@@ -17,6 +17,14 @@ int main(int argc,char **args)
 
   PetscInitialize(&argc,&args,(char*)0,help);
 
+  VecCreate(PETSC_COMM_WORLD,&x);
+  VecSetSizes(x,PETSC_DECIDE,4);
+  VecSetFromOptions(x);
+  PetscObjectSetName((PetscObject)x,"approximate solution");
+  VecDuplicate(x,&b);
+  VecDuplicate(x,&xexact);
+  PetscObjectSetName((PetscObject)xexact,"exact solution");
+
   MatCreate(PETSC_COMM_WORLD,&A);
   MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,4,4);
   MatSetFromOptions(A);
@@ -37,14 +45,6 @@ int main(int argc,char **args)
   MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);  MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);
   MatSetOption(A,MAT_SYMMETRIC,PETSC_TRUE);
 
-  VecCreate(PETSC_COMM_WORLD,&x);
-  VecSetSizes(x,PETSC_DECIDE,4);
-  VecSetFromOptions(x);
-  PetscObjectSetName((PetscObject)x,"approximate solution");
-  VecDuplicate(x,&b);
-  VecDuplicate(x,&xexact);
-  PetscObjectSetName((PetscObject)xexact,"exact solution");
-
   PetscInt       ix[4] = {0.0, 1.0, 2.0, 3.0};
   PetscScalar    xexactvals[4] = {3.0, 2.0, 1.0, 0.0};
   VecSetValues(xexact,4,ix,xexactvals,INSERT_VALUES);
@@ -60,7 +60,9 @@ int main(int argc,char **args)
   VecView(x,PETSC_VIEWER_STDOUT_WORLD);
   VecView(xexact,PETSC_VIEWER_STDOUT_WORLD);
 
-  KSPDestroy(&ksp);  VecDestroy(&x);  VecDestroy(&b);  MatDestroy(&A);
+  KSPDestroy(&ksp);
+  VecDestroy(&x);  VecDestroy(&b);
+  MatDestroy(&A);
   PetscFinalize();
   return 0;
 }

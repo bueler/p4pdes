@@ -6,7 +6,7 @@ machine=$(uname -n)
 if [[ "$machine" == 'bueler-leopard' ]]; then
    echo "on my workstation ${machine}:"
    export PETSC_DIR=~/petsc-3.5.2/
-   export PETSC_ARCH=linux-gnu-opt
+   export PETSC_ARCH=linux-gnu-dbg
    # mpiexec is global
 elif [[ "$machine" == 'bueler-gazelle' ]]; then
    echo "on my laptop ${machine}:"
