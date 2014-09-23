@@ -57,6 +57,6 @@ int main(int argc,char **args)
   ierr = VecDestroy(&u);CHKERRQ(ierr);  ierr = VecDestroy(&b);CHKERRQ(ierr);
   ierr = VecDestroy(&uexact);CHKERRQ(ierr);  ierr = MatDestroy(&A);CHKERRQ(ierr);
 
-  ierr = PetscFinalize();
+  PetscFinalize();
   return 0;
 }

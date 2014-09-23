@@ -4,6 +4,7 @@ ex??
 ex*.c
 
 c1matvec
+c1prealloc
 c1poisson
 
 ## Core latex/pdflatex auxiliary files:
