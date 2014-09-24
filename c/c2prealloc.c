@@ -1,4 +1,6 @@
-static char help[] = "Read in a FEM grid from PETSc binary file.  Demonstrate Mat preallocation.\n\n";
+static char help[] =
+"Read in a FEM grid from PETSc binary file in parallel.\n\
+Demonstrate Mat preallocation.\n\n";
 
 // do
 //     triangle -pqa1.0 bump   # generates bump.1.{node,ele}
@@ -27,7 +29,7 @@ int main(int argc,char **args)
   // MAJOR VARIABLES
   PetscInt N,   // number of degrees of freedom (= number of all nodes)
            M;   // number of elements;
-  Vec      vx, vy, vBT;
+  Vec      x, y, BT, P;
   Mat      A;   // we preallocate this stiffness matrix
 
   // INITIALIZE PETSC
@@ -46,6 +48,49 @@ int main(int argc,char **args)
   if (!fset) {
     SETERRQ(COMM,1,"option  -f FILENAME  required");
   }
+
+  // ALLOCATE and READ IN PARALLEL
+  PetscViewer viewer;
+  ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,fname,FILE_MODE_READ,
+             &viewer); CHKERRQ(ierr);
+  ierr = VecCreate(COMM,&x); CHKERRQ(ierr);
+  ierr = VecCreate(COMM,&y); CHKERRQ(ierr);
+  ierr = VecCreate(COMM,&BT); CHKERRQ(ierr);
+  ierr = VecCreate(COMM,&P); CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject)x,"node x coordinate"); CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject)y,"node y coordinate"); CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject)BT,"node boundary type"); CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject)P,"element node index array"); CHKERRQ(ierr);
+  ierr = PetscPrintf(COMM,"reading x,y,BT,P from %s in parallel ...\n",fname); CHKERRQ(ierr);
+  ierr = VecLoad(x,viewer); CHKERRQ(ierr);
+  ierr = VecLoad(y,viewer); CHKERRQ(ierr);
+  ierr = VecLoad(BT,viewer); CHKERRQ(ierr);
+  ierr = VecLoad(P,viewer); CHKERRQ(ierr);
+
+#if DEBUG
+  PetscInt rN, rM, bigsize=1000;
+  ierr = VecGetSize(x,&rN); CHKERRQ(ierr);
+  ierr = VecGetSize(P,&rM); CHKERRQ(ierr);
+  rM /= 3;
+  ierr = PetscPrintf(COMM,"  N=%d nodes, M=%d elements\n",rN,rM); CHKERRQ(ierr);
+  if ((rN < bigsize) && (rM < bigsize)) {
+    ierr = VecView(x,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
+    ierr = VecView(y,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
+    ierr = VecView(BT,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
+    ierr = VecView(P,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
+  } else {
+    ierr = PetscPrintf(COMM,"  [supressing VecView to STDOUT because too big]"); CHKERRQ(ierr);
+  }
+#endif
+
+FIXME FROM HERE
+
+  // CLEAN UP
+  VecDestroy(&rx);
+  VecDestroy(&ry);
+  VecDestroy(&rBT);
+  VecDestroy(&rP);
+  PetscViewerDestroy(&rviewer);
 
   // READ NODE HEADER
   PetscInt ndim, nattr, nbdrymarkers;
