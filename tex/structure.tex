@@ -1,0 +1,86 @@
+\documentclass[11pt,reqno]{amsart}
+%prepared in AMSLaTeX, under LaTeX2e
+\addtolength{\oddsidemargin}{-.65in}
+\addtolength{\evensidemargin}{-.65in}
+\addtolength{\topmargin}{-.3in}
+\addtolength{\textwidth}{1.5in}
+\addtolength{\textheight}{.6in}
+
+\renewcommand{\baselinestretch}{1.1}
+
+\usepackage{verbatim} % for "comment" environment
+
+\usepackage[pdftex, colorlinks=true, plainpages=false, linkcolor=blue, citecolor=red, urlcolor=blue]{hyperref}
+
+\usepackage{xspace}
+
+\usepackage{fancyvrb}
+
+\newcommand{\minput}[1]{
+\vspace{0.8cm}
+\VerbatimInput[frame=single,framesep=3mm,label=\fbox{\normalsize \textsl{\,#1.m\,}},fontfamily=courier,fontsize=\footnotesize]{../mfiles/#1.slim.m}
+\vspace{0.5cm}
+}
+
+\usepackage[final]{graphicx}
+
+%\newcommand{\regfigure}[2]{\includegraphics[height=#2in,keepaspectratio=true]{#1}}
+
+% macros
+\usepackage{amssymb}
+
+\usepackage[T1, OT1]{fontenc}
+\renewcommand{\dh}{\fontencoding{T1}\selectfont{\symbol{240}}}
+
+\newcommand{\bA}{\mathbf{A}}
+\newcommand{\bB}{\mathbf{B}}
+\newcommand{\bE}{\mathbf{E}}
+\newcommand{\bF}{\mathbf{F}}
+\newcommand{\bJ}{\mathbf{J}}
+\newcommand{\br}{\mathbf{r}}
+\newcommand{\bx}{\mathbf{x}}
+
+\newcommand{\CC}{\mathbb{C}}
+\newcommand{\RR}{\mathbb{R}}
+\newcommand{\ZZ}{\mathbb{Z}}
+
+\newcommand{\eps}{\epsilon}
+\newcommand{\lam}{\lambda}
+\newcommand{\lap}{\triangle}
+
+\newcommand{\Div}{\ensuremath{\nabla\cdot}}
+\newcommand{\Curl}{\ensuremath{\nabla\times}}
+\newcommand{\grad}{\nabla}
+
+\newcommand{\ip}[2]{\ensuremath{\left<#1,#2\right>}}
+\newcommand{\Matlab}{\textsc{Matlab}\xspace}
+
+\newcommand{\onull}{\operatorname{null}}
+\newcommand{\rank}{\operatorname{rank}}
+\newcommand{\range}{\operatorname{range}}
+
+\renewcommand{\Re}{\operatorname{Re}}
+\renewcommand{\Im}{\operatorname{Im}}
+
+
+
+
+\title{PETSc for PDEs}
+
+\author{Ed Bueler}
+
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\thispagestyle{empty}
+
+This is a draft structure.  For sure I will cite \cite{Smithetal1996}.
+
+\bigskip
+\small
+\bibliography{ice-bib}
+\bibliographystyle{siam}
+
+\end{document}
