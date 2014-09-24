@@ -2,6 +2,9 @@ static char help[] = "Solves 2D Poisson equation, a linear PDE, in parallel with
 
 #include <petscksp.h>
 
+#define doassembly(X) { ierr = VecAssemblyBegin(X); CHKERRQ(ierr); \
+                        ierr = VecAssemblyEnd(X); CHKERRQ(ierr); }
+
 int main(int argc,char **args)
 {
   Vec            u,b,uexact;

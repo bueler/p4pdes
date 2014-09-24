@@ -1,5 +1,7 @@
-static char help[] = "Read in a FEM grid from ASCII files written by triangle.\n\
-Write out in PETSc binary format.\n\n";
+static char help[] = 
+   "Read (rank 0 only) a FEM grid from ASCII files written by triangle.\n\
+    Write (rank 0 only) in PETSc binary format.  Read (all ranks) back\n\
+    and show at stdout.\n\n";
 
 // do
 //    triangle -pqa1.0 bump
@@ -9,9 +11,6 @@ Write out in PETSc binary format.\n\n";
 // which reads bump.1.{node,ele} and writes bump.1.petsc
 
 #include <petscmat.h>
-
-#define doassembly(X) { ierr = VecAssemblyBegin(X); CHKERRQ(ierr); \
-                        ierr = VecAssemblyEnd(X); CHKERRQ(ierr); }
 
 #define DEBUG 0
 
@@ -141,8 +140,8 @@ int main(int argc,char **args) {
                &viewer); CHKERRQ(ierr); 
 
     ierr = VecView(vx,viewer); CHKERRQ(ierr);
-    //ierr = VecView(vy,viewer); CHKERRQ(ierr);
-    //ierr = VecView(vBT,viewer); CHKERRQ(ierr);
+    ierr = VecView(vy,viewer); CHKERRQ(ierr);
+    ierr = VecView(vBT,viewer); CHKERRQ(ierr);
 #if DEBUG
     ierr = VecView(vx,PETSC_VIEWER_STDOUT_SELF); CHKERRQ(ierr);
 #endif
@@ -163,31 +162,33 @@ int main(int argc,char **args) {
   ierr = PetscFClose(COMM,elefile); CHKERRQ(ierr);
 
   // READ BACK IN PARALLEL: ALLOCATE VIEWER AND VECS
-  Vec rx;
+  Vec rx, ry, rBT;
   //Vec rx,ry,rP,rBT;
   PetscViewer rviewer;
   ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,outfilename,FILE_MODE_READ,
              &rviewer); CHKERRQ(ierr);
   ierr = VecCreate(COMM,&rx); CHKERRQ(ierr);
-  //ierr = VecDuplicate(rx,&ry); CHKERRQ(ierr);
-  //ierr = VecDuplicate(rx,&rBT); CHKERRQ(ierr);
+  ierr = VecCreate(COMM,&ry); CHKERRQ(ierr);
+  ierr = VecCreate(COMM,&rBT); CHKERRQ(ierr);
 
   // FILL 1D VECS FROM FILE
   ierr = PetscPrintf(COMM,"reading from %s in parallel:\n",outfilename); CHKERRQ(ierr);
   ierr = VecLoad(rx,rviewer); CHKERRQ(ierr);
-  //ierr = VecLoad(ry,rviewer); CHKERRQ(ierr);
-  //ierr = VecLoad(rBT,rviewer); CHKERRQ(ierr);
+  ierr = VecLoad(ry,rviewer); CHKERRQ(ierr);
+  ierr = VecLoad(rBT,rviewer); CHKERRQ(ierr);
 
   PetscInt rN;
   ierr = VecGetSize(rx,&rN); CHKERRQ(ierr);
   ierr = PetscPrintf(COMM,"  N=%d nodes\n",rN); CHKERRQ(ierr);
 
   ierr = VecView(rx,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
+  ierr = VecView(ry,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
+  ierr = VecView(rBT,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
 
   VecDestroy(&rx);
-  //VecDestroy(&ry);
+  VecDestroy(&ry);
+  VecDestroy(&rBT);
   //VecDestroy(&rP);
-  //VecDestroy(&rBT);
   PetscViewerDestroy(&rviewer);
 
   PetscFinalize();
