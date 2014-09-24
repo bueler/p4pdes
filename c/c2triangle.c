@@ -13,8 +13,8 @@ which reads bump.1.{node,ele} and writes bump.1.petsc.\n\n";
 
 #define DEBUG 0
 
-#define doassembly(X) { ierr = VecAssemblyBegin(X); CHKERRQ(ierr); \
-                        ierr = VecAssemblyEnd(X); CHKERRQ(ierr); }
+#define vecassembly(X) { ierr = VecAssemblyBegin(X); CHKERRQ(ierr); \
+                         ierr = VecAssemblyEnd(X); CHKERRQ(ierr); }
 
 int main(int argc,char **args) {
 
@@ -90,9 +90,9 @@ int main(int argc,char **args) {
       ierr = VecSetValues(vy,1,&i,&(v[1]),INSERT_VALUES); CHKERRQ(ierr);
       ierr = VecSetValues(vBT,1,&i,&(v[2]),INSERT_VALUES); CHKERRQ(ierr);
     }
-    doassembly(vx)
-    doassembly(vy)
-    doassembly(vBT)
+    vecassembly(vx)
+    vecassembly(vy)
+    vecassembly(vBT)
 #if DEBUG
     ierr = PetscPrintf(SELF,"node location and boundary type read (DEBUG):\n"); CHKERRQ(ierr);
     ierr = VecView(vx,PETSC_VIEWER_STDOUT_SELF); CHKERRQ(ierr);
@@ -116,9 +116,9 @@ int main(int argc,char **args) {
              M,nattrele); CHKERRQ(ierr);
 
     // ALLOCATE VEC FOR ELEMENTS
-    Vec vP; // array with 3M rows; P[k][q] is node index
+    Vec vP; // array with 3M rows; P[k][q] is node index (0 based)
     ierr = VecCreateSeq(SELF,3*M,&vP); CHKERRQ(ierr);
-    ierr = PetscObjectSetName((PetscObject)vP,"element node index array (seq)"); CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject)vP,"element node index array (seq and 0 based)"); CHKERRQ(ierr);
 
     // READ ELEMENTS; EACH PROCESS HOLDS FULL INFO (THREE NODE INDICES PER ELEMENT)
     PetscInt k, kplusone, q, j[3];
@@ -130,10 +130,13 @@ int main(int argc,char **args) {
       if (kplusone != k+1) {
         SETERRQ1(SELF,4,"indexing error in reading from %s",elefilename);
       }
-      for (q = 0; q < 3; q++)  j[q] = 3*k + q;
+      for (q = 0; q < 3; q++)  {
+        j[q] = 3*k + q;
+        w[q]--;  // change to zero-based from triangle's default one-based
+      }
       ierr = VecSetValues(vP,3,j,w,INSERT_VALUES); CHKERRQ(ierr);
     }
-    doassembly(vP)
+    vecassembly(vP)
 #if DEBUG
     ierr = PetscPrintf(SELF,"element indices read (DEBUG):\n"); CHKERRQ(ierr);
     ierr = VecView(vP,PETSC_VIEWER_STDOUT_SELF); CHKERRQ(ierr);
@@ -172,7 +175,7 @@ int main(int argc,char **args) {
   ierr = PetscObjectSetName((PetscObject)rx,"node x coordinate"); CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject)ry,"node y coordinate"); CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject)rBT,"node boundary type"); CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)rP,"element node index array"); CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject)rP,"element node index array (0 based)"); CHKERRQ(ierr);
 
   // FILL FROM FILE
   ierr = PetscPrintf(COMM,"reading from %s in parallel ...\n",outfilename); CHKERRQ(ierr);
