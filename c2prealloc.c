@@ -1,8 +1,10 @@
-static char help[] = "Read in a FEM grid.  Demonstrate Mat preallocation.\n\n";
+static char help[] = "Read in a FEM grid from PETSc binary file.  Demonstrate Mat preallocation.\n\n";
 
-// do   triangle -pqa1.0 bump  (or similar) to generate bump.1.{node,ele}
-// then do
-//    ./c1prealloc -f bump.1
+// do
+//     triangle -pqa1.0 bump   # generates bump.1.{node,ele}
+//     c2triangle -f bump.1    # reads bump.1.{node,ele} and generates bump.1.petsc
+//     c2prealloc -f bump.1.petsc
+
 // to see sparsity: ./c1prealloc -mat_view draw -draw_pause 1
 
 // SUMMARY FROM PETSC MANUAL
@@ -25,110 +27,85 @@ int main(int argc,char **args)
   // MAJOR VARIABLES
   PetscInt N,   // number of degrees of freedom (= number of all nodes)
            M;   // number of elements;
-  double *x,*y; // (x[i],y[i]) is location of node
-  int **P,      // array with M rows and 3 columns; P[k][q] is node index
-      *BT;      // array with N rows and 2 columns;
-                //   BT[i] = 0 if interior, 2 if Dirichlet, 3 if Neumann
+  Vec      vx, vy, vBT;
   Mat      A;   // we preallocate this stiffness matrix
 
   // INITIALIZE PETSC
   PetscInitialize(&argc,&args,(char*)0,help);
   const MPI_Comm  COMM = PETSC_COMM_WORLD;
-  PetscMPIInt     rank;
-  MPI_Comm_rank(COMM,&rank);
   PetscErrorCode  ierr;
 
   // GET FILENAME ROOT FROM OPTION
   const PetscInt MPL = PETSC_MAX_PATH_LEN;
-  char           fnameroot[MPL];
+  char           fname[MPL];
   PetscBool      fset;
-  ierr = PetscOptionsBegin(COMM, "", "options for c1prealloc", ""); CHKERRQ(ierr);
-  ierr = PetscOptionsString("-f", "triangle filename root to read", "", "bump.1",
-                            fnameroot, sizeof(fnameroot), &fset); CHKERRQ(ierr);
+  ierr = PetscOptionsBegin(COMM, "", "options for c2prealloc", ""); CHKERRQ(ierr);
+  ierr = PetscOptionsString("-f", "filename with PETSc binary, for reading", "", "",
+                            fname, sizeof(fname), &fset); CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
   if (!fset) {
-    SETERRQ(COMM,1,"option  -f FILENAMEROOT  required");
+    SETERRQ(COMM,1,"option  -f FILENAME  required");
   }
 
-  // DETERMINE FILENAMES
-  FILE           *nodefile, *elefile;
-  char           nodefilename[MPL], elefilename[MPL];
-  strcpy(fnameroot,"bump.1");
-  strcpy(nodefilename,fnameroot);
-  strcat(nodefilename,".node");
-  strcpy(elefilename,fnameroot);
-  strcat(elefilename,".ele");
+  // READ NODE HEADER
+  PetscInt ndim, nattr, nbdrymarkers;
+  if (4 != fscanf(nodefile,"%d %d %d %d\n",&N,&ndim,&nattr,&nbdrymarkers)) {
+    SETERRQ1(COMM,1,"expected 4 values in reading from %s",nodefilename);
+  }
+  if (ndim != 2) {
+    SETERRQ1(COMM,1,"ndim read from %s not equal to 2",nodefilename);
+  }
+  ierr = PetscPrintf(COMM,"read %s:\n",nodefilename); CHKERRQ(ierr);
+  ierr = PetscPrintf(COMM,
+           "  N=%d nodes in 2D polygon with %d attributes and %d boundary markers per node\n",
+           N,nattr,nbdrymarkers); CHKERRQ(ierr);
 
-  // RANK 0 OPENS FILES
-  ierr = PetscFOpen(COMM,nodefilename,"r",&nodefile); CHKERRQ(ierr);
-  ierr = PetscFOpen(COMM,elefilename,"r",&elefile); CHKERRQ(ierr);
-
-  if (rank == 0) {
-    // READ NODE HEADER
-    PetscInt ndim, nattr, nbdrymarkers;
-    if (4 != fscanf(nodefile,"%d %d %d %d\n",&N,&ndim,&nattr,&nbdrymarkers)) {
+  // READ NODES; EACH PROCESS HOLDS FULL INFO (INDEX, LOCATION, BOUNDARY MARKER)
+  PetscMalloc(N*sizeof(int),&BT);
+  PetscMalloc(N*sizeof(double),&x);
+  PetscMalloc(N*sizeof(double),&y);
+  PetscInt i,iplusone;
+  for (i = 0; i < N; i++) {
+    if (4 != fscanf(nodefile,"%d %lf %lf %d\n",&iplusone,&(x[i]),&(y[i]),&(BT[i]))) {
       SETERRQ1(COMM,1,"expected 4 values in reading from %s",nodefilename);
     }
-    if (ndim != 2) {
-      SETERRQ1(COMM,1,"ndim read from %s not equal to 2",nodefilename);
-    }
-    ierr = PetscPrintf(COMM,"read %s:\n",nodefilename); CHKERRQ(ierr);
-    ierr = PetscPrintf(COMM,
-             "  N=%d nodes in 2D polygon with %d attributes and %d boundary markers per node\n",
-             N,nattr,nbdrymarkers); CHKERRQ(ierr);
-
-    // READ NODES; EACH PROCESS HOLDS FULL INFO (INDEX, LOCATION, BOUNDARY MARKER)
-    PetscMalloc(N*sizeof(int),&BT);
-    PetscMalloc(N*sizeof(double),&x);
-    PetscMalloc(N*sizeof(double),&y);
-    PetscInt i,iplusone;
-    for (i = 0; i < N; i++) {
-      if (4 != fscanf(nodefile,"%d %lf %lf %d\n",&iplusone,&(x[i]),&(y[i]),&(BT[i]))) {
-        SETERRQ1(COMM,1,"expected 4 values in reading from %s",nodefilename);
-      }
-    }
+  }
 #if DEBUG
-    ierr = PetscPrintf(COMM,"boundary type read:\n"); CHKERRQ(ierr);
-    for (i = 0; i < N; i++) {
-      ierr = PetscPrintf(COMM,"%4d%6d\n",i,BT[i]); CHKERRQ(ierr);
-    }
+  ierr = PetscPrintf(COMM,"boundary type read:\n"); CHKERRQ(ierr);
+  for (i = 0; i < N; i++) {
+    ierr = PetscPrintf(COMM,"%4d%6d\n",i,BT[i]); CHKERRQ(ierr);
+  }
 #endif
 
-    // READ ELEMENT HEADER
-    PetscInt nthree, nattrele;
-    if (3 != fscanf(elefile,"%d %d %d\n",&M,&nthree,&nattrele)) {
-      SETERRQ1(COMM,1,"expected 3 values in reading from %s",elefilename);
-    }
-    if (nthree != 3) {
-      SETERRQ1(COMM,1,"nthree read from %s not equal to 3 (= nodes per element)",elefilename);
-    }
-    ierr = PetscPrintf(COMM,"read %s:\n",elefilename); CHKERRQ(ierr);
-    ierr = PetscPrintf(COMM,
-             "  M=%d elements in 2D polygon with %d attributes per element\n",
-             M,nattrele); CHKERRQ(ierr);
+  // READ ELEMENT HEADER
+  PetscInt nthree, nattrele;
+  if (3 != fscanf(elefile,"%d %d %d\n",&M,&nthree,&nattrele)) {
+    SETERRQ1(COMM,1,"expected 3 values in reading from %s",elefilename);
+  }
+  if (nthree != 3) {
+    SETERRQ1(COMM,1,"nthree read from %s not equal to 3 (= nodes per element)",elefilename);
+  }
+  ierr = PetscPrintf(COMM,"read %s:\n",elefilename); CHKERRQ(ierr);
+  ierr = PetscPrintf(COMM,
+           "  M=%d elements in 2D polygon with %d attributes per element\n",
+           M,nattrele); CHKERRQ(ierr);
 
-    // READ ELEMENTS; EACH PROCESS HOLDS FULL INFO (THREE NODE INDICES PER ELEMENT)
-    PetscInt k, kplusone;
-    PetscMalloc(M*sizeof(int*),&P);
-    for (k = 0; k < M; k++) {
-      PetscMalloc(3*sizeof(int),&(P[k]));
-      if (4 != fscanf(elefile,"%d %d %d %d\n",&kplusone,&(P[k][0]),&(P[k][1]),&(P[k][2]))) {
-        SETERRQ1(COMM,1,"expected 4 values in reading from %s",elefilename);
-      }
+  // READ ELEMENTS; EACH PROCESS HOLDS FULL INFO (THREE NODE INDICES PER ELEMENT)
+  PetscInt k, kplusone;
+  PetscMalloc(M*sizeof(int*),&P);
+  for (k = 0; k < M; k++) {
+    PetscMalloc(3*sizeof(int),&(P[k]));
+    if (4 != fscanf(elefile,"%d %d %d %d\n",&kplusone,&(P[k][0]),&(P[k][1]),&(P[k][2]))) {
+      SETERRQ1(COMM,1,"expected 4 values in reading from %s",elefilename);
     }
+  }
 #if DEBUG
-    ierr = PetscPrintf(COMM,"elements read:\n"); CHKERRQ(ierr);
-    for (k = 0; k < M; k++) {
-      ierr = PetscPrintf(COMM,"%4d%8d%6d%6d\n",k,P[k][0],P[k][1],P[k][2]); CHKERRQ(ierr);
-    }
+  ierr = PetscPrintf(COMM,"elements read:\n"); CHKERRQ(ierr);
+  for (k = 0; k < M; k++) {
+    ierr = PetscPrintf(COMM,"%4d%8d%6d%6d\n",k,P[k][0],P[k][1],P[k][2]); CHKERRQ(ierr);
+  }
 #endif
   }
-  ierr = PetscFClose(COMM,nodefile); CHKERRQ(ierr);
-  ierr = PetscFClose(COMM,elefile); CHKERRQ(ierr);
-
-PetscFinalize();
-return 0;
-
 
 #if 0
   // LEARN WHICH ROWS WE OWN
@@ -204,10 +181,10 @@ return 0;
 
 #endif
 
-  PetscFree(BT);
-  PetscFree(x);
-  PetscFree(y);
-  PetscFree(P);
+  VecDestroy(&vx);
+  VecDestroy(&vy);
+  VecDestroy(&vP);
+  VecDestroy(&vBT);
 //  PetscFree(dnnz);
 //  PetscFree(onnz);
 

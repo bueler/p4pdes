@@ -4,8 +4,9 @@ ex??
 ex*.c
 
 c1matvec
-c1prealloc
-c1poisson
+c2triangle
+c2prealloc
+c2poisson
 
 ## Core latex/pdflatex auxiliary files:
 *.aux

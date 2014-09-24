@@ -10,13 +10,17 @@ c1matvec: c1matvec.o  chkopts
 	-${CLINKER} -o c1matvec c1matvec.o  ${PETSC_KSP_LIB}
 	${RM} c1matvec.o
 
-c1prealloc: c1prealloc.o  chkopts
-	-${CLINKER} -o c1prealloc c1prealloc.o  ${PETSC_KSP_LIB}
-	${RM} c1prealloc.o
+c2triangle: c2triangle.o  chkopts
+	-${CLINKER} -o c2triangle c2triangle.o  ${PETSC_KSP_LIB}
+	${RM} c2triangle.o
 
-c1poisson: c1poisson.o  chkopts
-	-${CLINKER} -o c1poisson c1poisson.o  ${PETSC_KSP_LIB}
-	${RM} c1poisson.o
+c2prealloc: c2prealloc.o  chkopts
+	-${CLINKER} -o c2prealloc c2prealloc.o  ${PETSC_KSP_LIB}
+	${RM} c2prealloc.o
+
+c2poisson: c2poisson.o  chkopts
+	-${CLINKER} -o c2poisson c2poisson.o  ${PETSC_KSP_LIB}
+	${RM} c2poisson.o
 
 
 .PHONY: distclean
