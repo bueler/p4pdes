@@ -11,40 +11,39 @@
 % For nicely typeset tabular material
 \usepackage{booktabs}
 
-%\documentclass[11pt,reqno]{amsart}
-%prepared in AMSLaTeX, under LaTeX2e
-%\addtolength{\oddsidemargin}{-.65in}
-%\addtolength{\evensidemargin}{-.65in}
-%\addtolength{\topmargin}{-.3in}
-%\addtolength{\textwidth}{1.5in}
-%\addtolength{\textheight}{.6in}
-
-%\renewcommand{\baselinestretch}{1.1}
-
 \usepackage{verbatim} % for "comment" environment
 \usepackage{xspace}
 \usepackage{fancyvrb}
-%\usepackage[final]{graphicx}
 \usepackage{graphicx}
 \usepackage{amssymb}
-%\usepackage[T1, OT1]{fontenc}
-%\usepackage[pdftex, colorlinks=true, plainpages=false, linkcolor=blue, citecolor=red, urlcolor=blue]{hyperref}
 
-%\newcommand{\regfigure}[2]{\includegraphics[height=#2in,keepaspectratio=true]{#1}}
 
-\newcommand{\cinput}[1]{
+\newcommand{\trueinput}[2]{
+\VerbatimInput[frame=single,framesep=3mm,label=\fbox{\normalsize \textsl{\,#1\,}},fontfamily=courier,fontsize=\footnotesize]{#2}
+}
+
+\newcommand{\cinput}[2]{
+\begin{figure*}
 \vspace{0.8cm}
-\VerbatimInput[frame=single,framesep=3mm,label=\fbox{\normalsize \textsl{\,#1.m\,}},fontfamily=courier,fontsize=\footnotesize]{../c/#1}
+%\trueinput{#1}{../c/#1}
+\trueinput{#1}{fakeinput.c}
 \vspace{0.5cm}
+\caption{#2}
+\end{figure*}
 }
 
-\newcommand{\caveat}[1]{
-\vspace{1.0cm}{\Large
-\begin{quote}
-#1
-\end{quote}
-}
-\vspace{0.8cm}
+\newcommand{\caveat}[1]{\marginnote{\textsc{Where we stand:}\\  #1}}
+
+% Prints an epigraph and speaker in sans serif, all-caps type.
+\newcommand{\openepigraph}[2]{%
+  %\sffamily\fontsize{14}{16}\selectfont
+  \begin{fullwidth}
+  \sffamily\large
+  \begin{doublespace}
+  \noindent\allcaps{#1}\\% epigraph
+  \noindent \Large \allcaps{#2}% author
+  \end{doublespace}
+  \end{fullwidth}
 }
 
 \newcommand{\bA}{\mathbf{A}}
@@ -77,64 +76,179 @@
 \renewcommand{\Re}{\operatorname{Re}}
 \renewcommand{\Im}{\operatorname{Im}}
 
-\usepackage{makeidx}
-\makeindex
+\newcommand{\PETSc}{\textsc{PETSc}\xspace}
+\newcommand{\pVec}{{\Large\texttt{Vec}}}
+\newcommand{\pMat}{{\Large\texttt{Mat}}}
+
+% eventually this is a good idea:
+%\usepackage{makeidx}
+%\makeindex
 
 \begin{document}
 
 \frontmatter
 
+% epigraph page first
+\newpage\thispagestyle{empty}
+\openepigraph{%
+Developing parallel, nontrivial PDE solvers that deliver high
+performance is still difficult and requires months (or even years) of
+concentrated effort. PETSc is a toolkit that can ease these
+dffculties and reduce the development time, but it is not black-box
+PDE solver, nor a silver bullet
+}{Barry Smith}
+\vfill
+\openepigraph{%
+\ldots the designer of a new system must not only be the implementor and the first 
+large-scale user; the designer should also write the first user manual\ldots 
+If I had not participated fully in all these activities, 
+literally hundreds of improvements would never have been made, 
+because I would never have thought of them or perceived 
+why they were important.
+}{Donald E. Knuth}
+\vfill
+\openepigraph{%
+Tufte's style is known
+for its extensive use of sidenotes, tight integration of graphics with
+text, and well-set typography.
+}{The Tufte-LaTeX\ Developers}
+
 \maketitle
 
 \tableofcontents
 
-
-\chapter*{Why this book?}
-
-This is a draft structure.  For sure I will cite \citep{Smithetal1996}.
-
-\section{Introduction}
-
-\section{What is PETSc, and how to use it?}
-
-\newcommand{\pVec}{{\Large\texttt{Vec}}}
-\newcommand{\pMat}{{\Large\texttt{Mat}}}
-
-\section{\pVec s and \pMat s}  [introduce initialization/finalization, object Create+SetFromOptions paradigm, parallel layout of \pVec
-
-\cinput{c1matvec.c}
-
-\caveat{\emph{But} \Matlab is all you want if scale does not matter}
-
 %%%%%%%%%%
+
+\chapter{Why this book?}
+
+The Portable, Extensible Toolkit for Scientific computing (\PETSc\sidenote{Say it ``pet sea,'' in spoken english.}) is a library built on the standard software layer for large-scale parallel computation, namely the Message Passing Interface (MPI).
+
+It is not new software.  \PETSc version 2.0, the first version that made a difference to the scientific computing world, was built in 1994.  A textbook\cite{Smithetal1996} using \PETSc 2.0 appeared, emphasizing scalable solutions of linear PDEs through pre-conditioned iterative linear solvers.  For example, \citet{Smithetal1996} demonstrates that domain decomposition methods like additive Schwarz can solve the Poisson equation on irregular domains with fine meshes in parallel.
+
+But \PETSc is now at version 3.5, and it has transformed into something better.\sidenote{Version 3.5.2 is current in September 2014.  The stable homepage URL for PETSc, including download and installation instructions, is at \href{http://www.mcs.anl.gov/petsc/index.html}{www.mcs.anl.gov/petsc}.}  Examples. and typical applications, now emphasize solving nonlinear PDEs at scale.  The 21st-century \PETSc strategy is to compose Newton's method and mesh topology tools---this part of the \PETSc API dominates what is seen by modern library users---with a run-time chooseable selection of preconditioners and iterative linear solvers.  Thus ``multiphysics'' problems, wherein a system of PDEs with different classical types is solved simultaneously, are within reach.  \PETSc may not be a silver bullet, but the \PETSc user sees powerful tools to solve hard problems.
+
+On the other hand, its notoriously complicated.  So perhaps a new textbook is needed.
+
+This textbook, needed or not, does not replace the \PETSc \emph{User's Manual}.  The reader should grab that PDF, and at least know the topics it addresses.  (That is, a PDF \emph{User's Manual} is a good tool even if searching online is the first resort.)  For one thing, the current book assumes you want to solve PDEs, while there are many uses of \PETSc besides that.
+
+\section{The approach taken here, and what I need from you}  This book should help you solve nonlinear partial differential equations (PDEs), by using \PETSc, by writing C code.  This book will try to both explain the ideas and illustrate the ideas by example codes.  Scalability will always be the goal, and will be demonstrated.
+
+Some of the mathematical theory of PDEs must be familiar to you, but I will also assume some (nebulous, and hard to define) intuition about nonlinear PDE problems.\sidenote{\citep{Evans} and \citep{Ockendonetal2003} are recommended for these purposes, respectively.}  Of course, all applied mathematicians, distinctly including this author, are wanting  when it comes to both mathematical theory and intuition for nonlinear PDEs.
+
+Numerical ideas from linear algebra \citep{TrefethenBau} arise in this book, but so will discretization (approximation) approachs to PDEs.  Thus at least one numerical PDE paradigm must be in the reader's toolbox.  This numerical background might be based on finite differences, but I will assume you are interested in the finite element method (FEM) on unstructured grids.  The basics of the FEM method will be reviewed, but the reader must bring some background too.\sidenote{\citep{Elmanetal2005}, \citep{Braess}, and [Karniadakis and Sherwin] are all reasonable, but we will follow Elman most closely.}  The weak form of a PDE, and the idea assembling the system element-by-element, may be rusty but they must be there.
+
+
+\section{This book does not do everything}  There is a lot we will not do.  Here is a partial list:\begin{itemize}
+\item This book does not help you install \PETSc.
+\item This book does not replace a good tutorial introduction for quickly getting started in \PETSc.
+\item This book does not do anything in Fortran.
+\item This book does not replace \citep{Smithetal1996}.
+\item This book does not do a good job teaching the FEM.
+\item This book does not help much if your PDE problem is hyperbolic.
+\end{itemize}
+
+
+\section{Who are you, reader?}  
+
+So what do you look like? My best guess is that you've taken a mathematics course or two in PDEs, somewhere you picked up coding in C, you've written numerical codes in \Matlab or python, and you've tried numerical PDE methods, but \emph{now you want it all in parallel on big problems}.  This book is for you.
+
 
 \mainmatter
 
-\chapter{PETSc for \textsc{linear} PDEs}
+%%%%%%%%%
 
-\section{Getting a triangular mesh into PETSc}
+\chapter{1. Just solve a small linear system}
 
-\cinput{c2triangle.c}
+\section{Getting started with a code}
+
+\cinput{c1matvec.c}{demonstrates \PETSc code basics}
+
+\section{\textsc{Vec}s and \textsc{Mat}s}  [introduce initialization/finalization, object Create+SetFromOptions paradigm, parallel layout of \pVec
+
+\caveat{But \Matlab is all you want if scale does not matter.}
+
+
+%%%%%%%%%%
+
+\chapter{2. Linear PDEs, naively}
+
+\section{Getting a triangular mesh into \PETSc}
+
+\cinput{c2triangle.c}{reads \textsc{triangle}-generated mesh, then re-reads in parallel}
 
 \section{FEM method, for the Poisson equation}
 
 \section{Preallocate a \pMat}
 
-\cinput{c2prealloc.c}
+\cinput{c2prealloc.c}{demonstrates preallocation of parallel \pMat}
 
 \section{Assembling Poisson}
 
 \section{Performance: convergence and scaling}
 
-\caveat{\emph{But} real PDEs are nonlinear.  And PETSc helps with meshes.}
+\caveat{But real-world PDEs are nonlinear.}
 
 %%%%%%%%%%
 
-%\chapter{}
+\chapter{3. Nonlinear elliptic PDEs on structured grids}
 
-%\section{}
+\section{Newton's method}
 
-%\section{}
+\section{\textsc{SNES}}
+
+%\cinput{c3newton.c}{}
+
+\section{Structured grids in \PETSc}
+
+%\cinput{c3poisson.c}{}
+
+\section{Example: a porous medium equation}
+
+%\cinput{c3porous.c}{}
+
+\section{Jacobians: actual and approximate}
+
+\section{Indeterminant systems: Stokes}
+
+%\cinput{c3stokes.c}{}
+
+\caveat{But it isn't scaling well yet.}
+
+%%%%%%%%%%
+
+\chapter{4. Multigrid and run-time composition}
+
+\section{\textsc{DM}}
+
+\caveat{But \PETSc should help with unstructured meshes too.}
+
+%%%%%%%%%%
+
+\chapter{5. Unstructured grids}
+
+\section{\textsc{DMPlex}}
+
+%\cinput{c5poisson.c}{}
+
+\caveat{But my PDE has ``$t$'' in it.}
+
+%%%%%%%%%%
+
+\chapter{6. Time-evolving PDEs}
+
+\section{\textsc{TS}}
+
+%\cinput{c6freesurface.c}{}
+
+\caveat{But my PDE isn't really a PDE.  It has an inequality in it.}
+
+%%%%%%%%%%
+
+\chapter{7. Constraints on PDEs}
+
+\section{A variational inequality problem}
+
+%\cinput{c7obstacle.c}{}
 
 %%%%%%%%%%
 
