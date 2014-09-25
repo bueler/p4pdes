@@ -6,7 +6,7 @@ For a coarse grid example do:\n\
      c2triangle -f bump.1    # reads bump.1.{node,ele} and generates bump.1.petsc\n\
      c2prealloc -f bump.1    # reads bump.1.petsc\n\
 To see the sparsity pattern graphically:\n\
-     c2prealloc -f bump.1 -mat_view draw -draw_pause 2\n\n";
+     c2prealloc -f bump.1 -mat_view draw -draw_pause 5\n\n";
 
 // SUMMARY FROM PETSC MANUAL
 /*
@@ -21,20 +21,26 @@ number of nonzeros for the corresponding matrix row(s).
 #include <petscmat.h>
 #include <petscksp.h>
 
-#define DEBUG 1
+#define DEBUG 0
+
+#define matassembly(X) { ierr = MatAssemblyBegin(X,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr); \
+                         ierr = MatAssemblyEnd(X,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr); }
 
 int main(int argc,char **args)
 {
-  // MAJOR VARIABLES
+  // MAJOR VARIABLES FOR TRIANGULAR MESH
   PetscInt N,   // number of degrees of freedom (= number of all nodes)
            M;   // number of elements;
   Vec      x, y, BT, P; // mesh:  x coord of node, y coord of node, bdry type, element indexing
-  Mat      A;   // we preallocate this stiffness matrix
 
   // INITIALIZE PETSC
   PetscInitialize(&argc,&args,(char*)0,help);
   const MPI_Comm  COMM = PETSC_COMM_WORLD;
   PetscErrorCode  ierr;
+#if DEBUG
+  PetscMPIInt rank;
+  MPI_Comm_rank(COMM,&rank);
+#endif
 
   // GET FILENAME FROM OPTION
   const PetscInt MPL = PETSC_MAX_PATH_LEN;
@@ -83,16 +89,20 @@ int main(int argc,char **args)
     ierr = VecView(BT,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
     ierr = VecView(P,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
   } else {
-    ierr = PetscPrintf(COMM,"  [supressing VecView to STDOUT because too big]"); CHKERRQ(ierr);
+    ierr = PetscPrintf(COMM,"  [supressing VecView to STDOUT because too big]\n"); CHKERRQ(ierr);
   }
 #endif
 
-  // PUT A COPY OF THE FULL P ON EACH PROCESSOR
+  // PUT A COPY OF THE FULL P AND BT ON EACH PROCESSOR
   VecScatter  ctx;
-  Vec         PSEQ;
+  Vec         PSEQ, BTSEQ;
   ierr = VecScatterCreateToAll(P,&ctx,&PSEQ); CHKERRQ(ierr);
   ierr = VecScatterBegin(ctx,P,PSEQ,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
   ierr = VecScatterEnd(ctx,P,PSEQ,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
+  VecScatterDestroy(&ctx);
+  ierr = VecScatterCreateToAll(BT,&ctx,&BTSEQ); CHKERRQ(ierr);
+  ierr = VecScatterBegin(ctx,BT,BTSEQ,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
+  ierr = VecScatterEnd(ctx,BT,BTSEQ,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
   VecScatterDestroy(&ctx);
 
   // LEARN WHICH ROWS WE OWN
@@ -100,66 +110,96 @@ int main(int argc,char **args)
   ierr = VecGetOwnershipRange(x,&Istart,&Iend); CHKERRQ(ierr);
 
   // ALLOCATE LOCAL ARRAYS FOR NUMBER OF NONZEROS
-  PetscInt mm = Iend - Istart;
+  PetscInt mm = Iend - Istart, iloc;
   int *dnnz, // dnnz[i] is number of nonzeros in row which are in same-processor column
       *onnz; // onnz[i] is number of nonzeros in row which are in other-processor column
   PetscMalloc(mm*sizeof(int),&dnnz);
   PetscMalloc(mm*sizeof(int),&onnz);
+  for (iloc = 0; iloc < mm; iloc++) {
+    dnnz[iloc] = 2;  // diagonal entry
+    onnz[iloc] = 0;
+  }
 
   // FILL THE NUMBER-OF-NONZEROS ARRAYS
-  PetscInt    iloc, i, j, k, q, r;
-  PetscScalar *ap;
+  PetscInt    i, j, k, q, r;
+  PetscScalar *ap, *abt;
   ierr = VecGetArray(PSEQ,&ap); CHKERRQ(ierr);
+  ierr = VecGetArray(BTSEQ,&abt); CHKERRQ(ierr);
   for (k = 0; k < M; k++) {          // loop over ALL elements
     for (q = 0; q < 3; q++) {        // loop over vertices of current element
-      i = ap[3*k+q] - 1;             //   ... its global node index
-      // do I own it?
-      if ((i >= Istart) && (i < Iend)) {
-        for (r = 0; r < 3; r++) {    // loop over other vertices
-          j = ap[3*k+r] - 1;         //   ... its global node index
-          if ((j >= Istart) && (j < Iend))
-            dnnz[i]++;
-          else
-            onnz[i]++;
+      i = (int)ap[3*k+q];            //   global index of q node
+      if ((i < Istart) || (i >= Iend))  continue; // skip node if I don't own it
+      iloc = i - Istart;
+      for (r = 0; r < 3; r++) {      // loop over other vertices
+        if (r == q)  continue;       // diagonal entry already counted
+        j = (int)ap[3*k+r];          //   global index of r node
+        // (i,j) is an edge; we count this nonzero matrix entry
+        if ((j >= Istart) && (j < Iend)) {
+          dnnz[iloc]++;
+          if ((abt[i] > 0) && (abt[j] > 0))
+            dnnz[iloc]++;            // double-weight boundary edges
+        } else {
+          onnz[iloc]++;
         }
       }
     }
   }
   ierr = VecRestoreArray(PSEQ,&ap); CHKERRQ(ierr);
+  ierr = VecRestoreArray(BTSEQ,&abt); CHKERRQ(ierr);
+  // resolve double counting
+  for (iloc = 0; iloc < mm; iloc++) {
+    dnnz[iloc] /= 2;
+    onnz[iloc] /= 2;
+  }
 #if DEBUG
-  PetscMPIInt rank;
-  MPI_Comm_rank(COMM,&rank);
-  ierr = PetscSynchronizedPrintf(COMM,"showing entries of dnnz[] on rank %d (DEBUG)\n",rank); CHKERRQ(ierr);
+  ierr = PetscSynchronizedPrintf(COMM,"showing entries of dnnz[%d] on rank %d (DEBUG)\n",mm,rank); CHKERRQ(ierr);
   for (iloc = 0; iloc < mm; iloc++) {
       ierr = PetscSynchronizedPrintf(COMM,"dnnz[%d] = %d\n",iloc,dnnz[iloc]); CHKERRQ(ierr);
   }
-  ierr = PetscSynchronizedPrintf(COMM,"showing entries of onnz[] on rank %d (DEBUG)\n",rank); CHKERRQ(ierr);
+  ierr = PetscSynchronizedPrintf(COMM,"showing entries of onnz[%d] on rank %d (DEBUG)\n",mm,rank); CHKERRQ(ierr);
   for (iloc = 0; iloc < mm; iloc++) {
       ierr = PetscSynchronizedPrintf(COMM,"onnz[%d] = %d\n",iloc,onnz[iloc]); CHKERRQ(ierr);
   }
   ierr = PetscSynchronizedFlush(COMM,PETSC_STDOUT); CHKERRQ(ierr);
 #endif
 
-  ierr = MatCreateAIJ(COMM,mm,mm,N,N,0,dnnz,0,onnz,&A); CHKERRQ(ierr);
+  // PREALLOCATE STIFFNESS MATRIX
+  Mat A;
+  MatCreate(COMM,&A);
+  MatSetType(A,MATMPIAIJ);
+  MatSetSizes(A,mm,mm,N,N);
+  //"If the *_nnz parameter is given then the *_nz parameter is ignored"
+  MatMPIAIJSetPreallocation(A,0,dnnz,0,onnz);
+  MatSetOption(A, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE); // FIXME: WHY IS THIS NEEDED?
 
-//MatCreateAIJ(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt M,PetscInt N,PetscInt d_nz,const PetscInt d_nnz[],PetscInt o_nz,const PetscInt o_nnz[],Mat *A)
-//"If the *_nnz parameter is given then the *_nz parameter is ignored"
-
-//  MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);
-//  MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);
-//  MatSetFromOptions(A);
-
-  MatDestroy(&A);
-
-  PetscFree(dnnz);
-  PetscFree(onnz);
-  VecDestroy(&PSEQ);
+  // FILL MAT WITH FAKE ENTRIES
+  PetscInt    jj[3];
+  PetscScalar vv[3];
+  ierr = VecGetArray(PSEQ,&ap); CHKERRQ(ierr);
+  for (k = 0; k < M; k++) {          // loop over ALL elements
+    for (q = 0; q < 3; q++) {        // loop over vertices of current element
+      i = (int)ap[3*k+q];            //   global index of q node
+      if ((i < Istart) || (i >= Iend))  continue; // skip node if I don't own it
+      for (r = 0; r < 3; r++) {      // loop over other vertices
+        jj[r] = (int)ap[3*k+r];      //   global index of r node
+        vv[r] = 1.0;
+      }
+      ierr = MatSetValues(A,1,&i,3,jj,vv,ADD_VALUES); CHKERRQ(ierr);
+    }
+  }
+  ierr = VecRestoreArray(PSEQ,&ap); CHKERRQ(ierr);
+  matassembly(A)
 
   // CLEAN UP
+  PetscFree(dnnz);
+  PetscFree(onnz);
+  MatDestroy(&A);
   VecDestroy(&x);
   VecDestroy(&y);
   VecDestroy(&BT);
   VecDestroy(&P);
+  VecDestroy(&BTSEQ);
+  VecDestroy(&PSEQ);
   PetscViewerDestroy(&viewer);
 
   PetscFinalize();

@@ -196,7 +196,7 @@ int main(int argc,char **args) {
     ierr = VecView(rBT,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
     ierr = VecView(rP,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
   } else {
-    ierr = PetscPrintf(COMM,"  [supressing VecView to STDOUT because too big]"); CHKERRQ(ierr);
+    ierr = PetscPrintf(COMM,"  [supressing VecView to STDOUT because too big]\n"); CHKERRQ(ierr);
   }
 
   // CLEAN UP
