@@ -13,4 +13,4 @@ all: structure.pdf
 .PHONY: clean
 
 clean:
-	@rm -f *~ *.out *.aux *.log *.bbl *.blg *.synctex.gz
+	@rm -f *~ *.out *.aux *.log *.bbl *.blg *.synctex.gz *.idx *.toc *.dvi

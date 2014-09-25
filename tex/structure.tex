@@ -1,36 +1,51 @@
-\documentclass[11pt,reqno]{amsart}
-%prepared in AMSLaTeX, under LaTeX2e
-\addtolength{\oddsidemargin}{-.65in}
-\addtolength{\evensidemargin}{-.65in}
-\addtolength{\topmargin}{-.3in}
-\addtolength{\textwidth}{1.5in}
-\addtolength{\textheight}{.6in}
+\documentclass{tufte-book}
 
-\renewcommand{\baselinestretch}{1.1}
+\hypersetup{colorlinks}% uncomment this line if you prefer colored hyperlinks (e.g., for onscreen viewing)
+
+\title{PETSc for PDEs\thanks{Thanks to Jed Brown and Constantine Khroulev, my gurus.}}
+\author{Ed Bueler}
+\publisher{Publisher of This Book}
+
+\date{\today}
+
+% For nicely typeset tabular material
+\usepackage{booktabs}
+
+%\documentclass[11pt,reqno]{amsart}
+%prepared in AMSLaTeX, under LaTeX2e
+%\addtolength{\oddsidemargin}{-.65in}
+%\addtolength{\evensidemargin}{-.65in}
+%\addtolength{\topmargin}{-.3in}
+%\addtolength{\textwidth}{1.5in}
+%\addtolength{\textheight}{.6in}
+
+%\renewcommand{\baselinestretch}{1.1}
 
 \usepackage{verbatim} % for "comment" environment
-
-\usepackage[pdftex, colorlinks=true, plainpages=false, linkcolor=blue, citecolor=red, urlcolor=blue]{hyperref}
-
 \usepackage{xspace}
-
 \usepackage{fancyvrb}
-
-\newcommand{\minput}[1]{
-\vspace{0.8cm}
-\VerbatimInput[frame=single,framesep=3mm,label=\fbox{\normalsize \textsl{\,#1.m\,}},fontfamily=courier,fontsize=\footnotesize]{../mfiles/#1.slim.m}
-\vspace{0.5cm}
-}
-
-\usepackage[final]{graphicx}
+%\usepackage[final]{graphicx}
+\usepackage{graphicx}
+\usepackage{amssymb}
+%\usepackage[T1, OT1]{fontenc}
+%\usepackage[pdftex, colorlinks=true, plainpages=false, linkcolor=blue, citecolor=red, urlcolor=blue]{hyperref}
 
 %\newcommand{\regfigure}[2]{\includegraphics[height=#2in,keepaspectratio=true]{#1}}
 
-% macros
-\usepackage{amssymb}
+\newcommand{\cinput}[1]{
+\vspace{0.8cm}
+\VerbatimInput[frame=single,framesep=3mm,label=\fbox{\normalsize \textsl{\,#1.m\,}},fontfamily=courier,fontsize=\footnotesize]{../c/#1}
+\vspace{0.5cm}
+}
 
-\usepackage[T1, OT1]{fontenc}
-\renewcommand{\dh}{\fontencoding{T1}\selectfont{\symbol{240}}}
+\newcommand{\caveat}[1]{
+\vspace{1.0cm}{\Large
+\begin{quote}
+#1
+\end{quote}
+}
+\vspace{0.8cm}
+}
 
 \newcommand{\bA}{\mathbf{A}}
 \newcommand{\bB}{\mathbf{B}}
@@ -62,25 +77,70 @@
 \renewcommand{\Re}{\operatorname{Re}}
 \renewcommand{\Im}{\operatorname{Im}}
 
-
-
-
-\title{PETSc for PDEs}
-
-\author{Ed Bueler}
-
-\date{\today}
+\usepackage{makeidx}
+\makeindex
 
 \begin{document}
+
+\frontmatter
+
 \maketitle
 
-\thispagestyle{empty}
+\tableofcontents
 
-This is a draft structure.  For sure I will cite \cite{Smithetal1996}.
 
-\bigskip
-\small
+\chapter*{Why this book?}
+
+This is a draft structure.  For sure I will cite \citep{Smithetal1996}.
+
+\section{Introduction}
+
+\section{What is PETSc, and how to use it?}
+
+\newcommand{\pVec}{{\Large\texttt{Vec}}}
+\newcommand{\pMat}{{\Large\texttt{Mat}}}
+
+\section{\pVec s and \pMat s}  [introduce initialization/finalization, object Create+SetFromOptions paradigm, parallel layout of \pVec
+
+\cinput{c1matvec.c}
+
+\caveat{\emph{But} \Matlab is all you want if scale does not matter}
+
+%%%%%%%%%%
+
+\mainmatter
+
+\chapter{PETSc for \textsc{linear} PDEs}
+
+\section{Getting a triangular mesh into PETSc}
+
+\cinput{c2triangle.c}
+
+\section{FEM method, for the Poisson equation}
+
+\section{Preallocate a \pMat}
+
+\cinput{c2prealloc.c}
+
+\section{Assembling Poisson}
+
+\section{Performance: convergence and scaling}
+
+\caveat{\emph{But} real PDEs are nonlinear.  And PETSc helps with meshes.}
+
+%%%%%%%%%%
+
+%\chapter{}
+
+%\section{}
+
+%\section{}
+
+%%%%%%%%%%
+
+\backmatter
+
 \bibliography{ice-bib}
-\bibliographystyle{siam}
+\bibliographystyle{plainnat}
 
 \end{document}
