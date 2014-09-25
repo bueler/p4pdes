@@ -1,22 +1,21 @@
 \documentclass{tufte-book}
 
-\hypersetup{colorlinks}% uncomment this line if you prefer colored hyperlinks (e.g., for onscreen viewing)
+\hypersetup{colorlinks}
 
-\title{PETSc for PDEs\thanks{Thanks to Jed Brown and Constantine Khroulev, my gurus.}}
+\title{PETSc for PDEs}
 \author{Ed Bueler}
-\publisher{Publisher of This Book}
+\publisher{Maybe Someday a Publisher of This Book}
 
 \date{\today}
 
-% For nicely typeset tabular material
-\usepackage{booktabs}
-
+\usepackage{booktabs} % for nicely-typeset tabular material
 \usepackage{verbatim} % for "comment" environment
 \usepackage{xspace}
 \usepackage{fancyvrb}
 \usepackage{graphicx}
 \usepackage{amssymb}
 
+% macros
 
 \newcommand{\trueinput}[2]{
 \VerbatimInput[frame=single,framesep=3mm,label=\fbox{\normalsize \textsl{\,#1\,}},fontfamily=courier,fontsize=\footnotesize]{#2}
@@ -99,23 +98,26 @@ PDE solver, nor a silver bullet
 }{Barry Smith}
 \vfill
 \openepigraph{%
-\ldots the designer of a new system must not only be the implementor and the first 
-large-scale user; the designer should also write the first user manual\ldots 
-If I had not participated fully in all these activities, 
-literally hundreds of improvements would never have been made, 
-because I would never have thought of them or perceived 
-why they were important.
-}{Donald E. Knuth}
-\vfill
-\openepigraph{%
 Tufte's style is known
 for its extensive use of sidenotes, tight integration of graphics with
 text, and well-set typography.
 }{The Tufte-LaTeX\ Developers}
+\vfill
 
 \maketitle
 
 \tableofcontents
+
+% dedication
+\cleardoublepage
+~\vfill
+\begin{doublespace}
+\noindent\fontsize{18}{22}\selectfont\itshape
+\nohyphenation
+Thanks to \mbox{Jed Brown} and \mbox{Constantine Khroulev}, fellow students, and gurus.
+\end{doublespace}
+\vfill
+\vfill
 
 %%%%%%%%%%
 
@@ -123,7 +125,8 @@ text, and well-set typography.
 
 The Portable, Extensible Toolkit for Scientific computing (\PETSc\sidenote{Say it ``pet sea,'' in spoken english.}) is a library built on the standard software layer for large-scale parallel computation, namely the Message Passing Interface (MPI).
 
-It is not new software.  \PETSc version 2.0, the first version that made a difference to the scientific computing world, was built in 1994.  A textbook\cite{Smithetal1996} using \PETSc 2.0 appeared, emphasizing scalable solutions of linear PDEs through pre-conditioned iterative linear solvers.  For example, \citet{Smithetal1996} demonstrates that domain decomposition methods like additive Schwarz can solve the Poisson equation on irregular domains with fine meshes in parallel.
+It is not new software.  \PETSc version 2.0, the first version that made a difference to the scientific computing world, was built in 1994.  A textbook\sidenote{\citep{Smithetal1996} = \\ \noindent B.~Smith, P.~Bjorstad, and W.~Gropp. \emph{Domain decomposition: parallel multilevel methods for elliptic partial differential equations}. Cambridge
+University Press, 1996} using \PETSc 2.0 appeared, emphasizing scalable solutions of linear PDEs through pre-conditioned iterative linear solvers.  For example, \citet{Smithetal1996} demonstrates that domain decomposition methods like additive Schwarz can solve the Poisson equation on irregular domains with fine meshes in parallel.
 
 But \PETSc is now at version 3.5, and it has transformed into something better.\sidenote{Version 3.5.2 is current in September 2014.  The stable homepage URL for PETSc, including download and installation instructions, is at \href{http://www.mcs.anl.gov/petsc/index.html}{www.mcs.anl.gov/petsc}.}  Examples. and typical applications, now emphasize solving nonlinear PDEs at scale.  The 21st-century \PETSc strategy is to compose Newton's method and mesh topology tools---this part of the \PETSc API dominates what is seen by modern library users---with a run-time chooseable selection of preconditioners and iterative linear solvers.  Thus ``multiphysics'' problems, wherein a system of PDEs with different classical types is solved simultaneously, are within reach.  \PETSc may not be a silver bullet, but the \PETSc user sees powerful tools to solve hard problems.
 
@@ -146,6 +149,8 @@ Numerical ideas from linear algebra \citep{TrefethenBau} arise in this book, but
 \item This book does not replace \citep{Smithetal1996}.
 \item This book does not do a good job teaching the FEM.
 \item This book does not help much if your PDE problem is hyperbolic.
+\item This book does not prove anything.\sidenote{We do give evidence for convergence and scalability when possible.}
+\item This book is inadequate to cover what is known about nonlinear PDEs, much less what is not known.
 \end{itemize}
 
 
@@ -171,23 +176,7 @@ So what do you look like? My best guess is that you've taken a mathematics cours
 
 %%%%%%%%%%
 
-\chapter{2. Linear PDEs, naively}
-
-\section{Getting a triangular mesh into \PETSc}
-
-\cinput{c2triangle.c}{reads \textsc{triangle}-generated mesh, then re-reads in parallel}
-
-\section{FEM method, for the Poisson equation}
-
-\section{Preallocate a \pMat}
-
-\cinput{c2prealloc.c}{demonstrates preallocation of parallel \pMat}
-
-\section{Assembling Poisson}
-
-\section{Performance: convergence and scaling}
-
-\caveat{But real-world PDEs are nonlinear.}
+\input{linear.tex} % chapter 2
 
 %%%%%%%%%%
 

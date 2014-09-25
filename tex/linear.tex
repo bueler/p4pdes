@@ -1,0 +1,18 @@
+
+\chapter{2. Linear PDEs, naively}
+
+\section{Getting a triangular mesh into \PETSc}
+
+\cinput{c2triangle.c}{reads \textsc{triangle}-generated mesh, then re-reads in parallel}
+
+\section{FEM method, for the Poisson equation}
+
+\section{Preallocate a \pMat}
+
+\cinput{c2prealloc.c}{demonstrates preallocation of parallel \pMat}
+
+\section{Assembling Poisson}
+
+\section{Performance: convergence and scaling}
+
+\caveat{But real-world PDEs are nonlinear.}
