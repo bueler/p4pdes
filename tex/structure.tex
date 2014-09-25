@@ -131,7 +131,7 @@ On the other hand, its notoriously complicated.  So perhaps a new textbook is ne
 
 This textbook, needed or not, does not replace the \PETSc \emph{User's Manual}.  The reader should grab that PDF, and at least know the topics it addresses.  (That is, a PDF \emph{User's Manual} is a good tool even if searching online is the first resort.)  For one thing, the current book assumes you want to solve PDEs, while there are many uses of \PETSc besides that.
 
-\section{The approach taken here, and what I need from you}  This book should help you solve nonlinear partial differential equations (PDEs), by using \PETSc, by writing C code.  This book will try to both explain the ideas and illustrate the ideas by example codes.  Scalability will always be the goal, and will be demonstrated.
+\section{The approach taken here, and what I need from you}  This book should help you solve nonlinear partial differential equations (PDEs), by using \PETSc, by writing C code.  This book will try to both explain the ideas and illustrate the ideas by example codes.  I will show the codes.  And scalability will always be the goal, and will be demonstrated.
 
 Some of the mathematical theory of PDEs must be familiar to you, but I will also assume some (nebulous, and hard to define) intuition about nonlinear PDE problems.\sidenote{\citep{Evans} and \citep{Ockendonetal2003} are recommended for these purposes, respectively.}  Of course, all applied mathematicians, distinctly including this author, are wanting  when it comes to both mathematical theory and intuition for nonlinear PDEs.
 
@@ -142,6 +142,7 @@ Numerical ideas from linear algebra \citep{TrefethenBau} arise in this book, but
 \item This book does not help you install \PETSc.
 \item This book does not replace a good tutorial introduction for quickly getting started in \PETSc.
 \item This book does not do anything in Fortran.
+\item This book does not help with the many packages \PETSc links to.
 \item This book does not replace \citep{Smithetal1996}.
 \item This book does not do a good job teaching the FEM.
 \item This book does not help much if your PDE problem is hyperbolic.
@@ -150,7 +151,7 @@ Numerical ideas from linear algebra \citep{TrefethenBau} arise in this book, but
 
 \section{Who are you, reader?}  
 
-So what do you look like? My best guess is that you've taken a mathematics course or two in PDEs, somewhere you picked up coding in C, you've written numerical codes in \Matlab or python, and you've tried numerical PDE methods, but \emph{now you want it all in parallel on big problems}.  This book is for you.
+So what do you look like? My best guess is that you've taken a mathematics course or two in PDEs, somewhere you picked up coding in C, you've written numerical codes in \Matlab or python, and you've tried numerical PDE methods, but \emph{now you want it all in parallel on big problems}.\sidenote{This describes the author, too.}  This book is for you.
 
 
 \mainmatter
