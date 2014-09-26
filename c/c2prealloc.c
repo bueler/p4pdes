@@ -1,3 +1,4 @@
+
 static char help[] =
 "Read in a FEM grid from PETSc binary file in parallel.\n\
 Demonstrate Mat preallocation.\n\
@@ -20,30 +21,26 @@ number of nonzeros for the corresponding matrix row(s).
 
 #include <petscmat.h>
 #include <petscksp.h>
-
 #define DEBUG 0
-
 #define matassembly(X) { ierr = MatAssemblyBegin(X,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr); \
                          ierr = MatAssemblyEnd(X,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr); }
 
-int main(int argc,char **args)
-{
+int main(int argc,char **args) {
+
+  // STANDARD PREAMBLE
+  PetscInitialize(&argc,&args,(char*)0,help);
+  const MPI_Comm  COMM = PETSC_COMM_WORLD;
+  PetscMPIInt     rank;
+  MPI_Comm_rank(COMM,&rank);
+  const PetscInt  MPL = PETSC_MAX_PATH_LEN;
+  PetscErrorCode  ierr;
+
   // MAJOR VARIABLES FOR TRIANGULAR MESH
   PetscInt N,   // number of degrees of freedom (= number of all nodes)
            M;   // number of elements;
   Vec      x, y, BT, P; // mesh:  x coord of node, y coord of node, bdry type, element indexing
 
-  // INITIALIZE PETSC
-  PetscInitialize(&argc,&args,(char*)0,help);
-  const MPI_Comm  COMM = PETSC_COMM_WORLD;
-  PetscErrorCode  ierr;
-#if DEBUG
-  PetscMPIInt rank;
-  MPI_Comm_rank(COMM,&rank);
-#endif
-
   // GET FILENAME FROM OPTION
-  const PetscInt MPL = PETSC_MAX_PATH_LEN;
   char           fname[MPL];
   PetscBool      fset;
   ierr = PetscOptionsBegin(COMM, "", "options for c2prealloc", ""); CHKERRQ(ierr);

@@ -7,13 +7,25 @@ Let $\Omega \subset \RR^d$
 
 \section{Getting a triangular mesh into \PETSc}
 
-\cinput{c2triangle.c}{reads \textsc{triangle}-generated mesh, then re-reads in parallel}
+\cinputpart{c2triangle.c}{A help string, some pre-processor defines, and the standard preamble.}{I}{}{//ENDPREAMBLE}
+
+\cinputpart{c2triangle.c}{Determine filenames using \PETSc option processing.}{II}{//ENDPREAMBLE}{//ENDFILENAME}
+
+\cinputpart{c2triangle.c}{Start to read ASCII files with \textsc{triangle}-generated mesh by going to rank zero processor, reading node header, and allocating accordingly.}{III}{//ENDFILENAME}{//ENDRANK0ALLOC}
+
+\cinputpart{c2triangle.c}{On rank zero processor: Read node information.}{IV}{//ENDRANK0ALLOC}{//ENDREADNODES}
+
+\cinputpart{c2triangle.c}{On rank zero processor: Read element information.}{V}{//STARTREADELEMENTS}{//ENDREADELEMENTS}
+
+\cinputpart{c2triangle.c}{On rank zero processor: Write the mesh out in \PETSc binary format.}{VI}{//STARTBINARYWRITE}{//ENDRANK0}
+
+\cinputpart{c2triangle.c}{Re-read mesh in parallel, and write in parallel.}{VII}{//ENDRANK0}{//END}
 
 \section{FEM method, for the Poisson equation}
 
 \section{Preallocate a \pMat}
 
-\cinput{c2prealloc.c}{demonstrates preallocation of parallel \pMat}
+%\cinputfull{c2prealloc.c}{demonstrates preallocation of parallel \pMat}{}{}
 
 \section{Assembling Poisson}
 

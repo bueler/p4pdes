@@ -1,4 +1,5 @@
-static char help[] = 
+
+static char help[] =
 "Read (rank 0 only) a FEM grid from ASCII files written by triangle.\n\
 Write (rank 0 only) in PETSc binary format.\n\
 Read (all ranks) back and show at stdout.\n\n\
@@ -10,23 +11,23 @@ Then do\n\
 which reads bump.1.{node,ele} and writes bump.1.petsc.\n\n";
 
 #include <petscmat.h>
-
 #define DEBUG 0
-
 #define vecassembly(X) { ierr = VecAssemblyBegin(X); CHKERRQ(ierr); \
                          ierr = VecAssemblyEnd(X); CHKERRQ(ierr); }
 
 int main(int argc,char **args) {
 
+  // STANDARD PREAMBLE
   PetscInitialize(&argc,&args,(char*)0,help);
   const MPI_Comm  COMM = PETSC_COMM_WORLD,
                   SELF = PETSC_COMM_SELF;
   PetscMPIInt     rank;
   MPI_Comm_rank(COMM,&rank);
+  const PetscInt  MPL = PETSC_MAX_PATH_LEN;
   PetscErrorCode  ierr;
+//ENDPREAMBLE
 
   // GET FILENAME ROOT FROM OPTION AND BUILD FILENAMES
-  const PetscInt MPL = PETSC_MAX_PATH_LEN;
   PetscBool      fset;
   char fnameroot[MPL], outfilename[MPL], nodefilename[MPL], elefilename[MPL];
   ierr = PetscOptionsBegin(COMM, "", "options for c2triangle", ""); CHKERRQ(ierr);
@@ -42,6 +43,7 @@ int main(int argc,char **args) {
   strcat(elefilename,".ele");
   strcpy(outfilename,fnameroot);
   strcat(outfilename,".petsc");
+//ENDFILENAME
 
   // RANK 0 OPENS ASCII FILES
   FILE *nodefile, *elefile;
@@ -74,6 +76,7 @@ int main(int argc,char **args) {
     ierr = PetscObjectSetName((PetscObject)vx,"node x coordinate (seq)"); CHKERRQ(ierr);
     ierr = PetscObjectSetName((PetscObject)vy,"node y coordinate (seq)"); CHKERRQ(ierr);
     ierr = PetscObjectSetName((PetscObject)vBT,"node boundary type (seq)"); CHKERRQ(ierr);
+//ENDRANK0ALLOC
 
     // FILL 1D VECS FROM NODE FILE
     PetscInt    i,iplusone;
@@ -93,6 +96,7 @@ int main(int argc,char **args) {
     vecassembly(vx)
     vecassembly(vy)
     vecassembly(vBT)
+//ENDREADNODES
 #if DEBUG
     ierr = PetscPrintf(SELF,"node location and boundary type read (DEBUG):\n"); CHKERRQ(ierr);
     ierr = VecView(vx,PETSC_VIEWER_STDOUT_SELF); CHKERRQ(ierr);
@@ -100,6 +104,7 @@ int main(int argc,char **args) {
     ierr = VecView(vBT,PETSC_VIEWER_STDOUT_SELF); CHKERRQ(ierr);
 #endif
 
+//STARTREADELEMENTS
     // READ ELEMENT HEADER
     PetscInt M,   // number of elements
              nthree, nattrele;
@@ -137,11 +142,13 @@ int main(int argc,char **args) {
       ierr = VecSetValues(vP,3,j,w,INSERT_VALUES); CHKERRQ(ierr);
     }
     vecassembly(vP)
+//ENDREADELEMENTS
 #if DEBUG
     ierr = PetscPrintf(SELF,"element indices read (DEBUG):\n"); CHKERRQ(ierr);
     ierr = VecView(vP,PETSC_VIEWER_STDOUT_SELF); CHKERRQ(ierr);
 #endif
 
+//STARTBINARYWRITE
     // DO BINARY WRITE
     PetscViewer viewer;
     ierr = PetscPrintf(SELF,"writing %s on rank 0 ...\n",outfilename); CHKERRQ(ierr);
@@ -162,6 +169,7 @@ int main(int argc,char **args) {
 
   ierr = PetscFClose(COMM,nodefile); CHKERRQ(ierr);
   ierr = PetscFClose(COMM,elefile); CHKERRQ(ierr);
+//ENDRANK0
 
   // READ BACK IN PARALLEL: ALLOCATE VIEWER AND VECS
   Vec rx,ry,rP,rBT;
@@ -209,3 +217,4 @@ int main(int argc,char **args) {
   PetscFinalize();
   return 0;
 }
+//END

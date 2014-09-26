@@ -21,15 +21,27 @@
 \VerbatimInput[frame=single,framesep=3mm,label=\fbox{\normalsize \textsl{\,#1\,}},fontfamily=courier,fontsize=\footnotesize]{#2}
 }
 
-\newcommand{\cinput}[2]{
+\newcommand*\FancyVerbStartString{fill string}
+\newcommand*\FancyVerbStopString{fill string}
+
+\newcommand{\cinputraw}[5]{  
+\renewcommand*\FancyVerbStartString{#4}
+\renewcommand*\FancyVerbStopString{#5}
 \begin{figure*}
 \vspace{0.8cm}
-%\trueinput{#1}{../c/#1}
-\trueinput{#1}{fakeinput.c}
+\VerbatimInput[frame=single,%
+               framesep=3mm,%
+               label=\fbox{\normalsize \textsl{\,#1\,}#3},%
+               fontfamily=courier,%
+               fontsize=\small]{../c/#1}
 \vspace{0.5cm}
 \caption{#2}
 \end{figure*}
 }
+
+\newcommand{\cinput}[4]{\cinputraw{#1}{#2}{}{#3}{#4}}
+\newcommand{\cinputpart}[5]{\cinputraw{#1}{#2}{\quad \textbf{part #3}}{#4}{#5}}
+\newcommand{\cinputfull}[2]{\cinput{#1}{#2}{}{VERYUNLIKELYSTRING314159}}
 
 \newcommand{\caveat}[1]{\marginnote{\textsc{Where we stand:}\\  #1}}
 
@@ -76,8 +88,14 @@
 \renewcommand{\Im}{\operatorname{Im}}
 
 \newcommand{\PETSc}{\textsc{PETSc}\xspace}
-\newcommand{\pVec}{{\Large\texttt{Vec}}}
-\newcommand{\pMat}{{\Large\texttt{Mat}}}
+
+\newcommand{\pDM}{{\texttt{DM}}}
+\newcommand{\pDMPlex}{{\texttt{DMPlex}}}
+\newcommand{\pKSP}{{\texttt{KSP}}}
+\newcommand{\pMat}{{\texttt{Mat}}}
+\newcommand{\pSNES}{{\texttt{SNES}}}
+\newcommand{\pTS}{{\texttt{TS}}}
+\newcommand{\pVec}{{\texttt{Vec}}}
 
 % eventually this is a good idea:
 %\usepackage{makeidx}
@@ -90,7 +108,7 @@
 % epigraph page first
 \newpage\thispagestyle{empty}
 \openepigraph{%
-The only way to rectify our reasonings is to make them as tangible as those of the Mathematicians, so that we can find our error at a glance, and when there are disputes among persons, we can simply say: Let us calculate, without further ado, to see who is right.
+\dots when there are disputes among persons, we can simply say: Let us calculate, without further ado, to see who is right.
 }{Gottfried Wilhelm Leibniz}
 \vfill
 \openepigraph{%
@@ -112,6 +130,7 @@ text, and well-set typography.
 
 \tableofcontents
 
+\begin{comment}
 % dedication
 \cleardoublepage
 ~\vfill
@@ -121,7 +140,7 @@ text, and well-set typography.
 Thanks to \mbox{Jed Brown} and \mbox{Constantine Khroulev}, fellow students, and gurus.
 \end{doublespace}
 \vfill
-\vfill
+\end{comment}
 
 %%%%%%%%%%
 
@@ -175,7 +194,11 @@ You've taken a mathematics course or two in PDEs.  Somewhere you picked up a bit
 
 \section{Getting started with a code}
 
-\cinput{c1matvec.c}{demonstrates \PETSc code basics}
+\cinputpart{c1matvec.c}{Initialize \PETSc and allocate \pVec s and \pMat.}{I}{}{//ENDSETUP}
+
+\cinputpart{c1matvec.c}{Assemble \pMat $A$ and right-hand side $b$.}{II}{//ENDSETUP}{//ENDASSEMBLY}
+
+\cinputpart{c1matvec.c}{Set up \pKSP.  Solve.  Finalize.}{III}{//ENDASSEMBLY}{//END}
 
 \section{\textsc{Vec}s and \textsc{Mat}s}  [introduce initialization/finalization, object Create+SetFromOptions paradigm, parallel layout of \pVec
 

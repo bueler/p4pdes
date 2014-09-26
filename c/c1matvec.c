@@ -1,4 +1,6 @@
-static char help[] = "Solves a symmetric 4x4 linear system with KSP.\n\
+
+static char help[] =
+"Solves a symmetric 4x4 linear system with KSP.\n\
 Try:\n\
   ./c1matvec                            # sequential solve on one process\n\
   mpiexec -n 2 ./c1matvec               # parallel solve on two processes\n\
@@ -29,6 +31,7 @@ int main(int argc,char **args)
   MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,4,4);
   MatSetFromOptions(A);
   MatSetUp(A);
+//ENDSETUP
 
   PetscInt       i,j,Istart,Iend;
   PetscScalar    v;
@@ -42,14 +45,17 @@ int main(int argc,char **args)
       v = 1.0;  j = i+1;  MatSetValues(A,1,&i,1,&j,&v,INSERT_VALUES);
     }
   }
-  MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);  MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);
+  MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);
   MatSetOption(A,MAT_SYMMETRIC,PETSC_TRUE);
 
   PetscInt       ix[4] = {0.0, 1.0, 2.0, 3.0};
   PetscScalar    xexactvals[4] = {3.0, 2.0, 1.0, 0.0};
   VecSetValues(xexact,4,ix,xexactvals,INSERT_VALUES);
-  VecAssemblyBegin(xexact);  VecAssemblyEnd(xexact);
+  VecAssemblyBegin(xexact);
+  VecAssemblyEnd(xexact);
   MatMult(A,xexact,b);
+//ENDASSEMBLY
 
   KSPCreate(PETSC_COMM_WORLD,&ksp);
   KSPSetOperators(ksp,A,A);
@@ -66,3 +72,4 @@ int main(int argc,char **args)
   PetscFinalize();
   return 0;
 }
+//END
