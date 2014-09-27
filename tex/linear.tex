@@ -1,9 +1,23 @@
 
 \chapter{2. Linear PDEs, naively}
 
-We start with a cliched example because it is the right place to start.  The Poisson problem models the distribution of temperature in a conducting object at steady state, the electrostatic potential, the equilibrium distribution from certain random walks, and many other other physical phenomena.
+We start with a cliched example because it is the right place to start.
 
-Let $\Omega \subset \RR^d$
+Let $\Omega \subset \RR^d$ be a polygonal region\marginnote{Only $d=2$ and $d=3$ are used in this book.} with boundary decomposed into well-behaved subsets $\partial_D \Omega$ and $\partial_N \Omega$ whose union is the whole boundary $\partial \Omega$.  The \emph{Poisson problem}, in strong form and including both Dirichlet and Neumann boundary conditions, is
+\begin{align}
+\grad^2 u &= f \quad \text{ on } \Omega, \label{poissonstrong} \\
+u &= g \quad \text{ on } \partial_D \Omega, \notag \\
+\frac{\partial u}{\partial n} &= h \quad \text{ on } \partial_N \Omega \notag
+\end{align}
+where $\partial u/\partial n = \bn \cdot \grad u$.  Here the data of the problem, besides the region $\Omega$ and its boundary, is a \emph{source term} $f\in L^2(\Omega)$, \emph{Dirichlet} data $g\in L^2(\partial_N \Omega)$, and \emph{non-homogeneous Neumann} data $h\in L^2(\partial_N \Omega)$.  For simplicity, and so that the solution of this problem is unique if it exists \citep{Elmanetal2005}, we assume $\partial_D \Omega$ has positive measure, and all of our examples will have that property.
+
+This Poisson problem models the distribution of temperature in a conducting object at steady state, the electrostatic potential, the equilibrium distribution from certain random walks, and many other other physical phenomena.  And it is linear, that is, if $u_1$ and $u_2$ are solutions then convex linear combinations are also solutions.  More relevantly, it is a linear problem in the sense that finite-dimensional approximations of the Poisson problem are simply matrix problems.
+
+In the above form \eqref{poissonstrong} there may be no solution where ``$\grad^2 u$'' makes sense as a function.  In particular, there may be no $u\in C^2(\Omega)$ which is continuous up to the boundary (i.e.~$u\in C(\bar\Omega)$).  There is, however, a solution if we change to the following weak form \citep{Elmanetal2005}.  Let
+    $$H^1(\Omega) = \{u\in L^2(\Omega) \big| \grad u \text{ exists a.e.~and } \grad u \in L^2(\Omega)\},$$
+a Sobolev space \citep{Evans}.\sidenote{The many mathematical technicalities, covered by \citep{Evans}, for example, are issues orthogonal to our goal, which is computational performance in cases where the Poisson problem is mathematically well-behaved.}  This space has two subsets we will use often, namely those subspaces with value $g$ and with value $0$ on $\partial_D \Omega$, respectively, which we denote $H_g^1(\Omega)$ and $H_0^1(\Omega)$.
+
+FIXME
 
 \section{Getting a triangular mesh into \PETSc}
 
