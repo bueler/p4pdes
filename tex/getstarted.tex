@@ -1,0 +1,15 @@
+
+\chapter{1. Just solve a small linear system}
+
+\section{Getting started with a PETSc code}
+
+\cinputpartnostrip{c1matvec.c}{Initialize \PETSc and allocate \pVec s and \pMat.}{I}{}{//ENDSETUP}
+
+\cinputpartnostrip{c1matvec.c}{Assemble \pMat $A$ and right-hand side $b$.}{II}{//ENDSETUP}{//ENDASSEMBLY}
+
+\cinputpartnostrip{c1matvec.c}{Set up \pKSP.  Solve.  Finalize.}{III}{//ENDASSEMBLY}{//END}
+
+\section{\textsc{Vec}s and \textsc{Mat}s}  [introduce initialization/finalization, object Create+SetFromOptions paradigm, parallel layout of \pVec
+
+\caveat{But \Matlab is all you want if scale does not matter.}
+
