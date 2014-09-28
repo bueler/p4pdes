@@ -1,8 +1,9 @@
 
 static char help[] =
-"Read (rank 0 only) a FEM grid from ASCII files written by triangle.\n\
-Write (rank 0 only) in PETSc binary format.\n\
-Read (all ranks) back and show at stdout.\n\n\
+"Three step example of I/O with PETSc:\n\
+1. Rank 0 only:  Read a FEM grid from ASCII files written by triangle.\n\
+2. Rank 0 only:  Write in PETSc binary format.\n\
+1. All ranks:    Read binary file back and show contents at stdout.\n\n\
 For example, do\n\
     triangle -pqa1.0 bump\n\
 (or similar) to generate bump.1.{node,ele}.\n\
@@ -11,10 +12,10 @@ Then do\n\
 which reads bump.1.{node,ele} and writes bump.1.petsc.\n\n";
 
 #include <petscmat.h>
-#define DEBUG 0
 #define vecassembly(X) { ierr = VecAssemblyBegin(X); CHKERRQ(ierr); \
                          ierr = VecAssemblyEnd(X); CHKERRQ(ierr); }
 
+//STARTPREAMBLE
 int main(int argc,char **args) {
 
   // STANDARD PREAMBLE
@@ -73,9 +74,6 @@ int main(int argc,char **args) {
     ierr = VecCreateSeq(SELF,N,&vx); CHKERRQ(ierr);
     ierr = VecDuplicate(vx,&vy); CHKERRQ(ierr);
     ierr = VecDuplicate(vx,&vBT); CHKERRQ(ierr);
-    ierr = PetscObjectSetName((PetscObject)vx,"node x coordinate (seq)"); CHKERRQ(ierr);
-    ierr = PetscObjectSetName((PetscObject)vy,"node y coordinate (seq)"); CHKERRQ(ierr);
-    ierr = PetscObjectSetName((PetscObject)vBT,"node boundary type (seq)"); CHKERRQ(ierr);
 //ENDRANK0ALLOC
 
     // FILL 1D VECS FROM NODE FILE
@@ -97,14 +95,7 @@ int main(int argc,char **args) {
     vecassembly(vy)
     vecassembly(vBT)
 //ENDREADNODES
-#if DEBUG
-    ierr = PetscPrintf(SELF,"node location and boundary type read (DEBUG):\n"); CHKERRQ(ierr);
-    ierr = VecView(vx,PETSC_VIEWER_STDOUT_SELF); CHKERRQ(ierr);
-    ierr = VecView(vy,PETSC_VIEWER_STDOUT_SELF); CHKERRQ(ierr);
-    ierr = VecView(vBT,PETSC_VIEWER_STDOUT_SELF); CHKERRQ(ierr);
-#endif
 
-//STARTREADELEMENTS
     // READ ELEMENT HEADER
     PetscInt M,   // number of elements
              nthree, nattrele;
@@ -112,7 +103,7 @@ int main(int argc,char **args) {
       SETERRQ1(SELF,2,"expected 3 values in reading from %s",elefilename);
     }
     if (nthree != 3) {
-      SETERRQ1(SELF,3,"nthree read from %s not equal to 3 (= nodes per element)",elefilename);
+      SETERRQ1(SELF,3,"nthree read from %s not equal to 3",elefilename);
     }
     ierr = PetscPrintf(SELF,"reading %s on rank 0 ...\n",elefilename); CHKERRQ(ierr);
     ierr = PetscPrintf(SELF,
@@ -123,7 +114,6 @@ int main(int argc,char **args) {
     // ALLOCATE VEC FOR ELEMENTS
     Vec vP; // array with 3M rows; P[k][q] is node index (0 based)
     ierr = VecCreateSeq(SELF,3*M,&vP); CHKERRQ(ierr);
-    ierr = PetscObjectSetName((PetscObject)vP,"element node index array (seq and 0 based)"); CHKERRQ(ierr);
 
     // READ ELEMENTS; EACH PROCESS HOLDS FULL INFO (THREE NODE INDICES PER ELEMENT)
     PetscInt k, kplusone, q, j[3];
@@ -143,12 +133,7 @@ int main(int argc,char **args) {
     }
     vecassembly(vP)
 //ENDREADELEMENTS
-#if DEBUG
-    ierr = PetscPrintf(SELF,"element indices read (DEBUG):\n"); CHKERRQ(ierr);
-    ierr = VecView(vP,PETSC_VIEWER_STDOUT_SELF); CHKERRQ(ierr);
-#endif
 
-//STARTBINARYWRITE
     // DO BINARY WRITE
     PetscViewer viewer;
     ierr = PetscPrintf(SELF,"writing %s on rank 0 ...\n",outfilename); CHKERRQ(ierr);
@@ -180,10 +165,10 @@ int main(int argc,char **args) {
   ierr = VecCreate(COMM,&ry); CHKERRQ(ierr);
   ierr = VecCreate(COMM,&rBT); CHKERRQ(ierr);
   ierr = VecCreate(COMM,&rP); CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)rx,"node x coordinate"); CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)ry,"node y coordinate"); CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)rBT,"node boundary type"); CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)rP,"element node index array (0 based)"); CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject)rx,"node-x-coordinate"); CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject)ry,"node-y-coordinate"); CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject)rBT,"node-boundary-type"); CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject)rP,"element-node-indices"); CHKERRQ(ierr);
 
   // FILL FROM FILE
   ierr = PetscPrintf(COMM,"reading from %s in parallel ...\n",outfilename); CHKERRQ(ierr);

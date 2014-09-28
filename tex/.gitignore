@@ -1,6 +1,7 @@
 *~
 ice-bib.bib
 structure.pdf
+cstrip/*.c
 
 ## Core latex/pdflatex auxiliary files:
 *.aux

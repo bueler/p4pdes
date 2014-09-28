@@ -24,24 +24,31 @@
 \newcommand*\FancyVerbStartString{fill string}
 \newcommand*\FancyVerbStopString{fill string}
 
-\newcommand{\cinputraw}[5]{  
-\renewcommand*\FancyVerbStartString{#4}
-\renewcommand*\FancyVerbStopString{#5}
+%\cinputraw{FILENAME}{FILENAMEROOT}{CAPTION}{PARTSTRING}{STARTSTRING}{STOPSTRING}
+\newcommand{\cinputraw}[6]{
+\renewcommand*\FancyVerbStartString{#5}
+\renewcommand*\FancyVerbStopString{#6}
 \begin{figure*}
 \vspace{0.8cm}
 \VerbatimInput[frame=single,%
                framesep=3mm,%
-               label=\fbox{\normalsize \textsl{\,#1\,}#3},%
+               label=\fbox{\normalsize \textsl{\,#2\,}#4},%
                fontfamily=courier,%
-               fontsize=\small]{../c/#1}
+               fontsize=\small]{#1}
 \vspace{0.5cm}
-\caption{#2}
+\caption{#3}
 \end{figure*}
 }
 
-\newcommand{\cinput}[4]{\cinputraw{#1}{#2}{}{#3}{#4}}
-\newcommand{\cinputpart}[5]{\cinputraw{#1}{#2}{\quad \textbf{part #3}}{#4}{#5}}
-\newcommand{\cinputfull}[2]{\cinput{#1}{#2}{}{VERYUNLIKELYSTRING314159}}
+\newcommand{\cinput}[4]{%
+    \cinputraw{cstrip/#1}{#1}{#2}{}{#3}{#4}}
+\newcommand{\cinputnostrip}[4]{%
+    \cinputraw{../c/#1}{#1}{#2}{}{#3}{#4}}
+
+\newcommand{\cinputpart}[5]{%
+    \cinputraw{cstrip/#1}{#1}{#2}{\quad \textbf{part #3}}{#4}{#5}}
+\newcommand{\cinputpartnostrip}[5]{%
+    \cinputraw{../c/#1}{#1}{#2}{\quad \textbf{part #3}}{#4}{#5}}
 
 \newcommand{\caveat}[1]{\marginnote{\textsc{Where we stand:}\\  #1}}
 
@@ -192,11 +199,11 @@ You've taken a mathematics course or two in PDEs.  Somewhere you picked up a bit
 
 \section{Getting started with a code}
 
-\cinputpart{c1matvec.c}{Initialize \PETSc and allocate \pVec s and \pMat.}{I}{}{//ENDSETUP}
+\cinputpartnostrip{c1matvec.c}{Initialize \PETSc and allocate \pVec s and \pMat.}{I}{}{//ENDSETUP}
 
-\cinputpart{c1matvec.c}{Assemble \pMat $A$ and right-hand side $b$.}{II}{//ENDSETUP}{//ENDASSEMBLY}
+\cinputpartnostrip{c1matvec.c}{Assemble \pMat $A$ and right-hand side $b$.}{II}{//ENDSETUP}{//ENDASSEMBLY}
 
-\cinputpart{c1matvec.c}{Set up \pKSP.  Solve.  Finalize.}{III}{//ENDASSEMBLY}{//END}
+\cinputpartnostrip{c1matvec.c}{Set up \pKSP.  Solve.  Finalize.}{III}{//ENDASSEMBLY}{//END}
 
 \section{\textsc{Vec}s and \textsc{Mat}s}  [introduce initialization/finalization, object Create+SetFromOptions paradigm, parallel layout of \pVec
 

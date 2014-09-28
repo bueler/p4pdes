@@ -16,59 +16,64 @@ int main(int argc,char **args)
   Vec            x,b,xexact;
   Mat            A;
   KSP            ksp;
+  PetscErrorCode  ierr;
 
   PetscInitialize(&argc,&args,(char*)0,help);
 
-  VecCreate(PETSC_COMM_WORLD,&x);
-  VecSetSizes(x,PETSC_DECIDE,4);
-  VecSetFromOptions(x);
-  PetscObjectSetName((PetscObject)x,"approximate solution");
-  VecDuplicate(x,&b);
-  VecDuplicate(x,&xexact);
-  PetscObjectSetName((PetscObject)xexact,"exact solution");
+  ierr = VecCreate(PETSC_COMM_WORLD,&x); CHKERRQ(ierr);
+  ierr = VecSetSizes(x,PETSC_DECIDE,4); CHKERRQ(ierr);
+  ierr = VecSetFromOptions(x); CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject)x,"approx solution"); CHKERRQ(ierr);
+  ierr = VecDuplicate(x,&b); CHKERRQ(ierr);
+  ierr = VecDuplicate(x,&xexact); CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject)xexact,"exact solution"); CHKERRQ(ierr);
 
-  MatCreate(PETSC_COMM_WORLD,&A);
-  MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,4,4);
-  MatSetFromOptions(A);
-  MatSetUp(A);
+  ierr = MatCreate(PETSC_COMM_WORLD,&A); CHKERRQ(ierr);
+  ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,4,4); CHKERRQ(ierr);
+  ierr = MatSetFromOptions(A); CHKERRQ(ierr);
+  ierr = MatSetUp(A); CHKERRQ(ierr);
 //ENDSETUP
 
   PetscInt       i,j,Istart,Iend;
   PetscScalar    v;
-  MatGetOwnershipRange(A,&Istart,&Iend);
+  ierr = MatGetOwnershipRange(A,&Istart,&Iend); CHKERRQ(ierr);
   for (i=Istart; i<Iend; i++) {
-    v = -2.0;  j = i;  MatSetValues(A,1,&i,1,&j,&v,INSERT_VALUES);
+    v = -2.0;  j = i;
+    ierr = MatSetValues(A,1,&i,1,&j,&v,INSERT_VALUES); CHKERRQ(ierr);
     if (i > 0) {
-      v = 1.0;  j = i-1;  MatSetValues(A,1,&i,1,&j,&v,INSERT_VALUES);
+      v = 1.0;  j = i-1;
+      ierr = MatSetValues(A,1,&i,1,&j,&v,INSERT_VALUES); CHKERRQ(ierr);
     }
     if (i < 3) {
-      v = 1.0;  j = i+1;  MatSetValues(A,1,&i,1,&j,&v,INSERT_VALUES);
+      v = 1.0;  j = i+1;
+      ierr = MatSetValues(A,1,&i,1,&j,&v,INSERT_VALUES); CHKERRQ(ierr);
     }
   }
-  MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);
-  MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);
-  MatSetOption(A,MAT_SYMMETRIC,PETSC_TRUE);
+  ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+  ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+  ierr = MatSetOption(A,MAT_SYMMETRIC,PETSC_TRUE); CHKERRQ(ierr);
 
   PetscInt       ix[4] = {0.0, 1.0, 2.0, 3.0};
   PetscScalar    xexactvals[4] = {3.0, 2.0, 1.0, 0.0};
-  VecSetValues(xexact,4,ix,xexactvals,INSERT_VALUES);
-  VecAssemblyBegin(xexact);
-  VecAssemblyEnd(xexact);
-  MatMult(A,xexact,b);
+  ierr = VecSetValues(xexact,4,ix,xexactvals,INSERT_VALUES); CHKERRQ(ierr);
+  ierr = VecAssemblyBegin(xexact); CHKERRQ(ierr);
+  ierr = VecAssemblyEnd(xexact); CHKERRQ(ierr);
+  ierr = MatMult(A,xexact,b); CHKERRQ(ierr);
 //ENDASSEMBLY
 
-  KSPCreate(PETSC_COMM_WORLD,&ksp);
-  KSPSetOperators(ksp,A,A);
-  KSPSetFromOptions(ksp);
+  ierr = KSPCreate(PETSC_COMM_WORLD,&ksp); CHKERRQ(ierr);
+  ierr = KSPSetOperators(ksp,A,A); CHKERRQ(ierr);
+  ierr = KSPSetFromOptions(ksp); CHKERRQ(ierr);
 
-  KSPSolve(ksp,b,x);
+  ierr = KSPSolve(ksp,b,x); CHKERRQ(ierr);
 
-  VecView(x,PETSC_VIEWER_STDOUT_WORLD);
-  VecView(xexact,PETSC_VIEWER_STDOUT_WORLD);
+  ierr = VecView(x,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
+  ierr = VecView(xexact,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
 
-  KSPDestroy(&ksp);
-  VecDestroy(&x);  VecDestroy(&b);
-  MatDestroy(&A);
+  ierr = KSPDestroy(&ksp); CHKERRQ(ierr);
+  ierr = VecDestroy(&x); CHKERRQ(ierr);
+  ierr = VecDestroy(&b); CHKERRQ(ierr);
+  ierr = MatDestroy(&A); CHKERRQ(ierr);
   PetscFinalize();
   return 0;
 }
