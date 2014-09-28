@@ -2,35 +2,47 @@
 #
 # (C) 2014 Ed Bueler
 #
-# Create a tikz figure from the .node and .ele output of triangle.
+# Create a tikz figure from the .node, .ele, .poly output of triangle.
 
 import numpy
 import argparse
+import sys
 
-parser = argparse.ArgumentParser(description='Converts .node and .ele files from triangle into TikZ format.')
+commandline = " ".join(sys.argv[:])
+
+parser = argparse.ArgumentParser(description='Converts .node, .ele, .poly files from triangle into TikZ format.')
 parser.add_argument('--labelnodes', action='store_true',
                     help='label the nodes with zero-based index', default=False)
-parser.add_argument('-n', '--nodefile', metavar='FILENAME', required = True,
-                    help='input file name for nodes', default='foo.node')
-parser.add_argument('-e', '--elefile', metavar='FILENAME', required = True,
-                    help='input file name for elements', default='foo.ele')
-parser.add_argument('-o', '--outfile', metavar='FILENAME', required = True,
+parser.add_argument('--scale', action='store', metavar='X',
+                    help='amount by which to scale TikZ figure', default=1.0)
+parser.add_argument('--labeloffset', action='store', metavar='X',
+                    help='offset to use in labeling points', default=0.0)
+parser.add_argument('inroot', metavar='NAMEROOT',
+                    help='root of input file name for .node,.ele,.poly', default='foo')
+parser.add_argument('outfile', metavar='FILENAME',
                     help='output file name', default='foo.tikz')
+
 args = parser.parse_args()
 
-# FIXME use options on these:
-scale = 1.0
-offset = 0.25
+nodename = args.inroot + '.node'
+elename  = args.inroot + '.ele'
+polyname = args.inroot + '.poly'
+outname  = args.outfile
+dolabel = args.labelnodes
+scale   = (float)(args.scale)
+offset  = (float)(args.labeloffset)
 
-nodefile = open(args.nodefile, 'r')
-elefile = open(args.elefile, 'r')
-tikz = open(args.outfile, 'w')
+nodefile = open(nodename, 'r')
+elefile  = open(elename,  'r')
+polyfile = open(polyname, 'r')
 
-print 'reading from %s ' % args.nodefile,
+tikz     = open(outname, 'w')
+
+print 'reading from %s ' % nodename
 nodeheader = nodefile.readline()
-print '... header says:  ' + nodeheader,
+print '  header says:  ' + nodeheader,
 N = (int)(nodeheader.split()[0])
-print '  N=%d nodes' % N
+print '  will read N=%d nodes ...' % N
 
 # read node info into arrays
 x = numpy.zeros(N)
@@ -51,45 +63,69 @@ for j in range(N):
   y[j] = float(nxyb[2])
   bt[j] = int(nxyb[3])
 
-print 'reading from %s ' % args.elefile,
+print 'reading from %s ' % elename
 eleheader = elefile.readline()
-print '... header says:  ' + eleheader,
+print '  header says:  ' + eleheader,
 K = (int)(eleheader.split()[0])
-print '  K=%d elements' % K
+print '  will read K=%d elements ...' % K
 
-print 'writing %s ...' % args.outfile,
+print 'reading from %s ' % polyname
+polyheader1 = polyfile.readline()
+polyheader2 = polyfile.readline()
+print '  header says (line 1):  ' + polyheader1,
+print '  header says (line 2):  ' + polyheader2,
+P = (int)(polyheader2.split()[0])
+print '  will read P=%d boundary segments ...' % P
 
+print 'writing %s ...' % outname,
+
+tikz.write('%% created by script tri2tikz.py command line:%s\n' % '')
+tikz.write('%%   %s\n' % commandline)
+tikz.write('%%%s\n' % '')
 tikz.write('\\begin{tikzpicture}[scale=%f]\n' % scale)
 
 for m in range(K):
-  exyb = elefile.readline()
-  if exyb == '':
+  emabc = elefile.readline()
+  if emabc == '':
     break
-  if exyb == '\n':
+  if emabc == '\n':
     continue
-  exyb = exyb.split()
-  if exyb[0] == '#':
+  emabc = emabc.split()
+  if emabc[0] == '#':
     continue
-  if m+1 != int(exyb[0]):
+  if m+1 != int(emabc[0]):
     print 'ERROR: INDEXING WRONG IN READING ELEMENTS'
-  p = [int(exyb[1])-1, int(exyb[2])-1, int(exyb[3])-1] # node indices for this element
+  pp = [int(emabc[1])-1, int(emabc[2])-1, int(emabc[3])-1] # node indices for this element
   kk = [0, 1, 2, 0]  # cycle through nodes
   for k in range(3):
-    jfrom = p[kk[k]]
-    jto   = p[kk[k+1]]
-    if bt[jfrom] > 0 and bt[jto] > 0:
-      if bt[jfrom] == 2 and bt[jto] == 2:
-        mywidth = '2.0pt'
-      else:
-        mywidth = '0.75pt'
-      tikz.write('  \\draw[line width=%s] (%f,%f) -- (%f,%f);\n' \
-                 % (mywidth,x[jfrom],y[jfrom],x[jto],y[jto]))
-    else:
-      tikz.write('  \\draw[gray,very thin] (%f,%f) -- (%f,%f);\n' \
-                 % (x[jfrom],y[jfrom],x[jto],y[jto]))
+    jfrom = pp[kk[k]]
+    jto   = pp[kk[k+1]]
+    tikz.write('  \\draw[gray,very thin] (%f,%f) -- (%f,%f);\n' \
+               % (x[jfrom],y[jfrom],x[jto],y[jto]))
+
+for p in range(P):
+  pjkb = polyfile.readline()
+  if pjkb == '':
+    break
+  if pjkb == '\n':
+    continue
+  pjkb = pjkb.split()
+  if pjkb[0] == '#':
+    continue
+  if p+1 != int(pjkb[0]):
+    print 'ERROR: INDEXING WRONG IN READING ELEMENTS'
+  jfrom = int(pjkb[1])-1
+  jto   = int(pjkb[2])-1
+  bt    = int(pjkb[3])
+  if bt == 2:
+    mywidth = '2.5pt' # strong line for Dirichlet part
+  else:
+    mywidth = '0.75pt'
+  tikz.write('  \\draw[line width=%s] (%f,%f) -- (%f,%f);\n' \
+             % (mywidth,x[jfrom],y[jfrom],x[jto],y[jto]))
 
 for j in range(N):
-  if args.labelnodes:
+  if dolabel:
     tikz.write( '  \\draw (%f,%f) node {$%d$};\n' % (x[j]+0.7*offset,y[j]-offset,j))
   tikz.write('  \\filldraw (%f,%f) circle (1.25pt);\n' % (x[j],y[j]))
 
@@ -98,5 +134,6 @@ print 'done'
 
 nodefile.close()
 elefile.close()
+polyfile.close()
 tikz.close()
 
