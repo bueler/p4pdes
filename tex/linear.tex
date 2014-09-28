@@ -15,10 +15,10 @@ where $\partial u/\partial n = \bn \cdot \grad u$ and $\bn$ is the outward unit 
 \begin{tikzpicture}[scale=0.7]
 %\draw[gray,very thin] (-2,-7) grid (9,4);
 \draw[line width=2pt] (0,0) .. controls (0,3) and (5,3) .. node[sloped,above] {$u=g$} node[sloped,below] {$\partial_D\Omega$} (7,0);
-\draw (7,0) .. controls (9,-2) and (-1,-7) .. node[sloped,above] {$\partial_N\Omega$} node[sloped,below] {$\partial u/\partial n = h$} (-1,-5);
-\draw (-1,-5) .. controls (-1,-4) and (2,-5) .. (2,-3);
-\draw (2,-3) .. controls (2,-1) and (0,-3) .. (0,0);
-\draw (4,-1) node {$- \grad^2 u = f$ in $\Omega$};
+\draw[line width=0.75pt] (7,0) .. controls (9,-2) and (-1,-7) .. node[sloped,above] {$\partial_N\Omega$} node[sloped,below] {$\partial u/\partial n = h$} (-1,-5);
+\draw[line width=0.75pt] (-1,-5) .. controls (-1,-4) and (2,-5) .. (2,-3);
+\draw[line width=0.75pt] (2,-3) .. controls (2,-1) and (0,-3) .. (0,0);
+\draw[line width=0.75pt] (4,-1) node {$- \grad^2 u = f$ in $\Omega$};
 \end{tikzpicture}}
 
 The data of problem \eqref{poissonstrong}, besides the region $\Omega$ and its boundary, is a \emph{source term} $f\in L^2(\Omega)$, \emph{Dirichlet data} $g\in L^2(\partial_N \Omega)$, and \emph{non-homogeneous Neumann data} $h\in L^2(\partial_N \Omega)$.  For simplicity, and so that the solution of this problem is unique if it exists \citep{Elmanetal2005}, we assume $\partial_D \Omega$ has positive measure.  All of our examples will have that property.
@@ -52,14 +52,20 @@ To make this work, from now on we require that $\Omega$ be polygonal,\marginnote
 \begin{tikzpicture}[scale=0.6]
 %\draw[gray,very thin] (-2,-7) grid (9,4);
 \draw[line width=2pt] (0,0) -- (0,2) -- node[sloped,below] {$\partial_D\Omega$} (5,2) -- (8,0);
-\draw (8,0) -- (6,-3) -- node[sloped,above] {$\partial_N\Omega$} (-1,-6) -- (-1,-5);
-\draw (-1,-5) -- (-1,-4) -- (2,-3);
-\draw (2,-3) -- (0,-2) -- (0,0);
+\draw[line width=0.75pt] (8,0) -- (6,-3) -- node[sloped,above] {$\partial_N\Omega$} (-1,-6) -- (-1,-5);
+\draw[line width=0.75pt] (-1,-5) -- (-1,-4) -- (2,-3);
+\draw[line width=0.75pt] (2,-3) -- (0,-2) -- (0,0);
 \end{tikzpicture}}
  with boundary $\partial\Omega$ a closed polygon whose sides are each of positive length, and whose sides are either entirely in $\partial_D\Omega$ or in $\partial_N\Omega$.  As before, to produce a unique solution we require that $\partial_D\Omega$ contain at least one such side.
 
 The triangulation itself is a set
 
+once we have a triangulation
+\begin{marginfigure}
+\input{bump.1.tikz}
+\caption{A FEM triangulation}
+\label{fig:triangulation}
+\end{marginfigure}
 
 \marginnote{{\color{red} Remember:} $u_h$ is the \emph{trial} function and $v_h$ are the \emph{test} functions}
 
