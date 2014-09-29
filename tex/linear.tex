@@ -1,5 +1,5 @@
 
-\chapter{2. Linear PDEs with fast iterative methods}
+\chapter{2. Linear PDEs with matrix methods}
 
 We start with a cliched example because it is the right place to start.
 
@@ -9,20 +9,20 @@ Let $\Omega \subset \RR^d$ be a region.\marginnote{Only $d=2$ and $d=3$ are used
 \begin{align}
 - \grad^2 u &= f \quad \text{ on } \Omega, \label{poissonstrong} \\
 u &= g \quad \text{ on } \partial_D \Omega, \notag \\
-\frac{\partial u}{\partial n} &= h \quad \text{ on } \partial_N \Omega \notag
+\frac{\partial u}{\partial n} &= \gamma \quad \text{ on } \partial_N \Omega \notag
 \end{align}
 where $\partial u/\partial n = \bn \cdot \grad u$ and $\bn$ is the outward unit normal on $\partial \Omega$.\marginnote{%
 \begin{tikzpicture}[scale=0.7]
 %\draw[gray,very thin] (-2,-6) grid (8,3);
 \draw[line width=2pt] (0,0) .. controls (0,3) and (5,3) .. node[sloped,above] {$u=g$} node[sloped,below] {$\partial_D\Omega$} (7,0);
-\draw[line width=0.75pt] (7,0) .. controls (9,-2) and (-1,-7) .. node[sloped,above] {$\partial_N\Omega$} node[sloped,below] {$\partial u/\partial n = h$} (-1,-5);
+\draw[line width=0.75pt] (7,0) .. controls (9,-2) and (-1,-7) .. node[sloped,above] {$\partial_N\Omega$} node[sloped,below] {$\partial u/\partial n = \gamma$} (-1,-5);
 \draw[line width=0.75pt] (-1,-5) .. controls (-1,-4) and (2,-5) .. (2,-3);
 \draw[line width=0.75pt] (2,-3) .. controls (2,-1) and (0,-3) .. (0,0);
 \draw[->,line width=1.0pt] (2,-3) -- (1.2,-3) node[below] {$\bn$}; % normal vector
 \draw (4,-1) node {$- \grad^2 u = f$ in $\Omega$};
 \end{tikzpicture}}
 
-The data of problem \eqref{poissonstrong}, besides the region $\Omega$ and its boundary, is a \emph{source term} $f\in L^2(\Omega)$, \emph{Dirichlet data} $g\in L^2(\partial_N \Omega)$, and \emph{non-homogeneous Neumann data} $h\in L^2(\partial_N \Omega)$.  For simplicity, and so that the solution of this problem is unique \citep{Elmanetal2005}, we assume $\partial_D \Omega$ has positive measure.  All of our examples will have that property.
+The data of problem \eqref{poissonstrong}, besides the region $\Omega$ and its boundary, is a \emph{source term} $f\in L^2(\Omega)$, \emph{Dirichlet data} $g\in L^2(\partial_N \Omega)$, and \emph{non-homogeneous Neumann data} $\gamma\in L^2(\partial_N \Omega)$.  For simplicity, and so that the solution of this problem is unique \citep{Elmanetal2005}, we assume $\partial_D \Omega$ has positive measure.  All of our examples will have that property.
 
 The Poisson problem models the distribution of temperature in a conducting object at steady state, the electrostatic potential, the equilibrium distribution from certain random walks, and many other other physical phenomena.  And it is linear, that is, if $u_1$ and $u_2$ are solutions then convex linear combinations are also solutions.  More relevantly, it is a linear problem in the sense that finite-dimensional approximations of the Poisson problem are simply matrix problems.
 
@@ -30,50 +30,93 @@ As \eqref{poissonstrong} is stated there may be no solution where ``$\grad^2 u$'
 
 Define
     $$H^1(\Omega) = \{u\in L^2(\Omega) \big| \grad u \text{ exists a.e.~and } \grad u \in L^2(\Omega)\},$$
-which is a Sobolev space \citep{Evans}.  This space has two subsets we will use, namely functions with value $g$ and those with value $0$ on $\partial_D \Omega$, respectively, which we denote $H_g^1(\Omega)$ and $H_0^1(\Omega)$.
+which is a Sobolev space \citep{Evans}.  This space has two subsets\marginnote{Note  $H_0^1(\Omega)$ is a linear subspace of $H^1(\Omega)$ while $H_g^1(\Omega)$ is, in the general case $g\ne 0$, not a subspace because the zero function is not in it.  But we casually refer to both as ``subspaces''.} we will use, namely functions with value $g$ and those with value $0$ on $\partial_D \Omega$, respectively, which we denote $H_g^1(\Omega)$ and $H_0^1(\Omega)$.
 
-The weak formulation of the Poisson problem comes from choosing any $v\in H_0^1(\Omega)$, multiplying the first equation in \eqref{poissonstrong} by $v$, and integrating by parts:
+The weak formulation\marginnote{%
+{\color{red}Main ideas.} \par The main ideas of strong and weak formulations:\begin{itemize}
+\item If $u \in H_g^1(\Omega)$ solves the strong form \eqref{poissonstrong} then it solves \eqref{poissonweak} also.
+\item If $u \in H_g^1(\Omega)$ solves the weak form \eqref{poissonweak} then we accept it, by definition, as a solution of the Poisson problem.\end{itemize}} of the Poisson problem comes from choosing any $v\in H_0^1(\Omega)$, multiplying the first equation in \eqref{poissonstrong} by $v$, and integrating by parts:
 \begin{equation*}
 \int_\Omega \grad u \cdot \grad v - \int_{\partial\Omega} \frac{\partial u}{\partial n} v = \int_\Omega f v.
 \end{equation*}
-Now,\marginnote{%
-{\color{red}The main ideas} of strong and weak formulations:\begin{itemize}
-\item If $u \in H_g^1(\Omega)$ solves the strong form \eqref{poissonstrong} then it solves \eqref{poissonweak} also.
-\item If $u \in H_g^1(\Omega)$ solves the weak form \eqref{poissonweak} then we accept it, by definition, as a solution of the Poisson problem.\end{itemize}}
-supposing we already have a classical solution $u$ of \eqref{poissonstrong}, which is in $H_g^1(\Omega)$, we apply the other facts, namely that $v=0$ on $\partial_D\Omega$ and that there is Neumann data on $\partial_N\Omega$:
+Now, supposing we already have a classical solution $u$ of \eqref{poissonstrong}, which is in $H_g^1(\Omega)$, we apply the other facts, namely that $v=0$ on $\partial_D\Omega$ and that there is Neumann data on $\partial_N\Omega$:
 \begin{equation}
-\int_\Omega \grad u \cdot \grad v = \int_\Omega f v + \int_{\partial_N\Omega} h v\quad \text{ for any } v\in H_0^1(\Omega). \label{poissonweak}
+\int_\Omega \grad u \cdot \grad v = \int_\Omega f v + \int_{\partial_N\Omega} \gamma v\quad \text{ for any } v\in H_0^1(\Omega). \label{poissonweak}
 \end{equation}
 
-Equation \eqref{poissonweak} is the weak formulation of the Poisson problem.  A key observation is that $u$ itself incorporates the Dirichlet boundary condition, because it lives in $H_g^1(\Omega)$, while Neumann boundary data $h$, like the source function $f$, appears in equation \eqref{poissonweak}.
-
-The \emph{finite element method} (FEM) comes from requiring the weak formulation  \eqref{poissonweak} to be true for $u$ in a smaller, indeed finite-dimensional, subset of $H_g^1(\Omega)$, and for $v$ also in a finite-dimensional subspace of $H_0^1(\Omega)$; this is a \emph{Galerkin} FEM.  We will build these finite-dimensional subsets, in the current example, using a \emph{unstructured triangulation} on a region $\Omega\subset \RR^2$
-
-To make this work, from now on in this chapter we restrict to $d=2$ dimensions and we require that $\Omega$ be polygonal,\marginnote{%
-\begin{tikzpicture}[scale=0.6]
+Equation \eqref{poissonweak} is the weak formulation of the Poisson problem.
+\begin{comment}
+\marginnote{%
+\begin{tikzpicture}[scale=0.4]
 \draw[line width=2pt] (0,0) -- (0,2) -- node[sloped,below] {$\partial_D\Omega$} (5,2) -- (8,0);
 \draw[line width=0.75pt] (8,0) -- (6,-3) -- node[sloped,above] {$\partial_N\Omega$} (-1,-6) -- (-1,-5);
 \draw[line width=0.75pt] (-1,-5) -- (-1,-4) -- (2,-3);
 \draw[line width=0.75pt] (2,-3) -- (0,-2) -- (0,0);
 \draw (4,-1) node {$\Omega$};
 \end{tikzpicture}}
-with boundary $\partial\Omega$ a closed polygon.  We require that the sides of $\Omega$ each have positive length, and be either entirely in $\partial_D\Omega$ or in $\partial_N\Omega$.  As before, to produce a unique solution we require that $\partial_D\Omega$ contain at least one such side.
+\end{comment}
+A key observation is that $u$ itself incorporates the Dirichlet boundary condition, because it lives in $H_g^1(\Omega)$, while Neumann boundary data $\gamma$, like the source function $f$, appears in equation \eqref{poissonweak}.
 
-The triangulation itself is a set
-\marginnote{%
-\input{samplepoly.1.tikz}}
+The \emph{finite element method} (FEM) comes from requiring the weak formulation  \eqref{poissonweak} to be true for $u$ in a smaller, indeed finite-dimensional, subspace of $H_g^1(\Omega)$, and for $v$ also in a finite-dimensional subspace of $H_0^1(\Omega)$; this is a \emph{Galerkin} FEM.  We will build these finite-dimensional subspaces, in the current example, using a \emph{unstructured triangulation} on a region $\Omega\subset \RR^2$
 
-once we have a triangulation
+To make this work, from now on in this chapter we restrict to $d=2$ dimensions and we require that $\Omega$ be polygonal, with boundary $\partial\Omega$ a closed polygon.  We require that the sides of $\Omega$ each have positive length, and be either entirely in $\partial_D\Omega$ or in $\partial_N\Omega$.  As before, to produce a unique solution we require that $\partial_D\Omega$ contain at least one such side.
+
+\begin{marginfigure}
+\input{samplepoly.1.tikz}
+\caption{A triangulation $\Th$ with $K=22$ triangles (elements) numbered $k=0,1,\dots,K-1$ (in {\color{red} red}) and $N=16$ nodes numbered $j=0,1,\dots,N-1$  (in {\color{blue} blue}).  Nodes $\bx_0$, $\bx_1$, $\bx_2$, $\bx_3$ are in the Dirichlet boundary $\partial_D\Omega$.}
+\label{fig:number-elements}
+\end{marginfigure}
+
+The triangulation itself is a set of non-overlapping, non-empty open triangles which tile $\Omega$:
+\begin{equation*}
+\Th = \left\{\Delta_k \quad\Big|\quad \cup_k \overline{\Delta}_k = \overline{\Omega} \, \text{ and} \, \Omega_k \cap \Omega_l = \emptyset \text{ if } k\ne l\right\}.
+\end{equation*}
+There are $K$ triangles indexed $k=0,\dots,K-1$; see Figure \ref{fig:number-elements}.  The subscript ``$h$'' in the name ``$\Th$'' is traditional; it suggests there is a typical or maximum size (e.g.~diameter) $h$ of the triangles, and it serves as a reminder that we want to solve the Poisson problem accurately, that is, in the limit $h\to 0$.
+
+We informally call the triangles \emph{elements}, though there is more to the definition of ``element,'' as we now explain.  In fact, we are going to approximate the Poisson problem with $\Pone$ finite elements, which means that our finite-dimensional subspace we use contains only piecewise-linear functions which are linear on each triangle.  First, we index\sidenote{In contrast to \citet{Elmanetal2005}, which implements in \Matlab, our indexing is always zero-based, as we code in C.} all the vertices (nodes) in the triangulation with $j=0,1,\dots,N$:
+\begin{equation*}
+\bx_j = (x_j,y_j)
+\end{equation*}
+For each $j$ there is a $\Pone$ basis function\sidenote{Also known as a ``hat'' function; ``chapeaux'' for francophones.} $\phi_j(x,y)$ which is linear on each element and equal to one on only one node $j$:
+\begin{equation*}
+\phi_j(x_i,y_i) = \delta_{ij}.
+\end{equation*}
+The functions $\phi_j(x,y)$ are in $H^1(\Omega)$,\marginnote{FIXME: cartoon of $\phi_j(x,y)$ here} with piecewise-constant derivatives, and they are obviously linearly-independent also.
+Inside an element, $\phi_j$ has three degrees of freedom:
+\begin{equation*}
+\phi_j(x,y) = A_k + B_k x + C_k y \quad \text{ on } \Delta_k.
+\end{equation*}
+
+We can use these basis functions to approximate the Dirichlet data $g$.  We index the $L$ nodes which are in the Dirichlet boundary: $\bx_{j_l} \in \partial_D\Omega$ for $l=0,\dots,L-1$.\sidenote{Figure \ref{fig:number-elements} shows an example with $L=4$ and $j_l=l$ for $l=0,1,2,3$.} Then the piecewise-linear interpolant of $g$, as a function extended to all of $\Omega$ in a piecewise-linear way, is
+\begin{equation*}
+\hat g(x,y) = \sum_{l=0}^{L-1} g(\bx_{j_l}) \phi_{j_l}(x,y).
+\end{equation*}
+
+Next we can specify the finite-dimensional subsets of $H^1(\Omega)$ as the span of basis functions
+\begin{align*}
+S^h &= \Span\{\phi_j \,\big|\, \text{ all } j\,\}, \\
+S_0^h &= \Span\{\phi_j \,\big|\, \bx_j \notin \partial_D \Omega\}, \\
+S_g^h &= S_0^h + \hat g.
+\end{align*}
+Thus $\dim(S^h)=N$ and $\dim(S_0^h)=N-L$.  The affine space $S_g^h$ also has dimension $N-L$.
+
+
+\begin{marginfigure}
+%\input{isoparametric.tikz}}
+FIXME
+\caption{Mapping of a $\Pone$ element from the reference element.}
+\label{fig:isoparametric}
+\end{marginfigure}
 
 \marginnote{{\color{red} Remember:} $u_h$ is the \emph{trial} function and $v_h$ are the \emph{test} functions}
 
-
+\clearpage
 
 \section{Getting a triangular mesh into \PETSc}
 
 \begin{figure*}
 \input{bump.1.tikz}
-\caption{A FEM triangulation.  Nodes are labeled by $j=0,\dots,N$.  The Dirichlet boundary $\partial_D \Omega$ is bold.}
+\caption{A FEM triangulation.  Nodes are labeled by $j=0,\dots,N-1$ with $N=24$.  The Dirichlet boundary $\partial_D \Omega$ is bold.}
 \label{fig:triangulation}
 \end{figure*}
 

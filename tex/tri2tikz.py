@@ -11,18 +11,27 @@ import sys
 commandline = " ".join(sys.argv[:])
 
 parser = argparse.ArgumentParser(description='Converts .node, .ele, .poly files from triangle into TikZ format.')
+# boolean options
 parser.add_argument('--labelnodes', action='store_true',
+                    help='label the nodes with zero-based index',
+                    default=False)
+parser.add_argument('--labelelements', action='store_true',
                     help='label the nodes with zero-based index',
                     default=False)
 parser.add_argument('--polyonly', action='store_true',
                     help='build a TikZ figure with the polygon only (reads .poly and .node)',
                     default=False)
+# real options
 parser.add_argument('--scale', action='store', metavar='X',
                     help='amount by which to scale TikZ figure',
                     default=1.0)
-parser.add_argument('--labeloffset', action='store', metavar='X',
-                    help='offset to use in labeling points',
+parser.add_argument('--nodeoffset', action='store', metavar='X',
+                    help='offset to use in labeling nodes (points)',
                     default=0.0)
+parser.add_argument('--eleoffset', action='store', metavar='X',
+                    help='offset to use in labeling elements (triangles)',
+                    default=0.0)
+# positional filenames
 parser.add_argument('inroot', metavar='NAMEROOT',
                     help='root of input file name for .node,.ele,.poly',
                     default='foo')
@@ -30,15 +39,18 @@ parser.add_argument('outfile', metavar='FILENAME',
                     help='output file name',
                     default='foo.tikz')
 
+# process options: simpler names, and type conversions
 args = parser.parse_args()
 nodename = args.inroot + '.node'
 elename  = args.inroot + '.ele'
 polyname = args.inroot + '.poly'
 outname  = args.outfile
-dolabel  = args.labelnodes
-polyonly = args.polyonly
-scale    = (float)(args.scale)
-offset   = (float)(args.labeloffset)
+dolabelnodes = args.labelnodes
+dolabeleles  = args.labelelements
+polyonly     = args.polyonly
+scale        = (float)(args.scale)
+nodeoffset   = (float)(args.nodeoffset)
+eleoffset   = (float)(args.eleoffset)
 
 # always read .poly and .node files
 polyfile = open(polyname, 'r')
@@ -115,10 +127,22 @@ if not polyonly:
       jto   = pp[kk[k+1]]
       tikz.write('  \\draw[gray,very thin] (%f,%f) -- (%f,%f);\n' \
                  % (x[jfrom],y[jfrom],x[jto],y[jto]))
+    if dolabeleles:
+      xc = 0.0
+      yc = 0.0
+      for k in range(3):
+        jj = pp[kk[k]]
+        xc = xc + x[jj]
+        yc = yc + y[jj]
+      xc = xc/3.0
+      yc = yc/3.0
+      tikz.write( '  \\draw (%f,%f) node {\\color{red} $%d$};\n' \
+                 % (xc+0.7*eleoffset,yc-eleoffset,m))
   # plot nodes themselves
   for j in range(N):
-    if dolabel:
-      tikz.write( '  \\draw (%f,%f) node {$%d$};\n' % (x[j]+0.7*offset,y[j]-offset,j))
+    if dolabelnodes:
+      tikz.write( '  \\draw (%f,%f) node {\\color{blue} $%d$};\n' \
+                 % (x[j]+0.7*nodeoffset,y[j]-nodeoffset,j))
     tikz.write('  \\filldraw (%f,%f) circle (1.25pt);\n' % (x[j],y[j]))
 
 # read polygon file (.poly) and plot according to boundary type

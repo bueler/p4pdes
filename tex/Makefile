@@ -24,25 +24,25 @@ cstrip/%.c: ../c/%.c
 	sed -e 's/ CHKERRQ(ierr);//' $@.tmp > $@
 	rm -rf $@.tmp
 
-samplepoly.1.tikz: samplepoly.poly
-	triangle -pqa3.0 samplepoly
-	python tri2tikz.py --scale 0.6 samplepoly.1 samplepoly.1.tikz
+samplepoly.1.tikz: samplepoly.poly tri2tikz.py
+	triangle -pqa4.0 samplepoly
+	python tri2tikz.py --labelnodes --nodeoffset -0.3 --labelelements --scale 0.6 samplepoly.1 $@
 
-bump.1.tikz: ../c/bump.poly
+bump.1.tikz: ../c/bump.poly tri2tikz.py
 	(cd ../c/ && triangle -pqa1.0 bump)
 	rm -rf bump.1.node bump.1.ele bump.1.poly
 	ln -s ../c/bump.1.node
 	ln -s ../c/bump.1.ele
 	ln -s ../c/bump.1.poly
-	python tri2tikz.py --labelnodes --scale 2.0 --labeloffset 0.25 bump.1 bump.1.tikz
+	python tri2tikz.py --labelnodes --nodeoffset 0.25 --scale 2.0 bump.1 $@
 
-bump.2.tikz: ../c/bump.poly ../c/bump.1.poly
+bump.2.tikz: ../c/bump.poly ../c/bump.1.poly tri2tikz.py
 	(cd ../c/ && triangle -rpqa0.25 bump.1)
 	rm -rf bump.2.node bump.2.ele bump.2.poly
 	ln -s ../c/bump.2.node
 	ln -s ../c/bump.2.ele
 	ln -s ../c/bump.2.poly
-	python tri2tikz.py --scale 2.0 bump.2 bump.2.tikz
+	python tri2tikz.py --scale 2.0 bump.2 $@
 
 .PHONY: clean
 
