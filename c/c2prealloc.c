@@ -3,8 +3,8 @@ static char help[] =
 "Read in a FEM grid (unstructured triangulation) from PETSc binary file in parallel.\n\
 Demonstrate Mat preallocation.\n\
 For a one-process, coarse grid example do:\n\
-     triangle -pqa1.0 bump   # generates bump.1.{node,ele}\n\
-     c2triangle -f bump.1    # reads bump.1.{node,ele} and generates bump.1.petsc\n\
+     triangle -pqa1.0 bump   # generates bump.1.{node,ele,poly}\n\
+     c2triangle -f bump.1    # reads bump.1.{node,ele,poly} and generates bump.1.petsc\n\
      c2prealloc -f bump.1    # reads bump.1.petsc\n\
 To see the sparsity pattern graphically:\n\
      c2prealloc -f bump.1 -mat_view draw -draw_pause 5\n\n";
@@ -21,7 +21,7 @@ number of nonzeros for the corresponding matrix row(s).
 
 #include <petscmat.h>
 #include <petscksp.h>
-#define DEBUG 0
+#define DEBUG 1
 #define matassembly(X) { ierr = MatAssemblyBegin(X,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr); \
                          ierr = MatAssemblyEnd(X,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr); }
 
@@ -37,8 +37,10 @@ int main(int argc,char **args) {
 
   // MAJOR VARIABLES FOR TRIANGULAR MESH
   PetscInt N,   // number of degrees of freedom (= number of all nodes)
-           K;   // number of elements;
-  Vec      x, y, BT, P; // mesh:  x coord of node, y coord of node, bdry type, element indexing
+           K,   // number of elements
+           M;   // number of boundary segments
+  Vec      x, y,     // mesh:  x coord of node, y coord of node
+           BT, P, Q; // mesh: bdry type, element indexing, boundary segment indexing
 
   // GET FILENAME FROM OPTION
   char           fname[MPL];
@@ -54,41 +56,52 @@ int main(int argc,char **args) {
 
   // ALLOCATE AND READ IN PARALLEL: NODE INFO
   PetscViewer viewer;
-  ierr = PetscPrintf(COMM,"reading x,y,BT from %s in parallel ...\n",fname); CHKERRQ(ierr);
+  ierr = PetscPrintf(COMM,"reading x,y,BT,P,Q from %s in parallel ...\n",fname); CHKERRQ(ierr);
   ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,fname,FILE_MODE_READ,
              &viewer); CHKERRQ(ierr);
   ierr = VecCreate(COMM,&x); CHKERRQ(ierr);
   ierr = VecCreate(COMM,&y); CHKERRQ(ierr);
   ierr = VecCreate(COMM,&BT); CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)x,"node x coordinate"); CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)y,"node y coordinate"); CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)BT,"node boundary type"); CHKERRQ(ierr);
+  ierr = VecCreate(COMM,&P); CHKERRQ(ierr);
+  ierr = VecCreate(COMM,&Q); CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject)x,"node-x-coordinate"); CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject)y,"node-y-coordinate"); CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject)BT,"node-boundary-type"); CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject)P,"element-node-indices"); CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject)Q,"boundary-segment-indices"); CHKERRQ(ierr);
   ierr = VecLoad(x,viewer); CHKERRQ(ierr);
   ierr = VecLoad(y,viewer); CHKERRQ(ierr);
   ierr = VecLoad(BT,viewer); CHKERRQ(ierr);
-
-  ierr = VecCreate(COMM,&P); CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)P,"element node index array"); CHKERRQ(ierr);
   ierr = VecLoad(P,viewer); CHKERRQ(ierr);
+  ierr = VecLoad(Q,viewer); CHKERRQ(ierr);
 
   ierr = VecGetSize(x,&N); CHKERRQ(ierr);
   ierr = VecGetSize(P,&K); CHKERRQ(ierr);
+  ierr = VecGetSize(Q,&M); CHKERRQ(ierr);
   if (K % 3 != 0) {
     SETERRQ(COMM,3,"element node index array P invalid: must have 3 K entries");
   }
   K /= 3;
-  ierr = PetscPrintf(COMM,"  N=%d nodes, K=%d elements\n",N,K); CHKERRQ(ierr);
+  if (M % 2 != 0) {
+    SETERRQ(COMM,3,"element node index array Q invalid: must have 2 M entries");
+  }
+  M /= 2;
+  ierr = PetscPrintf(COMM,"  N=%d nodes, K=%d elements, M=%d boundary segments\n",N,K,M); CHKERRQ(ierr);
 
-  // PUT A COPY OF THE FULL P AND BT ON EACH PROCESSOR
+  // PUT A COPY OF THE FULL BT,P,Q ON EACH PROCESSOR
   VecScatter  ctx;
-  Vec         PSEQ, BTSEQ;
+  Vec         BTSEQ, PSEQ, QSEQ;
+  ierr = VecScatterCreateToAll(BT,&ctx,&BTSEQ); CHKERRQ(ierr);
+  ierr = VecScatterBegin(ctx,BT,BTSEQ,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
+  ierr = VecScatterEnd(ctx,BT,BTSEQ,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
+  VecScatterDestroy(&ctx);
   ierr = VecScatterCreateToAll(P,&ctx,&PSEQ); CHKERRQ(ierr);
   ierr = VecScatterBegin(ctx,P,PSEQ,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
   ierr = VecScatterEnd(ctx,P,PSEQ,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
   VecScatterDestroy(&ctx);
-  ierr = VecScatterCreateToAll(BT,&ctx,&BTSEQ); CHKERRQ(ierr);
-  ierr = VecScatterBegin(ctx,BT,BTSEQ,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
-  ierr = VecScatterEnd(ctx,BT,BTSEQ,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
+  ierr = VecScatterCreateToAll(Q,&ctx,&QSEQ); CHKERRQ(ierr);
+  ierr = VecScatterBegin(ctx,Q,QSEQ,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
+  ierr = VecScatterEnd(ctx,Q,QSEQ,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
   VecScatterDestroy(&ctx);
 
   // LEARN WHICH ROWS WE OWN
@@ -107,10 +120,10 @@ int main(int argc,char **args) {
   }
 
   // FILL THE NUMBER-OF-NONZEROS ARRAYS
-  PetscInt    i, j, k, q, r;
-  PetscScalar *ap, *abt;
-  ierr = VecGetArray(PSEQ,&ap); CHKERRQ(ierr);
+  PetscInt    i, j, k, m, q, r;
+  PetscScalar *abt, *ap, *aq;
   ierr = VecGetArray(BTSEQ,&abt); CHKERRQ(ierr);
+  ierr = VecGetArray(PSEQ,&ap); CHKERRQ(ierr);
   for (k = 0; k < K; k++) {          // loop over ALL elements
     for (q = 0; q < 3; q++) {        // loop over vertices of current element
       i = (int)ap[3*k+q];            //   global index of q node
@@ -122,8 +135,6 @@ int main(int argc,char **args) {
         // (i,j) is an edge; we count this nonzero matrix entry
         if ((j >= Istart) && (j < Iend)) {
           dnnz[iloc]++;
-          if ((abt[i] > 0) && (abt[j] > 0))
-            dnnz[iloc]++;            // double-weight boundary edges
         } else {
           onnz[iloc]++;
         }
@@ -132,6 +143,24 @@ int main(int argc,char **args) {
   }
   ierr = VecRestoreArray(PSEQ,&ap); CHKERRQ(ierr);
   ierr = VecRestoreArray(BTSEQ,&abt); CHKERRQ(ierr);
+
+  ierr = VecGetArray(QSEQ,&aq); CHKERRQ(ierr);
+  for (m = 0; m < M; m++) {          // loop over ALL boundary segments
+    for (q = 0; q < 2; q++) {        // loop over vertices of current segment
+      i = (int)aq[2*m+q];            //   global index of q node
+      if ((i < Istart) || (i >= Iend))  continue; // skip node if I don't own it
+      iloc = i - Istart;
+      r = 1 - q;                     // other vertex
+      j = (int)aq[2*m+r];            //   global index of r node
+      // (i,j) is a boundary segment; we count this nonzero matrix entry AGAIN
+      if ((j >= Istart) && (j < Iend)) {
+        dnnz[iloc]++;
+      } else {
+        onnz[iloc]++;
+      }
+    }
+  }
+  ierr = VecRestoreArray(QSEQ,&aq); CHKERRQ(ierr);
   // resolve double counting
   for (iloc = 0; iloc < mm; iloc++) {
     dnnz[iloc] /= 2;
@@ -184,8 +213,10 @@ int main(int argc,char **args) {
   VecDestroy(&y);
   VecDestroy(&BT);
   VecDestroy(&P);
+  VecDestroy(&Q);
   VecDestroy(&BTSEQ);
   VecDestroy(&PSEQ);
+  VecDestroy(&QSEQ);
   PetscViewerDestroy(&viewer);
 
   PetscFinalize();
