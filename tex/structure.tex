@@ -65,6 +65,12 @@
   \end{fullwidth}
 }
 
+\newcommand{\monthyear}{%
+  \ifcase\month\or January\or February\or March\or April\or May\or June\or
+  July\or August\or September\or October\or November\or
+  December\fi\space\number\year
+}
+
 \newcommand{\bA}{\mathbf{A}}
 \newcommand{\bB}{\mathbf{B}}
 \newcommand{\bE}{\mathbf{E}}
@@ -135,6 +141,22 @@ Tufte's style is known for its extensive use of sidenotes, tight integration of 
 \vfill
 
 \maketitle
+
+% v.4 copyright page
+\newpage
+\begin{fullwidth}
+~\vfill
+\thispagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{\baselineskip}
+Copyright \copyright\ \the\year\ \thanklessauthor
+
+\par\smallcaps{Published by \thanklesspublisher}
+
+%\par I have no idea if I should license this at this stage
+
+\par\textit{First printing, \monthyear}
+\end{fullwidth}
 
 \tableofcontents
 
