@@ -2,9 +2,9 @@
 ice-bib.bib
 structure.pdf
 cstrip/*.c
-*.node
-*.ele
-*.poly
+*.?.node
+*.?.ele
+*.?.poly
 *.?.tikz
 
 ## Core latex/pdflatex auxiliary files:
