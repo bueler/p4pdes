@@ -136,9 +136,11 @@ FIXME
 
 \cinputpart{c2triangle.c}{On rank zero processor: Read element information.}{V}{//ENDREADNODES}{//ENDREADELEMENTS}
 
-\cinputpart{c2triangle.c}{On rank zero processor: Write the mesh out in \PETSc binary format.}{VI}{//ENDREADELEMENTS}{//ENDRANK0}
+\cinputpart{c2triangle.c}{On rank zero processor: Read boundary polygon information.}{VI}{//ENDREADELEMENTS}{//ENDREADPOLYGONS}
 
-\cinputpart{c2triangle.c}{Re-read mesh in parallel, and write in parallel.}{VII}{//ENDRANK0}{//END}
+\cinputpart{c2triangle.c}{On rank zero processor: Write the mesh out in \PETSc binary format.}{VII}{//ENDREADPOLYGONS}{//ENDRANK0}
+
+\cinputpart{c2triangle.c}{Re-read mesh in parallel, and write in parallel.}{VIII}{//ENDRANK0}{//END}
 
 
 \section{FEM method, for the Poisson equation}
