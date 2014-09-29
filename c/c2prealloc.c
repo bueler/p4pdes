@@ -1,8 +1,8 @@
 
 static char help[] =
-"Read in a FEM grid from PETSc binary file in parallel.\n\
+"Read in a FEM grid (unstructured triangulation) from PETSc binary file in parallel.\n\
 Demonstrate Mat preallocation.\n\
-For a coarse grid example do:\n\
+For a one-process, coarse grid example do:\n\
      triangle -pqa1.0 bump   # generates bump.1.{node,ele}\n\
      c2triangle -f bump.1    # reads bump.1.{node,ele} and generates bump.1.petsc\n\
      c2prealloc -f bump.1    # reads bump.1.petsc\n\
@@ -37,7 +37,7 @@ int main(int argc,char **args) {
 
   // MAJOR VARIABLES FOR TRIANGULAR MESH
   PetscInt N,   // number of degrees of freedom (= number of all nodes)
-           M;   // number of elements;
+           K;   // number of elements;
   Vec      x, y, BT, P; // mesh:  x coord of node, y coord of node, bdry type, element indexing
 
   // GET FILENAME FROM OPTION
@@ -72,23 +72,12 @@ int main(int argc,char **args) {
   ierr = VecLoad(P,viewer); CHKERRQ(ierr);
 
   ierr = VecGetSize(x,&N); CHKERRQ(ierr);
-  ierr = VecGetSize(P,&M); CHKERRQ(ierr);
-  if (M % 3 != 0) {
-    SETERRQ(COMM,3,"element node index array P invalid: must have 3 M entries");
+  ierr = VecGetSize(P,&K); CHKERRQ(ierr);
+  if (K % 3 != 0) {
+    SETERRQ(COMM,3,"element node index array P invalid: must have 3 K entries");
   }
-  M /= 3;
-  ierr = PetscPrintf(COMM,"  N=%d nodes, M=%d elements\n",N,M); CHKERRQ(ierr);
-#if DEBUG
-  PetscInt bigsize=1000;
-  if ((N < bigsize) && (M < bigsize)) {
-    ierr = VecView(x,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
-    ierr = VecView(y,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
-    ierr = VecView(BT,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
-    ierr = VecView(P,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
-  } else {
-    ierr = PetscPrintf(COMM,"  [supressing VecView to STDOUT because too big]\n"); CHKERRQ(ierr);
-  }
-#endif
+  K /= 3;
+  ierr = PetscPrintf(COMM,"  N=%d nodes, K=%d elements\n",N,K); CHKERRQ(ierr);
 
   // PUT A COPY OF THE FULL P AND BT ON EACH PROCESSOR
   VecScatter  ctx;
@@ -122,7 +111,7 @@ int main(int argc,char **args) {
   PetscScalar *ap, *abt;
   ierr = VecGetArray(PSEQ,&ap); CHKERRQ(ierr);
   ierr = VecGetArray(BTSEQ,&abt); CHKERRQ(ierr);
-  for (k = 0; k < M; k++) {          // loop over ALL elements
+  for (k = 0; k < K; k++) {          // loop over ALL elements
     for (q = 0; q < 3; q++) {        // loop over vertices of current element
       i = (int)ap[3*k+q];            //   global index of q node
       if ((i < Istart) || (i >= Iend))  continue; // skip node if I don't own it
@@ -173,7 +162,7 @@ int main(int argc,char **args) {
   PetscInt    jj[3];
   PetscScalar vv[3];
   ierr = VecGetArray(PSEQ,&ap); CHKERRQ(ierr);
-  for (k = 0; k < M; k++) {          // loop over ALL elements
+  for (k = 0; k < K; k++) {          // loop over ALL elements
     for (q = 0; q < 3; q++) {        // loop over vertices of current element
       i = (int)ap[3*k+q];            //   global index of q node
       if ((i < Istart) || (i >= Iend))  continue; // skip node if I don't own it
