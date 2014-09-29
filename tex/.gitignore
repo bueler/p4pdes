@@ -5,6 +5,7 @@ cstrip/*.c
 *.node
 *.ele
 *.poly
+*.?.tikz
 
 ## Core latex/pdflatex auxiliary files:
 *.aux

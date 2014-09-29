@@ -1,6 +1,6 @@
 all: structure.pdf
 
-tikzinputs := bump.1.tikz bump.2.tikz
+tikzinputs := samplepoly.1.tikz bump.1.tikz bump.2.tikz
 texinputs := getstarted.tex linear.tex
 
 cinputs := c1matvec.c c2triangle.c
@@ -23,6 +23,10 @@ cstrip/%.c: ../c/%.c
 	sed -e 's/ierr = //' $< > $@.tmp
 	sed -e 's/ CHKERRQ(ierr);//' $@.tmp > $@
 	rm -rf $@.tmp
+
+samplepoly.1.tikz: samplepoly.poly
+	triangle -pqa3.0 samplepoly
+	python tri2tikz.py --scale 0.6 samplepoly.1 samplepoly.1.tikz
 
 bump.1.tikz: ../c/bump.poly
 	(cd ../c/ && triangle -pqa1.0 bump)

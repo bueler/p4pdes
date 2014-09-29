@@ -50,16 +50,17 @@ The \emph{finite element method} (FEM) comes from requiring the weak formulation
 
 To make this work, from now on we require that $\Omega$ be polygonal,\marginnote{%
 \begin{tikzpicture}[scale=0.6]
-%\draw[gray,very thin] (-2,-7) grid (9,4);
 \draw[line width=2pt] (0,0) -- (0,2) -- node[sloped,below] {$\partial_D\Omega$} (5,2) -- (8,0);
 \draw[line width=0.75pt] (8,0) -- (6,-3) -- node[sloped,above] {$\partial_N\Omega$} (-1,-6) -- (-1,-5);
 \draw[line width=0.75pt] (-1,-5) -- (-1,-4) -- (2,-3);
 \draw[line width=0.75pt] (2,-3) -- (0,-2) -- (0,0);
 \draw (4,-1) node {$\Omega$};
 \end{tikzpicture}}
- with boundary $\partial\Omega$ a closed polygon whose sides are each of positive length, and whose sides are either entirely in $\partial_D\Omega$ or in $\partial_N\Omega$.  As before, to produce a unique solution we require that $\partial_D\Omega$ contain at least one such side.
+with boundary $\partial\Omega$ a closed polygon whose sides are each of positive length, and whose sides are either entirely in $\partial_D\Omega$ or in $\partial_N\Omega$.  As before, to produce a unique solution we require that $\partial_D\Omega$ contain at least one such side.
 
 The triangulation itself is a set
+\marginnote{%
+\input{samplepoly.1.tikz}}
 
 once we have a triangulation
 
