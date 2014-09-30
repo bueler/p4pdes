@@ -12,8 +12,7 @@ Then do\n\
 which reads bump.1.{node,ele,poly} and writes bump.1.petsc.\n\n";
 
 #include <petscmat.h>
-#define vecassembly(X) { ierr = VecAssemblyBegin(X); CHKERRQ(ierr); \
-                         ierr = VecAssemblyEnd(X); CHKERRQ(ierr); }
+#include "convenience.h"
 
 //STARTPREAMBLE
 int main(int argc,char **args) {
@@ -28,24 +27,23 @@ int main(int argc,char **args) {
   PetscErrorCode  ierr;
 //ENDPREAMBLE
 
-  // GET FILENAME ROOT FROM OPTION AND BUILD FILENAMES
-  PetscBool      fset;
-  char fnameroot[MPL], outfilename[MPL], nodefilename[MPL], elefilename[MPL], polyfilename[MPL];
+  // GET OPTIONS AND BUILD FILENAMES
+  PetscBool      fset, docheck, checkset;
+  char fnameroot[MPL], outfilename[MPL],
+       nodefilename[MPL], elefilename[MPL], polyfilename[MPL];
   ierr = PetscOptionsBegin(COMM, "", "options for c2triangle", ""); CHKERRQ(ierr);
   ierr = PetscOptionsString("-f", "filename root", "", "",
                             fnameroot, sizeof(fnameroot), &fset); CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-check", "if set, re-read and show at STDOUT", "", PETSC_FALSE,
+                          &docheck,&checkset); CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
   if (!fset) {
     SETERRQ(COMM,1,"option  -f FILENAMEROOT  required");
   }
-  strcpy(nodefilename,fnameroot);
-  strcat(nodefilename,".node");
-  strcpy(elefilename,fnameroot);
-  strcat(elefilename,".ele");
-  strcpy(polyfilename,fnameroot);
-  strcat(polyfilename,".poly");
-  strcpy(outfilename,fnameroot);
-  strcat(outfilename,".petsc");
+  strcpy(nodefilename,fnameroot);  strcat(nodefilename,".node");
+  strcpy(elefilename,fnameroot);   strcat(elefilename,".ele");
+  strcpy(polyfilename,fnameroot);  strcat(polyfilename,".poly");
+  strcpy(outfilename,fnameroot);   strcat(outfilename,".petsc");
 //ENDFILENAME
 
   // RANK 0 OPENS ASCII FILES
@@ -185,11 +183,8 @@ int main(int argc,char **args) {
     ierr = VecView(vQ,viewer); CHKERRQ(ierr);
 
     // CLEAN UP
-    VecDestroy(&vx);
-    VecDestroy(&vy);
-    VecDestroy(&vBT);
-    VecDestroy(&vP);
-    VecDestroy(&vQ);
+    VecDestroy(&vx);  VecDestroy(&vy);
+    VecDestroy(&vBT);  VecDestroy(&vP);  VecDestroy(&vQ);
     PetscViewerDestroy(&viewer);
   }
 
@@ -198,55 +193,43 @@ int main(int argc,char **args) {
   ierr = PetscFClose(COMM,polyfile); CHKERRQ(ierr);
 //ENDRANK0
 
-  // READ BACK IN PARALLEL: ALLOCATE VIEWER AND VECS
-  Vec rx,ry,rP,rBT,rQ;
-  PetscViewer rviewer;
-  ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,outfilename,FILE_MODE_READ,
-             &rviewer); CHKERRQ(ierr);
-  ierr = VecCreate(COMM,&rx); CHKERRQ(ierr);
-  ierr = VecCreate(COMM,&ry); CHKERRQ(ierr);
-  ierr = VecCreate(COMM,&rBT); CHKERRQ(ierr);
-  ierr = VecCreate(COMM,&rP); CHKERRQ(ierr);
-  ierr = VecCreate(COMM,&rQ); CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)rx,"node-x-coordinate"); CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)ry,"node-y-coordinate"); CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)rBT,"node-boundary-type"); CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)rP,"element-node-indices"); CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)rQ,"boundary-segment-indices"); CHKERRQ(ierr);
+  if (docheck == PETSC_TRUE) {
+    // READ BACK IN PARALLEL: ALLOCATE, LOAD, NAME, GET SIZES
+    Vec rx,ry,rP,rBT,rQ;
+    PetscInt rN, rK, rM, bigsize=1000;
+    PetscViewer rviewer;
+    ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,outfilename,FILE_MODE_READ,
+               &rviewer); CHKERRQ(ierr);
+    ierr = PetscPrintf(COMM,"reading from %s in parallel ...\n",outfilename); CHKERRQ(ierr);
+    createloadname(rx, rviewer,"node-x-coordinate")
+    createloadname(ry, rviewer,"node-y-coordinate")
+    createloadname(rBT,rviewer,"node-boundary-type")
+    createloadname(rP, rviewer,"element-node-indices")
+    createloadname(rQ, rviewer,"boundary-segment-indices")
+    ierr = VecGetSize(rx,&rN); CHKERRQ(ierr);
+    ierr = VecGetSize(rP,&rK); CHKERRQ(ierr);
+    ierr = VecGetSize(rQ,&rM); CHKERRQ(ierr);
+    rK /= 3;
+    rM /= 2;
+    ierr = PetscPrintf(COMM,"  N=%d nodes, K=%d elements, M=%d boundary segments\n",
+                       rN,rK,rM); CHKERRQ(ierr);
 
-  // FILL FROM FILE
-  ierr = PetscPrintf(COMM,"reading from %s in parallel ...\n",outfilename); CHKERRQ(ierr);
-  ierr = VecLoad(rx,rviewer); CHKERRQ(ierr);
-  ierr = VecLoad(ry,rviewer); CHKERRQ(ierr);
-  ierr = VecLoad(rBT,rviewer); CHKERRQ(ierr);
-  ierr = VecLoad(rP,rviewer); CHKERRQ(ierr);
-  ierr = VecLoad(rQ,rviewer); CHKERRQ(ierr);
+    // SHOW WHAT WE GOT IF SMALL ENOUGH
+    if ((rN < bigsize) && (rK < bigsize)) {
+      ierr = VecView(rx,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
+      ierr = VecView(ry,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
+      ierr = VecView(rBT,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
+      ierr = VecView(rP,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
+      ierr = VecView(rQ,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
+    } else {
+      ierr = PetscPrintf(COMM,"  [supressing STDOUT because too big]\n"); CHKERRQ(ierr);
+    }
 
-  // SHOW WHAT WE GOT
-  PetscInt rN, rK, rM, bigsize=1000;
-  ierr = VecGetSize(rx,&rN); CHKERRQ(ierr);
-  ierr = VecGetSize(rP,&rK); CHKERRQ(ierr);
-  ierr = VecGetSize(rQ,&rM); CHKERRQ(ierr);
-  rK /= 3;
-  rM /= 2;
-  ierr = PetscPrintf(COMM,"  N=%d nodes, K=%d elements, M=%d boundary segments\n",rN,rK,rM); CHKERRQ(ierr);
-  if ((rN < bigsize) && (rK < bigsize)) {
-    ierr = VecView(rx,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
-    ierr = VecView(ry,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
-    ierr = VecView(rBT,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
-    ierr = VecView(rP,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
-    ierr = VecView(rQ,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
-  } else {
-    ierr = PetscPrintf(COMM,"  [supressing VecView to STDOUT because too big]\n"); CHKERRQ(ierr);
+    // CLEAN UP
+    VecDestroy(&rx);  VecDestroy(&ry);
+    VecDestroy(&rBT);  VecDestroy(&rP);  VecDestroy(&rQ);
+    PetscViewerDestroy(&rviewer);
   }
-
-  // CLEAN UP
-  VecDestroy(&rx);
-  VecDestroy(&ry);
-  VecDestroy(&rBT);
-  VecDestroy(&rP);
-  VecDestroy(&rQ);
-  PetscViewerDestroy(&rviewer);
 
   PetscFinalize();
   return 0;

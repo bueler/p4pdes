@@ -21,9 +21,8 @@ number of nonzeros for the corresponding matrix row(s).
 
 #include <petscmat.h>
 #include <petscksp.h>
-#define DEBUG 1
-#define matassembly(X) { ierr = MatAssemblyBegin(X,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr); \
-                         ierr = MatAssemblyEnd(X,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr); }
+#include "convenience.h"
+#define DEBUG 0
 
 int main(int argc,char **args) {
 
@@ -35,6 +34,7 @@ int main(int argc,char **args) {
   const PetscInt  MPL = PETSC_MAX_PATH_LEN;
   PetscErrorCode  ierr;
 
+//STARTLOAD
   // MAJOR VARIABLES FOR TRIANGULAR MESH
   PetscInt N,   // number of degrees of freedom (= number of all nodes)
            K,   // number of elements
@@ -59,25 +59,16 @@ int main(int argc,char **args) {
   ierr = PetscPrintf(COMM,"reading x,y,BT,P,Q from %s in parallel ...\n",fname); CHKERRQ(ierr);
   ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,fname,FILE_MODE_READ,
              &viewer); CHKERRQ(ierr);
-  ierr = VecCreate(COMM,&x); CHKERRQ(ierr);
-  ierr = VecCreate(COMM,&y); CHKERRQ(ierr);
-  ierr = VecCreate(COMM,&BT); CHKERRQ(ierr);
-  ierr = VecCreate(COMM,&P); CHKERRQ(ierr);
-  ierr = VecCreate(COMM,&Q); CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)x,"node-x-coordinate"); CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)y,"node-y-coordinate"); CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)BT,"node-boundary-type"); CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)P,"element-node-indices"); CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)Q,"boundary-segment-indices"); CHKERRQ(ierr);
-  ierr = VecLoad(x,viewer); CHKERRQ(ierr);
-  ierr = VecLoad(y,viewer); CHKERRQ(ierr);
-  ierr = VecLoad(BT,viewer); CHKERRQ(ierr);
-  ierr = VecLoad(P,viewer); CHKERRQ(ierr);
-  ierr = VecLoad(Q,viewer); CHKERRQ(ierr);
+  createloadname(x, viewer,"node-x-coordinate")
+  createloadname(y, viewer,"node-y-coordinate")
+  createloadname(BT,viewer,"node-boundary-type")
+  createloadname(P, viewer,"element-node-indices")
+  createloadname(Q, viewer,"boundary-segment-indices")
 
   ierr = VecGetSize(x,&N); CHKERRQ(ierr);
   ierr = VecGetSize(P,&K); CHKERRQ(ierr);
   ierr = VecGetSize(Q,&M); CHKERRQ(ierr);
+//ENDLOAD
   if (K % 3 != 0) {
     SETERRQ(COMM,3,"element node index array P invalid: must have 3 K entries");
   }
@@ -88,6 +79,7 @@ int main(int argc,char **args) {
   M /= 2;
   ierr = PetscPrintf(COMM,"  N=%d nodes, K=%d elements, M=%d boundary segments\n",N,K,M); CHKERRQ(ierr);
 
+//STARTPUTSEQ
   // PUT A COPY OF THE FULL BT,P,Q ON EACH PROCESSOR
   VecScatter  ctx;
   Vec         BTSEQ, PSEQ, QSEQ;
@@ -103,6 +95,7 @@ int main(int argc,char **args) {
   ierr = VecScatterBegin(ctx,Q,QSEQ,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
   ierr = VecScatterEnd(ctx,Q,QSEQ,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
   VecScatterDestroy(&ctx);
+//ENDPUTSEQ
 
   // LEARN WHICH ROWS WE OWN
   PetscInt Istart,Iend;
@@ -143,6 +136,7 @@ int main(int argc,char **args) {
   }
   ierr = VecRestoreArray(PSEQ,&ap); CHKERRQ(ierr);
   ierr = VecRestoreArray(BTSEQ,&abt); CHKERRQ(ierr);
+//ENDELEMENTSLOOP
 
   ierr = VecGetArray(QSEQ,&aq); CHKERRQ(ierr);
   for (m = 0; m < M; m++) {          // loop over ALL boundary segments
@@ -166,6 +160,7 @@ int main(int argc,char **args) {
     dnnz[iloc] /= 2;
     onnz[iloc] /= 2;
   }
+//ENDBDRYLOOP
 #if DEBUG
   ierr = PetscSynchronizedPrintf(COMM,"showing entries of dnnz[%d] on rank %d (DEBUG)\n",mm,rank); CHKERRQ(ierr);
   for (iloc = 0; iloc < mm; iloc++) {
@@ -178,14 +173,13 @@ int main(int argc,char **args) {
   ierr = PetscSynchronizedFlush(COMM,PETSC_STDOUT); CHKERRQ(ierr);
 #endif
 
+//STARTPREALLOC
   // PREALLOCATE STIFFNESS MATRIX
   Mat A;
   MatCreate(COMM,&A);
   MatSetType(A,MATMPIAIJ);
   MatSetSizes(A,mm,mm,N,N);
-  //"If the *_nnz parameter is given then the *_nz parameter is ignored"
   MatMPIAIJSetPreallocation(A,0,dnnz,0,onnz);
-  MatSetOption(A, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE); // FIXME: WHY IS THIS NEEDED?
 
   // FILL MAT WITH FAKE ENTRIES
   PetscInt    jj[3];
@@ -204,6 +198,7 @@ int main(int argc,char **args) {
   }
   ierr = VecRestoreArray(PSEQ,&ap); CHKERRQ(ierr);
   matassembly(A)
+//ENDPREALLOC
 
   // CLEAN UP
   PetscFree(dnnz);
