@@ -22,6 +22,7 @@ number of nonzeros for the corresponding matrix row(s).
 #include <petscmat.h>
 #include <petscksp.h>
 #include "convenience.h"
+#include "readmesh.h"
 #define DEBUG 0
 
 int main(int argc,char **args) {
@@ -39,63 +40,14 @@ int main(int argc,char **args) {
   PetscInt N,   // number of degrees of freedom (= number of all nodes)
            K,   // number of elements
            M;   // number of boundary segments
-  Vec      x, y,     // mesh:  x coord of node, y coord of node
-           BT, P, Q; // mesh: bdry type, element indexing, boundary segment indexing
+  Vec      x, y,     // mesh (parallel):  x coord of node, y coord of node
+           BTseq, Pseq, Qseq; // mesh (sequential): bdry type, element indexing, boundary segment indexing
 
-  // GET FILENAME FROM OPTION
-  char           fname[MPL];
-  PetscBool      fset;
-  ierr = PetscOptionsBegin(COMM, "", "options for c2prealloc", ""); CHKERRQ(ierr);
-  ierr = PetscOptionsString("-f", "filename root with PETSc binary, for reading", "", "",
-                            fname, sizeof(fname), &fset); CHKERRQ(ierr);
-  ierr = PetscOptionsEnd(); CHKERRQ(ierr);
-  if (!fset) {
-    SETERRQ(COMM,1,"option  -f FILENAME  required");
-  }
-  strcat(fname,".petsc");
-
-  // ALLOCATE AND READ IN PARALLEL: NODE INFO
+  // READ MESH FROM FILE
+  char        fname[MPL];
   PetscViewer viewer;
-  ierr = PetscPrintf(COMM,"reading x,y,BT,P,Q from %s in parallel ...\n",fname); CHKERRQ(ierr);
-  ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,fname,FILE_MODE_READ,
-             &viewer); CHKERRQ(ierr);
-  createloadname(x, viewer,"node-x-coordinate")
-  createloadname(y, viewer,"node-y-coordinate")
-  createloadname(BT,viewer,"node-boundary-type")
-  createloadname(P, viewer,"element-node-indices")
-  createloadname(Q, viewer,"boundary-segment-indices")
-
-  ierr = VecGetSize(x,&N); CHKERRQ(ierr);
-  ierr = VecGetSize(P,&K); CHKERRQ(ierr);
-  ierr = VecGetSize(Q,&M); CHKERRQ(ierr);
-//ENDLOAD
-  if (K % 3 != 0) {
-    SETERRQ(COMM,3,"element node index array P invalid: must have 3 K entries");
-  }
-  K /= 3;
-  if (M % 2 != 0) {
-    SETERRQ(COMM,3,"element node index array Q invalid: must have 2 M entries");
-  }
-  M /= 2;
-  ierr = PetscPrintf(COMM,"  N=%d nodes, K=%d elements, M=%d boundary segments\n",N,K,M); CHKERRQ(ierr);
-
-//STARTPUTSEQ
-  // PUT A COPY OF THE FULL BT,P,Q ON EACH PROCESSOR
-  VecScatter  ctx;
-  Vec         BTSEQ, PSEQ, QSEQ;
-  ierr = VecScatterCreateToAll(BT,&ctx,&BTSEQ); CHKERRQ(ierr);
-  ierr = VecScatterBegin(ctx,BT,BTSEQ,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
-  ierr = VecScatterEnd(ctx,BT,BTSEQ,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
-  VecScatterDestroy(&ctx);
-  ierr = VecScatterCreateToAll(P,&ctx,&PSEQ); CHKERRQ(ierr);
-  ierr = VecScatterBegin(ctx,P,PSEQ,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
-  ierr = VecScatterEnd(ctx,P,PSEQ,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
-  VecScatterDestroy(&ctx);
-  ierr = VecScatterCreateToAll(Q,&ctx,&QSEQ); CHKERRQ(ierr);
-  ierr = VecScatterBegin(ctx,Q,QSEQ,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
-  ierr = VecScatterEnd(ctx,Q,QSEQ,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
-  VecScatterDestroy(&ctx);
-//ENDPUTSEQ
+  ierr = getmeshfile(COMM, fname, &viewer); CHKERRQ(ierr);
+  ierr = readmesh(COMM, viewer, &N, &K, &M, &x, &y, &BTseq, &Pseq, &Qseq); CHKERRQ(ierr);
 
   // LEARN WHICH ROWS WE OWN
   PetscInt Istart,Iend;
@@ -115,8 +67,8 @@ int main(int argc,char **args) {
   // FILL THE NUMBER-OF-NONZEROS ARRAYS
   PetscInt    i, j, k, m, q, r;
   PetscScalar *abt, *ap, *aq;
-  ierr = VecGetArray(BTSEQ,&abt); CHKERRQ(ierr);
-  ierr = VecGetArray(PSEQ,&ap); CHKERRQ(ierr);
+  ierr = VecGetArray(BTseq,&abt); CHKERRQ(ierr);
+  ierr = VecGetArray(Pseq,&ap); CHKERRQ(ierr);
   for (k = 0; k < K; k++) {          // loop over ALL elements
     for (q = 0; q < 3; q++) {        // loop over vertices of current element
       i = (int)ap[3*k+q];            //   global index of q node
@@ -134,11 +86,11 @@ int main(int argc,char **args) {
       }
     }
   }
-  ierr = VecRestoreArray(PSEQ,&ap); CHKERRQ(ierr);
-  ierr = VecRestoreArray(BTSEQ,&abt); CHKERRQ(ierr);
+  ierr = VecRestoreArray(Pseq,&ap); CHKERRQ(ierr);
+  ierr = VecRestoreArray(BTseq,&abt); CHKERRQ(ierr);
 //ENDELEMENTSLOOP
 
-  ierr = VecGetArray(QSEQ,&aq); CHKERRQ(ierr);
+  ierr = VecGetArray(Qseq,&aq); CHKERRQ(ierr);
   for (m = 0; m < M; m++) {          // loop over ALL boundary segments
     for (q = 0; q < 2; q++) {        // loop over vertices of current segment
       i = (int)aq[2*m+q];            //   global index of q node
@@ -154,7 +106,7 @@ int main(int argc,char **args) {
       }
     }
   }
-  ierr = VecRestoreArray(QSEQ,&aq); CHKERRQ(ierr);
+  ierr = VecRestoreArray(Qseq,&aq); CHKERRQ(ierr);
   // resolve double counting
   for (iloc = 0; iloc < mm; iloc++) {
     dnnz[iloc] /= 2;
@@ -184,7 +136,7 @@ int main(int argc,char **args) {
   // FILL MAT WITH FAKE ENTRIES
   PetscInt    jj[3];
   PetscScalar vv[3];
-  ierr = VecGetArray(PSEQ,&ap); CHKERRQ(ierr);
+  ierr = VecGetArray(Pseq,&ap); CHKERRQ(ierr);
   for (k = 0; k < K; k++) {          // loop over ALL elements
     for (q = 0; q < 3; q++) {        // loop over vertices of current element
       i = (int)ap[3*k+q];            //   global index of q node
@@ -196,7 +148,7 @@ int main(int argc,char **args) {
       ierr = MatSetValues(A,1,&i,3,jj,vv,ADD_VALUES); CHKERRQ(ierr);
     }
   }
-  ierr = VecRestoreArray(PSEQ,&ap); CHKERRQ(ierr);
+  ierr = VecRestoreArray(Pseq,&ap); CHKERRQ(ierr);
   matassembly(A)
 //ENDPREALLOC
 
@@ -206,12 +158,9 @@ int main(int argc,char **args) {
   MatDestroy(&A);
   VecDestroy(&x);
   VecDestroy(&y);
-  VecDestroy(&BT);
-  VecDestroy(&P);
-  VecDestroy(&Q);
-  VecDestroy(&BTSEQ);
-  VecDestroy(&PSEQ);
-  VecDestroy(&QSEQ);
+  VecDestroy(&BTseq);
+  VecDestroy(&Pseq);
+  VecDestroy(&Qseq);
   PetscViewerDestroy(&viewer);
 
   PetscFinalize();

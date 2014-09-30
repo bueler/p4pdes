@@ -14,13 +14,13 @@ c2triangle: c2triangle.o  chkopts
 	-${CLINKER} -o c2triangle c2triangle.o  ${PETSC_KSP_LIB}
 	${RM} c2triangle.o
 
-c2prealloc: c2prealloc.o  chkopts
-	-${CLINKER} -o c2prealloc c2prealloc.o  ${PETSC_KSP_LIB}
-	${RM} c2prealloc.o
+c2prealloc: c2prealloc.o readmesh.o  chkopts
+	-${CLINKER} -o c2prealloc c2prealloc.o readmesh.o  ${PETSC_KSP_LIB}
+	${RM} c2prealloc.o readmesh.o
 
-c2poisson: c2poisson.o  chkopts
-	-${CLINKER} -o c2poisson c2poisson.o  ${PETSC_KSP_LIB}
-	${RM} c2poisson.o
+c2poisson: c2poisson.o readmesh.o  chkopts
+	-${CLINKER} -o c2poisson c2poisson.o readmesh.o  ${PETSC_KSP_LIB}
+	${RM} c2poisson.o readmesh.o
 
 
 .PHONY: distclean
