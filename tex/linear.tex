@@ -104,29 +104,49 @@ Inside an element, $\phi_j$ has three degrees of freedom:
 \phi_j(x,y) = A_k + B_k x + C_k y \quad \text{ on } \Delta_k.
 \end{equation*}
 
-We can use these basis functions to approximate the Dirichlet data $g$.  We index the $L$ nodes which are in the Dirichlet boundary: $\bx_{j_l} \in \partial_D\Omega$ for $l=0,\dots,L-1$.  (Figure \ref{fig:number-elements} shows an example with $L=4$ and $j_l=l$ for $l=0,1,2,3$.) Then the piecewise-linear interpolant of $g$, as a function extended to all of $\Omega$ in a piecewise-linear way, is
+We can use these basis functions to approximate the Dirichlet data $g$.  First index the $L$ nodes which are in the Dirichlet boundary: $\bx_{j_l} \in \partial_D\Omega$ for $l=0,\dots,L-1$.  (Figure \ref{fig:number-elements} shows an example with $L=4$ and $j_l=l$ for $l=0,1,2,3$.)  Then define the piecewise-linear interpolant of $g$ as this function which extends to all of $\Omega$ in a piecewise-linear way:
 \begin{equation*}
 \hat g(x,y) = \sum_{l=0,\dots,L} g(\bx_{j_l}) \phi_{j_l}(x,y).
 \end{equation*}
 
-Next we can describe finite-dimensional subsets of $H^1(\Omega)$ as the span of these basis functions:\sidenote{Traditionally, basis functions for $S_g^h$, where $u_h$ lives, are called the \emph{trial} functions, and basis functions for $S_0^h$ are called \emph{test} functions.  We will generally just give the labels $S_g^h$/$S_0^h$ instead of using the trial/test language.}
+Next, by using $\hat g$ and the basis functions $\phi_j$, we can describe three finite-dimensional subsets of $H^1(\Omega)$.  They are defined as the span of basis functions:\sidenote{Traditionally, basis functions for $S_g^h$, where $u_h$ lives, are called the \emph{trial} functions, and basis functions for $S_0^h$ are called \emph{test} functions.  We will generally just give the labels $S_g^h$/$S_0^h$ instead of using the trial/test language.}
 \begin{align*}
 S^h &= \Span\{\phi_j \,\big|\, \text{ all } j\,\}, \\
 S_0^h &= \Span\{\phi_j \,\big|\, \bx_j \notin \partial_D \Omega\}, \\
 S_g^h &= S_0^h + \hat g.
 \end{align*}
-Thus $\dim(S^h)=N$ and $\dim(S_0^h)=N-L$.  The affine space $S_g^h$ also has dimension $N-L$.
+Then $\dim(S^h)=N$ while $\dim(S_0^h)=\dim(S_g^h)=N-L$.
 
-The finite element method we have in mind requires that the weak formulation  \eqref{poissonweak} be true of $u_h\in S_g^h$ for all $v\in S_0^h$.  Thus we can write $u_h$ in the basis using $N-L$ coefficients $u_j$,
+The finite element method we choose requires that the weak formulation  \eqref{poissonweak} be true of $u_h\in S_g^h$ for all $v\in S_0^h$.  Thus we first write $u_h$ in the basis using $N-L$ unknown coefficients $u_j$,
 \begin{equation*}
-u_h(x,y) = \hat g(x,y) + \sum_{j\big|\bx_j \notin \partial_D \Omega} u_j \phi_j(x,y),
+u_h(x,y) = \hat g(x,y) + \sum_{j\big|\bx_j \notin \partial_D \Omega} u_j \phi_j(x,y).
 \end{equation*}
-and require that the weak formulation hold for all basis elements:
+Then we require that the weak formulation hold for a basis of $S_0^h$:
 \begin{align}
 \sum_{j\big|\bx_j \notin \partial_D \Omega} u_j \int_\Omega \grad \phi_j \cdot \grad \phi_i &= \int_\Omega f \phi_i + \int_{\partial_N\Omega} \gamma \phi_i \label{poissonfem} \\
 &\qquad - \sum_{l=0,\dots,L} g(\bx_{j_l})  \int_\Omega \grad \phi_{j_l} \cdot \grad \phi_i \notag
 \end{align}
 for all $i$ such that $\bx_i \notin \partial_D \Omega$.  The coefficients $u_j$, for all $j$ such that $\bx_j \notin \partial_D \Omega$, are unknown.
+
+The finite-dimensional weak formulation \eqref{poissonfem} is simply a matrix equation.  For ease of construction we will include the node-wise Dirichlet conditions into this matrix problem.  Let $A \in \RR^{N\times N}$ have entries
+\begin{equation*}
+a_{ij} = \int_\Omega \grad \phi_j \cdot \grad \phi_i,
+\end{equation*}
+if (FIXME: $i$ and $j$ are not Dirichlet ...)
+and $\bb\in \RR^N$ have entries
+\begin{equation*}
+b_i = \int_\Omega f \phi_i + \int_{\partial_N\Omega} \gamma \phi_i - \sum_{l=0,\dots,L} g(\bx_{j_l})  \int_\Omega \grad \phi_{j_l} \cdot \grad \phi_i.
+\end{equation*}
+(FIXME: except if $i$ is Dirichlet in which case $b_i=g(\bx_i)$)
+Then the FEM soluiton $u_h$ is the function determined by coefficients $u_j$ for $j=0,\dots,N$, which are the entries of $\bu \in \RR^N$, and the FEM equation is
+\begin{equation}
+A \bu = \bb \label{poissonmatrix}
+\end{equation}
+in matrix form.
+
+
+
+\section{Assembling the matrix problem, element by element}
 
 \begin{marginfigure}
 %\input{isoparametric.tikz}}
