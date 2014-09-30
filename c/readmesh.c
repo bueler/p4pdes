@@ -3,8 +3,7 @@
 #include "convenience.h"
 #include "readmesh.h"
 
-#define DEBUG 0
-
+//STARTGET
 PetscErrorCode getmeshfile(MPI_Comm comm, char filename[], PetscViewer *viewer) {
   PetscErrorCode ierr;
   PetscBool      fset;
@@ -16,39 +15,37 @@ PetscErrorCode getmeshfile(MPI_Comm comm, char filename[], PetscViewer *viewer) 
     SETERRQ(comm,1,"option  -f FILENAME  required");
   }
   strcat(filename,".petsc");
+  ierr = PetscPrintf(comm,"  opening mesh file %s ...\n",filename); CHKERRQ(ierr);
   ierr = PetscViewerBinaryOpen(comm,filename,FILE_MODE_READ,
              viewer); CHKERRQ(ierr);
   return 0;
 }
+//ENDGET
 
 PetscErrorCode readmesh(MPI_Comm comm, PetscViewer viewer,
                         PetscInt *N, PetscInt *K, PetscInt *M,
                         Vec *x, Vec *y, Vec *BTseq, Vec *Pseq, Vec *Qseq) {
   PetscErrorCode ierr;
+  ierr = PetscPrintf(comm,"  reading x,y,BT,P,Q from file ...\n"); CHKERRQ(ierr);
 
-  ierr = PetscPrintf(comm,"reading x,y,BT,P,Q from file ...\n"); CHKERRQ(ierr);
-
+  // READ IN ARRAYS, AND GET SIZES
   Vec BT, P, Q;
   createloadname(comm, *x, viewer,"node-x-coordinate")
   createloadname(comm, *y, viewer,"node-y-coordinate")
   createloadname(comm, BT, viewer,"node-boundary-type")
   createloadname(comm, P,  viewer,"element-node-indices")
   createloadname(comm, Q,  viewer,"boundary-segment-indices")
-
   ierr = VecGetSize(*x,N); CHKERRQ(ierr);
   ierr = VecGetSize(P,K); CHKERRQ(ierr);
   ierr = VecGetSize(Q,M); CHKERRQ(ierr);
-
   if (*K % 3 != 0) {
-    SETERRQ(comm,3,"element node index array P invalid: must have 3 K entries");
-  }
+    SETERRQ(comm,3,"element node index array P invalid: must have 3 K entries"); }
   *K /= 3;
   if (*M % 2 != 0) {
-    SETERRQ(comm,3,"element node index array Q invalid: must have 2 M entries");
-  }
+    SETERRQ(comm,3,"element node index array Q invalid: must have 2 M entries"); }
   *M /= 2;
-
-  ierr = PetscPrintf(comm,"  N=%d nodes, K=%d elements, M=%d boundary segments\n",*N,*K,*M); CHKERRQ(ierr);
+  ierr = PetscPrintf(comm,"  N=%d nodes, K=%d elements, M=%d boundary segments\n",
+                     *N,*K,*M); CHKERRQ(ierr);
 
   // PUT A COPY OF BT,P,Q ON EACH PROCESSOR
   VecScatter  ctx;
@@ -65,9 +62,7 @@ PetscErrorCode readmesh(MPI_Comm comm, PetscViewer viewer,
   ierr = VecScatterEnd(ctx,Q,*Qseq,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
   VecScatterDestroy(&ctx);
 
-  VecDestroy(&BT);
-  VecDestroy(&P);
-  VecDestroy(&Q);
+  VecDestroy(&BT);  VecDestroy(&P);  VecDestroy(&Q);
   return 0;
 }
-
+//END

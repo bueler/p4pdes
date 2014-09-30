@@ -10,9 +10,9 @@ c1matvec: c1matvec.o  chkopts
 	-${CLINKER} -o c1matvec c1matvec.o  ${PETSC_KSP_LIB}
 	${RM} c1matvec.o
 
-c2triangle: c2triangle.o  chkopts
-	-${CLINKER} -o c2triangle c2triangle.o  ${PETSC_KSP_LIB}
-	${RM} c2triangle.o
+c2triangle: c2triangle.o readmesh.o  chkopts
+	-${CLINKER} -o c2triangle c2triangle.o readmesh.o  ${PETSC_KSP_LIB}
+	${RM} c2triangle.o readmesh.o
 
 c2prealloc: c2prealloc.o readmesh.o  chkopts
 	-${CLINKER} -o c2prealloc c2prealloc.o readmesh.o  ${PETSC_KSP_LIB}

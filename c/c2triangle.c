@@ -13,6 +13,7 @@ which reads bump.1.{node,ele,poly} and writes bump.1.petsc.\n\n";
 
 #include <petscmat.h>
 #include "convenience.h"
+#include "readmesh.h"
 
 //STARTPREAMBLE
 int main(int argc,char **args) {
@@ -194,44 +195,33 @@ int main(int argc,char **args) {
 //ENDRANK0
 
   if (docheck == PETSC_TRUE) {
-    // READ BACK IN PARALLEL: ALLOCATE, LOAD, NAME, GET SIZES
-    Vec rx,ry,rP,rBT,rQ;
-    PetscInt rN, rK, rM, bigsize=1000;
+
+    // READ MESH FROM FILE
     PetscViewer rviewer;
-    ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,outfilename,FILE_MODE_READ,
-               &rviewer); CHKERRQ(ierr);
-    ierr = PetscPrintf(COMM,"reading from %s in parallel ...\n",outfilename); CHKERRQ(ierr);
-    createloadname(rx, rviewer,"node-x-coordinate")
-    createloadname(ry, rviewer,"node-y-coordinate")
-    createloadname(rBT,rviewer,"node-boundary-type")
-    createloadname(rP, rviewer,"element-node-indices")
-    createloadname(rQ, rviewer,"boundary-segment-indices")
-    ierr = VecGetSize(rx,&rN); CHKERRQ(ierr);
-    ierr = VecGetSize(rP,&rK); CHKERRQ(ierr);
-    ierr = VecGetSize(rQ,&rM); CHKERRQ(ierr);
-    rK /= 3;
-    rM /= 2;
-    ierr = PetscPrintf(COMM,"  N=%d nodes, K=%d elements, M=%d boundary segments\n",
-                       rN,rK,rM); CHKERRQ(ierr);
+    Vec rx,ry,rBTseq,rPseq,rQseq;
+    PetscInt rN, rK, rM, bigsize=1000;
+    ierr = getmeshfile(COMM, outfilename, &rviewer); CHKERRQ(ierr);
+    ierr = readmesh(COMM, rviewer, &rN, &rK, &rM,
+                    &rx, &ry, &rBTseq, &rPseq, &rQseq); CHKERRQ(ierr);
 
     // SHOW WHAT WE GOT IF SMALL ENOUGH
     if ((rN < bigsize) && (rK < bigsize)) {
       ierr = VecView(rx,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
       ierr = VecView(ry,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
-      ierr = VecView(rBT,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
-      ierr = VecView(rP,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
-      ierr = VecView(rQ,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
+      ierr = VecView(rBTseq,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
+      ierr = VecView(rPseq,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
+      ierr = VecView(rQseq,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
     } else {
       ierr = PetscPrintf(COMM,"  [supressing STDOUT because too big]\n"); CHKERRQ(ierr);
     }
 
     // CLEAN UP
     VecDestroy(&rx);  VecDestroy(&ry);
-    VecDestroy(&rBT);  VecDestroy(&rP);  VecDestroy(&rQ);
+    VecDestroy(&rBTseq);  VecDestroy(&rPseq);  VecDestroy(&rQseq);
     PetscViewerDestroy(&rviewer);
   }
 
   PetscFinalize();
   return 0;
 }
-//END
+

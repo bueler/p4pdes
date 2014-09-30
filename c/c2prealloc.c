@@ -35,7 +35,6 @@ int main(int argc,char **args) {
   const PetscInt  MPL = PETSC_MAX_PATH_LEN;
   PetscErrorCode  ierr;
 
-//STARTLOAD
   // MAJOR VARIABLES FOR TRIANGULAR MESH
   PetscInt N,   // number of degrees of freedom (= number of all nodes)
            K,   // number of elements
@@ -49,6 +48,7 @@ int main(int argc,char **args) {
   ierr = getmeshfile(COMM, fname, &viewer); CHKERRQ(ierr);
   ierr = readmesh(COMM, viewer, &N, &K, &M, &x, &y, &BTseq, &Pseq, &Qseq); CHKERRQ(ierr);
 
+//STARTNNZ
   // LEARN WHICH ROWS WE OWN
   PetscInt Istart,Iend;
   ierr = VecGetOwnershipRange(x,&Istart,&Iend); CHKERRQ(ierr);

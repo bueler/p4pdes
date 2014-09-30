@@ -7,6 +7,8 @@ For a one-process, coarse grid example do:\n\
 To see the sparsity pattern graphically:\n\
      c2poisson -f bump.1 -mat_view draw -draw_pause 5\n\n";
 
+FIXME: the rest is just a copy of the OLD c2prealloc.c
+
 #include <petscmat.h>
 #include <petscksp.h>
 #include "convenience.h"
