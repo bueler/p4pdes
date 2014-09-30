@@ -3,17 +3,18 @@ all: structure.pdf
 tikzinputs := samplepoly.1.tikz bump.1.tikz bump.2.tikz
 texinputs := getstarted.tex linear.tex
 
-cinputs := c1matvec.c c2triangle.c
+hinputs := $(addprefix ../c/, convenience.h)
+cinputs := c1matvec.c c2triangle.c c2prealloc.c
 cstrip := $(addprefix cstrip/, $(cinputs))
 
 # TO BUILD PDF:
 #     ice-bib.bib  needs to be a link to   pism/doc/ice-bib.bib
 
-structure.pdf: structure.tex structure.aux $(texinputs) $(cstrip) $(tikzinputs)
+structure.pdf: structure.tex structure.aux $(texinputs) $(hinputs) $(cstrip) $(tikzinputs)
 	pdflatex structure
 	pdflatex structure
 
-structure.aux: structure.tex $(texinputs) $(cstrip) $(tikzinputs)
+structure.aux: structure.tex $(texinputs) $(hinputs) $(cstrip) $(tikzinputs)
 	pdflatex structure
 	bibtex structure.aux
 
