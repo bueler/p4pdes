@@ -89,10 +89,10 @@ Inside an element, $\phi_j$ has three degrees of freedom:
 
 We can use these basis functions to approximate the Dirichlet data $g$.  We index the $L$ nodes which are in the Dirichlet boundary: $\bx_{j_l} \in \partial_D\Omega$ for $l=0,\dots,L-1$.\sidenote{Figure \ref{fig:number-elements} shows an example with $L=4$ and $j_l=l$ for $l=0,1,2,3$.} Then the piecewise-linear interpolant of $g$, as a function extended to all of $\Omega$ in a piecewise-linear way, is
 \begin{equation*}
-\hat g(x,y) = \sum_{l=0}^{L-1} g(\bx_{j_l}) \phi_{j_l}(x,y).
+\hat g(x,y) = \sum_{l=0,\dots,L} g(\bx_{j_l}) \phi_{j_l}(x,y).
 \end{equation*}
 
-Next we can specify the finite-dimensional subsets of $H^1(\Omega)$ as the span of basis functions
+Next we can describe finite-dimensional subsets of $H^1(\Omega)$ as the span of these basis functions:
 \begin{align*}
 S^h &= \Span\{\phi_j \,\big|\, \text{ all } j\,\}, \\
 S_0^h &= \Span\{\phi_j \,\big|\, \bx_j \notin \partial_D \Omega\}, \\
@@ -100,6 +100,16 @@ S_g^h &= S_0^h + \hat g.
 \end{align*}
 Thus $\dim(S^h)=N$ and $\dim(S_0^h)=N-L$.  The affine space $S_g^h$ also has dimension $N-L$.
 
+The finite element method we have in mind requires that the weak formulation  \eqref{poissonweak} be true of $u_h\in S_g^h$ for all $v\in S_0^h$.\marginnote{Traditionally, basis functions for $S_g^h$, where $u_h$ lives, are called the \emph{trial} functions, and basis functions for $S_0^h$ are called \emph{test} functions.  We will generally just give the labels $S_g^h$/$S_0^h$ instead of using the trial/test language.}  Thus we can write $u_h$ in the basis using $N-L$ coefficients $u_j$,
+\begin{equation*}
+u_h(x,y) = \hat g(x,y) + \sum_{j\big|\bx_j \notin \partial_D \Omega} u_j \phi_j(x,y),
+\end{equation*}
+and require that the weak formulation hold for all basis elements:
+\begin{align}
+\sum_{j\big|\bx_j \notin \partial_D \Omega} u_j \int_\Omega \grad \phi_j \cdot \grad \phi_i &= \int_\Omega f \phi_i + \int_{\partial_N\Omega} \gamma \phi_i \label{poissonfem} \\
+&\qquad - \sum_{l=0,\dots,L} g(\bx_{j_l})  \int_\Omega \grad \phi_{j_l} \cdot \grad \phi_i \notag
+\end{align}
+for all $i$ such that $\bx_i \notin \partial_D \Omega$.  The coefficients $u_j$, for all $j$ such that $\bx_j \notin \partial_D \Omega$, are unknown.
 
 \begin{marginfigure}
 %\input{isoparametric.tikz}}
@@ -108,7 +118,7 @@ FIXME
 \label{fig:isoparametric}
 \end{marginfigure}
 
-\marginnote{{\color{red} Remember:} $u_h$ is the \emph{trial} function and $v_h$ are the \emph{test} functions}
+
 
 \clearpage
 
