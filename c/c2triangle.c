@@ -1,15 +1,17 @@
 
 static char help[] =
-"Three step example of I/O with PETSc:\n\
-1. Rank 0 only:  Read a FEM grid from ASCII files .node,.ele,.poly written by triangle.\n\
-2. Rank 0 only:  Write in PETSc binary format (.petsc).\n\
-1. All ranks:    Read binary file back and show contents at stdout.\n\n\
-For example, do\n\
-    triangle -pqa1.0 bump\n\
-(or similar) to generate bump.1.{node,ele,poly}.\n\
-Then do\n\
-    c2triangle -f bump.1\n\
-which reads bump.1.{node,ele,poly} and writes bump.1.petsc.\n\n";
+"Convert triangle-written ASCII mesh files to binary (demonstrates I/O with PETSc):.\n\
+On the rank 0 process we do two steps:\n\
+  1.  Read a FEM grid from ASCII files .node,.ele,.poly written by triangle.\n\
+  2. Write in PETSc binary format (.petsc).\n\
+Optionally, as a check, the binary file can be read in parallel and written to\n\
+STDOUT.  In this case, node coordinates x,y have VecType \"mpi\" while integer\n\
+index arrays BT,P,Q are sequential (and stored on all processes).\n\n\
+For example, do:\n\
+    triangle -pqa1.0 bump   # generate bump.1.{node,ele,poly}\n\
+    c2triangle -f bump.1    # read bump.1.{node,ele,poly} and generate bump.1.petsc\n\n\
+Do this to re-read binary file bump.1.petsc and show contents:\n\
+    c2triangle -f bump.1 -check\n\n";
 
 #include <petscmat.h>
 #include "convenience.h"
@@ -24,12 +26,12 @@ int main(int argc,char **args) {
                   SELF = PETSC_COMM_SELF;
   PetscMPIInt     rank;
   MPI_Comm_rank(COMM,&rank);
-  const PetscInt  MPL = PETSC_MAX_PATH_LEN;
   PetscErrorCode  ierr;
 //ENDPREAMBLE
 
   // GET OPTIONS AND BUILD FILENAMES
   PetscBool      fset, docheck, checkset;
+  const PetscInt  MPL = PETSC_MAX_PATH_LEN;
   char fnameroot[MPL], outfilename[MPL],
        nodefilename[MPL], elefilename[MPL], polyfilename[MPL];
   ierr = PetscOptionsBegin(COMM, "", "options for c2triangle", ""); CHKERRQ(ierr);
@@ -195,29 +197,31 @@ int main(int argc,char **args) {
 //ENDRANK0
 
   if (docheck == PETSC_TRUE) {
+    ierr = PetscPrintf(COMM,"\nchecking %s by reading in Vecs and showing at STDOUT ...\n",
+                       outfilename); CHKERRQ(ierr);
 
     // READ MESH FROM FILE
     PetscViewer rviewer;
-    Vec rx,ry,rBTseq,rPseq,rQseq;
+    Vec rx,ry,rBT,rP,rQ;
     PetscInt rN, rK, rM, bigsize=1000;
     ierr = getmeshfile(COMM, outfilename, &rviewer); CHKERRQ(ierr);
-    ierr = readmesh(COMM, rviewer, &rN, &rK, &rM,
-                    &rx, &ry, &rBTseq, &rPseq, &rQseq); CHKERRQ(ierr);
+    ierr = readmeshseqall(COMM, rviewer, &rN, &rK, &rM,
+                          &rx, &ry, &rBT, &rP, &rQ); CHKERRQ(ierr);
 
     // SHOW WHAT WE GOT IF SMALL ENOUGH
     if ((rN < bigsize) && (rK < bigsize)) {
       ierr = VecView(rx,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
       ierr = VecView(ry,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
-      ierr = VecView(rBTseq,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
-      ierr = VecView(rPseq,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
-      ierr = VecView(rQseq,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
+      ierr = VecView(rBT,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
+      ierr = VecView(rP,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
+      ierr = VecView(rQ,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
     } else {
       ierr = PetscPrintf(COMM,"  [supressing STDOUT because too big]\n"); CHKERRQ(ierr);
     }
 
     // CLEAN UP
     VecDestroy(&rx);  VecDestroy(&ry);
-    VecDestroy(&rBTseq);  VecDestroy(&rPseq);  VecDestroy(&rQseq);
+    VecDestroy(&rBT);  VecDestroy(&rP);  VecDestroy(&rQ);
     PetscViewerDestroy(&rviewer);
   }
 

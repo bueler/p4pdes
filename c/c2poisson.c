@@ -33,24 +33,18 @@ int main(int argc,char **args) {
   ierr = getmeshfile(COMM, fname, &viewer); CHKERRQ(ierr);
   ierr = readmesh(COMM, viewer, &N, &K, &M, &x, &y, &BTseq, &Pseq, &Qseq); CHKERRQ(ierr);
 
-FIXME:  FROM HERE WE NEED TO ACTUALLY BUILD MATRIX A, NOT JUST PREALLOCATE IT
-
   // LEARN WHICH ROWS WE OWN
   PetscInt Istart,Iend;
   ierr = VecGetOwnershipRange(x,&Istart,&Iend); CHKERRQ(ierr);
 
-  // ALLOCATE LOCAL ARRAYS FOR NUMBER OF NONZEROS
+  // LOCAL ARRAYS FOR NUMBER OF NONZEROS
   PetscInt mm = Iend - Istart, iloc;
-  int *dnnz, // dnnz[i] is number of nonzeros in row which are in same-processor column
-      *onnz; // onnz[i] is number of nonzeros in row which are in other-processor column
+  int *dnnz, *onnz;
   PetscMalloc(mm*sizeof(int),&dnnz);
   PetscMalloc(mm*sizeof(int),&onnz);
   for (iloc = 0; iloc < mm; iloc++) {
-    dnnz[iloc] = 2;  // diagonal entry
-    onnz[iloc] = 0;
+    dnnz[iloc] = 2;  onnz[iloc] = 0;
   }
-
-  // FILL THE NUMBER-OF-NONZEROS ARRAYS
   PetscInt    i, j, k, m, q, r;
   PetscScalar *abt, *ap, *aq;
   ierr = VecGetArray(BTSEQ,&abt); CHKERRQ(ierr);
@@ -74,8 +68,6 @@ FIXME:  FROM HERE WE NEED TO ACTUALLY BUILD MATRIX A, NOT JUST PREALLOCATE IT
   }
   ierr = VecRestoreArray(PSEQ,&ap); CHKERRQ(ierr);
   ierr = VecRestoreArray(BTSEQ,&abt); CHKERRQ(ierr);
-//ENDELEMENTSLOOP
-
   ierr = VecGetArray(QSEQ,&aq); CHKERRQ(ierr);
   for (m = 0; m < M; m++) {          // loop over ALL boundary segments
     for (q = 0; q < 2; q++) {        // loop over vertices of current segment
@@ -93,33 +85,27 @@ FIXME:  FROM HERE WE NEED TO ACTUALLY BUILD MATRIX A, NOT JUST PREALLOCATE IT
     }
   }
   ierr = VecRestoreArray(QSEQ,&aq); CHKERRQ(ierr);
-  // resolve double counting
   for (iloc = 0; iloc < mm; iloc++) {
-    dnnz[iloc] /= 2;
-    onnz[iloc] /= 2;
+    dnnz[iloc] /= 2;  onnz[iloc] /= 2;
   }
-//ENDBDRYLOOP
-#if DEBUG
-  ierr = PetscSynchronizedPrintf(COMM,"showing entries of dnnz[%d] on rank %d (DEBUG)\n",mm,rank); CHKERRQ(ierr);
-  for (iloc = 0; iloc < mm; iloc++) {
-      ierr = PetscSynchronizedPrintf(COMM,"dnnz[%d] = %d\n",iloc,dnnz[iloc]); CHKERRQ(ierr);
-  }
-  ierr = PetscSynchronizedPrintf(COMM,"showing entries of onnz[%d] on rank %d (DEBUG)\n",mm,rank); CHKERRQ(ierr);
-  for (iloc = 0; iloc < mm; iloc++) {
-      ierr = PetscSynchronizedPrintf(COMM,"onnz[%d] = %d\n",iloc,onnz[iloc]); CHKERRQ(ierr);
-  }
-  ierr = PetscSynchronizedFlush(COMM,PETSC_STDOUT); CHKERRQ(ierr);
-#endif
 
-//STARTPREALLOC
-  // PREALLOCATE STIFFNESS MATRIX
+  // CREATE AND PREALLOCATE STIFFNESS MATRIX
   Mat A;
-  MatCreate(COMM,&A);
-  MatSetType(A,MATMPIAIJ);
-  MatSetSizes(A,mm,mm,N,N);
-  MatMPIAIJSetPreallocation(A,0,dnnz,0,onnz);
+  ierr = MatCreate(COMM,&A); CHKERRQ(ierr);
+  ierr = MatSetType(A,MATMPIAIJ); CHKERRQ(ierr);
+  ierr = MatSetSizes(A,mm,mm,N,N); CHKERRQ(ierr);
+  ierr = MatSetOptionsPrefix(A,"foo_"); CHKERRQ(ierr);
+  ierr = MatMPIAIJSetPreallocation(A,0,dnnz,0,onnz); CHKERRQ(ierr);
 
-  // FILL MAT WITH FAKE ENTRIES
+  // FIXME: to assemble we need seq copy of x,y too
+  VecScatter  ctx;
+  ierr = VecScatterCreateToAll(BT,&ctx,BTseq); CHKERRQ(ierr);
+  ierr = VecScatterBegin(ctx,BT,*BTseq,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
+  ierr = VecScatterEnd(ctx,BT,*BTseq,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
+
+FIXME
+
+  // GENERATE MAT ENTRIES
   PetscInt    jj[3];
   PetscScalar vv[3];
   ierr = VecGetArray(PSEQ,&ap); CHKERRQ(ierr);

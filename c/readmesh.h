@@ -6,19 +6,21 @@
 // get input file name from option "-f", and create corresponding viewer
 PetscErrorCode getmeshfile(MPI_Comm comm, char filename[], PetscViewer *viewer);
 
-// read from viewer created with getmeshfile()
-PetscErrorCode readmesh(MPI_Comm comm, PetscViewer viewer,
-                        PetscInt *N,    // number of nodes
-                        PetscInt *K,    // number of elements
-                        PetscInt *M,    // number of boundary segments
-                        Vec *x, Vec *y, // length N arrays (parallel) with nodes
-                        Vec *BTseq,     // length N array (sequential)
-                                        //   with boundary type: 0 = interior,
-                                        //   2 = Dirichlet, 3 = Neumann
-                        Vec *Pseq,      // length 3*K array (sequential)
-                                        //   with node indices for elements
-                        Vec *Qseq);     // length 2*M array (sequential)
-                                        //   with node indices for boundary segments
+// create a Vec and load it from a PETSc binary file
+PetscErrorCode createload(MPI_Comm comm, PetscViewer viewer, Vec *X);
 
+// read all mesh info onto each rank from viewer created with getmeshfile()
+PetscErrorCode readmeshseqall(MPI_Comm comm, PetscViewer viewer,
+                              PetscInt *N,    // number of nodes
+                              PetscInt *K,    // number of elements
+                              PetscInt *M,    // number of boundary segments
+                              Vec *x, Vec *y, // length N arrays with node coords
+                              Vec *BT,        // length N array with boundary type:
+                                              //   0 = interior,
+                                              //   2 = Dirichlet, 3 = Neumann
+                              Vec *P,         // length 3*K array with node indices
+                                              //   for elements
+                              Vec *Q);        // length 2*M array with node indices
+                                              //   for boundary segments
 #endif
 
