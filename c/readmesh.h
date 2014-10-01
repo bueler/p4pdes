@@ -19,5 +19,9 @@ PetscErrorCode readmeshseqall(MPI_Comm comm, PetscViewer viewer,
                                               //   for elements
                               Vec *Q);        // length 2*M array with node indices
                                               //   for boundary segments
+
+// get sizes: N = (# of nodes), K = (# of elements), M = (# of boundary segments)
+PetscErrorCode getmeshsizes(MPI_Comm comm, Vec x, Vec P, Vec Q,
+                            PetscInt *N, PetscInt *K, PetscInt *M);
 #endif
 

@@ -25,18 +25,15 @@ int main(int argc,char **args) {
            P,     //       element index,
            Q;     //       boundary segment index
   PetscInt N,     // number of nodes
-           K;     // number of elements
+           K,     // number of elements
+           M;     // number of boundary segments
   char     fname[PETSC_MAX_PATH_LEN];
   PetscViewer viewer;
   ierr = getmeshfile(COMM, fname, &viewer); CHKERRQ(ierr);
   ierr = readmeshseqall(COMM, viewer,
                         &x, &y, &BT, &P, &Q); CHKERRQ(ierr);
   PetscViewerDestroy(&viewer);
-  ierr = VecGetSize(x,&N); CHKERRQ(ierr);
-  ierr = VecGetSize(P,&K); CHKERRQ(ierr);
-  if (K % 3 != 0) {
-    SETERRQ(COMM,3,"element node index array P invalid: must have 3 K entries"); }
-  K /= 3;
+  ierr = getmeshsizes(COMM,x,P,Q,&N,&K,&M); CHKERRQ(ierr);
 
   // RELOAD x TO GET OWNERSHIP RANGES, AND ALLOCATE RHS
   Vec xmpi, b;

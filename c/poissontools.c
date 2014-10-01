@@ -1,4 +1,5 @@
 #include <petscmat.h>
+#include "readmesh.h"
 
 #define DEBUG 0
 
@@ -9,14 +10,7 @@ PetscErrorCode prealloc(MPI_Comm comm, Vec x, Vec y, Vec BT, Vec P, Vec Q,
 
   // NEED TOTAL NUMBER OF ELEMENTS AND BOUNDARY SEGMENTS
   PetscInt K, M;
-  ierr = VecGetSize(P,&K); CHKERRQ(ierr);
-  ierr = VecGetSize(Q,&M); CHKERRQ(ierr);
-  if (K % 3 != 0) {
-    SETERRQ(comm,3,"element node index array P invalid: must have 3 K entries"); }
-  K /= 3;
-  if (M % 2 != 0) {
-    SETERRQ(comm,3,"element node index array Q invalid: must have 2 M entries"); }
-  M /= 2;
+  ierr = getmeshsizes(comm,x,P,Q,NULL,&K,&M); CHKERRQ(ierr);
 
   // ALLOCATE LOCAL ARRAYS FOR NUMBER OF NONZEROS
   PetscInt mm = Iend - Istart, iloc;
@@ -80,11 +74,13 @@ PetscErrorCode prealloc(MPI_Comm comm, Vec x, Vec y, Vec BT, Vec P, Vec Q,
 #if DEBUG
   PetscMPIInt     rank;
   MPI_Comm_rank(COMM,&rank);
-  ierr = PetscSynchronizedPrintf(COMM,"showing entries of dnnz[%d] on rank %d (DEBUG)\n",mm,rank); CHKERRQ(ierr);
+  ierr = PetscSynchronizedPrintf(COMM,"showing entries of dnnz[%d] on rank %d (DEBUG)\n",
+                                 mm,rank); CHKERRQ(ierr);
   for (iloc = 0; iloc < mm; iloc++) {
       ierr = PetscSynchronizedPrintf(COMM,"dnnz[%d] = %d\n",iloc,dnnz[iloc]); CHKERRQ(ierr);
   }
-  ierr = PetscSynchronizedPrintf(COMM,"showing entries of onnz[%d] on rank %d (DEBUG)\n",mm,rank); CHKERRQ(ierr);
+  ierr = PetscSynchronizedPrintf(COMM,"showing entries of onnz[%d] on rank %d (DEBUG)\n",
+                                 mm,rank); CHKERRQ(ierr);
   for (iloc = 0; iloc < mm; iloc++) {
       ierr = PetscSynchronizedPrintf(COMM,"onnz[%d] = %d\n",iloc,onnz[iloc]); CHKERRQ(ierr);
   }
