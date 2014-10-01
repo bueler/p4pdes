@@ -18,6 +18,10 @@ c2testprealloc: c2testprealloc.o readmesh.o poissontools.o  chkopts
 	-${CLINKER} -o c2testprealloc c2testprealloc.o readmesh.o poissontools.o  ${PETSC_KSP_LIB}
 	${RM} c2testprealloc.o readmesh.o poissontools.o
 
+c2poisson: c2poisson.o readmesh.o poissontools.o  chkopts
+	-${CLINKER} -o c2poisson c2poisson.o readmesh.o poissontools.o  ${PETSC_KSP_LIB}
+	${RM} c2poisson.o readmesh.o poissontools.o
+
 
 .PHONY: distclean
 
