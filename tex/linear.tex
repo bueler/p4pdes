@@ -190,9 +190,9 @@ FIXME
 \cinputpart{c2triangle.c}{On rank zero processor: Write the mesh out in \PETSc binary format.}{VII}{//ENDREADPOLYGONS}{//ENDRANK0}
 
 
-\cinputpart{readmesh.c}{Determine filename of \PETSc binary file that has the mesh.}{I}{//STARTGET}{//ENDGET}
+\cinputpart{readmesh.c}{A method to determine the filename of \PETSc binary file that has the mesh, and a method to read one \pVec from a file.}{I}{//STARTGET}{//ENDGET}
 
-\cinputpart{readmesh.c}{Read the mesh in parallel, but put a sequential copy of index arrays on each processor.}{II}{//ENDGET}{//END}
+\cinputpart{readmesh.c}{Read the mesh from the file.  Then put a sequential copy of each mesh \pVec on each processor.}{II}{//ENDGET}{//END}
 
 
 \section{FEM method, for the Poisson equation}
@@ -202,11 +202,13 @@ FIXME
 FIXME: key idea is that we cannot tell if an edge is in the boundary just by whether both endpoints are in the boundary; i.e. we need to have list of boundary nodes which marks the boundary polygon
 
 
-\cinputpart{c2prealloc.c}{Loop over all elements to preallocate.}{I}{//STARTNNZ}{//ENDELEMENTSLOOP}
+\cinputpart{c2prealloc.c}{Read \pVec s from file and set up \pMat $A$.}{I}{//STARTREAD}{//STARTNNZ}
 
-\cinputpart{c2prealloc.c}{Loop over all boundary segments to preallocate.}{II}{//ENDELEMENTSLOOP}{//ENDBDRYLOOP}
+\cinputpart{c2prealloc.c}{Loop over all elements to preallocate.}{II}{//STARTNNZ}{//ENDELEMENTSLOOP}
 
-\cinputpart{c2prealloc.c}{Actually preallocate the \pMat in parallel.}{III}{//STARTPREALLOC}{//ENDPREALLOC}
+\cinputpart{c2prealloc.c}{Loop over all boundary segments to preallocate.}{III}{//ENDELEMENTSLOOP}{//ENDBDRYLOOP}
+
+\cinputpart{c2prealloc.c}{Actually preallocate the \pMat in parallel. Fill it with junk entries so the pattern can be visualized.}{IV}{//STARTPREALLOC}{//ENDPREALLOC}
 
 
 \section{Assembling Poisson}

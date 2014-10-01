@@ -29,6 +29,7 @@ int main(int argc,char **args) {
            P,     //       element index,
            Q;     //       boundary segment index
 
+//STARTREAD
   // READ MESH FROM FILE
   char        fname[PETSC_MAX_PATH_LEN];
   PetscViewer viewer;
@@ -37,22 +38,24 @@ int main(int argc,char **args) {
                         &N, &K, &M, &x, &y, &BT, &P, &Q); CHKERRQ(ierr);
   PetscViewerDestroy(&viewer);
 
-  // reload x to get ownership ranges
+  // RELOAD x TO GET OWNERSHIP RANGES
   Vec xmpi;
   PetscInt Istart,Iend;
   ierr = getmeshfile(COMM, fname, &viewer); CHKERRQ(ierr);
+  ierr = PetscPrintf(COMM,"  re-reading mesh Vec x to get ownership ranges ...\n"); CHKERRQ(ierr);
   ierr = createload(COMM, viewer, &xmpi); CHKERRQ(ierr);
   PetscViewerDestroy(&viewer);
   ierr = VecGetOwnershipRange(xmpi,&Istart,&Iend); CHKERRQ(ierr);
 
-//STARTNNZ
-  // ALLOCATE MAT AND LEARN WHICH ROWS WE OWN
+  // CREATE MAT AND LEARN WHICH ROWS WE OWN
   Mat A;
   ierr = MatCreate(COMM,&A); CHKERRQ(ierr);
   ierr = MatSetType(A,MATMPIAIJ); CHKERRQ(ierr);
   ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,N,N); CHKERRQ(ierr);
   ierr = MatSetOptionsPrefix(A,"a_"); CHKERRQ(ierr);
+  ierr = PetscPrintf(COMM,"  preallocating stiffness matrix A ...\n"); CHKERRQ(ierr);
 
+//STARTNNZ
   // ALLOCATE LOCAL ARRAYS FOR NUMBER OF NONZEROS
   PetscInt mm = Iend - Istart, iloc;
   int *dnnz, // dnnz[i] is number of nonzeros in row which are in same-processor column

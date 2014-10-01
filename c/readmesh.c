@@ -20,7 +20,6 @@ PetscErrorCode getmeshfile(MPI_Comm comm, char filename[], PetscViewer *viewer) 
              viewer); CHKERRQ(ierr);
   return 0;
 }
-//ENDGET
 
 PetscErrorCode createload(MPI_Comm comm, PetscViewer viewer, Vec *X) {
   PetscErrorCode ierr;
@@ -28,12 +27,13 @@ PetscErrorCode createload(MPI_Comm comm, PetscViewer viewer, Vec *X) {
   ierr = VecLoad(*X,viewer); CHKERRQ(ierr);
   return 0;
 }
+//ENDGET
 
 PetscErrorCode readmeshseqall(MPI_Comm comm, PetscViewer viewer,
                               PetscInt *N, PetscInt *K, PetscInt *M,
                               Vec *x, Vec *y, Vec *BT, Vec *P, Vec *Q) {
   PetscErrorCode ierr;
-  ierr = PetscPrintf(comm,"  reading Vecs x,y,BT,P,Q from file ...\n"); CHKERRQ(ierr);
+  ierr = PetscPrintf(comm,"  reading mesh Vecs x,y,BT,P,Q from file ...\n"); CHKERRQ(ierr);
 
   // READ IN ARRAYS, AND GET SIZES
   Vec xmpi, ympi, BTmpi, Pmpi, Qmpi;
@@ -56,31 +56,13 @@ PetscErrorCode readmeshseqall(MPI_Comm comm, PetscViewer viewer,
                      *N,*K,*M); CHKERRQ(ierr);
 
   // COPY TO EACH PROCESSOR
-  ierr = PetscPrintf(comm,"  scattering each Vec to each processor ...\n"); CHKERRQ(ierr);
+  ierr = PetscPrintf(comm,"  scattering each mesh Vec to each process ...\n"); CHKERRQ(ierr);
   VecScatter  ctx;
-  // scatter N-length Vecs
-  ierr = VecScatterCreateToAll(xmpi,&ctx,x); CHKERRQ(ierr);
-  ierr = VecScatterBegin(ctx,xmpi,*x,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
-  ierr = VecScatterEnd(ctx,xmpi,*x,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
-  VecScatterDestroy(&ctx);
-  ierr = VecScatterCreateToAll(ympi,&ctx,y); CHKERRQ(ierr);
-  ierr = VecScatterBegin(ctx,ympi,*y,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
-  ierr = VecScatterEnd(ctx,ympi,*y,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
-  VecScatterDestroy(&ctx);
-  ierr = VecScatterCreateToAll(BTmpi,&ctx,BT); CHKERRQ(ierr);
-  ierr = VecScatterBegin(ctx,BTmpi,*BT,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
-  ierr = VecScatterEnd(ctx,BTmpi,*BT,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
-  VecScatterDestroy(&ctx);
-  // scatter 3K-length Vec
-  ierr = VecScatterCreateToAll(Pmpi,&ctx,P); CHKERRQ(ierr);
-  ierr = VecScatterBegin(ctx,Pmpi,*P,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
-  ierr = VecScatterEnd(ctx,Pmpi,*P,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
-  VecScatterDestroy(&ctx);
-  // scatter 2M-length Vec
-  ierr = VecScatterCreateToAll(Qmpi,&ctx,Q); CHKERRQ(ierr);
-  ierr = VecScatterBegin(ctx,Qmpi,*Q,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
-  ierr = VecScatterEnd(ctx,Qmpi,*Q,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
-  VecScatterDestroy(&ctx);
+  scatterforwardall(ctx,xmpi,*x)
+  scatterforwardall(ctx,ympi,*y)
+  scatterforwardall(ctx,BTmpi,*BT)
+  scatterforwardall(ctx,Pmpi,*P)
+  scatterforwardall(ctx,Qmpi,*Q)
   VecDestroy(&xmpi);  VecDestroy(&ympi);
   VecDestroy(&BTmpi);  VecDestroy(&Pmpi);  VecDestroy(&Qmpi);
 

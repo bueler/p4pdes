@@ -1,4 +1,4 @@
-all: structure.pdf
+all: book.pdf
 
 tikzinputs := samplepoly.1.tikz bump.1.tikz bump.2.tikz
 texinputs := getstarted.tex linear.tex
@@ -10,13 +10,13 @@ cstrip := $(addprefix cstrip/, $(cinputs))
 # TO BUILD PDF:
 #     ice-bib.bib  needs to be a link to   pism/doc/ice-bib.bib
 
-structure.pdf: structure.tex structure.aux $(texinputs) $(hinputs) $(cstrip) $(tikzinputs)
-	pdflatex structure
-	pdflatex structure
+book.pdf: book.tex book.aux $(texinputs) $(hinputs) $(cstrip) $(tikzinputs)
+	pdflatex book
+	pdflatex book
 
-structure.aux: structure.tex $(texinputs) $(hinputs) $(cstrip) $(tikzinputs)
-	pdflatex structure
-	bibtex structure.aux
+book.aux: book.tex $(texinputs) $(hinputs) $(cstrip) $(tikzinputs)
+	pdflatex book
+	bibtex book.aux
 
 # The purpose of the following nonsense is to put only the "meat" of codes
 # into the book.  We remove ierr stuff.
@@ -48,4 +48,4 @@ bump.2.tikz: ../c/bump.poly ../c/bump.1.poly tri2tikz.py
 .PHONY: clean
 
 clean:
-	@rm -f *~ *.out *.aux *.log *.bbl *.blg *.synctex.gz *.idx *.ilg *.ind *.toc *.dvi cstrip/*.c
+	@rm -f *~ *.out *.aux *.log *.bbl *.blg *.synctex.gz *.idx *.ilg *.ind *.toc *.dvi cstrip/*.c bump.?.* samplepoly.?.*
