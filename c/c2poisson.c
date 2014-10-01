@@ -7,85 +7,33 @@ For a one-process, coarse grid example do:\n\
 To see the sparsity pattern graphically:\n\
      c2poisson -f bump.1 -mat_view draw -draw_pause 5\n\n";
 
-FIXME: the rest is just a copy of the OLD c2prealloc.c
-
-#include <petscmat.h>
 #include <petscksp.h>
 #include "convenience.h"
+#include "readmesh.h"
 #define DEBUG 0
 
 int main(int argc,char **args) {
 
-  // STANDARD PREAMBLE
   PetscInitialize(&argc,&args,(char*)0,help);
   const MPI_Comm  COMM = PETSC_COMM_WORLD;
-  PetscMPIInt     rank;
-  MPI_Comm_rank(COMM,&rank);
-  const PetscInt  MPL = PETSC_MAX_PATH_LEN;
   PetscErrorCode  ierr;
 
-//STARTLOAD
-  // MAJOR VARIABLES FOR TRIANGULAR MESH
+  // UNSTRUCTURED TRIANGULAR MESH
   PetscInt N,   // number of degrees of freedom (= number of all nodes)
            K,   // number of elements
            M;   // number of boundary segments
-  Vec      x, y,     // mesh:  x coord of node, y coord of node
-           BT, P, Q; // mesh: bdry type, element indexing, boundary segment indexing
+  Vec      x, y,  // mesh (parallel):   coords of node
+           BTseq, // mesh (sequential): bdry type,
+           Pseq,  //                    element index,
+           Qseq;  //                    boundary segment index
 
-  // GET FILENAME FROM OPTION
-  char           fname[MPL];
-  PetscBool      fset;
-  ierr = PetscOptionsBegin(COMM, "", "options for c2prealloc", ""); CHKERRQ(ierr);
-  ierr = PetscOptionsString("-f", "filename root with PETSc binary, for reading", "", "",
-                            fname, sizeof(fname), &fset); CHKERRQ(ierr);
-  ierr = PetscOptionsEnd(); CHKERRQ(ierr);
-  if (!fset) {
-    SETERRQ(COMM,1,"option  -f FILENAME  required");
-  }
-  strcat(fname,".petsc");
-
-  // ALLOCATE AND READ IN PARALLEL: NODE INFO
+  // READ MESH FROM FILE
+  char        fname[PETSC_MAX_PATH_LEN];
   PetscViewer viewer;
-  ierr = PetscPrintf(COMM,"reading x,y,BT,P,Q from %s in parallel ...\n",fname); CHKERRQ(ierr);
-  ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,fname,FILE_MODE_READ,
-             &viewer); CHKERRQ(ierr);
-  createloadname(x, viewer,"node-x-coordinate")
-  createloadname(y, viewer,"node-y-coordinate")
-  createloadname(BT,viewer,"node-boundary-type")
-  createloadname(P, viewer,"element-node-indices")
-  createloadname(Q, viewer,"boundary-segment-indices")
+  ierr = getmeshfile(COMM, fname, &viewer); CHKERRQ(ierr);
+  ierr = readmesh(COMM, viewer, &N, &K, &M, &x, &y, &BTseq, &Pseq, &Qseq); CHKERRQ(ierr);
 
-  ierr = VecGetSize(x,&N); CHKERRQ(ierr);
-  ierr = VecGetSize(P,&K); CHKERRQ(ierr);
-  ierr = VecGetSize(Q,&M); CHKERRQ(ierr);
-//ENDLOAD
-  if (K % 3 != 0) {
-    SETERRQ(COMM,3,"element node index array P invalid: must have 3 K entries");
-  }
-  K /= 3;
-  if (M % 2 != 0) {
-    SETERRQ(COMM,3,"element node index array Q invalid: must have 2 M entries");
-  }
-  M /= 2;
-  ierr = PetscPrintf(COMM,"  N=%d nodes, K=%d elements, M=%d boundary segments\n",N,K,M); CHKERRQ(ierr);
-
-//STARTPUTSEQ
-  // PUT A COPY OF THE FULL BT,P,Q ON EACH PROCESSOR
-  VecScatter  ctx;
-  Vec         BTSEQ, PSEQ, QSEQ;
-  ierr = VecScatterCreateToAll(BT,&ctx,&BTSEQ); CHKERRQ(ierr);
-  ierr = VecScatterBegin(ctx,BT,BTSEQ,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
-  ierr = VecScatterEnd(ctx,BT,BTSEQ,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
-  VecScatterDestroy(&ctx);
-  ierr = VecScatterCreateToAll(P,&ctx,&PSEQ); CHKERRQ(ierr);
-  ierr = VecScatterBegin(ctx,P,PSEQ,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
-  ierr = VecScatterEnd(ctx,P,PSEQ,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
-  VecScatterDestroy(&ctx);
-  ierr = VecScatterCreateToAll(Q,&ctx,&QSEQ); CHKERRQ(ierr);
-  ierr = VecScatterBegin(ctx,Q,QSEQ,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
-  ierr = VecScatterEnd(ctx,Q,QSEQ,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr);
-  VecScatterDestroy(&ctx);
-//ENDPUTSEQ
+FIXME:  FROM HERE WE NEED TO ACTUALLY BUILD MATRIX A, NOT JUST PREALLOCATE IT
 
   // LEARN WHICH ROWS WE OWN
   PetscInt Istart,Iend;

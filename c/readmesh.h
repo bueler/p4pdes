@@ -1,7 +1,7 @@
-#ifndef READMESH_H_   /* Include guard */
+#ifndef READMESH_H_
 #define READMESH_H_
 
-// these methods work with .petsc files written by  c2triangle
+// these methods work with .petsc binary files written by  c2triangle
 
 // get input file name from option "-f", and create corresponding viewer
 PetscErrorCode getmeshfile(MPI_Comm comm, char filename[], PetscViewer *viewer);

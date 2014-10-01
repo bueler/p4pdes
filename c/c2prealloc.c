@@ -9,41 +9,28 @@ For a one-process, coarse grid example do:\n\
 To see the sparsity pattern graphically:\n\
      c2prealloc -f bump.1 -mat_view draw -draw_pause 5\n\n";
 
-// SUMMARY FROM PETSC MANUAL
-/*
-For (vertex-based) finite element type calculations, an analogous procedure is as follows:
-  - Allocate integer array nnz.
-  - Loop over vertices, computing the number of neighbor vertices, which determines the
-number of nonzeros for the corresponding matrix row(s).
-  - Create the sparse matrix via MatCreateSeqAIJ() or alternative.
-  - Loop over elements, generating matrix entries and inserting in matrix via MatSetValues().
-*/
-
 #include <petscmat.h>
-#include <petscksp.h>
 #include "convenience.h"
 #include "readmesh.h"
 #define DEBUG 0
 
 int main(int argc,char **args) {
 
-  // STANDARD PREAMBLE
   PetscInitialize(&argc,&args,(char*)0,help);
   const MPI_Comm  COMM = PETSC_COMM_WORLD;
-  PetscMPIInt     rank;
-  MPI_Comm_rank(COMM,&rank);
-  const PetscInt  MPL = PETSC_MAX_PATH_LEN;
   PetscErrorCode  ierr;
 
-  // MAJOR VARIABLES FOR TRIANGULAR MESH
+  // UNSTRUCTURED TRIANGULAR MESH
   PetscInt N,   // number of degrees of freedom (= number of all nodes)
            K,   // number of elements
            M;   // number of boundary segments
-  Vec      x, y,     // mesh (parallel):  x coord of node, y coord of node
-           BTseq, Pseq, Qseq; // mesh (sequential): bdry type, element indexing, boundary segment indexing
+  Vec      x, y,  // mesh (parallel):   coords of node
+           BTseq, // mesh (sequential): bdry type,
+           Pseq,  //                    element index,
+           Qseq;  //                    boundary segment index
 
   // READ MESH FROM FILE
-  char        fname[MPL];
+  char        fname[PETSC_MAX_PATH_LEN];
   PetscViewer viewer;
   ierr = getmeshfile(COMM, fname, &viewer); CHKERRQ(ierr);
   ierr = readmesh(COMM, viewer, &N, &K, &M, &x, &y, &BTseq, &Pseq, &Qseq); CHKERRQ(ierr);
