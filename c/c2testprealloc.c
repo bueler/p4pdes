@@ -21,6 +21,7 @@ int main(int argc,char **args) {
   const MPI_Comm  COMM = PETSC_COMM_WORLD;
   PetscErrorCode  ierr;
 
+//STARTLOAD
   // READ MESH FROM FILE
   Vec      x, y,  // mesh: coords of node
            BT,    // mesh: bdry type,
@@ -48,6 +49,7 @@ int main(int argc,char **args) {
   ierr = createload(COMM, viewer, &xmpi); CHKERRQ(ierr);
   PetscViewerDestroy(&viewer);
   ierr = VecGetOwnershipRange(xmpi,&Istart,&Iend); CHKERRQ(ierr);
+//ENDLOAD
 
   // CREATE AND PREALLOCATE MAT
   Mat A;
@@ -75,6 +77,7 @@ int main(int argc,char **args) {
   }
   ierr = VecRestoreArray(P,&ap); CHKERRQ(ierr);
   matassembly(A)
+//ENDTEST
 
   // CLEAN UP
   MatDestroy(&A);

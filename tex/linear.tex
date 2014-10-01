@@ -195,20 +195,15 @@ FIXME
 \cinputpart{readmesh.c}{Read the mesh from the file.  Then put a sequential copy of each mesh \pVec on each processor.}{II}{//ENDGET}{//END}
 
 
-\section{FEM method, for the Poisson equation}
-
 \section{Preallocate a \pMat}
 
 FIXME: key idea is that we cannot tell if an edge is in the boundary just by whether both endpoints are in the boundary; i.e. we need to have list of boundary nodes which marks the boundary polygon
 
+%\cinputpart{poissontools.c}{FIXME}
 
-\cinputpart{c2prealloc.c}{Read \pVec s from file and set up \pMat $A$.}{I}{//STARTREAD}{//STARTNNZ}
+\cinputpart{c2testprealloc.c}{Read mesh \pVec s from file.  Get row ownership range.}{I}{//STARTLOAD}{//ENDLOAD}
 
-\cinputpart{c2prealloc.c}{Loop over all elements to preallocate.}{II}{//STARTNNZ}{//ENDELEMENTSLOOP}
-
-\cinputpart{c2prealloc.c}{Loop over all boundary segments to preallocate.}{III}{//ENDELEMENTSLOOP}{//ENDBDRYLOOP}
-
-\cinputpart{c2prealloc.c}{Actually preallocate the \pMat in parallel. Fill it with junk entries so the pattern can be visualized.}{IV}{//STARTPREALLOC}{//ENDPREALLOC}
+\cinputpart{c2testprealloc.c}{Set up \pMat $A$ and ctually preallocate it.  Fill it with junk entries so the pattern can be visualized.}{II}{//ENDLOAD}{//ENDTEST}
 
 
 \section{Assembling Poisson}

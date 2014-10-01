@@ -4,7 +4,7 @@ tikzinputs := samplepoly.1.tikz bump.1.tikz bump.2.tikz
 texinputs := getstarted.tex linear.tex
 
 hinputs := $(addprefix ../c/, convenience.h)
-cinputs := readmesh.c c1matvec.c c2triangle.c c2prealloc.c
+cinputs := readmesh.c poissontools.c c1matvec.c c2triangle.c c2testprealloc.c
 cstrip := $(addprefix cstrip/, $(cinputs))
 
 # TO BUILD PDF:
