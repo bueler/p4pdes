@@ -5,7 +5,7 @@ ex*.c
  
 c1matvec
 c2triangle
-c2prealloc
+c2testprealloc
 c2poisson
 
 bump.*

@@ -203,13 +203,14 @@ int main(int argc,char **args) {
     // READ MESH FROM FILE
     PetscViewer rviewer;
     Vec rx,ry,rBT,rP,rQ;
-    PetscInt rN, rK, rM, bigsize=1000;
     ierr = getmeshfile(COMM, outfilename, &rviewer); CHKERRQ(ierr);
-    ierr = readmeshseqall(COMM, rviewer, &rN, &rK, &rM,
+    ierr = readmeshseqall(COMM, rviewer,
                           &rx, &ry, &rBT, &rP, &rQ); CHKERRQ(ierr);
 
     // SHOW WHAT WE GOT IF SMALL ENOUGH
-    if ((rN < bigsize) && (rK < bigsize)) {
+    PetscInt N, bigsize=1000;
+    ierr = VecGetSize(rx,&N); CHKERRQ(ierr);
+    if (N < bigsize) {
       ierr = VecView(rx,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
       ierr = VecView(ry,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
       ierr = VecView(rBT,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);

@@ -11,9 +11,6 @@ PetscErrorCode createload(MPI_Comm comm, PetscViewer viewer, Vec *X);
 
 // read all mesh info onto each rank from viewer created with getmeshfile()
 PetscErrorCode readmeshseqall(MPI_Comm comm, PetscViewer viewer,
-                              PetscInt *N,    // number of nodes
-                              PetscInt *K,    // number of elements
-                              PetscInt *M,    // number of boundary segments
                               Vec *x, Vec *y, // length N arrays with node coords
                               Vec *BT,        // length N array with boundary type:
                                               //   0 = interior,

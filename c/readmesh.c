@@ -30,7 +30,6 @@ PetscErrorCode createload(MPI_Comm comm, PetscViewer viewer, Vec *X) {
 //ENDGET
 
 PetscErrorCode readmeshseqall(MPI_Comm comm, PetscViewer viewer,
-                              PetscInt *N, PetscInt *K, PetscInt *M,
                               Vec *x, Vec *y, Vec *BT, Vec *P, Vec *Q) {
   PetscErrorCode ierr;
   ierr = PetscPrintf(comm,"  reading mesh Vecs x,y,BT,P,Q from file ...\n"); CHKERRQ(ierr);
@@ -43,17 +42,19 @@ PetscErrorCode readmeshseqall(MPI_Comm comm, PetscViewer viewer,
   ierr = createload(comm, viewer, &Pmpi); CHKERRQ(ierr);
   ierr = createload(comm, viewer, &Qmpi); CHKERRQ(ierr);
 
-  ierr = VecGetSize(xmpi,N); CHKERRQ(ierr);
-  ierr = VecGetSize(Pmpi,K); CHKERRQ(ierr);
-  ierr = VecGetSize(Qmpi,M); CHKERRQ(ierr);
-  if (*K % 3 != 0) {
+  // SANITY CHECK: GET INDEX ARRAY SIZES
+  PetscInt N,K,M;
+  ierr = VecGetSize(xmpi,&N); CHKERRQ(ierr);
+  ierr = VecGetSize(Pmpi,&K); CHKERRQ(ierr);
+  ierr = VecGetSize(Qmpi,&M); CHKERRQ(ierr);
+  if (K % 3 != 0) {
     SETERRQ(comm,3,"element node index array P invalid: must have 3 K entries"); }
-  *K /= 3;
-  if (*M % 2 != 0) {
+  K /= 3;
+  if (M % 2 != 0) {
     SETERRQ(comm,3,"element node index array Q invalid: must have 2 M entries"); }
-  *M /= 2;
+  M /= 2;
   ierr = PetscPrintf(comm,"    N=%d nodes, K=%d elements, M=%d boundary segments\n",
-                     *N,*K,*M); CHKERRQ(ierr);
+                     N,K,M); CHKERRQ(ierr);
 
   // COPY TO EACH PROCESSOR
   ierr = PetscPrintf(comm,"  scattering each mesh Vec to each process ...\n"); CHKERRQ(ierr);
