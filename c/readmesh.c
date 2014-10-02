@@ -9,7 +9,7 @@ PetscErrorCode getmeshfile(MPI_Comm comm, char filename[], PetscViewer *viewer) 
   PetscBool      fset;
   ierr = PetscOptionsBegin(comm, "", "options for readmesh", ""); CHKERRQ(ierr);
   ierr = PetscOptionsString("-f", "filename root with PETSc binary, for reading", "", "",
-                            filename, sizeof(filename), &fset); CHKERRQ(ierr);
+                            filename, PETSC_MAX_PATH_LEN, &fset); CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
   if (!fset) {
     SETERRQ(comm,1,"option  -f FILENAME  required");
