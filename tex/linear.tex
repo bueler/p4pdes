@@ -130,7 +130,7 @@ for all $i$ such that $\bx_i \notin \partial_D \Omega$.  The coefficients $u_j$,
 Note that the support (i.e.~nonzero set) of $\phi_j$ includes the node $\bx_j$ and all triangles (elements) $\triangle_k$ for which $\bx_j$ is a node of $\triangle_k$.  Thus the integral ``$\int_\Omega \grad \phi_j \cdot \grad \phi_i$'' in \eqref{poissonfem} is often zero.  Specifically, it is zero if nodes $\bx_i$ and $\bx_j$ are not connected by an edge in the triangulation, equivalently if $\bx_i$ and $\bx_j$ are not both nodes of at least one triangle in the triangulation.
 
 
-\section{Assembling the matrix problem, element by element}
+\section{The FEM matrix problem}
 
 The finite-dimensional weak formulation \eqref{poissonfem} is simply a matrix equation.  For ease of construction we will include the node-wise Dirichlet conditions as rows of this matrix problem, so the matrix will have $N$ columns, corresponding to one unknown for \emph{every} node $\bx_j$, and $N$ rows.  We will then describe, and give a code for, \emph{assembling} this matrix equation.
 
@@ -216,11 +216,31 @@ A = \begin{bmatrix}
 
 \bigskip
 
-In terms of later examples, it is useful to note that the initial construction is correct in the case where $\partial_D \Omega = \emptyset$ is empty.  Of course, in that case the Poisson problem does not have a unique solution because $u=(\text{constant})$ solves $-\grad^2 u=0$ with $\partial u/\partial n = 0$ on the whole boundary $\partial_N \Omega = \partial \Omega$.
+In terms of later examples, we can note that the initial construction is already correct in the case where $\partial_D \Omega$ is the empty set.  In this Neumann-only case $A=\tilde A$ and $\bb = \tilde \bb$.  However, in this case it is also true that $u=(\text{constant})$ solves $-\grad^2 u=0$ with $\partial u/\partial n = 0$ on the whole boundary $\partial_N \Omega = \partial \Omega$, so equations \eqref{poissonstrong} or \eqref{poissonweak} only determines the solution up to an additive constant.  Thus the Poisson problem does not have a unique solution in this case, and we will have to tell \PETSc about the extra constant solutions, i.e.~the null space.
 
-\vspace{0.5in}
-FIXME
 
+\section{Assembling the matrix problem, element by element}
+
+Each entry $\tilde a_{ij}$ of the initial matrix $\tilde A$ is not, however, computed in turn.  Rather, we build the matrix by computing contributions to these entries from each element.
+
+To explain element-by-element assembly we first define the integral over just one triangle $\triangle_k$:
+    $$\tilde a_{ij}^k = \int_{\triangle_k} \grad \phi_j \cdot \grad \phi_i.$$
+Also we introduce the idea of FIXME \texttt{P(k,q)}
+
+Denoting $\tilde a_{ij}^k$ by \texttt{a(k,i,j)}, we to make the element-by-element assembly procedure clear:
+\begin{verbatim}
+A = 0                     // N x N matrix; set a(i,j) = 0
+for k = 0 to K-1 {        // loop through all elements
+  for q = 0 to 2 {        // loop through vertices of element k
+    i = P(k,q)            // row index
+    for r = 0 to 2 {
+      j = P(k,q)          // column index
+      a(i,j) += a(k,i,j)  // need to compute this ...
+    }
+  }
+}
+// now we need to edit A for Dirichlet conditions ...
+\end{verbatim}
 
 \begin{align*}
 \chi_0(\xi,\eta) &= 1-\xi-\eta \\
