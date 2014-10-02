@@ -13,6 +13,24 @@ To see the matrix graphically:\n\
 #include "readmesh.h"
 #include "poissontools.h"
 
+PetscScalar chi(PetscInt q, PetscScalar xi, PetscScalar eta) {
+  if (q==0) {
+    return 1.0 - xi - eta;
+  } else if (q==1) {
+    return xi;
+  } else {
+    return eta;
+  }
+}
+
+PetscScalar exactsolution(PetscScalar x, PetscScalar y) {
+  return cos(2.0*PETSC_PI*x) * cos(2.0*PETSC_PI*y);
+}
+
+PetscScalar sourcefunction(PetscScalar x, PetscScalar y) {
+  return 8.0 * PETSC_PI * PETSC_PI * exactsolution(x,y);
+}
+
 int main(int argc,char **args) {
 
   PetscInitialize(&argc,&args,(char*)0,help);
@@ -35,7 +53,7 @@ int main(int argc,char **args) {
   PetscViewerDestroy(&viewer);
   ierr = getmeshsizes(COMM,x,P,Q,&N,&K,&M); CHKERRQ(ierr);
 
-  // RELOAD x TO GET OWNERSHIP RANGES, AND ALLOCATE RHS
+  // RELOAD x TO GET OWNERSHIP RANGES, AND ALLOCATE RHS b
   Vec xmpi, b;
   PetscInt Istart,Iend;
   ierr = getmeshfile(COMM, fname, &viewer); CHKERRQ(ierr);
@@ -44,6 +62,7 @@ int main(int argc,char **args) {
   PetscViewerDestroy(&viewer);
   ierr = VecGetOwnershipRange(xmpi,&Istart,&Iend); CHKERRQ(ierr);
   ierr = VecDuplicate(xmpi,&b); CHKERRQ(ierr);
+  ierr = VecSet(b,0.0); CHKERRQ(ierr);
   ierr = VecDestroy(&xmpi); CHKERRQ(ierr);
 
   // CREATE AND PREALLOCATE MAT
@@ -59,14 +78,18 @@ int main(int argc,char **args) {
   
   // ASSEMBLE INITIAL STIFFNESS (IGNORING BOUNDARY VALUES)
   PetscScalar dxi[3]  = {-1.0, 1.0, 0.0}, // grad of basis functions on ref element
-              deta[3] = {-1.0, 0.0, 1.0};
+              deta[3] = {-1.0, 0.0, 1.0},
+              quadxi[3]  = {0.5, 0.5, 0.0}, // quadrature points are midpoints of
+              quadeta[3] = {0.0, 0.5, 0.5}; //   sides of ref element
   PetscInt    k, q, r, i, ii[3], jj[3];
   PetscBool   ownk;
-  PetscScalar *ax, *ay, *ap;
+  PetscScalar *ax, *ay, *ap, *ab;
   PetscScalar vv[3], b2, b3, c2, c3, detJ;
+  PetscScalar bval, xquad, yquad;
   ierr = VecGetArray(x,&ax); CHKERRQ(ierr);
   ierr = VecGetArray(y,&ay); CHKERRQ(ierr);
   ierr = VecGetArray(P,&ap); CHKERRQ(ierr);
+  ierr = VecGetArray(b,&ab); CHKERRQ(ierr);
   for (k = 0; k < K; k++) {          // loop over ALL elements
     // get vertex indices for current element
     ownk = PETSC_FALSE;
@@ -81,8 +104,9 @@ int main(int argc,char **args) {
     c2 = ax[ii[0]] - ax[ii[2]];      //           = x1 - x3
     c3 = ax[ii[1]] - ax[ii[0]];      //           = x2 - x1
     detJ = c3 * b2 - c2 * b3;        // note area = fabs(detJ)/2.0
-    // compute element stiffness contribution
-    for (q = 0; q < 3; q++) {        // loop over vertices of current element
+    // loop over vertices of current element
+    for (q = 0; q < 3; q++) {
+      // compute element stiffness contribution
       i = ii[q];                     // row index
       if ((i < Istart) || (i >= Iend))  continue; // skip row if I don't own it
       for (r = 0; r < 3; r++) {      // loop over other vertices
@@ -92,35 +116,78 @@ int main(int argc,char **args) {
         vv[r] /= 2.0 * detJ;
       }
       ierr = MatSetValues(A,1,&i,3,jj,vv,ADD_VALUES); CHKERRQ(ierr);
+      // compute element RHS contribution
+      bval = 0.0;
+      for (r = 0; r < 3; r++) {      // loop over quadrature points
+        xquad = ax[i] + c3 * quadxi[r] - c2 * quadeta[r]; // = x1 + (x2-x1) xi + (x3 - x1) eta
+        yquad = ay[i] - b3 * quadxi[r] + b2 * quadeta[r]; // = y1 + (y2-y1) xi + (y3 - y1) eta
+        bval += sourcefunction(xquad,yquad) * chi(q,quadxi[r],quadeta[r]);
+      }
+      bval *= detJ / 6.0;
+      ierr = VecSetValues(b,1,&i,&bval,ADD_VALUES); CHKERRQ(ierr);
     }
   }
   ierr = VecRestoreArray(x,&ax); CHKERRQ(ierr);
   ierr = VecRestoreArray(y,&ay); CHKERRQ(ierr);
   ierr = VecRestoreArray(P,&ap); CHKERRQ(ierr);
+  ierr = VecRestoreArray(b,&ab); CHKERRQ(ierr);
+  // ACTUALLY ASSEMBLE
   matassembly(A)
+  vecassembly(b)
 
   // MINIMAL CHECK IS THAT U=1 IS IN KERNEL
-  Vec uone;
+  Vec uone, btest;
   PetscScalar normone, normAone;
   ierr = VecDuplicate(b,&uone); CHKERRQ(ierr);
+  ierr = VecDuplicate(b,&btest); CHKERRQ(ierr);
   ierr = VecSet(uone,1.0); CHKERRQ(ierr);
-  ierr = MatMult(A,uone,b); CHKERRQ(ierr);             // b = A * uone
+  ierr = MatMult(A,uone,btest); CHKERRQ(ierr);             // btest = A * uone
   ierr = VecNorm(uone,NORM_2,&normone); CHKERRQ(ierr);
-  ierr = VecNorm(b,NORM_2,&normAone); CHKERRQ(ierr);
-  ierr = PetscPrintf(COMM,"  check:  |A0 * 1|_2 / |1|_2 = %e   (should be O(eps))\n",
+  ierr = VecNorm(btest,NORM_2,&normAone); CHKERRQ(ierr);
+  ierr = PetscPrintf(COMM,"  check I:  |A0 * 1|_2 / |1|_2 = %e   (should be O(eps))\n",
                      normAone/normone); CHKERRQ(ierr);
+  ierr = VecDestroy(&uone); CHKERRQ(ierr);
+  ierr = VecDestroy(&btest); CHKERRQ(ierr);
 
-/* FIXME TO DO second check: compute RHS with f = 1, and
-  KSP            ksp;
-  MatNullSpace   nullsp;
-  MatNullSpaceCreate(PETSC_COMM_WORLD, PETSC_TRUE, 0, NULL, &nullsp); // constants are in null space
-  KSPSetNullSpace(ksp, nullsp);
-  MatNullSpaceDestroy(&nullsp);
-*/
+  // SECOND CHECK: SOLVE HOMOGENEOUS NEUMANN PROBLEM WITH KNOWN SOLN
+  // FIRST EVALUATE EXACT SOLUTION AT NODES
+  Vec         uexact;
+  PetscScalar uval;
+  ierr = VecDuplicate(b,&uexact); CHKERRQ(ierr);
+  ierr = VecGetArray(x,&ax); CHKERRQ(ierr);
+  ierr = VecGetArray(y,&ay); CHKERRQ(ierr);
+  for (i = Istart; i < Iend; i++) {
+    uval = exactsolution(ax[i],ay[i]);
+    ierr = VecSetValues(uexact,1,&i,&uval,INSERT_VALUES); CHKERRQ(ierr);
+  }
+  ierr = VecRestoreArray(x,&ax); CHKERRQ(ierr);
+  ierr = VecRestoreArray(y,&ay); CHKERRQ(ierr);
+  vecassembly(uexact)
+  // NEXT SOLVE SYSTEM
+  Vec          u;
+  KSP          ksp;
+  MatNullSpace nullsp;
+  ierr = VecDuplicate(b, &u); CHKERRQ(ierr);
+  ierr = KSPCreate(COMM, &ksp); CHKERRQ(ierr);
+  // constants are in null space:
+  ierr = MatNullSpaceCreate(COMM, PETSC_TRUE, 0, NULL, &nullsp); CHKERRQ(ierr);
+  ierr = KSPSetNullSpace(ksp, nullsp); CHKERRQ(ierr);
+  ierr = KSPSetOperators(ksp, A, A); CHKERRQ(ierr);
+  ierr = KSPSetFromOptions(ksp); CHKERRQ(ierr);
+  ierr = KSPSolve(ksp, b, u); CHKERRQ(ierr);
+  // NOW COMPUTE ERROR
+  PetscScalar normuexact, normerror;
+  ierr = VecNorm(uexact,NORM_2,&normuexact); CHKERRQ(ierr);
+  ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);  // u := -uexact + u
+  ierr = VecNorm(u,NORM_2,&normerror); CHKERRQ(ierr);
+  ierr = PetscPrintf(COMM,"  check II: |u - uexact|_2 / |uexact|_2 = %e  (should be O(h^2))\n",
+                     normerror/normuexact); CHKERRQ(ierr);
+  ierr = MatNullSpaceDestroy(&nullsp); CHKERRQ(ierr);
+  ierr = KSPDestroy(&ksp); CHKERRQ(ierr);
 
   // CLEAN UP
   MatDestroy(&A);
-  VecDestroy(&b);
+  VecDestroy(&b);  VecDestroy(&u);  VecDestroy(&uexact);
   VecDestroy(&x);  VecDestroy(&y);
   VecDestroy(&BT);  VecDestroy(&P);  VecDestroy(&Q);
   PetscFinalize();
