@@ -13,10 +13,13 @@
 \usepackage{xspace}
 \usepackage{fancyvrb}
 \usepackage{graphicx}
-\usepackage{amsmath,amssymb}
+\usepackage{amsmath,amssymb,amsthm}
 \usepackage{tikz}
 
 % macros
+
+\theoremstyle{definition}
+\newtheorem*{example}{{\color{cyan} Example}}
 
 \newcommand{\trueinput}[2]{
 \VerbatimInput[frame=single,framesep=3mm,label=\fbox{\normalsize \textsl{\,#1\,}},fontfamily=courier,fontsize=\footnotesize]{#2}
@@ -86,6 +89,8 @@
 \newcommand{\CC}{\mathbb{C}}
 \newcommand{\RR}{\mathbb{R}}
 \newcommand{\ZZ}{\mathbb{Z}}
+
+\newcommand{\X}{\times}  % for nonzero entries in matrices
 
 \newcommand{\eps}{\epsilon}
 \newcommand{\lam}{\lambda}
@@ -202,7 +207,7 @@ This book does not replace the \PETSc \emph{User's Manual}.  For one thing, the 
 
 Some of the mathematical theory\sidenote{\citep{Evans} is recommended.} of PDEs must be familiar to you, but I will also assume some (nebulous, and hard to define) practical intuition about PDE problems, including exposure to nonlinear ones.\sidenote{\citep{Ockendonetal2003} is recommended.}  Of course, all applied mathematicians, distinctly including this author, are wanting when it comes to absorbing the mathematical theory of, and gaining intuition for, nonlinear PDEs.
 
-Numerical ideas from linear algebra \citep{TrefethenBau} arise in this book, but so will multiple numerical discretization strategies for PDEs.  Thus at least one numerical paradigm for PDEs must be in the reader's toolbox.  This numerical background might be based on finite differences \citep{MortonMayers} or finite volumes \citep{LeVeque}, but I will assume you are interested in applying the finite element method (FEM) on unstructured grids.  The basics of the FEM method will be reviewed, but the reader must bring some background understanding of this nontrivial topic.\sidenote{\citet{Elmanetal2005}, \citet{Braess}, and \citet{KarniadakisSherwin} are all recommended, but we will follow Elman most closely.}  Perhaps the weak form of a PDE, and the idea of assembling the systems of equations element-by-element, are ``rusty'' topics.  But these topics must be there somewhere.
+Numerical ideas from linear algebra \citep{TrefethenBau} arise in this book, but so will multiple numerical discretization strategies for PDEs.  Thus at least one numerical paradigm for PDEs must be in the reader's toolbox.  This numerical background might be based on finite differences \citep{MortonMayers} or finite volumes \citep{LeVeque}, but I will assume you are interested in applying the finite element method (FEM) on unstructured grids.  The basics of the FEM method will be reviewed, but the reader must bring some background understanding of this nontrivial topic.\sidenote{\citet{Elmanetal2005}, \citet{Braess}, and \citet{KarniadakisSherwin} are all recommended.}  Perhaps the weak form of a PDE, and the idea of assembling the systems of equations element-by-element, are ``rusty'' topics.  But these topics must be there somewhere.
 
 \section{There is much that this book does NOT do}
 

@@ -1,17 +1,11 @@
 
 \chapter{2. Linear PDEs with matrix methods}
 
-We start with a cliched example because it is the right place to start.
+We start with a cliched example because it is the right place to start.  Though the Poisson problem below is a cliche in applied mathematics, it provides us the opportunity to start using \PETSc for nontrivial tasks, among these the reading of an unstructured mesh from a file into \PETSc \pVec s, the preallocation of a \pMat in parallel, and the use of a linear solver (a \pKSP object) to solve large sparse systems.
 
 \section{A finite element method for the Poisson problem}
 
-Let $\Omega \subset \RR^d$ be a region.  (Only $d=2$ and $d=3$ are used in this book.)  Suppose its boundary is decomposed into well-behaved subsets $\partial_D \Omega$ and $\partial_N \Omega$ whose union is the entire boundary $\partial \Omega$.  The \emph{Poisson problem}, in strong form and including nonhomogeneous Dirichlet and Neumann boundary conditions, is
-\begin{align}
-- \grad^2 u &= f \quad \text{ on } \Omega, \label{poissonstrong} \\
-u &= g \quad \text{ on } \partial_D \Omega, \notag \\
-\frac{\partial u}{\partial n} &= \gamma \quad \text{ on } \partial_N \Omega \notag
-\end{align}
-where $\partial u/\partial n = \bn \cdot \grad u$ and $\bn$ is the outward unit normal on $\partial \Omega$.\marginnote{%
+Let $\Omega \subset \RR^d$ be a region.  (Only $d=2$ and $d=3$ are used in this book.)  Suppose its boundary is decomposed into well-behaved subsets $\partial_D \Omega$ and $\partial_N \Omega$ whose union is the entire boundary $\partial \Omega$.  The \emph{Poisson problem}, in strong form and including nonhomogeneous Dirichlet and Neumann boundary conditions, is\marginnote{%
 \begin{tikzpicture}[scale=0.7]
 %\draw[gray,very thin] (-2,-6) grid (8,3);
 \draw[line width=2pt] (0,0) .. controls (0,3) and (5,3) .. node[sloped,above] {$u=g$} node[sloped,below] {$\partial_D\Omega$} (7,0);
@@ -21,34 +15,36 @@ where $\partial u/\partial n = \bn \cdot \grad u$ and $\bn$ is the outward unit 
 \draw[->,line width=1.0pt] (2,-3) -- (1.2,-3) node[below] {$\bn$}; % normal vector
 \draw (4,-1) node {$- \grad^2 u = f$ in $\Omega$};
 \end{tikzpicture}}
-
-The data of problem \eqref{poissonstrong}, besides the region $\Omega$ and its boundary, is a \emph{source term} $f\in L^2(\Omega)$, \emph{Dirichlet data} $g\in L^2(\partial_N \Omega)$, and \emph{non-homogeneous Neumann data} $\gamma\in L^2(\partial_N \Omega)$.  For simplicity, and so that the solution of this problem is unique \citep{Elmanetal2005}, we assume $\partial_D \Omega$ has positive measure.  All of our examples will have that property.
+\begin{align}
+- \grad^2 u &= f \quad \text{ on } \Omega, \label{poissonstrong} \\
+u &= g \quad \text{ on } \partial_D \Omega, \notag \\
+\frac{\partial u}{\partial n} &= \gamma \quad \text{ on } \partial_N \Omega \notag
+\end{align}
+where $\partial u/\partial n = \bn \cdot \grad u$ and $\bn$ is the outward unit normal on $\partial \Omega$.  The data of problem \eqref{poissonstrong}, besides the region $\Omega$ and its boundary, is a \emph{source term} $f\in L^2(\Omega)$, \emph{Dirichlet data} $g\in L^2(\partial_N \Omega)$, and \emph{non-homogeneous Neumann data} $\gamma\in L^2(\partial_N \Omega)$.
 
 The Poisson problem models the distribution of temperature in a conducting object at steady state, the electrostatic potential, the equilibrium distribution from certain random walks, and many other other physical phenomena.  And it is linear, that is, if $u_1$ and $u_2$ are solutions then convex linear combinations are also solutions.  More relevantly, it is a linear problem in the sense that finite-dimensional approximations of the Poisson problem are simply matrix problems.
 
-As \eqref{poissonstrong} is stated there may be no solution where ``$\grad^2 u$'' makes sense as a function, even for ``nice'' boundary and source functions.  In particular, there may be no $u\in C^2(\Omega)$ which is continuous up to the boundary (i.e.~$u\in C(\bar\Omega)$).  There is, however, a unique solution\sidenote{Many mathematical concepts, including a well-posedness proof that justifies this claim, are all covered by \citep{Evans}.  These are technicalities for us.  Our goal is computational performance in cases where the Poisson problem is mathematically well-behaved.} if we change to a \emph{weak formulation}.  We will state the weak formulation after defining function spaces.
+As \eqref{poissonstrong} is stated there may be no solution where ``$\grad^2 u$'' makes sense as a function, even for ``nice'' boundary and source functions.  In particular, there may be no $u\in C^2(\Omega)$ which is continuous up to the boundary (i.e.~$u\in C(\bar\Omega)$).  There is, however, a solution\sidenote{Many mathematical concepts, including a well-posedness proof that justifies this claim, are all covered by \citep{Evans}.  These are technicalities for us.  Our goal is computational performance in cases where the Poisson problem is mathematically well-behaved.} if we change to a \emph{weak formulation}.  Furthermore, if $\partial_D \Omega$ has positive measure then the solution is unique.  We will state the weak formulation after defining function spaces.
 
 Define
     $$H^1(\Omega) = \{u\in L^2(\Omega) \big| \grad u \text{ exists a.e.~and } \grad u \in L^2(\Omega)\},$$
-which is a Sobolev space \citep{Evans}.  This space has two subsets we will use, namely functions with value $g$ and those with value $0$ on $\partial_D \Omega$, respectively, which we denote $H_g^1(\Omega)$ and $H_0^1(\Omega)$.  Note that $H_0^1(\Omega)$ is a linear subspace of $H^1(\Omega)$ while $H_g^1(\Omega)$ is, in the general case $g\ne 0$, not a subspace, because the zero function is not in it.  Nonetheless, from now on we refer to both $H_g^1(\Omega)$ and $H_0^1(\Omega)$ as ``subspaces''.
+which is a Sobolev space \citep{Evans}.  This space has two subsets we will use, namely functions with value $g$ on $\partial_D \Omega$ and those with value $0$ on $\partial_D \Omega$, respectively, which we denote $H_g^1(\Omega)$ and $H_0^1(\Omega)$.  Note that $H_0^1(\Omega)$ is a linear subspace of $H^1(\Omega)$ while $H_g^1(\Omega)$ is generally not a subspace, because the zero function is not in it.  Nonetheless, from now on we refer to both $H_g^1(\Omega)$ and $H_0^1(\Omega)$ as ``subspaces''.
 
-The weak formulation of the Poisson problem comes from choosing any $v\in H_0^1(\Omega)$, multiplying the first equation in \eqref{poissonstrong} by $v$, and integrating by parts:
+To get to the weak formulation of the Poisson problem we first choose any $v\in H_0^1(\Omega)$, multiply the first equation in \eqref{poissonstrong} by $v$, and integrate by parts:
 \begin{equation*}
 \int_\Omega \grad u \cdot \grad v - \int_{\partial\Omega} \frac{\partial u}{\partial n} v = \int_\Omega f v.
 \end{equation*}
 Now,\marginnote{%
 {\color{red}Main ideas} of strong and weak formulations:\begin{itemize}
 \item If $u \in H_g^1(\Omega)$ solves the strong form \eqref{poissonstrong} then it solves \eqref{poissonweak} also.
-\item If $u \in H_g^1(\Omega)$ solves the weak form \eqref{poissonweak} then we accept it, by definition, as a solution of the Poisson problem.\end{itemize}} supposing we already have a classical solution $u$ of \eqref{poissonstrong}, which is in $H_g^1(\Omega)$, we apply the other facts, namely that $v=0$ on $\partial_D\Omega$ and that there is Neumann data on $\partial_N\Omega$:
+\item If $u \in H_g^1(\Omega)$ solves the weak form \eqref{poissonweak} then we accept it, by definition, as a solution of the Poisson problem.\end{itemize}} supposing we already have a classical solution $u$ of \eqref{poissonstrong}, which is in $H_g^1(\Omega)$, we use the other data, namely that $v=0$ on $\partial_D\Omega$ and that there is Neumann data $\gamma$ on $\partial_N\Omega$:
 \begin{equation}
 \int_\Omega \grad u \cdot \grad v = \int_\Omega f v + \int_{\partial_N\Omega} \gamma v\quad \text{ for any } v\in H_0^1(\Omega). \label{poissonweak}
 \end{equation}
 
-Equation \eqref{poissonweak} is the weak formulation of the Poisson problem.  A key observation is that $u$ itself incorporates the Dirichlet boundary condition, because it lives in $H_g^1(\Omega)$, while Neumann boundary data $\gamma$, like the source function $f$, appears in equation \eqref{poissonweak}.
+Equation \eqref{poissonweak} is the weak formulation of the Poisson problem.  A key observation is that $u$ itself incorporates the Dirichlet boundary condition, because it lives in $H_g^1(\Omega)$, while both the Neumann boundary data $\gamma$ and the source function $f$ appear in equation \eqref{poissonweak}.
 
-The \emph{finite element method} (FEM) comes from requiring the weak formulation  \eqref{poissonweak} to be true for $u$ in a smaller, indeed finite-dimensional, subspace of $H_g^1(\Omega)$, and for $v$ also in a finite-dimensional subspace of $H_0^1(\Omega)$; this is a \emph{Galerkin} FEM.  We will build these finite-dimensional subspaces, in the current example, using a \emph{unstructured triangulation} on a region $\Omega\subset \RR^2$
-
-To make this work, from now on in this chapter we restrict to $d=2$ dimensions and we require that $\Omega$ be polygonal, with boundary $\partial\Omega$ a closed polygon.  We require that the sides of $\Omega$ each have positive length, and be either entirely in $\partial_D\Omega$ or in $\partial_N\Omega$.  As before, to produce a unique solution we require that $\partial_D\Omega$ contain at least one such side.
+The \emph{finite element method} (FEM) comes from requiring the weak formulation  \eqref{poissonweak} to be true for $u$ and $v$ in smaller, indeed finite-dimensional, subspaces of $H_g^1(\Omega)$ and $H_0^1(\Omega)$, respectively.  In our case these subspaces will be essentially the same, so our method is a \emph{Galerkin} FEM.  We will build these finite-dimensional subspaces, in the current example, using an unstructured triangulation on $\Omega\subset \RR^2$.  In particular, from now on in this chapter we restrict to $d=2$ dimensions.  Furthermore, to make our finite-dimensional spaces true subspaces of $H^1(\Omega)$---to make our FEM \emph{conforming}---we also require that $\Omega$ be polygonal, with $\partial\Omega$ a closed polygon.  We require that the segments in $\partial\Omega$ each have positive length, and be either entirely in $\partial_D\Omega$ or in $\partial_N\Omega$.
 
 \begin{marginfigure}
 \input{samplepoly.1.tikz}
@@ -56,17 +52,21 @@ To make this work, from now on in this chapter we restrict to $d=2$ dimensions a
 \label{fig:number-elements}
 \end{marginfigure}
 
-A triangulation is a set of non-overlapping, non-empty open triangles $\Delta_k$ which tile $\Omega$:
+By definition, a \emph{triangulation} is a set of non-overlapping, non-empty open triangles $\triangle_k\subset \RR^2$ which tile $\Omega$:
 \begin{equation*}
-\Th = \left\{\Delta_k \quad\Big|\quad \cup_k \overline{\Delta}_k = \overline{\Omega} \quad \text{ and} \quad \Omega_k \cap \Omega_l = \emptyset \text{ if } k\ne l\right\}.
+\Th = \left\{\triangle_k \quad\Big|\quad \cup_k \overline{\triangle}_k = \overline{\Omega} \quad \text{ and} \quad \Omega_k \cap \Omega_l = \emptyset \text{ if } k\ne l\right\}.
 \end{equation*}
-There are $K$ triangles indexed $k=0,\dots,K-1$; see Figure \ref{fig:number-elements}.  The subscript ``$h$'' in $\Th$ is traditional; it denotes the typical or maximum size $h$ (e.g.~diameter) of the triangles.  It serves as a reminder that we want to solve the Poisson problem accurately, that is, in the limit $h\to 0$.
+There are $K$ triangles indexed $k=0,\dots,K-1$, as in Figure \ref{fig:number-elements}, for example.  (In contrast to \citet{Elmanetal2005}, which we generally follow but which implements in \Matlab, our indexing is always zero-based.  After all, we code in C.)  The subscript ``$h$'' in $\Th$ is traditional; it denotes the typical or maximum size $h$ (e.g.~diameter) of the triangles.  It serves as a reminder that we want to solve the Poisson problem accurately, that is, in the limit $h\to 0$.
 
-We informally call the triangles \emph{elements}, though there is more to the definition of ``element,'' as we now explain.  We are going to approximate the Poisson problem with $\Pone$ finite elements, which means that our finite-dimensional subspace contains only piecewise-linear functions which are linear on each triangle.  First, we index\sidenote{In contrast to \citet{Elmanetal2005}, which implements in \Matlab, our indexing is always zero-based, as we code in C.} all the vertices (nodes) in the triangulation with $j=0,1,\dots,N$:
+We also index all the vertices (nodes) in the triangulation with $j=0,1,\dots,N$:
 \begin{equation*}
-\bx_j = (x_j,y_j)
+\bx_j = (x_j,y_j).
 \end{equation*}
-For each $j$ there is a $\Pone$ basis function, or ``hat'' function, $\phi_j(x,y)$ which is linear on each element and equal to one on only one node $j$:\marginnote{%
+An example of this node indexing is in Figure \ref{fig:number-elements}.
+
+Later we will informally call the triangles \emph{elements}, though there is more to the definition of ``element,'' as we now explain.  We are going to approximate the Poisson problem with $\Pone$ finite elements, which means that our finite-dimensional subspace contains only piecewise-linear functions which are linear on each triangle $\triangle_k$.
+
+In fact, for each node $j$ there is a $\Pone$ basis function, or ``hat'' function, $\phi_j(x,y)$ which is linear on each triangle, continuous on all of $\overline{\Omega}$, and equal to one on only one node $j$:\marginnote{%
 \begin{tikzpicture}[scale=0.9, z={(.707,.3)}]
     % (2,2,1) is top
     \draw[style=dashed] (0,0,0) -- (2,2,1); % to top from left
@@ -98,55 +98,134 @@ For each $j$ there is a $\Pone$ basis function, or ``hat'' function, $\phi_j(x,y
 \begin{equation*}
 \phi_j(\bx_i) = \delta_{ij}.
 \end{equation*}
-The functions $\phi_j(x,y)$ are in $H^1(\Omega)$, with piecewise-constant derivatives, and they are obviously linearly-independent also.
-Inside an element, $\phi_j$ has three degrees of freedom:
+The functions $\phi_j$ are in $H^1(\Omega)$, with piecewise-constant partial derivatives $\partial\phi_j/\partial x$ and $\partial\phi_j/\partial y$.  Also, the set $\{\phi_j\}_{j=0,\dots,N-1}$ is linearly-independent.  On each triangle, $\phi_j$ has three degrees of freedom:
 \begin{equation*}
 \phi_j(x,y) = A_k + B_k x + C_k y \quad \text{ on } \Delta_k.
 \end{equation*}
 
-We can use these basis functions to approximate the Dirichlet data $g$.  First index the $L$ nodes which are in the Dirichlet boundary: $\bx_{j_l} \in \partial_D\Omega$ for $l=0,\dots,L-1$.  (Figure \ref{fig:number-elements} shows an example with $L=4$ and $j_l=l$ for $l=0,1,2,3$.)  Then define the piecewise-linear interpolant of $g$ as this function which extends to all of $\Omega$ in a piecewise-linear way:
-\begin{equation*}
-\hat g(x,y) = \sum_{l=0,\dots,L} g(\bx_{j_l}) \phi_{j_l}(x,y).
-\end{equation*}
+We can immediately use these basis functions to approximate the Dirichlet data $g$ and ``extend'' it to the region $\Omega$.  We will assume from now on that the Dirichlet boundary is closed: $\partial_D\Omega = \overline{\partial_D\Omega}$.  Then we index the $L$ nodes which are in the Dirichlet boundary, $\bx_{j_l} \in \partial_D\Omega$ for $l=0,\dots,L-1$.  (Figure \ref{fig:number-elements} shows an example with $L=4$ and $j_l=l$ for $l=0,1,2,3$, but a general index $j_l$ is allowed.)  Then define an extended interpolant $\hat g$ of $g$ as the function which has the correct value on the Dirichlet boundary nodes and which extends to all of $\Omega$ in a continuous and piecewise-linear way:
+\begin{equation}
+\hat g(x,y) = \sum_{l=0,\dots,L} g(\bx_{j_l}) \phi_{j_l}(x,y). \label{hatgdefine}
+\end{equation}
 
-Next, by using $\hat g$ and the basis functions $\phi_j$, we can describe three finite-dimensional subsets of $H^1(\Omega)$.  They are defined as the span of basis functions:\sidenote{Traditionally, basis functions for $S_g^h$, where $u_h$ lives, are called the \emph{trial} functions, and basis functions for $S_0^h$ are called \emph{test} functions.  We will generally just give the labels $S_g^h$/$S_0^h$ instead of using the trial/test language.}
+By using $\hat g$ and the basis functions $\phi_j$, we can now describe three finite-dimensional subspaces of $H^1(\Omega)$.  They are defined as the span of basis functions:\sidenote{Traditionally, basis functions for $S_g^h$, where $u_h$ lives, are called the \emph{trial} functions, and basis functions for $S_0^h$ are called \emph{test} functions.  We will generally just use the labels ``$S_g^h$'' and ``$S_0^h$.''}
 \begin{align*}
 S^h &= \Span\{\phi_j \,\big|\, \text{ all } j\,\}, \\
-S_0^h &= \Span\{\phi_j \,\big|\, \bx_j \notin \partial_D \Omega\}, \\
-S_g^h &= S_0^h + \hat g.
+S_0^h &= \Span\{\phi_j \,\big|\, \bx_j \notin \partial_D \Omega\} \subset S^h, \\
+S_g^h &= S_0^h + \hat g \subset S^h.
 \end{align*}
-Then $\dim(S^h)=N$ while $\dim(S_0^h)=\dim(S_g^h)=N-L$.
+Then $\dim(S^h)=N$ while $\dim(S_0^h)=\dim(S_g^h)=N-L$, with $S_g^h$ now clearly defined as an affine subspace of $S^h$.
 
-The finite element method we choose requires that the weak formulation  \eqref{poissonweak} be true of $u_h\in S_g^h$ for all $v\in S_0^h$.  Thus we first write $u_h$ in the basis using $N-L$ unknown coefficients $u_j$,
-\begin{equation*}
-u_h(x,y) = \hat g(x,y) + \sum_{j\big|\bx_j \notin \partial_D \Omega} u_j \phi_j(x,y).
-\end{equation*}
-Then we require that the weak formulation hold for a basis of $S_0^h$:
+Finally, our finite element method requires that the weak formulation  \eqref{poissonweak} be true of $u_h\in S_g^h$ for all $v\in S_0^h$.  Thus we first write $u_h$ in the above basis for $S_g^h$ using $N-L$ unknown coefficients $u_j$:
+\begin{equation}
+u_h(x,y) = \hat g(x,y) + \sum_{\bx_j \notin \partial_D \Omega} u_j\, \phi_j(x,y). \label{uhexpand}
+\end{equation}
+Then we require that the weak formulation hold for all $\phi_i$ in the above basis of $S_0^h$.  That is, using definition \eqref{hatgdefine} and expansion \eqref{uhexpand}, we require
 \begin{align}
 \sum_{j\big|\bx_j \notin \partial_D \Omega} u_j \int_\Omega \grad \phi_j \cdot \grad \phi_i &= \int_\Omega f \phi_i + \int_{\partial_N\Omega} \gamma \phi_i \label{poissonfem} \\
 &\qquad - \sum_{l=0,\dots,L} g(\bx_{j_l})  \int_\Omega \grad \phi_{j_l} \cdot \grad \phi_i \notag
 \end{align}
 for all $i$ such that $\bx_i \notin \partial_D \Omega$.  The coefficients $u_j$, for all $j$ such that $\bx_j \notin \partial_D \Omega$, are unknown.
 
-The finite-dimensional weak formulation \eqref{poissonfem} is simply a matrix equation.  For ease of construction we will include the node-wise Dirichlet conditions into this matrix problem.  Let $A \in \RR^{N\times N}$ have entries
-\begin{equation*}
-a_{ij} = \int_\Omega \grad \phi_j \cdot \grad \phi_i,
-\end{equation*}
-if (FIXME: $i$ and $j$ are not Dirichlet ...)
-and $\bb\in \RR^N$ have entries
-\begin{equation*}
-b_i = \int_\Omega f \phi_i + \int_{\partial_N\Omega} \gamma \phi_i - \sum_{l=0,\dots,L} g(\bx_{j_l})  \int_\Omega \grad \phi_{j_l} \cdot \grad \phi_i.
-\end{equation*}
-(FIXME: except if $i$ is Dirichlet in which case $b_i=g(\bx_i)$)
-Then the FEM soluiton $u_h$ is the function determined by coefficients $u_j$ for $j=0,\dots,N$, which are the entries of $\bu \in \RR^N$, and the FEM equation is
-\begin{equation}
-A \bu = \bb \label{poissonmatrix}
-\end{equation}
-in matrix form.
-
+Note that the support (i.e.~nonzero set) of $\phi_j$ includes the node $\bx_j$ and all triangles (elements) $\triangle_k$ for which $\bx_j$ is a node of $\triangle_k$.  Thus the integral ``$\int_\Omega \grad \phi_j \cdot \grad \phi_i$'' in \eqref{poissonfem} is often zero.  Specifically, it is zero if nodes $\bx_i$ and $\bx_j$ are not connected by an edge in the triangulation, equivalently if $\bx_i$ and $\bx_j$ are not both nodes of at least one triangle in the triangulation.
 
 
 \section{Assembling the matrix problem, element by element}
+
+The finite-dimensional weak formulation \eqref{poissonfem} is simply a matrix equation.  For ease of construction we will include the node-wise Dirichlet conditions as rows of this matrix problem, so the matrix will have $N$ columns, corresponding to one unknown for \emph{every} node $\bx_j$, and $N$ rows.  We will then describe, and give a code for, \emph{assembling} this matrix equation.
+
+Thus we define $A \in \RR^{N\times N}$ to have entries
+\begin{equation*}
+a_{ij} = \int_\Omega \grad \phi_j \cdot \grad \phi_i,
+\end{equation*}
+if $\bx_i \notin \partial_D \Omega$ and $\bx_j \notin \partial_D \Omega$.  Otherwise
+\begin{equation*}
+a_{ij} = \delta_{ij},
+\end{equation*}
+that is, in any row $i$ where $\bx_i \in \partial_D \Omega$ or column $j$ where $\bx_j \in \partial_D \Omega$.  (Notice that we index rows and columns of matrices and vectors starting with zero.)
+
+We can immediately observe that $A$ is \emph{symmetric} because $a_{ij}=a_{ji}$.  Furthermore it is \emph{sparse}, that is, most entries are zero, as long as we consider triangulations with more than a handful of triangles.  These facts have profound consequences on the algorithms we will choose when solving a matrix equation
+\begin{equation}
+A \bu = \bb \label{poissonmatrix}
+\end{equation}
+using $A$.
+
+Recalling \eqref{poissonfem}, the right side of our matrix equation ``$A \bu = \bb$'' will be a vector $\bb\in\RR^N$ with entries
+    $$b_i = \int_\Omega f \phi_i + \int_{\partial_N\Omega} \gamma \phi_i - \sum_{l=0,\dots,L} g(\bx_{j_l})  \int_\Omega \grad \phi_{j_l} \cdot \grad \phi_i$$
+if $\bx_i \notin \partial_D \Omega$ and
+    $$b_i = g(\bx_{i})$$
+if $\bx_i \in \partial_D \Omega$.
+
+However, in practice we don't initially build $A$ quite as described in above.  We will initially build a matrix $\tilde A$ which ignors the type (i.e.~Dirichlet or Neumann) of the boundary nodes and computes all entries by the first formula above for $a_{ij}$.  That is, $\tilde A \in \RR^{N\times N}$ has entries
+\begin{equation*}
+\tilde a_{ij} = \int_\Omega \grad \phi_j \cdot \grad \phi_i
+\end{equation*}
+for all $i,j=0,1,\dots,N$.  Also we initially compute a right-hand side $\tilde \bb$ with simpler entries
+    $$\tilde b_i = \int_\Omega f \phi_i + \int_{\partial_N\Omega} \gamma \phi_i$$
+if $\bx_i \notin \partial_D \Omega$ and
+    $$\tilde b_i = g(\bx_{i})$$
+if $\bx_i \in \partial_D \Omega$.  Then we ``edit'' $\tilde A$ in each Dirichlet node \emph{row}, that is, for each $i$ where $\bx_i \in \partial_D \Omega$, simply by replacing the whole row by the corresponding row of the identity.  However, in each column $j$ for which $\bx_j \in \partial_D \Omega$, we move all entries $\tilde a_{ij}$ where $i$ is \emph{not} a Dirichlet row index, over to the right-hand side, multiplied by the negative of the boundary value $g(\bx_{j})$; informally we can write
+    $$\tilde b_i \to \tilde b_i - g(\bx_{j}) \tilde a_{ij}$$
+for the transformations which modify the initial version $\tilde \bb$.
+
+After this ``editing'' stage is completed for all Dirichlet rows and columns, we get $A$ and $\bb$.  Since this part of the matrix assembly is a key stage of understanding our FEM codes, we give a concrete example to show the non-zero pattern of $A$.
+
+\newcommand{\redX}{{\color{red} \X}}
+\newcommand{\blueX}{{\color{blue} \X}}
+
+\medskip\noindent\hrulefill
+\begin{example} In Figure \ref{fig:squarefour} there are five nodes.  The $i=1,2$ nodes live in the (closed) Dirichlet boundary $\partial_D \Omega$.  The matrix $\tilde A$ has zero entries $\tilde a_{ij} = 0$ only where the integral $\int_\Omega \grad \phi_j \cdot \grad \phi_i=0$, which is somewhat rare in this small (coarse)-mesh case.  The nonzero values are simply marked ``$\X$'', and the zero entries are spaces:\begin{marginfigure}
+\input{squarefour.tikz}
+\caption{A triangulation of a square with five nodes.  The top segment is the Dirichlet boundary.}
+\label{fig:squarefour}
+\end{marginfigure}%
+\begin{equation*}
+\tilde A = \begin{bmatrix}
+\X & \X &    & \X & \X \\
+\X & \X & \X &    & \X \\
+   & \X & \X & \X & \X \\
+\X &    & \X & \X & \X \\
+\X & \X & \X & \X & \X
+\end{bmatrix}.
+\end{equation*}
+Now we color the $i=1,2$ or $j=1,2$ entries which will be edited:\marginnote{{\color{red} Potential gotcha}:  The first row of any matrix in this book is numbered ``$0$.''  Likewise the first column.}
+\begin{equation*}
+\tilde A = \begin{bmatrix}
+\X & \redX &    & \X & \X \\
+\blueX & \blueX & \blueX &    & \blueX \\
+   & \blueX & \blueX & \blueX & \blueX \\
+\X &    & \redX & \X & \X \\
+\X & \redX & \redX & \X & \X
+\end{bmatrix}.
+\end{equation*}
+The {\color{blue} blue} entries are changed to $0$ or $1$ so that these rows become rows of the identity; their computed values are tossed out.  The {\color{red} red} entries, specifically the four entries $\tilde a_{01}$, $\tilde a_{32}$, $\tilde a_{41}$, and $\tilde a_{42}$, are moved over to the right side, however, so their values are used.  In fact, we can give formulas for the $i=0,3,4$ entries of the final vector $\bb$ in terms of the initially-computed vector $\tilde\bb$,
+\begin{align*}
+b_0 &= \tilde b_0 - g(\bx_1) \tilde a_{01} \\
+b_3 &= \tilde b_3 - g(\bx_2) \tilde a_{32} \\
+b_4 &= \tilde b_4 - g(\bx_1) \tilde a_{41} - g(\bx_2) \tilde a_{42},
+\end{align*}
+while $b_1=\tilde b_1=g(\bx_1)$ and $b_2 = \tilde b_2 = g(\bx_2)$.  The final matrix $A$ has thereby been ``edited'' to be the identity matrix in rows $i=1,2$ and columns $j=1,2$; it has this pattern:
+\begin{equation*}
+A = \begin{bmatrix}
+\X & & & \X & \X \\
+ & \,1\, & & & \\
+ & & \,1\, & & \\
+\X & & & \X & \X \\
+\X & & & \X & \X
+\end{bmatrix}.
+\end{equation*}
+\end{example}
+\noindent\hrulefill
+
+\bigskip
+
+In terms of later examples, it is useful to note that the initial construction is correct in the case where $\partial_D \Omega = \emptyset$ is empty.  Of course, in that case the Poisson problem does not have a unique solution because $u=(\text{constant})$ solves $-\grad^2 u=0$ with $\partial u/\partial n = 0$ on the whole boundary $\partial_N \Omega = \partial \Omega$.
+
+\vspace{0.5in}
+FIXME
+
+
+
 
 \begin{marginfigure}
 %\input{isoparametric.tikz}}
