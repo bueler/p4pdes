@@ -1,6 +1,11 @@
 
 static char help[] =
-"Solve the Poisson equation using an unstructured mesh FEM method.\n\
+"Solve the Poisson equation\n\
+  - div(grad u) = f,\n\
+with a mix of Dirichlet and Neumann boundary conditions,\n\
+  u          = g      on bdry_D Omega,\n\
+  grad u . n = gamma  on bdry_N Omega,\n\
+using an unstructured mesh FEM method.\n\
 For a one-process, coarse grid example do:\n\
      triangle -pqa1.0 bump   # generates bump.1.{node,ele,poly}\n\
      c2triangle -f bump.1    # reads bump.1.{node,ele,poly} and generates bump.1.petsc\n\
@@ -27,7 +32,7 @@ PetscScalar exactsolution(PetscScalar x, PetscScalar y) {
   return cos(2.0*PETSC_PI*x) * cos(2.0*PETSC_PI*y);
 }
 
-PetscScalar sourcefunction(PetscScalar x, PetscScalar y) {
+PetscScalar fsource(PetscScalar x, PetscScalar y) {
   return 8.0 * PETSC_PI * PETSC_PI * exactsolution(x,y);
 }
 
@@ -121,7 +126,7 @@ int main(int argc,char **args) {
       for (r = 0; r < 3; r++) {      // loop over quadrature points
         xquad = ax[i] + c3 * quadxi[r] - c2 * quadeta[r]; // = x1 + (x2-x1) xi + (x3 - x1) eta
         yquad = ay[i] - b3 * quadxi[r] + b2 * quadeta[r]; // = y1 + (y2-y1) xi + (y3 - y1) eta
-        bval += sourcefunction(xquad,yquad) * chi(q,quadxi[r],quadeta[r]);
+        bval += fsource(xquad,yquad) * chi(q,quadxi[r],quadeta[r]);
       }
       bval *= detJ / 6.0;
       ierr = VecSetValues(b,1,&i,&bval,ADD_VALUES); CHKERRQ(ierr);
