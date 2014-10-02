@@ -8,5 +8,6 @@ c2triangle
 c2testprealloc
 c2poisson
 
-bump.*
+bump.?.*
+square.?.*
 
