@@ -6,6 +6,7 @@ cstrip/*.c
 *.?.ele
 *.?.poly
 *.?.tikz
+squarefour.tikz
 
 ## Core latex/pdflatex auxiliary files:
 *.aux

@@ -25,6 +25,9 @@ parser.add_argument('--polyonly', action='store_true',
 parser.add_argument('--scale', action='store', metavar='X',
                     help='amount by which to scale TikZ figure',
                     default=1.0)
+parser.add_argument('--nodesize', action='store', metavar='X',
+                    help='size (in points) for dots showing nodes',
+                    default=1.25)
 parser.add_argument('--nodeoffset', action='store', metavar='X',
                     help='offset to use in labeling nodes (points)',
                     default=0.0)
@@ -49,8 +52,9 @@ dolabelnodes = args.labelnodes
 dolabeleles  = args.labelelements
 polyonly     = args.polyonly
 scale        = (float)(args.scale)
+nodesize     = (float)(args.nodesize)
 nodeoffset   = (float)(args.nodeoffset)
-eleoffset   = (float)(args.eleoffset)
+eleoffset    = (float)(args.eleoffset)
 
 # always read .poly and .node files
 polyfile = open(polyname, 'r')
@@ -143,7 +147,7 @@ if not polyonly:
     if dolabelnodes:
       tikz.write( '  \\draw (%f,%f) node {\\color{blue} $%d$};\n' \
                  % (x[j]+0.7*nodeoffset,y[j]-nodeoffset,j))
-    tikz.write('  \\filldraw (%f,%f) circle (1.25pt);\n' % (x[j],y[j]))
+    tikz.write('  \\filldraw (%f,%f) circle (%fpt);\n' % (x[j],y[j],nodesize))
 
 # read polygon file (.poly) and plot according to boundary type
 for p in range(P):

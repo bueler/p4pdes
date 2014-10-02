@@ -1,6 +1,6 @@
 all: book.pdf
 
-tikzinputs := samplepoly.1.tikz bump.1.tikz bump.2.tikz
+tikzinputs := samplepoly.1.tikz squarefour.tikz bump.1.tikz bump.2.tikz
 texinputs := getstarted.tex linear.tex
 
 hinputs := $(addprefix ../c/, convenience.h)
@@ -27,7 +27,10 @@ cstrip/%.c: ../c/%.c
 
 samplepoly.1.tikz: samplepoly.poly tri2tikz.py
 	triangle -pqa4.0 samplepoly
-	python tri2tikz.py --labelnodes --nodeoffset -0.3 --labelelements --scale 0.6 samplepoly.1 $@
+	python tri2tikz.py --labelnodes --nodesize 2.0 --nodeoffset -0.3 --labelelements --scale 0.6 samplepoly.1 $@
+
+squarefour.tikz: squarefour.poly tri2tikz.py
+	python tri2tikz.py --labelnodes --nodesize 0.5 --nodeoffset -0.1 --scale 3.0 squarefour $@
 
 bump.1.tikz: ../c/bump.poly tri2tikz.py
 	(cd ../c/ && triangle -pqa1.0 bump)
