@@ -27,8 +27,7 @@
 # These added vertices are used to mark boundary segments
  8    2.0  0.0
  9   -1.5  0.0
-# All nine segments on boundary are marked so *triangle* can work with the
-# non-convexly.   Boundary markers: 2 = Dirichlet, 3 = Neumann.
+# There are nine segments on the boundary.  Markers: 2 = Dirichlet, 3 = Neumann.
 9 1
  1   1 2   2
  2   2 3   2

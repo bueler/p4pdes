@@ -49,13 +49,13 @@ int main(int argc,char **args) {
   strcpy(outfilename,fnameroot);   strcat(outfilename,".petsc");
 //ENDFILENAME
 
-  // RANK 0 OPENS ASCII FILES
-  FILE *nodefile, *elefile, *polyfile;
-  ierr = PetscFOpen(COMM,nodefilename,"r",&nodefile); CHKERRQ(ierr);
-  ierr = PetscFOpen(COMM,elefilename,"r",&elefile); CHKERRQ(ierr);
-  ierr = PetscFOpen(COMM,polyfilename,"r",&polyfile); CHKERRQ(ierr);
-
   if (rank == 0) {
+    // RANK 0 OPENS ASCII FILES
+    FILE *nodefile, *elefile, *polyfile;
+    ierr = PetscFOpen(COMM,nodefilename,"r",&nodefile); CHKERRQ(ierr);
+    ierr = PetscFOpen(COMM,elefilename,"r",&elefile); CHKERRQ(ierr);
+    ierr = PetscFOpen(COMM,polyfilename,"r",&polyfile); CHKERRQ(ierr);
+
     // READ NODE HEADER
     PetscInt N,   // number of degrees of freedom (= number of all nodes)
              ndim, nattr, nbdrymarkers;
@@ -189,11 +189,11 @@ int main(int argc,char **args) {
     VecDestroy(&vx);  VecDestroy(&vy);
     VecDestroy(&vBT);  VecDestroy(&vP);  VecDestroy(&vQ);
     PetscViewerDestroy(&viewer);
-  }
 
-  ierr = PetscFClose(COMM,nodefile); CHKERRQ(ierr);
-  ierr = PetscFClose(COMM,elefile); CHKERRQ(ierr);
-  ierr = PetscFClose(COMM,polyfile); CHKERRQ(ierr);
+    ierr = PetscFClose(COMM,nodefile); CHKERRQ(ierr);
+    ierr = PetscFClose(COMM,elefile); CHKERRQ(ierr);
+    ierr = PetscFClose(COMM,polyfile); CHKERRQ(ierr);
+  }
 //ENDRANK0
 
   if (docheck == PETSC_TRUE) {
