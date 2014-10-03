@@ -30,20 +30,26 @@
 
 %\inputfromline{FULLPATH}{FILENAME}{CAPTION}{FIRSTLINE}{LABEL}
 \newcommand{\inputfromline}[5]{
-\begin{figure*}
 \vspace{0.8cm}
 \let\FancyVerbStartString\relax
 \let\FancyVerbStopString\relax
+\begin{minipage}[l]{1.25\textwidth}
 \VerbatimInput[frame=single,%
                framesep=3mm,%
-               label=\fbox{\normalsize \textsl{\,#2\,}},%
+               label=\fbox{\small \textsl{\,#2\,}},%
                fontfamily=courier,%
-               fontsize=\small,%
+               fontsize=\scriptsize,%
                firstline=#4]{#1}
+\end{minipage}
+\vspace{0.5cm}
+
+\begin{marginfigure}[1.0cm]
 \vspace{0.5cm}
 \caption{#3}
 \label{#5}
-\end{figure*}
+\end{marginfigure}
+
+\vspace{1.5cm}
 }
 
 \newcommand{\inputwhole}[4]{\inputfromline{#1}{#2}{#3}{1}{#4}}
@@ -52,17 +58,22 @@
 \newcommand{\cinputraw}[7]{
 \newcommand*\FancyVerbStartString{#5}
 \newcommand*\FancyVerbStopString{#6}
-\begin{figure*}
 \vspace{0.8cm}
+\begin{minipage}[l]{1.25\textwidth}
 \VerbatimInput[frame=single,%
                framesep=3mm,%
-               label=\fbox{\normalsize \textsl{\,#2\,}#4},%
+               label=\fbox{\small \textsl{\,#2\,}#4},%
                fontfamily=courier,%
-               fontsize=\small]{#1}
+               fontsize=\scriptsize]{#1}
+\end{minipage}
 \vspace{0.5cm}
+
+\begin{marginfigure}[1.0cm]
 \caption{#3}
 \label{#7}
-\end{figure*}
+\end{marginfigure}
+
+\vspace{1.5cm}
 \let\FancyVerbStartString\relax
 \let\FancyVerbStopString\relax
 }

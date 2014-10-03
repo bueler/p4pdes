@@ -136,7 +136,25 @@ Note that the support (i.e.~nonzero set) of $\phi_j$ includes the node $\bx_j$ a
 
 \section{Getting a triangular mesh into \PETSc}
 
-We now take a break from mathematical constructions to do something practical with \PETSc.  While \PETSc itself does not include any tools for triangulating regions of the plane, we use the well-known and easily-learned \Triangle software \citep{Shewchuk1996} for this task.\sidenote{See \href{http://www.cs.cmu.edu/~quake/triangle.html}{www.cs.cmu.edu/$\sim$quake/ triangle.html} for documentation and source code of \Triangle. You can build it from source, but it is probably available as a package in your operating system.}  \Triangle, which is both limited to planar regions and only capable of writing ASCII files, is not a choice for performance.  Instead it is convenient and widely-available.
+We now take a break from mathematical constructions to do something practical with \PETSc.  While \PETSc itself does not include any tools for triangulating regions of the plane, we use the widely-available and easy-to-use \Triangle software \citep{Shewchuk1996} for this task.\sidenote{See \href{http://www.cs.cmu.edu/~quake/triangle.html}{www.cs.cmu.edu/$\sim$quake/ triangle.html} for documentation and source code of \Triangle. You can build it from source, but it is probably available as a package in your operating system.}  \Triangle, which is both limited to planar regions and only capable of writing ASCII files, is not a choice for performance.  It is, however, convenient.
+
+\Triangle uses a simply-formatted ASCII file with extension \texttt{.poly} as input to describe a polygonal region $\Omega$ and to indicate the Dirichlet and Neumann portions.  For example, consider the input file \texttt{bump.poly} shown in Figure \ref{code:bumppoly}. 
+
+\inputfromline{../c/bump.poly}{bump.poly}{A description of the boundary polygon in Figure \ref{fig:triangulation}, suitable for reading by \Triangle.}{16}{code:bumppoly}
+
+This example polygon, a rectangle with a triangular bump in the base, is shown in Figure \ref{fig:bump-poly}.  It will reappear several times in these notes as we solve more and more interesting PDEs on it.
+
+\begin{marginfigure}
+\input{bump.poly.tikz}
+\caption{The polygon described in \texttt{bump.poly}.  The bold part is the Dirichlet boundary.}
+\label{fig:bump-poly}
+\end{marginfigure}
+
+The triangulation shown in Figure \ref{fig:triangulation} came from a single command which asks \Triangle to take \texttt{bump.poly} and generate a triangulation, including a polygon output file (option \texttt{-p}), which is quality-checked \citep{Shewchuk1996} (option \texttt{-q}), and which has triangles with maximum area of $1.0$ (option \texttt{-a1.0}):
+\begin{verbatim}
+  $ triangle -pqa1.0 bump
+\end{verbatim}
+This command generates three files, \texttt{bump.1.poly}, \texttt{bump.1.node}, and  \texttt{bump.1.ele}, which define the new (i.e.~refined relative to \texttt{bump.poly}) polygonal boundary, and the nodes and elements of the triangulation, respectively.  The file \texttt{bump.1.node} has the numbering and node locations shown in blue in Figure \ref{fig:triangulation}.
 
 \begin{figure*}
 \input{bump.1.tikz}
@@ -144,41 +162,23 @@ We now take a break from mathematical constructions to do something practical wi
 \label{fig:triangulation}
 \end{figure*}
 
-\Triangle uses a simply-formatted ASCII file as input to describe a polygonal region $\Omega$ and to indicate the Dirichlet and Neumann portions.  For example, the triangulation shown in Figure \ref{fig:triangulation} was generated from the input file  \texttt{bump.poly} shown in Figure \ref{code:bumppoly}.
-
-The triangulation shown in Figure \ref{fig:triangulation} came from a single command which asks \Triangle to take \texttt{bump.poly} and generate a triangulation, including a polygon output file (option \texttt{-p}), which is quality-checked \citep{Shewchuk1996} (option \texttt{-q}), and which has triangles with maximum area of $1.0$ (option \texttt{-a1.0}):
-\begin{verbatim}
-  $ triangle -pqa1.0 bump
-\end{verbatim}
-This command generates three files, \texttt{bump.1.poly}, \texttt{bump.1.node}, and  \texttt{bump.1.ele}, which define the new (i.e.~refined relative to \texttt{bump.poly}) polygonal boundary, and the nodes and elements of the triangulation, respectively.  This is enough information to draw Figure \ref{fig:triangulation}, in particular.  For example, the file \texttt{bump.1.node} has the numbering (though not zero-based as shown) and node locations shown in blue in Figure \ref{fig:triangulation}.
-
-\inputfromline{../c/bump.poly}{bump.poly}{A description of the polygon in Figure \ref{fig:triangulation}, suitable for reading by \Triangle.}{16}{code:bumppoly}
-
 As noted, \Triangle produces ASCII files.  This is not a good format for large files which we intend to read before solving large PDE problems in a scalable way, as with \PETSc.  So, as promised, we do a mundane and un-scalable task in \PETSc, namely we read the \Triangle files serially onto a single processor and write out a binary file in \PETSc format.  The code \texttt{c2triangle.c} will be invoked for the present purposes by
 \begin{verbatim}
   $ c2triangle -f bump.1
 \end{verbatim}
 to read ASCII files \texttt{bump.1.poly}, \texttt{bump.1.node}, and  \texttt{bump.1.ele}, and write out \PETSc-formatted binary file \texttt{bump.1.petsc}.
 
-\clearpage
-
 We show the code \texttt{c2triangle.c} in detail.  It starts with a standard preamble shown in Figure  \ref{code:trianglepartone}.  We will omit showing this preamble when we present future codes, but this preamble, or a subset of it, appears in all of them. In this preamble we see how \PETSc is initialized, and how to, for instance, learn which rank is the current processor.
 
 \cinputpart{c2triangle.c}{The standard preamble.}{I}{//STARTPREAMBLE}{//ENDPREAMBLE}{code:trianglepartone}
-
-\clearpage
 
 The next part of \texttt{c2triangle.c} is in Figure \ref{code:triangleparttwo}.  Here we use the pair \texttt{PetscOptionsBegin}/\texttt{PetscOptionsEnd} to bracket the reading of the two options we need, namely an input of the string containing the filename root, and a flag option which determines whether \texttt{c2triangle.c} will read back its \texttt{.petsc} output.  This \texttt{...Begin}/\texttt{...End} pair allows \PETSc to give a helpful message, describing various options for various components, if we run ``\texttt{c2triangle -h}''.
 
 \cinputpart{c2triangle.c}{Determine filenames using \PETSc option processing.}{II}{//ENDPREAMBLE}{//ENDFILENAME}{code:triangleparttwo}
 
-\clearpage
-
 The third part of \texttt{c2triangle.c} is in Figure \ref{code:trianglepartthree}.  After opening input files it only proceeds to do anything interesting on the first process (``rank zero'') in the MPI communicator.  This code will run at the same speed regardless of \texttt{NN}, if invoked \texttt{mpiexec -n NN c2triangle}, because it is actual a serial operation on the rank zero process.
 
 \cinputpart{c2triangle.c}{Start to read ASCII files with \textsc{triangle}-generated mesh by going to rank zero processor, reading node header, and allocating accordingly.}{III}{//ENDFILENAME}{//ENDRANK0ALLOC}{code:trianglepartthree}
-
-\clearpage
 
 In the fourth part of \texttt{c2triangle.c}, shown in Figure \ref{code:trianglepartfour}, we read the \texttt{.node} file.  It is read into sequential \PETSc \pVec s which have been allocated (created) only on the rank zero process.  The reading itself is done with the standard C library call \texttt{fscanf}, and then \texttt{VecSetValues} from \PETSc is used to set one \pVec entry at a time.  After setting these values, which is just the storage of a list of values in an internal \PETSc dynamic array used for assembling \pVec s, we actually ask \PETSc to do the assembly.  This is done so often that we put it in a C preprocessor macro, as shown in the short header \texttt{convenience.h} listed in Figure \ref{code:convenience}.
 
@@ -186,21 +186,18 @@ In the fourth part of \texttt{c2triangle.c}, shown in Figure \ref{code:trianglep
 
 \inputwhole{../c/convenience.h}{convenience.h}{Some definitions.}{code:convenience}
 
-\clearpage
-
-The fifth part of \texttt{c2triangle.c} is in Figure \ref{code:trianglepartfive}.  This looks like the fourth part, because we simply read element information from the \texttt{.ele} file.  Likewise the sixth part shown in Figure \ref{code:trianglepartsix}, which reads polygon information from the \texttt{.poly} file.
+The fifth part of \texttt{c2triangle.c} is in Figure \ref{code:trianglepartfive}.  This looks like the fourth part, because we simply read element information from the \texttt{.ele} file.
 
 \cinputpart{c2triangle.c}{On rank zero processor: Read element information.}{V}{//ENDREADNODES}{//ENDREADELEMENTS}{code:trianglepartfive}
 
-\cinputpart{c2triangle.c}{On rank zero processor: Read boundary polygon information.}{VI}{//ENDREADELEMENTS}{//ENDREADPOLYGONS}{code:trianglepartsix}
+The sixth part, shown in Figure \ref{code:trianglepartsix}, reads polygon information from the \texttt{.poly} file.
 
-\clearpage
+\cinputpart{c2triangle.c}{On rank zero processor: Read boundary polygon information.}{VI}{//ENDREADELEMENTS}{//ENDREADPOLYGONS}{code:trianglepartsix}
 
 At this point we have the whole triangulation in \PETSc \pVec s.  Now is the easy and last part of \texttt{c2triangle.c}, shown in Figure \ref{code:trianglepartseven}.  We simply create a \PETSc ``viewer'' and ``view'' all of the \pVec s which contain the mesh.  We will be able to reread these vectors in parallel, as long as we re-read them in the same order.
 
 \cinputpart{c2triangle.c}{On rank zero processor: Write the mesh out in \PETSc binary format.}{VII}{//ENDREADPOLYGONS}{//ENDRANK0}{code:trianglepartseven}
 
-\clearpage
 
 
 \section{The FEM matrix problem}
