@@ -3,11 +3,11 @@
 
 \section{Getting started with a PETSc code}
 
-\cinputpartnostrip{c1matvec.c}{Initialize \PETSc and allocate \pVec s and \pMat.}{I}{}{//ENDSETUP}
+\cinputpartnostrip{c1matvec.c}{Initialize \PETSc and allocate \pVec s and \pMat.}{I}{}{//ENDSETUP}{code:matvecpartone}
 
-\cinputpartnostrip{c1matvec.c}{Assemble \pMat $A$ and right-hand side $b$.}{II}{//ENDSETUP}{//ENDASSEMBLY}
+\cinputpartnostrip{c1matvec.c}{Assemble \pMat $A$ and right-hand side $b$.}{II}{//ENDSETUP}{//ENDASSEMBLY}{code:matvecparttwo}
 
-\cinputpartnostrip{c1matvec.c}{Set up \pKSP.  Solve.  Finalize.}{III}{//ENDASSEMBLY}{//END}
+\cinputpartnostrip{c1matvec.c}{Set up \pKSP.  Solve.  Finalize.}{III}{//ENDASSEMBLY}{//END}{code:matvecpartthree}
 
 \section{\textsc{Vec}s and \textsc{Mat}s}  [introduce initialization/finalization, object Create+SetFromOptions paradigm, parallel layout of \pVec
 

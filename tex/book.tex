@@ -17,6 +17,8 @@
 \usepackage{tikz}
 \usetikzlibrary{arrows,decorations.markings}
 
+\usepackage[subtle,floats]{savetrees}
+
 % macros
 
 \theoremstyle{definition}
@@ -26,13 +28,30 @@
 \VerbatimInput[frame=single,framesep=3mm,label=\fbox{\normalsize \textsl{\,#1\,}},fontfamily=courier,fontsize=\footnotesize]{#2}
 }
 
-\newcommand*\FancyVerbStartString{fill string}
-\newcommand*\FancyVerbStopString{fill string}
+%\inputfromline{FULLPATH}{FILENAME}{CAPTION}{FIRSTLINE}{LABEL}
+\newcommand{\inputfromline}[5]{
+\begin{figure*}
+\vspace{0.8cm}
+\let\FancyVerbStartString\relax
+\let\FancyVerbStopString\relax
+\VerbatimInput[frame=single,%
+               framesep=3mm,%
+               label=\fbox{\normalsize \textsl{\,#2\,}},%
+               fontfamily=courier,%
+               fontsize=\small,%
+               firstline=#4]{#1}
+\vspace{0.5cm}
+\caption{#3}
+\label{#5}
+\end{figure*}
+}
 
-%\cinputraw{FULLPATH}{FILENAME}{CAPTION}{PARTSTRING}{STARTSTRING}{STOPSTRING}
-\newcommand{\cinputraw}[6]{
-\renewcommand*\FancyVerbStartString{#5}
-\renewcommand*\FancyVerbStopString{#6}
+\newcommand{\inputwhole}[4]{\inputfromline{#1}{#2}{#3}{1}{#4}}
+
+%\cinputraw{FULLPATH}{FILENAME}{CAPTION}{PARTSTRING}{STARTSTRING}{STOPSTRING}{LABEL}
+\newcommand{\cinputraw}[7]{
+\newcommand*\FancyVerbStartString{#5}
+\newcommand*\FancyVerbStopString{#6}
 \begin{figure*}
 \vspace{0.8cm}
 \VerbatimInput[frame=single,%
@@ -42,18 +61,21 @@
                fontsize=\small]{#1}
 \vspace{0.5cm}
 \caption{#3}
+\label{#7}
 \end{figure*}
+\let\FancyVerbStartString\relax
+\let\FancyVerbStopString\relax
 }
 
-\newcommand{\cinput}[4]{%
-    \cinputraw{cstrip/#1}{#1}{#2}{}{#3}{#4}}
-\newcommand{\cinputnostrip}[4]{%
-    \cinputraw{../c/#1}{#1}{#2}{}{#3}{#4}}
+\newcommand{\cinput}[5]{%
+    \cinputraw{cstrip/#1}{#1}{#2}{}{#3}{#4}{#5}}
+\newcommand{\cinputnostrip}[5]{%
+    \cinputraw{../c/#1}{#1}{#2}{}{#3}{#4}{#5}}
 
-\newcommand{\cinputpart}[5]{%
-    \cinputraw{cstrip/#1}{#1}{#2}{\quad \textbf{part #3}}{#4}{#5}}
-\newcommand{\cinputpartnostrip}[5]{%
-    \cinputraw{../c/#1}{#1}{#2}{\quad \textbf{part #3}}{#4}{#5}}
+\newcommand{\cinputpart}[6]{%
+    \cinputraw{cstrip/#1}{#1}{#2}{\quad \textbf{part #3}}{#4}{#5}{#6}}
+\newcommand{\cinputpartnostrip}[6]{%
+    \cinputraw{../c/#1}{#1}{#2}{\quad \textbf{part #3}}{#4}{#5}{#6}}
 
 \newcommand{\caveat}[1]{\marginnote{\textsc{Where we stand:}\\  #1}}
 
@@ -104,7 +126,6 @@
 \newcommand{\grad}{\nabla}
 
 \newcommand{\ip}[2]{\ensuremath{\left<#1,#2\right>}}
-\newcommand{\Matlab}{\textsc{Matlab}\xspace}
 
 \newcommand{\onull}{\operatorname{null}}
 \newcommand{\rank}{\operatorname{rank}}
@@ -117,7 +138,9 @@
 \newcommand{\Th}{\mathcal{T}_h}
 \newcommand{\Pone}{\mathbf{P}_1}
 
+\newcommand{\Matlab}{\textsc{Matlab}\xspace}
 \newcommand{\PETSc}{\textsc{PETSc}\xspace}
+\newcommand{\Triangle}{\textsc{triangle}\xspace}
 
 \newcommand{\pDM}{\texttt{DM}\xspace}
 \newcommand{\pDMPlex}{\texttt{DMPlex}\xspace}
@@ -126,6 +149,8 @@
 \newcommand{\pSNES}{\texttt{SNES}\xspace}
 \newcommand{\pTS}{\texttt{TS}\xspace}
 \newcommand{\pVec}{\texttt{Vec}\xspace}
+
+%\renewcommand\floatpagefraction{.9}  %???
 
 % eventually this is a good idea:
 %\usepackage{makeidx}

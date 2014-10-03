@@ -1,4 +1,3 @@
-//START
 #define vecassembly(X) { \
     ierr = VecAssemblyBegin(X); CHKERRQ(ierr); \
     ierr = VecAssemblyEnd(X); CHKERRQ(ierr); }
@@ -10,4 +9,3 @@
     ierr = VecScatterBegin(CTX,X,XSEQ,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr); \
     ierr = VecScatterEnd(CTX,X,XSEQ,INSERT_VALUES,SCATTER_FORWARD); CHKERRQ(ierr); \
     VecScatterDestroy(&ctx); }
-//END

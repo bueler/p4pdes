@@ -1,6 +1,6 @@
 all: book.pdf
 
-tikzinputs := samplepoly.1.tikz squarefour.tikz bump.1.tikz bump.2.tikz
+tikzinputs := samplepoly.1.tikz squarefour.tikz bump.1.tikz
 texinputs := getstarted.tex linear.tex
 
 hinputs := $(addprefix ../c/, convenience.h)
@@ -40,15 +40,7 @@ bump.1.tikz: ../c/bump.poly tri2tikz.py
 	ln -s ../c/bump.1.poly
 	python tri2tikz.py --labelnodes --nodeoffset 0.25 --scale 2.0 bump.1 $@
 
-bump.2.tikz: ../c/bump.poly ../c/bump.1.poly tri2tikz.py
-	(cd ../c/ && triangle -rpqa0.25 bump.1)
-	rm -rf bump.2.node bump.2.ele bump.2.poly
-	ln -s ../c/bump.2.node
-	ln -s ../c/bump.2.ele
-	ln -s ../c/bump.2.poly
-	python tri2tikz.py --scale 2.0 bump.2 $@
-
 .PHONY: clean
 
 clean:
-	@rm -f *~ *.out *.aux *.log *.bbl *.blg *.synctex.gz *.idx *.ilg *.ind *.toc *.dvi cstrip/*.c bump.?.* samplepoly.?.*
+	@rm -f *~ *.out *.aux *.log *.bbl *.blg *.synctex.gz *.idx *.ilg *.ind *.toc *.dvi cstrip/*.c bump.?.* samplepoly.?.* squarefour.tikz

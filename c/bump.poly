@@ -13,9 +13,9 @@
 #     triangle -rpa0.5 bump.1  # creates bump.2.{node,ele,poly}
 #     showme bump &            # click through 0,1,2 levels
 #
-# A polygon with seven points in 2D, no attributes, no boundary markers.  For now.
+# A polygon with nine vertices, in 2D, no attributes, no markers for these vertices.
 9 2 0 0
-# Outer rectangle has these vertices:
+# Rectangle has these vertices:
  1   -3.0  0.0
  2   -3.0  3.0
  3    3.0  3.0
@@ -24,11 +24,11 @@
  5    1.0  0.0
  6    1.0  1.0
  7    0.0  0.0
-# These vertices help mark boundary segments
+# These added vertices are used to mark boundary segments
  8    2.0  0.0
  9   -1.5  0.0
-# All nine segments on boundary are marked so *triangle* can work non-convexly.
-# Markers: 2 identifies Dirichlet boundaries; 3 identifies Neumann boundary
+# All nine segments on boundary are marked so *triangle* can work with the
+# non-convexly.   Boundary markers: 2 = Dirichlet, 3 = Neumann.
 9 1
  1   1 2   2
  2   2 3   2

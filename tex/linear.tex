@@ -3,7 +3,7 @@
 
 We start with a cliched example because it is the right place to start.  Though the Poisson problem below is a cliche in applied mathematics, it provides us the opportunity to start using \PETSc for nontrivial tasks, among these the reading of an unstructured mesh from a file into \PETSc \pVec s, the preallocation of a \pMat in parallel, and the use of a linear solver (a \pKSP object) to solve large sparse systems.
 
-\section{A finite element method for the Poisson problem}
+\section{The Poisson problem}
 
 Let $\Omega \subset \RR^d$ be a region.  (Only $d=2$ and $d=3$ are used in this book.)  Suppose its boundary is decomposed into well-behaved subsets $\partial_D \Omega$ and $\partial_N \Omega$ whose union is the entire boundary $\partial \Omega$.  The \emph{Poisson problem}, in strong form and including nonhomogeneous Dirichlet and Neumann boundary conditions, is\marginnote{%
 \begin{tikzpicture}[scale=0.7]
@@ -44,19 +44,22 @@ Now,\marginnote{%
 
 Equation \eqref{poissonweak} is the weak formulation of the Poisson problem.  A key observation is that $u$ itself incorporates the Dirichlet boundary condition, because it lives in $H_g^1(\Omega)$, while both the Neumann boundary data $\gamma$ and the source function $f$ appear in equation \eqref{poissonweak}.
 
-The \emph{finite element method} (FEM) comes from requiring the weak formulation  \eqref{poissonweak} to be true for $u$ and $v$ in smaller, indeed finite-dimensional, subspaces of $H_g^1(\Omega)$ and $H_0^1(\Omega)$, respectively.  In our case these subspaces will be essentially the same, so our method is a \emph{Galerkin} FEM.  We will build these finite-dimensional subspaces, in the current example, using an unstructured triangulation on $\Omega\subset \RR^2$.  In particular, from now on in this chapter we restrict to $d=2$ dimensions.  Furthermore, to make our finite-dimensional spaces true subspaces of $H^1(\Omega)$---to make our FEM \emph{conforming}---we also require that $\Omega$ be polygonal, with $\partial\Omega$ a closed polygon.  We require that the segments in $\partial\Omega$ each have positive length, and be either entirely in $\partial_D\Omega$ or in $\partial_N\Omega$.
 
-\begin{marginfigure}
-\input{samplepoly.1.tikz}
-\caption{A triangulation $\Th$ with $K=22$ triangles (elements) numbered $k=0,1,\dots,K-1$ ({\color{red} red}) and $N=16$ nodes numbered $j=0,1,\dots,N-1$  ({\color{blue} blue}).  Nodes $\bx_0$, $\bx_1$, $\bx_2$, $\bx_3$ are in the Dirichlet boundary $\partial_D\Omega$.}
-\label{fig:number-elements}
-\end{marginfigure}
+\section{A finite element method for the Poisson problem}
+
+A \emph{finite element method} (FEM) for the Poisson problem comes from requiring the weak formulation \eqref{poissonweak} to be true for $u$ and $v$ in smaller, indeed finite-dimensional, subspaces of $H_g^1(\Omega)$ and $H_0^1(\Omega)$, respectively.  In our case these subspaces will be essentially the same, so our method is a \emph{Galerkin} FEM.  We will build these finite-dimensional subspaces, in the current example, using an unstructured triangulation on $\Omega\subset \RR^2$.  In particular, from now on in this chapter we restrict to $d=2$ dimensions.  Furthermore, to make our finite-dimensional spaces true subspaces of $H^1(\Omega)$---to make our FEM \emph{conforming}---we also require that $\Omega$ be polygonal, with $\partial\Omega$ a closed polygon.  We require that the segments in $\partial\Omega$ each have positive length, and be either entirely in $\partial_D\Omega$ or in $\partial_N\Omega$.
 
 By definition, a \emph{triangulation} is a set of non-overlapping, non-empty open triangles $\triangle_k\subset \RR^2$ which tile $\Omega$:
 \begin{equation*}
 \Th = \left\{\triangle_k \quad\Big|\quad \cup_k \overline{\triangle}_k = \overline{\Omega} \quad \text{ and} \quad \Omega_k \cap \Omega_l = \emptyset \text{ if } k\ne l\right\}.
 \end{equation*}
 There are $K$ triangles indexed $k=0,\dots,K-1$, as in Figure \ref{fig:number-elements}, for example.  (In contrast to \citet{Elmanetal2005}, which we generally follow but which implements in \Matlab, our indexing is always zero-based.  After all, we code in C.)  The subscript ``$h$'' in $\Th$ is traditional; it denotes the typical or maximum size $h$ (e.g.~diameter) of the triangles.  It serves as a reminder that we want to solve the Poisson problem accurately, that is, in the limit $h\to 0$.
+
+\begin{marginfigure}
+\input{samplepoly.1.tikz}
+\caption{A triangulation $\Th$ with $K=22$ triangles (elements) numbered $k=0,1,\dots,K-1$ ({\color{red} red}) and $N=16$ nodes numbered $j=0,1,\dots,N-1$  ({\color{blue} blue}).  Nodes $\bx_0$, $\bx_1$, $\bx_2$, $\bx_3$ are in the Dirichlet boundary $\partial_D\Omega$.}
+\label{fig:number-elements}
+\end{marginfigure}
 
 We also index all the vertices (nodes) in the triangulation with $j=0,1,\dots,N$:
 \begin{equation*}
@@ -130,9 +133,81 @@ for all $i$ such that $\bx_i \notin \partial_D \Omega$.  The coefficients $u_j$,
 Note that the support (i.e.~nonzero set) of $\phi_j$ includes the node $\bx_j$ and all triangles (elements) $\triangle_k$ for which $\bx_j$ is a node of $\triangle_k$.  Thus the integral ``$\int_\Omega \grad \phi_j \cdot \grad \phi_i$'' in \eqref{poissonfem} is often zero.  Specifically, it is zero if nodes $\bx_i$ and $\bx_j$ are not connected by an edge in the triangulation, equivalently if $\bx_i$ and $\bx_j$ are not both nodes of at least one triangle in the triangulation.
 
 
+
+\section{Getting a triangular mesh into \PETSc}
+
+We now take a break from mathematical constructions to do something practical with \PETSc.  While \PETSc itself does not include any tools for triangulating regions of the plane, we use the well-known and easily-learned \Triangle software \citep{Shewchuk1996} for this task.\sidenote{See \href{http://www.cs.cmu.edu/~quake/triangle.html}{www.cs.cmu.edu/$\sim$quake/ triangle.html} for documentation and source code of \Triangle. You can build it from source, but it is probably available as a package in your operating system.}  \Triangle, which is both limited to planar regions and only capable of writing ASCII files, is not a choice for performance.  Instead it is convenient and widely-available.
+
+\begin{figure*}
+\input{bump.1.tikz}
+\caption{A FEM triangulation generated by \Triangle.  Nodes are labeled by $j=0,\dots,N-1$ with $N=24$.  The Dirichlet boundary $\partial_D \Omega$ is bold.}
+\label{fig:triangulation}
+\end{figure*}
+
+\Triangle uses a simply-formatted ASCII file as input to describe a polygonal region $\Omega$ and to indicate the Dirichlet and Neumann portions.  For example, the triangulation shown in Figure \ref{fig:triangulation} was generated from the input file  \texttt{bump.poly} shown in Figure \ref{code:bumppoly}.
+
+The triangulation shown in Figure \ref{fig:triangulation} came from a single command which asks \Triangle to take \texttt{bump.poly} and generate a triangulation, including a polygon output file (option \texttt{-p}), which is quality-checked \citep{Shewchuk1996} (option \texttt{-q}), and which has triangles with maximum area of $1.0$ (option \texttt{-a1.0}):
+\begin{verbatim}
+  $ triangle -pqa1.0 bump
+\end{verbatim}
+This command generates three files, \texttt{bump.1.poly}, \texttt{bump.1.node}, and  \texttt{bump.1.ele}, which define the new (i.e.~refined relative to \texttt{bump.poly}) polygonal boundary, and the nodes and elements of the triangulation, respectively.  This is enough information to draw Figure \ref{fig:triangulation}, in particular.  For example, the file \texttt{bump.1.node} has the numbering (though not zero-based as shown) and node locations shown in blue in Figure \ref{fig:triangulation}.
+
+\inputfromline{../c/bump.poly}{bump.poly}{A description of the polygon in Figure \ref{fig:triangulation}, suitable for reading by \Triangle.}{16}{code:bumppoly}
+
+As noted, \Triangle produces ASCII files.  This is not a good format for large files which we intend to read before solving large PDE problems in a scalable way, as with \PETSc.  So, as promised, we do a mundane and un-scalable task in \PETSc, namely we read the \Triangle files serially onto a single processor and write out a binary file in \PETSc format.  The code \texttt{c2triangle.c} will be invoked for the present purposes by
+\begin{verbatim}
+  $ c2triangle -f bump.1
+\end{verbatim}
+to read ASCII files \texttt{bump.1.poly}, \texttt{bump.1.node}, and  \texttt{bump.1.ele}, and write out \PETSc-formatted binary file \texttt{bump.1.petsc}.
+
+\clearpage
+
+We show the code \texttt{c2triangle.c} in detail.  It starts with a standard preamble shown in Figure  \ref{code:trianglepartone}.  We will omit showing this preamble when we present future codes, but this preamble, or a subset of it, appears in all of them. In this preamble we see how \PETSc is initialized, and how to, for instance, learn which rank is the current processor.
+
+\cinputpart{c2triangle.c}{The standard preamble.}{I}{//STARTPREAMBLE}{//ENDPREAMBLE}{code:trianglepartone}
+
+\clearpage
+
+The next part of \texttt{c2triangle.c} is in Figure \ref{code:triangleparttwo}.  Here we use the pair \texttt{PetscOptionsBegin}/\texttt{PetscOptionsEnd} to bracket the reading of the two options we need, namely an input of the string containing the filename root, and a flag option which determines whether \texttt{c2triangle.c} will read back its \texttt{.petsc} output.  This \texttt{...Begin}/\texttt{...End} pair allows \PETSc to give a helpful message, describing various options for various components, if we run ``\texttt{c2triangle -h}''.
+
+\cinputpart{c2triangle.c}{Determine filenames using \PETSc option processing.}{II}{//ENDPREAMBLE}{//ENDFILENAME}{code:triangleparttwo}
+
+\clearpage
+
+The third part of \texttt{c2triangle.c} is in Figure \ref{code:trianglepartthree}.  After opening input files it only proceeds to do anything interesting on the first process (``rank zero'') in the MPI communicator.  This code will run at the same speed regardless of \texttt{NN}, if invoked \texttt{mpiexec -n NN c2triangle}, because it is actual a serial operation on the rank zero process.
+
+\cinputpart{c2triangle.c}{Start to read ASCII files with \textsc{triangle}-generated mesh by going to rank zero processor, reading node header, and allocating accordingly.}{III}{//ENDFILENAME}{//ENDRANK0ALLOC}{code:trianglepartthree}
+
+\clearpage
+
+In the fourth part of \texttt{c2triangle.c}, shown in Figure \ref{code:trianglepartfour}, we read the \texttt{.node} file.  It is read into sequential \PETSc \pVec s which have been allocated (created) only on the rank zero process.  The reading itself is done with the standard C library call \texttt{fscanf}, and then \texttt{VecSetValues} from \PETSc is used to set one \pVec entry at a time.  After setting these values, which is just the storage of a list of values in an internal \PETSc dynamic array used for assembling \pVec s, we actually ask \PETSc to do the assembly.  This is done so often that we put it in a C preprocessor macro, as shown in the short header \texttt{convenience.h} listed in Figure \ref{code:convenience}.
+
+\cinputpart{c2triangle.c}{On rank zero processor: Read node information.}{IV}{//ENDRANK0ALLOC}{//ENDREADNODES}{code:trianglepartfour}
+
+\inputwhole{../c/convenience.h}{convenience.h}{Some definitions.}{code:convenience}
+
+\clearpage
+
+The fifth part of \texttt{c2triangle.c} is in Figure \ref{code:trianglepartfive}.  This looks like the fourth part, because we simply read element information from the \texttt{.ele} file.  Likewise the sixth part shown in Figure \ref{code:trianglepartsix}, which reads polygon information from the \texttt{.poly} file.
+
+\cinputpart{c2triangle.c}{On rank zero processor: Read element information.}{V}{//ENDREADNODES}{//ENDREADELEMENTS}{code:trianglepartfive}
+
+\cinputpart{c2triangle.c}{On rank zero processor: Read boundary polygon information.}{VI}{//ENDREADELEMENTS}{//ENDREADPOLYGONS}{code:trianglepartsix}
+
+\clearpage
+
+At this point we have the whole triangulation in \PETSc \pVec s.  Now is the easy and last part of \texttt{c2triangle.c}, shown in Figure \ref{code:trianglepartseven}.  We simply create a \PETSc ``viewer'' and ``view'' all of the \pVec s which contain the mesh.  We will be able to reread these vectors in parallel, as long as we re-read them in the same order.
+
+\cinputpart{c2triangle.c}{On rank zero processor: Write the mesh out in \PETSc binary format.}{VII}{//ENDREADPOLYGONS}{//ENDRANK0}{code:trianglepartseven}
+
+\clearpage
+
+
 \section{The FEM matrix problem}
 
-The finite-dimensional weak formulation \eqref{poissonfem} is simply a matrix equation.  For ease of construction we will include the node-wise Dirichlet conditions as rows of this matrix problem, so the matrix will have $N$ columns, corresponding to one unknown for \emph{every} node $\bx_j$, and $N$ rows.  We will then describe, and give a code for, \emph{assembling} this matrix equation.
+Now that we can get a triangulation into \PETSc, we can return to the finite-dimensional weak formulation \eqref{poissonfem}.  It is simply a matrix equation, and we will write code which builds \PETSc \pMat and \pVec objects to store this problem, and then we will use a \PETSc \pKSP object to solve it.
+
+For ease of construction we will include the node-wise Dirichlet conditions as rows of this matrix problem, so the matrix will have $N$ columns, corresponding to one unknown for \emph{every} node $\bx_j$, and $N$ rows.  We will then describe, and give a code for, \emph{assembling} this matrix equation.
 
 Thus we define $A \in \RR^{N\times N}$ to have entries
 \begin{equation*}
@@ -219,29 +294,30 @@ A = \begin{bmatrix}
 In terms of later examples, we can note that the initial construction is already correct in the case where $\partial_D \Omega$ is the empty set.  In this Neumann-only case $A=\tilde A$ and $\bb = \tilde \bb$.  However, in this case it is also true that $u=(\text{constant})$ solves $-\grad^2 u=0$ with $\partial u/\partial n = 0$ on the whole boundary $\partial_N \Omega = \partial \Omega$, so equations \eqref{poissonstrong} or \eqref{poissonweak} only determines the solution up to an additive constant.  Thus the Poisson problem does not have a unique solution in this case, and we will have to tell \PETSc about the extra constant solutions, i.e.~the null space.
 
 
-\section{Assembling the matrix problem, element by element}
+\section{Assembling the matrix equation, element by element}
 
-Each entry $\tilde a_{ij}$ of the initial matrix $\tilde A$ is not, however, computed in turn.  Rather, we build the matrix by computing contributions to these entries from each element.
-
-To explain element-by-element assembly we first define the integral over just one triangle $\triangle_k$:
+Each entry $\tilde a_{ij}$ of the initial matrix $\tilde A$ is not, however, computed in whole.  Rather, we compute contributions to these entries from each element.  To explain such element-by-element assembly we first define the integral over just one triangle $\triangle_k$:
     $$\tilde a_{ij}^k = \int_{\triangle_k} \grad \phi_j \cdot \grad \phi_i.$$
-Also we introduce the idea of FIXME \texttt{P(k,q)}
+For each triangle $\triangle_k$ we assume that the three vertices are identified by local indices $q=0,1,2$.  Also we introduce an index function $P(k,q)$ for a triangulation which gives the (global) node index $j$ from the element index $k$ and the local index $q$:
+    $$j=P(k,q) \in \{0,1,\dots,N-1\}.$$
+Of course we can think of $P$ as an array with integer entries, $K$ rows, and 3 columns.
 
-Denoting $\tilde a_{ij}^k$ by \texttt{a(k,i,j)}, we to make the element-by-element assembly procedure clear:
+Denoting $\tilde a_{ij}^k$ by \texttt{a(k,i,j)}, to make the element-by-element assembly procedure clear we now give an assembly pseudocode for $\tilde A$:
 \begin{verbatim}
 A = 0                     // N x N matrix; set a(i,j) = 0
 for k = 0 to K-1 {        // loop through all elements
   for q = 0 to 2 {        // loop through vertices of element k
     i = P(k,q)            // row index
     for r = 0 to 2 {
-      j = P(k,q)          // column index
-      a(i,j) += a(k,i,j)  // need to compute this ...
+      j = P(k,r)          // column index
+      a(i,j) += a(k,i,j)  // add contribution from element k
     }
   }
 }
-// now we need to edit A for Dirichlet conditions ...
 \end{verbatim}
+To create a real code, however, we need to both compute $\tilde a_{ij}^k=$\texttt{a(k,i,j)} concretely, and implement the ``editing'' strategy which turns $\tilde A$ into $A$.  We address the former actions next, and leave the latter for an actual code below.
 
+FIXME
 \begin{align*}
 \chi_0(\xi,\eta) &= 1-\xi-\eta \\
 \chi_1(\xi,\eta) &= \xi \\
@@ -293,58 +369,25 @@ $$\phi_i(x(\xi,\eta),y(\xi,\eta)) = \chi_i(\xi,\eta)$$
 \end{marginfigure}
 
 
-
-\clearpage
-
-\section{Getting a triangular mesh into \PETSc}
-
-\begin{figure*}
-\input{bump.1.tikz}
-\caption{A FEM triangulation.  Nodes are labeled by $j=0,\dots,N-1$ with $N=24$.  The Dirichlet boundary $\partial_D \Omega$ is bold.}
-\label{fig:triangulation}
-\end{figure*}
-
-\begin{figure*}
-\input{bump.2.tikz}
-\caption{A finer FEM triangulation.}
-\label{fig:finertriangulation}
-\end{figure*}
-
-\cinputnostrip{convenience.h}{Some definitions.}{//START}{//END}
-
-\cinputpart{c2triangle.c}{The standard preamble.}{I}{//STARTPREAMBLE}{//ENDPREAMBLE}
-
-\cinputpart{c2triangle.c}{Determine filenames using \PETSc option processing.}{II}{//ENDPREAMBLE}{//ENDFILENAME}
-
-\cinputpart{c2triangle.c}{Start to read ASCII files with \textsc{triangle}-generated mesh by going to rank zero processor, reading node header, and allocating accordingly.}{III}{//ENDFILENAME}{//ENDRANK0ALLOC}
-
-\cinputpart{c2triangle.c}{On rank zero processor: Read node information.}{IV}{//ENDRANK0ALLOC}{//ENDREADNODES}
-
-\cinputpart{c2triangle.c}{On rank zero processor: Read element information.}{V}{//ENDREADNODES}{//ENDREADELEMENTS}
-
-\cinputpart{c2triangle.c}{On rank zero processor: Read boundary polygon information.}{VI}{//ENDREADELEMENTS}{//ENDREADPOLYGONS}
-
-\cinputpart{c2triangle.c}{On rank zero processor: Write the mesh out in \PETSc binary format.}{VII}{//ENDREADPOLYGONS}{//ENDRANK0}
-
-
-\cinputpart{readmesh.c}{A method to determine the filename of \PETSc binary file that has the mesh, and a method to read one \pVec from a file.}{I}{//STARTGET}{//ENDGET}
-
-\cinputpart{readmesh.c}{Read the mesh from the file.  Then put a sequential copy of each mesh \pVec on each processor.}{II}{//ENDGET}{//END}
-
-
 \section{Preallocate a \pMat}
 
 FIXME: key idea is that we cannot tell if an edge is in the boundary just by whether both endpoints are in the boundary; i.e. we need to have list of boundary nodes which marks the boundary polygon
 
 %\cinputpart{poissontools.c}{FIXME}
 
-\cinputpart{c2testprealloc.c}{Read mesh \pVec s from file.  Get row ownership range.}{I}{//STARTLOAD}{//ENDLOAD}
-
-\cinputpart{c2testprealloc.c}{Set up \pMat $A$ and ctually preallocate it.  Fill it with junk entries so the pattern can be visualized.}{II}{//ENDLOAD}{//ENDTEST}
+\cinputpart{c2testprealloc.c}{Read mesh \pVec s from file.  Get row ownership range.}{I}{//STARTLOAD}{//ENDLOAD}{code:testpreallocpartone}
 
 
-\section{Assembling Poisson}
+\cinputpart{readmesh.c}{A method to determine the filename of \PETSc binary file that has the mesh, and a method to read one \pVec from a file.}{I}{//STARTGET}{//ENDGET}{code:readmeshpartone}
+
+\cinputpart{readmesh.c}{Read the mesh from the file.  Then put a sequential copy of each mesh \pVec on each processor.}{II}{//ENDGET}{//END}{code:readmeshparttwo}
+
+
+\cinputpart{c2testprealloc.c}{Set up \pMat $A$ and ctually preallocate it.  Fill it with junk entries so the pattern can be visualized.}{II}{//ENDLOAD}{//ENDTEST}{code:testpreallocparttwo}
+
 
 \section{Performance: convergence and scaling}
+
+
 
 \caveat{But real-world PDEs are nonlinear.}
