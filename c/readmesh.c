@@ -4,7 +4,8 @@
 #include "readmesh.h"
 
 //STARTGET
-PetscErrorCode getmeshfile(MPI_Comm comm, const char suffix[], char filename[], PetscViewer *viewer) {
+PetscErrorCode getmeshfile(MPI_Comm comm, const char suffix[],
+                           char filename[], PetscViewer *viewer) {
   PetscErrorCode ierr;
   PetscBool      fset;
   ierr = PetscOptionsBegin(comm, "", "options for readmesh", ""); CHKERRQ(ierr);
@@ -22,6 +23,7 @@ PetscErrorCode getmeshfile(MPI_Comm comm, const char suffix[], char filename[], 
 }
 //ENDGET
 
+//STARTREADMESH
 PetscErrorCode readmesh(MPI_Comm comm, PetscViewer viewer,
                         Vec *E, Vec *x, Vec *y, Vec *Q) {
   PetscInt Ebs,Qbs,N,K,M;
@@ -51,7 +53,7 @@ PetscErrorCode readmesh(MPI_Comm comm, PetscViewer viewer,
                      N,K,M); CHKERRQ(ierr);
   return 0;
 }
-//END
+//ENDREADMESH
 
 PetscErrorCode getmeshsizes(MPI_Comm comm, Vec E, Vec x, Vec Q,
                             PetscInt *N, PetscInt *K, PetscInt *M) {
