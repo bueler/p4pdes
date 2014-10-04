@@ -1,6 +1,6 @@
 all: book.pdf
 
-tikzinputs := samplepoly.1.tikz squarefour.tikz bump.1.tikz
+tikzinputs := samplepoly.1.tikz squarefour.tikz bump.1.tikz bump.poly.tikz
 texinputs := getstarted.tex linear.tex
 
 hinputs := $(addprefix ../c/, convenience.h)
