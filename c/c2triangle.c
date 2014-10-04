@@ -3,14 +3,13 @@ static char help[] =
 "Convert triangle-written ASCII mesh files to binary PETSc files.\n\
 On the rank 0 process we do two steps:\n\
   1. Read a FEM grid from ASCII files .node,.ele,.poly written by triangle.\n\
-  2. Write elements in PETSc binary format (.Epetsc).\n\
-  3. Write nodal info in PETSc binary format (.Npetsc).\n\
+  2. Write elements and nodal info in PETSc binary format (.petsc).\n\
 Optionally, as a check, the binary file can be read in parallel and written to\n\
 STDOUT.  For example, do:\n\
     triangle -pqa1.0 bump   # generate bump.1.{node,ele,poly}\n\
     c2triangle -f bump.1    # read bump.1.{node,ele,poly}\n\
-                            # and generate bump.1.{Epetsc,.Npetsc}\n\n\
-Do this to re-read binary files bump.1.{Epetsc,Npetsc} and show contents:\n\
+                            # and generate bump.1.petsc\n\n\
+Do this to re-read binary files bump.1.petsc and show contents:\n\
     c2triangle -f bump.1 -check\n\n";
 
 #include <petscmat.h>
@@ -32,7 +31,7 @@ int main(int argc,char **args) {
   // GET OPTIONS AND BUILD FILENAMES
   PetscBool      fset, docheck, checkset;
   const PetscInt  MPL = PETSC_MAX_PATH_LEN;
-  char fnameroot[MPL], Eoutfilename[MPL], Noutfilename[MPL],
+  char fnameroot[MPL], outfilename[MPL],
        nodefilename[MPL], elefilename[MPL], polyfilename[MPL];
   ierr = PetscOptionsBegin(COMM, "", "options for c2triangle", ""); CHKERRQ(ierr);
   ierr = PetscOptionsString("-f", "filename root", "", "",
@@ -46,8 +45,7 @@ int main(int argc,char **args) {
   strcpy(nodefilename,fnameroot);  strcat(nodefilename,".node");
   strcpy(elefilename,fnameroot);   strcat(elefilename,".ele");
   strcpy(polyfilename,fnameroot);  strcat(polyfilename,".poly");
-  strcpy(Eoutfilename,fnameroot);   strcat(Eoutfilename,".Epetsc");
-  strcpy(Noutfilename,fnameroot);   strcat(Noutfilename,".Npetsc");
+  strcpy(outfilename,fnameroot);   strcat(outfilename,".petsc");
 //ENDFILENAME
 
   if (rank == 0) {
@@ -192,45 +190,40 @@ int main(int argc,char **args) {
 //ENDREADELEMENTS
 
     // DO BINARY WRITE AND CLEAN UP
+    //   FIXME: because of bug in petsc-3.5.2, and because we are writing
+    //   on single rank, we write WITHOUT "_" in prefixes and read WITH "_"
+    //   (see readmesh.c)
     PetscViewer viewer;
-    ierr = PetscPrintf(SELF,"writing %s on rank 0 ...\n",Eoutfilename); CHKERRQ(ierr);
-    ierr = PetscViewerBinaryOpen(PETSC_COMM_SELF,Eoutfilename,FILE_MODE_WRITE,
+    ierr = PetscPrintf(SELF,"writing %s on rank 0 ...\n",outfilename); CHKERRQ(ierr);
+    ierr = PetscViewerBinaryOpen(PETSC_COMM_SELF,outfilename,FILE_MODE_WRITE,
                &viewer); CHKERRQ(ierr);
     VecSetOptionsPrefix(vE,"E");
     ierr = VecView(vE,viewer); CHKERRQ(ierr);
-    VecDestroy(&vE);
-    PetscViewerDestroy(&viewer);
-    ierr = PetscPrintf(SELF,"writing %s on rank 0 ...\n",Noutfilename); CHKERRQ(ierr);
-    ierr = PetscViewerBinaryOpen(PETSC_COMM_SELF,Noutfilename,FILE_MODE_WRITE,
-               &viewer); CHKERRQ(ierr); 
     VecSetOptionsPrefix(vx,"x");
     ierr = VecView(vx,viewer); CHKERRQ(ierr);
     VecSetOptionsPrefix(vy,"y");
     ierr = VecView(vy,viewer); CHKERRQ(ierr);
     VecSetOptionsPrefix(vQ,"Q");
     ierr = VecView(vQ,viewer); CHKERRQ(ierr);
-    VecDestroy(&vx);  VecDestroy(&vy);  VecDestroy(&vQ);
+    VecDestroy(&vE);  VecDestroy(&vx);  VecDestroy(&vy);  VecDestroy(&vQ);
     PetscViewerDestroy(&viewer);
   }
 //ENDRANK0
 
   if (docheck == PETSC_TRUE) {
-    ierr = PetscPrintf(COMM,"\nchecking by reading in Vecs and showing at STDOUT ...\n"
+    ierr = PetscPrintf(COMM,"\nchecking by loading Vecs and viewing at STDOUT ...\n"
                        ); CHKERRQ(ierr);
-
-    // READ MESH FROM FILE, SHOW IT, AND CLEAN UP
-    PetscViewer Eviewer,Nviewer;
+    PetscViewer viewer;
     Vec rE,rx,ry,rQ;
-    ierr = getmeshfile(COMM, ".Epetsc", Eoutfilename, &Eviewer); CHKERRQ(ierr);
-    ierr = getmeshfile(COMM, ".Npetsc", Noutfilename, &Nviewer); CHKERRQ(ierr);
-    ierr = readmesh(COMM, Eviewer, Nviewer,
+    ierr = getmeshfile(COMM, ".petsc", outfilename, &viewer); CHKERRQ(ierr);
+    ierr = readmesh(COMM, viewer,
                     &rE, &rx, &ry, &rQ); CHKERRQ(ierr);
     ierr = VecView(rE,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
     ierr = VecView(rx,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
     ierr = VecView(ry,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
     ierr = VecView(rQ,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
     VecDestroy(&rE);  VecDestroy(&rx);  VecDestroy(&ry);  VecDestroy(&rQ);
-    PetscViewerDestroy(&Eviewer);   PetscViewerDestroy(&Nviewer);
+    PetscViewerDestroy(&viewer);
   }
 
   PetscFinalize();

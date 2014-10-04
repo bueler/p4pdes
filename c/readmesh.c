@@ -22,36 +22,30 @@ PetscErrorCode getmeshfile(MPI_Comm comm, const char suffix[], char filename[], 
 }
 //ENDGET
 
-PetscErrorCode readmesh(MPI_Comm comm, PetscViewer Eviewer, PetscViewer Nviewer,
+PetscErrorCode readmesh(MPI_Comm comm, PetscViewer viewer,
                         Vec *E, Vec *x, Vec *y, Vec *Q) {
-  PetscInt bs;
-  PetscInt N,K,M;
+  PetscInt Ebs,Qbs,N,K,M;
   PetscErrorCode ierr;
-
-  ierr = PetscPrintf(comm,"  reading mesh Vec E from file ...\n"); CHKERRQ(ierr);
+  ierr = PetscPrintf(comm,"  reading mesh Vec E,x,y,Q from file ...\n"); CHKERRQ(ierr);
   ierr = VecCreate(comm,E); CHKERRQ(ierr);
-  VecSetOptionsPrefix(*E,"E");
-  ierr = VecLoad(*E,Eviewer); CHKERRQ(ierr);
-  ierr = VecGetBlockSize(*E,&bs); CHKERRQ(ierr);
-  ierr = PetscPrintf(comm,"    block size for E is %d\n",bs); CHKERRQ(ierr); // HUH?  WHY WRONG SIZE?
-  ierr = PetscObjectSetName((PetscObject)(*E),"E-element-full-info"); CHKERRQ(ierr);
-
-  ierr = PetscPrintf(comm,"  reading mesh Vecs x,y,Q from file ...\n"); CHKERRQ(ierr);
+  VecSetOptionsPrefix(*E,"E_");
+  ierr = VecLoad(*E,viewer); CHKERRQ(ierr);
   ierr = VecCreate(comm,x); CHKERRQ(ierr);
-  VecSetOptionsPrefix(*x,"x");
-  ierr = VecLoad(*x,Nviewer); CHKERRQ(ierr);
+  VecSetOptionsPrefix(*x,"x_");
+  ierr = VecLoad(*x,viewer); CHKERRQ(ierr);
   ierr = VecCreate(comm,y); CHKERRQ(ierr);
-  VecSetOptionsPrefix(*y,"y");
-  ierr = VecLoad(*y,Nviewer); CHKERRQ(ierr);
+  VecSetOptionsPrefix(*y,"y_");
+  ierr = VecLoad(*y,viewer); CHKERRQ(ierr);
   ierr = VecCreate(comm,Q); CHKERRQ(ierr);
-  VecSetOptionsPrefix(*Q,"Q");
-  ierr = VecLoad(*Q,Nviewer); CHKERRQ(ierr);
-  ierr = VecGetBlockSize(*Q,&bs); CHKERRQ(ierr);
-  ierr = PetscPrintf(comm,"    block size for Q is %d\n",bs); CHKERRQ(ierr);
+  VecSetOptionsPrefix(*Q,"Q_");
+  ierr = VecLoad(*Q,viewer); CHKERRQ(ierr);
+  ierr = VecGetBlockSize(*E,&Ebs); CHKERRQ(ierr);
+  ierr = VecGetBlockSize(*Q,&Qbs); CHKERRQ(ierr);
+  ierr = PetscPrintf(comm,"    block size for E is %d, for Q is %d\n",Ebs,Qbs); CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject)(*E),"E-element-full-info"); CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject)(*x),"x-coordinate"); CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject)(*y),"y-coordinate"); CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject)(*Q),"Q-boundary-segment"); CHKERRQ(ierr);
-
   ierr = getmeshsizes(comm,*E,*x,*Q,&N,&K,&M); CHKERRQ(ierr);
   ierr = PetscPrintf(comm,"    N=%d nodes, K=%d elements, M=%d boundary segments\n",
                      N,K,M); CHKERRQ(ierr);

@@ -6,8 +6,8 @@
 // get input file name from option "-f", and create corresponding viewer
 PetscErrorCode getmeshfile(MPI_Comm comm, const char suffix[], char filename[], PetscViewer *viewer);
 
-// read mesh info from viewers created with getmeshfile()
-PetscErrorCode readmesh(MPI_Comm comm, PetscViewer Eviewer, PetscViewer Nviewer,
+// read mesh info from viewer created with getmeshfile()
+PetscErrorCode readmesh(MPI_Comm comm, PetscViewer viewer,
                         Vec *E,         // length 12*K array with full element info
                         Vec *x, Vec *y, // length N arrays with node coords
                         Vec *Q);        // length 2*M array with node indices
