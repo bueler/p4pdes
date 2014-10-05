@@ -4,7 +4,7 @@ ex??
 ex*.c
  
 c1matvec
-c2triangle
+c2convert
 c2testprealloc
 c2poisson
 

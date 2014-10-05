@@ -1,7 +1,7 @@
 #ifndef READMESH_H_
 #define READMESH_H_
 
-// these methods work with .petsc binary files written by  c2triangle
+// these methods work with .petsc binary files written by  c2convert
 
 typedef struct {
   PetscScalar j[3],  // global indices of nodes j[0], j[1], j[2]

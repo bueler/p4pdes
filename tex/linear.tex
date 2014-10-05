@@ -162,31 +162,31 @@ This command generates three ASCII files, \texttt{bump.1.poly}, \texttt{bump.1.n
 \label{fig:triangulation}
 \end{figure*}
 
-As noted, \Triangle produces ASCII files.  This is not a good format for large meshes.  Because we intend to rapidly read large meshes before solving large PDE problems in a scalable way with \PETSc, we now do a mundane and un-scalable task in \PETSc.  Namely we read the \Triangle files serially onto a single processor and write out a binary file in \PETSc format.  The code \texttt{c2triangle.c} which does this is invoked, for the present purposes, by
+As noted, \Triangle produces ASCII files.  This is not a good format for large meshes.  Because we intend to rapidly read large meshes before solving large PDE problems in a scalable way with \PETSc, we now do a mundane and un-scalable task in \PETSc.  Namely we read the \Triangle files serially onto a single processor and write out a binary file in \PETSc format.  The code \texttt{c2convert.c} which does this is invoked, for the present purposes, by
 \begin{verbatim}
-  $ c2triangle -f bump.1
+  $ c2convert -f bump.1
 \end{verbatim}
 This reads ASCII files \texttt{bump.1.poly}, \texttt{bump.1.node}, and \texttt{bump.1.ele}.  Then it writes out a \PETSc-formatted binary file \texttt{bump.1.petsc}.
 
-We show the code \texttt{c2triangle.c} in detail.  It starts with a standard preamble shown in Figure  \ref{code:trianglepartone}.  We will omit showing this preamble for future codes, but this preamble, or a subset of it, appears in all of them. In this preamble we see how \PETSc is initialized, and how to, for instance, learn which rank is the current processor.
+We show the code \texttt{c2convert.c} in detail.  It starts with a standard preamble shown in Figure  \ref{code:trianglepartone}.  We will omit showing this preamble for future codes, but this preamble, or a subset of it, appears in all of them. In this preamble we see how \PETSc is initialized, and how to, for instance, learn which rank is the current processor.
 
-\cinputpart{c2triangle.c}{The standard preamble.}{I}{//STARTPREAMBLE}{//ENDPREAMBLE}{code:trianglepartone}
+\cinputpart{c2convert.c}{The standard preamble.}{I}{//STARTPREAMBLE}{//ENDPREAMBLE}{code:trianglepartone}
 
-The next part of \texttt{c2triangle.c} is in Figure \ref{code:triangleparttwo}.  Here we use the pair \texttt{PetscOptionsBegin}/\texttt{PetscOptionsEnd} to bracket the reading of the two options we need, namely for the string containing the filename root, and for a flag which determines whether \texttt{c2triangle.c} will read back its \texttt{.petsc} output as a check.  This \texttt{...Begin}/\texttt{...End} pair allows \PETSc to give a helpful message, describing the options for various components including the application code, when we run ``\texttt{c2triangle -h}''.
+The next part of \texttt{c2convert.c} is in Figure \ref{code:triangleparttwo}.  Here we use the pair \texttt{PetscOptionsBegin}/\texttt{PetscOptionsEnd} to bracket the reading of the two options we need, namely for the string containing the filename root, and for a flag which determines whether \texttt{c2convert.c} will read back its \texttt{.petsc} output as a check.  This \texttt{...Begin}/\texttt{...End} pair allows \PETSc to give a helpful message, describing the options for various components including the application code, when we run ``\texttt{c2convert -h}''.
 
-\cinputpart{c2triangle.c}{Determine filenames using \PETSc option processing.}{II}{//ENDPREAMBLE}{//ENDFILENAME}{code:triangleparttwo}
+\cinputpart{c2convert.c}{Determine filenames using \PETSc option processing.}{II}{//ENDPREAMBLE}{//ENDFILENAME}{code:triangleparttwo}
 
-The third part of \texttt{c2triangle.c} is in Figure \ref{code:trianglepartthree}.  Starting here we only ask the first process (``rank zero'') in the MPI communicator to do any work.  Thus, if invoked ``\texttt{mpiexec -n NN c2triangle},'' this code will run at the same speed regardless of the value of \texttt{NN}, because it is actually a serial code.  This part of the code reads the header information in the \texttt{.node} file, and allocates \PETSc \pVec s according.
+The third part of \texttt{c2convert.c} is in Figure \ref{code:trianglepartthree}.  Starting here we only ask the first process (``rank zero'') in the MPI communicator to do any work.  Thus, if invoked ``\texttt{mpiexec -n NN c2convert},'' this code will run at the same speed regardless of the value of \texttt{NN}, because it is actually a serial code.  This part of the code reads the header information in the \texttt{.node} file, and allocates \PETSc \pVec s according.
 
-\cinputpart{c2triangle.c}{Start to read ASCII files with \textsc{triangle}-generated mesh by going to rank zero processor, reading node header, allocate accordingly, and read nodes.}{III}{//ENDFILENAME}{//ENDREADNODES}{code:trianglepartthree}
+\cinputpart{c2convert.c}{Start to read ASCII files with \textsc{triangle}-generated mesh by going to rank zero processor, reading node header, allocate accordingly, and read nodes.}{III}{//ENDFILENAME}{//ENDREADNODES}{code:trianglepartthree}
 
 Then we read the node locations from the \texttt{.node} file.  It is read into sequential \PETSc \pVec s which have been allocated (created) only on the rank zero process.  The reading itself is done with the standard C library call \texttt{fscanf}, and then \texttt{VecSetValues} from \PETSc is used to set one \pVec entry at a time.  After setting these values, which is just the storage of a list of values in an internal \PETSc dynamic array used for assembling \pVec s, we actually ask \PETSc to do the assembly.  This is done so often that we put it in a C preprocessor macro, as shown in the short header \texttt{convenience.h} listed in Figure \ref{code:convenience}.
 
 \inputwhole{../c/convenience.h}{convenience.h}{Some definitions.}{code:convenience}
 
-The next part of \texttt{c2triangle.c} is in Figure \ref{code:trianglepartfour}.  This looks like the previous part, because we read boundary polygon information from the \texttt{.poly} file.  Specifically, each segment of the boundary polygon corresponds to two node indices.  We store these in a \pVec with blocksize 2.
+The next part of \texttt{c2convert.c} is in Figure \ref{code:trianglepartfour}.  This looks like the previous part, because we read boundary polygon information from the \texttt{.poly} file.  Specifically, each segment of the boundary polygon corresponds to two node indices.  We store these in a \pVec with blocksize 2.
 
-\cinputpart{c2triangle.c}{On rank zero processor: Read polygon information.}{IV}{//ENDREADNODES}{//ENDREADPOLYGONS}{code:trianglepartfour}
+\cinputpart{c2convert.c}{On rank zero processor: Read polygon information.}{IV}{//ENDREADNODES}{//ENDREADPOLYGONS}{code:trianglepartfour}
 
 The next part, shown in Figure \ref{code:trianglepartfive}, might be the most important.  We build a single \pVec which contains all the information about each element that is needed to do the matrix equation assembly for that element.  In particular, we reads the node indices for each element from the \texttt{.ele} file.  Then we fill this C \texttt{struct}, which is the size of 12 \texttt{PetscScalars}:
 \begin{Verbatim}
@@ -199,11 +199,11 @@ The next part, shown in Figure \ref{code:trianglepartfive}, might be the most im
 \end{Verbatim}
 (Unfortunately, a \PETSc \pVec is designed to hold \texttt{PetscScalar} data types, i.e.~\texttt{double} in most cases, and so we are quite wasteful for integer indices.)  Thus we build a \pVec with blocksize 12.
 
-\cinputpart{c2triangle.c}{On rank zero processor: Read element indices  Build element data structure, i.e.~a \pVec with blocksize 12.}{V}{//ENDREADPOLYGONS}{//ENDREADELEMENTS}{code:trianglepartfive}
+\cinputpart{c2convert.c}{On rank zero processor: Read element indices  Build element data structure, i.e.~a \pVec with blocksize 12.}{V}{//ENDREADPOLYGONS}{//ENDREADELEMENTS}{code:trianglepartfive}
 
-At this point we have the whole triangulation in \PETSc \pVec s.  Now is the easy and last part of \texttt{c2triangle.c}, shown in Figure \ref{code:trianglepartsix}.  We simply create a \PETSc ``viewer'' and ``view'' all of the \pVec s which contain the mesh.  We will be able to reread these \pVec s in parallel, as long as we re-read them in the same order.
+At this point we have the whole triangulation in \PETSc \pVec s.  Now is the easy and last part of \texttt{c2convert.c}, shown in Figure \ref{code:trianglepartsix}.  We simply create a \PETSc ``viewer'' and ``view'' all of the \pVec s which contain the mesh.  We will be able to reread these \pVec s in parallel, as long as we re-read them in the same order.
 
-\cinputpart{c2triangle.c}{On rank zero processor: Write the mesh out in \PETSc binary format.}{VI}{//ENDREADELEMENTS}{//ENDRANK0}{code:trianglepartsix}
+\cinputpart{c2convert.c}{On rank zero processor: Write the mesh out in \PETSc binary format.}{VI}{//ENDREADELEMENTS}{//ENDRANK0}{code:trianglepartsix}
 
 
 

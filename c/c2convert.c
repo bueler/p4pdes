@@ -1,16 +1,15 @@
 
 static char help[] =
-"Convert triangle-written ASCII mesh files to binary PETSc files.\n\
+"Convert triangle-written ASCII mesh files to a binary PETSc file.\n\
 On the rank 0 process we do two steps:\n\
   1. Read a FEM grid from ASCII files .node,.ele,.poly written by triangle.\n\
   2. Write elements and nodal info in PETSc binary format (.petsc).\n\
 Optionally, as a check, the binary file can be read in parallel and written to\n\
 STDOUT.  For example, do:\n\
-    triangle -pqa1.0 bump   # generate bump.1.{node,ele,poly}\n\
-    c2triangle -f bump.1    # read bump.1.{node,ele,poly}\n\
-                            # and generate bump.1.petsc\n\n\
+    triangle -pqa1.0 bump  # generate bump.1.{node,ele,poly}\n\
+    c2convert -f bump.1    # read bump.1.{node,ele,poly}; generate bump.1.petsc\n\n\
 Do this to re-read binary files bump.1.petsc and show contents:\n\
-    c2triangle -f bump.1 -check\n\n";
+    c2convert -f bump.1 -check\n\n";
 
 #include <petscmat.h>
 #include "convenience.h"
@@ -33,7 +32,7 @@ int main(int argc,char **args) {
   const PetscInt  MPL = PETSC_MAX_PATH_LEN;
   char fnameroot[MPL], outfilename[MPL],
        nodefilename[MPL], elefilename[MPL], polyfilename[MPL];
-  ierr = PetscOptionsBegin(COMM, "", "options for c2triangle", ""); CHKERRQ(ierr);
+  ierr = PetscOptionsBegin(COMM, "", "options for c2convert", ""); CHKERRQ(ierr);
   ierr = PetscOptionsString("-f", "filename root", "", "",
                             fnameroot, sizeof(fnameroot), &fset); CHKERRQ(ierr);
   ierr = PetscOptionsBool("-check", "if set, re-read and show at STDOUT", "", PETSC_FALSE,

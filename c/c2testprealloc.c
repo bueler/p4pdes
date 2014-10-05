@@ -4,7 +4,7 @@ static char help[] =
 Demonstrate Mat preallocation.\n\
 For a one-process, coarse grid example do:\n\
      triangle -pqa1.0 bump       # generates bump.1.{node,ele,poly}\n\
-     c2triangle -f bump.1        # reads bump.1.{node,ele,poly} and generates bump.1.petsc\n\
+     c2convert -f bump.1        # reads bump.1.{node,ele,poly} and generates bump.1.petsc\n\
      c2testprealloc -f bump.1    # reads bump.1.petsc and tests preallocation\n\
 To see the sparsity pattern graphically:\n\
      c2testprealloc -f bump.1 -a_mat_view draw -draw_pause 5\n\n";

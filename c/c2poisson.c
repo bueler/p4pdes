@@ -8,7 +8,7 @@ with a mix of Dirichlet and Neumann boundary conditions,\n\
 using an unstructured mesh FEM method.\n\
 For a one-process, coarse grid example do:\n\
      triangle -pqa1.0 bump   # generates bump.1.{node,ele,poly}\n\
-     c2triangle -f bump.1    # reads bump.1.{node,ele,poly} and generates bump.1.petsc\n\
+     c2convert -f bump.1     # reads bump.1.{node,ele,poly} and generates bump.1.petsc\n\
      c2poisson -f bump.1     # reads bump.1.petsc and solves the equation\n\
 To see the matrix graphically:\n\
      c2poisson -f bump.1 -a_mat_view draw -draw_pause 5\n\n";
