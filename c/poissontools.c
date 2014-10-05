@@ -1,14 +1,34 @@
 #include <petscmat.h>
 #include "readmesh.h"
 
-#define DEBUG 0
+#define DEBUG 1
+
+PetscErrorCode printnnz(MPI_Comm comm, PetscInt mm, PetscInt *dnnz, PetscInt *onnz) {
+  PetscErrorCode ierr;
+  PetscMPIInt    rank;
+  PetscInt       iloc;
+  MPI_Comm_rank(comm,&rank);
+  ierr = PetscSynchronizedPrintf(comm,"showing entries of dnnz[%d] on rank %d (DEBUG)\n",
+                                 mm,rank); CHKERRQ(ierr);
+  for (iloc = 0; iloc < mm; iloc++) {
+      ierr = PetscSynchronizedPrintf(comm,"dnnz[%d] = %d\n",iloc,dnnz[iloc]); CHKERRQ(ierr);
+  }
+  ierr = PetscSynchronizedPrintf(comm,"showing entries of onnz[%d] on rank %d (DEBUG)\n",
+                                 mm,rank); CHKERRQ(ierr);
+  for (iloc = 0; iloc < mm; iloc++) {
+      ierr = PetscSynchronizedPrintf(comm,"onnz[%d] = %d\n",iloc,onnz[iloc]); CHKERRQ(ierr);
+  }
+  ierr = PetscSynchronizedFlush(comm,PETSC_STDOUT); CHKERRQ(ierr);
+  return 0;
+}
 
 //STARTPREALLOC
-PetscErrorCode prealloc(MPI_Comm comm, Vec E, Vec x, Vec y, Vec Q,
-                        PetscInt Istart, PetscInt Iend, Mat *A) {
+PetscErrorCode prealloc(MPI_Comm comm, Vec E, Vec x, Vec y, Vec Q, Mat *A) {
   PetscErrorCode ierr;
-  PetscInt K, M;
+  PetscInt K, M, Istart, Iend, Kstart, Kend;
   ierr = getmeshsizes(comm,E,x,Q,NULL,&K,&M); CHKERRQ(ierr); // K = # of elements, M = # of bdry segs
+  ierr = VecGetOwnershipRange(x,&Istart,&Iend); CHKERRQ(ierr);
+  ierr = VecGetOwnershipRange(E,&Kstart,&Kend); CHKERRQ(ierr);
 
   // ALLOCATE LOCAL ARRAYS FOR NUMBER OF NONZEROS
   PetscInt mm = Iend - Istart, iloc;
@@ -25,17 +45,25 @@ PetscErrorCode prealloc(MPI_Comm comm, Vec E, Vec x, Vec y, Vec Q,
   PetscInt    i, j, k, q, r;
   PetscScalar *ae;
   elementtype *Eptr;
+#if DEBUG
+  PetscMPIInt    rank;
+  MPI_Comm_rank(comm,&rank);
+  ierr = PetscPrintf(comm,"    inside prealloc:  Kstart=%d, Kend=%d\n",
+                     rank,Kstart,Kend); CHKERRQ(ierr);
+#endif
   ierr = VecGetArray(E,&ae); CHKERRQ(ierr);
   Eptr = (elementtype*)ae;
-  for (k = 0; k < K; k++) {          // loop over ALL elements
+  for (k = Kstart; k < Kend; k++) {          // loop over all elements we own
     for (q = 0; q < 3; q++) {        // loop over vertices of current element
       //WAS: i = (int)ap[3*k+q];
-      i = (int)Eptr[k].j[q];         //   global index of q node
+      i = (int)(Eptr[k].j[q]);         //   global index of q node
+      //i = (int)(ae[12*k+q]);         //   global index of q node
       if ((i < Istart) || (i >= Iend))  continue; // skip node if I don't own it
       iloc = i - Istart;
       for (r = 0; r < 3; r++) {      // loop over other vertices
         if (r == q)  continue;       // diagonal entry already counted
-        j = (int)Eptr[k].j[r];       //   global index of r node
+        j = (int)(Eptr[k].j[r]);       //   global index of r node
+        //j = (int)(ae[12*k+r]);         //   global index of q node
         // (i,j) is an edge; we count this nonzero matrix entry
         if ((j >= Istart) && (j < Iend)) {
           dnnz[iloc]++;
@@ -75,19 +103,7 @@ PetscErrorCode prealloc(MPI_Comm comm, Vec E, Vec x, Vec y, Vec Q,
   }
 
 #if DEBUG
-  PetscMPIInt     rank;
-  MPI_Comm_rank(COMM,&rank);
-  ierr = PetscSynchronizedPrintf(COMM,"showing entries of dnnz[%d] on rank %d (DEBUG)\n",
-                                 mm,rank); CHKERRQ(ierr);
-  for (iloc = 0; iloc < mm; iloc++) {
-      ierr = PetscSynchronizedPrintf(COMM,"dnnz[%d] = %d\n",iloc,dnnz[iloc]); CHKERRQ(ierr);
-  }
-  ierr = PetscSynchronizedPrintf(COMM,"showing entries of onnz[%d] on rank %d (DEBUG)\n",
-                                 mm,rank); CHKERRQ(ierr);
-  for (iloc = 0; iloc < mm; iloc++) {
-      ierr = PetscSynchronizedPrintf(COMM,"onnz[%d] = %d\n",iloc,onnz[iloc]); CHKERRQ(ierr);
-  }
-  ierr = PetscSynchronizedFlush(COMM,PETSC_STDOUT); CHKERRQ(ierr);
+  ierr = printnnz(comm, mm, dnnz, onnz); CHKERRQ(ierr);
 #endif
 
   // PREALLOCATE STIFFNESS MATRIX

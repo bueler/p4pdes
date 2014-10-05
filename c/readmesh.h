@@ -14,6 +14,7 @@ typedef struct {
 PetscErrorCode getmeshfile(MPI_Comm comm, const char suffix[], char filename[], PetscViewer *viewer);
 
 // read mesh info from viewer created with getmeshfile()
+FIXME:  Q needs to be sequential so that during assembly an arbitrary element can ask "is this segment boundary"
 PetscErrorCode readmesh(MPI_Comm comm, PetscViewer viewer,
                         Vec *E,         // length 12*K array with full element info
                         Vec *x, Vec *y, // length N arrays with node coords

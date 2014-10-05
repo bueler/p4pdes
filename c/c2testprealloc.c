@@ -3,9 +3,9 @@ static char help[] =
 "Read in a FEM grid (unstructured triangulation) from PETSc binary file.\n\
 Demonstrate Mat preallocation.\n\
 For a one-process, coarse grid example do:\n\
-     triangle -pqa1.0 bump       # generates bump.1.{node,ele,poly}\n\
-     c2convert -f bump.1        # reads bump.1.{node,ele,poly} and generates bump.1.petsc\n\
-     c2testprealloc -f bump.1    # reads bump.1.petsc and tests preallocation\n\
+     triangle -pqa1.0 bump     # generates bump.1.{node,ele,poly}\n\
+     c2convert -f bump.1       # reads bump.1.{node,ele,poly}; generate bump.1.petsc\n\
+     c2testprealloc -f bump.1  # reads bump.1.petsc and tests preallocation\n\
 To see the sparsity pattern graphically:\n\
      c2testprealloc -f bump.1 -a_mat_view draw -draw_pause 5\n\n";
 
@@ -24,17 +24,15 @@ int main(int argc,char **args) {
   Vec      E,     // full element info
            x, y,  // coords of node
            Q;     // boundary segment index
-  PetscInt N,     // number of nodes
+  PetscInt N,     // number of nodes = number of rows
            K;     // number of elements
   char     fname[PETSC_MAX_PATH_LEN];
   PetscViewer viewer;
-  PetscInt Istart,Iend;
   ierr = getmeshfile(COMM, ".petsc", fname, &viewer); CHKERRQ(ierr);
   ierr = readmesh(COMM, viewer,
                   &E, &x, &y, &Q); CHKERRQ(ierr);
   PetscViewerDestroy(&viewer);
   ierr = getmeshsizes(COMM, E, x, Q, &N, &K, NULL); CHKERRQ(ierr);
-  ierr = VecGetOwnershipRange(x,&Istart,&Iend); CHKERRQ(ierr);
 //ENDLOAD
 
   // CREATE AND PREALLOCATE MAT
@@ -44,12 +42,14 @@ int main(int argc,char **args) {
   ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,N,N); CHKERRQ(ierr);
   ierr = MatSetOptionsPrefix(A,"a_"); CHKERRQ(ierr);
   ierr = PetscPrintf(COMM,"  preallocating stiffness matrix A ...\n"); CHKERRQ(ierr);
-  ierr = prealloc(COMM, E, x, y, Q, Istart, Iend, &A); CHKERRQ(ierr);
+  ierr = prealloc(COMM, E, x, y, Q, &A); CHKERRQ(ierr);
 
   // FILL MAT WITH FAKE ENTRIES
   PetscInt    k, q, r, i, jj[3];
+  PetscInt    Istart,Iend;
   PetscScalar *ae, vv[3];
   elementtype *Eptr;
+  ierr = VecGetOwnershipRange(x,&Istart,&Iend); CHKERRQ(ierr);
   ierr = VecGetArray(E,&ae); CHKERRQ(ierr);
   Eptr = (elementtype*)ae;
   for (k = 0; k < K; k++) {          // loop over ALL elements
