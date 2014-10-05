@@ -38,7 +38,7 @@ bump.1.tikz: ../c/bump.poly
 	ln -s ../c/bump.1.node
 	ln -s ../c/bump.1.ele
 	ln -s ../c/bump.1.poly
-	python tri2tikz.py --labelnodes --nodeoffset 0.25 --scale 2.0 bump.1 $@
+	python tri2tikz.py --labelnodes --nodeoffset 0.25 --labelelements --scale 2.0 bump.1 $@
 
 bump.poly.tikz: ../c/bump.poly bump.1.tikz
 	python tri2tikz.py --polyonly bump.1 bump.poly.tikz
