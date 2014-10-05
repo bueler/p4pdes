@@ -1,11 +1,15 @@
 #ifndef READMESH_H_
 #define READMESH_H_
 
-// these methods work with .petsc binary files written by  c2convert
+// These utilities are for .petsc binary files which describe planar triangular
+// meshes which have either Dirichlet or Neumann boundary.  Such files are
+// written by  c2convert,  which converts from output of triangle.
 
 typedef struct {
-  PetscScalar j[3],  // global indices of nodes j[0], j[1], j[2]
-              BT[3], // boundary type of node:  BT[0], BT[1], BT[2]
+  PetscScalar j[3],  // global indices of vertices (nodes) j[0], j[1], j[2]
+              bN[3], // boundary type of node:  bN[0], bN[1], bN[2] in {0,1,2}
+              bE[3], // boundary type of edge:  bE[0], bE[1], bE[2] in {0,1,2},
+                     //   where bE[0] = <0,1>, bE[1] = <1,2>, bE[2] = <2,0>
               x[3],  // node x-coordinate x[0], x[1], x[2]
               y[3];  // node y-coordinate y[0], y[1], y[2]
 } elementtype;
@@ -14,15 +18,17 @@ typedef struct {
 PetscErrorCode getmeshfile(MPI_Comm comm, const char suffix[], char filename[], PetscViewer *viewer);
 
 // read mesh info from viewer created with getmeshfile()
-FIXME:  Q needs to be sequential so that during assembly an arbitrary element can ask "is this segment boundary"
 PetscErrorCode readmesh(MPI_Comm comm, PetscViewer viewer,
-                        Vec *E,         // length 12*K array with full element info
-                        Vec *x, Vec *y, // length N arrays with node coords
-                        Vec *Q);        // length 2*M array with node indices
-                                        //   for boundary segments
+                        Vec *E,          // length 15*K; has full element info
+                        Vec *x, Vec *y); // length N; has node coords for (e.g.)
+                                         //   plotting
 
-// get sizes: N = (# of nodes), K = (# of elements), M = (# of boundary segments)
-PetscErrorCode getmeshsizes(MPI_Comm comm, Vec E, Vec x, Vec Q,
-                            PetscInt *N, PetscInt *K, PetscInt *M);
+// get sizes: N = (# of nodes), K = (# of elements)
+PetscErrorCode getmeshsizes(MPI_Comm comm, Vec E, Vec x, Vec y,
+                            PetscInt *N, PetscInt *K);
+
+// method which is better than VecView for showing a vector which has blocks
+//   of type elementtype above
+PetscErrorCode elementVecViewSTDOUT(MPI_Comm comm, Vec E);
 #endif
 

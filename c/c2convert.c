@@ -2,7 +2,7 @@
 static char help[] =
 "Convert triangle-written ASCII mesh files to a binary PETSc file.\n\
 On the rank 0 process we do two steps:\n\
-  1. Read a FEM grid from ASCII files .node,.ele,.poly written by triangle.\n\
+  1. Read a triangular mesh from ASCII files .node,.ele,.poly (from triangle).\n\
   2. Write elements and nodal info in PETSc binary format (.petsc).\n\
 Optionally, as a check, the binary file can be read in parallel and written to\n\
 STDOUT.  For example, do:\n\
@@ -147,16 +147,17 @@ int main(int argc,char **args) {
              "  K=%d elements in 2D polygonal region\n"
              "  %d attributes per element\n",
              K,nattrele); CHKERRQ(ierr);
-    ierr = VecCreateSeq(SELF,12*K,&vE); CHKERRQ(ierr);
-    ierr = VecSetBlockSize(vE,12); CHKERRQ(ierr);
+    ierr = VecCreateSeq(SELF,15*K,&vE); CHKERRQ(ierr);
+    ierr = VecSetBlockSize(vE,15); CHKERRQ(ierr);
 
-    // READ ELEMENTS
+    // READ ELEMENTS AND CREATE VEC vE
     elementtype e;
-    PetscInt k, kplusone;
-    PetscScalar *ax, *ay, *aBT;
+    PetscInt k, kplusone, l, qnext;
+    PetscScalar *ax, *ay, *aBT, *aQ;
     ierr = VecGetArray(vx,&ax); CHKERRQ(ierr);
     ierr = VecGetArray(vy,&ay); CHKERRQ(ierr);
     ierr = VecGetArray(vBT,&aBT); CHKERRQ(ierr);
+    ierr = VecGetArray(vQ,&aQ); CHKERRQ(ierr);
     for (k = 0; k < K; k++) {
       if (4 != fscanf(elefile, "%d %lf %lf %lf\n",
                       &kplusone, &(e.j[0]), &(e.j[1]), &(e.j[2]))) {
@@ -167,17 +168,44 @@ int main(int argc,char **args) {
       }
       for (q = 0; q < 3; q++)  {
         e.j[q]--; // change to zero-based from triangle's default one-based
-        e.BT[q] = aBT[(int)e.j[q]];
+        e.bN[q] = aBT[(int)e.j[q]]; // node boundary type; in {0,2,3}
+        e.bE[q] = 0; // will compute it below; this sets it to not-boundary
         e.x[q] = ax[(int)e.j[q]];
         e.y[q] = ay[(int)e.j[q]];
+      }
+      if (e.bN[0] + e.bN[1] + e.bN[2] > 3.5) {
+        //ierr = PetscPrintf(SELF,"k = %d element has at least two nodes on boundary: %d %d %d\n",
+        //           k,(int)e.j[0],(int)e.j[1],(int)e.j[2]); CHKERRQ(ierr);
+        // this element has at least two nodes on boundary
+        for (q = 0; q < 3; q++)  {
+          qnext = (q < 2) ? q+1 : 0;  // cycle
+          if ((e.bN[q] > 0) && (e.bN[qnext] > 0)) {
+            // end-nodes of this edge are on boundary; need to find edge
+            //   in polygon (=boundary segment list)
+            const PetscInt ja = (int)e.j[q],
+                           jb = (int)e.j[qnext];
+            for (l = 0; l < M; l++) {
+              const PetscInt qa = (int)(aQ[2*l + 0]),
+                             qb = (int)(aQ[2*l + 1]);
+              if (    ((ja == qa) && (jb == qb))
+                   || ((ja == qb) && (jb == qa))  ) {
+                e.bE[q] = 1.0;
+                break;
+              }
+            }
+          }
+        }
       }
       ierr = VecSetValuesBlocked(vE,1,&k,(PetscScalar*)&e,INSERT_VALUES); CHKERRQ(ierr);
     }
     ierr = VecRestoreArray(vx,&ax); CHKERRQ(ierr);
     ierr = VecRestoreArray(vy,&ay); CHKERRQ(ierr);
     ierr = VecRestoreArray(vBT,&aBT); CHKERRQ(ierr);
+    ierr = VecRestoreArray(vQ,&aQ); CHKERRQ(ierr);
     ierr = PetscFClose(COMM,elefile); CHKERRQ(ierr);
+    // we are done with these
     VecDestroy(&vBT);
+    VecDestroy(&vQ);
 
     vecassembly(vE)
 //ENDREADELEMENTS
@@ -196,26 +224,23 @@ int main(int argc,char **args) {
     ierr = VecView(vx,viewer); CHKERRQ(ierr);
     VecSetOptionsPrefix(vy,"y");
     ierr = VecView(vy,viewer); CHKERRQ(ierr);
-    VecSetOptionsPrefix(vQ,"Q");
-    ierr = VecView(vQ,viewer); CHKERRQ(ierr);
-    VecDestroy(&vE);  VecDestroy(&vx);  VecDestroy(&vy);  VecDestroy(&vQ);
+    VecDestroy(&vE);  VecDestroy(&vx);  VecDestroy(&vy);
     PetscViewerDestroy(&viewer);
   }
 //ENDRANK0
 
   if (docheck == PETSC_TRUE) {
+    PetscViewer viewer;
+    Vec rE,rx,ry;
     ierr = PetscPrintf(COMM,"\nchecking by loading Vecs and viewing at STDOUT ...\n"
                        ); CHKERRQ(ierr);
-    PetscViewer viewer;
-    Vec rE,rx,ry,rQ;
     ierr = getmeshfile(COMM, ".petsc", outfilename, &viewer); CHKERRQ(ierr);
-    ierr = readmesh(COMM, viewer,
-                    &rE, &rx, &ry, &rQ); CHKERRQ(ierr);
+    ierr = readmesh(COMM, viewer, &rE, &rx, &ry); CHKERRQ(ierr);
+    //FIXME: this should work:  ierr = elementVecViewSTDOUT(COMM, rE); CHKERRQ(ierr);
     ierr = VecView(rE,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
     ierr = VecView(rx,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
     ierr = VecView(ry,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
-    ierr = VecView(rQ,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
-    VecDestroy(&rE);  VecDestroy(&rx);  VecDestroy(&ry);  VecDestroy(&rQ);
+    VecDestroy(&rE);  VecDestroy(&rx);  VecDestroy(&ry);
     PetscViewerDestroy(&viewer);
   }
 

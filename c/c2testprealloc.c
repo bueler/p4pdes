@@ -32,7 +32,7 @@ int main(int argc,char **args) {
   ierr = readmesh(COMM, viewer,
                   &E, &x, &y, &Q); CHKERRQ(ierr);
   PetscViewerDestroy(&viewer);
-  ierr = getmeshsizes(COMM, E, x, Q, &N, &K, NULL); CHKERRQ(ierr);
+  ierr = getmeshsizes(COMM, E, x, y, &N, &K); CHKERRQ(ierr);
 //ENDLOAD
 
   // CREATE AND PREALLOCATE MAT

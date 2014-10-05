@@ -25,8 +25,8 @@ PetscErrorCode printnnz(MPI_Comm comm, PetscInt mm, PetscInt *dnnz, PetscInt *on
 //STARTPREALLOC
 PetscErrorCode prealloc(MPI_Comm comm, Vec E, Vec x, Vec y, Vec Q, Mat *A) {
   PetscErrorCode ierr;
-  PetscInt K, M, Istart, Iend, Kstart, Kend;
-  ierr = getmeshsizes(comm,E,x,Q,NULL,&K,&M); CHKERRQ(ierr); // K = # of elements, M = # of bdry segs
+  PetscInt K, Istart, Iend, Kstart, Kend;
+  ierr = getmeshsizes(comm,E,x,y,NULL,&K); CHKERRQ(ierr); // K = # of elements, M = # of bdry segs
   ierr = VecGetOwnershipRange(x,&Istart,&Iend); CHKERRQ(ierr);
   ierr = VecGetOwnershipRange(E,&Kstart,&Kend); CHKERRQ(ierr);
 
