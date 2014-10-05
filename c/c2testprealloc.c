@@ -21,33 +21,20 @@ int main(int argc,char **args) {
   PetscErrorCode  ierr;
 
 //STARTLOAD
-  // READ MESH FROM FILE
-  Vec      x, y,  // mesh: coords of node
-           BT,    // mesh: bdry type,
-           P,     //       element index,
-           Q;     //       boundary segment index
+  Vec      E,     // full element info
+           x, y,  // coords of node
+           Q;     // boundary segment index
   PetscInt N,     // number of nodes
            K;     // number of elements
   char     fname[PETSC_MAX_PATH_LEN];
   PetscViewer viewer;
-  ierr = getmeshfile(COMM, fname, &viewer); CHKERRQ(ierr);
-  ierr = readmeshseqall(COMM, viewer,
-                        &x, &y, &BT, &P, &Q); CHKERRQ(ierr);
-  PetscViewerDestroy(&viewer);
-  ierr = VecGetSize(x,&N); CHKERRQ(ierr);
-  ierr = VecGetSize(P,&K); CHKERRQ(ierr);
-  if (K % 3 != 0) {
-    SETERRQ(COMM,3,"element node index array P invalid: must have 3 K entries"); }
-  K /= 3;
-
-  // RELOAD x TO GET OWNERSHIP RANGES
-  Vec xmpi;
   PetscInt Istart,Iend;
-  ierr = getmeshfile(COMM, fname, &viewer); CHKERRQ(ierr);
-  ierr = PetscPrintf(COMM,"  re-reading mesh Vec x to get ownership ranges ...\n"); CHKERRQ(ierr);
-  ierr = createload(COMM, viewer, &xmpi); CHKERRQ(ierr);
+  ierr = getmeshfile(COMM, ".petsc", fname, &viewer); CHKERRQ(ierr);
+  ierr = readmesh(COMM, viewer,
+                  &E, &x, &y, &Q); CHKERRQ(ierr);
   PetscViewerDestroy(&viewer);
-  ierr = VecGetOwnershipRange(xmpi,&Istart,&Iend); CHKERRQ(ierr);
+  ierr = getmeshsizes(COMM, E, x, Q, &N, &K, NULL); CHKERRQ(ierr);
+  ierr = VecGetOwnershipRange(x,&Istart,&Iend); CHKERRQ(ierr);
 //ENDLOAD
 
   // CREATE AND PREALLOCATE MAT
@@ -57,31 +44,32 @@ int main(int argc,char **args) {
   ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,N,N); CHKERRQ(ierr);
   ierr = MatSetOptionsPrefix(A,"a_"); CHKERRQ(ierr);
   ierr = PetscPrintf(COMM,"  preallocating stiffness matrix A ...\n"); CHKERRQ(ierr);
-  ierr = prealloc(COMM, x, y, BT, P, Q, Istart, Iend, &A); CHKERRQ(ierr);
+  ierr = prealloc(COMM, E, x, y, Q, Istart, Iend, &A); CHKERRQ(ierr);
 
   // FILL MAT WITH FAKE ENTRIES
   PetscInt    k, q, r, i, jj[3];
-  PetscScalar *ap, vv[3];
-  ierr = VecGetArray(P,&ap); CHKERRQ(ierr);
+  PetscScalar *ae, vv[3];
+  elementtype *Eptr;
+  ierr = VecGetArray(E,&ae); CHKERRQ(ierr);
+  Eptr = (elementtype*)ae;
   for (k = 0; k < K; k++) {          // loop over ALL elements
     for (q = 0; q < 3; q++) {        // loop over vertices of current element
-      i = (int)ap[3*k+q];            //   global index of q node
+      i = (int)Eptr[k].j[q];         //   global index of q node
       if ((i < Istart) || (i >= Iend))  continue; // skip node if I don't own it
       for (r = 0; r < 3; r++) {      // loop over other vertices
-        jj[r] = (int)ap[3*k+r];      //   global index of r node
+        jj[r] = (int)Eptr[k].j[r];   //   global index of r node
         vv[r] = 1.0;
       }
       ierr = MatSetValues(A,1,&i,3,jj,vv,ADD_VALUES); CHKERRQ(ierr);
     }
   }
-  ierr = VecRestoreArray(P,&ap); CHKERRQ(ierr);
+  ierr = VecRestoreArray(E,&ae); CHKERRQ(ierr);
   matassembly(A)
 //ENDTEST
 
   // CLEAN UP
   MatDestroy(&A);
-  VecDestroy(&x);  VecDestroy(&y);
-  VecDestroy(&BT);  VecDestroy(&P);  VecDestroy(&Q);
+  VecDestroy(&E);  VecDestroy(&x);  VecDestroy(&y);  VecDestroy(&Q);
   PetscFinalize();
   return 0;
 }

@@ -5,6 +5,6 @@
 // to solve Poisson equation
 
 // preallocate an already-created matrix A
-PetscErrorCode prealloc(MPI_Comm comm, Vec x, Vec y, Vec BT, Vec P, Vec Q,
+PetscErrorCode prealloc(MPI_Comm comm, Vec E, Vec x, Vec y, Vec Q,
                         PetscInt Istart, PetscInt Iend, Mat *A);
 #endif

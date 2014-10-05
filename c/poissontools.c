@@ -4,13 +4,11 @@
 #define DEBUG 0
 
 //STARTPREALLOC
-PetscErrorCode prealloc(MPI_Comm comm, Vec x, Vec y, Vec BT, Vec P, Vec Q,
+PetscErrorCode prealloc(MPI_Comm comm, Vec E, Vec x, Vec y, Vec Q,
                         PetscInt Istart, PetscInt Iend, Mat *A) {
-  PetscErrorCode  ierr;
-
-  // NEED TOTAL NUMBER OF ELEMENTS AND BOUNDARY SEGMENTS
+  PetscErrorCode ierr;
   PetscInt K, M;
-  ierr = getmeshsizes(comm,x,P,Q,NULL,&K,&M); CHKERRQ(ierr);
+  ierr = getmeshsizes(comm,E,x,Q,NULL,&K,&M); CHKERRQ(ierr); // K = # of elements, M = # of bdry segs
 
   // ALLOCATE LOCAL ARRAYS FOR NUMBER OF NONZEROS
   PetscInt mm = Iend - Istart, iloc;
@@ -24,17 +22,20 @@ PetscErrorCode prealloc(MPI_Comm comm, Vec x, Vec y, Vec BT, Vec P, Vec Q,
   }
 
   // FILL THE NUMBER-OF-NONZEROS ARRAYS: LOOP OVER ELEMENTS
-  PetscInt    i, j, k, m, q, r;
-  PetscScalar *ap, *aq;
-  ierr = VecGetArray(P,&ap); CHKERRQ(ierr);
+  PetscInt    i, j, k, q, r;
+  PetscScalar *ae;
+  elementtype *Eptr;
+  ierr = VecGetArray(E,&ae); CHKERRQ(ierr);
+  Eptr = (elementtype*)ae;
   for (k = 0; k < K; k++) {          // loop over ALL elements
     for (q = 0; q < 3; q++) {        // loop over vertices of current element
-      i = (int)ap[3*k+q];            //   global index of q node
+      //WAS: i = (int)ap[3*k+q];
+      i = (int)Eptr[k].j[q];         //   global index of q node
       if ((i < Istart) || (i >= Iend))  continue; // skip node if I don't own it
       iloc = i - Istart;
       for (r = 0; r < 3; r++) {      // loop over other vertices
         if (r == q)  continue;       // diagonal entry already counted
-        j = (int)ap[3*k+r];          //   global index of r node
+        j = (int)Eptr[k].j[r];       //   global index of r node
         // (i,j) is an edge; we count this nonzero matrix entry
         if ((j >= Istart) && (j < Iend)) {
           dnnz[iloc]++;
@@ -44,10 +45,12 @@ PetscErrorCode prealloc(MPI_Comm comm, Vec x, Vec y, Vec BT, Vec P, Vec Q,
       }
     }
   }
-  ierr = VecRestoreArray(P,&ap); CHKERRQ(ierr);
+  ierr = VecRestoreArray(E,&ae); CHKERRQ(ierr);
 //ENDELEMENTSLOOP
 
   // FILL THE NUMBER-OF-NONZEROS ARRAYS: LOOP OVER BOUNDARY SEGMENTS
+  PetscInt    m;
+  PetscScalar *aq;
   ierr = VecGetArray(Q,&aq); CHKERRQ(ierr);
   for (m = 0; m < M; m++) {          // loop over ALL boundary segments
     for (q = 0; q < 2; q++) {        // loop over vertices of current segment

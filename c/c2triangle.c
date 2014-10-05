@@ -132,13 +132,7 @@ int main(int argc,char **args) {
 //ENDREADPOLYGONS
 
     // READ ELEMENT HEADER AND ALLOCATE VEC
-    //   vE[k] is a 12 scalar struct with full info on element k:
-    typedef struct {
-      PetscScalar j[3],  // global indices of nodes j[0], j[1], j[2]
-                  BT[3], // boundary type of node:  BT[0], BT[1], BT[2]
-                  x[3],  // node x-coordinate x[0], x[1], x[2]
-                  y[3];  // node y-coordinate y[0], y[1], y[2]
-    } element;
+    // vE[k] is an elementtype struct, with full info on element k
     Vec vE;
     ierr = PetscFOpen(COMM,elefilename,"r",&elefile); CHKERRQ(ierr);
     PetscInt K,   // number of elements
@@ -158,7 +152,7 @@ int main(int argc,char **args) {
     ierr = VecSetBlockSize(vE,12); CHKERRQ(ierr);
 
     // READ ELEMENTS
-    element e;
+    elementtype e;
     PetscInt k, kplusone;
     PetscScalar *ax, *ay, *aBT;
     ierr = VecGetArray(vx,&ax); CHKERRQ(ierr);
