@@ -174,14 +174,12 @@ int main(int argc,char **args) {
         e.y[q] = ay[(int)e.j[q]];
       }
       if (e.bN[0] + e.bN[1] + e.bN[2] > 3.5) {
-        //ierr = PetscPrintf(SELF,"k = %d element has at least two nodes on boundary: %d %d %d\n",
-        //           k,(int)e.j[0],(int)e.j[1],(int)e.j[2]); CHKERRQ(ierr);
         // this element has at least two nodes on boundary
         for (q = 0; q < 3; q++)  {
           qnext = (q < 2) ? q+1 : 0;  // cycle
           if ((e.bN[q] > 0) && (e.bN[qnext] > 0)) {
-            // end-nodes of this edge are on boundary; need to find edge
-            //   in polygon (=boundary segment list)
+            // end-nodes of this edge are on boundary; is it an edge
+            //   in the polygon (= boundary segment list)?
             const PetscInt ja = (int)e.j[q],
                            jb = (int)e.j[qnext];
             for (l = 0; l < M; l++) {
@@ -236,8 +234,7 @@ int main(int argc,char **args) {
                        ); CHKERRQ(ierr);
     ierr = getmeshfile(COMM, ".petsc", outfilename, &viewer); CHKERRQ(ierr);
     ierr = readmesh(COMM, viewer, &rE, &rx, &ry); CHKERRQ(ierr);
-    //FIXME: this should work:  ierr = elementVecViewSTDOUT(COMM, rE); CHKERRQ(ierr);
-    ierr = VecView(rE,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
+    ierr = elementVecViewSTDOUT(COMM, rE); CHKERRQ(ierr);
     ierr = VecView(rx,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
     ierr = VecView(ry,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
     VecDestroy(&rE);  VecDestroy(&rx);  VecDestroy(&ry);
