@@ -77,9 +77,8 @@ PetscErrorCode getmeshsizes(MPI_Comm comm, Vec E, Vec x, Vec y,
 PetscErrorCode elementVecViewSTDOUT(MPI_Comm comm, Vec E) {
   PetscErrorCode ierr;
   PetscMPIInt    rank;
-  PetscInt       bs = 15, bsread, k, q, Kstart, Kend;
-  PetscInt       kk[bs];
-  PetscScalar    yy[bs];
+  PetscInt       bs = 15, bsread, k, Kstart, Kend;
+  PetscScalar    *ae;
   elementtype    *et;
   MPI_Comm_rank(comm,&rank);
   PetscObjectPrintClassNamePrefixType((PetscObject)E,PETSC_VIEWER_STDOUT_WORLD);
@@ -88,10 +87,9 @@ PetscErrorCode elementVecViewSTDOUT(MPI_Comm comm, Vec E) {
   if (bsread != bs) {
     SETERRQ1(comm,3,"element node index array E has invalid block size: must be %d",bs); }
   ierr = VecGetOwnershipRange(E,&Kstart,&Kend); CHKERRQ(ierr);
+  ierr = VecGetArray(E,&ae); CHKERRQ(ierr);
   for (k = Kstart; k < Kend; k += bs) { // loop over all owned elements
-    for (q = 0; q < bs; q++) {  kk[q] = k + q;  }
-    ierr = VecGetValues(E,bs,kk,yy); CHKERRQ(ierr);
-    et = (elementtype*)(yy);
+    et = (elementtype*)(&(ae[k-Kstart]));
     ierr = PetscSynchronizedPrintf(comm,
                "%d %d %d:\n"
                "    %d %d %d | %d %d %d | %g %g %g | %g %g %g |\n",
@@ -101,6 +99,7 @@ PetscErrorCode elementVecViewSTDOUT(MPI_Comm comm, Vec E) {
                et->x[0],      et->x[1],      et->x[2],
                et->y[0],      et->y[1],      et->y[2]); CHKERRQ(ierr);
   }
+  ierr = VecRestoreArray(E,&ae); CHKERRQ(ierr);
   ierr = PetscSynchronizedFlush(comm,PETSC_STDOUT); CHKERRQ(ierr);
   return 0;
 }
