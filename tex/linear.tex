@@ -142,15 +142,15 @@ Note that the support (i.e.~nonzero set) of $\phi_j$ includes only the node $\bx
 
 We now take a break from mathematical constructions to do something practical with \PETSc.  While \PETSc itself does not include any tools for triangulating regions of the plane, we use the widely-available and easy-to-use \Triangle software \citep{Shewchuk1996} for this task.\sidenote{See \href{http://www.cs.cmu.edu/~quake/triangle.html}{www.cs.cmu.edu/$\sim$quake/ triangle.html} for documentation and source code of \Triangle. You can build it from source, but it is probably available as a package in your operating system.}  \Triangle, which is both limited to planar regions and only capable of writing ASCII files, is not a choice for performance.  It is convenient.
 
-\Triangle uses a simply-formatted ASCII file with extension \texttt{.poly} as input to describe a polygonal region $\Omega$ and to indicate the Dirichlet and Neumann portions of $\partial \Omega$.  For example, consider the input file \texttt{bump.poly} shown in Figure \ref{code:bumppoly}. 
+\Triangle uses a simply-formatted ASCII file (extension \texttt{.poly}) as input to describe a polygonal region $\Omega$ and to indicate the Dirichlet and Neumann portions of $\partial \Omega$.  For example, consider the input file \texttt{bump.poly} shown in Figure \ref{code:bumppoly}. 
 
 \inputfromline{../c/bump.poly}{bump.poly}{A description of the boundary polygon in Figure \ref{fig:triangulation}, suitable for reading by \Triangle.}{16}{code:bumppoly}
 
-This example polygon, a rectangle with a triangular bump in the base, is shown in Figure \ref{fig:bump-poly}.  It will reappear several times in these notes as we solve more and more interesting PDEs on it.
+This example polygon, a rectangle with a triangular bump in the base, is shown in Figure \ref{fig:bump-poly}.  It will reappear several times in these notes as we solve more and more interesting PDEs on it.  Note that the two extra vertices introduced along the bottom are used to identify that part of the boundary as Neumann.  (Recall, in this context, that the Dirichlet boundary is closed.)
 
 \begin{marginfigure}
 \input{bump.poly.tikz}
-\caption{The polygon described in \texttt{bump.poly}.  The bold part is the Dirichlet boundary.}
+\caption{The polygon described in \texttt{bump.poly} (Figure \ref{code:bumppoly}).  The bold part is the Dirichlet boundary.}
 \label{fig:bump-poly}
 \end{marginfigure}
 
