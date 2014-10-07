@@ -13,7 +13,7 @@
 \usepackage{xspace}
 \usepackage{fancyvrb}
 \usepackage{graphicx}
-\usepackage{amsmath,amssymb,amsthm}
+\usepackage{amsmath,amssymb,amsthm,bm}
 \usepackage{tikz}
 \usetikzlibrary{arrows,decorations.markings}
 
@@ -125,8 +125,8 @@
 \newcommand{\ZZ}{\mathbb{Z}}
 
 \newcommand{\X}{\times}  % for nonzero entries in matrices
-\newcommand{\redX}{{\color{red} \X}}
-\newcommand{\blueX}{{\color{blue} \X}}
+\newcommand{\redX}{{\color{red} \bm{\X}}}
+\newcommand{\blueX}{{\color{blue} \bm{\X}}}
 
 \newcommand{\eps}{\epsilon}
 \newcommand{\lam}{\lambda}
@@ -277,33 +277,33 @@ Here is a partial list:\begin{itemize}
 
 %%%%%%%%%%
 
-\chapter{3. Nonlinear elliptic PDEs on structured grids}
+\input{scaling.tex} % chapter 3
+
+%%%%%%%%%%
+
+\chapter{4. Nonlinear elliptic PDEs on structured grids}
 
 \section{Newton's method}
 
 \section{\textsc{SNES}}
 
-%\cinput{c3newton.c}{}
-
-\section{Structured grids in \PETSc}
-
-%\cinput{c3poisson.c}{}
+%\cinput{c4newton.c}{}
 
 \section{Example: a porous medium equation}
 
-%\cinput{c3porous.c}{}
+%\cinput{c4porous.c}{}
 
 \section{Jacobians: actual and approximate}
 
 \section{Indeterminant systems: Stokes}
 
-%\cinput{c3stokes.c}{}
+%\cinput{c4stokes.c}{}
 
 \caveat{But it isn't scaling well yet.}
 
 %%%%%%%%%%
 
-\chapter{4. Multigrid, and other run-time preconditioner composition}
+\chapter{5. Multigrid, and other run-time preconditioner composition}
 
 \section{\textsc{DM}}
 
@@ -311,31 +311,31 @@ Here is a partial list:\begin{itemize}
 
 %%%%%%%%%%
 
-\chapter{5. Unstructured grids, the right way}
+\chapter{6. Unstructured grids, the right way}
 
 \section{\textsc{DMPlex}}
 
-%\cinput{c5poisson.c}{}
+%\cinput{c6poisson.c}{}
 
 \caveat{But my PDE has ``$t$'' in it.}
 
 %%%%%%%%%%
 
-\chapter{6. Time-evolving problems}
+\chapter{7. Time-evolving problems}
 
 \section{\textsc{TS}}
 
-%\cinput{c6freesurface.c}{}
+%\cinput{c7freesurface.c}{}
 
 \caveat{But my PDE isn't really a PDE.  It has an inequality in it.}
 
 %%%%%%%%%%
 
-\chapter{7. PDEs with constraints}
+\chapter{8. PDEs with constraints}
 
 \section{A variational inequality problem}
 
-%\cinput{c7obstacle.c}{}
+%\cinput{c8obstacle.c}{}
 
 %%%%%%%%%%
 

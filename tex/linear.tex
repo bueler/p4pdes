@@ -214,16 +214,18 @@ At this point we have the whole triangulation into \PETSc \pVec s.  Now is the e
 
 \cinputpart{c2convert.c}{On rank zero processor: Write the mesh out in \PETSc binary format.}{VI}{//ENDREADELEMENTS}{//ENDRANK0}{code:trianglepartsix}
 
-Actually, we are not showing an additional part of \texttt{c2convert.c}, in which we read the binary file in parallel if option \texttt{-check} is given.  We will show these actions in a code which also assembles the linear system (below).
+To tell the truth, we have not shown the last part of \texttt{c2convert.c}.  That truly-final bit of code checks if option \texttt{-check} is given, and if so we read back the binary file in parallel.  This part of \texttt{c2convert.c} calls two methods from a re-used component \texttt{readmesh.c} which we do show.  The first is a method \texttt{getmeshfile()} which finds a \PETSc binary file from a \texttt{-f} option (Figure \ref{code:readmeshparttwo}).  The second method \texttt{readmesh()} creates and reads three \pVec s in parallel from it (Figure \ref{code:readmeshparttwo}).  Note that prefixes are set on each \pVec so that the block size is correctly read.
+
+\cinputpart{readmesh.c}{Determine the filename of a \PETSc binary file that has a mesh.}{I}{//STARTGET}{//ENDGET}{code:readmeshpartone}
+
+\cinputpart{readmesh.c}{Read the mesh in parallel from the file.}{II}{//STARTREADMESH}{//ENDREADMESH}{code:readmeshparttwo}
 
 
-\section{The FEM matrix problem}
+\section{Constructing the FEM linear system}
 
-Now that we can get a triangulation into \PETSc, we can return to the finite-dimensional weak formulation \eqref{poissonfem}.  It is simply a matrix equation, and we will write code which builds \PETSc \pMat and \pVec objects to store this problem, and then we will use a \PETSc \pKSP object to solve it.
+Now that we can get a triangulation into \PETSc, we can return to the finite-dimensional weak formulation \eqref{poissonfem}.  It is simply a matrix equation (linear system).  We will write a code, namely for matrix \emph{preallocation} and \emph{assembly}, which builds \PETSc \pMat and \pVec objects to contain this problem, and then we will use a \PETSc \pKSP object to solve it.
 
-For ease of construction we will include the node-wise Dirichlet conditions as rows of this matrix problem, so the matrix will have $N$ columns, corresponding to one unknown for \emph{every} node $\bx_j$, and $N$ rows.  We will then describe, and give a code for, \emph{assembling} this matrix equation.
-
-Thus we define $A \in \RR^{N\times N}$ to have entries
+For ease of construction we include the node-wise Dirichlet conditions $u_j=g(\bx_j)$ as equations in this linear system, so that the matrix has $N$ columns and $N$ rows if there are $N$ nodes in total.  That is, we include a row and column for every node $\bx_j$ including $\bx_j\in\partial_D\Omega$.  Thus we define $A \in \RR^{N\times N}$ to have entries
 \begin{equation*}
 a_{ij} = \int_\Omega \grad \phi_j \cdot \grad \phi_i,
 \end{equation*}
@@ -231,36 +233,35 @@ if $\bx_i \notin \partial_D \Omega$ and $\bx_j \notin \partial_D \Omega$.  Other
 \begin{equation*}
 a_{ij} = \delta_{ij},
 \end{equation*}
-that is, in any row $i$ where $\bx_i \in \partial_D \Omega$ or column $j$ where $\bx_j \in \partial_D \Omega$.  (Notice that we index rows and columns of matrices and vectors starting with zero.)
+that is, if $\bx_i \in \partial_D \Omega$ or $\bx_j \in \partial_D \Omega$.  Because $j=0,1,\dots,N-1$, notice that we index rows and columns of matrices and vectors starting with zero.\sidenote{This follows C and \PETSc conventions, but is opposed to long-standing traditions about linear algebra!}
 
-We can immediately observe that $A$ is \emph{symmetric} because $a_{ij}=a_{ji}$.  Furthermore it is \emph{sparse}, that is, most entries are zero, as long as we consider triangulations with more than a handful of triangles.  These facts have profound consequences on the algorithms we will choose when solving a matrix equation
+We can immediately observe that $A$ is \emph{symmetric} because $a_{ij}=a_{ji}$.  Furthermore it is \emph{sparse}, that is, most entries are zero, at least for triangulations with more than a handful of triangles.  These facts have profound consequences on the algorithms we will choose when solving our linear system
 \begin{equation}
-A \bu = \bb \label{poissonmatrix}
+A \bu = \bb. \label{poissonmatrix}
 \end{equation}
-using $A$.
 
-Recalling \eqref{poissonfem}, the right side of our matrix equation ``$A \bu = \bb$'' will be a vector $\bb\in\RR^N$ with entries
+The right side of \eqref{poissonmatrix} also comes from \eqref{poissonfem}.  Define the vector $\bb\in\RR^N$ with entries
     $$b_i = \int_\Omega f \phi_i + \int_{\partial_N\Omega} \gamma \phi_i - \sum_{l=0,\dots,L} g(\bx_{j_l})  \int_\Omega \grad \phi_{j_l} \cdot \grad \phi_i$$
 if $\bx_i \notin \partial_D \Omega$ and
     $$b_i = g(\bx_{i})$$
 if $\bx_i \in \partial_D \Omega$.
 
-However, in practice we don't initially build $A$ quite as described in above.  We will initially build a matrix $\tilde A$ which ignors the type (i.e.~Dirichlet or Neumann) of the boundary nodes and computes all entries by the first formula above for $a_{ij}$.  That is, $\tilde A \in \RR^{N\times N}$ has entries
+In practice we \emph{don't} initially build $A$ as described above.  We initially build a matrix $\tilde A$ which is the same size as $A$ but which ignors the boundary nodes and their type (i.e.~Dirichlet or Neumann).  All entries of $\tilde A$ are computed by the first formula above for $a_{ij}$, that is, the entries are
 \begin{equation*}
 \tilde a_{ij} = \int_\Omega \grad \phi_j \cdot \grad \phi_i
 \end{equation*}
-for all $i,j=0,1,\dots,N$.  Also we initially compute a right-hand side $\tilde \bb$ with simpler entries
+for all $i,j=0,1,\dots,N$.  Also we initially compute a simpler right-hand side $\tilde \bb\in\RR^N$ with entries
     $$\tilde b_i = \int_\Omega f \phi_i + \int_{\partial_N\Omega} \gamma \phi_i$$
 if $\bx_i \notin \partial_D \Omega$ and
     $$\tilde b_i = g(\bx_{i})$$
-if $\bx_i \in \partial_D \Omega$.  Then we ``edit'' $\tilde A$ in each Dirichlet node \emph{row}, that is, for each $i$ where $\bx_i \in \partial_D \Omega$, simply by replacing the whole row by the corresponding row of the identity.  However, in each column $j$ for which $\bx_j \in \partial_D \Omega$, we move all entries $\tilde a_{ij}$ where $i$ is \emph{not} a Dirichlet row index, over to the right-hand side, multiplied by the negative of the boundary value $g(\bx_{j})$; informally we can write
-    $$\tilde b_i \to \tilde b_i - g(\bx_{j}) \tilde a_{ij}$$
-for the transformations which modify the initial version $\tilde \bb$.
+if $\bx_i \in \partial_D \Omega$.
 
-After this ``editing'' stage is completed for all Dirichlet rows and columns, we get $A$ and $\bb$.  Since this part of the matrix assembly is a key stage of understanding our FEM codes, we give a concrete example to show the non-zero pattern of $A$.
+Note ``$\tilde A \bu =\tilde \bb$'' is \emph{not} equivalent to $A\bu = \bb$ because rows $i$ where $\bx_i \in \partial_D \Omega$ are nonsensical; the value $(\tilde A \bu)_i$ is not compatible with $\tilde \bb_i$.  Thus the next step is to  ``edit'' $\tilde A$ in each Dirichlet node row, that is, for each $i$ where $\bx_i \in \partial_D \Omega$, by replacing the whole row by the corresponding row of the identity.  Furthermore, in each column $j$ for which $\bx_j \in \partial_D \Omega$, we move all entries $\tilde a_{ij}$ where $i$ is \emph{not} a Dirichlet row index, over to the right-hand side, but multiplied by the negative of the boundary value $g(\bx_{j})$.  Informally we write
+    $$\tilde b_i \to \tilde b_i - g(\bx_{j}) \tilde a_{ij}$$
+for these transformations.  After the completion of this ``editing'' stage, for all Dirichlet rows and columns, we get $A$ and $\bb$.  Since this part of the matrix assembly is a key stage of understanding our FEM codes, we give a concrete example.
 
 \medskip\noindent\hrulefill
-\begin{example} In Figure \ref{fig:squarefour} there are five nodes.  The $i=1,2$ nodes live in the (closed) Dirichlet boundary $\partial_D \Omega$.  The matrix $\tilde A$ has zero entries $\tilde a_{ij} = 0$ only where the integral $\int_\Omega \grad \phi_j \cdot \grad \phi_i=0$, which is somewhat rare in this small (coarse)-mesh case.  The nonzero values are simply marked ``$\X$'', and the zero entries are spaces:\begin{marginfigure}
+\begin{example} In Figure \ref{fig:squarefour} there are five nodes.  The $i=1,2$ nodes live in the (closed) Dirichlet boundary $\partial_D \Omega$.  The matrix $\tilde A$ has this nonzero pattern; the zero entries are spaces:\begin{marginfigure}
 \input{squarefour.tikz}
 \caption{A triangulation of a square with five nodes.  The top segment is the Dirichlet boundary.}
 \label{fig:squarefour}
@@ -274,7 +275,7 @@ After this ``editing'' stage is completed for all Dirichlet rows and columns, we
 \X & \X & \X & \X & \X
 \end{bmatrix}.
 \end{equation*}
-Now we color the $i=1,2$ or $j=1,2$ entries which will be edited:\marginnote{{\color{red} Potential gotcha}:  The first row of any matrix in this book is numbered ``$0$.''  Likewise the first column.}
+Note $\tilde a_{ij}=0$ only where the integral $\int_\Omega \grad \phi_j \cdot \grad \phi_i$ is zero, which is somewhat rare in this small (coarse)-mesh case.  Now we color the $i=1,2$ or $j=1,2$ entries which will be edited:\marginnote{{\color{red} Potential gotcha}:  The first row of any matrix in this book is numbered ``$0$.''  Likewise the first column.}
 \begin{equation*}
 \tilde A = \begin{bmatrix}
 \X & \redX &    & \X & \X \\
@@ -284,13 +285,13 @@ Now we color the $i=1,2$ or $j=1,2$ entries which will be edited:\marginnote{{\c
 \X & \redX & \redX & \X & \X
 \end{bmatrix}.
 \end{equation*}
-The {\color{blue} blue} entries are changed to $0$ or $1$ so that these rows become rows of the identity; their computed values are tossed out.  The {\color{red} red} entries, specifically the four entries $\tilde a_{01}$, $\tilde a_{32}$, $\tilde a_{41}$, and $\tilde a_{42}$, are moved over to the right side, however, so their values are used.  In fact, we can give formulas for the $i=0,3,4$ entries of the final vector $\bb$ in terms of the initially-computed vector $\tilde\bb$,
+The {\color{blue} blue} entries are changed to $0$ or $1$ so that these rows become rows of the identity; their computed values are tossed out.  The {\color{red} red} entries, specifically the four entries $\tilde a_{01}$, $\tilde a_{32}$, $\tilde a_{41}$, and $\tilde a_{42}$, are moved over to the right side, however; their values get used.  Formulas for the $i=0,3,4$ entries of the final vector $\bb$ in terms of the initially-computed vector $\tilde\bb$ are:
 \begin{align*}
 b_0 &= \tilde b_0 - g(\bx_1) \tilde a_{01} \\
 b_3 &= \tilde b_3 - g(\bx_2) \tilde a_{32} \\
-b_4 &= \tilde b_4 - g(\bx_1) \tilde a_{41} - g(\bx_2) \tilde a_{42},
+b_4 &= \tilde b_4 - g(\bx_1) \tilde a_{41} - g(\bx_2) \tilde a_{42}.
 \end{align*}
-while $b_1=\tilde b_1=g(\bx_1)$ and $b_2 = \tilde b_2 = g(\bx_2)$.  The final matrix $A$ has thereby been ``edited'' to be the identity matrix in rows $i=1,2$ and columns $j=1,2$; it has this pattern:
+Note $b_1=\tilde b_1=g(\bx_1)$ and $b_2 = \tilde b_2 = g(\bx_2)$.  The final matrix $A$ has this pattern:
 \begin{equation*}
 A = \begin{bmatrix}
 \X & & & \X & \X \\
@@ -305,31 +306,30 @@ A = \begin{bmatrix}
 
 \bigskip
 
-In terms of later examples, we can note that the initial construction is already correct in the case where $\partial_D \Omega$ is the empty set.  In this Neumann-only case $A=\tilde A$ and $\bb = \tilde \bb$.  However, in this case it is also true that $u=(\text{constant})$ solves $-\grad^2 u=0$ with $\partial u/\partial n = 0$ on the whole boundary $\partial_N \Omega = \partial \Omega$, so equations \eqref{poissonstrong} or \eqref{poissonweak} only determines the solution up to an additive constant.  Thus the Poisson problem does not have a unique solution in this case, and we will have to tell \PETSc about the extra constant solutions, i.e.~the null space.
+Note that the initial construction is already correct in the case where $\partial_D \Omega$ is the empty set.  That is, in the Neumann-only case $A=\tilde A$ and $\bb = \tilde \bb$.  However, in this case $u=(\text{constant})$ solves $-\grad^2 u=0$ with $\partial u/\partial n = 0$ on the whole boundary $\partial_N \Omega = \partial \Omega$, so equation \eqref{poissonweak} only determines the solution up to an additive constant.  Because the Poisson problem does not have a unique solution, we will have to tell \PETSc about the extra constant solutions, the null space, to solve it.
 
 
 \section{Assembling the matrix equation, element by element}
 
-Each entry $\tilde a_{ij}$ of the initial matrix $\tilde A$ is not, however, computed in whole.  Rather, we compute contributions to these entries from each element.  To explain such element-by-element assembly we first define the integral over just one triangle $\triangle_k$:
-    $$\tilde a_{ij}^k = \int_{\triangle_k} \grad \phi_j \cdot \grad \phi_i.$$
-For each triangle $\triangle_k$ we assume that the three vertices are identified by local indices $q=0,1,2$.  Also we introduce an index function $P(k,q)$ for a triangulation which gives the (global) node index $j$ from the element index $k$ and the local index $q$:
-    $$j=P(k,q) \in \{0,1,\dots,N-1\}.$$
-Of course we can think of $P$ as an array with integer entries, $K$ rows, and 3 columns.
+Each entry $\tilde a_{ij}$ of the initial matrix $\tilde A$ is not even computed all at once!  Rather, we compute contributions to these entries from each element.  Furthermore we do this in parallel because a \pVec \texttt{E} with the elements is distributed across the processes.
 
-Denoting $\tilde a_{ij}^k$ by \texttt{a(k,i,j)}, to make the element-by-element assembly procedure clear we now give an assembly pseudocode for $\tilde A$:
-\begin{verbatim}
-A = 0                     // N x N matrix; set a(i,j) = 0
-for k = 0 to K-1 {        // loop through all elements
-  for q = 0 to 2 {        // loop through vertices of element k
-    i = P(k,q)            // row index
-    for r = 0 to 2 {
-      j = P(k,r)          // column index
-      a(i,j) += a(k,i,j)  // add contribution from element k
-    }
-  }
-}
-\end{verbatim}
-To create a real code, however, we need to both compute $\tilde a_{ij}^k=$\texttt{a(k,i,j)} concretely, and implement the ``editing'' strategy which turns $\tilde A$ into $A$.  We address the former actions next, and leave the latter for an actual code below.
+To explain such element-by-element assembly we first define the integral over just one triangle $\triangle_k$:
+    $$\tilde a_{ij}^k = \int_{\triangle_k} \grad \phi_j \cdot \grad \phi_i.$$
+Recalling the \texttt{elementtype} structure in the previous section, if \texttt{E} denotes an array of \texttt{elementtype}s then for each triangle $\triangle_k$ we have a global node index for each of the three vertices.  That is, for each $k=0,1,\dots,K-1$ we have
+    $$\text{\texttt{E[k].j[q]}} \in \{0,1,\dots,N-1\} \quad \text{ for } q = 0,1,2.$$
+Then, denoting $\tilde a_{ij}^k$ by \texttt{a(k,i,j)}, the element-by-element assembly of $\tilde A$ follows this pseudocode:
+\begin{Verbatim}[fontsize=\small]
+A = 0                           // N x N sparse matrix with entries a(i,j)
+for k = 0 to K-1                // loop through all elements
+    for q = 0 to 2
+        i = E[k].j[q]           // row index
+        for r = 0 to 2
+            j = E[k].j[r]       // column index
+            a(i,j) += a(k,i,j)  // add contribution from element k
+\end{Verbatim}
+\medskip\noindent
+So now we need to both compute $\tilde a_{ij}^k= $\texttt{a(k,i,j)} concretely, after which we implement the ``editing'' strategy which turns $\tilde A$ into $A$.
+
 
 FIXME
 \begin{align*}
@@ -382,26 +382,22 @@ $$\phi_i(x(\xi,\eta),y(\xi,\eta)) = \chi_i(\xi,\eta)$$
 \label{fig:isoparametric}
 \end{marginfigure}
 
+FIXME: figure showing parallel partition of elements
+
 
 \section{Preallocate a \pMat}
 
-
-
-%\cinputpart{poissontools.c}{FIXME}
+FIXME: show \texttt{poissontools.c} here
 
 \cinputpart{c2testprealloc.c}{Read mesh \pVec s from file.  Get row ownership range.}{I}{//STARTLOAD}{//ENDLOAD}{code:testpreallocpartone}
-
-
-\cinputpart{readmesh.c}{A method to determine the filename of \PETSc binary file that has the mesh, and a method to read one \pVec from a file.}{I}{//STARTGET}{//ENDGET}{code:readmeshpartone}
-
-\cinputpart{readmesh.c}{Read the mesh from the file.  Then put a sequential copy of each mesh \pVec on each processor.}{II}{//STARTREADMESH}{//ENDREADMESH}{code:readmeshparttwo}
-
 
 \cinputpart{c2testprealloc.c}{Set up \pMat $A$ and actually preallocate it.  Fill it with junk entries so the pattern can be visualized.}{II}{//ENDLOAD}{//ENDTEST}{code:testpreallocparttwo}
 
 
-\section{Performance: convergence and scaling}
+\section{Solve the Poisson problem}
 
+FIXME: show \texttt{c2poisson.c} here
 
+FIXME: use CG
 
-\caveat{But real-world PDEs are nonlinear.}
+\caveat{It works, but does it work well?}

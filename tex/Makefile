@@ -1,7 +1,7 @@
 all: book.pdf
 
 tikzinputs := samplepoly.1.tikz squarefour.tikz bump.1.tikz bump.poly.tikz
-texinputs := getstarted.tex linear.tex
+texinputs := getstarted.tex linear.tex scaling.tex
 
 hinputs := $(addprefix ../c/, convenience.h)
 cinputs := readmesh.c poissontools.c c1matvec.c c2convert.c c2testprealloc.c
