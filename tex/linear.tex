@@ -195,6 +195,7 @@ The next part of \texttt{c2convert.c} is in Figure \ref{code:trianglepartthree}.
 \cinputpart{c2convert.c}{On rank zero processor: Read polygon information.}{III}{//ENDREADNODES}{//ENDREADPOLYGONS}{code:trianglepartthree}
 
 The next short part (Figure \ref{code:trianglepartfour}) reads the header information in the \texttt{.ele} file and allocates a \pVec called \texttt{vE} for the elements.  This part of the code is an important transformation of the data structures.  In fact, \texttt{vE} has block size 15,\marginnote{A \PETSc \pVec is designed to hold \texttt{PetscScalar} data types, i.e.~\texttt{double} in most cases.  So we are being quite wasteful for integer indices and boolean flags.} and, in contrast to the format from \Triangle, it contains all the information about each element that we need to do assemble the matrix equation.  Each of its blocks is the following C \texttt{struct}:
+\label{structelementtype}
 \newcommand*\FancyVerbStartString{//STARTSTRUCT}
 \newcommand*\FancyVerbStopString{//ENDSTRUCT}
 \VerbatimInput[fontfamily=courier,%
@@ -242,9 +243,8 @@ A \bu = \bb. \label{poissonmatrix}
 
 The right side of \eqref{poissonmatrix} also comes from \eqref{poissonfem}.  Define the vector $\bb\in\RR^N$ with entries
     $$b_i = \int_\Omega f \phi_i + \int_{\partial_N\Omega} \gamma \phi_i - \sum_{l=0,\dots,L} g(\bx_{j_l})  \int_\Omega \grad \phi_{j_l} \cdot \grad \phi_i$$
-if $\bx_i \notin \partial_D \Omega$ and
-    $$b_i = g(\bx_{i})$$
-if $\bx_i \in \partial_D \Omega$.
+if $\bx_i \notin \partial_D \Omega$, while if $\bx_i \in \partial_D \Omega$ then
+    $$b_i = g(\bx_{i}).$$
 
 In practice we \emph{don't} initially build $A$ as described above.  We initially build a matrix $\tilde A$ which is the same size as $A$ but which ignors the boundary nodes and their type (i.e.~Dirichlet or Neumann).  All entries of $\tilde A$ are computed by the first formula above for $a_{ij}$, that is, the entries are
 \begin{equation*}
@@ -252,11 +252,11 @@ In practice we \emph{don't} initially build $A$ as described above.  We initiall
 \end{equation*}
 for all $i,j=0,1,\dots,N$.  Also we initially compute a simpler right-hand side $\tilde \bb\in\RR^N$ with entries
     $$\tilde b_i = \int_\Omega f \phi_i + \int_{\partial_N\Omega} \gamma \phi_i$$
-if $\bx_i \notin \partial_D \Omega$ and
+if $\bx_i \notin \partial_D \Omega$, while if $\bx_i \in \partial_D \Omega$ then
     $$\tilde b_i = g(\bx_{i})$$
-if $\bx_i \in \partial_D \Omega$.
+as before.
 
-Note ``$\tilde A \bu =\tilde \bb$'' is \emph{not} equivalent to $A\bu = \bb$ because rows $i$ where $\bx_i \in \partial_D \Omega$ are nonsensical; the value $(\tilde A \bu)_i$ is not compatible with $\tilde \bb_i$.  Thus the next step is to  ``edit'' $\tilde A$ in each Dirichlet node row, that is, for each $i$ where $\bx_i \in \partial_D \Omega$, by replacing the whole row by the corresponding row of the identity.  Furthermore, in each column $j$ for which $\bx_j \in \partial_D \Omega$, we move all entries $\tilde a_{ij}$ where $i$ is \emph{not} a Dirichlet row index, over to the right-hand side, but multiplied by the negative of the boundary value $g(\bx_{j})$.  Informally we write
+Note that the equation ``$\tilde A \bu =\tilde \bb$'' is \emph{not} equivalent to $A\bu = \bb$ because in the former linear system rows $i$ where $\bx_i \in \partial_D \Omega$ are nonsensical; the value $(\tilde A \bu)_i$ is not compatible with $\tilde \bb_i$.  Thus the next step is to  ``edit'' $\tilde A$ in each Dirichlet node row, that is, for each $i$ where $\bx_i \in \partial_D \Omega$, by replacing the whole row by the corresponding row of the identity.  Furthermore, in each column $j$ for which $\bx_j \in \partial_D \Omega$, we move all entries $\tilde a_{ij}$ where $i$ is \emph{not} a Dirichlet row index, over to the right-hand side, but multiplied by the negative of the boundary value $g(\bx_{j})$.  Informally we write
     $$\tilde b_i \to \tilde b_i - g(\bx_{j}) \tilde a_{ij}$$
 for these transformations.  After the completion of this ``editing'' stage, for all Dirichlet rows and columns, we get $A$ and $\bb$.  Since this part of the matrix assembly is a key stage of understanding our FEM codes, we give a concrete example.
 
@@ -311,13 +311,15 @@ Note that the initial construction is already correct in the case where $\partia
 
 \section{Assembling the matrix equation, element by element}
 
-Each entry $\tilde a_{ij}$ of the initial matrix $\tilde A$ is not even computed all at once!  Rather, we compute contributions to these entries from each element.  Furthermore we do this in parallel because a \pVec \texttt{E} with the elements is distributed across the processes.
+Each entry $\tilde a_{ij}$ of the initial matrix $\tilde A$ is not even computed in one step.  Rather, we compute contributions to these entries from each element.  Furthermore we do this in parallel because, from \texttt{readmesh.c} above, the \pVec called \texttt{E}, containing a list of elements of type \texttt{elementtype},\sidenote{Defined just before Figure \ref{code:trianglepartfour}.} is distributed across the processes.
 
-To explain such element-by-element assembly we first define the integral over just one triangle $\triangle_k$:
-    $$\tilde a_{ij}^k = \int_{\triangle_k} \grad \phi_j \cdot \grad \phi_i.$$
-Recalling the \texttt{elementtype} structure in the previous section, if \texttt{E} denotes an array of \texttt{elementtype}s then for each triangle $\triangle_k$ we have a global node index for each of the three vertices.  That is, for each $k=0,1,\dots,K-1$ we have
+To explain such element-by-element assembly we first define the integral over just one triangle $\triangle_k$, and we give it a code-style name:
+    $$\text{\texttt{a(k,i,j)}} = \int_{\triangle_k} \grad \phi_j \cdot \grad \phi_i.$$
+Note that
+    $$\tilde a_{ij} = \sum_k \phantom{.}\text{\texttt{a(k,i,j)}}$$
+with this notation.  If \texttt{E} denotes an array of \texttt{elementtype}, then for each triangle $\triangle_k$ we have a global node index for each of the three vertices.  That is, for each $k=0,1,\dots,K-1$ we have
     $$\text{\texttt{E[k].j[q]}} \in \{0,1,\dots,N-1\} \quad \text{ for } q = 0,1,2.$$
-Then, denoting $\tilde a_{ij}^k$ by \texttt{a(k,i,j)}, the element-by-element assembly of $\tilde A$ follows this pseudocode:
+Now the element-by-element assembly of $\tilde A$ follows this pseudocode:
 \begin{Verbatim}[fontsize=\small]
 A = 0                           // N x N sparse matrix with entries a(i,j)
 for k = 0 to K-1                // loop through all elements
@@ -328,17 +330,25 @@ for k = 0 to K-1                // loop through all elements
             a(i,j) += a(k,i,j)  // add contribution from element k
 \end{Verbatim}
 \medskip\noindent
-So now we need to both compute $\tilde a_{ij}^k= $\texttt{a(k,i,j)} concretely, after which we implement the ``editing'' strategy which turns $\tilde A$ into $A$.
+In the above pseudocode it would be natural to write
+    $$\text{\texttt{a(k,q,r)}} = \text{\texttt{a(k,i,j)}},$$
+because on a given triangle $\triangle_k$, the global indices $i,j$ are functions of the local node indices $q,r\in\{0,1,2\}$ on the triangle.  So now we need to both compute \texttt{a(k,i,j)} concretely and we need to implement the ``editing'' strategy which turns $\tilde A$ into $A$.
 
-
-FIXME
+A standard approach to computing the element-wise integrals \texttt{a(k,i,j)} is to refer each triangle $\triangle_k$ to a reference triangle $\triangle_\ast$ with vertices $(0,0),\,(1,0),\,(0,1)$, as shown in Figure \ref{fig:isoparametric}.  The linear map from $\triangle_\ast$ to a generic triangle $\triangle$ with vertices $(x_0,y_0),\,(x_1,y_1),\,(x_2,y_2)$, as shown in the Figure, is
 \begin{align*}
-\chi_0(\xi,\eta) &= 1-\xi-\eta \\
-\chi_1(\xi,\eta) &= \xi \\
-\chi_2(\xi,\eta) &= \eta
+x(\xi,\eta) &= x_0 + (x_1-x_0) \xi + (x_2-x_0) \eta, \\
+y(\xi,\eta) &= y_0 + (y_1-y_0) \xi + (y_2-y_0) \eta.
 \end{align*}
-
-$$\phi_i(x(\xi,\eta),y(\xi,\eta)) = \chi_i(\xi,\eta)$$
+Thus the Jacobian of the map is
+    $$J = \begin{bmatrix}
+    \frac{\partial x}{\partial \xi} & \frac{\partial x}{\partial \eta} \\
+    \frac{\partial y}{\partial \xi} & \frac{\partial y}{\partial \eta}
+    \end{bmatrix}
+    =
+    \begin{bmatrix}
+    x_1-x_0 & x_2-x_0 \\
+    y_1-y_0 & y_2-y_0
+    \end{bmatrix}.$$
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=1.1,
@@ -358,7 +368,7 @@ $$\phi_i(x(\xi,\eta),y(\xi,\eta)) = \chi_i(\xi,\eta)$$
     \draw (3.5,-0.6) node {$(x_1,y_1)$};
     \draw (3.0,2.3) node {$(x_2,y_2)$};
     \draw[line width=1pt] (1.7,1) -- (3.5,-0.3) -- (3.0,2.0) -- cycle;
-    \draw (2.7,1.0) node {$\triangle_k$};
+    \draw (2.7,1.0) node {$\triangle$};
 % right xi,eta axes
     \draw[->, gray, very thin] (4.6,0) -- (6.6,0);
     \draw[->, gray, very thin] (5,-0.4) -- (5,2.0);
@@ -367,20 +377,37 @@ $$\phi_i(x(\xi,\eta),y(\xi,\eta)) = \chi_i(\xi,\eta)$$
     \filldraw (5,0) circle (1.25pt);  % (0,0)
     \filldraw (6,0) circle (1.25pt);  % (1,0)
     \filldraw (5,1) circle (1.25pt);  % (0,1)
+    \draw (5.3,-0.3) node {$(0,0)$};
     \draw (6.3,0.2) node {$(1,0)$};
-    \draw (5.4,1.2) node {$(1,0)$};
+    \draw (5.4,1.1) node {$(0,1)$};
     \draw[line width=1pt] (5,0) -- (6,0) -- (5,1) -- cycle;
     \draw (5.3,0.3) node {$\triangle_\ast$};
-% arcs connecting nodes
-\draw[gray, postaction={decorate}] (5,0) -- (1.7,1.03);
-\draw[gray, postaction={decorate}] (6,0) -- (3.5,-0.3);
-\draw[gray, postaction={decorate}] (5,1) -- (3.0,2.0);
-%\draw[thin, gray] (5,0) .. controls (4.7,0.4) and (2.0,1.1) .. (1.7,1);
+% arrows connecting nodes
+    \draw[gray, postaction={decorate}] (5,0) -- (1.7,1.03);
+    \draw[gray, postaction={decorate}] (6,0) -- (3.5,-0.3);
+    \draw[gray, postaction={decorate}] (5,1) -- (3.0,2.0);
 \end{tikzpicture}
-\medskip
-\caption{Mapping of a $\Pone$ element $\triangle_k$ from the reference element $\triangle_\ast$.}
+\smallskip
+\caption{Mapping of a generic triangle $\triangle$ from the reference triangle $\triangle_\ast$.}
 \label{fig:isoparametric}
 \end{marginfigure}
+
+\noindent Furthermore, on $\triangle_\ast$ any linear function is a linear combination of these three local basis functions:
+\begin{align*}
+\chi_0(\xi,\eta) &= 1-\xi-\eta, \\
+\chi_1(\xi,\eta) &= \xi, \\
+\chi_2(\xi,\eta) &= \eta.
+\end{align*}
+Now a key observation is that, using a local index $q=0,1,2$ for the vertices of $\triangle$, each of the basis functions $\phi_q=\phi_{j(q)}$ is the mapped version of the corresponding $\chi_q$:
+   $$\phi_q(x(\xi,\eta),y(\xi,\eta)) = \chi_q(\xi,\eta).$$
+
+In these terms, and recalling the change-of-variables formula for integrals,
+\begin{align*}
+\text{\texttt{a(k,q,r)}} &= \int_{\triangle} \grad\phi_q \cdot \grad\phi_r \\
+   &= \int_{\triangle} \frac{\partial\phi_q}{\partial x} \frac{\partial\phi_r}{\partial x} + \frac{\partial\phi_q}{\partial y} \frac{\partial\phi_r}{\partial y} \; dx \, dy \\
+   &= \int_{\triangle_\ast} \left(\frac{\partial \chi_q}{\partial \xi} \frac{\partial \xi}{\partial x} + FIXME \right) \; \det(J) \; d\xi \, d\eta \\
+   &= 
+\end{align*}
 
 FIXME: figure showing parallel partition of elements
 
