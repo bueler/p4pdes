@@ -41,9 +41,10 @@ bump.1.tikz: ../c/bump.poly
 	python tri2tikz.py --labelnodes --nodeoffset 0.25 --labelelements --scale 2.0 bump.1 $@
 
 bump.poly.tikz: ../c/bump.poly
+	ln -s ../c/bump.poly
 	python tri2tikz.py --polyonly bump --nodesize 3.0 bump.poly.tikz
 
 .PHONY: clean
 
 clean:
-	@rm -f *~ *.out *.aux *.log *.bbl *.blg *.synctex.gz *.idx *.ilg *.ind *.toc *.dvi cstrip/*.c bump.?.* samplepoly.?.* squarefour.tikz
+	@rm -f *~ *.out *.aux *.log *.bbl *.blg *.synctex.gz *.idx *.ilg *.ind *.toc *.dvi cstrip/*.c bump.?.* samplepoly.?.* bump.poly.tikz squarefour.tikz
