@@ -41,8 +41,9 @@ bump.1.tikz: ../c/bump.poly
 	python tri2tikz.py --labelnodes --nodeoffset 0.25 --labelelements --scale 2.0 bump.1 $@
 
 bump.poly.tikz: ../c/bump.poly
+	rm -rf bump.poly
 	ln -s ../c/bump.poly
-	python tri2tikz.py --polyonly bump --nodesize 3.0 bump.poly.tikz
+	python tri2tikz.py --scale 0.85 --polyonly bump --nodesize 3.0 bump.poly.tikz
 
 .PHONY: clean
 

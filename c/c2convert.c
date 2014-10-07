@@ -20,26 +20,24 @@ int main(int argc,char **args) {
 
   // STANDARD PREAMBLE
   PetscInitialize(&argc,&args,(char*)0,help);
-  const MPI_Comm  COMM = PETSC_COMM_WORLD,
-                  SELF = PETSC_COMM_SELF;
+  const MPI_Comm  WORLD = PETSC_COMM_WORLD,  SELF = PETSC_COMM_SELF;
   PetscMPIInt     rank;
-  MPI_Comm_rank(COMM,&rank);
+  MPI_Comm_rank(WORLD,&rank);
   PetscErrorCode  ierr;
-//ENDPREAMBLE
 
   // GET OPTIONS AND BUILD FILENAMES
   PetscBool      fset, docheck, checkset;
   const PetscInt  MPL = PETSC_MAX_PATH_LEN;
   char fnameroot[MPL], outfilename[MPL],
        nodefilename[MPL], elefilename[MPL], polyfilename[MPL];
-  ierr = PetscOptionsBegin(COMM, "", "options for c2convert", ""); CHKERRQ(ierr);
+  ierr = PetscOptionsBegin(WORLD, "", "options for c2convert", ""); CHKERRQ(ierr);
   ierr = PetscOptionsString("-f", "filename root", "", "",
                             fnameroot, sizeof(fnameroot), &fset); CHKERRQ(ierr);
   ierr = PetscOptionsBool("-check", "if set, re-read and show at STDOUT", "", PETSC_FALSE,
                           &docheck,&checkset); CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
   if (!fset) {
-    SETERRQ(COMM,1,"option  -f FILENAMEROOT  required");
+    SETERRQ(WORLD,1,"option  -f FILENAMEROOT  required");
   }
   strcpy(nodefilename,fnameroot);  strcat(nodefilename,".node");
   strcpy(elefilename,fnameroot);   strcat(elefilename,".ele");
@@ -54,7 +52,7 @@ int main(int argc,char **args) {
     Vec vx,vy,    // coordinates of N nodes
         vBT;      // boundary type of N nodes:
                   //   BT[i] = 0 if interior, 2 if Dirichlet, 3 if Neumann
-    ierr = PetscFOpen(COMM,nodefilename,"r",&nodefile); CHKERRQ(ierr);
+    ierr = PetscFOpen(WORLD,nodefilename,"r",&nodefile); CHKERRQ(ierr);
     PetscInt N,   // number of degrees of freedom (= number of all nodes)
              ndim, nattr, nbdrymarkers;
     if (4 != fscanf(nodefile,"%d %d %d %d\n",&N,&ndim,&nattr,&nbdrymarkers)) {
@@ -87,7 +85,7 @@ int main(int argc,char **args) {
       ierr = VecSetValues(vy,1,&i,&(v[1]),INSERT_VALUES); CHKERRQ(ierr);
       ierr = VecSetValues(vBT,1,&i,&(v[2]),INSERT_VALUES); CHKERRQ(ierr);
     }
-    ierr = PetscFClose(COMM,nodefile); CHKERRQ(ierr);
+    ierr = PetscFClose(WORLD,nodefile); CHKERRQ(ierr);
     vecassembly(vx)
     vecassembly(vy)
     vecassembly(vBT)
@@ -95,7 +93,7 @@ int main(int argc,char **args) {
 
     // READ POLYGON HEADER AND ALLOCATE VEC
     Vec vQ; // array with 2M rows; Q[2*m+q] is node index (0 based)
-    ierr = PetscFOpen(COMM,polyfilename,"r",&polyfile); CHKERRQ(ierr);
+    ierr = PetscFOpen(WORLD,polyfilename,"r",&polyfile); CHKERRQ(ierr);
     PetscInt M,   // number of segments in boundary polygon
              tmpa, tmpb, tmpc, tmpd;
     if (4 != fscanf(polyfile,"%d %d %d %d\n",&tmpa,&tmpb,&tmpc,&tmpd)) {
@@ -126,14 +124,14 @@ int main(int argc,char **args) {
       }
       ierr = VecSetValuesBlocked(vQ,1,&m,w,INSERT_VALUES); CHKERRQ(ierr);
     }
-    ierr = PetscFClose(COMM,polyfile); CHKERRQ(ierr);
+    ierr = PetscFClose(WORLD,polyfile); CHKERRQ(ierr);
     vecassembly(vQ)
 //ENDREADPOLYGONS
 
     // READ ELEMENT HEADER AND ALLOCATE VEC
     // vE[k] is an elementtype struct, with full info on element k
     Vec vE;
-    ierr = PetscFOpen(COMM,elefilename,"r",&elefile); CHKERRQ(ierr);
+    ierr = PetscFOpen(WORLD,elefilename,"r",&elefile); CHKERRQ(ierr);
     PetscInt K,   // number of elements
              nthree, nattrele;
     if (3 != fscanf(elefile,"%d %d %d\n",&K,&nthree,&nattrele)) {
@@ -150,6 +148,7 @@ int main(int argc,char **args) {
     ierr = VecCreateSeq(SELF,15*K,&vE); CHKERRQ(ierr);
     ierr = VecSetBlockSize(vE,15); CHKERRQ(ierr);
 
+//STARTREADELEMENTS
     // READ ELEMENTS AND CREATE VEC vE
     elementtype e;
     PetscInt k, kplusone, l, qnext;
@@ -200,7 +199,7 @@ int main(int argc,char **args) {
     ierr = VecRestoreArray(vy,&ay); CHKERRQ(ierr);
     ierr = VecRestoreArray(vBT,&aBT); CHKERRQ(ierr);
     ierr = VecRestoreArray(vQ,&aQ); CHKERRQ(ierr);
-    ierr = PetscFClose(COMM,elefile); CHKERRQ(ierr);
+    ierr = PetscFClose(WORLD,elefile); CHKERRQ(ierr);
     // we are done with these
     VecDestroy(&vBT);
     VecDestroy(&vQ);
@@ -214,7 +213,7 @@ int main(int argc,char **args) {
     //   (see readmesh.c)
     PetscViewer viewer;
     ierr = PetscPrintf(SELF,"writing %s on rank 0 ...\n",outfilename); CHKERRQ(ierr);
-    ierr = PetscViewerBinaryOpen(PETSC_COMM_SELF,outfilename,FILE_MODE_WRITE,
+    ierr = PetscViewerBinaryOpen(SELF,outfilename,FILE_MODE_WRITE,
                &viewer); CHKERRQ(ierr);
     VecSetOptionsPrefix(vE,"E");
     ierr = VecView(vE,viewer); CHKERRQ(ierr);
@@ -230,11 +229,11 @@ int main(int argc,char **args) {
   if (docheck == PETSC_TRUE) {
     PetscViewer viewer;
     Vec rE,rx,ry;
-    ierr = PetscPrintf(COMM,"\nchecking by loading Vecs and viewing at STDOUT ...\n"
+    ierr = PetscPrintf(WORLD,"\nchecking by loading Vecs and viewing at STDOUT ...\n"
                        ); CHKERRQ(ierr);
-    ierr = getmeshfile(COMM, ".petsc", outfilename, &viewer); CHKERRQ(ierr);
-    ierr = readmesh(COMM, viewer, &rE, &rx, &ry); CHKERRQ(ierr);
-    ierr = elementVecViewSTDOUT(COMM, rE); CHKERRQ(ierr);
+    ierr = getmeshfile(WORLD, ".petsc", outfilename, &viewer); CHKERRQ(ierr);
+    ierr = readmesh(WORLD, viewer, &rE, &rx, &ry); CHKERRQ(ierr);
+    ierr = elementVecViewSTDOUT(WORLD, rE); CHKERRQ(ierr);
     ierr = VecView(rx,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
     ierr = VecView(ry,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
     VecDestroy(&rE);  VecDestroy(&rx);  VecDestroy(&ry);
