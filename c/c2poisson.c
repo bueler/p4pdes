@@ -18,16 +18,18 @@ To see the matrix graphically:\n\
 #include "convenience.h"
 #include "readmesh.h"
 
-PetscScalar chi(PetscInt q, PetscScalar xi, PetscScalar eta) {
+PetscErrorCode getchi(MPI_Comm comm, PetscInt q, PetscScalar xi, PetscScalar eta,
+                      PetscScalar *chi) {
   if (q==0) {
-    return 1.0 - xi - eta;
+    *chi = 1.0 - xi - eta;
   } else if (q==1) {
-    return xi;
+    *chi = xi;
   } else if (q==2) {
-    return eta;
+    *chi = eta;
   } else {
     SETERRQ(comm,1,"q invalid: must be 0,1,2");
   }
+  return 0;
 }
 
 PetscScalar exactsolution(PetscScalar x, PetscScalar y) {
@@ -43,18 +45,21 @@ int main(int argc,char **args) {
   PetscInitialize(&argc,&args,(char*)0,help);
   const MPI_Comm  WORLD = PETSC_COMM_WORLD;
   PetscErrorCode  ierr;
+  PetscMPIInt     rank;
+  MPI_Comm_rank(WORLD,&rank);
 
   // READ MESH FROM FILE
   Vec      E,     // element data structure
            x, y;  // coords of node
   PetscInt N,     // number of nodes
-           K;     // number of elements
+           K,     // number of elements
+           bs;    // block size for elementtype
   char     fname[PETSC_MAX_PATH_LEN];
   PetscViewer viewer;
   ierr = getmeshfile(WORLD, ".petsc", fname, &viewer); CHKERRQ(ierr);
   ierr = readmesh(WORLD, viewer, &E, &x, &y); CHKERRQ(ierr);
   PetscViewerDestroy(&viewer);
-  ierr = getmeshsizes(WORLD,E,x,y,&N,&K); CHKERRQ(ierr);
+  ierr = getcheckmeshsizes(WORLD,E,x,y,&N,&K,&bs); CHKERRQ(ierr);
 
   // GET NODE AND ELEMENT OWNERSHIP RANGES
   PetscInt Istart,Iend,Kstart,Kend;
@@ -68,7 +73,8 @@ int main(int argc,char **args) {
   ierr = MatSetType(A,MATMPIAIJ); CHKERRQ(ierr);
   ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,N,N); CHKERRQ(ierr);
   ierr = MatSetOptionsPrefix(A,"a_"); CHKERRQ(ierr);
-  // FIXME:  instead of this line we should preallocate correctly
+  // FIXME:  instead of next two lines we should preallocate correctly
+  ierr = MatSetUp(A); CHKERRQ(ierr);
   ierr = MatSetOption(A,MAT_NEW_NONZERO_LOCATION_ERR,PETSC_FALSE); CHKERRQ(ierr);
   ierr = VecDuplicate(x,&b); CHKERRQ(ierr);
   ierr = VecSet(b,0.0); CHKERRQ(ierr);
@@ -79,13 +85,13 @@ int main(int argc,char **args) {
               deta[3] = {-1.0, 0.0, 1.0},   //     on ref element
               quadxi[3]  = {0.5, 0.5, 0.0}, // quadrature points are midpoints of
               quadeta[3] = {0.0, 0.5, 0.5}; //     sides of ref element
-  PetscInt    k, q, r, i, ii[3], jj[3];
+  PetscInt    k, q, r, i, jj[3];
   PetscScalar *ae;
   elementtype *et;
-  PetscScalar vv[3], y20, x02, y01, x10, detJ;
-  PetscScalar bval, xquad, yquad;
+  PetscScalar vv[3], y20, x02, y01, x10, detJ,
+              bval, xquad, yquad, chiq;
   ierr = VecGetArray(E,&ae); CHKERRQ(ierr);
-  for (k = Kstart; k < Kend; k++) {        // loop over all owned elements
+  for (k = Kstart; k < Kend; k += bs) {    // loop through owned elements
     et = (elementtype*)(&(ae[k-Kstart]));  // points to current element
     // compute element geometry constants (compare Elman (1.43)
     y20 = et->y[2] - et->y[0];
@@ -107,9 +113,10 @@ int main(int argc,char **args) {
       // compute element RHS contribution FIXME in homogeneous Neumann case
       bval = 0.0;
       for (r = 0; r < 3; r++) {      // loop over quadrature points
-        xquad = et->x[0] + x10 * quadxi[r] - x02 * quadeta[r]; // = x0 + (x1-x0) xi + (x2 - x0) eta
-        yquad = et->x[0] - y01 * quadxi[r] + y20 * quadeta[r]; // = y0 + (y1-y0) xi + (y2 - y0) eta
-        bval += fsource(xquad,yquad) * chi(q,quadxi[r],quadeta[r]);
+        xquad = et->x[0] + x10 * quadxi[r] - x02 * quadeta[r]; // = x0 + (x1-x0) xi + (x2-x0) eta
+        yquad = et->x[0] - y01 * quadxi[r] + y20 * quadeta[r]; // = y0 + (y1-y0) xi + (y2-y0) eta
+        ierr = getchi(WORLD,q,quadxi[r],quadeta[r],&chiq); CHKERRQ(ierr);
+        bval += fsource(xquad,yquad) * chiq;
       }
       bval *= detJ / 6.0;
       ierr = VecSetValues(b,1,&i,&bval,ADD_VALUES); CHKERRQ(ierr);
@@ -134,15 +141,15 @@ int main(int argc,char **args) {
   ierr = VecDestroy(&uone); CHKERRQ(ierr);
   ierr = VecDestroy(&btest); CHKERRQ(ierr);
 
-  // SECOND CHECK: SOLVE HOMOGENEOUS NEUMANN PROBLEM WITH KNOWN SOLN
+  // SOLVE HOMOGENEOUS NEUMANN PROBLEM WITH KNOWN SOLN
   // FIRST EVALUATE EXACT SOLUTION AT NODES
   Vec         uexact;
-  PetscScalar uval;
+  PetscScalar uval, *ax, *ay;
   ierr = VecDuplicate(b,&uexact); CHKERRQ(ierr);
   ierr = VecGetArray(x,&ax); CHKERRQ(ierr);
   ierr = VecGetArray(y,&ay); CHKERRQ(ierr);
   for (i = Istart; i < Iend; i++) {
-    uval = exactsolution(ax[i],ay[i]);
+    uval = exactsolution(ax[i-Istart],ay[i-Istart]);
     ierr = VecSetValues(uexact,1,&i,&uval,INSERT_VALUES); CHKERRQ(ierr);
   }
   ierr = VecRestoreArray(x,&ax); CHKERRQ(ierr);
@@ -154,7 +161,7 @@ int main(int argc,char **args) {
   MatNullSpace nullsp;
   ierr = VecDuplicate(b, &u); CHKERRQ(ierr);
   ierr = KSPCreate(WORLD, &ksp); CHKERRQ(ierr);
-  // constants are in null space:
+  // only constants are in null space:
   ierr = MatNullSpaceCreate(WORLD, PETSC_TRUE, 0, NULL, &nullsp); CHKERRQ(ierr);
   ierr = KSPSetNullSpace(ksp, nullsp); CHKERRQ(ierr);
   ierr = KSPSetOperators(ksp, A, A); CHKERRQ(ierr);
@@ -165,7 +172,7 @@ int main(int argc,char **args) {
   ierr = VecNorm(uexact,NORM_2,&normuexact); CHKERRQ(ierr);
   ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);  // u := -uexact + u
   ierr = VecNorm(u,NORM_2,&normerror); CHKERRQ(ierr);
-  ierr = PetscPrintf(WORLD,"  check II: |u - uexact|_2 / |uexact|_2 = %e  (should be O(h^2))\n",
+  ierr = PetscPrintf(WORLD,"  solving homogenous: |u - uexact|_2 / |uexact|_2 = %e  (should be O(h^2))\n",
                      normerror/normuexact); CHKERRQ(ierr);
   ierr = MatNullSpaceDestroy(&nullsp); CHKERRQ(ierr);
   ierr = KSPDestroy(&ksp); CHKERRQ(ierr);
@@ -173,8 +180,7 @@ int main(int argc,char **args) {
   // CLEAN UP
   MatDestroy(&A);
   VecDestroy(&b);  VecDestroy(&u);  VecDestroy(&uexact);
-  VecDestroy(&x);  VecDestroy(&y);
-  VecDestroy(&BT);  VecDestroy(&P);  VecDestroy(&Q);
+  VecDestroy(&x);  VecDestroy(&y);  VecDestroy(&E);
   PetscFinalize();
   return 0;
 }
