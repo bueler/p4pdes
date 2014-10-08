@@ -36,12 +36,11 @@ PetscErrorCode readmesh(MPI_Comm comm, PetscViewer viewer,
   ierr = VecCreate(comm,y); CHKERRQ(ierr);
   VecSetOptionsPrefix(*y,"y_");
   ierr = VecLoad(*y,viewer); CHKERRQ(ierr);
-  ierr = VecGetBlockSize(*E,&bs); CHKERRQ(ierr);
-  ierr = PetscPrintf(comm,"    block size for E is %d\n",bs); CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject)(*E),"E-element-full-info"); CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject)(*x),"x-coordinate"); CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject)(*y),"y-coordinate"); CHKERRQ(ierr);
-  ierr = getmeshsizes(comm,*E,*x,*y,&N,&K); CHKERRQ(ierr);
+  ierr = getcheckmeshsizes(comm,*E,*x,*y,&N,&K,&bs); CHKERRQ(ierr);
+  ierr = PetscPrintf(comm,"    block size for E is %d\n",bs); CHKERRQ(ierr);
   ierr = PetscPrintf(comm,"    N=%d nodes, K=%d elements\n",
                      N,K); CHKERRQ(ierr);
   return 0;
@@ -49,22 +48,38 @@ PetscErrorCode readmesh(MPI_Comm comm, PetscViewer viewer,
 //ENDREADMESH
 
 
-PetscErrorCode getmeshsizes(MPI_Comm comm, Vec E, Vec x, Vec y,
-                            PetscInt *N, PetscInt *K) {
+PetscErrorCode getcheckmeshsizes(MPI_Comm comm, Vec E, Vec x, Vec y,
+                                 PetscInt *N, PetscInt *K, PetscInt *bs) {
   PetscErrorCode ierr;
-  PetscInt Ny, bs;
+  PetscInt Ny;
   if (N) {
     ierr = VecGetSize(x,N); CHKERRQ(ierr);
     ierr = VecGetSize(y,&Ny); CHKERRQ(ierr);
     if (Ny != *N) {  SETERRQ(comm,3,"x,y arrays invalid: must have equal length"); } 
   }
   if (K) {
-    ierr = VecGetBlockSize(E,&bs); CHKERRQ(ierr);
-    if (bs != 15) {  SETERRQ(comm,3,"element array E has invalid block size (!= 15)"); }
     ierr = VecGetSize(E,K); CHKERRQ(ierr);
     if (*K % 15 != 0) {  SETERRQ(comm,3,"element array E invalid (!= 15 K entries)"); }
     *K /= 15;
   }
+  if (bs) {
+    ierr = VecGetBlockSize(E,bs); CHKERRQ(ierr);
+    if (*bs != 15) {  SETERRQ(comm,3,"element array E has invalid block size (!= 15)"); }
+  }
+  return 0;
+}
+
+
+PetscErrorCode showelementSynchronized(MPI_Comm comm, elementtype *et) {
+  PetscErrorCode ierr;
+  ierr = PetscSynchronizedPrintf(comm,
+               "%d %d %d:\n"
+               "    %d %d %d | %d %d %d | %g %g %g | %g %g %g |\n",
+               (int)et->j[0], (int)et->j[1], (int)et->j[2],
+               (int)et->bN[0],(int)et->bN[1],(int)et->bN[2],
+               (int)et->bE[0],(int)et->bE[1],(int)et->bE[2],
+               et->x[0],      et->x[1],      et->x[2],
+               et->y[0],      et->y[1],      et->y[2]); CHKERRQ(ierr);
   return 0;
 }
 
@@ -85,14 +100,7 @@ PetscErrorCode elementVecViewSTDOUT(MPI_Comm comm, Vec E) {
   ierr = VecGetArray(E,&ae); CHKERRQ(ierr);
   for (k = Kstart; k < Kend; k += bs) { // loop over all owned elements
     et = (elementtype*)(&(ae[k-Kstart]));
-    ierr = PetscSynchronizedPrintf(comm,
-               "%d %d %d:\n"
-               "    %d %d %d | %d %d %d | %g %g %g | %g %g %g |\n",
-               (int)et->j[0], (int)et->j[1], (int)et->j[2],
-               (int)et->bN[0],(int)et->bN[1],(int)et->bN[2],
-               (int)et->bE[0],(int)et->bE[1],(int)et->bE[2],
-               et->x[0],      et->x[1],      et->x[2],
-               et->y[0],      et->y[1],      et->y[2]); CHKERRQ(ierr);
+    ierr = showelementSynchronized(comm, et); CHKERRQ(ierr);
   }
   ierr = VecRestoreArray(E,&ae); CHKERRQ(ierr);
   ierr = PetscSynchronizedFlush(comm,PETSC_STDOUT); CHKERRQ(ierr);

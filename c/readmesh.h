@@ -26,8 +26,12 @@ PetscErrorCode readmesh(MPI_Comm comm, PetscViewer viewer,
                                          //   plotting
 
 // get sizes: N = (# of nodes), K = (# of elements)
-PetscErrorCode getmeshsizes(MPI_Comm comm, Vec E, Vec x, Vec y,
-                            PetscInt *N, PetscInt *K);
+PetscErrorCode getcheckmeshsizes(MPI_Comm comm, Vec E, Vec x, Vec y,
+                                 PetscInt *N, PetscInt *K, PetscInt *bs);
+
+// method which shows formated version of one element at STDOUT
+//   (calling routine is responsible for also calling PetscSynchronizedFlush)
+PetscErrorCode showelementSynchronized(MPI_Comm comm, elementtype *et);
 
 // method which is better than VecView for showing a vector which has blocks
 //   of type elementtype above
