@@ -332,25 +332,13 @@ for k = 0 to K-1                // loop through all elements
 \medskip\noindent
 In the above pseudocode it would be natural to write
     $$\text{\texttt{a(k,q,r)}} = \text{\texttt{a(k,i,j)}},$$
-because on a given triangle $\triangle_k$, the global indices $i,j$ are functions of the local node indices $q,r\in\{0,1,2\}$ on the triangle.  So now we need to both compute \texttt{a(k,i,j)} concretely and we need to implement the ``editing'' strategy which turns $\tilde A$ into $A$.
+because on a given triangle $\triangle_k$, the global indices $i,j$ are functions of the local node indices $q,r\in\{0,1,2\}$ on the triangle.  Now we need to both compute \texttt{a(k,q,r)} concretely and we need to implement the ``editing'' strategy which turns $\tilde A$ into $A$.
 
-A standard approach to computing the element-wise integrals \texttt{a(k,i,j)} is to refer each triangle $\triangle_k$ to a reference triangle $\triangle_\ast$ with vertices $(0,0),\,(1,0),\,(0,1)$, as shown in Figure \ref{fig:isoparametric}.  The linear map from $\triangle_\ast$ to a generic triangle $\triangle$ with vertices $(x_0,y_0),\,(x_1,y_1),\,(x_2,y_2)$, as shown in the Figure, is
-\begin{align*}
-x(\xi,\eta) &= x_0 + (x_1-x_0) \xi + (x_2-x_0) \eta, \\
-y(\xi,\eta) &= y_0 + (y_1-y_0) \xi + (y_2-y_0) \eta.
-\end{align*}
-Thus the Jacobian of the map is
-\begin{equation}
-J = \begin{bmatrix}
-    \frac{\partial x}{\partial \xi} & \frac{\partial x}{\partial \eta} \\
-    \frac{\partial y}{\partial \xi} & \frac{\partial y}{\partial \eta}
-    \end{bmatrix}
-    =
-    \begin{bmatrix}
-    x_1-x_0 & x_2-x_0 \\
-    y_1-y_0 & y_2-y_0
-    \end{bmatrix}.  \label{trianglejacobian}
-\end{equation}
+A standard approach to computing the element-wise integrals \texttt{a(k,q,r)} is to refer each triangle $\triangle_k$ to a reference triangle $\triangle_\ast$ with vertices $(0,0),\,(1,0),\,(0,1)$, as shown in Figure \ref{fig:isoparametric}.  The linear map from $\triangle_\ast$ to a generic triangle $\triangle$ with vertices $(x_0,y_0),\,(x_1,y_1),\,(x_2,y_2)$, as shown in the Figure, is
+\begin{align}
+x(\xi,\eta) &= x_0 + (x_1-x_0) \xi + (x_2-x_0) \eta, \label{trianglemap} \\
+y(\xi,\eta) &= y_0 + (y_1-y_0) \xi + (y_2-y_0) \eta. \notag
+\end{align}
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=1.1,
@@ -395,13 +383,59 @@ J = \begin{bmatrix}
 \end{marginfigure}
 
 \noindent Furthermore, on $\triangle_\ast$ any linear function is a linear combination of these three local basis functions:
-\begin{align*}
-\chi_0(\xi,\eta) &= 1-\xi-\eta, \\
-\chi_1(\xi,\eta) &= \xi, \\
-\chi_2(\xi,\eta) &= \eta.
-\end{align*}
-Now a key observation is that, using a local index $q=0,1,2$ for the vertices of $\triangle$, each of the basis functions $\phi_q=\phi_{j(q)}$ is the mapped version of the corresponding $\chi_q$:
+\begin{equation*}
+\chi_0(\xi,\eta) = 1-\xi-\eta, \qquad \chi_1(\xi,\eta) = \xi, \qquad \chi_2(\xi,\eta) = \eta.
+\end{equation*}
+Using a local index $q=0,1,2$ for the vertices of $\triangle$, each of the basis functions $\phi_q$ is the mapped version of the corresponding $\chi_q$:
    $$\phi_q(x(\xi,\eta),y(\xi,\eta)) = \chi_q(\xi,\eta).$$
+Through this last formula and the mapping \eqref{trianglemap} from the reference element one can check that
+   $$\phi_q(x_r,y_r) = \chi_q(\xi_r,\eta_r) = \delta_{qr}$$
+where we naturally define $(\xi_0,\eta_0)=(0,0)$, $(\xi_1,\eta_1)=(1,0)$, and $(\xi_2,\eta_2)=(0,1)$.
+
+The Jacobian\sidenote{By definition, the \emph{Jacobian} of a smooth map $F$ is its linearization, so that if $\by=F(\bx)$ and if $\by+\Delta\by = F(\bx+\Delta\bx)$ then $\Delta \by = J(\bx) \Delta\bx + O(|\Delta\bx|^2)$.} of map \eqref{trianglemap} is
+\begin{equation}
+J = \begin{bmatrix}
+    \frac{\partial x}{\partial \xi} & \frac{\partial x}{\partial \eta} \\[0.2em]
+    \frac{\partial y}{\partial \xi} & \frac{\partial y}{\partial \eta}
+    \end{bmatrix}
+    =
+    \begin{bmatrix}
+    x_1-x_0 & x_2-x_0 \\
+    y_1-y_0 & y_2-y_0
+    \end{bmatrix}.  \label{trianglejacobian}
+\end{equation}
+By the chain rule,\sidenote{{\color{red} Caution} for readers of \citet{Elmanetal2005}: The ``Jacobian'' in their formula (1.37) is the transpose of the Jacobian here.} the derivatives of a composition $F(\xi,\eta) \equiv f(x(\xi,\eta),y(\xi,\eta))$ satisfy
+\begin{equation*}
+\begin{bmatrix}
+\frac{\partial F}{\partial \xi} \\[0.4em]
+\frac{\partial F}{\partial \eta}
+\end{bmatrix}
+=
+J^\top
+\begin{bmatrix}
+\frac{\partial f}{\partial x} \\[0.4em]
+\frac{\partial f}{\partial y}
+\end{bmatrix}.
+\end{equation*}
+Applied to $F(\xi,\eta)=x(\xi,\eta)$ and $F(\xi,\eta)=y(\xi,\eta)$, in turn, to get the columns of a matrix, and inverting the $2\times 2$ matrix $J^\top$, we get these facts which will be useful below:
+\begin{equation*}
+\begin{bmatrix}
+    \frac{\partial \xi}{\partial x} & \frac{\partial \eta}{\partial x} \\[0.2em]
+    \frac{\partial \xi}{\partial y} & \frac{\partial \eta}{\partial y}
+\end{bmatrix}
+=
+(J^\top)^{-1}
+\begin{bmatrix}
+    \frac{\partial x}{\partial \xi} & \frac{\partial y}{\partial \xi} \\[0.2em]
+    \frac{\partial x}{\partial \eta} & \frac{\partial y}{\partial \eta}
+\end{bmatrix}
+=
+FIXME
+\end{equation*}
+and
+\begin{equation*}
+(J^\top)^{-1} = FIXME
+\end{equation*}
 
 In these terms, and recalling both the change-of-variables formula for integrals and the chain rule,
 \begin{align}
@@ -410,9 +444,9 @@ In these terms, and recalling both the change-of-variables formula for integrals
    &= \int_{\triangle_\ast} \left(\frac{\partial \chi_q}{\partial \xi} \frac{\partial \xi}{\partial x} + \frac{\partial \chi_q}{\partial \eta} \frac{\partial \eta}{\partial x}\right) \left(\frac{\partial \chi_r}{\partial \xi} \frac{\partial \xi}{\partial x} + \frac{\partial \chi_r}{\partial \eta} \frac{\partial \eta}{\partial x}\right) \notag \\
    &\qquad\qquad + \left(\frac{\partial \chi_q}{\partial \xi} \frac{\partial \xi}{\partial y} + \frac{\partial \chi_q}{\partial \eta} \frac{\partial \eta}{\partial y}\right) \left(\frac{\partial \chi_r}{\partial \xi} \frac{\partial \xi}{\partial y} + \frac{\partial \chi_r}{\partial \eta} \frac{\partial \eta}{\partial y}\right) \; \det(J) \; d\xi \, d\eta. \notag
 \end{align}
-The last expression is the low point of this calculation.  Indeed, the integrand is \emph{constant} in this case because $\partial \chi_q/\partial\{\xi,\eta\}$ are both constant (i.e.~$\chi_q$ is linear on $\triangle_\ast$), the partial derivatives $\partial\{\xi,\eta\}/\partial\{x,y\}$ are all constant (i.e.~the map to and from the reference triangle is linear), and $\det(J)$ is constant.
+The last expression is the low point of this calculation.  From now on the formulas get simpler because the integrand is \emph{constant}.  Indeed, in this case the derivatives $\partial \chi_q/\partial\{\xi,\eta\}$ are constant because $\chi_q$ is linear on $\triangle_\ast$, and the derivatives $\partial\{\xi,\eta\}/\partial\{x,y\}$ are constant because the map to and from the reference triangle is linear.  Thus also $\det(J)$ is constant.
 
-We need to calculate the four partial derivatives $\partial\{\xi,\eta\}/\partial\{x,y\}$ to simplify the last form of \eqref{elementcontrib}.  These are the entries of the \emph{inverse} of the Jacobian $J$.  But
+We need to calculate these constant derivatives, in terms of node coordinates, so as to compute \texttt{a(k,q,r)}.  First, the derivatives $\partial\{\xi,\eta\}/\partial\{x,y\}$ are the entries of the \emph{inverse} of the Jacobian $J$.  But
 \begin{equation*}
 \begin{bmatrix}
     \frac{\partial \xi}{\partial x} & \frac{\partial \xi}{\partial y} \\
@@ -420,12 +454,12 @@ We need to calculate the four partial derivatives $\partial\{\xi,\eta\}/\partial
     \end{bmatrix}
 = J^{-1}
 = \frac{1}{\det(J)} \begin{bmatrix}
-    \frac{\partial y}{\partial \eta}   & - \frac{\partial y}{\partial \xi} \\
-    - \frac{\partial x}{\partial \eta} & \frac{\partial x}{\partial \xi}
+    \frac{\partial y}{\partial \eta}   & - \frac{\partial x}{\partial \eta} \\
+    - \frac{\partial y}{\partial \xi} & \frac{\partial x}{\partial \xi}
     \end{bmatrix}
 = \frac{1}{\det(J)} \begin{bmatrix}
-    y_2-y_0 & y_0-y_1 \\
-    x_0-x_2 & x_1-x_0
+    y_2-y_0 & x_0-x_2 \\
+    y_0-y_1 & x_1-x_0
     \end{bmatrix}.
 \end{equation*}
 Using notation from \citet{Elmanetal2005}, let
@@ -455,18 +489,15 @@ because the area of the reference triangle $\triangle_\ast$ is $1/2$\,.  But als
 \frac{\partial \chi_0}{\partial \xi} &= -1, & \frac{\partial \chi_1}{\partial \xi} &= 1, & \frac{\partial \chi_2}{\partial \xi} &= 0, \label{chiderivs} \\
 \frac{\partial \chi_0}{\partial \eta} &= -1, & \frac{\partial \chi_1}{\partial \eta} &= 0, & \frac{\partial \chi_2}{\partial \eta} &= 1. \notag
 \end{align}
-Thus we know enough to write a concrete procedure to compute \texttt{a(k,q,r)}, and thus all the entries in $\tilde A$.
-
-FIXME: figure showing parallel partition of elements
+We now know enough to write a concrete procedure to compute \texttt{a(k,q,r)}, and thus all the entries in $\tilde A$.
 
 
-\section{Preallocate a \pMat}
 
-FIXME: show \texttt{poissontools.c} here
-
-\cinputpart{c2testprealloc.c}{Read mesh \pVec s from file.  Get row ownership range.}{I}{//STARTLOAD}{//ENDLOAD}{code:testpreallocpartone}
-
-\cinputpart{c2testprealloc.c}{Set up \pMat $A$ and actually preallocate it.  Fill it with junk entries so the pattern can be visualized.}{II}{//ENDLOAD}{//ENDTEST}{code:testpreallocparttwo}
+%\section{Preallocate a \pMat}
+%FIXME: figure showing parallel partition of elements
+%FIXME: show \texttt{poissontools.c} here
+%\cinputpart{c2testprealloc.c}{Read mesh \pVec s from file.  Get row ownership range.}{I}{//STARTLOAD}{//ENDLOAD}{code:testpreallocpartone}
+%\cinputpart{c2testprealloc.c}{Set up \pMat $A$ and actually preallocate it.  Fill it with junk entries so the pattern can be visualized.}{II}{//ENDLOAD}{//ENDTEST}{code:testpreallocparttwo}
 
 
 \section{Solve the Poisson problem}
