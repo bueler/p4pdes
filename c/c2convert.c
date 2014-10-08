@@ -208,18 +208,15 @@ int main(int argc,char **args) {
 //ENDREADELEMENTS
 
     // DO BINARY WRITE AND CLEAN UP
-    //   FIXME: because of bug in petsc-3.5.2, and because we are writing
-    //   on single rank, we write WITHOUT "_" in prefixes and read WITH "_"
-    //   (see readmesh.c)
     PetscViewer viewer;
     ierr = PetscPrintf(SELF,"writing %s on rank 0 ...\n",outfilename); CHKERRQ(ierr);
     ierr = PetscViewerBinaryOpen(SELF,outfilename,FILE_MODE_WRITE,
                &viewer); CHKERRQ(ierr);
-    VecSetOptionsPrefix(vE,"E");
+    VecSetOptionsPrefix(vE,"E_");
     ierr = VecView(vE,viewer); CHKERRQ(ierr);
-    VecSetOptionsPrefix(vx,"x");
+    VecSetOptionsPrefix(vx,"x_");
     ierr = VecView(vx,viewer); CHKERRQ(ierr);
-    VecSetOptionsPrefix(vy,"y");
+    VecSetOptionsPrefix(vy,"y_");
     ierr = VecView(vy,viewer); CHKERRQ(ierr);
     VecDestroy(&vE);  VecDestroy(&vx);  VecDestroy(&vy);
     PetscViewerDestroy(&viewer);
