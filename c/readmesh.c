@@ -12,9 +12,7 @@ PetscErrorCode getmeshfile(MPI_Comm comm, const char suffix[],
   ierr = PetscOptionsString("-f", "filename root with PETSc binary, for reading", "", "",
                             filename, PETSC_MAX_PATH_LEN, &fset); CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
-  if (!fset) {
-    SETERRQ(comm,1,"option  -f FILENAME  required");
-  }
+  if (!fset) {  SETERRQ(comm,1,"option  -f FILENAME  required");  }
   strcat(filename,suffix);
   ierr = PetscPrintf(comm,"  opening mesh file %s ...\n",filename); CHKERRQ(ierr);
   ierr = PetscViewerBinaryOpen(comm,filename,FILE_MODE_READ,
@@ -58,16 +56,13 @@ PetscErrorCode getmeshsizes(MPI_Comm comm, Vec E, Vec x, Vec y,
   if (N) {
     ierr = VecGetSize(x,N); CHKERRQ(ierr);
     ierr = VecGetSize(y,&Ny); CHKERRQ(ierr);
-    if (Ny != *N) {
-      SETERRQ(comm,3,"x,y-coordinate arrays invalid: must have equal length"); } 
+    if (Ny != *N) {  SETERRQ(comm,3,"x,y arrays invalid: must have equal length"); } 
   }
   if (K) {
     ierr = VecGetBlockSize(E,&bs); CHKERRQ(ierr);
-    if (bs != 15) {
-      SETERRQ(comm,3,"element node index array E has invalid block size: must be 15"); }
+    if (bs != 15) {  SETERRQ(comm,3,"element array E has invalid block size (!= 15)"); }
     ierr = VecGetSize(E,K); CHKERRQ(ierr);
-    if (*K % 15 != 0) {
-      SETERRQ(comm,3,"element node index array E invalid: must have 15 K entries"); }
+    if (*K % 15 != 0) {  SETERRQ(comm,3,"element array E invalid (!= 15 K entries)"); }
     *K /= 15;
   }
   return 0;
@@ -85,7 +80,7 @@ PetscErrorCode elementVecViewSTDOUT(MPI_Comm comm, Vec E) {
   ierr = PetscSynchronizedPrintf(comm, "Process [%d]\n",rank); CHKERRQ(ierr);
   ierr = VecGetBlockSize(E,&bsread); CHKERRQ(ierr);
   if (bsread != bs) {
-    SETERRQ1(comm,3,"element node index array E has invalid block size: must be %d",bs); }
+    SETERRQ1(comm,3,"element array E has invalid block size (!= %d)",bs); }
   ierr = VecGetOwnershipRange(E,&Kstart,&Kend); CHKERRQ(ierr);
   ierr = VecGetArray(E,&ae); CHKERRQ(ierr);
   for (k = Kstart; k < Kend; k += bs) { // loop over all owned elements

@@ -393,6 +393,7 @@ Through this last formula and the mapping \eqref{trianglemap} from the reference
 where we naturally define $(\xi_0,\eta_0)=(0,0)$, $(\xi_1,\eta_1)=(1,0)$, and $(\xi_2,\eta_2)=(0,1)$.
 
 The Jacobian\sidenote{By definition, the \emph{Jacobian} of a smooth map $F$ is its linearization, so that if $\by=F(\bx)$ and if $\by+\Delta\by = F(\bx+\Delta\bx)$ then $\Delta \by = J(\bx) \Delta\bx + O(|\Delta\bx|^2)$.} of map \eqref{trianglemap} is
+% CAUTION: Elman (1.37) uses "Jacobian" for the transpose of this, the true Jacobian (e.g. in Newton later)
 \begin{equation}
 J = \begin{bmatrix}
     \frac{\partial x}{\partial \xi} & \frac{\partial x}{\partial \eta} \\[0.2em]
@@ -404,38 +405,58 @@ J = \begin{bmatrix}
     y_1-y_0 & y_2-y_0
     \end{bmatrix}.  \label{trianglejacobian}
 \end{equation}
-By the chain rule,\sidenote{{\color{red} Caution} for readers of \citet{Elmanetal2005}: The ``Jacobian'' in their formula (1.37) is the transpose of the Jacobian here.} the derivatives of a composition $F(\xi,\eta) \equiv f(x(\xi,\eta),y(\xi,\eta))$ satisfy
+On the other hand, by the chain rule, we can make the silly calculation
 \begin{equation*}
 \begin{bmatrix}
-\frac{\partial F}{\partial \xi} \\[0.4em]
-\frac{\partial F}{\partial \eta}
+    1 & 0 \\[0.2em]
+    0 & 1
+\end{bmatrix}
+=\begin{bmatrix}
+    \frac{\partial x}{\partial x} & \frac{\partial x}{\partial y} \\[0.2em]
+    \frac{\partial y}{\partial x} & \frac{\partial y}{\partial y}
 \end{bmatrix}
 =
-J^\top
 \begin{bmatrix}
-\frac{\partial f}{\partial x} \\[0.4em]
-\frac{\partial f}{\partial y}
-\end{bmatrix}.
+    \frac{\partial x}{\partial \xi} & \frac{\partial x}{\partial \eta} \\[0.2em]
+    \frac{\partial y}{\partial \xi} & \frac{\partial y}{\partial \eta}
+\end{bmatrix}
+\begin{bmatrix}
+    \frac{\partial \xi}{\partial x} & \frac{\partial \xi}{\partial y} \\[0.2em]
+    \frac{\partial \eta}{\partial x} & \frac{\partial \eta}{\partial y}
+\end{bmatrix},
 \end{equation*}
-Applied to $F(\xi,\eta)=x(\xi,\eta)$ and $F(\xi,\eta)=y(\xi,\eta)$, in turn, to get the columns of a matrix, and inverting the $2\times 2$ matrix $J^\top$, we get these facts which will be useful below:
+which is to say ``$I=J\; J^{-1}$.''  So, because we can invert the $2\times 2$ matrix $J$ by hand (e.g.~Cramer's rule),\sidenote{This is useful below because we need computable formulas for ``$\partial \xi/\partial x$'' and similar terms.}
 \begin{equation*}
 \begin{bmatrix}
-    \frac{\partial \xi}{\partial x} & \frac{\partial \eta}{\partial x} \\[0.2em]
-    \frac{\partial \xi}{\partial y} & \frac{\partial \eta}{\partial y}
+    \frac{\partial \xi}{\partial x} & \frac{\partial \xi}{\partial y} \\[0.2em]
+    \frac{\partial \eta}{\partial x} & \frac{\partial \eta}{\partial y}
 \end{bmatrix}
-=
-(J^\top)^{-1}
+= J^{-1}
+= \frac{1}{\det(J)}
 \begin{bmatrix}
-    \frac{\partial x}{\partial \xi} & \frac{\partial y}{\partial \xi} \\[0.2em]
-    \frac{\partial x}{\partial \eta} & \frac{\partial y}{\partial \eta}
+    \frac{\partial y}{\partial \eta} & -\frac{\partial x}{\partial \eta} \\[0.2em]
+    -\frac{\partial y}{\partial \xi} & \frac{\partial x}{\partial \xi}
 \end{bmatrix}
-=
-FIXME
+= \frac{1}{\det(J)}
+\begin{bmatrix}
+    y_2-y_0 & x_0-x_2 \\
+    y_0-y_1 & x_1-x_0
+\end{bmatrix},
 \end{equation*}
-and
-\begin{equation*}
-(J^\top)^{-1} = FIXME
-\end{equation*}
+and also $\det(J) = (x_1-x_0)(y_2-y_0)-(y_1-y_0)(x_2-x_0)$.  It will be helpful to have shorthand for this, so based on these entries of $J^{-1}$, let $y_{20}=y_2-y_0$, $x_{02}=x_0-x_2$, $y_{01}=y_0-y_1$ and $x_{10}=x_1-x_0$ be the four differences we actually compute.  In terms of these differences,
+\begin{equation}
+\begin{bmatrix}
+    \frac{\partial \xi}{\partial x} & \frac{\partial \xi}{\partial y} \\[0.2em]
+    \frac{\partial \eta}{\partial x} & \frac{\partial \eta}{\partial y}
+\end{bmatrix}
+= \frac{1}{\det(J)}
+\begin{bmatrix}
+    y_{20} & x_{02} \\
+    y_{01} & x_{10}
+\end{bmatrix}
+\quad \text{ and } \quad
+\det(J) = x_{10} y_{20} - y_{01} x_{02}. \label{dxietadxy}
+\end{equation}
 
 In these terms, and recalling both the change-of-variables formula for integrals and the chain rule,
 \begin{align}
@@ -444,54 +465,30 @@ In these terms, and recalling both the change-of-variables formula for integrals
    &= \int_{\triangle_\ast} \left(\frac{\partial \chi_q}{\partial \xi} \frac{\partial \xi}{\partial x} + \frac{\partial \chi_q}{\partial \eta} \frac{\partial \eta}{\partial x}\right) \left(\frac{\partial \chi_r}{\partial \xi} \frac{\partial \xi}{\partial x} + \frac{\partial \chi_r}{\partial \eta} \frac{\partial \eta}{\partial x}\right) \notag \\
    &\qquad\qquad + \left(\frac{\partial \chi_q}{\partial \xi} \frac{\partial \xi}{\partial y} + \frac{\partial \chi_q}{\partial \eta} \frac{\partial \eta}{\partial y}\right) \left(\frac{\partial \chi_r}{\partial \xi} \frac{\partial \xi}{\partial y} + \frac{\partial \chi_r}{\partial \eta} \frac{\partial \eta}{\partial y}\right) \; \det(J) \; d\xi \, d\eta. \notag
 \end{align}
-The last expression is the low point of this calculation.  From now on the formulas get simpler because the integrand is \emph{constant}.  Indeed, in this case the derivatives $\partial \chi_q/\partial\{\xi,\eta\}$ are constant because $\chi_q$ is linear on $\triangle_\ast$, and the derivatives $\partial\{\xi,\eta\}/\partial\{x,y\}$ are constant because the map to and from the reference triangle is linear.  Thus also $\det(J)$ is constant.
+The last expression is the low point of this calculation.  From now on the formulas simplify because the integrand is \emph{constant}.  Indeed, in this case the derivatives $\partial \chi_q/\partial\{\xi,\eta\}$ and $\partial\{\xi,\eta\}/\partial\{x,y\}$ are all constant because the the functions in question are linear; thus also $\det(J)$ is constant.
 
-We need to calculate these constant derivatives, in terms of node coordinates, so as to compute \texttt{a(k,q,r)}.  First, the derivatives $\partial\{\xi,\eta\}/\partial\{x,y\}$ are the entries of the \emph{inverse} of the Jacobian $J$.  But
-\begin{equation*}
-\begin{bmatrix}
-    \frac{\partial \xi}{\partial x} & \frac{\partial \xi}{\partial y} \\
-    \frac{\partial \eta}{\partial x} & \frac{\partial \eta}{\partial y}
-    \end{bmatrix}
-= J^{-1}
-= \frac{1}{\det(J)} \begin{bmatrix}
-    \frac{\partial y}{\partial \eta}   & - \frac{\partial x}{\partial \eta} \\
-    - \frac{\partial y}{\partial \xi} & \frac{\partial x}{\partial \xi}
-    \end{bmatrix}
-= \frac{1}{\det(J)} \begin{bmatrix}
-    y_2-y_0 & x_0-x_2 \\
-    y_0-y_1 & x_1-x_0
-    \end{bmatrix}.
-\end{equation*}
-Using notation from \citet{Elmanetal2005}, let
-\begin{equation*}
-b_2 = y_2-y_0, \quad b_3 = y_0-y_1, \quad c_2 = x_0-x_2, \quad c_3 = x_1-x_0.
-\end{equation*}
-Then
-\begin{equation}
-\begin{bmatrix}
-    \frac{\partial \xi}{\partial x} & \frac{\partial \xi}{\partial y} \\
-    \frac{\partial \eta}{\partial x} & \frac{\partial \eta}{\partial y}
-    \end{bmatrix}
-= \frac{1}{\det(J)} \begin{bmatrix}
-    b_2 & b_3 \\
-    c_2 & c_3
-    \end{bmatrix}
-\quad \text{ and } \quad
-\det(J) = b_2 c_3 - b_3 c_2. \label{jacobianFINAL}
-\end{equation}
-Returning to \eqref{elementcontrib}, by \eqref{jacobianFINAL} our element-wise contribution to $\tilde a_{ij}$ simplifies to
+By \eqref{dxietadxy} and \eqref{elementcontrib}, and because the area of the reference triangle $\triangle_\ast$ is $1/2$\,, it follows that our element-wise contribution to $\tilde a_{ij}$ simplifies to
 \begin{align}
-\text{\texttt{a(k,q,r)}} = \frac{1}{2\; \det(J)} &\bigg[\left(\frac{\partial \chi_q}{\partial \xi} b_2 + \frac{\partial \chi_q}{\partial \eta} c_2\right) \left(\frac{\partial \chi_r}{\partial \xi} b_2 + \frac{\partial \chi_r}{\partial \eta} c_2\right) \label{elementcontribFINAL} \\
-&\quad + \left(\frac{\partial \chi_q}{\partial \xi} b_3 + \frac{\partial \chi_q}{\partial \eta} c_3\right) \left(\frac{\partial \chi_r}{\partial \xi} b_3 + \frac{\partial \chi_r}{\partial \eta} c_3\right)\bigg] \notag
+\text{\texttt{a(k,q,r)}} = \frac{1}{2\; \det(J)} &\bigg[\left(\frac{\partial \chi_q}{\partial \xi} y_{20} + \frac{\partial \chi_q}{\partial \eta} y_{01}\right) \left(\frac{\partial \chi_r}{\partial \xi} y_{20} + \frac{\partial \chi_r}{\partial \eta} y_{01}\right) \label{elementcontribFINAL} \\
+&\quad + \left(\frac{\partial \chi_q}{\partial \xi} x_{02} + \frac{\partial \chi_q}{\partial \eta} x_{10}\right) \left(\frac{\partial \chi_r}{\partial \xi} x_{02} + \frac{\partial \chi_r}{\partial \eta} x_{10}\right)\bigg]. \notag
 \end{align}
-because the area of the reference triangle $\triangle_\ast$ is $1/2$\,.  But also note
+But also note
 \begin{align}
 \frac{\partial \chi_0}{\partial \xi} &= -1, & \frac{\partial \chi_1}{\partial \xi} &= 1, & \frac{\partial \chi_2}{\partial \xi} &= 0, \label{chiderivs} \\
 \frac{\partial \chi_0}{\partial \eta} &= -1, & \frac{\partial \chi_1}{\partial \eta} &= 0, & \frac{\partial \chi_2}{\partial \eta} &= 1. \notag
 \end{align}
 We now know enough to write a concrete procedure to compute \texttt{a(k,q,r)}, and thus all the entries in $\tilde A$.
 
-
+But to write a code we also need to address the right-hand side.  In the (FIXME: homogeneous Neumann case only!) we need to compute
+    $$\text{\texttt{b(k,q)}} = \int_{\triangle_k} f \phi_q,$$
+where $\phi_{i(q)} = \phi_q$ in local node indices, so that
+    $$\tilde b_i = \sum_{k} \;\text{\texttt{b(k,q)}}.$$
+We do this by changing variables to the reference element, and quadrature (FIXME: clarify).
+\begin{align*}
+\text{\texttt{b(k,q)}} &= \int_{\triangle_\ast} f\, \chi_q \; \det(J) \; d\xi \, d\eta \\
+  &\approx \frac{\det(J)}{6} \left(\omega_q(0.5,0) + \omega_q(0.5,0.5) + \omega_q(0,0.5)\right)
+\end{align*}
+where $\omega_q(\xi,\eta) = f(x(\xi,\eta),y(\xi,\eta)) \chi_q(\xi,\eta)$.
 
 %\section{Preallocate a \pMat}
 %FIXME: figure showing parallel partition of elements

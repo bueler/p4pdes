@@ -6,25 +6,27 @@ with a mix of Dirichlet and Neumann boundary conditions,\n\
   u          = g      on bdry_D Omega,\n\
   grad u . n = gamma  on bdry_N Omega,\n\
 using an unstructured mesh FEM method.\n\
-For a one-process, coarse grid example do:\n\
-     triangle -pqa1.0 bump   # generates bump.1.{node,ele,poly}\n\
-     c2convert -f bump.1     # reads bump.1.{node,ele,poly} and generates bump.1.petsc\n\
-     c2poisson -f bump.1     # reads bump.1.petsc and solves the equation\n\
+This version uses a manufactured solution. (FIXME: make optional)\n\
+For a one-process, very coarse grid example do:\n\
+     triangle -pqa0.15 square  # generates square.1.{node,ele,poly}\n\
+     c2convert -f square.1     # reads square.1.{node,ele,poly}; generates square.1.petsc\n\
+     c2poisson -f square.1     # reads square.1.petsc and solves the equation\n\
 To see the matrix graphically:\n\
-     c2poisson -f bump.1 -a_mat_view draw -draw_pause 5\n\n";
+     c2poisson -f square.1 -a_mat_view draw -draw_pause 5\n\n";
 
 #include <petscksp.h>
 #include "convenience.h"
 #include "readmesh.h"
-#include "poissontools.h"
 
 PetscScalar chi(PetscInt q, PetscScalar xi, PetscScalar eta) {
   if (q==0) {
     return 1.0 - xi - eta;
   } else if (q==1) {
     return xi;
-  } else {
+  } else if (q==2) {
     return eta;
+  } else {
+    SETERRQ(comm,1,"q invalid: must be 0,1,2");
   }
 }
 
@@ -39,103 +41,81 @@ PetscScalar fsource(PetscScalar x, PetscScalar y) {
 int main(int argc,char **args) {
 
   PetscInitialize(&argc,&args,(char*)0,help);
-  const MPI_Comm  COMM = PETSC_COMM_WORLD;
+  const MPI_Comm  WORLD = PETSC_COMM_WORLD;
   PetscErrorCode  ierr;
 
   // READ MESH FROM FILE
-  Vec      x, y,  // mesh: coords of node
-           BT,    // mesh: bdry type,
-           P,     //       element index,
-           Q;     //       boundary segment index
+  Vec      E,     // element data structure
+           x, y;  // coords of node
   PetscInt N,     // number of nodes
-           K,     // number of elements
-           M;     // number of boundary segments
+           K;     // number of elements
   char     fname[PETSC_MAX_PATH_LEN];
   PetscViewer viewer;
-  ierr = getmeshfile(COMM, fname, &viewer); CHKERRQ(ierr);
-  ierr = readmeshseqall(COMM, viewer,
-                        &x, &y, &BT, &P, &Q); CHKERRQ(ierr);
+  ierr = getmeshfile(WORLD, ".petsc", fname, &viewer); CHKERRQ(ierr);
+  ierr = readmesh(WORLD, viewer, &E, &x, &y); CHKERRQ(ierr);
   PetscViewerDestroy(&viewer);
-  ierr = getmeshsizes(COMM,x,P,Q,&N,&K,&M); CHKERRQ(ierr);
+  ierr = getmeshsizes(WORLD,E,x,y,&N,&K); CHKERRQ(ierr);
 
-  // RELOAD x TO GET OWNERSHIP RANGES, AND ALLOCATE RHS b
-  Vec xmpi, b;
-  PetscInt Istart,Iend;
-  ierr = getmeshfile(COMM, fname, &viewer); CHKERRQ(ierr);
-  ierr = PetscPrintf(COMM,"  re-reading mesh Vec x to get ownership ranges ...\n"); CHKERRQ(ierr);
-  ierr = createload(COMM, viewer, &xmpi); CHKERRQ(ierr);
-  PetscViewerDestroy(&viewer);
-  ierr = VecGetOwnershipRange(xmpi,&Istart,&Iend); CHKERRQ(ierr);
-  ierr = VecDuplicate(xmpi,&b); CHKERRQ(ierr);
-  ierr = VecSet(b,0.0); CHKERRQ(ierr);
-  ierr = VecDestroy(&xmpi); CHKERRQ(ierr);
+  // GET NODE AND ELEMENT OWNERSHIP RANGES
+  PetscInt Istart,Iend,Kstart,Kend;
+  ierr = VecGetOwnershipRange(x,&Istart,&Iend); CHKERRQ(ierr);
+  ierr = VecGetOwnershipRange(E,&Kstart,&Kend); CHKERRQ(ierr);
 
-  // CREATE AND PREALLOCATE MAT
+  // CREATE MAT AND RHS b
   Mat A;
-  ierr = MatCreate(COMM,&A); CHKERRQ(ierr);
+  Vec b;
+  ierr = MatCreate(WORLD,&A); CHKERRQ(ierr);
   ierr = MatSetType(A,MATMPIAIJ); CHKERRQ(ierr);
   ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,N,N); CHKERRQ(ierr);
   ierr = MatSetOptionsPrefix(A,"a_"); CHKERRQ(ierr);
-  ierr = PetscPrintf(COMM,"  preallocating stiffness matrix A ...\n"); CHKERRQ(ierr);
-  ierr = prealloc(COMM, x, y, BT, P, Q, Istart, Iend, &A); CHKERRQ(ierr);
+  // FIXME:  instead of this line we should preallocate correctly
+  ierr = MatSetOption(A,MAT_NEW_NONZERO_LOCATION_ERR,PETSC_FALSE); CHKERRQ(ierr);
+  ierr = VecDuplicate(x,&b); CHKERRQ(ierr);
+  ierr = VecSet(b,0.0); CHKERRQ(ierr);
 
-  ierr = PetscPrintf(COMM,"  assembling initial stiffness matrix A0 ...\n"); CHKERRQ(ierr);
-  
   // ASSEMBLE INITIAL STIFFNESS (IGNORING BOUNDARY VALUES)
-  PetscScalar dxi[3]  = {-1.0, 1.0, 0.0}, // grad of basis functions on ref element
-              deta[3] = {-1.0, 0.0, 1.0},
+  ierr = PetscPrintf(WORLD,"  assembling initial stiffness matrix A0 ...\n"); CHKERRQ(ierr);
+  PetscScalar dxi[3]  = {-1.0, 1.0, 0.0},   // grad of basis functions chi0, chi1, chi2
+              deta[3] = {-1.0, 0.0, 1.0},   //     on ref element
               quadxi[3]  = {0.5, 0.5, 0.0}, // quadrature points are midpoints of
-              quadeta[3] = {0.0, 0.5, 0.5}; //   sides of ref element
+              quadeta[3] = {0.0, 0.5, 0.5}; //     sides of ref element
   PetscInt    k, q, r, i, ii[3], jj[3];
-  PetscBool   ownk;
-  PetscScalar *ax, *ay, *ap, *ab;
-  PetscScalar vv[3], b2, b3, c2, c3, detJ;
+  PetscScalar *ae;
+  elementtype *et;
+  PetscScalar vv[3], y20, x02, y01, x10, detJ;
   PetscScalar bval, xquad, yquad;
-  ierr = VecGetArray(x,&ax); CHKERRQ(ierr);
-  ierr = VecGetArray(y,&ay); CHKERRQ(ierr);
-  ierr = VecGetArray(P,&ap); CHKERRQ(ierr);
-  ierr = VecGetArray(b,&ab); CHKERRQ(ierr);
-  for (k = 0; k < K; k++) {          // loop over ALL elements
-    // get vertex indices for current element
-    ownk = PETSC_FALSE;
-    for (q = 0; q < 3; q++) {        // loop over vertices of current element
-      ii[q] = (int)ap[3*k+q];        //   global index of q node
-      if ((ii[q] >= Istart) && (ii[q] < Iend))  ownk = PETSC_TRUE;
-    }
-    if (!ownk) continue;             // skip elements where we DON'T own any nodes
-    // compute element dimension constants, and area; see Elman (1.43)
-    b2 = ay[ii[2]] - ay[ii[0]];      // in Elman: = y3 - y1
-    b3 = ay[ii[0]] - ay[ii[1]];      //           = y1 - y2
-    c2 = ax[ii[0]] - ax[ii[2]];      //           = x1 - x3
-    c3 = ax[ii[1]] - ax[ii[0]];      //           = x2 - x1
-    detJ = c3 * b2 - c2 * b3;        // note area = fabs(detJ)/2.0
+  ierr = VecGetArray(E,&ae); CHKERRQ(ierr);
+  for (k = Kstart; k < Kend; k++) {        // loop over all owned elements
+    et = (elementtype*)(&(ae[k-Kstart]));  // points to current element
+    // compute element geometry constants (compare Elman (1.43)
+    y20 = et->y[2] - et->y[0];
+    x02 = et->x[0] - et->x[2];
+    y01 = et->y[0] - et->y[1];
+    x10 = et->x[1] - et->x[0];
+    detJ = x10 * y20 - y01 * x02;          // note area = fabs(detJ)/2.0
     // loop over vertices of current element
     for (q = 0; q < 3; q++) {
-      // compute element stiffness contribution
-      i = ii[q];                     // row index
-      if ((i < Istart) || (i >= Iend))  continue; // skip row if I don't own it
-      for (r = 0; r < 3; r++) {      // loop over other vertices
-        jj[r] = (int)ap[3*k+r];      //   global index of r node
-        vv[r] =  (dxi[q] * b2 + deta[q] * b3) * (dxi[r] * b2 + deta[r] * b3);
-        vv[r] += (dxi[q] * c2 + deta[q] * c3) * (dxi[r] * c2 + deta[r] * c3);
+      // compute element stiffness contributions
+      i = (int)et->j[q];                   // global row index
+      for (r = 0; r < 3; r++) {            // loop over other vertices
+        jj[r] = (int)et->j[r];             // global column index
+        vv[r] =  (dxi[q] * y20 + deta[q] * y01) * (dxi[r] * y20 + deta[r] * y01);
+        vv[r] += (dxi[q] * x02 + deta[q] * x10) * (dxi[r] * x02 + deta[r] * x10);
         vv[r] /= 2.0 * detJ;
       }
       ierr = MatSetValues(A,1,&i,3,jj,vv,ADD_VALUES); CHKERRQ(ierr);
-      // compute element RHS contribution
+      // compute element RHS contribution FIXME in homogeneous Neumann case
       bval = 0.0;
       for (r = 0; r < 3; r++) {      // loop over quadrature points
-        xquad = ax[i] + c3 * quadxi[r] - c2 * quadeta[r]; // = x1 + (x2-x1) xi + (x3 - x1) eta
-        yquad = ay[i] - b3 * quadxi[r] + b2 * quadeta[r]; // = y1 + (y2-y1) xi + (y3 - y1) eta
+        xquad = et->x[0] + x10 * quadxi[r] - x02 * quadeta[r]; // = x0 + (x1-x0) xi + (x2 - x0) eta
+        yquad = et->x[0] - y01 * quadxi[r] + y20 * quadeta[r]; // = y0 + (y1-y0) xi + (y2 - y0) eta
         bval += fsource(xquad,yquad) * chi(q,quadxi[r],quadeta[r]);
       }
       bval *= detJ / 6.0;
       ierr = VecSetValues(b,1,&i,&bval,ADD_VALUES); CHKERRQ(ierr);
     }
   }
-  ierr = VecRestoreArray(x,&ax); CHKERRQ(ierr);
-  ierr = VecRestoreArray(y,&ay); CHKERRQ(ierr);
-  ierr = VecRestoreArray(P,&ap); CHKERRQ(ierr);
-  ierr = VecRestoreArray(b,&ab); CHKERRQ(ierr);
+  ierr = VecRestoreArray(E,&ae); CHKERRQ(ierr);
   // ACTUALLY ASSEMBLE
   matassembly(A)
   vecassembly(b)
@@ -149,7 +129,7 @@ int main(int argc,char **args) {
   ierr = MatMult(A,uone,btest); CHKERRQ(ierr);             // btest = A * uone
   ierr = VecNorm(uone,NORM_2,&normone); CHKERRQ(ierr);
   ierr = VecNorm(btest,NORM_2,&normAone); CHKERRQ(ierr);
-  ierr = PetscPrintf(COMM,"  check I:  |A0 * 1|_2 / |1|_2 = %e   (should be O(eps))\n",
+  ierr = PetscPrintf(WORLD,"  check I:  |A0 * 1|_2 / |1|_2 = %e   (should be O(eps))\n",
                      normAone/normone); CHKERRQ(ierr);
   ierr = VecDestroy(&uone); CHKERRQ(ierr);
   ierr = VecDestroy(&btest); CHKERRQ(ierr);
@@ -173,9 +153,9 @@ int main(int argc,char **args) {
   KSP          ksp;
   MatNullSpace nullsp;
   ierr = VecDuplicate(b, &u); CHKERRQ(ierr);
-  ierr = KSPCreate(COMM, &ksp); CHKERRQ(ierr);
+  ierr = KSPCreate(WORLD, &ksp); CHKERRQ(ierr);
   // constants are in null space:
-  ierr = MatNullSpaceCreate(COMM, PETSC_TRUE, 0, NULL, &nullsp); CHKERRQ(ierr);
+  ierr = MatNullSpaceCreate(WORLD, PETSC_TRUE, 0, NULL, &nullsp); CHKERRQ(ierr);
   ierr = KSPSetNullSpace(ksp, nullsp); CHKERRQ(ierr);
   ierr = KSPSetOperators(ksp, A, A); CHKERRQ(ierr);
   ierr = KSPSetFromOptions(ksp); CHKERRQ(ierr);
@@ -185,7 +165,7 @@ int main(int argc,char **args) {
   ierr = VecNorm(uexact,NORM_2,&normuexact); CHKERRQ(ierr);
   ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);  // u := -uexact + u
   ierr = VecNorm(u,NORM_2,&normerror); CHKERRQ(ierr);
-  ierr = PetscPrintf(COMM,"  check II: |u - uexact|_2 / |uexact|_2 = %e  (should be O(h^2))\n",
+  ierr = PetscPrintf(WORLD,"  check II: |u - uexact|_2 / |uexact|_2 = %e  (should be O(h^2))\n",
                      normerror/normuexact); CHKERRQ(ierr);
   ierr = MatNullSpaceDestroy(&nullsp); CHKERRQ(ierr);
   ierr = KSPDestroy(&ksp); CHKERRQ(ierr);
