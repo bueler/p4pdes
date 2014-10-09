@@ -19,11 +19,13 @@ book.aux: book.tex $(texinputs) $(hinputs) $(cstrip) $(tikzinputs)
 	bibtex book.aux
 
 # The purpose of the following nonsense is to put only the "meat" of codes
-# into the book.  We remove ierr stuff.
+# into the book.  We remove ierr stuff and lines with //STRIP.
 cstrip/%.c: ../c/%.c
-	sed -e 's/ierr = //' $< > $@.tmp
-	sed -e 's/ CHKERRQ(ierr);//' $@.tmp > $@
 	rm -rf $@.tmp
+	sed -e 's/ierr = //' $< > $@.tmp
+	sed -i 's/ CHKERRQ(ierr);//' $@.tmp
+	sed -i '/\/\/STRIP/d' $@.tmp
+	mv $@.tmp $@
 
 samplepoly.1.tikz: samplepoly.poly
 	triangle -pqa4.0 samplepoly
