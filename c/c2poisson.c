@@ -17,27 +17,14 @@ To see the matrix graphically:\n\
 #include <petscksp.h>
 #include "convenience.h"
 #include "readmesh.h"
+#include "poissontools.h"
 
-PetscErrorCode getchi(MPI_Comm comm, PetscInt q, PetscScalar xi, PetscScalar eta,
-                      PetscScalar *chi) {
-  if (q==0) {
-    *chi = 1.0 - xi - eta;
-  } else if (q==1) {
-    *chi = xi;
-  } else if (q==2) {
-    *chi = eta;
-  } else {
-    SETERRQ(comm,1,"q invalid: must be 0,1,2");
-  }
-  return 0;
-}
-
-PetscScalar exactsolution(PetscScalar x, PetscScalar y) {
+PetscScalar neuexactsoln(PetscScalar x, PetscScalar y) {
   return cos(2.0*PETSC_PI*x) * cos(2.0*PETSC_PI*y);
 }
 
-PetscScalar fsource(PetscScalar x, PetscScalar y) {
-  return 8.0 * PETSC_PI * PETSC_PI * exactsolution(x,y);
+PetscScalar neufsource(PetscScalar x, PetscScalar y) {
+  return 8.0 * PETSC_PI * PETSC_PI * neuexactsoln(x,y);
 }
 
 int main(int argc,char **args) {
@@ -80,52 +67,8 @@ int main(int argc,char **args) {
   ierr = VecSet(b,0.0); CHKERRQ(ierr);
 
   // ASSEMBLE INITIAL STIFFNESS (IGNORING BOUNDARY VALUES)
-  ierr = PetscPrintf(WORLD,"  assembling initial stiffness matrix A0 ...\n"); CHKERRQ(ierr);
-  PetscScalar dxi[3]  = {-1.0, 1.0, 0.0},   // grad of basis functions chi0, chi1, chi2
-              deta[3] = {-1.0, 0.0, 1.0},   //     on ref element
-              quadxi[3]  = {0.5, 0.5, 0.0}, // quadrature points are midpoints of
-              quadeta[3] = {0.0, 0.5, 0.5}; //     sides of ref element
-  PetscInt    k, q, r, i, jj[3];
-  PetscScalar *ae;
-  elementtype *et;
-  PetscScalar vv[3], y20, x02, y01, x10, detJ,
-              bval, xquad, yquad, chiq;
-  ierr = VecGetArray(E,&ae); CHKERRQ(ierr);
-  for (k = Kstart; k < Kend; k += bs) {    // loop through owned elements
-    et = (elementtype*)(&(ae[k-Kstart]));  // points to current element
-    // compute element geometry constants (compare Elman (1.43)
-    y20 = et->y[2] - et->y[0];
-    x02 = et->x[0] - et->x[2];
-    y01 = et->y[0] - et->y[1];
-    x10 = et->x[1] - et->x[0];
-    detJ = x10 * y20 - y01 * x02;          // note area = fabs(detJ)/2.0
-    // loop over vertices of current element
-    for (q = 0; q < 3; q++) {
-      // compute element stiffness contributions
-      i = (int)et->j[q];                   // global row index
-      for (r = 0; r < 3; r++) {            // loop over other vertices
-        jj[r] = (int)et->j[r];             // global column index
-        vv[r] =  (dxi[q] * y20 + deta[q] * y01) * (dxi[r] * y20 + deta[r] * y01);
-        vv[r] += (dxi[q] * x02 + deta[q] * x10) * (dxi[r] * x02 + deta[r] * x10);
-        vv[r] /= 2.0 * detJ;
-      }
-      ierr = MatSetValues(A,1,&i,3,jj,vv,ADD_VALUES); CHKERRQ(ierr);
-      // compute element RHS contribution FIXME in homogeneous Neumann case
-      bval = 0.0;
-      for (r = 0; r < 3; r++) {      // loop over quadrature points
-        xquad = et->x[0] + x10 * quadxi[r] - x02 * quadeta[r]; // = x0 + (x1-x0) xi + (x2-x0) eta
-        yquad = et->x[0] - y01 * quadxi[r] + y20 * quadeta[r]; // = y0 + (y1-y0) xi + (y2-y0) eta
-        ierr = getchi(WORLD,q,quadxi[r],quadeta[r],&chiq); CHKERRQ(ierr);
-        bval += fsource(xquad,yquad) * chiq;
-      }
-      bval *= detJ / 6.0;
-      ierr = VecSetValues(b,1,&i,&bval,ADD_VALUES); CHKERRQ(ierr);
-    }
-  }
-  ierr = VecRestoreArray(E,&ae); CHKERRQ(ierr);
-  // ACTUALLY ASSEMBLE
-  matassembly(A)
-  vecassembly(b)
+  ierr = PetscPrintf(WORLD,"  assembling initial stiffness matrix A ...\n"); CHKERRQ(ierr);
+  ierr = initassemble(WORLD,E,&neufsource,NULL,bs,Kstart,Kend,A,b); CHKERRQ(ierr);
 
   // MINIMAL CHECK IS THAT U=1 IS IN KERNEL
   Vec uone, btest;
@@ -145,11 +88,12 @@ int main(int argc,char **args) {
   // FIRST EVALUATE EXACT SOLUTION AT NODES
   Vec         uexact;
   PetscScalar uval, *ax, *ay;
+  PetscInt    i;
   ierr = VecDuplicate(b,&uexact); CHKERRQ(ierr);
   ierr = VecGetArray(x,&ax); CHKERRQ(ierr);
   ierr = VecGetArray(y,&ay); CHKERRQ(ierr);
   for (i = Istart; i < Iend; i++) {
-    uval = exactsolution(ax[i-Istart],ay[i-Istart]);
+    uval = neuexactsoln(ax[i-Istart],ay[i-Istart]);
     ierr = VecSetValues(uexact,1,&i,&uval,INSERT_VALUES); CHKERRQ(ierr);
   }
   ierr = VecRestoreArray(x,&ax); CHKERRQ(ierr);
