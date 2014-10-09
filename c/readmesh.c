@@ -10,13 +10,12 @@ PetscErrorCode getmeshfile(MPI_Comm comm, const char suffix[],
   PetscBool      fset;
   ierr = PetscOptionsBegin(comm, "", "options for readmesh", ""); CHKERRQ(ierr);
   ierr = PetscOptionsString("-f", "filename root with PETSc binary, for reading", "", "",
-                            filename, PETSC_MAX_PATH_LEN, &fset); CHKERRQ(ierr);
+                      filename, PETSC_MAX_PATH_LEN, &fset); CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
   if (!fset) {  SETERRQ(comm,1,"option  -f FILENAME  required");  }
   strcat(filename,suffix);
   ierr = PetscPrintf(comm,"  opening mesh file %s ...\n",filename); CHKERRQ(ierr);
-  ierr = PetscViewerBinaryOpen(comm,filename,FILE_MODE_READ,
-             viewer); CHKERRQ(ierr);
+  ierr = PetscViewerBinaryOpen(comm,filename,FILE_MODE_READ,viewer); CHKERRQ(ierr);
   return 0;
 }
 //ENDGET
@@ -41,8 +40,7 @@ PetscErrorCode readmesh(MPI_Comm comm, PetscViewer viewer,
   ierr = PetscObjectSetName((PetscObject)(*y),"y-coordinate"); CHKERRQ(ierr);
   ierr = getcheckmeshsizes(comm,*E,*x,*y,&N,&K,&bs); CHKERRQ(ierr);
   ierr = PetscPrintf(comm,"    block size for E is %d\n",bs); CHKERRQ(ierr);
-  ierr = PetscPrintf(comm,"    N=%d nodes, K=%d elements\n",
-                     N,K); CHKERRQ(ierr);
+  ierr = PetscPrintf(comm,"    N=%d nodes, K=%d elements\n",N,K); CHKERRQ(ierr);
   return 0;
 }
 //ENDREADMESH
