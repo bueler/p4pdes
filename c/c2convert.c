@@ -17,13 +17,13 @@ Do this to re-read binary files bump.1.petsc and show contents:\n\
 
 //STARTPREAMBLE
 int main(int argc,char **args) {
+  PetscErrorCode  ierr;  //STRIP
 
   // STANDARD PREAMBLE
   PetscInitialize(&argc,&args,(char*)0,help);
   const MPI_Comm  WORLD = PETSC_COMM_WORLD,  SELF = PETSC_COMM_SELF;
   PetscMPIInt     rank;
   MPI_Comm_rank(WORLD,&rank);
-  PetscErrorCode  ierr;
 
   // GET OPTIONS AND BUILD FILENAMES
   PetscBool      fset, docheck, checkset;

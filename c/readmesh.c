@@ -6,13 +6,13 @@
 //STARTGET
 PetscErrorCode getmeshfile(MPI_Comm comm, const char suffix[],
                            char filename[], PetscViewer *viewer) {
-  PetscErrorCode ierr;
+  PetscErrorCode ierr; //STRIP
   PetscBool      fset;
   ierr = PetscOptionsBegin(comm, "", "options for readmesh", ""); CHKERRQ(ierr);
   ierr = PetscOptionsString("-f", "filename root with PETSc binary, for reading", "", "",
                       filename, PETSC_MAX_PATH_LEN, &fset); CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
-  if (!fset) {  SETERRQ(comm,1,"option  -f FILENAME  required");  }
+  if (!fset) {  SETERRQ(comm,1,"option  -f FILENAME  required");  }  //STRIP
   strcat(filename,suffix);
   ierr = PetscPrintf(comm,"  opening mesh file %s ...\n",filename); CHKERRQ(ierr);
   ierr = PetscViewerBinaryOpen(comm,filename,FILE_MODE_READ,viewer); CHKERRQ(ierr);
@@ -21,23 +21,23 @@ PetscErrorCode getmeshfile(MPI_Comm comm, const char suffix[],
 //ENDGET
 
 //STARTREADMESH
-PetscErrorCode readmesh(MPI_Comm comm, PetscViewer viewer,
-                        Vec *E, Vec *x, Vec *y) {
+PetscErrorCode createloadname(MPI_Comm comm, PetscViewer viewer, const char prefix[],
+                              const char name[], Vec *v) {
+  PetscErrorCode ierr; //STRIP
+  ierr = VecCreate(comm,v); CHKERRQ(ierr);
+  VecSetOptionsPrefix(*v,prefix);
+  ierr = VecLoad(*v,viewer); CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject)(*v),name); CHKERRQ(ierr);
+  return 0;
+}
+
+PetscErrorCode readmesh(MPI_Comm comm, PetscViewer viewer, Vec *E, Vec *x, Vec *y) {
   PetscInt bs,N,K;
-  PetscErrorCode ierr;
+  PetscErrorCode ierr; //STRIP
   ierr = PetscPrintf(comm,"  reading mesh Vec E,x,y from file ...\n"); CHKERRQ(ierr);
-  ierr = VecCreate(comm,E); CHKERRQ(ierr);
-  VecSetOptionsPrefix(*E,"E_");
-  ierr = VecLoad(*E,viewer); CHKERRQ(ierr);
-  ierr = VecCreate(comm,x); CHKERRQ(ierr);
-  VecSetOptionsPrefix(*x,"x_");
-  ierr = VecLoad(*x,viewer); CHKERRQ(ierr);
-  ierr = VecCreate(comm,y); CHKERRQ(ierr);
-  VecSetOptionsPrefix(*y,"y_");
-  ierr = VecLoad(*y,viewer); CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)(*E),"E-element-full-info"); CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)(*x),"x-coordinate"); CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)(*y),"y-coordinate"); CHKERRQ(ierr);
+  ierr = createloadname(comm, viewer, "E_", "E-element-full-info", E); CHKERRQ(ierr);
+  ierr = createloadname(comm, viewer, "x_", "x-coordinate", x); CHKERRQ(ierr);
+  ierr = createloadname(comm, viewer, "y_", "y-coordinate", y); CHKERRQ(ierr);
   ierr = getcheckmeshsizes(comm,*E,*x,*y,&N,&K,&bs); CHKERRQ(ierr);
   ierr = PetscPrintf(comm,"    block size for E is %d\n",bs); CHKERRQ(ierr);
   ierr = PetscPrintf(comm,"    N=%d nodes, K=%d elements\n",N,K); CHKERRQ(ierr);
