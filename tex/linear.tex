@@ -221,44 +221,45 @@ To tell the truth, we have not shown the last part of \texttt{c2convert.c}.  Tha
 
 \section{Constructing the FEM linear system}
 
-Now that we can get a triangulation into \PETSc, we can return to the finite-dimensional weak formulation \eqref{poissonfem}.  It is simply a matrix equation (linear system).  We will write a code, namely for matrix \emph{preallocation} and \emph{assembly}, which builds \PETSc \pMat and \pVec objects to contain this problem, and then we will use a \PETSc \pKSP object to solve it.
-
-For ease of construction we include the node-wise Dirichlet conditions $u_j=g(\bx_j)$ as equations in this linear system, so that the matrix has $N$ columns and $N$ rows if there are $N$ nodes in total.  That is, we include a row and column for every node $\bx_j$ including $\bx_j\in\partial_D\Omega$.  Thus we define $A \in \RR^{N\times N}$ to have entries
-\begin{equation*}
-a_{ij} = \int_\Omega \grad \phi_j \cdot \grad \phi_i,
-\end{equation*}
-if $\bx_i \notin \partial_D \Omega$ and $\bx_j \notin \partial_D \Omega$.  Otherwise
-\begin{equation*}
-a_{ij} = \delta_{ij},
-\end{equation*}
-that is, if $\bx_i \in \partial_D \Omega$ or $\bx_j \in \partial_D \Omega$.  Because $j=0,1,\dots,N-1$, notice that we index rows and columns of matrices and vectors starting with zero.\sidenote{This follows C and \PETSc conventions, but is opposed to long-standing traditions about linear algebra!}
-
-We can immediately observe that $A$ is \emph{symmetric} because $a_{ij}=a_{ji}$.  Furthermore it is \emph{sparse}, that is, most entries are zero, at least for triangulations with more than a handful of triangles.  These facts have profound consequences on the algorithms we will choose when solving our linear system
+Now that we can get a triangulation into \PETSc, we can return to the finite-dimensional weak formulation \eqref{poissonfem}.  This linear system
 \begin{equation}
-A \bu = \bb. \label{poissonmatrix}
+A \bu = \bb, \label{poissonmatrix}
 \end{equation}
+has $A\in\RR^{N\times N}$ and $\bb\in\RR^N$, where $N$ is the number of nodes.  We will write a code which assembles $A$ and $\bb$ and solves for $\bu\in\RR^N$.  \PETSc \pMat and \pVec objects contain this problem, and we use a \PETSc \pKSP object to solve it.
 
-The right side of \eqref{poissonmatrix} also comes from \eqref{poissonfem}.  Define the vector $\bb\in\RR^N$ with entries
+For ease of construction we include the node-wise Dirichlet conditions $u_j=g(\bx_j)$ as equations in this linear system, treating such $u_j$ as unknowns, so that the matrix really does have $N$ rows and columns if there are $N$ nodes in total.  Thus we define $A$ to have entries
+\begin{equation*}
+a_{ij} = \int_\Omega \grad \phi_j \cdot \grad \phi_i
+\end{equation*}
+if $\bx_i \notin \partial_D \Omega$ and $\bx_j \notin \partial_D \Omega$, while otherwise
+\begin{equation*}
+a_{ij} = \delta_{ij}.
+\end{equation*}
+Notice that we index rows and columns of matrices and vectors starting with zero,\sidenote{This follows C and \PETSc conventions, but is opposed to long-standing traditions about linear algebra!} and that $j=0,1,\dots,N-1$ in particular.
+
+Observe that $A$ is \emph{symmetric}, $a_{ij}=a_{ji}$.  Furthermore $A$ is \emph{sparse}, that is, most entries are zero, at least for triangulations with more than a handful of triangles.  These facts affect the algorithms we choose when solving \eqref{poissonmatrix}.
+
+For the right side of \eqref{poissonfem}, define the entries
     $$b_i = \int_\Omega f \phi_i + \int_{\partial_N\Omega} \gamma \phi_i - \sum_{l=0,\dots,L} g(\bx_{j_l})  \int_\Omega \grad \phi_{j_l} \cdot \grad \phi_i$$
 if $\bx_i \notin \partial_D \Omega$, while if $\bx_i \in \partial_D \Omega$ then
     $$b_i = g(\bx_{i}).$$
 
-In practice we \emph{don't} initially build $A$ as described above.  We initially build a matrix $\tilde A$ which is the same size as $A$ but which ignors the boundary nodes and their type (i.e.~Dirichlet or Neumann).  All entries of $\tilde A$ are computed by the first formula above for $a_{ij}$, that is, the entries are
+In practice we \emph{don't} initially build $A$ or $\bb$ as described above.  We start with a matrix $\tilde A$ and vector $\tilde \bb$ which have the same size as $A$ and $\bb$, respectively, but which ignore the Dirichlet boundary.  We don't even evaluate the function $g$.  All entries of $\tilde A$ are computed by the first formula above for $a_{ij}$, that is, the entries are
 \begin{equation*}
-\tilde a_{ij} = \int_\Omega \grad \phi_j \cdot \grad \phi_i
+\tilde a_{ij} = \int_\Omega \grad \phi_i \cdot \grad \phi_j
 \end{equation*}
-for all $i,j=0,1,\dots,N$.  Also we initially compute a simpler right-hand side $\tilde \bb\in\RR^N$ with entries
+for all $i,j=0,1,\dots,N$.  Also the simpler right-hand side $\tilde \bb\in\RR^N$ has entries
     $$\tilde b_i = \int_\Omega f \phi_i + \int_{\partial_N\Omega} \gamma \phi_i$$
-if $\bx_i \notin \partial_D \Omega$, while if $\bx_i \in \partial_D \Omega$ then
-    $$\tilde b_i = g(\bx_{i})$$
-as before.
+for all $i=0,1,\dots,N$.
 
-Note that the equation ``$\tilde A \bu =\tilde \bb$'' is \emph{not} equivalent to $A\bu = \bb$ because in the former linear system rows $i$ where $\bx_i \in \partial_D \Omega$ are nonsensical; the value $(\tilde A \bu)_i$ is not compatible with $\tilde \bb_i$.  Thus the next step is to  ``edit'' $\tilde A$ in each Dirichlet node row, that is, for each $i$ where $\bx_i \in \partial_D \Omega$, by replacing the whole row by the corresponding row of the identity.  Furthermore, in each column $j$ for which $\bx_j \in \partial_D \Omega$, we move all entries $\tilde a_{ij}$ where $i$ is \emph{not} a Dirichlet row index, over to the right-hand side, but multiplied by the negative of the boundary value $g(\bx_{j})$.  Informally we write
+This initial linear system $\tilde A\bu=\tilde \bb$ is already correct in the case where there is no Dirichlet boundary (i.e.~$\partial_D \Omega=\emptyset$).  That is, in the Neumann-only case $A=\tilde A$ and $\bb = \tilde \bb$.  However, in this case $u=C$, where $C\in\RR$ is any constant value, solves $-\grad^2 u=0$ with $\partial u/\partial n = 0$ on the whole boundary $\partial_N \Omega = \partial \Omega$.  The Poisson problem then only determines the solution up to such an additive constant.  Because it does not have a unique solution in this case, when solving \eqref{poissonmatrix} in this Neumann case we will have to inform \PETSc about the null space of constant functions.
+
+In general, the next step is to edit $\tilde A$ in each Dirichlet row, that is, for each $i$ where $\bx_i \in \partial_D \Omega$, by replacing the whole row with the corresponding row of the identity and we replace $\tilde b_i$ with $b_i = g(\bx_i)$.  Furthermore, in each column $j$ for which $\bx_j \in \partial_D \Omega$, we move all entries $\tilde a_{ij}$ where $i$ is \emph{not} a Dirichlet row index over to the right-hand side, multiplied by the negative of the boundary value $g(\bx_{j})$.  We can write
     $$\tilde b_i \to \tilde b_i - g(\bx_{j}) \tilde a_{ij}$$
-for these transformations.  After the completion of this ``editing'' stage, for all Dirichlet rows and columns, we get $A$ and $\bb$.  Since this part of the matrix assembly is a key stage of understanding our FEM codes, we give a concrete example.
+for these transformations.  After the completion of this ``editing'' stage we get $A$ and $\bb$.  Since this part of the matrix assembly is a key stage of understanding our FEM codes, we now give a concrete example.
 
 \medskip\noindent\hrulefill
-\begin{example} In Figure \ref{fig:squarefour} there are five nodes.  The $i=1,2$ nodes live in the (closed) Dirichlet boundary $\partial_D \Omega$.  The matrix $\tilde A$ has this nonzero pattern; the zero entries are spaces:\begin{marginfigure}
+\begin{example} Figure \ref{fig:squarefour} shows a triangulation of the unit square with five nodes.  The matrix $\tilde A$ has the following nonzero pattern; the zero entries are shown as spaces:\begin{marginfigure}
 \input{squarefour.tikz}
 \caption{A triangulation of a square with five nodes.  The top segment is the Dirichlet boundary.}
 \label{fig:squarefour}
@@ -272,7 +273,7 @@ for these transformations.  After the completion of this ``editing'' stage, for 
 \X & \X & \X & \X & \X
 \end{bmatrix}.
 \end{equation*}
-Note $\tilde a_{ij}=0$ only where the integral $\int_\Omega \grad \phi_j \cdot \grad \phi_i$ is zero, which is somewhat rare in this small (coarse)-mesh case.  Now we color the $i=1,2$ or $j=1,2$ entries which will be edited:\marginnote{{\color{red} Potential gotcha}:  The first row of any matrix in this book is numbered ``$0$.''  Likewise the first column.}
+Note $\tilde a_{ij}=0$ only where the integral $\int_\Omega \grad \phi_j \cdot \grad \phi_i$ is zero, which is somewhat rare in this small (coarse)-mesh case.  Now, because the $i=1,2$ nodes live in the (closed) Dirichlet boundary $\partial_D \Omega$, we highlight the $i=1,2$ rows and $j=1,2$ columns which will be edited:\marginnote{{\color{red} \textbf{Caution}}:  The first row of any matrix in this book is numbered ``$0$.''  Likewise the first column.}
 \begin{equation*}
 \tilde A = \begin{bmatrix}
 \X & \redX &    & \X & \X \\
@@ -282,28 +283,37 @@ Note $\tilde a_{ij}=0$ only where the integral $\int_\Omega \grad \phi_j \cdot \
 \X & \redX & \redX & \X & \X
 \end{bmatrix}.
 \end{equation*}
-The {\color{blue} blue} entries are changed to $0$ or $1$ so that these rows become rows of the identity; their computed values are tossed out.  The {\color{red} red} entries, specifically the four entries $\tilde a_{01}$, $\tilde a_{32}$, $\tilde a_{41}$, and $\tilde a_{42}$, are moved over to the right side, however; their values get used.  Formulas for the $i=0,3,4$ entries of the final vector $\bb$ in terms of the initially-computed vector $\tilde\bb$ are:
-\begin{align*}
-b_0 &= \tilde b_0 - g(\bx_1) \tilde a_{01} \\
-b_3 &= \tilde b_3 - g(\bx_2) \tilde a_{32} \\
-b_4 &= \tilde b_4 - g(\bx_1) \tilde a_{41} - g(\bx_2) \tilde a_{42}.
-\end{align*}
-Note $b_1=\tilde b_1=g(\bx_1)$ and $b_2 = \tilde b_2 = g(\bx_2)$.  The final matrix $A$ has this pattern:
+The underlined {\color{blue} blue} entries are changed to $0$ or $1$ so that these rows become rows of the identity; the old computed values $\tilde a_{ij}$ are tossed out.  The unerlined {\color{red} red} entries, specifically the four entries $\tilde a_{01}$, $\tilde a_{32}$, $\tilde a_{41}$, and $\tilde a_{42}$, are moved over to the right side; their will values get used.  The final linear system $A \bu = \bb$, including formulas for the edited $b_0$, $b_3$, and $b_4$ entries, is
 \begin{equation*}
-A = \begin{bmatrix}
+\begin{bmatrix}
 \X & & & \X & \X \\
  & \,1\, & & & \\
  & & \,1\, & & \\
 \X & & & \X & \X \\
 \X & & & \X & \X
-\end{bmatrix}.
+\end{bmatrix}
+\begin{bmatrix}
+u_0 \\
+u_1 \\
+u_2 \\
+u_3 \\
+u_4
+\end{bmatrix}
+=
+\begin{bmatrix}
+\tilde b_0 - g(\bx_1) \tilde a_{01} \\
+g(\bx_1) \\
+g(\bx_2) \\
+\tilde b_3 - g(\bx_2) \tilde a_{32} \\
+\tilde b_4 - g(\bx_1) \tilde a_{41} - g(\bx_2) \tilde a_{42}
+\end{bmatrix}
 \end{equation*}
 \end{example}
 \noindent\hrulefill
 
 \bigskip
 
-Note that the initial construction is already correct in the case where $\partial_D \Omega$ is the empty set.  That is, in the Neumann-only case $A=\tilde A$ and $\bb = \tilde \bb$.  However, in this case $u=(\text{constant})$ solves $-\grad^2 u=0$ with $\partial u/\partial n = 0$ on the whole boundary $\partial_N \Omega = \partial \Omega$, so equation \eqref{poissonweak} only determines the solution up to an additive constant.  Because the Poisson problem does not have a unique solution, we will have to tell \PETSc about the extra constant solutions, the null space, to solve it.
+
 
 
 \section{Assembling the matrix equation, element by element}
