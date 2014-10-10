@@ -82,7 +82,7 @@ int main(int argc,char **args) {
     // CHECK 1: IS U=constant IN KERNEL?
     Vec         uone;
     PetscScalar normone, normAone;
-    ierr = initassemble(WORLD,E,&checkfsource,NULL,A,b); CHKERRQ(ierr);
+    ierr = assemble(WORLD,E,&checkfsource,NULL,NULL,A,b); CHKERRQ(ierr);
     ierr = VecDuplicate(b,&uone); CHKERRQ(ierr);
     ierr = VecSet(uone,1.0); CHKERRQ(ierr);
     ierr = MatMult(A,uone,b); CHKERRQ(ierr);             // b = A * uone
@@ -95,7 +95,7 @@ int main(int argc,char **args) {
   } else if (check == 2) {
     // CHECK 2: DOES b SUM TO AREA OF REGION?
     PetscScalar bsum;
-    ierr = initassemble(WORLD,E,&checkfsource,NULL,A,b); CHKERRQ(ierr);
+    ierr = assemble(WORLD,E,&checkfsource,NULL,NULL,A,b); CHKERRQ(ierr);
     ierr = VecSum(b,&bsum); CHKERRQ(ierr);
     ierr = PetscPrintf(WORLD,"  check 2:  does right side sum to area if f=1?\n"
                        "    sum(b) = %e   (should be area of region)\n",
@@ -108,7 +108,7 @@ int main(int argc,char **args) {
     PetscInt     i, Istart,Iend;
     KSP          ksp;
     MatNullSpace nullsp;
-    ierr = initassemble(WORLD,E,&neufsource,NULL,A,b); CHKERRQ(ierr);
+    ierr = assemble(WORLD,E,&neufsource,NULL,NULL,A,b); CHKERRQ(ierr);
     ierr = VecDuplicate(b,&uexact); CHKERRQ(ierr);
     ierr = VecGetOwnershipRange(uexact,&Istart,&Iend); CHKERRQ(ierr);
     ierr = VecGetArray(x,&ax); CHKERRQ(ierr);

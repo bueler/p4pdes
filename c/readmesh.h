@@ -9,7 +9,7 @@
 typedef struct {
   PetscScalar j[3],  // global indices of vertices (nodes) j[0], j[1], j[2]
               bN[3], // boundary type of node:  bN[0], bN[1], bN[2] in {0,1,2}
-              bE[3], // boundary type of edge:  bE[0], bE[1], bE[2] in {0,1,2},
+              bE[3], // isboundary for edge:  bE[0], bE[1], bE[2] in {0,1},
                      //   where bE[0] = <0,1>, bE[1] = <1,2>, bE[2] = <2,0>
               x[3],  // node x-coordinates x[0], x[1], x[2]
               y[3];  // node y-coordinates y[0], y[1], y[2]

@@ -60,4 +60,4 @@ mesh.1.tikz: ../c/structured.py
 clean:
 	@rm -f *~ *.out *.aux *.log *.bbl *.blg *.synctex.gz *.idx *.ilg *.ind *.toc *.dvi
 	@rm -f cstrip/*.c
-	@rm -f bump.?.* samplepoly.?.* bump.poly.tikz squarefour.tikz mesh.?.*
+	@rm -f bump.?.* samplepoly.?.* bump.poly* squarefour.tikz mesh.?.*
