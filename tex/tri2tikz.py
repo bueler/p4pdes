@@ -70,7 +70,7 @@ tikz.write('%%   %s\n' % commandline)
 tikz.write('%%%s\n' % '')
 tikz.write('\\begin{tikzpicture}[scale=%f]\n' % scale)
 
-# READ .node FILE
+# READ .node FILE BUT DO NO PLOTTING
 if not polyonly:
     print 'reading from %s ' % nodename
     headersread = 0
@@ -103,7 +103,53 @@ if not polyonly:
             x[count] = float(nxyb[1])
             y[count] = float(nxyb[2])
             bt[count] = int(nxyb[3])
-            tikz.write('  \\filldraw (%f,%f) circle (%fpt);\n' % (x[count],y[count],nodesize))
+            count += 1
+
+# READ .ele FILE AND PLOT TRIANGLES
+if not polyonly:
+    print 'reading from %s ' % elename
+    headersread = 0
+    count = 0
+    for line in elefile:
+        # strip comment
+        line = line.partition('#')[0]
+        line = line.rstrip()
+        if line: # only act if line content remains
+            # read headers
+            if headersread == 0:
+                eleheader = line
+                print '  header says:  ' + eleheader,
+                K = (int)(eleheader.split()[0])
+                print '... reading K = %d elements ...' % K
+                headersread += 1
+                continue
+            elif (headersread == 1) and (count >= K):
+                break # nothing more to read
+            # read content if headersread = 1 and count is small
+            #DEBUG print 'reading elefile content line with count = %d ...' % count
+            emabc = line.split()
+            #DEBUG print emabc
+            if count+1 != int(emabc[0]):
+              print 'ERROR: INDEXING WRONG IN READING ELEMENTS'
+              sys.exit(2)
+            pp = [int(emabc[1])-1, int(emabc[2])-1, int(emabc[3])-1] # node indices for this element
+            kk = [0, 1, 2, 0]  # cycle through nodes
+            for k in range(3):
+              jfrom = pp[kk[k]]
+              jto   = pp[kk[k+1]]
+              tikz.write('  \\draw[gray,very thin] (%f,%f) -- (%f,%f);\n' \
+                         % (x[jfrom],y[jfrom],x[jto],y[jto]))
+            if dolabeleles:
+              xc = 0.0
+              yc = 0.0
+              for k in range(3):
+                jj = pp[kk[k]]
+                xc = xc + x[jj]
+                yc = yc + y[jj]
+              xc = xc/3.0
+              yc = yc/3.0
+              tikz.write( '  \\draw (%f,%f) node {\\color{red} $%d$};\n' \
+                         % (xc+0.7*eleoffset,yc-eleoffset,count))
             count += 1
 
 # READ .poly FILE
@@ -175,53 +221,6 @@ for line in polyfile:
     else:
         print 'ERROR:  headersread not 1 or 2 and yet trying to read; something wrong ... exiting'
         sys.exit(1)
-
-# READ .ele FILE
-if not polyonly:
-    print 'reading from %s ' % elename
-    headersread = 0
-    count = 0
-    for line in elefile:
-        # strip comment
-        line = line.partition('#')[0]
-        line = line.rstrip()
-        if line: # only act if line content remains
-            # read headers
-            if headersread == 0:
-                eleheader = line
-                print '  header says:  ' + eleheader,
-                K = (int)(eleheader.split()[0])
-                print '... reading K = %d elements ...' % K
-                headersread += 1
-                continue
-            elif (headersread == 1) and (count >= K):
-                break # nothing more to read
-            # read content if headersread = 1 and count is small
-            #DEBUG print 'reading elefile content line with count = %d ...' % count
-            emabc = line.split()
-            #DEBUG print emabc
-            if count+1 != int(emabc[0]):
-              print 'ERROR: INDEXING WRONG IN READING ELEMENTS'
-              sys.exit(2)
-            pp = [int(emabc[1])-1, int(emabc[2])-1, int(emabc[3])-1] # node indices for this element
-            kk = [0, 1, 2, 0]  # cycle through nodes
-            for k in range(3):
-              jfrom = pp[kk[k]]
-              jto   = pp[kk[k+1]]
-              tikz.write('  \\draw[gray,very thin] (%f,%f) -- (%f,%f);\n' \
-                         % (x[jfrom],y[jfrom],x[jto],y[jto]))
-            if dolabeleles:
-              xc = 0.0
-              yc = 0.0
-              for k in range(3):
-                jj = pp[kk[k]]
-                xc = xc + x[jj]
-                yc = yc + y[jj]
-              xc = xc/3.0
-              yc = yc/3.0
-              tikz.write( '  \\draw (%f,%f) node {\\color{red} $%d$};\n' \
-                         % (xc+0.7*eleoffset,yc-eleoffset,count))
-            count += 1
 
 if not polyonly:
   # plot interior and boundary nodes themselves

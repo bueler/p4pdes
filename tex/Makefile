@@ -1,6 +1,6 @@
 all: book.pdf
 
-tikzinputs := samplepoly.1.tikz squarefour.tikz bump.1.tikz bump.poly.tikz
+tikzinputs := samplepoly.1.tikz squarefour.tikz bump.1.tikz bump.poly.tikz mesh.1.tikz
 texinputs := getstarted.tex linear.tex scaling.tex
 
 hinputs := $(addprefix ../c/, convenience.h)
@@ -47,7 +47,17 @@ bump.poly.tikz: ../c/bump.poly
 	ln -s ../c/bump.poly
 	python tri2tikz.py --scale 0.85 --polyonly bump --nodesize 3.0 bump.poly.tikz
 
+mesh.1.tikz: ../c/structured.py
+	(cd ../c/ && python structured.py mesh.1 5)
+	rm -rf mesh.1.node mesh.1.ele mesh.1.poly
+	ln -s ../c/mesh.1.node
+	ln -s ../c/mesh.1.ele
+	ln -s ../c/mesh.1.poly
+	python tri2tikz.py --labelnodes --nodeoffset 0.05 --nodesize 0.5 --labelelements --scale 5.0 mesh.1 $@
+
 .PHONY: clean
 
 clean:
-	@rm -f *~ *.out *.aux *.log *.bbl *.blg *.synctex.gz *.idx *.ilg *.ind *.toc *.dvi cstrip/*.c bump.?.* samplepoly.?.* bump.poly.tikz squarefour.tikz
+	@rm -f *~ *.out *.aux *.log *.bbl *.blg *.synctex.gz *.idx *.ilg *.ind *.toc *.dvi
+	@rm -f cstrip/*.c
+	@rm -f bump.?.* samplepoly.?.* bump.poly.tikz squarefour.tikz mesh.?.*
