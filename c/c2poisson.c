@@ -19,15 +19,18 @@ To see the matrix graphically:\n\
 #include "readmesh.h"
 #include "poissontools.h"
 
-PetscScalar neuexactsoln(PetscScalar x, PetscScalar y) {
-  return cos(2.0*PETSC_PI*x) * cos(2.0*PETSC_PI*y);
+// for manufactured solution:  this serves as uexact and as g
+PetscScalar manufacture_u(PetscScalar x, PetscScalar y) {
+  return x * x + y * y * y * y * y;
 }
 
-PetscScalar neufsource(PetscScalar x, PetscScalar y) {
-  return 8.0 * PETSC_PI * PETSC_PI * neuexactsoln(x,y);
+// for manufactured solution:  f = - div(grad u)
+PetscScalar manufacture_f(PetscScalar x, PetscScalar y) {
+  return - (2.0 + 20.0 * y * y * y);
 }
 
-PetscScalar checkfsource(PetscScalar x, PetscScalar y) {
+// for -check 2:  we need f(x,y)=1 when checking sum(b)=area
+PetscScalar check_f(PetscScalar x, PetscScalar y) {
   return 1.0;
 }
 
@@ -49,19 +52,20 @@ int main(int argc,char **args) {
   PetscInt check;
   PetscBool checkset;
   PetscViewer viewer;
-  ierr = getmeshfile(WORLD, ".petsc", fname, &viewer); CHKERRQ(ierr);
-  ierr = readmesh(WORLD, viewer, &E, &x, &y); CHKERRQ(ierr);
-  PetscViewerDestroy(&viewer);
-  ierr = getcheckmeshsizes(WORLD,E,x,y,&N,&K,&bs); CHKERRQ(ierr);
   ierr = PetscOptionsBegin(WORLD, "", "options for c2poisson", ""); CHKERRQ(ierr);
   ierr = PetscOptionsInt("-check",
-                         "check assembly: 1 = check if constants are in initial kernel,\n"
-                         " 2 = check if right side sums to area if f=1\n", "", -1,
+                         "check assembly, ignoring Dirichlet conditions:\n"
+                         "  1 = check if constants are kernel,\n"
+                         "  2 = check if right side sums to area when f=1\n", "", -1,
                          &check, &checkset); CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
   if ((checkset == PETSC_TRUE) && (check < 1) && (check > 2)) {
     SETERRQ(WORLD,1,"invalid argument for option -check");
   }
+  ierr = getmeshfile(WORLD, ".petsc", fname, &viewer); CHKERRQ(ierr);
+  ierr = readmesh(WORLD, viewer, &E, &x, &y); CHKERRQ(ierr);
+  PetscViewerDestroy(&viewer);
+  ierr = getcheckmeshsizes(WORLD,E,x,y,&N,&K,&bs); CHKERRQ(ierr);
 
   // CREATE MAT AND RHS b
   Mat A;
@@ -75,6 +79,7 @@ int main(int argc,char **args) {
   ierr = MatSetOption(A,MAT_NEW_NONZERO_LOCATION_ERR,PETSC_FALSE); CHKERRQ(ierr);
   ierr = VecDuplicate(x,&b); CHKERRQ(ierr);
   ierr = VecSet(b,0.0); CHKERRQ(ierr);
+  ierr = VecSetOptionsPrefix(b,"b_"); CHKERRQ(ierr);
 
   ierr = PetscPrintf(WORLD,"  assembling initial stiffness matrix A ...\n"); CHKERRQ(ierr);
 
@@ -82,7 +87,7 @@ int main(int argc,char **args) {
     // CHECK 1: IS U=constant IN KERNEL?
     Vec         uone;
     PetscScalar normone, normAone;
-    ierr = assemble(WORLD,E,&checkfsource,NULL,NULL,A,b); CHKERRQ(ierr);
+    ierr = assemble(WORLD,E,NULL,NULL,NULL,A,b); CHKERRQ(ierr);
     ierr = VecDuplicate(b,&uone); CHKERRQ(ierr);
     ierr = VecSet(uone,1.0); CHKERRQ(ierr);
     ierr = MatMult(A,uone,b); CHKERRQ(ierr);             // b = A * uone
@@ -95,49 +100,47 @@ int main(int argc,char **args) {
   } else if (check == 2) {
     // CHECK 2: DOES b SUM TO AREA OF REGION?
     PetscScalar bsum;
-    ierr = assemble(WORLD,E,&checkfsource,NULL,NULL,A,b); CHKERRQ(ierr);
+    ierr = assemble(WORLD,E,&check_f,NULL,NULL,A,b); CHKERRQ(ierr);
     ierr = VecSum(b,&bsum); CHKERRQ(ierr);
     ierr = PetscPrintf(WORLD,"  check 2:  does right side sum to area if f=1?\n"
                        "    sum(b) = %e   (should be area of region)\n",
                        bsum); CHKERRQ(ierr);
   } else {
-    // SOLVE HOMOGENEOUS NEUMANN PROBLEM WITH KNOWN SOLN
-    // (EVALUATES EXACT SOLUTION AT NODES)
-    Vec          u,uexact;
-    PetscScalar  uval, *ax, *ay, normuexact, normerror;
-    PetscInt     i, Istart,Iend;
-    KSP          ksp;
-    MatNullSpace nullsp;
-    ierr = assemble(WORLD,E,&neufsource,NULL,NULL,A,b); CHKERRQ(ierr);
+    // SOLVE MANUFACTURED DIRICHLET PROBLEM; SHOULD WORK IF ENTIRE BOUNDARY IS
+    //   MARKED AS DIRICHLET
+    Vec         u, uexact;
+    KSP         ksp;
+    PetscScalar *ax, *ay, uval, normdiff;
+    PetscInt    Istart, Iend, i;
+    // assemble and solve system
+    ierr = assemble(WORLD,E,&manufacture_f,&manufacture_u,NULL,A,b); CHKERRQ(ierr);
+    ierr = VecDuplicate(b, &u); CHKERRQ(ierr);
+    ierr = KSPCreate(WORLD, &ksp); CHKERRQ(ierr);
+    ierr = KSPSetOperators(ksp, A, A); CHKERRQ(ierr);
+    ierr = KSPSetFromOptions(ksp); CHKERRQ(ierr);
+    ierr = KSPSolve(ksp, b, u); CHKERRQ(ierr);
+    ierr = VecSetOptionsPrefix(u,"u_"); CHKERRQ(ierr);
+    // put exact solution in a Vec
     ierr = VecDuplicate(b,&uexact); CHKERRQ(ierr);
+    ierr = VecSetOptionsPrefix(uexact,"uexact_"); CHKERRQ(ierr);
     ierr = VecGetOwnershipRange(uexact,&Istart,&Iend); CHKERRQ(ierr);
     ierr = VecGetArray(x,&ax); CHKERRQ(ierr);
     ierr = VecGetArray(y,&ay); CHKERRQ(ierr);
     for (i = Istart; i < Iend; i++) {
-      uval = neuexactsoln(ax[i-Istart],ay[i-Istart]);
+      uval = manufacture_u(ax[i-Istart],ay[i-Istart]);
       ierr = VecSetValues(uexact,1,&i,&uval,INSERT_VALUES); CHKERRQ(ierr);
     }
     ierr = VecRestoreArray(x,&ax); CHKERRQ(ierr);
     ierr = VecRestoreArray(y,&ay); CHKERRQ(ierr);
     vecassembly(uexact)
-    // NEXT SOLVE SYSTEM
-    ierr = VecDuplicate(b, &u); CHKERRQ(ierr);
-    ierr = KSPCreate(WORLD, &ksp); CHKERRQ(ierr);
-    // only constants are in null space:
-    ierr = MatNullSpaceCreate(WORLD, PETSC_TRUE, 0, NULL, &nullsp); CHKERRQ(ierr);
-    ierr = KSPSetNullSpace(ksp, nullsp); CHKERRQ(ierr);
-    ierr = KSPSetOperators(ksp, A, A); CHKERRQ(ierr);
-    ierr = KSPSetFromOptions(ksp); CHKERRQ(ierr);
-    ierr = KSPSolve(ksp, b, u); CHKERRQ(ierr);
-    // COMPUTE ERROR
-    ierr = VecNorm(uexact,NORM_2,&normuexact); CHKERRQ(ierr);
+    vecassembly(u)  // FIXME:  JUST NEEDED TO ATTACH "u_" prefix for viewing?
+    // compute error
     ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);  // u := -uexact + u
-    ierr = VecNorm(u,NORM_2,&normerror); CHKERRQ(ierr);
-    ierr = PetscPrintf(WORLD,"  solving homogenous: |u - uexact|_2 / |uexact|_2 = %e  (should be O(h^2))\n",
-                     normerror/normuexact); CHKERRQ(ierr);
-    ierr = MatNullSpaceDestroy(&nullsp); CHKERRQ(ierr);
-    ierr = KSPDestroy(&ksp); CHKERRQ(ierr);
-    VecDestroy(&u);  VecDestroy(&uexact);
+    ierr = VecNorm(u,NORM_INFINITY,&normdiff); CHKERRQ(ierr);
+    ierr = PetscPrintf(WORLD,"  numerical error:\n"
+                       "    |u - uexact|_inf = %e   (should be O(h^2))\n",
+                       normdiff); CHKERRQ(ierr);
+    ierr = VecDestroy(&uexact); CHKERRQ(ierr);
   }
 
   MatDestroy(&A);  VecDestroy(&b);

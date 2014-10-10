@@ -13,13 +13,15 @@ PetscScalar chi(PetscInt q, PetscScalar xi, PetscScalar eta) {
 }
 
 
-PetscErrorCode assembledirichlet(MPI_Comm comm,
-                        Vec E,
-                        PetscScalar (*g)(PetscScalar, PetscScalar),
-                        Mat A, Vec b) {
+// run through elements and find and assemble all Dirichlet rows
+// uses INSERT_VALUES; may redundantly INSERT_VALUES many times given row
+PetscErrorCode dirichletrows(MPI_Comm comm,
+                             Vec E,
+                             PetscScalar (*g)(PetscScalar, PetscScalar),
+                             Mat A, Vec b) {
   PetscErrorCode ierr;  //STRIP
-  PetscInt       bs, Kstart, Kend, i;
-  PetscScalar    *ae, bval;
+  PetscInt       bs, Kstart, Kend, k, i, q;
+  PetscScalar    *ae, one=1.0, bi;
   elementtype    *et;
   ierr = VecGetBlockSize(E,&bs); CHKERRQ(ierr);
   ierr = VecGetOwnershipRange(E,&Kstart,&Kend); CHKERRQ(ierr);
@@ -30,10 +32,9 @@ PetscErrorCode assembledirichlet(MPI_Comm comm,
     for (q = 0; q < 3; q++) {
       if ((int)et->bN[q] == 2) {           // node is Dirichlet
         i = (int)et->j[q];                 // global row index
-        one = 1.0;
         ierr = MatSetValues(A,1,&i,1,&i,&one,INSERT_VALUES); CHKERRQ(ierr);
-        bval = (*g)(et->x[q],et->y[q]);
-        ierr = VecSetValues(b,1,&i,&bval,INSERT_VALUES); CHKERRQ(ierr);
+        bi = (*g)(et->x[q],et->y[q]);
+        ierr = VecSetValues(b,1,&i,&bi,INSERT_VALUES); CHKERRQ(ierr);
       }
     }
   }
@@ -44,12 +45,12 @@ PetscErrorCode assembledirichlet(MPI_Comm comm,
 }
 
 
-PetscErrorCode assemblegeneral(MPI_Comm comm,
-                        Vec E,
-                        PetscScalar (*f)(PetscScalar, PetscScalar),
-                        PetscScalar (*g)(PetscScalar, PetscScalar),
-                        PetscScalar (*gamma)(PetscScalar, PetscScalar),
-                        Mat A, Vec b) {
+PetscErrorCode assembleothers(MPI_Comm comm,
+                              Vec E,
+                              PetscScalar (*f)(PetscScalar, PetscScalar),
+                              PetscScalar (*g)(PetscScalar, PetscScalar),
+                              PetscScalar (*gamma)(PetscScalar, PetscScalar),
+                              Mat A, Vec b) {
   PetscErrorCode ierr;  //STRIP
   PetscScalar dxi[3]  = {-1.0, 1.0, 0.0},   // grad of basis functions chi0, chi1, chi2
               deta[3] = {-1.0, 0.0, 1.0},   //     on ref element
@@ -78,8 +79,8 @@ PetscErrorCode assemblegeneral(MPI_Comm comm,
     }
     // loop over vertices of current element
     for (q = 0; q < 3; q++) {
+      if ( (g) && ((int)et->bN[q] == 2) )  continue;  // skip Dirichlet rows
       i = (int)et->j[q];                   // global row index
-      FIXME: check if Dirichlet; if so skip it!
       // compute element RHS contribution from source f
       bval = 0.0;
       if (f) {
@@ -101,7 +102,6 @@ PetscErrorCode assemblegeneral(MPI_Comm comm,
           }
         }
       }
-      ierr = VecSetValues(b,1,&i,&bval,ADD_VALUES); CHKERRQ(ierr);
       // compute initial element stiffness contributions (ignore Dirchlet)
       for (r = 0; r < 3; r++) {            // loop over other vertices
         jj[r] = (int)et->j[r];             // global column index
@@ -109,15 +109,17 @@ PetscErrorCode assemblegeneral(MPI_Comm comm,
         vv[r] += (dxi[q] * x02 + deta[q] * x10) * (dxi[r] * x02 + deta[r] * x10);
         vv[r] /= 2.0 * fabs(detJ);
       }
-      // edit according to Dirchlet info
-      if ((g) && ((int)et->bN[q] == 2)) {
-        FIXME
-      } else {
-        for (r = 0; r < 3; r++) {            // loop over other vertices
-        
-        if (g) &&
-        ierr = MatSetValues(A,1,&i,3,jj,vv,ADD_VALUES); CHKERRQ(ierr);
+      // edit Dirichlet columns, and finalize right-hand side
+      if (g) {
+        for (r = 0; r < 3; r++) {          // loop over other vertices
+          if ((int)et->bN[r] == 2) {
+            bval -= (*g)(et->x[r],et->y[r]) * vv[r];
+            vv[r] = 0.0;
+          }
+        }
       }
+      ierr = MatSetValues(A,1,&i,3,jj,vv,ADD_VALUES); CHKERRQ(ierr);
+      ierr = VecSetValues(b,1,&i,&bval,ADD_VALUES); CHKERRQ(ierr);
     }
   }
   ierr = VecRestoreArray(E,&ae); CHKERRQ(ierr);
@@ -134,5 +136,10 @@ PetscErrorCode assemble(MPI_Comm comm,
                         PetscScalar (*g)(PetscScalar, PetscScalar),
                         PetscScalar (*gamma)(PetscScalar, PetscScalar),
                         Mat A, Vec b) {
-  FIXME: call assembledirichlet() then assemblegeneral()
+  PetscErrorCode ierr;  //STRIP
+  if (g) {
+    ierr = dirichletrows(comm,E,g,A,b); CHKERRQ(ierr);
+  }
+  ierr = assembleothers(comm,E,f,g,gamma,A,b); CHKERRQ(ierr);
+  return 0;
 }
