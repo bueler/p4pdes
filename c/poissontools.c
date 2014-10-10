@@ -130,18 +130,19 @@ PetscErrorCode initassemble(MPI_Comm comm,
                             Vec E,         // array of elementtype, as read by readmesh()
                             PetscScalar (*f)(PetscScalar, PetscScalar),
                             PetscScalar (*gamma)(PetscScalar, PetscScalar),
-                            PetscInt bs, PetscInt Kstart, PetscInt Kend,
                             Mat A, Vec b) {
-  PetscErrorCode ierr;
+  PetscErrorCode ierr;  //STRIP
   PetscScalar dxi[3]  = {-1.0, 1.0, 0.0},   // grad of basis functions chi0, chi1, chi2
               deta[3] = {-1.0, 0.0, 1.0},   //     on ref element
               quadxi[3]  = {0.5, 0.5, 0.0}, // quadrature points are midpoints of
               quadeta[3] = {0.0, 0.5, 0.5}; //     sides of ref element
-  PetscInt    k, q, r, i, jj[3];
+  PetscInt    bs, Kstart, Kend, k, q, r, i, jj[3];
   PetscScalar *ae;
   elementtype *et;
   PetscScalar vv[3], y20, x02, y01, x10, detJ,
               bval, xquad, yquad;
+  ierr = VecGetBlockSize(E,&bs); CHKERRQ(ierr);
+  ierr = VecGetOwnershipRange(E,&Kstart,&Kend); CHKERRQ(ierr);
   ierr = VecGetArray(E,&ae); CHKERRQ(ierr);
   for (k = Kstart; k < Kend; k += bs) {    // loop through owned elements
     et = (elementtype*)(&(ae[k-Kstart]));  // points to current element
@@ -174,7 +175,6 @@ PetscErrorCode initassemble(MPI_Comm comm,
     }
   }
   ierr = VecRestoreArray(E,&ae); CHKERRQ(ierr);
-  // ACTUALLY ASSEMBLE
   matassembly(A)
   vecassembly(b)
   return 0;

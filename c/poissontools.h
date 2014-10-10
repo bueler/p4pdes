@@ -13,6 +13,5 @@ PetscErrorCode initassemble(MPI_Comm comm,
                             Vec E,         // array of elementtype, as read by readmesh()
                             PetscScalar (*f)(PetscScalar, PetscScalar),
                             PetscScalar (*gamma)(PetscScalar, PetscScalar),
-                            PetscInt bs, PetscInt Kstart, PetscInt Kend,
                             Mat A, Vec b);
 #endif
