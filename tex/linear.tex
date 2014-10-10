@@ -421,12 +421,12 @@ J = \begin{bmatrix}
     \end{bmatrix}.  \label{trianglejacobian}
 \end{equation}
 
-Recalling both the change-of-variables formula for integrals\sidenote{If $F$ is smooth and maps points $\bx \in U$ to points $\by=F(\bx) \in F(U)$, and if $J$ is the Jacobian of $F$, then $$\int_{F(U)} f(\by)\,d\by = \int_U f(F(\bx))\,\det(J)\,d\bx.$$} and the chain rule, by \eqref{phichimap} we can write
+Recalling both the change-of-variables formula for integrals\sidenote{If $F$ is smooth and maps points $\bx \in U$ to points $\by=F(\bx) \in F(U)$, and if $J$ is the Jacobian of $F$, then $$\int_{F(U)} f(\by)\,d\by = \int_U f(F(\bx))\,|\det(J)|\,d\bx.$$} and the chain rule, by \eqref{phichimap} we can write
 \begin{align}
 \text{\texttt{a(k,q,r)}} &= \int_{\triangle_k} \grad\phi_q \cdot \grad\phi_r \label{elementcontrib} \\
    &= \int_{\triangle_k} \frac{\partial\phi_q}{\partial x} \frac{\partial\phi_r}{\partial x} + \frac{\partial\phi_q}{\partial y} \frac{\partial\phi_r}{\partial y} \; dx \, dy  \notag \\
    &= \int_{\triangle_\ast} \left(\frac{\partial \chi_q}{\partial \xi} \frac{\partial \xi}{\partial x} + \frac{\partial \chi_q}{\partial \eta} \frac{\partial \eta}{\partial x}\right) \left(\frac{\partial \chi_r}{\partial \xi} \frac{\partial \xi}{\partial x} + \frac{\partial \chi_r}{\partial \eta} \frac{\partial \eta}{\partial x}\right) \notag \\
-   &\qquad\qquad + \left(\frac{\partial \chi_q}{\partial \xi} \frac{\partial \xi}{\partial y} + \frac{\partial \chi_q}{\partial \eta} \frac{\partial \eta}{\partial y}\right) \left(\frac{\partial \chi_r}{\partial \xi} \frac{\partial \xi}{\partial y} + \frac{\partial \chi_r}{\partial \eta} \frac{\partial \eta}{\partial y}\right) \; \det(J) \; d\xi \, d\eta. \notag
+   &\qquad\qquad + \left(\frac{\partial \chi_q}{\partial \xi} \frac{\partial \xi}{\partial y} + \frac{\partial \chi_q}{\partial \eta} \frac{\partial \eta}{\partial y}\right) \left(\frac{\partial \chi_r}{\partial \xi} \frac{\partial \xi}{\partial y} + \frac{\partial \chi_r}{\partial \eta} \frac{\partial \eta}{\partial y}\right) \; |\det(J)| \; d\xi \, d\eta. \notag
 \end{align}
 The last expression is the low point of this calculation.  From now on the formulas simplify because the integrand is \emph{constant}.  Indeed, by \eqref{trianglejacobian} we see $\det(J)$ is constant, but also the derivatives $\partial \chi_q/\partial\{\xi,\eta\}$ and $\partial\{\xi,\eta\}/\partial\{x,y\}$ are all constant because the functions in question are linear.
 
@@ -480,7 +480,7 @@ Now let $y_{20}=y_2-y_0$, $x_{02}=x_0-x_2$, $y_{01}=y_0-y_1$ and $x_{10}=x_1-x_0
 \end{equation}
 Thus, by \eqref{elementcontrib} and \eqref{dxietadxy}, and because the area of the reference triangle $\triangle_\ast$ is $1/2$\,, our element-wise contribution to $\tilde a_{ij}$ simplifies to
 \begin{align}
-\text{\texttt{a(k,q,r)}} = \frac{1}{2\; \det(J)} &\bigg[\left(\frac{\partial \chi_q}{\partial \xi} y_{20} + \frac{\partial \chi_q}{\partial \eta} y_{01}\right) \left(\frac{\partial \chi_r}{\partial \xi} y_{20} + \frac{\partial \chi_r}{\partial \eta} y_{01}\right) \label{elementcontribFINAL} \\
+\text{\texttt{a(k,q,r)}} = \frac{1}{2\; |\det(J)|} &\bigg[\left(\frac{\partial \chi_q}{\partial \xi} y_{20} + \frac{\partial \chi_q}{\partial \eta} y_{01}\right) \left(\frac{\partial \chi_r}{\partial \xi} y_{20} + \frac{\partial \chi_r}{\partial \eta} y_{01}\right) \label{elementcontribFINAL} \\
 &\quad + \left(\frac{\partial \chi_q}{\partial \xi} x_{02} + \frac{\partial \chi_q}{\partial \eta} x_{10}\right) \left(\frac{\partial \chi_r}{\partial \xi} x_{02} + \frac{\partial \chi_r}{\partial \eta} x_{10}\right)\bigg]. \notag
 \end{align}
 Also note that
@@ -494,8 +494,8 @@ To complete the code for the initial linear system $\tilde A \bu = \tilde\bb$ we
 
 FIXME: in the homogeneous Neumann case ($\gamma=0$) we use midpoints of the edges of the triangles in our quadrature rule from \citet{Ciarlet}
 \begin{align*}
-\text{\texttt{b(k,q)}} &= \int_{\triangle_\ast} f\, \chi_q \; \det(J) \; d\xi \, d\eta \\
-  &\approx \frac{\det(J)}{6} \left(\omega_q(0.5,0) + \omega_q(0.5,0.5) + \omega_q(0,0.5)\right)
+\text{\texttt{b(k,q)}} &= \int_{\triangle_\ast} f\, \chi_q \; |\det(J)| \; d\xi \, d\eta \\
+  &\approx \frac{|\det(J)|}{6} \left(\omega_q(0.5,0) + \omega_q(0.5,0.5) + \omega_q(0,0.5)\right)
 \end{align*}
 where $\omega_q(\xi,\eta) = f(x(\xi,\eta),y(\xi,\eta)) \chi_q(\xi,\eta)$.
 

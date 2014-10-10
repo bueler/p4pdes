@@ -139,14 +139,14 @@ PetscErrorCode initassemble(MPI_Comm comm,
   PetscInt    bs, Kstart, Kend, k, q, r, i, jj[3];
   PetscScalar *ae;
   elementtype *et;
-  PetscScalar vv[3], y20, x02, y01, x10, detJ,
+  PetscScalar y20, x02, y01, x10, detJ, vv[3],
               bval, xquad, yquad;
   ierr = VecGetBlockSize(E,&bs); CHKERRQ(ierr);
   ierr = VecGetOwnershipRange(E,&Kstart,&Kend); CHKERRQ(ierr);
   ierr = VecGetArray(E,&ae); CHKERRQ(ierr);
   for (k = Kstart; k < Kend; k += bs) {    // loop through owned elements
     et = (elementtype*)(&(ae[k-Kstart]));  // points to current element
-    // compute element geometry constants (compare Elman (1.43)
+    // compute coordinate differences (compare Elman (1.43)
     y20 = et->y[2] - et->y[0];
     x02 = et->x[0] - et->x[2];
     y01 = et->y[0] - et->y[1];
@@ -160,7 +160,7 @@ PetscErrorCode initassemble(MPI_Comm comm,
         jj[r] = (int)et->j[r];             // global column index
         vv[r] =  (dxi[q] * y20 + deta[q] * y01) * (dxi[r] * y20 + deta[r] * y01);
         vv[r] += (dxi[q] * x02 + deta[q] * x10) * (dxi[r] * x02 + deta[r] * x10);
-        vv[r] /= 2.0 * detJ;
+        vv[r] /= 2.0 * fabs(detJ);
       }
       ierr = MatSetValues(A,1,&i,3,jj,vv,ADD_VALUES); CHKERRQ(ierr);
       // compute element RHS contribution FIXME in homogeneous Neumann case
@@ -170,7 +170,7 @@ PetscErrorCode initassemble(MPI_Comm comm,
         yquad = et->x[0] - y01 * quadxi[r] + y20 * quadeta[r]; // = y0 + (y1-y0) xi + (y2-y0) eta
         bval += (*f)(xquad,yquad) * chi(q,quadxi[r],quadeta[r]);
       }
-      bval *= detJ / 6.0;
+      bval *= fabs(detJ) / 6.0;
       ierr = VecSetValues(b,1,&i,&bval,ADD_VALUES); CHKERRQ(ierr);
     }
   }
