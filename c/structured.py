@@ -36,7 +36,7 @@ for j in range(N):
             bdry = 2  # only Dirichlet boundary
         else:
             bdry = 0
-        node.write(' %4d  %12g  %12g  %4d\n' % (n(i,j), x, y, bdry))
+        node.write(' %4d  %.14f  %.14f  %4d\n' % (n(i,j), x, y, bdry))
 node.write('# created by: %s\n' % commandline)
 node.close()
 
