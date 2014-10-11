@@ -5,8 +5,8 @@ ex*.c
  
 c1matvec
 c2convert
-c2testprealloc
 c2poisson
+c3poisson
 
 bump.?.*
 square.?.*

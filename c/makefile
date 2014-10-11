@@ -14,6 +14,10 @@ c2poisson: c2poisson.o readmesh.o poissontools.o chkopts
 	-${CLINKER} -o c2poisson c2poisson.o readmesh.o poissontools.o ${PETSC_KSP_LIB}
 	${RM} c2poisson.o readmesh.o poissontools.o
 
+c3poisson: c3poisson.o chkopts
+	-${CLINKER} -o c3poisson c3poisson.o ${PETSC_KSP_LIB}
+	${RM} c3poisson.o
+
 
 .PHONY: distclean
 
