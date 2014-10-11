@@ -13,8 +13,7 @@ PetscScalar chi(PetscInt q, PetscScalar xi, PetscScalar eta) {
 }
 
 
-// run through elements and find and assemble all Dirichlet rows
-// uses INSERT_VALUES; may redundantly INSERT_VALUES many times given row
+//DIRICHLETROWS
 PetscErrorCode dirichletrows(MPI_Comm comm,
                              Vec E,
                              PetscScalar (*g)(PetscScalar, PetscScalar),
@@ -43,14 +42,16 @@ PetscErrorCode dirichletrows(MPI_Comm comm,
   vecassembly(b)
   return 0;
 }
+//ENDDIRICHLETROWS
 
 
-PetscErrorCode assembleothers(MPI_Comm comm,
-                              Vec E,
-                              PetscScalar (*f)(PetscScalar, PetscScalar),
-                              PetscScalar (*g)(PetscScalar, PetscScalar),
-                              PetscScalar (*gamma)(PetscScalar, PetscScalar),
-                              Mat A, Vec b) {
+//ASSEMBLEADDONE
+PetscErrorCode assembleadd(MPI_Comm comm,
+                           Vec E,
+                           PetscScalar (*f)(PetscScalar, PetscScalar),
+                           PetscScalar (*g)(PetscScalar, PetscScalar),
+                           PetscScalar (*gamma)(PetscScalar, PetscScalar),
+                           Mat A, Vec b) {
   PetscErrorCode ierr;  //STRIP
   PetscScalar dxi[3]  = {-1.0, 1.0, 0.0},   // grad of basis functions chi0, chi1, chi2
               deta[3] = {-1.0, 0.0, 1.0},   //     on ref element
@@ -67,16 +68,17 @@ PetscErrorCode assembleothers(MPI_Comm comm,
   for (k = Kstart; k < Kend; k += bs) {    // loop through owned elements
     et = (elementtype*)(&(ae[k-Kstart]));  // points to current element
     // compute coordinate differences (compare Elman (1.43)
-    y20 = et->y[2] - et->y[0];
-    x02 = et->x[0] - et->x[2];
-    y01 = et->y[0] - et->y[1];
-    x10 = et->x[1] - et->x[0];
+    x10 = et->x[1] - et->x[0];  x02 = et->x[0] - et->x[2];
+    y01 = et->y[0] - et->y[1];  y20 = et->y[2] - et->y[0];
     detJ = x10 * y20 - y01 * x02;          // note area = fabs(detJ)/2.0
     // store element quadrature points (x,y coordinates)
     for (r = 0; r < 3; r++) {
-      xquad[r] = et->x[0] + x10 * quadxi[r] - x02 * quadeta[r]; // = x0 + (x1-x0) xi + (x2-x0) eta
-      yquad[r] = et->x[0] - y01 * quadxi[r] + y20 * quadeta[r]; // = y0 + (y1-y0) xi + (y2-y0) eta
+      // recall x = x0 + (x1-x0) xi + (x2-x0) eta  //STRIP
+      //   and  y = y0 + (y1-y0) xi + (y2-y0) eta  //STRIP
+      xquad[r] = et->x[0] + x10 * quadxi[r] - x02 * quadeta[r];
+      yquad[r] = et->x[0] - y01 * quadxi[r] + y20 * quadeta[r];
     }
+//ENDONE
     // loop over vertices of current element
     for (q = 0; q < 3; q++) {
       if ( (g) && ((int)et->bN[q] == 2) )  continue;  // skip Dirichlet rows
@@ -92,9 +94,10 @@ PetscErrorCode assembleothers(MPI_Comm comm,
       // add element RHS contribution from Neumann boundary values gamma
       if (gamma) {
         for (r = 0; r < 3; r++) {          // loop over edges of elemtn
-          if ((int)et->bE[r]) {
+          if ((int)et->bE[r]) {            // segment is on boundary
             rnext = (r < 2) ? r+1 : 0;     // cycle
-            if ( ((int)et->bN[r] == 3) && ((int)et->bN[rnext] == 3) ) { // both ends must be Neumann
+            if ( ((int)et->bN[r] == 3) && ((int)et->bN[rnext] == 3) ) {
+              // both end nodes must be Neumann to be Neumann boundary
               slen = PetscSqr(et->x[rnext] - et->x[r]) + PetscSqr(et->y[rnext] - et->y[r]);
               slen = PetscSqrtReal(slen);  // = side (edge) length
               bval += (*gamma)(xquad[r],yquad[r]) * chi(q,quadxi[r],quadeta[r]) * slen;
@@ -127,9 +130,9 @@ PetscErrorCode assembleothers(MPI_Comm comm,
   vecassembly(b)
   return 0;
 }
+//ENDASSEMBLEADD
 
-
-
+//FULLASSEMBLE
 PetscErrorCode assemble(MPI_Comm comm,
                         Vec E,
                         PetscScalar (*f)(PetscScalar, PetscScalar),
@@ -140,6 +143,7 @@ PetscErrorCode assemble(MPI_Comm comm,
   if (g) {
     ierr = dirichletrows(comm,E,g,A,b); CHKERRQ(ierr);
   }
-  ierr = assembleothers(comm,E,f,g,gamma,A,b); CHKERRQ(ierr);
+  ierr = assembleadd(comm,E,f,g,gamma,A,b); CHKERRQ(ierr);
   return 0;
 }
+//ENDFULLASSEMBLE

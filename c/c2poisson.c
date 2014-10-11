@@ -43,6 +43,7 @@ int main(int argc,char **args) {
   MPI_Comm_rank(WORLD,&rank);
 
   // READ MESH FROM FILE
+//GETMESH
   Vec      E,     // element data structure
            x, y;  // coords of node
   PetscInt N,     // number of nodes
@@ -59,9 +60,8 @@ int main(int argc,char **args) {
                          "  2 = check if right side sums to area when f=1\n", "", -1,
                          &check, &checkset); CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
-  if ((checkset == PETSC_TRUE) && (check < 1) && (check > 2)) {
-    SETERRQ(WORLD,1,"invalid argument for option -check");
-  }
+  if ((checkset == PETSC_TRUE) && (check < 1) && (check > 2)) {  //STRIP
+    SETERRQ(WORLD,1,"invalid argument for option -check");  }  //STRIP
   ierr = getmeshfile(WORLD, ".petsc", fname, &viewer); CHKERRQ(ierr);
   ierr = readmesh(WORLD, viewer, &E, &x, &y); CHKERRQ(ierr);
   PetscViewerDestroy(&viewer);
@@ -74,15 +74,16 @@ int main(int argc,char **args) {
   ierr = MatSetType(A,MATMPIAIJ); CHKERRQ(ierr);
   ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,N,N); CHKERRQ(ierr);
   ierr = MatSetOptionsPrefix(A,"a_"); CHKERRQ(ierr);
-  // FIXME:  instead of next two lines we should preallocate correctly
   ierr = MatSetUp(A); CHKERRQ(ierr);
   ierr = MatSetOption(A,MAT_NEW_NONZERO_LOCATION_ERR,PETSC_FALSE); CHKERRQ(ierr);
   ierr = VecDuplicate(x,&b); CHKERRQ(ierr);
   ierr = VecSet(b,0.0); CHKERRQ(ierr);
   ierr = VecSetOptionsPrefix(b,"b_"); CHKERRQ(ierr);
+//ENDMATVECCREATE
 
   ierr = PetscPrintf(WORLD,"  assembling initial stiffness matrix A ...\n"); CHKERRQ(ierr);
 
+//TWOCHECKS
   if (check == 1) {
     // CHECK 1: IS U=constant IN KERNEL?
     Vec         uone;
@@ -105,9 +106,11 @@ int main(int argc,char **args) {
     ierr = PetscPrintf(WORLD,"  check 2:  does right side sum to area if f=1?\n"
                        "    sum(b) = %e   (should be area of region)\n",
                        bsum); CHKERRQ(ierr);
+//ENDTWOCHECKS
   } else {
     // SOLVE MANUFACTURED DIRICHLET PROBLEM; SHOULD WORK IF ENTIRE BOUNDARY IS
     //   MARKED AS DIRICHLET
+//SOLVEMANU
     Vec         u, uexact;
     KSP         ksp;
     PetscScalar *ax, *ay, uval, normdiff;
@@ -142,6 +145,7 @@ int main(int argc,char **args) {
                        normdiff); CHKERRQ(ierr);
     ierr = VecDestroy(&uexact); CHKERRQ(ierr);
   }
+//ENDSOLVEMANU
 
   MatDestroy(&A);  VecDestroy(&b);
   VecDestroy(&x);  VecDestroy(&y);  VecDestroy(&E);

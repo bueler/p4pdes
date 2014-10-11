@@ -228,9 +228,9 @@ A \bu = \bb, \label{poissonmatrix}
 has $A\in\RR^{N\times N}$ and $\bb\in\RR^N$, where $N$ is the number of nodes.  We will write a code which assembles $A$ and $\bb$ and solves for $\bu\in\RR^N$.  \PETSc \pMat and \pVec objects contain this problem, and we use a \PETSc \pKSP object to solve it.
 
 For ease of construction we include the node-wise Dirichlet conditions $u_j=g(\bx_j)$ as equations in this linear system, treating such $u_j$ as unknowns, so that the matrix really does have $N$ rows and columns if there are $N$ nodes in total.  Thus we define $A$ to have entries
-\begin{equation*}
-a_{ij} = \int_\Omega \grad \phi_j \cdot \grad \phi_i
-\end{equation*}
+\begin{equation}
+a_{ij} = \int_\Omega \grad \phi_j \cdot \grad \phi_i \label{Aentryfem}
+\end{equation}
 if $\bx_i \notin \partial_D \Omega$ and $\bx_j \notin \partial_D \Omega$, while otherwise
 \begin{equation*}
 a_{ij} = \delta_{ij}.
@@ -240,7 +240,9 @@ Notice that we index rows and columns of matrices and vectors starting with zero
 Observe that $A$ is \emph{symmetric}, $a_{ij}=a_{ji}$.  Furthermore $A$ is \emph{sparse}, that is, most entries are zero, at least for triangulations with more than a handful of triangles.  These facts affect the algorithms we choose when solving \eqref{poissonmatrix}.
 
 For the right side of \eqref{poissonfem}, define the entries
-    $$b_i = \int_\Omega f \phi_i + \int_{\partial_N\Omega} \gamma \phi_i - \sum_{l=0,\dots,L} g(\bx_{j_l})  \int_\Omega \grad \phi_{j_l} \cdot \grad \phi_i$$
+\begin{equation}
+    b_i = \int_\Omega f \phi_i + \int_{\partial_N\Omega} \gamma \phi_i - \sum_{l=0,\dots,L} g(\bx_{j_l})  \int_\Omega \grad \phi_{j_l} \cdot \grad \phi_i  \label{bentryfem}
+\end{equation}
 if $\bx_i \notin \partial_D \Omega$, while if $\bx_i \in \partial_D \Omega$ then
     $$b_i = g(\bx_{i}).$$
 
@@ -398,14 +400,19 @@ y(\xi,\eta) &= y_0 + (y_1-y_0) \xi + (y_2-y_0) \eta. \notag
 \end{marginfigure}
 
 \noindent Furthermore, on $\triangle_\ast$ any linear function is a linear combination of these three local basis functions:
-\begin{equation*}
-\chi_0(\xi,\eta) = 1-\xi-\eta, \qquad \chi_1(\xi,\eta) = \xi, \qquad \chi_2(\xi,\eta) = \eta.
-\end{equation*}
+\begin{equation}
+\chi_0(\xi,\eta) = 1-\xi-\eta, \qquad \chi_1(\xi,\eta) = \xi, \qquad \chi_2(\xi,\eta) = \eta. \label{chiformulas}
+\end{equation}
 Each of the basis functions $\phi_q$ is then the mapped version of the corresponding $\chi_q$:
 \begin{equation}
 \phi_q(x(\xi,\eta),y(\xi,\eta)) = \chi_q(\xi,\eta). \label{phichimap}
 \end{equation}
 From \eqref{trianglemap} and \eqref{phichimap} one can confirm that $\phi_q(x_r,y_r) = \delta_{qr}$.
+
+Now is a good point at which to observe that the set of $\phi_j$, over all nodes $j=0,1,\dots,N$, is a partition of unity.  We can see this by switching to local node coordinate $q$ and by $\chi_0+\chi_1+\chi_2=1$ from \eqref{chiformulas} above.  That is, if $(x,y)\in\triangle_k$ then
+\begin{equation}
+   \sum_j \phi_j(x,y) = \sum_{q=0,1,2} \phi_q(x,y) = \sum_{q=0,1,2} \chi_q(\xi,\eta) =1.  \label{partitionofunity}
+\end{equation}
 
 The Jacobian\sidenote{By definition, the \emph{Jacobian} $J=J(\bx)$ of a smooth map $F$ at a point $\bx$ is its linearization at $\bx$.  That is, if $\by=F(\bx)$ and $\by+\Delta\by = F(\bx+\Delta\bx)$ then $J(\bx)$ satisfies $\Delta \by = J(\bx) \Delta\bx + O(|\Delta\bx|^2)$.} of map \eqref{trianglemap} is
 % CAUTION: Elman (1.37) uses "Jacobian" for the transpose of this, the true Jacobian (e.g. in Newton later)
@@ -420,7 +427,6 @@ J = \begin{bmatrix}
     y_1-y_0 & y_2-y_0
     \end{bmatrix}.  \label{trianglejacobian}
 \end{equation}
-
 Recalling both the change-of-variables formula for integrals\sidenote{If $F$ is smooth and maps points $\bx \in U$ to points $\by=F(\bx) \in F(U)$, and if $J$ is the Jacobian of $F$, then $$\int_{F(U)} f(\by)\,d\by = \int_U f(F(\bx))\,|\det(J)|\,d\bx.$$} and the chain rule, by \eqref{phichimap} we can write
 \begin{align}
 \text{\texttt{a(k,q,r)}} &= \int_{\triangle_k} \grad\phi_q \cdot \grad\phi_r \label{elementcontrib} \\
@@ -501,15 +507,33 @@ where $\omega_q(\xi,\eta) = f(x(\xi,\eta),y(\xi,\eta)) \chi_q(\xi,\eta)$.
 
 %\section{Preallocate a \pMat}
 %FIXME: figure showing parallel partition of elements
-%FIXME: show \texttt{poissontools.c} here
 %\cinputpart{c2testprealloc.c}{Read mesh \pVec s from file.  Get row ownership range.}{I}{//STARTLOAD}{//ENDLOAD}{code:testpreallocpartone}
 %\cinputpart{c2testprealloc.c}{Set up \pMat $A$ and actually preallocate it.  Fill it with junk entries so the pattern can be visualized.}{II}{//ENDLOAD}{//ENDTEST}{code:testpreallocparttwo}
 
 
 \section{Solve the Poisson problem}
 
-FIXME: show \texttt{c2poisson.c} here
+\cinputpart{poissontools.c}{Find Dirichlet rows, \texttt{INSERT\_VALUES} these, and call \texttt{MatAssemblyBegin/End} and \texttt{VecAssemblyBegin/End}.}{I}{//DIRICHLETROWS}{//ENDDIRICHLETROWS}{code:poissontoolsdirichlet}
 
-FIXME: use CG
+\cinputpart{poissontools.c}{Start computing all other contributions element-by-element: Precompute all geometry of element and quadrature points.}{II}{//ASSEMBLEADDONE}{//ENDONE}{code:poissontoolsaddone}
+
+\cinputpart{poissontools.c}{Compute all other contributions element-by-element including source $f$, Dirichlet columns using data $g$, and Neumann data $\gamma$.  Use \texttt{ADD\_VALUES} for these, and call \texttt{MatAssemblyBegin/End} and \texttt{VecAssemblyBegin/End}.}{III}{//ENDONE}{//ENDASSEMBLEADD}{code:poissontoolsaddtwo}
+
+\cinputpart{poissontools.c}{Call \texttt{dirichletrows()} and \texttt{assembleadd()}.}{IV}{//FULLASSEMBLE}{//ENDFULLASSEMBLE}{code:poissontoolsassemble}
+
+
+\cinputpart{c2poisson.c}{Read in mesh in parallel (i.e.~\pVec \texttt{E}) and create \pMat \texttt{A} and \pVec \texttt{b}.}{I}{//GETMESH}{//ENDMATVECCREATE}{code:ctwopoissongetmesh}
+
+In the next part of the code (Figure \ref{code:ctwopoissonchecks}) we do two basic checks on our assembly procedure, without solving a linear system.  First we check the construction of \texttt{A} by checking if constant functions are in the kernel when $\partial_D\Omega=\emptyset$.  In this check the data $f$, $g$, and $\gamma$ are all not used, and the boundary information in \texttt{E} is not used either.
+
+\cinputpart{c2poisson.c}{Do two checks on the construction of the linear system.}{II}{//TWOCHECKS}{//ENDTWOCHECKS}{code:ctwopoissonchecks}
+
+In the second check we verify the construction of $\bb$ in the case where $f\equiv 1$, $\gamma=0$, and $\partial_D\Omega=\emptyset$.  In this case, by formula \eqref{bentryfem} and observation \eqref{partitionofunity}, the sum of the entries of $\bb$ should be the area of the region:
+   $$\sum_j b_j = \sum_j \int_\Omega 1\, \phi_j = \int_\Omega \sum_j \phi_j = |\Omega|.$$
+
+\cinputpart{c2poisson.c}{Solve a Dirichlet problem for which we know the solution.}{III}{//SOLVEMANU}{//ENDSOLVEMANU}{code:ctwopoissonsolvemanu}
+
+
+
 
 \caveat{It works, but does it work well?}
