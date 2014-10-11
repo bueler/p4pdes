@@ -194,7 +194,7 @@ The next part of \texttt{c2convert.c} is in Figure \ref{code:trianglepartthree}.
 
 \cinputpart{c2convert.c}{On rank zero: Read polygon information.}{III}{//ENDREADNODES}{//ENDREADPOLYGONS}{code:trianglepartthree}
 
-The next short part (Figure \ref{code:trianglepartfour}) reads the header information in the \texttt{.ele} file and allocates a \pVec called \texttt{vE} for the elements.  This part of the code is an important transformation of the data structures.  In fact, \texttt{vE} has block size 15,\marginnote{A \PETSc \pVec is designed to hold \texttt{PetscScalar} data types, i.e.~\texttt{double} in most cases.  So we are being quite wasteful for integer indices and boolean flags.} and, in contrast to the format from \Triangle, it contains all the information about each element that we need to do assemble the matrix equation.  Each of its blocks is the following C \texttt{struct}:
+The next short part (Figure \ref{code:trianglepartfour}) reads the header information in the \texttt{.ele} file and allocates a \pVec called \texttt{vE} for the elements.  This part of the code is an important transformation of the data structures.  In fact, \texttt{vE} has block size 15,\sidenote{A \PETSc \pVec is designed to hold \texttt{PetscScalar} data types, i.e.~\texttt{double}.  So we are being quite wasteful for integer indices and boolean flags.} and, in contrast to the format from \Triangle, it contains all the information about each element that we need to do assemble the matrix equation.  Each of its blocks is the following C \texttt{struct}:
 \newcommand*\FancyVerbStartString{//STARTSTRUCT}
 \newcommand*\FancyVerbStopString{//ENDSTRUCT}
 \VerbatimInput[fontfamily=courier,%
@@ -414,7 +414,7 @@ Now is a good point at which to observe that the set of $\phi_j$, over all nodes
    \sum_j \phi_j(x,y) = \sum_{q=0,1,2} \phi_q(x,y) = \sum_{q=0,1,2} \chi_q(\xi,\eta) =1.  \label{partitionofunity}
 \end{equation}
 
-The Jacobian\sidenote{By definition, the \emph{Jacobian} $J=J(\bx)$ of a smooth map $F$ at a point $\bx$ is its linearization at $\bx$.  That is, if $\by=F(\bx)$ and $\by+\Delta\by = F(\bx+\Delta\bx)$ then $J(\bx)$ satisfies $\Delta \by = J(\bx) \Delta\bx + O(|\Delta\bx|^2)$.} of map \eqref{trianglemap} is
+The Jacobian\sidenote{By definition, the \emph{Jacobian} $J=J(\bx)$ of a smooth map $F$ at a point $\bx$ is its linearization at $\bx$.  That is, if $\by=F(\bx)$ and $\by+\Delta\by = F(\bx+\Delta\bx)$ then $J(\bx)$ satisfies $\Delta \by = J(\bx) \Delta\bx + o(|\Delta\bx|)$.} of map \eqref{trianglemap} is
 % CAUTION: Elman (1.37) uses "Jacobian" for the transpose of this, the true Jacobian (e.g. in Newton later)
 \begin{equation}
 J = \begin{bmatrix}
@@ -427,7 +427,7 @@ J = \begin{bmatrix}
     y_1-y_0 & y_2-y_0
     \end{bmatrix}.  \label{trianglejacobian}
 \end{equation}
-Recalling both the change-of-variables formula for integrals\sidenote{If $F$ is smooth and maps points $\bx \in U$ to points $\by=F(\bx) \in F(U)$, and if $J$ is the Jacobian of $F$, then $$\int_{F(U)} f(\by)\,d\by = \int_U f(F(\bx))\,|\det(J)|\,d\bx.$$} and the chain rule, by \eqref{phichimap} we can write
+Recalling both the change-of-variables formula for integrals\sidenote{If $F$ is a smooth map from $\bx \in U$ to $\by \in F(U)$, $J$ is the Jacobian of $F$, and $g$ is integrable on $F(U)$, then $$\int_{F(U)} g(\by)\,d\by = \int_U g(F(\bx))\,|\det(J)|\,d\bx.$$} and the chain rule, by \eqref{phichimap} we can write
 \begin{align}
 \text{\texttt{a(k,q,r)}} &= \int_{\triangle_k} \grad\phi_q \cdot \grad\phi_r \label{elementcontrib} \\
    &= \int_{\triangle_k} \frac{\partial\phi_q}{\partial x} \frac{\partial\phi_r}{\partial x} + \frac{\partial\phi_q}{\partial y} \frac{\partial\phi_r}{\partial y} \; dx \, dy  \notag \\
@@ -501,9 +501,9 @@ To complete the code for the initial linear system $\tilde A \bu = \tilde\bb$ we
 FIXME: in the homogeneous Neumann case ($\gamma=0$) we use midpoints of the edges of the triangles in our quadrature rule from \citet{Ciarlet}
 \begin{align*}
 \text{\texttt{b(k,q)}} &= \int_{\triangle_\ast} f\, \chi_q \; |\det(J)| \; d\xi \, d\eta \\
-  &\approx \frac{|\det(J)|}{6} \left(\omega_q(0.5,0) + \omega_q(0.5,0.5) + \omega_q(0,0.5)\right)
+  &\approx \frac{|\det(J)|}{6} \left(\omega(0.5,0) + \omega(0.5,0.5) + \omega(0,0.5)\right)
 \end{align*}
-where $\omega_q(\xi,\eta) = f(x(\xi,\eta),y(\xi,\eta)) \chi_q(\xi,\eta)$.
+where $\omega(\xi,\eta) = f(x(\xi,\eta),y(\xi,\eta)) \chi_q(\xi,\eta)$.
 
 %\section{Preallocate a \pMat}
 %FIXME: figure showing parallel partition of elements
