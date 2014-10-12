@@ -4,8 +4,8 @@ ex??
 ex*.c
  
 c1matvec
-c2convert
 c2poisson
+c3convert
 c3poisson
 
 bump.?.*

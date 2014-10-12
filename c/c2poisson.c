@@ -1,154 +1,114 @@
 
-static char help[] =
-"Solve the Poisson equation\n\
-  - div(grad u) = f,\n\
-with a mix of Dirichlet and Neumann boundary conditions,\n\
-  u          = g      on bdry_D Omega,\n\
-  grad u . n = gamma  on bdry_N Omega,\n\
-using an unstructured mesh FEM method.\n\
-This version uses a manufactured solution. (FIXME: make optional)\n\
-For a one-process, very coarse grid example do:\n\
-     triangle -pqa0.15 square  # generates square.1.{node,ele,poly}\n\
-     c2convert -f square.1     # reads square.1.{node,ele,poly}; generates square.1.petsc\n\
-     c2poisson -f square.1     # reads square.1.petsc and solves the equation\n\
-To see the matrix graphically:\n\
-     c2poisson -f square.1 -a_mat_view draw -draw_pause 5\n\n";
+static char help[] = "Solves a structured-grid Poisson problem with DMDA and KSP.\n\n";
+// this is an edited form of src/ksp/ksp/examples/tutorials/ex46.c; see also ex2.c
 
+// SHOW MAT:  ./c3poisson -a_mat_view
+// SHOW MAT GRAPHICAL:  ./c3poisson -a_mat_view draw -draw_pause 5
+// SHOW MAT DENSE:  ./c3poisson -da_grid_x 3 -da_grid_y 3 -a_mat_view ::ascii_dense
+
+// FIXME: this convergence is for discrete linear solver only, not for PDE
+// CONVERGENCE: for NN in 5 10 20 40 80 160; do ./c3poisson -da_grid_x $NN -da_grid_y $NN -ksp_rtol 1.0e-14 -ksp_type cg; done
+
+// VISUALIZATION OF SOLUTION: mpiexec -n 6 ./c3poisson -ksp_rtol 1.0e-12 -da_grid_x 129 -da_grid_y 129 -ksp_type cg -ksp_monitor_solution
+
+// PURE LU ALGORITHM: ./c3poisson  -ksp_type preonly -pc_type lu
+// PURE CHOLESKY ALGORITHM: ./c3poisson  -ksp_type preonly -pc_type cholesky
+// PURE CG ALGORITHM:
+//   ./c3poisson  -ksp_type cg -pc_type none -ksp_view  # JUST SHOW KSP STRUCTURE
+//   ./c3poisson -da_grid_x 257 -da_grid_y 257 -ksp_type cg -pc_type none -log_summary
+//   (compare Elman p.72 and Algorithm 2.1 = cg: "The computational work of one
+//   iteration is two inner products, three vector updates, and one matrix-vector
+//   product.")
+
+// PERFORMANCE ANALYSIS:
+//   export PETSC_ARCH=linux-gnu-opt
+//   make c3poisson
+//   ./c3poisson -da_grid_x 513 -da_grid_y 513 -ksp_type cg -log_summary
+//   mpiexec -n 4 ./c3poisson -da_grid_x 513 -da_grid_y 513 -ksp_type cg -log_summary
+
+#include <petscdmda.h>
 #include <petscksp.h>
 #include "convenience.h"
-#include "readmesh.h"
-#include "poissontools.h"
 
-// for manufactured solution:  this serves as uexact and as g
-PetscScalar manufacture_u(PetscScalar x, PetscScalar y) {
-  return x * x + y * y * y * y * y;
-}
-
-// for manufactured solution:  f = - div(grad u)
-PetscScalar manufacture_f(PetscScalar x, PetscScalar y) {
-  return - (2.0 + 20.0 * y * y * y);
-}
-
-// for -check 2:  we need f(x,y)=1 when checking sum(b)=area
-PetscScalar check_f(PetscScalar x, PetscScalar y) {
-  return 1.0;
-}
-
-int main(int argc,char **args) {
-
+int main(int argc,char **args)
+{
+  PetscErrorCode ierr;
   PetscInitialize(&argc,&args,(char*)0,help);
-  const MPI_Comm  WORLD = PETSC_COMM_WORLD;
-  PetscErrorCode  ierr;
-  PetscMPIInt     rank;
-  MPI_Comm_rank(WORLD,&rank);
 
-  // READ MESH FROM FILE
-//GETMESH
-  Vec      E,     // element data structure
-           x, y;  // coords of node
-  PetscInt N,     // number of nodes
-           K,     // number of elements
-           bs;    // block size for elementtype
-  char     fname[PETSC_MAX_PATH_LEN];
-  PetscInt check;
-  PetscBool checkset;
-  PetscViewer viewer;
-  ierr = PetscOptionsBegin(WORLD, "", "options for c2poisson", ""); CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-check",
-                         "check assembly, ignoring Dirichlet conditions:\n"
-                         "  1 = check if constants are kernel,\n"
-                         "  2 = check if right side sums to area when f=1\n", "", -1,
-                         &check, &checkset); CHKERRQ(ierr);
-  ierr = PetscOptionsEnd(); CHKERRQ(ierr);
-  if ((checkset == PETSC_TRUE) && (check < 1) && (check > 2)) {  //STRIP
-    SETERRQ(WORLD,1,"invalid argument for option -check");  }  //STRIP
-  ierr = getmeshfile(WORLD, ".petsc", fname, &viewer); CHKERRQ(ierr);
-  ierr = readmesh(WORLD, viewer, &E, &x, &y); CHKERRQ(ierr);
-  PetscViewerDestroy(&viewer);
-  ierr = getcheckmeshsizes(WORLD,E,x,y,&N,&K,&bs); CHKERRQ(ierr);
+  // create distributed array to handle parallel distribution.
+  // default size (5 x 5) can be changed using -da_grid_x M -da_grid_y N
+  DM             da;
+  DMDALocalInfo  info;
+  ierr = DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
+                DMDA_STENCIL_STAR,-5,-5,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,
+                &da); CHKERRQ(ierr);
+  ierr = DMDAGetLocalInfo(da,&info);CHKERRQ(ierr);
 
-  // CREATE MAT AND RHS b
-  Mat A;
-  Vec b;
-  ierr = MatCreate(WORLD,&A); CHKERRQ(ierr);
-  ierr = MatSetType(A,MATMPIAIJ); CHKERRQ(ierr);
-  ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,N,N); CHKERRQ(ierr);
+  // create linear system matrix
+  // to use symmetric storage, run with -dm_mat_type sbaij -mat_ignore_lower_triangular ??
+  Mat  A;
+  ierr = DMSetMatType(da,MATAIJ);CHKERRQ(ierr);
+  ierr = DMCreateMatrix(da,&A);CHKERRQ(ierr);
   ierr = MatSetOptionsPrefix(A,"a_"); CHKERRQ(ierr);
-  ierr = MatSetUp(A); CHKERRQ(ierr);
-  ierr = MatSetOption(A,MAT_NEW_NONZERO_LOCATION_ERR,PETSC_FALSE); CHKERRQ(ierr);
-  ierr = VecDuplicate(x,&b); CHKERRQ(ierr);
-  ierr = VecSet(b,0.0); CHKERRQ(ierr);
-  ierr = VecSetOptionsPrefix(b,"b_"); CHKERRQ(ierr);
-//ENDMATVECCREATE
 
-  ierr = PetscPrintf(WORLD,"  assembling initial stiffness matrix A ...\n"); CHKERRQ(ierr);
-
-//TWOCHECKS
-  if (check == 1) {
-    // CHECK 1: IS U=constant IN KERNEL?
-    Vec         uone;
-    PetscScalar normone, normAone;
-    ierr = assemble(WORLD,E,NULL,NULL,NULL,A,b); CHKERRQ(ierr);
-    ierr = VecDuplicate(b,&uone); CHKERRQ(ierr);
-    ierr = VecSet(uone,1.0); CHKERRQ(ierr);
-    ierr = MatMult(A,uone,b); CHKERRQ(ierr);             // b = A * uone
-    ierr = VecNorm(uone,NORM_2,&normone); CHKERRQ(ierr);
-    ierr = VecNorm(b,NORM_2,&normAone); CHKERRQ(ierr);
-    ierr = PetscPrintf(WORLD,"  check 1:  are constants in kernel?\n"
-                       "    |A * 1|_2 / |1|_2 = %e   (should be O(eps))\n",
-                       normAone/normone); CHKERRQ(ierr);
-    ierr = VecDestroy(&uone); CHKERRQ(ierr);
-  } else if (check == 2) {
-    // CHECK 2: DOES b SUM TO AREA OF REGION?
-    PetscScalar bsum;
-    ierr = assemble(WORLD,E,&check_f,NULL,NULL,A,b); CHKERRQ(ierr);
-    ierr = VecSum(b,&bsum); CHKERRQ(ierr);
-    ierr = PetscPrintf(WORLD,"  check 2:  does right side sum to area if f=1?\n"
-                       "    sum(b) = %e   (should be area of region)\n",
-                       bsum); CHKERRQ(ierr);
-//ENDTWOCHECKS
-  } else {
-    // SOLVE MANUFACTURED DIRICHLET PROBLEM; SHOULD WORK IF ENTIRE BOUNDARY IS
-    //   MARKED AS DIRICHLET
-//SOLVEMANU
-    Vec         u, uexact;
-    KSP         ksp;
-    PetscScalar *ax, *ay, uval, normdiff;
-    PetscInt    Istart, Iend, i;
-    // assemble and solve system
-    ierr = assemble(WORLD,E,&manufacture_f,&manufacture_u,NULL,A,b); CHKERRQ(ierr);
-    ierr = VecDuplicate(b, &u); CHKERRQ(ierr);
-    ierr = KSPCreate(WORLD, &ksp); CHKERRQ(ierr);
-    ierr = KSPSetOperators(ksp, A, A); CHKERRQ(ierr);
-    ierr = KSPSetFromOptions(ksp); CHKERRQ(ierr);
-    ierr = KSPSolve(ksp, b, u); CHKERRQ(ierr);
-    ierr = VecSetOptionsPrefix(u,"u_"); CHKERRQ(ierr);
-    // put exact solution in a Vec
-    ierr = VecDuplicate(b,&uexact); CHKERRQ(ierr);
-    ierr = VecSetOptionsPrefix(uexact,"uexact_"); CHKERRQ(ierr);
-    ierr = VecGetOwnershipRange(uexact,&Istart,&Iend); CHKERRQ(ierr);
-    ierr = VecGetArray(x,&ax); CHKERRQ(ierr);
-    ierr = VecGetArray(y,&ay); CHKERRQ(ierr);
-    for (i = Istart; i < Iend; i++) {
-      uval = manufacture_u(ax[i-Istart],ay[i-Istart]);
-      ierr = VecSetValues(uexact,1,&i,&uval,INSERT_VALUES); CHKERRQ(ierr);
+  // assemble matrix based on local stencil
+  PetscInt       i, j;
+  PetscScalar    hx = 1./info.mx,  hy = 1./info.my;  // domain is [0,1]x[0,1]
+  PetscLogStage  stage;
+  ierr = PetscLogStageRegister("Assembly", &stage); CHKERRQ(ierr);
+  ierr = PetscLogStagePush(stage); CHKERRQ(ierr);
+  for (j=info.ys; j<info.ys+info.ym; j++) {
+    for (i=info.xs; i<info.xs+info.xm; i++) {
+      MatStencil  row, col[5];
+      PetscScalar v[5];
+      PetscInt    ncols = 0;
+      row.j        = j; row.i = i;
+      col[ncols].j = j; col[ncols].i = i; v[ncols++] = 2*(hx/hy + hy/hx);
+      if (i>0)         {col[ncols].j = j;   col[ncols].i = i-1; v[ncols++] = -hy/hx;}
+      if (i<info.mx-1) {col[ncols].j = j;   col[ncols].i = i+1; v[ncols++] = -hy/hx;}
+      if (j>0)         {col[ncols].j = j-1; col[ncols].i = i;   v[ncols++] = -hx/hy;}
+      if (j<info.my-1) {col[ncols].j = j+1; col[ncols].i = i;   v[ncols++] = -hx/hy;}
+      ierr = MatSetValuesStencil(A,1,&row,ncols,col,v,INSERT_VALUES);CHKERRQ(ierr);
     }
-    ierr = VecRestoreArray(x,&ax); CHKERRQ(ierr);
-    ierr = VecRestoreArray(y,&ay); CHKERRQ(ierr);
-    vecassembly(uexact)
-    vecassembly(u)  // FIXME:  JUST NEEDED TO ATTACH "u_" prefix for viewing?
-    // compute error
-    ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);  // u := -uexact + u
-    ierr = VecNorm(u,NORM_INFINITY,&normdiff); CHKERRQ(ierr);
-    ierr = PetscPrintf(WORLD,"  numerical error:\n"
-                       "    |u - uexact|_inf = %e   (should be O(h^2))\n",
-                       normdiff); CHKERRQ(ierr);
-    ierr = VecDestroy(&uexact); CHKERRQ(ierr);
   }
-//ENDSOLVEMANU
+  matassembly(A)
+  ierr = PetscLogStagePop();CHKERRQ(ierr);
 
+  // create RHS, approx solution, exact solution
+  Vec  b,u,uexact;
+  ierr = DMCreateGlobalVector(da,&b);CHKERRQ(ierr);
+  ierr = VecDuplicate(b,&u); CHKERRQ(ierr);
+  ierr = VecDuplicate(b,&uexact); CHKERRQ(ierr);
+  ierr = VecSet(uexact,1.0); CHKERRQ(ierr);
+  ierr = MatMult(A,uexact,b); CHKERRQ(ierr);
+
+  // create linear solver context
+  KSP  ksp;
+  ierr = KSPCreate(PETSC_COMM_WORLD,&ksp); CHKERRQ(ierr);
+  ierr = KSPSetOperators(ksp,A,A); CHKERRQ(ierr);
+  ierr = KSPSetFromOptions(ksp); CHKERRQ(ierr);
+
+  // solve
+  ierr = PetscLogStageRegister("Solve", &stage); CHKERRQ(ierr);
+  ierr = PetscLogStagePush(stage); CHKERRQ(ierr);
+  ierr = KSPSolve(ksp,b,u); CHKERRQ(ierr);
+  ierr = PetscLogStagePop();CHKERRQ(ierr);
+
+  // report on ksp iterations and measure DISCRETE error in solution
+  PetscInt     its;
+  PetscScalar  norm, normexact;
+  ierr = KSPGetIterationNumber(ksp,&its); CHKERRQ(ierr);
+  ierr = VecNorm(uexact,NORM_2,&normexact); CHKERRQ(ierr);
+  ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);  // u <- u + (-1.0) uxact
+  ierr = VecNorm(u,NORM_2,&norm); CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,
+             "on %d x %d grid:  iterations %D, error |u-uexact|_2/|uexact|_2 = %g\n",
+             info.mx,info.my,its,norm/normexact); CHKERRQ(ierr);
+
+  // free work space and finalize
+  KSPDestroy(&ksp);
+  VecDestroy(&u);  VecDestroy(&uexact);
   MatDestroy(&A);  VecDestroy(&b);
-  VecDestroy(&x);  VecDestroy(&y);  VecDestroy(&E);
   PetscFinalize();
   return 0;
 }
