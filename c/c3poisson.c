@@ -1,15 +1,32 @@
 
-static char help[] = "Solves a structured-grid Poisson problem with a KSP.\n\
-Input parameters include:\n\
-  -m <mesh_x>       : number of mesh points in x-direction\n\
-  -n <mesh_n>       : number of mesh points in y-direction\n\n";
-// this is an edited form of src/ksp/ksp/examples/tutorials/ex2.c, but without
-//   logging, some comments
+static char help[] = "Solves a structured-grid Poisson problem with DMDA and KSP.\n\n";
+// this is an edited form of src/ksp/ksp/examples/tutorials/ex46.c; see also ex2.c
 
-/* 
-$ for NN in 5 10 20 40 80 160; do ./c3poisson -m $NN -n $NN -ksp_rtol 1.0e-14 -ksp_type cg; done
-*/
+// SHOW MAT:  ./c3poisson -a_mat_view
+// SHOW MAT GRAPHICAL:  ./c3poisson -a_mat_view draw -draw_pause 5
+// SHOW MAT DENSE:  ./c3poisson -da_grid_x 3 -da_grid_y 3 -a_mat_view ::ascii_dense
 
+// FIXME: this convergence is for discrete linear solver only, not for PDE
+// CONVERGENCE: for NN in 5 10 20 40 80 160; do ./c3poisson -da_grid_x $NN -da_grid_y $NN -ksp_rtol 1.0e-14 -ksp_type cg; done
+
+// VISUALIZATION OF SOLUTION: mpiexec -n 6 ./c3poisson -ksp_rtol 1.0e-12 -da_grid_x 129 -da_grid_y 129 -ksp_type cg -ksp_monitor_solution
+
+// PURE LU ALGORITHM: ./c3poisson  -ksp_type preonly -pc_type lu
+// PURE CHOLESKY ALGORITHM: ./c3poisson  -ksp_type preonly -pc_type cholesky
+// PURE CG ALGORITHM:
+//   ./c3poisson  -ksp_type cg -pc_type none -ksp_view  # JUST SHOW KSP STRUCTURE
+//   ./c3poisson -da_grid_x 257 -da_grid_y 257 -ksp_type cg -pc_type none -log_summary
+//   (compare Elman p.72 and Algorithm 2.1 = cg: "The computational work of one
+//   iteration is two inner products, three vector updates, and one matrix-vector
+//   product.")
+
+// PERFORMANCE ANALYSIS:
+//   export PETSC_ARCH=linux-gnu-opt
+//   make c3poisson
+//   ./c3poisson -da_grid_x 513 -da_grid_y 513 -ksp_type cg -log_summary
+//   mpiexec -n 4 ./c3poisson -da_grid_x 513 -da_grid_y 513 -ksp_type cg -log_summary
+
+#include <petscdmda.h>
 #include <petscksp.h>
 #include "convenience.h"
 
@@ -18,69 +35,64 @@ int main(int argc,char **args)
   PetscErrorCode ierr;
   PetscInitialize(&argc,&args,(char*)0,help);
 
-  // read options which determine mesh
-  PetscInt m = 5, n = 5; // because of design in PetscOptionsInt(), can't set defaultv=5
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "", "options for c3poisson", ""); CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-m","number of points in x direction", "", m, &m, NULL); CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-n","number of points in y direction", "", n, &n, NULL); CHKERRQ(ierr);
-  ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+  // create distributed array to handle parallel distribution.
+  // default size (5 x 5) can be changed using -da_grid_x M -da_grid_y N
+  DM             da;
+  DMDALocalInfo  info;
+  ierr = DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
+                DMDA_STENCIL_STAR,-5,-5,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,
+                &da); CHKERRQ(ierr);
+  ierr = DMDAGetLocalInfo(da,&info);CHKERRQ(ierr);
 
   // create linear system matrix
+  // to use symmetric storage, run with -dm_mat_type sbaij -mat_ignore_lower_triangular ??
   Mat  A;
-  ierr = MatCreate(PETSC_COMM_WORLD,&A); CHKERRQ(ierr);
-  ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,m*n,m*n); CHKERRQ(ierr);
-  ierr = MatSetFromOptions(A); CHKERRQ(ierr);
-  ierr = MatMPIAIJSetPreallocation(A,5,NULL,5,NULL); CHKERRQ(ierr);
-  ierr = MatSeqAIJSetPreallocation(A,5,NULL); CHKERRQ(ierr);
-  ierr = MatSetUp(A); CHKERRQ(ierr);
+  ierr = DMSetMatType(da,MATAIJ);CHKERRQ(ierr);
+  ierr = DMCreateMatrix(da,&A);CHKERRQ(ierr);
+  ierr = MatSetOptionsPrefix(A,"a_"); CHKERRQ(ierr);
 
-  // assemble matrix, by rows owned by process
-  PetscInt    i,j,Ii,J,Istart,Iend;
-  PetscScalar v;
-  ierr = MatGetOwnershipRange(A,&Istart,&Iend); CHKERRQ(ierr);
-  for (Ii=Istart; Ii<Iend; Ii++) {
-    // set matrix elements for the 2-D, five-point stencil in parallel
-    v = -1.0; i = Ii/n; j = Ii - i*n;
-    if (i>0) {
-      J = Ii - n;
-      ierr = MatSetValues(A,1,&Ii,1,&J,&v,INSERT_VALUES); CHKERRQ(ierr);
+  // assemble matrix based on local stencil
+  PetscInt       i, j;
+  PetscScalar    hx = 1./info.mx,  hy = 1./info.my;  // domain is [0,1]x[0,1]
+  PetscLogStage  stage;
+  ierr = PetscLogStageRegister("Assembly", &stage); CHKERRQ(ierr);
+  ierr = PetscLogStagePush(stage); CHKERRQ(ierr);
+  for (j=info.ys; j<info.ys+info.ym; j++) {
+    for (i=info.xs; i<info.xs+info.xm; i++) {
+      MatStencil  row, col[5];
+      PetscScalar v[5];
+      PetscInt    ncols = 0;
+      row.j        = j; row.i = i;
+      col[ncols].j = j; col[ncols].i = i; v[ncols++] = 2*(hx/hy + hy/hx);
+      if (i>0)         {col[ncols].j = j;   col[ncols].i = i-1; v[ncols++] = -hy/hx;}
+      if (i<info.mx-1) {col[ncols].j = j;   col[ncols].i = i+1; v[ncols++] = -hy/hx;}
+      if (j>0)         {col[ncols].j = j-1; col[ncols].i = i;   v[ncols++] = -hx/hy;}
+      if (j<info.my-1) {col[ncols].j = j+1; col[ncols].i = i;   v[ncols++] = -hx/hy;}
+      ierr = MatSetValuesStencil(A,1,&row,ncols,col,v,INSERT_VALUES);CHKERRQ(ierr);
     }
-    if (i<m-1) {
-      J = Ii + n;
-      ierr = MatSetValues(A,1,&Ii,1,&J,&v,INSERT_VALUES); CHKERRQ(ierr);
-    }
-    if (j>0) {
-      J = Ii - 1;
-      ierr = MatSetValues(A,1,&Ii,1,&J,&v,INSERT_VALUES); CHKERRQ(ierr);
-    }
-    if (j<n-1) {
-      J = Ii + 1;
-      ierr = MatSetValues(A,1,&Ii,1,&J,&v,INSERT_VALUES); CHKERRQ(ierr);
-    }
-    v = 4.0;
-    ierr = MatSetValues(A,1,&Ii,1,&Ii,&v,INSERT_VALUES); CHKERRQ(ierr);
   }
   matassembly(A)
-  ierr = MatSetOption(A,MAT_SYMMETRIC,PETSC_TRUE); CHKERRQ(ierr);
+  ierr = PetscLogStagePop();CHKERRQ(ierr);
 
   // create RHS, approx solution, exact solution
   Vec  b,u,uexact;
-  ierr = VecCreate(PETSC_COMM_WORLD,&b); CHKERRQ(ierr);
-  ierr = VecSetSizes(b,PETSC_DECIDE,m*n); CHKERRQ(ierr);
-  ierr = VecSetFromOptions(b); CHKERRQ(ierr);
+  ierr = DMCreateGlobalVector(da,&b);CHKERRQ(ierr);
   ierr = VecDuplicate(b,&u); CHKERRQ(ierr);
   ierr = VecDuplicate(b,&uexact); CHKERRQ(ierr);
   ierr = VecSet(uexact,1.0); CHKERRQ(ierr);
   ierr = MatMult(A,uexact,b); CHKERRQ(ierr);
 
-  // create linear solver context and solve
+  // create linear solver context
   KSP  ksp;
   ierr = KSPCreate(PETSC_COMM_WORLD,&ksp); CHKERRQ(ierr);
   ierr = KSPSetOperators(ksp,A,A); CHKERRQ(ierr);
-  ierr = KSPSetTolerances(ksp,1.e-2/((m+1)*(n+1)),1.e-50,PETSC_DEFAULT,
-                          PETSC_DEFAULT); CHKERRQ(ierr);
   ierr = KSPSetFromOptions(ksp); CHKERRQ(ierr);
+
+  // solve
+  ierr = PetscLogStageRegister("Solve", &stage); CHKERRQ(ierr);
+  ierr = PetscLogStagePush(stage); CHKERRQ(ierr);
   ierr = KSPSolve(ksp,b,u); CHKERRQ(ierr);
+  ierr = PetscLogStagePop();CHKERRQ(ierr);
 
   // report on ksp iterations and measure DISCRETE error in solution
   PetscInt     its;
@@ -91,7 +103,7 @@ int main(int argc,char **args)
   ierr = VecNorm(u,NORM_2,&norm); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
              "on %d x %d grid:  iterations %D, error |u-uexact|_2/|uexact|_2 = %g\n",
-             m,n,its,norm/normexact); CHKERRQ(ierr);
+             info.mx,info.my,its,norm/normexact); CHKERRQ(ierr);
 
   // free work space and finalize
   KSPDestroy(&ksp);
