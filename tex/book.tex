@@ -313,18 +313,18 @@ You've taken a mathematics course or two in partial differential equations (PDEs
 
 \section{\PETSc?}
 
-The Portable, Extensible Toolkit for Scientific computing (\PETSc\sidenote{Say it ``pets sea.''}) \citep{petsc-user-ref} is an open-source software library built on top of the standard software layer for large-scale parallel computation, the Message Passing Interface (MPI) \citep{Groppetal1999}.
+The Portable, Extensible Toolkit for Scientific computing (\PETSc\sidenote{Say it ``pets sea.''}) \citep{petsc-user-ref} is an open-source, mathematical software library built on top of the standard software layer for large-scale parallel computation, the Message Passing Interface (MPI) \citep{Groppetal1999}.  Thus \PETSc is a framework for solving problems like PDS at ``large scale,'' that is, at high resolution and on supercomputers with hundreds to millions of cores.
 
-\PETSc is not particularly new.  Version 2.0, the first to make an impact in the scientific computing world, was built in 1994.  A well-known textbook \citet{Smithetal1996}\sidenote{B.~Smith, P.~Bjorstad, and W.~Gropp. \emph{Domain decomposition: parallel multilevel methods for elliptic partial differential equations}. Cambridge
+\PETSc is not particularly new.  Version 2.0, the first version to make an impact in the scientific computing world, was built in 1994.  A well-known textbook \citet{Smithetal1996}\sidenote{B.~Smith, P.~Bjorstad, and W.~Gropp. \emph{Domain decomposition: parallel multilevel methods for elliptic partial differential equations}. Cambridge
 University Press, 1996} uses \PETSc 2.0 for scalable solutions of linear partial differential equations (PDEs).  That book focusses on pre-conditioned iterative linear solvers.  For example, domain decomposition methods like additive Schwarz are shown to scalably solve the Poisson equation on irregular domains and fine meshes in parallel.
 
 But \PETSc is now at version 3.5,\sidenote{Version 3.5.2 is current in September 2014.  The stable homepage URL for PETSc, including download and installation instructions, is at \href{http://www.mcs.anl.gov/petsc/index.html}{www.mcs.anl.gov/petsc}.} and it has transformed into something better.  Typical examples and applications now solve nonlinear PDEs at scale.  The 21st-century \PETSc strategy is to compose Newton's method and mesh topology tools---these new parts of the \PETSc API are highly-visible to modern users---with a run-time chooseable selection of preconditioners and iterative linear solvers.  ``Multiphysics problems''\sidenote{This buzzword just refers to a diverse system of coupled PDEs with nontrivial scalings among the variables.  But that is a concept that \emph{needs} a buzzword.} are now within reach.  \PETSc may not be a silver bullet, but users see powerful tools, beyond linear algebra, to solve hard problems.
 
-On the other hand, \PETSc is notoriously complicated.  So perhaps a new book is needed.
+On the other hand, \PETSc is notoriously complicated.  Twenty years have passed since \PETSc version 2.0.  Perhaps a new book is needed.
 
 \section{The goals of this book}
 
-This book is about approximately solving linear and nonlinear PDEs by writing C code that calls \PETSc methods.  It tries to both explain the ideas directly, and illustrate them through example codes.  The example codes come with enough background information so that readers can use them as a basis for further developments.  Demonstrated scalability of these examples is the goal, which means runtime options are explained and compared.
+This book is about approximately solving linear and nonlinear PDEs in 2 or 3 spatial variables by writing C code that calls \PETSc methods.  It tries to both explain the ideas directly, and illustrate them through example codes.  The example codes come with enough background information so that readers can use them as a basis for further developments.  Demonstrated scalability of these examples is the goal, which means runtime options are explained and compared.
 
 This book does not replace the \PETSc \emph{User's Manual}.  For one thing, the current book assumes you want to solve PDEs, while there are many other uses of \PETSc.  The reader should at least know which topics are addressed in the \emph{User's Manual}, even if searching online, or in the PETSc HTML manual pages, is the first resort for resolving compile-time errors or for exposing the API.
 
@@ -338,12 +338,11 @@ Numerical ideas from linear algebra \citep{TrefethenBau} arise in this book, but
 
 Here is a partial list:\begin{itemize}
 \item This book does not help you install \PETSc.
-\item This book does not replace a good online tutorial on getting started in \PETSc.
 \item This book does not replace \citep{Smithetal1996}.
 \item This book does not do anything in Fortran.
 \item This book does not help with most packages \PETSc links to.
 \item This book does not do a complete job of teaching the finite element method.
-\item This book does not help much if your PDE problem is hyperbolic.
+\item This book does not solve any hyperbolic PDE problems.
 \item This book does not consider spatial dimensions except 2 and 3.
 \item This book does not prove anything.\sidenote{We do give evidence for convergence and scalability when possible.}
 \item This book does not care whether its numerical solutions are good models of physical problems.
