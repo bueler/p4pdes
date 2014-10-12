@@ -1,7 +1,7 @@
 all: book.pdf
 
 tikzinputs := samplepoly.1.tikz squarefour.tikz bump.1.tikz bump.poly.tikz mesh.1.tikz
-texinputs := getstarted.tex linear.tex scaling.tex
+texinputs := getstarted.tex structured.tex unstructured.tex scaling.tex
 
 hinputs := $(addprefix ../c/, convenience.h)
 cinputs := readmesh.c poissontools.c c1matvec.c c2convert.c c2poisson.c
@@ -61,3 +61,4 @@ clean:
 	@rm -f *~ *.out *.aux *.log *.bbl *.blg *.synctex.gz *.idx *.ilg *.ind *.toc *.dvi
 	@rm -f cstrip/*.c
 	@rm -f bump.?.* samplepoly.?.* bump.poly* squarefour.tikz mesh.?.*
+

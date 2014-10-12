@@ -17,7 +17,7 @@
 \usepackage{tikz}
 \usetikzlibrary{arrows,decorations.markings}
 
-\usepackage[subtle,floats]{savetrees}
+%\usepackage[subtle,floats]{savetrees}
 
 % macros
 
@@ -130,6 +130,9 @@
 \newcommand{\redX}{{\color{red} \bm{\underline{\X}}}}
 \newcommand{\blueX}{{\color{blue} \bm{\underline{\X}}}}
 
+\newcommand{\XX}{$\bm{\times}$}  % for ticks in tables
+\newcommand{\gX}{{\color{Gray} $\times$}}
+
 \newcommand{\eps}{\epsilon}
 \newcommand{\lam}{\lambda}
 \newcommand{\lap}{\triangle}
@@ -156,6 +159,8 @@
 \newcommand{\Triangle}{\textsc{triangle}\xspace}
 
 \newcommand{\pDM}{\texttt{DM}\xspace}
+
+\newcommand{\pDMDA}{\texttt{DMDA}\xspace}
 \newcommand{\pDMPlex}{\texttt{DMPlex}\xspace}
 \newcommand{\pKSP}{\texttt{KSP}\xspace}
 \newcommand{\pMat}{\texttt{Mat}\xspace}
@@ -171,7 +176,84 @@
 
 \begin{document}
 
-\frontmatter
+\newcommand{\tblockeqncode}[3]{
+\begin{tabular}[t]{l} #1: \\ \qquad {\small #2} \\ \quad \texttt{#3} \end{tabular}
+}
+\newcommand{\tblockcode}[2]{
+\begin{tabular}[t]{l} #1 \\ \quad \texttt{#2} \end{tabular}
+}
+\newcommand{\tblock}[1]{
+\begin{tabular}[t]{l} #1 \end{tabular}
+}
+
+\thispagestyle{empty}
+\noindent \textsc{inside front cover:}
+
+\vfill
+\begin{center}
+\hspace{-10mm}\begin{tabular}{r|llll}
+\toprule
+Chapter 
+    &\quad linear\quad
+          &linear
+                &\quad nonlinear\quad
+                      &nonlinear \\ 
+    &     &time-dependent
+                &     &time-dependent \\
+\midrule
+1   &     &     &     &      \\ \midrule
+2   & \tblockeqncode{Poisson}{$-\grad^2 u = f$}{c2poisson.c}
+          & \tblockeqncode{heat}{$u_t = \grad^2 u$}{c2heat.c}
+                &     &      \\ \midrule
+3   & \tblockcode{Poisson}{c3poisson.c}
+          &     &     &      \\ \midrule
+4   & \tblock{Poisson}
+          & \tblock{heat}
+                &     &      \\ \midrule
+5   &     &     & \tblockeqncode{$p$-Laplace}{$-\Div\left(|\grad u|^{p-2} \grad u\right) = f$}{c5plap.c}
+                      & \tblockeqncode{porous}{$u_t = \Div\left(u^{\gamma-1} \grad u\right)$}{c5porous.c} \\ \midrule
+6   & \tblock{Poisson}
+          &     & \tblock{$p$-Laplace}
+                      & \tblock{porous} \\
+    & \tblockeqncode{Stokes}{$\begin{matrix} \Div u = 0 \\ 0 = -\grad p + \grad^2 u \end{matrix}$}{c6stokes.c}
+          &     &     &      \\ \midrule
+7   & \tblockcode{Poisson}{c7poisson.c}
+          &     &     &      \\
+    & \tblockcode{Stokes}{c7stokes.c}
+          &     &     &      \\ \midrule
+8   & \tblockcode{obstacle}{c8obstacle.c}
+          &     &     & \tblockeqncode{SIA}{$u_t = \Div\left(D(u,|\grad u|) \grad u\right)$}{c8sia.c} \\
+\bottomrule
+\end{tabular}
+\end{center}
+\vfill
+
+
+\newpage\thispagestyle{empty}
+\noindent \textsc{inside back cover:}
+
+\vfill
+\begin{center}
+\begin{tabular}{rccccccc}
+\toprule
+Chapter 
+    &\;\pVec\; &\;\pMat\;
+                &\;\pKSP\; &\pDMDA
+                            &\pDMPlex
+                                  &\pSNES &\;\pTS\; \\
+\midrule
+1   & \XX & \XX & \XX &     &     &     &      \\
+2   & \XX & \XX & \XX & \XX &     &     & \XX  \\
+3   & \XX & \XX & \XX &     &     &     &      \\
+4   & \XX & \XX & \XX & \XX &     &     &      \\
+5   & \gX & \gX & \gX & \XX &     & \XX &      \\
+6   & \gX & \gX & \gX & \XX &     & \XX & \XX? \\
+7   & \gX & \gX & \XX &     & \XX & \XX &      \\
+8   & \gX & \gX & \gX & \XX &     & \XX &      \\
+\bottomrule
+\end{tabular}
+\end{center}
+\vfill
 
 % epigraph page first
 \newpage\thispagestyle{empty}
@@ -187,6 +269,8 @@ Developing parallel, nontrivial PDE solvers that deliver high performance is sti
 Tufte's style is known for its extensive use of sidenotes, tight integration of graphics with text, and well-set typography.
 }{The Tufte-LaTeX\ Developers}
 \vfill
+
+\frontmatter
 
 \maketitle
 
@@ -275,61 +359,55 @@ Here is a partial list:\begin{itemize}
 
 %%%%%%%%%%
 
-\input{linear.tex} % chapter 2
+\input{structured.tex} % chapter 2
 
 %%%%%%%%%%
 
-\input{scaling.tex} % chapter 3
+\input{unstructured.tex} % chapter 3
 
 %%%%%%%%%%
 
-\chapter{4. Nonlinear elliptic PDEs on structured grids}
+\input{scaling.tex} % chapter 4
+
+%%%%%%%%%%
+
+\chapter{5. Nonlinear elliptic PDEs on structured grids}
 
 \section{Newton's method}
 
 \section{\textsc{SNES}}
-
-%\cinput{c4newton.c}{}
+% c4newton.c
 
 \section{Example: a porous medium equation}
 
-%\cinput{c4porous.c}{}
-
 \section{Jacobians: actual and approximate}
-
-\section{Indeterminant systems: Stokes}
-
-%\cinput{c4stokes.c}{}
 
 \caveat{But it isn't scaling well yet.}
 
 %%%%%%%%%%
 
-\chapter{5. Multigrid, and other run-time preconditioner composition}
+\chapter{6. Multigrid, and other run-time preconditioner composition}
 
-\section{\textsc{DM}}
+\section{Poisson again}
+
+\section{Indeterminant systems: Stokes}
+
+\section{More preconditioners}
 
 \caveat{But \PETSc should help with unstructured meshes too.}
 
 %%%%%%%%%%
 
-\chapter{6. Unstructured grids, the right way}
+\chapter{7. Unstructured grids, the right way}
 
 \section{\textsc{DMPlex}}
 
-%\cinput{c6poisson.c}{}
-
-\caveat{But my PDE has ``$t$'' in it.}
-
-%%%%%%%%%%
-
-\chapter{7. Time-evolving problems}
-
-\section{\textsc{TS}}
-
-%\cinput{c7freesurface.c}{}
-
 \caveat{But my PDE isn't really a PDE.  It has an inequality in it.}
+
+%\caveat{But my PDE has ``$t$'' in it.}
+%\chapter{7. Time-evolving problems}
+%\section{\textsc{TS}}
+
 
 %%%%%%%%%%
 
@@ -337,7 +415,6 @@ Here is a partial list:\begin{itemize}
 
 \section{A variational inequality problem}
 
-%\cinput{c8obstacle.c}{}
 
 %%%%%%%%%%
 
