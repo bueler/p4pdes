@@ -35,6 +35,7 @@ int main(int argc,char **args)
   PetscErrorCode ierr;
   PetscInitialize(&argc,&args,(char*)0,help);
 
+//CREATEGRID
   // create distributed array to handle parallel distribution.
   // default size (5 x 5) can be changed using -da_grid_x M -da_grid_y N
   DM             da;
@@ -43,7 +44,9 @@ int main(int argc,char **args)
                 DMDA_STENCIL_STAR,-5,-5,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,
                 &da); CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(da,&info);CHKERRQ(ierr);
+//ENDCREATEGRID
 
+//CREATEMATRIX
   // create linear system matrix
   // to use symmetric storage, run with -dm_mat_type sbaij -mat_ignore_lower_triangular ??
   Mat  A;
@@ -73,7 +76,9 @@ int main(int argc,char **args)
   }
   matassembly(A)
   ierr = PetscLogStagePop();CHKERRQ(ierr);
+//ENDCREATEMATRIX
 
+//SOLVE
   // create RHS, approx solution, exact solution
   Vec  b,u,uexact;
   ierr = DMCreateGlobalVector(da,&b);CHKERRQ(ierr);
@@ -104,6 +109,7 @@ int main(int argc,char **args)
   ierr = PetscPrintf(PETSC_COMM_WORLD,
              "on %d x %d grid:  iterations %D, error |u-uexact|_2/|uexact|_2 = %g\n",
              info.mx,info.my,its,norm/normexact); CHKERRQ(ierr);
+//ENDSOLVE
 
   // free work space and finalize
   KSPDestroy(&ksp);
