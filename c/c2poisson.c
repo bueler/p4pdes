@@ -28,25 +28,22 @@ static char help[] = "Solves a structured-grid Poisson problem with DMDA and KSP
 
 #include <petscdmda.h>
 #include <petscksp.h>
-#include "convenience.h"
+#include "structuredlaplacian.h"
 
 int main(int argc,char **args)
 {
   PetscErrorCode ierr;
   PetscInitialize(&argc,&args,(char*)0,help);
 
-//CREATEGRID
+//CREATE
   // create distributed array to handle parallel distribution.
   // default size (5 x 5) can be changed using -da_grid_x M -da_grid_y N
   DM             da;
-  DMDALocalInfo  info;
+  PetscLogStage  stage;
   ierr = DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
                 DMDA_STENCIL_STAR,-5,-5,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,
                 &da); CHKERRQ(ierr);
-  ierr = DMDAGetLocalInfo(da,&info);CHKERRQ(ierr);
-//ENDCREATEGRID
 
-//CREATEMATRIX
   // create linear system matrix
   // to use symmetric storage, run with -dm_mat_type sbaij -mat_ignore_lower_triangular ??
   Mat  A;
@@ -54,29 +51,11 @@ int main(int argc,char **args)
   ierr = DMCreateMatrix(da,&A);CHKERRQ(ierr);
   ierr = MatSetOptionsPrefix(A,"a_"); CHKERRQ(ierr);
 
-  // assemble matrix based on local stencil
-  PetscInt       i, j;
-  PetscScalar    hx = 1./info.mx,  hy = 1./info.my;  // domain is [0,1]x[0,1]
-  PetscLogStage  stage;
   ierr = PetscLogStageRegister("Assembly", &stage); CHKERRQ(ierr);
   ierr = PetscLogStagePush(stage); CHKERRQ(ierr);
-  for (j=info.ys; j<info.ys+info.ym; j++) {
-    for (i=info.xs; i<info.xs+info.xm; i++) {
-      MatStencil  row, col[5];
-      PetscScalar v[5];
-      PetscInt    ncols = 0;
-      row.j        = j; row.i = i;
-      col[ncols].j = j; col[ncols].i = i; v[ncols++] = 2*(hx/hy + hy/hx);
-      if (i>0)         {col[ncols].j = j;   col[ncols].i = i-1; v[ncols++] = -hy/hx;}
-      if (i<info.mx-1) {col[ncols].j = j;   col[ncols].i = i+1; v[ncols++] = -hy/hx;}
-      if (j>0)         {col[ncols].j = j-1; col[ncols].i = i;   v[ncols++] = -hx/hy;}
-      if (j<info.my-1) {col[ncols].j = j+1; col[ncols].i = i;   v[ncols++] = -hx/hy;}
-      ierr = MatSetValuesStencil(A,1,&row,ncols,col,v,INSERT_VALUES);CHKERRQ(ierr);
-    }
-  }
-  matassembly(A)
+  ierr = formlaplacian(da,A); CHKERRQ(ierr);
   ierr = PetscLogStagePop();CHKERRQ(ierr);
-//ENDCREATEMATRIX
+//ENDCREATE
 
 //SOLVE
   // create RHS, approx solution, exact solution
@@ -100,8 +79,10 @@ int main(int argc,char **args)
   ierr = PetscLogStagePop();CHKERRQ(ierr);
 
   // report on ksp iterations and measure DISCRETE error in solution
-  PetscInt     its;
-  PetscScalar  norm, normexact;
+  PetscInt       its;
+  PetscScalar    norm, normexact;
+  DMDALocalInfo  info;
+  ierr = DMDAGetLocalInfo(da,&info);CHKERRQ(ierr);
   ierr = KSPGetIterationNumber(ksp,&its); CHKERRQ(ierr);
   ierr = VecNorm(uexact,NORM_2,&normexact); CHKERRQ(ierr);
   ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);  // u <- u + (-1.0) uxact

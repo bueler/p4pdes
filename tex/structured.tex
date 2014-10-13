@@ -5,11 +5,11 @@ We start with a cliched example, the Poisson problem, because it is the right pl
 
 \section{Poisson-Dirichlet problem}
 
-\cinputpart{c2poisson.c}{Set up \pDMDA object.}{I}{//CREATEGRID}{//ENDCREATEGRID}{code:ctwopoissoncreategrid}
+\cinput{structuredlaplacian.c}{Fill matrix entries using \texttt{MatSetValuesStencil}.}{//CREATEMATRIX}{//ENDCREATEMATRIX}{code:structuredlaplacian}
 
-\cinputpart{c2poisson.c}{Fill matrix entries using \texttt{MatSetValuesStencil}.}{II}{//CREATEMATRIX}{//ENDCREATEMATRIX}{code:ctwopoissoncreatematrix}
+\cinputpart{c2poisson.c}{Set up \pDMDA \texttt{da} and \pMat \texttt{A} objects, and assemble the latter by calling \texttt{formlaplacian()}.}{I}{//CREATE}{//ENDCREATE}{code:ctwopoissoncreate}
 
-\cinputpart{c2poisson.c}{Solve using \pKSP, and report on solution.}{III}{//SOLVE}{//ENDSOLVE}{code:ctwopoissonsolve}
+\cinputpart{c2poisson.c}{Solve using \pKSP, and report on solution.}{II}{//SOLVE}{//ENDSOLVE}{code:ctwopoissonsolve}
 
 \section{Runtime control of linear solver}
 
