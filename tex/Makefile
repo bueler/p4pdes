@@ -47,8 +47,8 @@ bump.poly.tikz: ../c/bump.poly
 	ln -s ../c/bump.poly
 	python tri2tikz.py --scale 0.85 --polyonly bump --nodesize 3.0 bump.poly.tikz
 
-mesh.1.tikz: ../c/structured.py
-	(cd ../c/ && python structured.py mesh.1 5)
+mesh.1.tikz: ../c/genstructured.py
+	(cd ../c/ && python genstructured.py mesh.1 5)
 	rm -rf mesh.1.node mesh.1.ele mesh.1.poly
 	ln -s ../c/mesh.1.node
 	ln -s ../c/mesh.1.ele

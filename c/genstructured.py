@@ -93,6 +93,3 @@ poly.write('0\n')                 # no holes
 poly.write('# created by: %s\n' % commandline)
 poly.close()
 
-
-
-
