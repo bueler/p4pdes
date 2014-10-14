@@ -26,9 +26,39 @@ static char help[] = "Solves a structured-grid Poisson problem with DMDA and KSP
 //   ./c3poisson -da_grid_x 513 -da_grid_y 513 -ksp_type cg -log_summary
 //   mpiexec -n 4 ./c3poisson -da_grid_x 513 -da_grid_y 513 -ksp_type cg -log_summary
 
+
 #include <petscdmda.h>
 #include <petscksp.h>
 #include "structuredlaplacian.h"
+
+//RHS
+PetscErrorCode formRHSandExact(DM da, Vec b, Vec uexact) {
+  PetscErrorCode ierr;
+  DMDALocalInfo  info;
+  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+
+  PetscInt       i, j;
+  PetscReal      hx = 1./info.mx,  hy = 1./info.my,  // domain is [0,1] x [0,1]
+                 x, y, **ab, **auex;
+  ierr = DMDAVecGetArray(da, b, &ab);CHKERRQ(ierr);
+  ierr = DMDAVecGetArray(da, uexact, &auex);CHKERRQ(ierr);
+  for (j=info.ys; j<info.ys+info.ym; j++) {
+    y = j * hy;
+    for (i=info.xs; i<info.xs+info.xm; i++) {
+      x = i * hx;
+      auex[j][i] =
+      ab[j][i]   = 
+    }
+  }
+  ierr = DMDAVecRestoreArray(da, b, &ab);CHKERRQ(ierr);
+  ierr = DMDAVecRestoreArray(da, uexact, &auex);CHKERRQ(ierr);
+  
+  ierr = VecAssemblyBegin(b,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+  ierr = VecAssemblyEnd(b,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+  return 0;
+}
+//ENDRHS
+
 
 int main(int argc,char **args)
 {
@@ -36,7 +66,6 @@ int main(int argc,char **args)
   PetscInitialize(&argc,&args,(char*)0,help);
 
 //CREATE
-  // create distributed array to handle parallel distribution.
   // default size (5 x 5) can be changed using -da_grid_x M -da_grid_y N
   DM             da;
   PetscLogStage  stage;
@@ -51,20 +80,19 @@ int main(int argc,char **args)
   ierr = DMCreateMatrix(da,&A);CHKERRQ(ierr);
   ierr = MatSetOptionsPrefix(A,"a_"); CHKERRQ(ierr);
 
-  ierr = PetscLogStageRegister("Assembly", &stage); CHKERRQ(ierr);
+  ierr = PetscLogStageRegister("Matrix Assembly", &stage); CHKERRQ(ierr);
   ierr = PetscLogStagePush(stage); CHKERRQ(ierr);
   ierr = formlaplacian(da,A); CHKERRQ(ierr);
   ierr = PetscLogStagePop();CHKERRQ(ierr);
 //ENDCREATE
 
 //SOLVE
-  // create RHS, approx solution, exact solution
+  // create right-hand-side (RHS), approx solution, exact solution; fill
   Vec  b,u,uexact;
   ierr = DMCreateGlobalVector(da,&b);CHKERRQ(ierr);
   ierr = VecDuplicate(b,&u); CHKERRQ(ierr);
   ierr = VecDuplicate(b,&uexact); CHKERRQ(ierr);
-  ierr = VecSet(uexact,1.0); CHKERRQ(ierr);
-  ierr = MatMult(A,uexact,b); CHKERRQ(ierr);
+  ierr = formRHSandExact(da,b,uexact); CHKERRQ(ierr);
 
   // create linear solver context
   KSP  ksp;
@@ -78,24 +106,22 @@ int main(int argc,char **args)
   ierr = KSPSolve(ksp,b,u); CHKERRQ(ierr);
   ierr = PetscLogStagePop();CHKERRQ(ierr);
 
-  // report on ksp iterations and measure DISCRETE error in solution
+  // report on grid, ksp iterations, and numerical error
   PetscInt       its;
   PetscScalar    norm, normexact;
   DMDALocalInfo  info;
   ierr = DMDAGetLocalInfo(da,&info);CHKERRQ(ierr);
   ierr = KSPGetIterationNumber(ksp,&its); CHKERRQ(ierr);
   ierr = VecNorm(uexact,NORM_2,&normexact); CHKERRQ(ierr);
-  ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);  // u <- u + (-1.0) uxact
+  ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uxact
   ierr = VecNorm(u,NORM_2,&norm); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
              "on %d x %d grid:  iterations %D, error |u-uexact|_2/|uexact|_2 = %g\n",
              info.mx,info.my,its,norm/normexact); CHKERRQ(ierr);
-//ENDSOLVE
 
-  // free work space and finalize
-  KSPDestroy(&ksp);
-  VecDestroy(&u);  VecDestroy(&uexact);
-  MatDestroy(&A);  VecDestroy(&b);
+  KSPDestroy(&ksp);  MatDestroy(&A);
+  VecDestroy(&u);  VecDestroy(&uexact);  VecDestroy(&b);
   PetscFinalize();
   return 0;
 }
+//ENDSOLVE
