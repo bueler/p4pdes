@@ -10,7 +10,7 @@ The \emph{Laplacian} is the most common second-derivative of a function $u(x,y)$
 
 The Laplacian is a linear operator, i.e.~$\grad^2(c_1 u_1 + c_2 u_2) = c_1 \grad^2 u_1 + c_2 \grad^2 u_2$.  When one sees it in a mathematical model, the reason is almost always that there is conservation of some quantity $u$, thus the divergence $\Div$ appears, and that the gradient $\grad u$ is essentially the flux of $u$ \citep{Ockendonetal2003}.  
 
-In the \emph{Poisson equation} the Laplacian of $u$ as a known function.  We will solve not just this one equation, but a \emph{Poisson problem}, on a finite region and including boundary conditions, which determine a unique solution \citep{Evans}.  Let $\mathcal{S}$ be the unit square $[0,1]\times[0,1]$ in the plane.  For this section suppose $f(x,y)$ is continuous.   This is our first Poisson problem:
+In the \emph{Poisson equation} the Laplacian of $u$ as a known function.  We will solve not just this one equation, but a \emph{Poisson problem}, on a finite region and including boundary conditions, which determine a unique solution \citep{Evans}.  Let $\mathcal{S}$ be the unit square $[0,1]\times[0,1]$ in the plane.  For this section suppose $f(x,y)$ is continuous.   This is our first Poisson problem, as shown in Figure \ref{fig:unitsquare}:
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
   \draw[->,gray,very thin] (-0.2,0.0) -- (1.2,0.0) node[below] {$x$};
@@ -21,7 +21,6 @@ In the \emph{Poisson equation} the Laplacian of $u$ as a known function.  We wil
   \node at (0.5,1.1) {$u = 0$};
   \node at (-0.2,0.5) {$u = 0$};
   \node at (1.2,0.5) {$u = 0$};
-  %\filldraw (0.000000,0.000000) circle (0.500000pt);
 \end{tikzpicture}
 \caption{Our first, simple goal is to solve the Poisson equation on the unit square $\mathcal{S}$, with homogeneous Dirichlet boundary conditions.}
 \label{fig:unitsquare}
@@ -37,7 +36,40 @@ This Poisson problem models the distribution of temperature in a conducting obje
 
 Problem \eqref{poissonsquare} is also is linear, that is, if $u_1$ and $u_2$ are solutions then affine linear combinations (i.e.~with coefficients that sum to one) are also solutions.  More relevantly to our purposes, \eqref{poissonsquare} is a linear problem in the sense that finite-dimensional approximations of it are simply linear systems.
 
-Such a finite-dimensional approximation comes from applying a \emph{finite difference} method to \eqref{poissonsquare}.  Let
+Such a finite-dimensional approximation comes from applying a \emph{finite difference} (FD) method to \eqref{poissonsquare}.  To start our FD method we put a \emph{structured grid} of $MN$ points on the unit square, as in Figure \ref{fig:unitsquaregrid}, with spacing $h_x=1/(M-1)$ and $h_y=1/(N-1)$ in the two directions.  Thus the grid locations are $x_i = i\, h_x$ and $y_j = j\, h_y$ for $i = 0,1,\dots,M-1$ and $j=0,1,\dots,N-1$.  FIXME: WE COULD ALREADY STATE DMDACreate2d() LINE HERE
+
+\begin{marginfigure}
+\begin{tikzpicture}[scale=3.5]
+  \draw[->,gray,very thin] (0.0,0.0) -- (1.2,0.0) node[below] {$x$};
+  \draw[->,gray,very thin] (0.0,0.0) -- (0.0,1.2) node[left] {$y$};
+  \draw[line width=1.0pt] (0.0,0.0) -- (0.0,1.0) -- (1.0,1.0) -- (1.0,0.0) -- cycle;
+  \node at (0.0,-0.1) {$0$};
+  \node at (0.75,-0.1) {$i$};
+  \node at (1.0,-0.1) {$M-1$};
+  \node at (-0.1,0.0) {$0$};
+  \node at (-0.1,0.666667) {$j$};
+  \node at (-0.15,1.0) {$N-1$};
+  \filldraw (0.50,0.666667) circle (0.5pt);
+  \filldraw (0.75,0.666667) circle (0.5pt);
+  \filldraw (1.00,0.666667) circle (0.5pt);
+  \filldraw (0.75,0.5) circle (0.5pt);
+  \filldraw (0.75,0.833333) circle (0.5pt);
+  \draw[xstep=0.25,ystep=0.166667,black,thin] (0.0,0.0) grid (1.0,1.0);
+\end{tikzpicture}
+\caption{A grid on the unit square $\mathcal{S}$, with $M=5$ and $N=7$.  A stencil is shown at $i=3$ and $j=4$.}
+\label{fig:unitsquaregrid}
+\end{marginfigure}
+
+On the other hand, by a well-known Taylor's theorem argument \citep{MortonMayers}, for any function $F(x)$ which is sufficiently smooth,
+    $$F''(x) = \frac{F(x+h) - 2 F(x) + F(x-h)}{h^2} + O(h^2)$$
+as $h$ goes to zero.  To apply this formula to approximating the Laplacian in problem \eqref{poissonsquare}, we let $U_{i,j}$ be the approximation (which we compute) to the exact value $u(x_i,y_j)$ (which we don't suppose to know) of the solution $u$.  Also we denote $f_{i,j} = f(x_i,y_j)$.  Then we have this FD approximation to problem \eqref{poissonsquare}:
+\begin{equation}
+- \frac{U_{i+1,j} - 2 U_{i,j} + U_{i-1,j}}{h_x^2} - \frac{U_{i,j+1} - 2 U_{i,j} + U_{i,j-1}}{h_y^2} = f_{i,j}. \label{poissonsquareFD}
+\end{equation}
+Equation \eqref{poissonsquareFD} applies for all of the interior points where $1 \le i \le M-2$ and $1 \le j \le N-2$.  The boundary conditions in \eqref{poissonsquare} become $U_{0,j} = U_{M-1,j} = U_{i,0} = U_{i,N-1} = 0$, for all $i,j$.
+
+Problem \eqref{poissonsquareFD} is a linear system.  We choose to treat all $MN$ locations on the grid as unknowns. FIXME: BUILD MATRIX, COMMENTING ON ROW SCALING (i.e. mult by $h_x h_y$ to improve conditioning)
+
 
 \cinput{structuredlaplacian.c}{Fill matrix entries using \texttt{MatSetValuesStencil}.}{//CREATEMATRIX}{//ENDCREATEMATRIX}{code:structuredlaplacian}
 
