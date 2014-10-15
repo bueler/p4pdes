@@ -1,9 +1,9 @@
 #ifndef STRUCTUREDLAPLACIAN_H_
 #define STRUCTUREDLAPLACIAN_H_
 
-// assemble structured Laplacian matrix into A, using local stencil
-// actually computes  A u = - hx * hy * (u_xx + u_yy)
-PetscErrorCode formlaplacian(DM da, Mat A);
+// assemble structured-grid Laplacian matrix A, using Dirichlet boundary conditions,
+//   using a local stencil;  forms A in  A u = - hx * hy * (u_xx + u_yy)
+PetscErrorCode formdirichletlaplacian(DM da, Mat A);
 
 #endif
 

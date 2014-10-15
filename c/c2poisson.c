@@ -1,32 +1,37 @@
 
 static char help[] = "Solves a structured-grid Poisson problem with DMDA and KSP.\n\n";
-// this is an edited form of src/ksp/ksp/examples/tutorials/ex46.c; see also ex2.c
 
-// SHOW MAT:  ./c3poisson -a_mat_view
-// SHOW MAT GRAPHICAL:  ./c3poisson -a_mat_view draw -draw_pause 5
-// SHOW MAT DENSE:  ./c3poisson -da_grid_x 3 -da_grid_y 3 -a_mat_view ::ascii_dense
+// SHOW MAT GRAPHICAL:  ./c2poisson -a_mat_view draw -draw_pause 5
+// SHOW MAT DENSE:  ./c2poisson -da_grid_x 3 -da_grid_y 3 -a_mat_view ::ascii_dense
 
-// FIXME: this convergence is for discrete linear solver only, not for PDE
-// CONVERGENCE: for NN in 5 10 20 40 80 160; do ./c3poisson -da_grid_x $NN -da_grid_y $NN -ksp_rtol 1.0e-14 -ksp_type cg; done
+// SHOW KSP STRUCTURE:  ./c2poisson -ksp_view
 
-// VISUALIZATION OF SOLUTION: mpiexec -n 6 ./c3poisson -ksp_rtol 1.0e-12 -da_grid_x 129 -da_grid_y 129 -ksp_type cg -ksp_monitor_solution
+// CONVERGENCE:
+//   for NN in 5 9 17 33 65 129 257; do ./c2poisson -da_grid_x $NN -da_grid_y $NN -ksp_rtol 1.0e-8 -ksp_type cg; done
+// PERFORMANCE ON SAME:
+//   for NN in 5 9 17 33 65 129 257; do ./c2poisson -da_grid_x $NN -da_grid_y $NN -ksp_rtol 1.0e-8 -ksp_type cg -log_summary|grep "Time (sec):"; done
 
-// PURE LU ALGORITHM: ./c3poisson  -ksp_type preonly -pc_type lu
-// PURE CHOLESKY ALGORITHM: ./c3poisson  -ksp_type preonly -pc_type cholesky
-// PURE CG ALGORITHM:
-//   ./c3poisson  -ksp_type cg -pc_type none -ksp_view  # JUST SHOW KSP STRUCTURE
-//   ./c3poisson -da_grid_x 257 -da_grid_y 257 -ksp_type cg -pc_type none -log_summary
+// VISUALIZATION OF SOLUTION: mpiexec -n 6 ./c2poisson -da_grid_x 129 -da_grid_y 129 -ksp_type cg -ksp_monitor_solution
+
+// DIRECT LINEAR SOLVERS:
+//   LU ALGORITHM: ./c2poisson -ksp_type preonly -pc_type lu
+//   CHOLESKY ALGORITHM: ./c2poisson -ksp_type preonly -pc_type cholesky
+
+// UNPRECONDITIONED CG ALGORITHM:
+//   ./c2poisson -ksp_type cg -pc_type none -ksp_view  # JUST SHOW KSP STRUCTURE
+//   ./c2poisson -da_grid_x 257 -da_grid_y 257 -ksp_type cg -pc_type none -log_summary
 //   (compare Elman p.72 and Algorithm 2.1 = cg: "The computational work of one
 //   iteration is two inner products, three vector updates, and one matrix-vector
 //   product.")
 
 // PERFORMANCE ANALYSIS:
 //   export PETSC_ARCH=linux-gnu-opt
-//   make c3poisson
-//   ./c3poisson -da_grid_x 513 -da_grid_y 513 -ksp_type cg -log_summary
-//   mpiexec -n 4 ./c3poisson -da_grid_x 513 -da_grid_y 513 -ksp_type cg -log_summary
+//   make c2poisson
+//   ./c2poisson -da_grid_x 1029 -da_grid_y 1029 -ksp_type cg -log_summary|grep "Solve: "
+//   mpiexec -n 6 ./c2poisson -da_grid_x 1029 -da_grid_y 1029 -ksp_type cg -log_summary|grep "Solve: "
 
 
+#include <math.h>
 #include <petscdmda.h>
 #include <petscksp.h>
 #include "structuredlaplacian.h"
@@ -38,23 +43,34 @@ PetscErrorCode formRHSandExact(DM da, Vec b, Vec uexact) {
   ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
 
   PetscInt       i, j;
-  PetscReal      hx = 1./info.mx,  hy = 1./info.my,  // domain is [0,1] x [0,1]
-                 x, y, **ab, **auex;
+  PetscReal      hx = 1./(double)(info.mx-1),
+                 hy = 1./(double)(info.my-1),  // domain is [0,1] x [0,1]
+                 pi = PETSC_PI, x, y, f, **ab, **auex;
   ierr = DMDAVecGetArray(da, b, &ab);CHKERRQ(ierr);
   ierr = DMDAVecGetArray(da, uexact, &auex);CHKERRQ(ierr);
   for (j=info.ys; j<info.ys+info.ym; j++) {
     y = j * hy;
     for (i=info.xs; i<info.xs+info.xm; i++) {
       x = i * hx;
-      auex[j][i] =
-      ab[j][i]   = 
+      // choose exact solution to satisfy boundary conditions, and be a bit
+      //   generic (e.g. not equal to an eigenvector)
+      auex[j][i] = x * (1.0 - x) * sin(3.0 * pi * y);
+      if ( (i>0) && (i<info.mx-1) && (j>0) && (j<info.my-1) ) { // if not bdry
+        // f = - (u_xx + u_yy)
+        f = 2 * sin(3.0 * pi * y) + 9.0 * pi * pi * auex[j][i];
+        ab[j][i] = hx * hy * f;
+      } else {
+        ab[j][i] = 0.0;                          // on bdry we have "1 * u = 0"
+      }
     }
   }
   ierr = DMDAVecRestoreArray(da, b, &ab);CHKERRQ(ierr);
   ierr = DMDAVecRestoreArray(da, uexact, &auex);CHKERRQ(ierr);
   
-  ierr = VecAssemblyBegin(b,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-  ierr = VecAssemblyEnd(b,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+  ierr = VecAssemblyBegin(b); CHKERRQ(ierr);
+  ierr = VecAssemblyEnd(b); CHKERRQ(ierr);
+  ierr = VecAssemblyBegin(uexact); CHKERRQ(ierr);
+  ierr = VecAssemblyEnd(uexact); CHKERRQ(ierr);
   return 0;
 }
 //ENDRHS
@@ -66,12 +82,14 @@ int main(int argc,char **args)
   PetscInitialize(&argc,&args,(char*)0,help);
 
 //CREATE
-  // default size (5 x 5) can be changed using -da_grid_x M -da_grid_y N
+  // default size (9 x 9) can be changed using -da_grid_x M -da_grid_y N
   DM             da;
   PetscLogStage  stage;
-  ierr = DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
-                DMDA_STENCIL_STAR,-5,-5,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,
+  ierr = DMDACreate2d(PETSC_COMM_WORLD,
+                DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,  // points on boundary have no
+                DMDA_STENCIL_STAR,-9,-9,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,
                 &da); CHKERRQ(ierr);
+  ierr = DMDASetUniformCoordinates(da,0.0,1.0,0.0,1.0,-1.0,-1.0); CHKERRQ(ierr);
 
   // create linear system matrix
   // to use symmetric storage, run with -dm_mat_type sbaij -mat_ignore_lower_triangular ??
@@ -82,8 +100,9 @@ int main(int argc,char **args)
 
   ierr = PetscLogStageRegister("Matrix Assembly", &stage); CHKERRQ(ierr);
   ierr = PetscLogStagePush(stage); CHKERRQ(ierr);
-  ierr = formlaplacian(da,A); CHKERRQ(ierr);
+  ierr = formdirichletlaplacian(da,A); CHKERRQ(ierr);
   ierr = PetscLogStagePop();CHKERRQ(ierr);
+  ierr = MatSetOption(A,MAT_SYMMETRIC,PETSC_TRUE); CHKERRQ(ierr);
 //ENDCREATE
 
 //SOLVE
@@ -106,18 +125,19 @@ int main(int argc,char **args)
   ierr = KSPSolve(ksp,b,u); CHKERRQ(ierr);
   ierr = PetscLogStagePop();CHKERRQ(ierr);
 
-  // report on grid, ksp iterations, and numerical error
+  // report on grid, ksp results, and numerical error
   PetscInt       its;
-  PetscScalar    norm, normexact;
+  PetscScalar    resnorm, errnorm;
   DMDALocalInfo  info;
   ierr = DMDAGetLocalInfo(da,&info);CHKERRQ(ierr);
   ierr = KSPGetIterationNumber(ksp,&its); CHKERRQ(ierr);
-  ierr = VecNorm(uexact,NORM_2,&normexact); CHKERRQ(ierr);
+  ierr = KSPGetResidualNorm(ksp,&resnorm); CHKERRQ(ierr);
   ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uxact
-  ierr = VecNorm(u,NORM_2,&norm); CHKERRQ(ierr);
+  ierr = VecNorm(u,NORM_INFINITY,&errnorm); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
-             "on %d x %d grid:  iterations %D, error |u-uexact|_2/|uexact|_2 = %g\n",
-             info.mx,info.my,its,norm/normexact); CHKERRQ(ierr);
+             "on %4d x %4d grid:  iterations %D, residual norm = %g,\n"
+             "                      error |u-uexact|_inf = %g\n",
+             info.mx,info.my,its,resnorm,errnorm); CHKERRQ(ierr);
 
   KSPDestroy(&ksp);  MatDestroy(&A);
   VecDestroy(&u);  VecDestroy(&uexact);  VecDestroy(&b);
