@@ -1,17 +1,18 @@
 
 static char help[] = "Solves a structured-grid Poisson problem with DMDA and KSP.\n\n";
 
-// SHOW MAT GRAPHICAL:  ./c2poisson -a_mat_view draw -draw_pause 5
 // SHOW MAT DENSE:  ./c2poisson -da_grid_x 3 -da_grid_y 3 -a_mat_view ::ascii_dense
-
-// SHOW KSP STRUCTURE:  ./c2poisson -ksp_view
+// SHOW MAT GRAPHICAL:  ./c2poisson -a_mat_view draw -draw_pause 5
 
 // CONVERGENCE:
 //   for NN in 5 9 17 33 65 129 257; do ./c2poisson -da_grid_x $NN -da_grid_y $NN -ksp_rtol 1.0e-8 -ksp_type cg; done
+
+// VISUALIZATION OF SOLUTION: mpiexec -n 6 ./c2poisson -da_grid_x 129 -da_grid_y 129 -ksp_type cg -ksp_monitor_solution
+
 // PERFORMANCE ON SAME:
 //   for NN in 5 9 17 33 65 129 257; do ./c2poisson -da_grid_x $NN -da_grid_y $NN -ksp_rtol 1.0e-8 -ksp_type cg -log_summary|grep "Time (sec):"; done
 
-// VISUALIZATION OF SOLUTION: mpiexec -n 6 ./c2poisson -da_grid_x 129 -da_grid_y 129 -ksp_type cg -ksp_monitor_solution
+// SHOW KSP STRUCTURE:  ./c2poisson -ksp_view
 
 // DIRECT LINEAR SOLVERS:
 //   LU ALGORITHM: ./c2poisson -ksp_type preonly -pc_type lu
@@ -138,10 +139,11 @@ int main(int argc,char **args)
              "on %4d x %4d grid:  iterations %D, residual norm = %g,\n"
              "                      error |u-uexact|_inf = %g\n",
              info.mx,info.my,its,resnorm,errnorm); CHKERRQ(ierr);
+//ENDSOLVE
 
   KSPDestroy(&ksp);  MatDestroy(&A);
   VecDestroy(&u);  VecDestroy(&uexact);  VecDestroy(&b);
   PetscFinalize();
   return 0;
 }
-//ENDSOLVE
+
