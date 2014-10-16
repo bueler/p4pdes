@@ -181,85 +181,6 @@
 
 \begin{document}
 
-\newcommand{\tblockeqncode}[3]{
-\begin{tabular}[t]{l} #1: \\ \qquad {\small #2} \\ \quad \texttt{#3} \end{tabular}
-}
-\newcommand{\tblockcode}[2]{
-\begin{tabular}[t]{l} #1 \\ \quad \texttt{#2} \end{tabular}
-}
-\newcommand{\tblock}[1]{
-\begin{tabular}[t]{l} #1 \end{tabular}
-}
-
-\thispagestyle{empty}
-\noindent \textsc{inside front cover:}
-
-\vfill
-\begin{center}
-\hspace{-10mm}\begin{tabular}{r|llll}
-\toprule
-Chapter 
-    &\quad linear\quad
-          &linear
-                &\quad nonlinear\quad
-                      &nonlinear \\ 
-    &     &time-dependent
-                &     &time-dependent \\
-\midrule
-1   &     &     &     &      \\ \midrule
-2   & \tblockeqncode{Poisson}{$-\grad^2 u = f$}{c2poisson.c}
-          & \tblockeqncode{heat}{$u_t = \grad^2 u$}{c2heat.c}
-                &     &      \\ \midrule
-3   & \tblockcode{Poisson}{c3poisson.c}
-          &     &     &      \\ \midrule
-4   & \tblock{Poisson}
-          & \tblock{heat}
-                &     &      \\ \midrule
-5   &     &     & \tblockeqncode{$p$-Laplace}{$-\Div\left(|\grad u|^{p-2} \grad u\right) = f$}{c5plap.c}
-                      & \tblockeqncode{porous}{$u_t = \Div\left(u^{\gamma-1} \grad u\right)$}{c5porous.c} \\ \midrule
-6   & \tblock{Poisson}
-          &     & \tblock{$p$-Laplace}
-                      & \tblock{porous} \\
-    & \tblockeqncode{Stokes}{$\begin{matrix} \Div u = 0 \\ 0 = -\grad p + \grad^2 u \end{matrix}$}{c6stokes.c}
-          &     &     &      \\ \midrule
-7   & \tblockcode{Poisson}{c7poisson.c}
-          &     &     &      \\
-    & \tblockcode{Stokes}{c7stokes.c}
-          &     &     &      \\ \midrule
-8   & \tblockcode{obstacle}{c8obstacle.c}
-          &     &     & \tblockeqncode{SIA}{$u_t = \Div\left(D(u,|\grad u|) \grad u\right)$}{c8sia.c} \\
-\bottomrule
-\end{tabular}
-\end{center}
-\vfill
-
-
-\newpage\thispagestyle{empty}
-\noindent \textsc{inside back cover:}
-
-\vfill
-\begin{center}
-\begin{tabular}{rccccccc}
-\toprule
-Chapter 
-    &\;\pVec\; &\;\pMat\;
-                &\;\pKSP\; &\pDMDA
-                            &\pDMPlex
-                                  &\pSNES &\;\pTS\; \\
-\midrule
-1   & \XX & \XX & \XX &     &     &     &      \\
-2   & \XX & \XX & \XX & \XX &     &     & \XX  \\
-3   & \XX & \XX & \XX &     &     &     &      \\
-4   & \XX & \XX & \XX & \XX &     &     &      \\
-5   & \gX & \gX & \gX & \XX &     & \XX &      \\
-6   & \gX & \gX & \gX & \XX &     & \XX & \XX? \\
-7   & \gX & \gX & \XX &     & \XX & \XX &      \\
-8   & \gX & \gX & \gX & \XX &     & \XX &      \\
-\bottomrule
-\end{tabular}
-\end{center}
-\vfill
-
 % epigraph page first
 \newpage\thispagestyle{empty}
 \openepigraph{%
@@ -426,5 +347,86 @@ Here is a partial list:\begin{itemize}
 
 \bibliography{ice-bib}
 \bibliographystyle{plainnat}
+
+\clearpage
+
+\newcommand{\tblockeqncode}[3]{
+\begin{tabular}[t]{l} #1: \\ \qquad {\small #2} \\ \quad \texttt{#3} \end{tabular}
+}
+\newcommand{\tblockcode}[2]{
+\begin{tabular}[t]{l} #1 \\ \quad \texttt{#2} \end{tabular}
+}
+\newcommand{\tblock}[1]{
+\begin{tabular}[t]{l} #1 \end{tabular}
+}
+
+\thispagestyle{empty}
+\noindent \textsc{inside front cover:}
+
+\vfill
+\begin{center}
+\hspace{-10mm}\begin{tabular}{r|llll}
+\toprule
+Chapter 
+    &\quad linear\quad
+          &linear
+                &\quad nonlinear\quad
+                      &nonlinear \\ 
+    &     &time-dependent
+                &     &time-dependent \\
+\midrule
+1   &     &     &     &      \\ \midrule
+2   & \tblockeqncode{Poisson}{$-\grad^2 u = f$}{c2poisson.c}
+          & \tblockeqncode{heat}{$u_t = \grad^2 u$}{c2heat.c}
+                &     &      \\ \midrule
+3   & \tblockcode{Poisson}{c3poisson.c}
+          &     &     &      \\ \midrule
+4   & \tblock{Poisson}
+          & \tblock{heat}
+                &     &      \\ \midrule
+5   &     &     & \tblockeqncode{$p$-Laplace}{$-\Div\left(|\grad u|^{p-2} \grad u\right) = f$}{c5plap.c}
+                      & \tblockeqncode{porous}{$u_t = \Div\left(u^{\gamma-1} \grad u\right)$}{c5porous.c} \\ \midrule
+6   & \tblock{Poisson}
+          &     & \tblock{$p$-Laplace}
+                      & \tblock{porous} \\
+    & \tblockeqncode{Stokes}{$\begin{matrix} \Div u = 0 \\ 0 = -\grad p + \grad^2 u \end{matrix}$}{c6stokes.c}
+          &     &     &      \\ \midrule
+7   & \tblockcode{Poisson}{c7poisson.c}
+          &     &     &      \\
+    & \tblockcode{Stokes}{c7stokes.c}
+          &     &     &      \\ \midrule
+8   & \tblockcode{obstacle}{c8obstacle.c}
+          &     &     & \tblockeqncode{SIA}{$u_t = \Div\left(D(u,|\grad u|) \grad u\right)$}{c8sia.c} \\
+\bottomrule
+\end{tabular}
+\end{center}
+\vfill
+
+
+\newpage\thispagestyle{empty}
+\noindent \textsc{inside back cover:}
+
+\vfill
+\begin{center}
+\begin{tabular}{rccccccc}
+\toprule
+Chapter 
+    &\;\pVec\; &\;\pMat\;
+                &\;\pKSP\; &\pDMDA
+                            &\pDMPlex
+                                  &\pSNES &\;\pTS\; \\
+\midrule
+1   & \XX & \XX & \XX &     &     &     &      \\
+2   & \XX & \XX & \XX & \XX &     &     & \XX  \\
+3   & \XX & \XX & \XX &     &     &     &      \\
+4   & \XX & \XX & \XX & \XX &     &     &      \\
+5   & \gX & \gX & \gX & \XX &     & \XX &      \\
+6   & \gX & \gX & \gX & \XX &     & \XX & \XX? \\
+7   & \gX & \gX & \XX &     & \XX & \XX &      \\
+8   & \gX & \gX & \gX & \XX &     & \XX &      \\
+\bottomrule
+\end{tabular}
+\end{center}
+\vfill
 
 \end{document}
