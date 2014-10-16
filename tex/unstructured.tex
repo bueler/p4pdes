@@ -1,7 +1,7 @@
 
 \chapter{3. Linear PDEs: an unstructured finite element example}
 
-The cliched Poisson problem can be exploited more.  It gives us the opportunity to use \PETSc for some important tasks we have not yet seen, including reading an unstructured mesh into \PETSc \pVec s, preallocation of a \pMat in parallel, and use of a linear solver (a \pKSP object) to solve large sparse systems.
+The cliched Poisson problem can be exploited more.  It gives us the opportunity to use \PETSc for some important tasks we have not yet seen, including reading an unstructured mesh into \PETSc \pVecs, preallocation of a \pMat in parallel, and use of a linear solver (a \pKSP object) to solve large sparse systems.
 
 \section{Example: The Poisson problem}
 
@@ -180,11 +180,11 @@ We show \texttt{c3convert.c} in detail (Figure \ref{code:trianglepartone}).  It 
 
 \cinputpart{c3convert.c}{The standard preamble, and determination of filenames using \PETSc option processing.}{I}{//STARTPREAMBLE}{//ENDFILENAME}{code:trianglepartone}
 
-The next part of \texttt{c3convert.c} is in Figure \ref{code:triangleparttwo}.  Starting here we only ask the first process (``rank zero'') in the MPI communicator to do any work.\sidenote{This code can be invoked ``\texttt{mpiexec -n NN c3convert}'', but it behaves as a serial code, other than the ``\texttt{-check}'' part.}  This part of the code first reads the header information in the \texttt{.node} file, and allocates \PETSc \pVec s according.  We use \texttt{VecCreateSeq} to allocate the a sequential \pVec \texttt{vx}, which contains the $x$-coordinate of the nodes, only on the rank zero process.  Then \texttt{VecDuplicate} is used to allocate two more \pVec s with the same layout, \texttt{vy} and \texttt{vBT}.  This last \pVec will contain a flag $\{0,2,3\}$ for each node, where $0$ is an interior node, $2$ is a Dirichlet boundary node, and $3$ is a Neumann boundary node.
+The next part of \texttt{c3convert.c} is in Figure \ref{code:triangleparttwo}.  Starting here we only ask the first process (``rank zero'') in the MPI communicator to do any work.\sidenote{This code can be invoked ``\texttt{mpiexec -n NN c3convert}'', but it behaves as a serial code, other than the ``\texttt{-check}'' part.}  This part of the code first reads the header information in the \texttt{.node} file, and allocates \PETSc \pVecs according.  We use \texttt{VecCreateSeq} to allocate the a sequential \pVec \texttt{vx}, which contains the $x$-coordinate of the nodes, only on the rank zero process.  Then \texttt{VecDuplicate} is used to allocate two more \pVecs with the same layout, \texttt{vy} and \texttt{vBT}.  This last \pVec will contain a flag $\{0,2,3\}$ for each node, where $0$ is an interior node, $2$ is a Dirichlet boundary node, and $3$ is a Neumann boundary node.
 
-\cinputpart{c3convert.c}{Start reading ASCII files with the \textsc{triangle}-generated mesh: Go to rank zero processor, read node header, and allocate \pVec s accordingly.  Then read nodes.}{II}{//ENDFILENAME}{//ENDREADNODES}{code:triangleparttwo}
+\cinputpart{c3convert.c}{Start reading ASCII files with the \textsc{triangle}-generated mesh: Go to rank zero processor, read node header, and allocate \pVecs accordingly.  Then read nodes.}{II}{//ENDFILENAME}{//ENDREADNODES}{code:triangleparttwo}
 
-Then we read the node locations from the \texttt{.node} file.  The reading itself is done with the standard C library call \texttt{fscanf}.  Then \texttt{VecSetValues} is used to set one entry at a time.  After setting these values, which stores a list of entrys into an internal \PETSc dynamic data structure, we ask \PETSc to do the assembly.  Assembly of \pVec s and \pMat s is done so often that we put it in a C preprocessor macro (Figure \ref{code:convenience}).
+Then we read the node locations from the \texttt{.node} file.  The reading itself is done with the standard C library call \texttt{fscanf}.  Then \texttt{VecSetValues} is used to set one entry at a time.  After setting these values, which stores a list of entrys into an internal \PETSc dynamic data structure, we ask \PETSc to do the assembly.  Assembly of \pVecs and \pMat s is done so often that we put it in a C preprocessor macro (Figure \ref{code:convenience}).
 
 \inputwhole{../c/convenience.h}{convenience.h}{Macros for assembly.}{code:convenience}
 
@@ -206,11 +206,11 @@ In the next part (Figure \ref{code:trianglepartfive}) we fill the \pVec for elem
 
 \cinputpart{c3convert.c}{On rank zero: Read node indices for each element and fill element data structure.}{V}{//STARTREADELEMENTS}{//ENDREADELEMENTS}{code:trianglepartfive}
 
-At this point we have the whole triangulation into \PETSc \pVec s.  Now is the easy and last part of \texttt{c3convert.c}, shown in Figure \ref{code:trianglepartsix}.  We simply create a \PETSc ``viewer'' and ``view'' all of the \pVec s which contain the mesh.  We will be able to reread these \pVec s in parallel, as long as we re-read them in the same order.
+At this point we have the whole triangulation into \PETSc \pVecs.  Now is the easy and last part of \texttt{c3convert.c}, shown in Figure \ref{code:trianglepartsix}.  We simply create a \PETSc ``viewer'' and ``view'' all of the \pVecs which contain the mesh.  We will be able to reread these \pVecs in parallel, as long as we re-read them in the same order.
 
 \cinputpart{c3convert.c}{On rank zero: Write the mesh in \PETSc binary format.}{VI}{//ENDREADELEMENTS}{//ENDRANK0}{code:trianglepartsix}
 
-To tell the truth, we have not shown the last part of \texttt{c3convert.c}.  That truly-final bit of code checks if option \texttt{-check} is given, and if so we read back the binary file in parallel.  This part of \texttt{c3convert.c} calls two methods from a re-used component \texttt{readmesh.c} which we do show.  The first is a method \texttt{getmeshfile()} which finds a \PETSc binary file from a \texttt{-f} option (Figure \ref{code:readmeshparttwo}).  The second method \texttt{readmesh()} creates and reads three \pVec s in parallel from it (Figure \ref{code:readmeshparttwo}).  Note that prefixes are set on each \pVec so that the block size is correctly read.
+To tell the truth, we have not shown the last part of \texttt{c3convert.c}.  That truly-final bit of code checks if option \texttt{-check} is given, and if so we read back the binary file in parallel.  This part of \texttt{c3convert.c} calls two methods from a re-used component \texttt{readmesh.c} which we do show.  The first is a method \texttt{getmeshfile()} which finds a \PETSc binary file from a \texttt{-f} option (Figure \ref{code:readmeshparttwo}).  The second method \texttt{readmesh()} creates and reads three \pVecs in parallel from it (Figure \ref{code:readmeshparttwo}).  Note that prefixes are set on each \pVec so that the block size is correctly read.
 
 \cinputpart{readmesh.c}{Determine the filename of a \PETSc binary file that has a mesh.}{I}{//STARTGET}{//ENDGET}{code:readmeshpartone}
 
@@ -505,7 +505,7 @@ where $\omega(\xi,\eta) = f(x(\xi,\eta),y(\xi,\eta)) \chi_q(\xi,\eta)$.
 
 %\section{Preallocate a \pMat}
 %FIXME: figure showing parallel partition of elements
-%\cinputpart{c2testprealloc.c}{Read mesh \pVec s from file.  Get row ownership range.}{I}{//STARTLOAD}{//ENDLOAD}{code:testpreallocpartone}
+%\cinputpart{c2testprealloc.c}{Read mesh \pVecs from file.  Get row ownership range.}{I}{//STARTLOAD}{//ENDLOAD}{code:testpreallocpartone}
 %\cinputpart{c2testprealloc.c}{Set up \pMat $A$ and actually preallocate it.  Fill it with junk entries so the pattern can be visualized.}{II}{//ENDLOAD}{//ENDTEST}{code:testpreallocparttwo}
 
 
