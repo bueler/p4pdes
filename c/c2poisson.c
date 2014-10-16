@@ -83,12 +83,12 @@ int main(int argc,char **args)
   PetscInitialize(&argc,&args,(char*)0,help);
 
 //CREATE
-  // default size (9 x 9) can be changed using -da_grid_x M -da_grid_y N
+  // default size (10 x 10) can be changed using -da_grid_x M -da_grid_y N
   DM             da;
   PetscLogStage  stage;
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
                 DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,  // points on boundary have no
-                DMDA_STENCIL_STAR,-9,-9,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,
+                DMDA_STENCIL_STAR,-10,-10,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,
                 &da); CHKERRQ(ierr);
   ierr = DMDASetUniformCoordinates(da,0.0,1.0,0.0,1.0,-1.0,-1.0); CHKERRQ(ierr);
 

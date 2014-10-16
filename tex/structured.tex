@@ -63,40 +63,25 @@ The construction of such a two-dimensional (2D) grid, and the distribution of it
   DM  da;
   DMDACreate2d(PETSC_COMM_WORLD,
                DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
-               -9,-9,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,
+               -10,-10,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,
                &da);
   DMDASetUniformCoordinates(da,0.0,1.0,0.0,1.0,-1.0,-1.0);
 \end{Verbatim}
 \medskip\noindent
 which create a \PETSc \pDM object\sidenote{``\pDM'' might stand for ``data management'', but perhaps ``distributed mesh'' is a better expansion.} for a grid like that shown in Figure \ref{fig:unitsquaregrid}.
 
-A \pDM is an abstract type for describing the topology (i.e.~connectedness) of a grid, \emph{and} the way it is distributed across \MPI processes, \emph{and} the way each process's part of the grid can access its neighbors.  The specific variable \texttt{da} is above created to have type ``\pDMDA'', which is the subclass of \pDM s which are structured grids.  The above lines of code will appear in \texttt{c2poisson.c} below.  Supposing we call
+A \pDM is an abstract type for describing the topology (i.e.~connectedness) of a grid, \emph{and} the way it is distributed across \MPI processes, \emph{and} the way each process's part of the grid can access its neighbors.  The specific variable \texttt{da} is above created to have type ``\pDMDA'', which is the subclass of \pDM s which are structured grids.  The above lines of code will appear in \texttt{c2poisson.c} below.  If we do
 \begin{Verbatim}[fontsize=\small]
-  mpiexec -n 4 c2poisson -da_grid_x 5 -da_grid_y 7
+  make c2poisson
+  mpiexec -n 4 ./c2poisson -da_grid_x 5 -da_grid_y 7
 \end{Verbatim}
-\medskip\noindent
-then a structured grid like that in Figure \ref{fig:unitsquaregrid} will be created, but with the parallel decomposition shown in Figure \ref{fig:unitsquaregridparallel}.  In fact, \PETSc itself can show the parallel layout by calling
-\begin{Verbatim}[fontsize=\small]
-  mpiexec -n 4 c2poisson -da_grid_x 5 -da_grid_y 7 -dm_view
-\end{Verbatim}
-\noindent
-or
-\begin{Verbatim}[fontsize=\small]
-  mpiexec -n 4 c2poisson -da_grid_x 5 -da_grid_y 7 \
-      -dm_view draw -draw_pause -1
-\end{Verbatim}
-\noindent
-The latter version shows the grid graphically, and labels the nodes with the local order; use mouse clicks to cycle through the displays.
+then a structured grid will be distributed across the four processes exactly as in Figure \ref{fig:unitsquaregridparallel}.  Neither $M$ nor $N$ is divisible by two in this case, but \PETSc distributes the four ranks across the $MN=35$ nodes (grid points) in a as uniformly as possible given that each processor owns a rectangular subgrid, so that the rank $0$ process has 12 nodes, rank $1$ has 8 nodes, rank $2$ has 9 nodes, and rank  $3$ has 6 nodes.  That is, \PETSc does the best it can.
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
   \draw[->,gray,very thin] (0.0,0.0) -- (1.2,0.0) node[below] {$x$};
   \draw[->,gray,very thin] (0.0,0.0) -- (0.0,1.2) node[left] {$y$};
   \draw[line width=1.0pt] (0.0,0.0) -- (0.0,1.0) -- (1.0,1.0) -- (1.0,0.0) -- cycle;
-  \node at (0.0,-0.1) {$i=0$};
-  \node at (1.0,-0.1) {$i=M-1$};
-  \node at (-0.15,0.0) {$j=0$};
-  \node at (-0.22,1.0) {$j=N-1$};
   \draw[xstep=0.25,ystep=0.166667,black,thin] (0.0,0.0) grid (1.0,1.0);
   \draw[thick,rounded corners=8pt,color=red]
 (-0.04,-0.04) -- (-0.04,0.54) -- (0.54,0.54) -- (0.54,-0.04) -- cycle;
@@ -111,8 +96,52 @@ The latter version shows the grid graphically, and labels the nodes with the loc
 (0.71,0.626667) -- (0.71,1.04) -- (1.04,1.04) -- (1.04,0.626667) -- cycle;
   \node[color=red] at (0.87,0.83) {rank $3$};
 \end{tikzpicture}
-\caption{A grid on the unit square $\mathcal{S}$, with $M=5$ and $N=7$, distributed across four \MPI processes (i.e.~with \texttt{rank} $\in \{0,1,2,3\}$) automatically by \texttt{DMDACreate2d()}.}
+\caption{The same grid as in Figure \ref{fig:unitsquaregrid}, distributed across four \MPI processes (i.e.~with \texttt{rank} $\in \{0,1,2,3\}$) automatically by \texttt{DMDACreate2d()}.}
 \label{fig:unitsquaregridparallel}
+\end{marginfigure}
+
+The fifth and sixth arguments to \texttt{DMDACreate2d()} are used, in the above lines of code, to set default dimensions $M=10$ and $N=10$.  These defaults are overridden at runtime by options \texttt{-da\_grid\_x} and \texttt{-da\_grid\_y} in the runtime command above.  If, however, we wrote this at runtime,
+ \begin{Verbatim}[fontsize=\small]
+  mpiexec -n 4 ./c2poisson
+\end{Verbatim}
+then a structured grid will be distributed across the four processes as in Figure \ref{fig:unitsquaregrideight}, with each rank owning 25 nodes.  \PETSc itself can show the parallel layout by calling
+\begin{Verbatim}[fontsize=\small]
+  mpiexec -n 4 ./c2poisson -dm_view
+\end{Verbatim}
+or
+\begin{Verbatim}[fontsize=\small]
+  mpiexec -n 4 ./c2poisson -dm_view draw -draw_pause -1
+\end{Verbatim}
+The latter version shows the grid graphically, and labels the nodes with the local order; use mouse clicks to cycle through the displays.
+
+\begin{marginfigure}
+\begin{tikzpicture}[scale=3.5]
+  \draw[->,gray,very thin] (0.0,0.0) -- (1.2,0.0) node[below] {$x$};
+  \draw[->,gray,very thin] (0.0,0.0) -- (0.0,1.2) node[left] {$y$};
+  \draw[line width=1.0pt] (0.0,0.0) -- (0.0,1.0) -- (1.0,1.0) -- (1.0,0.0) -- cycle;
+  \pgfmathsetmacro\ninth{1.0/9.0}
+  \draw[xstep=\ninth,ystep=\ninth,black,thin] (0.0,0.0) grid (1.0,1.0);
+  \pgfmathsetmacro\dd{0.04}
+  \pgfmathsetmacro\od{1.04}
+  \pgfmathsetmacro\ap{4*\ninth + 0.04}
+  \pgfmathsetmacro\bm{5*\ninth - 0.04}
+  \pgfmathsetmacro\amid{2*\ninth}
+  \pgfmathsetmacro\bmid{7*\ninth}
+  \draw[thick,rounded corners=8pt,color=red]
+    (-\dd,-\dd) -- (-\dd,\ap) -- (\ap,\ap) -- (\ap,-\dd) -- cycle;
+  \node[color=red] at (\amid,\amid) {rank $0$};
+  \draw[thick,rounded corners=8pt,color=red]
+    (\bm,-\dd) -- (\od,-\dd) -- (\od,\ap) -- (\bm,\ap) -- cycle;
+  \node[color=red] at (\bmid,\amid) {rank $1$};
+  \draw[thick,rounded corners=8pt,color=red]
+    (-\dd,\bm) -- (\ap,\bm) -- (\ap,\od) -- (-\dd,\od) -- cycle;
+  \node[color=red] at (\amid,\bmid) {rank $2$};
+  \draw[thick,rounded corners=8pt,color=red]
+    (\bm,\bm) -- (\od,\bm) -- (\od,\od) -- (\bm,\od) -- cycle;
+  \node[color=red] at (\bmid,\bmid) {rank $3$};
+\end{tikzpicture}
+\caption{An $M=10$ by $N=10$ grid distributed by \texttt{DMDACreate2d()} across four \MPI processes.}
+\label{fig:unitsquaregrideight}
 \end{marginfigure}
 
 The above command \texttt{DMDACreate2d()} creates the \pDMDA object as a 2D structured grid but a bit more explanation than that is needed.   The \PETSc manual pages description of that method is
@@ -136,14 +165,14 @@ where
 \item[\texttt{da}]      output: the resulting distributed array object 
 \end{itemize}
 \normalsize
-In our example, the first object will be some serial or parallel \MPI communicator.  In the second and third arguments we choose ``\texttt{DM\_BOUNDARY\_NONE}'' meaning that implementing our boundary condition will not require FIXME ... FIXME with default dimensions $M=9$ and $N=9$; these defaults are set using negative numbers as the fifth and sixth arguments, and then will be overridden at runtime by options \texttt{-da\_grid\_x} and \texttt{-da\_grid\_y}.  The call to \texttt{DMDASetUniformCoordinates()} sets the domain to be $[0,1]\times[0,1]$; the last two arguments are ignored in this case but would set limits on the third dimension in 3D.
+In our example, the first object will be some serial or parallel \MPI communicator.  In the second and third arguments we choose ``\texttt{DM\_BOUNDARY\_NONE}'' meaning that implementing our boundary condition will not require FIXME ... FIXME  The call to \texttt{DMDASetUniformCoordinates()} sets the domain to be $[0,1]\times[0,1]$; the last two arguments are ignored in this case but would set limits on the third dimension in 3D.
 
 
 FIXME: a bit more on DMs is in Figure \ref{fig:petscghostvalues}; note left (structured) part shows BOX not STAR stencil
 
 \begin{figure}
-\includegraphics[width=0.9\textwidth]{petscghostvalues}
-\caption{The standard \PETSc ghost figure, from }
+\includegraphics[width=\textwidth]{petscghostvalues}
+\caption{\PETSc ghosts, in structured and unstructured grids.}
 \label{fig:petscghostvalues}
 \end{figure}
 
@@ -166,12 +195,8 @@ Problem \eqref{poissonsquareFD} is a linear system.  We choose to treat all $MN$
   \draw[->,gray,very thin] (0.0,0.0) -- (1.2,0.0) node[below] {$x$};
   \draw[->,gray,very thin] (0.0,0.0) -- (0.0,1.2) node[left] {$y$};
   \draw[line width=1.0pt] (0.0,0.0) -- (0.0,1.0) -- (1.0,1.0) -- (1.0,0.0) -- cycle;
-  \node at (0.0,-0.1) {$0$};
   \node at (0.75,-0.1) {$i$};
-  \node at (1.0,-0.1) {$M-1$};
-  \node at (-0.1,0.0) {$0$};
   \node at (-0.1,0.666667) {$j$};
-  \node at (-0.15,1.0) {$N-1$};
   \filldraw (0.50,0.666667) circle (0.5pt);
   \filldraw (0.75,0.666667) circle (0.5pt);
   \filldraw (1.00,0.666667) circle (0.5pt);
@@ -179,7 +204,7 @@ Problem \eqref{poissonsquareFD} is a linear system.  We choose to treat all $MN$
   \filldraw (0.75,0.833333) circle (0.5pt);
   \draw[xstep=0.25,ystep=0.166667,black,thin] (0.0,0.0) grid (1.0,1.0);
 \end{tikzpicture}
-\caption{A stencil is shown on the grid at $i=3$ and $j=4$.}
+\caption{A stencil, shown on the grid, at $i=3$ and $j=4$.}
 \label{fig:unitsquaregridstencil}
 \end{marginfigure}
 
