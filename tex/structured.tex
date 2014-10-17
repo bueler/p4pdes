@@ -5,11 +5,11 @@ We start with the Poisson problem because it is the right place to start.  Thoug
 
 \section{A Poisson problem on a square domain}
 
-It is common to see the \emph{Laplacian}
+The \emph{Laplacian}
     $$\grad^2 u = \Div(\grad u) = \frac{\partial^2 u}{\partial x^2} + \frac{\partial^2 u}{\partial y^2}$$
-of a function $u(x,y)$ in a mathematical model.  The Laplacian almost always appears because the quantity $u$ is conserved, and from an assumption that the gradient $\grad u$ is, up to a coefficient, the flux of $u$ \citep{Ockendonetal2003}.  The divergence ``$\Div$'' arises from the connection between a flux integral over a closed surface and an integral over the interior of that surface, namely, from the divergence (Gauss) theorem (FIXME cite).
+of a function $u(x,y)$ almost always appears in a mathematical model because the quantity $u$ is conserved in some sense, and because of an assumption that the gradient $\grad u$ is, up to a coefficient, the flux of $u$ \citep{Ockendonetal2003}.  The divergence ``$\Div$'' factor arises from a connection between a flux integral over a closed surface and an integral over the interior of that surface, namely the divergence (Gauss-Green) theorem \citep[Appendix C]{Evans}.
 
-In the \emph{Poisson equation} the Laplacian of $u$ is equal to a known function.  We cannot just solve this one equation on a finite region, however.  We solve a \emph{Poisson problem} including boundary conditions, and the whole problem determines a solution which we will find (approximate) numerically.  Let $\mathcal{S}$ be the open unit square $(0,1)\times(0,1)$.  The following is our Poisson problem for this Chapter;  see Figure \ref{fig:unitsquare}:
+In the \emph{Poisson equation} the Laplacian of $u$ is equal to a known function.  We will not just solve this one equation on a finite region, however.  We solve a \emph{Poisson problem} including boundary conditions, and the whole problem determines a solution which we will approximate numerically.  Let $\mathcal{S}$ be the open unit square $(0,1)\times(0,1)$.  The following is our Poisson problem for this Chapter;  see Figure \ref{fig:unitsquare}:
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
   \draw[->,gray,very thin] (-0.2,0.0) -- (1.2,0.0) node[below] {$x$};
@@ -30,18 +30,18 @@ u &= 0 \quad \text{ on } \partial \mathcal{S}. \notag
 \end{align}
 The boundary of the unit square, denoted ``$\partial\mathcal{S}$'', is simply the union of four (closed) line segments.  The boundary conditions $u=0$ are called ``\emph{homogeneous Dirichlet}.''
 
-The Poisson problem can model the distribution of temperature in a conducting object at steady state, the electrostatic potential, the equilibrium distribution from certain random walks, and many other other physical phenomena.  For example, in the context of heat conduction Fourier's law says $\bq = -k \grad u$, where $k$ is approximately constant if the variation in $u$ is not too large.  Conservation of energy for a solid says $c\rho \partial u/\partial t = - \Div\bq + f$ if $f$ describes a heat source within the domain.  At steady state ($\partial u/\partial t=0$) this equation becomes $0 = k \grad^2 u + f$, that is, Poisson's equation \eqref{poissonsquare}.  Holding the temperature fixed at zero along the boundary completes the problem.
+The Poisson problem can model the electrostatic potential, the equilibrium distribution from certain random walks, the distribution of temperature in a conducting object at steady state, and many other other physical phenomena.  For example, in the context of heat conduction Fourier's law says $\bq = -k \grad u$, where $k$ is approximately constant if the variation in $u$ is not too large.  Conservation of energy for a solid says $c\rho \partial u/\partial t = - \Div\bq + f$ if $f$ describes a heat source within the domain.  At steady state these facts combine to give $0 = k \grad^2 u + f$, that is, Poisson's equation \eqref{poissonsquare}.  Holding the temperature fixed at zero along the boundary completes the problem.
 
-For this chapter we will suppose that $f(x,y)$ is continuous and bounded on $\mathcal{S}$, so that we can compute its pointwise values.  With our homogeneous Dirichlet boundary conditions, and the assumptions on $f$, standard theory says that $u(x,y)$ exists and is continuous on the closed square $\overline{\mathcal{S}}$.\sidenote{One approach to showing this classical-existence fact starts by solving the problem \eqref{poissonsquare} by Fourier series!  Because $f$ itself is square-integrable, the Fourier coefficients $\hat f$ are square-integrable (Parseval's equality).  Because the Laplacian is elliptic and second-order, the coefficients $\hat u$ are square-integrable even when multiplied by the square of the frequency.  By a Cauchy-Schwarz argument, one then shows that the Fourier series for $u$ is the limit of a sequence of continuous functions on $\overline{\mathcal{S}}$ which converge uniformly.  (\emph{For a more abstract version see Theorem 6 in section 5.6 of \citet{Evans}.})}  Thus there is no ambiguity in the boundary condition ``$u=0$ on $\partial \mathcal{S}$,'' and furthermore we can sensibly discuss the pointwise values $u(x,y)$.
+For this chapter we will suppose that $f(x,y)$ is continuous and bounded on $\mathcal{S}$, so that we can compute its pointwise values.  With our homogeneous Dirichlet boundary conditions, and the assumptions on $f$, standard theory says that $u(x,y)$ exists and is continuous on the closed square $\overline{\mathcal{S}}$ \citep[Theorem 6 in section 5.6]{Evans}.\sidenote{A classical approach to showing existence starts by solving problem \eqref{poissonsquare} by Fourier series.  If $f$ is square-integrable then the coefficients $\hat f$ are square-integrable (Parseval's equality).  Because the Laplacian is elliptic and second-order, the coefficients $\hat u$ are square-integrable even when multiplied by the frequency squared.  By Cauchy-Schwarz, the Fourier series for $u$ is the limit of a sequence of continuous functions on $\overline{\mathcal{S}}$ which converge uniformly, so $u\in C^0(\overline{\mathcal{S}})$.}  Thus there is no ambiguity in the boundary condition ``$u=0$ on $\partial \mathcal{S}$,'' and also we can sensibly discuss the pointwise values $u(x,y)$.
 
-Without any boundary conditions, the Poisson equation $-\grad^2 u = f$ alone is not a well-posed problem because if $-\grad^2 u = f$ then also $-\grad^2(u+C)=f$ for any constant $C$; in fact there are these constant solutions and many, many more to the Laplace equation $-\grad^2 u = 0$ on $\mathcal{S}$.  With the Dirichlet boundary conditions in \eqref{poissonsquare}, the solution is unique if it exists.\sidenote{See Theorem 5 in section 2.2 of \citet{Evans} or subsection 5.2.1 of \citet{Ockendonetal2003}.}
+Without any boundary conditions, the Poisson equation $-\grad^2 u = f$ alone is not a well-posed problem because if $u$ is a solution then $v=u+C$ is also a solution for any constant $C$.  (In fact there are constant solutions $w=C$ and many, many more to the Laplace equation $-\grad^2 w = 0$ on $\mathcal{S}$.)  However, with the Dirichlet boundary conditions in \eqref{poissonsquare}, the solution is unique if it exists \citep[Theorem 5 in section 2.2]{Evans}; \citep[subsection 5.2.1]{Ockendonetal2003}.
 
 
-\clearpage
+%\clearpage
 
-\section{A finite difference method: the grid in parallel}
+\section{A finite difference method: build the grid}
 
-Because \eqref{poissonsquare} is a linear problem, finite-dimensional approximations of it are simply linear systems.  The finite-dimensional approximation in this Chapter comes from applying a \emph{finite difference} (FD) method.
+Because \eqref{poissonsquare} is a linear problem, finite-dimensional approximations of it are simply linear systems.  The finite-dimensional approximation in this Chapter comes from applying a \emph{finite difference} (FD) method.  In Chapter 3 we will apply a finite element approach instead.
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
@@ -58,20 +58,21 @@ Because \eqref{poissonsquare} is a linear problem, finite-dimensional approximat
 \label{fig:unitsquaregrid}
 \end{marginfigure}
 
-To start our FD method we put a \emph{structured grid} of $MN$ points on the unit square, as in Figure \ref{fig:unitsquaregrid}, with spacing $h_x=1/(M-1)$ and $h_y=1/(N-1)$ in the two directions.  The grid locations are $x_i = i\, h_x$ and $y_j = j\, h_y$ for $i = 0,1,\dots,M-1$ and $j=0,1,\dots,N-1$.
+To start our FD method we put a \emph{structured grid} of $MN$ points on the unit square, as in Figure \ref{fig:unitsquaregrid}, with spacing $h_x=1/(M-1)$ and $h_y=1/(N-1)$ in the two directions.  The grid locations are $x_i = i\, h_x$ for $i = 0,1,\dots,M-1$ and $y_j = j\, h_y$ and $j=0,1,\dots,N-1$.
 
-The construction of such a two-dimensional (2D) grid, and the distribution of it across processors, is our first new idea from \PETSc beyond the basics in Chapter 1.  Consider the lines of code in Figure \ref{code:dmdacreatetwod}.  It creates a \PETSc \pDM object\sidenote{``\pDM'' might stand for ``data management'', but perhaps ``distributed mesh'' is a better expansion.} for a grid like that shown in Figure \ref{fig:unitsquaregrid}.
+The construction of such a two-dimensional (2D) grid, and the distribution of it across processors, will be our first new idea from \PETSc, beyond the basics in Chapter 1.  Consider the lines of code in Figure \ref{code:dmdacreatetwod}.  They create a \PETSc \pDM object\sidenote{``\pDM'' might stand for ``data management'', but perhaps ``distributed mesh'' is better.} for a grid like Figure \ref{fig:unitsquaregrid}.
 
-A \pDM is an abstract type for describing the topology (i.e.~connectedness) of a grid, \emph{and} the way it is distributed across \MPI processes, \emph{and} the way each process's part of the grid can access its neighbors.  The specific variable \texttt{da} is above created to have type ``\pDMDA'', which is the subclass of \pDM s which are structured grids.  The above lines of code will appear in \texttt{c2poisson.c} below. 
-
+\clearpage
 \cinputraw{dmdacreate2d.frag}{extract from c2poisson.c}{An example of creating a 2D \pDMDA.}{}{//START}{//STOP}{code:dmdacreatetwod}
 
-If we do
+A \pDM is an abstract type for describing the topology (i.e.~connectedness) of a grid, \emph{and} the way it is distributed across \MPI processes, \emph{and} the way each process can access data from its neighbors.  The specific variable \texttt{da} in Figure \ref{code:dmdacreatetwod} has type ``\pDMDA'', which is the subclass of \pDM s which are structured grids.
+
+The Figure \ref{code:dmdacreatetwod} code will appear in \texttt{c2poisson.c} below, which solves Poisson's problem.  For now, if we do
 \begin{Verbatim}[fontsize=\small]
   make c2poisson
   mpiexec -n 4 ./c2poisson -da_grid_x 5 -da_grid_y 7
 \end{Verbatim}
-then a structured grid will be distributed across the four processes exactly as in Figure \ref{fig:unitsquaregridparallel}.  Neither $M$ nor $N$ is divisible by two in this case, but \PETSc distributes the four ranks across the $MN=35$ nodes (grid points) in a as uniformly as possible given that each processor owns a rectangular subgrid, so that the rank $0$ process has 12 nodes, rank $1$ has 8 nodes, rank $2$ has 9 nodes, and rank  $3$ has 6 nodes.  That is, \PETSc does the best it can.
+then a structured grid will be distributed across the four processes exactly as in Figure \ref{fig:unitsquaregridparallel}.  Neither $M=5$ nor $N=7$ is divisible by two in this case, but \PETSc distributes the four ranks across the $MN=35$ nodes (grid points) as uniformly as possible given that each processor owns a rectangular subgrid.  In fact, the rank $0$ process has the most nodes (12) and rank $3$ has the least (6), so the load is only uniform within a factor of two, but larger grids will be better load-balanced.  \PETSc does the best it can.
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
@@ -96,7 +97,7 @@ then a structured grid will be distributed across the four processes exactly as 
 \label{fig:unitsquaregridparallel}
 \end{marginfigure}
 
-The fifth and sixth arguments to \texttt{DMDACreate2d()} are used, in the above lines of code, to set default dimensions $M=10$ and $N=10$.  These defaults are overridden at runtime by options \texttt{-da\_grid\_x} and \texttt{-da\_grid\_y} in the runtime command above.  If, however, we wrote this at runtime,
+The fifth and sixth arguments ``\texttt{-10}'' to \texttt{DMDACreate2d()} in Figure \ref{code:dmdacreatetwod} are used to set default dimensions $M=10$ and $N=10$.  We have seen that these defaults are overridden by runtime options \texttt{-da\_grid\_x} and \texttt{-da\_grid\_y}.  However, if we do this,
  \begin{Verbatim}[fontsize=\small]
   mpiexec -n 4 ./c2poisson
 \end{Verbatim}
@@ -106,9 +107,9 @@ then a structured grid will be distributed across the four processes as in Figur
 \end{Verbatim}
 or
 \begin{Verbatim}[fontsize=\small]
-  mpiexec -n 4 ./c2poisson -dm_view draw -draw_pause -1
+  mpiexec -n 4 ./c2poisson -dm_view draw -draw_pause 2
 \end{Verbatim}
-The latter version shows the grid graphically, and labels the nodes with the local order; use mouse clicks to cycle through the displays.
+The latter version shows the grid graphically, for two seconds.
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
@@ -140,7 +141,10 @@ The latter version shows the grid graphically, and labels the nodes with the loc
 \label{fig:unitsquaregrideight}
 \end{marginfigure}
 
-The above command \texttt{DMDACreate2d()} creates the \pDMDA object as a 2D structured grid but a bit more explanation than that is needed.   The \PETSc manual pages description of that method is
+To explain the other options to \texttt{DMDACreate2d()} used in Figure \ref{code:dmdacreatetwod}, we quote the \PETSc manual pages description of that method:
+
+\clearpage
+\noindent\hrulefill
 \begin{Verbatim}[fontsize=\small]
 DMDACreate2d(MPI_Comm comm, DMBoundaryType bx, DMBoundaryType by,
   DMDAStencilType stype, PetscInt M, PetscInt N, PetscInt m, PetscInt n,
@@ -161,29 +165,55 @@ where
 \item[\texttt{da}]      output: the resulting distributed array object 
 \end{itemize}
 \normalsize
-In our example, the first object will be some serial or parallel \MPI communicator.  In the second and third arguments we choose ``\texttt{DM\_BOUNDARY\_NONE}'' meaning that implementing our boundary condition will not require FIXME ... FIXME  The call to \texttt{DMDASetUniformCoordinates()} sets the domain to be $[0,1]\times[0,1]$; the last two arguments are ignored in this case but would set limits on the third dimension in 3D.
+\noindent\hrulefill
+\medskip
 
+In Figure \ref{code:dmdacreatetwod}, the first argument is a serial or parallel \MPI communicator.  In the second and third arguments we have used ``\texttt{DM\_BOUNDARY\_NONE}'' because our Dirichlet boundary condition does not require communication to the next process' domain, nor periodic wrapping.  In the fourth argument we use \texttt{DMDA\_STENCIL\_STAR} because only cardinal neighbors of a grid point are used when forming the matrix; we will address the FD ``stencil'' below.  As already noted, the fifth and sixth arguments set $M=10,N=10$ as override-able grid defaults.  In the next two arguments we indeed use ``\texttt{PETSC\_DECIDE}'' to have \PETSc parallel-decompose our grid according to the size of (i.e.~number of processes in) the \MPI communicator.  The next two arguments, in the ninth and tenth positions, say that our PDE is scalar (\texttt{dof}$=1$) and that the FD method only needs one neighbor in each direction (\texttt{s}$=1$).  The next two arguments are \texttt{NULL} because we are \emph{not} telling \PETSc how to distribute processes over the grid; it \texttt{DECIDE}s for itself.  Finally, the \pDMDA object is created as an output.
 
-FIXME: a bit more on DMs is in Figure \ref{fig:petscghostvalues}; note left (structured) part shows BOX not STAR stencil
+The call to \texttt{DMDASetUniformCoordinates()} in Figure \ref{code:dmdacreatetwod} sets the domain to be $[0,1]\times[0,1]$.  The last two arguments are ignored in this case but would set limits on the third dimension in 3D.
+
+To wrap up our coverage of creating grids, the standard \PETSc view of what \pDM s ``look like'' is in Figure \ref{fig:petscghostvalues}.  On the left is a version of what we have done in the code in Figure \ref{code:dmdacreatetwod}, namely create a structured grid \pDM.  The one shown in Figure \ref{fig:petscghostvalues} has \texttt{DMDA\_STENCIL\_BOX} stencil type, unlike ours.  On the right is an unstructured grid, of the type created in Chapter 3 for the finite element method.  In both cases the figure shows nodes owned by a given process (red ``local'' nodes) and those other nodes that are accessible by the local process (blue ``ghost'' nodes).  We will see such local/ghost node types in all examples in this book.
 
 \begin{figure}
 \includegraphics[width=\textwidth]{petscghostvalues}
-\caption{\PETSc ghosts, in structured and unstructured grids.}
+\caption{\PETSc's parallel decomposition of structured and unstructured grids, showing owned (``local'') and accessible (``ghost'') nodes for one process.}
 \label{fig:petscghostvalues}
 \end{figure}
 
 
-\section{A finite difference method: assembling the linear system in parallel}
+\section{A finite difference method: assemble the linear system}
 
-On the other hand, by a well-known Taylor's theorem argument \citep{MortonMayers}, for any function $F(x)$ which is sufficiently smooth,
+Recall we were trying to approximate PDE problem \eqref{poissonsquare}.  Having built a structured grid we can now return to the FD method.
+
+By a well-known Taylor's theorem argument \citep{MortonMayers}, for any function $F(x)$ which is sufficiently smooth, we have
     $$F''(x) = \frac{F(x+h) - 2 F(x) + F(x-h)}{h^2} + O(h^2)$$
-as $h$ goes to zero.  To apply this formula to approximating the Laplacian in problem \eqref{poissonsquare}, we let $U_{i,j}$ be the approximation (which we compute) to the exact value $u(x_i,y_j)$ (which we don't suppose to know) of the solution $u$.  Also we denote $f_{i,j} = f(x_i,y_j)$.  Then we have this FD approximation to problem \eqref{poissonsquare}:
-\begin{equation}
-- \frac{U_{i+1,j} - 2 U_{i,j} + U_{i-1,j}}{h_x^2} - \frac{U_{i,j+1} - 2 U_{i,j} + U_{i,j-1}}{h_y^2} = f_{i,j}. \label{poissonsquareFD}
-\end{equation}
-Equation \eqref{poissonsquareFD} applies for all of the interior points where $1 \le i \le M-2$ and $1 \le j \le N-2$.  The boundary conditions in \eqref{poissonsquare} become $U_{0,j} = U_{M-1,j} = U_{i,0} = U_{i,N-1} = 0$, for all $i,j$.
+as $h$ goes to zero.  This formula, applied to partial derivatives, will give an approximation of the Laplacian in problem \eqref{poissonsquare}.
 
-Problem \eqref{poissonsquareFD} is a linear system.  We choose to treat all $MN$ locations on the grid as unknowns. FIXME: BUILD MATRIX, COMMENTING ON ROW SCALING (i.e. mult by $h_x h_y$ to improve conditioning)
+Let $U_{i,j}$ be the gridded approximation to the exact value $u(x_i,y_j)$ of the solution $u$,\sidenote{This is an important sentence!  We \emph{compute} values $U_{i,j}$ from the finite difference equations.  We generally \emph{don't know} the values of the exact solution on the grid, namely $u(x_i,y_j)$.  Of course we want the former to be close to the latter.}  and also denote $f_{i,j} = f(x_i,y_j)$.  Then we have this FD approximation to problem \eqref{poissonsquare}:
+\begin{equation}
+- \frac{U_{i+1,j} - 2 U_{i,j} + U_{i-1,j}}{h_x^2} - \frac{U_{i,j+1} - 2 U_{i,j} + U_{i,j-1}}{h_y^2} = f_{i,j}. \label{poissonsquareFDearly}
+\end{equation}
+Equation \eqref{poissonsquareFDearly} applies for all of the interior points where $1 \le i \le M-2$ and $1 \le j \le N-2$.  The boundary conditions in \eqref{poissonsquare} become
+\begin{align}
+U_{0,j} &= 0, \label{poissonsquareFDbcs} \\
+U_{M-1,j} &= 0, \notag \\
+U_{i,0} &= 0, \notag \\
+U_{i,N-1} &= 0, \notag
+\end{align}
+for all $i,j$.
+
+Equations \eqref{poissonsquareFDearly} and \eqref{poissonsquareFDbcs} form a linear system in which we choose to treat all $MN$ locations on the grid as unknowns.  Surprisingly, perhaps, there are two nontrivial observations to make about this system.  
+
+First, the equations have very different ``scaling''.  For example, if $M=N=1001$ so that $h_x=h_y=0.001$ then the coefficient of $U_{i,j}$ in \eqref{poissonsquareFDearly} is $4/(.001)^2 = 4 \times 10^6$, where as the coefficients of $U_{i,j}$ along the boundary in \eqref{poissonsquareFDbcs} are equal to 1.  For this reason we multiply equation \eqref{poissonsquareFDearly} by the grid cell area $h_x h_y$ to get
+\begin{align}
+&\left(2 \frac{h_y}{h_x} + 2 \frac{h_x}{h_y}\right) U_{i,j} - \frac{h_y}{h_x}\left(U_{i+1,j} + U_{i-1,j}\right)  - \frac{h_x}{h_y}\left(U_{i,j+1} + U_{i,j-1}\right) \label{poissonsquareFD} \\
+&\qquad = h_x h_y f_{i,j}. \notag
+\end{align}
+While one might complain about this form's appearance, note that in the $h_x=h_y$ case, regardless of whether the grid is fine or coarse, the equation is
+    $$4 U_{i,j} - U_{i+1,j} - U_{i-1,j} - U_{i,j+1} - U_{i,j-1}  = h_x h_y f_{i,j},$$
+with coefficients of size one.
+
+Second, \eqref{poissonsquareFDearly} or \eqref{poissonsquareFD} can be interpreted to give a symmetric matrix.  FIXME: BUILD MATRIX AND REPEAT IT IS SYMMETRIC
 
 
 \begin{marginfigure}
