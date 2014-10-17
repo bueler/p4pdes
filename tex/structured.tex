@@ -52,7 +52,9 @@ Because \eqref{poissonsquare} is a linear problem, finite-dimensional approximat
   \node at (1.0,-0.1) {$i=M-1$};
   \node at (-0.15,0.0) {$j=0$};
   \node at (-0.22,1.0) {$j=N-1$};
-  \draw[xstep=0.25,ystep=0.166667,black,thin] (0.0,0.0) grid (1.0,1.0);
+  \pgfmathsetmacro\fourth{1.0/4.0}
+  \pgfmathsetmacro\sixth{1.0/6.0}
+  \draw[xstep=\fourth,ystep=\sixth,black,thin] (0.0,0.0) grid (1.0,1.0);
 \end{tikzpicture}
 \caption{A grid on the unit square $\mathcal{S}$, with $M=5$ and $N=7$.}
 \label{fig:unitsquaregrid}
@@ -79,19 +81,31 @@ then a structured grid will be distributed across the four processes exactly as 
   \draw[->,gray,very thin] (0.0,0.0) -- (1.2,0.0) node[below] {$x$};
   \draw[->,gray,very thin] (0.0,0.0) -- (0.0,1.2) node[left] {$y$};
   \draw[line width=1.0pt] (0.0,0.0) -- (0.0,1.0) -- (1.0,1.0) -- (1.0,0.0) -- cycle;
-  \draw[xstep=0.25,ystep=0.166667,black,thin] (0.0,0.0) grid (1.0,1.0);
+  \pgfmathsetmacro\fourth{1.0/4.0}
+  \pgfmathsetmacro\sixth{1.0/6.0}
+  \draw[xstep=\fourth,ystep=\sixth,black,thin] (0.0,0.0) grid (1.0,1.0);
+  \pgfmathsetmacro\dd{0.04}
+  \pgfmathsetmacro\od{1.04}
+  \pgfmathsetmacro\xap{2*\fourth + 0.04}
+  \pgfmathsetmacro\xbm{3*\fourth - 0.04}
+  \pgfmathsetmacro\yap{3*\sixth + 0.04}
+  \pgfmathsetmacro\ybm{4*\sixth - 0.04}
+  \pgfmathsetmacro\xamid{1*\fourth}
+  \pgfmathsetmacro\xbmid{3.5*\fourth}
+  \pgfmathsetmacro\yamid{1.5*\sixth}
+  \pgfmathsetmacro\ybmid{5*\sixth}
   \draw[thick,rounded corners=8pt,color=red]
-(-0.04,-0.04) -- (-0.04,0.54) -- (0.54,0.54) -- (0.54,-0.04) -- cycle;
-  \node[color=red] at (0.25,0.25) {rank $0$};
+    (-\dd,-\dd) -- (-\dd,\yap) -- (\xap,\yap) -- (\xap,-\dd) -- cycle;
+  \node[color=red] at (\xamid,\yamid) {rank $0$};
   \draw[thick,rounded corners=8pt,color=red]
-(0.71,-0.04) -- (0.71,0.54) -- (1.04,0.54) -- (1.04,-0.04) -- cycle;
-  \node[color=red] at (0.87,0.25) {rank $1$};
+    (\xbm,-\dd) -- (\od,-\dd) -- (\od,\yap) -- (\xbm,\yap) -- cycle;
+  \node[color=red] at (\xbmid,\yamid) {rank $1$};
   \draw[thick,rounded corners=8pt,color=red]
-(-0.04,0.626667) -- (-0.04,1.04) -- (0.54,1.04) -- (0.54,0.62667) -- cycle;
-  \node[color=red] at (0.25,0.83) {rank $2$};
+    (-\dd,\ybm) -- (\xap,\ybm) -- (\xap,\od) -- (-\dd,\od) -- cycle;
+  \node[color=red] at (\xamid,\ybmid) {rank $2$};
   \draw[thick,rounded corners=8pt,color=red]
-(0.71,0.626667) -- (0.71,1.04) -- (1.04,1.04) -- (1.04,0.626667) -- cycle;
-  \node[color=red] at (0.87,0.83) {rank $3$};
+    (\xbm,\ybm) -- (\od,\ybm) -- (\od,\od) -- (\xbm,\od) -- cycle;
+  \node[color=red] at (\xbmid,\ybmid) {rank $3$};
 \end{tikzpicture}
 \caption{The same grid as in Figure \ref{fig:unitsquaregrid}, distributed across four \MPI processes (i.e.~with \texttt{rank} $\in \{0,1,2,3\}$) automatically by \texttt{DMDACreate2d()}.}
 \label{fig:unitsquaregridparallel}
@@ -202,19 +216,92 @@ U_{i,N-1} &= 0, \notag
 \end{align}
 for all $i,j$.
 
-Equations \eqref{poissonsquareFDearly} and \eqref{poissonsquareFDbcs} form a linear system in which we choose to treat all $MN$ locations on the grid as unknowns.  Surprisingly, perhaps, there are two nontrivial observations to make about this system.  
+Equations \eqref{poissonsquareFDearly} and \eqref{poissonsquareFDbcs} form a linear system of $d=MN$ equations in which we choose to treat all $d$ locations on the grid as unknowns.  To shown this linear system in traditional form
+\begin{equation}
+A \bu = \bb,
+\end{equation}
+where $A$ is a $d\times d$ matrix and $\bu,\bb$ are $d\times 1$ column vectors, we must order the unknowns.  This ordering will be used internally by \PETSc in a code that uses a \pDMDA, as in the current example, and we use it here for displaying the system, but the code we actually write (below) sticks to the grid-wise coordinates $(i,j)$.  The ordering is
+\begin{align}
+&u_{0,0}, \;u_{1,0}, \;\dots, \;u_{M-1,0}, \;\;u_{0,1}, \;u_{1,1}, \;\dots, \;u_{M-1,1} \label{orderingfd} \\
+&\qquad \dots \;\;u_{0,N-1}, \;u_{1,N-1}, \;\dots, \;u_{M-1,N-1}. \notag
+\end{align}
+Now would be a good time to show the linear system itself, and the ordering, in a small case.
 
-First, the equations have very different ``scaling''.  For example, if $M=N=1001$ so that $h_x=h_y=0.001$ then the coefficient of $U_{i,j}$ in \eqref{poissonsquareFDearly} is $4/(.001)^2 = 4 \times 10^6$, where as the coefficients of $U_{i,j}$ along the boundary in \eqref{poissonsquareFDbcs} are equal to 1.  For this reason we multiply equation \eqref{poissonsquareFDearly} by the grid cell area $h_x h_y$ to get
+\begin{marginfigure}
+\begin{tikzpicture}[scale=3.5]
+  \draw[->,gray,very thin] (0.0,0.0) -- (1.2,0.0) node[below] {$x$};
+  \draw[->,gray,very thin] (0.0,0.0) -- (0.0,1.2) node[left] {$y$};
+  \draw[line width=1.0pt] (0.0,0.0) -- (0.0,1.0) -- (1.0,1.0) -- (1.0,0.0) -- cycle;
+  \node at (0.0,-0.1) {$i=0$};
+  \node at (1.0,-0.1) {$i=3$};
+  \node at (-0.15,0.0) {$j=0$};
+  \node at (-0.15,1.0) {$j=2$};
+  \pgfmathsetmacro\third{1.0/3.0}
+  \pgfmathsetmacro\half{1.0/2.0}
+  \draw[xstep=\third,ystep=\half,black,thin] (0.0,0.0) grid (1.0,1.0);
+  \pgfmathsetmacro\dd{0.04}
+  \foreach \y in {0,1,2}
+    \foreach \x in {0,1,2,3} {
+      \pgfmathsetmacro\k{4*\y+\x}
+      \draw[color=blue] (\x*\third+\dd,\y*\half+\dd) node{\pgfmathprintnumber[fixed]{\k}};
+    }
+\end{tikzpicture}
+\caption{Ordering of unknowns \eqref{orderingfd} on a $M=4$ and $N=3$ grid.}
+\label{fig:unitsquaregridordering}
+\end{marginfigure}
+
+\medskip\noindent\hrulefill
+\begin{example} In the $M=4$ and $N=3$ case we have the grid and ordering shown in Figure \ref{fig:unitsquaregridordering}.  , equations \eqref{poissonsquareFDbcs} and \eqref{poissonsquareFD} become a system of 12 equations in 12 unknowns of form $A \bu = \bb$:
+\setcounter{MaxMatrixCols}{20}
+\begin{equation*}
+\begin{bmatrix}
+1 &  &  &  &  &  &  &  &  &  &  &  \\
+  & 1&  &  &  &  &  &  &  &  &  &  \\
+  &  & 1&  &  &  &  &  &  &  &  &  \\
+  &  &  & 1&  &  &  &  &  &  &  &  \\
+  &  &  &  & 1&  &  &  &  &  &  &  \\
+  &  &  &  &\X&\X&\X&  &  &  &  &  \\
+  &  &  &  &  &\X&\X&\X&  &  &  &  \\
+  &  &  &  &  &  &  & 1&  &  &  &  \\
+  &  &  &  &  &  &  &  & 1&  &  &  \\
+  &  &  &  &  &  &  &  &  & 1&  &  \\
+  &  &  &  &  &  &  &  &  &  & 1&  \\
+  &  &  &  &  &  &  &  &  &  &  & 1
+\end{bmatrix}
+\begin{bmatrix}
+u_{0,0} \\
+u_{1,0} \\
+u_{2,0} \\
+u_{3,0} \\
+u_{0,1} \\
+u_{1,1} \\
+u_{2,1} \\
+u_{3,1} \\
+u_{0,2} \\
+u_{1,2} \\
+u_{2,2} \\
+u_{3,2}
+\end{bmatrix}
+= FIXME
+\end{equation*}
+\end{example}
+\noindent\hrulefill
+
+Before assembling the system with \PETSc code, there are two nontrivial observations, and modifications, to make to this system.  First, the equations \eqref{poissonsquareFDearly} have very different ``scaling'' from those in \eqref{poissonsquareFDbcs}.  For example, if $M=N=1001$, so that $h_x=h_y=0.001$, then the coefficient of $U_{i,j}$ in \eqref{poissonsquareFDearly} is $4/(.001)^2 = 4 \times 10^6$, where as the coefficients of $U_{i,j}$ along the boundary in \eqref{poissonsquareFDbcs} are equal to 1.  Therefore we multiply equation \eqref{poissonsquareFDearly} by the grid cell area $h_x h_y$ to get
 \begin{align}
 &\left(2 \frac{h_y}{h_x} + 2 \frac{h_x}{h_y}\right) U_{i,j} - \frac{h_y}{h_x}\left(U_{i+1,j} + U_{i-1,j}\right)  - \frac{h_x}{h_y}\left(U_{i,j+1} + U_{i,j-1}\right) \label{poissonsquareFD} \\
 &\qquad = h_x h_y f_{i,j}. \notag
 \end{align}
-While one might complain about this form's appearance, note that in the $h_x=h_y$ case, regardless of whether the grid is fine or coarse, the equation is
-    $$4 U_{i,j} - U_{i+1,j} - U_{i-1,j} - U_{i,j+1} - U_{i,j-1}  = h_x h_y f_{i,j},$$
-with coefficients of size one.
+Using \eqref{poissonsquareFD}, as long as the cell aspect ratio $\max\{h_y/h_x,h_x/h_y\}$ is not too large, all the equations in the system, including the boundary conditions, will have coefficients of comparable size.
 
-Second, \eqref{poissonsquareFDearly} or \eqref{poissonsquareFD} can be interpreted to give a symmetric matrix.  FIXME: BUILD MATRIX AND REPEAT IT IS SYMMETRIC
+Second, our equations can be interpreted as a \emph{symmetric} matrix, and that opens up a larger range of linear algebra methods for solving the system efficiently.  For example, in the $i=1$ case of \eqref{poissonsquareFD}, i.e.~at a grid point adjacent to the left-hand boundary of the square, the boundary location value $U_{0,j}$ appears in the equation.  The matrix in the linear system will be symmetric if we systematically ``move'' such values to the right-hand side as known (and zero) instead of inserting a ``$1$'' into the corresponding matrix locations.  That is, we make off-diagonal zero entries in the columns corresponding to known boundary values, in addition to the off-diagonal zeros in rows corresponding to known boundary values.
 
+
+
+[FIXME show stencils and comment on coeffs]
+%In the $h_x=h_y$ case, regardless of whether the grid is fine or coarse, the equation is
+%    $$4 U_{i,j} - U_{i+1,j} - U_{i-1,j} - U_{i,j+1} - U_{i,j-1}  = h_x h_y f_{i,j},$$
+%with coefficients of size one.
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
