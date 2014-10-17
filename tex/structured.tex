@@ -37,11 +37,11 @@ For this chapter we will suppose that $f(x,y)$ is continuous and bounded on $\ma
 Without any boundary conditions, the Poisson equation $-\grad^2 u = f$ alone is not a well-posed problem because if $-\grad^2 u = f$ then also $-\grad^2(u+C)=f$ for any constant $C$; in fact there are these constant solutions and many, many more to the Laplace equation $-\grad^2 u = 0$ on $\mathcal{S}$.  With the Dirichlet boundary conditions in \eqref{poissonsquare}, the solution is unique if it exists.\sidenote{See Theorem 5 in section 2.2 of \citet{Evans} or subsection 5.2.1 of \citet{Ockendonetal2003}.}
 
 
+\clearpage
+
 \section{A finite difference method: the grid in parallel}
 
 Because \eqref{poissonsquare} is a linear problem, finite-dimensional approximations of it are simply linear systems.  The finite-dimensional approximation in this Chapter comes from applying a \emph{finite difference} (FD) method.
-
-To start our FD method we put a \emph{structured grid} of $MN$ points on the unit square, as in Figure \ref{fig:unitsquaregrid}, with spacing $h_x=1/(M-1)$ and $h_y=1/(N-1)$ in the two directions.  The grid locations are $x_i = i\, h_x$ and $y_j = j\, h_y$ for $i = 0,1,\dots,M-1$ and $j=0,1,\dots,N-1$.
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
@@ -58,19 +58,15 @@ To start our FD method we put a \emph{structured grid} of $MN$ points on the uni
 \label{fig:unitsquaregrid}
 \end{marginfigure}
 
-The construction of such a two-dimensional (2D) grid, and the distribution of it across processors, is our first new idea from \PETSc beyond the basics in Chapter 1.  Consider these lines
-\begin{Verbatim}[fontsize=\small]
-  DM  da;
-  DMDACreate2d(PETSC_COMM_WORLD,
-               DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
-               -10,-10,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,
-               &da);
-  DMDASetUniformCoordinates(da,0.0,1.0,0.0,1.0,-1.0,-1.0);
-\end{Verbatim}
-\medskip\noindent
-which create a \PETSc \pDM object\sidenote{``\pDM'' might stand for ``data management'', but perhaps ``distributed mesh'' is a better expansion.} for a grid like that shown in Figure \ref{fig:unitsquaregrid}.
+To start our FD method we put a \emph{structured grid} of $MN$ points on the unit square, as in Figure \ref{fig:unitsquaregrid}, with spacing $h_x=1/(M-1)$ and $h_y=1/(N-1)$ in the two directions.  The grid locations are $x_i = i\, h_x$ and $y_j = j\, h_y$ for $i = 0,1,\dots,M-1$ and $j=0,1,\dots,N-1$.
 
-A \pDM is an abstract type for describing the topology (i.e.~connectedness) of a grid, \emph{and} the way it is distributed across \MPI processes, \emph{and} the way each process's part of the grid can access its neighbors.  The specific variable \texttt{da} is above created to have type ``\pDMDA'', which is the subclass of \pDM s which are structured grids.  The above lines of code will appear in \texttt{c2poisson.c} below.  If we do
+The construction of such a two-dimensional (2D) grid, and the distribution of it across processors, is our first new idea from \PETSc beyond the basics in Chapter 1.  Consider the lines of code in Figure \ref{code:dmdacreatetwod}.  It creates a \PETSc \pDM object\sidenote{``\pDM'' might stand for ``data management'', but perhaps ``distributed mesh'' is a better expansion.} for a grid like that shown in Figure \ref{fig:unitsquaregrid}.
+
+A \pDM is an abstract type for describing the topology (i.e.~connectedness) of a grid, \emph{and} the way it is distributed across \MPI processes, \emph{and} the way each process's part of the grid can access its neighbors.  The specific variable \texttt{da} is above created to have type ``\pDMDA'', which is the subclass of \pDM s which are structured grids.  The above lines of code will appear in \texttt{c2poisson.c} below. 
+
+\cinputraw{dmdacreate2d.frag}{extract from c2poisson.c}{An example of creating a 2D \pDMDA.}{}{//START}{//STOP}{code:dmdacreatetwod}
+
+If we do
 \begin{Verbatim}[fontsize=\small]
   make c2poisson
   mpiexec -n 4 ./c2poisson -da_grid_x 5 -da_grid_y 7

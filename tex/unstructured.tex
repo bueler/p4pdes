@@ -193,13 +193,9 @@ The next part of \texttt{c3convert.c} is in Figure \ref{code:trianglepartthree}.
 
 \cinputpart{c3convert.c}{On rank zero: Read polygon information.}{III}{//ENDREADNODES}{//ENDREADPOLYGONS}{code:trianglepartthree}
 
-The next short part (Figure \ref{code:trianglepartfour}) reads the header information in the \texttt{.ele} file and allocates a \pVec called \texttt{vE} for the elements.  This part of the code is an important transformation of the data structures.  In fact, \texttt{vE} has block size 15,\sidenote{A \PETSc \pVec is designed to hold \texttt{PetscScalar} data types, i.e.~\texttt{double}.  So we are being quite wasteful for integer indices and boolean flags.} and, in contrast to the format from \Triangle, it contains all the information about each element that we need to do assemble the matrix equation.  Each of its blocks is the following C \texttt{struct}:
-\newcommand*\FancyVerbStartString{//STARTSTRUCT}
-\newcommand*\FancyVerbStopString{//ENDSTRUCT}
-\VerbatimInput[fontfamily=courier,%
-               fontsize=\small]{../c/readmesh.h}
-\let\FancyVerbStartString\relax
-\let\FancyVerbStopString\relax
+The next short part (Figure \ref{code:trianglepartfour}) reads the header information in the \texttt{.ele} file and allocates a \pVec called \texttt{vE} for the elements.  This part of the code is an important transformation of the data structures.  In fact, \texttt{vE} has block size 15,\sidenote{A \PETSc \pVec is designed to hold \texttt{PetscScalar} data types, i.e.~\texttt{double}.  So we are being quite wasteful for integer indices and boolean flags.} and, in contrast to the format from \Triangle, it contains all the information about each element that we need to do assemble the matrix equation.  Each of its blocks is the C \texttt{struct} shown in Figure \ref{code:elementtype}.
+
+\cinputraw{../c/readmesh.h}{extract from readmesh.h}{The \texttt{elementtype} struct.}{}{//STARTSTRUCT}{//ENDSTRUCT}{code:elementtype}
 
 \cinputpart{c3convert.c}{On rank zero: Read element header information and allocate a \pVec with block size 15.}{IV}{//ENDREADPOLYGONS}{//STARTREADELEMENTS}{code:trianglepartfour}
 
