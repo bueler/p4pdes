@@ -37,8 +37,6 @@ For this chapter we will suppose that $f(x,y)$ is continuous and bounded on $\ma
 Without any boundary conditions, the Poisson equation $-\grad^2 u = f$ alone is not a well-posed problem because if $u$ is a solution then $v=u+C$ is also a solution for any constant $C$.  (In fact there are constant solutions $w=C$ and many, many more to the Laplace equation $-\grad^2 w = 0$ on $\mathcal{S}$.)  However, with the Dirichlet boundary conditions in \eqref{poissonsquare}, the solution is unique if it exists \citep[Theorem 5 in section 2.2]{Evans}; \citep[subsection 5.2.1]{Ockendonetal2003}.
 
 
-%\clearpage
-
 \section{A finite difference method: build the grid}
 
 Because \eqref{poissonsquare} is a linear problem, finite-dimensional approximations of it are simply linear systems.  The finite-dimensional approximation in this Chapter comes from applying a \emph{finite difference} (FD) method.  In Chapter 3 we will apply a finite element approach instead.
@@ -208,100 +206,12 @@ Let $U_{i,j}$ be the gridded approximation to the exact value $u(x_i,y_j)$ of th
 - \frac{U_{i+1,j} - 2 U_{i,j} + U_{i-1,j}}{h_x^2} - \frac{U_{i,j+1} - 2 U_{i,j} + U_{i,j-1}}{h_y^2} = f_{i,j}. \label{poissonsquareFDearly}
 \end{equation}
 Equation \eqref{poissonsquareFDearly} applies for all of the interior points where $1 \le i \le M-2$ and $1 \le j \le N-2$.  The boundary conditions in \eqref{poissonsquare} become
-\begin{align}
-U_{0,j} &= 0, \label{poissonsquareFDbcs} \\
-U_{M-1,j} &= 0, \notag \\
-U_{i,0} &= 0, \notag \\
-U_{i,N-1} &= 0, \notag
-\end{align}
+\begin{equation}
+U_{0,j} = 0, \quad U_{M-1,j} = 0, \quad U_{i,0} = 0, \quad U_{i,N-1} = 0, \label{poissonsquareFDbcs}
+\end{equation}
 for all $i,j$.
 
-Equations \eqref{poissonsquareFDearly} and \eqref{poissonsquareFDbcs} form a linear system of $d=MN$ equations in which we choose to treat all $d$ locations on the grid as unknowns.  To shown this linear system in traditional form
-\begin{equation}
-A \bu = \bb,
-\end{equation}
-where $A$ is a $d\times d$ matrix and $\bu,\bb$ are $d\times 1$ column vectors, we must order the unknowns.  This ordering will be used internally by \PETSc in a code that uses a \pDMDA, as in the current example, and we use it here for displaying the system, but the code we actually write (below) sticks to the grid-wise coordinates $(i,j)$.  The ordering is
-\begin{align}
-&u_{0,0}, \;u_{1,0}, \;\dots, \;u_{M-1,0}, \;\;u_{0,1}, \;u_{1,1}, \;\dots, \;u_{M-1,1} \label{orderingfd} \\
-&\qquad \dots \;\;u_{0,N-1}, \;u_{1,N-1}, \;\dots, \;u_{M-1,N-1}. \notag
-\end{align}
-Now would be a good time to show the linear system itself, and the ordering, in a small case.
-
-\begin{marginfigure}
-\begin{tikzpicture}[scale=3.5]
-  \draw[->,gray,very thin] (0.0,0.0) -- (1.2,0.0) node[below] {$x$};
-  \draw[->,gray,very thin] (0.0,0.0) -- (0.0,1.2) node[left] {$y$};
-  \draw[line width=1.0pt] (0.0,0.0) -- (0.0,1.0) -- (1.0,1.0) -- (1.0,0.0) -- cycle;
-  \node at (0.0,-0.1) {$i=0$};
-  \node at (1.0,-0.1) {$i=3$};
-  \node at (-0.15,0.0) {$j=0$};
-  \node at (-0.15,1.0) {$j=2$};
-  \pgfmathsetmacro\third{1.0/3.0}
-  \pgfmathsetmacro\half{1.0/2.0}
-  \draw[xstep=\third,ystep=\half,black,thin] (0.0,0.0) grid (1.0,1.0);
-  \pgfmathsetmacro\dd{0.04}
-  \foreach \y in {0,1,2}
-    \foreach \x in {0,1,2,3} {
-      \pgfmathsetmacro\k{4*\y+\x}
-      \draw[color=blue] (\x*\third+\dd,\y*\half+\dd) node{\pgfmathprintnumber[fixed]{\k}};
-    }
-\end{tikzpicture}
-\caption{Ordering of unknowns \eqref{orderingfd} on a $M=4$ and $N=3$ grid.}
-\label{fig:unitsquaregridordering}
-\end{marginfigure}
-
-\medskip\noindent\hrulefill
-\begin{example} In the $M=4$ and $N=3$ case we have the grid and ordering shown in Figure \ref{fig:unitsquaregridordering}.  , equations \eqref{poissonsquareFDbcs} and \eqref{poissonsquareFD} become a system of 12 equations in 12 unknowns of form $A \bu = \bb$:
-\setcounter{MaxMatrixCols}{20}
-\begin{equation*}
-\begin{bmatrix}
-1 &  &  &  &  &  &  &  &  &  &  &  \\
-  & 1&  &  &  &  &  &  &  &  &  &  \\
-  &  & 1&  &  &  &  &  &  &  &  &  \\
-  &  &  & 1&  &  &  &  &  &  &  &  \\
-  &  &  &  & 1&  &  &  &  &  &  &  \\
-  &  &  &  &\X&\X&\X&  &  &  &  &  \\
-  &  &  &  &  &\X&\X&\X&  &  &  &  \\
-  &  &  &  &  &  &  & 1&  &  &  &  \\
-  &  &  &  &  &  &  &  & 1&  &  &  \\
-  &  &  &  &  &  &  &  &  & 1&  &  \\
-  &  &  &  &  &  &  &  &  &  & 1&  \\
-  &  &  &  &  &  &  &  &  &  &  & 1
-\end{bmatrix}
-\begin{bmatrix}
-u_{0,0} \\
-u_{1,0} \\
-u_{2,0} \\
-u_{3,0} \\
-u_{0,1} \\
-u_{1,1} \\
-u_{2,1} \\
-u_{3,1} \\
-u_{0,2} \\
-u_{1,2} \\
-u_{2,2} \\
-u_{3,2}
-\end{bmatrix}
-= FIXME
-\end{equation*}
-\end{example}
-\noindent\hrulefill
-
-Before assembling the system with \PETSc code, there are two nontrivial observations, and modifications, to make to this system.  First, the equations \eqref{poissonsquareFDearly} have very different ``scaling'' from those in \eqref{poissonsquareFDbcs}.  For example, if $M=N=1001$, so that $h_x=h_y=0.001$, then the coefficient of $U_{i,j}$ in \eqref{poissonsquareFDearly} is $4/(.001)^2 = 4 \times 10^6$, where as the coefficients of $U_{i,j}$ along the boundary in \eqref{poissonsquareFDbcs} are equal to 1.  Therefore we multiply equation \eqref{poissonsquareFDearly} by the grid cell area $h_x h_y$ to get
-\begin{align}
-&\left(2 \frac{h_y}{h_x} + 2 \frac{h_x}{h_y}\right) U_{i,j} - \frac{h_y}{h_x}\left(U_{i+1,j} + U_{i-1,j}\right)  - \frac{h_x}{h_y}\left(U_{i,j+1} + U_{i,j-1}\right) \label{poissonsquareFD} \\
-&\qquad = h_x h_y f_{i,j}. \notag
-\end{align}
-Using \eqref{poissonsquareFD}, as long as the cell aspect ratio $\max\{h_y/h_x,h_x/h_y\}$ is not too large, all the equations in the system, including the boundary conditions, will have coefficients of comparable size.
-
-Second, our equations can be interpreted as a \emph{symmetric} matrix, and that opens up a larger range of linear algebra methods for solving the system efficiently.  For example, in the $i=1$ case of \eqref{poissonsquareFD}, i.e.~at a grid point adjacent to the left-hand boundary of the square, the boundary location value $U_{0,j}$ appears in the equation.  The matrix in the linear system will be symmetric if we systematically ``move'' such values to the right-hand side as known (and zero) instead of inserting a ``$1$'' into the corresponding matrix locations.  That is, we make off-diagonal zero entries in the columns corresponding to known boundary values, in addition to the off-diagonal zeros in rows corresponding to known boundary values.
-
-
-
-[FIXME show stencils and comment on coeffs]
-%In the $h_x=h_y$ case, regardless of whether the grid is fine or coarse, the equation is
-%    $$4 U_{i,j} - U_{i+1,j} - U_{i-1,j} - U_{i,j+1} - U_{i,j-1}  = h_x h_y f_{i,j},$$
-%with coefficients of size one.
+At location $(x_i,y_j)$, equation \eqref{poissonsquareFDearly} relates the unknown $U_{i,j}$ to its four cardinal neighbors $U_{i+1,j}$, $U_{i-1,j}$, $U_{i,j+1}$, and $U_{i,j-1}$.  This pattern is a \emph{stencil}, in particular a ``star'' stencil, as shown in Figure \ref{fig:unitsquaregridstencil}.  A ``box'' stencil would also involve all the diagonal neighbors, so an equation using a star stencil relates at most five unknowns in 2D, while one with a box stencil relates at most nine unknowns in 2D.
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
@@ -310,16 +220,175 @@ Second, our equations can be interpreted as a \emph{symmetric} matrix, and that 
   \draw[line width=1.0pt] (0.0,0.0) -- (0.0,1.0) -- (1.0,1.0) -- (1.0,0.0) -- cycle;
   \node at (0.75,-0.1) {$i$};
   \node at (-0.1,0.666667) {$j$};
-  \filldraw (0.50,0.666667) circle (0.5pt);
-  \filldraw (0.75,0.666667) circle (0.5pt);
-  \filldraw (1.00,0.666667) circle (0.5pt);
-  \filldraw (0.75,0.5) circle (0.5pt);
-  \filldraw (0.75,0.833333) circle (0.5pt);
+  \filldraw (0.50,0.666667) circle (0.8pt);
+  \filldraw (0.75,0.666667) circle (0.8pt);
+  \filldraw (1.00,0.666667) circle (0.8pt);
+  \filldraw (0.75,0.5) circle (0.8pt);
+  \filldraw (0.75,0.833333) circle (0.8pt);
+  \draw[line width=2.0pt] (0.50,0.666667) -- (1.00,0.666667);
+  \draw[line width=2.0pt] (0.75,0.5)  -- (0.75,0.833333);
   \draw[xstep=0.25,ystep=0.166667,black,thin] (0.0,0.0) grid (1.0,1.0);
 \end{tikzpicture}
-\caption{A stencil, shown on the grid, at $i=3$ and $j=4$.}
+\caption{A ``star'' stencil, shown on the same grid as in Figure \ref{fig:unitsquaregrid}, at $i=3$ and $j=4$.}
 \label{fig:unitsquaregridstencil}
 \end{marginfigure}
+
+Equations \eqref{poissonsquareFDearly} and \eqref{poissonsquareFDbcs} form a linear system of $K=MN$ equations in which we choose to treat all $K$ locations on the grid as unknowns.  To shown this linear system in traditional form
+\begin{equation}
+A \bu = \bb,
+\end{equation}
+where $A$ is a $K\times K$ matrix and $\bu,\bb$ are $K\times 1$ column vectors, we must order the unknowns.  This ordering will be used internally by \PETSc in a code that uses a \pDMDA, and we use it here for displaying the system, but the code we will actually write uses the grid-wise coordinates $(i,j)$.  One could write this ordering as
+\begin{equation}
+    U_k = U_{i,j} \quad \text{ where } \quad k = j\,M + i. \label{orderingfd}
+\end{equation}
+We will let \PETSc do such index transformations internally, because, as we will see, it has tools for $i,j$-type indexing.  Now is a good time to show the linear system itself, and the ordering, in a small case.
+
+\begin{marginfigure}
+\begin{tikzpicture}[scale=3.5]
+  \draw[->,gray,very thin] (0.0,0.0) -- (1.2,0.0) node[below] {$x$};
+  \draw[->,gray,very thin] (0.0,0.0) -- (0.0,1.2) node[left] {$y$};
+  \draw[line width=1.0pt] (0.0,0.0) -- (0.0,1.0) -- (1.0,1.0) -- (1.0,0.0) -- cycle;
+  \pgfmathsetmacro\third{1.0/3.0}
+  \pgfmathsetmacro\half{1.0/2.0}
+  \node at (0.0,-0.1) {$0$};
+  \node at (\third,-0.1) {$1$};
+  \node at (\half,-0.2) {$i$};
+  \node at (2*\third,-0.1) {$2$};
+  \node at (1.0,-0.1) {$3$};
+  \node at (-0.1,0.0) {$0$};
+  \node at (-0.1,0.5) {$1$};
+  \node at (-0.25,0.5) {$j$};
+  \node at (-0.1,1.0) {$2$};
+  \draw[xstep=\third,ystep=\half,black,thin] (0.0,0.0) grid (1.0,1.0);
+  \pgfmathsetmacro\dd{0.04}
+  \foreach \y in {0,1,2}
+    \foreach \x in {0,1,2,3} {
+      \pgfmathsetmacro\k{4*\y+\x}
+      \draw[color=blue] (\x*\third+\dd,\y*\half+\dd) node{\pgfmathprintnumber[fixed]{\k}};
+    }
+\end{tikzpicture}
+\caption{Ordering of unknowns \eqref{orderingfd} on a $M=4$ and $N=3$ grid.  Index $k = j\,M + i$ is shown in {\color{blue} blue}.}
+\label{fig:unitsquaregridordering}
+\end{marginfigure}
+
+\medskip\noindent\hrulefill
+\begin{example} In the $M=4$ and $N=3$ case we have the grid and variable ordering shown in Figure \ref{fig:unitsquaregridordering}.  Note $h_x=1/3$ and $h_y=1/2$.  Equations \eqref{poissonsquareFDearly} and \eqref{poissonsquareFDbcs} are an invertible system of $K=12$ equations.  Only the $k=5$ and $k=6$ equations are not boundary conditions \eqref{poissonsquareFDbcs}:
+\setcounter{MaxMatrixCols}{20}
+\begin{equation*}
+\begin{bmatrix}
+1 &  &  &  &  &  &  &  &  &  &  &  \\
+  & 1&  &  &  &  &  &  &  &  &  &  \\
+  &  & 1&  &  &  &  &  &  &  &  &  \\
+  &  &  & 1&  &  &  &  &  &  &  &  \\
+  &  &  &  & 1&  &  &  &  &  &  &  \\
+  & c&  &  & b& a& b&  &  & c&  &  \\
+  &  & c&  &  & b& a& b&  &  & c&  \\
+  &  &  &  &  &  &  & 1&  &  &  &  \\
+  &  &  &  &  &  &  &  & 1&  &  &  \\
+  &  &  &  &  &  &  &  &  & 1&  &  \\
+  &  &  &  &  &  &  &  &  &  & 1&  \\
+  &  &  &  &  &  &  &  &  &  &  & 1
+\end{bmatrix}
+\begin{bmatrix}
+U_{0,0} \\
+U_{1,0} \\
+U_{2,0} \\
+U_{3,0} \\
+U_{0,1} \\
+U_{1,1} \\
+U_{2,1} \\
+U_{3,1} \\
+U_{0,2} \\
+U_{1,2} \\
+U_{2,2} \\
+U_{3,2}
+\end{bmatrix}
+=
+\begin{bmatrix}
+0 \\
+0 \\
+0 \\
+0 \\
+0 \\
+f_{1,1} \\
+f_{2,1} \\
+0 \\
+0 \\
+0 \\
+0 \\
+0
+\end{bmatrix}
+\end{equation*}
+where $a = 2/h_x^2 + 2/h_y^2 = 26$, $b = - 1/h_x^2 = -9$ and $c = - 1/h_y^2 = -4$.
+
+Note that the matrix $A$ is not symmetric, and it is not well-scaled for such a small example.  For instance, its 2-norm condition number \citep{TrefethenBau} is $\cond(A) = \|A\|_2 \|A^{-1}\|_2 = 43.16$.
+\end{example}
+\noindent\hrulefill
+
+Before assembling the system, by writing \PETSc code, there are two nontrivial observations about it.  First, the equations \eqref{poissonsquareFDearly} have very different ``scaling'' from those in \eqref{poissonsquareFDbcs}.  For example, if $M=N=1001$, so that $h_x=h_y=0.001$, then the coefficient of $U_{i,j}$ in \eqref{poissonsquareFDearly} is $4/(.001)^2 = 4 \times 10^6$, where as the coefficients of $U_{i,j}$ along the boundary in \eqref{poissonsquareFDbcs} are equal to 1.  Therefore we multiply equation \eqref{poissonsquareFDearly} by the grid cell area $h_x h_y$ to get
+\begin{align}
+&\left(2 \frac{h_y}{h_x} + 2 \frac{h_x}{h_y}\right) U_{i,j} - \frac{h_y}{h_x}\left(U_{i+1,j} + U_{i-1,j}\right)  - \frac{h_x}{h_y}\left(U_{i,j+1} + U_{i,j-1}\right) \label{poissonsquareFD} \\
+&\qquad = h_x h_y f_{i,j}. \notag
+\end{align}
+Using \eqref{poissonsquareFD}, as long as the cell aspect ratio $\max\{h_y/h_x,h_x/h_y\}$ is not too large, all the equations in the system, including the boundary conditions, will have coefficients of comparable size.  Note that if $h_x=h_y$ then the diagonal entries are equal to $4$ and the off-diagonal entries are $-1$.
+
+Second, our equations can be interpreted to give a \emph{symmetric} matrix $A$.  This opens up a larger range of linear algebra methods for solving the system efficiently.  For example, in the $i=1$ case of \eqref{poissonsquareFD}, i.e.~at a grid point adjacent to the left-hand boundary of the square, the boundary location value $U_{0,j}$ appears in the equation.  The matrix in the linear system will be symmetric if we systematically ``move'' such values to the right-hand side as known (and zero) instead of inserting a ``$1$'' into the corresponding matrix locations.  That is, we make off-diagonal zero entries in the columns corresponding to known boundary values, in addition to the off-diagonal zeros in rows corresponding to known boundary values.  With these two modifications we can redo the above $M=4$ and $n=3$ example.
+
+\medskip\noindent\hrulefill
+\begin{example} For the same $M=4$ and $N=3$ case shown in Figure \ref{fig:unitsquaregridordering}, equations \eqref{poissonsquareFDbcs} and \eqref{poissonsquareFD} become
+\begin{equation*}
+\begin{bmatrix}
+1 &  &  &  &  &  &  &  &  &  &  &  \\
+  & 1&  &  &  &  &  &  &  &  &  &  \\
+  &  & 1&  &  &  &  &  &  &  &  &  \\
+  &  &  & 1&  &  &  &  &  &  &  &  \\
+  &  &  &  & 1&  &  &  &  &  &  &  \\
+  &  &  &  &  & \alpha& \beta&  &  &  &  &  \\
+  &  &  &  &  & \beta& \alpha&  &  &  &  &  \\
+  &  &  &  &  &  &  & 1&  &  &  &  \\
+  &  &  &  &  &  &  &  & 1&  &  &  \\
+  &  &  &  &  &  &  &  &  & 1&  &  \\
+  &  &  &  &  &  &  &  &  &  & 1&  \\
+  &  &  &  &  &  &  &  &  &  &  & 1
+\end{bmatrix}
+\begin{bmatrix}
+U_{0,0} \\
+U_{1,0} \\
+U_{2,0} \\
+U_{3,0} \\
+U_{0,1} \\
+U_{1,1} \\
+U_{2,1} \\
+U_{3,1} \\
+U_{0,2} \\
+U_{1,2} \\
+U_{2,2} \\
+U_{3,2}
+\end{bmatrix}
+=
+\begin{bmatrix}
+0 \\
+0 \\
+0 \\
+0 \\
+0 \\
+(1/6) f_{1,1} \\
+(1/6) f_{2,1} \\
+0 \\
+0 \\
+0 \\
+0 \\
+0
+\end{bmatrix}
+\end{equation*}
+where $\alpha = 2 (h_y/h_x) + 2 (h_x/h_y) = 13/3$ and $\beta = - h_y/h_x = 3/2$.  The matrix is better-scaled, with $\cond(A)=5.83$.
+\end{example}
+\noindent\hrulefill
+
+
+FIXME: explain Mat assembly tools, including DALocalInfo and MatStencil
+
+\clearpage
 
 \cinput{structuredlaplacian.c}{Fill matrix entries using \texttt{MatSetValuesStencil}.}{//CREATEMATRIX}{//ENDCREATEMATRIX}{code:structuredlaplacian}
 
