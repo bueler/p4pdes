@@ -2,7 +2,7 @@
 #include <petscdmda.h>
 
 //CREATEMATRIX
-PetscErrorCode formdirichletlaplacian(DM da, Mat A) {
+PetscErrorCode formdirichletlaplacian(DM da, PetscReal dirichletdiag, Mat A) {
   PetscErrorCode ierr;
   DMDALocalInfo  info;
   ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
@@ -20,9 +20,9 @@ PetscErrorCode formdirichletlaplacian(DM da, Mat A) {
       col[ncols].j = j;        // in that diagonal entry ...
       col[ncols].i = i;
       if ( (i==0) || (i==info.mx-1) || (j==0) || (j==info.my-1) ) { // ... on bdry
-        v[ncols++] = 1.0;      //     ... we have "1 * u = 0"
+        v[ncols++] = dirichletdiag;
       } else {
-        v[ncols++] = 2*(hy/hx + hx/hy); // ... everywhere else we put an entry
+        v[ncols++] = 2*(hy/hx + hx/hy); // ... everywhere else we build a row
         // if neighbor is NOT known to be zero we put an entry:
         if (i-1>0) {
           col[ncols].j = j;    col[ncols].i = i-1;  v[ncols++] = -hy/hx;  }

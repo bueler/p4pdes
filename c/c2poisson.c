@@ -101,7 +101,7 @@ int main(int argc,char **args)
 
   ierr = PetscLogStageRegister("Matrix Assembly", &stage); CHKERRQ(ierr);
   ierr = PetscLogStagePush(stage); CHKERRQ(ierr);
-  ierr = formdirichletlaplacian(da,A); CHKERRQ(ierr);
+  ierr = formdirichletlaplacian(da,1.0,A); CHKERRQ(ierr);
   ierr = PetscLogStagePop();CHKERRQ(ierr);
   ierr = MatSetOption(A,MAT_SYMMETRIC,PETSC_TRUE); CHKERRQ(ierr);
 //ENDCREATE
