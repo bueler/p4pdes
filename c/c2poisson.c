@@ -1,16 +1,28 @@
 
 static char help[] = "Solves a structured-grid Poisson problem with DMDA and KSP.\n\n";
 
+// SEE ALSO:  src/ksp/ksp/examples/tutorials/ex50.c
+// IT IS SIMILAR BUT HAS MULTIGRID ABILITY BECAUSE OPERATOR A IS GENERATED AT
+// EACH LEVEL THROUGH
+//     KSPSetDM(ksp,(DM)da) ... KSPSetComputeOperators(ksp,ComputeJacobian,&user)
+// AND ComputeJacobian() USER CODE
+
 // SHOW MAT DENSE:  ./c2poisson -da_grid_x 3 -da_grid_y 3 -a_mat_view ::ascii_dense
 // SHOW MAT GRAPHICAL:  ./c2poisson -a_mat_view draw -draw_pause 5
 
 // CONVERGENCE:
 //   for NN in 5 9 17 33 65 129 257; do ./c2poisson -da_grid_x $NN -da_grid_y $NN -ksp_rtol 1.0e-8 -ksp_type cg; done
 
+// SAME CONVERGENCE USING -da_refine:
+//   for NN in 1 2 3 4 5 6; do ./c2poisson -da_grid_x 5 -da_grid_y 5 -ksp_rtol 1.0e-8 -ksp_type cg -da_refine $NN; done
+
 // VISUALIZATION OF SOLUTION: mpiexec -n 6 ./c2poisson -da_grid_x 129 -da_grid_y 129 -ksp_type cg -ksp_monitor_solution
 
 // PERFORMANCE ON SAME:
 //   for NN in 5 9 17 33 65 129 257; do ./c2poisson -da_grid_x $NN -da_grid_y $NN -ksp_rtol 1.0e-8 -ksp_type cg -log_summary|grep "Time (sec):"; done
+
+// WEAK SCALING IN TERMS OF FLOPS ONLY:
+//   for kk in 0 1 2 3; do NN=$((50*(2**$kk))); MM=$((2**(2*$kk))); cmd="mpiexec -n $MM ./c2poisson -da_grid_x $NN -da_grid_y $NN -ksp_rtol 1.0e-8 -ksp_type cg -log_summary"; echo $cmd; $cmd |'grep' "Flops:  "; echo; done
 
 // SHOW KSP STRUCTURE:  ./c2poisson -ksp_view
 
