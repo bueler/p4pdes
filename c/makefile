@@ -6,6 +6,10 @@ c1matvec: c1matvec.o  chkopts
 	-${CLINKER} -o c1matvec c1matvec.o  ${PETSC_KSP_LIB}
 	${RM} c1matvec.o
 
+testts: testts.o  chkopts
+	-${CLINKER} -o testts testts.o  ${PETSC_KSP_LIB}
+	${RM} testts.o
+
 c2poisson: c2poisson.o structuredlaplacian.o chkopts
 	-${CLINKER} -o c2poisson c2poisson.o structuredlaplacian.o ${PETSC_KSP_LIB}
 	${RM} c2poisson.o structuredlaplacian.o

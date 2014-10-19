@@ -6,6 +6,7 @@ ex*.c
 c1matvec
 c2poisson
 c2heat
+testts
 c3convert
 c3poisson
 
