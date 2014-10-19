@@ -12,13 +12,17 @@ static char help[] = "Time-dependent heat equation in 2d.\n";
     u(t,x,y) = e^{- pi^2 t} sin(pi x) sin(pi y)
                  + e^{- (3^2 + 2^2) pi^2 t} sin(3 pi x) sin(2 pi y)
 
+  Uses finite difference Laplacian.  Compare c2poisson.c
+
 For examples, try
 
   ./c2heat
   ./c2heat -ts_type euler                           # same as above
+  ./c2heat -steps 100                               #FIXME: disparity between tf sought and tf returned
+  ./c2heat -ts_monitor                              # report on steps
   ./c2heat -da_grid_x 20 -da_grid_y 20              # higher res
   ./c2heat -da_grid_x 100 -da_grid_y 100            # higher; Euler failure
-  ./c2heat -da_grid_x 100 -da_grid_y 100 -steps      # higher; Euler failure
+  ./c2heat -da_grid_x 100 -da_grid_y 100 -steps 500 # bring dt below stability limit
   ./c2heat -ts_type beuler                          #FIXME: see 10/18/2014 bug report
   ./c2heat -ts_monitor_draw_solution -draw_pause 1
 
@@ -57,19 +61,6 @@ PetscErrorCode FormSolutionAtTime(DM da, PetscReal t, Vec U) {
     }
   }
   ierr = DMDAVecRestoreArray(da,U,&u);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-
-PetscErrorCode MyTSMonitor(TS ts,PetscInt step,PetscReal t,Vec v,void *ctx) {
-  PetscErrorCode ierr;
-  PetscReal      norm;
-  MPI_Comm       comm;
-
-  PetscFunctionBeginUser;
-  ierr = VecNorm(v,NORM_INFINITY,&norm);CHKERRQ(ierr);
-  ierr = PetscObjectGetComm((PetscObject)ts,&comm);CHKERRQ(ierr);
-//  ierr = PetscPrintf(comm,"t = %10g:   max |u(t,x,y)| = %g\n",t,norm);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -114,9 +105,7 @@ int main(int argc,char **argv) {
   ierr = TSSetProblemType(ts,TS_LINEAR);CHKERRQ(ierr);
   ierr = TSSetRHSFunction(ts,NULL,TSComputeRHSFunctionLinear,NULL);CHKERRQ(ierr);
   ierr = TSSetRHSJacobian(ts,A,A,TSComputeRHSJacobianConstant,NULL);CHKERRQ(ierr);
-  ierr = TSMonitorSet(ts,MyTSMonitor,0,0);CHKERRQ(ierr);
   ierr = TSSetDM(ts,da);CHKERRQ(ierr);
-  ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP);CHKERRQ(ierr);
 
   // SET INITIAL CONDITION AND AS FOR DURATION
   ierr = FormSolutionAtTime(da,t0,u);CHKERRQ(ierr);
@@ -124,6 +113,9 @@ int main(int argc,char **argv) {
   ierr = TSSetInitialTimeStep(ts,t0,dtdefault);CHKERRQ(ierr);
   ierr = TSSetSolution(ts,u);CHKERRQ(ierr);
   ierr = TSSetDuration(ts,10*steps,tf);CHKERRQ(ierr);
+  //FIXME: seems to have no effect
+  ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP);CHKERRQ(ierr);
+
   ierr = PetscPrintf(PETSC_COMM_WORLD,
              "on %4d x %4d grid, from t0 = %g to tf = %g, with dt0 = %f:\n",
              info.mx,info.my,t0,tf,dtdefault); CHKERRQ(ierr);
@@ -140,13 +132,16 @@ int main(int argc,char **argv) {
   ierr = TSSolve(ts,u);CHKERRQ(ierr);
 
   // show result:
-  ierr = TSGetSolveTime(ts,&tf);CHKERRQ(ierr);
-  ierr = FormSolutionAtTime(da,tf,uexact);CHKERRQ(ierr);
+  // FIXME: does not return tf, as promised in man page for TSGetSolveTime()
+  PetscReal tfreturned;
+  ierr = TSGetSolveTime(ts,&tfreturned);CHKERRQ(ierr);
+
+  ierr = FormSolutionAtTime(da,tfreturned,uexact);CHKERRQ(ierr);
   ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uxact
   ierr = VecNorm(u,NORM_INFINITY,&errnorm); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
-             "result at t = %g:     error |u-uexact|_inf = %g\n",
-             tf,errnorm); CHKERRQ(ierr);
+             "result at t = %g (note |tf-tr_returned| = %e):     error |u-uexact|_inf = %g\n",
+             tfreturned,fabs(tf-tfreturned),errnorm); CHKERRQ(ierr);
 
   ierr = VecDestroy(&u);CHKERRQ(ierr);
   ierr = MatDestroy(&A);CHKERRQ(ierr);
