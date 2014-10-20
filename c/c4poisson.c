@@ -23,6 +23,7 @@ static char help[] = "SSolves a structured-grid Poisson problem with DMDA and KS
 #include <petscksp.h>
 
 
+//COMPUTERHS
 PetscErrorCode ComputeRHS(KSP ksp, Vec b, void *ctx) {
   PetscErrorCode ierr;
   DMDALocalInfo  info;
@@ -59,7 +60,10 @@ PetscErrorCode ComputeRHS(KSP ksp, Vec b, void *ctx) {
   ierr = VecAssemblyEnd(b); CHKERRQ(ierr);
   return 0;
 }
+//ENDCOMPUTERHS
 
+
+//COMPUTEJAC
 PetscErrorCode ComputeJacobian(KSP ksp,Mat J, Mat A,void *ctx) {
   PetscErrorCode ierr;
   PetscInt       i, j;
@@ -105,8 +109,9 @@ PetscErrorCode ComputeJacobian(KSP ksp,Mat J, Mat A,void *ctx) {
   ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
+//ENDCOMPUTEJAC
 
-
+//MAIN
 int main(int argc,char **argv)
 {
   KSP            ksp;
@@ -135,4 +140,5 @@ int main(int argc,char **argv)
   ierr = PetscFinalize();CHKERRQ(ierr);
   return 0;
 }
+//ENDMAIN
 

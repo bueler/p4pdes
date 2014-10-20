@@ -1,10 +1,12 @@
 all: book.pdf
 
+texinputs := getstarted.tex structured.tex unstructured.tex multigrid.tex scaling.tex
+
 tikzinputs := samplepoly.1.tikz squarefour.tikz bump.1.tikz bump.poly.tikz mesh.1.tikz
-texinputs := getstarted.tex structured.tex unstructured.tex scaling.tex
 
 hinputs := $(addprefix ../c/, convenience.h)
-cinputs := structuredlaplacian.c readmesh.c poissontools.c c1matvec.c c2poisson.c c3convert.c c3poisson.c
+
+cinputs := structuredlaplacian.c readmesh.c poissontools.c c1matvec.c c2poisson.c c3convert.c c3poisson.c c4poisson.c
 cstrip := $(addprefix cstrip/, $(cinputs))
 
 # TO BUILD PDF:
