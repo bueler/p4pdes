@@ -26,6 +26,9 @@ c3poisson: c3poisson.o readmesh.o poissontools.o chkopts
 	-${CLINKER} -o c3poisson c3poisson.o readmesh.o poissontools.o ${PETSC_KSP_LIB}
 	${RM} c3poisson.o readmesh.o poissontools.o
 
+c4poisson: c4poisson.o  chkopts
+	-${CLINKER} -o c4poisson c4poisson.o  ${PETSC_KSP_LIB}
+	${RM} c4poisson.o
 
 .PHONY: distclean
 
