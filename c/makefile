@@ -30,6 +30,11 @@ c4poisson: c4poisson.o  chkopts
 	-${CLINKER} -o c4poisson c4poisson.o  ${PETSC_KSP_LIB}
 	${RM} c4poisson.o
 
+c9obstacle: c9obstacle.o  chkopts
+	-${CLINKER} -o c9obstacle c9obstacle.o  ${PETSC_SNES_LIB}
+	${RM} c9obstacle.o
+
+
 .PHONY: distclean
 
 distclean:

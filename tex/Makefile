@@ -1,12 +1,13 @@
 all: book.pdf
 
-texinputs := getstarted.tex structured.tex unstructured.tex multigrid.tex scaling.tex
+texinputs := getstarted.tex structured.tex unstructured.tex multigrid.tex scaling.tex constrained.tex
 
 tikzinputs := samplepoly.1.tikz squarefour.tikz bump.1.tikz bump.poly.tikz mesh.1.tikz
 
 hinputs := $(addprefix ../c/, convenience.h)
 
-cinputs := structuredlaplacian.c readmesh.c poissontools.c c1matvec.c c2poisson.c c3convert.c c3poisson.c c4poisson.c
+cinputs := structuredlaplacian.c readmesh.c poissontools.c c1matvec.c c2poisson.c c3convert.c c3poisson.c c4poisson.c c9obstacle.c
+
 cstrip := $(addprefix cstrip/, $(cinputs))
 
 book.pdf: book.aux
@@ -22,7 +23,7 @@ book.aux: book.tex book.bib $(texinputs) $(hinputs) $(cstrip) $(tikzinputs)
 cstrip/%.c: ../c/%.c
 	rm -rf $@.tmp
 	sed -e 's/ierr = //' $< > $@.tmp
-	sed -i 's/ CHKERRQ(ierr);//' $@.tmp
+	sed -i 's/CHKERRQ(ierr);//' $@.tmp
 	sed -i '/\/\/STRIP/d' $@.tmp
 	mv $@.tmp $@
 

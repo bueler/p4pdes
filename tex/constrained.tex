@@ -1,0 +1,39 @@
+
+\chapter{9. PDEs with constraints}
+
+\section{A variational inequality problem}
+
+On a square $R = [-2,2]\times [-2,2]$.  Suppose $\psi \in H^1(R)$ has $\psi\big|_{\partial R} \le 0$ (in a trace sense).  Suppose we have $g\in L^2(\partial R)$ where $g \ge 0$ a.e.~on $\partial R$.  Consider the problem of finding $u\in H_0^1(R)$ so that
+\begin{equation}
+    \grad^2 u = 0 \text{ on } \{u > \psi\} \text{ \emph{and} } u\ge \psi. \label{obstaclestrong}
+\end{equation}
+
+This obstacle problem is nonlinear even though the Laplace equation is $\grad^2 u = 0$ is linear.
+
+This obstacle problem is equivalent to minimization of the functional
+\begin{equation}
+I[u] = \frac{1}{2} \int_R \grad u\cdot \grad u
+\end{equation}
+over the constraint set
+\begin{equation}
+\mathcal{K} = \left\{u \in H_0^1(R) \,\Big|\, u\ge \psi\right\}.
+\end{equation}
+
+The code we write solves a problem where the exact solution is known for the given $\psi$ and boundary values in question.  In this case
+   $$\psi(x,y) = \begin{cases} 1 - r^2, & r \le 1, \\  0, & \text{otherwise},\end{cases}$$
+where, as expected, $r = (x^2+y^2)^{1/2}$.% FIXME: \psi is not in H^1, technically
+Then the exact solution is
+   $$u_{\text{exact}}(x,y) = \begin{cases} \psi(x,y), & r \le r_{\text{free}}, \\  - A \ln(r) + B, & \text{otherwise},\end{cases}$$
+where $r_{\text{free}} = 0.69797$, $A = 0.68026$, and $B = 0.47152$.
+
+\cinputpart{c9obstacle.c}{Just the struct.}{I}{//STRUCT}{//ENDSTRUCT}{code:obstaclestruct}
+
+\cinputpart{c9obstacle.c}{Create the DMDA and Vecs.}{II}{//CREATE}{//ENDCREATE}{code:obstaclecreate}
+
+\cinputpart{c9obstacle.c}{Setup the SNESVI object.}{III}{//SETUPSNES}{//ENDSETUPSNES}{code:obstaclesetupsnes}
+
+\cinputpart{c9obstacle.c}{Important part: tell SNESVI object about bound $u\ge \psi$ (and $u<+\infty$ because SNESVI expects both upper and lower bounds).}{IV}{//FORMBOUNDS}{//ENDFORMBOUNDS}{code:obstacleformbounds}
+
+\cinputpart{c9obstacle.c}{Solve and report on results.}{V}{//SOLVE}{//ENDSOLVE}{code:obstaclesolve}
+
+\section{Ice sheets}
