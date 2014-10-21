@@ -1,7 +1,7 @@
 
 static char help[] = "Solves a structured-grid Poisson problem with DMDA and KSP.\n\n";
 
-// SEE ALSO:  src/ksp/ksp/examples/tutorials/ex50.c
+// SEE ALSO:  c4poisson.c
 // IT IS SIMILAR BUT HAS MULTIGRID ABILITY BECAUSE OPERATOR A IS GENERATED AT
 // EACH LEVEL THROUGH
 //     KSPSetDM(ksp,(DM)da) ... KSPSetComputeOperators(ksp,ComputeJacobian,&user)
@@ -18,30 +18,53 @@ static char help[] = "Solves a structured-grid Poisson problem with DMDA and KSP
 
 // VISUALIZATION OF SOLUTION: mpiexec -n 6 ./c2poisson -da_grid_x 129 -da_grid_y 129 -ksp_type cg -ksp_monitor_solution
 
-// PERFORMANCE ON SAME:
-//   for NN in 5 9 17 33 65 129 257; do ./c2poisson -da_grid_x $NN -da_grid_y $NN -ksp_rtol 1.0e-8 -ksp_type cg -log_summary|grep "Time (sec):"; done
-
-// WEAK SCALING IN TERMS OF FLOPS ONLY:
-//   for kk in 0 1 2 3; do NN=$((50*(2**$kk))); MM=$((2**(2*$kk))); cmd="mpiexec -n $MM ./c2poisson -da_grid_x $NN -da_grid_y $NN -ksp_rtol 1.0e-8 -ksp_type cg -log_summary"; echo $cmd; $cmd |'grep' "Flops:  "; echo; done
-
-// SHOW KSP STRUCTURE:  ./c2poisson -ksp_view
+// SHOW KSP STRUCTURE:
+//   ./c2poisson -ksp_view                              GMRES WITH IC(0)
+//   ./c2poisson -ksp_view -ksp_type cg                 CG WITH IC(0)
+//   ./c2poisson -ksp_view -ksp_type cg -pc_type none   UNPRECONDITIONED CG
 
 // DIRECT LINEAR SOLVERS:
 //   LU ALGORITHM: ./c2poisson -ksp_type preonly -pc_type lu
 //   CHOLESKY ALGORITHM: ./c2poisson -ksp_type preonly -pc_type cholesky
+//   SHOWS CG CAN GIVE SAME RESIDUAL: ./c2poisson -ksp_type cg -ksp_rtol 1.0e-14
 
 // UNPRECONDITIONED CG ALGORITHM:
 //   ./c2poisson -ksp_type cg -pc_type none -ksp_view  # JUST SHOW KSP STRUCTURE
 //   ./c2poisson -da_grid_x 257 -da_grid_y 257 -ksp_type cg -pc_type none -log_summary
 //   (compare Elman p.72 and Algorithm 2.1 = cg: "The computational work of one
 //   iteration is two inner products, three vector updates, and one matrix-vector
-//   product.")
+//   product." THIS IS WHAT I SEE!!)
+
+// MORE CG:  look at iterations in
+//   for NN in 5 9 17 33 65 129 257; do ./c2poisson -da_grid_x $NN -da_grid_y $NN -ksp_rtol 1.0e-8 -ksp_type cg -pc_type none; done
+// and look at iterations in
+//   for NN in 5 9 17 33 65 129 257; do ./c2poisson -da_grid_x $NN -da_grid_y $NN -ksp_rtol 1.0e-8 -ksp_type cg; done
+// IN BOTH CASES ITERATIONS (ASYMPTOTICALLY) DOUBLE WITH EACH GRID REFINEMENT
+//   (compare Elman p. 76: "...suggests that for uniformly refined grids, the
+//   number of CG iterations required to meet a fixed tolerance will approximately
+//   double with each grid refinement"
+//   and compare Elman p. 82: "One known result [ABOUT IC(0) PRECONDITIONING USED
+//   IN SECOND CASE ABOVE] is that the asymptotic behavior of the condition number
+//   using IC(0) preconditioning is unchanged: \kappa(M^{-1} A) = O(h^{-2})."
+//   THIS IS WHAT I SEE!!)
+
+// MINRES VS CG:
+//   time ./c2poisson -ksp_type cg -pc_type icc -da_grid_x 500 -da_grid_y 500
+//   time ./c2poisson -ksp_type minres -pc_type icc -da_grid_x 500 -da_grid_y 500
+//   (compare Elman p. 88: "Indeed, when solving discrete Poisson problems the
+//   the convergence of MINRES is almost identical to that of CG"  THIS IS WHAT I SEE!!)
 
 // PERFORMANCE ANALYSIS:
 //   export PETSC_ARCH=linux-gnu-opt
 //   make c2poisson
-//   ./c2poisson -da_grid_x 1029 -da_grid_y 1029 -ksp_type cg -log_summary|grep "Solve: "
-//   mpiexec -n 6 ./c2poisson -da_grid_x 1029 -da_grid_y 1029 -ksp_type cg -log_summary|grep "Solve: "
+//   ./c2poisson -da_grid_x 1025 -da_grid_y 1025 -ksp_type cg -log_summary|grep "Solve: "
+//   mpiexec -n 6 ./c2poisson -da_grid_x 1025 -da_grid_y 1025 -ksp_type cg -log_summary|grep "Solve: "
+
+// PERFORMANCE ON CONVERGENCE PATH:
+//   for NN in 5 9 17 33 65 129 257; do ./c2poisson -da_grid_x $NN -da_grid_y $NN -ksp_rtol 1.0e-8 -ksp_type cg -log_summary|grep "Time (sec):"; done
+
+// WEAK SCALING IN TERMS OF FLOPS ONLY:
+//   for kk in 0 1 2 3; do NN=$((50*(2**$kk))); MM=$((2**(2*$kk))); cmd="mpiexec -n $MM ./c2poisson -da_grid_x $NN -da_grid_y $NN -ksp_rtol 1.0e-8 -ksp_type cg -log_summary"; echo $cmd; $cmd |'grep' "Flops:  "; echo; done
 
 
 #include <math.h>
@@ -58,19 +81,19 @@ PetscErrorCode formRHSandExact(DM da, Vec b, Vec uexact) {
   PetscInt       i, j;
   PetscReal      hx = 1./(double)(info.mx-1),
                  hy = 1./(double)(info.my-1),  // domain is [0,1] x [0,1]
-                 pi = PETSC_PI, x, y, f, **ab, **auex;
+                 x, y, x2, y2, f, **ab, **auex;
   ierr = DMDAVecGetArray(da, b, &ab);CHKERRQ(ierr);
   ierr = DMDAVecGetArray(da, uexact, &auex);CHKERRQ(ierr);
   for (j=info.ys; j<info.ys+info.ym; j++) {
-    y = j * hy;
+    y = j * hy;  y2 = y*y;
     for (i=info.xs; i<info.xs+info.xm; i++) {
-      x = i * hx;
-      // choose exact solution to satisfy boundary conditions, and be a bit
-      //   generic (e.g. not equal to an eigenvector)
-      auex[j][i] = x * (1.0 - x) * sin(3.0 * pi * y);
+      x = i * hx;  x2 = x*x;
+      // choose exact solution to satisfy boundary conditions, and so that
+      //   method is not exact; this is example page 64 of Briggs et al 2000
+      auex[j][i] = x2 * (1.0 - x2) * y2 * (y2 - 1.0);
       if ( (i>0) && (i<info.mx-1) && (j>0) && (j<info.my-1) ) { // if not bdry
-        // f = - (u_xx + u_yy)
-        f = 2 * sin(3.0 * pi * y) + 9.0 * pi * pi * auex[j][i];
+        // f = - (u_xx + u_yy)  where u is exact
+        f = 2.0 * ( (1.0 - 6.0*x2) * y2 * (1.0 - y2) + (1.0 - 6.0*y2) * x2 * (1.0 - x2) );
         ab[j][i] = hx * hy * f;
       } else {
         ab[j][i] = 0.0;                          // on bdry we have "1 * u = 0"
@@ -97,7 +120,6 @@ int main(int argc,char **args)
 //CREATE
   // default size (10 x 10) can be changed using -da_grid_x M -da_grid_y N
   DM             da;
-  PetscLogStage  stage;
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
                 DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,  // points on boundary have no need to access ghosts
                 DMDA_STENCIL_STAR,-10,-10,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,
@@ -111,6 +133,7 @@ int main(int argc,char **args)
   ierr = DMCreateMatrix(da,&A);CHKERRQ(ierr);
   ierr = MatSetOptionsPrefix(A,"a_"); CHKERRQ(ierr);
 
+  PetscLogStage  stage;
   ierr = PetscLogStageRegister("Matrix Assembly", &stage); CHKERRQ(ierr);
   ierr = PetscLogStagePush(stage); CHKERRQ(ierr);
   ierr = formdirichletlaplacian(da,1.0,A); CHKERRQ(ierr);

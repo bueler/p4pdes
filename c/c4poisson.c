@@ -8,8 +8,21 @@ static char help[] = "SSolves a structured-grid Poisson problem with DMDA and KS
 
 // FIXME:currently code duplication from c2poisson.c; is there a good way to do code re-use on stuff from structuredlaplacian.c?
 
+// SHOWS c2 AND c4 CODES ARE DOING SAME THING (THOUGH c4 HAS NO EXACT SOLN):
+//   $ ./c4poisson 
+//   on   10 x   10 grid:  iterations 7, residual norm = 8.59388e-07
+//   $ ./c2poisson
+//   on   10 x   10 grid:  iterations 7, residual norm = 8.59388e-07,
+//                         error |u-uexact|_inf = 0.000621778
+
 // USE MULTIGRID AND SHOW IT GRAPHICALLY:
 //   ./c4poisson -da_grid_x 3 -da_grid_y 3 -pc_type mg -da_refine 3 -ksp_monitor -ksp_view -dm_view draw -draw_pause 1
+
+// PERFORMANCE ANALYSIS; COMPARE c2poisson VERSION:
+//   export PETSC_ARCH=linux-gnu-opt
+//   make c4poisson
+//   ./c4poisson -da_grid_x 3 -da_grid_y 3 -pc_type mg -da_refine 9 -log_summary|grep "Solve: "
+//   mpiexec -n 6 FIXME
 
 // NOT SURE WHAT IS BEING ACCOMPLISHED HERE:
 //   ./c4poisson -da_grid_x 100 -da_grid_y 100 -pc_type mg  -pc_mg_levels 1 -mg_levels_0_pc_type ilu -mg_levels_0_pc_factor_levels 1 -ksp_monitor -ksp_view
@@ -17,6 +30,11 @@ static char help[] = "SSolves a structured-grid Poisson problem with DMDA and KS
 
 // I NEED TO KNOW/UNDERSTAND EVERYTHING IN foo.txt:
 //   mpiexec -n 4 ./c4poisson -da_grid_x 3 -da_grid_y 3 -pc_type mg -da_refine 10 -ksp_monitor -dm_view -ksp_view -log_summary &> foo.txt
+
+// ONLY 17 SECONDS BUT USES 9 GB MEMORY:
+//   mpiexec -n 4 ./c4poisson -da_grid_x 3 -da_grid_y 3 -pc_type mg -da_refine 11 -ksp_monitor
+// (COMPARE: mpiexec -n 4 ./c2poisson -da_grid_x 4097 -da_grid_y 4097 -ksp_type cg
+// WHICH DOES 3329 ITERATIONS)
 
 #include <math.h>
 #include <petscdmda.h>
@@ -36,18 +54,15 @@ PetscErrorCode ComputeRHS(KSP ksp, Vec b, void *ctx) {
   PetscInt       i, j;
   PetscReal      hx = 1./(double)(info.mx-1),
                  hy = 1./(double)(info.my-1),  // domain is [0,1] x [0,1]
-                 pi = PETSC_PI, x, y, f, **ab, uex;
+                 x, y, x2, y2, f, **ab;
   ierr = DMDAVecGetArray(da, b, &ab);CHKERRQ(ierr);
   for (j=info.ys; j<info.ys+info.ym; j++) {
-    y = j * hy;
+    y = j * hy;  y2 = y*y;
     for (i=info.xs; i<info.xs+info.xm; i++) {
-      x = i * hx;
-      // choose exact solution to satisfy boundary conditions, and be a bit
-      //   generic (e.g. not equal to an eigenvector)
-      uex = x * (1.0 - x) * sin(3.0 * pi * y);
+      x = i * hx;  x2 = x*x;
+      // this is example page 64 of Briggs et al 2000
       if ( (i>0) && (i<info.mx-1) && (j>0) && (j<info.my-1) ) { // if not bdry
-        // f = - (u_xx + u_yy)
-        f = 2 * sin(3.0 * pi * y) + 9.0 * pi * pi * uex;
+        f = 2.0 * ( (1.0 - 6.0*x2) * y2 * (1.0 - y2) + (1.0 - 6.0*y2) * x2 * (1.0 - x2) );
         ab[j][i] = hx * hy * f;
       } else {
         ab[j][i] = 0.0;                          // on bdry we have "1 * u = 0"
@@ -119,21 +134,38 @@ int main(int argc,char **argv)
   PetscErrorCode ierr;
 
   PetscInitialize(&argc,&argv,(char*)0,help);
-  ierr = KSPCreate(PETSC_COMM_WORLD,&ksp);CHKERRQ(ierr);
 
+  // default size (10 x 10) can be changed using -da_grid_x M -da_grid_y N
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
                 DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
                 DMDA_STENCIL_STAR,-10,-10,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,
                 &da); CHKERRQ(ierr);
   ierr = DMDASetUniformCoordinates(da,0.0,1.0,0.0,1.0,-1.0,-1.0); CHKERRQ(ierr);
 
+  // create linear solver context; compare to c2poisson.c version; note there
+  // is no "Assemble" stage!; that happens inside KSPSolve()
+  ierr = KSPCreate(PETSC_COMM_WORLD,&ksp);CHKERRQ(ierr);
   ierr = KSPSetDM(ksp,(DM)da);
-
   ierr = KSPSetComputeRHS(ksp,ComputeRHS,NULL);CHKERRQ(ierr);
   ierr = KSPSetComputeOperators(ksp,ComputeJacobian,NULL);CHKERRQ(ierr);
   ierr = KSPSetFromOptions(ksp);CHKERRQ(ierr);
 
+  PetscLogStage  stage;
+  ierr = PetscLogStageRegister("Solve", &stage); CHKERRQ(ierr);
+  ierr = PetscLogStagePush(stage); CHKERRQ(ierr);
   ierr = KSPSolve(ksp,NULL,NULL);CHKERRQ(ierr);
+  ierr = PetscLogStagePop();CHKERRQ(ierr);
+
+  // report on grid, ksp results
+  PetscInt       its;
+  PetscScalar    resnorm;
+  DMDALocalInfo  info;
+  ierr = DMDAGetLocalInfo(da,&info);CHKERRQ(ierr);
+  ierr = KSPGetIterationNumber(ksp,&its); CHKERRQ(ierr);
+  ierr = KSPGetResidualNorm(ksp,&resnorm); CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,
+             "on %4d x %4d grid:  iterations %D, residual norm = %g\n",
+             info.mx,info.my,its,resnorm); CHKERRQ(ierr);
 
   ierr = DMDestroy(&da);CHKERRQ(ierr);
   ierr = KSPDestroy(&ksp);CHKERRQ(ierr);
