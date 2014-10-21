@@ -32,8 +32,10 @@ where $r_{\text{free}} = 0.69797$, $A = 0.68026$, and $B = 0.47152$.
 
 \cinputpart{c9obstacle.c}{Setup the SNESVI object.}{III}{//SETUPSNES}{//ENDSETUPSNES}{code:obstaclesetupsnes}
 
-\cinputpart{c9obstacle.c}{Important part: tell SNESVI object about bound $u\ge \psi$ (and $u<+\infty$ because SNESVI expects both upper and lower bounds).}{IV}{//FORMBOUNDS}{//ENDFORMBOUNDS}{code:obstacleformbounds}
+\cinputpart{c9obstacle.c}{Compute the function $\psi$ and the exact solution, which determines the boundary conditions.}{IV}{//FORMPSI}{//ENDFORMPSI}{code:obstacleformpsi}
 
-\cinputpart{c9obstacle.c}{Solve and report on results.}{V}{//SOLVE}{//ENDSOLVE}{code:obstaclesolve}
+\cinputpart{c9obstacle.c}{Important part: tell SNESVI object about bound $u\ge \psi$ (and $u<+\infty$ because SNESVI expects both upper and lower bounds).}{V}{//FORMBOUNDS}{//ENDFORMBOUNDS}{code:obstacleformbounds}
+
+\cinputpart{c9obstacle.c}{Solve and report on results.}{VI}{//SOLVE}{//ENDSOLVE}{code:obstaclesolve}
 
 \section{Ice sheets}

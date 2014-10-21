@@ -26,60 +26,57 @@ With finite difference evaluation of Jacobian using coloring:
 //STRUCT
 /* application context for obstacle problem solver */
 typedef struct {
+  PetscReal dx, dy;
   Vec psi,  // obstacle
       g;    // Dirichlet boundary conditions
 } ObsCtx;
 //ENDSTRUCT
 
 
-PetscErrorCode FormPsiAndInitialGuess(DM da,Vec U0,PetscBool feasible)
+//FORMPSI
+PetscErrorCode FormPsiAndInitialGuess(DM da,Vec U0,PetscBool feasible, ObsCtx *user)
 {
-  ObsCtx         *user;
   PetscErrorCode ierr;
-  PetscInt       i,j,Mx,My,xs,ys,xm,ym;
-  DM             coordDA;
-  Vec            coordinates;
-  DMDACoor2d     **coords;
-  PetscReal      **psi, **u0, **uexact;
-  PetscReal      x, y, r;
-  PetscReal      afree = 0.69797, A = 0.68026, B = 0.47152;
+  PetscInt       i,j;
+  PetscReal      **psi, **u0, **uexact,
+                 x, y, r,
+                 pi = PETSC_PI, afree = 0.69797, A = 0.68026, B = 0.47152;
+  DMDALocalInfo  info;
 
   PetscFunctionBeginUser;
-  ierr = DMGetApplicationContext(da,&user);CHKERRQ(ierr);
-  ierr = DMDAGetInfo(da,PETSC_IGNORE,&Mx,&My,PETSC_IGNORE,PETSC_IGNORE,
-                     PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,
-                     PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE);
-  ierr = DMDAGetCorners(da,&xs,&ys,NULL,&xm,&ym,NULL);CHKERRQ(ierr);
+  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
 
-  ierr = DMGetCoordinateDM(da, &coordDA);CHKERRQ(ierr);
-  ierr = DMGetCoordinates(da, &coordinates);CHKERRQ(ierr);
-
-  ierr = DMDAVecGetArray(coordDA, coordinates, &coords);CHKERRQ(ierr);
   ierr = DMDAVecGetArray(da, user->psi, &psi);CHKERRQ(ierr);
   ierr = DMDAVecGetArray(da, U0, &u0);CHKERRQ(ierr);
   ierr = DMDAVecGetArray(da, user->g, &uexact);CHKERRQ(ierr);
-  for (j=ys; j<ys+ym; j++) {
-    for (i=xs; i<xs+xm; i++) {
-      x = coords[j][i].x;
-      y = coords[j][i].y;
+  for (j=info.ys; j<info.ys+info.ym; j++) {
+    y = -2.0 + j * user->dy;
+    for (i=info.xs; i<info.xs+info.xm; i++) {
+      x = -2.0 + i * user->dx;
       r = PetscSqrtReal(x * x + y * y);
-      if (r <= 1.0) psi[j][i] = PetscSqrtReal(1.0 - r * r);
-      else psi[j][i] = -1.0;
-      if (r <= afree) uexact[j][i] = psi[j][i];  /* on the obstacle */
-      else uexact[j][i] = - A * PetscLogReal(r) + B;   /* solves the laplace eqn */
-
+      if (r <= 1.0)
+        psi[j][i] = PetscSqrtReal(1.0 - r * r);
+      else
+        psi[j][i] = -1.0;
+      if (r <= afree)
+        uexact[j][i] = psi[j][i];  /* on the obstacle */
+      else
+        uexact[j][i] = - A * PetscLogReal(r) + B;   /* solves the laplace eqn */
       if (feasible) {
-        if (i == 0 || j == 0 || i == Mx-1 || j == My-1) u0[j][i] = uexact[j][i];
-        else u0[j][i] = uexact[j][i] + PetscCosReal(PETSC_PI*x/4.0)*PetscCosReal(PETSC_PI*y/4.0); /* initial guess is admissible: it is above the obstacle */
-      } else u0[j][i] = 0.;
+        if (i == 0 || j == 0 || i == info.mx-1 || j == info.my-1)
+           u0[j][i] = uexact[j][i];
+        else
+           u0[j][i] = uexact[j][i] + PetscCosReal(pi*x/4.0)*PetscCosReal(pi*y/4.0);
+      } else
+        u0[j][i] = 0.;
     }
   }
   ierr = DMDAVecRestoreArray(da, user->psi, &psi);CHKERRQ(ierr);
   ierr = DMDAVecRestoreArray(da, U0, &u0);CHKERRQ(ierr);
   ierr = DMDAVecRestoreArray(da, user->g, &uexact);CHKERRQ(ierr);
-  ierr = DMDAVecRestoreArray(coordDA, coordinates, &coords);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
+//ENDFORMPSI
 
 
 //FORMBOUNDS
@@ -103,21 +100,18 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info,PetscScalar **x,PetscScalar
 {
   PetscErrorCode ierr;
   PetscInt       i,j;
-  PetscReal      dx,dy,uxx,uyy,**ag;
+  PetscReal      uxx,uyy,**ag;
 
   PetscFunctionBeginUser;
-  dx = 4.0 / (PetscReal)(info->mx-1);
-  dy = 4.0 / (PetscReal)(info->my-1);
-
   ierr = DMDAVecGetArray(info->da, user->g, &ag);CHKERRQ(ierr);
   for (j=info->ys; j<info->ys+info->ym; j++) {
     for (i=info->xs; i<info->xs+info->xm; i++) {
       if (i == 0 || j == 0 || i == info->mx-1 || j == info->my-1) {
         f[j][i] = x[j][i] - ag[j][i];
       } else {
-        uxx     = (x[j][i-1] - 2.0 * x[j][i] + x[j][i+1]) / (dx*dx);
-        uyy     = (x[j-1][i] - 2.0 * x[j][i] + x[j+1][i]) / (dy*dy);
-        f[j][i] = -uxx - uyy;
+        uxx     = (x[j][i-1] - 2.0 * x[j][i] + x[j][i+1]) / (user->dx*user->dx);
+        uyy     = (x[j-1][i] - 2.0 * x[j][i] + x[j+1][i]) / (user->dy*user->dy);
+        f[j][i] = - uxx - uyy;
       }
     }
   }
@@ -134,13 +128,11 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info,PetscScalar **x,Mat A,Mat j
   PetscErrorCode ierr;
   PetscInt       i,j;
   MatStencil     col[5],row;
-  PetscReal      v[5],dx,dy,oxx,oyy;
+  PetscReal      v[5],oxx,oyy;
 
   PetscFunctionBeginUser;
-  dx  = 4.0 / (PetscReal)(info->mx-1);
-  dy  = 4.0 / (PetscReal)(info->my-1);
-  oxx = 1.0 / (dx * dx);
-  oyy = 1.0 / (dy * dy);
+  oxx = 1.0 / (user->dx * user->dx);
+  oyy = 1.0 / (user->dy * user->dy);
 
   for (j=info->ys; j<info->ys+info->ym; j++) {
     for (i=info->xs; i<info->xs+info->xm; i++) {
@@ -184,23 +176,24 @@ int main(int argc,char **argv)
   SNESConvergedReason reason;
   DM                  da;
   ObsCtx              user;
-  PetscReal           dx,dy,error1,errorinf;
+  PetscReal           error1,errorinf;
   PetscBool           feasible = PETSC_FALSE,fdflg = PETSC_FALSE;
+  DMDALocalInfo  info;
 
   PetscInitialize(&argc,&argv,(char*)0,help);
 
 //CREATE
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
-      DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
-      DMDA_STENCIL_STAR,
+      DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
       -11,-11,                   // override with -da_grid_x,_y or -da_refine
       PETSC_DECIDE,PETSC_DECIDE, // num of procs in each dim
-      1,                         // dof = 1
-      1,                         // s = 1 (stencil extends out one cell)
-      NULL,NULL,
+      1,1,NULL,NULL,             // dof = 1 and stencil width = 1
       &da);CHKERRQ(ierr);
-  ierr = DMDASetUniformCoordinates(da,-2.0,2.0,-2.0,2.0,0.0,1.0);CHKERRQ(ierr);
+  ierr = DMDASetUniformCoordinates(da,-2.0,2.0,-2.0,2.0,-1.0,-1.0);CHKERRQ(ierr);
   ierr = DMSetApplicationContext(da,&user);CHKERRQ(ierr);
+  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+  user.dx = 4.0 / (PetscReal)(info.mx-1);
+  user.dy = 4.0 / (PetscReal)(info.my-1);
 
   ierr = DMCreateGlobalVector(da,&u);CHKERRQ(ierr);
   ierr = VecDuplicate(u,&r);CHKERRQ(ierr);
@@ -216,14 +209,12 @@ int main(int argc,char **argv)
 //ENDCREATE
 
 //SETUPSNES
-  ierr = FormPsiAndInitialGuess(da,u,feasible);CHKERRQ(ierr);
-
+  ierr = FormPsiAndInitialGuess(da,u,feasible,&user);CHKERRQ(ierr);
   ierr = SNESCreate(PETSC_COMM_WORLD,&snes);CHKERRQ(ierr);
   ierr = SNESSetDM(snes,da);CHKERRQ(ierr);
   ierr = SNESSetApplicationContext(snes,&user);CHKERRQ(ierr);
   ierr = SNESSetType(snes,SNESVINEWTONRSLS);CHKERRQ(ierr);
   ierr = SNESVISetComputeVariableBounds(snes,&FormBounds);CHKERRQ(ierr);
-
   ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
             (PetscErrorCode (*)(DMDALocalInfo*,void*,void*,void*))FormFunctionLocal,
             &user);CHKERRQ(ierr);
@@ -232,20 +223,15 @@ int main(int argc,char **argv)
               (PetscErrorCode (*)(DMDALocalInfo*,void*,Mat,Mat,void*))FormJacobianLocal,
               &user);CHKERRQ(ierr);
   }
-
   ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
 //ENDSETUPSNES
 
   /* report on setup */
-  DMDALocalInfo  info;
-  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-  dx   = 4.0 / (PetscReal)(info.mx-1);
-  dy   = 4.0 / (PetscReal)(info.my-1);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
                      "setup done: square       side length = %.3f\n"
                      "            grid               Mx,My = %D,%D\n"
                      "            spacing            dx,dy = %.3f,%.3f\n",
-                     4.0, info.mx, info.my, (double)dx, (double)dy);CHKERRQ(ierr);
+                     4.0, info.mx, info.my, user.dx, user.dy);CHKERRQ(ierr);
 
 //SOLVE
   /* solve nonlinear system */
