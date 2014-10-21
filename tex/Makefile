@@ -9,14 +9,11 @@ hinputs := $(addprefix ../c/, convenience.h)
 cinputs := structuredlaplacian.c readmesh.c poissontools.c c1matvec.c c2poisson.c c3convert.c c3poisson.c c4poisson.c
 cstrip := $(addprefix cstrip/, $(cinputs))
 
-# TO BUILD PDF:
-#     ice-bib.bib  needs to be a link to   pism/doc/ice-bib.bib
-
-book.pdf: book.tex book.aux $(texinputs) $(hinputs) $(cstrip) $(tikzinputs)
+book.pdf: book.aux
 	pdflatex book
 	pdflatex book
 
-book.aux: book.tex $(texinputs) $(hinputs) $(cstrip) $(tikzinputs)
+book.aux: book.tex book.bib $(texinputs) $(hinputs) $(cstrip) $(tikzinputs)
 	pdflatex book
 	bibtex book.aux
 
