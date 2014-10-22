@@ -25,6 +25,7 @@ cstrip/%.c: ../c/%.c
 	sed -e 's/ierr = //' $< > $@.tmp
 	sed -i 's/CHKERRQ(ierr);//' $@.tmp
 	sed -i '/\/\/STRIP/d' $@.tmp
+	sed -i '/PetscErrorCode ierr/d' $@.tmp
 	mv $@.tmp $@
 
 samplepoly.1.tikz: samplepoly.poly

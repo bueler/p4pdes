@@ -244,7 +244,7 @@ At a grid location $(x_i,y_j)$, equation \eqref{poissonsquareFDearly} relates th
 
 Equations \eqref{poissonsquareFDearly} and \eqref{poissonsquareFDbcs} form a linear system of $K=MN$ equations in which we choose to treat all values $U_{i,j}$ on the grid, whether on the boundary or in the interior, as unknowns.  To shown this linear system in traditional form
 \begin{equation}
-A \bu = \bb,
+A \bu = \bb, \label{poissonlinearsystem}
 \end{equation}
 where $A$ is a $K\times K$ matrix and $\bu,\bb$ are $K\times 1$ column vectors, we must order the unknowns.  Such an ordering is implemented inside a \PETSc \pDMDA.  We use it here for displaying the system, but the code we actually write uses the grid-wise coordinates $(i,j)$.
 
@@ -426,12 +426,59 @@ where $\alpha = 2 (h_y/h_x) + 2 (h_x/h_y) = 13/3$ and $\beta = - h_y/h_x = - 3/2
 \end{example}
 \noindent\hrulefill
 
+We now present the core code, in Figure \ref{code:structuredlaplacian}, that assembles ``$A$'' in our linear system \eqref{poissonlinearsystem}.  For clarity and code reuse we have isolated method \texttt{formdirichletlaplacian()} in a separate file; we will use it both to solve the Poisson and the heat equations below.
 
-FIXME: explain Mat assembly tools, including DALocalInfo and MatStencil
+\begin{marginfigure}
+\begin{tikzpicture}[scale=4.5]
+  \draw[xstep=0.1,ystep=0.1,gray,thin] (0.0,0.0) grid (0.9,0.9);
+  \draw[xstep=0.1,ystep=0.1,black,thick] (0.3,0.2) grid (0.7,0.6);
+  \draw[black,thick] (0.3,-0.03) -- (0.3,+0.03);
+  \draw[black,thick] (-0.03,0.2) -- (+0.03,0.2);
+  \node at (0.3,-0.06) {$i=$\texttt{info.xs}};
+  \draw[<->,] (0.3,0.2-0.04) -- (0.7,0.2-0.04);
+  \node at (0.5,0.2-0.08) {\texttt{info.xm}};
+  \node[rotate around={90:(-0.2,0.2)}] at (-0.1,0.1) {$j=$\texttt{info.ys}};
+  \draw[<->,] (0.3-0.04,0.2) -- (0.3-0.04,0.6);
+  \node[rotate around={90:(0.3-0.3,0.4)}] at (0.3-0.18,0.3) {\texttt{info.ym}};
+\end{tikzpicture}
+\caption{How \texttt{DMDALocalInfo info} describes your local process' part of the grid.}
+\label{fig:localpartofgrid}
+\end{marginfigure}
 
-\clearpage
+Its first action is to extract from the \pDM object \texttt{da} a variable \texttt{info} of type \texttt{DMDALocalInfo}.  In particular, this object has the global grid size in members \texttt{info.mx,info.my} so we can compute grid spacings \texttt{hx,hy}.  Significantly, \texttt{info} can tell us the part of the grid owned by the local processor.  The local process has a \texttt{info.xm} by \texttt{info.ym} rectangular subgrid, with a range of indices
+   $$\text{\texttt{info.xs}} \le i \le \text{\texttt{info.xs}} +\text{\texttt{info.xm}}$$
+and
+   $$\text{\texttt{info.ys}} \le j \le \text{\texttt{info.ys}} +\text{\texttt{info.ym}}.$$
+See Figure \ref{fig:localpartofgrid}.
+
+
+For example, in Figure \ref{fig:unitsquaregridparallel} the rank $0$ process has \text{\texttt{info.xs}}$=0$ and \text{\texttt{info.xm}}$=3$ while the rank $1$ process has \text{\texttt{info.xs}}$=3$ and \text{\texttt{info.xm}}$=2$.  Such index ranges are reflected in \texttt{for} loops which re-appear every time we do operations on a structured 2D grid:
+\begin{Verbatim}[fontsize=\small]
+  for (j=info.ys; j<info.ys+info.ym; j++) {
+    for (i=info.xs; i<info.xs+info.xm; i++) {
+      DO SOMETHING AT GRID POINT (i,j)
+    }
+  }
+\end{Verbatim}
 
 \cinput{structuredlaplacian.c}{Fill matrix entries using \texttt{MatSetValuesStencil}.}{//CREATEMATRIX}{//ENDCREATEMATRIX}{code:structuredlaplacian}
+
+The \pMat object we assemble has ranges of rows owned by each process.  But we don't need to know that on a \pDMDA-managed structured grid.  Instead we work though our locally-owned part of the grid and we use the $(i,j)$ description of a point and its stencil neighbors to insert entries into a dynamical data structure which is a non-yet-assembled \pMat.  That is, in Figure \ref{code:structuredlaplacian} we see one command \texttt{MatSetValuesStencil()} for each locally-owned grid point, and for the generic interior point that \texttt{MatSetValuesStencil()} command inserts five coefficients into the matrix.  The key data structure is of type \texttt{MatStencil}, which is an apparently trivial struct
+\begin{Verbatim}[fontsize=\small]
+typedef struct {
+  PetscInt k,j,i,c;
+} MatStencil;
+\end{Verbatim}
+In our 2D case, with a single degree of freedom at each node,\sidenote{That is, Poisson problem \eqref{poissonsquare} is a scalar PDE so the unknown at each grid point is the scalar $U_{i,j}$.  A system of equations like Maxwell's or Navier-Stokes would have \texttt{dof}$>1$ when we call \texttt{DMDACreateXd()}.} we only use the \texttt{i} and \texttt{j} members of \texttt{MatStencil}.
+
+From \eqref{poissonsquareFD}, the actual matrix entries are either $a_{i,i} = 2\left(h_y/h_x + h_x/h_y\right)$ on the diagonal and either $a_{i,j} = -h_y/h_x$ or $a_{i,j} = -h_x/h_y$ if an off-diagonal entry is nonzero.  Furthermore, as mentioned above, we only insert nonzeros in the matrix if the corresponding column in the matrix is a non-boundary location.
+
+After completing all the \texttt{MatSetValuesStencil()} commands we call 
+\begin{Verbatim}[fontsize=\small]
+  MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);
+\end{Verbatim}
+just as we did in Chapter 1.
 
 \cinputpart{c2poisson.c}{The right side of equation \eqref{poissonsquareFD} comes from differentiating the exact solution, which this method also computes.}{I}{//RHS}{//ENDRHS}{code:ctwopoissonrhs}
 
