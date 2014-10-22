@@ -96,6 +96,7 @@ PetscErrorCode FormBounds(SNES snes, Vec Xl, Vec Xu)
 
 
 /* FormFunctionLocal - Evaluates nonlinear function, F(x) on local process patch */
+//FORMFUNC
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info,PetscScalar **x,PetscScalar **f,ObsCtx *user)
 {
   PetscErrorCode ierr;
@@ -120,9 +121,11 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info,PetscScalar **x,PetscScalar
   ierr = PetscLogFlops(10.0*info->ym*info->xm);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
+//ENDFORMFUNC
 
 
 /* FormJacobianLocal - Evaluates Jacobian matrix on local process patch */
+//FORMJAC
 PetscErrorCode FormJacobianLocal(DMDALocalInfo *info,PetscScalar **x,Mat A,Mat jac, ObsCtx *user)
 {
   PetscErrorCode ierr;
@@ -165,7 +168,7 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info,PetscScalar **x,Mat A,Mat j
   ierr = PetscLogFlops(2.0*info->ym*info->xm);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
+//ENDFORMJAC
 
 int main(int argc,char **argv)
 {

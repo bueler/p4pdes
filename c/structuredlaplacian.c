@@ -23,7 +23,7 @@ PetscErrorCode formdirichletlaplacian(DM da, PetscReal dirichletdiag, Mat A) {
         v[ncols++] = dirichletdiag;
       } else {
         v[ncols++] = 2*(hy/hx + hx/hy); // ... everywhere else we build a row
-        // if neighbor is NOT known to be zero we put an entry:
+        // if neighbor is NOT a known boundary value then we put an entry:
         if (i-1>0) {
           col[ncols].j = j;    col[ncols].i = i-1;  v[ncols++] = -hy/hx;  }
         if (i+1<info.mx-1) {
