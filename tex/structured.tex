@@ -53,6 +53,11 @@ Because \eqref{poissonsquare} is a linear problem, finite-dimensional approximat
   \pgfmathsetmacro\fourth{1.0/4.0}
   \pgfmathsetmacro\sixth{1.0/6.0}
   \draw[xstep=\fourth,ystep=\sixth,black,thin] (0.0,0.0) grid (1.0,1.0);
+  \foreach \x in {0,...,4} {
+    \foreach \y in {0,...,6} {
+        \filldraw (\x * \fourth,\y * \sixth) circle (0.5pt);
+    }
+  }
 \end{tikzpicture}
 \caption{A grid on the unit square $\mathcal{S}$, with $M=5$ and $N=7$.}
 \label{fig:unitsquaregrid}
@@ -82,6 +87,11 @@ then a structured grid will be created which is exactly as shown in Figure \ref{
   \pgfmathsetmacro\fourth{1.0/4.0}
   \pgfmathsetmacro\sixth{1.0/6.0}
   \draw[xstep=\fourth,ystep=\sixth,black,thin] (0.0,0.0) grid (1.0,1.0);
+  \foreach \x in {0,...,4} {
+    \foreach \y in {0,...,6} {
+        \filldraw (\x * \fourth,\y * \sixth) circle (0.5pt);
+    }
+  }
   \pgfmathsetmacro\dd{0.04}
   \pgfmathsetmacro\od{1.04}
   \pgfmathsetmacro\xap{2*\fourth + 0.04}
@@ -91,7 +101,7 @@ then a structured grid will be created which is exactly as shown in Figure \ref{
   \pgfmathsetmacro\xamid{1*\fourth}
   \pgfmathsetmacro\xbmid{3.5*\fourth}
   \pgfmathsetmacro\yamid{1.5*\sixth}
-  \pgfmathsetmacro\ybmid{5*\sixth}
+  \pgfmathsetmacro\ybmid{4.7*\sixth}
   \draw[thick,rounded corners=8pt,color=red]
     (-\dd,-\dd) -- (-\dd,\yap) -- (\xap,\yap) -- (\xap,-\dd) -- cycle;
   \node[color=red] at (\xamid,\yamid) {rank $0$};
@@ -119,6 +129,38 @@ then \PETSc does the best it can to balance the load of \texttt{Mx}$\cdot$\textt
 \end{Verbatim}
 then the distributed structured grid shown in Figure \ref{fig:unitsquaregridparallel} will be created.  Neither \texttt{Mx}$=5$ nor \texttt{My}$=7$ is divisible by two, but \PETSc distributes the four ranks across the \texttt{Mx}$\cdot$\texttt{My}$=35$ nodes (grid points) relatively uniformly: the rank $0$ process owns 12 grid points and the rank $3$ process owns 6, while the other ranks are in between.  In this case the load is only balanced to within a factor of two, but larger grids will be better load-balanced.  
 
+\begin{marginfigure}
+\begin{tikzpicture}[scale=3.5]
+  \draw[->,gray,very thin] (0.0,0.0) -- (1.2,0.0) node[below] {$x$};
+  \draw[->,gray,very thin] (0.0,0.0) -- (0.0,1.2) node[left] {$y$};
+  \draw[line width=1.0pt] (0.0,0.0) -- (0.0,1.0) -- (1.0,1.0) -- (1.0,0.0) -- cycle;
+  \pgfmathsetmacro\fourth{1.0/4.0}
+  \pgfmathsetmacro\sixth{1.0/6.0}
+  \draw[xstep=\fourth,ystep=\sixth,black,thin] (0.0,0.0) grid (1.0,1.0);
+  \foreach \x in {0,...,4} {
+    \foreach \y in {0,...,6} {
+        \filldraw (\x * \fourth,\y * \sixth) circle (0.5pt);
+    }
+  }
+  \pgfmathsetmacro\dd{0.04}
+  \pgfmathsetmacro\od{1.04}
+  \foreach \y in {0,2} {
+    \pgfmathsetmacro\yup{\y * \sixth - 1.4 * \dd}  % less than 1.7 generates flaw?
+    \pgfmathsetmacro\ydn{(\y + 1) * \sixth + 1.4 * \dd}
+    \draw[thick,rounded corners=6pt,color=red]
+      (-\dd,\ydn) -- (\od,\ydn) -- (\od,\yup) -- (-\dd,\yup) -- cycle;
+  }
+  \foreach \y in {4,5,6} {
+    \pgfmathsetmacro\yup{\y * \sixth - 1.4 * \dd}  % less than 1.7 generates flaw?
+    \pgfmathsetmacro\ydn{\y * \sixth + 1.4 * \dd}
+    \draw[thick,rounded corners=6pt,color=red]
+      (-\dd,\ydn) -- (\od,\ydn) -- (\od,\yup) -- (-\dd,\yup) -- cycle;
+  }
+\end{tikzpicture}
+\caption{Processor domains are far from square if the total number of \MPI processes is prime, because only one dimension can be decomposed.  We show what \texttt{-dm\_view} reports for the same grid as in Figure \ref{fig:unitsquaregrid}, with \texttt{mpiexec -n 5}.}
+\label{fig:unitsquaregridprime}
+\end{marginfigure}
+
 The fifth and sixth arguments ``\texttt{-10}'' to \texttt{DMDACreate2d()} in Figure \ref{code:dmdacreatetwod} are used to set default dimensions $M=10$ and $N=10$.  We have seen that these defaults are overridden by runtime options \texttt{-da\_grid\_x} and \texttt{-da\_grid\_y}.  However, if we do this,
  \begin{Verbatim}[fontsize=\small]
   mpiexec -n 4 ./c2poisson
@@ -140,12 +182,17 @@ The latter version shows the grid graphically, for two seconds.
   \draw[line width=1.0pt] (0.0,0.0) -- (0.0,1.0) -- (1.0,1.0) -- (1.0,0.0) -- cycle;
   \pgfmathsetmacro\ninth{1.0/9.0}
   \draw[xstep=\ninth,ystep=\ninth,black,thin] (0.0,0.0) grid (1.0,1.0);
+  \foreach \x in {0,...,9} {
+    \foreach \y in {0,...,9} {
+        \filldraw (\x * \ninth,\y * \ninth) circle (0.3pt);
+    }
+  }
   \pgfmathsetmacro\dd{0.04}
   \pgfmathsetmacro\od{1.04}
   \pgfmathsetmacro\ap{4*\ninth + 0.04}
   \pgfmathsetmacro\bm{5*\ninth - 0.04}
-  \pgfmathsetmacro\amid{2*\ninth}
-  \pgfmathsetmacro\bmid{7*\ninth}
+  \pgfmathsetmacro\amid{1.5*\ninth}
+  \pgfmathsetmacro\bmid{6.5*\ninth}
   \draw[thick,rounded corners=8pt,color=red]
     (-\dd,-\dd) -- (-\dd,\ap) -- (\ap,\ap) -- (\ap,-\dd) -- cycle;
   \node[color=red] at (\amid,\amid) {rank $0$};
@@ -271,11 +318,12 @@ We will let \PETSc do such index transformations internally inside the \pDMDA im
   \node at (-0.25,0.5) {$j$};
   \node at (-0.1,1.0) {$2$};
   \draw[xstep=\third,ystep=\half,black,thin] (0.0,0.0) grid (1.0,1.0);
-  \pgfmathsetmacro\dd{0.04}
+  \pgfmathsetmacro\dd{0.05}
   \foreach \y in {0,1,2}
     \foreach \x in {0,1,2,3} {
       \pgfmathsetmacro\k{4*\y+\x}
       \draw[color=blue] (\x*\third+\dd,\y*\half+\dd) node{\pgfmathprintnumber[fixed]{\k}};
+      \filldraw (\x * \third,\y * \half) circle (0.5pt);
     }
 \end{tikzpicture}
 \caption{Ordering of unknowns \eqref{orderingfd} on a $M=4$ and $N=3$ grid.  Index $k = j\,M + i$ is shown in {\color{blue} blue}.}
@@ -430,18 +478,34 @@ We now present the core code, in Figure \ref{code:structuredlaplacian}, that ass
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=4.5]
-  \draw[xstep=0.1,ystep=0.1,gray,thin] (0.0,0.0) grid (0.9,0.9);
+  % global grid, local grid, nodes
+  \draw[xstep=0.1,ystep=0.1,gray,very thin] (0.0,0.0) grid (0.9,0.9);
   \draw[xstep=0.1,ystep=0.1,black,thick] (0.3,0.2) grid (0.7,0.6);
+  \foreach \y in {0,...,9}
+    \foreach \x in {0,...,9} {
+      \filldraw (\x * 0.1,\y * 0.1) circle (0.15pt);
+    }
+  % ticks on x-axis at 0, xs, mx
+  \draw[black,thick] (0,-0.03)   -- (0,+0.03);
   \draw[black,thick] (0.3,-0.03) -- (0.3,+0.03);
+  \draw[black,thick] (0.9,-0.03) -- (0.9,+0.03);
+  \node at (0,-0.06) {\texttt{0}};
+  \node at (0.3,-0.06) {\texttt{info.xs}};
+  \node at (0.9,-0.06) {\texttt{info.mx-1}};
+  % ticks on y-axis at 0, ys, my
+  \draw[black,thick] (-0.03,0)   -- (+0.03,0);
   \draw[black,thick] (-0.03,0.2) -- (+0.03,0.2);
-  \node at (0.3,-0.06) {$i=$\texttt{info.xs}};
-  \draw[<->,] (0.3,0.2-0.04) -- (0.7,0.2-0.04);
-  \node at (0.5,0.2-0.08) {\texttt{info.xm}};
-  \node[rotate around={90:(-0.2,0.2)}] at (-0.1,0.1) {$j=$\texttt{info.ys}};
-  \draw[<->,] (0.3-0.04,0.2) -- (0.3-0.04,0.6);
-  \node[rotate around={90:(0.3-0.3,0.4)}] at (0.3-0.18,0.3) {\texttt{info.ym}};
+  \draw[black,thick] (-0.03,0.9) -- (+0.03,0.9);
+  \node[rotate around={90:(0,0)}] at (-0.07,0) {\texttt{0}};
+  \node[rotate around={90:(-0.2,0.2)}] at (-0.08,0.12) {\texttt{info.ys}};
+  \node[rotate around={90:(0.0,0.9)}] at (-0.28,0.7) {\texttt{info.my-1}};
+  % xm, ym along sides of local patch
+  \draw[<->,] (0.3,-0.13) -- (0.7,-0.13);
+  \node at (0.5,-0.18) {\texttt{info.xm}};
+  \draw[<->,] (-0.15,0.2) -- (-0.15,0.6);
+  \node[rotate around={90:(0.3-0.3,0.4)}] at (-0.29,0.32) {\texttt{info.ym}};
 \end{tikzpicture}
-\caption{How \texttt{DMDALocalInfo info} describes your local process' part of the grid.}
+\caption{How \texttt{DMDALocalInfo info} describes the indices for your local process' part of the grid.}
 \label{fig:localpartofgrid}
 \end{marginfigure}
 
