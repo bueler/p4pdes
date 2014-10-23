@@ -112,43 +112,43 @@ PetscErrorCode formRHSandExact(DM da, Vec b, Vec uexact) {
 //ENDRHS
 
 
+//CREATE
 int main(int argc,char **args)
 {
   PetscErrorCode ierr;
   PetscInitialize(&argc,&args,(char*)0,help);
 
-//CREATE
   // default size (10 x 10) can be changed using -da_grid_x M -da_grid_y N
   DM             da;
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
-                DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,  // points on boundary have no need to access ghosts
+                DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
                 DMDA_STENCIL_STAR,-10,-10,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,
                 &da); CHKERRQ(ierr);
   ierr = DMDASetUniformCoordinates(da,0.0,1.0,0.0,1.0,-1.0,-1.0); CHKERRQ(ierr);
 
   // create linear system matrix
-  // to use symmetric storage, run with -dm_mat_type sbaij -mat_ignore_lower_triangular ??
   Mat  A;
+  PetscLogStage  stage;
   ierr = DMSetMatType(da,MATAIJ);CHKERRQ(ierr);
   ierr = DMCreateMatrix(da,&A);CHKERRQ(ierr);
   ierr = MatSetOptionsPrefix(A,"a_"); CHKERRQ(ierr);
-
-  PetscLogStage  stage;
   ierr = PetscLogStageRegister("Matrix Assembly", &stage); CHKERRQ(ierr);
   ierr = PetscLogStagePush(stage); CHKERRQ(ierr);
   ierr = formdirichletlaplacian(da,1.0,A); CHKERRQ(ierr);
   ierr = PetscLogStagePop();CHKERRQ(ierr);
   ierr = MatSetOption(A,MAT_SYMMETRIC,PETSC_TRUE); CHKERRQ(ierr);
-//ENDCREATE
 
-//SOLVE
-  // create right-hand-side (RHS), approx solution, exact solution; fill
+  // create right-hand-side (RHS), approx solution, exact solution
   Vec  b,u,uexact;
   ierr = DMCreateGlobalVector(da,&b);CHKERRQ(ierr);
   ierr = VecDuplicate(b,&u); CHKERRQ(ierr);
   ierr = VecDuplicate(b,&uexact); CHKERRQ(ierr);
-  ierr = formRHSandExact(da,b,uexact); CHKERRQ(ierr);
 
+  // assemble RHS and exact solution Vec s
+  ierr = formRHSandExact(da,b,uexact); CHKERRQ(ierr);
+//ENDCREATE
+
+//SOLVE
   // create linear solver context
   KSP  ksp;
   ierr = KSPCreate(PETSC_COMM_WORLD,&ksp); CHKERRQ(ierr);
@@ -174,11 +174,11 @@ int main(int argc,char **args)
              "on %4d x %4d grid:  iterations %D, residual norm = %g,\n"
              "                      error |u-uexact|_inf = %g\n",
              info.mx,info.my,its,resnorm,errnorm); CHKERRQ(ierr);
-//ENDSOLVE
 
   KSPDestroy(&ksp);  MatDestroy(&A);
   VecDestroy(&u);  VecDestroy(&uexact);  VecDestroy(&b);
   PetscFinalize();
   return 0;
 }
+//ENDSOLVE
 
