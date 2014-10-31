@@ -5,7 +5,8 @@ ex*.c
 
 # ? = 2,3,4
 c?poisson
- 
+
+c1e
 c1matvec
 c2heat
 testts

@@ -2,6 +2,10 @@
 include ${PETSC_DIR}/conf/variables
 include ${PETSC_DIR}/conf/rules
 
+c1e: c1e.o  chkopts
+	-${CLINKER} -o c1e c1e.o  ${PETSC_LIB}
+	${RM} c1e.o
+
 c1matvec: c1matvec.o  chkopts
 	-${CLINKER} -o c1matvec c1matvec.o  ${PETSC_KSP_LIB}
 	${RM} c1matvec.o
