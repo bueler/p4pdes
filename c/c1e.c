@@ -1,4 +1,4 @@
-static char help[] = "To get started with PETSc, compute e in parallel.\n\n";
+static char help[] = "Compute e in parallel with PETSc.\n\n";
 
 #include <petscsys.h>
 
@@ -28,10 +28,14 @@ int main(int argc,char **args) {
   ierr = MPI_Allreduce(&localval, &globalsum, 1, MPI_DOUBLE, MPI_SUM,
                        PETSC_COMM_WORLD); CHKERRQ(ierr);
 
-  // output is estimate of e, and report on work done
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"e is about %17.15f\n",globalsum); CHKERRQ(ierr);
+  // output one estimate of e
+  ierr = PetscPrintf(PETSC_COMM_WORLD,
+                     "e is about %17.15f\n",globalsum); CHKERRQ(ierr);
+
+  // output report on work done on each rank
   ierr = PetscGetFlops(&flops); CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_SELF,"rank %d did %d flops\n",rank,(int)flops); CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_SELF,
+                     "rank %d did %d flops\n",rank,(int)flops); CHKERRQ(ierr);
 
   PetscFinalize();  // <-- always call
   return 0;

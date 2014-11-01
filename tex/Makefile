@@ -6,7 +6,7 @@ tikzinputs := samplepoly.1.tikz squarefour.tikz bump.1.tikz bump.poly.tikz mesh.
 
 hinputs := $(addprefix ../c/, convenience.h)
 
-cinputs := structuredlaplacian.c readmesh.c poissontools.c c1matvec.c c2poisson.c c3convert.c c3poisson.c c4poisson.c c9obstacle.c
+cinputs := structuredlaplacian.c readmesh.c poissontools.c c1e.c c1matvec.c c2poisson.c c3convert.c c3poisson.c c4poisson.c c9obstacle.c
 
 cstrip := $(addprefix cstrip/, $(cinputs))
 
@@ -19,7 +19,8 @@ book.aux: book.tex book.bib $(texinputs) $(hinputs) $(cstrip) $(tikzinputs)
 	bibtex book.aux
 
 # The purpose of the following nonsense is to put only the "meat" of codes
-# into the book.  We remove ierr stuff and lines with //STRIP.
+# into the book.  We remove "PetscErrorCode ierr" lines and "//STRIP" lines and
+# characters "ierr = " and "CHKERRQ(ierr);"
 cstrip/%.c: ../c/%.c
 	rm -rf $@.tmp
 	sed -e 's/ierr = //' $< > $@.tmp

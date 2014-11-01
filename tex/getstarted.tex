@@ -1,7 +1,11 @@
 
-\chapter{1. Solve a small linear system with PETSc}
+\chapter{1. A small linear system with PETSc}
 
 \section{Getting started}
+
+\inputwhole{../c/c1e.c}{c1e.c}{Compute $e$ in parallel.}{code:e}
+
+\section{A linear system in \pVec and \pMat objects}
 
 \cinputpartnostrip{c1matvec.c}{Initialize \PETSc and allocate \pVec s and \pMat.}{I}{}{//ENDSETUP}{code:matvecpartone}
 
@@ -10,6 +14,8 @@
 \cinputpartnostrip{c1matvec.c}{Set up \pKSP.  Solve.  Finalize.}{III}{//ENDASSEMBLY}{//END}{code:matvecpartthree}
 
 FIXME: gloss PETSc traceback mechanism, before noting we don't show that stuff
+
+FIXME: show \texttt{-help | grep}
 
 \section{\textsc{Vec}s and \textsc{Mat}s}  [introduce initialization/finalization, object Create+SetFromOptions paradigm, parallel layout of \pVec
 
