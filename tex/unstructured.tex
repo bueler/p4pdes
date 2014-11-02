@@ -220,9 +220,9 @@ Now that we can get a triangulation into \PETSc, we can return to the finite-dim
 \begin{equation}
 A \bu = \bb, \label{poissonmatrix}
 \end{equation}
-has $A\in\RR^{N\times N}$ and $\bb\in\RR^N$, where $N$ is the number of nodes.  We will write a code which assembles $A$ and $\bb$ and solves for $\bu\in\RR^N$.  \PETSc \pMat and \pVec objects contain this problem, and we use a \PETSc \pKSP object to solve it.
+has $A\in\RR^{N\times N}$ and $\bu,\bb\in\RR^N$, where $N$ is the number of nodes.  We will write a code which assembles $A$ and $\bb$ and solves for $\bu$.  \PETSc \pMat and \pVec objects store the problem, and we use a \pKSP object to solve it.
 
-For ease of construction we include the node-wise Dirichlet conditions $u_j=g(\bx_j)$ as equations in this linear system, treating such $u_j$ as unknowns, so that the matrix really does have $N$ rows and columns if there are $N$ nodes in total.  Thus we define $A$ to have entries
+For ease of construction we include the node-wise Dirichlet conditions $u_j=g(\bx_j)$ as equations in this linear system, treating such $u_j$ as unknowns, so that the matrix has $N$ rows and columns if there are $N$ nodes in total.  Thus we define $A$ to have entries
 \begin{equation}
 a_{ij} = \int_\Omega \grad \phi_j \cdot \grad \phi_i \label{Aentryfem}
 \end{equation}
@@ -249,11 +249,13 @@ for all $i,j=0,1,\dots,N$.  Also the simpler right-hand side $\tilde \bb\in\RR^N
     $$\tilde b_i = \int_\Omega f \phi_i + \int_{\partial_N\Omega} \gamma \phi_i$$
 for all $i=0,1,\dots,N$.
 
-This initial linear system $\tilde A\bu=\tilde \bb$ is already correct in the case where there is no Dirichlet boundary (i.e.~$\partial_D \Omega=\emptyset$).  That is, in the Neumann-only case $A=\tilde A$ and $\bb = \tilde \bb$.  However, in this case $u=C$, where $C\in\RR$ is any constant value, solves $-\grad^2 u=0$ with $\partial u/\partial n = 0$ on the whole boundary $\partial_N \Omega = \partial \Omega$.  The Poisson problem then only determines the solution up to such an additive constant.  Because it does not have a unique solution in this case, when solving \eqref{poissonmatrix} in this Neumann case we will have to inform \PETSc about the null space of constant functions.
+This initial linear system $\tilde A\bu=\tilde \bb$ is (obviously) final in the case where there is no Dirichlet boundary (i.e.~$\partial_D \Omega=\emptyset$).  However, in this case $u=C$, where $C\in\RR$ is any constant value, solves $-\grad^2 u=0$ with $\partial u/\partial n = 0$ on the whole boundary $\partial_N \Omega = \partial \Omega$.  The Poisson problem then only determines the solution up to such an additive constant.  Because it does not have a unique solution, when solving \eqref{poissonmatrix} in this Neumann case we will have to inform \PETSc about the null space of constant functions.
 
-In general, the next step is to edit $\tilde A$ in each Dirichlet row, that is, for each $i$ where $\bx_i \in \partial_D \Omega$, by replacing the whole row with the corresponding row of the identity and we replace $\tilde b_i$ with $b_i = g(\bx_i)$.  Furthermore, in each column $j$ for which $\bx_j \in \partial_D \Omega$, we move all entries $\tilde a_{ij}$ where $i$ is \emph{not} a Dirichlet row index over to the right-hand side, multiplied by the negative of the boundary value $g(\bx_{j})$.  We can write
-    $$\tilde b_i \to \tilde b_i - g(\bx_{j}) \tilde a_{ij}$$
-for these transformations.  After the completion of this ``editing'' stage we get $A$ and $\bb$.  Since this part of the matrix assembly is a key stage of understanding our FEM codes, we now give a concrete example.
+In general, the next step is to edit $\tilde A$ in each Dirichlet row, that is, for each $i$ where $\bx_i \in \partial_D \Omega$.  For each such row we replace the whole row with the corresponding row of the identity, and also we replace $\tilde b_i$ with $b_i = g(\bx_i)$.  Furthermore, in each column $j$ for which $\bx_j \in \partial_D \Omega$, we move all entries $\tilde a_{ij}$ where $i$ is \emph{not} a Dirichlet row index over to the right-hand side, multiplied by the negative of the boundary value $g(\bx_{j})$.  We can write
+\begin{equation}
+    \tilde b_i \to \tilde b_i - g(\bx_{j}) \tilde a_{ij} \label{btransform}
+\end{equation}
+for these transformations.  After the completion of this ``editing'' stage we get $A$ and $\bb$.  Since this part of the matrix assembly is a key stage in our FEM codes, we now give a concrete example.
 
 \medskip\noindent\hrulefill
 \begin{example} Figure \ref{fig:squarefour} shows a triangulation of the unit square with five nodes.  The matrix $\tilde A$ has the following nonzero pattern; the zero entries are shown as spaces:\begin{marginfigure}
@@ -270,7 +272,7 @@ for these transformations.  After the completion of this ``editing'' stage we ge
 \X & \X & \X & \X & \X
 \end{bmatrix}.
 \end{equation*}
-Note $\tilde a_{ij}=0$ only where the integral $\int_\Omega \grad \phi_j \cdot \grad \phi_i$ is zero, which is somewhat rare in this small (coarse)-mesh case.  Now, because the $i=1,2$ nodes live in the (closed) Dirichlet boundary $\partial_D \Omega$, we highlight the $i=1,2$ rows and $j=1,2$ columns which will be edited:\marginnote{{\color{red} \textbf{Caution}}:  The first row of any matrix in this book is numbered ``$0$.''  Likewise the first column.}
+Note $\tilde a_{ij}=0$ only where the integral $\int_\Omega \grad \phi_j \cdot \grad \phi_i$ is zero, a rare event in this small (coarse)-mesh case.  Now, because the $i=1,2$ nodes live in the (closed) Dirichlet boundary $\partial_D \Omega$, we highlight the $i=1,2$ rows and $j=1,2$ columns which will be edited:\marginnote{{\color{red} \textbf{Caution}}:  The first row or column of any matrix in this book is numbered ``$0$.''}
 \begin{equation*}
 \tilde A = \begin{bmatrix}
 \X & \redX &    & \X & \X \\
@@ -280,7 +282,7 @@ Note $\tilde a_{ij}=0$ only where the integral $\int_\Omega \grad \phi_j \cdot \
 \X & \redX & \redX & \X & \X
 \end{bmatrix}.
 \end{equation*}
-The underlined {\color{blue} blue} entries are changed to $0$ or $1$ so that these rows become rows of the identity; the old computed values $\tilde a_{ij}$ are tossed out.  The unerlined {\color{red} red} entries, specifically the four entries $\tilde a_{01}$, $\tilde a_{32}$, $\tilde a_{41}$, and $\tilde a_{42}$, are moved over to the right side; their will values get used.  The final linear system $A \bu = \bb$, including formulas for the edited $b_0$, $b_3$, and $b_4$ entries, is
+The underlined {\color{blue} blue} entries are changed to $0$ or $1$ so that these rows become rows of the identity; the old computed values $\tilde a_{ij}$ are tossed out.  The underlined {\color{red} red} entries, specifically the four entries $\tilde a_{01}$, $\tilde a_{32}$, $\tilde a_{41}$, and $\tilde a_{42}$, are moved over to the right side using transformation \eqref{btransform}; these $\tilde a_{ij}$ values get used.  The final linear system $A \bu = \bb$, is
 \begin{equation*}
 \begin{bmatrix}
 \X & & & \X & \X \\
@@ -313,7 +315,7 @@ g(\bx_2) \\
 
 \section{Assembling the matrix equation, element by element}
 
-Each entry $\tilde a_{ij}$ of the initial matrix $\tilde A$ is not even computed in one step.  Rather, we compute contributions to these entries from each element in turn.  Furthermore we do this in parallel.  Recall that \texttt{c3convert.c} above creates a distributed \pVec called \texttt{E}, which is an array of elements of type \texttt{elementtype},\sidenote{Defined just before Figure \ref{code:trianglepartfour}.} and \texttt{readmesh.c} reads it.
+An entry $\tilde a_{ij}$ of the initial matrix $\tilde A$ is not computed in one step.  Rather, we compute contributions to these entries from each element in turn; we ``loop over the elements.''  Furthermore we do it in parallel.  Recall that \texttt{c3convert.c} above creates a distributed \pVec called \texttt{E}, which is an array of elements of type \texttt{elementtype},\sidenote{Defined just before Figure \ref{code:trianglepartfour}.} and \texttt{readmesh.c} reads it.
 
 For the element-by-element assembly procedure we first define the integral over one triangle $\triangle_k$,
 \begin{equation}
@@ -327,7 +329,7 @@ Likewise we will compute
 \end{equation}
 so that $\tilde b_i = \sum_{k} \;\text{\texttt{b(k,i)}}$.
 
-If \texttt{E} denotes an array of \texttt{elementtype} then for each triangle $\triangle_k$ we can get the node index for each of the three vertices.  Using $q=0,1,2$ as a local index for these vertices,
+If \texttt{E} denotes an array of \texttt{elementtype} then for each triangle $\triangle_k$ we can get the node index for each of its three vertices.  Using $q=0,1,2$ for these vertices,
     $$\text{\texttt{E[k].j[q]}} \in \{0,1,\dots,N-1\}.$$
 Thus the element-by-element assembly of $\tilde A$ follows this pseudocode:
 \begin{Verbatim}[fontsize=\small]
@@ -338,15 +340,13 @@ for k = 0 to K-1                // loop through all elements
         i = E[k].j[q]           // row index
         for r = 0 to 2
             j = E[k].j[r]       // column index
-            a(i,j) += a(k,i,j)  // add contribution from element k
-            b(i)   += b(k,i)    // ditto
+            a(i,j) += a(k,q,r)  // add contribution from element k
+            b(i)   += b(k,q)    // ditto
 \end{Verbatim}
 \medskip\noindent
-Observe that on each triangle $\triangle_k$ it would be natural to write
-    $$\text{\texttt{a(k,q,r)}} = \text{\texttt{a(k,i,j)}},$$
-by thinking of the global indices $i,j$ as functions of local node indices $q,r\in\{0,1,2\}$ on the triangle.
+Observe that on each triangle $\triangle_k$ we write ``\texttt{a(k,q,r)}'' for \texttt{a(k,i,j)}, by replacing the global indices $i,j$ by corresponding local node indices $q,r\in\{0,1,2\}$ for triangle $k$.
 
-A standard approach to computing the element-wise integrals \texttt{a(k,q,r)} is to refer each triangle $\triangle_k$ to a reference triangle $\triangle_\ast$ with vertices $(0,0),\,(1,0),\,(0,1)$, as shown in Figure \ref{fig:isoparametric}.  The linear map from $\triangle_\ast$ to $\triangle_k$ with vertices $(x_0,y_0),\,(x_1,y_1),\,(x_2,y_2)$, as shown in the Figure, is
+A standard approach to computing the element-wise integrals \texttt{a(k,q,r)} is to refer triangle $\triangle_k$ to a reference triangle $\triangle_\ast$ with vertices $(0,0),\,(1,0),\,(0,1)$, as shown in Figure \ref{fig:isoparametric}.  The linear map from $\triangle_\ast$ to $\triangle_k$ with vertices $(x_0,y_0),\,(x_1,y_1),\,(x_2,y_2)$, as shown in the Figure, is
 \begin{align}
 x(\xi,\eta) &= x_0 + (x_1-x_0) \xi + (x_2-x_0) \eta, \label{trianglemap} \\
 y(\xi,\eta) &= y_0 + (y_1-y_0) \xi + (y_2-y_0) \eta. \notag
@@ -398,15 +398,15 @@ y(\xi,\eta) &= y_0 + (y_1-y_0) \xi + (y_2-y_0) \eta. \notag
 \begin{equation}
 \chi_0(\xi,\eta) = 1-\xi-\eta, \qquad \chi_1(\xi,\eta) = \xi, \qquad \chi_2(\xi,\eta) = \eta. \label{chiformulas}
 \end{equation}
-Each of the basis functions $\phi_q$ is then the mapped version of the corresponding $\chi_q$:
+On $\triangle_k$, each of the basis functions $\phi_q$ is the mapped version of the corresponding $\chi_q$:
 \begin{equation}
 \phi_q(x(\xi,\eta),y(\xi,\eta)) = \chi_q(\xi,\eta). \label{phichimap}
 \end{equation}
 From \eqref{trianglemap} and \eqref{phichimap} one can confirm that $\phi_q(x_r,y_r) = \delta_{qr}$.
 
-Now is a good point at which to observe that the set of $\phi_j$, over all nodes $j=0,1,\dots,N$, is a partition of unity.  We can see this by switching to local node coordinate $q$ and by $\chi_0+\chi_1+\chi_2=1$ from \eqref{chiformulas} above.  That is, if $(x,y)\in\triangle_k$ then
+Now is a good point at which to observe that the set of $\phi_j$, over all nodes $j=0,1,\dots,N$, is a partition of unity.  We can see this by switching to local node coordinate $q$ and using $\chi_0+\chi_1+\chi_2=1$, which is obvious from \eqref{chiformulas}.  That is, if $\bx \in \triangle_k$ then
 \begin{equation}
-   \sum_j \phi_j(x,y) = \sum_{q=0,1,2} \phi_q(x,y) = \sum_{q=0,1,2} \chi_q(\xi,\eta) =1.  \label{partitionofunity}
+   \sum_j \phi_j(\bx) = \sum_{q=0,1,2} \phi_q(\bx) = \sum_{q=0,1,2} \chi_q =1.  \label{partitionofunity}
 \end{equation}
 
 The Jacobian\sidenote{By definition, the \emph{Jacobian} $J=J(\bx)$ of a smooth map $F$ at a point $\bx$ is its linearization at $\bx$.  That is, if $\by=F(\bx)$ and $\by+\Delta\by = F(\bx+\Delta\bx)$ then $J(\bx)$ satisfies $\Delta \by = J(\bx) \Delta\bx + o(|\Delta\bx|)$.} of map \eqref{trianglemap} is
@@ -429,7 +429,7 @@ Recalling both the change-of-variables formula for integrals\sidenote{If $F$ is 
    &= \int_{\triangle_\ast} \left(\frac{\partial \chi_q}{\partial \xi} \frac{\partial \xi}{\partial x} + \frac{\partial \chi_q}{\partial \eta} \frac{\partial \eta}{\partial x}\right) \left(\frac{\partial \chi_r}{\partial \xi} \frac{\partial \xi}{\partial x} + \frac{\partial \chi_r}{\partial \eta} \frac{\partial \eta}{\partial x}\right) \notag \\
    &\qquad\qquad + \left(\frac{\partial \chi_q}{\partial \xi} \frac{\partial \xi}{\partial y} + \frac{\partial \chi_q}{\partial \eta} \frac{\partial \eta}{\partial y}\right) \left(\frac{\partial \chi_r}{\partial \xi} \frac{\partial \xi}{\partial y} + \frac{\partial \chi_r}{\partial \eta} \frac{\partial \eta}{\partial y}\right) \; |\det(J)| \; d\xi \, d\eta. \notag
 \end{align}
-The last expression is the low point of this calculation.  From now on the formulas simplify because the integrand is \emph{constant}.  Indeed, by \eqref{trianglejacobian} we see $\det(J)$ is constant, but also the derivatives $\partial \chi_q/\partial\{\xi,\eta\}$ and $\partial\{\xi,\eta\}/\partial\{x,y\}$ are all constant because the functions in question are linear.
+The last expression is the low point of this calculation.  From now on the formulas simplify because the integrand is \emph{constant} for the $\Pone$ elements here.  Indeed, by \eqref{trianglejacobian} we see $\det(J)$ is constant, but also the derivatives $\partial \chi_q/\partial\{\xi,\eta\}$ and $\partial\{\xi,\eta\}/\partial\{x,y\}$ are all constant because the functions in question are linear.
 
 However, we need computable formulas for ``$\partial \xi/\partial x$'' and similar terms.  Again by the chain rule we can compute
 \begin{equation*}
@@ -475,11 +475,13 @@ Now let $y_{20}=y_2-y_0$, $x_{02}=x_0-x_2$, $y_{01}=y_0-y_1$ and $x_{10}=x_1-x_0
 \begin{bmatrix}
     y_{20} & x_{02} \\
     y_{01} & x_{10}
-\end{bmatrix}
-\quad \text{ and } \quad
-\det(J) = x_{10} y_{20} - y_{01} x_{02}. \label{dxietadxy}
+\end{bmatrix} \label{dxietadxy}
 \end{equation}
-Thus, by \eqref{elementcontrib} and \eqref{dxietadxy}, and because the area of the reference triangle $\triangle_\ast$ is $1/2$\,, our element-wise contribution to $\tilde a_{ij}$ simplifies to
+and
+\begin{equation}
+\det(J) = x_{10} y_{20} - y_{01} x_{02}. \label{detJ}
+\end{equation}
+Thus, by \eqref{elementcontrib}, \eqref{dxietadxy}, and \eqref{detJ}, and because the area of the reference triangle $\triangle_\ast$ is $1/2$\,, our element-wise contribution to $\tilde a_{ij}$ simplifies to
 \begin{align}
 \text{\texttt{a(k,q,r)}} = \frac{1}{2\; |\det(J)|} &\bigg[\left(\frac{\partial \chi_q}{\partial \xi} y_{20} + \frac{\partial \chi_q}{\partial \eta} y_{01}\right) \left(\frac{\partial \chi_r}{\partial \xi} y_{20} + \frac{\partial \chi_r}{\partial \eta} y_{01}\right) \label{elementcontribFINAL} \\
 &\quad + \left(\frac{\partial \chi_q}{\partial \xi} x_{02} + \frac{\partial \chi_q}{\partial \eta} x_{10}\right) \left(\frac{\partial \chi_r}{\partial \xi} x_{02} + \frac{\partial \chi_r}{\partial \eta} x_{10}\right)\bigg]. \notag
@@ -489,7 +491,7 @@ Also note that
 \frac{\partial \chi_0}{\partial \xi} &= -1, & \frac{\partial \chi_1}{\partial \xi} &= 1, & \frac{\partial \chi_2}{\partial \xi} &= 0, \label{chiderivs} \\
 \frac{\partial \chi_0}{\partial \eta} &= -1, & \frac{\partial \chi_1}{\partial \eta} &= 0, & \frac{\partial \chi_2}{\partial \eta} &= 1. \notag
 \end{align}
-Combining \eqref{elementcontribFINAL} and \eqref{chiderivs}, we now know enough to write code to compute \texttt{a(k,q,r)}, and thus all the entries in $\tilde A$.
+Combining \eqref{elementcontribFINAL} and \eqref{chiderivs}, we know enough to write code to compute \texttt{a(k,q,r)}, and thus the entries in $\tilde A$.
 
 To complete the code for the initial linear system $\tilde A \bu = \tilde\bb$ we also need to address the right-hand side $\tilde\bb$, that is, we need to compute the element-wise contribution \texttt{b(k,i)} in \eqref{belementintegral}.  We do these integrals by changing variables to the reference element, but we also only do the integrals approximately by quadrature.  This is because the data $f$ and $\gamma$ may have no analytically-computable integral, and because a modest error in evaluating the right side of the linear system can have only a small effect on the solution of the FEM linear system, which is, after all, only an approximation of the solution of the Poisson problem.
 
