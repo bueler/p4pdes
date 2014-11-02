@@ -1,27 +1,31 @@
-function multipoisson(N,d,Vnum)
+function multipoisson(N,Vnum,d)
 % MULTIPOISSON  Solve poisson equation
 %   - u_xx - u_yy = f
 % on unit square (0,1) x (0,1) by multigrid on a finest grid which has
-% N+1 x N+1 points where N has 2^d as a factor.  The grid at d
-% coarsenings is 
+% N+1 x N+1 points where N has 2^d as a factor.  The grid at depth d
+% coarsenings is solved by LU.  Default d yields coarsest grid having one
+% unknown.
 %
 % Uses homogeneous Dirichlet b.c. and manufactured solution.
 % Discrete equations are
 %   - u_i-1,j - u_i+1,j - u_i,j-1 - u_i,j+1 + 4 u_i,j = h^2 f_i,j
 % at interior points.  Smoother is red-black Gauss-Seidel.  Solves exactly
 % (i.e. by LU decomposition using backslash operator) on coarsest grid.
+%
+% Goal is to reproduce table page 65 of Briggs et al (2000), "A Multigrid
+% Tutorial," 2nd ed., SIAM Press.
 
-  % defaults to 15 V cycles
+  % get and check on depth d
   if nargin < 3
-    Vnum = 16;
-  end
-
-  % grid has N subintervals and N+1 points in each direction
-  if nargin < 2
-    d = log2(N);
+    d = log2(N) - 1;
     if mod(N,2^d) ~= 0,  error('N must be a power of two (N=2^d)'),  end
   else
     if mod(N,2^d) ~= 0,  error('N must have 2^d as a factor'),  end
+  end
+
+  % defaults to 15 V cycles
+  if nargin < 2
+    Vnum = 15;
   end
 
   % configure grid
@@ -29,14 +33,18 @@ function multipoisson(N,d,Vnum)
   xaxis = 0:h:1;
   yaxis = xaxis;
   [x,y] = meshgrid(xaxis,yaxis);
-  %mesh(x,y,uexact(x,y))
 
   % do Vnum V-cycles
   u = zeros(size(x));
+  ff = f(x,y);
+  r = residual(N,h,u,ff);
   uex = uexact(x,y);
-  for K = 0:Vnum-1
-    unew = vcycle(1,N,h,1,1,u,f(x,y));
-    fprintf('%3d   %.2e\n',K,discrete2norm(unew - uex,h));
+  fprintf('%3d   %.2e   %.2e\n',0,discrete2norm(r,h),discrete2norm(u - uex,h));
+  for K = 1:Vnum
+    %unew = vcycle(0,N,h,1,1,u,ff); % FIXME: solves exactly on finest grid
+    unew = vcycle(1,N,h,1,1,u,ff); % FIXME
+    r = residual(N,h,unew,ff);
+    fprintf('%3d   %.2e   %.2e\n',K,discrete2norm(r,h),discrete2norm(unew - uex,h));
     u = unew;
   end
 
@@ -60,10 +68,10 @@ function unew = vcycle(level,N,h,nu1,nu2,u,f)
     end
 
     % compute fine-grid residual r
-    % FIXME
+    r = residual(N,h,u,f);
 
     % restrict r to coarse grid
-    rcoarse = zeros(N/2+1,N/2+1);     % FIXME
+    rcoarse = fullweighting(N,h,r);
 
     % solve  A e = r  on coarser grid
     eguess = zeros(N/2+1,N/2+1);
@@ -141,6 +149,37 @@ function U = lusolve(N,h,f)
     for j = 1:N-1
       k = (N-1) * (i-1) + j;
       U(i+1,j+1) = uu(k);
+    end
+  end
+end
+
+
+function r = residual(N,h,u,f)
+% RESIDUAL compute  r = f - A u
+  r = zeros(size(u));
+  hsqr = h * h;
+  for i = 2:N
+    for j = 2:N
+      r(i,j) = f(i,j) + (u(i-1,j) + u(i+1,j) + u(i,j-1) + u(i,j+1) - 4 * u(i,j)) / hsqr;
+    end
+  end
+end
+
+
+function wcoarse = fullweighting(N,h,w)
+% FULLWEIGHTING  compute restriction operator (assuming zero along bdry)
+% See formula bottom page 36 of Briggs et al (2000).
+  if mod(N,2) ~= 0,  error('N must be even'),  end
+  if any(size(w) ~= [N+1,N+1]),  error('w must be N+1 by N+1 array'),  end
+  wcoarse = zeros(N/2+1,N/2+1);
+  for i = 2:N/2
+    for j = 2:N/2
+      ii = 2*i-1;
+      jj = 2*j-1;
+      wc = (1/16) * ( w(ii-1,jj-1) + w(ii-1,jj+1) + w(ii+1,jj-1) + w(ii+1,jj+1) );
+      wc = wc + (1/8) * ( w(ii,jj-1) + w(ii,jj+1) + w(ii-1,jj) + w(ii+1,jj) );
+      wc = wc + (1/4) * w(ii,jj);
+      wcoarse(i,j) = wc;
     end
   end
 end
