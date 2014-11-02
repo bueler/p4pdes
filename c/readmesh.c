@@ -31,21 +31,6 @@ PetscErrorCode createloadname(MPI_Comm comm, PetscViewer viewer, const char pref
   return 0;
 }
 
-PetscErrorCode readmesh(MPI_Comm comm, PetscViewer viewer, Vec *E, Vec *x, Vec *y) {
-  PetscInt bs,N,K;
-  PetscErrorCode ierr; //STRIP
-  ierr = PetscPrintf(comm,"  reading mesh Vec E,x,y from file ...\n"); CHKERRQ(ierr);
-  ierr = createloadname(comm, viewer, "E_", "E-element-full-info", E); CHKERRQ(ierr);
-  ierr = createloadname(comm, viewer, "x_", "x-coordinate", x); CHKERRQ(ierr);
-  ierr = createloadname(comm, viewer, "y_", "y-coordinate", y); CHKERRQ(ierr);
-  ierr = getcheckmeshsizes(comm,*E,*x,*y,&N,&K,&bs); CHKERRQ(ierr);
-  ierr = PetscPrintf(comm,"    block size for E is %d\n",bs); CHKERRQ(ierr);
-  ierr = PetscPrintf(comm,"    N=%d nodes, K=%d elements\n",N,K); CHKERRQ(ierr);
-  return 0;
-}
-//ENDREADMESH
-
-
 PetscErrorCode getcheckmeshsizes(MPI_Comm comm, Vec E, Vec x, Vec y,
                                  PetscInt *N, PetscInt *K, PetscInt *bs) {
   PetscErrorCode ierr;
@@ -66,6 +51,20 @@ PetscErrorCode getcheckmeshsizes(MPI_Comm comm, Vec E, Vec x, Vec y,
   }
   return 0;
 }
+
+PetscErrorCode readmesh(MPI_Comm comm, PetscViewer viewer, Vec *E, Vec *x, Vec *y) {
+  PetscInt bs,N,K;
+  PetscErrorCode ierr; //STRIP
+  ierr = PetscPrintf(comm,"  reading mesh Vec E,x,y from file ...\n"); CHKERRQ(ierr);
+  ierr = createloadname(comm, viewer, "E_", "E-element-full-info", E); CHKERRQ(ierr);
+  ierr = createloadname(comm, viewer, "x_", "x-coordinate", x); CHKERRQ(ierr);
+  ierr = createloadname(comm, viewer, "y_", "y-coordinate", y); CHKERRQ(ierr);
+  ierr = getcheckmeshsizes(comm,*E,*x,*y,&N,&K,&bs); CHKERRQ(ierr);
+  ierr = PetscPrintf(comm,"    block size for E is %d\n",bs); CHKERRQ(ierr);
+  ierr = PetscPrintf(comm,"    N=%d nodes, K=%d elements\n",N,K); CHKERRQ(ierr);
+  return 0;
+}
+//ENDREADMESH
 
 
 PetscErrorCode showelementSynchronized(MPI_Comm comm, elementtype *et) {

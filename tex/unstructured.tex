@@ -137,29 +137,30 @@ Note that the support (i.e.~nonzero set) of $\phi_j$ includes only the node $\bx
 
 \section{Getting a triangular mesh into \PETSc}
 
-We now take a break from mathematical constructions to do something practical with \PETSc.  While \PETSc itself does not include any tools for triangulating regions of the plane, we use the widely-available and easy-to-use \Triangle software \citep{Shewchuk1996} for this task.\sidenote{See \href{http://www.cs.cmu.edu/~quake/triangle.html}{www.cs.cmu.edu/$\sim$quake/ triangle.html} for documentation and source code of \Triangle. You can build it from source, but it is probably available as a package in your operating system.}  \Triangle, which is both limited to planar regions and only capable of writing ASCII files, is not a choice for performance.  It is convenient.
+We now take a break from mathematical constructions to do something practical with \PETSc.  While \PETSc itself does not include any tools for triangulating regions of the plane, we use the widely-available and easy-to-use \Triangle\sidenote{See \href{http://www.cs.cmu.edu/~quake/triangle.html}{www.cs.cmu.edu/$\sim$quake/ triangle.html} for documentation and source code. \Triangle may be available as a package in your operating system.} software \citep{Shewchuk1996} for this task.  
 
-\Triangle uses a simply-formatted ASCII file (extension \texttt{.poly}) as input to describe a polygonal region $\Omega$ and to indicate the Dirichlet and Neumann portions of $\partial \Omega$.  For example, consider the input file \texttt{bump.poly} shown in Figure \ref{code:bumppoly}. 
+\Triangle is both limited to planar regions and only capable of writing ASCII files.  Thus it is not a choice for performance, but of convenience.  It uses a simply-formatted ASCII file (extension \texttt{.poly}) as input to describe a polygonal region $\Omega$, and to indicate Dirichlet and Neumann portions of the boundary $\partial \Omega$.  For example, consider the input file \texttt{bump.poly} shown in Figure \ref{code:bumppoly}. 
 
 \inputfromline{../c/bump.poly}{bump.poly}{A description of the boundary polygon in Figure \ref{fig:triangulation}, suitable for reading by \Triangle.}{16}{code:bumppoly}
 
-This example polygon, a rectangle with a triangular bump in the base, is shown in Figure \ref{fig:bump-poly}.  It will reappear several times in these notes as we solve more and more interesting PDEs on it.  Note that the two extra vertices introduced along the bottom are used to identify that part of the boundary as Neumann.  (Recall, in this context, that the Dirichlet boundary is closed.)
+This example polygon, a rectangle with a triangular bump in the base, is shown in Figure \ref{fig:bump-poly}.  It will reappear several times in this book as we solve more interesting PDEs on it.  The two apparently-unnecessary vertices introduced along the bottom help identify the Neumann part of the boundary, but note that \texttt{bump.poly} includes a Dirichlet/Neumann flag along each boundary segment.
 
+The triangulation shown in Figure \ref{fig:triangulation} below came from a single command which asks \Triangle to take \texttt{bump.poly} and generate a triangulation which has a polygon output file (option \texttt{-p}), relatively-uniform triangles (option \texttt{-q} for ``quality-checked'' \citep{Shewchuk1996}), and triangles with maximum area of $1.0$ (option \texttt{-a1.0}):
 \begin{marginfigure}
 \input{bump.poly.tikz}
-\caption{The polygon described by \texttt{bump.poly} in Figure \ref{code:bumppoly}.  The bold part is the Dirichlet boundary.  The lower boundary is Neumann, and has ``extra'' nodes to identify it as such.}
+\caption{The polygon described by \texttt{bump.poly} in Figure \ref{code:bumppoly}.  The bold part is the closed Dirichlet boundary.  The lower boundary is Neumann, and has ``extra'' nodes to identify it as such.}
 \label{fig:bump-poly}
 \end{marginfigure}
-
-The triangulation shown in Figure \ref{fig:triangulation} came from a single command which asks \Triangle to take \texttt{bump.poly} and generate a triangulation which is quality-checked \citep{Shewchuk1996} (option \texttt{-q}), which has triangles with maximum area of $1.0$ (option \texttt{-a1.0}), and including a polygon output file (option \texttt{-p}):
 \begin{verbatim}
   $ triangle -pqa1.0 bump
 \end{verbatim}
-This command generates three ASCII files, \texttt{bump.1.poly}, \texttt{bump.1.node}, and  \texttt{bump.1.ele}.  These files define the new (i.e.~refined relative to \texttt{bump.poly}) polygonal boundary, the nodes locations, and the elements of the triangulation, respectively.  For example, \texttt{bump.1.node} has the numbering and node locations shown in blue in Figure \ref{fig:triangulation}.  The \Triangle software includes a minimal visualization tool which shows the triangulation graphically, and so
+This command generates three ASCII files, \texttt{bump.1.poly}, \texttt{bump.1.node}, and  \texttt{bump.1.ele}.  These files define the new (i.e.~refined relative to \texttt{bump.poly}) polygonal boundary, the nodes locations, and the elements in the triangulation, respectively.  For example, \texttt{bump.1.node} has the numbering and node locations shown in blue in Figure \ref{fig:triangulation}.
+
+\Triangle includes a minimal visualization tool which shows the triangulation graphically.  The command
 \begin{verbatim}
   $ showme bump
 \end{verbatim}
-will let the reader see both the boundary polygon in \texttt{bump.poly} and the triangulation in \texttt{bump.1.\{node,ele,poly\}}.
+displays the boundary polygon (from \texttt{bump.poly} or \texttt{bump.1.poly}) and the triangulation itself (\texttt{bump.1.node} and \texttt{bump.1.ele}).
 
 \begin{figure}
 \bigskip
@@ -168,7 +169,7 @@ will let the reader see both the boundary polygon in \texttt{bump.poly} and the 
 \label{fig:triangulation}
 \end{figure}
 
-The ASCII files produced by \Triangle produces are not in a good format for large meshes.  On the one hand we will accept this, as a convenience needed for portability and readability, as we will mostly focus on the scalability of the solution process once the mesh is loaded.  On the other hand, we do demonstrate how files are read in parallel, but this is based on first doing a mundane and un-scalable task in \PETSc.  Namely we read the ASCII \Triangle files serially onto a single processor and write out a binary file in \PETSc format.  The binary file both describes the mesh element-by-element and can be read in parallel.  The code \texttt{c3convert.c} does the conversion.  It is invoked, for the present purposes, by
+The ASCII files produced by \Triangle produces are not in a good format for large meshes.  On the one hand we will accept this for portability and readability.  On the other hand, we will demonstrate how files are read in parallel, based on first doing a mundane and un-scalable task in \PETSc, namely reading the ASCII \Triangle files serially onto a single processor and writing out a binary file in \PETSc format.\sidenote{Furthermore we will focus on the scalability of the FEM solution process, once the mesh is loaded.}  The binary file both describes the mesh element-by-element and can be read in parallel.  The code \texttt{c3convert.c} does the conversion.  It is invoked, for the present purposes, by
 \begin{verbatim}
   $ c3convert -f bump.1
 \end{verbatim}
@@ -204,7 +205,9 @@ At this point we have the whole triangulation into \PETSc \pVecs.  Now is the ea
 
 \cinputpart{c3convert.c}{On rank zero: Write the mesh in \PETSc binary format.}{VI}{//ENDREADELEMENTS}{//ENDRANK0}{code:trianglepartsix}
 
-To tell the truth, we have not shown the last part of \texttt{c3convert.c}.  That truly-final bit of code checks if option \texttt{-check} is given, and if so we read back the binary file in parallel.  This part of \texttt{c3convert.c} calls two methods from a re-used component \texttt{readmesh.c} which we do show.  The first is a method \texttt{getmeshfile()} which finds a \PETSc binary file from a \texttt{-f} option (Figure \ref{code:readmeshparttwo}).  The second method \texttt{readmesh()} creates and reads three \pVecs in parallel from it (Figure \ref{code:readmeshparttwo}).  Note that prefixes are set on each \pVec so that the block size is correctly read.
+To tell the truth, we will not show the last part of \texttt{c3convert.c}.  That final bit of code checks if option \texttt{-check} is given, and if so we read back the binary file in parallel.  This part of \texttt{c3convert.c} calls two methods from a a separate code (and re-used component) \texttt{readmesh.c} which we show in Figures \ref{code:readmeshpartone} and \ref{code:readmeshparttwo}.
+
+The first method \texttt{getmeshfile()} finds a \PETSc binary file from the \texttt{-f} option.  The other major method \texttt{readmesh()}, in Figure \ref{code:readmeshparttwo}, creates and reads three \pVecs in parallel from it, using utility methods \texttt{createloadname()} and \texttt{getcheckmeshsizes()}.  Note that prefixes are set on each \pVec so that the block size is correctly read.
 
 \cinputpart{readmesh.c}{Determine the filename of a \PETSc binary file that has a mesh.}{I}{//STARTGET}{//ENDGET}{code:readmeshpartone}
 
