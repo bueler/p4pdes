@@ -105,9 +105,11 @@ function unew = vcycle(d,level,N,h,nu1,nu2,u,f,verbose)
     % solve exactly on coarsest grid, so arguments nu1, nu2, and u
     %   are ignored
     if verbose
-      fprintf('%ssolving exactly with LU on coarsest grid\n',indent(d,level))
+      fprintf('%ssolving exactly with LU on coarsest %d x %d grid\n',...
+              indent(d,level),N+1,N+1)
     end
-    unew = lusolve(N,h,f);
+    %unew = lusolve(N,h,f);
+    error('this action not implemented')
   else
     % relax nu1 times on fine grid
     for K = 1:nu1
@@ -116,7 +118,8 @@ function unew = vcycle(d,level,N,h,nu1,nu2,u,f,verbose)
 
     if level > 0
       if verbose
-        fprintf('%sdescending to coarser level %d ...\n',indent(d,level),level-1)
+        fprintf('%sdescending to coarser level %d with %d x %d grid...\n',...
+                indent(d,level),level-1,N/2+1,N/2+1)
       end
 
       % compute fine-grid residual r and restrict to coarse grid
@@ -136,7 +139,8 @@ function unew = vcycle(d,level,N,h,nu1,nu2,u,f,verbose)
       end
     else
       if verbose
-        fprintf('%ssolving with nu1+nu2 sweeps on coarsest grid\n',indent(d,level))
+        fprintf('%ssolving with nu1+nu2 sweeps on coarsest %d x %d grid\n',...
+                indent(d,level),N+1,N+1)
       end
     end
 
@@ -174,39 +178,6 @@ function UU = relax(N,h,u,f)
   for i = 2:2:N
     for j = 3:2:N-1
       UU(i,j) = (1/4) * ( UU(i-1,j) + UU(i+1,j) + UU(i,j-1) + UU(i,j+1) + hsqr * f(i,j) );
-    end
-  end
-end
-
-
-function U = lusolve(N,h,f)
-% LUSOLVE  Exactly solve discrete problem by storing in sparse matrices
-% and using backslash.
-  K = (N-1)*(N-1);
-  A = spdiags(repmat(4,K,1),0,K,K);
-  b = zeros(N-1,1);
-  hsqr = h * h;
-  for i = 1:N-1
-    for j = 1:N-1
-      k      = (N-1) * (i-1) + j;
-      kleft  = (N-1) * (i-1) + j-1;
-      kright = (N-1) * (i-1) + j+1;
-      kup    = (N-1) * (i)   + j;
-      kdown  = (N-1) * (i-2) + j;
-      if j>1,    A(k,kleft)  = -1.0;  end
-      if j<N-1,  A(k,kright) = -1.0;  end
-      if i>1,    A(k,kdown)  = -1.0;  end
-      if i<N-1,  A(k,kup)    = -1.0;  end
-      b(k,1) = hsqr * f(i+1,j+1);
-    end
-  end
-  uu = A \ b;
-  %figure(99), spy(A)
-  U = zeros(N+1,N+1);
-  for i = 1:N-1
-    for j = 1:N-1
-      k = (N-1) * (i-1) + j;
-      U(i+1,j+1) = uu(k);
     end
   end
 end
