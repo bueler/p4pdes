@@ -36,6 +36,9 @@ static char help[] = "SSolves a structured-grid Poisson problem with DMDA and KS
 // (COMPARE: mpiexec -n 4 ./c2poisson -da_grid_x 4097 -da_grid_y 4097 -ksp_type cg
 // WHICH DOES 3329 ITERATIONS)
 
+// COMPARABLE?:
+//mpiexec -n 4 ./c4poisson -da_grid_x 4097 -da_grid_y 4097 -pc_type mg -pc_mg_levels 11 -ksp_monitor -pc_mg_type full -ksp_rtol 1.0e-12 -mg_levels_ksp_type cg
+
 #include <math.h>
 #include <petscdmda.h>
 #include <petscksp.h>
