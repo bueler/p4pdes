@@ -50,8 +50,8 @@ function table = multipoisson(N,numcycles,d)
   % initial u on fine grid
   % [which matches Briggs et al (2000) initial value?]
   %u = zeros(size(x));
-  %u = rand(size(x));
-  u = ( sin(16*pi*x) + sin(40*pi*x) ) .* ( sin(16*pi*y) + sin(40*pi*y) );
+  u = randn(size(x));
+  %u = ( sin(16*pi*x) + sin(40*pi*x) ) .* ( sin(16*pi*y) + sin(40*pi*y) );
 
   % other initial fields and norms
   ff = f(x,y);
