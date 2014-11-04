@@ -42,5 +42,5 @@ c9obstacle: c9obstacle.o  chkopts
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ c1matvec c2poisson c2heat c3convert c3poisson
+	@rm -f *~ c1e c1matvec c2poisson c2heat c3convert c3poisson c4poisson c9obstacle
 	@rm -f mesh.?.* bump.?.* square.?.*

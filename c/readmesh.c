@@ -25,7 +25,7 @@ PetscErrorCode createloadname(MPI_Comm comm, PetscViewer viewer, const char pref
                               const char name[], Vec *v) {
   PetscErrorCode ierr; //STRIP
   ierr = VecCreate(comm,v); CHKERRQ(ierr);
-  VecSetOptionsPrefix(*v,prefix);
+  ierr = VecSetOptionsPrefix(*v,prefix); CHKERRQ(ierr);
   ierr = VecLoad(*v,viewer); CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject)(*v),name); CHKERRQ(ierr);
   return 0;
