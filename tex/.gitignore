@@ -8,6 +8,7 @@ cstrip/*.c
 *.?.tikz
 squarefour.tikz
 bump.poly*
+c2poisson-conv.pdf
 
 ## Core latex/pdflatex auxiliary files:
 *.aux

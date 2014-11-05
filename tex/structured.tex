@@ -301,7 +301,7 @@ A \bu = \bb, \label{poissonlinearsystem}
 \end{equation}
 where $A$ is a $K\times K$ matrix and $\bu,\bb$ are $K\times 1$ column vectors.
 
-But to shown this linear system in traditional form we must globally-order the unknowns.  Such an ordering is implemented inside a \PETSc \pDMDA, but a feature of \PETSc is that it is hidden and can often be ignored.  We are explicit about the ordering here for the purpose of displaying the system in matrix-vector form, but the code we actually write only uses the grid-wise coordinates $(i,j)$.  The ability to assemble \pMat s and \pVec s with $(i,j)$-type indexing is one reason \pDMDA codes can be quite short.
+But to shown this linear system in traditional form we must globally-order the unknowns.  Such an ordering is implemented inside a \PETSc \pDMDA, but a feature of \PETSc is that it is hidden and can often be ignored.  We are explicit about the ordering here for the purpose of displaying the system in matrix-vector form, but the code we actually write only uses the grid-wise coordinates $(i,j)$.  The ability to assemble \pMats and \pVecs with $(i,j)$-type indexing is one reason \pDMDA codes can be quite short.
 
 The ordering used in serial in a 2D \pDMDA is shown by example in Figure \ref{fig:unitsquaregridordering}.  On an $M$ by $N$ grid one could write the ordering as
 \begin{equation}
@@ -550,36 +550,208 @@ In our 2D case, with a single degree of freedom at each node,\sidenote{The Poiss
 just as we did in Chapter 1.
 
 
-\section{Finite difference method: manufacture a problem}
+\section{A first example code for the Poisson problem}
 
-At this point we can set up a particular Poisson problem and proceed to solve it.  So that we know the exact solution we choose it,\sidenote{This same problem appears in Chapter 4 of \citep{Briggsetal2000}.  We are not being original!}% page 64
-taking care that it satisfies the boundary conditions:
+At this point we need to set up a particular Poisson problem so our first example code can solve it.  To do this we \emph{choose} an exact solution, taking care that it satisfies our homogeneous Dirichlet boundary conditions ($u=0$ along $\partial \mathcal{S}$):\sidenote{Noting that the truncation error term $O(h^2)$ in equation \eqref{secondderivativeFD} has a coefficient proportional to fourth derivatives, our FD method will \emph{not} be exact on this problem.  This is good; we would not want the simpler form $u(x,y)=(x-x^2)(y-y^2)$, for example, to test convergence rate of the code.}
 \begin{equation}
 u(x,y) = (x^2 - x^4) (y^4 - y^2). \label{exactsolution}
 \end{equation}
-Note that $u=0$ along $\partial \mathcal{S}$.  Then we just differentiate to get $f$ so that $-\grad^2 u=f$ and thus \eqref{exactsolution} solves \eqref{poissonsquare}:
+Then we merely differentiate to get $f = -\grad^2 u$.  Thus \eqref{exactsolution} solves \eqref{poissonsquare} with right side
 \begin{equation}
 f(x,y) = 2 (1 - 6 x^2) y^2 (1 - y^2) + 2 (1 - 6 y^2) x^2 (1 - x^2).\label{manufacturedf}
 \end{equation}
-Furthermore, noting that the truncation error term ``$O(h^2)$'' in equation \eqref{secondderivativeFD} has a coefficient which is proportional to the fourth derivative, our finite difference method will not be exact, which is the generic case.
+(This same problem appears in Chapter 4 of \citep{Briggsetal2000}, so we are not being original.) % page 64
 
-\cinputpart{c2poisson.c}{This method assembles a \pVec for the right-hand side of equation \eqref{poissonsquareFD}, and one for the exact solution.  Only local grid coordinates $(i,j)$ are used.}{I}{//RHS}{//ENDRHS}{code:ctwopoissonrhs}
+\cinputpart{c2poisson.c}{This method assembles a \pVec for the right-hand side of equation \eqref{poissonsquareFD}, and one for the exact solution.}{I}{//RHS}{//ENDRHS}{code:ctwopoissonrhs}
 
-Since $u$ from \eqref{exactsolution} and $f$ from  \eqref{manufacturedf} are intimately-connected, we isolate the code which computes these two functions in a method called \texttt{formRHSandExact()}, shown in Figure \ref{code:ctwopoissonrhs}.  As explained above we compute all the entries of the \pVec objects using only local grid coordinates $(i,j)$.  \PETSc pointer ``tricks'' allow us to index the C arrays we get from \texttt{DMDAVecGetArray()}, which have type \texttt{double **} = \texttt{PetscReal **}, using these grid indices.  (Recall Figure \ref{fig:localpartofgrid}.)  When we are done with the computation part we must both restore the C arrays by calling \texttt{DMDAVecRestoreArray()}, and explicitly ask for the \pVec objects to be assembled by calling \texttt{VecAssemblyBegin/End()}.
+The code \texttt{c2poisson.c} uses our finite difference method \eqref{poissonsquareFD} to solve the Poisson problem with $f$ from \eqref{manufacturedf}.  The first part, in Figure \ref{code:ctwopoissonrhs}, isolates the computation of $u$ from \eqref{exactsolution} and $f$ from  \eqref{manufacturedf} into a method called \texttt{formRHSandExact()}.  It uses only local grid coordinates $(i,j)$ for the computation, with loops over index ranges as shown in Figure \ref{fig:localpartofgrid}. \PETSc pointer arithmetic (i.e.~tricks) allows us to index the C arrays we get from \texttt{DMDAVecGetArray()} using $(i,j)$.  When we are done with computing \pVecs we restore the C arrays by calling \texttt{DMDAVecRestoreArray()}, and we explicitly ask for the \pVec objects to be assembled by calling \texttt{VecAssemblyBegin/End()}.
 
-Now we can get started on solving the whole problem using \PETSc.  Figure \ref{code:ctwopoissoncreate} shows how \texttt{c2poisson.c} creates the various parallel objects needed to solve the Poisson problem, especially one \pDM, one \pMat, and three \pVec s.  Note that a \pDM object possesses, or can compute, the matrix and vector sizes from the grid dimensions, so we call \texttt{DMCreateMatrix()} and \texttt{DMCreateGlobalVector()}, respectively, to create the \pMat and the \pVec s.  We also indicate the matrix-assembly part of the code to \PETSc's performance-logging API; more on that later.  Then we call the methods \texttt{formdirichletlaplacian()} and \texttt{formRHSandExact()}, which have already been shown.
+Next, Figure \ref{code:ctwopoissoncreate} shows how \texttt{c2poisson.c} creates the various parallel objects needed to solve the Poisson problem, namely one \pDM, one \pMat, and three \pVecs.  Note that a \pDM object can compute appropriate matrix and vector sizes from the grid dimensions, so we call \texttt{DMCreateMatrix()} and \texttt{DMCreateGlobalVector()} to create \pMat and \pVec objects, respectively.  Then we call \texttt{formdirichletlaplacian()} (see Figure \ref{code:structuredlaplacian}) and \texttt{formRHSandExact()} (see Figure \ref{code:ctwopoissonrhs}).
 
-\cinputpart{c2poisson.c}{Set up \pDMDA \texttt{da} and \pMat \texttt{A} objects, and assemble the latter by calling \texttt{formlaplacian()}.}{II}{//CREATE}{//ENDCREATE}{code:ctwopoissoncreate}
+\cinputpart{c2poisson.c}{Set up \pDM, \pMat, and \pVec objects, and assemble the linear system.}{II}{//CREATE}{//ENDCREATE}{code:ctwopoissoncreate}
+
+\PETSc describes the linear system ``$A\bu=\bb$'' by one \pMat \texttt{A} and two \pVecs (\texttt{u} and \texttt{b}), but the \emph{method} for solving the linear system is a ``Krylov space'' solver object of type \pKSP.  The part of \texttt{c2poisson.c} that creates this object is in Figure \ref{code:ctwopoissonsolve}.  Krylov space methods \citep{TrefethenBau} build a numerical solution $\tilde\bu$ by applying $A$ to vectors, but without using other manipulations of the entries of $A$.  For instance, the approximate solution $\tilde\bu$ might be an element of the $n$th Krylov space
+    $$\mathcal{K} = \operatorname{span}\{\bb,A\bb,A^2\bb,\dots,A^{n-1}\bb\},$$
+in which case
+    $$\tilde\bu = c_0 \bb + c_1 A \bb + c_2 A^2 \bb + \dots + c_{n-1} A^{n-1} \bb$$
+or equivalently
+    $$\tilde\bu = p(A) \bb$$
+for the $n-1$ degree polynomial
+    $$p(x) = c_0 + c_1 x + c_2 x^2 + \dots + c_{n-1} x^{n-1}$$
+applied to $A$.  Well-known methods CG, GMRES, MINRES, and others \citep{Greenbaum1997,Saad2003} solve a linear system this way.  Almost every Krylov method is implemented in \PETSc, and we get access to all of them via a \pKSP object.  We will return to using Krylov space methods in \PETSc in later chapters.
 
 \cinputpart{c2poisson.c}{Solve using \pKSP, and report on solution.}{III}{//SOLVE}{//ENDSOLVE}{code:ctwopoissonsolve}
 
+To finish showing the code, in Figure \ref{code:ctwopoissonsolve} we create the \pKSP object and tell it about \texttt{A} through a call to \texttt{KSPSetOperators()}.  Inside a \pKSP there are two ways \texttt{A} is used, namely as the system matrix and as a possible preconditioner---more on this later---which explains why \texttt{A} appears twice when calling \texttt{KSPSetOperators()}.  We also call \texttt{KSPSetFromOptions()} so that we can change the \pKSP type at runtime (illustrated below).  Solving the system means calling \texttt{KSPSolve()}.  Then we report on the solution by computing the numerical error by the norm $\|u-u_{exact}\|_\infty$.  Then we wrap up by destroying objects and calling \texttt{PetscFinalize()}.
 
-\section{Does our method work?: demonstrate convergence}
+As a first run do:
+\begin{Verbatim}[fontsize=\small]
+$ make c2poisson
+$ ./c2poisson
+\end{Verbatim}
+to get output
+\begin{Verbatim}[fontsize=\small]
+on 10 x 10 grid:  error |u-uexact|_inf = 0.000621778
+\end{Verbatim}
+We see the default $10\times 10$ grid chosen in our call to \texttt{DMDACreate2d()}. There were seven iterations of the KSP method and a final residual norm and numerical error.
 
 
-\section{Runtime control of linear solver}
+\section{Runtime control}
 
-FIXME: basic Krylov theory
+At this point we want to know:\begin{itemize}
+\item how to improve the quality of our numerical solution? (\emph{convergence})
+\item how to get high performance? (\emph{scaling})
+\item how to see inside \PETSc so we know what is going on? (\emph{exposure})
+\end{itemize}
+
+The \PETSc paradigm is that the choices of solver and parameters are controllable, and exposable, at runtime, once we have adequately described the problem to \PETSc.  Thereby we can both put-off questions of convergence, scaling, and exposure until runtime, and we can address these questions empirically based on actual performance.
+
+
+\section{Convergence}
+
+By ``convergence'' we mean that we want to show that the errors made by our numerical solver decrease in the expected way, namely by refining the grid so that the finite differences are better approximations of the corresponding derivatives.  Furthermore we want to know that the rate at which the error decreases is as expected in theory.
+
+If we want a smaller error specify a finer grid.  There are two ways to do this, both of which address the \pDM object by options.  One is to specify the grid directly:
+\begin{Verbatim}[fontsize=\small]
+$ ./c2poisson -da_grid_x 100 -da_grid_y 100
+on 100 x 100 grid:  error |u-uexact|_inf = 5.76054e-06
+\end{Verbatim}
+The other is to instruct the \pDM to refine the grid by factors of two.  Here the number of subintervals is increased by a factor of two, so this call replaces our default grid of 9 by 9 subintervals in the two directions by 18 in each direction:
+\begin{Verbatim}[fontsize=\small]
+$ ./c2poisson -da_refine 1
+on 19 x 19 grid:  error |u-uexact|_inf = 0.000155374
+\end{Verbatim}
+
+Thus we can check convergence by generating error data.  Here is a loop using the Bash shell:
+\begin{Verbatim}[fontsize=\small]
+$ for K in 0 1 2 3 4 5 6; do ./c2poisson -da_refine $K; done
+on 10 x 10 grid:  error |u-uexact|_inf = 0.000621778
+on 19 x 19 grid:  error |u-uexact|_inf = 0.000155374
+on 37 x 37 grid:  error |u-uexact|_inf = 3.87982e-05
+on 73 x 73 grid:  error |u-uexact|_inf = 1.05331e-05
+on 145 x 145 grid:  error |u-uexact|_inf = 3.17389e-06
+on 289 x 289 grid:  error |u-uexact|_inf = 1.60786e-06
+on 577 x 577 grid:  error |u-uexact|_inf = 1.22251e-06
+\end{Verbatim}
+The data is shown in Figure \ref{fig:c2poisson-conv} as the circles.
+
+\begin{figure}
+\bigskip
+\includegraphics[width=0.9\textwidth]{c2poisson-conv}
+\caption{FIXME}
+\label{fig:c2poisson-conv}
+\end{figure}
+
+FIXME: complaints are that $K=5$ and $K=6$ cases are slow (about 2 minutes for latter; more later), convergence is below $h^2$ so maybe we have implementation error?
+
+FIXME show
+\begin{Verbatim}[fontsize=\small]
+./c2poisson -help |grep ksp_
+\end{Verbatim}
+
+FIXME: asking for smaller residual
+\begin{Verbatim}[fontsize=\small]
+$ ./c2poisson -da_refine 4 -ksp_rtol 1.0e-12
+\end{Verbatim}
+
+FIXME show
+\begin{Verbatim}[fontsize=\small]
+./c2poisson -ksp_type cg
+\end{Verbatim}
+
+FIXME: look under hood at KSP
+\begin{Verbatim}[fontsize=\small]
+$ ./c2poisson -ksp_view
+KSP Object: 1 MPI processes
+  type: gmres
+    GMRES: restart=30, using Classical (unmodified) Gram-Schmidt Orthogonaliz...
+    GMRES: happy breakdown tolerance 1e-30
+  maximum iterations=10000, initial guess is zero
+  tolerances:  relative=1e-05, absolute=1e-50, divergence=10000
+  left preconditioning
+  using PRECONDITIONED norm type for convergence test
+PC Object: 1 MPI processes
+  type: ilu
+    ILU: out-of-place factorization
+    0 levels of fill
+    tolerance for zero pivot 2.22045e-14
+    using diagonal shift on blocks to prevent zero pivot [INBLOCKS]
+    matrix ordering: natural
+    factor fill ratio given 1, needed 1
+      Factored matrix follows:
+        Mat Object:         1 MPI processes
+          type: seqaij
+          rows=100, cols=100
+          package used to perform factorization: petsc
+          total: nonzeros=460, allocated nonzeros=460
+          total number of mallocs used during MatSetValues calls =0
+            not using I-node routines
+  linear system matrix = precond matrix:
+  Mat Object:  (a_)   1 MPI processes
+    type: seqaij
+    rows=100, cols=100
+    total: nonzeros=460, allocated nonzeros=460
+    total number of mallocs used during MatSetValues calls =0
+      not using I-node routines
+on 10 x 10 grid:  iterations 7, residual norm = 8.59388e-07,
+                  error |u-uexact|_inf = 0.000621778
+\end{Verbatim}
+
+FIXME:  In parallel
+\begin{Verbatim}[fontsize=\small]
+$ mpiexec -n 4 ./c2poisson -ksp_view
+KSP Object: 4 MPI processes
+  type: gmres
+    GMRES: restart=30, using Classical (unmodified) Gram-Schmidt Orthogonaliz...
+    GMRES: happy breakdown tolerance 1e-30
+  maximum iterations=10000, initial guess is zero
+  tolerances:  relative=1e-05, absolute=1e-50, divergence=10000
+  left preconditioning
+  using PRECONDITIONED norm type for convergence test
+PC Object: 4 MPI processes
+  type: bjacobi
+    block Jacobi: number of blocks = 4
+    Local solve is same for all blocks, in the following KSP and PC objects:
+  KSP Object:  (sub_)   1 MPI processes
+    type: preonly
+    maximum iterations=10000, initial guess is zero
+    tolerances:  relative=1e-05, absolute=1e-50, divergence=10000
+    left preconditioning
+    using NONE norm type for convergence test
+  PC Object:  (sub_)   1 MPI processes
+    type: ilu
+      ILU: out-of-place factorization
+      0 levels of fill
+      tolerance for zero pivot 2.22045e-14
+      using diagonal shift on blocks to prevent zero pivot [INBLOCKS]
+      matrix ordering: natural
+      factor fill ratio given 1, needed 1
+        Factored matrix follows:
+          Mat Object:           1 MPI processes
+            type: seqaij
+            rows=25, cols=25
+            package used to perform factorization: petsc
+            total: nonzeros=105, allocated nonzeros=105
+            total number of mallocs used during MatSetValues calls =0
+              not using I-node routines
+    linear system matrix = precond matrix:
+    Mat Object:    (a_)     1 MPI processes
+      type: seqaij
+      rows=25, cols=25
+      total: nonzeros=105, allocated nonzeros=105
+      total number of mallocs used during MatSetValues calls =0
+        not using I-node routines
+  linear system matrix = precond matrix:
+  Mat Object:  (a_)   4 MPI processes
+    type: mpiaij
+    rows=100, cols=100
+    total: nonzeros=460, allocated nonzeros=460
+    total number of mallocs used during MatSetValues calls =0
+on 10 x 10 grid:  iterations 11, residual norm = 1.67019e-07,
+                  error |u-uexact|_inf = 0.000621549
+\end{Verbatim}
+
+
 
 \section{Time-dependent heat equation}
 

@@ -73,24 +73,25 @@ static char help[] = "Solves a structured-grid Poisson problem with DMDA and KSP
 #include "structuredlaplacian.h"
 
 //RHS
-PetscErrorCode formRHSandExact(DM da, Vec b, Vec uexact) {
+PetscErrorCode formRHSandExact(DM da, Vec uexact, Vec b) {
   PetscErrorCode ierr;
   DMDALocalInfo  info;
   ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
 
-  PetscInt       i, j;
-  PetscReal      hx = 1./(double)(info.mx-1),
-                 hy = 1./(double)(info.my-1),  // domain is [0,1] x [0,1]
-                 x, y, x2, y2, f, **ab, **auex;
+  PetscInt  i, j;
+  PetscReal hx = 1./(double)(info.mx-1),
+            hy = 1./(double)(info.my-1),  // domain is [0,1] x [0,1]
+            x, y, x2, y2, f,
+            **auexact, **ab;
+  ierr = DMDAVecGetArray(da, uexact, &auexact);CHKERRQ(ierr);
   ierr = DMDAVecGetArray(da, b, &ab);CHKERRQ(ierr);
-  ierr = DMDAVecGetArray(da, uexact, &auex);CHKERRQ(ierr);
   for (j=info.ys; j<info.ys+info.ym; j++) {
     y = j * hy;  y2 = y*y;
     for (i=info.xs; i<info.xs+info.xm; i++) {
       x = i * hx;  x2 = x*x;
-      // choose exact solution to satisfy boundary conditions, and so that
+      // choose exact solution to satisfy boundary conditions, and so that FD
       //   method is not exact; this is example page 64 of Briggs et al 2000
-      auex[j][i] = x2 * (1.0 - x2) * y2 * (y2 - 1.0);
+      auexact[j][i] = x2 * (1.0 - x2) * y2 * (y2 - 1.0);
       if ( (i>0) && (i<info.mx-1) && (j>0) && (j<info.my-1) ) { // if not bdry
         // f = - (u_xx + u_yy)  where u is exact
         f = 2.0 * ( (1.0 - 6.0*x2) * y2 * (1.0 - y2) + (1.0 - 6.0*y2) * x2 * (1.0 - x2) );
@@ -100,13 +101,13 @@ PetscErrorCode formRHSandExact(DM da, Vec b, Vec uexact) {
       }
     }
   }
+  ierr = DMDAVecRestoreArray(da, uexact, &auexact);CHKERRQ(ierr);
   ierr = DMDAVecRestoreArray(da, b, &ab);CHKERRQ(ierr);
-  ierr = DMDAVecRestoreArray(da, uexact, &auex);CHKERRQ(ierr);
   
-  ierr = VecAssemblyBegin(b); CHKERRQ(ierr);
-  ierr = VecAssemblyEnd(b); CHKERRQ(ierr);
   ierr = VecAssemblyBegin(uexact); CHKERRQ(ierr);
   ierr = VecAssemblyEnd(uexact); CHKERRQ(ierr);
+  ierr = VecAssemblyBegin(b); CHKERRQ(ierr);
+  ierr = VecAssemblyEnd(b); CHKERRQ(ierr);
   return 0;
 }
 //ENDRHS
@@ -119,33 +120,32 @@ int main(int argc,char **args)
   PetscInitialize(&argc,&args,(char*)0,help);
 
   // default size (10 x 10) can be changed using -da_grid_x M -da_grid_y N
-  DM             da;
+  DM  da;
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
                 DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
                 DMDA_STENCIL_STAR,-10,-10,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,
                 &da); CHKERRQ(ierr);
   ierr = DMDASetUniformCoordinates(da,0.0,1.0,0.0,1.0,-1.0,-1.0); CHKERRQ(ierr);
 
-  // create linear system matrix
+  // create linear system matrix A
   Mat  A;
-  PetscLogStage  stage;
-  ierr = DMSetMatType(da,MATAIJ);CHKERRQ(ierr);
   ierr = DMCreateMatrix(da,&A);CHKERRQ(ierr);
   ierr = MatSetOptionsPrefix(A,"a_"); CHKERRQ(ierr);
-  ierr = PetscLogStageRegister("Matrix Assembly", &stage); CHKERRQ(ierr);
-  ierr = PetscLogStagePush(stage); CHKERRQ(ierr);
-  ierr = formdirichletlaplacian(da,1.0,A); CHKERRQ(ierr);
-  ierr = PetscLogStagePop();CHKERRQ(ierr);
-  ierr = MatSetOption(A,MAT_SYMMETRIC,PETSC_TRUE); CHKERRQ(ierr);
+  ierr = MatSetFromOptions(A); CHKERRQ(ierr);
 
-  // create right-hand-side (RHS), approx solution, exact solution
+  // create right-hand-side (RHS) b, approx solution u, exact solution uexact
   Vec  b,u,uexact;
   ierr = DMCreateGlobalVector(da,&b);CHKERRQ(ierr);
   ierr = VecDuplicate(b,&u); CHKERRQ(ierr);
   ierr = VecDuplicate(b,&uexact); CHKERRQ(ierr);
 
-  // assemble RHS and exact solution Vec s
-  ierr = formRHSandExact(da,b,uexact); CHKERRQ(ierr);
+  // assemble linear system
+  PetscLogStage  stage; //STRIP
+  ierr = PetscLogStageRegister("Matrix Assembly", &stage); CHKERRQ(ierr); //STRIP
+  ierr = PetscLogStagePush(stage); CHKERRQ(ierr); //STRIP
+  ierr = formdirichletlaplacian(da,1.0,A); CHKERRQ(ierr);
+  ierr = PetscLogStagePop();CHKERRQ(ierr); //STRIP
+  ierr = formRHSandExact(da,uexact,b); CHKERRQ(ierr);
 //ENDCREATE
 
 //SOLVE
@@ -156,27 +156,25 @@ int main(int argc,char **args)
   ierr = KSPSetFromOptions(ksp); CHKERRQ(ierr);
 
   // solve
-  ierr = PetscLogStageRegister("Solve", &stage); CHKERRQ(ierr);
-  ierr = PetscLogStagePush(stage); CHKERRQ(ierr);
+  ierr = PetscLogStageRegister("Solve", &stage); CHKERRQ(ierr); //STRIP
+  ierr = PetscLogStagePush(stage); CHKERRQ(ierr); //STRIP
   ierr = KSPSolve(ksp,b,u); CHKERRQ(ierr);
-  ierr = PetscLogStagePop();CHKERRQ(ierr);
+  ierr = PetscLogStagePop();CHKERRQ(ierr); //STRIP
 
   // report on grid, ksp results, and numerical error
-  PetscInt       its;
-  PetscScalar    resnorm, errnorm;
+  PetscScalar    errnorm;
   DMDALocalInfo  info;
-  ierr = DMDAGetLocalInfo(da,&info);CHKERRQ(ierr);
-  ierr = KSPGetIterationNumber(ksp,&its); CHKERRQ(ierr);
-  ierr = KSPGetResidualNorm(ksp,&resnorm); CHKERRQ(ierr);
   ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uxact
   ierr = VecNorm(u,NORM_INFINITY,&errnorm); CHKERRQ(ierr);
+  ierr = DMDAGetLocalInfo(da,&info);CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
-             "on %4d x %4d grid:  iterations %D, residual norm = %g,\n"
-             "                      error |u-uexact|_inf = %g\n",
-             info.mx,info.my,its,resnorm,errnorm); CHKERRQ(ierr);
+             "on %d x %d grid:  error |u-uexact|_inf = %g\n",
+             info.mx,info.my,errnorm); CHKERRQ(ierr);
 
-  KSPDestroy(&ksp);  MatDestroy(&A);
+  KSPDestroy(&ksp);
   VecDestroy(&u);  VecDestroy(&uexact);  VecDestroy(&b);
+  MatDestroy(&A);
+  DMDestroy(&da);
   PetscFinalize();
   return 0;
 }

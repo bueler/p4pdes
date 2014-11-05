@@ -4,6 +4,8 @@ texinputs := getstarted.tex structured.tex unstructured.tex multigrid.tex scalin
 
 tikzinputs := samplepoly.1.tikz squarefour.tikz bump.1.tikz bump.poly.tikz mesh.1.tikz
 
+pdfinputs := c2poisson-conv.pdf
+
 hinputs := $(addprefix ../c/, convenience.h)
 
 cinputs := structuredlaplacian.c readmesh.c poissontools.c c1e.c c1matvec.c c2poisson.c c3convert.c c3poisson.c c4poisson.c c9obstacle.c
@@ -14,7 +16,7 @@ book.pdf: book.aux
 	pdflatex book
 	pdflatex book
 
-book.aux: book.tex book.bib $(texinputs) $(hinputs) $(cstrip) $(tikzinputs)
+book.aux: book.tex book.bib $(texinputs) $(hinputs) $(cstrip) $(tikzinputs) $(pdfinputs)
 	pdflatex book
 	bibtex book.aux
 
@@ -56,6 +58,9 @@ mesh.1.tikz: ../c/genstructured.py
 	ln -s ../c/mesh.1.ele
 	ln -s ../c/mesh.1.poly
 	python tri2tikz.py --labelnodes --nodeoffset 0.05 --nodesize 0.5 --labelelements --scale 5.0 mesh.1 $@
+
+c2poisson-conv.pdf: c2poisson-conv.py
+	python c2poisson-conv.py
 
 .PHONY: clean
 
