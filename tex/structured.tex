@@ -560,11 +560,11 @@ Then we merely differentiate to get $f = -\grad^2 u$.  Thus \eqref{exactsolution
 \begin{equation}
 f(x,y) = 2 (1 - 6 x^2) y^2 (1 - y^2) + 2 (1 - 6 y^2) x^2 (1 - x^2).\label{manufacturedf}
 \end{equation}
-(This same problem appears in Chapter 4 of \citep{Briggsetal2000}, so we are not being original.) % page 64
+From now on we will refer to $u$ in \eqref{exactsolution} as ``$u_{ex}$'', the exact solution.  (This same problem appears in Chapter 4 of \citep{Briggsetal2000}, so we are not being original.) % page 64
 
 \cinputpart{c2poisson.c}{This method assembles a \pVec for the right-hand side of equation \eqref{poissonsquareFD}, and one for the exact solution.}{I}{//RHS}{//ENDRHS}{code:ctwopoissonrhs}
 
-The code \texttt{c2poisson.c} uses our finite difference method \eqref{poissonsquareFD} to solve the Poisson problem with $f$ from \eqref{manufacturedf}.  The first part, in Figure \ref{code:ctwopoissonrhs}, isolates the computation of $u$ from \eqref{exactsolution} and $f$ from  \eqref{manufacturedf} into a method called \texttt{formRHSandExact()}.  It uses only local grid coordinates $(i,j)$ for the computation, with loops over index ranges as shown in Figure \ref{fig:localpartofgrid}. \PETSc pointer arithmetic (i.e.~tricks) allows us to index the C arrays we get from \texttt{DMDAVecGetArray()} using $(i,j)$.  When we are done with computing \pVecs we restore the C arrays by calling \texttt{DMDAVecRestoreArray()}, and we explicitly ask for the \pVec objects to be assembled by calling \texttt{VecAssemblyBegin/End()}.
+The code \texttt{c2poisson.c} uses our finite difference method \eqref{poissonsquareFD} to solve the Poisson problem with $f$ from \eqref{manufacturedf}.  The first part, in Figure \ref{code:ctwopoissonrhs}, isolates the computation of $u_{ex}$ from \eqref{exactsolution} and $f$ from  \eqref{manufacturedf} into a method called \texttt{formRHSandExact()}.  It uses only local grid coordinates $(i,j)$ for the computation, with loops over index ranges as shown in Figure \ref{fig:localpartofgrid}. \PETSc pointer arithmetic (i.e.~tricks) allows us to index the C arrays we get from \texttt{DMDAVecGetArray()} using $(i,j)$.  When we are done with computing \pVecs we restore the C arrays by calling \texttt{DMDAVecRestoreArray()}, and we explicitly ask for the \pVec objects to be assembled by calling \texttt{VecAssemblyBegin/End()}.
 
 Next, Figure \ref{code:ctwopoissoncreate} shows how \texttt{c2poisson.c} creates the various parallel objects needed to solve the Poisson problem, namely one \pDM, one \pMat, and three \pVecs.  Note that a \pDM object can compute appropriate matrix and vector sizes from the grid dimensions, so we call \texttt{DMCreateMatrix()} and \texttt{DMCreateGlobalVector()} to create \pMat and \pVec objects, respectively.  Then we call \texttt{formdirichletlaplacian()} (see Figure \ref{code:structuredlaplacian}) and \texttt{formRHSandExact()} (see Figure \ref{code:ctwopoissonrhs}).
 
@@ -582,7 +582,7 @@ applied to $A$.  Well-known methods CG, GMRES, MINRES, and others \citep{Greenba
 
 \cinputpart{c2poisson.c}{Solve using \pKSP, and report on solution.}{III}{//SOLVE}{//ENDSOLVE}{code:ctwopoissonsolve}
 
-To finish showing the code, in Figure \ref{code:ctwopoissonsolve} we create the \pKSP object and tell it about \texttt{A} through a call to \texttt{KSPSetOperators()}.  Inside a \pKSP there are two ways \texttt{A} is used, namely as the system matrix and as a possible preconditioner---more on this later---which explains why \texttt{A} appears twice when calling \texttt{KSPSetOperators()}.  We also call \texttt{KSPSetFromOptions()} so that we can change the \pKSP type at runtime (illustrated below).  Solving the system means calling \texttt{KSPSolve()}.  Then we report on the solution by computing the numerical error by the norm $\|u-u_{exact}\|_\infty$.  Then we wrap up by destroying objects and calling \texttt{PetscFinalize()}.
+To finish showing the code, in Figure \ref{code:ctwopoissonsolve} we create the \pKSP object and tell it about \texttt{A} through a call to \texttt{KSPSetOperators()}.  Inside a \pKSP there are two ways \texttt{A} is used, namely as the system matrix and as a possible preconditioner---more on this later---which explains why \texttt{A} appears twice when calling \texttt{KSPSetOperators()}.  We also call \texttt{KSPSetFromOptions()} so that we can change the \pKSP type at runtime (illustrated below).  Solving the system means calling \texttt{KSPSolve()}.  Then we report on the solution by computing the numerical error by the norm $\|u-u_{ex}\|_\infty$.  Then we wrap up by destroying objects and calling \texttt{PetscFinalize()}.
 
 As a first run do:
 \begin{Verbatim}[fontsize=\small]
@@ -603,26 +603,25 @@ At this point we want to know:\begin{itemize}
 \item how to get high performance? (\emph{scaling})
 \item how to see inside \PETSc so we know what is going on? (\emph{exposure})
 \end{itemize}
-
-The \PETSc paradigm is that the choices of solver and parameters are controllable, and exposable, at runtime, once we have adequately described the problem to \PETSc.  Thereby we can both put-off questions of convergence, scaling, and exposure until runtime, and we can address these questions empirically based on actual performance.
+In \PETSc these choices of solver and parameters are controllable and exposable at runtime, once we have adequately-described the problem to \PETSc.  We can both put-off questions of convergence, scaling, and exposure until runtime, and we can make control choices empirically, i.e.~based on actual performance.  Runtime control is a topic that we will return to frequently, starting now with measuring convergence of \texttt{c2poisson.c}.
 
 
 \section{Convergence}
 
-By ``convergence'' we mean that we want to show that the errors made by our numerical solver decrease in the expected way, namely by refining the grid so that the finite differences are better approximations of the corresponding derivatives.  Furthermore we want to know that the rate at which the error decreases is as expected in theory.
+By ``showing convergence'' we mean that we demonstrate that errors made by our numerical solver decrease in the expected way, as we refine the grid so that the finite differences are better approximations of the corresponding derivatives.  Furthermore we want to show that the rate at which the error decreases matches what we expect in theory.
 
-If we want a smaller error specify a finer grid.  There are two ways to do this, both of which address the \pDM object by options.  One is to specify the grid directly:
+There are two ways to specify a finer grid in a code like \texttt{c2poisson.c}, both of which address the \pDM object through options.  One is to specify the grid directly:
 \begin{Verbatim}[fontsize=\small]
 $ ./c2poisson -da_grid_x 100 -da_grid_y 100
 on 100 x 100 grid:  error |u-uexact|_inf = 5.76054e-06
 \end{Verbatim}
-The other is to instruct the \pDM to refine the grid by factors of two.  Here the number of subintervals is increased by a factor of two, so this call replaces our default grid of 9 by 9 subintervals in the two directions by 18 in each direction:
+The other is to instruct the \pDM to refine the grid by factors of two.  More precisely, the number of \emph{subintervals} is increased by a factor of two.  For example, this call replaces our default grid of 9 by 9 subintervals (i.e.~10 by 10 grid \emph{points}) by 18 subintervals in each direction (i.e.~19 grid points):
 \begin{Verbatim}[fontsize=\small]
 $ ./c2poisson -da_refine 1
 on 19 x 19 grid:  error |u-uexact|_inf = 0.000155374
 \end{Verbatim}
 
-Thus we can check convergence by generating error data.  Here is a loop using the Bash shell:
+We check convergence by generating error data.  Here is a loop using the Bash shell:
 \begin{Verbatim}[fontsize=\small]
 $ for K in 0 1 2 3 4 5 6; do ./c2poisson -da_refine $K; done
 on 10 x 10 grid:  error |u-uexact|_inf = 0.000621778
@@ -633,31 +632,68 @@ on 145 x 145 grid:  error |u-uexact|_inf = 3.17389e-06
 on 289 x 289 grid:  error |u-uexact|_inf = 1.60786e-06
 on 577 x 577 grid:  error |u-uexact|_inf = 1.22251e-06
 \end{Verbatim}
-The data is shown in Figure \ref{fig:c2poisson-conv} as the circles.
+The data is shown in Figure \ref{fig:c2poisson-conv} as the squares.  For the coarser grids (e.g.~$N+1=10,19,37,73$ grid points), a refinement by a factor of two gives a reduction in error by a factor of about four, as expected because our FD method is $O(h^2)$ \citep{MortonMayers}.  Unfortunately the error seems to have stopped falling for the finer grids ($N+1=145,289,577$), at a level around $\|u-u_{ex}\|_\infty \approx 10^{-6}$.
 
 \begin{figure}
 \bigskip
 \includegraphics[width=0.9\textwidth]{c2poisson-conv}
-\caption{FIXME}
+\caption{To show convergence we refine the \pDM grid by factors of two.  With the default \pKSP relative tolerance the error seems to level out (squares).  With a stronger tolerance for solving the linear system (\texttt{-ksp\_rtol 1.0e-12}) the errors continue to fall (circles) at the expected rate (dotted line).}
 \label{fig:c2poisson-conv}
 \end{figure}
 
-FIXME: complaints are that $K=5$ and $K=6$ cases are slow (about 2 minutes for latter; more later), convergence is below $h^2$ so maybe we have implementation error?
+Is the reduce apparent rate of convergence a sign of an implementation error.  In fact not, because simply asking for the \pKSP object to solve the linear system better is effective.  On a particular grid we can see the difference using option \texttt{-ksp\_monitor} to watch the residuals and setting a stronger value for the \pKSP relative tolerance for residual norm size (\texttt{-ksp\_rtol}):
+\begin{Verbatim}[fontsize=\small]
+$ ./c2poisson -ksp_monitor
+  0 KSP Residual norm 1.007660904704e-01 
+  1 KSP Residual norm 2.917206076870e-02 
+  2 KSP Residual norm 1.153582666339e-02 
+  3 KSP Residual norm 2.915161628052e-03 
+  4 KSP Residual norm 5.145699777443e-04 
+  5 KSP Residual norm 6.960595794927e-05 
+  6 KSP Residual norm 6.995040432502e-06 
+  7 KSP Residual norm 8.593881990968e-07 
+on 10 x 10 grid:  error |u-uexact|_inf = 0.000621778
+$ ./c2poisson -ksp_monitor -ksp_rtol 1.0e-12
+  0 KSP Residual norm 1.007660904704e-01 
+  1 KSP Residual norm 2.917206076870e-02 
+  2 KSP Residual norm 1.153582666339e-02 
+  3 KSP Residual norm 2.915161628052e-03 
+  4 KSP Residual norm 5.145699777443e-04 
+  5 KSP Residual norm 6.960595794927e-05 
+  6 KSP Residual norm 6.995040432502e-06 
+  7 KSP Residual norm 8.593881990968e-07 
+  8 KSP Residual norm 8.624906750384e-08 
+  9 KSP Residual norm 7.509270093428e-09 
+ 10 KSP Residual norm 5.508827844317e-10 
+ 11 KSP Residual norm 6.349819528978e-11 
+ 12 KSP Residual norm 4.328647633960e-12 
+ 13 KSP Residual norm 4.240214646869e-13 
+ 14 KSP Residual norm 3.105665682224e-14 
+on 10 x 10 grid:  error |u-uexact|_inf = 0.000621527
+\end{Verbatim}
+On this coarse grid the numerical error is nearly the same, but on finer grids the fact that the linear system is solved more exactly will bring the numerical solution closer to the exact one.
+
+In fact, rerunning the Bash loop with the stronger tolerance yields this data,
+\begin{Verbatim}[fontsize=\small]
+$ for K in 0 1 2 3 4 5 6; do ./c2poisson -da_refine $K -ksp_rtol 1.0e-12; done
+on 10 x 10 grid:  error |u-uexact|_inf = 0.000621527
+on 19 x 19 grid:  error |u-uexact|_inf = 0.000155312
+on 37 x 37 grid:  error |u-uexact|_inf = 3.8823e-05
+on 73 x 73 grid:  error |u-uexact|_inf = 9.71122e-06
+on 145 x 145 grid:  error |u-uexact|_inf = 2.42806e-06
+on 289 x 289 grid:  error |u-uexact|_inf = 6.07041e-07
+on 577 x 577 grid:  error |u-uexact|_inf = 1.51761e-07
+\end{Verbatim}
+which is plotted as the circles in Figure \ref{fig:c2poisson-conv}.  The linear-fit rate of this logarithmic error data is $O(h^{1.9999})$, suggesting strongly that our implementation is correct.
+
+
 
 FIXME show
 \begin{Verbatim}[fontsize=\small]
 ./c2poisson -help |grep ksp_
 \end{Verbatim}
 
-FIXME: asking for smaller residual
-\begin{Verbatim}[fontsize=\small]
-$ ./c2poisson -da_refine 4 -ksp_rtol 1.0e-12
-\end{Verbatim}
-
-FIXME show
-\begin{Verbatim}[fontsize=\small]
-./c2poisson -ksp_type cg
-\end{Verbatim}
+FIXME: complaint: $K=5$ and $K=6$ cases are slow (about 2 minutes for latter; more later)
 
 FIXME: look under hood at KSP
 \begin{Verbatim}[fontsize=\small]
@@ -695,6 +731,11 @@ PC Object: 1 MPI processes
       not using I-node routines
 on 10 x 10 grid:  iterations 7, residual norm = 8.59388e-07,
                   error |u-uexact|_inf = 0.000621778
+\end{Verbatim}
+
+FIXME but wait, $A$ was symmetric; show
+\begin{Verbatim}[fontsize=\small]
+./c2poisson -ksp_type cg
 \end{Verbatim}
 
 FIXME:  In parallel
