@@ -7,35 +7,35 @@ FIXME: to show starting and stopping \PETSc, and that MPI is there too, and prin
 
 \inputwhole{../c/c1e.c}{c1e.c}{Compute $e$ in parallel.}{code:e}
 
-\section{\textsc{Vec}s and \textsc{Mat}s} 
-
-FIXME: introduce object Create/Set/SetFromOptions/<use>/Destroy
-
-FIXME: parallel layout of \pVec and \pMat
 
 \section{A bit of linear algebra}
 
-At the core of most \PETSc computations is a finite-dimensional linear system.  Before adding the PDE context, and the \PETSc details, as we will do in the rest of the book, it is useful to recall a bit of linear algebra.
+At the core of most \PETSc computations is a finite-dimensional linear system.  Before giving any of the \PETSc details for such systems in \PETSc, it is useful to recall the most basic ideas of numerical linear algebra.
 
 Suppose $\bb\in \RR^{N}$ is a column vector and $A\in\RR^{N\times N}$ is a square matrix.  The linear system
 \begin{equation}
 A \bu = \bb \label{introsystem}
 \end{equation}
-has a unique solution if $A$ is invertible,
+has a unique solution if $A$ is invertible, namely
 \begin{equation}
 \bu = A^{-1} \bb. \label{introsolution}
 \end{equation}
 This is simple in theory.
 
-It is not so simple in practice, however, namely when solving large systems on a computer.  There are two key facts to always keep in mind while working numerically  \citep{TrefethenBau}.
+It is not so simple in practice, however, when solving large systems on a computer.  There are two key facts to always keep in mind while working numerically  \citep{TrefethenBau}.
 \renewcommand{\labelenumi}{\roman{enumi})}
 \begin{enumerate}
-\item \emph{accuracy}:  If real numbers are represented on the computer with machine precision $\eps$ then the solution of \eqref{introsystem} can only be computed within an error $\kappa(A) \eps$ where $\kappa(A) = \|A\|_2/\|A^{-1}\|_2$ is the (2-norm) \emph{condition number} of $A$.\sidenote{Fact i) is about \emph{conditioning} not \emph{methods}.  Informally speaking, there are linear systems $A,\bb$ that are the same to within $\eps$ but for which the infinite-precision solutions $\bu$ are different by the amount $\kappa(A) \eps$.}
-\item \emph{speed of direct solution}:  Computation of solution \eqref{introsolution} by a direct method like Gauss elimination, whether actually forming $A^{-1}$ (a bad idea) or not, is an $O(N^3)$ operation.
+\item \emph{limits to accuracy}:  If real numbers are represented on the computer with machine precision $\eps$ then the solution of \eqref{introsystem} can only be computed within an error $\kappa(A) \eps$ where $\kappa(A) = \|A\|_2/\|A^{-1}\|_2$ is the (2-norm) \emph{condition number} of $A$.\sidenote{Fact i) is about \emph{conditioning} not \emph{methods}.  Informally speaking, there are linear systems $A,\bb$ that are the same to within $\eps$ but for which the infinite-precision solutions $\bu$ are different by the amount $\kappa(A) \eps$.}
+\item \emph{cost of direct solutions}:  Computation of solution \eqref{introsolution} by a direct method like Gauss elimination, whether actually forming $A^{-1}$ (a bad idea) or not, is an $O(N^3)$ operation.
 \end{enumerate}
-On most computers the precision for the C \texttt{double} type, the default representation of real numbers, is about $2.2 \times 10^{-16}$.  By i), a linear system having $\kappa(A) \approx 10^{10}$ can only be solved to about six digits of precision.  Because of ii), a linear system with $N=10^6$ equations requires $\sim 10^{18}$ operations to solve by Gauss elimination, and even modern processors take a while to do a quintillion operations.
 
-On the other hand, there are many other systems which are equivalent to \eqref{introsystem}, when thinking of exact real representations.  If $P\in\RR^{N\times N}$ is another invertible square matrix then the systems
+For a sense of the consequences of these facts, let's put in some numbers.  On most computers the precision for the C \texttt{double} type, the default representation of real numbers, is $\eps = 2.2 \times 10^{-16}$.  By i), a linear system having $\kappa(A) \approx 10^{10}$, for example, can only be solved to about six digits of precision.  Because of ii), a linear system with $N=10^6$ equations\sidenote{We will do problems of this size on a single processor in a few seconds, and in $O(N)$ operations, in Chapter 4.}
+%time ./c4poisson -da_refine 7 -ksp_type cg -pc_type mg
+%on 1153 x 1153 grid:  iterations 2, residual norm = 1.88082e-05
+%real 11.18
+requires $\sim 10^{18}$ operations to solve by Gauss elimination, and even modern processors take a while to do a quintillion operations.
+
+Returning to non-numerical linear algebra for a moment, note that there are many other systems which are equivalent to \eqref{introsystem}.  In fact, if $P\in\RR^{N\times N}$ is an invertible square matrix then the systems
 \begin{equation}
 (P^{-1} A) \bu = P^{-1} \bb \label{introleftpre}
 \end{equation}
@@ -43,14 +43,31 @@ and
 \begin{equation}
 (A P^{-1}) (P\bu) = \bb \label{introrightpre}
 \end{equation}
-obviously have the same solution $\bu$.  The matrices $P^{-1} A$ and $A P^{-1}$ may have very different condition numbers, however.  While the accuracy of the solution $\bu$ cannot be improved beyond the $\kappa{A} \eps$ level---fact i) cannot be overcome---methods can certainly take advantage of better conditioning to generate an as-good-as-achievably approximate solution more quickly.
+obviously have the same solution $\bu$ as \eqref{introsystem}.
 
-FIXME: called preconditioning on left and right
+The matrices $P^{-1} A$ and $A P^{-1}$ may have very different condition numbers, however.  While the accuracy of the solution $\bu$ cannot be improved beyond the $\kappa(A) \eps$ level---fact i) cannot be overcome in that sense---methods can indeed take advantage of better conditioning or other spectral properties to generate an approximate solution more quickly.  Equivalent systems \eqref{introleftpre} and \eqref{introrightpre} are referred to as \emph{preconditioned} systems, with the former called \emph{left preconditioning} and the latter \emph{right-preconditioning}.
 
-FIXME: super-simple Jacobi iteration example and stop
+Before giving a quick example of the role of preconditioning, an explanation of the phrase ``conditioning or other spectral properties'' is warranted.  Recall that a complex number $\lambda \in \CC$ is an \emph{eigenvalue} of $A$ if there is a nonzero vector $\bv\in\RR^N$ so that $A \bv = \lambda \bv$.  The set of all eigenvalues of $A$ is the \emph{spectrum} $\sigma(A)$ of $A$, so properties of $A$ that can be described in terms of eigenvalues are ``spectral properties.''
+
+Besides the eigenvalues of $A$, its \emph{singular values} are also spectral because they are the square roots of the eigenvalues of the matrix $A^*A$.\sidenote{The matrix $A^*A$ is symmetric and positive-definite so its eigenvalues are nonnegative, and thus have square roots.}  Singular values are also geometrically-defined as the lengths of semi-axes of the ellipsoid in $\RR^N$ that results from applying $A$ to all vectors in the unit sphere of $\RR^N$ \citep{TrefethenBau}.  Note that $\|A\|_2$ is equal to the largest singular value of $A$, while $\|A^{-1}\|_2$ is equal to the inverse of the smallest singular value of $A$.  Thus $\kappa(A)$ is the ratio of largest to smallest singular values of $A$, and is well-visualized as the eccentricity of the just-mentioned ellipsoid.
+
+For example, FIXME: super-simple Richardson iteration example and stop
+% A = [10 -1; -1 1]
+% P = [10 0; 0 1]
+% z = randn(2,1)
+% z = z + 1.0 * (b - A*z)
+% z = z + 1.0 * (P \ b - P \ A*z)
 
 
-\section{A linear system in \pVec and \pMat objects}
+
+\section{\pVecs and \pMats}
+
+FIXME: introduce/illustrate object Create/Set/SetFromOptions/<use>/Destroy
+
+FIXME: parallel layout of \pVec and \pMat
+
+
+\section{A linear system in \PETSc}
 
 \cinputpartnostrip{c1matvec.c}{Initialize \PETSc and allocate \pVec s and \pMat.}{I}{}{//ENDSETUP}{code:matvecpartone}
 
