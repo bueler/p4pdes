@@ -599,8 +599,8 @@ We see the default $10\times 10$ grid chosen in our call to \texttt{DMDACreate2d
 \section{Runtime control}
 
 At this point we want to know:\begin{itemize}
-\item how to improve the quality of our numerical solution? (\emph{convergence})
-\item how to get high performance? (\emph{scaling})
+\item is our numerical method correctly implemented? (\emph{convergence})
+\item how to get high performance? (\emph{efficiency})
 \item how to see inside \PETSc so we know what is going on? (\emph{exposure})
 \end{itemize}
 In \PETSc these choices of solver and parameters are controllable and exposable at runtime, once we have adequately-described the problem to \PETSc.  We can both put-off questions of convergence, scaling, and exposure until runtime, and we can make control choices empirically, i.e.~based on actual performance.  Runtime control is a topic that we will return to frequently, starting now with measuring convergence of \texttt{c2poisson.c}.
@@ -673,7 +673,7 @@ on 10 x 10 grid:  error |u-uexact|_inf = 0.000621527
 \end{Verbatim}
 On this coarse grid the numerical error is nearly the same, but on finer grids the fact that the linear system is solved more exactly will bring the numerical solution closer to the exact one.
 
-In fact, rerunning the Bash loop with the stronger tolerance yields this data,
+In fact, rerunning the Bash loop with the stronger tolerance yields excellent evidence of convergence at the expected rate:
 \begin{Verbatim}[fontsize=\small]
 $ for K in 0 1 2 3 4 5 6; do ./c2poisson -da_refine $K -ksp_rtol 1.0e-12; done
 on 10 x 10 grid:  error |u-uexact|_inf = 0.000621527
@@ -684,18 +684,52 @@ on 145 x 145 grid:  error |u-uexact|_inf = 2.42806e-06
 on 289 x 289 grid:  error |u-uexact|_inf = 6.07041e-07
 on 577 x 577 grid:  error |u-uexact|_inf = 1.51761e-07
 \end{Verbatim}
-which is plotted as the circles in Figure \ref{fig:c2poisson-conv}.  The linear-fit rate of this logarithmic error data is $O(h^{1.9999})$, suggesting strongly that our implementation is correct.
+This is plotted as the circles in Figure \ref{fig:c2poisson-conv}.  The linear-fit rate of this logarithmic error data is $O(h^{1.9999})$.  Our implementation is correct in this sense.
 
 
+\section{Efficiency, and exposing \PETSc's solvers}
 
-FIXME show
+On the other hand, the finer grid calculations above are slow.  How about if we re-run in parallel?  On a typical four-core laptop\sidenote{Circa 2013 manufacture, with an Intel i7 processor at 2.7GHz.} we get:
 \begin{Verbatim}[fontsize=\small]
-./c2poisson -help |grep ksp_
+$ time ./c2poisson -da_refine 5 -ksp_rtol 1.0e-12
+on 289 x 289 grid:  error |u-uexact|_inf = 6.07041e-07
+real 31.53
+user 31.40
+sys 0.09
+$ time mpiexec -n 4 ./c2poisson -da_refine 5 -ksp_rtol 1.0e-12
+on 289 x 289 grid:  error |u-uexact|_inf = 6.07041e-07
+real 12.63
+user 45.41
+sys 0.38
+\end{Verbatim}
+It is nice to see a speedup, though only by a factor of $31.5/12.6 = 2.5$ on this fixed-size problem, which is disappointing given the putative four-times increase in processing power.
+
+These first performance results probably raise more questions than they answer.  In particular,
+\renewcommand{\labelenumi}{\roman{enumi})}
+\begin{enumerate}
+\item are we effectively using \PETSc options at runtime?
+\item what is going on inside the \PETSc solver(s)?
+\item is this the parallel scaling we expect?
+\item was our method actually efficient?
+\end{enumerate}
+While we will focus on performance and scaling in Chapter 5, we can get started on these questions.
+
+Regarding i), even knowing what are possible runtime options is nontrivial in \PETSc because there are so many options.  But the answer is simple: pipe the output from option \texttt{-help} into a pager like \texttt{more} or \texttt{less}, like this
+\begin{Verbatim}[fontsize=\small]
+./c2poisson -help | less
+\end{Verbatim}
+This gives a view of the options available \emph{for} \texttt{c2poisson}, so that, for instance, the many options for nonlinear solvers are \emph{not} included in \texttt{-help} output because we have not used \pSNES; we'll use such tools in Chapter 6.  This \texttt{-help} output also gives default values for parameters; for example we see that the default for \texttt{-ksp\_rtol} is \texttt{1e-05}, which explains why convergence ``leveled out'' on fine grids.
+
+Alternatively, one might want to know what are options for controlling particular objects inside \texttt{c2poisson}.  For example, this command shows runtime options which control the \pKSP object:
+\begin{Verbatim}[fontsize=\small]
+./c2poisson -help | grep ksp_
+\end{Verbatim}
+If the list is too long, pipe it into the pager:
+\begin{Verbatim}[fontsize=\small]
+./c2poisson -help | grep ksp_ | less
 \end{Verbatim}
 
-FIXME: complaint: $K=5$ and $K=6$ cases are slow (about 2 minutes for latter; more later)
-
-FIXME: look under hood at KSP
+Regarding ii), recall that we used \texttt{-dm\_view} to show properties of the \pDM object in \texttt{c2poisson}.  We should do the same for the \pKSP object:
 \begin{Verbatim}[fontsize=\small]
 $ ./c2poisson -ksp_view
 KSP Object: 1 MPI processes
@@ -709,29 +743,17 @@ KSP Object: 1 MPI processes
 PC Object: 1 MPI processes
   type: ilu
     ILU: out-of-place factorization
-    0 levels of fill
-    tolerance for zero pivot 2.22045e-14
-    using diagonal shift on blocks to prevent zero pivot [INBLOCKS]
-    matrix ordering: natural
-    factor fill ratio given 1, needed 1
-      Factored matrix follows:
-        Mat Object:         1 MPI processes
-          type: seqaij
-          rows=100, cols=100
-          package used to perform factorization: petsc
-          total: nonzeros=460, allocated nonzeros=460
-          total number of mallocs used during MatSetValues calls =0
-            not using I-node routines
+    ...
   linear system matrix = precond matrix:
   Mat Object:  (a_)   1 MPI processes
     type: seqaij
     rows=100, cols=100
     total: nonzeros=460, allocated nonzeros=460
-    total number of mallocs used during MatSetValues calls =0
-      not using I-node routines
+    ...
 on 10 x 10 grid:  iterations 7, residual norm = 8.59388e-07,
                   error |u-uexact|_inf = 0.000621778
 \end{Verbatim}
+We have suppressed some of the output, but this shows the default FIXME
 
 FIXME but wait, $A$ was symmetric; show
 \begin{Verbatim}[fontsize=\small]

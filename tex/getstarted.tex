@@ -3,7 +3,52 @@
 
 \section{Getting started}
 
+FIXME: to show starting and stopping \PETSc, and that MPI is there too, and printing to STDOUT
+
 \inputwhole{../c/c1e.c}{c1e.c}{Compute $e$ in parallel.}{code:e}
+
+\section{\textsc{Vec}s and \textsc{Mat}s} 
+
+FIXME: introduce object Create/Set/SetFromOptions/<use>/Destroy
+
+FIXME: parallel layout of \pVec and \pMat
+
+\section{A bit of linear algebra}
+
+At the core of most \PETSc computations is a finite-dimensional linear system.  Before adding the PDE context, and the \PETSc details, as we will do in the rest of the book, it is useful to recall a bit of linear algebra.
+
+Suppose $\bb\in \RR^{N}$ is a column vector and $A\in\RR^{N\times N}$ is a square matrix.  The linear system
+\begin{equation}
+A \bu = \bb \label{introsystem}
+\end{equation}
+has a unique solution if $A$ is invertible,
+\begin{equation}
+\bu = A^{-1} \bb. \label{introsolution}
+\end{equation}
+This is simple in theory.
+
+It is not so simple in practice, however, namely when solving large systems on a computer.  There are two key facts to always keep in mind while working numerically  \citep{TrefethenBau}.
+\renewcommand{\labelenumi}{\roman{enumi})}
+\begin{enumerate}
+\item \emph{accuracy}:  If real numbers are represented on the computer with machine precision $\eps$ then the solution of \eqref{introsystem} can only be computed within an error $\kappa(A) \eps$ where $\kappa(A) = \|A\|_2/\|A^{-1}\|_2$ is the (2-norm) \emph{condition number} of $A$.\sidenote{Fact i) is about \emph{conditioning} not \emph{methods}.  Informally speaking, there are linear systems $A,\bb$ that are the same to within $\eps$ but for which the infinite-precision solutions $\bu$ are different by the amount $\kappa(A) \eps$.}
+\item \emph{speed of direct solution}:  Computation of solution \eqref{introsolution} by a direct method like Gauss elimination, whether actually forming $A^{-1}$ (a bad idea) or not, is an $O(N^3)$ operation.
+\end{enumerate}
+On most computers the precision for the C \texttt{double} type, the default representation of real numbers, is about $2.2 \times 10^{-16}$.  By i), a linear system having $\kappa(A) \approx 10^{10}$ can only be solved to about six digits of precision.  Because of ii), a linear system with $N=10^6$ equations requires $\sim 10^{18}$ operations to solve by Gauss elimination, and even modern processors take a while to do a quintillion operations.
+
+On the other hand, there are many other systems which are equivalent to \eqref{introsystem}, when thinking of exact real representations.  If $P\in\RR^{N\times N}$ is another invertible square matrix then the systems
+\begin{equation}
+(P^{-1} A) \bu = P^{-1} \bb \label{introleftpre}
+\end{equation}
+and
+\begin{equation}
+(A P^{-1}) (P\bu) = \bb \label{introrightpre}
+\end{equation}
+obviously have the same solution $\bu$.  The matrices $P^{-1} A$ and $A P^{-1}$ may have very different condition numbers, however.  While the accuracy of the solution $\bu$ cannot be improved beyond the $\kappa{A} \eps$ level---fact i) cannot be overcome---methods can certainly take advantage of better conditioning to generate an as-good-as-achievably approximate solution more quickly.
+
+FIXME: called preconditioning on left and right
+
+FIXME: super-simple Jacobi iteration example and stop
+
 
 \section{A linear system in \pVec and \pMat objects}
 
@@ -17,7 +62,6 @@ FIXME: gloss PETSc traceback mechanism, before noting we don't show that stuff
 
 FIXME: show \texttt{-help | grep}
 
-\section{\textsc{Vec}s and \textsc{Mat}s}  [introduce initialization/finalization, object Create+SetFromOptions paradigm, parallel layout of \pVec
 
 \caveat{But \Matlab is all you want if scale does not matter.}
 
