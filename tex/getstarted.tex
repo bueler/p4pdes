@@ -5,8 +5,6 @@
 
 The purpose of the \PETSc library is to help you solve scientific and engineering problems, like PDEs, on distributed computers.  But \PETSc is built ``on top of'' the Message Passing Interface (MPI; \citep{Groppetal1999}) library, and some of the flavor of that library comes through in examples.  We start with an example C code \texttt{c1e.c} in Figure \ref{code:e} that is more-or-less just a introductory MPI example, but it does call \PETSc for some of the basic tasks.
 
-\inputwhole{../c/c1e.c}{\texttt{p4pdes/c/c1e.c}}{Compute $e$ in parallel.}{code:e}
-
 This code computes Euler's constant
   $$e = \sum_{n = 0}^\infty \frac{1}{n!} \approx 2.718281828$$
 in parallel.  It does the computation in a very distributed manner, by computing one term of the infinite series on each process.  Thus it computes a better estimate of $e$ if run on many MPI processes.\sidenote{It's kind of silly.}
@@ -22,7 +20,7 @@ $ make c1e
 \end{Verbatim}
 For the command ``\texttt{make}'' to work there must be a makefile, and there is one.  The relevant part of it looks like Figure \ref{code:c1emakefile}.  For all of the \PETSc examples in this book, the makefile will have this form, exactly as recommended in the \PETSc User's Manual \citep{petsc-user-ref}.
 
-\cinputraw{c1emakefile.frag}{extract from \texttt{p4pdes/c/makefile}}{All \texttt{makefile}s for the \PETSc codes in this book like like this.}{}{//START}{//STOP}{code:c1emakefile}
+\inputwhole{../c/c1e.c}{\texttt{p4pdes/c/c1e.c}}{Compute $e$ in parallel.}{code:e}
 
 Run the code on one MPI process like this:
 \begin{Verbatim}[fontsize=\small]
@@ -50,6 +48,8 @@ rank 0 did 1 flops
 ...
 rank 18 did 37 flops
 \end{Verbatim}
+
+\cinputraw{c1emakefile.frag}{extract from \texttt{p4pdes/c/makefile}}{All \texttt{makefile}s for the \PETSc codes in this book like like this.}{}{//START}{//STOP}{code:c1emakefile}
 
 Now, perhaps the reader is worried that this book was written using a large supercomputer whereas the reader has a little laptop with a coupld of cores.  Not so; these $N=5$ and $N=20$ process runs can be done just fine on your little laptop or mine.  MPI creates processes as needed, and indeed operating systems have been multitasking for quite some time.
 
@@ -83,7 +83,7 @@ This is simple in theory.
 It is not so simple in practice, however, when solving large systems on a computer.  There are two key facts to keep in mind while working numerically  \citep{TrefethenBau}.
 \renewcommand{\labelenumi}{\roman{enumi})}
 \begin{enumerate}
-\item \emph{limit to accuracy}:  If real numbers are represented on the computer with machine precision $\eps$ then the solution of \eqref{introsystem} can only be computed within an error $\kappa(A) \eps$ where $\kappa(A) = \|A\|_2/\|A^{-1}\|_2$ is the (2-norm) \emph{condition number} of $A$.\sidenote{Fact i) is about \emph{conditioning} not \emph{methods}.  Informally speaking, there are linear systems $A,\bb$ that are the same to within $\eps$ but for which the infinite-precision solutions $\bu$ are different by the amount $\kappa(A) \eps$.}
+\item \emph{limit to accuracy}:  If real numbers are represented on the computer with machine precision $\eps$ then the solution of \eqref{introsystem} can only be computed within an error $\kappa(A) \eps$ where $\kappa(A) = \|A\|_2 \|A^{-1}\|_2$ is the (2-norm) \emph{condition number} of $A$.\sidenote{Fact i) is about \emph{conditioning} not \emph{methods}.  Informally speaking, there are linear systems $A,\bb$ that are the same to within $\eps$ but for which the infinite-precision solutions $\bu$ are different by the amount $\kappa(A) \eps$.}
 \item \emph{cost of direct solutions}:  Computation of solution \eqref{introsolution} by a direct method like Gauss elimination, whether actually forming $A^{-1}$ or not, is an $O(N^3)$ operation.
 \end{enumerate}
 

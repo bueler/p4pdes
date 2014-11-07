@@ -298,19 +298,19 @@ At grid location $(x_i,y_j)$, equation \eqref{poissonsquareFDearly} relates the 
 \label{fig:unitsquaregridstencil}
 \end{marginfigure}
 
-Equations \eqref{poissonsquareFDearly} and \eqref{poissonsquareFDbcs} form a linear system of $K=MN$ equations.  Note that if we choose to treat all values $U_{i,j}$ on the grid, whether on the boundary or in the interior, as unknowns then we have $K$ unknowns.  This is a linear
+We will treat all values $U_{i,j}$ on the grid, whether on the boundary or in the interior, as unknowns, so we have $K=MN$ unknowns.  Equations \eqref{poissonsquareFDearly} and \eqref{poissonsquareFDbcs} form a linear system of $K$ equations,
 \begin{equation}
 A \bu = \bb, \label{poissonlinearsystem}
 \end{equation}
 where $A$ is a $K\times K$ matrix and $\bu,\bb$ are $K\times 1$ column vectors.
 
-But to shown this linear system in traditional form we must globally-order the unknowns.  Such an ordering is implemented inside a \PETSc \pDMDA, but a feature of \PETSc is that it is hidden and can often be ignored.  We are explicit about the ordering here for the purpose of displaying the system in matrix-vector form, but the code we actually write only uses the grid-wise coordinates $(i,j)$.  The ability to assemble \pMats and \pVecs with $(i,j)$-type indexing is one reason \pDMDA codes can be quite short.
+However, to show linear system \eqref{poissonlinearsystem} in traditional form we must globally-order the unknowns.  Such an ordering is implemented inside a \PETSc \pDMDA, which hides the ordering so it can often be ignored.  While our code (\texttt{c2poisson.c} below) will only use the grid-wise coordinates $(i,j)$, we will be explicit about the ordering here for the purpose of displaying the system in matrix-vector form.  The ability to assemble \pMats and \pVecs with $(i,j)$-type indexing is one reason structured-grid codes using \pDMDA can be quite short.
 
-The ordering used in serial in a 2D \pDMDA is shown by example in Figure \ref{fig:unitsquaregridordering}.  On an $M$ by $N$ grid one could write the ordering as
+The ordering used (in serial) by a 2D \pDMDA is shown in Figure \ref{fig:unitsquaregridordering}.  On an $M$ by $N$ grid one could write it as
 \begin{equation}
     U_k = U_{i,j} \quad \text{ where } \quad k = j\,M + i \label{orderingfd}
 \end{equation}
-for $i=0,1,\dots,M-1$ and $j=0,1,\dots,N-1$, so $k=0,1,\dots,MN-1$.  As already noted, we will let \PETSc do such index transformations internally inside the \pDMDA implementation, but now we can show the linear system in a small-grid case.
+for $i=0,1,\dots,M-1$ and $j=0,1,\dots,N-1$, so $k=0,1,\dots,MN-1$.  In fact we let \PETSc do such index transformations inside the \pDMDA implementation.
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
@@ -337,12 +337,12 @@ for $i=0,1,\dots,M-1$ and $j=0,1,\dots,N-1$, so $k=0,1,\dots,MN-1$.  As already 
       \filldraw (\x * \third,\y * \half) circle (0.5pt);
     }
 \end{tikzpicture}
-\caption{Ordering of unknowns \eqref{orderingfd} on a $M=4$ and $N=3$ grid.  Index $k = j\,M + i$ is shown in {\color{blue} blue}.}
+\caption{Ordering of unknowns \eqref{orderingfd} on a $M=4$ and $N=3$ grid.  Index $k$ from \eqref{orderingfd} is shown in {\color{blue} blue}.}
 \label{fig:unitsquaregridordering}
 \end{marginfigure}
 
 \medskip\noindent\hrulefill
-\begin{example} In the $M=4$ and $N=3$ case shown in Figure \ref{fig:unitsquaregridordering} we have grid spacing $h_x=1/3$ and $h_y=1/2$.  Equations \eqref{poissonsquareFDearly} and \eqref{poissonsquareFDbcs} are an invertible system of $K=12$ equations.  Only the $k=5$ and $k=6$ equations are not boundary conditions \eqref{poissonsquareFDbcs}.  The linear system is
+\begin{example} In the $M=4$ and $N=3$ case (Figure \ref{fig:unitsquaregridordering}) we have grid spacing $h_x=1/3$ and $h_y=1/2$.  Only the $k=5$ and $k=6$ equations are not boundary conditions \eqref{poissonsquareFDbcs}.  The linear system \eqref{poissonlinearsystem} is
 \setcounter{MaxMatrixCols}{20}
 \begin{equation*}
 \begin{bmatrix}
@@ -391,20 +391,20 @@ f_{2,1} \\
 \end{equation*}
 where $a = 2/h_x^2 + 2/h_y^2 = 26$, $b = - 1/h_x^2 = -9$ and $c = - 1/h_y^2 = -4$.
 
-Note that the matrix $A$ is not symmetric.  Furthermore it is not well-scaled for such a small example.  For instance, its 2-norm condition number \citep{TrefethenBau} is $\cond(A) = \|A\|_2 \|A^{-1}\|_2 = 43.16$.
+The matrix $A$ is not symmetric.  Furthermore it is not well-scaled, for such a small example, because the 2-norm condition number is $\kappa(A) = \|A\|_2 \|A^{-1}\|_2 = 43.16$.
 \end{example}
 \noindent\hrulefill
 
 Before assembling the system by writing \PETSc code, there are two nontrivial observations about it.  These observations lead to an equivalent linear system that is easier to solve.
 
-First, the equations \eqref{poissonsquareFDearly} have very different ``scaling'' from those in \eqref{poissonsquareFDbcs} and this means that the rows of $A$ have very different scaling also.  For example, if $M=N=1001$, so that $h_x=h_y=0.001$, then the coefficient of $U_{i,j}$ in \eqref{poissonsquareFDearly} is $4/(.001)^2 = 4 \times 10^6$, while the coefficients along the boundary, from equations \eqref{poissonsquareFDbcs}, are equal to 1.
+First, equations \eqref{poissonsquareFDearly} have very different ``scaling'' from equations \eqref{poissonsquareFDbcs}.  For example, if $M=N=1001$, so that $h_x=h_y=0.001$, then the coefficient of $U_{i,j}$ in \eqref{poissonsquareFDearly} is $4/(.001)^2 = 4 \times 10^6$, while the coefficients from \eqref{poissonsquareFDbcs} are equal to 1.
 
-To make the equations better scaled, which is also the scaling that arises naturally in the finite element method (see Chapter 3), we multiply equation \eqref{poissonsquareFDearly} by the grid cell area $h_x h_y$ to get
+To make the equations better scaled, we multiply \eqref{poissonsquareFDearly} by the grid cell area $h_x h_y$ to get
 \begin{align}
 &\left(2 \frac{h_y}{h_x} + 2 \frac{h_x}{h_y}\right) U_{i,j} - \frac{h_y}{h_x}\left(U_{i+1,j} + U_{i-1,j}\right)  - \frac{h_x}{h_y}\left(U_{i,j+1} + U_{i,j-1}\right) \label{poissonsquareFD} \\
 &\qquad = h_x h_y f_{i,j}. \notag
 \end{align}
-Using \eqref{poissonsquareFD}, in cases where the cell aspect ratio $\max\{h_y/h_x,h_x/h_y\}$ is not too large, all the equations in the system including the boundary conditions will have coefficients of comparable size.  If $h_x=h_y$ then the diagonal entries are equal to $4$ and the off-diagonal entries are $-1$; this is the well-known stencil shown in Figure \ref{fig:equalstarstencil}.
+Using \eqref{poissonsquareFD}, in cases where the cell aspect ratio ($=\max\{h_y/h_x,h_x/h_y\}$) is not too large, all the equations in the system will have coefficients of comparable size.  If $h_x=h_y$ then the diagonal entries are equal to $4$ and the off-diagonal entries are $-1$; this is the well-known stencil shown in Figure \ref{fig:equalstarstencil}.
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
@@ -419,25 +419,23 @@ Using \eqref{poissonsquareFD}, in cases where the cell aspect ratio $\max\{h_y/h
   \filldraw (0.75,0.5) circle (0.8pt);
   \filldraw (0.75,1.0) circle (0.8pt);
   \pgfmathsetmacro\dd{0.06}
-  \draw[color=red] (0.75+\dd,0.75+\dd) node{$4$};
-  \draw[color=red] (0.5+\dd,0.75+\dd)  node{$-1$};
-  \draw[color=red] (0.75+\dd,0.5+\dd)  node{$-1$};
-  \draw[color=red] (1.0+\dd,0.75+\dd)  node{$-1$};
-  \draw[color=red] (0.75+\dd,1.0+\dd)  node{$-1$};
+  \draw (0.75+\dd,0.75+\dd) node{$4$};
+  \draw (0.5+\dd,0.75+\dd)  node{$-1$};
+  \draw (0.75+\dd,0.5+\dd)  node{$-1$};
+  \draw (1.0+\dd,0.75+\dd)  node{$-1$};
+  \draw (0.75+\dd,1.0+\dd)  node{$-1$};
   \draw[line width=2.0pt] (0.50,0.75) -- (1.00,0.75);
   \draw[line width=2.0pt] (0.75,0.5)  -- (0.75,1.00);
   \draw[xstep=0.25,ystep=0.25,black,thin] (0.0,0.0) grid (1.0,1.0);
 \end{tikzpicture}
-\caption{For a grid with $h_x=h_y$, the coefficients on the left side of \eqref{poissonsquareFD}, shown here in {\color{red} red}, are the well-known ``$4$'' and ``$-1$'' for the stencil of the Laplacian.}
+\caption{For a grid with $h_x=h_y$, the coefficients on the left side of \eqref{poissonsquareFD} are the well-known ``$4$'' and ``$-1$'' for the stencil of the Laplacian.}
 \label{fig:equalstarstencil}
 \end{marginfigure}
 
-Our second observation is that our FD equations can be re-interpreted to give a \emph{symmetric} matrix $A$.  This opens up a larger range of linear algebra methods for solving the system efficiently.  For example, in the $i=1$ case of \eqref{poissonsquareFD}, i.e.~at a grid point adjacent to the left-hand boundary of the square, the boundary location value $U_{0,j}$ appears in the equation.  The matrix in the linear system will be symmetric if we systematically ``move'' such values to the right-hand side as known.  That is, we force off-diagonal entries to be zero in columns corresponding to known boundary values, in addition to the existing off-diagonal zeros in the boundary-value rows.
-
-With these two modifications we can redo the previous $M=4$ and $N=3$ example.
+Our second observation is that our FD equations can be re-interpreted to give a \emph{symmetric} matrix $A$.  This opens up a larger range of linear algebra methods for solving the system efficiently.  For example, in the $i=1$ case of \eqref{poissonsquareFD}, i.e.~at a grid point adjacent to the left-hand boundary of the square, the boundary location value $U_{0,j}$ appears in the equation.  The matrix in the linear system will be symmetric if we systematically ``move'' such values to the right-hand side as known.  That is, we force off-diagonal entries to be zero in columns corresponding to known boundary values, in addition to the existing off-diagonal zeros in the boundary-value rows.  With these two modifications we can redo the previous $M=4$ and $N=3$ example.
 
 \medskip\noindent\hrulefill
-\begin{example} For the same $M=4$ and $N=3$ case shown in Figure \ref{fig:unitsquaregridordering}, equations \eqref{poissonsquareFDbcs} and \eqref{poissonsquareFD} become
+\begin{example} For the same $M=4$ and $N=3$ case shown in Figure \ref{fig:unitsquaregridordering}, equations \eqref{poissonsquareFDbcs} and \eqref{poissonsquareFD} yield the linear system
 \begin{equation*}
 \begin{bmatrix}
 1 &  &  &  &  &  &  &  &  &  &  &  \\
@@ -483,23 +481,23 @@ U_{3,2}
 0
 \end{bmatrix}
 \end{equation*}
-where $\alpha = 2 (h_y/h_x) + 2 (h_x/h_y) = 13/3$ and $\beta = - h_y/h_x = - 3/2$.  The matrix is both symmetric and better-scaled, with $\cond(A)=5.83$.
+where $\alpha = 2 (h_y/h_x) + 2 (h_x/h_y) = 13/3$ and $\beta = - h_y/h_x = - 3/2$.  The matrix is symmetric and better-scaled than before ($\kappa(A)=5.83$).
 \end{example}
 \noindent\hrulefill
 
-We now show the core code, in Figure \ref{code:structuredlaplacian}, that assembles ``$A$'' in our linear system \eqref{poissonlinearsystem}.  For clarity and code reuse we have isolated method \texttt{formdirichletlaplacian()} in a separate file.  We will use it both in the Poisson problem (\texttt{c2poisson.c}) and the time-dependent heat equation (\texttt{c2heat.c}) codes below.
+We can now show the code that assembles ``$A$'' in linear system \eqref{poissonlinearsystem}; see Figure \ref{code:structuredlaplacian}.  For clarity and code reuse we have isolated this method \texttt{formdirichletlaplacian()} in a separate file.
 
 \cinput{structuredlaplacian.c}{Fill matrix entries using \texttt{MatSetValuesStencil}.}{//CREATEMATRIX}{//ENDCREATEMATRIX}{code:structuredlaplacian}
 
-The first action of \texttt{formdirichletlaplacian()} is to get a variable \texttt{info} of type  from the \pDM object \texttt{da}.  \texttt{DMDALocalInfo} is a C structure type which stores both global grid size and the size of the locally-owned grid.  This \texttt{struct} has the global grid size in members \texttt{info.mx,info.my} so we can compute grid spacings \texttt{hx,hy}.  The local process owns a \texttt{info.xm} by \texttt{info.ym} rectangular subgrid, with a range of indices
+The first action of \texttt{formdirichletlaplacian()} is to get a variable \texttt{info} of type \texttt{DMDALocalInfo} from the \pDM.  As shown in Figure \ref{fig:localpartofgrid}, \texttt{info} is a C structure which stores both global grid size and the extent of the locally-owned subgrid.  The global size is in members \texttt{info.mx,info.my}; with these we compute grid spacings \texttt{hx,hy}.  The local process owns a \texttt{info.xm} by \texttt{info.ym} rectangular subgrid, with a range of indices
    $$\text{\texttt{info.xs}} \le i \le \text{\texttt{info.xs}} +\text{\texttt{info.xm}}-1$$
 and
-   $$\text{\texttt{info.ys}} \le j \le \text{\texttt{info.ys}} +\text{\texttt{info.ym}}-1$$
-as shown in Figure \ref{fig:localpartofgrid}.  For example, in Figure \ref{fig:unitsquaregridparallel} the rank $0$ and $2$ processes have \text{\texttt{info.xs}}$=0$ and \text{\texttt{info.xm}}$=3$ while the rank $1$ and $3$ processes have \text{\texttt{info.xs}}$=3$ and \text{\texttt{info.xm}}$=2$.  (The $y$ ranges are similar.)  Such index ranges are then reflected in the \texttt{for} loops which re-appear every time we do operations on a structured 2D grid:
+   $$\text{\texttt{info.ys}} \le j \le \text{\texttt{info.ys}} +\text{\texttt{info.ym}}-1.$$
+For example, in Figure \ref{fig:unitsquaregridparallel} the rank $0$ and $2$ processes have \text{\texttt{info.xs}}$=0$ and \text{\texttt{info.xm}}$=3$ while the rank $1$ and $3$ processes have \text{\texttt{info.xs}}$=3$ and \text{\texttt{info.xm}}$=2$.  (The $y$ ranges are similar.)  Such index ranges are then reflected in the \texttt{for} loops which re-appear every time we do operations on a structured 2D grid:
 \begin{Verbatim}[fontsize=\small]
   for (j=info.ys; j<info.ys+info.ym; j++) {
     for (i=info.xs; i<info.xs+info.xm; i++) {
-      DO SOMETHING AT OR NEAR GRID POINT (i,j)
+      DO SOMETHING AT GRID POINT (i,j)
     }
   }
 \end{Verbatim}
@@ -533,19 +531,19 @@ as shown in Figure \ref{fig:localpartofgrid}.  For example, in Figure \ref{fig:u
   \draw[<->,] (-0.15,0.2) -- (-0.15,0.6);
   \node[rotate around={90:(0.3-0.3,0.4)}] at (-0.29,0.32) {\texttt{info.ym}};
 \end{tikzpicture}
-\caption{How the \texttt{DMDALocalInfo info} struct describes the indices for a local process' part of a 2D grid, and the global grid size, using six integers.}
+\caption{A \texttt{DMDALocalInfo} struct describes the indices for a local process' part of a 2D grid, plus the global grid size, using six integers.}
 \label{fig:localpartofgrid}
 \end{marginfigure}
 
-The \pMat object $A$ which is assembled by \texttt{formdirichletlaplacian()} in Figure \ref{code:structuredlaplacian} has ranges of rows owned by each process.  This is the standard parallel layout of \pMat objects in \PETSc.  But this fact is another one that we don't need to know, on a \pDMDA-managed structured grid.  Instead we work with our locally-owned part of the grid using the $(i,j)$ description of a point and its stencil neighbors.  Such local indices can be used when inserting entries into a dynamical data structure for matrix assembly, namely the non-yet-assembled \pMat.
+The \pMat object $A$ assembled by \texttt{formdirichletlaplacian()} (Figure \ref{code:structuredlaplacian}) has ranges of rows owned by each process.  This is the standard parallel layout of \pMat objects in \PETSc, but this fact is another one we can often forget on a \pDMDA-managed structured grid because we work with the locally-owned subgrid using $(i,j)$ indices.
 
-Thus in Figure \ref{code:structuredlaplacian} we see one command \texttt{MatSetValuesStencil()} for each locally-owned grid point.  For a generic interior point this command inserts five coefficients into the matrix.  The key data structure is of type \texttt{MatStencil}, an apparently-trivial struct
+In particular, local indices $(i,j)$ can be used when inserting entries into a dynamical data structure for matrix assembly, namely a \pMat.  Thus in Figure \ref{code:structuredlaplacian} we see use of \texttt{MatSetValuesStencil()}, once for each locally-owned grid point.  For a generic interior point this command inserts five coefficients into the matrix.  The key data structure is of type \texttt{MatStencil}, an apparently-trivial struct
 \begin{Verbatim}[fontsize=\small]
 typedef struct {
   PetscInt k,j,i,c;
 } MatStencil;
 \end{Verbatim}
-In our 2D case, with a single degree of freedom at each node,\sidenote{The Poisson equation \eqref{poissonsquare} is a scalar PDE so the unknown at each grid point is the scalar $U_{i,j}$.  A system of equations like Navier-Stokes would have \texttt{dof}$>1$ when we call \texttt{DMDACreateXd()}.} we only use the \texttt{i} and \texttt{j} members of \texttt{MatStencil}.  From \eqref{poissonsquareFD}, the actual matrix entries are $a_{i,i} = 2\left(h_y/h_x + h_x/h_y\right)$ on the diagonal or $a_{i,j} = -h_y/h_x$ or $a_{i,j} = -h_x/h_y$ for off-diagonals.  As mentioned above, we only insert nonzero off-diagonals in the matrix if the column corresponds to a non-boundary location.  After completing all the \texttt{MatSetValuesStencil()} insertion commands we call 
+In our 2D case, with a single degree of freedom at each node,\sidenote{The Poisson equation \eqref{poissonsquare} is a scalar PDE so the unknown at each grid point is the scalar $U_{i,j}$.  A system of equations like Navier-Stokes would have \texttt{dof}$>1$ when we call \texttt{DMDACreateXd()}, and the ``\texttt{c}'' member of \texttt{MatStencil} would get used.} we only use the \texttt{i} and \texttt{j} members of \texttt{MatStencil}.  From \eqref{poissonsquareFD}, the actual matrix entries are $a_{i,i} = 2\left(h_y/h_x + h_x/h_y\right)$ on the diagonal, and $a_{i,j} = -h_y/h_x$ or $a_{i,j} = -h_x/h_y$ for off-diagonals.  We only insert nonzero off-diagonals in the matrix if the column corresponds to a non-boundary location.  After completing all the \texttt{MatSetValuesStencil()} insertion commands we call 
 \begin{Verbatim}[fontsize=\small]
   MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);
   MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);
@@ -553,9 +551,9 @@ In our 2D case, with a single degree of freedom at each node,\sidenote{The Poiss
 just as we did in Chapter 1.
 
 
-\section{A first example code for the Poisson problem}
+\section{A particular Poisson problem}
 
-At this point we need to set up a particular Poisson problem so our first example code can solve it.  To do this we \emph{choose} an exact solution, taking care that it satisfies our homogeneous Dirichlet boundary conditions ($u=0$ along $\partial \mathcal{S}$):\sidenote{Noting that the truncation error term $O(h^2)$ in equation \eqref{secondderivativeFD} has a coefficient proportional to fourth derivatives, our FD method will \emph{not} be exact on this problem.  This is good; we would not want the simpler form $u(x,y)=(x-x^2)(y-y^2)$, for example, to test convergence rate of the code.}
+At this point we need to set up a particular Poisson problem so our first example code can solve it.  To do this we \emph{choose} an exact solution, taking care that it satisfies homogeneous Dirichlet boundary conditions ($u=0$ along $\partial \mathcal{S}$):\sidenote{The truncation error term $O(h^2)$ in equation \eqref{secondderivativeFD} has a coefficient proportional to fourth derivatives, our FD method will \emph{not} be exact on this problem.  This is good; we would not want the simpler form $u(x,y)=(x-x^2)(y-y^2)$, for example, to test convergence rate of the code.}
 \begin{equation}
 u(x,y) = (x^2 - x^4) (y^4 - y^2). \label{exactsolution}
 \end{equation}
@@ -565,27 +563,49 @@ f(x,y) = 2 (1 - 6 x^2) y^2 (1 - y^2) + 2 (1 - 6 y^2) x^2 (1 - x^2).\label{manufa
 \end{equation}
 From now on we will refer to $u$ in \eqref{exactsolution} as ``$u_{ex}$'', the exact solution.  (This same problem appears in Chapter 4 of \citep{Briggsetal2000}, so we are not being original.) % page 64
 
+
+\section{The code}
+
+The code \texttt{c2poisson.c} uses our finite difference method \eqref{poissonsquareFD} to solve the Poisson problem with $f$ from \eqref{manufacturedf}.  The first part, in Figure \ref{code:ctwopoissonrhs}, isolates \eqref{exactsolution} and \eqref{manufacturedf} into a method called \texttt{formRHSandExact()}.  It uses only local grid coordinates $(i,j)$ for the computation, with loops over index ranges as shown in Figure \ref{fig:localpartofgrid}. \PETSc pointer arithmetic (i.e.~tricks) allows us to index the C arrays we get from \texttt{DMDAVecGetArray()} using $(i,j)$.  When we are done with computing \pVecs we restore the C arrays by calling \texttt{DMDAVecRestoreArray()}, and we explicitly ask for the \pVec objects to be assembled by calling \texttt{VecAssemblyBegin/End()}.
+
+Next, Figure \ref{code:ctwopoissoncreate} shows how \texttt{c2poisson.c} creates the various parallel objects needed to solve the Poisson problem, namely one \pDM, one \pMat, and three \pVecs.  A \pDM object can compute matrix and vector sizes from the grid dimensions, so we call \texttt{DMCreateMatrix()} and \texttt{DMCreateGlobalVector()} to create \pMat and \pVec objects, respectively.  Then we call \texttt{formdirichletlaplacian()} (see Figure \ref{code:structuredlaplacian}) and \texttt{formRHSandExact()}---see Figure \ref{code:ctwopoissonrhs}---to assemble the matrix and vectors.
+
 \cinputpart{c2poisson.c}{This method assembles a \pVec for the right-hand side of equation \eqref{poissonsquareFD}, and one for the exact solution.}{I}{//RHS}{//ENDRHS}{code:ctwopoissonrhs}
 
-The code \texttt{c2poisson.c} uses our finite difference method \eqref{poissonsquareFD} to solve the Poisson problem with $f$ from \eqref{manufacturedf}.  The first part, in Figure \ref{code:ctwopoissonrhs}, isolates the computation of $u_{ex}$ from \eqref{exactsolution} and $f$ from  \eqref{manufacturedf} into a method called \texttt{formRHSandExact()}.  It uses only local grid coordinates $(i,j)$ for the computation, with loops over index ranges as shown in Figure \ref{fig:localpartofgrid}. \PETSc pointer arithmetic (i.e.~tricks) allows us to index the C arrays we get from \texttt{DMDAVecGetArray()} using $(i,j)$.  When we are done with computing \pVecs we restore the C arrays by calling \texttt{DMDAVecRestoreArray()}, and we explicitly ask for the \pVec objects to be assembled by calling \texttt{VecAssemblyBegin/End()}.
+\PETSc describes the linear system ``$A\bu=\bb$'' by one \pMat \texttt{A} and two \pVecs (\texttt{u} and \texttt{b}), but the \emph{method} for solving the linear system is a ``Krylov space'' solver object of type \pKSP.  The part of \texttt{c2poisson.c} that creates this object is in Figure \ref{code:ctwopoissonsolve}.
 
-Next, Figure \ref{code:ctwopoissoncreate} shows how \texttt{c2poisson.c} creates the various parallel objects needed to solve the Poisson problem, namely one \pDM, one \pMat, and three \pVecs.  Note that a \pDM object can compute appropriate matrix and vector sizes from the grid dimensions, so we call \texttt{DMCreateMatrix()} and \texttt{DMCreateGlobalVector()} to create \pMat and \pVec objects, respectively.  Then we call \texttt{formdirichletlaplacian()} (see Figure \ref{code:structuredlaplacian}) and \texttt{formRHSandExact()} (see Figure \ref{code:ctwopoissonrhs}).
 
-\cinputpart{c2poisson.c}{Set up \pDM, \pMat, and \pVec objects, and assemble the linear system.}{II}{//CREATE}{//ENDCREATE}{code:ctwopoissoncreate}
+\section{Krylov space solvers}
 
-\PETSc describes the linear system ``$A\bu=\bb$'' by one \pMat \texttt{A} and two \pVecs (\texttt{u} and \texttt{b}), but the \emph{method} for solving the linear system is a ``Krylov space'' solver object of type \pKSP.  The part of \texttt{c2poisson.c} that creates this object is in Figure \ref{code:ctwopoissonsolve}.  Krylov space methods \citep{TrefethenBau} build a numerical solution $\tilde\bu$ by applying $A$ to vectors, but without using other manipulations of the entries of $A$.  For instance, the approximate solution $\tilde\bu$ might be an element of the $n$th Krylov space
-    $$\mathcal{K} = \operatorname{span}\{\bb,A\bb,A^2\bb,\dots,A^{n-1}\bb\},$$
+Recall that Krylov space methods \citep{TrefethenBau} build a numerical solution $\tilde\bu$ by applying $A$ to vectors, but without using other manipulations of the entries of $A$.  For instance, the approximate solution $\tilde\bu$ to \eqref{poissonlinearsystem} might be an element of the $n$th Krylov space
+    $$\mathcal{K}_n = \operatorname{span}\{\bb,A\bb,A^2\bb,\dots,A^{n-1}\bb\},$$
 in which case
     $$\tilde\bu = c_0 \bb + c_1 A \bb + c_2 A^2 \bb + \dots + c_{n-1} A^{n-1} \bb$$
 or equivalently
-    $$\tilde\bu = p(A) \bb$$
-for the $n-1$ degree polynomial
-    $$p(x) = c_0 + c_1 x + c_2 x^2 + \dots + c_{n-1} x^{n-1}$$
-applied to $A$.  Well-known methods CG, GMRES, MINRES, and others \citep{Greenbaum1997,Saad2003} solve a linear system this way.  Almost every Krylov method is implemented in \PETSc, and we get access to all of them via a \pKSP object.  We will return to using Krylov space methods in \PETSc in later chapters.
+    $$\tilde\bu = p_{n-1}(A) \bb$$
+for the $n-1$ degree polynomial $p_{n-1}(x) = c_0 + c_1 x + \dots + c_{n-1} x^{n-1}$ applied to $A$.
+
+\cinputpart{c2poisson.c}{Set up \pDM, \pMat, and \pVec objects, and assemble the linear system.}{II}{//CREATE}{//ENDCREATE}{code:ctwopoissoncreate}
+
+Krylov space methods compute polynomials $p$ so that $p(A) \approx A^{-1}$.  For example, if we recall the Richardson iteration \eqref{introrichardson}, namely $\bu_{k+1} = \bu_k + \omega (\bb - A \bu_k)$, and we suppose $\bu_0=0$ then $\bu_k = p_{k-1}(A) \bb$ where
+\begin{align*}
+p_0(A) &= \omega I, \\
+p_1(A) &= 2 \omega I - \omega^2 A, \\
+p_2(A) &= 3 \omega I - 3 \omega^2 A + \omega^3 A^2, \\
+\vdots
+\end{align*}
+However, it is not at all clear that these are efficient approximations of $A^{-1}$, and we will not be using this simple iteration in its raw form.
 
 \cinputpart{c2poisson.c}{Solve using \pKSP, and report on solution.}{III}{//SOLVE}{//ENDSOLVE}{code:ctwopoissonsolve}
 
+Well-known iterative linear algebra methods GMRES, CG (conjugate gradient), MINRES, and others \citep{Greenbaum1997,Saad2003} are Krylov space methods which generate optimal (in various senses) polynomials $p(A) \approx A^{-1}$. FIXME: flesh out for GMRES
+
+Most Krylov methods are implemented in \PETSc, and we get access to them via a \pKSP object.  Which method is used can be controlled at runtime, and experimentation is appropriate in general.  For the Poisson problem we will see that preconditioned CG is very effective, but eventually we will put the most emphasis on the preconditioning stage (see Chapter 4).  We will return to Krylov space methods repeatedly in later Chapters.
+
 To finish showing the code, in Figure \ref{code:ctwopoissonsolve} we create the \pKSP object and tell it about \texttt{A} through a call to \texttt{KSPSetOperators()}.  Inside a \pKSP there are two ways \texttt{A} is used, namely as the system matrix and as a possible preconditioner---more on this later---which explains why \texttt{A} appears twice when calling \texttt{KSPSetOperators()}.  We also call \texttt{KSPSetFromOptions()} so that we can change the \pKSP type at runtime (illustrated below).  Solving the system means calling \texttt{KSPSolve()}.  Then we report on the solution by computing the numerical error by the norm $\|u-u_{ex}\|_\infty$.  Then we wrap up by destroying objects and calling \texttt{PetscFinalize()}.
+
+
+\section{Running the code, and runtime control}
 
 As a first run do:
 \begin{Verbatim}[fontsize=\small]
@@ -597,9 +617,6 @@ to get output
 on 10 x 10 grid:  error |u-uexact|_inf = 0.000621778
 \end{Verbatim}
 We see the default $10\times 10$ grid chosen in our call to \texttt{DMDACreate2d()}. There were seven iterations of the KSP method and a final residual norm and numerical error.
-
-
-\section{Runtime control}
 
 At this point we want to know:\begin{itemize}
 \item is our numerical method correctly implemented? (\emph{convergence})
@@ -650,9 +667,7 @@ $ ./c2poisson -ksp_monitor
   0 KSP Residual norm 1.007660904704e-01 
   1 KSP Residual norm 2.917206076870e-02 
   2 KSP Residual norm 1.153582666339e-02 
-  3 KSP Residual norm 2.915161628052e-03 
-  4 KSP Residual norm 5.145699777443e-04 
-  5 KSP Residual norm 6.960595794927e-05 
+... 
   6 KSP Residual norm 6.995040432502e-06 
   7 KSP Residual norm 8.593881990968e-07 
 on 10 x 10 grid:  error |u-uexact|_inf = 0.000621778
@@ -660,21 +675,12 @@ $ ./c2poisson -ksp_monitor -ksp_rtol 1.0e-12
   0 KSP Residual norm 1.007660904704e-01 
   1 KSP Residual norm 2.917206076870e-02 
   2 KSP Residual norm 1.153582666339e-02 
-  3 KSP Residual norm 2.915161628052e-03 
-  4 KSP Residual norm 5.145699777443e-04 
-  5 KSP Residual norm 6.960595794927e-05 
-  6 KSP Residual norm 6.995040432502e-06 
-  7 KSP Residual norm 8.593881990968e-07 
-  8 KSP Residual norm 8.624906750384e-08 
-  9 KSP Residual norm 7.509270093428e-09 
- 10 KSP Residual norm 5.508827844317e-10 
- 11 KSP Residual norm 6.349819528978e-11 
- 12 KSP Residual norm 4.328647633960e-12 
+...
  13 KSP Residual norm 4.240214646869e-13 
  14 KSP Residual norm 3.105665682224e-14 
 on 10 x 10 grid:  error |u-uexact|_inf = 0.000621527
 \end{Verbatim}
-On this coarse grid the numerical error is nearly the same, but on finer grids the fact that the linear system is solved more exactly will bring the numerical solution closer to the exact one.
+On this coarse grid the numerical error is nearly the same, but on finer grids the fact that the linear system is solved more exactly will bring the numerical solution closer to the exact one.  However, the \pKSP takes twice as many iterations to achieve the desired residual norm reduction.
 
 In fact, rerunning the Bash loop with the stronger tolerance yields excellent evidence of convergence at the expected rate:
 \begin{Verbatim}[fontsize=\small]
