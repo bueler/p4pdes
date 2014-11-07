@@ -10,7 +10,7 @@ FIXME: to show starting and stopping \PETSc, and that MPI is there too, and prin
 
 \section{A bit of linear algebra}
 
-At the core of most \PETSc computations is a finite-dimensional linear system.  Before giving any of the \PETSc details for such systems in \PETSc, it is useful to recall the most basic ideas of numerical linear algebra.
+At the core of most \PETSc computations is a finite-dimensional linear system.  Before giving any of the details for solving such systems in \PETSc, it is useful to recall the most basic ideas of numerical linear algebra.
 
 Suppose $\bb\in \RR^{N}$ is a column vector and $A\in\RR^{N\times N}$ is a square matrix.  The linear system
 \begin{equation}
@@ -22,18 +22,42 @@ has a unique solution if $A$ is invertible, namely
 \end{equation}
 This is simple in theory.
 
-It is not so simple in practice, however, when solving large systems on a computer.  There are two key facts to always keep in mind while working numerically  \citep{TrefethenBau}.
+It is not so simple in practice, however, when solving large systems on a computer.  There are two key facts to keep in mind while working numerically  \citep{TrefethenBau}.
 \renewcommand{\labelenumi}{\roman{enumi})}
 \begin{enumerate}
-\item \emph{limits to accuracy}:  If real numbers are represented on the computer with machine precision $\eps$ then the solution of \eqref{introsystem} can only be computed within an error $\kappa(A) \eps$ where $\kappa(A) = \|A\|_2/\|A^{-1}\|_2$ is the (2-norm) \emph{condition number} of $A$.\sidenote{Fact i) is about \emph{conditioning} not \emph{methods}.  Informally speaking, there are linear systems $A,\bb$ that are the same to within $\eps$ but for which the infinite-precision solutions $\bu$ are different by the amount $\kappa(A) \eps$.}
-\item \emph{cost of direct solutions}:  Computation of solution \eqref{introsolution} by a direct method like Gauss elimination, whether actually forming $A^{-1}$ (a bad idea) or not, is an $O(N^3)$ operation.
+\item \emph{limit to accuracy}:  If real numbers are represented on the computer with machine precision $\eps$ then the solution of \eqref{introsystem} can only be computed within an error $\kappa(A) \eps$ where $\kappa(A) = \|A\|_2/\|A^{-1}\|_2$ is the (2-norm) \emph{condition number} of $A$.\sidenote{Fact i) is about \emph{conditioning} not \emph{methods}.  Informally speaking, there are linear systems $A,\bb$ that are the same to within $\eps$ but for which the infinite-precision solutions $\bu$ are different by the amount $\kappa(A) \eps$.}
+\item \emph{cost of direct solutions}:  Computation of solution \eqref{introsolution} by a direct method like Gauss elimination, whether actually forming $A^{-1}$ or not, is an $O(N^3)$ operation.
 \end{enumerate}
 
-For a sense of the consequences of these facts, let's put in some numbers.  On most computers the precision for the C \texttt{double} type, the default representation of real numbers, is $\eps = 2.2 \times 10^{-16}$.  By i), a linear system having $\kappa(A) \approx 10^{10}$, for example, can only be solved to about six digits of precision.  Because of ii), a linear system with $N=10^6$ equations\sidenote{We will do problems of this size on a single processor in a few seconds, and in $O(N)$ operations, in Chapter 4.}
+For a sense of the consequences of these facts, let's put in some numbers.  On most computers the precision for the C \texttt{double} type, the modern default 64-bit representation of real numbers, is $\eps = 2.2 \times 10^{-16}$.  By i), a linear system having $\kappa(A) \approx 10^{10}$, for example, can only be solved to about six digits of precision.  Because of ii), a linear system with $N=10^6$ equations\sidenote{We will do problems of this size on a single processor in a few seconds, and in $O(N)$ operations, in Chapter 4.}
 %time ./c4poisson -da_refine 7 -ksp_type cg -pc_type mg
 %on 1153 x 1153 grid:  iterations 2, residual norm = 1.88082e-05
 %real 11.18
-requires $\sim 10^{18}$ operations to solve by Gauss elimination, and even modern processors take a while to do a quintillion operations.
+requires $\sim 10^{18}$ operations to solve by Gauss elimination.  Even modern processors take a while to do a quintillion operations.
+
+Many methods other than Gauss elimination are possible for solving linear systems, and this is a topic we will return to in Chapters 2, 4, and 5 especially.  Usually these methods are iterative, and they often use the concept of \emph{residual}.  If $\bu_0\in \RR^N$ is a vector, then by definition the residual for $\bu_0$. as an estimate of the solution to equation \eqref{introsystem}, is the vector
+\begin{equation}
+\br_0 = \bb - A \bu_0. \label{residualdefn}
+\end{equation}
+
+Evaluating the residual for a known vector $\bu_0$ requires only applying $A$ to it, an $O(N^2)$ operation in general, plus a vector subtraction.  However, most discretization schemes for PDEs generate system matrices $A$ that are sparse, meaning simply that they have many more zero entries than nonzeros.  Also these matrices are likely to have a pattern to their nonzero entries in some sense.  In this case the operation $A\bu_0$ can often be implemented in $O(N)$ cost.
+
+The \emph{Richardson iteration} is an example of an iterative method based on the residual.  If $\bu_0$ is an initial estimate of the solution then the iteration simply adds a multiple of the residual to get the next iterate,
+\begin{equation}
+\bu_{k+1} = \bu_k + \omega (\bb - A \bu_k),  \label{introrichardson}
+\end{equation}
+where $\omega\in\RR$ is called the ``weight.''  Each step of this iteration is $O(N)$ work if the matrix-vector product $A\bu_k$ can be computed in $O(N)$ work.  If significantly fewer than $O(N^2)$ steps are needed to make $\bu_k$ an adequately-good approximation of the exact solution $\bu$, then the Richardson iteration is an improvement on Gauss elimination.  On the other hand, the Richardson iteration may not even converge.  If we write \eqref{introrichardson} as $\bu_{k+1} = (I - \omega A) \bu_k + \omega \bb$ then it is easy to see that the ``size'' of the matrix $I-\omega A$ will determine whether $\lim_{k\to\infty} \bu_k$ exists.
+
+To examine questions like the convergence of the Richardson iteration, we recall the definitions of \emph{eigenvalue} and \emph{singular value}.  A complex number $\lambda \in \CC$ is an eigenvalue of $A$ if there is a nonzero vector $\bv\in\RR^N$ so that $A \bv = \lambda \bv$.  The set of all eigenvalues of $A$ is the \emph{spectrum} $\sigma(A)$ of $A$.  The singular values are the square roots of the eigenvalues of the matrix $A^*A$.\sidenote{The matrix $A^*A$ is symmetric and positive-definite so its eigenvalues are nonnegative, and thus have square roots.}  Singular values are also geometrically-defined as the lengths of semi-axes of the ellipsoid in $\RR^N$ that results from applying $A$ to all vectors in the unit sphere of $\RR^N$ \citep{TrefethenBau}.  Properties of $A$ that can be described in terms of its eigenvalues or singular values are generically called ``spectral properties'' of $A$.
+
+Note that $\|A\|_2$ is equal to the largest singular value of $A$, while $\|A^{-1}\|_2$ is equal to the inverse of the smallest singular value of $A$.  Thus $\kappa(A)$ is the ratio of largest to smallest singular values of $A$, and is well-visualized as the eccentricity of the just-mentioned ellipsoid.  The condition number of $A$ is thus a spectral property.
+
+It is an easy exercise to show that the Richardson iteration \eqref{introrichardson} will converge if and only if all the eigenvalues of $I-\omega A$ are inside the unit circle.  Defining the \emph{spectral radius} $\rho(A)$ of a matrix $A$ as the maximum norm of the eigenvalues of $A$, we can describe the convergence of the Richardson iteration this way:
+\begin{equation}
+\text{\eqref{introrichardson} converges if and only if } \rho(I-\omega A) < 1.
+\end{equation}
+
+Other examples of iterative methods include the classical Jacobi and Gauss-Siedel iterations \citep{Greenbaum1997}, but the really powerful ones proceed by iteratively generating an \emph{optimal}, in some sense, estimate $\bu_k$ which is a linear combination of vectors $\bb,A\bb,A^2\bb,\dots,A^{k-1}\bb$, and these methods are collectively called \emph{Krylov space methods} because the span of these vectors is a Krylov space.  Typically the sense of ``optimal'' also depends on the eigenvalues or singular values of $A$.  We use Krylov space methods in Chapter 2 and all later Chapters.
 
 Returning to non-numerical linear algebra for a moment, note that there are many other systems which are equivalent to \eqref{introsystem}.  In fact, if $P\in\RR^{N\times N}$ is an invertible square matrix then the systems
 \begin{equation}
@@ -47,13 +71,11 @@ obviously have the same solution $\bu$ as \eqref{introsystem}.
 
 The matrices $P^{-1} A$ and $A P^{-1}$ may have very different condition numbers, however.  While the accuracy of the solution $\bu$ cannot be improved beyond the $\kappa(A) \eps$ level---fact i) cannot be overcome in that sense---methods can indeed take advantage of better conditioning or other spectral properties to generate an approximate solution more quickly.  Equivalent systems \eqref{introleftpre} and \eqref{introrightpre} are referred to as \emph{preconditioned} systems, with the former called \emph{left preconditioning} and the latter \emph{right-preconditioning}.
 
-Before giving a quick example of the role of preconditioning, an explanation of the phrase ``conditioning or other spectral properties'' is warranted.  Recall that a complex number $\lambda \in \CC$ is an \emph{eigenvalue} of $A$ if there is a nonzero vector $\bv\in\RR^N$ so that $A \bv = \lambda \bv$.  The set of all eigenvalues of $A$ is the \emph{spectrum} $\sigma(A)$ of $A$, so properties of $A$ that can be described in terms of eigenvalues are ``spectral properties.''
-
-Besides the eigenvalues of $A$, its \emph{singular values} are also spectral because they are the square roots of the eigenvalues of the matrix $A^*A$.\sidenote{The matrix $A^*A$ is symmetric and positive-definite so its eigenvalues are nonnegative, and thus have square roots.}  Singular values are also geometrically-defined as the lengths of semi-axes of the ellipsoid in $\RR^N$ that results from applying $A$ to all vectors in the unit sphere of $\RR^N$ \citep{TrefethenBau}.  Note that $\|A\|_2$ is equal to the largest singular value of $A$, while $\|A^{-1}\|_2$ is equal to the inverse of the smallest singular value of $A$.  Thus $\kappa(A)$ is the ratio of largest to smallest singular values of $A$, and is well-visualized as the eccentricity of the just-mentioned ellipsoid.
-
-For example, FIXME: super-simple Richardson iteration example and stop
+We can conclude this little bit of numerical linear algebra by giving a small example of its role in making the simple Richardson iteration converge.  FIXME
 % A = [10 -1; -1 1]
 % P = [10 0; 0 1]
+% uexact = [1; 2]
+% b = A * uexact
 % z = randn(2,1)
 % z = z + 1.0 * (b - A*z)
 % z = z + 1.0 * (P \ b - P \ A*z)
