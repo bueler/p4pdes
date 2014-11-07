@@ -271,7 +271,7 @@ You've taken a mathematics course or two in partial differential equations (PDEs
 
 The Portable, Extensible Toolkit for Scientific computing (\PETSc\sidenote{Say it ``pets sea.''}) \citep{petsc-user-ref} is an open-source, mathematical software library built on top of the standard software layer for large-scale parallel computation, the Message Passing Interface (MPI) \citep{Groppetal1999}.  Thus \PETSc is a framework for solving problems like PDS at ``large scale,'' that is, at high resolution and on supercomputers with hundreds to millions of cores.
 
-\PETSc is not particularly new.  Version 2.0, the first version to make an impact in the scientific computing world, was built in 1994.  A well-known textbook \citet{Smithetal1996}\sidenote{B.~Smith, P.~Bjorstad, and W.~Gropp. \emph{Domain decomposition: parallel multilevel methods for elliptic partial differential equations}. Cambridge
+\PETSc is not particularly new.  Version 2.0, the first version to make an impact in the scientific computing world, was built in 1994.  A well-known monograph \citet{Smithetal1996}\sidenote{B.~Smith, P.~Bjorstad, and W.~Gropp. \emph{Domain decomposition: parallel multilevel methods for elliptic partial differential equations}. Cambridge
 University Press, 1996} uses \PETSc 2.0 for scalable solutions of linear partial differential equations (PDEs).  That book focusses on pre-conditioned iterative linear solvers.  For example, domain decomposition methods like additive Schwarz are shown to scalably solve the Poisson equation on irregular domains and fine meshes in parallel.
 
 But \PETSc is now at version 3.5.\sidenote{Version 3.5.2 is current in September 2014.  The stable homepage URL for PETSc, including download and installation instructions, is at \href{http://www.mcs.anl.gov/petsc/index.html}{www.mcs.anl.gov/petsc}.}  It has evolved into a more powerful toolbox with a much richer API.
@@ -282,7 +282,7 @@ On the other hand, \PETSc is notoriously complicated.  Twenty years have passed 
 
 \section{The goals of this book}
 
-This book is about approximately solving linear and nonlinear PDEs in 2 or 3 spatial variables by writing C code that calls \PETSc methods.  It tries to both explain the ideas directly, and illustrate them through example codes.  The example codes come with enough background information so that readers can use them as a basis for further developments.  Demonstrated scalability of these examples is the goal, so runtime options are explained and compared.
+This book is about numerically solving linear and nonlinear PDEs in 2 or 3 spatial variables by writing C code that directly calls \PETSc.  This book tries to both explain the ideas directly, and illustrate them through example codes.  The example codes come with enough background information so that readers can use them as a basis for further developments.  Demonstrated scalability is the goal, so runtime options are explained and compared.
 
 This book does not replace the \PETSc \emph{User's Manual}.  Indeed, the current book assumes you want to solve PDEs, while there are many other uses of \PETSc.
 
@@ -302,15 +302,13 @@ Searching in the \PETSc HTML manual pages should be the reader's first resort fo
 \section{There is much that this book does NOT do}
 
 This book\begin{itemize}
-\item  does not help you install \PETSc.
-\item  does not replace \citep{Smithetal1996}.
-\item  does not do anything in Fortran.
-\item  does not help with most packages \PETSc links to.
-\item  does not do a complete job of teaching the finite element method.
-\item  does not solve any hyperbolic PDE problems.
-\item  does not consider spatial dimensions except 2 and 3.
-\item  does not prove anything.\sidenote{We do give evidence for convergence and scalability when possible.}
-\item  does not care whether its numerical solutions are good models of physical problems.
+\item  does not help you install \PETSc,
+\item  does not use Fortran or C++, and all examples are in C,\sidenote{We use ANSI C99 features.}
+\item  does not help with most of the many packages \PETSc links to,
+\item  does not do a complete job of teaching the finite element method or any other discretization paradigm for PDEs,
+\item  does not consider spatial dimensions except 2 and 3,
+\item  does not prove anything,\sidenote{We do give evidence for convergence and scalability when possible.}
+\item  does not care whether its numerical solutions are good models of physical problems, and
 \item  does not adequately cover what is known about nonlinear PDEs, much less what is not known.
 \end{itemize}
 

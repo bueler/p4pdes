@@ -1,11 +1,69 @@
 
-\chapter{1. A small linear system with PETSc}
+\chapter{1. Getting started with PETSc}
 
-\section{Getting started}
+\section{A code that does almost nothing}
 
-FIXME: to show starting and stopping \PETSc, and that MPI is there too, and printing to STDOUT
+The purpose of the \PETSc library is to help you solve scientific and engineering problems, like PDEs, on distributed computers.  But \PETSc is built ``on top of'' the Message Passing Interface (MPI; \citep{Groppetal1999}) library, and some of the flavor of that library comes through in examples.  We start with an example C code \texttt{c1e.c} in Figure \ref{code:e} that is more-or-less just a introductory MPI example, but it does call \PETSc for some of the basic tasks.
 
-\inputwhole{../c/c1e.c}{c1e.c}{Compute $e$ in parallel.}{code:e}
+\inputwhole{../c/c1e.c}{\texttt{p4pdes/c/c1e.c}}{Compute $e$ in parallel.}{code:e}
+
+This code computes Euler's constant
+  $$e = \sum_{n = 0}^\infty \frac{1}{n!} \approx 2.718281828$$
+in parallel.  It does the computation in a very distributed manner, by computing one term of the infinite series on each process.  Thus it computes a better estimate of $e$ if run on many MPI processes.\sidenote{It's kind of silly.}
+
+As with any C source that compiles into an executable, its overall structure is just a function called \texttt{main()}.  This function takes inputs from the command line, \texttt{argc}, the argument count, and \texttt{argv}, the arguments themselves.  It outputs an \texttt{int} which is $0$ if the program succeeds.  Like all C codes we include the needed libraries---only \texttt{petscsys.h} is needed here.  Then we declare some variables, call various methods, and return $0$ at the end.
+
+Additional features of \texttt{c1e.c} will be worth describing once we compile and run our code.  Please do the following to start:
+\begin{Verbatim}[fontsize=\small]
+$ cd p4pdes/c/  # this book is distributed by
+                #     "git clone https://github.com/bueler/p4pdes.git"
+                #     or similar
+$ make c1e
+\end{Verbatim}
+For the command ``\texttt{make}'' to work there must be a makefile, and there is one.  The relevant part of it looks like Figure \ref{code:c1emakefile}.  For all of the \PETSc examples in this book, the makefile will have this form, exactly as recommended in the \PETSc User's Manual \citep{petsc-user-ref}.
+
+\cinputraw{c1emakefile.frag}{extract from \texttt{p4pdes/c/makefile}}{All \texttt{makefile}s for the \PETSc codes in this book like like this.}{}{//START}{//STOP}{code:c1emakefile}
+
+Run the code on one MPI process like this:
+\begin{Verbatim}[fontsize=\small]
+$ ./c1e
+e is about 1.000000000000000
+rank 0 did 1 flops
+\end{Verbatim}
+The value $1.000\dots$ is a very poor estimate of $e$, but this code does better with more processes:
+\begin{Verbatim}[fontsize=\small]
+$ mpiexec -n 5 ./c1e
+rank 3 did 7 flops
+rank 4 did 9 flops
+e is about 2.708333333333333
+rank 0 did 1 flops
+rank 1 did 3 flops
+rank 2 did 5 flops
+\end{Verbatim}
+That's a better estimate of $e$, but hardly impressive.  On the other hand, with $N=20$ processes we get a good estimate:
+\begin{Verbatim}[fontsize=\small]
+$ mpiexec -n 20 ./c1e
+rank 9 did 19 flops
+...
+e is about 2.718281828459045
+rank 0 did 1 flops
+...
+rank 18 did 37 flops
+\end{Verbatim}
+
+Now, perhaps the reader is worried that this book was written using a large supercomputer whereas the reader has a little laptop with a coupld of cores.  Not so; these $N=5$ and $N=20$ process runs can be done just fine on your little laptop or mine.  MPI creates processes as needed, and indeed operating systems have been multitasking for quite some time.
+
+An interesting aspect of the code and output is that there are two printing jobs, one of which is \emph{collective} over all processes---i.e.~\emph{ranks}, in MPI language---and one of which is individual to each rank.  In the code in Figure \ref{code:e} we see the difference between \texttt{PetscPrintf()}, a formatted print command, called with either the MPI communicator \texttt{PETSC\_COMM\_WORLD} or \texttt{PETSC\_COMM\_SELF}, respectively.  In this program each MPI process (i.e.~rank) report its rank and the work it did as soon as it is done, and thus these lines appear in almost random order.  Note that we get the rank of the current process with a call \texttt{MPI\_Comm\_rank()} directly to the MPI library; when a job \emph{can} be done by MPI, \PETSc will leave it that way.
+
+The main job, however, is to collect the terms in the (truncated) infinite series onto each process, and then print this estimate of $e$ just once.  Thus the code is basically structured as a computation of $1/n!$ on each rank $n$, a call to \texttt{MPI\_Allreduce()} to sum all contributions onto all processes, and then a collective print statement giving the value of $e$.
+
+This is about all there is to say, except that every \PETSc program should start and end with the commands \texttt{PetscInitialize()} and \texttt{PetscFinalize()}:
+\begin{Verbatim}[fontsize=\small]
+  PetscInitialize(&argc,&args,(char*)0,help);  // <-- always call
+  ... everything else goes here ...
+  PetscFinalize();  // <-- always call
+\end{Verbatim}
+Also, so that this \PETSc code can provide useful usage help, we add a \texttt{help} string at the start; it is a good place to say what the purpose of the code is.
 
 
 \section{A bit of linear algebra}
