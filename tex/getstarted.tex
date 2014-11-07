@@ -54,7 +54,7 @@ Note that $\|A\|_2$ is equal to the largest singular value of $A$, while $\|A^{-
 
 It is an easy exercise to show that the Richardson iteration \eqref{introrichardson} will converge if and only if all the eigenvalues of $I-\omega A$ are inside the unit circle.  Defining the \emph{spectral radius} $\rho(A)$ of a matrix $A$ as the maximum norm of the eigenvalues of $A$, we can describe the convergence of the Richardson iteration this way:
 \begin{equation}
-\text{\eqref{introrichardson} converges if and only if } \rho(I-\omega A) < 1.
+\text{\eqref{introrichardson} converges if and only if } \rho(I-\omega A) < 1. \label{introconvergethm}
 \end{equation}
 
 Other examples of iterative methods include the classical Jacobi and Gauss-Siedel iterations \citep{Greenbaum1997}, but the really powerful ones proceed by iteratively generating an \emph{optimal}, in some sense, estimate $\bu_k$ which is a linear combination of vectors $\bb,A\bb,A^2\bb,\dots,A^{k-1}\bb$, and these methods are collectively called \emph{Krylov space methods} because the span of these vectors is a Krylov space.  Typically the sense of ``optimal'' also depends on the eigenvalues or singular values of $A$.  We use Krylov space methods in Chapter 2 and all later Chapters.
@@ -69,17 +69,54 @@ and
 \end{equation}
 obviously have the same solution $\bu$ as \eqref{introsystem}.
 
-The matrices $P^{-1} A$ and $A P^{-1}$ may have very different condition numbers, however.  While the accuracy of the solution $\bu$ cannot be improved beyond the $\kappa(A) \eps$ level---fact i) cannot be overcome in that sense---methods can indeed take advantage of better conditioning or other spectral properties to generate an approximate solution more quickly.  Equivalent systems \eqref{introleftpre} and \eqref{introrightpre} are referred to as \emph{preconditioned} systems, with the former called \emph{left preconditioning} and the latter \emph{right-preconditioning}.
+Compared to $A$, the matrices $P^{-1} A$ or $A P^{-1}$ may have very different eigenvalues, condition numbers, and so on.  While the accuracy of the solution $\bu$ cannot be improved beyond the $\kappa(A) \eps$ level---fact i) cannot be overcome in that sense---methods can indeed take advantage of better conditioning or other spectral properties to generate an approximate solution more quickly.  Especially if $P^{-1}$ is easy to apply\sidenote{I.e.~if a system $P\bv = \bc$ is easy to solve for $\bv$ in the sense of low computational cost.} then this can be an advantageous idea when trying to approximate $\bu$ quickly.  Equivalent systems \eqref{introleftpre} and \eqref{introrightpre} are referred to as \emph{preconditioned} systems, with the former called \emph{left preconditioning} and the latter \emph{right-preconditioning}.
 
-We can conclude this little bit of numerical linear algebra by giving a small example of its role in making the simple Richardson iteration converge.  FIXME
-% A = [10 -1; -1 1]
-% P = [10 0; 0 1]
-% uexact = [1; 2]
-% b = A * uexact
-% z = randn(2,1)
-% z = z + 1.0 * (b - A*z)
-% z = z + 1.0 * (P \ b - P \ A*z)
+Now we conclude this little bit of numerical linear algebra by giving a small example of the role of preconditioning in making the simple Richardson iteration converge.  This small example is to help make the idea of preconditioning, to improve spectral properties, concrete for the reader.  Many methods far superior to the Richardson iteration are implemented in \PETSc, and we will use the best ones.
 
+\medskip\noindent\hrulefill
+\begin{example} Consider the linear system
+\begin{equation}
+A \bu =
+\begin{bmatrix}
+10 & -1 \\ -1 & 1
+\end{bmatrix} 
+\begin{bmatrix}
+u_1 \\ u_2
+\end{bmatrix}
+=
+\begin{bmatrix}
+8 \\
+1 
+\end{bmatrix}
+= \bb
+ \label{introexample}
+\end{equation}
+which has solution $\bu = [1\,\, 2]^*$.  If we start with estimate $\bu_0 = [0\,\, 0]^*$ then the unweighted ($\omega=1$) Richardson iteration \eqref{introrichardson} gives a sequence of vectors % see ../matlab/richardsonex.m
+\newcommand{\rvect}[3]{\ensuremath{\bu_{#1} = \begin{bmatrix} #2 \\ #3 \end{bmatrix}}}
+\begin{equation}
+\rvect{0}{0}{0}, \rvect{1}{8}{1}, \rvect{2}{-63}{9}, \rvect{3}{584}{-62}, \dots
+\end{equation}
+This sequence is not heading toward the solution $\bu = [1\,\, 2]^*$.  Suppose, however, that we use the diagonal matrix from system \eqref{introexample} to build $P$:
+\begin{equation}
+P = \begin{bmatrix}
+10 & 0 \\ 0 & 1
+\end{bmatrix}.  \label{introP}
+\end{equation}
+Being diagonal, this $P$ is very easy to invert and apply.  The preconditioned Richardson iteration using $P$, namely
+\begin{equation}
+\bu_{k+1} = \bu_k + \omega (P^{-1} \bb - P^{-1} A \bu_k),  \label{introprerichardson}
+\end{equation}
+is much better behaved.  With $\bu_0 = [0\,\, 0]^*$ again we get this sequence from \eqref{introprerichardson}:
+\begin{equation}
+\rvect{0}{0}{0}, \rvect{1}{0.8}{1.0}, \rvect{2}{0.9}{1.8}, \rvect{3}{0.98}{1.90}, \dots
+\end{equation}
+This sequence is apparently going to $\bu = [1\,\, 2]^*$.  Of course, the explanation is not hard to see; in this case
+\begin{equation}
+\rho(I-A) = -9.1, \qquad \rho(I-P^{-1} A) = 0.32,
+\end{equation}
+so our convergence claim \eqref{introconvergethm} matches the evidence.
+\end{example}
+\noindent\hrulefill
 
 
 \section{\pVecs and \pMats}
@@ -98,8 +135,6 @@ FIXME: parallel layout of \pVec and \pMat
 \cinputpartnostrip{c1matvec.c}{Set up \pKSP.  Solve.  Finalize.}{III}{//ENDASSEMBLY}{//END}{code:matvecpartthree}
 
 FIXME: gloss PETSc traceback mechanism, before noting we don't show that stuff
-
-FIXME: show \texttt{-help | grep}
 
 
 \caveat{But \Matlab is all you want if scale does not matter.}
