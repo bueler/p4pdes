@@ -139,7 +139,10 @@
 
 \newcommand{\bb}{\mathbf{b}}
 \newcommand{\bc}{\mathbf{c}}
+\newcommand{\bbf}{\mathbf{f}} % \bf already defined
+\newcommand{\bg}{\mathbf{g}}
 \newcommand{\bn}{\mathbf{n}}
+\newcommand{\bp}{\mathbf{p}}
 \newcommand{\bq}{\mathbf{q}}
 \newcommand{\br}{\mathbf{r}}
 \newcommand{\bu}{\mathbf{u}}
@@ -147,6 +150,7 @@
 \newcommand{\bw}{\mathbf{w}}
 \newcommand{\bx}{\mathbf{x}}
 \newcommand{\by}{\mathbf{y}}
+\newcommand{\bz}{\mathbf{z}}
 
 \newcommand{\CC}{\mathbb{C}}
 \newcommand{\RR}{\mathbb{R}}
@@ -346,13 +350,7 @@ FIXME: somewhere in here we get to an idea that is most relevant to nonlinear pr
 
 %%%%%%%%%%
 
-\chapter{7. More run-time preconditioner composition}
-
-\section{Indeterminant systems: Stokes}
-
-\section{More preconditioners}
-
-\caveat{But \PETSc should help with unstructured meshes too.}
+\input{stokes.tex} % chapter 7
 
 %%%%%%%%%%
 

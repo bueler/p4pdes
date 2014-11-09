@@ -1,0 +1,80 @@
+\chapter{7. Systems of PDEs: Stokes equations}
+
+\section{First-order systems}
+
+FIXME: possibly FOSLS for Poisson, or wave equation (i.e.~$u_{xx}=u_{tt}$, but in first-order form), or both
+
+\section{Stokes equations}
+
+FIXME: lay out theory from incompressible variable-viscosity Navier-Stokes,
+\begin{align*}
+\rho \left(\frac{\partial \bu}{\partial t} + \bu \cdot \grad \bu\right) &= \Div \sigma + \bg \\
+\sigma &= \nu \left(\grad \bu + \grad \bu^{\top}\right) - p I \\
+\Div \bu &= 0
+\end{align*}
+to (Froude zero) variable-viscosity Stokes in terms of velocity,
+\begin{align*}
+\Div \left(\nu \left(\grad \bu + \grad \bu^{\top}\right)\right) - \grad p &= - \bg \\
+\Div \bu &= 0
+\end{align*}
+to constant-viscosity ($\nu=1$) Stokes in 2D with gravity body force
+\begin{align}
+\grad^2 u - p_x &= + \gamma \label{stokesu} \\
+\grad^2 v - p_y &= - g \label{stokesv} \\
+u_x + u_y &= 0 \label{stokesincomp} 
+\end{align}
+
+FIXME: particular problem is flow down a slope which is periodic in $x$ and has these boundary conditions,
+\begin{align}
+\text{top:}&    & &\begin{array}{l} u_y + v_x = 0 \\ 2 v_y = p\end{array} \\
+\text{bottom:}& & &\begin{array}{l} u = 0 \\ v = 0 \end{array}
+\end{align}
+
+\section{A finite difference, structured-grid approach}
+
+FIXME: Laplacians are something we understand, so lets proceed with eqns \eqref{stokesu}, \eqref{stokesv}; use FD centered
+
+FIXME: any way we do \eqref{stokesincomp} we get block structure for $A \bz = \bbf$ where
+    $$\begin{bmatrix}
+    L & 0 & G_1 \\
+    0 & L & G_2 \\
+    B_1 & B_2 & 0
+    \end{bmatrix}
+    \begin{bmatrix}
+    \bu \\ \bv \\ \bp
+    \end{bmatrix}
+    =
+    \begin{bmatrix}
+    + \gamma \\ - g \\ 0
+    \end{bmatrix}
+    $$
+so certain not invertible if approx to ``$\Div \bu$'' (i.e.~$\begin{bmatrix} B_1 & B_2 \end{bmatrix}$) has more rows than columns
+
+FIXME: extract approx to ``$\Div \bu$'' as transpose of the ``$\grad p$'' part (i.e.~$\begin{bmatrix} G_1 \\ G_2 \end{bmatrix}$); now system is symmetric:
+    $$\begin{bmatrix}
+    L & 0 & G_1 \\
+    0 & L & G_2 \\
+    G_1^\top & G_2^\top & 0
+    \end{bmatrix}
+    \begin{bmatrix}
+    \bu \\ \bv \\ \bp
+    \end{bmatrix}
+    =
+    \begin{bmatrix}
+    + \gamma \\ - g \\ 0
+    \end{bmatrix}
+    \quad \iff \quad A\bz = \bbf
+    $$
+
+FIXME: not the best way but illuminating; code uses DMDA and SNES
+
+\section{Preconditioners for indefinite systems}
+
+FIXME: while $A$ is symmetric, it is not positive definite
+
+(FIXME: because $G a = \lambda b$ and
+$G^\top b = \lambda a$ so
+$\lambda b^\top b = (G a)^\top b = a^\top G^\top b = \lambda a^\top a$ ?? \dots why is $\lambda < 0$?)
+
+\caveat{But \PETSc should help with unstructured meshes too.}
+
