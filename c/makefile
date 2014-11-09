@@ -34,6 +34,10 @@ c4poisson: c4poisson.o  chkopts
 	-${CLINKER} -o c4poisson c4poisson.o  ${PETSC_KSP_LIB}
 	${RM} c4poisson.o
 
+c7stokes: c7stokes.o  chkopts
+	-${CLINKER} -o c7stokes c7stokes.o  ${PETSC_KSP_LIB}
+	${RM} c7stokes.o
+
 c9obstacle: c9obstacle.o  chkopts
 	-${CLINKER} -o c9obstacle c9obstacle.o  ${PETSC_SNES_LIB}
 	${RM} c9obstacle.o
@@ -42,5 +46,5 @@ c9obstacle: c9obstacle.o  chkopts
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ c1e c1matvec c2poisson c2heat c3convert c3poisson c4poisson c9obstacle
+	@rm -f *~ c1e c1matvec c2poisson c2heat c3convert c3poisson c4poisson c7stokes c9obstacle
 	@rm -f mesh.?.* bump.?.* square.?.*

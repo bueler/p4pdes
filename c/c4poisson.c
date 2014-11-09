@@ -1,5 +1,5 @@
 
-static char help[] = "SSolves a structured-grid Poisson problem with DMDA and KSP,\n"
+static char help[] = "Solves a structured-grid Poisson problem with DMDA and KSP,\n"
 "but (unlike c2poisson) also using KSPSetComputeOperators() so we can use\n"
 "multigrid preconditioning at the command line.\n\n";
 
