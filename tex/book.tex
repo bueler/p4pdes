@@ -413,7 +413,7 @@ Chapter
 5   &     &     &     &      \\ \bigskip
 6   &     &     & \tblockeqncode{$p$-Laplace}{$\begin{matrix} -\Div\left(D \grad u\right) = f \\ D = |\grad u|^{p-2} \end{matrix}$}{c6plap.c}
                       & \tblockeqncode{porous}{$\begin{matrix} u_t = \Div\left(D \grad u\right) \\ D = u^{\gamma-1} \end{matrix}$}{c6porous.c} \\ \bigskip
-7   & \tblockeqncode{Stokes}{$\begin{matrix} \Div u = 0 \\ \grad p = \grad^2 u \end{matrix}$}{c7stokes.c}
+7   & \tblockeqncode{Stokes}{$\begin{matrix} \grad^2 u - \grad p = 0 \\ \Div u = 0 \end{matrix}$}{c7stokes.c}
           &     &     &      \\ \bigskip
 8   & \tblockcode{Poisson}{c8poisson.c}
           &     &     &      \\
@@ -441,7 +441,7 @@ Chapter
                                   &\pSNES &\;\pTS\; \\
 \midrule
 1   & \XX & \XX & \XX &     &     &     &      \\
-2   & \XX & \XX & \XX & \XX &     &     & \XX  \\
+2   & \XX & \XX & \XX & \XX &     &     &      \\
 3   & \XX & \XX & \XX &     &     &     &      \\
 4   & \gX & \gX & \XX & \XX &     &     &      \\
 5   & \gX & \gX & \XX & \XX &     &     &      \\
