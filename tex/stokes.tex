@@ -1,41 +1,117 @@
-\chapter{7. Systems of PDEs: Stokes equations}
+\chapter{7. Systems of PDEs, and the Stokes equations}
 
 \section{First-order systems}
 
-FIXME: possibly FOSLS for Poisson, or wave equation (i.e.~$u_{xx}=u_{tt}$, but in first-order form), or both
+FIXME: FOSLS for Poisson
 
 \section{Stokes equations}
 
 FIXME: lay out theory from incompressible variable-viscosity Navier-Stokes,
 \begin{align*}
 \rho \left(\frac{\partial \bu}{\partial t} + \bu \cdot \grad \bu\right) &= \Div \sigma + \bg \\
-\sigma &= \nu \left(\grad \bu + \grad \bu^{\top}\right) - p I \\
+\sigma &= 2 \nu\, Du - p I \\
 \Div \bu &= 0
 \end{align*}
+where
+  $$\grad \bu = \begin{bmatrix}
+    \frac{\partial u_1}{\partial x} & \frac{\partial u_2}{\partial x} & \frac{\partial u_3}{\partial x} \\
+    \frac{\partial u_1}{\partial y} & \frac{\partial u_2}{\partial y} & \frac{\partial u_3}{\partial y} \\
+    \frac{\partial u_1}{\partial z} & \frac{\partial u_2}{\partial z} & \frac{\partial u_3}{\partial z}
+    \end{bmatrix}$$
+and
+    $$D u = \frac{1}{2} \left(\grad \bu + \grad \bu^{\top}\right)$$
 to (Froude zero) variable-viscosity Stokes in terms of velocity,
 \begin{align*}
 \Div \left(\nu \left(\grad \bu + \grad \bu^{\top}\right)\right) - \grad p &= - \bg \\
 \Div \bu &= 0
 \end{align*}
-to constant-viscosity ($\nu=1$) Stokes in 2D with gravity body force
+
+Consider the case where the viscosity $\nu$ is constant.  Note that by commuting mixed derivatives and using incompressibility we have
+\begin{align*}
+\Div \left(\grad \bu^{\top}\right) &= \begin{bmatrix}
+    \frac{\partial}{\partial x} & \frac{\partial}{\partial y} & \frac{\partial}{\partial z}
+    \end{bmatrix}
+    \begin{bmatrix}
+    \frac{\partial u_1}{\partial x} & \frac{\partial u_1}{\partial y} & \frac{\partial u_1}{\partial z} \\
+    \frac{\partial u_2}{\partial x} & \frac{\partial u_2}{\partial y} & \frac{\partial u_2}{\partial z} \\
+    \frac{\partial u_3}{\partial x} & \frac{\partial u_3}{\partial y} & \frac{\partial u_3}{\partial z}
+    \end{bmatrix} \\
+  &= \begin{bmatrix}
+    \frac{\partial}{\partial x}\left(\Div \bu\right) & \frac{\partial}{\partial y }\left(\Div \bu\right) & \frac{\partial}{\partial x} \left(\Div \bu\right)
+    \end{bmatrix}
+    = \begin{bmatrix} 0 & 0 & 0 \end{bmatrix}.
+\end{align*}
+On the other hand,
+\begin{align*}
+\Div \left(\grad \bu^{\top}\right) &= \begin{bmatrix}
+    \frac{\partial}{\partial x} & \frac{\partial}{\partial y} & \frac{\partial}{\partial z}
+    \end{bmatrix}
+    \begin{bmatrix}
+    \frac{\partial u_1}{\partial x} & \frac{\partial u_2}{\partial x} & \frac{\partial u_3}{\partial x} \\
+    \frac{\partial u_1}{\partial y} & \frac{\partial u_2}{\partial y} & \frac{\partial u_3}{\partial y} \\
+    \frac{\partial u_1}{\partial z} & \frac{\partial u_2}{\partial z} & \frac{\partial u_3}{\partial z}
+    \end{bmatrix}
+    = \begin{bmatrix} \grad^2 u_1 & \grad^2 u_2 & \grad^2 u_3 \end{bmatrix}
+\end{align*}
+which we write as ``$\grad^2 \bu$.''  Thus in the constant viscosity case the Stokes equations are
 \begin{align}
-\grad^2 u - p_x &= + \gamma \label{stokesu} \\
-\grad^2 v - p_y &= - g \label{stokesv} \\
-u_x + u_y &= 0 \label{stokesincomp} 
+\nu \grad^2 \bu - \grad p &= - \bg \\
+\Div \bu &= 0
 \end{align}
 
-FIXME: particular problem is flow down a slope which is periodic in $x$ and has these boundary conditions,
+\section{A planar-flow problem}
+
+ours in 2D with gravity body force
 \begin{align}
-\text{top:}&    & &\begin{array}{l} u_y + v_x = 0 \\ 2 v_y = p\end{array} \\
+\nu \grad^2 u - p_x &= - g_1 \label{stokes2du} \\
+\nu \grad^2 v - p_y &= - g_2 \label{stokes2dv} \\
+u_x + u_y &= 0 \label{stokes2dincomp} 
+\end{align}
+where
+    $$\bg = (\rho g \sin \theta, - \rho g \cos \theta) = (g_1,g_2)$$
+
+FIXME: particular problem is flow down a slope which is periodic in $x$
+
+FIXME: particular problem has stress free top
+\begin{align*}
+\sigma\cdot\bn &= 0 \\
+\iff \qquad \begin{bmatrix}
+2 \nu u_x - p & \nu (u_y+v_x) \\
+\nu (u_y+v_x) & 2 \nu v_y - p
+\end{bmatrix} \begin{bmatrix}
+g_2 \\ -g_1
+\end{bmatrix} &= \begin{bmatrix}
+0 \\ 0
+\end{bmatrix} \\
+\iff \qquad FIXME
+\end{align*}
+
+and no-slip bottom, thus these boundary conditions,
+\begin{align}
+\text{top:}&    & &\begin{array}{l} u_y + v_x = 0 \\ 2 \nu v_y = p\end{array} \\
 \text{bottom:}& & &\begin{array}{l} u = 0 \\ v = 0 \end{array}
 \end{align}
 
 \section{A finite difference, structured-grid approach}
 
-FIXME: Laplacians are something we understand, so lets proceed with eqns \eqref{stokesu}, \eqref{stokesv}; use FD centered
+FIXME: Laplacians are something we understand, so lets proceed with eqns \eqref{stokes2du}, \eqref{stokes2dv}; use FD centered
 
-FIXME: any way we do \eqref{stokesincomp} we get block structure for $A \bz = \bbf$ where
-    $$\begin{bmatrix}
+FIXME: any way we do \eqref{stokes2dincomp} we get block structure for the full system $A \bz = \bbf$; informally the structure is
+  $$\begin{bmatrix}
+    \nu\grad^2 & 0 & -\grad \\
+    0 & \nu\grad^2 & -\grad \\
+    \grad & \grad & 0
+    \end{bmatrix}
+    \begin{bmatrix}
+    \bu \\ \bv \\ \bp
+    \end{bmatrix}
+    =
+    \begin{bmatrix}
+    - g_1 \\ - g_2 \\ 0
+    \end{bmatrix}
+    $$
+but let's write
+  $$\begin{bmatrix}
     L & 0 & G_1 \\
     0 & L & G_2 \\
     B_1 & B_2 & 0
@@ -45,10 +121,11 @@ FIXME: any way we do \eqref{stokesincomp} we get block structure for $A \bz = \b
     \end{bmatrix}
     =
     \begin{bmatrix}
-    + \gamma \\ - g \\ 0
+    - g_1 \\ - g_2 \\ 0
     \end{bmatrix}
     $$
-so certain not invertible if approx to ``$\Div \bu$'' (i.e.~$\begin{bmatrix} B_1 & B_2 \end{bmatrix}$) has more rows than columns
+
+FIXME: $A$ certainly not invertible if approx to ``$\Div \bu$'' (i.e.~$\begin{bmatrix} B_1 & B_2 \end{bmatrix}$) has more rows than columns
 
 FIXME: extract approx to ``$\Div \bu$'' as transpose of the ``$\grad p$'' part (i.e.~$\begin{bmatrix} G_1 \\ G_2 \end{bmatrix}$); now system is symmetric:
     $$\begin{bmatrix}
@@ -61,7 +138,7 @@ FIXME: extract approx to ``$\Div \bu$'' as transpose of the ``$\grad p$'' part (
     \end{bmatrix}
     =
     \begin{bmatrix}
-    + \gamma \\ - g \\ 0
+    - g_1 \\ - g_2 \\ 0
     \end{bmatrix}
     \quad \iff \quad A\bz = \bbf
     $$
@@ -70,11 +147,15 @@ FIXME: not the best way but illuminating; code uses DMDA and SNES
 
 \section{Preconditioners for indefinite systems}
 
-FIXME: while $A$ is symmetric, it is not positive definite
+FIXME: while $A$ is symmetric, it is not positive definite; note that if
+    $$M = \begin{bmatrix} 0 & G \\ G^\top & 0 \end{bmatrix}$$
+and if $M$ has eigenvalue $\lambda$ so that
+    $$M \begin{bmatrix} \bx \\ \by \end{bmatrix} = \lambda \begin{bmatrix} \bx \\ \by \end{bmatrix}$$
+then
+    $$M \begin{bmatrix} -\bx \\ \by \end{bmatrix} = - \lambda \begin{bmatrix} -\bx \\ \by \end{bmatrix}$$
+and (w.o.l.o.g.) this is a lin.-indep. eigenvector so $M$ also has eigenvalue $-\lambda$
 
-(FIXME: because $G a = \lambda b$ and
-$G^\top b = \lambda a$ so
-$\lambda b^\top b = (G a)^\top b = a^\top G^\top b = \lambda a^\top a$ ?? \dots why is $\lambda < 0$?)
+
 
 \caveat{But \PETSc should help with unstructured meshes too.}
 
