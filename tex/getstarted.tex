@@ -1,5 +1,6 @@
 
-\chapter{1. Getting started with PETSc}
+\chapter{Getting started with PETSc}
+\label{chap:getstarted}
 
 \section{A code that does almost nothing}
 
@@ -87,13 +88,13 @@ It is not so simple in practice, however, when solving large systems on a comput
 \item \emph{cost of direct solutions}:  Computation of solution \eqref{introsolution} by a direct method like Gauss elimination, whether actually forming $A^{-1}$ or not, is an $O(N^3)$ operation.
 \end{enumerate}
 
-For a sense of the consequences of these facts, let's put in some numbers.  On most computers the precision for the C \texttt{double} type, the modern default 64-bit representation of real numbers, is $\eps = 2.2 \times 10^{-16}$.  By i), a linear system having $\kappa(A) \approx 10^{10}$, for example, can only be solved to about six digits of precision.  Because of ii), a linear system with $N=10^6$ equations\sidenote{We will do problems of this size on a single processor in a few seconds, and in $O(N)$ operations, in Chapter 4.}
+For a sense of the consequences of these facts, let's put in some numbers.  On most computers the precision for the C \texttt{double} type, the modern default 64-bit representation of real numbers, is $\eps = 2.2 \times 10^{-16}$.  By i), a linear system having $\kappa(A) \approx 10^{10}$, for example, can only be solved to about six digits of precision.  Because of ii), a linear system with $N=10^6$ equations\sidenote{We will do problems of this size on a single processor in a few seconds, and in $O(N)$ operations, in Chapter \ref{chap:multigrid}.}
 %time ./c4poisson -da_refine 7 -ksp_type cg -pc_type mg
 %on 1153 x 1153 grid:  iterations 2, residual norm = 1.88082e-05
 %real 11.18
 requires $\sim 10^{18}$ operations to solve by Gauss elimination.  Even modern processors take a while to do a quintillion operations.
 
-Many methods other than Gauss elimination are possible for solving linear systems, and this is a topic we will return to in Chapters 2, 4, and 5 especially.  Usually these methods are iterative, and they often use the concept of \emph{residual}.  If $\bu_0\in \RR^N$ is a vector, then by definition the residual for $\bu_0$. as an estimate of the solution to equation \eqref{introsystem}, is the vector
+Many methods other than Gauss elimination are possible for solving linear systems, and this is a topic we will return to several times in later Chapters.  Usually these methods are iterative, and they often use the concept of \emph{residual}.  If $\bu_0\in \RR^N$ is a vector, then by definition the residual for $\bu_0$. as an estimate of the solution to equation \eqref{introsystem}, is the vector
 \begin{equation}
 \br_0 = \bb - A \bu_0. \label{residualdefn}
 \end{equation}
@@ -115,7 +116,7 @@ It is an easy exercise to show that the Richardson iteration \eqref{introrichard
 \text{\eqref{introrichardson} converges if and only if } \rho(I-\omega A) < 1. \label{introconvergethm}
 \end{equation}
 
-Other examples of iterative methods include the classical Jacobi and Gauss-Siedel iterations \citep{Greenbaum1997}, but the really powerful ones proceed by iteratively generating an \emph{optimal}, in some sense, estimate $\bu_k$ which is a linear combination of vectors $\bb,A\bb,A^2\bb,\dots,A^{k-1}\bb$, and these methods are collectively called \emph{Krylov space methods} because the span of these vectors is a Krylov space.  Typically the sense of ``optimal'' also depends on the eigenvalues or singular values of $A$.  We use Krylov space methods in Chapter 2 and all later Chapters.
+Other examples of iterative methods include the classical Jacobi and Gauss-Siedel iterations \citep{Greenbaum1997}, but the really powerful ones proceed by iteratively generating an \emph{optimal}, in some sense, estimate $\bu_k$ which is a linear combination of vectors $\bb,A\bb,A^2\bb,\dots,A^{k-1}\bb$, and these methods are collectively called \emph{Krylov space methods} because the span of these vectors is a Krylov space.  Typically the sense of ``optimal'' also depends on the eigenvalues or singular values of $A$.  We use Krylov space methods in Chapter \ref{chap:structured} and all later Chapters.
 
 Returning to non-numerical linear algebra for a moment, note that there are many other systems which are equivalent to \eqref{introsystem}.  In fact, if $P\in\RR^{N\times N}$ is an invertible square matrix then the systems
 \begin{equation}

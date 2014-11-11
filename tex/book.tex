@@ -207,6 +207,8 @@
 
 %\renewcommand\floatpagefraction{.9}  %???
 
+\setcounter{secnumdepth}{0}
+
 % eventually this is a good idea:
 %\usepackage{makeidx}
 %\makeindex
@@ -252,21 +254,12 @@ Copyright \copyright\ \the\year\ \thanklessauthor
 
 \tableofcontents
 
-\begin{comment}
-% dedication
-\cleardoublepage
-~\vfill
-\begin{doublespace}
-\noindent\fontsize{18}{22}\selectfont\itshape
-\nohyphenation
-Thanks to \mbox{Jed Brown} and \mbox{Constantine Khroulev}, fellow students, and gurus.
-\end{doublespace}
-\vfill
-\end{comment}
+
+% Thanks to \mbox{Jed Brown} and \mbox{Constantine Khroulev}, fellow students, and gurus.
 
 %%%%%%%%%%
 
-\chapter{Why this book?}
+\chapter*{Why this book?}
 
 
 You've taken a mathematics course or two in partial differential equations (PDEs).  Somewhere you picked up a bit of coding in C; perhaps you write C code every day.\sidenote{You know that ``API'' stands for ``application program interface,'' for example.}  You've also written various short scripts in \Matlab or python, and you've even tried solving PDEs numerically.  But \emph{now you want it all in parallel on big problems}.  This book is for you and me.
@@ -319,6 +312,8 @@ This book\begin{itemize}
 
 \mainmatter
 
+%\setcounter{chapter}{0}
+
 %%%%%%%%%
 
 \input{getstarted.tex} % chapter 1
@@ -333,7 +328,8 @@ This book\begin{itemize}
 
 %%%%%%%%%%
 
-\chapter{6. Nonlinear elliptic PDEs on structured grids}
+\chapter{Nonlinear elliptic PDEs on structured grids}
+\label{chap:nonlinear}
 
 \section{Newton's method}
 
@@ -354,7 +350,8 @@ FIXME: somewhere in here we get to an idea that is most relevant to nonlinear pr
 
 %%%%%%%%%%
 
-\chapter{8. Unstructured grids, the right way}
+\chapter{Unstructured grids, the right way}
+\label{chap:dmplex}
 
 \section{\textsc{DMPlex}}
 

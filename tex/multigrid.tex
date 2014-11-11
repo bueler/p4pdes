@@ -1,7 +1,8 @@
 
-\chapter{4. Linear PDEs: multigrid}
+\chapter{Linear PDEs: multigrid}
+\label{chap:multigrid}
 
-We now make a key transition from Chapters 2 and 3.  Instead of writing code to assemble the matrix form of the problem on the grid initially chosen at runtime, and handing it to \pKSP for solution, we give a matrix-building code to \pKSP.  Then the \pKSP can choose the grid.  This gives the problem to a \PETSc \pKSP object in a way that allows it to do multigrid \citep{Briggsetal2000}.
+We now make a key transition from Chapters \ref{chap:structured} and \ref{chap:unstructured}.  Instead of writing code to assemble the matrix form of the problem on the grid initially chosen at runtime, and handing it to \pKSP for solution, we give a matrix-building code to \pKSP.  Then the \pKSP can choose the grid.  This gives the problem to a \PETSc \pKSP object in a way that allows it to do multigrid \citep{Briggsetal2000}.
 
 \cinputpart{c4poisson.c}{Poisson problem on a structured grid again, but this time using \texttt{KSPSetComputeOperators()} so that multigrid is possible.}{I}{//MAIN}{//ENDMAIN}{code:multigridone}
 

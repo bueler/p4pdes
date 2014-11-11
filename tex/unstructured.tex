@@ -1,5 +1,6 @@
 
-\chapter{3. Linear PDEs: an unstructured finite element mesh}
+\chapter{Linear PDEs: an unstructured finite element mesh}
+\label{chap:unstructured}
 
 The cliched Poisson problem can be exploited some more.  It gives us the opportunity to use \PETSc for important tasks we have not yet seen, including reading an unstructured mesh into \PETSc \pVecs, symmetric implementation of boundary conditions, and explicit preallocation of a \pMat in parallel.
 
@@ -46,7 +47,7 @@ Equation \eqref{poissonweak} is the weak formulation of the Poisson problem.  An
 
 \section{A finite element method (FEM) for the Poisson problem in the plane}
 
-An FEM for the Poisson problem comes from requiring the weak formulation \eqref{poissonweak} to be true for $u$ in a much smaller, indeed finite-dimensional, subspace of $H_g^1(\Omega)$, and for test functions $v$ ranging over a finite-dimensional subspace of $H_0^1(\Omega)$.  In the ``Galerkin'' method here, these subspaces will be essentially the same.  We will build these subspaces, in the current example, using an unstructured triangulation on $\Omega\subset \RR^2$; from now on in this chapter we restrict to $d=2$ dimensions.
+An FEM for the Poisson problem comes from requiring the weak formulation \eqref{poissonweak} to be true for $u$ in a much smaller, indeed finite-dimensional, subspace of $H_g^1(\Omega)$, and for test functions $v$ ranging over a finite-dimensional subspace of $H_0^1(\Omega)$.  In the ``Galerkin'' method here, these subspaces will be essentially the same.  We will build these subspaces, in the current example, using an unstructured triangulation on $\Omega\subset \RR^2$; from now on in this Chapter we restrict to $d=2$ dimensions.
 
 Furthermore, to make our finite-dimensional spaces true subspaces of $H^1(\Omega)$---to make our FEM \emph{conforming}---we require that $\Omega$ be polygonal, with $\partial\Omega$ a closed polygon.  Segments of $\partial\Omega$ must have positive length, and be either entirely in $\partial_D\Omega$ or entirely in $\partial_N\Omega$.  We also assume $\partial_D\Omega$ is a closed set so that, at vertices of $\partial \Omega$ where the Dirichlet boundary and Neumann boundary meet, the vertex is Dirichlet.
 

@@ -1,8 +1,10 @@
-\chapter{7. Systems of PDEs, and the Stokes equations}
+
+\chapter{Systems of PDEs, and the Stokes equations}
+\label{chap:stokes}
 
 \section{First-order systems}
 
-FIXME: FOSLS for Poisson
+FIXME: FOSLS for Poisson?
 
 \section{Stokes equations}
 
@@ -39,7 +41,7 @@ Consider the case where the viscosity $\nu$ is constant.  Note that by commuting
   &= \begin{bmatrix}
     \frac{\partial}{\partial x}\left(\Div \bu\right) & \frac{\partial}{\partial y }\left(\Div \bu\right) & \frac{\partial}{\partial x} \left(\Div \bu\right)
     \end{bmatrix}
-    = \begin{bmatrix} 0 & 0 & 0 \end{bmatrix}.
+    = 0.
 \end{align*}
 On the other hand,
 \begin{align*}
@@ -50,12 +52,14 @@ On the other hand,
     \frac{\partial u_1}{\partial x} & \frac{\partial u_2}{\partial x} & \frac{\partial u_3}{\partial x} \\
     \frac{\partial u_1}{\partial y} & \frac{\partial u_2}{\partial y} & \frac{\partial u_3}{\partial y} \\
     \frac{\partial u_1}{\partial z} & \frac{\partial u_2}{\partial z} & \frac{\partial u_3}{\partial z}
-    \end{bmatrix}
-    = \begin{bmatrix} \grad^2 u_1 & \grad^2 u_2 & \grad^2 u_3 \end{bmatrix}
+    \end{bmatrix} \\
+  &= \begin{bmatrix} \grad^2 u_1 & \grad^2 u_2 & \grad^2 u_3 \end{bmatrix} = \grad^2 \bu
 \end{align*}
-which we write as ``$\grad^2 \bu$.''  Thus in the constant viscosity case the Stokes equations are
+which we have written as ``$\grad^2 \bu$,'' that is, the last equality is a definition.  
+
+Thus we have a Poisson-like problem for $\bu$, but with an unknown pressure playing a role as a source term, in addition to the body force $\bg$.  For consistency with the Poisson equation sign convention in Chapters \ref{chap:structured}--\ref{chap:multigrid}, in the constant viscosity case we write the Stokes equations as
 \begin{align}
-\nu \grad^2 \bu - \grad p &= - \bg \\
+- \nu \grad^2 \bu + \grad p &= \bg \\
 \Div \bu &= 0
 \end{align}
 
