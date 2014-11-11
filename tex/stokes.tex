@@ -228,9 +228,9 @@ with block structure \eqref{blockppstokes}.  We do not, however, describe this l
 
 To get started on the FD equations, and recalling the notation from Chapter \ref{chap:structured}, suppose that we have a grid of \texttt{Mx} points in the $x$ direction and \texttt{My} points in the $y$ direction.  Periodicity in the $x$ direction means that there is a subtle change in the computation of grid spacing from the number of grid points in each direction:
 \begin{equation}
-h_x = \frac{L}{\text{\texttt{Mx}}}, \qquad h_y = \frac{L}{\text{\texttt{My}}-1}. \label{hdefinestokes}
+h_x = \frac{L}{\text{\texttt{Mx}}}, \qquad h_y = \frac{H}{\text{\texttt{My}}-1}. \label{hdefinestokes}
 \end{equation}
-The reason for the difference is suggested by Figure \ref{fig:xperiodicgrid}, where we see that each grid point along the $x$-axis represents an entire grid cell, while in the $y$ direction the first and last grid points represent boundary locations.
+The reason for the difference is suggested by Figure \ref{fig:xperiodicgrid}, where we see that each grid point along the $x$-axis represents an entire grid cell, while in the $y$ direction the first and last grid points represent boundary locations.  Of course the main idea of periodicity is that left neighbors of $i=0$ grid locations are ``wrapped-around'' to the right-most grid points, while right neighbors of $i=\text{\texttt{Mx}}-1$ locations are wrapped to the left-most grid points.
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=2.2]
@@ -256,6 +256,15 @@ The reason for the difference is suggested by Figure \ref{fig:xperiodicgrid}, wh
 \caption{Because the grid is periodic in $x$, but not in $y$, the computation of $h_x$ and $h_y$ follows formulas \eqref{hdefinestokes}.}
 \label{fig:xperiodicgrid}
 \end{marginfigure}
+
+The FD equations for interior points, including the periodic boundaries, (i.e.~any $i$ but $0 < j < \text{\texttt{My}}-1$) are the approximations to equations \eqref{ppstokes2du}--\eqref{ppstokes2dincomp}:
+\begin{align}
+&-\nu \left(\frac{u_{i+1,j} - 2 u_{i,j} + u_{i-1,j}}{h_x^2} + \frac{u_{i,j+1} - 2 u_{i,j} + u_{i,j-1}}{h_y^2}\right) \notag \\
+&\qquad + \frac{p_{i+1,j}-p_{i-1,j}}{2h_x} = g_1 \label{fdstokes2du} \\
+-\nu \grad^2 v + p_y &= g_2 \label{fdstokes2dv} \\
+u_x + u_y - \eps \grad^2 p &= 0 \label{fdstokes2dincomp}
+\end{align}
+In case $i=0$ then we interpret ``$i-1$'' subscripts as $\text{\texttt{Mx}}-1$, while if $i=\text{\texttt{Mx}}-1$ then we interpret ``$i+1$'' subscripts as $0$.
 
 FIXME: FD equations
 
