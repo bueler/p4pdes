@@ -8,29 +8,34 @@ FIXME: FOSLS for Poisson?
 
 \section{Stokes equations}
 
-FIXME: lay out theory from incompressible variable-viscosity Navier-Stokes,
+FIXME: lay out theory 
+
+Thus the incompressible variable-viscosity Navier-Stokes has these main equations
 \begin{align*}
 \rho \left(\frac{\partial \bu}{\partial t} + \bu \cdot \grad \bu\right) &= \Div \sigma + \bg \\
 \sigma &= 2 \nu\, Du - p I \\
 \Div \bu &= 0
 \end{align*}
 where
-  $$\grad \bu = \begin{bmatrix}
+  $$\grad \bu = \renewcommand{\arraystretch}{1.3}\begin{bmatrix}
     \frac{\partial u_1}{\partial x} & \frac{\partial u_2}{\partial x} & \frac{\partial u_3}{\partial x} \\
     \frac{\partial u_1}{\partial y} & \frac{\partial u_2}{\partial y} & \frac{\partial u_3}{\partial y} \\
     \frac{\partial u_1}{\partial z} & \frac{\partial u_2}{\partial z} & \frac{\partial u_3}{\partial z}
     \end{bmatrix}$$
 and
-    $$D u = \frac{1}{2} \left(\grad \bu + \grad \bu^{\top}\right)$$
-to (Froude zero) variable-viscosity Stokes in terms of velocity,
+    $$D u = \frac{1}{2} \left(\grad \bu + \grad \bu^{\top}\right).$$
+
+FIXME: theory where Froude $\approx 0$
+
+Thus the variable-viscosity Stokes equations, in terms of velocity, are
 \begin{align*}
 \Div \left(\nu \left(\grad \bu + \grad \bu^{\top}\right)\right) - \grad p &= - \bg \\
 \Div \bu &= 0
 \end{align*}
 
-Consider the case where the viscosity $\nu$ is constant.  Note that by commuting mixed derivatives and using incompressibility we have
+We will, however, first consider the case where the viscosity $\nu$ is constant.  In such case the velocity second derivative term can be simplified, and recognized as an application of the Laplacian operator.  Observe that by commuting mixed derivatives and using incompressibility we have
 \begin{align*}
-\Div \left(\grad \bu^{\top}\right) &= \begin{bmatrix}
+\Div \left(\grad \bu^{\top}\right) &= \renewcommand{\arraystretch}{1.3}\begin{bmatrix}
     \frac{\partial}{\partial x} & \frac{\partial}{\partial y} & \frac{\partial}{\partial z}
     \end{bmatrix}
     \begin{bmatrix}
@@ -45,7 +50,7 @@ Consider the case where the viscosity $\nu$ is constant.  Note that by commuting
 \end{align*}
 On the other hand,
 \begin{align*}
-\Div \left(\grad \bu^{\top}\right) &= \begin{bmatrix}
+\Div \left(\grad \bu\right) &= \renewcommand{\arraystretch}{1.3}\begin{bmatrix}
     \frac{\partial}{\partial x} & \frac{\partial}{\partial y} & \frac{\partial}{\partial z}
     \end{bmatrix}
     \begin{bmatrix}
@@ -63,38 +68,64 @@ Thus we have a Poisson-like problem for $\bu$, but with an unknown pressure play
 \Div \bu &= 0
 \end{align}
 
+
 \section{A planar-flow problem}
 
-ours in 2D with gravity body force
+FIXME: reduce to 2D with gravity body force.
+
+\begin{marginfigure}
+\begin{tikzpicture}[scale=2.5,rotate=-20]
+  \draw[->,gray,very thin] (-0.2,0.0) -- (2.2,0.0) node[below] {$x$};
+  \draw[->,gray,very thin] (0.0,-0.2) -- (0.0,1.2) node[left] {$y$};
+  \node[xshift=-0.2cm,yshift=-0.13cm] at (0.0,0.0) {$0$};
+  \node[xshift=0.0cm,yshift=-0.25cm] at (2.0,0.0) {$L$};
+  \node[xshift=-0.25cm,yshift=0.1cm] at (0.0,1.0) {$H$};
+  \draw[line width=1.0pt] (0.0,0.0) -- (2.0,0.0);
+  \draw[line width=1.0pt] (0.0,1.0) -- (2.0,1.0);
+  \node[rotate=-20] at (1.0,-0.1) {no slip: $\bu=0$};
+  \node[rotate=-20] at (1.0,1.1) {stress free: $\sigma\cdot\bn=0$};
+  \draw[line width=1.5pt,dashed] (0.0,0.0) -- (0.0,1.0);
+  \draw[line width=1.3pt,dashed] (2.0,0.0) -- (2.0,1.0);
+  \node[rotate=70] at (-0.1,0.5) {periodic};
+  \node[rotate=70] at (2.1,0.5) {periodic};
+  \draw[line width=1.0pt,dotted] (1.0,0.8) -- node[xshift=-0.2cm,yshift=0.0cm] {$g_2$} (1.0,0.2);
+  \draw[line width=1.0pt,dotted] (1.0,0.2) -- node[xshift=0.0cm,yshift=-0.2cm] {$g_1$} (1.2,0.2);
+  %>> 0.6 * tan((pi/180)*20)
+  %ans =  0.21838
+  \draw[->,line width=1.0pt] (1.0,0.8) -- (1.21838,0.2) node[xshift=0.2cm,yshift=0.6cm] {$\bg$};
+  \draw[line width=0.7pt] (1.0,0.58) .. controls (1.03,0.575) and (1.04,0.585) .. (1.07,0.6);
+  \node at (1.05,0.5) {$\theta$};
+\end{tikzpicture}
+\caption{Geometry and boundary conditions of our first Stokes problem, for sticky fluid flowing down a slope.}
+\label{fig:slabonslope}
+\end{marginfigure}
+
+The particular problem we will solve is a constant-thickness flow down a slope, using rotated coordinates as in Figure \ref{fig:slabonslope}.  First we simplify the appearance of the field equations.  Write $u=u_1$ and $v=u_2$.  Then the three scalar equations are
 \begin{align}
-\nu \grad^2 u - p_x &= - g_1 \label{stokes2du} \\
-\nu \grad^2 v - p_y &= - g_2 \label{stokes2dv} \\
+-\nu \grad^2 u + p_x &= g_1 \label{stokes2du} \\
+-\nu \grad^2 v + p_y &= g_2 \label{stokes2dv} \\
 u_x + u_y &= 0 \label{stokes2dincomp} 
 \end{align}
-where
-    $$\bg = (\rho g \sin \theta, - \rho g \cos \theta) = (g_1,g_2)$$
+where $\nu$ is constant and
+    $$\bg = (g_1,g_2) = (\rho g \sin \theta, - \rho g \cos \theta).$$
 
-FIXME: particular problem is flow down a slope which is periodic in $x$
-
-FIXME: particular problem has stress free top
-\begin{align*}
-\sigma\cdot\bn &= 0 \\
-\iff \qquad \begin{bmatrix}
+Because the flow is infinite in the $x$ direction, for a numerical approximation we will require the solution to be periodic in $x$, so the domain is a rectangle.  We assume a stress-free top and no slip at the base.  Because the normal direction to the top is in the (rotated) $y$-direction, the top boundary condition is
+  $$\sigma\cdot\bn = 0 \iff
+\begin{bmatrix}
 2 \nu u_x - p & \nu (u_y+v_x) \\
 \nu (u_y+v_x) & 2 \nu v_y - p
 \end{bmatrix} \begin{bmatrix}
-g_2 \\ -g_1
-\end{bmatrix} &= \begin{bmatrix}
+0 \\ 1
+\end{bmatrix} = \begin{bmatrix}
 0 \\ 0
-\end{bmatrix} \\
-\iff \qquad FIXME
-\end{align*}
-
-and no-slip bottom, thus these boundary conditions,
+\end{bmatrix}.$$
+Thus, with the no-slip base, we have these boundary conditions,
 \begin{align}
 \text{top:}&    & &\begin{array}{l} u_y + v_x = 0 \\ 2 \nu v_y = p\end{array} \\
 \text{bottom:}& & &\begin{array}{l} u = 0 \\ v = 0 \end{array}
 \end{align}
+
+
 
 \section{A finite difference, structured-grid approach}
 
