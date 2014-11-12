@@ -229,7 +229,7 @@ In this section we apply centered finite differences to equations \eqref{ppstoke
 \end{equation}
 with block structure \eqref{blockppstokes}.  We do not, however, describe this linear system to \PETSc using \pMat for $A$ and a \pVec for $\bbf$ in \eqref{linsysstokes}.  Rather we treat the linear problem as nonlinear, following the examples in Chapter \ref{chap:nonlinear}.  Because we are using a structured grid managed by a \PETSc \pDMDA object, we provide a residual-evaluation routine for the locally-owned part of the structured grid.
 
-To get started on the FD equations, and recalling the notation from Chapter \ref{chap:structured}, suppose that we have a grid of \texttt{Mx} points in the $x$ direction and \texttt{My} points in the $y$ direction.  Periodicity in the $x$ direction means that there is a subtle change in the computation of grid spacing from the number of grid points in each direction:
+To get started on the FD equations, and recalling the notation from Chapter \ref{chap:structured}, suppose that we have a grid of \texttt{Mx} points in the $x$ direction and \texttt{My} points in the $y$ direction.  Periodicity in the $x$ direction means that there is a difference in the computation of grid spacing:
 \begin{equation}
 h_x = \frac{L}{\text{\texttt{Mx}}}, \qquad h_y = \frac{H}{\text{\texttt{My}}-1}. \label{hdefinestokes}
 \end{equation}
@@ -262,14 +262,15 @@ The reason for the difference is suggested by Figure \ref{fig:xperiodicgrid}, wh
 
 The FD equations for interior points, including the periodic boundaries, (i.e.~any $i$ but $0 < j < \text{\texttt{My}}-1$) are the approximations to equations \eqref{ppstokes2du}--\eqref{ppstokes2dincomp}:
 \begin{align}
-&-\nu \left(\frac{u_{i+1,j} - 2 u_{i,j} + u_{i-1,j}}{h_x^2} + \frac{u_{i,j+1} - 2 u_{i,j} + u_{i,j-1}}{h_y^2}\right) \notag \\
-&\qquad + \frac{p_{i+1,j}-p_{i-1,j}}{2h_x} = g_1 \label{fdstokes2du} \\
--\nu \grad^2 v + p_y &= g_2 \label{fdstokes2dv} \\
-u_x + u_y - \eps \grad^2 p &= 0 \label{fdstokes2dincomp}
+-\nu \Big(\frac{u_{i+1,j} - 2 u_{i,j} + u_{i-1,j}}{h_x^2} &+ \frac{u_{i,j+1} - 2 u_{i,j} + u_{i,j-1}}{h_y^2}\Big) \notag \\
+&\qquad + \frac{p_{i+1,j}-p_{i-1,j}}{2h_x} - g_1 = 0 \label{fdstokes2du} \\
+-\nu \Big(\frac{v_{i+1,j} - 2 v_{i,j} + v_{i-1,j}}{h_x^2} &+ \frac{v_{i,j+1} - 2 v_{i,j} + v_{i,j-1}}{h_y^2}\Big) \notag \\
+&\qquad + \frac{p_{i,j+1}-p_{i,j-1}}{2h_y} - g_2 = 0 \label{fdstokes2v} \\
+\frac{u_{i+1,j}-u_{i-1,j}}{2h_x} + \frac{v_{i,j+1}-v_{i,j-1}}{2h_y} &- \eps \Big(\frac{p_{i+1,j} - 2 p_{i,j} + p_{i-1,j}}{h_x^2} \notag \\
+&\qquad\quad + \frac{p_{i,j+1} - 2 p_{i,j} + p_{i,j-1}}{h_y^2}\Big) = 0 \label{fdstokes2dincomp}
 \end{align}
-In case $i=0$ then we interpret ``$i-1$'' subscripts as $\text{\texttt{Mx}}-1$, while if $i=\text{\texttt{Mx}}-1$ then we interpret ``$i+1$'' subscripts as $0$.
+To address periodicity in the $x$ direction, in the case $i=0$ we interpret ``$i-1$'' subscripts as $\text{\texttt{Mx}}-1$, while if $i=\text{\texttt{Mx}}-1$ then we interpret ``$i+1$'' subscripts as $0$.
 
-FIXME: FD equations
 
 
 \section{Preconditioners for indefinite systems}
