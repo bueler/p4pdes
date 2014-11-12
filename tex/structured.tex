@@ -157,7 +157,7 @@ then the distributed structured grid shown in Figure \ref{fig:unitsquaregridpara
       (-\dd,\ydn) -- (\od,\ydn) -- (\od,\yup) -- (-\dd,\yup) -- cycle;
   }
 \end{tikzpicture}
-\caption{Processor domains are far from square if the total number of \MPI processes is prime, because only one dimension can be decomposed.  We show what \texttt{-dm\_view} reports for the same grid as in Figure \ref{fig:unitsquaregrid}, with \texttt{mpiexec -n 5}.}
+\caption{Processor domains are far from square if the number of \MPI processes is prime; here we used \texttt{mpiexec -n 5}.}
 \label{fig:unitsquaregridprime}
 \end{marginfigure}
 
