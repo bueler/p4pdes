@@ -9,6 +9,16 @@ static char help[] =
 "of pressure into incompressibility equations.\n"
 "\n\n";
 
+// ./c7stokes -snes_fd -dm_view draw -draw_pause 2
+// ./c7stokes -snes_fd -snes_monitor -snes_converged_reason
+// ./c7stokes -snes_fd -snes_monitor -snes_converged_reason -da_grid_x 10 -da_grid_y 11  -snes_monitor_solution -draw_pause 2
+// ./c7stokes -snes_fd -snes_monitor -snes_converged_reason -da_refine 3 -ksp_rtol 1.0e-14
+// ./c7stokes -snes_fd -snes_monitor -snes_converged_reason -da_refine 3 -snes_rtol 1.0e-14
+
+// ./c7stokes -snes_fd -mat_view ::ascii_matlab >> bar.m
+
+// ./c7stokes -snes_fd -mat_is_symmetric 0.001    // FAILS FOR NOW
+
 #include <petscdmda.h>
 #include <petscsnes.h>
 
@@ -21,7 +31,7 @@ typedef struct {
 
 typedef struct {
   DM        da;
-  PetscInt  dof;   // number of degrees of freedom at each node
+  Vec       xexact;
   PetscReal L,     // length of domain in x direction
             H,     // length of domain in y direction
             g1,    // signed component of gravity in x-direction
@@ -30,7 +40,7 @@ typedef struct {
             ppeps; // amount of Laplacian of pressure to add to incompressibility
 } AppCtx;
 
-extern PetscErrorCode FormInitialGuess(Vec,AppCtx*);
+extern PetscErrorCode FormExactSolution(AppCtx*);
 extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*,Field**,Field**,AppCtx*);
 //extern PetscErrorCode FormJacobianLocal(DMDALocalInfo*,Field**,Mat,Mat,AppCtx*);
 
@@ -43,21 +53,32 @@ int main(int argc,char **argv)
 
   PetscInitialize(&argc,&argv,(char*)0,help);
 
-  user.dof   = 3;
-  user.L     = 10.0;
+  const PetscReal rg = 1000.0 * 9.81, // = rho g; scale for body force;
+                                      //     kg / (m^2 s^2);  weight of water
+                  theta = PETSC_PI / 9.0; // 20 degrees
+  user.L     = 1.0;
   user.H     = 1.0;
-  user.g1    = 1.0;
-  user.g2    = -9.0;
-  user.nu    = 1.0;
+  user.g1    = rg * sin(theta);
+  user.g2    = - rg * cos(theta);
+  user.nu    = 0.25;  // Pa s;  typical dynamic viscosity of motor oil
   user.ppeps = 1.0;
+
+// FIXME: TO DO:
+//   1. make error display optional
+//   2. allow initial condition to be 0, random, exact
+//   3. use matlab output to work on making symmetric
+//   4. use matlab output to improve row scaling
 
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
                       DM_BOUNDARY_PERIODIC, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
-                      -4,-4,PETSC_DECIDE,PETSC_DECIDE,
-                      user.dof,1,NULL,NULL,&user.da); CHKERRQ(ierr);
+                      -4,-5,PETSC_DECIDE,PETSC_DECIDE,
+                      3,1,NULL,NULL,&user.da); CHKERRQ(ierr);
   ierr = DMDASetUniformCoordinates(user.da, 0.0, user.H, 0.0, user.L, -1.0, -1.0); CHKERRQ(ierr);
   ierr = DMSetApplicationContext(user.da,&user); CHKERRQ(ierr);
   ierr = DMCreateGlobalVector(user.da,&x); CHKERRQ(ierr);
+  ierr = DMDASetFieldName(user.da,0,"u"); CHKERRQ(ierr);
+  ierr = DMDASetFieldName(user.da,1,"v"); CHKERRQ(ierr);
+  ierr = DMDASetFieldName(user.da,2,"p"); CHKERRQ(ierr);
 
   ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
   ierr = SNESSetDM(snes,user.da); CHKERRQ(ierr);
@@ -65,10 +86,26 @@ int main(int argc,char **argv)
                                   (DMDASNESFunction)FormFunctionLocal,&user); CHKERRQ(ierr);
   ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
-  ierr = FormInitialGuess(da,x,&user); CHKERRQ(ierr);
-  //ierr = VecSet(x,0.0); CHKERRQ(ierr);
+  ierr = DMCreateGlobalVector(user.da,&user.xexact); CHKERRQ(ierr);
+  ierr = FormExactSolution(&user); CHKERRQ(ierr);
+
+  ierr = VecSet(x,0.0); CHKERRQ(ierr);
 
   ierr = SNESSolve(snes,NULL,x); CHKERRQ(ierr);
+
+  PetscReal  umax, vmax, pmax, uerr, verr, perr;
+  ierr = VecStrideNorm(user.xexact,0,NORM_INFINITY,&umax); CHKERRQ(ierr);
+  ierr = VecStrideNorm(user.xexact,1,NORM_INFINITY,&vmax); CHKERRQ(ierr);
+  ierr = VecStrideNorm(user.xexact,2,NORM_INFINITY,&pmax); CHKERRQ(ierr);
+  ierr = VecAXPY(x,-1.0,user.xexact); CHKERRQ(ierr);  // x := -xexact + x
+  ierr = VecStrideNorm(x,0,NORM_INFINITY,&uerr); CHKERRQ(ierr);
+  ierr = VecStrideNorm(x,1,NORM_INFINITY,&verr); CHKERRQ(ierr);
+  ierr = VecStrideNorm(x,2,NORM_INFINITY,&perr); CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,
+                     "|u - uexact|_inf = %e   (|uexact|_inf = %e)\n"
+                     "|v - vexact|_inf = %e   (|vexact|_inf = %e)\n"
+                     "|p - pexact|_inf = %e   (|pexact|_inf = %e)\n",
+                     uerr,umax,verr,vmax,perr,pmax); CHKERRQ(ierr);
 
   ierr = VecDestroy(&x); CHKERRQ(ierr);
   ierr = SNESDestroy(&snes); CHKERRQ(ierr);
@@ -78,79 +115,77 @@ int main(int argc,char **argv)
 }
 
 
-// FIXME: this version only sets x to the exact solution
-PetscErrorCode FormInitialGuess(Vec x, AppCtx* user) {
-{
+PetscErrorCode FormExactSolution(AppCtx* user) {
   PetscErrorCode ierr;
-  DMDALocalInfo *info;
-  PetscReal      **ax, hy, y;
+  DMDALocalInfo  info;
+  PetscInt       i,j;
+  PetscReal      hy, y;
+  Field          **ax;
 
   ierr = DMDAGetLocalInfo(user->da,&info); CHKERRQ(ierr);
-  hy = user->H / (double)(info.my - 1);
-  ierr = DMGetCoordinates(user->da,&xycoords); CHKERRQ(ierr);
-  ierr = VecGetArray(x,&ax); CHKERRQ(ierr);
-  for (j = info.ys; j < info.ys+info.ym-1; j++) {
-    y = hy * (double) j;
-    for (i = info.xs; i < info.xs+info.xm-1; i++) {
+  hy = user->H / (PetscReal)(info.my - 1);
+  ierr = DMDAVecGetArray(user->da,user->xexact,&ax); CHKERRQ(ierr);
+  for (j = info.ys; j < info.ys+info.ym; j++) {
+    y = hy * (PetscReal)j;
+    for (i = info.xs; i < info.xs+info.xm; i++) {
       ax[j][i].u = (user->g1 / user->nu) * y * (user->H - y/2.0);
       ax[j][i].v = 0.0;
       ax[j][i].p = - user->g2 * (user->H - y);
     }
   }
-  ierr = VecRestoreArray(x,&ax); CHKERRQ(ierr);
+  ierr = DMDAVecRestoreArray(user->da,user->xexact,&ax); CHKERRQ(ierr);
   return 0;
 }
 
 
-PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, Field **x, Field **f, AppCtx *user)
-{
-  Field          uLocal[3];
-  PetscInt       i,j,k,l;
-  PetscReal      hx, hy, uUP, vUP,
-                 H = user->H, g1 = user->g1, g2 = user->g2,
+PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, Field **x, Field **f, AppCtx *user) {
+  PetscInt       i,j;
+  PetscReal      hx, hy, ux, uxx, uyy, vxx, vy, vyy,
+                 px, pxx, py, pyy, uUP, pUP,
+                 g1 = user->g1, g2 = user->g2,
                  nu = user->nu, eps = user->ppeps;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
 
   hx = user->L / (PetscReal)(info->mx);    // periodic direction
   hy = user->H / (PetscReal)(info->my-1);  // non-periodic
 
-  // zero-out locally-owned f;  from snes/examples/tutorials/ex7.c
-  ierr = PetscMemzero((void*) &(f[info->xs][info->ys]),
-                      info->xm*info->ym*sizeof(Field)); CHKERRQ(ierr);
-
-  for (j = info->ys; j < info->ys+info->ym-1; j++) {
-    for (i = info->xs; i < info->xs+info->xm-1; i++) {
+  for (j = info->ys; j < info->ys+info->ym; j++) {
+    for (i = info->xs; i < info->xs+info->xm; i++) {
       if (j == 0) {
         // Dirichlet conditions at bottom
         f[j][i].u = x[j][i].u;
         f[j][i].v = x[j][i].v;
-        f[j][i].p = x[j][i].p + g2 * H;
-      } else if (j == info.my-1) {
-        // stress-free, and pressure zero, conditions at top
-        uUP = FIXME;
-        f[j][i].u = (uUP - x[j-1][i].u) / (2.0*hy);
-        vUP = FIXME;
-        f[j][i].v = (vUP - x[j-1][i].v) / hy;
-        f[j][i].p = x[j][i].p;
+        f[j][i].p = x[j][i].p + g2 * user->H;
       } else {
-        // FD eqn I:
-        f[j][i].u = - nu * (x[j][i+1].u - 2.0 * x[j][i].u + x[j][i-1].u) / (hx*hx)
-                    - nu * (x[j+1][i].u - 2.0 * x[j][i].u + x[j+1][i].u) / (hy*hy)
-                    + (x[j][i+1].p - x[j][i-1].p) / (2.0*hx)
-                    - g1;
-        // FD eqn II:
-        f[j][i].v = - nu * (x[j][i+1].v - 2.0 * x[j][i].v + x[j][i-1].v) / (hx*hx)
-                    - nu * (x[j+1][i].v - 2.0 * x[j][i].v + x[j+1][i].v) / (hy*hy)
-                    + (x[j+1][i].p - x[j-1][i].p) / (2.0*hy)
-                    - g2;
-        // FD eqn III:
-        f[j][i].p =   (x[j][i+1].u - x[j][i-1].u) / (2.0*hx)
-                    + (x[j+1][i].v - x[j-1][i].v) / (2.0*hy)
-                    - eps * (
-                        (x[j][i+1].p - 2.0 * x[j][i].p + x[j][i-1].p) / (hx*hx)
-                      + (x[j+1][i].p - 2.0 * x[j][i].p + x[j+1][i].p) / (hy*hy) );
+        // in all other cases we use some centered x-derivatives
+        ux  = (x[j][i+1].u - x[j][i-1].u) / (2.0*hx);
+        uxx = (x[j][i+1].u - 2.0 * x[j][i].u + x[j][i-1].u) / (hx*hx);
+        vxx = (x[j][i+1].v - 2.0 * x[j][i].v + x[j][i-1].v) / (hx*hx);
+        if (j == info->my-1) {
+          // stress-free, and pressure zero, conditions at top
+          uUP = 2.0 * x[j][i].u - x[j-1][i].u - (hy*hy) * ( (g1/nu) + uxx );
+          f[j][i].u =   (uUP - x[j-1][i].u) / (2.0*hy)
+                      + (x[j][i+1].v - x[j][i-1].v) / (2.0*hx);
+          pUP = ((hy*hy) / eps) * ux - x[j-1][i].p;
+          f[j][i].v = - nu * vxx
+                      - nu * (2.0 * x[j-1][i].v - 2.0 * x[j][i].v) / (hy*hy)
+                      + (pUP - x[j-1][i].p) / (2.0*hy) - g2;
+          f[j][i].p = x[j][i].p;
+        } else {
+          // three field equations at generic points
+          px  = (x[j][i+1].p - x[j][i-1].p) / (2.0*hx);
+          py  = (x[j+1][i].p - x[j-1][i].p) / (2.0*hy);
+          vy  = (x[j+1][i].v - x[j-1][i].v) / (2.0*hy);
+          uyy = (x[j+1][i].u - 2.0 * x[j][i].u + x[j-1][i].u) / (hy*hy);
+          vyy = (x[j+1][i].v - 2.0 * x[j][i].v + x[j-1][i].v) / (hy*hy);
+          pxx = (x[j][i+1].p - 2.0 * x[j][i].p + x[j][i-1].p) / (hx*hx);
+          pyy = (x[j+1][i].p - 2.0 * x[j][i].p + x[j-1][i].p) / (hy*hy);
+          f[j][i].u = - nu * (uxx + uyy) + px - g1;
+          f[j][i].v = - nu * (vxx + vyy) + py - g2;
+          f[j][i].p = ux + vy - eps * (pxx + pyy);
+        }
+      }
     }
   }
 
