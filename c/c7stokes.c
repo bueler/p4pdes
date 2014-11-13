@@ -194,7 +194,8 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, Field **x, Field **f, AppC
           uUP = 2.0 * x[j][i].u - x[j-1][i].u - (hy*hy) * ( (g1/nu) + uxx );
           f[j][i].u =   (uUP - x[j-1][i].u) / (2.0*hy)
                       + (x[j][i+1].v - x[j][i-1].v) / (2.0*hx);
-          pUP = ((hy*hy) / eps) * ux - x[j-1][i].p;
+          f[j][i].u *= nu / hy;  // enforce symmetry by matching coeff of u[j+1][i] below
+          pUP = - ((hy*hy) / eps) * ux - x[j-1][i].p;
           f[j][i].v = - nu * vxx
                       - nu * (2.0 * x[j-1][i].v - 2.0 * x[j][i].v) / (hy*hy)
                       + (pUP - x[j-1][i].p) / (2.0*hy) - g2;
