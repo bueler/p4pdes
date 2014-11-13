@@ -10,12 +10,17 @@ static char help[] =
 "\n\n";
 
 // ./c7stokes -snes_fd -dm_view draw -draw_pause 2
-// ./c7stokes -snes_fd -snes_monitor -snes_converged_reason
-// ./c7stokes -snes_fd -snes_monitor -snes_converged_reason -da_grid_x 10 -da_grid_y 11  -snes_monitor_solution -draw_pause 2
-// ./c7stokes -snes_fd -snes_monitor -snes_converged_reason -da_refine 3 -ksp_rtol 1.0e-14
-// ./c7stokes -snes_fd -snes_monitor -snes_converged_reason -da_refine 3 -snes_rtol 1.0e-14
+// ./c7stokes -snes_fd -stokes_err -snes_monitor -snes_converged_reason
+// ./c7stokes -snes_fd -stokes_err -snes_monitor -snes_converged_reason -da_grid_x 10 -da_grid_y 11  -snes_monitor_solution -draw_pause 2
+// ./c7stokes -snes_fd -stokes_err -snes_monitor -snes_converged_reason -da_refine 3 -ksp_rtol 1.0e-14
+// ./c7stokes -snes_fd -stokes_err -snes_monitor -snes_converged_reason -da_refine 3 -snes_rtol 1.0e-14
 
-// ./c7stokes -snes_fd -mat_view ::ascii_matlab >> bar.m
+/* WORK ON SYMMETRY
+./c7stokes -snes_fd -da_grid_x 2 -da_grid_y 6 -mat_view ::ascii_matlab >> foo.m
+>> foo
+>> A = Mat_0x1cd5470_0 
+>> imagesc(A-A')
+*/
 
 // ./c7stokes -snes_fd -mat_is_symmetric 0.001    // FAILS FOR NOW
 
@@ -64,15 +69,21 @@ int main(int argc,char **argv)
   user.ppeps = 1.0;
 
 // FIXME: TO DO:
-//   1. make error display optional
 //   2. allow initial condition to be 0, random, exact
-//   3. use matlab output to work on making symmetric (e.g. on -da_grid_x 2 -da_grid_y 3
-//      which gives A of size 18 x 18)
+//   3. use matlab output to work on making symmetric (e.g. on -da_grid_x 2 -da_grid_y 4
+//      which gives A of size 24 x 24)
 //   4. use matlab output to improve row scaling
 //   5. add sliding exact solution from Will's thesis
 //   6. add analytical jacobian
 //   7. play with decreasing ppeps
 //   8. is it symmetric even when hx != hy?
+
+  PetscBool doerror = PETSC_FALSE;
+  ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "stokes_", "options for c7stokes", ""); CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-err",
+           "evaluate and display numerical error (exact solution case)",
+           "",doerror,&doerror,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
                       DM_BOUNDARY_PERIODIC, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
@@ -84,6 +95,15 @@ int main(int argc,char **argv)
   ierr = DMDASetFieldName(user.da,0,"u"); CHKERRQ(ierr);
   ierr = DMDASetFieldName(user.da,1,"v"); CHKERRQ(ierr);
   ierr = DMDASetFieldName(user.da,2,"p"); CHKERRQ(ierr);
+
+  // check that info.mx >= 4 so j==0,j==1,j==mx-2,j==mx-1 are different levels
+  DMDALocalInfo  info;
+  ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);
+  if ((info.mx < 2) || (info.my < 4)) {
+    SETERRQ2(PETSC_COMM_WORLD,1,
+      "info.mx==%d and info.my=%d but implementation of boundary conditions\n"
+      "  requires mx >= 2 and my >= 4\n",info.mx,info.my);
+  }
 
   ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
   ierr = SNESSetDM(snes,user.da); CHKERRQ(ierr);
@@ -98,19 +118,21 @@ int main(int argc,char **argv)
 
   ierr = SNESSolve(snes,NULL,x); CHKERRQ(ierr);
 
-  PetscReal  umax, vmax, pmax, uerr, verr, perr;
-  ierr = VecStrideNorm(user.xexact,0,NORM_INFINITY,&umax); CHKERRQ(ierr);
-  ierr = VecStrideNorm(user.xexact,1,NORM_INFINITY,&vmax); CHKERRQ(ierr);
-  ierr = VecStrideNorm(user.xexact,2,NORM_INFINITY,&pmax); CHKERRQ(ierr);
-  ierr = VecAXPY(x,-1.0,user.xexact); CHKERRQ(ierr);  // x := -xexact + x
-  ierr = VecStrideNorm(x,0,NORM_INFINITY,&uerr); CHKERRQ(ierr);
-  ierr = VecStrideNorm(x,1,NORM_INFINITY,&verr); CHKERRQ(ierr);
-  ierr = VecStrideNorm(x,2,NORM_INFINITY,&perr); CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,
-                     "|u - uexact|_inf = %e   (|uexact|_inf = %e)\n"
-                     "|v - vexact|_inf = %e   (|vexact|_inf = %e)\n"
-                     "|p - pexact|_inf = %e   (|pexact|_inf = %e)\n",
-                     uerr,umax,verr,vmax,perr,pmax); CHKERRQ(ierr);
+  if (doerror) {
+    PetscReal  umax, vmax, pmax, uerr, verr, perr;
+    ierr = VecStrideNorm(user.xexact,0,NORM_INFINITY,&umax); CHKERRQ(ierr);
+    ierr = VecStrideNorm(user.xexact,1,NORM_INFINITY,&vmax); CHKERRQ(ierr);
+    ierr = VecStrideNorm(user.xexact,2,NORM_INFINITY,&pmax); CHKERRQ(ierr);
+    ierr = VecAXPY(x,-1.0,user.xexact); CHKERRQ(ierr);  // x := -xexact + x
+    ierr = VecStrideNorm(x,0,NORM_INFINITY,&uerr); CHKERRQ(ierr);
+    ierr = VecStrideNorm(x,1,NORM_INFINITY,&verr); CHKERRQ(ierr);
+    ierr = VecStrideNorm(x,2,NORM_INFINITY,&perr); CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,
+                       "|u - uexact|_inf = %e   (|uexact|_inf = %e)\n"
+                       "|v - vexact|_inf = %e   (|vexact|_inf = %e)\n"
+                       "|p - pexact|_inf = %e   (|pexact|_inf = %e)\n",
+                       uerr,umax,verr,vmax,perr,pmax); CHKERRQ(ierr);
+  }
 
   ierr = VecDestroy(&x); CHKERRQ(ierr);
   ierr = SNESDestroy(&snes); CHKERRQ(ierr);
@@ -147,7 +169,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, Field **x, Field **f, AppC
   PetscInt       i,j;
   PetscReal      hx, hy, ux, uxx, uyy, vxx, vy, vyy,
                  px, pxx, py, pyy, uUP, pUP,
-                 g1 = user->g1, g2 = user->g2,
+                 H = user->H, g1 = user->g1, g2 = user->g2,
                  nu = user->nu, eps = user->ppeps;
 
   PetscFunctionBeginUser;
@@ -161,7 +183,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, Field **x, Field **f, AppC
         // Dirichlet conditions at bottom
         f[j][i].u = x[j][i].u;
         f[j][i].v = x[j][i].v;
-        f[j][i].p = x[j][i].p + g2 * user->H;
+        f[j][i].p = x[j][i].p + g2 * H;
       } else {
         // in all other cases we use some centered x-derivatives
         ux  = (x[j][i+1].u - x[j][i-1].u) / (2.0*hx);
@@ -178,17 +200,37 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, Field **x, Field **f, AppC
                       + (pUP - x[j-1][i].p) / (2.0*hy) - g2;
           f[j][i].p = x[j][i].p;
         } else {
-          // three field equations at generic points
+          // at generic points
           px  = (x[j][i+1].p - x[j][i-1].p) / (2.0*hx);
-          py  = (x[j+1][i].p - x[j-1][i].p) / (2.0*hy);
-          vy  = (x[j+1][i].v - x[j-1][i].v) / (2.0*hy);
-          uyy = (x[j+1][i].u - 2.0 * x[j][i].u + x[j-1][i].u) / (hy*hy);
-          vyy = (x[j+1][i].v - 2.0 * x[j][i].v + x[j-1][i].v) / (hy*hy);
           pxx = (x[j][i+1].p - 2.0 * x[j][i].p + x[j][i-1].p) / (hx*hx);
-          pyy = (x[j+1][i].p - 2.0 * x[j][i].p + x[j-1][i].p) / (hy*hy);
+          // use bottom p=-g2 H or top b.c. p=0 for symmetry
+          if (j == 1) {
+            py  = (x[j+1][i].p + g2 * H) / (2.0*hy);
+            pyy = (x[j+1][i].p - 2.0 * x[j][i].p - g2 * H) / (hy*hy);
+          } else if (j == info->my-2) {
+            py  = (0.0 - x[j-1][i].p) / (2.0*hy);
+            pyy = (0.0 - 2.0 * x[j][i].p + x[j-1][i].p) / (hy*hy);
+          } else {
+            py  = (x[j+1][i].p - x[j-1][i].p) / (2.0*hy);
+            pyy = (x[j+1][i].p - 2.0 * x[j][i].p + x[j-1][i].p) / (hy*hy);
+          }
+          // use bottom u=0 for symmetry
+          if (j == 1)
+            uyy = (x[j+1][i].u - 2.0 * x[j][i].u + 0.0) / (hy*hy);
+          else
+            uyy = (x[j+1][i].u - 2.0 * x[j][i].u + x[j-1][i].u) / (hy*hy);
+          // use bottom v=0 for symmetry
+          if (j == 1) {
+            vy  = (x[j+1][i].v - 0.0) / (2.0*hy);
+            vyy = (x[j+1][i].v - 2.0 * x[j][i].v + 0.0) / (hy*hy);
+          } else {
+            vy  = (x[j+1][i].v - x[j-1][i].v) / (2.0*hy);
+            vyy = (x[j+1][i].v - 2.0 * x[j][i].v + x[j-1][i].v) / (hy*hy);
+          }
+          // three field equations, scaled by area of cell:
           f[j][i].u = - nu * (uxx + uyy) + px - g1;
           f[j][i].v = - nu * (vxx + vyy) + py - g2;
-          f[j][i].p = ux + vy - eps * (pxx + pyy);
+          f[j][i].p = - ux - vy - eps * (pxx + pyy);
         }
       }
     }
