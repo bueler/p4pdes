@@ -66,8 +66,13 @@ int main(int argc,char **argv)
 // FIXME: TO DO:
 //   1. make error display optional
 //   2. allow initial condition to be 0, random, exact
-//   3. use matlab output to work on making symmetric
+//   3. use matlab output to work on making symmetric (e.g. on -da_grid_x 2 -da_grid_y 3
+//      which gives A of size 18 x 18)
 //   4. use matlab output to improve row scaling
+//   5. add sliding exact solution from Will's thesis
+//   6. add analytical jacobian
+//   7. play with decreasing ppeps
+//   8. is it symmetric even when hx != hy?
 
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
                       DM_BOUNDARY_PERIODIC, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
