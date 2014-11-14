@@ -65,9 +65,9 @@ The last equality defines symbols ``$\grad^2 \bu$.''
 In the constant viscosity case we write the Stokes equations as
 \begin{align}
 - \nu \grad^2 \bu + \grad p &= \bg \\
-\Div \bu &= 0
+- \Div \bu &= 0
 \end{align}
-This is a Poisson-like problem for $\bu$, but with an unknown pressure generating a source term, in addition to the body force $\bg$.
+This is a Poisson-like problem for $\bu$, but with an unknown pressure generating a source term, in addition to the body force $\bg$.  We have negated the second equation because it helps with symmetry.
 
 \section{Fluid flowing down a slope}
 
@@ -77,7 +77,7 @@ The particular problem we will solve is a constant-thickness flow down a slope o
 \begin{align}
 -\nu \grad^2 u + p_x &= g_1 \label{stokes2du} \\
 -\nu \grad^2 v + p_y &= g_2 \label{stokes2dv} \\
-u_x + v_y &= 0 \label{stokes2dincomp}
+- u_x - v_y &= 0 \label{stokes2dincomp}
 \end{align}
 where $\nu$ is constant and $\bg = (g_1,g_2) = (\rho g \sin \theta, - \rho g \cos \theta)$.
 
@@ -135,7 +135,7 @@ p &= -g_2 (H-y).\label{exactstokesp}
 It is not hard to explain how this solution is derived.  First, the solution of the problem is unique by standard arguments with the weak formulation \citep[p.~223]{Elmanetal2005}.  Thus the solution is independent of $x$ because the transformation $x\mapsto x+c$ changes none of the equations or boundary conditions.  Next, by \eqref{stokes2du} and boundary conditions \eqref{bcstokestop}, \eqref{bcstokesbottom}, $u=u(y)$ solves the easy two-point boundary value problem $-\nu u_{yy} = g_1$, $u(0)=0$, $u_y(H)=0$ which gives \eqref{exactstokesu}.  But then by \eqref{stokes2dincomp} and the boundary condition \eqref{bcstokesbottom}, $v=0$.  Finally for the pressure $p=p(y)$, equations \eqref{stokes2dv} and \eqref{bcstokestop} say $p_y=g_2$ and $p(H)=0$ thus \eqref{exactstokesp}.
 
 
-\section{Block structure of numerical Stokes solvers}
+\section{Block structure and symmetry}
 
 FIXME: Laplacians are something we understand, so lets proceed with eqns \eqref{stokes2du}, \eqref{stokes2dv}
 
@@ -143,7 +143,7 @@ FIXME: any way we do \eqref{stokes2dincomp} we get block structure for the full 
   $$\begin{bmatrix}
     -\nu\grad^2 & 0 & \partial/\partial x \\
     0 & -\nu\grad^2 & \partial/\partial y \\
-    \partial/\partial x & \partial/\partial y & 0
+    -\partial/\partial x & -\partial/\partial y & 0
     \end{bmatrix}
     \begin{bmatrix}
     \bu \\ \bv \\ \bp
@@ -171,7 +171,7 @@ where $L_i$, $G_i$, $B_i$ are matrices.  We expect that Laplacian-approximation 
 
 FIXME: $A$ certainly not invertible if approx to ``$\Div \bu$'' (i.e.~$\begin{bmatrix} B_1 & B_2 \end{bmatrix}$) has more rows than columns
 
-FIXME: extract approx to ``$\Div \bu$'' as transpose of the ``$\grad p$'' part (i.e.~$G_i$) so that
+FIXME: careful implementation of finite differences are required so as to make symmetric, i.e.~make $B_1=G_1^\top$, $B_2=G_2^\top$:
     $$\begin{bmatrix}
     \nu L_1 & 0 & G_1 \\
     0 & \nu L_1 & G_2 \\
@@ -201,7 +201,7 @@ The appearance of the Laplacian in a decoupled equation opens up the possibility
 \begin{align}
 -\nu \grad^2 u + p_x &= g_1 \label{ppstokes2du} \\
 -\nu \grad^2 v + p_y &= g_2 \label{ppstokes2dv} \\
-u_x + v_y - \eps \grad^2 p &= 0 \label{ppstokes2dincomp}
+- u_x - v_y - \eps \grad^2 p &= 0 \label{ppstokes2dincomp}
 \end{align}
 These equations correspond to block structure of the numerical approximation,
 \begin{equation}
@@ -266,7 +266,7 @@ The FD equations for interior points, including the periodic boundaries, (i.e.~a
 &\qquad + \frac{p_{i+1,j}-p_{i-1,j}}{2h_x} - g_1 = 0 \label{fdstokes2du} \\
 -\nu \Big(\frac{v_{i+1,j} - 2 v_{i,j} + v_{i-1,j}}{h_x^2} &+ \frac{v_{i,j+1} - 2 v_{i,j} + v_{i,j-1}}{h_y^2}\Big) \notag \\
 &\qquad + \frac{p_{i,j+1}-p_{i,j-1}}{2h_y} - g_2 = 0 \label{fdstokes2dv} \\
-\frac{u_{i+1,j}-u_{i-1,j}}{2h_x} + \frac{v_{i,j+1}-v_{i,j-1}}{2h_y} &- \eps \Big(\frac{p_{i+1,j} - 2 p_{i,j} + p_{i-1,j}}{h_x^2} \notag \\
+- \frac{u_{i+1,j}-u_{i-1,j}}{2h_x} - \frac{v_{i,j+1}-v_{i,j-1}}{2h_y} &- \eps \Big(\frac{p_{i+1,j} - 2 p_{i,j} + p_{i-1,j}}{h_x^2} \notag \\
 &\qquad\quad + \frac{p_{i,j+1} - 2 p_{i,j} + p_{i,j-1}}{h_y^2}\Big) = 0 \label{fdstokes2dincomp}
 \end{align}
 In the above formulas, so as to address periodicity in the $x$ direction, in the case $i=0$ we interpret ``$i-1$'' subscripts as $\text{\texttt{Mx}}-1$, while if $i=\text{\texttt{Mx}}-1$ then we interpret ``$i+1$'' subscripts as $0$.
@@ -275,7 +275,9 @@ At the bottom $y=0$ we set fields from the Dirichlet boundary conditions \eqref{
 \begin{equation}
   u_{i,0} = v_{i,0} = 0, \quad p_{i,0} = - g_2 H. \label{fdbcstokesbottom}
 \end{equation}
-The top $y=H$ boundary conditions \eqref{bcstokestop} require care.  Let $J=\text{\texttt{My}}-1$, the upper most index in the $y$ direction.  We set $p$ from the exact solution, $p_{i,J} = 0$.  Approximating the first of equations \eqref{bcstokestop} at $(x_i,y_J)$ by centered FD formulas gives
+For the top ($y=H$) boundary conditions, let $J=\text{\texttt{My}}-1$, the upper most index in the $y$ direction.  We set $p$ from the exact solution, $p_{i,J} = 0$.
+
+The remaining top boundary conditions \eqref{bcstokestop} require care.  Approximating the first of equations \eqref{bcstokestop} at $(x_i,y_J)$ by centered FD formulas gives
 \begin{equation}
   \frac{u_{i,J+1}-u_{i,J-1}}{2h_y} + \frac{v_{i+1,J}-v_{i-1,J}}{2h_x} = 0, \label{earlyfdbcstokestop}
 \end{equation}
@@ -284,7 +286,9 @@ but the notional point ``$u_{i,J+1}$'' is outside the domain.  We add equation \
 %  -\nu \Big(\frac{u_{i+1,J} - 2 u_{i,J} + u_{i-1,J}}{h_x^2} + \frac{u_{i,J+1} - 2 u_{i,J} + u_{i,J-1}}{h_y^2}\Big) - g_1 = 0 \label{earlyfdstokes2dutop} 
   u_{i,J+1} = 2 u_{i,J} - u_{i,J-1} - h_y^2 \left(\frac{g_1}{\nu} + \frac{u_{i+1,J} - 2 u_{i,J} + u_{i-1,J}}{h_x^2}\right) \label{earlyfdstokes2dutop} 
 \end{equation}
-and incorporating $p_{i-1,J}=p_{i+1,J}=0$ also, and substitute this into \eqref{earlyfdbcstokestop}.  Finally, the second of equations \eqref{bcstokestop} says $v_y=0$ at $(x_i,y_J)$ because $p_{i,J}=0$, so $v_{i,J+1} = v_{i,J-1}$ from the centered FD approximation.  But then \eqref{fdstokes2dv} and \eqref{fdstokes2dincomp} become the pair of equations
+and incorporating $p_{i-1,J}=p_{i+1,J}=0$ also, and substitute this into \eqref{earlyfdbcstokestop}.
+
+The second of equations \eqref{bcstokestop} says $v_y=0$ at $(x_i,y_J)$ because $p_{i,J}=0$, so $v_{i,J+1} = v_{i,J-1}$ from the centered FD approximation.  But then \eqref{fdstokes2dv} and \eqref{fdstokes2dincomp} become the pair of equations
 \begin{align}
 -\nu \Big(\frac{v_{i+1,J} - 2 v_{i,J} + v_{i-1,J}}{h_x^2} + \frac{2 v_{i,J-1} - 2 v_{i,J}}{h_y^2}\Big) + \frac{p_{i,J+1}-p_{i,J-1}}{2h_y} - g_2 = 0 \label{fdtopv} \\
 \frac{u_{i+1,J}-u_{i-1,J}}{2h_x}  - \eps \frac{p_{i,J+1} + p_{i,J-1}}{h_y^2} = 0. \label{earlytoppressure}
