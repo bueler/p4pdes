@@ -177,23 +177,55 @@ so our convergence claim \eqref{introconvergethm} matches the evidence.
 \noindent\hrulefill
 
 
-\section{\pVecs and \pMats}
+\section{\PETSc \pVec and \pMat objects}
 
-FIXME: introduce/illustrate object Create/Set/SetFromOptions/<use>/Destroy
+Although \PETSc is written in C, not C++ in particular, it is a relentlessly object-oriented software library.  Consider the operations which might touch the matrix object \texttt{A} in a linear system like \eqref{introsystem}:
+\begin{Verbatim}[fontsize=\small]
+  Mat A;
+  MatCreate(COMM,&A);
+  MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,N,N);
+  PetscObjectSetName((PetscObject)A,"A");
+  MatSetOptionsPrefix(A,"a_");
+  MatSetFromOptions(A);
+  ... fill entries of (i.e. assemble) A ...
+  ... solve system with A ...
+  MatDestroy(&A);
+\end{Verbatim}
+where \texttt{COMM} is an MPI communicator.
 
-FIXME: parallel layout of \pVec and \pMat
+Evidently \texttt{A} has an internal representation with nontrivial structure, but that is hidden.  Indeed the data structure inside \texttt{A} depends on runtime choices, the most basic being that the number of bytes used to store \texttt{A} on a given MPI process will depend on the number of processes.  At a deeper level, a \PETSc \pMat object need not even \emph{have} entries, but it may instead represent code that applies a linear operator to vectors.
+
+Once \texttt{A} is created and set up by the first five commands, then various methods become valid for \texttt{A}, for example including the \texttt{MatSetValues()} method to set entries in \texttt{A}.  Also the run-time option \texttt{-a\_mat\_view} will print out the entries of \texttt{A}; the option prefix ``\texttt{a\_}'' is helpful in distinguishing \pMat objects at the command line in a context with multiple \pMats.
+
+For the ``\pVec'' objects storing vectors, the ``\pMat'' objects storing matrices, and indeed all \PETSc object types, this basic sequence of operations applies:\sidenote{Of course ``\texttt{Object}'' here is merely a meta-name for the object type.}
+\begin{Verbatim}[fontsize=\small]
+  Object X;
+  ObjectCreate(COMM,&X);
+  ... set properties of X from code ...
+  ObjectSetFromOptions(X);  // allows run-time setting of properties
+  ... use X ...
+  ObjectDestroy(&X);
+\end{Verbatim}
+The first argument of \texttt{ObjectCreate()} takes an MPI communicator because \PETSc objects are, generically, distributed across, and accessible from, multiple MPI processes. 
+
+FIXME: \pVec and \pMat allow parallel assembly
+
+FIXME: illustrate parallel layout of \pVec and \pMat
+
+FIXME: assembly of \pMat a bit idiosyncratic; needs either MatXXXSetPreallocation() or MatSetUp() before MatGetOwnershipRange()
 
 
-\section{A linear system in \PETSc}
+\section{Solve a linear system in \PETSc}
 
-\cinputpartnostrip{c1matvec.c}{Initialize \PETSc and allocate \pVec s and \pMat.}{I}{}{//ENDSETUP}{code:matvecpartone}
+\cinputpartnostrip{c1matvec.c}{Initialize \PETSc and set up \pVecs and \pMat.}{I}{}{//ENDSETUP}{code:matvecpartone}
 
-\cinputpartnostrip{c1matvec.c}{Assemble \pMat $A$ and right-hand side $b$.}{II}{//ENDSETUP}{//ENDASSEMBLY}{code:matvecparttwo}
+\cinputpartnostrip{c1matvec.c}{Assemble \pMat $A$.  Assemble right-hand side $b$ via exact solution to system.}{II}{//ENDSETUP}{//ENDASSEMBLY}{code:matvecparttwo}
 
 \cinputpartnostrip{c1matvec.c}{Set up \pKSP.  Solve.  Finalize.}{III}{//ENDASSEMBLY}{//END}{code:matvecpartthree}
 
-FIXME: gloss PETSc traceback mechanism, before noting we don't show that stuff
+FIXME: gloss PETSc traceback mechanism, before noting we will strip that stuff
 
+FIXME: show sparse and Matlab-format output for \texttt{A}, noting we get this at the \texttt{MatAssemblyEnd()} stage %$ ./c1matvec -a_mat_view ::ascii_matlab
 
 \caveat{But \Matlab is all you want if scale does not matter.}
 

@@ -22,20 +22,23 @@ int main(int argc,char **args)
 
   ierr = VecCreate(PETSC_COMM_WORLD,&x); CHKERRQ(ierr);
   ierr = VecSetSizes(x,PETSC_DECIDE,4); CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject)x,"approx_solution"); CHKERRQ(ierr);
   ierr = VecSetFromOptions(x); CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)x,"approx solution"); CHKERRQ(ierr);
+
   ierr = VecDuplicate(x,&b); CHKERRQ(ierr);
   ierr = VecDuplicate(x,&xexact); CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)xexact,"exact solution"); CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject)xexact,"exact_solution"); CHKERRQ(ierr);
 
   ierr = MatCreate(PETSC_COMM_WORLD,&A); CHKERRQ(ierr);
   ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,4,4); CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject)A,"A"); CHKERRQ(ierr);
+  ierr = MatSetOptionsPrefix(A,"a_"); CHKERRQ(ierr);
   ierr = MatSetFromOptions(A); CHKERRQ(ierr);
-  ierr = MatSetUp(A); CHKERRQ(ierr);
 //ENDSETUP
 
   PetscInt       i,j,Istart,Iend;
   PetscScalar    v;
+  ierr = MatSetUp(A); CHKERRQ(ierr);  // called instead of preallocation
   ierr = MatGetOwnershipRange(A,&Istart,&Iend); CHKERRQ(ierr);
   for (i=Istart; i<Iend; i++) {
     v = -2.0;  j = i;
@@ -53,7 +56,7 @@ int main(int argc,char **args)
   ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
   ierr = MatSetOption(A,MAT_SYMMETRIC,PETSC_TRUE); CHKERRQ(ierr);
 
-  PetscInt       ix[4] = {0.0, 1.0, 2.0, 3.0};
+  PetscInt       ix[4] = {0, 1, 2, 3};
   PetscScalar    xexactvals[4] = {3.0, 2.0, 1.0, 0.0};
   ierr = VecSetValues(xexact,4,ix,xexactvals,INSERT_VALUES); CHKERRQ(ierr);
   ierr = VecAssemblyBegin(xexact); CHKERRQ(ierr);
