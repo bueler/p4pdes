@@ -2,23 +2,25 @@
 \chapter{Getting started with PETSc}
 \label{chap:getstarted}
 
-\section{A code that does almost nothing}
+\section{A code that does almost nothing, but in parallel}
 
-The purpose of the \PETSc library is to help you solve scientific and engineering problems, like PDEs, on distributed computers.  But \PETSc is built ``on top of'' the Message Passing Interface (MPI; \citep{Groppetal1999}) library, and some of the flavor of that library comes through in examples.  We start with an example C code \texttt{c1e.c} in Figure \ref{code:e} that is more-or-less just a introductory MPI example, but it does call \PETSc for some of the basic tasks.
+The purpose of the \PETSc library is to help you solve scientific and engineering problems, like PDEs, on distributed computers.  But \PETSc is built ``on top of'' the Message Passing Interface (MPI; \citep{Groppetal1999}) library, and some of the flavor of that library comes through in examples.  We start with an example C code that is more-or-less just a introductory MPI example, but which calls \PETSc for some basic tasks.
 
-This code computes Euler's constant
-  $$e = \sum_{n = 0}^\infty \frac{1}{n!} \approx 2.718281828$$
-in parallel.  It does the computation in a very distributed manner, by computing one term of the infinite series on each process.  Thus it computes a better estimate of $e$ if run on many MPI processes.\sidenote{It's kind of silly.}
+This code \texttt{c1e.c}, shown in Figure \ref{code:e}, computes Euler's constant
+\begin{equation}
+e = \sum_{n = 0}^\infty \frac{1}{n!} \approx 2.718281828 \label{introeseries}
+\end{equation}
+in parallel.  It does the computation in a very distributed manner, by computing one term of the infinite series on each process.  Thus it computes a better estimate of $e$ when run on more MPI processes.  In other words, this is a silly use of \PETSc, but an easy to understand parallel computation.
 
-As with any C source that compiles into an executable, its overall structure is just a function called \texttt{main()}.  This function takes inputs from the command line, \texttt{argc}, the argument count, and \texttt{argv}, the arguments themselves.  It outputs an \texttt{int} which is $0$ if the program succeeds.  Like all C codes we include the needed libraries---only \texttt{petscsys.h} is needed here.  Then we declare some variables, call various methods, and return $0$ at the end.
+As with any C source for an executable, in Figure \ref{code:e} we have a function called \texttt{main()}.  It takes inputs from the command line, \texttt{argc} and \texttt{argv},\sidenote{Here \texttt{argc} is an \texttt{int} with the argument count and \texttt{argv} are the arguments themselves as an array of strings (i.e.~C type \texttt{char**}).  But in this code, and all other codes in this book, we simply pass these arguments on to \PETSc through the \texttt{PetscInitialize()} method.}  and it outputs an \texttt{int} which is $0$ if the program succeeds.  Like all C codes we include the needed headers; only \texttt{petscsys.h} is needed here, but later codes will include other \PETSc headers.  Then we declare some variables, do a computation on each process, communicate the results between processes to get an estimate of $e$.  Finally we report success (i.e.~return $0$) at the end.
 
-Additional features of \texttt{c1e.c} will be worth describing once we compile and run our code.  Please do the following to start:
+More details of \texttt{c1e.c} can be described once we compile and run the code.  Please do the following to start:
 \begin{Verbatim}[fontsize=\small]
-$ cd p4pdes/c/  # download this book by
+$ cd p4pdes/c/  # download this book, and its codes in p4pdes/c/, by
                 #     "git clone https://github.com/bueler/p4pdes.git"
 $ make c1e
 \end{Verbatim}
-For the command ``\texttt{make}'' to work there must be a makefile, and there is one.  The relevant part of it looks like Figure \ref{code:c1emakefile}.  For all of the \PETSc examples in this book, the makefile will have this form, exactly as recommended in the \PETSc User's Manual \citep{petsc-user-ref}.
+For the command ``\texttt{make}'' to work there must be a makefile, of course, and it is \texttt{/p4pdes/c/makefile}, shown in Figure \ref{code:c1emakefile}.  For all the codes in this book, the makefile will have this form, exactly as recommended in the \PETSc User's Manual \citep{petsc-user-ref}.
 
 \inputwhole{../c/c1e.c}{\texttt{p4pdes/c/c1e.c}}{Compute $e$ in parallel.}{code:e}
 
@@ -28,7 +30,7 @@ $ ./c1e
 e is about 1.000000000000000
 rank 0 did 1 flops
 \end{Verbatim}
-The value $1.000\dots$ is a very poor estimate of $e$, but this code does better with more processes:
+The value $1.0$ is a very poor estimate of $e$, but this code does better with more processes:
 \begin{Verbatim}[fontsize=\small]
 $ mpiexec -n 5 ./c1e
 rank 3 did 7 flops
@@ -38,7 +40,7 @@ rank 0 did 1 flops
 rank 1 did 3 flops
 rank 2 did 5 flops
 \end{Verbatim}
-That's a better estimate of $e$, but hardly impressive.  On the other hand, with $N=20$ processes we get a good estimate:
+That's a better estimate of $e$, but hardly impressive.  On the other hand, with $N=20$ processes, and thus $N=20$ terms in series \eqref{introeseries}, we get a good estimate:
 \begin{Verbatim}[fontsize=\small]
 $ mpiexec -n 20 ./c1e
 rank 9 did 19 flops
@@ -49,7 +51,7 @@ rank 0 did 1 flops
 rank 18 did 37 flops
 \end{Verbatim}
 
-\cinputraw{c1emakefile.frag}{extract from \texttt{p4pdes/c/makefile}}{All \texttt{makefile}s for the \PETSc codes in this book like like this.}{}{//START}{//STOP}{code:c1emakefile}
+\cinputraw{c1emakefile.frag}{extract from \texttt{p4pdes/c/makefile}}{All \texttt{makefile}s for the \PETSc codes in this book look like this.}{}{//START}{//STOP}{code:c1emakefile}
 
 Now, perhaps the reader is worried that this book was written using a large supercomputer whereas the reader has a little laptop with a coupld of cores.  Not so; these $N=5$ and $N=20$ process runs can be done just fine on your little laptop or mine.  MPI creates processes as needed, and indeed operating systems have been multitasking for quite some time.
 
