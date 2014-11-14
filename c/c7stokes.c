@@ -69,7 +69,6 @@ int main(int argc,char **argv)
   user.ppeps = 1.0;
 
 // FIXME: TO DO:
-//   2. allow initial condition to be 0, random, exact
 //   3. use matlab output to work on making symmetric (e.g. on -da_grid_x 2 -da_grid_y 4
 //      which gives A of size 24 x 24)
 //   4. use matlab output to improve row scaling
@@ -86,6 +85,9 @@ int main(int argc,char **argv)
   ierr = PetscOptionsBool("-exact_init",
            "use exact solution as initial value (instead of zero)",
            "",exactinit,&exactinit,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-ppeps",
+           "set epsilon which is the amount of Laplacian of pressure (i.e. pressure-poisson)",
+           "",user.ppeps,&user.ppeps,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
@@ -204,7 +206,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, Field **x, Field **f, AppC
           f[j][i].u =   (uUP - x[j-1][i].u) / (2.0*hy)
                       + (x[j][i+1].v - x[j][i-1].v) / (2.0*hx);
           f[j][i].u *= nu / hy;  // enforce symmetry by matching coeff of u[j+1][i] below
-          pUP = - ((hy*hy) / eps) * ux - x[j-1][i].p;
+          pUP = ((hy*hy) / eps) * ux - x[j-1][i].p;
           f[j][i].v = - nu * vxx
                       - nu * (2.0 * x[j-1][i].v - 2.0 * x[j][i].v) / (hy*hy)
                       + (pUP - x[j-1][i].p) / (2.0*hy) - g2;
