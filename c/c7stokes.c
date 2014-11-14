@@ -78,11 +78,14 @@ int main(int argc,char **argv)
 //   7. play with decreasing ppeps
 //   8. is it symmetric even when hx != hy?
 
-  PetscBool doerror = PETSC_FALSE;
+  PetscBool doerror = PETSC_FALSE, exactinit = PETSC_FALSE;
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "stokes_", "options for c7stokes", ""); CHKERRQ(ierr);
   ierr = PetscOptionsBool("-err",
            "evaluate and display numerical error (exact solution case)",
            "",doerror,&doerror,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-exact_init",
+           "use exact solution as initial value (instead of zero)",
+           "",exactinit,&exactinit,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
@@ -114,7 +117,11 @@ int main(int argc,char **argv)
   ierr = DMCreateGlobalVector(user.da,&user.xexact); CHKERRQ(ierr);
   ierr = FormExactSolution(&user); CHKERRQ(ierr);
 
-  ierr = VecSet(x,0.0); CHKERRQ(ierr);
+  if (exactinit) {
+    ierr = VecCopy(user.xexact,x); CHKERRQ(ierr);
+  } else {
+    ierr = VecSet(x,0.0); CHKERRQ(ierr);
+  }
 
   ierr = SNESSolve(snes,NULL,x); CHKERRQ(ierr);
 
@@ -128,13 +135,15 @@ int main(int argc,char **argv)
     ierr = VecStrideNorm(x,1,NORM_INFINITY,&verr); CHKERRQ(ierr);
     ierr = VecStrideNorm(x,2,NORM_INFINITY,&perr); CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,
-                       "|u - uexact|_inf = %e   (|uexact|_inf = %e)\n"
-                       "|v - vexact|_inf = %e   (|vexact|_inf = %e)\n"
-                       "|p - pexact|_inf = %e   (|pexact|_inf = %e)\n",
-                       uerr,umax,verr,vmax,perr,pmax); CHKERRQ(ierr);
+                 "on %d x %d grid:\n"
+                 "  |u - uexact|_inf = %e   (|uexact|_inf = %e)\n"
+                 "  |v - vexact|_inf = %e   (|vexact|_inf = %e)\n"
+                 "  |p - pexact|_inf = %e   (|pexact|_inf = %e)\n",
+                 info.mx,info.my,uerr,umax,verr,vmax,perr,pmax); CHKERRQ(ierr);
   }
 
   ierr = VecDestroy(&x); CHKERRQ(ierr);
+  ierr = VecDestroy(&user.xexact); CHKERRQ(ierr);
   ierr = SNESDestroy(&snes); CHKERRQ(ierr);
   ierr = DMDestroy(&user.da); CHKERRQ(ierr);
   ierr = PetscFinalize();
@@ -228,7 +237,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, Field **x, Field **f, AppC
             vy  = (x[j+1][i].v - x[j-1][i].v) / (2.0*hy);
             vyy = (x[j+1][i].v - 2.0 * x[j][i].v + x[j-1][i].v) / (hy*hy);
           }
-          // three field equations, scaled by area of cell:
+          // three field equations:
           f[j][i].u = - nu * (uxx + uyy) + px - g1;
           f[j][i].v = - nu * (vxx + vyy) + py - g2;
           f[j][i].p = - ux - vy - eps * (pxx + pyy);
