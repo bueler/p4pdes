@@ -32,9 +32,9 @@
 
 \usepackage{booktabs} % for nicely-typeset tabular material
 \usepackage{verbatim} % for "comment" environment
+\usepackage{fancyvrb}
 \usepackage{xspace}
 %\usepackage{underscore} % causes "Missing \endcsname inserted" error?
-\usepackage{fancyvrb}
 \usepackage{graphicx}
 \usepackage{amsmath,amssymb,amsthm,bm}
 \usepackage{tikz}
@@ -126,7 +126,10 @@
 }
 
 \DefineVerbatimEnvironment{code}{Verbatim}
-{fontsize=\small,frame=lines,framerule=0.2mm,framesep=2.0mm}
+{fontsize=\small,frame=lines,framerule=0.2mm,framesep=2.0mm,xleftmargin=5mm}
+
+\DefineVerbatimEnvironment{cline}{Verbatim}
+{fontsize=\small,frame=leftline,framerule=0.3mm,framesep=2.0mm}
 
 \newcommand{\monthyear}{%
   \ifcase\month\or January\or February\or March\or April\or May\or June\or

@@ -15,23 +15,24 @@ in parallel.  It does the computation in a very distributed manner, by computing
 As with any C source for an executable, in Figure \ref{code:e} we have a function called \texttt{main()}.  It takes inputs from the command line, \texttt{argc} and \texttt{argv},\sidenote{Here \texttt{argc} is an \texttt{int} with the argument count and \texttt{argv} are the arguments themselves as an array of strings (i.e.~C type \texttt{char**}).  But in this code, and all other codes in this book, we simply pass these arguments on to \PETSc through the \texttt{PetscInitialize()} method.}  and it outputs an \texttt{int} which is $0$ if the program succeeds.  Like all C codes we include the needed headers; only \texttt{petscsys.h} is needed here, but later codes will include other \PETSc headers.  Then we declare some variables, do a computation on each process, communicate the results between processes to get an estimate of $e$.  Finally we report success (i.e.~return $0$) at the end.
 
 More details of \texttt{c1e.c} can be described once we compile and run the code.  Please do the following to start:
-\begin{code}
+\begin{cline}
 $ cd p4pdes/c/  # download this book, and its codes in p4pdes/c/, by
                 #     "git clone https://github.com/bueler/p4pdes.git"
 $ make c1e
-\end{code}
+\end{cline}
 For the command ``\texttt{make}'' to work there must be a makefile, of course, and it is \texttt{/p4pdes/c/makefile}, shown in Figure \ref{code:c1emakefile}.  For all the codes in this book, the makefile will have this form, exactly as recommended in the \PETSc User's Manual \citep{petsc-user-ref}.
 
 \inputwhole{../c/c1e.c}{\texttt{p4pdes/c/c1e.c}}{Compute $e$ in parallel.}{code:e}
 
 Run the code on one MPI process like this:
-\begin{code}
+\begin{cline}
 $ ./c1e
 e is about 1.000000000000000
 rank 0 did 1 flops
-\end{code}
+\end{cline}
+%$
 The value $1.0$ is a very poor estimate of $e$, but this code does better with more processes:
-\begin{code}
+\begin{cline}
 $ mpiexec -n 5 ./c1e
 rank 3 did 7 flops
 rank 4 did 9 flops
@@ -39,9 +40,10 @@ e is about 2.708333333333333
 rank 0 did 1 flops
 rank 1 did 3 flops
 rank 2 did 5 flops
-\end{code}
+\end{cline}
+%$
 That's a better estimate of $e$, but hardly impressive.  On the other hand, with $N=20$ processes, and thus $N=20$ terms in series \eqref{introeseries}, we get a good estimate:
-\begin{code}
+\begin{cline}
 $ mpiexec -n 20 ./c1e
 rank 9 did 19 flops
 ...
@@ -49,7 +51,8 @@ e is about 2.718281828459045
 rank 0 did 1 flops
 ...
 rank 18 did 37 flops
-\end{code}
+\end{cline}
+%$
 
 \cinputraw{c1emakefile.frag}{extract from \texttt{p4pdes/c/makefile}}{All \texttt{makefile}s for the \PETSc codes in this book look like this.}{}{//START}{//STOP}{code:c1emakefile}
 
@@ -61,9 +64,9 @@ The main job, however, is to collect the terms in the (truncated) infinite serie
 
 This is about all there is to say, except that every \PETSc program should start and end with the commands \texttt{PetscInitialize()} and \texttt{PetscFinalize()}:
 \begin{code}
-  PetscInitialize(&argc,&args,(char*)0,help);  // <-- always call
-  ... everything else goes here ...
-  PetscFinalize();  // <-- always call
+PetscInitialize(&argc,&args,(char*)0,help);  // <-- always call
+... everything else goes here ...
+PetscFinalize();  // <-- always call
 \end{code}
 Also, so that this \PETSc code can provide useful usage help, we add a \texttt{help} string at the start; it is a good place to say what the purpose of the code is.
 
@@ -183,15 +186,15 @@ so our convergence claim \eqref{introconvergethm} matches the evidence.
 
 Although \PETSc is written in C, not C++ in particular, it is a relentlessly object-oriented software library.  Consider the operations which might touch the matrix object \texttt{A} in a linear system like \eqref{introsystem}:
 \begin{code}
-  Mat A;
-  MatCreate(COMM,&A);
-  MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,N,N);
-  PetscObjectSetName((PetscObject)A,"A");
-  MatSetOptionsPrefix(A,"a_");
-  MatSetFromOptions(A);
-  ... fill entries of (i.e. assemble) A ...
-  ... solve system with A ...
-  MatDestroy(&A);
+Mat A;
+MatCreate(COMM,&A);
+MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,N,N);
+PetscObjectSetName((PetscObject)A,"A");
+MatSetOptionsPrefix(A,"a_");
+MatSetFromOptions(A);
+... fill entries of (i.e. assemble) A ...
+... solve system with A ...
+MatDestroy(&A);
 \end{code}
 where \texttt{COMM} is an MPI communicator.
 
@@ -201,12 +204,12 @@ Once \texttt{A} is created and set up by the first five commands, then various m
 
 For the ``\pVec'' objects storing vectors, the ``\pMat'' objects storing matrices, and indeed all \PETSc object types, this basic sequence of operations applies:\sidenote{Of course ``\texttt{Object}'' here is merely a meta-name for the object type.}
 \begin{code}
-  Object X;
-  ObjectCreate(COMM,&X);
-  ... set properties of X from code ...
-  ObjectSetFromOptions(X);  // allows run-time setting of properties
-  ... use X ...
-  ObjectDestroy(&X);
+Object X;
+ObjectCreate(COMM,&X);
+... set properties of X from code ...
+ObjectSetFromOptions(X);  // allows run-time setting of properties
+... use X ...
+ObjectDestroy(&X);
 \end{code}
 The first argument of \texttt{ObjectCreate()} takes an MPI communicator because \PETSc objects are, generically, distributed across, and accessible from, multiple MPI processes. 
 
