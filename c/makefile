@@ -10,6 +10,10 @@ c1matvec: c1matvec.o  chkopts
 	-${CLINKER} -o c1matvec c1matvec.o  ${PETSC_KSP_LIB}
 	${RM} c1matvec.o
 
+testmatcreate: testmatcreate.o  chkopts
+	-${CLINKER} -o testmatcreate testmatcreate.o  ${PETSC_KSP_LIB}
+	${RM} testmatcreate.o
+
 testts: testts.o  chkopts
 	-${CLINKER} -o testts testts.o  ${PETSC_KSP_LIB}
 	${RM} testts.o

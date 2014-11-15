@@ -9,12 +9,14 @@ c1e
 c1matvec
 c2poisson
 c2heat
-testts
 c3convert
 c3poisson
 c4poisson
 c7stokes
 c9obstacle
+
+testts
+testmatcreate
 
 bump.?.*
 square.?.*
