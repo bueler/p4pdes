@@ -39,7 +39,7 @@
 \usepackage{amsmath,amssymb,amsthm,bm}
 \usepackage{tikz}
 
-\usetikzlibrary{arrows,decorations.markings,fadings}
+\usetikzlibrary{arrows,decorations.markings,decorations.pathreplacing,fadings}
 
 %\usepackage[subtle,floats]{savetrees}
 
@@ -47,6 +47,7 @@
 
 \theoremstyle{definition}
 \newtheorem*{example}{{\color{cyan} Example}}
+\newtheorem*{examplecont}{{\color{cyan} Example, continued}}
 
 \newcommand{\trueinput}[2]{
 \VerbatimInput[frame=single,framesep=3mm,label=\fbox{\normalsize \textsl{\,#1\,}},fontfamily=courier,fontsize=\footnotesize]{#2}
