@@ -150,15 +150,15 @@ The triangulation shown in Figure \ref{fig:triangulation} came from a single com
 \caption{The polygon described by \texttt{bump.poly} in Figure \ref{code:bumppoly}.  The bold part is the closed Dirichlet boundary.  The lower boundary is Neumann, and has ``extra'' nodes to identify it as such.}
 \label{fig:bump-poly}
 \end{marginfigure}
-\begin{verbatim}
+\begin{code}
   $ triangle -pqa1.0 bump
-\end{verbatim}
+\end{code}
 This command generates three ASCII files, \texttt{bump.1.poly}, \texttt{bump.1.node}, and  \texttt{bump.1.ele}.  These files define the new (i.e.~refined relative to \texttt{bump.poly}) polygonal boundary, the nodes locations, and the elements in the triangulation, respectively.  For example, \texttt{bump.1.node} has the numbering and node locations shown in blue in Figure \ref{fig:triangulation}.
 
 \Triangle includes a minimal visualization tool which shows the triangulation graphically.  The command
-\begin{verbatim}
+\begin{code}
   $ showme bump
-\end{verbatim}
+\end{code}
 displays the boundary polygon (from \texttt{bump.poly} or \texttt{bump.1.poly}) and the triangulation itself (\texttt{bump.1.node} and \texttt{bump.1.ele}).
 
 \begin{figure}
@@ -174,9 +174,9 @@ displays the boundary polygon (from \texttt{bump.poly} or \texttt{bump.1.poly}) 
 The ASCII files produced by \Triangle produces are not in a good format for large meshes, but we will accept this for portability and readability.  We will, however, demonstrate how files are read in parallel, based on first doing a mundane and un-scalable task in \PETSc, namely reading the ASCII \Triangle files serially onto a single processor and writing out a binary file in \PETSc format.\sidenote{Furthermore we will focus on the scalability of the FEM solution process, once the mesh is loaded.}  The binary file both describes the mesh element-by-element and can be read in parallel.
 
 The code \texttt{c3convert.c} does the conversion.  It is invoked, for the present purposes, by
-\begin{verbatim}
+\begin{code}
   $ c3convert -f bump.1
-\end{verbatim}
+\end{code}
 This reads ASCII files \texttt{bump.1.\{node,ele,poly\}} and writes a \PETSc-formatted binary file \texttt{bump.1.petsc}.
 
 We will not show \texttt{c3convert.c}, but we summarize the high points.  First \PETSc is initialized and we get the rank of the current (MPI) process.  We only ask the first process (``rank zero'') in the MPI communicator to do any work.\sidenote{This code can be invoked ``\texttt{mpiexec -n NN c3convert}'', but it behaves as a serial code.}  This part of the code first reads the header information in the \texttt{.node} file, and allocates \PETSc \pVecs according.  We use \texttt{VecCreateSeq} to allocate the a sequential \pVec \texttt{vx}, which contains the $x$-coordinate of the nodes, only on the rank zero process.  Then \texttt{VecDuplicate} is used to allocate two more \pVecs with the same layout, \texttt{vy} and \texttt{vBT}.  This last \pVec will contain a flag $\{0,2,3\}$ for each node, where $0$ is an interior node, $2$ is a Dirichlet boundary node, and $3$ is a Neumann boundary node.
@@ -318,7 +318,7 @@ so that $\tilde b_i = \sum_{k} \;\text{\texttt{b(k,i)}}$.
 If \texttt{E} denotes an array of \texttt{elementtype} then for each triangle $\triangle_k$ we can get the node index for each of its three vertices.  Using $q=0,1,2$ for these vertices,
     $$\text{\texttt{E[k].j[q]}} \in \{0,1,\dots,N-1\}.$$
 Thus the element-by-element assembly of $\tilde A$ follows this pseudocode:
-\begin{Verbatim}[fontsize=\small]
+\begin{code}
 A = 0                           // N x N sparse matrix with entries a(i,j)
 b = 0                           // N x 1 column vector with entries b(i)
 for k = 0 to K-1                // loop through all elements
@@ -328,7 +328,7 @@ for k = 0 to K-1                // loop through all elements
             j = E[k].j[r]       // column index
             a(i,j) += a(k,q,r)  // add contribution from element k
             b(i)   += b(k,q)    // ditto
-\end{Verbatim}
+\end{code}
 \medskip\noindent
 Observe that on each triangle $\triangle_k$ we write ``\texttt{a(k,q,r)}'' for \texttt{a(k,i,j)}, by replacing the global indices $i,j$ by corresponding local node indices $q,r\in\{0,1,2\}$ for triangle $k$.
 

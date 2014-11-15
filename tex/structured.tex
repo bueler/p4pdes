@@ -115,18 +115,18 @@ A \pDM is an abstract type for describing the topology (connectedness) of a grid
 \end{marginfigure}
 
 If we do
-\begin{Verbatim}[fontsize=\small]
+\begin{code}
   make c2poisson
   ./c2poisson -da_grid_x 5 -da_grid_y 7
-\end{Verbatim}
+\end{code}
 then a structured grid will be created which is exactly as shown in Figure \ref{fig:unitsquaregrid}.  In this case all points of the grid are ``owned'' by the single process created when we run \texttt{c2poisson} without \MPI.  However, if we run it with multiple \MPI processes by
-\begin{Verbatim}[fontsize=\small]
+\begin{code}
   mpiexec -n N ./c2poisson -da_grid_x Mx -da_grid_y My
-\end{Verbatim}
+\end{code}
 then \PETSc does the best it can to balance the load of \texttt{Mx}$\cdot$\texttt{My} grid points among \texttt{N} processes, with the restriction that each \MPI process owns a rectangular subgrid.  For example, if we do
-\begin{Verbatim}[fontsize=\small]
+\begin{code}
   mpiexec -n 4 ./c2poisson -da_grid_x 5 -da_grid_y 7
-\end{Verbatim}
+\end{code}
 then the distributed structured grid shown in Figure \ref{fig:unitsquaregridparallel} will be created.  Neither \texttt{Mx}$=5$ nor \texttt{My}$=7$ is divisible by two, but \PETSc distributes the four ranks across the \texttt{Mx}$\cdot$\texttt{My}$=35$ nodes (grid points) relatively uniformly: the rank $0$ process owns 12 grid points and the rank $3$ process owns 6, while the other ranks are in between.  In this case the load is only balanced to within a factor of two, but larger grids can be better load-balanced.  
 
 \begin{marginfigure}
@@ -162,23 +162,23 @@ then the distributed structured grid shown in Figure \ref{fig:unitsquaregridpara
 \end{marginfigure}
 
 The observant reader may have already noted that the total number of processes \texttt{N}, in ``\texttt{mpiexec -n N},'' must not be prime if we are to get relatively-square processor domains in (portions of) the grid.  The ``bad'' result from running
-\begin{Verbatim}[fontsize=\small]
+\begin{code}
   mpiexec -n 5 ./c2poisson -da_grid_x 5 -da_grid_y 7
-\end{Verbatim}
+\end{code}
 is shown in Figure \ref{fig:unitsquaregridprime}.  Each process' portion of the grid is not ``compact'' in the sense of having a small perimeter-to-area ratio, so communication between processes will be large compared to the computation on each process.
 
 The fifth and sixth arguments ``\texttt{-10}'' to \texttt{DMDACreate2d()} in Figure \ref{code:dmdacreatetwod} are used to set default dimensions $M=10$ and $N=10$, but we have seen that these defaults can be overridden by runtime options \texttt{-da\_grid\_x} and \texttt{-da\_grid\_y}.  The command
- \begin{Verbatim}[fontsize=\small]
+\begin{code}
   mpiexec -n 4 ./c2poisson
-\end{Verbatim}
+\end{code}
 distributes a $10\times 10$ grid among four processes as in Figure \ref{fig:unitsquaregrideight}, with each rank owning a square subgrid of 25 nodes.  \PETSc can show the parallel layout by calling
-\begin{Verbatim}[fontsize=\small]
+\begin{code}
   mpiexec -n 4 ./c2poisson -dm_view
-\end{Verbatim}
+\end{code}
 The alternative form
-\begin{Verbatim}[fontsize=\small]
+\begin{code}
   mpiexec -n 4 ./c2poisson -dm_view draw -draw_pause 2
-\end{Verbatim}
+\end{code}
 shows the grid graphically using X windows.
 
 \begin{marginfigure}
@@ -218,13 +218,12 @@ shows the grid graphically using X windows.
 
 To explain the other options to \texttt{DMDACreate2d()} we start by quoting the \PETSc manual pages description:
 
-\noindent\hrulefill
-\begin{Verbatim}[fontsize=\small]
+\begin{code}
 DMDACreate2d(MPI_Comm comm, DMBoundaryType bx, DMBoundaryType by,
   DMDAStencilType stype, PetscInt M, PetscInt N, PetscInt m, PetscInt n,
   PetscInt dof, PetscInt s, const PetscInt lx[], const PetscInt ly[],
   DM *da)
-\end{Verbatim}
+\end{code}
 where
 \small
 \begin{itemize}[align=left]
@@ -495,13 +494,13 @@ The first action of \texttt{formdirichletlaplacian()} is to get a variable \text
 and
    $$\text{\texttt{info.ys}} \le j \le \text{\texttt{info.ys}} +\text{\texttt{info.ym}}-1.$$
 For example, in Figure \ref{fig:unitsquaregridparallel} the rank $0$ and $2$ processes have \text{\texttt{info.xs}}$=0$ and \text{\texttt{info.xm}}$=3$ while the rank $1$ and $3$ processes have \text{\texttt{info.xs}}$=3$ and \text{\texttt{info.xm}}$=2$.  (The $y$ ranges are similar.)  Such index ranges are then reflected in the \texttt{for} loops which re-appear every time we do operations on a structured 2D grid:
-\begin{Verbatim}[fontsize=\small]
+\begin{code}
   for (j=info.ys; j<info.ys+info.ym; j++) {
     for (i=info.xs; i<info.xs+info.xm; i++) {
       DO SOMETHING AT GRID POINT (i,j)
     }
   }
-\end{Verbatim}
+\end{code}
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=5]
@@ -539,16 +538,16 @@ For example, in Figure \ref{fig:unitsquaregridparallel} the rank $0$ and $2$ pro
 The \pMat object $A$ assembled by \texttt{formdirichletlaplacian()} (Figure \ref{code:structuredlaplacian}) has ranges of rows owned by each process.  This is the standard parallel layout of \pMat objects in \PETSc, but this fact is another one we can often forget on a \pDMDA-managed structured grid because we work with the locally-owned subgrid using $(i,j)$ indices.
 
 In particular, local indices $(i,j)$ can be used when inserting entries into a dynamical data structure for matrix assembly, namely a \pMat.  Thus in Figure \ref{code:structuredlaplacian} we see use of \texttt{MatSetValuesStencil()}, once for each locally-owned grid point.  For a generic interior point this command inserts five coefficients into the matrix.  The key data structure is of type \texttt{MatStencil}, an apparently-trivial struct
-\begin{Verbatim}[fontsize=\small]
+\begin{code}
 typedef struct {
   PetscInt k,j,i,c;
 } MatStencil;
-\end{Verbatim}
+\end{code}
 In our 2D case, with a single degree of freedom at each node,\sidenote{The Poisson equation \eqref{poissonsquare} is a scalar PDE so the unknown at each grid point is the scalar $U_{i,j}$.  A system of equations like Navier-Stokes would have \texttt{dof}$>1$ when we call \texttt{DMDACreateXd()}, and the ``\texttt{c}'' member of \texttt{MatStencil} would get used.} we only use the \texttt{i} and \texttt{j} members of \texttt{MatStencil}.  From \eqref{poissonsquareFD}, the actual matrix entries are $a_{i,i} = 2\left(h_y/h_x + h_x/h_y\right)$ on the diagonal, and $a_{i,j} = -h_y/h_x$ or $a_{i,j} = -h_x/h_y$ for off-diagonals.  We only insert nonzero off-diagonals in the matrix if the column corresponds to a non-boundary location.  After completing all the \texttt{MatSetValuesStencil()} insertion commands we call 
-\begin{Verbatim}[fontsize=\small]
+\begin{code}
   MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);
   MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);
-\end{Verbatim}
+\end{code}
 just as we did in Chapter \ref{chap:getstarted}.
 
 
@@ -609,14 +608,14 @@ To finish showing the code, in Figure \ref{code:ctwopoissonsolve} we create the 
 \section{Running the code, and runtime control}
 
 As a first run do:
-\begin{Verbatim}[fontsize=\small]
+\begin{code}
 $ make c2poisson
 $ ./c2poisson
-\end{Verbatim}
+\end{code}
 to get output
-\begin{Verbatim}[fontsize=\small]
+\begin{code}
 on 10 x 10 grid:  error |u-uexact|_inf = 0.000621778
-\end{Verbatim}
+\end{code}
 We see the default $10\times 10$ grid chosen in our call to \texttt{DMDACreate2d()}. There were seven iterations of the KSP method and a final residual norm and numerical error.
 
 At this point we want to know:\begin{itemize}
@@ -632,18 +631,18 @@ In \PETSc these choices of solver and parameters are controllable and exposable 
 By ``showing convergence'' we mean that we demonstrate that errors made by our numerical solver decrease in the expected way, as we refine the grid so that the finite differences are better approximations of the corresponding derivatives.  Furthermore we want to show that the rate at which the error decreases matches what we expect in theory.
 
 There are two ways to specify a finer grid in a code like \texttt{c2poisson.c}, both of which address the \pDM object through options.  One is to specify the grid directly:
-\begin{Verbatim}[fontsize=\small]
+\begin{code}
 $ ./c2poisson -da_grid_x 100 -da_grid_y 100
 on 100 x 100 grid:  error |u-uexact|_inf = 5.76054e-06
-\end{Verbatim}
+\end{code}
 The other is to instruct the \pDM to refine the grid by factors of two.  More precisely, the number of \emph{subintervals} is increased by a factor of two.  For example, this call replaces our default grid of 9 by 9 subintervals (i.e.~10 by 10 grid \emph{points}) by 18 subintervals in each direction (i.e.~19 grid points):
-\begin{Verbatim}[fontsize=\small]
+\begin{code}
 $ ./c2poisson -da_refine 1
 on 19 x 19 grid:  error |u-uexact|_inf = 0.000155374
-\end{Verbatim}
+\end{code}
 
 We check convergence by generating error data.  Here is a loop using the Bash shell:
-\begin{Verbatim}[fontsize=\small]
+\begin{code}
 $ for K in 0 1 2 3 4 5 6; do ./c2poisson -da_refine $K; done
 on 10 x 10 grid:  error |u-uexact|_inf = 0.000621778
 on 19 x 19 grid:  error |u-uexact|_inf = 0.000155374
@@ -652,7 +651,7 @@ on 73 x 73 grid:  error |u-uexact|_inf = 1.05331e-05
 on 145 x 145 grid:  error |u-uexact|_inf = 3.17389e-06
 on 289 x 289 grid:  error |u-uexact|_inf = 1.60786e-06
 on 577 x 577 grid:  error |u-uexact|_inf = 1.22251e-06
-\end{Verbatim}
+\end{code}
 The data is shown in Figure \ref{fig:c2poisson-conv} as the squares.  For the coarser grids (e.g.~$N+1=10,19,37,73$ grid points), a refinement by a factor of two gives a reduction in error by a factor of about four, as expected because our FD method is $O(h^2)$ \citep{MortonMayers}.  Unfortunately the error seems to have stopped falling for the finer grids ($N+1=145,289,577$), at a level around $\|u-u_{ex}\|_\infty \approx 10^{-6}$.
 
 \begin{figure}
@@ -663,7 +662,7 @@ The data is shown in Figure \ref{fig:c2poisson-conv} as the squares.  For the co
 \end{figure}
 
 Is the reduce apparent rate of convergence a sign of an implementation error.  In fact not, because simply asking for the \pKSP object to solve the linear system better is effective.  On a particular grid we can see the difference using option \texttt{-ksp\_monitor} to watch the residuals and setting a stronger value for the \pKSP relative tolerance for residual norm size (\texttt{-ksp\_rtol}):
-\begin{Verbatim}[fontsize=\small]
+\begin{code}
 $ ./c2poisson -ksp_monitor
   0 KSP Residual norm 1.007660904704e-01 
   1 KSP Residual norm 2.917206076870e-02 
@@ -680,11 +679,11 @@ $ ./c2poisson -ksp_monitor -ksp_rtol 1.0e-12
  13 KSP Residual norm 4.240214646869e-13 
  14 KSP Residual norm 3.105665682224e-14 
 on 10 x 10 grid:  error |u-uexact|_inf = 0.000621527
-\end{Verbatim}
+\end{code}
 On this coarse grid the numerical error is nearly the same, but on finer grids the fact that the linear system is solved more exactly will bring the numerical solution closer to the exact one.  However, the \pKSP takes twice as many iterations to achieve the desired residual norm reduction.
 
 In fact, rerunning the Bash loop with the stronger tolerance yields excellent evidence of convergence at the expected rate:
-\begin{Verbatim}[fontsize=\small]
+\begin{code}
 $ for K in 0 1 2 3 4 5 6; do ./c2poisson -da_refine $K -ksp_rtol 1.0e-12; done
 on 10 x 10 grid:  error |u-uexact|_inf = 0.000621527
 on 19 x 19 grid:  error |u-uexact|_inf = 0.000155312
@@ -693,14 +692,14 @@ on 73 x 73 grid:  error |u-uexact|_inf = 9.71122e-06
 on 145 x 145 grid:  error |u-uexact|_inf = 2.42806e-06
 on 289 x 289 grid:  error |u-uexact|_inf = 6.07041e-07
 on 577 x 577 grid:  error |u-uexact|_inf = 1.51761e-07
-\end{Verbatim}
+\end{code}
 This is plotted as the circles in Figure \ref{fig:c2poisson-conv}.  The linear-fit rate of this logarithmic error data is $O(h^{1.9999})$.  Our implementation is correct in this sense.
 
 
 \section{Efficiency, and exposing \PETSc's solvers}
 
 On the other hand, the finer grid calculations above are slow.  How about if we re-run in parallel?  On a typical four-core laptop\sidenote{Circa 2013 manufacture, with an Intel i7 processor at 2.7GHz.} we get:
-\begin{Verbatim}[fontsize=\small]
+\begin{code}
 $ time ./c2poisson -da_refine 5 -ksp_rtol 1.0e-12
 on 289 x 289 grid:  error |u-uexact|_inf = 6.07041e-07
 real 31.53
@@ -711,7 +710,7 @@ on 289 x 289 grid:  error |u-uexact|_inf = 6.07041e-07
 real 12.63
 user 45.41
 sys 0.38
-\end{Verbatim}
+\end{code}
 It is nice to see a speedup, though only by a factor of $31.5/12.6 = 2.5$ on this fixed-size problem, which is disappointing given the putative four-times increase in processing power.
 
 These first performance results probably raise more questions than they answer.  In particular,
@@ -725,22 +724,22 @@ These first performance results probably raise more questions than they answer. 
 While we will focus on performance and scaling in Chapter \ref{chap:scaling}, we can get started on these questions.
 
 Regarding i), even knowing what are possible runtime options is nontrivial in \PETSc because there are so many options.  But the answer is simple: pipe the output from option \texttt{-help} into a pager like \texttt{more} or \texttt{less}, like this
-\begin{Verbatim}[fontsize=\small]
+\begin{code}
 ./c2poisson -help | less
-\end{Verbatim}
+\end{code}
 This gives a view of the options available \emph{for} \texttt{c2poisson}, so that, for instance, the many options for nonlinear solvers are \emph{not} included in \texttt{-help} output because we have not used \pSNES; we'll use such tools in Chapter \ref{chap:nonlinear}.  This \texttt{-help} output also gives default values for parameters; for example we see that the default for \texttt{-ksp\_rtol} is \texttt{1e-05}, which explains why convergence ``leveled out'' on fine grids.
 
 Alternatively, one might want to know what are options for controlling particular objects inside \texttt{c2poisson}.  For example, this command shows runtime options which control the \pKSP object:
-\begin{Verbatim}[fontsize=\small]
+\begin{code}
 ./c2poisson -help | grep ksp_
-\end{Verbatim}
+\end{code}
 If the list is too long, pipe it into the pager:
-\begin{Verbatim}[fontsize=\small]
+\begin{code}
 ./c2poisson -help | grep ksp_ | less
-\end{Verbatim}
+\end{code}
 
 Regarding ii), recall that we used \texttt{-dm\_view} to show properties of the \pDM object in \texttt{c2poisson}.  We should do the same for the \pKSP object:
-\begin{Verbatim}[fontsize=\small]
+\begin{code}
 $ ./c2poisson -ksp_view
 KSP Object: 1 MPI processes
   type: gmres
@@ -762,16 +761,16 @@ PC Object: 1 MPI processes
     ...
 on 10 x 10 grid:  iterations 7, residual norm = 8.59388e-07,
                   error |u-uexact|_inf = 0.000621778
-\end{Verbatim}
+\end{code}
 We have suppressed some of the output, but this shows the default FIXME
 
 FIXME but wait, $A$ was symmetric; show
-\begin{Verbatim}[fontsize=\small]
+\begin{code}
 ./c2poisson -ksp_type cg
-\end{Verbatim}
+\end{code}
 
 FIXME:  In parallel
-\begin{Verbatim}[fontsize=\small]
+\begin{code}
 $ mpiexec -n 4 ./c2poisson -ksp_view
 KSP Object: 4 MPI processes
   type: gmres
@@ -822,7 +821,7 @@ PC Object: 4 MPI processes
     total number of mallocs used during MatSetValues calls =0
 on 10 x 10 grid:  iterations 11, residual norm = 1.67019e-07,
                   error |u-uexact|_inf = 0.000621549
-\end{Verbatim}
+\end{code}
 
 
 
