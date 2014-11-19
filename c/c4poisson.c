@@ -6,14 +6,16 @@ static char help[] = "Solves a structured-grid Poisson problem with DMDA and KSP
 // based on src/ksp/ksp/examples/tutorials/ex50.c, but in Dirichlet-only case,
 //   and following c2poisson.c closely
 
-// FIXME:currently code duplication from c2poisson.c; is there a good way to do code re-use on stuff from structuredlaplacian.c?
-
-// SHOWS c2 AND c4 CODES ARE DOING SAME THING (THOUGH c4 HAS NO EXACT SOLN):
+// SHOWS c2 AND c4 CODES ARE DOING SAME THING
+//   $ ./c2poisson 
+//   on 10 x 10 grid:  error |u-uexact|_inf = 0.000621778
 //   $ ./c4poisson 
-//   on   10 x   10 grid:  iterations 7, residual norm = 8.59388e-07
-//   $ ./c2poisson
-//   on   10 x   10 grid:  iterations 7, residual norm = 8.59388e-07,
-//                         error |u-uexact|_inf = 0.000621778
+//   on 10 x 10 grid:  error |u-uexact|_inf = 0.000621778
+
+// REGARDLESS OF INTEGER DIMS OF INITIAL GRID, THIS ALWAYS WORKS:
+//   ./c4poisson -pc_type mg -pc_mg_levels N -da_refine N
+// SO CONVERGENCE IS:
+//   for NN in 1 2 3 4 5 6 7 8; do ./c4poisson -da_grid_x 5 -da_grid_y 5 -da_refine $NN -pc_type mg -pc_mg_levels $NN -ksp_rtol 1.0e-8; done
 
 // USE MULTIGRID AND SHOW IT GRAPHICALLY:
 //   ./c4poisson -da_grid_x 3 -da_grid_y 3 -pc_type mg -da_refine 3 -ksp_monitor -ksp_view -dm_view draw -draw_pause 1
@@ -42,133 +44,71 @@ static char help[] = "Solves a structured-grid Poisson problem with DMDA and KSP
 #include <math.h>
 #include <petscdmda.h>
 #include <petscksp.h>
+#include "structuredlaplacian.h"
 
-
-//COMPUTERHS
+//COMPUTES
 PetscErrorCode ComputeRHS(KSP ksp, Vec b, void *ctx) {
   PetscErrorCode ierr;
-  DMDALocalInfo  info;
   DM             da;
-
   PetscFunctionBeginUser;
   ierr = KSPGetDM(ksp,&da);CHKERRQ(ierr);
-  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-
-  PetscInt       i, j;
-  PetscReal      hx = 1./(double)(info.mx-1),
-                 hy = 1./(double)(info.my-1),  // domain is [0,1] x [0,1]
-                 x, y, x2, y2, f, **ab;
-  ierr = DMDAVecGetArray(da, b, &ab);CHKERRQ(ierr);
-  for (j=info.ys; j<info.ys+info.ym; j++) {
-    y = j * hy;  y2 = y*y;
-    for (i=info.xs; i<info.xs+info.xm; i++) {
-      x = i * hx;  x2 = x*x;
-      // this is example page 64 of Briggs et al 2000
-      if ( (i>0) && (i<info.mx-1) && (j>0) && (j<info.my-1) ) { // if not bdry
-        f = 2.0 * ( (1.0 - 6.0*x2) * y2 * (1.0 - y2) + (1.0 - 6.0*y2) * x2 * (1.0 - x2) );
-        ab[j][i] = hx * hy * f;
-      } else {
-        ab[j][i] = 0.0;                          // on bdry we have "1 * u = 0"
-      }
-    }
-  }
-  ierr = DMDAVecRestoreArray(da, b, &ab);CHKERRQ(ierr);
-
-  ierr = VecAssemblyBegin(b); CHKERRQ(ierr);
-  ierr = VecAssemblyEnd(b); CHKERRQ(ierr);
+  ierr = formRHS(da,b); CHKERRQ(ierr);
   return 0;
 }
-//ENDCOMPUTERHS
 
 
-//COMPUTEJAC
-PetscErrorCode ComputeJacobian(KSP ksp,Mat J, Mat A,void *ctx) {
+PetscErrorCode ComputeA(KSP ksp,Mat J, Mat A,void *ctx) {
   PetscErrorCode ierr;
-  PetscInt       i, j;
-  PetscScalar    hx, hy;
   DM             da;
-  DMDALocalInfo  info;
-
   PetscFunctionBeginUser;
-  ierr  = KSPGetDM(ksp,&da);CHKERRQ(ierr);
-
-  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-  hx   = 1.0/(PetscReal)(info.mx);
-  hy   = 1.0/(PetscReal)(info.my);
-
-  for (j=info.ys; j<info.ys+info.ym; j++) {
-    for (i=info.xs; i<info.xs+info.xm; i++) {
-      MatStencil  row, col[5];
-      PetscReal   v[5];
-      PetscInt    ncols = 0;
-      row.j = j;               // row of A corresponding to the unknown at (x_i,y_j)
-      row.i = i;
-      col[ncols].j = j;        // in that diagonal entry ...
-      col[ncols].i = i;
-      if ( (i==0) || (i==info.mx-1) || (j==0) || (j==info.my-1) ) { // ... on bdry
-        v[ncols++] = 1.0;
-      } else {
-        v[ncols++] = 2*(hy/hx + hx/hy); // ... everywhere else we build a row
-        // if neighbor is NOT known to be zero we put an entry:
-        if (i-1>0) {
-          col[ncols].j = j;    col[ncols].i = i-1;  v[ncols++] = -hy/hx;  }
-        if (i+1<info.mx-1) {
-          col[ncols].j = j;    col[ncols].i = i+1;  v[ncols++] = -hy/hx;  }
-        if (j-1>0) {
-          col[ncols].j = j-1;  col[ncols].i = i;    v[ncols++] = -hx/hy;  }
-        if (j+1<info.my-1) {
-          col[ncols].j = j+1;  col[ncols].i = i;    v[ncols++] = -hx/hy;  }
-      }
-      ierr = MatSetValuesStencil(A,1,&row,ncols,col,v,INSERT_VALUES); CHKERRQ(ierr);
-    }
-  }
-
-  ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  ierr = KSPGetDM(ksp,&da); CHKERRQ(ierr);
+  ierr = formdirichletlaplacian(da,1.0,A); CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-//ENDCOMPUTEJAC
+//ENDCOMPUTES
+
 
 //MAIN
 int main(int argc,char **argv)
 {
-  KSP            ksp;
-  DM             da;
   PetscErrorCode ierr;
-
   PetscInitialize(&argc,&argv,(char*)0,help);
 
-  // default size (10 x 10) can be changed using -da_grid_x M -da_grid_y N
+  DM da;
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
-                DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
-                DMDA_STENCIL_STAR,-10,-10,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,
+                DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
+                -10,-10,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,
                 &da); CHKERRQ(ierr);
   ierr = DMDASetUniformCoordinates(da,0.0,1.0,0.0,1.0,-1.0,-1.0); CHKERRQ(ierr);
 
   // create linear solver context; compare to c2poisson.c version; note there
   // is no "Assemble" stage!; that happens inside KSPSolve()
+  KSP ksp;
   ierr = KSPCreate(PETSC_COMM_WORLD,&ksp);CHKERRQ(ierr);
   ierr = KSPSetDM(ksp,(DM)da);
   ierr = KSPSetComputeRHS(ksp,ComputeRHS,NULL);CHKERRQ(ierr);
-  ierr = KSPSetComputeOperators(ksp,ComputeJacobian,NULL);CHKERRQ(ierr);
+  ierr = KSPSetComputeOperators(ksp,ComputeA,NULL);CHKERRQ(ierr);
   ierr = KSPSetFromOptions(ksp);CHKERRQ(ierr);
 
-  PetscLogStage  stage;
-  ierr = PetscLogStageRegister("Solve", &stage); CHKERRQ(ierr);
-  ierr = PetscLogStagePush(stage); CHKERRQ(ierr);
-  ierr = KSPSolve(ksp,NULL,NULL);CHKERRQ(ierr);
-  ierr = PetscLogStagePop();CHKERRQ(ierr);
+  Vec u;
+  ierr = DMCreateGlobalVector(da,&u);CHKERRQ(ierr);
+  PetscLogStage  stage; //STRIP
+  ierr = PetscLogStageRegister("Solve", &stage); CHKERRQ(ierr); //STRIP
+  ierr = PetscLogStagePush(stage); CHKERRQ(ierr); //STRIP
+  ierr = KSPSolve(ksp,NULL,u);CHKERRQ(ierr);
+  ierr = PetscLogStagePop();CHKERRQ(ierr); //STRIP
 
-  // report on grid, ksp results
-  PetscInt       its;
-  PetscScalar    resnorm;
+  PetscScalar    errnorm;
   DMDALocalInfo  info;
+  Vec            uexact;
+  ierr = DMCreateGlobalVector(da,&uexact);CHKERRQ(ierr);
+  ierr = formExact(da,uexact); CHKERRQ(ierr);
+  ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uxact
+  ierr = VecNorm(u,NORM_INFINITY,&errnorm); CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(da,&info);CHKERRQ(ierr);
-  ierr = KSPGetIterationNumber(ksp,&its); CHKERRQ(ierr);
-  ierr = KSPGetResidualNorm(ksp,&resnorm); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
-             "on %4d x %4d grid:  iterations %D, residual norm = %g\n",
-             info.mx,info.my,its,resnorm); CHKERRQ(ierr);
+             "on %d x %d grid:  error |u-uexact|_inf = %g\n",
+             info.mx,info.my,errnorm); CHKERRQ(ierr);
 
   ierr = DMDestroy(&da);CHKERRQ(ierr);
   ierr = KSPDestroy(&ksp);CHKERRQ(ierr);

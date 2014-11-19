@@ -6,6 +6,5 @@ We now make a key transition from Chapters \ref{chap:structured} and \ref{chap:u
 
 \cinputpart{c4poisson.c}{Poisson problem on a structured grid again, but this time using \texttt{KSPSetComputeOperators()} so that multigrid is possible.}{I}{//MAIN}{//ENDMAIN}{code:multigridone}
 
-\cinputpart{c4poisson.c}{This method builds the right-hand side.}{II}{//COMPUTERHS}{//ENDCOMPUTERHS}{code:multigridtwo}
+\cinputpart{c4poisson.c}{These methods build the right-hand side and the matrix, for call-back by \texttt{KSPSetComputeRHS()} and \texttt{KSPSetComputeOperators()}, respectively, but they are just wrappers around code reused from Chapter \ref{chap:structured}.}{II}{//COMPUTES}{//ENDCOMPUTES}{code:multigridtwo}
 
-\cinputpart{c4poisson.c}{This is the method handed to \texttt{KSPSetComputeOperators()}.}{III}{//COMPUTEJAC}{//ENDCOMPUTEJAC}{code:multigridthree}

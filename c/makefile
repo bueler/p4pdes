@@ -34,12 +34,16 @@ c3poisson: c3poisson.o readmesh.o poissontools.o chkopts
 	-${CLINKER} -o c3poisson c3poisson.o readmesh.o poissontools.o ${PETSC_KSP_LIB}
 	${RM} c3poisson.o readmesh.o poissontools.o
 
-c4poisson: c4poisson.o  chkopts
-	-${CLINKER} -o c4poisson c4poisson.o  ${PETSC_KSP_LIB}
-	${RM} c4poisson.o
+c4poisson: c4poisson.o structuredlaplacian.o  chkopts
+	-${CLINKER} -o c4poisson c4poisson.o structuredlaplacian.o  ${PETSC_KSP_LIB}
+	${RM} c4poisson.o structuredlaplacian.o
+
+c7fosls: c7fosls.o  chkopts
+	-${CLINKER} -o c7fosls c7fosls.o  ${PETSC_KSP_LIB}
+	${RM} c7fosls.o
 
 c7stokes: c7stokes.o  chkopts
-	-${CLINKER} -o c7stokes c7stokes.o  ${PETSC_KSP_LIB}
+	-${CLINKER} -o c7stokes c7stokes.o  ${PETSC_SNES_LIB}
 	${RM} c7stokes.o
 
 c9obstacle: c9obstacle.o  chkopts
@@ -50,5 +54,5 @@ c9obstacle: c9obstacle.o  chkopts
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ c1e c1matvec c2poisson c2heat c3convert c3poisson c4poisson c7stokes c9obstacle
+	@rm -f *~ c1e c1matvec c2poisson c2heat c3convert c3poisson c4poisson c7fosls c7stokes c9obstacle
 	@rm -f mesh.?.* bump.?.* square.?.*

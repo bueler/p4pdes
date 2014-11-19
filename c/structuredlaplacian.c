@@ -1,6 +1,64 @@
 #include <petscmat.h>
 #include <petscdmda.h>
 
+//FORMEXACT
+PetscErrorCode formExact(DM da, Vec uexact) {
+  PetscErrorCode ierr;
+  DMDALocalInfo  info;
+  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+
+  PetscInt  i, j;
+  // domain is [0,1] x [0,1]:
+  PetscReal hx = 1.0/(info.mx-1), hy = 1.0/(info.my-1),
+            x, y, **auexact;
+  ierr = DMDAVecGetArray(da, uexact, &auexact);CHKERRQ(ierr);
+  for (j=info.ys; j<info.ys+info.ym; j++) {
+    y = j * hy;
+    for (i=info.xs; i<info.xs+info.xm; i++) {
+      x = i * hx;
+      auexact[j][i] = x*x * (1.0 - x*x) * y*y * (y*y - 1.0);
+    }
+  }
+  ierr = DMDAVecRestoreArray(da, uexact, &auexact);CHKERRQ(ierr);
+
+  ierr = VecAssemblyBegin(uexact); CHKERRQ(ierr);
+  ierr = VecAssemblyEnd(uexact); CHKERRQ(ierr);
+  return 0;
+}
+//ENDFORMEXACT
+
+//FORMRHS
+PetscErrorCode formRHS(DM da, Vec b) {
+  PetscErrorCode ierr;
+  DMDALocalInfo  info;
+  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+
+  PetscInt  i, j;
+  PetscReal hx = 1.0/(info.mx-1), hy = 1.0/(info.my-1),
+            x, y, x2, y2, f, **ab;
+  ierr = DMDAVecGetArray(da, b, &ab);CHKERRQ(ierr);
+  for (j=info.ys; j<info.ys+info.ym; j++) {
+    y = j * hy;  y2 = y*y;
+    for (i=info.xs; i<info.xs+info.xm; i++) {
+      x = i * hx;  x2 = x*x;
+      if ( (i>0) && (i<info.mx-1) && (j>0) && (j<info.my-1) ) { // if not bdry
+        // f = - (u_xx + u_yy)  where u is exact
+        f = 2.0 * ( (1.0 - 6.0*x2) * y2 * (1.0 - y2)
+                    + (1.0 - 6.0*y2) * x2 * (1.0 - x2) );
+        ab[j][i] = hx * hy * f;
+      } else {
+        ab[j][i] = 0.0;                          // on bdry we have 1*u = 0
+      }
+    }
+  }
+  ierr = DMDAVecRestoreArray(da, b, &ab);CHKERRQ(ierr);
+
+  ierr = VecAssemblyBegin(b); CHKERRQ(ierr);
+  ierr = VecAssemblyEnd(b); CHKERRQ(ierr);
+  return 0;
+}
+//ENDFORMRHS
+
 //CREATEMATRIX
 PetscErrorCode formdirichletlaplacian(DM da, PetscReal dirichletdiag, Mat A) {
   PetscErrorCode ierr;
@@ -8,18 +66,18 @@ PetscErrorCode formdirichletlaplacian(DM da, PetscReal dirichletdiag, Mat A) {
   ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
 
   PetscInt   i, j;
-  PetscReal  hx = 1./(double)(info.mx-1),  // domain is [0,1] x [0,1]
-             hy = 1./(double)(info.my-1);
+  PetscReal  hx = 1.0/(info.mx-1), hy = 1.0/(info.my-1);
   for (j=info.ys; j<info.ys+info.ym; j++) {
     for (i=info.xs; i<info.xs+info.xm; i++) {
       MatStencil  row, col[5];
       PetscReal   v[5];
       PetscInt    ncols = 0;
-      row.j = j;               // row of A corresponding to the unknown at (x_i,y_j)
+      row.j = j;               // row of A corresponding to (x_i,y_j)
       row.i = i;
-      col[ncols].j = j;        // in that diagonal entry ...
+      col[ncols].j = j;        // in this diagonal entry
       col[ncols].i = i;
-      if ( (i==0) || (i==info.mx-1) || (j==0) || (j==info.my-1) ) { // ... on bdry
+      if ( (i==0) || (i==info.mx-1) || (j==0) || (j==info.my-1) ) {
+        // if on boundary, just insert diagonal entry
         v[ncols++] = dirichletdiag;
       } else {
         v[ncols++] = 2*(hy/hx + hx/hy); // ... everywhere else we build a row
