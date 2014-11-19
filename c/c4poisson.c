@@ -7,7 +7,7 @@ static char help[] = "Solves a structured-grid Poisson problem with DMDA and KSP
 //   and following c2poisson.c closely
 
 // SHOWS c2 AND c4 CODES ARE DOING SAME THING
-//   $ ./c2poisson 
+//   $ ./c2poisson
 //   on 10 x 10 grid:  error |u-uexact|_inf = 0.000621778
 //   $ ./c4poisson 
 //   on 10 x 10 grid:  error |u-uexact|_inf = 0.000621778
@@ -44,7 +44,7 @@ static char help[] = "Solves a structured-grid Poisson problem with DMDA and KSP
 #include <math.h>
 #include <petscdmda.h>
 #include <petscksp.h>
-#include "structuredlaplacian.h"
+#include "structuredpoisson.h"
 
 //COMPUTES
 PetscErrorCode ComputeRHS(KSP ksp, Vec b, void *ctx) {

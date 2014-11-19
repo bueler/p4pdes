@@ -491,9 +491,9 @@ where $\alpha = 2 (h_y/h_x) + 2 (h_x/h_y) = 13/3$ and $\beta = - h_y/h_x = - 3/2
 \end{example}
 \noindent\hrulefill
 
-We can now show the code that assembles ``$A$'' in linear system \eqref{poissonlinearsystem}; see Figure \ref{code:structuredlaplacian}.  For clarity and code reuse we have isolated this method \texttt{formdirichletlaplacian()} in a separate file.
+We can now show the code that assembles ``$A$'' in linear system \eqref{poissonlinearsystem}; see Figure \ref{code:structuredpoisson}.  For clarity and code reuse we have isolated this method \texttt{formdirichletlaplacian()} in a separate file.
 
-\cinput{structuredlaplacian.c}{Fill matrix entries using \texttt{MatSetValuesStencil}.}{//CREATEMATRIX}{//ENDCREATEMATRIX}{code:structuredlaplacian}
+\cinputpart{structuredpoisson.c}{Fill matrix entries using \texttt{MatSetValuesStencil}.}{I}{//CREATEMATRIX}{//ENDCREATEMATRIX}{code:structuredpoisson}
 
 The first action of \texttt{formdirichletlaplacian()} is to get a variable \texttt{info} of type \texttt{DMDALocalInfo} from the \pDM.  As shown in Figure \ref{fig:localpartofgrid}, \texttt{info} is a C structure which stores both global grid size and the extent of the locally-owned subgrid.  The global size is in members \texttt{info.mx,info.my}; with these we compute grid spacings \texttt{hx,hy}.  The local process owns a \texttt{info.xm} by \texttt{info.ym} rectangular subgrid, with a range of indices
    $$\text{\texttt{info.xs}} \le i \le \text{\texttt{info.xs}} +\text{\texttt{info.xm}}-1$$
@@ -541,9 +541,9 @@ for (j=info.ys; j<info.ys+info.ym; j++) {
 \label{fig:localpartofgrid}
 \end{marginfigure}
 
-The \pMat object $A$ assembled by \texttt{formdirichletlaplacian()} (Figure \ref{code:structuredlaplacian}) has ranges of rows owned by each process.  This is the standard parallel layout of \pMat objects in \PETSc, but this fact is another one we can often forget on a \pDMDA-managed structured grid because we work with the locally-owned subgrid using $(i,j)$ indices.
+The \pMat object $A$ assembled by \texttt{formdirichletlaplacian()} (Figure \ref{code:structuredpoisson}) has ranges of rows owned by each process.  This is the standard parallel layout of \pMat objects in \PETSc, but this fact is another one we can often forget on a \pDMDA-managed structured grid because we work with the locally-owned subgrid using $(i,j)$ indices.
 
-In particular, local indices $(i,j)$ can be used when inserting entries into a dynamical data structure for matrix assembly, namely a \pMat.  Thus in Figure \ref{code:structuredlaplacian} we see use of \texttt{MatSetValuesStencil()}, once for each locally-owned grid point.  For a generic interior point this command inserts five coefficients into the matrix.  The key data structure is of type \texttt{MatStencil}, an apparently-trivial struct
+In particular, local indices $(i,j)$ can be used when inserting entries into a dynamical data structure for matrix assembly, namely a \pMat.  Thus in Figure \ref{code:structuredpoisson} we see use of \texttt{MatSetValuesStencil()}, once for each locally-owned grid point.  For a generic interior point this command inserts five coefficients into the matrix.  The key data structure is of type \texttt{MatStencil}, an apparently-trivial struct
 \begin{code}
 typedef struct {
   PetscInt k,j,i,c;
@@ -569,16 +569,16 @@ f(x,y) = 2 (1 - 6 x^2) y^2 (1 - y^2) + 2 (1 - 6 y^2) x^2 (1 - x^2).\label{manufa
 \end{equation}
 From now on we will refer to $u$ in \eqref{exactsolution} as ``$u_{ex}$'', the exact solution.  (This same problem appears in Chapter 4 of \citep{Briggsetal2000}, so we are not being original.) % page 64
 
-\cinputpart{structuredlaplacian.c}{This method assembles \pVec \texttt{uexact} for the exact solution.}{II}{//FORMEXACT}{//ENDFORMEXACT}{code:poissonexact}
+\cinputpart{structuredpoisson.c}{This method assembles \pVec \texttt{uexact} for the exact solution.}{II}{//FORMEXACT}{//ENDFORMEXACT}{code:poissonexact}
 
-Because we want to reuse this code,\sidenote{See Chapter \ref{chap:multigrid}.} we also put the code that computes formulas \eqref{exactsolution} and \eqref{manufacturedf} in source file \texttt{structuredlaplacian.c}.  Figure \ref{code:poissonexact} shows how \eqref{exactsolution} is implemented as \texttt{formExact()}.  Figure \ref{code:poissonrhs} shows how \eqref{manufacturedf} is implemented as \texttt{formExact()}.  The computations use only local grid coordinates $(i,j)$, with loops over index ranges as shown in Figure \ref{fig:localpartofgrid}.  \PETSc pointer arithmetic (i.e.~tricks) allows us to index the C arrays we get from \texttt{DMDAVecGetArray()} using $(i,j)$.  When we are done with computing \pVecs we restore the C arrays by calling \texttt{DMDAVecRestoreArray()}, and we explicitly ask for the \pVec objects to be assembled by calling \texttt{VecAssemblyBegin/End()}.
+Because we want to reuse this code,\sidenote{See Chapter \ref{chap:multigrid}.} we also put the code that computes formulas \eqref{exactsolution} and \eqref{manufacturedf} in source file \texttt{structuredpoisson.c}.  Figure \ref{code:poissonexact} shows how \eqref{exactsolution} is implemented as \texttt{formExact()}.  Figure \ref{code:poissonrhs} shows how \eqref{manufacturedf} is implemented as \texttt{formExact()}.  The computations use only local grid coordinates $(i,j)$, with loops over index ranges as shown in Figure \ref{fig:localpartofgrid}.  \PETSc pointer arithmetic (i.e.~tricks) allows us to index the C arrays we get from \texttt{DMDAVecGetArray()} using $(i,j)$.  When we are done with computing \pVecs we restore the C arrays by calling \texttt{DMDAVecRestoreArray()}, and we explicitly ask for the \pVec objects to be assembled by calling \texttt{VecAssemblyBegin/End()}.
 
-\cinputpart{structuredlaplacian.c}{This method assembles \pVec \texttt{b} for the right-hand side of equation \eqref{poissonsquareFD}.}{III}{//FORMRHS}{//ENDFORMRHS}{code:poissonrhs}
+\cinputpart{structuredpoisson.c}{This method assembles \pVec \texttt{b} for the right-hand side of equation \eqref{poissonsquareFD}.}{III}{//FORMRHS}{//ENDFORMRHS}{code:poissonrhs}
 
 
 \section{The code}
 
-The code \texttt{c2poisson.c} uses our finite difference method \eqref{poissonsquareFD} to solve the Poisson problem with $f$ from \eqref{manufacturedf}.  Figure \ref{code:ctwopoissoncreate} shows how \texttt{c2poisson.c} creates the various parallel objects needed to solve the Poisson problem, namely one \pDM, one \pMat, and three \pVecs.  A \pDM object can compute matrix and vector sizes from the grid dimensions, so we call \texttt{DMCreateMatrix()} and \texttt{DMCreateGlobalVector()} to create \pMat and \pVec objects, respectively.  Then we call methods from \texttt{structuredlaplacian.c}, as above, to assemble the matrix and vectors.
+The code \texttt{c2poisson.c} uses our finite difference method \eqref{poissonsquareFD} to solve the Poisson problem with $f$ from \eqref{manufacturedf}.  Figure \ref{code:ctwopoissoncreate} shows how \texttt{c2poisson.c} creates the various parallel objects needed to solve the Poisson problem, namely one \pDM, one \pMat, and three \pVecs.  A \pDM object can compute matrix and vector sizes from the grid dimensions, so we call \texttt{DMCreateMatrix()} and \texttt{DMCreateGlobalVector()} to create \pMat and \pVec objects, respectively.  Then we call methods from \texttt{structuredpoisson.c}, as above, to assemble the matrix and vectors.
 
 \cinputpart{c2poisson.c}{Set up \pDM, \pMat, and \pVec objects, and assemble the linear system.}{I}{//CREATE}{//ENDCREATE}{code:ctwopoissoncreate}
 

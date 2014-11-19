@@ -18,13 +18,13 @@ testts: testts.o  chkopts
 	-${CLINKER} -o testts testts.o  ${PETSC_KSP_LIB}
 	${RM} testts.o
 
-c2poisson: c2poisson.o structuredlaplacian.o chkopts
-	-${CLINKER} -o c2poisson c2poisson.o structuredlaplacian.o ${PETSC_KSP_LIB}
-	${RM} c2poisson.o structuredlaplacian.o
+c2poisson: c2poisson.o structuredpoisson.o chkopts
+	-${CLINKER} -o c2poisson c2poisson.o structuredpoisson.o ${PETSC_KSP_LIB}
+	${RM} c2poisson.o structuredpoisson.o
 
-c2heat: c2heat.o structuredlaplacian.o chkopts
-	-${CLINKER} -o c2heat c2heat.o structuredlaplacian.o ${PETSC_KSP_LIB}
-	${RM} c2heat.o structuredlaplacian.o
+c2heat: c2heat.o structuredpoisson.o chkopts
+	-${CLINKER} -o c2heat c2heat.o structuredpoisson.o ${PETSC_KSP_LIB}
+	${RM} c2heat.o structuredpoisson.o
 
 c3convert: c3convert.o readmesh.o  chkopts
 	-${CLINKER} -o c3convert c3convert.o readmesh.o  ${PETSC_KSP_LIB}
@@ -34,9 +34,9 @@ c3poisson: c3poisson.o readmesh.o poissontools.o chkopts
 	-${CLINKER} -o c3poisson c3poisson.o readmesh.o poissontools.o ${PETSC_KSP_LIB}
 	${RM} c3poisson.o readmesh.o poissontools.o
 
-c4poisson: c4poisson.o structuredlaplacian.o  chkopts
-	-${CLINKER} -o c4poisson c4poisson.o structuredlaplacian.o  ${PETSC_KSP_LIB}
-	${RM} c4poisson.o structuredlaplacian.o
+c4poisson: c4poisson.o structuredpoisson.o  chkopts
+	-${CLINKER} -o c4poisson c4poisson.o structuredpoisson.o  ${PETSC_KSP_LIB}
+	${RM} c4poisson.o structuredpoisson.o
 
 c7fosls: c7fosls.o  chkopts
 	-${CLINKER} -o c7fosls c7fosls.o  ${PETSC_KSP_LIB}
