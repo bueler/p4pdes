@@ -2,9 +2,47 @@
 \chapter{Linear PDEs: multigrid}
 \label{chap:multigrid}
 
-We now make a key transition from Chapters \ref{chap:structured} and \ref{chap:unstructured}.  Instead of writing code to assemble the matrix form of the problem on the grid initially chosen at runtime, and handing it to \pKSP for solution, we give a matrix-building code to \pKSP.  Then the \pKSP can choose the grid.  This gives the problem to a \PETSc \pKSP object in a way that allows it to do multigrid \citep{Briggsetal2000}.
+We now make a transition from Chapters \ref{chap:structured} and \ref{chap:unstructured}.  In those chapters we wrote code to assemble the linear system for the problem on the grid or mesh initially chosen at runtime, and then we handed the system, in the form of \pMat and \pVec objects, to the \pKSP for solution.  In this Chapter, by contrast, we give a matrix-building code to \pKSP.  The \pKSP can actually choose the grid during the solution process, and ask our code (i.e.~through a ``call-back'') to assemble the matrix on that grid at that stage of the process.  This means \PETSc \pKSP object can do \emph{geometric multigrid} \citep{Briggsetal2000}.  To get started we recall basic ideas of multigrid.
+
+
+\section{Multigrid basics}
+
+FIXME: setup: suppose we are solving 1D Poisson equation on $\RR$, i.e.
+    $$- u_{xx} = f(x)$$
+with scheme
+    $$- \frac{u_{j+1} - 2 u_j + u_{j-1}}{h^2} = f_j,$$
+where $f_j = f(x_j)$, or equivalently
+    $$- u_{j-1} + 2 u_j - u_{j+1} = h^2 f_j.$$
+
+FIXME: idea (1) in 1D, on unbounded grid with spacing $h$, restriction to every other point takes lowish frequency wave to higher frequency wave on (still unbounded) grid with spacing $2h$
+
+FIXME: idea (2) pointwise iteration version of Poisson FD scheme, e.g.~Jacobi
+   $$u_j^{(m+1)} = \frac{1}{2} \left(u_{j-1}^{(m)} + u_{j+1}^{(m)} + h^2 f_j\right) $$
+or Gauss-Seidel (where we update in increasing order on $j$)
+   $$u_j^{(m+1)} = \frac{1}{2} \left(u_{j-1}^{(m+1)} + u_{j+1}^{(m)} + h^2 f_j\right) $$
+will serve as low-pass filter on a given grid
+
+FIXME: idea (3) given $u^{(0)}$ on fine $h$ grid, it is the residual FIXME
+
+FIXME: for more, read \citep{Briggsetal2000} which is at same level as this book
+
+
+\section{A multigrid-capable Poisson problem code}
+
+Figure \ref{code:multigridone} show most of the code \texttt{c4poisson.c}.  Note the lines which create the \pKSP object and configure it:
+\begin{code}
+  KSP ksp;
+  KSPCreate(PETSC_COMM_WORLD,&ksp);
+  KSPSetDM(ksp,da);
+  KSPSetComputeRHS(ksp,ComputeRHS,NULL);
+  KSPSetComputeOperators(ksp,ComputeA,NULL);
+  KSPSetFromOptions(ksp);
+\end{code}
+That is, we create \texttt{ksp} as in \texttt{c2poisson.c}, but this time we explicitly associate it to the \texttt{DM} object and then we hand it two methods \texttt{ComputeRHS()} and \texttt{ComputeA()} which it can call (i.e.~call back) when it needs the right-hand-side and the matrix of the system to be assembled.
 
 \cinputpart{c4poisson.c}{Poisson problem on a structured grid again, but this time using \texttt{KSPSetComputeOperators()} so that multigrid is possible.}{I}{//MAIN}{//ENDMAIN}{code:multigridone}
+
+The code \texttt{c4poisson.c} is quite short because the two methods \texttt{ComputeRHS()} and \texttt{ComputeA()} are quite trivial ``wrappers'' around methods \texttt{formRHS()} and \texttt{formdirichletlaplacian()} from source file \texttt{structuredpoisson.c} in Chapter \ref{chap:structured}.  See Figure \ref{code:multigridtwo}.
 
 \cinputpart{c4poisson.c}{These methods build the right-hand side and the matrix, for call-back by \texttt{KSPSetComputeRHS()} and \texttt{KSPSetComputeOperators()}, respectively, but they are just wrappers around code reused from Chapter \ref{chap:structured}.}{II}{//COMPUTES}{//ENDCOMPUTES}{code:multigridtwo}
 
