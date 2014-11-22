@@ -84,35 +84,35 @@ int main(int argc,char **argv)
   // create linear solver context; compare to c2poisson.c version; note there
   // is no "Assemble" stage!; that happens inside KSPSolve()
   KSP ksp;
-  ierr = KSPCreate(PETSC_COMM_WORLD,&ksp);CHKERRQ(ierr);
-  ierr = KSPSetDM(ksp,(DM)da);
-  ierr = KSPSetComputeRHS(ksp,ComputeRHS,NULL);CHKERRQ(ierr);
-  ierr = KSPSetComputeOperators(ksp,ComputeA,NULL);CHKERRQ(ierr);
-  ierr = KSPSetFromOptions(ksp);CHKERRQ(ierr);
+  ierr = KSPCreate(PETSC_COMM_WORLD,&ksp); CHKERRQ(ierr);
+  ierr = KSPSetDM(ksp,da); CHKERRQ(ierr);
+  ierr = KSPSetComputeRHS(ksp,ComputeRHS,NULL); CHKERRQ(ierr);
+  ierr = KSPSetComputeOperators(ksp,ComputeA,NULL); CHKERRQ(ierr);
+  ierr = KSPSetFromOptions(ksp); CHKERRQ(ierr);
 
   Vec u;
-  ierr = DMCreateGlobalVector(da,&u);CHKERRQ(ierr);
+  ierr = DMCreateGlobalVector(da,&u); CHKERRQ(ierr);
   PetscLogStage  stage; //STRIP
   ierr = PetscLogStageRegister("Solve", &stage); CHKERRQ(ierr); //STRIP
   ierr = PetscLogStagePush(stage); CHKERRQ(ierr); //STRIP
-  ierr = KSPSolve(ksp,NULL,u);CHKERRQ(ierr);
-  ierr = PetscLogStagePop();CHKERRQ(ierr); //STRIP
+  ierr = KSPSolve(ksp,NULL,u); CHKERRQ(ierr);
+  ierr = PetscLogStagePop(); CHKERRQ(ierr); //STRIP
 
   PetscScalar    errnorm;
   DMDALocalInfo  info;
   Vec            uexact;
-  ierr = DMCreateGlobalVector(da,&uexact);CHKERRQ(ierr);
+  ierr = DMCreateGlobalVector(da,&uexact); CHKERRQ(ierr);
   ierr = formExact(da,uexact); CHKERRQ(ierr);
   ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uxact
   ierr = VecNorm(u,NORM_INFINITY,&errnorm); CHKERRQ(ierr);
-  ierr = DMDAGetLocalInfo(da,&info);CHKERRQ(ierr);
+  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
              "on %d x %d grid:  error |u-uexact|_inf = %g\n",
              info.mx,info.my,errnorm); CHKERRQ(ierr);
 
-  ierr = DMDestroy(&da);CHKERRQ(ierr);
-  ierr = KSPDestroy(&ksp);CHKERRQ(ierr);
-  ierr = PetscFinalize();CHKERRQ(ierr);
+  ierr = DMDestroy(&da); CHKERRQ(ierr);
+  ierr = KSPDestroy(&ksp); CHKERRQ(ierr);
+  ierr = PetscFinalize(); CHKERRQ(ierr);
   return 0;
 }
 //ENDMAIN
