@@ -467,11 +467,11 @@ FIXME: show sparse and Matlab-format output for \texttt{A}, noting we get this a
 
 \section{Exercises}
 
-\renewcommand{\labelenumi}{\arabic{enumi}.\quad}
+\renewcommand{\labelenumi}{\arabic{chapter}.\arabic{enumi}\quad}
 \begin{enumerate}
 \item Program \texttt{c1e.c} does a terrible job of load-balancing because the computation of the factorial $n!$ requires more flops when the process rank is larger.  Modify the code to balance the load almost perfectly, with exactly one multiply operation on each \texttt{rank>0} process, by using a blocking send and receive operations (\texttt{MPI\_Send(),MPI\_Recv()}) to pass the result of the last factorial to the next rank.  (\emph{Of course now we have a code that does a ridiculous amount of communication.})
 % e1balanced.c
-\item Modify \texttt{c1matvec.c} to read an integer option \texttt{-N}\sidenote{Use methods \texttt{PetscOptionsBegin()}, \texttt{PetscOptionsInt()}, and \texttt{PetscOptionsEnd()}.} and form an $N\times N$ matrix, with $-2$ on the diagonal and $1$ on the super- and sub-diagonals as before.  Choose any desired right-hand-side.  Use \PETSc runtime options to estimate the condition number of the matrix for sample $N$ values; the online \PETSc FAQ page will help with these options.
+\item Modify \texttt{c1matvec.c} to read an integer option\sidenote{Use methods \texttt{PetscOptionsBegin()}, \texttt{PetscOptionsInt()}, and \texttt{PetscOptionsEnd()} so that \texttt{-help} output explains the option.} \texttt{-N} and form an $N\times N$ matrix, with $-2$ on the diagonal and $1$ on the super- and sub-diagonals as before.  (Choose any desired right-hand-side.)  Use \PETSc runtime options to estimate the condition number of the matrix for sample $N$ values; the online \PETSc FAQ page\sidenote{\texttt{www.mcs.anl.gov/petsc/documentation/faq.html}} will help with these options.
 % see "How can I determine the condition number of a matrix?" on the PETSc FAQ page; "be sure to avoid restarts"
 % -pc_type none -ksp_type gmres -ksp_monitor_singular_value -ksp_gmres_restart 1000
 \end{enumerate}

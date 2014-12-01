@@ -19,7 +19,7 @@ testts
 testmatcreate
 
 e1balanced
-e2matvecn
+e1matvecn
 
 bump.?.*
 square.?.*

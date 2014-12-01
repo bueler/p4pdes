@@ -1,6 +1,4 @@
-
-static char help[] =
-"Solution to exercise 2 in chapter 1.\n\n";
+static char help[] = "Solution to exercise 2 in chapter 1.\n\n";
 
 // try:
 //   ./e2matvecn -pc_type none -ksp_type gmres -ksp_monitor_singular_value -ksp_gmres_restart 1000 -N 10 | grep "max/min" | tail -n 1

@@ -63,9 +63,9 @@ e1balanced: e1balanced.o  chkopts
 	-${CLINKER} -o e1balanced e1balanced.o  ${PETSC_LIB}
 	${RM} e1balanced.o
 
-e2matvecn: e2matvecn.o  chkopts
-	-${CLINKER} -o e2matvecn e2matvecn.o  ${PETSC_KSP_LIB}
-	${RM} e2matvecn.o
+e1matvecn: e1matvecn.o  chkopts
+	-${CLINKER} -o e1matvecn e1matvecn.o  ${PETSC_KSP_LIB}
+	${RM} e1matvecn.o
 
 
 # etc
