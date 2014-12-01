@@ -60,7 +60,7 @@ On the other hand,
     \end{bmatrix} \\
   &= \begin{bmatrix} \grad^2 u_1 & \grad^2 u_2 & \grad^2 u_3 \end{bmatrix} = \grad^2 \bu.
 \end{align*}
-The last equality defines symbols ``$\grad^2 \bu$.''
+The last equality defines the symbol ``$\grad^2 \bu$.''
 
 In the constant viscosity case we write the Stokes equations as
 \begin{align}
@@ -195,7 +195,7 @@ Now, taking the $x$ derivative of \eqref{mixedstokes2du} and the $y$-derivative 
 \begin{equation}
 \grad^2 p = 0. \label{pressurepoisson}
 \end{equation}
-The derivation here is not original; we have arrived at the well-known \emph{pressure-Poisson} equation \citep{Ockendonetal2003}.
+The derivation here is not original; we have arrived at the well-known \emph{pressure-Poisson} equation \citep[FIXME: check]{Ockendonetal2003}.
 
 The appearance of the Laplacian in a decoupled equation opens up the possibility that we can make our linear system ``more positive definite'' by adding a multiple of equation \eqref{pressurepoisson} to the Stokes system.  Concretely, if $\eps\ge 0$ then this system is equivalent to \eqref{stokes2du}--\eqref{stokes2dincomp}:
 \begin{align}
@@ -260,7 +260,7 @@ The reason for the difference is suggested by Figure \ref{fig:xperiodicgrid}, wh
 \label{fig:xperiodicgrid}
 \end{marginfigure}
 
-The FD equations for interior points, including the periodic boundaries, (i.e.~any $i$ but $0 < j < \text{\texttt{My}}-1$) are the approximations to equations \eqref{ppstokes2du}--\eqref{ppstokes2dincomp}:
+The FD equations for interior points, including the periodic boundaries, i.e.~any location $(i,j)$ where $0 < j < \text{\texttt{My}}-1$, are the approximations to equations \eqref{ppstokes2du}--\eqref{ppstokes2dincomp}:
 \begin{align}
 -\nu \Big(\frac{u_{i+1,j} - 2 u_{i,j} + u_{i-1,j}}{h_x^2} &+ \frac{u_{i,j+1} - 2 u_{i,j} + u_{i,j-1}}{h_y^2}\Big) \notag \\
 &\qquad + \frac{p_{i+1,j}-p_{i-1,j}}{2h_x} - g_1 = 0 \label{fdstokes2du} \\
@@ -269,7 +269,7 @@ The FD equations for interior points, including the periodic boundaries, (i.e.~a
 - \frac{u_{i+1,j}-u_{i-1,j}}{2h_x} - \frac{v_{i,j+1}-v_{i,j-1}}{2h_y} &- \eps \Big(\frac{p_{i+1,j} - 2 p_{i,j} + p_{i-1,j}}{h_x^2} \notag \\
 &\qquad\quad + \frac{p_{i,j+1} - 2 p_{i,j} + p_{i,j-1}}{h_y^2}\Big) = 0 \label{fdstokes2dincomp}
 \end{align}
-In the above formulas, so as to address periodicity in the $x$ direction, in the case $i=0$ we interpret ``$i-1$'' subscripts as $\text{\texttt{Mx}}-1$, while if $i=\text{\texttt{Mx}}-1$ then we interpret ``$i+1$'' subscripts as $0$.
+In the above formulas, so as to address periodicity in the $x$ direction, in the case $i=0$ we interpret an ``$i-1$'' subscript as $\text{\texttt{Mx}}-1$, while if $i=\text{\texttt{Mx}}-1$ then we interpret an ``$i+1$'' subscript as $0$.
 
 At the bottom $y=0$ we set fields from the Dirichlet boundary conditions \eqref{bcstokesbottom}, and from the exact solution for $p$:
 \begin{equation}
@@ -299,6 +299,9 @@ p_{i,J+1} = \frac{h_y^2}{\eps} \frac{u_{i+1,J}-u_{i-1,J}}{2h_x} - p_{i,J-1},\lab
 \end{equation}
 which is substituted into \eqref{fdtopv}.
 
+FIXME: the resulting code is \texttt{c7stokes.c}
+
+
 \section{Preconditioners for indefinite systems}
 
 FIXME: while $A$ is symmetric, it is not positive definite; note that if
@@ -313,3 +316,12 @@ and (w.o.l.o.g.) this is a lin.-indep. eigenvector so $M$ also has eigenvalue $-
 
 \caveat{But \PETSc should help with unstructured meshes too.}
 
+
+
+
+\section{Exercises}
+
+\renewcommand{\labelenumi}{\arabic{chapter}.\arabic{enumi}\quad}
+\begin{enumerate}
+\item FIXME: apply chapter 2 idea of making more symmetric boundary conditions
+\end{enumerate}

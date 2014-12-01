@@ -4,7 +4,7 @@
 
 \section{A code that does almost nothing, but in parallel}
 
-The purpose of the \PETSc library is to help you solve scientific and engineering problems, such as PDEs of course, on distributed computers.  But \PETSc is built ``on top of'' the Message Passing Interface (MPI; \citep{Groppetal1999}) library, and some of the flavor of that library comes through in examples.  We start with an example C code that is more-or-less just a introductory MPI example, but which calls \PETSc for some basic tasks.
+The purpose of the \PETSc library is to help you solve scientific and engineering problems, such as PDEs of course, on distributed computers.  But \PETSc is built ``on top of'' the Message Passing Interface (MPI; \citep{Groppetal1999}) library, and some of the flavor of that library comes through.  We start with an example C code that is essentially an introductory MPI example, though it calls \PETSc for some basic tasks.
 
 This code \texttt{c1e.c}, shown in its entirety in Figure \ref{code:e}, computes Euler's constant
 \begin{equation}
@@ -12,7 +12,9 @@ e = \sum_{n = 0}^\infty \frac{1}{n!} \approx 2.718281828 \label{introeseries}
 \end{equation}
 It does the computation in a distributed manner by computing one term of the infinite series on each process.  Thus it computes a better estimate of $e$ when run on more MPI processes. While this is a silly use of \PETSc, it is an easy to understand parallel computation.
 
-As with any C source for an executable, in Figure \ref{code:e} we have a function called \texttt{main()}.  It takes inputs from the command line, \texttt{argc} and \texttt{argv},\sidenote{Here \texttt{argc} is an \texttt{int} with the argument count and \texttt{argv} are the arguments themselves as an array of strings (i.e.~C type \texttt{char**}).  But in this code, and all other codes in this book, we simply pass these arguments on to \PETSc through the \texttt{PetscInitialize()} method.}  and it outputs an \texttt{int} which is $0$ if the program succeeds.  Like all C codes we include the needed headers; only \texttt{petscsys.h} is needed here, but later codes will include other \PETSc headers.  Then we declare some variables, do a computation on each process, communicate the results between processes to get an estimate of $e$.  Finally we report success (i.e.~return $0$) at the end.
+As with any C source for an executable, \texttt{c1e.c} has a function called \texttt{main()} which takes inputs from the command line, namely \texttt{argc} and \texttt{argv},\sidenote{Here \texttt{argc} is an \texttt{int} holding the argument count.  The second argument \texttt{argv} is an array of strings (i.e.~C type \texttt{char**}) holding the command line (i.e.~command and arguments).  However, in all codes in this book we simply pass these arguments on to \PETSc through the \texttt{PetscInitialize()} method.} and which outputs an \texttt{int} which is $0$ if the program succeeds.  Also, like all C codes, we include the needed headers; only \texttt{petscsys.h} is needed here, but later codes will include other \PETSc headers.
+
+The substance of \texttt{main()} is to declare some variables, do a computation on each process, and communicate the results between processes to get an estimate of $e$.  Finally we report success (i.e.~return $0$) at the end.
 
 More details of \texttt{c1e.c} can be described once we compile and run the code.  Please do the following to start:
 \begin{cline}
@@ -56,11 +58,11 @@ rank 18 did 37 flops
 
 \cinputraw{c1emakefile.frag}{extract from \texttt{p4pdes/c/makefile}}{All \texttt{makefile}s for the \PETSc codes in this book look like this.}{}{//START}{//STOP}{code:c1emakefile}
 
-Now, perhaps the reader is worried that this book was written using a large supercomputer whereas the reader has a little laptop with only a couple of cores.  Not so; these $N=5$ and $N=20$ process MPI calls work just fine on the author's four-core laptop.  MPI creates processes as needed.  Indeed operating systems have been multitasking for quite some time!
+Now, perhaps the reader is worried that this book was written using a large supercomputer whereas the reader has a little laptop with only a couple of cores.  Not so; these $N=5$ and $N=20$ process MPI calls work just fine on the author's four-core laptop because MPI processes are created as needed.\sidenote{Multitasking operating systems have been around for quite some time!}
 
-The main job in \texttt{c1e.c} is to collect the sum of the terms of (truncated) infinite series \eqref{introeseries} onto each process.  After each process computes term $1/n!$, where $n$ is its rank in the MPI communicator, a call to \texttt{MPI\_Allreduce()} does the sum and then sends the sum back to each process.  We also get the rank of the current process with a call to \texttt{MPI\_Comm\_rank()}.  These direct uses of the MPI library illustrate that when a job \emph{can} be done by MPI, \PETSc will leave it that way.
+The main job in \texttt{c1e.c} is to collect the sum of the terms of (truncated) infinite series \eqref{introeseries} onto each process.  After each process computes term $1/n!$, where $n$ is its rank in the MPI communicator, a call to \texttt{MPI\_Allreduce()} does the sum and then sends the sum back to each process.  We also get the rank of the current process with a call to \texttt{MPI\_Comm\_rank()}.  These direct uses of the MPI library illustrate that \PETSc, which tries to avoid duplication of MPI functionality, need not be called for some low-level parallel tasks.
 
-In \texttt{c1e.c} we print the computed estimate of $e$, and we also have each process print its rank and the work it did.\sidenote{Mostly we print the rank and work so as to illustrate collective and non-collective operations in the same program.}  These are two calls to \texttt{PetscPrintf()}, a formatted print command like \texttt{fprintf()} from the C standard library, one with MPI communicator \texttt{PETSC\_COMM\_WORLD} and one with \texttt{PETSC\_COMM\_SELF}.  The first of these \texttt{STDOUT} printing jobs is therefore \emph{collective} over all processes, and thus only done once, and other printing job is individual to each rank.\sidenote{A process is often just called a \emph{rank} in MPI language.}  In the output the \texttt{PETSC\_COMM\_SELF} printed lines appear in almost random order because the print occurs as soon as that process reaches that line.
+In \texttt{c1e.c} we print the computed estimate of $e$, and we also have each process print its rank and the work it did.  Observe that \texttt{PetscPrintf()}, a formatted print command like \texttt{fprintf()} from the C standard library, is called twice, once with MPI communicator \texttt{PETSC\_COMM\_WORLD} and once with \texttt{PETSC\_COMM\_SELF}.\sidenote{Thereby we illustrate collective and non-collective operations in the same program.}  The first of these \texttt{STDOUT} printing jobs is therefore \emph{collective} over all processes, and thus only done once, and other printing job is individual to each rank.\sidenote{A process is often just called a \emph{rank} in MPI language.}  In the output the \texttt{PETSC\_COMM\_SELF} printed lines appear in almost random order because the print occurs as soon as that process reaches that line.
 
 Every \PETSc program should start and end with the commands \texttt{PetscInitialize()} and \texttt{PetscFinalize()}:
 \begin{code}
@@ -74,14 +76,12 @@ There is one more observation about \texttt{c1e.c} and all \PETSc programs: ther
 \begin{code}
 ierr = PetscCommand(...); CHKERRQ(ierr);
 \end{code}
-The explanation of this clutter is that almost all \PETSc methods, and most user-written methods in \PETSc programs, return an \texttt{int} for error checking, with value $0$ if successful.  In the line above, \texttt{ierr} is a \texttt{PetscInt} type and \texttt{CHKERRQ()} is a macro which does nothing if \texttt{ierr == 0} but which stops the program otherwise.  In the nonzero case the program stops with a traceback, namely a list of the nested methods, in reverse order, showing the line numbers and method names of the location where the error occurred.
-
-This traceback tends to be the first line of defense when debugging run-time errors.  It is helpful enough so that the examples in this book always capture-and-check the returned error code in this way, despite the clutter.  On the other hand, after this chapter we will strip the ``\texttt{ierr =}'' and ``\texttt{CHKERRQ(ierr);}'' clutter from the code displayed in the text, even though it is still present in the source file itself.
+The explanation of this clutter is that almost all \PETSc methods, and most user-written methods in \PETSc programs, return an \texttt{int} for error checking, with value $0$ if successful.  In the line above, \texttt{ierr} is a \texttt{PetscInt} type and \texttt{CHKERRQ()} is a macro which does nothing if \texttt{ierr == 0} but which stops the program otherwise.  In the nonzero case the program stops with a traceback, namely a list of the nested methods, in reverse order, showing the line numbers and method names of the location where the error occurred.  This traceback tends to be the first line of defense when debugging run-time errors.  Examples in this book always capture-and-check the returned error code in this way, despite the clutter.  On the other hand, after this chapter we will strip the ``\texttt{ierr =}'' and ``\texttt{CHKERRQ(ierr);}'' clutter from the code displayed in the text, even though it is still present in the source file itself.
 
 
-\section{A bit of numerical linear algebra}
+\section{Linear systems}
 
-Of course, our goal is to compute more interesting quantities than Euler's constant $e$.  At the core of most \PETSc computations is a finite-dimensional linear system.  Before solving such systems in \PETSc, it is useful to recall basic ideas of numerical linear algebra.
+Of course, our goal in the remainder of the book is to compute more interesting quantities than Euler's constant $e$.  At the core of most \PETSc computations is a finite-dimensional linear system.  Before solving such systems in \PETSc, it is useful to recall the most basic ideas of numerical linear algebra.
 
 Suppose $\bb\in \RR^{N}$ is a column vector and $A\in\RR^{N\times N}$ is a square matrix.  The linear system
 \begin{equation}
@@ -100,104 +100,19 @@ It is not so simple in practice, however, when solving large systems on a comput
 \item \emph{cost of direct solutions}:  Computation of solution \eqref{introsolution} by a direct method like Gauss elimination, whether actually forming $A^{-1}$ or not, is an $O(N^3)$ operation.
 \end{enumerate}
 
-For a sense of the consequences of these facts, let's put in some numbers for $\eps$, $\kappa(A)$, and $N$.  On most computers the precision for the C \texttt{double} type, the modern default 64-bit representation of real numbers, is $\eps = 2.2 \times 10^{-16}$.  By i), a linear system having $\kappa(A) \approx 10^{10}$, for example, can only be solved to about six digits of precision.  Because of ii), a linear system with $N=10^6$ equations\sidenote{We will do problems of this size on a single processor in a few seconds, and in $O(N)$ operations, in Chapter \ref{chap:multigrid}.}
+For a sense of the consequences of these facts, let's put in some numbers for $\eps$, $\kappa(A)$, and $N$.  On most computers the precision for the C \texttt{double} type, the modern default 64-bit representation of real numbers, is $\eps = 2.2 \times 10^{-16}$.  By i), a linear system having $\kappa(A) \approx 10^{10}$, for example, can only be solved to about six digits of precision.
+
+Regarding computational cost, because of ii) a linear system with $N=10^6$ equations requires $\sim 10^{18}$ operations to solve by Gauss elimination.  While even modern supercomputers take a while to do a quintillion operations, so that Gauss elimination is impractical for systems of $N=10^6$ equations, we will successfully solve problems of this size on a single processor in a few seconds, and in $O(N)$ operations, in Chapter \ref{chap:multigrid}.
 %time ./c4poisson -da_refine 7 -ksp_type cg -pc_type mg
 %on 1153 x 1153 grid:  iterations 2, residual norm = 1.88082e-05
 %real 11.18
-requires $\sim 10^{18}$ operations to solve by Gauss elimination.  Even modern supercomputers take a while to do a quintillion operations.
 
-Many methods other than Gauss elimination are possible for solving linear systems; this is a topic we will return to several times in later Chapters.  Usually these methods are iterative, and they often use the \emph{residual}.  By definition, if $\bu_0\in \RR^N$ is a vector then by the residual for $\bu_0$, as an estimate of the solution to equation \eqref{introsystem}, is the vector
-\begin{equation}
-\br_0 = \bb - A \bu_0. \label{residualdefn}
-\end{equation}
-
-Evaluating the residual for a known vector $\bu_0$ requires only applying $A$ to it, an $O(N^2)$ operation at most.  However, most discretization schemes for PDEs generate matrices $A$ that are \emph{sparse}, with many more zero entries than nonzeros, and often the number of nonzeros per row is independent of $N$.  In such cases the operation $A\bu_0$ can be implemented in $O(N)$ operations.
-
-The \emph{Richardson iteration} is an example of an iterative method based on the residual.  If $\bu_0$ is an initial estimate of the solution then it simply adds a multiple $\omega$ of the residual at each step:
-\begin{equation}
-\bu_{k+1} = \bu_k + \omega (\bb - A \bu_k).  \label{introrichardson}
-\end{equation}
-If significantly fewer than $O(N^2)$ steps are needed to make $\bu_k$ an adequate approximation of the exact solution $\bu$, then the Richardson iteration can improve on Gauss elimination.  On the other hand, the Richardson iteration may not converge.
-
-\newcommand{\rvect}[3]{\ensuremath{\bu_{#1} = \begin{bmatrix} #2 \\ #3 \end{bmatrix}}}
-
-\medskip\noindent\hrulefill
-\begin{example} Consider the linear system
-\begin{equation}
-A \bu
-= \begin{bmatrix}
-10 & -1 \\ -1 & 1
-\end{bmatrix}
-\begin{bmatrix} u_1 \\ u_2 \end{bmatrix}
-= \begin{bmatrix} 8 \\ 1 \end{bmatrix}
-= \bb
- \label{introexample}
-\end{equation}
-which has solution $\bu = [1\,\, 2]^\top$.  If we start with estimate $\bu_0 = [0\,\, 0]^\top$ then the unweighted ($\omega=1$) Richardson iteration \eqref{introrichardson} gives a sequence of vectors % see ../matlab/richardsonex.m
-\begin{equation}
-\rvect{0}{0}{0}, \rvect{1}{8}{1}, \rvect{2}{-63}{9}, \rvect{3}{584}{-62}, \dots
-\end{equation}
-This sequence is not heading toward the solution $\bu = [1\,\, 2]^\top$.
-\end{example}
-\noindent\hrulefill
-
-If we rewrite \eqref{introrichardson} as
-\begin{equation}
-\bu_{k+1} = (I - \omega A) \bu_k + \omega \bb  \label{introrewriterichardson}
-\end{equation}
-then it is easy to believe that the ``size'' of the matrix $I-\omega A$ will determine whether $\lim_{k\to\infty} \bu_k$ exists, for generic starting vectors $\bu_0$.
-
-To examine such questions, we recall the definitions of \emph{eigenvalue} and \emph{singular value}.  A complex number $\lambda \in \CC$ is an eigenvalue of a square matrix $B\in\RR^{N\times N}$ if there is a nonzero vector $\bv\in\CC^N$ so that $B \bv = \lambda \bv$.    The singular values are the square roots of the eigenvalues of the matrix $B^*B$.\sidenote{The matrix $B^*B$ is symmetric and positive-definite so its eigenvalues are nonnegative.}  Singular values are also geometrically-defined as the lengths of semi-axes of the ellipsoid in $\RR^N$ that results from applying $B$ to all vectors in the unit sphere of $\RR^N$ \citep{TrefethenBau}.
-
-The set of all eigenvalues of $B$ is the \emph{spectrum} $\sigma(B)$ of $B$, and properties of matrices that can be described in terms of eigenvalues or singular values are generically called ``spectral properties.''  For example, recall that $\|B\|_2$ is equal to the largest singular value of $B$, while $\|B^{-1}\|_2$ is equal to the inverse of the smallest singular value of $B$.  The 2-norm condition number $\kappa(B)$ is the ratio of largest to smallest singular values,\sidenote{The condition number of $B$ well-visualized as the eccentricity of the ellipsoid we used in defining the singular values geometrically.}, and thus is a spectral property of $B$.
-
-It is an easy exercise to show that the Richardson iteration \eqref{introrichardson} will converge if and only if all the eigenvalues of $B=I-\omega A$ are inside the unit circle.  Defining the \emph{spectral radius} $\rho(B)$ of a matrix $B$ as the maximum norm of the eigenvalues of $A$, we can describe the convergence of the Richardson iteration this way:
-\begin{equation}
-\text{\eqref{introrichardson} converges if and only if } \rho(I-\omega A) < 1. \label{introconvergethm}
-\end{equation}
-We can also show that $\rho(B) \le \|B\|_2$ so \eqref{introrewriterichardson} converges if $\|I-\omega A\|_2 < 1$, but this norm condition is merely sufficient, while \eqref{introconvergethm} is necessary and sufficient.
-
-Other examples of iterative methods include the classical Jacobi and Gauss-Siedel iterations.  The most powerful methods generate optimal, in various senses \citep{TrefethenBau}, estimates $\bu_k$ which are each linear combinations of vectors $\bb,A\bb,A^2\bb,\dots,A^{k-1}\bb$.  These methods are collectively called \emph{Krylov space methods} because the span of these vectors is a Krylov space.  Typically the effectiveness of the iteration on a given matrix $A$ depends on the eigenvalues or singular values of $A$.  We use Krylov space methods in Chapter \ref{chap:structured} and all later Chapters.  Examples are conjugate gradients (CG) and minimum residual methods (e.g.~MINRES or GMRES) \citep{Greenbaum1997}.
-
-There are many other systems which are equivalent to \eqref{introsystem}.  In fact, if $P\in\RR^{N\times N}$ is an invertible square matrix then the systems
-\begin{equation}
-(P^{-1} A) \bu = P^{-1} \bb \label{introleftpre}
-\end{equation}
-and
-\begin{equation}
-(A P^{-1}) (P\bu) = \bb \label{introrightpre}
-\end{equation}
-obviously have the same solution $\bu$ as \eqref{introsystem}.  However, matrices $P^{-1} A$ or $A P^{-1}$ may have different eigenvalues, condition numbers, and so on, namely different spectral properties, from $A$.  While the accuracy of the approximate solution $\bu$ cannot be improved beyond the $\kappa(A) \eps$ level---fact i) cannot be overcome in that sense---methods can indeed take advantage of better conditioning or other spectral properties to generate $\bu$ more quickly.  Especially if $P^{-1}$ is easy to apply\sidenote{The inverse matrix $P^{-1}$ is ``easy to apply'' exactly if the system $P\bv = \bc$ is easy to solve for $\bv$ in the sense of low computational cost.} then this can be an advantageous idea when trying to approximate $\bu$ quickly.  Equivalent systems \eqref{introleftpre} and \eqref{introrightpre} are referred to as \emph{preconditioned} systems, with \eqref{introleftpre} called \emph{left preconditioning} and \eqref{introrightpre} called \emph{right-preconditioning}.  Preconditioning can help in making our Richardson iteration example converge.  
-
-\medskip\noindent\hrulefill
-\begin{examplecont}  Suppose we use the diagonal matrix from  \eqref{introexample} as $P$:
-\begin{equation}
-P = \begin{bmatrix}
-10 & 0 \\ 0 & 1
-\end{bmatrix}.  \label{introP}
-\end{equation}
-Being diagonal, this $P$ is easy to invert and apply.  The preconditioned Richardson iteration using $P$, namely
-\begin{equation}
-\bu_{k+1} = \bu_k + \omega (P^{-1} \bb - P^{-1} A \bu_k),  \label{introprerichardson}
-\end{equation}
-is much better behaved.  With $\bu_0 = [0\,\, 0]^*$ again we get this sequence from \eqref{introprerichardson}:
-\begin{equation}
-\rvect{0}{0}{0}, \rvect{1}{0.8}{1.0}, \rvect{2}{0.9}{1.8}, \rvect{3}{0.98}{1.90}, \dots
-\end{equation}
-This sequence is apparently going to $\bu = [1\,\, 2]^*$.  Of course, the explanation is not hard to see; in this case
-\begin{equation}
-\rho(I-A) = -9.1, \qquad \rho(I-P^{-1} A) = 0.32.
-\end{equation}
-Convergence claim \eqref{introconvergethm} matches this bit of evidence.
-\end{examplecont}
-\noindent\hrulefill
-
-Many iterative methods superior to the Richardson iteration are implemented in \PETSc.  We will use several of them, with choice of method only at run-time.  First we must build our first \PETSc code for a linear system, based on the \PETSc objects which store vectors and matrices.
+To build our first \PETSc code for a linear system, we describe the \PETSc objects which store vectors and matrices.
 
 
 \section{\PETSc \pVec and \pMat objects}
 
-The \pVec object is a container and interface for a distributed vector, and \pMat a distributed matrix.  Although \PETSc is written in C, not C++, it is a relentlessly object-oriented software library.  Consider the operations which might touch a matrix object \texttt{A} in a linear system like \eqref{introsystem}:
+The \pVec object is a container and interface for a distributed vector, and a \pMat object holds a distributed matrix.  Although \PETSc is written in C, not C++, it is a relentlessly object-oriented software library.  Consider the operations which might touch a matrix object \texttt{A} in a linear system like \eqref{introsystem}:
 \begin{code}
 Mat A;
 MatCreate(COMM,&A);
@@ -218,18 +133,20 @@ ObjectSetFromOptions(X);  // allows run-time setting of properties
 ... use X ...
 ObjectDestroy(&X);
 \end{code}
-Of course ``\texttt{Object}'' here is merely a meta-name for the object type.
+Of course ``\texttt{Object}'' here is merely a meta-name for a \PETSc type like \pVec or \pMat.
 
-\PETSc objects are generically distributed across, and accessible from, multiple MPI processes.  Therefore the first argument of \texttt{ObjectCreate()}, and of \texttt{MatCreate()} above, is an MPI communicator (``\texttt{COMM}'').  All processes in \texttt{COMM} must call the \texttt{ObjectCreate()} method.
+\PETSc objects are generically distributed across, and accessible from, multiple MPI processes.  Therefore the first argument of an \texttt{ObjectCreate()} method is an MPI communicator (``\texttt{COMM}'').  All processes in \texttt{COMM} must call the \texttt{ObjectCreate()} method.
 
 Evidently \texttt{Mat A} above has an internal representation with nontrivial structure, but that is hidden.  Indeed the data structure inside \texttt{A} depends on runtime choices, the most basic being that the number of bytes used to store \texttt{A} on a given MPI process will depend on the number of processes.  At a deeper level, a \PETSc \pMat object need not even \emph{have} entries, but it may instead represent code that applies a linear operator to vectors.
 
-Once \texttt{A} is created and set up by the first five commands \texttt{MatCreate()}--\texttt{MatSetFromOptions()}, then various methods become valid for \texttt{A}, for example including the \texttt{MatSetValues()} method to set entries in \texttt{A}.  Because of the call to \texttt{MatSetOptionsPrefix()}, the run-time option \texttt{-a\_mat\_view} will print out the entries of \texttt{A}; the option prefix ``\texttt{a\_}'' is helpful in distinguishing \pMat objects at the command line in a context with multiple \pMats.
+Because of the call to \texttt{MatSetOptionsPrefix()}, run-time options can specifically address the particular \pMat object.  For example, the run-time option \texttt{-a\_mat\_view} will print out the entries of \texttt{A}.  An option prefix like ``\texttt{a\_}'' is especially helpful in distinguishing \pMat objects at the command line in a context with multiple \pMats.
+
+Once \texttt{A} is created and set up by the first five commands \texttt{MatCreate()}--\texttt{MatSetFromOptions()}, then various methods become valid for \texttt{A}, for example including the \texttt{MatSetValues()} method to set entries in \texttt{A}.
 
 
 \section{Assembly and parallel layout of \pVecs and \pMats}
 
-Fundamentally, a \pVec or \pMat can store its entries in parallel across all the processes in the MPI communicator used when \texttt{Create}ing it.  For the \pVec type, the create-assemble sequence of a vector with four entries might look like
+Fundamentally, a \pVec or \pMat can store its entries in parallel across all the processes in the MPI communicator used when creating it.  For the \pVec type, the create-assemble sequence of a vector with four entries might look like
 \begin{code}
 Vec x;
 PetscInt   i[4] = {0, 1, 2, 3};
@@ -316,11 +233,13 @@ if (rank == 0) {
   SETERRQ(COMM,1,"this code only works with size==2 communicators");
 }
 \end{code}
-That is, we can use $3$ or $1$, for the two ranks respectively, as the ``local size'' argument to \texttt{VecSetSizes()}, instead of \texttt{PETSC\_DECIDE}.\sidenote{Such inflexible coding is neither necessary, nor recommended.}  The resulting layout is shown in Figure \ref{fig:artificialmpitwoveclayout}.
+That is, we could specify the ``local size'' argument to \texttt{VecSetSizes()}, instead of using \texttt{PETSC\_DECIDE}.\sidenote{In fact such inflexible coding is rarely necessary.}  The resulting layout is shown in Figure \ref{fig:artificialmpitwoveclayout}.
 
-In summary, the reader is allowed to think of a \PETSc \pVec as a one-dimensional C array with its range of indices and contents ``broken-up'' across the processes in the MPI communicator (i.e.~the one used in the \texttt{VecCreate()} command).
+In summary, the reader is allowed to think of a \PETSc \pVec as a one-dimensional C array with its range of indices and contents ``broken-up'' across the processes in the MPI communicator used in the \texttt{VecCreate()} command.
 
-Parallel matrix objects \pMat require an additional choice, and \PETSc always stores ranges of complete rows on each process.  Said another way, conceptually at least, the column vectors in the \pMat are stored like \pVecs.  While other storage formats are possible, the one usually used in this book is \emph{parallel compressed sparse row storage}, what \PETSc calls the \texttt{MATMPIAIJ} type.  That is, a range of rows is owned by each process (parallel row storage), and within each owned range of rows only the nonzero entries are stored (sparse), and furthermore the data structures store these nonzero entries contiguously in an array, with an additional contiguous index array (compressed).
+Parallel matrix objects \pMat, which are at some level conceived as 2D arrays, obviously require an additional choice regarding distribution.  But \PETSc makes this choice inside the implementation of \pMat.  Namely, \PETSc always stores ranges of complete rows on each process.  Said another way, conceptually at least, the column vectors which form the \pMat are stored like \pVecs.
+
+While other storage formats are possible, the one usually used in this book is \emph{parallel compressed sparse row storage}, what \PETSc calls the \texttt{MATMPIAIJ} type.  That is, a range of rows is owned by each process (parallel row storage), and within each owned range of rows only the nonzero entries are stored (sparse), and furthermore the data structures store these nonzero entries contiguously in an array, with an additional contiguous index array (compressed).
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
@@ -443,9 +362,13 @@ Mat Object: 1 MPI processes
  0.00000e+00  -1.00000e+00  4.00000e+00  -1.00000e+00
  0.00000e+00  0.00000e+00  -1.00000e+00  4.00000e+00
 \end{cline}
-The former view shows the compressed sparse storage, wherein only the nonzero values are shown, as pairs with column index and value, while the latter is a traditional (``dense'') display where zero values are shown.  Because these calls used only one MPI process, the matrix was stored in \emph{serial} compressed sparse row format, the \texttt{MATSEQAIJ} type.
+The former view shows the compressed sparse storage, wherein only the nonzero values are shown, as pairs with column index and value, while the latter is a traditional (``dense'') display where zero values are shown.  In these cases the matrix was stored in \emph{serial} compressed sparse row format, the \texttt{MATSEQAIJ} type.
 
-In practice, what ``parallel row storage'' layout means is that when \PETSc multiplies a matrix times a vector, it first communicates (``scatters'') the whole vector to each process.  To do this product, \PETSc requires that the rows of the \pMat are distributed the same way as the entries of the \pVec.  After that initial scatter the \pMat-\pVec product is a local operation, requiring no further communication.  The result vector, a linear combination of the columns of the \pMat, is distributed the same way as the input \pVec.
+The result vector of a \pMat-\pVec product is, of course, a linear combination of the columns of the \pMat.  Thus, in practice, ``parallel row storage'' layout normally means two things:\begin{itemize}
+\item \PETSc internally distributes the rows of the \pMat $A$ the same way as the entries of the intended output \pVec $b$, i.e.~if $Ax=b$ for some $x$, at least when \texttt{PETSC\_DECIDE} is used in setting the \pMat sizes, and
+\item before \PETSc multiplies a matrix times a vector, \PETSc automatically communicates (``scatters'') the whole vector to each process.
+\end{itemize}
+After the scatter the \pMat-\pVec product is a local operation, requiring no further communication.
 
 FIXME: assembly of \pMat a bit idiosyncratic; \texttt{MatSetValues()} sets a \emph{block} of values, not arbitrary inserts into sparse storage; need either MatXXXSetPreallocation() or MatSetUp() before MatGetOwnershipRange()
 
@@ -461,6 +384,102 @@ FIXME: emphasize that \texttt{MatGetOwnershipRange()} means that different proce
 \cinputpartnostrip{c1matvec.c}{Set up \pKSP.  Solve.  Finalize.}{III}{//ENDASSEMBLY}{//END}{code:matvecpartthree}
 
 FIXME: show sparse and Matlab-format output for \texttt{A}, noting we get this at the \texttt{MatAssemblyEnd()} stage %$ ./c1matvec -a_mat_view ::ascii_matlab
+
+FIXME: solve without choosing method
+
+FIXME: show how to solve with Gaussian elimination
+
+
+\section{A bit more numerical linear algebra}
+
+Many methods other than Gauss elimination are possible for solving linear systems.  Usually these methods are iterative, and they often use the \emph{residual}.  By definition, if $\bu_0\in \RR^N$ is a vector then by the residual for $\bu_0$, as an estimate of the solution to equation \eqref{introsystem}, is the vector
+\begin{equation}
+\br_0 = \bb - A \bu_0. \label{residualdefn}
+\end{equation}
+
+Evaluating the residual for a known vector $\bu_0$ requires only applying $A$ to it, an $O(N^2)$ operation at most.  However, most discretization schemes for PDEs generate matrices $A$ that are \emph{sparse}, with many more zero entries than nonzeros, and often the number of nonzeros per row is independent of $N$.  In such cases the operation $A\bu_0$ can be implemented in $O(N)$ operations.
+
+The \emph{Richardson iteration} is an example of an iterative method based on the residual.  If $\bu_0$ is an initial estimate of the solution then it simply adds a multiple $\omega$ of the residual at each step:
+\begin{equation}
+\bu_{k+1} = \bu_k + \omega (\bb - A \bu_k).  \label{introrichardson}
+\end{equation}
+If significantly fewer than $O(N^2)$ steps are needed to make $\bu_k$ an adequate approximation of the exact solution $\bu$, then the Richardson iteration can improve on Gauss elimination.  On the other hand, the Richardson iteration may not converge.
+
+\newcommand{\rvect}[3]{\ensuremath{\bu_{#1} = \begin{bmatrix} #2 \\ #3 \end{bmatrix}}}
+
+\medskip\noindent\hrulefill
+\begin{example} Consider the linear system
+\begin{equation}
+A \bu
+= \begin{bmatrix}
+10 & -1 \\ -1 & 1
+\end{bmatrix}
+\begin{bmatrix} u_1 \\ u_2 \end{bmatrix}
+= \begin{bmatrix} 8 \\ 1 \end{bmatrix}
+= \bb
+ \label{introexample}
+\end{equation}
+which has solution $\bu = [1\,\, 2]^\top$.  If we start with estimate $\bu_0 = [0\,\, 0]^\top$ then the unweighted ($\omega=1$) Richardson iteration \eqref{introrichardson} gives a sequence of vectors % see ../matlab/richardsonex.m
+\begin{equation}
+\rvect{0}{0}{0}, \rvect{1}{8}{1}, \rvect{2}{-63}{9}, \rvect{3}{584}{-62}, \dots
+\end{equation}
+This sequence is not heading toward the solution $\bu = [1\,\, 2]^\top$.
+\end{example}
+\noindent\hrulefill
+
+If we rewrite \eqref{introrichardson} as
+\begin{equation}
+\bu_{k+1} = (I - \omega A) \bu_k + \omega \bb  \label{introrewriterichardson}
+\end{equation}
+then it is easy to believe that the ``size'' of the matrix $I-\omega A$ will determine whether $\lim_{k\to\infty} \bu_k$ exists, for generic starting vectors $\bu_0$.
+
+To examine such questions, we recall the definitions of \emph{eigenvalue} and \emph{singular value}.  A complex number $\lambda \in \CC$ is an eigenvalue of a square matrix $B\in\RR^{N\times N}$ if there is a nonzero vector $\bv\in\CC^N$ so that $B \bv = \lambda \bv$.    The singular values are the square roots of the eigenvalues of the matrix $B^*B$.\sidenote{The matrix $B^*B$ is symmetric and positive-definite so its eigenvalues are nonnegative.}  Singular values are also geometrically-defined as the lengths of semi-axes of the ellipsoid in $\RR^N$ that results from applying $B$ to all vectors in the unit sphere of $\RR^N$ \citep{TrefethenBau}.
+
+The set of all eigenvalues of $B$ is the \emph{spectrum} $\sigma(B)$ of $B$, and properties of matrices that can be described in terms of eigenvalues or singular values are generically called ``spectral properties.''  For example, recall that $\|B\|_2$ is equal to the largest singular value of $B$, while $\|B^{-1}\|_2$ is equal to the inverse of the smallest singular value of $B$.  The 2-norm condition number $\kappa(B)$ is the ratio of largest to smallest singular values,\sidenote{The condition number of $B$ well-visualized as the eccentricity of the ellipsoid we used in defining the singular values geometrically.}, and thus is a spectral property of $B$.
+
+It is an easy exercise to show that the Richardson iteration \eqref{introrichardson} will converge if and only if all the eigenvalues of $B=I-\omega A$ are inside the unit circle.  Defining the \emph{spectral radius} $\rho(B)$ of a matrix $B$ as the maximum norm of the eigenvalues of $A$, we can describe the convergence of the Richardson iteration this way:
+\begin{equation}
+\text{\eqref{introrichardson} converges if and only if } \rho(I-\omega A) < 1. \label{introconvergethm}
+\end{equation}
+We can also show that $\rho(B) \le \|B\|_2$ so \eqref{introrewriterichardson} converges if $\|I-\omega A\|_2 < 1$, but this norm condition is merely sufficient, while \eqref{introconvergethm} is necessary and sufficient.
+
+Other examples of iterative methods include the classical Jacobi and Gauss-Siedel iterations.  The most powerful methods generate optimal, in various senses \citep{TrefethenBau}, estimates $\bu_k$ which are each linear combinations of vectors $\bb,A\bb,A^2\bb,\dots,A^{k-1}\bb$.  These methods are collectively called \emph{Krylov space methods} because the span of these vectors is a Krylov space.  Typically the effectiveness of the iteration on a given matrix $A$ depends on the eigenvalues or singular values of $A$.  We use Krylov space methods in Chapter \ref{chap:structured} and all later Chapters.  Examples are conjugate gradients (CG) and minimum residual methods (e.g.~MINRES or GMRES) \citep{Greenbaum1997}.
+
+There are many other systems which are equivalent to \eqref{introsystem}.  In fact, if $P\in\RR^{N\times N}$ is an invertible square matrix then the systems
+\begin{equation}
+(P^{-1} A) \bu = P^{-1} \bb \label{introleftpre}
+\end{equation}
+and
+\begin{equation}
+(A P^{-1}) (P\bu) = \bb \label{introrightpre}
+\end{equation}
+obviously have the same solution $\bu$ as \eqref{introsystem}.  However, matrices $P^{-1} A$ or $A P^{-1}$ may have different eigenvalues, condition numbers, and so on, namely different spectral properties, from $A$.  While the accuracy of the approximate solution $\bu$ cannot be improved beyond the $\kappa(A) \eps$ level---fact i) cannot be overcome in that sense---methods can indeed take advantage of better conditioning or other spectral properties to generate $\bu$ more quickly.  Especially if $P^{-1}$ is easy to apply\sidenote{The inverse matrix $P^{-1}$ is ``easy to apply'' exactly if the system $P\bv = \bc$ is easy to solve for $\bv$ in the sense of low computational cost.} then this can be an advantageous idea when trying to approximate $\bu$ quickly.  Equivalent systems \eqref{introleftpre} and \eqref{introrightpre} are referred to as \emph{preconditioned} systems, with \eqref{introleftpre} called \emph{left preconditioning} and \eqref{introrightpre} called \emph{right-preconditioning}.  Preconditioning can help in making our Richardson iteration example converge.  
+
+\medskip\noindent\hrulefill
+\begin{examplecont}  Suppose we use the diagonal matrix from  \eqref{introexample} as $P$:
+\begin{equation}
+P = \begin{bmatrix}
+10 & 0 \\ 0 & 1
+\end{bmatrix}.  \label{introP}
+\end{equation}
+Being diagonal, this $P$ is easy to invert and apply.  The preconditioned Richardson iteration using $P$, namely
+\begin{equation}
+\bu_{k+1} = \bu_k + \omega (P^{-1} \bb - P^{-1} A \bu_k),  \label{introprerichardson}
+\end{equation}
+is much better behaved.  With $\bu_0 = [0\,\, 0]^*$ again we get this sequence from \eqref{introprerichardson}:
+\begin{equation}
+\rvect{0}{0}{0}, \rvect{1}{0.8}{1.0}, \rvect{2}{0.9}{1.8}, \rvect{3}{0.98}{1.90}, \dots
+\end{equation}
+This sequence is apparently going to $\bu = [1\,\, 2]^*$.  Of course, the explanation is not hard to see; in this case
+\begin{equation}
+\rho(I-A) = -9.1, \qquad \rho(I-P^{-1} A) = 0.32.
+\end{equation}
+Convergence claim \eqref{introconvergethm} matches this bit of evidence.
+\end{examplecont}
+\noindent\hrulefill
+
+Many iterative methods superior to the Richardson iteration are implemented in \PETSc.  We will use several of them, with choice of method only at run-time.
+
 
 \caveat{But \Matlab is all you want if scale does not matter.}
 
