@@ -4,13 +4,13 @@
 
 \section{A code that does almost nothing, but in parallel}
 
-The purpose of the \PETSc library is to help you solve scientific and engineering problems, like PDEs, on distributed computers.  But \PETSc is built ``on top of'' the Message Passing Interface (MPI; \citep{Groppetal1999}) library, and some of the flavor of that library comes through in examples.  We start with an example C code that is more-or-less just a introductory MPI example, but which calls \PETSc for some basic tasks.
+The purpose of the \PETSc library is to help you solve scientific and engineering problems, such as PDEs of course, on distributed computers.  But \PETSc is built ``on top of'' the Message Passing Interface (MPI; \citep{Groppetal1999}) library, and some of the flavor of that library comes through in examples.  We start with an example C code that is more-or-less just a introductory MPI example, but which calls \PETSc for some basic tasks.
 
-This code \texttt{c1e.c}, shown in Figure \ref{code:e}, computes Euler's constant
+This code \texttt{c1e.c}, shown in its entirety in Figure \ref{code:e}, computes Euler's constant
 \begin{equation}
 e = \sum_{n = 0}^\infty \frac{1}{n!} \approx 2.718281828 \label{introeseries}
 \end{equation}
-in parallel.  It does the computation in a very distributed manner, by computing one term of the infinite series on each process.  Thus it computes a better estimate of $e$ when run on more MPI processes.  In other words, this is a silly use of \PETSc, but an easy to understand parallel computation.
+It does the computation in a distributed manner by computing one term of the infinite series on each process.  Thus it computes a better estimate of $e$ when run on more MPI processes. While this is a silly use of \PETSc, it is an easy to understand parallel computation.
 
 As with any C source for an executable, in Figure \ref{code:e} we have a function called \texttt{main()}.  It takes inputs from the command line, \texttt{argc} and \texttt{argv},\sidenote{Here \texttt{argc} is an \texttt{int} with the argument count and \texttt{argv} are the arguments themselves as an array of strings (i.e.~C type \texttt{char**}).  But in this code, and all other codes in this book, we simply pass these arguments on to \PETSc through the \texttt{PetscInitialize()} method.}  and it outputs an \texttt{int} which is $0$ if the program succeeds.  Like all C codes we include the needed headers; only \texttt{petscsys.h} is needed here, but later codes will include other \PETSc headers.  Then we declare some variables, do a computation on each process, communicate the results between processes to get an estimate of $e$.  Finally we report success (i.e.~return $0$) at the end.
 
@@ -464,3 +464,14 @@ FIXME: show sparse and Matlab-format output for \texttt{A}, noting we get this a
 
 \caveat{But \Matlab is all you want if scale does not matter.}
 
+
+\section{Exercises}
+
+\renewcommand{\labelenumi}{\arabic{enumi}.\quad}
+\begin{enumerate}
+\item Program \texttt{c1e.c} does a terrible job of load-balancing because the computation of the factorial $n!$ requires more flops when the process rank is larger.  Modify the code to balance the load almost perfectly, with exactly one multiply operation on each \texttt{rank>0} process, by using a blocking send and receive operations (\texttt{MPI\_Send(),MPI\_Recv()}) to pass the result of the last factorial to the next rank.  (\emph{Of course now we have a code that does a ridiculous amount of communication.})
+% e1balanced.c
+\item Modify \texttt{c1matvec.c} to read an integer option \texttt{-N}\sidenote{Use methods \texttt{PetscOptionsBegin()}, \texttt{PetscOptionsInt()}, and \texttt{PetscOptionsEnd()}.} and form an $N\times N$ matrix, with $-2$ on the diagonal and $1$ on the super- and sub-diagonals as before.  Choose any desired right-hand-side.  Use \PETSc runtime options to estimate the condition number of the matrix for sample $N$ values; the online \PETSc FAQ page will help with these options.
+% see "How can I determine the condition number of a matrix?" on the PETSc FAQ page; "be sure to avoid restarts"
+% -pc_type none -ksp_type gmres -ksp_monitor_singular_value -ksp_gmres_restart 1000
+\end{enumerate}

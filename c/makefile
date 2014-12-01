@@ -2,6 +2,9 @@
 include ${PETSC_DIR}/conf/variables
 include ${PETSC_DIR}/conf/rules
 
+
+# codes in text
+
 c1e: c1e.o  chkopts
 	-${CLINKER} -o c1e c1e.o  ${PETSC_LIB}
 	${RM} c1e.o
@@ -9,14 +12,6 @@ c1e: c1e.o  chkopts
 c1matvec: c1matvec.o  chkopts
 	-${CLINKER} -o c1matvec c1matvec.o  ${PETSC_KSP_LIB}
 	${RM} c1matvec.o
-
-testmatcreate: testmatcreate.o  chkopts
-	-${CLINKER} -o testmatcreate testmatcreate.o  ${PETSC_KSP_LIB}
-	${RM} testmatcreate.o
-
-testts: testts.o  chkopts
-	-${CLINKER} -o testts testts.o  ${PETSC_KSP_LIB}
-	${RM} testts.o
 
 c2poisson: c2poisson.o structuredpoisson.o chkopts
 	-${CLINKER} -o c2poisson c2poisson.o structuredpoisson.o ${PETSC_KSP_LIB}
@@ -50,6 +45,30 @@ c9obstacle: c9obstacle.o  chkopts
 	-${CLINKER} -o c9obstacle c9obstacle.o  ${PETSC_SNES_LIB}
 	${RM} c9obstacle.o
 
+
+# test codes
+
+testmatcreate: testmatcreate.o  chkopts
+	-${CLINKER} -o testmatcreate testmatcreate.o  ${PETSC_KSP_LIB}
+	${RM} testmatcreate.o
+
+testts: testts.o  chkopts
+	-${CLINKER} -o testts testts.o  ${PETSC_KSP_LIB}
+	${RM} testts.o
+
+
+# exercise solutions
+
+e1balanced: e1balanced.o  chkopts
+	-${CLINKER} -o e1balanced e1balanced.o  ${PETSC_LIB}
+	${RM} e1balanced.o
+
+e2matvecn: e2matvecn.o  chkopts
+	-${CLINKER} -o e2matvecn e2matvecn.o  ${PETSC_KSP_LIB}
+	${RM} e2matvecn.o
+
+
+# etc
 
 .PHONY: distclean
 

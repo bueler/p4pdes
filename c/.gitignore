@@ -18,6 +18,9 @@ c9obstacle
 testts
 testmatcreate
 
+e1balanced
+e2matvecn
+
 bump.?.*
 square.?.*
 mesh.?.*
