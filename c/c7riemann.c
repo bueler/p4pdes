@@ -4,17 +4,31 @@ static char help[] = "Implement Gudunov method for system of linear conservation
 #include <math.h>
 #include <petscdmda.h>
 
-//MAIN
+
+PetscErrorCode fillsmallmat(const PetscInt d, PetscReal values[d][d], Mat A) {
+  PetscErrorCode ierr;
+  PetscInt       col[d], row, j;
+  for (j = 0; j < d; j++)
+    col[j] = j;
+  for (row = 0; row < d; row++) {
+    ierr = MatSetValues(A,1,&row,d,col,(PetscReal*)values[row],INSERT_VALUES); CHKERRQ(ierr);
+  }
+  ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+  ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+  return 0;
+}
+
+
 int main(int argc,char **argv)
 {
   PetscErrorCode ierr;
   PetscReal      L = 10.0, dx;
   DMDALocalInfo  info;
 
-  const PetscInt d = 2;
-  PetscInt       i, col[d];
   Vec            u, unew;
-  PetscReal      lambda[d], value[d], c = 3.0;
+
+  const PetscInt d = 2;
+  PetscReal      lambda[d], val[d][d], c = 3.0;
   Mat            A, Aminus, R, Rinv;
 
   PetscInitialize(&argc,&argv,(char*)0,help);
@@ -22,9 +36,7 @@ int main(int argc,char **argv)
   // these are dense d x d sequential matrices, unrelated to the grid
   //   (each processor owns whole matrix)
   ierr = MatCreateSeqAIJ(PETSC_COMM_WORLD,d,d,d,NULL,&A); CHKERRQ(ierr);
-  ierr = MatDuplicate(A,MAT_SHARE_NONZERO_PATTERN,&Aminus); CHKERRQ(ierr);
-  ierr = MatDuplicate(A,MAT_SHARE_NONZERO_PATTERN,&R); CHKERRQ(ierr);
-  ierr = MatDuplicate(A,MAT_SHARE_NONZERO_PATTERN,&Rinv); CHKERRQ(ierr);
+  ierr = MatSetFromOptions(A); CHKERRQ(ierr);
 
   // FIXME: read this from file?
   // fill A and lambda and R
@@ -44,26 +56,20 @@ int main(int argc,char **argv)
        -0.50000  0.50000
         0.50000  0.50000
   */
-  col[0] = 0; col[1] = 1;
-  i = 0;
-  value[0] = 0.0; value[1] = c;
-  ierr = MatSetValues(A,1,&i,2,col,value,INSERT_VALUES); CHKERRQ(ierr);
-  i = 1;
-  value[0] = c; value[1] = 0.0;
-  ierr = MatSetValues(A,1,&i,2,col,value,INSERT_VALUES); CHKERRQ(ierr);
+
   lambda[0] = -c;  lambda[1] = c;
-  i = 0;
-  value[0] = -1.0; value[1] = 1.0;
-  ierr = MatSetValues(R,1,&i,2,col,value,INSERT_VALUES); CHKERRQ(ierr);
-  i = 1;
-  value[0] = 1.0; value[1] = 1.0;
-  ierr = MatSetValues(R,1,&i,2,col,value,INSERT_VALUES); CHKERRQ(ierr);
-  i = 0;
-  value[0] = -0.5; value[1] = 0.5;
-  ierr = MatSetValues(Rinv,1,&i,2,col,value,INSERT_VALUES); CHKERRQ(ierr);
-  i = 1;
-  value[0] = 0.5; value[1] = 0.5;
-  ierr = MatSetValues(Rinv,1,&i,2,col,value,INSERT_VALUES); CHKERRQ(ierr);
+  val[0][0] = 0.0;  val[0][1] = c;
+  val[1][0] = c;    val[1][1] = 0.0;
+  ierr = fillsmallmat(2,val,A); CHKERRQ(ierr);
+  ierr = MatDuplicate(A,MAT_SHARE_NONZERO_PATTERN,&R); CHKERRQ(ierr);
+  ierr = MatDuplicate(A,MAT_SHARE_NONZERO_PATTERN,&Rinv); CHKERRQ(ierr);
+  ierr = MatDuplicate(A,MAT_SHARE_NONZERO_PATTERN,&Aminus); CHKERRQ(ierr);
+  val[0][0] = -1.0; val[0][1] = 1.0;
+  val[1][0] = 1.0;  val[1][1] = 1.0;
+  ierr = fillsmallmat(2,val,R); CHKERRQ(ierr);
+  val[0][0] = -0.5; val[0][1] = 0.5;
+  val[1][0] = 0.5;  val[1][1] = 0.5;
+  ierr = fillsmallmat(2,val,Rinv); CHKERRQ(ierr);
 
   // set up the grid
   DM da;
