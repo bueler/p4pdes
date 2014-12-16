@@ -105,7 +105,8 @@ int main(int argc,char **argv)
           ierr = VecRestoreArray(dq,&adq); CHKERRQ(ierr);
           ierr = VecRestoreArray(qleft,&aqleft); CHKERRQ(ierr);
 
-          // Fcell = A qleft + Aminus dq
+          // tmp = A qleft
+          // Fcell = tmp + Aminus dq
           ierr = MatMult(A,qleft,tmp); CHKERRQ(ierr);
           ierr = MatMultAdd(Aminus,dq,tmp,Fcell); CHKERRQ(ierr);
 
