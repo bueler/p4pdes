@@ -33,6 +33,10 @@ c4poisson: c4poisson.o structuredpoisson.o  chkopts
 	-${CLINKER} -o c4poisson c4poisson.o structuredpoisson.o  ${PETSC_KSP_LIB}
 	${RM} c4poisson.o structuredpoisson.o
 
+c7riemann: c7riemann.o  chkopts
+	-${CLINKER} -o c7riemann c7riemann.o  ${PETSC_KSP_LIB}
+	${RM} c7riemann.o
+
 c7fosls: c7fosls.o  chkopts
 	-${CLINKER} -o c7fosls c7fosls.o  ${PETSC_KSP_LIB}
 	${RM} c7fosls.o

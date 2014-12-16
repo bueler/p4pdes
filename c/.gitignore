@@ -12,6 +12,8 @@ c2heat
 c3convert
 c3poisson
 c4poisson
+c7riemann
+c7fosls
 c7stokes
 c9obstacle
 
