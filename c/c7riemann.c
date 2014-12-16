@@ -22,54 +22,24 @@ PetscErrorCode fillsmallmat(const PetscInt d, PetscReal values[d][d], Mat A) {
 int main(int argc,char **argv)
 {
   PetscErrorCode ierr;
-  PetscReal      L = 10.0, dx;
-  DMDALocalInfo  info;
-
-  Vec            u, unew;
-
-  const PetscInt d = 2;
-  PetscReal      lambda[d], val[d][d], c = 3.0;
-  Mat            A, Aminus, R, Rinv;
-
   PetscInitialize(&argc,&argv,(char*)0,help);
 
+  const PetscInt d = 2;
+  Mat            A, Aminus;
   // these are dense d x d sequential matrices, unrelated to the grid
   //   (each processor owns whole matrix)
   ierr = MatCreateSeqAIJ(PETSC_COMM_WORLD,d,d,d,NULL,&A); CHKERRQ(ierr);
   ierr = MatSetFromOptions(A); CHKERRQ(ierr);
 
-  // FIXME: read this from file?
-  // fill A and lambda and R
-  /*
-  >> c = 3;
-  >> A = [0 c; c 0];
-  >> [X,D]=eig(A)
-  X =
-       -0.70711  0.70711
-        0.70711  0.70711
-  D =
-       -3        0
-        0        3
-  >> R = [-1.0 1.0; 1.0 1.0];
-  >> inv(R)
-  ans =
-       -0.50000  0.50000
-        0.50000  0.50000
-  */
-
-  lambda[0] = -c;  lambda[1] = c;
+  // fill A and Aminus; see getAminus.m 
+  PetscReal      val[d][d], c = 3.0;
   val[0][0] = 0.0;  val[0][1] = c;
   val[1][0] = c;    val[1][1] = 0.0;
   ierr = fillsmallmat(2,val,A); CHKERRQ(ierr);
-  ierr = MatDuplicate(A,MAT_SHARE_NONZERO_PATTERN,&R); CHKERRQ(ierr);
-  ierr = MatDuplicate(A,MAT_SHARE_NONZERO_PATTERN,&Rinv); CHKERRQ(ierr);
   ierr = MatDuplicate(A,MAT_SHARE_NONZERO_PATTERN,&Aminus); CHKERRQ(ierr);
-  val[0][0] = -1.0; val[0][1] = 1.0;
-  val[1][0] = 1.0;  val[1][1] = 1.0;
-  ierr = fillsmallmat(2,val,R); CHKERRQ(ierr);
-  val[0][0] = -0.5; val[0][1] = 0.5;
-  val[1][0] = 0.5;  val[1][1] = 0.5;
-  ierr = fillsmallmat(2,val,Rinv); CHKERRQ(ierr);
+  val[0][0] = -1.5; val[0][1] = 1.5;
+  val[1][0] = 1.5;  val[1][1] = -1.5;
+  ierr = fillsmallmat(2,val,Aminus); CHKERRQ(ierr);
 
   // set up the grid
   DM da;
@@ -77,42 +47,108 @@ int main(int argc,char **argv)
                       -50,         // override with -da_grid_x or -da_refine
                       d, 1, NULL,  // dof = 1 and stencil width = 1
                       &da); CHKERRQ(ierr);
-  //ierr = DMSetApplicationContext(user.da, &user);CHKERRQ(ierr);
+
+  // determine grid locations (cell-centered grid)
+  DMDALocalInfo  info;
+  PetscReal      L = 10.0, dx;
   ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
   dx = L / (PetscReal)(info.mx);
-  // cell-centered grid
   ierr = DMDASetUniformCoordinates(da,dx/2,L-dx/2,-1.0,-1.0,-1.0,-1.0);CHKERRQ(ierr);
 
   // u = u(t_n), unew = u(t_n+1)
-  ierr = DMCreateGlobalVector(da,&u);CHKERRQ(ierr);
+  Vec  u, unew, F;
+  ierr = DMCreateLocalVector(da,&u);CHKERRQ(ierr);
   ierr = VecSetOptionsPrefix(u,"u_"); CHKERRQ(ierr);
-  ierr = VecDuplicate(u,&unew);CHKERRQ(ierr);
+  ierr = VecDuplicate(u,&F);CHKERRQ(ierr);
+  ierr = VecSetOptionsPrefix(F,"F_"); CHKERRQ(ierr);
+  ierr = DMCreateGlobalVector(da,&unew);CHKERRQ(ierr);
   ierr = VecSetOptionsPrefix(unew,"unew_"); CHKERRQ(ierr);
+  ierr = VecSet(unew,0.0); CHKERRQ(ierr);
 
-  ierr = VecSet(u,0.0); CHKERRQ(ierr);
+  // at each cell we need to compute   Fcell = A qleft + Aminus dq
+  Vec dq, qleft, tmp, Fcell;
+  ierr = VecCreateSeq(PETSC_COMM_WORLD,d,&dq); CHKERRQ(ierr);
+  ierr = VecDuplicate(dq,&qleft); CHKERRQ(ierr);
+  ierr = VecDuplicate(dq,&tmp); CHKERRQ(ierr);
+  ierr = VecDuplicate(dq,&Fcell); CHKERRQ(ierr);
+
+  PetscViewer viewer;
+  ierr = PetscViewerDrawOpen(PETSC_COMM_WORLD,NULL,"solution u",
+              PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,&viewer); CHKERRQ(ierr);
 
   /* time-stepping loop */
   {
-    PetscReal  t = 0.0, tf = 10.0, dt;
+    PetscReal  t = 0.0, tf = 10.0, dt, nu;
     PetscInt   n, NN = 10;
     dt = tf / NN;
+    nu = dt / dx;
     for (n = 0; n < NN; ++n) {
       ierr = PetscPrintf(PETSC_COMM_WORLD, "  time[%3d]=%6g: \n", n, t); CHKERRQ(ierr);
-      // do something in here
-      ierr = VecCopy(unew, u); CHKERRQ(ierr);
+
+      ierr = DMGlobalToLocalBegin(da,unew,INSERT_VALUES,u); CHKERRQ(ierr);
+      ierr = DMGlobalToLocalEnd(da,unew,INSERT_VALUES,u); CHKERRQ(ierr);
+
+      ierr = VecView(u,viewer); CHKERRQ(ierr);
+
+      PetscReal  **au, **aunew, **aF;
+      PetscInt   j, p;
+      ierr = DMDAVecGetArrayDOF(da, u, &au);CHKERRQ(ierr);
+      ierr = DMDAVecGetArrayDOF(da, F, &aF);CHKERRQ(ierr);
+      for (j=info.xs; j<info.xs+info.xm; j++) {
+          PetscReal *adq, *aqleft, *aFcell;
+          ierr = VecGetArray(dq,&adq); CHKERRQ(ierr);
+          ierr = VecGetArray(qleft,&aqleft); CHKERRQ(ierr);
+          for (p = 0; p < d; p++) {
+            adq[p]    = au[j+1][p] - au[j][p];
+            aqleft[p] = au[j][p];
+          }
+          ierr = VecRestoreArray(dq,&adq); CHKERRQ(ierr);
+          ierr = VecRestoreArray(qleft,&aqleft); CHKERRQ(ierr);
+
+          // Fcell = A qleft + Aminus dq
+          ierr = MatMult(A,qleft,tmp); CHKERRQ(ierr);
+          ierr = MatMultAdd(Aminus,dq,tmp,Fcell); CHKERRQ(ierr);
+
+          ierr = VecGetArray(Fcell,&aFcell); CHKERRQ(ierr);
+          for (p = 0; p < d; p++)
+            aF[j][p] = aFcell[p];
+          ierr = VecRestoreArray(Fcell,&aFcell); CHKERRQ(ierr);
+      }
+      ierr = DMDAVecRestoreArrayDOF(da, F, &aF);CHKERRQ(ierr);
+
+      ierr = DMLocalToLocalBegin(da,F,INSERT_VALUES,F); CHKERRQ(ierr);
+      ierr = DMLocalToLocalEnd(da,F,INSERT_VALUES,F); CHKERRQ(ierr);
+
+      ierr = DMDAVecGetArrayDOF(da, F, &aF);CHKERRQ(ierr);
+      ierr = DMDAVecGetArrayDOF(da, unew, &aunew);CHKERRQ(ierr);
+      for (j=info.xs; j<info.xs+info.xm; j++) {
+          for (p = 0; p < d; p++)
+            aunew[j][p] = au[j][p] - nu * (aF[j+1][p] - aF[j][p]);
+      }
+      ierr = DMDAVecRestoreArrayDOF(da, u, &au);CHKERRQ(ierr);
+      ierr = DMDAVecRestoreArrayDOF(da, F, &aF);CHKERRQ(ierr);
+      ierr = DMDAVecRestoreArrayDOF(da, unew, &aunew);CHKERRQ(ierr);
+
       t += dt;
     }
   }
 
   ierr = VecDestroy(&u); CHKERRQ(ierr);
   ierr = VecDestroy(&unew); CHKERRQ(ierr);
+  ierr = VecDestroy(&F); CHKERRQ(ierr);
+
+  ierr = VecDestroy(&dq); CHKERRQ(ierr);
+  ierr = VecDestroy(&qleft); CHKERRQ(ierr);
+  ierr = VecDestroy(&tmp); CHKERRQ(ierr);
+  ierr = VecDestroy(&Fcell); CHKERRQ(ierr);
+
   ierr = MatDestroy(&A); CHKERRQ(ierr);  
   ierr = MatDestroy(&Aminus); CHKERRQ(ierr);  
-  ierr = MatDestroy(&R); CHKERRQ(ierr);  
-  ierr = MatDestroy(&Rinv); CHKERRQ(ierr);  
+
+  ierr = PetscViewerDestroy(&viewer); CHKERRQ(ierr);  
+
   ierr = DMDestroy(&da); CHKERRQ(ierr);
   ierr = PetscFinalize(); CHKERRQ(ierr);
   return 0;
 }
-//ENDMAIN
 
