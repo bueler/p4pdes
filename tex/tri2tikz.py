@@ -20,7 +20,10 @@ parser.add_argument('--labelelements', action='store_true',
                     help='label the nodes with zero-based index',
                     default=False)
 parser.add_argument('--polyonly', action='store_true',
-                    help='build a TikZ figure with the polygon (.poly) only',
+                    help='use only the original polygon (.poly) file',
+                    default=False)
+parser.add_argument('--noboundary', action='store_true',
+                    help='do not show the boundary segments at all',
                     default=False)
 # real options
 parser.add_argument('--scale', action='store', metavar='X',
@@ -52,6 +55,7 @@ outname  = args.outfile
 dolabelnodes = args.labelnodes
 dolabeleles  = args.labelelements
 polyonly     = args.polyonly
+noboundary   = args.noboundary
 scale        = (float)(args.scale)
 nodesize     = (float)(args.nodesize)
 nodeoffset   = (float)(args.nodeoffset)
@@ -137,8 +141,9 @@ if not polyonly:
             for k in range(3):
               jfrom = pp[kk[k]]
               jto   = pp[kk[k+1]]
-              tikz.write('  \\draw[gray,very thin] (%f,%f) -- (%f,%f);\n' \
-                         % (x[jfrom],y[jfrom],x[jto],y[jto]))
+              if (not noboundary) or (bt[jfrom] == 0) or (bt[jto] == 0):
+                tikz.write('  \\draw[gray,very thin] (%f,%f) -- (%f,%f);\n' \
+                           % (x[jfrom],y[jfrom],x[jto],y[jto]))
             if dolabeleles:
               xc = 0.0
               yc = 0.0
@@ -153,74 +158,75 @@ if not polyonly:
             count += 1
 
 # READ .poly FILE
-print 'reading from %s ' % polyname
-headersread = 0
-count = 0
-for line in polyfile:
-  # strip comment
-  line = line.partition('#')[0]
-  line = line.rstrip()
-  if line: # only act if line content remains
-    # read headers
-    if headersread == 0:
-        polyheader1 = line
-        print '  header 1 says:  ' + polyheader1,
-        NP = (int)(polyheader1.split()[0])
-        if NP > 0:
-          print '... reading NP = %d nodes on boundary ...' % NP
-          # read node info into arrays
-          bx = numpy.zeros(NP)
-          by = numpy.zeros(NP)
-        else:
-          print '...'
-        headersread += 1
-        count = 0
-        continue
-    elif (headersread == 1) and (count >= NP):
-        polyheader2 = line
-        print '  header 2 says:  ' + polyheader2,
-        P = (int)(polyheader2.split()[0])
-        print '... reading P = %d boundary segments ...' % P
-        headersread += 1
-        count = 0
-        continue
-    elif (headersread == 2) and (count >= P):
-        break # nothing more to read
-    # read content if headersread = 1 or 2 and count is small
-    #DEBUG  print 'reading content line with count = %d ...' % count
-    if headersread == 1:
-        # read a line describing a node on the boundary; should only occur
-        #   in cases where bx[], by[] exist
-        nxyb = line.split()
-        if count+1 != int(nxyb[0]):
-            print 'ERROR: INDEXING WRONG IN READING NODES ON POLYGON'
-            sys.exit(2)
-        bx[count] = float(nxyb[1])
-        by[count] = float(nxyb[2])
-        tikz.write('  \\filldraw (%f,%f) circle (%fpt);\n' % (bx[count],by[count],nodesize))
-        count += 1
-    elif headersread == 2:
-        # read a line describing a boundary segment
-        pjkb = line.split()
-        if count+1 != int(pjkb[0]):
-            print 'ERROR: INDEXING WRONG IN READING POLYGON SEGMENTS'
-            sys.exit(2)
-        jfrom = int(pjkb[1])-1
-        jto   = int(pjkb[2])-1
-        if int(pjkb[3]) == 2: # check boundary type
-            mywidth = '2.5pt'   # strong line for Dirichlet part
-        else:
-            mywidth = '0.75pt'  # weak line for Neumann
-        if polyonly:
-            tikz.write('  \\draw[line width=%s] (%f,%f) -- (%f,%f);\n' \
-                       % (mywidth,bx[jfrom],by[jfrom],bx[jto],by[jto]))
-        else:
-            tikz.write('  \\draw[line width=%s] (%f,%f) -- (%f,%f);\n' \
-                       % (mywidth,x[jfrom],y[jfrom],x[jto],y[jto]))
-        count += 1
-    else:
-        print 'ERROR:  headersread not 1 or 2 and yet trying to read; something wrong ... exiting'
-        sys.exit(1)
+if not noboundary:
+  print 'reading from %s ' % polyname
+  headersread = 0
+  count = 0
+  for line in polyfile:
+    # strip comment
+    line = line.partition('#')[0]
+    line = line.rstrip()
+    if line: # only act if line content remains
+      # read headers
+      if headersread == 0:
+          polyheader1 = line
+          print '  header 1 says:  ' + polyheader1,
+          NP = (int)(polyheader1.split()[0])
+          if NP > 0:
+            print '... reading NP = %d nodes on boundary ...' % NP
+            # read node info into arrays
+            bx = numpy.zeros(NP)
+            by = numpy.zeros(NP)
+          else:
+            print '...'
+          headersread += 1
+          count = 0
+          continue
+      elif (headersread == 1) and (count >= NP):
+          polyheader2 = line
+          print '  header 2 says:  ' + polyheader2,
+          P = (int)(polyheader2.split()[0])
+          print '... reading P = %d boundary segments ...' % P
+          headersread += 1
+          count = 0
+          continue
+      elif (headersread == 2) and (count >= P):
+          break # nothing more to read
+      # read content if headersread = 1 or 2 and count is small
+      #DEBUG  print 'reading content line with count = %d ...' % count
+      if headersread == 1:
+          # read a line describing a node on the boundary; should only occur
+          #   in cases where bx[], by[] exist
+          nxyb = line.split()
+          if count+1 != int(nxyb[0]):
+              print 'ERROR: INDEXING WRONG IN READING NODES ON POLYGON'
+              sys.exit(2)
+          bx[count] = float(nxyb[1])
+          by[count] = float(nxyb[2])
+          tikz.write('  \\filldraw (%f,%f) circle (%fpt);\n' % (bx[count],by[count],nodesize))
+          count += 1
+      elif headersread == 2:
+          # read a line describing a boundary segment
+          pjkb = line.split()
+          if count+1 != int(pjkb[0]):
+              print 'ERROR: INDEXING WRONG IN READING POLYGON SEGMENTS'
+              sys.exit(2)
+          jfrom = int(pjkb[1])-1
+          jto   = int(pjkb[2])-1
+          if int(pjkb[3]) == 2: # check boundary type
+              mywidth = '2.5pt'   # strong line for Dirichlet part
+          else:
+              mywidth = '0.75pt'  # weak line for Neumann
+          if polyonly:
+              tikz.write('  \\draw[line width=%s] (%f,%f) -- (%f,%f);\n' \
+                         % (mywidth,bx[jfrom],by[jfrom],bx[jto],by[jto]))
+          else:
+              tikz.write('  \\draw[line width=%s] (%f,%f) -- (%f,%f);\n' \
+                         % (mywidth,x[jfrom],y[jfrom],x[jto],y[jto]))
+          count += 1
+      else:
+          print 'ERROR:  headersread not 1 or 2 and yet trying to read; something wrong ... exiting'
+          sys.exit(1)
 
 if not polyonly:
   # plot interior and boundary nodes themselves
