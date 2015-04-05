@@ -12,7 +12,7 @@ int main(int argc,char **args) {
 
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank); CHKERRQ(ierr);
 
-  // compute  1 / n!  where n = (one more than rank of process)
+  // compute  1 / n!  where n = (rank of process) + 1
   localval = 1.0;
   for (i = 1; i < rank; i++)
     localval *= i+1;

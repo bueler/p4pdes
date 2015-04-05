@@ -4,7 +4,7 @@
 
 \section{A code that does almost nothing, but in parallel}
 
-The purpose of the \PETSc library is to help you solve scientific and engineering problems, such as PDEs of course, on distributed computers.  But \PETSc is built ``on top of'' the Message Passing Interface (MPI; \citep{Groppetal1999}) library, and some of the flavor of that library comes through.  We start with an example C code that is essentially an introductory MPI example, though it calls \PETSc for some basic tasks.
+The purpose of the \PETSc library is to help you solve scientific and engineering problems, such as PDEs of course, on distributed computers.  As \PETSc is built ``on top of'' the Message Passing Interface (MPI; \citep{Groppetal1999}) library, some of the MPI flavor comes through.  We start with an example C code that is essentially an introductory MPI example, though it calls \PETSc for some basic tasks.
 
 This code \texttt{c1e.c}, shown in its entirety in Figure \ref{code:e}, computes Euler's constant
 \begin{equation}
@@ -12,28 +12,29 @@ e = \sum_{n = 0}^\infty \frac{1}{n!} \approx 2.718281828 \label{introeseries}
 \end{equation}
 It does the computation in a distributed manner by computing one term of the infinite series on each process.  Thus it computes a better estimate of $e$ when run on more MPI processes. While this is a silly use of \PETSc, it is an easy to understand parallel computation.
 
-As with any C source for an executable, \texttt{c1e.c} has a function called \texttt{main()} which takes inputs from the command line, namely \texttt{argc} and \texttt{argv},\sidenote{Here \texttt{argc} is an \texttt{int} holding the argument count.  The second argument \texttt{argv} is an array of strings (i.e.~C type \texttt{char**}) holding the command line (i.e.~command and arguments).  However, in all codes in this book we simply pass these arguments on to \PETSc through the \texttt{PetscInitialize()} method.} and which outputs an \texttt{int} which is $0$ if the program succeeds.  Also, like all C codes, we include the needed headers; only \texttt{petscsys.h} is needed here, but later codes will include other \PETSc headers.
+As a C source for an executable, \texttt{c1e.c} has a function called \texttt{main()} which takes inputs from the command line, namely \texttt{argc} and \texttt{argv},\sidenote{Here \texttt{argc} is an \texttt{int} holding the argument count.  The second argument \texttt{argv} is an array of strings (i.e.~C type \texttt{char**}) holding the command line (i.e.~command and arguments).  However, in all codes in this book we simply pass these arguments on to \PETSc through the \texttt{PetscInitialize()} method.} and which outputs an \texttt{int}.  The output is $0$ if the program succeeds.  The substance of \texttt{main()} is to declare some variables, do a computation on each process, and communicate the results between processes to get an estimate of $e$.
 
-The substance of \texttt{main()} is to declare some variables, do a computation on each process, and communicate the results between processes to get an estimate of $e$.  Finally we report success (i.e.~return $0$) at the end.
+Like all C codes, we include the needed headers.  Only \texttt{petscsys.h} is needed here, but later codes will include other \PETSc headers.
 
-More details of \texttt{c1e.c} can be described once we compile and run the code.  Please do the following to start:
+More details of \texttt{c1e.c} can be described once we compile and run the code.  Do the following to start:
 \begin{cline}
-$ cd p4pdes/c/  # download this book, and its codes in p4pdes/c/, by
-                #     "git clone https://github.com/bueler/p4pdes.git"
+$ cd p4pdes/c/   # first download this book by
+                 #   "git clone https://github.com/bueler/p4pdes.git"
+                 # the codes are in p4pdes/c/
 $ make c1e
 \end{cline}
-For the command ``\texttt{make}'' to work there must be a makefile, of course, and it is \texttt{/p4pdes/c/makefile}, shown in Figure \ref{code:c1emakefile}.  For all the codes in this book, the makefile will have this form, exactly as recommended in the \PETSc User's Manual \citep{petsc-user-ref}.
+For the command ``\texttt{make}'' to work there must be a makefile, of course, and it is \texttt{/p4pdes/c/makefile}, shown in Figure \ref{code:c1emakefile}.  For all the codes in this book, the makefile will have this form, exactly as recommended in the \PETSc User's Manual \citep{petsc-user-ref}, so we won't list them in the future.
 
 \inputwhole{../c/c1e.c}{\texttt{p4pdes/c/c1e.c}}{Compute $e$ in parallel.}{code:e}
 
-Run the code on one MPI process like this:
+Run the code like this:
 \begin{cline}
 $ ./c1e
 e is about 1.000000000000000
 rank 0 did 1 flops
 \end{cline}
 %$
-The value $1.0$ is a very poor estimate of $e$, but this code does better with more processes:
+The value $1.0$ is a very poor estimate of $e$, but this code does better with more MPI processes:
 \begin{cline}
 $ mpiexec -n 5 ./c1e
 rank 3 did 7 flops
@@ -56,13 +57,13 @@ rank 18 did 37 flops
 \end{cline}
 %$
 
-\cinputraw{c1emakefile.frag}{extract from \texttt{p4pdes/c/makefile}}{All \texttt{makefile}s for the \PETSc codes in this book look like this.}{}{//START}{//STOP}{code:c1emakefile}
+\cinputraw{c1emakefile.frag}{extract from \texttt{p4pdes/c/makefile}}{All \texttt{makefile}s for our \PETSc codes look like this.}{}{//START}{//STOP}{code:c1emakefile}
 
-Now, perhaps the reader is worried that this book was written using a large supercomputer whereas the reader has a little laptop with only a couple of cores.  Not so; these $N=5$ and $N=20$ process MPI calls work just fine on the author's four-core laptop because MPI processes are created as needed.\sidenote{Multitasking operating systems have been around for quite some time!}
+Perhaps the reader is now worried that this book was written using a large supercomputer whereas the reader has a little laptop with only a couple of cores.  In fact these five or twenty process runs work just fine on the author's four-core laptop.  MPI processes are created as needed, using an old feature of operating systems: multitasking.  Speedup from parallelism is another matter, and one we will return to.
 
-The main job in \texttt{c1e.c} is to collect the sum of the terms of (truncated) infinite series \eqref{introeseries} onto each process.  After each process computes term $1/n!$, where $n$ is its rank in the MPI communicator, a call to \texttt{MPI\_Allreduce()} does the sum and then sends the sum back to each process.  We also get the rank of the current process with a call to \texttt{MPI\_Comm\_rank()}.  These direct uses of the MPI library illustrate that \PETSc, which tries to avoid duplication of MPI functionality, need not be called for some low-level parallel tasks.
+The main job in \texttt{c1e.c} is to collect the sum of the terms of series \eqref{introeseries} onto each process.  Each process computes term $1/n!$, where $n$ is its rank in the MPI communicator; we get $n$ with a call to \texttt{MPI\_Comm\_rank()}.  Then a call to \texttt{MPI\_Allreduce()} does the sum and then sends it back to each process.  These direct uses of the MPI library are a part of using \PETSc, which tries to avoid duplication of MPI functionality.
 
-In \texttt{c1e.c} we print the computed estimate of $e$, and we also have each process print its rank and the work it did.  Observe that \texttt{PetscPrintf()}, a formatted print command like \texttt{fprintf()} from the C standard library, is called twice, once with MPI communicator \texttt{PETSC\_COMM\_WORLD} and once with \texttt{PETSC\_COMM\_SELF}.\sidenote{Thereby we illustrate collective and non-collective operations in the same program.}  The first of these \texttt{STDOUT} printing jobs is therefore \emph{collective} over all processes, and thus only done once, and other printing job is individual to each rank.\sidenote{A process is often just called a \emph{rank} in MPI language.}  In the output the \texttt{PETSC\_COMM\_SELF} printed lines appear in almost random order because the print occurs as soon as that process reaches that line.
+In \texttt{c1e.c} we print the computed estimate of $e$, and we also have each process print its rank and the work it did.  Observe that \texttt{PetscPrintf()}, a formatted print command like \texttt{fprintf()} from the C standard library, is called twice, once with MPI communicator \texttt{PETSC\_COMM\_WORLD} and once with \texttt{PETSC\_COMM\_SELF}.\sidenote{Thereby we illustrate collective and non-collective operations in the same program.}  The first of these \texttt{STDOUT} printing jobs is therefore \emph{collective} over all processes, and thus only done once.  The second printing job is individual to each rank.\sidenote{A process is often just called a \emph{rank} in MPI language.}  In the output the \texttt{PETSC\_COMM\_SELF} printed lines appear in almost random order because the print occurs as soon as that process reaches that line.
 
 Every \PETSc program should start and end with the commands \texttt{PetscInitialize()} and \texttt{PetscFinalize()}:
 \begin{code}
@@ -70,18 +71,32 @@ PetscInitialize(&argc,&args,(char*)0,help);
 ... everything else goes here ...
 PetscFinalize();
 \end{code}
-Also, so that this \PETSc code can provide useful usage help, we add a \texttt{help} string at the start; it is a good place to say what the purpose of the code is.
 
-There is one more observation about \texttt{c1e.c} and all \PETSc programs: there is error-checking clutter from capturing and checking the return code of each method called.  While languages other than C could help with decluttering this stuff, we are stuck with lines that look like
+Also, to provide useful usage help, we add a \texttt{help} string at the start; it is a good place to say what the purpose of the code is.  Do
+\begin{cline}
+$ ./c1e -help
+\end{cline}
+%$
+to see the help string, and many other options.
+
+\PETSc programs like \texttt{c1e.c} have a  built-in help system for runtime options that is both effective and surprisingly minimal.  To see runtime options related to logging performance, do
+\begin{cline}
+$ ./c1e -help | grep log_
+\end{cline}
+%$
+
+Here is one more observation about \texttt{c1e.c} and all \PETSc programs: there is error-checking clutter from capturing and checking the return code of call.  While languages other than C could help with decluttering this stuff, we are stuck with lines that look like
 \begin{code}
 ierr = PetscCommand(...); CHKERRQ(ierr);
 \end{code}
-The explanation of this clutter is that almost all \PETSc methods, and most user-written methods in \PETSc programs, return an \texttt{int} for error checking, with value $0$ if successful.  In the line above, \texttt{ierr} is a \texttt{PetscInt} type and \texttt{CHKERRQ()} is a macro which does nothing if \texttt{ierr == 0} but which stops the program otherwise.  In the nonzero case the program stops with a traceback, namely a list of the nested methods, in reverse order, showing the line numbers and method names of the location where the error occurred.  This traceback tends to be the first line of defense when debugging run-time errors.  Examples in this book always capture-and-check the returned error code in this way, despite the clutter.  On the other hand, after this chapter we will strip the ``\texttt{ierr =}'' and ``\texttt{CHKERRQ(ierr);}'' clutter from the code displayed in the text, even though it is still present in the source file itself.
+The explanation of this clutter is that almost all \PETSc methods, and most user-written methods in \PETSc programs, return an \texttt{int} for error checking, with value $0$ if successful.  In the line above, \texttt{ierr} is a \texttt{PetscInt} type and \texttt{CHKERRQ()} is a macro which does nothing if \texttt{ierr == 0} but which stops the program with a ``traceback'' otherwise.  A traceback is a list of the nested methods, in reverse order, showing the line numbers and method names of the location where the error occurred.  This traceback tends to be the first line of defense when debugging run-time errors.  This traceback mechanism is most effective if \PETSc is configured with debugging symbols, i.e.~with the option \texttt{--with-debugging=1}.
+
+Examples in this book always capture-and-check the returned error code using \texttt{ierr} and \texttt{CHKERRQ()}.  However, after this chapter we will strip the ``\texttt{ierr =}'' and ``\texttt{CHKERRQ(ierr);}'' clutter from the code displayed in the text, even though it is still present in the source file itself.
 
 
 \section{Linear systems}
 
-Of course, our goal in the remainder of the book is to compute more interesting quantities than Euler's constant $e$.  At the core of most \PETSc computations is a finite-dimensional linear system.  Before solving such systems in \PETSc, it is useful to recall the most basic ideas of numerical linear algebra.
+Of course, our goal is to compute more interesting quantities than Euler's constant $e$.  At the core of most \PETSc computations is a finite-dimensional linear system.  Before solving such systems in \PETSc, it is useful to recall the most basic ideas of numerical linear algebra.
 
 Suppose $\bb\in \RR^{N}$ is a column vector and $A\in\RR^{N\times N}$ is a square matrix.  The linear system
 \begin{equation}
@@ -96,21 +111,21 @@ This is simple in theory.
 It is not so simple in practice, however, when solving large systems on a computer.  There are two key facts to keep in mind while working numerically  \citep{TrefethenBau}.
 \renewcommand{\labelenumi}{\roman{enumi})}
 \begin{enumerate}
-\item \emph{limit to accuracy}:  If real numbers are represented on the computer with machine precision $\eps$ then the solution of \eqref{introsystem} can only be computed within an error $\kappa(A) \eps$ where $\kappa(A) = \|A\|_2 \|A^{-1}\|_2$ is the (2-norm) \emph{condition number} of $A$.\sidenote{Fact i) is about \emph{conditioning} not \emph{methods}.  Informally speaking, there are linear systems $A,\bb$ that are the same to within $\eps$ but for which the infinite-precision solutions $\bu$ are different by the amount $\kappa(A) \eps$.}
+\item \emph{limit to accuracy}:\sidenote{Fact i) is about \emph{conditioning} not \emph{methods}.  Informally speaking, there are linear systems that are the same to within $\eps$ but for which the infinite-precision solutions $\bu$ differ by an amount $\kappa(A) \eps$.}  If real numbers are represented on the computer with machine precision $\eps$ then the solution of \eqref{introsystem} can only be computed within an error $\kappa(A) \eps$ where $\kappa(A) = \|A\|_2 \|A^{-1}\|_2$ is the (2-norm) \emph{condition number} of $A$.
 \item \emph{cost of direct solutions}:  Computation of solution \eqref{introsolution} by a direct method like Gauss elimination, whether actually forming $A^{-1}$ or not, is an $O(N^3)$ operation.
 \end{enumerate}
 
-For a sense of the consequences of these facts, let's put in some numbers for $\eps$, $\kappa(A)$, and $N$.  On most computers the precision for the C \texttt{double} type, the modern default 64-bit representation of real numbers, is $\eps = 2.2 \times 10^{-16}$.  By i), a linear system having $\kappa(A) \approx 10^{10}$, for example, can only be solved to about six digits of precision.
+For a sense of the consequences of these facts, let's put in some numbers for $\eps$, $\kappa(A)$, and $N$.  On modern computers the precision for the C \texttt{double} type, the default 64-bit representation of real numbers, is $\eps = 2.2 \times 10^{-16}$.  Thus by i), a linear system having $\kappa(A) \approx 10^{10}$, for example, can only be solved to about six digits of precision.
 
-Regarding computational cost, because of ii) a linear system with $N=10^6$ equations requires $\sim 10^{18}$ operations to solve by Gauss elimination.  While even modern supercomputers take a while to do a quintillion operations, so that Gauss elimination is impractical for systems of $N=10^6$ equations, we will successfully solve problems of this size on a single processor in a few seconds, and in $O(N)$ operations, in Chapter \ref{chap:multigrid}.
+Regarding computational cost, because of ii) a generic linear system with $N=10^6$ equations requires $\sim 10^{18}$ operations to solve by Gauss elimination.  While even modern supercomputers take a while to do a quintillion operations, so that Gauss elimination is impractical for systems of $N=10^6$ equations, we will successfully solve PDE-generated problems of this size on a single processor in a few seconds, and in $O(N)$ operations, in Chapter \ref{chap:multigrid}.
 %time ./c4poisson -da_refine 7 -ksp_type cg -pc_type mg
 %on 1153 x 1153 grid:  iterations 2, residual norm = 1.88082e-05
 %real 11.18
 
-To build our first \PETSc code for a linear system, we describe the \PETSc objects which store vectors and matrices.
-
 
 \section{\PETSc \pVec and \pMat objects}
+
+To build our first \PETSc code to solve a linear system, we describe the \PETSc objects which store vectors and matrices.
 
 The \pVec object is a container and interface for a distributed vector, and a \pMat object holds a distributed matrix.  Although \PETSc is written in C, not C++, it is a relentlessly object-oriented software library.  Consider the operations which might touch a matrix object \texttt{A} in a linear system like \eqref{introsystem}:
 \begin{code}
