@@ -30,7 +30,7 @@ For examples, try
 
 #include <petscdmda.h>
 #include <petscts.h>
-#include "structuredlaplacian.h"
+#include "structuredpoisson.h"
 
 
 // use both for initial condition at t=0 and exact solution at t=tf
