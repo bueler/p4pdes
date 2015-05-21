@@ -9,7 +9,7 @@ Try:\n\
   ./c1matvec -ksp_view                  # show default KSP type, etc.\n\
   ./c1matvec -ksp_monitor -ksp_type cg  # try CG instead of default GMRES\n\n";
 
-#include <petscksp.h>
+#include <petsc.h>
 
 int main(int argc,char **args)
 {

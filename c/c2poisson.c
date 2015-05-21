@@ -67,8 +67,7 @@ static char help[] = "Solves a structured-grid Poisson problem with DMDA and KSP
 
 
 #include <math.h>
-#include <petscdmda.h>
-#include <petscksp.h>
+#include <petsc.h>
 #include "structuredpoisson.h"
 
 //CREATE
