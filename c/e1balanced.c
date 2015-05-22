@@ -24,13 +24,12 @@ int main(int argc,char **args) {
     MPI_Status status;
     ierr =  MPI_Recv(&localval, 1, MPI_DOUBLE, rank-1, MPI_ANY_TAG,
              PETSC_COMM_WORLD, &status); CHKERRQ(ierr);
-    localval *= rank;
+    localval /= rank;
     if (rank < size-1) {
       ierr = MPI_Send(&localval, 1, MPI_DOUBLE, rank+1, 1,
                PETSC_COMM_WORLD); CHKERRQ(ierr);
     }
   }
-  localval = 1.0 / localval;
 
   // sum the contributions over all processes
   ierr = MPI_Allreduce(&localval, &globalsum, 1, MPI_DOUBLE, MPI_SUM,
@@ -42,7 +41,7 @@ int main(int argc,char **args) {
 
   // from each process, output report on work done
   ierr = PetscPrintf(PETSC_COMM_SELF,
-                     "rank %d did %d flops\n",rank,rank == 0 ? 1+1 : 2+1); CHKERRQ(ierr);
+                     "rank %d did %d flops\n",rank,rank == 0 ? 1 : 2); CHKERRQ(ierr);
 
   PetscFinalize();  // <-- always call
   return 0;
