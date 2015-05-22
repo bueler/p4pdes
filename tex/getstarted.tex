@@ -60,16 +60,12 @@ $ mpiexec -n 20 ./c1e
 e is about 2.718281828459045
 rank 0 did 0 flops
 ...
-rank 10 did 20 flops
-...
-rank 19 did 38 flops
-rank 13 did 26 flops
 \end{cline}
 %$
 
 \cinputraw{c1emakefile.frag}{extract from \texttt{p4pdes/c/makefile}}{All \texttt{makefile}s for our \PETSc codes look like this.}{}{//START}{//STOP}{code:c1emakefile}
 
-Perhaps the reader is now worried that this book was written using a large supercomputer whereas the reader has a little laptop with only a couple of cores.  In fact these five or twenty process runs work just fine on the author's four-core laptop.  MPI processes are created as needed, using an old feature of operating systems: multitasking.  Speedup from parallelism is another matter; we will return to it.
+Perhaps the reader is now worried that this book was written using a large supercomputer whereas the reader has a little laptop with only a couple of cores.  In fact these five or twenty process runs work just fine on the author's laptop.  MPI processes are created as needed, using an old feature of operating systems: multitasking.  Speedup from parallelism is another matter; we will return to it.
 
 The main job in \texttt{c1e.c} is to collect the sum of the terms of series \eqref{introeseries} onto each process.  Each process computes term $1/n!$, where $n$ is the rank in the MPI communicator returned by \texttt{MPI\_Comm\_rank()}.  Then a call to \texttt{MPI\_Allreduce()} does the sum and then sends it back to each process.  These direct uses of the MPI library are a part of using \PETSc, which avoids duplicating MPI functionality.
 
@@ -109,7 +105,7 @@ Examples in this book always capture-and-check the returned error code using \te
 
 \section{Linear systems}
 
-Of course, our goal is to compute more interesting quantities than Euler's constant $e$.  At the core of most \PETSc computations is a finite-dimensional linear system.  Before solving such systems in \PETSc, it is useful to recall the most basic ideas of numerical linear algebra.
+Of course, our goal is to compute more interesting quantities than Euler's constant $e$.  At the core of most \PETSc computations is a finite-dimensional linear system.  Before solving such systems in \PETSc, we recall the most basic ideas of numerical linear algebra.
 
 Suppose $\bb\in \RR^{N}$ is a column vector and $A\in\RR^{N\times N}$ is a square matrix.  The linear system
 \begin{equation}
@@ -121,16 +117,16 @@ has a unique solution if $A$ is invertible, namely
 \end{equation}
 This is simple in theory.
 
-It is not so simple in practice, however, when solving large systems on a computer.  There are two key facts to keep in mind while working numerically  \citep{TrefethenBau}.
+It is not so simple in practice, however, to solve large systems on a computer.  There are two key facts to keep in mind while working numerically  \citep{TrefethenBau}.
 \renewcommand{\labelenumi}{\roman{enumi})}
 \begin{enumerate}
-\item \emph{limit to accuracy}:\sidenote{Fact i) is about \emph{conditioning} not \emph{methods}.  Informally speaking, there are linear systems that are the same to within $\eps$ but for which the infinite-precision solutions $\bu$ differ by an amount $\kappa(A) \eps$.}  If real numbers are represented on the computer with machine precision $\eps$ then the solution of \eqref{introsystem} can only be computed within an error $\kappa(A) \eps$ where $\kappa(A) = \|A\|_2 \|A^{-1}\|_2$ is the (2-norm) \emph{condition number} of $A$.
+\item \emph{limit to accuracy}:  If real numbers are represented on the computer with machine precision $\eps$ then the solution of \eqref{introsystem} can only be computed within an error $\kappa(A) \eps$ where $\kappa(A) = \|A\|_2 \|A^{-1}\|_2$ is the (2-norm) \emph{condition number} of $A$.
 \item \emph{cost of direct solutions}:  Computation of solution \eqref{introsolution} by a direct method like Gauss elimination, whether actually forming $A^{-1}$ or not, is an $O(N^3)$ operation.
 \end{enumerate}
 
-For a sense of the consequences of these facts, let's put in some numbers for $\eps$, $\kappa(A)$, and $N$.  On modern computers the precision for the C \texttt{double} type, the default 64-bit representation of real numbers, is $\eps = 2.2 \times 10^{-16}$.  Thus by i), a linear system having $\kappa(A) \approx 10^{10}$, for example, can only be solved to about six digits of precision.
+Fact i) is about \emph{conditioning} not \emph{methods}.  Informally speaking, there are linear systems that are the same to within $\eps$ but for which the infinite-precision solutions $\bu$ differ by an amount $\kappa(A) \eps$.
 
-Regarding computational cost, because of ii) a generic linear system with $N=10^6$ equations requires $\sim 10^{18}$ operations to solve by Gauss elimination.  While even modern supercomputers take a while to do a quintillion operations, so that Gauss elimination is impractical for systems of $N=10^6$ equations, we will successfully solve PDE-generated problems of this size on a single processor in a few seconds, and in $O(N)$ operations, in Chapter \ref{chap:multigrid}.
+For a sense of the consequences of these facts, let's put in some numbers for $\eps$, $\kappa(A)$, and $N$.  On modern computers the precision for the C \texttt{double} type, the default 64-bit representation of real numbers, is $\eps = 2.2 \times 10^{-16}$.  Thus by i), a linear system having $\kappa(A) \approx 10^{10}$, for example, can only be solved to about six digits of precision.  By ii) a generic linear system with $N=10^6$ equations requires $\sim 10^{18}$ operations to solve by Gauss elimination.  Even modern supercomputers take a while to do a quintillion operations.  However, though Gauss elimination is impractical for systems of $N=10^6$ equations, we will successfully solve PDE-generated linear systems of this size on a single processor in a few seconds, and in $O(N)$ operations, in Chapter \ref{chap:multigrid}.
 %time ./c4poisson -da_refine 7 -ksp_type cg -pc_type mg
 %on 1153 x 1153 grid:  iterations 2, residual norm = 1.88082e-05
 %real 11.18
@@ -138,9 +134,9 @@ Regarding computational cost, because of ii) a generic linear system with $N=10^
 
 \section{\PETSc \pVec and \pMat objects}
 
-To build our first \PETSc code to solve a linear system, we describe the \PETSc objects which store vectors and matrices.
+To build our first \PETSc code to solve a linear system, we need the \PETSc objects which store vectors and matrices.  The \pVec object is a container and interface for a distributed vector, and a \pMat object holds a distributed matrix.
 
-The \pVec object is a container and interface for a distributed vector, and a \pMat object holds a distributed matrix.  Although \PETSc is written in C, not C++, it is a relentlessly object-oriented software library.  Consider the operations which might touch a matrix object \texttt{A} in a linear system like \eqref{introsystem}:
+Although \PETSc is written in C, not C++, it is a relentlessly object-oriented software library.  Consider the operations which would create and configure a matrix object \texttt{A} for linear system \eqref{introsystem}:
 \begin{code}
 Mat A;
 MatCreate(COMM,&A);
@@ -152,29 +148,30 @@ MatSetFromOptions(A);
 ... solve system with A ...
 MatDestroy(&A);
 \end{code}
-In fact, for ``\pVec'' objects storing vectors, ``\pMat'' objects storing matrices, and indeed for all \PETSc object types, this basic sequence of operations applies:
+
+Of course \texttt{Mat A} has an internal representation with nontrivial structure, but that is hidden.  Even the act of filling entries will treat \texttt{A} as an abstract object.  Furthermore the data structure inside \texttt{A} depends on runtime choices, the most basic being that the number of bytes used to store \texttt{A} on a given MPI process will depend on the number of processes.  At a deeper level, a \PETSc \pMat object need not even \emph{have} entries, but might instead be code that applies a linear operator to vectors.
+
+Indeed for all \PETSc object types this basic sequence of operations applies:
 \begin{code}
 Object X;
 ObjectCreate(COMM,&X);
-... set properties of X from code ...
-ObjectSetFromOptions(X);  // allows run-time setting of properties
-... use X ...
+... code sets properties of X ...
+ObjectSetFromOptions(X);  // allows run-time setting/overriding of properties
+... code uses X ...
 ObjectDestroy(&X);
 \end{code}
-Of course ``\texttt{Object}'' here is merely a meta-name for a \PETSc type like \pVec or \pMat.
+(Here ``\texttt{Object}'' is a meta-name for a \PETSc type like \pVec or \pMat.)
 
-\PETSc objects are generically distributed across, and accessible from, multiple MPI processes.  Therefore the first argument of an \texttt{ObjectCreate()} method is an MPI communicator (``\texttt{COMM}'').  All processes in \texttt{COMM} must call the \texttt{ObjectCreate()} method.
+\PETSc objects are generally distributed across, and accessible from, multiple MPI processes.  Therefore the first argument of an \texttt{ObjectCreate()} method is an MPI communicator (``\texttt{COMM}'').  All processes in \texttt{COMM} must call the \texttt{ObjectCreate()} and  \texttt{ObjectDestroy()} methods.
 
-Evidently \texttt{Mat A} above has an internal representation with nontrivial structure, but that is hidden.  Indeed the data structure inside \texttt{A} depends on runtime choices, the most basic being that the number of bytes used to store \texttt{A} on a given MPI process will depend on the number of processes.  At a deeper level, a \PETSc \pMat object need not even \emph{have} entries, but it may instead represent code that applies a linear operator to vectors.
+In the \pMat code above, note the call to \texttt{MatSetOptionsPrefix()}.  Through this ``prefix'', run-time options can address the particular \pMat object.  For example, the run-time option \texttt{-a\_mat\_view} will print out the entries of \texttt{A}.  An option prefix like ``\texttt{a\_}'' is especially helpful in distinguishing multiple \pMat objects at the command line.
 
-Because of the call to \texttt{MatSetOptionsPrefix()}, run-time options can specifically address the particular \pMat object.  For example, the run-time option \texttt{-a\_mat\_view} will print out the entries of \texttt{A}.  An option prefix like ``\texttt{a\_}'' is especially helpful in distinguishing \pMat objects at the command line in a context with multiple \pMats.
-
-Once \texttt{A} is created and set up by the first five commands \texttt{MatCreate()}--\texttt{MatSetFromOptions()}, then various methods become valid for \texttt{A}, for example including the \texttt{MatSetValues()} method to set entries in \texttt{A}.
+Once \texttt{A} is created and set up by the first five commands \texttt{MatCreate()}--\texttt{MatSetFromOptions()}, then various methods become valid for \texttt{A}, for example including the \texttt{MatSetValues()} method to set entries in \texttt{A}.  We will use that method in codes in many later sections.
 
 
 \section{Assembly and parallel layout of \pVecs and \pMats}
 
-Fundamentally, a \pVec or \pMat can store its entries in parallel across all the processes in the MPI communicator used when creating it.  For the \pVec type, the create-assemble sequence of a vector with four entries might look like
+A \pVec or \pMat stores its entries in parallel across all the processes in the MPI communicator used when creating it.  For example, the create-assemble sequence of a \pVec with four entries might look like
 \begin{code}
 Vec x;
 PetscInt   i[4] = {0, 1, 2, 3};
@@ -187,7 +184,9 @@ VecSetValues(x,4,i,vals,INSERT_VALUES);
 VecAssemblyBegin(x);
 VecAssemblyEnd(x);
 \end{code}
-The four entries of \texttt{Vec x} are (obviously) set by \texttt{VecSetValues()}, putting values from array \texttt{vals[]} at the indices given by \texttt{i[]}.  Potentially such operations require communication between processes, because entries of \texttt{x} which are stored on process $m$ could be set by processor $n$.  Such communication is started and ended by the \texttt{VecAssemblyBegin(), VecAssemblyEnd()} pair of commands.
+The four entries of \texttt{Vec x} are set by \texttt{VecSetValues()}, putting values from array \texttt{vals[]} at the indices given by \texttt{i[]}.
+
+Potentially the operation of setting values in \texttt{x} requires communication between processes, because entries of \texttt{x} which are to be stored on one process could be set by another process.  Such communication occurs between the \texttt{VecAssemblyBegin()} and \texttt{VecAssemblyEnd()} commands.
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
@@ -211,19 +210,17 @@ The four entries of \texttt{Vec x} are (obviously) set by \texttt{VecSetValues()
 \label{fig:seqveclayout}
 \end{marginfigure}
 
-Suppose this sequence appears in a program called \texttt{myprogram.c}.  If the program is run sequentially on one process, i.e.~as
+Suppose the above code appears in \texttt{mycode.c}.  If it is run sequentially on one process, i.e.~as
 \begin{cline}
-$ ./myprogram.c
+$ ./mycode.c
 \end{cline}
 %$
-then, at the end of the above create-assemble sequence, the storage of \texttt{x} looks like Figure \ref{fig:seqveclayout}.
-
-However, if run as
+then, at the end of the above create-assemble sequence, the storage of \texttt{x} looks like Figure \ref{fig:seqveclayout}.  However, if run as
 \begin{cline}
-$ mpiexec -n 2 ./myprogram.c
+$ mpiexec -n 2 ./mycode.c
 \end{cline}
 %$
-then the layout looks like Figure \ref{fig:mpitwoveclayout}.  In this case the argument \texttt{PETSC\_DECIDE} in \texttt{VecSetSizes()} is active because \PETSc \emph{decides} to put the first two entries of \texttt{x} on the rank $0$ process and the other two on the rank $1$ process. 
+then the layout looks like Figure \ref{fig:mpitwoveclayout}.  In this case the argument \texttt{PETSC\_DECIDE} in \texttt{VecSetSizes()} is active.  \PETSc decides to put the first two entries of \texttt{x} on the rank $0$ process and the other two on the rank $1$ process. 
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
@@ -249,7 +246,7 @@ then the layout looks like Figure \ref{fig:mpitwoveclayout}.  In this case the a
 \label{fig:mpitwoveclayout}
 \end{marginfigure}
 
-Though in the current context it is completely artificial, one could override the ``\texttt{PETSC\_DECIDE}'' parallel layout by replacing the \texttt{VecSetSizes()} line with this block of code:
+By contrast, one could override the ``\texttt{PETSC\_DECIDE}'' parallel layout by replacing the \texttt{VecSetSizes()} line with this block of code:
 \begin{code}
 PetscMPIInt rank;
 MPI_Comm_rank(COMM,&rank);
@@ -261,13 +258,7 @@ if (rank == 0) {
   SETERRQ(COMM,1,"this code only works with size==2 communicators");
 }
 \end{code}
-That is, we could specify the ``local size'' argument to \texttt{VecSetSizes()}, instead of using \texttt{PETSC\_DECIDE}.\sidenote{In fact such inflexible coding is rarely necessary.}  The resulting layout is shown in Figure \ref{fig:artificialmpitwoveclayout}.
-
-In summary, the reader is allowed to think of a \PETSc \pVec as a one-dimensional C array with its range of indices and contents ``broken-up'' across the processes in the MPI communicator used in the \texttt{VecCreate()} command.
-
-Parallel matrix objects \pMat, which are at some level conceived as 2D arrays, obviously require an additional choice regarding distribution.  But \PETSc makes this choice inside the implementation of \pMat.  Namely, \PETSc always stores ranges of complete rows on each process.  Said another way, conceptually at least, the column vectors which form the \pMat are stored like \pVecs.
-
-While other storage formats are possible, the one usually used in this book is \emph{parallel compressed sparse row storage}, what \PETSc calls the \texttt{MATMPIAIJ} type.  That is, a range of rows is owned by each process (parallel row storage), and within each owned range of rows only the nonzero entries are stored (sparse), and furthermore the data structures store these nonzero entries contiguously in an array, with an additional contiguous index array (compressed).
+That is, we could specify the ``local size'' argument to \texttt{VecSetSizes()}, instead of using \texttt{PETSC\_DECIDE}.  The resulting layout is shown in Figure \ref{fig:artificialmpitwoveclayout}.  Fortunately, inflexible coding like this is rarely necessary.
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
@@ -293,7 +284,17 @@ While other storage formats are possible, the one usually used in this book is \
 \label{fig:artificialmpitwoveclayout}
 \end{marginfigure}
 
-For example, the following code creates and assembles a \pMat \texttt{A} with four rows and four columns:
+The reader is allowed to think of a \PETSc \pVec as a one-dimensional C array with its contents split across the processes in the MPI communicator used in the \texttt{VecCreate()} command.
+
+\pMat objects, though not actually 2D arrays, require additional choices regarding parallel distribution.  Though this is done inside the implementation of \pMat, and generally is hidden, the most common storage format is \emph{parallel compressed sparse row storage}, what \PETSc calls the \texttt{MATMPIAIJ} type.  That is, a range of rows is owned by each process (parallel row storage), and within each owned range of rows only the nonzero entries are stored (sparse), and furthermore the data structures store these nonzero entries contiguously in an array, with an additional contiguous index array (compressed).
+
+The result vector of a \pMat-\pVec product is a linear combination of the columns of the \pMat.  In practice, ``parallel row storage'' means these things:\begin{itemize}
+\item \PETSc internally distributes the rows of the \pMat $A$ the same way as the entries of the intended output \pVec $b$, i.e.~if $Ax=b$ for some $x$, at least when \texttt{PETSC\_DECIDE} is used in setting \pVec and \pMat sizes.
+\item Before \PETSc multiplies a matrix times a vector, \PETSc communicates (``scatters'') the whole vector to each process.
+\item After the scatter the \pMat-\pVec product is a local operation, requiring no further communication.
+\end{itemize}
+
+But one doesn't really need to know all this!  For example, here is how to create and assemble a $4\times 4$ \pMat one row at a time:
 % see testmatcreate.c
 \begin{code}
 Mat A;
@@ -323,14 +324,7 @@ MatSetValues(A,1,&i,2,j,v,INSERT_VALUES);
 MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);
 MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);
 \end{code}
-The method \texttt{MatSetValues()} sets a \emph{block} of values, and in this case we use it to set each row of the matrix.  Thus ``\texttt{1,\&i}'' arguments to \texttt{MatSetValues()} say ``we are setting one row, and look at the location of integer \texttt{i} for the (global) index.''  The ``\texttt{3,\&j}'' arguments, used in the \texttt{i} $=1,2$ rows, say ``we are setting three values in the row, and look at integer array \texttt{j} for the (global) indices.''
-
-If the above lines appeared in \texttt{myprogram.c}, and if it was run
-\begin{cline}
-$ mpiexec -n 2 ./myprogram
-\end{cline}
-%$
-then this \pMat would have the entries and layout shown in Figure \ref{fig:mpitwomatlayout}.
+The method \texttt{MatSetValues()} sets a \emph{block} of values, in this case a row.  The ``\texttt{1,\&i}'' arguments to \texttt{MatSetValues()} say ``we are setting one row with global index \texttt{i}.''  The ``\texttt{3,j}'' arguments, used in the \texttt{i} $=1,2$ rows, say ``set three values in the row using integer array \texttt{j} for the (global) column indices.''
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
@@ -373,16 +367,21 @@ then this \pMat would have the entries and layout shown in Figure \ref{fig:mpitw
 \label{fig:mpitwomatlayout}
 \end{marginfigure}
 
-We can have \PETSc show us the \pMat in different formats at the command line:
+If the above lines appeared in \texttt{mycode.c}, and if it was run
 \begin{cline}
-$ ./myprogram -mat_view
+$ mpiexec -n 2 ./mycode
+\end{cline}
+%$
+then the layout would be as in Figure \ref{fig:mpitwomatlayout}.  We could have \PETSc show us the \pMat in different formats at the command line:
+\begin{cline}
+$ ./mycode -mat_view
 Mat Object: 1 MPI processes
   type: seqaij
 row 0: (0, 4)  (1, -1)
 row 1: (0, -1)  (1, 4)  (2, -1)
 row 2: (1, -1)  (2, 4)  (3, -1)
 row 3: (2, -1)  (3, 4)
-$ ./myprogram -mat_view ::ascii_dense
+$ ./mycode -mat_view ::ascii_dense
 Mat Object: 1 MPI processes
   type: seqaij
  4.00000e+00  -1.00000e+00  0.00000e+00  0.00000e+00
@@ -390,18 +389,10 @@ Mat Object: 1 MPI processes
  0.00000e+00  -1.00000e+00  4.00000e+00  -1.00000e+00
  0.00000e+00  0.00000e+00  -1.00000e+00  4.00000e+00
 \end{cline}
-The former view shows the compressed sparse storage, wherein only the nonzero values are shown, as pairs with column index and value, while the latter is a traditional (``dense'') display where zero values are shown.  In these cases the matrix was stored in \emph{serial} compressed sparse row format, the \texttt{MATSEQAIJ} type.
-
-The result vector of a \pMat-\pVec product is, of course, a linear combination of the columns of the \pMat.  Thus, in practice, ``parallel row storage'' layout normally means two things:\begin{itemize}
-\item \PETSc internally distributes the rows of the \pMat $A$ the same way as the entries of the intended output \pVec $b$, i.e.~if $Ax=b$ for some $x$, at least when \texttt{PETSC\_DECIDE} is used in setting the \pMat sizes, and
-\item before \PETSc multiplies a matrix times a vector, \PETSc automatically communicates (``scatters'') the whole vector to each process.
-\end{itemize}
-After the scatter the \pMat-\pVec product is a local operation, requiring no further communication.
-
-FIXME: assembly of \pMat a bit idiosyncratic; \texttt{MatSetValues()} sets a \emph{block} of values, not arbitrary inserts into sparse storage; need either MatXXXSetPreallocation() or MatSetUp() before MatGetOwnershipRange()
+The former view shows the compressed sparse storage, with nonzero values as pairs with column index and value.  The latter view is a traditional (``dense'') display where zero values are shown.  In these cases the matrix was stored in \emph{serial} compressed sparse row format, the \texttt{MATSEQAIJ} type, because of the one-process execution.
 
 
-\section{Solve a linear system in \PETSc}
+\section{Solve a structured linear system in \PETSc}
 
 \cinputpartnostrip{c1matvec.c}{Initialize \PETSc and set up \pVecs and \pMat.}{I}{}{//ENDSETUP}{code:matvecpartone}
 
@@ -412,6 +403,8 @@ FIXME: emphasize that \texttt{MatGetOwnershipRange()} means that different proce
 \cinputpartnostrip{c1matvec.c}{Set up \pKSP.  Solve.  Finalize.}{III}{//ENDASSEMBLY}{//END}{code:matvecpartthree}
 
 FIXME: show sparse and Matlab-format output for \texttt{A}, noting we get this at the \texttt{MatAssemblyEnd()} stage %$ ./c1matvec -a_mat_view ::ascii_matlab
+
+FIXME: need either MatXXXSetPreallocation() or MatSetUp() before MatGetOwnershipRange()
 
 FIXME: solve without choosing method
 
