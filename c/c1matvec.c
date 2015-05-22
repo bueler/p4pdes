@@ -16,7 +16,7 @@ int main(int argc,char **args)
   Vec            x,b,xexact;
   Mat            A;
   KSP            ksp;
-  PetscErrorCode  ierr;
+  PetscErrorCode ierr;
 
   PetscInitialize(&argc,&args,(char*)0,help);
 
@@ -76,6 +76,7 @@ int main(int argc,char **args)
   ierr = KSPDestroy(&ksp); CHKERRQ(ierr);
   ierr = VecDestroy(&x); CHKERRQ(ierr);
   ierr = VecDestroy(&b); CHKERRQ(ierr);
+  ierr = VecDestroy(&xexact); CHKERRQ(ierr);
   ierr = MatDestroy(&A); CHKERRQ(ierr);
   PetscFinalize();
   return 0;
