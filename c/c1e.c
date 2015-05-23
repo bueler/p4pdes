@@ -4,9 +4,8 @@ static char help[] = "Compute e in parallel with PETSc.\n\n";
 
 int main(int argc, char **args) {
   PetscErrorCode  ierr;
-  PetscMPIInt     rank;
-  PetscScalar     localval, globalsum;
-  int             i;
+  int             rank, i;
+  PetscReal       localval, globalsum;
 
   PetscInitialize(&argc,&args,(char*)0,help);
 

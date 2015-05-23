@@ -4,7 +4,7 @@
 
 \section{A code that does almost nothing, but in parallel}
 
-The purpose of the \PETSc library is to help you solve scientific and engineering problems, such as PDEs, on distributed computers.  As \PETSc is built ``on top of'' the Message Passing Interface (MPI; \citep{Groppetal1999}) library, some of the MPI flavor comes through.  We start with an an introductory MPI code, though it calls \PETSc for some basic tasks.
+The purpose of the \PETSc library is to help you solve scientific and engineering problems, such as PDEs, on multi-processor computers.  As \PETSc is built ``on top of'' the Message Passing Interface (MPI; \citep{Groppetal1999}) library, some of the MPI flavor comes through.  Therefore we start with an an introductory MPI code which calls \PETSc for some basic tasks.
 
 This code \texttt{c1e.c}, shown in its entirety in Figure \ref{code:e}, approximates Euler's constant
 \begin{equation}
@@ -14,9 +14,9 @@ It does the computation in a distributed manner by computing one term of the inf
 
 As with any C source code, \texttt{c1e.c} has a function called \texttt{main()} which takes inputs from the command line, namely \texttt{argc} and \texttt{argv},\sidenote{Here \texttt{argc} is an \texttt{int} holding the argument count and \texttt{argv} is an array of strings (i.e.~type \texttt{char**}) holding the command line including all arguments.  However, in all codes in this book we simply pass these arguments on to \PETSc through the \texttt{PetscInitialize()} method.  \PETSc extracts options through this mechanism.} and which outputs an \texttt{int}.  The output is $0$ if the program succeeds.  Also like all C codes, we include needed headers.  Only \texttt{petsc.h} is needed.
 
-The substance of \texttt{c1e.c} is to declare some variables, do a computation on each process, and communicate the results between processes to get an estimate of $e$.  More details will be described once we compile and run the code.
+The substance of \texttt{c1e.c} is to declare some variables, do a computation on each process, and communicate the results between processes to get an estimate of $e$.
 
-Before doing anything else, \PETSc must be installed.  For example, go to
+Before we can compile and run \texttt{c1e.c}, \PETSc must be installed.  If it is not already available, go to
 \begin{quote}
 \href{http://www.mcs.anl.gov/petsc/download/index.html}{\texttt{www.mcs.anl.gov/petsc/download/}}
 \end{quote}
@@ -24,7 +24,7 @@ to download the source code, and then follow the instructions at
 \begin{quote}
 \href{http://www.mcs.anl.gov/petsc/documentation/installation.html}{\texttt{www.mcs.anl.gov/petsc/documentation/installation.html}}
 \end{quote}
-to install.  Be sure to run ``\texttt{make test}'' and see it pass the tests.  If \PETSc is correctly installed then  environment variables \texttt{PETSC\_DIR} and \texttt{PETSC\_ARCH} point to a valid installation, and the MPI command \texttt{mpiexec} is from the same MPI installation as was used in configuring \PETSc.
+to install.  Be sure to run ``\texttt{make test}'' and see it pass the tests.  If \PETSc is correctly installed then  environment variables \texttt{PETSC\_DIR} and \texttt{PETSC\_ARCH} point to a valid installation, and the MPI command \texttt{mpiexec} is from the same MPI installation as was used in configuring \PETSc.\sidenote{Type ``\texttt{which mpiexec}'' to find which one you are running.  You may need to modify your \texttt{PATH} environment variable to get the right \texttt{mpiexec}.}
 
 Do the following to compile \texttt{c1e.c}:
 \begin{cline}
@@ -32,7 +32,7 @@ $ cd p4pdes/c/
 $ make c1e
 \end{cline}
 %$
-Calling ``\texttt{make}'' uses \texttt{p4pdes/c/makefile}.  An extract is shown in Figure \ref{code:c1emakefile}.  For all the codes in this book, the makefile has this form, as recommended in the \PETSc \emph{User's Manual} \citep{petsc-user-ref}.
+Calling ``\texttt{make}'' uses \texttt{p4pdes/c/makefile}.  An extract of this makefile is shown in Figure \ref{code:c1emakefile}.  For all the codes in this book, the makefile has this form, as recommended in the \PETSc \emph{User's Manual} \citep{petsc-user-ref}.
 
 \inputwhole{../c/c1e.c}{\texttt{p4pdes/c/c1e.c}}{Compute $e$ in parallel with \PETSc.}{code:e}
 
@@ -67,7 +67,7 @@ rank 0 did 0 flops
 
 Perhaps the reader is now worried that this book was written using a large supercomputer whereas the reader has a little laptop with only a couple of cores.  In fact these five or twenty process runs work just fine on the author's laptop.  MPI processes are created as needed, using an old feature of operating systems: multitasking.  Speedup from parallelism is another matter; we will return to it.
 
-The main job in \texttt{c1e.c} is to collect the sum of the terms of series \eqref{introeseries} onto each process.  Each process computes term $1/n!$, where $n$ is the rank in the MPI communicator returned by \texttt{MPI\_Comm\_rank()}.  Then a call to \texttt{MPI\_Allreduce()} does the sum and then sends it back to each process.  These direct uses of the MPI library are a part of using \PETSc, which avoids duplicating MPI functionality.
+The main job in \texttt{c1e.c} is to collect the sum of the terms of series \eqref{introeseries} onto each process.  Each process computes term $1/n!$, where $n$ is returned by \texttt{MPI\_Comm\_rank()}.  More precisely, \texttt{PETSC\_COMM\_WORLD} is an MPI communicator \citep{Groppetal1999} containing all processes generated by \texttt{mpiexec} in the above calls, and $n$ is the rank of the process in this communicator.  Then a call to \texttt{MPI\_Allreduce()} does the sum and then sends it back to each process.  These direct uses of the MPI library are a part of using \PETSc because \PETSc generally avoids duplicating MPI functionality.
 
 We print the computed estimate of $e$, but each process also prints its rank and the work it did.  The formatted print command \texttt{PetscPrintf()}, which is like \texttt{fprintf()} from the C standard library, is called twice, once with MPI communicator \texttt{PETSC\_COMM\_WORLD} and once with \texttt{PETSC\_COMM\_SELF}.  The first of these printing jobs is \emph{collective} over all processes, and thus only done once, while the second is individual to each rank.\sidenote{A process is often just called a \emph{rank} in MPI language.}  In the output the \texttt{PETSC\_COMM\_SELF} printed lines can appear in random order because the print occurs as soon as that process reaches that line.
 
@@ -77,8 +77,7 @@ PetscInitialize(&argc,&args,(char*)0,help);
 ... everything else goes here ...
 PetscFinalize();
 \end{code}
-
-To provide usage help, we add a \texttt{help} string at the start.  Tt is a good place to say what the purpose of the code is.  To see the help string, and a longer list of possible options, do:
+As an argument to \texttt{PetscInitialize()} we supply a \texttt{help} string.  This string is a good place to say what is the purpose of the code.  To see the help string, and a longer list of possible \PETSc options, do:
 \begin{cline}
 $ ./c1e -help
 \end{cline}
@@ -88,24 +87,25 @@ or
 $ ./c1e -help | less
 \end{cline}
 %$
-Thereby \PETSc programs have a built-in help system for runtime options that is both light-weight and surprisingly-effective.  For example, to see options related to logging performance, do
+Through \texttt{-help}, \PETSc programs have a built-in help system for runtime options that is both light-weight and surprisingly-effective.  For example, to see options related to logging performance, do
 \begin{cline}
 $ ./c1e -help | grep log_
 \end{cline}
 %$
+We will see later how to add options to our own programs so that they will be documented in the same way.
 
-Unfortunately, \texttt{c1e.c} and all other \PETSc programs have error-checking clutter.  While languages other than C could help with decluttering this stuff, we are stuck with ugly lines that look like
+Unfortunately, \texttt{c1e.c} and all other \PETSc programs have error-checking clutter.  While languages other than C might help with decluttering, we are stuck with ugly lines that look like
 \begin{code}
 ierr = PetscCommand(...); CHKERRQ(ierr);
 \end{code}
-The explanation is that almost all \PETSc methods, and most user-written methods in \PETSc programs, return an \texttt{int} for error checking, with value $0$ if successful.  In the line above, \texttt{ierr} is a \texttt{PetscInt} type and \texttt{CHKERRQ()} is a macro which does nothing if \texttt{ierr == 0} but which stops the program with a ``traceback'' otherwise.\sidenote{A traceback is a list of the nested methods, in reverse order, showing the line numbers and method names of the location where the error occurred.}  This traceback mechanishm tends to be the first line of defense when debugging run-time errors, and it is most effective if \PETSc is configured with debugging symbols, i.e.~with the option \texttt{--with-debugging=1}.
+The explanation is that almost all \PETSc methods, and most user-written methods in \PETSc programs, return an \texttt{int} for error checking, with value $0$ if successful.  In the line above, \texttt{ierr} is passed to the \texttt{CHKERRQ()} macro which does nothing if \texttt{ierr == 0} but which stops the program with a ``traceback'' otherwise.\sidenote{A traceback is a list of the nested methods, in reverse order, showing the line numbers and method names of the location where the error occurred.}  This traceback mechanishm tends to be the first line of defense when debugging run-time errors.  It is most effective if \PETSc is configured with debugging symbols, i.e.~with the option \texttt{--with-debugging=1}.
 
-Examples in this book always capture-and-check the returned error code using \texttt{ierr} and \texttt{CHKERRQ()}.  However, after this chapter we will strip the ``\texttt{ierr =}'' and ``\texttt{CHKERRQ(ierr);}'' clutter from the code displayed in the text, though it is still present in the source itself.
+Examples in this book always capture-and-check the returned error code using \texttt{ierr} and \texttt{CHKERRQ()}; these are always present in the \texttt{.c} sources in \texttt{p4pde/c/}.  However, after this chapter we will strip the ``\texttt{ierr =}'' and ``\texttt{CHKERRQ(ierr);}'' clutter from the code displayed in the text.
 
 
 \section{Linear systems}
 
-Of course, our goal is to compute more interesting quantities than Euler's constant $e$.  At the core of most \PETSc computations is a finite-dimensional linear system.  Before solving such systems in \PETSc, we recall the most basic ideas of numerical linear algebra.
+Our goal is to compute more interesting quantities than Euler's constant $e$.  At the core of most \PETSc computations is a finite-dimensional linear system.  Before solving such systems in \PETSc, we recall the most basic ideas of numerical linear algebra.
 
 Suppose $\bb\in \RR^{N}$ is a column vector and $A\in\RR^{N\times N}$ is a square matrix.  The linear system
 \begin{equation}
@@ -117,16 +117,18 @@ has a unique solution if $A$ is invertible, namely
 \end{equation}
 This is simple in theory.
 
-It is not so simple in practice, however, to solve large systems on a computer.  There are two key facts to keep in mind while working numerically  \citep{TrefethenBau}.
+It is not so simple in practice, however, to solve large systems on a computer.  There are two key facts to keep in mind while working numerically  \citep{TrefethenBau}:
 \renewcommand{\labelenumi}{\roman{enumi})}
 \begin{enumerate}
 \item \label{limittoaccuracy} \emph{limit to accuracy}:  If real numbers are represented on the computer with machine precision $\eps$ then the solution of \eqref{introsystem} can only be computed within an error $\kappa(A) \eps$ where $\kappa(A) = \|A\|_2 \|A^{-1}\|_2$ is the (2-norm) \emph{condition number} of $A$.
-\item \emph{cost of direct solutions}:  Computation of solution \eqref{introsolution} by a direct method like Gauss elimination, whether actually forming $A^{-1}$ or not, is an $O(N^3)$ operation.
+\item \emph{cost of direct solutions}:  Computation of solution \eqref{introsolution} by a direct method like Gauss elimination,\sidenote{Or by QR, so that we have a \emph{backward stable} direct method.} whether actually forming $A^{-1}$ or not, is an $O(N^3)$ operation.
 \end{enumerate}
 
 Fact i) is about \emph{conditioning} not \emph{methods}.  Informally speaking, there are linear systems that are the same to within $\eps$ but for which the infinite-precision solutions $\bu$ differ by an amount $\kappa(A) \eps$.
 
-For a sense of the consequences of these facts, let's put in some numbers for $\eps$, $\kappa(A)$, and $N$.  On modern computers the precision for the C \texttt{double} type, the default 64-bit representation of real numbers, is $\eps = 2.2 \times 10^{-16}$.  Thus by i), a linear system having $\kappa(A) \approx 10^{10}$, for example, can only be solved to about six digits of precision.  By ii) a generic linear system with $N=10^6$ equations requires $\sim 10^{18}$ operations to solve by Gauss elimination.  Even modern supercomputers take a while to do a quintillion operations.  However, though Gauss elimination is impractical for systems of $N=10^6$ equations, we will successfully solve PDE-generated linear systems of this size on a single processor in a few seconds, and in $O(N)$ operations, in Chapter \ref{chap:multigrid}.
+On modern computers the precision for the C \texttt{double} type, the default 64-bit representation of real numbers, is $\eps = 2.2 \times 10^{-16}$.  Thus by i), a linear system having $\kappa(A) \approx 10^{10}$, for example, can only be solved to about six digits of precision.  While a matrix with such a large condition number is ``poorly-conditioned,'' it is easy to reach that level when discretizing PDEs.  We have to be aware of conditioning when forming expectations about solution accuracy.
+
+By ii) a generic linear system with $N=10^6$ equations requires $10^{18}$ or so operations to solve by Gauss elimination.  Even modern supercomputers take a while to do a quintillion operations.  However, though Gauss elimination is impractical for systems of $N=10^6$ equations, we will successfully solve PDE-generated linear systems of this size on a single processor in a few seconds, and in $O(N)$ operations, in Chapter \ref{chap:multigrid}.  The key fact that discretized PDEs generate linear systems with exploitable structure, especially \emph{sparsity} but also coefficient smoothness, will have to be exposed in serious numerical PDE solutions because naive application of direct methods is too slow.
 %time ./c4poisson -da_refine 7 -ksp_type cg -pc_type mg
 %on 1153 x 1153 grid:  iterations 2, residual norm = 1.88082e-05
 %real 11.18
@@ -134,9 +136,7 @@ For a sense of the consequences of these facts, let's put in some numbers for $\
 
 \section{\PETSc \pVec and \pMat objects}
 
-To build our first \PETSc code to solve a linear system, we need the \PETSc objects which store vectors and matrices.  The \pVec object is a container and interface for a distributed vector, and a \pMat object holds a distributed matrix.
-
-Although \PETSc is written in C, not C++, it is a relentlessly object-oriented software library.  Consider the operations which would create and configure a matrix object \texttt{A} for linear system \eqref{introsystem}:
+To build our first \PETSc code to solve a linear system, we need the \PETSc \emph{objects} which store vectors (\pVec) and matrices (\pMat).  Note that, although \PETSc is written in C and not C++, it is a relentlessly object-oriented software library.  Consider the operations which could create and configure a matrix object \texttt{A} for linear system \eqref{introsystem}:
 \begin{code}
 Mat A;
 MatCreate(COMM,&A);
@@ -148,10 +148,11 @@ MatSetFromOptions(A);
 ... solve system with A ...
 MatDestroy(&A);
 \end{code}
+We can think of these calls as using methods ``owned'' by the \pMat type, in the sense that these methods manipulate the internal representation of a \pMat while we are (happily) unaware of those details.  At least a \pMat is an \emph{abstract data type} with a hidden implementation.
 
-Of course \texttt{Mat A} has an internal representation with nontrivial structure, but that is hidden.  Even the act of filling entries will treat \texttt{A} as an abstract object.  Furthermore the data structure inside \texttt{A} depends on runtime choices, the most basic being that the number of bytes used to store \texttt{A} on a given MPI process will depend on the number of processes.  At a deeper level, a \PETSc \pMat object need not even \emph{have} entries, but might instead be code that applies a linear operator to vectors.
+Even the act of filling entries will treat a \pMat as an abstract object.  Furthermore the data structure inside depends on runtime choices, the most basic being that the number of bytes used to store entries on a given MPI process will depend on the number of processes.  Actually a \PETSc \pMat object need not even have entries.  It might, instead, contain code that applies a linear operator to vectors.
 
-Indeed for all \PETSc object types this basic sequence of operations applies:
+For all \PETSc object types this basic sequence of operations applies:
 \begin{code}
 Object X;
 ObjectCreate(COMM,&X);
@@ -162,11 +163,11 @@ ObjectDestroy(&X);
 \end{code}
 (Here ``\texttt{Object}'' is a meta-name for a \PETSc type like \pVec or \pMat.)
 
-\PETSc objects are generally distributed across, and accessible from, multiple MPI processes.  Therefore the first argument of an \texttt{ObjectCreate()} method is an MPI communicator (``\texttt{COMM}'').  All processes in \texttt{COMM} must call the \texttt{ObjectCreate()} and  \texttt{ObjectDestroy()} methods.
+Because \PETSc objects are generally distributed across, and accessible from, multiple MPI processes., the first argument of an \texttt{ObjectCreate()} method is an MPI communicator (``\texttt{COMM}'').  All processes in \texttt{COMM} must call the \texttt{ObjectCreate()} and  \texttt{ObjectDestroy()} methods.
 
 In the \pMat code above, note the call to \texttt{MatSetOptionsPrefix()}.  Through this ``prefix'', run-time options can address the particular \pMat object.  For example, the run-time option \texttt{-a\_mat\_view} will print out the entries of \texttt{A}.  An option prefix like ``\texttt{a\_}'' is especially helpful in distinguishing multiple \pMat objects at the command line.
 
-Once \texttt{A} is created and set up by the first five commands \texttt{MatCreate()}--\texttt{MatSetFromOptions()}, then various methods become valid for \texttt{A}, for example including the \texttt{MatSetValues()} method to set entries in \texttt{A}.  We will use that method in codes in many later sections.
+Once \texttt{A} is created and set up by the first five commands \texttt{MatCreate()}--\texttt{MatSetFromOptions()}, then various methods become valid for \texttt{A}, for example including the \texttt{MatSetValues()} method to set entries in \texttt{A}.  We will use that method soon.
 
 
 \section{Assembly and parallel layout of \pVecs and \pMats}
@@ -184,7 +185,7 @@ VecSetValues(x,4,i,v,INSERT_VALUES);
 VecAssemblyBegin(x);
 VecAssemblyEnd(x);
 \end{code}
-The four entries of \texttt{Vec x} are set by \texttt{VecSetValues()}, putting values from array \texttt{v[]} at the indices given by \texttt{i[]}.
+The four entries of \texttt{Vec x} are set by \texttt{VecSetValues()}, putting values from array \texttt{v} at the indices given by \texttt{i}.
 
 Potentially the operation of setting values in \texttt{x} requires communication between processes, because entries of \texttt{x} which are to be stored on one process could be set by another process.  Such communication occurs between the \texttt{VecAssemblyBegin()} and \texttt{VecAssemblyEnd()} commands.
 
@@ -210,12 +211,12 @@ Potentially the operation of setting values in \texttt{x} requires communication
 \label{fig:seqveclayout}
 \end{marginfigure}
 
-Suppose the above code appears in \texttt{mycode.c}.  If it is run sequentially on one process, i.e.~as
+The reader is allowed to think of a \PETSc \pVec as a one-dimensional C array with its contents split across the processes in the MPI communicator used in the \texttt{VecCreate()} command.  For example, if the above code appears in \texttt{mycode.c}, and if it is run sequentially on one process, i.e.~as
 \begin{cline}
 $ ./mycode.c
 \end{cline}
 %$
-then, at the end of the above create-assemble sequence, the storage of \texttt{x} looks like Figure \ref{fig:seqveclayout}.  However, if run as
+then, at the end of the above create-set-assemble sequence, the storage of \texttt{x} looks like Figure \ref{fig:seqveclayout}.  However, if run as
 \begin{cline}
 $ mpiexec -n 2 ./mycode.c
 \end{cline}
@@ -284,12 +285,10 @@ That is, we could specify the ``local size'' argument to \texttt{VecSetSizes()},
 \label{fig:artificialmpitwoveclayout}
 \end{marginfigure}
 
-The reader is allowed to think of a \PETSc \pVec as a one-dimensional C array with its contents split across the processes in the MPI communicator used in the \texttt{VecCreate()} command.
-
-\pMat objects, though not actually 2D arrays, require additional choices regarding parallel distribution.  Though this is done inside the implementation of \pMat, and generally is hidden, the most common storage format is \emph{parallel compressed sparse row storage}, what \PETSc calls the \texttt{MATMPIAIJ} type.  That is, a range of rows is owned by each process (parallel row storage), and within each owned range of rows only the nonzero entries are stored (sparse), and furthermore the data structures store these nonzero entries contiguously in an array, with an additional contiguous index array (compressed).
+\pMat objects, though not actually 2D C arrays, require additional choices regarding parallel distribution.  Though this is done inside the implementation of \pMat, and generally is hidden, the most common storage format is \emph{parallel compressed sparse row storage}, what \PETSc calls the \texttt{MATMPIAIJ} type.  That is, a range of rows is owned by each process (parallel row storage), and within each owned range of rows only the specifically-allocated\sidenote{These are generally the nonzero entries, and usually referred-to as such.} entries are stored (sparse), and furthermore the data structures store these nonzero entries contiguously in an array, using an additional index array (compressed).
 
 The result vector of a \pMat-\pVec product is a linear combination of the columns of the \pMat.  In practice, ``parallel row storage'' means these things:\begin{itemize}
-\item \PETSc internally distributes the rows of the \pMat $A$ the same way as the entries of the intended output \pVec $b$, i.e.~if $Ax=b$ for some $x$, at least when \texttt{PETSC\_DECIDE} is used in setting \pVec and \pMat sizes.
+\item \PETSc internally distributes the rows of the \pMat $A$ the same way as the entries of the intended output \pVec.  Thus if $Ax=b$ for some $x$ then the rows of $A$ are distributed like the entries of $b$, at least when \texttt{PETSC\_DECIDE} is used in setting \pVec and \pMat sizes.
 \item Before \PETSc multiplies a matrix times a vector, \PETSc communicates (``scatters'') the whole vector to each process.
 \item After the scatter the \pMat-\pVec product is a local operation, requiring no further communication.
 \end{itemize}
@@ -511,13 +510,16 @@ FIXME: with \texttt{-ksp\_view}
 
 FIXME: serial default is \texttt{-ksp\_type gmres -pc\_type ilu}
 
-FIXME: with \texttt{-pc\_type jacobi}
-
 FIXME: with \texttt{-ksp\_type none -pc\_type lu}
+
+FIXME: unpreconditioned richardson fails (\texttt{./c1vecmatksp -ksp\_type richardson -ksp\_richardson\_scale 1.0 -ksp\_monitor -pc\_type none}) but default preconditioned succeeds (i.e. -pc\_type ilu)
 
 FIXME: parallel default is \texttt{-ksp\_type gmres -pc\_type bjacobi -sub\_pc\_type ilu}
 
+FIXME: try parallel with \texttt{-pc\_type jacobi}; compare -ksp\_view and note there is no sub\_.  in fact, defaults fail but this works on 4 processes
+
 FIXME: try \texttt{-ksp\_pc\_side RIGHT}; default is \texttt{LEFT}
+
 
 That's enough runtime options for now.  There will be more.
 
