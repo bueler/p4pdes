@@ -294,31 +294,31 @@ The result vector of a \pMat-\pVec product is a linear combination of the column
 \item After the scatter the \pMat-\pVec product is a local operation, requiring no further communication.
 \end{itemize}
 
-But one doesn't really need to know all this!  For example, here is how to create and assemble a $4\times 4$ \pMat one row at a time:
+But one doesn't really need to know all this!  For example, here is how to create and assemble a $4\times 4$ \pMat, with essentially random entries, one row at a time:
 % see testmatcreate.c
 \begin{code}
 Mat A;
-PetscInt  i, j[3];
-PetscReal v[2] = {4.0, -1.0}, w[3] = {-1.0, 4.0, -1.0};
+PetscInt  i, j[4] = {0, 1, 2, 3};
+PetscReal v[4];
 
 MatCreate(PETSC_COMM_WORLD,&A);
 MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,4,4);
 MatSetFromOptions(A);
 MatSetUp(A);
 
-i = 0;  j[0] = 0;  j[1] = 1;
-MatSetValues(A,1,&i,2,j,v,INSERT_VALUES);
-i = 1;  j[0] = 0;  j[1] = 1;  j[2] = 2;
-MatSetValues(A,1,&i,3,j,w,INSERT_VALUES);
-i = 2;  j[0] = 1;  j[1] = 2;  j[2] = 3;
-MatSetValues(A,1,&i,3,j,w,INSERT_VALUES);
-i = 3;  j[0] = 2;  j[1] = 3;
-MatSetValues(A,1,&i,2,j,w,INSERT_VALUES);
+i = 0;  v[0] = 1.0;  v[1] = 2.0;  v[2] = 3.0;  v[3] = 4.0;
+MatSetValues(A,1,&i,4,j,v,INSERT_VALUES);
+i = 1;  v[0] = 2.0;  v[1] = 0.0;  v[2] = -2.0;  v[3] = -3.0;
+MatSetValues(A,1,&i,4,j,v,INSERT_VALUES);
+i = 2;  v[0] = -1.0;  v[1] = 1.0;  v[2] = 1.0;  v[3] = 0.0;
+MatSetValues(A,1,&i,4,j,v,INSERT_VALUES);
+i = 3;  v[0] = 2.0;  v[1] = 1.0;  v[2] = -1.0;  v[3] = 1.0;
+MatSetValues(A,1,&i,4,j,v,INSERT_VALUES);
 
 MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);
 MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);
 \end{code}
-The method \texttt{MatSetValues()} sets a \emph{block} of values, in this case a row.  The ``\texttt{1,\&i}'' arguments to \texttt{MatSetValues()} say ``we are setting one row with global index \texttt{i}.''  The ``\texttt{3,j}'' arguments, used in the \texttt{i} $=1,2$ rows, say ``set three values in the row using integer array \texttt{j} for the (global) column indices.''
+The method \texttt{MatSetValues()} sets a \emph{block} of values, in this case a row.  The ``\texttt{1,\&i}'' arguments to \texttt{MatSetValues()} say that we are setting one row with global index \texttt{i}.  The ``\texttt{4,j}'' arguments say that we set the row using integer array \texttt{j} for the (global) column indices.
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
@@ -337,19 +337,25 @@ The method \texttt{MatSetValues()} sets a \emph{block} of values, in this case a
   \node at ( 0.5-\xoff, 1.1) {$j=1$};
   \node at (0.25-\xoff, 1.1) {$j=0$};
 
-  \node at (\xoff,1.0-\yoff) {$4.0$};
-  \node at (0.25+\xoff,1.0-\yoff) {$-1.0$};
+  \node at (\xoff,1.0-\yoff) {$1.0$};
+  \node at (0.25+\xoff,1.0-\yoff) {$2.0$};
+  \node at (0.5+\xoff,1.0-\yoff) {$3.0$};
+  \node at (0.75+\xoff,1.0-\yoff) {$4.0$};
 
-  \node at (\xoff,0.75-\yoff) {$-1.0$};
-  \node at (0.25+\xoff,0.75-\yoff) {$4.0$};
-  \node at (0.5+\xoff,0.75-\yoff) {$-1.0$};
+  \node at (\xoff,0.75-\yoff) {$2.0$};
+  \node at (0.25+\xoff,0.75-\yoff) {$0.0$};
+  \node at (0.5+\xoff,0.75-\yoff) {$-2.0$};
+  \node at (0.75+\xoff,0.75-\yoff) {$-3.0$};
 
-  \node at (0.25+\xoff,0.5-\yoff) {$-1.0$};
-  \node at (0.5+\xoff,0.5-\yoff) {$4.0$};
-  \node at (0.75+\xoff,0.5-\yoff) {$-1.0$};
+  \node at (\xoff,0.5-\yoff) {$-1.0$};
+  \node at (0.25+\xoff,0.5-\yoff) {$1.0$};
+  \node at (0.5+\xoff,0.5-\yoff) {$1.0$};
+  \node at (0.75+\xoff,0.5-\yoff) {$0.0$};
 
+  \node at (\xoff,0.25-\yoff) {$2.0$};
+  \node at (0.25+\xoff,0.25-\yoff) {$1.0$};
   \node at (0.5+\xoff,0.25-\yoff) {$-1.0$};
-  \node at (0.75+\xoff,0.25-\yoff) {$4.0$};
+  \node at (0.75+\xoff,0.25-\yoff) {$1.0$};
 
   \draw[decoration={brace,mirror,raise=5pt},decorate,line width=1pt] (1.01,0.52) -- (1.01,1.0);
   \node at (1.3,0.752) {rank $=0$};
@@ -357,7 +363,7 @@ The method \texttt{MatSetValues()} sets a \emph{block} of values, in this case a
   \node at (1.3,0.251) {rank $=1$};
 \end{tikzpicture}
 \bigskip
-\caption{A parallel \pMat layout on two processes.  Blank entries are zeros, which are not stored because of ``compressed sparse'' storage.}
+\caption{A parallel \pMat layout on two processes.}
 \label{fig:mpitwomatlayout}
 \end{marginfigure}
 
@@ -371,19 +377,19 @@ then the layout would be as in Figure \ref{fig:mpitwomatlayout}.  We could have 
 $ ./mycode -mat_view
 Mat Object: 1 MPI processes
   type: seqaij
-row 0: (0, 4)  (1, -1)
-row 1: (0, -1)  (1, 4)  (2, -1)
-row 2: (1, -1)  (2, 4)  (3, -1)
-row 3: (2, -1)  (3, 4)
+row 0: (0, 1)  (1, 2)  (2, 3)  (3, 4)
+row 1: (0, 2)  (1, 0)  (2, -2)  (3, -3)
+row 2: (0, -1)  (1, 1)  (2, 1)  (3, 0)
+row 3: (0, 2)  (1, 1)  (2, -1)  (3, 1)
 $ ./mycode -mat_view ::ascii_dense
 Mat Object: 1 MPI processes
   type: seqaij
- 4.00000e+00  -1.00000e+00  0.00000e+00  0.00000e+00
- -1.00000e+00  4.00000e+00  -1.00000e+00  0.00000e+00
- 0.00000e+00  -1.00000e+00  4.00000e+00  -1.00000e+00
- 0.00000e+00  0.00000e+00  -1.00000e+00  4.00000e+00
+ 1.00000e+00  2.00000e+00  3.00000e+00  4.00000e+00
+ 2.00000e+00  0.00000e+00  -2.00000e+00  -3.00000e+00
+ -1.00000e+00  1.00000e+00  1.00000e+00  0.00000e+00
+ 2.00000e+00  1.00000e+00  -1.00000e+00  1.00000e+00
 \end{cline}
-The former view shows the compressed sparse storage, with nonzero values as pairs with column index and value.  The latter view is a traditional (``dense'') display where zero values are shown.  In these cases the matrix was stored in \emph{serial} compressed sparse row format, the \texttt{MATSEQAIJ} type, because of the one-process execution.
+The former view shows the compressed sparse storage, with values as pairs with column index and value.  The latter view is a traditional (``dense'') display where zero values are shown.  In these cases the matrix was stored in \emph{serial} compressed sparse row format, the \texttt{MATSEQAIJ} type, because of the one-process execution.
 
 \section{A bit more numerical linear algebra}
 
@@ -474,9 +480,8 @@ so convergence claim \eqref{introconvergethm} matches this bit of evidence.
 \end{examplecont}
 \noindent\hrulefill
 
+\medskip
 The above introduction of the residual, Richardson iteration, and preconditioning is hardly adequate.  But let us return to \PETSc codes and solve linear systems.  The reader can treat \PETSc's linear solvers as black boxes for now.
-
-\inputwhole{../c/c1vecmatksp.c}{\texttt{p4pdes/c/c1vecmatksp.c}}{Solve a small linear system.}{code:vecmatksp}
 
 \section{Solve a small linear system in \PETSc}
 
@@ -493,6 +498,10 @@ But first we must tell \pKSP about the matrix in the linear system.  For that we
 KSPSetOperators(ksp,A,A);
 \end{code}
 Why do we list \texttt{A} twice, you say?  As in our brief introduction above, the linear system 
+
+
+\inputwhole{../c/c1vecmatksp.c}{\texttt{p4pdes/c/c1vecmatksp.c}}{Solve a small linear system.}{code:vecmatksp}
+
 
 FIXME: one and 2 processor
 
@@ -532,7 +541,7 @@ FIXME: emphasize that \texttt{MatGetOwnershipRange()} means that different proce
 
 %\cinputpartnostrip{c1matvec.c}{Set up \pKSP.  Solve.  Finalize.}{III}{//ENDASSEMBLY}{//END}{code:matvecpartthree}
 
-FIXME: show sparse and Matlab-format output for \texttt{A}, noting we get this at the \texttt{MatAssemblyEnd()} stage %$ ./c1matvec -a_mat_view ::ascii_matlab
+FIXME: show sparse-format output for \texttt{A}, noting we get this at the \texttt{MatAssemblyEnd()} stage %$ ./c1matvec -a_mat_view
 
 FIXME: show MatXXXSetPreallocation(); need either that or MatSetUp() before MatGetOwnershipRange()
 

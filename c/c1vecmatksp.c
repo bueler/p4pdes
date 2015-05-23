@@ -3,13 +3,11 @@ static char help[] = "Solve a 4x4 linear system with Vec, Mat, and KSP.\n";
 #include <petsc.h>
 
 int main(int argc,char **args) {
-  Vec            x,b;
+  Vec            x, b;
   Mat            A;
   KSP            ksp;
-  PetscInt       ib[4] = {0, 1, 2, 3},
-                 i, j[3];
-  PetscReal      vb[4] = {11.0, 7.0, 5.0, 3.0},
-                 v[2]  = {4.0, -1.0}, w[3] = {-1.0, 4.0, -1.0};
+  PetscInt       i, j[4] = {0, 1, 2, 3};
+  PetscReal      v[4] = {11.0, 7.0, 5.0, 3.0};
   PetscErrorCode ierr;
 
   PetscInitialize(&argc,&args,(char*)0,help);
@@ -19,7 +17,7 @@ int main(int argc,char **args) {
   ierr = VecSetFromOptions(b); CHKERRQ(ierr);
   ierr = VecDuplicate(b,&x); CHKERRQ(ierr);
 
-  ierr = VecSetValues(b,4,ib,vb,INSERT_VALUES); CHKERRQ(ierr);
+  ierr = VecSetValues(b,4,j,v,INSERT_VALUES); CHKERRQ(ierr);
   ierr = VecAssemblyBegin(b); CHKERRQ(ierr);
   ierr = VecAssemblyEnd(b); CHKERRQ(ierr);
 
@@ -28,14 +26,14 @@ int main(int argc,char **args) {
   ierr = MatSetFromOptions(A); CHKERRQ(ierr);
   ierr = MatSetUp(A); CHKERRQ(ierr);
 
-  i = 0;  j[0] = 0;  j[1] = 1;
-  ierr = MatSetValues(A,1,&i,2,j,v,INSERT_VALUES); CHKERRQ(ierr);
-  i = 1;  j[0] = 0;  j[1] = 1;  j[2] = 2;
-  ierr = MatSetValues(A,1,&i,3,j,w,INSERT_VALUES); CHKERRQ(ierr);
-  i = 2;  j[0] = 1;  j[1] = 2;  j[2] = 3;
-  ierr = MatSetValues(A,1,&i,3,j,w,INSERT_VALUES); CHKERRQ(ierr);
-  i = 3;  j[0] = 2;  j[1] = 3;
-  ierr = MatSetValues(A,1,&i,2,j,w,INSERT_VALUES); CHKERRQ(ierr);
+  i = 0;  v[0] = 1.0;  v[1] = 2.0;  v[2] = 3.0;  v[3] = 4.0;
+  ierr = MatSetValues(A,1,&i,4,j,v,INSERT_VALUES); CHKERRQ(ierr);
+  i = 1;  v[0] = 2.0;  v[1] = 0.0;  v[2] = -2.0;  v[3] = -3.0;
+  ierr = MatSetValues(A,1,&i,4,j,v,INSERT_VALUES); CHKERRQ(ierr);
+  i = 2;  v[0] = -1.0;  v[1] = 1.0;  v[2] = 1.0;  v[3] = 0.0;
+  ierr = MatSetValues(A,1,&i,4,j,v,INSERT_VALUES); CHKERRQ(ierr);
+  i = 3;  v[0] = 2.0;  v[1] = 1.0;  v[2] = -1.0;  v[3] = 1.0;
+  ierr = MatSetValues(A,1,&i,4,j,v,INSERT_VALUES); CHKERRQ(ierr);
 
   ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
   ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
