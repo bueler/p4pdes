@@ -175,16 +175,16 @@ A \pVec or \pMat stores its entries in parallel across all the processes in the 
 \begin{code}
 Vec x;
 PetscInt   i[4] = {0, 1, 2, 3};
-PetscReal  vals[4] = {11.0, 7.0, 5.0, 3.0};
+PetscReal  v[4] = {11.0, 7.0, 5.0, 3.0};
 
 VecCreate(COMM,&x);
 VecSetSizes(x,PETSC_DECIDE,4);
 VecSetFromOptions(x);
-VecSetValues(x,4,i,vals,INSERT_VALUES);
+VecSetValues(x,4,i,v,INSERT_VALUES);
 VecAssemblyBegin(x);
 VecAssemblyEnd(x);
 \end{code}
-The four entries of \texttt{Vec x} are set by \texttt{VecSetValues()}, putting values from array \texttt{vals[]} at the indices given by \texttt{i[]}.
+The four entries of \texttt{Vec x} are set by \texttt{VecSetValues()}, putting values from array \texttt{v[]} at the indices given by \texttt{i[]}.
 
 Potentially the operation of setting values in \texttt{x} requires communication between processes, because entries of \texttt{x} which are to be stored on one process could be set by another process.  Such communication occurs between the \texttt{VecAssemblyBegin()} and \texttt{VecAssemblyEnd()} commands.
 
@@ -299,27 +299,21 @@ But one doesn't really need to know all this!  For example, here is how to creat
 \begin{code}
 Mat A;
 PetscInt  i, j[3];
-PetscReal v[3];
+PetscReal v[2] = {4.0, -1.0}, w[3] = {-1.0, 4.0, -1.0};
 
 MatCreate(PETSC_COMM_WORLD,&A);
 MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,4,4);
 MatSetFromOptions(A);
 MatSetUp(A);
 
-i = 0;
-j[0] = 0;    j[1] = 1;
-v[0] = 4.0;  v[1] = -1.0;
+i = 0;  j[0] = 0;  j[1] = 1;
 MatSetValues(A,1,&i,2,j,v,INSERT_VALUES);
-i = 1;
-j[0] = 0;    j[1] = 1;    j[2] = 2;
-v[0] = -1.0; v[1] = 4.0;  v[2] = -1.0;
-MatSetValues(A,1,&i,3,j,v,INSERT_VALUES);
-i = 2;
-j[0] = 1;    j[1] = 2;    j[2] = 3;
-MatSetValues(A,1,&i,3,j,v,INSERT_VALUES);
-i = 3;
-j[0] = 2;    j[1] = 3;
-MatSetValues(A,1,&i,2,j,v,INSERT_VALUES);
+i = 1;  j[0] = 0;  j[1] = 1;  j[2] = 2;
+MatSetValues(A,1,&i,3,j,w,INSERT_VALUES);
+i = 2;  j[0] = 1;  j[1] = 2;  j[2] = 3;
+MatSetValues(A,1,&i,3,j,w,INSERT_VALUES);
+i = 3;  j[0] = 2;  j[1] = 3;
+MatSetValues(A,1,&i,2,j,w,INSERT_VALUES);
 
 MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);
 MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);
@@ -391,29 +385,9 @@ Mat Object: 1 MPI processes
 \end{cline}
 The former view shows the compressed sparse storage, with nonzero values as pairs with column index and value.  The latter view is a traditional (``dense'') display where zero values are shown.  In these cases the matrix was stored in \emph{serial} compressed sparse row format, the \texttt{MATSEQAIJ} type, because of the one-process execution.
 
-
-\section{Solve a structured linear system in \PETSc}
-
-\cinputpartnostrip{c1matvec.c}{Initialize \PETSc and set up \pVecs and \pMat.}{I}{}{//ENDSETUP}{code:matvecpartone}
-
-FIXME: emphasize that \texttt{MatGetOwnershipRange()} means that different processes are assembling different rows, unlike earlier example where all processes inserted all values
-
-\cinputpartnostrip{c1matvec.c}{Assemble \pMat $A$.  Assemble right-hand side $b$ via exact solution to system.}{II}{//ENDSETUP}{//ENDASSEMBLY}{code:matvecparttwo}
-
-\cinputpartnostrip{c1matvec.c}{Set up \pKSP.  Solve.  Finalize.}{III}{//ENDASSEMBLY}{//END}{code:matvecpartthree}
-
-FIXME: show sparse and Matlab-format output for \texttt{A}, noting we get this at the \texttt{MatAssemblyEnd()} stage %$ ./c1matvec -a_mat_view ::ascii_matlab
-
-FIXME: need either MatXXXSetPreallocation() or MatSetUp() before MatGetOwnershipRange()
-
-FIXME: solve without choosing method
-
-FIXME: show how to solve with Gaussian elimination
-
-
 \section{A bit more numerical linear algebra}
 
-Many methods other than Gauss elimination are possible for solving linear systems.  Usually these methods are iterative, and they often use the \emph{residual}.  By definition, the residual of vector $\bu_0$ in linear system \eqref{introsystem} is the vector
+Gauss elimination \citep{TrefethenBau} is one way to solve a system, but many other methods are iterative, and they often use the \emph{residual}.  By definition, the residual of vector $\bu_0$ in linear system \eqref{introsystem} is the vector
 \begin{equation}
 \br_0 = \bb - A \bu_0. \label{residualdefn}
 \end{equation}
@@ -500,8 +474,73 @@ so convergence claim \eqref{introconvergethm} matches this bit of evidence.
 \end{examplecont}
 \noindent\hrulefill
 
+The above introduction of the residual, Richardson iteration, and preconditioning is hardly adequate.  But let us return to \PETSc codes and solve linear systems.  The reader can treat \PETSc's linear solvers as black boxes for now.
 
-%\caveat{But \Matlab is all you want if scale does not matter.}
+\inputwhole{../c/c1vecmatksp.c}{\texttt{p4pdes/c/c1vecmatksp.c}}{Solve a small linear system.}{code:vecmatksp}
+
+\section{Solve a small linear system in \PETSc}
+
+We have already know how to create, fill, and destroy a \pVec object and a \pMat object.  The next code, \texttt{c1vecmatksp.c} shown in Figure \ref{code:vecmatksp}, does all these steps.  To solve the system, however, it adds one more \PETSc object, namely a Krylov space method object ``\pKSP'' which holds the linear system.
+
+The \pKSP has the ability to solve a linear system by a method chosen at runtime.  Besides the promised \texttt{Create/SetFromOptions/Destroy} sequence for \pKSP, there are two more important commands.  The system is actually solved by
+\begin{code}
+KSPSolve(ksp,b,x);
+\end{code}
+which supplies the right-hand side of the system (i.e.~\pVec \texttt{b}) and space for the solution (\pVec \texttt{x}).
+
+But first we must tell \pKSP about the matrix in the linear system.  For that we have the command
+\begin{code}
+KSPSetOperators(ksp,A,A);
+\end{code}
+Why do we list \texttt{A} twice, you say?  As in our brief introduction above, the linear system 
+
+FIXME: one and 2 processor
+
+FIXME: with \texttt{-mat\_view} and \texttt{-vec\_view}
+
+FIXME: with \texttt{-ksp\_view}
+
+FIXME: serial default is \texttt{-ksp\_type gmres -pc\_type ilu}
+
+FIXME: with \texttt{-pc\_type jacobi}
+
+FIXME: with \texttt{-ksp\_type none -pc\_type lu}
+
+FIXME: parallel default is \texttt{-ksp\_type gmres -pc\_type bjacobi -sub\_pc\_type ilu}
+
+FIXME: try \texttt{-ksp\_pc\_side RIGHT}; default is \texttt{LEFT}
+
+That's enough runtime options for now.  There will be more.
+
+\section{More \PETSc functionality for linear systems}
+
+FIXME: use methods \texttt{PetscOptionsBegin()}, \texttt{PetscOptionsInt()}, and \texttt{PetscOptionsEnd()} so that \texttt{-help} output explains the option
+
+FIXME option \texttt{-N} so form an $N\times N$ matrix, with $-2$ on the diagonal and $1$ on the super- and sub-diagonals as before
+
+FIXME use matrix mult to get b from arbitrary $x$
+
+FIXME estimate the condition number of the matrix for sample $N$ values
+% see "How can I determine the condition number of a matrix?" on the PETSc FAQ page; "be sure to avoid restarts"
+% -pc_type none -ksp_type gmres -ksp_monitor_singular_value -ksp_gmres_restart 1000
+
+%\cinputpartnostrip{c1matvec.c}{Initialize \PETSc and set up \pVecs and \pMat.}{I}{}{//ENDSETUP}{code:matvecpartone}
+
+FIXME: emphasize that \texttt{MatGetOwnershipRange()} means that different processes are assembling different rows, unlike earlier example where all processes inserted all values
+
+%\cinputpartnostrip{c1matvec.c}{Assemble \pMat $A$.  Assemble right-hand side $b$ via exact solution to system.}{II}{//ENDSETUP}{//ENDASSEMBLY}{code:matvecparttwo}
+
+%\cinputpartnostrip{c1matvec.c}{Set up \pKSP.  Solve.  Finalize.}{III}{//ENDASSEMBLY}{//END}{code:matvecpartthree}
+
+FIXME: show sparse and Matlab-format output for \texttt{A}, noting we get this at the \texttt{MatAssemblyEnd()} stage %$ ./c1matvec -a_mat_view ::ascii_matlab
+
+FIXME: show MatXXXSetPreallocation(); need either that or MatSetUp() before MatGetOwnershipRange()
+
+FIXME: solve without choosing method
+
+FIXME: show how to solve with Gaussian elimination
+
+FIXME: \texttt{-ksp\_monitor, -ksp\_view, -ksp\_monitor -ksp\_type cg}
 
 
 \section{Exercises}
@@ -510,7 +549,4 @@ so convergence claim \eqref{introconvergethm} matches this bit of evidence.
 \begin{enumerate}
 \item Program \texttt{c1e.c} does redundant work, and a terrible job of load-balancing, because the computation of the factorial $n!$ on rank $n$ requires more flops when $n$ is larger.  Modify the code to balance the load almost perfectly, with exactly one divide operation on each \texttt{rank}$>0$ process, by using blocking send and receive operations (\texttt{MPI\_Send(),MPI\_Recv()}) to pass the result of the last factorial to the next rank.  (\emph{Of course now we have a code that does a ridiculous amount of communication and waiting.})
 % e1balanced.c
-\item Modify \texttt{c1matvec.c} to read an integer option\sidenote{Use methods \texttt{PetscOptionsBegin()}, \texttt{PetscOptionsInt()}, and \texttt{PetscOptionsEnd()} so that \texttt{-help} output explains the option.} \texttt{-N} and form an $N\times N$ matrix, with $-2$ on the diagonal and $1$ on the super- and sub-diagonals as before.  (Choose any desired right-hand-side.)  Use \PETSc runtime options to estimate the condition number of the matrix for sample $N$ values; the online \PETSc FAQ page\sidenote{\texttt{www.mcs.anl.gov/petsc/documentation/faq.html}} will help with these options.
-% see "How can I determine the condition number of a matrix?" on the PETSc FAQ page; "be sure to avoid restarts"
-% -pc_type none -ksp_type gmres -ksp_monitor_singular_value -ksp_gmres_restart 1000
 \end{enumerate}
