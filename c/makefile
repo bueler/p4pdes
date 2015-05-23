@@ -7,9 +7,9 @@ c1e: c1e.o  chkopts
 	-${CLINKER} -o c1e c1e.o  ${PETSC_LIB}
 	${RM} c1e.o
 
-c1matvec: c1matvec.o  chkopts
-	-${CLINKER} -o c1matvec c1matvec.o  ${PETSC_KSP_LIB}
-	${RM} c1matvec.o
+c1vecmatksp: c1vecmatksp.o  chkopts
+	-${CLINKER} -o c1vecmatksp c1vecmatksp.o  ${PETSC_KSP_LIB}
+	${RM} c1vecmatksp.o
 
 c2poisson: c2poisson.o structuredpoisson.o chkopts
 	-${CLINKER} -o c2poisson c2poisson.o structuredpoisson.o ${PETSC_KSP_LIB}
@@ -75,5 +75,5 @@ e1matvecn: e1matvecn.o  chkopts
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ c1e c1matvec c2poisson c2heat c3convert c3poisson c4poisson c7fosls c7stokes c9obstacle
+	@rm -f *~ c1e c1vecmatksp c1tri c2poisson c2heat c3convert c3poisson c4poisson c7fosls c7stokes c9obstacle
 	@rm -f mesh.?.* bump.?.* square.?.*

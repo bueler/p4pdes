@@ -6,7 +6,8 @@ ex*.c
 # ? = 2,3,4
 
 c1e
-c1matvec
+c1vecmatksp
+c1tri
 c2poisson
 c2heat
 c3convert

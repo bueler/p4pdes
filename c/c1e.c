@@ -23,9 +23,9 @@ int main(int argc, char **args) {
 
   // output one estimate of e, but report on work from each process
   ierr = PetscPrintf(PETSC_COMM_WORLD,
-                     "e is about %17.15f\n",globalsum); CHKERRQ(ierr);
+    "e is about %17.15f\n",globalsum); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_SELF,
-                     "rank %d did %d flops\n",rank,(rank > 0) ? rank-1 : 0); CHKERRQ(ierr);
+    "rank %d did %d flops\n",rank,(rank > 0) ? rank-1 : 0); CHKERRQ(ierr);
 
   PetscFinalize();
   return 0;
