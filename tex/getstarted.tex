@@ -126,7 +126,7 @@ It is not so simple in practice, however, to solve large systems on a computer. 
 
 Fact i) is about \emph{conditioning} not \emph{methods}.  Informally speaking, there are linear systems that are the same to within $\eps$ but for which the infinite-precision solutions $\bu$ differ by an amount $\kappa(A) \eps$.
 
-On modern computers the precision for the C \texttt{double} type, the default 64-bit representation of real numbers, is $\eps = 2.2 \times 10^{-16}$.  Thus by i), a linear system having $\kappa(A) \approx 10^{10}$, for example, can only be solved to about six digits of precision.  While a matrix with such a large condition number is ``poorly-conditioned,'' it is easy to reach that level when discretizing PDEs.  We have to be aware of conditioning when forming expectations about solution accuracy.
+On modern computers the precision for the C \texttt{double} type, the default 64-bit representation of real numbers, is $\eps = 2.2 \times 10^{-16}$.  Thus by i), a linear system having $\kappa(A) \approx 10^{10}$, for example, can only be solved to about six digits of precision.  While a matrix with such a large condition number is ``poorly-conditioned,'' it is easy to reach that level for $\kappa(A)$ when discretizing PDEs.  We have to be aware of conditioning when forming expectations about solution accuracy.
 
 By ii) a generic linear system with $N=10^6$ equations requires $10^{18}$ or so operations to solve by Gauss elimination.  Even modern supercomputers take a while to do a quintillion operations.  However, though Gauss elimination is impractical for systems of $N=10^6$ equations, we will successfully solve PDE-generated linear systems of this size on a single processor in a few seconds, and in $O(N)$ operations, in Chapter \ref{chap:multigrid}.  The key fact that discretized PDEs generate linear systems with exploitable structure, especially \emph{sparsity} but also coefficient smoothness, will have to be exposed in serious numerical PDE solutions because naive application of direct methods is too slow.
 %time ./c4poisson -da_refine 7 -ksp_type cg -pc_type mg
@@ -157,7 +157,8 @@ For all \PETSc object types this basic sequence of operations applies:
 Object X;
 ObjectCreate(COMM,&X);
 ... code sets properties of X ...
-ObjectSetFromOptions(X);  // allows run-time setting/overriding of properties
+ObjectSetFromOptions(X);  // allows run-time setting
+                          // or overriding of properties
 ... code uses X ...
 ObjectDestroy(&X);
 \end{code}
@@ -167,7 +168,7 @@ Because \PETSc objects are generally distributed across, and accessible from, mu
 
 In the \pMat code above, note the call to \texttt{MatSetOptionsPrefix()}.  Through this ``prefix'', run-time options can address the particular \pMat object.  For example, the run-time option \texttt{-a\_mat\_view} will print out the entries of \texttt{A}.  An option prefix like ``\texttt{a\_}'' is especially helpful in distinguishing multiple \pMat objects at the command line.
 
-Once \texttt{A} is created and set up by the first five commands \texttt{MatCreate()}--\texttt{MatSetFromOptions()}, then various methods become valid for \texttt{A}, for example including the \texttt{MatSetValues()} method to set entries in \texttt{A}.  We will use that method soon.
+Once \pMat \texttt{A} is created and set up by the first five commands \texttt{MatCreate()}--\texttt{MatSetFromOptions()}, then various methods become valid for \texttt{A}, for example including the \texttt{MatSetValues()} method to set entries in \texttt{A}.  We will use that method soon.
 
 
 \section{Assembly and parallel layout of \pVecs and \pMats}
@@ -247,49 +248,11 @@ then the layout looks like Figure \ref{fig:mpitwoveclayout}.  In this case the a
 \label{fig:mpitwoveclayout}
 \end{marginfigure}
 
-By contrast, one could override the ``\texttt{PETSC\_DECIDE}'' parallel layout by replacing the \texttt{VecSetSizes()} line with this block of code:
-\begin{code}
-PetscMPIInt rank;
-MPI_Comm_rank(COMM,&rank);
-if (rank == 0) {
-  VecSetSizes(x,3,4);
-} else if (rank == 1) {
-  VecSetSizes(x,1,4);
-} else {
-  SETERRQ(COMM,1,"this code only works with size==2 communicators");
-}
-\end{code}
-That is, we could specify the ``local size'' argument to \texttt{VecSetSizes()}, instead of using \texttt{PETSC\_DECIDE}.  The resulting layout is shown in Figure \ref{fig:artificialmpitwoveclayout}.  Fortunately, inflexible coding like this is rarely necessary.
+\pMat objects, however, are not actually 2D C arrays even in serial (i.e.~in one-process runs).  Compared to \pVecs they require additional choices regarding parallel distribution.  Though this is hidden inside the implementation of \pMat, the most common storage format is \emph{parallel compressed sparse row storage}, what \PETSc calls the \texttt{MATMPIAIJ} type.  In this type a range of rows is owned by each process (parallel row storage), and within each owned range of rows only the specifically-allocated\sidenote{These are generally the nonzero entries, and usually referred-to as such.} entries are stored (sparse), and furthermore nonzero entries are stored contiguously in an array using an additional index array (compressed).
 
-\begin{marginfigure}
-\begin{tikzpicture}[scale=3.5]
-  \pgfmathsetmacro\fourth{1.0/4.0}
-  \pgfmathsetmacro\xoff{0.12}
-  \pgfmathsetmacro\yoff{0.12}
-  \draw[xstep=\fourth,ystep=\fourth,black,thick] (0.0,0.0) grid (\fourth,1.0);
-  \node at (-0.2,1.0-\yoff) {$i=0$};
-  \node at (\xoff,1.0-\yoff) {$11.0$};
-  \node at (-0.2,0.75-\yoff) {$i=1$};
-  \node at (\xoff,0.75-\yoff) {$7.0$};
-  \node at (-0.2,0.5-\yoff) {$i=2$};
-  \node at (\xoff,0.5-\yoff) {$5.0$};
-  \node at (-0.2,0.25-\yoff) {$i=3$};
-  \node at (\xoff,0.25-\yoff) {$3.0$};
-  \draw[decoration={brace,mirror,raise=5pt},decorate,line width=1pt] (0.3,0.27) -- (0.3,1.0);
-  \node at (0.65,0.65) {rank $=0$};
-  \draw[decoration={brace,mirror,raise=5pt},decorate,line width=1pt] (0.3,0.0) -- (0.3,0.23);
-  \node at (0.65,0.125) {rank $=1$};
-\end{tikzpicture}
-\bigskip
-\caption{A non-default parallel \pVec layout on two processes, by forcing local sizes to be not equal.}
-\label{fig:artificialmpitwoveclayout}
-\end{marginfigure}
-
-\pMat objects, though not actually 2D C arrays, require additional choices regarding parallel distribution.  Though this is done inside the implementation of \pMat, and generally is hidden, the most common storage format is \emph{parallel compressed sparse row storage}, what \PETSc calls the \texttt{MATMPIAIJ} type.  That is, a range of rows is owned by each process (parallel row storage), and within each owned range of rows only the specifically-allocated\sidenote{These are generally the nonzero entries, and usually referred-to as such.} entries are stored (sparse), and furthermore the data structures store these nonzero entries contiguously in an array, using an additional index array (compressed).
-
-The result vector of a \pMat-\pVec product is a linear combination of the columns of the \pMat.  In practice, ``parallel row storage'' means these things:\begin{itemize}
+\pMat objects are linear operators so their major purpose is to multiply \pVecs.  The result vector of a \pMat-\pVec product is a linear combination of the columns of the \pMat.  Thus, in practice, ``parallel row storage'' of the \pMat means these things:\begin{itemize}
 \item \PETSc internally distributes the rows of the \pMat $A$ the same way as the entries of the intended output \pVec.  Thus if $Ax=b$ for some $x$ then the rows of $A$ are distributed like the entries of $b$, at least when \texttt{PETSC\_DECIDE} is used in setting \pVec and \pMat sizes.
-\item Before \PETSc multiplies a matrix times a vector, \PETSc communicates (``scatters'') the whole vector to each process.
+\item Before \PETSc computes a \pMat-\pVec product, \PETSc communicates (``scatters'') the whole \pVec to each process.
 \item After the scatter the \pMat-\pVec product is a local operation, requiring no further communication.
 \end{itemize}
 
@@ -371,7 +334,9 @@ If the above lines appeared in \texttt{mycode.c}, and if it was run
 $ mpiexec -n 2 ./mycode
 \end{cline}
 %$
-then the layout would be as in Figure \ref{fig:mpitwomatlayout}.  We can have \PETSc show us the \pMat in different formats at the command line:
+then the layout would be as in Figure \ref{fig:mpitwomatlayout}.
+
+We can have \PETSc show us the entries in the \pMat in different formats at the command line:
 \begin{cline}
 $ ./mycode -mat_view
 Mat Object: 1 MPI processes
@@ -388,14 +353,14 @@ Mat Object: 1 MPI processes
  -1.00000e+00  1.00000e+00  1.00000e+00  0.00000e+00
  2.00000e+00  1.00000e+00  -1.00000e+00  1.00000e+00
 \end{cline}
-The former view shows the compressed sparse storage, with values as pairs with column index and value.  The latter view is a traditional (``dense'') display where zero values are shown.  In these cases the matrix was stored in \emph{serial} compressed sparse row format, the \texttt{MATSEQAIJ} type, because of the one-process execution.
+The first view shows the compressed sparse storage, with values as pairs with column index and value.  The second view is a traditional (``dense'') display where all zero values are shown, whether allocated or not.  In these cases the matrix was stored in \emph{serial} compressed sparse row format, the \texttt{MATSEQAIJ} type, because of the one-process execution.
 
-If the code is run in parallel, i.e.~by \texttt{mpiexec -n N ./mycode -mat\_view}, then \PETSc reports \texttt{type:~mpiaij} corresponding to \pMat type \texttt{MATMPIAIJ}.  This is the ``parallel compressed sparse row storage'' described above.
+If the code is run in parallel, i.e.~by \texttt{mpiexec -n N ./mycode}, then \texttt{-mat\_view}  reports \texttt{type:~mpiaij} corresponding to \pMat type \texttt{MATMPIAIJ}.  This is the ``parallel compressed sparse row storage'' described above.
 
 
 \section{A bit more numerical linear algebra}
 
-Gauss elimination \citep{TrefethenBau} is one way to solve a system, but many other methods are iterative.  They are often based on the \emph{residual} of some approximation $\bu_0$ of the solution.  By definition, the residual of $\bu_0$ in linear system \eqref{introsystem} is the vector
+Direct methods like Gauss elimination \citep{TrefethenBau} are one way to solve a system, but many other methods are iterative.  They are often based on the \emph{residual} of some approximation $\bu_0$ of the solution.  By definition, the residual of $\bu_0$ in linear system \eqref{introsystem} is the vector
 \begin{equation}
 \br_0 = \bb - A \bu_0. \label{residualdefn}
 \end{equation}
@@ -457,7 +422,9 @@ and
 \begin{equation}
 (A P^{-1}) (P\bu) = \bb \label{introrightpre}
 \end{equation}
-obviously have the same solution $\bu$ as \eqref{introsystem}.  However, matrices $P^{-1} A$ or $A P^{-1}$ may have different eigenvalues, condition numbers, and so on---different spectral properties---from $A$.  While the accuracy of the approximate solution $\bu$ cannot be improved beyond the $\kappa(A) \eps$ level, as fact i) on page \pageref{limittoaccuracy} cannot be overcome, methods can indeed take advantage of better conditioning or other spectral properties to generate $\bu$ more quickly.  Especially if $P^{-1}$ is easy to apply\sidenote{The inverse matrix $P^{-1}$ is ``easy to apply'' exactly if the system $P\bv = \bc$ is easy to solve for $\bv$ in the sense of low computational cost.} then this can be an advantageous idea when trying to approximate $\bu$ quickly.  Equivalent systems \eqref{introleftpre} and \eqref{introrightpre} are referred to as \emph{preconditioned} systems, with \eqref{introleftpre} called \emph{left preconditioning} and \eqref{introrightpre} called \emph{right-preconditioning}.  The next example shows how preconditioning can make the Richardson iteration converge.
+obviously have the same solution $\bu$ as \eqref{introsystem}.  However, matrices $P^{-1} A$ or $A P^{-1}$ may have different eigenvalues, condition numbers, and so on---different spectral properties---from $A$.  While the accuracy of the approximate solution $\bu$ cannot be improved beyond the $\kappa(A) \eps$ level, as fact i) on page \pageref{limittoaccuracy} cannot be overcome, methods can take advantage of better spectral properties to generate $\bu$ more quickly.  This idea is effective if $P^{-1}$ is easy to apply.\sidenote{This means: the system $P\bv = \bc$ is easy to solve for $\bv$ in the sense of low computational cost.}
+
+Equivalent systems \eqref{introleftpre} and \eqref{introrightpre} are referred to as \emph{preconditioned} systems, with \eqref{introleftpre} called \emph{left preconditioning} and \eqref{introrightpre} called \emph{right-preconditioning}.  The next example shows how preconditioning can make the Richardson iteration converge.
 
 \medskip\noindent\hrulefill
 \begin{examplecont}  Suppose we use the diagonal matrix from  \eqref{introexample} as $P$:
@@ -470,58 +437,111 @@ Being diagonal, this $P$ is easy to invert and apply.  The preconditioned Richar
 \begin{equation}
 \bu_{k+1} = \bu_k + \omega (P^{-1} \bb - P^{-1} A \bu_k),  \label{introprerichardson}
 \end{equation}
-is much better behaved.  With $\bu_0 = [0\,\, 0]^*$ again we get this sequence from \eqref{introprerichardson}:
+is better behaved.  With $\bu_0 = [0\,\, 0]^*$ again we get this sequence from \eqref{introprerichardson}:
 \begin{equation}
 \rvect{0}{0}{0}, \rvect{1}{0.8}{1.0}, \rvect{2}{0.9}{1.8}, \rvect{3}{0.98}{1.90}, \dots
 \end{equation}
-This sequence is apparently going to $\bu = [1\,\, 2]^*$.  Of course, the explanation is not hard to see.  In this case
+This sequence is apparently going to $\bu = [1\,\, 2]^*$.  The explanation is not hard to see; compare
 \begin{equation}
-\rho(I-A) = -9.1, \qquad \rho(I-P^{-1} A) = 0.32,
+\rho(I-A) = -9.1, \qquad \rho(I-P^{-1} A) = 0.32.
 \end{equation}
-so convergence claim \eqref{introconvergethm} matches this bit of evidence.
+This example illustrates convergence claim \eqref{introconvergethm}.
 \end{examplecont}
 \noindent\hrulefill
 
 \medskip
-The above introduction of the residual, Richardson iteration, and preconditioning is hardly adequate.  But let us return to \PETSc codes and solve linear systems.  The reader can treat \PETSc's linear solvers as black boxes for now.
+The above introduction of the residual, Richardson iteration, and preconditioning is hardly adequate.  But let us return to \PETSc codes and solve linear systems.  The reader can first treat \PETSc's linear solver object as a black box, but then explore how it works through runtime options.
 
 \section{Solve a small linear system in \PETSc}
 
-We have already know how to create, fill, and destroy a \pVec object and a \pMat object.  The next code, \texttt{c1vecmatksp.c} shown in Figure \ref{code:vecmatksp}, does all these steps.  To solve the system, however, it adds one more \PETSc object, namely a Krylov space method object ``\pKSP'' which holds the linear system.
+We already know how to create, fill, and destroy \pVec and \pMat objects.  The next code, \texttt{c1vecmatksp.c} shown in Figure \ref{code:vecmatksp}, does these steps.  To solve the system it uses a Krylov space solver object ``\pKSP'' which has the ability to solve a linear system by a method chosen at runtime.
 
-The \pKSP has the ability to solve a linear system by a method chosen at runtime.  Besides the promised \texttt{Create/SetFromOptions/Destroy} sequence for \pKSP, there are two more important commands.  The system is actually solved by
+Besides the expected \texttt{Create/SetFromOptions/Destroy} sequence for \pKSP, there are two important commands.  The system is actually solved by
 \begin{code}
 KSPSolve(ksp,b,x);
 \end{code}
-which supplies the right-hand side of the system (i.e.~\pVec \texttt{b}) and space for the solution (\pVec \texttt{x}).
-
-But first we must tell \pKSP about the matrix in the linear system.  For that we have the command
+This supplies the right-hand side of the system (i.e.~\pVec \texttt{b}) and space for the solution (\pVec \texttt{x}).  But first we tell \pKSP about the matrix in the linear system by the command
 \begin{code}
 KSPSetOperators(ksp,A,A);
 \end{code}
-Why do we list \texttt{A} twice, you say?  As in our brief introduction above, the linear system 
 
+Why list \texttt{A} twice in \texttt{KSPSetOperators}?  As in our brief introduction above, the linear system $A\bx=\bb$ is equivalent to preconditioned systems like $P^{-1} A \bx = P^{-1} \bb$ (for left preconditioning).  At runtime, typically and conceptually, one chooses a preconditioning method which builds $P$ from $A$, or an approximation of $A$, before applying $P^{-1}$.  For example, \emph{incomplete LU} factorization can be used in building $P$ from $A$, or $P$ could be the diagonal of $A$ as in the example.  The second matrix argument supplied to \texttt{KSPSetOperators} is the ``raw data'' from which the preconditioner $P$ is built.  Note we do not \emph{supply} $P$ itself---that would both require the user to write extra code and it would stop the user from choosing among preconditioners at runtime.  Insteady we supply ``material'' from which preconditioner code can build and apply the linear operator $P^{-1}$, and the most common such ``material'' is $A$ itself.
+
+After calling \texttt{KSPSolve()} we view the solution \pVec \texttt{x} by calling \texttt{VecView()}.  But this and everything else about the code in Figure \ref{code:vecmatksp} should be self-explanatory, so now let's run it:
+\begin{cline}
+$ make c1vecmatksp
+$ ./c1vecmatksp
+Vec Object: 1 MPI processes
+  type: seq
+3
+4
+4
+-3
+\end{cline}
+This solves the system and gives us $\bx$.  But what happened and how to control it?
 
 \inputwhole{../c/c1vecmatksp.c}{\texttt{p4pdes/c/c1vecmatksp.c}}{Solve a small linear system.}{code:vecmatksp}
 
 
-FIXME: one and 2 processor
+\section{Revealing actions at runtime}
 
-FIXME: with \texttt{-mat\_view} and \texttt{-vec\_view}
+Now we get to a key \PETSc idea which cannot be over-emphasized:
+\begin{quote}
+learning \PETSc requires viewing solver objects at runtime.
+\end{quote}
+For example, what happened in running ``\texttt{./c1vecmatksp}'' above?  Quite a bit!  To start we can view the \pVec and \pMat objects, by ``\texttt{./c1vecmatksp -vec\_view -mat\_view}'' but this tells us nothing about the solver, and gives no hints on changing methods at runtime.  Instead, look at the output of \texttt{-ksp\_view}, here with a bit of the information supressed for brevity:
+\begin{cline}
+$ ./c1vecmatksp -ksp_view
+KSP Object: 1 MPI processes
+  type: gmres
+    GMRES: restart=30, using Classical (unmodified) Gram-Schmidt ...
+    GMRES: happy breakdown tolerance 1e-30
+  maximum iterations=10000, initial guess is zero
+  tolerances:  relative=1e-05, absolute=1e-50, divergence=10000
+  left preconditioning
+  using PRECONDITIONED norm type for convergence test
+PC Object: 1 MPI processes
+  type: ilu
+    ILU: out-of-place factorization
+    0 levels of fill
+    tolerance for zero pivot 2.22045e-14
+    matrix ordering: natural
+    factor fill ratio given 1, needed 1
+      ...
+  linear system matrix = precond matrix:
+  Mat Object:   1 MPI processes
+    type: seqaij
+    rows=4, cols=4
+    total: nonzeros=16, allocated nonzeros=20
+    total number of mallocs used during MatSetValues calls =0
+      using I-node routines: found 1 nodes, limit used is 5
+Vec Object: 1 MPI processes
+  type: seq
+3
+4
+4
+-3
+\end{cline}
+%$
 
-FIXME: with \texttt{-ksp\_view}
-
-FIXME: serial default is \texttt{-ksp\_type gmres -pc\_type ilu}
+FIXME: explain that serial default is \texttt{-ksp\_type gmres -pc\_type ilu}
 
 FIXME: with \texttt{-ksp\_type none -pc\_type lu}
 
 FIXME: unpreconditioned richardson fails (\texttt{./c1vecmatksp -ksp\_type richardson -ksp\_richardson\_scale 1.0 -ksp\_monitor -pc\_type none}) but default preconditioned succeeds (i.e. -pc\_type ilu)
 
-FIXME: parallel default is \texttt{-ksp\_type gmres -pc\_type bjacobi -sub\_pc\_type ilu}
-
-FIXME: try parallel with \texttt{-pc\_type jacobi}; compare -ksp\_view and note there is no sub\_.  in fact, defaults fail but this works on 4 processes
+FIXME: \texttt{-ksp\_monitor}
 
 FIXME: try \texttt{-ksp\_pc\_side RIGHT}; default is \texttt{LEFT}
+
+
+FIXME: 2 processor
+
+FIXME: parallel default is \texttt{-ksp\_type gmres -pc\_type bjacobi -sub\_pc\_type ilu}
+
+FIXME: in fact, defaults fail on 4 processes
+
+FIXME: try parallel with \texttt{-pc\_type jacobi}; compare -ksp\_view and note there is no sub\_; this works on 4 processes
 
 
 That's enough runtime options for now.  There will be more.
@@ -564,4 +584,18 @@ FIXME: \texttt{-ksp\_monitor, -ksp\_view, -ksp\_monitor -ksp\_type cg}
 \item Program \texttt{c1e.c} does redundant work, and a terrible job of load-balancing, because the computation of the factorial $n!$ on rank $n$ requires more flops when $n$ is larger.  Modify the code to balance the load almost perfectly, with exactly one divide operation on each \texttt{rank}$>0$ process, by using blocking send and receive operations (\texttt{MPI\_Send(),MPI\_Recv()}) to pass the result of the last factorial to the next rank.  (\emph{Of course now we have a code that does a ridiculous amount of communication and waiting.})
 % e1balanced.c
 \item Show \eqref{introconvergethm}.
+\item FIXME valgrind exercise: remove Destroy and see the failure
+\item FIXME: make exercise: By contrast, one could override the ``\texttt{PETSC\_DECIDE}'' parallel layout by replacing the \texttt{VecSetSizes()} line with this block of code:
+\begin{code}
+PetscMPIInt rank;
+MPI_Comm_rank(COMM,&rank);
+if (rank == 0) {
+  VecSetSizes(x,3,4);
+} else if (rank == 1) {
+  VecSetSizes(x,1,4);
+} else {
+  SETERRQ(COMM,1,"this code only works with size==2 communicators");
+}
+\end{code}
+That is, we could specify the ``local size'' argument to \texttt{VecSetSizes()}, instead of using \texttt{PETSC\_DECIDE}.  The resulting layout is shown in Figure \ref{fig:artificialmpitwoveclayout}.  Fortunately, inflexible coding like this is rarely necessary.
 \end{enumerate}
