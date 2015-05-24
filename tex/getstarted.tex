@@ -371,7 +371,7 @@ If the above lines appeared in \texttt{mycode.c}, and if it was run
 $ mpiexec -n 2 ./mycode
 \end{cline}
 %$
-then the layout would be as in Figure \ref{fig:mpitwomatlayout}.  We could have \PETSc show us the \pMat in different formats at the command line:
+then the layout would be as in Figure \ref{fig:mpitwomatlayout}.  We can have \PETSc show us the \pMat in different formats at the command line:
 \begin{cline}
 $ ./mycode -mat_view
 Mat Object: 1 MPI processes
@@ -390,17 +390,19 @@ Mat Object: 1 MPI processes
 \end{cline}
 The former view shows the compressed sparse storage, with values as pairs with column index and value.  The latter view is a traditional (``dense'') display where zero values are shown.  In these cases the matrix was stored in \emph{serial} compressed sparse row format, the \texttt{MATSEQAIJ} type, because of the one-process execution.
 
+If the code is run in parallel, i.e.~by \texttt{mpiexec -n N ./mycode -mat\_view}, then \PETSc reports \texttt{type:~mpiaij} corresponding to \pMat type \texttt{MATMPIAIJ}.  This is the ``parallel compressed sparse row storage'' described above.
+
+
 \section{A bit more numerical linear algebra}
 
-Gauss elimination \citep{TrefethenBau} is one way to solve a system, but many other methods are iterative, and they often use the \emph{residual}.  By definition, the residual of vector $\bu_0$ in linear system \eqref{introsystem} is the vector
+Gauss elimination \citep{TrefethenBau} is one way to solve a system, but many other methods are iterative.  They are often based on the \emph{residual} of some approximation $\bu_0$ of the solution.  By definition, the residual of $\bu_0$ in linear system \eqref{introsystem} is the vector
 \begin{equation}
 \br_0 = \bb - A \bu_0. \label{residualdefn}
 \end{equation}
-If $\bu_0$ is approximately the solution of \eqref{introsystem} then the residual is approximately zero, at least up to a factor of the norm of $A$.
 
-Evaluating the residual for a known vector $\bu_0$ requires only applying $A$ to it, an $O(N^2)$ operation at most.  However, most discretization schemes for PDEs generate matrices $A$ that are \emph{sparse}, with many more zero entries than nonzeros, and often the number of nonzeros per row is independent of $N$.  In such cases the operation $A\bu_0$ can be implemented in $O(N)$ operations.
+Evaluating the residual for a known vector $\bu_0$ requires only applying $A$ to it, an $O(N^2)$ operation at most.  However, most discretization schemes for PDEs generate matrices $A$ that are \emph{sparse}, with many more zero entries than nonzeros, and often the number of nonzeros per row is independent of $N$.  In such cases the operation $A\bu_0$ and the evaluation of the residual can be done in $O(N)$ operations.
 
-The \emph{Richardson iteration} is an example of an iterative method based on the residual.  If $\bu_0$ is an initial estimate of the solution then it simply adds a multiple $\omega$ of the residual at each step:
+The \emph{Richardson iteration} is an example of an iterative method based on the residual.  If $\bu_0$ is an initial estimate of the solution then it simply adds a multiple $\omega$ of the last residual at each step:
 \begin{equation}
 \bu_{k+1} = \bu_k + \omega (\bb - A \bu_k).  \label{introrichardson}
 \end{equation}
@@ -420,29 +422,30 @@ A \bu
 = \bb
  \label{introexample}
 \end{equation}
-which has solution $\bu = [1\,\, 2]^\top$.  If we start with estimate $\bu_0 = [0\,\, 0]^\top$ then the unweighted ($\omega=1$) Richardson iteration \eqref{introrichardson} gives a sequence of vectors % see ../matlab/richardsonex.m
+which has solution $\bu = [1\,\, 2]^\top$.  If we start with estimate $\bu_0 = [0\,\, 0]^\top$ then the $\omega=1$ Richardson iteration \eqref{introrichardson} gives a sequence of vectors % see ../matlab/richardsonex.m
 \begin{equation}
 \rvect{0}{0}{0}, \rvect{1}{8}{1}, \rvect{2}{-63}{9}, \rvect{3}{584}{-62}, \dots
 \end{equation}
-This sequence is not heading toward the solution $\bu = [1\,\, 2]^\top$.
+This sequence is not heading toward the solution.
 \end{example}
 \noindent\hrulefill
 
+\medskip
 If we rewrite \eqref{introrichardson} as
 \begin{equation}
 \bu_{k+1} = (I - \omega A) \bu_k + \omega \bb  \label{introrewriterichardson}
 \end{equation}
-then it is easy to believe that the ``size'' of the matrix $I-\omega A$ will determine whether $\lim_{k\to\infty} \bu_k$ exists, for generic starting vectors $\bu_0$.
+then it is easy to believe that the ``size'' of the matrix $I-\omega A$ will determine whether $\lim_{k\to\infty} \bu_k$ exists, for generic starting vectors $\bu_0$.  To make this precise we recall the definitions of \emph{eigenvalue} and \emph{singular value}.
 
-To resolve these questions we recall the definitions of \emph{eigenvalue} and \emph{singular value}.  A complex number $\lambda \in \CC$ is an eigenvalue of a square matrix $B\in\RR^{N\times N}$ if there is a nonzero vector $\bv\in\CC^N$ so that $B \bv = \lambda \bv$.    The singular values are the square roots of the eigenvalues of the matrix $B^*B$.\sidenote{The matrix $B^*B$ is symmetric and positive-definite so its eigenvalues are nonnegative.}  Singular values are also geometrically-defined as the lengths of semi-axes of the ellipsoid in $\RR^N$ that results from applying $B$ to all vectors in the unit sphere of $\RR^N$ \citep{TrefethenBau}.
+A complex number $\lambda \in \CC$ is an eigenvalue of a square matrix $B\in\RR^{N\times N}$ if there is a nonzero vector $\bv\in\CC^N$ so that $B \bv = \lambda \bv$.  The singular values are then the square roots of the eigenvalues of the matrix $B^*B$.  The matrix $B^*B$ is symmetric and positive-definite so its eigenvalues are nonnegative.  Singular values are also geometrically-defined as the lengths of semi-axes of the ellipsoid in $\RR^N$ that results from applying $B$ to all vectors in the unit sphere of $\RR^N$ \citep{TrefethenBau}.
 
-The set of all eigenvalues of $B$ is the \emph{spectrum} $\sigma(B)$ of $B$.  Properties of matrices that can be described in terms of eigenvalues or singular values are generically called ``spectral properties.''  For example, recall that $\|B\|_2$ is equal to the largest singular value of $B$, while $\|B^{-1}\|_2$ is equal to the inverse of the smallest singular value of $B$.  The 2-norm condition number $\kappa(B)$ is the ratio of largest to smallest singular values,\sidenote{The condition number of $B$ well-visualized as the eccentricity of the ellipsoid we used in defining the singular values geometrically.}, and thus is a spectral property of $B$.
+The set of all eigenvalues of $B$ is the \emph{spectrum} $\sigma(B)$ of $B$.  Properties of matrices described in terms of eigenvalues or singular values are generically called ``spectral properties.''  For example, recall that $\|B\|_2$ is equal to the largest singular value of $B$, while $\|B^{-1}\|_2$ is equal to the inverse of the smallest singular value of $B$.  The 2-norm condition number $\kappa(B)$ is the ratio of largest to smallest singular values,\sidenote{The condition number of $B$ is visualized as the eccentricity of the ellipsoid we used in defining the singular values geometrically.} and thus is a spectral property of $B$.
 
-It is an easy exercise to show that the Richardson iteration \eqref{introrichardson} will converge if and only if all the eigenvalues of $B=I-\omega A$ are inside the unit circle.  Defining the \emph{spectral radius} $\rho(B)$ of a matrix $B$ as the maximum norm of the eigenvalues of $A$, we can describe the convergence of the Richardson iteration this way:
+It is an easy exercise to show that the Richardson iteration \eqref{introrichardson} will converge if and only if all the eigenvalues of $B=I-\omega A$ are inside the unit circle.  Defining the \emph{spectral radius} $\rho(B)$ of a matrix $B$ as the maximum norm of the eigenvalues of $A$, we can describe the convergence of the Richardson iteration:
 \begin{equation}
 \text{\eqref{introrichardson} converges if and only if } \rho(I-\omega A) < 1. \label{introconvergethm}
 \end{equation}
-We can also show that $\rho(B) \le \|B\|_2$ so \eqref{introrewriterichardson} converges if $\|I-\omega A\|_2 < 1$, but this norm condition is merely sufficient, while \eqref{introconvergethm} is necessary and sufficient.
+One can show that $\rho(B) \le \|B\|_2$, so \eqref{introrewriterichardson} converges if $\|I-\omega A\|_2 < 1$.
 
 The most powerful iterative linear algebra methods generate optimal, in various senses \citep{TrefethenBau}, estimates $\bu_k$ which are each linear combinations of vectors $\bb,A\bb,A^2\bb,\dots,A^{k-1}\bb$.  These methods are collectively called \emph{Krylov space methods} because the span of these vectors is a Krylov space.  Examples are conjugate gradients (CG) and minimum residual methods (e.g.~MINRES or GMRES) \citep{Greenbaum1997}.  (The classical Jacobi and Gauss-Siedel iterative methods are not Krylov space methods because they involve extracting parts of $A$ as a matrix.)  The effectiveness of a given Krylov method on a given matrix $A$ depends on the eigenvalues or singular values of $A$, i.e.~on its spectral properties.  We use Krylov space methods in Chapter \ref{chap:structured} and all later Chapters.
 
@@ -560,4 +563,5 @@ FIXME: \texttt{-ksp\_monitor, -ksp\_view, -ksp\_monitor -ksp\_type cg}
 \begin{enumerate}
 \item Program \texttt{c1e.c} does redundant work, and a terrible job of load-balancing, because the computation of the factorial $n!$ on rank $n$ requires more flops when $n$ is larger.  Modify the code to balance the load almost perfectly, with exactly one divide operation on each \texttt{rank}$>0$ process, by using blocking send and receive operations (\texttt{MPI\_Send(),MPI\_Recv()}) to pass the result of the last factorial to the next rank.  (\emph{Of course now we have a code that does a ridiculous amount of communication and waiting.})
 % e1balanced.c
+\item Show \eqref{introconvergethm}.
 \end{enumerate}
