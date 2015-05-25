@@ -483,15 +483,15 @@ This solves the system and gives us $\bx$.  But what happened and how to control
 \inputwhole{../c/c1vecmatksp.c}{\texttt{p4pdes/c/c1vecmatksp.c}}{Solve a small linear system.}{code:vecmatksp}
 
 
-\section{Revealing actions at runtime}
+\section{Revealing solvers at runtime}
 
-To start see what happened when we ran \texttt{./c1vecmatksp} above, we could start by viewing the \pVec and \pMat objects.  The result of ``\texttt{./c1vecmatksp -vec\_view -mat\_view}'' is perfectly clear, but it tells us nothing about the solver, and it gives no hints on alternative ways of solving the equations.
+To start to see what happened when we ran \texttt{./c1vecmatksp} above, we could start by viewing the \pVec and \pMat objects.  The result of ``\texttt{./c1vecmatksp -vec\_view -mat\_view}'' is perfectly clear, but it tells us nothing about the solver, and it gives no hints on alternative ways of solving the equations.
 
-Here is a key \PETSc idea which cannot be over-emphasized:
+Here is a key idea which cannot be over-emphasized:
 \begin{quote}
 learning \PETSc requires viewing \emph{solver} objects at runtime.
 \end{quote}
-For example, we try \texttt{-ksp\_view}; the output here is clipped for brevity:
+For example, we try \texttt{-ksp\_view}; the output is slightly-clipped for clarity:
 \begin{cline}
 $ ./c1vecmatksp -ksp_view
 KSP Object: 1 MPI processes
@@ -526,9 +526,44 @@ Vec Object: 1 MPI processes
 \end{cline}
 %$
 
-FIXME: explain that serial default is \texttt{-ksp\_type gmres -pc\_type ilu}
+So here is what we learn:
+\begin{itemize}
+\item The default \pKSP solver is GMRES \citep{Saad2003}, i.e.~\texttt{-ksp\_type gmres} as a command-line option.  As GMRES builds an approximation of the solution from the Krylov space by saving more and more vectors, and thus uses up memory, one saves memory by restarting after a number of iterations.  The default is every 30 iterations, i.e.~\texttt{-ksp\_gmres\_restart 30}.
+\item The default convergence tolerances for the \pKSP are \texttt{-ksp\_rtol 1.0e-5 -ksp\_atol 1.0e-50}.  In particular, \pKSP iterations stop when the residual norm has been reduced by $10^5$.
+\item Inside the \pKSP is a \pPC preconditioner object.  We did not ask for one in the code, but every \pKSP has a \pPC.
+\item The default \pPC is left preconditioning with ILU, i.e.~incomplete LU factorization, which is \texttt{-pc\_type ilu} as a runtime option.\sidenote{We will see in a moment that this is the \emph{serial} default \pPC, and there is more going on in parallel.}  Actually, this preconditioner is usually called ``ILU($0$)'', i.e.~with ``\texttt{0 levels of fill}'', so it does not use more memory than used by $A$ already.
+\item The \pPC object has a copy of $A$ (``\texttt{Mat Object}''), because it was supplied as the second argument to \texttt{KSPSetOperators()} above.
+\end{itemize}
+Also, of course, we get the output of the solution $\bx$.
 
-FIXME: direct solve by \texttt{-ksp\_type preonly -pc\_type lu}, but \texttt{-ksp\_monitor} output shows it was essentially direct solve with ilu above
+While option \texttt{-ksp\_view} tells us what the solver \emph{is}, option \texttt{-ksp\_monitor} shows what it \emph{does}.  In this case, the \pKSP iteration is short:
+\begin{cline}
+$ ./c1vecmatksp -ksp_monitor
+  0 KSP Residual norm 2.449489742783e+00
+  1 KSP Residual norm 1.520235486122e-15
+Vec Object: 1 MPI processes
+  type: seq
+1
+0
+2
+-1
+\end{cline}
+%$
+The reason that the residual drops to nearly zero, in this case, is that GMRES essentially sees a preconditioned system with an \emph{identity} matrix.  That is, $P^{-1} A = I$ in this case because the ILU operation on $A$, to build $P^{-1}$, is a full LU factorization.  This is the case when we have an $A$ that is dense, but here our $A$ is banded and ``dense enough'' so that the LU factorization requires no fill-in.
+
+For a small system like this we can try a direct solve anyway.  To see how, first do
+\begin{cline}
+$ ./c1vecmatksp -help | grep ksp_type
+  -ksp_type <gmres>: Krylov method (one of) cg groppcg pipecg cgne nash stcg gltr richardson
+$ ./c1vecmatksp -help | grep pc_type
+  -pc_type <ilu>: Preconditioner (one of) none jacobi pbjacobi bjacobi sor lu shell mg
+\end{cline}
+to see the solver and preconditioner options.  One of the preconditioners is ``\texttt{lu}'', suggesting a direct solve.  In this case we \emph{do not} want iterations, and one of the \pKSP options\sidenote{FIXME: should be!} ``\texttt{preonly}''.  The direct solver combination we want is
+\begin{cline}
+$ ./c1vecmatksp -ksp_type preonly -pc_type lu
+\end{cline}
+%$
+The reader should check with \texttt{-ksp\_view} that the solver/preconditioner is as intended, and with \texttt{-ksp\_monitor} to see that there were, in fact, no iterations.
 
 FIXME: unpreconditioned richardson fails (\texttt{./c1vecmatksp -ksp\_type richardson -ksp\_monitor -pc\_type none}) but default preconditioned succeeds (i.e. -pc\_type ilu)
 
