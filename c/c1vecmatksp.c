@@ -7,7 +7,7 @@ int main(int argc,char **args) {
   Mat            A;
   KSP            ksp;
   PetscInt       i, j[4] = {0, 1, 2, 3};
-  PetscReal      v[4] = {11.0, 7.0, 5.0, 3.0};
+  PetscReal      v[4] = {7.0, 1.0, 1.0, 3.0};
   PetscErrorCode ierr;
 
   PetscInitialize(&argc,&args,(char*)0,help);
@@ -26,14 +26,15 @@ int main(int argc,char **args) {
   ierr = MatSetFromOptions(A); CHKERRQ(ierr);
   ierr = MatSetUp(A); CHKERRQ(ierr);
 
-  i = 0;  v[0] = 1.0;  v[1] = 2.0;  v[2] = 3.0;  v[3] = 4.0;
-  ierr = MatSetValues(A,1,&i,4,j,v,INSERT_VALUES); CHKERRQ(ierr);
-  i = 1;  v[0] = 2.0;  v[1] = 0.0;  v[2] = -2.0;  v[3] = -3.0;
+  i = 0;  v[0] = 1.0;  v[1] = 2.0;  v[2] = 3.0;
+  ierr = MatSetValues(A,1,&i,3,j,v,INSERT_VALUES); CHKERRQ(ierr);
+  i = 1;  v[0] = 2.0;  v[1] = 1.0;  v[2] = -2.0;  v[3] = -3.0;
   ierr = MatSetValues(A,1,&i,4,j,v,INSERT_VALUES); CHKERRQ(ierr);
   i = 2;  v[0] = -1.0;  v[1] = 1.0;  v[2] = 1.0;  v[3] = 0.0;
   ierr = MatSetValues(A,1,&i,4,j,v,INSERT_VALUES); CHKERRQ(ierr);
-  i = 3;  v[0] = 2.0;  v[1] = 1.0;  v[2] = -1.0;  v[3] = 1.0;
-  ierr = MatSetValues(A,1,&i,4,j,v,INSERT_VALUES); CHKERRQ(ierr);
+  j[0] = 1;  j[1] = 2;  j[2] = 3;
+  i = 3;  v[0] = 1.0;  v[1] = 1.0;  v[2] = -1.0;
+  ierr = MatSetValues(A,1,&i,3,j,v,INSERT_VALUES); CHKERRQ(ierr);
 
   ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
   ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
