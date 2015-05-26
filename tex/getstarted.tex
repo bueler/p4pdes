@@ -533,7 +533,7 @@ So here is what we learn:
 \item The default \pPC is left preconditioning with ILU, i.e.~incomplete LU factorization, which is \texttt{-pc\_type ilu} as a runtime option.\sidenote{We will see in a moment that this is the \emph{serial} default \pPC, and there is more going on in parallel.}  Actually, this preconditioner is usually called ``ILU($0$)'', i.e.~with ``\texttt{0 levels of fill}'', so it does not use more memory than used by $A$ already.
 \item The \pPC object has a copy of $A$ (``\texttt{Mat Object}''), because it was supplied as the second argument to \texttt{KSPSetOperators()} above.
 \end{itemize}
-Also, of course, we get the solution $\bx$!
+Of course, we get the solution $\bx$ too.
 
 While option \texttt{-ksp\_view} tells us what the solver \emph{is}, option \texttt{-ksp\_monitor} shows what it \emph{does}.  In this case, the \pKSP iteration is short:
 \begin{cline}
@@ -583,19 +583,13 @@ FIXME: use methods \texttt{PetscOptionsBegin()}, \texttt{PetscOptionsInt()}, and
 
 FIXME option \texttt{-N} so form an $N\times N$ matrix, with $-2$ on the diagonal and $1$ on the super- and sub-diagonals as before
 
-FIXME use matrix mult to get b from arbitrary $x$
+FIXME use matrix mult to get $\bb$ from $\bx$
 
-FIXME estimate the condition number of the matrix for sample $N$ values
-% see "How can I determine the condition number of a matrix?" on the PETSc FAQ page; "be sure to avoid restarts"
-% -pc_type none -ksp_type gmres -ksp_monitor_singular_value -ksp_gmres_restart 1000
+\cinputpartnostrip{c1tri.c}{Set up \pVec and \pMat objects for a tridiagonal system.}{I}{//STARTSETUP}{//ENDSETUP}{code:tripartone}
 
-%\cinputpartnostrip{c1matvec.c}{Initialize \PETSc and set up \pVecs and \pMat.}{I}{}{//ENDSETUP}{code:matvecpartone}
+\cinputpartnostrip{c1tri.c}{Fill the \pVec and \pMat objects and solve the system.}{II}{//ENDSETUP}{//ENDSOLVE}{code:triparttwo}
 
 FIXME: emphasize that \texttt{MatGetOwnershipRange()} means that different processes are assembling different rows, unlike earlier example where all processes inserted all values
-
-%\cinputpartnostrip{c1matvec.c}{Assemble \pMat $A$.  Assemble right-hand side $b$ via exact solution to system.}{II}{//ENDSETUP}{//ENDASSEMBLY}{code:matvecparttwo}
-
-%\cinputpartnostrip{c1matvec.c}{Set up \pKSP.  Solve.  Finalize.}{III}{//ENDASSEMBLY}{//END}{code:matvecpartthree}
 
 FIXME: show sparse-format output for \texttt{A}, noting we get this at the \texttt{MatAssemblyEnd()} stage %$ ./c1matvec -a_mat_view
 
@@ -627,4 +621,7 @@ if (rank == 0) {
 }
 \end{code}
 That is, we could specify the ``local size'' argument to \texttt{VecSetSizes()}, instead of using \texttt{PETSC\_DECIDE}.  The resulting layout is shown in Figure \ref{fig:artificialmpitwoveclayout}.  Fortunately, inflexible coding like this is rarely necessary.
+\item FIXME for \texttt{c1tri.c}, estimate the condition number of the matrix for sample $N$ values
+% see "How can I determine the condition number of a matrix?" on the PETSc FAQ page; "be sure to avoid restarts"
+% -pc_type none -ksp_type gmres -ksp_monitor_singular_value -ksp_gmres_restart 1000
 \end{enumerate}

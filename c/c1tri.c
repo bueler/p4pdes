@@ -9,8 +9,9 @@
        VecAXPY() and VecNorm()  for computing error
 */
 
-static char help[] = "Solve a symmetric tridiagonal system of arbitrary size.\n"
-                     "Option prefix = tri_.\n";
+//STARTSETUP
+static char help[] =
+  "Solve a tridiagonal system of arbitrary size.  Option prefix = tri_.\n";
 
 #include <petsc.h>
 
@@ -20,17 +21,18 @@ int main(int argc,char **args) {
   KSP            ksp;
   PetscBool      prealloc = PETSC_FALSE;
   PetscInt       N = 4, i, Istart, Iend, j[3];
-  PetscReal      v[3], xval, err;
+  PetscReal      v[3], xval, errnorm;
   PetscErrorCode ierr;
 
   PetscInitialize(&argc,&args,(char*)0,help);
 
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"tri_","options for c1tri",""); CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-prealloc",
-                          "use MatMPIAIJSetPreallocation() instead of MatSetUp()",
-                          NULL,prealloc,&prealloc,NULL); CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-n",
-                         "dimension of linear system",NULL,N,&N,NULL); CHKERRQ(ierr);
+  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,
+        "tri_","options for c1tri",""); CHKERRQ(ierr);
+  ierr = PetscOptionsBool(
+        "-prealloc","use MatMPIAIJSetPreallocation() instead of MatSetUp()",
+        NULL,prealloc,&prealloc,NULL); CHKERRQ(ierr);
+  ierr = PetscOptionsInt(
+        "-n","dimension of linear system",NULL,N,&N,NULL); CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
   ierr = VecCreate(PETSC_COMM_WORLD,&x); CHKERRQ(ierr);
@@ -43,7 +45,6 @@ int main(int argc,char **args) {
 
   ierr = MatCreate(PETSC_COMM_WORLD,&A); CHKERRQ(ierr);
   ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,N,N); CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)A,"A"); CHKERRQ(ierr);
   ierr = MatSetOptionsPrefix(A,"a_"); CHKERRQ(ierr);
   ierr = MatSetFromOptions(A); CHKERRQ(ierr);
 
@@ -58,7 +59,7 @@ int main(int argc,char **args) {
   } else {
     ierr = MatSetUp(A); CHKERRQ(ierr);
   }
-
+//ENDSETUP
   ierr = MatGetOwnershipRange(A,&Istart,&Iend); CHKERRQ(ierr);
   for (i=Istart; i<Iend; i++) {
     if (i == 0) {
@@ -92,13 +93,13 @@ int main(int argc,char **args) {
   ierr = KSPSolve(ksp,b,x); CHKERRQ(ierr);
 
   ierr = VecAXPY(x,-1.0,xexact); CHKERRQ(ierr);
-  ierr = VecNorm(x,NORM_2,&err); CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"error |x-xexact|_2 = %.1e\n",err); CHKERRQ(ierr);
+  ierr = VecNorm(x,NORM_2,&errnorm); CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,
+        "error norm |x-xexact|_2 = %.1e\n",errnorm); CHKERRQ(ierr);
 
-  KSPDestroy(&ksp);
+  KSPDestroy(&ksp);  MatDestroy(&A);
   VecDestroy(&x);  VecDestroy(&b);  VecDestroy(&xexact);
-  MatDestroy(&A);
   PetscFinalize();
   return 0;
 }
-
+//ENDSOLVE
