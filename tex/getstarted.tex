@@ -525,7 +525,6 @@ Vec Object: 1 MPI processes
 -1
 \end{cline}
 %$
-
 So here is what we learn:
 \begin{itemize}
 \item The default \pKSP solver is GMRES \citep{Saad2003}, i.e.~\texttt{-ksp\_type gmres} as a command-line option.  As GMRES builds an approximation of the solution from the Krylov space by saving more and more vectors, and thus uses up memory, one saves memory by restarting after a number of iterations.  The default is every 30 iterations, i.e.~\texttt{-ksp\_gmres\_restart 30}.
@@ -534,7 +533,7 @@ So here is what we learn:
 \item The default \pPC is left preconditioning with ILU, i.e.~incomplete LU factorization, which is \texttt{-pc\_type ilu} as a runtime option.\sidenote{We will see in a moment that this is the \emph{serial} default \pPC, and there is more going on in parallel.}  Actually, this preconditioner is usually called ``ILU($0$)'', i.e.~with ``\texttt{0 levels of fill}'', so it does not use more memory than used by $A$ already.
 \item The \pPC object has a copy of $A$ (``\texttt{Mat Object}''), because it was supplied as the second argument to \texttt{KSPSetOperators()} above.
 \end{itemize}
-Also, of course, we get the output of the solution $\bx$.
+Also, of course, we get the solution $\bx$!
 
 While option \texttt{-ksp\_view} tells us what the solver \emph{is}, option \texttt{-ksp\_monitor} shows what it \emph{does}.  In this case, the \pKSP iteration is short:
 \begin{cline}
@@ -542,16 +541,12 @@ $ ./c1vecmatksp -ksp_monitor
   0 KSP Residual norm 2.449489742783e+00
   1 KSP Residual norm 1.520235486122e-15
 Vec Object: 1 MPI processes
-  type: seq
-1
-0
-2
--1
+...
 \end{cline}
 %$
-The reason that the residual drops to nearly zero, in this case, is that GMRES essentially sees a preconditioned system with an \emph{identity} matrix.  That is, $P^{-1} A = I$ in this case because the ILU operation on $A$, to build $P^{-1}$, is a full LU factorization.  This is the case when we have an $A$ that is dense, but here our $A$ is banded and ``dense enough'' so that the LU factorization requires no fill-in.
+The reason that the residual drops to nearly zero in one iteration is that GMRES sees a preconditioned system with an \emph{identity} matrix in this case.  That is, $P^{-1} A = I$ because the ILU operation on $A$ is a full LU factorization.  Our $A$ is banded and ``dense enough'' so that the LU factorization requires no fill-in.
 
-For a small system like this we can try a direct solve anyway.  To see how, first do
+For a small system like this a direct solve works fine.  To see how, first do
 \begin{cline}
 $ ./c1vecmatksp -help | grep ksp_type
   -ksp_type <gmres>: Krylov method (one of) cg groppcg pipecg cgne nash stcg gltr richardson
@@ -575,12 +570,14 @@ FIXME: 2 processor
 FIXME: \texttt{-ksp\_view} shows parallel default is \texttt{-ksp\_type gmres -pc\_type bjacobi -sub\_pc\_type ilu}
 
 
-FIXME: try parallel with \texttt{-pc\_type jacobi}; compare -ksp\_view and note there is no sub\_; this works on 4 processes
+FIXME: try parallel with \texttt{-pc\_type jacobi}; compare -ksp\_view and note there is no sub\_
 
 
 That's enough runtime options for now.  There will be more.
 
-\section{More \PETSc functionality for linear systems}
+\section{More \PETSc functionality, from the code side \dots}
+
+FIXME: new code is \texttt{c1tri.c}
 
 FIXME: use methods \texttt{PetscOptionsBegin()}, \texttt{PetscOptionsInt()}, and \texttt{PetscOptionsEnd()} so that \texttt{-help} output explains the option
 
@@ -604,11 +601,9 @@ FIXME: show sparse-format output for \texttt{A}, noting we get this at the \text
 
 FIXME: show MatXXXSetPreallocation(); need either that or MatSetUp() before MatGetOwnershipRange()
 
-FIXME: solve without choosing method
+FIXME: solve and time with default method
 
-FIXME: show how to solve with Gaussian elimination
-
-FIXME: \texttt{-ksp\_monitor, -ksp\_view, -ksp\_monitor -ksp\_type cg}
+FIXME: solve and time with \texttt{-ksp\_type cg}
 
 
 \section{Exercises}
