@@ -136,23 +136,22 @@ By ii) a generic linear system with $N=10^6$ equations requires $10^{18}$ or so 
 
 \section{\PETSc \pVec and \pMat objects}
 
-To build our first \PETSc code to solve a linear system, we need the \PETSc \emph{objects} which store vectors (\pVec) and matrices (\pMat).  Note that, although \PETSc is written in C and not C++, it is a relentlessly object-oriented software library.  Consider the operations which could create and configure a matrix object \texttt{A} for linear system \eqref{introsystem}:
+To build our first \PETSc code to solve a linear system, we need the \emph{objects} which hold vectors (\pVec) and matrices (\pMat).  Note that, although \PETSc is written in C, and not C++ for example, it is a relentlessly object-oriented software library.  Consider the operations which create and configure a matrix object \texttt{A} for linear system \eqref{introsystem}:
 \begin{code}
 Mat A;
 MatCreate(COMM,&A);
 MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,N,N);
-PetscObjectSetName((PetscObject)A,"A");
 MatSetOptionsPrefix(A,"a_");
 MatSetFromOptions(A);
 ... fill entries of (i.e. assemble) A ...
 ... solve system with A ...
 MatDestroy(&A);
 \end{code}
-We can think of these calls as using methods ``owned'' by the \pMat type, in the sense that these methods manipulate the internal representation of a \pMat while we are (happily) unaware of those details.  At least a \pMat is an \emph{abstract data type} with a hidden implementation.
+We can think of these calls as using methods ``owned'' by the \pMat type, in the sense that they manipulate the internal representation of a \pMat, which is, happily, hidden from us.  If not true ``objects'', major \PETSc types are at least abstract data types with a hidden implementation.
 
-Even the act of filling entries will treat a \pMat as an abstract object.  Furthermore the data structure inside depends on runtime choices, the most basic being that the number of bytes used to store entries on a given MPI process will depend on the number of processes.  Actually a \PETSc \pMat object need not even have entries.  It might, instead, contain code that applies a linear operator to vectors.
+The act of filling entries will treat a \PETSc \pMat as an abstract object.  In fact, a \pMat need not even have entries because it might, instead, contain code that applies a linear operator to vectors.  Furthermore the data structure inside a \pMat depends on runtime choices, the most basic being that the number of bytes used to store entries on a given MPI process will depend on the number of processes.
 
-For all \PETSc object types this basic sequence of operations applies:
+For all \PETSc object types this basic sequence of operations applies:\sidenote{Here ``\texttt{Object}'' is a meta-name for a \PETSc type like \pVec or \pMat.}
 \begin{code}
 Object X;
 ObjectCreate(COMM,&X);
@@ -162,13 +161,11 @@ ObjectSetFromOptions(X);  // allows run-time setting
 ... code uses X ...
 ObjectDestroy(&X);
 \end{code}
-(Here ``\texttt{Object}'' is a meta-name for a \PETSc type like \pVec or \pMat.)
-
-Because \PETSc objects are generally distributed across, and accessible from, multiple MPI processes., the first argument of an \texttt{ObjectCreate()} method is an MPI communicator (``\texttt{COMM}'').  All processes in \texttt{COMM} must call the \texttt{ObjectCreate()} and  \texttt{ObjectDestroy()} methods.
+Because \PETSc objects are generally distributed across, and accessible from, multiple MPI processes., the first argument of an \texttt{ObjectCreate()} method is an MPI communicator (``\texttt{COMM}'').  All processes in \texttt{COMM} must call the \texttt{ObjectCreate()} and  \texttt{ObjectDestroy()} methods.  That is, these are ``collective'' operations.
 
 In the \pMat code above, note the call to \texttt{MatSetOptionsPrefix()}.  Through this ``prefix'', run-time options can address the particular \pMat object.  For example, the run-time option \texttt{-a\_mat\_view} will print out the entries of \texttt{A}.  An option prefix like ``\texttt{a\_}'' is especially helpful in distinguishing multiple \pMat objects at the command line.
 
-Once \pMat \texttt{A} is created and set up by the first five commands \texttt{MatCreate()}--\texttt{MatSetFromOptions()}, then various methods become valid for \texttt{A}, for example including the \texttt{MatSetValues()} method to set entries in \texttt{A}.  We will use that method soon.
+Once \pMat \texttt{A} is created and set up by the first several commands \texttt{MatCreate()}--\texttt{MatSetFromOptions()}, then various methods become valid for \texttt{A}, for example including the \texttt{MatSetValues()} method to set entries in \texttt{A}.  We will use that method after looking at the parallel layout of vectors and matrices.
 
 
 \section{Assembly and parallel layout of \pVecs and \pMats}
@@ -188,7 +185,7 @@ VecAssemblyEnd(x);
 \end{code}
 The four entries of \texttt{Vec x} are set by \texttt{VecSetValues()}, putting values from array \texttt{v} at the indices given by \texttt{i}.
 
-Potentially the operation of setting values in \texttt{x} requires communication between processes, because entries of \texttt{x} which are to be stored on one process could be set by another process.  Such communication occurs between the \texttt{VecAssemblyBegin()} and \texttt{VecAssemblyEnd()} commands.
+The operation of setting values in \texttt{x} may require communication between processes because entries which are to be stored on one process could be set by another process.  Such communication occurs between the \texttt{VecAssemblyBegin()} and \texttt{VecAssemblyEnd()} commands.
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
@@ -222,7 +219,7 @@ then, at the end of the above create-set-assemble sequence, the storage of \text
 $ mpiexec -n 2 ./mycode.c
 \end{cline}
 %$
-then the layout looks like Figure \ref{fig:mpitwoveclayout}.  In this case the argument \texttt{PETSC\_DECIDE} in \texttt{VecSetSizes()} is active.  \PETSc decides to put the first two entries of \texttt{x} on the rank $0$ process and the other two on the rank $1$ process. 
+then the layout looks like Figure \ref{fig:mpitwoveclayout}.  In this case the argument \texttt{PETSC\_DECIDE} in \texttt{VecSetSizes()} is active, and the decision is to put the first two entries of \texttt{x} on the rank $0$ process and the other two on the rank $1$ process. 
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
@@ -248,15 +245,16 @@ then the layout looks like Figure \ref{fig:mpitwoveclayout}.  In this case the a
 \label{fig:mpitwoveclayout}
 \end{marginfigure}
 
-\pMat objects, however, are not actually 2D C arrays even in serial (i.e.~in one-process runs).  Compared to \pVecs they require additional choices regarding parallel distribution.  Though this is hidden inside the implementation of \pMat, the most common storage format is \emph{parallel compressed sparse row storage}, what \PETSc calls the \texttt{MATMPIAIJ} type.  In this type a range of rows is owned by each process (parallel row storage), and within each owned range of rows only the specifically-allocated\sidenote{These are generally the nonzero entries, and usually referred-to as such.} entries are stored (sparse), and furthermore nonzero entries are stored contiguously in an array using an additional index array (compressed).
+\pMat objects, however, are not actually 2D C arrays even in serial (i.e.~in one-process runs).  Compared to \pVecs they require additional choices regarding parallel distribution.  Though this is hidden inside the implementation of \pMat, the most common storage format is \emph{parallel compressed sparse row storage}, what \PETSc calls the \texttt{MATMPIAIJ} type.  In this type a range of rows is owned by each process (parallel row storage), and within each owned range of rows only the specifically-allocated\sidenote{These are generally the nonzero entries, and usually referred-to as such.} entries are stored (sparse), and furthermore nonzero entries are stored contiguously in memory along with an additional index array (compressed).
 
-\pMat objects are linear operators so their major purpose is to multiply \pVecs.  The result vector of a \pMat-\pVec product is a linear combination of the columns of the \pMat.  Thus, in practice, ``parallel row storage'' of the \pMat means these things:\begin{itemize}
-\item \PETSc internally distributes the rows of the \pMat $A$ the same way as the entries of the intended output \pVec.  Thus if $Ax=b$ for some $x$ then the rows of $A$ are distributed like the entries of $b$, at least when \texttt{PETSC\_DECIDE} is used in setting \pVec and \pMat sizes.
+\pMat objects are linear operators so their major purpose is to multiply \pVecs.  The result vector of a \pMat-\pVec product is a linear combination of the columns of the \pMat.  Thus, in practice, ``parallel row storage'' of the \pMat means these things:
+\begin{itemize}
+\item \PETSc internally distributes the rows of the \pMat $A$ the same way as the entries of the intended \emph{output} (i.e.~column) \pVec.  Thus if $Ax=b$ for some $x$ then row $i$ of $A$ is on the rank $m$ processor if and if entry $i$ of $b$ is on the rank $m$ processor.  (At least this can be expected when \texttt{PETSC\_DECIDE} is used in setting both the \pVec and \pMat sizes and they are of the same dimension.)
 \item Before \PETSc computes a \pMat-\pVec product, \PETSc communicates (``scatters'') the whole \pVec to each process.
 \item After the scatter the \pMat-\pVec product is a local operation, requiring no further communication.
 \end{itemize}
 
-But one doesn't really need to know all this!  For example, here is how to create and assemble a $4\times 4$ \pMat one row at a time:
+But one doesn't really need to know all this to assemble a \pMat!  For example, here is how to create and assemble a $4\times 4$ \pMat one row at a time:
 \begin{code}
 Mat A;
 PetscInt  i, j[4] = {0, 1, 2, 3};
@@ -280,7 +278,7 @@ MatSetValues(A,1,&i,3,j,v,INSERT_VALUES);
 MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);
 MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);
 \end{code}
-The method \texttt{MatSetValues()} sets a \emph{block} of values, in this case a row.  The ``\texttt{1,\&i}'' arguments to \texttt{MatSetValues()} say that we are setting one row with global index \texttt{i}.  The ``\texttt{3,j}'' or ``\texttt{4,j}'' arguments say that we set the row using integer array \texttt{j} for the (global) column indices.
+The method \texttt{MatSetValues()} sets multiple values, in this case a row.  The ``\texttt{1,\&i}'' arguments to \texttt{MatSetValues()} say that we are setting one row with global index \texttt{i}.  The ``\texttt{3,j}'' or ``\texttt{4,j}'' arguments say that we set the row using integer array \texttt{j} for the (global) column indices.
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
@@ -353,21 +351,22 @@ Mat Object: 1 MPI processes
  -1.00000e+00  1.00000e+00  1.00000e+00  0.00000e+00
  0.00000e+00  1.00000e+00  1.00000e+00  -1.00000e+00
 \end{cline}
-The first view shows the compressed sparse storage, with values as pairs with column index and value.  The second view is a traditional (``dense'') display where all zero values are shown, whether allocated or not.  In these cases the matrix was stored in \emph{serial} compressed sparse row format, the \texttt{MATSEQAIJ} type, because of the one-process execution.
+The first view shows the compressed sparse storage, with values as pairs with column index and value.  The second view is a traditional (``dense'') display where all zero values are shown, whether allocated or not.\sidenote{Other possibilities, not shown, are \texttt{-mat\_view ::ascii\_matlab}, which dumps in Matlab's text format, and \texttt{-mat\_view binary -viewer\_binary\_filename a.dat} which saves to file \texttt{a.dat} in \PETSc's scalable binary format.}
 
-If the code is run in parallel, i.e.~by \texttt{mpiexec -n N ./mycode}, then \texttt{-mat\_view}  reports \texttt{type:~mpiaij} corresponding to \pMat type \texttt{MATMPIAIJ}.  This is the ``parallel compressed sparse row storage'' described above.
+In these cases the matrix was stored in \emph{serial} compressed sparse row format, the \texttt{MATSEQAIJ} type, because of the one-process execution.  If the code is run in parallel, i.e.~by \texttt{mpiexec -n N ./mycode}, then \texttt{-mat\_view}  reports \texttt{type:~mpiaij} corresponding to \pMat type \texttt{MATMPIAIJ}.  This is the ``parallel compressed sparse row storage'' described above.
 
 
 \section{A bit more numerical linear algebra}
 
-Direct methods like Gauss elimination \citep{TrefethenBau} are one way to solve a system, but many other methods are iterative.  They are often based on the \emph{residual} of some approximation $\bu_0$ of the solution.  By definition, the residual of $\bu_0$ in linear system \eqref{introsystem} is the vector
+Direct methods like Gauss elimination \citep{TrefethenBau} are one way to solve a system, but the most powerful general methods, i.e.~for our later PDE-solving uses, are iterative.  They are often based on the \emph{residual} of some approximation of the solution to the linear system.
+
+By definition, the residual of $\bu_0$ in linear system \eqref{introsystem} is the vector
 \begin{equation}
 \br_0 = \bb - A \bu_0. \label{residualdefn}
 \end{equation}
-
 Evaluating the residual for a known vector $\bu_0$ requires only applying $A$ to it, an $O(N^2)$ operation at most.  However, most discretization schemes for PDEs generate matrices $A$ that are \emph{sparse}, with many more zero entries than nonzeros, and often the number of nonzeros per row is independent of $N$.  In such cases the operation $A\bu_0$ and the evaluation of the residual can be done in $O(N)$ operations.
 
-The \emph{Richardson iteration} is an example of an iterative method based on the residual.  If $\bu_0$ is an initial estimate of the solution then it simply adds a multiple $\omega$ of the last residual at each step:
+The \emph{Richardson iteration} is an example of an iterative method based on the residual.  If $\bu_0$ is an initial estimate of the solution then this iteration simply adds a multiple $\omega$ of the last residual at each step:
 \begin{equation}
 \bu_{k+1} = \bu_k + \omega (\bb - A \bu_k).  \label{introrichardson}
 \end{equation}
@@ -412,7 +411,7 @@ It is an easy exercise to show that the Richardson iteration \eqref{introrichard
 \end{equation}
 One can show that $\rho(B) \le \|B\|_2$, so \eqref{introrewriterichardson} converges if $\|I-\omega A\|_2 < 1$.
 
-The most powerful iterative linear algebra methods generate optimal, in various senses \citep{TrefethenBau}, estimates $\bu_k$ which are each linear combinations of vectors $\bb,A\bb,A^2\bb,\dots,A^{k-1}\bb$.  These methods are collectively called \emph{Krylov space methods} because the span of these vectors is a Krylov space.  Examples are conjugate gradients (CG) and minimum residual methods (e.g.~MINRES or GMRES) \citep{Greenbaum1997}.  (The classical Jacobi and Gauss-Siedel iterative methods are not Krylov space methods because they involve extracting parts of $A$ as a matrix.)  The effectiveness of a given Krylov method on a given matrix $A$ depends on the eigenvalues or singular values of $A$, i.e.~on its spectral properties.  We use Krylov space methods in Chapter \ref{chap:structured} and all later Chapters.
+The most powerful iterative linear algebra methods generate optimal, in various senses \citep{TrefethenBau}, estimates $\bu_k$ which are each linear combinations of vectors $\bb,A\bb,A^2\bb,\dots,A^{k-1}\bb$.  These methods are collectively called \emph{Krylov space methods} because the span of these vectors is a Krylov space.  Examples of such methods are conjugate gradients (CG) and minimum residual methods (e.g.~MINRES or GMRES) \citep{Greenbaum1997,Saad2003}.  The classical Jacobi and Gauss-Siedel iterative methods are not Krylov space methods because they involve extracting parts of $A$ as a matrix.  The effectiveness of a given Krylov method on a given matrix $A$ depends on the eigenvalues or singular values of $A$, i.e.~on its spectral properties.  As they are built into and fully-supported by \PETSc, we will use Krylov space methods in all later Chapters.
 
 Considering spectral properties brings us to an important general point about linear systems.  Namely, that there are many other systems which are equivalent to \eqref{introsystem}.  In fact, if $P\in\RR^{N\times N}$ is an invertible square matrix then the systems
 \begin{equation}
@@ -422,7 +421,7 @@ and
 \begin{equation}
 (A P^{-1}) (P\bu) = \bb \label{introrightpre}
 \end{equation}
-obviously have the same solution $\bu$ as \eqref{introsystem}.  However, matrices $P^{-1} A$ or $A P^{-1}$ may have different eigenvalues, condition numbers, and so on---different spectral properties---from $A$.  While the accuracy of the approximate solution $\bu$ cannot be improved beyond the $\kappa(A) \eps$ level, as fact i) on page \pageref{limittoaccuracy} cannot be overcome, methods can take advantage of better spectral properties to generate $\bu$ more quickly.  This idea is effective if $P^{-1}$ is easy to apply.\sidenote{This means: the system $P\bv = \bc$ is easy to solve for $\bv$ in the sense of low computational cost.}
+obviously have the same solution(s) $\bu$ as \eqref{introsystem}.  However, matrices $P^{-1} A$ or $A P^{-1}$ may have different eigenvalues, condition numbers, and so on---different spectral properties---from $A$.  While the accuracy of the approximate solution $\bu$ cannot be improved beyond the $\kappa(A) \eps$ level, as fact i) on page \pageref{limittoaccuracy} cannot be overcome, methods can take advantage of better spectral properties to generate $\bu$ more quickly.  This idea is effective if $P^{-1}$ is easy to apply.\sidenote{This means: the system $P\bv = \bc$ is easy to solve for $\bv$ in the sense of low computational cost.}
 
 Equivalent systems \eqref{introleftpre} and \eqref{introrightpre} are referred to as \emph{preconditioned} systems, with \eqref{introleftpre} called \emph{left preconditioning} and \eqref{introrightpre} called \emph{right-preconditioning}.  The next example shows how preconditioning can make the Richardson iteration converge.
 
@@ -445,27 +444,29 @@ This sequence is apparently going to $\bu = [1\,\, 2]^*$.  The explanation is no
 \begin{equation}
 \rho(I-A) = -9.1, \qquad \rho(I-P^{-1} A) = 0.32.
 \end{equation}
-This example illustrates convergence claim \eqref{introconvergethm}.
 \end{examplecont}
 \noindent\hrulefill
 
 \medskip
-The above introduction of the residual, Richardson iteration, and preconditioning is hardly adequate.  But let us return to \PETSc codes and solve linear systems.  The reader can first treat \PETSc's linear solver object as a black box, but then explore how it works through runtime options.
+The above example illustrates convergence claim \eqref{introconvergethm}.  Preconditioning using the diagonal this way is called \emph{Jacobi} preconditioning, as it is related to, though not the same idea as, the classical Jacobi iteration for solving a linear system.
+
+Our brief introduction of the residual, Richardson iteration, and preconditioning is hardly adequate.  But let us return to \PETSc codes and solve linear systems.  In the upcoming material the reader can first treat \PETSc's linear solver object as a black box, but then explore how it works through runtime options.
 
 \section{Solve a small linear system in \PETSc}
 
-We already know how to create, fill, and destroy \pVec and \pMat objects.  The next code, \texttt{c1vecmatksp.c} shown in Figure \ref{code:vecmatksp}, does these steps.  To solve the system it uses a Krylov space solver object ``\pKSP'' which has the ability to solve a linear system by a method chosen at runtime.
+We already know how to create, fill, and destroy \pVec and \pMat objects.  The next code, \texttt{c1vecmatksp.c} shown in Figure \ref{code:vecmatksp}, does these steps.  To solve the system it uses a Krylov space method object ``\pKSP'' which has the ability to solve a linear system by a method chosen at runtime.  In the language of \PETSc this is a ``linear solver'' object.
 
-Besides the expected \texttt{Create/SetFromOptions/Destroy} sequence for \pKSP, there are two important commands.  The system is actually solved by
-\begin{code}
-KSPSolve(ksp,b,x);
-\end{code}
-This supplies the right-hand side of the system (i.e.~\pVec \texttt{b}) and space for the solution (\pVec \texttt{x}).  But first we tell \pKSP about the matrix in the linear system by the command
+Besides the expected \texttt{Create/SetFromOptions/Destroy} sequence for \pKSP, there are two important commands needed even for the simplest examples.  First we tell \pKSP about the matrix in the linear system by the command
 \begin{code}
 KSPSetOperators(ksp,A,A);
 \end{code}
+Then the system is actually solved by
+\begin{code}
+KSPSolve(ksp,b,x);
+\end{code}
+This supplies the right-hand side of the system (i.e.~an allocated and assembled \pVec \texttt{b}) and space for the solution (i.e.~an allocated \pVec \texttt{x}).
 
-Why list \texttt{A} twice in calling \texttt{KSPSetOperators}?  Recall the linear system $A\bx=\bb$ is equivalent to $P^{-1} A \bx = P^{-1} \bb$ (left preconditioning).  At runtime, one typically chooses a preconditioning method which builds $P$ from $A$, or from an approximation of $A$, when applying $P^{-1}$.  For example, \emph{incomplete LU} factorization of $A$ can be used in generating $P^{-1}$, or $P$ could be the diagonal of $A$ (as in the example above).  The second matrix argument to \texttt{KSPSetOperators} is the ``raw data'' from which the preconditioner $P$ is built.  Note we do not supply $P$ itself---that would both require the user to write extra code and block easy choice among preconditioners at runtime.  Instead we supply ``material'' from which the preconditioner is built, and the most common such ``material'' is $A$ itself.
+Why do we list \texttt{A} twice in calling \texttt{KSPSetOperators}?  Recall the linear system $A\bx=\bb$ is equivalent to $P^{-1} A \bx = P^{-1} \bb$ (left preconditioning).  At runtime, one typically chooses a preconditioning method which builds $P$ from $A$, or from an approximation of $A$, when applying $P^{-1}$.  For example, \emph{incomplete LU} factorization of $A$ can be used in generating $P^{-1}$, or $P$ could be the diagonal of $A$ (as in the example above).  The second matrix argument to \texttt{KSPSetOperators} is the ``raw data'' from which the preconditioner $P$ is built.  Note we do not supply $P$ itself---that would both require the user to write extra code and block easy choice among preconditioners at runtime.  Instead we supply ``material'' from which the preconditioner is built, and the most common such ``material'' is $A$ itself.
 
 After calling \texttt{KSPSolve()} we display the solution \pVec by calling \texttt{VecView()}.  This and everything else about the code in Figure \ref{code:vecmatksp} should now be self-explanatory.  So let's run it:
 \begin{cline}
