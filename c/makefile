@@ -11,6 +11,10 @@ c1vecmatksp: c1vecmatksp.o  chkopts
 	-${CLINKER} -o c1vecmatksp c1vecmatksp.o  ${PETSC_KSP_LIB}
 	${RM} c1vecmatksp.o
 
+c1tri: c1tri.o  chkopts
+	-${CLINKER} -o c1tri c1tri.o  ${PETSC_KSP_LIB}
+	${RM} c1tri.o
+
 c2poisson: c2poisson.o structuredpoisson.o chkopts
 	-${CLINKER} -o c2poisson c2poisson.o structuredpoisson.o ${PETSC_KSP_LIB}
 	${RM} c2poisson.o structuredpoisson.o
