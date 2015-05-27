@@ -611,15 +611,19 @@ FIXME: solve and time with \texttt{-ksp\_type cg}
 \item Program \texttt{c1e.c} does redundant work, and a terrible job of load-balancing, because the computation of the factorial $n!$ on rank $n$ requires more flops when $n$ is larger.  Modify the code to balance the load almost perfectly, with exactly one divide operation on each \texttt{rank}$>0$ process, by using blocking send and receive operations (\texttt{MPI\_Send(),MPI\_Recv()}) to pass the result of the last factorial to the next rank.  (\emph{Of course now we have a code that does a ridiculous amount of communication and waiting.})
 % e1balanced.c
 \item Show \eqref{introconvergethm}.
-\item FIXME valgrind exercise: remove Destroy and see the failure
+\item As the reader will undoubtedly experience, segmentation faults and memory leaks are inevitable when one develops \PETSc codes.  The standard tool for detecting the latter is \texttt{valgrind}.  We recommend running it frequently.  As an exercise, run
+\begin{cline}
+valgrind ./c1vecmatksp
+\end{cline}
+to see what \texttt{valgrind} shows for a leak-free program.  Then comment-out one \texttt{VecDestroy()} call in \texttt{c1vecmatksp.c} and rerun to see a common type of memory leak.
 \item Play with preconditioning and the Richardson iteration on the example
 \begin{cline}
-./c1tri -tri\_n 100 -ksp\_monitor
+./c1tri -tri_n 100 -ksp_monitor
 \end{cline}
 In particular, observe that unpreconditioned Richardson iteration fails (i.e.~add \texttt{-ksp\_type richardson -pc\_type none}).  The default preconditioner succeeds (\texttt{-pc\_type ilu}), but this is cheating because ILU($0$) becomes a complete LU factorization on this tridiagonal and diagonally-dominant $A$.  But, as in the example on page \pageref{introprerichardson}, Richardson iteration succeeds with \texttt{-pc\_type jacobi}.
-\item Estimate the growth rate of the condition number of the matrix in \texttt{c1tri.c} for some $N$ values.  In particular, one must avoid restarts and preconditioning to use the
-\begin{quote}
-\texttt{-ksp\_monitor\_singular\_value}
-\end{quote}
-option, so add \texttt{-ksp\_type gmres -ksp\_gmres\_restart 1000 -pc\_type none}.
+\item Unpreconditioned GMRES solves the linear system in \texttt{c1tri.c} reasonably efficiently.  We can explain this by asking \PETSc to compute the eigenvalues of $A$ by using option \texttt{-ksp\_compute\_eigenvalues}.  Because this option will compute the eigenvalues of the ILU($0$)-preconditioned operator unless we turn off preconditioning, we need to add \texttt{-pc\_type none}.  Try dimensions $N=10,100,1000$.  Why does the  run
+\begin{cline}
+./c1tri -tri_n 1000 -pc_type none -ksp_compute_eigenvalues
+\end{cline}
+only show 11 eigenvalues of this $1000\times 1000$ matrix?  How do these eigenvalues explain the good behavior of unpreconditioned GMRES?\sidenote{See \citep{TrefethenBau}, perhaps.}  Note that the relevant \PETSc manual page says option \texttt{-ksp\_compute\_eigenvalues} is ``intended only for assistance in understanding the convergence of iterative methods, not for eigenanalysis.  For accurate computation of eigenvalues we recommend using the excellant package SLEPc.''
 \end{enumerate}
