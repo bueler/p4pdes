@@ -454,9 +454,9 @@ Our brief introduction of the residual, Richardson iteration, and preconditionin
 
 \section{Solve a small linear system in \PETSc}
 
-We already know how to create, fill, and destroy \pVec and \pMat objects.  The next code, \texttt{c1vecmatksp.c} shown in Figure \ref{code:vecmatksp}, does these steps.  To solve the system it uses a Krylov space method object ``\pKSP'' which has the ability to solve a linear system by a method chosen at runtime.  In the language of \PETSc this is a ``linear solver'' object.
+We already know how to create, fill, and destroy \pVec and \pMat objects.  The next code, \texttt{c1vecmatksp.c} shown in Figure \ref{code:vecmatksp}, does these steps.  To actually solve a linear system it also uses a Krylov space method object ``\pKSP''.  This linear solver uses a method chosen at runtime.
 
-Besides the expected \texttt{Create/SetFromOptions/Destroy} sequence for \pKSP, there are two important commands needed even for the simplest examples.  First we tell \pKSP about the matrix in the linear system by the command
+Besides the expected \texttt{Create/SetFromOptions/Destroy} sequence for \pKSP, there are two important commands needed even for the simplest examples.  First we need to tell \pKSP about the matrix in the linear system by the command
 \begin{code}
 KSPSetOperators(ksp,A,A);
 \end{code}
@@ -464,9 +464,11 @@ Then the system is actually solved by
 \begin{code}
 KSPSolve(ksp,b,x);
 \end{code}
-This supplies the right-hand side of the system (i.e.~an allocated and assembled \pVec \texttt{b}) and space for the solution (i.e.~an allocated \pVec \texttt{x}).
+which also supplies the right-hand side of the system (i.e.~an allocated and assembled \pVec \texttt{b}) and space for the solution (i.e.~an allocated \pVec \texttt{x}).
 
-Why do we list \texttt{A} twice in calling \texttt{KSPSetOperators}?  Recall the linear system $A\bx=\bb$ is equivalent to $P^{-1} A \bx = P^{-1} \bb$ (left preconditioning).  At runtime, one typically chooses a preconditioning method which builds $P$ from $A$, or from an approximation of $A$, when applying $P^{-1}$.  For example, \emph{incomplete LU} factorization of $A$ can be used in generating $P^{-1}$, or $P$ could be the diagonal of $A$ (as in the example above).  The second matrix argument to \texttt{KSPSetOperators} is the ``raw data'' from which the preconditioner $P$ is built.  Note we do not supply $P$ itself---that would both require the user to write extra code and block easy choice among preconditioners at runtime.  Instead we supply ``material'' from which the preconditioner is built, and the most common such ``material'' is $A$ itself.
+Why do we list \texttt{A} twice in calling \texttt{KSPSetOperators()}?  Recall the linear system $A\bx=\bb$ is equivalent to $P^{-1} A \bx = P^{-1} \bb$ (left preconditioning).  At runtime we are going to choose a preconditioning method which builds $P^{-1}$ from $A$ or from an approximation of $A$.  For example, \emph{incomplete LU} factorization of $A$ can be used in generating $P^{-1}$, or $P$ could be the diagonal of $A$ (as in the example above).  The second matrix argument to \texttt{KSPSetOperators()} is the \pMat from which $P^{-1}$ is built.  Note we do not supply $P$ itself, as that would require the user to write extra code.  It would also block easy choice among preconditioners at runtime.  Instead we supply ``material'' from which the preconditioner is built, and the most common such material is $A$ itself.
+
+\inputwhole{../c/c1vecmatksp.c}{\texttt{p4pdes/c/c1vecmatksp.c}}{Solve a small linear system.}{code:vecmatksp}
 
 After calling \texttt{KSPSolve()} we display the solution \pVec by calling \texttt{VecView()}.  This and everything else about the code in Figure \ref{code:vecmatksp} should now be self-explanatory.  So let's run it:
 \begin{cline}
@@ -481,8 +483,6 @@ Vec Object: 1 MPI processes
 \end{cline}
 This solves the system and gives us $\bx$.  But what happened and how to control it?
 
-\inputwhole{../c/c1vecmatksp.c}{\texttt{p4pdes/c/c1vecmatksp.c}}{Solve a small linear system.}{code:vecmatksp}
-
 
 \section{Revealing solvers at runtime}
 
@@ -490,9 +490,9 @@ To start to see what happened when we ran \texttt{./c1vecmatksp} above, we could
 
 Here is a key idea which cannot be over-emphasized:
 \begin{quote}
-learning \PETSc requires viewing \emph{solver} objects at runtime.
+\emph{learning \PETSc requires viewing \emph{solver} objects at runtime.}
 \end{quote}
-For example, we try \texttt{-ksp\_view}; the output is slightly-clipped for clarity:
+Here we try \texttt{-ksp\_view}; the output is slightly-clipped for clarity:
 \begin{cline}
 $ ./c1vecmatksp -ksp_view
 KSP Object: 1 MPI processes
@@ -526,12 +526,14 @@ Vec Object: 1 MPI processes
 -1
 \end{cline}
 %$
-So here is what we learn:
+Here is some of what we learn:
 \begin{itemize}
-\item The default \pKSP solver is GMRES \citep{Saad2003}, i.e.~\texttt{-ksp\_type gmres} as a command-line option.  As GMRES builds an approximation of the solution from the Krylov space by saving more and more vectors, and thus uses up memory, one saves memory by restarting after a number of iterations.  The default is every 30 iterations, i.e.~\texttt{-ksp\_gmres\_restart 30}.
-\item The default convergence tolerances for the \pKSP are \texttt{-ksp\_rtol 1.0e-5 -ksp\_atol 1.0e-50}.  In particular, \pKSP iterations stop when the residual norm has been reduced by $10^5$.
-\item Inside the \pKSP is a \pPC preconditioner object.  We did not ask for one in the code, but every \pKSP has a \pPC.
-\item The default \pPC is left preconditioning with ILU, i.e.~incomplete LU factorization, which is \texttt{-pc\_type ilu} as a runtime option.\sidenote{We will see in a moment that this is the \emph{serial} default \pPC, and there is more going on in parallel.}  Actually, this preconditioner is usually called ``ILU($0$)'', i.e.~with ``\texttt{0 levels of fill}'', so it does not use more memory than used by $A$ already.
+\item The default \pKSP solver is GMRES \citep{Saad2003}.\sidenote{This is \texttt{-ksp\_type gmres} as a command-line option.}
+\item As GMRES builds an approximation of the solution from the Krylov space by saving more and more vectors, and thus uses up memory, one restarts after a number of iterations.  The default is \texttt{-ksp\_gmres\_restart 30}.
+\item The default convergence tolerances for the \pKSP are \texttt{-ksp\_rtol 1.0e-5} and \texttt{-ksp\_atol 1.0e-50}.  In particular, \pKSP iterations stop when the residual norm has been reduced by $10^5$.
+\item Inside the \pKSP is a \pPC preconditioner object.  We did not have to ask for one in the code, as every \pKSP has a \pPC.
+\item The default \pPC is left preconditioning with ILU, i.e.~incomplete LU factorization, which is \texttt{-pc\_type ilu} as a runtime option.\sidenote{We will see in a moment that this is the \emph{serial} default \pPC, and there is more going on in parallel.}
+\item Actually, the preconditioner is usually called ``ILU($0$)'', i.e.~with ``\texttt{0 levels of fill}'', so it does not use more memory than used by $A$ already.
 \item The \pPC object has a copy of $A$ (``\texttt{Mat Object}''), because it was supplied as the second argument to \texttt{KSPSetOperators()} above.
 \end{itemize}
 Of course, we get the solution $\bx$ too.
@@ -545,36 +547,37 @@ Vec Object: 1 MPI processes
 ...
 \end{cline}
 %$
-The reason that the residual drops to nearly zero in one iteration is that GMRES sees a preconditioned system with an \emph{identity} matrix in this case.  That is, $P^{-1} A = I$ because the ILU operation on $A$ is a full LU factorization.  Our $A$ is banded and ``dense enough'' so that the LU factorization requires no fill-in.
+The reason that the residual drops to nearly zero in one iteration is that GMRES sees a preconditioned system with an identity matrix in this case.  That is, $P^{-1} A = I$ because the ILU operation on this particular $A$ is actually a full LU factorization.  Our $A$ is banded and ``dense enough'' so that the LU factorization requires no fill-in.
 
-For a small system like this a direct solve works fine.  To see how, first do
+For a small system like this a direct solve also works fine.  To see how to do it, first do
 \begin{cline}
 $ ./c1vecmatksp -help | grep ksp_type
-  -ksp_type <gmres>: Krylov method (one of) cg groppcg pipecg cgne nash stcg gltr richardson
+  -ksp_type <gmres>: Krylov method (one of) cg ... preonly ... (KSPSetType)
 $ ./c1vecmatksp -help | grep pc_type
-  -pc_type <ilu>: Preconditioner (one of) none jacobi pbjacobi bjacobi sor lu shell mg
+  -pc_type <ilu>: Preconditioner (one of) none jacobi ... lu ... (PCSetType)
 \end{cline}
-to see the solver and preconditioner options.  One of the preconditioners is ``\texttt{lu}'', suggesting a direct solve.  In this case we \emph{do not} want iterations, and one of the \pKSP options\sidenote{FIXME: should be!} ``\texttt{preonly}''.  The direct solver combination we want is
+to see the many solver and preconditioner options.  One of the preconditioners is ``\texttt{lu}'', suggesting a direct solve.  In this case we \emph{do not} want iterations, and one of the \pKSP options is ``\texttt{preonly}''.  Thus the direct solver combination we want is
 \begin{cline}
 $ ./c1vecmatksp -ksp_type preonly -pc_type lu
 \end{cline}
 %$
-The reader should check with \texttt{-ksp\_view} that the solver/preconditioner is as intended, and with \texttt{-ksp\_monitor} to see that there were, in fact, no iterations.
+The reader should check that the output of \texttt{-ksp\_view} is as intended.\sidenote{The output of \texttt{-ksp\_monitor} is empty as there were, in fact, no iterations!}
 
-FIXME: unpreconditioned richardson fails (\texttt{./c1vecmatksp -ksp\_type richardson -ksp\_monitor -pc\_type none}) but default preconditioned succeeds (i.e. -pc\_type ilu)
-
-FIXME: try \texttt{-ksp\_pc\_side RIGHT}; default is \texttt{LEFT}
-
-
-FIXME: 2 processor
-
-FIXME: \texttt{-ksp\_view} shows parallel default is \texttt{-ksp\_type gmres -pc\_type bjacobi -sub\_pc\_type ilu}
-
-
-FIXME: try parallel with \texttt{-pc\_type jacobi}; compare -ksp\_view and note there is no sub\_
-
-
-That's enough runtime options for now.  There will be more.
+When solving on multiple processors, using ILU($0$) as the default preconditioner makes no sense.  This is because, even when fill-in is avoided, the LU factorization algorithm would involve a great deal of interprocessor communication.  However, there are blocks along the diagonal of the system matrix $A$ which are entirely owned by a single processor.  The ILU($0$) method can be applied to these, and the result treated as an approximation $P^{-1}\approx A^{-1}$.  That is, the blocks along the diagonal can be approximately inverted by ILU($0$), and the result treated as a diagonal (i.e.~Jacobi) preconditioner.  So this is what is done by default \PETSc \pKSP settings in parallel:
+\begin{itemize}
+\item The default \pKSP is still GMRES with restart 30.
+\item The default \pPC is \texttt{bjacobi}, i.e.~application of approximate diagonal-block inverses as $P^{-1}$.
+\item Inside the \pPC is a \texttt{sub\_pc} object, also a \pPC, which is ILU($0$).\sidenote{There is even a \texttt{sub\_ksp} object, but it is \texttt{preonly}.  So let's just ignore that complication for now.}
+\item These defaults correspond to options
+\begin{quote}
+\texttt{-ksp\_type gmres -pc\_type bjacobi -sub\_pc\_type ilu}
+\end{quote}
+\end{itemize}
+The reader can confirm this understanding of the situation by running
+\begin{cline}
+mpiexec -n 2 ./c1vecmatksp -ksp_view
+\end{cline}
+But surely that's enough runtime options for now.  There will be more, especially in later chapters when we solve PDEs.
 
 \section{More \PETSc functionality, from the code side \dots}
 
@@ -609,20 +612,14 @@ FIXME: solve and time with \texttt{-ksp\_type cg}
 % e1balanced.c
 \item Show \eqref{introconvergethm}.
 \item FIXME valgrind exercise: remove Destroy and see the failure
-\item FIXME: make exercise: By contrast, one could override the ``\texttt{PETSC\_DECIDE}'' parallel layout by replacing the \texttt{VecSetSizes()} line with this block of code:
-\begin{code}
-PetscMPIInt rank;
-MPI_Comm_rank(COMM,&rank);
-if (rank == 0) {
-  VecSetSizes(x,3,4);
-} else if (rank == 1) {
-  VecSetSizes(x,1,4);
-} else {
-  SETERRQ(COMM,1,"this code only works with size==2 communicators");
-}
-\end{code}
-That is, we could specify the ``local size'' argument to \texttt{VecSetSizes()}, instead of using \texttt{PETSC\_DECIDE}.  The resulting layout is shown in Figure \ref{fig:artificialmpitwoveclayout}.  Fortunately, inflexible coding like this is rarely necessary.
-\item FIXME for \texttt{c1tri.c}, estimate the condition number of the matrix for sample $N$ values
-% see "How can I determine the condition number of a matrix?" on the PETSc FAQ page; "be sure to avoid restarts"
-% -pc_type none -ksp_type gmres -ksp_monitor_singular_value -ksp_gmres_restart 1000
+\item Play with preconditioning and the Richardson iteration on the example
+\begin{cline}
+./c1tri -tri\_n 100 -ksp\_monitor
+\end{cline}
+In particular, observe that unpreconditioned Richardson iteration fails (i.e.~add \texttt{-ksp\_type richardson -pc\_type none}).  The default preconditioner succeeds (\texttt{-pc\_type ilu}), but this is cheating because ILU($0$) becomes a complete LU factorization on this tridiagonal and diagonally-dominant $A$.  But, as in the example on page \pageref{introprerichardson}, Richardson iteration succeeds with \texttt{-pc\_type jacobi}.
+\item Estimate the growth rate of the condition number of the matrix in \texttt{c1tri.c} for some $N$ values.  In particular, one must avoid restarts and preconditioning to use the
+\begin{quote}
+\texttt{-ksp\_monitor\_singular\_value}
+\end{quote}
+option, so add \texttt{-ksp\_type gmres -ksp\_gmres\_restart 1000 -pc\_type none}.
 \end{enumerate}
