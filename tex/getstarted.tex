@@ -581,33 +581,61 @@ But surely that's enough runtime options for now.  There will be more, especiall
 
 \vfill
 \newpage
-\cinputpartnostrip{c1tri.c}{Set up \pVec and \pMat objects for a tridiagonal system.}{I}{//STARTSETUP}{//ENDSETUP}{code:tripartone}
-
 \section{More \PETSc functionality from the code side}
 
-Let's return to \PETSc code to set up and solve linear systems, as there is more to say.  The next code is \texttt{c1tri.c}, split into Figures \ref{code:tripartone} and \ref{code:triparttwo}.  It introduces three key concepts and their associated function calls:
-
+We have seen \PETSc code to set up and solve linear systems, but there is more to say.  The next example \texttt{c1tri.c}, split into Figures \ref{code:tripartone} and \ref{code:triparttwo}, introduces these additional concepts and their associated function calls:
 \begin{enumerate}
-\item Creating options so that the parameters of your application program can be controlled at runtime, by using \texttt{PetscOptionsXXX()} calls.
-\item Assembling a system of arbitrary size across an arbitrary number of processes, using \texttt{MatGetOwnershipRange()}, in particular.
-\item Preallocating with \texttt{MatXXXSetPreallocation()}, to speed the assembly process.
+\item Creating an option, so that the size of the linear system can be controlled at runtime, by using \texttt{PetscOptionsXXX()} calls.
+\item Using \texttt{VecDuplicate()} for allocation.
+\item Assembling a system of arbitrary size across an arbitrary number of processes, using \texttt{MatGetOwnershipRange()} to only set locally-owned rows.
+\item Using \texttt{VecAXPY()}, \texttt{VecNorm()}, and \texttt{PetscPrintf()} to compute and display the error in a case where the exact solution is known.
 \end{enumerate}
 
-FIXME: use methods \texttt{PetscOptionsBegin()}, \texttt{PetscOptionsInt()}, and \texttt{PetscOptionsEnd()} so that \texttt{-help} output explains the option
+\cinputpartnostrip{c1tri.c}{Set up \pVec and \pMat objects for a tridiagonal system.}{I}{//STARTSETUP}{//ENDSETUP}{code:tripartone}
 
-FIXME option \texttt{-N} so form an $N\times N$ matrix, with $-2$ on the diagonal and $1$ on the super- and sub-diagonals as before
+\vfill
+\newpage
+For concept i), notice that methods \texttt{PetscOptionsBegin()} and \texttt{PetscOptionsEnd()} bracket the calls for the one actual option (Figure \ref{code:tripartone}).  The \texttt{PetscOptionsBegin()} call allows us to set an option prefix ``\texttt{tri\_}'' so that this option is distinguished from the many built-in \PETSc options that start with \texttt{ksp\_} or \texttt{vec\_} or whatever.  The particular call to \texttt{PetscOptionsInt()} allows the user to set the variable \texttt{N}, and to leave the default unaltered if the option is not set.
 
-FIXME use matrix mult to get $\bb$ from $\bx$
+\cinputpartnostrip{c1tri.c}{Fill the \pVec and \pMat objects and solve the system.}{II}{//ENDSETUP}{//ENDSOLVE}{code:triparttwo}
 
-FIXME: emphasize that \texttt{MatGetOwnershipRange()} means that different processes are assembling different rows, unlike earlier example where all processes inserted all values
+\vfill
+\newpage
+To see the option and its default setting in \texttt{-help} output do
+\begin{cline}
+$ make c1tri
+...
+$ ./c1tri -help | grep tri_
+Solve a tridiagonal system of arbitrary size.  Option prefix = tri_.
+  -tri_n <4>: dimension of linear system (None)
+\end{cline}
+The actual effect of option \texttt{-tri\_n} should be clear.  Here, for instance, we set the system size to be very small and view the matrix:
+\begin{cline}
+$ ./c1tri -tri_n 2 -a_mat_view
+Mat Object:(a_) 1 MPI processes
+  type: seqaij
+row 0: (0, 3)  (1, -1) 
+row 1: (0, -1)  (1, 3) 
+error norm |x-xexact|_2 = 8.0e-16
+\end{cline}
+%$
 
-FIXME: show MatXXXSetPreallocation(); need either MatSetUp() or MatGetOwnershipRange()
+FIXME use matrix mult to get $\bb$ from exact $\bx$
+
+FIXME: \texttt{MatGetOwnershipRange()} means that different processes are assembling different rows, unlike earlier example where all processes inserted all values
 
 FIXME: solve and time with default method
 
 FIXME: solve and time with \texttt{-ksp\_type cg}
 
-\cinputpartnostrip{c1tri.c}{Fill the \pVec and \pMat objects and solve the system.}{II}{//ENDSETUP}{//ENDSOLVE}{code:triparttwo}
+Finally, \PETSc can generate graphics showing convergence of iterative methods, at least if X windows are installed.  Compare these line graphs of the norm of the residual:
+\begin{cline}
+./c1tri -tri_n 100 -ksp_monitor_lg_residualnorm -draw_pause 0.5 -pc_type jacobi
+\end{cline}
+and
+\begin{cline}
+./c1tri -tri_n 100 -ksp_monitor_lg_residualnorm -draw_pause 0.5 -pc_type jacobi -ksp_type richardson
+\end{cline}
 
 
 \vfill
