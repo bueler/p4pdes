@@ -351,7 +351,7 @@ Mat Object: 1 MPI processes
  -1.00000e+00  1.00000e+00  1.00000e+00  0.00000e+00
  0.00000e+00  1.00000e+00  1.00000e+00  -1.00000e+00
 \end{cline}
-The first view shows the compressed sparse storage, with values as pairs with column index and value.  The second view is a traditional (``dense'') display where all zero values are shown, whether allocated or not.\sidenote{Other possibilities, not shown, are \texttt{-mat\_view ::ascii\_matlab}, which dumps in Matlab's text format, and \texttt{-mat\_view binary -viewer\_binary\_filename a.dat} which saves to file \texttt{a.dat} in \PETSc's scalable binary format.}
+The first view shows the compressed sparse storage, with values as pairs with column index and value.  The second view is a traditional (``dense'') display where all zero values are shown, whether allocated or not.\sidenote{Other possibilities, not shown, are \texttt{-mat\_view ::ascii\_matlab}, which dumps in Matlab's text format, and \texttt{-mat\_view binary -viewer\_binary\_filename a.dat} which saves to file \texttt{a.dat} in \PETSc's scalable binary format.}  Note that \texttt{-mat\_view} output is activated by the \texttt{MatAssemblyBegin/End()} calls.
 
 In these cases the matrix was stored in \emph{serial} compressed sparse row format, the \texttt{MATSEQAIJ} type, because of the one-process execution.  If the code is run in parallel, i.e.~by \texttt{mpiexec -n N ./mycode}, then \texttt{-mat\_view}  reports \texttt{type:~mpiaij} corresponding to \pMat type \texttt{MATMPIAIJ}.  This is the ``parallel compressed sparse row storage'' described above.
 
@@ -579,9 +579,19 @@ mpiexec -n 2 ./c1vecmatksp -ksp_view
 \end{cline}
 But surely that's enough runtime options for now.  There will be more, especially in later chapters when we solve PDEs.
 
-\section{More \PETSc functionality, from the code side \dots}
+\vfill
+\newpage
+\cinputpartnostrip{c1tri.c}{Set up \pVec and \pMat objects for a tridiagonal system.}{I}{//STARTSETUP}{//ENDSETUP}{code:tripartone}
 
-FIXME: new code is \texttt{c1tri.c}
+\section{More \PETSc functionality from the code side}
+
+Let's return to \PETSc code to set up and solve linear systems, as there is more to say.  The next code is \texttt{c1tri.c}, split into Figures \ref{code:tripartone} and \ref{code:triparttwo}.  It introduces three key concepts and their associated function calls:
+
+\begin{enumerate}
+\item Creating options so that the parameters of your application program can be controlled at runtime, by using \texttt{PetscOptionsXXX()} calls.
+\item Assembling a system of arbitrary size across an arbitrary number of processes, using \texttt{MatGetOwnershipRange()}, in particular.
+\item Preallocating with \texttt{MatXXXSetPreallocation()}, to speed the assembly process.
+\end{enumerate}
 
 FIXME: use methods \texttt{PetscOptionsBegin()}, \texttt{PetscOptionsInt()}, and \texttt{PetscOptionsEnd()} so that \texttt{-help} output explains the option
 
@@ -589,21 +599,19 @@ FIXME option \texttt{-N} so form an $N\times N$ matrix, with $-2$ on the diagona
 
 FIXME use matrix mult to get $\bb$ from $\bx$
 
-\cinputpartnostrip{c1tri.c}{Set up \pVec and \pMat objects for a tridiagonal system.}{I}{//STARTSETUP}{//ENDSETUP}{code:tripartone}
-
-\cinputpartnostrip{c1tri.c}{Fill the \pVec and \pMat objects and solve the system.}{II}{//ENDSETUP}{//ENDSOLVE}{code:triparttwo}
-
 FIXME: emphasize that \texttt{MatGetOwnershipRange()} means that different processes are assembling different rows, unlike earlier example where all processes inserted all values
 
-FIXME: show sparse-format output for \texttt{A}, noting we get this at the \texttt{MatAssemblyEnd()} stage %$ ./c1matvec -a_mat_view
-
-FIXME: show MatXXXSetPreallocation(); need either that or MatSetUp() before MatGetOwnershipRange()
+FIXME: show MatXXXSetPreallocation(); need either MatSetUp() or MatGetOwnershipRange()
 
 FIXME: solve and time with default method
 
 FIXME: solve and time with \texttt{-ksp\_type cg}
 
+\cinputpartnostrip{c1tri.c}{Fill the \pVec and \pMat objects and solve the system.}{II}{//ENDSETUP}{//ENDSOLVE}{code:triparttwo}
 
+
+\vfill
+\newpage
 \section{Exercises}
 
 \renewcommand{\labelenumi}{\arabic{chapter}.\arabic{enumi}\quad}
@@ -621,9 +629,13 @@ to see what \texttt{valgrind} shows for a leak-free program.  Then comment-out o
 ./c1tri -tri_n 100 -ksp_monitor
 \end{cline}
 In particular, observe that unpreconditioned Richardson iteration fails (i.e.~add \texttt{-ksp\_type richardson -pc\_type none}).  The default preconditioner succeeds (\texttt{-pc\_type ilu}), but this is cheating because ILU($0$) becomes a complete LU factorization on this tridiagonal and diagonally-dominant $A$.  But, as in the example on page \pageref{introprerichardson}, Richardson iteration succeeds with \texttt{-pc\_type jacobi}.
-\item Unpreconditioned GMRES solves the linear system in \texttt{c1tri.c} reasonably efficiently.  We can explain this by asking \PETSc to compute the eigenvalues of $A$ by using option \texttt{-ksp\_compute\_eigenvalues}.  Because this option will compute the eigenvalues of the ILU($0$)-preconditioned operator unless we turn off preconditioning, we need to add \texttt{-pc\_type none}.  Try dimensions $N=10,100,1000$.  Why does the  run
+\item Unpreconditioned GMRES solves the linear system in \texttt{c1tri.c} reasonably efficiently.  We can explain this by asking \PETSc to compute the eigenvalues of $A$ by using option\sidenote{The relevant \PETSc manual page says this option is ``intended only for assistance in understanding the convergence of iterative methods, not for eigenanalysis.  For accurate computation of eigenvalues we recommend using the excellant package SLEPc.''}
+\begin{quote}
+\texttt{-ksp\_compute\_eigenvalues}
+\end{quote}
+Because otherwise this would compute the eigenvalues of the preconditioned operator $P^{-1}A$, add \texttt{-pc\_type none}.  Try dimensions $N=10,100,1000$.  Why does the  run
 \begin{cline}
 ./c1tri -tri_n 1000 -pc_type none -ksp_compute_eigenvalues
 \end{cline}
-only show 11 eigenvalues of this $1000\times 1000$ matrix?  How do these eigenvalues explain the good behavior of unpreconditioned GMRES?\sidenote{See \citep{TrefethenBau}, perhaps.}  Note that the relevant \PETSc manual page says option \texttt{-ksp\_compute\_eigenvalues} is ``intended only for assistance in understanding the convergence of iterative methods, not for eigenanalysis.  For accurate computation of eigenvalues we recommend using the excellant package SLEPc.''
+only show 11 eigenvalues of this $1000\times 1000$ matrix?\sidenote{See \citep{TrefethenBau} for help with these questions.}  How do these eigenvalues explain the good behavior of unpreconditioned GMRES?
 \end{enumerate}
