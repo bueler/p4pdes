@@ -1,14 +1,3 @@
-
-/* shows:
-       PetscOptionsXXX()
-       XXXSetOptionsPrefix()
-       VecDuplicate()
-       MatXXXAIJSetPreallocation() or MatSetUp()
-       GetOwnershipRange()
-       MatMult()   for exact solution
-       VecAXPY() and VecNorm()  for computing error
-*/
-
 //STARTSETUP
 static char help[] =
   "Solve a tridiagonal system of arbitrary size.  Option prefix = tri_.\n";
@@ -19,7 +8,6 @@ int main(int argc,char **args) {
   Vec            x, b, xexact;
   Mat            A;
   KSP            ksp;
-  PetscBool      prealloc = PETSC_FALSE;
   PetscInt       N = 4, i, Istart, Iend, j[3];
   PetscReal      v[3], xval, errnorm;
   PetscErrorCode ierr;
@@ -28,16 +16,12 @@ int main(int argc,char **args) {
 
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD,
         "tri_","options for c1tri",""); CHKERRQ(ierr);
-  ierr = PetscOptionsBool(
-        "-prealloc","use MatMPIAIJSetPreallocation() instead of MatSetUp()",
-        NULL,prealloc,&prealloc,NULL); CHKERRQ(ierr);
   ierr = PetscOptionsInt(
         "-n","dimension of linear system",NULL,N,&N,NULL); CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
   ierr = VecCreate(PETSC_COMM_WORLD,&x); CHKERRQ(ierr);
   ierr = VecSetSizes(x,PETSC_DECIDE,N); CHKERRQ(ierr);
-  ierr = VecSetOptionsPrefix(x,"x_"); CHKERRQ(ierr);
   ierr = VecSetFromOptions(x); CHKERRQ(ierr);
 
   ierr = VecDuplicate(x,&b); CHKERRQ(ierr);
@@ -47,18 +31,7 @@ int main(int argc,char **args) {
   ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,N,N); CHKERRQ(ierr);
   ierr = MatSetOptionsPrefix(A,"a_"); CHKERRQ(ierr);
   ierr = MatSetFromOptions(A); CHKERRQ(ierr);
-
-  if (prealloc) {
-    int size;
-    ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size); CHKERRQ(ierr);
-    if (size == 1) {
-      ierr = MatSeqAIJSetPreallocation(A,3,NULL); CHKERRQ(ierr);
-    } else {
-      ierr = MatMPIAIJSetPreallocation(A,3,NULL,1,NULL); CHKERRQ(ierr);
-    }
-  } else {
-    ierr = MatSetUp(A); CHKERRQ(ierr);
-  }
+  ierr = MatSetUp(A); CHKERRQ(ierr);
 //ENDSETUP
   ierr = MatGetOwnershipRange(A,&Istart,&Iend); CHKERRQ(ierr);
   for (i=Istart; i<Iend; i++) {
@@ -89,7 +62,6 @@ int main(int argc,char **args) {
   ierr = KSPCreate(PETSC_COMM_WORLD,&ksp); CHKERRQ(ierr);
   ierr = KSPSetOperators(ksp,A,A); CHKERRQ(ierr);
   ierr = KSPSetFromOptions(ksp); CHKERRQ(ierr);
-
   ierr = KSPSolve(ksp,b,x); CHKERRQ(ierr);
 
   ierr = VecAXPY(x,-1.0,xexact); CHKERRQ(ierr);
