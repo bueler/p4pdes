@@ -595,21 +595,20 @@ We have seen \PETSc code to set up and solve linear systems, but there is more t
 
 \vfill
 \newpage
-For concept i), notice that methods \texttt{PetscOptionsBegin()} and \texttt{PetscOptionsEnd()} bracket the calls for the one actual option (Figure \ref{code:tripartone}).  The \texttt{PetscOptionsBegin()} call allows us to set an option prefix ``\texttt{tri\_}'' so that this option is distinguished from the many built-in \PETSc options that start with \texttt{ksp\_} or \texttt{vec\_} or whatever.  The particular call to \texttt{PetscOptionsInt()} allows the user to set the variable \texttt{N}, and to leave the default unaltered if the option is not set.
+To get started on the new concepts shown in Figure \ref{code:tripartone}, notice that methods \texttt{PetscOptionsBegin()} and \texttt{PetscOptionsEnd()} bracket the call to \texttt{PetscOptionsInt()}.  We set an option prefix ``\texttt{-tri\_...}'' so that the new option we create is distinguished from the many built-in \PETSc options that start with \texttt{-ksp\_...} or \texttt{-vec\_...} or whatever.  Our use of \texttt{PetscOptionsInt()} creates an option \texttt{-tri\_n} which allows the user to set the variable \texttt{N}, and to leave the default \texttt{N}$=4$ unaltered if the option is not set.
 
 \cinputpartnostrip{c1tri.c}{Fill the \pVec and \pMat objects and solve the system.}{II}{//ENDSETUP}{//ENDSOLVE}{code:triparttwo}
 
 \vfill
 \newpage
-To see the option and its default setting in \texttt{-help} output do
+To see the option and its default value in \texttt{-help} output do
 \begin{cline}
 $ make c1tri
-...
 $ ./c1tri -help | grep tri_
 Solve a tridiagonal system of arbitrary size.  Option prefix = tri_.
   -tri_n <4>: dimension of linear system (None)
 \end{cline}
-The actual effect of option \texttt{-tri\_n} should be clear.  Here, for instance, we set the system size to be very small and view the matrix:
+Here, for instance, we reset the system size to be small and we view the matrix:
 \begin{cline}
 $ ./c1tri -tri_n 2 -a_mat_view
 Mat Object:(a_) 1 MPI processes
@@ -620,9 +619,26 @@ error norm |x-xexact|_2 = 8.0e-16
 \end{cline}
 %$
 
-FIXME use matrix mult to get $\bb$ from exact $\bx$
+After setting up the new option, next in \texttt{c1tri.c} the numerical solution \pVec \texttt{x} is created just as we did in the last example \texttt{c1vecmatksp.c} (Figure \ref{code:vecmatksp}).  But now we also want to create \pVecs \texttt{b} and \texttt{xexact}; the former is the right-hand side of the linear system and the latter holds the exact solution to the linear system so that we can evaluate the error in the numerical solution.  Though at this stage we have not filled any entries of \texttt{x}, we can save repetitive function calls to \texttt{VecCreate/SetSizes/SetFromOptions()} when creating these additional \pVecs.  That is, because they have the same properties and parallel layout we can use \texttt{VecDuplicate()} to allocate \pVecs just like \texttt{x}.\sidenote{There is a different method for copying the contents of \pVecs, namely \texttt{VecCopy()}.  It requires that the two \pVecs are already allocated and have the same layout.}
 
-FIXME: \texttt{MatGetOwnershipRange()} means that different processes are assembling different rows, unlike earlier example where all processes inserted all values
+Next we assemble the matrix $A$.  This is a boring tridiagonal matrix with $3$ on the diagonal and $-1$ in the super- and sub-diagonals.  Though boring, we want to assemble it efficiently in parallel, something that will be important when solving 2D and 3D PDEs in later chapters.  However, only when \texttt{c1tri.c} is run do we know how many processes are in use.  A key method for efficient matrix assembly in parallel is the method \texttt{MatGetOwnershipRange()} which tells our program, as it is running on a particular process (rank), what rows it owns locally.  In the case of a many structured matrices like this one, we can avoid all interprocess communication by assembling exactly the rows we own.  In particular, as seen at the top of Figure \ref{code:triparttwo}, we call
+\begin{quote}
+\texttt{MatGetOwnershipRange(A,\&Istart,\&Iend)}
+\end{quote}
+to get the starting and ending row indices for the local process.  These are used as limits in a \texttt{for} loop over the locally own rows, wherein we call \texttt{MatSetValues()} to actually set the entries of $A$.  We call \texttt{MatAssemblyBegin/End()} to complete the assembly of $A$.
+
+We need to assemble the right-hand side $\bb$ of the linear system.  But this is related to the question: how does one get the exact solution $\bx_{\text{exact}}$ to a linear system $A\bx_{\text{exact}} = \bb$?  The easiest way for demonstration purposes, as here, is to \emph{choose} $\bx_{\text{exact}}$ and then compute $\bb$ by multiplying by $A$.  Thus, we set (unimportant) values for \texttt{xexact}, and call \texttt{VecAssemblyBegin/End()} on it.  Then we compute \texttt{b} by calling \texttt{MatMult(A,xexact,b)}.
+
+As in the earlier code, the \pKSP is set up and then \texttt{KSPSolve()} is called to solve.  When this solver is working we can see how it reduces the residual norm $\|\bb-A\bx_k\|_2$, at the $k$th \pKSP iteration, just with option \texttt{-ksp\_monitor}.  However, in this case we can see not just that the residual gets small but that the actual error
+	$$\|\bx - \bx_{\text{exact}}\|_2$$
+in the numerical solution $\bx$ is small when the \pKSP completes its work.  We do this with two commands,
+
+\begin{tabular}{ll}
+\text{\texttt{VecAXPY(x,-1.0,xexact)}}       & $\bx \leftarrow -1\, \bx_{\text{exact}} + \bx$ \\
+\text{\texttt{VecNorm(x,NORM\_2,\&errnorm)}} & \text{\texttt{errnorm} } $\leftarrow \|\bx\|_2$.
+\end{tabular}
+
+FIXME
 
 FIXME: solve and time with default method
 
