@@ -51,12 +51,10 @@ int main(int argc,char **args) {
     xval = exp(cos(i));
     ierr = VecSetValues(xexact,1,&i,&xval,INSERT_VALUES); CHKERRQ(ierr);
   }
-
   ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
   ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
   ierr = VecAssemblyBegin(xexact); CHKERRQ(ierr);
   ierr = VecAssemblyEnd(xexact); CHKERRQ(ierr);
-
   ierr = MatMult(A,xexact,b); CHKERRQ(ierr);
 
   ierr = KSPCreate(PETSC_COMM_WORLD,&ksp); CHKERRQ(ierr);
