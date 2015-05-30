@@ -14,18 +14,18 @@ function run() {
   cat $NAME
 }
 
-run 1 preonly lu ""
-for PC in none ilu jacobi; do
-    run 1 gmres $PC ""
+for PC in lu cholesky; do
+    run 1 preonly $PC ""
 done
-for PC in none ilu jacobi icc; do
-    run 1 cg $PC ""
+for KSP in gmres cg; do
+    for N in 1 4; do
+        for PC in none jacobi; do
+            run $N $KSP $PC ""
+        done
+    done
 done
-run 4 gmres none ""
-run 4 gmres jacobi ""
+run 1 gmres ilu ""
 run 4 gmres bjacobi "-sub_pc_type ilu"
-run 4 cg none ""
-run 4 cg jacobi ""
-run 4 cg bjacobi "-sub_pc_type ilu"
+run 1 cg icc ""
 run 4 cg bjacobi "-sub_pc_type icc"
 

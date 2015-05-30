@@ -696,25 +696,28 @@ It is reasonable to ask if other methods and/or more processors speed up the sol
 $ timer mpiexec -n N ./c1tri -tri_m 10000000 -ksp_type KSP -pc_type PC
 \end{cline}
 %$
-
-FIXME: for table below, create makefile to create files like \texttt{c/timing/c1tri/preonly.lu.4} and then do \verb|\input{../c/timing/c1tri.preonly.lu.4}| in corresponding entry in table
+\newcommand{\intime}[1]{\input{../c/timing/c1tri/#1}}
 
 \begin{figure}[ht]
 \texttt{
 \begin{tabular}{llll}
-\underline{KSP} & \underline{PC} & \underline{N=1 \textrm{time (s)}} & \underline{N=4 \textrm{time (s)}} \\
-preonly & lu     &  \\
-gmres   & ilu    &  \\
-        & none   & \\
-        & jacobi & \\
-cg      & ilu    &  \\
-        & none   & \\
-        & jacobi & \\
-        & icc    &
+\underline{KSP}\hspace{0.5in} & \underline{PC}\hspace{0.8in} & \underline{N=1 \textrm{time (s)}}\hspace{0.3in} & \underline{N=4 \textrm{time (s)}} \\
+preonly & lu          & \intime{preonly.lu.1}       &  \\
+        & cholesky    & \intime{preonly.cholesky.1} &  \\
+gmres   & none        & \intime{gmres.none.1}       & \intime{gmres.none.4} \\
+        & jacobi      & \intime{gmres.jacobi.1}     & \intime{gmres.jacobi.4} \\
+        & ilu         & \intime{gmres.ilu.1}        &  \\
+        & bjacobi/ilu &                             & \intime{gmres.bjacobi.4} \\
+cg      & none        & \intime{cg.none.1}          & \intime{cg.none.4} \\
+        & jacobi      & \intime{cg.jacobi.1}        & \intime{cg.jacobi.4} \\
+        & icc         & \intime{cg.icc.1}           &  \\
+        & bjacobi/icc &                             & \intime{cg.bjacobi.4} \\
 \end{tabular}
 }
 \caption{Times for \texttt{c1tri.c} to solve systems of dimension $10^7$.  In this case $A$ is \emph{tridiagonal}, \emph{symmetric}, \emph{diagonally-dominant}, and \emph{positive definite}.} \label{tab:c1tritiming}
 \end{figure}
+
+FIXME: what it all means
 
 \bigskip
 Finally, \PETSc can generate graphics showing convergence of iterative methods, at least if X windows are installed.  Compare these line graphs of the norm of the residual:
