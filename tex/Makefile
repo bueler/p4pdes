@@ -8,7 +8,7 @@ pdfinputs := c2poisson-conv.pdf
 
 hinputs := $(addprefix ../c/, convenience.h)
 
-cinputs := structuredpoisson.c readmesh.c poissontools.c c1e.c c1vecmatksp.c c2poisson.c c3poisson.c c4poisson.c c9obstacle.c
+cinputs := structuredpoisson.c readmesh.c poissontools.c c2poisson.c c3poisson.c c4poisson.c c9obstacle.c
 
 cstrip := $(addprefix cstrip/, $(cinputs))
 

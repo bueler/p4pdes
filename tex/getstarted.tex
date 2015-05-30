@@ -606,7 +606,7 @@ row 2: (1, -1)  (2, 3)  (3, -1)
 row 3: (2, -1)  (3, 3)
   0 KSP Residual norm 3.302822756884e+00
   1 KSP Residual norm 5.519370044893e-16
-error norm |x-xexact|_2 = 5.1e-16
+error for m = 4 system is |x-xexact|_2 = 5.1e-16
 \end{cline}
 %$
 
@@ -614,23 +614,23 @@ error norm |x-xexact|_2 = 5.1e-16
 
 \vfill
 \newpage
-To get started on the new concepts shown in Figure \ref{code:tripartone}, notice that methods \texttt{PetscOptionsBegin()} and \texttt{PetscOptionsEnd()} bracket the call to \texttt{PetscOptionsInt()}.  We set an option prefix ``\texttt{-tri\_...}'' so that the new option we create is distinguished from the many built-in \PETSc options that start with \texttt{-ksp\_...} or \texttt{-vec\_...} or whatever.  Our use of \texttt{PetscOptionsInt()} creates an option \texttt{-tri\_n} which allows the user to set the variable \texttt{N}, and to leave the default \texttt{N}$=4$ unaltered if the option is not set.
+To get started on the new concepts shown in Figure \ref{code:tripartone}, notice that methods \texttt{PetscOptionsBegin()} and \texttt{PetscOptionsEnd()} bracket the call to \texttt{PetscOptionsInt()}.  We set an option prefix ``\texttt{-tri\_...}'' so that the new option we create is distinguished from the many built-in \PETSc options that start with \texttt{-ksp\_...} or \texttt{-vec\_...} or whatever.  Our use of \texttt{PetscOptionsInt()} creates an option \texttt{-tri\_m} which allows the user to set the variable \texttt{m}, and to leave the default \texttt{m}$=4$ unaltered if the option is not set.
 
 To see the option and its default value in \texttt{-help} output do
 \begin{cline}
 $ make c1tri
 $ ./c1tri -help | grep tri_
 Solve a tridiagonal system of arbitrary size.  Option prefix = tri_.
-  -tri_n <4>: dimension of linear system (None)
+  -tri_m <4>: dimension of linear system (None)
 \end{cline}
 Here, for instance, we reset the system size to be small and we view the matrix:
 \begin{cline}
-$ ./c1tri -tri_n 2 -a_mat_view
+$ ./c1tri -tri_m 2 -a_mat_view
 Mat Object:(a_) 1 MPI processes
   type: seqaij
 row 0: (0, 3)  (1, -1) 
 row 1: (0, -1)  (1, 3) 
-error norm |x-xexact|_2 = 8.0e-16
+error for m = 2 system is |x-xexact|_2 = 8.0e-16
 \end{cline}
 %$
 
@@ -664,10 +664,10 @@ The linear system assembled by \texttt{c1tri.c} is about as easy to solve as the
 
 We can time a one-process solution:\sidenote{On the author's 2012-era workstation with 16 GB memory and a single Intel Core i7-3820 8-core cpu running at 3.60GHz.}
 \begin{cline}
-$ time ./c1tri -tri_n 10000
-error norm |x-xexact|_2 = 8.0e-13
+$ time ./c1tri -tri_m 10000
+error for m = 10000 system is |x-xexact|_2 = 8.0e-13
 real 0.04
-user 0.03
+user 0.04
 sys 0.00
 \end{cline}
 %$
@@ -677,27 +677,27 @@ $ alias timer='time -f "real %e"'
 \end{cline}
 %$
 
-The above timing result of $.04$ seconds suggests that a $N=10^4$ dimension system is not yet big enough to be worth testing , so now we test what $N$ gives a linear system with noticable solution time.  Here is a roll-your-own bash loop\sidenote{I have found \href{http://mywiki.wooledge.org/FullBashGuide}{mywiki.wooledge.org/ FullBashGuide} to be a reasonable online overview of bash.} to time some bigger solves:
+The above timing result of $.04$ seconds suggests that a $m=10^4$ dimension system is not yet big enough to be worth testing , so now we test what $m$ gives a linear system with noticable solution time.  Here is a roll-your-own bash loop\sidenote{I have found \href{http://mywiki.wooledge.org/FullBashGuide}{mywiki.wooledge.org/ FullBashGuide} to be a reasonable online overview of bash.} to time some bigger solves:
 \begin{cline}
-$ for N in 10000 100000 1000000 10000000; do timer ./c1tri -tri_n $N; done
-error norm |x-xexact|_2 = 8.0e-13
+$ for M in 10000 100000 1000000 10000000; do timer ./c1tri -tri_m $M; done
+error for m = 10000 system is |x-xexact|_2 = 8.0e-13
 real 0.04
-error norm |x-xexact|_2 = 3.1e-12
-real 0.19
-error norm |x-xexact|_2 = 4.8e-11
-real 1.15
-error norm |x-xexact|_2 = 3.5e-10
-real 11.80
+error for m = 100000 system is |x-xexact|_2 = 3.1e-12
+real 0.18
+error for m = 1000000 system is |x-xexact|_2 = 4.8e-11
+real 1.17
+error for m = 10000000 system is |x-xexact|_2 = 3.5e-10
+real 11.96
 \end{cline}
-Thus the default methods\sidenote{Recall: GMRES with ILU($0$) preconditioning.} solve a system of size $N=10^7$ (ten million) in a time of about 12 seconds.  It is reasonable to ask if other methods and/or more processors speed this up.
+Thus the default methods\sidenote{Recall: GMRES with ILU($0$) preconditioning.} solve a system of size $m=10^7$ (ten million) in a time of about 12 seconds.
 
-FIXME so we did:
+It is reasonable to ask if other methods and/or more processors speed up the solution of the linear system of size $m=10^7$.  To generate Table \ref{tab:c1tritiming} below, we did:
 \begin{cline}
 $ timer mpiexec -n N ./c1tri -tri_m 10000000 -ksp_type KSP -pc_type PC
 \end{cline}
 %$
 
-FIXME: for table below, create makefile to create files like \texttt{c/timing/preonly.lu.4} and then do \verb|\input{../c/timing/preonly.lu.4}| in corresponding entry in table
+FIXME: for table below, create makefile to create files like \texttt{c/timing/c1tri.preonly.lu.4} and then do \verb|\input{../c/timing/c1tri.preonly.lu.4}| in corresponding entry in table
 
 \begin{figure}[ht]
 \texttt{
@@ -713,7 +713,7 @@ cg      & ilu    &  \\
         & icc    &
 \end{tabular}
 }
-\caption{Times for \texttt{c1tri.c} to solve systems of dimension $10^7$.} \label{tab:c1tritiming}
+\caption{Times for \texttt{c1tri.c} to solve systems of dimension $10^7$.  In this case $A$ is \emph{tridiagonal}, \emph{symmetric}, \emph{diagonally-dominant}, and \emph{positive definite}.} \label{tab:c1tritiming}
 \end{figure}
 
 \bigskip
