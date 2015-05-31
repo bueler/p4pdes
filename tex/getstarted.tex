@@ -597,15 +597,15 @@ We have seen \PETSc code to set up and solve linear systems, but there is more t
 \newpage
 First build (``\texttt{make c1tri}'') and run the code with options that show what it is does by default:
 \begin{cline}
-$ ./c1tri -ksp_monitor -a_mat_view
+$ ./c1tri -ksp_monitor -a_mat_view ::ascii_dense
 Mat Object:(a_) 1 MPI processes
   type: seqaij
-row 0: (0, 3)  (1, -1)
-row 1: (0, -1)  (1, 3)  (2, -1)
-row 2: (1, -1)  (2, 3)  (3, -1)
-row 3: (2, -1)  (3, 3)
-  0 KSP Residual norm 3.302822756884e+00
-  1 KSP Residual norm 5.519370044893e-16
+  3.00000e+00  -1.00000e+00   0.00000e+00   0.00000e+00 
+ -1.00000e+00   3.00000e+00  -1.00000e+00   0.00000e+00 
+  0.00000e+00  -1.00000e+00   3.00000e+00  -1.00000e+00 
+  0.00000e+00   0.00000e+00  -1.00000e+00   3.00000e+00 
+  0 KSP Residual norm 3.302822756884e+00 
+  1 KSP Residual norm 5.519370044893e-16 
 error for m = 4 system is |x-xexact|_2 = 5.1e-16
 \end{cline}
 %$
@@ -660,7 +660,7 @@ is small when the \pKSP completes its work.  So, after getting \texttt{x} from \
 
 \section{A first look at performance}
 
-The linear system assembled by \texttt{c1tri.c} is about as easy to solve as they get.   It is tridiagonal, symmetric, diagonally-dominant, and positive definite.\sidenote{Regarding the last property, see exercise \ref{exer:computeeigs}.}  So \PETSc ought to be able to solve quickly, and parallelization ought to be effective.
+The linear system assembled by \texttt{c1tri.c} is about as easy to solve as they get.   It is tridiagonal, symmetric, diagonally-dominant, and positive definite.\sidenote{Regarding the last property, see exercise \ref{exer:computeeigs}.}  So \PETSc ought to be able to solve it quickly, and parallelization ought to be effective.
 
 \newcommand{\WORKSTATION}{\textsc{workstation}\xspace}
 We can time a one-process solution:\sidenote{On the author's 2012-era workstation with 16 GB memory and a single Intel Core i7-3820 8-core cpu running at 3.60GHz.  We call this machine \WORKSTATION. \label{defineworkstation}}
@@ -678,7 +678,7 @@ $ alias timer='time -f "real %e"'
 \end{cline}
 %$
 
-The above timing result of $.04$ seconds suggests that a $m=10^4$ dimension system is not yet big enough to be worth testing , so now we test what $m$ gives a linear system with noticable solution time.  Here is a roll-your-own bash loop\sidenote{I have found \href{http://mywiki.wooledge.org/FullBashGuide}{mywiki.wooledge.org/ FullBashGuide} to be a reasonable online overview of bash.} to time some bigger solves:
+The above timing result of $.04$ seconds suggests that this $m=10^4$ dimension system is not yet big enough to be worth testing, so we experiment on what $m$ gives a linear system with noticeable solution time.  Here is a roll-your-own bash loop\sidenote{I have found \href{http://mywiki.wooledge.org/FullBashGuide}{mywiki.wooledge.org/ FullBashGuide} to be a reasonable online overview of bash.} to time some bigger solves:
 \begin{cline}
 $ for M in 10000 100000 1000000 10000000; do timer ./c1tri -tri_m $M; done
 error for m = 10000 system is |x-xexact|_2 = 8.0e-13
@@ -699,7 +699,7 @@ To generate Table \ref{tab:c1tritiming} below, we did:
 $ timer mpiexec -n N ./c1tri -tri_m 10000000 -ksp_rtol 1.0e-10 -ksp_type KSP -pc_type PC
 \end{cline}
 %$
-The tighter tolerances option \texttt{-ksp\_rtol 1.0e-10} was added because the only fair comparison to a direct solve is to ask for significant accuracy in the solution, at least as reflected by a large reduction in residual norm.
+for $N=1$ and $N=4$, and several \pKSP/\pPC choices.  The tighter tolerance \texttt{-ksp\_rtol 1.0e-10} was added because a fair comparison of iterative and direct methods needs significant accuracy in the iterative ones.
 
 \newcommand{\intime}[1]{\input{../c/timing/c1tri/#1}}
 \begin{figure}[ht]
@@ -719,48 +719,62 @@ cg         & none        & \intime{cg.none.1}          & \intime{cg.none.4} \\
            & bjacobi/icc &                             & \intime{cg.bjacobi.4} \\
 \end{tabular}
 }
-\caption{Times for \texttt{c1tri.c} to solve systems of dimension $10^7$.  In this case $A$ is \emph{tridiagonal}, \emph{symmetric}, \emph{diagonally-dominant}, and \emph{positive definite}.  All runs were on \WORKSTATION (see page \pageref{defineworkstation}).} \label{tab:c1tritiming}
+\caption{Times for \texttt{c1tri.c} to solve systems of dimension $m=10^7$.  In this case the matrix is \emph{tridiagonal}, \emph{symmetric}, \emph{diagonally-dominant}, and \emph{positive definite}.  All runs were on \WORKSTATION (see page \pageref{defineworkstation}).} \label{tab:c1tritiming}
 \end{figure}
 
-FIXME: what it all means
+This table deserves discussion:
+\begin{itemize}
+\item Entries ``\texttt{bjacobi/ilu}'' and ``\texttt{bjacobi/icc}'' correspond to options \texttt{-pc\_type bjacobi -sub\_pc\_type ilu} and \texttt{-pc\_type bjacobi -sub\_pc\_type icc}, respectively.  As already noted, the first of these is the parallel default.\sidenote{This table, at least, suggests it is a reasonable choice for that purpose.}
+\item Counting floating point operations shows the leading-order work for Cholesky is $m^3/3$ while for LU it is $2 m^3/3$ \citep{TrefethenBau}.  This is reflected in the direct-solve results (with \texttt{-ksp\_type preonly}).  A diagonally-dominant tridiagonal problem is very well-behaved for direct methods, however, because no fill-in or pivoting occurs when they are applied.\sidenote{Do not assume that most $m=10^7$ dimension systems are good candidates for direct solves!}
+\item Cholesky and conjugate gradient methods apply to symmetric positive-definite matrices only, which is what \texttt{c1tri.c} assembles.  These are \pKSP method \texttt{cg} and \pPC methods \texttt{cholesky} and \texttt{icc} (incomplete-Cholesky, also denoted ``ICC($0$)'').  We see some benefit to using CG on one-process runs, compared to the general (``non-symmetric'') method GMRES, but the matrix generated by \texttt{c1tri.c} is so well-behaved that both of these iterations work well.
+\item There is indeed speed-up from $N=1$ to $N=4$ processes, on this single node 8-core workstation, for many methods.  The 2 to 3 times speed-up is relatively uniform across methods, but (again) the fact that the matrix is very well-structured makes this un-surprising.
+\end{itemize}
+
+In future Chapters, from ``real'' linear and non-linear systems generated from discretizing PDEs, we will create timing tables like Table \ref{tab:c1tritiming}, and re-consider the results.
+
+\begin{marginfigure}
+\bigskip
+\includegraphics[width=0.9\textwidth]{line-graph-c1tri}
+\caption{\PETSc can use X windows to produce line graphs at run time.  (This is not to say they are pretty.)}
+\label{fig:line-graph-c1tri}
+\end{marginfigure}
+
+Finally, \PETSc can generate graphics showing convergence of iterative methods, at least if X windows are installed.  The line graph in Figure \ref{fig:line-graph-c1tri}, from
+\begin{cline}
+$ ./c1tri -tri_m 1000000 -ksp_rtol 1.0e-10 -pc_type jacobi \
+    -ksp_monitor_lg_residualnorm -draw_pause 1
+\end{cline}
+%$
+shows the residual norm logarithm versus the iteration number.
 
 \bigskip
-Finally, \PETSc can generate graphics showing convergence of iterative methods, at least if X windows are installed.  Compare these line graphs of the norm of the residual:
-\begin{cline}
-./c1tri -tri_n 100 -ksp_monitor_lg_residualnorm -draw_pause 0.5 -pc_type jacobi
-\end{cline}
-and
-\begin{cline}
-./c1tri -tri_n 100 -ksp_monitor_lg_residualnorm -draw_pause 0.5 -pc_type jacobi -ksp_type richardson
-\end{cline}
-
-
-\vfill
-\newpage
 \section{Exercises}
 
 \renewcommand{\labelenumi}{\arabic{chapter}.\arabic{enumi}\quad}
 \begin{enumerate}
-\item Program \texttt{c1e.c} does redundant work, and a terrible job of load-balancing, because the computation of the factorial $n!$ on rank $n$ requires more flops when $n$ is larger.  Modify the code to balance the load almost perfectly, with exactly one divide operation on each \texttt{rank}$>0$ process, by using blocking send and receive operations (\texttt{MPI\_Send(),MPI\_Recv()}) to pass the result of the last factorial to the next rank.  (\emph{Of course now we have a code that does a ridiculous amount of communication and waiting.})
+\item Program \texttt{c1e.c} does redundant work, and a terrible job of load-balancing, because the computation of the factorial $n!$ on the rank $n$ process requires $n-1$ flops.  Modify the code to balance the load almost perfectly, with exactly one divide operation on each \texttt{rank} $>0$ process, by using blocking send and receive operations (\texttt{MPI\_Send(),MPI\_Recv()}) to pass the result of the last factorial to the next rank.  (\emph{Now the code does lots of communication and waiting.})
 % e1balanced.c
 \item Show \eqref{introconvergethm}.
-\item As the reader will undoubtedly experience, segmentation faults and memory leaks are inevitable when one develops \PETSc codes.  The standard tool for detecting the latter is \texttt{valgrind}.  We recommend running it frequently.  As an exercise, run
+\item As the reader will undoubtedly experience, segmentation faults and memory leaks are inevitable when one develops \PETSc codes.  A standard tool for detecting/diagnosing these is \texttt{valgrind}.\sidenote{\href{http://valgrind.org/}{valgrind.org}}  We recommend running it frequently.  As an exercise, run
 \begin{cline}
 valgrind ./c1vecmatksp
 \end{cline}
-to see what \texttt{valgrind} shows for a leak-free program.  Then comment-out one \texttt{VecDestroy()} call in \texttt{c1vecmatksp.c} and rerun to see a common type of memory leak.
-\item Play with preconditioning and the Richardson iteration on the example
+to see what \texttt{valgrind} shows for a leak-free program.  Then comment-out a \texttt{VecDestroy()} call in \texttt{c1vecmatksp.c} and rerun to see a common type of memory leak.
+\item Consider Richardson iteration in the example
 \begin{cline}
-./c1tri -tri_n 100 -ksp_monitor
+./c1tri -tri_m 100 -ksp_monitor -ksp_type richardson
 \end{cline}
-In particular, observe that unpreconditioned Richardson iteration fails (i.e.~add \texttt{-ksp\_type richardson -pc\_type none}).  The default preconditioner succeeds (\texttt{-pc\_type ilu}), but this is cheating because ILU($0$) becomes a complete LU factorization on this tridiagonal and diagonally-dominant $A$.  But, as in the example on page \pageref{introprerichardson}, Richardson iteration succeeds with \texttt{-pc\_type jacobi}.
-\item \label{exer:computeeigs} Unpreconditioned GMRES solves the linear system in \texttt{c1tri.c} reasonably efficiently.  We can explain this by asking \PETSc to compute the eigenvalues of $A$ by using option\sidenote{The relevant \PETSc manual page says this option is ``intended only for assistance in understanding the convergence of iterative methods, not for eigenanalysis.  For accurate computation of eigenvalues we recommend using the excellant package SLEPc.''}
+Un-preconditioned Richardson iteration fails (i.e.~add \texttt{-pc\_type none}); explain.  The default preconditioner succeeds (i.e.~\texttt{-pc\_type ilu}), but ILU($0$) is cheating because it becomes a complete LU factorization on this tridiagonal and diagonally-dominant $A$; we are really seeing a direct solve.  The same can be said for ICC($0$).  Confirm that, as in the example on page \pageref{introprerichardson}, Richardson iteration succeeds with \texttt{-pc\_type jacobi}, even though the diagonal is constant; explain.
+\item \label{exer:computeeigs} Un-preconditioned GMRES solves the linear system in \texttt{c1tri.c} reasonably efficiently.  We can explain this by asking \PETSc to compute the eigenvalues of $A$ by using option\sidenote{The relevant \PETSc manual page says this option is ``intended only for assistance in understanding the convergence of iterative methods, not for eigenanalysis.  For accurate computation of eigenvalues we recommend using the excellant package SLEPc.''}
 \begin{quote}
 \texttt{-ksp\_compute\_eigenvalues}
 \end{quote}
-Because otherwise this would compute the eigenvalues of the preconditioned operator $P^{-1}A$, add \texttt{-pc\_type none}.  Try dimensions $N=10,100,1000$.  Why does the  run
+Because otherwise it computes the eigenvalues of the preconditioned operator $P^{-1}A$, add \texttt{-pc\_type none}.  Try dimensions $N=10,100,1000$.  Why does the  run
 \begin{cline}
 ./c1tri -tri_n 1000 -pc_type none -ksp_compute_eigenvalues
 \end{cline}
-only show 11 eigenvalues of this $1000\times 1000$ matrix?\sidenote{See \citep{TrefethenBau} for help with these questions.}  How do these eigenvalues explain the good behavior of unpreconditioned GMRES?
+only show 11 eigenvalues of this $1000\times 1000$ matrix?  How do these eigenvalues explain the good behavior of unpreconditioned GMRES?\sidenote{See \citep{TrefethenBau} for help with both of these questions.}
+\item The accuracy of direct solves (e.g.~\texttt{-ksp\_type preonly -pc\_type cholesky}) in \texttt{c1tri.c}, as measured by the reported error norm $\|\bx - \bx_{\text{exact}}\|_2$, decreases with increasing dimension.  Confirm and explain this observation.
+\item Table \ref{tab:c1tritiming} includes a number of blanks.  For each one, explain why it is blank, experimenting if needed.
+\item Table \ref{tab:c1tritiming} gives execution times not iteration count.  Generate the corresponding table of \pKSP iteration count by adding option \verb|-ksp_converged_reason| to the run commands.  Note the large number of ``coincidences'' in iteration count, i.e.~cases where iteration counts are identical; explain.  Which preconditioners have a strong or weak effect on iteration count?  Is timing or iteration count more useful?
 \end{enumerate}
