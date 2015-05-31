@@ -4,7 +4,7 @@ texinputs := getstarted.tex structured.tex unstructured.tex multigrid.tex scalin
 
 tikzinputs := samplepoly.1.tikz squarefour.tikz bump.1.tikz bump.poly.tikz mesh.1.tikz
 
-pdfinputs := c2poisson-conv.pdf
+pdfinputs := c2poisson-conv.pdf richpolyplot.pdf
 
 hinputs := $(addprefix ../c/, convenience.h)
 
@@ -61,6 +61,9 @@ mesh.1.tikz: ../c/genstructured.py
 
 c2poisson-conv.pdf: c2poisson-conv.py
 	python c2poisson-conv.py
+
+richpolyplot.pdf: richpolyplot.py
+	python richpolyplot.py
 
 .PHONY: clean
 
