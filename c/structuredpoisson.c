@@ -3,7 +3,7 @@
 
 //CREATEMATRIX
 PetscErrorCode formdirichletlaplacian(DM da, DMDALocalInfo info,
-                   PetscReal hx, PetscReal hy, PetscReal dirichletdiag, Mat A) {
+                   PetscReal hx, PetscReal hy, PetscReal diagentry, Mat A) {
   PetscErrorCode ierr;
   PetscInt  i, j;
   for (j=info.ys; j<info.ys+info.ym; j++) {
@@ -17,7 +17,7 @@ PetscErrorCode formdirichletlaplacian(DM da, DMDALocalInfo info,
       col[ncols].i = i;
       if ( (i==0) || (i==info.mx-1) || (j==0) || (j==info.my-1) ) {
         // if on boundary, just insert diagonal entry
-        v[ncols++] = dirichletdiag;
+        v[ncols++] = diagentry;
       } else {
         v[ncols++] = 2*(hy/hx + hx/hy); // ... everywhere else we build a row
         // if neighbor is NOT a known boundary value then we put an entry:
@@ -40,7 +40,8 @@ PetscErrorCode formdirichletlaplacian(DM da, DMDALocalInfo info,
 //ENDCREATEMATRIX
 
 //FORMEXACTRHS
-PetscErrorCode formExact(DM da, DMDALocalInfo info, PetscReal hx, PetscReal hy, Vec uexact) {
+PetscErrorCode formExact(DM da, DMDALocalInfo info, PetscReal hx, PetscReal hy,
+                         Vec uexact) {
   PetscErrorCode ierr;
   PetscInt       i, j;
   PetscReal      x, y, **auexact;
@@ -58,7 +59,8 @@ PetscErrorCode formExact(DM da, DMDALocalInfo info, PetscReal hx, PetscReal hy, 
   return 0;
 }
 
-PetscErrorCode formRHS(DM da, DMDALocalInfo info, PetscReal hx, PetscReal hy, Vec b) {
+PetscErrorCode formRHS(DM da, DMDALocalInfo info, PetscReal hx, PetscReal hy,
+                       Vec b) {
   PetscErrorCode ierr;
   PetscInt       i, j;
   PetscReal      x, y, x2, y2, f, **ab;

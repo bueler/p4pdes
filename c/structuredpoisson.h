@@ -6,7 +6,7 @@
 // finite difference approximation of
 //     A u = - hx * hy * (u_xx + u_yy)
 PetscErrorCode formdirichletlaplacian(DM da, DMDALocalInfo info,
-                   PetscReal hx, PetscReal hy, PetscReal dirichletdiag, Mat A);
+                   PetscReal hx, PetscReal hy, PetscReal diagentry, Mat A);
 
 // For a particular "manufactured" Poisson problem on a square,
 // compute the exact solution.

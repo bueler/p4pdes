@@ -54,11 +54,10 @@ static char help[] = "Solves a structured-grid Poisson problem with DMDA and KSP
 //   for kk in 0 1 2 3; do NN=$((50*(2**$kk))); MM=$((2**(2*$kk))); cmd="mpiexec -n $MM ./c2poisson -da_grid_x $NN -da_grid_y $NN -ksp_rtol 1.0e-8 -ksp_type cg -log_summary"; echo $cmd; $cmd |'grep' "Flops:  "; echo; done
 
 
-#include <math.h>
+//CREATE
 #include <petsc.h>
 #include "structuredpoisson.h"
 
-//CREATE
 int main(int argc,char **args)
 {
   PetscErrorCode ierr;
