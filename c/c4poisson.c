@@ -118,8 +118,9 @@ int main(int argc,char **argv)
              "on %d x %d grid:  error |u-uexact|_inf = %g\n",
              ctx.info.mx,ctx.info.my,errnorm); CHKERRQ(ierr);
 
-  ierr = DMDestroy(&da); CHKERRQ(ierr);
-  ierr = KSPDestroy(&ksp); CHKERRQ(ierr);
+  VecDestroy(&u);  VecDestroy(&uexact);
+  KSPDestroy(&ksp);
+  DMDestroy(&da);
   ierr = PetscFinalize(); CHKERRQ(ierr);
   return 0;
 }
