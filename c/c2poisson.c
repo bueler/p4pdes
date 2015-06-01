@@ -6,26 +6,14 @@ static char help[] = "Solves a structured-grid Poisson problem with DMDA and KSP
 // EACH LEVEL THROUGH
 //     KSPSetDM(ksp,(DM)da) ... KSPSetComputeOperators(ksp,ComputeJacobian,&user)
 
-// SHOW MAT DENSE:  ./c2poisson -da_grid_x 3 -da_grid_y 3 -a_mat_view ::ascii_dense
-// SHOW MAT GRAPHICAL:  ./c2poisson -a_mat_view draw -draw_pause 5
+// match example on page 40:  ./c2poisson -da_grid_x 4 -da_grid_y 3 -a_mat_view ::ascii_dense
 
-// CONVERGENCE:
-//   for NN in 5 9 17 33 65 129 257; do ./c2poisson -da_grid_x $NN -da_grid_y $NN -ksp_rtol 1.0e-8 -ksp_type cg; done
+// screenshot this; red for pos., blue for neg., faint teal for allocated zeros:
+//    ./c2poisson -da_grid_x 5 -da_grid_y 7 -a_mat_view draw -draw_pause 10
 
-// SAME CONVERGENCE USING -da_refine:
-//   for NN in 1 2 3 4 5 6; do ./c2poisson -da_grid_x 5 -da_grid_y 5 -ksp_rtol 1.0e-8 -ksp_type cg -da_refine $NN; done
+// good solver options?:  -ksp_rtol 1.0e-8 -ksp_type cg
 
-// VISUALIZATION OF SOLUTION: mpiexec -n 6 ./c2poisson -da_grid_x 129 -da_grid_y 129 -ksp_type cg -ksp_monitor_solution
-
-// SHOW KSP STRUCTURE:
-//   ./c2poisson -ksp_view                              GMRES WITH IC(0)
-//   ./c2poisson -ksp_view -ksp_type cg                 CG WITH IC(0)
-//   ./c2poisson -ksp_view -ksp_type cg -pc_type none   UNPRECONDITIONED CG
-
-// DIRECT LINEAR SOLVERS:
-//   LU ALGORITHM: ./c2poisson -ksp_type preonly -pc_type lu
-//   CHOLESKY ALGORITHM: ./c2poisson -ksp_type preonly -pc_type cholesky
-//   SHOWS CG CAN GIVE SAME RESIDUAL: ./c2poisson -ksp_type cg -ksp_rtol 1.0e-14
+// VISUALIZATION OF SOLUTION: mpiexec -n 4 ./c2poisson -da_refine 4 -ksp_type cg -ksp_monitor_solution
 
 // UNPRECONDITIONED CG ALGORITHM:
 //   ./c2poisson -ksp_type cg -pc_type none -ksp_view  # JUST SHOW KSP STRUCTURE
