@@ -1,16 +1,11 @@
 #include <petscmat.h>
 #include <petscdmda.h>
 
-//FORMEXACT
-PetscErrorCode formExact(DM da, Vec uexact) {
+//FORMEXACTRHS
+PetscErrorCode formExact(DM da, DMDALocalInfo info, PetscReal hx, PetscReal hy, Vec uexact) {
   PetscErrorCode ierr;
-  DMDALocalInfo  info;
-  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-
-  PetscInt  i, j;
-  // domain is [0,1] x [0,1]:
-  PetscReal hx = 1.0/(info.mx-1), hy = 1.0/(info.my-1),
-            x, y, **auexact;
+  PetscInt       i, j;
+  PetscReal      x, y, **auexact;
   ierr = DMDAVecGetArray(da, uexact, &auexact);CHKERRQ(ierr);
   for (j=info.ys; j<info.ys+info.ym; j++) {
     y = j * hy;
@@ -20,22 +15,15 @@ PetscErrorCode formExact(DM da, Vec uexact) {
     }
   }
   ierr = DMDAVecRestoreArray(da, uexact, &auexact);CHKERRQ(ierr);
-
   ierr = VecAssemblyBegin(uexact); CHKERRQ(ierr);
   ierr = VecAssemblyEnd(uexact); CHKERRQ(ierr);
   return 0;
 }
-//ENDFORMEXACT
 
-//FORMRHS
-PetscErrorCode formRHS(DM da, Vec b) {
+PetscErrorCode formRHS(DM da, DMDALocalInfo info, PetscReal hx, PetscReal hy, Vec b) {
   PetscErrorCode ierr;
-  DMDALocalInfo  info;
-  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-
-  PetscInt  i, j;
-  PetscReal hx = 1.0/(info.mx-1), hy = 1.0/(info.my-1),
-            x, y, x2, y2, f, **ab;
+  PetscInt       i, j;
+  PetscReal      x, y, x2, y2, f, **ab;
   ierr = DMDAVecGetArray(da, b, &ab);CHKERRQ(ierr);
   for (j=info.ys; j<info.ys+info.ym; j++) {
     y = j * hy;  y2 = y*y;
@@ -51,22 +39,18 @@ PetscErrorCode formRHS(DM da, Vec b) {
       }
     }
   }
-  ierr = DMDAVecRestoreArray(da, b, &ab);CHKERRQ(ierr);
-
+  ierr = DMDAVecRestoreArray(da, b, &ab); CHKERRQ(ierr);
   ierr = VecAssemblyBegin(b); CHKERRQ(ierr);
   ierr = VecAssemblyEnd(b); CHKERRQ(ierr);
   return 0;
 }
-//ENDFORMRHS
+//ENDFORMEXACTRHS
 
 //CREATEMATRIX
-PetscErrorCode formdirichletlaplacian(DM da, PetscReal dirichletdiag, Mat A) {
+PetscErrorCode formdirichletlaplacian(DM da, DMDALocalInfo info,
+                   PetscReal hx, PetscReal hy, PetscReal dirichletdiag, Mat A) {
   PetscErrorCode ierr;
-  DMDALocalInfo  info;
-  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-
-  PetscInt   i, j;
-  PetscReal  hx = 1.0/(info.mx-1), hy = 1.0/(info.my-1);
+  PetscInt  i, j;
   for (j=info.ys; j<info.ys+info.ym; j++) {
     for (i=info.xs; i<info.xs+info.xm; i++) {
       MatStencil  row, col[5];
@@ -94,7 +78,6 @@ PetscErrorCode formdirichletlaplacian(DM da, PetscReal dirichletdiag, Mat A) {
       ierr = MatSetValuesStencil(A,1,&row,ncols,col,v,INSERT_VALUES); CHKERRQ(ierr);
     }
   }
-
   ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
   ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
   return 0;

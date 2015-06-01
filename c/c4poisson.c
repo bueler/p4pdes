@@ -44,23 +44,31 @@ static char help[] = "Solves a structured-grid Poisson problem with DMDA and KSP
 #include <petsc.h>
 #include "structuredpoisson.h"
 
+//CONTEXT
+typedef struct {
+  DMDALocalInfo info;
+  PetscReal     hx, hy;
+} PoissonCtx;
+//ENDCONTEXT
+
 //COMPUTES
 PetscErrorCode ComputeRHS(KSP ksp, Vec b, void *ctx) {
   PetscErrorCode ierr;
   DM             da;
+  PoissonCtx     *pctx = (PoissonCtx*)ctx;
   PetscFunctionBeginUser;
   ierr = KSPGetDM(ksp,&da);CHKERRQ(ierr);
-  ierr = formRHS(da,b); CHKERRQ(ierr);
+  ierr = formRHS(da,pctx->info,pctx->hx,pctx->hy,b); CHKERRQ(ierr);
   return 0;
 }
 
-
-PetscErrorCode ComputeA(KSP ksp,Mat J, Mat A,void *ctx) {
+PetscErrorCode ComputeA(KSP ksp, Mat J, Mat A, void *ctx) {
   PetscErrorCode ierr;
   DM             da;
+  PoissonCtx     *pctx = (PoissonCtx*)ctx;
   PetscFunctionBeginUser;
   ierr = KSPGetDM(ksp,&da); CHKERRQ(ierr);
-  ierr = formdirichletlaplacian(da,1.0,A); CHKERRQ(ierr);
+  ierr = formdirichletlaplacian(da,pctx->info,pctx->hx,pctx->hy,1.0,A); CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 //ENDCOMPUTES
@@ -70,6 +78,7 @@ PetscErrorCode ComputeA(KSP ksp,Mat J, Mat A,void *ctx) {
 int main(int argc,char **argv)
 {
   PetscErrorCode ierr;
+  PoissonCtx     ctx;
   PetscInitialize(&argc,&argv,(char*)0,help);
 
   DM da;
@@ -78,14 +87,17 @@ int main(int argc,char **argv)
                 -10,-10,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,
                 &da); CHKERRQ(ierr);
   ierr = DMDASetUniformCoordinates(da,0.0,1.0,0.0,1.0,-1.0,-1.0); CHKERRQ(ierr);
+  ierr = DMDAGetLocalInfo(da,&ctx.info); CHKERRQ(ierr);
+  ctx.hx = 1.0/(ctx.info.mx-1);
+  ctx.hy = 1.0/(ctx.info.my-1);
 
   // create linear solver context; compare to c2poisson.c version; note there
   // is no "Assemble" stage!; that happens inside KSPSolve()
   KSP ksp;
   ierr = KSPCreate(PETSC_COMM_WORLD,&ksp); CHKERRQ(ierr);
   ierr = KSPSetDM(ksp,da); CHKERRQ(ierr);
-  ierr = KSPSetComputeRHS(ksp,ComputeRHS,NULL); CHKERRQ(ierr);
-  ierr = KSPSetComputeOperators(ksp,ComputeA,NULL); CHKERRQ(ierr);
+  ierr = KSPSetComputeRHS(ksp,ComputeRHS,&ctx); CHKERRQ(ierr);
+  ierr = KSPSetComputeOperators(ksp,ComputeA,&ctx); CHKERRQ(ierr);
   ierr = KSPSetFromOptions(ksp); CHKERRQ(ierr);
 
   Vec u;
@@ -97,16 +109,14 @@ int main(int argc,char **argv)
   ierr = PetscLogStagePop(); CHKERRQ(ierr); //STRIP
 
   PetscScalar    errnorm;
-  DMDALocalInfo  info;
   Vec            uexact;
   ierr = DMCreateGlobalVector(da,&uexact); CHKERRQ(ierr);
-  ierr = formExact(da,uexact); CHKERRQ(ierr);
+  ierr = formExact(da,ctx.info,ctx.hx,ctx.hy,uexact); CHKERRQ(ierr);
   ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uxact
   ierr = VecNorm(u,NORM_INFINITY,&errnorm); CHKERRQ(ierr);
-  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
              "on %d x %d grid:  error |u-uexact|_inf = %g\n",
-             info.mx,info.my,errnorm); CHKERRQ(ierr);
+             ctx.info.mx,ctx.info.my,errnorm); CHKERRQ(ierr);
 
   ierr = DMDestroy(&da); CHKERRQ(ierr);
   ierr = KSPDestroy(&ksp); CHKERRQ(ierr);
