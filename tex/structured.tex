@@ -584,41 +584,10 @@ The code \texttt{c2poisson.c} uses our finite difference method \eqref{poissonsq
 
 \cinputpart{c2poisson.c}{Solve using \pKSP, and report on solution.}{II}{//SOLVE}{//ENDSOLVE}{code:ctwopoissonsolve}
 
-
-\section{Krylov space solvers}
-
-Recall that Krylov space methods \citep{TrefethenBau} build a numerical solution $\tilde\bu$ by applying $A$ to vectors, but without using other manipulations of the entries of $A$.  For instance, the approximate solution $\tilde\bu$ to \eqref{poissonlinearsystem} might be an element of the $n$th Krylov space
-    $$\mathcal{K}_n = \operatorname{span}\{\bb,A\bb,A^2\bb,\dots,A^{n-1}\bb\},$$
-in which case
-    $$\tilde\bu = c_0 \bb + c_1 A \bb + c_2 A^2 \bb + \dots + c_{n-1} A^{n-1} \bb$$
-or equivalently
-    $$\tilde\bu = p_{n-1}(A) \bb$$
-for the $n-1$ degree polynomial $p_{n-1}(x) = c_0 + c_1 x + \dots + c_{n-1} x^{n-1}$ applied to $A$.
-
-Krylov space methods compute polynomials $p$ so that $p(A) \approx A^{-1}$.  For example, if we recall the Richardson iteration \eqref{introrichardson}, namely $\bu_{k+1} = \bu_k + \omega (\bb - A \bu_k)$, and we suppose $\bu_0=0$ then $\bu_k = p_{k-1}(A) \bb$ where
-\begin{align*}
-p_0(A) &= \omega I, \\
-p_1(A) &= 2 \omega I - \omega^2 A, \\
-p_2(A) &= 3 \omega I - 3 \omega^2 A + \omega^3 A^2, \\
-\vdots
-\end{align*}
-However, it is not at all clear that these are efficient approximations of $A^{-1}$, and we will not be using this simple iteration in its raw form.
-
-\begin{figure}
-\bigskip
-\includegraphics[width=0.9\textwidth]{richpolyplot}
-\caption{(FIXME: improve caption and move to Chapter 1)  The Richardson iteration \eqref{introrichardson} is equivalent to approximating $\bu=A^{-1}\bb$ by using these polynomials $p_k(x)$ to approximate $p_k(A)\approx A^{-1}$.}
-\label{fig:richpolyplot}
-\end{figure}
-
-Well-known iterative linear algebra methods GMRES, CG (conjugate gradient), MINRES, and others \citep{Greenbaum1997,Saad2003} are Krylov space methods which generate optimal (in various senses) polynomials $p(A) \approx A^{-1}$. FIXME: flesh out for GMRES
-
-Most Krylov methods are implemented in \PETSc, and we get access to them via a \pKSP object.  Which method is used can be controlled at runtime, and experimentation is appropriate in general.  For the Poisson problem we will see that preconditioned CG is very effective, but eventually we will put the most emphasis on the preconditioning stage (see Chapter \ref{chap:multigrid}).  We will return to Krylov space methods repeatedly in later Chapters.
-
 To finish showing the code, in Figure \ref{code:ctwopoissonsolve} we create the \pKSP object and tell it about \texttt{A} through a call to \texttt{KSPSetOperators()}.  Inside a \pKSP there are two ways \texttt{A} is used, namely as the system matrix and as a possible preconditioner---more on this later---which explains why \texttt{A} appears twice when calling \texttt{KSPSetOperators()}.  We also call \texttt{KSPSetFromOptions()} so that we can change the \pKSP type at runtime (illustrated below).  Solving the system means calling \texttt{KSPSolve()}.  Then we report on the solution by computing the numerical error by the norm $\|u-u_{ex}\|_\infty$.  Then we wrap up by destroying objects and calling \texttt{PetscFinalize()}.
 
 
-\section{Running the code, and runtime control}
+\section{Runtime control}
 
 As a first run do:
 \begin{cline}

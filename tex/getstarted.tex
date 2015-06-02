@@ -357,21 +357,21 @@ The first view shows the compressed sparse storage, with values as pairs with co
 In these cases the matrix was stored in \emph{serial} compressed sparse row format, the \texttt{MATSEQAIJ} type, because of the one-process execution.  If the code is run in parallel, i.e.~by \texttt{mpiexec -n N ./mycode}, then \texttt{-mat\_view}  reports \texttt{type:~mpiaij} corresponding to \pMat type \texttt{MATMPIAIJ}.  This is the ``parallel compressed sparse row storage'' described above.
 
 
-\section{A bit more numerical linear algebra}
+\section{Numerical linear algebra: residual, iteration, preconditioning}
 
-Direct methods like Gauss elimination \citep{TrefethenBau} are one way to solve a system, but the most powerful general methods, i.e.~for our later PDE-solving uses, are iterative.  They are often based on the \emph{residual} of some approximation of the solution to the linear system.
+Direct methods like Gauss elimination \citep{TrefethenBau} are one way to solve a linear system.  The most powerful methods for our later PDE-solving uses, however, are iterative.  They use the \emph{residual} of some approximation of the solution to the linear system.
 
 By definition, the residual of $\bu_0$ in linear system \eqref{introsystem} is the vector
 \begin{equation}
 \br_0 = \bb - A \bu_0. \label{residualdefn}
 \end{equation}
-Evaluating the residual for a known vector $\bu_0$ requires only applying $A$ to it, an $O(N^2)$ operation at most.  However, most discretization schemes for PDEs generate matrices $A$ that are \emph{sparse}, with many more zero entries than nonzeros, and often the number of nonzeros per row is independent of $N$.  In such cases the operation $A\bu_0$ and the evaluation of the residual can be done in $O(N)$ operations.
+Evaluating the residual for a known vector $\bu_0$ requires only applying $A$ to it, an $O(N^2)$ operation at worst.  Because most discretization schemes for PDEs generate matrices $A$ that are \emph{sparse}, with many more zero entries than nonzeros, and because often the number of nonzeros per row is small and independent of $N$, the operation $A\bu_0$ and the evaluation of the residual can usually be done in $O(N)$ operations.
 
-The \emph{Richardson iteration} is an example of an iterative method based on the residual.  If $\bu_0$ is an initial estimate of the solution then this iteration simply adds a multiple $\omega$ of the last residual at each step:
+The \emph{Richardson iteration}, which simply adds a multiple $\omega$ of the last residual at each step,
 \begin{equation}
-\bu_{k+1} = \bu_k + \omega (\bb - A \bu_k).  \label{introrichardson}
+\bu_{k+1} = \bu_k + \omega (\bb - A \bu_k),  \label{introrichardson}
 \end{equation}
-If significantly fewer than $O(N^2)$ steps are needed to make $\bu_k$ an adequate approximation of the exact solution $\bu$, then the Richardson iteration can improve on Gauss elimination.  On the other hand, the Richardson iteration may not converge, as in the next Example.
+is an example of an iterative method based on the residual.  If significantly fewer than $O(N^2)$ steps are needed to make $\bu_k$ an adequate approximation of the exact solution $\bu$, then the Richardson iteration can improve on Gauss elimination.  On the other hand, the Richardson iteration may not converge, as in the next Example.
 
 \newcommand{\rvect}[3]{\ensuremath{\bu_{#1} = \begin{bmatrix} #2 \\ #3 \end{bmatrix}}}
 
@@ -400,21 +400,19 @@ If we rewrite \eqref{introrichardson} as
 \begin{equation}
 \bu_{k+1} = (I - \omega A) \bu_k + \omega \bb  \label{introrewriterichardson}
 \end{equation}
-then it is easy to believe that the ``size'' of the matrix $I-\omega A$ will determine whether $\lim_{k\to\infty} \bu_k$ exists, for generic starting vectors $\bu_0$.  To make this precise we recall the definitions of \emph{eigenvalue} and \emph{singular value}.
+then it is easy to believe that the ``size'' of the matrix $I-\omega A$ will determine whether $\lim_{k\to\infty} \bu_k$ exists.
 
-A complex number $\lambda \in \CC$ is an eigenvalue of a square matrix $B\in\RR^{N\times N}$ if there is a nonzero vector $\bv\in\CC^N$ so that $B \bv = \lambda \bv$.  The singular values are then the square roots of the eigenvalues of the matrix $B^*B$.  The matrix $B^*B$ is symmetric and positive-definite so its eigenvalues are nonnegative.  Singular values are also geometrically-defined as the lengths of semi-axes of the ellipsoid in $\RR^N$ that results from applying $B$ to all vectors in the unit sphere of $\RR^N$ \citep{TrefethenBau}.
+To make this precise we recall important definitions.  A complex number $\lambda \in \CC$ is an \emph{eigenvalue} of a square matrix $B\in\RR^{N\times N}$ if there is a nonzero vector $\bv\in\CC^N$ so that $B \bv = \lambda \bv$.  The set of all eigenvalues of $B$ is the \emph{spectrum} $\sigma(B)$ of $B$.  The \emph{singular values} are the square roots of the eigenvalues of the matrix $B^*B$, a symmetric and positive-definite matrix with nonnegative eigenvalues.  Singular values are geometrically-defined as the lengths of semi-axes of the ellipsoid in $\RR^N$ that results from applying $B$ to all vectors in the unit ball of $\RR^N$ \citep{TrefethenBau}.
 
-The set of all eigenvalues of $B$ is the \emph{spectrum} $\sigma(B)$ of $B$.  Properties of matrices described in terms of eigenvalues or singular values are generically called ``spectral properties.''  For example, recall that $\|B\|_2$ is equal to the largest singular value of $B$, while $\|B^{-1}\|_2$ is equal to the inverse of the smallest singular value of $B$.  The 2-norm condition number $\kappa(B)$ is the ratio of largest to smallest singular values,\sidenote{The condition number of $B$ is visualized as the eccentricity of the ellipsoid we used in defining the singular values geometrically.} and thus is a spectral property of $B$.
+Properties of matrices described in terms of eigenvalues or singular values are generically called ``spectral properties.''  For example, because $\|B\|_2$ is equal to the largest singular value of $B$, while $\|B^{-1}\|_2$ is equal to the inverse of the smallest singular value of $B$, these are spectral properties.  The 2-norm condition number $\kappa(B)=\|B\|_2/\|B^{-1}\|_2$ is thus a spectral property as well; it is visualized as the eccentricity of the ellipsoid above.
 
-It is an easy exercise to show that the Richardson iteration \eqref{introrichardson} will converge if and only if all the eigenvalues of $B=I-\omega A$ are inside the unit circle.  Defining the \emph{spectral radius} $\rho(B)$ of a matrix $B$ as the maximum norm of the eigenvalues of $A$, we can describe the convergence of the Richardson iteration:
+It is an easy exercise to show that the Richardson iteration \eqref{introrichardson} will converge if and only if all the eigenvalues of $B=I-\omega A$ are inside the unit circle.  Defining the \emph{spectral radius} $\rho(B)$ as the maximum magnitude of the eigenvalues of $B$, we can describe the convergence of the Richardson iteration:
 \begin{equation}
 \text{\eqref{introrichardson} converges if and only if } \rho(I-\omega A) < 1. \label{introconvergethm}
 \end{equation}
-One can show that $\rho(B) \le \|B\|_2$, so \eqref{introrewriterichardson} converges if $\|I-\omega A\|_2 < 1$.
+One can also show that $\rho(B) \le \|B\|_2$, so \eqref{introrewriterichardson} converges if $\|I-\omega A\|_2 < 1$.
 
-The most powerful iterative linear algebra methods generate optimal, in various senses \citep{TrefethenBau}, estimates $\bu_k$ which are each linear combinations of vectors $\bb,A\bb,A^2\bb,\dots,A^{k-1}\bb$.  These methods are collectively called \emph{Krylov space methods} because the span of these vectors is a Krylov space.  Examples of such methods are conjugate gradients (CG) and minimum residual methods (e.g.~MINRES or GMRES) \citep{Greenbaum1997,Saad2003}.  The classical Jacobi and Gauss-Siedel iterative methods are not Krylov space methods because they involve extracting parts of $A$ as a matrix.  The effectiveness of a given Krylov method on a given matrix $A$ depends on the eigenvalues or singular values of $A$, i.e.~on its spectral properties.  As they are built into and fully-supported by \PETSc, we will use Krylov space methods in all later Chapters.
-
-Considering spectral properties brings us to an important general point about linear systems.  Namely, that there are many other systems which are equivalent to \eqref{introsystem}.  In fact, if $P\in\RR^{N\times N}$ is an invertible square matrix then the systems
+Considering spectral properties brings us to the important general point that there are many other systems which are equivalent to \eqref{introsystem}.  In fact, if $P\in\RR^{N\times N}$ is an invertible square matrix then the systems
 \begin{equation}
 (P^{-1} A) \bu = P^{-1} \bb \label{introleftpre}
 \end{equation}
@@ -422,7 +420,7 @@ and
 \begin{equation}
 (A P^{-1}) (P\bu) = \bb \label{introrightpre}
 \end{equation}
-obviously have the same solution(s) $\bu$ as \eqref{introsystem}.  However, matrices $P^{-1} A$ or $A P^{-1}$ may have different eigenvalues, condition numbers, and so on---different spectral properties---from $A$.  While the accuracy of the approximate solution $\bu$ cannot be improved beyond the $\kappa(A) \eps$ level, as fact i) on page \pageref{limittoaccuracy} cannot be overcome, methods can take advantage of better spectral properties to generate $\bu$ more quickly.  This idea is effective if $P^{-1}$ is easy to apply.\sidenote{This means: the system $P\bv = \bc$ is easy to solve for $\bv$ in the sense of low computational cost.}
+have the same solution(s) $\bu$ as \eqref{introsystem}.  However, matrices $P^{-1} A$ or $A P^{-1}$ generally have different eigenvalues, condition numbers, and so on---different spectral properties---from $A$.  While the accuracy of the approximate solution $\bu$ cannot be improved beyond the $\kappa(A) \eps$ level, as fact i) on page \pageref{limittoaccuracy} cannot be overcome, methods can take advantage of better spectral properties to generate $\bu$ more quickly.  This idea is effective if $P^{-1}$ is easy to apply, in the sense of low computational cost.
 
 Equivalent systems \eqref{introleftpre} and \eqref{introrightpre} are referred to as \emph{preconditioned} systems, with \eqref{introleftpre} called \emph{left preconditioning} and \eqref{introrightpre} called \emph{right-preconditioning}.  The next example shows how preconditioning can make the Richardson iteration converge.
 
@@ -445,14 +443,48 @@ This sequence is apparently going to $\bu = [1\,\, 2]^*$.  The explanation is no
 \begin{equation}
 \rho(I-A) = -9.1, \qquad \rho(I-P^{-1} A) = 0.32.
 \end{equation}
+This example illustrates convergence claim \eqref{introconvergethm}.
 \end{examplecont}
 \noindent\hrulefill
 
 \medskip
-The above example illustrates convergence claim \eqref{introconvergethm}.  Preconditioning using the diagonal this way is called \emph{Jacobi} preconditioning, as it is related to, though not the same idea as, the classical Jacobi iteration for solving a linear system.
+Preconditioning using the diagonal as in the above example is called \emph{Jacobi} preconditioning.  It is related to, but not the same idea as, the classical Jacobi iteration \citep{Greenbaum1997} for solving a linear system.
 
-Our brief introduction of the residual, Richardson iteration, and preconditioning is hardly adequate.  But let us return to \PETSc codes and solve linear systems.  In the upcoming material the reader can first treat \PETSc's linear solver object as a black box, but then explore how it works through runtime options.
 
+\section{Numerical linear algebra: Krylov space methods}
+
+The most powerful iterative methods for solving system \eqref{introsystem} generate optimal, in various senses \citep{TrefethenBau}, estimates $\bu_k$ which are linear combinations of vectors $\bz,A\bz,A^2\bz,\dots,A^{k-1}\bz$ where $\bz$ is a fixed vector (which is often $\bz=\bb$).  These methods are collectively called \emph{Krylov space methods} because the span of such vectors is a \emph{Krylov space}.  Examples of such methods include the Richardson iteration, conjugate gradients (CG), and minimum residual methods (e.g.~MINRES or GMRES; \citet{Greenbaum1997,Saad2003}).  The classical Jacobi and Gauss-Siedel \citep{Greenbaum1997} iterative methods are not Krylov space methods because they involve extracting parts of (entries of) $A$ as a matrix.  The effectiveness of a given Krylov method on a system depends on the eigenvalues or singular values of the matrix $A$, i.e.~on its spectral properties.  As many Krylov space methods are built into and fully-supported by \PETSc, we will use them heavily in all later Chapters.
+
+To be concrete, given $\bb$ the $n$th Krylov space in defined to be
+    $$\mathcal{K}_n = \operatorname{span}\{\bb,A\bb,A^2\bb,\dots,A^{n-1}\bb\}.$$
+Suppose $\tilde\bu \in \mathcal{K}_n$ so
+    $$\tilde\bu = c_0 \bb + c_1 A \bb + c_2 A^2 \bb + \dots + c_{n-1} A^{n-1} \bb,$$
+or equivalently
+    $$\tilde\bu = p_{n-1}(A) \bb$$
+for the $n-1$ degree polynomial $p_{n-1}(x) = c_0 + c_1 x + \dots + c_{n-1} x^{n-1}$ applied to $A$.  Thus if we want $\tilde\bu$ to approximate $\bu$, the solution to \eqref{introsystem}, then we want to find a polynomial $p_{n-1}$ so that
+    $$p_{n-1}(A) \approx A^{-1}.$$
+Krylov space methods do this, subject to the important idea that if $p_{n-1}(z)$ is close to $1/z$ \emph{on the finite set of eigenvalues of} $A$, i.e.~on the spectrum $\sigma(A)\subset \CC$, then $p_{n-1}(A) \approx A^{-1}$.  Thus, whether $p_{n-1}$ is a ``good'' polynomial for approximately inverting $A$ is a spectral question about $A$.
+
+For example, consider the Richardson iteration \eqref{introrichardson}, namely $\bu_{k+1} = \bu_k + \omega (\bb - A \bu_k)$
+
+FIXME
+
+\begin{figure}
+\bigskip
+\includegraphics[width=0.9\textwidth]{richpolyplot}
+\caption{(FIXME: improve caption and move to Chapter 1)  The Richardson iteration \eqref{introrichardson} is equivalent to approximating $\bu=A^{-1}\bb$ by using these polynomials $p_k(x)$ to approximate $p_k(A)\approx A^{-1}$.}
+\label{fig:richpolyplot}
+\end{figure}
+
+FIXME: flesh out CG and GMRES
+
+Most Krylov methods are implemented in \PETSc, and we get access to them via a \pKSP object.  Which method is used can be controlled at runtime, and runtime experimentation is always appropriate.  For the Poisson problem in Chapter \ref{chap:structured}, for example, we will see that preconditioned CG is very effective, but eventually we will put the most emphasis on the preconditioning stage and see that multigrid is extraordinarily effective for that purpose (see Chapter \ref{chap:multigrid}).  We will return to Krylov space methods repeatedly in later Chapters.
+
+Our brief introduction of iterative linear algebra is hardly adequate.  But we need now to return to \PETSc codes and solve linear systems.  In the upcoming material the reader can first treat \PETSc's linear solver object as a black box, but then explore how it works through runtime options.
+
+\vfill
+\clearpage
+\newpage
 \section{Solve a small linear system in \PETSc}
 
 We already know how to create, fill, and destroy \pVec and \pMat objects.  The next code, \texttt{c1vecmatksp.c} shown in Figure \ref{code:vecmatksp}, does these steps.  To actually solve a linear system it also uses a Krylov space method object ``\pKSP''.  This linear solver uses a method chosen at runtime.
@@ -469,8 +501,6 @@ which also supplies the right-hand side of the system (i.e.~an allocated and ass
 
 Why do we list \texttt{A} twice in calling \texttt{KSPSetOperators()}?  Recall the linear system $A\bx=\bb$ is equivalent to $P^{-1} A \bx = P^{-1} \bb$ (left preconditioning).  At runtime we are going to choose a preconditioning method which builds $P^{-1}$ from $A$ or from an approximation of $A$.  For example, \emph{incomplete LU} factorization of $A$ can be used in generating $P^{-1}$, or $P$ could be the diagonal of $A$ (as in the example above).  The second matrix argument to \texttt{KSPSetOperators()} is the \pMat from which $P^{-1}$ is built.  Note we do not supply $P$ itself, as that would require the user to write extra code.  It would also block easy choice among preconditioners at runtime.  Instead we supply ``material'' from which the preconditioner is built, and the most common such material is $A$ itself.
 
-\inputwhole{../c/c1vecmatksp.c}{\texttt{p4pdes/c/c1vecmatksp.c}}{Solve a small linear system.}{code:vecmatksp}
-
 After calling \texttt{KSPSolve()} we display the solution \pVec by calling \texttt{VecView()}.  This and everything else about the code in Figure \ref{code:vecmatksp} should now be self-explanatory.  So let's run it:
 \begin{cline}
 $ make c1vecmatksp
@@ -483,6 +513,8 @@ Vec Object: 1 MPI processes
 -1
 \end{cline}
 This solves the system and gives us $\bx$.  But what happened and how to control it?
+
+\inputwhole{../c/c1vecmatksp.c}{\texttt{p4pdes/c/c1vecmatksp.c}}{Solve a small linear system.}{code:vecmatksp}
 
 
 \section{Revealing solvers at runtime}
@@ -580,8 +612,6 @@ mpiexec -n 2 ./c1vecmatksp -ksp_view
 \end{cline}
 But surely that's enough runtime options for now.  There will be more, especially in later chapters when we solve PDEs.
 
-\vfill
-\newpage
 \section{More \PETSc functionality from the code side}
 
 We have seen \PETSc code to set up and solve linear systems, but there is more to say.  The next example \texttt{c1tri.c}, split into Figures \ref{code:tripartone} and \ref{code:triparttwo}, introduces these additional concepts and their associated function calls:
@@ -592,10 +622,10 @@ We have seen \PETSc code to set up and solve linear systems, but there is more t
 \item Using \texttt{VecAXPY()}, \texttt{VecNorm()}, and \texttt{PetscPrintf()} to compute and display the error in a case where the exact solution is known.
 \end{enumerate}
 
-\cinputpartnostrip{c1tri.c}{Set up \pVec and \pMat objects for a tridiagonal system.}{I}{//STARTSETUP}{//ENDSETUP}{code:tripartone}
-
 \vfill
 \newpage
+\cinputpartnostrip{c1tri.c}{Set up \pVec and \pMat objects for a tridiagonal system.}{I}{//STARTSETUP}{//ENDSETUP}{code:tripartone}
+
 First build (``\texttt{make c1tri}'') and run the code with options that show what it is does by default:
 \begin{cline}
 $ ./c1tri -ksp_monitor -a_mat_view ::ascii_dense
@@ -611,10 +641,6 @@ error for m = 4 system is |x-xexact|_2 = 5.1e-16
 \end{cline}
 %$
 
-\cinputpartnostrip{c1tri.c}{Assemble and solve.}{II}{//ENDSETUP}{//ENDSOLVE}{code:triparttwo}
-
-\vfill
-\newpage
 To get started on the new concepts shown in Figure \ref{code:tripartone}, notice that methods \texttt{PetscOptionsBegin()} and \texttt{PetscOptionsEnd()} bracket the call to \texttt{PetscOptionsInt()}.  We set an option prefix ``\texttt{-tri\_...}'' so that the new option we create is distinguished from the many built-in \PETSc options that start with \texttt{-ksp\_...} or \texttt{-vec\_...} or whatever.  Our use of \texttt{PetscOptionsInt()} creates an option \texttt{-tri\_m} which allows the user to set the variable \texttt{m}, and to leave the default \texttt{m}$=4$ unaltered if the option is not set.
 
 To see the option and its default value in \texttt{-help} output do
@@ -642,6 +668,8 @@ Next we assemble the matrix $A$.  This is a boring tridiagonal matrix with $3$ o
 \texttt{MatGetOwnershipRange(A,\&Istart,\&Iend)}
 \end{quote}
 to get the starting and ending row indices for the local process.  These are used as limits in a \texttt{for} loop over the locally own rows, wherein we call \texttt{MatSetValues()} to actually set the entries of $A$.  We call \texttt{MatAssemblyBegin/End()} to complete the assembly of $A$.
+
+\cinputpartnostrip{c1tri.c}{Assemble and solve.}{II}{//ENDSETUP}{//ENDSOLVE}{code:triparttwo}
 
 We need to assemble the right-hand side $\bb$ of the linear system.  But this is related to the question: how does one get the exact solution $\bx_{\text{exact}}$ to a linear system $A\bx_{\text{exact}} = \bb$?  The easiest way for demonstration purposes, as here, is to \emph{choose} $\bx_{\text{exact}}$ and then compute $\bb$ by multiplying by $A$.  Thus, we set (unimportant) values for \texttt{xexact}, and call \texttt{VecAssemblyBegin/End()} on it.  Then we compute \texttt{b} by calling \texttt{MatMult(A,xexact,b)}.
 
