@@ -72,4 +72,5 @@ clean:
 	@rm -f *~ *.out *.aux *.log *.bbl *.blg *.synctex.gz *.idx *.ilg *.ind *.toc *.dvi
 	@rm -f cstrip/*.c
 	@rm -f bump.?.* samplepoly.?.* bump.poly* squarefour.tikz mesh.?.*
+	@rm -f c2poisson-conv.pdf richpolyplot.pdf
 
