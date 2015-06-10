@@ -514,7 +514,7 @@ Vec Object: 1 MPI processes
 \end{cline}
 This solves the system and gives us $\bx$.  But what happened and how to control it?
 
-\inputwhole{../c/c1vecmatksp.c}{\texttt{p4pdes/c/c1vecmatksp.c}}{Solve a small linear system.}{code:vecmatksp}
+\inputwhole{../c/ch2/vecmatksp.c}{\texttt{p4pdes/c/c1vecmatksp.c}}{Solve a small linear system.}{code:vecmatksp}
 
 
 \section{Revealing solvers at runtime}
@@ -624,7 +624,7 @@ We have seen \PETSc code to set up and solve linear systems, but there is more t
 
 \vfill
 \newpage
-\cinputpartnostrip{c1tri.c}{Set up \pVec and \pMat objects for a tridiagonal system.}{I}{//STARTSETUP}{//ENDSETUP}{code:tripartone}
+\cinputpartnostrip{ch2/tri.c}{Set up \pVec and \pMat objects for a tridiagonal system.}{I}{//STARTSETUP}{//ENDSETUP}{code:tripartone}
 
 First build (``\texttt{make c1tri}'') and run the code with options that show what it is does by default:
 \begin{cline}
@@ -669,7 +669,7 @@ Next we assemble the matrix $A$.  This is a boring tridiagonal matrix with $3$ o
 \end{quote}
 to get the starting and ending row indices for the local process.  These are used as limits in a \texttt{for} loop over the locally own rows, wherein we call \texttt{MatSetValues()} to actually set the entries of $A$.  We call \texttt{MatAssemblyBegin/End()} to complete the assembly of $A$.
 
-\cinputpartnostrip{c1tri.c}{Assemble and solve.}{II}{//ENDSETUP}{//ENDSOLVE}{code:triparttwo}
+\cinputpartnostrip{ch2/tri.c}{Assemble and solve.}{II}{//ENDSETUP}{//ENDSOLVE}{code:triparttwo}
 
 We need to assemble the right-hand side $\bb$ of the linear system.  But this is related to the question: how does one get the exact solution $\bx_{\text{exact}}$ to a linear system $A\bx_{\text{exact}} = \bb$?  The easiest way for demonstration purposes, as here, is to \emph{choose} $\bx_{\text{exact}}$ and then compute $\bb$ by multiplying by $A$.  Thus, we set (unimportant) values for \texttt{xexact}, and call \texttt{VecAssemblyBegin/End()} on it.  Then we compute \texttt{b} by calling \texttt{MatMult(A,xexact,b)}.
 
@@ -730,7 +730,7 @@ $ timer mpiexec -n N ./c1tri -tri_m 10000000 -ksp_rtol 1.0e-10 -ksp_type KSP -pc
 %$
 for $N=1$ and $N=4$, and several \pKSP/\pPC choices.  The tighter tolerance \texttt{-ksp\_rtol 1.0e-10} was added because a fair comparison of iterative and direct methods needs significant accuracy in the iterative ones.
 
-\newcommand{\intime}[1]{\input{../c/timing/c1tri/#1}}
+\newcommand{\intime}[1]{\input{../c/ch2/timing/tri/#1}}
 \begin{figure}[ht]
 \texttt{
 \begin{tabular}{llll}

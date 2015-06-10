@@ -27,20 +27,20 @@ Then the exact solution is
    $$u_{\text{exact}}(x,y) = \begin{cases} \psi(x,y), & r \le r_{\text{free}}, \\  - A \ln(r) + B, & \text{otherwise},\end{cases}$$
 where $r_{\text{free}} = 0.69797$, $A = 0.68026$, and $B = 0.47152$.
 
-\cinputpart{c9obstacle.c}{Just the struct.}{I}{//STRUCT}{//ENDSTRUCT}{code:obstaclestruct}
+\cinputpart{obstacle.c}{Just the struct.}{I}{//STRUCT}{//ENDSTRUCT}{code:obstaclestruct}
 
-\cinputpart{c9obstacle.c}{Create the DMDA and Vecs.}{II}{//CREATE}{//ENDCREATE}{code:obstaclecreate}
+\cinputpart{obstacle.c}{Create the DMDA and Vecs.}{II}{//CREATE}{//ENDCREATE}{code:obstaclecreate}
 
-\cinputpart{c9obstacle.c}{Setup the SNESVI object.}{III}{//SETUPSNES}{//ENDSETUPSNES}{code:obstaclesetupsnes}
+\cinputpart{obstacle.c}{Setup the SNESVI object.}{III}{//SETUPSNES}{//ENDSETUPSNES}{code:obstaclesetupsnes}
 
-\cinputpart{c9obstacle.c}{Compute the function $\psi$ and the exact solution, which determines the boundary conditions.}{IV}{//FORMPSI}{//ENDFORMPSI}{code:obstacleformpsi}
+\cinputpart{obstacle.c}{Compute the function $\psi$ and the exact solution, which determines the boundary conditions.}{IV}{//FORMPSI}{//ENDFORMPSI}{code:obstacleformpsi}
 
-\cinputpart{c9obstacle.c}{From \PETSc 's point of view we are solving ``$F(u)=0$ subject to $u\ge \psi$''; this method computes $F(u)$.}{V}{//FORMFUNC}{//ENDFORMFUNC}{code:obstacleformfunc}
+\cinputpart{obstacle.c}{From \PETSc 's point of view we are solving ``$F(u)=0$ subject to $u\ge \psi$''; this method computes $F(u)$.}{V}{//FORMFUNC}{//ENDFORMFUNC}{code:obstacleformfunc}
 
-\cinputpart{c9obstacle.c}{This method assembles the Jacobian $J = F'(u)$.}{VI}{//FORMJAC}{//ENDFORMJAC}{code:obstacleformjac}
+\cinputpart{obstacle.c}{This method assembles the Jacobian $J = F'(u)$.}{VI}{//FORMJAC}{//ENDFORMJAC}{code:obstacleformjac}
 
-\cinputpart{c9obstacle.c}{An important part: tell SNESVI object about bound $u\ge \psi$ (and $u<+\infty$ because SNESVI expects both upper and lower bounds).}{VII}{//FORMBOUNDS}{//ENDFORMBOUNDS}{code:obstacleformbounds}
+\cinputpart{obstacle.c}{An important part: tell SNESVI object about bound $u\ge \psi$ (and $u<+\infty$ because SNESVI expects both upper and lower bounds).}{VII}{//FORMBOUNDS}{//ENDFORMBOUNDS}{code:obstacleformbounds}
 
-\cinputpart{c9obstacle.c}{Solve and report on results.}{VIII}{//SOLVE}{//ENDSOLVE}{code:obstaclesolve}
+\cinputpart{obstacle.c}{Solve and report on results.}{VIII}{//SOLVE}{//ENDSOLVE}{code:obstaclesolve}
 
 \section{Ice sheets}
