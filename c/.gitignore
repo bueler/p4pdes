@@ -1,30 +1,9 @@
 *~
-ex?
-ex??
-ex*.c
 
-# ? = 2,3,4
-
-c1e
-c1vecmatksp
-c1tri
-c2poisson
-c2heat
-c3convert
-c3poisson
-c4poisson
-c7riemann
-c7fosls
-c7stokes
-c9obstacle
+riemann
+stokes
+obstacle
 
 testts
-testmatcreate
-
-e1balanced
-e1matvecn
-
-bump.?.*
-square.?.*
-mesh.?.*
+testprealloc
 

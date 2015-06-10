@@ -11,8 +11,8 @@ To see the sparsity pattern graphically:\n\
      c2testprealloc -f bump.1 -a_mat_view draw -draw_pause 5\n\n";
 
 #include <petscmat.h>
-#include "convenience.h"
-#include "readmesh.h"
+#include "ch4/convenience.h"
+#include "ch4/readmesh.h"
 
 #define DEBUG 1
 
