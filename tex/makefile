@@ -8,7 +8,8 @@ pdfinputs := c2poisson-conv.pdf richpolyplot.pdf
 
 hinputs := $(addprefix ../c/, convenience.h)
 
-cinputs := structuredpoisson.c readmesh.c poissontools.c c2poisson.c c3poisson.c c4poisson.c c9obstacle.c
+# FIXME:
+cinputs := ch3/structuredpoisson.c ch4/readmesh.c ch4/poissontools.c ch3/poisson.c ch4/poisson.c ch5/poisson.c obstacle.c
 
 cstrip := $(addprefix cstrip/, $(cinputs))
 

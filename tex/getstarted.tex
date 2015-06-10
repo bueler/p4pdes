@@ -34,7 +34,7 @@ $ make c1e
 %$
 Calling ``\texttt{make}'' uses \texttt{p4pdes/c/makefile}.  An extract of this makefile is shown in Figure \ref{code:c1emakefile}.  For all the codes in this book, the makefile has this form, as recommended in the \PETSc \emph{User's Manual} \citep{petsc-user-ref}.
 
-\inputwhole{../c/c1e.c}{\texttt{p4pdes/c/c1e.c}}{Compute $e$ in parallel with \PETSc.}{code:e}
+\inputwhole{../c/ch1/e.c}{\texttt{p4pdes/c/ch1/e.c}}{Compute $e$ in parallel with \PETSc.}{code:e}
 
 Run the code like this:
 \begin{cline}
@@ -63,7 +63,7 @@ rank 0 did 0 flops
 \end{cline}
 %$
 
-\cinputraw{c1emakefile.frag}{extract from \texttt{p4pdes/c/makefile}}{All \texttt{makefile}s for our \PETSc codes look like this.}{}{//START}{//STOP}{code:c1emakefile}
+\cinputraw{ch1makefile.frag}{extract from \texttt{p4pdes/ch1/makefile}}{All \texttt{makefile}s for our \PETSc codes look like this.}{}{//START}{//STOP}{code:ch1makefile}
 
 Perhaps the reader is now worried that this book was written using a large supercomputer whereas the reader has a little laptop with only a couple of cores.  In fact these five or twenty process runs work just fine on the author's laptop.  MPI processes are created as needed, using an old feature of operating systems: multitasking.  Speedup from parallelism is another matter; we will return to it.
 
