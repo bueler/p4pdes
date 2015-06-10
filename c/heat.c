@@ -30,7 +30,7 @@ For examples, try
 
 #include <petscdmda.h>
 #include <petscts.h>
-#include "structuredpoisson.h"
+#include "ch3/structuredpoisson.h"
 
 
 // use both for initial condition at t=0 and exact solution at t=tf
@@ -94,10 +94,11 @@ int main(int argc,char **argv) {
   ierr = DMSetMatType(da,MATAIJ);CHKERRQ(ierr);
   ierr = DMCreateMatrix(da,&A);CHKERRQ(ierr);
   ierr = MatSetOptionsPrefix(A,"a_"); CHKERRQ(ierr);
-  ierr = formdirichletlaplacian(da,0.0,A); CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(da,&info);CHKERRQ(ierr);
   hx = 1.0/(PetscReal)(info.mx-1);
   hy = 1.0/(PetscReal)(info.my-1);
+
+  ierr = formdirichletlaplacian(da,info,hx,hy,0.0,A); CHKERRQ(ierr);
   ierr = MatScale(A,-1.0/(hx*hy)); CHKERRQ(ierr);
 
   // CREATE AND SETUP TS
