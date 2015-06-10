@@ -42,7 +42,7 @@ static char help[] = "Solves a structured-grid Poisson problem with DMDA and KSP
 //mpiexec -n 4 ./c4poisson -da_grid_x 4097 -da_grid_y 4097 -pc_type mg -pc_mg_levels 11 -ksp_monitor -pc_mg_type full -ksp_rtol 1.0e-12 -mg_levels_ksp_type cg
 
 #include <petsc.h>
-#include "structuredpoisson.h"
+#include "../ch3/structuredpoisson.h"
 
 //CONTEXT
 typedef struct {

@@ -1,4 +1,4 @@
-p4pdes/c/timing/
+timing/tri/
 ================
 
 Time results needed to make the text of the book are under git control in
@@ -7,12 +7,6 @@ the book can be built without a working PETSc install.
 
 To redo the timing results do
 
-    $ (cd ../ && make c1tri)
-    $ cd c1tri/
+    $ (cd ../../ && make tri)
     $ ./time.sh
-
-To remove all timing results, do
-
-    $ cd c1tri/
-    $ rm *.*.*
 
