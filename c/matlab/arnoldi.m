@@ -17,7 +17,7 @@ function [Q, H] = arnoldi(A,b,n)
 %     >> eig(A), eig(H(1:4,:))
 %
 % Example:  reproduce figure 34.3 (=front cover) from Trefethen and Bau
-%     >> arnoldiblobs(100,2)
+%     >> arnoldiblobs(100,2,4)
 
 m = size(A,1);
 if size(A,2) ~= m, error('A must be square'), end
