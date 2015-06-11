@@ -9,6 +9,8 @@ CH4="readmesh.c poissontools.c poisson.c"
 CH5="poisson.c"
 OTHER="obstacle.c"
 
+mkdir cstrip/
+
 for NAME in $CH3; do
     cp ../c/ch3/$NAME cstrip/ch3$NAME
 done
