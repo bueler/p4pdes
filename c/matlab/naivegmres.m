@@ -4,11 +4,7 @@ function x = naivegmres(A,b,n)
 % using Givens rotations to perform QR as the Arnoldi iteration proceeds.
 % Calls ARNOLDI.
 % Example:
-%     >> m = 20;  b = randn(m,1);
-%     >> A = 3*eye(m) + diag(-ones(1,m-1),1) + diag(-ones(1,m-1),-1);
-%     >> x = A\b;
-%     >> for k=1:m,  er(k) = norm(x - naivegmres(A,b,k));  end
-%     >> semilogy(1:m,er,'o:'),  set(gca,'XTick',1:m),  grid on
+%     >> gmresexample(20)
 
 if size(A,1) ~= size(A,2), error('A must be square'), end
 if size(b,1) ~= size(A,1) | size(b,2) ~= 1, error('b must be column vector for A'), end
