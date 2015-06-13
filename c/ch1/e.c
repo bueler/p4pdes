@@ -7,7 +7,7 @@ int main(int argc, char **args) {
   int             rank, i;
   PetscReal       localval, globalsum;
 
-  PetscInitialize(&argc,&args,(char*)0,help);
+  PetscInitialize(&argc,&args,NULL,help);
 
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank); CHKERRQ(ierr);
 
