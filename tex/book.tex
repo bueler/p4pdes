@@ -2,6 +2,11 @@
 
 \hypersetup{colorlinks}
 
+\usepackage{xspace}
+\newcommand{\PETSCVERSION}{3.6\xspace}
+\newcommand{\PETSCMINORVERSION}{3.6.0\xspace}
+\newcommand{\PETSCMONTH}{June 2015\xspace}
+
 \renewcommand{\maketitlepage}[0]{%
   \cleardoublepage%
   {%
@@ -13,7 +18,7 @@
   \vfill%
     \fontsize{18}{40}\selectfont\par\noindent\textcolor{darkgray}{\allcaps{numerical solutions using}}%
     \fontsize{18}{40}\selectfont\par\noindent\textcolor{darkgray}{\allcaps{the Portable, Extensible Toolkit for Scientific computation}}%
-    \fontsize{18}{40}\selectfont\par\noindent\textcolor{darkgray}{(for PETSc version 3.5)}%
+    \fontsize{18}{40}\selectfont\par\noindent\textcolor{darkgray}{(for PETSc version \PETSCVERSION)}%
   \vfill%
   \fontsize{14}{16}\selectfont\par\noindent\allcaps{\thanklesspublisher}%
   \end{fullwidth}%
@@ -32,7 +37,6 @@
 \usepackage{booktabs} % for nicely-typeset tabular material
 \usepackage{verbatim} % for "comment" environment
 \usepackage{fancyvrb}
-\usepackage{xspace}
 %\usepackage{underscore} % causes "Missing \endcsname inserted" error?
 \usepackage{graphicx}
 \usepackage{amsmath,amssymb,amsthm,bm}
@@ -210,8 +214,6 @@
 \newcommand{\pVec}{\texttt{Vec}\xspace}
 \newcommand{\pVecs}{\texttt{Vec}s\xspace}
 
-%\renewcommand\floatpagefraction{.9}  %???
-
 \setcounter{secnumdepth}{0}
 
 % eventually this is a good idea:
@@ -266,27 +268,27 @@ Copyright \copyright\ \the\year\ \thanklessauthor
 
 \chapter*{Preface}
 
-\section{Why this book?}
+\section{Why read this book?}
 
 Perhaps you've taken a mathematics course or two in partial differential equations (PDEs).  You may have written a few codes in C, or various short scripts in \Matlab or python.  You are interested in solving PDEs numerically for models which work in parallel on big problems.  This book is for you.
 
-\section{Get the book}
+\section{Get the example codes}
 
-Use \texttt{git} to get the whole book, with C codes and \LaTeX\xspace sources too:
+Use \texttt{git} to get the example C codes, and \LaTeX\xspace sources for the book too:
 \begin{cline}
 $ git clone https://github.com/bueler/p4pdes.git
 \end{cline}
 %$
-In the text we refer to the C codes in directory \texttt{p4pdes/c/}.
+In the text we use the C codes in subdirectories \texttt{p4pdes/c/ch}$N$ for $N$ equal to the chapter number.
 
-\section{\PETSc?}
+\section{What is \PETSc?}
 
-The Portable, Extensible Toolkit for Scientific computing (\PETSc)\sidenote{Say it ``pets sea.''  The stable homepage URL for PETSc, including download and installation instructions, is \href{http://www.mcs.anl.gov/petsc/index.html}{www.mcs.anl.gov/petsc}.} is an open-source, mathematical software library built on top of the standard software layer for large-scale parallel computation, the Message Passing Interface (MPI) \citep{Groppetal1999}.  Thus \PETSc is a framework capable of solving problems like PDEs at ``large scale,'' that is, at high resolution and on supercomputers with hundreds to millions of cores.
+The Portable, Extensible Toolkit for Scientific computing (\PETSc)\sidenote{Say it ``pets sea.''  The homepage for PETSc, including download and installation instructions, is \href{http://www.mcs.anl.gov/petsc/index.html}{www.mcs.anl.gov/petsc}.} is an open-source, mathematical software library built on top of the standard software layer for large-scale parallel computation, the Message Passing Interface (MPI) \citep{Groppetal1999}.  Thus \PETSc is a framework capable of solving problems like PDEs at ``large scale,'' that is, at high resolution and on supercomputers with hundreds to millions of cores.
 
 \PETSc is not particularly new.  Version 2.0, the first version to make an impact in the scientific computing world, was built in 1994.  A well-known monograph \citet{Smithetal1996}\sidenote{B.~Smith, P.~Bjorstad, and W.~Gropp. \emph{Domain decomposition: parallel multilevel methods for elliptic partial differential equations}. Cambridge
 University Press, 1996} uses \PETSc 2.0 for scalable solutions of linear partial differential equations (PDEs).  That book focusses on pre-conditioned iterative linear solvers and domain decomposition.  For example, methods like additive Schwarz are shown to scalably-solve the Poisson equation on irregular domains and fine meshes in parallel.
 
-But \PETSc is now at version 3.5.\sidenote{Version 3.5.3 is current in April 2015.}  It has evolved into a more powerful toolbox with a much richer API (application program interface).  Typical examples and applications are for nonlinear PDEs.  Indeed nonlinear, multigrid, and multiphysics\sidenote{This buzzword just refers to a diverse system of coupled PDEs with nontrivial scalings among the variables.} parts of the API are now highly-visible to users.  The \PETSc strategy is to compose Newton's method and mesh topology tools with a run-time choice of preconditioners and iterative linear solvers.  \PETSc may not be a silver bullet, but it presents users with many powerful tools for solving hard problems, well beyond iterative linear algebra.  As twenty years have passed since version 2.0, perhaps a new book is appropriate.
+But \PETSc is now at version \PETSCVERSION.\sidenote{Version \PETSCMINORVERSION is current in \PETSCMONTH.}  It has evolved into a more powerful toolbox with a much richer API (application program interface).  Typical examples and applications are for nonlinear PDEs.  Indeed nonlinear, multigrid, and multiphysics\sidenote{This buzzword refers to a diverse system of coupled PDEs with nontrivial scalings among the variables.} parts of the API are now highly-visible to users.  The \PETSc strategy is to compose Newton's method and mesh topology tools with a run-time choice of preconditioners and iterative linear solvers.  \PETSc may not be a silver bullet, but it presents users with many powerful tools for solving hard problems, well beyond iterative linear algebra.  As twenty years have passed since version 2.0, perhaps a new book is appropriate.
 
 \section{My goals}
 
@@ -330,13 +332,15 @@ I'll assume you want to solve PDEs, but there are many other uses of \PETSc.  Fu
 
 \input{getstarted.tex} % chapter 1
 
-\input{structured.tex} % chapter 2
+\input{linearsystem.tex} % chapter 2
 
-\input{unstructured.tex} % chapter 3
+\input{structured.tex} % chapter 3
 
-\input{multigrid.tex} % chapter 4
+\input{unstructured.tex} % chapter 4
 
-\input{scaling.tex} % chapter 5
+\input{multigrid.tex} % chapter 5
+
+\input{scaling.tex} % chapter 6
 
 %%%%%%%%%%
 
@@ -358,7 +362,7 @@ FIXME: somewhere in here we get to an idea that is most relevant to nonlinear pr
 
 %%%%%%%%%%
 
-\input{stokes.tex} % chapter 7
+\input{stokes.tex} % chapter 8
 
 %%%%%%%%%%
 
@@ -371,7 +375,7 @@ FIXME: somewhere in here we get to an idea that is most relevant to nonlinear pr
 
 %%%%%%%%%%
 
-\input{constrained.tex} % chapter 9
+\input{constrained.tex} % chapter 10
 
 %%%%%%%%%%
 

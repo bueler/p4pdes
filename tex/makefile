@@ -1,6 +1,6 @@
 all: book.pdf
 
-texinputs := getstarted.tex structured.tex unstructured.tex multigrid.tex scaling.tex stokes.tex constrained.tex
+texinputs := getstarted.tex linearsystem.tex structured.tex unstructured.tex multigrid.tex scaling.tex stokes.tex constrained.tex
 
 tikzinputs := samplepoly.1.tikz squarefour.tikz bump.1.tikz bump.poly.tikz mesh.1.tikz
 
