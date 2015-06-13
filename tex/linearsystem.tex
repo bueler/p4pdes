@@ -345,30 +345,39 @@ which illustrates convergence claim \eqref{introconvergethm}.
 
 \section{Numerical linear algebra: Krylov space methods}
 
-The most powerful iterative methods for solving system \eqref{introsystem} generate optimal, in various senses \citep{TrefethenBau}, estimates $\bu_k$ which are linear combinations of vectors $\bz,A\bz,A^2\bz,\dots,A^{k-1}\bz$ where $\bz$ is a fixed vector (which is often $\bz=\bb$).  These methods are collectively called \emph{Krylov space methods} because the span of such vectors is a \emph{Krylov space}.  Examples of such methods include the Richardson iteration, conjugate gradients (CG), and minimum residual methods (e.g.~MINRES or GMRES; \citet{Greenbaum1997,Saad2003}).  The classical Jacobi and Gauss-Siedel \citep{Greenbaum1997} iterative methods are not Krylov space methods because they involve extracting parts of (entries of) $A$ as a matrix.  The effectiveness of a given Krylov method on a system depends on the eigenvalues or singular values of the matrix $A$, i.e.~on its spectral properties.  As many Krylov space methods are built into and fully-supported by \PETSc, we will use them heavily in all later Chapters.
+The most powerful iterative methods for solving system \eqref{introsystem} generate optimal, in various senses, estimates $\bu_k$ which are linear combinations of vectors $\bz,A\bz,A^2\bz,\dots,A^{k-1}\bz$ where $\bz$ is a fixed vector; often $\bz=\bb$.  These methods are collectively called \emph{Krylov space methods} because the span of such vectors is a \emph{Krylov space}.  Examples include the Richardson iteration, conjugate gradient (CG), and minimum residual methods (MINRES or GMRES).\sidenote{We will gloss these below, but see  \citet{Greenbaum1997} or \citet{Saad2003} for details and algorithms.}  The effectiveness of a given Krylov method on a given system depends on the eigenvalues or singular values of the matrix $A$, i.e.~on its spectral properties.  Many Krylov space methods are built into and fully-supported by \PETSc, and we will use them in all later Chapters.
 
-To be concrete, given $\bb$ the $n$th Krylov space in defined to be
-    $$\mathcal{K}_n = \operatorname{span}\{\bb,A\bb,A^2\bb,\dots,A^{n-1}\bb\}.$$
-Suppose $\tilde\bu \in \mathcal{K}_n$ so
-    $$\tilde\bu = c_0 \bb + c_1 A \bb + c_2 A^2 \bb + \dots + c_{n-1} A^{n-1} \bb,$$
-or equivalently
+To be concrete, a Krylov space is defined as
+    $$\mathcal{K}_n(A,\bb) = \operatorname{span}\{\bb,A\bb,A^2\bb,\dots,A^{n-1}\bb\},$$
+but we give the abbreviated name ``$\mathcal{K}_n$'' when the context is clear.  Suppose $\tilde\bu \in \mathcal{K}_n$.  Then
+    $$\tilde\bu = c_0 \bb + c_1 A \bb + c_2 A^2 \bb + \dots + c_{n-1} A^{n-1} \bb$$
+for some coefficients $c_j$, or equivalently
     $$\tilde\bu = p_{n-1}(A) \bb$$
-for the $n-1$ degree polynomial $p_{n-1}(x) = c_0 + c_1 x + \dots + c_{n-1} x^{n-1}$ applied to $A$.  Thus if we want $\tilde\bu$ to approximate $\bu$, the solution to \eqref{introsystem}, then we want to find a polynomial $p_{n-1}$ so that
-    $$p_{n-1}(A) \approx A^{-1}.$$
-Krylov space methods do this, subject to the important idea that if $p_{n-1}(z)$ is close to $1/z$ \emph{on the finite set of eigenvalues of} $A$, i.e.~on the spectrum $\sigma(A)\subset \CC$, then $p_{n-1}(A) \approx A^{-1}$.  Thus, whether $p_{n-1}$ is a ``good'' polynomial for approximately inverting $A$ is a spectral question about $A$.
+for the $n-1$ degree polynomial $p_{n-1}(x) = c_0 + c_1 x + \dots + c_{n-1} x^{n-1}$ applied to $A$.
 
-For example, consider the Richardson iteration \eqref{introrichardson}, namely $\bu_{k+1} = \bu_k + \omega (\bb - A \bu_k)$
+Thus if we want $\tilde\bu$ to approximate $\bu$, the solution to \eqref{introsystem}, then we want to find a polynomial $p_{n-1}$ so that
+    $$p_{n-1}(A) \approx A^{-1},$$
+at least in the action of applying $p_{n-1}(A)$ to $\bb$.  Krylov space methods do this.
 
-FIXME
+One can prove that if $p_{n-1}(z)$ is close to $1/z$ on the finite set of eigenvalues of $A$, i.e.~on the spectrum $\sigma(A)$ in the complex plane, then $p_{n-1}(A) \approx A^{-1}$.  Thus, whether $p_{n-1}$ is a ``good'' polynomial for approximately inverting $A$ is a spectral question about $A$.  The construction of a ``good'' $p_{n-1}$ would be only a question of approximation theory in the complex plane if only the spectrum $\sigma(A)$ were known, but in fact that is asking too much!  We know $A$ through its entries or action on vectors, and we can hope to have general spectral information about $A$ through the context in which it was generated,\sidenote{As a discretized PDE, for example.} but accurately computing its full spectrum $\sigma(A)$ is at least as difficult as solving a linear system $A\bu=\bb$.
+
+For an example in which polynomial generation from a Krylov method can be seen, consider again the Richardson iteration \eqref{introrichardson} with $\omega=1$, namely $\bu_{k+1} = \bu_k + (\bb - A \bu_k)$.  A straightforward calculation starting with $\bu_0=\bb$ shows
+	$$\bu_k = q_k(A) \bb \quad \text{with} \quad q_{k+1}(x) = 1 + (1-x) q_k(x)$$
+and $q_0(x)=1$.
+%see richpolyplot.py for formulas
+Figure \ref{fig:richpolyplot} shows these polynomials.  It is easy to check that $q_k(x) \to 1/x$ for $x\in (0,2)$, and the Figure suggests it too.  On the other hand, \eqref{introconvergethm} says $q_k(A) \bb \to A^{-1} \bb$ if $\rho(I-A)<1$, which says exactly that all eigenvalues of $A$ must be within distance 1 of $1$ in the complex plane, and thus that all real eigenvalues of $A$ must be in $(0,2)$.
 
 \begin{figure}
 \bigskip
-\includegraphics[width=0.9\textwidth]{richpolyplot}
-\caption{(FIXME: improve caption and move to Chapter 1)  The Richardson iteration \eqref{introrichardson} is equivalent to approximating $\bu=A^{-1}\bb$ by using these polynomials $p_k(x)$ to approximate $p_k(A)\approx A^{-1}$.}
+\includegraphics[width=0.8\textwidth]{richpolyplot}
+\caption{The $\omega=1$ case of the Richardson iteration \eqref{introrichardson} approximates $\bu=A^{-1}\bb$ by $\bu_k=q_k(A)\bb$.  These polynomials $q_k(x)$ approximate $1/x$ on the interval $(0,2)$.}
 \label{fig:richpolyplot}
 \end{figure}
 
 FIXME: flesh out CG and GMRES
+
+
+The classical \emph{Jacobi} and \emph{Gauss-Seidel iterative methods} \citep{Greenbaum1997} are not Krylov space methods as they stand.  They involve extracting parts of (entries of) $A$, as a matrix, which is not a result of operations $A^k\bv$ for some vector $\bv$.  They can, however, be regarded as preconditioned forms of the Richardson iteration \citep{Greenbaum1997}; see the Exercises.
 
 Most Krylov methods are implemented in \PETSc, and we get access to them via a \pKSP object.  Which method is used can be controlled at runtime, and runtime experimentation is always appropriate.  For the Poisson problem in Chapter \ref{chap:structured}, for example, we will see that preconditioned CG is very effective, but eventually we will put the most emphasis on the preconditioning stage and see that multigrid is extraordinarily effective for that purpose (see Chapter \ref{chap:multigrid}).  We will return to Krylov space methods repeatedly in later Chapters.
 
@@ -673,6 +682,7 @@ shows the residual norm logarithm versus the iteration number.
 
 \renewcommand{\labelenumi}{\arabic{chapter}.\arabic{enumi}\quad}
 \begin{enumerate}
+\item Given a square matrix $A$ with nonzero diagonal entries.  Decompose it into diagonal and lower/upper triangular parts: $A=D+L+U$.  Show that the Jacobi iteration $\bu_{k+1} = D^{-1} \left(\bb - L \bu_k - U \bu_k\right)$ is the same as the $\omega=1$ Richardson iteration \eqref{introrichardson} applied to the left-preconditioned system \eqref{introleftpre} with $M=D$.  Formulate and prove a corresponding statement about the Gauss-Seidel iteration $\bu_{k+1} = (D+L)^{-1} \left(\bb - U \bu_k\right)$.
 \item Show \eqref{introconvergethm}.
 \item As the reader will undoubtedly experience, segmentation faults and memory leaks are inevitable when one develops \PETSc codes.  A standard tool for detecting/diagnosing these is \texttt{valgrind}.\sidenote{\href{http://valgrind.org/}{valgrind.org}}  We recommend running it frequently.  As an exercise, run
 \begin{cline}
