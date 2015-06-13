@@ -600,6 +600,27 @@ on 10 x 10 grid:  error |u-uexact|_inf = 0.000621778
 \end{cline}
 We see the default $10\times 10$ grid chosen in our call to \texttt{DMDACreate2d()}. There were seven iterations of the KSP method and a final residual norm and numerical error.
 
+FIXME: first two generate Figures \ref{fig:matM5N7} and \ref{fig:dmM5N7}; last (not shown) is "movie" of iteration $\{\bu_k\}$ as \pKSP converges
+\begin{cline}
+./poisson -da_grid_x 5 -da_grid_y 7 -a_mat_view draw -draw_pause 5
+./poisson -da_grid_x 5 -da_grid_y 7 -dm_view draw -draw_pause 5
+./poisson -da_grid_x 100 -da_grid_y 100 -ksp_monitor_solution
+\end{cline}
+
+\begin{marginfigure}
+\bigskip
+\includegraphics[width=0.95\textwidth]{matM5N7}
+\caption{\PETSc can show the matrix structure using X11 windows at runtime.  Red = positive entry, blue = negative entry, teal = allocated entry which is zero.}
+\label{fig:matM5N7}
+\end{marginfigure}
+
+\begin{marginfigure}
+\bigskip
+\includegraphics[width=0.8\textwidth]{dmM5N7}
+\caption{\PETSc can also graphically show the structured-grid \pDMDA at runtime, here for a single-process run.}
+\label{fig:dmM5N7}
+\end{marginfigure}
+
 At this point we want to know:\begin{itemize}
 \item is our numerical method correctly implemented? (\emph{convergence})
 \item how to get high performance? (\emph{efficiency})

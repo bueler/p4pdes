@@ -1,31 +1,20 @@
 
 static char help[] = "Solves a structured-grid Poisson problem with DMDA and KSP.\n\n";
 
-// SEE ALSO:  c4poisson.c
-// IT IS SIMILAR BUT HAS MULTIGRID ABILITY BECAUSE OPERATOR A IS GENERATED AT
-// EACH LEVEL THROUGH
-//     KSPSetDM(ksp,(DM)da) ... KSPSetComputeOperators(ksp,ComputeJacobian,&user)
-
-// match example on page 40:  ./c2poisson -da_grid_x 4 -da_grid_y 3 -a_mat_view ::ascii_dense
-
-// screenshot this; red for pos., blue for neg., faint teal for allocated zeros:
-//    ./c2poisson -da_grid_x 5 -da_grid_y 7 -a_mat_view draw -draw_pause 10
+// match revised matrix in ch3 example :  ./poisson -da_grid_x 4 -da_grid_y 3 -a_mat_view ::ascii_dense
 
 // good solver options?:  -ksp_rtol 1.0e-8 -ksp_type cg
 
-// VISUALIZATION OF SOLUTION: mpiexec -n 4 ./c2poisson -da_refine 4 -ksp_type cg -ksp_monitor_solution
-
 // UNPRECONDITIONED CG ALGORITHM:
-//   ./c2poisson -ksp_type cg -pc_type none -ksp_view  # JUST SHOW KSP STRUCTURE
-//   ./c2poisson -da_grid_x 257 -da_grid_y 257 -ksp_type cg -pc_type none -log_summary
+//   ./poisson -ksp_type cg -pc_type none -ksp_view  # JUST SHOW KSP STRUCTURE
+//   ./poisson -da_grid_x 257 -da_grid_y 257 -ksp_type cg -pc_type none -log_summary
 //   (compare Elman p.72 and Algorithm 2.1 = cg: "The computational work of one
 //   iteration is two inner products, three vector updates, and one matrix-vector
 //   product." THIS IS WHAT I SEE!!)
 
-// MORE CG:  look at iterations in
-//   for NN in 5 9 17 33 65 129 257; do ./c2poisson -da_grid_x $NN -da_grid_y $NN -ksp_rtol 1.0e-8 -ksp_type cg -pc_type none; done
-// and look at iterations in
-//   for NN in 5 9 17 33 65 129 257; do ./c2poisson -da_grid_x $NN -da_grid_y $NN -ksp_rtol 1.0e-8 -ksp_type cg; done
+// MORE CG:  look at iterations in IC(0) preconditioned,
+//   for NN in 5 9 17 33 65 129 257; do ./poisson -da_grid_x $NN -da_grid_y $NN -ksp_rtol 1.0e-8 -ksp_type cg -ksp_converged_reason; done
+// and redo with -pc_type none
 // IN BOTH CASES ITERATIONS (ASYMPTOTICALLY) DOUBLE WITH EACH GRID REFINEMENT
 //   (compare Elman p. 76: "...suggests that for uniformly refined grids, the
 //   number of CG iterations required to meet a fixed tolerance will approximately
@@ -36,22 +25,22 @@ static char help[] = "Solves a structured-grid Poisson problem with DMDA and KSP
 //   THIS IS WHAT I SEE!!)
 
 // MINRES VS CG:
-//   time ./c2poisson -ksp_type cg -pc_type icc -da_grid_x 500 -da_grid_y 500
-//   time ./c2poisson -ksp_type minres -pc_type icc -da_grid_x 500 -da_grid_y 500
+//   time ./poisson -ksp_type cg -pc_type icc -da_grid_x 500 -da_grid_y 500
+//   time ./poisson -ksp_type minres -pc_type icc -da_grid_x 500 -da_grid_y 500
 //   (compare Elman p. 88: "Indeed, when solving discrete Poisson problems the
 //   the convergence of MINRES is almost identical to that of CG"  THIS IS WHAT I SEE!!)
 
 // PERFORMANCE ANALYSIS:
 //   export PETSC_ARCH=linux-gnu-opt
-//   make c2poisson
-//   ./c2poisson -da_grid_x 1025 -da_grid_y 1025 -ksp_type cg -log_summary|grep "Solve: "
-//   mpiexec -n 6 ./c2poisson -da_grid_x 1025 -da_grid_y 1025 -ksp_type cg -log_summary|grep "Solve: "
+//   make poisson
+//   ./poisson -da_grid_x 1025 -da_grid_y 1025 -ksp_type cg -log_summary|grep "Solve: "
+//   mpiexec -n 6 ./poisson -da_grid_x 1025 -da_grid_y 1025 -ksp_type cg -log_summary|grep "Solve: "
 
 // PERFORMANCE ON CONVERGENCE PATH:
-//   for NN in 5 9 17 33 65 129 257; do ./c2poisson -da_grid_x $NN -da_grid_y $NN -ksp_rtol 1.0e-8 -ksp_type cg -log_summary|grep "Time (sec):"; done
+//   for NN in 5 9 17 33 65 129 257; do ./poisson -da_grid_x $NN -da_grid_y $NN -ksp_rtol 1.0e-8 -ksp_type cg -log_summary|grep "Time (sec):"; done
 
 // WEAK SCALING IN TERMS OF FLOPS ONLY:
-//   for kk in 0 1 2 3; do NN=$((50*(2**$kk))); MM=$((2**(2*$kk))); cmd="mpiexec -n $MM ./c2poisson -da_grid_x $NN -da_grid_y $NN -ksp_rtol 1.0e-8 -ksp_type cg -log_summary"; echo $cmd; $cmd |'grep' "Flops:  "; echo; done
+//   for kk in 0 1 2 3; do NN=$((50*(2**$kk))); MM=$((2**(2*$kk))); cmd="mpiexec -n $MM ./poisson -da_grid_x $NN -da_grid_y $NN -ksp_rtol 1.0e-8 -ksp_type cg -log_summary"; echo $cmd; $cmd |'grep' "Flops:  "; echo; done
 
 
 //CREATE
