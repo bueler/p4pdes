@@ -435,29 +435,27 @@ Chapter
     &     &time-dependent
                 &     &time-dependent \\
 \midrule  \bigskip
-1   &     &     &     &      \\ \bigskip
-2   & \tblockeqncode{Poisson}{$-\grad^2 u = f$}{c2poisson.c}
-          & \tblockeqncode{heat}{$u_t = \grad^2 u$}{c2heat.c}
-                &     &      \\ \bigskip
-3   & \tblockcode{Poisson}{c3poisson.c}
+3   & \tblockeqncode{Poisson}{$-\grad^2 u = f$}{poisson.c}
+          &  &     &      \\ \bigskip
+4   & \tblockcode{Poisson}{poisson.c}
           &     &     &      \\ \bigskip
-4   & \begin{minipage}[t]{35mm}
- \tblockcode{Poisson}{c4poisson.c}
+5   & \begin{minipage}[t]{35mm}
+ \tblockcode{Poisson}{poisson.c}
 
- \tblockeqncode{advection-diffusion}{$\bv \cdot \grad u - \grad^2 u = f$}{c4ad.c}
+ \tblockeqncode{advection-diffusion}{$\bv \cdot \grad u - \grad^2 u = f$}{ad.c}
 \end{minipage}
+          & \tblockeqncode{heat}{$u_t = \grad^2 u$}{heat.c}
+                   &     &      \\ \bigskip
+6   &     &     &     &      \\ \bigskip
+7   &     &     & \tblockeqncode{$p$-Laplace}{$\begin{matrix} -\Div\left(D \grad u\right) = f \\ D = |\grad u|^{p-2} \end{matrix}$}{plap.c}
+                      & \tblockeqncode{porous}{$\begin{matrix} u_t = \Div\left(D \grad u\right) \\ D = u^{\gamma-1} \end{matrix}$}{porous.c} \\ \bigskip
+8   & \tblockeqncode{Stokes}{$\begin{matrix} -\grad^2 \bu + \grad p = 0 \\ \Div \bu = 0 \end{matrix}$}{stokes.c}
           &     &     &      \\ \bigskip
-5   &     &     &     &      \\ \bigskip
-6   &     &     & \tblockeqncode{$p$-Laplace}{$\begin{matrix} -\Div\left(D \grad u\right) = f \\ D = |\grad u|^{p-2} \end{matrix}$}{c6plap.c}
-                      & \tblockeqncode{porous}{$\begin{matrix} u_t = \Div\left(D \grad u\right) \\ D = u^{\gamma-1} \end{matrix}$}{c6porous.c} \\ \bigskip
-7   & \tblockeqncode{Stokes}{$\begin{matrix} -\grad^2 \bu + \grad p = 0 \\ \Div \bu = 0 \end{matrix}$}{c7stokes.c}
-          &     &     &      \\ \bigskip
-8   & \tblockcode{Poisson}{c8poisson.c}
+9   & \tblockcode{Poisson}{poisson.c}
           &     &     &      \\
-    & \tblockcode{Stokes}{c8stokes.c}
-          &     &     &      \\ \bigskip
-9   &     &     & \tblockeqncode{obstacle}{$\begin{matrix} -\grad^2 u = f \\ u\ge \psi \end{matrix}$}{c9obstacle.c}
-                      & \tblockeqncode{ice sheet}{$\begin{matrix} H_t = \Div\left(D \grad H\right) + f \\ D = H^{n+2} |\grad (H-b)|^{n-1} \\ H \ge 0\end{matrix}$}{c9ice.c} \\
+    &     &     &     &      \\ \bigskip
+10  &     &     & \tblockeqncode{obstacle}{$\begin{matrix} -\grad^2 u = f \\ u\ge \psi \end{matrix}$}{obstacle.c}
+                      & \tblockeqncode{ice sheet}{$\begin{matrix} H_t = \Div\left(D \grad H\right) + f \\ D = H^{n+2} |\grad (H-b)|^{n-1} \\ H \ge 0\end{matrix}$}{ice.c} \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -472,20 +470,23 @@ Chapter
 \begin{tabular}{rccccccc}
 \toprule
 Chapter 
-    &\;\pVec\; &\;\pMat\;
-                &\;\pKSP\; &\pDMDA
+    &\;\pVec\;
+          &\;\pMat\;
+                &\;\texttt{KSP}${+}$\pPC\;
+                      &\pDMDA
                             &\pDMPlex
-                                  &\pSNES &\;\pTS\; \\
+                                  &\pSNES
+                                        &\;\pTS\; \\
 \midrule
-1   & \XX & \XX & \XX &     &     &     &      \\
-2   & \XX & \XX & \XX & \XX &     &     &      \\
-3   & \XX & \XX & \XX &     &     &     &      \\
-4   & \gX & \gX & \XX & \XX &     &     &      \\
+2   & \XX & \XX & \XX &     &     &     &      \\
+3   & \XX & \XX & \XX & \XX &     &     &      \\
+4   & \XX & \XX & \XX &     &     &     &      \\
 5   & \gX & \gX & \XX & \XX &     &     &      \\
-6   & \gX & \gX & \XX & \XX &     & \XX & \XX  \\
-7   & \gX & \gX & \gX & \XX &     & \XX &      \\
-8   & \gX & \gX & \XX &     & \XX & \XX &      \\
-9   & \gX & \gX & \gX & \XX &     & \XX &      \\
+6   & \gX & \gX & \XX & \XX &     &     &      \\
+7   & \gX & \gX & \XX & \XX &     & \XX & \XX  \\
+8   & \gX & \gX & \gX & \XX &     & \XX &      \\
+9   & \gX & \gX & \XX &     & \XX & \XX &      \\
+10  & \gX & \gX & \gX & \XX &     & \XX &      \\
 \bottomrule
 \end{tabular}
 \end{center}
