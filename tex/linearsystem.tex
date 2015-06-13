@@ -251,7 +251,7 @@ The first view shows the compressed sparse storage, with values as pairs with co
 In these cases the matrix was stored in \emph{serial} compressed sparse row format, the \texttt{MATSEQAIJ} type, because of the one-process run.  If the code is run in parallel, i.e.~by \texttt{mpiexec -n N ./mycode}, then \texttt{-mat\_view}  reports \texttt{type:~mpiaij} corresponding to \pMat type \texttt{MATMPIAIJ}, the ``parallel compressed sparse row storage'' described above.
 
 
-\section{Numerical linear algebra: residual, iteration, preconditioning}
+\section{Numerical linear algebra: residual, iterations, preconditioning}
 
 Direct methods like Gauss elimination \citep{TrefethenBau} are one way to solve a linear system.  The most powerful methods for our later PDE-solving uses, however, are iterative.  They use the \emph{residual} of some approximation of the solution to the linear system.
 
@@ -259,14 +259,15 @@ By definition, the residual of $\bu_0$ in linear system \eqref{introsystem} is t
 \begin{equation}
 \br_0 = \bb - A \bu_0. \label{residualdefn}
 \end{equation}
-Evaluating the residual for a known vector $\bu_0$ requires only applying $A$ to it, an $O(N^2)$ operation at worst.  Because most discretization schemes for PDEs generate matrices $A$ that are \emph{sparse}, with many more zero entries than nonzeros, and because often the number of nonzeros per row is small and independent of $N$, the operation $A\bu_0$ and the evaluation of the residual can usually be done in $O(N)$ operations.
+Evaluating the residual for a known vector $\bu_0$ requires only applying $A$ to it, an $O(N^2)$ operation at worst.  Because most discretization schemes for PDEs generate matrices $A$ that are \emph{sparse}, with many more zero entries than nonzeros, and because often the number of nonzeros per row is small and independent of $N$, the operation $A\bu_0$ and thus the evaluation of the residual can usually be done in $O(N)$ operations.
 
-The \emph{Richardson iteration}, which simply adds a multiple $\omega$ of the last residual at each step,
+The \emph{Richardson iteration},\sidenote{Also called \emph{simple iteration} \citep{Greenbaum1997}.} simply adds a multiple $\omega$ of the last residual at each step,
 \begin{equation}
-\bu_{k+1} = \bu_k + \omega (\bb - A \bu_k),  \label{introrichardson}
+\bu_{k+1} = \bu_k + \omega (\bb - A \bu_k).  \label{introrichardson}
 \end{equation}
-is an example of an iterative method based on the residual.  If significantly fewer than $O(N^2)$ steps are needed to make $\bu_k$ an adequate approximation of the exact solution $\bu$, then the Richardson iteration can improve on Gauss elimination.  On the other hand, the Richardson iteration may not converge, as in the next Example.
+If significantly fewer than $O(N^2)$ steps were needed to make $\bu_k$ an adequate approximation of the exact solution $\bu$, then the Richardson iteration could improve on Gauss elimination.  On the other hand, the Richardson iteration may not converge, as in the next Example.
 
+% iteration vec display in R^2
 \newcommand{\rvect}[3]{\ensuremath{\bu_{#1} = \begin{bmatrix} #2 \\ #3 \end{bmatrix}}}
 
 \medskip\noindent\hrulefill
@@ -296,53 +297,50 @@ If we rewrite \eqref{introrichardson} as
 \end{equation}
 then it is easy to believe that the ``size'' of the matrix $I-\omega A$ will determine whether $\lim_{k\to\infty} \bu_k$ exists.
 
-To make this precise we recall important definitions.  A complex number $\lambda \in \CC$ is an \emph{eigenvalue} of a square matrix $B\in\RR^{N\times N}$ if there is a nonzero vector $\bv\in\CC^N$ so that $B \bv = \lambda \bv$.  The set of all eigenvalues of $B$ is the \emph{spectrum} $\sigma(B)$ of $B$.  The \emph{singular values} are the square roots of the eigenvalues of the matrix $B^*B$, a symmetric and positive-definite matrix with nonnegative eigenvalues.  Singular values are geometrically-defined as the lengths of semi-axes of the ellipsoid in $\RR^N$ that results from applying $B$ to all vectors in the unit ball of $\RR^N$ \citep{TrefethenBau}.
+To make this precise we recall important definitions.  A complex number\sidenote{Though $B$ is real, $\lambda$ may indeed be complex, but if $\lambda$ is an eigenvalue of a real matrix $B$ then so is $\bar\lambda$.} $\lambda \in \CC$ is an \emph{eigenvalue} of a square matrix $B\in\RR^{N\times N}$ if there is a nonzero vector $\bv\in\CC^N$ so that $B \bv = \lambda \bv$.  The set of all eigenvalues of $B$ is the \emph{spectrum} $\sigma(B)$ of $B$.  The \emph{spectral radius} $\rho(B)$ is the maximum magnitude of the eigenvalues of $B$.  The \emph{singular values} are the square roots of the eigenvalues of the matrix $B^*B$, a symmetric and positive-definite matrix with nonnegative eigenvalues.  Singular values are geometrically-defined as the lengths of semi-axes of the (hyper-)ellipsoid in $\RR^N$ that results from applying $B$ to all vectors in the unit ball of $\RR^N$ \citep{TrefethenBau}.
 
-Properties of matrices described in terms of eigenvalues or singular values are generically called ``spectral properties.''  For example, because $\|B\|_2$ is equal to the largest singular value of $B$, while $\|B^{-1}\|_2$ is equal to the inverse of the smallest singular value of $B$, these are spectral properties.  The 2-norm condition number $\kappa(B)=\|B\|_2/\|B^{-1}\|_2$ is thus a spectral property as well; it is visualized as the eccentricity of the ellipsoid above.
+Properties of a matrix described in terms of its eigenvalues or singular values are generically called ``spectral properties.''  For example, $\|B\|_2$ is the largest singular value of $B$ and $\|B^{-1}\|_2$ is the inverse of the smallest singular value of $B$, so these are spectral properties.  The 2-norm condition number $\kappa(B)=\|B\|_2/\|B^{-1}\|_2$ is thus also a spectral property; it is visualized as the eccentricity of the ellipsoid above.
 
-It is an easy exercise to show that the Richardson iteration \eqref{introrichardson} will converge if and only if all the eigenvalues of $B=I-\omega A$ are inside the unit circle.  Defining the \emph{spectral radius} $\rho(B)$ as the maximum magnitude of the eigenvalues of $B$, we can describe the convergence of the Richardson iteration:
+It is an easy exercise to show that the Richardson iteration \eqref{introrichardson} or \eqref{introrewriterichardson} will converge if and only if all the eigenvalues of $B=I-\omega A$ are inside the unit circle:
 \begin{equation}
 \text{\eqref{introrichardson} converges if and only if } \rho(I-\omega A) < 1. \label{introconvergethm}
 \end{equation}
-One can also show that $\rho(B) \le \|B\|_2$, so \eqref{introrewriterichardson} converges if $\|I-\omega A\|_2 < 1$.
+One can also show that $\rho(B) \le \|B\|_2$, so \eqref{introrichardson} converges if $\|I-\omega A\|_2 < 1$.
 
-Considering spectral properties brings us to the important general point that there are many other systems which are equivalent to \eqref{introsystem}.  In fact, if $P\in\RR^{N\times N}$ is an invertible square matrix then the systems
+Considering spectral properties brings us to an important general point about linear systems.  Namely, that there are many systems which are equivalent to \eqref{introsystem}.  In fact, if $M\in\RR^{N\times N}$ is an invertible matrix then the systems
 \begin{equation}
-(P^{-1} A) \bu = P^{-1} \bb \label{introleftpre}
+(M^{-1} A) \bu = M^{-1} \bb \label{introleftpre}
 \end{equation}
 and
 \begin{equation}
-(A P^{-1}) (P\bu) = \bb \label{introrightpre}
+(A M^{-1}) (M\bu) = \bb \label{introrightpre}
 \end{equation}
-have the same solution(s) $\bu$ as \eqref{introsystem}.  However, matrices $P^{-1} A$ or $A P^{-1}$ generally have different eigenvalues, condition numbers, and so on---different spectral properties---from $A$.  While the accuracy of the approximate solution $\bu$ cannot be improved beyond the $\kappa(A) \eps$ level, as fact i) on page \pageref{limittoaccuracy} cannot be overcome, methods can take advantage of better spectral properties to generate $\bu$ more quickly.  This idea is effective if $P^{-1}$ is easy to apply, in the sense of low computational cost.
+have the same solution(s) $\bu$ as \eqref{introsystem}.  However, matrices $M^{-1} A$ or $A M^{-1}$ generally have different eigenvalues, condition numbers, and so on---different spectral properties---from $A$.  While the accuracy of the approximate solution $\bu$ cannot be improved beyond the $\kappa(A) \eps$ level, as fact i) on page \pageref{limittoaccuracy} cannot be overcome, methods can take advantage of the better spectral properties of $M^{-1} A$ or $A M^{-1}$, relative to $A$, to generate approximations to $\bu$ more quickly.  This idea is effective if $M^{-1}$ is easy to apply, in the sense that substantially fewer operations are needed to solve the system $M\bv=\bc$ than the original system $A\bu=\bb$.
 
-Equivalent systems \eqref{introleftpre} and \eqref{introrightpre} are referred to as \emph{preconditioned} systems, with \eqref{introleftpre} called \emph{left preconditioning} and \eqref{introrightpre} called \emph{right-preconditioning}.  The next example shows how preconditioning can make the Richardson iteration converge.
+Systems \eqref{introleftpre} and \eqref{introrightpre} are referred to as \emph{preconditioned} versions of \eqref{introsystem}, with \eqref{introleftpre} called \emph{left preconditioning} and \eqref{introrightpre} called \emph{right-preconditioning}.  The next example shows how preconditioning can make the Richardson iteration converge.  In this case the diagonal of $A$ is used as $M$, so it is an example of \emph{Jacobi preconditioning}.
 
 \medskip\noindent\hrulefill
-\begin{examplecont}  Suppose we use the diagonal matrix from  \eqref{introexample} as $P$:
+\begin{examplecont}  Suppose we extract the diagonal of $A$ from  \eqref{introexample}:
 \begin{equation}
-P = \begin{bmatrix}
+M = \begin{bmatrix}
 10 & 0 \\ 0 & 1
-\end{bmatrix}.  \label{introP}
+\end{bmatrix}.  \label{introM}
 \end{equation}
-Being diagonal, this $P$ is easy to invert and apply.  The preconditioned Richardson iteration using $P$, namely
+Being diagonal, $M$ is easy to invert and apply.  The preconditioned Richardson iteration using $M$, namely
 \begin{equation}
-\bu_{k+1} = \bu_k + \omega (P^{-1} \bb - P^{-1} A \bu_k),  \label{introprerichardson}
+\bu_{k+1} = \bu_k + \omega (M^{-1} \bb - M^{-1} A \bu_k),  \label{introprerichardson}
 \end{equation}
-is better behaved.  With $\bu_0 = [0\,\, 0]^*$ again we get this sequence from \eqref{introprerichardson}:
+is better behaved.  With $\bu_0 = [0\,\, 0]^*$ and $\omega=1$ again we get this sequence from \eqref{introprerichardson}:
 \begin{equation}
 \rvect{0}{0}{0}, \rvect{1}{0.8}{1.0}, \rvect{2}{0.9}{1.8}, \rvect{3}{0.98}{1.90}, \dots
 \end{equation}
 This sequence is apparently going to $\bu = [1\,\, 2]^*$.  The explanation is not hard to see; compare
 \begin{equation}
-\rho(I-A) = -9.1, \qquad \rho(I-P^{-1} A) = 0.32.
+\rho(I-A) = -9.1 \quad \text{and} \quad \rho(I-M^{-1} A) = 0.32,
 \end{equation}
-This example illustrates convergence claim \eqref{introconvergethm}.
+which illustrates convergence claim \eqref{introconvergethm}.
 \end{examplecont}
 \noindent\hrulefill
-
-\medskip
-Preconditioning using the diagonal as in the above example is called \emph{Jacobi} preconditioning.  It is related to, but not the same idea as, the classical Jacobi iteration \citep{Greenbaum1997} for solving a linear system.
 
 
 \section{Numerical linear algebra: Krylov space methods}
