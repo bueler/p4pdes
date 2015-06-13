@@ -356,16 +356,20 @@ for some coefficients $c_j$, or equivalently
 for the $n-1$ degree polynomial $p_{n-1}(x) = c_0 + c_1 x + \dots + c_{n-1} x^{n-1}$ applied to $A$.
 
 Thus if we want $\tilde\bu$ to approximate $\bu$, the solution to \eqref{introsystem}, then we want to find a polynomial $p_{n-1}$ so that
-    $$p_{n-1}(A) \approx A^{-1},$$
+\begin{equation}
+    p_{n-1}(A) \approx A^{-1},  \label{krylovgoal}
+\end{equation}
 at least in the action of applying $p_{n-1}(A)$ to $\bb$.  Krylov space methods do this.
 
-One can prove that if $p_{n-1}(z)$ is close to $1/z$ on the finite set of eigenvalues of $A$, i.e.~on the spectrum $\sigma(A)$ in the complex plane, then $p_{n-1}(A) \approx A^{-1}$.  Thus, whether $p_{n-1}$ is a ``good'' polynomial for approximately inverting $A$ is a spectral question about $A$.  The construction of a ``good'' $p_{n-1}$ would be only a question of approximation theory in the complex plane if only the spectrum $\sigma(A)$ were known, but in fact that is asking too much!  We know $A$ through its entries or action on vectors, and we can hope to have general spectral information about $A$ through the context in which it was generated,\sidenote{As a discretized PDE, for example.} but accurately computing its full spectrum $\sigma(A)$ is at least as difficult as solving a linear system $A\bu=\bb$.
+One can prove that if $p_{n-1}(z)$ is close to $1/z$ on the finite set of eigenvalues of $A$, i.e.~on the spectrum $\sigma(A)$ in the complex plane, then \eqref{krylovgoal}.  Thus, whether $p_{n-1}$ is a ``good'' polynomial for approximately inverting $A$ is a spectral question about $A$.  The construction of a ``good'' $p_{n-1}$ would be only a question of approximation theory in the complex plane if only the spectrum $\sigma(A)$ were known, but in fact that is asking too much!  We know $A$ through its entries or action on vectors, and we can hope to have general spectral information about $A$ through the context in which it was generated,\sidenote{As a discretized PDE, for example.} but accurately computing its full spectrum $\sigma(A)$ is at least as difficult as solving a linear system $A\bu=\bb$.
 
 For an example in which polynomial generation from a Krylov method can be seen, consider again the Richardson iteration \eqref{introrichardson} with $\omega=1$, namely $\bu_{k+1} = \bu_k + (\bb - A \bu_k)$.  A straightforward calculation starting with $\bu_0=\bb$ shows
-	$$\bu_k = q_k(A) \bb \quad \text{with} \quad q_{k+1}(x) = 1 + (1-x) q_k(x)$$
+\begin{equation}
+	\bu_k = q_k(A) \bb \quad \text{with} \quad q_{k+1}(x) = 1 + (1-x) q_k(x)  \label{richpolys}
+\end{equation}
 and $q_0(x)=1$.
 %see richpolyplot.py for formulas
-Figure \ref{fig:richpolyplot} shows these polynomials.  It is easy to check that $q_k(x) \to 1/x$ for $x\in (0,2)$, and the Figure suggests it too.  On the other hand, \eqref{introconvergethm} says $q_k(A) \bb \to A^{-1} \bb$ if $\rho(I-A)<1$, which says exactly that all eigenvalues of $A$ must be within distance 1 of $1$ in the complex plane, and thus that all real eigenvalues of $A$ must be in $(0,2)$.
+Figure \ref{fig:richpolyplot} shows these polynomials.  It is easy to check that $q_k(x) \to 1/x$ for $x\in (0,2)$, and the Figure suggests it too.  On the other hand, \eqref{introconvergethm} says $q_k(A) \bb \to A^{-1} \bb$ if the spectral condition $\rho(I-A)<1$ holds.  This condition says exactly that all eigenvalues of $A$ must be within distance one of $1+0i$ in the complex plane, and thus that all real eigenvalues of $A$ must be in $(0,2)$.
 
 \begin{figure}
 \bigskip
@@ -383,9 +387,7 @@ Most Krylov methods are implemented in \PETSc, and we get access to them via a \
 
 Our brief introduction of iterative linear algebra is hardly adequate.  But we need now to return to \PETSc codes and solve linear systems.  In the upcoming material the reader can first treat \PETSc's linear solver object as a black box, but then explore how it works through runtime options.
 
-\vfill
-\clearpage
-\newpage
+
 \section{Solve a small linear system in \PETSc}
 
 We already know how to create, fill, and destroy \pVec and \pMat objects.  The next code, \texttt{c1vecmatksp.c} shown in Figure \ref{code:vecmatksp}, does these steps.  To actually solve a linear system it also uses a Krylov space method object ``\pKSP''.  This linear solver uses a method chosen at runtime.
@@ -402,6 +404,8 @@ which also supplies the right-hand side of the system (i.e.~an allocated and ass
 
 Why do we list \texttt{A} twice in calling \texttt{KSPSetOperators()}?  Recall the linear system $A\bx=\bb$ is equivalent to $P^{-1} A \bx = P^{-1} \bb$ (left preconditioning).  At runtime we are going to choose a preconditioning method which builds $P^{-1}$ from $A$ or from an approximation of $A$.  For example, \emph{incomplete LU} factorization of $A$ can be used in generating $P^{-1}$, or $P$ could be the diagonal of $A$ (as in the example above).  The second matrix argument to \texttt{KSPSetOperators()} is the \pMat from which $P^{-1}$ is built.  Note we do not supply $P$ itself, as that would require the user to write extra code.  It would also block easy choice among preconditioners at runtime.  Instead we supply ``material'' from which the preconditioner is built, and the most common such material is $A$ itself.
 
+\inputwhole{../c/ch2/vecmatksp.c}{\texttt{p4pdes/c/c1vecmatksp.c}}{Solve a small linear system.}{code:vecmatksp}
+
 After calling \texttt{KSPSolve()} we display the solution \pVec by calling \texttt{VecView()}.  This and everything else about the code in Figure \ref{code:vecmatksp} should now be self-explanatory.  So let's run it:
 \begin{cline}
 $ make c1vecmatksp
@@ -414,8 +418,6 @@ Vec Object: 1 MPI processes
 -1
 \end{cline}
 This solves the system and gives us $\bx$.  But what happened and how to control it?
-
-\inputwhole{../c/ch2/vecmatksp.c}{\texttt{p4pdes/c/c1vecmatksp.c}}{Solve a small linear system.}{code:vecmatksp}
 
 
 \section{Revealing solvers at runtime}
@@ -682,28 +684,41 @@ shows the residual norm logarithm versus the iteration number.
 
 \renewcommand{\labelenumi}{\arabic{chapter}.\arabic{enumi}\quad}
 \begin{enumerate}
-\item Given a square matrix $A$ with nonzero diagonal entries.  Decompose it into diagonal and lower/upper triangular parts: $A=D+L+U$.  Show that the Jacobi iteration $\bu_{k+1} = D^{-1} \left(\bb - L \bu_k - U \bu_k\right)$ is the same as the $\omega=1$ Richardson iteration \eqref{introrichardson} applied to the left-preconditioned system \eqref{introleftpre} with $M=D$.  Formulate and prove a corresponding statement about the Gauss-Seidel iteration $\bu_{k+1} = (D+L)^{-1} \left(\bb - U \bu_k\right)$.
+\item Suppose a square matrix $A$ with nonzero diagonal entries is decomposed into diagonal and lower/upper triangular parts as $A=D+L+U$.  Show that the Jacobi iteration $\bu_{k+1} = D^{-1} \left(\bb - L \bu_k - U \bu_k\right)$ is the same as the $\omega=1$ Richardson iteration \eqref{introrichardson} applied to the left-preconditioned system \eqref{introleftpre} with $M=D$.  Formulate and prove a corresponding statement about the Gauss-Seidel iteration $\bu_{k+1} = (D+L)^{-1} \left(\bb - U \bu_k\right)$.
+
 \item Show \eqref{introconvergethm}.
-\item As the reader will undoubtedly experience, segmentation faults and memory leaks are inevitable when one develops \PETSc codes.  A standard tool for detecting/diagnosing these is \texttt{valgrind}.\sidenote{\href{http://valgrind.org/}{valgrind.org}}  We recommend running it frequently.  As an exercise, run
-\begin{cline}
-valgrind ./c1vecmatksp
-\end{cline}
-to see what \texttt{valgrind} shows for a leak-free program.  Then comment-out a \texttt{VecDestroy()} call in \texttt{c1vecmatksp.c} and rerun to see a common type of memory leak.
+
+\item On page \pageref{krylovgoal} we note that a Krylov space approximation $p_{n-1}(A)\bb$ to the solution $A^{-1}\bb$ is close if $p_{n-1}(z)$ is close to $1/z$ on the spectrum of $A$.  Prove this for invertible diagonalizable matrices $A=S\Lambda S^{-1}$, with $\Lambda$ diagonal, by showing
+	$$\|p_{n-1}(A) - A^{-1}\| \le \,\kappa(S)\, \max_{\lambda \in \sigma(A)} |p_{n-1}(\lambda) - \lambda^{-1}|$$
+where $\kappa(S) = \|S\| \|S^{-1}\|$ is the condition number.\sidenote{Here $\|\cdot\|$ is any induced matrix norm \citep{TrefethenBau}.}  If $A$ is \emph{normal} then, by definition, $S$ can be chosen to be unitary.  In that case, using the $2$-norm, the condition number factor can have its minimal value of $1$.
+
+\item For the $\omega=1$ Richardson iteration \eqref{introrichardson} and $\bu_0=\bb$ we get $\bu_k = q_k(A) \bb$ for polynomials $q_k$ given by \eqref{richpolys}.  Show that if $\lim_{k\to\infty} q_k=q_\infty$ exists then $q_\infty(x)=1/x$.  On the other hand, by setting $y=1-x$ and defining $Q_k(y)=q_k(1-y)$, show $Q_k(y)$ is the partial sum of a well-known series with a well-known radius of convergence.
+
 \item Consider Richardson iteration in the example
 \begin{cline}
-./c1tri -tri_m 100 -ksp_monitor -ksp_type richardson
+./tri -tri_m 100 -ksp_monitor -ksp_type richardson
 \end{cline}
 Un-preconditioned Richardson iteration fails (i.e.~add \texttt{-pc\_type none}); explain.  The default preconditioner succeeds (i.e.~\texttt{-pc\_type ilu}), but ILU($0$) is cheating because it becomes a complete LU factorization on this tridiagonal and diagonally-dominant $A$; we are really seeing a direct solve.  The same can be said for ICC($0$).  Confirm that, as in the example on page \pageref{introprerichardson}, Richardson iteration succeeds with \texttt{-pc\_type jacobi}, even though the diagonal is constant; explain.
-\item \label{exer:computeeigs} Un-preconditioned GMRES solves the linear system in \texttt{c1tri.c} reasonably efficiently.  We can explain this by asking \PETSc to compute the eigenvalues of $A$ by using option\sidenote{The relevant \PETSc manual page says this option is ``intended only for assistance in understanding the convergence of iterative methods, not for eigenanalysis.  For accurate computation of eigenvalues we recommend using the excellant package SLEPc.''}
+
+\item \label{exer:computeeigs} Un-preconditioned GMRES solves the linear system in \texttt{tri.c} reasonably efficiently.  We can explain this by asking \PETSc to compute the eigenvalues of $A$ by using option\sidenote{The relevant \PETSc manual page says this option is ``intended only for assistance in understanding the convergence of iterative methods, not for eigenanalysis.  For accurate computation of eigenvalues we recommend using the excellent package SLEPc.''}
 \begin{quote}
 \texttt{-ksp\_compute\_eigenvalues}
 \end{quote}
 Because otherwise it computes the eigenvalues of the preconditioned operator $P^{-1}A$, add \texttt{-pc\_type none}.  Try dimensions $N=10,100,1000$.  Why does the  run
 \begin{cline}
-./c1tri -tri_n 1000 -pc_type none -ksp_compute_eigenvalues
+./tri -tri_n 1000 -pc_type none -ksp_compute_eigenvalues
 \end{cline}
 only show 11 eigenvalues of this $1000\times 1000$ matrix?  How do these eigenvalues explain the good behavior of unpreconditioned GMRES?\sidenote{See \citep{TrefethenBau} for help with both of these questions.}
-\item The accuracy of direct solves (e.g.~\texttt{-ksp\_type preonly -pc\_type cholesky}) in \texttt{c1tri.c}, as measured by the reported error norm $\|\bx - \bx_{\text{exact}}\|_2$, decreases with increasing dimension.  Confirm and explain this observation.
+
+\item The accuracy of direct solves (e.g.~\texttt{-ksp\_type preonly -pc\_type cholesky}) in \texttt{tri.c}, as measured by the reported error norm $\|\bx - \bx_{\text{exact}}\|_2$, decreases with increasing dimension.  Confirm and explain this observation.
+
 \item Table \ref{tab:c1tritiming} includes a number of blanks.  For each one, explain why it is blank, experimenting if needed.
+
 \item Table \ref{tab:c1tritiming} gives execution times not iteration count.  Generate the corresponding table of \pKSP iteration count by adding option \verb|-ksp_converged_reason| to the run commands.  Note the large number of ``coincidences'' in iteration count, i.e.~cases where iteration counts are identical; explain.  Which preconditioners have a strong or weak effect on iteration count?  Is timing or iteration count more useful?
+
+\item As the reader will undoubtedly experience, segmentation faults and memory leaks are inevitable when one develops \PETSc codes.  A standard tool for detecting/diagnosing these is \texttt{valgrind}.\sidenote{\href{http://valgrind.org/}{valgrind.org}}  We recommend running it frequently.  As an exercise, run
+\begin{cline}
+valgrind ./vecmatksp
+\end{cline}
+to see what \texttt{valgrind} shows for a leak-free program.  Then comment-out a \texttt{VecDestroy()} call in \texttt{vecmatksp.c} and rerun to see a common type of memory leak.
 \end{enumerate}
