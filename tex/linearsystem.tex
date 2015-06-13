@@ -384,7 +384,9 @@ Though the Richardson iteration generates $\bu_k$ which are from a Krylov space,
 \newcommand{\Kone}[2]{\mathcal{K}_{#1}^1(#2)}
 Define $\Pnone$ to be the set of all real polynomials $p$ of degree $n$ such that $p(0)=1$.  For a real square matrix $A \in \RR^{N\times N}$ and $\bv\in\RR^N$, define the affine space (set)
 	$$\Kone{n}{A,\bv} = \bv + \Span\{A\bv,A^2\bv,\dots\,A^{n-1}\bv\}.$$
-In these terms, Figure \ref{tab:krylovcompare} compares three of the best-known Krylov methods, namely the Richardson iteration \eqref{introrichardson}, conjugate gradients (CG), and generalized minimum residuals (GMRES).  For CG and GMRES as algorithms, see \citet{Greenbaum1997} or \citet{Saad2003}.
+In these terms, Figure \ref{tab:krylovcompare} compares three of the best-known Krylov methods, namely the Richardson iteration \eqref{introrichardson}, conjugate gradients (CG), and generalized minimum residuals (GMRES).  
+
+For CG and GMRES as algorithms, see \citet{Greenbaum1997} or \citet{Saad2003}.  Regarding GMRES, note that in practice it uses ``restarts'' to avoid filling memory with its internal representation of the Krylov space, and this action stops it from being a ``pure'' Krylov method (i.e.~one based on a fixed initial vector to form the Krylov space).  The \PETSc default is to restart after 30 iterations, so GMRES uses $\sim 30N$ memory locations on an $N$-dimensional problem, compared to $3N$ for CG and $2N$ for Richardson.
 
 The classical \emph{Jacobi} and \emph{Gauss-Seidel iterative methods} \citep{Greenbaum1997} are not Krylov space methods as they stand.  They involve extracting parts of (entries of) $A$, as a matrix, which can not be done by operations $A^k\bv$.  These classical iterations can, however, be regarded as preconditioned forms of the Richardson iteration \citep{Greenbaum1997}; see the Exercises.
 
@@ -406,11 +408,11 @@ We get access to the many Krylov methods implemented in \PETSc any time we creat
 Our brief introduction of iterative linear algebra is hardly adequate.  But we need now to return to \PETSc codes and solve linear systems.  In the upcoming material the reader can initially treat \PETSc's \pKSP linear solver object as a black box, but then explore how it works through runtime options.
 
 
-\section{Solve a small linear system in \PETSc}
+\section{A small linear system}
 
-We already know how to create, fill, and destroy \pVec and \pMat objects.  The next code, \texttt{c1vecmatksp.c} shown in Figure \ref{code:vecmatksp}, does these steps.  To actually solve a linear system it also uses a Krylov space method object ``\pKSP''.  This linear solver uses a method chosen at runtime.
+We already know how to create, fill, and destroy \pVec and \pMat objects.  The next code, \texttt{vecmatksp.c} in Figure \ref{code:vecmatksp}, does these steps.  It also uses a \pKSP object to actually solve the linear system.  The specific Krylov iteration, inside the \pKSP, is chosen at runtime.  The expected \texttt{Create/SetFromOptions/Destroy} sequence applies to a \pKSP.
 
-Besides the expected \texttt{Create/SetFromOptions/Destroy} sequence for \pKSP, there are two important commands needed even for the simplest examples.  First we need to tell \pKSP about the matrix in the linear system by the command
+There are, however, two additional commands, or their equivalents, needed even for the simplest examples.  First we need to tell \pKSP about the matrix via the command
 \begin{code}
 KSPSetOperators(ksp,A,A);
 \end{code}
@@ -418,16 +420,15 @@ Then the system is actually solved by
 \begin{code}
 KSPSolve(ksp,b,x);
 \end{code}
-which also supplies the right-hand side of the system (i.e.~an allocated and assembled \pVec \texttt{b}) and space for the solution (i.e.~an allocated \pVec \texttt{x}).
+which also supplies the right-hand side of the system (i.e.~an allocated and assembled \pVec \texttt{b}) and space for the solution (an allocated \pVec \texttt{x}).
 
-Why do we list \texttt{A} twice in calling \texttt{KSPSetOperators()}?  Recall the linear system $A\bx=\bb$ is equivalent to $P^{-1} A \bx = P^{-1} \bb$ (left preconditioning).  At runtime we are going to choose a preconditioning method which builds $P^{-1}$ from $A$ or from an approximation of $A$.  For example, \emph{incomplete LU} factorization of $A$ can be used in generating $P^{-1}$, or $P$ could be the diagonal of $A$ (as in the example above).  The second matrix argument to \texttt{KSPSetOperators()} is the \pMat from which $P^{-1}$ is built.  Note we do not supply $P$ itself, as that would require the user to write extra code.  It would also block easy choice among preconditioners at runtime.  Instead we supply ``material'' from which the preconditioner is built, and the most common such material is $A$ itself.
+Why do we list \texttt{A} twice in calling \texttt{KSPSetOperators()}?  Recall the linear system $A\bx=\bb$ is equivalent to $M^{-1} A \bx = M^{-1} \bb$ (left preconditioning).  At runtime we generally choose a preconditioning method which builds $M^{-1}$ from $A$ or from an approximation of $A$.  For example, \emph{incomplete LU} factorization of $A$ can be used in generating $M^{-1}$, or $M$ could be the diagonal of $A$ (as in the example above).  The second matrix argument to \texttt{KSPSetOperators()} is the \pMat from which $M^{-1}$ is built.  Note we do not supply $M$ itself; that would block easy choice among preconditioners at runtime.\sidenote{And require the user to write extra code.}  Instead we supply ``material'' from which the preconditioning action $M^{-1}$ is built.  The most common such material is $A$ itself.
 
-\inputwhole{../c/ch2/vecmatksp.c}{\texttt{p4pdes/c/c1vecmatksp.c}}{Solve a small linear system.}{code:vecmatksp}
-
-After calling \texttt{KSPSolve()} we display the solution \pVec by calling \texttt{VecView()}.  This and everything else about the code in Figure \ref{code:vecmatksp} should now be self-explanatory.  So let's run it:
+After calling \texttt{KSPSolve()} we display the solution \pVec by calling \texttt{VecView()}.  This and everything else about the code in Figure \ref{code:vecmatksp} should now be self-explanatory.  So let's compile and run it:
 \begin{cline}
-$ make c1vecmatksp
-$ ./c1vecmatksp
+$ cd c/ch2/
+$ make vecmatksp
+$ ./vecmatksp
 Vec Object: 1 MPI processes
   type: seq
 1
@@ -435,12 +436,22 @@ Vec Object: 1 MPI processes
 2
 -1
 \end{cline}
+%$
 This solves the system and gives us $\bx$.  But what happened and how to control it?
+
+\vfill
+\clearpage
+\inputwhole{../c/ch2/vecmatksp.c}{\texttt{c/ch2/vecmatksp.c}}{Solve a small linear system.}{code:vecmatksp}
 
 
 \section{Revealing solvers at runtime}
 
-To start to see what happened when we ran \texttt{./c1vecmatksp} above, we could start by viewing the \pVec and \pMat objects.  The result of ``\texttt{./c1vecmatksp -vec\_view -mat\_view}'' is perfectly clear, but it tells us nothing about the solver, and it gives no hints on alternative ways of solving the equations.
+To start to see what happened when we ran \texttt{./vecmatksp} above, we could start by viewing the \pVec and \pMat objects.  In fact, the result of doing
+\begin{cline}
+$ ./vecmatksp -vec_view -mat_view
+\end{cline}
+%$
+should be completely as expected, and thus it is not shown.  This output tells us nothing about the solution process, however, and it gives no hints on alternative ways of solving the equations.
 
 Here is a key idea which cannot be over-emphasized:
 \begin{quote}
@@ -448,7 +459,7 @@ Here is a key idea which cannot be over-emphasized:
 \end{quote}
 Here we try \texttt{-ksp\_view}; the output is slightly-clipped for clarity:
 \begin{cline}
-$ ./c1vecmatksp -ksp_view
+$ ./vecmatksp -ksp_view
 KSP Object: 1 MPI processes
   type: gmres
     GMRES: restart=30, using Classical (unmodified) Gram-Schmidt ...
@@ -482,19 +493,19 @@ Vec Object: 1 MPI processes
 %$
 Here is some of what we learn:
 \begin{itemize}
-\item The default \pKSP solver is GMRES \citep{Saad2003}.\sidenote{This is \texttt{-ksp\_type gmres} as a command-line option.}
-\item As GMRES builds an approximation of the solution from the Krylov space by saving more and more vectors, and thus uses up memory, one restarts after a number of iterations.  The default is \texttt{-ksp\_gmres\_restart 30}.
+\item The default \pKSP solver is GMRES.  This is \texttt{-ksp\_type gmres} as a command-line option.
+\item As noted, GMRES restarts after a number of iterations so as to limit memory usage.  The default is \texttt{-ksp\_gmres\_restart 30} as an option.
 \item The default convergence tolerances for the \pKSP are \texttt{-ksp\_rtol 1.0e-5} and \texttt{-ksp\_atol 1.0e-50}.  In particular, \pKSP iterations stop when the residual norm has been reduced by $10^5$.
-\item Inside the \pKSP is a \pPC preconditioner object.  We did not have to ask for one in the code, as every \pKSP has a \pPC.
+\item Inside the \pKSP is a \pPC preconditioner object.  We did not have to ask for one when writing the code, as every \pKSP has a \pPC.
 \item The default \pPC is left preconditioning with ILU, i.e.~incomplete LU factorization, which is \texttt{-pc\_type ilu} as a runtime option.\sidenote{We will see in a moment that this is the \emph{serial} default \pPC, and there is more going on in parallel.}
-\item Actually, the preconditioner is usually called ``ILU($0$)'', i.e.~with ``\texttt{0 levels of fill}'', so it does not use more memory than used by $A$ already.
 \item The \pPC object has a copy of $A$ (``\texttt{Mat Object}''), because it was supplied as the second argument to \texttt{KSPSetOperators()} above.
+\item The preconditioner has ``\texttt{0 levels of fill}'',\sidenote{Thus it is usually called ``ILU($0$)''.} so it uses no more memory than is used by the copy of $A$ which is supplied to \texttt{KSPSetOperators()}.
 \end{itemize}
 Of course, we get the solution $\bx$ too.
 
 While option \texttt{-ksp\_view} tells us what the solver \emph{is}, option \texttt{-ksp\_monitor} shows what it \emph{does}.  In this case, the \pKSP iteration is short:
 \begin{cline}
-$ ./c1vecmatksp -ksp_monitor
+$ ./vecmatksp -ksp_monitor
   0 KSP Residual norm 2.449489742783e+00
   1 KSP Residual norm 1.520235486122e-15
 Vec Object: 1 MPI processes
@@ -505,37 +516,41 @@ The reason that the residual drops to nearly zero in one iteration is that GMRES
 
 For a small system like this a direct solve also works fine.  To see how to do it, first do
 \begin{cline}
-$ ./c1vecmatksp -help | grep ksp_type
+$ ./vecmatksp -help | grep ksp_type
   -ksp_type <gmres>: Krylov method (one of) cg ... preonly ... (KSPSetType)
-$ ./c1vecmatksp -help | grep pc_type
+$ ./vecmatksp -help | grep pc_type
   -pc_type <ilu>: Preconditioner (one of) none jacobi ... lu ... (PCSetType)
 \end{cline}
 to see the many solver and preconditioner options.  One of the preconditioners is ``\texttt{lu}'', suggesting a direct solve.  In this case we \emph{do not} want iterations, and one of the \pKSP options is ``\texttt{preonly}''.  Thus the direct solver combination we want is
 \begin{cline}
-$ ./c1vecmatksp -ksp_type preonly -pc_type lu
+$ ./vecmatksp -ksp_type preonly -pc_type lu
 \end{cline}
 %$
-The reader should check that the output of \texttt{-ksp\_view} is as intended.\sidenote{The output of \texttt{-ksp\_monitor} is empty as there were, in fact, no iterations!}
+The reader should check that the output of \texttt{-ksp\_view} is as intended.
 
-When solving on multiple processors, using ILU($0$) as the default preconditioner makes no sense.  This is because, even when fill-in is avoided, the LU factorization algorithm would involve a great deal of interprocessor communication.  However, there are blocks along the diagonal of the system matrix $A$ which are entirely owned by a single processor.  The ILU($0$) method can be applied to these, and the result treated as an approximation $P^{-1}\approx A^{-1}$.  That is, the blocks along the diagonal can be approximately inverted by ILU($0$), and the result treated as a diagonal (i.e.~Jacobi) preconditioner.  So this is what is done by default \PETSc \pKSP settings in parallel:
-\begin{itemize}
-\item The default \pKSP is still GMRES with restart 30.
-\item The default \pPC is \texttt{bjacobi}, i.e.~application of approximate diagonal-block inverses as $P^{-1}$.
-\item Inside the \pPC is a \texttt{sub\_pc} object, also a \pPC, which is ILU($0$).\sidenote{There is even a \texttt{sub\_ksp} object, but it is \texttt{preonly}.  So let's just ignore that complication for now.}
-\item These defaults correspond to options
+When solving on multiple processors, using ILU($0$) as the default preconditioner makes no sense.  This is because, even when fill-in is avoided, the LU factorization algorithm would involve a great deal of interprocessor communication.  However, there are blocks along the diagonal of the system matrix $A$ which are entirely owned by a single processor.  The ILU($0$) method can be applied to these, and the result treated as an approximation $P^{-1}\approx A^{-1}$.  That is, the blocks along the diagonal can be approximately inverted by ILU($0$), and the result treated as a block-diagonal (i.e.~block-Jacobi) preconditioner.
+
+The default \PETSc \pKSP settings \emph{in parallel} correspond to options
 \begin{quote}
 \texttt{-ksp\_type gmres -pc\_type bjacobi -sub\_pc\_type ilu}
 \end{quote}
+This is what they do:
+\begin{itemize}
+\item The default \pKSP remains GMRES with restart 30.
+\item The default \pPC is now \texttt{bjacobi}, i.e.~application of approximate diagonal-block inverses as $M^{-1}$.
+\item Inside the \pPC is a \texttt{sub\_pc} object, also a \pPC, which is ILU($0$),\sidenote{There is even a \texttt{sub\_ksp} object, but it is \texttt{preonly}.  So let's just ignore that complication for now.} and this generates the approximate diagonal-block inverses.
 \end{itemize}
 The reader can confirm this understanding of the situation by running
 \begin{cline}
-mpiexec -n 2 ./c1vecmatksp -ksp_view
+mpiexec -n 2 ./vecmatksp -ksp_view
 \end{cline}
+
 But surely that's enough runtime options for now.  There will be more, especially in later chapters when we solve PDEs.
 
-\section{More \PETSc functionality from the code side}
 
-We have seen \PETSc code to set up and solve linear systems, but there is more to say.  The next example \texttt{c1tri.c}, split into Figures \ref{code:tripartone} and \ref{code:triparttwo}, introduces these additional concepts and their associated function calls:
+\section{A sparse system of arbitrary size}
+
+We have seen \PETSc code to set up and solve linear systems, but there is more to say.  The next example \texttt{tri.c}, split into Figures \ref{code:tripartone} and \ref{code:triparttwo}, introduces these additional concepts and their associated function calls:
 \begin{enumerate}
 \item Creating an option, so that the size of the linear system can be controlled at runtime, by using \texttt{PetscOptionsXXX()} calls.
 \item Using \texttt{VecDuplicate()} for allocation.
@@ -547,9 +562,10 @@ We have seen \PETSc code to set up and solve linear systems, but there is more t
 \newpage
 \cinputpartnostrip{ch2/tri.c}{Set up \pVec and \pMat objects for a tridiagonal system.}{I}{//STARTSETUP}{//ENDSETUP}{code:tripartone}
 
-First build (``\texttt{make c1tri}'') and run the code with options that show what it is does by default:
+First build and run the code with options that show what it is does by default:
 \begin{cline}
-$ ./c1tri -ksp_monitor -a_mat_view ::ascii_dense
+$ make tri
+$ ./tri -ksp_monitor -a_mat_view ::ascii_dense
 Mat Object:(a_) 1 MPI processes
   type: seqaij
   3.00000e+00  -1.00000e+00   0.00000e+00   0.00000e+00 
@@ -560,20 +576,18 @@ Mat Object:(a_) 1 MPI processes
   1 KSP Residual norm 5.519370044893e-16 
 error for m = 4 system is |x-xexact|_2 = 5.1e-16
 \end{cline}
-%$
 
 To get started on the new concepts shown in Figure \ref{code:tripartone}, notice that methods \texttt{PetscOptionsBegin()} and \texttt{PetscOptionsEnd()} bracket the call to \texttt{PetscOptionsInt()}.  We set an option prefix ``\texttt{-tri\_...}'' so that the new option we create is distinguished from the many built-in \PETSc options that start with \texttt{-ksp\_...} or \texttt{-vec\_...} or whatever.  Our use of \texttt{PetscOptionsInt()} creates an option \texttt{-tri\_m} which allows the user to set the variable \texttt{m}, and to leave the default \texttt{m}$=4$ unaltered if the option is not set.
 
 To see the option and its default value in \texttt{-help} output do
 \begin{cline}
-$ make c1tri
-$ ./c1tri -help | grep tri_
+$ ./tri -help | grep tri_
 Solve a tridiagonal system of arbitrary size.  Option prefix = tri_.
   -tri_m <4>: dimension of linear system (None)
 \end{cline}
 Here, for instance, we reset the system size to be small and we view the matrix:
 \begin{cline}
-$ ./c1tri -tri_m 2 -a_mat_view
+$ ./tri -tri_m 2 -a_mat_view
 Mat Object:(a_) 1 MPI processes
   type: seqaij
 row 0: (0, 3)  (1, -1) 
@@ -582,9 +596,9 @@ error for m = 2 system is |x-xexact|_2 = 8.0e-16
 \end{cline}
 %$
 
-After setting up the new option, next in \texttt{c1tri.c} the numerical solution \pVec \texttt{x} is created just as we did in the last example \texttt{c1vecmatksp.c} (Figure \ref{code:vecmatksp}).  But now we also want to create \pVecs \texttt{b} and \texttt{xexact}; the former is the right-hand side of the linear system and the latter holds the exact solution to the linear system so that we can evaluate the error in the numerical solution.  Though at this stage we have not filled any entries of \texttt{x}, we can save repetitive function calls to \texttt{VecCreate/SetSizes/SetFromOptions()} when creating these additional \pVecs.  That is, because they have the same properties and parallel layout we can use \texttt{VecDuplicate()} to allocate \pVecs just like \texttt{x}.\sidenote{There is a different method for copying the contents of \pVecs, namely \texttt{VecCopy()}.  It requires that the two \pVecs are already allocated and have the same layout.}
+After setting up the new option, next in \texttt{tri.c} the numerical solution \pVec \texttt{x} is created just as we did in the last example \texttt{vecmatksp.c} (Figure \ref{code:vecmatksp}).  But now we also want to create \pVecs \texttt{b} and \texttt{xexact}; the former is the right-hand side of the linear system and the latter holds the exact solution to the linear system so that we can evaluate the error in the numerical solution.  Though at this stage we have not filled any entries of \texttt{x}, we can save repetitive function calls to \texttt{VecCreate/SetSizes/SetFromOptions()} when creating these additional \pVecs.  That is, because they have the same properties and parallel layout we can use \texttt{VecDuplicate()} to allocate \pVecs just like \texttt{x}.\sidenote{There is a different method for copying the contents of \pVecs, namely \texttt{VecCopy()}.  It requires that the two \pVecs are already allocated and have the same layout.}
 
-Next we assemble the matrix $A$.  This is a boring tridiagonal matrix with $3$ on the diagonal and $-1$ in the super- and sub-diagonals.  Though boring, we want to assemble it efficiently in parallel, something that will be important when solving 2D and 3D PDEs in later chapters.  However, only when \texttt{c1tri.c} is run do we know how many processes are in use.  A key method for efficient matrix assembly in parallel is the method \texttt{MatGetOwnershipRange()} which tells our program, as it is running on a particular process (rank), what rows it owns locally.  In the case of a many structured matrices like this one, we can avoid all interprocess communication by assembling exactly the rows we own.  As seen at the top of Figure \ref{code:triparttwo}, we call
+Next we assemble the matrix $A$.  This is a boring tridiagonal matrix with $3$ on the diagonal and $-1$ in the super- and sub-diagonals.  Though boring, we want to assemble it efficiently in parallel, something that will be important when solving 2D and 3D PDEs in later chapters.  However, only when \texttt{tri.c} is run do we know how many processes are in use.  A key method for efficient matrix assembly in parallel is the method \texttt{MatGetOwnershipRange()} which tells our program, as it is running on a particular process (rank), what rows it owns locally.  In the case of a many structured matrices like this one, we can avoid all interprocess communication by assembling exactly the rows we own.  As seen at the top of Figure \ref{code:triparttwo}, we call
 \begin{quote}
 \texttt{MatGetOwnershipRange(A,\&Istart,\&Iend)}
 \end{quote}
@@ -610,27 +624,31 @@ is small when the \pKSP completes its work.  So, after getting \texttt{x} from \
 
 \section{A first look at performance}
 
-The linear system assembled by \texttt{c1tri.c} is about as easy to solve as they get.   It is tridiagonal, symmetric, diagonally-dominant, and positive definite.\sidenote{Regarding the last property, see exercise \ref{exer:computeeigs}.}  So \PETSc ought to be able to solve it quickly, and parallelization ought to be effective.
+The linear system assembled by \texttt{tri.c} is about as easy to solve as they get.   It is tridiagonal, symmetric, diagonally-dominant, and positive definite.\sidenote{See exercise \ref{exer:computeeigs}.}  So \PETSc ought to be able to solve it quickly, almost all Krylov methods should apply, and parallelization ought to be effective.
 
 \newcommand{\WORKSTATION}{\textsc{workstation}\xspace}
-We can time a one-process solution:\sidenote{On the author's 2012-era workstation with 16 GB memory and a single Intel Core i7-3820 8-core cpu running at 3.60GHz.  We call this machine \WORKSTATION. \label{defineworkstation}}
+We can time a one-process solution:
 \begin{cline}
-$ time ./c1tri -tri_m 10000
+$ time ./tri -tri_m 10000
 error for m = 10000 system is |x-xexact|_2 = 8.0e-13
 real 0.04
 user 0.04
 sys 0.00
 \end{cline}
 %$
-Only the ``\texttt{real}'' time is worth considering, so from now on we will use an alias to get just this time:
+\label{defineworkstation}
+These times were taken on the author's 2012-era workstation with 16 GB memory and a single Intel Core i7-3820 8-core cpu running at 3.60GHz.  From now on we call this machine \WORKSTATION.
+
+Only the ``\texttt{real}'' time above is worth considering.  From now on we will use an alias to get just this time:
 \begin{cline}
 $ alias timer='time -f "real %e"'
 \end{cline}
 %$
 
-The above timing result of $.04$ seconds suggests that this $m=10^4$ dimension system is not yet big enough to be worth testing, so we experiment on what $m$ gives a linear system with noticeable solution time.  Here is a roll-your-own bash loop\sidenote{I have found \href{http://mywiki.wooledge.org/FullBashGuide}{mywiki.wooledge.org/ FullBashGuide} to be a reasonable online overview of bash.} to time some bigger solves:
+The above timing result of $.04$ seconds suggests that this $m=10^4$ dimension system is not yet big enough to be worth testing, so we experiment on what $m$ gives a linear system with noticeable solution time.  Here is a roll-your-own bash\sidenote{\href{http://www.gnu.org/software/bash/}{www.gnu.org/software/bash/}} loop to time some bigger solves:
 \begin{cline}
-$ for M in 10000 100000 1000000 10000000; do timer ./c1tri -tri_m $M; done
+$ export SIZES="10000 100000 1000000 10000000"
+$ for M in $SIZES; do timer ./tri -tri_m $M; done
 error for m = 10000 system is |x-xexact|_2 = 8.0e-13
 real 0.04
 error for m = 100000 system is |x-xexact|_2 = 3.1e-12
@@ -640,13 +658,13 @@ real 1.17
 error for m = 10000000 system is |x-xexact|_2 = 3.5e-10
 real 11.96
 \end{cline}
-Thus the default methods\sidenote{Recall: GMRES with ILU($0$) preconditioning.} solve a system of size $m=10^7$ (ten million) in a time of about 12 seconds.
+We see that the default \PETSc \pKSP and \pPC methods\sidenote{GMRES with ILU($0$) preconditioning.} solve a system of size $m=10^7$ (ten million) in a time of about 12 seconds \WORKSTATION.  Will other methods and/or more processors speed up the solution of the linear system of this size?
 
-It is reasonable to ask if other methods and/or more processors speed up the solution of the linear system of size $m=10^7$.  In particular we can try a direct solve (\texttt{-ksp\_type preonly -pc\_type lu}), the default serial solver (\texttt{-ksp\_type gmres -pc\_type ilu}), and the default parallel solver (\texttt{-ksp\_type gmres -pc\_type bjacobi -sub\_pc\_type ilu}).  We can turn off preconditioning (\texttt{-pc\_type none}) or switch from ILU($0$)-based preconditioning to Jacobi preconditioning (\texttt{-pc\_type jacobi}). 
+We can try a direct solve (\texttt{-ksp\_type preonly -pc\_type lu}), the default serial solver (\texttt{-ksp\_type gmres -pc\_type ilu}), and the default parallel solver (\texttt{-ksp\_type gmres -pc\_type bjacobi -sub\_pc\_type ilu}).  We can turn off preconditioning (\texttt{-pc\_type none}) or switch from ILU($0$)-based preconditioning to Jacobi preconditioning (\texttt{-pc\_type jacobi}).
 
-To generate Table \ref{tab:c1tritiming} below, we did:
+Thus, to generate Table \ref{tab:tritiming} below, we did 16 runs which looked like this:
 \begin{cline}
-$ timer mpiexec -n N ./c1tri -tri_m 10000000 -ksp_rtol 1.0e-10 -ksp_type KSP -pc_type PC
+$ timer mpiexec -n N ./tri -tri_m 10000000 -ksp_rtol 1.0e-10 -ksp_type KSP -pc_type PC
 \end{cline}
 %$
 for $N=1$ and $N=4$, and several \pKSP/\pPC choices.  The tighter tolerance \texttt{-ksp\_rtol 1.0e-10} was added because a fair comparison of iterative and direct methods needs significant accuracy in the iterative ones.
@@ -662,36 +680,36 @@ richardson & jacobi      & \intime{richardson.jacobi.1}& \intime{richardson.jaco
 gmres      & none        & \intime{gmres.none.1}       & \intime{gmres.none.4} \\
            & jacobi      & \intime{gmres.jacobi.1}     & \intime{gmres.jacobi.4} \\
            & ilu         & \intime{gmres.ilu.1}        &  \\
-           & bjacobi/ilu &                             & \intime{gmres.bjacobi.4} \\
+           & bjacobi+ilu &                             & \intime{gmres.bjacobi.4} \\
 cg         & none        & \intime{cg.none.1}          & \intime{cg.none.4} \\
            & jacobi      & \intime{cg.jacobi.1}        & \intime{cg.jacobi.4} \\
            & icc         & \intime{cg.icc.1}           &  \\
-           & bjacobi/icc &                             & \intime{cg.bjacobi.4} \\
+           & bjacobi+icc &                             & \intime{cg.bjacobi.4} \\
 \end{tabular}
 }
-\caption{Times for \texttt{c1tri.c} to solve systems of dimension $m=10^7$.  In this case the matrix is \emph{tridiagonal}, \emph{symmetric}, \emph{diagonally-dominant}, and \emph{positive definite}.  All runs were on \WORKSTATION (see page \pageref{defineworkstation}).} \label{tab:c1tritiming}
+\caption{Times for \texttt{tri.c} to solve systems of dimension $m=10^7$.  In this case the matrix is \emph{tridiagonal}, \emph{symmetric}, \emph{diagonally-dominant}, and \emph{positive definite}.  All runs were on \WORKSTATION (see page \pageref{defineworkstation}).} \label{tab:tritiming}
 \end{figure}
 
 This table deserves discussion:
 \begin{itemize}
-\item Entries ``\texttt{bjacobi/ilu}'' and ``\texttt{bjacobi/icc}'' correspond to options \texttt{-pc\_type bjacobi -sub\_pc\_type ilu} and \texttt{-pc\_type bjacobi -sub\_pc\_type icc}, respectively.  As already noted, the first of these is the parallel default.\sidenote{This table, at least, suggests it is a reasonable choice for that purpose.}
-\item Counting floating point operations shows the leading-order work for Cholesky is $m^3/3$ while for LU it is $2 m^3/3$ \citep{TrefethenBau}.  This is reflected in the direct-solve results (with \texttt{-ksp\_type preonly}).  A diagonally-dominant tridiagonal problem is very well-behaved for direct methods, however, because no fill-in or pivoting occurs when they are applied.\sidenote{Do not assume that most $m=10^7$ dimension systems are good candidates for direct solves!}
-\item Cholesky and conjugate gradient methods apply to symmetric positive-definite matrices only, which is what \texttt{c1tri.c} assembles.  These are \pKSP method \texttt{cg} and \pPC methods \texttt{cholesky} and \texttt{icc} (incomplete-Cholesky, also denoted ``ICC($0$)'').  We see some benefit to using CG on one-process runs, compared to the general (``non-symmetric'') method GMRES, but the matrix generated by \texttt{c1tri.c} is so well-behaved that both of these iterations work well.
-\item There is indeed speed-up from $N=1$ to $N=4$ processes, on this single node 8-core workstation, for many methods.  The 2 to 3 times speed-up is relatively uniform across methods, but (again) the fact that the matrix is very well-structured makes this un-surprising.
+\item Entries ``\texttt{bjacobi+ilu}'' and ``\texttt{bjacobi+icc}'' correspond to options \texttt{-pc\_type bjacobi -sub\_pc\_type ilu} and \texttt{-pc\_type bjacobi -sub\_pc\_type icc}, respectively.  As already noted, the first of these is the parallel default.\sidenote{This example suggests it is a reasonable choice for the default!}
+\item Counting floating point operations shows the leading-order work for Cholesky is $m^3/3$ while for LU it is $2 m^3/3$ \citep{TrefethenBau}.  This is reflected in the direct-solve results using \texttt{-ksp\_type preonly}.  A diagonally-dominant tridiagonal problem is very well-behaved for direct methods because no fill-in or pivoting occurs when they are applied, but we should not assume that most $m=10^7$ dimension systems are good candidates for direct solves.
+\item Cholesky and CG methods apply to symmetric positive-definite matrices only.  These are \pKSP method \texttt{cg} and \pPC methods \texttt{cholesky} and \texttt{icc} (incomplete-Cholesky, also denoted ``IC($0$)'').  We see some benefit to using CG on one-process runs, compared to the general (non-symmetric) method GMRES, but the matrix generated by \texttt{tri.c} is so well-behaved that both of these iterations work well.
+\item There is indeed speed-up from $N=1$ to $N=4$ processes on this single node 8-core workstation.  The 2 to 3 times speed-up is relatively uniform across methods.
 \end{itemize}
 
-In future Chapters, from ``real'' linear and non-linear systems generated from discretizing PDEs, we will create timing tables like Table \ref{tab:c1tritiming}, and re-consider the results.
+In future Chapters, ``real'' linear and non-linear systems will be generated by discretizing PDEs.  Then we will create timing tables like Table \ref{tab:tritiming}, and re-consider the results.
 
 \begin{marginfigure}
 \bigskip
-\includegraphics[width=0.9\textwidth]{line-graph-c1tri}
+\includegraphics[width=0.9\textwidth]{line-graph-tri}
 \caption{\PETSc can use X windows to produce line graphs at run time.  (This is not to say they are pretty.)}
-\label{fig:line-graph-c1tri}
+\label{fig:line-graph-tri}
 \end{marginfigure}
 
-Finally, \PETSc can generate graphics showing convergence of iterative methods, at least if X windows are installed.  The line graph in Figure \ref{fig:line-graph-c1tri}, from
+Finally, \PETSc can generate graphics showing convergence of iterative methods, at least if X windows are installed.  The line graph in Figure \ref{fig:line-graph-tri}, from
 \begin{cline}
-$ ./c1tri -tri_m 1000000 -ksp_rtol 1.0e-10 -pc_type jacobi \
+$ ./tri -tri_m 1000000 -ksp_rtol 1.0e-10 -pc_type jacobi \
     -ksp_monitor_lg_residualnorm -draw_pause 1
 \end{cline}
 %$
@@ -730,9 +748,9 @@ only show 11 eigenvalues of this $1000\times 1000$ matrix?  How do these eigenva
 
 \item The accuracy of direct solves (e.g.~\texttt{-ksp\_type preonly -pc\_type cholesky}) in \texttt{tri.c}, as measured by the reported error norm $\|\bx - \bx_{\text{exact}}\|_2$, decreases with increasing dimension.  Confirm and explain this observation.
 
-\item Table \ref{tab:c1tritiming} includes a number of blanks.  For each one, explain why it is blank, experimenting if needed.
+\item Table \ref{tab:tritiming} includes a number of blanks.  For each one, explain why it is blank, experimenting if needed.
 
-\item Table \ref{tab:c1tritiming} gives execution times not iteration count.  Generate the corresponding table of \pKSP iteration count by adding option \verb|-ksp_converged_reason| to the run commands.  Note the large number of ``coincidences'' in iteration count, i.e.~cases where iteration counts are identical; explain.  Which preconditioners have a strong or weak effect on iteration count?  Is timing or iteration count more useful?
+\item Table \ref{tab:tritiming} gives execution times not iteration count.  Generate the corresponding table of \pKSP iteration count by adding option \verb|-ksp_converged_reason| to the run commands.  Note the large number of ``coincidences'' in iteration count, i.e.~cases where iteration counts are identical; explain.  Which preconditioners have a strong or weak effect on iteration count?  Is timing or iteration count more useful?
 
 \item As the reader will undoubtedly experience, segmentation faults and memory leaks are inevitable when one develops \PETSc codes.  A standard tool for detecting/diagnosing these is \texttt{valgrind}.\sidenote{\href{http://valgrind.org/}{valgrind.org}}  We recommend running it frequently.  As an exercise, run
 \begin{cline}

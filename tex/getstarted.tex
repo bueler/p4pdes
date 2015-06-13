@@ -26,13 +26,14 @@ to install.  Be sure to run ``\texttt{make test}'' and see it pass the tests.  W
 
 Do the following to compile \texttt{e.c}:
 \begin{cline}
-$ cd p4pdes/c/ch1/
+$ cd p4pdes/
+$ cd c/ch1/
 $ make e
 \end{cline}
 %$
 Calling ``\texttt{make}'' uses \texttt{p4pdes/c/ch1/makefile}.  An extract of this makefile is shown in Figure \ref{code:ch1makefile}.  For all the codes in this book, the makefile has this form, as recommended in the \PETSc \emph{User's Manual} \citep{petsc-user-ref}.
 
-\inputwhole{../c/ch1/e.c}{\texttt{p4pdes/c/ch1/e.c}}{Compute $e$ with \PETSc.}{code:e}
+\inputwhole{../c/ch1/e.c}{\texttt{c/ch1/e.c}}{Compute $e$ with \PETSc.}{code:e}
 
 Run the code like this:
 \begin{cline}
@@ -63,7 +64,7 @@ rank 0 did 0 flops
 
 ``Double precision'' refers to the 64-bit representation of real numbers, which is the type normally aliased to \texttt{PetscReal} and \texttt{PetscScalar} inside \PETSc codes.  This representation corresponds to about 15 decimal digit accuracy \citep{TrefethenBau}.
 
-\inputtoline{../c/ch1/makefile}{extract from \texttt{p4pdes/c/ch1/makefile}}{All our \texttt{makefile}s for \PETSc examples look like this.}{6}{code:ch1makefile}
+\inputtoline{../c/ch1/makefile}{extract from \texttt{c/ch1/makefile}}{All our \texttt{makefile}s for \PETSc examples look like this.}{6}{code:ch1makefile}
 
 Perhaps the reader is now worried that this book was written using a cluster with 20 physical processors whereas the reader has a little laptop with only a couple of cores.  Not so.  In fact these 5 and 20 process runs work just fine on the author's laptop.  MPI processes are created as needed, using an old feature of operating systems: multitasking.  Speedup from parallelism is another matter, to which we will return.
 

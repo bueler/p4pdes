@@ -1,4 +1,4 @@
-static char help[] = "Solve a 4x4 linear system with Vec, Mat, and KSP.\n";
+static char help[] = "Solve a 4x4 linear system using Vec, Mat, and KSP.\n";
 
 #include <petsc.h>
 
@@ -35,7 +35,6 @@ int main(int argc,char **args) {
   j[0] = 1;  j[1] = 2;  j[2] = 3;
   i = 3;  v[0] = 1.0;  v[1] = 1.0;  v[2] = -1.0;
   ierr = MatSetValues(A,1,&i,3,j,v,INSERT_VALUES); CHKERRQ(ierr);
-
   ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
   ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
 

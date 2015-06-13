@@ -65,7 +65,8 @@ int main(int argc,char **args) {
   ierr = VecAXPY(x,-1.0,xexact); CHKERRQ(ierr);
   ierr = VecNorm(x,NORM_2,&errnorm); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
-        "error for m = %d system is |x-xexact|_2 = %.1e\n",m,errnorm); CHKERRQ(ierr);
+         "error for m = %d system is |x-xexact|_2 = %.1e\n",m,errnorm);
+         CHKERRQ(ierr);
 
   KSPDestroy(&ksp);  MatDestroy(&A);
   VecDestroy(&x);  VecDestroy(&b);  VecDestroy(&xexact);

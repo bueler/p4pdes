@@ -129,12 +129,12 @@
 }
 
 \newcommand{\cinput}[5]{%
-    \cinputraw{cstrip/#1}{#1}{#2}{}{#3}{#4}{#5}}
+    \cinputraw{cstrip/#1}{c/#1}{#2}{}{#3}{#4}{#5}}
 
 \newcommand{\cinputpart}[6]{%
-    \cinputraw{cstrip/#1}{#1}{#2}{\quad \textbf{part #3}}{#4}{#5}{#6}}
+    \cinputraw{cstrip/#1}{c/#1}{#2}{\quad \textbf{part #3}}{#4}{#5}{#6}}
 \newcommand{\cinputpartnostrip}[6]{%
-    \cinputraw{../c/#1}{#1}{#2}{\quad \textbf{part #3}}{#4}{#5}{#6}}
+    \cinputraw{../c/#1}{c/#1}{#2}{\quad \textbf{part #3}}{#4}{#5}{#6}}
 
 \newcommand{\caveat}[1]{\marginnote{\textsc{Where we stand:}\\  #1}}
 
