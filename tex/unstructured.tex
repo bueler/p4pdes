@@ -198,9 +198,9 @@ At this point we have the whole triangulation into \PETSc \pVecs.  The almost-la
 
 The first method \texttt{getmeshfile()} finds a \PETSc binary file from the \texttt{-f} option.  The other major method \texttt{readmesh()}, in Figure \ref{code:readmeshparttwo}, creates and reads three \pVecs in parallel from it, using utility methods \texttt{createloadname()} and \texttt{getcheckmeshsizes()}.  Note that prefixes are set on each \pVec so that the block size is correctly read.
 
-\cinputpart{ch4readmesh.c}{Determine the filename of a \PETSc binary file that has a mesh.}{I}{//STARTGET}{//ENDGET}{code:readmeshpartone}
+\cinputpart{readmesh.c}{Determine the filename of a \PETSc binary file that has a mesh.}{I}{//STARTGET}{//ENDGET}{code:readmeshpartone}
 
-\cinputpart{ch4readmesh.c}{Read the mesh in parallel from the file.}{II}{//STARTREADMESH}{//ENDREADMESH}{code:readmeshparttwo}
+\cinputpart{readmesh.c}{Read the mesh in parallel from the file.}{II}{//STARTREADMESH}{//ENDREADMESH}{code:readmeshparttwo}
 
 
 \section{Constructing the FEM linear system}
@@ -493,33 +493,34 @@ where $\omega(\xi,\eta) = f(x(\xi,\eta),y(\xi,\eta)) \chi_q(\xi,\eta)$.
 
 %\section{Preallocate a \pMat}
 %FIXME: figure showing parallel partition of elements
-%\cinputpart{c2testprealloc.c}{Read mesh \pVecs from file.  Get row ownership range.}{I}{//STARTLOAD}{//ENDLOAD}{code:testpreallocpartone}
-%\cinputpart{c2testprealloc.c}{Set up \pMat $A$ and actually preallocate it.  Fill it with junk entries so the pattern can be visualized.}{II}{//ENDLOAD}{//ENDTEST}{code:testpreallocparttwo}
+%\cinputpart{testprealloc.c}{Read mesh \pVecs from file.  Get row ownership range.}{I}{//STARTLOAD}{//ENDLOAD}{code:testpreallocpartone}
+%\cinputpart{testprealloc.c}{Set up \pMat $A$ and actually preallocate it.  Fill it with junk entries so the pattern can be visualized.}{II}{//ENDLOAD}{//ENDTEST}{code:testpreallocparttwo}
 
 
 \section{Solve the Poisson problem}
 
-\cinputpart{ch4poissontools.c}{Find Dirichlet rows, \texttt{INSERT\_VALUES} these, and call \texttt{MatAssemblyBegin/End} and \texttt{VecAssemblyBegin/End}.}{I}{//DIRICHLETROWS}{//ENDDIRICHLETROWS}{code:poissontoolsdirichlet}
+\cinputpart{poissontools.c}{Find Dirichlet rows, \texttt{INSERT\_VALUES} these, and call \texttt{MatAssemblyBegin/End} and \texttt{VecAssemblyBegin/End}.}{I}{//DIRICHLETROWS}{//ENDDIRICHLETROWS}{code:poissontoolsdirichlet}
 
-\cinputpart{ch4poissontools.c}{Start computing all other contributions element-by-element: Precompute all geometry of element and quadrature points.}{II}{//ASSEMBLEADDONE}{//ENDONE}{code:poissontoolsaddone}
+\cinputpart{poissontools.c}{Start computing all other contributions element-by-element: Precompute all geometry of element and quadrature points.}{II}{//ASSEMBLEADDONE}{//ENDONE}{code:poissontoolsaddone}
 
-\cinputpart{ch4poissontools.c}{Compute all other contributions element-by-element including source $f$, Dirichlet columns using data $g$, and Neumann data $\gamma$.  Use \texttt{ADD\_VALUES} for these, and call \texttt{MatAssemblyBegin/End} and \texttt{VecAssemblyBegin/End}.}{III}{//ENDONE}{//ENDASSEMBLEADD}{code:poissontoolsaddtwo}
+\cinputpart{poissontools.c}{Compute all other contributions element-by-element including source $f$, Dirichlet columns using data $g$, and Neumann data $\gamma$.  Use \texttt{ADD\_VALUES} for these, and call \texttt{MatAssemblyBegin/End} and \texttt{VecAssemblyBegin/End}.}{III}{//ENDONE}{//ENDASSEMBLEADD}{code:poissontoolsaddtwo}
 
-\cinputpart{ch4poissontools.c}{Call \texttt{dirichletrows()} and \texttt{assembleadd()}.}{IV}{//FULLASSEMBLE}{//ENDFULLASSEMBLE}{code:poissontoolsassemble}
+\cinputpart{poissontools.c}{Call \texttt{dirichletrows()} and \texttt{assembleadd()}.}{IV}{//FULLASSEMBLE}{//ENDFULLASSEMBLE}{code:poissontoolsassemble}
 
 
-\cinputpart{ch4poisson.c}{Read in mesh in parallel (i.e.~\pVec \texttt{E}) and create \pMat \texttt{A} and \pVec \texttt{b}.}{I}{//GETMESH}{//ENDMATVECCREATE}{code:cthreepoissongetmesh}
+\cinputpart{poissonfem.c}{Read in mesh in parallel (i.e.~\pVec \texttt{E}) and create \pMat \texttt{A} and \pVec \texttt{b}.}{I}{//GETMESH}{//ENDMATVECCREATE}{code:cthreepoissongetmesh}
 
 In the next part of the code (Figure \ref{code:cthreepoissonchecks}) we do two basic checks on our assembly procedure, without solving a linear system.  First we check the construction of \texttt{A} by checking if constant functions are in the kernel when $\partial_D\Omega=\emptyset$.  In this check the data $f$, $g$, and $\gamma$ are all not used, and the boundary information in \texttt{E} is not used either.
 
-\cinputpart{ch4poisson.c}{Do two checks on the construction of the linear system.}{II}{//TWOCHECKS}{//ENDTWOCHECKS}{code:cthreepoissonchecks}
+\cinputpart{poissonfem.c}{Do two checks on the construction of the linear system.}{II}{//TWOCHECKS}{//ENDTWOCHECKS}{code:cthreepoissonchecks}
 
 In the second check we verify the construction of $\bb$ in the case where $f\equiv 1$, $\gamma=0$, and $\partial_D\Omega=\emptyset$.  In this case, by formula \eqref{bentryfem} and observation \eqref{partitionofunity}, the sum of the entries of $\bb$ should be the area of the region:
    $$\sum_j b_j = \sum_j \int_\Omega 1\, \phi_j = \int_\Omega \sum_j \phi_j = |\Omega|.$$
 
-\cinputpart{ch4poisson.c}{Solve a Dirichlet problem for which we know the solution.}{III}{//SOLVEMANU}{//ENDSOLVEMANU}{code:cthreepoissonsolvemanu}
+\cinputpart{poissonfem.c}{Solve a Dirichlet problem for which we know the solution.}{III}{//SOLVEMANU}{//ENDSOLVEMANU}{code:cthreepoissonsolvemanu}
 
 
 
 
 \caveat{It works, but does it work well?}
+
