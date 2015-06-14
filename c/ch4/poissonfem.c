@@ -9,10 +9,10 @@ using an unstructured mesh FEM method.\n\
 This version uses a manufactured solution. (FIXME: make optional)\n\
 For a one-process, coarse grid example do:\n\
      genstructured.py mesh.1 5   # generates mesh.1.{node,ele,poly}\n\
-     c3convert -f mesh.1         # reads mesh.1.{node,ele,poly}; generates mesh.1.petsc\n\
-     c3poisson -f mesh.1         # reads mesh.1.petsc and solves the equation\n\
+     convert -f mesh.1           # reads mesh.1.{node,ele,poly}; generates mesh.1.petsc\n\
+     poissonfem -f mesh.1        # reads mesh.1.petsc and solves the equation\n\
 To see the matrix graphically:\n\
-     c3poisson -f mesh.1 -a_mat_view draw -draw_pause 5\n\n";
+     poissonfem -f mesh.1 -a_mat_view draw -draw_pause 5\n\n";
 
 #include <petscksp.h>
 #include "convenience.h"

@@ -6,9 +6,9 @@ convert: convert.o readmesh.o  chkopts
 	-${CLINKER} -o convert convert.o readmesh.o  ${PETSC_KSP_LIB}
 	${RM} convert.o readmesh.o
 
-poisson: poisson.o readmesh.o poissontools.o chkopts
-	-${CLINKER} -o poisson poisson.o readmesh.o poissontools.o ${PETSC_KSP_LIB}
-	${RM} poisson.o readmesh.o poissontools.o
+poissonfem: poissonfem.o readmesh.o poissontools.o chkopts
+	-${CLINKER} -o poissonfem poissonfem.o readmesh.o poissontools.o ${PETSC_KSP_LIB}
+	${RM} poissonfem.o readmesh.o poissontools.o
 
 
 # etc
@@ -16,5 +16,5 @@ poisson: poisson.o readmesh.o poissontools.o chkopts
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ convert poisson
+	@rm -f *~ convert poissonfem
 	@rm -f mesh.?.* bump.?.* square.?.*

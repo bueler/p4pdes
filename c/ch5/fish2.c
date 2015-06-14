@@ -4,42 +4,42 @@ static char help[] = "Solves a structured-grid Poisson problem with DMDA and KSP
 "multigrid preconditioning at the command line.\n\n";
 
 // based on src/ksp/ksp/examples/tutorials/ex50.c, but in Dirichlet-only case,
-//   and following c2poisson.c closely
+//   and following ch3/poisson.c closely
 
-// SHOWS c2 AND c4 CODES ARE DOING SAME THING
-//   $ ./c2poisson
+// SHOWS ch3 AND ch5 CODES ARE DOING SAME THING
+//   $ ../ch3/poisson
 //   on 10 x 10 grid:  error |u-uexact|_inf = 0.000621778
-//   $ ./c4poisson 
+//   $ ./fish2 
 //   on 10 x 10 grid:  error |u-uexact|_inf = 0.000621778
 
 // REGARDLESS OF INTEGER DIMS OF INITIAL GRID, THIS ALWAYS WORKS:
-//   ./c4poisson -pc_type mg -pc_mg_levels N -da_refine N
+//   ./fish2 -pc_type mg -pc_mg_levels N -da_refine N
 // SO CONVERGENCE IS:
-//   for NN in 1 2 3 4 5 6 7 8; do ./c4poisson -da_grid_x 5 -da_grid_y 5 -da_refine $NN -pc_type mg -pc_mg_levels $NN -ksp_rtol 1.0e-8; done
+//   for NN in 1 2 3 4 5 6 7 8; do ./fish2 -da_grid_x 5 -da_grid_y 5 -da_refine $NN -pc_type mg -pc_mg_levels $NN -ksp_rtol 1.0e-8; done
 
 // USE MULTIGRID AND SHOW IT GRAPHICALLY:
-//   ./c4poisson -da_grid_x 3 -da_grid_y 3 -pc_type mg -da_refine 3 -ksp_monitor -ksp_view -dm_view draw -draw_pause 1
+//   ./fish2 -da_grid_x 3 -da_grid_y 3 -pc_type mg -da_refine 3 -ksp_monitor -ksp_view -dm_view draw -draw_pause 1
 
 // PERFORMANCE ANALYSIS; COMPARE c2poisson VERSION:
 //   export PETSC_ARCH=linux-gnu-opt
-//   make c4poisson
-//   ./c4poisson -da_grid_x 3 -da_grid_y 3 -pc_type mg -da_refine 9 -log_summary|grep "Solve: "
+//   make fish2
+//   ./fish2 -da_grid_x 3 -da_grid_y 3 -pc_type mg -da_refine 9 -log_summary|grep "Solve: "
 //   mpiexec -n 6 FIXME
 
 // NOT SURE WHAT IS BEING ACCOMPLISHED HERE:
-//   ./c4poisson -da_grid_x 100 -da_grid_y 100 -pc_type mg  -pc_mg_levels 1 -mg_levels_0_pc_type ilu -mg_levels_0_pc_factor_levels 1 -ksp_monitor -ksp_view
-//   ./c4poisson -da_grid_x 100 -da_grid_y 100 -pc_type mg -pc_mg_levels 1 -mg_levels_0_pc_type lu -mg_levels_0_pc_factor_shift_type NONZERO -ksp_monitor
+//   ./fish2 -da_grid_x 100 -da_grid_y 100 -pc_type mg  -pc_mg_levels 1 -mg_levels_0_pc_type ilu -mg_levels_0_pc_factor_levels 1 -ksp_monitor -ksp_view
+//   ./fish2 -da_grid_x 100 -da_grid_y 100 -pc_type mg -pc_mg_levels 1 -mg_levels_0_pc_type lu -mg_levels_0_pc_factor_shift_type NONZERO -ksp_monitor
 
 // I NEED TO KNOW/UNDERSTAND EVERYTHING IN foo.txt:
-//   mpiexec -n 4 ./c4poisson -da_grid_x 3 -da_grid_y 3 -pc_type mg -da_refine 10 -ksp_monitor -dm_view -ksp_view -log_summary &> foo.txt
+//   mpiexec -n 4 ./fish2 -da_grid_x 3 -da_grid_y 3 -pc_type mg -da_refine 10 -ksp_monitor -dm_view -ksp_view -log_summary &> foo.txt
 
 // ONLY 17 SECONDS BUT USES 9 GB MEMORY:
-//   mpiexec -n 4 ./c4poisson -da_grid_x 3 -da_grid_y 3 -pc_type mg -da_refine 11 -ksp_monitor
+//   mpiexec -n 4 ./fish2 -da_grid_x 3 -da_grid_y 3 -pc_type mg -da_refine 11 -ksp_monitor
 // (COMPARE: mpiexec -n 4 ./c2poisson -da_grid_x 4097 -da_grid_y 4097 -ksp_type cg
 // WHICH DOES 3329 ITERATIONS)
 
 // COMPARABLE?:
-//mpiexec -n 4 ./c4poisson -da_grid_x 4097 -da_grid_y 4097 -pc_type mg -pc_mg_levels 11 -ksp_monitor -pc_mg_type full -ksp_rtol 1.0e-12 -mg_levels_ksp_type cg
+//mpiexec -n 4 ./fish2 -da_grid_x 4097 -da_grid_y 4097 -pc_type mg -pc_mg_levels 11 -ksp_monitor -pc_mg_type full -ksp_rtol 1.0e-12 -mg_levels_ksp_type cg
 
 #include <petsc.h>
 #include "../ch3/structuredpoisson.h"

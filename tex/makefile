@@ -9,7 +9,7 @@ pdfinputs := c2poisson-conv.pdf richpolyplot.pdf
 hinputs := ../c/ch4/convenience.h
 
 # for these, see strip.sh
-cinputs := ch3structuredpoisson.c ch3poisson.c ch4readmesh.c ch4poissontools.c ch4poisson.c ch5poisson.c obstacle.c
+cinputs := structuredpoisson.c poisson.c readmesh.c poissontools.c poissonfem.c fish2.c obstacle.c
 cstrip := $(addprefix cstrip/, $(cinputs))
 
 book.pdf: book.aux

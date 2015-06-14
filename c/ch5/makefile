@@ -1,10 +1,9 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
-
-poisson: poisson.o ../ch3/structuredpoisson.o  chkopts
-	-${CLINKER} -o poisson poisson.o ../ch3/structuredpoisson.o  ${PETSC_KSP_LIB}
-	${RM} poisson.o ../ch3/structuredpoisson.o
+fish2: fish2.o ../ch3/structuredpoisson.o  chkopts
+	-${CLINKER} -o fish2 fish2.o ../ch3/structuredpoisson.o  ${PETSC_KSP_LIB}
+	${RM} fish2.o ../ch3/structuredpoisson.o
 
 
 # etc
@@ -12,5 +11,5 @@ poisson: poisson.o ../ch3/structuredpoisson.o  chkopts
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ poisson
+	@rm -f *~ fish2
 
