@@ -6,7 +6,7 @@ tikzinputs := samplepoly.1.tikz squarefour.tikz bump.1.tikz bump.poly.tikz mesh.
 
 pdfinputs := c2poisson-conv.pdf richpolyplot.pdf
 
-hinputs := ../c/ch4/convenience.h
+hinputs :=
 
 # for these, see strip.sh
 cinputs := structuredpoisson.c poisson.c readmesh.c poissontools.c poissonfem.c fish2.c obstacle.c
