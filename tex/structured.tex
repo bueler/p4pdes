@@ -35,18 +35,16 @@ The Laplacian almost always appears in mathematical models through conservation 
 
 The Poisson problem may model the electrostatic potential, the equilibrium distribution from certain random walks, or various other other physical phenomena.  For example, in the context of heat conduction in solids Fourier's law says that the heat flux is $\bq = -k \grad u$, where $k$ is the conductivity.  Conservation of heat energy says $c\rho \partial u/\partial t = - \Div\bq + f$ if $f$ describes a heat source within the domain.  The coefficient ``$c\rho$'' parameterizes the ability of the material to hold heat by a gain in temperature \citep{Ockendonetal2003}.  At steady state these facts combine to give Poisson's equation $0 = k \grad^2 u + f$ in the simple case where $k$ is constant.  Holding the temperature fixed at zero along the boundary, i.e.~\eqref{poissonsquarebcs}, completes our version of the problem.
 
-Holding the heat flux fixed along the boundary, i.e.~Neumann conditions, is just as common and often more physical.
+With Dirichlet boundary conditions \eqref{poissonsquarebcs}, the solution to the Poisson problem is unique if it exists.\sidenote{See Theorem 5 in section 2.2 in \citep{Evans} or subsection 5.2.1 of \citep{Ockendonetal2003}.}  On the other hand, holding the heat flux, i.e.~$\grad u$, fixed along the boundary, \emph{Neumann conditions}, is just as common and often more physical.  With only Neumann boundary conditions, however, the Poisson equation $-\grad^2 u = f$ is not a well-posed problem because if $u$ is a solution then $v=u+c$ is also a solution for any constant $c$.  Indeed, without any boundary conditions, there is an infinite-dimensional space of solutions to the Laplace equation $-\grad^2 w = 0$ on $\mathcal{S}$---i.e.~\emph{harmonic functions}---so the Poisson equation is far from well-posed.
 
-With homogeneous Neumann boundary conditions, the Poisson equation $-\grad^2 u = f$ is not a well-posed problem because if $u$ is a solution then $v=u+C$ is also a solution for any constant $C$.  Without any boundary conditions, there are infinitely-many solutions to the Laplace equation $-\grad^2 w = 0$ on $\mathcal{S}$ (\emph{harmonic functions}), so the Poisson equation is far from well-posed because if $u$ solves $-\grad^2 u = f$ then so does $v=u+w$.  However, with the Dirichlet boundary conditions in \eqref{poissonsquarebcs}, the solution is unique if it exists.\sidenote{See Theorem 5 in section 2.2 in \citep{Evans} or subsection 5.2.1 of \citep{Ockendonetal2003}.}
+In this Chapter we will also require that $f(x,y)$ be continuous and bounded on $\mathcal{S}$, so that we can compute its pointwise values.  With our homogeneous Dirichlet boundary conditions, and this assumption on $f$, standard theory says that $u(x,y)$ exists and is continuous on the closed square $\bar{\mathcal{S}}$ \citep[Theorem 6 in section 5.6]{Evans}.  Thus there is no ambiguity in the boundary condition ``$u=0$ on $\partial \mathcal{S}$.''  Furthermore and we can evaluate pointwise errors if we have an exact solution. 
 
-In this Chapter we will also require that $f(x,y)$ be continuous and bounded on $\mathcal{S}$, so that we can compute its pointwise values.  With our homogeneous Dirichlet boundary conditions, and this assumption on $f$, standard theory says that $u(x,y)$ exists and is continuous on the closed square $\bar{\mathcal{S}}$ \citep[Theorem 6 in section 5.6]{Evans}.\sidenote{A classical approach to showing existence starts by solving problem \eqref{poissonsquare} by Fourier series.  If $f$ is square-integrable then the coefficients $\hat f$ are square-integrable (Parseval's equality).  Because the Laplacian is elliptic and second-order, the coefficients $\hat u$ are square-integrable even when multiplied by the frequency squared.  By Cauchy-Schwarz, the Fourier series for $u$ is the limit of a sequence of continuous functions on $\overline{\mathcal{S}}$ which converge uniformly, so $u\in C^0(\overline{\mathcal{S}})$.}  Thus there is no ambiguity in the boundary condition ``$u=0$ on $\partial \mathcal{S}$'' and we can sensibly evaluate pointwise errors if we have an exact solution. 
+Because \eqref{poissonsquare} and \eqref{poissonsquarebcs} form a linear problem, finite-dimensional approximations of it are simply linear systems, as solved in the last Chapter.  The approximation in this Chapter comes from applying a \emph{finite difference} (FD) method as a way to generate the linear system.  In the next Chapter we will apply a finite element approach instead.
 
 
 \section{Building a structured grid}
 
-Because \eqref{poissonsquare} and \eqref{poissonsquarebcs} for a linear problem, finite-dimensional approximations of it are simply linear systems.  The approximation in this Chapter comes from applying a \emph{finite difference} (FD) method as a way to generate the linear system.  In Chapter \ref{chap:unstructured} we will apply a finite element approach instead.
-
-To start our FD method we put a \emph{structured grid} of $MN$ points on the unit square, as in Figure \ref{fig:unitsquaregrid}, with spacing $h_x=1/(M-1)$ and $h_y=1/(N-1)$ in the two directions.  The grid coordinates are $x_i = i\, h_x$ for $i = 0,1,\dots,M-1$ and $y_j = j\, h_y$ and $j=0,1,\dots,N-1$.  The construction of such a two-dimensional (2D) grid, and distributing it across processors, will form our first new ideas from \PETSc, beyond the basics in Chapter \ref{chap:getstarted}.
+Our FD method is based on a \emph{structured grid} of $MN$ points on the unit square, as in Figure \ref{fig:unitsquaregrid}, with spacing $h_x=1/(M-1)$ and $h_y=1/(N-1)$ in the two directions.  The grid coordinates are $x_i = i\, h_x$ for $i = 0,1,\dots,M-1$ and $y_j = j\, h_y$ for $j=0,1,\dots,N-1$.  The construction of such a 2D grid, and distributing it across processors, are our first new ideas from \PETSc beyond the basics in Chapters \ref{chap:getstarted} and \ref{chap:linearsystem}.
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
@@ -70,16 +68,9 @@ To start our FD method we put a \emph{structured grid} of $MN$ points on the uni
 \label{fig:unitsquaregrid}
 \end{marginfigure}
 
-Consider the lines of code in Figure \ref{code:dmdacreatetwod}, an extract from \texttt{c2poisson.c} later in this Chapter.  These lines create a \PETSc \pDM object for a grid like Figure \ref{fig:unitsquaregrid}.  A \pDM is an abstract type for describing the topology (connectedness) of a grid, \emph{and} the way it is distributed across \MPI processes, \emph{and} the way each process can access data from its neighboring processes.  The specific case in Figure \ref{code:dmdacreatetwod} creates a ``\pDMDA'', which is the subclass of \pDM s which are structured grids.  (``\pDM'' might stand for ``distributed mesh,'' and ``\texttt{DA}'' for ``distributed array''.)
+Consider the lines of code in Figure \ref{code:dmdacreatetwod}, an extract from \texttt{poisson.c} later in this Chapter.  These lines create a \PETSc \pDM object for a grid like Figure \ref{fig:unitsquaregrid}.  A \pDM is an abstract type for describing the topology (connectedness) and geometry of a grid, \emph{and} the way it is distributed across \MPI processes, \emph{and} the way each process can access data from its neighboring processes.  The specific case in Figure \ref{code:dmdacreatetwod} creates a ``\pDMDA'', the subclass of \pDM s which are structured grids.  (Note ``\pDM'' might stand for ``distributed mesh,'' and ``\texttt{DA}'' for ``distributed array''.)
 
-\cinputraw{dmdacreate2d.frag}{extract from c2poisson.c}{An example of creating a 2D \pDMDA.  See Figures \ref{code:ctwopoissoncreate} and \ref{code:ctwopoissonsolve} for the rest of this code.}{}{//START}{//STOP}{code:dmdacreatetwod}
-
-If we do
-\begin{cline}
-$ make c2poisson
-$ ./c2poisson -da_grid_x 5 -da_grid_y 7
-\end{cline}
-then the structured grid shown in Figure \ref{fig:unitsquaregrid} is created.  In this case all points of the grid are ``owned'' by the single process invoked when we ran \texttt{c2poisson} (i.e.~without \MPI).
+\cinputraw{dmdacreate2d.frag}{extract from c/ch3/poisson.c}{An example of creating a 2D \pDMDA.  See Figures \ref{code:ctwopoissoncreate} and \ref{code:ctwopoissonsolve} for the rest of this code.}{}{//START}{//STOP}{code:dmdacreatetwod}
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
@@ -121,17 +112,24 @@ then the structured grid shown in Figure \ref{fig:unitsquaregrid} is created.  I
 \label{fig:unitsquaregridparallel}
 \end{marginfigure}
 
-However, if we run with multiple \MPI processes by
+If we do
 \begin{cline}
-$ mpiexec -n N ./c2poisson -da_grid_x Mx -da_grid_y My
+$ cd c/ch3/
+$ make poisson
+$ ./poisson -da_grid_x 5 -da_grid_y 7
 \end{cline}
 %$
-then \PETSc does the best it can to balance the load of \texttt{Mx}$\cdot$\texttt{My} grid points among \texttt{N} processes, with the restriction that each \MPI process owns a rectangular subgrid.  For example, if we do
+then the structured grid shown in Figure \ref{fig:unitsquaregrid} is created.  In this case all points of the grid are ``owned'' by a single MPI process.  However, if we run with multiple \MPI processes by
 \begin{cline}
-$ mpiexec -n 4 ./c2poisson -da_grid_x 5 -da_grid_y 7
+$ mpiexec -n K ./poisson -da_grid_x M -da_grid_y N
 \end{cline}
 %$
-then the distributed structured grid shown in Figure \ref{fig:unitsquaregridparallel} will be created.  Neither \texttt{Mx}$=5$ nor \texttt{My}$=7$ is divisible by two, but \PETSc distributes the four ranks across the \texttt{Mx}$\cdot$\texttt{My}$=35$ nodes (grid points) relatively uniformly: the rank $0$ process owns 12 grid points and the rank $3$ process owns 6, while the other ranks are in between.  In this case the load is only balanced to within a factor of two, but larger grids can be better load-balanced.
+then \PETSc does the best it can to balance the load of \texttt{MN} grid points among \texttt{K} processes, with the restriction that each \MPI process owns a rectangular subgrid.  For example,
+\begin{cline}
+$ mpiexec -n 4 ./poisson -da_grid_x 5 -da_grid_y 7
+\end{cline}
+%$
+distributes the grid as shown in Figure \ref{fig:unitsquaregridparallel} will be created.  Neither \texttt{M}$=5$ nor \texttt{N}$=7$ is divisible by two, but \PETSc distributes the four ranks across the \texttt{MN}$=35$ nodes (grid points) relatively uniformly: the rank $0$ process owns 12 grid points and rank $3$ owns 6, while the other ranks are in between.  In this case the load is only balanced to within a factor of two, but larger grids can be better load-balanced.
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
@@ -165,12 +163,12 @@ then the distributed structured grid shown in Figure \ref{fig:unitsquaregridpara
 \label{fig:unitsquaregridprime}
 \end{marginfigure}
 
-The observant reader has already noted that if the total number of processes \texttt{N}, in ``\texttt{mpiexec -n N},'' is prime then we get not-at-all-square processor domains.  For instance, the ``bad'' result from running
+The observant reader has already noted that if the total number of processes \texttt{K}, in ``\texttt{mpiexec -n K},'' is prime then we get not-at-all-square processor domains.  For instance, the ``bad'' result from running
 \begin{cline}
-$ mpiexec -n 5 ./c2poisson -da_grid_x 5 -da_grid_y 7
+$ mpiexec -n 5 ./poisson -da_grid_x 5 -da_grid_y 7
 \end{cline}
 %$
-is shown in Figure \ref{fig:unitsquaregridprime}.  Each process' portion of the grid has large perimeter-to-area ratio so that communication between processes will be large compared to the computation on each process.
+is shown in Figure \ref{fig:unitsquaregridprime}.  Each process' portion of the grid has large perimeter-to-area ratio.  Thus communication between processes will be large compared to the computation on each process.
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
@@ -209,12 +207,10 @@ is shown in Figure \ref{fig:unitsquaregridprime}.  Each process' portion of the 
 
 Though these defaults can be overridden by runtime options \texttt{-da\_grid\_x} and \texttt{-da\_grid\_y}, the fifth and sixth arguments ``\texttt{-10}'' of \texttt{DMDACreate2d()} in Figure \ref{code:dmdacreatetwod} are used to set default dimensions $M=10$ and $N=10$.  Thus
 \begin{cline}
-$ mpiexec -n 4 ./c2poisson
+$ mpiexec -n 4 ./poisson
 \end{cline}
 %$
 distributes a $10\times 10$ grid among four processes as in Figure \ref{fig:unitsquaregrideight}, with each rank owning a square subgrid of 25 nodes.
-
-\PETSc itself can show the parallel layout by option \texttt{-dm\_view}.  The alternative form \texttt{-dm\_view draw -draw\_pause 2}, or similar, shows the grid graphically using X windows.
 
 To explain the other options to \texttt{DMDACreate2d()} we quote the \PETSc manual pages description:
 
@@ -301,7 +297,7 @@ where $A$ is a $K\times K$ matrix and $\bu,\bb$ are $K\times 1$ column vectors.
 \label{fig:unitsquaregridstencil}
 \end{marginfigure}
 
-However, to show linear system \eqref{poissonlinearsystem} in traditional form we must globally-order the unknowns.  Such an ordering is implemented inside a \PETSc \pDMDA, but it is hidden so it can often be ignored.  While our code (\texttt{c2poisson.c} below) will only use the grid-wise coordinates $(i,j)$, we must be explicit about the ordering here for the purpose of displaying the system in matrix-vector form.  The ability to assemble \pMats and \pVecs with $(i,j)$-type indexing is one reason structured-grid codes using \pDMDA can be quite short.
+However, to show linear system \eqref{poissonlinearsystem} in traditional form we must globally-order the unknowns.  Such an ordering is implemented inside a \PETSc \pDMDA, but it is hidden so it can often be ignored.  While our code (\texttt{poisson.c} below) will only use the grid-wise coordinates $(i,j)$, we must be explicit about the ordering here for the purpose of displaying the system in matrix-vector form.  The ability to assemble \pMats and \pVecs with $(i,j)$-type indexing is one reason structured-grid codes using \pDMDA can be quite short.
 
 The ordering used in a one-process (serial) run by a 2D \pDMDA is shown in Figure \ref{fig:unitsquaregridordering}.  On an $M$ by $N$ grid one could write it as
 \begin{equation}
@@ -576,13 +572,13 @@ The computations in Figure \ref{code:poissonexactrhs} use only local grid coordi
 \newpage
 \section{Solving the PDE}
 
-The code \texttt{c2poisson.c} uses our finite difference method \eqref{poissonsquareFD} to solve the Poisson problem with $f$ from \eqref{manufacturedf}.  Figure \ref{code:ctwopoissoncreate} shows how \texttt{c2poisson.c} creates the various parallel objects needed to solve the Poisson problem, namely one \pDM, one \pMat, and three \pVecs.  A \pDM object can compute matrix and vector sizes from the grid dimensions, so we call \texttt{DMCreateMatrix()} and \texttt{DMCreateGlobalVector()} to create \pMat and \pVec objects, respectively.  Then we call methods from \texttt{structuredpoisson.c}, as above, to assemble the matrix and vectors.
+The code \texttt{poisson.c} uses our finite difference method \eqref{poissonsquareFD} to solve the Poisson problem with $f$ from \eqref{manufacturedf}.  Figure \ref{code:ctwopoissoncreate} shows how \texttt{poisson.c} creates the various parallel objects needed to solve the Poisson problem, namely one \pDM, one \pMat, and three \pVecs.  A \pDM object can compute matrix and vector sizes from the grid dimensions, so we call \texttt{DMCreateMatrix()} and \texttt{DMCreateGlobalVector()} to create \pMat and \pVec objects, respectively.  Then we call methods from \texttt{structuredpoisson.c}, as above, to assemble the matrix and vectors.
 
 \cinputpart{poisson.c}{Set up \pDM, \pMat, and \pVec objects, and assemble the linear system.}{I}{//CREATE}{//ENDCREATE}{code:ctwopoissoncreate}
 
 \vfill
 \newpage
-\PETSc describes the linear system ``$A\bu=\bb$'' by one \pMat \texttt{A} and two \pVecs (\texttt{u} and \texttt{b}), but, as in Chapter \ref{chap:getstarted}, the method for solving the linear system is a Krylov space method solver object of type \pKSP.  The part of \texttt{c2poisson.c} that creates and uses this object is in Figure \ref{code:ctwopoissonsolve}.  After calling \texttt{KSPSolve()} we compute the numerical error with \texttt{VecAXPY()} and \texttt{VecNorm()}, this time computing the error $\|u-u_{ex}\|_\infty$.  Finally we print the error and clean up.
+\PETSc describes the linear system ``$A\bu=\bb$'' by one \pMat \texttt{A} and two \pVecs (\texttt{u} and \texttt{b}), but, as in Chapter \ref{chap:getstarted}, the method for solving the linear system is a Krylov space method solver object of type \pKSP.  The part of \texttt{poisson.c} that creates and uses this object is in Figure \ref{code:ctwopoissonsolve}.  After calling \texttt{KSPSolve()} we compute the numerical error with \texttt{VecAXPY()} and \texttt{VecNorm()}, this time computing the error $\|u-u_{ex}\|_\infty$.  Finally we print the error and clean up.
 
 \cinputpart{poisson.c}{Solve using \pKSP, and report on solution.}{II}{//SOLVE}{//ENDSOLVE}{code:ctwopoissonsolve}
 
@@ -593,8 +589,8 @@ To finish showing the code, in Figure \ref{code:ctwopoissonsolve} we create the 
 
 As a first run do:
 \begin{cline}
-$ make c2poisson
-$ ./c2poisson
+$ make poisson
+$ ./poisson
 \end{cline}
 to get output
 \begin{cline}
@@ -628,29 +624,29 @@ At this point we want to know:\begin{itemize}
 \item how to get high performance? (\emph{efficiency})
 \item how to see inside \PETSc so we know what is going on? (\emph{exposure})
 \end{itemize}
-In \PETSc these choices of solver and parameters are controllable and exposable at runtime, once we have adequately-described the problem to \PETSc.  We can both put-off questions of convergence, scaling, and exposure until runtime, and we can make control choices empirically, i.e.~based on actual performance.  Runtime control is a topic that we will return to frequently, starting now with measuring convergence of \texttt{c2poisson.c}.
+In \PETSc these choices of solver and parameters are controllable and exposable at runtime, once we have adequately-described the problem to \PETSc.  We can both put-off questions of convergence, scaling, and exposure until runtime, and we can make control choices empirically, i.e.~based on actual performance.  Runtime control is a topic that we will return to frequently, starting now with measuring convergence of \texttt{poisson.c}.
 
 
 \section{Convergence}
 
 By ``showing convergence'' we mean that we demonstrate that errors made by our numerical solver decrease in the expected way, as we refine the grid so that the finite differences are better approximations of the corresponding derivatives.  Furthermore we want to show that the rate at which the error decreases matches what we expect in theory.
 
-There are two ways to specify a finer grid in a code like \texttt{c2poisson.c}, both of which address the \pDM object through options.  One is to specify the grid directly:
+There are two ways to specify a finer grid in a code like \texttt{poisson.c}, both of which address the \pDM object through options.  One is to specify the grid directly:
 \begin{cline}
-$ ./c2poisson -da_grid_x 100 -da_grid_y 100
+$ ./poisson -da_grid_x 100 -da_grid_y 100
 on 100 x 100 grid:  error |u-uexact|_inf = 5.76054e-06
 \end{cline}
 %$
 The other is to instruct the \pDM to refine the grid by factors of two.  More precisely, the number of \emph{subintervals} is increased by a factor of two.  For example, this call replaces our default grid of 9 by 9 subintervals (i.e.~10 by 10 grid \emph{points}) by 18 subintervals in each direction (i.e.~19 grid points):
 \begin{cline}
-$ ./c2poisson -da_refine 1
+$ ./poisson -da_refine 1
 on 19 x 19 grid:  error |u-uexact|_inf = 0.000155374
 \end{cline}
 %$
 
 We check convergence by generating error data.  Here is a loop using the Bash shell:
 \begin{cline}
-$ for K in 0 1 2 3 4 5 6; do ./c2poisson -da_refine $K; done
+$ for K in 0 1 2 3 4 5 6; do ./poisson -da_refine $K; done
 on 10 x 10 grid:  error |u-uexact|_inf = 0.000621778
 on 19 x 19 grid:  error |u-uexact|_inf = 0.000155374
 on 37 x 37 grid:  error |u-uexact|_inf = 3.87982e-05
@@ -660,18 +656,18 @@ on 289 x 289 grid:  error |u-uexact|_inf = 1.60786e-06
 on 577 x 577 grid:  error |u-uexact|_inf = 1.22251e-06
 \end{cline}
 %$
-The data is shown in Figure \ref{fig:c2poisson-conv} as the squares.  For the coarser grids (e.g.~$N+1=10,19,37,73$ grid points), a refinement by a factor of two gives a reduction in error by a factor of about four, as expected because our FD method is $O(h^2)$ \citep{MortonMayers}.  Unfortunately the error seems to have stopped falling for the finer grids ($N+1=145,289,577$), at a level around $\|u-u_{ex}\|_\infty \approx 10^{-6}$.
+The data is shown in Figure \ref{fig:poisson-conv} as the squares.  For the coarser grids (e.g.~$N+1=10,19,37,73$ grid points), a refinement by a factor of two gives a reduction in error by a factor of about four, as expected because our FD method is $O(h^2)$ \citep{MortonMayers}.  Unfortunately the error seems to have stopped falling for the finer grids ($N+1=145,289,577$), at a level around $\|u-u_{ex}\|_\infty \approx 10^{-6}$.
 
 \begin{figure}
 \bigskip
 \includegraphics[width=0.9\textwidth]{c2poisson-conv}
 \caption{To show convergence we refine the \pDM grid by factors of two.  With the default \pKSP relative tolerance the error seems to level out (squares).  With a stronger tolerance for solving the linear system (\texttt{-ksp\_rtol 1.0e-12}) the errors continue to fall (circles) at the expected rate (dotted line).}
-\label{fig:c2poisson-conv}
+\label{fig:poisson-conv}
 \end{figure}
 
 Is the reduce apparent rate of convergence a sign of an implementation error.  In fact not, because simply asking for the \pKSP object to solve the linear system better is effective.  On a particular grid we can see the difference using option \texttt{-ksp\_monitor} to watch the residuals and setting a stronger value for the \pKSP relative tolerance for residual norm size (\texttt{-ksp\_rtol}):
 \begin{cline}
-$ ./c2poisson -ksp_monitor
+$ ./poisson -ksp_monitor
   0 KSP Residual norm 1.007660904704e-01 
   1 KSP Residual norm 2.917206076870e-02 
   2 KSP Residual norm 1.153582666339e-02 
@@ -679,7 +675,7 @@ $ ./c2poisson -ksp_monitor
   6 KSP Residual norm 6.995040432502e-06 
   7 KSP Residual norm 8.593881990968e-07 
 on 10 x 10 grid:  error |u-uexact|_inf = 0.000621778
-$ ./c2poisson -ksp_monitor -ksp_rtol 1.0e-12
+$ ./poisson -ksp_monitor -ksp_rtol 1.0e-12
   0 KSP Residual norm 1.007660904704e-01 
   1 KSP Residual norm 2.917206076870e-02 
   2 KSP Residual norm 1.153582666339e-02 
@@ -692,7 +688,7 @@ On this coarse grid the numerical error is nearly the same, but on finer grids t
 
 In fact, rerunning the Bash loop with the stronger tolerance yields excellent evidence of convergence at the expected rate:
 \begin{cline}
-$ for K in 0 1 2 3 4 5 6; do ./c2poisson -da_refine $K -ksp_rtol 1.0e-12; done
+$ for K in 0 1 2 3 4 5 6; do ./poisson -da_refine $K -ksp_rtol 1.0e-12; done
 on 10 x 10 grid:  error |u-uexact|_inf = 0.000621527
 on 19 x 19 grid:  error |u-uexact|_inf = 0.000155312
 on 37 x 37 grid:  error |u-uexact|_inf = 3.8823e-05
@@ -702,19 +698,19 @@ on 289 x 289 grid:  error |u-uexact|_inf = 6.07041e-07
 on 577 x 577 grid:  error |u-uexact|_inf = 1.51761e-07
 \end{cline}
 %$
-This is plotted as the circles in Figure \ref{fig:c2poisson-conv}.  The linear-fit rate of this logarithmic error data is $O(h^{1.9999})$.  Our implementation is correct in this sense.
+This is plotted as the circles in Figure \ref{fig:poisson-conv}.  The linear-fit rate of this logarithmic error data is $O(h^{1.9999})$.  Our implementation is correct in this sense.
 
 
 \section{Efficiency, and exposing \PETSc's solvers}
 
 On the other hand, the finer grid calculations above are slow.  How about if we re-run in parallel?  On a typical four-core laptop\sidenote{Circa 2013 manufacture, with an Intel i7 processor at 2.7GHz.} we get:
 \begin{cline}
-$ time ./c2poisson -da_refine 5 -ksp_rtol 1.0e-12
+$ time ./poisson -da_refine 5 -ksp_rtol 1.0e-12
 on 289 x 289 grid:  error |u-uexact|_inf = 6.07041e-07
 real 31.53
 user 31.40
 sys 0.09
-$ time mpiexec -n 4 ./c2poisson -da_refine 5 -ksp_rtol 1.0e-12
+$ time mpiexec -n 4 ./poisson -da_refine 5 -ksp_rtol 1.0e-12
 on 289 x 289 grid:  error |u-uexact|_inf = 6.07041e-07
 real 12.63
 user 45.41
@@ -734,25 +730,25 @@ While we will focus on performance and scaling in Chapter \ref{chap:scaling}, we
 
 Regarding i), even knowing what are possible runtime options is nontrivial in \PETSc because there are so many options.  But the answer is simple: pipe the output from option \texttt{-help} into a pager like \texttt{more} or \texttt{less}, like this
 \begin{cline}
-$ ./c2poisson -help | less
+$ ./poisson -help | less
 \end{cline}
 %$
-This gives a view of the options available \emph{for} \texttt{c2poisson}, so that, for instance, the many options for nonlinear solvers are \emph{not} included in \texttt{-help} output because we have not used \pSNES; we'll use such tools in Chapter \ref{chap:nonlinear}.  This \texttt{-help} output also gives default values for parameters; for example we see that the default for \texttt{-ksp\_rtol} is \texttt{1e-05}, which explains why convergence ``leveled out'' on fine grids.
+This gives a view of the options available \emph{for} \texttt{poisson}, so that, for instance, the many options for nonlinear solvers are \emph{not} included in \texttt{-help} output because we have not used \pSNES; we'll use such tools in Chapter \ref{chap:nonlinear}.  This \texttt{-help} output also gives default values for parameters; for example we see that the default for \texttt{-ksp\_rtol} is \texttt{1e-05}, which explains why convergence ``leveled out'' on fine grids.
 
-Alternatively, one might want to know what are options for controlling particular objects inside \texttt{c2poisson}.  For example, this command shows runtime options which control the \pKSP object:
+Alternatively, one might want to know what are options for controlling particular objects inside \texttt{poisson}.  For example, this command shows runtime options which control the \pKSP object:
 \begin{cline}
-$ ./c2poisson -help | grep ksp_
+$ ./poisson -help | grep ksp_
 \end{cline}
 %$
 If the list is too long, pipe it into the pager:
 \begin{cline}
-$ ./c2poisson -help | grep ksp_ | less
+$ ./poisson -help | grep ksp_ | less
 \end{cline}
 %$
 
-Regarding ii), recall that we used \texttt{-dm\_view} to show properties of the \pDM object in \texttt{c2poisson}.  We should do the same for the \pKSP object:
+Regarding ii), recall that we used \texttt{-dm\_view} to show properties of the \pDM object in \texttt{poisson}.  We should do the same for the \pKSP object:
 \begin{cline}
-$ ./c2poisson -ksp_view
+$ ./poisson -ksp_view
 KSP Object: 1 MPI processes
   type: gmres
     GMRES: restart=30, using Classical (unmodified) Gram-Schmidt Orthogonaliz...
@@ -779,13 +775,13 @@ We have suppressed some of the output, but this shows the default FIXME
 
 FIXME but wait, $A$ was symmetric; show
 \begin{cline}
-$ ./c2poisson -ksp_type cg
+$ ./poisson -ksp_type cg
 \end{cline}
 %$
 
 FIXME:  In parallel
 \begin{cline}
-$ mpiexec -n 4 ./c2poisson -ksp_view
+$ mpiexec -n 4 ./poisson -ksp_view
 ...
 \end{cline}
 %$
@@ -805,5 +801,5 @@ FIXME: use TS for backward-euler
 
 \renewcommand{\labelenumi}{\arabic{chapter}.\arabic{enumi}\quad}
 \begin{enumerate}
-\item FIXME modify \texttt{c2poisson.c} to do non-homogeneous Dirichlet
+\item FIXME modify \texttt{poisson.c} to do non-homogeneous Dirichlet
 \end{enumerate}
