@@ -40,9 +40,9 @@ Figure \ref{code:multigridone} show most of the code \texttt{c4poisson.c}.  Note
 \end{code}
 That is, we create \texttt{ksp} as in \texttt{c2poisson.c}, but this time we explicitly associate it to the \texttt{DM} object and then we hand it two methods \texttt{ComputeRHS()} and \texttt{ComputeA()} which it can call (i.e.~call back) when it needs the right-hand-side and the matrix of the system to be assembled.
 
-\cinputpart{fish2.c}{Poisson problem on a structured grid again, but this time using \texttt{KSPSetComputeOperators()} so that multigrid is possible.}{I}{//MAIN}{//ENDMAIN}{code:multigridone}
+\cinputpart{fish2.c}{c/ch5/}{Poisson problem on a structured grid again, but this time using \texttt{KSPSetComputeOperators()} so that multigrid is possible.}{I}{//MAIN}{//ENDMAIN}{code:multigridone}
 
 The code \texttt{c4poisson.c} is quite short because the two methods \texttt{ComputeRHS()} and \texttt{ComputeA()} are quite trivial ``wrappers'' around methods \texttt{formRHS()} and \texttt{formdirichletlaplacian()} from source file \texttt{structuredpoisson.c} in Chapter \ref{chap:structured}.  See Figure \ref{code:multigridtwo}.
 
-\cinputpart{fish2.c}{These methods build the right-hand side and the matrix, for call-back by \texttt{KSPSetComputeRHS()} and \texttt{KSPSetComputeOperators()}, respectively, but they are just wrappers around code reused from Chapter \ref{chap:structured}.}{II}{//COMPUTES}{//ENDCOMPUTES}{code:multigridtwo}
+\cinputpart{fish2.c}{c/ch5/}{These methods build the right-hand side and the matrix, for call-back by \texttt{KSPSetComputeRHS()} and \texttt{KSPSetComputeOperators()}, respectively, but they are just wrappers around code reused from Chapter \ref{chap:structured}.}{II}{//COMPUTES}{//ENDCOMPUTES}{code:multigridtwo}
 

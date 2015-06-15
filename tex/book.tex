@@ -104,7 +104,7 @@
 
 \newcommand{\inputwhole}[4]{\inputfromline{#1}{#2}{#3}{1}{#4}}
 
-%\cinputraw{FULLPATH}{FILENAME}{CAPTION}{PARTSTRING}{STARTSTRING}{STOPSTRING}{LABEL}
+%\cinputraw{FULLPATH}{FILENAMESHOWN}{CAPTION}{PARTSTRING}{STARTSTRING}{STOPSTRING}{LABEL}
 \newcommand{\cinputraw}[7]{
 \newcommand*\FancyVerbStartString{#5}
 \newcommand*\FancyVerbStopString{#6}
@@ -128,14 +128,12 @@
 \let\FancyVerbStopString\relax
 }
 
-\newcommand{\cinput}[5]{%
-    \cinputraw{cstrip/#1}{#1}{#2}{}{#3}{#4}{#5}}
+\newcommand{\cinputpart}[7]{%
+    \cinputraw{cstrip/#1}{#2#1}{#3}{\quad \textbf{part #4}}{#5}{#6}{#7}}
 
-\newcommand{\cinputpart}[6]{%
-    \cinputraw{cstrip/#1}{#1}{#2}{\quad \textbf{part #3}}{#4}{#5}{#6}}
+\newcommand{\cinputpartnostrip}[7]{%
+    \cinputraw{../#2#1}{#2#1}{#3}{\quad \textbf{part #4}}{#5}{#6}{#7}}
 
-\newcommand{\cinputpartnostrip}[6]{%
-    \cinputraw{../c/#1}{c/#1}{#2}{\quad \textbf{part #3}}{#4}{#5}{#6}}
 
 \newcommand{\caveat}[1]{\marginnote{\textsc{Where we stand:}\\  #1}}
 
