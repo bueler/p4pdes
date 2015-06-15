@@ -235,7 +235,7 @@ where
 \end{itemize}
 \normalsize
 
-In Figure \ref{code:dmdacreatetwod}, the second and third arguments are \texttt{DM\_BOUNDARY\_NONE} because our Dirichlet boundary conditions do not need communication to the next process' domain, nor periodic wrapping.  In the fourth argument we use \texttt{DMDA\_STENCIL\_STAR} because only cardinal neighbors of a grid point are used when forming the matrix; we picture the ``stencil'' below.  The two \texttt{PETSC\_DECIDE} arguments which follow tell \PETSc to distribute the grid over \MPI processes according to the size of (number of processes in) the \MPI communicator, and using \PETSc internal logic as illustrated above.  The next two arguments, in the ninth and tenth positions, say that our PDE is scalar (\texttt{dof}$=1$) and that the FD method only needs one neighbor in each \texttt{STENCIL\_STAR} direction (\texttt{s}$=1$).  The next two arguments after that are \texttt{NULL} because we are \emph{not} telling \PETSc any details about how to distribute processes over the grid; it \texttt{DECIDE}s for itself.  Finally, the \pDMDA object is created as an output (i.e.~pass-by-reference).
+In Figure \ref{code:dmdacreatetwod}, the second and third arguments are \texttt{DM\_BOUNDARY\_NONE} because our Dirichlet boundary conditions do not need communication to the next process' domain, nor periodic wrapping.  In the fourth argument we use \texttt{DMDA\_STENCIL\_STAR} because only cardinal neighbors of a grid point are used when forming the matrix.\sidenote{Figure \ref{fig:unitsquaregridstencil} shows the ``stencil'' of our FD method.}  The two \texttt{PETSC\_DECIDE} arguments which follow tell \PETSc to distribute the grid over processes according to the size of (number of processes in) the \MPI communicator, and using \PETSc internal logic as illustrated above.  The next two arguments, in the ninth and tenth positions, say that our PDE is scalar (\texttt{dof}$=1$) and that the FD method only needs one neighbor in each direction (\texttt{s}$=1$).  The next two arguments after that are \texttt{NULL} because we are \emph{not} telling \PETSc any details about how to distribute processes over the grid; it \texttt{DECIDE}s for itself.  Finally, the \pDMDA object is created as an output (i.e.~pass-by-reference).
 
 The call to \texttt{DMDASetUniformCoordinates()} in Figure \ref{code:dmdacreatetwod} sets the domain to be $[0,1]\times[0,1]$ in the sense that the \pDM object knows the spacing and locations of the grid points.  The last two arguments are ignored in this case; they would set limits on the third dimension if \texttt{da} were created with \texttt{DMDACreate3d()}.
 
@@ -246,36 +246,28 @@ The call to \texttt{DMDASetUniformCoordinates()} in Figure \ref{code:dmdacreatet
 \label{fig:petscghostvalues}
 \end{figure}
 
-The standard \PETSc view of what \pDM s ``look like'' is in Figure \ref{fig:petscghostvalues}.  The code in Figure \ref{code:dmdacreatetwod} generates something like the left figure, namely a structured-grid \pDM, though the one shown in Figure \ref{fig:petscghostvalues} has \texttt{DMDA\_STENCIL\_BOX} stencil type, unlike ours.  On the right is an unstructured grid, of the type created in Chapter \ref{chap:unstructured} for the finite element method.  In both cases the Figure shows the nodes owned by a given process (red ``local'' nodes) and those other nodes that are accessible by the local process (blue ``ghost'' nodes).  We will see such local/ghost node types in all examples in this book.  We will return to them again in future examples.
+The standard \PETSc view of what \pDM s ``look like'' is in Figure \ref{fig:petscghostvalues}.  The code in Figure \ref{code:dmdacreatetwod} generates something like the left figure, namely a structured-grid \pDM, except that the one shown in Figure \ref{fig:petscghostvalues} has \texttt{DMDA\_STENCIL\_BOX} stencil type, unlike ours.  On the right is an unstructured grid, of the type created in Chapter \ref{chap:unstructured} for the finite element method.  In both cases the Figure shows the nodes owned by a given process (red ``local'' nodes) and those other nodes that are accessible by the local process (blue ``ghost'' nodes).
 
 
 \section{Finite difference method}
 
-Recall we were trying to approximate PDE problem \eqref{poissonsquare} and \eqref{poissonsquarebcs}, not just build a grid!  The following finite difference method will allow us to take the next \PETSc step, which is to create and assemble \pVecs and a \pMat for the linear system corresponding to the PDE.
+Recall we were trying to approximate PDE problem \eqref{poissonsquare} and \eqref{poissonsquarebcs}, not just build a grid.  The following FD method leads to the next step, creating and assembling a \pMat, and some \pVecs, for the linear system corresponding to the PDE.
 
-By a well-known Taylor's theorem argument \citep{MortonMayers}, for any function $F(x)$ which is sufficiently smooth we have
+By a well-known Taylor's theorem argument \citep{MortonMayers}, if $F(x)$ is sufficiently smooth then
 \begin{equation}
    F''(x) = \frac{F(x+h) - 2 F(x) + F(x-h)}{h^2} + O(h^2)  \label{secondderivativeFD}
 \end{equation}
-as $h$ goes to zero.  This formula, applied to partial derivatives, will approximate the Laplacian in equation \eqref{poissonsquare}.
-
-Let $U_{i,j}$ be the gridded approximation to the value $u(x_i,y_j)$ of the exact solution $u(x,y)$ at a grid point,\sidenote{This is an important sentence!  We compute values $U_{i,j}$ from the finite difference equations.  We generally \emph{don't know} the values $u(x_i,y_j)$.  We do, however, want the former to be close to the latter.} and also denote $f_{i,j} = f(x_i,y_j)$.  From \eqref{secondderivativeFD} we have this FD approximation to equation \eqref{poissonsquare}:
+as $h$ goes to zero.  This formula, applied to partial derivatives, will approximate the Laplacian in equation \eqref{poissonsquare}.  In fact, if $U_{i,j}$ is the gridded approximation to the value $u(x_i,y_j)$ of the exact solution $u(x,y)$ at a grid point,\sidenote{This is an important phrase!  We compute values $U_{i,j}$ from the finite difference equations.  We generally \emph{do not know} the values $u(x_i,y_j)$.  We want the former to be close to the latter.} and if $f_{i,j} = f(x_i,y_j)$ then from \eqref{secondderivativeFD} we have this FD approximation to equation \eqref{poissonsquare}:
 \begin{equation}
 - \frac{U_{i+1,j} - 2 U_{i,j} + U_{i-1,j}}{h_x^2} - \frac{U_{i,j+1} - 2 U_{i,j} + U_{i,j-1}}{h_y^2} = f_{i,j}. \label{poissonsquareFDearly}
 \end{equation}
-Equation \eqref{poissonsquareFDearly} applies at all of the interior points where $1 \le i \le M-2$ and $1 \le j \le N-2$.  The boundary conditions \eqref{poissonsquarebcs} become
+Equation \eqref{poissonsquareFDearly} applies at all interior points where $1 \le i \le M-2$ and $1 \le j \le N-2$.  The boundary conditions \eqref{poissonsquarebcs} become
 \begin{equation}
 U_{0,j} = 0, \quad U_{M-1,j} = 0, \quad U_{i,0} = 0, \quad U_{i,N-1} = 0, \label{poissonsquareFDbcs}
 \end{equation}
 for all $i,j$.
 
-At grid location $(x_i,y_j)$, equation \eqref{poissonsquareFDearly} relates the unknown $U_{i,j}$ to its four cardinal neighbors $U_{i+1,j}$, $U_{i-1,j}$, $U_{i,j+1}$, and $U_{i,j-1}$.  This pattern is a \emph{stencil}, in particular a ``star'' stencil, as shown in Figure \ref{fig:unitsquaregridstencil}.  (A ``box'' stencil would additionally involve the four diagonal neighbors.  In 2D, a star stencil relates five unknowns, while a box stencil relates nine unknowns.)
-
-We will treat all values $U_{i,j}$ on the grid, whether on the boundary or in the interior, as unknowns, so we have $K=MN$ unknowns.  Equations \eqref{poissonsquareFDearly} and \eqref{poissonsquareFDbcs} form a linear system of $K$ equations,
-\begin{equation}
-A \bu = \bb, \label{poissonlinearsystem}
-\end{equation}
-where $A$ is a $K\times K$ matrix and $\bu,\bb$ are $K\times 1$ column vectors.
+At grid location $(x_i,y_j)$, equation \eqref{poissonsquareFDearly} relates the unknown $U_{i,j}$ to its four cardinal neighbors $U_{i+1,j}$, $U_{i-1,j}$, $U_{i,j+1}$, and $U_{i,j-1}$.  This pattern is a \emph{stencil}, in particular a ``star'' stencil, as shown in Figure \ref{fig:unitsquaregridstencil}.  By contrast, a ``box'' stencil would additionally involve the four diagonal neighbors.  In 2D, a star stencil relates five unknowns, while a box stencil relates nine unknowns.
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
@@ -297,13 +289,19 @@ where $A$ is a $K\times K$ matrix and $\bu,\bb$ are $K\times 1$ column vectors.
 \label{fig:unitsquaregridstencil}
 \end{marginfigure}
 
-However, to show linear system \eqref{poissonlinearsystem} in traditional form we must globally-order the unknowns.  Such an ordering is implemented inside a \PETSc \pDMDA, but it is hidden so it can often be ignored.  While our code (\texttt{poisson.c} below) will only use the grid-wise coordinates $(i,j)$, we must be explicit about the ordering here for the purpose of displaying the system in matrix-vector form.  The ability to assemble \pMats and \pVecs with $(i,j)$-type indexing is one reason structured-grid codes using \pDMDA can be quite short.
+We will treat all values $U_{i,j}$ as unknowns, whether on the boundary or in the interior, so we have $L=MN$ unknowns.  Equations \eqref{poissonsquareFDearly} and \eqref{poissonsquareFDbcs} form a linear system of $L$ equations,
+\begin{equation}
+A \bu = \bb, \label{poissonlinearsystem}
+\end{equation}
+where $A$ is a $L\times L$ matrix and $\bu,\bb$ are $L\times 1$ column vectors.
+
+However, to show entries of $A$ and $\bb$ in linear system \eqref{poissonlinearsystem} we must globally-order the unknowns.  Such an ordering is implemented inside a \PETSc \pDMDA, and indeed our code (\texttt{poisson.c} below) will use only the grid-wise coordinates $(i,j)$.\sidenote{The ability to assemble \pMats and \pVecs with $(i,j)$-type indexing is one reason structured-grid codes using \pDMDA can be quite short.}  Here we expose the ordering only for the purpose of displaying the system in matrix-vector form.
 
 The ordering used in a one-process (serial) run by a 2D \pDMDA is shown in Figure \ref{fig:unitsquaregridordering}.  On an $M$ by $N$ grid one could write it as
 \begin{equation}
     U_k = U_{i,j} \quad \text{ where } \quad k = j\,M + i \label{orderingfd}
 \end{equation}
-for $i=0,1,\dots,M-1$ and $j=0,1,\dots,N-1$, so $k=0,1,\dots,MN-1$.  In fact we let \PETSc do such index transformations inside the \pDMDA implementation.
+for $i=0,1,\dots,M-1$ and $j=0,1,\dots,N-1$, so $k=0,1,\dots,MN-1$.  Of course we let \PETSc do such index transformations inside the \pDMDA implementation.
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
@@ -312,25 +310,25 @@ for $i=0,1,\dots,M-1$ and $j=0,1,\dots,N-1$, so $k=0,1,\dots,MN-1$.  In fact we 
   \draw[line width=1.0pt] (0.0,0.0) -- (0.0,1.0) -- (1.0,1.0) -- (1.0,0.0) -- cycle;
   \pgfmathsetmacro\third{1.0/3.0}
   \pgfmathsetmacro\half{1.0/2.0}
-  \node at (0.0,-0.1) {$0$};
-  \node at (\third,-0.1) {$1$};
+  \node[gray] at (0.0,-0.1) {$0$};
+  \node[gray] at (\third,-0.1) {$1$};
   \node at (\half,-0.2) {$i$};
-  \node at (2*\third,-0.1) {$2$};
-  \node at (1.0,-0.1) {$3$};
-  \node at (-0.1,0.0) {$0$};
-  \node at (-0.1,0.5) {$1$};
+  \node[gray] at (2*\third,-0.1) {$2$};
+  \node[gray] at (1.0,-0.1) {$3$};
+  \node[gray] at (-0.1,0.0) {$0$};
+  \node[gray] at (-0.1,0.5) {$1$};
   \node at (-0.25,0.5) {$j$};
-  \node at (-0.1,1.0) {$2$};
+  \node[gray] at (-0.1,1.0) {$2$};
   \draw[xstep=\third,ystep=\half,black,thin] (0.0,0.0) grid (1.0,1.0);
   \pgfmathsetmacro\dd{0.05}
   \foreach \y in {0,1,2}
     \foreach \x in {0,1,2,3} {
       \pgfmathsetmacro\k{4*\y+\x}
-      \draw[color=blue] (\x*\third+\dd,\y*\half+\dd) node{\pgfmathprintnumber[fixed]{\k}};
+      \draw (\x*\third+\dd,\y*\half+\dd) node{$\mathbf{\pgfmathprintnumber[fixed]{\k}}$};
       \filldraw (\x * \third,\y * \half) circle (0.5pt);
     }
 \end{tikzpicture}
-\caption{Ordering of unknowns \eqref{orderingfd} on a $M=4$ and $N=3$ grid.  Index $k$ from \eqref{orderingfd} is shown in {\color{blue} blue}.}
+\caption{Ordering of unknowns \eqref{orderingfd} on a $M=4$ and $N=3$ grid.  Index $k$ from \eqref{orderingfd} is shown in \textbf{bold}.}
 \label{fig:unitsquaregridordering}
 \end{marginfigure}
 
