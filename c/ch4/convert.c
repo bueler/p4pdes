@@ -12,7 +12,6 @@ Do this to re-read binary files bump.1.petsc and show contents:\n\
     c3convert -f bump.1 -check\n\n";
 
 #include <petscmat.h>
-#include "convenience.h"
 #include "readmesh.h"
 
 //STARTPREAMBLE
@@ -79,9 +78,12 @@ int main(int argc,char **args) {
       ierr = VecSetValues(vBT,1,&i,&(v[2]),INSERT_VALUES); CHKERRQ(ierr);
     }
     ierr = PetscFClose(WORLD,nodefile); CHKERRQ(ierr);
-    vecassembly(vx)
-    vecassembly(vy)
-    vecassembly(vBT)
+    ierr = VecAssemblyBegin(vx); CHKERRQ(ierr);
+    ierr = VecAssemblyEnd(vx); CHKERRQ(ierr);
+    ierr = VecAssemblyBegin(vy); CHKERRQ(ierr);
+    ierr = VecAssemblyEnd(vy); CHKERRQ(ierr);
+    ierr = VecAssemblyBegin(vBT); CHKERRQ(ierr);
+    ierr = VecAssemblyEnd(vBT); CHKERRQ(ierr);
 //ENDREADNODES
 
     // READ POLYGON HEADER AND ALLOCATE VEC
@@ -110,7 +112,8 @@ int main(int argc,char **args) {
       ierr = VecSetValuesBlocked(vQ,1,&m,w,INSERT_VALUES); CHKERRQ(ierr);
     }
     ierr = PetscFClose(WORLD,polyfile); CHKERRQ(ierr);
-    vecassembly(vQ)
+    ierr = VecAssemblyBegin(vQ); CHKERRQ(ierr);
+    ierr = VecAssemblyEnd(vQ); CHKERRQ(ierr);
 //ENDREADPOLYGONS
 
     // READ ELEMENT HEADER AND ALLOCATE VEC
@@ -177,7 +180,8 @@ int main(int argc,char **args) {
     ierr = VecRestoreArray(vBT,&aBT); CHKERRQ(ierr);
     ierr = VecRestoreArray(vQ,&aQ); CHKERRQ(ierr);
     ierr = PetscFClose(WORLD,elefile); CHKERRQ(ierr);
-    vecassembly(vE)
+    ierr = VecAssemblyBegin(vE); CHKERRQ(ierr);
+    ierr = VecAssemblyEnd(vE); CHKERRQ(ierr);
 //ENDREADELEMENTS
 
     // DO BINARY WRITE AND CLEAN UP

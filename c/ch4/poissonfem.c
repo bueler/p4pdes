@@ -15,7 +15,6 @@ To see the matrix graphically:\n\
      poissonfem -f mesh.1 -a_mat_view draw -draw_pause 5\n\n";
 
 #include <petscksp.h>
-#include "convenience.h"
 #include "readmesh.h"
 #include "poissontools.h"
 
@@ -50,7 +49,7 @@ int main(int argc,char **args) {
            K,     // number of elements
            bs;    // block size for elementtype
   char     fname[PETSC_MAX_PATH_LEN];
-  PetscInt check;
+  PetscInt check = 0;
   PetscBool checkset;
   PetscViewer viewer;
   ierr = PetscOptionsBegin(WORLD, "", "options for c3poisson", ""); CHKERRQ(ierr);
@@ -135,15 +134,20 @@ int main(int argc,char **args) {
     }
     ierr = VecRestoreArray(x,&ax); CHKERRQ(ierr);
     ierr = VecRestoreArray(y,&ay); CHKERRQ(ierr);
-    vecassembly(uexact)
-    vecassembly(u)  // FIXME:  JUST NEEDED TO ATTACH "u_" prefix for viewing?
+    ierr = VecAssemblyBegin(uexact); CHKERRQ(ierr);
+    ierr = VecAssemblyEnd(uexact); CHKERRQ(ierr);
+    ierr = VecAssemblyBegin(u); CHKERRQ(ierr);  // FIXME:  JUST NEEDED TO ATTACH "u_" prefix for viewing?
+    ierr = VecAssemblyEnd(u); CHKERRQ(ierr);
+
     // compute error
     ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);  // u := -uexact + u
     ierr = VecNorm(u,NORM_INFINITY,&normdiff); CHKERRQ(ierr);
     ierr = PetscPrintf(WORLD,"  numerical error:\n"
                        "    |u - uexact|_inf = %e   (should be O(h^2))\n",
                        normdiff); CHKERRQ(ierr);
+    ierr = VecDestroy(&u); CHKERRQ(ierr);
     ierr = VecDestroy(&uexact); CHKERRQ(ierr);
+    ierr = KSPDestroy(&ksp); CHKERRQ(ierr);
   }
 //ENDSOLVEMANU
 

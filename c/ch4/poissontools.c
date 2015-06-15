@@ -1,5 +1,4 @@
 #include <petscmat.h>
-#include "convenience.h"
 #include "readmesh.h"
 
 
@@ -38,8 +37,10 @@ PetscErrorCode dirichletrows(MPI_Comm comm,
     }
   }
   ierr = VecRestoreArray(E,&ae); CHKERRQ(ierr);
-  matassembly(A)
-  vecassembly(b)
+  ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+  ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+  ierr = VecAssemblyBegin(b); CHKERRQ(ierr);
+  ierr = VecAssemblyEnd(b); CHKERRQ(ierr);
   return 0;
 }
 //ENDDIRICHLETROWS
@@ -126,8 +127,10 @@ PetscErrorCode assembleadd(MPI_Comm comm,
     }
   }
   ierr = VecRestoreArray(E,&ae); CHKERRQ(ierr);
-  matassembly(A)
-  vecassembly(b)
+  ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+  ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+  ierr = VecAssemblyBegin(b); CHKERRQ(ierr);
+  ierr = VecAssemblyEnd(b); CHKERRQ(ierr);
   return 0;
 }
 //ENDASSEMBLEADD

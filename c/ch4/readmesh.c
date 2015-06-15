@@ -1,6 +1,5 @@
 #include <petscmat.h>
 #include <petscksp.h>
-#include "convenience.h"
 #include "readmesh.h"
 
 //STARTGET
