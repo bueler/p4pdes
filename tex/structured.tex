@@ -534,7 +534,7 @@ for (j=info.ys; j<info.ys+info.ym; j++) {
 }
 \end{code}
 
-Still considering the code in Figure \ref{code:structuredpoisson}, the \pMat object $A$ assembled by \texttt{formdirichletlaplacian()}  has ranges of rows owned by each process, the standard parallel layout \texttt{MATMPIAIJ} of \pMat objects in \PETSc (Chapter \ref{chap:getstarted}).  However, because we work with the locally-owned subgrid using $(i,j)$ indices, we can often forget the actual layout of a \pMat.  We get to just focus on the part of the grid owned by the process, as in Figures \ref{fig:unitsquaregridparallel}--\ref{fig:unitsquaregrideight}, instead of worrying about the matrix itself.
+Still considering the code in Figure \ref{code:structuredpoisson}, the \pMat object $A$ assembled by \texttt{formdirichletlaplacian()}  has ranges of rows owned by each process, the standard parallel layout \texttt{MATMPIAIJ} of \pMat objects in \PETSc (Chapter \ref{chap:getstarted}).  However, because we work with the locally-owned subgrid using $(i,j)$ indices, we can often forget the actual layout of a \pMat.  We get to just focus on the part of the grid owned by the process instead of worrying about the matrix itself.
 
 In particular, local indices $(i,j)$ can be used when inserting entries into \pMat \texttt{A}, which is really a dynamical data structure for matrix assembly.  Thus in Figure \ref{code:structuredpoisson} we see one use of \texttt{MatSetValuesStencil()} for each locally-owned grid point.  For a generic interior point this command inserts five coefficients into the matrix.  The key data structure is of type \texttt{MatStencil}, an apparently-trivial struct
 \begin{code}
@@ -542,12 +542,12 @@ typedef struct {
   PetscInt k,j,i,c;
 } MatStencil;
 \end{code}
-In our 2D case, with a single degree of freedom at each node,\sidenote{The Poisson equation \eqref{poissonsquare} is a scalar PDE so the unknown at each grid point is the scalar $U_{i,j}$.  A system of equations like Navier-Stokes would have \texttt{dof}$>1$ when we call \texttt{DMDACreateXd()}, and the ``\texttt{c}'' member of \texttt{MatStencil} would get used.} we only use the \texttt{i} and \texttt{j} members of \texttt{MatStencil}.  From \eqref{poissonsquareFD}, the actual matrix entries are $a_{i,i} = 2\left(h_y/h_x + h_x/h_y\right)$ on the diagonal, and $a_{i,j} = -h_y/h_x$ or $a_{i,j} = -h_x/h_y$ for off-diagonals.  We only insert nonzero off-diagonals in the matrix if the column corresponds to a non-boundary location.  After completing all the \texttt{MatSetValuesStencil()} insertion commands we call \texttt{MatAssemblyBegin/End()} just as we did in Chapter \ref{chap:getstarted}.
+In our 2D case, with a single degree of freedom at each node,\sidenote{The Poisson equation \eqref{poissonsquare} is a scalar PDE so the unknown at each grid point is the scalar $U_{i,j}$.  A system of equations like Navier-Stokes would have \texttt{dof}$>1$ when we call \texttt{DMDACreateXd()}, and the ``\texttt{c}'' member of \texttt{MatStencil} would get used.} we only use the \texttt{i} and \texttt{j} members of \texttt{MatStencil}.  From \eqref{poissonsquareFD}, the actual matrix entries are $a_{i,i} = 2\left(h_y/h_x + h_x/h_y\right)$ on the diagonal, and $a_{i,j} = -h_y/h_x$ or $a_{i,j} = -h_x/h_y$ for off-diagonals.  We only insert nonzero off-diagonals in the matrix if the column corresponds to a non-boundary location.
 
 
 \section{A particular problem, an exact solution}
 
-At this point we need to set up a particular Poisson problem so our first example code can solve it.  To do this we again\sidenote{For the code \texttt{c1tri.c} in Chapter 1 we did something similar, i.e.~the choice of exact solution $\bu$ before computing $\bb=A\bu$ by matrix multiplication.} \emph{choose} an exact solution, taking care that it satisfies homogeneous Dirichlet boundary conditions ($u=0$ along $\partial \mathcal{S}$):
+At this point we need to set up a particular Poisson problem so our example code can solve it.  To do this we again\sidenote{For the code \texttt{tri.c} in Chapter \ref{chap:linearsystem} we did something similar, i.e.~choosing exact solution $\bu$ before computing $\bb=A\bu$ by matrix multiplication.} \emph{choose} an exact solution, taking care that it satisfies homogeneous Dirichlet boundary conditions ($u=0$ along $\partial \mathcal{S}$):
 \begin{equation}
 u(x,y) = (x^2 - x^4) (y^4 - y^2). \label{exactsolution}
 \end{equation}
@@ -557,32 +557,26 @@ f(x,y) = 2 (1 - 6 x^2) y^2 (1 - y^2) + 2 (1 - 6 y^2) x^2 (1 - x^2).\label{manufa
 \end{equation}
 From now on we will refer to $u$ in \eqref{exactsolution} as ``$u_{ex}$'', the exact solution.  This same problem and solution appears in Chapter 4 of \citep{Briggsetal2000}, so these formulas are not original. % page 64
 
-Observe that the truncation error term $O(h^2)$ in equation \eqref{secondderivativeFD} has a coefficient proportional to fourth derivatives \citep{MortonMayers} so our FD method will not be exact on this problem because $u_{ex}$ has nonzero fourth derivatives.  This is \emph{good}.  We would not use the simpler form $u(x,y)=(x-x^2)(y-y^2)$, for example, to test convergence rate of the code because the decay of numerical error with refining grids is not at all generic.
+Observe that the truncation error term $O(h^2)$ in equation \eqref{secondderivativeFD} has a coefficient proportional to fourth derivatives \citep{MortonMayers} so our FD method will not be exact on this problem.  That is, $u_{ex}$ has nonzero fourth derivatives.  This is \emph{good}.  We would not want to use the simpler form $u(x,y)=(x-x^2)(y^2-y)$, for example, to test convergence rate of the code because the decay of numerical error with refining grids is not at all generic.
 
 Because we want to reuse this part also,\sidenote{See Chapter \ref{chap:multigrid}.} we put the code that computes formulas \eqref{exactsolution} and \eqref{manufacturedf} in source file \texttt{structuredpoisson.c}.  Figure \ref{code:poissonexactrhs} shows how \eqref{exactsolution} is implemented as \texttt{formExact()} and how \eqref{manufacturedf} is implemented as \texttt{formRHS()}.
 
-\vfill
-\newpage
-\cinputpart{structuredpoisson.c}{c/ch3/}{Methods which assemble \pVec \texttt{uexact} for the exact solution and \pVec \texttt{b} for the right-hand side of equation \eqref{poissonsquareFD}.}{II}{//FORMEXACTRHS}{//ENDFORMEXACTRHS}{code:poissonexactrhs}
+\cinputpart{structuredpoisson.c}{c/ch3/}{Methods which assemble the exact solution and the right-hand side of equation \eqref{poissonsquareFD}.}{II}{//FORMEXACTRHS}{//ENDFORMEXACTRHS}{code:poissonexactrhs}
 
 The computations in Figure \ref{code:poissonexactrhs} use only local grid coordinates $(i,j)$, with loops over index ranges as shown in Figure \ref{fig:localpartofgrid}.  \PETSc pointer arithmetic (i.e.~tricks) allows us to index the C arrays we get from \texttt{DMDAVecGetArray()} using $(i,j)$.  When we are done with computing \pVecs we restore the C arrays by calling \texttt{DMDAVecRestoreArray()}, and we explicitly ask for the \pVec objects to be assembled by calling \texttt{VecAssemblyBegin/End()}, just as in Chapter \ref{chap:getstarted}.
 
 
-\vfill
-\newpage
+\cinputpart{poisson.c}{c/ch3/}{Set up \pDM, \pMat, and \pVec objects, and assemble the linear system.}{I}{//CREATE}{//ENDCREATE}{code:poissoncreate}
+
 \section{Solving the PDE}
 
-The code \texttt{poisson.c} uses our finite difference method \eqref{poissonsquareFD} to solve the Poisson problem with $f$ from \eqref{manufacturedf}.  Figure \ref{code:ctwopoissoncreate} shows how \texttt{poisson.c} creates the various parallel objects needed to solve the Poisson problem, namely one \pDM, one \pMat, and three \pVecs.  A \pDM object can compute matrix and vector sizes from the grid dimensions, so we call \texttt{DMCreateMatrix()} and \texttt{DMCreateGlobalVector()} to create \pMat and \pVec objects, respectively.  Then we call methods from \texttt{structuredpoisson.c}, as above, to assemble the matrix and vectors.
+The code \texttt{poisson.c} uses our finite difference method \eqref{poissonsquareFD} to solve the Poisson problem with $f$ from \eqref{manufacturedf}.  Figure \ref{code:poissoncreate} shows how \texttt{poisson.c} creates the various objects needed to solve the Poisson problem, namely one \pDM, one \pMat, and three \pVecs.  A \pDM object can compute matrix and vector sizes from the grid dimensions, so we call \texttt{DMCreateMatrix()} and \texttt{DMCreateGlobalVector()} to create \pMat and \pVec objects, respectively.  Then we call methods from \texttt{structuredpoisson.c}, as above, to assemble the matrix and vectors.
 
-\cinputpart{poisson.c}{c/ch3/}{Set up \pDM, \pMat, and \pVec objects, and assemble the linear system.}{I}{//CREATE}{//ENDCREATE}{code:ctwopoissoncreate}
+\PETSc describes the linear system ``$A\bu=\bb$'' by one \pMat \texttt{A} and two \pVecs (\texttt{u} and \texttt{b}), but, as in Chapter \ref{chap:linearsystem}, the system is solved by a \pKSP Krylov space method solver object.
 
-\vfill
-\newpage
-\PETSc describes the linear system ``$A\bu=\bb$'' by one \pMat \texttt{A} and two \pVecs (\texttt{u} and \texttt{b}), but, as in Chapter \ref{chap:getstarted}, the method for solving the linear system is a Krylov space method solver object of type \pKSP.  The part of \texttt{poisson.c} that creates and uses this object is in Figure \ref{code:ctwopoissonsolve}.  After calling \texttt{KSPSolve()} we compute the numerical error with \texttt{VecAXPY()} and \texttt{VecNorm()}, this time computing the error $\|u-u_{ex}\|_\infty$.  Finally we print the error and clean up.
+In Figure \ref{code:poissonsolve} we create the \pKSP object and tell it about \texttt{A} through a call to \texttt{KSPSetOperators()}.  Recall there are two ways \texttt{A} is used, namely as the system matrix and as the ``material'' from which the preconditioner is built; this explains why \texttt{A} appears twice when calling \texttt{KSPSetOperators()}.  We also call \texttt{KSPSetFromOptions()} so that we can change the \pKSP type at runtime (illustrated below).  Solving the system means calling \texttt{KSPSolve()}.  Then we report on the solution by computing the numerical error by the norm $\|u-u_{ex}\|_\infty$.  Finally we wrap up by destroying objects and calling \texttt{PetscFinalize()}.
 
-\cinputpart{poisson.c}{c/ch3/}{Solve using \pKSP, and report on solution.}{II}{//SOLVE}{//ENDSOLVE}{code:ctwopoissonsolve}
-
-To finish showing the code, in Figure \ref{code:ctwopoissonsolve} we create the \pKSP object and tell it about \texttt{A} through a call to \texttt{KSPSetOperators()}.  Inside a \pKSP there are two ways \texttt{A} is used, namely as the system matrix and as a possible preconditioner---more on this later---which explains why \texttt{A} appears twice when calling \texttt{KSPSetOperators()}.  We also call \texttt{KSPSetFromOptions()} so that we can change the \pKSP type at runtime (illustrated below).  Solving the system means calling \texttt{KSPSolve()}.  Then we report on the solution by computing the numerical error by the norm $\|u-u_{ex}\|_\infty$.  Then we wrap up by destroying objects and calling \texttt{PetscFinalize()}.
+\cinputpart{poisson.c}{c/ch3/}{Solve using \pKSP, and report on solution.}{II}{//SOLVE}{//ENDSOLVE}{code:poissonsolve}
 
 
 \section{Runtime control}
@@ -596,19 +590,29 @@ to get output
 \begin{cline}
 on 10 x 10 grid:  error |u-uexact|_inf = 0.000621778
 \end{cline}
-We see the default $10\times 10$ grid chosen in our call to \texttt{DMDACreate2d()}. There were seven iterations of the KSP method and a final residual norm and numerical error.
+We see the default $10\times 10$ grid chosen in our call to \texttt{DMDACreate2d()}. There were seven iterations of the KSP method and a final residual norm and numerical error.  We have solved a first PDE problem.
 
-FIXME: first two generate Figures \ref{fig:matM5N7} and \ref{fig:dmM5N7}; last (not shown) is "movie" of iteration $\{\bu_k\}$ as \pKSP converges
+Recalling the $M=5$, $N=7$ grid in Figure \ref{fig:unitsquaregrid}, we can now examine both the grid (i.e.~the \pDM object) and the generated matrix graphically at runtime.  That is, if X11 or other windowing is correctly linked in your \PETSc installation then
 \begin{cline}
-./poisson -da_grid_x 5 -da_grid_y 7 -a_mat_view draw -draw_pause 5
-./poisson -da_grid_x 5 -da_grid_y 7 -dm_view draw -draw_pause 5
-./poisson -da_grid_x 100 -da_grid_y 100 -ksp_monitor_solution
+$ ./poisson -da_grid_x 5 -da_grid_y 7 -a_mat_view draw -draw_pause 5
 \end{cline}
+%$
+shows a graphic similar to Figure \ref{fig:matM5N7}.  Options
+\begin{cline}
+$ ./poisson -da_grid_x 5 -da_grid_y 7 -dm_view draw -draw_pause 5
+\end{cline}
+%$
+shows Figure \ref{fig:dmM5N7}.  Finally, a ``movie'' of the \pKSP iterates $\{\bu_k\}$ comes from running
+\begin{cline}
+$ ./poisson -da_grid_x 100 -da_grid_y 100 -ksp_monitor_solution
+\end{cline}
+%$
+(not shown).
 
 \begin{marginfigure}
 \bigskip
 \includegraphics[width=0.95\textwidth]{matM5N7}
-\caption{\PETSc can show the matrix structure using X11 windows at runtime.  Red = positive entry, blue = negative entry, teal = allocated entry which is zero.}
+\caption{\PETSc can show the matrix structure using X11 windows at runtime.  The actual graphic is in color, but here the two shades of dark gray show positive and negative entries while the light gray shows allocated locations which are zero.}
 \label{fig:matM5N7}
 \end{marginfigure}
 

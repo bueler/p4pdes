@@ -47,8 +47,7 @@ static char help[] = "Solves a structured-grid Poisson problem with DMDA and KSP
 #include <petsc.h>
 #include "structuredpoisson.h"
 
-int main(int argc,char **args)
-{
+int main(int argc,char **args) {
   PetscErrorCode ierr;
   PetscInitialize(&argc,&args,(char*)0,help);
 
@@ -57,9 +56,9 @@ int main(int argc,char **args)
   DMDALocalInfo info;
   PetscReal     hx, hy;
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
-                DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
-                -10,-10,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,
-                &da); CHKERRQ(ierr);
+               DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
+               -10,-10,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,
+               &da); CHKERRQ(ierr);
   ierr = DMDASetUniformCoordinates(da,0.0,1.0,0.0,1.0,-1.0,-1.0); CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(da,&info);CHKERRQ(ierr);
   hx = 1.0/(info.mx-1);
