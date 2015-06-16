@@ -428,7 +428,7 @@ We have converted the earlier system to having a symmetric matrix $A$.  This ope
 With these two modifications we can redo the last example.
 
 \medskip\noindent\hrulefill
-\begin{example} For the same $M=4$ and $N=3$ case shown in Figure \ref{fig:unitsquaregridordering}, equations \eqref{poissonsquareFDbcs} and \eqref{poissonsquareFD} yield the linear system
+\begin{example} \label{exampleredo} For the same $M=4$ and $N=3$ case shown in Figure \ref{fig:unitsquaregridordering}, equations \eqref{poissonsquareFDbcs} and \eqref{poissonsquareFD} yield the linear system
 \begin{equation*}
 \begin{bmatrix}
 1 &  &  &  &  &  &  &  &  &  &  &  \\
@@ -579,49 +579,28 @@ In Figure \ref{code:poissonsolve} we create the \pKSP object and tell it about \
 \cinputpart{poisson.c}{c/ch3/}{Solve using \pKSP, and report on solution.}{II}{//SOLVE}{//ENDSOLVE}{code:poissonsolve}
 
 
-\section{Runtime grid-setting}
+\section{Runtime}
 
 As a first run do:
 \begin{cline}
+$ cd c/ch3/
 $ make poisson
-$ ./poisson
+$ ./poisson -ksp_monitor
 \end{cline}
+%$
 to get output
 \begin{cline}
+  0 KSP Residual norm 1.007660904704e-01 
+  1 KSP Residual norm 2.917206076870e-02 
+  2 KSP Residual norm 1.153582666339e-02 
+  3 KSP Residual norm 2.915161628052e-03 
+  4 KSP Residual norm 5.145699777443e-04 
+  5 KSP Residual norm 6.960595794927e-05 
+  6 KSP Residual norm 6.995040432502e-06 
+  7 KSP Residual norm 8.593881990968e-07 
 on 10 x 10 grid:  error |u-uexact|_inf = 0.000621778
 \end{cline}
-We see the default $10\times 10$ grid chosen in our call to \texttt{DMDACreate2d()}. There were seven iterations of the KSP method and a final residual norm and numerical error.  We have solved a first PDE problem.
-
-\begin{marginfigure}
-\bigskip
-\includegraphics[width=0.95\textwidth]{matM5N7}
-\caption{\PETSc can show the matrix structure using X11 windows at runtime.  The actual graphic is in color, but here the two shades of dark gray show positive and negative entries while the light gray shows allocated locations which are zero.}
-\label{fig:matM5N7}
-\end{marginfigure}
-
-We can set the grid at runtime by options \texttt{-da\_grid\_x M -da\_grid\_y N}.  Furthermore, recalling the $M=5$, $N=7$ grid in Figure \ref{fig:unitsquaregrid}, we can examine both the grid (i.e.~the \pDM object) and the generated matrix graphically at runtime.  That is, if X11 or other windowing is correctly linked in your \PETSc installation then
-\begin{cline}
-$ ./poisson -da_grid_x 5 -da_grid_y 7 -a_mat_view draw -draw_pause 5
-\end{cline}
-%$
-shows a graphic similar to Figure \ref{fig:matM5N7}.  Options
-\begin{cline}
-$ ./poisson -da_grid_x 5 -da_grid_y 7 -dm_view draw -draw_pause 5
-\end{cline}
-%$
-shows Figure \ref{fig:dmM5N7}.  Finally, a ``movie'' of the \pKSP iterates $\{\bu_k\}$ comes from running
-\begin{cline}
-$ ./poisson -da_grid_x 100 -da_grid_y 100 -ksp_monitor_solution
-\end{cline}
-%$
-(not shown).
-
-In fact there are two ways to specify a finer grid, both of which address the \pDM object through options.  One is to specify the grid directly as above, but the other is to have the \pDM refine the grid by factors of two.  More precisely, the number of \emph{subintervals} is increased by a factor of two.  For example, this replaces our default grid of 9 by 9 subintervals (i.e.~10 by 10 grid \emph{points}) by 18 subintervals in each direction (i.e.~19 grid points):
-\begin{cline}
-$ ./poisson -da_refine 1
-on 19 x 19 grid:  error |u-uexact|_inf = 0.000155374
-\end{cline}
-%$
+Recall that a default $10\times 10$ grid was chosen in calling \texttt{DMDACreate2d()}.  We see seven iterations of the KSP method, a small final residual norm, and an apparently small numerical error.  It is reasonable to think that we have solved a first PDE problem, but skepticism, and further inspection, is in order.
 
 \begin{marginfigure}
 \bigskip
@@ -630,14 +609,66 @@ on 19 x 19 grid:  error |u-uexact|_inf = 0.000155374
 \label{fig:dmM5N7}
 \end{marginfigure}
 
+Options \texttt{-da\_grid\_x M -da\_grid\_y N} set the grid at runtime.  Furthermore, we can examine both the grid (i.e.~the \pDM object) and our assembled \pMat graphically at runtime.  If X11 or other windowing is correctly linked in your \PETSc installation then
+\begin{cline}
+$ ./poisson -da_grid_x 5 -da_grid_y 7 -dm_view draw -draw_pause 5
+\end{cline}
+%$
+gives Figure \ref{fig:dmM5N7}, same as the $M=5$, $N=7$ grid in Figure \ref{fig:unitsquaregrid} with global node ordering by formula \eqref{orderingfd}.  Options
+\begin{cline}
+$ ./poisson -da_grid_x 5 -da_grid_y 7 -a_mat_view draw -draw_pause 5
+\end{cline}
+%$
+show a graphic similar to Figure \ref{fig:matM5N7}.  This suggests that we have the right kind of matrix structure for the Poisson problem, namely a symmetric sparse matrix with tridiagonal blocks along the diagonal and a banded structure.
+
+\begin{marginfigure}
+\bigskip
+\includegraphics[width=0.95\textwidth]{matM5N7}
+\caption{\PETSc can show the matrix structure using X11 windows at runtime.  The actual graphic is in color, but here the two shades of dark gray show positive and negative entries while the light gray shows allocated locations which are zero.}
+\label{fig:matM5N7}
+\end{marginfigure}
+
+As a specific check on our matrix assembly, this sparse matrix view is easily checked to be identical to the matrix in the linear system on page \pageref{exampleredo}:
+\begin{cline}
+$ ./poisson -da_grid_x 4 -da_grid_y 3 -a_mat_view
+Mat Object:(a_) 1 MPI processes
+  type: seqaij
+row 0: (0, 1)  (1, 0)  (4, 0) 
+row 1: (0, 0)  (1, 1)  (2, 0)  (5, 0) 
+row 2: (1, 0)  (2, 1)  (3, 0)  (6, 0) 
+row 3: (2, 0)  (3, 1)  (7, 0) 
+row 4: (0, 0)  (4, 1)  (5, 0)  (8, 0) 
+row 5: (1, 0)  (4, 0)  (5, 4.33333)  (6, -1.5)  (9, 0) 
+row 6: (2, 0)  (5, -1.5)  (6, 4.33333)  (7, 0)  (10, 0) 
+row 7: (3, 0)  (6, 0)  (7, 1)  (11, 0) 
+row 8: (4, 0)  (8, 1)  (9, 0) 
+row 9: (5, 0)  (8, 0)  (9, 1)  (10, 0) 
+row 10: (6, 0)  (9, 0)  (10, 1)  (11, 0) 
+row 11: (7, 0)  (10, 0)  (11, 1) 
+on 4 x 3 grid:  error |u-uexact|_inf = 0.0085927
+\end{cline}
+%$
+
+Finally, a ``movie'' of the \pKSP iterates $\{\bu_k\}$ comes from running
+\begin{cline}
+$ ./poisson -da_grid_x 100 -da_grid_y 100 -ksp_monitor_solution
+\end{cline}
+%$
+(not shown).  As in Chapter \ref{chap:linearsystem}, a line graph of the (preconditioned) residual norm is from \texttt{-ksp\_monitor\_lg\_residualnorm} (also not shown).  All of the above viewing options can, and probably should, be used on any under-development PDE-solving code on a structured grid.
+
+In fact there are two ways to specify a grid.  One is to specify the grid dimensions directly as above, but the other is to have the \pDM refine the grid by factors of two.  More precisely, the number of \emph{subintervals} is increased by a factor of two.  For example, this option replaces our default grid of 9 by 9 subintervals (i.e.~10 by 10 grid \emph{points}) by 18 subintervals in each direction (i.e.~19 by 19 points):
+\begin{cline}
+$ ./poisson -da_refine 1
+on 19 x 19 grid:  error |u-uexact|_inf = 0.000155374
+\end{cline}
+%$
+
 At this point we want to know:\begin{itemize}
 \item is our numerical method correctly implemented? (\emph{convergence})
-\item how to see inside \PETSc so we know what is going on? (\emph{exposure})
+\item what is going on inside \PETSc? (\emph{exposure})
 \item how to get high performance? (\emph{efficiency})
 \end{itemize}
-In \PETSc the choices of solver and parameters are controllable and exposable at runtime, once we have adequately-described the problem to \PETSc.  Thus we can, and we have until now, delayed questions of convergence, scaling, and exposure until runtime.  We can make our choice empirical, i.e.~based on actual performance.
-
-Runtime control is a topic that we will return to frequently.  But we start right now with measuring convergence of \texttt{poisson.c}.
+In \PETSc the choices of solver and parameters are controllable and exposable at runtime, once we have adequately-described the problem to \PETSc, and we have just gotten started on ``exposure.''  We have, until now, delayed questions of convergence and efficiency, or just scaling, until runtime.  We can make our choice empirical, i.e.~based on actual performance.  In any case, runtime control is a topic that we will return to frequently.  But we start right now with measuring convergence of \texttt{poisson.c}.
 
 
 \section{Convergence}

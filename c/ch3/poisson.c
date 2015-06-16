@@ -1,10 +1,6 @@
 
 static char help[] = "Solves a structured-grid Poisson problem with DMDA and KSP.\n\n";
 
-// match revised matrix in ch3 example :  ./poisson -da_grid_x 4 -da_grid_y 3 -a_mat_view ::ascii_dense
-
-// good solver options?:  -ksp_rtol 1.0e-8 -ksp_type cg
-
 // MORE CG:  look at iterations in IC(0) preconditioned,
 //   for NN in 5 9 17 33 65 129 257; do ./poisson -da_grid_x $NN -da_grid_y $NN -ksp_rtol 1.0e-8 -ksp_type cg -ksp_converged_reason; done
 // and redo with -pc_type none
