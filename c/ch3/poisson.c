@@ -5,13 +5,6 @@ static char help[] = "Solves a structured-grid Poisson problem with DMDA and KSP
 
 // good solver options?:  -ksp_rtol 1.0e-8 -ksp_type cg
 
-// UNPRECONDITIONED CG ALGORITHM:
-//   ./poisson -ksp_type cg -pc_type none -ksp_view  # JUST SHOW KSP STRUCTURE
-//   ./poisson -da_grid_x 257 -da_grid_y 257 -ksp_type cg -pc_type none -log_summary
-//   (compare Elman p.72 and Algorithm 2.1 = cg: "The computational work of one
-//   iteration is two inner products, three vector updates, and one matrix-vector
-//   product." THIS IS WHAT I SEE!!)
-
 // MORE CG:  look at iterations in IC(0) preconditioned,
 //   for NN in 5 9 17 33 65 129 257; do ./poisson -da_grid_x $NN -da_grid_y $NN -ksp_rtol 1.0e-8 -ksp_type cg -ksp_converged_reason; done
 // and redo with -pc_type none

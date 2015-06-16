@@ -579,7 +579,7 @@ In Figure \ref{code:poissonsolve} we create the \pKSP object and tell it about \
 \cinputpart{poisson.c}{c/ch3/}{Solve using \pKSP, and report on solution.}{II}{//SOLVE}{//ENDSOLVE}{code:poissonsolve}
 
 
-\section{Runtime control}
+\section{Runtime grid-setting}
 
 As a first run do:
 \begin{cline}
@@ -592,7 +592,14 @@ on 10 x 10 grid:  error |u-uexact|_inf = 0.000621778
 \end{cline}
 We see the default $10\times 10$ grid chosen in our call to \texttt{DMDACreate2d()}. There were seven iterations of the KSP method and a final residual norm and numerical error.  We have solved a first PDE problem.
 
-Recalling the $M=5$, $N=7$ grid in Figure \ref{fig:unitsquaregrid}, we can now examine both the grid (i.e.~the \pDM object) and the generated matrix graphically at runtime.  That is, if X11 or other windowing is correctly linked in your \PETSc installation then
+\begin{marginfigure}
+\bigskip
+\includegraphics[width=0.95\textwidth]{matM5N7}
+\caption{\PETSc can show the matrix structure using X11 windows at runtime.  The actual graphic is in color, but here the two shades of dark gray show positive and negative entries while the light gray shows allocated locations which are zero.}
+\label{fig:matM5N7}
+\end{marginfigure}
+
+We can set the grid at runtime by options \texttt{-da\_grid\_x M -da\_grid\_y N}.  Furthermore, recalling the $M=5$, $N=7$ grid in Figure \ref{fig:unitsquaregrid}, we can examine both the grid (i.e.~the \pDM object) and the generated matrix graphically at runtime.  That is, if X11 or other windowing is correctly linked in your \PETSc installation then
 \begin{cline}
 $ ./poisson -da_grid_x 5 -da_grid_y 7 -a_mat_view draw -draw_pause 5
 \end{cline}
@@ -609,12 +616,12 @@ $ ./poisson -da_grid_x 100 -da_grid_y 100 -ksp_monitor_solution
 %$
 (not shown).
 
-\begin{marginfigure}
-\bigskip
-\includegraphics[width=0.95\textwidth]{matM5N7}
-\caption{\PETSc can show the matrix structure using X11 windows at runtime.  The actual graphic is in color, but here the two shades of dark gray show positive and negative entries while the light gray shows allocated locations which are zero.}
-\label{fig:matM5N7}
-\end{marginfigure}
+In fact there are two ways to specify a finer grid, both of which address the \pDM object through options.  One is to specify the grid directly as above, but the other is to have the \pDM refine the grid by factors of two.  More precisely, the number of \emph{subintervals} is increased by a factor of two.  For example, this replaces our default grid of 9 by 9 subintervals (i.e.~10 by 10 grid \emph{points}) by 18 subintervals in each direction (i.e.~19 grid points):
+\begin{cline}
+$ ./poisson -da_refine 1
+on 19 x 19 grid:  error |u-uexact|_inf = 0.000155374
+\end{cline}
+%$
 
 \begin{marginfigure}
 \bigskip
@@ -625,30 +632,19 @@ $ ./poisson -da_grid_x 100 -da_grid_y 100 -ksp_monitor_solution
 
 At this point we want to know:\begin{itemize}
 \item is our numerical method correctly implemented? (\emph{convergence})
-\item how to get high performance? (\emph{efficiency})
 \item how to see inside \PETSc so we know what is going on? (\emph{exposure})
+\item how to get high performance? (\emph{efficiency})
 \end{itemize}
-In \PETSc these choices of solver and parameters are controllable and exposable at runtime, once we have adequately-described the problem to \PETSc.  We can both put-off questions of convergence, scaling, and exposure until runtime, and we can make control choices empirically, i.e.~based on actual performance.  Runtime control is a topic that we will return to frequently, starting now with measuring convergence of \texttt{poisson.c}.
+In \PETSc the choices of solver and parameters are controllable and exposable at runtime, once we have adequately-described the problem to \PETSc.  Thus we can, and we have until now, delayed questions of convergence, scaling, and exposure until runtime.  We can make our choice empirical, i.e.~based on actual performance.
+
+Runtime control is a topic that we will return to frequently.  But we start right now with measuring convergence of \texttt{poisson.c}.
 
 
 \section{Convergence}
 
-By ``showing convergence'' we mean that we demonstrate that errors made by our numerical solver decrease in the expected way, as we refine the grid so that the finite differences are better approximations of the corresponding derivatives.  Furthermore we want to show that the rate at which the error decreases matches what we expect in theory.
+We want to see the numerical errors decrease as we refine the grid.  Such decrease is expected because the finite differences become better approximations of the corresponding derivatives, but we want to \emph{see} it, so we know the code is correct.  Furthermore we want the rate at which the error decreases to match what we expect in theory.
 
-There are two ways to specify a finer grid in a code like \texttt{poisson.c}, both of which address the \pDM object through options.  One is to specify the grid directly:
-\begin{cline}
-$ ./poisson -da_grid_x 100 -da_grid_y 100
-on 100 x 100 grid:  error |u-uexact|_inf = 5.76054e-06
-\end{cline}
-%$
-The other is to instruct the \pDM to refine the grid by factors of two.  More precisely, the number of \emph{subintervals} is increased by a factor of two.  For example, this call replaces our default grid of 9 by 9 subintervals (i.e.~10 by 10 grid \emph{points}) by 18 subintervals in each direction (i.e.~19 grid points):
-\begin{cline}
-$ ./poisson -da_refine 1
-on 19 x 19 grid:  error |u-uexact|_inf = 0.000155374
-\end{cline}
-%$
-
-We check convergence by generating error data.  Here is a Bash loop:
+The code \texttt{poisson.c} already generates the max norm error, and we know how to refine the grid by factors of two, so let's generate some  data.  Here is a Bash loop:
 \begin{cline}
 $ for K in 0 1 2 3 4 5 6; do ./poisson -da_refine $K; done
 on 10 x 10 grid:  error |u-uexact|_inf = 0.000621778
@@ -786,5 +782,15 @@ FIXME: see \verb|-log_summary| output
 \begin{enumerate}
 \item FIXME use \texttt{DMDACreate1d()} to write solver for 1D Poisson
 \item FIXME modify \texttt{poisson.c} to do non-homogeneous Dirichlet
-\item FIXME 
+\item Because the matrix set up by \texttt{poisson.c} is symmetric positive definite, the CG iteration applies.  Compare performance of Jacobi-preconditioned and un-preconditioned CG, by doing
+\begin{cline}
+$ timer ./poisson -da_refine 5 -ksp_converged_reason -ksp_type cg -pc_type X
+\end{cline}
+%$
+for \texttt{X}=\texttt{preonly},\texttt{jacobi} in turn.  (Add \texttt{-ksp\_view} to these runs to see the solver configuration.  Why is Jacobi preconditioning irrelevant here, i.e.~no better than \texttt{-pc\_type none}?  Make a fair comparison to the direct method represented by \texttt{-ksp\_type preonly -pc\_type cholesky} by tightening the tolerance for CG to \texttt{-ksp\_rtol 1.0e-12}.  (The effectiveness of iteration should be clear.)  Finally, add \texttt{-log\_summary} to the un-preconditioned CG run, e.g.
+\begin{cline}
+$ ./poisson -ksp_converged_reason -ksp_type cg -pc_type none -log_summary
+\end{cline}
+%$
+By looking at the ``Count'' column of ``Event Stage 2: Solve'', confirm that the computational work of one CG iteration consists of two inner products (\texttt{VecTDot}), three vector updates (\texttt{VecAXPY} and \texttt{VecAyPX}), and one matrix-vector product (\texttt{MatMult}).
 \end{enumerate}
