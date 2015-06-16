@@ -648,7 +648,7 @@ on 19 x 19 grid:  error |u-uexact|_inf = 0.000155374
 \end{cline}
 %$
 
-We check convergence by generating error data.  Here is a loop using the Bash shell:
+We check convergence by generating error data.  Here is a Bash loop:
 \begin{cline}
 $ for K in 0 1 2 3 4 5 6; do ./poisson -da_refine $K; done
 on 10 x 10 grid:  error |u-uexact|_inf = 0.000621778
@@ -669,7 +669,7 @@ The data is shown in Figure \ref{fig:poisson-conv} as the squares.  For the coar
 \label{fig:poisson-conv}
 \end{figure}
 
-Is the reduce apparent rate of convergence a sign of an implementation error.  In fact not, because simply asking for the \pKSP object to solve the linear system better is effective.  On a particular grid we can see the difference using option \texttt{-ksp\_monitor} to watch the residuals and setting a stronger value for the \pKSP relative tolerance for residual norm size (\texttt{-ksp\_rtol}):
+Is the reduced apparent rate of convergence a sign of an implementation error?  In fact not, because simply asking for the \pKSP object to solve the linear system better is effective.  On a particular grid we can see the difference using option \texttt{-ksp\_monitor} to watch the residuals and setting a stronger value for the \pKSP relative tolerance for residual norm size (\texttt{-ksp\_rtol}):
 \begin{cline}
 $ ./poisson -ksp_monitor
   0 KSP Residual norm 1.007660904704e-01 
@@ -690,39 +690,23 @@ on 10 x 10 grid:  error |u-uexact|_inf = 0.000621527
 \end{cline}
 On this coarse grid the numerical error is nearly the same, but on finer grids the fact that the linear system is solved more exactly will bring the numerical solution closer to the exact one.  However, the \pKSP takes twice as many iterations to achieve the desired residual norm reduction.
 
-In fact, rerunning the Bash loop with the stronger tolerance yields excellent evidence of convergence at the expected rate:
-\begin{cline}
-$ for K in 0 1 2 3 4 5 6; do ./poisson -da_refine $K -ksp_rtol 1.0e-12; done
-on 10 x 10 grid:  error |u-uexact|_inf = 0.000621527
-on 19 x 19 grid:  error |u-uexact|_inf = 0.000155312
-on 37 x 37 grid:  error |u-uexact|_inf = 3.8823e-05
-on 73 x 73 grid:  error |u-uexact|_inf = 9.71122e-06
-on 145 x 145 grid:  error |u-uexact|_inf = 2.42806e-06
-on 289 x 289 grid:  error |u-uexact|_inf = 6.07041e-07
-on 577 x 577 grid:  error |u-uexact|_inf = 1.51761e-07
-\end{cline}
-%$
-This is plotted as the circles in Figure \ref{fig:poisson-conv}.  The linear-fit rate of this logarithmic error data is $O(h^{1.9999})$.  Our implementation is correct in this sense.
+In fact, rerunning the Bash loop with the stronger $10^{-12}$ tolerance yields excellent evidence of convergence as shown by the circles in Figure \ref{fig:poisson-conv}.  The linear-fit rate of this logarithmic error data is $O(h^{1.9999})$.  Our implementation is correct.
 
 
 \section{Efficiency, and exposing \PETSc's solvers}
 
-On the other hand, the finer grid calculations above are slow.  How about if we re-run in parallel?  On a typical four-core laptop\sidenote{Circa 2013 manufacture, with an Intel i7 processor at 2.7GHz.} we get:
+On the other hand, the finer grid calculations above are slow.  How about if we re-run in parallel?  On \WORKSTATION we get:
 \begin{cline}
-$ time ./poisson -da_refine 5 -ksp_rtol 1.0e-12
+$ timer ./poisson -da_refine 5 -ksp_rtol 1.0e-12
 on 289 x 289 grid:  error |u-uexact|_inf = 6.07041e-07
 real 31.53
-user 31.40
-sys 0.09
 $ time mpiexec -n 4 ./poisson -da_refine 5 -ksp_rtol 1.0e-12
 on 289 x 289 grid:  error |u-uexact|_inf = 6.07041e-07
 real 12.63
-user 45.41
-sys 0.38
 \end{cline}
 It is nice to see a speedup, though only by a factor of $31.5/12.6 = 2.5$ on this fixed-size problem, which is disappointing given the putative four-times increase in processing power.
 
-These first performance results probably raise more questions than they answer.  In particular,
+These first performance results may raise more questions than they answer.  In particular,
 \renewcommand{\labelenumi}{\roman{enumi})}
 \begin{enumerate}
 \item are we effectively using \PETSc options at runtime?
@@ -732,12 +716,12 @@ These first performance results probably raise more questions than they answer. 
 \end{enumerate}
 While we will focus on performance and scaling in Chapter \ref{chap:scaling}, we can get started on these questions.
 
-Regarding i), even knowing what are possible runtime options is nontrivial in \PETSc because there are so many options.  But the answer is simple: pipe the output from option \texttt{-help} into a pager like \texttt{more} or \texttt{less}, like this
+Regarding i), even knowing what are the possible runtime options is nontrivial in \PETSc because there are so many.  But the first step for finding allowed options is simple: pipe the output from option \texttt{-help} into a pager like \texttt{more} or \texttt{less}, like this
 \begin{cline}
 $ ./poisson -help | less
 \end{cline}
 %$
-This gives a view of the options available \emph{for} \texttt{poisson}, so that, for instance, the many options for nonlinear solvers are \emph{not} included in \texttt{-help} output because we have not used \pSNES; we'll use such tools in Chapter \ref{chap:nonlinear}.  This \texttt{-help} output also gives default values for parameters; for example we see that the default for \texttt{-ksp\_rtol} is \texttt{1e-05}, which explains why convergence ``leveled out'' on fine grids.
+This gives a view of the options available for those parts of \PETSc which are actually used in \texttt{poisson}.  For instance, the many options for controlling nonlinear solvers are \emph{not} included in \texttt{-help} output because we have not used \pSNES; compare Chapter \ref{chap:nonlinear}.  This \texttt{-help} output also gives default values for parameters; for example we see that the default for \texttt{-ksp\_rtol} is \texttt{1e-05}, which explains why convergence ``leveled out'' on fine grids.
 
 Alternatively, one might want to know what are options for controlling particular objects inside \texttt{poisson}.  For example, this command shows runtime options which control the \pKSP object:
 \begin{cline}
@@ -791,12 +775,7 @@ $ mpiexec -n 4 ./poisson -ksp_view
 %$
 
 
-
-\section{Time-dependent heat equation}
-
-FIXME: we WON'T do explicit, but it would look like ...
-
-FIXME: use TS for backward-euler
+FIXME: see \verb|-log_summary| output
 
 
 
@@ -805,5 +784,7 @@ FIXME: use TS for backward-euler
 
 \renewcommand{\labelenumi}{\arabic{chapter}.\arabic{enumi}\quad}
 \begin{enumerate}
+\item FIXME use \texttt{DMDACreate1d()} to write solver for 1D Poisson
 \item FIXME modify \texttt{poisson.c} to do non-homogeneous Dirichlet
+\item FIXME 
 \end{enumerate}
