@@ -9,7 +9,7 @@ cstrip/*.c
 squarefour.tikz
 bump.poly*
 
-c2poisson-conv.pdf
+poisson-conv.pdf
 richpolyplot.pdf
 
 ## Core latex/pdflatex auxiliary files:

@@ -1,32 +1,34 @@
 
 static char help[] = "Solves a structured-grid Poisson problem with DMDA and KSP.\n\n";
 
-// MORE CG:  look at iterations in IC(0) preconditioned,
-//   for NN in 5 9 17 33 65 129 257; do ./poisson -da_grid_x $NN -da_grid_y $NN -ksp_rtol 1.0e-8 -ksp_type cg -ksp_converged_reason; done
-// and redo with -pc_type none
-// IN BOTH CASES ITERATIONS (ASYMPTOTICALLY) DOUBLE WITH EACH GRID REFINEMENT
+// PRECONDITIONED CG:  look at iterations in IC(0) preconditioned,
+
+//   for NN in 1 2 3 4 5; do ./poisson -da_refine $NN -ksp_rtol 1.0e-8 -ksp_type cg -pc_type none -ksp_converged_reason; done
+// ITERATIONS (ASYMPTOTICALLY) DOUBLE WITH EACH GRID REFINEMENT
 //   (compare Elman p. 76: "...suggests that for uniformly refined grids, the
 //   number of CG iterations required to meet a fixed tolerance will approximately
 //   double with each grid refinement"
-//   and compare Elman p. 82: "One known result [ABOUT IC(0) PRECONDITIONING USED
+
+//   for NN in 1 2 3 4 5; do ./poisson -da_refine $NN -ksp_rtol 1.0e-8 -ksp_type cg -pc_type icc -ksp_converged_reason; done
+// compare Elman p. 82: "One known result [ABOUT IC(0) PRECONDITIONING USED
 //   IN SECOND CASE ABOVE] is that the asymptotic behavior of the condition number
 //   using IC(0) preconditioning is unchanged: \kappa(M^{-1} A) = O(h^{-2})."
 //   THIS IS WHAT I SEE!!)
 
 // MINRES VS CG:
-//   time ./poisson -ksp_type cg -pc_type icc -da_grid_x 500 -da_grid_y 500
-//   time ./poisson -ksp_type minres -pc_type icc -da_grid_x 500 -da_grid_y 500
+// for NN in 1 2 3 4 5; do ./poisson -da_refine $NN -ksp_rtol 1.0e-8 -ksp_type minres -pc_type none -ksp_converged_reason; done
 //   (compare Elman p. 88: "Indeed, when solving discrete Poisson problems the
 //   the convergence of MINRES is almost identical to that of CG"  THIS IS WHAT I SEE!!)
+
+// CHOLESKY VS CG:
+// for NN in 1 2 3 4 5; do timer ./poisson -da_refine $NN -ksp_type preonly -pc_type cholesky -ksp_converged_reason; done
+// for NN in 1 2 3 4 5; do timer ./poisson -da_refine $NN -ksp_type preonly -pc_type cholesky -ksp_converged_reason; done
 
 // PERFORMANCE ANALYSIS:
 //   export PETSC_ARCH=linux-gnu-opt
 //   make poisson
 //   ./poisson -da_grid_x 1025 -da_grid_y 1025 -ksp_type cg -log_summary|grep "Solve: "
 //   mpiexec -n 6 ./poisson -da_grid_x 1025 -da_grid_y 1025 -ksp_type cg -log_summary|grep "Solve: "
-
-// PERFORMANCE ON CONVERGENCE PATH:
-//   for NN in 5 9 17 33 65 129 257; do ./poisson -da_grid_x $NN -da_grid_y $NN -ksp_rtol 1.0e-8 -ksp_type cg -log_summary|grep "Time (sec):"; done
 
 // WEAK SCALING IN TERMS OF FLOPS ONLY:
 //   for kk in 0 1 2 3; do NN=$((50*(2**$kk))); MM=$((2**(2*$kk))); cmd="mpiexec -n $MM ./poisson -da_grid_x $NN -da_grid_y $NN -ksp_rtol 1.0e-8 -ksp_type cg -log_summary"; echo $cmd; $cmd |'grep' "Flops:  "; echo; done
@@ -40,13 +42,13 @@ int main(int argc,char **args) {
   PetscErrorCode ierr;
   PetscInitialize(&argc,&args,(char*)0,help);
 
-  // default size (10 x 10) can be changed using -da_grid_x M -da_grid_y N
+  // default size (9 x 9) can be changed using -da_grid_x M -da_grid_y N
   DM            da;
   DMDALocalInfo info;
   PetscReal     hx, hy;
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
                DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
-               -10,-10,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,
+               -9,-9,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,
                &da); CHKERRQ(ierr);
   ierr = DMDASetUniformCoordinates(da,0.0,1.0,0.0,1.0,-1.0,-1.0); CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(da,&info);CHKERRQ(ierr);

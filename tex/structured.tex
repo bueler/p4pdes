@@ -205,12 +205,12 @@ is shown in Figure \ref{fig:unitsquaregridprime}.  Each process' portion of the 
 \label{fig:unitsquaregrideight}
 \end{marginfigure}
 
-Though these defaults can be overridden by runtime options \texttt{-da\_grid\_x} and \texttt{-da\_grid\_y}, the fifth and sixth arguments ``\texttt{-10}'' of \texttt{DMDACreate2d()} in Figure \ref{code:dmdacreatetwod} are used to set default dimensions $M=10$ and $N=10$.  Thus
+Though these defaults can be overridden by runtime options \texttt{-da\_grid\_x} and \texttt{-da\_grid\_y}, the fifth and sixth arguments ``\texttt{-9}'' of \texttt{DMDACreate2d()} in Figure \ref{code:dmdacreatetwod} are used to set default dimensions $M=9$ and $N=9$.  Thus
 \begin{cline}
 $ mpiexec -n 4 ./poisson
 \end{cline}
 %$
-distributes a $10\times 10$ grid among four processes as in Figure \ref{fig:unitsquaregrideight}, with each rank owning a square subgrid of 25 nodes.
+distributes a $9\times 9$ grid among four processes.  Figure \ref{fig:unitsquaregrideight} shows the balanced result of ``\texttt{mpiexec -n 4 ./poisson -da\_grid\_x 10 -da\_grid\_y 10}'' with each rank owning a square subgrid of 25 nodes.
 
 To explain the other options to \texttt{DMDACreate2d()} we quote the \PETSc manual pages description:
 
@@ -565,8 +565,8 @@ Because we want to reuse this part also,\sidenote{See Chapter \ref{chap:multigri
 
 The computations in Figure \ref{code:poissonexactrhs} use only local grid coordinates $(i,j)$, with loops over index ranges as shown in Figure \ref{fig:localpartofgrid}.  \PETSc pointer arithmetic (i.e.~tricks) allows us to index the C arrays we get from \texttt{DMDAVecGetArray()} using $(i,j)$.  When we are done with computing \pVecs we restore the C arrays by calling \texttt{DMDAVecRestoreArray()}, and we explicitly ask for the \pVec objects to be assembled by calling \texttt{VecAssemblyBegin/End()}, just as in Chapter \ref{chap:getstarted}.
 
-
 \cinputpart{poisson.c}{c/ch3/}{Set up \pDM, \pMat, and \pVec objects, and assemble the linear system.}{I}{//CREATE}{//ENDCREATE}{code:poissoncreate}
+
 
 \section{Solving the PDE}
 
@@ -590,17 +590,17 @@ $ ./poisson -ksp_monitor
 %$
 to get output
 \begin{cline}
-  0 KSP Residual norm 1.007660904704e-01 
-  1 KSP Residual norm 2.917206076870e-02 
-  2 KSP Residual norm 1.153582666339e-02 
-  3 KSP Residual norm 2.915161628052e-03 
-  4 KSP Residual norm 5.145699777443e-04 
-  5 KSP Residual norm 6.960595794927e-05 
-  6 KSP Residual norm 6.995040432502e-06 
-  7 KSP Residual norm 8.593881990968e-07 
-on 10 x 10 grid:  error |u-uexact|_inf = 0.000621778
+  0 KSP Residual norm 1.020952970432e-01 
+  1 KSP Residual norm 2.656923348626e-02 
+  2 KSP Residual norm 8.679141000397e-03 
+  3 KSP Residual norm 1.557150861763e-03 
+  4 KSP Residual norm 2.239919982542e-04 
+  5 KSP Residual norm 2.519822315367e-05 
+  6 KSP Residual norm 2.152764600588e-06 
+  7 KSP Residual norm 2.650467236964e-07 
+on 9 x 9 grid:  error |u-uexact|_inf = 0.000763959
 \end{cline}
-Recall that a default $10\times 10$ grid was chosen in calling \texttt{DMDACreate2d()}.  We see seven iterations of the KSP method, a small final residual norm, and an apparently small numerical error.  It is reasonable to think that we have solved a first PDE problem, but skepticism, and further inspection, is in order.
+Recall that a default $9\times 9$ grid was chosen in calling \texttt{DMDACreate2d()}.  We see seven iterations of the KSP method, a small final residual norm, and an apparently small numerical error.  It is reasonable to think that we have solved a first PDE problem, but skepticism, and further inspection, is in order.
 
 \begin{marginfigure}
 \bigskip
@@ -663,7 +663,7 @@ on 19 x 19 grid:  error |u-uexact|_inf = 0.000155374
 \end{cline}
 %$
 
-At this point we want to know:\begin{itemize}
+So at this point we have some confidence that we can control our code at runtime.  Here is what we want to know:\begin{itemize}
 \item is our numerical method correctly implemented? (\emph{convergence})
 \item what is going on inside \PETSc? (\emph{exposure})
 \item how to get high performance? (\emph{efficiency})
@@ -678,25 +678,25 @@ We want to see the numerical errors decrease as we refine the grid.  Such decrea
 The code \texttt{poisson.c} already generates the max norm error, and we know how to refine the grid by factors of two, so let's generate some  data.  Here is a Bash loop:
 \begin{cline}
 $ for K in 0 1 2 3 4 5 6; do ./poisson -da_refine $K; done
-on 10 x 10 grid:  error |u-uexact|_inf = 0.000621778
-on 19 x 19 grid:  error |u-uexact|_inf = 0.000155374
-on 37 x 37 grid:  error |u-uexact|_inf = 3.87982e-05
-on 73 x 73 grid:  error |u-uexact|_inf = 1.05331e-05
-on 145 x 145 grid:  error |u-uexact|_inf = 3.17389e-06
-on 289 x 289 grid:  error |u-uexact|_inf = 1.60786e-06
-on 577 x 577 grid:  error |u-uexact|_inf = 1.22251e-06
+on 9 x 9 grid:  error |u-uexact|_inf = 0.000763959
+on 17 x 17 grid:  error |u-uexact|_inf = 0.000196764
+on 33 x 33 grid:  error |u-uexact|_inf = 4.91557e-05
+on 65 x 65 grid:  error |u-uexact|_inf = 1.29719e-05
+on 129 x 129 grid:  error |u-uexact|_inf = 3.76924e-06
+on 257 x 257 grid:  error |u-uexact|_inf = 1.73086e-06
+on 513 x 513 grid:  error |u-uexact|_inf = 1.23567e-06
 \end{cline}
 %$
-The data is shown in Figure \ref{fig:poisson-conv} as the squares.  For the coarser grids (e.g.~$N+1=10,19,37,73$ grid points), a refinement by a factor of two gives a reduction in error by a factor of about four, as expected because our FD method is $O(h^2)$ \citep{MortonMayers}.  Unfortunately the error seems to have stopped falling for the finer grids ($N+1=145,289,577$), at a level around $\|u-u_{ex}\|_\infty \approx 10^{-6}$.
+The data is shown in Figure \ref{fig:poisson-conv} as the squares.  For the four coarsest grids refinement by a factor of two gives a reduction in error by a factor of about four, as expected because our FD method is $O(h^2)$ \citep{MortonMayers}.  Unfortunately the error seems to have stopped falling for the three finer grids, at a numerical error level around $\|u-u_{ex}\|_\infty \approx 10^{-6}$.
 
 \begin{figure}
 \bigskip
-\includegraphics[width=0.9\textwidth]{c2poisson-conv}
+\includegraphics[width=0.9\textwidth]{poisson-conv}
 \caption{To show convergence we refine the \pDM grid by factors of two.  With the default \pKSP relative tolerance the error seems to level out (squares).  With a stronger tolerance for solving the linear system (\texttt{-ksp\_rtol 1.0e-12}) the errors continue to fall (circles) at the expected rate (dotted line).}
 \label{fig:poisson-conv}
 \end{figure}
 
-Is the reduced apparent rate of convergence a sign of an implementation error?  In fact not, because simply asking for the \pKSP object to solve the linear system better is effective.  On a particular grid we can see the difference using option \texttt{-ksp\_monitor} to watch the residuals and setting a stronger value for the \pKSP relative tolerance for residual norm size (\texttt{-ksp\_rtol}):
+Is the reduced apparent rate of convergence a sign of an implementation error?  In fact not, because simply asking for the \pKSP object to solve the linear system more accurately is effective.  On a particular grid we can see the difference using option \texttt{-ksp\_monitor} to watch the residuals and setting a stronger value for the \pKSP relative tolerance for residual norm size (\texttt{-ksp\_rtol}):
 \begin{cline}
 $ ./poisson -ksp_monitor
   0 KSP Residual norm 1.007660904704e-01 

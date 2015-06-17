@@ -4,7 +4,7 @@ texinputs := getstarted.tex linearsystem.tex structured.tex unstructured.tex mul
 
 tikzinputs := samplepoly.1.tikz squarefour.tikz bump.1.tikz bump.poly.tikz mesh.1.tikz
 
-pdfinputs := c2poisson-conv.pdf richpolyplot.pdf
+pdfinputs := poisson-conv.pdf richpolyplot.pdf
 
 hinputs :=
 
@@ -41,8 +41,8 @@ mesh.1.tikz: ../c/ch4/genstructured.py
 	(cd ../c/ch4/ && python genstructured.py mesh.1 5)
 	python tri2tikz.py --labelnodes --nodeoffset 0.05 --nodesize 0.5 --labelelements --scale 5.0 ../c/ch4/mesh.1 $@
 
-c2poisson-conv.pdf: c2poisson-conv.py
-	python c2poisson-conv.py
+poisson-conv.pdf: poisson-conv.py
+	python poisson-conv.py
 
 richpolyplot.pdf: richpolyplot.py
 	python richpolyplot.py
