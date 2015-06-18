@@ -776,7 +776,27 @@ reminds us that in parallel the defaults are GMRES plus block Jacobi as a precon
 
 \section{A first look at efficiency: CG, for better or worse}
 
+
 FIXME: the next several timing results had better go in a table
+
+\renewcommand{\intime}[1]{\input{../c/ch3/timing/poisson/#1}}
+\begin{figure}[ht]
+\texttt{
+\begin{tabular}{llll}
+\underline{KSP}\hspace{0.5in} & \underline{PC}\hspace{0.8in} & \underline{\textrm{time (s)}}\hspace{0.3in} & \underline{iterations} \\
+gmres      & none        & \intime{gmres.none} \\
+           & ilu         & \intime{gmres.ilu} \\
+           & ilu \emph{restart} & \intime{gmres.ilu.restart} \\
+cg         & none        & \intime{cg.none} \\
+           & jacobi      & \intime{cg.jacobi} \\
+           & icc         & \intime{cg.icc} \\
+           & icc \emph{tight} & \intime{cg.icc.tight} \\
+minres     & none        & \intime{minres.none} \\
+preonly    & cholesky    & \intime{preonly.cholesky}  \\
+\end{tabular}
+}
+\caption{Times and number of \pKSP iterations for serial runs of \texttt{poisson.c} on grids of $6.6\times 10^3$ unknowns.  The matrix is \emph{symmetric}, \emph{diagonally-dominant}, and \emph{positive definite}.  All runs were on \WORKSTATION (see page \pageref{defineworkstation}).} \label{tab:poissontiming}
+\end{figure}
 
 On a modestly-fine grid, the \PETSc defaults for \pKSP and \pPC give a certain timing and a certain number of iterations:
 \begin{cline}
