@@ -669,7 +669,7 @@ $ timer mpiexec -n N ./tri -tri_m 10000000 -ksp_rtol 1.0e-10 -ksp_type KSP -pc_t
 %$
 for $N=1$ and $N=4$, and several \pKSP/\pPC choices.  The tighter tolerance \texttt{-ksp\_rtol 1.0e-10} was added because a fair comparison of iterative and direct methods needs significant accuracy in the iterative ones.
 
-\newcommand{\intime}[1]{\input{../c/ch2/timing/tri/#1}}
+\newcommand{\intime}[1]{\input{timing/tri/#1}}
 \begin{figure}[ht]
 \texttt{
 \begin{tabular}{llll}

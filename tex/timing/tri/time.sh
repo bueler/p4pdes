@@ -2,10 +2,12 @@
 
 set +x
 
+EXEC=$1
+
 function run() {
   rm -f tmp
   set -x
-  /usr/bin/time -f "%e" mpiexec -n $1 ../../tri -tri_m 10000000 -ksp_rtol 1.0e-10 -ksp_converged_reason -ksp_type $2 -pc_type $3 $4 &> tmp
+  /usr/bin/time -f "%e" mpiexec -n $1 $EXEC -tri_m 10000000 -ksp_rtol 1.0e-10 -ksp_converged_reason -ksp_type $2 -pc_type $3 $4 &> tmp
   set +x
   cat tmp
   NAME=$2.$3.$1
