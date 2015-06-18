@@ -2,10 +2,14 @@
 #include <petscdmda.h>
 
 //CREATEMATRIX
-PetscErrorCode formdirichletlaplacian(DM da, DMDALocalInfo info,
-                   PetscReal hx, PetscReal hy, PetscReal diagentry, Mat A) {
+PetscErrorCode formdirichletlaplacian(DM da, PetscReal diagentry, Mat A) {
   PetscErrorCode ierr;
-  PetscInt  i, j;
+  DMDALocalInfo  info;
+  PetscReal      hx, hy;
+  PetscInt       i, j;
+
+  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+  hx = 1.0/(info.mx-1);  hy = 1.0/(info.my-1);
   for (j=info.ys; j<info.ys+info.ym; j++) {
     for (i=info.xs; i<info.xs+info.xm; i++) {
       MatStencil  row, col[5];
@@ -40,11 +44,14 @@ PetscErrorCode formdirichletlaplacian(DM da, DMDALocalInfo info,
 //ENDCREATEMATRIX
 
 //FORMEXACTRHS
-PetscErrorCode formExact(DM da, DMDALocalInfo info, PetscReal hx, PetscReal hy,
-                         Vec uexact) {
+PetscErrorCode formExact(DM da, Vec uexact) {
   PetscErrorCode ierr;
+  DMDALocalInfo  info;
   PetscInt       i, j;
-  PetscReal      x, y, **auexact;
+  PetscReal      hx, hy, x, y, **auexact;
+
+  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+  hx = 1.0/(info.mx-1);  hy = 1.0/(info.my-1);
   ierr = DMDAVecGetArray(da, uexact, &auexact);CHKERRQ(ierr);
   for (j=info.ys; j<info.ys+info.ym; j++) {
     y = j * hy;
@@ -59,11 +66,14 @@ PetscErrorCode formExact(DM da, DMDALocalInfo info, PetscReal hx, PetscReal hy,
   return 0;
 }
 
-PetscErrorCode formRHS(DM da, DMDALocalInfo info, PetscReal hx, PetscReal hy,
-                       Vec b) {
+PetscErrorCode formRHS(DM da, Vec b) {
   PetscErrorCode ierr;
   PetscInt       i, j;
-  PetscReal      x, y, x2, y2, f, **ab;
+  PetscReal      hx, hy, x, y, x2, y2, f, **ab;
+  DMDALocalInfo  info;
+
+  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+  hx = 1.0/(info.mx-1);  hy = 1.0/(info.my-1);
   ierr = DMDAVecGetArray(da, b, &ab);CHKERRQ(ierr);
   for (j=info.ys; j<info.ys+info.ym; j++) {
     y = j * hy;  y2 = y*y;

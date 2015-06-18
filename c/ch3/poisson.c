@@ -20,17 +20,12 @@ int main(int argc,char **args) {
   PetscInitialize(&argc,&args,(char*)0,help);
 
   // default size (9 x 9) can be changed using -da_grid_x M -da_grid_y N
-  DM            da;
-  DMDALocalInfo info;
-  PetscReal     hx, hy;
+  DM  da;
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
                DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
                -9,-9,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,
                &da); CHKERRQ(ierr);
   ierr = DMDASetUniformCoordinates(da,0.0,1.0,0.0,1.0,-1.0,-1.0); CHKERRQ(ierr);
-  ierr = DMDAGetLocalInfo(da,&info);CHKERRQ(ierr);
-  hx = 1.0/(info.mx-1);
-  hy = 1.0/(info.my-1);
 
   // create linear system matrix A
   Mat  A;
@@ -45,14 +40,14 @@ int main(int argc,char **args) {
   ierr = VecDuplicate(b,&uexact); CHKERRQ(ierr);
 
   // fill known vectors
-  ierr = formExact(da,info,hx,hy,uexact); CHKERRQ(ierr);
-  ierr = formRHS(da,info,hx,hy,b); CHKERRQ(ierr);
+  ierr = formExact(da,uexact); CHKERRQ(ierr);
+  ierr = formRHS(da,b); CHKERRQ(ierr);
 
   // assemble linear system
   PetscLogStage  stage; //STRIP
   ierr = PetscLogStageRegister("Matrix Assembly", &stage); CHKERRQ(ierr); //STRIP
   ierr = PetscLogStagePush(stage); CHKERRQ(ierr); //STRIP
-  ierr = formdirichletlaplacian(da,info,hx,hy,1.0,A); CHKERRQ(ierr);
+  ierr = formdirichletlaplacian(da,1.0,A); CHKERRQ(ierr);
   ierr = PetscLogStagePop();CHKERRQ(ierr); //STRIP
 //ENDCREATE
 
@@ -71,8 +66,10 @@ int main(int argc,char **args) {
 
   // report on grid and numerical error
   PetscScalar    errnorm;
+  DMDALocalInfo  info;
   ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uxact
   ierr = VecNorm(u,NORM_INFINITY,&errnorm); CHKERRQ(ierr);
+  ierr = DMDAGetLocalInfo(da,&info);CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
              "on %d x %d grid:  error |u-uexact|_inf = %g\n",
              info.mx,info.my,errnorm); CHKERRQ(ierr);

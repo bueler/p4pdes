@@ -5,16 +5,15 @@
 // conditions, using a local stencil.  This method forms operator A from
 // finite difference approximation of
 //     A u = - hx * hy * (u_xx + u_yy)
-PetscErrorCode formdirichletlaplacian(DM da, DMDALocalInfo info,
-                   PetscReal hx, PetscReal hy, PetscReal diagentry, Mat A);
+PetscErrorCode formdirichletlaplacian(DM da, PetscReal diagentry, Mat A);
 
 // For a particular "manufactured" Poisson problem on a square,
 // compute the exact solution.
-PetscErrorCode formExact(DM da, DMDALocalInfo info, PetscReal hx, PetscReal hy, Vec uexact);
+PetscErrorCode formExact(DM da, Vec uexact);
 
 // For a particular "manufactured" Poisson problem on a square,
 // compute the right side b of the system  A u = b.
-PetscErrorCode formRHS(DM da, DMDALocalInfo info, PetscReal hx, PetscReal hy, Vec b);
+PetscErrorCode formRHS(DM da, Vec b);
 
 #endif
 
