@@ -579,7 +579,7 @@ In Figure \ref{code:poissonsolve} we create the \pKSP object and tell it about \
 \cinputpart{poisson.c}{c/ch3/}{Solve using \pKSP, and report on solution.}{II}{//SOLVE}{//ENDSOLVE}{code:poissonsolve}
 
 
-\section{Runtime}
+\section{Runtime controls and viewers}
 
 As a first run do:
 \begin{cline}
@@ -663,12 +663,12 @@ on 19 x 19 grid:  error |u-uexact|_inf = 0.000155374
 \end{cline}
 %$
 
-So at this point we have some confidence that we can control our code at runtime.  Here is what we want to know:\begin{itemize}
+In \PETSc the choices of solver and parameters can be made at runtime, once we have adequately-described the problem in terms of \PETSc objects.  We have delayed questions of convergence and efficiency until runtime.  However, now that we have some confidence that we can control our code at runtime, here is what we might want to know:\begin{itemize}
 \item is our numerical method correctly implemented? (\emph{convergence})
 \item what is going on inside \PETSc? (\emph{exposure})
 \item how to get high performance? (\emph{efficiency})
 \end{itemize}
-In \PETSc the choices of solver and parameters are controllable and exposable at runtime, once we have adequately-described the problem to \PETSc, and we have just gotten started on ``exposure.''  We have, until now, delayed questions of convergence and efficiency, or just scaling, until runtime.  We can make our choice empirical, i.e.~based on actual performance.  In any case, runtime control is a topic that we will return to frequently.  But we start right now with measuring convergence of \texttt{poisson.c}.
+In the next three sections we address these in turn, but we only get the most shallow start on efficiency.  Attaining efficiency both requires a better understanding of this goal, and a better appreciation of preconditioning, both of which are addressed in later chapters.
 
 
 \section{Convergence}
@@ -720,7 +720,7 @@ On this coarse grid the numerical error is nearly the same, but on finer grids t
 In fact, rerunning the Bash loop with the stronger $10^{-12}$ tolerance yields excellent evidence of convergence as shown by the circles in Figure \ref{fig:poisson-conv}.  The linear-fit rate of this logarithmic error data is $O(h^{1.9999})$.  Our implementation is correct.
 
 
-\section{Efficiency, and exposing \PETSc's solvers}
+\section{Exposing \PETSc's options and solvers}
 
 On the other hand, the finer grid calculations above are slow.  How about if we re-run in parallel?  On \WORKSTATION we get:
 \begin{cline}
@@ -738,19 +738,16 @@ These first performance results may raise more questions than they answer.  In p
 \begin{enumerate}
 \item are we effectively using \PETSc options at runtime?
 \item what is going on inside the \PETSc solver(s)?
-\item is this the parallel scaling we expect?
-\item was our method actually efficient?
 \end{enumerate}
-While we will focus on performance and scaling in Chapter \ref{chap:scaling}, we can get started on these questions.
 
-Regarding i), even knowing what are the possible runtime options is nontrivial in \PETSc because there are so many.  But the first step for finding allowed options is simple: pipe the output from option \texttt{-help} into a pager like \texttt{more} or \texttt{less}, like this
+Regarding i), even knowing what are the possible runtime options is nontrivial because there are so many.  The first step for finding allowed options is simple: pipe the output from option \texttt{-help} into a pager like \texttt{less}, like this
 \begin{cline}
 $ ./poisson -help | less
 \end{cline}
 %$
-This gives a view of the options available for those parts of \PETSc which are actually used in \texttt{poisson}.  For instance, the many options for controlling nonlinear solvers are \emph{not} included in \texttt{-help} output because we have not used \pSNES; compare Chapter \ref{chap:nonlinear}.  This \texttt{-help} output also gives default values for parameters; for example we see that the default for \texttt{-ksp\_rtol} is \texttt{1e-05}, which explains why convergence ``leveled out'' on fine grids.
+This gives a view of the options available for those parts of \PETSc which are actually used in \texttt{poisson}.  For instance, the many options for controlling nonlinear solvers and timestepping are \emph{not} included in \texttt{-help} output because we have not used \pSNES or \pTS objects.\sidenote{We get started with \pSNES in Chapter \ref{chap:nonlinear}.}  This \texttt{-help} output also shows the default values for parameters; for example the default for \texttt{-ksp\_rtol} is \texttt{1e-05}, which explains why convergence ``leveled out'' on fine grids in the last section on convergence.
 
-Alternatively, one might want to know what are options for controlling particular objects inside \texttt{poisson}.  For example, this command shows runtime options which control the \pKSP object:
+Alternatively, one might want to know what are options for controlling particular objects inside \texttt{poisson}.  For example, we can find the runtime options which control the \pKSP object:
 \begin{cline}
 $ ./poisson -help | grep ksp_
 \end{cline}
@@ -761,67 +758,155 @@ $ ./poisson -help | grep ksp_ | less
 \end{cline}
 %$
 
-Regarding ii), recall that we used \texttt{-dm\_view} to show properties of the \pDM object in \texttt{poisson}.  We should do the same for the \pKSP object:
+Regarding ii) above, recall that we used \texttt{-dm\_view} to show properties of the \pDM object in \texttt{poisson}, but also we used \texttt{-ksp\_view} in Chapter \ref{chap:linearsystem} to expose the linear solver.  As a reminder here, do
 \begin{cline}
 $ ./poisson -ksp_view
-KSP Object: 1 MPI processes
-  type: gmres
-    GMRES: restart=30, using Classical (unmodified) Gram-Schmidt Orthogonaliz...
-    GMRES: happy breakdown tolerance 1e-30
-  maximum iterations=10000, initial guess is zero
-  tolerances:  relative=1e-05, absolute=1e-50, divergence=10000
-  left preconditioning
-  using PRECONDITIONED norm type for convergence test
-PC Object: 1 MPI processes
-  type: ilu
-    ILU: out-of-place factorization
-    ...
-  linear system matrix = precond matrix:
-  Mat Object:  (a_)   1 MPI processes
-    type: seqaij
-    rows=100, cols=100
-    total: nonzeros=460, allocated nonzeros=460
-    ...
-on 10 x 10 grid:  iterations 7, residual norm = 8.59388e-07,
-                  error |u-uexact|_inf = 0.000621778
 \end{cline}
 %$
-We have suppressed some of the output, but this shows the default FIXME
-
-FIXME but wait, $A$ was symmetric; show
-\begin{cline}
-$ ./poisson -ksp_type cg
-\end{cline}
-%$
-
-FIXME:  In parallel
+We see the serial \pKSP defaults: GMRES plus ILU($0$) as the preconditioner.  And
 \begin{cline}
 $ mpiexec -n 4 ./poisson -ksp_view
-...
+\end{cline}
+%$
+reminds us that in parallel the defaults are GMRES plus block Jacobi as a preconditioner, but where each diagonal block---there are four here---is preconditioned with ILU($0$).
+
+
+\section{A first look at efficiency: CG, for better or worse}
+
+FIXME: the next several timing results had better go in a table
+
+On a modestly-fine grid, the \PETSc defaults for \pKSP and \pPC give a certain timing and a certain number of iterations:
+\begin{cline}
+$ timer ./poisson -da_refine 5 -ksp_converged_reason -ksp_type gmres -pc_type ilu
+Linear solve converged due to CONVERGED_RTOL iterations 506
+on 257 x 257 grid:  error |u-uexact|_inf = 1.73086e-06
+real 3.77
+\end{cline}
+%$
+That is a lot of iterations, and it is not clear if about 4 seconds is fast or slow, but let us suppose this is some kind of base performance.  Without thinking too hard, experimentation should show us what goes faster or slower.
+
+For example, having a preconditioner is important and desireable:
+\begin{cline}
+$ timer ./poisson -da_refine 5 -ksp_converged_reason -ksp_type gmres -pc_type none
+Linear solve converged due to CONVERGED_RTOL iterations 4705
+on 257 x 257 grid:  error |u-uexact|_inf = 1.84382e-06
+real 25.99
+\end{cline}
+%$
+The iterations and the time go up by a substantial factor.  On the other hand, maybe GMRES can be tuned better:
+\begin{cline}
+$ timer ./poisson -da_refine 5 -ksp_converged_reason -ksp_type gmres -pc_type ilu -ksp_gmres_restart 200
+Linear solve converged due to CONVERGED_RTOL iterations 174
+on 257 x 257 grid:  error |u-uexact|_inf = 7.80545e-07
+real 2.85
 \end{cline}
 %$
 
+But wait!  The system matrix $A$ is symmetric and positive definite.  From Chapter \ref{chap:linearsystem} we recall that CG (conjugate gradients) should apply:
+\begin{cline}
+$ timer ./poisson -da_refine 5 -ksp_converged_reason -ksp_type cg -pc_type none
+Linear solve converged due to CONVERGED_RTOL iterations 606
+on 257 x 257 grid:  error |u-uexact|_inf = 7.69971e-07
+real 1.95
+\end{cline}
+%$
+Thus \emph{un}-preconditioned CG does as well as the above preconditioned forms of GMRES.  This is worth exploring, so let's try two different preconditions which apply to symmetric positive definite matrices; both are mentioned in Chapter \ref{chap:linearsystem}:
+\begin{cline}
+$ timer ./poisson -da_refine 5 -ksp_converged_reason -ksp_type cg -pc_type jacobi
+Linear solve converged due to CONVERGED_RTOL iterations 606
+on 257 x 257 grid:  error |u-uexact|_inf = 7.69971e-07
+real 2.10
+$ timer ./poisson -da_refine 5 -ksp_converged_reason -ksp_type cg -pc_type icc
+Linear solve converged due to CONVERGED_RTOL iterations 177
+on 257 x 257 grid:  error |u-uexact|_inf = 7.82448e-07
+real 1.31
+\end{cline}
+We see that Jacobi preconditioning seems to make no difference at all,\sidenote{See the exercises.} but that incomplete Cholesky IC($0$) as a preconditioner for CG is the best so far.
 
-FIXME: see \verb|-log_summary| output
+We have so far not mentioned the symmetric minimum residual method MINRES \citep{Greenbaum1997}, but of course it is implemented in \PETSc too.  At least in its un-preconditioned form, it seems to do no better that un-preconditioned CG:
+\begin{cline}
+$ timer ./poisson -da_refine 5 -ksp_converged_reason -ksp_type minres -pc_type none -ksp_rtol 1.0e-14
+Linear solve converged due to CONVERGED_RTOL iterations 1044
+on 257 x 257 grid:  error |u-uexact|_inf = 7.68279e-07
+real 3.56
+\end{cline}
+%$
+Noting that no improvement is theoretically-expected, as CG applies to our positive-definite problem while MINRES only requires symmetry, we will not pursue it further for now.\sidenote{In fact, \cite[][p.~88]{Elmanetal2005} says ``when solving discrete Poisson problems the convergence of MINRES is almost identical to that of CG.''}
 
+While we are at it, however, a ``fair'' comparison to a direct method, in this case Cholesky itself, is in order.  Recall that ``fairness'' means asking for tight convergence tolerance in the iterative method to which we compare:
+\begin{cline}
+$ timer ./poisson -da_refine 5 -ksp_type preonly -pc_type cholesky
+on 257 x 257 grid:  error |u-uexact|_inf = 7.68279e-07
+real 27.89
+$ timer ./poisson -da_refine 5 -ksp_converged_reason -ksp_type cg -pc_type icc -ksp_rtol 1.0e-14
+Linear solve converged due to CONVERGED_RTOL iterations 314
+on 257 x 257 grid:  error |u-uexact|_inf = 7.68279e-07
+real 2.12
+\end{cline}
+Because we have several iterative methods that beat it, we conclude that this direct method is not competitive.
 
+Unfortunately, CG remain seriously flawed, at least from the 21st century point of view.\sidenote{The above timing table would be quite satisfying in 1975.}  The flaw is that the iteration count grows with refined grids.  In fact, \citet[][p.~76]{Elmanetal2005} summarises the situation this way:
+\begin{quote}
+for uniformly refined grids, the number of CG iterations required to meet a fixed tolerance will approximately double with each grid refinement
+\end{quote}
+That is, the 
+And this is precisely what we see with another bash loop:
+\begin{cline}
+$ for NN in 1 2 3 4 5; do
+> ./poisson -da_refine $NN -ksp_type cg -pc_type none -ksp_converged_reason; done
+Linear solve converged due to CONVERGED_RTOL iterations 36
+on 17 x 17 grid:  error |u-uexact|_inf = 0.000196729
+Linear solve converged due to CONVERGED_RTOL iterations 73
+on 33 x 33 grid:  error |u-uexact|_inf = 4.91819e-05
+Linear solve converged due to CONVERGED_RTOL iterations 148
+on 65 x 65 grid:  error |u-uexact|_inf = 1.22921e-05
+Linear solve converged due to CONVERGED_RTOL iterations 299
+on 129 x 129 grid:  error |u-uexact|_inf = 3.07512e-06
+Linear solve converged due to CONVERGED_RTOL iterations 606
+on 257 x 257 grid:  error |u-uexact|_inf = 7.69971e-07
+\end{cline}
+Of course, this is un-preconditioned CG.  While it is not surprising that \texttt{-pc\_type jacobi} does no better, such poor scaling unfortunately also applies to our favorite method so far:
+\begin{cline}
+$ for NN in 1 2 3 4 5; do
+> ./poisson -da_refine $NN -ksp_type cg -pc_type icc -ksp_converged_reason; done
+Linear solve converged due to CONVERGED_RTOL iterations 12
+on 17 x 17 grid:  error |u-uexact|_inf = 0.000196774
+Linear solve converged due to CONVERGED_RTOL iterations 23
+on 33 x 33 grid:  error |u-uexact|_inf = 4.91531e-05
+Linear solve converged due to CONVERGED_RTOL iterations 44
+on 65 x 65 grid:  error |u-uexact|_inf = 1.22657e-05
+Linear solve converged due to CONVERGED_RTOL iterations 88
+on 129 x 129 grid:  error |u-uexact|_inf = 3.0852e-06
+Linear solve converged due to CONVERGED_RTOL iterations 177
+on 257 x 257 grid:  error |u-uexact|_inf = 7.82448e-07
+\end{cline}
+%$
+We know that IC($0$) gives faster solves and lower iteration counts, but the \emph{scaling} of those iteration counts is the same: doubling with each grid refinement.
 
+FIXME: connect iteration count to condition number i.e.~using result from \citep{Greenbaum1997}
+
+FIXME: \citet[][p.~82]{Elmanetal2005} adds the bad news that 
+\begin{quote}
+One known result [about CG for the Poisson equation] is that the asymptotic behavior of the condition number using IC(0) preconditioning is unchanged: $\kappa(M^{-1} A) = O(h^{-2})$
+\end{quote}
 
 \section{Exercises}
 
 \renewcommand{\labelenumi}{\arabic{chapter}.\arabic{enumi}\quad}
 \begin{enumerate}
 \item FIXME use \texttt{DMDACreate1d()} to write solver for 1D Poisson
-\item FIXME modify \texttt{poisson.c} to do non-homogeneous Dirichlet
-\item Because the matrix set up by \texttt{poisson.c} is symmetric positive definite, the CG iteration applies.  Compare performance of Jacobi-preconditioned and un-preconditioned CG, by doing
+\item FIXME modify \texttt{poisson.c} to do non-homogeneous Dirichlet  
+\item Confirm the nearly-identical performance of un-preconditioned and Jacobi-preconditioned CG, by doing
 \begin{cline}
 $ timer ./poisson -da_refine 5 -ksp_converged_reason -ksp_type cg -pc_type X
 \end{cline}
 %$
-for \texttt{X}=\texttt{preonly},\texttt{jacobi} in turn.  (Add \texttt{-ksp\_view} to these runs to see the solver configuration.  Why is Jacobi preconditioning irrelevant here, i.e.~no better than \texttt{-pc\_type none}?  Make a fair comparison to the direct method represented by \texttt{-ksp\_type preonly -pc\_type cholesky} by tightening the tolerance for CG to \texttt{-ksp\_rtol 1.0e-12}.  (The effectiveness of iteration should be clear.)  Finally, add \texttt{-log\_summary} to the un-preconditioned CG run, e.g.
+for \texttt{X}=\texttt{none},\texttt{jacobi} in turn.  Explain.
+% ANSWER: because all non-boundary condition rows, i.e. all rows with coupling to other equations, which could be split out as A = I \oplus B for B with same condition number as A, have the same diagonal entry of "4" so the only effect of -pc_type jacobi is to scale the spectrum, but the fundamental CG convergence result says CG depends on condition number, i.e. in invariant to scaling of spectrum
+\item Add \texttt{-log\_summary} to an un-preconditioned CG run, e.g.
 \begin{cline}
 $ ./poisson -ksp_converged_reason -ksp_type cg -pc_type none -log_summary
 \end{cline}
 %$
-By looking at the ``Count'' column of ``Event Stage 2: Solve'', confirm that the computational work of one CG iteration consists of two inner products (\texttt{VecTDot}), three vector updates (\texttt{VecAXPY} and \texttt{VecAyPX}), and one matrix-vector product (\texttt{MatMult}).
+By looking at the ``Count'' column of ``Event Stage 2: Solve'', and noting the iteration count from the \texttt{-ksp\_converged\_reason} output, confirm that the computational work of one CG iteration consists of two inner products (\texttt{VecTDot}), three vector updates (\texttt{VecAXPY} and \texttt{VecAyPX}), and one matrix-vector product (\texttt{MatMult}).
 \end{enumerate}

@@ -1,29 +1,6 @@
 
 static char help[] = "Solves a structured-grid Poisson problem with DMDA and KSP.\n\n";
 
-// PRECONDITIONED CG:  look at iterations in IC(0) preconditioned,
-
-//   for NN in 1 2 3 4 5; do ./poisson -da_refine $NN -ksp_rtol 1.0e-8 -ksp_type cg -pc_type none -ksp_converged_reason; done
-// ITERATIONS (ASYMPTOTICALLY) DOUBLE WITH EACH GRID REFINEMENT
-//   (compare Elman p. 76: "...suggests that for uniformly refined grids, the
-//   number of CG iterations required to meet a fixed tolerance will approximately
-//   double with each grid refinement"
-
-//   for NN in 1 2 3 4 5; do ./poisson -da_refine $NN -ksp_rtol 1.0e-8 -ksp_type cg -pc_type icc -ksp_converged_reason; done
-// compare Elman p. 82: "One known result [ABOUT IC(0) PRECONDITIONING USED
-//   IN SECOND CASE ABOVE] is that the asymptotic behavior of the condition number
-//   using IC(0) preconditioning is unchanged: \kappa(M^{-1} A) = O(h^{-2})."
-//   THIS IS WHAT I SEE!!)
-
-// MINRES VS CG:
-// for NN in 1 2 3 4 5; do ./poisson -da_refine $NN -ksp_rtol 1.0e-8 -ksp_type minres -pc_type none -ksp_converged_reason; done
-//   (compare Elman p. 88: "Indeed, when solving discrete Poisson problems the
-//   the convergence of MINRES is almost identical to that of CG"  THIS IS WHAT I SEE!!)
-
-// CHOLESKY VS CG:
-// for NN in 1 2 3 4 5; do timer ./poisson -da_refine $NN -ksp_type preonly -pc_type cholesky -ksp_converged_reason; done
-// for NN in 1 2 3 4 5; do timer ./poisson -da_refine $NN -ksp_type preonly -pc_type cholesky -ksp_converged_reason; done
-
 // PERFORMANCE ANALYSIS:
 //   export PETSC_ARCH=linux-gnu-opt
 //   make poisson
