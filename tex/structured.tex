@@ -70,7 +70,7 @@ Our FD method is based on a \emph{structured grid} of $MN$ points on the unit sq
 
 Consider the lines of code in Figure \ref{code:dmdacreatetwod}, an extract from \texttt{poisson.c} later in this Chapter.  These lines create a \PETSc \pDM object for a grid like Figure \ref{fig:unitsquaregrid}.  A \pDM is an abstract type for describing the topology (connectedness) and geometry of a grid, \emph{and} the way it is distributed across \MPI processes, \emph{and} the way each process can access data from its neighboring processes.  The specific case in Figure \ref{code:dmdacreatetwod} creates a ``\pDMDA'', the subclass of \pDM s which are structured grids.  (Note ``\pDM'' might stand for ``distributed mesh,'' and ``\texttt{DA}'' for ``distributed array''.)
 
-\cinputraw{dmdacreate2d.frag}{extract from c/ch3/poisson.c}{An example of creating a 2D \pDMDA.  See Figures \ref{code:ctwopoissoncreate} and \ref{code:ctwopoissonsolve} for the rest of this code.}{}{//START}{//STOP}{code:dmdacreatetwod}
+\cinputraw{dmdacreate2d.frag}{extract from c/ch3/poisson.c}{An example of creating a 2D \pDMDA.  See Figures \ref{code:poissoncreate} and \ref{code:poissonsolve} for the rest of this code.}{}{//START}{//STOP}{code:dmdacreatetwod}
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
@@ -210,7 +210,12 @@ Though these defaults can be overridden by runtime options \texttt{-da\_grid\_x}
 $ mpiexec -n 4 ./poisson
 \end{cline}
 %$
-distributes a $9\times 9$ grid among four processes.  Figure \ref{fig:unitsquaregrideight} shows the balanced result of ``\texttt{mpiexec -n 4 ./poisson -da\_grid\_x 10 -da\_grid\_y 10}'' with each rank owning a square subgrid of 25 nodes.
+distributes the default $9\times 9$ grid in a well-balanced manner among four processes.  Figure \ref{fig:unitsquaregrideight} shows the perfectly-balanced result of
+\begin{cline}
+$ mpiexec -n 4 ./poisson -da_grid_x 10 -da_grid_y 10
+\end{cline}
+%$
+with each rank owning a square subgrid of 25 nodes.
 
 To explain the other options to \texttt{DMDACreate2d()} we quote the \PETSc manual pages description:
 
@@ -421,11 +426,7 @@ where $a=h_y/h_x$ and $b=h_x/h_y$.  Using \eqref{poissonsquareFD}, all the equat
 \label{fig:equalstarstencil}
 \end{marginfigure}
 
-Our second observation is that the FD equations can be re-interpreted to give a \emph{symmetric} matrix $A$.  For example, at a grid point adjacent to the left-hand boundary of the square, the $i=1$ case of \eqref{poissonsquareFD}, the boundary location value $U_{0,j}$ appears in the equation.  The matrix in the linear system will be symmetric if we systematically ``move'' such values to the right-hand side vector $\bb$, as the value $U_{0,j}$ is known.  That is, we force off-diagonal entries $A$ to be zero in columns corresponding to known boundary values.
-
-We have converted the earlier system to having a symmetric matrix $A$.  This opens up a larger range of linear algebra methods for solving the system efficiently, including conjugate gradients (\texttt{-ksp\_type cg}) and Cholesky preconditioners (\texttt{-pc\_type cholesky} or \texttt{-pc\_type icc}).
-
-With these two modifications we can redo the last example.
+Our second observation is that the FD equations can be re-interpreted to give a \emph{symmetric} matrix $A$.  For example, at a grid point adjacent to the left-hand boundary of the square, the $i=1$ case of \eqref{poissonsquareFD}, the boundary location value $U_{0,j}$ appears in the equation.  The matrix in the linear system will be symmetric if we systematically ``move'' such values to the right-hand side vector $\bb$, as the value $U_{0,j}$ is known.  That is, we force off-diagonal entries $A$ to be zero in columns corresponding to known boundary values.  With these two modifications we can redo the last example.
 
 \medskip\noindent\hrulefill
 \begin{example} \label{exampleredo} For the same $M=4$ and $N=3$ case shown in Figure \ref{fig:unitsquaregridordering}, equations \eqref{poissonsquareFDbcs} and \eqref{poissonsquareFD} yield the linear system
@@ -478,19 +479,21 @@ where $\alpha = 2 (h_y/h_x) + 2 (h_x/h_y) = 13/3$ and $\beta = - h_y/h_x = - 3/2
 \end{example}
 \noindent\hrulefill
 
+By converting the earlier system to a symmetric matrix $A$ we open up a larger range of linear algebra methods for solving the system efficiently.  We can now use conjugate gradients as the \pKSP (\texttt{-ksp\_type cg}), plus Cholesky preconditioners (\texttt{-pc\_type cholesky} or \texttt{-pc\_type icc}).
+
 
 \section{Code for matrix assembly}
 
-We now show in Figure \ref{code:structuredpoisson} the code that assembles ``$A$'' in linear system \eqref{poissonlinearsystem}.  For clarity and code reuse we have isolated this method in a separate file.  Arguments to \texttt{formdirichletlaplacian()} include the \pDM itself, grid spacings \texttt{hx,hy}, the value to put on the diagonal for Dirichlet boundary conditions, and the returned (i.e.~modified) \pMat \texttt{A}.
+We now show in Figure \ref{code:structuredpoisson} the code that assembles ``$A$'' in linear system \eqref{poissonlinearsystem} using \eqref{poissonsquareFD}.  For clarity and code reuse we have isolated this method in a separate file.  Arguments to \texttt{formdirichletlaplacian()} are simply the \pDM, the value to put on the diagonal for Dirichlet boundary conditions,\sidenote{This changes in a time-dependent problem which reuses the code} and the returned (i.e.~modified) \pMat \texttt{A}.
 
 \cinputpart{structuredpoisson.c}{c/ch3/}{Fill matrix entries using \texttt{MatSetValuesStencil}.  (From now on we strip ``\texttt{ierr=}'' and ``\texttt{CHKERRQ(ierr)}'' from the displayed code, but it is still present in the source.)}{I}{//CREATEMATRIX}{//ENDCREATEMATRIX}{code:structuredpoisson}
 
-The argument ``\texttt{DMDALocalInfo info}'' needs special description.  As shown in Figure \ref{fig:localpartofgrid}, \texttt{info} is a C structure which stores both global grid size and the extent of the locally-owned subgrid.  The global size is in members \texttt{info.mx,info.my}.  The local process owns a \texttt{info.xm} by \texttt{info.ym} rectangular subgrid, with a range of indices
+The ``\texttt{DMDALocalInfo info}'' object needs special description.  It is a C structure which stores both global grid size and the extent of the locally-owned subgrid, as shown in Figure \ref{fig:localpartofgrid}.  The global size is in members \texttt{info.mx,info.my}.  The local process owns a \texttt{info.xm} by \texttt{info.ym} rectangular subgrid, with a range of indices
 \begin{align*}
 &\text{\texttt{info.xs}} \le i \le \text{\texttt{info.xs}} +\text{\texttt{info.xm}}-1, \\
-&\text{\texttt{info.ys}} \le j \le \text{\texttt{info.ys}} +\text{\texttt{info.ym}}-1.
+&\text{\texttt{info.ys}} \le j \le \text{\texttt{info.ys}} +\text{\texttt{info.ym}}-1
 \end{align*}
-in two dimensions.  For example, in Figure \ref{fig:unitsquaregridparallel} the rank $0$ and $2$ processes have \text{\texttt{info.xs}} $=0$ and \text{\texttt{info.xm}} $=3$ while the rank $1$ and $3$ processes have \text{\texttt{info.xs}} $=3$ and \text{\texttt{info.xm}} $=2$.  The $y$ ranges are similar.
+(in two dimensions).  For example, in Figure \ref{fig:unitsquaregridparallel} the rank $0$ and $2$ processes have \text{\texttt{info.xs}} $=0$ and \text{\texttt{info.xm}} $=3$ while the rank $1$ and $3$ processes have \text{\texttt{info.xs}} $=3$ and \text{\texttt{info.xm}} $=2$, with similar $y$ ranges.
 
 \begin{figure}
 \begin{tikzpicture}[scale=8]
