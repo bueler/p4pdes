@@ -65,10 +65,15 @@ PetscErrorCode ComputeRHS(KSP ksp, Vec b, void *ctx) {
 PetscErrorCode ComputeA(KSP ksp, Mat J, Mat A, void *ctx) {
   PetscErrorCode ierr;
   DM             da;
-  PoissonCtx     *pctx = (PoissonCtx*)ctx;
+  DMDALocalInfo  info;
+  PetscReal      hx,hy;
+
   PetscFunctionBeginUser;
   ierr = KSPGetDM(ksp,&da); CHKERRQ(ierr);
-  ierr = formdirichletlaplacian(da,pctx->info,pctx->hx,pctx->hy,1.0,A); CHKERRQ(ierr);
+  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+  hx = 1.0/(info.mx-1);
+  hy = 1.0/(info.my-1);
+  ierr = formdirichletlaplacian(da,info,hx,hy,1.0,A); CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 //ENDCOMPUTES
