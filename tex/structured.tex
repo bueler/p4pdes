@@ -736,19 +736,12 @@ real 12.63
 \end{cline}
 It is nice to see a speedup, though only by a factor of $31.5/12.6 = 2.5$ on this fixed-size problem, which is disappointing given the putative four-times increase in processing power.
 
-These first performance results may raise more questions than they answer.  In particular,
-\renewcommand{\labelenumi}{\roman{enumi})}
-\begin{enumerate}
-\item are we effectively using \PETSc options at runtime?
-\item what is going on inside the \PETSc solver(s)?
-\end{enumerate}
-
-Regarding i), even knowing what are the possible runtime options is nontrivial because there are so many.  The first step for finding allowed options is simple: pipe the output from option \texttt{-help} into a pager like \texttt{less}, like this
+These first performance results may raise more questions than they answer.  In particular, are we effectively using the available \PETSc options at runtime?  Even knowing what are the possible runtime options is nontrivial because there are so many.  The first step for finding allowed options is simple: pipe the output from option \texttt{-help} into a pager like \texttt{less}, like this
 \begin{cline}
 $ ./poisson -help | less
 \end{cline}
 %$
-This gives a view of the options available for those parts of \PETSc which are actually used in \texttt{poisson}.  For instance, the many options for controlling nonlinear solvers and timestepping are \emph{not} included in \texttt{-help} output because we have not used \pSNES or \pTS objects.\sidenote{We get started with \pSNES in Chapter \ref{chap:nonlinear}.}  This \texttt{-help} output also shows the default values for parameters; for example the default for \texttt{-ksp\_rtol} is \texttt{1e-05}, which explains why convergence ``leveled out'' on fine grids in the last section on convergence.
+This gives a view of the options available for those parts of \PETSc which are actually used in \texttt{poisson}.  For instance, the many options for controlling nonlinear solvers and timestepping are \emph{not} included in \texttt{-help} output because we have not used \pSNES or \pTS objects.\sidenote{We use \pSNES in Chapter \ref{chap:nonlinear}.}  This \texttt{-help} output also shows the default values for parameters; for example the default for \texttt{-ksp\_rtol} is \texttt{1e-05}, which explains why convergence ``leveled out'' on fine grids in the last section on convergence.
 
 Alternatively, one might want to know what are options for controlling particular objects inside \texttt{poisson}.  For example, we can find the runtime options which control the \pKSP object:
 \begin{cline}
@@ -761,7 +754,7 @@ $ ./poisson -help | grep ksp_ | less
 \end{cline}
 %$
 
-Regarding ii) above, recall that we used \texttt{-dm\_view} to show properties of the \pDM object in \texttt{poisson}, but also we used \texttt{-ksp\_view} in Chapter \ref{chap:linearsystem} to expose the linear solver.  As a reminder here, do
+Recall that we used \texttt{-dm\_view} to show properties of the \pDM object in \texttt{poisson}, but also we used \texttt{-ksp\_view} in Chapter \ref{chap:linearsystem} to expose the linear solver.  As a reminder here, do
 \begin{cline}
 $ ./poisson -ksp_view
 \end{cline}
@@ -944,5 +937,5 @@ for \texttt{X}=\texttt{none},\texttt{jacobi} in turn.  Explain.
 $ ./poisson -ksp_converged_reason -ksp_type cg -pc_type none -log_summary
 \end{cline}
 %$
-By looking at the ``Count'' column of ``Event Stage 2: Solve'', and noting the iteration count from the \texttt{-ksp\_converged\_reason} output, confirm that the computational work of one CG iteration consists of two inner products (\texttt{VecTDot}), three vector updates (\texttt{VecAXPY} and \texttt{VecAyPX}), and one matrix-vector product (\texttt{MatMult}).
+By looking at the ``Count'' column of ``Event Stage 2: Solve'', and noting the iteration count from the \texttt{-ksp\_converged\_reason} output, confirm that the computational work of one CG iteration consists of two inner products (\texttt{VecTDot}), three vector updates (\texttt{VecAXPY} and \texttt{VecAYPX}), and one matrix-vector product (\texttt{MatMult}).
 \end{enumerate}
