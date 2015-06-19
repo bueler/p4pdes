@@ -670,7 +670,7 @@ $ timer mpiexec -n N ./tri -tri_m 10000000 -ksp_rtol 1.0e-10 -ksp_type KSP -pc_t
 for $N=1$ and $N=4$, and several \pKSP/\pPC choices.  The tighter tolerance \texttt{-ksp\_rtol 1.0e-10} was added because a fair comparison of iterative and direct methods needs significant accuracy in the iterative ones.
 
 \newcommand{\intime}[1]{\input{timing/tri/#1}}
-\begin{figure}[ht]
+\begin{table}
 \texttt{
 \begin{tabular}{llll}
 \underline{KSP}\hspace{0.5in} & \underline{PC}\hspace{0.8in} & \underline{N=1 \textrm{time (s)}}\hspace{0.3in} & \underline{N=4 \textrm{time (s)}} \\
@@ -688,9 +688,9 @@ cg         & none        & \intime{cg.none.1}          & \intime{cg.none.4} \\
 \end{tabular}
 }
 \caption{Times for \texttt{tri.c} to solve systems of dimension $m=10^7$.  In this case the matrix is \emph{tridiagonal}, \emph{symmetric}, \emph{diagonally-dominant}, and \emph{positive definite}.  All runs were on \WORKSTATION (see page \pageref{defineworkstation}).} \label{tab:tritiming}
-\end{figure}
+\end{table}
 
-This table deserves discussion:
+This Table deserves discussion:
 \begin{itemize}
 \item Entries ``\texttt{bjacobi+ilu}'' and ``\texttt{bjacobi+icc}'' correspond to options \texttt{-pc\_type bjacobi -sub\_pc\_type ilu} and \texttt{-pc\_type bjacobi -sub\_pc\_type icc}, respectively.  As already noted, the first of these is the parallel default.\sidenote{This example suggests it is a reasonable choice for the default!}
 \item Counting floating point operations shows the leading-order work for Cholesky is $m^3/3$ while for LU it is $2 m^3/3$ \citep{TrefethenBau}.  This is reflected in the direct-solve results using \texttt{-ksp\_type preonly}.  A diagonally-dominant tridiagonal problem is very well-behaved for direct methods because no fill-in or pivoting occurs when they are applied, but we should not assume that most $m=10^7$ dimension systems are good candidates for direct solves.

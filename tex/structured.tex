@@ -785,7 +785,7 @@ $ timer ./poisson -da_refine 5 -ksp_converged_reason -ksp_type KSP -pc_type PC
 and recording the resulting time and iteration count.  The iteration count is worth noting when it can help explain the timing, but at this stage we are identifying the un-defined term ``efficiency'' as just ``execution time.''
 
 \renewcommand{\intime}[1]{\input{timing/poisson/#1}}
-\begin{figure}[ht]
+\begin{table}
 \texttt{
 \begin{tabular}{llll}
 \underline{KSP}\hspace{0.5in} & \underline{PC}\hspace{0.8in} & \underline{\textrm{time (s)}}\hspace{0.3in} & \underline{iterations} \\
@@ -796,69 +796,31 @@ cg         & none        & \intime{cg.none} \\
            & jacobi      & \intime{cg.jacobi} \\
            & icc         & \intime{cg.icc} \\
            & icc + rtol=$10^{-14}$ & \intime{cg.icc.tight} \\
-minres     & none        & \intime{minres.none} \\
 preonly    & cholesky    & \intime{preonly.cholesky}  \\
+minres     & none        & \intime{minres.none} \\
 \end{tabular}
 }
 \caption{Times and number of \pKSP iterations for serial runs of \texttt{poisson.c} on $257\times 257$ grids.  The assembled matrix is \emph{symmetric}, \emph{diagonally-dominant}, and \emph{positive definite}.  All runs were on \WORKSTATION (see page \pageref{defineworkstation}).} \label{tab:poissontiming}
-\end{figure}
+\end{table}
 
-From table \ref{tab:poissontiming} we see that for GMRES, having a preconditioner is important and desireable.  That is, ILU($0$) substantially reduces both iteration count and time compared to no preconditioner.  But note that the number of iterations suggests that GMRES went through several restarts, which it does by default every 30 iterations.  For the current problem memory overflow is no issue, so we can try to avoid restart, and in fact that reduces both the iteration count and the time.
+From Table \ref{tab:poissontiming} we see that for GMRES, having a preconditioner is essential.  That is, ILU($0$) substantially reduces both iteration count and time compared to no preconditioner.  But note that the number of iterations suggests that GMRES went through several restarts, which it does by default every 30 iterations.  For the current problem memory overflow is no issue, so we avoid restart using option \texttt{-ksp\_gmres\_restart 200}, and this reduces both iteration count and execution time.
 
-FIXME
+However, the system matrix $A$ is symmetric and positive definite.  Recall from Chapter \ref{chap:linearsystem} that the CG (conjugate gradients) Krylov method should apply, and that Cholesky and incomplete Cholesky (IC($0$)) are available as preconditioners.  In Table \ref{tab:poissontiming} we compare these methods also.  Because \texttt{-ksp\_preonly -pc\_type cholesky} is a direct solver, fair comparison to iterative methods suggests we should solve the equations accurately, so we add the tighter tolerance \texttt{-ksp\_rtol 1.0e-14} to an iterative run.
 
-But wait!  The system matrix $A$ is symmetric and positive definite.  From Chapter \ref{chap:linearsystem} we recall that CG (conjugate gradients) should apply:
-\begin{cline}
-$ timer ./poisson -da_refine 5 -ksp_converged_reason -ksp_type cg -pc_type none
-Linear solve converged due to CONVERGED_RTOL iterations 606
-on 257 x 257 grid:  error |u-uexact|_inf = 7.69971e-07
-real 1.95
-\end{cline}
-%$
-Thus \emph{un}-preconditioned CG does as well as the above preconditioned forms of GMRES.  This is worth exploring, so let's try two different preconditions which apply to symmetric positive definite matrices; both are mentioned in Chapter \ref{chap:linearsystem}:
-\begin{cline}
-$ timer ./poisson -da_refine 5 -ksp_converged_reason -ksp_type cg -pc_type jacobi
-Linear solve converged due to CONVERGED_RTOL iterations 606
-on 257 x 257 grid:  error |u-uexact|_inf = 7.69971e-07
-real 2.10
-$ timer ./poisson -da_refine 5 -ksp_converged_reason -ksp_type cg -pc_type icc
-Linear solve converged due to CONVERGED_RTOL iterations 177
-on 257 x 257 grid:  error |u-uexact|_inf = 7.82448e-07
-real 1.31
-\end{cline}
-We see that Jacobi preconditioning seems to make no difference at all,\sidenote{See the exercises.} but that incomplete Cholesky IC($0$) as a preconditioner for CG is the best so far.
+We see that Jacobi preconditioning has little benefit over \emph{un}-preconditioned CG, because the diagonal is effectively constant,\sidenote{See the exercises.} but that IC($0$) for CG is the best so far.  The direct Cholesky solver is slower, presumably because of fill-in of the band seen in Figure \ref{fig:matM5N7}.
 
-We have so far not mentioned the symmetric minimum residual method MINRES \citep{Greenbaum1997}, but of course it is implemented in \PETSc too.  At least in its un-preconditioned form, it seems to do no better that un-preconditioned CG:
-\begin{cline}
-$ timer ./poisson -da_refine 5 -ksp_converged_reason -ksp_type minres -pc_type none -ksp_rtol 1.0e-14
-Linear solve converged due to CONVERGED_RTOL iterations 1044
-on 257 x 257 grid:  error |u-uexact|_inf = 7.68279e-07
-real 3.56
-\end{cline}
-%$
-Noting that no improvement is theoretically-expected, as CG applies to our positive-definite problem while MINRES only requires symmetry, we will not pursue it further for now.\sidenote{In fact, \citet[][p.~88]{Elmanetal2005} says ``when solving discrete Poisson problems the convergence of MINRES is almost identical to that of CG.''}
+We have so far not mentioned the minimum residual method \citep[MINRES]{Greenbaum1997} which applies to indefinite symmetric matrices, but of course it is implemented in \PETSc too.  We see that it seems to do no better than CG, at least in their un-preconditioned form, but this is no surprise.  For example, \citet[][p.~88]{Elmanetal2005} states that ``when solving discrete Poisson problems the convergence of MINRES is almost identical to that of CG.''
 
-While we are at it, however, a ``fair'' comparison to a direct method, in this case Cholesky itself, is in order.  Recall that ``fairness'' means asking for tight convergence tolerance in the iterative method to which we compare:
-\begin{cline}
-$ timer ./poisson -da_refine 5 -ksp_type preonly -pc_type cholesky
-on 257 x 257 grid:  error |u-uexact|_inf = 7.68279e-07
-real 27.89
-$ timer ./poisson -da_refine 5 -ksp_converged_reason -ksp_type cg -pc_type icc -ksp_rtol 1.0e-14
-Linear solve converged due to CONVERGED_RTOL iterations 314
-on 257 x 257 grid:  error |u-uexact|_inf = 7.68279e-07
-real 2.12
-\end{cline}
-Because we have several iterative methods that beat it, we conclude that this direct method is not competitive.
+If we were to stop now we might conclude that we have found a good \pKSP and \pPC combination for the Poisson equation, and proceed to harder problems.  Such a conclusion would be premature.
 
 
 \section{Krylov iteration is not enough \dots \emph{good} preconditioning is needed!}
 
-Unfortunately, CG remain seriously flawed, at least from the 21st century point of view.\sidenote{The above timing table might have satisfied in 1975.}  The flaw is that the iteration count grows with refined grids.  In fact, \citet[][p.~76]{Elmanetal2005} summarises the situation this way:
+Unfortunately, even with the preconditioners tried above, CG remains flawed.\sidenote{At least from a 21st-century point of view.  The above timing table might have satisfied in 1975.}  The leading flaw is that iteration count grows with refined grids, so that \citet[][p.~76]{Elmanetal2005} says
 \begin{quote}
 for uniformly refined grids, the number of CG iterations required to meet a fixed tolerance will approximately double with each grid refinement
 \end{quote}
-That is, the 
-And this is precisely what we see with another bash loop:
+This is precisely what we see from another bash loop:
 \begin{cline}
 $ for NN in 1 2 3 4 5; do
 > ./poisson -da_refine $NN -ksp_type cg -pc_type none -ksp_converged_reason; done
@@ -873,7 +835,9 @@ on 129 x 129 grid:  error |u-uexact|_inf = 3.07512e-06
 Linear solve converged due to CONVERGED_RTOL iterations 606
 on 257 x 257 grid:  error |u-uexact|_inf = 7.69971e-07
 \end{cline}
-Of course, this is un-preconditioned CG.  While it is not surprising that \texttt{-pc\_type jacobi} does no better, such poor scaling unfortunately also applies to our favorite method so far:
+Of course, this is un-preconditioned CG.  While it is not surprising that \texttt{-pc\_type jacobi} does no better (not shown), poor scaling also applies to our favorite method so far:
+
+FIXME: add this and above data to figure
 \begin{cline}
 $ for NN in 1 2 3 4 5; do
 > ./poisson -da_refine $NN -ksp_type cg -pc_type icc -ksp_converged_reason; done
@@ -927,10 +891,10 @@ real 10.43
 \item FIXME modify \texttt{poisson.c} to do non-homogeneous Dirichlet  
 \item Confirm the nearly-identical performance of un-preconditioned and Jacobi-preconditioned CG, by doing
 \begin{cline}
-$ timer ./poisson -da_refine 5 -ksp_converged_reason -ksp_type cg -pc_type X
+$ timer ./poisson -da_refine N -ksp_converged_reason -ksp_type cg -pc_type X
 \end{cline}
 %$
-for \texttt{X}=\texttt{none},\texttt{jacobi} in turn.  Explain.
+for \texttt{N}$=1,\dots,6$ and \texttt{X}=\texttt{none},\texttt{jacobi}.  Explain.
 % ANSWER: because all non-boundary condition rows, i.e. all rows with coupling to other equations, which could be split out as A = I \oplus B for B with same condition number as A, have the same diagonal entry of "4" so the only effect of -pc_type jacobi is to scale the spectrum, but the fundamental CG convergence result says CG depends on condition number, i.e. in invariant to scaling of spectrum
 \item Add \texttt{-log\_summary} to an un-preconditioned CG run, e.g.
 \begin{cline}
