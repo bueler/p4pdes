@@ -690,12 +690,12 @@ on 257 x 257 grid:  error |u-uexact|_inf = 1.73086e-06
 on 513 x 513 grid:  error |u-uexact|_inf = 1.23567e-06
 \end{cline}
 %$
-The data is shown in Figure \ref{fig:poisson-conv} as the squares.  For the four coarsest grids refinement by a factor of two gives a reduction in error by a factor of about four, as expected because our FD method is $O(h^2)$ \citep{MortonMayers}.  Unfortunately the error seems to have stopped falling for the three finer grids, at a numerical error level around $\|u-u_{ex}\|_\infty \approx 10^{-6}$.
+The data is shown in Figure \ref{fig:poisson-conv} as the stars.  For the four coarsest grids refinement by a factor of two gives a reduction in error by a factor of about four, as expected because our FD method is $O(h^2)$ \citep{MortonMayers}.  Unfortunately the error seems to have stopped falling for the three finer grids, at a numerical error level around $\|u-u_{ex}\|_\infty \approx 10^{-6}$.
 
 \begin{figure}
 \bigskip
 \includegraphics[width=0.9\textwidth]{poisson-conv}
-\caption{To show convergence we refine the \pDM grid by factors of two.  With the default \pKSP relative tolerance the error seems to level out (squares).  With a stronger tolerance for solving the linear system (\texttt{-ksp\_rtol 1.0e-12}) the errors continue to fall (circles) at the expected rate (dotted line).}
+\caption{To show convergence we refine the \pDM grid by factors of two so that $h\to 0$.  With the default settings the error seems to level out (stars).  With a stronger linear solver tolerance (\texttt{-ksp\_rtol 1.0e-12}) the errors (dots) fall at the expected rate (dashed).}
 \label{fig:poisson-conv}
 \end{figure}
 
@@ -720,7 +720,7 @@ on 10 x 10 grid:  error |u-uexact|_inf = 0.000621527
 \end{cline}
 On this coarse grid the numerical error is nearly the same, but on finer grids the fact that the linear system is solved more exactly will bring the numerical solution closer to the exact one.  However, the \pKSP takes twice as many iterations to achieve the desired residual norm reduction.
 
-In fact, rerunning the Bash loop with the stronger $10^{-12}$ tolerance yields excellent evidence of convergence as shown by the circles in Figure \ref{fig:poisson-conv}.  The linear-fit rate of this logarithmic error data is $O(h^{1.9999})$.  Our implementation is correct.
+In fact, rerunning the bash loop with the stronger $10^{-12}$ tolerance yields excellent evidence of convergence as shown by the dots in Figure \ref{fig:poisson-conv}.  The linear-fit rate of this logarithmic error data is $O(h^{1.9999})$.  Our implementation is correct.
 
 
 \section{Exposing \PETSc's options and solvers}
@@ -816,10 +816,12 @@ If we were to stop now we might conclude that we have found a good \pKSP and \pP
 
 \section{Krylov iteration is not enough \dots \emph{good} preconditioning is needed!}
 
-Unfortunately, even with the preconditioners tried above, CG remains flawed.\sidenote{At least from a 21st-century point of view.  The above timing table might have satisfied in 1975.}  The leading flaw is that iteration count grows with refined grids, so that \citet[][p.~76]{Elmanetal2005} says
+Unfortunately, even with the preconditioners tried above, CG has a distinct flaw.\sidenote{At least from a 21st-century point of view.  The above timing table might have satisfied in 1970.}  The iteration count grows with refined grids, so that
 \begin{quote}
 for uniformly refined grids, the number of CG iterations required to meet a fixed tolerance will approximately double with each grid refinement
 \end{quote}
+\citep[p.~76]{Elmanetal2005}.
+
 This is precisely what we see from another bash loop:
 \begin{cline}
 $ for NN in 1 2 3 4 5; do
@@ -835,31 +837,19 @@ on 129 x 129 grid:  error |u-uexact|_inf = 3.07512e-06
 Linear solve converged due to CONVERGED_RTOL iterations 606
 on 257 x 257 grid:  error |u-uexact|_inf = 7.69971e-07
 \end{cline}
-Of course, this is un-preconditioned CG.  While it is not surprising that \texttt{-pc\_type jacobi} does no better (not shown), poor scaling also applies to our favorite method so far:
 
-FIXME: add this and above data to figure
-\begin{cline}
-$ for NN in 1 2 3 4 5; do
-> ./poisson -da_refine $NN -ksp_type cg -pc_type icc -ksp_converged_reason; done
-Linear solve converged due to CONVERGED_RTOL iterations 12
-on 17 x 17 grid:  error |u-uexact|_inf = 0.000196774
-Linear solve converged due to CONVERGED_RTOL iterations 23
-on 33 x 33 grid:  error |u-uexact|_inf = 4.91531e-05
-Linear solve converged due to CONVERGED_RTOL iterations 44
-on 65 x 65 grid:  error |u-uexact|_inf = 1.22657e-05
-Linear solve converged due to CONVERGED_RTOL iterations 88
-on 129 x 129 grid:  error |u-uexact|_inf = 3.0852e-06
-Linear solve converged due to CONVERGED_RTOL iterations 177
-on 257 x 257 grid:  error |u-uexact|_inf = 7.82448e-07
-\end{cline}
-%$
-We know that IC($0$) gives faster solves and lower iteration counts, but the \emph{scaling} of those iteration counts is the same: doubling with each grid refinement.
+Of course, this is un-preconditioned CG.  While it is not surprising that \texttt{-pc\_type jacobi} does no better (not shown but see exercises), our favorite method so far has the same poor scaling.  Figure \ref{fig:poisson-cg-scale} shows that, while the \texttt{icc} preconditioner reduces the iteration count, the rate at which iterations grow is no better than \texttt{none}.  Though IC($0$) gives somewhat faster solves and lower iteration counts, the \emph{scaling} of those iteration counts is the same: doubling with each factor-of-two grid refinement.
 
-FIXME: connect iteration count to condition number i.e.~using result from \citep{Greenbaum1997}
+\begin{figure}
+\bigskip
+\includegraphics[width=0.9\textwidth]{poisson-cg-scale}
+\caption{As the grid is refined ($h\to 0$), un-preconditioned CG scales poorly on our Poisson problem in the sense that iterations increase steadily.  But IC($0$) does not improve the scaling either.  We need to find a truly-effective preconditioner.}
+\label{fig:poisson-cg-scale}
+\end{figure}
 
-FIXME: \citet[][p.~82]{Elmanetal2005} adds the bad news that 
+FIXME: connect iteration count to condition number i.e.~using result from \citep{Greenbaum1997}. this connection explains \citet[][p.~82]{Elmanetal2005} comment
 \begin{quote}
-One known result [about CG for the Poisson equation] is that the asymptotic behavior of the condition number using IC(0) preconditioning is unchanged: $\kappa(M^{-1} A) = O(h^{-2})$
+One known result [about CG for the Poisson equation] is that the asymptotic behavior of the condition number using IC($0$) preconditioning is unchanged: $\kappa(M^{-1} A) = O(h^{-2})$
 \end{quote}
 
 FIXME: but even more bad news: lu beats cg+icc anyway.  this is because lu is applied with nested-dissection () by default, so lu+nd and cholesky+nd are quite good; before dispairing on iteration, however, we are headed toward multigrid
