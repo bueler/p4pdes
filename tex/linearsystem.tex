@@ -397,7 +397,7 @@ The classical \emph{Jacobi} and \emph{Gauss-Seidel iterative methods} \citep{Gre
 \begin{tabular}{llll} \vspace{5mm}
 \emph{NAME}\hspace{0.5in} & Richardson & CG & GMRES \\ \vspace{5mm}
 \emph{SYMMETRY} & any & \begin{minipage}[l]{\mpwide}symmetric positive-definite\end{minipage} & any \\ \vspace{5mm}
-\emph{OPTIMALITY} & none & \begin{minipage}[l]{25mm}$\be_k$ minimizes $f(\bv){=}\left<A\bv,\bv\right>$ over $\bv{\in}\Kone{k}{A,\be_0}$\end{minipage} & \begin{minipage}[l]{\mpwide}$\br_k$ minimizes $f(\bv){=}\|\bv\|_2$ over $\bv{\in}\Kone{k}{A,\bb}$\end{minipage} \\ \vspace{5mm}
+\emph{OPTIMALITY} & none & \begin{minipage}[l]{25mm}$\be_k$ minimizes $f(\bv){=}\left<\bv,A\bv\right>$ over $\bv{\in}\Kone{k}{A,\be_0}$\end{minipage} & \begin{minipage}[l]{\mpwide}$\br_k$ minimizes $f(\bv){=}\|\bv\|_2$ over $\bv{\in}\Kone{k}{A,\bb}$\end{minipage} \\ \vspace{5mm}
 \begin{minipage}[l]{21mm}\emph{SPECTRAL} \emph{CONDITION}\end{minipage} & $\rho(I-\omega A) \ll 1$ & \begin{minipage}[l]{\mpwide}exist $p_n{\in}\Pnone$ small on $\sigma(A){\subset}(0,\infty)$\end{minipage} & \begin{minipage}[l]{\mpwide}exist $p_n{\in}\Pnone$ small on $\sigma(A){\subset}\CC$\end{minipage}
 \end{tabular}
 \caption{Comparison of three well-known Krylov methods for the problem $A\bu=\bb$.  ``Symmetry'' refers to the required properties of $A$ so as to apply the method.  ``Spectral condition'' is an informal statement of the spectral properties of $A$ which will lead to rapid convergence.  Here $\br_k=\bb-A\bu_k$ and $\be_k=\bu_k-\bu$.} \label{tab:krylovcompare}

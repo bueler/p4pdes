@@ -695,7 +695,7 @@ The data is shown in Figure \ref{fig:poisson-conv} as the stars.  For the four c
 
 \begin{figure}
 \bigskip
-\includegraphics[width=0.9\textwidth]{poisson-conv}
+\includegraphics[width=0.75\textwidth]{poisson-conv}
 \caption{To show convergence we refine the \pDM grid by factors of two so that $h\to 0$.  With the default settings the error seems to level out (stars).  With a stronger linear solver tolerance (\texttt{-ksp\_rtol 1.0e-12}) the errors (dots) fall at the expected rate (dashed).}
 \label{fig:poisson-conv}
 \end{figure}
@@ -841,10 +841,35 @@ Of course, this is un-preconditioned CG.  While it is not surprising that \textt
 
 \begin{figure}
 \bigskip
-\includegraphics[width=0.9\textwidth]{poisson-cg-scale}
+\includegraphics[width=0.75\textwidth]{poisson-cg-scale}
 \caption{As the grid is refined ($h\to 0$), un-preconditioned CG scales poorly on our Poisson problem in the sense that iterations increase steadily.  But IC($0$) does not improve the scaling either.  We need to find a truly-effective preconditioner.}
 \label{fig:poisson-cg-scale}
 \end{figure}
+
+This is the point at which some theory about CG would help to understand results, but stating the theorem needs some preparation.  Given $A$ a real, $N\times N$, symmetric, and positive-definite matrix we can define a new norm on $v\in\RR^N$,
+\begin{equation}
+\|v\|_A = \ip{v}{Av} = v^\top Av.  \label{normAdefn}
+\end{equation}
+Recall the notation that $\be_k = \bu_k - \bu$ is the error in solving $A\bu=\bb$.  Note that, CG being a Krylov method, its $k$th error satisfies
+    $$\be_k = \be_0 + c_1 A \be_0 + \dots + c_k A^k \be_0$$
+for some real coefficients $c_j$.  Also, denote by $\sigma_j(A)$ the ordered singular values with subscript $0$ indicating the largest value.  Recall that $\sigma_j(A)=\lambda_j(A)$, where $\lambda_j(A)$ are the ordered eigenvalues of $A$, because $A$ is symmetric and positive-definite.  Thus the 2-norm condition of a symmetric positive-definite matrix $A$ is also the ratio of eigenvalues,
+	$$\kappa_2(A) = \lambda_0(A)/\lambda_{N-1}(A) \ge 1.$$
+(Note $\lambda_{N-1}(A)>0$ because $A$ is positive-definite.)
+
+Now we can state a useful theorem giving the sense in which CG is optimal, plus a practical error bound.  The second part of the theorem follows from the first by using Chebyshev polynomials to construct a polynomial which is small on the interval $[\lambda_{N-1}(A),\lambda_0(A)]$.
+
+\begin{theorem} \citep{Greenbaum1997} Suppose $\bu_k$ are the iterates from CG.  Then:\begin{itemize}
+\item Considering all real polynomials $p_k(x)$ of degree $k$ such that $p_k(0)=1$,
+    $$\|\be_k\|_A = \min_{p_k} \|p_k(A) \be_0\|_A.$$
+\item The $k$th error is bounded by an amount which is computable from the condition number $\kappa=\kappa_2(A)$, namely
+	$$\|\be_k\|_A \le 2 \left(\frac{\sqrt{\kappa}-1}{\sqrt{\kappa}+1}\right)^k \|\be_0\|_A.$$
+\end{itemize}
+\end{theorem}
+
+FIXME: estimate, including computation using
+\begin{cline}
+-ksp_compute_eigenvalues
+\end{cline}
 
 FIXME: connect iteration count to condition number i.e.~using result from \citep{Greenbaum1997}. this connection explains \citet[][p.~82]{Elmanetal2005} comment
 \begin{quote}
@@ -881,7 +906,7 @@ fish2   & cg         & mg       &  10.43 &    7 \\ % -ksp_rtol 1.0e-14
 \begin{enumerate}
 \item Use \texttt{DMDACreate1d()}, and other appropriate modifications of \texttt{poisson.c} and \texttt{structuredpoisson.c}, to write a solver for the 1D Poisson problem
     $$-u'' = f, \quad u(0)=u(1)=0.$$
-For simplicity, choose exact solution $u(x)=x^2(1-x^2)$.  Note you can easily use \texttt{MatSetValues()} instead of \texttt{MatSetValuesStencil()} because indexing is easy.  Show your results converge by generating numerical error data on a sequence of refining grids, as done in Figure \ref{fig:poisson-conv}, and seeing the error go to zero as $O(h^2)$.\sidenote{I was able to get 11 digit accuracy at every grid value of $u(x)$.}
+For simplicity, choose exact solution $u(x)=x^2(1-x^2)$.  Note you can use \texttt{MatSetValues()} instead of \texttt{MatSetValuesStencil()} because indexing is easy.  Show your results converge by generating numerical error norms on a sequence of refining grids, as done in Figure \ref{fig:poisson-conv}.  The error should go to zero as $O(h^2)$.  Find a grid refinement level, and \texttt{-ksp\_...} options, to get 11 digit accuracy at every grid point.
 % ANSWER:   FD is:  - U_{i-1} + 2 U_i - U_{i+1} = h^2 f_i
 %  for exact u:  u'   = 2x(1-x^2) + x^2(-2x) = 2x - 4x^3
 %                -u'' = -(2 - 12 x^2) = 12x^2 - 2
@@ -899,5 +924,6 @@ $ ./poisson -ksp_converged_reason -ksp_type cg -pc_type none -log_summary
 \end{cline}
 %$
 By looking at the ``Count'' column of ``Event Stage 2: Solve'', and noting the iteration count from the \texttt{-ksp\_converged\_reason} output, confirm that the computational work of one CG iteration consists of two inner products (\texttt{VecTDot}), three vector updates (\texttt{VecAXPY} and \texttt{VecAYPX}), and one matrix-vector product (\texttt{MatMult}).
+\item Show that \eqref{normAdefn} defines a norm on $\RR^N$.  By correctly-defining the matrix $\sqrt{A}$, show that $\|v\|_A = \|\sqrt{A}v\|_2$.
 \item Use \texttt{DMDACreate3d()} and etc.~to solve a 3D Poisson problem on the unit cube $\mathcal{C}=[0,1]^3$.  Looking forward, how is the approach taken in Chapter \ref{chap:multigrid} different from your code?
 \end{enumerate}
