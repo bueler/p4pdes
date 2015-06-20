@@ -678,7 +678,8 @@ In the next three sections we address these in turn, but we only get the most sh
 
 We want to see the numerical errors decrease as we refine the grid.  Such decrease is expected because the finite differences become better approximations of the corresponding derivatives, but we want to \emph{see} it, so we know the code is correct.  Furthermore we want the rate at which the error decreases to match what we expect in theory.
 
-The code \texttt{poisson.c} already generates the max norm error, and we know how to refine the grid by factors of two, so let's generate some  data.  Here is a Bash loop:
+The code \texttt{poisson.c} already generates the max norm error, and we know how to refine the grid by factors of two, so let's generate some  data.  Here is a bash loop:
+\label{poissonconvdata}
 \begin{cline}
 $ for K in 0 1 2 3 4 5 6; do ./poisson -da_refine $K; done
 on 9 x 9 grid:  error |u-uexact|_inf = 0.000763959
@@ -816,12 +817,10 @@ If we were to stop now we might conclude that we have found a good \pKSP and \pP
 
 \section{Krylov iteration is not enough \dots \emph{good} preconditioning is needed!}
 
-Unfortunately, even with the preconditioners tried above, CG has a distinct flaw.\sidenote{At least from a 21st-century point of view.  The above timing table might have satisfied in 1970.}  The iteration count grows with refined grids, so that
+Unfortunately, even with the preconditioners tried above, CG has a distinct flaw.\sidenote{At least from a 21st-century point of view.  The above timing table might have satisfied in 1970.}  The iteration count grows with refined grids, so that \citep[p.~76]{Elmanetal2005}
 \begin{quote}
-for uniformly refined grids, the number of CG iterations required to meet a fixed tolerance will approximately double with each grid refinement
+for uniformly refined grids, the number of CG iterations required to meet a fixed tolerance will approximately double with each grid refinement.
 \end{quote}
-\citep[p.~76]{Elmanetal2005}.
-
 This is precisely what we see from another bash loop:
 \begin{cline}
 $ for NN in 1 2 3 4 5; do
@@ -838,7 +837,7 @@ Linear solve converged due to CONVERGED_RTOL iterations 606
 on 257 x 257 grid:  error |u-uexact|_inf = 7.69971e-07
 \end{cline}
 
-Of course, this is un-preconditioned CG.  While it is not surprising that \texttt{-pc\_type jacobi} does no better (not shown but see exercises), our favorite method so far has the same poor scaling.  Figure \ref{fig:poisson-cg-scale} shows that, while the \texttt{icc} preconditioner reduces the iteration count, the rate at which iterations grow is no better than \texttt{none}.  Though IC($0$) gives somewhat faster solves and lower iteration counts, the \emph{scaling} of those iteration counts is the same: doubling with each factor-of-two grid refinement.
+Of course, this is un-preconditioned CG.  While it is not surprising that \texttt{-pc\_type jacobi} does no better (not shown; see exercises), our favorite method so far has the same poor scaling.  Figure \ref{fig:poisson-cg-scale} shows that though IC($0$) gives somewhat faster solves and lower iteration counts, the \emph{scaling} of those iteration counts is the same as \texttt{-pc\_type none}: doubling with each factor-of-two grid refinement.
 
 \begin{figure}
 \bigskip
@@ -853,32 +852,40 @@ One known result [about CG for the Poisson equation] is that the asymptotic beha
 \end{quote}
 
 FIXME: but even more bad news: lu beats cg+icc anyway.  this is because lu is applied with nested-dissection () by default, so lu+nd and cholesky+nd are quite good; before dispairing on iteration, however, we are headed toward multigrid
+Ran \texttt{poisson} with options \texttt{-ksp\_converged\_reason -da\_refine 7} gives $1025 \times 1025$ grid and thus about $10^6$ degrees of freedom.
+
 \begin{cline}
-$ timer ./poisson -ksp_converged_reason -da_refine 7 -ksp_type cg -pc_type icc -ksp_rtol 1.0e-14
-Linear solve converged due to CONVERGED_RTOL iterations 1262
-on 1025 x 1025 grid:  error |u-uexact|_inf = 4.80182e-08
-real 127.63
-$ timer ./poisson -ksp_converged_reason -da_refine 7 -ksp_type preonly -pc_type lu
-Linear solve converged due to CONVERGED_ITS iterations 1
-on 1025 x 1025 grid:  error |u-uexact|_inf = 4.80182e-08
-real 56.45
-$ timer ./poisson -ksp_converged_reason -da_refine 7 -ksp_type preonly -pc_type cholesky -pc_factor_mat_ordering_type nd
-Linear solve converged due to CONVERGED_ITS iterations 1
-on 1025 x 1025 grid:  error |u-uexact|_inf = 4.80182e-08
-real 80.00
-$ timer ../ch5/fish2 -ksp_converged_reason -da_refine 7 -ksp_type cg -pc_type mg -ksp_rtol 1.0e-14
-Linear solve converged due to CONVERGED_RTOL iterations 7
-on 1025 x 1025 grid:  error |u-uexact|_inf = 4.80182e-08
-real 10.43
+./poisson ... -ksp_type cg -pc_type icc -ksp_rtol 1.0e-14
+./poisson ... -ksp_type preonly -pc_type cholesky -pc_factor_mat_ordering_type nd
+./poisson ... -ksp_type preonly -pc_type lu
+./fish2   ... -ksp_type cg -pc_type mg  -ksp_rtol 1.0e-14
 \end{cline}
-%$
+
+\begin{table}
+\texttt{
+\begin{tabular}{lllll}
+\underline{Code}\hspace{0.2in} & \underline{KSP}\hspace{0.3in} & \underline{PC}\hspace{0.4in} & \underline{\textrm{time (s)}}\hspace{0.1in} & \underline{iterations} \\
+poisson & cg         & icc      & 127.63 & 1262 \\ % -ksp_rtol 1.0e-14
+        & preonly    & cholesky &  80.00 &    1 \\ % -pc_factor_mat_ordering_type nd
+        &            & lu       &  56.45 &    1 \\
+fish2   & cg         & mg       &  10.43 &    7 \\ % -ksp_rtol 1.0e-14
+\end{tabular}
+}
+\caption{FIXME} \label{tab:directbeatscgexceptmg}
+\end{table}
+
 
 \section{Exercises}
 
 \renewcommand{\labelenumi}{\arabic{chapter}.\arabic{enumi}\quad}
 \begin{enumerate}
-\item FIXME use \texttt{DMDACreate1d()} to write solver for 1D Poisson
-\item FIXME modify \texttt{poisson.c} to do non-homogeneous Dirichlet  
+\item Use \texttt{DMDACreate1d()}, and other appropriate modifications of \texttt{poisson.c} and \texttt{structuredpoisson.c}, to write a solver for the 1D Poisson problem
+    $$-u'' = f, \quad u(0)=u(1)=0.$$
+For simplicity, choose exact solution $u(x)=x^2(1-x^2)$.  Note you can easily use \texttt{MatSetValues()} instead of \texttt{MatSetValuesStencil()} because indexing is easy.  Show your results converge by generating numerical error data on a sequence of refining grids, as done in Figure \ref{fig:poisson-conv}, and seeing the error go to zero as $O(h^2)$.\sidenote{I was able to get 11 digit accuracy at every grid value of $u(x)$.}
+% ANSWER:   FD is:  - U_{i-1} + 2 U_i - U_{i+1} = h^2 f_i
+%  for exact u:  u'   = 2x(1-x^2) + x^2(-2x) = 2x - 4x^3
+%                -u'' = -(2 - 12 x^2) = 12x^2 - 2
+\item Modify \texttt{structuredpoisson.c} to allow non-homogeneous Dirichlet boundary data $u|_{\partial \mathcal{S}}=g$.  Test the correctness (i.e.~convergence at the expected rate) of your code by solving \eqref{poissonsquare} with both $f$ and $g$ derived from the exact solution $u(x,y)=3x + \sin(20xy)$ and examining errors under grid refinement.
 \item Confirm the nearly-identical performance of un-preconditioned and Jacobi-preconditioned CG, by doing
 \begin{cline}
 $ timer ./poisson -da_refine N -ksp_converged_reason -ksp_type cg -pc_type X
@@ -892,4 +899,5 @@ $ ./poisson -ksp_converged_reason -ksp_type cg -pc_type none -log_summary
 \end{cline}
 %$
 By looking at the ``Count'' column of ``Event Stage 2: Solve'', and noting the iteration count from the \texttt{-ksp\_converged\_reason} output, confirm that the computational work of one CG iteration consists of two inner products (\texttt{VecTDot}), three vector updates (\texttt{VecAXPY} and \texttt{VecAYPX}), and one matrix-vector product (\texttt{MatMult}).
+\item Use \texttt{DMDACreate3d()} and etc.~to solve a 3D Poisson problem on the unit cube $\mathcal{C}=[0,1]^3$.  Looking forward, how is the approach taken in Chapter \ref{chap:multigrid} different from your code?
 \end{enumerate}

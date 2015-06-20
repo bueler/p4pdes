@@ -10,21 +10,19 @@ PetscErrorCode formdirichletlaplacian(DM da, Mat A) {
 
     ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
     for (i=info.xs; i<info.xs+info.xm; i++) {
-      MatStencil  row, col[3];
       PetscReal   v[3];
-      PetscInt    ncols = 0;
-      row.i = i;
-      col[ncols].i = i;
+      PetscInt    row = i, col[3];
+      PetscInt    ncols=0;
       if ( (i==0) || (i==info.mx-1) ) {
-        v[ncols++] = 1;
+        col[ncols] = i;  v[ncols++] = 1.0;
       } else {
-        v[ncols++] = 2;
+        col[ncols] = i;  v[ncols++] = 2.0;
         if (i-1>0) {
-          col[ncols].i = i-1;  v[ncols++] = -1;  }
+          col[ncols] = i-1;  v[ncols++] = -1.0;  }
         if (i+1<info.mx-1) {
-          col[ncols].i = i+1;  v[ncols++] = -1;  }
+          col[ncols] = i+1;  v[ncols++] = -1.0;  }
       }
-      ierr = MatSetValuesStencil(A,1,&row,ncols,col,v,INSERT_VALUES); CHKERRQ(ierr);
+      ierr = MatSetValues(A,1,&row,ncols,col,v,INSERT_VALUES); CHKERRQ(ierr);
     }
     ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
     ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
@@ -35,20 +33,19 @@ PetscErrorCode formExactAndRHS(DM da, Vec uexact, Vec b) {
   PetscErrorCode ierr;
   DMDALocalInfo  info;
   PetscInt       i;
-  PetscReal      hx, x, x2, *ab, *auexact;
+  PetscReal      h, x, *ab, *auexact;
 
   ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-  hx = 1.0/(info.mx-1);
+  h = 1.0/(info.mx-1);
   ierr = DMDAVecGetArray(da, b, &ab);CHKERRQ(ierr);
   ierr = DMDAVecGetArray(da, uexact, &auexact);CHKERRQ(ierr);
   for (i=info.xs; i<info.xs+info.xm; i++) {
-    x = i * hx;  x2 = x*x;
-    auexact[i] = x2 * (1.0 - x2);
-    if ( (i>0) && (i<info.mx-1) ) { // if not bdry
-      ab[i] = hx * 2.0 * (1.0 - 6.0*x2);  //FIXME
-    } else {
+    x = i * h;
+    auexact[i] = x*x * (1.0 - x*x);
+    if ( (i>0) && (i<info.mx-1) )
+      ab[i] = h*h * (12.0 * x*x - 2.0);
+    else
       ab[i] = 0.0;
-    }
   }
   ierr = DMDAVecRestoreArray(da, uexact, &auexact);CHKERRQ(ierr);
   ierr = DMDAVecRestoreArray(da, b, &ab); CHKERRQ(ierr);
@@ -67,8 +64,8 @@ int main(int argc,char **args) {
   Vec            b,u,uexact;
   PetscReal      errnorm;
   DMDALocalInfo  info;
-  PetscInitialize(&argc,&args,(char*)0,help);
 
+  PetscInitialize(&argc,&args,(char*)0,help);
   ierr = DMDACreate1d(PETSC_COMM_WORLD,
                DM_BOUNDARY_NONE,
                -9,1,1,NULL,
