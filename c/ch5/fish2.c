@@ -41,6 +41,16 @@ static char help[] = "Solves a structured-grid Poisson problem with DMDA and KSP
 // COMPARABLE?:
 //mpiexec -n 4 ./fish2 -da_grid_x 4097 -da_grid_y 4097 -pc_type mg -pc_mg_levels 11 -ksp_monitor -pc_mg_type full -ksp_rtol 1.0e-12 -mg_levels_ksp_type cg
 
+// PERFORMANCE ANALYSIS:
+//   export PETSC_ARCH=linux-gnu-opt
+//   make fish2
+//   ./fish2 -da_grid_x 1025 -da_grid_y 1025 -ksp_type cg -log_summary|grep "Solve: "
+//   mpiexec -n 6 ./poisson -da_grid_x 1025 -da_grid_y 1025 -ksp_type cg -log_summary|grep "Solve: "
+
+// WEAK SCALING IN TERMS OF FLOPS ONLY:
+//   for kk in 0 1 2 3; do NN=$((50*(2**$kk))); MM=$((2**(2*$kk))); cmd="mpiexec -n $MM ./fish2 -da_grid_x $NN -da_grid_y $NN -ksp_rtol 1.0e-8 -ksp_type cg -log_summary"; echo $cmd; $cmd |'grep' "Flops:  "; echo; done
+
+
 #include <petsc.h>
 #include "../ch3/structuredpoisson.h"
 
