@@ -837,7 +837,7 @@ Linear solve converged due to CONVERGED_RTOL iterations 606
 on 257 x 257 grid:  error |u-uexact|_inf = 7.69971e-07
 \end{cline}
 
-Of course, this is un-preconditioned CG.  While it is not surprising that \texttt{-pc\_type jacobi} does no better (not shown; see exercises), it is easy to check that our favorite method so far has the same poor scaling.  Figure \ref{fig:poisson-cg-scale} shows that though IC($0$) gives somewhat faster solves and lower iteration counts, the \emph{scaling} of those counts is the same as \texttt{-pc\_type none}: the number of iterations doubles with each factor-of-two grid refinement.
+Of course, this is un-preconditioned CG.  While it is not surprising that \texttt{-pc\_type jacobi} does no better (not shown but see Exercises), it is easy to check that our favorite method so far has the same poor scaling.  Figure \ref{fig:poisson-cg-scale} shows that though IC($0$) gives somewhat faster solves and lower iteration counts, the \emph{scaling} of those counts is the same as \texttt{-pc\_type none}: the number of iterations doubles with each factor-of-two grid refinement.
 
 \begin{figure}
 \bigskip
@@ -846,36 +846,35 @@ Of course, this is un-preconditioned CG.  While it is not surprising that \textt
 \label{fig:poisson-cg-scale}
 \end{figure}
 
-Some theory of the CG iteration helps to understand these results, but stating a theorem requires preparation.  Suppose that $A$ is an $N\times N$, symmetric, and positive-definite matrix.  We can define a new norm, the \emph{$A$-norm}, on $v\in\RR^N$,
+Some theoretical bounds for the number CG iterations helps to understand these results, but stating a theorem requires preparation.  Suppose that $A$ is an $N\times N$, symmetric, and positive-definite matrix.  We can define a new norm, the \emph{$A$-norm}, on $v\in\RR^N$,
 \begin{equation}
 \|v\|_A = \ip{v}{Av}^{1/2} = (v^\top Av)^{1/2}.  \label{normAdefn}
 \end{equation}
-Recall the notation that $\be_k = \bu_k - \bu$ is the error of $\bu_k$ as a solution to $A\bu=\bb$.  Also, denote by $\sigma_j(A)$ the ordered singular values with subscript $0$ indicating the largest value.  Recall that $\sigma_j(A)=\lambda_j(A)$, where $\lambda_j(A)$ are the ordered eigenvalues of $A$, because $A$ is symmetric and positive-definite.  Thus the 2-norm condition of a symmetric positive-definite matrix $A$ is also the ratio of eigenvalues,
+Recall the notation that $\be_k = \bu_k - \bu$ is the error of $\bu_k$ as a solution to $A\bu=\bb$.  Denote by $\sigma_j(A)$ the ordered singular values with subscript $0$ indicating the largest value.  Recall that if $A$ is symmetric and positive-definite then $\sigma_j(A)=\lambda_j(A)$, where $\lambda_j(A)$ is an (ordered) eigenvalue of $A$.  Note $\lambda_{N-1}(A)>0$ if $A$ is symmetric positive-definite.  Finally, the 2-norm condition of a symmetric positive-definite matrix is the ratio of eigenvalues,
 	$$\kappa_2(A) = \lambda_0(A)/\lambda_{N-1}(A) \ge 1.$$
-(Note $\lambda_{N-1}(A)>0$ because $A$ is positive-definite.)
 
-Now we can state a conceptually-useful theorem giving the sense in which CG is optimal and an error bound.  Part (\emph{ii}) of the theorem follows from (\emph{i}) by using Chebyshev polynomials to construct a polynomial which is small on the interval $[\lambda_{N-1}(A),\lambda_0(A)]$.  Part (\emph{iii}) follows from (\emph{ii}) by understanding the norm $\|\cdot\|_A$ in terms of the 2-norm and the matrix $\sqrt{A}$; see the Exercises.  We state part (\emph{iii}) for the simple reason that $\|\br_k\|_2$ is a quantity computable by \PETSc, given the information available, while $\|\be_k\|_A$ is not.  Parts (\emph{ii}) and (\emph{iii}) are not optimal bounds, though it is easy to state that for part (\emph{ii}) \citep[p.~51]{Greenbaum1997}.
+Now we can state a conceptually-useful theorem giving the sense in which CG is optimal and an error bound.  Part (\emph{i}) is proved by \citet[p.~50]{Greenbaum1997}.  Part (\emph{ii}) follows from (\emph{i}) by using Chebyshev polynomials to construct a polynomial which is small on the interval $[\lambda_{N-1}(A),\lambda_0(A)]$ \citep[p.~51]{Greenbaum1997}.  Part (\emph{iii}) follows from (\emph{ii}) by understanding the norm $\|\cdot\|_A$ in terms of the 2-norm and the matrix $\sqrt{A}$; see the Exercises.  We state part (\emph{iii}) for the simple reason that $\|\br_k\|_2$ is a quantity computable by \PETSc, given the information available, while $\|\be_k\|_A$ is not.  Parts (\emph{ii}) and (\emph{iii}) are not optimal bounds, though it is easy to state that for part (\emph{ii}) \citep[p.~51]{Greenbaum1997}.
 
 \renewcommand{\labelenumi}{(\roman{enumi})}
 \begin{theorem}Suppose $\bu_k$ are the iterates from CG.  Then:\begin{enumerate}
-\item \citep[p.~50]{Greenbaum1997}  Considering all real polynomials $p_k(x)$ of degree $k$ such that $p_k(0)=1$,
+\item Considering all real polynomials $p_k(x)$ of degree $k$ such that $p_k(0)=1$,
     $$\|\be_k\|_A = \min_{p_k} \|p_k(A) \be_0\|_A.$$
-\item \citep[p.~51]{Greenbaum1997}  The relative $A$-norm of the error at the $k$th iteration is bounded by an amount which is computable from the 2-norm condition number $\kappa=\kappa_2(A)$, namely
+\item The relative $A$-norm of the error at the $k$th iteration is bounded by an amount which is computable from the 2-norm condition number $\kappa=\kappa_2(A)$, namely
 	$$\frac{\|\be_k\|_A}{\|\be_0\|_A} \le 2 \left(\frac{\sqrt{\kappa}-1}{\sqrt{\kappa}+1}\right)^k.$$
 \item The relative 2-norm of the residual is likewise bounded, but with an additional $\sqrt{\kappa}$ factor:
 	$$\frac{\|\br_k\|_2}{\|\br_0\|_2} \le 2 \sqrt{\kappa} \left(\frac{\sqrt{\kappa}-1}{\sqrt{\kappa}+1}\right)^k.$$
 \end{enumerate}
 \end{theorem}
 
-Consider the number of iterations needed to reduce $\|\be_k\|_A$ by a factor of $\eps<0$.  Note $(x-1)/(x+1) = 1 - 2/(x+1)$, and recall that $\ln(1-x) \approx -x$ for small $x$.  If $\sqrt{\kappa} = \sqrt{\kappa_2(A)}$ is large then part (\emph{ii}) says that $\|\be_k\|_A$ is reduced from its initial value $\|\be_0\|_A$ by a factor of $\eps$ if
-    $$k \le \frac{\ln(\eps/2)}{\ln\left(1 - \frac{2}{\sqrt{\kappa}+1}\right)} = -\frac{\ln(\eps/2)}{2} (\sqrt{\kappa}+1).$$
-In abbreviated form,
+Consider the number of iterations $k$ needed to reduce $\|\be_k\|_A$ by a factor of $\eps<0$.  Note $(x-1)/(x+1) = 1 - 2/(x+1)$, and recall that $\ln(1-x) \approx -x$ for small $x$.  If $\sqrt{\kappa} = \sqrt{\kappa_2(A)}$ is large then part (\emph{ii}) says that $\|\be_k\|_A$ is reduced from its initial value $\|\be_0\|_A$ by a factor of $\eps$ if
+    $$k \le \frac{\ln(\eps/2)}{\ln\left(1 - \frac{2}{\sqrt{\kappa}+1}\right)} \approx -\frac{\ln(\eps/2)}{2} (\sqrt{\kappa}+1).$$
+In summary,
 \begin{equation}
-\frac{\|\be_k\|_A}{\|\be_0\|_A} \le \eps \quad \text{if} \quad k = O(\kappa_2(A)^{1/2}).  \label{cgkappaiter}
+\frac{\|\be_k\|_A}{\|\be_0\|_A} \le \eps \quad \text{if} \quad k = O\left(\sqrt{\kappa_2(A)}\right).  \label{cgkappaiter}
 \end{equation}
 The same conclusion applies to reducing $\|\br_k\|_2$ by a factor of $\eps$, though the analysis is not so simple; see the Exercises.
 
-Though the theorem states an important-to-understand connection between $\kappa_2(A)$ and iteration count, the precise condition number is not typically available.  Nonetheless, we can ask \PETSc to approximate eigenvalues of $A$ as the Krylov iteration proceeds.  Note that we need the iteration to use the \emph{un}-preconditioned operator when computing eigenvalues, so we use either no preconditioner or right-side-preconditioning (\texttt{-ksp\_pc\_side RIGHT}).  Doing this largely explains the poor scaling of CG iteration count for our case (i.e.~the symmetric-matrix, structured-grid Poisson problem case).
+Though the theorem states a key connection between $\kappa_2(A)$ and iteration count, the precise condition number is not typically available.  On the other hand we can ask \PETSc to approximate eigenvalues of $A$ as the Krylov iteration proceeds.  Note that we need the iteration to use the \emph{un}-preconditioned operator when computing eigenvalues.\sidenote{Instead of \texttt{-pc\_type none} one can also use right-side-preconditioning \texttt{-ksp\_pc\_side RIGHT}.}  Doing this will largely explain the poor scaling of CG iteration count for our case (i.e.~a symmetric-matrix, structured-grid Poisson problem).
 
 Concretely,
 \begin{cline}
@@ -887,11 +886,11 @@ Iteratively computed eigenvalues
 on 9 x 9 grid:  error |u-uexact|_inf = 0.00076388
 \end{cline}
 %$
-In fact $17$ eigenvalues\sidenote{There were $17$ \pKSP iterations---confirm this with option \texttt{-ksp\_converged\_reason}---and the method computes one additional eigenvalue per iteration.} are shown in this run, but we suppress all but the first and last.  Only these are needed to approximate $\kappa_2(A)$.
+In fact $17$ eigenvalues\sidenote{There were $17$ \pKSP iterations---confirm this with option \texttt{-ksp\_converged\_reason}---and the method computes one additional eigenvalue per iteration.} are output by this run, but we suppress all but the first (smallest) and last (largest), as they suffice for approximating $\kappa_2(A)$.
 
 The approximate condition number on the above grid, with spacing $h=1/8$, is
     $$\kappa_2(A_{h=1/8}) \approx \frac{7.69543}{0.304482} = 25.274.$$
-When we redo this with option \texttt{-da\_refine N} for \texttt{N}$=1,2$ we get
+We also re-run with option \texttt{-da\_refine N} for \texttt{N}$=1,2$ to get
 \begin{align*}
     \kappa_2(A_{h=1/16}) &\approx \frac{7.92311}{0.0768589} = 103.09, \\
     \kappa_2(A_{h=1/32}) &\approx \frac{7.98073}{0.0192611} = 414.34.
@@ -904,33 +903,31 @@ In fact, as an \emph{a priori} statement, the $2$-norm condition number of the d
 \begin{equation}
     \kappa_2(A_h) = O(h^{-2}), \label{kappaofh}
 \end{equation}
-exactly as seen experimentally above.  This can be shown through either exact eigen-analysis \citep{Briggsetal2000,Elmanetal2005}, though such analysis is special to the uniform rectangular case, or through a more robust and general FEM error analysis which applies to unstructured grids having a mesh-uniformity bound \citep{Elmanetal2005}.  Combining \eqref{cgkappaiter} and \eqref{kappaofh} shows that we should expect
+exactly as seen experimentally above.  This can be shown by exact analysis using the eigenvectors of the discrete Poisson problem \citep{Briggsetal2000,Elmanetal2005}, though such analysis is special to the uniform rectangular case.  A more robust and general FEM error analysis which applies to unstructured grids having a mesh-uniformity bound \citep{Elmanetal2005} also applies.  In either case, combining \eqref{cgkappaiter} and \eqref{kappaofh} shows that we should expect
 \begin{equation}
     k = O(h^{-1}), \label{kofh}
 \end{equation}
-iterations to solve our discrete Poisson problem with unpreconditioned CG to a given relative tolerance.
+iterations to solve our discrete Poisson problem to a given relative tolerance using un-preconditioned CG.
 
-The above analysis applies to the un-preconditioned CG iteration.  We have also seen that IC($0$) preconditioning speeds the iteration and reduces the iteration count, but that it does not improve scaling \eqref{kofh}.  Though detailed analysis of the effects of incomplete Cholesky precondition, we certainly have the correct context to understand this comment by \citet[][p.~82]{Elmanetal2005}:
+We have also seen that IC($0$) preconditioning reduces the time and iteration count, but that it does not improve on scaling \eqref{kofh}; recall Figure \ref{fig:poisson-cg-scale}.  Detailed analysis of the effects of incomplete Cholesky precondition must be difficult, and it will certainly not be pursued here, but we do now have the correct context to understand this claim about the result \citet[][p.~82]{Elmanetal2005}:
 \begin{quote}
 One known result [\emph{for CG for the Poisson equation}] is that the asymptotic behavior of the condition number using IC($0$) preconditioning is unchanged: $\kappa(M^{-1} A) = O(h^{-2})$.
 \end{quote}
-So apparently IC($0$) is just not that promising as a preconditioner.
+So IC($0$) is not as promising a preconditioner as we had first hoped.
 
 
-\section{Krylov iteration is not enough \dots \emph{good} preconditioning is needed}
+\section{Krylov is not enough \dots \emph{good} preconditioning is needed}
 
-CG iterations and the preconditioning methods above, especially IC($0$) and ILU($0$), are effective in providing substantial improvements on naively-applied direct linear algebra methods.  Besides the bad news of the last section, namely that CG iterations scale badly with refining grids, there is more bad news we could bring up.  Namely, that smartly-applied direct linear algebra techniques can actually beat CG+IC($0$) anyway.
+When solving the sparse linear systems from discretized PDEs, the Krylov iterations like CG and the preconditioning methods like IC($0$) and ILU($0$) are useful tools.  In particular, they can improve upon naively-applied direct linear algebra methods.
 
-Specifically, suppose we run \texttt{poisson} with option \texttt{-da\_refine 7}, to give a finer $1025 \times 1025$ grid and about $10^6$ degrees of freedom.  Suppose that, in addition to the CG iteration with IC($0$) preconditioning we compare two other methods,
+However, besides the bad news of the last section that CG iterations scale badly with refining grids, there is more ``bad news'' for our Krylov approach.  Namely, that smartly-applied direct linear algebra techniques can also beat CG+IC($0$).  Specifically, suppose we run \texttt{poisson} with option \texttt{-da\_refine 7}, to give a finer $1025 \times 1025$ grid and about $10^6$ degrees of freedom.  Suppose we compare IC($0$)-preconditioned CG iterations with two other methods:
 \begin{cline}
 $ ./poisson -da_refine 7 -ksp_type cg -pc_type icc
 $ ./poisson -da_refine 7 -ksp_type preonly -pc_type cholesky -pc_factor_mat_ordering_type nd
 $ ./poisson -da_refine 7 -ksp_type preonly -pc_type lu -pc_factor_mat_ordering_type nd
 \end{cline}
 %$
-To be precise, we also added option \texttt{-ksp\_converged\_reason} to the CG run, so as to count iterations, and \texttt{-ksp\_rtol 1.0e-4} so as to be ``fair'' to the direct solvers.
-
-The first of the above runs requires no explanation; it is the best-so-far way of using CG.  The second and third runs are clearly direct methods, but option \texttt{-pc\_factor\_mat\_ordering\_type nd} asks that the direct method be applied using the \emph{nested dissection} ordering of the unknowns \citep{George1973}.  While we will give no details for such an algorithm, one can say that, in outline, the unknowns and equations are re-ordered to reduce the cost of the factorization.  We get the first three rows of Table \ref{tab:cgdirectmg}.
+To be precise, we also added option \texttt{-ksp\_converged\_reason} to the CG run, so as to count iterations, and \texttt{-ksp\_rtol 1.0e-4} so as to be ``fair'' to the direct solvers.  We get the first three rows of Table \ref{tab:cgdirectmg}.
 
 \begin{table}
 \texttt{
@@ -945,16 +942,18 @@ fish2   & cg         & mg            &  10.43 &    7 \\
 \caption{Time and iteration count for \texttt{-da\_refine 7} runs, a $1025 \times 1025$ grid.  The \texttt{fish2} code appears in Chapter \ref{chap:multigrid}.} \label{tab:cgdirectmg}
 \end{table}
 
-Thus nested-dissection application of direct solvers is competitive with, indeed better than, IC($0$)-preconditioned CG.  Regarding the option for \pPC factorization reordering and \PETSc defaults, for LU factorization the nested dissection ordering is actually the default for single-processor runs.  % FIXME: check on parallel case
-For Cholesky preconditioning, which does not require pivoting for stability on the symmetric positive-definite matrix problems to which it applies, the nested-dissection reordering is not the default.  % FIXME: what to say here?
+The first of the above runs requires no explanation; it is the best-so-far way of using CG.  The second and third runs are direct methods.  Option \texttt{-pc\_factor\_mat\_ordering\_type nd} asks that the direct method be applied using the \emph{nested dissection} ordering \citep{George1973}.  While we give no details, of course in outline the unknowns and equations are re-ordered to reduce the cost of the factorization.  Nested-dissection application of the two direct solvers is apparently competitive with IC($0$)-preconditioned CG.
 
-At this point the impulsive reader might give up on Krylov methods, but that also would be premature.  However, it seems we need to find a more-effective preconditioner if we are going to have scalable solutions of this Poisson PDE problem.  Furthermore, quite a bit of exploration will eventually show that properly-preconditioned Krylov iterations are indeed a robust tool for \emph{parallel-scalable} solution of large nonlinear and variable-coefficient elliptic PDE problems in 2D and 3D; in Chapter \ref{chap:nonlinear} we will start to fulfill this promise.
+Regarding the option \texttt{-pc\_factor\_mat\_ordering\_type} and \PETSc defaults, for LU factorization the nested dissection ordering is actually the default for single-processor runs.\sidenote{And for this reason, the result of the \texttt{-ksp\_type preonly -pc\_type lu} was not in Table \ref{tab:poissontiming}.}  % FIXME: check on parallel case
+For Cholesky preconditioning, which does not require pivoting for stable solutions of symmetric positive-definite problems, the nested-dissection reordering is not the default.  % FIXME: what to say here?
 
-Thus, so that the reader does not despair, note that we are headed toward geometric multigrid solution of PDEs (Chapter \ref{chap:multigrid}).  These multigrid methods can act as preconditioners on Krylov iterations, a combination which will provide an excellent solution method both for the structured, rectangular-grid Poisson problem of the current Chapter, and later for a broader range of elliptic PDE problems on unstructured grids (Chapter \ref{chap:dmplex}).  Thus we add one more run to the results in Table \ref{tab:cgdirectmg}, namely\sidenote{Again we add options \texttt{-ksp\_converged\_reason -ksp\_rtol 1.0e-4}, for iterations and fairness.}
+At this point the impulsive reader might give up on Krylov methods, but that also would be premature.  However, we do need to find a better preconditioner if we are going to have scalable solutions of this Poisson PDE problem.  Furthermore, quite a bit of exploration will eventually show that properly-preconditioned Krylov iterations give robust \emph{parallel-scalable} solutions of large nonlinear and variable-coefficient elliptic PDE problems in 2D and 3D.  In Chapters \ref{chap:nonlinear} and \ref{chap:multigrid} we will start to fulfill this promise.
+
+For now, so that the reader does not despair, note we are headed toward geometric multigrid methods (Chapter \ref{chap:multigrid}).  These methods can act as preconditioners on Krylov iterations, a combination which provides optimal scaling for the structured, rectangular-grid Poisson problem of the current Chapter.  Thus we add one more run to the results in Table \ref{tab:cgdirectmg}, namely\sidenote{Again we actually added options \texttt{-ksp\_converged\_reason -ksp\_rtol 1.0e-4}, for iterations and fairness.}
 \begin{cline}
 ./fish2 -da_refine 7 -ksp_type cg -pc_type mg
 \end{cline}
-where \texttt{ch5/fish2.c} is a program we describe in Chapter \ref{chap:multigrid}.  The result shows further improvement over the nested-dissection direct methods.  However, it turns out that if we are to exploit the power of geometric multigrid then we need to do a better job using \PETSc's tools for assembling the finite linear system.  Specifically, we need to allow the \pDM object to ``tell us'' the grid on which we are assembling the linear system, something which is done in \texttt{ch5/fish2.c}.
+where \texttt{fish2.c} is a program we describe in Chapter \ref{chap:multigrid}.  The result shows further improvement over the nested-dissection direct methods.  However, it turns out that if we are to exploit the power of geometric multigrid then we need to do a better job using \PETSc's tools for assembling the finite linear system.  Specifically, we need to allow the \pDMDA object to ``tell us'' the grid on which we are assembling the linear system, something which is done in \texttt{fish2.c}.
 
 
 \section{Exercises}
