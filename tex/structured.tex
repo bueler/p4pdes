@@ -812,12 +812,12 @@ We see that Jacobi preconditioning has little benefit over \emph{un}-preconditio
 
 We have so far not mentioned the minimum residual method \citep[MINRES]{Greenbaum1997} which applies to indefinite symmetric matrices, but of course it is implemented in \PETSc too.  We see that it seems to do no better than CG, at least in their un-preconditioned form, but this is no surprise.  For example, \citet[][p.~88]{Elmanetal2005} states that ``when solving discrete Poisson problems the convergence of MINRES is almost identical to that of CG.''
 
-If we were to stop now we might conclude that we have found a good \pKSP and \pPC combination for the Poisson equation, and proceed to harder problems.  Such a conclusion would be premature.
+If we were to stop now we might conclude that we have found a good \pKSP and \pPC combination for the Poisson equation, and proceed to harder problems.  This conclusion would be premature.
 
 
 \section{Krylov iteration is not enough \dots \emph{good} preconditioning is needed}
 
-Unfortunately, even with the preconditioners tried above, CG has a distinct flaw.\sidenote{At least from a 21st-century point of view.  The above timing table might have satisfied in 1970.}  The iteration count grows with refined grids, so that \citep[p.~76]{Elmanetal2005}
+Unfortunately, even with the preconditioners tried above, CG has a distinct flaw.\sidenote{At least from a 21st-century point of view.  The above timing table might have satisfied in 1970.}  Namely, the iteration count grows with refined grids, so that \citep[p.~76]{Elmanetal2005}
 \begin{quote}
 for uniformly refined grids, the number of CG iterations required to meet a fixed tolerance will approximately double with each grid refinement.
 \end{quote}
@@ -837,7 +837,7 @@ Linear solve converged due to CONVERGED_RTOL iterations 606
 on 257 x 257 grid:  error |u-uexact|_inf = 7.69971e-07
 \end{cline}
 
-Of course, this is un-preconditioned CG.  While it is not surprising that \texttt{-pc\_type jacobi} does no better (not shown; see exercises), our favorite method so far has the same poor scaling.  Figure \ref{fig:poisson-cg-scale} shows that though IC($0$) gives somewhat faster solves and lower iteration counts, the \emph{scaling} of those counts is the same as \texttt{-pc\_type none}: the number of iterations doubles with each factor-of-two grid refinement.
+Of course, this is un-preconditioned CG.  While it is not surprising that \texttt{-pc\_type jacobi} does no better (not shown; see exercises), it is easy to check that our favorite method so far has the same poor scaling.  Figure \ref{fig:poisson-cg-scale} shows that though IC($0$) gives somewhat faster solves and lower iteration counts, the \emph{scaling} of those counts is the same as \texttt{-pc\_type none}: the number of iterations doubles with each factor-of-two grid refinement.
 
 \begin{figure}
 \bigskip
@@ -846,7 +846,7 @@ Of course, this is un-preconditioned CG.  While it is not surprising that \textt
 \label{fig:poisson-cg-scale}
 \end{figure}
 
-Some theory about CG would help to understand these results, but stating a theorem requires preparation.  Suppose that $A$ is a real, $N\times N$, symmetric, and positive-definite matrix.  We can define a new norm, the \emph{$A$-norm}, on $v\in\RR^N$,
+Some theory of the CG iteration helps to understand these results, but stating a theorem requires preparation.  Suppose that $A$ is an $N\times N$, symmetric, and positive-definite matrix.  We can define a new norm, the \emph{$A$-norm}, on $v\in\RR^N$,
 \begin{equation}
 \|v\|_A = \ip{v}{Av}^{1/2} = (v^\top Av)^{1/2}.  \label{normAdefn}
 \end{equation}
@@ -854,22 +854,51 @@ Recall the notation that $\be_k = \bu_k - \bu$ is the error of $\bu_k$ as a solu
 	$$\kappa_2(A) = \lambda_0(A)/\lambda_{N-1}(A) \ge 1.$$
 (Note $\lambda_{N-1}(A)>0$ because $A$ is positive-definite.)
 
-Now we can state a useful theorem giving the sense in which CG is optimal, plus a practical error bound.  The second part of the theorem follows from the first by using Chebyshev polynomials to construct a polynomial which is small on the interval $[\lambda_{N-1}(A),\lambda_0(A)]$.
+Now we can state a conceptually-useful theorem giving the sense in which CG is optimal and an error bound.  Part (\emph{ii}) of the theorem follows from (\emph{i}) by using Chebyshev polynomials to construct a polynomial which is small on the interval $[\lambda_{N-1}(A),\lambda_0(A)]$.  Part (\emph{iii}) follows from (\emph{ii}) by understanding the norm $\|\cdot\|_A$ in terms of the 2-norm and the matrix $\sqrt{A}$; see the Exercises.  We state part (\emph{iii}) for the simple reason that $\|\br_k\|_2$ is a quantity computable by \PETSc, given the information available, while $\|\be_k\|_A$ is not.  Parts (\emph{ii}) and (\emph{iii}) are not optimal bounds, though it is easy to state that for part (\emph{ii}) \citep[p.~51]{Greenbaum1997}.
 
-\begin{theorem} \citep{Greenbaum1997} Suppose $\bu_k$ are the iterates from CG.  Then:\begin{itemize}
-\item Considering all real polynomials $p_k(x)$ of degree $k$ such that $p_k(0)=1$,
+\renewcommand{\labelenumi}{(\roman{enumi})}
+\begin{theorem}Suppose $\bu_k$ are the iterates from CG.  Then:\begin{enumerate}
+\item \citep[p.~50]{Greenbaum1997}  Considering all real polynomials $p_k(x)$ of degree $k$ such that $p_k(0)=1$,
     $$\|\be_k\|_A = \min_{p_k} \|p_k(A) \be_0\|_A.$$
-\item The relative $A$-norm of the error at the $k$th iteration is bounded by an amount which is computable from the 2-norm condition number $\kappa=\kappa_2(A)$, namely
+\item \citep[p.~51]{Greenbaum1997}  The relative $A$-norm of the error at the $k$th iteration is bounded by an amount which is computable from the 2-norm condition number $\kappa=\kappa_2(A)$, namely
 	$$\frac{\|\be_k\|_A}{\|\be_0\|_A} \le 2 \left(\frac{\sqrt{\kappa}-1}{\sqrt{\kappa}+1}\right)^k.$$
-\end{itemize}
+\item The relative 2-norm of the residual is likewise bounded with an additional factor:
+	$$\frac{\|\br_k\|_2}{\|\br_0\|_2} \le 2 \sqrt{\kappa} \left(\frac{\sqrt{\kappa}-1}{\sqrt{\kappa}+1}\right)^k.$$
+\end{enumerate}
 \end{theorem}
 
-FIXME: estimate, including computation using
-\begin{cline}
--ksp_compute_eigenvalues
-\end{cline}
+Consider the number of iterations needed to reduce the $A$-norm of the error by a factor of $\eps<0$.  Noting $(x-1)/(x+1) = 1 - 2/(x+1)$, and using a standard approximation $\ln(1-x) \approx -x$ for small $x$, when $\sqrt{\kappa}$ is large then part (\emph{ii}) says that $\|\be_k\|_A$ is reduced from its initial value $\|\be_0\|_A$ by a factor of $\eps$ if
+    $$k \le \frac{\ln(\eps/2)}{\ln\left(1 - \frac{2}{\sqrt{\kappa}+1}\right)} = -\frac{\ln(\eps/2)}{2} (\sqrt{\kappa}+1).$$
+In abbreviated form,
+\begin{equation}
+\frac{\|\be_k\|_A}{\|\be_0\|_A} \le \eps \quad \text{if} \quad k = O(\sqrt{\kappa}).  \label{cgkappaiter}
+\end{equation}
+The same conclusion applies when we consider a reduction in $\|\br_k\|_2$ by a factor of $\eps$, though the analysis is not so simple; see the Exercises.
 
-FIXME: connect iteration count to condition number i.e.~using result from \citep{Greenbaum1997}. this connection explains \citet[][p.~82]{Elmanetal2005} comment
+Though the theorem states an important-to-understand connection between $\kappa$ and iteration count, the reader should keep in mind that a precise value of $\kappa$ is not typically available.  Nonetheless, on small examples we can ask \PETSc to approximate eigenvalues of $A$ as the Krylov iteration proceeds.  This provides a reasonably-clear explanation of the poor scaling of CG iteration count in this symmetric-matrix case.
+
+Concretely, noting that we want the eigenvalues of the \emph{un}-preconditioned operator, so we use either no preconditioner or right-side-preconditioning (\texttt{-ksp\_pc\_side RIGHT}),
+\begin{cline}
+$ ./poisson -ksp_type cg -pc_type none -ksp_compute_eigenvalues
+Iteratively computed eigenvalues
+0.304482 + 0i
+...
+7.69543 + 0i
+on 9 x 9 grid:  error |u-uexact|_inf = 0.00076388
+\end{cline}
+%$
+In fact $17$ eigenvalues\sidenote{There were $17$ \pKSP iterations---confirm this with option \texttt{-ksp\_converged\_reason}---and the method computes one additional eigenvalue per iteration.} are shown in this run, but we suppress all but the first and last because we only these are needed to compute an approximate $\kappa$.
+
+The approximate condition number on the above grid, with spacing $h=1/8$, is
+    $$\kappa\big|_{h=1/8} \approx \frac{7.69543}{0.304482} = 25.274.$$
+Because we observe that the CG iteration count increases with refinement, we redo this with option \texttt{-da\_refine 1}:
+    $$\kappa\big|_{h=1/16} \approx \frac{7.92311}{0.0768589} = 103.09.$$
+
+In the fact that $103 \approx 4 \times 25$, and for similar results from \texttt{-da\_refine 2} and so on, we now see the issue clearly.  The condition number $\kappa$ is increasing by a factor of four for each grid refinement by a factor of two (i.e.~$h\to h/2$).  Then \eqref{cgkappaiter} says we should expect an increase in iteration count by a factor of two.  In fact the $2$-norm condition number of the discrete Poisson operator (matrix) $A_h$ on a uniform rectangular grid with spacing $h$ is known to be
+    $$\kappa_2(A_h) = O(h^{-2})$$
+as an \emph{a priori} statement.  This can be shown through either exact eigen-analysis \citep{Briggsetal2000,Elmanetal2005}, though such analysis is special to the uniform rectangular case, or through a more robust and general FEM error analysis which applies to unstructured grids with a mesh-uniformity bound \citep{Elmanetal2005}.
+
+FIXME: preconditioning?  above explains \citet[][p.~82]{Elmanetal2005} comment
 \begin{quote}
 One known result [about CG for the Poisson equation] is that the asymptotic behavior of the condition number using IC($0$) preconditioning is unchanged: $\kappa(M^{-1} A) = O(h^{-2})$
 \end{quote}
@@ -897,7 +926,7 @@ poisson & cg         & icc      & 127.63 & 1262 \\ % -ksp_rtol 1.0e-14
 fish2   & cg         & mg       &  10.43 &    7 \\ % -ksp_rtol 1.0e-14
 \end{tabular}
 }
-\caption{FIXME} \label{tab:directbeatscgexceptmg}
+\caption{FIXME} \label{tab:cgdirectmg}
 \end{table}
 
 
@@ -924,7 +953,7 @@ for \texttt{N}$=1,\dots,6$ and \texttt{X}=\texttt{none},\texttt{jacobi}.  Explai
 $ ./poisson -ksp_converged_reason -ksp_type cg -pc_type none -log_summary
 \end{cline}
 %$
-By looking at the ``Count'' column of ``Event Stage 2: Solve'', and noting the iteration count from the \texttt{-ksp\_converged\_reason} output, confirm that the computational work of one CG iteration consists of two inner products (\texttt{VecTDot}), three vector updates (\texttt{VecAXPY} and \texttt{VecAYPX}), and one matrix-vector product (\texttt{MatMult}).
-\item For a symmetric positive-definite matrix $A$, show that \eqref{normAdefn} defines a norm on $\RR^N$.  By correctly-defining the matrix $\sqrt{A}$, show that $\|v\|_A = \|\sqrt{A}v\|_2$.
+By looking at the ``Count'' column, and noting that the iteration count is known from \texttt{-ksp\_converged\_reason} output, confirm that the computational work of one CG iteration consists of two inner products (\texttt{VecTDot}), three vector updates (\texttt{VecAXPY} and \texttt{VecAYPX}), and one matrix-vector product (\texttt{MatMult}).
+\item FIXME: flesh out till it shows part (\emph{iii}).  For a symmetric positive-definite matrix $A$, show that \eqref{normAdefn} defines a norm on $\RR^N$.  By correctly-defining the matrix $\sqrt{A}$, show that $\|v\|_A = \|\sqrt{A}v\|_2$.
 \item Use \texttt{DMDACreate3d()} and etc.~to solve a 3D Poisson problem on the unit cube $\mathcal{C}=[0,1]^3$.  Looking forward, how is the approach taken in Chapter \ref{chap:multigrid} different from your code?
 \end{enumerate}
