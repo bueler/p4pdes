@@ -789,7 +789,7 @@ and recording the resulting time and iteration count.  The iteration count is wo
 \begin{table}
 \texttt{
 \begin{tabular}{llll}
-\underline{KSP}\hspace{0.5in} & \underline{PC}\hspace{0.8in} & \underline{\textrm{time (s)}}\hspace{0.3in} & \underline{iterations} \\
+\underline{KSP}\hspace{0.5in} & \underline{PC}\hspace{1.3in} & \underline{\textrm{time (s)}}\hspace{0.3in} & \underline{\textrm{iterations}} \\
 gmres      & none        & \intime{gmres.none} \\
            & ilu         & \intime{gmres.ilu} \\
            & ilu + restart=$200$ & \intime{gmres.ilu.restart} \\
@@ -890,7 +890,7 @@ FIXME  Ran \texttt{poisson} with options \texttt{-ksp\_converged\_reason -da\_re
 \begin{table}
 \texttt{
 \begin{tabular}{lllll}
-\underline{Code}\hspace{0.2in} & \underline{KSP}\hspace{0.3in} & \underline{PC}\hspace{0.4in} & \underline{\textrm{time (s)}}\hspace{0.1in} & \underline{iterations} \\
+\underline{\textrm{Code}}\hspace{0.3in} & \underline{KSP}\hspace{0.4in} & \underline{PC}\hspace{0.5in} & \underline{\textrm{time (s)}}\hspace{0.2in} & \underline{\textrm{iterations}} \\
 poisson & cg         & icc      & 127.63 & 1262 \\ % -ksp_rtol 1.0e-14
         & preonly    & cholesky &  80.00 &    1 \\ % -pc_factor_mat_ordering_type nd
         &            & lu       &  56.45 &    1 \\
