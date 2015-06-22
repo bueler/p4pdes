@@ -1,17 +1,7 @@
 
+//CREATE
 static char help[] = "Solves a structured-grid Poisson problem with DMDA and KSP.\n\n";
 
-// PERFORMANCE ANALYSIS:
-//   export PETSC_ARCH=linux-gnu-opt
-//   make poisson
-//   ./poisson -da_grid_x 1025 -da_grid_y 1025 -ksp_type cg -log_summary|grep "Solve: "
-//   mpiexec -n 6 ./poisson -da_grid_x 1025 -da_grid_y 1025 -ksp_type cg -log_summary|grep "Solve: "
-
-// WEAK SCALING IN TERMS OF FLOPS ONLY:
-//   for kk in 0 1 2 3; do NN=$((50*(2**$kk))); MM=$((2**(2*$kk))); cmd="mpiexec -n $MM ./poisson -da_grid_x $NN -da_grid_y $NN -ksp_rtol 1.0e-8 -ksp_type cg -log_summary"; echo $cmd; $cmd |'grep' "Flops:  "; echo; done
-
-
-//CREATE
 #include <petsc.h>
 #include "structuredpoisson.h"
 
@@ -44,11 +34,7 @@ int main(int argc,char **args) {
   ierr = formRHS(da,b); CHKERRQ(ierr);
 
   // assemble linear system
-  PetscLogStage  stage; //STRIP
-  ierr = PetscLogStageRegister("Matrix Assembly", &stage); CHKERRQ(ierr); //STRIP
-  ierr = PetscLogStagePush(stage); CHKERRQ(ierr); //STRIP
   ierr = formdirichletlaplacian(da,1.0,A); CHKERRQ(ierr);
-  ierr = PetscLogStagePop();CHKERRQ(ierr); //STRIP
 //ENDCREATE
 
 //SOLVE
@@ -59,10 +45,7 @@ int main(int argc,char **args) {
   ierr = KSPSetFromOptions(ksp); CHKERRQ(ierr);
 
   // solve
-  ierr = PetscLogStageRegister("Solve", &stage); CHKERRQ(ierr); //STRIP
-  ierr = PetscLogStagePush(stage); CHKERRQ(ierr); //STRIP
   ierr = KSPSolve(ksp,b,u); CHKERRQ(ierr);
-  ierr = PetscLogStagePop();CHKERRQ(ierr); //STRIP
 
   // report on grid and numerical error
   PetscScalar    errnorm;
