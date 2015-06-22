@@ -815,13 +815,13 @@ We have so far not mentioned the minimum residual method \citep[MINRES]{Greenbau
 If we were to stop now we might conclude that we have found a good \pKSP and \pPC combination for the Poisson equation, and proceed to harder problems.  Such a conclusion would be premature.
 
 
-\section{Krylov iteration is not enough \dots \emph{good} preconditioning is needed!}
+\section{Krylov iteration is not enough \dots \emph{good} preconditioning is needed}
 
 Unfortunately, even with the preconditioners tried above, CG has a distinct flaw.\sidenote{At least from a 21st-century point of view.  The above timing table might have satisfied in 1970.}  The iteration count grows with refined grids, so that \citep[p.~76]{Elmanetal2005}
 \begin{quote}
 for uniformly refined grids, the number of CG iterations required to meet a fixed tolerance will approximately double with each grid refinement.
 \end{quote}
-This is precisely what we see from another bash loop:
+This is indeed what we see from the following bash loop:
 \begin{cline}
 $ for NN in 1 2 3 4 5; do
 > ./poisson -da_refine $NN -ksp_type cg -pc_type none -ksp_converged_reason; done
@@ -837,22 +837,20 @@ Linear solve converged due to CONVERGED_RTOL iterations 606
 on 257 x 257 grid:  error |u-uexact|_inf = 7.69971e-07
 \end{cline}
 
-Of course, this is un-preconditioned CG.  While it is not surprising that \texttt{-pc\_type jacobi} does no better (not shown; see exercises), our favorite method so far has the same poor scaling.  Figure \ref{fig:poisson-cg-scale} shows that though IC($0$) gives somewhat faster solves and lower iteration counts, the \emph{scaling} of those iteration counts is the same as \texttt{-pc\_type none}: doubling with each factor-of-two grid refinement.
+Of course, this is un-preconditioned CG.  While it is not surprising that \texttt{-pc\_type jacobi} does no better (not shown; see exercises), our favorite method so far has the same poor scaling.  Figure \ref{fig:poisson-cg-scale} shows that though IC($0$) gives somewhat faster solves and lower iteration counts, the \emph{scaling} of those counts is the same as \texttt{-pc\_type none}: the number of iterations doubles with each factor-of-two grid refinement.
 
 \begin{figure}
 \bigskip
 \includegraphics[width=0.75\textwidth]{poisson-cg-scale}
-\caption{As the grid is refined ($h\to 0$), un-preconditioned CG scales poorly on our Poisson problem in the sense that iterations increase steadily.  But IC($0$) does not improve the scaling either.  We need to find a truly-effective preconditioner.}
+\caption{As the grid is refined ($h\to 0$), un-preconditioned CG scales poorly on our Poisson problem, and IC($0$) preconditioning does not improve the scaling.}
 \label{fig:poisson-cg-scale}
 \end{figure}
 
-This is the point at which some theory about CG would help to understand results, but stating the theorem needs some preparation.  Given $A$ a real, $N\times N$, symmetric, and positive-definite matrix we can define a new norm on $v\in\RR^N$,
+Some theory about CG would help to understand these results, but stating a theorem requires preparation.  Suppose that $A$ is a real, $N\times N$, symmetric, and positive-definite matrix.  We can define a new norm, the \emph{$A$-norm}, on $v\in\RR^N$,
 \begin{equation}
-\|v\|_A = \ip{v}{Av} = v^\top Av.  \label{normAdefn}
+\|v\|_A = \ip{v}{Av}^{1/2} = (v^\top Av)^{1/2}.  \label{normAdefn}
 \end{equation}
-Recall the notation that $\be_k = \bu_k - \bu$ is the error in solving $A\bu=\bb$.  Note that, CG being a Krylov method, its $k$th error satisfies
-    $$\be_k = \be_0 + c_1 A \be_0 + \dots + c_k A^k \be_0$$
-for some real coefficients $c_j$.  Also, denote by $\sigma_j(A)$ the ordered singular values with subscript $0$ indicating the largest value.  Recall that $\sigma_j(A)=\lambda_j(A)$, where $\lambda_j(A)$ are the ordered eigenvalues of $A$, because $A$ is symmetric and positive-definite.  Thus the 2-norm condition of a symmetric positive-definite matrix $A$ is also the ratio of eigenvalues,
+Recall the notation that $\be_k = \bu_k - \bu$ is the error of $\bu_k$ as a solution to $A\bu=\bb$.  Also, denote by $\sigma_j(A)$ the ordered singular values with subscript $0$ indicating the largest value.  Recall that $\sigma_j(A)=\lambda_j(A)$, where $\lambda_j(A)$ are the ordered eigenvalues of $A$, because $A$ is symmetric and positive-definite.  Thus the 2-norm condition of a symmetric positive-definite matrix $A$ is also the ratio of eigenvalues,
 	$$\kappa_2(A) = \lambda_0(A)/\lambda_{N-1}(A) \ge 1.$$
 (Note $\lambda_{N-1}(A)>0$ because $A$ is positive-definite.)
 
@@ -861,8 +859,8 @@ Now we can state a useful theorem giving the sense in which CG is optimal, plus 
 \begin{theorem} \citep{Greenbaum1997} Suppose $\bu_k$ are the iterates from CG.  Then:\begin{itemize}
 \item Considering all real polynomials $p_k(x)$ of degree $k$ such that $p_k(0)=1$,
     $$\|\be_k\|_A = \min_{p_k} \|p_k(A) \be_0\|_A.$$
-\item The $k$th error is bounded by an amount which is computable from the condition number $\kappa=\kappa_2(A)$, namely
-	$$\|\be_k\|_A \le 2 \left(\frac{\sqrt{\kappa}-1}{\sqrt{\kappa}+1}\right)^k \|\be_0\|_A.$$
+\item The relative $A$-norm of the error at the $k$th iteration is bounded by an amount which is computable from the 2-norm condition number $\kappa=\kappa_2(A)$, namely
+	$$\frac{\|\be_k\|_A}{\|\be_0\|_A} \le 2 \left(\frac{\sqrt{\kappa}-1}{\sqrt{\kappa}+1}\right)^k.$$
 \end{itemize}
 \end{theorem}
 
@@ -876,8 +874,11 @@ FIXME: connect iteration count to condition number i.e.~using result from \citep
 One known result [about CG for the Poisson equation] is that the asymptotic behavior of the condition number using IC($0$) preconditioning is unchanged: $\kappa(M^{-1} A) = O(h^{-2})$
 \end{quote}
 
-FIXME: but even more bad news: lu beats cg+icc anyway.  this is because lu is applied with nested-dissection () by default, so lu+nd and cholesky+nd are quite good; before dispairing on iteration, however, we are headed toward multigrid
-Ran \texttt{poisson} with options \texttt{-ksp\_converged\_reason -da\_refine 7} gives $1025 \times 1025$ grid and thus about $10^6$ degrees of freedom.
+FIXME: but even more bad news: lu beats cg+icc anyway.  this is because lu is applied with nested-dissection () by default, so lu+nd and cholesky+nd are quite good; 
+
+FIXME  We need to find a truly-effective preconditioner.  before dispairing on iteration, however, we are headed toward multigrid
+
+FIXME  Ran \texttt{poisson} with options \texttt{-ksp\_converged\_reason -da\_refine 7} gives $1025 \times 1025$ grid and thus about $10^6$ degrees of freedom.
 
 \begin{cline}
 ./poisson ... -ksp_type cg -pc_type icc -ksp_rtol 1.0e-14
@@ -924,6 +925,6 @@ $ ./poisson -ksp_converged_reason -ksp_type cg -pc_type none -log_summary
 \end{cline}
 %$
 By looking at the ``Count'' column of ``Event Stage 2: Solve'', and noting the iteration count from the \texttt{-ksp\_converged\_reason} output, confirm that the computational work of one CG iteration consists of two inner products (\texttt{VecTDot}), three vector updates (\texttt{VecAXPY} and \texttt{VecAYPX}), and one matrix-vector product (\texttt{MatMult}).
-\item Show that \eqref{normAdefn} defines a norm on $\RR^N$.  By correctly-defining the matrix $\sqrt{A}$, show that $\|v\|_A = \|\sqrt{A}v\|_2$.
+\item For a symmetric positive-definite matrix $A$, show that \eqref{normAdefn} defines a norm on $\RR^N$.  By correctly-defining the matrix $\sqrt{A}$, show that $\|v\|_A = \|\sqrt{A}v\|_2$.
 \item Use \texttt{DMDACreate3d()} and etc.~to solve a 3D Poisson problem on the unit cube $\mathcal{C}=[0,1]^3$.  Looking forward, how is the approach taken in Chapter \ref{chap:multigrid} different from your code?
 \end{enumerate}

@@ -3,11 +3,9 @@ function N = getiterest(rtol,lamBIG,lamSMALL)
 kap = lamBIG/lamSMALL
 gam = (sqrt(kap) - 1) / (sqrt(kap) + 1)
 
-N = log(rtol/2) / log(gam);
-
 for k=1:100
-   if 2 / ( gam^k + gam^(-k) )  < rtol
+   if 2 * sqrt(kap) / ( gam^k + gam^(-k) )  < rtol  % factor of sqrt(kap) from converting |e|_A to |r|_2
       break;
    end
 end
-k
+N=k;
