@@ -1,5 +1,5 @@
 
-\chapter{Linear PDEs: multigrid}
+\chapter{Multigrid}
 \label{chap:multigrid}
 
 We now make a transition from Chapters \ref{chap:structured} and \ref{chap:unstructured}.  In those chapters we wrote code to assemble the linear system for the problem on the grid or mesh initially chosen at runtime, and then we handed the system, in the form of \pMat and \pVec objects, to the \pKSP for solution.  In this Chapter, by contrast, we give a matrix-building code to \pKSP.  The \pKSP can actually choose the grid during the solution process, and ask our code (i.e.~through a ``call-back'') to assemble the matrix on that grid at that stage of the process.  This means \PETSc \pKSP object can do \emph{geometric multigrid} \citep{Briggsetal2000}.  To get started we recall basic ideas of multigrid.

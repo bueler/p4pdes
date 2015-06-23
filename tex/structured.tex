@@ -1,5 +1,5 @@
 
-\chapter{Linear PDEs: a structured grid example}
+\chapter{Poisson PDE on a structured grid}
 \label{chap:structured}
 
 We start with the Poisson problem on a square---a clich\'e, of course---because it is a straightforward PDE problem on which to learn key parts of \PETSc.  We will build a structured grid using a \pDMDA, then assemble a \pMat in parallel based on this grid, and then solve in parallel using a \pKSP object.  Discretizing the PDE generates a linear system which is only slightly more interesting than the tridiagonal system we solved in Chapter \ref{chap:linearsystem}.
