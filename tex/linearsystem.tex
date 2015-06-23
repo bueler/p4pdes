@@ -313,7 +313,7 @@ It is an easy exercise to show that the Richardson iteration \eqref{introrichard
 \begin{equation}
 \text{\eqref{introrichardson} converges if and only if } \rho(I-\omega A) < 1. \label{introconvergethm}
 \end{equation}
-One can also show that $\rho(B) \le \|B\|_2$, so \eqref{introrichardson} converges if $\|I-\omega A\|_2 < 1$.
+One can also show that $\rho(B) \le \|B\|$ using any induced matrix norm, so \eqref{introrichardson} converges if $\|I-\omega A\| < 1$.
 
 Considering spectral properties brings us to an important general point about linear systems.  Namely, that there are many systems which are equivalent to \eqref{introsystem}.  In fact, if $M\in\RR^{N\times N}$ is an invertible matrix then the systems
 \begin{equation}
@@ -350,10 +350,24 @@ which illustrates convergence claim \eqref{introconvergethm}.
 \end{examplecont}
 \noindent\hrulefill
 
+\medskip
+Let us note one more idea associated to the residual.  Intuitively speaking, a vector norm of a residual, for example $\|\br_0\| = \|\bb - A \bu_0\|$, measures how ``wrong'' is $\bu_0$ as an approximation to $\bu=A^{-1}\bb$, but this idea is incomplete in two senses.  First, we surely would want the norm of the \emph{error} itself, i.e.
+\begin{equation}
+\be_0 = \bu_0 - \bu \label{errordefn}
+\end{equation}
+as an authentic measure of how wrong $\bu_0$ is.  However, given $\bu_0$, by \eqref{errordefn} exact knowledge of the error $\be_0$ is equivalent to exact knowledge of the solution $\bu$ itself.  Only bounds on $\|\be_0\|$ might be reasonably be expected, even though we can compute the full residual vector $\br_0 = \bb - A \bu_0$ at will.  Secondly, errors are most meaningful if they are relative.  For instance, knowing ``$\|\be_0\|\le 10^{-6}$'' does not tell us that $\bu_0$ is an accurate solution to the system $A \bu = \bb$ if $\|A^{-1}\|=1$ and $\|\bb\|= 10^{-6}$, in which case we know in advance that $\|\bu\|\le 10^{-6}$.
+
+These ideas relate to the conditioning of $A$.  Indeed, the connection between the relative norm we \emph{can} compute, namely $\|\br_0\|/\|\bb\|$, and the relative norm we \emph{want} is well-known:
+\begin{equation}
+\kappa(A)^{-1} \frac{\|\br_0\|}{\|\bb\|} \le \frac{\|\be_0\|}{\|\bu\|} \le \kappa(A) \frac{\|\br_0\|}{\|\bb\|}, \label{relativenormbounds}
+\end{equation}
+where $\kappa(A) = \|A\| \|A^{-1}\|$ is the condition number in the induced norm.  Proving \eqref{relativenormbounds} is an easy exercise with norms.
+
+
 
 \section{Numerical linear algebra: Krylov space methods}
 
-The most powerful iterative methods for solving system \eqref{introsystem} generate optimal, in various senses, estimates $\bu_k$ which are linear combinations of vectors $\bz,A\bz,A^2\bz,\dots,A^{k-1}\bz$ where $\bz$ is a fixed vector; often $\bz=\bb$.  These methods are collectively called \emph{Krylov space methods} because the span of such vectors is a \emph{Krylov space}.  Examples include the Richardson iteration, conjugate gradient (CG), and minimum residual methods (MINRES or GMRES).\sidenote{We will gloss these below, but see  \citet{Greenbaum1997} or \citet{Saad2003} for details and algorithms.}  The effectiveness of a given Krylov method on a given system depends on the eigenvalues or singular values of the matrix $A$, i.e.~on its spectral properties.  Many Krylov space methods are built into and fully-supported by \PETSc, and we will use them in all later Chapters.
+The most powerful iterative methods for solving system \eqref{introsystem} generate optimal, in various senses, estimates $\bu_k$ which are linear combinations of vectors $\bz,A\bz,A^2\bz,\dots,A^{k-1}\bz$ where $\bz$ is a fixed vector; often $\bz=\bb$.  These methods are collectively called \emph{Krylov space methods} because the span of such vectors is a \emph{Krylov space}.  Examples include the Richardson iteration, conjugate gradient (CG), and minimum residual methods (MINRES or GMRES).\sidenote{We will address these method in this and the next chapter, but see \citet{Greenbaum1997} or \citet{Saad2003} for details and algorithms.}  The effectiveness of a given Krylov method on a given system depends on the eigenvalues or singular values of the matrix $A$, i.e.~on its spectral properties.  Many Krylov space methods are built into and fully-supported by \PETSc, and we will use them in all later Chapters.
 
 To be concrete, a Krylov space is defined as
     $$\mathcal{K}_n(A,\bb) = \operatorname{span}\{\bb,A\bb,A^2\bb,\dots,A^{n-1}\bb\},$$
@@ -369,7 +383,7 @@ Thus if we want $\tilde\bu$ to approximate $\bu$, the solution to \eqref{introsy
 \end{equation}
 at least in the action of applying $p_{n-1}(A)$ to $\bb$.  Krylov space methods do this.
 
-One can prove that if $p_{n-1}(z)$ is close to $1/z$ on the finite set of eigenvalues of $A$, i.e.~on the spectrum $\sigma(A)$ in the complex plane, then \eqref{krylovgoal}.  Thus, whether $p_{n-1}$ is a ``good'' polynomial for approximately inverting $A$ is a spectral question about $A$.  The construction of a ``good'' $p_{n-1}$ would be only a question of approximation theory in the complex plane if only the spectrum $\sigma(A)$ were known, but in fact that is asking too much!  We know $A$ through its entries or action on vectors, and we can hope to have general spectral information about $A$ through the context in which it was generated,\sidenote{As a discretized PDE, for example.} but accurately computing its full spectrum $\sigma(A)$ is at least as difficult as solving a linear system $A\bu=\bb$.
+One can prove that if $p_{n-1}(z)$ is close to $1/z$ on the finite set of eigenvalues of $A$, i.e.~on the spectrum $\sigma(A)$ in the complex plane, then \eqref{krylovgoal} follows.  Thus, whether $p_{n-1}$ is a ``good'' polynomial for approximately inverting $A$ is a spectral question about $A$.  The construction of a ``good'' $p_{n-1}$ would be only a question of approximation theory in the complex plane if only the spectrum $\sigma(A)$ were known, but in fact that is asking too much!  We know $A$ through its entries or action on vectors, and we might have general spectral information about $A$ through the context in which it was generated,\sidenote{As the discretization of a PDE with known spectral properties, for example.} but accurately computing its full spectrum $\sigma(A)$ is at least as difficult as solving a linear system $A\bu=\bb$.
 
 For an example in which polynomial generation from a Krylov method can be seen, consider again the Richardson iteration \eqref{introrichardson} with $\omega=1$, namely $\bu_{k+1} = \bu_k + (\bb - A \bu_k)$.  A straightforward calculation starting with $\bu_0=\bb$ shows
 \begin{equation}
@@ -632,7 +646,7 @@ is small when the \pKSP completes its work.  So, after getting \texttt{x} from \
 
 \section{A first look at performance}
 
-The linear system assembled by \texttt{tri.c} is about as easy to solve as they get.   It is tridiagonal, symmetric, diagonally-dominant, and positive definite.\sidenote{See exercise \ref{exer:computeeigs}.}  So \PETSc ought to be able to solve it quickly, almost all Krylov methods should apply, and parallelization ought to be effective.
+The linear system assembled by \texttt{tri.c} is about as easy to solve as they get.   It is tridiagonal, symmetric, diagonally-dominant, and positive definite.\sidenote{See Exercise \ref{exer:computeeigs}.}  So \PETSc ought to be able to solve it quickly, almost all Krylov methods should apply, and parallelization ought to be effective.
 
 \newcommand{\WORKSTATION}{\textsc{workstation}\xspace}
 We can time a one-process solution:
@@ -653,7 +667,7 @@ $ alias timer='time -f "real %e"'
 \end{cline}
 %$
 
-The above timing result of $.04$ seconds suggests that this $m=10^4$ dimension system is not yet big enough to be worth testing, so we experiment on what $m$ gives a linear system with noticeable solution time.  Here is a roll-your-own bash\sidenote{\href{http://www.gnu.org/software/bash/}{www.gnu.org/software/bash/}} loop to time some bigger solves:
+The above timing result of $.04$ seconds suggests that this $m=10^4$ dimension system is not yet big enough to be worth testing, so we experiment on what $m$ gives a linear system with noticeable solution time.  Here is a roll-your-own bash loop to time some bigger solves:
 \begin{cline}
 $ export SIZES="10000 100000 1000000 10000000"
 $ for M in $SIZES; do timer ./tri -tri_m $M; done
@@ -732,6 +746,9 @@ shows the residual norm logarithm versus the iteration number.
 
 \item Show \eqref{introconvergethm}.
 
+\item Show \eqref{relativenormbounds}.
+%For the left inequality, note first that $\|\br_0\| = \|\bb - A \bu_0\| \le \|A\| \|A^{-1} \bb - \bu\| = \|A\| \|\be_0\|$, and second that $\|\bu\| = \|A^{-1}\bb\| \le \|A^{-1}\| \|\bb\|$ so $1 / \|\bb\| \le \|A\| / \|\bu\|$.  Combining these gives the left inequality.
+
 \item On page \pageref{krylovgoal} we note that a Krylov space approximation $p_{n-1}(A)\bb$ to the solution $A^{-1}\bb$ is close if $p_{n-1}(z)$ is close to $1/z$ on the spectrum of $A$.  Prove this for invertible diagonalizable matrices $A=S\Lambda S^{-1}$, with $\Lambda$ diagonal, by showing
 	$$\|p_{n-1}(A) - A^{-1}\| \le \,\kappa(S)\, \max_{\lambda \in \sigma(A)} |p_{n-1}(\lambda) - \lambda^{-1}|$$
 where $\kappa(S) = \|S\| \|S^{-1}\|$ is the condition number.\sidenote{Here $\|\cdot\|$ is any induced matrix norm \citep{TrefethenBau}.}  If $A$ is \emph{normal} then, by definition, $S$ can be chosen to be unitary.  In that case, using the $2$-norm, the condition number factor can have its minimal value of $1$.
@@ -744,7 +761,7 @@ where $\kappa(S) = \|S\| \|S^{-1}\|$ is the condition number.\sidenote{Here $\|\
 \end{cline}
 Un-preconditioned Richardson iteration fails (i.e.~add \texttt{-pc\_type none}); explain.  The default preconditioner succeeds (i.e.~\texttt{-pc\_type ilu}), but ILU($0$) is cheating because it becomes a complete LU factorization on this tridiagonal and diagonally-dominant $A$; we are really seeing a direct solve.  The same can be said for ICC($0$).  Confirm that, as in the example on page \pageref{introprerichardson}, Richardson iteration succeeds with \texttt{-pc\_type jacobi}, even though the diagonal is constant; explain.
 
-\item \label{exer:computeeigs} Un-preconditioned GMRES solves the linear system in \texttt{tri.c} reasonably efficiently.  We can explain this by asking \PETSc to compute the eigenvalues of $A$ by using option\sidenote{The relevant \PETSc manual page says this option is ``intended only for assistance in understanding the convergence of iterative methods, not for eigenanalysis.  For accurate computation of eigenvalues we recommend using the excellent package SLEPc.''}
+\item \label{exer:computeeigs} Un-preconditioned GMRES solves the linear system in \texttt{tri.c} reasonably efficiently.  We can explain this by asking \PETSc to compute the eigenvalues of $A$ by using option\sidenote{The relevant \PETSc manual page says this option is ``intended only for assistance in understanding the convergence of iterative methods, not for eigenanalysis.  For accurate computation of eigenvalues we recommend using the excellent package SLEPc.''  See \href{http://slepc.upv.es/}{\texttt{slepc.upv.es}}.}
 \begin{quote}
 \texttt{-ksp\_compute\_eigenvalues}
 \end{quote}
@@ -760,7 +777,7 @@ only show 11 eigenvalues of this $1000\times 1000$ matrix?  How do these eigenva
 
 \item Table \ref{tab:tritiming} gives execution times not iteration count.  Generate the corresponding table of \pKSP iteration count by adding option \verb|-ksp_converged_reason| to the run commands.  Note the large number of ``coincidences'' in iteration count, i.e.~cases where iteration counts are identical; explain.  Which preconditioners have a strong or weak effect on iteration count?  Is timing or iteration count more useful?
 
-\item As the reader will undoubtedly experience, segmentation faults and memory leaks are inevitable when one develops \PETSc codes.  A standard tool for detecting/diagnosing these is \texttt{valgrind}.\sidenote{\href{http://valgrind.org/}{valgrind.org}}  We recommend running it frequently.  As an exercise, run
+\item As the reader will undoubtedly experience, segmentation faults and memory leaks are inevitable when one develops \PETSc codes.  A standard tool for detecting/diagnosing these is \texttt{valgrind}.\sidenote{See \href{http://valgrind.org/}{\texttt{valgrind.org}}.}  We recommend running it frequently.  As an exercise, run
 \begin{cline}
 valgrind ./vecmatksp
 \end{cline}
