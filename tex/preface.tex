@@ -35,9 +35,7 @@ Multiple numerical discretization paradigms will arise here, but at least one nu
 
 Certainly ideas from numerical linear algebra \citep{Greenbaum1997,TrefethenBau} will appear, often with only a brief introduction.  In particular, the definitions of vector norms and (induced) matrix norms, along with the LU and Cholesky decompositions, will be assumed.  The textbook by \citet{TrefethenBau} is the closest of the above-mentioned texts to actually being a ``prerequisite'' to understanding the material in the current book.
 
-Starting in Chapter 3 I will assume that you are interested in unstructured grids, though not at the exclusion of structured approaches.  The basics of the FEM method will be reviewed, but the reader with some background understanding will benefit most.\sidenote{Priority topics for review are the weak form of a PDE and the idea of assembling the equations element-by-element.}
-
-Searching in the \PETSc HTML manual pages should be the reader's first resort for resolving compile-time errors.  The reader should review the \PETSc \emph{User's Manual} \citep{petsc-user-ref}, as it explains best why the API is designed in the way it is.
+Starting in Chapter \ref{chap:unstructured} I will assume that you are interested in unstructured grids, though not at the exclusion of structured approaches.  Some basics of the FEM method will be reviewed in Chapters \ref{chap:unstructured} and \ref{chap:dmplex}, but the reader with some background understanding will benefit most.\sidenote{Priority topics for review include the weak form of a PDE and the idea of assembling the equations element-by-element.}
 
 
 \section{There is much that this book does NOT do}
@@ -53,3 +51,26 @@ I'll assume you want to solve PDEs, but there are many other uses of \PETSc.  Fu
 \item  does not prove anything,\sidenote{We do give evidence for convergence and scalability when possible.} and
 \item  does not adequately cover what is known about nonlinear PDEs, much less what is not known.
 \end{itemize}
+
+
+\section{At the command line}
+
+Before we really get started, what ``computer skills'' do I assume?  In summary, something more than what you need to get started with \Matlab, but certainly less than professional programmer abilities.  It is a fact that numerical programming usually means stereotyped coding using a modest language subset.
+
+You need to have written and compiled C programs before.   Running and modifying the examples will inevitably expose some subtleties of the C language, but no more than would appear in a first college course in computer programming using C or a similar language.  All examples in this book were built and run with the GNU C compiler ``\texttt{gcc}'' (\href{https://gcc.gnu.org/}{\texttt{gcc.gnu.org}}), but this fact would not be visible without this mention here.  \PETSc's configuration finds the compiler, and enables ``\texttt{make}'' as a build command, or it fails.
+
+Serious experience and/or capability as a C programmer is not needed.\sidenote{The author does not qualify as such.}  The concepts of compiling and linking, of including header files, of passing arguments by value and reference, and (most importantly) of pointer variables and arrays-as-pointers, should all be familiar.
+
+The examples included with the book can be run with no more work than to type ``\texttt{make}'' at the command line; with luck this does not lead to compiler errors.  Doing the exercises, or modifying the examples, will always require attention to compile-time errors.  Searching in the \PETSc HTML manual pages for the various commands and data types, online at
+\begin{quote}
+\href{http://www.mcs.anl.gov/petsc/documentation/index.html}{\texttt{www.mcs.anl.gov/petsc/documentation/index.html}}
+\end{quote}
+or downloaded with the \PETSc source, should be the reader's first action for resolving compile-time errors.  The reader should review the PDF \emph{\PETSc User's Manual} \citep{petsc-user-ref}; it explains best why the API is designed in the way it is.
+
+Finally, this book assumes a \emph{bash} shell (\href{https://www.gnu.org/software/bash/bash.html}{\texttt{www.gnu.org/software/bash/bash.html}}) or a shell that interprets bash syntax.  Uses of bash syntax are mostly trivial, but examples of ``for loop'' syntax appear every once in a while:
+\begin{cline}
+$ for N in 1 2 3; do echo "count is $N"; done
+count is 1
+count is 2
+count is 3
+\end{cline}
