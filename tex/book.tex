@@ -288,71 +288,12 @@ Copyright \copyright\ \the\year\ \thanklessauthor
 
 % Thanks to \mbox{Jed Brown} and \mbox{Constantine Khroulev}, fellow students, and gurus.
 
-%%%%%%%%%%
 
-\chapter*{Preface}
-
-\section{Why read this book?}
-
-Perhaps you've taken a mathematics course or two in partial differential equations (PDEs).  You may have written a few codes in C, or various short scripts in \Matlab or python.  You are interested in solving PDEs numerically for models which work in parallel on big problems.  This book is for you.
-
-\section{Get the example codes}
-
-Use \texttt{git} to get the example C codes, and \LaTeX\xspace sources for the book too:
-\begin{cline}
-$ git clone https://github.com/bueler/p4pdes.git
-\end{cline}
-%$
-In the text we use the C codes in subdirectories \texttt{p4pdes/c/ch}$N$ for $N$ equal to the chapter number.
-
-\section{What is \PETSc?}
-
-The Portable, Extensible Toolkit for Scientific computing (\PETSc)\sidenote{Say it ``pets sea.''  The homepage for PETSc, including download and installation instructions, is \href{http://www.mcs.anl.gov/petsc/index.html}{www.mcs.anl.gov/petsc}.} is an open-source, mathematical software library built on top of the standard software layer for large-scale parallel computation, the Message Passing Interface (MPI) \citep{Groppetal1999}.  Thus \PETSc is a framework capable of solving problems like PDEs at ``large scale,'' that is, at high resolution and on supercomputers with hundreds to millions of cores.
-
-\PETSc is not particularly new.  Version 2.0, the first version to make an impact in the scientific computing world, was built in 1994.  A well-known monograph \citet{Smithetal1996}\sidenote{B.~Smith, P.~Bjorstad, and W.~Gropp. \emph{Domain decomposition: parallel multilevel methods for elliptic partial differential equations}. Cambridge
-University Press, 1996} uses \PETSc 2.0 for scalable solutions of linear partial differential equations (PDEs).  That book focusses on pre-conditioned iterative linear solvers and domain decomposition.  For example, methods like additive Schwarz are shown to scalably-solve the Poisson equation on irregular domains and fine meshes in parallel.
-
-But \PETSc is now at version \PETSCVERSION.\sidenote{Version \PETSCMINORVERSION is current in \PETSCMONTH.}  It has evolved into a more powerful toolbox with a much richer API (application program interface).  Typical examples and applications are for nonlinear PDEs.  Indeed nonlinear, multigrid, and multiphysics\sidenote{This buzzword refers to a diverse system of coupled PDEs with nontrivial scalings among the variables.} parts of the API are now highly-visible to users.  The \PETSc strategy is to compose Newton's method and mesh topology tools with a run-time choice of preconditioners and iterative linear solvers.  \PETSc may not be a silver bullet, but it presents users with many powerful tools for solving hard problems, well beyond iterative linear algebra.  As twenty years have passed since version 2.0, perhaps a new book is appropriate.
-
-\section{My goals}
-
-This book is about numerically-solving linear and nonlinear PDEs in 2 or 3 spatial variables by writing C code that directly calls \PETSc.  It tries to both \emph{explain} the ideas and \emph{illustrate} them through example codes.  The example codes come with enough background information so that readers can use them as a basis for further developments.  Demonstrated scalability is the goal, so runtime options are explained and compared, especially in the exercises.
-
-This book is written from the conviction that \emph{better access to common knowledge among experts} advances scientific computing as a discipline.  An expert in \PETSc may say about this book's content that ``I knew all that'' \emph{and} that ``this book is a fast on-ramp to what I already know.''  That is my hope!
-
-\section{What I need from you, the reader}
-
-To make sense of this book, some of the mathematical theory\sidenote{\citep{Evans} is recommended, but not really a prerequisite.} of PDEs must be familiar.  I will also assume some practical intuition about PDE problems, including exposure to nonlinear ones.\sidenote{\citep{Ockendonetal2003} is recommended.}  Of course, all applied mathematicians, distinctly including this author, are wanting when it comes to injesting the mathematical theory of, and building intuition for, nonlinear PDEs.
-
-Multiple numerical discretization paradigms will arise here, but at least one numerical approach to PDEs should already be in the reader's toolbox.  That might be the finite element method (FEM) \citep{Braess,Elmanetal2005}, finite differences \citep{MortonMayers}, finite volumes \citep{LeVeque}, or spectral methods \citep{KarniadakisSherwin,Trefethen}.  Exposure to multigrid ideas \citep{Briggsetal2000} would be helpful, but these concepts will be reviewed.
-
-Certainly numerical ideas from linear algebra \citep{Greenbaum1997,TrefethenBau} will appear, often with only a brief introduction.
-
-Starting in Chapter 3 I will assume that you are interested in unstructured grids, though not at the exclusion of structured approaches.  The basics of the FEM method will be reviewed, but the reader with some background understanding will benefit most.\sidenote{Priority topics for review are the weak form of a PDE and the idea of assembling the equations element-by-element.}
-
-Searching in the \PETSc HTML manual pages should be the reader's first resort for resolving compile-time errors.  The reader should review the \PETSc \emph{User's Manual} \citep{petsc-user-ref}, as it explains best why the API is designed in the way it is.
-
-
-\section{There is much that this book does NOT do}
-
-I'll assume you want to solve PDEs, but there are many other uses of \PETSc.  Furthermore, this book\begin{itemize}
-\item  does not replace the \PETSc \emph{User's Manual},
-\item  does not really help you install \PETSc,
-\item  does not use Fortran or C++; all examples are in C though we use ANSI C99 features,
-\item  does not help with most of the many packages \PETSc links to,
-\item  does not do a complete job of teaching the FEM or any other discretization paradigm for PDEs,
-\item  does not particularly care whether its numerical solutions are good models of physical problems---that is your job, not mine,
-\item  does not consider spatial dimensions except 2 and 3,
-\item  does not prove anything,\sidenote{We do give evidence for convergence and scalability when possible.} and
-\item  does not adequately cover what is known about nonlinear PDEs, much less what is not known.
-\end{itemize}
-
+\input{preface.tex}
 
 \mainmatter
 
 %\setcounter{chapter}{0}
-
-%%%%%%%%%
 
 \input{getstarted.tex} % chapter 1
 

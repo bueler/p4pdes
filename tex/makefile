@@ -1,6 +1,7 @@
 all: book.pdf
 
-texinputs := getstarted.tex linearsystem.tex structured.tex unstructured.tex multigrid.tex scaling.tex nonlinear.tex stokes.tex dmplex.tex constrained.tex
+texroots := preface getstarted linearsystem structured unstructured multigrid scaling nonlinear stokes dmplex constrained
+texinputs := $(addsuffix .tex, $(texroots))
 
 tikzinputs := samplepoly.1.tikz squarefour.tikz bump.1.tikz bump.poly.tikz mesh.1.tikz
 
