@@ -4,7 +4,7 @@
 
 \section{The facts of (numerical) life}
 
-Our goal is to compute more interesting quantities than Euler's constant $e$.\sidenote{See Chapter \ref{chap:getstarted}.}  At the core of most \PETSc computations, and many numerical PDE solutions, is a finite-dimensional linear system.  In this section we both recall some basic ideas of numerical linear algebra and apply \PETSc to solve some simple linear systems.
+Our goal is to compute more interesting quantities than Euler's constant $e$.  At the core of most \PETSc computations, and many numerical PDE solutions, is a finite-dimensional linear system.  In this section we both recall basic ideas of numerical linear algebra and apply \PETSc to solve simple linear systems.
 
 Suppose $\bb\in \RR^{N}$ is a column vector and $A\in\RR^{N\times N}$ is a square matrix.\sidenote{\PETSc can handle complex matrices, but all matrices are real in this book.}  The linear system
 \begin{equation}
@@ -16,21 +16,29 @@ has a unique solution $\bu\in \RR^{N}$ if $A$ is invertible, namely
 \end{equation}
 This is simple in theory.
 
-It is not so simple in practice, however, to solve linear systems on a computer.  There are two key facts to keep in mind while working numerically  \citep{TrefethenBau}:
+It is not so simple in practice, however, to solve linear systems on a computer.  Here are two facts to keep in mind while working numerically with linear systems \citep{TrefethenBau}:
 \renewcommand{\labelenumi}{\roman{enumi})}
 \begin{enumerate}
-\item \label{limittoaccuracy} \emph{limit to accuracy}:  If real numbers are represented with machine precision $\eps$ then the solution of \eqref{introsystem} can only be computed within an error $\kappa(A) \eps$ where $\kappa(A) = \|A\|_2 \|A^{-1}\|_2$ is the (2-norm) \emph{condition number} of $A$.
-\item \emph{cost of direct solutions}:  Computation of solution \eqref{introsolution} by a direct method like Gauss elimination,\sidenote{Or by QR, a \emph{backward stable} direct method.} whether actually forming $A^{-1}$ or not, is an $O(N^3)$ operation.
+\item \label{limittoaccuracy} \emph{limit to accuracy}:  If real numbers are represented with machine precision $\eps$ then the solution of \eqref{introsystem} can only be computed within an error $\kappa(A) \eps$ where $\kappa(A) = \|A\| \|A^{-1}\|$ is the \emph{condition number} of $A$ (for the induced matrix norm $\|\cdot\|$).
+\item \emph{cost of direct solutions}:  If $A$ is a generic $N\times N$ matrix then computation of solution \eqref{introsolution} by a direct method, like Gauss elimination, whether actually forming $A^{-1}$ or not, is an $O(N^3)$ operation.
 \end{enumerate}
 
-Fact i) is about \emph{conditioning} not \emph{methods}.  Informally speaking, there are matrices $A$ and $\tilde A$ that are the same to within $\eps$ but for which the infinite-precision solutions to \eqref{introsolution} differ by an amount $\kappa(A) \eps$.
+Fact i) is about conditioning not methods.  Informally speaking, there are matrices $A$ and $\tilde A$ that are the same to within $\eps$ but for which the infinite-precision solutions to \eqref{introsolution} differ by an amount $\kappa(A) \eps$.  Rounding errors, which is like random noise added to every arithmetic operation on the computer, act to perturb $A$ by $\eps$ during any computation, and thus at least $\kappa(A) \eps$ size errors appear in the solution of the linear system.  However, \emph{backward stable} direct methods, specifically the QR method, can be shown to actually achieve this level of accuracy on all matrices.
 
-The precision for the C \texttt{double} type, the default 64-bit representation of real numbers known as \texttt{PetscReal} in \PETSc programs, is $\eps = 2.2 \times 10^{-16}$.  Thus by i), a linear system having $\kappa(A) \approx 10^{10}$, for example, can only be solved to five or six decimal digits of precision.  While a matrix with such a large condition number is ``poorly-conditioned,'' it is distressingly easy to reach that level for $\kappa(A)$ when discretizing PDEs.  We have to be aware of conditioning when forming expectations about solution accuracy.
+The precision for the C \texttt{double} type, the default 64-bit representation of real numbers, a type aliased to \texttt{PetscReal} in our \PETSc programs, is $\eps = 2.2 \times 10^{-16}$.  Thus by i), a linear system having $\kappa(A) \approx 10^{10}$, for example, can only be solved to five or six decimal digits of precision.  While a matrix with such a large condition number is ``poorly-conditioned,'' it is possible to reach that level for $\kappa(A)$ when discretizing PDEs.  We have to be aware of conditioning when forming expectations about solution accuracy.
 
-By ii) a generic linear system with $N=10^6$ equations requires $10^{18}$ or so operations to solve by Gauss elimination, but even modern supercomputers take a while to do a quintillion operations.  However, though general-purpose direct methods are impractical for systems of $N=10^6$ equations, we will successfully solve PDE-generated linear systems of this size on a single processor in a few seconds, and in $O(N)$ operations, in Chapter \ref{chap:multigrid}.  The key fact is that discretized PDEs generate linear systems with exploitable structure, especially \emph{sparsity} but also coefficient smoothness.  This structure will have to be exposed in serious numerical PDE solutions.  Naive application of direct methods---treating solvers for \eqref{introsystem} as unadjusted black boxes---is too slow.
-%ch4/:  timer ./poisson -da_refine 7 -ksp_type cg -pc_type mg
+By ii) a generic linear system with $N=10^6$ equations requires $10^{18}$ or so operations to solve by Gauss elimination.  Even modern supercomputers take a while to do a quintillion operations.  However, though general-purpose direct methods are impractical for $N=10^6$ systems, we will successfully solve PDE-generated linear systems of this size on a single processor in a few seconds, and in $O(N)$ operations, in Chapter \ref{chap:multigrid}.  The key fact is that discretized PDEs generate linear systems with exploitable structure, especially \emph{sparsity}, namely only a few nonzero entries per matrix row.  For the methods to converge there needs to be other structure, such as regularity of the matrix entries arising from the smoothness of the coefficients in the PDE.  In any case, this structure will must be exploited, and exposed to one degree or another, in serious numerical PDE solutions.  Naive application of direct methods---treating solvers for \eqref{introsystem} as unadjusted black boxes---is too slow.
+%ch5/:  timer ./fish2 -da_refine 7 -ksp_type cg -pc_type mg
 %on 1153 x 1153 grid:  iterations 2, residual norm = 1.88082e-05
 %real 11.18
+
+It is reasonable to add one more point about computer memory, not operation count, to our above list of facts-of-life:
+\begin{enumerate}
+\item[iii)] \emph{do not form the inverse}:  The matrices $A$ arising from discretized PDEs are usually sparse, but their inverses $A^{-1}$ are usually dense and may not even fit in computer memory.
+\end{enumerate}
+
+The difference in memory cost can be dramatic.  For example, the $N$-dimensional tridiagonal matrix $A$ assembled later in this section occupies $24 N$ bytes, because each allocated real entry occupies 8 bytes using \texttt{double} precision.  The inverse $A^{-1}$, however, is dense and uses $8 N^2$ bytes.  Though we can easily solve $A\bu=\bb$ for this matrix in dimension $N=10^7$, in a few seconds on a single processor using less than a gigabyte of memory in the solution process,\sidenote{See \texttt{tri.c}.  Do ``\texttt{tri -tri\_m 10000000 -ksp\_type cg -pc\_type none}.''} simply storing $A^{-1}$ would occupy $800$ terabytes of memory or disk.
+\vfill
 
 
 \section{\PETSc \pVec and \pMat objects}
