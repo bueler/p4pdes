@@ -1,3 +1,4 @@
+\renewcommand{\CODELOC}{c/ch4/}
 
 \chapter{Nonlinear elliptic PDEs on structured grids}
 \label{chap:nonlinear}
@@ -7,11 +8,14 @@
 \section{\pSNES and call-backs}
 % newton.c
 
+\section{Example: 1D reaction-diffusion equation}
 
-\section{Example: a porous medium equation}
+\cinputpart{reaction.c}{\CODELOC}{FIXME}{I}{//SETUP}{//ENDSETUP}{code:reactionI}
+
+\cinputpart{reaction.c}{\CODELOC}{FIXME}{II}{//FUNCTION}{//ENDFUNCTION}{code:reactionII}
+
+\cinputpart{reaction.c}{\CODELOC}{FIXME}{III}{//MAIN}{//ENDMAIN}{code:reactionIII}
 
 \section{Jacobians, exact and approximate}
 
-\section{Structured $Q^1$ FEM}
-
-\section{Example: 2D $p$-Laplacian problem}
+\section{Example: 2D porous medium equation}

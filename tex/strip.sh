@@ -4,8 +4,9 @@
 # We remove "PetscErrorCode ierr" lines and "//STRIP" lines and
 # characters "ierr = " and "CHKERRQ(ierr);"
 
-# each of these filenames should be distinct
+# filenames should be distinct
 CH3="structuredpoisson.c poisson.c"
+CH4="reaction.c"
 CH5="fish2.c"
 CH7="readmesh.c poissontools.c poissonfem.c"
 OTHER="obstacle.c"
@@ -14,6 +15,9 @@ mkdir cstrip/
 
 for NAME in $CH3; do
     cp ../c/ch3/$NAME cstrip/$NAME
+done
+for NAME in $CH4; do
+    cp ../c/ch4/$NAME cstrip/$NAME
 done
 for NAME in $CH5; do
     cp ../c/ch5/$NAME cstrip/$NAME
