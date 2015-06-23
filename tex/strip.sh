@@ -6,8 +6,8 @@
 
 # each of these filenames should be distinct
 CH3="structuredpoisson.c poisson.c"
-CH4="readmesh.c poissontools.c poissonfem.c"
 CH5="fish2.c"
+CH7="readmesh.c poissontools.c poissonfem.c"
 OTHER="obstacle.c"
 
 mkdir cstrip/
@@ -15,11 +15,11 @@ mkdir cstrip/
 for NAME in $CH3; do
     cp ../c/ch3/$NAME cstrip/$NAME
 done
-for NAME in $CH4; do
-    cp ../c/ch4/$NAME cstrip/$NAME
-done
 for NAME in $CH5; do
     cp ../c/ch5/$NAME cstrip/$NAME
+done
+for NAME in $CH7; do
+    cp ../c/ch7/$NAME cstrip/$NAME
 done
 for NAME in $OTHER; do
     cp ../c/$NAME cstrip/$NAME
