@@ -6,7 +6,7 @@
 
 # filenames should be distinct
 CH3="structuredpoisson.c poisson.c"
-CH4="expcircle.c reaction.c"
+CH4="expcircle.c expcircleJAC.c reaction.c"
 CH5="fish2.c"
 CH7="readmesh.c poissontools.c poissonfem.c"
 OTHER="obstacle.c"
