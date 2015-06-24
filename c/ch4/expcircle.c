@@ -20,23 +20,23 @@ PetscErrorCode FormFunction(SNES snes,Vec x,Vec f,void *ctx) {
 
 int main(int argc,char **argv)
 {
-  SNES           snes;         // nonlinear solver context
-  Vec            x,r;          // solution, residual vectors
+  SNES  snes;         // nonlinear solver context
+  Vec   x,r;          // solution, residual vectors
   PetscErrorCode ierr;
 
   PetscInitialize(&argc,&argv,(char*)0,help);
-  ierr = SNESCreate(PETSC_COMM_WORLD,&snes);CHKERRQ(ierr);
+  ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
 
-  ierr = VecCreate(PETSC_COMM_WORLD,&x);CHKERRQ(ierr);
-  ierr = VecSetSizes(x,PETSC_DECIDE,2);CHKERRQ(ierr);
-  ierr = VecSetFromOptions(x);CHKERRQ(ierr);
-  ierr = VecDuplicate(x,&r);CHKERRQ(ierr);
+  ierr = VecCreate(PETSC_COMM_WORLD,&x); CHKERRQ(ierr);
+  ierr = VecSetSizes(x,PETSC_DECIDE,2); CHKERRQ(ierr);
+  ierr = VecSetFromOptions(x); CHKERRQ(ierr);
+  ierr = VecDuplicate(x,&r); CHKERRQ(ierr);
 
-  ierr = SNESSetFunction(snes,r,FormFunction,NULL);CHKERRQ(ierr);
-  ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
+  ierr = SNESSetFunction(snes,r,FormFunction,NULL); CHKERRQ(ierr);
+  ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
-  ierr = VecSet(x,1.0);CHKERRQ(ierr);
-  ierr = SNESSolve(snes,NULL,x);CHKERRQ(ierr);
+  ierr = VecSet(x,1.0); CHKERRQ(ierr);
+  ierr = SNESSolve(snes,NULL,x); CHKERRQ(ierr);
   ierr = VecView(x,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
 
   VecDestroy(&x);  VecDestroy(&r);  SNESDestroy(&snes);

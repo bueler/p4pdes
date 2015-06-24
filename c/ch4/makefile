@@ -5,6 +5,10 @@ expcircle: expcircle.o chkopts
 	-${CLINKER} -o expcircle expcircle.o ${PETSC_SNES_LIB}
 	${RM} expcircle.o
 
+expcircleJAC: expcircleJAC.o chkopts
+	-${CLINKER} -o expcircleJAC expcircleJAC.o ${PETSC_SNES_LIB}
+	${RM} expcircleJAC.o
+
 reaction: reaction.o chkopts
 	-${CLINKER} -o reaction reaction.o ${PETSC_SNES_LIB}
 	${RM} reaction.o
@@ -14,5 +18,5 @@ reaction: reaction.o chkopts
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ expcircle reaction
+	@rm -f *~ expcircle expcircleJAC reaction
 
