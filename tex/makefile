@@ -10,7 +10,7 @@ pdfinputs := poisson-conv.pdf poisson-cg-scale.pdf richpolyplot.pdf
 hinputs :=
 
 # for these, see strip.sh
-cinputs := structuredpoisson.c poisson.c reaction.c fish2.c readmesh.c poissontools.c poissonfem.c obstacle.c
+cinputs := structuredpoisson.c poisson.c expcircle.c reaction.c fish2.c readmesh.c poissontools.c poissonfem.c obstacle.c
 cstrip := $(addprefix cstrip/, $(cinputs))
 
 book.pdf: book.aux
