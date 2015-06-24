@@ -1,0 +1,99 @@
+\begin{tikzpicture}[scale=0.4]
+
+  % strong grid around elements
+  \draw[thick] (0,0) -- (8,0);
+  \draw[thick] (2,2) -- (10,2);
+  \draw[thick] (4,4) -- (12,4);
+  \draw[thick] (0,0) -- (4,4);
+  \draw[thick] (4,0) -- (8,4);
+  \draw[thick] (8,0) -- (12,4);
+
+  \def\ytop{7};
+
+  % tent lines
+  \draw[gray,thick] (6,\ytop) -- (4,0);
+  \draw[gray,thick] (6,\ytop) -- (2,2);
+  \draw[gray,thick] (6,\ytop) -- (10,2);
+  \draw[gray,thick] (6,\ytop) -- (8,4);
+
+  \def\dx{(10.0-6.0)/6};
+  \def\dy{(2.0-\ytop)/6};
+  \foreach \jj in {1,...,5}
+  {
+       \draw[gray,very thin] ({6+\jj*\dx},{\ytop+\jj*\dy}) -- ({4+(4/6)*\jj},0.0);
+  }
+
+  \def\dx{(4.0-6.0)/6};
+  \def\dy{(0.0-\ytop)/6};
+  \foreach \jj in {1,...,5}
+  {
+       \draw[gray,very thin] ({6+\jj*\dx},{\ytop+\jj*\dy}) -- ({10-(2/6)*\jj},{2-(2/6)*\jj});
+  }
+
+  \def\dx{(2.0-6.0)/6};
+  \def\dy{(2.0-\ytop)/6};
+  \foreach \jj in {1,...,5}
+  {
+       \draw[gray,thin] ({6+\jj*\dx},{\ytop+\jj*\dy}) -- ({4-(4/6)*\jj},0.0);
+  }
+
+  \def\dx{(4.0-6.0)/6};
+  \def\dy{(0.0-\ytop)/6};
+  \foreach \jj in {1,...,5}
+  {
+       \draw[gray,thin] ({6+\jj*\dx},{\ytop+\jj*\dy}) -- ({2-(2/6)*\jj},{2-(2/6)*\jj});
+  }
+
+  \def\dx{(10.0-6.0)/6};
+  \def\dy{(2.0-\ytop)/6};
+  \foreach \jj in {1,...,5}
+  {
+       \draw[gray,thin] ({6+\jj*\dx},{\ytop+\jj*\dy}) -- ({8+(4/6)*\jj},4.0);
+  }
+
+  \def\dx{(8.0-6.0)/6};
+  \def\dy{(4.0-\ytop)/6};
+  \foreach \jj in {1,...,5}
+  {
+       \draw[gray,thin] ({6+\jj*\dx},{\ytop+\jj*\dy}) -- ({10+(2/6)*\jj},{2+(2/6)*\jj});
+  }
+
+  \def\dx{(2.0-6.0)/3};
+  \def\dy{(2.0-\ytop)/3};
+  \foreach \jj in {1,...,2}  % reduce clutter
+  {
+       \draw[gray,thin] ({6+\jj*\dx},{\ytop+\jj*\dy}) -- ({8-(4/3)*\jj},4.0);
+  }
+
+  \def\dx{(8.0-6.0)/3};
+  \def\dy{(4.0-\ytop)/3};
+  \foreach \jj in {1,...,2}
+  {
+       \draw[gray,thin] ({6+\jj*\dx},{\ytop+\jj*\dy}) -- ({2+(2/3)*\jj},{2+(2/3)*\jj});
+  }
+
+  % nodes in base plane
+  \filldraw (0,0) circle (4pt);
+  \filldraw (4,0) circle (4pt);
+  \filldraw (8,0) circle (4pt);
+  \filldraw (2,2) circle (4pt);
+  %\filldraw (6,2) circle (4pt);   % (x_j,y_k) is at (6,2)
+  \filldraw (10,2) circle (4pt);
+  \filldraw (4,4) circle (4pt);
+  \filldraw (8,4) circle (4pt);
+  \filldraw (12,4) circle (4pt);
+
+  % node at tent top
+  \filldraw (6,\ytop) circle (4pt);
+
+  % annotate
+  \draw (10,\ytop+1.0) node {$\psi_{j,k}(x_j,y_k)=1$};
+  \draw[-latex] (7.2,\ytop+0.8) -- (6.1,\ytop+0.1);
+  \draw (10,-0.9) node {$\psi_{j,k}=0$ at all other nodes};
+  \draw[-latex] (10,-0.3) -- (10,1.8);
+
+  % label center point
+  \draw (4,-0.6) node {$x_j$};
+  \draw (1.2,2) node {$y_k$};
+
+\end{tikzpicture}
