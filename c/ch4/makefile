@@ -1,14 +1,18 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
+expcircle: expcircle.o chkopts
+	-${CLINKER} -o expcircle expcircle.o ${PETSC_SNES_LIB}
+	${RM} expcircle.o
+
 reaction: reaction.o chkopts
 	-${CLINKER} -o reaction reaction.o ${PETSC_SNES_LIB}
-	${RM} reaction.o 
+	${RM} reaction.o
 
 # etc
 
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ reaction
+	@rm -f *~ expcircle reaction
 
