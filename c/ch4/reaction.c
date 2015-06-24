@@ -4,7 +4,7 @@ static char help[] = "Solves a 1D reaction-diffusion problem with DMDA and SNES.
 
 //SETUP
 typedef struct {
-  PetscReal L, D, rho, M, uLEFT, uRIGHT;
+  PetscReal L, rho, M, uLEFT, uRIGHT;
 } AppCtx;
 
 PetscErrorCode FormInitialGuess(DM da, AppCtx *user, Vec u) {
@@ -43,7 +43,8 @@ PetscErrorCode FormExactSolution(DM da, AppCtx *user, Vec uex) {
 //ENDSETUP
 
 //FUNCTION
-PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal *u, PetscReal *f, AppCtx *user) {
+PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal *u,
+                                 PetscReal *f, AppCtx *user) {
     PetscInt       i;
     PetscReal      h = user->L / (info->mx-1), R;
     for (i=info->xs; i<info->xs+info->xm; i++) {
@@ -54,14 +55,37 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal *u, PetscReal *f
         } else {
             // generic interior location
             R = - user->rho * PetscSqrtReal(u[i]);
-            f[i] = user->D * (u[i+1] - 2.0 * u[i] + u[i-1]) / h + h * R;
+            f[i] = (u[i+1] - 2.0 * u[i] + u[i-1]) / h + h * R;
         }
     }
     return 0;
 }
 //ENDFUNCTION
 
-//extern PetscErrorCode FormJacobianLocal(DMDALocalInfo*,PetscScalar*,Mat,Mat,AppCtx*);
+//JACOBIAN
+PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar *u,
+                                 Mat J, Mat Jpre, AppCtx *user) {
+    PetscErrorCode ierr;
+    PetscInt       i, col[3];
+    PetscReal      h = user->L / (info->mx-1), dRdu, v[3];
+
+    for (i=info->xs; i<info->xs+info->xm; i++) {
+        if ((i == 0) | (i == info->mx-1)) {
+            v[0] = 1.0;
+            ierr = MatSetValues(Jpre,1,&i,1,&i,v,INSERT_VALUES); CHKERRQ(ierr);
+        } else {
+            dRdu = - (user->rho / 2.0) / PetscSqrtReal(u[i]);
+            col[0] = i-1;  v[0] = 1.0 / h;
+            col[1] = i;    v[1] = -2.0 / h + h * dRdu;
+            col[2] = i+1;  v[2] = v[0];
+            ierr = MatSetValues(Jpre,1,&i,3,col,v,INSERT_VALUES); CHKERRQ(ierr);
+        }
+    }
+    ierr = MatAssemblyBegin(Jpre,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+    ierr = MatAssemblyEnd(Jpre,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+    return 0;
+}
+//ENDJACOBIAN
 
 //MAIN
 int main(int argc,char **args) {
@@ -76,9 +100,8 @@ int main(int argc,char **args) {
 
   PetscInitialize(&argc,&args,(char*)0,help);
   user.L      = 1.0;
-  user.D      = 1.0;
   user.rho    = 10.0;
-  user.M      = PetscSqr(user.rho / (12.0 * user.D));
+  user.M      = PetscSqr(user.rho / 12.0);
   user.uLEFT  = user.M;
   user.uRIGHT = user.M * PetscPowReal(user.L + 1.0,4.0);
 
@@ -95,8 +118,8 @@ int main(int argc,char **args) {
   ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
   ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
              (DMDASNESFunction)FormFunctionLocal,&user); CHKERRQ(ierr);
-//  ierr = DMDASNESSetJacobianLocal(da,
-//             (DMDASNESJacobian)FormJacobianLocal,&user); CHKERRQ(ierr);
+  ierr = DMDASNESSetJacobianLocal(da,
+             (DMDASNESJacobian)FormJacobianLocal,&user); CHKERRQ(ierr);
   ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
   ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
