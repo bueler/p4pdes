@@ -3,11 +3,12 @@
 set +x
 
 EXEC=$1
+REFINE=5
 
 function run() {
   rm -f tmp
   set -x
-  /usr/bin/time -f "%e" $EXEC -da_refine 5 -ksp_converged_reason -ksp_type $1 -pc_type $2 $3 &> tmp
+  /usr/bin/time -f "%e" $EXEC -da_refine $REFINE -ksp_converged_reason -ksp_type $1 -pc_type $2 $3 &> tmp
   set +x
   cat tmp
   NAME=$1.$2$4
@@ -26,5 +27,5 @@ run cg jacobi
 run cg icc
 run minres none
 run preonly cholesky
-run cg icc "-ksp_rtol 1.0e-14" .tight
+run cg icc "-ksp_rtol 1.0e-10" .tight
 

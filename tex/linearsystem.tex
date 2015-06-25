@@ -656,7 +656,7 @@ sys 0.00
 \end{cline}
 %$
 \label{defineworkstation}
-These times were taken on the author's 2012-era workstation with 16 GB memory and a single Intel Core i7-3820 8-core cpu running at 3.60GHz.  From now on we call this machine \WORKSTATION.
+These times were taken on the author's 2012-era workstation with 16 GB memory and a single Intel Core i7-3820 4-core cpu running at 3.60GHz.  From now on we call this machine \WORKSTATION.
 
 Only the ``\texttt{real}'' time above is worth considering.  From now on we will use an alias to get just this time:
 \begin{cline}
@@ -669,21 +669,21 @@ The above timing result of $.04$ seconds suggests that this $m=10^4$ dimension s
 $ export SIZES="10000 100000 1000000 10000000"
 $ for M in $SIZES; do timer ./tri -tri_m $M; done
 error for m = 10000 system is |x-xexact|_2 = 8.0e-13
-real 0.04
+real 0.01
 error for m = 100000 system is |x-xexact|_2 = 3.1e-12
-real 0.18
+real 0.07
 error for m = 1000000 system is |x-xexact|_2 = 4.8e-11
-real 1.17
+real 0.32
 error for m = 10000000 system is |x-xexact|_2 = 3.5e-10
-real 11.96
+real 2.39
 \end{cline}
-We see that the default \PETSc \pKSP and \pPC methods\sidenote{GMRES with ILU($0$) preconditioning.} solve a system of size $m=10^7$ (ten million) in a time of about 12 seconds \WORKSTATION.  Will other methods and/or more processors speed up the solution of the linear system of this size?
+We see that the default \PETSc \pKSP and \pPC methods\sidenote{GMRES with ILU($0$) preconditioning.} solve a system of size $m=10^7$ (ten million) in a time of a few seconds on \WORKSTATION.  Will other methods and/or more processors speed up the solution of the linear system of this size?
 
 We can try a direct solve (\texttt{-ksp\_type preonly -pc\_type lu}), the default serial solver (\texttt{-ksp\_type gmres -pc\_type ilu}), and the default parallel solver (\texttt{-ksp\_type gmres -pc\_type bjacobi -sub\_pc\_type ilu}).  We can turn off preconditioning (\texttt{-pc\_type none}) or switch from ILU($0$)-based preconditioning to Jacobi preconditioning (\texttt{-pc\_type jacobi}).
 
 Thus, to generate Table \ref{tab:tritiming} below, we did 16 runs which looked like this:
 \begin{cline}
-$ timer mpiexec -n N ./tri -tri_m 10000000 -ksp_rtol 1.0e-10 -ksp_type KSP -pc_type PC
+$ timer mpiexec -n N ./tri -tri_m 20000000 -ksp_rtol 1.0e-10 -ksp_type KSP -pc_type PC
 \end{cline}
 %$
 for $N=1$ and $N=4$, and several \pKSP/\pPC choices.  The tighter tolerance \texttt{-ksp\_rtol 1.0e-10} was added because a fair comparison of iterative and direct methods needs significant accuracy in the iterative ones.
@@ -706,15 +706,15 @@ cg         & none        & \intime{cg.none.1}          & \intime{cg.none.4} \\
            & bjacobi+icc &                             & \intime{cg.bjacobi.4} \\
 \end{tabular}
 }
-\caption{Times for \texttt{tri.c} to solve systems of dimension $m=10^7$.  In this case the matrix is \emph{tridiagonal}, \emph{symmetric}, \emph{diagonally-dominant}, and \emph{positive definite}.  All runs were on \WORKSTATION (see page \pageref{defineworkstation}).} \label{tab:tritiming}
+\caption{Times for \texttt{tri.c} to solve systems of dimension $m=2\times 10^7$.  In this case the matrix is \emph{tridiagonal}, \emph{symmetric}, \emph{diagonally-dominant}, and \emph{positive definite}.  All runs were on \WORKSTATION (see page \pageref{defineworkstation}).} \label{tab:tritiming}
 \end{table}
 
 This Table deserves discussion:
 \begin{itemize}
 \item Entries ``\texttt{bjacobi+ilu}'' and ``\texttt{bjacobi+icc}'' correspond to options \texttt{-pc\_type bjacobi -sub\_pc\_type ilu} and \texttt{-pc\_type bjacobi -sub\_pc\_type icc}, respectively.  As already noted, the first of these is the parallel default.\sidenote{This example suggests it is a reasonable choice for the default!}
-\item Counting floating point operations shows the leading-order work for Cholesky is $m^3/3$ while for LU it is $2 m^3/3$ \citep{TrefethenBau}.  This is reflected in the direct-solve results using \texttt{-ksp\_type preonly}.  A diagonally-dominant tridiagonal problem is very well-behaved for direct methods because no fill-in or pivoting occurs when they are applied, but we should not assume that most $m=10^7$ dimension systems are good candidates for direct solves.
+\item Counting floating point operations shows the leading-order work for Cholesky is $m^3/3$ while for LU it is $2 m^3/3$ \citep{TrefethenBau}.  This is reflected in the direct-solve results using \texttt{-ksp\_type preonly}.  A diagonally-dominant tridiagonal problem is very well-behaved for direct methods because no fill-in or pivoting occurs when they are applied, but we should not assume that a generic $10^7$ dimension systems are good candidates for direct solves.
 \item Cholesky and CG methods apply to symmetric positive-definite matrices only.  These are \pKSP method \texttt{cg} and \pPC methods \texttt{cholesky} and \texttt{icc} (incomplete-Cholesky, also denoted ``IC($0$)'').  We see some benefit to using CG on one-process runs, compared to the general (non-symmetric) method GMRES, but the matrix generated by \texttt{tri.c} is so well-behaved that both of these iterations work well.
-\item There is indeed speed-up from $N=1$ to $N=4$ processes on this single node 8-core workstation.  The 2 to 3 times speed-up is relatively uniform across methods.
+\item There is some speed-up from $N=1$ to $N=4$ processes on this single node 4-core \WORKSTATION.  The two (or slightly more) times speed-up is relatively uniform across methods.  But apparently using four cores does not guarantee anywhere near four-times speed-up.
 \end{itemize}
 
 In future Chapters, ``real'' linear and non-linear systems will be generated by discretizing PDEs.  Then we will create timing tables like Table \ref{tab:tritiming}, and re-consider the results.

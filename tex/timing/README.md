@@ -7,7 +7,7 @@ That is, the book can be built without a working PETSc install.
 
 To redo the timing results, for example for `tri.c` in Chapter 2, do
 
-    $ (cd ../../c/ch2/ && make tri)
+    $ (cd ../../c/ch2/ && export PETSC_ARCH=linux-c-opt && make tri)
     $ cd tri/
     $ ./time.sh ../../../c/ch2/tri
 
