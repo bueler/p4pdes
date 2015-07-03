@@ -5,12 +5,21 @@
 
 \section{Newton's method}
 
-FIXME suppose $\bF : \RR^N \to \RR^N$ is differentiable.  note $\bF(\bx) = [F_0(\bx), \dots, F_{N-1}(\bx)]$, which we regard as a column vector.  to solve
+How do nonlinear equations arise?  From applications, of course; from physical models with nonlinearities.
+
+But here we care about how nonlinear equations should first ``arise'' in a code which use solvers like \PETSc.  We will think of nonlinear equations as a ``simple'' change to the functional form of the residual.  That is, for a linear system we could say that the residual is a function of the unknowns with a particular form,
+\begin{equation}
+\br = \bF(\bu) = \bb - A \bu. \label{eq:nl:linres}
+\end{equation}
+Nonlinear equations are a generalization of this, where we allow $\bF$ to be arbitrary in form, perhaps a higher-order polynomial or transcendental function.
+
+So now suppose $\bF : \RR^N \to \RR^N$ is differentiable.  An output $\bF(\bx)$ is a column vector if $\bx$ is a column vector, so in that sense $\bF$ acts like a square matrix $A$.  Exactly as we want to reduce the residual to zero in iterative linear algebra, for nonlinear $\bF$ we want to solve
 \begin{equation}
    \bF(\bx) = 0.   \label{eq:nl:equation}
 \end{equation}
+The name change of the unknown $\bu\to\bx$ is because we will think geometrically about changes in the ``location'' of the unknown $\bx$ as stepwise movement through the space $\RR^n$.
 
-given $\bx_k$ and $\Delta\bx$, define $\bx_{k+1} = \bx_k + \Delta\bx$.  note that if $\bF$ is a smooth function then
+That is, we follow Newton in building an iterative method by linearizing \eqref{eq:nl:equation} around each iterate, and treating the problem of ``moving'' $\bx$ as an instance of solving linear equations.  Given $\bx_k$ and a step $\Delta\bx$, both vectors in $\RR^n$, we define $\bx_{k+1} = \bx_k + \Delta\bx$.  If $\bF$ is a smooth function then
 \begin{equation}
     \bF(\bx_{k+1}) = \bF(\bx_k) + J_\bF(\bx_k) \Delta\bx + O(\|\Delta\bx\|^2)  \label{eq:nl:expandF}
 \end{equation}

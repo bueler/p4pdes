@@ -1,6 +1,6 @@
 
 //CREATE
-static char help[] = "Solves a structured-grid Poisson problem with DMDA and KSP.\n\n";
+static char help[] = "A structured-grid Poisson problem with DMDA+KSP.\n\n";
 
 #include <petsc.h>
 #include "structuredpoisson.h"
