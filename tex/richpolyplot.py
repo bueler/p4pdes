@@ -5,7 +5,7 @@ from pylab import *
 
 # Plot polynomials which come from Richardson iteration with omega=1.
 
-x = linspace(-0.4,2.4,301);
+x = linspace(-0.4,2.4,301)
 
 p = []
 #p.append(ones(shape(x)))  # omit p_0(x)

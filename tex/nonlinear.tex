@@ -5,74 +5,90 @@
 
 \section{Newton's method}
 
-How do nonlinear equations arise?  From applications, of course; from physical models with nonlinearities.  But how should nonlinear equations first ``arise'' in a code which use solvers like \PETSc?
+How do nonlinear equations arise?  One answers ``from applications.''  Nonlinear equations come from physical models with nonlinearities.  We will see some examples later in this section.
 
-We will think of nonlinear equations as a ``simple'' change to the functional form of the residual.  That is, for a linear system we could say that the residual is a function of the unknowns with a particular form,
+But how should nonlinear equations first appear in a code which uses \PETSc?  Here the answer is that they represent a ``simple'' change to the functional form of the residual in the linear case.  For a linear system the residual is a particular function of the unknowns,
 \begin{equation}
 \br = \bF(\bu) = \bb - A \bu. \label{eq:nl:linres}
 \end{equation}
-Nonlinear equations are a generalization of this, where we allow $\bF$ to be arbitrary in form, perhaps a higher-order polynomial or transcendental function.
+Nonlinear equations are a generalization in which function $\bF(\cdot)$ is a higher-order polynomial, a transcendental function, or some more general function.
 
-That is, suppose $\bF : \RR^N \to \RR^N$ is merely differentiable.  The input $\bx$ and output $\bF(\bx)$ are column vectors,\sidenote{The name change of the unknown $\bu\to\bx$, relative to the last section, is because we will think geometrically about changes in the location of the unknown $\bx$ as stepwise movement through the space $\RR^n$.} so in that sense $\bF$ acts like multiplying by a square matrix $\bx\mapsto A\bx$.  Exactly as we want to reduce the residual to zero in iterative linear algebra, for nonlinear $\bF$ we want to solve
+Suppose $\bF : \RR^N \to \RR^N$ is differentiable.  The input $\bx$ and output $\bF(\bx)$ are column vectors,\sidenote{The name change of the unknown $\bu\to\bx$, relative to the last section, is because we will think geometrically about changes in the location of the unknown $\bx$ as stepwise movement through the space $\RR^n$.} so in that sense $\bF$ acts like multiplying by a square matrix $\bx\mapsto A\bx$.  As when we reduce the residual to zero in an iterative linear algebra method, for nonlinear $\bF$ we want to solve
 \begin{equation}
-   \bF(\bx) = 0.   \label{eq:nl:equation}
+   \bF(\bx) = 0   \label{eq:nl:equation}
 \end{equation}
+by iteration.
 
-In this section we will follow Isaac Newton in building an iterative method by linearizing \eqref{eq:nl:equation} around each iterate, and in treating the problem as that of ``moving'' $\bx$ to a location closer to the solution of \eqref{eq:nl:equation}.  Each iteration starts by solving a linear system, and of course we already have some technology for that.  However, choosing the right distance to move requires additional choices, beyond the linear solver issues in the last two sections, and the cost of performing the linearization must be taken seriously as well.  Also we need to connect Newton-type ideas to the discretizations of PDEs.
+In this section we follow Isaac Newton in first building an iterative method by linearizing \eqref{eq:nl:equation} around each iterate and then treating the problem as that of ``moving'' $\bx$ to a location closer to the solution of \eqref{eq:nl:equation}.  Each iteration therefore solves a linear system, and we already have some technology for that!  However, choosing the right distance to move requires additional choices, the cost of performing the linearization must be taken into account, and all the existing linear solver choices discussed in the last two sections are also active.  Also, we will need to tell \PETSc about the specific function in \eqref{eq:nl:equation}.
 
-Given $\bx_k$ and a step $\Delta\bx$, both vectors in $\RR^n$, we define $\bx_{k+1} = \bx_k + \Delta\bx$.  If $\bF$ is differentiable then
+If we were given both the current iterate $\bx_k$ and a step $\bs$, as vectors in $\RR^n$, we would let
 \begin{equation}
-    \bF(\bx_{k+1}) = \bF(\bx_k) + J_\bF(\bx_k) \Delta\bx + o(\|\Delta\bx\|)  \label{eq:nl:expandF}
+\bx_{k+1} = \bx_k + \bs \label{eq:nl:firstupdate}
 \end{equation}
-for some matrix
+be the next iterate.  Because $\bF$ is differentiable,
+\begin{equation}
+    \bF(\bx_{k+1}) = \bF(\bx_k) + J_\bF(\bx_k) \bs + o(\|\bs\|)  \label{eq:nl:expandF}
+\end{equation}
+for some square matrix
 \begin{equation}
 J = J_\bF(\bx_k) = \begin{bmatrix}
     \frac{\partial F_0}{\partial x_0} & \dots & \frac{\partial F_0}{\partial x_{N-1}} \\
     \vdots & \ddots & \vdots \\
     \frac{\partial F_{N-1}}{\partial x_0} & \dots & \frac{\partial F_{N-1}}{\partial x_{N-1}}  \end{bmatrix}.  \label{eq:nl:jacdefn}
 \end{equation}
-By definition, $J$ is the \emph{Jacobian (matrix)} of $\bF$ at $\bx_k$; in fact we also refer to the function $\bx \mapsto J_\bF(\bx)$ as the Jacobian.
+By definition, $J$ is the \emph{Jacobian (matrix)} of $\bF$ at $\bx_k$.  (We also refer to the function $\bx \mapsto J_\bF(\bx)$ as the Jacobian.)
 
-An iteration of Newton's method approximately solves nonlinear equation \eqref{eq:nl:equation} by truncating \eqref{eq:nl:expandF} and seeking $\Delta \bx$ so that the updated value $\bF(\bx_{k+1})$ is zero in the truncated equation.  That is,  each step computes $\Delta x$ so that
+An iteration of Newton's method approximately solves nonlinear equation \eqref{eq:nl:equation} by truncating \eqref{eq:nl:expandF} and seeking $\bs$ so that the updated value $\bF(\bx_{k+1})$ is zero in the truncated equation.  That is,  each step computes $\bs$ so that
 \begin{equation}
-    0 = \bF(\bx_k) + J_\bF(\bx_k) \Delta\bx.
+    0 = \bF(\bx_k) + J_\bF(\bx_k) \bs.
 \end{equation}
-Writing this equation in our previous style ``$A\bu=\bb$'' for linear systems, at each iteration $k$ we solve a linear system and then do a vector update:
+Writing this equation in our previous style ``$A\bu=\bb$'' for linear systems, at each iteration $k$ we solve a linear system and then do a vector addition:
 \begin{align}
-    J_\bF(\bx_k) \Delta\bx &= - \bF(\bx_k)  \label{eq:nl:newtoneq}  \\
-    \bx_{k+1} &= \bx_k + \Delta\bx  \label{eq:nl:newtonupdate}
+    J_\bF(\bx_k) \bs &= - \bF(\bx_k)  \label{eq:nl:newtoneq}  \\
+    \bx_{k+1} &= \bx_k + \bs  \label{eq:nl:newtonupdate}
 \end{align}
-This is fairly-simple in theory.
+This is simple in theory.
 
-Actual practice is not \emph{that} much more complicated!  Despite the reputation of Newton iteration as fragile or scary, with a bit of caution in ``moving'' to the new iterate as in \eqref{eq:nl:newtonupdate}, this will work out.  Newton iteration provides the best available technology for solving nonlinear problems including PDEs.  On the other hand, care is needed in solving linear system \eqref{eq:nl:newtoneq}; it should be clear that the nonlinear problem must also require all of the tools for linear systems already considered, and more.
+Actual practice is not \emph{that} much more complicated, especially when we have \PETSc in hand.  Despite the reputation of Newton iteration as fragile or scary, by using a bit of caution in ``moving'' to the new iterate as in \eqref{eq:nl:newtonupdate}, this will work out just fine on most small nonlinear systems.  On big nonlinear systems we will need to pay more attention to the details of the linear solve at each step.\sidenote{It should be clear that the nonlinear problem must also require all of the tools for linear systems already considered, and more.  Nonlinear problems cannot somehow be easier than linear ones!}  But, in any case, Newton iteration provides the best available technology for solving nonlinear problems, including nonlinear PDEs.
 
-Such considerations will be easier if we see an example.
+Exploring such considerations should start from a small example.
 
 \medskip\noindent\hrulefill
-\begin{example}  Nonlinear systems can be thought of as describing the intersections of curves, surfaces, or hypersurfaces, depending on dimension.  For example, this pair of nonlinear equations
-    $$y = \frac{1}{2} e^x, \qquad x^2+y^2 = 1$$
-are an exponential curve and a circle around the origin.  They are easy to visualize, and also shown in Figure FIXME.  The curves clearly have two points of intersection, one each in the first and second quadrants.  Finding those points of intersection means solving the system of simultaneous nonlinear equations.
+\begin{example}  Nonlinear systems can be visualized as the intersections of curves, surfaces, or hypersurfaces, depending on dimension.  For example, given $b > 1$ this pair of nonlinear equations
+    $$y = \frac{1}{b} e^{bx}, \qquad x^2+y^2 = 1,$$
+are an exponential curve in the upper half plane and a circle around the origin.  The curves intersect twice, once each in the first and second quadrants.  Figure \ref{fig:expcirclebasic} shows the $b=2$ case. 
 
-To put the system in standard form \eqref{eq:nl:equation} we write
+These nonlinear equations are put in standard form \eqref{eq:nl:equation} by writing
 \begin{equation}
+\label{eq:nl:expcircleF}
 \bF(\bx) = \begin{bmatrix}
-           e^{x_0} - 2 x_1 \\
+           \frac{1}{b} e^{b x_0} - x_1 \\
            x_0^2 + x_1^2 - 1
            \end{bmatrix}
 \end{equation}
-for $\bx\in \RR^2$.  Thus
+for $\bx\in \RR^2$ with scalar components $\bx = [x_0 \, x_1]^\top$.  Thus
 \begin{equation}
 J_\bF(\bx) = \begin{bmatrix}
-    e^{x_0} & -2 \\
+    e^{b x_0} & -1 \\
     2 x_0   & 2 x_1 \end{bmatrix}
 \end{equation}
-If we start the Newton iteration with $\bx_0 = [1,1]$ then the sequence of iterates from \eqref{eq:nl:Newton} is
-    $$\twovect{\bx}{0}{1}{1}, \twovect{\bx}{1}{FIXME}{FIXME}, \dots$$
-as shown in Figure FIXME
+If $b=2$ and we start the Newton iteration with $\bx_0 = [1 \, 1]^\top$ then the sequence of iterates from \eqref{eq:nl:newtoneq} and \eqref{eq:nl:newtonupdate} is
+    $$\twovect{\bx}{0}{1}{1}, \twovect{\bx}{1}{0.619203}{0.880797}, \twovect{\bx}{2}{0.394157}{0.948623}, \dots$$
+as also shown in Figure \ref{fig:expcirclebasic}.
+%  FROM $ for N in 0 1 2; do ./expcircle -snes_fd -snes_max_it $N; done
 \end{example}
 \noindent\hrulefill
 
 \medskip
+\begin{figure}
+\bigskip
+\includegraphics[width=0.8\textwidth]{expcirclebasic}
+\caption{Newton iterates approach a solution of $\bF(\bx)=0$ for $\bF$ in \eqref{eq:nl:expcircleF} with $b=2$.  In this case a solution is an intersection of an exponential curve and the unit circle.}
+\label{fig:expcirclebasic}
+\end{figure}
+
+To do this calculation in \PETSc FIXME
+
 There are only two main ideas, beyond the construction of the Newton iteration \eqref{eq:nl:Newton} itself, which turn Newton iteration into an effective, indeed profoundly-effective, tool:
 \renewcommand{\labelenumi}{\roman{enumi})}
 \begin{enumerate}
@@ -92,7 +108,7 @@ $ make expcircle
 $ ./expcircle -snes_fd
 \end{cline}
 %$
-Better is to add option \texttt{-snes\_monitor}.  Also \texttt{-snes\_mf} works.
+Better is to add option \texttt{-snes\_monitor}.  Also \texttt{-snes\_mf} works.  See result from \texttt{-snes\_view} in combination with \texttt{-snes\_fd} and \texttt{-snes\_mf}.
 
 FIXME the code works through \emph{call-back}.  Specifically FIXME
 
