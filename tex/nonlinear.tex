@@ -5,45 +5,48 @@
 
 \section{Newton's method}
 
-How do nonlinear equations arise?  From applications, of course; from physical models with nonlinearities.
+How do nonlinear equations arise?  From applications, of course; from physical models with nonlinearities.  But how should nonlinear equations first ``arise'' in a code which use solvers like \PETSc?
 
-But here we care about how nonlinear equations should first ``arise'' in a code which use solvers like \PETSc.  We will think of nonlinear equations as a ``simple'' change to the functional form of the residual.  That is, for a linear system we could say that the residual is a function of the unknowns with a particular form,
+We will think of nonlinear equations as a ``simple'' change to the functional form of the residual.  That is, for a linear system we could say that the residual is a function of the unknowns with a particular form,
 \begin{equation}
 \br = \bF(\bu) = \bb - A \bu. \label{eq:nl:linres}
 \end{equation}
 Nonlinear equations are a generalization of this, where we allow $\bF$ to be arbitrary in form, perhaps a higher-order polynomial or transcendental function.
 
-So now suppose $\bF : \RR^N \to \RR^N$ is differentiable.  An output $\bF(\bx)$ is a column vector if $\bx$ is a column vector, so in that sense $\bF$ acts like a square matrix $A$.  Exactly as we want to reduce the residual to zero in iterative linear algebra, for nonlinear $\bF$ we want to solve
+That is, suppose $\bF : \RR^N \to \RR^N$ is merely differentiable.  The input $\bx$ and output $\bF(\bx)$ are column vectors,\sidenote{The name change of the unknown $\bu\to\bx$, relative to the last section, is because we will think geometrically about changes in the location of the unknown $\bx$ as stepwise movement through the space $\RR^n$.} so in that sense $\bF$ acts like multiplying by a square matrix $\bx\mapsto A\bx$.  Exactly as we want to reduce the residual to zero in iterative linear algebra, for nonlinear $\bF$ we want to solve
 \begin{equation}
    \bF(\bx) = 0.   \label{eq:nl:equation}
 \end{equation}
-The name change of the unknown $\bu\to\bx$ is because we will think geometrically about changes in the ``location'' of the unknown $\bx$ as stepwise movement through the space $\RR^n$.
 
-That is, we follow Newton in building an iterative method by linearizing \eqref{eq:nl:equation} around each iterate, and treating the problem of ``moving'' $\bx$ as an instance of solving linear equations.  Given $\bx_k$ and a step $\Delta\bx$, both vectors in $\RR^n$, we define $\bx_{k+1} = \bx_k + \Delta\bx$.  If $\bF$ is a smooth function then
+In this section we will follow Isaac Newton in building an iterative method by linearizing \eqref{eq:nl:equation} around each iterate, and in treating the problem as that of ``moving'' $\bx$ to a location closer to the solution of \eqref{eq:nl:equation}.  Each iteration starts by solving a linear system, and of course we already have some technology for that.  However, choosing the right distance to move requires additional choices, beyond the linear solver issues in the last two sections, and the cost of performing the linearization must be taken seriously as well.  Also we need to connect Newton-type ideas to the discretizations of PDEs.
+
+Given $\bx_k$ and a step $\Delta\bx$, both vectors in $\RR^n$, we define $\bx_{k+1} = \bx_k + \Delta\bx$.  If $\bF$ is differentiable then
 \begin{equation}
-    \bF(\bx_{k+1}) = \bF(\bx_k) + J_\bF(\bx_k) \Delta\bx + O(\|\Delta\bx\|^2)  \label{eq:nl:expandF}
+    \bF(\bx_{k+1}) = \bF(\bx_k) + J_\bF(\bx_k) \Delta\bx + o(\|\Delta\bx\|)  \label{eq:nl:expandF}
 \end{equation}
-where
+for some matrix
 \begin{equation}
-J_\bF(\bx) = \begin{bmatrix}
+J = J_\bF(\bx_k) = \begin{bmatrix}
     \frac{\partial F_0}{\partial x_0} & \dots & \frac{\partial F_0}{\partial x_{N-1}} \\
     \vdots & \ddots & \vdots \\
-    \frac{\partial F_{N-1}}{\partial x_0} & \dots & \frac{\partial F_{N-1}}{\partial x_{N-1}}  \end{bmatrix}  \label{eq:nl:jacdefn}
+    \frac{\partial F_{N-1}}{\partial x_0} & \dots & \frac{\partial F_{N-1}}{\partial x_{N-1}}  \end{bmatrix}.  \label{eq:nl:jacdefn}
 \end{equation}
-is the Jacobian matrix of $\bF$ at $\bx$.
+By definition, $J$ is the \emph{Jacobian (matrix)} of $\bF$ at $\bx_k$; in fact we also refer to the function $\bx \mapsto J_\bF(\bx)$ as the Jacobian.
 
-Newton's method is an iteration which solves nonlinear equation \eqref{eq:nl:equation} by linearization from truncating \eqref{eq:nl:expandF}.  each step computes $\Delta x$ so that $\bF(\bx_{k+1})=0$ in \eqref{eq:nl:expandF}, after dropping the $O(\|\Delta\bx\|^2)$ term, i.e.~we solve
+An iteration of Newton's method approximately solves nonlinear equation \eqref{eq:nl:equation} by truncating \eqref{eq:nl:expandF} and seeking $\Delta \bx$ so that the updated value $\bF(\bx_{k+1})$ is zero in the truncated equation.  That is,  each step computes $\Delta x$ so that
 \begin{equation}
-    0 = \bF(\bx_k) + J_\bF(\bx_k) \Delta\bx
+    0 = \bF(\bx_k) + J_\bF(\bx_k) \Delta\bx.
 \end{equation}
-for $\Delta x$.  thus at each iteration $k$ we solve a linear system and then do a vector update:
+Writing this equation in our previous style ``$A\bu=\bb$'' for linear systems, at each iteration $k$ we solve a linear system and then do a vector update:
 \begin{align}
-    J_\bF(\bx_k) \Delta\bx &= - \bF(\bx_k)  \label{eq:nl:Newton}  \\
-    \bx_{k+1} &= \bx_k + \Delta\bx  \notag
+    J_\bF(\bx_k) \Delta\bx &= - \bF(\bx_k)  \label{eq:nl:newtoneq}  \\
+    \bx_{k+1} &= \bx_k + \Delta\bx  \label{eq:nl:newtonupdate}
 \end{align}
 This is fairly-simple in theory.
 
-In practice is not \emph{that} much more complicated, despite the reputation of Newton iteration as fragile or scary.  Let's see an example:
+Actual practice is not \emph{that} much more complicated!  Despite the reputation of Newton iteration as fragile or scary, with a bit of caution in ``moving'' to the new iterate as in \eqref{eq:nl:newtonupdate}, this will work out.  Newton iteration provides the best available technology for solving nonlinear problems including PDEs.  On the other hand, care is needed in solving linear system \eqref{eq:nl:newtoneq}; it should be clear that the nonlinear problem must also require all of the tools for linear systems already considered, and more.
+
+Such considerations will be easier if we see an example.
 
 \medskip\noindent\hrulefill
 \begin{example}  Nonlinear systems can be thought of as describing the intersections of curves, surfaces, or hypersurfaces, depending on dimension.  For example, this pair of nonlinear equations
