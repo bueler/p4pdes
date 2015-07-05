@@ -1,3 +1,4 @@
+\renewcommand{\CODELOC}{c/ch3/}
 
 \chapter{Poisson PDE on a structured grid}
 \label{chap:structured}
@@ -388,8 +389,9 @@ f_{2,1} \\
 where $a = 2/h_x^2 + 2/h_y^2 = 26$, $b = - 1/h_x^2 = -9$ and $c = - 1/h_y^2 = -4$.
 
 The matrix $A$ is not symmetric.  Furthermore it is not well-scaled, for such a small example, because the 2-norm condition number is $\kappa(A) = \|A\|_2 \|A^{-1}\|_2 = 43.16$.
-\end{example}
+
 \noindent\hrulefill
+\end{example}
 
 \medskip
 Before assembling the system by writing \PETSc code, there are two nontrivial observations about it.  These observations lead to an equivalent linear system that is easier to solve both in the sense that we have more options for solving the system,\sidenote{More \pKSP and \pPC choices and more choices that converge.} and in the sense that the numerical solution is more accurate because the condition number is smaller.\sidenote{Recall idea i) on page \pageref{limittoaccuracy}.}
@@ -476,8 +478,8 @@ U_{3,2}
 \end{bmatrix}
 \end{equation*}
 where $\alpha = 2 (h_y/h_x) + 2 (h_x/h_y) = 13/3$ and $\beta = - h_y/h_x = - 3/2$.  The matrix is symmetric, positive definite, and better-scaled than before with $\kappa(A)=5.83$.
-\end{example}
 \noindent\hrulefill
+\end{example}
 
 By converting the earlier system to a symmetric matrix $A$ we open up a larger range of linear algebra methods for solving the system efficiently.  We can now use conjugate gradients as the \pKSP (\texttt{-ksp\_type cg}), plus Cholesky preconditioners (\texttt{-pc\_type cholesky} or \texttt{-pc\_type icc}).
 
