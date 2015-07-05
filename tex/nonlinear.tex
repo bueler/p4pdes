@@ -5,9 +5,9 @@
 
 \section{Newton's method}
 
-How do nonlinear equations arise?  One answers ``from applications.''  Nonlinear equations come from physical models with nonlinearities.  We will see some examples later in this section.
+How do nonlinear equations arise?  From applications, of course.  Nonlinear equations come from physical models with nonlinearities.  We will see some examples later in this section.
 
-But how should nonlinear equations first appear in a code which uses \PETSc?  Here the answer is that they represent a ``simple'' change to the functional form of the residual in the linear case.  For a linear system the residual is a particular function of the unknowns,
+But how should nonlinear equations first appear in a code which uses \PETSc?  Here the answer is that they merely change the functional form of the residual, compared to the linear case.  For a linear system the residual is a particular function of the unknowns,
 \begin{equation}
 \br = \bF(\bu) = \bb - A \bu. \label{eq:nl:linres}
 \end{equation}
@@ -19,9 +19,9 @@ Suppose $\bF : \RR^N \to \RR^N$ is differentiable.  The input $\bx$ and output $
 \end{equation}
 by iteration.
 
-In this section we follow Isaac Newton in first building an iterative method by linearizing \eqref{eq:nl:equation} around each iterate and then treating the problem as that of ``moving'' $\bx$ to a location closer to the solution of \eqref{eq:nl:equation}.  Each iteration therefore solves a linear system, and we already have some technology for that!  However, choosing the right distance to move requires additional choices, the cost of performing the linearization must be taken into account, and all the existing linear solver choices discussed in the last two sections are also active.  Also, we will need to tell \PETSc about the specific function in \eqref{eq:nl:equation}.
+In this section we follow Isaac Newton in building an iterative method by linearizing \eqref{eq:nl:equation} around each iterate and then treating the problem as that of ``moving'' $\bx$ to a location closer to the solution.  Each iteration therefore solves a linear system, and we already have some technology for that!  However, choosing the right distance to move requires additional choices, the cost of performing the linearization must be taken into account, and all existing issues regarding linear solver choices, as discussed in the last two sections, remain active.  Also, we will need to tell \PETSc about the specific function in \eqref{eq:nl:equation}.
 
-If we were given both the current iterate $\bx_k$ and a step $\bs$, as vectors in $\RR^n$, we would let
+If we were given both the current iterate $\bx_k$ and a step $\bs$, vectors in $\RR^n$, we would let
 \begin{equation}
 \bx_{k+1} = \bx_k + \bs \label{eq:nl:firstupdate}
 \end{equation}
@@ -36,9 +36,9 @@ J = J_\bF(\bx_k) = \begin{bmatrix}
     \vdots & \ddots & \vdots \\
     \frac{\partial F_{N-1}}{\partial x_0} & \dots & \frac{\partial F_{N-1}}{\partial x_{N-1}}  \end{bmatrix}.  \label{eq:nl:jacdefn}
 \end{equation}
-By definition, $J$ is the \emph{Jacobian (matrix)} of $\bF$ at $\bx_k$.  (We also refer to the function $\bx \mapsto J_\bF(\bx)$ as the Jacobian.)
+By definition, $J$ is the \emph{Jacobian (matrix)} of $\bF$ at $\bx_k$.  We also refer to the function $\bx \mapsto J_\bF(\bx)$ itself as the Jacobian.
 
-An iteration of Newton's method approximately solves nonlinear equation \eqref{eq:nl:equation} by truncating \eqref{eq:nl:expandF} and seeking $\bs$ so that the updated value $\bF(\bx_{k+1})$ is zero in the truncated equation.  That is,  each step computes $\bs$ so that
+An iteration of Newton's method approximately solves nonlinear equation \eqref{eq:nl:equation} by truncating \eqref{eq:nl:expandF} and seeking $\bs$ so that the updated value $\bF(\bx_{k+1})$ is zero in the truncated equation.  That is, each Newton step computes $\bs$ so that
 \begin{equation}
     0 = \bF(\bx_k) + J_\bF(\bx_k) \bs.
 \end{equation}
@@ -73,30 +73,36 @@ J_\bF(\bx) = \begin{bmatrix}
     2 x_0   & 2 x_1 \end{bmatrix}
 \end{equation}
 If $b=2$ and we start the Newton iteration with $\bx_0 = [1 \, 1]^\top$ then the sequence of iterates from \eqref{eq:nl:newtoneq} and \eqref{eq:nl:newtonupdate} is
-    $$\twovect{\bx}{0}{1}{1}, \twovect{\bx}{1}{0.619203}{0.880797}, \twovect{\bx}{2}{0.394157}{0.948623}, \dots$$
+    $$\twovect{\bx}{0}{1}{1}, \quad \twovect{\bx}{1}{0.619203}{0.880797}, \quad \twovect{\bx}{2}{0.394157}{0.948623}, \quad \dots$$
 as also shown in Figure \ref{fig:expcirclebasic}.
+
+\noindent\hrulefill
 %  FROM $ for N in 0 1 2; do ./expcircle -snes_fd -snes_max_it $N; done
 \end{example}
-\noindent\hrulefill
 
-\medskip
-\begin{figure}
-\bigskip
-\includegraphics[width=0.8\textwidth]{expcirclebasic}
-\caption{Newton iterates approach a solution of $\bF(\bx)=0$ for $\bF$ in \eqref{eq:nl:expcircleF} with $b=2$.  In this case a solution is an intersection of an exponential curve and the unit circle.}
+\begin{marginfigure}
+\includegraphics[width=1.2\textwidth]{expcirclebasic}
+\caption{Newton iterates approach a solution of $\bF(\bx)=0$ for $\bF$ in \eqref{eq:nl:expcircleF}.}
 \label{fig:expcirclebasic}
-\end{figure}
+\end{marginfigure}
 
-To do this calculation in \PETSc FIXME
+FIXME quadratic convergence in Figure \ref{fig:newtonconvbasic}
 
-There are only two main ideas, beyond the construction of the Newton iteration \eqref{eq:nl:Newton} itself, which turn Newton iteration into an effective, indeed profoundly-effective, tool:
+To do this calculation in \PETSc FIXME: (1) SNES callback to describe $\bF$, (2) how to compute Jacobian, (3) choice of linesearch
+
+There are only two main ideas, beyond the construction of the Newton iteration \eqref{eq:nl:newtoneq} itself, which turn Newton iteration into an effective, indeed profoundly-effective, tool:
 \renewcommand{\labelenumi}{\roman{enumi})}
 \begin{enumerate}
 \item FIXME linesearch or trust region needed \citep{Kelley2003}
-\item FIXME full range of linear tools (e.g.~Chapter \ref{chap:linearsystem}) should be applied to the linear system \eqref{eq:nl:Newton}
+\item FIXME full range of linear tools (e.g.~Chapter \ref{chap:linearsystem}) should be applied to the linear system
 \end{enumerate}
 
-What make's Newton so good?  FIXME: quadratic convergence
+\begin{figure}
+\includegraphics[width=0.8\textwidth]{newtonconvbasic}
+\caption{The characteristic look of the quadratic convergence of the Newton iteration: the residual drops abruptly.}
+\label{fig:newtonconvbasic}
+\end{figure}
+
 
 
 \section{\pSNES and call-backs}

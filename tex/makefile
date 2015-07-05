@@ -51,8 +51,10 @@ poisson-conv.pdf: poisson-conv.py
 poisson-cg-scale.pdf: poisson-cg-scale.py
 	python poisson-cg-scale.py
 
-expcirclebasic.pdf: expcircle.py
+expcirclebasic.pdf newtonconvbasic.pdf: expcircle.py
 	python expcircle.py
+	pdfcrop expcirclebasic.pdf expcirclebasic.pdf
+	pdfcrop newtonconvbasic.pdf newtonconvbasic.pdf
 
 .PHONY: clean
 

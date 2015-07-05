@@ -12,6 +12,7 @@ bump.poly*
 poisson-*.pdf
 richpolyplot.pdf
 expcirclebasic.pdf
+newtonconvbasic.pdf
 
 ## Core latex/pdflatex auxiliary files:
 *.aux
