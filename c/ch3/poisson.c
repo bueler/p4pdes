@@ -57,10 +57,8 @@ int main(int argc,char **args) {
              "on %d x %d grid:  error |u-uexact|_inf = %g\n",
              info.mx,info.my,errnorm); CHKERRQ(ierr);
 
-  KSPDestroy(&ksp);
   VecDestroy(&u);  VecDestroy(&uexact);  VecDestroy(&b);
-  MatDestroy(&A);
-  DMDestroy(&da);
+  MatDestroy(&A);  KSPDestroy(&ksp);  DMDestroy(&da);
   PetscFinalize();
   return 0;
 }
