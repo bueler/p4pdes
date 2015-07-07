@@ -1,4 +1,3 @@
-
 static char help[] = "Solves a structured-grid Poisson problem with DMDA and KSP,\n"
 "but (unlike c2poisson) also using KSPSetComputeOperators() so we can use\n"
 "multigrid preconditioning at the command line.\n\n";
@@ -82,9 +81,14 @@ PetscErrorCode ComputeA(KSP ksp, Mat J, Mat A, void *ctx) {
 int main(int argc,char **argv)
 {
   PetscErrorCode ierr;
+  DM             da;
+  KSP            ksp;
+  Vec            u, uexact;
+  PetscReal      errnorm;
+  DMDALocalInfo  info;
+
   PetscInitialize(&argc,&argv,(char*)0,help);
 
-  DM da;
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
                 DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
                 -9,-9,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,
@@ -93,14 +97,12 @@ int main(int argc,char **argv)
 
   // create linear solver context; compare to c2poisson.c version; note there
   // is no "Assemble" stage!; that happens inside KSPSolve()
-  KSP ksp;
   ierr = KSPCreate(PETSC_COMM_WORLD,&ksp); CHKERRQ(ierr);
   ierr = KSPSetDM(ksp,da); CHKERRQ(ierr);
   ierr = KSPSetComputeRHS(ksp,ComputeRHS,NULL); CHKERRQ(ierr);
   ierr = KSPSetComputeOperators(ksp,ComputeA,NULL); CHKERRQ(ierr);
   ierr = KSPSetFromOptions(ksp); CHKERRQ(ierr);
 
-  Vec u;
   ierr = DMCreateGlobalVector(da,&u); CHKERRQ(ierr);
   PetscLogStage  stage; //STRIP
   ierr = PetscLogStageRegister("Solve", &stage); CHKERRQ(ierr); //STRIP
@@ -108,9 +110,6 @@ int main(int argc,char **argv)
   ierr = KSPSolve(ksp,NULL,u); CHKERRQ(ierr);
   ierr = PetscLogStagePop(); CHKERRQ(ierr); //STRIP
 
-  PetscScalar    errnorm;
-  Vec            uexact;
-  DMDALocalInfo  info;
   ierr = DMCreateGlobalVector(da,&uexact); CHKERRQ(ierr);
   ierr = formExact(da,uexact); CHKERRQ(ierr);
   ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uxact
@@ -121,8 +120,7 @@ int main(int argc,char **argv)
              info.mx,info.my,errnorm); CHKERRQ(ierr);
 
   VecDestroy(&u);  VecDestroy(&uexact);
-  KSPDestroy(&ksp);
-  DMDestroy(&da);
+  KSPDestroy(&ksp);  DMDestroy(&da);
   ierr = PetscFinalize(); CHKERRQ(ierr);
   return 0;
 }
