@@ -5,13 +5,28 @@ static char help[] = "Solves a 3D structured-grid Poisson problem with DMDA\n"
 
 #include <petsc.h>
 
-PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal ***x,
+PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal ***u,
                                  PetscReal ***F, void *user) {
-    SETERRQ(PETSC_COMM_WORLD,1,"NOT IMPLEMENTED");
+//    SETERRQ(PETSC_COMM_WORLD,1,"NOT IMPLEMENTED");
+//    PetscErrorCode ierr;
+    PetscInt       i, j, k;
+    PetscReal      hx, hy, hz, x, y, z;
+
+    hx = 1.0/(info->mx-1);  hy = 1.0/(info->my-1);  hz = 1.0/(info->my-1);
+    for (k=info->zs; k<info->zs+info->zm; k++) {
+        z = k * hz;
+        for (j=info->ys; j<info->ys+info->ym; j++) {
+            y = j * hy;
+            for (i=info->xs; i<info->xs+info->xm; i++) {
+                x = i * hx;
+                F[k][j][i] = 0.0 * x * y * z;
+            }
+        }
+    }
     return 0;
 }
 
-PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar ***x,
+PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar ***u,
                                  Mat J, Mat Jpre, void *user) {
     SETERRQ(PETSC_COMM_WORLD,1,"NOT IMPLEMENTED");
     return 0;
