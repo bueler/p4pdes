@@ -4,17 +4,17 @@ static char help[] = "Newton's method for a two-variable system.\n"
 
 #include <petsc.h>
 
-PetscErrorCode FormFunction(SNES snes,Vec x,Vec f,void *ctx) {
+PetscErrorCode FormFunction(SNES snes,Vec x,Vec F,void *ctx) {
     PetscErrorCode ierr;
     const PetscReal  b = 2.0, *ax;
-    PetscReal        *af;
+    PetscReal        *aF;
 
     ierr = VecGetArrayRead(x,&ax);CHKERRQ(ierr);
-    ierr = VecGetArray(f,&af);CHKERRQ(ierr);
-    af[0] = (1.0 / b) * PetscExpReal(b * ax[0]) - ax[1];
-    af[1] = ax[0] * ax[0] + ax[1] * ax[1] - 1.0;
+    ierr = VecGetArray(F,&aF);CHKERRQ(ierr);
+    aF[0] = (1.0 / b) * PetscExpReal(b * ax[0]) - ax[1];
+    aF[1] = ax[0] * ax[0] + ax[1] * ax[1] - 1.0;
     ierr = VecRestoreArrayRead(x,&ax);CHKERRQ(ierr);
-    ierr = VecRestoreArray(f,&af);CHKERRQ(ierr);
+    ierr = VecRestoreArray(F,&aF);CHKERRQ(ierr);
     return 0;
 }
 
@@ -27,13 +27,13 @@ int main(int argc,char **argv) {
     ierr = VecCreate(PETSC_COMM_WORLD,&x); CHKERRQ(ierr);
     ierr = VecSetSizes(x,PETSC_DECIDE,2); CHKERRQ(ierr);
     ierr = VecSetFromOptions(x); CHKERRQ(ierr);
+    ierr = VecSet(x,1.0); CHKERRQ(ierr);
     ierr = VecDuplicate(x,&r); CHKERRQ(ierr);
 
     ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
     ierr = SNESSetFunction(snes,r,FormFunction,NULL); CHKERRQ(ierr);
     ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
-    ierr = VecSet(x,1.0); CHKERRQ(ierr);
     ierr = SNESSolve(snes,NULL,x); CHKERRQ(ierr);
     ierr = VecView(x,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
 

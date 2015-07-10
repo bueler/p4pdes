@@ -89,20 +89,34 @@ as also shown in Figure \ref{fig:expcirclebasic}.
 
 \section{\pSNES and call-backs}
 
-To do this calculation in \PETSc FIXME: (1) SNES callback to describe $\bF$, (2) how to compute Jacobian
+We will do this calculation in \PETSc using a nonlinear-solver object of type \pSNES, for ``scalable nonlinear equation solver.''  This object has the usual \texttt{Create/SetFromOptions/Destroy} sequence, but additionally we must tell it about the function $\bF$.  One would generally also want to provide the derivative of $\bF$, the Jacobian function $J_{\bF}$, to the \pSNES, but that matrix can be approximated by finite differences.
 
-FIXME  we solve the above example in code \texttt{expcircle.c} as shown in Figure \ref{code:expcircle}.  this is the entire code, but note that the Jacobian $J_\bF(\bx)$ is not implemented in code.
+Figure \ref{code:expcircle} shows our first \pSNES-using code \texttt{expcircle.c}, which solves the problem \eqref{eq:nl:equation} with $\bF$ from \eqref{eq:nl:expcircleF}.  The \texttt{main()} routine is mostly not surprising, but we summarize the contents anyway.  We start by allocating a \pVec \texttt{x}, of fixed dimension 2, which will hold both the initial iterate $\bx_0$ and, once the Newton iteration is ended, the converged estimate of the solution to system \eqref{eq:nl:equation}.  Because both components of $\bx_0$ equal $1$ in the above example, it is easy to initialize the \pVec with \texttt{VecSet()}.  Finally, a duplicate \pVec \texttt{r} is created because we need to supply it to the \pSNES as space for the (nonlinear) residual.
 
-run it
+Next, the \pSNES is created and configured.  Through a ``call-back'' the formula \eqref{eq:nl:expcircleF} is supplied by a call to \texttt{SNESSetFunction()}.  The third argument of \texttt{SNESSetFunction()} is the name of the C function \texttt{FormFunction()} which we wrote.  In order to match the calling sequence of \texttt{SNESSetFunction()}, our \texttt{FormFunction()} must have a particular ``signature'' as a C function:
+\begin{code}
+PetscErrorCode (*f)(SNES,Vec,Vec,void*)
+\end{code}
+Then \texttt{SNESSetFromOptions()} is called so that, in particular, we will have run-time control both on how the Jacobian is calculated and on how the length of the step $\bs$ is actually determined; see below.
+
+Finally the system is solved by a call to \texttt{SNESSolve()}.  With this call the initial iterate in \texttt{x} is also supplied.  After that the new state of \texttt{x}, presumably the converged solution, is printed at the command line using \texttt{VecView()} with a \texttt{STDOUT} viewer.
+
+\vfill
+\cinput{expcircle.c}{\CODELOC}{FIXME}{//START}{//END}{code:expcircle}
+
+Looking inside our function \texttt{FormFunction()} we see an example of how to extract values from a \pVec and then a new method for how to set values.  Previously we have used \texttt{VecSetValues()} to set values at given indices but it is also possible to access the C array underlying the \pVec.  In this case we need to read entries of input \texttt{x} and then set entries of output \texttt{F}.  FIXME
+
+Run it
 \begin{cline}
 $ cd c/ch4/
 $ make expcircle
 $ ./expcircle -snes_fd
 \end{cline}
 %$
+ 
+FIXME: Clearly the iteration \eqref{eq:nl:newtoneq} requires the Jacobian.  FIXME: explain \texttt{-snes\_fd}
 
-\vfill
-\cinput{expcircle.c}{\CODELOC}{FIXME}{//START}{//END}{code:expcircle}
+FIXME  we solve the above example in code \texttt{expcircle.c} as shown in Figure \ref{code:expcircle}.  this is the entire code, but note that the Jacobian $J_\bF(\bx)$ is not implemented in code.
 
 FIXME Better is to add option \texttt{-snes\_monitor}.  Also \texttt{-snes\_mf} works.  See result from \texttt{-snes\_view} in combination with \texttt{-snes\_fd} and \texttt{-snes\_mf}.
 
@@ -123,6 +137,8 @@ $ ./expcircle
 ...
 \end{cline}
 %$
+
+FIXME use \texttt{-snes\_rtol}
 
 
 \section{Jacobians, exact and approximate}
