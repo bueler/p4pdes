@@ -1,5 +1,5 @@
 static char help[] =
-   "Newton's method for a two-variable system with analytical Jacobian.\n\n";
+   "Newton's method for a two-variable system, with analytical Jacobian.\n\n";
 
 #include <petsc.h>
 

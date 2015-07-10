@@ -1,6 +1,6 @@
 //START
 static char help[] = "Newton's method for a two-variable system.\n"
-    "No analytical Jacobian, so run only with -snes_fd or -snes_mf.\n\n";
+    "No analytical Jacobian.  Run with -snes_fd or -snes_mf.\n\n";
 
 #include <petsc.h>
 
