@@ -7,25 +7,20 @@
 
 How do nonlinear equations arise?  From applications, of course.  They come from physical models with nonlinearities, and we will see examples later in this section.  But how should they first appear in a code which uses \PETSc?
 
-Nonlinear equations merely change the functional form of the residual.  For a linear system the residual is this function of the unknowns,
+The answer is that nonlinear equations merely change the functional form of the residual.  For a linear system the residual is this function of the unknowns,
 \begin{equation}
 \br = \bF(\bu) = \bb - A \bu. \label{eq:nl:linres}
 \end{equation}
-We now consider cases in which function $\bF(\cdot)$ is a higher-order polynomial, a transcendental function, or some more general function.
 
-Suppose $\bF : \RR^N \to \RR^N$ is differentiable.  The input $\bx$ and output $\bF(\bx)$ are column vectors,\sidenote{The name change of the unknown $\bu\to\bx$, relative to \eqref{eq:nl:linres}, is because we will now think more geometrically about changes in the location of $\bx$.} so in that sense $\bF$ acts like multiplying by a square matrix $\bx\mapsto A\bx$.  As when we reduce the residual to zero in an iterative linear algebra method, for nonlinear $\bF$ we want to solve
+We now consider cases in which function $\bF(\cdot)$ is a higher-order polynomial, a transcendental function, or some more general function.  That is, we suppose $\bF : \RR^N \to \RR^N$ is differentiable.  The input $\bx$ and output $\bF(\bx)$ are column vectors,\sidenote{The name change of the unknown $\bu\to\bx$, relative to \eqref{eq:nl:linres}, is because we will now think more geometrically about changes in the location of $\bx$.} so in that sense $\bF$ acts like multiplying by a square matrix $\bx\mapsto A\bx$.  As when we reduce the residual to zero in an iterative linear algebra method, for nonlinear $\bF$ we want to solve
 \begin{equation}
    \bF(\bx) = 0   \label{eq:nl:equation}
 \end{equation}
 by iteration.
 
-In this section we follow Isaac Newton in building an iterative method by linearizing \eqref{eq:nl:equation} around each iterate and then treating the problem as that of ``moving'' $\bx$ to a location closer to the solution.  Each iteration therefore solves a linear system; we already have some technology for that!  However, choosing the right distance to move requires additional choices.  Furthermore, the cost of performing the linearization must be taken into account, and all existing issues regarding linear solver choices, as discussed in the last two sections, remain active.  Also, we will learn how to tell \PETSc about the specific function in \eqref{eq:nl:equation}.
+In this section we follow Isaac Newton in building an iterative method by linearizing \eqref{eq:nl:equation} around each iterate and then treating the problem as that of ``moving'' $\bx$ to a location closer to the solution.  Each iteration therefore solves a linear system; we already have some \PETSc technology for that!  However, choosing the right distance to move requires additional choices.  Furthermore, the cost of performing the linearization must be taken into account, and all existing issues regarding the linear solver, including preconditioner choices, as discussed in the last two sections, remain active.
 
-First, here is the idea of Newton's method.  If we had determined a step $\bs$ from the current iterate $\bx_k$, where both are vectors in $\RR^n$, we would let
-\begin{equation}
-\bx_{k+1} = \bx_k + \bs \label{eq:nl:firstupdate}
-\end{equation}
-be the next iterate.  By definition, because $\bF$ is differentiable,
+First we recall Newton's method.  If we had determined a step $\bs$ from the current iterate $\bx_k$, where both are vectors in $\RR^n$, we would let $\bx_{k+1} = \bx_k + \bs$ be the next iterate.  By definition, because $\bF$ is differentiable,
 \begin{equation}
     \bF(\bx_{k+1}) = \bF(\bx_k) + J_\bF(\bx_k) \bs + o(\|\bs\|)  \label{eq:nl:expandF}
 \end{equation}
@@ -38,7 +33,7 @@ J_\bF(\bx_k) = \begin{bmatrix}
 \end{equation}
 and where $o(\|\bs\|)$ denotes some quantity that goes to zero as the length of the step $\|\bs\|$ goes to zero.  The matrix $J = J_\bF(\bx_k)$ is called the \emph{Jacobian} of $\bF$ at $\bx_k$, though we also refer to the function $\bx \mapsto J_\bF(\bx)$ itself as the Jacobian.
 
-An iteration of Newton's method approximately solves nonlinear equation \eqref{eq:nl:equation} by truncating \eqref{eq:nl:expandF} and then seeking $\bs$ so that the updated value $\bF(\bx_{k+1})$ is zero in the truncated equation.  That is, each Newton step computes $\bs$ so that
+An iteration of Newton's method approximately solves nonlinear equation \eqref{eq:nl:equation} by truncating \eqref{eq:nl:expandF} and then seeking $\bs$ so that the updated value $\bF(\bx_{k+1})$ is zero.  That is, each Newton step computes $\bs$ by the equation
 \begin{equation}
     0 = \bF(\bx_k) + J_\bF(\bx_k) \bs.
 \end{equation}
@@ -49,7 +44,7 @@ Writing this equation in our previous style ``$A\bu=\bb$'' for linear systems, a
 \end{align}
 This is Newton's method.  It is simple in theory.
 
-Actual practice is not that much more complicated, especially having \PETSc in hand!  Despite the reputation of Newton iteration as fragile or scary, by using a bit of caution in ``moving'' to the new iterate as in \eqref{eq:nl:newtonupdate}, this will work out just fine on many small nonlinear systems \citep{Kelley2003}.  On big nonlinear systems we will need to pay more attention to the details of the linear solve at each step.\sidenote{It should be clear that the nonlinear problem must also require all of the tools for linear systems already considered in Chapters \ref{chap:linearsystem} and \ref{chap:structured}, and more.  Nonlinear problems cannot somehow be easier than linear ones!}  In either case, Newton iteration is the core technology for solving nonlinear problems, including nonlinear PDEs.
+Actual practice is not that much more complicated, especially with \PETSc in hand.  Despite the reputation of Newton iteration as fragile or scary, by using a bit of caution in ``moving'' to the new iterate as in \eqref{eq:nl:newtonupdate}, this will work out just fine on many small nonlinear systems \citep{Kelley2003}.  On big nonlinear systems we will need to pay more attention to the details of the linear solve at each step.\sidenote{The nonlinear problem requires all of the tools for linear systems already considered in Chapters \ref{chap:linearsystem} and \ref{chap:structured}, and more.  Nonlinear problems are strictly harder to solve than their linearized versions.}  In either case, Newton iteration is the core technology for solving nonlinear problems, including nonlinear PDEs.
 
 A small example gives us a start on exploring the details.
 
@@ -58,7 +53,7 @@ A small example gives us a start on exploring the details.
     $$y = \frac{1}{b} e^{bx}, \qquad x^2+y^2 = 1,$$
 form intersecting curves in the plane.  As shown in Figure \ref{fig:expcirclebasic} for the $b=2$ case, the curves intersect twice, once each in the first and second quadrants.
 
-These nonlinear equations are put in standard form \eqref{eq:nl:equation} by writing
+These equations are put in standard form \eqref{eq:nl:equation} by writing
 \begin{equation}
 \label{eq:nl:expcircleF}
 \bF(\bx) = \begin{bmatrix}
@@ -89,7 +84,7 @@ as also shown in Figure \ref{fig:expcirclebasic}.
 
 \section{\pSNES and call-backs}
 
-We will do this calculation in \PETSc using a nonlinear-solver object of type \pSNES, an acronym which stands for ``scalable nonlinear equation solver.''  This object has the usual \texttt{Create/SetFromOptions/Destroy} sequence, but additionally we must tell it about the function $\bF$.  One would generally also want to provide the derivative of $\bF$, namely the Jacobian function $J_{\bF}$, to the \pSNES, but that matrix can optionally be approximated by finite differences.
+We will do this calculation in \PETSc using a nonlinear-solver object of type \pSNES, an acronym which stands for ``scalable nonlinear equation solver.''  This object has the usual \texttt{Create/SetFromOptions/Destroy} sequence.  It has a method by which we tell it about the function $\bF$.  One would generally also want to provide the derivative of $\bF$, namely the Jacobian function $J_{\bF}$, to the \pSNES, but that matrix can optionally be approximated by finite differences.
 
 Figure \ref{code:expcircle} shows our first \pSNES-using code \texttt{expcircle.c}.  It solves problem \eqref{eq:nl:equation} with $\bF$ from \eqref{eq:nl:expcircleF}.  The \texttt{main()} portion is mostly not surprising, but we summarize the contents anyway.  We start by allocating \pVec \texttt{x}, of fixed dimension 2, which will hold both the initial iterate $\bx_0$ and, once the Newton iteration is ended, the converged estimate of the solution to system \eqref{eq:nl:equation}.  Because both components of $\bx_0$ are $1$ in the above example, it is easy to initialize the \pVec with \texttt{VecSet()}.  Finally, a duplicate \pVec \texttt{r} is created because we need to supply it to the \pSNES as space for the (nonlinear) residual.
 
