@@ -105,35 +105,45 @@ To avoid conflicts with other methods reading or writing the same memory, these 
 
 The actual content of \texttt{FormFunction()} is to implement formulas \eqref{eq:nl:expcircleF}.  Note \texttt{PetscExpReal()} computes the exponential function $e^x$; in fact it is just an alias for \texttt{exp()} from the standard library, but use of such functions means that the \PETSc configuration can link to consistent libraries and give access to them all just by including \texttt{petsc.h}, as we do in Figure \ref{code:expcircle}.
 
-It is time to run this example:
+It is time to run this example.  We use option \texttt{-snes\_monitor}, which counts the Newton iterations and shows the residual norm $\|\bF(\bx_k)\|_2$:
 \begin{cline}
 $ cd c/ch4/
 $ make expcircle
-$ ./expcircle -snes_fd
+...
+$ ./expcircle -snes_fd -snes_monitor
+  0 SNES Function norm 2.874105323289e+00 
+  1 SNES Function norm 8.591393113962e-01 
+  2 SNES Function norm 1.609958353862e-01 
+  3 SNES Function norm 1.106891696425e-02 
+  4 SNES Function norm 6.618141730691e-05 
+  5 SNES Function norm 2.420782802130e-09 
+Vec Object: 1 MPI processes
+  type: seq
+0.319632
+0.947542
 \end{cline}
 %$
-This uses a new option \texttt{-snes\_fd}, the purpose of which the reader may already see.  Clearly the iteration \eqref{eq:nl:newtoneq} requires the Jacobian, but we have only supplied the \pSNES with an implementation of function $\bF(\bx)$, not with $J_{\bF}(\bx)$.  The entries of the latter matrix are derivatives, however, and we can approximate these by finite differences.  For example, the upper-left entry in $J_{\bF}(\bx)$ is approximately
+Thus after 5 iterations the Newton method has reduced the residual norm by a factor of $10^9$ and stopped with solution $x_0=0.319632$ and $x_1=0.947542$.  Compare Figure \ref{fig:expcirclebasic}.
+
+The above run also uses option \texttt{-snes\_fd}, the purpose of which the reader may already see.  Clearly the iteration \eqref{eq:nl:newtoneq} requires the Jacobian, but we have only supplied the \pSNES with an implementation of function $\bF(\bx)$, not with $J_{\bF}(\bx)$.  The entries of the latter matrix are derivatives, however, and we can approximate these by finite differences.  For example, the upper-left entry in $J_{\bF}(\bx)$ is approximately
 \begin{equation}
-\frac{\partial F_0}{\partial x_0} \approx \frac{F_0(x_0+\delta,x_1) - F_0(x_0,x_1)}{\delta}
+\frac{\partial F_0}{\partial x_0} \approx \frac{F_0(x_0+\delta,x_1) - F_0(x_0,x_1)}{\delta}  \label{eq:nl:examplefdjac}
 \end{equation}
 if $\delta>0$.  It turns out that choosing $\delta = \sqrt{\eps}$, where $\eps$ is machine precision, gives a reasonably accurate approximation to the derivative if the inputs to $\bF$ are all of order approximately one.\cite{Kelley2003}
 
-Thus with option \texttt{-snes\_fd}, this is what is then done by \pSNES internally, at least in outline, to implement the Newton method \eqref{eq:nl:newtoneq} and \eqref{eq:nl:newtonupdate}:
-\begin{itemize}
-\item FIXME
-\end{itemize}
+Thus with option \texttt{-snes\_fd}, the follow is what is done by \pSNES internally, at least in outline, to implement the Newton method \eqref{eq:nl:newtoneq} and \eqref{eq:nl:newtonupdate} on a system of dimension $N$:
+\renewcommand{\labelenumi}{(\emph{\roman{enumi}})}
+\begin{enumerate}
+\item from the current iterate $\bx_k$, $\bF(\bx_k)$ is evaluated by calling the call-back function set in \texttt{SNESSetFunction()}, i.e.~\texttt{FormFunction()} in this case,
+\item then \texttt{FormFunction()} is called $N$ more times to evaluate $\bF(\bx_k+\delta \be_j)$, for $j=0,\dots,N-1$, where $\be_j$ is the $j$th unit vector in $\RR^N$,
+\item from formulas like \eqref{eq:nl:examplefdjac}, all entries of the $N\times N$ matrix $J_{\bF}(\bx_k)$ are approximated,
+\item $N\times N$ linear system \eqref{eq:nl:newtoneq} is solved,
+\item vector update \eqref{eq:nl:newtonupdate} is done,
+\item a convergence test is made, and we repeat at (\emph{i}) if not converged.
+\end{enumerate}
+Note that with item (\emph{i}) and (\emph{ii}) we need to evaluate \texttt{FormFunction()} $N+1$ times per Newton iteration.  While this is no particular problem for a two-dimensional example, as here, it is a worrying amount of work to do if $N$ is large, as it would be for a system of nonlinear equations coming from discretizing a PDE.
 
-FIXME Better is to add option \texttt{-snes\_monitor}.  Also \texttt{-snes\_mf} works.  See result from \texttt{-snes\_view} in combination with \texttt{-snes\_fd} and \texttt{-snes\_mf}.
-
-FIXME use \texttt{-snes\_monitor}; result is quadratic convergence in Figure \ref{fig:newtonconvbasic}
-
-\begin{figure}
-\includegraphics[width=0.8\textwidth]{newtonconvbasic}
-\caption{The characteristic look of the quadratic convergence of the Newton iteration: the residual drops abruptly.}
-\label{fig:newtonconvbasic}
-\end{figure}
-
-FIXME if you run w/o \texttt{-snes\_fd} then error message
+If you run without option \texttt{-snes\_fd} then you get an error message about an un-assembled matrix:
 \begin{cline}
 $ ./expcircle
 [0]PETSC ERROR: --------------------- Error Message -------------------------
@@ -142,25 +152,41 @@ $ ./expcircle
 ...
 \end{cline}
 %$
+This message is somewhat opaque unless you are conscious of the need to form the Jacobian $J=J_{\bF}$ at each Newton iteration.
 
-FIXME use \texttt{-snes\_rtol}
+To ask the \pSNES object to try to reduce the residual norm more, or less, we would use option \texttt{-snes\_rtol}.  For example,
+\begin{cline}
+$ ./expcircle -snes_fd -snes_monitor -snes_rtol 1.0e-14
+\end{cline}
+%$
+asks for much more accuracy than the early run which used the default setting \texttt{-snes\_rtol 1.0e-8}.\marginnote{Recall that \texttt{./expcircle -snes\_fd -help |grep snes\_rtol} gets the default for this parameter.}  Instead of showing the resulting 6 Newton iterations as text output, Figure \ref{fig:newtonconvbasic} shows these residual norm values in a graph with log-scaling on the $y$-axis.  We see that the residual drops fairly abruptly.  FIXME quadratic convergence
+
+\begin{figure}
+\includegraphics[width=0.8\textwidth]{newtonconvbasic}
+\caption{The characteristic look of the quadratic convergence of the Newton iteration: the residual drops abruptly.}
+\label{fig:newtonconvbasic}
+\end{figure}
 
 
-\section{Jacobians, exact and approximate}
+\section{Exact Jacobians}
 
-FIXME
+FIXME: adding exact jacobian AND struct holding $b$ (FIX CODE)
 
-\vfill
 \cinputpart{expcircleJAC.c}{\CODELOC}{FIXME}{I}{//STARTJAC}{//ENDJAC}{code:expcircleJACI}
 
 \cinputpart{expcircleJAC.c}{\CODELOC}{FIXME}{II}{//STARTADDJAC}{//ENDADDJAC}{code:expcircleJACII}
 
+
+\section{Line search}
+
 There remain two major ideas not covered above, i.e.~beyond the construction of the Newton iteration \eqref{eq:nl:newtoneq} itself, to turn Newton iteration into an effective tool:
 \renewcommand{\labelenumi}{\roman{enumi})}
 \begin{enumerate}
-\item FIXME linesearch or trust region needed \citep{Kelley2003}
-\item FIXME full range of linear tools (e.g.~Chapter \ref{chap:linearsystem}) should be applied to the linear system
+\item linesearch or trust region needed \citep{Kelley2003}
+\item full range of linear tools (e.g.~Chapter \ref{chap:linearsystem}) should be applied to the linear system
 \end{enumerate}
+
+Regarding the former FIXME
 
 
 \section{Example: 1D reaction-diffusion equation}
