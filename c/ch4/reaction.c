@@ -42,7 +42,7 @@ PetscErrorCode FormExactSolution(DM da, AppCtx *user, Vec uex) {
 }
 //ENDSETUP
 
-//FUNCTION
+//FUNJAC
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal *u,
                                  PetscReal *f, AppCtx *user) {
     PetscInt       i;
@@ -60,9 +60,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal *u,
     }
     return 0;
 }
-//ENDFUNCTION
 
-//JACOBIAN
 PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar *u,
                                  Mat J, Mat Jpre, AppCtx *user) {
     PetscErrorCode ierr;
@@ -83,9 +81,13 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar *u,
     }
     ierr = MatAssemblyBegin(Jpre,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
     ierr = MatAssemblyEnd(Jpre,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+    if (J != Jpre) {
+        ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+        ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    }
     return 0;
 }
-//ENDJACOBIAN
+//ENDFUNJAC
 
 //MAIN
 int main(int argc,char **args) {

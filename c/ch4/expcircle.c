@@ -4,7 +4,7 @@ static char help[] = "Newton's method for a two-variable system.\n"
 
 #include <petsc.h>
 
-PetscErrorCode FormFunction(SNES snes,Vec x,Vec F,void *ctx) {
+PetscErrorCode FormFunction(SNES snes, Vec x, Vec F, void *ctx) {
     PetscErrorCode ierr;
     const PetscReal  b = 2.0, *ax;
     PetscReal        *aF;
