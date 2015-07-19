@@ -112,11 +112,11 @@ $ make expcircle
 $ ./expcircle -snes_fd
 \end{cline}
 %$
-This uses a new option \texttt{-snes\_fd}, the purpose of which the reader may already see.  Clearly the iteration \eqref{eq:nl:newtoneq} requires the Jacobian!  Here we have only supplied the \pSNES object with an implementation of function $\bF(\bx)$, but not with $J_{\bF}(\bx)$.  The entries of the latter matrix are derivatives, however, and so we can approximate by finite differences.  For example, the upper-left entry in $J_{\bF}(\bx)$ is approximated
+This uses a new option \texttt{-snes\_fd}, the purpose of which the reader may already see.  Clearly the iteration \eqref{eq:nl:newtoneq} requires the Jacobian, but we have only supplied the \pSNES with an implementation of function $\bF(\bx)$, not with $J_{\bF}(\bx)$.  The entries of the latter matrix are derivatives, however, and we can approximate these by finite differences.  For example, the upper-left entry in $J_{\bF}(\bx)$ is approximately
 \begin{equation}
-\frac{\partial F_0}{\partial x_0} = \frac{F_0(x_0+\delta,x_1) - F_0(x_0,x_1)}{\delta}
+\frac{\partial F_0}{\partial x_0} \approx \frac{F_0(x_0+\delta,x_1) - F_0(x_0,x_1)}{\delta}
 \end{equation}
-if $\delta>0$.  It turns out that choosing $\delta \approx \sqrt{\eps}$ gives a reasonably accurate approximation to the derivative if the inputs to $\bF$ are all of order approximately one \cite{Kelley2003}.
+if $\delta>0$.  It turns out that choosing $\delta = \sqrt{\eps}$, where $\eps$ is machine precision, gives a reasonably accurate approximation to the derivative if the inputs to $\bF$ are all of order approximately one.\cite{Kelley2003}
 
 Thus with option \texttt{-snes\_fd}, this is what is then done by \pSNES internally, at least in outline, to implement the Newton method \eqref{eq:nl:newtoneq} and \eqref{eq:nl:newtonupdate}:
 \begin{itemize}
