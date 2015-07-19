@@ -154,7 +154,10 @@ $ ./expcircle
 %$
 This message is somewhat opaque unless you are conscious of the need to form the Jacobian $J=J_{\bF}$ at each Newton iteration.
 
-To ask the \pSNES object to try to reduce the residual norm more, or less, we would use option \texttt{-snes\_rtol}.  For example,
+
+\section{Residual norm in the Newton iteration}
+
+To ask the \pSNES object to try to reduce the residual norm more or less we use option \texttt{-snes\_rtol}.  For example,
 \begin{cline}
 $ ./expcircle -snes_fd -snes_monitor -snes_rtol 1.0e-14
 \end{cline}
@@ -163,34 +166,36 @@ asks for much more accuracy than the early run which used the default setting \t
 
 \begin{figure}
 \includegraphics[width=0.8\textwidth]{newtonconvbasic}
-\caption{The characteristic look of the quadratic convergence of the Newton iteration: the residual drops abruptly.}
+\caption{The characteristic look of the quadratic convergence of the Newton iteration: the residual norm drops abruptly.}
 \label{fig:newtonconvbasic}
 \end{figure}
 
-The residual drops very abruptly in the Figure, reflecting the hoped-for behavior of Newton iteration.  In this best case the error in the solution, and the residual norm also, decreases substantially at each iteration in the sense that the error at an iteration is proportional to the \emph{square} of the error at the last iteration.  It is time for a theorem expressing this best-case behavior \citep[Theorems 1.1 and inequalities (1.13)]{Kelley2003}:
+The residual drops very abruptly in the Figure, reflecting the hoped-for best-case behavior of Newton iteration.  The residual norm, and the error in the solution also, decreases substantially at each iteration in the sense that the error at an iteration is proportional to the \emph{square} of the error at the last iteration.
+
+This theorem expresses the best-case behavior of a Newton iteration \citep[Theorems 1.1 and inequalities (1.13)]{Kelley2003}:
 
 \begin{theorem}
-Suppose $\bF:\RR^N\to\RR^N$ is differentiable, that $\bx^*$ is a solution of \eqref{eq:nl:equation}, that $J_{\bF}$ is Lipschitz near $\bx^*$, and that $J_{\bF}(\bx^*)$ is a nonsingular $N\times N$ matrix.  Let $\be_k=\bx_k-\bx^*$, let $\|\cdot\|$ denote a vector norm and its induced matrix norm, and let $\kappa(A)=\|A^{-1}\| \|A\|$ denote condition number of an invertible matrix $A$.  If $\bx_0$ is sufficiently close to $\bx^*$ then:
+Suppose $\bF:\RR^N\to\RR^N$ is differentiable, that $\bx^*$ is a solution of \eqref{eq:nl:equation}, that $J_{\bF}$ is Lipschitz near $\bx^*$, and that $J_{\bF}(\bx^*)$ is a nonsingular matrix.  Let $\be_k=\bx_k-\bx^*$, let $\|\cdot\|$ denote a vector norm and its induced matrix norm, and let $\kappa(A)=\|A^{-1}\| \|A\|$ denote condition number of an invertible matrix $A$.  If $\bx_0$ is sufficiently close to $\bx^*$ then, in exact arithmetic,
 \renewcommand{\labelenumi}{(\roman{enumi})}
 \begin{enumerate}
-\item There is $K>0$ such that for all $k$ sufficiently large,
-	$$\|\be_{k+1}\| \le K \|\be_k\|^2.$$
+\item There is $K\ge 0$ such that for all $k$ sufficiently large,
+\begin{equation}
+	\|\be_{k+1}\| \le K \|\be_k\|^2. \label{eq:nl:quadraticconvergence}
+\end{equation}
 \item If $\kappa = \kappa\left(J_{\bF}(\bx^*)\right)$, so that $\kappa\ge 1$, then
 	$$\frac{\|\be_k\|}{4 \kappa \|\be_0\|} \le \frac{\|\bF(\bx_k)\|}{\|\bF(\bx_0)\|} \le \frac{4 \kappa \|\be_k\|}{\|\be_0\|}.$$
 \end{enumerate}
 \end{theorem}
 
-The first idea in this theorem is that, under the given assumptions about the regularity and nonsingularity of the Jacobian, the error decays quadratically.  This is what we see in the Figure, and it is a remarkable fact about Newton iteration.  Heuristically, once the error norm $\|\be_k\|$ is a small number (e.g.~$\|\be_k\| \ll 1$), the number of correct digits in $\bx_k$ \emph{doubles} at each iteration.
+By definition, a sequence $\{\bx_k\}$ in $\RR^N$ \emph{converges quadratically to} $\bx^*$ if the sequence $\be_k=\bx_k-\bx^*$ satisfies \eqref{eq:nl:quadraticconvergence} for some $K\ge 0$.  Thus the first idea in the Theorem is that, under strong assumptions about the regularity and nonsingularity of the Jacobian, the error decays very rapidly in the sense that the iterates converge quadratically to a solution of \eqref{eq:nl:equation}.  This remarkable fact is one way of saying why Newton iteration is such a powerful tool.  Heuristically, once the error norm $\|\be_k\|$ is a small number (e.g.~$\|\be_k\| \ll 1$), the number of correct digits in $\bx_k$ \emph{doubles} with each additional iteration.
 
-Second, the Theorem says that the relative error decrease at the $k$th iteration (i.e.~$\|\be_k\|/\|\be_0\|$) is within a factor, determined by the conditioning of the Jacobian at the solution, of the relative residual norm decrease at the $k$th iteration (i.e.~$\|\bF(\bx_k)\|/\|\bF(\bx_0)\|$).  This idea is significant because the latter quantity, the residual norm decrease, is \emph{computable}.  That is, if we want to reduce the (generally-unknowable) numerical error $\be_k=\bx_k-\bx^*$ by a given factor then it suffices to reduce the residual norm by a comparable factor, slightly or significantly larger than one according only to the conditioning of the Jacobian.
+We seem to see quadratic converge in Figure \ref{fig:newtonconvbasic}, but note this Figure shows the residual norm $\|\bF(\bx_k)\|_2$ and not the error norm $\|\be_k\|_2$.  The second part of the Theorem says that the relative error decrease at the $k$th iteration (i.e.~$\|\be_k\|/\|\be_0\|$) is within a factor, determined by the conditioning of the Jacobian at the solution, of the relative residual norm decrease at the $k$th iteration (i.e.~$\|\bF(\bx_k)\|/\|\bF(\bx_0)\|$).  This idea is significant because only the latter quantity, the residual norm ratio, is \emph{computable}.
 
-
-\section{\PETSc's termination conditions}
+The Theorem confirms that residual norm decay like that shown in Figure \ref{fig:newtonconvbasic} corresponds to quadratic convergence of iterates $\bx_k$ to a solution $\bx^*$.  If we want to reduce the (generally-unknowable) numerical error $\be_k=\bx_k-\bx^*$ by a given amount then it suffices to reduce the residual norm by a comparable amount.  The factor by which the two relative norms differ, namely $4 \kappa$, is large only if the conditioning of the Jacobian at the solution is poor.  A large condition number $\kappa\left(J_{\bF}(\bx^*)\right)$ would also mean, just as in the linear case, that there is lost precision in solving the nonlinear equations by any numerical means; see Chapter \ref{chap:linearsystem}.
 
 A residual norm reduction goal is exactly what the option \texttt{-snes\_rtol} controls, that is, the iteration continues until
     $$\frac{\|\bF(\bx_k)\|_2}{\|\bF(\bx_0)\|_2} \le \text{\texttt{snes\_rtol}}.$$
-
-Actually, to give the more complete story, there are three \pSNES tolerances, listed in Table \ref{tab:snestolerances}.  The iteration stops as soon as one of these conditions is satisfied.  Note that $\bs_k$ denotes the solution to linear system \eqref{eq:nl:newtoneq}, the ``step'' at iteration $k$; we will look again at the length of the step $\bs$ below.  The defaults for the three tolerances are \texttt{X}$=10^{-8},10^{-50},10^{-8}$, respectively.
+Actually, to give the more complete story, there are three \pSNES tolerances, listed in Table \ref{tab:snestolerances}.  The iteration stops as soon as one of the conditions in the Table is satisfied.  Note that $\bs_k$ denotes the solution to linear system \eqref{eq:nl:newtoneq}, the ``step'' at iteration $k$; we will look again at step length below.  The defaults for the three tolerances are \texttt{X}$=10^{-8},10^{-50},10^{-8}$, respectively.
 
 \begin{table}
 \begin{tabular}{lll}
@@ -214,15 +219,27 @@ Vec Object: 1 MPI processes
 \end{cline}
 %$
 
+So far we have portrayed the Newton iteration in optimistic terms, but it is not magic and things can go wrong.  First note a key hypothesis in the above Theorem, namely that ``$\bx_0$ is sufficiently close to $\bx^*$''.  FIXME
 
-\section{Exact Jacobians}
+\section{Implementing exact Jacobians}
 
 FIXME: adding exact jacobian AND struct holding $b$ (FIX CODE)
 
-\cinputpart{expcircleJAC.c}{\CODELOC}{FIXME}{I}{//STARTJAC}{//ENDJAC}{code:expcircleJACI}
+\cinputpart{expcircleJAC.c}{\CODELOC}{FIXME}{I}{//START}{//END}{code:expcircleJACI}
 
-\cinputpart{expcircleJAC.c}{\CODELOC}{FIXME}{II}{//STARTADDJAC}{//ENDADDJAC}{code:expcircleJACII}
+\cinputpart{expcircleJAC.c}{\CODELOC}{FIXME}{II}{//STARTMAIN}{//ENDMAIN}{code:expcircleJACII}
 
+
+\section{``Matrix-free'' Newton method}
+
+FIXME all of these work because of double-mat-assembly in \texttt{FormJacobian()}:
+
+\begin{cline}
+$ ./expcircleJAC -snes_monitor -snes_mf_operator
+$ ./expcircleJAC -snes_monitor -snes_mf
+$ ./expcircleJAC -snes_monitor -snes_fd
+$ ./expcircleJAC -snes_monitor
+\end{cline}
 
 \section{Line search}
 
@@ -243,11 +260,9 @@ FIXME
 \vfill
 \cinputpart{reaction.c}{\CODELOC}{FIXME}{I}{//SETUP}{//ENDSETUP}{code:reactionI}
 
-\cinputpart{reaction.c}{\CODELOC}{FIXME}{II}{//FUNCTION}{//ENDFUNCTION}{code:reactionII}
+\cinputpart{reaction.c}{\CODELOC}{FIXME}{II}{//FUNJAC}{//ENDFUNJAC}{code:reactionII}
 
-\cinputpart{reaction.c}{\CODELOC}{FIXME}{III}{//JACOBIAN}{//ENDJACOBIAN}{code:reactionIII}
-
-\cinputpart{reaction.c}{\CODELOC}{FIXME}{IV}{//MAIN}{//ENDMAIN}{code:reactionIV}
+\cinputpart{reaction.c}{\CODELOC}{FIXME}{III}{//MAIN}{//ENDMAIN}{code:reactionIII}
 
 \section{Optimization and nonlinear PDEs: $p$-Laplacian equation}
 
@@ -287,4 +302,6 @@ FIXME try NCG
     \item The sequence $x_k = 1-2^{-2^n}$ converges quadratically to $x^*=1$.  Find $k$ so that $|e_k| < 10^{-16}$.  Find the smallest $K$ so that $|e_{k+1}| \le K |e_k|^2$ for all $k$.
     \item Let $F(x) = \cos(x-1) - \exp(1-x)$ and $x_0=0.5$.  Using any quick-and-dirty numerical tool,\sidenote{Extra credit for doing it in \PETSc.} compute Newton iterates $x_k$ for $k=1,\dots,6$.  Estimate $K$ so that $|e_{k+1}| \le K |e_k|^2$ for large $k$.
     \end{enumerate}
+
+\item Make a tiny modification to \texttt{expcircleJAC.c} to set the components of the initial vector to $20$, i.e.~$\bx_0 = [20\,\, 20]^\top$.  Rerun it only with option \texttt{-snes\_monitor} and note the manner in which it does not converge to a solution of $\bF(\bx)=0$ for \eqref{eq:nl:expcircleF}.  Why does the \pSNES stop?  Add one runtime option so that it does converge to a solution.  Is the convergence quadratic?
 \end{enumerate}
