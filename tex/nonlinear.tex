@@ -5,20 +5,19 @@
 
 \section{Newton's method}
 
-How do nonlinear equations arise?  From applications, of course.  They come from physical models with nonlinearities, and we will see examples later in this section.  But how should they first appear in a code which uses \PETSc?
-
-The answer is that nonlinear equations merely change the functional form of the residual.  For a linear system the residual is this function of the unknowns,
+How should nonlinear equations first appear in a code which uses \PETSc?  The answer is that they merely change the functional form of the residual.  For a linear system the residual is this function of the unknowns,
 \begin{equation}
-\br = \bF(\bu) = \bb - A \bu. \label{eq:nl:linres}
+\br = \bF(\bu) = \bb - A \bu, \label{eq:nl:linres}
 \end{equation}
-
-We now consider cases in which function $\bF(\cdot)$ is a higher-order polynomial, a transcendental function, or some more general function.  That is, we suppose $\bF : \RR^N \to \RR^N$ is differentiable.  The input $\bx$ and output $\bF(\bx)$ are column vectors,\sidenote{The name change of the unknown $\bu\to\bx$, relative to \eqref{eq:nl:linres}, is because we will now think more geometrically about changes in the location of $\bx$.} so in that sense $\bF$ acts like multiplying by a square matrix $\bx\mapsto A\bx$.  As when we reduce the residual to zero in an iterative linear algebra method, for nonlinear $\bF$ we want to solve
+but we now consider cases in which function $\bF(\cdot)$ is a higher-order polynomial, a transcendental function, or some more general function.  That is, we suppose $\bF : \RR^N \to \RR^N$ is differentiable.  The input $\bx$ and output $\bF(\bx)$ are column vectors,\sidenote{The name change of the unknown $\bu\to\bx$, relative to \eqref{eq:nl:linres}, is because we will now think more geometrically about changes in the location of $\bx$.} so in that sense $\bF$ acts like multiplying by a square matrix $\bx\mapsto A\bx$.  Just as we would reduce the residual to zero in an iterative linear algebra method, for nonlinear $\bF$ we want to solve
 \begin{equation}
    \bF(\bx) = 0   \label{eq:nl:equation}
 \end{equation}
 by iteration.
 
-In this section we follow Isaac Newton in building an iterative method by linearizing \eqref{eq:nl:equation} around each iterate and then treating the problem as that of ``moving'' $\bx$ to a location closer to the solution.  Each iteration therefore solves a linear system; we already have some \PETSc technology for that!  However, choosing the right distance to move requires additional choices.  Furthermore, the cost of performing the linearization must be taken into account, and all existing issues regarding the linear solver, including preconditioner choices, as discussed in the last two sections, remain active.
+In this section we follow Isaac Newton in building an iterative method to solve \eqref{eq:nl:equation}.  This method linearizes \eqref{eq:nl:equation} around the most recent iterate and then ``moves'' $\bx$ to the location which solves the linear problem and is, we hope, closer to the solution.  Each iteration therefore solves a linear system; we already have some \PETSc technology for that!  However, choosing the ``smart'' distance to move will require additional choices.  Furthermore, the cost of performing the linearization must be taken into account, and all existing issues regarding the linear solver, including preconditioner choices, as discussed in the last two chapters, remain active.
+
+Of course, nonlinear PDEs do arise in applications.  They come from physical models with nonlinearities, and we will see examples later in this section.  Discretizing nonlinear PDEs leads to systems like \eqref{eq:nl:equation}, and we will give examples of that.  For now, however, we concentrate on solving \eqref{eq:nl:equation}.
 
 First we recall Newton's method.  If we had determined a step $\bs$ from the current iterate $\bx_k$, where both are vectors in $\RR^n$, we would let $\bx_{k+1} = \bx_k + \bs$ be the next iterate.  By definition, because $\bF$ is differentiable,
 \begin{equation}
@@ -31,7 +30,7 @@ J_\bF(\bx_k) = \begin{bmatrix}
     \vdots & \ddots & \vdots \\
     \frac{\partial F_{N-1}}{\partial x_0} & \dots & \frac{\partial F_{N-1}}{\partial x_{N-1}}  \end{bmatrix},  \label{eq:nl:jacdefn}
 \end{equation}
-and where $o(\|\bs\|)$ denotes some quantity that goes to zero as the length of the step $\|\bs\|$ goes to zero.  The matrix $J = J_\bF(\bx_k)$ is called the \emph{Jacobian} of $\bF$ at $\bx_k$, though we also refer to the function $\bx \mapsto J_\bF(\bx)$ itself as the Jacobian.
+and where $o(\|\bs\|)$ denotes some quantity that goes to zero as the length of the step $\|\bs\|$ goes to zero.  The matrix $J = J_\bF(\bx_k)$ is called the \emph{Jacobian} of $\bF$ at $\bx_k$, though we also refer to the function $\bx \mapsto J_\bF(\bx)$ as the Jacobian.
 
 An iteration of Newton's method approximately solves nonlinear equation \eqref{eq:nl:equation} by truncating \eqref{eq:nl:expandF} and then seeking $\bs$ so that the updated value $\bF(\bx_{k+1})$ is zero.  That is, each Newton step computes $\bs$ by the equation
 \begin{equation}
@@ -44,7 +43,7 @@ Writing this equation in our previous style ``$A\bu=\bb$'' for linear systems, a
 \end{align}
 This is Newton's method.  It is simple in theory.
 
-Actual practice is not that much more complicated, especially with \PETSc in hand.  Despite the reputation of Newton iteration as fragile or scary, by using a bit of caution in ``moving'' to the new iterate as in \eqref{eq:nl:newtonupdate}, this will work out just fine on many small nonlinear systems \citep{Kelley2003}.  On big nonlinear systems we will need to pay more attention to the details of the linear solve at each step.\sidenote{The nonlinear problem requires all of the tools for linear systems already considered in Chapters \ref{chap:linearsystem} and \ref{chap:structured}, and more.  Nonlinear problems are strictly harder to solve than their linearized versions.}  In either case, Newton iteration is the core technology for solving nonlinear problems, including nonlinear PDEs.
+Actual practice is not that much more complicated, especially with \PETSc in hand.  Despite the reputation of Newton iteration as fragile or scary, by using a bit of caution in ``moving'' to the new iterate as in \eqref{eq:nl:newtonupdate}, this will work out just fine on many small nonlinear systems \citep{Kelley2003}.  On big nonlinear systems we will need to pay more attention to the details of the linear solve at each step.\sidenote{It is important to emphasize that the nonlinear problem requires all of the tools for linear systems already considered in Chapters \ref{chap:linearsystem} and \ref{chap:structured}, and more.}  In either case, Newton iteration is the core technology for solving nonlinear problems, including nonlinear PDEs.
 
 A small example gives us a start on exploring the details.
 
@@ -61,13 +60,13 @@ These equations are put in standard form \eqref{eq:nl:equation} by writing
            x_0^2 + x_1^2 - 1
            \end{bmatrix}
 \end{equation}
-for $\bx\in \RR^2$ with scalar components $\bx = [x_0 \, x_1]^\top$.  Thus
+for $\bx\in \RR^2$ with components $\bx = [x_0 \, x_1]^\top$.  Thus
 \begin{equation}
 J_\bF(\bx) = \begin{bmatrix}
     e^{b x_0} & -1 \\
     2 x_0   & 2 x_1 \end{bmatrix}
 \end{equation}
-If $b=2$ and we start the Newton iteration with $\bx_0 = [1 \, 1]^\top$ then the sequence of iterates from \eqref{eq:nl:newtoneq} and \eqref{eq:nl:newtonupdate} is
+Let $b=2$.  If we start the Newton iteration with $\bx_0 = [1 \, 1]^\top$ then the sequence of iterates from \eqref{eq:nl:newtoneq} and \eqref{eq:nl:newtonupdate} is
     $$\twovect{\bx}{0}{1}{1}, \quad \twovect{\bx}{1}{0.619203}{0.880797}, \quad \twovect{\bx}{2}{0.394157}{0.948623}, \quad \dots$$
 as also shown in Figure \ref{fig:expcirclebasic}.
 
@@ -84,34 +83,45 @@ as also shown in Figure \ref{fig:expcirclebasic}.
 
 \section{\pSNES and call-backs}
 
-We will do this calculation in \PETSc using a nonlinear-solver object of type \pSNES, an acronym which stands for ``scalable nonlinear equation solver.''  This object has the usual \texttt{Create/SetFromOptions/Destroy} sequence.  It has a method by which we tell it about the function $\bF$.  One would generally also want to provide the derivative of $\bF$, namely the Jacobian function $J_{\bF}$, to the \pSNES, but that matrix can optionally be approximated by finite differences.
+We will do this calculation in \PETSc using a nonlinear-solver object of type \pSNES, an acronym which stands for ``scalable nonlinear equation solver.''  This object has the usual \texttt{Create/SetFromOptions/Destroy} sequence.  A \pSNES object also has a method by which we tell it about the function $\bF$.  This is a ``call-back'' in the sense that we supply a function which the \pSNES can call, inputing argument $\bx$ when it needs $\bF(\bx)$ during the Newton iteration.  In further examples we will also provide the \pSNES with a function which computes the derivative of $\bF$, i.e.~we will provide the Jacobian function $J_{\bF}$, but because this derivative can optionally be approximated by finite differences, our first code can avoid a ``call-back'' for the Jacobian.
 
-Figure \ref{code:expcircle} shows our first \pSNES-using code \texttt{expcircle.c}.  It solves problem \eqref{eq:nl:equation} with $\bF$ from \eqref{eq:nl:expcircleF}.  The \texttt{main()} portion is mostly not surprising, but we summarize the contents anyway.  We start by allocating \pVec \texttt{x}, of fixed dimension 2, which will hold both the initial iterate $\bx_0$ and, once the Newton iteration is ended, the converged estimate of the solution to system \eqref{eq:nl:equation}.  Because both components of $\bx_0$ are $1$ in the above example, it is easy to initialize the \pVec with \texttt{VecSet()}.  Finally, a duplicate \pVec \texttt{r} is created because we need to supply it to the \pSNES as space for the (nonlinear) residual.
-
-Next, the \pSNES is created and configured.  The \texttt{SNESCreate()} call is totally uninteresting, but observe that the formula \eqref{eq:nl:expcircleF} is supplied by a call to \texttt{SNESSetFunction()}.  This is a ``call-back'' in the sense that we supply a function which the \pSNES can call when it needs to.  In particular, the third argument of \texttt{SNESSetFunction()} is the name of the C function \texttt{FormFunction()} which we wrote.  In order to match the calling sequence of \texttt{SNESSetFunction()}, our \texttt{FormFunction()} must have a particular ``signature'' as a C function:
-\begin{code}
-PetscErrorCode (*f)(SNES,Vec,Vec,void*)
-\end{code}
-Then \texttt{SNESSetFromOptions()} is called so that, in particular, we will have run-time control both on how the Jacobian is calculated and on how the length of the step $\bs$ is actually determined; see below.
+Figure \ref{code:expcircle} shows our first \pSNES-using code \texttt{expcircle.c}.  It solves problem \eqref{eq:nl:equation} with $\bF$ from \eqref{eq:nl:expcircleF} and $b=2$.  The \texttt{main()} portion is mostly not surprising, but we summarize the contents anyway:  We start by allocating \pVec \texttt{x}, of fixed dimension 2, which will hold both the initial iterate $\bx_0$ and, once the Newton iteration is ended, the converged estimate of the solution to system \eqref{eq:nl:equation}.  Because both components of $\bx_0$ are $1$ in the above example, it is easy to initialize the \pVec with \texttt{VecSet()}.  Next a duplicate \pVec \texttt{r} is created because we need to supply it to the \pSNES as space for the (nonlinear) residual.  Then the \pSNES is created and configured by a \texttt{SNESCreate()} call which is totally uninteresting.  Next the formula \eqref{eq:nl:expcircleF} is supplied by a call to \texttt{SNESSetFunction()}.  This ``call-back'' sets the third argument of \texttt{SNESSetFunction()} to the name of the C function \texttt{FormFunction()}, which also appears in Figure \ref{code:expcircle}.  Next \texttt{SNESSetFromOptions()} is called so that, in particular, we will have run-time control both on how the Jacobian is calculated and on how the length of the step $\bs$ is actually determined; see below.  Then the system is solved by a call to \texttt{SNESSolve()}, which also supplies the initial iterate, and space for the solution, in \texttt{x}.  Finally the new state of \texttt{x}, presumably the converged solution, is printed at the command line using \texttt{VecView()} with a \texttt{STDOUT} viewer.
 
 \vfill
 \cinput{expcircle.c}{\CODELOC}{A first \pSNES-using code.  Solves nonlinear system \eqref{eq:nl:equation} with $\bF$ given in \eqref{eq:nl:expcircleF}.}{//START}{//END}{code:expcircle}
 
-Finally the system is solved by a call to \texttt{SNESSolve()}.  With this call the initial iterate in \texttt{x} is also supplied.  After that the new state of \texttt{x}, presumably the converged solution, is printed at the command line using \texttt{VecView()} with a \texttt{STDOUT} viewer.
+In order to match the calling sequence of \texttt{SNESSetFunction()}, our \texttt{FormFunction()} must have a particular ``signature'' as a C function:
+\begin{code}
+PetscErrorCode (*f)(SNES,Vec,Vec,void*)
+\end{code}
+That is, \texttt{FormFunction()} must have the \pSNES, the input $\bx$ (as the first \pVec), the output $\bF(\bx)$ (as the second \pVec), and perhaps additional information. such as parameters, in a ``user context;'' we will return to ``user contexts'' below.
 
-Looking inside our function \texttt{FormFunction()} we see an example of how to extract values from a \pVec and then a new method for how to set values.  Previously we have used \texttt{VecSetValues()} to set values at given indices but it is also possible to access the C array underlying the \pVec.  In this case we need to read entries of input \texttt{x} and then set entries of output \texttt{F}.  FIXME
+Looking inside \texttt{FormFunction()} in Figure \ref{code:expcircle} we see new methods for extracting values from, and setting values in, a \pVec.  Previously we have used \texttt{VecSetValues()} to set values at given indices, but, as here, it is also possible to access the C array underlying the \pVec.  In this case we need to read entries of input \pVec \texttt{x} and then set entries of output \pVec \texttt{F}.  For the former we use the read-only array access method \texttt{VecGetArrayRead()} which supplies us with a read-only pointer \texttt{const PetscReal *ax}; thus \texttt{ax[0]} is the first entry of \pVec \texttt{x}, for example, and the C compiler can stop us from altering \pVec \texttt{x}.  Since we are setting entries of \pVec \texttt{F}, we do nearly the same but using non-\texttt{const} \texttt{PetscReal *aF} and method \texttt{VecGetArray()}.
 
-Run it
+To avoid conflicts with other methods reading or writing the same memory, these \texttt{VecGetArray()} and \texttt{VecGetArrayRead()} methods are matched by \texttt{VecRestoreArray()} and \texttt{VecRestoreArrayRead()} methods which ``free'' the \pVecs to be read or written by other methods.  In general:
+\begin{quote}
+\emph{Each \emph{\texttt{VecGetArray()}}-type call should be matched by the corresponding \emph{\texttt{VecRestoreArray()}} call once you are done with that \emph{\pVec}}.
+\end{quote}
+
+The actual content of \texttt{FormFunction()} is to implement formulas \eqref{eq:nl:expcircleF}.  Note \texttt{PetscExpReal()} computes the exponential function $e^x$; in fact it is just an alias for \texttt{exp()} from the standard library, but use of such functions means that the \PETSc configuration can link to consistent libraries and give access to them all just by including \texttt{petsc.h}, as we do in Figure \ref{code:expcircle}.
+
+It is time to run this example:
 \begin{cline}
 $ cd c/ch4/
 $ make expcircle
 $ ./expcircle -snes_fd
 \end{cline}
 %$
- 
-FIXME: Clearly the iteration \eqref{eq:nl:newtoneq} requires the Jacobian.  FIXME: explain \texttt{-snes\_fd}
+This uses a new option \texttt{-snes\_fd}, the purpose of which the reader may already see.  Clearly the iteration \eqref{eq:nl:newtoneq} requires the Jacobian!  Here we have only supplied the \pSNES object with an implementation of function $\bF(\bx)$, but not with $J_{\bF}(\bx)$.  The entries of the latter matrix are derivatives, however, and so we can approximate by finite differences.  For example, the upper-left entry in $J_{\bF}(\bx)$ is approximated
+\begin{equation}
+\frac{\partial F_0}{\partial x_0} = \frac{F_0(x_0+\delta,x_1) - F_0(x_0,x_1)}{\delta}
+\end{equation}
+if $\delta>0$.  It turns out that choosing $\delta \approx \sqrt{\eps}$ gives a reasonably accurate approximation to the derivative if the inputs to $\bF$ are all of order approximately one \cite{Kelley2003}.
 
-FIXME  we solve the above example in code \texttt{expcircle.c} as shown in Figure \ref{code:expcircle}.  this is the entire code, but note that the Jacobian $J_\bF(\bx)$ is not implemented in code.
+Thus with option \texttt{-snes\_fd}, this is what is then done by \pSNES internally, at least in outline, to implement the Newton method \eqref{eq:nl:newtoneq} and \eqref{eq:nl:newtonupdate}:
+\begin{itemize}
+\item FIXME
+\end{itemize}
 
 FIXME Better is to add option \texttt{-snes\_monitor}.  Also \texttt{-snes\_mf} works.  See result from \texttt{-snes\_view} in combination with \texttt{-snes\_fd} and \texttt{-snes\_mf}.
 

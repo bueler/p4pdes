@@ -33,7 +33,6 @@ int main(int argc,char **argv) {
     ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
     ierr = SNESSetFunction(snes,r,FormFunction,NULL); CHKERRQ(ierr);
     ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
-
     ierr = SNESSolve(snes,NULL,x); CHKERRQ(ierr);
     ierr = VecView(x,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
 
