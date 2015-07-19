@@ -159,7 +159,7 @@ To ask the \pSNES object to try to reduce the residual norm more, or less, we wo
 $ ./expcircle -snes_fd -snes_monitor -snes_rtol 1.0e-14
 \end{cline}
 %$
-asks for much more accuracy than the early run which used the default setting \texttt{-snes\_rtol 1.0e-8}.\marginnote{Recall that \texttt{./expcircle -snes\_fd -help |grep snes\_rtol} gets the default for this parameter.}  Instead of showing the resulting 6 Newton iterations as text output, Figure \ref{fig:newtonconvbasic} shows these residual norm values in a graph with log-scaling on the $y$-axis.  We see that the residual drops fairly abruptly.  FIXME quadratic convergence
+asks for much more accuracy than the early run which used the default setting \texttt{-snes\_rtol 1.0e-8}.\sidenote{Recall that \texttt{./expcircle -snes\_fd -help |grep snes\_rtol} gets the default for this parameter.}  Instead of showing the resulting 6 Newton iterations as text output, Figure \ref{fig:newtonconvbasic} shows these residual norm values in a graph with log-scaling on the $y$-axis.
 
 \begin{figure}
 \includegraphics[width=0.8\textwidth]{newtonconvbasic}
@@ -167,6 +167,23 @@ asks for much more accuracy than the early run which used the default setting \t
 \label{fig:newtonconvbasic}
 \end{figure}
 
+The residual drops very abruptly in the Figure, reflecting the hoped-for behavior of Newton iteration.  In this best case the error in the solution, and the residual norm also, decreases substantially at each iteration in the sense that the error at an iteration is proportional to the \emph{square} of the error at the last iteration.  It is time for a theorem expressing this best-case behavior \citep[Theorems 1.1 and inequalities (1.13)]{Kelley2003}:
+
+\begin{theorem}
+Suppose $\bF:\RR^N\to\RR^N$ is differentiable, that $\bx^*$ is a solution of \eqref{eq:nl:equation}, that $J_{\bF}$ is Lipschitz near $\bx^*$, and that $J_{\bF}(\bx^*)$ is a nonsingular $N\times N$ matrix.  Let $\be_k=\bx_k-\bx^*$, let $\|\cdot\|$ denote a vector norm and its induced matrix norm, and let $\kappa(A)=\|A^{-1}\| \|A\|$ denote condition number of an invertible matrix $A$.  If $\bx_0$ is sufficiently close to $\bx^*$ then:
+\renewcommand{\labelenumi}{(\roman{enumi})}
+\begin{enumerate}
+\item There is $K>0$ such that for all $k$ sufficiently large,
+	$$\|\be_{k+1}\| \le K \|\be_k\|^2.$$
+\item If $\kappa = \kappa\left(J_{\bF}(\bx^*)\right)$ then
+	$$\frac{\|\be_k\|}{4 \kappa \|\be_0\|} \le \frac{\|\bF(\bx_k)\|}{\|\bF(\bx_0)\|} \le \frac{4 \kappa \|\be_k\|}{\|\be_0\|}.$$
+(Note $\kappa\ge 1$ in this context.)
+\end{enumerate}
+\end{theorem}
+
+The first idea in this theorem is that, under the given assumptions about the regularity and nonsingularity of the Jacobian, the error decays quadratically.  This is what we see in the Figure, and it is a remarkable fact about Newton iteration.  Heuristically, once the error norm $\|\be_k\|$ is a small number (e.g.~$\|\be_k\| \ll 1$), the number of correct digits in $\bx_k$ \emph{doubles} at each iteration.
+
+Second, the Theorem says that the relative error decrease at the $k$th iteration (i.e.~$\|\be_k\|/\|\be_0\|$) is within a factor, determined by the conditioning of the Jacobian at the solution, of the relative residual norm decrease at the $k$th iteration (i.e.~$\|\bF(\bx_k)\|/\|\bF(\bx_0)\|$).  This idea is significant because it is the latter quantity, the residual norm decrease, which is computable.  That is, if we want to reduce the generally-unknowable error $\be_k=\bx_k-\bx^*$ by a given factor then it suffices to reduce the residual norm by a comparable factor, slightly or significantly larger than one according only to the conditioning of the Jacobian.
 
 \section{Exact Jacobians}
 
