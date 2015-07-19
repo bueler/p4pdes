@@ -62,6 +62,7 @@ These equations are put in standard form \eqref{eq:nl:equation} by writing
 \end{equation}
 for $\bx\in \RR^2$ with components $\bx = [x_0 \, x_1]^\top$.  Thus
 \begin{equation}
+\label{eq:nl:expcircleJac}
 J_\bF(\bx) = \begin{bmatrix}
     e^{b x_0} & -1 \\
     2 x_0   & 2 x_1 \end{bmatrix}
@@ -217,21 +218,31 @@ Vec Object: 1 MPI processes
 \end{cline}
 %$
 
-So far we have portrayed the Newton iteration in optimistic terms, but it is not magic and things can go wrong.  First note a key hypothesis in the above Theorem, namely that ``$\bx_0$ is sufficiently close to $\bx^*$''.  Even on well-behaved systems, if one is far from the solution then even in the best cases the iteration may take many steps before $\|\be_k\|$ becomes small enough so that it starts to satisfy quadratic convergence.  In other systems the Newton iteration \eqref{eq:nl:newtoneq}, \eqref{eq:nl:newtonupdate} as it stands enters a limit cycle or does not converge, though schemes to reduce the step length $\|\bs_k\|$ are in \PETSc and are effective at ``globalizing'' the convergence behavior \citep{Kelley2003}; see below.  (See the exercises for examples of the phenomena in the last two sentences.)  Finally, many practical problems do not have the smoothness needed to apply the above Theorem.  In such cases the problem may need regularization or other procedures to make it manageable.
+So far we have portrayed the Newton iteration in optimistic terms, but it is not magic and things can go wrong.  First note a key hypothesis in the above Theorem, namely that ``$\bx_0$ is sufficiently close to $\bx^*$''.  Even on well-behaved nonlinear equations, if one is far from the solution then the iteration may take many steps before $\|\be_k\|$ becomes small enough so that quadratic convergence \eqref{eq:nl:quadraticconvergence} ``kicks in''.  On other equations the Newton iteration \eqref{eq:nl:newtoneq}, \eqref{eq:nl:newtonupdate} as it stands actually diverges.  In those cases the ``linesearch'' schemes in \PETSc will reduce the step length $\|\bs_k\|$.  These schemes, which are addressed later in this section, are effective at ``globalizing'' the convergence behavior \citep{Kelley2003}.\sidenote{See the exercises for examples of the phenomena in this paragraph.}
+
+On the other hand, many practical problems do not have the smoothness needed to apply the above Theorem.  In such cases the problem may need regularization or other procedures to make it manageable.
 
 
 \section{Implementing exact Jacobians}
 
-FIXME: adding exact jacobian AND struct holding $b$ (FIX CODE)
+We have yet to exploit two critical parts of the \pSNES API, namely the ability to provide an exact Jacobian, which is to say a method which computes the Jacobian function $J_{\bF}(\bx)$, and the ability to pass parameters through the call-back mechanism so that such parameters can be used inside the function and Jacobian evaluation routines.
 
-\cinputpart{expcircleJAC.c}{\CODELOC}{FIXME}{I}{//START}{//END}{code:expcircleJACI}
+The next code \texttt{expcircleJAC.c} uses these \pSNES abilities.  The first new part in the code in Figure \ref{code:expcircleJACI} is a C \texttt{struct} called \texttt{AppCtx} with just one element, the real parameter $b$ which appears in formulas \eqref{eq:nl:expcircleF} and \eqref{eq:nl:expcircleJac}.\sidenote{A \texttt{struct} is not necessary here, but it will be needed in future examples where there is more than one parameter to pass.}  Next, the method \texttt{FormFunction()} is almost the same as the one in \texttt{expcircle.c}, in Figure \ref{code:expcircle}, but the value of $b$ comes from the \texttt{struct} instead of being hard-wired as before.  In detail, the argument \texttt{void *ctx} is ``cast'' \citep{KernighanRitchie1988} to a pointer of type \texttt{AppCtx*}, and then the parameter is extracted via the pointer (i.e.~by \texttt{user->b}).
 
-\cinputpart{expcircleJAC.c}{\CODELOC}{FIXME}{II}{//STARTMAIN}{//ENDMAIN}{code:expcircleJACII}
+\cinputpart{expcircleJAC.c}{\CODELOC}{Solves the same nonlinear system as does \texttt{expcircle.c}, but this version includes an exact Jacobian and has the \pSNES pass a parameter into the call-back functions.}{I}{//START}{//END}{code:expcircleJACI}
+
+FIXME: describe Jacobian call-back
+
+\cinputpart{expcircleJAC.c}{\CODELOC}{The \texttt{main()} method is also similar to that in \texttt{expcircle.c}, but with a bit more code to allocate the \pMat which stores the Jacobian.}{II}{//STARTMAIN}{//ENDMAIN}{code:expcircleJACII}
+
+FIXME: describe \pMat allocation
 
 
 \section{``Matrix-free'' Newton method}
 
-FIXME all of these work because of double-mat-assembly in \texttt{FormJacobian()}:
+FIXME: theory of matrix-free JK \cite{KnollKeyes2004}
+
+FIXME because of double-mat-assembly in \texttt{FormJacobian()}, all of these work
 
 \begin{cline}
 $ ./expcircleJAC -snes_monitor -snes_mf_operator
@@ -239,6 +250,7 @@ $ ./expcircleJAC -snes_monitor -snes_mf
 $ ./expcircleJAC -snes_monitor -snes_fd
 $ ./expcircleJAC -snes_monitor
 \end{cline}
+
 
 \section{Line search}
 
