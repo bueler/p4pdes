@@ -13,10 +13,16 @@ reaction: reaction.o chkopts
 	-${CLINKER} -o reaction reaction.o ${PETSC_SNES_LIB}
 	${RM} reaction.o
 
+# solutions to exercises
+
+e3atan: e3atan.o chkopts
+	-${CLINKER} -o e3atan e3atan.o ${PETSC_SNES_LIB}
+	${RM} e3atan.o
+
 # etc
 
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ expcircle expcircleJAC reaction
+	@rm -f *~ expcircle expcircleJAC reaction e3arctan
 
