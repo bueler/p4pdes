@@ -175,15 +175,45 @@ Suppose $\bF:\RR^N\to\RR^N$ is differentiable, that $\bx^*$ is a solution of \eq
 \begin{enumerate}
 \item There is $K>0$ such that for all $k$ sufficiently large,
 	$$\|\be_{k+1}\| \le K \|\be_k\|^2.$$
-\item If $\kappa = \kappa\left(J_{\bF}(\bx^*)\right)$ then
+\item If $\kappa = \kappa\left(J_{\bF}(\bx^*)\right)$, so that $\kappa\ge 1$, then
 	$$\frac{\|\be_k\|}{4 \kappa \|\be_0\|} \le \frac{\|\bF(\bx_k)\|}{\|\bF(\bx_0)\|} \le \frac{4 \kappa \|\be_k\|}{\|\be_0\|}.$$
-(Note $\kappa\ge 1$ in this context.)
 \end{enumerate}
 \end{theorem}
 
 The first idea in this theorem is that, under the given assumptions about the regularity and nonsingularity of the Jacobian, the error decays quadratically.  This is what we see in the Figure, and it is a remarkable fact about Newton iteration.  Heuristically, once the error norm $\|\be_k\|$ is a small number (e.g.~$\|\be_k\| \ll 1$), the number of correct digits in $\bx_k$ \emph{doubles} at each iteration.
 
-Second, the Theorem says that the relative error decrease at the $k$th iteration (i.e.~$\|\be_k\|/\|\be_0\|$) is within a factor, determined by the conditioning of the Jacobian at the solution, of the relative residual norm decrease at the $k$th iteration (i.e.~$\|\bF(\bx_k)\|/\|\bF(\bx_0)\|$).  This idea is significant because it is the latter quantity, the residual norm decrease, which is computable.  That is, if we want to reduce the generally-unknowable error $\be_k=\bx_k-\bx^*$ by a given factor then it suffices to reduce the residual norm by a comparable factor, slightly or significantly larger than one according only to the conditioning of the Jacobian.
+Second, the Theorem says that the relative error decrease at the $k$th iteration (i.e.~$\|\be_k\|/\|\be_0\|$) is within a factor, determined by the conditioning of the Jacobian at the solution, of the relative residual norm decrease at the $k$th iteration (i.e.~$\|\bF(\bx_k)\|/\|\bF(\bx_0)\|$).  This idea is significant because the latter quantity, the residual norm decrease, is \emph{computable}.  That is, if we want to reduce the (generally-unknowable) numerical error $\be_k=\bx_k-\bx^*$ by a given factor then it suffices to reduce the residual norm by a comparable factor, slightly or significantly larger than one according only to the conditioning of the Jacobian.
+
+
+\section{\PETSc's termination conditions}
+
+A residual norm reduction goal is exactly what the option \texttt{-snes\_rtol} controls, that is, the iteration continues until
+    $$\frac{\|\bF(\bx_k)\|_2}{\|\bF(\bx_0)\|_2} \le \text{\texttt{snes\_rtol}}.$$
+
+Actually, to give the more complete story, there are three \pSNES tolerances, listed in Table \ref{tab:snestolerances}.  The iteration stops as soon as one of these conditions is satisfied.  Note that $\bs_k$ denotes the solution to linear system \eqref{eq:nl:newtoneq}, the ``step'' at iteration $k$; we will look again at the length of the step $\bs$ below.  The defaults for the three tolerances are \texttt{X}$=10^{-8},10^{-50},10^{-8}$, respectively.
+
+\begin{table}
+\begin{tabular}{lll}
+\underline{Option}\hspace{0.2in} & \underline{Name}\hspace{0.2in} & \underline{Condition}\hspace{0.2in} \\
+\texttt{-snes\_rtol X} & relative (\texttt{FNORM\_RELATIVE}) & $\|\bF(\bx_k)\|_2 \le \text{\texttt{X}}\, \|\bF(\bx_0)\|_2$ \\
+\texttt{-snes\_atol X} & absolute (\texttt{FNORM\_ABS}) & $\|\bF(\bx_k)\|_2 \le \text{\texttt{X}}$ \\
+\texttt{-snes\_stol X} & step-length (\texttt{SNORM\_RELATIVE}) & $\|\bs_k\|_2 \le \text{\texttt{X}}\, \|\bx_k\|_2$
+\end{tabular}
+\caption{The three ways \pSNES can succeed, i.e.~the tolerance options and corresponding termination conditions, for stopping the Newton iteration.} \label{tab:snestolerances}
+\end{table}
+
+\medskip
+Option \texttt{-snes\_converged\_reason} reports which termination condition was active, using the parenthetical name given in Table \ref{tab:snestolerances}.  For example,
+\begin{cline}
+$ ./expcircle -snes_fd -snes_converged_reason
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+Vec Object: 1 MPI processes
+  type: seq
+0.319632
+0.947542
+\end{cline}
+%$
+
 
 \section{Exact Jacobians}
 
@@ -245,3 +275,16 @@ FIXME introduce $Q^1$ FEM on structured grid
 FIXME code uses \texttt{SNESSetObjective()} only, though also \texttt{SNESSetFunction()}; no hand-made Jacobian at all
 
 FIXME try NCG
+
+
+\section{Exercises}
+
+\renewcommand{\labelenumi}{\arabic{chapter}.\arabic{enumi}\quad}
+\renewcommand{\labelenumii}{(\alph{enumii})}
+\begin{enumerate}
+\item One needs to \emph{see} quadratic convergence to believe it.  Observe that for $x_k$ in both parts (b) and (c), the \emph{number of correct digits in $x_k$ doubles at each iteration}. \begin{enumerate}
+    \item The sequence $x_k = 1-2^{-n}$ converges quickly to $x^*=1$, but not quadratically.  Find $k$ so that $|e_k| < 10^{-16}$.
+    \item The sequence $x_k = 1-2^{-2^n}$ converges quadratically to $x^*=1$.  Find $k$ so that $|e_k| < 10^{-16}$.  Find the smallest $K$ so that $|e_{k+1}| \le K |e_k|^2$ for all $k$.
+    \item Let $F(x) = \cos(x-1) - \exp(1-x)$ and $x_0=0.5$.  Using any quick-and-dirty numerical tool,\sidenote{Extra credit for doing it in \PETSc.} compute Newton iterates $x_k$ for $k=1,\dots,6$.  Estimate $K$ so that $|e_{k+1}| \le K |e_k|^2$ for large $k$.
+    \end{enumerate}
+\end{enumerate}
