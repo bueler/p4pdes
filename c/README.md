@@ -9,5 +9,5 @@ Do this to build the first code:
     $ make e
     $ ./e
 
-Tested with PETSc master branch (post 3.5).
+Tested with PETSc maint branch (at 3.6.0).
 

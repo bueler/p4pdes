@@ -1,0 +1,42 @@
+\renewcommand{\CODELOC}{c/ch5/}
+
+\chapter{Nonlinear optimization, and a finite element method}
+\label{chap:optifem}
+
+\section{$p$-Laplacian equation}
+
+FIXME for $p>1$,
+    $$I[u] = \int_\Omega \frac{1}{p} |\grad u|^p - fu$$
+the variational equation is the weak form of a PDE:
+\begin{align*}
+I[u+\eps v] - I[u] &= \int_\Omega \frac{1}{p} |\grad u + \eps \grad v|^p + \frac{1}{p} |\grad u|^p - \eps f v \\
+   &= \eps \left(\int_\Omega |\grad u|^{p-2} \grad u \cdot \grad v - f v\right) + O(\eps^2)
+\end{align*}
+so we want
+    $$0 = \int_\Omega |\grad u|^{p-2} \grad u \cdot \grad v - f v$$
+for all $v \in W^{1,p}_0(\Omega)$.  this can become a strong form by another integration by parts,
+    $$0 = - \Div\left(|\grad u|^{p-2} \grad u\right) - f$$
+which is \eqref{poissonsquare} if $p=2$
+
+\section{Structured $Q^1$ finite elements}
+
+FIXME
+
+\begin{marginfigure}
+\input{q1hat.tikz}
+\caption{FIXME}
+\label{fig:q1hat}
+\end{marginfigure}
+
+FIXME code uses \texttt{SNESSetObjective()} only, though also \texttt{SNESSetFunction()}; no hand-made Jacobian at all
+
+FIXME try NCG
+
+
+\section{Exercises}
+
+\renewcommand{\labelenumi}{\arabic{chapter}.\arabic{enumi}\quad}
+\renewcommand{\labelenumii}{(\alph{enumii})}
+\begin{enumerate}
+\item FIXME
+\end{enumerate}

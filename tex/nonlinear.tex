@@ -1,9 +1,8 @@
 \renewcommand{\CODELOC}{c/ch4/}
 
-\chapter{Nonlinear elliptic PDEs on structured grids}
+\chapter{Nonlinear equations}
 \label{chap:nonlinear}
 
-\section{Newton's method}
 
 How should nonlinear equations first appear in a code which uses \PETSc?  The answer is that they merely change the functional form of the residual.  For a linear system the residual is this function of the unknowns,
 \begin{equation}
@@ -17,7 +16,10 @@ by iteration.
 
 In this section we follow Isaac Newton in building an iterative method to solve \eqref{eq:nl:equation}.  This method linearizes \eqref{eq:nl:equation} around the most recent iterate and then ``moves'' $\bx$ to the location which solves the linear problem and is, we hope, closer to the solution.  Each iteration therefore solves a linear system; we already have some \PETSc technology for that!  However, choosing the ``smart'' distance to move will require additional choices.  Furthermore, the cost of performing the linearization must be taken into account, and all existing issues regarding the linear solver, including preconditioner choices, as discussed in the last two chapters, remain active.
 
-Of course, nonlinear PDEs do arise in applications.  They come from physical models with nonlinearities, and we will see examples later in this section.  Discretizing nonlinear PDEs leads to systems like \eqref{eq:nl:equation}, and we will give examples of that.  For now, however, we concentrate on solving \eqref{eq:nl:equation}.
+Of course, nonlinear PDEs do arise in applications, as there are many PDE-type physical models with nonlinearities.  Most of this section is about finite-dimensional systems of nonlinear equations \eqref{eq:nl:equation}, as problems of their own, but discretizing a nonlinear PDE leads to such systems.  At the end of this section we give one example of a discretized one-dimensional nonlinear PDE, and in the next Chapter we continue with nonlinear problems.
+
+
+\section{Newton's method}
 
 First we recall Newton's method.  If we had determined a step $\bs$ from the current iterate $\bx_k$, where both are vectors in $\RR^n$, we would let $\bx_{k+1} = \bx_k + \bs$ be the next iterate.  By definition, because $\bF$ is differentiable,
 \begin{equation}
@@ -86,10 +88,12 @@ as also shown in Figure \ref{fig:expcirclebasic}.
 
 We will do this calculation in \PETSc using a nonlinear-solver object of type \pSNES, an acronym which stands for ``scalable nonlinear equation solver.''  This object has the usual \texttt{Create/SetFromOptions/Destroy} sequence.  A \pSNES object also has a method by which we tell it about the function $\bF$.  This is a ``call-back'' in the sense that we supply a function which the \pSNES can call, inputing argument $\bx$ when it needs $\bF(\bx)$ during the Newton iteration.  In further examples we will also provide the \pSNES with a function which computes the derivative of $\bF$, i.e.~we will provide the Jacobian function $J_{\bF}$, but because this derivative can optionally be approximated by finite differences, our first code can avoid a ``call-back'' for the Jacobian.
 
-Figure \ref{code:expcircle} shows our first \pSNES-using code \texttt{expcircle.c}.  It solves problem \eqref{eq:nl:equation} with $\bF$ from \eqref{eq:nl:expcircleF} and $b=2$.  The \texttt{main()} portion is mostly not surprising, but we summarize the contents anyway:  We start by allocating \pVec \texttt{x}, of fixed dimension 2, which will hold both the initial iterate $\bx_0$ and, once the Newton iteration is ended, the converged estimate of the solution to system \eqref{eq:nl:equation}.  Because both components of $\bx_0$ are $1$ in the above example, it is easy to initialize the \pVec with \texttt{VecSet()}.  Next a duplicate \pVec \texttt{r} is created because we need to supply it to the \pSNES as space for the (nonlinear) residual.  Then the \pSNES is created and configured by a \texttt{SNESCreate()} call which is totally uninteresting.  Next the formula \eqref{eq:nl:expcircleF} is supplied by a call to \texttt{SNESSetFunction()}.  This ``call-back'' sets the third argument of \texttt{SNESSetFunction()} to the name of the C function \texttt{FormFunction()}, which also appears in Figure \ref{code:expcircle}.  Next \texttt{SNESSetFromOptions()} is called so that, in particular, we will have run-time control both on how the Jacobian is calculated and on how the length of the step $\bs$ is actually determined; see below.  Then the system is solved by a call to \texttt{SNESSolve()}, which also supplies the initial iterate, and space for the solution, in \texttt{x}.  Finally the new state of \texttt{x}, presumably the converged solution, is printed at the command line using \texttt{VecView()} with a \texttt{STDOUT} viewer.
+Figure \ref{code:expcircle} shows our first \pSNES-using code \texttt{expcircle.c}.  It solves problem \eqref{eq:nl:equation} with $\bF$ from \eqref{eq:nl:expcircleF} and $b=2$.
 
 \vfill
 \cinput{expcircle.c}{\CODELOC}{A first \pSNES-using code.  Solves nonlinear system \eqref{eq:nl:equation} with $\bF$ given in \eqref{eq:nl:expcircleF}.}{//START}{//END}{code:expcircle}
+
+The \texttt{main()} portion is mostly not surprising, but we summarize the contents anyway:  We start by allocating \pVec \texttt{x}, of fixed dimension 2, which will hold both the initial iterate $\bx_0$ and, once the Newton iteration is ended, the converged estimate of the solution to system \eqref{eq:nl:equation}.  Because both components of $\bx_0$ are $1$ in the above example, it is easy to initialize the \pVec with \texttt{VecSet()}.  Next a duplicate \pVec \texttt{r} is created because we need to supply it to the \pSNES as space for the (nonlinear) residual.  Then the \pSNES is created and configured by a \texttt{SNESCreate()} call which is totally uninteresting.  Next the formula \eqref{eq:nl:expcircleF} is supplied by a call to \texttt{SNESSetFunction()}.  This ``call-back'' sets the third argument of \texttt{SNESSetFunction()} to the name of the C function \texttt{FormFunction()}, which also appears in Figure \ref{code:expcircle}.  Next \texttt{SNESSetFromOptions()} is called so that, in particular, we will have run-time control both on how the Jacobian is calculated and on how the length of the step $\bs$ is actually determined; see below.  Then the system is solved by a call to \texttt{SNESSolve()}, which also supplies the initial iterate, and space for the solution, in \texttt{x}.  Finally the new state of \texttt{x}, presumably the converged solution, is printed at the command line using \texttt{VecView()} with a \texttt{STDOUT} viewer.
 
 In order to match the calling sequence of \texttt{SNESSetFunction()}, our \texttt{FormFunction()} must have a particular ``signature'' as a C function:
 \begin{code}
@@ -227,9 +231,9 @@ On the other hand, many practical problems do not have the smoothness needed to 
 
 We have yet to exploit two critical parts of the \pSNES API, namely the ability to provide an exact Jacobian, which is to say a method which computes the Jacobian function $J_{\bF}(\bx)$, and the ability to pass parameters through the call-back mechanism so that such parameters can be used inside the residual- and Jacobian-evaluation functions.  The next code \texttt{expcircleJAC.c}, in Figures \ref{code:expcircleJACI} and \ref{code:expcircleJACII}, uses these abilities, and it might be regarded as a ``model'' use of \pSNES.
 
-The first new part in Figure \ref{code:expcircleJACI} is a C \texttt{struct} called \texttt{AppCtx} (``application context'') with just one element, the real parameter $b$ which appears in formulas \eqref{eq:nl:expcircleF} and \eqref{eq:nl:expcircleJac}.  A \texttt{struct} is not really necessary here, but it will be needed in future examples where there is more than one parameter to pass.
-
 \cinputpart{expcircleJAC.c}{\CODELOC}{Solves the same nonlinear system as does \texttt{expcircle.c}, but this version includes an exact Jacobian and has the \pSNES pass a parameter into the call-back functions.}{I}{//START}{//END}{code:expcircleJACI}
+
+The first new part in Figure \ref{code:expcircleJACI} is a C \texttt{struct} called \texttt{AppCtx} (``application context'') with just one element, the real parameter $b$ which appears in formulas \eqref{eq:nl:expcircleF} and \eqref{eq:nl:expcircleJac}.  A \texttt{struct} is not really necessary here, but it will be needed in future examples where there is more than one parameter to pass.
 
 Next, the method \texttt{FormFunction()} is almost the same as the one in \texttt{expcircle.c}, in Figure \ref{code:expcircle}, but the value of $b$ comes from the \texttt{struct} instead of being hard-wired as before.  In detail, the argument \texttt{void *ctx} is ``cast'' in the sense of the C language \citep{KernighanRitchie1988} to a pointer of type \texttt{AppCtx*}, and then the parameter is extracted via the pointer (i.e.~by ``\texttt{user->b}'' which is shorthand for ``\texttt{(*user).b}'').
 
@@ -282,33 +286,6 @@ FIXME
 \cinputpart{reaction.c}{\CODELOC}{FIXME}{II}{//FUNJAC}{//ENDFUNJAC}{code:reactionII}
 
 \cinputpart{reaction.c}{\CODELOC}{FIXME}{III}{//MAIN}{//ENDMAIN}{code:reactionIII}
-
-\section{Optimization and nonlinear PDEs: $p$-Laplacian equation}
-
-FIXME for $p>1$,
-    $$I[u] = \int_\Omega \frac{1}{p} |\grad u|^p - fu$$
-the variational equation is the weak form of a PDE:
-\begin{align*}
-I[u+\eps v] - I[u] &= \int_\Omega \frac{1}{p} |\grad u + \eps \grad v|^p + \frac{1}{p} |\grad u|^p - \eps f v \\
-   &= \eps \left(\int_\Omega |\grad u|^{p-2} \grad u \cdot \grad v - f v\right) + O(\eps^2)
-\end{align*}
-so we want
-    $$0 = \int_\Omega |\grad u|^{p-2} \grad u \cdot \grad v - f v$$
-for all $v \in W^{1,p}_0(\Omega)$.  this can become a strong form by another integration by parts,
-    $$0 = - \Div\left(|\grad u|^{p-2} \grad u\right) - f$$
-which is \eqref{poissonsquare} if $p=2$
-
-FIXME introduce $Q^1$ FEM on structured grid
-
-\begin{marginfigure}
-\input{q1hat.tikz}
-\caption{FIXME}
-\label{fig:q1hat}
-\end{marginfigure}
-
-FIXME code uses \texttt{SNESSetObjective()} only, though also \texttt{SNESSetFunction()}; no hand-made Jacobian at all
-
-FIXME try NCG
 
 
 \section{Exercises}
