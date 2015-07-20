@@ -223,17 +223,25 @@ So far we have portrayed the Newton iteration in optimistic terms, but it is not
 On the other hand, many practical problems do not have the smoothness needed to apply the above Theorem.  In such cases the problem may need regularization or other procedures to make it manageable.
 
 
-\section{Implementing exact Jacobians}
+\section{Exact Jacobians and passing parameters}
 
-We have yet to exploit two critical parts of the \pSNES API, namely the ability to provide an exact Jacobian, which is to say a method which computes the Jacobian function $J_{\bF}(\bx)$, and the ability to pass parameters through the call-back mechanism so that such parameters can be used inside the function and Jacobian evaluation routines.
+We have yet to exploit two critical parts of the \pSNES API, namely the ability to provide an exact Jacobian, which is to say a method which computes the Jacobian function $J_{\bF}(\bx)$, and the ability to pass parameters through the call-back mechanism so that such parameters can be used inside the residual- and Jacobian-evaluation functions.  The next code \texttt{expcircleJAC.c}, in Figures \ref{code:expcircleJACI} and \ref{code:expcircleJACII}, uses these abilities, and it might be regarded as a ``model'' use of \pSNES.
 
-The next code \texttt{expcircleJAC.c} uses these \pSNES abilities.  The first new part in the code in Figure \ref{code:expcircleJACI} is a C \texttt{struct} called \texttt{AppCtx} with just one element, the real parameter $b$ which appears in formulas \eqref{eq:nl:expcircleF} and \eqref{eq:nl:expcircleJac}.\sidenote{A \texttt{struct} is not necessary here, but it will be needed in future examples where there is more than one parameter to pass.}  Next, the method \texttt{FormFunction()} is almost the same as the one in \texttt{expcircle.c}, in Figure \ref{code:expcircle}, but the value of $b$ comes from the \texttt{struct} instead of being hard-wired as before.  In detail, the argument \texttt{void *ctx} is ``cast'' \citep{KernighanRitchie1988} to a pointer of type \texttt{AppCtx*}, and then the parameter is extracted via the pointer (i.e.~by \texttt{user->b}).
+The first new part in Figure \ref{code:expcircleJACI} is a C \texttt{struct} called \texttt{AppCtx} (``application context'') with just one element, the real parameter $b$ which appears in formulas \eqref{eq:nl:expcircleF} and \eqref{eq:nl:expcircleJac}.  A \texttt{struct} is not really necessary here, but it will be needed in future examples where there is more than one parameter to pass.
 
 \cinputpart{expcircleJAC.c}{\CODELOC}{Solves the same nonlinear system as does \texttt{expcircle.c}, but this version includes an exact Jacobian and has the \pSNES pass a parameter into the call-back functions.}{I}{//START}{//END}{code:expcircleJACI}
 
-FIXME: describe Jacobian call-back
+Next, the method \texttt{FormFunction()} is almost the same as the one in \texttt{expcircle.c}, in Figure \ref{code:expcircle}, but the value of $b$ comes from the \texttt{struct} instead of being hard-wired as before.  In detail, the argument \texttt{void *ctx} is ``cast'' in the sense of the C language \citep{KernighanRitchie1988} to a pointer of type \texttt{AppCtx*}, and then the parameter is extracted via the pointer (i.e.~by ``\texttt{user->b}'' which is shorthand for ``\texttt{(*user).b}'').
 
 \cinputpart{expcircleJAC.c}{\CODELOC}{The \texttt{main()} method is also similar to that in \texttt{expcircle.c}, but with a bit more code to allocate the \pMat which stores the Jacobian.}{II}{//STARTMAIN}{//ENDMAIN}{code:expcircleJACII}
+
+The method \texttt{FormJacobian()} in Figure \ref{code:expcircleJACI} is new.  It has similar structure and semantics to \texttt{FormFunction()}.  Like that method, there is a required signature so that it can be used in call-back, namely
+\begin{code}
+PetscErrorCode (*J)(SNES,Vec,Mat,Mat,void*)
+\end{code}
+Input \pVec \texttt{x} and pointer \texttt{void *ctx} have the same meaning, but the difference is that we must set a \pMat as output, based on formula \eqref{eq:nl:expcircleJac} in this case, not a \pVec like \texttt{F}.  We use \texttt{Vec[Get/Restore]Array()} just as in the previous code, and, because we use \texttt{MatSetValues()} for this purpose, the role of real array \texttt{v[4]} and integer arrays \texttt{row[2],col[2]} should be familiar from Chapter \ref{chap:linearsystem}.
+
+An interesting detail appears in the last few lines of \texttt{FormJacobian()}.  There are \emph{two} matrices that we must assemble, but FIXME
 
 FIXME: describe \pMat allocation
 

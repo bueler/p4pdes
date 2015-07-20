@@ -28,7 +28,7 @@ PetscErrorCode FormJacobian(SNES snes, Vec x, Mat J, Mat Jpre, void *ctx) {
     PetscErrorCode    ierr;
     AppCtx            *user = (AppCtx*)ctx;
     const PetscReal   b = user->b, *ax;
-    PetscScalar       v[4];
+    PetscReal         v[4];
     PetscInt          row[2] = {0,1}, col[2] = {0,1};
 
     ierr = VecGetArrayRead(x,&ax); CHKERRQ(ierr);
