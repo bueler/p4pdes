@@ -105,14 +105,14 @@ PetscErrorCode (*f)(SNES,Vec,Vec,void*)
 \end{code}
 In particular, \texttt{FormFunction()} takes the input $\bx$ as the first \pVec and it must generate output $\bF(\bx)$ as the second \pVec.  There may be additional information, such as parameters, passed to \texttt{FormFunction()} in a ``user context'' which is the pointer \texttt{void*}; we will return to passing parameters below.
 
-Looking inside \texttt{FormFunction()}, in Figure \ref{code:expcircle}, we see new methods for extracting values from, and setting values in, a \pVec.  Previously we have used \texttt{VecSetValues()} to set values at given indices, but here we access the C array underlying the \pVec instead.  We need to read entries of input \pVec \texttt{x} and then set entries of output \pVec \texttt{F}.  For the former we use the read-only array access method \texttt{VecGetArrayRead()} which supplies us with a read-only pointer \texttt{const PetscReal *ax}; thus \texttt{ax[0]} is the first entry of \pVec \texttt{x}, for example.\sidenote{Because of the \texttt{const} qualifier the C compiler can stop us from altering \pVec \texttt{x}.  Try it!}  Since we are setting entries of \pVec \texttt{F}, we do nearly the same but using non-\texttt{const} \texttt{PetscReal *aF} and method \texttt{VecGetArray()}.
+Looking inside \texttt{FormFunction()}, in Figure \ref{code:expcircle}, we see new methods for extracting values from, and setting values in, a \pVec.  Previously we have used \texttt{VecSetValues()} to set values at given indices, but here we access the C array underlying the \pVec instead.  We need to read entries of input \pVec \texttt{x} and then set entries of output \pVec \texttt{F}.  For the former we use the read-only array access method \texttt{VecGetArrayRead()} which supplies us with a read-only pointer \texttt{const PetscReal *ax}.\sidenote{Because of the \texttt{const} qualifier the C compiler can stop us from altering \pVec \texttt{x}.  Try it!}  For example, \texttt{ax[0]} is the first entry of \pVec \texttt{x}.  Since we are setting entries of \pVec \texttt{F}, we do nearly the same but using \texttt{PetscReal *aF} and method \texttt{VecGetArray()}.
 
-To avoid conflicts with other methods reading or writing the same memory, these \texttt{VecGetArray()} and \texttt{VecGetArrayRead()} methods are matched by \texttt{VecRestoreArray()} and \texttt{VecRestoreArrayRead()} methods which ``free'' the \pVecs to be read or written by other methods.  In general:
+To avoid conflicts with other methods reading or writing the same memory, \texttt{VecGetArray()} and \texttt{VecGetArrayRead()} are matched by \texttt{VecRestoreArray()} and \texttt{VecRestoreArrayRead()}.  These methods ``free-up,'' but do not de-allocate, the \pVecs, so that they can be read or written by other methods.  In general:
 \begin{quote}
 \emph{Each \emph{\texttt{VecGetArray()}}-type call should be matched by the corresponding \emph{\texttt{VecRestoreArray()}} call once you are done with that \emph{\pVec}}.
 \end{quote}
 
-The actual content of \texttt{FormFunction()} is to implement formulas \eqref{eq:nl:expcircleF}.  Note \texttt{PetscExpReal()} computes the exponential function $e^x$; in fact it is just an alias for \texttt{exp()} from the standard library, but use of such functions means that the \PETSc configuration can link to consistent libraries and give access to them all just by including \texttt{petsc.h}, as we do in Figure \ref{code:expcircle}.
+The actual content of \texttt{FormFunction()} is to implement formulas \eqref{eq:nl:expcircleF}.  Note \texttt{PetscExpReal()} computes the exponential function $e^x$.  In fact it is just an alias for \texttt{exp()} from the standard library (i.e.~\texttt{math.h}), but use of such \PETSc library functions means that the \PETSc configuration can link to consistent libraries.  In any case, we access them just by including \texttt{petsc.h}.
 
 It is time to run this example.  We use option \texttt{-snes\_monitor}, which counts the Newton iterations and shows the residual norm $\|\bF(\bx_k)\|_2$:
 \begin{cline}
@@ -134,23 +134,24 @@ Vec Object: 1 MPI processes
 %$
 Thus after 5 iterations the Newton method has reduced the residual norm by a factor of $10^9$ and stopped with solution $x_0=0.319632$ and $x_1=0.947542$.  Compare Figure \ref{fig:expcirclebasic}.
 
-The above run also uses option \texttt{-snes\_fd}, the purpose of which the reader may already see.  Clearly the iteration \eqref{eq:nl:newtoneq} requires the Jacobian, but we have only supplied the \pSNES with an implementation of function $\bF(\bx)$, not with $J_{\bF}(\bx)$.  The entries of the latter matrix are derivatives, however, and we can approximate these by finite differences.  For example, the upper-left entry in $J_{\bF}(\bx)$ is approximately
+The above run also uses option \texttt{-snes\_fd}, the purpose of which the reader may already see.  Clearly the Newton iteration \eqref{eq:nl:newtoneq} requires the Jacobian, but we have only supplied the \pSNES with an implementation of function $\bF(\bx)$, not with $J_{\bF}(\bx)$.  The entries of the latter matrix are derivatives, however, and we can approximate these by finite differences.  An entry in matrix $J=J_{\bF}(\bx)$ is approximated
 \begin{equation}
-\frac{\partial F_0}{\partial x_0} \approx \frac{F_0(x_0+\delta,x_1) - F_0(x_0,x_1)}{\delta}  \label{eq:nl:examplefdjac}
+J_{ij} = \frac{\partial F_i}{\partial x_j} \approx \frac{F_i(\bx+\delta \be_j) - F_i(\bx)}{\delta}  \label{eq:nl:examplefdjac}
 \end{equation}
-if $\delta>0$.  It turns out that choosing $\delta = \sqrt{\eps}$, where $\eps$ is machine precision, gives a reasonably accurate approximation to the derivative if the inputs to $\bF$ are all of order approximately one.\cite{Kelley2003}
+if $\delta>0$ and $\be_j\in \RR^N$ denotes a vector with entry one in the $j$th position and zero otheriwse.  It turns out that choosing $\delta = \sqrt{\eps}$, where $\eps$ is machine precision, or a small amount larger than that, gives a reasonably accurate approximation if the inputs to $\bF$ are all of order approximately one \citep{Kelley2003}.
 
-Thus with option \texttt{-snes\_fd}, the follow is what is done by \pSNES internally, at least in outline, to implement the Newton method \eqref{eq:nl:newtoneq} and \eqref{eq:nl:newtonupdate} on a system of dimension $N$:
+Thus with option \texttt{-snes\_fd}, the following is what is done by \pSNES internally, at least in outline, to implement the Newton method \eqref{eq:nl:newtoneq} and \eqref{eq:nl:newtonupdate} on a system of dimension $N$:
 \renewcommand{\labelenumi}{(\emph{\roman{enumi}})}
 \begin{enumerate}
-\item from the current iterate $\bx_k$, $\bF(\bx_k)$ is evaluated by calling the call-back function set in \texttt{SNESSetFunction()}, i.e.~\texttt{FormFunction()} in this case,
-\item then \texttt{FormFunction()} is called $N$ more times to evaluate $\bF(\bx_k+\delta \be_j)$, for $j=0,\dots,N-1$, where $\be_j$ is the $j$th unit vector in $\RR^N$,
-\item from formulas like \eqref{eq:nl:examplefdjac}, all entries of the $N\times N$ matrix $J_{\bF}(\bx_k)$ are approximated,
+\item from the current iterate $\bx_k$, $\bF(\bx_k)$ is evaluated using the call-back function set in \texttt{SNESSetFunction()}, i.e.~\texttt{FormFunction()},
+\item then \texttt{FormFunction()} is called $N$ more times to evaluate $\bF(\bx_k+\delta \be_j)$, for $j=0,\dots,N-1$,
+\item all entries of matrix $J_{\bF}(\bx_k)$ are approximated using \eqref{eq:nl:examplefdjac},
 \item $N\times N$ linear system \eqref{eq:nl:newtoneq} is solved,
 \item vector update \eqref{eq:nl:newtonupdate} is done,
 \item a convergence test is made, and we repeat at (\emph{i}) if not converged.
 \end{enumerate}
-Note that with item (\emph{i}) and (\emph{ii}) we need to evaluate \texttt{FormFunction()} $N+1$ times per Newton iteration.  While this is no particular problem for a two-dimensional example, as here, it is a worrying amount of work to do if $N$ is large, as it would be for a system of nonlinear equations coming from discretizing a PDE.
+
+In (\emph{i}) and (\emph{ii}) together we need to evaluate \texttt{FormFunction()} $N+1$ times per Newton iteration.  While this is no particular problem for a two-dimensional example, as here, it is a worrying amount of work to do if $N$ is large, as it would be for a system of nonlinear equations coming from discretizing a PDE, or  if $\bF$ is an expensive function to evaluate.  For some PDEs, a graph-theoretic ``coloring'' algorithm makes this stage efficient; see the example at the end of this Chapter, and the example in the next Chapter.
 
 If you run without option \texttt{-snes\_fd} then you get an error message about an un-assembled matrix:
 \begin{cline}
@@ -161,17 +162,22 @@ $ ./expcircle
 ...
 \end{cline}
 %$
-This message is somewhat opaque unless you are conscious of the need to form the Jacobian $J=J_{\bF}$ at each Newton iteration.
+This message is somewhat opaque unless you are conscious of the need to form the Jacobian matrix at each Newton iteration.
 
 
 \section{Residual norm in the Newton iteration}
 
-Option \texttt{-snes\_rtol} specifies by what factor the \pSNES should try to reduce the residual norm.  For example,
+Option \texttt{-snes\_rtol} specifies by what factor the \pSNES should try to reduce the residual norm.  The default accuracy corresponds to \texttt{-snes\_rtol 1.0e-8}; the default can be seen by running
+\begin{cline}
+$ ./expcircle -snes_fd -help | grep snes_rtol
+\end{cline}
+%$
+The example
 \begin{cline}
 $ ./expcircle -snes_fd -snes_monitor -snes_rtol 1.0e-14
 \end{cline}
 %$
-asks for much more accuracy than the early run which used the default setting \texttt{-snes\_rtol 1.0e-8}.\sidenote{Recall that \texttt{./expcircle -snes\_fd -help |grep snes\_rtol} gets the default for this parameter.}  It may be a surprise that asking for a further $10^6$ reduction in residual norm requires only one more iteration.  Instead of showing the 6 Newton iterations as text output, Figure \ref{fig:newtonconvbasic} shows these residual norm values in a graph with log-scaling on the $y$-axis.
+thus asks for much more accuracy than the earlier run which used the default.  It may be a surprise that this tight-tolerance run, asking for a further $10^6$ reduction in residual norm, requires only one more iteration, namely six iterations this time, but this is typical of the Newton iteration in the best cases.  Instead of showing the Newton iterations as text output, Figure \ref{fig:newtonconvbasic} shows these residual norm values in a graph with log-scaling on the $y$-axis.
 
 \begin{figure}
 \includegraphics[width=0.8\textwidth]{newtonconvbasic}
@@ -179,30 +185,30 @@ asks for much more accuracy than the early run which used the default setting \t
 \label{fig:newtonconvbasic}
 \end{figure}
 
-The residual drops very abruptly in the Figure, reflecting the hoped-for best-case behavior of Newton iteration.  The residual norm, and the error in the solution also, decreases substantially at each iteration in the sense that the error at an iteration is proportional to the \emph{square} of the error at the last iteration.  The next theorem expresses such best-case behavior of a Newton iteration \citep[Theorems 1.1 and inequalities (1.13)]{Kelley2003}:
+The residual drops very abruptly in the Figure, reflecting the hoped-for best-case behavior of Newton iteration.  The residual norm, and the error in the solution also, decreases substantially at each iteration in the sense that the error is proportional to the \emph{square} of the error at the last iteration.  The next theorem expresses such best-case behavior \citep[Theorems 1.1 and inequalities (1.13)]{Kelley2003}:
 
 \begin{theorem}
 Suppose that $\bF:\RR^N\to\RR^N$ is differentiable, $\bx^*$ is a solution of \eqref{eq:nl:equation}, $J_{\bF}$ is Lipschitz near $\bx^*$, and $J_{\bF}(\bx^*)$ is a nonsingular matrix.  Let $\be_k=\bx_k-\bx^*$, let $\|\cdot\|$ denote a vector norm and its induced matrix norm, and let $\kappa(A)=\|A^{-1}\| \|A\|$ denote the condition number of an invertible matrix $A$.  If $\bx_0$ is sufficiently close to $\bx^*$ then, in exact arithmetic,
 \renewcommand{\labelenumi}{(\roman{enumi})}
 \begin{enumerate}
-\item There is $K\ge 0$ such that for all $k$ sufficiently large,
+\item there is $K\ge 0$ such that for all $k$ sufficiently large,
 \begin{equation}
-	\|\be_{k+1}\| \le K \|\be_k\|^2. \label{eq:nl:quadraticconvergence}
+	\|\be_{k+1}\| \le K \|\be_k\|^2, \label{eq:nl:quadraticconvergence}
 \end{equation}
-\item If $\kappa = \kappa\left(J_{\bF}(\bx^*)\right)$, so that $\kappa\ge 1$, then
+\item and if $\kappa = \kappa\left(J_{\bF}(\bx^*)\right)$, so that $\kappa\ge 1$, then
 	$$\frac{\|\be_k\|}{4 \kappa \|\be_0\|} \le \frac{\|\bF(\bx_k)\|}{\|\bF(\bx_0)\|} \le \frac{4 \kappa \|\be_k\|}{\|\be_0\|}.$$
 \end{enumerate}
 \end{theorem}
 
 By definition, a sequence $\{\bx_k\}$ in $\RR^N$ \emph{converges quadratically to} $\bx^*$ if the sequence $\be_k=\bx_k-\bx^*$ satisfies \eqref{eq:nl:quadraticconvergence} for some $K\ge 0$.  Thus the first idea in the Theorem is that, under strong assumptions about the regularity and nonsingularity of the Jacobian, the error decays very rapidly in the sense that the iterates converge quadratically to a solution of \eqref{eq:nl:equation}.  This remarkable fact says Newton iteration is a powerful tool.  Heuristically, once the error norm $\|\be_k\|$ is a small number (e.g.~$\|\be_k\| \ll 1$), the number of correct digits in $\bx_k$ \emph{doubles} with each additional iteration.
 
-We seem to see quadratic converge in Figure \ref{fig:newtonconvbasic}, but note this Figure shows the residual norm $\|\bF(\bx_k)\|_2$ and not the error norm $\|\be_k\|_2$.  The second part of the Theorem says that the relative error decrease at the $k$th iteration (i.e.~$\|\be_k\|/\|\be_0\|$) is within a factor, determined by the conditioning of the Jacobian at the solution, of the relative residual norm decrease at the $k$th iteration (i.e.~$\|\bF(\bx_k)\|/\|\bF(\bx_0)\|$).  This idea is significant because only the latter quantity, the residual norm ratio, is \emph{computable}.
+We seem to see quadratic converge in Figure \ref{fig:newtonconvbasic}, but this Figure shows the residual norm $\|\bF(\bx_k)\|_2$ and not the error norm $\|\be_k\|_2$.  The second part of the Theorem says that the relative error decrease at the $k$th iteration (i.e.~$\|\be_k\|/\|\be_0\|$) is within a factor, determined by the conditioning of the Jacobian at the solution, of the relative residual norm decrease at the $k$th iteration (i.e.~$\|\bF(\bx_k)\|/\|\bF(\bx_0)\|$).  This idea is especially significant because the latter quantity, the residual norm reduction ratio, is \emph{computable}.
 
-The Theorem therefore confirms that residual norm decay like that shown in Figure \ref{fig:newtonconvbasic} corresponds to quadratic convergence of $\bx_k$ to a solution $\bx^*$.  If we want to reduce the (generally-unknowable) numerical error $\be_k=\bx_k-\bx^*$ by a given amount then it suffices to reduce the residual norm by a comparable amount.  The factor by which the two relative norms differ, namely $4 \kappa$, is large only if the conditioning of the Jacobian at the solution is poor.  A large condition number $\kappa\left(J_{\bF}(\bx^*)\right)$ would also mean, just as in the linear case, that there is lost precision in solving the nonlinear equations by any numerical means; recall the numerical facts-of-life from Chapter \ref{chap:linearsystem}.
+The Theorem therefore confirms that residual norm decay like that shown in Figure \ref{fig:newtonconvbasic} corresponds to quadratic convergence of $\bx_k$ to a solution $\bx^*$.  If we want to reduce the (generally-unknowable) numerical error $\be_k=\bx_k-\bx^*$ by a given amount then it suffices to reduce the residual norm by a comparable amount.  The factor $4 \kappa$ by which the two relative norms differ is large only if the conditioning of the Jacobian at the solution is poor.  A large condition number $\kappa=\kappa\left(J_{\bF}(\bx^*)\right)$ would also mean, just as in the linear case, that there is lost precision in solving the nonlinear equations by \emph{any} numerical means; recall the numerical facts-of-life from Chapter \ref{chap:linearsystem}.
 
 Residual norm reduction is exactly what the option \texttt{-snes\_rtol} controls, that is, the iteration continues until
     $$\frac{\|\bF(\bx_k)\|_2}{\|\bF(\bx_0)\|_2} \le \text{\texttt{snes\_rtol}}.$$
-Actually, to give the more complete story, there are three \pSNES tolerances, listed in Table \ref{tab:snestolerances}.  The iteration stops as soon as one of the conditions in the Table is satisfied.  Note that $\bs_k$ denotes the solution to linear system \eqref{eq:nl:newtoneq}, the ``step'' at iteration $k$; we will look again at step length below.  The defaults for the three tolerances are \texttt{X}$=10^{-8},10^{-50},10^{-8}$, respectively.
+Actually, to give the more complete story, there are \emph{three} \pSNES tolerances, listed in Table \ref{tab:snestolerances}.  The iteration stops as soon as one of these conditions is satisfied.  Note that $\bs_k$ denotes the solution to linear system \eqref{eq:nl:newtoneq}, the ``step'' at iteration $k$.  The defaults for the three tolerances are \texttt{X}$=10^{-8},10^{-50},10^{-8}$, respectively.
 
 \begin{table}
 \begin{tabular}{lll}
@@ -219,17 +225,21 @@ Option \texttt{-snes\_converged\_reason} reports which termination condition was
 \begin{cline}
 $ ./expcircle -snes_fd -snes_converged_reason
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
-Vec Object: 1 MPI processes
-  type: seq
-0.319632
-0.947542
+...
 \end{cline}
 %$
 
-So far we have portrayed the Newton iteration in optimistic terms, but it is not magic and things can go wrong.  First note a key hypothesis in the above Theorem, namely that ``$\bx_0$ is sufficiently close to $\bx^*$''.  Even on well-behaved nonlinear equations, if one is far from the solution then the iteration may take many steps before $\|\be_k\|$ becomes small enough so that quadratic convergence \eqref{eq:nl:quadraticconvergence} ``kicks in''.  On other equations the Newton iteration \eqref{eq:nl:newtoneq}, \eqref{eq:nl:newtonupdate} as it stands actually diverges.  In those cases the ``linesearch'' schemes in \PETSc will reduce the step length $\|\bs_k\|$.  These schemes, which are addressed later in this section, are effective at ``globalizing'' the convergence behavior \citep{Kelley2003}.\sidenote{See the exercises for examples of the phenomena in this paragraph.}
+So far we have portrayed the Newton iteration in optimistic terms, but it is not magic and things can go wrong.  First note a key hypothesis in the above Theorem, namely that ``$\bx_0$ is sufficiently close to $\bx^*$''.  Even on well-behaved nonlinear equations, if one is far from the solution then the iteration may take many steps before $\|\be_k\|$ becomes small enough so that quadratic convergence \eqref{eq:nl:quadraticconvergence} ``kicks in''.  For example, Figure \ref{fig:newtonconvdelayed} shows what happens if we use initial iterate $\bx_0=[20\,\, 20]^\top$ in the above Example.
 
-On the other hand, many practical problems do not have the smoothness needed to apply the above Theorem.  In such cases the problem may need regularization or other procedures to make it manageable.
+\begin{figure}
+%FIXME \includegraphics[width=0.8\textwidth]{newtonconvbasic}
+\caption{Even in good cases, if the initial iterate is far from the solution then the desired quadratic convergence is delayed by many iterations.}
+\label{fig:newtonconvdelayed}
+\end{figure}
 
+On other equations the Newton iteration \eqref{eq:nl:newtoneq}, \eqref{eq:nl:newtonupdate} as it stands actually diverges.  In those cases the ``linesearch'' schemes in \PETSc will reduce the step length $\|\bs_k\|$.  These schemes, which are addressed later in this section, are effective at ``globalizing'' the convergence behavior \citep{Kelley2003}.\sidenote{See the exercises for examples of the phenomena in this paragraph.}
+
+Finally, many practical problems do not have the smoothness needed to apply the above Theorem.  In such cases the problem may need regularization or other procedures to make it manageable.
 
 \cinputpart{expcircleJAC.c}{\CODELOC}{Solves the same nonlinear system as does \texttt{expcircle.c}, but this version includes an exact Jacobian and has the \pSNES pass a parameter into the call-back functions.}{I}{//START}{//END}{code:expcircleJACI}
 
