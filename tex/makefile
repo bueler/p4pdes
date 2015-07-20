@@ -5,7 +5,7 @@ texinputs := $(addsuffix .tex, $(texroots))
 
 tikzinputs := samplepoly.1.tikz squarefour.tikz bump.1.tikz bump.poly.tikz mesh.1.tikz
 
-pdfinputs := poisson-conv.pdf poisson-cg-scale.pdf richpolyplot.pdf expcirclebasic.pdf
+pdfinputs := poisson-conv.pdf poisson-cg-scale.pdf richpolyplot.pdf expcirclebasic.pdf newtonconvbasic.pdf newtonconvdelayed.pdf
 
 hinputs :=
 
@@ -51,10 +51,11 @@ poisson-conv.pdf: poisson-conv.py
 poisson-cg-scale.pdf: poisson-cg-scale.py
 	python poisson-cg-scale.py
 
-expcirclebasic.pdf newtonconvbasic.pdf: expcircle.py
+expcirclebasic.pdf newtonconvbasic.pdf newtonconvdelayed.pdf: expcircle.py
 	python expcircle.py
 	pdfcrop expcirclebasic.pdf expcirclebasic.pdf
 	pdfcrop newtonconvbasic.pdf newtonconvbasic.pdf
+	pdfcrop newtonconvdelayed.pdf newtonconvdelayed.pdf
 
 .PHONY: clean
 

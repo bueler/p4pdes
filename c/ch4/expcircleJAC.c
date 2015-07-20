@@ -64,11 +64,12 @@ int main(int argc,char **argv)
   ierr = VecSetFromOptions(x); CHKERRQ(ierr);
   ierr = VecDuplicate(x,&r); CHKERRQ(ierr);
 
-  ierr = SNESSetFunction(snes,r,FormFunction,&user);CHKERRQ(ierr);
   ierr = MatCreate(PETSC_COMM_WORLD,&J); CHKERRQ(ierr);
   ierr = MatSetSizes(J,PETSC_DECIDE,PETSC_DECIDE,2,2); CHKERRQ(ierr);
   ierr = MatSetFromOptions(J); CHKERRQ(ierr);
   ierr = MatSetUp(J); CHKERRQ(ierr);
+
+  ierr = SNESSetFunction(snes,r,FormFunction,&user);CHKERRQ(ierr);
   ierr = SNESSetJacobian(snes,J,J,FormJacobian,&user);CHKERRQ(ierr);
   ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
 

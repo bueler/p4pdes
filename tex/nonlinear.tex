@@ -229,40 +229,48 @@ Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
 \end{cline}
 %$
 
-So far we have portrayed the Newton iteration in optimistic terms, but it is not magic and things can go wrong.  First note a key hypothesis in the above Theorem, namely that ``$\bx_0$ is sufficiently close to $\bx^*$''.  Even on well-behaved nonlinear equations, if one is far from the solution then the iteration may take many steps before $\|\be_k\|$ becomes small enough so that quadratic convergence \eqref{eq:nl:quadraticconvergence} ``kicks in''.  For example, Figure \ref{fig:newtonconvdelayed} shows what happens if we use initial iterate $\bx_0=[20\,\, 20]^\top$ in the above Example.
+So far we have portrayed the Newton iteration in optimistic terms, but it is not magic and things can go wrong.  First note a key hypothesis in the above Theorem, namely that ``$\bx_0$ is sufficiently close to $\bx^*$''.  Even on well-behaved nonlinear equations, if $\bx_0$ is far from the solution then the iteration may take many steps before $\|\be_k\|$ becomes small enough so that quadratic convergence \eqref{eq:nl:quadraticconvergence} ``kicks in''.  For example, Figure \ref{fig:newtonconvdelayed} shows what happens if we use initial iterate $\bx_0=[10\,\, 10]^\top$ in the above Example.  A long period of slower convergence\sidenote{Evidently \emph{linear} convergence in which the residual norm is being reduced by a constant factor.} is needed before the iterate enters the region where $\bx_0$ is sufficiently close so that the conclusions of the Theorem apply.  This region is sometimes known as the ``ball of quadratic convergence.''
 
 \begin{figure}
-%FIXME \includegraphics[width=0.8\textwidth]{newtonconvbasic}
-\caption{Even in good cases, if the initial iterate is far from the solution then the desired quadratic convergence is delayed by many iterations.}
+\includegraphics[width=0.8\textwidth]{newtonconvdelayed}
+\caption{Even in for well-behaved systems $\bF(\bx)=0$, if the initial iterate $\bx_0$ is far from the solution then quadratic convergence can be postponed for many iterations.}
 \label{fig:newtonconvdelayed}
 \end{figure}
 
-On other equations the Newton iteration \eqref{eq:nl:newtoneq}, \eqref{eq:nl:newtonupdate} as it stands actually diverges.  In those cases the ``linesearch'' schemes in \PETSc will reduce the step length $\|\bs_k\|$.  These schemes, which are addressed later in this section, are effective at ``globalizing'' the convergence behavior \citep{Kelley2003}.\sidenote{See the exercises for examples of the phenomena in this paragraph.}
+On other equations the Newton iteration \eqref{eq:nl:newtoneq}, \eqref{eq:nl:newtonupdate} as it stands actually diverges.  In those cases the ``linesearch'' schemes in \PETSc will reduce the step length $\|\bs_k\|$.  These schemes, which are addressed later in this section, are effective at ``globalizing'' the convergence behavior \citep{Kelley2003}.  For an example, see Exercise \ref{chap:nonlinear}.\ref{exer:newtonatan}.
 
-Finally, many practical problems do not have the smoothness needed to apply the above Theorem.  In such cases the problem may need regularization or other procedures to make it manageable.
-
-\cinputpart{expcircleJAC.c}{\CODELOC}{Solves the same nonlinear system as does \texttt{expcircle.c}, but this version includes an exact Jacobian and has the \pSNES pass a parameter into the call-back functions.}{I}{//START}{//END}{code:expcircleJACI}
+Finally, many practical problems do not have the smoothness needed to apply the above Theorem.  In such cases the problem may need regularization, continuation, or other procedures to make it manageable.
 
 
 \section{Exact Jacobians and passing parameters}
 
-We have yet to exploit two critical parts of the \pSNES API, namely the ability to provide an exact Jacobian, which is to say a method which computes the Jacobian function $J_{\bF}(\bx)$, and the ability to pass parameters through the call-back mechanism so that such parameters can be used inside the residual- and Jacobian-evaluation functions.  The next code \texttt{expcircleJAC.c}, in Figures \ref{code:expcircleJACI} and \ref{code:expcircleJACII}, uses these abilities, and it might be regarded as a ``model'' use of \pSNES.
+We have yet to exploit two critical parts of the \pSNES API, namely the ability to provide an exact Jacobian, which is to say a method which computes the Jacobian function $J_{\bF}(\bx)$, and the ability to pass parameters through the call-back mechanism so that such parameters can be used inside the residual- and Jacobian-evaluation functions.  The next code \texttt{expcircleJAC.c}, in Figures \ref{code:expcircleJACI} and \ref{code:expcircleJACII}, uses these abilities.  For later reference, this code is proposed as a ``model use'' of \pSNES.
+
+The first new idea seen in Figure \ref{code:expcircleJACI} is the declaration of a C \texttt{struct} called \texttt{AppCtx} (``application context'').  It has just one element, the real parameter $b$ which appears in formulas \eqref{eq:nl:expcircleF} and \eqref{eq:nl:expcircleJac}.  A \texttt{struct} is not really necessary here, but it will be needed in future examples where there is more than one parameter to pass.
+
+\cinputpart{expcircleJAC.c}{\CODELOC}{Solves the same nonlinear system as does \texttt{expcircle.c}, but this version includes an exact Jacobian and has the \pSNES pass a parameter into the call-back functions.}{I}{//START}{//END}{code:expcircleJACI}
+
+Next, the method \texttt{FormFunction()} in Figure \ref{code:expcircleJACI} is almost the same as the one in \texttt{expcircle.c}, namely in Figure \ref{code:expcircle}, but the value of $b$ comes from the \texttt{struct} instead of being hard-wired as before.  In detail, the argument \texttt{void *ctx} is ``cast'' in the sense of the C language \citep{KernighanRitchie1988} to a pointer of type \texttt{AppCtx*}, and then the parameter is extracted via the pointer (i.e.~by ``\texttt{user->b}'' which is shorthand for ``\texttt{(*user).b}'').  This awkward-seeming method of passing parameters allows the signature of \texttt{FormFunction()} to be precisely as before.
 
 \cinputpart{expcircleJAC.c}{\CODELOC}{The \texttt{main()} method is also similar to that in \texttt{expcircle.c}, but with a bit more code to allocate the \pMat which stores the Jacobian.}{II}{//STARTMAIN}{//ENDMAIN}{code:expcircleJACII}
-
-The first new part in Figure \ref{code:expcircleJACI} is a C \texttt{struct} called \texttt{AppCtx} (``application context'') with just one element, the real parameter $b$ which appears in formulas \eqref{eq:nl:expcircleF} and \eqref{eq:nl:expcircleJac}.  A \texttt{struct} is not really necessary here, but it will be needed in future examples where there is more than one parameter to pass.
-
-Next, the method \texttt{FormFunction()} is almost the same as the one in \texttt{expcircle.c}, in Figure \ref{code:expcircle}, but the value of $b$ comes from the \texttt{struct} instead of being hard-wired as before.  In detail, the argument \texttt{void *ctx} is ``cast'' in the sense of the C language \citep{KernighanRitchie1988} to a pointer of type \texttt{AppCtx*}, and then the parameter is extracted via the pointer (i.e.~by ``\texttt{user->b}'' which is shorthand for ``\texttt{(*user).b}'').
 
 The method \texttt{FormJacobian()} in Figure \ref{code:expcircleJACI} is new.  It has similar structure and semantics to \texttt{FormFunction()}.  Like that method, there is a required signature so that it can be used in call-back, namely
 \begin{code}
 PetscErrorCode (*J)(SNES,Vec,Mat,Mat,void*)
 \end{code}
-Input \pVec \texttt{x} and pointer \texttt{void *ctx} have the same meaning, but the difference is that we must set a \pMat as output, based on formula \eqref{eq:nl:expcircleJac} in this case, not a \pVec like \texttt{F}.  We use \texttt{Vec[Get/Restore]Array()} just as in the previous code, and, because we use \texttt{MatSetValues()} for this purpose, the role of real array \texttt{v[4]} and integer arrays \texttt{row[2],col[2]} should be familiar from Chapter \ref{chap:linearsystem}.
+Input \pVec \texttt{x} and parameter-passing pointer \texttt{void *ctx} have the same meaning as in \texttt{FormFunction()}.  For reading \texttt{x} we use \texttt{VecGetArrayRead()} and \texttt{VecRestoreArrayRead()} just as in the previous code \texttt{expcircle.c}.
 
-An interesting detail appears in the last few lines of \texttt{FormJacobian()}.  There are \emph{two} matrices that we must assemble, but FIXME
+The difference is that we must set a \pMat as output, based on formula \eqref{eq:nl:expcircleJac} in this case, not a \pVec like \texttt{F}.  To set values in the output \pMat we use \texttt{MatSetValues()}, so the roles of real array \texttt{v[4]}, as values, and integer arrays \texttt{row[2],col[2]}, as global indices, should be familiar from Chapter \ref{chap:linearsystem}.
 
-FIXME: describe \pMat allocation
+An interesting detail now appears, however, which will take some explanation.  There are actually \emph{two} output \pMats for \texttt{FormJacobian()} to set.  The first, called \texttt{J} here, corresponds to the Jacobian matrix itself, which, in this simple case, we want to supply.  The second, \texttt{Jpre}, could be only vaguely-related to the Jacobian; it might be the matrix we want to supply as material to build a preconditioner.
+
+Now is the time to look at Figure \ref{code:expcircleJACII}, and note the differences from \texttt{main()} in the earlier code \texttt{expcircle.c} (Figure \ref{code:expcircle}).  There are two differences, the first of which is obvious and unrelated to the Jacobian; namely, we declare and initialize a \texttt{struct} instance to pass the parameter $b$.  The second difference is that we create and configure a $2\times 2$ \pMat \texttt{J} to hold the Jacobian.  Our use of \texttt{MatCreate(), MatSetSizes(), MatSetFromOptions(),} and \texttt{MatSetUp()} on \texttt{J} mimics what we did for finite-dimensional systems in Chapter \ref{chap:linearsystem}.
+
+However, this time when we set-up the \pSNES we pass \texttt{J} for two arguments,
+\begin{code}
+SNESSetJacobian(snes,J,J,FormJacobian,&user);
+\end{code}
+This means we give a pointer to the allocated space \pMat \texttt{J} as both the Jacobian matrix and as the preconditioner matrix.  FIXME
 
 
 \section{``Matrix-free'' Newton method}
@@ -315,9 +323,10 @@ FIXME
     \item Let $F(x) = \cos(x-1) - \exp(1-x)$ and $x_0=0.5$.  Using any quick-and-dirty numerical tool,\sidenote{Extra credit for doing it in \PETSc.} compute Newton iterates $x_k$ for $k=1,\dots,6$.  Estimate $K$ so that $|e_{k+1}| \le K |e_k|^2$ for large $k$.
     \end{enumerate}
 
-\item Make a tiny modification to \texttt{expcircleJAC.c} to set the components of the initial vector to $20$, i.e.~$\bx_0 = [20\,\, 20]^\top$.  Rerun it only with option \texttt{-snes\_monitor} and note the manner in which it does not converge to a solution of $\bF(\bx)=0$ for \eqref{eq:nl:expcircleF}.  Why does the \pSNES stop?  Add one runtime option so that it does converge to a solution.  Is the convergence quadratic?
+\item Make a tiny modification to \texttt{expcircleJAC.c} to set the initial vector to $\bx_0 = [10\,\, 10]^\top$.  Rerun it with option \texttt{-snes\_monitor} and note it does not converge to a solution.  Why does the \pSNES stop?  Add one runtime option so that it does converge to a solution, thereby producing the data shown in Figure \ref{fig:newtonconvdelayed}.
 
-\item This example shows a famous case where the no-linesearch Newton iteration either diverges or enters a limit cycle according to the initial iterate $x_0$.  Linesearch fixes this.
+\item  \label{exer:newtonatan}
+This example shows a famous case where the no-linesearch Newton iteration either diverges or enters a limit cycle according to the initial iterate $x_0$.  Linesearch fixes this.
     \begin{enumerate}
     \item By simple modifications of \texttt{expcircle.c}, write a code \texttt{e3atan.c} which solves the (one-dimensional) nonlinear equation $F(x)=\arctan(x)=0$ using initial iterate $x_0=2.0$.  Use \texttt{atan()}.  By running it \texttt{./e3atan -snes\_fd -snes\_linesearch\_type basic}, show that the Newton iteration without a linesearch diverges, while using the default choice \texttt{-snes\_linesearch\_type bt} gives convergence.
     \item Continuing with $F(x)=\arctan x$, require the Newton iteration \eqref{eq:nl:newtoneq}, \eqref{eq:nl:newtonupdate} to enter a limit cycle, i.e.~so that $x_{k+1} = - x_k$ for all $k$.  Thereby approximate the positive value $x_0$ so that the Newton iteration makes no progress, and yet remains bounded, for all $k$.\sidenote{One may solve this problem with Newton's method.}  Draw a (well-known) sketch of the situation.  Then, by modifying $x_0$ in \texttt{e3atan.c} and again using linesearch type \texttt{basic}, confirm that one can make the Newton iteration ``stick'' in this (actually unstable) limit cycle for quite a while.  Then confirm that linesearch types \texttt{bt,l2,cp} all get unstuck immediately.
@@ -330,7 +339,6 @@ FIXME
 %   for j = 1:4, x = x - G(x) / J(x), end
 % get:
 %  x = 1.39174520027073
-
     \end{enumerate}
 
 \end{enumerate}
