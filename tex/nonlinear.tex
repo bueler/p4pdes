@@ -58,6 +58,12 @@ Noting that nonlinear systems can be visualized as the intersections of curves, 
     $$y = \frac{1}{b} e^{bx}, \qquad x^2+y^2 = 1,$$
 form intersecting curves in the plane.  As shown in Figure \ref{fig:expcirclebasic} for the $b=2$ case, the curves intersect twice, once each in the first and second quadrants.
 
+\begin{marginfigure}
+\includegraphics[width=1.2\textwidth]{expcirclebasic}
+\caption{Newton iterates approach a solution of $\bF(\bx)=0$ for $\bF$ in \eqref{eq:nl:expcircleF} and $b=2$.}
+\label{fig:expcirclebasic}
+\end{marginfigure}
+
 These equations are put in standard form \eqref{eq:nl:equation} by writing
 \begin{equation}
 \label{eq:nl:expcircleF}
@@ -81,31 +87,25 @@ as also shown in Figure \ref{fig:expcirclebasic}.
 %  FROM $ for N in 0 1 2; do ./expcircle -snes_fd -snes_max_it $N; done
 \end{example}
 
-\begin{marginfigure}
-\includegraphics[width=1.2\textwidth]{expcirclebasic}
-\caption{Newton iterates approach a solution of $\bF(\bx)=0$ for $\bF$ in \eqref{eq:nl:expcircleF} and $b=2$.}
-\label{fig:expcirclebasic}
-\end{marginfigure}
-
 
 \section{\pSNES and call-backs}
 
-We will do Newton iteration for the above example in \PETSc using a nonlinear-solver object of type \pSNES, an acronym which stands for ``scalable nonlinear equation solver.''  This object has the usual \texttt{Create/SetFromOptions/Destroy} sequence.  A \pSNES object also has a method by which we tell it about the function $\bF$.  This is a ``call-back'' in the sense that we supply a function which the \pSNES can call, inputing argument $\bx$ when it needs $\bF(\bx)$ during the Newton iteration.  In further examples we will also provide the \pSNES with a function which computes the derivative of $\bF$, i.e.~we will provide the Jacobian function $J_{\bF}$, but because this derivative can optionally be approximated by finite differences, our first code can avoid a ``call-back'' for the Jacobian.
+In \PETSc we will do Newton iteration for the above example by using a nonlinear-solver object of type \pSNES.\sidenote{This acronym stands for ``scalable nonlinear equation solver.''}  A \pSNES object has the usual \texttt{Create/SetFromOptions/Destroy} sequence, but it also has a method by which we tell it about the function $\bF$.  This is a ``call-back'' in the sense that we supply a function, here named \texttt{FormFunction()}, which the \pSNES can call.  The \pSNES calls \texttt{FormFunction()} with an argument $\bx$, when it needs $\bF(\bx)$ during the Newton iteration.  Later we will also provide the \pSNES with a function which computes the derivative of $\bF$, the Jacobian function $J_{\bF}$.  However, because this derivative can instead be approximated by finite differences, our first code avoids a Jacobian ``call-back,''
 
-Figure \ref{code:expcircle} shows our first \pSNES-using code \texttt{expcircle.c}.  It solves problem \eqref{eq:nl:equation} with $\bF$ from \eqref{eq:nl:expcircleF} and $b=2$.
+Figure \ref{code:expcircle} shows our entire first \pSNES-using code \texttt{expcircle.c}.  It solves problem \eqref{eq:nl:equation} with $\bF$ from \eqref{eq:nl:expcircleF} and $b=2$.
 
 \vfill
 \cinput{expcircle.c}{\CODELOC}{A first \pSNES-using code.  Solves nonlinear system \eqref{eq:nl:equation} with $\bF$ given in \eqref{eq:nl:expcircleF}.}{//START}{//END}{code:expcircle}
 
-The \texttt{main()} portion is mostly not surprising, but we summarize the contents anyway:  We start by allocating \pVec \texttt{x}, of fixed dimension 2, which will hold both the initial iterate $\bx_0$ and, once the Newton iteration is ended, the converged estimate of the solution to system \eqref{eq:nl:equation}.  Because both components of $\bx_0$ are $1$ in the above example, it is easy to initialize the \pVec with \texttt{VecSet()}.  Next a duplicate \pVec \texttt{r} is created because we need to supply it to the \pSNES as space for the (nonlinear) residual.  Then the \pSNES is created and configured by a \texttt{SNESCreate()} call which is totally uninteresting.  Next the formula \eqref{eq:nl:expcircleF} is supplied by a call to \texttt{SNESSetFunction()}.  This ``call-back'' sets the third argument of \texttt{SNESSetFunction()} to the name of the C function \texttt{FormFunction()}, which also appears in Figure \ref{code:expcircle}.  Next \texttt{SNESSetFromOptions()} is called so that, in particular, we will have run-time control both on how the Jacobian is calculated and on how the length of the step $\bs$ is actually determined; see below.  Then the system is solved by a call to \texttt{SNESSolve()}, which also supplies the initial iterate, and space for the solution, in \texttt{x}.  Finally the new state of \texttt{x}, presumably the converged solution, is printed at the command line using \texttt{VecView()} with a \texttt{STDOUT} viewer.
+The \texttt{main()} portion is mostly not surprising, but we summarize the contents anyway:  We start by allocating \pVec \texttt{x} of fixed dimension 2.  This holds both the initial iterate $\bx_0$ and, once the Newton iteration is ended, the converged estimate of the solution to system \eqref{eq:nl:equation}.  Because both components of $\bx_0$ are $1$ in the above example, \pVec \texttt{x} can be initialized with \texttt{VecSet()}.  Next a duplicate \pVec \texttt{r} is created; the \pSNES will use it as space for the (nonlinear) residual.  Then the \pSNES is created and configured, and, in particular, the formula \eqref{eq:nl:expcircleF} is supplied by a call to \texttt{SNESSetFunction()}.  This ``call-back'' sets the third argument of \texttt{SNESSetFunction()} to the name of the C function \texttt{FormFunction()}, which also appears in Figure \ref{code:expcircle}.  Note \texttt{SNESSetFromOptions()} gives us run-time control both on how the Jacobian is calculated\sidenote{Options \texttt{-snes\_fd} and \texttt{-snes\_mf} are allowed; see below.} and on how the length of the step $\bs$ is actually determined.\sidenote{Through \texttt{-snes\_linesearch\_type} and related options; see below.}  Then the system is solved by a call to \texttt{SNESSolve()}, which also supplies \pVec \texttt{x}.  Finally the new state of \texttt{x}, presumably the converged solution, is printed at the command line using \texttt{VecView()} with a \texttt{STDOUT} viewer.
 
 In order to match the calling sequence of \texttt{SNESSetFunction()}, our \texttt{FormFunction()} must have a particular ``signature'' as a C function:
 \begin{code}
 PetscErrorCode (*f)(SNES,Vec,Vec,void*)
 \end{code}
-That is, \texttt{FormFunction()} must have the \pSNES, the input $\bx$ (as the first \pVec), the output $\bF(\bx)$ (as the second \pVec), and perhaps additional information. such as parameters, in a ``user context;'' we will return to ``user contexts'' below.
+In particular, \texttt{FormFunction()} takes the input $\bx$ as the first \pVec and it must generate output $\bF(\bx)$ as the second \pVec.  There may be additional information, such as parameters, passed to \texttt{FormFunction()} in a ``user context'' which is the pointer \texttt{void*}; we will return to passing parameters below.
 
-Looking inside \texttt{FormFunction()} in Figure \ref{code:expcircle} we see new methods for extracting values from, and setting values in, a \pVec.  Previously we have used \texttt{VecSetValues()} to set values at given indices, but, as here, it is also possible to access the C array underlying the \pVec.  In this case we need to read entries of input \pVec \texttt{x} and then set entries of output \pVec \texttt{F}.  For the former we use the read-only array access method \texttt{VecGetArrayRead()} which supplies us with a read-only pointer \texttt{const PetscReal *ax}; thus \texttt{ax[0]} is the first entry of \pVec \texttt{x}, for example, and the C compiler can stop us from altering \pVec \texttt{x}.  Since we are setting entries of \pVec \texttt{F}, we do nearly the same but using non-\texttt{const} \texttt{PetscReal *aF} and method \texttt{VecGetArray()}.
+Looking inside \texttt{FormFunction()}, in Figure \ref{code:expcircle}, we see new methods for extracting values from, and setting values in, a \pVec.  Previously we have used \texttt{VecSetValues()} to set values at given indices, but here we access the C array underlying the \pVec instead.  We need to read entries of input \pVec \texttt{x} and then set entries of output \pVec \texttt{F}.  For the former we use the read-only array access method \texttt{VecGetArrayRead()} which supplies us with a read-only pointer \texttt{const PetscReal *ax}; thus \texttt{ax[0]} is the first entry of \pVec \texttt{x}, for example.\sidenote{Because of the \texttt{const} qualifier the C compiler can stop us from altering \pVec \texttt{x}.  Try it!}  Since we are setting entries of \pVec \texttt{F}, we do nearly the same but using non-\texttt{const} \texttt{PetscReal *aF} and method \texttt{VecGetArray()}.
 
 To avoid conflicts with other methods reading or writing the same memory, these \texttt{VecGetArray()} and \texttt{VecGetArrayRead()} methods are matched by \texttt{VecRestoreArray()} and \texttt{VecRestoreArrayRead()} methods which ``free'' the \pVecs to be read or written by other methods.  In general:
 \begin{quote}
