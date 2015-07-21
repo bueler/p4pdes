@@ -262,11 +262,11 @@ Input \pVec \texttt{x} and parameter-passing pointer \texttt{void *ctx} have the
 
 The difference is that we must set a \pMat as output, based on formula \eqref{eq:nl:expcircleJac} in this case, not a \pVec like \texttt{F}.  To set values in the output \pMat we use \texttt{MatSetValues()}, so the roles of real array \texttt{v[4]}, as values, and integer arrays \texttt{row[2],col[2]}, as global indices, should be familiar from Chapter \ref{chap:linearsystem}.
 
-An interesting detail now appears, however, which will take some explanation.  There are actually \emph{two} output \pMats for \texttt{FormJacobian()} to set.  The first, called \texttt{J} here, corresponds to the Jacobian matrix itself, which, in this simple case, we want to supply.  The second, \texttt{Jpre}, could be only vaguely-related to the Jacobian; it might be the matrix we want to supply as material to build a preconditioner.
+An interesting detail now appears!   It will take some explanation.  There are actually \emph{two} output \pMats for \texttt{FormJacobian()} to set.  The first, called \texttt{J} here, corresponds to the Jacobian matrix itself, which, in this simple case, we want to supply.  The second, \texttt{Jpre}, might be a very poor approximation of the Jacobian; it is the matrix we would supply as material to build a preconditioner.
 
-Now is the time to look at Figure \ref{code:expcircleJACII}, and note the differences from \texttt{main()} in the earlier code \texttt{expcircle.c} (Figure \ref{code:expcircle}).  There are two differences, the first of which is obvious and unrelated to the Jacobian; namely, we declare and initialize a \texttt{struct} instance to pass the parameter $b$.  The second difference is that we create and configure a $2\times 2$ \pMat \texttt{J} to hold the Jacobian.  Our use of \texttt{MatCreate(), MatSetSizes(), MatSetFromOptions(),} and \texttt{MatSetUp()} on \texttt{J} mimics what we did for finite-dimensional systems in Chapter \ref{chap:linearsystem}.
+Now is the time to look at Figure \ref{code:expcircleJACII}, and note the differences from \texttt{main()} in the earlier code \texttt{expcircle.c} (Figure \ref{code:expcircle}).  There are two differences, the first of which is obvious and unrelated to the Jacobian; namely, we declare and initialize a \texttt{struct} instance to pass the parameter $b$.
 
-However, this time when we set-up the \pSNES we pass \texttt{J} for two arguments,
+The second difference is that we create and configure a $2\times 2$ \pMat \texttt{J} to hold the Jacobian.  Our use of \texttt{MatCreate(), MatSetSizes(), MatSetFromOptions(),} and \texttt{MatSetUp()} on \texttt{J} mimics what we did for finite-dimensional systems in Chapter \ref{chap:linearsystem}.  However, this time when we set-up the \pSNES we pass \texttt{J} for two arguments,
 \begin{code}
 SNESSetJacobian(snes,J,J,FormJacobian,&user);
 \end{code}
