@@ -947,7 +947,7 @@ poisson & cg         & icc           & 27.10 & 1056 \\
 fish2   & cg         & mg            &  2.60 &    5 \\
 \end{tabular}
 }
-\caption{Time and iteration count for \texttt{-da\_refine 7} runs, a $1025 \times 1025$ grid.  The \texttt{fish2} code appears in Chapter \ref{chap:multigrid}.} \label{tab:cgdirectmg}
+\caption{Time and iteration count for \texttt{-da\_refine 7} runs, a $1025 \times 1025$ grid on a single MPI process on \WORKSTATION.  The \texttt{fish2} code appears in Chapter \ref{chap:multigrid}.} \label{tab:cgdirectmg}
 \end{table}
 
 The first of the above runs requires no explanation; it is the best-so-far way of using CG.  The second and third runs are direct methods.  Option \texttt{-pc\_factor\_mat\_ordering\_type nd} asks that the direct method be applied using the \emph{nested dissection} ordering \citep{George1973}.  While we give no details, of course in outline the unknowns and equations are re-ordered to reduce the cost of the factorization.  Nested-dissection application of the two direct solvers is apparently competitive with IC($0$)-preconditioned CG.
@@ -970,12 +970,12 @@ where \texttt{fish2.c} is a program we describe in Chapter \ref{chap:multigrid}.
 \begin{enumerate}
 \item Use \texttt{DMDACreate1d()}, and other appropriate modifications of \texttt{poisson.c} and \texttt{structuredpoisson.c}, to write a solver for the 1D Poisson problem
     $$-u'' = f, \quad u(0)=u(1)=0.$$
-For simplicity, choose exact solution $u(x)=x^2(1-x^2)$.  Note you can use \texttt{MatSetValues()} instead of \texttt{MatSetValuesStencil()} because indexing is easy.  Show that your results converge by generating numerical error norms on a sequence of refining grids, as done in Figure \ref{fig:poisson-conv}; again the errors should go to zero as $O(h^2)$.  Find a grid refinement level, and use \pKSP options as appropriate, to get 11 digit accuracy at every grid point.
+For simplicity, choose exact solution $u(x)=x^2(1-x^2)$ to determine $f(x)$.  Note you can use \texttt{MatSetValues()} instead of \texttt{MatSetValuesStencil()} because indexing is easy in 1D.  Show that your results converge by generating numerical error norms on a sequence of refining grids, as done in Figure \ref{fig:poisson-conv}; again the errors should go to zero as $O(h^2)$.  Find a grid refinement level, and use \pKSP options as appropriate, to get 11 digit accuracy at every grid point.  \emph{It will never again be this good.}
 % ANSWER:   e1poisson1D.c
 %  FD is:  - U_{i-1} + 2 U_i - U_{i+1} = h^2 f_i
 %  for exact u:  u'   = 2x(1-x^2) + x^2(-2x) = 2x - 4x^3
 %                -u'' = -(2 - 12 x^2) = 12x^2 - 2
-\item Modify \texttt{structuredpoisson.c} to allow non-homogeneous Dirichlet boundary data $u|_{\partial \mathcal{S}}=g$.  Test the correctness (i.e.~convergence at the expected rate) of your code by solving \eqref{poissonsquare} with both $f$ and $g$ derived from the exact solution $u(x,y)=3x + \sin(20xy)$.  Again examine  numerical errors under grid refinement.
+\item Modify \texttt{structuredpoisson.c} to allow non-homogeneous Dirichlet boundary data $u|_{\partial \mathcal{S}}=g$.  Test the correctness (i.e.~convergence at the expected rate) of your code by solving \eqref{poissonsquare} with both $f$ and $g$ derived from an exact solution $u(x,y)=3x + \sin(20xy)$.  Again examine  numerical errors under grid refinement.
 \item Use \texttt{DMDACreate3d()} and etc.~to solve a 3D Poisson problem on the unit cube $\mathcal{C}=[0,1]^3$.  Looking forward, how is the approach taken in Chapter \ref{chap:multigrid} different from your code?
 \item Confirm the nearly-identical performance of un-preconditioned and Jacobi-preconditioned CG, by doing
 \begin{cline}
