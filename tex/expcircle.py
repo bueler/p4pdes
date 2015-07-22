@@ -53,7 +53,7 @@ for k in range(7):
     plt.hold(True)
     x = x - solve(J(b,x),F(b,x))
 plt.hold(False)
-plt.axis([-0.5, 7.5, 1.0e-16, 1.0e1])
+plt.axis([-0.5, 6.5, 1.0e-16, 1.0e1])
 plt.grid(True)
 plt.xlabel('k',fontsize=20.0)
 plt.ylabel('residual norm',fontsize=20.0)
