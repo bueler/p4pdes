@@ -132,23 +132,27 @@ The above run also uses option \texttt{-snes\_fd}, the purpose of which the read
 \begin{equation}
 J_{ij} = \frac{\partial F_i}{\partial x_j} \approx \frac{F_i(\bx+\delta \be_j) - F_i(\bx)}{\delta}  \label{eq:nl:examplefdjac}
 \end{equation}
-if $\delta>0$ and $\be_j\in \RR^N$ denotes a vector with entry one in the $j$th position and zero otheriwse.  It turns out that choosing $\delta = \sqrt{\eps}$, where $\eps$ is machine precision, or a small amount larger than that, gives a reasonably accurate approximation if the inputs to $\bF$ are all of order approximately one \citep{Kelley2003}.
+if $\delta>0$ and $\be_j\in \RR^N$ denotes a vector with entry one in the $j$th position and zero otheriwse.  It turns out that choosing $\delta = \sqrt{\eps}$, where $\eps$ is machine precision, gives a reasonably accurate approximation if the inputs to $\bF$ are all of order approximately one \citep{Kelley2003}.
 
-Thus with option \texttt{-snes\_fd}, the \pSNES does the following, in outline, to do the Newton method on a system of dimension $N$:
+In outline, \pSNES does these steps to implement the Newton method:
 \begin{quote}
 	\renewcommand{\labelenumi}{(\emph{\roman{enumi}})}
+	\renewcommand{\labelenumii}{\emph{\alph{enumii}}.}
 	\begin{enumerate}
-	\item from the current iterate $\bx_k$, $\bF(\bx_k)$ is evaluated using the call-back function set in \texttt{SNESSetFunction()}, i.e.~\texttt{FormFunction()},
-	\item then \texttt{FormFunction()} is called $N$ more times to evaluate $\bF(\bx_k+\delta \be_j)$, for $j=0,\dots,N-1$,
-	\item all entries of matrix $J_{\bF}(\bx_k)$ are approximated using \eqref{eq:nl:examplefdjac},
-	\item linear system \eqref{eq:nl:newtoneq} is solved and vector update \eqref{eq:nl:newtonupdate} is done,
+	\item from the current iterate $\bx_k$, $\bF(\bx_k)$ is evaluated using a call-back function set in \texttt{SNESSetFunction()} like \texttt{FormFunction()} above,
+	\item the Jacobian $J_{\bF}(\bx_k)$ is
+	    \begin{enumerate}
+	    \item computed and assembled by a call-back to user-supplied code, e.g.~\texttt{FormJacobian()} in in Figure \ref{code:expcircleJACI} below, \emph{or}
+	    \item computed and assembled by using formula \eqref{eq:nl:examplefdjac} $N^2$ times, which requires calling \texttt{FormFunction()} $N$ times to evaluate $\bF(\bx_k+\delta \be_j)$ for $j=0,\dots,N-1$, \emph{or}
+	    \item not formed, but, in a Krylov iterative method for solving system \eqref{eq:nl:newtoneq}, the action of $J_{\bF}(\bx_k)$ on vectors is computed by finite-differences, possibly using an additional preconditioning matrix,
+        \end{enumerate}
+	\item linear system \eqref{eq:nl:newtoneq} is solved for $\bs$, and vector update \eqref{eq:nl:newtonupdate} is done, with possible reduction in the length of $\bs$, \emph{and}
 	\item a convergence test is made, and we repeat at (\emph{i}) if not converged.
 	\end{enumerate}
 \end{quote}
+The issue raised in (\emph{ii})c, and also the possible step-length reduction in (\emph{iii}), will be addressed starting on page \pageref{sec:JFNKandlinesearch}.
 
-In (\emph{i}) and (\emph{ii}) together we need to evaluate \texttt{FormFunction()} $N+1$ times per Newton iteration.  While this is no particular problem for a two-dimensional example, as here, it is a worrying amount of work if $N$ is large, as it would be for a system of nonlinear equations coming from discretizing a PDE, or  if $\bF$ is an expensive function to evaluate.  For some discretized PDEs, a graph-theoretic ``coloring'' algorithm makes this stage efficient; see the example at the end of this Chapter, and the example in the next Chapter.
-
-Step (\emph{ii}) is different if we supply a call-back function for the Jacobian, which is the next topic.  For now, however, if you run without option \texttt{-snes\_fd} then you get an error message about an un-assembled matrix:
+Option (\emph{ii})a is taken if we supply a call-back function for the Jacobian through \texttt{SNESSetJacobian()} or similar, and we give an example below in the next section.  For now, however, if you run with no \texttt{-snes\_\dots} option, in particular without option \texttt{-snes\_fd}, then you get an error message about an un-assembled matrix:
 \begin{cline}
 $ ./expcircle
 [0]PETSC ERROR: --------------------- Error Message -------------------------
@@ -157,7 +161,11 @@ $ ./expcircle
 ...
 \end{cline}
 %$
-This message is somewhat opaque unless you are conscious of the need to form the Jacobian matrix at each Newton iteration.
+This message is somewhat opaque unless you are conscious of the need to form the Jacobian matrix at each Newton iteration.  That is, \emph{something} must happen at step (\emph{ii}).
+
+Option (\emph{ii})b is what happens if we run with option \texttt{-snes\_fd}.  The benefit of using this option should be obvious: we do not need to write any error-prone code based on taking derivatives of our function $\bF$.  One possible disadvantage of this option is that formula \eqref{eq:nl:examplefdjac} is only an approximation, but in many cases using an approximate Jacobian in the Newton step is not problematic \citep{Kelley2003}.
+
+However, there is a bigger problem with finite-difference evaluation of the Jacobian, at least when it comes to PDE-related applications of Newton's method.  In steps (\emph{i}) and (\emph{ii})b together we evaluate $\bF$ through $N+1$ calls to \texttt{FormFunction()} per Newton iteration.  While this is no particular problem in dimension $N=2$, as here, it is a worrying amount of work if $N$ is large, as it would be for a system of nonlinear equations coming from discretizing a PDE.\sidenote{There are systems where $\bF$ itself is an expensive function to evaluate.  In any case, evaluating $\bF$ many times can be the dominant work in the Newton iteration.  The work done in solving the linear system \eqref{eq:nl:newtoneq} is the other main concern.  A good \PETSc habit, to start right now, is using \texttt{-log\_summary} to know which kind of work is dominant!  \label{sidenote:logsummary}}  For many PDE discretization schemes, however, a graph-theoretic ``coloring'' algorithm makes \texttt{-snes\_fd} an efficient option by reducing the number of evaluations of \texttt{FormFunction()} to a small constant per Newton step.  See the diffusion-reaction PDE example at the end of this Chapter, shown in Figures \ref{code:reactionI}--\ref{code:reactionIII}, and examples in later Chapters.
 
 
 \section{Residual norm in the Newton iteration}
@@ -291,7 +299,7 @@ $ ./expcircleJAC -snes_monitor -snes_fd
 \end{cline}
 %$
 
-\section{Jacobian-free Newton-Krylov, and line search}
+\section{Jacobian-free Newton-Krylov, and line search} \label{sec:JFNKandlinesearch}
 
 FIXME: theory of matrix-free JK \citep{KnollKeyes2004}
 
@@ -327,7 +335,7 @@ FIXME in setting initial condition and exact solution, need to extract \texttt{D
 
 \cinputpart{reaction.c}{\CODELOC}{FIXME}{II}{//FUNJAC}{//ENDFUNJAC}{code:reactionII}
 
-\cinputpart{reaction.c}{\CODELOC}{FIXME}{III}{//MAIN}{//ENDMAIN}{code:reactionII}
+\cinputpart{reaction.c}{\CODELOC}{FIXME}{III}{//MAIN}{//ENDMAIN}{code:reactionIII}
 
 FIXME: show \texttt{-snes\_monitor\_solution}
 
@@ -337,20 +345,21 @@ FIXME: show \texttt{-snes\_monitor\_solution}
 \renewcommand{\labelenumi}{\arabic{chapter}.\arabic{enumi}\quad}
 \renewcommand{\labelenumii}{(\alph{enumii})}
 \begin{enumerate}
-\item One needs to \emph{see} quadratic convergence to believe it.  Observe that for $x_k$ in both parts (b) and (c), the \emph{number of correct digits in $x_k$ doubles at each iteration}.
+\item One needs to \emph{see} quadratic convergence to believe it.  Observe that for $x_k$ in both parts (b) and (c) below, the \emph{number of correct digits in $x_k$ doubles at each iteration}.
     \begin{enumerate}
     \item The sequence $x_k = 1-2^{-n}$ converges quickly to $x^*=1$, but not quadratically.  Find $k$ so that $|e_k| < 10^{-16}$.
-    \item The sequence $x_k = 1-2^{-2^n}$ converges quadratically to $x^*=1$.  Find $k$ so that $|e_k| < 10^{-16}$.  Find the smallest $K$ so that $|e_{k+1}| \le K |e_k|^2$ for all $k$.
+    \item The sequence $x_k = 1-2^{(-2^n)}$ converges quadratically to $x^*=1$.  Find $k$ so that $|e_k| < 10^{-16}$.  Find the smallest $K$ so that $|e_{k+1}| \le K |e_k|^2$ for all $k$.
     \item Let $F(x) = \cos(x-1) - \exp(1-x)$ and $x_0=0.5$.  Using any quick-and-dirty numerical tool,\sidenote{Extra credit for doing it in \PETSc.} compute Newton iterates $x_k$ for $k=1,\dots,6$.  Estimate $K$ so that $|e_{k+1}| \le K |e_k|^2$ for large $k$.
     \end{enumerate}
 
 \item Make a tiny modification to \texttt{expcircleJAC.c} to set the initial vector to $\bx_0 = [10\,\, 10]^\top$.  Rerun it with option \texttt{-snes\_monitor} and note it does not converge to a solution.  Why does the \pSNES stop?  Add one runtime option so that it does converge to a solution, thereby producing the data shown in Figure \ref{fig:newtonconvdelayed}.
 
 \item  \label{exer:newtonatan}
-This example shows a famous case where the no-linesearch Newton iteration either diverges or enters a limit cycle according to the initial iterate $x_0$.  Linesearch fixes this.
+This example shows a famous case where the no-linesearch Newton iteration can diverge or even enter a limit cycle according to the initial iterate $x_0$.  Linesearch fixes this.
     \begin{enumerate}
-    \item By simple modifications of \texttt{expcircle.c}, write a code \texttt{e3atan.c} which solves the (one-dimensional) nonlinear equation $F(x)=\arctan(x)=0$ using initial iterate $x_0=2.0$.  Use \texttt{atan()}.  By running it \texttt{./e3atan -snes\_fd -snes\_linesearch\_type basic}, show that the Newton iteration without a linesearch diverges, while using the default choice \texttt{-snes\_linesearch\_type bt} gives convergence.
-    \item Continuing with $F(x)=\arctan x$, require the Newton iteration \eqref{eq:nl:newtoneq}, \eqref{eq:nl:newtonupdate} to enter a limit cycle, i.e.~so that $x_{k+1} = - x_k$ for all $k$.  Thereby approximate the positive value $x_0$ so that the Newton iteration makes no progress, and yet remains bounded, for all $k$.\sidenote{One may solve this problem with Newton's method.}  Draw a (well-known) sketch of the situation.  Then, by modifying $x_0$ in \texttt{e3atan.c} and again using linesearch type \texttt{basic}, confirm that one can make the Newton iteration ``stick'' in this (actually unstable) limit cycle for quite a while.  Then confirm that linesearch types \texttt{bt,l2,cp} all get unstuck immediately.
+    \item By simple modifications of \texttt{expcircle.c}, write a code \texttt{e3atan.c} which solves the (one-dimensional) nonlinear equation $F(x)=\arctan(x)=0$ using initial iterate $x_0=2.0$.  Use \texttt{atan()}.  By running it \texttt{./e3atan -snes\_fd -snes\_linesearch\_type basic}, show that the Newton iteration without a linesearch diverges, while using the default choice (which is \texttt{-snes\_linesearch\_type bt}) gives convergence.
+    \item Returning to a paper calculation, require the Newton iteration \eqref{eq:nl:newtoneq}, \eqref{eq:nl:newtonupdate} to enter a sign-flipping limit cycle, i.e.~so that $x_{k+1} = - x_k$ for all $k$.  Thereby approximate the positive value $x_0$ so that the Newton iteration both makes no progress remains bounded for all $k$.\sidenote{One may solve this problem with Newton's method.}  Sketch the situation.
+    \item By modifying $x_0$ in \texttt{e3atan.c} and using linesearch type \texttt{basic}, confirm that one can make the Newton iteration ``stick'' in this (actually unstable) limit cycle for quite a while.  Then confirm that linesearch types \texttt{bt,l2,cp} all get unstuck immediately.
 % to solve:  - x = x - arctan(x) (1+x^2)
 % octave:
 %   G = @(x) 2*x - atan(x) * (1+x^2);
@@ -361,6 +370,8 @@ This example shows a famous case where the no-linesearch Newton iteration either
 % get:
 %  x = 1.39174520027073
     \end{enumerate}
+
+\item As noted on page \pageref{sidenote:logsummary}, \PETSc option \texttt{-log\_summary} can show whether function evaluations or linear solves are dominating the cost of Newton's method.  By looking at \texttt{-log\_summary} output, compare where the work is done in these runs: \texttt{./reaction}, \texttt{./reaction -snes\_fd}, \texttt{./reaction -snes\_mf}.  Does the comparison change if you add \texttt{-da\_refine 5}?  Explain as much as you can.  (\emph{Hints}: Look at \texttt{SNESSolve} events for the total time spent in the Newton method, $\approx$100\% for these cases.  Within that event, event \texttt{SNESLineSearch} is where function and Jacobian evaluations happen, while the linear solve is the \texttt{KSPSolve} event.  Within the \texttt{SNESLineSearch} event, look at \texttt{SNESFunctionEval} and \texttt{SNESJacobianEval} events.)
 
 \item FIXME: write variation \texttt{bratu1.c} of \texttt{reaction.c} to solve
     $$-u'' + \lambda e^u = f(x)$$
