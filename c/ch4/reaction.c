@@ -56,6 +56,7 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscReal *u,
             dRdu = - (user->rho / 2.0) / PetscSqrtReal(u[i]);
             col[0] = i-1;  v[0] = 1.0;
             col[1] = i;    v[1] = -2.0 + h*h * dRdu;
+//            col[1] = i;    v[1] = -2.0; //STRIP
             col[2] = i+1;  v[2] = v[0];
             ierr = MatSetValues(P,1,&i,3,col,v,INSERT_VALUES); CHKERRQ(ierr);
         }
@@ -78,7 +79,6 @@ int main(int argc,char **args) {
   AppCtx              user;
   Vec                 u, uexact;
   PetscReal           unorm, errnorm;
-  SNESConvergedReason reason;
   DMDALocalInfo       info;
 
   PetscInitialize(&argc,&args,(char*)0,help);
@@ -109,10 +109,9 @@ int main(int argc,char **args) {
   ierr = VecNorm(u,NORM_INFINITY,&unorm); CHKERRQ(ierr);
   ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uxact
   ierr = VecNorm(u,NORM_INFINITY,&errnorm); CHKERRQ(ierr);
-  ierr = SNESGetConvergedReason(snes, &reason); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
-              "on %d point grid:  %s with |u-u_exact|_inf/|u|_inf = %g\n",
-              info.mx,SNESConvergedReasons[reason],errnorm/unorm); CHKERRQ(ierr);
+              "on %d point grid:  |u-u_exact|_inf/|u|_inf = %g\n",
+              info.mx,errnorm/unorm); CHKERRQ(ierr);
 
   VecDestroy(&u);  VecDestroy(&uexact);
   SNESDestroy(&snes);  DMDestroy(&da);
