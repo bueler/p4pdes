@@ -24,7 +24,7 @@ PetscErrorCode FormFunction(SNES snes, Vec x, Vec F, void *ctx) {
     return 0;
 }
 
-PetscErrorCode FormJacobian(SNES snes, Vec x, Mat J, Mat Jpre, void *ctx) {
+PetscErrorCode FormJacobian(SNES snes, Vec x, Mat J, Mat P, void *ctx) {
     PetscErrorCode    ierr;
     AppCtx            *user = (AppCtx*)ctx;
     const PetscReal   b = user->b, *ax;
@@ -34,11 +34,11 @@ PetscErrorCode FormJacobian(SNES snes, Vec x, Mat J, Mat Jpre, void *ctx) {
     ierr = VecGetArrayRead(x,&ax); CHKERRQ(ierr);
     v[0] = PetscExpReal(b * ax[0]);  v[1] = -1.0;
     v[2] = 2.0 * ax[0];              v[3] = 2.0 * ax[1];
-    ierr = MatSetValues(Jpre,2,row,2,col,v,INSERT_VALUES); CHKERRQ(ierr);
+    ierr = MatSetValues(P,2,row,2,col,v,INSERT_VALUES); CHKERRQ(ierr);
     ierr = VecRestoreArrayRead(x,&ax); CHKERRQ(ierr);
-    ierr = MatAssemblyBegin(Jpre,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-    ierr = MatAssemblyEnd(Jpre,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-    if (J != Jpre) {
+    ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    ierr = MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    if (J != P) {
         ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
         ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
     }

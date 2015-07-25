@@ -44,25 +44,25 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal *u,
 
 //FUNJAC
 PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscReal *u,
-                                 Mat J, Mat Jpre, AppCtx *user) {
+                                 Mat J, Mat P, AppCtx *user) {
     PetscErrorCode ierr;
     PetscInt  i, col[3];
     PetscReal h = 1.0 / (info->mx-1), dRdu, v[3];
     for (i=info->xs; i<info->xs+info->xm; i++) {
         if ((i == 0) | (i == info->mx-1)) {
             v[0] = 1.0;
-            ierr = MatSetValues(Jpre,1,&i,1,&i,v,INSERT_VALUES); CHKERRQ(ierr);
+            ierr = MatSetValues(P,1,&i,1,&i,v,INSERT_VALUES); CHKERRQ(ierr);
         } else {
             dRdu = - (user->rho / 2.0) / PetscSqrtReal(u[i]);
             col[0] = i-1;  v[0] = 1.0;
             col[1] = i;    v[1] = -2.0 + h*h * dRdu;
             col[2] = i+1;  v[2] = v[0];
-            ierr = MatSetValues(Jpre,1,&i,3,col,v,INSERT_VALUES); CHKERRQ(ierr);
+            ierr = MatSetValues(P,1,&i,3,col,v,INSERT_VALUES); CHKERRQ(ierr);
         }
     }
-    ierr = MatAssemblyBegin(Jpre,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-    ierr = MatAssemblyEnd(Jpre,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-    if (J != Jpre) {
+    ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+    ierr = MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+    if (J != P) {
         ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
         ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
     }
