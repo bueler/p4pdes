@@ -170,7 +170,7 @@ However, there is a bigger problem with finite-difference evaluation of the Jaco
 
 \section{Residual norm in the Newton iteration}
 
-Option \texttt{-snes\_rtol} specifies by what factor the \pSNES should try to reduce the residual norm.  The default accuracy corresponds to \texttt{-snes\_rtol 1.0e-8}; the default can be seen by running
+Option \texttt{-snes\_rtol} specifies by what factor the \pSNES should try to reduce the residual norm.  The default accuracy corresponds to \texttt{-snes\_rtol 1.0e-8}; this default value can be printed by running
 \begin{cline}
 $ ./expcircle -snes_fd -help | grep snes_rtol
 \end{cline}
@@ -180,7 +180,7 @@ The example
 $ ./expcircle -snes_fd -snes_monitor -snes_rtol 1.0e-14
 \end{cline}
 %$
-thus asks for much more accuracy than the earlier run which used the default.  It may be a surprise that this tight-tolerance run, asking for a further $10^6$ reduction in residual norm, requires only one more iteration, namely six iterations this time, but this is typical of the Newton iteration in the best cases.  Instead of showing the Newton iterations as text output, Figure \ref{fig:newtonconvbasic} shows these residual norm values in a graph with log-scaling on the $y$-axis.
+thus asks for much more accuracy than the earlier run which used the default.  It may be a surprise that this tight-tolerance run, asking for a further $10^6$ reduction in residual norm, requires only one more iteration, namely six iterations this time, but this is typical of the Newton iteration in the best cases.  Instead of showing the Newton iterations again as text output, Figure \ref{fig:newtonconvbasic} shows these residual norm values in a graph with log-scaling on the $y$-axis.
 
 \begin{figure}
 \includegraphics[width=0.8\textwidth]{newtonconvbasic}
@@ -199,7 +199,9 @@ Suppose that $\bF:\RR^N\to\RR^N$ is differentiable, $\bx^*$ is a solution of \eq
 	\|\be_{k+1}\| \le K \|\be_k\|^2, \label{eq:nl:quadraticconvergence}
 \end{equation}
 \item and if $\kappa = \kappa\left(J_{\bF}(\bx^*)\right)$, so that $\kappa\ge 1$, then
-	$$\frac{\|\be_k\|}{4 \kappa \|\be_0\|} \le \frac{\|\bF(\bx_k)\|}{\|\bF(\bx_0)\|} \le \frac{4 \kappa \|\be_k\|}{\|\be_0\|}.$$
+\begin{equation}
+	\frac{\|\be_k\|}{4 \kappa \|\be_0\|} \le \frac{\|\bF(\bx_k)\|}{\|\bF(\bx_0)\|} \le \frac{4 \kappa \|\be_k\|}{\|\be_0\|}. \label{eq:nl:errorresidualnormequiv}
+\end{equation}
 \end{enumerate}
 \end{theorem}
 
@@ -207,12 +209,13 @@ By definition, a sequence $\{\bx_k\}$ in $\RR^N$ \emph{converges quadratically t
 
 We seem to see quadratic converge in Figure \ref{fig:newtonconvbasic}, but this Figure shows the residual norm $\|\bF(\bx_k)\|_2$ and not the error norm $\|\be_k\|_2$.  The second part of the Theorem says that the relative error decrease at the $k$th iteration (i.e.~$\|\be_k\|/\|\be_0\|$) is within a factor, determined by the conditioning of the Jacobian at the solution, of the relative residual norm decrease at the $k$th iteration (i.e.~$\|\bF(\bx_k)\|/\|\bF(\bx_0)\|$).  This idea is especially significant because the latter quantity, the residual norm reduction ratio, is \emph{computable}.
 
-The Theorem therefore confirms that residual norm decay like that shown in Figure \ref{fig:newtonconvbasic} corresponds to quadratic convergence of $\bx_k$ to a solution $\bx^*$.  If we want to reduce the (generally-unknowable) numerical error $\be_k=\bx_k-\bx^*$ by a given amount then it suffices to reduce the residual norm by a comparable amount.  The factor $4 \kappa$ by which the two relative norms differ is large only if the conditioning of the Jacobian at the solution is poor.  A large condition number $\kappa=\kappa\left(J_{\bF}(\bx^*)\right)$ would also mean, just as in the linear case, that there is lost precision in solving the nonlinear equations by \emph{any} numerical means; recall the numerical facts-of-life from Chapter \ref{chap:linearsystem}.
+The Theorem therefore confirms that residual norm decay like that shown in Figure \ref{fig:newtonconvbasic} corresponds to quadratic convergence of $\bx_k$ to a solution $\bx^*$.  If we want to reduce the (generally-unknowable) numerical error $\be_k=\bx_k-\bx^*$ by a given amount then it suffices to reduce the residual norm by a comparable amount.  The factor $4 \kappa$ by which the two relative norms differ in \eqref{eq:nl:errorresidualnormequiv} is large only if the conditioning of the Jacobian at the solution is poor.  Observe that, just as in the linear case, a large condition number $\kappa=\kappa\left(J_{\bF}(\bx^*)\right)$ would also mean lost precision in solving \eqref{eq:nl:equation} by \emph{any} numerical means.\sidenote{Recall the numerical facts-of-life in Chapter \ref{chap:linearsystem}.}
 
-Residual norm reduction is exactly what the option \texttt{-snes\_rtol} controls, that is, the iteration continues until
+The amount of residual norm reduction is exactly what the option \texttt{-snes\_rtol} controls, that is, the iteration continues until
     $$\frac{\|\bF(\bx_k)\|_2}{\|\bF(\bx_0)\|_2} \le \text{\texttt{snes\_rtol}}.$$
 Actually, to give the more complete story, there are \emph{three} \pSNES tolerances, listed in Table \ref{tab:snestolerances}.  The iteration stops as soon as one of these conditions is satisfied.  Note that $\bs_k$ denotes the solution to linear system \eqref{eq:nl:newtoneq}, the ``step'' at iteration $k$.  The defaults for the three tolerances are \texttt{X}$=10^{-8},10^{-50},10^{-8}$, respectively.
 
+\medskip
 \begin{table}
 \begin{tabular}{lll}
 \underline{Option}\hspace{0.2in} & \underline{Name}\hspace{0.2in} & \underline{Condition}\hspace{0.2in} \\
@@ -231,8 +234,10 @@ Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
 ...
 \end{cline}
 %$
+\vspace{-4mm}
+One can force the \pSNES to use a subset of the stopping criteria by setting the tolerance to zero in the unwanted conditions(s).
 
-So far we have portrayed the Newton iteration in optimistic terms, but it is not magic and things can go wrong.  First note a key hypothesis in the above Theorem, namely that ``$\bx_0$ is sufficiently close to $\bx^*$''.  Even on well-behaved nonlinear equations, if $\bx_0$ is far from the solution then the iteration may take many steps before $\|\be_k\|$ becomes small enough so that quadratic convergence \eqref{eq:nl:quadraticconvergence} ``kicks in''.  For example, Figure \ref{fig:newtonconvdelayed} shows what happens if we use initial iterate $\bx_0=[10\,\, 10]^\top$ in the above Example.  A long period of slower convergence\sidenote{Evidently \emph{linear} convergence in which the residual norm is being reduced by a constant factor.} is needed before the iterate enters the region where $\bx_0$ is sufficiently close so that the conclusions of the Theorem apply.  This region is sometimes known as the ``ball of quadratic convergence.''
+So far we have portrayed the Newton iteration in optimistic terms, but it is not magic and things can go wrong.  First note a key hypothesis in the above Theorem, namely that $\bx_0$ is sufficiently close to $\bx^*$.  Even on well-behaved nonlinear equations, if $\bx_0$ is far from the solution then the iteration may take many steps before $\|\be_k\|$ becomes small enough so that quadratic convergence \eqref{eq:nl:quadraticconvergence} ``kicks in''.  For example, Figure \ref{fig:newtonconvdelayed} shows what happens if we use initial iterate $\bx_0=[10\,\, 10]^\top$ in the above Example.  A long period of slower convergence\sidenote{Evidently \emph{linear} convergence in which the residual norm is being reduced by a constant factor.} is needed before the iterate enters the region where $\bx_0$ is sufficiently close so that the conclusions of the Theorem apply.  This region is sometimes known as the ``ball of quadratic convergence.''
 
 \begin{figure}
 \includegraphics[width=0.8\textwidth]{newtonconvdelayed}
