@@ -150,7 +150,7 @@ In outline, \pSNES does these steps to implement the Newton method:
 	\item a convergence test is made, and we repeat at (\emph{i}) if not converged.
 	\end{enumerate}
 \end{quote}
-The issue raised in (\emph{ii})c, and also the possible step-length reduction in (\emph{iii}), will be addressed starting on page \pageref{sec:JFNKandlinesearch}.
+The issue raised in (\emph{ii})c will be addressed starting on page \pageref{sec:JFNK} below.  Issue (\emph{iii}) about possible step-length reduction will be addressed on page \pageref{sec:linesearch}.
 
 Option (\emph{ii})a is taken if we supply a call-back function for the Jacobian through \texttt{SNESSetJacobian()} or similar, and we give an example below in the next section.  For now, however, if you run with no \texttt{-snes\_\dots} option, in particular without option \texttt{-snes\_fd}, then you get an error message about an un-assembled matrix:
 \begin{cline}
@@ -310,24 +310,103 @@ with Dirichlet boundary conditions $u(0)=u_L$ and $u(1)=u_R$
 
 FIXME: because second derivatives and square-roots of 4th degree polynomials both reduce the power by two, exact solution from substituting $u(x)=M(x+1)^4$; get $M=(\rho/12)^2$; get $u_L=M$ and $u_R=16 M$ from this
 
+\cinputpart{reaction.c}{\CODELOC}{FIXME}{I}{//SETUP}{//ENDSETUP}{code:reactionI}
+
 FIXME: now that we use \pDMDA for the grid, we have \texttt{Local} forms of \texttt{FormFunction/Jacobian()}
 
 FIXME in setting initial condition and exact solution, need to extract \texttt{DMDALocalInfo} and use it for grid
 
-\cinputpart{reaction.c}{\CODELOC}{FIXME}{I}{//SETUP}{//ENDSETUP}{code:reactionI}
-
 \cinputpart{reaction.c}{\CODELOC}{FIXME}{II}{//FUNJAC}{//ENDFUNJAC}{code:reactionII}
+
+FIXME: show \texttt{-da\_refine 4 -snes\_monitor} result with no option and with \texttt{-snes\_fd}
 
 \cinputpart{reaction.c}{\CODELOC}{FIXME}{III}{//MAIN}{//ENDMAIN}{code:reactionIII}
 
 FIXME: show \texttt{-snes\_monitor\_solution}
 
 
-\section{Jacobian-free Newton-Krylov, and line search} \label{sec:JFNKandlinesearch}
+\section{Jacobian-free Newton-Krylov} \label{sec:JFNK}
 
 FIXME: theory of matrix-free JK \citep{KnollKeyes2004}
 
-FIXME as practical \PETSc \pSNES advice: you've fully-implemented the Jacobian if all four of these modes work
+The \PETSc paradigm for Jacobians in \pSNES-using codes has these cases:
+\begin{itemize}
+\item FIXME
+\end{itemize}
+
+In summary, as practical \pSNES-using advice, you have correctly- and fully-implemented the Jacobian, and you have found an adequate initial iterate, if all four of these modes work and give quadratic convergence.  For example, these properties describe the last two codes \texttt{expcircleJAC.c} and \texttt{reaction.c}.
+
+The \texttt{reaction.c} PDE example above shows these Jacobian-free ideas in action.  First, for high-resolution grids, the \texttt{-snes\_mf} and \texttt{-snes\_fd} methods, neither of which evaluate the Jacobian through the call-back mechanism at all, have serious difficulties.  Consider the 8000 or so point grid that comes from option \texttt{-da\_refine 10}.  The \texttt{-snes\_mf} method, with no additional ``help'' (compare below), no longer converges at all:
+\begin{cline}
+$ timer ./reaction -snes_converged_reason -da_refine 10 -snes_mf
+Nonlinear solve did not converge due to DIVERGED_LINEAR_SOLVE iterations 0
+on 8193 point grid:  |u-u_exact|_inf/|u|_inf = 0.217386
+real 7.05
+\end{cline}
+%$
+On the other hand, the \texttt{-snes\_fd} method, which succeeds in the sense that it gives a small number of Newton iterations, is both very slow and it requires many calls to \texttt{FormFunction()}.  In fact, by default the \pSNES limits the number of these calls to $10000$, so we have to raise that limit to get convergence:
+\begin{cline}
+$ timer ./reaction -snes_converged_reason -da_refine 10 -snes_fd -snes_max_funcs 1000000
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+on 8193 point grid:  |u-u_exact|_inf/|u|_inf = 1.75635e-10
+real 10.47
+\end{cline}
+%$
+Note the execution time of 10 seconds, for comparison to the runs below.
+
+What if a Jacobian is available, but it is only approximate?  For example, modify this line in \texttt{reaction.c},
+\begin{code}
+    col[1] = i;    v[1] = -2.0 + h*h * dRdu;
+\end{code}
+to remove ``\texttt{+ h*h * dRdu}'', to get
+\begin{code}
+    col[1] = i;    v[1] = -2.0;
+\end{code}
+This change keeps the tridiagonal sparsity pattern of the Jacobian, but it removes the influence of the nonlinear term ``$+\rho \sqrt{u}$'' in \eqref{eq:nl:diffusionreaction}.
+
+With this change, convergence is slowed for no option, i.e.~when using the approximate Jacobian as though it were exact.  On a coarse grid the number of iterations goes from 4 to 15, and the reported residual norms---here mostly suppressed---suggest that the convergence is no longer quadratic:
+\begin{cline}
+$ ./reaction -da_refine 4 -snes_monitor    # before change
+  0 SNES Function norm 1.671129624018e-02 
+  1 SNES Function norm 3.609252641302e-04 
+  2 SNES Function norm 4.167490508951e-07 
+  3 SNES Function norm 4.935230509260e-13 
+on 129 point grid:  |u-u_exact|_inf/|u|_inf = 7.39662e-07
+$ ./reaction -da_refine 4 -snes_monitor    # after change
+  0 SNES Function norm 1.671129624018e-02 
+  1 SNES Function norm 3.822032062916e-03 
+...
+ 14 SNES Function norm 3.879363487638e-10 
+ 15 SNES Function norm 1.119521798815e-10 
+on 129 point grid:  |u-u_exact|_inf/|u|_inf = 7.38159e-07
+\end{cline}
+This loss of performance for the Newton iteration, as caused by an in-exact Jacobian, is expected in theory \citep{Kelley2003}.
+
+For this modified Jacobian case, \texttt{-snes\_mf\_operator} is now the fastest option for higher-resolution grids.  Consider the 8000 or so point grid that comes from option \texttt{-da\_refine 10}.  As above for the coarser grid, using the approximate Jacobian ``as is'' causes many Newton iterations:
+\begin{cline}
+$ timer ./reaction -snes_converged_reason -da_refine 10
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 15
+on 8193 point grid:  |u-u_exact|_inf/|u|_inf = 1.36236e-09
+real 0.13
+\end{cline}
+%$
+Now we try \texttt{-snes\_mf\_operator}, which is designed for this approximate-Jacobian situation:
+\begin{cline}
+$ timer ./reaction -snes_converged_reason -da_refine 10 -snes_mf_operator
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+on 8193 point grid:  |u-u_exact|_inf/|u|_inf = 1.80588e-10
+real 0.05
+\end{cline}
+%$
+The number of iterations and the time are significantly reduced.
+
+This confirms, in one overly-simple example, the idea that preconditioning the matrix-free Jacobian action by the use of a preconditioner is effective.  As a general rule, for large problems where \texttt{-snes\_fd} is seen to be too costly, one might say:
+\begin{quote}
+First consider implementing the exact Jacobian.  If that seems like too much work, or if it is too error-prone, consider implementing an approximate Jacobian which, in the PDE case, captures the highest-order derivatives.  To test such an approximate Jacobian, compare ``no option'' runs, where less-than-quadratic convergence is expected, and \texttt{-snes\_mf\_operator} runs where quadratic convergence may be recovered.
+\end{quote}
+
+
+\section{Line search} \label{sec:linesearch}
 
 FIXME linesearch or trust region needed \citep{Kelley2003}
 
@@ -356,10 +435,10 @@ $ ./expcircle -snes_monitor -snes_mf_operator
 run without errors, and why?  Same question for \texttt{expcircleJAC.c}.
 
 \item  \label{exer:newtonatan}
-This example shows a famous case where the no-linesearch Newton iteration can diverge or even enter a limit cycle according to the initial iterate $x_0$.  Linesearch fixes this.
+This example shows a famous case where the original Newton iteration can diverge or enter a limit cycle, according to the initial iterate $x_0$, while using linesearch gives essentially global convergence.
     \begin{enumerate}
-    \item By simple modifications of \texttt{expcircle.c}, write a code \texttt{e3atan.c} which solves the (one-dimensional) nonlinear equation $F(x)=\arctan(x)=0$ using initial iterate $x_0=2.0$.  Use \texttt{atan()}.  By running it \texttt{./e3atan -snes\_fd -snes\_linesearch\_type basic}, show that the Newton iteration without a linesearch diverges, while using the default choice (which is \texttt{-snes\_linesearch\_type bt}) gives convergence.
-    \item Returning to a paper calculation, require the Newton iteration \eqref{eq:nl:newtoneq}, \eqref{eq:nl:newtonupdate} to enter a sign-flipping limit cycle, i.e.~so that $x_{k+1} = - x_k$ for all $k$.  Thereby approximate the positive value $x_0$ so that the Newton iteration both makes no progress remains bounded for all $k$.\sidenote{One may solve this problem with Newton's method.}  Sketch the situation.
+    \item By simple modifications of \texttt{expcircle.c}, write a code \texttt{e3atan.c} which solves the (one-dimensional) nonlinear equation $F(x)=\arctan(x)=0$ using initial iterate $x_0=2.0$.  Use ``\texttt{atan}'' for the $\arctan$ function.  By running it \texttt{./e3atan -snes\_fd -snes\_linesearch\_type basic}, show that the Newton iteration without a linesearch diverges, while using the default choice (which is \texttt{-snes\_linesearch\_type bt}) gives convergence.
+    \item Returning to a paper calculation, require the Newton iteration \eqref{eq:nl:newtoneq}, \eqref{eq:nl:newtonupdate} to enter a sign-flipping limit cycle, i.e.~so that $x_{k+1} = - x_k$ for all $k$.  Thereby approximate the positive value $x_0$ so that the Newton iteration both makes no progress, and remains bounded, for all $k$.\sidenote{One may solve this problem with Newton's method.}  Sketch the situation.
     \item By modifying $x_0$ in \texttt{e3atan.c} and using linesearch type \texttt{basic}, confirm that one can make the Newton iteration ``stick'' in this (actually unstable) limit cycle for quite a while.  Then confirm that linesearch types \texttt{bt,l2,cp} all get unstuck immediately.
 % to solve:  - x = x - arctan(x) (1+x^2)
 % octave:
