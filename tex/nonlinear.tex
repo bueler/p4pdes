@@ -310,31 +310,43 @@ with Dirichlet boundary conditions $u(0)=u_L$ and $u(1)=u_R$
 
 FIXME: because second derivatives and square-roots of 4th degree polynomials both reduce the power by two, exact solution from substituting $u(x)=M(x+1)^4$; get $M=(\rho/12)^2$; get $u_L=M$ and $u_R=16 M$ from this
 
-\cinputpart{reaction.c}{\CODELOC}{FIXME}{I}{//SETUP}{//ENDSETUP}{code:reactionI}
-
 FIXME: now that we use \pDMDA for the grid, we have \texttt{Local} forms of \texttt{FormFunction/Jacobian()}
 
 FIXME in setting initial condition and exact solution, need to extract \texttt{DMDALocalInfo} and use it for grid
 
-\cinputpart{reaction.c}{\CODELOC}{FIXME}{II}{//FUNJAC}{//ENDFUNJAC}{code:reactionII}
-
 FIXME: show \texttt{-da\_refine 4 -snes\_monitor} result with no option and with \texttt{-snes\_fd}
-
-\cinputpart{reaction.c}{\CODELOC}{FIXME}{III}{//MAIN}{//ENDMAIN}{code:reactionIII}
 
 FIXME: show \texttt{-snes\_monitor\_solution}
 
+\cinputpart{reaction.c}{\CODELOC}{FIXME}{I}{//SETUP}{//ENDSETUP}{code:reactionI}
+
+\cinputpart{reaction.c}{\CODELOC}{FIXME}{II}{//FUNJAC}{//ENDFUNJAC}{code:reactionII}
+
+\cinputpart{reaction.c}{\CODELOC}{FIXME}{III}{//MAIN}{//ENDMAIN}{code:reactionIII}
+
+\vfill
+\clearpage
 
 \section{Jacobian-free Newton-Krylov} \label{sec:JFNK}
 
 FIXME: theory of matrix-free JK \citep{KnollKeyes2004}
 
-The \PETSc paradigm for Jacobians in \pSNES-using codes has these cases:
-\begin{itemize}
-\item FIXME
-\end{itemize}
+FIXME: \PETSc has options: no option, \texttt{-snes\_fd}, \texttt{-snes\_mf}, and \texttt{-snes\_mf\_operator}
 
-In summary, as practical \pSNES-using advice, you have correctly- and fully-implemented the Jacobian, and you have found an adequate initial iterate, if all four of these modes work and give quadratic convergence.  For example, these properties describe the last two codes \texttt{expcircleJAC.c} and \texttt{reaction.c}.
+As practical \pSNES-using advice, you have correctly- and fully-implemented the Jacobian, and you have found an adequate initial iterate, if all four of these modes work and give quadratic convergence.  For example, these properties describe the last two codes \texttt{expcircleJAC.c} and \texttt{reaction.c}.
+
+At a more formal level, the \PETSc paradigm for implementing residual and Jacobian call-backs in \pSNES-using codes has these cases:
+\renewcommand{\labelenumi}{(\roman{enumi})}
+\begin{enumerate}
+\item If only code for $\bF$ is implemented, provide it through \texttt{SNESSetFunction()}.  (If the problem is based on a structured grid, as in the \texttt{reaction.c} example above, use \texttt{DMDASNESSetFunctionLocal()}.)  Do not create or preallocate a \pMat for the Jacobian, as this is done internally by the \pSNES for \texttt{-snes\_fd} runs, while no assembled Jacobian \pMat exists for \texttt{-snes\_mf} runs.
+\item If an exact or approximate Jacobian is implemented in code, then there are two cases:
+   \renewcommand{\labelenumii}{\alph{enumii}.}
+   \begin{enumerate}
+   \item In general one must declare a \pMat variable, say ``\texttt{J}'', and then call \texttt{MatCreate()}, \texttt{MatSetSizes()}, and \texttt{MatSetFromOptions()} on it.  Then call either \texttt{MatSetUp()} or \texttt{MatXAIJPreallocate()} on \texttt{J}, to allocate space for the assembled Jacobian matrix.  Then provide \texttt{J} for both \pMat arguments to \texttt{SNESSetJacobian()}.  One also provides the call-back code ``\texttt{FormJacobian()}'' at the same time.
+   \item On a structured grid, provide the exact or approximate Jacobian through call-back using \texttt{DMDASNESSetJacobianLocal()}.  In this case the \pMat holding the Jacobian is internal, and does not need to be created or preallocated in user code.
+   \end{enumerate}
+\end{enumerate}
+In either case (ii)a or (ii)b, the Jacobian-implementing code, e.g.~in a method like \texttt{FormJacobian()} or \texttt{FormJacobianLocal()} in the above examples, only needs to set values in the second ``preconditioner'' \pMat argument.\sidenote{This assumes \texttt{J} is provided for both \pMat arguments of   \texttt{SNESSetJacobian()} as described in (ii)a above.}  It should, however, assemble \emph{both} \pMat arguments.  
 
 The \texttt{reaction.c} PDE example above shows these Jacobian-free ideas in action.  First, for high-resolution grids, the \texttt{-snes\_mf} and \texttt{-snes\_fd} methods, neither of which evaluate the Jacobian through the call-back mechanism at all, have serious difficulties.  Consider the 8000 or so point grid that comes from option \texttt{-da\_refine 10}.  The \texttt{-snes\_mf} method, with no additional ``help'' (compare below), no longer converges at all:
 \begin{cline}
@@ -408,7 +420,7 @@ First consider implementing the exact Jacobian.  If that seems like too much wor
 
 \section{Line search} \label{sec:linesearch}
 
-FIXME linesearch or trust region needed \citep{Kelley2003}
+FIXME linesearch or trust region sometimes needed to ``globalize'' convergence \citep{Kelley2003}
 
 
 \section{Exercises}
@@ -453,7 +465,7 @@ This example shows a famous case where the original Newton iteration can diverge
 
 \item As noted on page \pageref{sidenote:logsummary}, \PETSc option \texttt{-log\_summary} can show whether function evaluations or linear solves are dominating the cost of Newton's method.  By looking at \texttt{-log\_summary} output, compare where the work is done in these runs: \texttt{./reaction}, \texttt{./reaction -snes\_fd}, \texttt{./reaction -snes\_mf}.  Does the comparison change if you add \texttt{-da\_refine 5}?  Explain as much as you can.  (\emph{Hints}: Look at \texttt{SNESSolve} events for the total time spent in the Newton method, $\approx$100\% for these cases.  Within that event, event \texttt{SNESLineSearch} is where function and Jacobian evaluations happen, while the linear solve is the \texttt{KSPSolve} event.  Within the \texttt{SNESLineSearch} event, look at \texttt{SNESFunctionEval} and \texttt{SNESJacobianEval} events.)
 
-\item FIXME: write variation \texttt{bratu1.c} of \texttt{reaction.c} to solve
+\item FIXME: write variation \texttt{bratu.c} of \texttt{reaction.c} to solve
     $$-u'' + \lambda e^u = f(x)$$
-with same Dirichlet conditons as for \eqref{eq:nl:diffusionreaction}.  while exact solution of \eqref{eq:nl:diffusionreaction} uses structure of equation, we can ``manufacture'' solution.  do so, say using $u_{\texttt{exact}}(x)=x + sin(3\pi x)$ and getting $u_L,u_R$ as the end-point $x=0,1$ values of $u_{\text{exact}}(x)$.  FIXME implement \texttt{bratu1.c} without \texttt{FormJacobianLocal()} first, and check convergence, before adding Jacobian and then checking JFNK options work too  FIXME maybe nontrivial linesearch needed?
+with same Dirichlet conditons as for \eqref{eq:nl:diffusionreaction}.  while exact solution of \eqref{eq:nl:diffusionreaction} uses structure of equation, we can ``manufacture'' solution.  do so, say using $u_{\texttt{exact}}(x)=x + sin(3\pi x)$ and getting $u_L,u_R$ as the end-point $x=0,1$ values of $u_{\text{exact}}(x)$.  FIXME implement \texttt{bratu.c} without \texttt{FormJacobianLocal()} first, and check convergence, before adding Jacobian and then checking JFNK options work too  FIXME nontrivial linesearch needed once $\lambda$ is close to critical
 \end{enumerate}
