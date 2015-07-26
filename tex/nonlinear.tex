@@ -333,9 +333,22 @@ FIXME: theory of matrix-free JK \citep{KnollKeyes2004}
 
 FIXME: \PETSc has options: no option, \texttt{-snes\_fd}, \texttt{-snes\_mf}, and \texttt{-snes\_mf\_operator}
 
-As practical \pSNES-using advice, you have correctly- and fully-implemented the Jacobian, and you have found an adequate initial iterate, if all four of these modes work and give quadratic convergence.  For example, these properties describe the last two codes \texttt{expcircleJAC.c} and \texttt{reaction.c}.
+\def\checkmark{\tikz\fill[scale=0.4](0,.35) -- (.25,0) -- (.7,.8) -- (.25,.15) -- cycle;}
+\def\bigcheckmark{\tikz\fill[scale=0.6](0,.35) -- (.25,0) -- (.7,.8) -- (.25,.15) -- cycle;}
 
-At a more formal level, the \PETSc paradigm for implementing residual and Jacobian call-backs in \pSNES-using codes has these cases:
+The \PETSc paradigm for implementing residual and Jacobian call-backs in \pSNES-using codes is summarized in Table \ref{tab:snesjacobianoptions}.  In the Table, symbol ``$P$'' denotes an approximate Jacobian while ``$J$'' denotes an exact one.  The large check mark indicates recommended usage.  As practical \pSNES-using advice, you know you have correctly- and fully-implemented the Jacobian, and you have found an adequate initial iterate, if all four of these modes work and give quadratic convergence, as in the last line of the table.  This is the situation for the last two codes above, \texttt{expcircleJAC.c} and \texttt{reaction.c}.
+
+\begin{table}
+\begin{tabular}{rllll}
+ &\underline{no option}\hspace{0.0in} & \underline{\texttt{-snes\_fd}} & \underline{\texttt{-snes\_mf}} & \underline{\texttt{-snes\_mf\_operator}} \\
+only $\bF$:      & error           & $\bigcheckmark$ & $\bigcheckmark$ & error \\
+$\bF$ and $P$:   & \,?           & $\checkmark$    & $\checkmark$    & $\bigcheckmark$ \\
+$\bF$ and $J$:   & $\bigcheckmark$ & $\checkmark$    & $\checkmark$    & $\checkmark$
+\end{tabular}
+\caption{For these three Jacobian options when using \pSNES, either the run-time should work and provide quadratic convergence on well-behaved examples (check mark), it gives uncertain convergence rate (?), or it gives a run-time error.  The big check marks recommended usage.} \label{tab:snesjacobianoptions}
+\end{table}
+
+From the code side we have these cases:
 \renewcommand{\labelenumi}{(\roman{enumi})}
 \begin{enumerate}
 \item If only code for $\bF$ is implemented, provide it through \texttt{SNESSetFunction()}.  (If the problem is based on a structured grid, as in the \texttt{reaction.c} example above, use \texttt{DMDASNESSetFunctionLocal()}.)  Do not create or preallocate a \pMat for the Jacobian, as this is done internally by the \pSNES for \texttt{-snes\_fd} runs, while no assembled Jacobian \pMat exists for \texttt{-snes\_mf} runs.
@@ -346,7 +359,7 @@ At a more formal level, the \PETSc paradigm for implementing residual and Jacobi
    \item On a structured grid, provide the exact or approximate Jacobian through call-back using \texttt{DMDASNESSetJacobianLocal()}.  In this case the \pMat holding the Jacobian is internal, and does not need to be created or preallocated in user code.
    \end{enumerate}
 \end{enumerate}
-In either case (ii)a or (ii)b, the Jacobian-implementing code, e.g.~in a method like \texttt{FormJacobian()} or \texttt{FormJacobianLocal()} in the above examples, only needs to set values in the second ``preconditioner'' \pMat argument.\sidenote{This assumes \texttt{J} is provided for both \pMat arguments of   \texttt{SNESSetJacobian()} as described in (ii)a above.}  It should, however, assemble \emph{both} \pMat arguments.  
+In either case (ii)a or (ii)b, the Jacobian-implementing code, e.g.~in a method like \texttt{FormJacobian()} or \texttt{FormJacobianLocal()} in the above examples, only needs to set values in the second ``preconditioner'' \pMat argument.\sidenote{This assumes \texttt{J} is provided for both \pMat arguments of   \texttt{SNESSetJacobian()} as described in (ii)a above.}  It should, however, assemble \emph{both} \pMat arguments.
 
 The \texttt{reaction.c} PDE example above shows these Jacobian-free ideas in action.  First, for high-resolution grids, the \texttt{-snes\_mf} and \texttt{-snes\_fd} methods, neither of which evaluate the Jacobian through the call-back mechanism at all, have serious difficulties.  Consider the 8000 or so point grid that comes from option \texttt{-da\_refine 10}.  The \texttt{-snes\_mf} method, with no additional ``help'' (compare below), no longer converges at all:
 \begin{cline}
