@@ -24,5 +24,5 @@ e3atan: e3atan.o chkopts
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ expcircle expcircleJAC reaction e3arctan
+	@rm -f *~ expcircle expcircleJAC reaction e3atan
 
