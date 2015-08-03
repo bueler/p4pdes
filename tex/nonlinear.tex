@@ -217,11 +217,12 @@ Suppose that $\bF:\RR^N\to\RR^N$ is differentiable, $\bx^*$ is a solution of \eq
 \end{enumerate}
 \end{theorem}
 
-By definition, a sequence $\{\bx_k\}$ in $\RR^N$ \emph{converges quadratically to} $\bx^*$ if the sequence $\be_k=\bx_k-\bx^*$ satisfies \eqref{eq:nl:quadraticconvergence} for some $K\ge 0$.  Thus the first idea in the Theorem is that, under strong assumptions about the regularity and nonsingularity of the Jacobian, the error decays very rapidly in the sense that the iterates converge quadratically to a solution of \eqref{eq:nl:equation}.  This remarkable fact says Newton iteration is a powerful tool.  Heuristically, once the error norm $\|\be_k\|$ is a small number (e.g.~$\|\be_k\| \ll 1$), the number of correct digits in $\bx_k$ \emph{doubles} with each additional iteration.
+\medskip
+By definition, a sequence $\{\bx_k\}$ in $\RR^N$ \emph{converges quadratically to} $\bx^*$ if the sequence $\be_k=\bx_k-\bx^*$ satisfies \eqref{eq:nl:quadraticconvergence} for some $K\ge 0$.  Thus the first idea in the Theorem is that, under strong assumptions about the regularity and nonsingularity of the Jacobian, the error decays very rapidly in the sense that the iterates converge quadratically to a solution of \eqref{eq:nl:equation}.  This remarkable fact explains why Newton iteration is such a powerful tool.  Heuristically, once the error norm $\|\be_k\|$ is a small number (e.g.~$\|\be_k\| \ll 1$), the number of correct digits in $\bx_k$ \emph{doubles} with each additional iteration.
 
-We seem to see quadratic converge in Figure \ref{fig:newtonconvbasic}, but this Figure shows the residual norm $\|\bF(\bx_k)\|_2$ and not the error norm $\|\be_k\|_2$.  The second part of the Theorem says that the relative error decrease at the $k$th iteration (i.e.~$\|\be_k\|/\|\be_0\|$) is within a factor, determined by the conditioning of the Jacobian at the solution, of the relative residual norm decrease at the $k$th iteration (i.e.~$\|\bF(\bx_k)\|/\|\bF(\bx_0)\|$).  This idea is especially significant because the latter quantity, the residual norm reduction ratio, is \emph{computable}.
+We seem to see quadratic converge in Figure \ref{fig:newtonconvbasic}, but this Figure shows the residual norm $\|\bF(\bx_k)\|_2$ and not the error norm $\|\be_k\|_2$.  The second part of the Theorem says that the error decrease at the $k$th iteration (i.e.~$\|\be_k\|/\|\be_0\|$) is within a factor, determined by the conditioning of the Jacobian at the solution, of the residual decrease at the $k$th iteration (i.e.~$\|\bF(\bx_k)\|/\|\bF(\bx_0)\|$).  This idea is significant because the latter quantity, the residual norm reduction ratio, is \emph{computable}.
 
-The Theorem therefore confirms that residual norm decay like that shown in Figure \ref{fig:newtonconvbasic} corresponds to quadratic convergence of $\bx_k$ to a solution $\bx^*$.  If we want to reduce the (generally-unknowable) numerical error $\be_k=\bx_k-\bx^*$ by a given amount then it suffices to reduce the residual norm by a comparable amount.  The factor $4 \kappa$ by which the two relative norms differ in \eqref{eq:nl:errorresidualnormequiv} is large only if the conditioning of the Jacobian at the solution is poor.  Observe that, just as in the linear case, a large condition number $\kappa=\kappa\left(J_{\bF}(\bx^*)\right)$ would also mean lost precision in solving \eqref{eq:nl:equation} by \emph{any} numerical means.\sidenote{Recall the numerical facts-of-life in Chapter \ref{chap:linearsystem}.}
+The Theorem confirms that residual norm decay like that shown in Figure \ref{fig:newtonconvbasic} corresponds to quadratic convergence of $\bx_k$ to a solution $\bx^*$.  If we want to reduce the (generally-unknowable) numerical error $\be_k=\bx_k-\bx^*$ by a given amount then it can suffice to reduce the residual norm by a comparable amount.  The factor $4 \kappa$ by which the two relative norms differ in \eqref{eq:nl:errorresidualnormequiv} is large only if the conditioning of the Jacobian at the solution is poor.  Just as in the linear case, however, a large condition number $\kappa=\kappa\left(J_{\bF}(\bx^*)\right)$ would also mean lost precision in solving \eqref{eq:nl:equation} by \emph{any} numerical means.\sidenote{Recall the numerical facts-of-life in Chapter \ref{chap:linearsystem}.}
 
 The amount of residual norm reduction is exactly what the option \texttt{-snes\_rtol} controls, that is, the iteration continues until
     $$\frac{\|\bF(\bx_k)\|_2}{\|\bF(\bx_0)\|_2} \le \text{\texttt{snes\_rtol}}.$$
@@ -235,7 +236,7 @@ Actually, to give the more complete story, there are \emph{three} \pSNES toleran
 \texttt{-snes\_atol X} & absolute (\texttt{FNORM\_ABS}) & $\|\bF(\bx_k)\|_2 \le \text{\texttt{X}}$ \\
 \texttt{-snes\_stol X} & step-length (\texttt{SNORM\_RELATIVE}) & $\|\bs_k\|_2 \le \text{\texttt{X}}\, \|\bx_k\|_2$
 \end{tabular}
-\caption{The three ways \pSNES can succeed, i.e.~the tolerance options and corresponding termination conditions, for stopping the Newton iteration.} \label{tab:snestolerances}
+\caption{The three ways \pSNES can succeed, thereby stopping the Newton iteration.} \label{tab:snestolerances}
 \end{table}
 
 \medskip
@@ -249,7 +250,10 @@ Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
 \vspace{-4mm}
 One can force the \pSNES to use a subset of the stopping criteria by setting the tolerance to zero in the unwanted conditions(s).
 
-So far we have portrayed the Newton iteration in optimistic terms, but it is not magic and things can go wrong.  First note a key hypothesis in the above Theorem, namely that $\bx_0$ is sufficiently close to $\bx^*$.  Even on well-behaved nonlinear equations, if $\bx_0$ is far from the solution then the iteration may take many steps before $\|\be_k\|$ becomes small enough so that quadratic convergence \eqref{eq:nl:quadraticconvergence} ``kicks in''.  For example, Figure \ref{fig:newtonconvdelayed} shows what happens if we use initial iterate $\bx_0=[10\,\, 10]^\top$ in the above Example.  A long period of slower convergence\sidenote{In this particular case, evidently it is \emph{linear} convergence in which the residual norm is being reduced by a constant factor.} is needed before the iterate enters the region where $\bx_0$ is sufficiently close so that the conclusions of the Theorem apply.  This region is sometimes known as the ``ball of quadratic convergence.''
+
+\section{Convergence difficulties} \label{sec:divergence}
+
+So far we have portrayed the Newton iteration in optimistic terms, but it is not magic and things can go wrong.
 
 \begin{figure}
 \includegraphics[width=0.8\textwidth]{newtonconvdelayed}
@@ -257,21 +261,24 @@ So far we have portrayed the Newton iteration in optimistic terms, but it is not
 \label{fig:newtonconvdelayed}
 \end{figure}
 
-On other equations the Newton iteration \eqref{eq:nl:newtoneq}, \eqref{eq:nl:newtonupdate} as it stands actually diverges from some initial states.  For an example, see Exercise \ref{chap:nonlinear}.\ref{exer:newtonatan}.  In those cases the ``linesearch'' schemes in \PETSc will reduce the step length $\|\bs_k\|$ and this may ``globalize'' the convergence \citep{Kelley2003} by allowing convergence from a larger set of initial states.  These schemes are addressed later in this section.  Finally, many practical problems do not have the smoothness needed to apply the above Theorem.  In such cases the problem may need regularization, continuation, or other procedures to make it manageable.
+First note a key hypothesis in the above Theorem, namely that $\bx_0$ is sufficiently close to $\bx^*$.  Even on well-behaved nonlinear equations, if $\bx_0$ is far from the solution then the iteration may take many steps before $\|\be_k\|$ becomes small enough so that quadratic convergence \eqref{eq:nl:quadraticconvergence} ``kicks in''.  For example, Figure \ref{fig:newtonconvdelayed} shows what happens if we use initial iterate $\bx_0=[10\,\, 10]^\top$ in the above Example.  A long period of slower convergence\sidenote{In this particular case, evidently it is \emph{linear} convergence in which the residual norm is being reduced by a constant factor.} is needed before the iterate enters the region where $\bx_0$ is sufficiently close so that the conclusions of the Theorem apply.  This region is sometimes known as the ``ball of quadratic convergence.''
+
+Actual decrease in residual norm, as displayed in Figures \ref{fig:newtonconvbasic} and \ref{fig:newtonconvdelayed}, is also not guaranteed in general.  There is nothing intrinsic about the solution $\bs$ to \eqref{eq:nl:newtoneq} that implies $\|\bF(\bx_{k+1})\| \le \|\bF(\bx_k)\|$.  Again, however, ``line-search'' methods, described starting on page \pageref{sec:linesearch}, can enforce residual norm decrease.  Such methods generate an error if searching along the direction $\bs$ does not find a step-length which generates a (sufficient) residual norm decrease.
+
+On some equations the Newton iteration \eqref{eq:nl:newtoneq}, \eqref{eq:nl:newtonupdate} as it stands actually diverges from some initial states.  For an example, see Exercise \ref{chap:nonlinear}.\ref{exer:newtonatan}.  In those cases line-search methods will generally reduce the step length $\|\bs_k\|$ and this may ``globalize'' the convergence \citep{Kelley2003} in the sense of allowing convergence from a larger set of initial states.
+
+Finally, many practical problems do not have the smoothness needed to apply the above Theorem.  In such cases the problem may need regularization, continuation, or other procedures to make it manageable.
 
 
 \section{Exact Jacobians and passing parameters}
 
-We have yet to exploit two critical possibilities when using a \pSNES, namely the ability to provide a method which computes the Jacobian function $J_{\bF}(\bx)$, and the ability to pass parameters through the call-back mechanism so that they can be used inside the residual- and Jacobian-evaluation functions.  The next code \texttt{ecjacobian.c}, in Figures \ref{code:ecjacobianI} and \ref{code:ecjacobianII}, uses these abilities.  For later reference, this code is a ``model use'' of \pSNES.\sidenote{In cases without a structured grid of the \pDMDA type (Chapter \ref{chap:structured}).}
-
-\medskip
-\cinputpart{ecjacobian.c}{\CODELOC}{Solves the same nonlinear system as does \texttt{expcircle.c}, but this version includes an exact Jacobian and has the \pSNES pass a parameter into the call-back functions.}{I}{//START}{//END}{code:ecjacobianI}
+We have yet to exploit two critical possibilities when using a \pSNES, namely the ability to provide a method which computes the Jacobian function $J_{\bF}(\bx)$, and the ability to pass parameters through the call-back mechanism so that they can be used inside the residual- and Jacobian-evaluation functions.  The next code \texttt{ecjacobian.c}, in Figures \ref{code:ecjacobianI} and \ref{code:ecjacobianII}, uses these abilities; this example is a ``model use'' of \pSNES.\sidenote{For cases without a structured grid of the \pDMDA type (Chapter \ref{chap:structured}), anyway.  Compare \texttt{reaction.c} below.}
 
 The first new idea (Figure \ref{code:ecjacobianI}) is the declaration of a C \texttt{struct} called \texttt{AppCtx} (``application context'').  It has just one element, the real parameter $b$ which appears in formulas \eqref{eq:nl:expcircleF} and \eqref{eq:nl:ecjacobian}.  A \texttt{struct} is not really necessary here, but in future examples there will be more than one parameter to pass.
 
-\cinputpart{ecjacobian.c}{\CODELOC}{The \texttt{main()} method is also similar to that in \texttt{expcircle.c}, but with a bit more code to allocate the \pMat which stores the Jacobian.}{II}{//STARTMAIN}{//ENDMAIN}{code:ecjacobianII}
+Next, the method \texttt{FormFunction()} in Figure \ref{code:ecjacobianI} is almost the same as the one in \texttt{expcircle.c} (Figure \ref{code:expcircle}), but the value of $b$ comes from the \texttt{struct} instead of being hard-wired as before.  In detail, the argument \texttt{void *ctx} is ``cast'' in the sense of the C language \citep{KernighanRitchie1988} to a pointer of type \texttt{AppCtx*}, and then the parameter is extracted, via the pointer, by ``\texttt{user->b}'' which is shorthand for ``\texttt{(*user).b}''.  This awkward-seeming method of passing parameters allows the signature of \texttt{FormFunction()} to be precisely as before.
 
-Next, the method \texttt{FormFunction()} in Figure \ref{code:ecjacobianI} is almost the same as the one in \texttt{expcircle.c} (Figure \ref{code:expcircle}), but the value of $b$ comes from the \texttt{struct} instead of being hard-wired as before.  In detail, the argument \texttt{void *ctx} is ``cast'' in the sense of the C language \citep{KernighanRitchie1988} to a pointer of type \texttt{AppCtx*}, and then the parameter is extracted via the pointer (i.e.~by ``\texttt{user->b}'' which is shorthand for ``\texttt{(*user).b}'').  This awkward-seeming method of passing parameters allows the signature of \texttt{FormFunction()} to be precisely as before.
+\cinputpart{ecjacobian.c}{\CODELOC}{Solves the same nonlinear system as \texttt{expcircle.c}.  This version has an exact Jacobian.  It also passes a parameter into the call-back functions.}{I}{//START}{//END}{code:ecjacobianI}
 
 The method \texttt{FormJacobian()} in Figure \ref{code:ecjacobianI} is new.  It has similar structure and semantics to \texttt{FormFunction()}, but a new (required) signature so that it can be used in call-back, namely
 \begin{code}
@@ -279,14 +286,16 @@ PetscErrorCode (*J)(SNES,Vec,Mat,Mat,void*)
 \end{code}
 Input \pVec \texttt{x} and parameter-passing pointer \texttt{void *ctx} have the same meaning as in \texttt{FormFunction()}.  Also just as before, when reading \texttt{x} we can use \texttt{VecGetArrayRead()} and \texttt{VecRestoreArrayRead()}.
 
-The difference is that we must set a \pMat as output, based on formula \eqref{eq:nl:ecjacobian} in this case.  We use \texttt{MatSetValues()}, so the roles of real array \texttt{v[4]} for the entries themselves, and of integer arrays \texttt{row[2],col[2]}, as global indices, is the same as in Chapter \ref{chap:linearsystem}.  An interesting detail appears here, however, and it will take some explanation.  There are actually \emph{two} output \pMats for \texttt{FormJacobian()} to set.  The first, called \texttt{J} here, corresponds to the Jacobian matrix itself, which, in this simple case, we want to supply.  The second, \texttt{P}, might in other cases be a very poor approximation of the Jacobian.  It is the matrix we would supply as material to build a preconditioner.  A method like our \texttt{FormJacobian()} needs to set at least one of these \pMats according to whether we intend to supply accurate derivatives of $\bF$ or not.  We assemble the \pMat \texttt{P} and, if the \pMat \texttt{J} is also present and is a different pointer, then we also assemble it.  These actions allow ``Jacobian-free'' Newton-Krylov methods to work (below).
+\cinputpart{ecjacobian.c}{\CODELOC}{This \texttt{main()} method adds code, relative to  \texttt{expcircle.c}, to allocate a \pMat to hold the Jacobian.}{II}{//STARTMAIN}{//ENDMAIN}{code:ecjacobianII}
+
+The difference is that we must set a \pMat as output, based on formula \eqref{eq:nl:ecjacobian} in this case.  The roles of \texttt{MatSetValues()}, real array \texttt{v[4]} for the entries themselves, and integer arrays \texttt{row[2]} and \texttt{col[2]} as global indices, are all the same as in Chapter \ref{chap:linearsystem}.  An interesting detail appears here, however, and it requires some explanation.  There are actually \emph{two} output \pMats for \texttt{FormJacobian()} to set.  The first, called \texttt{J} here, corresponds to the Jacobian matrix itself, which, in this simple case, we want to supply.  The second, called \texttt{P} here, is the ``material'' we supply to build a preconditioner.  It might, at least in other cases, be a very poor approximation of the Jacobian.  A method like \texttt{FormJacobian()} sets one of these \pMats according to whether we intend to supply accurate derivatives of $\bF$ or not.  In fact, we assemble the \pMat \texttt{P} and, if the \pMat \texttt{J} is also present and is a different pointer, then we also assemble it.  These actions allow ``Jacobian-free'' Newton-Krylov methods to work (below).
 %FIXME: I haven't really explained anything!
 
-Now look at \texttt{main()} in Figure \ref{code:ecjacobianII} and note that we create and configure a $2\times 2$ \pMat \texttt{J} to hold the Jacobian.  Our use of \texttt{MatCreate(), MatSetSizes(), MatSetFromOptions(),} and \texttt{MatSetUp()} on \texttt{J} mimics what we did for finite-dimensional systems in Chapter \ref{chap:linearsystem}.  However, this time when we set-up the \pSNES we pass \texttt{J} for two arguments,
+Looking at \texttt{main()} in Figure \ref{code:ecjacobianII}, note that we create and configure a $2\times 2$ \pMat \texttt{J} to hold the Jacobian.  Our use of \texttt{MatCreate(), MatSetSizes(), MatSetFromOptions(),} and \texttt{MatSetUp()} on \texttt{J} mimics what we did for finite-dimensional systems in Chapter \ref{chap:linearsystem}.  However, this time when we set-up the \pSNES we pass \texttt{J} for two arguments,
 \begin{code}
 SNESSetJacobian(snes,J,J,FormJacobian,&user);
 \end{code}
-This means we provide the allocated space in \texttt{J} as both the Jacobian and preconditioner matrices, that is, for both the second and third \pMat arguments.  We declare and initialize a \texttt{struct} of type \texttt{AppCtx} to pass the parameter $b$.  In all other ways the content of this \texttt{main()} is the same as in Figure \ref{code:expcircle}.
+This means we provide the allocated space in \texttt{J} as both the Jacobian and preconditioner matrices, that is, for both the second and third \pMat arguments.
 
 Now that we have assembled an exact Jacobian, we see that it and its finite-difference approximation produce nearly the same result on this small and well-behaved example:
 \begin{cline}
@@ -312,7 +321,7 @@ $ ./ecjacobian -snes_monitor -snes_fd
 %$
 
 
-\section{Example: 1D nonlinear diffusion-reaction equation}
+\section{Example: a nonlinear diffusion-reaction equation}
 
 FIXME equation is
 \begin{equation}

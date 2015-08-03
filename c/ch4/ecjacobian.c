@@ -57,7 +57,6 @@ int main(int argc,char **argv)
 
   PetscInitialize(&argc,&argv,(char*)0,help);
   user.b = 2.0;
-  ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
 
   ierr = VecCreate(PETSC_COMM_WORLD,&x); CHKERRQ(ierr);
   ierr = VecSetSizes(x,PETSC_DECIDE,2); CHKERRQ(ierr);
@@ -69,6 +68,7 @@ int main(int argc,char **argv)
   ierr = MatSetFromOptions(J); CHKERRQ(ierr);
   ierr = MatSetUp(J); CHKERRQ(ierr);
 
+  ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
   ierr = SNESSetFunction(snes,r,FormFunction,&user);CHKERRQ(ierr);
   ierr = SNESSetJacobian(snes,J,J,FormJacobian,&user);CHKERRQ(ierr);
   ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
