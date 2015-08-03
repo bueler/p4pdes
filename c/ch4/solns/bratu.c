@@ -1,8 +1,10 @@
-static char help[] = "Solves the Bratu reaction-diffusion problem in 1D.\n\n";
+static char help[] = "Solves the Bratu reaction-diffusion problem in 1D.\n"
+"Optionally includes manufactured solutio to generalized problem.\n";
 
 #include <petsc.h>
 
 typedef struct {
+  PetscBool manufactured;
   PetscReal lambda;
 } AppCtx;
 
@@ -18,16 +20,34 @@ PetscErrorCode Initial(DM da, DMDALocalInfo *info, Vec u0, AppCtx *user) {
     return 0;
 }
 
+PetscErrorCode Exact(DM da, DMDALocalInfo *info, Vec uex, AppCtx *user) {
+    PetscErrorCode ierr;
+    PetscInt  i;
+    PetscReal h = 1.0 / (info->mx-1), x, *auex;
+    ierr = DMDAVecGetArray(da,uex,&auex); CHKERRQ(ierr);
+    for (i=info->xs; i<info->xs+info->xm; i++) {
+        x = i * h;
+        auex[i] = sin(PETSC_PI * x);
+    }
+    ierr = DMDAVecRestoreArray(da,uex,&auex); CHKERRQ(ierr);
+    return 0;
+}
+
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal *u,
                                  PetscReal *f, AppCtx *user) {
     PetscInt  i;
-    PetscReal h = 1.0 / (info->mx-1), R;
+    PetscReal h = 1.0 / (info->mx-1), x, R, compf;
     for (i=info->xs; i<info->xs+info->xm; i++) {
         if ((i == 0) || (i == info->mx-1)) {
             f[i] = u[i];
         } else {  // interior location
             R = - user->lambda * PetscExpReal(u[i]);
             f[i] = - u[i+1] + 2.0 * u[i] - u[i-1] + h*h * R;
+            if (user->manufactured) {
+                x = i * h;
+                FIXME
+                f[i] -= compf;
+            }
         }
     }
     return 0;
