@@ -56,7 +56,6 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscReal *u,
             dRdu = (user->rho / 2.0) / PetscSqrtReal(u[i]);
             col[0] = i-1;  v[0] = - 1.0;
             col[1] = i;    v[1] = 2.0 + h*h * dRdu;
-//            col[1] = i;    v[1] = 2.0; //STRIP
             col[2] = i+1;  v[2] = - 1.0;
             ierr = MatSetValues(P,1,&i,3,col,v,INSERT_VALUES); CHKERRQ(ierr);
         }
@@ -82,7 +81,13 @@ int main(int argc,char **args) {
   DMDALocalInfo       info;
 
   PetscInitialize(&argc,&args,(char*)0,help);
+
   user.rho    = 10.0;
+  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,
+                           "optr_","options for optreact",""); CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-rho","coefficient of nonlinear zeroth-order term",
+                          NULL,user.rho,&(user.rho),NULL); CHKERRQ(ierr);
+  ierr = PetscOptionsEnd(); CHKERRQ(ierr);
   user.M      = PetscSqr(user.rho / 12.0);
   user.uLEFT  = user.M;
   user.uRIGHT = 16.0 * user.M;

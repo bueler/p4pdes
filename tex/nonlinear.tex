@@ -441,30 +441,21 @@ FIXME linesearch or trust region sometimes needed to ``globalize'' convergence \
 \renewcommand{\labelenumi}{\arabic{chapter}.\arabic{enumi}\quad}
 \renewcommand{\labelenumii}{(\alph{enumii})}
 \begin{enumerate}
-\item One needs to \emph{see} quadratic convergence to believe it.  Observe that for $x_k$ in both parts (b) and (c) below, the \emph{number of correct digits in $x_k$ doubles at each iteration}.
+\item One needs to \emph{see} quadratic convergence to believe it.  Observe that for $x_k$ in both parts (b) and (c) below, the number of correct digits in $x_k$ \emph{doubles} at each iteration.
     \begin{enumerate}
-    \item The sequence $x_k = 1-2^{-n}$ converges quickly to $x^*=1$, but not quadratically.  Find $k$ so that $|e_k| < 10^{-16}$.
+    \item The sequence $x_k = 1-2^{-n}$ converges to $x^*=1$, but not quadratically.\sidenote{It converges \emph{linearly}.}  Find $k$ so that $|e_k| < 10^{-16}$.
     \item The sequence $x_k = 1-2^{(-2^n)}$ converges quadratically to $x^*=1$.  Find $k$ so that $|e_k| < 10^{-16}$.  Find the smallest $K$ so that $|e_{k+1}| \le K |e_k|^2$ for all $k$.
     \item Let $F(x) = \cos(x-1) - \exp(1-x)$ and $x_0=0.5$.  Using any quick-and-dirty numerical tool,\sidenote{Extra credit for doing it in \PETSc.} compute Newton iterates $x_k$ for $k=1,\dots,6$.  Estimate $K$ so that $|e_{k+1}| \le K |e_k|^2$ for large $k$.
     \end{enumerate}
 
-\item Make a tiny modification to \texttt{ecjacobian.c} to set the initial vector to $\bx_0 = [10\,\, 10]^\top$.  Rerun it with option \texttt{-snes\_monitor} and note it does not converge to a solution.  Why does the \pSNES stop?  Add one runtime option so that it does converge to a solution, thereby producing the data shown in Figure \ref{fig:newtonconvdelayed}.
-
-\item We showed that Jacobian-free options \texttt{-snes\_mf} and \texttt{-snes\_mf\_operator} work when running \texttt{reaction.c}.  Which of these four commands
-\begin{cline}
-$ ./expcircle -snes_monitor
-$ ./expcircle -snes_monitor -snes_fd
-$ ./expcircle -snes_monitor -snes_mf
-$ ./expcircle -snes_monitor -snes_mf_operator
-\end{cline}
-run without errors, and why?  Same question for \texttt{ecjacobian.c}.
+\item Make a tiny modification to \texttt{ecjacobian.c} to set the initial vector to $\bx_0 = [10\,\, 10]^\top$.  Rerun it with option \texttt{-snes\_monitor} and note it does not converge to a solution.  Why does the \pSNES stop?  Add one runtime option so that it  converges, thereby producing the data shown in Figure \ref{fig:newtonconvdelayed}.
 
 \item  \label{exer:newtonatan}
 This example shows a famous case where the original Newton iteration can diverge or enter a limit cycle, according to the initial iterate $x_0$, while using linesearch gives essentially global convergence.
     \begin{enumerate}
-    \item By simple modifications of \texttt{expcircle.c}, write a code \texttt{e3atan.c} which solves the (one-dimensional) nonlinear equation $F(x)=\arctan(x)=0$ using initial iterate $x_0=2.0$.  Use ``\texttt{atan}'' for the $\arctan$ function.  By running it \texttt{./e3atan -snes\_fd -snes\_linesearch\_type basic}, show that the Newton iteration without a linesearch diverges, while using the default choice (which is \texttt{-snes\_linesearch\_type bt}) gives convergence.
+    \item By simple modifications of \texttt{expcircle.c}, write a code \texttt{atan.c} which solves the (one-dimensional) nonlinear equation $F(x)=\arctan(x)=0$ using initial iterate $x_0=2.0$.  (Use ``\texttt{atan}'' for the $\arctan$ function.)  By running it \texttt{./atan -snes\_fd -snes\_linesearch\_type basic}, show that the Newton iteration without a linesearch diverges, while using the default choice (which is \texttt{-snes\_linesearch\_type bt}) gives convergence.
     \item Returning to a paper calculation, require the Newton iteration \eqref{eq:nl:newtoneq}, \eqref{eq:nl:newtonupdate} to enter a sign-flipping limit cycle, i.e.~so that $x_{k+1} = - x_k$ for all $k$.  Thereby approximate the positive value $x_0$ so that the Newton iteration both makes no progress, and remains bounded, for all $k$.\sidenote{One may solve this problem with Newton's method.}  Sketch the situation.
-    \item By modifying $x_0$ in \texttt{e3atan.c} and using linesearch type \texttt{basic}, confirm that one can make the Newton iteration ``stick'' in this (actually unstable) limit cycle for quite a while.  Then confirm that linesearch types \texttt{bt,l2,cp} all get unstuck immediately.
+    \item By modifying $x_0$ in \texttt{atan.c} and using linesearch type \texttt{basic}, confirm that one can make the Newton iteration ``stick'' in this (actually unstable) limit cycle for quite a while.  Then confirm that linesearch types \texttt{bt,l2,cp} all get unstuck immediately.
 % to solve:  - x = x - arctan(x) (1+x^2)
 % octave:
 %   G = @(x) 2*x - atan(x) * (1+x^2);
@@ -478,7 +469,31 @@ This example shows a famous case where the original Newton iteration can diverge
 
 \item As noted on page \pageref{sidenote:logsummary}, \PETSc option \texttt{-log\_summary} can show whether function evaluations or linear solves are dominating the cost of Newton's method.  By looking at \texttt{-log\_summary} output, compare where the work is done in these runs: \texttt{./reaction}, \texttt{./reaction -snes\_fd}, \texttt{./reaction -snes\_mf}.  Does the comparison change if you add \texttt{-da\_refine 5}?  Explain as much as you can.  (\emph{Hints}: Look at \texttt{SNESSolve} events for the total time spent in the Newton method, $\approx$100\% for these cases.  Within that event, event \texttt{SNESLineSearch} is where function and Jacobian evaluations happen, while the linear solve is the \texttt{KSPSolve} event.  Within the \texttt{SNESLineSearch} event, look at \texttt{SNESFunctionEval} and \texttt{SNESJacobianEval} events.)
 
-\item FIXME: write variation \texttt{bratu.c} of \texttt{reaction.c} to solve
-    $$-u'' + \lambda e^u = f(x)$$
-with same Dirichlet conditons as for \eqref{eq:nl:diffusionreaction}.  while exact solution of \eqref{eq:nl:diffusionreaction} uses structure of equation, we can ``manufacture'' solution.  do so, say using $u_{\texttt{exact}}(x)=x + sin(3\pi x)$ and getting $u_L,u_R$ as the end-point $x=0,1$ values of $u_{\text{exact}}(x)$.  FIXME implement \texttt{bratu.c} without \texttt{FormJacobianLocal()} first, and check convergence, before adding Jacobian and then checking JFNK options work too  FIXME nontrivial linesearch needed once $\lambda$ is close to critical
+\item Most \PETSc programs add more runtime options than shown in our examples so far; ours are deliberately de-cluttered.  The PDE problem in \texttt{reaction.c} has parameter $\rho$ which can be adjusted via \texttt{PetscOptionsReal()}.  Modify \texttt{reaction.c} to ``\texttt{optreact.c}'' and add an option like this at the appropriate point:
+\begin{code}
+  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,
+                           "optr_","options for optreact",""); CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-rho","coefficient of nonlinear zeroth-order term",
+                          NULL,user.rho,&(user.rho),NULL); CHKERRQ(ierr);
+  ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+\end{code}
+By sampling, for what range of positive \texttt{X}$=\rho$ does the run
+\begin{cline}
+./optreact -snes_monitor -da_refine 4 -optr_rho X
+\end{cline}
+converge?  Explain why this case, with this way of choosing the boundary conditions and initial iterate, in particular, and in contrast to the next exercise, is so insensitive to the value of the major parameter $\rho$.
+
+\item Modify \texttt{reaction.c} to create ``\texttt{bratu.c}'' which solves
+\begin{equation}
+    - u'' - \lambda e^u = 0 \label{eq:nl:bratuoned}
+\end{equation}
+with Dirichlet boundary conditions $u(0)=u(1)=0$.  Make $\lambda$ an option-adjustable real parameter---see the previous exercise---and use the simplest function which satisfies the boundary conditions as an initial iterate.  Confirm by using a fine grid, and option \texttt{-snes\_converged\_reason} plus other options as needed, that around $\lambda=3.513$ there is a transition to non-convergence of the Newton iteration.  This \emph{critical value} is intrinsic to the nonlinear PDE problem and not a result of a Newton failure \citep{Doedeletal1991}.
+
+\item To the author's knowledge an exact solution of \eqref{eq:nl:bratuoned} is unknown for $\lambda>0$.  While writing the code in the last exercise is doable, based on the simplicity of the problem and the availability of a ``nearby'' correct example code,\sidenote{I.e.~we started from \texttt{reaction.c}.} one should not walk over high wires too often without a net.  Fortunately, because we can ``manufacture'' \citep{Wesseling2001} an exact solution to a generalized form on \eqref{eq:nl:bratuoned}, one does not need to take big risks.
+
+Consider the equation
+\begin{equation}
+    - u'' - \lambda e^u = f(x). \label{eq:nl:bratuonedwithf}
+\end{equation}
+We can make $u(x) = \sin(\pi x)$ the exact solution of \eqref{eq:nl:bratuonedwithf} by determining $f(x)$ from the equation by differentiation alone.  Add options and additional exact solution code to \texttt{bratu.c} in the previous exercise so as to optionally check the result on this exact solution.  For instance, the \texttt{struct} of type \texttt{AppCtx} might have a user-option-settable boolean variable \texttt{manufactured}.  When it is false then $f(x)=0$ as in the previous example; here no exact solution is available and no numerical error is reported.  If the variable is true then we change to the appropriate $f(x)$ and we can report a numerical error.  Confirm that for sub-critical values of $\lambda$ we have both quadratic convergence of the Newton iteration \emph{and} $O(h^2)$ convergence of the numerical error.
 \end{enumerate}
