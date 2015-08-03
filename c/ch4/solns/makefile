@@ -7,10 +7,6 @@ atan: atan.o chkopts
 	-${CLINKER} -o atan atan.o ${PETSC_SNES_LIB}
 	${RM} atan.o
 
-optreact: optreact.o chkopts
-	-${CLINKER} -o optreact optreact.o ${PETSC_SNES_LIB}
-	${RM} optreact.o
-
 bratu: bratu.o chkopts
 	-${CLINKER} -o bratu bratu.o ${PETSC_SNES_LIB}
 	${RM} bratu.o
@@ -20,5 +16,5 @@ bratu: bratu.o chkopts
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ atan optreact bratu
+	@rm -f *~ atan bratu
 

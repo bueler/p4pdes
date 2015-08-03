@@ -503,6 +503,7 @@ By sampling, for what range of positive \texttt{X}$=\rho$ does the run
 ./optreact -snes_monitor -da_refine 4 -optr_rho X
 \end{cline}
 converge?  Explain why this case, with this way of choosing the boundary conditions and initial iterate, in particular, and in contrast to the next exercise, is so insensitive to the value of the major parameter $\rho$.
+% because this option is used in bratu.c below, for simplicity of maintenance, the result optreact.c is NOT saved in c/ch4/solns/
 
 \item Modify \texttt{reaction.c} to create ``\texttt{bratu.c}'' which solves
 \begin{equation}
