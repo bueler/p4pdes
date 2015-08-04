@@ -345,52 +345,52 @@ FIXME: show \texttt{-snes\_monitor\_solution}
 
 \cinputpart{reaction.c}{\CODELOC}{FIXME}{III}{//MAIN}{//ENDMAIN}{code:reactionIII}
 
-\vfill
-\clearpage
+
 
 \section{Jacobian-free Newton-Krylov} \label{sec:JFNK}
 
 FIXME: theory of matrix-free JK \citep{KnollKeyes2004}
 
-FIXME: \PETSc has options: no option, \texttt{-snes\_fd}, \texttt{-snes\_mf}, and \texttt{-snes\_mf\_operator}
+
+\section{Exploring Jacobian cases} \label{sec:jacobiancases}
 
 \def\checkmark{\tikz\fill[scale=0.4](0,.35) -- (.25,0) -- (.7,.8) -- (.25,.15) -- cycle;}
 \def\bigcheckmark{\tikz\fill[scale=0.6](0,.35) -- (.25,0) -- (.7,.8) -- (.25,.15) -- cycle;}
 
-The \PETSc paradigm for implementing residual and Jacobian call-backs in \pSNES-using codes is summarized in Table \ref{tab:snesjacobianoptions}.  In the Table, symbol ``$P$'' denotes an approximate Jacobian while ``$J$'' denotes an exact one.  The large check mark indicates recommended usage.  As practical \pSNES-using advice, you know you have correctly- and fully-implemented the Jacobian, and you have found an adequate initial iterate, if all four of these modes work and give quadratic convergence, as in the last line of the table.  This is the situation for the last two codes above, \texttt{ecjacobian.c} and \texttt{reaction.c}.
-
+The paradigm for residual and Jacobian call-backs in \pSNES-using codes is summarized in Table \ref{tab:snesjacobianoptions}.  If a Jacobian routine is \emph{not} provided in the user-written code then only finite-difference evaluation of the assembled Jacobian matrix (i.e.~\texttt{-snes\_fd}) and finite-difference evaluation of the Jacobian-vector product inside the Krylov method (\texttt{-snes\_mf}) are available for the Newton iteration.  If a Jacobian routine is provided then additionally the Newton iteration can be used with no option---this is the obvious way to implement the Newton method---but also an additional option exists.  In this added possibility the provided Jacobian is used only to \emph{precondition} the finite-difference Jacobian-vector product (\texttt{-snes\_mf\_operator}).  In the Table, symbol ``$P$'' denotes a routine which computes an easy-to-invert approximate Jacobian while ``$J$'' denotes an exact one.
 \begin{table}
 \begin{tabular}{rllll}
  &\underline{no option}\hspace{0.0in} & \underline{\texttt{-snes\_fd}} & \underline{\texttt{-snes\_mf}} & \underline{\texttt{-snes\_mf\_operator}} \\
 only $\bF$:      & error           & $\bigcheckmark$ & $\bigcheckmark$ & error \\
-$\bF$ and $P$:   & \,?           & $\checkmark$    & $\checkmark$    & $\bigcheckmark$ \\
+$\bF$ and $P$:   & $\bigcheckmark$ & $\checkmark$    & $\checkmark$    & $\bigcheckmark$ \\
 $\bF$ and $J$:   & $\bigcheckmark$ & $\checkmark$    & $\checkmark$    & $\checkmark$
 \end{tabular}
-\caption{For these three Jacobian options when using \pSNES, either the run-time should work and provide quadratic convergence on well-behaved examples (check mark), it gives uncertain convergence rate (?), or it gives a run-time error.  The big check marks recommended usage.} \label{tab:snesjacobianoptions}
+\caption{Jacobian options when using \pSNES:  A question mark denotes uncertain convergence rate and a big check mark is recommended usage.} \label{tab:snesjacobianoptions}
 \end{table}
 
-From the code side we have these cases:
+A large check mark indicates recommended usage cases in the Table.  As practical advice for the debugging stage, you know you have correctly- and fully-implemented the Jacobian, and you have found an adequate initial iterate, if all four options work and give apparent quadratic convergence.\sidenote{I.e.~from looking at the residual norm decay shown by \texttt{-snes\_monitor}.}  As the reader may check, this is the situation for the last two codes \texttt{ecjacobian.c} and \texttt{reaction.c}.
+
+From the code side we can state the cases this way:
 \renewcommand{\labelenumi}{(\roman{enumi})}
 \begin{enumerate}
-\item If only code for $\bF$ is implemented, provide it through \texttt{SNESSetFunction()}.  (If the problem is based on a structured grid, as in the \texttt{reaction.c} example above, use \texttt{DMDASNESSetFunctionLocal()}.)  Do not create or preallocate a \pMat for the Jacobian, as this is done internally by the \pSNES for \texttt{-snes\_fd} runs, while no assembled Jacobian \pMat exists for \texttt{-snes\_mf} runs.
-\item If an exact or approximate Jacobian is implemented in code, then there are two cases:
+\item If only a method for $\bF$ is implemented, provide it through \texttt{SNESSetFunction()}.  If the problem is based on a structured grid, as in the \texttt{reaction.c} example above, instead use \texttt{DMDASNESSetFunctionLocal()}.  Do not create or preallocate a \pMat for the Jacobian, as this is done internally by the \pSNES for \texttt{-snes\_fd} runs, while no assembled Jacobian \pMat exists for \texttt{-snes\_mf} runs.
+\item If an exact or approximate Jacobian is implemented then there are two cases:
    \renewcommand{\labelenumii}{\alph{enumii}.}
    \begin{enumerate}
-   \item In general one must declare a \pMat variable, say ``\texttt{J}'', and then call \texttt{MatCreate()}, \texttt{MatSetSizes()}, and \texttt{MatSetFromOptions()} on it.  Then call either \texttt{MatSetUp()} or \texttt{MatXAIJPreallocate()} on \texttt{J}, to allocate space for the assembled Jacobian matrix.  Then provide \texttt{J} for both \pMat arguments to \texttt{SNESSetJacobian()}.  One also provides the call-back code ``\texttt{FormJacobian()}'' at the same time.
+   \item In a general nonlinear equation solve, namely one not based on a structured grid, first declare a \pMat variable, say ``\texttt{J}'', and then call \texttt{MatCreate()}, \texttt{MatSetSizes()}, and \texttt{MatSetFromOptions()} on it.  Then call either \texttt{MatSetUp()} or \texttt{MatXAIJPreallocate()} on \texttt{J}, to allocate space for the assembled Jacobian matrix.  Then provide both the call-back code (e.g.~``\texttt{FormJacobian()}'') and \texttt{J}, for both \pMat arguments, to \texttt{SNESSetJacobian()}.
    \item On a structured grid, provide the exact or approximate Jacobian through call-back using \texttt{DMDASNESSetJacobianLocal()}.  In this case the \pMat holding the Jacobian is internal, and does not need to be created or preallocated in user code.
    \end{enumerate}
 \end{enumerate}
-In either case (ii)a or (ii)b, the Jacobian-implementing code, e.g.~in a method like \texttt{FormJacobian()} or \texttt{FormJacobianLocal()} in the above examples, only needs to set values in the second ``preconditioner'' \pMat argument.\sidenote{This assumes \texttt{J} is provided for both \pMat arguments of   \texttt{SNESSetJacobian()} as described in (ii)a above.}  It should, however, assemble \emph{both} \pMat arguments.
+In either case (ii)a or (ii)b, the Jacobian-implementing code, e.g.~in a method like \texttt{FormJacobian()} or \texttt{FormJacobianLocal()} in the above examples, only needs to set values in the second ``preconditioner'' \pMat argument.\sidenote{This assumes \texttt{J} is provided for both \pMat arguments of   \texttt{SNESSetJacobian()} as described in (ii)a above.}  It should, however, \emph{assemble} both \pMat arguments.
 
-The \texttt{reaction.c} PDE example above shows these Jacobian-free ideas in action.  First, for high-resolution grids, the \texttt{-snes\_mf} and \texttt{-snes\_fd} methods, neither of which evaluate the Jacobian through the call-back mechanism at all, have serious difficulties.  Consider the 8000 or so point grid that comes from option \texttt{-da\_refine 10}.  The \texttt{-snes\_mf} method, with no additional ``help'' (compare below), no longer converges at all:
+We use the \texttt{reaction.c} example to show these Jacobian-free ideas in action.  First, for high-resolution grids, the \texttt{-snes\_mf} and \texttt{-snes\_fd} methods, neither of which evaluate the Jacobian through the call-back mechanism at all, have serious difficulties.  Consider the 8000 or so point grid that comes from option \texttt{-da\_refine 10}.  The \texttt{-snes\_mf} method, with no additional ``help'' (compare below), no longer converges at all:
 \begin{cline}
-$ timer ./reaction -snes_converged_reason -da_refine 10 -snes_mf
+$ ./reaction -snes_converged_reason -da_refine 10 -snes_mf
 Nonlinear solve did not converge due to DIVERGED_LINEAR_SOLVE iterations 0
 on 8193 point grid:  |u-u_exact|_inf/|u|_inf = 0.217386
-real 7.05
 \end{cline}
 %$
-On the other hand, the \texttt{-snes\_fd} method, which succeeds in the sense that it gives a small number of Newton iterations, is both very slow and it requires many calls to \texttt{FormFunction()}.  In fact, by default the \pSNES limits the number of these calls to $10000$, so we have to raise that limit to get convergence:
+On the other hand, the \texttt{-snes\_fd} method, which succeeds in the sense that it gives a small number of Newton iterations, is quite slow and it requires many calls to \texttt{FormFunction()}.  In fact, by default the \pSNES limits the number of these calls to $10000$, so we have to raise that limit to get convergence:
 \begin{cline}
 $ timer ./reaction -snes_converged_reason -da_refine 10 -snes_fd -snes_max_funcs 1000000
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
@@ -398,19 +398,20 @@ on 8193 point grid:  |u-u_exact|_inf/|u|_inf = 1.75635e-10
 real 10.47
 \end{cline}
 %$
+% this is slow because coloring has not kicked in.  why?
 Note the execution time of 10 seconds, for comparison to the runs below.
 
-What if a Jacobian is available, but it is only approximate?  For example, modify this line in \texttt{reaction.c},
+What if a Jacobian is available, but it is only approximate?  For example, suppose we modify this line in \texttt{reaction.c},
 \begin{code}
-    col[1] = i;    v[1] = -2.0 + h*h * dRdu;
+    col[1] = i;    v[1] = 2.0 + h*h * dRdu;
 \end{code}
 to remove ``\texttt{+ h*h * dRdu}'', to get
 \begin{code}
-    col[1] = i;    v[1] = -2.0;
+    col[1] = i;    v[1] = 2.0;
 \end{code}
-This change keeps the tridiagonal sparsity pattern of the Jacobian, but it removes the influence of the nonlinear term ``$+\rho \sqrt{u}$'' in \eqref{eq:nl:diffusionreaction}.
+This change, which we call a ``\texttt{J->P}'' in the next paragraphs below, keeps the tridiagonal sparsity pattern of the Jacobian, but it removes the influence of the nonlinear term ``$+\rho \sqrt{u}$''---see \eqref{eq:nl:diffusionreaction}---from the Jacobian.
 
-With this change, convergence is slowed for no option, i.e.~when using the approximate Jacobian as though it were exact.  On a coarse grid the number of iterations goes from 4 to 15, and the reported residual norms---here mostly suppressed---suggest that the convergence is no longer quadratic:
+With this change, convergence is slowed for no option, i.e.~when using the approximate Jacobian as though it were exact.  Specifically, on a coarse grid the number of iterations goes from 4 to 15, and the reported residual norms---here partly suppressed---suggest that the convergence is no longer quadratic:
 \begin{cline}
 $ ./reaction -da_refine 4 -snes_monitor    # before change
   0 SNES Function norm 1.671129624018e-02 
@@ -418,7 +419,7 @@ $ ./reaction -da_refine 4 -snes_monitor    # before change
   2 SNES Function norm 4.167490508951e-07 
   3 SNES Function norm 4.935230509260e-13 
 on 129 point grid:  |u-u_exact|_inf/|u|_inf = 7.39662e-07
-$ ./reaction -da_refine 4 -snes_monitor    # after change
+$ ./reaction -da_refine 4 -snes_monitor    # with J->P change
   0 SNES Function norm 1.671129624018e-02 
   1 SNES Function norm 3.822032062916e-03 
 ...
@@ -428,9 +429,9 @@ on 129 point grid:  |u-u_exact|_inf/|u|_inf = 7.38159e-07
 \end{cline}
 This loss of performance for the Newton iteration, as caused by an in-exact Jacobian, is expected in theory \citep{Kelley2003}.
 
-For this modified Jacobian case, \texttt{-snes\_mf\_operator} is now the fastest option for higher-resolution grids.  Consider the 8000 or so point grid that comes from option \texttt{-da\_refine 10}.  As above for the coarser grid, using the approximate Jacobian ``as is'' causes many Newton iterations:
+For this modified Jacobian case, \texttt{-snes\_mf\_operator} is now the fastest option for higher-resolution grids.  Again on the 8000 or so point grid that comes from option \texttt{-da\_refine 10}, using the approximate Jacobian ``as is'' causes many Newton iterations:
 \begin{cline}
-$ timer ./reaction -snes_converged_reason -da_refine 10
+$ timer ./reaction -snes_converged_reason -da_refine 10    # with J->P change
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 15
 on 8193 point grid:  |u-u_exact|_inf/|u|_inf = 1.36236e-09
 real 0.13
@@ -438,7 +439,7 @@ real 0.13
 %$
 Now we try \texttt{-snes\_mf\_operator}, which is designed for this approximate-Jacobian situation:
 \begin{cline}
-$ timer ./reaction -snes_converged_reason -da_refine 10 -snes_mf_operator
+$ timer ./reaction -snes_converged_reason -da_refine 10 -snes_mf_operator  # with J->P change
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
 on 8193 point grid:  |u-u_exact|_inf/|u|_inf = 1.80588e-10
 real 0.05
@@ -446,11 +447,12 @@ real 0.05
 %$
 The number of iterations and the time are significantly reduced.
 
-This confirms, in one overly-simple example, the idea that preconditioning the matrix-free Jacobian action by the use of a preconditioner is effective.  As a general rule, for large problems where \texttt{-snes\_fd} is seen to be too costly, one might say:
+This confirms, in one overly-simple example, the idea that preconditioning the matrix-free Jacobian action by the use of a preconditioner is effective.  As a general rule, for large problems where \texttt{-snes\_fd} is seen to be too costly, one might give this advice:
 \begin{quote}
-First consider implementing the exact Jacobian.  If that seems like too much work, or if it is too error-prone, consider implementing an approximate Jacobian which, in the PDE case, captures the highest-order derivatives.  To test such an approximate Jacobian, compare ``no option'' runs, where less-than-quadratic convergence is expected, and \texttt{-snes\_mf\_operator} runs where quadratic convergence may be recovered.
+First consider implementing the exact Jacobian.  If that seems like too much work, or if it is too error-prone, consider implementing an approximate Jacobian which is easier to assemble and apply.  (In the PDE case it might only capture the highest-order derivatives.)  To test convergence with such an approximate Jacobian, compare ``no option'' runs, where less-than-quadratic convergence is expected, and \texttt{-snes\_mf\_operator} runs where quadratic convergence may be recovered.
 \end{quote}
 
+FIXME: \texttt{-snes\_test}
 
 \section{Line search} \label{sec:linesearch}
 
@@ -474,9 +476,9 @@ FIXME linesearch or trust region sometimes needed to ``globalize'' convergence \
 \item  \label{exer:newtonatan}
 This example shows a famous case where the original Newton iteration can diverge or enter a limit cycle, according to the initial iterate $x_0$, while using linesearch gives essentially global convergence.
     \begin{enumerate}
-    \item By simple modifications of \texttt{expcircle.c}, write a code \texttt{atan.c} which solves the (one-dimensional) nonlinear equation $F(x)=\arctan(x)=0$ using initial iterate $x_0=2.0$.  (Use ``\texttt{atan}'' for the $\arctan$ function.)  By running it \texttt{./atan -snes\_fd -snes\_linesearch\_type basic}, show that the Newton iteration without a linesearch diverges, while using the default choice (which is \texttt{-snes\_linesearch\_type bt}) gives convergence.
+    \item By straightforward modifications of \texttt{expcircle.c}, write a code \texttt{atan.c} which solves the (one-dimensional) nonlinear equation $F(x)=\arctan(x)=0$ using initial iterate $x_0=2.0$.  (Use ``\texttt{atan}'' for the $\arctan$ function.)  By running it \texttt{./atan -snes\_fd -snes\_linesearch\_type basic}, show that the Newton iteration without a linesearch diverges, while using the default choice (i.e.~\texttt{-snes\_linesearch\_type bt}) gives convergence.
     \item Returning to a paper calculation, require the Newton iteration \eqref{eq:nl:newtoneq}, \eqref{eq:nl:newtonupdate} to enter a sign-flipping limit cycle, i.e.~so that $x_{k+1} = - x_k$ for all $k$.  Thereby approximate the positive value $x_0$ so that the Newton iteration both makes no progress, and remains bounded, for all $k$.\sidenote{One may solve this problem with Newton's method.}  Sketch the situation.
-    \item By modifying $x_0$ in \texttt{atan.c} and using linesearch type \texttt{basic}, confirm that one can make the Newton iteration ``stick'' in this (actually unstable) limit cycle for quite a while.  Then confirm that linesearch types \texttt{bt,l2,cp} all get unstuck immediately.
+    \item By modifying $x_0$ in \texttt{atan.c} and using linesearch type \texttt{basic}, confirm that one can make the Newton iteration ``stick'' in this actually-unstabl limit cycle for quite a while.  Then confirm that linesearch types \texttt{bt,l2,cp} all get unstuck immediately.
 % to solve:  - x = x - arctan(x) (1+x^2)
 % octave:
 %   G = @(x) 2*x - atan(x) * (1+x^2);
@@ -488,7 +490,7 @@ This example shows a famous case where the original Newton iteration can diverge
 %  x = 1.39174520027073
     \end{enumerate}
 
-\item As noted on page \pageref{sidenote:logsummary}, \PETSc option \texttt{-log\_summary} can show whether function evaluations or linear solves are dominating the cost of Newton's method.  By looking at \texttt{-log\_summary} output, compare where the work is done in these runs: \texttt{./reaction}, \texttt{./reaction -snes\_fd}, \texttt{./reaction -snes\_mf}.  Does the comparison change if you add \texttt{-da\_refine 5}?  Explain as much as you can.  (\emph{Hints}: Look at \texttt{SNESSolve} events for the total time spent in the Newton method, $\approx$100\% for these cases.  Within that event, event \texttt{SNESLineSearch} is where function and Jacobian evaluations happen, while the linear solve is the \texttt{KSPSolve} event.  Within the \texttt{SNESLineSearch} event, look at \texttt{SNESFunctionEval} and \texttt{SNESJacobianEval} events.)
+\item As noted on page \pageref{sidenote:logsummary}, \PETSc option \texttt{-log\_summary} can show whether function evaluations or linear solves are dominating the cost of Newton's method.  By looking at \texttt{-log\_summary} output, compare where the work is done in these runs: \texttt{./reaction}, \texttt{./reaction -snes\_fd}, \texttt{./reaction -snes\_mf}.  Does the comparison change if you add \texttt{-da\_refine 5}?  Explain as much as you can.  (\emph{Hints}: Look at \texttt{SNESSolve} events for the total time spent in the Newton method, which is $\approx$100\% for these cases.  Within that event, event \texttt{SNESLineSearch} is where function and Jacobian evaluations happen, while the linear solve is the \texttt{KSPSolve} event.  Within the \texttt{SNESLineSearch} event, look at \texttt{SNESFunctionEval} and \texttt{SNESJacobianEval} events.)
 
 \item Most \PETSc programs add more runtime options than shown in our examples so far; ours are deliberately de-cluttered.  The PDE problem in \texttt{reaction.c} has parameter $\rho$ which can be adjusted via \texttt{PetscOptionsReal()}.  Modify \texttt{reaction.c} to ``\texttt{optreact.c}'' and add an option like this at the appropriate point:
 \begin{code}
