@@ -504,7 +504,7 @@ By sampling, for what range of positive \texttt{X}$=\rho$ does the run
 \begin{cline}
 ./optreact -snes_monitor -da_refine 4 -optr_rho X
 \end{cline}
-converge?  Explain why this case, with this way of choosing the boundary conditions and initial iterate, in particular, and in contrast to the next exercise, is so insensitive to the value of the major parameter $\rho$.
+converge?  Explain why this case, with this way of choosing the boundary conditions and initial iterate, and in contrast to the next exercise, is insensitive to the value of the major parameter $\rho$.
 % because this option is used in bratu.c below, for simplicity of maintenance, the result optreact.c is NOT saved in c/ch4/solns/
 
 \item Modify \texttt{reaction.c} to create ``\texttt{bratu.c}'' which solves
@@ -513,11 +513,15 @@ converge?  Explain why this case, with this way of choosing the boundary conditi
 \end{equation}
 with Dirichlet boundary conditions $u(0)=u(1)=0$.  Make $\lambda$ an option-adjustable real parameter---see the previous exercise---and use the simplest function which satisfies the boundary conditions as an initial iterate.  Confirm by using a fine grid, and option \texttt{-snes\_converged\_reason} plus other options as needed, that around $\lambda=3.513$ there is a transition to non-convergence of the Newton iteration.  This \emph{critical value} is intrinsic to the nonlinear PDE problem and not a result of a Newton failure \citep{Doedeletal1991}.
 
-\item To the author's knowledge an exact solution of \eqref{eq:nl:bratuoned} is unknown for $\lambda>0$.  While writing the code in the last exercise is doable, based on the simplicity of the problem and the availability of a ``nearby'' correct example code,\sidenote{I.e.~we started from \texttt{reaction.c}.} one should not walk over high wires too often without a net.  Fortunately, because we can ``manufacture'' \citep{Wesseling2001} an exact solution to a generalized form on \eqref{eq:nl:bratuoned}, one does not need to take big risks.
+\item To the author's knowledge an exact solution of \eqref{eq:nl:bratuoned} cannot be written in elementary functions for $\lambda>0$.  On the other hand, while writing the code in the last exercise is doable because of the simplicity of the problem and the availability of a ``nearby'' correct example code,\sidenote{I.e.~we started from \texttt{reaction.c}.} one should not walk over high wires too often without a net.  Here ``having a net'' means having an exact solution computed independently of the numerical approximation and its implementation.
 
-Consider the equation
+Fortunately, we can ``manufacture'' \citep{Wesseling2001} an exact solution to a generalized form of \eqref{eq:nl:bratuoned}.  Thus one does not need to take big risks.  In fact, consider the equation
 \begin{equation}
     - u'' - \lambda e^u = f(x). \label{eq:nl:bratuonedwithf}
 \end{equation}
-We can make $u(x) = \sin(\pi x)$ the exact solution of \eqref{eq:nl:bratuonedwithf} by determining $f(x)$ from the equation by differentiation alone.  Add options and additional exact solution code to \texttt{bratu.c} in the previous exercise so as to optionally check the result on this exact solution.  For instance, the \texttt{struct} of type \texttt{AppCtx} might have a user-option-settable boolean variable \texttt{manufactured}.  When it is false then $f(x)=0$ as in the previous example; here no exact solution is available and no numerical error is reported.  If the variable is true then we change to the appropriate $f(x)$ and we can report a numerical error.  Confirm that for sub-critical values of $\lambda$ we have both quadratic convergence of the Newton iteration \emph{and} $O(h^2)$ convergence of the numerical error.
+For example we can make $u(x) = \sin(\pi x)$ the exact solution of \eqref{eq:nl:bratuonedwithf} by determining $f(x)$ from the equation itself.
+
+Thus: Add options and a manufactured exact solution to the code \texttt{bratu.c} in the previous exercise.  Optionally verify the code using this exact solution.
+
+For instance, the \texttt{struct} of type \texttt{AppCtx} might have a user-option-settable boolean member \texttt{manufactured}; use \texttt{PetscOptionsBool()} to set it.  When it is false then $f(x)=0$ as in the previous example; here no exact solution is available and no numerical error is reported.  If the boolean variable is true then we use the appropriate $f(x)$ in computing the residual, and we can report a numerical error.  Observe that having $f(x)\ne 0$ does not change the Jacobian from the $f(x)=0$ case.  Confirm that in the manufactured-solution case we have both quadratic convergence of the Newton iteration \emph{and} $O(h^2)$ convergence of the numerical error.
 \end{enumerate}
