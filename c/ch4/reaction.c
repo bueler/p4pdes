@@ -2,25 +2,20 @@ static char help[] = "Solves a 1D reaction-diffusion problem with DMDA and SNES.
 
 #include <petsc.h>
 
-//SETUP
+//CALLBACK
 typedef struct {
   PetscReal rho, M, uLEFT, uRIGHT;
 } AppCtx;
 
-PetscErrorCode InitialAndExact(DM da, DMDALocalInfo *info, Vec u0, Vec uex,
-                               AppCtx *user) {
-    PetscErrorCode ierr;
+PetscErrorCode InitialAndExactLocal(DMDALocalInfo *info, PetscReal *u0,
+                                    PetscReal *uex, AppCtx *user) {
     PetscInt  i;
-    PetscReal h = 1.0 / (info->mx-1), x, *au0, *auex;
-    ierr = DMDAVecGetArray(da,u0,&au0); CHKERRQ(ierr);
-    ierr = DMDAVecGetArray(da,uex,&auex); CHKERRQ(ierr);
+    PetscReal h = 1.0 / (info->mx-1), x;
     for (i=info->xs; i<info->xs+info->xm; i++) {
         x = h * i;
-        au0[i]  = user->uLEFT * (1.0 - x) + user->uRIGHT * x;
-        auex[i] = user->M * PetscPowReal(x + 1.0,4.0);
+        u0[i]  = user->uLEFT * (1.0 - x) + user->uRIGHT * x;
+        uex[i] = user->M * PetscPowReal(x + 1.0,4.0);
     }
-    ierr = DMDAVecRestoreArray(da,u0,&au0); CHKERRQ(ierr);
-    ierr = DMDAVecRestoreArray(da,uex,&auex); CHKERRQ(ierr);
     return 0;
 }
 
@@ -40,9 +35,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal *u,
     }
     return 0;
 }
-//ENDSETUP
 
-//FUNJAC
 PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscReal *u,
                                  Mat J, Mat P, AppCtx *user) {
     PetscErrorCode ierr;
@@ -69,7 +62,7 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscReal *u,
     }
     return 0;
 }
-//ENDFUNJAC
+//ENDCALLBACK
 
 //MAIN
 int main(int argc,char **args) {
@@ -78,7 +71,7 @@ int main(int argc,char **args) {
   SNES                snes;
   AppCtx              user;
   Vec                 u, uexact;
-  PetscReal           unorm, errnorm;
+  PetscReal           unorm, errnorm, *au, *auex;
   DMDALocalInfo       info;
 
   PetscInitialize(&argc,&args,(char*)0,help);
@@ -94,7 +87,11 @@ int main(int argc,char **args) {
 
   ierr = DMCreateGlobalVector(da,&u); CHKERRQ(ierr);
   ierr = VecDuplicate(u,&uexact); CHKERRQ(ierr);
-  ierr = InitialAndExact(da,&info,u,uexact,&user); CHKERRQ(ierr);
+  ierr = DMDAVecGetArray(da,u,&au); CHKERRQ(ierr);
+  ierr = DMDAVecGetArray(da,uexact,&auex); CHKERRQ(ierr);
+  ierr = InitialAndExactLocal(&info,au,auex,&user); CHKERRQ(ierr);
+  ierr = DMDAVecRestoreArray(da,u,&au); CHKERRQ(ierr);
+  ierr = DMDAVecRestoreArray(da,uexact,&auex); CHKERRQ(ierr);
 
   ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
   ierr = SNESSetDM(snes,da); CHKERRQ(ierr);

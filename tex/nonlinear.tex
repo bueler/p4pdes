@@ -3,7 +3,6 @@
 \chapter{Nonlinear equations}
 \label{chap:nonlinear}
 
-
 How should nonlinear equations first appear in a code which uses \PETSc?  The answer is that they merely change the functional form of the residual.  For a linear system the residual is this function of the unknowns,
 \begin{equation}
 \br = \bF(\bu) = \bb - A \bu. \label{eq:nl:linres}
@@ -323,11 +322,17 @@ $ ./ecjacobian -snes_monitor -snes_fd
 
 \section{Example: a nonlinear diffusion-reaction equation}
 
-FIXME equation is
+To get started on nonlinear PDE problems we take a simple two-point boundary value problem, that is, an elliptic PDE in one-dimension.  
 \begin{equation}
 -u'' + \rho \sqrt{u} = 0 \label{eq:nl:diffusionreaction}
 \end{equation}
 with Dirichlet boundary conditions $u(0)=u_L$ and $u(1)=u_R$
+
+% analysis in 1D, thinking about well-posedness:
+% - u' u'' + R(u) u' = 0
+% (u')^2 - 2 S(u) = C   (where S'(u) = R(u))
+% R(u) = rho sqrt(|u|)  ==>   S(u) = (2/3) rho u^(3/2) + C
+% R(u) = - lambda e^u  ==>   S(u) = - lambda e^u + C
 
 FIXME: because second derivatives and square-roots of 4th degree polynomials both reduce the power by two, exact solution from substituting $u(x)=M(x+1)^4$; get $M=(\rho/12)^2$; get $u_L=M$ and $u_R=16 M$ from this
 
@@ -339,11 +344,9 @@ FIXME: show \texttt{-da\_refine 4 -snes\_monitor} result with no option and with
 
 FIXME: show \texttt{-snes\_monitor\_solution}
 
-\cinputpart{reaction.c}{\CODELOC}{FIXME}{I}{//SETUP}{//ENDSETUP}{code:reactionI}
+\cinputpart{reaction.c}{\CODELOC}{FIXME}{I}{//CALLBACK}{//ENDCALLBACK}{code:reactionI}
 
-\cinputpart{reaction.c}{\CODELOC}{FIXME}{II}{//FUNJAC}{//ENDFUNJAC}{code:reactionII}
-
-\cinputpart{reaction.c}{\CODELOC}{FIXME}{III}{//MAIN}{//ENDMAIN}{code:reactionIII}
+\cinputpart{reaction.c}{\CODELOC}{FIXME}{II}{//MAIN}{//ENDMAIN}{code:reactionII}
 
 
 
@@ -524,4 +527,5 @@ For example we can make $u(x) = \sin(\pi x)$ the exact solution of \eqref{eq:nl:
 Thus: Add options and a manufactured exact solution to the code \texttt{bratu.c} in the previous exercise.  Optionally verify the code using this exact solution.
 
 For instance, the \texttt{struct} of type \texttt{AppCtx} might have a user-option-settable boolean member \texttt{manufactured}; use \texttt{PetscOptionsBool()} to set it.  When it is false then $f(x)=0$ as in the previous example; here no exact solution is available and no numerical error is reported.  If the boolean variable is true then we use the appropriate $f(x)$ in computing the residual, and we can report a numerical error.  Observe that having $f(x)\ne 0$ does not change the Jacobian from the $f(x)=0$ case.  Confirm that in the manufactured-solution case we have both quadratic convergence of the Newton iteration \emph{and} $O(h^2)$ convergence of the numerical error.
+
 \end{enumerate}
