@@ -322,29 +322,41 @@ $ ./ecjacobian -snes_monitor -snes_fd
 
 \section{Example: a nonlinear diffusion-reaction equation}
 
-To get started on nonlinear PDE problems we take a simple two-point boundary value problem, that is, an elliptic PDE in one-dimension.  
+To get started on nonlinear PDE problems we look at simple two-point boundary value problems.  Equations of the form
 \begin{equation}
--u'' + \rho \sqrt{u} = 0 \label{eq:nl:diffusionreaction}
+-u'' + R(u) = f(x)  \label{eq:nl:diffusionreaction}
 \end{equation}
-with Dirichlet boundary conditions $u(0)=u_L$ and $u(1)=u_R$
+are called \emph{diffusion-reaction} equations because the second derivative term models the diffusion of some quantity with density $u$, while the term $R(u)$ can model the production or destruction of $u$.  It is also fair to say that equation \eqref{eq:nl:diffusionreaction} is a nonlinear elliptic PDE in one-dimension.  
 
+FIXME: discuss well-posedness of \eqref{eq:nl:diffusionreaction} with Dirichlet boundary conditions $u(0)=u_L$ and $u(1)=u_R$
 % analysis in 1D, thinking about well-posedness:
 % - u' u'' + R(u) u' = 0
 % first integral:   (u')^2 - 2 S(u) = C   (where S'(u) = R(u))
 % R(u) = rho sqrt(|u|)  ==>   S(u) = (2/3) rho u^(3/2)
 % R(u) = - lambda e^u  ==>   S(u) = - lambda e^u
 
-FIXME: because second derivatives and square-roots of 4th degree polynomials both reduce the power by two, exact solution from substituting $u(x)=M(x+1)^4$; get $M=(\rho/12)^2$; get $u_L=M$ and $u_R=16 M$ from this
+For example,
+\begin{equation}
+-u'' + \rho \sqrt{u} = 0 \label{eq:nl:drsqrt}
+\end{equation}
+is a particular case of problem \eqref{eq:nl:diffusionreaction} with $R(u) = \rho \sqrt{u}$ and $f(x)=0$.  To use this in a first numerical example we want to verify our numerical solution using an exact solution, but its particular form makes this easy.
 
-FIXME: now that we use \pDMDA for the grid, we have \texttt{Local} forms of \texttt{FormFunction/Jacobian()}
+Specifically, because both second-derivative and square-root operations can convert certain 4th degree polynomials into quadratic polynomials, an exact solution can be found by substituting a polynomial.  For verification purposes we can also get the boundary conditions from the exact solution.  Thus we substitute
+\begin{equation}
+u(x)=M(x+1)^4 \label{eq:nl:exactform}
+\end{equation}
+into \eqref{eq:nl:drsqrt} and find
+\begin{equation}
+M=(\rho/12)^2, \quad u_L=M, \quad \text{and} \quad u_R=16 M. \label{eq:nl:exactconds}
+\end{equation}
 
-FIXME in setting initial condition and exact solution, need to extract \texttt{DMDALocalInfo} and use it for grid
+Code \texttt{reaction.c} in Figures \eqref{code:reactionI} and \eqref{code:reactionII} solves this problem using a \pSNES object to manage the Newton iteration and a \pDMDA object for the finite-difference grid.  In more detail, FIXME: we have \texttt{Local} forms of \texttt{FormFunction/Jacobian()}, and in setting initial condition and exact solution we extract \texttt{DMDALocalInfo}
+
+\cinputpart{reaction.c}{\CODELOC}{FIXME}{I}{//CALLBACK}{//ENDCALLBACK}{code:reactionI}
 
 FIXME: show \texttt{-da\_refine 4 -snes\_monitor} result with no option and with \texttt{-snes\_fd}
 
 FIXME: show \texttt{-snes\_monitor\_solution}
-
-\cinputpart{reaction.c}{\CODELOC}{FIXME}{I}{//CALLBACK}{//ENDCALLBACK}{code:reactionI}
 
 \cinputpart{reaction.c}{\CODELOC}{FIXME}{II}{//MAIN}{//ENDMAIN}{code:reactionII}
 
@@ -518,14 +530,8 @@ with Dirichlet boundary conditions $u(0)=u(1)=0$.  Make $\lambda$ an option-adju
 
 \item To the author's knowledge an exact solution of \eqref{eq:nl:bratuoned} cannot be written in elementary functions for $\lambda>0$.  On the other hand, while writing the code in the last exercise is doable because of the simplicity of the problem and the availability of a ``nearby'' correct example code,\sidenote{I.e.~we started from \texttt{reaction.c}.} one should not walk over high wires too often without a net.  Here ``having a net'' means having an exact solution computed independently of the numerical approximation and its implementation.
 
-Fortunately, we can ``manufacture'' \citep{Wesseling2001} an exact solution to a generalized form of \eqref{eq:nl:bratuoned}.  Thus one does not need to take big risks.  In fact, consider the equation
-\begin{equation}
-    - u'' - \lambda e^u = f(x). \label{eq:nl:bratuonedwithf}
-\end{equation}
-For example we can make $u(x) = \sin(\pi x)$ the exact solution of \eqref{eq:nl:bratuonedwithf} by determining $f(x)$ from the equation itself.
+Fortunately, we can ``manufacture'' \citep{Wesseling2001} an exact solution to a generalized form of \eqref{eq:nl:bratuoned}, namely to equation \eqref{eq:nl:diffusionreaction} in the case where $R(u)=-\lambda e^u$.  For example we can choose $u(x) = \sin(\pi x)$ as the exact solution of \eqref{eq:nl:diffusionreaction}, and then determining $f(x)$ from the equation itself and have $u(0)=u(1)=0$ as boundary conditions that are satisfied by the chosen exact solution.
 
-Thus: Add options and a manufactured exact solution to the code \texttt{bratu.c} in the previous exercise.  Optionally verify the code using this exact solution.
-
-For instance, the \texttt{struct} of type \texttt{AppCtx} might have a user-option-settable boolean member \texttt{manufactured}; use \texttt{PetscOptionsBool()} to set it.  When it is false then $f(x)=0$ as in the previous example; here no exact solution is available and no numerical error is reported.  If the boolean variable is true then we use the appropriate $f(x)$ in computing the residual, and we can report a numerical error.  Observe that having $f(x)\ne 0$ does not change the Jacobian from the $f(x)=0$ case.  Confirm that in the manufactured-solution case we have both quadratic convergence of the Newton iteration \emph{and} $O(h^2)$ convergence of the numerical error.
+Thus: Add options and a manufactured exact solution to the code \texttt{bratu.c} in the previous exercise so that the new code can both solve the previous exercise and be verified using the new exact solution.  For instance, one might add a user-option-settable boolean member \texttt{manufactured} to \texttt{AppCtx}.  When it is false then $f(x)=0$ and the code solves the previous exercise.  If it is true then we use the appropriate $f(x)$ in computing the residual, and we report a numerical error.  Observe that having $f(x)\ne 0$ does not change the Jacobian.  Confirm that in the manufactured-solution case we have both quadratic convergence of the Newton iteration \emph{and} $O(h^2)$ convergence of the numerical error.
 
 \end{enumerate}
