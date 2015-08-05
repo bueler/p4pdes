@@ -330,9 +330,9 @@ with Dirichlet boundary conditions $u(0)=u_L$ and $u(1)=u_R$
 
 % analysis in 1D, thinking about well-posedness:
 % - u' u'' + R(u) u' = 0
-% (u')^2 - 2 S(u) = C   (where S'(u) = R(u))
-% R(u) = rho sqrt(|u|)  ==>   S(u) = (2/3) rho u^(3/2) + C
-% R(u) = - lambda e^u  ==>   S(u) = - lambda e^u + C
+% first integral:   (u')^2 - 2 S(u) = C   (where S'(u) = R(u))
+% R(u) = rho sqrt(|u|)  ==>   S(u) = (2/3) rho u^(3/2)
+% R(u) = - lambda e^u  ==>   S(u) = - lambda e^u
 
 FIXME: because second derivatives and square-roots of 4th degree polynomials both reduce the power by two, exact solution from substituting $u(x)=M(x+1)^4$; get $M=(\rho/12)^2$; get $u_L=M$ and $u_R=16 M$ from this
 
