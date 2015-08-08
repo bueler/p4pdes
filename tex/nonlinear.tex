@@ -496,7 +496,7 @@ This example shows a famous case where the original Newton iteration can diverge
     \begin{enumerate}
     \item By straightforward modifications of \texttt{expcircle.c}, write a code \texttt{atan.c} which solves the (one-dimensional) nonlinear equation $F(x)=\arctan(x)=0$ using initial iterate $x_0=2.0$.  (Use ``\texttt{atan}'' for the $\arctan$ function.)  By running it \texttt{./atan -snes\_fd -snes\_linesearch\_type basic}, show that the Newton iteration without a linesearch diverges, while using the default choice (i.e.~\texttt{-snes\_linesearch\_type bt}) gives convergence.
     \item Returning to a paper calculation, require the Newton iteration \eqref{eq:nl:newtoneq}, \eqref{eq:nl:newtonupdate} to enter a sign-flipping limit cycle, i.e.~so that $x_{k+1} = - x_k$ for all $k$.  Thereby approximate the positive value $x_0$ so that the Newton iteration both makes no progress, and remains bounded, for all $k$.\sidenote{One may solve this problem with Newton's method.}  Sketch the situation.
-    \item By modifying $x_0$ in \texttt{atan.c} and using linesearch type \texttt{basic}, confirm that one can make the Newton iteration ``stick'' in this actually-unstabl limit cycle for quite a while.  Then confirm that linesearch types \texttt{bt,l2,cp} all get unstuck immediately.
+    \item By modifying $x_0$ in \texttt{atan.c} and using linesearch type \texttt{basic}, confirm that one can make the Newton iteration ``stick'' in this actually-unstable limit cycle for quite a while.  Then confirm that linesearch types \texttt{bt,l2,cp} all get unstuck immediately.
 % to solve:  - x = x - arctan(x) (1+x^2)
 % octave:
 %   G = @(x) 2*x - atan(x) * (1+x^2);
