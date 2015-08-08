@@ -29,8 +29,8 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal *u,
         } else if (i == info->mx-1) {
             f[i] = u[i] - user->uRIGHT;
         } else {  // interior location
-            R = user->rho * PetscSqrtReal(u[i]);
-            f[i] = - u[i+1] + 2.0 * u[i] - u[i-1] + h*h * R;
+            R = - user->rho * PetscSqrtReal(u[i]);
+            f[i] = - u[i+1] + 2.0 * u[i] - u[i-1] - h*h * R;
         }
     }
     return 0;
@@ -46,9 +46,9 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscReal *u,
             v[0] = 1.0;
             ierr = MatSetValues(P,1,&i,1,&i,v,INSERT_VALUES); CHKERRQ(ierr);
         } else {
-            dRdu = (user->rho / 2.0) / PetscSqrtReal(u[i]);
+            dRdu = - (user->rho / 2.0) / PetscSqrtReal(u[i]);
             col[0] = i-1;  v[0] = - 1.0;
-            col[1] = i;    v[1] = 2.0 + h*h * dRdu;
+            col[1] = i;    v[1] = 2.0 - h*h * dRdu;
 //            col[1] = i;    v[1] = 2.0; //STRIP
             col[2] = i+1;  v[2] = - 1.0;
             ierr = MatSetValues(P,1,&i,3,col,v,INSERT_VALUES); CHKERRQ(ierr);
