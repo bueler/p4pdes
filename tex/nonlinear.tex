@@ -322,26 +322,32 @@ $ ./ecjacobian -snes_monitor -snes_fd
 
 \section{Example: a nonlinear diffusion-reaction equation}
 
-To get started on nonlinear PDE problems we look at simple two-point boundary value problems.  Equations of the form
+To get started on nonlinear PDE problems we look at a simple two-point boundary value problem.  Suppose $u(x)$ is the density of some substance and that $D>0$ is a constant.  An equation of the form
 \begin{equation}
--u'' + R(u) = f(x)  \label{eq:nl:diffusionreaction}
+- D u'' - R(u) = f(x)  \label{eq:nl:diffusionreaction}
 \end{equation}
-are called \emph{diffusion-reaction} equations because the second derivative term models the diffusion of some quantity with density $u$, while the term $R(u)$ can model the production or destruction of $u$.  It is also fair to say that equation \eqref{eq:nl:diffusionreaction} is a nonlinear elliptic PDE in one-dimension.  
+models a time-independent combination of \emph{diffusion} and \emph{reaction} processes by the terms on the left, respectively.  The right-hand side $f(x)$ models an additional location-dependent \emph{source}.  If $R(u)+f(x)>0$ then the reaction produces $u$, while otherwise it destroys $u$.  Note that our sign convention is clearest in the time-dependent model ``$u_t = D u_{xx} + R(u) + f(x)$,'' a typical generalization of the one-dimensional time-evolving heat equation.  In such a case, where $u$ represents temperature and $R(u)$ represents a heat-producing or -absorbing temperature-dependent reaction, according to its sign, \eqref{eq:nl:diffusionreaction} is the model of steady state.
 
-FIXME: discuss well-posedness of \eqref{eq:nl:diffusionreaction} with Dirichlet boundary conditions $u(0)=u_L$ and $u(1)=u_R$
-% analysis in 1D, thinking about well-posedness:
-% - u' u'' + R(u) u' = 0
-% first integral:   (u')^2 - 2 S(u) = C   (where S'(u) = R(u))
-% R(u) = rho sqrt(|u|)  ==>   S(u) = (2/3) rho u^(3/2)
-% R(u) = - lambda e^u  ==>   S(u) = - lambda e^u
+We should be concerned about solvability of \eqref{eq:nl:diffusionreaction} in the case where $R$ is an \emph{increasing} function of $u$.  If $R$ positive and increasing then the ability of the $-D u''$ term to ``damp-out'' maxima may be exceeded by the increasing production from large values of $u$.  If $R$ is negative and increasing then the analogous concern applies to minima of $u$.  These concerns are demonstrated by the example $R(u) = \lambda e^u$ with $\lambda>0$ in Exercise 4.\ref{exer:nl:bratu}, in which the problem is apparently not numerically-solvable for sufficiently-large $\lambda$.  
+
+On the other hand, it is also fair to say that equation \eqref{eq:nl:diffusionreaction} is a nonlinear elliptic PDE,\sidenote{By mild abuse of the letter ``P''.} but in one-dimension.  From this point of view we can get the converse of our concern, namely that a non-increasing $R$ function generates unique existence.  Consider the Dirichlet boundary conditions case, for instance
+\begin{equation}
+u(0)=\alpha \quad \text{and} \quad u(1)=\beta,  \label{eq:nl:drbcs}
+\end{equation}
+where we have chosen a convenient interval $x\in[0,1]$ by shifting and scaling $x$ as needed.  In the case where $R(u)$ is continuous and \emph{non}-increasing, the nonlinear operator in \eqref{eq:nl:diffusionreaction} is strictly monotone \citep{KinderlehrerStampacchia1980}.  Because it is also coercive on the appropriate space, which says intuitively that the leading-order term is effective at damping out variations which generate a large norm of the first derivative $u'$, abstract arguments show well-posedness \citep[pages 93-94]{KinderlehrerStampacchia1980}.
+% analysis in 1D, thinking about well-posedness, recall first integral:
+%   - u' u'' - R(u) u' = 0 ==> (u')^2 + 2 S(u) = C  where S'(u) = R(u)
 
 For example,
 \begin{equation}
 -u'' + \rho \sqrt{u} = 0 \label{eq:nl:drsqrt}
 \end{equation}
-is a particular case of problem \eqref{eq:nl:diffusionreaction} with $R(u) = \rho \sqrt{u}$ and $f(x)=0$.  To use this in a first numerical example we want to verify our numerical solution using an exact solution, but its particular form makes this easy.
+% R(u) = - rho sqrt(|u|) decreasing (so "-u''+F(u)=0", for K&S p 94, with F increasing)
+is a particular case of problem \eqref{eq:nl:diffusionreaction} with $R(u) = - \rho \sqrt{u}$, which is non-increasing for the $u>0$ values for which it is defined, and $f(x)=0$.  We use this in a first numerical example because we want to verify our numerical solution using an exact solution; the  particular form of \eqref{eq:nl:drsqrt} makes this easy.
 
-Specifically, because both second-derivative and square-root operations can convert certain 4th degree polynomials into quadratic polynomials, an exact solution can be found by substituting a polynomial.  For verification purposes we can also get the boundary conditions from the exact solution.  Thus we substitute
+\cinputpart{reaction.c}{\CODELOC}{FIXME}{I}{//CALLBACK}{//ENDCALLBACK}{code:reactionI}
+
+In fact, because both second-derivative and square-root operations can convert certain 4th degree polynomials into quadratic polynomials, an exact solution can be found by substituting a polynomial.  For verification purposes we can also get the boundary conditions from the exact solution.  Thus we substitute
 \begin{equation}
 u(x)=M(x+1)^4 \label{eq:nl:exactform}
 \end{equation}
@@ -351,8 +357,6 @@ M=(\rho/12)^2, \quad u_L=M, \quad \text{and} \quad u_R=16 M. \label{eq:nl:exactc
 \end{equation}
 
 Code \texttt{reaction.c} in Figures \eqref{code:reactionI} and \eqref{code:reactionII} solves this problem using a \pSNES object to manage the Newton iteration and a \pDMDA object for the finite-difference grid.  In more detail, FIXME: we have \texttt{Local} forms of \texttt{FormFunction/Jacobian()}, and in setting initial condition and exact solution we extract \texttt{DMDALocalInfo}
-
-\cinputpart{reaction.c}{\CODELOC}{FIXME}{I}{//CALLBACK}{//ENDCALLBACK}{code:reactionI}
 
 FIXME: show \texttt{-da\_refine 4 -snes\_monitor} result with no option and with \texttt{-snes\_fd}
 
@@ -522,10 +526,11 @@ By sampling, for what range of positive \texttt{X}$=\rho$ does the run
 converge?  Explain why this case, with this way of choosing the boundary conditions and initial iterate, and in contrast to the next exercise, is insensitive to the value of the major parameter $\rho$.
 % because this option is used in bratu.c below, for simplicity of maintenance, the result optreact.c is NOT saved in c/ch4/solns/
 
-\item Modify \texttt{reaction.c} to create ``\texttt{bratu.c}'' which solves
+\item \label{exer:nl:bratu} Modify \texttt{reaction.c} to create ``\texttt{bratu.c}'' which solves
 \begin{equation}
     - u'' - \lambda e^u = 0 \label{eq:nl:bratuoned}
 \end{equation}
+% R(u) = lambda e^u increasing
 with Dirichlet boundary conditions $u(0)=u(1)=0$.  Make $\lambda$ an option-adjustable real parameter---see the previous exercise---and use the simplest function which satisfies the boundary conditions as an initial iterate.  Confirm by using a fine grid, and option \texttt{-snes\_converged\_reason} plus other options as needed, that around $\lambda=3.513$ there is a transition to non-convergence of the Newton iteration.  This \emph{critical value} is intrinsic to the nonlinear PDE problem and not a result of a Newton failure \citep{Doedeletal1991}.
 
 \item To the author's knowledge an exact solution of \eqref{eq:nl:bratuoned} cannot be written in elementary functions for $\lambda>0$.  On the other hand, while writing the code in the last exercise is doable because of the simplicity of the problem and the availability of a ``nearby'' correct example code,\sidenote{I.e.~we started from \texttt{reaction.c}.} one should not walk over high wires too often without a net.  Here ``having a net'' means having an exact solution computed independently of the numerical approximation and its implementation.
