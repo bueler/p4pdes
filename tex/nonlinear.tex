@@ -380,7 +380,20 @@ Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
 on 513 point grid:  |u-u_exact|_inf/|u|_inf = 4.62255e-08
 \end{cline}
 
-Recall our finite difference method has local truncation error $O(h^2)$.  We can generate convergence data, with the result shown in Figure \ref{fig:nl:reaction-conv}, like this:
+On the other hand, one can see the Newton iterates graphically by
+\begin{cline}
+$ ./reaction -da_refine 6 -snes_monitor_solution -draw_pause 1
+\end{cline}
+%$
+One sees that the first Newton step moves close to the solution.
+
+\begin{figure}
+\includegraphics[width=\textwidth]{reaction-conv}
+\caption{This convergence evidence suggests \texttt{reaction.c} is correctly-implemented.}
+\label{fig:nl:reaction-conv}
+\end{figure}
+
+Noting that our finite difference method has local truncation error $O(h^2)$, and because our exact solution allows computation of the numerical error, we can generate convergence data to check the implementation.  The result of this bash loop
 \begin{cline}
 $ for N in 0 2 4 6 8 10 12 14 16; do
 >   ./reaction -da_refine $N -snes_rtol 1.0e-10; done
@@ -390,25 +403,21 @@ on 33 point grid:  |u-u_exact|_inf/|u|_inf = 1.1825e-05
 on 131073 point grid:  |u-u_exact|_inf/|u|_inf = 7.05476e-13
 on 524289 point grid:  |u-u_exact|_inf/|u|_inf = 6.04273e-12
 \end{cline}
-If we ignore the result on the finest grid, the convergence rate we see is also $O(h^2)$; error stagnation arises at some level of refinement because of accumulation of round-off error.  We also see consistent evidence of quadratic convergence by adding \texttt{-snes\_monitor} to the above runs.  Thus we conclude our implementation is correct.
-
-\begin{figure}
-\includegraphics[width=\textwidth]{reaction-conv}
-\caption{This convergence evidence suggests \texttt{reaction.c} is correctly-implemented.}
-\label{fig:nl:reaction-conv}
-\end{figure}
+is shown in Figure \ref{fig:nl:reaction-conv}.  If we ignore the result on the finest grid, the convergence rate we see is also $O(h^2)$; error stagnation arises at some level of refinement because of accumulation of round-off error.  We also see consistent evidence of quadratic convergence by adding \texttt{-snes\_monitor} to the above runs.  Thus we conclude our implementation is correct.
 
 
 \section{Finite-difference Jacobians by ``coloring''}
 
-However, when we look closer at the finite-difference evaluation of Jacobians we see that it is not really working.  In contrast to the fixed-dimension examples earlier in this Chapter, discretizing a PDE generates an arbitrarily-large number of unknowns.  Consider what happens when the dimension is about 8000:
+However, when we look closer at the finite-difference evaluation of Jacobians we see that it is not really working.  In contrast to the fixed-dimension examples earlier in this Chapter, discretizing a PDE generates an arbitrarily-large number of unknowns.
+
+Consider what happens when the grid has about 8000 points:
 \begin{cline}
 $ ./reaction -snes_converged_reason -da_refine 10 -snes_fd
 Nonlinear solve did not converge due to DIVERGED_FUNCTION_COUNT iterations 1
 on 8193 point grid:  |u-u_exact|_inf/|u|_inf = 0.0049428
 \end{cline}
 %$
-The problem is that this finite-difference Jacobian evaluation is requiring about 8000 evaluations of $\bF$ per Newton iteration, and this exceeds the default maximum count for the \pSNES.\sidenote{Again, ``\texttt{./reaction -help |grep snes\_}'' gets the default value of 10000.}  If we raise the limit by a factor of ten then we do get convergence:
+The problem is that finite-difference Jacobian evaluation \eqref{eq:nl:examplefdjac} is requiring about 8000 evaluations of $\bF$ per Newton iteration, and this exceeds the default maximum count for the \pSNES.\sidenote{Again, ``\texttt{./reaction -help |grep snes\_}'' gets the default value of 10000.}  If we raise the limit by a factor of ten then we do get convergence, but at a huge performance cost relative to the use of an analytical Jacobian:
 \begin{cline}
 $ timer ./reaction -snes_converged_reason -da_refine 10 -snes_fd \
 > -snes_max_funcs 100000
@@ -417,7 +426,7 @@ on 8193 point grid:  |u-u_exact|_inf/|u|_inf = 1.75635e-10
 real 9.04
 \end{cline}
 %$
-This run, however, is very slow because we have evaluated $\bF$ about 25000 times.  The analytical-Jacobian alternative evaluates $J_{\bF}$ just three times, and is fast:
+This run is slow because we have evaluated $\bF$ about 25000 times.  The alternative evaluates $\bF$ four times and $J_{\bF}$ three times:
 \begin{cline}
 $ timer ./reaction -snes_converged_reason -da_refine 10
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
@@ -426,20 +435,18 @@ real 0.04
 \end{cline}
 %$
 
-FIXME: compare fd and fd-with-coloring
+Fortunately, given that it is desirable for initial prototyping and saving programmer effort, there is no need to abandon the finite-difference-Jacobian idea.  The additional idea needed to make it work for PDEs is applicable to most numerical schemes which use a small set of grid values---a small stencil---in approximating the PDE at each location.\sidenote{Finite difference, element, and volume schemes for discretizing PDES all normally have this property.  Spectral methods, by contrast, have a large, sometimes global, stencil, and would not benefit.}   The idea is to ``color'' [FIXME: cite] the nodes of the grid with a small set of colors so that each evaluation of $\bF$ allows the computation of as many entries of $J_{\bF}(\bx)$ as possible.
 
+FIXME: flesh-out theory using Figure
+
+FIXME: the result is fast
 \begin{cline}
-$ timer ./reaction -snes_converged_reason -da_refine 10 -snes_fd -snes_max_funcs 100000
-Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-on 8193 point grid:  |u-u_exact|_inf/|u|_inf = 1.75633e-10
-real 14.27
 $ timer ./reaction -snes_converged_reason -da_refine 10 -snes_fd -snes_fd_color
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
 on 8193 point grid:  |u-u_exact|_inf/|u|_inf = 1.75633e-10
 real 0.06
 \end{cline}
-
-FIXME: show \texttt{-snes\_monitor\_solution}
+%$
 
 
 
