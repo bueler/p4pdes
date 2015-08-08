@@ -13,6 +13,7 @@ poisson-*.pdf
 richpolyplot.pdf
 expcirclebasic.pdf
 newtonconv*.pdf
+reaction-conv.pdf
 
 ## Core latex/pdflatex auxiliary files:
 *.aux

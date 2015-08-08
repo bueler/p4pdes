@@ -5,7 +5,7 @@ texinputs := $(addsuffix .tex, $(texroots))
 
 tikzinputs := samplepoly.1.tikz squarefour.tikz bump.1.tikz bump.poly.tikz mesh.1.tikz
 
-pdfinputs := poisson-conv.pdf poisson-cg-scale.pdf richpolyplot.pdf expcirclebasic.pdf newtonconvbasic.pdf newtonconvdelayed.pdf
+pdfinputs := poisson-conv.pdf poisson-cg-scale.pdf richpolyplot.pdf expcirclebasic.pdf newtonconvbasic.pdf newtonconvdelayed.pdf reaction-conv.pdf
 
 hinputs :=
 
@@ -57,12 +57,15 @@ expcirclebasic.pdf newtonconvbasic.pdf newtonconvdelayed.pdf: expcircle.py
 	pdfcrop newtonconvbasic.pdf newtonconvbasic.pdf
 	pdfcrop newtonconvdelayed.pdf newtonconvdelayed.pdf
 
+reaction-conv.pdf: reaction-conv.py
+	python reaction-conv.py
+
 .PHONY: clean
 
 clean:
 	@rm -f *~ *.out *.aux *.log *.bbl *.blg *.synctex.gz *.idx *.ilg *.ind *.toc *.dvi
 	@rm -rf cstrip/
 	@rm -f bump.?.* samplepoly.?.* bump.poly* squarefour.tikz mesh.?.*
-	@rm -f poisson-conv.pdf poisson-cg-scale.pdf richpolyplot.pdf
+	@rm -f poisson-conv.pdf poisson-cg-scale.pdf richpolyplot.pdf expcirclebasic.pdf newtonconv*pdf reaction-conv.pdf
 	@rm -f timing/*~ timing/poisson/*~ timing/tri/*~
 

@@ -357,13 +357,44 @@ Code \texttt{reaction.c} shown in Figures \eqref{code:reactionI} and \eqref{code
 
 These are ``\texttt{Local}'' methods in the sense that their inputs are C pointers for arrays instead of \pVecs.  Our implementation of \texttt{InitialAndExactLocal()} explains how this works.  As seen in Figure \ref{code:reactionII}, before this method is called we use \texttt{DMDAVecGetArray()} on the \pVecs which need reading or setting, namely \texttt{u} and \texttt{uexact}.  This gives pointers of type \texttt{PetscReal*} which are then handed to \texttt{InitialAndExactLocal()}.  The call-back done inside \pSNES calls \texttt{FormFunctionLocal()} the same way.  The \pSNES also treats the input to  \texttt{FormJacobianLocal()} the same way.  Another aspect of these ``\texttt{Local}'' call-back methods is a \texttt{DMDALocalInfo} struct is passed into the call-back functions.  Thus the local part of the grid (i.e.~\texttt{info.xs} and etc.) and the global grid size (i.e.~\texttt{info.mx})---recall Figure \ref{fig:localpartofgrid}---can be accessed without needing the \pDMDA object itself.
 
-Observe that in \texttt{main()} in Figure \ref{code:reactionII} we use \texttt{DMDASNESSetFunctionLocal()} instead of \texttt{SNESSetFunction()} as in \texttt{ecjacobian.c} earlier.  There is a similar method for assigning the local Jacobian routine.  This is because the signature of the call-back is different and uses \pDMDA-specific pointers.  Also, though we implement a Jacobian, we do not allocate a \pMat for it because the \pDMDA has information about the grid and stencil that suffice to pre-allocate a \pMat internally.
+Observe that in \texttt{main()} in Figure \ref{code:reactionII}, because our local call-back functions have a different signature that uses \pDMDA-specific pointers, we use \texttt{DMDASNESSetFunctionLocal()} instead of \texttt{SNESSetFunction()} as in \texttt{ecjacobian.c} earlier.  The Jacobian is set by a similar method \texttt{DMDASNESSetJacobianLocal()}.  Also, though we implement a Jacobian, we do not allocate a \pMat to hold it.  In fact the \pDMDA object has enough information about the grid and stencil so as to pre-allocate a \pMat internally; this is the \pMat that is passed to \texttt{FormJacobianLocal()} for filling-in.
 
-FIXME: show \texttt{-da\_refine 4 -snes\_monitor} result with no option and with \texttt{-snes\_fd}
-
-FIXME: show \texttt{-snes\_monitor\_solution}
+Now we can run the example.  Recall that the resolution of a structured grid can be set with either \texttt{-da\_grid\_x N} or with \texttt{-da\_refine N}.  Thus we can compare the number of Newton iterations on analytical and finite-difference Jacobian solutions on a modestly-refined grid like this,
+\begin{cline}
+$ ./reaction -snes_converged_reason -da_refine 6
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+on 513 point grid:  |u-u_exact|_inf/|u|_inf = 4.62255e-08
+$ ./reaction -snes_converged_reason -da_refine 6 -snes_fd
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+on 513 point grid:  |u-u_exact|_inf/|u|_inf = 4.62255e-08
+\end{cline}
+On the other hand we can generate convergence data, with the result shown in Figure \ref{fig:nl:reaction-conv}, like this
+\begin{cline}
+$ for N in 0 2 4 6 8 10 12 14; do
+>   ./reaction -da_refine $N -snes_rtol 1.0e-10; done
+\end{cline}
 
 \cinputpart{reaction.c}{\CODELOC}{In \texttt{main()} we create \pDMDA, then \pVecs, and then a \pSNES, solve the equation, and clean up.}{II}{//MAIN}{//ENDMAIN}{code:reactionII}
+
+\begin{cline}
+on 9 point grid:  |u-u_exact|_inf/|u|_inf = 0.000188753
+on 33 point grid:  |u-u_exact|_inf/|u|_inf = 1.1825e-05
+on 129 point grid:  |u-u_exact|_inf/|u|_inf = 7.39662e-07
+on 513 point grid:  |u-u_exact|_inf/|u|_inf = 4.62255e-08
+on 2049 point grid:  |u-u_exact|_inf/|u|_inf = 2.88941e-09
+on 8193 point grid:  |u-u_exact|_inf/|u|_inf = 1.75603e-10
+on 32769 point grid:  |u-u_exact|_inf/|u|_inf = 6.77346e-12
+on 131073 point grid:  |u-u_exact|_inf/|u|_inf = 7.05476e-13
+\end{cline}
+Because the convergence rate is close to $O(h^2)$, the local truncation error in our finite difference method, our implementation is correct.
+
+\begin{figure}
+\includegraphics[width=\textwidth]{reaction-conv}
+\caption{This convergence evidence suggests \texttt{reaction.c} is correctly-implemented.}
+\label{fig:nl:reaction-conv}
+\end{figure}
+
+FIXME: show \texttt{-snes\_monitor\_solution}
 
 
 
