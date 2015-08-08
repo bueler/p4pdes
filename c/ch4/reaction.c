@@ -4,7 +4,7 @@ static char help[] = "Solves a 1D reaction-diffusion problem with DMDA and SNES.
 
 //CALLBACK
 typedef struct {
-  PetscReal rho, M, uLEFT, uRIGHT;
+  PetscReal rho, M, alpha, beta;
 } AppCtx;
 
 PetscErrorCode InitialAndExactLocal(DMDALocalInfo *info, PetscReal *u0,
@@ -13,7 +13,7 @@ PetscErrorCode InitialAndExactLocal(DMDALocalInfo *info, PetscReal *u0,
     PetscReal h = 1.0 / (info->mx-1), x;
     for (i=info->xs; i<info->xs+info->xm; i++) {
         x = h * i;
-        u0[i]  = user->uLEFT * (1.0 - x) + user->uRIGHT * x;
+        u0[i]  = user->alpha * (1.0 - x) + user->beta * x;
         uex[i] = user->M * PetscPowReal(x + 1.0,4.0);
     }
     return 0;
@@ -25,9 +25,9 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal *u,
     PetscReal h = 1.0 / (info->mx-1), R;
     for (i=info->xs; i<info->xs+info->xm; i++) {
         if (i == 0) {
-            f[i] = u[i] - user->uLEFT;
+            f[i] = u[i] - user->alpha;
         } else if (i == info->mx-1) {
-            f[i] = u[i] - user->uRIGHT;
+            f[i] = u[i] - user->beta;
         } else {  // interior location
             R = - user->rho * PetscSqrtReal(u[i]);
             f[i] = - u[i+1] + 2.0 * u[i] - u[i-1] - h*h * R;
@@ -75,10 +75,10 @@ int main(int argc,char **args) {
   DMDALocalInfo       info;
 
   PetscInitialize(&argc,&args,(char*)0,help);
-  user.rho    = 10.0;
-  user.M      = PetscSqr(user.rho / 12.0);
-  user.uLEFT  = user.M;
-  user.uRIGHT = 16.0 * user.M;
+  user.rho   = 10.0;
+  user.M     = PetscSqr(user.rho / 12.0);
+  user.alpha = user.M;
+  user.beta  = 16.0 * user.M;
 
   ierr = DMDACreate1d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,-9,1,1,NULL,&da); CHKERRQ(ierr);
   ierr = DMDASetUniformCoordinates(da,0.0,1.0,-1.0,-1.0,-1.0,-1.0); CHKERRQ(ierr);
