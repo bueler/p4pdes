@@ -461,19 +461,17 @@ where $J = J_\bF(\bx)$, and the Krylov space definition \eqref{eq:li:krylovdefn}
 \begin{equation}
     \mathcal{K} = \operatorname{span}\{\br,J\br,J^2\br,\dots,J^{n-1}\br\}.  \label{eq:nl:krylovagain}
 \end{equation}
-In a Krylov space method (e.g.~CG or GMRES) we would might start with initial iterate $0$, as a solution to linear equation \eqref{eq:nl:newtoneqforJFNK}, and compute the residual $\br = - \bF(\bx)$.  From this vector we need to compute $J\br$, $J^2\br=J(J\br)$, and so on, to solve the linear equation by looking in the Krylov space $\mathcal{K}$.
+In a Krylov space method (e.g.~CG or GMRES) we would might start with initial estimate $\bs\approx 0$ of the solution to linear equation \eqref{eq:nl:newtoneqforJFNK} \citep{KnollKeyes2004} and compute the residual $\br = - \bF(\bx) - J 0 = - \bF(\bx)$.  From this vector we need to compute $J\br$, $J^2\br=J(J\br)$, and so on, to construct a solution to \eqref{eq:nl:newtoneqforJFNK} from the Krylov space $\mathcal{K}$.
 
 By definition of the derivative of $\bF$, i.e.~by the same idea as in \eqref{eq:nl:expandF},
 \begin{equation}
 J \br \approx \frac{\bF(\bx+\delta \br) - \bF(\bx)}{\delta} \label{eq:nl:JFNKbasic}
 \end{equation}
-if $\delta \ne 0$ is small.  That is, noting that $\br = - \bF(\bx)$ itself is computed by an evaluation of $\bF$, each additional vector in the above Krylov basis of $\mathcal{K}$ can be computed by one additional evaluation of $\bF$, namely by the formula
+if $\delta \ne 0$ is small.  Noting that $\br = - \bF(\bx)$ comes from evaluating $\bF$, each additional vector in the above Krylov basis of $\mathcal{K}$ can be approximated using one additional evaluation of $\bF$, namely by the formula
 \begin{equation}
-J^{\ell} \br \approx \frac{\bF(\bx+\delta J^{\ell-1}\br) - \bF(\bx)}{\delta}
+J^{\ell} \br \approx \frac{\bF(\bx+\delta J^{\ell-1}\br) - \bF(\bx)}{\delta} \label{eq:nl:JFNKiteration}
 \end{equation}
-for $\ell=1,\dots,n$.
-
-This elegant idea is implemented by the simple option \texttt{-snes\_mf} in \PETSc:
+for $\ell=1,\dots,n$.  This elegant idea is implemented in \PETSc and is invoked by the option \texttt{-snes\_mf}:\sidenote{``\texttt{mf}'' stands for ``matrix-free''.}
 \begin{cline}
 $ ./reaction -snes_converged_reason -snes_mf
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
@@ -481,7 +479,7 @@ on 9 point grid:  |u-u_exact|_inf/|u|_inf = 0.000188753
 \end{cline}
 %$
 
-Caution should quickly damp our enthusiasm, however.  Noting we are using an \emph{un}preconditioned Krylov solve when using JFNK as stated.  Because $J$ is symmetric in our case, we try an appropriate Krylov method on refining grids, and we ask \PETSc for both the number of Newton iterations and the Krylov method iterations on each Newton step:
+Our enthusiasm may be quickly damped, however, by trying refined grids.  Observe we are using an \emph{un}preconditioned Krylov method, when using JFNK as stated in \eqref{eq:nl:JFNKiteration}.  For example, because $J$ is symmetric in our case, we might try an appropriate Krylov method on refining grids, namely CG (Chapter \ref{chap:linearsystem}), and ask \PETSc for both the number of Newton and Krylov iterations:
 \begin{cline}
 $ ./reaction -snes_converged_reason -snes_mf -ksp_converged_reason -ksp_type cg -da_refine 6
   Linear solve converged due to CONVERGED_RTOL iterations 511
@@ -497,8 +495,7 @@ $ ./reaction -snes_converged_reason -snes_mf -ksp_converged_reason -ksp_type cg 
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
 on 1025 point grid:  |u-u_exact|_inf/|u|_inf = 1.15576e-08
 \end{cline}
-
-These large iteration counts remind us of the flaw in unprecondition Krylov methods, addressed in Chapter \ref{chap:linearsystem}.  In the above CG case we see the well-known doubling of iterations with each doubling of dimension, while with the default GMRES solver things are no better as we simply get a linear solve failure:
+These large iteration counts, specifically the well-known doubling of CG iterations with each doubling of dimension, remind us of the flaws in unpreconditioned Krylov methods which were addressed in Chapter \ref{chap:linearsystem}.  Note that the default GMRES solver is no better; we simply get a linear solve failure:
 \begin{cline}
 $ ./reaction -snes_converged_reason -snes_mf -ksp_converged_reason -da_refine 7
   Linear solve did not converge due to DIVERGED_ITS iterations 10000
@@ -506,7 +503,7 @@ Nonlinear solve did not converge due to DIVERGED_LINEAR_SOLVE iterations 0
 on 1025 point grid:  |u-u_exact|_inf/|u|_inf = 0.217386
 \end{cline}
 %$
-In other words, we have an excellent reminder to apply the Krylov solver to a \emph{preconditioned} form of system \eqref{eq:nl:newtoneqforJFNK}, but this requires returning to the central idea in equation  \eqref{eq:nl:JFNKbasic} and modifying it.
+In other words, we see an excellent reminder to apply the Krylov solver to a \emph{preconditioned} form of system \eqref{eq:nl:newtoneqforJFNK}.  However, this requires returning to, and modifying, the central idea in equation  \eqref{eq:nl:JFNKbasic}.
 
 FIXME: preconditioned JFNK
 
