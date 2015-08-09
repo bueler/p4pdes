@@ -264,7 +264,7 @@ First note a key hypothesis in the above Theorem, namely that $\bx_0$ is suffici
 
 Actual decrease in residual norm, as displayed in Figures \ref{fig:newtonconvbasic} and \ref{fig:newtonconvdelayed}, is also not guaranteed in general.  There is nothing intrinsic about the solution $\bs$ to \eqref{eq:nl:newtoneq} that implies $\|\bF(\bx_{k+1})\| \le \|\bF(\bx_k)\|$.  Again, however, ``line-search'' methods, described starting on page \pageref{sec:linesearch}, can enforce residual norm decrease.  Such methods generate an error if searching along the direction $\bs$ does not find a step-length which generates a (sufficient) residual norm decrease.
 
-On some equations the Newton iteration \eqref{eq:nl:newtoneq}, \eqref{eq:nl:newtonupdate} as it stands actually diverges from some initial states.  For an example, see Exercise \ref{chap:nonlinear}.\ref{exer:newtonatan}.  In those cases line-search methods will generally reduce the step length $\|\bs_k\|$ and this may ``globalize'' the convergence \citep{Kelley2003} in the sense of allowing convergence from a larger set of initial states.
+On some equations the Newton iteration \eqref{eq:nl:newtoneq}, \eqref{eq:nl:newtonupdate} as it stands actually diverges from some initial states.  For an example, see Exercise \ref{chap:nonlinear}.\ref{exer:nl:newtonatan}.  In those cases line-search methods will generally reduce the step length $\|\bs_k\|$ and this may ``globalize'' the convergence \citep{Kelley2003} in the sense of allowing convergence from a larger set of initial states.
 
 Finally, many practical problems do not have the smoothness needed to apply the above Theorem.  In such cases the problem may need regularization, continuation, or other procedures to make it manageable.
 
@@ -451,35 +451,46 @@ real 0.06
 
 \section{Jacobian-free Newton-Krylov (JFNK)} \label{sec:JFNK}
 
-Besides the finite-difference Jacobian approach we have already seen, which uses equation \eqref{eq:nl:fdjac} to compute the entries of an assembled Jacobian matrix, there is another finite-difference approach which approximates the Jacobian-times-vector product by a finite difference.  This approach, which must be used with a Krylov-type method so as to avoid assembling the matrix, goes by the name ``Jacobian-free Newton-Krylov'' or JFNK \citep{KnollKeyes2004}.
+Besides the finite-difference Jacobian approach we have already seen, which uses equation \eqref{eq:nl:fdjac} to compute the entries of an assembled Jacobian matrix, there is a different approach which approximates the Jacobian-times-vector product by a finite difference.  This approach must be used with a Krylov-type method to solve the Newton step equation.  It goes by the name ``Jacobian-free Newton-Krylov'' \citep{KnollKeyes2004} or just ``JFNK''.
 
-At the simplest level of introduction of this idea we need only recall the Newton equation for the current step $\bs$ based on the current iterate $\bx=\bx_k$, namely \eqref{eq:nl:newtoneq}
+To introduce JFNK we recall two things.  First is Newton equation \eqref{eq:nl:newtoneq} for step $\bs$ based on the current iterate $\bx=\bx_k$, namely
 \begin{equation}
     J \bs = - \bF(\bx) \label{eq:nl:newtoneqforJFNK}
 \end{equation}
-where $J = J_\bF(\bx)$, and the Krylov space definition \eqref{eq:li:krylovdefn} given matrix $J$ and some vector $\br$:
+where $J = J_\bF(\bx)$.  Second is the Krylov space definition \eqref{eq:li:krylovdefn}, here with matrix $J$ and vector $\br$:
 \begin{equation}
     \mathcal{K} = \operatorname{span}\{\br,J\br,J^2\br,\dots,J^{n-1}\br\}.  \label{eq:nl:krylovagain}
 \end{equation}
-In a Krylov space method (e.g.~CG or GMRES) we would might start with initial estimate $\bs\approx 0$ of the solution to linear equation \eqref{eq:nl:newtoneqforJFNK} \citep{KnollKeyes2004} and compute the residual $\br = - \bF(\bx) - J 0 = - \bF(\bx)$.  From this vector we need to compute $J\br$, $J^2\br=J(J\br)$, and so on, to construct a solution to \eqref{eq:nl:newtoneqforJFNK} from the Krylov space $\mathcal{K}$.
 
-By definition of the derivative of $\bF$, i.e.~by the same idea as in \eqref{eq:nl:expandF},
+Suppose we use initial estimate $\bs\approx 0$ \citep{KnollKeyes2004} of the solution to \eqref{eq:nl:newtoneqforJFNK}.  The residual is $\br = - \bF(\bx) - J 0 = - \bF(\bx)$.  From this vector we need to compute $J\br$, $J^2\br=J(J\br)$, and so on, to solve \eqref{eq:nl:newtoneqforJFNK} from the Krylov space $\mathcal{K}$.  However, by definition of the derivative of $\bF$, the same idea as equation \eqref{eq:nl:expandF}, if $\bv$ is any vector then
 \begin{equation}
-J \br \approx \frac{\bF(\bx+\delta \br) - \bF(\bx)}{\delta} \label{eq:nl:JFNKbasic}
+J \bv \approx \frac{\bF(\bx+\delta \bv) - \bF(\bx)}{\delta} \label{eq:nl:JFNKbasic}
 \end{equation}
-if $\delta \ne 0$ is small.  Noting that $\br = - \bF(\bx)$ comes from evaluating $\bF$, each additional vector in the above Krylov basis of $\mathcal{K}$ can be approximated using one additional evaluation of $\bF$, namely by the formula
+if $\delta \ne 0$ is small.  That is, the Jacobian-vector product can be approximated by a finite-difference, thereby avoiding evaluation of the entries of $J$ by finite-difference equation \eqref{eq:nl:fdjac}. In fact we can avoid assembling $J$ as a matrix!
+
+Note $\br = - \bF(\bx)$ comes from evaluating $\bF$.  From the above ideas, each additional vector in the Krylov basis \eqref{eq:nl:krylovagain} can be approximated using one additional evaluation of $\bF$ by the formula
 \begin{equation}
 J^{\ell} \br \approx \frac{\bF(\bx+\delta J^{\ell-1}\br) - \bF(\bx)}{\delta} \label{eq:nl:JFNKiteration}
 \end{equation}
-for $\ell=1,\dots,n$.  This elegant idea is implemented in \PETSc and is invoked by the option \texttt{-snes\_mf}:\sidenote{``\texttt{mf}'' stands for ``matrix-free''.}
+for $\ell=1,\dots,n$.  Equation \eqref{eq:nl:JFNKiteration} is the central idea in JFNK.
+
+Observe that use of the earlier finite difference formula \eqref{eq:nl:fdjac} to compute a generic $N\times N$ Jacobian $J$ would require $N$ evaluations of $\bF$.  Thus the two evaluations of $\bF$ needed for \eqref{eq:nl:JFNKbasic} to compute $J\bv$, or the $n$ evaluations of $\bF$ needed to compute the whole Krylov basis \eqref{eq:nl:krylovagain}, seems very efficient.  However, there are two countervailing points to make: (i) coloring greatly reduces the cost of using \eqref{eq:nl:fdjac} for many PDEs, and (ii) once you have a matrix you can do many things, such as matrix factorizations, other than computing a matrix-vector product or a Krylov basis.  In other words, JFNK is a good strategy to the extent that it actually \emph{works}, which we now pursue in more detail.
+
+
+\section{JFNK in practice, and with preconditioning} \label{sec:JFNKprecond}
+
+This elegant idea is implemented in \PETSc and invoked by option \texttt{-snes\_mf}:
 \begin{cline}
 $ ./reaction -snes_converged_reason -snes_mf
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
 on 9 point grid:  |u-u_exact|_inf/|u|_inf = 0.000188753
 \end{cline}
 %$
+Note that ``\texttt{mf}'' in the option stands for ``matrix-free'', but we shall see below that there may be some matrix involved in JFNK anyway.  The method never involves fully-assembling the Jacobian matrix itself, however, and thus the ``Jacobian-free'' label is most justified.
 
-Our enthusiasm may be quickly damped, however, by trying refined grids.  Observe we are using an \emph{un}preconditioned Krylov method, when using JFNK as stated in \eqref{eq:nl:JFNKiteration}.  For example, because $J$ is symmetric in our case, we might try an appropriate Krylov method on refining grids, namely CG (Chapter \ref{chap:linearsystem}), and ask \PETSc for both the number of Newton and Krylov iterations:
+Our enthusiasm for JFNK is damped when we try refined grids in the 1D diffusion-reaction PDE example.  Observe we are using an \emph{un}preconditioned Krylov method; that is, option \texttt{-snes\_mf} corresponds to JFNK as stated in \eqref{eq:nl:JFNKiteration}.
+
+To see the bad news in an example, note $J$ is symmetric in the \texttt{reaction.c} case.\sidenote{Well \dots nearly so.  See exercise 4.\ref{exer:nl:symmetrizeJ}.}  Thus we try the CG Krylov method (Chapter \ref{chap:linearsystem}) and ask \PETSc for both the number of Newton and Krylov iterations:
 \begin{cline}
 $ ./reaction -snes_converged_reason -snes_mf -ksp_converged_reason -ksp_type cg -da_refine 6
   Linear solve converged due to CONVERGED_RTOL iterations 511
@@ -495,7 +506,9 @@ $ ./reaction -snes_converged_reason -snes_mf -ksp_converged_reason -ksp_type cg 
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
 on 1025 point grid:  |u-u_exact|_inf/|u|_inf = 1.15576e-08
 \end{cline}
-These large iteration counts, specifically the well-known doubling of CG iterations with each doubling of dimension, remind us of the flaws in unpreconditioned Krylov methods which were addressed in Chapter \ref{chap:linearsystem}.  Note that the default GMRES solver is no better; we simply get a linear solve failure:
+These large iteration counts, which illustrate the well-known doubling of CG iterations with each doubling of dimension, remind us of the flaw in unpreconditioned Krylov methods.\sidenote{These were addressed in Chapter \ref{chap:linearsystem}.}
+
+The default GMRES solver is no better; we simply get a linear solve failure:
 \begin{cline}
 $ ./reaction -snes_converged_reason -snes_mf -ksp_converged_reason -da_refine 7
   Linear solve did not converge due to DIVERGED_ITS iterations 10000
@@ -503,17 +516,25 @@ Nonlinear solve did not converge due to DIVERGED_LINEAR_SOLVE iterations 0
 on 1025 point grid:  |u-u_exact|_inf/|u|_inf = 0.217386
 \end{cline}
 %$
-In other words, we see an excellent reminder to apply the Krylov solver to a \emph{preconditioned} form of system \eqref{eq:nl:newtoneqforJFNK}.  However, this requires returning to, and modifying, the central idea in equation  \eqref{eq:nl:JFNKbasic}.
 
-FIXME: preconditioned JFNK
+In other words, we see here an excellent reminder to apply the Krylov solver to a \emph{preconditioned} form of the Newton equation \eqref{eq:nl:newtoneqforJFNK}.  Recall there are left- and right-sided versions of preconditioning, equations \eqref{introleftpre} and \eqref{introrightpre} in Chapter \ref{chap:linearsystem}.  For equation \eqref{eq:nl:newtoneqforJFNK}, using an invertible preconditioning matrix $M$, these versions are
+\begin{align}
+(M^{-1} J) \bs &= - M^{-1} \bF(\bx), \quad \text{and} \label{eq:nl:leftpre} \\
+(J M^{-1}) (M \bs) &= - \bF(\bx), \label{eq:nl:rightpre}
+\end{align}
+respectively.
 
-FIXME
-\begin{cline}
-FIXME
-\end{cline}
+Left preconditioning \eqref{eq:nl:leftpre} requires no further comment because the action of $M^{-1} J$ on some vector $\bv$ is a straightforward composition of \eqref{eq:nl:JFNKbasic} followed by application of $M^{-1}$.  However, right preconditioning \eqref{eq:nl:rightpre}, in a Krylov iteration, uses a two step process.  The action of $J M^{-1}$ on $\bv$ is computed by first applying $M^{-1}$ to $\bv$, namely by solving $M \by = \bv$, and then using
+\begin{equation}
+(J M^{-1}) \bv = J \by \approx \frac{\bF(\bx+\delta \by) - \bF(\bx)}{\delta} \label{eq:nl:JFNKwithrightpre}
+\end{equation}
+
+Recall that, when preconditioning, matrices $M$ and $M^{-1}$ are usually never assembled.  Even if an assembled preconditioner-material matrix $P$ is present, $M$ may be constructed nontrivially from $P$.  For example, if we supply some assembled matrix $P$ as the preconditioner material, but we ask for ILU($0$) preconditioning,\sidenote{I.e.~the default corresponding to option \texttt{-pc\_type ilu}.} then $M$ is actually the product of the ILU($0$) factors of $P$, and thus it is generally not equal to $P$.
+
+At this point we risk overwhelming the reader with options, so we pause to summarize the possibilities before returning to their testing on the \texttt{reaction.c} problem.
 
 
-\section{Exploring Jacobian cases} \label{sec:jacobiancases}
+\section{The \PETSc Jacobian cases} \label{sec:jacobiancases}
 
 \def\checkmark{\tikz\fill[scale=0.4](0,.35) -- (.25,0) -- (.7,.8) -- (.25,.15) -- cycle;}
 \def\bigcheckmark{\tikz\fill[scale=0.6](0,.35) -- (.25,0) -- (.7,.8) -- (.25,.15) -- cycle;}
@@ -530,7 +551,7 @@ $\bF$ and $J$:   & $\bigcheckmark$ & $\checkmark$    & $\checkmark$    & $\check
 \caption{Jacobian options when using \pSNES, according to which functions are implemented.  Symbol ``$P$'' denotes a routine which computes an easy-to-invert approximate Jacobian while ``$J$'' denotes the actual Jacobian $J_{\bF}$.  Recommended usages have a big check mark.} \label{tab:snesjacobianoptions}
 \end{table}
 
-If a Jacobian routine is \emph{not} provided in the user-written code then only finite-difference evaluation of the assembled Jacobian matrix (i.e.~\texttt{-snes\_fd}) and finite-difference evaluation of the Jacobian-vector product inside the Krylov method (\texttt{-snes\_mf}) are available for the Newton iteration.  If a Jacobian routine is provided then additionally the Newton iteration can be used with no option---this is the obvious way to implement the Newton method.  The provided Jacobian may be used only to \emph{precondition} the finite-difference Jacobian-vector product, which is option \texttt{-snes\_mf\_operator}.  This last option may give quadratic convergence even if the provided Jacobian is inexact, that is, even if $P$ in the table is a somewhat-poor approximation of the Jacobian.
+If a Jacobian routine is \emph{not} provided in the user-written code then only finite-difference evaluation of the assembled Jacobian matrix (i.e.~\texttt{-snes\_fd}) and finite-difference evaluation of the Jacobian-vector product inside the Krylov method (\texttt{-snes\_mf}) are available for the Newton iteration.  If a Jacobian routine is provided then additionally the Newton iteration can be used with no option---this is the obvious way to implement the Newton method.  The provided Jacobian may be used only to precondition the finite-difference Jacobian-vector product, which is option \texttt{-snes\_mf\_operator}.  This last option may give quadratic convergence even if the provided Jacobian is inexact, that is, even if $P$ in the table is a somewhat-poor approximation of the Jacobian.
 
 From the code side we can state the cases this way:
 \begin{quote}
@@ -555,6 +576,10 @@ From the code side we can state the cases this way:
 In either case (ii)a or (ii)b, the Jacobian-implementing code, e.g.~\texttt{FormJacobian()} or \texttt{FormJacobianLocal()} in the above examples, only needs to set values in the second ``preconditioner'' \pMat argument.\sidenote{This assumes \texttt{J} is provided for both \pMat arguments of   \texttt{SNESSetJacobian()} as described in (ii)a above.}  It should, however, \emph{assemble} both \pMat arguments.
 
 As practical advice for the debugging stage, you know you have correctly- and fully-implemented the Jacobian, and you have found an adequate initial iterate, if all four options in Table \ref{tab:snesjacobianoptions} work and give apparent quadratic convergence.\sidenote{I.e.~from looking at the residual norm decay shown by \texttt{-snes\_monitor}.}  As the reader may check, this is the situation for the last two codes \texttt{ecjacobian.c} and \texttt{reaction.c}.
+
+
+
+\section{Testing Jacobian cases} \label{sec:jacobiantesting}
 
 We can, and indeed already have, used refined-grid cases of \texttt{reaction.c} to show these alternatives in action.  We have already seen that the \texttt{-snes\_fd} option used \emph{without} coloring needs far too many evaluations of $\bF$, but it very much succeeds when used with coloring option \texttt{-snes\_fd\_color}.  And we have seen that the un-preconditioned Jacobian-free method \texttt{-snes\_mf}, which like \texttt{-snes\_fd} does not require any implemented Jacobian, has serious difficulties as it requires unreasonable numbers of Krylov iterations (and function evaluations).  However, what if a Jacobian is available, but it is only approximate?
 
@@ -636,7 +661,7 @@ FIXME linesearch or trust region sometimes needed to ``globalize'' convergence \
 
 \item Make a tiny modification to \texttt{ecjacobian.c} to set the initial vector to $\bx_0 = [10\,\, 10]^\top$.  Rerun it with option \texttt{-snes\_monitor} and note it does not converge to a solution.  Why does the \pSNES stop?  Add one runtime option so that it  converges, thereby producing the data shown in Figure \ref{fig:newtonconvdelayed}.
 
-\item  \label{exer:newtonatan}
+\item  \label{exer:nl:newtonatan}
 This example shows a famous case where the original Newton iteration can diverge or enter a limit cycle, according to the initial iterate $x_0$, while using linesearch gives essentially global convergence.
     \begin{enumerate}
     \item By straightforward modifications of \texttt{expcircle.c}, write a code \texttt{atan.c} which solves the (one-dimensional) nonlinear equation $F(x)=\arctan(x)=0$ using initial iterate $x_0=2.0$.  (Use ``\texttt{atan}'' for the $\arctan$ function.)  By running it \texttt{./atan -snes\_fd -snes\_linesearch\_type basic}, show that the Newton iteration without a linesearch diverges, while using the default choice (i.e.~\texttt{-snes\_linesearch\_type bt}) gives convergence.
@@ -654,6 +679,8 @@ This example shows a famous case where the original Newton iteration can diverge
     \end{enumerate}
 
 \item As noted on page \pageref{sidenote:logsummary}, \PETSc option \texttt{-log\_summary} can show whether function evaluations or linear solves are dominating the cost of Newton's method.  By looking at \texttt{-log\_summary} output, compare where the work is done in these runs: \texttt{./reaction}, \texttt{./reaction -snes\_fd}, \texttt{./reaction -snes\_mf}.  Does the comparison change if you add \texttt{-da\_refine 5}?  Explain as much as you can.  (\emph{Hints}: Look at \texttt{SNESSolve} events for the total time spent in the Newton method, which is $\approx$100\% for these cases.  Within that event, event \texttt{SNESLineSearch} is where function and Jacobian evaluations happen, while the linear solve is the \texttt{KSPSolve} event.  Within the \texttt{SNESLineSearch} event, look at \texttt{SNESFunctionEval} and \texttt{SNESJacobianEval} events.)
+
+\item \label{exer:nl:symmetrizeJ}  In Chapter \ref{chap:structured} we gave some advice which we have not followed in the current Chapter, namely that one should implement Dirichlet conditions in a manner that preserves the symmetry of the matrix in question, which is the Jacobian here.  Modify \texttt{reaction.c} to preserve symmetry, noting that this requires modifying both the $\bF$ and $J$ evaluation routines.  Does this modification improve performance when using the CG iteration?  Does it change our conclusions about un-preconditioned JFNK, which were based on the CG iteration?
 
 \item Most \PETSc programs add more runtime options than shown in our examples so far; ours are deliberately de-cluttered.  The PDE problem in \texttt{reaction.c} has parameter $\rho$ which can be adjusted via \texttt{PetscOptionsReal()}.  Modify \texttt{reaction.c} to ``\texttt{optreact.c}'' and add an option like this at the appropriate point:
 \begin{code}
