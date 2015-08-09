@@ -134,7 +134,7 @@ The above run also uses option \texttt{-snes\_fd}, the purpose of which the read
 \begin{equation}
 J_{ij} = \frac{\partial F_i}{\partial x_j} \approx \frac{F_i(\bx+\delta \be_j) - F_i(\bx)}{\delta}.  \label{eq:nl:fdjac}
 \end{equation}
-It turns out that choosing $\delta = \sqrt{\eps}$, where $\eps$ is machine precision, gives a reasonably accurate approximation if the inputs to $\bF$ are all of order approximately one and the function $\bF$ can be accurately evaluated. \citep{Kelley2003}.
+When using formula \eqref{eq:nl:fdjac}, \PETSc chooses $\delta$ internally.  For example, $\delta = \sqrt{\eps}$, where $\eps$ is machine precision, gives a reasonably accurate approximation if the inputs to $\bF$ are all of order approximately one and the function $\bF$ can be accurately evaluated. \citep{Kelley2003}.
 
 
 \section{Inside \pSNES} \label{sec:insidesnes}
@@ -144,19 +144,21 @@ In outline, \pSNES does these steps to implement the Newton method:
 	\renewcommand{\labelenumi}{(\emph{\roman{enumi}})}
 	\renewcommand{\labelenumii}{\emph{\alph{enumii}}.}
 	\begin{enumerate}
-	\item from the current iterate $\bx_k$, $\bF(\bx_k)$ is evaluated using a call-back function set in \texttt{SNESSetFunction()}, like \texttt{FormFunction()} above,
+	\item from the current iterate $\bx_k$, $\bF(\bx_k)$ is evaluated using a call-back function set in \texttt{SNESSetFunction()}, e.g.~\texttt{FormFunction()} above,
 	\item the Jacobian $J_{\bF}(\bx_k)$ is
 	    \begin{enumerate}
-	    \item computed and assembled by a call-back to user-supplied code, e.g.~\texttt{FormJacobian()} in in Figure \ref{code:ecjacobianI} below, \emph{or}
-	    \item computed and assembled by using formula \eqref{eq:nl:fdjac} $N^2$ times, which requires calling \texttt{FormFunction()} $N$ times to evaluate $\bF(\bx_k+\delta \be_j)$ for $j=0,\dots,N-1$, \emph{or}
-	    \item not formed, but, in a Krylov iterative method for solving system \eqref{eq:nl:newtoneq}, the action of $J_{\bF}(\bx_k)$ on vectors is computed by finite-differences, possibly using an additional preconditioning matrix,
+	    \item computed and assembled by a call-back to user-supplied code, e.g.~\texttt{FormJacobian()} in code \texttt{ecjacobian.c} below, \emph{or}
+	    \item computed and assembled by evaluating $\bF(\bx_k+\delta \be_j)$ for $j=0,\dots,N-1$, thus  calling \texttt{FormFunction()} $N$ times, and then using formula \eqref{eq:nl:fdjac} as many as $N^2$ times, according to the sparsity pattern of $J$, \emph{or}
+	    \item computed and assembled by calling \texttt{FormFunction()} to compute $\bF(\bx_k+\delta \bv)$ for special vectors $\bv$, substantially less than $N$ times, and using formula \eqref{eq:nl:fdjac} according to the sparsity pattern of $J$, by using a grid-based graph-coloring algorithm to construct the vectors $\bv$, \emph{or}
+	    \item not assembled, but, in a Krylov iterative method for solving system \eqref{eq:nl:newtoneq}, the action $J_{\bF}(\bx_k) \bv$, of the Jacobian on vectors $\bv$, is computed by finite-differences,
         \end{enumerate}
-	\item linear system \eqref{eq:nl:newtoneq} is solved for $\bs$, and vector update \eqref{eq:nl:newtonupdate} is done, with possible reduction in the length of $\bs$, \emph{and}
+	\item linear system \eqref{eq:nl:newtoneq} is solved for $\bs$ by some \pKSP object, using whatever additional preconditioning matrix which is chosen,
+	\item vector update \eqref{eq:nl:newtonupdate} is done, with possible reduction in the length of $\bs$, \emph{and}
 	\item a convergence test is made, and we repeat at (\emph{i}) if not converged.
 	\end{enumerate}
 \end{quote}
 
-The Jacobian-free method mentioned in (\emph{ii})c will be addressed starting on page \pageref{sec:JFNK} below.  Issue (\emph{iii}) about possible step-length reduction will be addressed on page \pageref{sec:linesearch}.
+Our single run above of \texttt{expcircle.c} used option (\emph{ii})b for the Jacobian, but our next code will allow option (\emph{ii})a as well.  The graph-coloring mention in (\emph{ii})c will be addressed starting on page \pageref{sec:nl:coloring}, and the Jacobian-free method in (\emph{ii})d starting on page \pageref{sec:JFNK}.  Issue (\emph{iv}) about possible step-length reduction will be addressed on page \pageref{sec:linesearch}.
 
 Option (\emph{ii})a is taken if we supply a call-back function for the Jacobian through \texttt{SNESSetJacobian()} or similar; we give an example below in the next section.  For now, however, if you run without option \texttt{-snes\_fd} or \texttt{-snes\_mf} then you get an error message about an un-assembled matrix:
 \begin{cline}
@@ -405,7 +407,7 @@ on 524289 point grid:  |u-u_exact|_inf/|u|_inf = 6.04273e-12
 is shown in Figure \ref{fig:nl:reaction-conv}.  If we ignore the result on the finest grid, the convergence rate we see is also $O(h^2)$; error stagnation arises at some level of refinement because of accumulation of round-off error.  We also see consistent evidence of quadratic convergence by adding \texttt{-snes\_monitor} to the above runs.  Thus we conclude our implementation is correct.
 
 
-\section{Finite-difference Jacobians by ``coloring''}
+\section{Finite-difference Jacobians by ``coloring''} \label{sec:nl:coloring}
 
 However, when we look closer at the finite-difference evaluation of Jacobians we see that it is not really working.  In contrast to the fixed-dimension examples earlier in this Chapter, discretizing a PDE generates an arbitrarily-large number of unknowns.
 
@@ -533,7 +535,7 @@ Recall that, when preconditioning, matrices $M$ and $M^{-1}$ are usually never a
 At this point we risk overwhelming the reader with options, so we pause to summarize the possibilities before returning to their testing on the \texttt{reaction.c} problem.
 
 
-\section{The \PETSc Jacobian cases} \label{sec:jacobiancases}
+\section{Jacobian cases} \label{sec:jacobiancases}
 
 \def\checkmark{\tikz\fill[scale=0.4](0,.35) -- (.25,0) -- (.7,.8) -- (.25,.15) -- cycle;}
 \def\bigcheckmark{\tikz\fill[scale=0.6](0,.35) -- (.25,0) -- (.7,.8) -- (.25,.15) -- cycle;}
