@@ -362,13 +362,14 @@ These ideas relate to the conditioning of $A$.  Indeed, the connection between t
 where $\kappa(A) = \|A\| \|A^{-1}\|$ is the condition number in the induced norm.  Proving \eqref{relativenormbounds} is an easy exercise with norms.
 
 
-
 \section{Numerical linear algebra: Krylov space methods}
 
 The most powerful iterative methods for solving system \eqref{introsystem} generate optimal, in various senses, estimates $\bu_k$ which are linear combinations of vectors $\bz,A\bz,A^2\bz,\dots,A^{k-1}\bz$ where $\bz$ is a fixed vector; often $\bz=\bb$.  These methods are collectively called \emph{Krylov space methods} because the span of such vectors is a \emph{Krylov space}.  Examples include the Richardson iteration, conjugate gradient (CG), and minimum residual methods (MINRES or GMRES).\sidenote{We will address these method in this and the next chapter, but see \citet{Greenbaum1997} or \citet{Saad2003} for details and algorithms.}  The effectiveness of a given Krylov method on a given system depends on the eigenvalues or singular values of the matrix $A$, i.e.~on its spectral properties.  Many Krylov space methods are built into and fully-supported by \PETSc, and we will use them in all later Chapters.
 
 To be concrete, a Krylov space is defined as
-    $$\mathcal{K}_n(A,\bb) = \operatorname{span}\{\bb,A\bb,A^2\bb,\dots,A^{n-1}\bb\},$$
+\begin{equation}
+    \mathcal{K}_n(A,\bb) = \operatorname{span}\{\bb,A\bb,A^2\bb,\dots,A^{n-1}\bb\}, \label{eq:li:krylovdefn}
+\end{equation}
 but we give the abbreviated name ``$\mathcal{K}_n$'' when the context is clear.  Suppose $\tilde\bu \in \mathcal{K}_n$.  Then
     $$\tilde\bu = c_0 \bb + c_1 A \bb + c_2 A^2 \bb + \dots + c_{n-1} A^{n-1} \bb$$
 for some coefficients $c_j$, or equivalently

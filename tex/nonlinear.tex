@@ -83,7 +83,7 @@ as also shown in Figure \ref{fig:expcirclebasic}.
 \end{example}
 
 
-\section{Using \pSNES; call-backs} \label{sec:usingsnes}
+\section{Using \pSNES with call-backs} \label{sec:usingsnes}
 
 We will do the above example in \PETSc by using a nonlinear solver object of type \pSNES.\sidenote{This acronym stands for ``scalable nonlinear equation solver.''}  It has the usual \texttt{Create/SetFromOptions/Destroy} sequence, but it also has a method by which we provide the function $\bF$.  This is a ``call-back'' in the sense that we supply a function, here named \texttt{FormFunction()}, which the \pSNES can then call with argument $\bx$ when it needs $\bF(\bx)$ during the Newton iteration.  Later we will also provide the \pSNES with a function which computes the Jacobian.  However, because this derivative can instead be approximated by finite differences applied to $\bF$ itself, and thus because $J_\bF$ can be approximated by repeatedly calling \texttt{FormFunction()}, our first code avoids such a Jacobian ``call-back.''
 
@@ -133,9 +133,9 @@ Thus after 5 iterations the Newton method has reduced the residual norm by a fac
 
 The above run also uses option \texttt{-snes\_fd}, the purpose of which the reader may already see.  Clearly the Newton iteration \eqref{eq:nl:newtoneq} requires the Jacobian, but we have only supplied the \pSNES with an implementation of function $\bF(\bx)$, not with $J_{\bF}(\bx)$.  The entries of the latter matrix are derivatives, however, and we can approximate these by finite differences.  Specifically, an entry in matrix $J=J_{\bF}(\bx)$ is approximated
 \begin{equation}
-J_{ij} = \frac{\partial F_i}{\partial x_j} \approx \frac{F_i(\bx+\delta \be_j) - F_i(\bx)}{\delta}  \label{eq:nl:examplefdjac}
+J_{ij} = \frac{\partial F_i}{\partial x_j} \approx \frac{F_i(\bx+\delta \be_j) - F_i(\bx)}{\delta}  \label{eq:nl:fdjac}
 \end{equation}
-if $\delta>0$ and $\be_j\in \RR^N$ denotes a vector with entry one in the $j$th position (and zero otherwise).  It turns out that choosing $\delta = \sqrt{\eps}$, where $\eps$ is machine precision, gives a reasonably accurate approximation if the inputs to $\bF$ are all of order approximately one \citep{Kelley2003}.
+if $\delta\ne 0$ and $\be_j\in \RR^N$ denotes a vector with entry one in the $j$th position (and zero otherwise).  It turns out that choosing $\delta = \sqrt{\eps}$, where $\eps$ is machine precision, gives a reasonably accurate approximation if the inputs to $\bF$ are all of order approximately one \citep{Kelley2003}.
 
 
 \section{Inside \pSNES} \label{sec:insidesnes}
@@ -149,7 +149,7 @@ In outline, \pSNES does these steps to implement the Newton method:
 	\item the Jacobian $J_{\bF}(\bx_k)$ is
 	    \begin{enumerate}
 	    \item computed and assembled by a call-back to user-supplied code, e.g.~\texttt{FormJacobian()} in in Figure \ref{code:ecjacobianI} below, \emph{or}
-	    \item computed and assembled by using formula \eqref{eq:nl:examplefdjac} $N^2$ times, which requires calling \texttt{FormFunction()} $N$ times to evaluate $\bF(\bx_k+\delta \be_j)$ for $j=0,\dots,N-1$, \emph{or}
+	    \item computed and assembled by using formula \eqref{eq:nl:fdjac} $N^2$ times, which requires calling \texttt{FormFunction()} $N$ times to evaluate $\bF(\bx_k+\delta \be_j)$ for $j=0,\dots,N-1$, \emph{or}
 	    \item not formed, but, in a Krylov iterative method for solving system \eqref{eq:nl:newtoneq}, the action of $J_{\bF}(\bx_k)$ on vectors is computed by finite-differences, possibly using an additional preconditioning matrix,
         \end{enumerate}
 	\item linear system \eqref{eq:nl:newtoneq} is solved for $\bs$, and vector update \eqref{eq:nl:newtonupdate} is done, with possible reduction in the length of $\bs$, \emph{and}
@@ -170,7 +170,7 @@ $ ./expcircle
 %$
 This message is somewhat opaque unless you are conscious of the need to form the Jacobian matrix at each Newton iteration.  That is, \emph{something} must happen at step (\emph{ii}), and actions (\emph{ii})b and (\emph{ii})c usually require runtime options.
 
-Option (\emph{ii})b is what happens if we run with option \texttt{-snes\_fd}.  One possible disadvantage of this option is that formula \eqref{eq:nl:examplefdjac} is only an approximation, but in many cases using an approximate Jacobian in the Newton step is not problematic \citep{Kelley2003}.
+Option (\emph{ii})b is what happens if we run with option \texttt{-snes\_fd}.  One possible disadvantage of this option is that formula \eqref{eq:nl:fdjac} is only an approximation, but in many cases using an approximate Jacobian in the Newton step is not problematic \citep{Kelley2003}.
 
 However, there is a significant performance problem with finite-difference evaluation of the Jacobian when it comes to PDE-related applications of Newton's method.  In steps (\emph{i}) and (\emph{ii})b together we evaluate $\bF$ through $N+1$ calls to \texttt{FormFunction()} per Newton iteration.  While this is no particular problem in dimension $N=2$, as here, it is a worrying amount of work if $N$ is large, as it would be for a system of nonlinear equations coming from discretizing a PDE.  For many PDE discretization schemes, however, a graph-theoretic ``coloring'' algorithm makes \texttt{-snes\_fd} an efficient option by reducing the number of evaluations of \texttt{FormFunction()} to a small constant per Newton step.  See the diffusion-reaction PDE example at the end of this Chapter, as well as examples in later Chapters.
 
@@ -368,7 +368,7 @@ Observe that in \texttt{main()} in Figure \ref{code:reactionII}, because our loc
 \cinputpart{reaction.c}{\CODELOC}{In \texttt{main()} we create a \pDMDA, then \pVecs, and then a \pSNES.  We hand call-back functions to the \pSNES.  Then we solve the equation, get the numerical error, and clean up.}{II}{//MAIN}{//ENDMAIN}{code:reactionII}
 
 
-\section{Running and demonstrating convergence}
+\section{Convergence under grid refinement}
 
 Recall that the resolution of a structured grid can be set with either \texttt{-da\_grid\_x N} or with \texttt{-da\_refine N}.  For example, on a modestly-refined grid we can compare the number of Newton iterations using analytical and finite-difference Jacobian solutions like this:
 \begin{cline}
@@ -417,7 +417,7 @@ Nonlinear solve did not converge due to DIVERGED_FUNCTION_COUNT iterations 1
 on 8193 point grid:  |u-u_exact|_inf/|u|_inf = 0.0049428
 \end{cline}
 %$
-The problem is that finite-difference Jacobian evaluation \eqref{eq:nl:examplefdjac} is requiring about 8000 evaluations of $\bF$ per Newton iteration, and this exceeds the default maximum count for the \pSNES.\sidenote{Again, ``\texttt{./reaction -help |grep snes\_}'' gets the default value of 10000.}  If we raise the limit by a factor of ten then we do get convergence, but at a huge performance cost relative to the use of an analytical Jacobian:
+The problem is that finite-difference Jacobian evaluation \eqref{eq:nl:fdjac} is requiring about 8000 evaluations of $\bF$ per Newton iteration, and this exceeds the default maximum count for the \pSNES.\sidenote{Again, ``\texttt{./reaction -help |grep snes\_}'' gets the default value of 10000.}  If we raise the limit by a factor of ten then we do get convergence, but at a huge performance cost relative to the use of an analytical Jacobian:
 \begin{cline}
 $ timer ./reaction -snes_converged_reason -da_refine 10 -snes_fd \
 > -snes_max_funcs 100000
@@ -449,10 +449,71 @@ real 0.06
 %$
 
 
+\section{Jacobian-free Newton-Krylov (JFNK)} \label{sec:JFNK}
 
-\section{Jacobian-free Newton-Krylov} \label{sec:JFNK}
+Besides the finite-difference Jacobian approach we have already seen, which uses equation \eqref{eq:nl:fdjac} to compute the entries of an assembled Jacobian matrix, there is another finite-difference approach which approximates the Jacobian-times-vector product by a finite difference.  This approach, which must be used with a Krylov-type method so as to avoid assembling the matrix, goes by the name ``Jacobian-free Newton-Krylov'' or JFNK \citep{KnollKeyes2004}.
 
-FIXME: theory of matrix-free JK \citep{KnollKeyes2004}
+At the simplest level of introduction of this idea we need only recall the Newton equation for the current step $\bs$ based on the current iterate $\bx=\bx_k$, namely \eqref{eq:nl:newtoneq}
+\begin{equation}
+    J \bs = - \bF(\bx) \label{eq:nl:newtoneqforJFNK}
+\end{equation}
+where $J = J_\bF(\bx)$, and the Krylov space definition \eqref{eq:li:krylovdefn} given matrix $J$ and some vector $\br$:
+\begin{equation}
+    \mathcal{K} = \operatorname{span}\{\br,J\br,J^2\br,\dots,J^{n-1}\br\}.  \label{eq:nl:krylovagain}
+\end{equation}
+In a Krylov space method (e.g.~CG or GMRES) we would might start with initial iterate $0$, as a solution to linear equation \eqref{eq:nl:newtoneqforJFNK}, and compute the residual $\br = - \bF(\bx)$.  From this vector we need to compute $J\br$, $J^2\br=J(J\br)$, and so on, to solve the linear equation by looking in the Krylov space $\mathcal{K}$.
+
+By definition of the derivative of $\bF$, i.e.~by the same idea as in \eqref{eq:nl:expandF},
+\begin{equation}
+J \br \approx \frac{\bF(\bx+\delta \br) - \bF(\bx)}{\delta} \label{eq:nl:JFNKbasic}
+\end{equation}
+if $\delta \ne 0$ is small.  That is, noting that $\br = - \bF(\bx)$ itself is computed by an evaluation of $\bF$, each additional vector in the above Krylov basis of $\mathcal{K}$ can be computed by one additional evaluation of $\bF$, namely by the formula
+\begin{equation}
+J^{\ell} \br \approx \frac{\bF(\bx+\delta J^{\ell-1}\br) - \bF(\bx)}{\delta}
+\end{equation}
+for $\ell=1,\dots,n$.
+
+This elegant idea is implemented by the simple option \texttt{-snes\_mf} in \PETSc:
+\begin{cline}
+$ ./reaction -snes_converged_reason -snes_mf
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+on 9 point grid:  |u-u_exact|_inf/|u|_inf = 0.000188753
+\end{cline}
+%$
+
+Caution should quickly damp our enthusiasm, however.  Noting we are using an \emph{un}preconditioned Krylov solve when using JFNK as stated.  Because $J$ is symmetric in our case, we try an appropriate Krylov method on refining grids, and we ask \PETSc for both the number of Newton iterations and the Krylov method iterations on each Newton step:
+\begin{cline}
+$ ./reaction -snes_converged_reason -snes_mf -ksp_converged_reason -ksp_type cg -da_refine 6
+  Linear solve converged due to CONVERGED_RTOL iterations 511
+  Linear solve converged due to CONVERGED_RTOL iterations 504
+  Linear solve converged due to CONVERGED_RTOL iterations 508
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+on 513 point grid:  |u-u_exact|_inf/|u|_inf = 4.62255e-08
+$ ./reaction -snes_converged_reason -snes_mf -ksp_converged_reason -ksp_type cg -da_refine 7
+  Linear solve converged due to CONVERGED_RTOL iterations 1023
+  Linear solve converged due to CONVERGED_RTOL iterations 1006
+  Linear solve converged due to CONVERGED_RTOL iterations 1015
+  Linear solve converged due to CONVERGED_RTOL iterations 950
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+on 1025 point grid:  |u-u_exact|_inf/|u|_inf = 1.15576e-08
+\end{cline}
+
+These large iteration counts remind us of the flaw in unprecondition Krylov methods, addressed in Chapter \ref{chap:linearsystem}.  In the above CG case we see the well-known doubling of iterations with each doubling of dimension, while with the default GMRES solver things are no better as we simply get a linear solve failure:
+\begin{cline}
+$ ./reaction -snes_converged_reason -snes_mf -ksp_converged_reason -da_refine 7
+  Linear solve did not converge due to DIVERGED_ITS iterations 10000
+Nonlinear solve did not converge due to DIVERGED_LINEAR_SOLVE iterations 0
+on 1025 point grid:  |u-u_exact|_inf/|u|_inf = 0.217386
+\end{cline}
+%$
+In other words, we have an excellent reminder to apply the Krylov solver to a \emph{preconditioned} form of system \eqref{eq:nl:newtoneqforJFNK}, but this requires returning to the central idea in equation  \eqref{eq:nl:JFNKbasic} and modifying it.
+
+FIXME: preconditioned JFNK
+
+FIXME
+\begin{cline}
+FIXME
+\end{cline}
 
 
 \section{Exploring Jacobian cases} \label{sec:jacobiancases}
@@ -460,7 +521,8 @@ FIXME: theory of matrix-free JK \citep{KnollKeyes2004}
 \def\checkmark{\tikz\fill[scale=0.4](0,.35) -- (.25,0) -- (.7,.8) -- (.25,.15) -- cycle;}
 \def\bigcheckmark{\tikz\fill[scale=0.6](0,.35) -- (.25,0) -- (.7,.8) -- (.25,.15) -- cycle;}
 
-The paradigm for residual and Jacobian call-backs in \pSNES-using codes is summarized in Table \ref{tab:snesjacobianoptions}.  If a Jacobian routine is \emph{not} provided in the user-written code then only finite-difference evaluation of the assembled Jacobian matrix (i.e.~\texttt{-snes\_fd}) and finite-difference evaluation of the Jacobian-vector product inside the Krylov method (\texttt{-snes\_mf}) are available for the Newton iteration.  If a Jacobian routine is provided then additionally the Newton iteration can be used with no option---this is the obvious way to implement the Newton method---but also an additional option exists.  The provided Jacobian may be used only to \emph{precondition} the finite-difference Jacobian-vector product (\texttt{-snes\_mf\_operator}).
+Now is a good time to summarize the paradigm for residual and Jacobian call-backs in \pSNES-using codes.  This is done in Table \ref{tab:snesjacobianoptions}.
+
 \begin{table}
 \begin{tabular}{rllll}
  &\underline{no option}\hspace{0.0in} & \underline{\texttt{-snes\_fd}} & \underline{\texttt{-snes\_mf}} & \underline{\texttt{-snes\_mf\_operator}} \\
@@ -468,8 +530,10 @@ only $\bF$:      & error           & $\bigcheckmark$ & $\bigcheckmark$ & error \
 $\bF$ and $P$:   & $\bigcheckmark$ & $\checkmark$    & $\checkmark$    & $\bigcheckmark$ \\
 $\bF$ and $J$:   & $\bigcheckmark$ & $\checkmark$    & $\checkmark$    & $\checkmark$
 \end{tabular}
-\caption{Jacobian options when using \pSNES.  Symbol ``$P$'' denotes a routine which computes an easy-to-invert approximate Jacobian while ``$J$'' denotes an exact one.  A big check mark is recommended usage.} \label{tab:snesjacobianoptions}
+\caption{Jacobian options when using \pSNES, according to which functions are implemented.  Symbol ``$P$'' denotes a routine which computes an easy-to-invert approximate Jacobian while ``$J$'' denotes the actual Jacobian $J_{\bF}$.  Recommended usages have a big check mark.} \label{tab:snesjacobianoptions}
 \end{table}
+
+If a Jacobian routine is \emph{not} provided in the user-written code then only finite-difference evaluation of the assembled Jacobian matrix (i.e.~\texttt{-snes\_fd}) and finite-difference evaluation of the Jacobian-vector product inside the Krylov method (\texttt{-snes\_mf}) are available for the Newton iteration.  If a Jacobian routine is provided then additionally the Newton iteration can be used with no option---this is the obvious way to implement the Newton method.  The provided Jacobian may be used only to \emph{precondition} the finite-difference Jacobian-vector product, which is option \texttt{-snes\_mf\_operator}.  This last option may give quadratic convergence even if the provided Jacobian is inexact, that is, even if $P$ in the table is a somewhat-poor approximation of the Jacobian.
 
 From the code side we can state the cases this way:
 \begin{quote}
@@ -495,23 +559,17 @@ In either case (ii)a or (ii)b, the Jacobian-implementing code, e.g.~\texttt{Form
 
 As practical advice for the debugging stage, you know you have correctly- and fully-implemented the Jacobian, and you have found an adequate initial iterate, if all four options in Table \ref{tab:snesjacobianoptions} work and give apparent quadratic convergence.\sidenote{I.e.~from looking at the residual norm decay shown by \texttt{-snes\_monitor}.}  As the reader may check, this is the situation for the last two codes \texttt{ecjacobian.c} and \texttt{reaction.c}.
 
-We use the \texttt{reaction.c} example to show these alternatives in action.  First, for high-resolution grids, the Jacobian-free method \texttt{-snes\_mf}, which like \texttt{-snes\_fd} does not evaluate the Jacobian through the call-back mechanism at all, has serious difficulties.  Again using the ``\texttt{-da\_refine 10}'' grid, the \texttt{-snes\_mf} method no longer converges at all:
-\begin{cline}
-$ ./reaction -snes_converged_reason -da_refine 10 -snes_mf
-Nonlinear solve did not converge due to DIVERGED_LINEAR_SOLVE iterations 0
-on 8193 point grid:  |u-u_exact|_inf/|u|_inf = 0.217386
-\end{cline}
-%$
+We can, and indeed already have, used refined-grid cases of \texttt{reaction.c} to show these alternatives in action.  We have already seen that the \texttt{-snes\_fd} option used \emph{without} coloring needs far too many evaluations of $\bF$, but it very much succeeds when used with coloring option \texttt{-snes\_fd\_color}.  And we have seen that the un-preconditioned Jacobian-free method \texttt{-snes\_mf}, which like \texttt{-snes\_fd} does not require any implemented Jacobian, has serious difficulties as it requires unreasonable numbers of Krylov iterations (and function evaluations).  However, what if a Jacobian is available, but it is only approximate?
 
-However, what if a Jacobian is available, but it is only approximate?  For example, suppose we modify this line in \texttt{reaction.c},
+For example, suppose we modify this line in \texttt{reaction.c},
 \begin{code}
-    col[1] = i;    v[1] = 2.0 + h*h * dRdu;
+    col[1] = i;    v[1] = 2.0 - h*h * dRdu;
 \end{code}
-to remove ``\texttt{+ h*h * dRdu}'', to get
+to remove ``\texttt{- h*h * dRdu}'', to get
 \begin{code}
     col[1] = i;    v[1] = 2.0;
 \end{code}
-This change, which we call a ``\texttt{J->P}'' in the next paragraphs below, keeps the tridiagonal sparsity pattern of the Jacobian, but it removes the influence of the nonlinear term ``$+\rho \sqrt{u}$''---see \eqref{eq:nl:diffusionreaction}---from the Jacobian.
+This change, which we call a ``\texttt{J->P}'' in the next paragraphs below, keeps the tridiagonal sparsity pattern of the Jacobian, but it removes the influence of the nonlinear term ``$+\rho \sqrt{u}$'' from the Jacobian; recall \eqref{eq:nl:diffusionreaction}.
 
 With this change, convergence is slowed for no option, i.e.~when using the approximate Jacobian as though it were exact.  Specifically, on a coarse grid the number of iterations goes from 4 to 15, and the reported residual norms---here partly suppressed---suggest that the convergence is no longer quadratic:
 \begin{cline}
@@ -531,7 +589,7 @@ on 129 point grid:  |u-u_exact|_inf/|u|_inf = 7.38159e-07
 \end{cline}
 This loss of performance for the Newton iteration, as caused by an in-exact Jacobian, is expected in theory \citep{Kelley2003}.
 
-For this modified Jacobian case, \texttt{-snes\_mf\_operator} is now the fastest option for higher-resolution grids.  Again on the 8000 or so point grid that comes from option \texttt{-da\_refine 10}, using the approximate Jacobian ``as is'' causes many Newton iterations:
+However, for this modified Jacobian case, \texttt{-snes\_mf\_operator} is now a fast option for higher-resolution grids, fully competitive with the exact Jacobian and finite-difference-by-coloring cases already seen.  Again on a $\approx 8000$ point grid, using the approximate Jacobian ``as is'' causes too many Newton iterations and less-than-quadratic convergence:
 \begin{cline}
 $ timer ./reaction -snes_converged_reason -da_refine 10    # with J->P change
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 15
@@ -549,12 +607,18 @@ real 0.05
 %$
 The number of iterations and the time are significantly reduced.
 
-This confirms, in one overly-simple example, the idea that preconditioning the matrix-free Jacobian action by the use of a preconditioner is effective.  As a general rule, for large problems where \texttt{-snes\_fd} is seen to be too costly, one might give this advice:
+This confirms, in one admittedly-simple example, the idea that preconditioning the matrix-free Jacobian action by the use of an approximate Jacobian is effective.  As a general rule, for large problems on a structured grid where coloring can be applied, \texttt{-snes\_fd -snes\_fd\_color} is often effective if no Jacobian is implemented.  As we will see, on an unstructured grid the coloring method may require additional work or be impossible, in which case implementing an approximate Jacobian and using \texttt{-snes\_mf\_operator} may be the optimal compromise to both get computational performance and save programmer time.
+
+One might give this advice about \pSNES and the Newton iteration:
 \begin{quote}
-First consider implementing the exact Jacobian.  If that seems like too much work, or if it is too error-prone, consider implementing an approximate Jacobian which is easier to assemble and apply.  (In the PDE case it might only capture the highest-order derivatives.)  To test convergence with such an approximate Jacobian, compare ``no option'' runs, where less-than-quadratic convergence is expected, and \texttt{-snes\_mf\_operator} runs where quadratic convergence may be recovered.
+Before implementing a Jacobian, try finite-difference evaluation of it, and look at whether coloring applies to your case.  Then consider implementing the exact Jacobian $J$.  If that seems like too much work, or if it is too error-prone, consider implementing an approximate Jacobian $P$ which is easier to assemble and apply than $J$.  In the PDE case $P$ might only capture the highest-order derivatives in $J$.  To test convergence with $P$, compare ``no option'' runs, where less-than-quadratic convergence is expected, and \texttt{-snes\_mf\_operator} runs where quadratic convergence may be recovered.
 \end{quote}
 
+
+\section{Checking your Jacobian implementation}
+
 FIXME: \texttt{-snes\_test}
+
 
 \section{Line search} \label{sec:linesearch}
 
@@ -620,6 +684,6 @@ with Dirichlet boundary conditions $u(0)=u(1)=0$.  Make $\lambda$ an option-adju
 
 Fortunately, we can ``manufacture'' \citep{Wesseling2001} an exact solution to a generalized form of \eqref{eq:nl:bratuoned}, namely to equation \eqref{eq:nl:diffusionreaction} in the case where $R(u)=-\lambda e^u$.  For example we can choose $u(x) = \sin(\pi x)$ as the exact solution of \eqref{eq:nl:diffusionreaction}, and then determining $f(x)$ from the equation itself and have $u(0)=u(1)=0$ as boundary conditions that are satisfied by the chosen exact solution.
 
-Thus: Add options and a manufactured exact solution to the code \texttt{bratu.c} in the previous exercise so that the new code can both solve the previous exercise and be verified using the new exact solution.  For instance, one might add a user-option-settable boolean member \texttt{manufactured} to \texttt{AppCtx}.  When it is false then $f(x)=0$ and the code solves the previous exercise.  If it is true then we use the appropriate $f(x)$ in computing the residual, and we report a numerical error.  Observe that having $f(x)\ne 0$ does not change the Jacobian.  Confirm that in the manufactured-solution case we have both quadratic convergence of the Newton iteration \emph{and} $O(h^2)$ convergence of the numerical error.
+Thus we get to the exercise itself: Add options and a manufactured exact solution to the code \texttt{bratu.c} in the previous exercise so that the new code can both solve the previous exercise and be verified using the new exact solution.  For instance, one might add a user-option-settable boolean member \texttt{manufactured} to \texttt{AppCtx}.  When it is false then $f(x)=0$ and the code solves the previous exercise.  If it is true then we use the appropriate $f(x)$ in computing the residual, and we report a numerical error.  Observe that having $f(x)\ne 0$ does not change the Jacobian.  Confirm that in the manufactured-solution case we have both quadratic convergence of the Newton iteration \emph{and} $O(h^2)$ convergence of the numerical error.
 
 \end{enumerate}
