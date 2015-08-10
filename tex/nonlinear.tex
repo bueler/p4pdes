@@ -433,23 +433,50 @@ FIXME: flesh-out theory using Figure
 
 \begin{figure}
 \begin{tikzpicture}[scale=1.0]
-\node at (-1.0,8.0) {grid:};
-  \node at (0.5,8.5) {$1$};
-  \node at (1.5,8.5) {$2$};
-  \node at (2.5,8.5) {$3$};
-  \node at (3.5,8.5) {$1$};
-  \node at (4.5,8.5) {$2$};
-  \node at (5.5,8.5) {$3$};
-  \node at (6.5,8.5) {$1$};
-  \draw[line width=1.0pt] (0.5,8.0) -- (6.5,8.0);
+\node at (-1.95,9.0) {grid with stencil:};
+  \node at (0.5,9.3) {$u_0$};
+  \node at (1.5,9.3) {$u_1$};
+  \node at (2.5,9.3) {$u_2$};
+  \node at (3.5,9.3) {$u_3$};
+  \node at (4.5,9.3) {$u_4$};
+  \node at (5.5,9.3) {$u_5$};
+  \node at (6.5,9.3) {$u_6$};
+  \draw[line width=0.7pt] (0.5,9.0) -- (6.5,9.0);
+  \filldraw (0.5,9.0) circle (2.0pt);
+  \filldraw (1.5,9.0) circle (2.0pt);
+  \filldraw (2.5,9.0) circle (2.0pt);
+  \filldraw (3.5,9.0) circle (4.0pt);
+  \filldraw (4.5,9.0) circle (4.0pt);
+  \filldraw (5.5,9.0) circle (4.0pt);
+  \filldraw (6.5,9.0) circle (2.0pt);
+  \draw[line width=1.5pt] (3.5,9.0) -- (5.5,9.0);
+\node at (-1.8,8.0) {colored graph:};
+  \node at (0.5,8.4) {$1$};
+  \node at (1.5,8.4) {$2$};
+  \node at (2.5,8.4) {$3$};
+  \node at (3.5,8.4) {$1$};
+  \node at (4.5,8.4) {$2$};
+  \node at (5.5,8.4) {$3$};
+  \node at (6.5,8.4) {$1$};
   \draw (0.5,8.0) circle (4.0pt);
+  \draw[line width=0.6pt] (0.65,8.0) -- (1.35,8.0);
   \draw (1.5,8.0) circle (4.0pt);
+  \draw[line width=0.6pt] (1.65,8.0) -- (2.35,8.0);
   \draw (2.5,8.0) circle (4.0pt);
+  \draw[line width=0.6pt] (2.65,8.0) -- (3.35,8.0);
   \draw (3.5,8.0) circle (4.0pt);
+  \draw[line width=0.6pt] (3.65,8.0) -- (4.35,8.0);
   \draw (4.5,8.0) circle (4.0pt);
+  \draw[line width=0.6pt] (4.65,8.0) -- (5.35,8.0);
   \draw (5.5,8.0) circle (4.0pt);
+  \draw[line width=0.6pt] (5.65,8.0) -- (6.35,8.0);
   \draw (6.5,8.0) circle (4.0pt);
-\node at (-1.4,6.5) {matrix $J$:};
+  \draw[line width=0.75pt] (0.6,7.9) .. controls (1.4,7.5) and (1.6,7.5) .. (2.4,7.9);
+  \draw[line width=0.75pt] (1.6,7.9) .. controls (2.4,7.5) and (2.6,7.5) .. (3.4,7.9);
+  \draw[line width=0.75pt] (2.6,7.9) .. controls (3.4,7.5) and (3.6,7.5) .. (4.4,7.9);
+  \draw[line width=0.75pt] (3.6,7.9) .. controls (4.4,7.5) and (4.6,7.5) .. (5.4,7.9);
+  \draw[line width=0.75pt] (4.6,7.9) .. controls (5.4,7.5) and (5.6,7.5) .. (6.4,7.9);
+\node at (-2.4,6.5) {generate columns of $J$:};
   \draw[xstep=1.0,ystep=1.0,black,thin] (0.0,0.0) grid (7.0,7.0);
   \node at (0.5,6.5) {$1$};
   \node at (0.5,5.5) {$1$};
@@ -612,7 +639,6 @@ From the code side we can state the cases this way:
 In either case (ii)a or (ii)b, the Jacobian-implementing code, e.g.~\texttt{FormJacobian()} or \texttt{FormJacobianLocal()} in the above examples, only needs to set values in the second ``preconditioner'' \pMat argument.\sidenote{This assumes \texttt{J} is provided for both \pMat arguments of   \texttt{SNESSetJacobian()} as described in (ii)a above.}  It should, however, \emph{assemble} both \pMat arguments.
 
 As practical advice for the debugging stage, you know you have correctly- and fully-implemented the Jacobian, and you have found an adequate initial iterate, if all four options in Table \ref{tab:snesjacobianoptions} work and give apparent quadratic convergence.\sidenote{I.e.~from looking at the residual norm decay shown by \texttt{-snes\_monitor}.}  As the reader may check, this is the situation for the last two codes \texttt{ecjacobian.c} and \texttt{reaction.c}.
-
 
 
 \section{Testing Jacobian cases} \label{sec:jacobiantesting}
