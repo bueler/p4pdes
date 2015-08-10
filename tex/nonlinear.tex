@@ -344,18 +344,24 @@ This is of form \eqref{eq:nl:diffusionreaction} with $R(u) = - \rho \sqrt{u}$ an
 
 We are actually using \eqref{eq:nl:drsqrt} as a first example, however, because we want to verify our numerical solution using an exact solution, and its particular form makes this easy.  The solution is found \citep{Ockendonetal2003} by noting that both second-derivative and square-root operations convert certain 4th degree polynomials into quadratic polynomials.  We also get the boundary conditions from the exact solution.  Therefore we substitute $u(x)=M(x+1)^4$ into \eqref{eq:nl:drsqrt} and find $M=(\rho/12)^2$, $\alpha=M$, and $\beta=16 M$.
 
-Code \texttt{reaction.c} shown in Figures \ref{code:reactionI} and \ref{code:reactionII} solves this problem using a \pSNES object for the Newton iteration and a \pDMDA object for the finite-difference grid.  The first Figure shows three call-back methods.  First we compute the initial iterate---it is a linear function connecting the boundary conditions---and the exact solution in the method \texttt{InitialAndExactLocal()}.  Then we have the residual (\texttt{FormFunctionLocal()}) and Jacobian (\texttt{FormJacobianLocal()}) evaluation functions.
+The actual finite-difference scheme we propose for \eqref{eq:nl:diffusionreaction} is quite obvious.  On an $N$ point grid it is
+\begin{equation}
+- D \frac{u_{j+1} - 2 u_j + u_{j-1}}{h^2} - R(u_j) = f(x_j)   \label{eq:nl:drfdscheme}
+\end{equation}
+where $h=1/(N-1)>0$ is the grid spacing, $x_j = j h$ for $j=0,1,\dots,N-1$, and $u_j \approx u(x_j)$.
+
+Code \texttt{reaction.c} shown in Figures \ref{code:reactionI} and \ref{code:reactionII} solves this problem using finite-difference scheme \eqref{eq:nl:drfdscheme}, a \pSNES object for the Newton iteration, and a \pDMDA object for the finite-difference grid.  The first Figure shows three call-back methods.  First we compute the initial iterate---it is a linear function connecting the boundary conditions---and the exact solution in the method \texttt{InitialAndExactLocal()}.  Then we have the residual (\texttt{FormFunctionLocal()}) and Jacobian (\texttt{FormJacobianLocal()}) evaluation functions.
 
 These are ``\texttt{Local}'' methods in the sense that their inputs are C pointers for arrays instead of \pVecs.  Our implementation of \texttt{InitialAndExactLocal()} explains how this works.  As seen in Figure \ref{code:reactionII}, before this method is called we use \texttt{DMDAVecGetArray()} on the \pVecs which need reading or setting, namely \texttt{u} and \texttt{uexact}.  This gives pointers of type \texttt{PetscReal*} which are then handed to \texttt{InitialAndExactLocal()}.  The call-back done inside \pSNES calls \texttt{FormFunctionLocal()} the same way.  The \pSNES also treats the input to  \texttt{FormJacobianLocal()} the same way.  Another aspect of these ``\texttt{Local}'' call-back methods is that a \texttt{DMDALocalInfo} struct is passed into the call-back functions.  Thus the local part of the grid (i.e.~\texttt{info.xs} and etc.) and the global grid size (i.e.~\texttt{info.mx}) can be accessed without needing the \pDMDA object itself.\sidenote{Recall Figure \ref{fig:localpartofgrid}.}
 
 In \texttt{main()} (Figure \ref{code:reactionII}) we use \texttt{DMDASNESSetFunctionLocal()} instead of \texttt{SNESSetFunction()}\sidenote{Compare \texttt{ecjacobian.c}.} because our local call-back functions have a different signature based on \pDMDA-derived pointers,   The Jacobian is set by a similar method \texttt{DMDASNESSetJacobianLocal()}.  Also, though we implement a Jacobian, we do not allocate a \pMat to hold it because the \pDMDA object has enough information about the grid and stencil so as to pre-allocate a \pMat internally.
 
+\cinputpart{reaction.c}{\CODELOC}{In \texttt{main()} we create a \pDMDA, then \pVecs, and then a \pSNES.  We hand call-back functions to the \pSNES.  Then we solve the equation, get the numerical error, and clean up.}{II}{//MAIN}{//ENDMAIN}{code:reactionII}
+
 
 \section{Convergence under grid refinement}
 
 Recall that the resolution of a structured grid can be set with either \texttt{-da\_grid\_x N} or \texttt{-da\_refine N}.  For example, on a modestly-refined grid we can compare the number of Newton iterations using analytical and finite-difference Jacobian solutions like this:
-
-\cinputpart{reaction.c}{\CODELOC}{In \texttt{main()} we create a \pDMDA, then \pVecs, and then a \pSNES.  We hand call-back functions to the \pSNES.  Then we solve the equation, get the numerical error, and clean up.}{II}{//MAIN}{//ENDMAIN}{code:reactionII}
 
 \begin{cline}
 $ ./reaction -snes_converged_reason -da_refine 6
@@ -402,7 +408,7 @@ Nonlinear solve did not converge due to DIVERGED_FUNCTION_COUNT iterations 1
 on 8193 point grid:  |u-u_exact|_inf/|u|_inf = 0.0049428
 \end{cline}
 %$
-The problem is that finite-difference Jacobian evaluation \eqref{eq:nl:fdjac} is requiring about 8000 evaluations of $\bF$ per Newton iteration, and this exceeds the default maximum count for the \pSNES.\sidenote{Again, ``\texttt{./reaction -help |grep snes\_}'' gets the default value of 10000.}  If we raise the limit by a factor of ten then we do get convergence, but at a huge performance cost relative to the use of an analytical Jacobian:
+The problem is that finite-difference Jacobian evaluation \eqref{eq:nl:fdjac} is requiring about 8000 evaluations of $\bF$ per Newton iteration, and this exceeds the default maximum count for the \pSNES.\sidenote{Again, ``\texttt{./reaction -help |grep snes\_}'' gets the default value of 10000.}  If we raise the function-count limit then we do get convergence, but at a huge performance cost relative to the use of an analytical Jacobian:
 \begin{cline}
 $ timer ./reaction -snes_converged_reason -da_refine 10 -snes_fd \
 > -snes_max_funcs 100000
@@ -420,9 +426,14 @@ real 0.04
 \end{cline}
 %$
 
-Fortunately, given that it is desirable for initial prototyping and saving programmer effort, there is no need to abandon the finite-difference-Jacobian idea.  The additional tool needed to make it work for PDEs is applicable to many numerical schemes which use a small set of grid values---a small stencil---in approximating the PDE at each location.\sidenote{Finite difference, element, and volume schemes for discretizing PDES all normally have this property.  Spectral methods, by contrast, have a large, sometimes global, stencil, and would not benefit.}   The idea is to ``color'' [FIXME: cite] the nodes of the grid with a small set of colors so that each evaluation of $\bF$ allows the computation of as many entries of $J_{\bF}(\bx)$ as possible.
+Fortunately, given that it is desirable for initial prototyping and saving programmer effort, there is no need to abandon the finite-difference-Jacobian idea.  The additional tool needed to make it work for PDEs is applicable to many numerical schemes, especially on structured grids, which use a small set of grid values---a small stencil---in approximating the PDE at each location.\sidenote{Finite difference, element, and volume schemes for discretizing PDES all normally have this property.  Spectral methods, by contrast, have a large, sometimes global, stencil, and would not benefit.}  The idea is to ``color'' [FIXME: cite] the nodes of the grid with a small set of colors so that each evaluation of $\bF$ allows the computation of as many entries of $J_{\bF}(\bx)$ as possible.
 
-FIXME: flesh-out theory using Figure
+Consider the seven-point grid, and the view of the corresponding matrix, that comes from this command:
+\begin{cline}
+$ ./reaction -da_grid_x 7 -mat_view ::ascii_dense
+\end{cline}
+%$
+Figure \ref{fig:fdcolorreaction} first shows this grid and the obvious three-point stencil which comes from finite-difference scheme \eqref{eq:nl:drfdscheme}.  FIXME: flesh-out theory using Figure
 
 \begin{equation}
 \bv_1 = \begin{bmatrix} 1 \\ 0 \\ 0 \\ 1 \\ 0 \\ 0 \\ 1 \end{bmatrix}, \qquad 
