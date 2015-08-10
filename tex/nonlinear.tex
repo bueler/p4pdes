@@ -348,12 +348,12 @@ Code \texttt{reaction.c} shown in Figures \ref{code:reactionI} and \ref{code:rea
 
 These are ``\texttt{Local}'' methods in the sense that their inputs are C pointers for arrays instead of \pVecs.  Our implementation of \texttt{InitialAndExactLocal()} explains how this works.  As seen in Figure \ref{code:reactionII}, before this method is called we use \texttt{DMDAVecGetArray()} on the \pVecs which need reading or setting, namely \texttt{u} and \texttt{uexact}.  This gives pointers of type \texttt{PetscReal*} which are then handed to \texttt{InitialAndExactLocal()}.  The call-back done inside \pSNES calls \texttt{FormFunctionLocal()} the same way.  The \pSNES also treats the input to  \texttt{FormJacobianLocal()} the same way.  Another aspect of these ``\texttt{Local}'' call-back methods is that a \texttt{DMDALocalInfo} struct is passed into the call-back functions.  Thus the local part of the grid (i.e.~\texttt{info.xs} and etc.) and the global grid size (i.e.~\texttt{info.mx}) can be accessed without needing the \pDMDA object itself.\sidenote{Recall Figure \ref{fig:localpartofgrid}.}
 
-Observe that in \texttt{main()} in Figure \ref{code:reactionII}, because our local call-back functions have a different signature that uses \pDMDA-specific pointers, we use \texttt{DMDASNESSetFunctionLocal()} instead of \texttt{SNESSetFunction()}.\sidenote{Compare \texttt{ecjacobian.c}.}  The Jacobian is set by a similar method \texttt{DMDASNESSetJacobianLocal()}.  Also, though we implement a Jacobian, we do not allocate a \pMat to hold it because the \pDMDA object has enough information about the grid and stencil so as to pre-allocate a \pMat internally.
+In \texttt{main()} (Figure \ref{code:reactionII}) we use \texttt{DMDASNESSetFunctionLocal()} instead of \texttt{SNESSetFunction()}\sidenote{Compare \texttt{ecjacobian.c}.} because our local call-back functions have a different signature based on \pDMDA-derived pointers,   The Jacobian is set by a similar method \texttt{DMDASNESSetJacobianLocal()}.  Also, though we implement a Jacobian, we do not allocate a \pMat to hold it because the \pDMDA object has enough information about the grid and stencil so as to pre-allocate a \pMat internally.
 
 
 \section{Convergence under grid refinement}
 
-Recall that the resolution of a structured grid can be set with either \texttt{-da\_grid\_x N} or with \texttt{-da\_refine N}.  For example, on a modestly-refined grid we can compare the number of Newton iterations using analytical and finite-difference Jacobian solutions like this:
+Recall that the resolution of a structured grid can be set with either \texttt{-da\_grid\_x N} or \texttt{-da\_refine N}.  For example, on a modestly-refined grid we can compare the number of Newton iterations using analytical and finite-difference Jacobian solutions like this:
 
 \cinputpart{reaction.c}{\CODELOC}{In \texttt{main()} we create a \pDMDA, then \pVecs, and then a \pSNES.  We hand call-back functions to the \pSNES.  Then we solve the equation, get the numerical error, and clean up.}{II}{//MAIN}{//ENDMAIN}{code:reactionII}
 
@@ -365,13 +365,12 @@ $ ./reaction -snes_converged_reason -da_refine 6 -snes_fd
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
 on 513 point grid:  |u-u_exact|_inf/|u|_inf = 4.62255e-08
 \end{cline}
-
-On the other hand, one can see the Newton iterates graphically by
+The results are identical.  On the other hand, one can see the Newton iterates graphically by
 \begin{cline}
 $ ./reaction -da_refine 6 -snes_monitor_solution -draw_pause 1
 \end{cline}
 %$
-One sees that the first Newton step moves close to the solution.
+One sees that the first Newton step moves us close to the solution (not shown).
 
 \begin{figure}
 \includegraphics[width=\textwidth]{reaction-conv}
@@ -379,7 +378,7 @@ One sees that the first Newton step moves close to the solution.
 \label{fig:nl:reaction-conv}
 \end{figure}
 
-Noting that our finite difference method has local truncation error $O(h^2)$, and because our exact solution allows computation of the numerical error, we can generate convergence data to check the implementation.  The result of this bash loop
+Noting that our finite difference method has local truncation error $O(h^2)$, and because an exact solution allows computation of the numerical error, we can generate convergence data to check the implementation.  The result of this bash loop
 \begin{cline}
 $ for N in 0 2 4 6 8 10 12 14 16; do
 >   ./reaction -da_refine $N -snes_rtol 1.0e-10; done
@@ -389,12 +388,12 @@ on 33 point grid:  |u-u_exact|_inf/|u|_inf = 1.1825e-05
 on 131073 point grid:  |u-u_exact|_inf/|u|_inf = 7.05476e-13
 on 524289 point grid:  |u-u_exact|_inf/|u|_inf = 6.04273e-12
 \end{cline}
-is shown in Figure \ref{fig:nl:reaction-conv}.  If we ignore the result on the finest grid, the convergence rate we see is also $O(h^2)$; error stagnation arises at some level of refinement because of accumulation of round-off error.  We also see consistent evidence of quadratic convergence by adding \texttt{-snes\_monitor} to the above runs.  Thus we conclude our implementation is correct.
+is shown in Figure \ref{fig:nl:reaction-conv}.  If we ignore the result on the finest grid then the convergence rate is also $O(h^2)$.\sidenote{Error stagnation always occurs at some level of refinement because of accumulation of round-off error.}  We also see consistent evidence of quadratic convergence by adding \texttt{-snes\_monitor} to the above runs.  Thus we conclude our implementation is correct.
 
 
 \section{Finite-difference Jacobians by ``coloring''} \label{sec:nl:coloring}
 
-However, when we look closer at the finite-difference evaluation of Jacobians we see that it is not really working.  In contrast to the fixed-dimension examples earlier in this Chapter, discretizing a PDE generates an arbitrarily-large number of unknowns.
+However, when we look closer at results from finite-difference evaluation of Jacobians we see that it is not really working.  This is because, in contrast to the fixed-dimension examples earlier in this Chapter, discretizing a PDE generates an arbitrarily-large number of unknowns.
 
 Consider what happens when the grid has about 8000 points:
 \begin{cline}
@@ -412,7 +411,7 @@ on 8193 point grid:  |u-u_exact|_inf/|u|_inf = 1.75635e-10
 real 9.04
 \end{cline}
 %$
-This run is slow because we have evaluated $\bF$ about 25000 times.  The alternative evaluates $\bF$ four times and $J_{\bF}$ three times:
+This run is slow because we have evaluated $\bF$ about 25000 times.  By comparison, the analytical Jacobian version evaluates $\bF$ four times and $J_{\bF}$ three times and runs a hundred times faster:
 \begin{cline}
 $ timer ./reaction -snes_converged_reason -da_refine 10
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
@@ -421,9 +420,60 @@ real 0.04
 \end{cline}
 %$
 
-Fortunately, given that it is desirable for initial prototyping and saving programmer effort, there is no need to abandon the finite-difference-Jacobian idea.  The additional idea needed to make it work for PDEs is applicable to most numerical schemes which use a small set of grid values---a small stencil---in approximating the PDE at each location.\sidenote{Finite difference, element, and volume schemes for discretizing PDES all normally have this property.  Spectral methods, by contrast, have a large, sometimes global, stencil, and would not benefit.}   The idea is to ``color'' [FIXME: cite] the nodes of the grid with a small set of colors so that each evaluation of $\bF$ allows the computation of as many entries of $J_{\bF}(\bx)$ as possible.
+Fortunately, given that it is desirable for initial prototyping and saving programmer effort, there is no need to abandon the finite-difference-Jacobian idea.  The additional tool needed to make it work for PDEs is applicable to many numerical schemes which use a small set of grid values---a small stencil---in approximating the PDE at each location.\sidenote{Finite difference, element, and volume schemes for discretizing PDES all normally have this property.  Spectral methods, by contrast, have a large, sometimes global, stencil, and would not benefit.}   The idea is to ``color'' [FIXME: cite] the nodes of the grid with a small set of colors so that each evaluation of $\bF$ allows the computation of as many entries of $J_{\bF}(\bx)$ as possible.
 
 FIXME: flesh-out theory using Figure
+
+\begin{equation}
+\bv_1 = \begin{bmatrix} 1 \\ 0 \\ 0 \\ 1 \\ 0 \\ 0 \\ 1 \end{bmatrix}, \qquad 
+\bv_2 = \begin{bmatrix} 0 \\ 1 \\ 0 \\ 0 \\ 1 \\ 0 \\ 0 \end{bmatrix}, \qquad
+\bv_3 = \begin{bmatrix} 0 \\ 0 \\ 1 \\ 0 \\ 0 \\ 1 \\ 0 \end{bmatrix}.
+ \label{eq:nl:coloringvecs}
+\end{equation}
+
+\begin{figure}
+\begin{tikzpicture}[scale=1.0]
+\node at (-1.0,8.0) {grid:};
+  \node at (0.5,8.5) {$1$};
+  \node at (1.5,8.5) {$2$};
+  \node at (2.5,8.5) {$3$};
+  \node at (3.5,8.5) {$1$};
+  \node at (4.5,8.5) {$2$};
+  \node at (5.5,8.5) {$3$};
+  \node at (6.5,8.5) {$1$};
+  \draw[line width=1.0pt] (0.5,8.0) -- (6.5,8.0);
+  \draw (0.5,8.0) circle (4.0pt);
+  \draw (1.5,8.0) circle (4.0pt);
+  \draw (2.5,8.0) circle (4.0pt);
+  \draw (3.5,8.0) circle (4.0pt);
+  \draw (4.5,8.0) circle (4.0pt);
+  \draw (5.5,8.0) circle (4.0pt);
+  \draw (6.5,8.0) circle (4.0pt);
+\node at (-1.4,6.5) {matrix $J$:};
+  \draw[xstep=1.0,ystep=1.0,black,thin] (0.0,0.0) grid (7.0,7.0);
+  \node at (0.5,6.5) {$1$};
+  \node at (0.5,5.5) {$1$};
+  \node at (1.5,6.5) {$2$};
+  \node at (1.5,5.5) {$2$};
+  \node at (1.5,4.5) {$2$};
+  \node at (2.5,5.5) {$3$};
+  \node at (2.5,4.5) {$3$};
+  \node at (2.5,3.5) {$3$};
+  \node at (3.5,4.5) {$1$};
+  \node at (3.5,3.5) {$1$};
+  \node at (3.5,2.5) {$1$};
+  \node at (4.5,3.5) {$2$};
+  \node at (4.5,2.5) {$2$};
+  \node at (4.5,1.5) {$2$};
+  \node at (5.5,2.5) {$3$};
+  \node at (5.5,1.5) {$3$};
+  \node at (5.5,0.5) {$3$};
+  \node at (6.5,1.5) {$1$};
+  \node at (6.5,0.5) {$1$};
+\end{tikzpicture}
+\caption{FIXME: coloring in 1D looks like this}
+\label{fig:fdcolorreaction}
+\end{figure}
 
 FIXME: the result is fast
 \begin{cline}
