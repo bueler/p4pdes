@@ -15,11 +15,6 @@ stokes: stokes.o  chkopts
 	-${CLINKER} -o stokes stokes.o  ${PETSC_SNES_LIB}
 	${RM} stokes.o
 
-obstacle: obstacle.o  chkopts
-	-${CLINKER} -o obstacle obstacle.o  ${PETSC_SNES_LIB}
-	${RM} obstacle.o
-
-
 # test codes
 
 testprealloc: testprealloc.o ch4/readmesh.o chkopts
@@ -36,5 +31,5 @@ testts: testts.o  chkopts
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ heat stokes riemann obstacle testprealloc testts
+	@rm -f *~ heat stokes riemann testprealloc testts
 

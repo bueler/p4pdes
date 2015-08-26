@@ -9,7 +9,7 @@ CH3="structuredpoisson.c poisson.c"
 CH4="expcircle.c ecjacobian.c reaction.c"
 CH6="fish2.c"
 CH8="readmesh.c poissontools.c poissonfem.c"
-OTHER="obstacle.c"
+CH11="obstacle.c"
 
 mkdir cstrip/
 
@@ -25,8 +25,8 @@ done
 for NAME in $CH8; do
     cp ../c/ch8/$NAME cstrip/$NAME
 done
-for NAME in $OTHER; do
-    cp ../c/$NAME cstrip/$NAME
+for NAME in $CH11; do
+    cp ../c/ch11/$NAME cstrip/$NAME
 done
 
 ls cstrip/
@@ -42,3 +42,4 @@ for NAME in *.c; do
     sed -i '/PetscErrorCode ierr/d' $NAME.tmp
     mv $NAME.tmp $NAME
 done
+
