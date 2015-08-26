@@ -7,6 +7,15 @@
 \newcommand{\PETSCMINORVERSION}{3.6.0\xspace}
 \newcommand{\PETSCMONTH}{June 2015\xspace}
 
+\newcommand{\CODELOC}{}  % each Chapter redefines this
+
+%\let\STUBSONLY\relax  %                                <--- UNCOMMENT TO ONLY GENERATE STUB CHAPTERS
+\ifx\STUBSONLY\undefined
+  \newcommand{\stubinput}[2]{\input{#1}}
+\else
+  \newcommand{\stubinput}[2]{Percent completed: #2\%.}
+\fi
+
 \renewcommand{\maketitlepage}[0]{%
   \cleardoublepage%
   {%
@@ -165,8 +174,6 @@
   December\fi\space\number\year
 }
 
-\newcommand{\CODELOC}{}  % each Chapter redefines this
-
 \newcommand{\bA}{\mathbf{A}}
 \newcommand{\bB}{\mathbf{B}}
 \newcommand{\bE}{\mathbf{E}}
@@ -300,33 +307,67 @@ Copyright \copyright\ \the\year\ \thanklessauthor
 % Thanks to \mbox{Jed Brown} and \mbox{Constantine Khroulev}, fellow students, and gurus.
 
 
+\chapter*{Preface}
 \input{preface.tex}
 
 \mainmatter
 
 %\setcounter{chapter}{0}
 
-\input{getstarted.tex} % chapter 1
+\chapter{Getting started with PETSc}
+\label{chap:getstarted}
+\renewcommand{\CODELOC}{c/ch1/}
+\input{getstarted.tex}
 
-\input{linearsystem.tex} % chapter 2
+\chapter{Finite-dimensional linear systems}
+\label{chap:linearsystem}
+\renewcommand{\CODELOC}{c/ch2/}
+\input{linearsystem.tex}
 
-\input{structured.tex} % chapter 3
+\chapter{Poisson PDE on a structured grid}
+\label{chap:structured}
+\renewcommand{\CODELOC}{c/ch3/}
+\input{structured.tex}
 
-\input{nonlinear.tex} % chapter 4
+\chapter{Nonlinear equations}
+\label{chap:nonlinear}
+\renewcommand{\CODELOC}{c/ch4/}
+\input{nonlinear.tex}
 
-\input{optifem.tex} % chapter 5
+\chapter{Nonlinear optimization, and a finite element method}
+\label{chap:optifem}
+\renewcommand{\CODELOC}{c/ch5/}
+\stubinput{optifem.tex}{10}
 
-\input{multigrid.tex} % chapter 6
+\chapter{Multigrid}
+\label{chap:multigrid}
+\renewcommand{\CODELOC}{c/ch6/}
+\stubinput{multigrid.tex}{20}
 
-\input{scaling.tex} % chapter 7
+\chapter{Parallel scaling and performance}
+\label{chap:scaling}
+\renewcommand{\CODELOC}{c/ch7/}
+\stubinput{scaling.tex}{5}
 
-\input{unstructured.tex} % chapter 8
+\chapter{An unstructured finite element method}
+\label{chap:unstructured}
+\renewcommand{\CODELOC}{c/ch8/}
+\stubinput{unstructured.tex}{40}
 
-\input{stokes.tex} % chapter 9
+\chapter{Systems of PDEs, and the Stokes equations}
+\label{chap:stokes}
+\renewcommand{\CODELOC}{c/ch9/}
+\stubinput{stokes.tex}{5}
 
-\input{dmplex.tex} % chapter 10
+\chapter{Unstructured grids, the right way}
+\label{chap:dmplex}
+\renewcommand{\CODELOC}{c/ch10/}
+\stubinput{dmplex.tex}{0}
 
-\input{constrained.tex} % chapter 11
+\chapter{PDEs with constraints}
+\label{chap:constrained}
+\renewcommand{\CODELOC}{c/ch11/}
+\stubinput{constrained.tex}{20}
 
 %%%%%%%%%%
 

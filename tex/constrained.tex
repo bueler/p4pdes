@@ -1,7 +1,4 @@
 
-\chapter{PDEs with constraints}
-\label{chap:constrained}
-
 \section{A variational inequality problem}
 
 On a square $R = [-2,2]\times [-2,2]$.  Suppose $\psi \in H^1(R)$ has $\psi\big|_{\partial R} \le 0$ (in a trace sense).  Suppose we have $g\in L^2(\partial R)$ where $g \ge 0$ a.e.~on $\partial R$.  Consider the problem of finding $u\in H_0^1(R)$ so that
@@ -27,21 +24,21 @@ Then the exact solution is
    $$u_{\text{exact}}(x,y) = \begin{cases} \psi(x,y), & r \le r_{\text{free}}, \\  - A \ln(r) + B, & \text{otherwise},\end{cases}$$
 where $r_{\text{free}} = 0.69797$, $A = 0.68026$, and $B = 0.47152$.
 
-\cinputpart{obstacle.c}{c/}{Just the struct.}{I}{//STRUCT}{//ENDSTRUCT}{code:obstaclestruct}
+\cinputpart{obstacle.c}{\CODELOC}{Just the struct.}{I}{//STRUCT}{//ENDSTRUCT}{code:obstaclestruct}
 
-\cinputpart{obstacle.c}{c/}{Create the DMDA and Vecs.}{II}{//CREATE}{//ENDCREATE}{code:obstaclecreate}
+\cinputpart{obstacle.c}{\CODELOC}{Create the DMDA and Vecs.}{II}{//CREATE}{//ENDCREATE}{code:obstaclecreate}
 
-\cinputpart{obstacle.c}{c/}{Setup the SNESVI object.}{III}{//SETUPSNES}{//ENDSETUPSNES}{code:obstaclesetupsnes}
+\cinputpart{obstacle.c}{\CODELOC}{Setup the SNESVI object.}{III}{//SETUPSNES}{//ENDSETUPSNES}{code:obstaclesetupsnes}
 
-\cinputpart{obstacle.c}{c/}{Compute the function $\psi$ and the exact solution, which determines the boundary conditions.}{IV}{//FORMPSI}{//ENDFORMPSI}{code:obstacleformpsi}
+\cinputpart{obstacle.c}{\CODELOC}{Compute the function $\psi$ and the exact solution, which determines the boundary conditions.}{IV}{//FORMPSI}{//ENDFORMPSI}{code:obstacleformpsi}
 
-\cinputpart{obstacle.c}{c/}{From \PETSc 's point of view we are solving ``$F(u)=0$ subject to $u\ge \psi$''; this method computes $F(u)$.}{V}{//FORMFUNC}{//ENDFORMFUNC}{code:obstacleformfunc}
+\cinputpart{obstacle.c}{\CODELOC}{From \PETSc 's point of view we are solving ``$F(u)=0$ subject to $u\ge \psi$''; this method computes $F(u)$.}{V}{//FORMFUNC}{//ENDFORMFUNC}{code:obstacleformfunc}
 
-\cinputpart{obstacle.c}{c/}{This method assembles the Jacobian $J = F'(u)$.}{VI}{//FORMJAC}{//ENDFORMJAC}{code:obstacleformjac}
+\cinputpart{obstacle.c}{\CODELOC}{This method assembles the Jacobian $J = F'(u)$.}{VI}{//FORMJAC}{//ENDFORMJAC}{code:obstacleformjac}
 
-\cinputpart{obstacle.c}{c/}{An important part: tell SNESVI object about bound $u\ge \psi$ (and $u<+\infty$ because SNESVI expects both upper and lower bounds).}{VII}{//FORMBOUNDS}{//ENDFORMBOUNDS}{code:obstacleformbounds}
+\cinputpart{obstacle.c}{\CODELOC}{An important part: tell SNESVI object about bound $u\ge \psi$ (and $u<+\infty$ because SNESVI expects both upper and lower bounds).}{VII}{//FORMBOUNDS}{//ENDFORMBOUNDS}{code:obstacleformbounds}
 
-\cinputpart{obstacle.c}{c/}{Solve and report on results.}{VIII}{//SOLVE}{//ENDSOLVE}{code:obstaclesolve}
+\cinputpart{obstacle.c}{\CODELOC}{Solve and report on results.}{VIII}{//SOLVE}{//ENDSOLVE}{code:obstaclesolve}
 
 \section{Ice sheets}
 
