@@ -781,4 +781,7 @@ only show 11 eigenvalues of this $1000\times 1000$ matrix?  How do these eigenva
 valgrind ./vecmatksp
 \end{cline}
 to see what \texttt{valgrind} shows for a leak-free program.  Then comment-out a \texttt{VecDestroy()} call in \texttt{vecmatksp.c} and rerun to see a common type of memory leak.
+
+% from Barry Smith on petsc-users: "What does your -log_summary output look like? One thing that GMRES does is it introduces a global reduction with each multiple (hence a barrier across all your processes) on some systems this can be deadly."  Turn this into GMRES exercise on many processors with tri.c?
+
 \end{enumerate}
