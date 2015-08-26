@@ -44,3 +44,23 @@ where $r_{\text{free}} = 0.69797$, $A = 0.68026$, and $B = 0.47152$.
 \cinputpart{obstacle.c}{c/}{Solve and report on results.}{VIII}{//SOLVE}{//ENDSOLVE}{code:obstaclesolve}
 
 \section{Ice sheets}
+
+
+%\section{General linear constraints}
+%Date: Sat, 22 Aug 2015 21:29:25 -0500
+%From: Barry Smith <bsmith@mcs.anl.gov>
+%To: David Knezevic <david.knezevic@akselos.com>
+%Cc: PETSc users list <petsc-users@mcs.anl.gov>
+%Subject: Re: [petsc-users] Variatonal inequalities
+%
+%  David,
+%
+%   Currently the only way to do this without adding a lot of additional PETSc code is to add additional variables such that only box constraints appear in the final problem. For example say you have constraints   c <= Ax <= d then introduce new variables y = Ax and then you have the larger problem of unknowns (x,y) and box constrains on y with -infinity and +infinity constraints on x.
+%
+%  Barry
+%
+%> On Aug 22, 2015, at 6:59 AM, David Knezevic <david.knezevic@akselos.com> wrote:
+%> Hi all,
+%> I see from Section 5.7 of the manual that SNES supports box constraints on variables, which is great. However, I was also hoping to also be able to consider general linear inequality constraints, so I was wondering if anyone has any suggestions on how (or if) that could be done with PETSc?
+%> Thanks,
+%> David
