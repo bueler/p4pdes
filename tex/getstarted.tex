@@ -109,6 +109,6 @@ The explanation is that almost all \PETSc methods, and most user-written methods
 \item Program \texttt{e.c} does redundant work, and a terrible job of load-balancing, because the computation of the factorial $n!$ on the rank $n$ process requires $n-1$ flops.  Modify the code to balance the load almost perfectly, with exactly one divide operation on each \texttt{rank} $>0$ process, by using blocking send and receive operations (\texttt{MPI\_Send(),MPI\_Recv()}) to pass the result of the last factorial to the next rank.  (\emph{Now the code does lots of unnecessary communication and waiting.})
 % e1balanced.c
 
-%from Matt Knepley in a petsc-users reply: "In parallel, a total order on summation is not guaranteed, and thus you will have jitter in the result."  Make this into an exercise about modifying e.c to print lots of digits and see that number of processors affects result.
+%from Matt Knepley in a petsc-users reply: "In parallel, a total order on summation is not guaranteed, and thus you will have jitter in the result."  Make this into a subsection "Another numerical fact of life, in parallel" and an exercise about modifying e.c to print lots of digits and see that number of processors affects result.  This code could add reading an option (PetscOptionReal to get a tolerance, with number of terms in sum to use) and getting number of processors (with MPI_Comm_size()) to do the sum with enough terms to get desired tolerance and with equal numbers of terms per processor.
 
 \end{enumerate}
