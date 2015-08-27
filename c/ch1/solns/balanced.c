@@ -1,4 +1,5 @@
-static char help[] = "Solution to exercise 1 in chapter 1.\n\n";
+static char help[] = "Load-balanced computation of Euler's constant, with\n"
+"a ridiculous amount of communication.\n\n";
 
 #include <petscsys.h>
 
@@ -46,3 +47,4 @@ int main(int argc,char **args) {
   PetscFinalize();  // <-- always call
   return 0;
 }
+

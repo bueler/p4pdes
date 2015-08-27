@@ -5,17 +5,14 @@ e: e.o  chkopts
 	-${CLINKER} -o e e.o  ${PETSC_LIB}
 	${RM} e.o
 
-# exercise solutions
-
-e1balanced: e1balanced.o  chkopts
-	-${CLINKER} -o e1balanced e1balanced.o  ${PETSC_LIB}
-	${RM} e1balanced.o
-
+shuffle: shuffle.o  chkopts
+	-${CLINKER} -o shuffle shuffle.o  ${PETSC_LIB}
+	${RM} shuffle.o
 
 # etc
 
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ e e1balanced
+	@rm -f *~ e shuffle
 
