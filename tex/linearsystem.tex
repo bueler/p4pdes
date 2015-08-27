@@ -407,18 +407,18 @@ For CG and GMRES as algorithms, see \citet{Greenbaum1997} or \citet{Saad2003}.  
 
 The classical \emph{Jacobi} and \emph{Gauss-Seidel iterative methods} \citep{Greenbaum1997} are not Krylov space methods as they stand.  They involve extracting parts of (entries of) $A$, as a matrix, which can not be done by operations $A^k\bv$.  These classical iterations can, however, be regarded as preconditioned forms of the Richardson iteration \citep{Greenbaum1997}; see the Exercises.
 
-\newcommand{\mpwide}{28mm}
+\newcommand{\mpwide}{27mm}
 \bigskip
-\begin{figure}[h]
+\begin{table}[h]
 \small
 \begin{tabular}{llll} \vspace{5mm}
-\emph{NAME}\hspace{0.5in} & Richardson & CG & GMRES \\ \vspace{5mm}
-\emph{SYMMETRY} & any & \begin{minipage}[l]{\mpwide}symmetric positive-definite\end{minipage} & any \\ \vspace{5mm}
-\emph{OPTIMALITY} & none & \begin{minipage}[l]{25mm}$\be_k$ minimizes $f(\bv){=}\left<\bv,A\bv\right>$ over $\bv{\in}\Kone{k}{A,\be_0}$\end{minipage} & \begin{minipage}[l]{\mpwide}$\br_k$ minimizes $f(\bv){=}\|\bv\|_2$ over $\bv{\in}\Kone{k}{A,\bb}$\end{minipage} \\ \vspace{5mm}
-\begin{minipage}[l]{21mm}\emph{SPECTRAL} \emph{CONDITION}\end{minipage} & $\rho(I-\omega A) \ll 1$ & \begin{minipage}[l]{\mpwide}exist $p_n{\in}\Pnone$ small on $\sigma(A){\subset}(0,\infty)$\end{minipage} & \begin{minipage}[l]{\mpwide}exist $p_n{\in}\Pnone$ small on $\sigma(A){\subset}\CC$\end{minipage}
+\emph{NAME} & \emph{SYMMETRY} & \emph{OPTIMALITY} & \begin{minipage}[l]{21mm}\emph{SPECTRAL} \emph{CONDITION}\end{minipage} \\ \vspace{5mm}
+Richardson & any & none & $\rho(I-\omega A) \ll 1$ \\ \vspace{5mm}
+CG & \begin{minipage}[l]{\mpwide}symmetric \\ positive-definite\end{minipage} & \begin{minipage}[l]{25mm}$\be_k$ minimizes $f(\bv){=}\left<\bv,A\bv\right>$ over $\bv{\in}\Kone{k}{A,\be_0}$\end{minipage} & \begin{minipage}[l]{\mpwide}exist $p_n{\in}\Pnone$ small on $\sigma(A){\subset}(0,\infty)$\end{minipage} \\ \vspace{5mm}
+GMRES & any & \begin{minipage}[l]{\mpwide}$\br_k$ minimizes $f(\bv){=}\|\bv\|_2$ over $\bv{\in}\Kone{k}{A,\bb}$\end{minipage} & \begin{minipage}[l]{\mpwide}exist $p_n{\in}\Pnone$ small on $\sigma(A){\subset}\CC$\end{minipage}
 \end{tabular}
-\caption{Comparison of three well-known Krylov methods for the problem $A\bu=\bb$.  ``Symmetry'' refers to the required properties of $A$ so as to apply the method.  ``Spectral condition'' is an informal statement of the spectral properties of $A$ which will lead to rapid convergence.  Here $\br_k=\bb-A\bu_k$ and $\be_k=\bu_k-\bu$.} \label{tab:krylovcompare}
-\end{figure}
+\caption{Comparison of three well-known Krylov methods for the problem $A\bu=\bb$.  ``Symmetry'' means required properties of $A$ to apply the method.  ``Spectral condition'' informally states spectral properties of $A$ which lead to rapid convergence.  Recall $\br_k=\bb-A\bu_k$ and $\be_k=\bu_k-\bu$.} \label{tab:krylovcompare}
+\end{table}
 
 We get access to the many Krylov methods implemented in \PETSc any time we create a \pKSP object.  Which method is used can be controlled at runtime, as long as we call the \texttt{KSPSetFromOptions()} method (below), and runtime experimentation is always appropriate.  For the Poisson problem in Chapter \ref{chap:structured}, for example, we will see that preconditioned CG is very effective, but in later Chapters we will put the most emphasis on the preconditioning stage.  We will see that multigrid preconditioning is extraordinarily effective on the Poisson problem (Chapter \ref{chap:multigrid}).  And we will return to Krylov space methods repeatedly in later Chapters.
 
