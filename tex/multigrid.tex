@@ -46,11 +46,21 @@ The code \texttt{c4poisson.c} is quite short because the two methods \texttt{Com
 
 \section{Grid sequencing on a nonlinear problem}
 
+% question by Gideon Simpson:
+% ...
 %> Nope, I'm not doing any grid sequencing. Clearly that makes a lot of
 %> sense, to solve on a spatially coarse mesh for the field variables,
-%> interpolate onto the finer mesh, and then solve again.  I?m not entirely
+%> interpolate onto the finer mesh, and then solve again.  I'm not entirely
 %> clear on the practical implementation
 %
-%SNES should do this automatically using -snes_grid_sequence <k>.  If this
-%does not work, complain. Loudly.
+% SNES should do this automatically using -snes_grid_sequence <k>.  If this
+% does not work, complain. Loudly.
 %   Matt
+% ... later in correspondence ...
+%> 4.  When I do SNESSolve(snes, NULL, U) with grid sequencing, U is not
+%> the solution on the fine mesh.  But what is it?  Is it still the starting
+%> guess, or is it the solution on the coarse mesh?
+%
+% It will contain the solution on the coarse mesh. After SNESSolve() call
+% SNESGetSolution() and it will give back the solution on the fine mesh.
+%  Barry
