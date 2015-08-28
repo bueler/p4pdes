@@ -1,5 +1,5 @@
 
-We now make a transition from Chapters \ref{chap:structured} and \ref{chap:unstructured}.  In those chapters we wrote code to assemble the linear system for the problem on the grid or mesh initially chosen at runtime, and then we handed the system, in the form of \pMat and \pVec objects, to the \pKSP for solution.  In this Chapter, by contrast, we give a matrix-building code to \pKSP.  The \pKSP can actually choose the grid during the solution process, and ask our code (i.e.~through a ``call-back'') to assemble the matrix on that grid at that stage of the process.  This means \PETSc \pKSP object can do \emph{geometric multigrid} \citep{Briggsetal2000}.  To get started we recall basic ideas of multigrid.
+We now make a transition from Chapters \ref{chap:st} and \ref{chap:un}.  In those chapters we wrote code to assemble the linear system for the problem on the grid or mesh initially chosen at runtime, and then we handed the system, in the form of \pMat and \pVec objects, to the \pKSP for solution.  In this Chapter, by contrast, we give a matrix-building code to \pKSP.  The \pKSP can actually choose the grid during the solution process, and ask our code (i.e.~through a ``call-back'') to assemble the matrix on that grid at that stage of the process.  This means \PETSc \pKSP object can do \emph{geometric multigrid} \citep{Briggsetal2000}.  To get started we recall basic ideas of multigrid.
 
 
 \section{Multigrid basics}
@@ -39,9 +39,9 @@ That is, we create \texttt{ksp} as in \texttt{c2poisson.c}, but this time we exp
 
 \cinputpart{fish2.c}{c/ch5/}{Poisson problem on a structured grid again, but this time using \texttt{KSPSetComputeOperators()} so that multigrid is possible.}{I}{//MAIN}{//ENDMAIN}{code:multigridone}
 
-The code \texttt{c4poisson.c} is quite short because the two methods \texttt{ComputeRHS()} and \texttt{ComputeA()} are quite trivial ``wrappers'' around methods \texttt{formRHS()} and \texttt{formdirichletlaplacian()} from source file \texttt{structuredpoisson.c} in Chapter \ref{chap:structured}.  See Figure \ref{code:multigridtwo}.
+The code \texttt{c4poisson.c} is quite short because the two methods \texttt{ComputeRHS()} and \texttt{ComputeA()} are quite trivial ``wrappers'' around methods \texttt{formRHS()} and \texttt{formdirichletlaplacian()} from source file \texttt{structuredpoisson.c} in Chapter \ref{chap:st}.  See Figure \ref{code:multigridtwo}.
 
-\cinputpart{fish2.c}{c/ch5/}{These methods build the right-hand side and the matrix, for call-back by \texttt{KSPSetComputeRHS()} and \texttt{KSPSetComputeOperators()}, respectively, but they are just wrappers around code reused from Chapter \ref{chap:structured}.}{II}{//COMPUTES}{//ENDCOMPUTES}{code:multigridtwo}
+\cinputpart{fish2.c}{c/ch5/}{These methods build the right-hand side and the matrix, for call-back by \texttt{KSPSetComputeRHS()} and \texttt{KSPSetComputeOperators()}, respectively, but they are just wrappers around code reused from Chapter \ref{chap:st}.}{II}{//COMPUTES}{//ENDCOMPUTES}{code:multigridtwo}
 
 
 \section{Grid sequencing on a nonlinear problem}

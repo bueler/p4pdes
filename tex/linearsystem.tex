@@ -13,7 +13,7 @@ has a unique solution $\bu\in \RR^{N}$ if $A$ is invertible, namely
 \end{equation}
 This is simple in theory.
 
-It is not so simple in practice, however, to solve linear systems on a computer.  Here are two facts to keep in mind while working numerically with linear systems \citep{TrefethenBau}:
+It is not so simple in practice, however, to solve linear systems on a computer.  Here are two facts to keep in mind while working numerically with linear systems \citep{TrefethenBau1997}:
 \renewcommand{\labelenumi}{\roman{enumi})}
 \begin{enumerate}
 \item \label{limittoaccuracy} \emph{limit to accuracy}:  If real numbers are represented with machine precision $\eps$ then the solution of \eqref{introsystem} can only be computed within an error $\kappa(A) \eps$ where $\kappa(A) = \|A\| \|A^{-1}\|$ is the \emph{condition number} of $A$ (for the induced matrix norm $\|\cdot\|$).
@@ -24,7 +24,7 @@ Fact i) is about conditioning not methods.  Informally speaking, there are matri
 
 The precision for the C \texttt{double} type, the default 64-bit representation of real numbers, a type aliased to \texttt{PetscReal} in our \PETSc programs, is $\eps = 2.2 \times 10^{-16}$.  Thus by i), a linear system having $\kappa(A) \approx 10^{10}$, for example, can only be solved to five or six decimal digits of precision.  While a matrix with such a large condition number is ``poorly-conditioned,'' it is possible to reach that level for $\kappa(A)$ when discretizing PDEs.  We have to be aware of conditioning when forming expectations about solution accuracy.
 
-By ii) a generic linear system with $N=10^6$ equations requires $10^{18}$ or so operations to solve by Gauss elimination.  Even modern supercomputers take a while to do a quintillion operations.  However, though general-purpose direct methods are impractical for $N=10^6$ systems, we will successfully solve PDE-generated linear systems of this size on a single processor in a few seconds, and in $O(N)$ operations, in Chapter \ref{chap:multigrid}.  The key fact is that discretized PDEs generate linear systems with exploitable structure, especially \emph{sparsity}, namely only a few nonzero entries per matrix row.  For the methods to converge there needs to be other structure, such as regularity of the matrix entries arising from the smoothness of the coefficients in the PDE.  In any case, this structure will must be exploited, and exposed to one degree or another, in serious numerical PDE solutions.  Naive application of direct methods---treating solvers for \eqref{introsystem} as unadjusted black boxes---is too slow.
+By ii) a generic linear system with $N=10^6$ equations requires $10^{18}$ or so operations to solve by Gauss elimination.  Even modern supercomputers take a while to do a quintillion operations.  However, though general-purpose direct methods are impractical for $N=10^6$ systems, we will successfully solve PDE-generated linear systems of this size on a single processor in a few seconds, and in $O(N)$ operations, in Chapter \ref{chap:mg}.  The key fact is that discretized PDEs generate linear systems with exploitable structure, especially \emph{sparsity}, namely only a few nonzero entries per matrix row.  For the methods to converge there needs to be other structure, such as regularity of the matrix entries arising from the smoothness of the coefficients in the PDE.  In any case, this structure will must be exploited, and exposed to one degree or another, in serious numerical PDE solutions.  Naive application of direct methods---treating solvers for \eqref{introsystem} as unadjusted black boxes---is too slow.
 %ch5/:  timer ./fish2 -da_refine 7 -ksp_type cg -pc_type mg
 %on 1153 x 1153 grid:  iterations 2, residual norm = 1.88082e-05
 %real 11.18
@@ -258,7 +258,7 @@ In these cases the matrix was stored in \emph{serial} compressed sparse row form
 
 \section{Numerical linear algebra: residual, iterations, preconditioning}
 
-Direct methods like Gauss elimination \citep{TrefethenBau} are one way to solve a linear system.  The most powerful methods for our later PDE-solving uses, however, are iterative.  They use the \emph{residual} of some approximation of the solution to the linear system.
+Direct methods like Gauss elimination \citep{TrefethenBau1997} are one way to solve a linear system.  The most powerful methods for our later PDE-solving uses, however, are iterative.  They use the \emph{residual} of some approximation of the solution to the linear system.
 
 By definition, the residual of $\bu_0$ in linear system \eqref{introsystem} is the vector
 \begin{equation}
@@ -299,7 +299,7 @@ If we rewrite \eqref{introrichardson} as
 \end{equation}
 then it is easy to believe that the ``size'' of the matrix $I-\omega A$ will determine whether $\lim_{k\to\infty} \bu_k$ exists.
 
-To make this precise we recall important definitions.  A complex number\sidenote{Though $B$ is real, $\lambda$ may indeed be complex, but if $\lambda$ is an eigenvalue of a real matrix $B$ then so is $\bar\lambda$.} $\lambda \in \CC$ is an \emph{eigenvalue} of a square matrix $B\in\RR^{N\times N}$ if there is a nonzero vector $\bv\in\CC^N$ so that $B \bv = \lambda \bv$.  The set of all eigenvalues of $B$ is the \emph{spectrum} $\sigma(B)$ of $B$.  The \emph{spectral radius} $\rho(B)$ is the maximum magnitude of the eigenvalues of $B$.  The \emph{singular values} are the square roots of the eigenvalues of the matrix $B^*B$, a symmetric and positive-definite matrix with nonnegative eigenvalues.  Singular values are geometrically-defined as the lengths of semi-axes of the (hyper-)ellipsoid in $\RR^N$ that results from applying $B$ to all vectors in the unit ball of $\RR^N$ \citep{TrefethenBau}.
+To make this precise we recall important definitions.  A complex number\sidenote{Though $B$ is real, $\lambda$ may indeed be complex, but if $\lambda$ is an eigenvalue of a real matrix $B$ then so is $\bar\lambda$.} $\lambda \in \CC$ is an \emph{eigenvalue} of a square matrix $B\in\RR^{N\times N}$ if there is a nonzero vector $\bv\in\CC^N$ so that $B \bv = \lambda \bv$.  The set of all eigenvalues of $B$ is the \emph{spectrum} $\sigma(B)$ of $B$.  The \emph{spectral radius} $\rho(B)$ is the maximum magnitude of the eigenvalues of $B$.  The \emph{singular values} are the square roots of the eigenvalues of the matrix $B^*B$, a symmetric and positive-definite matrix with nonnegative eigenvalues.  Singular values are geometrically-defined as the lengths of semi-axes of the (hyper-)ellipsoid in $\RR^N$ that results from applying $B$ to all vectors in the unit ball of $\RR^N$ \citep{TrefethenBau1997}.
 
 Properties of a matrix described in terms of its eigenvalues or singular values are generically called ``spectral properties.''  For example, $\|B\|_2$ is the largest singular value of $B$ and $\|B^{-1}\|_2$ is the inverse of the smallest singular value of $B$, so these are spectral properties.  The 2-norm condition number $\kappa(B)=\|B\|_2/\|B^{-1}\|_2$ is thus also a spectral property; it is visualized as the eccentricity of the ellipsoid above.
 
@@ -420,7 +420,7 @@ GMRES & any & \begin{minipage}[l]{\mpwide}$\br_k$ minimizes $f(\bv){=}\|\bv\|_2$
 \caption{Comparison of three well-known Krylov methods for the problem $A\bu=\bb$.  ``Symmetry'' means required properties of $A$ to apply the method.  ``Spectral condition'' informally states spectral properties of $A$ which lead to rapid convergence.  Recall $\br_k=\bb-A\bu_k$ and $\be_k=\bu_k-\bu$.} \label{tab:krylovcompare}
 \end{table}
 
-We get access to the many Krylov methods implemented in \PETSc any time we create a \pKSP object.  Which method is used can be controlled at runtime, as long as we call the \texttt{KSPSetFromOptions()} method (below), and runtime experimentation is always appropriate.  For the Poisson problem in Chapter \ref{chap:structured}, for example, we will see that preconditioned CG is very effective, but in later Chapters we will put the most emphasis on the preconditioning stage.  We will see that multigrid preconditioning is extraordinarily effective on the Poisson problem (Chapter \ref{chap:multigrid}).  And we will return to Krylov space methods repeatedly in later Chapters.
+We get access to the many Krylov methods implemented in \PETSc any time we create a \pKSP object.  Which method is used can be controlled at runtime, as long as we call the \texttt{KSPSetFromOptions()} method (below), and runtime experimentation is always appropriate.  For the Poisson problem in Chapter \ref{chap:st}, for example, we will see that preconditioned CG is very effective, but in later Chapters we will put the most emphasis on the preconditioning stage.  We will see that multigrid preconditioning is extraordinarily effective on the Poisson problem (Chapter \ref{chap:mg}).  And we will return to Krylov space methods repeatedly in later Chapters.
 
 Our brief introduction of iterative linear algebra is hardly adequate.  But we need now to return to \PETSc codes and solve linear systems.  In the upcoming material the reader can initially treat \PETSc's \pKSP linear solver object as a black box, but then explore how it works through runtime options.
 
@@ -710,7 +710,7 @@ cg         & none        & \intime{cg.none.1}          & \intime{cg.none.4} \\
 This Table deserves discussion:
 \begin{itemize}
 \item Entries ``\texttt{bjacobi+ilu}'' and ``\texttt{bjacobi+icc}'' correspond to options \texttt{-pc\_type bjacobi -sub\_pc\_type ilu} and \texttt{-pc\_type bjacobi -sub\_pc\_type icc}, respectively.  As already noted, the first of these is the parallel default.\sidenote{This example suggests it is a reasonable choice for the default!}
-\item Counting floating point operations shows the leading-order work for Cholesky is $m^3/3$ while for LU it is $2 m^3/3$ \citep{TrefethenBau}.  This is reflected in the direct-solve results using \texttt{-ksp\_type preonly}.  A diagonally-dominant tridiagonal problem is very well-behaved for direct methods because no fill-in or pivoting occurs when they are applied, but we should not assume that a generic $10^7$ dimension systems are good candidates for direct solves.
+\item Counting floating point operations shows the leading-order work for Cholesky is $m^3/3$ while for LU it is $2 m^3/3$ \citep{TrefethenBau1997}.  This is reflected in the direct-solve results using \texttt{-ksp\_type preonly}.  A diagonally-dominant tridiagonal problem is very well-behaved for direct methods because no fill-in or pivoting occurs when they are applied, but we should not assume that a generic $10^7$ dimension systems are good candidates for direct solves.
 \item Cholesky and CG methods apply to symmetric positive-definite matrices only.  These are \pKSP method \texttt{cg} and \pPC methods \texttt{cholesky} and \texttt{icc} (incomplete-Cholesky, also denoted ``IC($0$)'').  We see some benefit to using CG on one-process runs, compared to the general (non-symmetric) method GMRES, but the matrix generated by \texttt{tri.c} is so well-behaved that both of these iterations work well.
 \item There is some speed-up from $N=1$ to $N=4$ processes on this single node 4-core \WORKSTATION.  The two (or slightly more) times speed-up is relatively uniform across methods.  But apparently using four cores does not guarantee anywhere near four-times speed-up.
 \end{itemize}
@@ -746,7 +746,7 @@ shows the residual norm logarithm versus the iteration number.
 
 \item On page \pageref{krylovgoal} we note that a Krylov space approximation $p_{n-1}(A)\bb$ to the solution $A^{-1}\bb$ is close if $p_{n-1}(z)$ is close to $1/z$ on the spectrum of $A$.  Prove this for invertible diagonalizable matrices $A=S\Lambda S^{-1}$, with $\Lambda$ diagonal, by showing
 	$$\|p_{n-1}(A) - A^{-1}\| \le \,\kappa(S)\, \max_{\lambda \in \sigma(A)} |p_{n-1}(\lambda) - \lambda^{-1}|$$
-where $\kappa(S) = \|S\| \|S^{-1}\|$ is the condition number.\sidenote{Here $\|\cdot\|$ is any induced matrix norm \citep{TrefethenBau}.}  If $A$ is \emph{normal} then, by definition, $S$ can be chosen to be unitary.  In that case, using the $2$-norm, the condition number factor can have its minimal value of $1$.
+where $\kappa(S) = \|S\| \|S^{-1}\|$ is the condition number.\sidenote{Here $\|\cdot\|$ is any induced matrix norm \citep{TrefethenBau1997}.}  If $A$ is \emph{normal} then, by definition, $S$ can be chosen to be unitary.  In that case, using the $2$-norm, the condition number factor can have its minimal value of $1$.
 
 \item For the $\omega=1$ Richardson iteration \eqref{introrichardson} and $\bu_0=\bb$ we get $\bu_k = q_k(A) \bb$ for polynomials $q_k$ given by \eqref{richpolys}.  Show that if $\lim_{k\to\infty} q_k=q_\infty$ exists then $q_\infty(x)=1/x$.  On the other hand, by setting $y=1-x$ and defining $Q_k(y)=q_k(1-y)$, show $Q_k(y)$ is the partial sum of a well-known series with a well-known radius of convergence.
 
@@ -764,7 +764,7 @@ Because otherwise it computes the eigenvalues of the preconditioned operator $P^
 \begin{cline}
 ./tri -tri_n 1000 -pc_type none -ksp_compute_eigenvalues
 \end{cline}
-only show 11 eigenvalues of this $1000\times 1000$ matrix?  How do these eigenvalues explain the good behavior of unpreconditioned GMRES?\sidenote{See \citep{TrefethenBau} for help with both of these questions.}
+only show 11 eigenvalues of this $1000\times 1000$ matrix?  How do these eigenvalues explain the good behavior of unpreconditioned GMRES?\sidenote{See \citep{TrefethenBau1997} for help with both of these questions.}
 
 \item The accuracy of direct solves (e.g.~\texttt{-ksp\_type preonly -pc\_type cholesky}) in \texttt{tri.c}, as measured by the reported error norm $\|\bx - \bx_{\text{exact}}\|_2$, decreases with increasing dimension.  Confirm and explain this observation.
 

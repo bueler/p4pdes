@@ -224,9 +224,9 @@ In this section we apply centered finite differences to equations \eqref{ppstoke
 \begin{equation}
   A \bz = \bbf \label{linsysstokes}
 \end{equation}
-with block structure \eqref{blockppstokes}.  We do not, however, describe this linear system to \PETSc using \pMat for $A$ and a \pVec for $\bbf$ in \eqref{linsysstokes}.  Rather we treat the linear problem as nonlinear, following the examples in Chapter \ref{chap:nonlinear}.  Because we are using a structured grid managed by a \PETSc \pDMDA object, we provide a residual-evaluation routine for the locally-owned part of the structured grid.
+with block structure \eqref{blockppstokes}.  We do not, however, describe this linear system to \PETSc using \pMat for $A$ and a \pVec for $\bbf$ in \eqref{linsysstokes}.  Rather we treat the linear problem as nonlinear, following the examples in Chapter \ref{chap:nl}.  Because we are using a structured grid managed by a \PETSc \pDMDA object, we provide a residual-evaluation routine for the locally-owned part of the structured grid.
 
-To get started on the FD equations, and recalling the notation from Chapter \ref{chap:structured}, suppose that we have a grid of \texttt{Mx} points in the $x$ direction and \texttt{My} points in the $y$ direction.  Periodicity in the $x$ direction means that there is a difference in the computation of grid spacing:
+To get started on the FD equations, and recalling the notation from Chapter \ref{chap:st}, suppose that we have a grid of \texttt{Mx} points in the $x$ direction and \texttt{My} points in the $y$ direction.  Periodicity in the $x$ direction means that there is a difference in the computation of grid spacing:
 \begin{equation}
 h_x = \frac{L}{\text{\texttt{Mx}}}, \qquad h_y = \frac{H}{\text{\texttt{My}}-1}. \label{hdefinestokes}
 \end{equation}
