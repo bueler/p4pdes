@@ -1,15 +1,19 @@
 
 \section{A code that does almost nothing, but in parallel}
 
-The purpose of the \PETSc library is to help you solve scientific and engineering problems, on multi-processor computers.  As \PETSc is built ``on top of'' the Message Passing Interface (MPI; \citep{Groppetal1999}) library, some of the MPI flavor comes through.  Therefore we start with an introductory \PETSc code which calls MPI for some basic tasks.
+The purpose of the \PETSc library is to help you solve scientific and engineering problems on multi-processor computers.  As \PETSc is built on top of the Message Passing Interface (MPI; \citep{Groppetal1999}) library, some of its flavor comes through.  Therefore we start with an introductory \PETSc code which calls MPI for some basic tasks.
 
-This code \texttt{e.c}, shown in its entirety in Figure \ref{code:e}, approximates Euler's constant
+This code \texttt{e.c}, shown in its entirety in Code \ref{code:e}, approximates Euler's constant
 \begin{equation}
 e = \sum_{n = 0}^\infty \frac{1}{n!} \approx 2.718281828 \label{introeseries}
 \end{equation}
 It does the computation in a distributed manner by computing one term of the infinite series on each process, giving a better estimate of $e$ when run on more MPI processes. While this is a silly use of \PETSc, it is an easy-to-understand parallel computation.
 
-As with any C source code, \texttt{e.c} has a function called \texttt{main()} which takes inputs from the command line, namely \texttt{argc} and \texttt{argv},\sidenote{Here \texttt{argc} is an \texttt{int} holding the argument count and \texttt{argv} is an array of strings (i.e.~type \texttt{char**}) holding the command line including all arguments.  In all our codes we simply pass these arguments to \PETSc through the \texttt{PetscInitialize()} method; it extracts options through this mechanism.} and which outputs an \texttt{int}.  The output is $0$ if the program succeeds.  Also like all C codes, we include needed headers.  Only \texttt{petsc.h} is needed because MPI methods are included thereby.  The substance of \texttt{e.c} is to declare some variables, do a computation on each process, and communicate the results between processes to get an estimate of $e$.
+As with most C codes we include needed headers, but only \texttt{petsc.h} is needed because it includes MPI too.  Also, like any C program, \texttt{e.c} has a function called \texttt{main()} which takes inputs from the command line, namely \texttt{argc} and \texttt{argv}.  The former is an \texttt{int} holding the argument count and the latter is an array of strings---i.e.~\texttt{argv} is of type \texttt{char**}---holding the command line, including all arguments.  In all our codes we will simply pass these arguments to \PETSc through the \texttt{PetscInitialize()} which extracts options through this mechanism.  The \texttt{main()} function also outputs an \texttt{int}.  This return value is $0$ if the program succeeds, and so we see ``\texttt{return 0;}'' as the last line, but the error-related commands ``\texttt{CHKERRQ(ierr);}'' can also generate a non-zero return value from \texttt{main()}.  (We will return to this ``trace-back'' mechanism later in the Chapter.)
+
+The substance of \texttt{e.c} is to declare some variables, do a computation on each process, and communicate the results between processes to get an estimate of $e$.  We will return to the parallel computation itself momentarily.
+
+\inputwhole{../c/ch1/e.c}{\texttt{ch1/e.c}}{Compute $e$ with \PETSc.}{code:e}
 
 Before we can compile and run \texttt{e.c}, \PETSc must be installed.  If it is not already available, go to
 \begin{quote}
@@ -23,14 +27,12 @@ to install.  Be sure to run ``\texttt{make test}'' and see it pass the tests.  W
 
 Do the following to compile \texttt{e.c}:
 \begin{cline}
-$ cd p4pdes/
-$ cd c/ch1/
+$ cd p4pdes/c/
+$ cd ch1/
 $ make e
 \end{cline}
 %$
-Calling ``\texttt{make}'' uses \texttt{p4pdes/c/ch1/makefile}.  An extract of this makefile is shown in Figure \ref{code:ch1makefile}.  For all the codes in this book, the makefile has this form, as recommended in the \PETSc \emph{User's Manual} \citep{petsc-user-ref}.
-
-\inputwhole{../c/ch1/e.c}{\texttt{c/ch1/e.c}}{Compute $e$ with \PETSc.}{code:e}
+Calling ``\texttt{make}'' uses \texttt{makefile} in the \texttt{ch1/} directory.  An extract of this is shown in Code \ref{code:ch1makefile}.  For all the codes in this book, the makefile has this form, as recommended in the \PETSc \emph{User's Manual} \citep{petsc-user-ref}.
 
 Run the code like this:
 \begin{cline}
@@ -59,15 +61,15 @@ rank 0 did 0 flops
 \end{cline}
 %$
 
-``Double precision'' refers to the 64-bit representation of real numbers, which is the type normally aliased to \texttt{PetscReal} and \texttt{PetscScalar} inside \PETSc codes.  This representation corresponds to about 15 decimal digit accuracy \citep{TrefethenBau}.
+``Double precision,'' of course, refers to the 64-bit representation of real numbers.  This type, which is normally aliased to \texttt{PetscReal} inside \PETSc codes, corresponds to about 15 decimal digit accuracy in scientific notation, i.e.~floating point representation \citep{TrefethenBau}.
 
-\inputtoline{../c/ch1/makefile}{extract from \texttt{c/ch1/makefile}}{All our \texttt{makefile}s for \PETSc examples look like this.}{6}{code:ch1makefile}
+\inputwhole{ch1makefile.frag}{extract from \texttt{ch1/makefile}}{All our \texttt{makefile}s for \PETSc examples look like this.}{code:ch1makefile}
 
-Perhaps the reader is now worried that this book was written using a cluster with 20 physical processors whereas the reader has a little laptop with only a couple of cores.  Not so.  In fact these 5 and 20 process runs work just fine on the author's laptop.  MPI processes are created as needed, using an old feature of operating systems: multitasking.  Speedup from parallelism is another matter, to which we will return.
+Perhaps the reader is now worried that this book was written using a cluster with 20 physical processors whereas the reader has a little laptop with only a couple of cores.  Not so.  In fact these 5 and 20 process runs work just fine on the author's 4-core laptop.  MPI processes are created as needed, using an old feature of operating systems: multitasking.  Actual speedup from parallelism is another matter entirely, to which we will return.
 
-The main job in \texttt{e.c} is to collect the partial sum of series \eqref{introeseries} onto each process.  Each process computes term $1/n!$, where $n$ is returned by \texttt{MPI\_Comm\_rank()}.  More precisely, \texttt{PETSC\_COMM\_WORLD} is an MPI communicator \citep{Groppetal1999} containing all processes generated by ``\texttt{mpiexec -n N}'' in the above calls, and $n$ is the rank of the process in this communicator.  A call to \texttt{MPI\_Allreduce()} does the sum and sends the result back to each process.  These direct uses of the MPI library are a part of using \PETSc, which generally avoids duplicating MPI functionality.
+The main job in \texttt{e.c} is to collect the partial sum of series \eqref{introeseries} onto each process.  Each process computes term $1/n!$, where $n$ is returned by \texttt{MPI\_Comm\_rank()}.  More precisely, \texttt{PETSC\_COMM\_WORLD} is an MPI communicator \citep{Groppetal1999} containing all processes generated by ``\texttt{mpiexec -n N}'' in the above calls, and $n$ is the rank of the process in this communicator.\sidenote{A call to \texttt{MPI\_Comm\_size()} would return \texttt{N}, the communicator's \emph{size}.}  A call to \texttt{MPI\_Allreduce()} does the sum and sends the result back to each process.  These direct uses of the MPI library are a part of using \PETSc, which generally avoids duplicating MPI functionality.
 
-We print the computed estimate of $e$, but each process also prints its rank and the work it did.  The formatted print command \texttt{PetscPrintf()}, which acts like \texttt{fprintf()} from the C standard library, is called twice, once with MPI communicator \texttt{PETSC\_COMM\_WORLD} and once with \texttt{PETSC\_COMM\_SELF}.  The first of these printing jobs is \emph{collective} over all processes, and thus only done once, while the second is individual to each rank.\sidenote{A process is often just called a \emph{rank} in MPI language.}  In the output the \texttt{PETSC\_COMM\_SELF} printed lines can appear in random order because the print occurs as soon as that rank reaches that line.
+We print the computed estimate of $e$ once, but each process also prints its rank and the work it did.  The formatted print command \texttt{PetscPrintf()}, which acts like \texttt{fprintf()} from the C standard library, is called twice in the code.  The first time it uses MPI communicator \texttt{PETSC\_COMM\_WORLD} and the second time \texttt{PETSC\_COMM\_SELF}.  The first of these printing jobs is thus \emph{collective} over all processes, and thus only one line of output is produced, while the second is individual to each rank\sidenote{A process is often just called a \emph{rank} in MPI language.}  and we get \texttt{N} printed lines.  The \texttt{PETSC\_COMM\_SELF} lines can appear in apparently random order because the print occurs as soon as that rank reaches the \texttt{PetscPrintf()} command in the code.
 
 \section{Every \PETSc program}
 
@@ -94,11 +96,11 @@ $ ./e -help | grep log_
 %$
 We will see later how to add options to our own programs so that they will be documented in the same way.
 
-Unfortunately for their appearance, all our \PETSc example codes have error-checking clutter.  While languages other than C might help with decluttering, we are stuck with ugly lines that look like
+Unfortunately with respect to their appearance, all our \PETSc example codes have error-checking clutter.  While languages other than C might help with decluttering, we are stuck with ugly lines that look like
 \begin{code}
 ierr = PetscCommand(...); CHKERRQ(ierr);
 \end{code}
-The explanation is that almost all \PETSc methods, and most user-written methods in \PETSc programs, return an \texttt{int} for error checking, with value $0$ if successful.  In the line above, \texttt{ierr} is passed to the \texttt{CHKERRQ()} macro which does nothing if \texttt{ierr == 0} but which stops the program with a ``traceback'' otherwise.\sidenote{A traceback is a list of the nested methods, in reverse order, showing the line numbers and method names of the location where the error occurred.  Traceback is most effective if \PETSc is configured with debugging symbols, i.e.~with the option \texttt{----with-debugging=1}.}  This traceback mechanism tends to be the first line of defense when debugging run-time errors.  Thus examples in this book always capture-and-check the returned error code using \texttt{ierr} and \texttt{CHKERRQ()}.  However, after this chapter we will strip the ``\texttt{ierr =}'' and ``\texttt{CHKERRQ(ierr);}'' clutter from the code displayed in the text, though they are always present in the C sources in \texttt{p4pde/c/}
+The explanation is that almost all \PETSc methods, and most user-written methods in \PETSc programs, return an \texttt{int} for error checking, with value $0$ if successful.  In the line above, \texttt{ierr} is passed to the \texttt{CHKERRQ()} macro.  It does nothing if \texttt{ierr == 0} but it stops the program with a ``traceback'' otherwise.\sidenote{A traceback is a list of the nested methods, in reverse order, showing the line numbers and method names of the location where the error occurred.  Traceback is most effective if \PETSc is configured with debugging symbols, i.e.~with the option \texttt{----with-debugging=1}.}  This traceback mechanism is a first line of defense when debugging run-time errors, so in this book we always capture-and-check the returned error code using the \texttt{CHKERRQ()} macro.  After this Chapter we will strip the ``\texttt{ierr =}'' and ``\texttt{CHKERRQ(ierr);}'' clutter from the code displayed in the text, but they are always present in the C sources in \texttt{p4pde/c/}.
 
 
 \bigskip
