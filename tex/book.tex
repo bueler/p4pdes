@@ -9,11 +9,11 @@
 
 \newcommand{\CODELOC}{}  % each Chapter redefines this
 
-%\let\STUBSONLY\relax  %                                <--- UNCOMMENT TO ONLY GENERATE STUB CHAPTERS
+\let\STUBSONLY\relax  %                                <--- UNCOMMENT TO GENERATE STUB CHAPTERS
 \ifx\STUBSONLY\undefined
   \newcommand{\stubinput}[2]{\input{#1}}
 \else
-  \newcommand{\stubinput}[2]{Percent completed: #2\%.}
+  \newcommand{\stubinput}[2]{\vspace{5cm} \centerline{\LARGE Percent completed:  \Huge #2\%.} \vfill}
 \fi
 
 \renewcommand{\maketitlepage}[0]{%
