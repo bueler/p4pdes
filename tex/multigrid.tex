@@ -43,3 +43,14 @@ The code \texttt{c4poisson.c} is quite short because the two methods \texttt{Com
 
 \cinputpart{fish2.c}{c/ch5/}{These methods build the right-hand side and the matrix, for call-back by \texttt{KSPSetComputeRHS()} and \texttt{KSPSetComputeOperators()}, respectively, but they are just wrappers around code reused from Chapter \ref{chap:structured}.}{II}{//COMPUTES}{//ENDCOMPUTES}{code:multigridtwo}
 
+
+\section{Grid sequencing on a nonlinear problem}
+
+%> Nope, I'm not doing any grid sequencing. Clearly that makes a lot of
+%> sense, to solve on a spatially coarse mesh for the field variables,
+%> interpolate onto the finer mesh, and then solve again.  I?m not entirely
+%> clear on the practical implementation
+%
+%SNES should do this automatically using -snes_grid_sequence <k>.  If this
+%does not work, complain. Loudly.
+%   Matt
