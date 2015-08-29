@@ -427,7 +427,7 @@ Our brief introduction of iterative linear algebra is hardly adequate.  But we n
 
 \section{A small linear system}
 
-We already know how to create, fill, and destroy \pVec and \pMat objects.  The next code, \texttt{vecmatksp.c} in Figure \ref{code:vecmatksp}, does these steps.  It also uses a \pKSP object to actually solve the linear system.  The specific Krylov iteration, inside the \pKSP, is chosen at runtime.  The expected \texttt{Create/SetFromOptions/Destroy} sequence applies to a \pKSP.
+We already know how to create, fill, and destroy \pVec and \pMat objects.  The next code, \texttt{vecmatksp.c} in Code \ref{code:vecmatksp}, does these steps.  It also uses a \pKSP object to actually solve the linear system.  The specific Krylov iteration, inside the \pKSP, is chosen at runtime.  The expected \texttt{Create/SetFromOptions/Destroy} sequence applies to a \pKSP.
 
 There are, however, two additional commands, or their equivalents, needed even for the simplest examples.  First we need to tell \pKSP about the matrix via the command
 \begin{code}
@@ -441,7 +441,7 @@ which also supplies the right-hand side of the system (i.e.~an allocated and ass
 
 Why do we list \texttt{A} twice in calling \texttt{KSPSetOperators()}?  Recall the linear system $A\bx=\bb$ is equivalent to $M^{-1} A \bx = M^{-1} \bb$ (left preconditioning).  At runtime we generally choose a preconditioning method which builds $M^{-1}$ from $A$ or from an approximation of $A$.  For example, \emph{incomplete LU} factorization of $A$ can be used in generating $M^{-1}$, or $M$ could be the diagonal of $A$ (as in the example above).  The second matrix argument to \texttt{KSPSetOperators()} is the \pMat from which $M^{-1}$ is built.  Note we do not supply $M$ itself; that would block easy choice among preconditioners at runtime.\sidenote{And require the user to write extra code.}  Instead we supply ``material'' from which the preconditioning action $M^{-1}$ is built.  The most common such material is $A$ itself.
 
-After calling \texttt{KSPSolve()} we display the solution \pVec by calling \texttt{VecView()}.  This and everything else about the code in Figure \ref{code:vecmatksp} should now be self-explanatory.  So let's compile and run it:
+After calling \texttt{KSPSolve()} we display the solution \pVec by calling \texttt{VecView()}.  This and everything else about the code in Code \ref{code:vecmatksp} should now be self-explanatory.  So let's compile and run it:
 \begin{cline}
 $ cd c/ch2/
 $ make vecmatksp
@@ -458,7 +458,7 @@ This solves the system and gives us $\bx$.  But what happened and how to control
 
 \vfill
 \clearpage
-\inputwhole{../c/ch2/vecmatksp.c}{\texttt{c/ch2/vecmatksp.c}}{Solve a small linear system.}{code:vecmatksp}
+\inputwhole{../c/ch2/vecmatksp.c}{\texttt{ch2/vecmatksp.c}}{Solve a small linear system.}{code:vecmatksp}
 
 
 \section{Revealing solvers at runtime}
@@ -577,7 +577,7 @@ We have seen \PETSc code to set up and solve linear systems, but there is more t
 
 \vfill
 \newpage
-\cinputpartnostrip{tri.c}{c/ch2/}{Set up \pVec and \pMat objects for a tridiagonal system.}{I}{//STARTSETUP}{//ENDSETUP}{code:tripartone}
+\cinputpartnostrip{../c/ch2/tri.c}{ch2/tri.c}{Set up \pVec and \pMat objects for a tridiagonal system.}{I}{//STARTSETUP}{//ENDSETUP}{code:tripartone}
 
 First build and run the code with options that show what it is does by default:
 \begin{cline}
@@ -594,7 +594,7 @@ Mat Object:(a_) 1 MPI processes
 error for m = 4 system is |x-xexact|_2 = 5.1e-16
 \end{cline}
 
-To get started on the new concepts shown in Figure \ref{code:tripartone}, notice that methods \texttt{PetscOptionsBegin()} and \texttt{PetscOptionsEnd()} bracket the call to \texttt{PetscOptionsInt()}.  We set an option prefix ``\texttt{-tri\_...}'' so that the new option we create is distinguished from the many built-in \PETSc options that start with \texttt{-ksp\_...} or \texttt{-vec\_...} or whatever.  Our use of \texttt{PetscOptionsInt()} creates an option \texttt{-tri\_m} which allows the user to set the variable \texttt{m}, and to leave the default \texttt{m}$=4$ unaltered if the option is not set.
+To get started on the new concepts shown in Code \ref{code:tripartone}, notice that methods \texttt{PetscOptionsBegin()} and \texttt{PetscOptionsEnd()} bracket the call to \texttt{PetscOptionsInt()}.  We set an option prefix ``\texttt{-tri\_...}'' so that the new option we create is distinguished from the many built-in \PETSc options that start with \texttt{-ksp\_...} or \texttt{-vec\_...} or whatever.  Our use of \texttt{PetscOptionsInt()} creates an option \texttt{-tri\_m} which allows the user to set the variable \texttt{m}, and to leave the default \texttt{m}$=4$ unaltered if the option is not set.
 
 To see the option and its default value in \texttt{-help} output do
 \begin{cline}
@@ -613,15 +613,15 @@ error for m = 2 system is |x-xexact|_2 = 8.0e-16
 \end{cline}
 %$
 
-After setting up the new option, next in \texttt{tri.c} the numerical solution \pVec \texttt{x} is created just as we did in the last example \texttt{vecmatksp.c} (Figure \ref{code:vecmatksp}).  But now we also want to create \pVecs \texttt{b} and \texttt{xexact}; the former is the right-hand side of the linear system and the latter holds the exact solution to the linear system so that we can evaluate the error in the numerical solution.  Though at this stage we have not filled any entries of \texttt{x}, we can save repetitive function calls to \texttt{VecCreate/SetSizes/SetFromOptions()} when creating these additional \pVecs.  That is, because they have the same properties and parallel layout we can use \texttt{VecDuplicate()} to allocate \pVecs just like \texttt{x}.\sidenote{There is a different method for copying the contents of \pVecs, namely \texttt{VecCopy()}.  It requires that the two \pVecs are already allocated and have the same layout.}
+After setting up the new option, next in \texttt{tri.c} the numerical solution \pVec \texttt{x} is created just as we did in the last example \texttt{vecmatksp.c} (Code \ref{code:vecmatksp}).  But now we also want to create \pVecs \texttt{b} and \texttt{xexact}; the former is the right-hand side of the linear system and the latter holds the exact solution to the linear system so that we can evaluate the error in the numerical solution.  Though at this stage we have not filled any entries of \texttt{x}, we can save repetitive function calls to \texttt{VecCreate/SetSizes/SetFromOptions()} when creating these additional \pVecs.  That is, because they have the same properties and parallel layout we can use \texttt{VecDuplicate()} to allocate \pVecs just like \texttt{x}.\sidenote{There is a different method for copying the contents of \pVecs, namely \texttt{VecCopy()}.  It requires that the two \pVecs are already allocated and have the same layout.}
 
-Next we assemble the matrix $A$.  This is a boring tridiagonal matrix with $3$ on the diagonal and $-1$ in the super- and sub-diagonals.  Though boring, we want to assemble it efficiently in parallel, something that will be important when solving 2D and 3D PDEs in later chapters.  However, only when \texttt{tri.c} is run do we know how many processes are in use.  A key method for efficient matrix assembly in parallel is the method \texttt{MatGetOwnershipRange()} which tells our program, as it is running on a particular process (rank), what rows it owns locally.  In the case of a many structured matrices like this one, we can avoid all interprocess communication by assembling exactly the rows we own.  As seen at the top of Figure \ref{code:triparttwo}, we call
+Next we assemble the matrix $A$.  This is a boring tridiagonal matrix with $3$ on the diagonal and $-1$ in the super- and sub-diagonals.  Though boring, we want to assemble it efficiently in parallel, something that will be important when solving 2D and 3D PDEs in later chapters.  However, only when \texttt{tri.c} is run do we know how many processes are in use.  A key method for efficient matrix assembly in parallel is the method \texttt{MatGetOwnershipRange()} which tells our program, as it is running on a particular process (rank), what rows it owns locally.  In the case of a many structured matrices like this one, we can avoid all interprocess communication by assembling exactly the rows we own.  As seen at the top of Code \ref{code:triparttwo}, we call
 \begin{quote}
 \texttt{MatGetOwnershipRange(A,\&Istart,\&Iend)}
 \end{quote}
 to get the starting and ending row indices for the local process.  These are used as limits in a \texttt{for} loop over the locally own rows, wherein we call \texttt{MatSetValues()} to actually set the entries of $A$.  We call \texttt{MatAssemblyBegin/End()} to complete the assembly of $A$.
 
-\cinputpartnostrip{tri.c}{c/ch2/}{Assemble and solve.}{II}{//ENDSETUP}{//ENDSOLVE}{code:triparttwo}
+\cinputpartnostrip{../c/ch2/tri.c}{ch2/tri.c}{Assemble and solve.}{II}{//ENDSETUP}{//ENDSOLVE}{code:triparttwo}
 
 We need to assemble the right-hand side $\bb$ of the linear system.  But this is related to the question: how does one get the exact solution $\bx_{\text{exact}}$ to a linear system $A\bx_{\text{exact}} = \bb$?  The easiest way for demonstration purposes, as here, is to \emph{choose} $\bx_{\text{exact}}$ and then compute $\bb$ by multiplying by $A$.  Thus, we set (unimportant) values for \texttt{xexact}, and call \texttt{VecAssemblyBegin/End()} on it.  Then we compute \texttt{b} by calling \texttt{MatMult(A,xexact,b)}.
 
