@@ -422,7 +422,7 @@ real 0.04
 \end{cline}
 %$
 
-Fortunately, given that it is desirable for initial prototyping and saving programmer effort, there is no need to abandon the finite-difference-Jacobian idea.  The additional tool needed to make it work for PDEs is applicable to many numerical schemes, especially on structured grids, which use a small set of grid values---a small stencil---in approximating the PDE at each location.\sidenote{Finite difference, element, and volume schemes for discretizing PDES all normally have this property.  Spectral methods, by contrast, have a large, sometimes global, stencil, and would not benefit.}  The idea is to ``color'' [FIXME: cite] the nodes of the grid with a small set of colors so that each evaluation of $\bF$ allows the computation of as many entries of $J_{\bF}(\bx)$ as possible.
+Fortunately, given that it is desirable for initial prototyping and saving programmer effort, there is no need to abandon the finite-difference-Jacobian idea.  The additional tool needed to make it work for PDEs is applicable to many numerical schemes, especially on structured grids, which use a small set of grid values---a small stencil---in approximating the PDE at each location.\sidenote{Finite difference, element, and volume schemes for discretizing PDES all normally have this property.  Spectral methods, by contrast, have a large, sometimes global, stencil, and would not benefit.}  The idea is to ``color'' the nodes of the grid with a small set of colors so that each evaluation of $\bF$ allows the computation of as many entries of $J_{\bF}(\bx)$ as possible.  That minimizing the number of function evaluations in this context is equivalent to a graph coloring was first seen by \citet{ColemanMore1983}; see also the  more recent comprehensive review by \citet{Gebremedhinetal2005}.
 
 Consider the seven-point grid, and the view of the corresponding matrix, that comes from this command:
 \begin{cline}
@@ -700,10 +700,7 @@ The number of iterations and the time are significantly reduced.
 
 This confirms, in one admittedly-simple example, the idea that preconditioning the matrix-free Jacobian action by the use of an approximate Jacobian is effective.  As a general rule, for large problems on a structured grid where coloring can be applied, \texttt{-snes\_fd -snes\_fd\_color} is often effective if no Jacobian is implemented.  As we will see, on an unstructured grid the coloring method may require additional work or be impossible, in which case implementing an approximate Jacobian and using \texttt{-snes\_mf\_operator} may be the optimal compromise to both get computational performance and save programmer time.
 
-One might give this advice about \pSNES and the Newton iteration:
-\begin{quote}
-Before implementing a Jacobian, try finite-difference evaluation of it, and look at whether coloring applies to your case.  Then consider implementing the exact Jacobian $J$.  If that seems like too much work, or if it is too error-prone, consider implementing an approximate Jacobian $P$ which is easier to assemble and apply than $J$.  In the PDE case $P$ might only capture the highest-order derivatives in $J$.  To test convergence with $P$, compare ``no option'' runs, where less-than-quadratic convergence is expected, and \texttt{-snes\_mf\_operator} runs where quadratic convergence may be recovered.
-\end{quote}
+One might give this advice about \pSNES and the Newton iteration:  Before implementing a Jacobian, try finite-difference evaluation of it, and look at whether coloring applies to your case.  Then consider implementing the exact Jacobian $J$.  If that seems like too much work, or if it is too error-prone, consider implementing an approximate Jacobian $P$ which is easier to assemble and apply than $J$.  In the PDE case $P$ might only capture the highest-order derivatives in $J$.  To test convergence with $P$, compare ``no option'' runs, where less-than-quadratic convergence is expected, and \texttt{-snes\_mf\_operator} runs where quadratic convergence may be recovered.
 
 
 \section{Checking your Jacobian implementation}
