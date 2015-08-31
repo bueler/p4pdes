@@ -736,6 +736,29 @@ Note that for merit function \eqref{eq:nl:linesearchmeritfunction} we have
 \end{equation}
 on the right side of \eqref{eq:nl:linesearchsuffdecrease}.  This is an initial slope (directional derivative) of $\phi(\bx)$, as we move in the search direction $\bs$, and it is always negative.  That is, if the solution $\bs_k$ of \eqref{eq:nl:newtoneq} is thought of as a search direction then it is always a descent direction if we use \eqref{eq:nl:linesearchmeritfunction} as our merit function.  Also observe that the right side of \eqref{eq:nl:linesearchsuffdecrease} can be evaluated given only information $J_{\bF}(\bx_k)$ and $\bF(\bx_k)$ that is already present in setting-up equations \eqref{eq:nl:newtoneq}.  The \PETSc default for $\alpha$ is $10^{-4}$, corresponding to an easy-to-satisfy reduction criterion.  Finally, the \PETSc line searches will stop the Newton iteration with an error if such a decrease cannot be found.
 
+Merit function \eqref{eq:nl:linesearchmeritfunction} has another nice property.  Though $\phi(\bx)$ may have local minima other than solutions to \eqref{eq:nl:equation}, the Jacobian must also be singular at such non-solution locations.  In fact, $\bF(\bx')\ne 0$ at such locations, but also
+\begin{equation}
+0 = \grad \phi (\bx') = J_{\bF}(\bx')^\top \bF(\bx'),
+\end{equation}
+so $J_{\bF}(\bx')^\top$ has a nonzero null-space.  Thus, for example, no such local minima arise in regions where the condition number of the Jacobian is known to be bounded.
+
+The line search options available in \PETSc are summarized in Table 
+
+
+\begin{table}
+\begin{tabular}{ll}
+\underline{Name} & \underline{Summary} \\
+\texttt{basic} & No line search.  Use full Newton step $\lambda_k=1$ in \eqref{eq:nl:linesearchupdate}. \\
+\texttt{bt} [default] & FIXME align \begin{minipage}[l]{0.7\textwidth}
+Polynomial-fit back-tracking.  If a $\lambda$ value does not give sufficient decrease \eqref{eq:nl:linesearchsuffdecrease} then a quadratic or cubic [default] polynomial is built up as a model for $f(\lambda) = \phi(\bx_k+\lambda \bs_k)$, and the resulting approximate minimizer is tried as the next $\lambda$.
+\end{minipage}
+ \\
+\texttt{cp} & FIXME \\
+\texttt{l2} &  
+\end{tabular}
+\caption{Line search methods (types) for \pSNES.  Use \texttt{-snes\_linesearch\_type NAME} to choose one.  Only types \texttt{bt} and \texttt{l2} use an objective function, supposing it is provided by a call to \texttt{SNESSetObjective()}.} \label{tab:nl:linesearchoptions}
+\end{table}
+
 FIXME trust region
 
 
