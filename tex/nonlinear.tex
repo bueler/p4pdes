@@ -706,7 +706,35 @@ One might give this advice about \pSNES and the Newton iteration:  Before implem
 
 \section{Line search} \label{sec:linesearch}
 
-FIXME insert new text
+As already hinted a couple of times, once the Newton step $\bs = \bs_k$ solving equation \eqref{eq:nl:newtoneq} is computed, the new iterate $\bx_{k+1} = \bx_k + \bs_k$ from \eqref{eq:nl:newtonupdate} may not be the one we want.  For example, the residual norm $\|\bF(\bx_{k+1})\|$ may actually exceed the previous one $\|\bF(\bx_{k})\|$, suggesting that no progress is being made in solving \eqref{eq:nl:equation}, that is, $\bF(\bx)=0$.  Improving this situation is the problem of \emph{globalizing} the convergence of the Newton iteration, so that the iterates $\bx_k$ are more likely to head toward the sometimes-small region of quadratic convergence around the solution $\bx^*$ to \eqref{eq:nl:equation}.
+
+The \emph{line search} globalization technique \citep{DennisSchnabel1983} is to replace \eqref{eq:nl:newtonupdate}  with
+\begin{equation}
+\bx_{k+1} = \bx_k + \lambda_k \bs_k.  \label{eq:nl:linesearchupdate}
+\end{equation}
+That is, we will accept the \emph{direction} of $\bs_k$ solving \eqref{eq:nl:newtoneq}, as a search direction, but use an actual step of less ($\lambda_k < 1$), or occasionally more ($>1$) than in \eqref{eq:nl:newtonupdate}.
+
+The question, of course, is how to choose $\lambda_k$.  We are solving a system of nonlinear equations \eqref{eq:nl:equation}, so there is no pre-existing sense of ``better'' or ``worse'' approximations, as we would in an optimization context.  But we may introduce a particular \emph{merit function} \citep{NocedalWright2006} to provide such a sense, namely
+\begin{equation}
+\phi(\bx) = \frac{1}{2} \|\bF(\bx)\|_2^2.  \label{eq:nl:linesearchmeritfunction}
+\end{equation}
+This merit function is used in all \pSNES line searches, unless a different objective function is provided (next Chapter).
+
+To determine $\lambda_k$ we could perhaps solve a one-dimensional optimization problem,
+\begin{equation}
+\min_{0<\lambda<\lambda_{\text{max}}} \phi(\bx_k + \lambda_k \bs_k),  \label{eq:nl:linesearchperhapsopt}
+\end{equation}
+thereby making the residual as small as possible along the search direction, in the sense of residual $2$-norm.  However, solving this optimization problem accurately is rarely-justified because we are merely using the solution to compute the next Newton iterate; the Newton iteration itself is where we expect to get rapid convergence.
+
+A practical line-search at least seeks to reduce the merit function along the search direction from \eqref{eq:nl:newtoneq}.  A \emph{sufficient  decrease} condition with parameter $\alpha\in(0,1)$ is to require
+\begin{equation}
+\phi(\bx_k + \lambda_k \bs_k) \le \phi(\bx_k) + \alpha \lambda_k \bs_k^\top \grad \phi(\bx_k).  \label{eq:nl:linesearchsuffdecrease}
+\end{equation}
+Note that for merit function \eqref{eq:nl:linesearchmeritfunction} we have
+\begin{equation}
+\bs^\top \grad \phi(\bx) = \bs^\top J_{\bF}(\bx)^\top \bF(\bx) = \left(J_{\bF}(\bx) \bs\right)^\top \bF(\bx) = - \|\bF(\bx)\|_2^2 \label{eq:nl:linesearchinitslope}
+\end{equation}
+on the right side of \eqref{eq:nl:linesearchsuffdecrease}.  This is an initial slope (directional derivative) of $\phi(\bx)$, as we move in the search direction $\bs$, and it is always negative.  That is, if the solution $\bs_k$ of \eqref{eq:nl:newtoneq} is thought of as a search direction then it is always a descent direction if we use \eqref{eq:nl:linesearchmeritfunction} as our merit function.  Also observe that the right side of \eqref{eq:nl:linesearchsuffdecrease} can be evaluated given only information $J_{\bF}(\bx_k)$ and $\bF(\bx_k)$ that is already present in setting-up equations \eqref{eq:nl:newtoneq}.  The \PETSc default for $\alpha$ is $10^{-4}$, corresponding to an easy-to-satisfy reduction criterion.  Finally, the \PETSc line searches will stop the Newton iteration with an error if such a decrease cannot be found.
 
 FIXME trust region
 
