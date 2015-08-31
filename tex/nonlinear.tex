@@ -149,9 +149,9 @@ In outline, \pSNES does these steps to implement the Newton method:
 	\end{enumerate}
 \end{quote}
 
-Our single run above of \texttt{expcircle.c} used option (\emph{ii})b for the Jacobian, but our next code will allow option (\emph{ii})a as well.  The graph-coloring technique mentioned in (\emph{ii})c will be addressed starting on page \pageref{sec:nl:coloring}, and the Jacobian-free method in (\emph{ii})d starting on page \pageref{sec:JFNK}.  Issue (\emph{iv}) about possible step-length reduction will be addressed on page \pageref{sec:linesearch}.
+Our single run above of \texttt{expcircle.c} used option (\emph{ii})b for the Jacobian, but our next code will allow option (\emph{ii})a as well.  The graph-coloring technique (\emph{ii})c will be addressed starting on page \pageref{sec:nl:coloring}, and the Jacobian-free method in (\emph{ii})d starting on page \pageref{sec:JFNK}.  Issue (\emph{iv}), about possible step-length reduction, will be addressed starting on page \pageref{sec:linesearch}.
 
-Option (\emph{ii})a is only possible if we supply a call-back function for the Jacobian through \texttt{SNESSetJacobian()} or similar.  For now, however, if you run without option \texttt{-snes\_fd} or \texttt{-snes\_mf} then you get an error message about an un-assembled matrix:
+Option (\emph{ii})a is only possible if we supply a call-back function for the Jacobian through \texttt{SNESSetJacobian()} or similar.  For now, however, if you run \texttt{expcircle.c} without option \texttt{-snes\_fd} or \texttt{-snes\_mf} then you get an error message about an un-assembled matrix:
 \begin{cline}
 $ ./expcircle
 [0]PETSC ERROR: --------------------- Error Message -------------------------
@@ -162,11 +162,11 @@ $ ./expcircle
 %$
 This message is somewhat opaque unless you are conscious of the need to form the Jacobian matrix at each Newton iteration.  That is, \emph{something} must supply a Jacobian at step (\emph{ii}).
 
-The benefit of using options (\emph{ii})b, (\emph{ii})c, or (\emph{ii})d above is that we do not need to write any error-prone code based on taking derivatives of our function $\bF$.  Avoiding writing and debugging Jacobian implementations can speed implementation by reducing \emph{your} time.
+One possible disadvantage of using  \texttt{-snes\_fd}, option (\emph{ii})b, namely that formula \eqref{eq:nl:fdjac} is only an approximation, but, in most cases using an approximate Jacobian in the Newton step is not problematical \citep{Kelley2003}.  On the other hand, there is a significant performance problem in using \eqref{eq:nl:fdjac} naively for PDE-type applications of Newton's method.  In steps (\emph{i}) and (\emph{ii})b together we evaluate $\bF$ through $N+1$ calls to \texttt{FormFunction()}, per Newton iteration.  This is a worrying amount of work if $N$ is large, as it would be for a system of nonlinear equations coming from discretizing a PDE.  For many PDE discretization schemes, however, the coloring algorithm in (\emph{ii})c makes finite difference Jacobians an efficient option by reducing the number of $\bF$ evaluations to a small constant, independent of $N$, per Newton step.  See the diffusion-reaction PDE example at the end of this Chapter, as well as examples in later Chapters.
 
-One possible disadvantage of using  \texttt{-snes\_fd}, option (\emph{ii})b above, is that formula \eqref{eq:nl:fdjac} is only an approximation.  However, in most cases using an approximate Jacobian in the Newton step is not problematic \citep{Kelley2003}.  However, there is a significant \emph{performance} problem when it comes to PDE-type applications of Newton's method.  In steps (\emph{i}) and (\emph{ii})b together we evaluate $\bF$ through $N+1$ calls to \texttt{FormFunction()}, per Newton iteration.  This is a worrying amount of work if $N$ is large, as it would be for a system of nonlinear equations coming from discretizing a PDE.  For many PDE discretization schemes, however, the coloring algorithm in (\emph{ii})c makes finite difference Jacobians an efficient option by reducing the number of evaluations of \texttt{FormFunction()} to a small constant per Newton step.  See the diffusion-reaction PDE example at the end of this Chapter, as well as examples in later Chapters.
+There are systems where $\bF$ itself is an expensive function to evaluate, and even if not, evaluating $\bF$ can dominate the work in the Newton iteration.  The work done in solving linear system \eqref{eq:nl:newtoneq} is, of course, the other main concern.  A good \PETSc habit, to start right now, is to use \texttt{-log\_summary} to \emph{see} which kind of work is dominant.
 
-There are systems where $\bF$ itself is an expensive function to evaluate.  Evaluating $\bF$ can dominate the work in the Newton iteration.  The work done in solving linear system \eqref{eq:nl:newtoneq} is, of course, the other main concern.\sidenote{A good \PETSc habit, to start right now, is using \texttt{-log\_summary} to know which kind of work is dominant!  \label{sidenote:logsummary}}
+In any case, the benefit of using options (\emph{ii})b, (\emph{ii})c, or (\emph{ii})d above is that we do not need to write any error-prone code based on taking derivatives of our function $\bF$.  Avoiding writing and debugging Jacobian implementations may speed implementation by reducing the time \emph{you} spend on the task.
 
 
 \section{Residual norm in the Newton iteration}
@@ -181,7 +181,7 @@ The example
 $ ./expcircle -snes_fd -snes_monitor -snes_rtol 1.0e-14
 \end{cline}
 %$
-thus asks for much more accuracy.  It may be a surprise that this tight-tolerance run, asking for a further $10^6$ reduction in residual norm, requires only one more iteration, namely six iterations this time.  This is, however, typical of the Newton iteration in the best cases.  Instead of showing the Newton iterations again as text output, Figure \ref{fig:newtonconvbasic} shows these residual norm values in a graph with log-scaling on the $y$-axis.
+thus asks for much more accuracy.  It may be a surprise that asking for a further $10^6$ reduction in residual norm requires only one more iteration, namely six iterations this time, but this is typical of the Newton iteration in the best cases.  Instead of showing the Newton iterations again as text output, Figure \ref{fig:newtonconvbasic} shows residual norms in a graph with log-scaling on the $y$-axis.
 
 \begin{figure}
 \includegraphics[width=0.8\textwidth]{newtonconvbasic}
@@ -189,17 +189,21 @@ thus asks for much more accuracy.  It may be a surprise that this tight-toleranc
 \label{fig:newtonconvbasic}
 \end{figure}
 
-The residual drops abruptly in the Figure, reflecting the hoped-for best-case behavior of Newton iteration.  The residual norm, and the error in the solution also, decreases substantially at each iteration in the sense that the error is proportional to the \emph{square} of the error at the last iteration, which is the main reason the Newton iteration is so powerful.  The next theorem expresses such best-case behavior \citep[Theorems 1.1 and inequalities (1.13)]{Kelley2003}:
+The residual norm drops abruptly in the Figure, reflecting the hoped-for best-case behavior of Newton iteration.  The per-iteration decrease is substantial in the sense that the error is proportional to the \emph{square} of the error at the last iteration.  This is the main reason the Newton iteration is so powerful.  The next theorem expresses such best-case behavior \citep[Theorems 1.1 and inequalities (1.13)]{Kelley2003}:
 
 \begin{theorem}
-Suppose that $\bF:\RR^N\to\RR^N$ is differentiable, $\bx^*$ is a solution of \eqref{eq:nl:equation}, $J_{\bF}$ is Lipschitz near $\bx^*$, and $J_{\bF}(\bx^*)$ is a nonsingular matrix.  Let $\be_k=\bx_k-\bx^*$, let $\|\cdot\|$ denote a vector norm and its induced matrix norm, and let $\kappa(A)=\|A^{-1}\| \|A\|$ denote the condition number of an invertible matrix $A$.  If $\bx_0$ is sufficiently close to $\bx^*$ then, in exact arithmetic,
+Suppose that $\bF:\RR^N\to\RR^N$ is differentiable, $\bx^*$ is a solution of \eqref{eq:nl:equation}, $J_{\bF}$ is Lipschitz near $\bx^*$, and $J_{\bF}(\bx^*)$ is a nonsingular matrix.  Let $\|\cdot\|$ denote a vector norm and its induced matrix norm, and let $\kappa(A)=\|A^{-1}\| \|A\|$ denote the condition number of an invertible matrix $A$.  Let
+\begin{equation}
+\be_k = \bx_k-\bx^*
+\end{equation}
+be the \emph{error} at iteration $k$.  If $\bx_0$ is sufficiently close to $\bx^*$ then, in exact arithmetic,
 \renewcommand{\labelenumi}{(\roman{enumi})}
 \begin{enumerate}
 \item there is $K\ge 0$ such that for all $k$ sufficiently large,
 \begin{equation}
 	\|\be_{k+1}\| \le K \|\be_k\|^2, \label{eq:nl:quadraticconvergence}
 \end{equation}
-\item and if $\kappa = \kappa\left(J_{\bF}(\bx^*)\right)$, so that $\kappa\ge 1$, then
+\item and if $\kappa = \kappa\left(J_{\bF}(\bx^*)\right)$ then
 \begin{equation}
 	\frac{\|\be_k\|}{4 \kappa \|\be_0\|} \le \frac{\|\bF(\bx_k)\|}{\|\bF(\bx_0)\|} \le \frac{4 \kappa \|\be_k\|}{\|\be_0\|}. \label{eq:nl:errorresidualnormequiv}
 \end{equation}
@@ -207,15 +211,18 @@ Suppose that $\bF:\RR^N\to\RR^N$ is differentiable, $\bx^*$ is a solution of \eq
 \end{theorem}
 
 \medskip
-By definition, a sequence $\{\bx_k\}$ in $\RR^N$ \emph{converges quadratically to} $\bx^*$ if the sequence $\be_k=\bx_k-\bx^*$ satisfies \eqref{eq:nl:quadraticconvergence} for some $K\ge 0$.  Thus the Theorem says that, under strong assumptions about the regularity and nonsingularity of the Jacobian, the iterates converge quadratically to a solution of \eqref{eq:nl:equation}.  Heuristically, once $\|\be_k\|$ gets reasonably small then, from then on, the number of correct digits in $\bx_k$ \emph{doubles} with each additional iteration.
+By definition, a sequence $\{\bx_k\}$ in $\RR^N$ \emph{converges quadratically to} $\bx^*$ if the sequence of errors $\{\be_k\}$ satisfies \eqref{eq:nl:quadraticconvergence} for some $K\ge 0$.  Thus the Theorem says that, under strong assumptions about the regularity and nonsingularity of the Jacobian, the iterates converge quadratically to a solution of \eqref{eq:nl:equation}.  Heuristically, once $\|\be_k\|$ gets reasonably small then, from then on, the number of correct digits in $\bx_k$ \emph{doubles} with each additional iteration.
 
-We seem to see quadratic converge in Figure \ref{fig:newtonconvbasic}, but it shows the residual norm $\|\bF(\bx_k)\|_2$ and not the error norm $\|\be_k\|_2$.  The second part of the Theorem says that the error decrease at the $k$th iteration (i.e.~$\|\be_k\|/\|\be_0\|$) is within a factor, determined by the conditioning of the Jacobian at the solution, of the residual decrease (i.e.~$\|\bF(\bx_k)\|/\|\bF(\bx_0)\|$).  This idea is significant because the latter quantity is \emph{computable}.
+We seem to see quadratic convergence in Figure \ref{fig:newtonconvbasic}, but actually it shows the residual norm $\|\bF(\bx_k)\|_2$ and not the error norm $\|\be_k\|_2$.  However, the second part of the Theorem says that the residual decrease at the $k$th iteration (i.e.~$\|\bF(\bx_k)\|/\|\bF(\bx_0)\|$) is within a factor, determined by the conditioning of the Jacobian at the solution, of the error decrease ($\|\be_k\|/\|\be_0\|$).  This idea is significant because the former quantity is computable.
 
-The Theorem confirms that residual norm decay like that shown in Figure \ref{fig:newtonconvbasic} corresponds to quadratic convergence of $\bx_k$ to a solution $\bx^*$.  If we want to reduce the (generally-unknowable) numerical error $\be_k=\bx_k-\bx^*$ by a given amount then it can suffice to reduce the residual norm by a comparable amount.  The factor $4 \kappa$ by which the two relative norms differ in \eqref{eq:nl:errorresidualnormequiv} is large only if the conditioning of the Jacobian at the solution is poor.  Just as in the linear case, however, a large condition number $\kappa=\kappa\left(J_{\bF}(\bx^*)\right)$ would also mean lost precision in solving \eqref{eq:nl:equation} by \emph{any} numerical means.\sidenote{Recall the numerical facts-of-life in Chapter \ref{chap:ls}.}
+The Theorem confirms that residual norm decay like that shown in Figure \ref{fig:newtonconvbasic} corresponds to quadratic convergence of $\bx_k$ to a solution $\bx^*$.  If we want to reduce the (generally-unknowable) error $\be_k$ by a given amount then it can suffice to reduce the residual norm by a comparable amount.  The factor $4 \kappa$ by which the two relative norms differ in \eqref{eq:nl:errorresidualnormequiv} is large if the conditioning of the Jacobian at the solution is poor, but, just as in the linear case, a large Jacobian condition number would also mean lost precision in solving \eqref{eq:nl:equation} by \emph{any} numerical means.\sidenote{Recall the numerical facts-of-life in Chapter \ref{chap:ls}.}
+
+
+\section{\pSNES tolerances}
 
 The amount of residual norm reduction is exactly what the option \texttt{-snes\_rtol} controls, that is, the iteration continues until
     $$\frac{\|\bF(\bx_k)\|_2}{\|\bF(\bx_0)\|_2} \le \text{\texttt{snes\_rtol}}.$$
-Actually, to give the more complete story, there are \emph{three} \pSNES tolerances, listed in Table \ref{tab:snestolerances}.  The iteration stops as soon as one of these conditions is satisfied.  Note that $\bs_k$ denotes the solution to linear system \eqref{eq:nl:newtoneq}, the ``step'' at iteration $k$.  The defaults for the three tolerances in the Table are \texttt{X}$=10^{-8},10^{-50},10^{-8}$, respectively.
+To give the more complete story, however, note there are \emph{three} \pSNES tolerances, as listed in Table \ref{tab:snestolerances}.  The iteration stops as soon as one of these conditions is satisfied.  Note that $\bs_k$ denotes the solution to linear system \eqref{eq:nl:newtoneq}, the ``step'' at iteration $k$.
 
 \medskip
 \begin{table}
@@ -236,12 +243,13 @@ Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
 ...
 \end{cline}
 %$
-One can force the \pSNES to use a subset of the stopping criteria by setting the tolerance to zero in the unwanted conditions(s).
+
+One can force the \pSNES to use a subset of the stopping criteria by setting the tolerance to zero (\texttt{X} $=0$) in the unwanted condition(s).  The defaults for the three tolerances in the Table are \texttt{X} $=10^{-8},10^{-50},10^{-8}$, respectively.
 
 
 \section{Convergence difficulties} \label{sec:divergence}
 
-So far we have portrayed the Newton iteration in optimistic terms, but it is not magic and things can go wrong.  First note a key hypothesis in the above Theorem, namely that $\bx_0$ needs to be sufficiently close to $\bx^*$.  Even on well-behaved nonlinear equations, if $\bx_0$ is far from the solution then the iteration may take many steps before $\|\be_k\|$ becomes small enough so that quadratic convergence \eqref{eq:nl:quadraticconvergence} ``kicks in''.  For example, Figure \ref{fig:newtonconvdelayed} shows what happens if we use initial iterate $\bx_0=[10\,\, 10]^\top$ in the above Example.  A long period of slower convergence\sidenote{Evidently \emph{linear} convergence in which the residual norm is reduced by a constant factor.} is needed before the iterate $\bx_k$ enters the region around where $\bx^*$ where the conclusions of the Theorem apply.  This region is sometimes known as the ``ball of quadratic convergence.''
+So far we have portrayed the Newton iteration in optimistic terms, but it is not magic and things can go wrong.  First note a key hypothesis in the above Theorem, namely that $\bx_0$ needs to be sufficiently close to $\bx^*$.  Even on well-behaved nonlinear equations, if $\bx_0$ is far from the solution then the iteration may take many steps before $\|\be_k\|$ becomes small enough so that quadratic convergence \eqref{eq:nl:quadraticconvergence} ``kicks in''.  For example, Figure \ref{fig:newtonconvdelayed} shows what happens if we use initial iterate $\bx_0=[10\,\, 10]^\top$ in the above Example.  About 16 iterations of slow progress\sidenote{From the constant slope shown in the Figure, this is evidently \emph{linear} convergence in which the residual norm is reduced by a constant factor.} is needed before the iterate $\bx_k$ enters the region around $\bx^*$ where the conclusions of the Theorem apply.  This region is sometimes known as the ``ball of quadratic convergence.''
 
 \begin{figure}
 \includegraphics[width=0.8\textwidth]{newtonconvdelayed}
@@ -249,20 +257,18 @@ So far we have portrayed the Newton iteration in optimistic terms, but it is not
 \label{fig:newtonconvdelayed}
 \end{figure}
 
-Actual decrease in residual norm, as displayed in Figures \ref{fig:newtonconvbasic} and \ref{fig:newtonconvdelayed}, is also not guaranteed in general.  There is nothing intrinsic about the solution $\bs$ to \eqref{eq:nl:newtoneq} that implies $\|\bF(\bx_{k+1})\| \le \|\bF(\bx_k)\|$.  However, the ``line-search'' methods, described starting on page \pageref{sec:linesearch}, enforce such residual norm decrease.  Conversely, the line-search generates an error if searching along the direction $\bs$ does not find a location which generates (sufficient) residual norm decrease.
+Actual decrease in residual norm, as displayed in Figures \ref{fig:newtonconvbasic} and \ref{fig:newtonconvdelayed}, is also not guaranteed in general.  There is nothing intrinsic about the solution $\bs$ to \eqref{eq:nl:newtoneq} that implies $\|\bF(\bx_{k+1})\| \le \|\bF(\bx_k)\|$.  However, the ``line-search'' methods, described starting on page \pageref{sec:linesearch}, enforce residual norm decrease, or stop if it cannot be achieved.  On some equations the Newton iteration \eqref{eq:nl:newtoneq}, \eqref{eq:nl:newtonupdate} as it stands actually diverges from some initial states.  For an example, see Exercise \ref{chap:nl}.\ref{exer:nl:newtonatan}.  In these cases line-search methods will generally reduce the step length $\|\bs_k\|$ and this may ``globalize'' the convergence \citep{Kelley2003} in the sense of allowing convergence from a larger set of initial states.
 
-On some equations the Newton iteration \eqref{eq:nl:newtoneq}, \eqref{eq:nl:newtonupdate} as it stands actually diverges from some initial states.  For an example, see Exercise \ref{chap:nl}.\ref{exer:nl:newtonatan}.  In those cases line-search methods will generally reduce the step length $\|\bs_k\|$ and this may ``globalize'' the convergence \citep{Kelley2003} in the sense of allowing convergence from a larger set of initial states.
-
-Finally, many practical problems do not have the smoothness needed to apply the above Theorem.  In such cases the problem may need regularization, continuation, or other procedures to make it manageable.
+Many real-world problems do not have the smoothness needed to apply the above Theorem.  In such cases regularization, continuation, or other procedures may be needed to make the Newton method effective.
 
 
 \section{Exact Jacobians and passing parameters}
 
-We have yet to exploit two critical possibilities when using a \pSNES, namely providing code for a Jacobian function $J_{\bF}(\bx)$ and the ability to pass parameters through the call-back mechanism, so that they can be used inside the residual- and Jacobian-evaluation functions.  The next code \texttt{ecjacobian.c}, in Figures \ref{code:ecjacobianI} and \ref{code:ecjacobianII}, uses these abilities; this example is a ``model use'' of \pSNES.\sidenote{For cases without a structured grid of the \pDMDA type (Chapter \ref{chap:st}), anyway.  Compare \texttt{reaction.c} below.}
+We have yet to exploit two critical possibilities when using a \pSNES, namely passing parameters through the call-back mechanism, so that they can be used inside the residual- and Jacobian-evaluation functions, and providing code for a Jacobian function $J_{\bF}(\bx)$.  The next code \texttt{ecjacobian.c}, in Figures \ref{code:ecjacobianI} and \ref{code:ecjacobianII}, implements both of these capabilities.  It is a ``model use'' of \pSNES.\sidenote{For cases without a structured grid of the \pDMDA type (Chapter \ref{chap:st}), anyway.  Compare \texttt{reaction.c} below.}
 
-The first new idea in the code is the declaration of a C \texttt{struct} called \texttt{AppCtx} (``application context'').  It has just one element, the real parameter $b$ which appears in formulas \eqref{eq:nl:expcircleF} and \eqref{eq:nl:ecjacobian}.  A \texttt{struct} is not really necessary here, but in future examples there will be more than one parameter to pass.  Next, the method \texttt{FormFunction()} in Code \ref{code:ecjacobianI} is almost the same as the one in \texttt{expcircle.c} (Code \ref{code:expcircle}), but the value of $b$ comes from the \texttt{struct} instead of being hard-wired as before.  In detail, the argument \texttt{void *ctx} is ``cast'' in the sense of the C language \citep{KernighanRitchie1988} to a pointer of type \texttt{AppCtx*}, and then the parameter is extracted, via the pointer, by ``\texttt{user->b}.''\sidenote{Shorthand for ``\texttt{(*user).b}''.}  This awkward-seeming method of passing parameters allows the signature of \texttt{FormFunction()} to be precisely as before.
+The first new idea in the code is the declaration of a C \texttt{struct} called \texttt{AppCtx} (``application context'').  It has just one element, the real parameter $b$ which appears in formulas \eqref{eq:nl:expcircleF} and \eqref{eq:nl:ecjacobian}, so a \texttt{struct} is not necessary here, but in future examples there will be more than one parameter to pass.  Next, the method \texttt{FormFunction()} in Code \ref{code:ecjacobianI} is almost the same as the one in \texttt{expcircle.c} (Code \ref{code:expcircle}), but the value of $b$ comes from the \texttt{struct} instead of being hard-wired as before.  In detail, the argument \texttt{void *ctx} is ``cast'' in the sense of the C language \citep{KernighanRitchie1988} to a pointer of type \texttt{AppCtx*}, and then the parameter is extracted, via the pointer, by ``\texttt{user->b}.''\sidenote{Note ``\texttt{user->b}'' is shorthand for ``\texttt{(*user).b}''.}  This awkward-seeming method of passing parameters allows the signature of \texttt{FormFunction()} to be precisely as before.
 
-\cinputpart{ecjacobian.c}{\CODELOC}{Solves the same nonlinear system as \texttt{expcircle.c}.  This version has an exact Jacobian.  It also passes a parameter into the call-back functions.}{I}{//START}{//END}{code:ecjacobianI}
+\cinputpart{ecjacobian.c}{\CODELOC}{Solves the same nonlinear system as \texttt{expcircle.c}, but with an exact Jacobian and parameter passing.}{I}{//START}{//END}{code:ecjacobianI}
 
 The method \texttt{FormJacobian()} in Code \ref{code:ecjacobianI} is new.  It has similar structure and semantics to \texttt{FormFunction()}, but a new signature for this kind of call-back, namely
 \begin{code}
@@ -270,7 +276,7 @@ PetscErrorCode (*J)(SNES,Vec,Mat,Mat,void*)
 \end{code}
 Input \pVec \texttt{x} and pointer \texttt{void *ctx} have the same meaning as in \texttt{FormFunction()}.  Also just as before, when reading \texttt{x} we can use \texttt{VecGetArrayRead()} and \texttt{VecRestoreArrayRead()}.
 
-\cinputpart{ecjacobian.c}{\CODELOC}{This \texttt{main()} method adds code, relative to  \texttt{expcircle.c}, to allocate a \pMat to hold the Jacobian.}{II}{//STARTMAIN}{//ENDMAIN}{code:ecjacobianII}
+\cinputpart{ecjacobian.c}{\CODELOC}{This \texttt{main()} method allocates a \pMat to hold the Jacobian.}{II}{//STARTMAIN}{//ENDMAIN}{code:ecjacobianII}
 
 The difference is that we must set a \pMat as output, based on formula \eqref{eq:nl:ecjacobian} in this case.  The roles of \texttt{MatSetValues()}, real array \texttt{v[4]} for the entries themselves, and integer arrays \texttt{row[2]} and \texttt{col[2]} as global indices, are all the same as in Chapter \ref{chap:ls}.  An interesting detail appears here, however.  There are actually \emph{two} output \pMats for \texttt{FormJacobian()} to set.  The first, called \texttt{J} here, corresponds to the Jacobian matrix itself, which, in this simple case, we want to supply.  The second, called \texttt{P} here, is the ``material'' we supply to build a preconditioner.  It might, at least in other cases, be a very poor approximation of the Jacobian.  A method like \texttt{FormJacobian()} sets one of these \pMats according to whether we intend to supply accurate derivatives of $\bF$ or not.  In fact, we assemble the \pMat \texttt{P} and, if the \pMat \texttt{J} is also present and is a different pointer, then we also assemble it.  In particular, these actions allow ``Jacobian-free'' Newton-Krylov methods to work; see page \pageref{sec:JFNK} below.
 
@@ -303,6 +309,26 @@ $ ./ecjacobian -snes_monitor -snes_fd
 \end{cline}
 %$
 
+\PETSc also helps with debugging exact-Jacobian code.  The finite-difference approximation of the Jacobian $J_{\bF}(\by)$, which needs only \texttt{FormFunction()} evaluations $\bF(\by)$, is compared to the result of \texttt{FormJacobian()} evaluations for a small selection of inputs $\by$.  This action comes from \texttt{-snes\_type test}.   Oddly, it generates an error message even in the case where the comparison shows that the implemented Jacobian is good:
+\begin{cline}
+$ ./ecjacobian -snes_type test
+Testing hand-coded Jacobian, if the ratio is
+O(1.e-8), the hand-coded Jacobian is probably correct.
+Run with -snes_test_display to show difference
+of hand-coded and finite difference Jacobian.
+Norm of matrix ratio 1.9182e-08, difference 1.52973e-07 (user-defined state)
+Norm of matrix ratio 1.21378e-08, difference 3.64505e-08 (constant state -1.0)
+Norm of matrix ratio 1.9182e-08, difference 1.52973e-07 (constant state 1.0)
+[0]PETSC ERROR: --------------------- Error Message ------------------------
+[0]PETSC ERROR: Object is in wrong state
+[0]PETSC ERROR: SNESTest aborts after Jacobian test: it is NORMAL behavior.
+...
+[0]PETSC ERROR: ----------------End of Error Message -------
+...
+\end{cline}
+%$
+See Exercise \ref{chap:nl}.\ref{exer:nl:snestestdisplay} for a bit more on this capability.
+
 
 \section{Example: a nonlinear diffusion-reaction equation}
 
@@ -331,8 +357,6 @@ Now we consider the example
 % R(u) = - rho sqrt(|u|) decreasing so -u''+F(u)=0 with F increasing
 This is of form \eqref{eq:nl:diffusionreaction} with $R(u) = - \rho \sqrt{u}$ and $f(x)=0$.  Because $R$ is non-increasing and continuous if $\rho>0$, the corresponding Dirichlet problem is well-posed.  (If desired $R$ can be extended as $R(u)=0$ for $u<0$, thereby becoming non-increasing and continuous for all of $\RR$.)
 
-\cinputpart{reaction.c}{\CODELOC}{Call-back functions for \texttt{reaction.c}.}{I}{//CALLBACK}{//ENDCALLBACK}{code:reactionI}
-
 We are actually using \eqref{eq:nl:drsqrt} as a first example, however, because we want to verify our numerical solution using an exact solution, and its particular form makes this easy.  The solution is found \citep{Ockendonetal2003} by noting that both second-derivative and square-root operations convert certain 4th degree polynomials into quadratic polynomials.  We also get the boundary conditions from the exact solution.  Therefore we substitute $u(x)=M(x+1)^4$ into \eqref{eq:nl:drsqrt} and find $M=(\rho/12)^2$, $\alpha=M$, and $\beta=16 M$.
 
 The actual finite-difference scheme we propose for \eqref{eq:nl:diffusionreaction} is quite obvious.  On an $N$ point grid it is
@@ -343,11 +367,13 @@ where $h=1/(N-1)>0$ is the grid spacing, $x_j = j h$ for $j=0,1,\dots,N-1$, and 
 
 Code \texttt{reaction.c} shown in Figures \ref{code:reactionI} and \ref{code:reactionII} solves this problem using finite-difference scheme \eqref{eq:nl:drfdscheme}, a \pSNES object for the Newton iteration, and a \pDMDA object for the finite-difference grid.  The first Figure shows three call-back methods.  First we compute the initial iterate---it is a linear function connecting the boundary conditions---and the exact solution in the method \texttt{InitialAndExactLocal()}.  Then we have the residual (\texttt{FormFunctionLocal()}) and Jacobian (\texttt{FormJacobianLocal()}) evaluation functions.
 
+\cinputpart{reaction.c}{\CODELOC}{Call-back functions for \texttt{reaction.c}.}{I}{//CALLBACK}{//ENDCALLBACK}{code:reactionI}
+
+\cinputpart{reaction.c}{\CODELOC}{In \texttt{main()} we create a \pDMDA, then \pVecs, and then a \pSNES.  We hand call-back functions to the \pSNES.  Then we solve the equation, get the numerical error, and clean up.}{II}{//MAIN}{//ENDMAIN}{code:reactionII}
+
 These are ``\texttt{Local}'' methods in the sense that their inputs are C pointers for arrays instead of \pVecs.  Our implementation of \texttt{InitialAndExactLocal()} explains how this works.  As seen in Code \ref{code:reactionII}, before this method is called we use \texttt{DMDAVecGetArray()} on the \pVecs which need reading or setting, namely \texttt{u} and \texttt{uexact}.  This gives pointers of type \texttt{PetscReal*} which are then handed to \texttt{InitialAndExactLocal()}.  The call-back done inside \pSNES calls \texttt{FormFunctionLocal()} the same way.  The \pSNES also treats the input to  \texttt{FormJacobianLocal()} the same way.  Another aspect of these ``\texttt{Local}'' call-back methods is that a \texttt{DMDALocalInfo} struct is passed into the call-back functions.  Thus the local part of the grid (i.e.~\texttt{info.xs} and etc.) and the global grid size (i.e.~\texttt{info.mx}) can be accessed without needing the \pDMDA object itself.\sidenote{Recall Figure \ref{fig:localpartofgrid}.}
 
 In \texttt{main()} (Code \ref{code:reactionII}) we use \texttt{DMDASNESSetFunctionLocal()} instead of \texttt{SNESSetFunction()}\sidenote{Compare \texttt{ecjacobian.c}.} because our local call-back functions have a different signature based on \pDMDA-derived pointers,   The Jacobian is set by a similar method \texttt{DMDASNESSetJacobianLocal()}.  Also, though we implement a Jacobian, we do not allocate a \pMat to hold it because the \pDMDA object has enough information about the grid and stencil so as to pre-allocate a \pMat internally.
-
-\cinputpart{reaction.c}{\CODELOC}{In \texttt{main()} we create a \pDMDA, then \pVecs, and then a \pSNES.  We hand call-back functions to the \pSNES.  Then we solve the equation, get the numerical error, and clean up.}{II}{//MAIN}{//ENDMAIN}{code:reactionII}
 
 
 \section{Convergence under grid refinement}
@@ -541,21 +567,16 @@ for $\ell=1,\dots,n$.  Equation \eqref{eq:nl:JFNKiteration} is the central idea 
 
 Observe that use of the earlier finite difference formula \eqref{eq:nl:fdjac} to compute a generic $N\times N$ Jacobian $J$ would require $N$ evaluations of $\bF$.  Thus the two evaluations of $\bF$ needed for \eqref{eq:nl:JFNKbasic} to compute $J\bv$, or the $n$ evaluations of $\bF$ needed to compute the whole Krylov basis \eqref{eq:nl:krylovagain}, seems very efficient.  However, there are two countervailing points to make: (i) coloring greatly reduces the cost of using \eqref{eq:nl:fdjac} for many PDEs, and (ii) once you have a matrix you can do many things, such as matrix factorizations, other than computing a matrix-vector product or a Krylov basis.  In other words, JFNK is a good strategy to the extent that it actually \emph{works}, which we now pursue in more detail.
 
-
-\section{JFNK in practice, and with preconditioning} \label{sec:JFNKprecond}
-
-This elegant idea is implemented in \PETSc and invoked by option \texttt{-snes\_mf}:
+JFNK is implemented in \PETSc and invoked by option \texttt{-snes\_mf}:
 \begin{cline}
 $ ./reaction -snes_converged_reason -snes_mf
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
 on 9 point grid:  |u-u_exact|_inf/|u|_inf = 0.000188753
 \end{cline}
 %$
-Note that ``\texttt{mf}'' in the option stands for ``matrix-free'', but we shall see below that there may be some matrix involved in JFNK anyway.  The method never involves fully-assembling the Jacobian matrix itself, however, and thus the ``Jacobian-free'' label is most justified.
+Note that ``\texttt{mf}'' in the option stands for ``matrix-free'', but we shall see below that there may be a matrix involved in JFNK anyway.  The method never involves fully-assembling the Jacobian matrix itself, however, and thus the ``Jacobian-free'' label is justified.
 
-Our enthusiasm for JFNK is damped when we try refined grids in the 1D diffusion-reaction PDE example.  Observe we are using an \emph{un}preconditioned Krylov method; that is, option \texttt{-snes\_mf} corresponds to JFNK as stated in \eqref{eq:nl:JFNKiteration}.
-
-To see the bad news in an example, note $J$ is symmetric in the \texttt{reaction.c} case.\sidenote{Well \dots nearly so.  See exercise 4.\ref{exer:nl:symmetrizeJ}.}  Thus we try the CG Krylov method (Chapter \ref{chap:ls}) and ask \PETSc for both the number of Newton and Krylov iterations:
+Our enthusiasm for JFNK is damped when we try refined grids in the 1D diffusion-reaction PDE example.  Observe we are using an \emph{un}preconditioned Krylov method; that is, option \texttt{-snes\_mf} corresponds to JFNK as stated in \eqref{eq:nl:JFNKiteration}.  To see the bad news in an example, note $J$ is symmetric in the \texttt{reaction.c} case.\sidenote{Well \dots nearly so.  See exercise 4.\ref{exer:nl:symmetrizeJ}.}  Thus we try the CG Krylov method (Chapter \ref{chap:ls}) and ask \PETSc for both the number of Newton and Krylov iterations:
 \begin{cline}
 $ ./reaction -snes_converged_reason -snes_mf -ksp_converged_reason -ksp_type cg -da_refine 6
   Linear solve converged due to CONVERGED_RTOL iterations 511
@@ -571,9 +592,7 @@ $ ./reaction -snes_converged_reason -snes_mf -ksp_converged_reason -ksp_type cg 
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
 on 1025 point grid:  |u-u_exact|_inf/|u|_inf = 1.15576e-08
 \end{cline}
-These large iteration counts, which illustrate the well-known doubling of CG iterations with each doubling of dimension, remind us of the flaw in unpreconditioned Krylov methods.\sidenote{These were addressed in Chapter \ref{chap:ls}.}
-
-The default GMRES solver is no better; we simply get a linear solve failure:
+These large iteration counts, which illustrate the well-known doubling of CG iterations with each doubling of dimension, remind us of the flaw in unpreconditioned Krylov methods addressed in Chapter \ref{chap:ls}.  The default GMRES solver is no better; we simply get a linear solve failure:
 \begin{cline}
 $ ./reaction -snes_converged_reason -snes_mf -ksp_converged_reason -da_refine 7
   Linear solve did not converge due to DIVERGED_ITS iterations 10000
@@ -587,16 +606,12 @@ In other words, we see here an excellent reminder to apply the Krylov solver to 
 (M^{-1} J) \bs &= - M^{-1} \bF(\bx), \quad \text{and} \label{eq:nl:leftpre} \\
 (J M^{-1}) (M \bs) &= - \bF(\bx), \label{eq:nl:rightpre}
 \end{align}
-respectively.
-
-Left preconditioning \eqref{eq:nl:leftpre} requires no further comment because the action of $M^{-1} J$ on some vector $\bv$ is a straightforward composition of \eqref{eq:nl:JFNKbasic} followed by application of $M^{-1}$.  However, right preconditioning \eqref{eq:nl:rightpre}, in a Krylov iteration, uses a two step process.  The action of $J M^{-1}$ on $\bv$ is computed by first applying $M^{-1}$ to $\bv$, namely by solving $M \by = \bv$, and then using
+respectively.  Left preconditioning \eqref{eq:nl:leftpre} requires no further comment because the action of $M^{-1} J$ on some vector $\bv$ is a straightforward composition of \eqref{eq:nl:JFNKbasic} followed by application of $M^{-1}$.  However, right preconditioning \eqref{eq:nl:rightpre}, in a Krylov iteration, uses a two step process.  The action of $J M^{-1}$ on $\bv$ is computed by first applying $M^{-1}$ to $\bv$, namely by solving $M \by = \bv$, and then using
 \begin{equation}
 (J M^{-1}) \bv = J \by \approx \frac{\bF(\bx+\delta \by) - \bF(\bx)}{\delta} \label{eq:nl:JFNKwithrightpre}
 \end{equation}
 
 Recall that, when preconditioning, matrices $M$ and $M^{-1}$ are usually never assembled.  Even if an assembled preconditioner-material matrix $P$ is present, $M$ may be constructed nontrivially from $P$.  For example, if we supply some assembled matrix $P$ as the preconditioner material, but we ask for ILU($0$) preconditioning,\sidenote{I.e.~the default corresponding to option \texttt{-pc\_type ilu}.} then $M$ is actually the product of the ILU($0$) factors of $P$, and thus it is generally not equal to $P$.
-
-At this point we risk overwhelming the reader with options, so we pause to summarize the possibilities before returning to their testing on the \texttt{reaction.c} problem.
 
 
 \section{Jacobian cases} \label{sec:jacobiancases}
@@ -604,7 +619,7 @@ At this point we risk overwhelming the reader with options, so we pause to summa
 \def\checkmark{\tikz\fill[scale=0.4](0,.35) -- (.25,0) -- (.7,.8) -- (.25,.15) -- cycle;}
 \def\bigcheckmark{\tikz\fill[scale=0.6](0,.35) -- (.25,0) -- (.7,.8) -- (.25,.15) -- cycle;}
 
-Now is a good time to summarize the paradigm for residual and Jacobian call-backs in \pSNES-using codes.  This is done in Table \ref{tab:snesjacobianoptions}.
+At this point we risk overwhelming the reader with options, so we pause to review the possibilities before returning to testing them on the \texttt{reaction.c} problem.  Table \ref{tab:snesjacobianoptions} summarizes options relating to residual and Jacobian call-backs in \pSNES-using codes.
 
 \begin{table}
 \begin{tabular}{rllll}
@@ -613,7 +628,7 @@ only $\bF$:      & error           & $\bigcheckmark$ & $\bigcheckmark$ & error \
 $\bF$ and $P$:   & $\bigcheckmark$ & $\checkmark$    & $\checkmark$    & $\bigcheckmark$ \\
 $\bF$ and $J$:   & $\bigcheckmark$ & $\checkmark$    & $\checkmark$    & $\checkmark$
 \end{tabular}
-\caption{Jacobian options when using \pSNES, according to which functions are implemented.  Symbol ``$P$'' denotes a routine which computes an easy-to-invert approximate Jacobian while ``$J$'' denotes the actual Jacobian $J_{\bF}$.  Recommended usages have a big check mark.} \label{tab:snesjacobianoptions}
+\caption{Jacobian options when using \pSNES, according to which functions are implemented.  Symbol ``$P$'' denotes a routine which computes an easy-to-invert approximate Jacobian while ``$J$'' denotes an implementation of the actual Jacobian function $J_{\bF}(\bx)$.  A big check mark shows recommended usage.} \label{tab:snesjacobianoptions}
 \end{table}
 
 If a Jacobian routine is \emph{not} provided in the user-written code then only finite-difference evaluation of the assembled Jacobian matrix (i.e.~\texttt{-snes\_fd}) and finite-difference evaluation of the Jacobian-vector product inside the Krylov method (\texttt{-snes\_mf}) are available for the Newton iteration.  If a Jacobian routine is provided then additionally the Newton iteration can be used with no option---this is the obvious way to implement the Newton method.  The provided Jacobian may be used only to precondition the finite-difference Jacobian-vector product, which is option \texttt{-snes\_mf\_operator}.  This last option may give quadratic convergence even if the provided Jacobian is inexact, that is, even if $P$ in the table is a somewhat-poor approximation of the Jacobian.
@@ -698,11 +713,6 @@ This confirms, in one admittedly-simple example, the idea that preconditioning t
 One might give this advice about \pSNES and the Newton iteration:  Before implementing a Jacobian, try finite-difference evaluation of it, and look at whether coloring applies to your case.  Then consider implementing the exact Jacobian $J$.  If that seems like too much work, or if it is too error-prone, consider implementing an approximate Jacobian $P$ which is easier to assemble and apply than $J$.  In the PDE case $P$ might only capture the highest-order derivatives in $J$.  To test convergence with $P$, compare ``no option'' runs, where less-than-quadratic convergence is expected, and \texttt{-snes\_mf\_operator} runs where quadratic convergence may be recovered.
 
 
-\section{Checking your Jacobian implementation}
-
-FIXME: \texttt{-snes\_test}
-
-
 \section{Line search} \label{sec:linesearch}
 
 FIXME linesearch or trust region sometimes needed to ``globalize'' convergence \citep{Kelley2003}
@@ -720,7 +730,12 @@ FIXME linesearch or trust region sometimes needed to ``globalize'' convergence \
     \item Let $F(x) = \cos(x-1) - \exp(1-x)$ and $x_0=0.5$.  Using any quick-and-dirty numerical tool,\sidenote{Extra credit for doing it in \PETSc.} compute Newton iterates $x_k$ for $k=1,\dots,6$.  Estimate $K$ so that $|e_{k+1}| \le K |e_k|^2$ for large $k$.
     \end{enumerate}
 
-\item Make a tiny modification to \texttt{ecjacobian.c} to set the initial vector to $\bx_0 = [10\,\, 10]^\top$.  Rerun it with option \texttt{-snes\_monitor} and note it does not converge to a solution.  Why does the \pSNES stop?  Add one runtime option so that it  converges, thereby producing the data shown in Figure \ref{fig:newtonconvdelayed}.
+\item Make a tiny modification to \texttt{ecjacobian.c} to set the initial vector to $\bx_0 = [10\,\, 10]^\top$.  Rerun it with option \texttt{-snes\_monitor} and note it does not converge to a solution.  Why does the \pSNES stop?  Add one runtime option so that it converges, thereby producing the data shown in Figure \ref{fig:newtonconvdelayed}.
+
+\item \label{exer:nl:snestestdisplay}  Run and interpret the result:
+\begin{cline}
+./ecjacobian -snes_type test -snes_test_display
+\end{cline}
 
 \item  \label{exer:nl:newtonatan}
 This example shows a famous case where the original Newton iteration can diverge or enter a limit cycle, according to the initial iterate $x_0$, while using linesearch gives essentially global convergence.
@@ -739,7 +754,7 @@ This example shows a famous case where the original Newton iteration can diverge
 %  x = 1.39174520027073
     \end{enumerate}
 
-\item As noted on page \pageref{sidenote:logsummary}, \PETSc option \texttt{-log\_summary} can show whether function evaluations or linear solves are dominating the cost of Newton's method.  By looking at \texttt{-log\_summary} output, compare where the work is done in these runs: \texttt{./reaction}, \texttt{./reaction -snes\_fd}, \texttt{./reaction -snes\_mf}.  Does the comparison change if you add \texttt{-da\_refine 5}?  Explain as much as you can.  (\emph{Hints}: Look at \texttt{SNESSolve} events for the total time spent in the Newton method, which is $\approx$100\% for these cases.  Within that event, event \texttt{SNESLineSearch} is where function and Jacobian evaluations happen, while the linear solve is the \texttt{KSPSolve} event.  Within the \texttt{SNESLineSearch} event, look at \texttt{SNESFunctionEval} and \texttt{SNESJacobianEval} events.)
+\item Option \texttt{-log\_summary} can show whether function evaluations or linear solves are dominating the cost of Newton's method.  By looking at \texttt{-log\_summary} output, compare where the work is done in these runs: \texttt{./reaction}, \texttt{./reaction -snes\_fd}, \texttt{./reaction -snes\_mf}.  Does the comparison change if you add \texttt{-da\_refine 5}?  Explain as much as you can.  (\emph{Hints}: Look at \texttt{SNESSolve} events for the total time spent in the Newton method, which is $\approx$100\% for these cases.  Within that event, event \texttt{SNESLineSearch} is where function and Jacobian evaluations happen, while the linear solve is the \texttt{KSPSolve} event.  Within the \texttt{SNESLineSearch} event, look at \texttt{SNESFunctionEval} and \texttt{SNESJacobianEval} events.)
 
 \item \label{exer:nl:symmetrizeJ}  In Chapter \ref{chap:st} we gave some advice which we have not followed in the current Chapter, namely that one should implement Dirichlet conditions in a manner that preserves the symmetry of the matrix in question, which is the Jacobian here.  Modify \texttt{reaction.c} to preserve symmetry, noting that this requires modifying both the $\bF$ and $J$ evaluation routines.  Does this modification improve performance when using the CG iteration?  Does it change our conclusions about un-preconditioned JFNK, which were based on the CG iteration?
 
@@ -765,10 +780,10 @@ converge?  Explain why this case, with this way of choosing the boundary conditi
 % R(u) = lambda e^u increasing
 with Dirichlet boundary conditions $u(0)=u(1)=0$.  Make $\lambda$ an option-adjustable real parameter---see the previous exercise---and use the simplest function which satisfies the boundary conditions as an initial iterate.  Confirm by using a fine grid, and option \texttt{-snes\_converged\_reason} plus other options as needed, that around $\lambda=3.513$ there is a transition to non-convergence of the Newton iteration.  This \emph{critical value} is intrinsic to the nonlinear PDE problem and not a result of a Newton failure \citep{Doedeletal1991}.
 
-\item To the author's knowledge an exact solution of \eqref{eq:nl:bratuoned} cannot be written in elementary functions for $\lambda>0$.  On the other hand, while writing the code in the last exercise is doable because of the simplicity of the problem and the availability of a ``nearby'' correct example code,\sidenote{I.e.~we started from \texttt{reaction.c}.} one should not walk over high wires too often without a net.  Here ``having a net'' means having an exact solution computed independently of the numerical approximation and its implementation.
+\item To the author's knowledge an exact solution of \eqref{eq:nl:bratuoned} cannot be written in elementary functions for $\lambda>0$.  Because we started from \texttt{reaction.c}, writing the code in the last exercise is doable.  However, one should not walk over high wires too often without a net, and having an exact solution to check correctness is such a ``net.''  Fortunately, we can ``manufacture'' \citep{Wesseling2001} an exact solution to a generalized form of \eqref{eq:nl:bratuoned}, namely to equation \eqref{eq:nl:diffusionreaction} in the case where $D=1$ and $R(u)=-\lambda e^u$.  For example we can choose $u(x) = \sin(\pi x)$ as the exact solution of \eqref{eq:nl:diffusionreaction}, and then determine $f(x)$ from the equation itself.  Here $u(0)=u(1)=0$ are the boundary conditions, because they are satisfied by the exact solution.
 
-Fortunately, we can ``manufacture'' \citep{Wesseling2001} an exact solution to a generalized form of \eqref{eq:nl:bratuoned}, namely to equation \eqref{eq:nl:diffusionreaction} in the case where $R(u)=-\lambda e^u$.  For example we can choose $u(x) = \sin(\pi x)$ as the exact solution of \eqref{eq:nl:diffusionreaction}, and then determining $f(x)$ from the equation itself and have $u(0)=u(1)=0$ as boundary conditions that are satisfied by the chosen exact solution.
+Thus we get to the exercise itself: Add options and a manufactured exact solution to the code \texttt{bratu.c} in the previous exercise.  The new code will both solve the previous exercise and be verified using the new exact solution.  One might add a user-option-settable boolean member \texttt{manufactured} to \texttt{AppCtx}: when it is false then $f(x)=0$ and the code solves the previous exercise, but if it is true then we report a numerical error based on the manufactured solution.  Observe that having $f(x)\ne 0$ does not change the Jacobian.  Confirm that in the manufactured-solution case we have both quadratic convergence of the Newton iteration \emph{and} $O(h^2)$ convergence of the numerical error under grid refinement.
 
-Thus we get to the exercise itself: Add options and a manufactured exact solution to the code \texttt{bratu.c} in the previous exercise so that the new code can both solve the previous exercise and be verified using the new exact solution.  For instance, one might add a user-option-settable boolean member \texttt{manufactured} to \texttt{AppCtx}.  When it is false then $f(x)=0$ and the code solves the previous exercise.  If it is true then we use the appropriate $f(x)$ in computing the residual, and we report a numerical error.  Observe that having $f(x)\ne 0$ does not change the Jacobian.  Confirm that in the manufactured-solution case we have both quadratic convergence of the Newton iteration \emph{and} $O(h^2)$ convergence of the numerical error.
+\item FIXME: exercise on parallel runs of \texttt{ecjacobian.c} and \texttt{reaction.c}
 
 \end{enumerate}
