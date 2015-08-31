@@ -1,24 +1,24 @@
 
-Nonlinear equations change the functional form of the residual, compared to the linear case.  For a linear system the residual is this function of the unknowns,
+The simplest thing to say about nonlinear equations is that they change change the functional form of the residual, compared to the linear case.  For a linear system the residual $\br$, defined in \eqref{residualdefn}, is a certain function of the unknowns $\bu$, namely
 \begin{equation}
-\br = \bF(\bu) = \bb - A \bu \quad (\text{linear residual}). \label{eq:nl:linres}
+\bF(\bu) = \bb - A \bu. \label{eq:nl:linres}
 \end{equation}
 Now we consider cases in which $\bF$ is a higher-order polynomial, a transcendental function, or some more general function.
 
-In fact, let us simply suppose, for now, that $\bF : \RR^N \to \RR^N$ is differentiable.  The input $\bx$ and output $\bF(\bx)$ are column vectors,\sidenote{The name change $\bu\to\bx$, relative to \eqref{eq:nl:linres}, comes from thinking more geometrically about changes in the location of $\bx$.} so in that sense $\bF$ acts like square-matrix multiplication $\bx\mapsto A\bx$.  Just as we would reduce the residual \eqref{eq:nl:linres} to zero in an iterative linear algebra method, for nonlinear $\bF$ we want to solve
+In fact, let us simply suppose for now that $\bF : \RR^N \to \RR^N$ is differentiable.  The input $\bx$ and output $\bF(\bx)$ are column vectors,\sidenote{Our name change $\bu\to\bx$, relative to \eqref{eq:nl:linres}, comes from thinking more geometrically about changes in the location of $\bx$.} so in that sense $\bF$ acts like square-matrix multiplication $\bx\mapsto A\bx$.  A linear solver like GMRES (Chapter \ref{chap:ls}) reduces the residual \eqref{eq:nl:linres} to zero by generating a sequence $\bu_k$.  Likewise for nonlinear $\bF$ we want to solve
 \begin{equation}
    \bF(\bx) = 0   \label{eq:nl:equation}
 \end{equation}
-by iteration.
+by iteration, generating improved estimates $\bx_k$ so that $\bF(\bx_k)$ goes to zero.
 
-Newton's method linearizes \eqref{eq:nl:equation} around the most recent iterate and then ``moves'' $\bx$ to the location which solves the linear problem.  The new location is, we hope, closer to the solution.  Each iteration therefore solves a linear system; we already have \PETSc technology for that!  However, the cost of performing the linearization must be taken into account, choosing a ``smart'' distance to move will require additional choices, and all existing issues regarding the linear solver---especially preconditioning as discussed in Chapters \ref{chap:ls} and \ref{chap:st}---remain active.
+Newton's method linearizes \eqref{eq:nl:equation} around the most recent iterate and then ``moves'' $\bx$ to the location which solves the linear problem.  The new location is, we hope, closer to the solution.  Each iteration therefore solves a linear system, and we already have \PETSc technology for that.  However, the cost of performing the linearization must be taken into account, choosing a smart distance to move will require additional choices, and all existing choices regarding the linear solver---especially preconditioning---remain active.  Solving a nonlinear problem generally requires all the tools for linear systems considered in Chapter \ref{chap:ls}, and more.
 
-Large systems of nonlinear equations certainly arise in applications, as there are many PDE-type physical models with nonlinearities.  However, this section is largely about finite-dimensional systems of nonlinear equations \eqref{eq:nl:equation} as problems of their own.  Later in this section we give an example of a discretized one-dimensional nonlinear PDE, and in the next Chapter we continue with another nonlinear PDE problem in two dimensions.
+Large systems of nonlinear equations arise in applications as there are many PDE-type physical models with nonlinearities.  However, this section is largely about finite-dimensional systems of nonlinear equations \eqref{eq:nl:equation} as problems of their own.  Late in this section we give an example of a discretized one-dimensional nonlinear PDE.  In the next Chapter we continue with another nonlinear PDE problem in two dimensions, though it can also be regarded as an optimization problem.
 
 
 \section{Newton's method}
 
-Suppose $\bx_k\in\RR^N$ is an approximation, whether good or bad, to the solution of \eqref{eq:nl:equation}.  If we have already determined a \emph{step} $\bs\in\RR^N$ away from the current iterate $\bx_k$ then $\bx_{k+1} = \bx_k + \bs$ is the next iterate.  By definition, because $\bF$ is differentiable,
+Suppose $\bx_k\in\RR^N$ is an approximation, whether good or bad, to the solution of \eqref{eq:nl:equation}.  If we have already determined a \emph{step} $\bs\in\RR^N$ away from this current iterate $\bx_k$ then $\bx_{k+1} = \bx_k + \bs$ will be the next iterate.  Because $\bF$ is differentiable, by definition
 \begin{equation}
     \bF(\bx_{k+1}) = \bF(\bx_k) + J_\bF(\bx_k) \bs + o(\|\bs\|)  \label{eq:nl:expandF}
 \end{equation}
@@ -29,22 +29,22 @@ J_\bF(\bx_k) = \begin{bmatrix}
     \vdots & \ddots & \vdots \\
     \frac{\partial F_{N-1}}{\partial x_0} & \dots & \frac{\partial F_{N-1}}{\partial x_{N-1}}  \end{bmatrix}  \label{eq:nl:jacdefn}
 \end{equation}
-and some quantity $o(\|\bs\|)$ that goes to zero as the \emph{step length} $\|\bs\|$ goes to zero.  The matrix $J = J_\bF(\bx_k)$ is called the \emph{Jacobian} of $\bF$ at $\bx_k$; we also call the function $\bx \mapsto J_\bF(\bx)$ by the same name.
+and some quantity $o(\|\bs\|)$ that goes to zero as the \emph{step length} $\|\bs\|$ goes to zero.  The matrix $J = J_\bF(\bx_k)$ is called the \emph{Jacobian} of $\bF$ at $\bx_k$; we also call the function $\bx \mapsto J_\bF(\bx)$ the Jacobian.
 
-An iteration of Newton's method approximately solves \eqref{eq:nl:equation} by truncating \eqref{eq:nl:expandF} and seeking $\bs$ so that the updated value $\bF(\bx_{k+1})$ is zero.  That is, each Newton step computes $\bs$ by the linear equation
+Each iteration of Newton's method approximately solves \eqref{eq:nl:equation} by truncating \eqref{eq:nl:expandF} and seeking $\bs$ so that the updated value $\bF(\bx_{k+1})$ is zero.  That is, each Newton step computes $\bs$ by the linear equation
 \begin{equation}
     0 = \bF(\bx_k) + J_\bF(\bx_k) \bs.
 \end{equation}
-At each iteration $k$ we solve a linear system, which we now write in form ``$A\bu=\bb$,'' and then we do a vector addition:
+Writing the linear system in form ``$A\bu=\bb$,'' an iteration of Newton's method requires solving a linear system and then doing a vector addition:
 \begin{align}
     J_\bF(\bx_k) \bs &= - \bF(\bx_k)  \label{eq:nl:newtoneq}  \\
     \bx_{k+1} &= \bx_k + \bs  \label{eq:nl:newtonupdate}
 \end{align}
 This is Newton's method.  It is fairly simple in theory.
 
-Actual practice for Newton's method is not that complicated, at least with \PETSc in hand, as it has a mature implementation of this core technology  Despite the reputation of Newton iteration as fragile or scary, it works just fine on many nonlinear systems once one adds some protections.  For example, one may ``move'' a shorter distance to the new iterate than stated in \eqref{eq:nl:newtonupdate}.\sidenote{See the line-search material starting on page \pageref{sec:linesearch}.}  On big nonlinear systems we will also need to pay more attention to the details of the linear solve at each step.  Indeed, solving a nonlinear PDE problem generally requires all the tools for linear systems considered in Chapters \ref{chap:ls} and \ref{chap:st}, and more.
+Actual practice for Newton's method is also not that complicated with \PETSc in hand because it has a mature implementation of this core technology.  Despite the reputation of Newton iteration as fragile or scary, it works just fine on many nonlinear systems once one adds some protections.  For example, a line search may ``move'' a shorter distance to the new iterate than stated in \eqref{eq:nl:newtonupdate}; see page \pageref{sec:linesearch}.
 
-In any case, finite-dimensional nonlinear systems can be visualized as the problem of finding the intersections of curves, surfaces, or hypersurfaces, depending on dimension.  A small example gives us a start on the details.
+Finite-dimensional nonlinear systems can be visualized as the problem of finding the intersections of curves, surfaces, or hypersurfaces, depending on dimension.  A small example gives us a start on the details.
 
 \clearpage
 \noindent\hrulefill
