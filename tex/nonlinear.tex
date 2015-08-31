@@ -435,6 +435,7 @@ real 9.04
 \end{cline}
 %$
 This run is slow because we have evaluated $\bF$ about 25000 times.  By comparison, the analytical Jacobian version evaluates $\bF$ four times and $J_{\bF}$ three times and runs a hundred times faster:
+\label{etc:nl:bestreaction}
 \begin{cline}
 $ timer ./reaction -snes_converged_reason -da_refine 10
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
@@ -619,50 +620,40 @@ Recall that, when preconditioning, matrices $M$ and $M^{-1}$ are usually never a
 \def\checkmark{\tikz\fill[scale=0.4](0,.35) -- (.25,0) -- (.7,.8) -- (.25,.15) -- cycle;}
 \def\bigcheckmark{\tikz\fill[scale=0.6](0,.35) -- (.25,0) -- (.7,.8) -- (.25,.15) -- cycle;}
 
-At this point we risk overwhelming the reader with options, so we pause to review the possibilities before returning to testing them on the \texttt{reaction.c} problem.  Table \ref{tab:snesjacobianoptions} summarizes options relating to residual and Jacobian call-backs in \pSNES-using codes.
+At this point we risk overwhelming the reader with options, so we pause to review the possibilities before testing them on the \texttt{reaction.c} problem.  Table \ref{tab:snesjacobianoptions} summarizes options relating to residual and Jacobian call-backs in \pSNES-using codes.  If no Jacobian or approximate Jacobian routine is provided in the user-written code then only finite-difference evaluation of an assembled Jacobian matrix (i.e.~\texttt{-snes\_fd}) or finite-difference evaluation of the Jacobian-vector product inside the Krylov method (\texttt{-snes\_mf}, i.e.~JFNK) are available.  If a Jacobian routine \emph{is} provided then the Newton iteration itself occurs when no option is given.  However, the provided Jacobian may instead be used only to precondition the JFNK Jacobian-vector product, which is option \texttt{-snes\_mf\_operator}.  This last option may give quadratic convergence even if the provided Jacobian is inexact, that is, even if $P$ is a somewhat-poor approximation of the Jacobian.
 
 \begin{table}
-\begin{tabular}{rllll}
- &\underline{no option}\hspace{0.0in} & \underline{\texttt{-snes\_fd}} & \underline{\texttt{-snes\_mf}} & \underline{\texttt{-snes\_mf\_operator}} \\
-only $\bF$:      & error           & $\bigcheckmark$ & $\bigcheckmark$ & error \\
-$\bF$ and $P$:   & $\bigcheckmark$ & $\checkmark$    & $\checkmark$    & $\bigcheckmark$ \\
-$\bF$ and $J$:   & $\bigcheckmark$ & $\checkmark$    & $\checkmark$    & $\checkmark$
+\begin{tabular}{lllll}
+implemented: &\underline{no option}\hspace{0.0in} & \underline{\texttt{-snes\_fd}} & \underline{\texttt{-snes\_mf}} & \underline{\texttt{-snes\_mf\_operator}} \\
+only $\bF$      & error           & $\bigcheckmark$ & $\bigcheckmark$ & error \\
+$\bF$ and $P$   & $\bigcheckmark$ & $\checkmark$    & $\checkmark$    & $\bigcheckmark$ \\
+$\bF$ and $J$   & $\bigcheckmark$ & $\checkmark$    & $\checkmark$    & $\checkmark$
 \end{tabular}
-\caption{Jacobian options when using \pSNES, according to which functions are implemented.  Symbol ``$P$'' denotes a routine which computes an easy-to-invert approximate Jacobian while ``$J$'' denotes an implementation of the actual Jacobian function $J_{\bF}(\bx)$.  A big check mark shows recommended usage.} \label{tab:snesjacobianoptions}
+\caption{Jacobian options when using \pSNES.  Symbol ``$P$'' denotes an easy-to-invert approximate Jacobian while ``$J$'' denotes the actual Jacobian.  A big check mark shows recommended usage.} \label{tab:snesjacobianoptions}
 \end{table}
 
-If a Jacobian routine is \emph{not} provided in the user-written code then only finite-difference evaluation of the assembled Jacobian matrix (i.e.~\texttt{-snes\_fd}) and finite-difference evaluation of the Jacobian-vector product inside the Krylov method (\texttt{-snes\_mf}) are available for the Newton iteration.  If a Jacobian routine is provided then additionally the Newton iteration can be used with no option---this is the obvious way to implement the Newton method.  The provided Jacobian may be used only to precondition the finite-difference Jacobian-vector product, which is option \texttt{-snes\_mf\_operator}.  This last option may give quadratic convergence even if the provided Jacobian is inexact, that is, even if $P$ in the table is a somewhat-poor approximation of the Jacobian.
+From the code side we can say that at a minimum, a method for $\bF$ must be implemented in all cases, as there is no other way for \PETSc to know what equations you are solving.  There are two ways of providing $\bF$:  If the problem is based on a structured grid, as in \texttt{reaction.c} above, use \texttt{DMDASNESSetFunctionLocal()}.  In general, use \texttt{SNESSetFunction()}.
 
-From the code side we can state the cases this way:
+If \emph{only} $\bF$ is provided, do not create or preallocate a \pMat for the Jacobian, as this is done internally by the \pSNES for \texttt{-snes\_fd} runs, while no assembled Jacobian \pMat exists for \texttt{-snes\_mf} runs.
+
+If an exact ($J$) or approximate ($P$) Jacobian function is implemented then there are two cases:
 \begin{quote}
-\renewcommand{\labelenumi}{(\roman{enumi})}
-\begin{enumerate}
-\item[($0$)] At a minimum, a method for $\bF$ must be implemented in all cases, as there is no other way for \PETSc to know what equations you are solving!  There are two ways of providing $\bF$:
-  \renewcommand{\labelenumii}{\alph{enumii}.}
-   \begin{enumerate}
-   \item If the problem is based on a structured grid, as in \texttt{reaction.c} above, use \texttt{DMDASNESSetFunctionLocal()}.
-   \item In general, use \texttt{SNESSetFunction()}.
-   \end{enumerate}
-\item If \emph{only} $\bF$ is provided, do not create or preallocate a \pMat for the Jacobian, as this is done internally by the \pSNES for \texttt{-snes\_fd} runs, while no assembled Jacobian \pMat exists for \texttt{-snes\_mf} runs.
-\item If an exact or approximate Jacobian is implemented then there are two cases:
-   \renewcommand{\labelenumii}{\alph{enumii}.}
-   \begin{enumerate}
-   \item On a structured grid, provide the exact or approximate Jacobian through call-back using \texttt{DMDASNESSetJacobianLocal()}.  In this case the \pMat holding the Jacobian is internal, and does not need to be created or preallocated in user code.
-   \item In a general nonlinear equation solve, namely one not based on a structured grid, first declare a \pMat variable, say ``\texttt{J}'', and then call \texttt{MatCreate()}, \texttt{MatSetSizes()}, and \texttt{MatSetFromOptions()} on it.  Then call either \texttt{MatSetUp()} or \texttt{MatXAIJPreallocate()} on \texttt{J}, to allocate space for the assembled Jacobian matrix.  Then provide both the call-back code (e.g.~``\texttt{FormJacobian()}'') and \texttt{J}, for both \pMat arguments, through \texttt{SNESSetJacobian()}.
-   \end{enumerate}
-\end{enumerate}
+  \renewcommand{\labelenumi}{(\roman{enumi})}
+  \begin{enumerate}
+  \item On a structured grid, provide the function (e.g.~``\texttt{FormJacobianLocal()}'') using \texttt{DMDASNESSetJacobianLocal()}.  In this case the \pMat holding the Jacobian is internal, and does not need to be created or preallocated in user code.
+  \item In a general nonlinear equation solve, namely one not based on a structured grid, first declare a \pMat variable, say ``\texttt{J}'', and then call \texttt{MatCreate()}, \texttt{MatSetSizes()}, and \texttt{MatSetFromOptions()} on it.  Then call either \texttt{MatSetUp()} or \texttt{MatXAIJPreallocate()} on \texttt{J}, to allocate space for the assembled Jacobian matrix.  Then provide both the call-back code for function $J$ or $P$ (e.g.~``\texttt{FormJacobian()}''), and the \pMat \texttt{J} for both \pMat arguments, through \texttt{SNESSetJacobian()}.
+  \end{enumerate}
 \end{quote}
+In either case (i) or (ii), the Jacobian-implementing code only needs to set values in the second ``preconditioner'' \pMat argument, assuming in (ii) that \texttt{J} is provided for both \pMat arguments of   \texttt{SNESSetJacobian()} as described above.  The code should, however, \emph{assemble} both \pMat arguments.
 
-In either case (ii)a or (ii)b, the Jacobian-implementing code, e.g.~\texttt{FormJacobian()} or \texttt{FormJacobianLocal()} in the above examples, only needs to set values in the second ``preconditioner'' \pMat argument.\sidenote{This assumes \texttt{J} is provided for both \pMat arguments of   \texttt{SNESSetJacobian()} as described in (ii)a above.}  It should, however, \emph{assemble} both \pMat arguments.
-
-As practical advice for the debugging stage, you know you have correctly- and fully-implemented the Jacobian, and you have found an adequate initial iterate, if all four options in Table \ref{tab:snesjacobianoptions} work and give apparent quadratic convergence.\sidenote{I.e.~from looking at the residual norm decay shown by \texttt{-snes\_monitor}.}  As the reader may check, this is the situation for the last two codes \texttt{ecjacobian.c} and \texttt{reaction.c}.
+As practical advice for the debugging stage, you know you have correctly- and fully-implemented the Jacobian, and you have found an adequate initial iterate, if all four options in Table \ref{tab:snesjacobianoptions} work and each gives apparent quadratic convergence when looking at the residual norm decay shown by \texttt{-snes\_monitor}.  As the reader may check, this is the situation for the last two codes \texttt{ecjacobian.c} and \texttt{reaction.c}.
 
 
-\section{Testing Jacobian cases} \label{sec:jacobiantesting}
+\section{Testing JFNK with preconditioning} \label{sec:testsnesmfoperator}
 
-We can, and indeed already have, used refined-grid cases of \texttt{reaction.c} to show these alternatives in action.  We have already seen that the \texttt{-snes\_fd} option used \emph{without} coloring needs far too many evaluations of $\bF$, but it very much succeeds when used with coloring option \texttt{-snes\_fd\_color}.  And we have seen that the un-preconditioned Jacobian-free method \texttt{-snes\_mf}, which like \texttt{-snes\_fd} does not require any implemented Jacobian, has serious difficulties as it requires unreasonable numbers of Krylov iterations (and function evaluations).  However, what if a Jacobian is available, but it is only approximate?
+We now do refined-grid runs of \texttt{reaction.c} to show these alternatives in action.  We have already seen that the \texttt{-snes\_fd\_color} option is effective for reducing evaluations of $\bF$ if a Jacobian is not implemented.  In the same case, the un-preconditioned JFNK method \texttt{-snes\_mf} has serious difficulties as it requires unreasonable numbers of Krylov iterations and function evaluations.  However, what if a Jacobian is available, but it is only approximate?
 
-For example, suppose we modify this line in \texttt{reaction.c},
+For example, suppose we modify this line in \texttt{reaction.c}, in Code \ref{code:reactionI},
 \begin{code}
     col[1] = i;    v[1] = 2.0 - h*h * dRdu;
 \end{code}
@@ -670,7 +661,7 @@ to remove ``\texttt{- h*h * dRdu}'', to get
 \begin{code}
     col[1] = i;    v[1] = 2.0;
 \end{code}
-This change, which we call a ``\texttt{J->P}'' in the next paragraphs below, keeps the tridiagonal sparsity pattern of the Jacobian, but it removes the influence of the nonlinear term ``$+\rho \sqrt{u}$'' from the Jacobian; recall \eqref{eq:nl:diffusionreaction}.
+This change, which we call a ``\texttt{J->P}'' below, keeps the tridiagonal sparsity pattern of the Jacobian and it preserves the spectral character of the nonlinear operator $-u''+\rho \sqrt{u}$ in \eqref{eq:nl:drsqrt} by keeping the highest-order term, but it removes the influence of the nonlinear term from the Jacobian.
 
 With this change, convergence is slowed for no option, i.e.~when using the approximate Jacobian as though it were exact.  Specifically, on a coarse grid the number of iterations goes from 4 to 15, and the reported residual norms---here partly suppressed---suggest that the convergence is no longer quadratic:
 \begin{cline}
@@ -688,7 +679,7 @@ $ ./reaction -da_refine 4 -snes_monitor    # with J->P change
  15 SNES Function norm 1.119521798815e-10 
 on 129 point grid:  |u-u_exact|_inf/|u|_inf = 7.38159e-07
 \end{cline}
-This loss of performance for the Newton iteration, as caused by an in-exact Jacobian, is expected in theory \citep{Kelley2003}.
+This loss of performance for the Newton iteration, as caused by a significantly in-exact Jacobian, is expected in theory \citep{Kelley2003}.
 
 However, for this modified Jacobian case, \texttt{-snes\_mf\_operator} is now a fast option for higher-resolution grids, fully competitive with the exact Jacobian and finite-difference-by-coloring cases already seen.  Again on a $\approx 8000$ point grid, using the approximate Jacobian ``as is'' causes too many Newton iterations and less-than-quadratic convergence:
 \begin{cline}
@@ -706,16 +697,18 @@ on 8193 point grid:  |u-u_exact|_inf/|u|_inf = 1.80588e-10
 real 0.05
 \end{cline}
 %$
-The number of iterations and the time are significantly reduced.
+The number of iterations and the time are significantly reduced, and both are comparable to the exact Jacobian case (page \pageref{etc:nl:bestreaction}).
 
-This confirms, in one admittedly-simple example, the idea that preconditioning the matrix-free Jacobian action by the use of an approximate Jacobian is effective.  As a general rule, for large problems on a structured grid where coloring can be applied, \texttt{-snes\_fd -snes\_fd\_color} is often effective if no Jacobian is implemented.  As we will see, on an unstructured grid the coloring method may require additional work or be impossible, in which case implementing an approximate Jacobian and using \texttt{-snes\_mf\_operator} may be the optimal compromise to both get computational performance and save programmer time.
+This confirms, in a simple PDE example, the idea that preconditioning the matrix-free Jacobian action by the use of an approximate Jacobian is effective.  As a general rule, for large problems on a structured grid where coloring can be applied, \texttt{-snes\_fd\_color} is often effective if no Jacobian is implemented.  (On an unstructured grid the coloring method requires additional work.)  Implementing an approximate Jacobian and using \texttt{-snes\_mf\_operator} may be a good compromise which saves programmer time by avoiding a full Jacobian implementation.
 
-One might give this advice about \pSNES and the Newton iteration:  Before implementing a Jacobian, try finite-difference evaluation of it, and look at whether coloring applies to your case.  Then consider implementing the exact Jacobian $J$.  If that seems like too much work, or if it is too error-prone, consider implementing an approximate Jacobian $P$ which is easier to assemble and apply than $J$.  In the PDE case $P$ might only capture the highest-order derivatives in $J$.  To test convergence with $P$, compare ``no option'' runs, where less-than-quadratic convergence is expected, and \texttt{-snes\_mf\_operator} runs where quadratic convergence may be recovered.
+One might give this advice about \pSNES and the Newton iteration:  Before implementing a Jacobian, try finite-difference evaluation  \texttt{-snes\_fd}, and look at whether coloring applies to your case.  Then consider implementing the exact Jacobian $J$.  If that seems like too much work, or if it is too error-prone, consider implementing a simpler/faster approximate Jacobian $P$; in the PDE case $P$ might only capture the highest-order derivatives in $J$.  To test convergence with $P$, compare ``no option'' runs, where less-than-quadratic convergence is expected, and \texttt{-snes\_mf\_operator} runs where quadratic convergence may be recovered.
 
 
 \section{Line search} \label{sec:linesearch}
 
-FIXME linesearch or trust region sometimes needed to ``globalize'' convergence \citep{Kelley2003}
+FIXME insert new text
+
+FIXME trust region
 
 
 \section{Exercises}
