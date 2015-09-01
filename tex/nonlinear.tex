@@ -764,7 +764,7 @@ Secant-line minimization along the search direction, starting with testing \mbox
 
 Note one chooses line search type \texttt{X} by option \texttt{-snes\_linesearch\_type X}, and use \texttt{-snes\_linesearch\_monitor} for runtime information.  Parameter $\alpha$ in sufficient decrease condition \eqref{eq:nl:linesearchsuffdecrease} can be set, in the rare case where this is needed, by \texttt{-snes\_linesearch\_alpha}.  The initial value for $\lambda_k$ can be set by \texttt{-snes\_linesearch\_damping}, with default of $1$.  Option \texttt{-snes\_linesearch\_max\_it} sets the maximum number of line search tries for type \texttt{bt}, but for types \texttt{l2} and \texttt{cp} it sets the fixed number of repetitions of the secant line calculation.  As usual, find all such options by
 \begin{cline}
-$ ./reaction -help |grep snes_linesearch
+$ ./reaction -help | grep snes_linesearch
 \end{cline}
 %$
 for example.
@@ -788,8 +788,9 @@ We have actually only been describing one type of \pSNES solver in the last sect
 
 \item \label{exer:nl:snestestdisplay}  Run and interpret the result:
 \begin{cline}
-./ecjacobian -snes_type test -snes_test_display
+$ ./ecjacobian -snes_type test -snes_test_display
 \end{cline}
+%$
 
 \item  \label{exer:nl:newtonatan}
 This example shows a famous case where the original Newton iteration can diverge or enter a limit cycle, according to the initial iterate $x_0$, while using linesearch gives essentially global convergence.
@@ -822,8 +823,9 @@ This example shows a famous case where the original Newton iteration can diverge
 \end{code}
 By sampling, for what range of positive \texttt{X}$=\rho$ does the run
 \begin{cline}
-./optreact -snes_monitor -da_refine 4 -optr_rho X
+$ ./optreact -snes_monitor -da_refine 4 -optr_rho X
 \end{cline}
+%$
 converge?  Explain why this case, with this way of choosing the boundary conditions and initial iterate, and in contrast to the next exercise, is insensitive to the value of the major parameter $\rho$.
 % because this option is used in bratu.c below, for simplicity of maintenance, the result optreact.c is NOT saved in c/ch4/solns/
 
@@ -838,6 +840,13 @@ with Dirichlet boundary conditions $u(0)=u(1)=0$.  Make $\lambda$ an option-adju
 
 Thus we get to the exercise itself: Add options and a manufactured exact solution to the code \texttt{bratu.c} in the previous exercise.  The new code will both solve the previous exercise and be verified using the new exact solution.  One might add a user-option-settable boolean member \texttt{manufactured} to \texttt{AppCtx}: when it is false then $f(x)=0$ and the code solves the previous exercise, but if it is true then we report a numerical error based on the manufactured solution.  Observe that having $f(x)\ne 0$ does not change the Jacobian.  Confirm that in the manufactured-solution case we have both quadratic convergence of the Newton iteration \emph{and} $O(h^2)$ convergence of the numerical error under grid refinement.
 
-\item FIXME: exercise on parallel runs of \texttt{ecjacobian.c} and \texttt{reaction.c}
+\item As long as the number of MPI processes does not exceed the number of grid points, \texttt{reaction.c} will solve correctly, though perhaps not efficiently, in parallel.  Confirm this by running
+\begin{cline}
+$ mpiexec -n N ./reaction -snes_converged_reason -da_refine M
+\end{cline}
+%$
+with a few values of \texttt{N} and \texttt{M}.
+
+Code \texttt{ecjacobian.c} does not run correctly in parallel even on two MPI processes!  Modify so that it does.
 
 \end{enumerate}
