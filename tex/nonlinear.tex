@@ -332,13 +332,13 @@ See Exercise \ref{chap:nl}.\ref{exer:nl:snestestdisplay} for a bit more on this 
 
 \section{Example: a nonlinear diffusion-reaction equation}
 
-To get started on nonlinear PDE problems we look at a simple two-point boundary value problem.  Suppose $u(x)$ is the density of some substance and that $D>0$ is a constant.  An equation of the form
+To get started on nonlinear PDE problems we look at a simple two-point boundary value problem.  Suppose $u(x)$ is the density of some substance.  An equation of the form
 \begin{equation}
-- D u'' - R(u) = f(x)  \label{eq:nl:diffusionreaction}
+- u'' - R(u) = f(x)  \label{eq:nl:diffusionreaction}
 \end{equation}
 models a time-independent combination of \emph{diffusion} and \emph{reaction} processes by the terms on the left, respectively.  The right-hand side $f(x)$ models an additional location-dependent \emph{source}.  The condition $R(u)+f(x)>0$ models the production (increase) of $u$, while negative values model destruction (decrease) of $u$.  If $u$ represents temperature, in which case $R(u)$ represents a heat-producing or -absorbing temperature-dependent reaction, according to its sign, \eqref{eq:nl:diffusionreaction} is the model of the equilibrium (steady state) temperature distribution.  These ideas are perhaps clearest if we note \eqref{eq:nl:diffusionreaction} is the steady-state of the time-dependent model
 \begin{equation}
-u_t = D u_{xx} + R(u) + f(x),  \label{eq:nl:drtimedependent}
+u_t = u_{xx} + R(u) + f(x),  \label{eq:nl:drtimedependent}
 \end{equation}
 a generalization of the classical one-dimensional time-evolving heat equation.
 
@@ -361,7 +361,7 @@ We are actually using \eqref{eq:nl:drsqrt} as a first example, however, because 
 
 The actual finite-difference scheme we propose for \eqref{eq:nl:diffusionreaction} is quite obvious.  On an $N$ point grid it is
 \begin{equation}
-- D \frac{u_{j+1} - 2 u_j + u_{j-1}}{h^2} - R(u_j) = f(x_j)   \label{eq:nl:drfdscheme}
+- \frac{u_{j+1} - 2 u_j + u_{j-1}}{h^2} - R(u_j) = f(x_j)   \label{eq:nl:drfdscheme}
 \end{equation}
 where $h=1/(N-1)>0$ is the grid spacing, $x_j = j h$ for $j=0,1,\dots,N-1$, and $u_j \approx u(x_j)$.
 
@@ -836,7 +836,7 @@ converge?  Explain why this case, with this way of choosing the boundary conditi
 % R(u) = lambda e^u increasing
 with Dirichlet boundary conditions $u(0)=u(1)=0$.  Make $\lambda$ an option-adjustable real parameter---see the previous exercise---and use the simplest function which satisfies the boundary conditions as an initial iterate.  Confirm by using a fine grid, and option \texttt{-snes\_converged\_reason} plus other options as needed, that around $\lambda=3.513$ there is a transition to non-convergence of the Newton iteration.  This \emph{critical value} is intrinsic to the nonlinear PDE problem and not a result of a Newton failure \citep{Doedeletal1991}.
 
-\item To the author's knowledge an exact solution of \eqref{eq:nl:bratuoned} cannot be written in elementary functions for $\lambda>0$.  Because we started from \texttt{reaction.c}, writing the code in the last exercise is doable.  However, one should not walk over high wires too often without a net, and having an exact solution to check correctness is such a ``net.''  Fortunately, we can ``manufacture'' \citep{Wesseling2001} an exact solution to a generalized form of \eqref{eq:nl:bratuoned}, namely to equation \eqref{eq:nl:diffusionreaction} in the case where $D=1$ and $R(u)=-\lambda e^u$.  For example we can choose $u(x) = \sin(\pi x)$ as the exact solution of \eqref{eq:nl:diffusionreaction}, and then determine $f(x)$ from the equation itself.  Here $u(0)=u(1)=0$ are the boundary conditions, because they are satisfied by the exact solution.
+\item To the author's knowledge an exact solution of \eqref{eq:nl:bratuoned} cannot be written in elementary functions for $\lambda>0$.  Because we started from \texttt{reaction.c}, writing the code in the last exercise is doable.  However, one should not walk over high wires too often without a net, and having an exact solution to check correctness is such a ``net.''  Fortunately, we can ``manufacture'' \citep{Wesseling2001} an exact solution to a generalized form of \eqref{eq:nl:bratuoned}, namely to equation \eqref{eq:nl:diffusionreaction} in the case where $R(u)=-\lambda e^u$.  For example we can choose $u(x) = \sin(\pi x)$ as the exact solution of \eqref{eq:nl:diffusionreaction}, and then determine $f(x)$ from the equation itself.  Here $u(0)=u(1)=0$ are the boundary conditions, because they are satisfied by the exact solution.
 
 Thus we get to the exercise itself: Add options and a manufactured exact solution to the code \texttt{bratu.c} in the previous exercise.  The new code will both solve the previous exercise and be verified using the new exact solution.  One might add a user-option-settable boolean member \texttt{manufactured} to \texttt{AppCtx}: when it is false then $f(x)=0$ and the code solves the previous exercise, but if it is true then we report a numerical error based on the manufactured solution.  Observe that having $f(x)\ne 0$ does not change the Jacobian.  Confirm that in the manufactured-solution case we have both quadratic convergence of the Newton iteration \emph{and} $O(h^2)$ convergence of the numerical error under grid refinement.
 
