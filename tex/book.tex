@@ -358,51 +358,62 @@ Copyright \copyright\ \the\year\ \thanklessauthor
 \clearpage
 
 \newcommand{\tblockeqncode}[3]{
-\begin{tabular}[t]{l} #1: \\ \qquad {\small #2} \\ \quad {\large \underline{\texttt{#3}}} \end{tabular}
+\begin{tabular}[t]{l} #1 \\ \quad {\normalsize \texttt{#3}} \\ \qquad \fbox{\small #2} \end{tabular}
 }
 \newcommand{\tblockcode}[2]{
-\begin{tabular}[t]{l} #1 \\ \quad {\large \underline{\texttt{#2}}} \end{tabular}
+\begin{tabular}[t]{l} #1 \\ \quad {\normalsize \texttt{#2}} \end{tabular}
 }
 \newcommand{\tblock}[1]{
 \begin{tabular}[t]{l} #1 \end{tabular}
 }
 
+\clearpage
 \thispagestyle{empty}
 \noindent \textsc{inside front cover:}
 
 \vfill
-\begin{center}
-\hspace{-10mm}\begin{tabular}{rllll}
-\toprule
-Chapter 
-    &\quad linear\quad
-          &linear
-                &\quad nonlinear\quad
-                      &nonlinear \\ 
-    &     &time-dependent
-                &     &time-dependent \\
-\midrule  \bigskip
-3   & \tblockeqncode{Poisson}{$-\grad^2 u = f$}{poisson.c}
-          &  &     &      \\ \bigskip
-4   & \tblockcode{Poisson}{poisson.c}
-          &     &     &      \\ \bigskip
-5   & \begin{minipage}[t]{35mm}
- \tblockcode{Poisson}{poisson.c}
+{\large \noindent \textsc{PDE examples}.} \quad Chapter $N$ codes are in directory \texttt{c/ch}$N$\texttt{/}.
 
- \tblockeqncode{advection-diffusion}{$\bv \cdot \grad u - \grad^2 u = f$}{ad.c}
-\end{minipage}
-          & \tblockeqncode{heat}{$u_t = \grad^2 u$}{heat.c}
-                   &     &      \\ \bigskip
-6   &     &     &     &      \\ \bigskip
-7   &     &     & \tblockeqncode{$p$-Laplace}{$\begin{matrix} -\Div\left(D \grad u\right) = f \\ D = |\grad u|^{p-2} \end{matrix}$}{plap.c}
-                      & \tblockeqncode{porous}{$\begin{matrix} u_t = \Div\left(D \grad u\right) \\ D = u^{\gamma-1} \end{matrix}$}{porous.c} \\ \bigskip
-8   & \tblockeqncode{Stokes}{$\begin{matrix} -\grad^2 \bu + \grad p = 0 \\ \Div \bu = 0 \end{matrix}$}{stokes.c}
+\begin{center}
+\small
+\hspace{-10mm}\begin{tabular}{lllll}
+\toprule
+Chap.
+    &linear
+          &linear time-dep.
+                &nonlinear
+                      &nonlinear time-dep. \\
+\midrule  \bigskip
+\ref{chap:st}
+    & \tblockeqncode{Poisson (2D)}{$-\grad^2 u = f$}{poisson.c}
           &     &     &      \\ \bigskip
-9   & \tblockcode{Poisson}{poisson.c}
+\ref{chap:nl}
+    &     &     & \tblockeqncode{diffusion-reaction (1D)}{$- u''-R(u)=f$}{reaction.c} &      \\ \bigskip
+\ref{chap:of}
+    &     &     & \tblockeqncode{$p$-Laplace (2D)}{$\begin{matrix} -\Div\left(D \grad u\right) = f \\ D = |\grad u|^{p-2} \end{matrix}$}{plap.c}
+                      &  \\ \bigskip
+\ref{chap:mg}
+    & \begin{minipage}[t]{35mm}
+ \tblockcode{Poisson (2D, 3D)}{fish2.c, fish3.c}
+
+ \tblockeqncode{advection-diffusion (2D)}{$\bv \cdot \grad u - \grad^2 u = f$}{ad.c}
+\end{minipage}
+          &     &     &      \\ \bigskip
+\ref{chap:sc}
+    &     & \tblockeqncode{heat (2D)}{$u_t = \grad^2 u$}{heat.c}
+                &     & \tblockeqncode{porous (3D)}{$\begin{matrix} u_t = \Div\left(D \grad u\right) \\ D = u^{\gamma-1} \end{matrix}$}{porous.c} \\ \bigskip
+\ref{chap:un}
+    & \tblockcode{Poisson (2D)}{unfish.c}    &     &     &      \\ \bigskip
+\ref{chap:sy}
+    & \tblockeqncode{Stokes (2D)}{$\begin{matrix} -\grad^2 \bu + \grad p = 0 \\ \Div \bu = 0 \end{matrix}$}{stokes.c}
+          &     &     & \tblockeqncode{shallow water (1D)}{$\begin{matrix} h_t + (hv)_x = 0 \\ (hv)_t + (hv^2 + \tfrac{1}{2} g h^2)_x = 0 \end{matrix}$}{water.c}     \\ \bigskip
+\ref{chap:dp}
+    & \tblockcode{Poisson (2D, 3D)}{plexfish.c}
           &     &     &      \\
     &     &     &     &      \\ \bigskip
-10  &     &     & \tblockeqncode{obstacle}{$\begin{matrix} -\grad^2 u = f \\ u\ge \psi \end{matrix}$}{obstacle.c}
-                      & \tblockeqncode{ice sheet}{$\begin{matrix} H_t = \Div\left(D \grad H\right) + f \\ D = H^{n+2} |\grad (H-b)|^{n-1} \\ H \ge 0\end{matrix}$}{ice.c} \\
+\ref{chap:co}
+   &     &     & \tblockeqncode{obstacle}{$\begin{matrix} -\grad^2 u = f \\ u\ge \psi \end{matrix}$}{obstacle.c}
+                      & \tblockeqncode{ice sheet}{$\begin{matrix} H_t = \Div\left(D \grad H\right) + f \\ D \text{ nonlinear},\, H \ge 0\end{matrix}$}{ice.c} \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -413,6 +424,8 @@ Chapter
 \noindent \textsc{inside back cover:}
 
 \vfill
+{\large \noindent \textsc{\PETSc component coverage}}
+
 \begin{center}
 \begin{tabular}{rccccccc}
 \toprule
@@ -420,20 +433,21 @@ Chapter
     &\;\pVec\;
           &\;\pMat\;
                 &\;\texttt{KSP}${+}$\pPC\;
-                      &\pDMDA
+                      &\pSNES
                             &\pDMPlex
-                                  &\pSNES
+                                  &\pDMDA
                                         &\;\pTS\; \\
 \midrule
 2   & \XX & \XX & \XX &     &     &     &      \\
-3   & \XX & \XX & \XX & \XX &     &     &      \\
-4   & \XX & \XX & \XX &     &     &     &      \\
-5   & \gX & \gX & \XX & \XX &     &     &      \\
-6   & \gX & \gX & \XX & \XX &     &     &      \\
+3   & \XX & \XX & \XX &     &     & \XX &      \\
+4   & \gX & \XX & \gX & \XX &     & \XX &      \\
+5   & \gX & \gX & \gX & \XX &     & \XX &      \\
+6   & \gX & \gX & \XX & \XX &     & \XX &      \\
 7   & \gX & \gX & \XX & \XX &     & \XX & \XX  \\
-8   & \gX & \gX & \gX & \XX &     & \XX &      \\
-9   & \gX & \gX & \XX &     & \XX & \XX &      \\
-10  & \gX & \gX & \gX & \XX &     & \XX &      \\
+8   & \XX & \XX & \gX & \XX &     &     & \XX  \\
+9   & \gX & \gX & \XX & \XX &     & \XX &      \\
+10  & \gX & \gX & \XX & \XX & \XX &     &      \\
+11  & \gX & \gX & \gX & \XX &     & \XX &      \\
 \bottomrule
 \end{tabular}
 \end{center}
