@@ -21,7 +21,7 @@ int main(int argc, char **args) {
 
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"","options for lntwo",""); CHKERRQ(ierr);
   ierr = PetscOptionsInt("-n","number of terms in sum",
-                          NULL,n,&n,NULL); CHKERRQ(ierr);
+                          "lntwo.c",n,&n,NULL); CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
   ierr = PetscRandomCreate(PETSC_COMM_WORLD,&r); CHKERRQ(ierr);

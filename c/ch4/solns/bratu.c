@@ -95,9 +95,9 @@ int main(int argc,char **args) {
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD,
                            "bra_","options for bratu",""); CHKERRQ(ierr);
   ierr = PetscOptionsReal("-lambda","coefficient of nonlinear zeroth-order term",
-                          NULL,user.lambda,&(user.lambda),NULL); CHKERRQ(ierr);
+                          "bratu.c",user.lambda,&(user.lambda),NULL); CHKERRQ(ierr);
   ierr = PetscOptionsBool("-manufactured","if set, use a manufactured solution",
-                          NULL,user.manufactured,&(user.manufactured),NULL); CHKERRQ(ierr);
+                          "bratu.c",user.manufactured,&(user.manufactured),NULL); CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
   ierr = DMDACreate1d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,-9,1,1,NULL,&da); CHKERRQ(ierr);

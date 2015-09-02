@@ -17,7 +17,7 @@ int main(int argc,char **args) {
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD,
         "tri_","options for tri",""); CHKERRQ(ierr);
   ierr = PetscOptionsInt(
-        "-m","dimension of linear system",NULL,m,&m,NULL); CHKERRQ(ierr);
+        "-m","dimension of linear system","tri.c",m,&m,NULL); CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
   ierr = VecCreate(PETSC_COMM_WORLD,&x); CHKERRQ(ierr);

@@ -16,7 +16,7 @@ int main(int argc, char **args) {
 
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"","options for shuffle",""); CHKERRQ(ierr);
   ierr = PetscOptionsInt("-n","sets n so we permute integers 1 .. n",
-                          NULL,n,&n,NULL); CHKERRQ(ierr);
+                         "shuffle.c",n,&n,NULL); CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
   ierr = PetscRandomCreate(PETSC_COMM_WORLD,&r); CHKERRQ(ierr);

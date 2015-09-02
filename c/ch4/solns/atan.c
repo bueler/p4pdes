@@ -25,7 +25,7 @@ int main(int argc,char **argv) {
     PetscInitialize(&argc,&argv,(char*)0,help);
 
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"","options to e3arctan","");CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-x0","initial value","",x0,&x0,NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsReal("-x0","initial value","atan.c",x0,&x0,NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnd();CHKERRQ(ierr);
 
     ierr = VecCreate(PETSC_COMM_WORLD,&x); CHKERRQ(ierr);
