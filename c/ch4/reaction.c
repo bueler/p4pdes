@@ -23,7 +23,6 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal *u,
                                  PetscReal *f, AppCtx *user) {
     PetscInt  i;
     PetscReal h = 1.0 / (info->mx-1), R;
-    // PetscPrintf(PETSC_COMM_WORLD,"F eval\n"); //STRIP
     for (i=info->xs; i<info->xs+info->xm; i++) {
         if (i == 0) {
             f[i] = u[i] - user->alpha;
@@ -42,7 +41,6 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscReal *u,
     PetscErrorCode ierr;
     PetscInt  i, col[3];
     PetscReal h = 1.0 / (info->mx-1), dRdu, v[3];
-    // PetscPrintf(PETSC_COMM_WORLD,"Jacobian eval\n"); //STRIP
     for (i=info->xs; i<info->xs+info->xm; i++) {
         if ((i == 0) | (i == info->mx-1)) {
             v[0] = 1.0;

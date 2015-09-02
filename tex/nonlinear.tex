@@ -348,7 +348,7 @@ On the other hand, it is also fair to say that equation \eqref{eq:nl:diffusionre
 \begin{equation}
 u(0)=\alpha \quad \text{and} \quad u(1)=\beta.  \label{eq:nl:drbcs}
 \end{equation}
-(We have chosen a convenient interval $x\in[0,1]$, but for other intervals we can shift and scale $x$ as needed.)  If $R$ is continuous and non-increasing then the nonlinear operator in \eqref{eq:nl:diffusionreaction} is strictly-monotone \citep{KinderlehrerStampacchia1980}.  Because it is also coercive on the appropriate function space,\sidenote{Namely the Sobolev space $H_0^1[0,1]$, after a linear change of variables to set $\alpha=\beta=0$.} which says intuitively that the highest-order (diffusion) term is effective at damping out large variations in $u$, corresponding to a large norm $\|u'\|_2$, abstract arguments show unique existence of a solution.
+(We have chosen a convenient interval $x\in[0,1]$, but for other intervals we can shift and scale $x$ as needed.)  If $R$ is continuous and non-increasing then the nonlinear operator in \eqref{eq:nl:diffusionreaction} is strictly-monotone \citep{KinderlehrerStampacchia1980}.  Because it is also coercive on the appropriate function space,\sidenote{Namely the Sobolev space $H_0^1[0,1]$, after a linear change of variables to set $\alpha=\beta=0$.} which says intuitively that the highest-order (diffusion) term is effective at damping out large variations in $u$ which correspond to a large norm $\|u'\|_2$, abstract arguments show unique existence of a solution.
 
 Now we consider the example
 \begin{equation}
@@ -357,21 +357,23 @@ Now we consider the example
 % R(u) = - rho sqrt(|u|) decreasing so -u''+F(u)=0 with F increasing
 This is of form \eqref{eq:nl:diffusionreaction} with $R(u) = - \rho \sqrt{u}$ and $f(x)=0$.  Because $R$ is non-increasing and continuous if $\rho>0$, the corresponding Dirichlet problem is well-posed.  (If desired $R$ can be extended as $R(u)=0$ for $u<0$, thereby becoming non-increasing and continuous for all of $\RR$.)
 
-We are actually using \eqref{eq:nl:drsqrt} as a first example, however, because we want to verify our numerical solution using an exact solution, and its particular form makes this easy.  The solution is found \citep{Ockendonetal2003} by noting that both second-derivative and square-root operations convert certain 4th degree polynomials into quadratic polynomials.  We also get the boundary conditions from the exact solution.  Therefore we substitute $u(x)=M(x+1)^4$ into \eqref{eq:nl:drsqrt} and find $M=(\rho/12)^2$, $\alpha=M$, and $\beta=16 M$.
+We are actually using \eqref{eq:nl:drsqrt} as a first example, however, because we want to verify our numerical solution using an exact solution, and its form makes this easy.  The solution is found \citep{Ockendonetal2003} by noting that both second-derivative and square-root operations convert certain 4th degree polynomials into quadratic polynomials.  We also get the boundary conditions from the exact solution.  Therefore we substitute $u(x)=M(x+1)^4$ into \eqref{eq:nl:drsqrt} and find $M=(\rho/12)^2$, $\alpha=M$, and $\beta=16 M$.
 
-The actual finite-difference scheme we propose for \eqref{eq:nl:diffusionreaction} is quite obvious.  On an $N$ point grid it is
+On an $N$ point grid, the finite-difference scheme we propose for \eqref{eq:nl:diffusionreaction} is
 \begin{equation}
 - \frac{u_{j+1} - 2 u_j + u_{j-1}}{h^2} - R(u_j) = f(x_j)   \label{eq:nl:drfdscheme}
 \end{equation}
 where $h=1/(N-1)>0$ is the grid spacing, $x_j = j h$ for $j=0,1,\dots,N-1$, and $u_j \approx u(x_j)$.
 
-Code \texttt{reaction.c} shown in Figures \ref{code:reactionI} and \ref{code:reactionII} solves this problem using finite-difference scheme \eqref{eq:nl:drfdscheme}, a \pSNES object for the Newton iteration, and a \pDMDA object for the finite-difference grid.  The first Figure shows three call-back methods.  First we compute the initial iterate---it is a linear function connecting the boundary conditions---and the exact solution in the method \texttt{InitialAndExactLocal()}.  Then we have the residual (\texttt{FormFunctionLocal()}) and Jacobian (\texttt{FormJacobianLocal()}) evaluation functions.
-
 \cinputpart{reaction.c}{\CODELOC}{Call-back functions for \texttt{reaction.c}.}{I}{//CALLBACK}{//ENDCALLBACK}{code:reactionI}
 
 \cinputpart{reaction.c}{\CODELOC}{In \texttt{main()} we create a \pDMDA, then \pVecs, and then a \pSNES.  We hand call-back functions to the \pSNES.  Then we solve the equation, get the numerical error, and clean up.}{II}{//MAIN}{//ENDMAIN}{code:reactionII}
 
-These are ``\texttt{Local}'' methods in the sense that their inputs are C pointers for arrays instead of \pVecs.  Our implementation of \texttt{InitialAndExactLocal()} explains how this works.  As seen in Code \ref{code:reactionII}, before this method is called we use \texttt{DMDAVecGetArray()} on the \pVecs which need reading or setting, namely \texttt{u} and \texttt{uexact}.  This gives pointers of type \texttt{PetscReal*} which are then handed to \texttt{InitialAndExactLocal()}.  The call-back done inside \pSNES calls \texttt{FormFunctionLocal()} the same way.  The \pSNES also treats the input to  \texttt{FormJacobianLocal()} the same way.  Another aspect of these ``\texttt{Local}'' call-back methods is that a \texttt{DMDALocalInfo} struct is passed into the call-back functions.  Thus the local part of the grid (i.e.~\texttt{info.xs} and etc.) and the global grid size (i.e.~\texttt{info.mx}) can be accessed without needing the \pDMDA object itself.\sidenote{Recall Figure \ref{fig:localpartofgrid}.}
+Code \texttt{reaction.c} shown in Codes \ref{code:reactionI} and \ref{code:reactionII} solves this problem using \eqref{eq:nl:drfdscheme}, a \pSNES object for the Newton iteration, and a \pDMDA object for the grid.  Code \ref{code:reactionI} shows three call-back methods.  First we compute the initial iterate---a linear function connecting the boundary conditions---and the exact solution in the method \texttt{InitialAndExactLocal()}.  Then we have the residual (\texttt{FormFunctionLocal()}) and Jacobian (\texttt{FormJacobianLocal()}) evaluation functions.
+
+These are ``\texttt{Local}'' methods in the sense that their inputs are C pointers for arrays instead of \pVecs.  Our implementation of \texttt{InitialAndExactLocal()} explains how this works.  As seen in Code \ref{code:reactionII}, before this method is called we use \texttt{DMDAVecGetArray()} on the \pVecs which need reading or setting, namely \texttt{u} and \texttt{uexact}.  This gives pointers of type \texttt{PetscReal*} which are then handed to \texttt{InitialAndExactLocal()}.  The call-back done by \pSNES on \texttt{FormFunctionLocal()} and \texttt{FormJacobianLocal()} works the same way.
+
+Another aspect of these ``\texttt{Local}'' call-back methods is that a \texttt{DMDALocalInfo} struct is passed into the call-back functions.  The local part of the grid (i.e.~\texttt{info.xs} and etc.) and the global grid size (i.e.~\texttt{info.mx}) can be accessed through this struct without needing the \pDMDA object itself.\sidenote{Recall Figure \ref{fig:localpartofgrid}.}
 
 In \texttt{main()} (Code \ref{code:reactionII}) we use \texttt{DMDASNESSetFunctionLocal()} instead of \texttt{SNESSetFunction()}\sidenote{Compare \texttt{ecjacobian.c}.} because our local call-back functions have a different signature based on \pDMDA-derived pointers,   The Jacobian is set by a similar method \texttt{DMDASNESSetJacobianLocal()}.  Also, though we implement a Jacobian, we do not allocate a \pMat to hold it because the \pDMDA object has enough information about the grid and stencil so as to pre-allocate a \pMat internally.
 
@@ -570,9 +572,9 @@ By the way, to actually \emph{count} the number of function evaluations, there i
 $ ./reaction -da_refine 10 -snes_fd -snes_max_funcs 100000 -log_summary | grep SNESFunctionEval
 SNESFunctionEval   24586 1.0 3.3170e+00 1.0 ...
 $ ./reaction -da_refine 10 -snes_fd_color -log_summary | grep SNESFunctionEval
-SNESFunctionEval       4 1.0 1.5512e-03 1.0 ...
+SNESFunctionEval      13 1.0 4.7762e-03 1.0 ...
 \end{cline}
-The exact number of $\bF$ evaluations was 24586 and 4 in the two runs, respectively.\sidenote{The latter count is \emph{wrong} and a bug in \PETSc.  See \PETSc issue \#105.}
+The exact number of $\bF$ evaluations was 24586 and 13 in the two runs, respectively.
 
 
 \section{Jacobian-free Newton-Krylov (JFNK)} \label{sec:JFNK}
