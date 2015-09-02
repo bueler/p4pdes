@@ -380,17 +380,16 @@ Copyright \copyright\ \the\year\ \thanklessauthor
 \toprule
 Chap.
     &linear
-          &linear time-dep.
-                &nonlinear
-                      &nonlinear time-dep. \\
+          &nonlinear
+                &nonlinear time-dependent \\
 \midrule  \bigskip
 \ref{chap:st}
     & \tblockeqncode{Poisson (2D)}{$-\grad^2 u = f$}{poisson.c}
-          &     &     &      \\ \bigskip
+          &     &      \\ \bigskip
 \ref{chap:nl}
-    &     &     & \tblockeqncode{diffusion-reaction (1D)}{$- u''-R(u)=f$}{reaction.c} &      \\ \bigskip
+    &     & \tblockeqncode{diffusion-reaction (1D)}{$- u''-R(u)=f$}{reaction.c} &      \\ \bigskip
 \ref{chap:of}
-    &     &     & \tblockeqncode{$p$-Laplace (2D)}{$\begin{matrix} -\Div\left(D \grad u\right) = f \\ D = |\grad u|^{p-2} \end{matrix}$}{plap.c}
+    &     & \tblockeqncode{$p$-Laplace (2D)}{$\begin{matrix} -\Div\left(D \grad u\right) = f \\ D = |\grad u|^{p-2} \end{matrix}$}{plap.c}
                       &  \\ \bigskip
 \ref{chap:mg}
     & \begin{minipage}[t]{35mm}
@@ -398,22 +397,21 @@ Chap.
 
  \tblockeqncode{advection-diffusion (2D)}{$\bv \cdot \grad u - \grad^2 u = f$}{ad.c}
 \end{minipage}
-          &     &     &      \\ \bigskip
+          &     &      \\ \bigskip
 \ref{chap:sc}
-    &     & \tblockeqncode{heat (2D)}{$u_t = \grad^2 u$}{heat.c}
-                &     & \tblockeqncode{porous (3D)}{$\begin{matrix} u_t = \Div\left(D \grad u\right) \\ D = u^{\gamma-1} \end{matrix}$}{porous.c} \\ \bigskip
+    & \tblockeqncode{time-dependent heat (2D)}{$u_t = \grad^2 u$}{heat.c}
+          &     & \tblockeqncode{porous (3D)}{$\begin{matrix} u_t = \Div\left(D \grad u\right) \\ D = u^{\gamma-1} \end{matrix}$}{porous.c} \\ \bigskip
 \ref{chap:un}
     & \tblockcode{Poisson (2D)}{unfish.c}    &     &     &      \\ \bigskip
 \ref{chap:sy}
     & \tblockeqncode{Stokes (2D)}{$\begin{matrix} -\grad^2 \bu + \grad p = 0 \\ \Div \bu = 0 \end{matrix}$}{stokes.c}
-          &     &     & \tblockeqncode{shallow water (1D)}{$\begin{matrix} h_t + (hv)_x = 0 \\ (hv)_t + (hv^2 + \tfrac{1}{2} g h^2)_x = 0 \end{matrix}$}{water.c}     \\ \bigskip
+          &     & \tblockeqncode{shallow water (1D)}{$\begin{matrix} h_t + (hv)_x = 0 \\ (hv)_t + (hv^2 + \tfrac{1}{2} g h^2)_x = 0 \end{matrix}$}{water.c}     \\ \bigskip
 \ref{chap:dp}
     & \tblockcode{Poisson (2D, 3D)}{plexfish.c}
-          &     &     &      \\
-    &     &     &     &      \\ \bigskip
+          &     &      \\ \bigskip
 \ref{chap:co}
-   &     &     & \tblockeqncode{obstacle}{$\begin{matrix} -\grad^2 u = f \\ u\ge \psi \end{matrix}$}{obstacle.c}
-                      & \tblockeqncode{ice sheet}{$\begin{matrix} H_t = \Div\left(D \grad H\right) + f \\ D \text{ nonlinear},\, H \ge 0\end{matrix}$}{ice.c} \\
+    &     & \tblockeqncode{obstacle}{$\begin{matrix} -\grad^2 u = f \\ u\ge \psi \end{matrix}$}{obstacle.c}
+                & \tblockeqncode{ice sheet}{$\begin{matrix} H_t = \Div\left(D \grad H\right) + f \\ D \text{ nonlinear},\, H \ge 0\end{matrix}$}{ice.c} \\
 \bottomrule
 \end{tabular}
 \end{center}
