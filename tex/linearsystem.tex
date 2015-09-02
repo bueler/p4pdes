@@ -567,7 +567,7 @@ But surely that's enough runtime options for now.  There will be more, especiall
 
 \section{A sparse system of arbitrary size}
 
-We have seen \PETSc code to set up and solve linear systems, but there is more to say.  The next example \texttt{tri.c}, split into Figures \ref{code:tripartone} and \ref{code:triparttwo}, introduces these additional concepts and their associated function calls:
+We have seen \PETSc code to set up and solve linear systems, but there is more to say.  The next example \texttt{tri.c}, split into Codes \ref{code:tripartone} and \ref{code:triparttwo}, introduces these additional concepts and their associated function calls:
 \begin{enumerate}
 \item Creating an option, so that the size of the linear system can be controlled at runtime, by using \texttt{PetscOptionsXXX()} calls.
 \item Using \texttt{VecDuplicate()} for allocation.
