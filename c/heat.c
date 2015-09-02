@@ -76,7 +76,7 @@ int main(int argc,char **argv) {
   PetscInitialize(&argc,&argv,(char*)0,help);
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "", "options for c2heat", ""); CHKERRQ(ierr);
   ierr = PetscOptionsInt("-steps",
-                         "choose number of requested time steps\n", "", steps,
+                         "choose number of requested time steps\n", "heat.c", steps,
                          &steps, NULL); CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 

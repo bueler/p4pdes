@@ -81,13 +81,13 @@ int main(int argc,char **argv)
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "stokes_", "options for c7stokes", ""); CHKERRQ(ierr);
   ierr = PetscOptionsBool("-err",
            "evaluate and display numerical error (exact solution case)",
-           "",doerror,&doerror,NULL);CHKERRQ(ierr);
+           "stokes.c",doerror,&doerror,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-exact_init",
            "use exact solution as initial value (instead of zero)",
-           "",exactinit,&exactinit,NULL);CHKERRQ(ierr);
+           "stokes.c",exactinit,&exactinit,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-ppeps",
            "set epsilon which is the amount of Laplacian of pressure (i.e. pressure-poisson)",
-           "",user.ppeps,&user.ppeps,NULL);CHKERRQ(ierr);
+           "stokes.c",user.ppeps,&user.ppeps,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
   ierr = DMDACreate2d(PETSC_COMM_WORLD,

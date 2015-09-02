@@ -10,7 +10,7 @@ int main(int argc,char **argv) {
   PetscBool wanttfexact = PETSC_FALSE;
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "", "options for testts", ""); CHKERRQ(ierr);
   ierr = PetscOptionsBool("-want_tf_exact",
-                          "do call to TSSetExactFinalTime()\n", "", wanttfexact,
+                          "do call to TSSetExactFinalTime()", "testts.c", wanttfexact,
                           &wanttfexact, NULL); CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
