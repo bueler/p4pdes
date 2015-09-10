@@ -390,8 +390,7 @@ In \texttt{main()} (Code \ref{code:reactionII}) we use \texttt{DMDASNESSetFuncti
 
 \section{Convergence under grid refinement}
 
-Recall that the resolution of a structured grid can be set with either \texttt{-da\_grid\_x N} or \texttt{-da\_refine N}.  For example, on a modestly-refined grid we can compare the number of Newton iterations using analytical and finite-difference Jacobian solutions like this:
-
+On a modestly-refined grid we can compare the number of \texttt{reaction.c} Newton iterations from both analytical and finite-difference Jacobians.  Recalling that the resolution of a structured grid can be set with either \texttt{-da\_grid\_x M} or \texttt{-da\_refine N}, we do:
 \begin{cline}
 $ ./reaction -snes_converged_reason -da_refine 6
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
@@ -400,7 +399,7 @@ $ ./reaction -snes_converged_reason -da_refine 6 -snes_fd
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
 on 513 point grid:  |u-u_exact|_inf/|u|_inf = 4.62255e-08
 \end{cline}
-The results are identical.  On the other hand, one can see the Newton iterates graphically by
+The results are identical.  One can also see the Newton iterates graphically by
 \begin{cline}
 $ ./reaction -da_refine 6 -snes_monitor_solution -draw_pause 1
 \end{cline}
@@ -413,7 +412,7 @@ One sees that the first Newton step moves us close to the solution (not shown).
 \label{fig:nl:reaction-conv}
 \end{figure}
 
-Noting that our finite difference method has local truncation error $O(h^2)$, and because an exact solution allows computation of the numerical error, we can generate convergence data to check the implementation.  The result of this bash loop
+Noting that our finite difference method has local truncation error $O(h^2)$, and because an exact solution allows computation of the numerical error, we should generate convergence data to check the implementation.  The result of this bash loop
 \begin{cline}
 $ for N in 0 2 4 6 8 10 12 14 16; do
 >   ./reaction -da_refine $N -snes_rtol 1.0e-10; done
@@ -423,14 +422,14 @@ on 33 point grid:  |u-u_exact|_inf/|u|_inf = 1.1825e-05
 on 131073 point grid:  |u-u_exact|_inf/|u|_inf = 7.05476e-13
 on 524289 point grid:  |u-u_exact|_inf/|u|_inf = 6.04273e-12
 \end{cline}
-is shown in Figure \ref{fig:nl:reaction-conv}.  If we ignore the result on the finest grid then the convergence rate is also $O(h^2)$.\sidenote{Error stagnation always occurs at some level of refinement because of accumulation of round-off error.}  We also see consistent evidence of quadratic convergence by adding \texttt{-snes\_monitor} to the above runs.  Thus we conclude our implementation is correct.
+is shown in Figure \ref{fig:nl:reaction-conv}.  If we ignore the result on the finest grid then the convergence rate is $O(h^2)$.\sidenote{Error stagnation always occurs at some level of refinement because of accumulation of round-off error.}  We also see consistent evidence of quadratic convergence by adding \texttt{-snes\_monitor} to the above runs.  Thus we conclude our implementation is correct.
 
 
 \section{Finite-difference Jacobians by ``coloring''} \label{sec:nl:coloring}
 
-However, when we look closer at the results we get from finite-difference evaluation of Jacobians we see that it is not really working.  For the  \texttt{reaction.c} example there are far too many function evaluations per Newton step to be practical.  This is because, in contrast to the earlier fixed-dimension examples, discretizing a PDE generates an arbitrarily-large number of unknowns.
+However, when we look closer at the \texttt{-snes\_fd} results from finite-difference Jacobians we see that it is not really working.  There are far too many function evaluations per Newton step to be practical.  This is because, in contrast to the earlier fixed-dimension examples, discretizing a PDE generates an arbitrarily-large number of unknowns.
 
-First, look at the performance of the analytical Jacobian on a grid of about 8000 nodes:
+An analytical Jacobian run on a grid of about 8000 nodes requires three Newton iterations and $0.04$ seconds:
 \label{etc:nl:bestreaction}
 \begin{cline}
 $ timer ./reaction -snes_converged_reason -da_refine 10
@@ -439,16 +438,16 @@ on 8193 point grid:  |u-u_exact|_inf/|u|_inf = 1.75603e-10
 real 0.04
 \end{cline}
 %$
-There are four $\bF$ evaluations and three $J_{\bF}$ evaluations in this $0.04$ second run.
+Note that this run used four $\bF$ evaluations and three $J_{\bF}$ evaluations.
 
-Now compare the finite-difference-Jacobian case.  At first it simply fails:
+By contrast the finite-difference-Jacobian case simply fails at first:
 \begin{cline}
 $ ./reaction -snes_converged_reason -da_refine 10 -snes_fd
 Nonlinear solve did not converge due to DIVERGED_FUNCTION_COUNT iterations 1
 on 8193 point grid:  |u-u_exact|_inf/|u|_inf = 0.0049428
 \end{cline}
 %$
-The problem is that a complete Jacobian evaluation using finite-difference formula \eqref{eq:nl:fdjac} is requiring about $N+1=8194$ evaluations of $\bF$ per Newton iteration, one for each column of $J_{\bF}$ plus one for the right-side evaluation in \eqref{eq:nl:newton:eq}.  Thus the default maximum allowed $\bF$ evaluation count for the \pSNES is exceeded with just two iterations.\sidenote{Again, ``\texttt{./reaction -help |grep snes\_}'' gets the default value of 10000.}  If we raise the function-count limit then we do get convergence, but at more than 100 times increase in run time compared to the analytical Jacobian run:
+The problem is that a single Jacobian evaluation using finite-difference formula \eqref{eq:nl:fdjac} requires $N+1=8194$ evaluations of $\bF$ per Newton iteration, one for each column of $J_{\bF}$ plus one for the right side of \eqref{eq:nl:newton:eq}.  Thus \pSNES's default maximum $\bF$ evaluation count of 10000 is exceeded with just two iterations.\sidenote{Again, ``\texttt{./reaction -help |grep snes\_}'' gets the default value.}  If we raise the function-count limit then we do get convergence, but at more than 100 times increase in run time compared to the analytical Jacobian run:
 \begin{cline}
 $ timer ./reaction -snes_converged_reason -da_refine 10 -snes_fd \
 > -snes_max_funcs 100000
@@ -457,15 +456,15 @@ on 8193 point grid:  |u-u_exact|_inf/|u|_inf = 1.75635e-10
 real 9.04
 \end{cline}
 %$
-In this run we have evaluated $\bF$ about $3N \approx 25000$ times.  
+In this run we have evaluated $\bF$ about $3N \approx 25000$ times.  This performance hit is not sustainable when we go to two and three dimensional PDE problems.
 
-Fortunately, given that it is desirable for initial prototyping and saving programmer effort, there is no need to abandon the finite-difference-Jacobian idea.  The additional tool needed to make it work is applicable to many PDE numerical schemes, especially on structured grids.  Namely, we can exploit the fact that a small set of grid values---a small stencil---is used in approximating the PDE at each location.\sidenote{Finite difference, element, and volume schemes for discretizing PDES all normally have this property.  Spectral methods, by contrast, have a large, sometimes global, stencil, and would not benefit.}
+Fortunately, given that it saves programmer effort at the initial prototyping stage, there is no need to abandon the finite-difference-Jacobian idea.  The additional tool needed to make it work is applicable to many PDE numerical schemes, especially on structured grids.  Namely, we can exploit the fact that a small set of grid values---a small stencil---is used in approximating the PDE at each location.\sidenote{Finite difference, element, and volume schemes for discretizing PDES all normally have this property.  Spectral methods, by contrast, have a large, sometimes global, stencil, and would not benefit.}
 
-The idea is to ``color'' the nodes of the grid, and thus also the columns of the Jacobian, with a small set of colors so that each discrete equation uses nodes with distinct colors.  Code in \PETSc is already present to do such a coloring---adequately but not optimally---for structured grids.  From the coloring, evaluations of $\bF$ can be redesigned, relative to the basic formula \eqref{eq:nl:fdjac}, to allow the computation of many columns of $J_{\bF}(\bx)$ simultaneously; again this is already available in \PETSc.
+The idea is to ``color'' the nodes, and thus also the unknowns of the problem and the columns of the Jacobian, with a small set of colors so that each scalar equation in system \eqref{eq:nl:equation} relates nodes (unknowns) with distinct colors.  The ``colors'' are in fact just integers that we attach to each node/column.  From the coloring, evaluations of $\bF$ can be redesigned, relative to the basic formula \eqref{eq:nl:fdjac}, to allow the computation of many columns of $J_{\bF}(\bx)$ simultaneously; this is formula \eqref{eq:nl:fdcolorjac} below.  The fact that the number of needed $\bF$ evaluations in this context is one more than the number of colors needed for a (proper) vertex coloring \citep[e.g.~as defined in][]{ChartrandLesniakZhang2010} of a graph associated to the Jacobian matrix was first seen by \citet{ColemanMore1983}; see also the  more recent comprehensive review by \citet{Gebremedhinetal2005}.
 
-The fact that minimizing the number of function evaluations in this context is equivalent to a graph coloring was first seen by \citet{ColemanMore1983}; see also the  more recent comprehensive review by \citet{Gebremedhinetal2005}.  Note that the ``colors'' are in fact just integers that we attach to each node/column.
+Code in \PETSc is already present to do such coloring-based finite-difference Jacobian approximations for structured grids, and for \pDMDA-based structured grids we can access it through a run-time option.  Before looking at such runs, let's be clear on the role of graph coloring in a small example.
 
-For an example, consider the seven-point grid that comes from this command:\sidenote{Add \texttt{-mat\_view ::ascii\_dense} to see the successive Jacobian matrices from the Newton iteration.}
+Consider the seven-point grid that comes from this command:\sidenote{Add \texttt{-mat\_view ::ascii\_dense} to see the successive Jacobian matrices from the Newton iteration.}
 \begin{cline}
 $ ./reaction -da_grid_x 7
 \end{cline}
