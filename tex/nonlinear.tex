@@ -554,11 +554,13 @@ We take the unknowns, or equivalently the grid nodes at which the solution is un
 
 Now suppose we (``properly'') color the vertices so that any two vertices which share an edge have distinct colors.  The coloring in the Figure uses $c=3$ colors which is equal to the minimum number needed, which is to say $\chi(G)=c$ where $\chi(G)$ is the \emph{chromatic number} of $G$ \citep{ChartrandLesniakZhang2011}.
 
-Optimally-coloring a graph is a hard problem which \PETSc does not attempt to solve.  The \PETSc ``incidence-degree ordering'' and ``smallest-last ordering'' graph-coloring algorithms are generally near-optimal \citep{ColemanMore1983}, so we get $c$ for which $c \gtrsim \chi(G)$, but they run in a time proportional to the sum of squares of the number of nonzeros in each rows of $J$.  Thus we get a $c$-coloring in not just polynomial time in $N$, the number of unknowns, but in substantially-less time than $O(N^2)$ and often in $O(N)$ time.  (Recall we are trying to improve on the $O(N^2)$ cost of the \texttt{-snes\_fd} method.)
+Optimally-coloring a graph is a hard problem which \PETSc does not attempt to solve.  The \PETSc ``incidence-degree ordering'' [\emph{default}] and ``smallest-last ordering'' graph-coloring algorithms are relatively-near to optimal in the provable sense that we get $c$-colorings for which $c \le \alpha N^{1/2} \chi(G(J))$ \citep{ColemanMore1983}, for some constant $\alpha>0$, where $N$ is the number of equations in \eqref{eq:nl:equation}, and in the informal sense that $c\approx \chi(G(J))$ for a large selection of test matrices.
+
+However, these algorithms run in a time proportional to the sum of squares of the number of nonzeros in each rows of $J$.  Thus we get a reasonably-good coloring not just in polynomial time in $N$, but in substantially-less time than $O(N^2)$ and often in $O(N)$ time for problems coming from discretized PDEs.  Recall we are trying to improve on the $O(N^2)$ cost of the \texttt{-snes\_fd} method.
 
 We have now also colored the columns of $J$, as shown in the bottom of Figure \ref{fig:fdcolorreaction}.  Each row has distinct colors, which is one way to describe the purpose of our coloring.
 
-We now generate vectors $\bv_0, \bv_1, \dots, \bv_{c-1} \in \RR^N$ by the rule that $\bv_k$ has a $1$ in entry $j$ if $k$ is the color of column $j$ in $J$, and is otherwise zero.  In this $c=3$ case,
+From the coloring of $G(J)$ we generate vectors $\bv_0, \bv_1, \dots, \bv_{c-1} \in \RR^N$ by the rule that $\bv_k$ has a $1$ in entry $j$ if $k$ is the color of unknown $j$, and is otherwise zero.  In this $c=3$ case,
 \begin{equation}
 \bv_0 = \begin{bmatrix} 1 \\ 0 \\ 0 \\ 1 \\ 0 \\ 0 \\ 1 \end{bmatrix}, \qquad
 \bv_1 = \begin{bmatrix} 0 \\ 1 \\ 0 \\ 0 \\ 1 \\ 0 \\ 0 \end{bmatrix}, \qquad
@@ -599,7 +601,7 @@ SNESFunctionEval       4 1.0 9.3341e-04 1.0 ...
 %$
 The exact number of $\bF$ evaluations was 24586, 13, and 4, respectively.
 
-FIXME: gloss 2D case
+Before proceeding, we consider the structured 2D grid used in Chapter \ref{chap:st}, and in particular finite-difference scheme \eqref{poissonsquareFD} for the Poisson equation \eqref{poissonsquare}, and how this graph-coloring approach to forming a finite-difference approximation of the Jacobian might work.  FIXME
 
 \begin{figure}
 \begin{tikzpicture}[scale=7.0]
