@@ -678,7 +678,9 @@ $ ./reaction -snes_converged_reason -snes_mf -ksp_converged_reason -ksp_type cg 
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
 on 1025 point grid:  |u-u_exact|_inf/|u|_inf = 1.15576e-08
 \end{cline}
-These large iteration counts, which illustrate the well-known doubling of CG iterations with each doubling of dimension, remind us of the flaw in unpreconditioned Krylov methods addressed in Chapter \ref{chap:ls}.  The default GMRES solver is no better; we simply get a linear solve failure:
+These large iteration counts, which illustrate the well-known doubling of CG iterations with each doubling of dimension, also arose in Chapter \ref{chap:ls} when we looked at unpreconditioned Krylov methods.
+
+Observe that the default GMRES solver is no better; we simply get a linear solve failure:
 \begin{cline}
 $ ./reaction -snes_converged_reason -snes_mf -ksp_converged_reason -da_refine 7
   Linear solve did not converge due to DIVERGED_ITS iterations 10000
@@ -687,17 +689,17 @@ on 1025 point grid:  |u-u_exact|_inf/|u|_inf = 0.217386
 \end{cline}
 %$
 
-In other words, we see here an excellent reminder to apply the Krylov solver to a \emph{preconditioned} form of the Newton equation \eqref{eq:nl:newtoneqforJFNK}.  Recall there are left- and right-sided versions of preconditioning, equations \eqref{introleftpre} and \eqref{introrightpre} in Chapter \ref{chap:ls}.  For equation \eqref{eq:nl:newtoneqforJFNK}, using an invertible preconditioning matrix $M$, these versions are
+Here we see an excellent reminder to apply the Krylov solver to a \emph{preconditioned} form of linear equation \eqref{eq:nl:newton:eq}.  In this case left- and right-sided preconditioning, equations \eqref{introleftpre} and \eqref{introrightpre} in Chapter \ref{chap:ls}, are
 \begin{align}
-(M^{-1} J) \bs &= - M^{-1} \bF(\bx), \quad \text{and} \label{eq:nl:leftpre} \\
-(J M^{-1}) (M \bs) &= - \bF(\bx), \label{eq:nl:rightpre}
+(M^{-1} J) \bs &= - M^{-1} \bF(\bx_k), \label{eq:nl:leftpre} \\
+(J M^{-1}) (M \bs) &= - \bF(\bx_k), \label{eq:nl:rightpre}
 \end{align}
-respectively.  Left preconditioning \eqref{eq:nl:leftpre} requires no further comment because the action of $M^{-1} J$ on some vector $\bv$ is a straightforward composition of \eqref{eq:nl:JFNKbasic} followed by application of $M^{-1}$.  However, right preconditioning \eqref{eq:nl:rightpre}, in a Krylov iteration, uses a two step process.  The action of $J M^{-1}$ on $\bv$ is computed by first applying $M^{-1}$ to $\bv$, namely by solving $M \by = \bv$, and then using
+respectively.  Regarding their implementation in the Krylov iteration, in \eqref{eq:nl:leftpre} the action of $M^{-1} J$ on some vector $\bv$ is a straightforward composition of \eqref{eq:nl:JFNKbasic} followed by application of $M^{-1}$.  In right preconditioning \eqref{eq:nl:rightpre} the action of $J M^{-1}$ on $\bv$ is computed by first applying $M^{-1}$ to $\bv$, namely by solving $M \by = \bv$, and then using \eqref{eq:nl:JFNKbasic}:
 \begin{equation}
-(J M^{-1}) \bv = J \by \approx \frac{\bF(\bx+\delta \by) - \bF(\bx)}{\delta} \label{eq:nl:JFNKwithrightpre}
+(J M^{-1}) \bv \approx \frac{\bF(\bx+\delta \by) - \bF(\bx)}{\delta} \label{eq:nl:JFNKwithrightpre}
 \end{equation}
 
-Recall that, when preconditioning, matrices $M$ and $M^{-1}$ are usually never assembled.  Even if an assembled preconditioner-material matrix $P$ is present, $M$ may be constructed nontrivially from $P$.  For example, if we supply some assembled matrix $P$ as the preconditioner material, but we ask for ILU($0$) preconditioning,\sidenote{I.e.~the default corresponding to option \texttt{-pc\_type ilu}.} then $M$ is actually the product of the ILU($0$) factors of $P$, and thus it is generally not equal to $P$.
+Also recall that preconditioning matrices $M$ and $M^{-1}$ are usually never assembled.  Even if an assembled preconditioner-material matrix $P$ is present, $M$ is generally constructed nontrivially from $P$.  For example, if we supply some assembled matrix $P$ as the preconditioner material, but we ask for ILU($0$) preconditioning, then $M$ is actually the product of the ILU($0$) factors of $P$, not $P$ itself.
 
 
 \section{Jacobian cases} \label{sec:jacobiancases}
