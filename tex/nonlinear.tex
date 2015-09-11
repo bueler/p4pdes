@@ -631,41 +631,38 @@ Before proceeding, we consider the structured 2D grid used in Chapter \ref{chap:
 
 \section{Jacobian-free Newton-Krylov (JFNK)} \label{sec:JFNK}
 
-Besides the finite-difference Jacobian approach we have already seen, which uses equation \eqref{eq:nl:fdjac} to compute the entries of an assembled Jacobian matrix, there is a different approach which approximates the Jacobian-times-vector product by a finite difference.  This approach must be used with a Krylov-type method to solve the Newton step equation.  It goes by the name ``Jacobian-free Newton-Krylov'' \citep{KnollKeyes2004} or just ``JFNK''.
-
-To introduce JFNK we recall two things.  First is Newton equation \eqref{eq:nl:newton:eq} for step $\bs$ based on the current iterate $\bx=\bx_k$, namely
+Besides the finite-difference Jacobian approach above, using equation \eqref{eq:nl:fdjac} or \eqref{eq:nl:fdcolorjac} to compute the entries of the matrix, there is a different approach which requires no assembled Jacobian matrix at all.  It approximates matrix-vector products by a finite difference formula, and uses a Krylov-type method to solve \eqref{eq:nl:newton:eq} from a space
 \begin{equation}
-    J \bs = - \bF(\bx) \label{eq:nl:newtoneqforJFNK}
+    \mathcal{K} = \operatorname{span}\{\br,J\br,J^2\br,\dots,J^{m-1}\br\}. \label{eq:nl:krylovagain}
 \end{equation}
-where $J = J_\bF(\bx)$.  Second is the Krylov space definition \eqref{eq:li:krylovdefn}, here with matrix $J$ and vector $\br$:
-\begin{equation}
-    \mathcal{K} = \operatorname{span}\{\br,J\br,J^2\br,\dots,J^{n-1}\br\}.  \label{eq:nl:krylovagain}
-\end{equation}
+Here $J=J_{\bF}(\bx_k)$ is the Jacobian at iterate $k$ and $\br$ is a (linear) residual in equation \eqref{eq:nl:newton:eq}.
 
-Suppose we use initial estimate $\bs\approx 0$ \citep{KnollKeyes2004} of the solution to \eqref{eq:nl:newtoneqforJFNK}.  The residual is $\br = - \bF(\bx) - J 0 = - \bF(\bx)$.  From this vector we need to compute $J\br$, $J^2\br=J(J\br)$, and so on, to solve \eqref{eq:nl:newtoneqforJFNK} from the Krylov space $\mathcal{K}$.  However, by definition of the derivative of $\bF$, the same idea as equation \eqref{eq:nl:expandF}, if $\bv$ is any vector then
+It goes by the name ``Jacobian-free Newton-Krylov'' \citep{KnollKeyes2004} or just ``JFNK''.  To give more detail, suppose we use initial estimate $0$ for the solution to \eqref{eq:nl:newton:eq}.  The residual is $\br = - \bF(\bx) - J 0 = - \bF(\bx)$.  To compute $J\br$, $J^2\br=J(J\br)$, \dots in \eqref{eq:nl:krylovagain}, recall definition \eqref{eq:nl:expandF} of the derivative of $\bF$.  It implies that if $\bv$ is any vector then
 \begin{equation}
 J \bv \approx \frac{\bF(\bx+\delta \bv) - \bF(\bx)}{\delta} \label{eq:nl:JFNKbasic}
 \end{equation}
-if $\delta \ne 0$ is small.  That is, the Jacobian-vector product can be approximated by a finite-difference, thereby avoiding evaluation of the entries of $J$ by finite-difference equation \eqref{eq:nl:fdjac}. In fact we can avoid assembling $J$ as a matrix!
+for small $\delta \ne 0$.  Approximating the Jacobian-vector product by \eqref{eq:nl:JFNKbasic} avoids evaluation of any entries of $J$.
 
-Note $\br = - \bF(\bx)$ comes from evaluating $\bF$.  From the above ideas, each additional vector in the Krylov basis \eqref{eq:nl:krylovagain} can be approximated using one additional evaluation of $\bF$ by the formula
+Computing $\br = - \bF(\bx)$, to get the Krylov method started, requires evaluating $\bF$.  Then each successive vector in basis \eqref{eq:nl:krylovagain} requires an additional evaluation of $\bF$, namely
 \begin{equation}
 J^{\ell} \br \approx \frac{\bF(\bx+\delta J^{\ell-1}\br) - \bF(\bx)}{\delta} \label{eq:nl:JFNKiteration}
 \end{equation}
-for $\ell=1,\dots,n$.  Equation \eqref{eq:nl:JFNKiteration} is the central idea in JFNK.
+for $\ell=1,\dots,m$.  Equation \eqref{eq:nl:JFNKiteration}, the central calculation in JFNK, uses $m$ evaluations of $\bF$ to compute the whole Krylov basis \eqref{eq:nl:krylovagain}.  By contrast, use of finite difference formula \eqref{eq:nl:fdjac} to compute a generic $N\times N$ Jacobian $J$ requires $N$ evaluations of $\bF$.  Thus JFNK is efficient if \eqref{eq:nl:newton:eq} is solved to desired tolerance in $m\ll N$ Krylov iterations.
 
-Observe that use of the earlier finite difference formula \eqref{eq:nl:fdjac} to compute a generic $N\times N$ Jacobian $J$ would require $N$ evaluations of $\bF$.  Thus the two evaluations of $\bF$ needed for \eqref{eq:nl:JFNKbasic} to compute $J\bv$, or the $n$ evaluations of $\bF$ needed to compute the whole Krylov basis \eqref{eq:nl:krylovagain}, seems very efficient.  However, there are two countervailing points to make: (i) coloring greatly reduces the cost of using \eqref{eq:nl:fdjac} for many PDEs, and (ii) once you have a matrix you can do many things, such as matrix factorizations, other than computing a matrix-vector product or a Krylov basis.  In other words, JFNK is a good strategy to the extent that it actually \emph{works}, which we now pursue in more detail.
+However, there are a few basic points to consider.  First, once you have a matrix you can do many things, such as incomplete matrix factorizations, other than computing a matrix-vector product or a Krylov basis, so giving up on matrices may be premature.  Second, and related, we may need to precondition linear equation \eqref{eq:nl:newton:eq}, in which case we want the Krylov space for the linear operator $M^{-1}J$, not for $J$ itself.  Also, in cases such as structured-grid PDE schemes where it can be applied, we have seen that coloring greatly reduces the cost of using \eqref{eq:nl:fdjac} to assemble $J$.  JFNK is a good strategy to the extent that it actually \emph{works}, and to the extent it beats the competition.
 
-JFNK is implemented in \PETSc and invoked by option \texttt{-snes\_mf}:
+Note JFNK is implemented in \PETSc and invoked by option \texttt{-snes\_mf}, where ``\texttt{mf}'' in stands for ``matrix-free.''  We shall see below, in the important and even essential preconditioned case, that there may be a matrix involved in JFNK anyway.  The method never involves fully-assembling the Jacobian matrix itself, however, and thus the ``Jacobian-free'' label is justified.
+
+The issues above can be pursued in more detail on a concrete example, so let us give it a try on a very coarse grid in the 1D diffusion-reaction PDE example \texttt{reaction.c}:
 \begin{cline}
 $ ./reaction -snes_converged_reason -snes_mf
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
 on 9 point grid:  |u-u_exact|_inf/|u|_inf = 0.000188753
 \end{cline}
 %$
-Note that ``\texttt{mf}'' in the option stands for ``matrix-free'', but we shall see below that there may be a matrix involved in JFNK anyway.  The method never involves fully-assembling the Jacobian matrix itself, however, and thus the ``Jacobian-free'' label is justified.
+So far so good.
 
-Our enthusiasm for JFNK is damped when we try refined grids in the 1D diffusion-reaction PDE example.  Observe we are using an \emph{un}preconditioned Krylov method; that is, option \texttt{-snes\_mf} corresponds to JFNK as stated in \eqref{eq:nl:JFNKiteration}.  To see the bad news in an example, note $J$ is symmetric in the \texttt{reaction.c} case.\sidenote{Well \dots nearly so.  See exercise 4.\ref{exer:nl:symmetrizeJ}.}  Thus we try the CG Krylov method (Chapter \ref{chap:ls}) and ask \PETSc for both the number of Newton and Krylov iterations:
+Any enthusiasm is rather damped when we try refined grids.  Noting $J$ is symmetric in this case,\sidenote{Well \dots nearly so.  See exercise 4.\ref{exer:nl:symmetrizeJ}.} we try the CG method (Chapter \ref{chap:ls}) and ask \PETSc for both the number of Newton and Krylov iterations.  On 500 and 1000 point grids the performance is poor in the sense that too many ``inner'' Krylov iterations are needed:
 \begin{cline}
 $ ./reaction -snes_converged_reason -snes_mf -ksp_converged_reason -ksp_type cg -da_refine 6
   Linear solve converged due to CONVERGED_RTOL iterations 511
