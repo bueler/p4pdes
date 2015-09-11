@@ -458,7 +458,7 @@ on 8193 point grid:  |u-u_exact|_inf/|u|_inf = 1.75635e-10
 real 9.04
 \end{cline}
 %$
-In this run we have evaluated $\bF$ about $3N \approx 25000$ times.  This performance hit is not sustainable when we go to two and three dimensional PDE problems.
+In this run we have evaluated $\bF$ about $3N \approx 24000$ times.  This performance hit is not sustainable when we go to two and three dimensional PDE problems.
 
 Fortunately, given that it saves programmer effort at the initial prototyping stage, there is no need to abandon the finite-difference-Jacobian idea.  The additional tool needed to make it work is applicable to many PDE numerical schemes, especially on structured grids.  Namely, we can exploit the fact that a small set of grid values---a small stencil---is used in approximating the PDE at each location.\sidenote{Finite difference, element, and volume schemes for discretizing PDES all normally have this property.  Spectral methods, by contrast, have a large, sometimes global, stencil, and would not benefit.}
 
@@ -552,9 +552,13 @@ We take the unknowns, or equivalently the grid nodes at which the solution is un
 \label{fig:fdcolorreaction}
 \end{figure}
 
-Now suppose we (``properly'') color the vertices so that any two vertices which share an edge have distinct colors.  In this case the coloring uses $c=3$ colors, which in this simple case is equal to the minimum number needed, which is to say that the \emph{chromatic number} $\chi(G)=c=3$.  We have now also colored the columns of $J$, as shown in the bottom of the Figure, so that each row involves distinct colors.
+Now suppose we (``properly'') color the vertices so that any two vertices which share an edge have distinct colors.  The coloring in the Figure uses $c=3$ colors which is equal to the minimum number needed, which is to say $\chi(G)=c$ where $\chi(G)$ is the \emph{chromatic number} of $G$ \citep{ChartrandLesniakZhang2011}.
 
-We now generate $c$ vectors $v_k \in \RR^N$.  Each vector has a $1$ in entry $j$ if $k$ is the color of column $j$ in $J$.  In this $c=3$ case,
+Optimally-coloring a graph is a hard problem which \PETSc does not attempt to solve.  The \PETSc ``incidence-degree ordering'' and ``smallest-last ordering'' graph-coloring algorithms are generally near-optimal \citep{ColemanMore1983}, so we get $c$ for which $c \gtrsim \chi(G)$, but they run in a time proportional to the sum of squares of the number of nonzeros in each rows of $J$.  Thus we get a $c$-coloring in not just polynomial time in $N$, the number of unknowns, but in substantially-less time than $O(N^2)$ and often in $O(N)$ time.  (Recall we are trying to improve on the $O(N^2)$ cost of the \texttt{-snes\_fd} method.)
+
+We have now also colored the columns of $J$, as shown in the bottom of Figure \ref{fig:fdcolorreaction}.  Each row has distinct colors, which is one way to describe the purpose of our coloring.
+
+We now generate vectors $\bv_0, \bv_1, \dots, \bv_{c-1} \in \RR^N$ by the rule that $\bv_k$ has a $1$ in entry $j$ if $k$ is the color of column $j$ in $J$, and is otherwise zero.  In this $c=3$ case,
 \begin{equation}
 \bv_0 = \begin{bmatrix} 1 \\ 0 \\ 0 \\ 1 \\ 0 \\ 0 \\ 1 \end{bmatrix}, \qquad
 \bv_1 = \begin{bmatrix} 0 \\ 1 \\ 0 \\ 0 \\ 1 \\ 0 \\ 0 \end{bmatrix}, \qquad
@@ -565,14 +569,15 @@ In fact, a function maps from node/unknown index $j$ to color $k$,
 \begin{equation}
 k = k(j),  \label{eq:nl:colorfunc}
 \end{equation}
-and $k(j) = j\mod 3$ in this case.
+and $(\bv_k)_j = \delta_{k,k(j)}$.  Note $k(j) = j\mod 3$ in this case.
 
-replace \eqref{eq:nl:fdjac} with
+Finally we replace \eqref{eq:nl:fdjac} with
 \begin{equation}
 J_{ij} = \frac{\partial F_i}{\partial x_j} \approx \frac{F_i(\bx+\delta \bv_{k(j)}) - F_i(\bx)}{\delta}.  \label{eq:nl:fdcolorjac}
 \end{equation}
+The right sides of \eqref{eq:nl:fdjac} and \eqref{eq:nl:fdcolorjac} compute exactly the same entries $J_{ij}$.  In particular, all columns of $J$ with color $k$ are computed by \eqref{eq:nl:fdcolorjac} just using the \emph{smallest} $j$ for which $k(j)=k$.   In a $c$-coloring of $G(J)$ there are exactly $c$ evaluations $\bF(\bx+\delta \bv_{k(j)})$, plus one more for $\bF(\bx)$, to fill $J$.
 
-FIXME: the result is fast
+The result is almost as fast in this 1D PDE case as using the analytical Jacobian:
 \begin{cline}
 $ timer ./reaction -snes_converged_reason -da_refine 10 -snes_fd_color
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
@@ -580,17 +585,21 @@ on 8193 point grid:  |u-u_exact|_inf/|u|_inf = 1.75633e-10
 real 0.06
 \end{cline}
 %$
+Compare the run on page \pageref{etc:nl:bestreaction}.
 
-By the way, to actually \emph{count} the number of function evaluations, there is no need to alter \texttt{reaction.c}.\sidenote{No reason to add print statements!}  Use \texttt{-log\_summary} and look at the output.  Because we want the ``\texttt{SNESFunctionEval}'' line, these lines extract the count for the runs above:
+To actually \emph{count} the number of function evaluations, there is no need to alter \texttt{reaction.c}.\sidenote{No reason to add print statements!}  Use \texttt{-log\_summary} and look at the output.  Because we want the ``\texttt{SNESFunctionEval}'' line, \texttt{grep} extracts the count for the runs above:
 \begin{cline}
 $ ./reaction -da_refine 10 -snes_fd -snes_max_funcs 100000 -log_summary | grep SNESFunctionEval
 SNESFunctionEval   24586 1.0 3.3170e+00 1.0 ...
 $ ./reaction -da_refine 10 -snes_fd_color -log_summary | grep SNESFunctionEval
 SNESFunctionEval      13 1.0 4.7762e-03 1.0 ...
+$./reaction -da_refine 10 -log_summary | grep SNESFunctionEval
+SNESFunctionEval       4 1.0 9.3341e-04 1.0 ...
 \end{cline}
-The exact number of $\bF$ evaluations was 24586 and 13 in the two runs, respectively.
+%$
+The exact number of $\bF$ evaluations was 24586, 13, and 4, respectively.
 
-
+FIXME: gloss 2D case
 
 \begin{figure}
 \begin{tikzpicture}[scale=7.0]
