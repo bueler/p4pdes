@@ -377,15 +377,17 @@ where $h=1/(N-1)>0$ is the grid spacing, $x_j = j h$ for $j=0,1,\dots,N-1$, and 
 
 Code \texttt{reaction.c} shown in Codes \ref{code:reactionI} and \ref{code:reactionII} solves this problem.  We use scheme \eqref{eq:nl:drfdscheme}, a \pSNES object for the Newton iteration, and a \pDMDA object for the grid.
 
-Three call-back methods appear in Code \ref{code:reactionI}.  First we compute the initial iterate---a linear function connecting the boundary conditions---and the exact solution in the method \texttt{InitialAndExactLocal()}.  Then we have the residual (\texttt{FormFunctionLocal()}) and Jacobian (\texttt{FormJacobianLocal()}) evaluation functions.  These are ``\texttt{Local}'' methods in the sense that their inputs are C pointers for arrays instead of \pVecs.  Our implementation of \texttt{InitialAndExactLocal()} explains how this works.  As seen in Code \ref{code:reactionII}, before this method is called we use \texttt{DMDAVecGetArray()} on the \pVecs \texttt{u} and \texttt{uexact}.  This gives \texttt{PetscReal*} pointers which are then handed to \texttt{InitialAndExactLocal()}.  The call-back done by \pSNES on \texttt{FormFunctionLocal()} and \texttt{FormJacobianLocal()} works the same way.
+Three call-back methods appear in Code \ref{code:reactionI}.  First we compute the initial iterate---a linear function connecting the boundary conditions---and the exact solution in the method \texttt{InitialAndExactLocal()}.  Then we have the residual (\texttt{FormFunctionLocal()}) and Jacobian (\texttt{FormJacobianLocal()}) evaluation functions.  These are ``\texttt{Local}'' methods in the sense that their inputs are C pointers for arrays instead of \pVecs.
 
 \cinputpart{reaction.c}{\CODELOC}{Call-back functions for \texttt{reaction.c}.}{I}{//CALLBACK}{//ENDCALLBACK}{code:reactionI}
 
 \cinputpart{reaction.c}{\CODELOC}{In \texttt{main()} we create a \pDMDA, then \pVecs, and then a \pSNES.  We hand call-back functions to the \pSNES.  Then we solve the equation, get the numerical error, and clean up.}{II}{//MAIN}{//ENDMAIN}{code:reactionII}
 
-Another aspect of these ``\texttt{Local}'' call-back methods is that a \texttt{DMDALocalInfo} struct is passed into the call-back functions.  The local part of the grid (i.e.~\texttt{info.xs} and etc.) and the global grid size (i.e.~\texttt{info.mx}) can be accessed through this struct without needing the \pDMDA object itself.\sidenote{Recall Figure \ref{fig:localpartofgrid}.}
+Our implementation of \texttt{InitialAndExactLocal()} explains how the ``\texttt{Local}'' methods work.  As seen in Code \ref{code:reactionII}, before this method is called we use \texttt{DMDAVecGetArray()} on the \pVecs \texttt{u} and \texttt{uexact}.  This gives \texttt{PetscReal*} pointers which are then handed to \texttt{InitialAndExactLocal()}.  Also note that a \texttt{DMDALocalInfo} struct is passed in so that the local part of the grid (i.e.~\texttt{info.xs} and etc.) and the global grid size (i.e.~\texttt{info.mx}) can be accessed through this struct without needing the \pDMDA object itself.\sidenote{Recall Figure \ref{fig:localpartofgrid}.}  The call-back done by \pSNES on \texttt{FormFunctionLocal()} and \texttt{FormJacobianLocal()} works the same way.
 
-In \texttt{main()} (Code \ref{code:reactionII}) we use \texttt{DMDASNESSetFunctionLocal()} instead of \texttt{SNESSetFunction()}\sidenote{Compare \texttt{ecjacobian.c}.} because our local call-back functions have a different signature based on \pDMDA-derived pointers,   The Jacobian is set by a similar method \texttt{DMDASNESSetJacobianLocal()}.  Also, though we implement a Jacobian, we do not allocate a \pMat to hold it because the \pDMDA object has enough information about the grid and stencil so as to pre-allocate a \pMat internally.
+In \texttt{main()} we use \texttt{DMDASNESSetFunctionLocal()} instead of
+
+\noindent \texttt{SNESSetFunction()}\sidenote{Compare \texttt{ecjacobian.c}.} because our local call-back functions have a different signature based on \pDMDA-derived pointers.  The Jacobian is set by a similar method \texttt{DMDASNESSetJacobianLocal()}.  Also, though we implement a Jacobian, we do not allocate a \pMat to hold it because the \pDMDA object has enough information about the grid and stencil so as to pre-allocate a \pMat internally.
 
 
 \section{Convergence under grid refinement}
@@ -460,16 +462,16 @@ In this run we have evaluated $\bF$ about $3N \approx 25000$ times.  This perfor
 
 Fortunately, given that it saves programmer effort at the initial prototyping stage, there is no need to abandon the finite-difference-Jacobian idea.  The additional tool needed to make it work is applicable to many PDE numerical schemes, especially on structured grids.  Namely, we can exploit the fact that a small set of grid values---a small stencil---is used in approximating the PDE at each location.\sidenote{Finite difference, element, and volume schemes for discretizing PDES all normally have this property.  Spectral methods, by contrast, have a large, sometimes global, stencil, and would not benefit.}
 
-The idea is to ``color'' the nodes, and thus also the unknowns of the problem and the columns of the Jacobian, with a small set of colors so that each scalar equation in system \eqref{eq:nl:equation} relates nodes (unknowns) with distinct colors.  The ``colors'' are in fact just integers that we attach to each node/column.  From the coloring, evaluations of $\bF$ can be redesigned, relative to the basic formula \eqref{eq:nl:fdjac}, to allow the computation of many columns of $J_{\bF}(\bx)$ simultaneously; this is formula \eqref{eq:nl:fdcolorjac} below.  The fact that the number of needed $\bF$ evaluations in this context is one more than the number of colors needed for a (proper) vertex coloring \citep[e.g.~as defined in][]{ChartrandLesniakZhang2010} of a graph associated to the Jacobian matrix was first seen by \citet{ColemanMore1983}; see also the  more recent comprehensive review by \citet{Gebremedhinetal2005}.
+The idea is to ``color'' the nodes, and thus also the unknowns of the problem and the columns of the Jacobian, with a small set of colors so that each scalar equation in system \eqref{eq:nl:equation} relates nodes (unknowns) with distinct colors.  The ``colors'' are in fact just integers $\{0,1,2,\dots,c-1\}$, where $c$ is the number of colors used, that we attach to each node/column.  From the coloring, evaluations of $\bF$ can be redesigned, relative to the basic formula \eqref{eq:nl:fdjac}, to allow the computation of many columns of $J_{\bF}(\bx)$ simultaneously; this is formula \eqref{eq:nl:fdcolorjac} below.  The fact that the number of needed $\bF$ evaluations in this context is one more than the number of colors needed for a (proper) vertex coloring \citep[e.g.~as defined in][]{ChartrandLesniakZhang2011} of a graph associated to the Jacobian matrix was first seen by \citet{ColemanMore1983}; see also the  more recent comprehensive review by \citet{Gebremedhinetal2005}.
 
-Code in \PETSc is already present to do such coloring-based finite-difference Jacobian approximations for structured grids, and for \pDMDA-based structured grids we can access it through a run-time option.  Before looking at such runs, let's be clear on the role of graph coloring in a small example.
+Code in \PETSc is already present for such coloring-based finite-difference Jacobian approximations.  For \pDMDA-based structured grids we invoke it through a run-time option.  Before looking at such runs, however, let's be clear on the coloring in a small example.
 
-Consider the seven-point grid that comes from this command:\sidenote{Add \texttt{-mat\_view ::ascii\_dense} to see the successive Jacobian matrices from the Newton iteration.}
+Consider the $N=7$ point grid that comes from this command:
 \begin{cline}
 $ ./reaction -da_grid_x 7
 \end{cline}
 %$
-Figure \ref{fig:stencilreaction} shows this grid and the three-point stencil for the numerical discretization scheme \eqref{eq:nl:drfdscheme}.   The stencil at $x_j$ shows that (generically) the equation involves three unknowns, namely $u_{j-1}$, $u_j$, and $u_{j+1}$.  Exceptions occur at the boundary nodes, where only two unknowns are involved.
+Figure \ref{fig:stencilreaction} shows this grid and the three-point stencil for the numerical discretization scheme \eqref{eq:nl:drfdscheme}.  The stencil (equation) at $x_j$ generically involves three unknowns, namely $u_{j-1}$, $u_j$, and $u_{j+1}$.  Thus the $j$th row of the Jacobian $J$ has three nonzero entries.  Exceptions occur at the boundary nodes, where only two unknowns are involved.  In any case, option \texttt{-mat\_view ::ascii\_dense} allows one to see the Jacobian matrices themselves during the Newton iteration.
 
 \begin{figure}
 \begin{tikzpicture}[scale=1.0]
@@ -494,18 +496,18 @@ Figure \ref{fig:stencilreaction} shows this grid and the three-point stencil for
 \label{fig:stencilreaction}
 \end{figure}
 
-We take the nodes to be the vertices of a graph.  We draw an edge between two vertices if the corresponding unknowns both appear in at least one equation, i.e.~in one instance of equation \eqref{eq:nl:drfdscheme}.  The result is the graph shown in the top of Figure \ref{fig:fdcolorreaction}.  Now suppose we \emph{color} the graph.  That is, integers are assigned to vertices so that any two vertices which share an edge have distinct values (colors).  Recalling that in finite-difference approximation \eqref{eq:nl:fdjac} each node corresponds to a column of the Jacobian, we have also colored the columns of $J$ (same Figure).
+We take the unknowns, or equivalently the grid nodes at which the solution is unknown, to be the vertices of a graph $G=G(J)$, as shown in the top of Figure \ref{fig:fdcolorreaction}.  Graph $G$ has an edge between two vertices if the corresponding unknowns both appear in at least one equation, i.e.~in one instance of equation \eqref{eq:nl:drfdscheme} in this case.
 
 \begin{figure}
 \begin{tikzpicture}[scale=1.0]
-\node at (-1.8,8.0) {colored graph:};
-  \node at (0.5,8.4) {$1$};
-  \node at (1.5,8.4) {$2$};
-  \node at (2.5,8.4) {$3$};
-  \node at (3.5,8.4) {$1$};
-  \node at (4.5,8.4) {$2$};
-  \node at (5.5,8.4) {$3$};
-  \node at (6.5,8.4) {$1$};
+\node at (-2.25,8.0) {colored graph $G(J)$:};
+  \node at (0.5,8.4) {$0$};
+  \node at (1.5,8.4) {$1$};
+  \node at (2.5,8.4) {$2$};
+  \node at (3.5,8.4) {$0$};
+  \node at (4.5,8.4) {$1$};
+  \node at (5.5,8.4) {$2$};
+  \node at (6.5,8.4) {$0$};
   \draw (0.5,8.0) circle (4.0pt);
   \draw[line width=0.6pt] (0.65,8.0) -- (1.35,8.0);
   \draw (1.5,8.0) circle (4.0pt);
@@ -525,43 +527,46 @@ We take the nodes to be the vertices of a graph.  We draw an edge between two ve
   \draw[line width=0.75pt] (3.6,7.9) .. controls (4.4,7.5) and (4.6,7.5) .. (5.4,7.9);
   \draw[line width=0.75pt] (4.6,7.9) .. controls (5.4,7.5) and (5.6,7.5) .. (6.4,7.9);
 \node at (-2.4,6.5) {colored columns of $J$:};
-  \draw[xstep=1.0,ystep=1.0,black,thin] (0.0,0.0) grid (7.0,7.0);
-  \node at (0.5,6.5) {$1$};
-  \node at (0.5,5.5) {$1$};
-  \node at (1.5,6.5) {$2$};
-  \node at (1.5,5.5) {$2$};
-  \node at (1.5,4.5) {$2$};
-  \node at (2.5,5.5) {$3$};
-  \node at (2.5,4.5) {$3$};
-  \node at (2.5,3.5) {$3$};
-  \node at (3.5,4.5) {$1$};
-  \node at (3.5,3.5) {$1$};
-  \node at (3.5,2.5) {$1$};
-  \node at (4.5,3.5) {$2$};
-  \node at (4.5,2.5) {$2$};
-  \node at (4.5,1.5) {$2$};
-  \node at (5.5,2.5) {$3$};
-  \node at (5.5,1.5) {$3$};
-  \node at (5.5,0.5) {$3$};
-  \node at (6.5,1.5) {$1$};
-  \node at (6.5,0.5) {$1$};
+  %\draw[xstep=1.0,ystep=1.0,black,thin] (0.0,0.0) grid (7.0,7.0);
+  \node at (0.5,6.5) {$0$};
+  \node at (0.5,5.5) {$0$};
+  \node at (1.5,6.5) {$1$};
+  \node at (1.5,5.5) {$1$};
+  \node at (1.5,4.5) {$1$};
+  \node at (2.5,5.5) {$2$};
+  \node at (2.5,4.5) {$2$};
+  \node at (2.5,3.5) {$2$};
+  \node at (3.5,4.5) {$0$};
+  \node at (3.5,3.5) {$0$};
+  \node at (3.5,2.5) {$0$};
+  \node at (4.5,3.5) {$1$};
+  \node at (4.5,2.5) {$1$};
+  \node at (4.5,1.5) {$1$};
+  \node at (5.5,2.5) {$2$};
+  \node at (5.5,1.5) {$2$};
+  \node at (5.5,0.5) {$2$};
+  \node at (6.5,1.5) {$0$};
+  \node at (6.5,0.5) {$0$};
 \end{tikzpicture}
-\caption{We can build a graph from the grid, with an edge for every pair of unknowns that appears in an equation.  Coloring this graph also assigns colors to the columns of the Jacobian.}
+\caption{Graph $G(J)$ is built from the stencil and the grid, with an edge for every pair of unknowns that appears in an equation in system \eqref{eq:nl:equation}.  Coloring this graph---$c=3$ colors suffice in this case---also assigns colors to the columns of $J$ so that }
 \label{fig:fdcolorreaction}
 \end{figure}
 
-FIXME: generate $\bv_k$ by having a $1$ in every entry where $k$ is the color of that column of $J$: 
+Now suppose we (``properly'') color the vertices so that any two vertices which share an edge have distinct colors.  In this case the coloring uses $c=3$ colors, which in this simple case is equal to the minimum number needed, which is to say that the \emph{chromatic number} $\chi(G)=c=3$.  We have now also colored the columns of $J$, as shown in the bottom of the Figure, so that each row involves distinct colors.
+
+We now generate $c$ vectors $v_k \in \RR^N$.  Each vector has a $1$ in entry $j$ if $k$ is the color of column $j$ in $J$.  In this $c=3$ case,
 \begin{equation}
-\bv_1 = \begin{bmatrix} 1 \\ 0 \\ 0 \\ 1 \\ 0 \\ 0 \\ 1 \end{bmatrix}, \qquad 
-\bv_2 = \begin{bmatrix} 0 \\ 1 \\ 0 \\ 0 \\ 1 \\ 0 \\ 0 \end{bmatrix}, \qquad
-\bv_3 = \begin{bmatrix} 0 \\ 0 \\ 1 \\ 0 \\ 0 \\ 1 \\ 0 \end{bmatrix}.
+\bv_0 = \begin{bmatrix} 1 \\ 0 \\ 0 \\ 1 \\ 0 \\ 0 \\ 1 \end{bmatrix}, \qquad
+\bv_1 = \begin{bmatrix} 0 \\ 1 \\ 0 \\ 0 \\ 1 \\ 0 \\ 0 \end{bmatrix}, \qquad
+\bv_2 = \begin{bmatrix} 0 \\ 0 \\ 1 \\ 0 \\ 0 \\ 1 \\ 0 \end{bmatrix}.
  \label{eq:nl:coloringvecs}
 \end{equation}
-
-FIXME: we have a function that maps from node index $j$ to color $k$:
+In fact, a function maps from node/unknown index $j$ to color $k$,
 \begin{equation}
-k = k(j)  \label{eq:nl:colorfunc}
+k = k(j),  \label{eq:nl:colorfunc}
 \end{equation}
+and $k(j) = j\mod 3$ in this case.
+
 replace \eqref{eq:nl:fdjac} with
 \begin{equation}
 J_{ij} = \frac{\partial F_i}{\partial x_j} \approx \frac{F_i(\bx+\delta \bv_{k(j)}) - F_i(\bx)}{\delta}.  \label{eq:nl:fdcolorjac}
