@@ -84,7 +84,7 @@ Later we will also provide the \pSNES with a function which computes the Jacobia
 
 The whole of \texttt{expcircle.c}, to solve the above Example, is in Code \ref{code:expcircle}.  The \texttt{main()} method starts by allocating \pVec \texttt{x} of fixed dimension 2 which will hold both the initial iterate $\bx_0$ and, once the Newton iteration is ended, the converged estimate of the solution.  Because both components of $\bx_0$ are $1$, it is initialized using \texttt{VecSet()}.  Next a duplicate \pVec \texttt{r} is created; the \pSNES needs it as space for the (nonlinear) residual.
 
-Then the \pSNES is created and configured.  Formula \eqref{eq:nl:expcircleF} is in method \texttt{FormFunction()}, which is supplied using \texttt{SNESSetFunction()}.  Then we call \texttt{SNESSetFromOptions()} because it both gives us run-time control on how the Jacobian is calculated\sidenote{Options \texttt{-snes\_fd} and \texttt{-snes\_mf} are allowed; see Table \ref{tab:snesjacobianoptions} on page \pageref{tab:snesjacobianoptions}.} and on how the length of the step $\bs$ is actually determined.\sidenote{Through \texttt{-snes\_linesearch\_type} and related options; see page \pageref{sec:linesearch}.}  Then \eqref{eq:nl:equation} is solved by a call to \texttt{SNESSolve()}.  Finally the new values in \texttt{x}, presumably the converged solution, are printed at the command line using \texttt{VecView()} with a \texttt{STDOUT} viewer.
+Then the \pSNES is created and configured.  Formula \eqref{eq:nl:expcircleF} is in method \texttt{FormFunction()}, which is supplied using \texttt{SNESSetFunction()}.  Then we call \texttt{SNESSetFromOptions()} because it both gives us run-time control on how the Jacobian is calculated\sidenote{Options \texttt{-snes\_fd} and \texttt{-snes\_mf} are allowed; see Table \ref{tab:snesjacobianoptions:needed} below.} and on how the length of the step $\bs$ is actually determined.\sidenote{Through \texttt{-snes\_linesearch\_type} and related options; see page \pageref{sec:linesearch}.}  Then \eqref{eq:nl:equation} is solved by a call to \texttt{SNESSolve()}.  Finally the new values in \texttt{x}, presumably the converged solution, are printed at the command line using \texttt{VecView()} with a \texttt{STDOUT} viewer.
 
 \vfill
 \cinput{expcircle.c}{\CODELOC}{A first \pSNES-using code.  Solves nonlinear system \eqref{eq:nl:equation} with $\bF$ given in \eqref{eq:nl:expcircleF}.}{//START}{//END}{code:expcircle}
@@ -707,50 +707,68 @@ Also recall that preconditioning matrices $M$ and $M^{-1}$ are usually never ass
 \def\checkmark{\tikz\fill[scale=0.4](0,.35) -- (.25,0) -- (.7,.8) -- (.25,.15) -- cycle;}
 \def\bigcheckmark{\tikz\fill[scale=0.6](0,.35) -- (.25,0) -- (.7,.8) -- (.25,.15) -- cycle;}
 
-At this point we risk overwhelming the reader with options, so we pause to review the possibilities before testing them on the \texttt{reaction.c} problem.  Table \ref{tab:snesjacobianoptions} summarizes options relating to residual and Jacobian call-backs in \pSNES-using codes.  If no Jacobian or approximate Jacobian routine is provided in the user-written code then only finite-difference evaluation of an assembled Jacobian matrix (i.e.~\texttt{-snes\_fd}) or finite-difference evaluation of the Jacobian-vector product inside the Krylov method (\texttt{-snes\_mf}, i.e.~JFNK) are available.  If a Jacobian routine \emph{is} provided then the Newton iteration itself occurs when no option is given.  However, the provided Jacobian may instead be used only to precondition the JFNK Jacobian-vector product, which is option \texttt{-snes\_mf\_operator}.  This last option may give quadratic convergence even if the provided Jacobian is inexact, that is, even if $P$ is a somewhat-poor approximation of the Jacobian.
+At this point we risk overwhelming the reader with options, so we pause to review the possibilities before testing them on the \texttt{reaction.c} problem.
+
+Table \ref{tab:snesjacobianoptions:needed} summarizes options relating to residual and Jacobian call-backs in \pSNES-using codes.  If no Jacobian or approximate Jacobian routine is provided in the user-written code then only finite-difference evaluation of an assembled Jacobian matrix (i.e.~\texttt{-snes\_fd} or \texttt{-snes\_fd\_color}) or finite-difference evaluation of the Jacobian-vector product inside the Krylov method (\texttt{-snes\_mf}, i.e.~JFNK) are available.  If a Jacobian routine \emph{is} provided then the Newton iteration itself occurs when no option is given.  However, the provided Jacobian may be used only to precondition the JFNK Jacobian-vector product, which is option \texttt{-snes\_mf\_operator}.  This last option may give quadratic convergence even if the provided Jacobian is inexact, that is, even if $P$ is a somewhat-poor approximation of the Jacobian.
 
 \begin{table}
 \begin{tabular}{lllll}
-implemented: &\underline{no option}\hspace{0.0in} & \underline{\texttt{-snes\_fd}} & \underline{\texttt{-snes\_mf}} & \underline{\texttt{-snes\_mf\_operator}} \\
+ &\underline{no option}\hspace{0.0in} & \underline{\texttt{-snes\_fd}} & \underline{\texttt{-snes\_mf}} & \underline{\texttt{-snes\_mf\_operator}} \\
 only $\bF$      & error           & $\bigcheckmark$ & $\bigcheckmark$ & error \\
 $\bF$ and $P$   & $\bigcheckmark$ & $\checkmark$    & $\checkmark$    & $\bigcheckmark$ \\
 $\bF$ and $J$   & $\bigcheckmark$ & $\checkmark$    & $\checkmark$    & $\checkmark$
 \end{tabular}
-\caption{Jacobian options when using \pSNES.  Symbol ``$P$'' denotes an easy-to-invert approximate Jacobian while ``$J$'' denotes the actual Jacobian.  A big check mark shows recommended usage.} \label{tab:snesjacobianoptions}
+\caption{Jacobian options when using \pSNES, compared by need for user-implemented functions.  Symbol ``$P$'' denotes an easy-to-invert approximate Jacobian while ``$J$'' denotes the actual Jacobian.  A big check mark shows recommended usage.} \label{tab:snesjacobianoptions:needed}
 \end{table}
 
-From the code side we can say that at a minimum, a method for $\bF$ must be implemented in all cases, as there is no other way for \PETSc to know what equations you are solving.  There are two ways of providing $\bF$:  If the problem is based on a structured grid, as in \texttt{reaction.c} above, use \texttt{DMDASNESSetFunctionLocal()}.  In general, use \texttt{SNESSetFunction()}.
-
-If \emph{only} $\bF$ is provided, do not create or preallocate a \pMat for the Jacobian, as this is done internally by the \pSNES for \texttt{-snes\_fd} runs, while no assembled Jacobian \pMat exists for \texttt{-snes\_mf} runs.
+From the code side, at a minimum a method for $\bF$ must be implemented in all cases, as there is no other way for \PETSc to know what equations you are solving.  There are two ways of providing $\bF$:  If the problem is based on a structured grid, as in \texttt{reaction.c} above, use \texttt{DMDASNESSetFunctionLocal()}.  In general, use \texttt{SNESSetFunction()}.  If only $\bF$ is provided, do not create or preallocate a \pMat for the Jacobian, as this is done internally by the \pSNES for \texttt{-snes\_fd} runs, while no assembled Jacobian \pMat exists for \texttt{-snes\_mf} runs.
 
 If an exact ($J$) or approximate ($P$) Jacobian function is implemented then there are two cases:
 \begin{quote}
   \renewcommand{\labelenumi}{(\roman{enumi})}
   \begin{enumerate}
-  \item On a structured grid, provide the function (e.g.~``\texttt{FormJacobianLocal()}'') using \texttt{DMDASNESSetJacobianLocal()}.  In this case the \pMat holding the Jacobian is internal, and does not need to be created or preallocated in user code.
-  \item In a general nonlinear equation solve, namely one not based on a structured grid, first declare a \pMat variable, say ``\texttt{J}'', and then call \texttt{MatCreate()}, \texttt{MatSetSizes()}, and \texttt{MatSetFromOptions()} on it.  Then call either \texttt{MatSetUp()} or \texttt{MatXAIJPreallocate()} on \texttt{J}, to allocate space for the assembled Jacobian matrix.  Then provide both the call-back code for function $J$ or $P$ (e.g.~``\texttt{FormJacobian()}''), and the \pMat \texttt{J} for both \pMat arguments, through \texttt{SNESSetJacobian()}.
+  \item On a structured grid, provide the function (e.g.~``\texttt{FormJacobianLocal()}'') using \texttt{DMDASNESSetJacobianLocal()}.  In this case the \pMat holding the Jacobian is internal, and so it is not created or preallocated by the user.
+  \item In a general, first declare a \pMat variable, say ``\texttt{J}'', and then call \texttt{MatCreate()}, \texttt{MatSetSizes()}, and \texttt{MatSetFromOptions()} on it.  Then call either \texttt{MatSetUp()} or \texttt{MatXAIJPreallocate()} on \texttt{J}, to allocate space for the assembled Jacobian matrix.  Then provide the call-back code for function $J$ or $P$ (e.g.~``\texttt{FormJacobian()}'') and the \pMat \texttt{J} for both \pMat arguments through \texttt{SNESSetJacobian()}.
   \end{enumerate}
 \end{quote}
-In either case (i) or (ii), the Jacobian-implementing code only needs to set values in the second ``preconditioner'' \pMat argument, assuming in (ii) that \texttt{J} is provided for both \pMat arguments of   \texttt{SNESSetJacobian()} as described above.  The code should, however, \emph{assemble} both \pMat arguments.
+In either case (i) or (ii), the user's Jacobian code only needs to set values in the second ``preconditioner'' \pMat argument, assuming in (ii) that \texttt{J} is provided for both \pMat arguments of   \texttt{SNESSetJacobian()} as described above.  The code should, however, \emph{assemble} both \pMat arguments.
 
-As practical advice for the debugging stage, you know you have correctly- and fully-implemented the Jacobian, and you have found an adequate initial iterate, if all four options in Table \ref{tab:snesjacobianoptions} work and each gives apparent quadratic convergence when looking at the residual norm decay shown by \texttt{-snes\_monitor}.  As the reader may check, this is the situation for the last two codes \texttt{ecjacobian.c} and \texttt{reaction.c}.
+As practical advice for the debugging stage, you know you have correctly- and fully-implemented the Jacobian, and you have found an adequate initial iterate, if all four options in Table \ref{tab:snesjacobianoptions:evals} work and each gives apparent quadratic convergence when looking at the residual norm decay shown by \texttt{-snes\_monitor}.  As the reader may check that this is the situation for the last two codes \texttt{ecjacobian.c} and \texttt{reaction.c}.
+
+Another way to compare the options, especially in a structured PDE case where option \texttt{-snes\_fd\_color} might be effective, is shown in Table \ref{tab:snesjacobianoptions:evals}.  This Table supposes, rather unrealistically, that the number $q$ of Newton iterations is independent of the option.  For the last column it also assumes, again unrealistically, that the number of Krylov iterations is the same at each Newton iteration (in JFNK).
+
+\begin{table}
+\begin{tabular}{lccc}
+ &\underline{no option}
+                       & \small\underline{$\begin{array}{ll} \text{\texttt{-snes\_fd}} \\ \text{\texttt{-snes\_fd\_color}} \end{array}$}
+                                    & \small\underline{$\begin{array}{ll} \text{\texttt{-snes\_mf}} \\ \text{\texttt{-snes\_mf\_operator}} \end{array}$} \vspace{0.2in} \\
+residual $\bF$        & $q+1$ & $\begin{array}{cc} q(N+1)+1 \\ q(c+1)+1 \end{array}$ & $\begin{array}{cc} q m_1 \\ q m_2 \end{array}$ \vspace{0.1in} \\
+Jacobian $J$ or $P$    & $q$ & $\begin{array}{cc} 0 \\ 0 \end{array}$ & $\begin{array}{cc} 0 \\ q \end{array}$
+\end{tabular}
+\caption{Jacobian options compared by number of residual and Jacobian evaluations.  Here $q$ is the number of Newton iterations, $N$ is the dimension of the problem, $c$ is the number of colors on $G(J)$, $m_1$ is the dimension of the Krylov space for $J$, and $m_2$ is the Krylov space dimension for the preconditioned operator $M^{-1}J$.} \label{tab:snesjacobianoptions:evals}
+\end{table}
+
+Table \ref{tab:snesjacobianoptions:evals} is useful for making two simple points:\begin{itemize}
+\item Improved performance with \texttt{-snes\_fd\_color} comes from having a $c$-coloring where $c \ll N$.
+\item Improved performance with \texttt{-snes\_mf\_operator} comes from reducing the number $m$ of Krylov iterations.  We already know from Chapter \ref{chap:ls} that this is primarily an issue of choosing the right preconditioner so that $m_2 \ll m_1$.
+\end{itemize}
 
 
 \section{Testing JFNK with preconditioning} \label{sec:testsnesmfoperator}
 
-We now do refined-grid runs of \texttt{reaction.c} to show these alternatives in action.  We have already seen that the \texttt{-snes\_fd\_color} option is effective for reducing evaluations of $\bF$ if a Jacobian is not implemented.  In the same case, the un-preconditioned JFNK method \texttt{-snes\_mf} has serious difficulties as it requires unreasonable numbers of Krylov iterations and function evaluations.  However, what if a Jacobian is available, but it is only approximate?
+We now do refined-grid runs of \texttt{reaction.c} to show the \texttt{-snes\_mf\_operator} option in action.  We have already seen that the \texttt{-snes\_fd\_color} option is effective for reducing evaluations of $\bF$ if a Jacobian is not implemented, but in the same case the un-preconditioned JFNK method \texttt{-snes\_mf} has serious difficulties as it requires unreasonable numbers of Krylov iterations and function evaluations.  Now we can show that \texttt{-snes\_mf\_operator} using only a rough approximation of the Jacobian as a preconditioner gives good performance.
 
-For example, suppose we modify this line in \texttt{reaction.c}, in Code \ref{code:reactionI},
+Specifically, suppose we modify this line in \texttt{reaction.c} (Code \ref{code:reactionI}),
 \begin{code}
     col[1] = i;    v[1] = 2.0 - h*h * dRdu;
 \end{code}
-to remove ``\texttt{- h*h * dRdu}'', to get
+to remove ``\texttt{- h*h * dRdu}'', corresponding to the nonlinear term $\rho \sqrt{u}$ in \eqref{eq:nl:drsqrt}, to get
 \begin{code}
     col[1] = i;    v[1] = 2.0;
 \end{code}
-This change, which we call a ``\texttt{J->P}'' below, keeps the tridiagonal sparsity pattern of the Jacobian and it preserves the spectral character of the nonlinear operator $-u''+\rho \sqrt{u}$ in \eqref{eq:nl:drsqrt} by keeping the highest-order term, but it removes the influence of the nonlinear term from the Jacobian.
+This change, which we call a ``\texttt{J->P}'' below, keeps the tridiagonal sparsity pattern of the Jacobian.  Furthermore it preserves many characteristics of the spectrum of the linearizations of the operator in \eqref{eq:nl:drsqrt} by keeping the highest-order term $u''$.
 
-With this change, convergence is slowed for no option, i.e.~when using the approximate Jacobian as though it were exact.  Specifically, on a coarse grid the number of iterations goes from 4 to 15, and the reported residual norms---here partly suppressed---suggest that the convergence is no longer quadratic:
+With this change, convergence is slowed for no option, that is, when we try to use the new approximate Jacobian as though it were exact.  Specifically, on a coarse grid the number of iterations goes from 4 to 15, and the residual norms suggest that convergence is no longer quadratic:
 \begin{cline}
 $ ./reaction -da_refine 4 -snes_monitor    # before change
   0 SNES Function norm 1.671129624018e-02 
@@ -766,9 +784,9 @@ $ ./reaction -da_refine 4 -snes_monitor    # with J->P change
  15 SNES Function norm 1.119521798815e-10 
 on 129 point grid:  |u-u_exact|_inf/|u|_inf = 7.38159e-07
 \end{cline}
-This loss of performance for the Newton iteration, as caused by a significantly in-exact Jacobian, is expected in theory \citep{Kelley2003}.
+This loss of Newton method performance from a significantly incorrect Jacobian is expected in theory \citep{Kelley2003}.
 
-However, for this modified Jacobian case, \texttt{-snes\_mf\_operator} is now a fast option for higher-resolution grids, fully competitive with the exact Jacobian and finite-difference-by-coloring cases already seen.  Again on a $\approx 8000$ point grid, using the approximate Jacobian ``as is'' causes too many Newton iterations and less-than-quadratic convergence:
+However, for this modified Jacobian case, \texttt{-snes\_mf\_operator} is now a fast option for higher-resolution grids, fully competitive with the exact Jacobian and finite-difference-by-coloring cases already seen.  Again on a $8000$ point grid, using the approximate Jacobian ``as is'' causes too many Newton iterations and less-than-quadratic convergence:
 \begin{cline}
 $ timer ./reaction -snes_converged_reason -da_refine 10    # with J->P change
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 15
@@ -786,51 +804,55 @@ real 0.05
 %$
 The number of iterations and the time are significantly reduced, and both are comparable to the exact Jacobian case (page \pageref{etc:nl:bestreaction}).
 
-This confirms, in a simple PDE example, the idea that preconditioning the matrix-free Jacobian action by the use of an approximate Jacobian is effective.  As a general rule, for large problems on a structured grid where coloring can be applied, \texttt{-snes\_fd\_color} is often effective if no Jacobian is implemented.  (On an unstructured grid the coloring method requires additional work.)  Implementing an approximate Jacobian and using \texttt{-snes\_mf\_operator} may be a good compromise which saves programmer time by avoiding a full Jacobian implementation.
+One might give the following summary advice on \pSNES usage:
 
-One might give this advice about \pSNES and the Newton iteration:  Before implementing a Jacobian, try finite-difference evaluation  \texttt{-snes\_fd}, and look at whether coloring applies to your case.  Then consider implementing the exact Jacobian $J$.  If that seems like too much work, or if it is too error-prone, consider implementing a simpler/faster approximate Jacobian $P$; in the PDE case $P$ might only capture the highest-order derivatives in $J$.  To test convergence with $P$, compare ``no option'' runs, where less-than-quadratic convergence is expected, and \texttt{-snes\_mf\_operator} runs where quadratic convergence may be recovered.
+\begin{quote}
+Before implementing a Jacobian, try finite-difference evaluation \texttt{-snes\_fd} first, including a look at whether coloring (option \texttt{-snes\_fd\_color}) applies to your case.  As a general rule, it can be applied and it is often effective on a structured grid, but on an unstructured grid (Chapters \ref{chap:un} and \ref{chap:dp}) the coloring method requires additional work.  Note JFNK with no preconditioning (option \texttt{-snes\_mf}) is rarely effective, though easy to try.  Now consider implementing the exact Jacobian $J$.  If that seems like too much work or is too error-prone, consider a simpler approximate Jacobian $P$ used with option \texttt{-snes\_mf\_operator}.  In PDE cases, in particular, $P$ might only capture the highest-order derivatives in $J$.  To test convergence with $P$, compare ``no option'' runs which use $P$ as though it were $J$, but wherein less-than-quadratic convergence is expected, and \texttt{-snes\_mf\_operator} runs where quadratic convergence should be recovered.
+\end{quote}
 
 
 \section{Line search Newton methods} \label{sec:linesearch}
 
-As already hinted, once the Newton step $\bs_k$ solving equation \eqref{eq:nl:newton:eq} is computed, the new iterate $\bx_{k+1} = \bx_k + \bs_k$ from \eqref{eq:nl:newton:update} may not be what we want.  For example, the residual norm $\|\bF(\bx_{k+1})\|$ may exceed $\|\bF(\bx_{k})\|$, suggesting that no progress is being made in solving \eqref{eq:nl:equation}, that is, $\bF(\bx)=0$.  Improving this situation is the problem of \emph{globalizing} the convergence of the Newton iteration, so that the iterates $\bx_k$ are more likely to head toward the sometimes-small region of quadratic convergence around the solution $\bx^*$ to \eqref{eq:nl:equation}.
+Once the Newton step $\bs_k$ solving equation \eqref{eq:nl:newton:eq} is computed, the new iterate $\bx_{k+1} = \bx_k + \bs_k$ from \eqref{eq:nl:newton:update} may not be what we want.  For example, the residual norm $\|\bF(\bx_k + \bs_k)\|$ may exceed $\|\bF(\bx_{k})\|$, suggesting that no progress is being made in solving \eqref{eq:nl:equation}.  Improving this situation is the problem of \emph{globalizing} the convergence of the Newton iteration, so that the iterates $\bx_k$ are more likely to head toward the sometimes-small region of quadratic convergence around the solution to \eqref{eq:nl:equation}.
 
 The \emph{line search} globalization technique \citep{DennisSchnabel1983} is to replace \eqref{eq:nl:newton:update} with
 \begin{equation}
 \bx_{k+1} = \bx_k + \lambda_k \bs_k.  \label{eq:nl:linesearchupdate}
 \end{equation}
-That is, we accept $\bs_k$ as a search direction for solving \eqref{eq:nl:newton:eq}, but use an actual step of less ($\lambda_k < 1$), or occasionally more ($\lambda_k > 1$), than in \eqref{eq:nl:newton:update}.  The question, of course, is how to choose $\lambda_k$.  As we are solving a system of nonlinear equations \eqref{eq:nl:equation}, there is no pre-existing sense of ``better'' or ``worse'' approximations, which would exist in an optimization context.  But we may introduce a particular \emph{merit function} \citep{NocedalWright2006} to provide such a sense, namely
+That is, we accept $\bs_k$ as a search direction for solving \eqref{eq:nl:newton:eq}, but we may use an actual step of less ($\lambda_k < 1$), or sometimes more ($\lambda_k > 1$), than in \eqref{eq:nl:newton:update}.  The question, of course, is how to choose $\lambda_k$.
+
+As we are solving a system of nonlinear equations \eqref{eq:nl:equation}, there is no pre-existing sense of ``better'' or ``worse'' approximations, as there is in an optimization context.  But we may introduce a particular \emph{merit function} \citep{NocedalWright2006} to provide such a sense, namely
 \begin{equation}
 \phi(\bx) = \frac{1}{2} \|\bF(\bx)\|_2^2.  \label{eq:nl:linesearchmeritfunction}
 \end{equation}
-This merit function is used in all \pSNES line searches, unless a different objective function is provided (next Chapter).
+This merit function is used in all \pSNES line searches, unless an objective function is provided to the \pSNES (next Chapter).
 
-To determine $\lambda_k$ one could perhaps solve a one-dimensional optimization problem such as
+To determine $\lambda_k$ one could perhaps solve the one-dimensional optimization problem
 \begin{equation}
-\min_{0<\lambda} \phi(\bx_k + \lambda_k \bs_k),  \label{eq:nl:linesearchperhapsopt}
+\min_{0<\lambda} \phi(\bx_k + \lambda \bs_k),  \label{eq:nl:linesearchperhapsopt}
 \end{equation}
-thereby making the residual 2-norm as small as possible along the search direction.  However, solving this optimization problem accurately is rarely-justified because we are merely using the solution to compute the next Newton iterate; we hope the Newton iteration itself generates rapid convergence.
+thereby making the residual 2-norm as small as possible along the search direction.  However, solving this optimization problem accurately is rarely-justified because we are merely using the solution to compute the next Newton iterate; we hope the Newton iteration itself, with $\lambda=1$, generates rapid convergence.
 
 A practical line-search tries candidate values of $\lambda=\lambda_k$, testing them for whether they reduce $\phi(\bx_k + \lambda \bs_k)$.  The initial try is usually $\lambda=1$.  A \emph{sufficient  decrease} condition with parameter $\alpha\in(0,1)$ is to require
 \begin{equation}
-\phi(\bx_k + \lambda \bs_k) \le \phi(\bx_k) + \alpha \lambda \bs_k^\top \grad \phi(\bx_k).  \label{eq:nl:linesearchsuffdecrease}
+\phi(\bx_k + \lambda \bs_k) \le \phi(\bx_k) + \alpha \lambda\, \bs_k^\top \grad \phi(\bx_k).  \label{eq:nl:linesearchsuffdecrease}
 \end{equation}
-The \PETSc default for $\alpha$ is $10^{-4}$, corresponding to an easy-to-satisfy reduction criterion.  \PETSc line searches will stop the Newton iteration with an error if such a decrease cannot be found.
+The \PETSc default for $\alpha$ is $10^{-4}$, corresponding to an easy-to-satisfy reduction criterion, and the Newton iteration is stopped with an error if such a decrease cannot be found.
 
-Note that for merit function \eqref{eq:nl:linesearchmeritfunction}, and by using \eqref{eq:nl:newton:eq}, we have
+The quantity $\bs_k^\top \grad \phi(\bx_k)$ in \eqref{eq:nl:linesearchsuffdecrease} is an initial slope of $\phi(\bx)$ as we move in the search direction---it is the directional derivative in the direction $\bs_k$.  In fact, for merit function \eqref{eq:nl:linesearchmeritfunction} it is always negative, as we see by using \eqref{eq:nl:newton:eq}:
 \begin{align}
 \bs_k^\top \grad \phi(\bx_k) &= \bs_k^\top J_{\bF}(\bx_k)^\top \bF(\bx_k) = \left(J_{\bF}(\bx_k) \bs_k\right)^\top \bF(\bx_k) \label{eq:nl:linesearchinitslope} \\
-  &= - \|\bF(\bx_k)\|_2^2 \notag
+  &= - \|\bF(\bx_k)\|_2^2. \notag
 \end{align}
-on the right side of \eqref{eq:nl:linesearchsuffdecrease}.  The quantity in \eqref{eq:nl:linesearchinitslope} is an initial slope of $\phi(\bx)$ as we move in the search direction, i.e.~a directional derivative in the direction $\bs_k$, and it is always negative.  Thus $\bs_k$ is at least a descent direction if we use \eqref{eq:nl:linesearchmeritfunction} as our merit function.  Also observe that the right side of \eqref{eq:nl:linesearchsuffdecrease} can be evaluated given only  the already-known value $\bF(\bx_k)$.
+Thus $\bs_k$ is a descent direction for merit function \eqref{eq:nl:linesearchmeritfunction}.  Also notice that sufficient decrease condition \eqref{eq:nl:linesearchsuffdecrease} can be evaluated using only residual evaluations $\bF(\bx_k)$ and $\bF(\bx_k + \lambda \bs_k)$.
 
-Merit function \eqref{eq:nl:linesearchmeritfunction} has another nice property.  Though $\phi(\bx)$ may have local minima other than solutions to \eqref{eq:nl:equation}, the Jacobian must also be singular at such non-solution locations.  In fact, $\bF(\bx')\ne 0$ at such locations, but
+Merit function \eqref{eq:nl:linesearchmeritfunction} has another nice property.  Though $\phi(\bx)$ may have local minima $\bx'$ other than solutions $\bx^*$ to \eqref{eq:nl:equation}, the Jacobian must also be singular at such locations.  In fact,
 \begin{equation}
 0 = \grad \phi (\bx') = J_{\bF}(\bx')^\top \bF(\bx'),
 \end{equation}
-so $J_{\bF}(\bx')^\top$ has a nonzero null-space.  Thus, for example, no such local minima arise in a region where there is a finite bound on the condition number of the Jacobian.
+so $J_{\bF}(\bx')^\top$ has a nonzero null-space if $\bF(\bx')\ne 0$.  Thus, for example, no non-solution local minima arise in a region where there is a finite bound on the condition number of the Jacobian.
 
-The line search options available in \PETSc are summarized in Table \ref{tab:nl:linesearchoptions}.  The Table has only minimal information on the line search details.  For more see \citep[Chapter 6]{DennisSchnabel1983} and the \PETSc source code itself.
+The line search options available in \PETSc are summarized in Table \ref{tab:nl:linesearchoptions}.  The Table has only minimal information, so for more details see \citep[Chapter 6]{DennisSchnabel1983} and the \PETSc source code itself.
 
 \begin{table}
 \begin{tabular}{ll}
@@ -849,14 +871,13 @@ Secant-line minimization along the search direction, starting with testing \mbox
 \caption{Line search methods (types) for \pSNES.  Use \texttt{-snes\_linesearch\_type X} to choose one.  Only types \texttt{bt} and \texttt{l2} use an objective function, supposing it is provided by a call to \texttt{SNESSetObjective()}.  Sufficient decrease \eqref{eq:nl:linesearchsuffdecrease} is only tested in type \texttt{bt}.} \label{tab:nl:linesearchoptions}
 \end{table}
 
-Note one chooses line search type \texttt{X} by option \texttt{-snes\_linesearch\_type X}, and use \texttt{-snes\_linesearch\_monitor} for runtime information.  Parameter $\alpha$ in sufficient decrease condition \eqref{eq:nl:linesearchsuffdecrease} can be set, in the rare case where this is needed, by \texttt{-snes\_linesearch\_alpha}.  The initial value for $\lambda_k$ can be set by \texttt{-snes\_linesearch\_damping}, with default of $1$.  Option \texttt{-snes\_linesearch\_max\_it} sets the maximum number of line search tries for type \texttt{bt}, but for types \texttt{l2} and \texttt{cp} it sets the fixed number of repetitions of the secant line calculation.  As usual, find all such options by
+One chooses line search type \texttt{X} by option \texttt{-snes\_linesearch\_type X}.  Option \texttt{-snes\_linesearch\_monitor} shows runtime diagnostics.  Parameter $\alpha$ in sufficient decrease condition \eqref{eq:nl:linesearchsuffdecrease} can be set, in the rare case where this is needed, by \texttt{-snes\_linesearch\_alpha}.  The initial value for $\lambda_k$ can be set by \texttt{-snes\_linesearch\_damping}, with default of $1$.  Option \texttt{-snes\_linesearch\_max\_it} sets the maximum number of line search tries for type \texttt{bt}, but for types \texttt{l2} and \texttt{cp} it sets the fixed number of repetitions of the secant line calculation.  As usual, find all such options by
 \begin{cline}
 $ ./reaction -help | grep snes_linesearch
 \end{cline}
 %$
-for example.
 
-We have actually only been describing one type of \pSNES solver in the last section, namely the line-search \pSNES type chosen by \texttt{-snes\_type newtonls}.  There are also trust region methods \citep{NocedalWright2006} chosen by \texttt{-snes\_type newtontr}, as well as variations on nonlinear preconditioning.  See the \PETSc User's Manual \citep{petsc-user-ref}.
+We have actually only been describing one type of \pSNES solver in the last section, namely the line-search \pSNES type chosen by \texttt{-snes\_type newtonls}.  There are also trust region methods \citep{NocedalWright2006} (\texttt{-snes\_type newtontr}) as well as variations on nonlinear preconditioning, but they are not used in this book.  See the \PETSc User's Manual \citep{petsc-user-ref}.
 
 
 \section{Exercises}
@@ -864,11 +885,11 @@ We have actually only been describing one type of \pSNES solver in the last sect
 \renewcommand{\labelenumi}{\arabic{chapter}.\arabic{enumi}\quad}
 \renewcommand{\labelenumii}{(\alph{enumii})}
 \begin{enumerate}
-\item One needs to \emph{see} quadratic convergence to believe it.  Observe that for $x_k$ in both parts (b) and (c) below, the number of correct digits in $x_k$ \emph{doubles} at each iteration.
+\item One needs to \emph{see} quadratic convergence to believe it.  Observe that for $x_k$ in both parts (b) and (c) below, the \emph{number of correct digits in $x_k$ doubles} at each iteration.
     \begin{enumerate}
-    \item The sequence $x_k = 1-2^{-n}$ converges to $x^*=1$, but not quadratically.\sidenote{It converges \emph{linearly}.}  Find $k$ so that $|e_k| < 10^{-16}$.
+    \item The sequence $x_k = 1-2^{-n}$ converges to $x^*=1$, but linearly instead of quadratically.  Find $k$ so that $|e_k| < 10^{-16}$.
     \item The sequence $x_k = 1-2^{(-2^n)}$ converges quadratically to $x^*=1$.  Find $k$ so that $|e_k| < 10^{-16}$.  Find the smallest $K$ so that $|e_{k+1}| \le K |e_k|^2$ for all $k$.
-    \item Let $F(x) = \cos(x-1) - \exp(1-x)$ and $x_0=0.5$.  Using any quick-and-dirty numerical tool,\sidenote{Extra credit for doing it in \PETSc.} compute Newton iterates $x_k$ for $k=1,\dots,6$.  Estimate $K$ so that $|e_{k+1}| \le K |e_k|^2$ for large $k$.
+    \item Let $F(x) = \cos(x-1) - \exp(1-x)$ and $x_0=0.5$.  Using either \PETSc or a quick-and-dirty numerical tool, compute Newton iterates $x_k$ for $k=1,\dots,6$.  Estimate $K$ so that $|e_{k+1}| \le K |e_k|^2$ for large $k$.
     \end{enumerate}
 
 \item Make a tiny modification to \texttt{ecjacobian.c} to set the initial vector to $\bx_0 = [10\,\, 10]^\top$.  Rerun it with option \texttt{-snes\_monitor} and note it does not converge to a solution.  Why does the \pSNES stop?  Add one runtime option so that it converges, thereby producing the data shown in Figure \ref{fig:newtonconvdelayed}.
@@ -880,10 +901,10 @@ $ ./ecjacobian -snes_type test -snes_test_display
 %$
 
 \item  \label{exer:nl:newtonatan}
-This example shows a famous case where the original Newton iteration can diverge or enter a limit cycle, according to the initial iterate $x_0$, while using linesearch gives essentially global convergence.
+This exercise shows that the original Newton iteration can diverge or enter a limit cycle, according to the initial iterate $x_0$, while using linesearch gives essentially global convergence.
     \begin{enumerate}
-    \item By straightforward modifications of \texttt{expcircle.c}, write a code \texttt{atan.c} which solves the (one-dimensional) nonlinear equation $F(x)=\arctan(x)=0$ using initial iterate $x_0=2.0$.  (Use ``\texttt{atan}'' for the $\arctan$ function.)  By running it \texttt{./atan -snes\_fd -snes\_linesearch\_type basic}, show that the Newton iteration without a linesearch diverges, while using the default choice (i.e.~\texttt{-snes\_linesearch\_type bt}) gives convergence.
-    \item Returning to a paper calculation, require the Newton iteration \eqref{eq:nl:newton} to enter a sign-flipping limit cycle, i.e.~so that $x_{k+1} = - x_k$ for all $k$.  Thereby approximate the positive value $x_0$ so that the Newton iteration both makes no progress, and remains bounded, for all $k$.\sidenote{One may solve this problem with Newton's method.}  Sketch the situation.
+    \item By straightforward modifications of \texttt{expcircle.c}, write a code \texttt{atan.c} which solves nonlinear equation \eqref{eq:nl:equation} with $F(x)=\arctan(x)$ and initial iterate $x_0=2.0$.  Observe that running it \texttt{./atan -snes\_fd -snes\_linesearch\_type basic} causes it to diverge, but the default choice \texttt{-snes\_linesearch\_type bt} gives convergence.
+    \item Returning to paper calculation, require the Newton iteration \eqref{eq:nl:newton} to enter a sign-flipping limit cycle, i.e.~so that $x_{k+1} = - x_k$ for all $k$.  Thereby approximate the positive value $x_0$ so that the Newton iteration both makes no progress, and remains bounded, for all $k$.\sidenote{One should solve this problem with Newton's method!}  Sketch the situation.
     \item By modifying $x_0$ in \texttt{atan.c} and using linesearch type \texttt{basic}, confirm that one can make the Newton iteration ``stick'' in this actually-unstable limit cycle for quite a while.  Then confirm that linesearch types \texttt{bt,l2,cp} all get unstuck immediately.
 % to solve:  - x = x - arctan(x) (1+x^2)
 % octave:
@@ -898,9 +919,9 @@ This example shows a famous case where the original Newton iteration can diverge
 
 \item Option \texttt{-log\_summary} can show whether function evaluations or linear solves are dominating the cost of Newton's method.  By looking at \texttt{-log\_summary} output, compare where the work is done in these runs: \texttt{./reaction}, \texttt{./reaction -snes\_fd}, \texttt{./reaction -snes\_mf}.  Does the comparison change if you add \texttt{-da\_refine 5}?  Explain as much as you can.  (\emph{Hints}: Look at \texttt{SNESSolve} events for the total time spent in the Newton method, which is $\approx$100\% for these cases.  Within that event, event \texttt{SNESLineSearch} is where function and Jacobian evaluations happen, while the linear solve is the \texttt{KSPSolve} event.  Within the \texttt{SNESLineSearch} event, look at \texttt{SNESFunctionEval} and \texttt{SNESJacobianEval} events.)
 
-\item \label{exer:nl:symmetrizeJ}  In Chapter \ref{chap:st} we gave some advice which we have not followed in the current Chapter, namely that one should implement Dirichlet conditions in a manner that preserves the symmetry of the matrix in question, which is the Jacobian here.  Modify \texttt{reaction.c} to preserve symmetry, noting that this requires modifying both the $\bF$ and $J$ evaluation routines.  Does this modification improve performance when using the CG iteration?  Does it change our conclusions about un-preconditioned JFNK, which were based on the CG iteration?
+\item \label{exer:nl:symmetrizeJ}  In Chapter \ref{chap:st} we gave some advice which we have not followed in the current Chapter, namely that one should implement Dirichlet conditions in a manner that preserves the symmetry of the matrix in question, which is the Jacobian here.  Modify \texttt{reaction.c} to preserve symmetry, noting that this requires modifying both the $\bF$ and $J$ evaluation routines.  Does this modification improve performance when using the CG iteration?  Does it change our conclusions about un-preconditioned JFNK?
 
-\item Most \PETSc programs add more runtime options than shown in our examples so far; ours are deliberately de-cluttered.  The PDE problem in \texttt{reaction.c} has parameter $\rho$ which can be adjusted via \texttt{PetscOptionsReal()}.  Modify \texttt{reaction.c} to ``\texttt{optreact.c}'' and add an option like this at the appropriate point:
+\item \PETSc programs often add more runtime options than shown in our examples so far; ours are deliberately de-cluttered.  The PDE problem in \texttt{reaction.c} has parameter $\rho$ which can be adjusted via \texttt{PetscOptionsReal()}.  Modify \texttt{reaction.c} to ``\texttt{optreact.c}'' and add an option like this at the appropriate point:
 \begin{code}
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD,
                            "optr_","options for optreact",""); CHKERRQ(ierr);
@@ -913,7 +934,7 @@ By sampling, for what range of positive \texttt{X}$=\rho$ does the run
 $ ./optreact -snes_monitor -da_refine 4 -optr_rho X
 \end{cline}
 %$
-converge?  Explain why this case, with this way of choosing the boundary conditions and initial iterate, and in contrast to the next exercise, is insensitive to the value of the major parameter $\rho$.
+converge?  Explain why this case, with this way of choosing the boundary conditions and initial iterate, and in contrast to the next Exercise, is insensitive to the value of the major parameter $\rho$.
 % because this option is used in bratu.c below, for simplicity of maintenance, the result optreact.c is NOT saved in c/ch4/solns/
 
 \item \label{exer:nl:bratu} Modify \texttt{reaction.c} to create ``\texttt{bratu.c}'' which solves
@@ -921,19 +942,17 @@ converge?  Explain why this case, with this way of choosing the boundary conditi
     - u'' - \lambda e^u = 0 \label{eq:nl:bratuoned}
 \end{equation}
 % R(u) = lambda e^u increasing
-with Dirichlet boundary conditions $u(0)=u(1)=0$.  Make $\lambda$ an option-adjustable real parameter---see the previous exercise---and use the simplest function which satisfies the boundary conditions as an initial iterate.  Confirm by using a fine grid, and option \texttt{-snes\_converged\_reason} plus other options as needed, that around $\lambda=3.513$ there is a transition to non-convergence of the Newton iteration.  This \emph{critical value} is intrinsic to the nonlinear PDE problem and not a result of a Newton failure \citep{Doedeletal1991}.
+with Dirichlet boundary conditions $u(0)=u(1)=0$.  Make $\lambda$ an option-adjustable real parameter---see the previous Exercise---and use the simplest function which satisfies the boundary conditions as an initial iterate.  Confirm by using a fine grid, and option \texttt{-snes\_converged\_reason} plus other options as needed, that around $\lambda=3.513$ there is a transition to non-convergence of the Newton iteration.  This \emph{critical value} is intrinsic to the nonlinear PDE problem and not a result of a Newton failure \citep{Doedeletal1991}.
 
-\item To the author's knowledge an exact solution of \eqref{eq:nl:bratuoned} cannot be written in elementary functions for $\lambda>0$.  Because we started from \texttt{reaction.c}, writing the code in the last exercise is doable.  However, one should not walk over high wires too often without a net, and having an exact solution to check correctness is such a ``net.''  Fortunately, we can ``manufacture'' \citep{Wesseling2001} an exact solution to a generalized form of \eqref{eq:nl:bratuoned}, namely to equation \eqref{eq:nl:diffusionreaction} in the case where $R(u)=-\lambda e^u$.  For example we can choose $u(x) = \sin(\pi x)$ as the exact solution of \eqref{eq:nl:diffusionreaction}, and then determine $f(x)$ from the equation itself.  Here $u(0)=u(1)=0$ are the boundary conditions, because they are satisfied by the exact solution.
+\item To the author's knowledge an exact solution of \eqref{eq:nl:bratuoned} cannot be written in elementary functions for $\lambda>0$.  Because we started from \texttt{reaction.c}, writing the code in the last exercise is doable.  However, one should not walk over high wires too often without a net, and having an exact solution to check correctness is such a ``net.''  Fortunately, we can ``manufacture'' \citep{Wesseling2001} an exact solution to a generalized form of \eqref{eq:nl:bratuoned}, namely to equation \eqref{eq:nl:diffusionreaction} in the case where $R(u)=-\lambda e^u$.  For example we can choose $u(x) = \sin(\pi x)$ as the exact solution of \eqref{eq:nl:diffusionreaction}, and then determine $f(x)$ from the equation itself.  Here $u(0)=u(1)=0$ are the boundary conditions; they are satisfied by the exact solution.
 
-Thus we get to the exercise itself: Add options and a manufactured exact solution to the code \texttt{bratu.c} in the previous exercise.  The new code will both solve the previous exercise and be verified using the new exact solution.  One might add a user-option-settable boolean member \texttt{manufactured} to \texttt{AppCtx}: when it is false then $f(x)=0$ and the code solves the previous exercise, but if it is true then we report a numerical error based on the manufactured solution.  Observe that having $f(x)\ne 0$ does not change the Jacobian.  Confirm that in the manufactured-solution case we have both quadratic convergence of the Newton iteration \emph{and} $O(h^2)$ convergence of the numerical error under grid refinement.
+The exercise itself: Add options and such a manufactured exact solution to the code \texttt{bratu.c} in the previous Exercise.  The new code will both solve the previous Exercise and be verified using the new exact solution, according to a new boolean member \texttt{manufactured} of \texttt{AppCtx}: when it is false then $f(x)=0$ and the code solves the previous Exercise, but if it is true then we report a numerical error based on the manufactured solution.  Implement option \texttt{-bratu\_manu} to set this boolean.  Observe that $f(x)\ne 0$ does not change the Jacobian.  Confirm that in the manufactured-solution case we have both quadratic convergence of the Newton iteration on a fixed grid \emph{and} $O(h^2)$ convergence of the numerical error under grid refinement.
 
 \item As long as the number of MPI processes does not exceed the number of grid points, \texttt{reaction.c} will solve correctly, though perhaps not efficiently, in parallel.  Confirm this by running
 \begin{cline}
 $ mpiexec -n N ./reaction -snes_converged_reason -da_refine M
 \end{cline}
 %$
-with a few values of \texttt{N} and \texttt{M}.
-
-Code \texttt{ecjacobian.c} does not run correctly in parallel even on two MPI processes!  Modify so that it does.
+with a few values of \texttt{N} and \texttt{M}.  However, \texttt{ecjacobian.c} does not run correctly even on two MPI processes.  Modify so that it does.
 
 \end{enumerate}
