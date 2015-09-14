@@ -5,6 +5,7 @@
 # characters "ierr = " and "CHKERRQ(ierr);"
 
 # filenames should be distinct
+CH2="vecmatksp.c tri.c"
 CH3="structuredpoisson.c poisson.c"
 CH4="expcircle.c ecjacobian.c reaction.c"
 CH6="fish2.c"
@@ -13,6 +14,9 @@ CH11="obstacle.c"
 
 mkdir cstrip/
 
+for NAME in $CH2; do
+    cp ../c/ch2/$NAME cstrip/$NAME
+done
 for NAME in $CH3; do
     cp ../c/ch3/$NAME cstrip/$NAME
 done

@@ -458,8 +458,7 @@ This solves the system and gives us $\bx$.  But what happened and how to control
 
 \vfill
 \clearpage
-\inputwhole{../c/ch2/vecmatksp.c}{\texttt{ch2/vecmatksp.c}}{Solve a small linear system.}{code:vecmatksp}
-
+\cinput{vecmatksp.c}{\CODELOC}{Solve a small linear system.}{//START}{//END}{code:vecmatksp}
 
 \section{Revealing solvers at runtime}
 
@@ -577,7 +576,7 @@ We have seen \PETSc code to set up and solve linear systems, but there is more t
 
 \vfill
 \newpage
-\cinputpartnostrip{../c/ch2/tri.c}{ch2/tri.c}{Set up \pVec and \pMat objects for a tridiagonal system.}{I}{//STARTSETUP}{//ENDSETUP}{code:tripartone}
+\cinputpart{tri.c}{\CODELOC}{Set up \pVec and \pMat objects for a tridiagonal system.}{I}{//STARTSETUP}{//ENDSETUP}{code:tripartone}
 
 First build and run the code with options that show what it is does by default:
 \begin{cline}
@@ -621,7 +620,7 @@ Next we assemble the matrix $A$.  This is a boring tridiagonal matrix with $3$ o
 \end{quote}
 to get the starting and ending row indices for the local process.  These are used as limits in a \texttt{for} loop over the locally own rows, wherein we call \texttt{MatSetValues()} to actually set the entries of $A$.  We call \texttt{MatAssemblyBegin/End()} to complete the assembly of $A$.
 
-\cinputpartnostrip{../c/ch2/tri.c}{ch2/tri.c}{Assemble and solve.}{II}{//ENDSETUP}{//ENDSOLVE}{code:triparttwo}
+\cinputpart{tri.c}{\CODELOC}{Assemble and solve.}{II}{//ENDSETUP}{//ENDSOLVE}{code:triparttwo}
 
 We need to assemble the right-hand side $\bb$ of the linear system.  But this is related to the question: how does one get the exact solution $\bx_{\text{exact}}$ to a linear system $A\bx_{\text{exact}} = \bb$?  The easiest way for demonstration purposes, as here, is to \emph{choose} $\bx_{\text{exact}}$ and then compute $\bb$ by multiplying by $A$.  Thus, we set (unimportant) values for \texttt{xexact}, and call \texttt{VecAssemblyBegin/End()} on it.  Then we compute \texttt{b} by calling \texttt{MatMult(A,xexact,b)}.
 

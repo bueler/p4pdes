@@ -1,3 +1,4 @@
+//START
 static char help[] = "Solve a 4x4 linear system using Vec, Mat, and KSP.\n";
 
 #include <petsc.h>
@@ -45,10 +46,9 @@ int main(int argc,char **args) {
   ierr = KSPSolve(ksp,b,x); CHKERRQ(ierr);
   ierr = VecView(x,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
 
-  ierr = KSPDestroy(&ksp); CHKERRQ(ierr);
-  ierr = VecDestroy(&x); CHKERRQ(ierr);
-  ierr = VecDestroy(&b); CHKERRQ(ierr);
-  ierr = MatDestroy(&A); CHKERRQ(ierr);
+  KSPDestroy(&ksp);  MatDestroy(&A);
+  VecDestroy(&x);  VecDestroy(&b);
   PetscFinalize();
   return 0;
 }
+//END
