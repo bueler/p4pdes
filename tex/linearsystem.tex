@@ -256,7 +256,7 @@ The first view shows the compressed sparse storage, with values as pairs with co
 In the last two cases shown above, the matrix was stored in \emph{serial} compressed sparse row format, the \texttt{MATSEQAIJ} type, because of the one-process run.  If the code is run in parallel, i.e.~by \texttt{mpiexec -n N ./mycode}, then \texttt{-mat\_view}  reports \texttt{type:~mpiaij} corresponding to \pMat type \texttt{MATMPIAIJ}, the ``parallel compressed sparse row storage'' described above.
 
 
-\section{Numerical linear algebra: residual, iterations, preconditioning}
+\section{Numerical linear algebra 1: residual and iterations}
 
 Direct methods like Gauss elimination \citep{TrefethenBau1997} are one way to solve a linear system.  The most powerful methods for our later PDE-solving uses, however, are iterative.  They use the \emph{residual} of some approximation of the solution to the linear system.
 
@@ -264,7 +264,7 @@ By definition, the residual of $\bu_0$ in linear system \eqref{introsystem} is t
 \begin{equation}
 \br_0 = \bb - A \bu_0. \label{residualdefn}
 \end{equation}
-Evaluating the residual for a known vector $\bu_0$ requires only applying $A$ to it, an $O(N^2)$ operation at worst.  Because most discretization schemes for PDEs generate matrices $A$ that are \emph{sparse}, with many more zero entries than nonzeros, and because often the number of nonzeros per row is small and independent of $N$, the operation $A\bu_0$ and thus the evaluation of the residual can usually be done in $O(N)$ operations.
+Evaluating the residual for a known vector $\bu_0$ requires only applying $A$ to it, an $O(N^2)$ operation at worst.  Because most discretization schemes for PDEs generate matrices $A$ that are \emph{sparse}, with many more zero entries than nonzeros, and because often the number of nonzeros per row is typically small and independent of $N$, the operation $A\bu_0$ can often be done in $O(N)$ operations.
 
 The \emph{Richardson iteration},\sidenote{Also called \emph{simple iteration} \citep{Greenbaum1997}.} simply adds a multiple $\omega$ of the last residual at each step,
 \begin{equation}
@@ -297,19 +297,22 @@ If we rewrite \eqref{introrichardson} as
 \begin{equation}
 \bu_{k+1} = (I - \omega A) \bu_k + \omega \bb  \label{introrewriterichardson}
 \end{equation}
-then it is easy to believe that the ``size'' of the matrix $I-\omega A$ will determine whether $\lim_{k\to\infty} \bu_k$ exists.
+then it is easy to believe that the ``size'' of the matrix $I-\omega A$ will determine whether $\lim_{k\to\infty} \bu_k$ exists.  To make this precise we recall important definitions.
 
-To make this precise we recall important definitions.  A complex number\sidenote{Though $B$ is real, $\lambda$ may indeed be complex, but if $\lambda$ is an eigenvalue of a real matrix $B$ then so is $\bar\lambda$.} $\lambda \in \CC$ is an \emph{eigenvalue} of a square matrix $B\in\RR^{N\times N}$ if there is a nonzero vector $\bv\in\CC^N$ so that $B \bv = \lambda \bv$.  The set of all eigenvalues of $B$ is the \emph{spectrum} $\sigma(B)$ of $B$.  The \emph{spectral radius} $\rho(B)$ is the maximum magnitude of the eigenvalues of $B$.  The \emph{singular values} are the square roots of the eigenvalues of the matrix $B^*B$, a symmetric and positive-definite matrix with nonnegative eigenvalues.  Singular values are geometrically-defined as the lengths of semi-axes of the (hyper-)ellipsoid in $\RR^N$ that results from applying $B$ to all vectors in the unit ball of $\RR^N$ \citep{TrefethenBau1997}.
+A complex number\sidenote{Though $B$ is real, $\lambda$ may be complex.  Also, if $\lambda$ is an eigenvalue of a real matrix $B$ then so is its complex conjugate $\bar\lambda$.} $\lambda \in \CC$ is an \emph{eigenvalue} of a square matrix $B\in\RR^{N\times N}$ if there is a nonzero vector $\bv\in\CC^N$ so that $B \bv = \lambda \bv$.  The set of all eigenvalues of $B$ is the \emph{spectrum} $\sigma(B)$ of $B$.  The \emph{spectral radius} $\rho(B)$ is the maximum magnitude of the eigenvalues of $B$.  The \emph{singular values} are the square roots of the eigenvalues of the matrix $B^*B$, a symmetric and positive-definite matrix with nonnegative eigenvalues.  Singular values are geometrically-defined as the lengths of semi-axes of the (hyper-)ellipsoid in $\RR^N$ that results from applying $B$ to all vectors in the unit (hyper-)sphere of $\RR^N$ \citep{TrefethenBau1997}.
 
 Properties of a matrix described in terms of its eigenvalues or singular values are generically called ``spectral properties.''  For example, $\|B\|_2$ is the largest singular value of $B$ and $\|B^{-1}\|_2$ is the inverse of the smallest singular value of $B$, so these are spectral properties.  The 2-norm condition number $\kappa(B)=\|B\|_2/\|B^{-1}\|_2$ is thus also a spectral property; it is visualized as the eccentricity of the ellipsoid above.
 
-It is an easy exercise to show that the Richardson iteration \eqref{introrichardson} or \eqref{introrewriterichardson} will converge if and only if all the eigenvalues of $B=I-\omega A$ are inside the unit circle:
+Exercise \ref{chap:ls}.\ref{exer:ls:showconvergethm} asks you to show that the Richardson iteration \eqref{introrichardson} or \eqref{introrewriterichardson} will converge if and only if all the eigenvalues of $B=I-\omega A$ are inside the unit circle:
 \begin{equation}
 \text{\eqref{introrichardson} converges if and only if } \rho(I-\omega A) < 1. \label{introconvergethm}
 \end{equation}
-One can also show that $\rho(B) \le \|B\|$ using any induced matrix norm, so \eqref{introrichardson} converges if $\|I-\omega A\| < 1$.
+One can also show that $\rho(B) \le \|B\|$ in any induced matrix norm, so that \eqref{introrichardson} converges if $\|I-\omega A\| < 1$.
 
-Considering spectral properties brings us to an important general point about linear systems.  Namely, that there are many systems which are equivalent to \eqref{introsystem}.  In fact, if $M\in\RR^{N\times N}$ is an invertible matrix then the systems
+
+\section{Numerical linear algebra 2: preconditioning}
+
+Considering spectral properties brings us to an important general observation about linear systems.  Namely, that there are many systems which are equivalent to \eqref{introsystem}.  In fact, if $M\in\RR^{N\times N}$ is an invertible matrix then the systems
 \begin{equation}
 (M^{-1} A) \bu = M^{-1} \bb \label{introleftpre}
 \end{equation}
@@ -317,9 +320,11 @@ and
 \begin{equation}
 (A M^{-1}) (M\bu) = \bb \label{introrightpre}
 \end{equation}
-have the same solution(s) $\bu$ as \eqref{introsystem}.  However, matrices $M^{-1} A$ or $A M^{-1}$ generally have different eigenvalues, condition numbers, and so on---different spectral properties---from $A$.  While the accuracy of the approximate solution $\bu$ cannot be improved beyond the $\kappa(A) \eps$ level, as fact i) on page \pageref{limittoaccuracy} cannot be overcome, methods can take advantage of the better spectral properties of $M^{-1} A$ or $A M^{-1}$, relative to $A$, to generate approximations to $\bu$ more quickly.  This idea is effective if $M^{-1}$ is easy to apply, in the sense that substantially fewer operations are needed to solve the system $M\bv=\bc$ than the original system $A\bu=\bb$.
+have exactly the same set of solutions as \eqref{introsystem}.  However, matrices $M^{-1} A$ and $A M^{-1}$ generally have different eigenvalues, condition numbers, and so on---different spectral properties---from $A$.
 
-Systems \eqref{introleftpre} and \eqref{introrightpre} are referred to as \emph{preconditioned} versions of \eqref{introsystem}, with \eqref{introleftpre} called \emph{left preconditioning} and \eqref{introrightpre} called \emph{right-preconditioning}.  The next example shows how preconditioning can make the Richardson iteration converge.  In this case the diagonal of $A$ is used as $M$, so it is an example of \emph{Jacobi preconditioning}.
+While the accuracy of the approximate solution to \eqref{introsystem} cannot be improved beyond the $\kappa(A) \eps$ level by switching to systems \eqref{introleftpre} or \eqref{introrightpre}, as fact i) on page \pageref{limittoaccuracy} cannot be bypassed, methods may take advantage of better spectral properties of $M^{-1} A$ or $A M^{-1}$, compared to those of $A$, to generate approximations to the solution more quickly.  This idea is effective if $M^{-1}$ is easy to apply in the sense that (substantially) fewer operations are needed to solve the system $M\bv=\bc$ than to solve the original system.
+
+Systems \eqref{introleftpre} and \eqref{introrightpre} are referred to as \emph{preconditioned} versions of \eqref{introsystem}, with \eqref{introleftpre} called \emph{left-preconditioning} and \eqref{introrightpre} \emph{right-preconditioning}.  The next example shows how preconditioning can make the Richardson iteration converge.  In this case the diagonal of $A$ is used as $M$, an example of \emph{Jacobi preconditioning}.
 
 \medskip\noindent\hrulefill
 \begin{examplecont}  Suppose we extract the diagonal of $A$ from  \eqref{introexample}:
@@ -340,25 +345,29 @@ This sequence is apparently going to $\bu = [1\,\, 2]^*$.  The explanation is no
 \begin{equation}
 \rho(I-A) = -9.1 \quad \text{and} \quad \rho(I-M^{-1} A) = 0.32,
 \end{equation}
-which illustrates convergence claim \eqref{introconvergethm}.
+and recall \eqref{introconvergethm}.
 \end{examplecont}
 \noindent\hrulefill
 
 \medskip
-Let us note one more idea associated to the residual.  Intuitively speaking, a vector norm of a residual, for example $\|\br_0\| = \|\bb - A \bu_0\|$, measures how ``wrong'' is $\bu_0$ as an approximation to $\bu=A^{-1}\bb$, but this idea is incomplete in two senses.  First, we surely would want the norm of the \emph{error} itself, i.e.
+Intuitively speaking, the vector norm of a residual $\|\br_0\| = \|\bb - A \bu_0\|$ measures how ``wrong'' is $\bu_0$ as an approximation to $\bu=A^{-1}\bb$.  This idea is incomplete in two senses, as follows.
+
+First, we surely would want the norm of the \emph{error} itself, i.e.
 \begin{equation}
 \be_0 = \bu_0 - \bu \label{errordefn}
 \end{equation}
-as an authentic measure of how wrong $\bu_0$ is.  However, given $\bu_0$, by \eqref{errordefn} exact knowledge of the error $\be_0$ is equivalent to exact knowledge of the solution $\bu$ itself.  Only bounds on $\|\be_0\|$ might be reasonably be expected, even though we can compute the full residual vector $\br_0 = \bb - A \bu_0$ at will.  Secondly, errors are most meaningful if they are relative.  For instance, knowing ``$\|\be_0\|\le 10^{-6}$'' does not tell us that $\bu_0$ is an accurate solution to the system $A \bu = \bb$ if $\|A^{-1}\|=1$ and $\|\bb\|= 10^{-6}$, in which case we know in advance that $\|\bu\|\le 10^{-6}$.
+as the direct measure of how wrong $\bu_0$ is.  However, exact knowledge of the error $\be_0$ is equivalent to exact knowledge of the solution $\bu$ itself, if we already have the approximation $\bu_0$.  Thus only bounds on $\|\be_0\|$ might be reasonably be expected, even though we can compute the full residual vector $\br_0 = \bb - A \bu_0$ at will.
 
-These ideas relate to the conditioning of $A$.  Indeed, the connection between the relative norm we \emph{can} compute, namely $\|\br_0\|/\|\bb\|$, and the relative norm we \emph{want} is well-known:
+Secondly, errors are most meaningful if they are relative.  For instance, knowing ``$\|\be_0\|\le 10^{-6}$'' does not tell us that $\bu_0$ is an accurate solution to the system $A \bu = \bb$ if $\|A^{-1}\|=1$ and $\|\bb\|= 10^{-6}$, in which case we would know in advance that $\|\bu\|\le 10^{-6}$.
+
+These ideas both relate to the conditioning of $A$.  Indeed, the connection between the relative norm we \emph{can} compute, namely $\|\br_0\|/\|\bb\|$, and the relative norm we \emph{want} is well-known:
 \begin{equation}
 \kappa(A)^{-1} \frac{\|\br_0\|}{\|\bb\|} \le \frac{\|\be_0\|}{\|\bu\|} \le \kappa(A) \frac{\|\br_0\|}{\|\bb\|}, \label{relativenormbounds}
 \end{equation}
-where $\kappa(A) = \|A\| \|A^{-1}\|$ is the condition number in the induced norm.  Proving \eqref{relativenormbounds} is an easy exercise with norms.
+where $\kappa(A) = \|A\| \|A^{-1}\|$ is the condition number in the induced norm.  Proving \eqref{relativenormbounds} is Exercise \ref{chap:ls}.\ref{exer:ls:errornorms}; it requires only straightforward manipulations with norms.
 
 
-\section{Numerical linear algebra: Krylov space methods}
+\section{Numerical linear algebra 3: Krylov space methods}
 
 The most powerful iterative methods for solving system \eqref{introsystem} generate optimal, in various senses, estimates $\bu_k$ which are linear combinations of vectors $\bz,A\bz,A^2\bz,\dots,A^{k-1}\bz$ where $\bz$ is a fixed vector; often $\bz=\bb$.  These methods are collectively called \emph{Krylov space methods} because the span of such vectors is a \emph{Krylov space}.  Examples include the Richardson iteration, conjugate gradient (CG), and minimum residual methods (MINRES or GMRES).\sidenote{We will address these method in this and the next chapter, but see \citet{Greenbaum1997} or \citet{Saad2003} for details and algorithms.}  The effectiveness of a given Krylov method on a given system depends on the eigenvalues or singular values of the matrix $A$, i.e.~on its spectral properties.  Many Krylov space methods are built into and fully-supported by \PETSc, and we will use them in all later Chapters.
 
@@ -738,9 +747,9 @@ shows the residual norm logarithm versus the iteration number.
 \begin{enumerate}
 \item Suppose a square matrix $A$ with nonzero diagonal entries is decomposed into diagonal and lower/upper triangular parts as $A=D+L+U$.  Show that the Jacobi iteration $\bu_{k+1} = D^{-1} \left(\bb - L \bu_k - U \bu_k\right)$ is the same as the $\omega=1$ Richardson iteration \eqref{introrichardson} applied to the left-preconditioned system \eqref{introleftpre} with $M=D$.  Formulate and prove a corresponding statement about the Gauss-Seidel iteration $\bu_{k+1} = (D+L)^{-1} \left(\bb - U \bu_k\right)$.
 
-\item Show \eqref{introconvergethm}.
+\item \label{exer:ls:showconvergethm}  Show \eqref{introconvergethm}.
 
-\item Show \eqref{relativenormbounds}.
+\item \label{exer:ls:errornorms}  Show \eqref{relativenormbounds}.
 %For the left inequality, note first that $\|\br_0\| = \|\bb - A \bu_0\| \le \|A\| \|A^{-1} \bb - \bu\| = \|A\| \|\be_0\|$, and second that $\|\bu\| = \|A^{-1}\bb\| \le \|A^{-1}\| \|\bb\|$ so $1 / \|\bb\| \le \|A\| / \|\bu\|$.  Combining these gives the left inequality.
 
 \item On page \pageref{krylovgoal} we note that a Krylov space approximation $p_{n-1}(A)\bb$ to the solution $A^{-1}\bb$ is close if $p_{n-1}(z)$ is close to $1/z$ on the spectrum of $A$.  Prove this for invertible diagonalizable matrices $A=S\Lambda S^{-1}$, with $\Lambda$ diagonal, by showing
