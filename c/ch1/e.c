@@ -1,5 +1,3 @@
-static char help[] = "Compute e in parallel with PETSc.\n\n";
-
 #include <petsc.h>
 
 int main(int argc, char **args) {
@@ -7,7 +5,7 @@ int main(int argc, char **args) {
   int             rank, i;
   PetscReal       localval, globalsum;
 
-  PetscInitialize(&argc,&args,NULL,help);
+  PetscInitialize(&argc,&args,NULL,"Compute e in parallel with PETSc.\n\n");
 
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank); CHKERRQ(ierr);
 
