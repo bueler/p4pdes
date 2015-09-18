@@ -327,7 +327,7 @@ While the accuracy of the approximate solution to \eqref{introsystem} cannot be 
 Systems \eqref{introleftpre} and \eqref{introrightpre} are referred to as \emph{preconditioned} versions of \eqref{introsystem}, with \eqref{introleftpre} called \emph{left-preconditioning} and \eqref{introrightpre} \emph{right-preconditioning}.  The next example shows how preconditioning can make the Richardson iteration converge.  In this case the diagonal of $A$ is used as $M$, an example of \emph{Jacobi preconditioning}.
 
 \medskip\noindent\hrulefill
-\begin{examplecont}  Suppose we extract the diagonal of $A$ from  \eqref{introexample}:
+\begin{examplecont} \label{example:ls:jacobirichardson}  Suppose we extract the diagonal of $A$ from  \eqref{introexample}:
 \begin{equation}
 M = \begin{bmatrix}
 10 & 0 \\ 0 & 1
@@ -369,55 +369,60 @@ where $\kappa(A) = \|A\| \|A^{-1}\|$ is the condition number in the induced norm
 
 \section{Numerical linear algebra 3: Krylov space methods}
 
-The most powerful iterative methods for solving system \eqref{introsystem} generate optimal, in various senses, estimates $\bu_k$ which are linear combinations of vectors $\bz,A\bz,A^2\bz,\dots,A^{k-1}\bz$ where $\bz$ is a fixed vector; often $\bz=\bb$.  These methods are collectively called \emph{Krylov space methods} because the span of such vectors is a \emph{Krylov space}.  Examples include the Richardson iteration, conjugate gradient (CG), and minimum residual methods (MINRES or GMRES).\sidenote{We will address these method in this and the next chapter, but see \citet{Greenbaum1997} or \citet{Saad2003} for details and algorithms.}  The effectiveness of a given Krylov method on a given system depends on the eigenvalues or singular values of the matrix $A$, i.e.~on its spectral properties.  Many Krylov space methods are built into and fully-supported by \PETSc, and we will use them in all later Chapters.
+The most powerful iterative methods for solving system \eqref{introsystem} generate optimal\sidenote{In various senses.  See Table \ref{tab:krylovcompare} below for two such.} estimates $\bu_k$ which are linear combinations of vectors $\bv,A\bv,A^2\bv,\dots,A^{k-1}\bv$.  Here $\bv$ is a fixed vector; often $\bv=\bb$ or $\bv$ is the initial residual.
 
-To be concrete, a Krylov space is defined as
+These methods are collectively called \emph{Krylov space methods} because the span of such vectors is a \emph{Krylov space}.  Examples include the Richardson iteration, conjugate gradient (CG), and minimum residual methods (MINRES or GMRES).\sidenote{We will address these methods in this and the next chapter.  See \citet{Greenbaum1997} or \citet{Saad2003} for details, algorithms, and many more methods.}  The effectiveness of a given Krylov method on a given system depends on the eigenvalues or singular values of the matrix $A$, i.e.~on its spectral properties.  Many Krylov space methods are built into and fully-supported by \PETSc, and we will use them in all later Chapters.
+
+To be concrete, for a square matrix $A\in \RR^{N\times N}$ and a vector $\bv\in\RR^N$, a Krylov space is defined as
 \begin{equation}
-    \mathcal{K}_n(A,\bb) = \operatorname{span}\{\bb,A\bb,A^2\bb,\dots,A^{n-1}\bb\}, \label{eq:li:krylovdefn}
+    \mathcal{K}_n(A,\bv) = \operatorname{span}\{\bv,A\bv,A^2\bv,\dots,A^{n-1}\bv\}. \label{eq:ls:krylovdefn}
 \end{equation}
-but we give the abbreviated name ``$\mathcal{K}_n$'' when the context is clear.  Suppose $\tilde\bu \in \mathcal{K}_n$.  Then
-    $$\tilde\bu = c_0 \bb + c_1 A \bb + c_2 A^2 \bb + \dots + c_{n-1} A^{n-1} \bb$$
+We will use just ``$\mathcal{K}_n$'' when the context is clear.  Suppose $\tilde\bu \in \mathcal{K}_n$.  Then
+    $$\tilde\bu = c_0 \bv + c_1 A \bv + c_2 A^2 \bv + \dots + c_{n-1} A^{n-1} \bv$$
 for some coefficients $c_j$, or equivalently
-    $$\tilde\bu = p_{n-1}(A) \bb$$
+    $$\tilde\bu = p_{n-1}(A) \bv$$
 for the $n-1$ degree polynomial $p_{n-1}(x) = c_0 + c_1 x + \dots + c_{n-1} x^{n-1}$ applied to $A$.
 
 Thus if we want $\tilde\bu$ to approximate $\bu$, the solution to \eqref{introsystem}, then we want to find a polynomial $p_{n-1}$ so that
 \begin{equation}
-    p_{n-1}(A) \approx A^{-1},  \label{krylovgoal}
+    p_{n-1}(A) \approx A^{-1},  \label{eq:ls:krylovgoal}
 \end{equation}
-at least in the action of applying $p_{n-1}(A)$ to $\bb$.  Krylov space methods do this.
+at least in the action of applying $p_{n-1}(A)$ to $\bv$.  Krylov space methods do this.
 
-One can prove that if $p_{n-1}(z)$ is close to $1/z$ on the finite set of eigenvalues of $A$, i.e.~on the spectrum $\sigma(A)$ in the complex plane, then \eqref{krylovgoal} follows.  Thus, whether $p_{n-1}$ is a ``good'' polynomial for approximately inverting $A$ is a spectral question about $A$.  The construction of a ``good'' $p_{n-1}$ would be only a question of approximation theory in the complex plane if only the spectrum $\sigma(A)$ were known, but in fact that is asking too much!  We know $A$ through its entries or action on vectors, and we might have general spectral information about $A$ through the context in which it was generated,\sidenote{As the discretization of a PDE with known spectral properties, for example.} but accurately computing its full spectrum $\sigma(A)$ is at least as difficult as solving a linear system $A\bu=\bb$.
+One can prove that if $p_{n-1}(z)$ is close to $1/z$ on the finite set of eigenvalues of $A$, i.e.~on the spectrum $\sigma(A)$ in the complex plane, then \eqref{eq:ls:krylovgoal} follows.  Thus, whether $p_{n-1}$ is a ``good'' polynomial for approximately inverting $A$ is a spectral question about $A$, and $p_{n-1}(z) \approx 1/z$ is by no means required on large domains (open sets) of the complex plane.
 
-For an example in which polynomial generation from a Krylov method can be seen, consider again the Richardson iteration \eqref{introrichardson} with $\omega=1$, namely $\bu_{k+1} = \bu_k + (\bb - A \bu_k)$.  A straightforward calculation starting with $\bu_0=\bb$ shows
+The construction of a ``good'' $p_{n-1}$ would be a question of approximation theory on finite subsets of the complex plane if only the spectrum $\sigma(A)$ were known, but in fact that is asking too much.  We typically know $A$ either through its entries or action on vectors, and we might have general spectral information about $A$ through the context in which it was generated.\sidenote{As the discretization of a PDE with known spectral properties, for example.}   Accurately computing the full spectrum $\sigma(A)$, however, is at least as difficult as solving a linear system $A\bu=\bb$.
+
+For an example in which a polynomial is generated during a Krylov iteration, consider again the Richardson iteration \eqref{introrichardson} with $\omega=1$, namely $\bu_{k+1} = \bu_k + (\bb - A \bu_k)$.  A straightforward calculation starting with $\bu_0=\bb$ shows
 \begin{equation}
 	\bu_k = q_k(A) \bb \quad \text{with} \quad q_{k+1}(x) = 1 + (1-x) q_k(x)  \label{richpolys}
 \end{equation}
 and $q_0(x)=1$.
 %see richpolyplot.py for formulas
-Figure \ref{fig:richpolyplot} shows these polynomials.  It is easy to check that $q_k(x) \to 1/x$ for $x\in (0,2)$, and the Figure suggests it too.  On the other hand, \eqref{introconvergethm} says $q_k(A) \bb \to A^{-1} \bb$ if the spectral condition $\rho(I-A)<1$ holds.  This condition says exactly that all eigenvalues of $A$ must be within distance one of $1+0i$ in the complex plane, and thus that all real eigenvalues of $A$ must be in $(0,2)$.
+Figure \ref{fig:richpolyplot} shows these polynomials.  It is easy to check that $q_k(x) \to 1/x$ for $x\in (0,2)$, and the Figure suggests it too.  On the other hand, \eqref{introconvergethm} says $q_k(A) \bb \to A^{-1} \bb$ if the spectral condition $\rho(I-A)<1$ holds.  The latter condition says exactly that all eigenvalues of $A$ must be within distance one of $1+0i$ in the complex plane, and thus that all real eigenvalues of $A$ must be in $(0,2)$.
 
 \begin{figure}
 \bigskip
 \includegraphics[width=0.8\textwidth]{richpolyplot}
-\caption{The $\omega=1$ case of the Richardson iteration \eqref{introrichardson} approximates $\bu=A^{-1}\bb$ by $\bu_k=q_k(A)\bb$.  These polynomials $q_k(x)$ approximate $1/x$ on the interval $(0,2)$.}
+\caption{The $\omega=1$ case of the Richardson iteration \eqref{introrichardson} approximates $\bu=A^{-1}\bb$ by $\bu_k=q_k(A)\bb$ for polynomials $q_k(x)$ which approximate $1/x$ on the interval $(0,2)$.}
 \label{fig:richpolyplot}
 \end{figure}
 
-Though the Richardson iteration generates $\bu_k$ which are from a Krylov space, and thus from polynomials in $A$ applied to $\bb$, they are by no means the best such approximations.  We now give a ``gloss'' of two other well-known Krylov methods.  They generated the same kind of polynomial approximations, but for polynomials $p_n$ which minimize vector norms over a Krylov space.
+Though the Richardson iteration generates $\bu_k$ which are from a Krylov space, and thus $\bu_k$ are polynomials in $A$ applied to $\bb$, they are by no means the best such approximations.  We now give a ``gloss'' of two other well-known Krylov methods.  They generate the same kind of polynomial approximations, but for polynomials $p_n$ which minimize vector norms over a Krylov space.
 
 \newcommand{\Pnone}{\mathcal{P}_n^1}
 \newcommand{\Kone}[2]{\mathcal{K}_{#1}^1(#2)}
 Define $\Pnone$ to be the set of all real polynomials $p$ of degree $n$ such that $p(0)=1$.  For a real square matrix $A \in \RR^{N\times N}$ and $\bv\in\RR^N$, define the affine space (set)
-	$$\Kone{n}{A,\bv} = \bv + \Span\{A\bv,A^2\bv,\dots\,A^{n-1}\bv\}.$$
-In these terms, Figure \ref{tab:krylovcompare} compares three of the best-known Krylov methods, namely the Richardson iteration \eqref{introrichardson}, conjugate gradients (CG), and generalized minimum residuals (GMRES).  
+\begin{equation}
+\Kone{n}{A,\bv} = \bv + \Span\{A\bv,A^2\bv,\dots\,A^{n-1}\bv\}.
+\end{equation}
+In these terms, Table \ref{tab:krylovcompare} compares three Krylov methods, namely the Richardson iteration \eqref{introrichardson}, conjugate gradients (CG), and generalized minimum residuals (GMRES).  For CG and GMRES as algorithms, see \citet{Greenbaum1997} or \citet{Saad2003}.
 
-For CG and GMRES as algorithms, see \citet{Greenbaum1997} or \citet{Saad2003}.  Regarding GMRES, note that in practice it uses ``restarts'' to avoid filling memory with its internal representation of the Krylov space, and this action stops it from being a ``pure'' Krylov method (i.e.~one based on a fixed initial vector to form the Krylov space).  The \PETSc default is to restart after 30 iterations, so GMRES uses $\sim 30N$ memory locations on an $N$-dimensional problem, compared to $3N$ for CG and $2N$ for Richardson.
+In practice, GMRES uses ``restarts'' to avoid filling memory with its internal representation of the Krylov space.  (This mechanism stops practical GMRES from being a ``pure'' Krylov method.)  The \PETSc default is to restart after 30 iterations, so GMRES uses $\sim 30N$ memory locations on an $N$-dimensional problem, compared to $3N$ for CG and $2N$ for Richardson.
 
-The classical \emph{Jacobi} and \emph{Gauss-Seidel iterative methods} \citep{Greenbaum1997} are not Krylov space methods as they stand.  They involve extracting parts of (entries of) $A$, as a matrix, which can not be done by operations $A^k\bv$.  These classical iterations can, however, be regarded as preconditioned forms of the Richardson iteration \citep{Greenbaum1997}; see the Exercises.
+The classical \emph{Jacobi} and \emph{Gauss-Seidel iterative methods} \citep{Greenbaum1997} are not Krylov space methods as they stand.  They involve extracting parts of (entries of) $A$, as a matrix, which cannot be done by operations $A^k\bv$.  These classical iterations can, however, be regarded as preconditioned forms of the Richardson iteration \citep{Greenbaum1997}; see Exercise \ref{chap:ls}.\ref{exer:ls:jacobirichardson}.
 
 \newcommand{\mpwide}{27mm}
-\bigskip
 \begin{table}[h]
 \small
 \begin{tabular}{llll} \vspace{5mm}
@@ -429,31 +434,45 @@ GMRES & any & \begin{minipage}[l]{\mpwide}$\br_k$ minimizes $f(\bv){=}\|\bv\|_2$
 \caption{Comparison of three well-known Krylov methods for the problem $A\bu=\bb$.  ``Symmetry'' means required properties of $A$ to apply the method.  ``Spectral condition'' informally states spectral properties of $A$ which lead to rapid convergence.  Recall $\br_k=\bb-A\bu_k$ and $\be_k=\bu_k-\bu$.} \label{tab:krylovcompare}
 \end{table}
 
-We get access to the many Krylov methods implemented in \PETSc any time we create a \pKSP object.  Which method is used can be controlled at runtime, as long as we call the \texttt{KSPSetFromOptions()} method (below), and runtime experimentation is always appropriate.  For the Poisson problem in Chapter \ref{chap:st}, for example, we will see that preconditioned CG is very effective, but in later Chapters we will put the most emphasis on the preconditioning stage.  We will see that multigrid preconditioning is extraordinarily effective on the Poisson problem (Chapter \ref{chap:mg}).  And we will return to Krylov space methods repeatedly in later Chapters.
+We get access to the many Krylov methods implemented in \PETSc any time we create a \pKSP object.  Which method is used can be controlled at runtime, as long as we call the \texttt{KSPSetFromOptions()} method (below)
 
-Our brief introduction of iterative linear algebra is hardly adequate.  But we need now to return to \PETSc codes and solve linear systems.  In the upcoming material the reader can initially treat \PETSc's \pKSP linear solver object as a black box, but then explore how it works through runtime options.
+Runtime experimentation with Krylov methods is always appropriate.  For the Poisson problem in Chapter \ref{chap:st}, for example, preconditioned CG is effective, though we will see that the most emphasis should be put on the preconditioning stage.
+
+Our brief introduction of iterative linear algebra is now done, though it is hardly adequate, and we return to \PETSc codes and concrete linear systems.  In the upcoming material the reader can initially treat \PETSc's \pKSP linear solver object as a black box, but then explore how it works through runtime options, recalling the above material as needed.
 
 
 \section{A small linear system}
 
-We already know how to create, fill, and destroy \pVec and \pMat objects.  The next code, \texttt{vecmatksp.c} in Code \ref{code:vecmatksp}, does these steps.  It also uses a \pKSP object to actually solve the linear system.  The specific Krylov iteration, inside the \pKSP, is chosen at runtime.  The expected \texttt{Create/SetFromOptions/Destroy} sequence applies to a \pKSP.
+We already know how to create, fill, and destroy \pVec and \pMat objects.  Code \ref{code:vecmatksp} shows \texttt{vecmatksp.c} which does these steps for the linear system
+\begin{equation}
+\begin{pmatrix} 1 & 2 & 3 & 0 \\
+                2 & 1 &-2 &-3 \\
+               -1 & 1 & 1 & 0 \\
+                0 & 1 & 1 &-1 \end{pmatrix}
+\begin{pmatrix} x_0 \\ x_1 \\ x_2 \\ x_3 \end{pmatrix}
+=
+\begin{pmatrix} 7 \\ 1 \\ 1 \\ 3 \end{pmatrix}.
+\end{equation}
 
-There are, however, two additional commands, or their equivalents, needed even for the simplest examples.  First we need to tell \pKSP about the matrix via the command
+A \pKSP object solves the linear system, with the specific method chosen at runtime.  It has the expected \texttt{Create/SetFromOptions/Destroy} sequence.  In addition, at the set-up stage for the linear system we tell the \pKSP about the matrix via the command
 \begin{code}
 KSPSetOperators(ksp,A,A);
 \end{code}
-Then the system is actually solved by
+Why do we list \texttt{A} twice in calling \texttt{KSPSetOperators()}?  The reason is that at runtime we generally choose a preconditioning method which builds $M^{-1}$ in equation \eqref{introleftpre} or \eqref{introrightpre} from $A$ or from an approximation of $A$.  For example, \emph{incomplete LU} factorization of $A$ (``ILU($0$)'') can be used in generating $M^{-1}$, or $M$ could be the diagonal of $A$ as in the example on page \pageref{example:ls:jacobirichardson}.  The second matrix argument to \texttt{KSPSetOperators()} is this \pMat from which $M^{-1}$ is built.
+
+\cinput{vecmatksp.c}{\CODELOC}{Solve a small linear system.}{//START}{//END}{code:vecmatksp}
+
+Note we do not supply $M$ \emph{itself} because that would obstruct easy choice among preconditioners at runtime, and require the user to write extra code.  Instead we supply ``material'' from which the preconditioning action $M^{-1}$ is built.  The most common such material is $A$ itself, as here.  \PETSc extracts the diagonal from this ``material'' in Jacobi preconditioning, for example.  Or it computes ILU($0$) factors $L$ and $U$ from $A$, in which case $A \approx LU$ may be a poor approximation but $M^{-1} = (LU)^{-1} = U^{-1} L^{-1}$ is applied in preconditioning.
+
+To actually solve the system we call
 \begin{code}
 KSPSolve(ksp,b,x);
 \end{code}
-which also supplies the right-hand side of the system (i.e.~an allocated and assembled \pVec \texttt{b}) and space for the solution (an allocated \pVec \texttt{x}).
-
-Why do we list \texttt{A} twice in calling \texttt{KSPSetOperators()}?  Recall the linear system $A\bx=\bb$ is equivalent to $M^{-1} A \bx = M^{-1} \bb$ (left preconditioning).  At runtime we generally choose a preconditioning method which builds $M^{-1}$ from $A$ or from an approximation of $A$.  For example, \emph{incomplete LU} factorization of $A$ can be used in generating $M^{-1}$, or $M$ could be the diagonal of $A$ (as in the example above).  The second matrix argument to \texttt{KSPSetOperators()} is the \pMat from which $M^{-1}$ is built.  Note we do not supply $M$ itself; that would block easy choice among preconditioners at runtime.\sidenote{And require the user to write extra code.}  Instead we supply ``material'' from which the preconditioning action $M^{-1}$ is built.  The most common such material is $A$ itself.
-
-After calling \texttt{KSPSolve()} we display the solution \pVec by calling \texttt{VecView()}.  This and everything else about the code in Code \ref{code:vecmatksp} should now be self-explanatory.  So let's compile and run it:
+This supplies the right-hand side of the system, an allocated and assembled \pVec \texttt{b}, and space for the solution, an allocated \pVec \texttt{x}.  After this we display the solution using \texttt{VecView()}.  Everything else about Code \ref{code:vecmatksp} should be self-explanatory, so we compile and run it:
 \begin{cline}
 $ cd c/ch2/
 $ make vecmatksp
+...
 $ ./vecmatksp
 Vec Object: 1 MPI processes
   type: seq
@@ -463,26 +482,23 @@ Vec Object: 1 MPI processes
 -1
 \end{cline}
 %$
-This solves the system and gives us $\bx$.  But what happened and how to control it?
+The reader can even check the correctness of this solution by hand.
 
-\vfill
-\clearpage
-\cinput{vecmatksp.c}{\CODELOC}{Solve a small linear system.}{//START}{//END}{code:vecmatksp}
 
 \section{Revealing solvers at runtime}
 
-To start to see what happened when we ran \texttt{./vecmatksp} above, we could start by viewing the \pVec and \pMat objects.  In fact, the result of doing
+To see more of what happened when we ran \texttt{vecmatksp.c} above, we could start by viewing the \pVec and \pMat objects.  But the result of
 \begin{cline}
 $ ./vecmatksp -vec_view -mat_view
 \end{cline}
 %$
-should be completely as expected, and thus it is not shown.  This output tells us nothing about the solution process, however, and it gives no hints on alternative ways of solving the equations.
+is completely as expected, and thus not shown.  This output tells us nothing about the solution process, nor does it give any hints on alternative ways of solving the equations.
 
 Here is a key idea which cannot be over-emphasized:
 \begin{quote}
 \emph{learning \PETSc requires viewing \emph{solver} objects at runtime.}
 \end{quote}
-Here we try \texttt{-ksp\_view}; the output is slightly-clipped for clarity:
+So we use \texttt{-ksp\_view}; the output is slightly-clipped for clarity:
 \begin{cline}
 $ ./vecmatksp -ksp_view
 KSP Object: 1 MPI processes
@@ -500,14 +516,19 @@ PC Object: 1 MPI processes
     tolerance for zero pivot 2.22045e-14
     matrix ordering: natural
     factor fill ratio given 1, needed 1
-      ...
+      Factored matrix follows:
+        Mat Object:         1 MPI processes
+          type: seqaij
+          rows=4, cols=4
+          package used to perform factorization: petsc
+          total: nonzeros=14, allocated nonzeros=14
+          ...
   linear system matrix = precond matrix:
   Mat Object:   1 MPI processes
     type: seqaij
     rows=4, cols=4
     total: nonzeros=16, allocated nonzeros=20
-    total number of mallocs used during MatSetValues calls =0
-      using I-node routines: found 1 nodes, limit used is 5
+    ...
 Vec Object: 1 MPI processes
   type: seq
 1
@@ -518,15 +539,12 @@ Vec Object: 1 MPI processes
 %$
 Here is some of what we learn:
 \begin{itemize}
-\item The default \pKSP solver is GMRES.  This is \texttt{-ksp\_type gmres} as a command-line option.
-\item As noted, GMRES restarts after a number of iterations so as to limit memory usage.  The default is \texttt{-ksp\_gmres\_restart 30} as an option.
-\item The default convergence tolerances for the \pKSP are \texttt{-ksp\_rtol 1.0e-5} and \texttt{-ksp\_atol 1.0e-50}.  In particular, \pKSP iterations stop when the residual norm has been reduced by $10^5$.
-\item Inside the \pKSP is a \pPC preconditioner object.  We did not have to ask for one when writing the code, as every \pKSP has a \pPC.
-\item The default \pPC is left preconditioning with ILU, i.e.~incomplete LU factorization, which is \texttt{-pc\_type ilu} as a runtime option.\sidenote{We will see in a moment that this is the \emph{serial} default \pPC, and there is more going on in parallel.}
-\item The \pPC object has a copy of $A$ (``\texttt{Mat Object}''), because it was supplied as the second argument to \texttt{KSPSetOperators()} above.
-\item The preconditioner has ``\texttt{0 levels of fill}'',\sidenote{Thus it is usually called ``ILU($0$)''.} so it uses no more memory than is used by the copy of $A$ which is supplied to \texttt{KSPSetOperators()}.
+\item The default \pKSP solver is GMRES.  This is \texttt{-ksp\_type gmres} as a command-line option.  Also, as already noted, GMRES restarts after a number of iterations so as to limit memory usage, and the default is \texttt{-ksp\_gmres\_restart 30}.
+\item The default convergence tolerances for the \pKSP are \texttt{-ksp\_rtol 1.0e-5} and \texttt{-ksp\_atol 1.0e-50}.  In particular, iterations stop when the residual norm has been reduced by $10^5$.
+\item Inside every \pKSP is a \pPC preconditioner object.  We did not have to ask for one when writing the code.
+\item The \pPC object has a copy of $A$ (second ``\texttt{Mat Object:}'' line), because it was supplied as the second argument to \texttt{KSPSetOperators()} above.
+\item The default \pPC is left preconditioning with ILU, i.e.~incomplete LU factorization, which is \texttt{-pc\_type ilu} as a runtime option.\sidenote{We will see in a moment that this is the \emph{serial} default \pPC, and there is more going on in parallel.}  This preconditioner has ``\texttt{0 levels of fill}'', which explains the notation ``ILU($0$)'', but it is done ``\texttt{out-of-place}'' meaning that the factors occupy an additional \pMat (first ``\texttt{Mat Object:}'' line).
 \end{itemize}
-Of course, we get the solution $\bx$ too.
 
 While option \texttt{-ksp\_view} tells us what the solver \emph{is}, option \texttt{-ksp\_monitor} shows what it \emph{does}.  In this case, the \pKSP iteration is short:
 \begin{cline}
@@ -537,16 +555,21 @@ Vec Object: 1 MPI processes
 ...
 \end{cline}
 %$
-The reason that the residual drops to nearly zero in one iteration is that GMRES sees a preconditioned system with an identity matrix in this case.  That is, $P^{-1} A = I$ because the ILU operation on this particular $A$ is actually a full LU factorization.  Our $A$ is banded and ``dense enough'' so that the LU factorization requires no fill-in.
+The reason that the residual drops to nearly zero in one iteration is that GMRES sees a preconditioned system with an identity matrix $M^{-1} A = I$ \emph{in this case}.  That is because the ILU operation on this particular $A$ is actually a full LU factorization: $M=LU=A$.  Our $A$ is allocated as dense so the exact LU factorization requires no fill-in.  The next example \texttt{tri.c}, and the examples in later Chapters, are more representative because they involve sparse matrices.
 
-For a small system like this a direct solve also works fine.  To see how to do it, first do
+For a small system like this, of course, a direct solve can be chosen deliberately.  To see how to do it, first do
 \begin{cline}
 $ ./vecmatksp -help | grep ksp_type
   -ksp_type <gmres>: Krylov method (one of) cg ... preonly ... (KSPSetType)
+\end{cline}
+%$
+and
+\begin{cline}
 $ ./vecmatksp -help | grep pc_type
   -pc_type <ilu>: Preconditioner (one of) none jacobi ... lu ... (PCSetType)
 \end{cline}
-to see the many solver and preconditioner options.  One of the preconditioners is ``\texttt{lu}'', suggesting a direct solve.  In this case we \emph{do not} want iterations, and one of the \pKSP options is ``\texttt{preonly}''.  Thus the direct solver combination we want is
+%$
+This shows the many Krylov solver and preconditioner options.  One of the preconditioners is ``\texttt{lu}'' for the full LU decomposition.  In this case we \emph{do not} want iterations, and one of the \pKSP options is ``\texttt{preonly}''.  Thus a direct solver combination is
 \begin{cline}
 $ ./vecmatksp -ksp_type preonly -pc_type lu
 \end{cline}
@@ -745,14 +768,14 @@ shows the residual norm logarithm versus the iteration number.
 
 \renewcommand{\labelenumi}{\arabic{chapter}.\arabic{enumi}\quad}
 \begin{enumerate}
-\item Suppose a square matrix $A$ with nonzero diagonal entries is decomposed into diagonal and lower/upper triangular parts as $A=D+L+U$.  Show that the Jacobi iteration $\bu_{k+1} = D^{-1} \left(\bb - L \bu_k - U \bu_k\right)$ is the same as the $\omega=1$ Richardson iteration \eqref{introrichardson} applied to the left-preconditioned system \eqref{introleftpre} with $M=D$.  Formulate and prove a corresponding statement about the Gauss-Seidel iteration $\bu_{k+1} = (D+L)^{-1} \left(\bb - U \bu_k\right)$.
+\item \label{exer:ls:jacobirichardson}  Suppose a square matrix $A$ with nonzero diagonal entries is decomposed into diagonal and lower/upper triangular parts as $A=D+L+U$.  Show that the Jacobi iteration $\bu_{k+1} = D^{-1} \left(\bb - L \bu_k - U \bu_k\right)$ is the same as the $\omega=1$ Richardson iteration \eqref{introrichardson} applied to the left-preconditioned system \eqref{introleftpre} with $M=D$.  Formulate and prove a corresponding statement about the Gauss-Seidel iteration $\bu_{k+1} = (D+L)^{-1} \left(\bb - U \bu_k\right)$.
 
 \item \label{exer:ls:showconvergethm}  Show \eqref{introconvergethm}.
 
 \item \label{exer:ls:errornorms}  Show \eqref{relativenormbounds}.
 %For the left inequality, note first that $\|\br_0\| = \|\bb - A \bu_0\| \le \|A\| \|A^{-1} \bb - \bu\| = \|A\| \|\be_0\|$, and second that $\|\bu\| = \|A^{-1}\bb\| \le \|A^{-1}\| \|\bb\|$ so $1 / \|\bb\| \le \|A\| / \|\bu\|$.  Combining these gives the left inequality.
 
-\item On page \pageref{krylovgoal} we note that a Krylov space approximation $p_{n-1}(A)\bb$ to the solution $A^{-1}\bb$ is close if $p_{n-1}(z)$ is close to $1/z$ on the spectrum of $A$.  Prove this for invertible diagonalizable matrices $A=S\Lambda S^{-1}$, with $\Lambda$ diagonal, by showing
+\item On page \pageref{eq:ls:krylovgoal} we note that a Krylov space approximation $p_{n-1}(A)\bb$ to the solution $A^{-1}\bb$ is close if $p_{n-1}(z)$ is close to $1/z$ on the spectrum of $A$.  Prove this for invertible diagonalizable matrices $A=S\Lambda S^{-1}$, with $\Lambda$ diagonal, by showing
 	$$\|p_{n-1}(A) - A^{-1}\| \le \,\kappa(S)\, \max_{\lambda \in \sigma(A)} |p_{n-1}(\lambda) - \lambda^{-1}|$$
 where $\kappa(S) = \|S\| \|S^{-1}\|$ is the condition number.\sidenote{Here $\|\cdot\|$ is any induced matrix norm \citep{TrefethenBau1997}.}  If $A$ is \emph{normal} then, by definition, $S$ can be chosen to be unitary.  In that case, using the $2$-norm, the condition number factor can have its minimal value of $1$.
 
