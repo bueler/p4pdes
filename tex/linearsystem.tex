@@ -576,41 +576,37 @@ $ ./vecmatksp -ksp_type preonly -pc_type lu
 %$
 The reader should check that the output of \texttt{-ksp\_view} is as intended.
 
-When solving on multiple processors, using ILU($0$) as the default preconditioner makes no sense.  This is because, even when fill-in is avoided, the LU factorization algorithm would involve a great deal of interprocessor communication.  However, there are blocks along the diagonal of the system matrix $A$ which are entirely owned by a single processor.  The ILU($0$) method can be applied to these, and the result treated as an approximation $P^{-1}\approx A^{-1}$.  That is, the blocks along the diagonal can be approximately inverted by ILU($0$), and the result treated as a block-diagonal (i.e.~block-Jacobi) preconditioner.
+When solving on multiple processors, using ILU($0$) as the default preconditioner makes no sense.  This is because, even when fill-in is avoided, the LU factorization algorithm would involve a great deal of interprocessor communication.  However, there are blocks along the diagonal of the system matrix $A$ which are entirely owned by a single processor.  The ILU($0$) method can be applied to these, and the result treated as an approximation $M^{-1}\approx A^{-1}$.  That is, the blocks along the diagonal can be approximately inverted by ILU($0$), and the result treated as a block-diagonal (i.e.~block-Jacobi) preconditioner.
 
 The default \PETSc \pKSP settings \emph{in parallel} correspond to options
 \begin{quote}
 \texttt{-ksp\_type gmres -pc\_type bjacobi -sub\_pc\_type ilu}
 \end{quote}
-This is what they do:
+Namely:
 \begin{itemize}
 \item The default \pKSP remains GMRES with restart 30.
-\item The default \pPC is now \texttt{bjacobi}, i.e.~application of approximate diagonal-block inverses as $M^{-1}$.
-\item Inside the \pPC is a \texttt{sub\_pc} object, also a \pPC, which is ILU($0$),\sidenote{There is even a \texttt{sub\_ksp} object, but it is \texttt{preonly}.  So let's just ignore that complication for now.} and this generates the approximate diagonal-block inverses.
+\item The default \pPC is \texttt{bjacobi}, i.e.~application of approximate diagonal-block inverses as $M^{-1}$.
+\item Inside the \pPC is a \texttt{sub\_pc} object, also a \pPC, which is ILU($0$),\sidenote{There is even a \texttt{sub\_ksp} object, but it is \texttt{preonly}.  Let's just ignore that complication for now \dots} and this generates the approximate diagonal-block inverses.
 \end{itemize}
-The reader can confirm this understanding of the situation by running
+The reader can confirm the situation by running
 \begin{cline}
 mpiexec -n 2 ./vecmatksp -ksp_view
 \end{cline}
 
-But surely that's enough runtime options for now.  There will be more, especially in later chapters when we solve PDEs.
+Surely that's enough runtime options for now.  Of course there will be more, especially in later Chapters when we solve PDEs.
 
 
 \section{A sparse system of arbitrary size}
 
-We have seen \PETSc code to set up and solve linear systems, but there is more to say.  The next example \texttt{tri.c}, split into Codes \ref{code:tripartone} and \ref{code:triparttwo}, introduces these additional concepts and their associated function calls:
+We have seen how \PETSc code sets up and solves linear systems, but there is more to say.  The next example \texttt{tri.c}, split into Codes \ref{code:tripartone} and \ref{code:triparttwo}, introduces the following additional concepts and associated function calls:
 \begin{enumerate}
-\item Creating an option, so that the size of the linear system can be controlled at runtime, by using \texttt{PetscOptionsXXX()} calls.
+\item Creating an integer option by \texttt{PetscOptionsXXX()} calls, so that the size of the linear system can be controlled at runtime.
 \item Using \texttt{VecDuplicate()} for allocation.
 \item Assembling a system of arbitrary size across an arbitrary number of processes, using \texttt{MatGetOwnershipRange()} to only set locally-owned rows.
-\item Using \texttt{VecAXPY()}, \texttt{VecNorm()}, and \texttt{PetscPrintf()} to compute and display the error in a case where the exact solution is known.
+\item Using \texttt{VecAXPY()}, \texttt{VecNorm()}, and \texttt{PetscPrintf()} to compute and display the numerical error in a case where the exact solution is known.
 \end{enumerate}
 
-\vfill
-\newpage
-\cinputpart{tri.c}{\CODELOC}{Set up \pVec and \pMat objects for a tridiagonal system.}{I}{//STARTSETUP}{//ENDSETUP}{code:tripartone}
-
-First build and run the code with options that show what it is does by default:
+First we build and run the code:
 \begin{cline}
 $ make tri
 $ ./tri -ksp_monitor -a_mat_view ::ascii_dense
@@ -625,7 +621,9 @@ Mat Object:(a_) 1 MPI processes
 error for m = 4 system is |x-xexact|_2 = 5.1e-16
 \end{cline}
 
-To get started on the new concepts shown in Code \ref{code:tripartone}, notice that methods \texttt{PetscOptionsBegin()} and \texttt{PetscOptionsEnd()} bracket the call to \texttt{PetscOptionsInt()}.  We set an option prefix ``\texttt{-tri\_...}'' so that the new option we create is distinguished from the many built-in \PETSc options that start with \texttt{-ksp\_...} or \texttt{-vec\_...} or whatever.  Our use of \texttt{PetscOptionsInt()} creates an option \texttt{-tri\_m} which allows the user to set the variable \texttt{m}, and to leave the default \texttt{m}$=4$ unaltered if the option is not set.
+\cinputpart{tri.c}{\CODELOC}{Set up \pVec and \pMat objects for a tridiagonal system.}{I}{//STARTSETUP}{//ENDSETUP}{code:tripartone}
+
+The first new tool used in Code \ref{code:tripartone} is bracketed by \texttt{PetscOptionsBegin()} and \texttt{PetscOptionsEnd()}, namely the call to \texttt{PetscOptionsInt()}.  The \texttt{Begin} method sets a prefix ``\texttt{-tri\_...}'' so that the new option we create is distinguished from the many built-in \PETSc options that start with \texttt{-ksp\_...} or \texttt{-vec\_...} or whatever.  Here \texttt{PetscOptionsInt()} creates option \texttt{-tri\_m} so the user can set the variable \texttt{m}, and leave the default \texttt{m}$=4$ unaltered if the option is not set.
 
 To see the option and its default value in \texttt{-help} output do
 \begin{cline}
@@ -633,30 +631,27 @@ $ ./tri -help | grep tri_
 Solve a tridiagonal system of arbitrary size.  Option prefix = tri_.
   -tri_m <4>: dimension of linear system (None)
 \end{cline}
-Here, for instance, we reset the system size to be small and we view the matrix:
+%$
+Here, for instance, we reset the system size to be small:
 \begin{cline}
-$ ./tri -tri_m 2 -a_mat_view
-Mat Object:(a_) 1 MPI processes
-  type: seqaij
-row 0: (0, 3)  (1, -1) 
-row 1: (0, -1)  (1, 3) 
+$ ./tri -tri_m 2
 error for m = 2 system is |x-xexact|_2 = 8.0e-16
 \end{cline}
 %$
 
-After setting up the new option, next in \texttt{tri.c} the numerical solution \pVec \texttt{x} is created just as we did in the last example \texttt{vecmatksp.c} (Code \ref{code:vecmatksp}).  But now we also want to create \pVecs \texttt{b} and \texttt{xexact}; the former is the right-hand side of the linear system and the latter holds the exact solution to the linear system so that we can evaluate the error in the numerical solution.  Though at this stage we have not filled any entries of \texttt{x}, we can save repetitive function calls to \texttt{VecCreate/SetSizes/SetFromOptions()} when creating these additional \pVecs.  That is, because they have the same properties and parallel layout we can use \texttt{VecDuplicate()} to allocate \pVecs just like \texttt{x}.\sidenote{There is a different method for copying the contents of \pVecs, namely \texttt{VecCopy()}.  It requires that the two \pVecs are already allocated and have the same layout.}
-
-Next we assemble the matrix $A$.  This is a boring tridiagonal matrix with $3$ on the diagonal and $-1$ in the super- and sub-diagonals.  Though boring, we want to assemble it efficiently in parallel, something that will be important when solving 2D and 3D PDEs in later chapters.  However, only when \texttt{tri.c} is run do we know how many processes are in use.  A key method for efficient matrix assembly in parallel is the method \texttt{MatGetOwnershipRange()} which tells our program, as it is running on a particular process (rank), what rows it owns locally.  In the case of a many structured matrices like this one, we can avoid all interprocess communication by assembling exactly the rows we own.  As seen at the top of Code \ref{code:triparttwo}, we call
-\begin{quote}
-\texttt{MatGetOwnershipRange(A,\&Istart,\&Iend)}
-\end{quote}
-to get the starting and ending row indices for the local process.  These are used as limits in a \texttt{for} loop over the locally own rows, wherein we call \texttt{MatSetValues()} to actually set the entries of $A$.  We call \texttt{MatAssemblyBegin/End()} to complete the assembly of $A$.
+After setting up the new option, next in \texttt{tri.c} the numerical solution \pVec \texttt{x} is created just as we did in the last example \texttt{vecmatksp.c} (Code \ref{code:vecmatksp}).  But now we also want to create \pVecs \texttt{b} and \texttt{xexact}; the former is the right-hand side of the linear system and the latter holds the exact solution to the linear system so that we can evaluate the error in the numerical solution.  Though at this stage we have not filled any entries of \texttt{x}, we can save repetitive function calls to \texttt{VecCreate/SetSizes/SetFromOptions()}, when creating these additional \pVecs, by calling \texttt{VecDuplicate()} to allocate \pVecs just like \texttt{x}.  (There is a different method for copying the contents of \pVecs, namely \texttt{VecCopy()}.  It requires that the two \pVecs are already allocated and have the same layout.)
 
 \cinputpart{tri.c}{\CODELOC}{Assemble and solve.}{II}{//ENDSETUP}{//ENDSOLVE}{code:triparttwo}
 
-We need to assemble the right-hand side $\bb$ of the linear system.  But this is related to the question: how does one get the exact solution $\bx_{\text{exact}}$ to a linear system $A\bx_{\text{exact}} = \bb$?  The easiest way for demonstration purposes, as here, is to \emph{choose} $\bx_{\text{exact}}$ and then compute $\bb$ by multiplying by $A$.  Thus, we set (unimportant) values for \texttt{xexact}, and call \texttt{VecAssemblyBegin/End()} on it.  Then we compute \texttt{b} by calling \texttt{MatMult(A,xexact,b)}.
+Next we assemble the matrix $A$.  This is a boring tridiagonal matrix with $3$ on the diagonal and $-1$ in the super- and sub-diagonals.  Though boring, we want to assemble it efficiently in parallel, something that will be important when solving 2D and 3D PDEs in later chapters.  However, only when \texttt{tri.c} is run do we know how many processes are in use.  The method \texttt{MatGetOwnershipRange()} tells our program, running on a particular process (rank), what rows it owns locally.  In the case of a many structured matrices like this one, we can avoid all interprocess communication by assembling exactly the rows we own.  As seen at the top of Code \ref{code:triparttwo}, we call
+\begin{quote}
+\texttt{MatGetOwnershipRange(A,\&Istart,\&Iend)}
+\end{quote}
+to get the starting and ending row indices for the local process.  These are used as limits in a \texttt{for} loop over the locally own rows.  We use \texttt{MatSetValues()} to actually set the entries of $A$ and \texttt{MatAssemblyBegin/End()} to complete the assembly of $A$.
 
-As in the earlier code, we set up  the \pKSP and then call \texttt{KSPSolve()} to approximately solve $A\bx = \bb$.  As the \pKSP is working we can see it reduce the $k$th-iteration residual norm $\|\bb-A\bx_k\|_2$ just by using option \texttt{-ksp\_monitor}.  In this case we also want to see that the actual error
+We need to assemble the right-hand side $\bb$ of the linear system and also the exact solution $\bx_{\text{exact}}$ to the linear system ($A\bx_{\text{exact}} = \bb$).  The easiest way, for demonstration purposes here, is to \emph{choose} $\bx_{\text{exact}}$ and then compute $\bb$ by multiplying by $A$.  Thus, we set (unimportant) values for \texttt{xexact}, and call \texttt{VecAssemblyBegin/End()} on it.  Then we compute \texttt{b} by calling \texttt{MatMult(A,xexact,b)}.
+
+As in \texttt{vecmatksp.c} before we set up  the \pKSP and then call \texttt{KSPSolve()} to approximately solve $A\bx = \bb$.  Option \texttt{-ksp\_monitor} prints the residual norm $\|\bb-A\bx_k\|_2$ at runtime.  In this case we also want to see that the actual error
 	$$\|\bx - \bx_{\text{exact}}\|_2$$
 is small when the \pKSP completes its work.  So, after getting \texttt{x} from \texttt{KSPSolve()} we compute the error with two commands,
 
@@ -672,7 +667,7 @@ is small when the \pKSP completes its work.  So, after getting \texttt{x} from \
 
 \section{A first look at performance}
 
-The linear system assembled by \texttt{tri.c} is about as easy to solve as they get.   It is tridiagonal, symmetric, diagonally-dominant, and positive definite.\sidenote{See Exercise \ref{exer:computeeigs}.}  So \PETSc ought to be able to solve it quickly, almost all Krylov methods should apply, and parallelization ought to be effective.
+The linear system assembled by \texttt{tri.c} is about as easy to solve as they get.   It is tridiagonal, symmetric, diagonally-dominant, and positive definite.\sidenote{See Exercise \ref{chap:ls}.\ref{exer:computeeigs}.}  So \PETSc ought to be able to solve it quickly, almost all Krylov methods should apply, and parallelization ought to be effective.
 
 \newcommand{\WORKSTATION}{\textsc{workstation}\xspace}
 We can time a one-process solution:
@@ -710,7 +705,7 @@ We see that the default \PETSc \pKSP and \pPC methods\sidenote{GMRES with ILU($0
 
 We can try a direct solve (\texttt{-ksp\_type preonly -pc\_type lu}), the default serial solver (\texttt{-ksp\_type gmres -pc\_type ilu}), and the default parallel solver (\texttt{-ksp\_type gmres -pc\_type bjacobi -sub\_pc\_type ilu}).  We can turn off preconditioning (\texttt{-pc\_type none}) or switch from ILU($0$)-based preconditioning to Jacobi preconditioning (\texttt{-pc\_type jacobi}).
 
-Thus, to generate Table \ref{tab:tritiming} below, we did 16 runs which looked like this:
+To generate Table \ref{tab:tritiming} below we did 16 runs like this:
 \begin{cline}
 $ timer mpiexec -n N ./tri -tri_m 20000000 -ksp_rtol 1.0e-10 -ksp_type KSP -pc_type PC
 \end{cline}
@@ -740,9 +735,14 @@ cg         & none        & \intime{cg.none.1}          & \intime{cg.none.4} \\
 
 This Table deserves discussion:
 \begin{itemize}
-\item Entries ``\texttt{bjacobi+ilu}'' and ``\texttt{bjacobi+icc}'' correspond to options \texttt{-pc\_type bjacobi -sub\_pc\_type ilu} and \texttt{-pc\_type bjacobi -sub\_pc\_type icc}, respectively.  As already noted, the first of these is the parallel default.\sidenote{This example suggests it is a reasonable choice for the default!}
-\item Counting floating point operations shows the leading-order work for Cholesky is $m^3/3$ while for LU it is $2 m^3/3$ \citep{TrefethenBau1997}.  This is reflected in the direct-solve results using \texttt{-ksp\_type preonly}.  A diagonally-dominant tridiagonal problem is very well-behaved for direct methods because no fill-in or pivoting occurs when they are applied, but we should not assume that a generic $10^7$ dimension systems are good candidates for direct solves.
-\item Cholesky and CG methods apply to symmetric positive-definite matrices only.  These are \pKSP method \texttt{cg} and \pPC methods \texttt{cholesky} and \texttt{icc} (incomplete-Cholesky, also denoted ``IC($0$)'').  We see some benefit to using CG on one-process runs, compared to the general (non-symmetric) method GMRES, but the matrix generated by \texttt{tri.c} is so well-behaved that both of these iterations work well.
+\item Entries ``\texttt{bjacobi+ilu}'' and ``\texttt{bjacobi+icc}'' correspond to options \texttt{-pc\_type bjacobi -sub\_pc\_type ilu} and \texttt{-pc\_type bjacobi -sub\_pc\_type icc}, respectively.  As already noted, the first of these is the parallel default, and the Table suggests why this is.
+
+\item Counting floating point operations shows the leading-order work for Cholesky is $m^3/3$ while for LU it is $2 m^3/3$ \citep{TrefethenBau1997}.  This is reflected in the direct-solve results using \texttt{-ksp\_type preonly}.
+
+\item A diagonally-dominant tridiagonal problem is very well-behaved for direct methods because no fill-in or pivoting occurs when they are applied, but the reader should not assume that generic $N=10^7$ dimension systems are good candidates for direct solves.
+
+\item Cholesky and CG methods, namely \pKSP method \texttt{cg} and \pPC methods \texttt{cholesky} and \texttt{icc} (incomplete-Cholesky, also denoted ``IC($0$)''), respectively, apply to symmetric positive-definite matrices only.  We see some benefit to using CG on one-process runs, compared to the general (non-symmetric) method GMRES, but the matrix here is so well-behaved that exploiting symmetry gives no noticable benefit.
+
 \item There is some speed-up from $N=1$ to $N=4$ processes on this single node 4-core \WORKSTATION.  The two (or slightly more) times speed-up is relatively uniform across methods.  But apparently using four cores does not guarantee anywhere near four-times speed-up.
 \end{itemize}
 

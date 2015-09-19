@@ -15,14 +15,12 @@ int main(int argc,char **args) {
   PetscInitialize(&argc,&args,(char*)0,help);
 
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"tri_","options for tri",""); CHKERRQ(ierr);
-  ierr = PetscOptionsInt(
-        "-m","dimension of linear system","tri.c",m,&m,NULL); CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-m","dimension of linear system","tri.c",m,&m,NULL); CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
   ierr = VecCreate(PETSC_COMM_WORLD,&x); CHKERRQ(ierr);
   ierr = VecSetSizes(x,PETSC_DECIDE,m); CHKERRQ(ierr);
   ierr = VecSetFromOptions(x); CHKERRQ(ierr);
-
   ierr = VecDuplicate(x,&b); CHKERRQ(ierr);
   ierr = VecDuplicate(x,&xexact); CHKERRQ(ierr);
 
@@ -64,8 +62,7 @@ int main(int argc,char **args) {
   ierr = VecAXPY(x,-1.0,xexact); CHKERRQ(ierr);
   ierr = VecNorm(x,NORM_2,&errnorm); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
-         "error for m = %d system is |x-xexact|_2 = %.1e\n",m,errnorm);
-         CHKERRQ(ierr);
+         "error for m = %d system is |x-xexact|_2 = %.1e\n",m,errnorm); CHKERRQ(ierr);
 
   KSPDestroy(&ksp);  MatDestroy(&A);
   VecDestroy(&x);  VecDestroy(&b);  VecDestroy(&xexact);
