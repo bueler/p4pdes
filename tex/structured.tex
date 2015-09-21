@@ -68,7 +68,7 @@ Our FD method is based on a \emph{structured grid} of $MN$ points on the unit sq
 \label{fig:unitsquaregrid}
 \end{marginfigure}
 
-Consider the lines of code in Code \ref{code:dmdacreatetwod}, an extract from \texttt{poisson.c} shown later (Codes \ref{code:poissoncreate} and \ref{code:poissonsolve}).  These lines create a \PETSc \pDM object for the grid in Figure \ref{fig:unitsquaregrid}.  A \pDM is an abstract type for describing the topology (connectedness) and geometry of a grid, \emph{and} the way it is distributed across \MPI processes, \emph{and} the way each process can access data from its neighboring processes.  The specific case in Code \ref{code:dmdacreatetwod} creates a ``\pDMDA'', the subclass of \pDMs which are structured grids.  (Note ``\pDM'' might stand for ``distributed mesh,'' and ``\texttt{DA}'' for ``distributed array''.)
+Consider the lines of code in Code \ref{code:dmdacreatetwod}, an extract from \texttt{poisson.c} shown later (Codes \ref{code:poissoncreate} and \ref{code:poissonsolve}).  They create a \PETSc \pDM object, an abstract type for describing the topology (connectedness) and geometry of a grid, the way it is distributed across \MPI processes, and the way each process can access data from its neighboring processes.  This specific case creates a ``\pDMDA'', which is the structured-grid subclass of \pDMs, for grids like Figure \ref{fig:unitsquaregrid}.  Historically-speaking, ``\pDM'' might stand for ``distributed mesh'' and ``\texttt{DA}'' for ``distributed array,'' but in practice ``\pDMDA'' means ``structured grid'' from now on.
 
 \cinputraw{dmdacreate2d.frag}{extract from ch3/poisson.c}{An example of creating a 2D \pDMDA.}{}{//START}{//STOP}{code:dmdacreatetwod}
 
@@ -119,7 +119,7 @@ $ make poisson
 $ ./poisson -da_grid_x 5 -da_grid_y 7
 \end{cline}
 %$
-then the structured grid shown in Figure \ref{fig:unitsquaregrid} is created.  In this case all points of the grid are ``owned'' by a single MPI process.  However, if we run with multiple \MPI processes by
+then the particular structured grid shown in Figure \ref{fig:unitsquaregrid} is created.  In this case all points of the grid are ``owned'' by a single MPI process.  However, if we run with multiple \MPI processes by
 \begin{cline}
 $ mpiexec -n K ./poisson -da_grid_x M -da_grid_y N
 \end{cline}
@@ -129,7 +129,7 @@ then \PETSc does the best it can to balance the load of \texttt{MN} grid points 
 $ mpiexec -n 4 ./poisson -da_grid_x 5 -da_grid_y 7
 \end{cline}
 %$
-distributes the grid as shown in Figure \ref{fig:unitsquaregridparallel} will be created.  Neither \texttt{M}$=5$ nor \texttt{N}$=7$ is divisible by two, but \PETSc distributes the four ranks across the \texttt{MN}$=35$ nodes (grid points) relatively uniformly: the rank $0$ process owns 12 grid points and rank $3$ owns 6, while the other ranks are in between.  In this case the load is only balanced to within a factor of two, but larger grids can be better load-balanced.
+distributes the grid as in Figure \ref{fig:unitsquaregridparallel}.  Neither \texttt{M} $=5$ nor \texttt{N} $=7$ is divisible by two, but \PETSc distributes the four ranks across the \texttt{MN} $=35$ grid points relatively uniformly; the rank $0$ process owns 12 points and rank $3$ owns 6, while the other ranks are in between.  In this case the load is only balanced to within a factor of two, but on larger grids this ``\texttt{PETSC\_DECIDE}'' method can do better.
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
@@ -168,7 +168,7 @@ The observant reader has already noted that if the total number of processes \te
 $ mpiexec -n 5 ./poisson -da_grid_x 5 -da_grid_y 7
 \end{cline}
 %$
-is shown in Figure \ref{fig:unitsquaregridprime}.  Each process' portion of the grid has large perimeter-to-area ratio.  Thus communication between processes will be large compared to the computation on each process.
+is shown in Figure \ref{fig:unitsquaregridprime}.  Each process' portion of the grid has large perimeter-to-area ratio so that interprocess communication will be large.
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
@@ -201,7 +201,7 @@ is shown in Figure \ref{fig:unitsquaregridprime}.  Each process' portion of the 
     (\bm,\bm) -- (\od,\bm) -- (\od,\od) -- (\bm,\od) -- cycle;
   \node[color=red] at (\bmid,\bmid) {rank $3$};
 \end{tikzpicture}
-\caption{A well-balanced, compact-domain distribution of a $M=10$ by $N=10$ grid across four \MPI processes, created by \texttt{DMDACreate2d()}.}
+\caption{A balanced distribution of a $10\times 10$ grid across four \MPI processes, as created by \texttt{DMDACreate2d()}.}
 \label{fig:unitsquaregrideight}
 \end{marginfigure}
 
@@ -210,7 +210,7 @@ Though these defaults can be overridden by runtime options \texttt{-da\_grid\_x}
 $ mpiexec -n 4 ./poisson
 \end{cline}
 %$
-distributes the default $9\times 9$ grid in a well-balanced manner among four processes.  Figure \ref{fig:unitsquaregrideight} shows the perfectly-balanced result of
+distributes the default $9\times 9$ grid in a reasonably well-balanced manner among four processes.  Figure \ref{fig:unitsquaregrideight} shows the perfectly-balanced result of
 \begin{cline}
 $ mpiexec -n 4 ./poisson -da_grid_x 10 -da_grid_y 10
 \end{cline}
@@ -240,7 +240,7 @@ where
 \end{itemize}
 \normalsize
 
-In Code \ref{code:dmdacreatetwod}, the second and third arguments are \texttt{DM\_BOUNDARY\_NONE} because our Dirichlet boundary conditions do not need communication to the next process' domain, nor periodic wrapping.  In the fourth argument we use \texttt{DMDA\_STENCIL\_STAR} because only cardinal neighbors of a grid point are used when forming the matrix.\sidenote{Figure \ref{fig:unitsquaregridstencil} shows the ``stencil'' of our FD method.}  The two \texttt{PETSC\_DECIDE} arguments which follow tell \PETSc to distribute the grid over processes according to the size of (number of processes in) the \MPI communicator, and using \PETSc internal logic as illustrated above.  The next two arguments, in the ninth and tenth positions, say that our PDE is scalar (\texttt{dof}$=1$) and that the FD method only needs one neighbor in each direction (\texttt{s}$=1$).  The next two arguments after that are \texttt{NULL} because we are \emph{not} telling \PETSc any details about how to distribute processes over the grid; it \texttt{DECIDE}s for itself.  Finally, the \pDMDA object is created as an output (i.e.~pass-by-reference).
+In Code \ref{code:dmdacreatetwod}, the second and third arguments are \texttt{DM\_BOUNDARY\_NONE} because our Dirichlet boundary conditions do not need communication to the next process' domain, nor periodic wrapping.  In the fourth argument we use \texttt{DMDA\_STENCIL\_STAR} because only cardinal neighbors of a grid point will be used when forming the matrix.\sidenote{Figure \ref{fig:unitsquaregridstencil} below shows the ``stencil'' of our FD method.}  The two \texttt{PETSC\_DECIDE} arguments which follow tell \PETSc to distribute the grid over processes according to the size of (number of processes in) the \MPI communicator using \PETSc internal logic as illustrated above.  The next two arguments, in the ninth and tenth positions, say that our PDE is scalar (\texttt{dof}$=1$) and that the FD method will only need one neighbor in each direction (\texttt{s}$=1$).  The next two arguments after that are \texttt{NULL} because we are \emph{not} telling \PETSc any details about how to distribute processes over the grid; it \texttt{DECIDE}s for itself.  Finally, the \pDMDA object is created as an output (i.e.~pass-by-reference).
 
 The call to \texttt{DMDASetUniformCoordinates()} in Code \ref{code:dmdacreatetwod} sets the domain to be $[0,1]\times[0,1]$ in the sense that the \pDM object knows the spacing and locations of the grid points.  The last two arguments are ignored in this case; they would set limits on the third dimension if \texttt{da} were created with \texttt{DMDACreate3d()}.
 
@@ -251,28 +251,28 @@ The call to \texttt{DMDASetUniformCoordinates()} in Code \ref{code:dmdacreatetwo
 \label{fig:petscghostvalues}
 \end{figure}
 
-The standard \PETSc view of what \pDM s ``look like'' is in Figure \ref{fig:petscghostvalues}.  The code in Code \ref{code:dmdacreatetwod} generates something like the left figure, namely a structured-grid \pDM, except that the one shown in Figure \ref{fig:petscghostvalues} has \texttt{DMDA\_STENCIL\_BOX} stencil type, unlike ours.  On the right is an unstructured grid, of the type created in Chapter \ref{chap:un} for the finite element method.  In both cases the Figure shows the nodes owned by a given process (red ``local'' nodes) and those other nodes that are accessible by the local process (blue ``ghost'' nodes).
+The standard \PETSc view of what \pDM s ``look like'' is in Figure \ref{fig:petscghostvalues}.  The code in Code \ref{code:dmdacreatetwod} generates something like the left figure, namely a structured-grid \pDM, except that the one shown in Figure \ref{fig:petscghostvalues} has \texttt{DMDA\_STENCIL\_BOX} stencil type, unlike ours.  On the right is an unstructured grid, of the type created in Chapter \ref{chap:un} for the finite element method.  In both cases the Figure shows the nodes owned by a given process (``local'' nodes) and those other nodes that are accessible by the local process (``ghost'' nodes).
 
 
 \section{Finite difference method}
 
-Recall we were trying to approximate PDE problem \eqref{poissonsquare} and \eqref{poissonsquarebcs}, not just build a grid.  The following FD method leads to the next step, creating and assembling a \pMat, and some \pVecs, for the linear system corresponding to the PDE.
+We were trying to approximate PDE problem \eqref{poissonsquare} and \eqref{poissonsquarebcs}, not just build a grid.  The following FD method leads to the next step, creating and assembling a \pMat and \pVecs, for the linear system corresponding to the PDE.
 
 By a well-known Taylor's theorem argument \citep{MortonMayers2005}, if $F(x)$ is sufficiently smooth then
 \begin{equation}
    F''(x) = \frac{F(x+h) - 2 F(x) + F(x-h)}{h^2} + O(h^2)  \label{secondderivativeFD}
 \end{equation}
-as $h$ goes to zero.  This formula, applied to partial derivatives, will approximate the Laplacian in equation \eqref{poissonsquare}.  In fact, if $U_{i,j}$ is the gridded approximation to the value $u(x_i,y_j)$ of the exact solution $u(x,y)$ at a grid point,\sidenote{This is an important phrase!  We compute values $U_{i,j}$ from the finite difference equations.  We generally \emph{do not know} the values $u(x_i,y_j)$.  We want the former to be close to the latter.} and if $f_{i,j} = f(x_i,y_j)$ then from \eqref{secondderivativeFD} we have this FD approximation to equation \eqref{poissonsquare}:
+as $h$ goes to zero.  This formula, applied to partial derivatives, will approximate the Laplacian in equation \eqref{poissonsquare}.  In fact, if $U_{i,j}$ is the gridded approximation to the value $u(x_i,y_j)$ of the exact solution $u(x,y)$ at a grid point,\sidenote{This is an important phrase!  We compute values $U_{i,j}$ from the finite difference equations.  We generally do not know the values $u(x_i,y_j)$.} and if $f_{i,j} = f(x_i,y_j)$, then from \eqref{secondderivativeFD} we have this FD approximation to equation \eqref{poissonsquare}:
 \begin{equation}
 - \frac{U_{i+1,j} - 2 U_{i,j} + U_{i-1,j}}{h_x^2} - \frac{U_{i,j+1} - 2 U_{i,j} + U_{i,j-1}}{h_y^2} = f_{i,j}. \label{poissonsquareFDearly}
 \end{equation}
-Equation \eqref{poissonsquareFDearly} applies at all interior points where $1 \le i \le M-2$ and $1 \le j \le N-2$.  The boundary conditions \eqref{poissonsquarebcs} become
+Equation \eqref{poissonsquareFDearly} applies at all interior points, where $1 \le i \le M-2$ and $1 \le j \le N-2$.  The boundary conditions \eqref{poissonsquarebcs} become
 \begin{equation}
 U_{0,j} = 0, \quad U_{M-1,j} = 0, \quad U_{i,0} = 0, \quad U_{i,N-1} = 0, \label{poissonsquareFDbcs}
 \end{equation}
 for all $i,j$.
 
-At grid location $(x_i,y_j)$, equation \eqref{poissonsquareFDearly} relates the unknown $U_{i,j}$ to its four cardinal neighbors $U_{i+1,j}$, $U_{i-1,j}$, $U_{i,j+1}$, and $U_{i,j-1}$.  This pattern is a \emph{stencil}, in particular a ``star'' stencil, as shown in Figure \ref{fig:unitsquaregridstencil}.  By contrast, a ``box'' stencil would additionally involve the four diagonal neighbors.  In 2D, a star stencil relates five unknowns, while a box stencil relates nine unknowns.
+At grid location $(x_i,y_j)$, equation \eqref{poissonsquareFDearly} relates the unknown $U_{i,j}$ to its four cardinal neighbors $U_{i+1,j}$, $U_{i-1,j}$, $U_{i,j+1}$, and $U_{i,j-1}$.  This pattern (Figure \ref{fig:unitsquaregridstencil}) is a \emph{stencil}, in particular a ``star'' stencil.  By contrast, a ``box'' stencil would additionally involve the four diagonal neighbors.  In 2D, a star stencil relates five unknowns, while a box stencil relates nine.
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
@@ -290,7 +290,7 @@ At grid location $(x_i,y_j)$, equation \eqref{poissonsquareFDearly} relates the 
   \draw[line width=2.0pt] (0.75,0.5)  -- (0.75,0.833333);
   \draw[xstep=0.25,ystep=0.166667,black,thin] (0.0,0.0) grid (1.0,1.0);
 \end{tikzpicture}
-\caption{This ``star'' stencil simply illustrates the adjacency pattern in FD scheme \eqref{poissonsquareFDearly}.}
+\caption{This ``star'' stencil simply illustrates FD scheme \eqref{poissonsquareFDearly}.}
 \label{fig:unitsquaregridstencil}
 \end{marginfigure}
 
@@ -300,13 +300,13 @@ A \bu = \bb, \label{poissonlinearsystem}
 \end{equation}
 where $A$ is a $L\times L$ matrix and $\bu,\bb$ are $L\times 1$ column vectors.
 
-However, to show entries of $A$ and $\bb$ in linear system \eqref{poissonlinearsystem} we must globally-order the unknowns.  Such an ordering is implemented inside a \PETSc \pDMDA, and indeed our code (\texttt{poisson.c} below) will use only the grid-wise coordinates $(i,j)$.\sidenote{The ability to assemble \pMats and \pVecs with $(i,j)$-type indexing is one reason structured-grid codes using \pDMDA can be quite short.}  Here we expose the ordering only for the purpose of displaying the system in matrix-vector form.
+However, to show entries of $A$ and $\bb$ in linear system \eqref{poissonlinearsystem} we must globally-order the unknowns.  Such an ordering is implemented inside a \PETSc \pDMDA, and indeed our code (\texttt{poisson.c} below) will use only the grid-wise coordinates $(i,j)$.\sidenote{The ability to assemble \pMats and \pVecs with $(i,j)$-type indexing is one reason structured-grid codes using \pDMDA can be quite short.}  Here we expose the ordering for the purpose of displaying the system in matrix-vector form.
 
 The ordering used in a one-process (serial) run by a 2D \pDMDA is shown in Figure \ref{fig:unitsquaregridordering}.  On an $M$ by $N$ grid one could write it as
 \begin{equation}
     U_k = U_{i,j} \quad \text{ where } \quad k = j\,M + i \label{orderingfd}
 \end{equation}
-for $i=0,1,\dots,M-1$ and $j=0,1,\dots,N-1$, so $k=0,1,\dots,MN-1$.  Of course we let \PETSc do such index transformations inside the \pDMDA implementation.
+for $i=0,1,\dots,M-1$ and $j=0,1,\dots,N-1$, so $k=0,1,\dots,MN-1$.  \PETSc does such index transformations inside the \pDMDA implementation.
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
@@ -393,41 +393,17 @@ The matrix $A$ is not symmetric.  Furthermore it is not well-scaled, for such a 
 \end{example}
 
 \medskip
-Before assembling the system by writing \PETSc code, there are two nontrivial observations about it.  These observations lead to an equivalent linear system that is easier to solve both in the sense that we have more options for solving the system,\sidenote{More \pKSP and \pPC choices and more choices that converge.} and in the sense that the numerical solution is more accurate because the condition number is smaller.\sidenote{Recall idea i) on page \pageref{limittoaccuracy}.}
+Before assembling system \eqref{poissonsquareFDearly} and \eqref{poissonsquareFDbcs} by writing \PETSc code, there are two nontrivial observations about it.  These observations lead to an equivalent linear system that is easier to solve both in the sense that we have more options for solving the system,\sidenote{More \pKSP and \pPC choices, and more that converge.} and in the sense that the condition number is smaller.
 
 First, equations \eqref{poissonsquareFDearly} have very different ``scaling'' from equations \eqref{poissonsquareFDbcs}.  For example, if $M=N=1001$, so that $h_x=h_y=0.001$, then the coefficient of $U_{i,j}$ in \eqref{poissonsquareFDearly} is $4/(.001)^2 = 4 \times 10^6$, while the coefficients from \eqref{poissonsquareFDbcs} are equal to 1.  To make the equations better scaled, we multiply \eqref{poissonsquareFDearly} by the grid cell area $h_x h_y$ to get
 \begin{equation}
 2 (a + b) U_{i,j} - a \left(U_{i+1,j} + U_{i-1,j}\right) - b \left(U_{i,j+1} + U_{i,j-1}\right) = h_x h_y f_{i,j} \label{poissonsquareFD}
 \end{equation}
-where $a=h_y/h_x$ and $b=h_x/h_y$.  Using \eqref{poissonsquareFD}, all the equations in the system will have coefficients of comparable size, unless the cell aspect ratio $h_y/h_x$ is very large or small.  If $h_x=h_y$ then diagonal entries are $4$ and off-diagonal entries are $-1$ as in Figure \ref{fig:equalstarstencil}.
+where $a=h_y/h_x$ and $b=h_x/h_y$.  Using \eqref{poissonsquareFD}, all the equations in the system will have coefficients of comparable size, unless the cell aspect ratio $h_y/h_x$ is very large or small.  If $h_x=h_y$ then diagonal entries are $4$ and off-diagonal entries are $-1$.
 
-\begin{marginfigure}
-\begin{tikzpicture}[scale=3.5]
-  \draw[->,gray,very thin] (0.0,0.0) -- (1.2,0.0) node[below] {$x$};
-  \draw[->,gray,very thin] (0.0,0.0) -- (0.0,1.2) node[left] {$y$};
-  \draw[line width=1.0pt] (0.0,0.0) -- (0.0,1.0) -- (1.0,1.0) -- (1.0,0.0) -- cycle;
-  \node at (0.75,-0.1) {$i$};
-  \node at (-0.1,0.75) {$j$};
-  \filldraw (0.50,0.75) circle (0.8pt);
-  \filldraw (0.75,0.75) circle (0.8pt);
-  \filldraw (1.00,0.75) circle (0.8pt);
-  \filldraw (0.75,0.5) circle (0.8pt);
-  \filldraw (0.75,1.0) circle (0.8pt);
-  \pgfmathsetmacro\dd{0.06}
-  \draw (0.75+\dd,0.75+\dd) node{$4$};
-  \draw (0.5+\dd,0.75+\dd)  node{$-1$};
-  \draw (0.75+\dd,0.5+\dd)  node{$-1$};
-  \draw (1.0+\dd,0.75+\dd)  node{$-1$};
-  \draw (0.75+\dd,1.0+\dd)  node{$-1$};
-  \draw[line width=2.0pt] (0.50,0.75) -- (1.00,0.75);
-  \draw[line width=2.0pt] (0.75,0.5)  -- (0.75,1.00);
-  \draw[xstep=0.25,ystep=0.25,black,thin] (0.0,0.0) grid (1.0,1.0);
-\end{tikzpicture}
-\caption{For a grid with $h_x=h_y$, the coefficients on the left side of \eqref{poissonsquareFD} are the well-known ``$4$'' and ``$-1$'' for the stencil of the Laplacian.}
-\label{fig:equalstarstencil}
-\end{marginfigure}
+Second, the FD equations can be re-interpreted to give a \emph{symmetric} matrix $A$.  For example, at a grid point adjacent to the left-hand boundary of the square, the $i=1$ case of \eqref{poissonsquareFD}, the boundary location value $U_{0,j}$ appears in the equation.  The matrix in the linear system will be symmetric if we systematically ``move'' such values to the right-hand side vector $\bb$, which we can do because the value $U_{0,j}$ is known.  This forces off-diagonal entries $A$ to be zero in columns corresponding to known boundary values.  By converting the earlier system to a symmetric matrix $A$ we open up a larger range of linear algebra methods for solving the system efficiently, specifically including conjugate gradients as the \pKSP type and Cholesky preconditioners (\texttt{-pc\_type cholesky} or \texttt{-pc\_type icc}) as the \pPC type.
 
-Our second observation is that the FD equations can be re-interpreted to give a \emph{symmetric} matrix $A$.  For example, at a grid point adjacent to the left-hand boundary of the square, the $i=1$ case of \eqref{poissonsquareFD}, the boundary location value $U_{0,j}$ appears in the equation.  The matrix in the linear system will be symmetric if we systematically ``move'' such values to the right-hand side vector $\bb$, as the value $U_{0,j}$ is known.  That is, we force off-diagonal entries $A$ to be zero in columns corresponding to known boundary values.  With these two modifications we can redo the last example.
+With these two modifications we can redo the last example.
 
 \medskip\noindent\hrulefill
 \begin{example} \label{exampleredo} For the same $M=4$ and $N=3$ case shown in Figure \ref{fig:unitsquaregridordering}, equations \eqref{poissonsquareFDbcs} and \eqref{poissonsquareFD} yield the linear system
@@ -476,26 +452,26 @@ U_{3,2}
 0
 \end{bmatrix}
 \end{equation*}
-where $\alpha = 2 (h_y/h_x) + 2 (h_x/h_y) = 13/3$ and $\beta = - h_y/h_x = - 3/2$.  The matrix is symmetric, positive definite, and better-scaled than before with $\kappa(A)=5.83$.
+where $\alpha = 2 (h_y/h_x) + 2 (h_x/h_y) = 13/3$ and $\beta = - h_y/h_x = - 3/2$.  The matrix is symmetric, positive definite, and better-scaled than before, with $\kappa(A)=5.83$.
 
 \noindent\hrulefill
 \end{example}
 
-By converting the earlier system to a symmetric matrix $A$ we open up a larger range of linear algebra methods for solving the system efficiently.  We can now use conjugate gradients as the \pKSP (\texttt{-ksp\_type cg}), plus Cholesky preconditioners (\texttt{-pc\_type cholesky} or \texttt{-pc\_type icc}).
-
 
 \section{Code for matrix assembly}
 
-We now show in Code \ref{code:structuredpoisson} the code that assembles ``$A$'' in linear system \eqref{poissonlinearsystem} using \eqref{poissonsquareFD}.  For clarity and code reuse we have isolated this method in a separate file.  Arguments to \texttt{formdirichletlaplacian()} are simply the \pDM, the value to put on the diagonal for Dirichlet boundary conditions,\sidenote{This changes in a time-dependent problem which reuses the code} and the returned (i.e.~modified) \pMat \texttt{A}.
+Code \ref{code:structuredpoisson} assembles ``$A$'' in linear system \eqref{poissonlinearsystem} from equations \eqref{poissonsquareFD}.  For clarity and code reuse we have isolated this method in a separate file \texttt{structuredpoisson.c}.  It is included by \texttt{poisson.c} shown later in this Chapter, and by programs in Chapters \ref{chap:mg} and \ref{chap:sc}.
 
-\cinputpart{structuredpoisson.c}{\CODELOC}{Fill matrix entries using \texttt{MatSetValuesStencil}.  (From now on we strip ``\texttt{ierr=}'' and ``\texttt{CHKERRQ(ierr)}'' from the displayed code, but it is still present in the source.)}{I}{//CREATEMATRIX}{//ENDCREATEMATRIX}{code:structuredpoisson}
+Arguments to \texttt{formdirichletlaplacian()} in Code \ref{code:structuredpoisson} are the \pDM, the value to put on the diagonal for Dirichlet boundary conditions,\sidenote{The value on the diagonal is different in a time-dependent problem which reuses the code.  See Chapter \ref{chap:sc}.} and the returned (i.e.~modified) \pMat \texttt{A}.
 
-The ``\texttt{DMDALocalInfo info}'' object needs special description.  It is a C structure which stores both global grid size and the extent of the locally-owned subgrid, as shown in Figure \ref{fig:localpartofgrid}.  The global size is in members \texttt{info.mx,info.my}.  The local process owns a \texttt{info.xm} by \texttt{info.ym} rectangular subgrid, with a range of indices
+\cinputpart{structuredpoisson.c}{\CODELOC}{Fill matrix entries from formulas \eqref{poissonsquareFDbcs} and \eqref{poissonsquareFD} using \texttt{MatSetValuesStencil()}.}{I}{//CREATEMATRIX}{//ENDCREATEMATRIX}{code:structuredpoisson}
+
+The ``\texttt{DMDALocalInfo info}'' object needs special description.  It is a \PETSc-defined C structure using six integers to describe both the global grid size and the extent of the locally-owned subgrid, as shown in Figure \ref{fig:localpartofgrid}.  The global size is in members \texttt{info.mx,info.my}.  The local process owns a \texttt{info.xm} by \texttt{info.ym} rectangular subgrid, with a range of indices
 \begin{align*}
 &\text{\texttt{info.xs}} \le i \le \text{\texttt{info.xs}} +\text{\texttt{info.xm}}-1, \\
 &\text{\texttt{info.ys}} \le j \le \text{\texttt{info.ys}} +\text{\texttt{info.ym}}-1
 \end{align*}
-(in two dimensions).  For example, in Figure \ref{fig:unitsquaregridparallel} the rank $0$ and $2$ processes have \text{\texttt{info.xs}} $=0$ and \text{\texttt{info.xm}} $=3$ while the rank $1$ and $3$ processes have \text{\texttt{info.xs}} $=3$ and \text{\texttt{info.xm}} $=2$, with similar $y$ ranges.
+(in two dimensions).  For example, in Figure \ref{fig:unitsquaregridparallel} we have \texttt{info.mx} $=5$, the rank $0$ and $2$ processes have \texttt{info.xs} $=0$ and \texttt{info.xm} $=3$, and the rank $1$ and $3$ processes have \texttt{info.xs} $=3$ and \texttt{info.xm} $=2$.  There are similar $y$ ranges.
 
 \begin{figure}
 \begin{tikzpicture}[scale=8]
@@ -526,11 +502,11 @@ The ``\texttt{DMDALocalInfo info}'' object needs special description.  It is a C
   \draw[<->,] (-0.15,0.2) -- (-0.15,0.6);
   \node[rotate around={90:(0.3-0.3,0.4)}] at (-0.28,0.35) {\texttt{info.ym}};
 \end{tikzpicture}
-\caption{A \texttt{DMDALocalInfo} struct describes the indices for a local process' part of a 2D grid, plus the global grid size, using six integers.}
+\caption{A \texttt{DMDALocalInfo} struct describes the indices for a local process' part of a 2D grid, plus the global grid size.}
 \label{fig:localpartofgrid}
 \end{figure}
 
-The index ranges from \texttt{info} are used in the \texttt{for} loops which re-appear every time we do operations on a structured 2D grid:
+The local-ownership index ranges from \texttt{info} are used in the \texttt{for} loops which re-appear every time we do operations on a structured 2D grid:
 \begin{code}
 for (j=info.ys; j<info.ys+info.ym; j++) {
   for (i=info.xs; i<info.xs+info.xm; i++) {
@@ -539,7 +515,7 @@ for (j=info.ys; j<info.ys+info.ym; j++) {
 }
 \end{code}
 
-Still considering the code in Code \ref{code:structuredpoisson}, the \pMat object $A$ assembled by \texttt{formdirichletlaplacian()}  has ranges of rows owned by each process, the standard parallel layout \texttt{MATMPIAIJ} of \pMat objects in \PETSc (Chapter \ref{chap:gs}).  However, because we work with the locally-owned subgrid using $(i,j)$ indices, we can often forget the actual layout of a \pMat.  We get to just focus on the part of the grid owned by the process instead of worrying about the matrix itself.
+Still considering the code in Code \ref{code:structuredpoisson}, the \pMat object $A$ assembled by \texttt{formdirichletlaplacian()}  has ranges of rows owned by each process, the standard parallel layout \texttt{MATMPIAIJ} of \pMat objects in \PETSc (Chapter \ref{chap:gs}).  However, because we work with the locally-owned subgrid using $(i,j)$ indices, we can forget the actual layout of a \pMat and only focus on the part of the grid owned by the process, instead of worrying about the matrix itself.
 
 In particular, local indices $(i,j)$ can be used when inserting entries into \pMat \texttt{A}, which is really a dynamical data structure for matrix assembly.  Thus in Code \ref{code:structuredpoisson} we see one use of \texttt{MatSetValuesStencil()} for each locally-owned grid point.  For a generic interior point this command inserts five coefficients into the matrix.  The key data structure is of type \texttt{MatStencil}, an apparently-trivial struct
 \begin{code}
@@ -547,12 +523,12 @@ typedef struct {
   PetscInt k,j,i,c;
 } MatStencil;
 \end{code}
-In our 2D case, with a single degree of freedom at each node,\sidenote{The Poisson equation \eqref{poissonsquare} is a scalar PDE so the unknown at each grid point is the scalar $U_{i,j}$.  A system of equations like Navier-Stokes would have \texttt{dof}$>1$ when we call \texttt{DMDACreateXd()}, and the ``\texttt{c}'' member of \texttt{MatStencil} would get used.} we only use the \texttt{i} and \texttt{j} members of \texttt{MatStencil}.  From \eqref{poissonsquareFD}, the actual matrix entries are $a_{i,i} = 2\left(h_y/h_x + h_x/h_y\right)$ on the diagonal, and $a_{i,j} = -h_y/h_x$ or $a_{i,j} = -h_x/h_y$ for off-diagonals.  We only insert nonzero off-diagonals in the matrix if the column corresponds to a non-boundary location.
+In our 2D case, with a single degree of freedom at each node,\sidenote{The Poisson equation \eqref{poissonsquare} is a scalar PDE so the unknown at each grid point is the scalar $U_{i,j}$.  A system of equations like Navier-Stokes would have \texttt{dof}$>1$ when we call \texttt{DMDACreateXd()}, and the ``\texttt{c}'' member of \texttt{MatStencil} would get used.} we only use the \texttt{i} and \texttt{j} members of \texttt{MatStencil}.  From \eqref{poissonsquareFD}, the actual matrix entries are $a_{i,i} = 2\left(h_y/h_x + h_x/h_y\right)$ on the diagonal, and $a_{i,j} = -h_y/h_x$ or $a_{i,j} = -h_x/h_y$ for off-diagonals.
 
 
 \section{A particular problem, an exact solution}
 
-At this point we need to set up a particular Poisson problem so our example code can solve it.  To do this we again\sidenote{For the code \texttt{tri.c} in Chapter \ref{chap:ls} we did something similar, i.e.~choosing exact solution $\bu$ before computing $\bb=A\bu$ by matrix multiplication.} \emph{choose} an exact solution, taking care that it satisfies homogeneous Dirichlet boundary conditions ($u=0$ along $\partial \mathcal{S}$):
+At this point we need a specific Poisson problem so our example code can solve it.  To do this we \emph{choose}\sidenote{For the code \texttt{tri.c} in Chapter \ref{chap:ls} we did something similar, i.e.~choosing exact solution $\bu$ before computing $\bb=A\bu$ by matrix multiplication.} an exact solution, taking care that it satisfies homogeneous Dirichlet boundary conditions ($u=0$ along $\partial \mathcal{S}$):
 \begin{equation}
 u(x,y) = (x^2 - x^4) (y^4 - y^2). \label{exactsolution}
 \end{equation}
@@ -562,24 +538,24 @@ f(x,y) = 2 (1 - 6 x^2) y^2 (1 - y^2) + 2 (1 - 6 y^2) x^2 (1 - x^2).\label{manufa
 \end{equation}
 From now on we will refer to $u$ in \eqref{exactsolution} as ``$u_{ex}$'', the exact solution.  This same problem and solution appears in Chapter 4 of \citep{Briggsetal2000}, so these formulas are not original. % page 64
 
-Observe that the truncation error term $O(h^2)$ in equation \eqref{secondderivativeFD} has a coefficient proportional to fourth derivatives \citep{MortonMayers2005} so our FD method will not be exact on this problem.  That is, $u_{ex}$ has nonzero fourth derivatives.  This is \emph{good}.  We would not want to use the simpler form $u(x,y)=(x-x^2)(y^2-y)$, for example, to test convergence rate of the code because the decay of numerical error with refining grids is not at all generic.
+Observe that the truncation error term $O(h^2)$ in equation \eqref{secondderivativeFD} has a coefficient proportional to fourth derivatives \citep{MortonMayers2005} so our FD method will not be exact on this problem.  That is, $u_{ex}$ has nonzero fourth derivatives.  This is \emph{good} for testing, and we would not want to use the simpler form $u(x,y)=(x-x^2)(y^2-y)$, for example, to test convergence rate of the code, because we want the decay of numerical error with refining grids to be generic.
 
-Because we want to reuse this part also,\sidenote{See Chapter \ref{chap:mg}.} we put the code that computes formulas \eqref{exactsolution} and \eqref{manufacturedf} in source file \texttt{structuredpoisson.c}.  Code \ref{code:poissonexactrhs} shows how \eqref{exactsolution} is implemented as \texttt{formExact()} and how \eqref{manufacturedf} is implemented as \texttt{formRHS()}.
+Code \ref{code:poissonexactrhs} shows how \eqref{exactsolution} is implemented as \texttt{formExact()} and how \eqref{manufacturedf} is implemented as \texttt{formRHS()}.  We will reuse these parts in Chapters \ref{chap:mg} and \ref{chap:sc}.
 
 \cinputpart{structuredpoisson.c}{\CODELOC}{Methods which assemble the exact solution and the right-hand side of equation \eqref{poissonsquareFD}.}{II}{//FORMEXACTRHS}{//ENDFORMEXACTRHS}{code:poissonexactrhs}
 
-The computations in Code \ref{code:poissonexactrhs} use only local grid coordinates $(i,j)$, with loops over index ranges as shown in Figure \ref{fig:localpartofgrid}.  \PETSc pointer arithmetic (i.e.~tricks) allows us to index the C arrays we get from \texttt{DMDAVecGetArray()} using $(i,j)$.  When we are done with computing \pVecs we restore the C arrays by calling \texttt{DMDAVecRestoreArray()}, and we explicitly ask for the \pVec objects to be assembled by calling \texttt{VecAssemblyBegin/End()}, just as in Chapter \ref{chap:gs}.
+The computations in Code \ref{code:poissonexactrhs} use only local grid coordinates $(i,j)$.  \PETSc pointer arithmetic (i.e.~tricks) allows us to index the C arrays we get from \texttt{DMDAVecGetArray()} using $(i,j)$.  When we are done with computing \pVecs we restore the C arrays by calling \texttt{DMDAVecRestoreArray()}, and we explicitly ask for the \pVec objects to be assembled by calling \texttt{VecAssemblyBegin/End()}, just as in Chapter \ref{chap:gs}.
 
 \cinputpart{poisson.c}{\CODELOC}{Set up \pDM, \pMat, and \pVec objects, and assemble the linear system.}{I}{//CREATE}{//ENDCREATE}{code:poissoncreate}
 
 
 \section{Solving the PDE}
 
-The code \texttt{poisson.c} uses our finite difference method \eqref{poissonsquareFD} to solve the Poisson problem with $f$ from \eqref{manufacturedf}.  Code \ref{code:poissoncreate} shows how \texttt{poisson.c} creates the various objects needed to solve the Poisson problem, namely one \pDM, one \pMat, and three \pVecs.  A \pDM object can compute matrix and vector sizes from the grid dimensions, so we call \texttt{DMCreateMatrix()} and \texttt{DMCreateGlobalVector()} to create \pMat and \pVec objects, respectively.  Then we call methods from \texttt{structuredpoisson.c}, as above, to assemble the matrix and vectors.
+Code \ref{code:poissoncreate} shows how \texttt{poisson.c} creates the various objects needed to solve the Poisson problem, namely one \pDM, one \pMat, and three \pVecs.  A \pDM object can compute matrix and vector sizes from the grid dimensions, so we call \texttt{DMCreateMatrix()} and \texttt{DMCreateGlobalVector()} to create \pMat and \pVec objects, respectively.  Then we call methods from \texttt{structuredpoisson.c} (Codes \ref{code:structuredpoisson} and \ref{code:poissonexactrhs} above) to assemble the matrix and vectors.
 
-\PETSc describes the linear system ``$A\bu=\bb$'' by one \pMat \texttt{A} and two \pVecs (\texttt{u} and \texttt{b}), but, as in Chapter \ref{chap:ls}, the system is solved by a \pKSP Krylov space method solver object.
+As in Chapter \ref{chap:ls}, the linear system itself is solved by a \pKSP Krylov space method solver object.  In Code \ref{code:poissonsolve} we create it and tell it about \pMat \texttt{A} through a call to \texttt{KSPSetOperators()}.  Recall there are two ways \texttt{A} is used, namely as the system matrix and as the ``material'' from which the preconditioner is built; this explains why \texttt{A} appears as two arguments of \texttt{KSPSetOperators()}.  We also call \texttt{KSPSetFromOptions()} so that we can change the \pKSP type at runtime (illustrated below).
 
-In Code \ref{code:poissonsolve} we create the \pKSP object and tell it about \texttt{A} through a call to \texttt{KSPSetOperators()}.  Recall there are two ways \texttt{A} is used, namely as the system matrix and as the ``material'' from which the preconditioner is built; this explains why \texttt{A} appears twice when calling \texttt{KSPSetOperators()}.  We also call \texttt{KSPSetFromOptions()} so that we can change the \pKSP type at runtime (illustrated below).  Solving the system means calling \texttt{KSPSolve()}.  Then we report on the solution by computing the numerical error by the norm $\|u-u_{ex}\|_\infty$.  Finally we wrap up by destroying objects and calling \texttt{PetscFinalize()}.
+The system is solved by calling \texttt{KSPSolve()}.  Then we report on the solution by computing the numerical error by the norm $\|u-u_{ex}\|_\infty$.  Finally we wrap up by destroying objects and calling \texttt{PetscFinalize()}.
 
 \cinputpart{poisson.c}{\CODELOC}{Solve using \pKSP, and report on solution.}{II}{//SOLVE}{//ENDSOLVE}{code:poissonsolve}
 

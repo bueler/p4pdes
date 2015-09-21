@@ -85,7 +85,7 @@ PetscErrorCode formRHS(DM da, Vec b) {
                     + (1.0 - 6.0*y2) * x2 * (1.0 - x2) );
         ab[j][i] = hx * hy * f;
       } else {
-        ab[j][i] = 0.0;                          // on bdry we have 1*u = 0
+        ab[j][i] = 0.0;                          // on bdry the eqn is 1*u = 0
       }
     }
   }
