@@ -562,15 +562,11 @@ The system is solved by calling \texttt{KSPSolve()}.  Then we report on the solu
 
 \section{Runtime controls and viewers}
 
-As a first run do:
+In a first run we want to see the residuals decrease:
 \begin{cline}
 $ cd c/ch3/
 $ make poisson
 $ ./poisson -ksp_monitor
-\end{cline}
-%$
-to get output
-\begin{cline}
   0 KSP Residual norm 1.020952970432e-01 
   1 KSP Residual norm 2.656923348626e-02 
   2 KSP Residual norm 8.679141000397e-03 
@@ -581,31 +577,32 @@ to get output
   7 KSP Residual norm 2.650467236964e-07 
 on 9 x 9 grid:  error |u-uexact|_inf = 0.000763959
 \end{cline}
-Recall that a default $9\times 9$ grid was chosen in calling \texttt{DMDACreate2d()}.  We see seven iterations of the KSP method, a small final residual norm, and an apparently small numerical error.  It is reasonable to think that we have solved a first PDE problem, but skepticism, and further inspection, is in order.
+%$
+Recall that a default $9\times 9$ grid was chosen in calling \texttt{DMDACreate2d()}.  We see seven iterations of the KSP method, a small final residual norm, and an apparently small numerical error.  It is reasonable to think that we have solved the problem, but further inspection is definitely in order.
 
 \begin{marginfigure}
 \bigskip
 \includegraphics[width=0.8\textwidth]{dmM5N7}
-\caption{\PETSc can also graphically show the structured-grid \pDMDA at runtime, here for a single-process run.}
+\caption{\PETSc can show the structured-grid \pDMDA at runtime, here for a single-process run.}
 \label{fig:dmM5N7}
 \end{marginfigure}
 
-Options \texttt{-da\_grid\_x M -da\_grid\_y N} set the grid at runtime.  Furthermore, we can examine both the grid (i.e.~the \pDM object) and our assembled \pMat graphically at runtime.  If X11 or other windowing is correctly linked in your \PETSc installation then
+Options \texttt{-da\_grid\_x M -da\_grid\_y N} set the grid at runtime, and we can examine both the grid (i.e.~the \pDM object) and our assembled \pMat graphically to check these objects.  If X11 or other windowing is correctly linked in your \PETSc installation then
 \begin{cline}
 $ ./poisson -da_grid_x 5 -da_grid_y 7 -dm_view draw -draw_pause 5
 \end{cline}
 %$
-gives Figure \ref{fig:dmM5N7}, same as the $M=5$, $N=7$ grid in Figure \ref{fig:unitsquaregrid} with global node ordering by formula \eqref{orderingfd}.  Options
+gives Figure \ref{fig:dmM5N7}, same as the $M=5$, $N=7$ grid in Figure \ref{fig:unitsquaregrid}, including the global node ordering by formula \eqref{orderingfd}.  Options
 \begin{cline}
 $ ./poisson -da_grid_x 5 -da_grid_y 7 -a_mat_view draw -draw_pause 5
 \end{cline}
 %$
-show a graphic similar to Figure \ref{fig:matM5N7}.  This suggests that we have the right kind of matrix structure for the Poisson problem, namely a symmetric sparse matrix with tridiagonal blocks along the diagonal and a banded structure.
+show a graphic similar to Figure \ref{fig:matM5N7}.  These views suggest that we have the right kind of matrix structure for the Poisson problem, namely a symmetric sparse matrix with tridiagonal blocks along the diagonal and a banded structure.
 
 \begin{marginfigure}
 \bigskip
 \includegraphics[width=0.95\textwidth]{matM5N7}
-\caption{\PETSc can show the matrix structure using X11 windows at runtime.  The actual graphic is in color, but here the two shades of dark gray show positive and negative entries while the light gray shows allocated locations which are zero.}
+\caption{\PETSc can show the matrix structure too.  The actual graphic is in color, but here the two dark shades show positive and negative entries while the light shade shows allocated locations which are zero.}
 \label{fig:matM5N7}
 \end{marginfigure}
 
@@ -630,33 +627,33 @@ on 4 x 3 grid:  error |u-uexact|_inf = 0.0085927
 \end{cline}
 %$
 
-Finally, a ``movie'' of the \pKSP iterates $\{\bu_k\}$ comes from running
+Additionally, a ``movie'' of the \pKSP iterates $\{\bu_k\}$ comes from running
 \begin{cline}
 $ ./poisson -da_grid_x 100 -da_grid_y 100 -ksp_monitor_solution
 \end{cline}
 %$
-(not shown).  As in Chapter \ref{chap:ls}, a line graph of the (preconditioned) residual norm is from \texttt{-ksp\_monitor\_lg\_residualnorm} (also not shown).  All of the above viewing options can, and probably should, be used on any under-development PDE-solving code on a structured grid.
+(not shown).  Alternatively, as in Chapter \ref{chap:ls}, a line graph of the (preconditioned) residual norm is from \texttt{-ksp\_monitor\_lg\_residualnorm} (also not shown).  These various viewing options should be used on under-development PDE-solving code on a structured grid.
 
-In fact there are two ways to specify a grid.  One is to specify the grid dimensions directly as above, but the other is to have the \pDM refine the grid by factors of two.  More precisely, the number of \emph{subintervals} is increased by a factor of two.  For example, this option replaces our default grid of 9 by 9 subintervals (i.e.~10 by 10 grid \emph{points}) by 18 subintervals in each direction (i.e.~19 by 19 points):
+There are two ways to specify grid refinement.  One is to specify the grid dimensions directly as above, but the other is to have the \pDM refine the grid by factors of two.  More precisely, the number of \emph{subintervals} is increased by a factor of two.  For example, this option replaces our default grid of $8$ subintervals (i.e.~$9 \times 9$ grid \emph{points}) by $16$ subintervals (i.e.~$17\times 17$ points) in each direction:
 \begin{cline}
 $ ./poisson -da_refine 1
-on 19 x 19 grid:  error |u-uexact|_inf = 0.000155374
+on 17 x 17 grid:  error |u-uexact|_inf = 0.000196764
 \end{cline}
 %$
 
-In \PETSc the choices of solver and parameters can be made at runtime, once we have adequately-described the problem in terms of \PETSc objects.  We have delayed questions of convergence and efficiency until runtime.  However, now that we have some confidence that we can control our code at runtime, here is what we might want to know:\begin{itemize}
+Choices of solver and parameters can be made at runtime, once we have adequately-described the problem in terms of \PETSc objects.  We have delayed questions of convergence and efficiency until runtime, but here is what we might want to know now:\begin{itemize}
 \item is our numerical method correctly implemented? (\emph{convergence})
 \item what is going on inside \PETSc? (\emph{exposure})
 \item how to get high performance? (\emph{efficiency})
 \end{itemize}
-In the next three sections we address these in turn, but we only get the most shallow start on efficiency.  Attaining efficiency both requires a better understanding of this goal, and a better appreciation of preconditioning, both of which are addressed in later chapters.
+In the next three sections we address these in turn, with only a superficial stab at efficiency.  Attaining efficiency requires a better understanding of this goal, and better choices for preconditioners, than we have now.
 
 
 \section{Convergence}
 
-We want to see the numerical errors decrease as we refine the grid.  Such decrease is expected because the finite differences become better approximations of the corresponding derivatives, but we want to \emph{see} it, so we know the code is correct.  Furthermore we want the rate at which the error decreases to match what we expect in theory.
+We want to see the numerical errors decrease as we refine the grid.  Such decrease is expected because the finite differences become better approximations of the corresponding derivatives, but we want to \emph{see} it, so we know our actual implementation is correct.  The rate at which the error decreases should match what we expect from theory.
 
-The code \texttt{poisson.c} already generates the max norm error, and we know how to refine the grid by factors of two, so let's generate some  data.  Here is a bash loop:
+Recall that \texttt{poisson.c} already generates the max norm error (Code \ref{code:poissonsolve}), and we know how to refine the grid by factors of two, so here is a bash loop refinement study:
 \label{poissonconvdata}
 \begin{cline}
 $ for K in 0 1 2 3 4 5 6; do ./poisson -da_refine $K; done
@@ -669,16 +666,16 @@ on 257 x 257 grid:  error |u-uexact|_inf = 1.73086e-06
 on 513 x 513 grid:  error |u-uexact|_inf = 1.23567e-06
 \end{cline}
 %$
-The data is shown in Figure \ref{fig:poisson-conv} as the stars.  For the four coarsest grids refinement by a factor of two gives a reduction in error by a factor of about four, as expected because our FD method is $O(h^2)$ \citep{MortonMayers2005}.  Unfortunately the error seems to have stopped falling for the three finer grids, at a numerical error level around $\|u-u_{ex}\|_\infty \approx 10^{-6}$.
+The data is shown in Figure \ref{fig:poisson-conv} as stars.  For the four coarsest grids refinement by a factor of two gives a reduction in error by a factor of about four, as expected because our FD method is $O(h^2)$ \citep{MortonMayers2005}.  Unfortunately the error seems to have stopped falling for the three finer grids, at a numerical error level around $\|u-u_{ex}\|_\infty \approx 10^{-6}$.
 
 \begin{figure}
 \bigskip
 \includegraphics[width=0.75\textwidth]{poisson-conv}
-\caption{To show convergence we refine the \pDM grid by factors of two so that $h\to 0$.  With the default settings the error seems to level out (stars).  With a stronger linear solver tolerance (\texttt{-ksp\_rtol 1.0e-12}) the errors (dots) fall at the expected rate (dashed).}
+\caption{To show convergence we refine the \pDM grid by factors of two so that $h\to 0$.  With a stronger linear solver tolerance (\texttt{-ksp\_rtol 1.0e-12}) the errors (dots) fall at the expected rate (dashed), unlike with the default tolerance ($10^{-5}$; stars).}
 \label{fig:poisson-conv}
 \end{figure}
 
-Is the reduced apparent rate of convergence a sign of an implementation error?  In fact not, because simply asking for the \pKSP object to solve the linear system more accurately is effective.  On a particular grid we can see the difference using option \texttt{-ksp\_monitor} to watch the residuals and setting a stronger value for the \pKSP relative tolerance for residual norm size (\texttt{-ksp\_rtol}):
+This stagnation of convergence is not a sign of an implementation error.  It comes from the default tolerance for the \pKSP object, and we simply need to ask for more accuracy using option \texttt{-ksp\_rtol}.  On a particular grid we can see the effect of a smaller tolerance by using option \texttt{-ksp\_monitor} to watch the residuals:
 \begin{cline}
 $ ./poisson -ksp_monitor
   0 KSP Residual norm 1.007660904704e-01 
@@ -697,9 +694,7 @@ $ ./poisson -ksp_monitor -ksp_rtol 1.0e-12
  14 KSP Residual norm 3.105665682224e-14 
 on 10 x 10 grid:  error |u-uexact|_inf = 0.000621527
 \end{cline}
-On this coarse grid the numerical error is nearly the same, but on finer grids the fact that the linear system is solved more exactly will bring the numerical solution closer to the exact one.  However, the \pKSP takes twice as many iterations to achieve the desired residual norm reduction.
-
-In fact, rerunning the bash loop with the stronger $10^{-12}$ tolerance yields excellent evidence of convergence as shown by the dots in Figure \ref{fig:poisson-conv}.  The linear-fit rate of this logarithmic error data is $O(h^{1.9999})$.  Our implementation is correct.
+On this coarse grid the numerical error is nearly the same, but on finer grids the fact that the linear system is solved more exactly also brings the numerical solution significantly closer to the exact one.  In fact, rerunning the above bash loop with the stronger $10^{-12}$ tolerance yields excellent evidence of convergence (dots in Figure \ref{fig:poisson-conv}).  The linear-fit rate of this logarithmic error data is $O(h^{1.9999})$.  Our implementation is correct.
 
 
 \section{Exposing \PETSc's options and solvers}
