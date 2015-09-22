@@ -803,38 +803,37 @@ Of course, this is un-preconditioned CG.  While it is not surprising that \textt
 \label{fig:poisson-cg-scale}
 \end{figure}
 
-Some theoretical bounds for the number CG iterations helps to understand these results, but stating a theorem requires preparation.  Suppose that $A$ is an $N\times N$, symmetric, and positive-definite matrix.  We can define a new norm, the \emph{$A$-norm}, on $v\in\RR^N$,
+A theoretical bound on the number of CG iterations would help to understand these results, but stating such a theorem requires preparation.  Suppose that $A$ is an $N\times N$, symmetric, and positive-definite matrix.  We can define a new norm, the \emph{$A$-norm}, on $\bv\in\RR^N$,
 \begin{equation}
-\|v\|_A = \ip{v}{Av}^{1/2} = (v^\top Av)^{1/2}.  \label{normAdefn}
+\|\bv\|_A = \ip{\bv}{A\bv}^{1/2} = (\bv^\top A\bv)^{1/2}.  \label{normAdefn}
 \end{equation}
-Recall the notation that $\be_k = \bu_k - \bu$ is the error of $\bu_k$ as a solution to $A\bu=\bb$.  Denote by $\sigma_j(A)$ the ordered singular values with subscript $0$ indicating the largest value.  Recall that if $A$ is symmetric and positive-definite then $\sigma_j(A)=\lambda_j(A)$, where $\lambda_j(A)$ is an (ordered) eigenvalue of $A$.  Note $\lambda_{N-1}(A)>0$ if $A$ is symmetric positive-definite.  Finally, the 2-norm condition of a symmetric positive-definite matrix is the ratio of eigenvalues,
-	$$\kappa_2(A) = \lambda_0(A)/\lambda_{N-1}(A) \ge 1.$$
-
-Now we can state a conceptually-useful theorem giving the sense in which CG is optimal and an error bound.  Part (\emph{i}) is proved by \citet[p.~50]{Greenbaum1997}.  Part (\emph{ii}) follows from (\emph{i}) by using Chebyshev polynomials to construct a polynomial which is small on the interval $[\lambda_{N-1}(A),\lambda_0(A)]$ \citep[p.~51]{Greenbaum1997}.  Part (\emph{iii}) follows from (\emph{ii}) by understanding the norm $\|\cdot\|_A$ in terms of the 2-norm and the matrix $\sqrt{A}$; see the Exercises.  We state part (\emph{iii}) for the simple reason that $\|\br_k\|_2$ is a quantity computable by \PETSc, given the information available, while $\|\be_k\|_A$ is not.  Parts (\emph{ii}) and (\emph{iii}) are not optimal bounds, though it is easy to state that for part (\emph{ii}) \citep[p.~51]{Greenbaum1997}.
+Recall that the eigenvalues $\lambda_j(A)$ of such a matrix $A$ are positive and identical to the singular values, so that the 2-norm condition number of $A$ is the ratio of the largest and smallest eigenvalues,
+	$$\kappa_2(A) = \frac{\lambda_{\max}(A)}{\lambda_{\min}(A)} \ge 1.$$
+Finally, recall that $\be_k = \bu_k - \bu$ denotes the error of $\bu_k$ as a solution to $A\bu=\bb$.  In these terms we can state the following conceptually-useful theorem giving the sense in which CG is optimal\sidenote{In  fact this sense was already stated in Table \ref{tab:krylovcompare}.} and supplying an error bound.
 
 \renewcommand{\labelenumi}{(\roman{enumi})}
 \begin{theorem}  \label{thm:cgiterations}
-Suppose $\bu_k$ are the iterates from CG.  Then:\begin{enumerate}
-\item Considering all real polynomials $p_k(x)$ of degree $k$ such that $p_k(0)=1$,
-    $$\|\be_k\|_A = \min_{p_k} \|p_k(A) \be_0\|_A.$$
-\item The relative $A$-norm of the error at the $k$th iteration is bounded by an amount which is computable from the 2-norm condition number $\kappa=\kappa_2(A)$, namely
-	$$\frac{\|\be_k\|_A}{\|\be_0\|_A} \le 2 \left(\frac{\sqrt{\kappa}-1}{\sqrt{\kappa}+1}\right)^k.$$
-\item The relative 2-norm of the residual is likewise bounded, but with an additional $\sqrt{\kappa}$ factor:
-	$$\frac{\|\br_k\|_2}{\|\br_0\|_2} \le 2 \sqrt{\kappa} \left(\frac{\sqrt{\kappa}-1}{\sqrt{\kappa}+1}\right)^k.$$
+Suppose $\bu_j$ are the iterates from un-preconditioned CG.  Then:\begin{enumerate}
+\item Let $\mathcal{P}_j^1$ be the space of all real polynomials $p(x)$ of degree at most $j$ such that $p(0)=1$.  Then
+    $$\|\be_j\|_A = \min_{p \in \mathcal{P}_j^1} \|p(A) \be_0\|_A.$$
+\item The relative $A$-norm of the error at the $j$th iteration is bounded by an amount which is computable from the 2-norm condition number $\kappa=\kappa_2(A)$, namely
+	$$\frac{\|\be_j\|_A}{\|\be_0\|_A} \le 2 \left(\frac{\sqrt{\kappa}-1}{\sqrt{\kappa}+1}\right)^j.$$
+\item The relative 2-norm of the residual is likewise bounded:
+	$$\frac{\|\br_j\|_2}{\|\br_0\|_2} \le 2 \sqrt{\kappa} \left(\frac{\sqrt{\kappa}-1}{\sqrt{\kappa}+1}\right)^j.$$
 \end{enumerate}
 \end{theorem}
 
-Consider the number of iterations $k$ needed to reduce $\|\be_k\|_A$ by a factor of $\eps<0$.  Note $(x-1)/(x+1) = 1 - 2/(x+1)$, and recall that $\ln(1-x) \approx -x$ for small $x$.  If $\sqrt{\kappa} = \sqrt{\kappa_2(A)}$ is large then part (\emph{ii}) says that $\|\be_k\|_A$ is reduced from its initial value $\|\be_0\|_A$ by a factor of $\eps$ if
-    $$k \le \frac{\ln(\eps/2)}{\ln\left(1 - \frac{2}{\sqrt{\kappa}+1}\right)} \approx -\frac{\ln(\eps/2)}{2} (\sqrt{\kappa}+1).$$
+Part (\emph{i}) of the Theorem is proved by \citet[p.~50]{Greenbaum1997}.  Part (\emph{ii}) follows from (\emph{i}) by using Chebyshev polynomials to construct a polynomial which is small on the interval $[\lambda_{\min}(A),\lambda_{\max}(A)]$ \citep[p.~51]{Greenbaum1997}.  Part (\emph{iii}) follows from (\emph{ii}) by understanding the norm $\|\cdot\|_A$ in terms of the 2-norm and the matrix $\sqrt{A}$; see Exercise \ref{chap:st}.\ref{exer:st:Anorm}.  We state part (\emph{iii}) for the simple reason that $\|\br_k\|_2$ is a quantity computed by \PETSc while $\|\be_k\|_A$ is not.  Parts (\emph{ii}) and (\emph{iii}) are not optimal bounds, though such can be found \citep[p.~51]{Greenbaum1997}.
+
+Consider the number of iterations $j$ needed to reduce $\|\be_j\|_A$ by a factor of $\eps<0$.  Note $(x-1)/(x+1) = 1 - 2/(x+1)$, and recall that $\ln(1-x) \approx -x$ for small $x$.  If $\sqrt{\kappa}$ is large then part (\emph{ii}) of the Theorem says that $\|\be_j\|_A$ is reduced from its initial value $\|\be_0\|_A$ by a factor of $\eps$ if
+    $$j \le \frac{\ln(\eps/2)}{\ln\left(1 - \frac{2}{\sqrt{\kappa}+1}\right)} \approx -\frac{\ln(\eps/2)}{2} (\sqrt{\kappa}+1).$$
 In summary,
 \begin{equation}
-\frac{\|\be_k\|_A}{\|\be_0\|_A} \le \eps \quad \text{if} \quad k = O\left(\sqrt{\kappa_2(A)}\right).  \label{cgkappaiter}
+\frac{\|\be_j\|_A}{\|\be_0\|_A} \le \eps \quad \text{if} \quad j = O\left(\sqrt{\kappa_2(A)}\right).  \label{cgkappaiter}
 \end{equation}
-The same conclusion applies to reducing $\|\br_k\|_2$ by a factor of $\eps$, though the analysis is not so simple; see the Exercises.
+The same conclusion applies to reducing $\|\br_j\|_2$ by a factor of $\eps$, though the analysis is not so simple; see Exercise \ref{chap:st}.\ref{exer:st:Anorm}.
 
-Though the theorem states a key connection between $\kappa_2(A)$ and iteration count, the precise condition number is not typically available.  On the other hand we can ask \PETSc to approximate eigenvalues of $A$ as the Krylov iteration proceeds.  Note that we need the iteration to use the \emph{un}-preconditioned operator when computing eigenvalues.\sidenote{Instead of \texttt{-pc\_type none} one can also use right-side-preconditioning \texttt{-ksp\_pc\_side RIGHT}.}  Doing this will largely explain the poor scaling of CG iteration count for our case (i.e.~a symmetric-matrix, structured-grid Poisson problem).
-
-Concretely,
+Though the theorem states a key connection between condition number and iteration count, the precise condition number of a discretized-PDE matrix $A_h$, coming from a mesh with spacing $h$, is not typically available.  On the other hand we can ask \PETSc to approximate eigenvalues of $A_h$ as the Krylov iteration proceeds.\sidenote{We need the iteration to use the \emph{un}-preconditioned operator when computing eigenvalues, so use \texttt{-pc\_type none} or right-side-preconditioning \texttt{-ksp\_pc\_side RIGHT}.}  Doing this will largely explain the poor scaling of CG iteration count for our symmetric-matrix, structured-grid, Poisson problem case:
 \begin{cline}
 $ ./poisson -ksp_type cg -pc_type none -ksp_compute_eigenvalues
 Iteratively computed eigenvalues
@@ -844,26 +843,22 @@ Iteratively computed eigenvalues
 on 9 x 9 grid:  error |u-uexact|_inf = 0.00076388
 \end{cline}
 %$
-In fact $17$ eigenvalues\sidenote{There were $17$ \pKSP iterations---confirm this with option \texttt{-ksp\_converged\_reason}---and the method computes one additional eigenvalue per iteration.} are output by this run, but we suppress all but the first (smallest) and last (largest), as they suffice for approximating $\kappa_2(A)$.
-
-The approximate condition number on the above grid, with spacing $h=1/8$, is
+In fact $17$ eigenvalues were printed, because there were $17$ \pKSP iterations and the method computes one additional eigenvalue per iteration.  We suppressed all but the first (smallest) and last (largest), as they suffice for approximating the condition number.  Thus, on the above grid with spacing $h=1/8$:
     $$\kappa_2(A_{h=1/8}) \approx \frac{7.69543}{0.304482} = 25.274.$$
-We also re-run with option \texttt{-da\_refine N} for \texttt{N}$=1,2$ to get
+Re-running with option \texttt{-da\_refine N} for \texttt{N}$=1,2$ we get:
 \begin{align*}
     \kappa_2(A_{h=1/16}) &\approx \frac{7.92311}{0.0768589} = 103.09, \\
     \kappa_2(A_{h=1/32}) &\approx \frac{7.98073}{0.0192611} = 414.34.
 \end{align*}
-In the fact that
-    $$414 \approx 4 \times 103 \approx 4^2 \times 25$$
-we now see the issue clearly.  Each time the grid is refined by a factor of two (i.e.~$h\to h/2$), the condition number $\kappa_2(A)$ apparently increases by a factor of four.  Then \eqref{cgkappaiter} says we should expect an increase in iteration count by a factor of two.
+We now see the issue clearly.  Each time the grid is refined by a factor of two (i.e.~$h\to h/2$), the condition number $\kappa_2(A_h)$ increases by a factor of four.  Then \eqref{cgkappaiter} says we should expect an increase in iteration count by a factor of two.
 
-In fact, as an \emph{a priori} statement, the $2$-norm condition number of the discrete Poisson operator (matrix) $A_h$ on a uniform rectangular grid with spacing $h$ is well-known to be
+In fact, as an \emph{a priori} statement, the $2$-norm condition number of the discrete Poisson matrix $A_h$ on a uniform rectangular grid with spacing $h$ is known to be
 \begin{equation}
     \kappa_2(A_h) = O(h^{-2}), \label{kappaofh}
 \end{equation}
-exactly as seen experimentally above.  This can be shown by exact analysis using the eigenvectors of the discrete Poisson problem \citep{Briggsetal2000,Elmanetal2005}, though such analysis is special to the uniform rectangular case.  A more robust and general FEM error analysis which applies to unstructured grids having a mesh-uniformity bound \citep{Elmanetal2005} also applies.  In either case, combining \eqref{cgkappaiter} and \eqref{kappaofh} shows that we should expect
+exactly as seen experimentally above.  This can be shown by exact analysis using the eigenvectors of the discrete Poisson problem in the uniform rectangular case \citep{Briggsetal2000}.  A more robust and general FEM error analysis which applies to unstructured grids having a mesh-uniformity bound \citep{Elmanetal2005} also applies.  In either case, combining \eqref{cgkappaiter} and \eqref{kappaofh} shows that we should expect to need
 \begin{equation}
-    k = O(h^{-1}), \label{kofh}
+    j = O(h^{-1}), \label{kofh}
 \end{equation}
 iterations to solve our discrete Poisson problem to a given relative tolerance using un-preconditioned CG.
 
@@ -952,7 +947,7 @@ $ ./poisson -ksp_converged_reason -ksp_type cg -pc_type none -log_summary
 %$
 By looking at the ``Count'' column, and noting that the iteration count is known from \texttt{-ksp\_converged\_reason} output, confirm that the computational work of one CG iteration consists of two inner products (\texttt{VecTDot}), three vector updates (\texttt{VecAXPY} and \texttt{VecAYPX}), and one matrix-vector product (\texttt{MatMult}).  Find a pseudo-code for CG in some textbook and confirm this work pattern.
 
-\item Let $A$ be a symmetric positive-definite $N\times N$ matrix.  Note $A$ is diagonalizable and has positive eigenvalues.
+\item \label{exer:st:Anorm} Let $A$ be a symmetric positive-definite $N\times N$ matrix.  Note $A$ is diagonalizable and has positive eigenvalues.
   \renewcommand{\labelenumii}{(\emph{\roman{enumii}})}
   \begin{enumerate}
   \item Show that \eqref{normAdefn} defines a norm on $\RR^N$.
