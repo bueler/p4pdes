@@ -871,17 +871,16 @@ So IC($0$) is not as promising a preconditioner as we had first hoped.
 
 \section{Krylov is not enough \dots \emph{good} preconditioning is needed}
 
-When solving the sparse linear systems from discretized PDEs, the Krylov iterations like CG and the preconditioning methods like IC($0$) and ILU($0$) are useful tools.  In particular, they can improve upon naively-applied direct linear algebra methods.
+When solving the sparse linear systems from discretized PDEs, Krylov iterations like CG and preconditioning methods like IC($0$) are useful tools because they can improve upon naively-applied direct linear algebra methods.  However, besides the bad news above that CG iterations scale badly with refining grids, there is more ``bad news'' for our Krylov approach.  Namely, that smartly-applied direct linear algebra techniques can also beat CG+IC($0$), at least in the two-dimensional case of this Chapter.
 
-However, besides the bad news of the last section that CG iterations scale badly with refining grids, there is more ``bad news'' for our Krylov approach.  Namely, that smartly-applied direct linear algebra techniques can also beat CG+IC($0$).  Specifically, suppose we run \texttt{poisson} with option \texttt{-da\_refine 7}, to give a finer $1025 \times 1025$ grid and about $10^6$ degrees of freedom.  Suppose we compare IC($0$)-preconditioned CG iterations with two other methods:
+Specifically, suppose we run \texttt{poisson} with option \texttt{-da\_refine 7}, to give a $1025 \times 1025$ grid and about $10^6$ degrees of freedom.  Suppose we compare IC($0$)-preconditioned CG iterations with two other methods:
 \begin{cline}
 $ ./poisson -da_refine 7 -ksp_type cg -pc_type icc
 $ ./poisson -da_refine 7 -ksp_type preonly -pc_type cholesky -pc_factor_mat_ordering_type nd
 $ ./poisson -da_refine 7 -ksp_type preonly -pc_type lu -pc_factor_mat_ordering_type nd
 \end{cline}
 %$
-To be precise, we also added option \texttt{-ksp\_converged\_reason} to the CG run, so as to count iterations, and \texttt{-ksp\_rtol 1.0e-10} so as to be ``fair'' to the direct solvers.  We get the first three rows of Table \ref{tab:cgdirectmg}.
-
+(To be precise, we added options \texttt{-ksp\_converged\_reason} and \texttt{-ksp\_rtol 1.0e-10} to the CG run.)  We get the first three rows of Table \ref{tab:cgdirectmg}, the first of which requires no further explanation because it is the best-so-far way of using CG.  The second and third runs, which are faster, are direct methods.
 %timer ./poisson -da_refine 7 -ksp_type cg -pc_type icc -ksp_converged_reason -ksp_rtol 1.0e-10
 %timer ./poisson -da_refine 7 -ksp_type preonly -pc_type cholesky -pc_factor_mat_ordering_type nd
 %timer ./poisson -da_refine 7 -ksp_type preonly -pc_type lu -pc_factor_mat_ordering_type nd
@@ -900,18 +899,17 @@ fish2   & cg         & mg            &  2.60 &    5 \\
 \caption{Time and iteration count for \texttt{-da\_refine 7} runs, a $1025 \times 1025$ grid on a single MPI process on \WORKSTATION.  The \texttt{fish2} code appears in Chapter \ref{chap:mg}.} \label{tab:cgdirectmg}
 \end{table}
 
-The first of the above runs requires no explanation; it is the best-so-far way of using CG.  The second and third runs are direct methods.  Option \texttt{-pc\_factor\_mat\_ordering\_type nd} asks that the direct method be applied using the \emph{nested dissection} ordering \citep{George1973}.  While we give no details, of course in outline the unknowns and equations are re-ordered to reduce the cost of the factorization.  Nested-dissection application of the two direct solvers is apparently competitive with IC($0$)-preconditioned CG.
+Option \texttt{-pc\_factor\_mat\_ordering\_type nd} asks that the direct method be applied using the \emph{nested dissection} ordering \citep{George1973}.  While we give no details, in outline the unknowns and equations are re-ordered to reduce the cost of the factorization.  For LU factorization the nested dissection ordering is actually the \PETSc default for single-processor runs.\sidenote{And for this reason, the result of the \texttt{-ksp\_type preonly -pc\_type lu} was not in Table \ref{tab:poissontiming}.}  In any case, the two direct solvers in Table \ref{tab:cgdirectmg} are clearly competitive with IC($0$)-preconditioned CG.
 
-Regarding the option \texttt{-pc\_factor\_mat\_ordering\_type} and \PETSc defaults, for LU factorization the nested dissection ordering is actually the default for single-processor runs.\sidenote{And for this reason, the result of the \texttt{-ksp\_type preonly -pc\_type lu} was not in Table \ref{tab:poissontiming}.}  % FIXME: check on parallel case
-For Cholesky preconditioning, which does not require pivoting for stable solutions of symmetric positive-definite problems, the nested-dissection reordering is not the default.  % FIXME: what to say here?
+At this point the impulsive reader might give up on Krylov methods, but that also would be premature.  We do need to find a better preconditioner if we are going to have scalable solutions of this Poisson PDE problem.  Finding such methods will eventually show that properly-preconditioned Krylov iterations give both efficient and parallel-scalable solutions of large nonlinear and variable-coefficient elliptic PDE problems in 2D and 3D, something direct methods of linear algebra do not achieve.  Chapters \ref{chap:mg} and \ref{chap:sc} begin to fulfill this promise.
 
-At this point the impulsive reader might give up on Krylov methods, but that also would be premature.  However, we do need to find a better preconditioner if we are going to have scalable solutions of this Poisson PDE problem.  Furthermore, quite a bit of exploration will eventually show that properly-preconditioned Krylov iterations give robust \emph{parallel-scalable} solutions of large nonlinear and variable-coefficient elliptic PDE problems in 2D and 3D.  In Chapters \ref{chap:nl} and \ref{chap:mg} we will start to fulfill this promise.
-
-For now, so that the reader does not despair, note we are headed toward geometric multigrid methods (Chapter \ref{chap:mg}).  These methods can act as preconditioners on Krylov iterations, a combination which provides optimal scaling for the structured, rectangular-grid Poisson problem of the current Chapter.  Thus we add one more run to the results in Table \ref{tab:cgdirectmg}, namely\sidenote{Again we actually added options \texttt{-ksp\_converged\_reason -ksp\_rtol 1.0e-4}, for iterations and fairness.}
+For now, so that the reader does not despair, note we are headed toward geometric multigrid methods (Chapter \ref{chap:mg}).  These methods can act as preconditioners on Krylov iterations, a combination which provides optimal scaling for the structured, rectangular-grid Poisson problem of the current Chapter.  Thus we add one more run to the results in Table \ref{tab:cgdirectmg}, namely
 \begin{cline}
 ./fish2 -da_refine 7 -ksp_type cg -pc_type mg
 \end{cline}
-where \texttt{fish2.c} is a program we describe in Chapter \ref{chap:mg}.  The result shows further improvement over the nested-dissection direct methods.  However, it turns out that if we are to exploit the power of geometric multigrid then we need to do a better job using \PETSc's tools for assembling the finite linear system.  Specifically, we need to allow the \pDMDA object to ``tell us'' the grid on which we are assembling the linear system, something which is done in \texttt{fish2.c}.
+where \texttt{fish2.c} is a Chapter \ref{chap:mg} program for solving the same Poisson problem.  The result shows significant further improvement over the nested-dissection direct methods.
+
+However, to exploit the power of geometric multigrid we also need to do a better job using \PETSc's tools for assembling the finite linear system.  Specifically, we need to allow the \pDMDA object to ``tell us'' the grid on which we are assembling the linear system, something which is not done in \texttt{poisson.c}.
 
 
 \section{Exercises}
@@ -922,14 +920,12 @@ where \texttt{fish2.c} is a program we describe in Chapter \ref{chap:mg}.  The r
 
 \item Use \texttt{DMDACreate1d()}, and other appropriate modifications of \texttt{poisson.c} and \texttt{structuredpoisson.c}, to write a code \texttt{poisson1D.c} for the 1D Poisson problem
     $$-u'' = f, \quad u(0)=u(1)=0.$$
-For simplicity, choose exact solution $u(x)=x^2(1-x^2)$ to determine $f(x)$.  Note you can use \texttt{MatSetValues()} instead of \texttt{MatSetValuesStencil()} because indexing is easy in 1D.  Show that your results converge by generating numerical error norms on a sequence of refining grids, as done in Figure \ref{fig:poisson-conv}; again the errors should go to zero as $O(h^2)$.  Find a grid refinement level, and use \pKSP options as appropriate, to get 11 digit accuracy at every grid point.  \emph{It will never again be this good.}
+For simplicity, choose exact solution $u(x)=x^2(1-x^2)$ to determine $f(x)$.  Note you can either use \texttt{MatSetValues()} or \texttt{MatSetValuesStencil()} because indexing is easy in 1D.  Show that your results converge on a sequence of refining grids, as done in Figure \ref{fig:poisson-conv}; the errors should go to zero as $O(h^2)$.  Find a grid refinement level, and use \pKSP options as appropriate, to get 11 digit accuracy at every grid point.  \emph{It will never again be this good.}
 %  FD is:  - U_{i-1} + 2 U_i - U_{i+1} = h^2 f_i
 %  for exact u:  u'   = 2x(1-x^2) + x^2(-2x) = 2x - 4x^3
 %                -u'' = -(2 - 12 x^2) = 12x^2 - 2
 
 \item Modify \texttt{structuredpoisson.c} to allow non-homogeneous Dirichlet boundary data $u|_{\partial \mathcal{S}}=g$.  Test the correctness (i.e.~convergence at the expected rate) of your code by solving \eqref{poissonsquare} with both $f$ and $g$ derived from an exact solution $u(x,y)=3x + \sin(20xy)$.  Again examine  numerical errors under grid refinement.
-
-\item Use \texttt{DMDACreate3d()} and etc.~in a code \texttt{poisson3D.c} solve a 3D Poisson problem on the unit cube $\mathcal{C}=[0,1]^3$.  Looking forward, how is the approach taken in Chapter \ref{chap:mg} different from your code?
 
 \item \label{exer:st:jacobivsnone} Confirm the nearly-identical performance of un-preconditioned and Jacobi-preconditioned CG, by doing
 \begin{cline}
@@ -945,16 +941,23 @@ Now confirm that IC($0$) preconditioning gives lower iteration counts but the sa
 $ ./poisson -ksp_converged_reason -ksp_type cg -pc_type none -log_summary
 \end{cline}
 %$
-By looking at the ``Count'' column, and noting that the iteration count is known from \texttt{-ksp\_converged\_reason} output, confirm that the computational work of one CG iteration consists of two inner products (\texttt{VecTDot}), three vector updates (\texttt{VecAXPY} and \texttt{VecAYPX}), and one matrix-vector product (\texttt{MatMult}).  Find a pseudo-code for CG in some textbook and confirm this work pattern.
+By looking at the ``Count'' column, and noting that the iteration count comes from \texttt{-ksp\_converged\_reason} output, confirm that the computational work of one CG iteration consists of two inner products (\texttt{VecTDot}), three vector updates (\texttt{VecAXPY} and \texttt{VecAYPX}), and one matrix-vector product (\texttt{MatMult}).  Find a pseudo-code for CG in some textbook, and confirm this work pattern.
 
 \item \label{exer:st:Anorm} Let $A$ be a symmetric positive-definite $N\times N$ matrix.  Note $A$ is diagonalizable and has positive eigenvalues.
   \renewcommand{\labelenumii}{(\emph{\roman{enumii}})}
   \begin{enumerate}
   \item Show that \eqref{normAdefn} defines a norm on $\RR^N$.
-  \item Define the matrix $\sqrt{A}$ so that $(\sqrt{A})^2 = A$ and $\sqrt{A}$ is symmetric and positive-definite.  Show that $\|v\|_A = \|\sqrt{A}\,v\|_2$ and $\kappa_2\left(\sqrt{A}\right) = \sqrt{\kappa_2(A)}$.
+  \item Define the matrix $\sqrt{A}$ as the unique symmetric and positive-definite matrix such that $(\sqrt{A})^2 = A$.  Show that $\|v\|_A = \|\sqrt{A}\,v\|_2$ and that $\kappa_2\left(\sqrt{A}\right) = \sqrt{\kappa_2(A)}$.
   \item Recalling that $A\be=-\br$, show that
       $$\frac{1}{\|\sqrt{A}\|_2} \|\br\|_2 \le \|\be\|_A \le \|\sqrt{A}\|_2 \|\br\|_2.$$
   \item Prove part (\emph{iii}) of the Theorem on page \pageref{thm:cgiterations}.
   \end{enumerate}
+
+\item If you have difficulty reproducing timings like those in Table \ref{tab:cgdirectmg}, note that they come from a \PETSc configuration with ``optimized'' configuration option\sidenote{\emph{Not} runtime option!} \texttt{--with-debugging=0}.  If you have not already done so, see the \PETSc installation page
+\begin{quote}
+\href{http://www.mcs.anl.gov/petsc/documentation/installation.html}{\texttt{www.mcs.anl.gov/petsc/documentation/installation.html}}
+\end{quote}
+and generate a new configuration, with a new \texttt{PETSC\_ARCH} value, with this ``optimized'' configuration option.  Generate your own version of Table \ref{tab:cgdirectmg}.
+\item Use \texttt{DMDACreate3d()} and etc.~in a code \texttt{poisson3D.c} which solves a 3D Poisson problem on the unit cube $\mathcal{C}=[0,1]^3$ using the same \pDMDA and \pKSP methods as in \texttt{poisson.c}.  Looking forward, how is the approach taken in Chapter \ref{chap:mg} different from your code?
 
 \end{enumerate}
