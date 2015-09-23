@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from sys import exit
+from os import system
 import numpy as np
 import matplotlib.pyplot as plt
 from numpy.linalg import solve, norm
@@ -34,13 +35,15 @@ x = x0
 for k in range(3):  # newton iteration
     print x
     plt.plot(x[0],x[1],'ko',ms=8.0)
-    plt.text(x[0]+0.05,x[1]+0.05,r'$x_%d$' % k,fontsize=20.0)
+    plt.text(x[0]+0.05,x[1]+0.05,r'$\mathbf{x}_%d$' % k,fontsize=20.0)
     x = x - solve(J(b,x),F(b,x))
 plt.hold(False)
 plt.axis('off')
+plt.axis('tight')
 plt.axis('equal')
 plt.axis([-1.3, 1.3, 0.0, 1.5])
 plt.savefig('expcirclebasic.pdf',bbox_inches='tight')
+system("pdfcrop expcirclebasic.pdf expcirclebasic.pdf")
 
 # PLOT RESIDUAL DECAY (QUAD CONVERGENCE)
 fig = plt.figure(figsize=(7,6))

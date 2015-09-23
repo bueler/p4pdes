@@ -1,15 +1,15 @@
 
-The simplest thing to say about nonlinear equations is that they change the functional form of the residual, compared to the linear case.  For a linear system the residual $\br$, defined in \eqref{residualdefn}, is a certain function of the unknowns $\bu$, namely $\br = \bF(\bu) = \bb - A \bu$.  Now we consider cases in which $\bF$ is a higher-order polynomial, a transcendental function, or some more general function.
+The simplest thing to say about nonlinear equations is that they change the functional form of the residual, compared to the linear case.  For a linear system the residual $\br$ is a certain function of the unknowns $\bu$, namely $\br = \bF(\bu) = \bb - A \bu$.  Now we consider cases in which $\bF$ is a higher-order polynomial, a transcendental function, or some more general function.
 
-In fact, let us simply suppose for now that $\bF : \RR^N \to \RR^N$ is differentiable.  The input $\bx$ and output $\bF(\bx)$ are column vectors,\sidenote{Our name change $\bu\to\bx$ comes from now thinking more geometrically about the location of $\bx$.} so in that sense $\bF$ acts like square-matrix multiplication $\bx\mapsto A\bx$.  Just as a linear solver like GMRES (Chapter \ref{chap:ls}) reduces the linear residual $\br_k=\bF(\bu_k)$ to zero by generating a sequence $\bu_k$, for nonlinear $\bF$ we want to solve
+In fact, let us simply suppose for now that $\bF : \RR^N \to \RR^N$ is differentiable.  The input $\bx$ and output $\bF(\bx)$ are column vectors,\sidenote{Our name change $\bu\to\bx$ comes from now thinking more geometrically about the location of $\bx$.} so in that sense $\bF$ acts like square-matrix multiplication $\bx\mapsto A\bx$.  Just as a linear solver like GMRES (Chapter \ref{chap:ls}) reduces the linear residual $\br_k=\bb - A \bu_k$ to zero by generating a sequence $\bu_k$, for nonlinear $\bF$ we want to solve
 \begin{equation}
    \bF(\bx) = 0   \label{eq:nl:equation}
 \end{equation}
-by iteration, generating improved estimates $\bx_k$ so that $\bF(\bx_k)$ goes to zero.
+by iteration, generating approximations $\bx_k$ so that $\bF(\bx_k)$ goes to zero.
 
 Newton's method linearizes \eqref{eq:nl:equation} around the most recent iterate $\bx_k$ and then ``moves'' to the location $\bx_{k+1}$ which solves the linear problem.  The new location is, we hope, closer to the solution.  Each iteration requires solving a linear system, and we already have \PETSc technology for that.  However, the cost of performing the linearization must be taken into account, choosing a smart distance to move will require additional choices, and all existing choices regarding the linear solver---especially preconditioning---remain active.  Solving a nonlinear problem generally requires all the tools for linear systems considered in Chapter \ref{chap:ls}, and more.
 
-Large systems of nonlinear equations often arise in applications from PDE-type physical models with nonlinearities.  However, the current Chapter is largely about finite-dimensional systems of nonlinear equations \eqref{eq:nl:equation} as problems of their own.  Late in this Chapter we give an example of a discretized one-dimensional nonlinear PDE.  The next Chapter covers another nonlinear PDE problem, this time in two dimensions, though it can also be regarded as an optimization problem.
+Large systems of nonlinear equations often arise in applications from PDE-type physical models with nonlinearities.  However, the current Chapter is largely about finite-dimensional systems of nonlinear equations \eqref{eq:nl:equation} as problems of their own.  Late in this Chapter we do give an example of a discretized one-dimensional nonlinear PDE.
 
 
 \section{Newton's method}
@@ -27,11 +27,11 @@ J_\bF(\bx_k) = \begin{bmatrix}
 \end{equation}
 and some quantity $o(\|\bs\|)$ that goes to zero as the \emph{step length} $\|\bs\|$ goes to zero.  The matrix $J = J_\bF(\bx_k)$ is called the \emph{Jacobian} of $\bF$ at $\bx_k$; we also call the function $\bx \mapsto J_\bF(\bx)$ the Jacobian.
 
-Each iteration of Newton's method approximately solves \eqref{eq:nl:equation} by truncating \eqref{eq:nl:expandF} and seeking $\bs$ so that the updated value $\bF(\bx_{k+1})$ would be zero if the truncated equation were true.  That is, each Newton step computes $\bs$ by the linear equation
+Each iteration of Newton's method approximately solves \eqref{eq:nl:equation} by truncating \eqref{eq:nl:expandF}---removing ``$+o(\|\bs\|)$''---and seeking $\bs$ so that the updated value $\bF(\bx_{k+1})$ would be zero if the truncated equation were true.  That is, each Newton step computes $\bs$ by the linear equation
 \begin{equation}
     0 = \bF(\bx_k) + J_\bF(\bx_k) \bs.
 \end{equation}
-Writing the linear system in form ``$A\bu=\bb$,'' an iteration of Newton's method requires solving a linear system and then doing a vector addition:
+Writing the linear system in form ``$A\bu=\bb$,'' we see that an iteration of Newton's method requires solving a linear system and then doing a vector addition:
 \refstepcounter{equation}\label{eq:nl:newton}  % \eqref{eq:nl:newton} for both eqns
 \begin{align}
     J_\bF(\bx_k) \bs &= - \bF(\bx_k)  \label{eq:nl:newton:eq} \tag{\theequation a} \\
@@ -39,7 +39,7 @@ Writing the linear system in form ``$A\bu=\bb$,'' an iteration of Newton's metho
 \end{align}
 This is Newton's method.  It is fairly simple in theory.
 
-Actual practice for Newton's method is also not that complicated with \PETSc in hand, because it has a mature implementation of this core technology.  Despite the reputation of Newton iteration as fragile or scary, it works just fine on many nonlinear systems once one adds some protections.  Primarily, a line search may ``move'' a shorter distance to the new iterate than stated in \eqref{eq:nl:newton:update}; see page \pageref{sec:linesearch}.
+Actual practice for Newton's method is also not that complicated with \PETSc in hand, because it has a mature implementation of this core technology.  In fact, despite the reputation of Newton iteration as fragile or scary, it works just fine on many nonlinear systems once one adds some protections.  Primarily, a line search will, as needed, move a shorter distance to the new iterate than stated in \eqref{eq:nl:newton:update}; see page \pageref{sec:linesearch}.
 
 Finite-dimensional nonlinear systems \eqref{eq:nl:equation} can be visualized as the problem of finding the intersections of curves, surfaces, or hypersurfaces, depending on dimension.  A small example gives us a start on the details.
 
@@ -48,6 +48,15 @@ Finite-dimensional nonlinear systems \eqref{eq:nl:equation} can be visualized as
 \begin{example}  Given parameter $b > 1$, the nonlinear equations
     $$y = \frac{1}{b} e^{bx}, \qquad x^2+y^2 = 1,$$
 form intersecting curves in the plane.  The curves intersect twice, as shown in Figure \ref{fig:expcirclebasic}.  These equations are put in standard form \eqref{eq:nl:equation} by writing
+
+\begin{marginfigure}
+\includegraphics[width=1.2\textwidth]{expcirclebasic}
+
+\medskip
+\caption{Newton iterates $\bx_k$ approach a solution of $\bF(\bx)=0$ for $\bF$ in \eqref{eq:nl:expcircleF} and $b=2$.}
+\label{fig:expcirclebasic}
+\end{marginfigure}
+
 \begin{equation}
 \label{eq:nl:expcircleF}
 \bF(\bx) = \begin{bmatrix}
@@ -55,7 +64,7 @@ form intersecting curves in the plane.  The curves intersect twice, as shown in 
            x_0^2 + x_1^2 - 1
            \end{bmatrix}
 \end{equation}
-for $\bx\in \RR^2$.\sidenote{Note $\bx$ is a column vector with components $x_0$, $x_1$: $\bx = [x_0 \,\, x_1]^\top$.}  Thus
+for $\bx\in \RR^2$ a column vector: $\bx = [x_0 \,\,\, x_1]^\top$.  Thus
 \begin{equation}
 \label{eq:nl:ecjacobian}
 J_\bF(\bx) = \begin{bmatrix}
@@ -64,13 +73,6 @@ J_\bF(\bx) = \begin{bmatrix}
 \end{equation}
 As also shown in Figure \ref{fig:expcirclebasic}, for $b=2$, if we start the Newton iteration with $\bx_0 = [1 \,\, 1]^\top$ then the sequence of iterates from \eqref{eq:nl:newton} is
     $$\twovect{\bx}{0}{1}{1}, \quad \twovect{\bx}{1}{0.619203}{0.880797}, \quad \twovect{\bx}{2}{0.394157}{0.948623}, \quad \dots$$
-
-\begin{marginfigure}
-\includegraphics[width=1.2\textwidth]{expcirclebasic}
-\caption{Newton iterates approach a solution of $\bF(\bx)=0$ for $\bF$ in \eqref{eq:nl:expcircleF} and $b=2$.}
-\label{fig:expcirclebasic}
-\end{marginfigure}
-
 \noindent\hrulefill
 %  FROM $ for N in 0 1 2; do ./expcircle -snes_fd -snes_max_it $N; done
 \end{example}
@@ -78,13 +80,13 @@ As also shown in Figure \ref{fig:expcirclebasic}, for $b=2$, if we start the New
 
 \section{Using \pSNES with call-backs} \label{sec:usingsnes}
 
-We will compute the Newton iterates in the above example by using a nonlinear solver object of type \pSNES\sidenote{This acronym stands for ``scalable nonlinear equation solver.''} from \PETSc.  Note \pSNES has the usual \texttt{Create/SetFromOptions/Destroy} sequence.  Our code provides a function $\bF$ which is a ``call-back'' in the sense that we supply it to the \pSNES.  The \pSNES calls it with argument $\bx$ when it needs $\bF(\bx)$ during the Newton iteration.
+We will compute the Newton iterates in the above example by using a nonlinear solver object of type \pSNES\sidenote{SNES stands for ``scalable nonlinear equation solver.''} from \PETSc.  Note \pSNES has the usual \texttt{Create/SetFromOptions/Destroy} sequence.  Our code provides a function $\bF$ which is a ``call-back'' in the sense that we supply it to the \pSNES, which then calls it with argument $\bx$ when it needs $\bF(\bx)$ during the Newton iteration.
 
-Later we will also provide the \pSNES with a function which computes the Jacobian function $J_\bF$.  However, the Jacobian can be approximated by repeated $\bF$ evaluations because a derivative can be approximated by finite differences.  Thus our first code avoids such a Jacobian ``call-back'' for now.
+Later we will also provide the \pSNES with a function which computes the Jacobian function $J_\bF$.  However, the Jacobian can be approximated by repeated $\bF$ evaluations because a derivative can also be approximated by finite differences.  Thus our first code avoids such a Jacobian ``call-back'' for now.
 
-The whole of \texttt{expcircle.c}, to solve the above Example, is in Code \ref{code:expcircle}.  The \texttt{main()} method starts by allocating \pVec \texttt{x} of fixed dimension 2 which will hold both the initial iterate $\bx_0$ and, once the Newton iteration is ended, the converged estimate of the solution.  Because both components of $\bx_0$ are $1$, it is initialized using \texttt{VecSet()}.  Next a duplicate \pVec \texttt{r} is created; the \pSNES needs it as space for the (nonlinear) residual.
+The whole of \texttt{expcircle.c}, to solve the above Example, is in Code \ref{code:expcircle}.  The \texttt{main()} method starts by allocating \pVec \texttt{x} of fixed dimension 2 which will hold both the initial iterate $\bx_0$.  (Once the Newton iteration is ended it holds the converged estimate of the solution.)  Because both components of $\bx_0$ are $1$, it is initialized using \texttt{VecSet()}.  Next a duplicate \pVec \texttt{r} is created because the \pSNES needs it as space for the (nonlinear) residual.
 
-Then the \pSNES is created and configured.  Formula \eqref{eq:nl:expcircleF} is in method \texttt{FormFunction()}, which is supplied using \texttt{SNESSetFunction()}.  Then we call \texttt{SNESSetFromOptions()} because it both gives us run-time control on how the Jacobian is calculated\sidenote{Options \texttt{-snes\_fd} and \texttt{-snes\_mf} are allowed; see Table \ref{tab:snesjacobianoptions:needed} below.} and on how the length of the step $\bs$ is actually determined.\sidenote{Through \texttt{-snes\_linesearch\_type} and related options; see page \pageref{sec:linesearch}.}  Then \eqref{eq:nl:equation} is solved by a call to \texttt{SNESSolve()}.  Finally the new values in \texttt{x}, presumably the converged solution, are printed at the command line using \texttt{VecView()} with a \texttt{STDOUT} viewer.
+Then the \pSNES is created and configured.  Formula \eqref{eq:nl:expcircleF} is in method \texttt{FormFunction()}, which is supplied using \texttt{SNESSetFunction()}.  We call \texttt{SNESSetFromOptions()} because it both gives us run-time control on how the Jacobian is calculated\sidenote{Options \texttt{-snes\_fd} and \texttt{-snes\_mf} are allowed; see Table \ref{tab:snesjacobianoptions:needed} below.} and on how the length of the step $\bs$ is actually determined.\sidenote{Through \texttt{-snes\_linesearch\_type} and related options; see page \pageref{sec:linesearch}.}  Then \eqref{eq:nl:equation} is solved by a call to \texttt{SNESSolve()}.  Finally the new values in \texttt{x}, presumably the converged solution, are printed at the command line using \texttt{VecView()} with a \texttt{STDOUT} viewer.
 
 \vfill
 \cinput{expcircle.c}{\CODELOC}{A first \pSNES-using code.  Solves nonlinear system \eqref{eq:nl:equation} with $\bF$ given in \eqref{eq:nl:expcircleF}.}{//START}{//END}{code:expcircle}
@@ -97,14 +99,14 @@ In particular, \texttt{FormFunction()} takes the input $\bx$ as the first \pVec 
 
 In other examples there may be additional information, such as parameters, passed to \texttt{FormFunction()} in a ``user context.''  This is why there is a fourth pointer argument ``\texttt{void*}'' to \texttt{FormFunction()}.  We will show how to pass parameters in the next code.
 
-Looking inside \texttt{FormFunction()} in Code \ref{code:expcircle}, we see a new method for extracting values from, and setting values in, a \pVec.  Previously we have used \texttt{VecSetValues()} to set values at given indices (Chapter \ref{chap:ls}), or we have used a \pDMDA structured grid method of access (Chapter \ref{chap:st}).  Here we access the C array underlying the \pVec.  Because we only need to read entries of input \pVec \texttt{x} we use the read-only array access method \texttt{VecGetArrayRead()} which supplies us with a read-only pointer ``\texttt{const PetscReal *ax}.''\sidenote{Because of the \texttt{const} qualifier, the C compiler can stop us from altering \texttt{ax[0]}, for example.  Try it!}  Since we are setting entries of \pVec \texttt{F}, we do nearly the same but we use an unrestricted pointer ``\texttt{PetscReal *aF}'' and method \texttt{VecGetArray()}.
+Looking inside \texttt{FormFunction()} in Code \ref{code:expcircle}, we see a new method for extracting values from, and setting values in, a \pVec.  Previously we have used \texttt{VecSetValues()} to set values at given indices (Chapter \ref{chap:ls}), or we have used a \pDMDA structured grid method of access (Chapter \ref{chap:st}).  Here we access the C array underlying the \pVec.  Because we only need to read entries of input \pVec \texttt{x}, we use the read-only array access method \texttt{VecGetArrayRead()} which supplies us with a read-only pointer ``\texttt{const PetscReal *ax}.''\sidenote{Because of the \texttt{const} qualifier, the C compiler can stop us from altering \texttt{ax[0]}, for example.  Try it!}  Since we are setting entries of \pVec \texttt{F}, we do nearly the same for it but we use an unrestricted pointer ``\texttt{PetscReal *aF}'' and method \texttt{VecGetArray()}.
 
-The actual content of \texttt{FormFunction()} is to implement formulas \eqref{eq:nl:expcircleF}.  \texttt{PetscExpReal()}, which computes the exponential function $e^x$, is just an alias for \texttt{exp()} from the standard library (i.e.~\texttt{math.h}).  Use of such \PETSc library functions means that the \PETSc configuration can link to consistent libraries just by including \texttt{petsc.h}.
-
-To avoid conflicts with other methods which might want to read or write to the same memory, calls to \texttt{VecGetArray()} and \texttt{VecGetArrayRead()} are matched by \texttt{VecRestoreArray()} and \texttt{VecRestoreArrayRead()}.  These methods ``free-up''  the \pVecs, but they do not deallocate anything.\sidenote{\texttt{VecDestroy()} does that.}  In general:
+Note that to avoid conflicts with other methods which might want to read or write to the same memory, calls to \texttt{VecGetArray()} and \texttt{VecGetArrayRead()} are matched by \texttt{VecRestoreArray()} and \texttt{VecRestoreArrayRead()}.  These methods ``free-up''  the \pVecs, but they do not deallocate anything.\sidenote{\texttt{VecDestroy()} does that.}  In general:
 \begin{quote}
 \emph{Each \emph{\texttt{VecGetArray()}}-type call should be matched by the corresponding \emph{\texttt{VecRestoreArray()}} call once you are done with the array.}
 \end{quote}
+
+The actual content of \texttt{FormFunction()} is to implement formulas \eqref{eq:nl:expcircleF}.  \texttt{PetscExpReal()}, which computes the exponential function $e^x$, is just an alias for \texttt{exp()} from the standard library (i.e.~\texttt{math.h}).  Use of such \PETSc library functions means that the \PETSc configuration can link to consistent libraries just by including \texttt{petsc.h}.
 
 It is time to run this example with \texttt{-snes\_monitor}, so as to count the iterations and show the residual norm $\|\bF(\bx_k)\|_2$:
 \begin{cline}
@@ -130,12 +132,12 @@ The above run also uses option \texttt{-snes\_fd}, the purpose of which the read
 \begin{equation}
 J_{ij} = \frac{\partial F_i}{\partial x_j} \approx \frac{F_i(\bx+\delta \be_j) - F_i(\bx)}{\delta}.  \label{eq:nl:fdjac}
 \end{equation}
-When using \eqref{eq:nl:fdjac}, \PETSc chooses $\delta$ internally.  For example, $\delta = \sqrt{\eps}$, where $\eps$ is machine precision, gives a reasonably-accurate approximation if the inputs to $\bF$ are all of order approximately one and the function $\bF$ can be accurately-evaluated \citep{Kelley2003}.
+When using \texttt{-snes\_fd}, \PETSc chooses $\delta$ internally and applies \eqref{eq:nl:fdjac}.  For example, $\delta = \sqrt{\eps}$, where $\eps$ is machine precision, gives a reasonably-accurate approximation if the inputs to $\bF$ are all of order approximately one and the function $\bF$ can be accurately-evaluated \citep{Kelley2003}.
 
 
 \section{Inside \pSNES} \label{sec:insidesnes}
 
-In outline, \pSNES does these steps to implement the Newton method:
+It is helpful to describe Newton iteration from the point of view of the actions taken by the \pSNES solver object.  In outline, it does these steps:
 \begin{quote}
 	\renewcommand{\labelenumi}{(\emph{\roman{enumi}})}
 	\renewcommand{\labelenumii}{\emph{\alph{enumii}}.}
@@ -144,7 +146,7 @@ In outline, \pSNES does these steps to implement the Newton method:
 	\item the Jacobian $J=J_{\bF}(\bx_k)$ is
 	    \begin{enumerate}
 	    \item computed and assembled by a call-back to user-supplied code, if it is available, as set using \texttt{SNESSetJacobian()}, e.g.~\texttt{FormJacobian()} in code \texttt{ecjacobian.c} below, \emph{or}
-	    \item computed and assembled by evaluating $\bF(\bx_k+\delta \be_j)$ for $j=0,\dots,N-1$, thus  calling \texttt{FormFunction()} $N$ times, and then using formula \eqref{eq:nl:fdjac} $N^2$ times to fill $J$, \emph{or}
+	    \item computed and assembled by evaluating $\bF(\bx_k+\delta \be_j)$ for $j=0,\dots,N-1$, thus  calling \texttt{FormFunction()} $N$ times, and then using formula \eqref{eq:nl:fdjac} $N^2$ times to compute all entries of $J$, \emph{or}
 	    \item computed and assembled by calling \texttt{FormFunction()} substantially fewer than $N$ times to compute $\bF(\bx_k+\delta \bv)$ for special vectors $\bv$, by using a graph-coloring algorithm based on the sparsity pattern of $J$ to construct the vectors $\bv$, and using formula \eqref{eq:nl:fdcolorjac} below, \emph{or}
 	    \item not assembled, but, in a Krylov iterative method for solving system \eqref{eq:nl:newton:eq}, the action $J \by$, of the Jacobian on vectors $\by$, is computed by finite-differences,
         \end{enumerate}
@@ -154,7 +156,7 @@ In outline, \pSNES does these steps to implement the Newton method:
 	\end{enumerate}
 \end{quote}
 
-Our single run above of \texttt{expcircle.c} used option (\emph{ii})b for the Jacobian, but our next code will allow option (\emph{ii})a as well.  The graph-coloring technique (\emph{ii})c will be addressed starting on page \pageref{sec:nl:coloring}, and the Jacobian-free method in (\emph{ii})d starting on page \pageref{sec:JFNK}.
+Our single run above of \texttt{expcircle.c} used option (\emph{ii})b for the Jacobian, but option (\emph{ii}d) also works.  Our next code will allow option (\emph{ii})a as well.  The graph-coloring technique (\emph{ii})c will be addressed starting on page \pageref{sec:nl:coloring}.
 
 If you run \texttt{expcircle.c} without option \texttt{-snes\_fd} or \texttt{-snes\_mf} then you get an error message about an un-assembled matrix:
 \begin{cline}
@@ -167,11 +169,11 @@ $ ./expcircle
 %$
 This message is somewhat opaque unless you are conscious of the need to form the Jacobian matrix at each Newton iteration.  That is, \emph{something} must supply a Jacobian at step (\emph{ii}), and the supplied-Jacobian-code case (\emph{ii})a does not work for \texttt{expcircle.c}.
 
-The benefit of using options (\emph{ii})b--(\emph{ii})d above is that we do not need to write any error-prone code based on taking derivatives of our function $\bF$.  Avoiding writing and debugging Jacobian implementations may speed implementation by reducing the time \emph{you} spend on the task.  A possible disadvantage of these is likely to be apparent to the reader, namely, formula \eqref{eq:nl:fdjac} is only an \emph{approximation} of a Jacobian entry.  However, in most cases using a finite-difference-approximated Jacobian in the Newton step is not problematical \citep{Kelley2003}.
+The benefit of using options (\emph{ii})b--(\emph{ii})d above is that we do not need to write any error-prone code based on taking derivatives of our function $\bF$.  Avoiding writing and debugging Jacobian implementations may speed implementation by reducing the time \emph{you} spend on the task.  One possible disadvantage is likely to be apparent to the reader, namely that formula \eqref{eq:nl:fdjac} is only an \emph{approximation} of a Jacobian entry.  However, in most cases using a finite-difference-approximated Jacobian in the Newton step is not problematical \citep{Kelley2003}.
 
-On the other hand, there is a significant performance problem in using \eqref{eq:nl:fdjac} naively for PDE-type applications of Newton's method.  In steps (\emph{i}) and (\emph{ii})b together we do $N+1$ calls to \texttt{FormFunction()} per Newton iteration.  This is a worrying amount of work if $N$ is large, as it would be for a system of nonlinear equations coming from discretizing a PDE.  We will therefore return to this issue later in the current Chapter, and provide detail on (\emph{ii})c and (\emph{ii})d, after introducing further examples including a diffusion-reaction PDE.
+On the other hand, there is a significant performance problem in using \eqref{eq:nl:fdjac} naively for PDE-type applications of Newton's method.  In steps (\emph{i}) and (\emph{ii})b together we do $N+1$ calls to \texttt{FormFunction()} per Newton iteration.  This is a worrying amount of work if $N$ is large, as it would be for a system of nonlinear equations coming from discretizing a PDE.  We will therefore return to this issue later in the current Chapter, and provide more detail on (\emph{ii})c and (\emph{ii})d.
 
-Evaluating $\bF$ can dominate the work in the Newton iteration, and there are systems where it is an intrinsically-expensive function to evaluate.  The work done in solving linear system \eqref{eq:nl:newton:eq} is the other main concern.  A good \PETSc habit, to start right now, is to use \texttt{-log\_summary} to \emph{see} which kind of work is dominant.
+Evaluating $\bF$ can dominate the work in the Newton iteration, and there are systems where it is an intrinsically-expensive function to evaluate.  The work done in solving linear system \eqref{eq:nl:newton:eq} is the other main concern.  A good \PETSc habit, to start right now, is to use \texttt{-log\_summary} to see which kind of work actually dominates.
 
 
 \section{Residual norm in the Newton iteration}
@@ -186,7 +188,7 @@ Thus the example
 $ ./expcircle -snes_fd -snes_monitor -snes_rtol 1.0e-14
 \end{cline}
 %$
-asks for much more accuracy.  It may be a surprise that asking for a further $10^6$ reduction in residual norm requires only one more iteration, namely six iterations this time, but this is typical of the Newton iteration in the best cases.  Instead of showing the Newton iterations again as text output, Figure \ref{fig:newtonconvbasic} shows residual norms in a graph with log-scaling on the $y$-axis.
+asks for much more accuracy.  It may be a surprise that asking for a further $10^6$ reduction in residual norm requires only one more iteration, namely six iterations this time, but this is typical of the Newton iteration in the best cases.  Instead of showing the Newton iterations again as text output, Figure \ref{fig:newtonconvbasic} shows the residual norms in a graph with log-scaling on the $y$-axis.
 
 \begin{figure}
 \includegraphics[width=0.8\textwidth]{newtonconvbasic}
@@ -200,7 +202,7 @@ The next theorem will express such best-case behavior, but before we state it we
 \begin{equation}
 \be_k = \bx_k-\bx^*,  \label{eq:nl:errordefn}
 \end{equation}
-which we want to send to zero.  In particular, we want to stop the Newton iteration when $\bx_k$ is a good approximation of $\bx^*$.  Of course, $\be_k$ is just as hard to compute as $\bx^*$; we do not generally have exact access to either one.  Instead we have computable quantities $\bx_k$ and $\br_k=\bF(\bx_k)$ available for inspection.  Thus the following theorem has two parts.
+which we want to send to zero.  In particular, we want to stop the Newton iteration when $\bx_k$ is a good approximation of $\bx^*$.  Of course, $\be_k$ is just as hard to compute as $\bx^*$; we do not generally have exact access to either one.  Instead we have computable quantities $\bx_k$ and $\br_k=\bF(\bx_k)$ available for inspection.  Thus both parts of the following theorem are important.
 
 \begin{theorem} \citep[Theorems 1.1 and inequalities (1.13)]{Kelley2003}
 Suppose that $\bF:\RR^N\to\RR^N$ is differentiable, $J_{\bF}$ is Lipschitz near $\bx^*$, and $J_{\bF}(\bx^*)$ is a nonsingular matrix.  Let $\|\cdot\|$ denote a vector norm and its induced matrix norm, and let $\kappa(A)=\|A^{-1}\| \|A\|$ denote the condition number of an invertible matrix $A$.  If $\bx_0$ is sufficiently close to $\bx^*$ then, in exact arithmetic,
