@@ -608,7 +608,7 @@ Before proceeding, we consider the structured 2D grid used in Chapter \ref{chap:
 \begin{figure}
 \begin{tikzpicture}[scale=7.0]
 % mesh
-  \draw[xstep=0.25,ystep=0.166667,black,thin,dashed] (0.0,0.0) grid (1.25,1.0);
+  \draw[xstep=0.25,ystep=0.166667,black,thin,dashed] (0.0,0.333334) grid (1.25,1.0);
 % stencil
   \filldraw (0.50,0.666667) circle (0.6pt);
   \filldraw (0.75,0.666667) circle (0.6pt);
@@ -630,6 +630,12 @@ Before proceeding, we consider the structured 2D grid used in Chapter \ref{chap:
 \label{fig:colorstencilplane}
 \end{figure}
 
+% for number of colors on graph in fig:colorstencilplane, in refined-grid cases, compare
+%   $ ./ex5 -da_refine 4 -log_summary -snes_fd_color | grep SNESFunctionEval
+% which gives 19 function evals and
+%   $ ./ex5 -da_refine 4 -snes_converged_reason -snes_fd_color
+% which gives 3 iterations
+% we conclude  19=N(c+1)+1=3(c+1)+1  so c = 5
 
 \section{Jacobian-free Newton-Krylov (JFNK)} \label{sec:JFNK}
 

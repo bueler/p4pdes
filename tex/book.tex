@@ -413,7 +413,7 @@ Chap.
     & \tblockeqncode{time-dependent heat (2D)}{$u_t = \grad^2 u$}{heat.c}
           &     & \tblockeqncode{porous (3D)}{$\begin{matrix} u_t = \Div\left(D \grad u\right) \\ D = u^{\gamma-1} \end{matrix}$}{porous.c} \\ \bigskip
 \ref{chap:un}
-    & \tblockcode{Poisson (2D)}{unfish.c}    &     &     &      \\ \bigskip
+    & \tblockcode{Poisson (2D)}{femfish.c}    &     &     &      \\ \bigskip
 \ref{chap:sy}
     & \tblockeqncode{Stokes (2D)}{$\begin{matrix} -\grad^2 \bu + \grad p = 0 \\ \Div \bu = 0 \end{matrix}$}{stokes.c}
           &     & \tblockeqncode{shallow water (1D)}{$\begin{matrix} h_t + (hv)_x = 0 \\ (hv)_t + (hv^2 + \tfrac{1}{2} g h^2)_x = 0 \end{matrix}$}{water.c}     \\ \bigskip
@@ -453,8 +453,8 @@ Chapter
 5   & \gX & \gX & \gX & \XX &     & \XX &      \\
 6   & \gX & \gX & \XX & \XX &     & \XX &      \\
 7   & \gX & \gX & \XX & \XX &     & \XX & \XX  \\
-8   & \XX & \XX & \gX & \XX &     &     & \XX  \\
-9   & \gX & \gX & \XX & \XX &     & \XX &      \\
+8   & \XX & \XX & \gX & \XX &     &     &      \\
+9   & \gX & \gX & \XX & \XX &     & \XX & \XX  \\
 10  & \gX & \gX & \XX & \XX & \XX &     &      \\
 11  & \gX & \gX & \gX & \XX &     & \XX &      \\
 \bottomrule
