@@ -929,20 +929,12 @@ This exercise shows that the original Newton iteration can diverge or enter a li
 
 \item \label{exer:nl:symmetrizeJ}  In Chapter \ref{chap:st} we gave some advice which we have not followed in the current Chapter, namely that one should implement Dirichlet conditions in a manner that preserves the symmetry of the matrix in question, which is the Jacobian here.  Modify \texttt{reaction.c} to preserve symmetry, noting that this requires modifying both the $\bF$ and $J$ evaluation routines.  Does this modification improve performance when using the CG iteration?  Does it change our conclusions about un-preconditioned JFNK?
 
-\item \PETSc programs often add more runtime options than shown in our examples so far; ours are deliberately de-cluttered.  The PDE problem in \texttt{reaction.c} has parameter $\rho$ which can be adjusted via \texttt{PetscOptionsReal()}.  Modify \texttt{reaction.c} to ``\texttt{optreact.c}'' and add an option like this at the appropriate point:
-\begin{code}
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,
-                           "optr_","options for optreact",""); CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-rho","coefficient of nonlinear zeroth-order term",
-                          NULL,user.rho,&(user.rho),NULL); CHKERRQ(ierr);
-  ierr = PetscOptionsEnd(); CHKERRQ(ierr);
-\end{code}
-By sampling, for what range of positive \texttt{X}$=\rho$ does the run
+\item The PDE problem in \texttt{reaction.c} has parameter $\rho$ which can be adjusted via \texttt{PetscOptionsReal()}.  Modify \texttt{reaction.c} to a new code ``\texttt{optreact.c}'' and add an option \texttt{-optr\_rho} to read $\rho$ at runtime.  (The prefix \texttt{optr\_} is added when you call \texttt{PetscOptionsBegin()}.)  By sampling, for what range of positive \texttt{X} does the run
 \begin{cline}
 $ ./optreact -snes_monitor -da_refine 4 -optr_rho X
 \end{cline}
 %$
-converge?  Explain why this case, with this way of choosing the boundary conditions and initial iterate, and in contrast to the next Exercise, is insensitive to the value of the major parameter $\rho$.
+converge?  Explain why this case, with this way of choosing the boundary conditions and initial iterate, in contrast to the next Exercise, is insensitive to the value of the major parameter $\rho$.
 % because this option is used in bratu.c below, for simplicity of maintenance, the result optreact.c is NOT saved in c/ch4/solns/
 
 \item \label{exer:nl:bratu} Modify \texttt{reaction.c} to create ``\texttt{bratu.c}'' which solves
