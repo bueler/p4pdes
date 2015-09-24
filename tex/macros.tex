@@ -1,4 +1,13 @@
 
+% the goal here is to have a display of code with a separate "Code x.y" numbering
+% and with the caption in the margin
+\DeclareFloatingEnvironment[placement={!ht},name=Code]{mycodeenv}
+\captionsetup[mycodeenv]{labelfont=bf}
+% next line duplicates declaration of environment "marginfigure" in tufte-common.def
+\newenvironment{margincode}[1][-1.2ex]%
+  {\begin{@tufte@margin@float}[#1]{mycodeenv}}
+  {\end{@tufte@margin@float}}
+
 \newcommand{\trueinput}[2]{
 \VerbatimInput[frame=single,framesep=3mm,label=\fbox{\normalsize \textsl{\,#1\,}},fontfamily=courier,fontsize=\footnotesize]{#2}
 }
@@ -62,15 +71,6 @@
 
 \DefineVerbatimEnvironment{cline}{Verbatim}
 {fontsize=\small,frame=leftline,framerule=0.3mm,framesep=2.0mm}
-
-% the goal here is to have a display of code with a separate "Code x.y" numbering
-% and with the caption in the margin
-\DeclareFloatingEnvironment[placement={!ht},name=Code]{mycodeenv}
-\captionsetup[mycodeenv]{labelfont=bf}
-% next line duplicates declaration of environment "marginfigure" in tufte-common.def
-\newenvironment{margincode}[1][-1.2ex]%
-  {\begin{@tufte@margin@float}[#1]{mycodeenv}}
-  {\end{@tufte@margin@float}}
 
 \newcommand{\bA}{\mathbf{A}}
 \newcommand{\bB}{\mathbf{B}}
