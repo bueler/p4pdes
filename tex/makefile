@@ -1,6 +1,6 @@
 all: book.pdf
 
-texroots := preface getstarted linearsystem structured nonlinear optifem unstructured multigrid scaling stokes dmplex constrained
+texroots := macros preface getstarted linearsystem structured nonlinear optifem unstructured multigrid scaling stokes dmplex constrained
 texinputs := $(addsuffix .tex, $(texroots))
 
 tikzinputs := samplepoly.1.tikz squarefour.tikz bump.1.tikz bump.poly.tikz mesh.1.tikz

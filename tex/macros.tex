@@ -1,0 +1,167 @@
+
+\newcommand{\trueinput}[2]{
+\VerbatimInput[frame=single,framesep=3mm,label=\fbox{\normalsize \textsl{\,#1\,}},fontfamily=courier,fontsize=\footnotesize]{#2}
+}
+
+% the goal here is to have a display of code with a separate "Code x.y" numbering
+% and with the caption in the margin
+\DeclareFloatingEnvironment[placement={!ht},name=Code]{mycodeenv}
+\captionsetup[mycodeenv]{labelfont=bf}
+% next line duplicates declaration of environment "marginfigure" in tufte-common.def
+\newenvironment{margincode}[1][-1.2ex]%
+  {\begin{@tufte@margin@float}[#1]{mycodeenv}}
+  {\end{@tufte@margin@float}}
+
+%\inputfromline{FULLPATH}{FILENAME}{CAPTION}{FIRSTLINE}{LABEL}
+\newcommand{\inputfromline}[5]{
+\vspace{0.8cm}
+\let\FancyVerbStartString\relax
+\let\FancyVerbStopString\relax
+\begin{minipage}[l]{1.25\textwidth}
+\VerbatimInput[frame=single,%
+               framesep=3mm,%
+               label=\fbox{\small \textsl{\,#2\,}},%
+               fontfamily=courier,%
+               fontsize=\footnotesize,%
+               firstline=#4]{#1}
+\end{minipage}
+\vspace{0.5cm}
+\begin{margincode}[1.0cm]
+\caption{#3}
+\label{#5}
+\end{margincode}
+\vspace{1.5cm}
+}
+
+\newcommand{\inputwhole}[4]{\inputfromline{#1}{#2}{#3}{1}{#4}}
+
+%\cinputraw{FULLPATH}{FILENAMESHOWN}{CAPTION}{PARTSTRING}{STARTSTRING}{STOPSTRING}{LABEL}
+\newcommand{\cinputraw}[7]{
+\newcommand*\FancyVerbStartString{#5}
+\newcommand*\FancyVerbStopString{#6}
+\vspace{0.8cm}
+\begin{minipage}[l]{1.25\textwidth}
+\VerbatimInput[frame=single,%
+               framesep=3mm,%
+               label=\fbox{\small \textsl{\,#2\,}#4},%
+               fontfamily=courier,%
+               fontsize=\footnotesize]{#1}
+\end{minipage}
+\vspace{0.5cm}
+\begin{margincode}[1.0cm]
+\caption{#3}
+\label{#7}
+\end{margincode}
+\vspace{1.5cm}
+\let\FancyVerbStartString\relax
+\let\FancyVerbStopString\relax
+}
+
+\newcommand{\cinput}[6]{%
+    \cinputraw{cstrip/#1}{#2#1}{#3}{}{#4}{#5}{#6}}
+
+\newcommand{\cinputpart}[7]{%
+    \cinputraw{cstrip/#1}{#2#1}{#3}{\quad \textbf{part #4}}{#5}{#6}{#7}}
+
+\newcommand{\cinputpartnostrip}[7]{%
+    \cinputraw{#1}{#2}{#3}{\quad \textbf{part #4}}{#5}{#6}{#7}}
+
+\DefineVerbatimEnvironment{code}{Verbatim}
+{fontsize=\small,frame=lines,framerule=0.2mm,framesep=2.0mm,xleftmargin=5mm}
+
+\DefineVerbatimEnvironment{cline}{Verbatim}
+{fontsize=\small,frame=leftline,framerule=0.3mm,framesep=2.0mm}
+
+\newcommand{\bA}{\mathbf{A}}
+\newcommand{\bB}{\mathbf{B}}
+\newcommand{\bE}{\mathbf{E}}
+\newcommand{\bF}{\mathbf{F}}
+\newcommand{\bJ}{\mathbf{J}}
+
+\newcommand{\bb}{\mathbf{b}}
+\newcommand{\bc}{\mathbf{c}}
+\newcommand{\be}{\mathbf{e}}
+\newcommand{\bbf}{\mathbf{f}} % \bf already defined
+\newcommand{\bg}{\mathbf{g}}
+\newcommand{\bn}{\mathbf{n}}
+\newcommand{\bp}{\mathbf{p}}
+\newcommand{\bq}{\mathbf{q}}
+\newcommand{\br}{\mathbf{r}}
+\newcommand{\bs}{\mathbf{s}}
+\newcommand{\bu}{\mathbf{u}}
+\newcommand{\bv}{\mathbf{v}}
+\newcommand{\bw}{\mathbf{w}}
+\newcommand{\bx}{\mathbf{x}}
+\newcommand{\by}{\mathbf{y}}
+\newcommand{\bz}{\mathbf{z}}
+
+\newcommand{\CC}{\mathbb{C}}
+\newcommand{\RR}{\mathbb{R}}
+\newcommand{\ZZ}{\mathbb{Z}}
+
+\newcommand{\X}{\times}  % for nonzero entries in matrices
+\newcommand{\redX}{{\color{red} \bm{\underline{\X}}}}
+\newcommand{\blueX}{{\color{blue} \bm{\underline{\X}}}}
+
+\newcommand{\XX}{$\bm{\times}$}  % for ticks in tables
+\newcommand{\gX}{{\color{Gray} $\times$}}
+
+\newcommand{\eps}{\epsilon}
+\newcommand{\lam}{\lambda}
+\newcommand{\lap}{\triangle}
+
+\newcommand{\Div}{\ensuremath{\nabla\cdot}}
+\newcommand{\Curl}{\ensuremath{\nabla\times}}
+\newcommand{\grad}{\nabla}
+
+\newcommand{\ip}[2]{\ensuremath{\left<#1,#2\right>}}
+
+% iteration vec display in R^2
+\newcommand{\twovect}[4]{\ensuremath{{#1}_{#2} =
+                            \begin{bmatrix} #3 \\ #4 \end{bmatrix}}}
+\newcommand{\rvect}[3]{\twovect{\bu}{#1}{#2}{#3}}
+
+\newcommand{\cond}{\operatorname{cond}}
+\newcommand{\onull}{\operatorname{null}}
+\newcommand{\rank}{\operatorname{rank}}
+\newcommand{\range}{\operatorname{range}}
+\newcommand{\Span}{\operatorname{span}}
+
+\renewcommand{\Re}{\operatorname{Re}}
+\renewcommand{\Im}{\operatorname{Im}}
+
+\newcommand{\Th}{\mathcal{T}_h}
+\newcommand{\Pone}{\mathbf{P}_1}
+
+\newcommand{\Matlab}{\textsc{Matlab}\xspace}
+\newcommand{\Triangle}{\textsc{triangle}\xspace}
+\newcommand{\MPI}{\textsc{MPI}\xspace}
+
+\newcommand{\PETSc}{\textsc{PETSc}\xspace}
+
+\newcommand{\pDM}{\texttt{DM}\xspace}
+\newcommand{\pDMs}{\texttt{DM}s\xspace}
+
+\newcommand{\pDMDA}{\texttt{DMDA}\xspace}
+\newcommand{\pDMDAs}{\texttt{DMDA}s\xspace}
+
+\newcommand{\pDMPlex}{\texttt{DMPlex}\xspace}
+\newcommand{\pDMPlexs}{\texttt{DMPlex}s\xspace}
+
+\newcommand{\pKSP}{\texttt{KSP}\xspace}
+\newcommand{\pKSPs}{\texttt{KSP}s\xspace}
+
+\newcommand{\pPC}{\texttt{PC}\xspace}
+\newcommand{\pPCs}{\texttt{PC}s\xspace}
+
+\newcommand{\pSNES}{\texttt{SNES}\xspace}
+\newcommand{\pSNESs}{\texttt{SNES}s\xspace}
+
+\newcommand{\pTS}{\texttt{TS}\xspace}
+\newcommand{\pTSs}{\texttt{TS}s\xspace}
+
+\newcommand{\pMat}{\texttt{Mat}\xspace}
+\newcommand{\pMats}{\texttt{Mat}s\xspace}
+
+\newcommand{\pVec}{\texttt{Vec}\xspace}
+\newcommand{\pVecs}{\texttt{Vec}s\xspace}
