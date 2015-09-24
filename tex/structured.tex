@@ -246,7 +246,7 @@ The call to \texttt{DMDASetUniformCoordinates()} in Code \ref{code:dmdacreatetwo
 
 \medskip
 \begin{figure}
-\includegraphics[width=\textwidth]{petscghostvalues}
+\includegraphics[width=\textwidth]{figs/petscghostvalues}
 \caption{\PETSc's parallel decomposition of structured (left) and unstructured (right) grids, showing owned (``local'') and accessible (``ghost'') nodes for one process.}
 \label{fig:petscghostvalues}
 \end{figure}
@@ -582,7 +582,7 @@ Recall that a default $9\times 9$ grid was chosen in calling \texttt{DMDACreate2
 
 \begin{marginfigure}
 \bigskip
-\includegraphics[width=0.8\textwidth]{dmM5N7}
+\includegraphics[width=0.8\textwidth]{figs/dmM5N7}
 \caption{\PETSc can show the structured-grid \pDMDA at runtime, here for a single-process run.}
 \label{fig:dmM5N7}
 \end{marginfigure}
@@ -601,7 +601,7 @@ show a graphic similar to Figure \ref{fig:matM5N7}.  These views suggest that we
 
 \begin{marginfigure}
 \bigskip
-\includegraphics[width=0.95\textwidth]{matM5N7}
+\includegraphics[width=0.95\textwidth]{figs/matM5N7}
 \caption{\PETSc can show the matrix structure too.  The actual graphic is in color, but here the two dark shades show positive and negative entries while the light shade shows allocated locations which are zero.}
 \label{fig:matM5N7}
 \end{marginfigure}
@@ -670,7 +670,7 @@ The data is shown in Figure \ref{fig:poisson-conv} as stars.  For the four coars
 
 \begin{figure}
 \bigskip
-\includegraphics[width=0.75\textwidth]{poisson-conv}
+\includegraphics[width=0.75\textwidth]{figs/poisson-conv}
 \caption{To show convergence we refine the \pDM grid by factors of two so that $h\to 0$.  With a stronger linear solver tolerance (\texttt{-ksp\_rtol 1.0e-12}) the errors (dots) fall at the expected rate (dashed), unlike with the default tolerance ($10^{-5}$; stars).}
 \label{fig:poisson-conv}
 \end{figure}
@@ -798,7 +798,7 @@ Of course, this is un-preconditioned CG.  While it is not surprising that \textt
 
 \begin{figure}
 \bigskip
-\includegraphics[width=0.75\textwidth]{poisson-cg-scale}
+\includegraphics[width=0.75\textwidth]{figs/poisson-cg-scale}
 \caption{As the grid is refined ($h\to 0$), un-preconditioned CG scales poorly on our Poisson problem, and IC($0$) preconditioning does not improve the scaling.}
 \label{fig:poisson-cg-scale}
 \end{figure}

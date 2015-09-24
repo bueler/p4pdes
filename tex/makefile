@@ -3,21 +3,24 @@ all: book.pdf
 texroots := macros preface getstarted linearsystem structured nonlinear optifem unstructured multigrid scaling stokes dmplex constrained
 texinputs := $(addsuffix .tex, $(texroots))
 
+# for these, see strip.sh
+croots := vecmatksp tri structuredpoisson poisson expcircle expcircleJAC reaction fish2 readmesh poissontools poissonfem obstacle
+cstrip := $(addprefix cstrip/, $(addsuffix .c, $(croots)))
+
 tikzinputs := samplepoly.1.tikz squarefour.tikz bump.1.tikz bump.poly.tikz mesh.1.tikz
 
-pdfinputs := poisson-conv.pdf poisson-cg-scale.pdf richpolyplot.pdf expcirclebasic.pdf newtonconvbasic.pdf newtonconvdelayed.pdf reaction-conv.pdf
+pdfroots := petscghostvalues
+pdfinputs := $(addprefix figs/, $(addsuffix .pdf, $(pdfroots)))
 
-hinputs :=
-
-# for these, see strip.sh
-cinputs := vecmatksp.c tri.c structuredpoisson.c poisson.c expcircle.c expcircleJAC.c reaction.c fish2.c readmesh.c poissontools.c poissonfem.c obstacle.c
-cstrip := $(addprefix cstrip/, $(cinputs))
+pngroots := dmM5N7 line-graph-tri matM5N7
+pnginputs := $(addprefix figs/, $(addsuffix .png, $(pngroots)))
 
 book.pdf: book.aux
 	pdflatex book
 	pdflatex book
 
-book.aux: book.tex book.bib $(texinputs) $(hinputs) $(cstrip) $(tikzinputs) $(pdfinputs)
+book.aux: book.tex book.bib $(texinputs) $(cstrip) $(tikzinputs) $(pdfinputs) $(pnginputs)
+	(cd figs/ && make)
 	pdflatex book
 	bibtex book.aux
 
@@ -42,30 +45,12 @@ mesh.1.tikz: ../c/ch8/genstructured.py
 	(cd ../c/ch8/ && python genstructured.py mesh.1 5)
 	python tri2tikz.py --labelnodes --nodeoffset 0.05 --nodesize 0.5 --labelelements --scale 5.0 ../c/ch8/mesh.1 $@
 
-richpolyplot.pdf: richpolyplot.py
-	python richpolyplot.py
-
-poisson-conv.pdf: poisson-conv.py
-	python poisson-conv.py
-
-poisson-cg-scale.pdf: poisson-cg-scale.py
-	python poisson-cg-scale.py
-
-expcirclebasic.pdf newtonconvbasic.pdf newtonconvdelayed.pdf: expcircle.py
-	python expcircle.py
-	pdfcrop expcirclebasic.pdf expcirclebasic.pdf
-	pdfcrop newtonconvbasic.pdf newtonconvbasic.pdf
-	pdfcrop newtonconvdelayed.pdf newtonconvdelayed.pdf
-
-reaction-conv.pdf: reaction-conv.py
-	python reaction-conv.py
-
 .PHONY: clean
 
 clean:
-	@rm -f *~ *.out *.aux *.log *.bbl *.blg *.synctex.gz *.idx *.ilg *.ind *.toc *.dvi
-	@rm -rf cstrip/
-	@rm -f bump.?.* samplepoly.?.* bump.poly* squarefour.tikz mesh.?.*
-	@rm -f poisson-conv.pdf poisson-cg-scale.pdf richpolyplot.pdf expcirclebasic.pdf newtonconv*pdf reaction-conv.pdf
-	@rm -f timing/*~ timing/poisson/*~ timing/tri/*~
+	rm -f *~ *.out *.aux *.log *.bbl *.blg *.synctex.gz *.idx *.ilg *.ind *.toc *.dvi
+	rm -rf cstrip/
+	(cd figs/ && make clean)
+	rm -f bump.?.* samplepoly.?.* bump.poly* squarefour.tikz mesh.?.*
+	rm -f timing/*~ timing/poisson/*~ timing/tri/*~
 

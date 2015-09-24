@@ -50,7 +50,7 @@ Finite-dimensional nonlinear systems \eqref{eq:nl:equation} can be visualized as
 form intersecting curves in the plane.  The curves intersect twice, as shown in Figure \ref{fig:expcirclebasic}.  These equations are put in standard form \eqref{eq:nl:equation} by writing
 
 \begin{marginfigure}
-\includegraphics[width=1.2\textwidth]{expcirclebasic}
+\includegraphics[width=1.2\textwidth]{figs/expcirclebasic}
 
 \medskip
 \caption{Newton iterates $\bx_k$ approach a solution of $\bF(\bx)=0$ for $\bF$ in \eqref{eq:nl:expcircleF} and $b=2$.}
@@ -191,7 +191,7 @@ $ ./expcircle -snes_fd -snes_monitor -snes_rtol 1.0e-14
 asks for much more accuracy.  It may be a surprise that asking for a further $10^6$ reduction in residual norm requires only one more iteration, namely six iterations this time, but this is typical of the Newton iteration in the best cases.  Instead of showing the Newton iterations again as text output, Figure \ref{fig:newtonconvbasic} shows the residual norms in a graph with log-scaling on the $y$-axis.
 
 \begin{figure}
-\includegraphics[width=0.8\textwidth]{newtonconvbasic}
+\includegraphics[width=0.8\textwidth]{figs/newtonconvbasic}
 \caption{The characteristic look of the quadratic convergence of the Newton iteration: the residual norm drops abruptly.}
 \label{fig:newtonconvbasic}
 \end{figure}
@@ -258,7 +258,7 @@ The defaults for the three tolerances in the Table are \texttt{X} $=10^{-8},10^{
 So far we have portrayed the Newton iteration in optimistic terms, but it is not magic and things can go wrong.  First note a key hypothesis in the above Theorem, namely that $\bx_0$ needs to be sufficiently close to $\bx^*$.  Even on well-behaved nonlinear equations, if $\bx_0$ is far from the solution then the iteration may take many steps before $\|\be_k\|$ becomes small enough so that quadratic convergence \eqref{eq:nl:quadraticconvergence} ``kicks in''.  For example, Figure \ref{fig:newtonconvdelayed} shows what happens if we use initial iterate $\bx_0=[10\,\, 10]^\top$ in the above Example.  About 16 iterations of slow progress\sidenote{From the constant slope shown in the Figure, this is evidently \emph{linear} convergence in which the residual norm is reduced by a constant factor.} is needed before the iterate $\bx_k$ enters the region around $\bx^*$ where the conclusions of the Theorem apply.  This region is sometimes known as the ``ball of quadratic convergence.''
 
 \begin{figure}
-\includegraphics[width=0.8\textwidth]{newtonconvdelayed}
+\includegraphics[width=0.8\textwidth]{figs/newtonconvdelayed}
 \caption{Even in for well-behaved systems $\bF(\bx)=0$, if the initial iterate $\bx_0$ is far from the solution then quadratic convergence can be postponed for many iterations.}
 \label{fig:newtonconvdelayed}
 \end{figure}
@@ -409,7 +409,7 @@ $ ./reaction -da_refine 6 -snes_monitor_solution -draw_pause 1
 One sees that the first Newton step moves us close to the solution (not shown).
 
 \begin{figure}
-\includegraphics[width=\textwidth]{reaction-conv}
+\includegraphics[width=\textwidth]{figs/reaction-conv}
 \caption{This convergence evidence suggests \texttt{reaction.c} is correctly-implemented.}
 \label{fig:nl:reaction-conv}
 \end{figure}
