@@ -1,7 +1,20 @@
 
+In the last three Chapters we have introduced the most important six \PETSc object types:
+\begin{itemize}
+\item[\quad Chapter \ref{chap:ls}:] \pVec, \pMat, \pKSP, \pPC
+\item[\quad Chapter \ref{chap:st}:] \pDM (in the \pDMDA case)
+\item[\quad Chapter \ref{chap:ls}:] \pSNES
+\end{itemize}
+Each of the examples in the rest of this book will use all of these types in some way.
+
+In particular, from now on we will solve \emph{linear} PDEs using a \pSNES object and Newton iteration, so as to get more uniform code structure.  Linear problems are simply the case where we know, in advance, that one Newton iteration suffices.
+
+In the current Chapter we take a break from introducing new \PETSc objects, but we continue with new ideas.  Our one example from a significant class of nonlinear PDEs, namely a Poisson-like diffusion problem with solution-dependent diffusivity.  This example is an excuse to introduce PDE problems which are equivalent to minimization in a function space, and structured-grid finite element methods (FEM).
+
+
 \section{$p$-Laplacian equation}
 
-FIXME for $p>1$,
+Consider this nonlinear functional for $p>1$,
     $$I[u] = \int_\Omega \frac{1}{p} |\grad u|^p - fu$$
 the variational equation is the weak form of a PDE:
 \begin{align*}
