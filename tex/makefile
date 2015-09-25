@@ -4,7 +4,7 @@ texroots := macros preface getstarted linearsystem structured nonlinear optifem 
 texinputs := $(addsuffix .tex, $(texroots))
 
 # for these, see strip.sh
-croots := vecmatksp tri structuredpoisson poisson expcircle expcircleJAC reaction fish2 readmesh poissontools poissonfem obstacle
+croots := vecmatksp tri structuredpoisson poisson expcircle expcircleJAC reaction plap fish2 readmesh poissontools poissonfem obstacle
 cstrip := $(addprefix cstrip/, $(addsuffix .c, $(croots)))
 
 tikzinputs := samplepoly.1.tikz squarefour.tikz bump.1.tikz bump.poly.tikz mesh.1.tikz
