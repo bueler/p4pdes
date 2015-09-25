@@ -37,17 +37,15 @@ for NAME in $CH11; do
     cp ../c/ch11/$NAME cstrip/$NAME
 done
 
-ls cstrip/
+#ls cstrip/
 cd cstrip/
 
 set -x
 
 for NAME in *.c; do
-    cp $NAME $NAME.tmp
-    sed -i 's/ierr = //' $NAME.tmp
-    sed -i 's/CHKERRQ(ierr);//' $NAME.tmp
-    sed -i '/\/\/STRIP/d' $NAME.tmp
-    sed -i '/PetscErrorCode ierr/d' $NAME.tmp
-    mv $NAME.tmp $NAME
+    sed -i 's/ierr = //' $NAME
+    sed -i 's/CHKERRQ(ierr);//' $NAME
+    sed -i '/\/\/STRIP/d' $NAME
+    sed -i '/PetscErrorCode ierr/d' $NAME
 done
 
