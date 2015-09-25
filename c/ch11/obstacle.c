@@ -183,7 +183,7 @@ int main(int argc,char **argv)
   PetscBool           feasible = PETSC_FALSE,fdflg = PETSC_FALSE;
   DMDALocalInfo  info;
 
-  PetscInitialize(&argc,&argv,(char*)0,help);
+  PetscInitialize(&argc,&argv,NULL,help);
 
 //CREATE
   ierr = DMDACreate2d(PETSC_COMM_WORLD,

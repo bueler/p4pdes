@@ -74,7 +74,7 @@ int main(int argc,char **args) {
   PetscReal           unorm, errnorm, *au, *auex;
   DMDALocalInfo       info;
 
-  PetscInitialize(&argc,&args,(char*)0,help);
+  PetscInitialize(&argc,&args,NULL,help);
   user.rho   = 10.0;
   user.M     = PetscSqr(user.rho / 12.0);
   user.alpha = user.M;

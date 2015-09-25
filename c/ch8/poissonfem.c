@@ -35,7 +35,7 @@ PetscScalar check_f(PetscScalar x, PetscScalar y) {
 
 int main(int argc,char **args) {
 
-  PetscInitialize(&argc,&args,(char*)0,help);
+  PetscInitialize(&argc,&args,NULL,help);
   const MPI_Comm  WORLD = PETSC_COMM_WORLD;
   PetscErrorCode  ierr;
   PetscMPIInt     rank;

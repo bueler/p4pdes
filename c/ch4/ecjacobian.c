@@ -55,7 +55,7 @@ int main(int argc,char **argv)
   AppCtx user;
   PetscErrorCode ierr;
 
-  PetscInitialize(&argc,&argv,(char*)0,help);
+  PetscInitialize(&argc,&argv,NULL,help);
   user.b = 2.0;
 
   ierr = VecCreate(PETSC_COMM_WORLD,&x); CHKERRQ(ierr);

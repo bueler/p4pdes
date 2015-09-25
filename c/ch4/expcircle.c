@@ -23,7 +23,7 @@ int main(int argc,char **argv) {
     SNES  snes;          // nonlinear solver context
     Vec   x, r;          // solution, residual vectors
 
-    PetscInitialize(&argc,&argv,(char*)0,help);
+    PetscInitialize(&argc,&argv,NULL,help);
     ierr = VecCreate(PETSC_COMM_WORLD,&x); CHKERRQ(ierr);
     ierr = VecSetSizes(x,PETSC_DECIDE,2); CHKERRQ(ierr);
     ierr = VecSetFromOptions(x); CHKERRQ(ierr);
