@@ -10,8 +10,8 @@ typedef struct {
   Vec       f;
 } PLapCtx;
 
-PetscErrorCode ExactFLocal(DMDALocalInfo *info, PetscReal **uex, PetscReal **f,
-                           PLapCtx *user) {
+PetscErrorCode ExactFLocal(DMDALocalInfo *info,
+                           PetscReal **uex, PetscReal **f, PLapCtx *user) {
   PetscInt         i,j;
   PetscReal        x,y,s,c,paray,gradsqr;
   const PetscReal  pi2 = PETSC_PI * PETSC_PI;
@@ -31,13 +31,10 @@ PetscErrorCode ExactFLocal(DMDALocalInfo *info, PetscReal **uex, PetscReal **f,
 }
 
 PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **u,
-                                  PLapCtx *user) {
-  PetscInt i,j;
-  for (j=info->ys; j<info->ys+info->ym; j++) {
-    for (i=info->xs; i<info->xs+info->xm; i++) {
-      u[j][i] = 0.0; // FIXME
-    }
-  }
+                                  PetscReal *obj, PLapCtx *user) {
+  PetscErrorCode ierr;
+  PetscReal      lobj = 0.0;  // FIXME
+  ierr = MPI_Allreduce(&lobj,obj,1,MPIU_REAL,MPIU_SUM,PETSC_COMM_WORLD); CHKERRQ(ierr);
   return 0;
 }
 //ENDFUNCTIONS
@@ -77,7 +74,7 @@ int main(int argc,char **argv) {
   ierr = DMDAVecGetArray(da,uexact,&auexact); CHKERRQ(ierr);
   ierr = DMDAVecGetArray(da,user.f,&af); CHKERRQ(ierr);
   ierr = ExactFLocal(&info,auexact,af,&user); CHKERRQ(ierr);
-  // FIXME: initialize u
+  VecSet(u,1.0);// FIXME: correctly initialize u
   ierr = DMDAVecRestoreArray(da,uexact,&auexact); CHKERRQ(ierr);
   ierr = DMDAVecRestoreArray(da,user.f,&af); CHKERRQ(ierr);
 
