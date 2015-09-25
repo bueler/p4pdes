@@ -1,16 +1,56 @@
 static char help[] = "Solve the p-laplacian equation in 2D using an objective function.\n\n";
 
-// RUN AS   ./plap -snes_fd_function   IF FUNCTION NOT IMPLEMENTED
+// RUN AS
+//   ./plap -snes_fd_function   (no residual = gradient function evaluation)
+//   ./plap -snes_fd_color   (no Jacobian = Hessian function evaluation)
 
 #include <petsc.h>
 
-//STARTFUNCTIONS
+//STARTCONFIGURE
 typedef struct {
   PetscReal p, dx, dy;
   PetscBool manufactured;
   Vec       f;
 } PLapCtx;
 
+PetscErrorCode Configure(PLapCtx *user) {
+  PetscErrorCode ierr;
+  user->p = 2.0;
+  user->manufactured = PETSC_FALSE;
+  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"plap_","p-laplacian solver options",""); CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-p","exponent p with  1 <= p < infty",
+                   NULL,user->p,&(user->p),NULL); CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-manufactured","use manufactured solution (p=2,4 only)",
+                   NULL,user->manufactured,&(user->manufactured),NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+  if ((user->manufactured) && (user->p != 2.0) && (user->p != 4.0)) {
+      SETERRQ1(PETSC_COMM_WORLD,1,"no manufactured soln for p=%.3f",user->p);
+  }
+  return 0;
+}
+
+PetscErrorCode PrintResult(DMDALocalInfo *info, SNES snes, Vec u, Vec uexact,
+                           PLapCtx *user) {
+  PetscErrorCode ierr;
+  PetscReal            unorm, errnorm;
+  SNESConvergedReason  reason;
+
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"on %d x %d grid:  ",info->mx,info->my); CHKERRQ(ierr);
+  ierr = SNESGetConvergedReason(snes, &reason); CHKERRQ(ierr);
+  if (user->manufactured) {
+      ierr = VecNorm(u,NORM_INFINITY,&unorm); CHKERRQ(ierr);
+      ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uxact
+      ierr = VecNorm(u,NORM_INFINITY,&errnorm); CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"|u-u_exact|_inf/|u|_inf = %g\n",
+                  errnorm/unorm); CHKERRQ(ierr);
+  } else {
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"%s\n",SNESConvergedReasons[reason]); CHKERRQ(ierr);
+  }
+  return 0;
+}
+//ENDCONFIGURE
+
+//STARTEXACTF
 PetscErrorCode ExactFLocal(DMDALocalInfo *info,
                            PetscReal **uex, PetscReal **f, PLapCtx *user) {
   PetscInt         i,j;
@@ -28,7 +68,8 @@ PetscErrorCode ExactFLocal(DMDALocalInfo *info,
             f[j][i] = 2.0 * s * (2.0 * pi2 * paray + 1.0);
           } else if (user->p == 4.0) {
             c = cos(2.0*PETSC_PI*x);
-            gradsqr = 4.0 * pi2 * c*c * paray*paray + s*s * (1.0-2.0*y)*(1.0-2.0*y);
+            gradsqr = 4.0 * pi2 * c*c * paray*paray
+                      + s*s * (1.0-2.0*y)*(1.0-2.0*y);
             f[j][i] = 0.0 * gradsqr;  // FIXME
           } else {
             SETERRQ(PETSC_COMM_WORLD,1,"HOW DID I GET HERE?");
@@ -41,7 +82,9 @@ PetscErrorCode ExactFLocal(DMDALocalInfo *info,
   }
   return 0;
 }
+//ENDEXACTF
 
+//STARTOBJECTIVE
 PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **u,
                                   PetscReal *obj, PLapCtx *user) {
   PetscErrorCode ierr;
@@ -49,13 +92,15 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **u,
   ierr = MPI_Allreduce(&lobj,obj,1,MPIU_REAL,MPIU_SUM,PETSC_COMM_WORLD); CHKERRQ(ierr);
   return 0;
 }
+//ENDOBJECTIVE
 
+//STARTFUNCTION
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal **u,
                                  PetscReal **f, PLapCtx *user) {
   SETERRQ(PETSC_COMM_WORLD,1,"NOT YET IMPLEMENTED");
   return 0;
 }
-//ENDFUNCTIONS
+//ENDFUNCTION
 
 //STARTMAIN
 int main(int argc,char **argv) {
@@ -63,25 +108,13 @@ int main(int argc,char **argv) {
   DM                   da;
   SNES                 snes;
   Vec                  u, uexact;
-  PetscReal            **auexact, **af, unorm, errnorm;
+  PetscReal            **auexact, **af;
   PLapCtx              user;
   DMDALocalInfo        info;
-  SNESConvergedReason  reason;
 
   PetscInitialize(&argc,&argv,NULL,help);
 
-  user.p = 2.0;
-  user.manufactured = PETSC_FALSE;
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"plap_","p-laplacian solver options",""); CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-p","exponent p with  1 <= p < infty",
-                   NULL,user.p,&(user.p),NULL); CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-manufactured","use manufactured solution (p=2,4 only)",
-                   NULL,user.manufactured,&(user.manufactured),NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsEnd(); CHKERRQ(ierr);
-  if ((user.manufactured) && (user.p != 2.0) && (user.p != 4.0)) {
-      SETERRQ1(PETSC_COMM_WORLD,1,
-               "manufactured solution not available for p=%.3f", user.p);
-  }
+  ierr = Configure(&user); CHKERRQ(ierr);
 
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
                DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_BOX,
@@ -113,20 +146,7 @@ int main(int argc,char **argv) {
   ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
   ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
-
-  ierr = SNESGetConvergedReason(snes, &reason); CHKERRQ(ierr);
-  if (user.manufactured) {
-      ierr = VecNorm(u,NORM_INFINITY,&unorm); CHKERRQ(ierr);
-      ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uxact
-      ierr = VecNorm(u,NORM_INFINITY,&errnorm); CHKERRQ(ierr);
-      ierr = PetscPrintf(PETSC_COMM_WORLD,
-                  "on %d x %d grid:  |u-u_exact|_inf/|u|_inf = %g\n",
-                  info.mx,info.mx,errnorm/unorm); CHKERRQ(ierr);
-  } else {
-      ierr = PetscPrintf(PETSC_COMM_WORLD,
-                  "on %d x %d grid:  %s\n",
-                  info.mx,info.mx,SNESConvergedReasons[reason]); CHKERRQ(ierr);
-  }
+  ierr = PrintResult(&info,snes,u,uexact,&user); CHKERRQ(ierr);
 
   VecDestroy(&u);  VecDestroy(&uexact);  VecDestroy(&(user.f));
   SNESDestroy(&snes);  DMDestroy(&da);
@@ -134,3 +154,4 @@ int main(int argc,char **argv) {
   return 0;
 }
 //ENDMAIN
+
