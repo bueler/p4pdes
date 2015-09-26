@@ -12,10 +12,41 @@ In particular, from now on we will solve \emph{linear} PDEs using a \pSNES objec
 In the current Chapter we take a break from introducing new \PETSc objects, but we continue with new ideas.  Our one example from a significant class of nonlinear PDEs, namely a Poisson-like diffusion problem with solution-dependent diffusivity.  This example is an excuse to introduce PDE problems which are equivalent to minimization in a function space, and structured-grid finite element methods (FEM).
 
 
-\section{$p$-Laplacian equation}
+\section{$p$-Laplacian equation as minimization}
 
-Consider this nonlinear functional for $p>1$,
-    $$I[u] = \int_\Omega \frac{1}{p} |\grad u|^p - fu$$
+Let $\Omega$ be a domain (connected open subset) in $\RR^2$ or $\RR^3$ with well-behaved boundary.  Consider this nonlinear functional for $p \ge 1$,
+\begin{equation}
+    I[u] = \int_\Omega \frac{1}{p} |\grad u|^p - fu.  \label{eq:of:functional}
+\end{equation}
+This functional is well-defined on the Sobolev space of functions which are defined on $\Omega$, are integrable, and have an integrable gradient:
+    $$W^{1,p}(\Omega) = \left\{f \,:\, \int_\Omega |f|^p < \infty \,\, \& \, \int_\Omega |\grad f|^p < \infty\right\}.$$
+This is a Banach space with norm
+    $$\|u\|_{W^{1,p}} = \left(\int_\Omega |f|^p + \int_\Omega |\grad f|^p\right)^{1/p}.$$
+
+Not only is the functional $I[u]$ in \eqref{eq:of:functional} well-defined, it has a minimum, as suggested in our cartoon version in Figure \ref{fig:of:cartoonfunctional}.  First of all it is \emph{coercive} in the sense that if the norm of the input function is large then the output is large:
+    $$\lim_{\|u\|_{W^{1,p}} \to \infty} I[u] = +\infty.$$
+Furthermore the functional FIXME: IS CONVEX AND WELL-BEHAVED.  THUS IT HAS A MIN
+
+\begin{marginfigure}
+\begin{tikzpicture}
+\begin{axis}[view={145}{45},
+             axis lines=center,
+             axis on top,
+             xtick=\empty,ytick=\empty,ztick=\empty,
+             xlabel=$W^{1,p}(\Omega)$,
+             xlabel near ticks,
+             xlabel shift={25pt},
+             mesh/interior colormap name=blackwhite,
+             colormap/blackwhite,]
+  \addplot3[domain=-10:10,surf,opacity=0.5]{abs(x)^3 + abs(y)^3};
+\end{axis}
+\end{tikzpicture}
+\medskip
+\caption{FIXME}
+\label{fig:of:cartoonfunctional}
+\end{marginfigure}
+
+
 the variational equation is the weak form of a PDE:
 \begin{align*}
 I[u+\eps v] - I[u] &= \int_\Omega \frac{1}{p} |\grad u + \eps \grad v|^p + \frac{1}{p} |\grad u|^p - \eps f v \\
