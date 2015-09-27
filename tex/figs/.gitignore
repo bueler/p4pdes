@@ -1,13 +1,10 @@
 *~
-ice-bib.bib
-book.pdf
-cstrip/*.c
-*.?.node
-*.?.ele
-*.?.poly
-*.?.tikz
-squarefour.tikz
-bump.poly*
+poisson-*.pdf
+richpolyplot.pdf
+expcirclebasic.pdf
+newtonconv*.pdf
+reaction-conv.pdf
+minsurf.pdf
 
 ## Core latex/pdflatex auxiliary files:
 *.aux

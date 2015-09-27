@@ -1,6 +1,6 @@
 # list the targets for which we run a script to generate
 # (note there are both .png and .pdf figs which are not re-generated)
-pdfroots := poisson-conv poisson-cg-scale richpolyplot expcirclebasic newtonconvbasic newtonconvdelayed reaction-conv
+pdfroots := poisson-conv poisson-cg-scale richpolyplot expcirclebasic newtonconvbasic newtonconvdelayed reaction-conv minsurf
 pdfgens := $(addsuffix .pdf, $(pdfroots))
 
 all: $(pdfgens)
@@ -22,6 +22,10 @@ expcirclebasic.pdf newtonconvbasic.pdf newtonconvdelayed.pdf: expcircle.py
 
 reaction-conv.pdf: reaction-conv.py
 	python reaction-conv.py
+
+minsurf.pdf: minsurf.tex
+	pdflatex minsurf
+	pdfcrop minsurf.pdf minsurf.pdf
 
 .PHONY: clean
 
