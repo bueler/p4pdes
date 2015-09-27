@@ -18,7 +18,7 @@ Let $\Omega$ be a domain (connected open subset) in $\RR^2$ or $\RR^3$ with well
 \begin{equation}
     I[u] = \int_\Omega \frac{1}{p} |\grad u|^p - fu.  \label{eq:of:functional}
 \end{equation}
-This functional is well-defined on the Sobolev space \citep{Evans2010} of integrable functions which are defined on $\Omega$ and have integrable gradient, namely
+This functional is well-defined on the Sobolev space \citep{Evans2010} of integrable functions which are defined on $\Omega$ and have integrable gradient,
 \begin{equation}
     W^{1,p}(\Omega) = \left\{w \,:\, \int_\Omega |w|^p < \infty \,\, \& \, \int_\Omega |\grad w|^p < \infty\right\}, \label{eq:of:sobolevdefn}
 \end{equation}
@@ -31,13 +31,15 @@ which is a Banach space with norm $\|w\|_{W^{1,p}} = \left(\int_\Omega |w|^p + \
 \label{fig:of:cartoonfunctional}
 \end{marginfigure}
 
-The reader should probably visualize $I[u]$ in \eqref{eq:of:functional} as in our cartoon version Figure \ref{fig:of:cartoonfunctional}.  Not only is it well-defined, but it also has a unique minimum, at least if we add boundary conditions.  To add such conditions we choose a real-valued function $g$ defined along $\partial \Omega$ and we define a subset of $W_g^{1,p}(\Omega)$
+The reader may visualize $I[u]$ in \eqref{eq:of:functional} as drawn in cartoon form in Figure \ref{fig:of:cartoonfunctional}.  As suggested by our cartoon, not only is it well-defined, but it also has a unique minimum if we add boundary conditions.
+
+We add Dirichlet conditions, as in the Poisson problem in Chapter \ref{chap:st}, by choosing a real-valued function $g$ defined along $\partial \Omega$ and define a subset (affine subspace) of $W^{1,p}(\Omega)$, namely
 \begin{equation}
     W_g^{1,p}(\Omega) = \left\{w \,:\, w \in W^{1,p}(\Omega) \,\, \& \,\, w\big|_{\partial \Omega} = g\right\}.  \label{eq:of:affinedirichlet}
 \end{equation}
-For this to make sense FIXME
+For this to make sense we assume $g \in L^p(\partial \Omega)$ and note that ``$w\big|_{\partial \Omega} = g$'' has a precise ``trace operator'' meaning \citep{Evans2010}.  These considerations also define the vector subspace $W_0^{1,p}(\Omega) \subset W^{1,p}(\Omega)$ in the $g=0$ case; we will use this subspace for ``test functions'' below.
 
-With such Dirichlet boundary conditions, $I[u]$ is \emph{coercive} in the sense that if the norm of the input function from $W_g^{1,p}(\Omega)$ is large then the output is large:
+With such Dirichlet boundary conditions, then first of all $I[u]$ is \emph{coercive} in the sense that if the input function from $W_g^{1,p}(\Omega)$ is large in norm then the output is large:
 \begin{equation}
 \lim_{\|u\|_{W^{1,p}} \to +\infty} I[u] = +\infty.   \label{eq:of:coercivity}
 \end{equation}
@@ -55,7 +57,7 @@ if $u,v\in W^{1,p}(\Omega)$ and $0 \le \lambda \le 1$.  \citet{KinderlehrerStamp
 \end{equation}
 has a unique solution.
 
-On the other hand, the solution to this minimization problem is also the solution to a nonlinear PDE.  Indeed, if $p>1$ then the functional $I[u]$ is smooth enough to have a gradient (derivative).  The statement that the gradient is zero at the minimum has several names, among them \emph{variational equation}, \emph{Euler-Lagrange equation}, and the \emph{weak form} of the PDE.  The multiple names suggest the centrality of the following calculation to many parts of applied mathematics.
+On the other hand, the solution of minimization problem \eqref{eq:of:plapmin} is also the solution to a nonlinear PDE.  Indeed, if $p>1$ then the functional $I[u]$ is smooth enough to have a gradient (derivative).  The statement that the gradient is zero at the minimum has several names, among them \emph{variational equation}, \emph{Euler-Lagrange equation}, and the \emph{weak form} of the PDE.  These multiple names hint that one sees the following calculation in many parts of applied mathematics.
 
 Assume $\eps$ is a real number and $u,v \in W^{1,p}(\Omega)$.  Then
 \begin{align*}
@@ -64,23 +66,37 @@ I[u+\eps v] - I[u] &= \int_\Omega \frac{1}{p} |\grad u + \eps \grad v|^p + \frac
 \end{align*}
 and so the gradient exists,
 \begin{equation}
-\grad I[u](v) = \lim_{\eps\to 0} \frac{I[u+\eps v] - I[u]}{\eps} = \int_\Omega |\grad u|^{p-2} \grad u \cdot \grad v - f v, \label{eq:of:plapfunctionalderivative}
+\grad I[u](v) = \lim_{\eps\to 0} \frac{I[u+\eps v] - I[u]}{\eps} = \int_\Omega |\grad u|^{p-2} \grad u \cdot \grad v - f v. \label{eq:of:plapfunctionalderivative}
 \end{equation}
-defining a map $\grad I[u] : W^{1,p}(\Omega) \to \RR$ for each $u \in W^{1,p}(\Omega)$.  If $u$ solves \eqref{eq:of:plapmin} and $v\in W_0^{1,p}(\Omega)$ then $\grad I[u](v)=0$ or
-\begin{equation}
-\int_\Omega |\grad u|^{p-2} \grad u \cdot \grad v - f v = 0. \label{eq:of:plapweakform}
-\end{equation}
-From now on we refer to \eqref{eq:of:plapweakform} as the \emph{weak form} of the $p$-\emph{Laplacian} equation.
+That is, for each $u \in W^{1,p}(\Omega)$ formula \eqref{eq:of:plapfunctionalderivative} defines a map
+   $$\grad I[u] : W^{1,p}(\Omega) \to \RR.$$
 
-FIXME this becomes a \emph{strong form}, the traditional form of the $p$-Laplacian equation by another integration by parts,
+If $u \in W_g^{1,p}(\Omega)$ and $v\in W_0^{1,p}(\Omega)$ then $u+\eps v\in W_g^{1,p}(\Omega)$.  Thus if $u \in W_g^{1,p}(\Omega)$ solves \eqref{eq:of:plapmin} then the above derivative calculation shows $\grad I[u](v)=0$ or
+\begin{equation}
+\int_\Omega |\grad u|^{p-2} \grad u \cdot \grad v - f v = 0 \label{eq:of:plapweakform}
+\end{equation}
+for all $v\in W_0^{1,p}(\Omega)$.  From now on we refer to \eqref{eq:of:plapweakform} as the \emph{weak form} of the $p$-\emph{Laplacian} equation.
+
+Whether or not this is a surprise to the reader, we have nearly returned to the Poisson problem address in Chapter \ref{chap:st}.  In particular, if the solution $u \in W_g^{1,p}(\Omega)$ to problem \eqref{eq:of:plapmin} is actually smooth-enough to have continuous second derivatives, i.e.~$u \in C^2(\Omega)$, then we can derive the \emph{strong form} corresponding to equation \eqref{eq:of:plapweakform}.
+
+We show this by an integration-by-parts \citep{Evans2010} on equation \eqref{eq:of:plapweakform}, which gives
+    $$-\int_\Omega \Div\left(|\grad u|^{p-2} \grad u\right) v - \int_\Omega f v + \int_{\partial \Omega} v |\grad u|^{p-2} \grad u \cdot \bn = 0$$
+The boundary integral is zero if $v\in W_0^{1,p}(\Omega)$.  It follows that
 \begin{equation}
 - \Div\left(|\grad u|^{p-2} \grad u\right) = f
 \label{eq:of:plapstrongform}
 \end{equation}
-which is \eqref{poissonsquare} if $p=2$
+This is the strong form.  It is the traditional form of the $p$-Laplacian equation, and it reduces to equation \eqref{poissonsquare} if $p=2$.
+
+Before proceeding to a numerical solution, the main idea of this extended diversion into theory is fairly simple:
+\begin{quote}
+Minimization problem \eqref{eq:of:plapmin} for functional $I[u]$ in \eqref{eq:of:functional} is equivalent to the weak form equation \eqref{eq:of:plapweakform}, and it is the strong form equation \eqref{eq:of:plapstrongform} in the cases where the solution $u$ is smooth.  Thus the $p$-Laplacian equation \eqref{eq:of:plapstrongform}, which arises from a minimization problem for any $p>1$, is a nonlinear generalization of the Poisson equation.
+\end{quote}
 
 
 \section{Structured $Q^1$ finite elements}
+
+FIXME so what?  well, it turns out \PETSc is perfectly-happy to let us think of the $p$-Laplacian equation as a minimization problem.  all we need to implement is \eqref{eq:of:functional}.  we do so, and we take quite literally the fundamental idea, that the unknowns represent a function in a function space and we need only implement a real-valued functional on such functions.
 
 FIXME show grid with $(i,j)$ indexing on nodes, and $\ell=0,1,2,3$ indexing on corners of element $\square_{i,j}$
 
