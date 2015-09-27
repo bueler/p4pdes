@@ -262,17 +262,17 @@ By a well-known Taylor's theorem argument \citep{MortonMayers2005}, if $F(x)$ is
 \begin{equation}
    F''(x) = \frac{F(x+h) - 2 F(x) + F(x-h)}{h^2} + O(h^2)  \label{secondderivativeFD}
 \end{equation}
-as $h$ goes to zero.  This formula, applied to partial derivatives, will approximate the Laplacian in equation \eqref{poissonsquare}.  In fact, if $U_{i,j}$ is the gridded approximation to the value $u(x_i,y_j)$ of the exact solution $u(x,y)$ at a grid point,\sidenote{This is an important phrase!  We compute values $U_{i,j}$ from the finite difference equations.  We generally do not know the values $u(x_i,y_j)$.} and if $f_{i,j} = f(x_i,y_j)$, then from \eqref{secondderivativeFD} we have this FD approximation to equation \eqref{poissonsquare}:
+as $h$ goes to zero.  This formula, applied to partial derivatives, will approximate the Laplacian in equation \eqref{poissonsquare}.  In fact, if $u_{i,j}$ is the gridded approximation to the value $u(x_i,y_j)$ of the exact solution $u(x,y)$ at a grid point,\sidenote{This is an important phrase!  We compute values $u_{i,j}$ from the finite difference equations.  We generally do not know the values $u(x_i,y_j)$.} and if $f_{i,j} = f(x_i,y_j)$, then from \eqref{secondderivativeFD} we have this FD approximation to equation \eqref{poissonsquare}:
 \begin{equation}
-- \frac{U_{i+1,j} - 2 U_{i,j} + U_{i-1,j}}{h_x^2} - \frac{U_{i,j+1} - 2 U_{i,j} + U_{i,j-1}}{h_y^2} = f_{i,j}. \label{poissonsquareFDearly}
+- \frac{u_{i+1,j} - 2 u_{i,j} + u_{i-1,j}}{h_x^2} - \frac{u_{i,j+1} - 2 u_{i,j} + u_{i,j-1}}{h_y^2} = f_{i,j}. \label{poissonsquareFDearly}
 \end{equation}
 Equation \eqref{poissonsquareFDearly} applies at all interior points, where $1 \le i \le M-2$ and $1 \le j \le N-2$.  The boundary conditions \eqref{poissonsquarebcs} become
 \begin{equation}
-U_{0,j} = 0, \quad U_{M-1,j} = 0, \quad U_{i,0} = 0, \quad U_{i,N-1} = 0, \label{poissonsquareFDbcs}
+u_{0,j} = 0, \quad u_{M-1,j} = 0, \quad u_{i,0} = 0, \quad u_{i,N-1} = 0, \label{poissonsquareFDbcs}
 \end{equation}
 for all $i,j$.
 
-At grid location $(x_i,y_j)$, equation \eqref{poissonsquareFDearly} relates the unknown $U_{i,j}$ to its four cardinal neighbors $U_{i+1,j}$, $U_{i-1,j}$, $U_{i,j+1}$, and $U_{i,j-1}$.  This pattern (Figure \ref{fig:unitsquaregridstencil}) is a \emph{stencil}, in particular a ``star'' stencil.  By contrast, a ``box'' stencil would additionally involve the four diagonal neighbors.  In 2D, a star stencil relates five unknowns, while a box stencil relates nine.
+At grid location $(x_i,y_j)$, equation \eqref{poissonsquareFDearly} relates the unknown $u_{i,j}$ to its four cardinal neighbors $u_{i+1,j}$, $u_{i-1,j}$, $u_{i,j+1}$, and $u_{i,j-1}$.  This pattern (Figure \ref{fig:unitsquaregridstencil}) is a \emph{stencil}, in particular a ``star'' stencil.  By contrast, a ``box'' stencil would additionally involve the four diagonal neighbors.  In 2D, a star stencil relates five unknowns, while a box stencil relates nine.
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
@@ -294,7 +294,7 @@ At grid location $(x_i,y_j)$, equation \eqref{poissonsquareFDearly} relates the 
 \label{fig:unitsquaregridstencil}
 \end{marginfigure}
 
-We will treat all values $U_{i,j}$ as unknowns, whether on the boundary or in the interior, so we have $L=MN$ unknowns.  Equations \eqref{poissonsquareFDearly} and \eqref{poissonsquareFDbcs} form a linear system of $L$ equations,
+We will treat all values $u_{i,j}$ as unknowns, whether on the boundary or in the interior, so we have $L=MN$ unknowns.  Equations \eqref{poissonsquareFDearly} and \eqref{poissonsquareFDbcs} form a linear system of $L$ equations,
 \begin{equation}
 A \bu = \bb, \label{poissonlinearsystem}
 \end{equation}
@@ -304,7 +304,7 @@ However, to show entries of $A$ and $\bb$ in linear system \eqref{poissonlinears
 
 The ordering used in a one-process (serial) run by a 2D \pDMDA is shown in Figure \ref{fig:unitsquaregridordering}.  On an $M$ by $N$ grid one could write it as
 \begin{equation}
-    U_k = U_{i,j} \quad \text{ where } \quad k = j\,M + i \label{orderingfd}
+    U_k = u_{i,j} \quad \text{ where } \quad k = j\,M + i \label{orderingfd}
 \end{equation}
 for $i=0,1,\dots,M-1$ and $j=0,1,\dots,N-1$, so $k=0,1,\dots,MN-1$.  \PETSc does such index transformations inside the \pDMDA implementation.
 
@@ -356,18 +356,18 @@ for $i=0,1,\dots,M-1$ and $j=0,1,\dots,N-1$, so $k=0,1,\dots,MN-1$.  \PETSc does
   &  &  &  &  &  &  &  &  &  &  & 1
 \end{bmatrix}
 \begin{bmatrix}
-U_{0,0} \\
-U_{1,0} \\
-U_{2,0} \\
-U_{3,0} \\
-U_{0,1} \\
-U_{1,1} \\
-U_{2,1} \\
-U_{3,1} \\
-U_{0,2} \\
-U_{1,2} \\
-U_{2,2} \\
-U_{3,2}
+u_{0,0} \\
+u_{1,0} \\
+u_{2,0} \\
+u_{3,0} \\
+u_{0,1} \\
+u_{1,1} \\
+u_{2,1} \\
+u_{3,1} \\
+u_{0,2} \\
+u_{1,2} \\
+u_{2,2} \\
+u_{3,2}
 \end{bmatrix}
 =
 \begin{bmatrix}
@@ -395,13 +395,13 @@ The matrix $A$ is not symmetric.  Furthermore it is not well-scaled, for such a 
 \medskip
 Before assembling system \eqref{poissonsquareFDearly} and \eqref{poissonsquareFDbcs} by writing \PETSc code, there are two nontrivial observations about it.  These observations lead to an equivalent linear system that is easier to solve both in the sense that we have more options for solving the system,\sidenote{More \pKSP and \pPC choices, and more that converge.} and in the sense that the condition number is smaller.
 
-First, equations \eqref{poissonsquareFDearly} have very different ``scaling'' from equations \eqref{poissonsquareFDbcs}.  For example, if $M=N=1001$, so that $h_x=h_y=0.001$, then the coefficient of $U_{i,j}$ in \eqref{poissonsquareFDearly} is $4/(.001)^2 = 4 \times 10^6$, while the coefficients from \eqref{poissonsquareFDbcs} are equal to 1.  To make the equations better scaled, we multiply \eqref{poissonsquareFDearly} by the grid cell area $h_x h_y$ to get
+First, equations \eqref{poissonsquareFDearly} have very different ``scaling'' from equations \eqref{poissonsquareFDbcs}.  For example, if $M=N=1001$, so that $h_x=h_y=0.001$, then the coefficient of $u_{i,j}$ in \eqref{poissonsquareFDearly} is $4/(.001)^2 = 4 \times 10^6$, while the coefficients from \eqref{poissonsquareFDbcs} are equal to 1.  To make the equations better scaled, we multiply \eqref{poissonsquareFDearly} by the grid cell area $h_x h_y$ to get
 \begin{equation}
-2 (a + b) U_{i,j} - a \left(U_{i+1,j} + U_{i-1,j}\right) - b \left(U_{i,j+1} + U_{i,j-1}\right) = h_x h_y f_{i,j} \label{poissonsquareFD}
+2 (a + b) u_{i,j} - a \left(u_{i+1,j} + u_{i-1,j}\right) - b \left(u_{i,j+1} + u_{i,j-1}\right) = h_x h_y f_{i,j} \label{poissonsquareFD}
 \end{equation}
 where $a=h_y/h_x$ and $b=h_x/h_y$.  Using \eqref{poissonsquareFD}, all the equations in the system will have coefficients of comparable size, unless the cell aspect ratio $h_y/h_x$ is very large or small.  If $h_x=h_y$ then diagonal entries are $4$ and off-diagonal entries are $-1$.
 
-Second, the FD equations can be re-interpreted to give a \emph{symmetric} matrix $A$.  For example, at a grid point adjacent to the left-hand boundary of the square, the $i=1$ case of \eqref{poissonsquareFD}, the boundary location value $U_{0,j}$ appears in the equation.  The matrix in the linear system will be symmetric if we systematically ``move'' such values to the right-hand side vector $\bb$, which we can do because the value $U_{0,j}$ is known.  This forces off-diagonal entries $A$ to be zero in columns corresponding to known boundary values.  By converting the earlier system to a symmetric matrix $A$ we open up a larger range of linear algebra methods for solving the system efficiently, specifically including conjugate gradients as the \pKSP type and Cholesky preconditioners (\texttt{-pc\_type cholesky} or \texttt{-pc\_type icc}) as the \pPC type.
+Second, the FD equations can be re-interpreted to give a \emph{symmetric} matrix $A$.  For example, at a grid point adjacent to the left-hand boundary of the square, the $i=1$ case of \eqref{poissonsquareFD}, the boundary location value $u_{0,j}$ appears in the equation.  The matrix in the linear system will be symmetric if we systematically ``move'' such values to the right-hand side vector $\bb$, which we can do because the value $u_{0,j}$ is known.  This forces off-diagonal entries $A$ to be zero in columns corresponding to known boundary values.  By converting the earlier system to a symmetric matrix $A$ we open up a larger range of linear algebra methods for solving the system efficiently, specifically including conjugate gradients as the \pKSP type and Cholesky preconditioners (\texttt{-pc\_type cholesky} or \texttt{-pc\_type icc}) as the \pPC type.
 
 With these two modifications we can redo the last example.
 
@@ -423,18 +423,18 @@ With these two modifications we can redo the last example.
   &  &  &  &  &  &  &  &  &  &  & 1
 \end{bmatrix}
 \begin{bmatrix}
-U_{0,0} \\
-U_{1,0} \\
-U_{2,0} \\
-U_{3,0} \\
-U_{0,1} \\
-U_{1,1} \\
-U_{2,1} \\
-U_{3,1} \\
-U_{0,2} \\
-U_{1,2} \\
-U_{2,2} \\
-U_{3,2}
+u_{0,0} \\
+u_{1,0} \\
+u_{2,0} \\
+u_{3,0} \\
+u_{0,1} \\
+u_{1,1} \\
+u_{2,1} \\
+u_{3,1} \\
+u_{0,2} \\
+u_{1,2} \\
+u_{2,2} \\
+u_{3,2}
 \end{bmatrix}
 =
 \begin{bmatrix}
@@ -523,7 +523,7 @@ typedef struct {
   PetscInt k,j,i,c;
 } MatStencil;
 \end{code}
-In our 2D case, with a single degree of freedom at each node,\sidenote{The Poisson equation \eqref{poissonsquare} is a scalar PDE so the unknown at each grid point is the scalar $U_{i,j}$.  A system of equations like Navier-Stokes would have \texttt{dof}$>1$ when we call \texttt{DMDACreateXd()}, and the ``\texttt{c}'' member of \texttt{MatStencil} would get used.} we only use the \texttt{i} and \texttt{j} members of \texttt{MatStencil}.  From \eqref{poissonsquareFD}, the actual matrix entries are $a_{i,i} = 2\left(h_y/h_x + h_x/h_y\right)$ on the diagonal, and $a_{i,j} = -h_y/h_x$ or $a_{i,j} = -h_x/h_y$ for off-diagonals.
+In our 2D case, with a single degree of freedom at each node,\sidenote{The Poisson equation \eqref{poissonsquare} is a scalar PDE so the unknown at each grid point is the scalar $u_{i,j}$.  A system of equations like Navier-Stokes would have \texttt{dof}$>1$ when we call \texttt{DMDACreateXd()}, and the ``\texttt{c}'' member of \texttt{MatStencil} would get used.} we only use the \texttt{i} and \texttt{j} members of \texttt{MatStencil}.  From \eqref{poissonsquareFD}, the actual matrix entries are $a_{i,i} = 2\left(h_y/h_x + h_x/h_y\right)$ on the diagonal, and $a_{i,j} = -h_y/h_x$ or $a_{i,j} = -h_x/h_y$ for off-diagonals.
 
 
 \section{A particular problem, an exact solution}
@@ -921,7 +921,7 @@ However, to exploit the power of geometric multigrid we also need to do a better
 \item Use \texttt{DMDACreate1d()}, and other appropriate modifications of \texttt{poisson.c} and \texttt{structuredpoisson.c}, to write a code \texttt{poisson1D.c} for the 1D Poisson problem
     $$-u'' = f, \quad u(0)=u(1)=0.$$
 For simplicity, choose exact solution $u(x)=x^2(1-x^2)$ to determine $f(x)$.  Note you can either use \texttt{MatSetValues()} or \texttt{MatSetValuesStencil()} because indexing is easy in 1D.  Show that your results converge on a sequence of refining grids, as done in Figure \ref{fig:poisson-conv}; the errors should go to zero as $O(h^2)$.  Find a grid refinement level, and use \pKSP options as appropriate, to get 11 digit accuracy at every grid point.  \emph{It will never again be this good.}
-%  FD is:  - U_{i-1} + 2 U_i - U_{i+1} = h^2 f_i
+%  FD is:  - u_{i-1} + 2 U_i - u_{i+1} = h^2 f_i
 %  for exact u:  u'   = 2x(1-x^2) + x^2(-2x) = 2x - 4x^3
 %                -u'' = -(2 - 12 x^2) = 12x^2 - 2
 
