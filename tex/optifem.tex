@@ -114,14 +114,14 @@ FIXME so what?  well, it turns out \PETSc is perfectly-happy to let us think of 
   \draw[line width=1.5pt] (0.5,\third) -- (0.75,\third) -- (0.75,\twothird) -- (0.5,\twothird) -- cycle;
   \node at (0.64,0.5) {$\square_{ij}$};
   \filldraw (0.5,\third) circle (0.7pt) node[xshift=-5mm,yshift=-3mm] {$(x_i,y_j)$};
-  \draw[<->] (0.5,1.1) -- (0.75,1.1) node[above,yshift=1mm,xshift=-4mm] {$\Delta x$};
-  \draw[<->] (1.1,\third) -- (1.1,\twothird) node[right,yshift=-5mm] {$\Delta y$};
+  \draw[<->] (0.5,1.1) -- (0.75,1.1) node[above,yshift=1mm,xshift=-4mm] {$h_x$};
+  \draw[<->] (1.1,\third) -- (1.1,\twothird) node[right,yshift=-5mm] {$h_y$};
   \node at (0.15,0.8) {\large $\Omega$};
   \node[yshift=-3mm] at (1.0,0.0) {$1$};
   \node[xshift=-3mm] at (0.0,1.0) {$1$};
   \node[xshift=-2mm,yshift=-2mm] at (0.0,0.0) {$0$};
 \end{tikzpicture}
-\caption{Our domain $\Omega$ is a unit square.  The structured grid divides it into elements $\square_{ij}$ of area $\Delta x \Delta y$ indexed by their lower-left corners $(x_i,y_j)$.}
+\caption{Our domain $\Omega$ is a unit square.  The structured grid divides it into elements $\square_{ij}$ of area $h_x h_y$ indexed by their lower-left corners $(x_i,y_j)$.}
 \label{fig:q1grid}
 \end{marginfigure}
 
@@ -133,19 +133,19 @@ I[u] &= \int_\Omega \frac{1}{p} |\grad u|^p - fu  \notag \\
 \end{align}
 
 FIXME show bilinear functions: $\ell=0,1,2,3$ indexing on corners  and their basis $\chi_\ell(\xi,\eta)$ on reference element $\square_\ast = [-1,1]\times[-1,1]$
-
 \begin{align}
 (\xi_0,\eta_0) &= (-1,-1), \quad (\xi_1,\eta_1) = (+1,-1),    \label{eq:of:refcorners} \\
 (\xi_2,\eta_2) &= (+1,+1), \quad (\xi_3,\eta_3) = (-1,+1) \notag
 \end{align}
-
+on the reference element there is a basis of bilinear functions
 \begin{equation}
 \chi_\ell(\xi,\eta) = \frac{1}{4} \left(1 + \xi_\ell \xi\right) \left(1 + \eta_\ell \eta\right)   \label{eq:of:chidefn}
 \end{equation}
-
-\begin{equation}
-x(\xi,\eta) = \sum_{\ell=0}^3 x_\ell \chi_\ell(\xi,\eta), \quad y(\xi,\eta) = \sum_{\ell=0}^3 y_\ell \chi_\ell(\xi,\eta)  \label{eq:of:referencemap}
-\end{equation}
+the map $\square_\ast \to \square_{ij}$ can be written
+\begin{align}
+x(\xi,\eta) &= \sum_{\ell=0}^3 x_\ell \chi_\ell(\xi,\eta) = x_i + \frac{h_x}{2} (1+\xi) \label{eq:of:referencemap} \\
+y(\xi,\eta) &= \sum_{\ell=0}^3 y_\ell \chi_\ell(\xi,\eta) = x_j + \frac{h_y}{2} (1+\eta) \notag
+\end{align}
 
 \begin{figure}
 \begin{tikzpicture}[scale=3.0]
@@ -179,20 +179,19 @@ x(\xi,\eta) = \sum_{\ell=0}^3 x_\ell \chi_\ell(\xi,\eta), \quad y(\xi,\eta) = \s
 % arc
   \draw[->,line width=1.0pt] (2.3,0.55) .. controls (1.8,1.0) and (0.7,1.0) .. (0.6,0.72);
 \end{tikzpicture}
-\caption{Each element $\square_{ij}$ is the image under a map from a reference element $\square_\ast$.  The corners of $\square_\ast$, and thus of $\square_{ij}$ as well, are numbered $\ell=0,1,2,3$.}
+\caption{Each element $\square_{ij}$ is the image under a map from the reference element $\square_\ast$.  The corners of $\square_\ast$, and thus also of $\square_{ij}$, are numbered $\ell=0,1,2,3$.}
 \label{fig:q1gridandref}
 \end{figure}
 
 FIXME hat functions
-
 \begin{equation}
   \psi_{i,j}(x_r,y_s) = \delta_{ir} \delta_{js}  \label{eq:of:phinodewise}
 \end{equation}
-
+but using the numbering of the corners of the elements and pulling back to the ref element we have
 \begin{equation}
   \psi_\ell(\xi,\eta) = \psi_\ell(x(\xi,\eta),y(\xi,\eta)) = \chi_\ell(\xi,\eta)  \label{eq:of:phionref}
 \end{equation}
-
+because we will be computing gradients, this is useful:
 \begin{align}
   (\grad \psi_\ell)(\xi,\eta) &= \left<\frac{\partial\psi_\ell}{\partial x}(x(\xi,\eta),y(\xi,\eta)),\frac{\partial\psi_\ell}{\partial y}(x(\xi,\eta),y(\xi,\eta))\right> \label{eq:of:gradphionref} \\
      &= \left<\frac{1}{2h_x}\xi_\ell \left(1+\eta_\ell \eta\right),\frac{1}{2h_y}\eta_\ell \left(1+\xi_\ell \xi\right)\right> \notag
@@ -204,6 +203,33 @@ FIXME hat functions
 \label{fig:q1hat}
 \end{marginfigure}
 
+FIXME suppose we have $v \in W^{1,p}(\Omega)$ which is bilinear on element $\square_{ij}$.  Then it can be represented in the hat functions
+\begin{align}
+v(x,y) &= v_{ij} \phi_{ij}(x,y) + v_{i+1,j} \phi_{i+1,j}(x,y) \label{eq:of:bilinearrepresentation} \\
+ &\quad + v_{i+1,j+1} \phi_{i+1,j+1}(x,y) + v_{i,j+1} \phi_{i,j+1}(x,y) \notag \end{align}
+it is actually more useful, not to mention more elegant, to pull-back to the reference element, using the local node numbering
+\begin{equation}
+v(\xi,\eta) = \sum_{\ell=0}^3 v_\ell \chi_\ell(\xi,\eta)  \label{eq:of:bilinearrepresentationref}
+\end{equation}
+Its gradient therefore satisfies, when pulled-back to the ref element,
+\begin{equation}
+  (\grad v)(\xi,\eta) = \sum_{\ell=0}^3 v_\ell (\grad \psi_\ell)(\xi,\eta)   \label{eq:of:gradrepref}
+\end{equation}
+so we can use \eqref{eq:of:gradphionref}
+
+FIXME integrating an arbitrary function $a(x,y)$ over an element is done by change-of-variables to the reference element,
+\begin{equation}
+\int_{\square_{ij}} a(x,y)\,dx\,dy = \int_{-1}^1 \int_{-1}^1 a(\xi,\eta) \det\frac{\partial(x,y)}{\partial(\xi,\eta)}\,d\xi\,d\eta   \label{eq:of:changeofvars}
+\end{equation}
+where $a(\xi,\eta)=a(x(\xi,\eta),y(\xi,\eta))$ and where the Jacobian of the change of variables matrix appears.  Note that in this case
+\begin{equation}
+\det\frac{\partial(x,y)}{\partial(\xi,\eta)} = \det\begin{bmatrix} \frac{h_x}{2} & 0 \\ 0 & \frac{h_y}{2} \end{bmatrix} = \frac{h_x h_y}{4}.  \label{eq:of:elementjacobian}
+\end{equation}
+
+
+\section{Quadrature}
+
+FIXME
 
 \section{Implementation with objective only}
 
@@ -232,7 +258,10 @@ FIXME try NCG
 \begin{enumerate}
 \item Prove coercivity \eqref{eq:of:coercivity} and convexity \eqref{eq:of:convexity} of functional $I[u]$ defined in \eqref{eq:of:functional}.  The finite dimensional facts that FIXME for $\xi,\eta\in\RR^n$ will be useful.
 
-\item Using \eqref{eq:of:chidefn}, \eqref{eq:of:referencemap}, and \eqref{eq:of:phionref}, derive \eqref{eq:of:gradphionref}.
+\item Expand \eqref{eq:of:chidefn} to see the basis of bilinear functions more clearly.  Then confirm \eqref{eq:of:referencemap}.
+
+\item Using \eqref{eq:of:chidefn}, \eqref{eq:of:referencemap}, and \eqref{eq:of:phionref}, derive \eqref{eq:of:gradphionref}.  Also show \eqref{eq:of:elementjacobian}.
+
 
 \item FIXME
 \end{enumerate}
