@@ -25,17 +25,16 @@ w = {[2],
 fprintf('degree  difference  success\n')
 for k=0:7
     % do quadrature
-    rsum = 0.0;
-    for i=1:n
-        xij = z{n}(i);
-        for j=1:n
-            yij = z{n}(j);
-            omega = w{n}(i) * w{n}(j);
-            rsum = rsum + omega * integrand(k,xij,yij);
+    tsum = 0.0;
+    for r=1:n
+        rsum = 0.0;
+        for s=1:n
+            rsum = rsum + w{n}(s) * integrand(k,z{n}(r),z{n}(s));
         end
+        tsum = tsum + w{n}(r) * rsum;
     end
     % compare to exact integral and report
-    err = abs(rsum - exact(k));
+    err = abs(tsum - exact(k));
     if err <= (k+1)^2 * 10 * eps
         succstr = 'yes';
     else
