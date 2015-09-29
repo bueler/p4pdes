@@ -126,11 +126,20 @@ We can use \PETSc to numerically solve the $p$-Laplacian equation \emph{as a min
 
 The domain in our first example is the square $\Omega = [0,1]\times[0,1]$.  Consider the structured grid shown in Figure \ref{fig:q1grid} with nodes $(x_i,y_j)$ where $x_i = i h_x \, (0 \le i \le m_x-1)$, $y_j = j h_y \, (0 \le j \le m_y-1)$, $h_x=1/m_x$, and $h_y=1/m_y$.  The \emph{elements} are rectangles
    $$\square_{ij} = [x_i,x_{i+1}] \times [y_j,y_{j+1}].$$
-It immediately follows that the functional can be computed element-by-element because that is the way integration works:
+It immediately follows that the functional can be computed element-by-element, because integration is additive over sets:
 \begin{equation}
 I[u] = \sum_{i=0}^{m_x-1} \sum_{j=0}^{m_y-1} \int_{\square_{ij}} \frac{1}{p} |\grad u|^p - fu  \label{eq:of:sumoverelements}
 \end{equation}
 
+How do we approximately represent the unknown function $u \in W_g^{1,p}(\Omega)$?  One of the simpler choices, compatible with the structured grid of rectangles above, is to require that the approximation $u_h \approx u$ be bilinear on each element $\square_{ij}$ and continuous on the whole domain $\Omega$.  However, $u_h$ must have the right boundary values $g$, which generally conflicts with both requirements for $u_h$.  We resolve the conflict by requiring that $g$ in the original problem be well-behaved (below), a small but genuine restriction to our method.
+
+In fact, it is an easy exercise to show that the finite-dimensional (affine) space of functions
+\begin{equation}
+S_g^h = \left\{v \in C(\Omega) \, \Big| \, v|_{\partial \Omega} = g \text{ and } v|_{\square_{ij}} \text{ is bilinear}\right\} \label{eq:of:Shdefn}
+\end{equation}
+is an (affine) subspace of $W_g^{1,p}(\Omega)$ if $g$ is continuous and (appropriately) piece-wise linear on $\partial\Omega$.
+
+Because the elements are quadrilaterals, and because the degree of bilinear polynomial is one, this choice is called a  ``$Q^1$'' FEM \citep{Elmanetal2005}.  From now on we will assume that $g$ is well-behaved enough so that $S_g^h \subset W_g^{1,p}(\Omega)$.  In that case one says this is a ``conforming'' $Q^1$ FEM.  The ``nonconforming'' version, which would be more general, would only have $u_h \approx g$ on the boundary, in the sense, for example, that the boundary values $u_h|_{\partial \Omega}$ would interpolate $g$.
 
 FIXME show bilinear functions: $\ell=0,1,2,3$ indexing on corners  and their basis $\chi_\ell(\xi,\eta)$ on reference element $\square_\ast = [-1,1]\times[-1,1]$
 \begin{align}
@@ -260,6 +269,8 @@ FIXME try NCG
 \renewcommand{\labelenumii}{(\alph{enumii})}
 \begin{enumerate}
 \item Prove coercivity \eqref{eq:of:coercivity} and convexity \eqref{eq:of:convexity} of functional $I[u]$ defined in \eqref{eq:of:functional}.  The finite dimensional facts that FIXME for $\xi,\eta\in\RR^n$ will be useful.
+
+\item Show that $S_0^h$ is a linear subspace of $W_0^{1,p}(\Omega)$ with dimension $(m_x-1)(m_y-1)$.  What precisely is meant by ``$g$ is \dots (appropriately) piece-wise linear on $\partial\Omega$'' in the definition of $S_g^h$ (page \pageref{eq:of:Shdefn})?
 
 \item Expand \eqref{eq:of:chidefn} to see the basis of bilinear functions more clearly.  Then confirm \eqref{eq:of:referencemap}.
 
