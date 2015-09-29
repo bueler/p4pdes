@@ -9,7 +9,7 @@ Each example in the rest of the book will use \emph{all} of these object types.
 
 In particular, from now on we will even solve \emph{linear} PDEs using a \pSNES object and Newton iteration.  Linear problems are now merely the case where we know, in advance, that one Newton iteration suffices.  Always using \pSNES gives us uniform code structure and much more flexibility when it comes to changing the PDE problem.
 
-Though new ideas appear in it, the current Chapter takes a break from introducing new \PETSc objects.  Instead we introduce PDEs which arise from minimization in a function space, and we introduce a structured-grid finite element method (FEM).  Our one example is from an important class of nonlinear PDEs, namely Poisson-like problems with solution-dependent diffusivity.
+Though new ideas appear in it, the current Chapter takes a break from introducing new \PETSc objects.  Instead we look at a PDE which arises from minimization in a function space, and we introduce a structured-grid finite element method (FEM).  Our one example is from the important class of nonlinear PDEs which are Poisson-like, but with solution-dependent diffusivity.
 
 
 \section{$p$-Laplacian equation as minimization}
@@ -31,13 +31,13 @@ which is a Banach space with norm $\|w\|_{W^{1,p}} = \left(\int_\Omega |w|^p + \
 \label{fig:of:cartoonfunctional}
 \end{marginfigure}
 
-The reader may visualize $I[u]$ in \eqref{eq:of:functional} in cartoon form as in Figure \ref{fig:of:cartoonfunctional}.  As suggested by this cartoon, not only is it well-defined, but it also has a unique minimum, at least if we add boundary conditions.
+The reader may visualize $I[u]$ in \eqref{eq:of:functional} in cartoon form as in Figure \ref{fig:of:cartoonfunctional}.  As suggested by this cartoon it has a unique minimum, at least if we add boundary conditions.
 
-We add Dirichlet conditions, as in the Poisson problem in Chapter \ref{chap:st}, by choosing a real-valued function $g$ defined along $\partial \Omega$.  This function determines a subset (affine subspace) of $W^{1,p}(\Omega)$, namely
+We add Dirichlet conditions (Chapter \ref{chap:st}) by choosing a real-valued function $g$ defined along $\partial \Omega$.  This function determines a subset (affine subspace) of $W^{1,p}(\Omega)$, namely
 \begin{equation}
     W_g^{1,p}(\Omega) = \left\{w \,:\, w \in W^{1,p}(\Omega) \,\, \& \,\, w\big|_{\partial \Omega} = g\right\},  \label{eq:of:affinedirichlet}
 \end{equation}
-consisting of those functions which have boundary value $g$.  For this to make sense we assume $g \in L^p(\partial \Omega)$ and note that ``$w\big|_{\partial \Omega} = g$'' has a precise ``trace operator'' meaning \citep{Evans2010}.  These considerations also define the vector subspace $W_0^{1,p}(\Omega) \subset W^{1,p}(\Omega)$ when $g=0$; we use this subspace for ``test functions'' below.
+consisting of those functions which have boundary value $g$.  For this to make sense we assume $g \in L^p(\partial \Omega)$ and note that ``$w\big|_{\partial \Omega} = g$'' has a precise ``trace operator'' meaning \citep{Evans2010}.  These considerations also define the vector subspace $W_0^{1,p}(\Omega) \subset W^{1,p}(\Omega)$ in the case where $g=0$; we use this subspace for ``test functions'' below.
 
 The functional $I[u]$ has three significant properties.  First of all, with the Dirichlet boundary conditions, $I[u]$ is \emph{coercive} in the sense that if the input function from $W_g^{1,p}(\Omega)$ is large in norm then the output is large:
 \begin{equation}
@@ -59,14 +59,14 @@ if $u,v\in W^{1,p}(\Omega)$ and $0 \le \lambda \le 1$.
 \end{equation}
 has a unique solution.  Being good calculus students we immediately seek this solution by taking the derivative and setting it to zero.  Fortunately, if $p>1$ then the functional $I[u]$ is smooth enough to have a gradient (derivative).
 
-In fact the solution of minimization problem \eqref{eq:of:plapmin} is also the solution to a nonlinear PDE.  The statement that the gradient is zero at the minimum has several names, among them \emph{variational equation}, \emph{Euler-Lagrange equation}, and the \emph{weak form} of the PDE.  These multiple names hint that one sees the following calculation in many parts of applied mathematics.
+In fact, if $p>1$ then the solution of minimization problem \eqref{eq:of:plapmin} is also the solution to a nonlinear PDE.  The statement that the gradient is zero at the minimum has several names, among them \emph{variational equation}, \emph{Euler-Lagrange equation}, and the \emph{weak form of the PDE}.  These multiple names hint that one sees the following calculation in many parts of applied mathematics.
 
 Assume $\eps$ is a real number and $u,v \in W^{1,p}(\Omega)$.  Then
 \begin{align*}
 I[u+\eps v] - I[u] &= \int_\Omega \frac{1}{p} |\grad u + \eps \grad v|^p + \frac{1}{p} |\grad u|^p - \eps f v \\
    &= \eps \left(\int_\Omega |\grad u|^{p-2} \grad u \cdot \grad v - f v\right) + O(\eps^2),
 \end{align*}
-and so the gradient exists,
+and so the directional derivative, and thus the gradient, exists and has this formula:
 \begin{equation}
 \grad I[u](v) = \lim_{\eps\to 0} \frac{I[u+\eps v] - I[u]}{\eps} = \int_\Omega |\grad u|^{p-2} \grad u \cdot \grad v - f v. \label{eq:of:plapfunctionalderivative}
 \end{equation}
@@ -77,11 +77,11 @@ If $u \in W_g^{1,p}(\Omega)$ and $v\in W_0^{1,p}(\Omega)$ then $u+\eps v\in W_g^
 \begin{equation}
 \int_\Omega |\grad u|^{p-2} \grad u \cdot \grad v - f v = 0 \label{eq:of:plapweakform}
 \end{equation}
-for all $v\in W_0^{1,p}(\Omega)$.
+for all $v\in W_0^{1,p}(\Omega)$.  Note that the test functions $v$ must have zero boundary values in this calculation.
 
-From now on we refer to \eqref{eq:of:plapweakform} as the \emph{weak form} of the $p$-\emph{Laplacian} equation, and it generalizes the Poisson problem from Chapter \ref{chap:st}.  In particular, if the solution $u \in W_g^{1,p}(\Omega)$ to problem \eqref{eq:of:plapmin} is actually smooth-enough to have continuous second derivatives,\sidenote{\emph{Proving} this much smoothness is possible in some cases when the domain $\Omega$ and data $f,g$ are well-behaved.  Such results, found in \citep{KinderlehrerStampacchia1980} for example, are strongly $p$-dependent, and beyond our scope here.} i.e.~$u \in C^2(\Omega)$, then we can derive the \emph{strong form} corresponding to equation \eqref{eq:of:plapweakform}.
+From now on we refer to \eqref{eq:of:plapweakform} as the \emph{weak form} of the $p$-\emph{Laplacian} equation.  If the solution $u \in W_g^{1,p}(\Omega)$ to problem \eqref{eq:of:plapmin} is actually smooth-enough to have continuous second derivatives,\sidenote{\emph{Proving} this much smoothness is possible in some cases when the domain $\Omega$ and data $f,g$ are well-behaved.  Such results, found in \citep{KinderlehrerStampacchia1980} for example, are strongly $p$-dependent, and beyond our scope here.} i.e.~$u \in C^2(\Omega)$, then we can derive the \emph{strong form} corresponding to equation \eqref{eq:of:plapweakform}.  The strong form generalizes the Poisson problem stated in Chapter \ref{chap:st}
 
-We show this by an integration-by-parts \citep{Evans2010} of equation \eqref{eq:of:plapweakform}, which gives
+The strong form arises here by an integration-by-parts \citep{Evans2010} of equation \eqref{eq:of:plapweakform}, which gives
     $$-\int_\Omega \Div\left(|\grad u|^{p-2} \grad u\right) v - \int_\Omega f v + \int_{\partial \Omega} v |\grad u|^{p-2} \grad u \cdot \bn = 0$$
 The boundary integral is zero if $v\in W_0^{1,p}(\Omega)$.  It follows that
 \begin{equation}
@@ -92,14 +92,13 @@ which is the strong form, the traditional form of the $p$-Laplacian equation.  I
 
 Before proceeding to a numerical solution, the main idea of this extended diversion into theory is simple and worth summarizing:
 \begin{quote}
-Minimization problem \eqref{eq:of:plapmin} for functional $I[u]$ in \eqref{eq:of:functional} is equivalent to the weak form equation \eqref{eq:of:plapweakform}, and it becomes the strong form equation \eqref{eq:of:plapstrongform} in cases where the solution $u$ is smooth.  Thus the $p$-Laplacian equation \eqref{eq:of:plapstrongform}, a nonlinear Poisson equation, arises from a minimization problem.
+Minimization problem \eqref{eq:of:plapmin} for functional $I[u]$ in \eqref{eq:of:functional} is equivalent to the weak form \eqref{eq:of:plapweakform}.  It becomes the strong form \eqref{eq:of:plapstrongform} in cases where the solution $u$ is smooth.  Thus the $p$-Laplacian equation \eqref{eq:of:plapstrongform}, a nonlinear Poisson equation, arises from a minimization problem.
 \end{quote}
 
 
 \section{Structured $Q^1$ finite elements}
 
-FIXME so what?  well, it turns out \PETSc is perfectly-happy to let us think of the $p$-Laplacian equation as a minimization problem.  all we need to implement is \eqref{eq:of:functional}.  we do so, and we take quite literally the fundamental idea that the unknowns represent a function in a function space and we need only implement a real-valued functional on such functions.
-
+We can use \PETSc to numerically solve the $p$-Laplacian equation \emph{as a minimization problem} based on user code that computes the functional $I[u]$ from a representation of $u \in W_g^{1,p}(\Omega)$.  In other words, at least for initial prototyping, all we need to implement is formula \eqref{eq:of:functional} for $I[u]$, once we have a finite-dimensional representation of the input $u$.  For the representation we introduce a structured-grid finite element method.  The gridded unknowns, which live on the same structured grid as in Chapter \ref{chap:st}, will now represent a function in a function space.
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
@@ -125,12 +124,13 @@ FIXME so what?  well, it turns out \PETSc is perfectly-happy to let us think of 
 \label{fig:q1grid}
 \end{marginfigure}
 
-FIXME show grid with $(i,j)$ indexing on nodes, of thus of elements $\square_{ij}$
+The domain in our first example is the square $\Omega = [0,1]\times[0,1]$.  Consider the structured grid shown in Figure \ref{fig:q1grid} with nodes $(x_i,y_j)$ where $x_i = i h_x \, (0 \le i \le m_x-1)$, $y_j = j h_y \, (0 \le j \le m_y-1)$, $h_x=1/m_x$, and $h_y=1/m_y$.  The \emph{elements} are rectangles
+   $$\square_{ij} = [x_i,x_{i+1}] \times [y_j,y_{j+1}].$$
+It immediately follows that the functional can be computed element-by-element because that is the way integration works:
+\begin{equation}
+I[u] = \sum_{i=0}^{m_x-1} \sum_{j=0}^{m_y-1} \int_{\square_{ij}} \frac{1}{p} |\grad u|^p - fu  \label{eq:of:sumoverelements}
+\end{equation}
 
-\begin{align}
-I[u] &= \int_\Omega \frac{1}{p} |\grad u|^p - fu  \notag \\
-     &= \sum_{i=0}^{M_x-1} \sum_{j=0}^{M_y-1} \int_{\square_{ij}} \frac{1}{p} |\grad u|^p - fu  \label{eq:of:sumoverelements}
-\end{align}
 
 FIXME show bilinear functions: $\ell=0,1,2,3$ indexing on corners  and their basis $\chi_\ell(\xi,\eta)$ on reference element $\square_\ast = [-1,1]\times[-1,1]$
 \begin{align}
@@ -141,11 +141,6 @@ on the reference element there is a basis of bilinear functions
 \begin{equation}
 \chi_\ell(\xi,\eta) = \frac{1}{4} \left(1 + \xi_\ell \xi\right) \left(1 + \eta_\ell \eta\right)   \label{eq:of:chidefn}
 \end{equation}
-the map $\square_\ast \to \square_{ij}$ can be written
-\begin{align}
-x(\xi,\eta) &= \sum_{\ell=0}^3 x_\ell \chi_\ell(\xi,\eta) = x_i + \frac{h_x}{2} (1+\xi) \label{eq:of:referencemap} \\
-y(\xi,\eta) &= \sum_{\ell=0}^3 y_\ell \chi_\ell(\xi,\eta) = x_j + \frac{h_y}{2} (1+\eta) \notag
-\end{align}
 
 \begin{figure}
 \begin{tikzpicture}[scale=3.0]
@@ -183,6 +178,17 @@ y(\xi,\eta) &= \sum_{\ell=0}^3 y_\ell \chi_\ell(\xi,\eta) = x_j + \frac{h_y}{2} 
 \label{fig:q1gridandref}
 \end{figure}
 
+the map $\square_\ast \to \square_{ij}$ can be written
+\begin{align}
+x(\xi,\eta) &= \sum_{\ell=0}^3 x_\ell \chi_\ell(\xi,\eta) = x_i + \frac{h_x}{2} (1+\xi) \label{eq:of:referencemap} \\
+y(\xi,\eta) &= \sum_{\ell=0}^3 y_\ell \chi_\ell(\xi,\eta) = x_j + \frac{h_y}{2} (1+\eta) \notag
+\end{align}
+the Jacobian of this map is
+\begin{equation}
+\det\frac{\partial(x,y)}{\partial(\xi,\eta)} = \det\begin{bmatrix} \frac{h_x}{2} & 0 \\ 0 & \frac{h_y}{2} \end{bmatrix} = \frac{h_x h_y}{4}, \label{eq:of:elementjacobian}
+\end{equation}
+which is the ratio of areas of the elements
+
 FIXME hat functions
 \begin{equation}
   \psi_{i,j}(x_r,y_s) = \delta_{ir} \delta_{js}  \label{eq:of:phinodewise}
@@ -192,10 +198,10 @@ but using the numbering of the corners of the elements and pulling back to the r
   \psi_\ell(\xi,\eta) = \psi_\ell(x(\xi,\eta),y(\xi,\eta)) = \chi_\ell(\xi,\eta)  \label{eq:of:phionref}
 \end{equation}
 because we will be computing gradients, this is useful:
-\begin{align}
-  (\grad \psi_\ell)(\xi,\eta) &= \left<\frac{\partial\psi_\ell}{\partial x}(x(\xi,\eta),y(\xi,\eta)),\frac{\partial\psi_\ell}{\partial y}(x(\xi,\eta),y(\xi,\eta))\right> \label{eq:of:gradphionref} \\
-     &= \left<\frac{1}{2h_x}\xi_\ell \left(1+\eta_\ell \eta\right),\frac{1}{2h_y}\eta_\ell \left(1+\xi_\ell \xi\right)\right> \notag
-\end{align}
+\begin{equation}
+  (\grad_{x,y} \psi_\ell)(\xi,\eta) = \left<\frac{\partial\psi_\ell}{\partial \xi} \frac{\partial\xi}{\partial x},\frac{\partial\psi_\ell}{\partial \eta} \frac{\partial\eta}{\partial y}\right> = \left<\frac{2}{h_x}\frac{\partial\psi_\ell}{\partial \xi},\frac{2}{h_y}\frac{\partial\psi_\ell}{\partial \eta}\right>   \label{eq:of:gradphionref}
+\end{equation}
+and $\partial\psi_\ell/\partial \xi,\partial\psi_\ell/\partial \eta,$ can be found from equation \eqref{eq:of:chidefn} above
 
 \begin{marginfigure}
 \input{q1hat.tikz}
@@ -211,20 +217,17 @@ it is actually more useful, not to mention more elegant, to pull-back to the ref
 \begin{equation}
 v(\xi,\eta) = \sum_{\ell=0}^3 v_\ell \chi_\ell(\xi,\eta)  \label{eq:of:bilinearrepresentationref}
 \end{equation}
-Its gradient therefore satisfies, when pulled-back to the ref element,
+by \eqref{eq:of:gradphionref} its gradient satisfies, when pulled-back to the ref element,
 \begin{equation}
-  (\grad v)(\xi,\eta) = \sum_{\ell=0}^3 v_\ell (\grad \psi_\ell)(\xi,\eta)   \label{eq:of:gradrepref}
+  (\grad_{x,y} v)(\xi,\eta) = \left<\frac{2}{h_x} \sum_{\ell=0}^3 v_\ell \frac{\partial\chi_\ell}{\partial \xi}, \frac{2}{h_y} \sum_{\ell=0}^3 v_\ell \frac{\partial\chi_\ell}{\partial \eta}\right> \label{eq:of:gradrepref}
 \end{equation}
-so we can use \eqref{eq:of:gradphionref}
 
-FIXME integrating an arbitrary function $a(x,y)$ over an element is done by change-of-variables to the reference element,
-\begin{equation}
-\int_{\square_{ij}} a(x,y)\,dx\,dy = \int_{-1}^1 \int_{-1}^1 a(\xi,\eta) \det\frac{\partial(x,y)}{\partial(\xi,\eta)}\,d\xi\,d\eta   \label{eq:of:changeofvars}
-\end{equation}
-where $a(\xi,\eta)=a(x(\xi,\eta),y(\xi,\eta))$ and where the Jacobian of the change of variables matrix appears.  Note that in this case
-\begin{equation}
-\det\frac{\partial(x,y)}{\partial(\xi,\eta)} = \det\begin{bmatrix} \frac{h_x}{2} & 0 \\ 0 & \frac{h_y}{2} \end{bmatrix} = \frac{h_x h_y}{4}.  \label{eq:of:elementjacobian}
-\end{equation}
+FIXME integrating an arbitrary function $a(x,y)$ over an element is done by change-of-variables to the reference element, which uses \eqref{eq:of:elementjacobian},
+\begin{align}
+\int_{\square_{ij}} a(x,y)\,dx\,dy &= \int_{\square_\ast} a(\xi,\eta) \det\frac{\partial(x,y)}{\partial(\xi,\eta)}\,d\xi\,d\eta  \label{eq:of:changeofvars} \\
+&= \frac{h_x h_y}{4} \int_{\square_\ast} a(\xi,\eta) \,d\xi\,d\eta \notag
+\end{align}
+where $a(\xi,\eta)=a(x(\xi,\eta),y(\xi,\eta))$
 
 
 \section{Quadrature}
