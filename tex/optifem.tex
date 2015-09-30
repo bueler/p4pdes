@@ -9,7 +9,7 @@ Each example in the rest of the book will use \emph{all} of these object types.
 
 In particular, from now on we will even solve \emph{linear} PDEs using a \pSNES object and Newton iteration.  Linear problems are now merely the case where we know, in advance, that one Newton iteration suffices.  Always using \pSNES gives us uniform code structure and much more flexibility when it comes to changing the PDE problem.
 
-Though new ideas appear in it, the current Chapter takes a break from introducing new \PETSc objects.  Instead we look at a PDE which arises from minimization in a function space, and we introduce a structured-grid finite element method (FEM).  Our one example is from the important class of nonlinear PDEs which are Poisson-like, but with solution-dependent diffusivity.
+Though new ideas appear in it, the current Chapter takes a break from introducing new \PETSc objects.  Instead we look at a PDE which arises from minimization in a function space, and we introduce a structured-grid finite element method.  Our one example is from the important class of nonlinear PDEs which are Poisson-like, but with solution-dependent diffusivity.
 
 
 \section{$p$-Laplacian equation as minimization}
@@ -98,7 +98,9 @@ Minimization problem \eqref{eq:of:plapmin} for functional $I[u]$ in \eqref{eq:of
 
 \section{Structured $Q^1$ finite elements}
 
-We can use \PETSc to numerically solve the $p$-Laplacian equation \emph{as a minimization problem} based on user code that computes the functional $I[u]$ from a representation of $u \in W_g^{1,p}(\Omega)$.  In other words, at least for initial prototyping, all we need to implement is formula \eqref{eq:of:functional} for $I[u]$, once we have a finite-dimensional representation of the input $u$.  For the representation we introduce a structured-grid finite element method.  The gridded unknowns, which live on the same structured grid as in Chapter \ref{chap:st}, will now represent a function in a function space.
+We can use \PETSc to numerically solve the $p$-Laplacian equation \eqref{eq:of:plapstrongform} \emph{as a minimization problem} based only on user code that computes the functional $I[u]$ from a representation of $u \in W_g^{1,p}(\Omega)$.  In other words, once we have a finite-dimensional representation of the input $u$, all we need to implement is formula \eqref{eq:of:functional} for $I[u]$.  Such an implementation may suffice  for initial prototyping or, as we show here, it can be augmented by additional derivative-computing code.  Initially, however, we can ask \PETSc to use finite differences when it needs derivatives (gradients) in minimizing $I[u]$.
+
+For the representation of $u$ we introduce a structured-grid finite element method (FEM) using quadrilateral elements.  The gridded unknowns, which live on the same structured grid as in Chapter \ref{chap:st}, will in this Chapter represent a function in a function space.  The resulting code will be surprisingly-similar to a finite difference solution of PDE \eqref{eq:of:plapstrongform}, despite the conceptually-distinct approach.
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
@@ -112,7 +114,7 @@ We can use \PETSc to numerically solve the $p$-Laplacian equation \emph{as a min
   % outline an element
   \draw[line width=1.5pt] (0.5,\third) -- (0.75,\third) -- (0.75,\twothird) -- (0.5,\twothird) -- cycle;
   \node at (0.64,0.5) {$\square_{ij}$};
-  \filldraw (0.5,\third) circle (0.7pt) node[xshift=-5mm,yshift=-3mm] {$(x_i,y_j)$};
+  \filldraw (0.5,\third) circle (0.7pt) node[xshift=-4.5mm,yshift=-3mm] {$(x_i,y_j)$};
   \draw[<->] (0.5,1.1) -- (0.75,1.1) node[above,yshift=1mm,xshift=-4mm] {$h_x$};
   \draw[<->] (1.1,\third) -- (1.1,\twothird) node[right,yshift=-5mm] {$h_y$};
   \node at (0.15,0.8) {\large $\Omega$};
@@ -124,22 +126,25 @@ We can use \PETSc to numerically solve the $p$-Laplacian equation \emph{as a min
 \label{fig:q1grid}
 \end{marginfigure}
 
-The domain in our first example is the square $\Omega = [0,1]\times[0,1]$.  Consider the structured grid shown in Figure \ref{fig:q1grid} with nodes $(x_i,y_j)$ where $x_i = i h_x \, (0 \le i \le m_x-1)$, $y_j = j h_y \, (0 \le j \le m_y-1)$, $h_x=1/m_x$, and $h_y=1/m_y$.  The \emph{elements} are rectangles
-   $$\square_{ij} = [x_i,x_{i+1}] \times [y_j,y_{j+1}].$$
-It immediately follows that the functional can be computed element-by-element, because integration is additive over sets:
+The domain is fixed to be the square $\Omega = (0,1)\times (0,1)$ in this Chapter.  Consider the structured grid on $\Omega$ shown in Figure \ref{fig:q1grid}.  It has nodes $(x_i,y_j)$ where $h_x=1/(m_x-1)$, $h_y=1/(m_y-1)$, $x_i = i h_x$, and $y_j = j h_y$; note $i\in \{0,1,\dots,m_x-1\}$ and $j\in\{0,1,\dots,m_y-1\}$.  The \emph{elements} are the (closed) rectangles
+   $$\square_{ij} = [x_i,x_{i+1}] \times [y_j,y_{j+1}]$$
+so that $\bigcup_{ij} \square_{ij} = \overline{\Omega}$ and $|\square_{ij}| = h_x h_y$.
+
+We immediately see that the functional can be computed element-by-element, because integration is additive over sets and the boundaries are of zero measure:
 \begin{equation}
 I[u] = \sum_{i=0}^{m_x-1} \sum_{j=0}^{m_y-1} \int_{\square_{ij}} \frac{1}{p} |\grad u|^p - fu  \label{eq:of:sumoverelements}
 \end{equation}
+Integration over a single element $\square_{ij}$ can be addressed once we represent $f$ and $u$.
 
-How do we approximately represent the unknown function $u \in W_g^{1,p}(\Omega)$?  One of the simpler choices, compatible with the structured grid of rectangles above, is to require that the approximation $u_h \approx u$ be bilinear on each element $\square_{ij}$ and continuous on the whole domain $\Omega$.  However, $u_h$ must have the right boundary values $g$, which generally conflicts with both requirements for $u_h$.  We resolve the conflict by requiring that $g$ in the original problem be well-behaved (below), a small but genuine restriction to our method.
+So, how should we approximate a function $w \in W^{1,p}(\Omega)$ in a manner compatible with the structured grid of rectangles above?  One of the simpler choices is to require that the approximation $w_h \approx w$ be bilinear on each element $\square_{ij}$ and continuous on the whole domain $\Omega$.  We will see that these requirements allow us to determine $w_h(x,y)$ for any $(x,y)\in \overline\Omega$ if we know the nodal values $w_{ij} = w_h(x_i,y_j)$.  In fact these requirements determine a bijection between the vector space $\RR^N$ of possible nodal values, with $N=m_x m_y$ equal to the total number of nodes, and an $N$-dimensional linear subspace of $W^{1,p}(\Omega)$.
 
-In fact, it is an easy exercise to show that the finite-dimensional (affine) space of functions
+The solution $u$ to minimization problem \eqref{eq:of:plapmin} must, however, have the boundary values given by $g$.  If $g$ is discontinuous or if it is not piecewise-linear then it conflicts with the above requirements for the approximation $u_h\approx u$.  We resolve the conflict by restricting $g$ in the original problem be well-behaved (below), an often acceptable restriction in practice.
+
+Given the above considerations, it is an easy exercise to show that the finite-dimensional (affine) space of functions
 \begin{equation}
 S_g^h = \left\{v \in C(\Omega) \, \Big| \, v|_{\partial \Omega} = g \text{ and } v|_{\square_{ij}} \text{ is bilinear}\right\} \label{eq:of:Shdefn}
 \end{equation}
-is an (affine) subspace of $W_g^{1,p}(\Omega)$ if $g$ is continuous and (appropriately) piece-wise linear on $\partial\Omega$.
-
-Because the elements are quadrilaterals, and because the degree of bilinear polynomial is one, this choice is called a  ``$Q^1$'' FEM \citep{Elmanetal2005}.  From now on we will assume that $g$ is well-behaved enough so that $S_g^h \subset W_g^{1,p}(\Omega)$.  In that case one says this is a ``conforming'' $Q^1$ FEM.  The ``nonconforming'' version, which would be more general, would only have $u_h \approx g$ on the boundary, in the sense, for example, that the boundary values $u_h|_{\partial \Omega}$ would interpolate $g$.
+is an (affine) subspace of $W_g^{1,p}(\Omega)$ if $g$ is continuous and (appropriately) piece-wise linear on $\partial\Omega$.  Because the elements are quadrilaterals, and because the degree of bilinear polynomial is one, $S_h$ is called a  ``$Q^1$'' FEM space \citep{Elmanetal2005}.  From now on we will assume that $g$ is well-behaved enough so that $S_g^h \subset W_g^{1,p}(\Omega)$.  One says this is a ``conforming'' $Q^1$ FEM.\sidenote{The ``nonconforming'' version only has $u_h \approx g$ on the boundary.  For example, $u_h|_{\partial \Omega}$ might be a piecewise-linear interpolant of $g$.}
 
 FIXME show bilinear functions: $\ell=0,1,2,3$ indexing on corners  and their basis $\chi_\ell(\xi,\eta)$ on reference element $\square_\ast = [-1,1]\times[-1,1]$
 \begin{align}
@@ -220,8 +225,8 @@ and $\partial\psi_\ell/\partial \xi,\partial\psi_\ell/\partial \eta,$ can be fou
 
 FIXME suppose we have $v \in W^{1,p}(\Omega)$ which is bilinear on element $\square_{ij}$.  Then it can be represented in the hat functions
 \begin{align}
-v(x,y) &= v_{ij} \phi_{ij}(x,y) + v_{i+1,j} \phi_{i+1,j}(x,y) \label{eq:of:bilinearrepresentation} \\
- &\quad + v_{i+1,j+1} \phi_{i+1,j+1}(x,y) + v_{i,j+1} \phi_{i,j+1}(x,y) \notag \end{align}
+v(x,y) &= v_{ij} \psi_{ij}(x,y) + v_{i+1,j} \psi_{i+1,j}(x,y) \label{eq:of:bilinearrepresentation} \\
+ &\quad + v_{i+1,j+1} \psi_{i+1,j+1}(x,y) + v_{i,j+1} \psi_{i,j+1}(x,y) \notag \end{align}
 it is actually more useful, not to mention more elegant, to pull-back to the reference element, using the local node numbering
 \begin{equation}
 v(\xi,\eta) = \sum_{\ell=0}^3 v_\ell \chi_\ell(\xi,\eta)  \label{eq:of:bilinearrepresentationref}
@@ -231,6 +236,9 @@ by \eqref{eq:of:gradphionref} its gradient satisfies, when pulled-back to the re
   (\grad_{x,y} v)(\xi,\eta) = \left<\frac{2}{h_x} \sum_{\ell=0}^3 v_\ell \frac{\partial\chi_\ell}{\partial \xi}, \frac{2}{h_y} \sum_{\ell=0}^3 v_\ell \frac{\partial\chi_\ell}{\partial \eta}\right> \label{eq:of:gradrepref}
 \end{equation}
 
+
+\section{Quadrature}
+
 FIXME integrating an arbitrary function $a(x,y)$ over an element is done by change-of-variables to the reference element, which uses \eqref{eq:of:elementjacobian},
 \begin{align}
 \int_{\square_{ij}} a(x,y)\,dx\,dy &= \int_{\square_\ast} a(\xi,\eta) \det\frac{\partial(x,y)}{\partial(\xi,\eta)}\,d\xi\,d\eta  \label{eq:of:changeofvars} \\
@@ -238,11 +246,16 @@ FIXME integrating an arbitrary function $a(x,y)$ over an element is done by chan
 \end{align}
 where $a(\xi,\eta)=a(x(\xi,\eta),y(\xi,\eta))$
 
+FIXME in fact we only compute such integrals approximately by Gauss-Legendre
 
-\section{Quadrature}
+FIXME table with degree $n=1,2,3$ quadrature nodes $z_q$ and weights $w_q$ for integration over $[-1,1]$
 
-FIXME
+FIXME tensor products for integrals over $\square_\ast$,
+    $$\int_{\square_\ast} a(\xi,\eta) \,d\xi\,d\eta \approx \sum_{r=0}^n \sum_{s=0^n} w_r w_s a(z_r,z_s)$$
 
+
+\clearpage
+\newpage
 \section{Implementation with objective only}
 
 FIXME code uses \texttt{SNESSetObjective()} only, though also \texttt{SNESSetFunction()}; no hand-made Jacobian at all
