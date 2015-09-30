@@ -30,5 +30,5 @@ minsurf.pdf: minsurf.tex
 .PHONY: clean
 
 clean:
-	@rm -f richpolyplot.pdf poisson-conv.pdf poisson-cg-scale.pdf expcirclebasic.pdf newtonconv*pdf reaction-conv.pdf
+	@rm -f *~ richpolyplot.pdf poisson-conv.pdf poisson-cg-scale.pdf expcirclebasic.pdf newtonconv*pdf reaction-conv.pdf minsurf.pdf *.aux *.log
 
