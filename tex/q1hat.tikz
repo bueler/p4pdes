@@ -1,4 +1,4 @@
-\begin{tikzpicture}[scale=0.4]
+\begin{tikzpicture}[scale=0.5]
 
   % strong grid around elements
   \draw[thick] (0,0) -- (8,0);
@@ -87,13 +87,13 @@
   \filldraw (6,\ytop) circle (4pt);
 
   % annotate
-  \draw (10,\ytop+1.0) node {$\psi_{i,j}(x_i,y_j)=1$};
-  \draw[-latex] (7.2,\ytop+0.8) -- (6.1,\ytop+0.1);
-  \draw (10,-0.9) node {$\psi_{i,j}=0$ at all other nodes};
+  \draw (10,\ytop+1.0) node {$\psi_{p,q}(x_p,y_q)=1$};
+  \draw[-latex] (7.2,\ytop+0.8) -- (6.2,\ytop+0.2);
+  \draw (10,-1.2) node {$\psi_{p,q}=0$ at other nodes};
   \draw[-latex] (10,-0.3) -- (10,1.8);
 
   % label center point
-  \draw (4,-0.6) node {$x_i$};
-  \draw (1.2,2) node {$y_j$};
+  \draw (4,-0.6) node {$x_p$};
+  \draw (1.2,2) node {$y_q$};
 
 \end{tikzpicture}
