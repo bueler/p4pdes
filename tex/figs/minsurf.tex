@@ -14,7 +14,7 @@
              xlabel shift={20pt},
              mesh/interior colormap name=blackwhite,
              colormap/blackwhite,]
-  \addplot3[domain=-5:5,surf,opacity=0.5]{0.25*abs(x)^4 + 0.25*abs(y)^4 + 2*x - 2*y};
+  \addplot3[domain=-5:5,surf,opacity=0.5]{0.25*abs(x)^4 + 0.25*abs(y)^4 - 2*x + 2*y};
 \end{axis}
 \end{tikzpicture}
 \end{document}
