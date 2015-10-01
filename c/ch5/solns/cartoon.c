@@ -1,28 +1,59 @@
 static char help[] = "Solve a 2-variable polynomial optimization problem.\n"
-"When using -objonly option, only seems to work this way:\n"
-"    ./cartoon -objonly -snes_fd_function -snes_mf\n"
-"To use residual (i.e. gradient-of-objective) evaluation routine, plus\n"
-"objective function in the line search, run as\n"
-"    ./cartoon -snes_fd\n\n";
+"Has FormObjective() and FormFunction() implementations.  The latter is the\n"
+"residual and also the gradient of the objective.  The Jacobian (= Hessian of\n"
+"objective) is not implemented.  Usage is either:\n"
+"    ./cartoon -snes_[fd|mf]\n"
+"or:\n"
+"    ./cartoon -snes_[fd|mf] -snes_fd_function\n\n";
+
+/*  RESULTS:
+
+$ ./cartoon -snes_fd -snes_converged_reason -snes_rtol 1.0e-15
+Nonlinear solve converged due to CONVERGED_FNORM_ABS iterations 5
+10 FormObjective evals,  21 FormFunction evals
+|x-x_exact|_inf = 0
+
+$ ./cartoon -snes_mf -snes_converged_reason -snes_rtol 1.0e-15
+Nonlinear solve converged due to CONVERGED_FNORM_ABS iterations 5
+10 FormObjective evals,  11 FormFunction evals
+|x-x_exact|_inf = 0
+
+$ ./cartoon -snes_fd -snes_converged_reason -snes_rtol 1.0e-15 -snes_fd_function
+Nonlinear solve converged due to CONVERGED_FNORM_ABS iterations 4
+127 FormObjective evals,  0 FormFunction evals
+|x-x_exact|_inf = 1.97337e-08
+
+$ ./cartoon -snes_mf -snes_converged_reason -snes_rtol 1.0e-15 -snes_fd_function
+Nonlinear solve converged due to CONVERGED_FNORM_ABS iterations 4
+99 FormObjective evals,  0 FormFunction evals
+|x-x_exact|_inf = 5.97357e-08
+
+*/
 
 #include <petsc.h>
 
-// the exact minimum of this objective is  Phi(2^(1/3),-2^(1/3)) = - 3 * 2^(1/3)
+typedef struct {
+  PetscInt ocount, fcount;
+} CountCtx;
+
 PetscErrorCode FormObjective(SNES snes, Vec x, PetscReal *Phi, void *ctx) {
     PetscErrorCode  ierr;
     const PetscReal *ax;
+    CountCtx        *user = (CountCtx*)ctx;
 
     ierr = VecGetArrayRead(x,&ax); CHKERRQ(ierr);
     *Phi = 0.25 * (pow(ax[0],4.0) + pow(ax[1],4.0)) - 2.0 * ax[0] + 2.0 * ax[1];
     ierr = VecRestoreArrayRead(x,&ax); CHKERRQ(ierr);
+    (user->ocount)++;
     return 0;
 }
 
 // residual F = grad Phi
 PetscErrorCode FormFunction(SNES snes, Vec x, Vec F, void *ctx) {
-    PetscErrorCode   ierr;
-    const PetscReal  *ax;
-    PetscReal        *aF;
+    PetscErrorCode  ierr;
+    const PetscReal *ax;
+    PetscReal       *aF;
+    CountCtx        *user = (CountCtx*)ctx;
 
     ierr = VecGetArrayRead(x,&ax);CHKERRQ(ierr);
     ierr = VecGetArray(F,&aF);CHKERRQ(ierr);
@@ -30,39 +61,51 @@ PetscErrorCode FormFunction(SNES snes, Vec x, Vec F, void *ctx) {
     aF[1] = ax[1]*ax[1]*ax[1] + 2.0;
     ierr = VecRestoreArrayRead(x,&ax);CHKERRQ(ierr);
     ierr = VecRestoreArray(F,&aF);CHKERRQ(ierr);
+    (user->fcount)++;
     return 0;
 }
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
     SNES           snes;          // nonlinear solver context
-    Vec            x, r;          // solution vector
-    PetscReal      initial = 1.0;
-    PetscBool      objonly = PETSC_FALSE;
+    Vec            x, r;          // soln and residual vectors
+    const PetscInt ix[2] = {0,1};
+    PetscReal      scale = 1.0, iv[2], err;
+    CountCtx       user;
 
     PetscInitialize(&argc,&argv,NULL,help);
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"","cartoon options",""); CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-initial","initial vector has this value for both components",
-                   NULL,initial,&initial,NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-objonly","do not use residual evaluation routine at all",
-                   NULL,objonly,&objonly,NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsReal("-initialscale",
+                   "scale initial vector x = [1 -1] by this value",
+                   NULL,scale,&scale,NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+    user.ocount = 0;
+    user.fcount = 0;
 
     ierr = VecCreate(PETSC_COMM_WORLD,&x); CHKERRQ(ierr);
     ierr = VecSetSizes(x,PETSC_DECIDE,2); CHKERRQ(ierr);
     ierr = VecSetFromOptions(x); CHKERRQ(ierr);
-    ierr = PetscOptionsGetReal(NULL,"-initial",&initial,NULL); CHKERRQ(ierr);
-    ierr = VecSet(x,initial); CHKERRQ(ierr);
+    iv[0] = 1.0 * scale;   iv[1] = -1.0 * scale;
+    ierr = VecSetValues(x,2,ix,iv,INSERT_VALUES); CHKERRQ(ierr);
+    ierr = VecAssemblyBegin(x); CHKERRQ(ierr);
+    ierr = VecAssemblyEnd(x); CHKERRQ(ierr);
+
     ierr = VecDuplicate(x,&r); CHKERRQ(ierr);
 
     ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
-    ierr = SNESSetObjective(snes,FormObjective,NULL); CHKERRQ(ierr);
-    if (!objonly) {
-        ierr = SNESSetFunction(snes,r,FormFunction,NULL); CHKERRQ(ierr);
-    }
+    ierr = SNESSetObjective(snes,FormObjective,&user); CHKERRQ(ierr);
+    ierr = SNESSetFunction(snes,r,FormFunction,&user); CHKERRQ(ierr);
     ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
     ierr = SNESSolve(snes,NULL,x); CHKERRQ(ierr);
-    ierr = VecView(x,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"%d FormObjective evals,  %d FormFunction evals\n",
+                       user.ocount,user.fcount); CHKERRQ(ierr);
+
+    iv[0] = - pow(2.0,1.0/3.0);  iv[1] = - iv[0];  // negative of exact soln
+    ierr = VecSetValues(x,2,ix,iv,ADD_VALUES); CHKERRQ(ierr); // note ADD_VALUES
+    ierr = VecAssemblyBegin(x); CHKERRQ(ierr);
+    ierr = VecAssemblyEnd(x); CHKERRQ(ierr);
+    ierr = VecNorm(x,NORM_INFINITY,&err); CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"|x-x_exact|_inf = %g\n",err); CHKERRQ(ierr);
 
     VecDestroy(&x);  VecDestroy(&r);  SNESDestroy(&snes);
     PetscFinalize();
