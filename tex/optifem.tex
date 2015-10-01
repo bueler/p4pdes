@@ -37,29 +37,26 @@ We add Dirichlet conditions (Chapter \ref{chap:st}) by choosing a real-valued fu
 \begin{equation}
     W_g^{1,p}(\Omega) = \left\{w \,:\, w \in W^{1,p}(\Omega) \,\, \& \,\, w\big|_{\partial \Omega} = g\right\},  \label{eq:of:affinedirichlet}
 \end{equation}
-consisting of those functions which have boundary value $g$.  For this to make sense we assume $g \in L^p(\partial \Omega)$ and note that ``$w\big|_{\partial \Omega} = g$'' has a precise ``trace operator'' meaning \citep{Evans2010}.  These considerations also define the vector subspace $W_0^{1,p}(\Omega) \subset W^{1,p}(\Omega)$ in the case where $g=0$; we use this subspace for ``test functions'' below.
+consisting of those functions which have boundary value $g$.  For this to make sense we assume $g \in L^p(\partial \Omega)$ and note that ``$w\big|_{\partial \Omega} = g$'' has a precise ``trace operator'' meaning \citep[section 5.5]{Evans2010}.  These considerations also define the vector subspace $W_0^{1,p}(\Omega) \subset W^{1,p}(\Omega)$ in the case where $g=0$; we use this subspace for ``test functions'' below.
 
-The functional $I[u]$ has three significant properties.  First of all, with the Dirichlet boundary conditions, $I[u]$ is \emph{coercive} in the sense that if the input function from $W_g^{1,p}(\Omega)$ is large in norm then the output is large:
+The functional $I[u]$ has two significant properties.  First, with the Dirichlet boundary conditions, $I[u]$ is \emph{coercive} in the sense that if the input function from $W_g^{1,p}(\Omega)$ is large in norm then the output is large:
 \begin{equation}
 \lim_{\|u\|_{W^{1,p}} \to +\infty} I[u] = +\infty.   \label{eq:of:coercivity}
 \end{equation}
-Secondly it is continuous enough to have a minimum on compact sets, namely it is \emph{weakly lower semi-continuous}, which means, by definition, that
-\begin{equation}
-\lim_{u\rightharpoonup v} I[u] \ge I[v],  \label{eq:of:lowersemicont}
-\end{equation}
-where the limit is in the weak topology on $W^{1,p}(\Omega)$ \citep{Evans2010,KinderlehrerStampacchia1980}.  Third it is \emph{convex}, meaning
+Second it is \emph{strictly convex}, meaning that
 \begin{equation}
 I[\lambda u + (1-\lambda) v] \le \lambda I[u] + (1-\lambda) I[v]    \label{eq:of:convexity}
 \end{equation}
-if $u,v\in W^{1,p}(\Omega)$ and $0 \le \lambda \le 1$.
+if $u,v\in W_g^{1,p}(\Omega)$ and $0 \le \lambda \le 1$, and that inequality \eqref{eq:of:convexity} is strict if $\|u-v\|_{W^{1,p}} > 0$ and $0 < \lambda < 1$.
+These two properties of $I[u]$ are addressed in Exercise \ref{chap:of}.\ref{exer:of:twoproperties}.
 
-\citet{KinderlehrerStampacchia1980} show that the three properties \eqref{eq:of:coercivity}, \eqref{eq:of:lowersemicont}, \eqref{eq:of:convexity} imply that the problem
+\citet{Evans2010} shows that properties \eqref{eq:of:coercivity} and \eqref{eq:of:convexity} imply that the problem
 \begin{equation}
 \min_{u \in W_g^{1,p}(\Omega)} I[u] \label{eq:of:plapmin}
 \end{equation}
-has a unique solution.  Being good calculus students we immediately seek this solution by taking the derivative and setting it to zero.  Fortunately, if $p>1$ then the functional $I[u]$ is smooth enough to have a gradient (derivative).
+has a unique solution.  Note that strict convexity is used to show uniqueness, but convexity also implies that $I[u]$ is continuous enough to have a minimum on compact sets in the appropriate topology.\sidenote{Namely it is \emph{weakly lower semi-continuous}, which means, by definition, that $\liminf_{v\rightharpoonup u} I[v] \ge I[u]$, where the limit is in the weak topology on $W^{1,p}(\Omega)$ \citep[section 8.2]{Evans2010}.} 
 
-In fact, if $p>1$ then the solution of minimization problem \eqref{eq:of:plapmin} is also the solution to a nonlinear PDE.  The statement that the gradient is zero at the minimum has several names, among them \emph{variational equation}, \emph{Euler-Lagrange equation}, and the \emph{weak form of the PDE}.  These multiple names hint that one sees the following calculation in many parts of applied mathematics.
+Being good calculus students we seek this solution by taking the derivative and setting it to zero.  Fortunately, if $p>1$ then the functional $I[u]$ is smooth enough to have a gradient (derivative), and then the solution of minimization problem \eqref{eq:of:plapmin} is also the solution to a nonlinear PDE.  The statement that the gradient is zero at the minimum has several names, among them \emph{variational equation}, \emph{Euler-Lagrange equation}, and the \emph{weak form of the PDE}.  These multiple names hint that one sees the following calculation in many parts of applied mathematics.
 
 Assume $\eps$ is a real number and $u,v \in W^{1,p}(\Omega)$.  Then
 \begin{align*}
@@ -79,7 +76,7 @@ If $u \in W_g^{1,p}(\Omega)$ and $v\in W_0^{1,p}(\Omega)$ then $u+\eps v\in W_g^
 \end{equation}
 for all $v\in W_0^{1,p}(\Omega)$.  Note that the test functions $v$ must have zero boundary values in this calculation.
 
-From now on we refer to \eqref{eq:of:plapweakform} as the \emph{weak form} of the $p$-\emph{Laplacian} equation.  If the solution $u \in W_g^{1,p}(\Omega)$ to problem \eqref{eq:of:plapmin} is actually smooth-enough to have continuous second derivatives,\sidenote{\emph{Proving} this much smoothness is possible in some cases when the domain $\Omega$ and data $f,g$ are well-behaved.  Such results, found in \citep{KinderlehrerStampacchia1980} for example, are strongly $p$-dependent, and beyond our scope here.} i.e.~$u \in C^2(\Omega)$, then we can derive the \emph{strong form} corresponding to equation \eqref{eq:of:plapweakform}.  The strong form generalizes the Poisson problem stated in Chapter \ref{chap:st}
+From now on we refer to \eqref{eq:of:plapweakform} as the \emph{weak form} of the $p$-\emph{Laplacian} equation.  If the solution $u \in W_g^{1,p}(\Omega)$ to problem \eqref{eq:of:plapmin} is actually smooth-enough to have continuous second derivatives,\sidenote{\emph{Proving} this much smoothness is possible in some cases when the domain $\Omega$ and data $f,g$ are well-behaved, but such results are beyond our scope.} i.e.~$u \in C^2(\Omega)$, then we can derive the \emph{strong form} corresponding to equation \eqref{eq:of:plapweakform}.  The strong form generalizes the Poisson problem stated in Chapter \ref{chap:st}
 
 The strong form arises here by an integration-by-parts \citep{Evans2010} of equation \eqref{eq:of:plapweakform}, which gives
     $$-\int_\Omega \Div\left(|\grad u|^{p-2} \grad u\right) v - \int_\Omega f v + \int_{\partial \Omega} v |\grad u|^{p-2} \grad u \cdot \bn = 0$$
@@ -294,7 +291,11 @@ FIXME try NCG
 \renewcommand{\labelenumi}{\arabic{chapter}.\arabic{enumi}\quad}
 \renewcommand{\labelenumii}{(\alph{enumii})}
 \begin{enumerate}
-\item Prove coercivity \eqref{eq:of:coercivity} and convexity \eqref{eq:of:convexity} of functional $I[u]$ defined in \eqref{eq:of:functional}.  The finite dimensional facts that FIXME for $\xi,\eta\in\RR^n$ will be useful.
+\item  \label{exer:of:twoproperties}  This two-part exercise may be too much of a mathematical excursion for some readers.
+  \begin{enumerate}
+  \item For $1 \le p < \infty$, prove coercivity \eqref{eq:of:coercivity} of functional $I[u]$, defined in \eqref{eq:of:functional}, on $W_0^{1,p}(\Omega)$.  (\emph{Hints}:  Use Poincar\`e inequality \citep[Theorem 6.30]{AdamsFournier2003} to convert to replace the leading term with the full $W^{1,p}$ norm.  Use Young's inequality with $\epsilon>0$ \citep[Appendix B]{Evans2010} for the ``$-fu$'' term.  Now choose $\eps$ appropriately.)
+  \item For $1 < p < \infty$, prove strict convexity \eqref{eq:of:convexity} of functional $I[u]$ on $W_0^{1,p}(\Omega)$.  (\emph{Hint}:  The argument in section 5.3 of \citet{Ciarlet2002} suffices.)
+  \end{enumerate}
 
 \item Show that $S^h$ is a linear subspace of $W^{1,p}(\Omega)$ with dimension $(m_x-1)(m_y-1)$.  What precisely is meant by saying $g$ is ``(appropriately) piece-wise linear on $\partial\Omega$'' in the definition of $S_g^h$ (page \pageref{eq:of:Sghdefn})?
 
@@ -304,6 +305,10 @@ FIXME try NCG
     $$\int_{\square_\ast} (1+\xi)^k + (1+\eta)^k\,d\xi\, d\eta = \frac{2^{k+3}}{k+1}$$
 for $k=0,1,\dots,7$, confirm that the $n=1,2,3,4$ Gauss-Legendre quadrature formulas listed in the text will exactly integrate degree $2n-1$ degree polynomials, but not degree $2n$ polynomials, on the reference element.
 % solution:  matlab/testgauss2d.m
+
+\item Figure \ref{fig:of:cartoonfunctional} shows the graph of $\Phi(x,y)=\tfrac{1}{4}(x^4+y^4) - 2x + 2y$, a cartoon for the $p$-Laplacian functional $I[u]$ in the case $p=4$.  Solve
+    $$\min_{x,y} \Phi(x,y)$$
+by hand.  Now write a \PETSc code \texttt{cartoon.c} to solve this problem, starting with a code that only implements $\Phi(x,y)$ by a function \texttt{FormObjective()} and a call to \texttt{SNESSetObjective()}.  After checking that it works, add a function \texttt{FormFunction()} and a call to \texttt{SNESSetFunction()}.  Note that \texttt{expcircle.c} from Chapter \ref{chap:nl} is a convenient starting point for your code.
 
 \item FIXME
 \end{enumerate}
