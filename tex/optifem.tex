@@ -254,25 +254,37 @@ The coefficient $v_\ell$ is equal to $v_{r,s} = v(x_r,y_s)$ for $(x_r,y_s)\in\sq
 
 \section{Quadrature}
 
-We do not plan to do the integrals in \eqref{eq:of:sumoverelements} exactly, but instead by numerical integration (quadrature).  Indeed, for general $p$ it would be quite challenging to integrate the term ``$|\grad u|^p$'' exactly.
+We do not plan to do the integrals in \eqref{eq:of:sumoverelements} exactly, but instead by numerical integration (quadrature).  For general $p$ it would be quite challenging to exactly-integrate the term ``$|\grad u|^p$'' exactly.
 
 First we use change-of-variables to transfer the integral to the reference element.  Suppose $v(x,y)$ is an integrable function on element $\square_{i,j}$.  Using the element map and Jacobian formula \eqref{eq:of:elementjacobian} we have
 \begin{align}
-\int_{\square_{ij}} v(x,y)\,dx\,dy &= \int_{\square_\ast} v(\xi,\eta) \det\frac{\partial(x,y)}{\partial(\xi,\eta)}\,d\xi\,d\eta  \label{eq:of:changeofvars} \\
-&= \frac{h_x h_y}{4} \int_{\square_\ast} v(\xi,\eta) \,d\xi\,d\eta \notag
+\int_{\square_{ij}} v(x,y)\,dx\,dy &= \int_{\square_\ast} v(\xi,\eta) \det\frac{\partial(x,y)}{\partial(\xi,\eta)}\,d\xi\,d\eta  \notag \\
+&= \frac{h_x h_y}{4} \int_{\square_\ast} v(\xi,\eta) \,d\xi\,d\eta \label{eq:of:changeofvars}
 \end{align}
 where $v(\xi,\eta)=v(x(\xi,\eta),y(\xi,\eta))$.
 
-FIXME in fact we only compute such integrals approximately by Gauss-Legendre
+FIXME we do Gauss-Legendre on integrals
+\begin{equation}
+\int_{-1}^1 f(z)\,dz \approx \sum_{q=0}^{n-1} w_q f(z_q)  \label{eq:of:gauss}
+\end{equation}
+which become tensor products for integrals like \eqref{eq:of:changeofvars} over $\square_\ast$,
+\begin{equation}
+\int_{\square_\ast} v(\xi,\eta) \,d\xi\,d\eta \approx \sum_{r=0}^n \sum_{s=0}^n w_r w_s v(z_r,z_s)  \label{eq:of:tensorgauss}
+\end{equation}
 
 FIXME table with degree $n=1,2,3$ quadrature nodes $z_q$ and weights $w_q$ for integration over $[-1,1]$
 
-FIXME tensor products for integrals over $\square_\ast$,
-    $$\int_{\square_\ast} a(\xi,\eta) \,d\xi\,d\eta \approx \sum_{r=0}^n \sum_{s=0^n} w_r w_s a(z_r,z_s)$$
+\begin{table}
+\begin{tabular}{lll}
+$n$\phantom{foobar} & nodes $z_q$\phantom{foo} & weights $w_q$ \\ \hline
+$1$ & $0$ & $2$ \\
+$2$ & $-\frac{1}{\sqrt{3}}, +\frac{1}{\sqrt{3}}$ & $1,1$ \\
+$3$ & $-\sqrt{\frac{3}{5}}, 0, +\sqrt{\frac{3}{5}}$ & $\frac{5}{9}, \frac{8}{9}, \frac{5}{9}$ \\
+\end{tabular}
+\caption{Nodes and weights for low-degree Gauss-Legendre quadrature rules, for integrals \eqref{eq:of:gauss}.} \label{tab:of:gauss}
+\end{table}
 
 
-\clearpage
-\newpage
 \section{Implementation with objective only}
 
 FIXME code uses \texttt{SNESSetObjective()} only, though also \texttt{SNESSetFunction()}; no hand-made Jacobian at all
