@@ -54,29 +54,34 @@ PetscErrorCode PrintResult(DMDALocalInfo *info, SNES snes, Vec u, Vec uexact,
 PetscErrorCode ExactFLocal(DMDALocalInfo *info,
                            PetscReal **uex, PetscReal **f, PLapCtx *user) {
   PetscInt         i,j;
-  PetscReal        x,y,s,c,paray,gradsqr;
-  const PetscReal  pi2 = PETSC_PI * PETSC_PI;
+  PetscReal        x,y,s,c,ux,uy,py,dpy,gs,gsx,gsy,lap;
+  const PetscReal  pi = PETSC_PI, pi2 = pi * pi, pi3 = pi2 * pi;
   for (j=info->ys; j<info->ys+info->ym; j++) {
-    y = user->dy * j;
+    y   = user->dy * j;
+    py  = y * (1.0 - y);
+    dpy = 1.0 - 2.0 * y;
     for (i=info->xs; i<info->xs+info->xm; i++) {
       x = user->dx * i;
-      s = sin(2.0*PETSC_PI*x);
-      paray = y * (1.0 - y);
+      s = sin(2.0*pi*x);
       if (user->manufactured) {
-          uex[j][i] = s * paray;
+          uex[j][i] = s * py;  //  u(x,y) = sin(2 pi x) y (1 - y)
+          lap = 2.0 * s * (2.0 * pi2 * py + 1.0);           // = u_xx + u_yy
           if (user->p == 2.0) {
-            f[j][i] = 2.0 * s * (2.0 * pi2 * paray + 1.0);
+            f[j][i] = - lap;
           } else if (user->p == 4.0) {
-            c = cos(2.0*PETSC_PI*x);
-            gradsqr = 4.0 * pi2 * c*c * paray*paray
-                      + s*s * (1.0-2.0*y)*(1.0-2.0*y);
-            f[j][i] = 0.0 * gradsqr;  // FIXME
+            c = cos(2.0*pi*x);
+            ux  = 2.0 * pi * c * py;
+            uy  = s * dpy;
+            gs  = 4.0 * pi2 * c*c * py*py + s*s * dpy*dpy;  // = |grad u|^2
+            gsx = - 16.0 * pi3 * c*s * py*py + 4.0 * pi * s*c * dpy*dpy;
+            gsy = 4.0 * pi2 * c*c * 2.0 * py*dpy + s*s * 2.0 * dpy*(-2.0);
+            f[j][i] = - gsx * ux - gsy * uy - gs * lap;
           } else {
             SETERRQ(PETSC_COMM_WORLD,1,"HOW DID I GET HERE?");
           }
       } else {
         uex[j][i] = NAN;
-        f[j][i] = s * paray;
+        f[j][i] = s * py;  //  f(x,y) = sin(2 pi x) y (1 - y)
       }
     }
   }
@@ -85,10 +90,30 @@ PetscErrorCode ExactFLocal(DMDALocalInfo *info,
 //ENDEXACTF
 
 //STARTOBJECTIVE
+static PetscReal xiell  = {-1.0, +1.0, +1.0, -1.0},
+                 etaell = {-1.0, -1.0, +1.0, +1.0},
+                 xiq    = {}, // FIXME: fix quad degree n=2
+                 etaq   = {};
+
+PetscReal chi(PetscInt l, PetscReal xi, PetscReal eta) {
+  return 0.25 * (1.0 + ;
+}
+
 PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **u,
                                   PetscReal *obj, PLapCtx *user) {
-  PetscErrorCode ierr;
-  PetscReal      lobj = 0.0;  // FIXME
+  PetscErrorCode   ierr;
+  PetscReal        lobj = 0.0;
+  PetscInt         i,j;
+  const PetscReal  pi = PETSC_PI, pi2 = pi * pi, pi3 = pi2 * pi;
+  for (j=info->ys; j<info->ys+info->ym; j++) {
+      if (j == info->my - 1) continue;
+      for (i=info->xs; i<info->xs+info->xm; i++) {
+          if (i == info->mx - 1) continue;
+          
+          lobj += ;
+      }
+  }
+  lobj *= 0.25 * hx * hy;
   ierr = MPI_Allreduce(&lobj,obj,1,MPIU_REAL,MPIU_SUM,PETSC_COMM_WORLD); CHKERRQ(ierr);
   return 0;
 }
