@@ -21,12 +21,15 @@ PetscErrorCode Configure(PLapCtx *user) {
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"plap_","p-laplacian solver options",""); CHKERRQ(ierr);
   ierr = PetscOptionsReal("-p","exponent p with  1 <= p < infty",
                    NULL,user->p,&(user->p),NULL); CHKERRQ(ierr);
+  if (user->p < 1.0) {
+      SETERRQ1(PETSC_COMM_WORLD,1,"p=%.3f invalid ... p >= 1 required",user->p);
+  }
   ierr = PetscOptionsBool("-manufactured","use manufactured solution (p=2,4 only)",
                    NULL,user->manufactured,&(user->manufactured),NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsEnd(); CHKERRQ(ierr);
   if ((user->manufactured) && (user->p != 2.0) && (user->p != 4.0)) {
-      SETERRQ1(PETSC_COMM_WORLD,1,"no manufactured soln for p=%.3f",user->p);
+      SETERRQ1(PETSC_COMM_WORLD,2,"no manufactured soln for p=%.3f ... only for p=2,4",user->p);
   }
+  ierr = PetscOptionsEnd(); CHKERRQ(ierr);
   return 0;
 }
 
@@ -82,7 +85,7 @@ PetscErrorCode ExactFLocal(DMDALocalInfo *info, Vec uexact, Vec f, PLapCtx *user
             gsy = 4.0 * pi2 * c*c * 2.0 * py*dpy + s*s * 2.0 * dpy*(-2.0);
             af[j][i] = - gsx * ux - gsy * uy - gs * lap;
           } else {
-            SETERRQ(PETSC_COMM_WORLD,1,"HOW DID I GET HERE?");
+            SETERRQ(PETSC_COMM_WORLD,1,"p!=2 and p!=4 ... HOW DID I GET HERE?");
           }
       } else {
         auex[j][i] = NAN;
@@ -97,23 +100,26 @@ PetscErrorCode ExactFLocal(DMDALocalInfo *info, Vec uexact, Vec f, PLapCtx *user
 //ENDEXACTF
 
 //STARTOBJECTIVE
-static PetscInt  xiell[4]  = {0,  1,  1,  0},
-                 etaell[4] = {0,  0,  1,  1};
+static PetscInt  xi_shift[4]  = {0,  1,  1,  0},
+                 eta_shift[4] = {0,  0,  1,  1};
 static PetscReal zq[2]     = {-0.577350269189626,0.577350269189626}, // FIXME: fix quad degree n=2
                  wq[2]     = {1.0,1.0};
 
 PetscReal chi(PetscInt l, PetscReal xi, PetscReal eta) {
-  return 0.25 * (1.0 + xiell[l] * xi) * (1.0 + etaell[l] * eta);
+  const PetscInt  xi_l  = 2 * xi_shift[l]  - 1,   // in {-1,1}
+                  eta_l = 2 * eta_shift[l] - 1;   // in {-1,1}
+  return 0.25 * (1.0 + xi_l * xi) * (1.0 + eta_l * eta);
 }
 
 // FIXME: add this:
 //PetscReal dchi(PetscInt l, PetscReal xi, PetscReal eta) {
 
+// evaluate the function  v(x,y)  on  \square_{i,j}  using local coords xi,eta
 PetscReal refeval(PetscInt i, PetscInt j, PetscReal **v, PetscReal xi, PetscReal eta) {
   PetscReal sum = 0.0;
   PetscInt  l;
   for (l=0; l<4; l++) {
-    sum += v[j + xiell[l]][i + etaell[l]] * chi(l,xi,eta);
+    sum += v[j + xi_shift[l]][i + eta_shift[l]] * chi(l,xi,eta);
   }
   return sum;
 }
