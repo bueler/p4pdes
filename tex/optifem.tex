@@ -58,48 +58,48 @@ A standard theorem in the calculus of variations \citep[Theorem 8.2.2]{Evans2010
 \end{equation}
 has a unique solution.  Strict convexity is used to show uniqueness, but convexity also implies that $I[u]$ is continuous enough to have a minimum on compact sets in the appropriate topology.\sidenote{Namely $I[u]$ is \emph{weakly lower semi-continuous}. This means, by definition, that $\liminf_{v\rightharpoonup u} I[v] \ge I[u]$, using the weak topology on $W^{1,p}(\Omega)$ \citep[section 8.2]{Evans2010}.}  Compactness arises from coercivity in the sense that bounded, closed subsets of $W^{1,p}(\Omega)$, which arise in the existence proof as sets $\{w\,:\,I[w] \le L\}$, are compact in the weak topology.
 
-Being good calculus students we seek this solution by taking the derivative and setting it to zero.  Fortunately, at least if $p>1$, the functional $I[u]$ is smooth enough to have a gradient (derivative), and then the solution of minimization problem \eqref{eq:of:plapmin} is also the solution to a nonlinear PDE.  The statement that the gradient is zero at the minimum has several names, among them \emph{variational equation}, \emph{Euler-Lagrange equation}, and the \emph{weak form of the PDE}.  Indeed one sees the following calculation in many parts of applied mathematics.
+Being good calculus students we seek the solution to minimization problem \eqref{eq:of:plapmin} by taking the derivative and setting it to zero.  Fortunately, if $p>1$ then the functional $I[u]$ is smooth enough to have a gradient, as we show next.  The solution of minimization \eqref{eq:of:plapmin} is then also the solution to a nonlinear equation.  It has several names, including \emph{variational equation}, \emph{Euler-Lagrange equation}, and the \emph{weak form of the PDE}.
 
-Assume $\eps\in \RR$ and $u,v \in W^{1,p}(\Omega)$.  Then
+Assume $\eps\in \RR$ and $u,v \in W^{1,p}(\Omega)$.  Then, by the binomial theorem,
 \begin{align*}
-I[u+\eps v] - I[u] &= \int_\Omega \frac{1}{p} |\grad u + \eps \grad v|^p + \frac{1}{p} |\grad u|^p - \eps f v \\
-   &= \eps \left(\int_\Omega |\grad u|^{p-2} \grad u \cdot \grad v - f v\right) + O(\eps^2),
+I[u+\eps v] - I[u] &= \int_\Omega \frac{1}{p} |\grad u + \eps \grad v|^p - \frac{1}{p} |\grad u|^p - \eps f v \\
+   &= \eps \left(\int_\Omega |\grad u|^{p-2} \grad u \cdot \grad v - f v\right) + O(\eps^2).
 \end{align*}
-and so the directional derivative exists and has this formula:
+Thus the directional derivative exists and has this formula:
 \begin{equation}
 \grad I[u](v) = \lim_{\eps\to 0} \frac{I[u+\eps v] - I[u]}{\eps} = \int_\Omega |\grad u|^{p-2} \grad u \cdot \grad v - f v. \label{eq:of:plapfunctionalderivative}
 \end{equation}
-That is, for each $u \in W^{1,p}(\Omega)$ formula \eqref{eq:of:plapfunctionalderivative} defines a map, the gradient,
+That is, for each $u \in W^{1,p}(\Omega)$, formula \eqref{eq:of:plapfunctionalderivative} defines a linear and continuous map, the gradient
    $$\grad I[u] : W^{1,p}(\Omega) \to \RR.$$
 
 If $u \in W_g^{1,p}(\Omega)$ and $v\in W_0^{1,p}(\Omega)$ then $u+\eps v\in W_g^{1,p}(\Omega)$.  Thus if $u \in W_g^{1,p}(\Omega)$ solves \eqref{eq:of:plapmin} then the above calculation also shows $\grad I[u](v)=0$ or
 \begin{equation}
 \int_\Omega |\grad u|^{p-2} \grad u \cdot \grad v - f v = 0 \label{eq:of:plapweakform}
 \end{equation}
-for all $v\in W_0^{1,p}(\Omega)$.  Note that the test functions $v$ must have zero boundary values in this calculation.
+for all $v\in W_0^{1,p}(\Omega)$.  Note that the test functions $v$ have zero boundary values in this calculation.  We refer to \eqref{eq:of:plapweakform} as the \emph{weak form} of the $p$-\emph{Laplacian} equation.
 
-From now on we refer to \eqref{eq:of:plapweakform} as the \emph{weak form} of the $p$-\emph{Laplacian} equation.  If the solution $u \in W_g^{1,p}(\Omega)$ to problem \eqref{eq:of:plapmin} is actually smooth-enough to have continuous second derivatives,\sidenote{\emph{Proving} this much smoothness is possible in some cases when the domain $\Omega$ and data $f,g$ are well-behaved, but such results are beyond our scope.} i.e.~$u \in C^2(\Omega)$, then we can derive the \emph{strong form} corresponding to equation \eqref{eq:of:plapweakform} as follows.  An integration-by-parts \citep[Appendix C]{Evans2010} of equation \eqref{eq:of:plapweakform} gives
+If the solution $u \in W_g^{1,p}(\Omega)$ to minimization problem \eqref{eq:of:plapmin} or equation \eqref{eq:of:plapweakform} is actually smooth enough to have continuous second derivatives\sidenote{\emph{Proving} this much smoothness is possible in some cases when the domain $\Omega$ and data $f,g$ are well-behaved, but beyond our scope.} then we can derive the \emph{strong form} PDE as follows.  An integration-by-parts \citep[Appendix C]{Evans2010} gives
     $$-\int_\Omega \Div\left(|\grad u|^{p-2} \grad u\right) v - \int_\Omega f v + \int_{\partial \Omega} v |\grad u|^{p-2} \grad u \cdot \bn = 0.$$
-The boundary integral is zero if $v\in W_0^{1,p}(\Omega)$.  It follows that
+The boundary integral is zero because $v\in W_0^{1,p}(\Omega)$.  It follows that
 \begin{equation}
-- \Div\left(|\grad u|^{p-2} \grad u\right) = f,
+- \Div\left(|\grad u|^{p-2} \grad u\right) = f.
 \label{eq:of:plapstrongform}
 \end{equation}
-the strong form.  In fact this is the traditional form of the $p$-Laplacian equation \citep[section 1.2]{Evans2010}.  It reduces to Poisson equation \eqref{poissonsquare} if $p=2$.
+This strong form is the traditional form of the $p$-Laplacian equation.  It reduces to the Poisson equation \eqref{poissonsquare} if $p=2$.
 
-Before proceeding to a numerical solution, the main idea of this extended diversion into theory is simple and worth summarizing:
+Before proceeding to a numerical solution, the main ideas of the above diversion into theory are simple and thus worth restating:
 \begin{quote}
-Minimization problem \eqref{eq:of:plapmin} for functional $I[u]$ in \eqref{eq:of:functional} is equivalent to the weak form \eqref{eq:of:plapweakform}.  It becomes the strong form \eqref{eq:of:plapstrongform} in cases where the solution $u$ is smooth.  Thus the $p$-Laplacian equation, in either form \eqref{eq:of:plapweakform} or \eqref{eq:of:plapstrongform}, arises from a minimization problem.
+Minimization problem \eqref{eq:of:plapmin} for functional $I[u]$ in \eqref{eq:of:functional} is equivalent to the weak form \eqref{eq:of:plapweakform}.  It becomes the strong form \eqref{eq:of:plapstrongform} in cases where the solution $u$ is smooth.  Thus the $p$-Laplacian equation, in either form \eqref{eq:of:plapweakform} or \eqref{eq:of:plapstrongform}, arises from minimization.
 \end{quote}
 
 
 \section{Structured $Q^1$ finite elements}
 
-We can use \PETSc to numerically solve the $p$-Laplacian equation \eqref{eq:of:plapstrongform} \emph{as minimization problem} \eqref{eq:of:plapmin}, based only on user code that computes the functional $I[u]$ from a representation of $u \in W_g^{1,p}(\Omega)$.  In other words, once we have a finite-dimensional representation of the input $u$, all we need to implement is formula \eqref{eq:of:functional} for $I[u]$.
+We can use \PETSc to numerically solve the $p$-Laplacian equation as minimization problem \eqref{eq:of:plapmin}, based only on user code that computes the functional $I[u]$ from a representation of $u \in W_g^{1,p}(\Omega)$.  Thus, once we have a finite-dimensional representation of the input $u$, all we need to implement is formula \eqref{eq:of:functional} for $I[u]$.
 
-Such a minimization approach may suffice for initial prototyping or, as we show here, it can be augmented by additional derivative-computing code, in which case the problem becomes one of the nonlinear-residual problems of Chapter \ref{chap:nl}.  Initially, however, we will ask \PETSc to use finite differences when it needs derivatives (gradients) in minimizing $I[u]$.  Thus a system of nonlinear equations, with associated residual function, is only implicit.
+Such a minimization approach may suffice for initial prototyping.  It can then be augmented by additional derivative-computing code, as we show, in which case the problem becomes a nonlinear-residual problem like that of Chapter \ref{chap:nl}.  Initially, however, we will ask \PETSc to use finite differences when it needs derivatives (gradients) in minimizing $I[u]$.  In this case the system of nonlinear equations, with associated residual function, is internal to \PETSc, and only approximate.
 
-For the representation of $u$ we introduce a structured-grid finite element method (FEM) using quadrilateral elements.  The gridded unknowns, which live on the same structured grid as in Chapter \ref{chap:st}, will in this Chapter represent a function in a function space.  The resulting code will be surprisingly-similar to a finite difference solution of PDE \eqref{eq:of:plapstrongform}, despite the conceptually-distinct approach.
+For the representation of $u$ we introduce a structured-grid finite element method (FEM) using quadrilateral elements.  The gridded unknowns, which live on the same structured grid as in Chapter \ref{chap:st}, now represent a function in a function space.  The resulting code will be similar to a finite difference solution of PDE \eqref{eq:of:plapstrongform}, despite the conceptual changes.
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
@@ -125,17 +125,15 @@ For the representation of $u$ we introduce a structured-grid finite element meth
 \label{fig:of:q1grid}
 \end{marginfigure}
 
-The domain is fixed to be the square $\Omega = (0,1)\times (0,1)$ in this Chapter; unstructured grids appear in Chapter \ref{chap:un}.  Consider the structured grid on $\Omega$ shown in Figure \ref{fig:of:q1grid}.  It has nodes $(x_i,y_j)$ where $h_x=1/(m_x-1)$, $h_y=1/(m_y-1)$, $x_i = i h_x$, and $y_j = j h_y$; note $0\le i \le m_x-1$ and $0 \le j \le m_y-1$.
-
-The \emph{elements} are the (closed) rectangles
+The domain is fixed to be the square $\Omega = (0,1)\times (0,1)$.  Consider the structured grid on $\Omega$ shown in Figure \ref{fig:of:q1grid}.  For positive integers $m_x$ and $m_y$ let $h_x=1/(m_x-1)$ and $h_y=1/(m_y-1)$.  The grid has nodes $(x_i,y_j)$ where $x_i = i h_x$ and $y_j = j h_y$, for indices $0\le i \le m_x-1$ and $0 \le j \le m_y-1$.  The \emph{elements} are the (closed) rectangles
    $$\square_{ij} = [x_i,x_{i+1}] \times [y_j,y_{j+1}].$$
 Observe that $\bigcup_{ij} \square_{ij} = \overline{\Omega}$ and $|\square_{ij}| = h_x h_y$.
 
-We immediately see that the functional can be computed element-by-element, because integration is additive over sets and the element boundaries are of zero measure:
+We immediately see that the functional in \eqref{eq:of:functional} can be computed element-by-element, because the element boundaries are of zero measure and integration is additive:
 \begin{equation}
 I[u] = \sum_{i=0}^{m_x-1} \sum_{j=0}^{m_y-1} \int_{\square_{ij}} \frac{1}{p} |\grad u|^p - fu  \label{eq:of:sumoverelements}
 \end{equation}
-Integration over a single element $\square_{ij}$ can be addressed once we represent $f$ and $u$.
+Integration over a single element $\square_{ij}$ can be addressed once we represent $f$ and $u$.  A very similar sum over elements computes an approximation of the weak form \eqref{eq:of:plapweakform}.
 
 So, how should we approximate a function $w \in W^{1,p}(\Omega)$ in a manner compatible with the structured grid of rectangles above?  One of the simpler choices is to require that the approximation $w_h \approx w$ be bilinear on each element $\square_{ij}$ and continuous on the whole domain $\Omega$.  These requirements allow us to determine $w_h(x,y)$, for any $(x,y)\in \overline\Omega$, from the nodal values $w_{ij} = w_h(x_i,y_j)$.  Said another way, there is a linear isomorphism between the vector space $\RR^N$ of possible nodal values, with $N=m_x m_y$ equal to the total number of nodes, and an $N$-dimensional linear subspace of $W^{1,p}(\Omega)$, namely
 \begin{equation}
