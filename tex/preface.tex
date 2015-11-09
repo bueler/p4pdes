@@ -7,15 +7,6 @@ This book is written from the conviction that \emph{better access to common know
 
 So, let's suppose you have taken a mathematics course or two in partial differential equations (PDEs).  You have written a few codes in C, and probably some in \Matlab or python or similar prototyping languages.  You are interested in solving PDE or similar models numerically in parallel on big problems.  Then this book is for you.
 
-\section{Get the example codes}
-
-Use \texttt{git} to get the example C codes:
-\begin{cline}
-$ git clone https://github.com/bueler/p4pdes.git
-\end{cline}
-%$
-Codes from subdirectory \texttt{p4pdes/c/ch}$N$\texttt{/} are for Chapter $N$ of this book.
-
 \section{What is \PETSc?}
 
 The Portable, Extensible Toolkit for Scientific computing (\PETSc)\sidenote{Say it ``pets sea.''  The homepage for PETSc, including download and installation instructions, is \href{http://www.mcs.anl.gov/petsc/index.html}{www.mcs.anl.gov/petsc}.} is an open-source, mathematical software library built on top of the standard software layer for large-scale parallel computation, namely the Message Passing Interface (MPI) \citep{Groppetal1999}.  Thus \PETSc is a framework capable of solving problems like PDEs at ``large scale,'' that is, at high resolution and on supercomputers with hundreds to millions of cores.  \PETSc also runs on your laptop, and that is where most examples from this book should be tried first.
