@@ -135,21 +135,21 @@ I[u] = \sum_{i=0}^{m_x-1} \sum_{j=0}^{m_y-1} \int_{\square_{ij}} \frac{1}{p} |\g
 \end{equation}
 Integration over a single element $\square_{ij}$ can be addressed once we represent $f$ and $u$.  A very similar sum over elements computes an approximation of the weak form \eqref{eq:of:plapweakform}.
 
-So, how should we approximate a function $w \in W^{1,p}(\Omega)$ in a manner compatible with the structured grid of rectangles above?  One of the simpler choices is to require that the approximation $w_h \approx w$ be bilinear on each element $\square_{ij}$ and continuous on the whole domain $\Omega$.  These requirements allow us to determine $w_h(x,y)$, for any $(x,y)\in \overline\Omega$, from the nodal values $w_{ij} = w_h(x_i,y_j)$.  Said another way, there is a linear isomorphism between the vector space $\RR^N$ of possible nodal values, with $N=m_x m_y$ equal to the total number of nodes, and an $N$-dimensional linear subspace of $W^{1,p}(\Omega)$, namely
+So, how should we approximate a function $w \in W^{1,p}(\Omega)$ in a manner compatible with the structured grid of rectangles above?  One simple choice requires that the approximation $w_h \approx w$ be bilinear on each element $\square_{ij}$ and continuous on the whole domain $\Omega$.  These requirements allow us to determine $w_h(x,y)$, for any $(x,y)\in \overline\Omega$, from the nodal values $w_{ij} = w_h(x_i,y_j)$.  Said another way, there is a linear isomorphism between the vector space $\RR^N$ of possible nodal values, with $N=m_x m_y$ equal to the total number of nodes, and an $N$-dimensional linear subspace of $W^{1,p}(\Omega)$, namely
 \begin{equation}
 S^h = \left\{v \in C(\Omega) \, \Big| \, v|_{\square_{ij}} \text{ is bilinear}\right\}. \label{eq:of:Shdefn}
 \end{equation}
 Because the elements are quadrilaterals and the degree of bilinear polynomials is one, $S^h$ is a $Q^1$ \emph{finite element space} \citep{Elmanetal2005}
 
-The solution $u$ to minimization problem \eqref{eq:of:plapmin} must, however, have the boundary values given by $g$.  If $g$ is discontinuous or not piecewise-linear then its use as boundary values conflicts with the restrictions which define $S^hh$.  We resolve the conflict by requiring $g$ to be well-behaved, namely continuous and (appropriately) piece-wise linear on $\partial\Omega$.  One may show in that case that the (affine) space of functions
+The solution $u$ to minimization problem \eqref{eq:of:plapmin} must, however, have the boundary values given by $g$.  If $g$ is discontinuous or not piecewise-linear then its use as boundary values conflicts with the restrictions which define $S^h$.  We therefore require $g$ to be continuous and (appropriately) piece-wise linear on $\partial\Omega$.  One may show in that case that the functions
 \begin{equation}
 S_g^h = \left\{v \in S^h \, \Big| \, v|_{\partial \Omega} = g\right\} \label{eq:of:Sghdefn}
 \end{equation}
-is an (affine) subspace of $W_g^{1,p}(\Omega)$.  Replacing $W_g^{1,p}(\Omega)$ by $S_g^h$ in problem \eqref{eq:of:plapmin} gives a \emph{conforming}\sidenote{A ``nonconforming'' version might only have $u_h \approx g$ on the boundary.  For example, $u_h|_{\partial \Omega}$ might be a piecewise-linear interpolant of $g$.} $Q^1$ FEM in which the FEM solution $u_h\in S_g^h$ is also in $W_g^{1,p}(\Omega)$.
+form an (affine) subspace of $W_g^{1,p}(\Omega)$.  Replacing $W_g^{1,p}(\Omega)$ by $S_g^h$ in problem \eqref{eq:of:plapmin} is a \emph{conforming}\sidenote{A ``nonconforming'' version might only have $u_h \approx g$ on the boundary.  For example, $u_h|_{\partial \Omega}$ might be the piecewise-linear interpolant of $g$.} $Q^1$ FEM.
 
 The next step is to describe a bilinear function on a single element $\square_{ij}$, and to thereby build a basis for space $S_g^h$.  We do this by constructing bilinear functions on a \emph{reference element}
     $$\square_\ast = [-1,1]\times[-1,1],$$
-in variables $\xi$ and $\eta$, as shown in Figure \ref{fig:of:q1gridandref}.\sidenote{One can avoid the reference element in the case here, in which all elements in the structured grid are congruent rectangles \citep[for example]{Bueler2015}.  However, we are thinking ahead toward less-structured examples (Chapter \ref{chap:un}).}
+in variables $\xi$ and $\eta$, as shown in Figure \ref{fig:of:q1gridandref}.\sidenote{One may easily avoid using the reference element in the case here, because all elements are congruent rectangles.  However, we are thinking ahead toward less-structured examples (Chapter \ref{chap:un}).}
 
 If $v(\xi,\eta)$ is bilinear on $\square_\ast$ then $v(\xi,\eta) = a + b\, \xi + c\, \eta + d\, \xi \eta$.  The monomial basis $\{1,\xi,\eta,\xi\eta\}$ is not, however, a convenient one.  Instead, number the vertices (nodes) of $\square_\ast$ as shown in Figure \ref{fig:of:q1gridandref}:
 \begin{align}
@@ -181,6 +181,8 @@ where $v_\ell = v(\xi_\ell,\eta_\ell)$; the coefficients are the nodal values.
   % outline an element
   \draw[line width=1.5pt] (0.5,\third) -- (0.75,\third) -- (0.75,\twothird) -- (0.5,\twothird) -- cycle;
   \node at (0.64,0.5) {$\square_{ij}$};
+  \node at (0.51,-0.1) {$x_i$};
+  \node at (-0.08,0.33) {$y_j$};
 
 % (xi,eta) reference element
 % origin of axes at (2.5,0.0) and square has half-width 0.5
@@ -200,16 +202,16 @@ where $v_\ell = v(\xi_\ell,\eta_\ell)$; the coefficients are the nodal values.
 % arc
   \draw[->,line width=1.0pt] (2.3,0.55) .. controls (1.8,1.0) and (0.7,1.0) .. (0.6,0.72);
 \end{tikzpicture}
-\caption{Each element $\square_{ij}$ is the image under a map from the reference element $\square_\ast$.  The corners of $\square_\ast$ are numbered $\ell=0,1,2,3$.}
+\caption{Each element $\square_{ij}$ is the image under a map from the reference element $\square_\ast$.  The corners of $\square_\ast$ are numbered $\ell=0,1,2,3$ and the $\ell=0$ corner maps to $(x_i,y_j)$.}
 \label{fig:of:q1gridandref}
 \end{figure}
 
-The element map $\square_\ast \to \square_{ij}$ pictured in Figure \ref{fig:of:q1gridandref} can be written using the above basis functions\sidenote{This form applies even in the case of logically-structured grids of quadrilaterals which are deformed in the $(x,y)$ plane, so-called \emph{isoparametric} finite elements \citep{Elmanetal2005}.} $\chi_\ell$, but then one can simplify significantly:
+The element map $\square_\ast \to \square_{ij}$ pictured in Figure \ref{fig:of:q1gridandref} can be written using the above basis functions $\chi_\ell$, but then one can simplify significantly:
 \begin{align}
 x(\xi,\eta) &= \sum_{\ell=0}^3 x_\ell \chi_\ell(\xi,\eta) = x_i + \frac{h_x}{2} (1+\xi), \label{eq:of:referencemap} \\
 y(\xi,\eta) &= \sum_{\ell=0}^3 y_\ell \chi_\ell(\xi,\eta) = y_j + \frac{h_y}{2} (1+\eta). \notag
 \end{align}
-The Jacobian of this map, used in integrals below, is the ratio of the area of $\square_{ij}$ to the area of $\square_\ast$:
+The Jacobian of this map, used in integrals below, is the ratio of the area of $\square_{ij}$ to that of $\square_\ast$:
 \begin{equation}
 \det\frac{\partial(x,y)}{\partial(\xi,\eta)} = \det\begin{bmatrix} \frac{h_x}{2} & 0 \\ 0 & \frac{h_y}{2} \end{bmatrix} = \frac{h_x h_y}{4}. \label{eq:of:elementjacobian}
 \end{equation}
@@ -226,7 +228,7 @@ For each node $(x_p,y_q)$ in the structured grid there is a continuous, piecewis
 \end{equation}
 Such ``hat'' functions, illustrated in Figure \ref{fig:of:q1hat}, form a basis of $S^h$.
 
-A key fact in practice is that when restricted to a particular element $\square_{ij}$, and then pulled-back to the reference element $\square_\ast$, the hat function $\psi_{p,q}$ is either identically zero or it is equal to one of the basis functions $\chi_\ell$.  That is, if node $(\xi_\ell,\eta_\ell) \in \square_\ast$ corresponds to node $(x_p,y_q) \in \overline\Omega$, under the element map onto $\square_{ij}$, then 
+When restricted to a particular element $\square_{ij}$, and then pulled-back to the reference element $\square_\ast$, the hat function $\psi_{p,q}$ is either identically zero or it is equal to one of the basis functions $\chi_\ell$.  That is, if node $(\xi_\ell,\eta_\ell) \in \square_\ast$ corresponds to node $(x_p,y_q) \in \overline\Omega$, under the element map onto $\square_{ij}$, then 
 \begin{equation}
   \psi_{p,q}(x(\xi,\eta),y(\xi,\eta)) = \chi_\ell(\xi,\eta).  \label{eq:of:phionref}
 \end{equation}
@@ -236,11 +238,11 @@ However, to evaluate $I[u]$ in \eqref{eq:of:functional} we will want to compute 
 \end{equation}
 Derivatives $\partial\chi_\ell/\partial \xi$ and $\partial\chi_\ell/\partial \eta$ can be found from formula \eqref{eq:of:chidefn} above.  Checking equations \eqref{eq:of:phionref} and \eqref{eq:of:gradphionref} is an easy exercise.
 
-We are nearly ready to do the element-wise integrals in \eqref{eq:of:sumoverelements}, so a summary of where we stand is appropriate.  Suppose we have $v \in S^h$.  It can be represented using the hat functions:
+We are ready to do the element-wise integrals in \eqref{eq:of:sumoverelements}, and a summary shows where we stand:  Suppose we have $v \in S^h$.  It can be represented using hat functions:
 \begin{equation}
 v(x,y) = \sum_{i=0}^{m_x-1} \sum_{j=0}^{m_y-1} v_{i,j} \psi_{i,j}(x,y)  \qquad \text{on } \,\Omega. \label{eq:of:bilinearrepresentation}
 \end{equation}
-It is bilinear on element $\square_{i,j}$ and it pulls-back to the reference element $\square_\ast$, using the local node numbering, as
+This function is bilinear on element $\square_{i,j}$ and it pulls-back to the reference element $\square_\ast$, using the local node numbering, as
 \begin{equation}
 v(\xi,\eta) = \sum_{\ell=0}^3 v_\ell \chi_\ell(\xi,\eta)  \qquad \text{on } \,\square_\ast. \label{eq:of:bilinearref}
 \end{equation}
@@ -252,9 +254,9 @@ The coefficient $v_\ell$ is equal to $v_{r,s} = v(x_r,y_s)$ for $(x_r,y_s)\in\sq
 
 \section{Quadrature}
 
-We do not plan to do the integrals in \eqref{eq:of:sumoverelements} exactly, but instead by numerical integration (quadrature).  For general $p$ it would be quite challenging to exactly-integrate the term ``$|\grad u|^p$'' exactly.
+We do not plan to do the integrals exactly in \eqref{eq:of:sumoverelements}, or the corresponding sum for \eqref{eq:of:plapweakform}, but instead by numerical integration (quadrature).  One reason is that for general $p$ it would be quite challenging to exactly-integrate the term ``$|\grad u|^p$.''
 
-First we use change-of-variables to transfer the integral to the reference element.  Suppose $v(x,y)$ is an integrable function on element $\square_{i,j}$.  Using the element map and Jacobian formula \eqref{eq:of:elementjacobian} we have
+First we use change-of-variables to transfer the integral to the reference element.  Suppose $v(x,y)$ is any integrable function on element $\square_{i,j}$.  Using the element map and Jacobian formula \eqref{eq:of:elementjacobian} we have
 \begin{align}
 \int_{\square_{ij}} v(x,y)\,dx\,dy &= \int_{\square_\ast} v(\xi,\eta) \det\frac{\partial(x,y)}{\partial(\xi,\eta)}\,d\xi\,d\eta  \notag \\
 &= \frac{h_x h_y}{4} \int_{\square_\ast} v(\xi,\eta) \,d\xi\,d\eta \label{eq:of:changeofvars}
