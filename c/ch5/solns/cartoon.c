@@ -30,6 +30,9 @@ Nonlinear solve converged due to CONVERGED_FNORM_ABS iterations 4
 
 */
 
+// NOTE:  this should work to report Function and Objective evaluations, but not yet in maint:
+//    ./cartoon -snes_converged_reason -snes_rtol 1e-15 -snes_fd_function -snes_fd -log_summary |grep Eval
+
 #include <petsc.h>
 
 typedef struct {

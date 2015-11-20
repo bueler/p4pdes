@@ -6,6 +6,8 @@ static char help[] = "Solve the p-laplacian equation in 2D using an objective fu
 
 #include <petsc.h>
 
+#define COMM PETSC_COMM_WORLD
+
 //STARTCONFIGURE
 typedef struct {
   DM        da;
@@ -18,16 +20,16 @@ PetscErrorCode Configure(PLapCtx *user) {
   PetscErrorCode ierr;
   user->p = 2.0;
   user->manufactured = PETSC_FALSE;
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"plap_","p-laplacian solver options",""); CHKERRQ(ierr);
+  ierr = PetscOptionsBegin(COMM,"plap_","p-laplacian solver options",""); CHKERRQ(ierr);
   ierr = PetscOptionsReal("-p","exponent p with  1 <= p < infty",
                    NULL,user->p,&(user->p),NULL); CHKERRQ(ierr);
   if (user->p < 1.0) {
-      SETERRQ1(PETSC_COMM_WORLD,1,"p=%.3f invalid ... p >= 1 required",user->p);
+      SETERRQ1(COMM,1,"p=%.3f invalid ... p >= 1 required",user->p);
   }
   ierr = PetscOptionsBool("-manufactured","use manufactured solution (p=2,4 only)",
                    NULL,user->manufactured,&(user->manufactured),NULL);CHKERRQ(ierr);
   if ((user->manufactured) && (user->p != 2.0) && (user->p != 4.0)) {
-      SETERRQ1(PETSC_COMM_WORLD,2,"no manufactured soln for p=%.3f ... only for p=2,4",user->p);
+      SETERRQ1(COMM,2,"no manufactured soln for p=%.3f; use p=2,4",user->p);
   }
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
   return 0;
@@ -39,16 +41,16 @@ PetscErrorCode PrintResult(DMDALocalInfo *info, SNES snes, Vec u, Vec uexact,
   PetscReal            unorm, errnorm;
   SNESConvergedReason  reason;
 
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"on %d x %d grid:  ",info->mx,info->my); CHKERRQ(ierr);
+  ierr = PetscPrintf(COMM,"on %d x %d grid:  ",info->mx,info->my); CHKERRQ(ierr);
   ierr = SNESGetConvergedReason(snes, &reason); CHKERRQ(ierr);
   if (user->manufactured) {
       ierr = VecNorm(u,NORM_INFINITY,&unorm); CHKERRQ(ierr);
       ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uxact
       ierr = VecNorm(u,NORM_INFINITY,&errnorm); CHKERRQ(ierr);
-      ierr = PetscPrintf(PETSC_COMM_WORLD,"|u-u_exact|_inf/|u|_inf = %g\n",
+      ierr = PetscPrintf(COMM,"|u-u_exact|_inf/|u|_inf = %g\n",
                   errnorm/unorm); CHKERRQ(ierr);
   } else {
-      ierr = PetscPrintf(PETSC_COMM_WORLD,"%s\n",SNESConvergedReasons[reason]); CHKERRQ(ierr);
+      ierr = PetscPrintf(COMM,"%s\n",SNESConvergedReasons[reason]); CHKERRQ(ierr);
   }
   return 0;
 }
@@ -85,7 +87,7 @@ PetscErrorCode ExactFLocal(DMDALocalInfo *info, Vec uexact, Vec f, PLapCtx *user
             gsy = 4.0 * pi2 * c*c * 2.0 * py*dpy + s*s * 2.0 * dpy*(-2.0);
             af[j][i] = - gsx * ux - gsy * uy - gs * lap;
           } else {
-            SETERRQ(PETSC_COMM_WORLD,1,"p!=2 and p!=4 ... HOW DID I GET HERE?");
+            SETERRQ(COMM,1,"p!=2 and p!=4 ... HOW DID I GET HERE?");
           }
       } else {
         auex[j][i] = NAN;
@@ -148,7 +150,7 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **au,
   }
   ierr = DMDAVecRestoreArray(user->da,user->f,&af); CHKERRQ(ierr);
   lobj *= 0.25 * user->hx * user->hy;
-  ierr = MPI_Allreduce(&lobj,obj,1,MPIU_REAL,MPIU_SUM,PETSC_COMM_WORLD); CHKERRQ(ierr);
+  ierr = MPI_Allreduce(&lobj,obj,1,MPIU_REAL,MPIU_SUM,COMM); CHKERRQ(ierr);
   return 0;
 }
 //ENDOBJECTIVE
@@ -156,7 +158,7 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **au,
 //STARTFUNCTION
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal **u,
                                  PetscReal **f, PLapCtx *user) {
-  SETERRQ(PETSC_COMM_WORLD,1,"NOT YET IMPLEMENTED");
+  SETERRQ(COMM,1,"NOT YET IMPLEMENTED");
   return 0;
 }
 //ENDFUNCTION
@@ -173,7 +175,7 @@ int main(int argc,char **argv) {
 
   ierr = Configure(&user); CHKERRQ(ierr);
 
-  ierr = DMDACreate2d(PETSC_COMM_WORLD,
+  ierr = DMDACreate2d(COMM,
                DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_BOX,
                -9,-9,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,
                &(user.da)); CHKERRQ(ierr);
@@ -189,7 +191,7 @@ int main(int argc,char **argv) {
   ierr = ExactFLocal(&info,uexact,user.f,&user); CHKERRQ(ierr);
   VecSet(u,0.0);
 
-  ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
+  ierr = SNESCreate(COMM,&snes); CHKERRQ(ierr);
   ierr = SNESSetDM(snes,user.da); CHKERRQ(ierr);
   ierr = DMDASNESSetObjectiveLocal(user.da,
              (DMDASNESObjective)FormObjectiveLocal,&user); CHKERRQ(ierr);
