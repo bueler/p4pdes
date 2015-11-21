@@ -1,7 +1,7 @@
 static char help[] = "Solve a 2-variable polynomial optimization problem.\n"
-"Has FormObjective() and FormFunction() implementations.  The latter is the\n"
-"residual and also the gradient of the objective.  The Jacobian (= Hessian of\n"
-"objective) is not implemented.  Usage is either:\n"
+"Has FormObjective() and FormFunction() implementations; the latter is the\n"
+"the gradient of the objective.  The Jacobian (= Hessian of objective) is\n"
+"not implemented.  Usage is either:\n"
 "    ./cartoon -snes_[fd|mf]\n"
 "or:\n"
 "    ./cartoon -snes_[fd|mf] -snes_fd_function\n"
@@ -27,9 +27,6 @@ Nonlinear solve converged due to CONVERGED_FNORM_ABS iterations 4
 |x-x_exact|_inf = 5.97357e-08
 
 */
-
-// NOTE:  this should work to report Function and Objective evaluations, but not yet in maint:
-//    ./cartoon -snes_converged_reason -snes_rtol 1e-15 -snes_fd_function -snes_fd -log_summary |grep Eval
 
 #include <petsc.h>
 
@@ -93,7 +90,7 @@ int main(int argc,char **argv) {
     ierr = VecAssemblyBegin(x); CHKERRQ(ierr);
     ierr = VecAssemblyEnd(x); CHKERRQ(ierr);
     ierr = VecNorm(x,NORM_INFINITY,&err); CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"|x-x_exact|_inf = %g\n",err); CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"numerical error |x-x_exact|_inf = %g\n",err); CHKERRQ(ierr);
 
     VecDestroy(&x);  VecDestroy(&r);  SNESDestroy(&snes);
     PetscFinalize();
