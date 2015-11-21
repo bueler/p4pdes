@@ -133,9 +133,11 @@ PetscReal integrand(PetscInt i, PetscInt j, PetscReal **af, PetscReal **au,
 
 PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **au,
                                   PetscReal *obj, PLapCtx *user) {
-  PetscErrorCode   ierr;
-  PetscReal        lobj = 0.0, **af;
-  PetscInt         i,j,r,s;
+  PetscErrorCode ierr;
+  PetscReal      lobj = 0.0, **af;
+  PetscInt       i,j,r,s;
+  MPI_Comm       comm;
+
   ierr = DMDAVecGetArray(user->da,user->f,&af); CHKERRQ(ierr);
   for (j=info->ys; j<info->ys+info->ym; j++) {
       if (j == info->my - 1) continue;
@@ -150,7 +152,9 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **au,
   }
   ierr = DMDAVecRestoreArray(user->da,user->f,&af); CHKERRQ(ierr);
   lobj *= 0.25 * user->hx * user->hy;
-  ierr = MPI_Allreduce(&lobj,obj,1,MPIU_REAL,MPIU_SUM,COMM); CHKERRQ(ierr);
+
+  ierr = PetscObjectGetComm((PetscObject)(info->da),&comm);CHKERRQ(ierr);
+  ierr = MPI_Allreduce(&lobj,obj,1,MPIU_REAL,MPIU_SUM,comm); CHKERRQ(ierr);
   return 0;
 }
 //ENDOBJECTIVE
