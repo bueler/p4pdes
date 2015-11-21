@@ -1,8 +1,9 @@
-static char help[] = "Solve the p-laplacian equation in 2D using an objective function.\n\n";
+static char help[] = "Solve the p-laplacian equation in 2D using Q^1 FEM\n"
+"and an objective function.\n\n";
 
 // RUN AS
 //   ./plap -snes_fd_function   (no residual = gradient function evaluation)
-//   ./plap -snes_fd_color   (no Jacobian = Hessian function evaluation)
+//   ./plap -snes_fd_color      (no Jacobian = Hessian function evaluation)
 
 #include <petsc.h>
 
@@ -43,21 +44,21 @@ PetscErrorCode PrintResult(DMDALocalInfo *info, SNES snes, Vec u, Vec uexact,
 
   ierr = PetscPrintf(COMM,"on %d x %d grid:  ",info->mx,info->my); CHKERRQ(ierr);
   ierr = SNESGetConvergedReason(snes, &reason); CHKERRQ(ierr);
+  ierr = PetscPrintf(COMM,"%s\n",SNESConvergedReasons[reason]); CHKERRQ(ierr);
   if (user->manufactured) {
       ierr = VecNorm(u,NORM_INFINITY,&unorm); CHKERRQ(ierr);
       ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uxact
       ierr = VecNorm(u,NORM_INFINITY,&errnorm); CHKERRQ(ierr);
-      ierr = PetscPrintf(COMM,"|u-u_exact|_inf/|u|_inf = %g\n",
+      ierr = PetscPrintf(COMM,"numerical error:  |u-u_exact|_inf/|u|_inf = %g\n",
                   errnorm/unorm); CHKERRQ(ierr);
-  } else {
-      ierr = PetscPrintf(COMM,"%s\n",SNESConvergedReasons[reason]); CHKERRQ(ierr);
   }
   return 0;
 }
 //ENDCONFIGURE
 
-//STARTEXACTF
-PetscErrorCode ExactFLocal(DMDALocalInfo *info, Vec uexact, Vec f, PLapCtx *user) {
+//STARTEXACT
+PetscErrorCode ExactLocal(DMDALocalInfo *info, Vec uexact, Vec f,
+                          PLapCtx *user) {
   PetscErrorCode ierr;
   PetscInt         i,j;
   PetscReal        x,y, s,c,ux,uy,py,dpy,gs,gsx,gsy,lap,
@@ -99,9 +100,9 @@ PetscErrorCode ExactFLocal(DMDALocalInfo *info, Vec uexact, Vec f, PLapCtx *user
   ierr = DMDAVecRestoreArray(user->da,f,&af); CHKERRQ(ierr);
   return 0;
 }
-//ENDEXACTF
+//ENDEXACT
 
-//STARTOBJECTIVE
+//STARTFEM
 static PetscInt  xi_shift[4]  = {0,  1,  1,  0},
                  eta_shift[4] = {0,  0,  1,  1};
 static PetscReal zq[2]     = {-0.577350269189626,0.577350269189626}, // FIXME: fix quad degree n=2
@@ -125,9 +126,11 @@ PetscReal refeval(PetscInt i, PetscInt j, PetscReal **v, PetscReal xi, PetscReal
   }
   return sum;
 }
+//ENDFEM
 
-PetscReal integrand(PetscInt i, PetscInt j, PetscReal **af, PetscReal **au,
-                    PetscReal xi, PetscReal eta) {
+//STARTOBJECTIVE
+PetscReal ObjIntegrand(PetscInt i, PetscInt j, PetscReal **af, PetscReal **au,
+                       PetscReal xi, PetscReal eta) {
   return refeval(i,j,af,xi,eta) * refeval(i,j,au,xi,eta); // MAJOR FIXME
 }
 
@@ -145,7 +148,7 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **au,
           if (i == info->mx - 1) continue;
           for (r=0; r<2; r++) {
               for (s=0; s<2; s++) {
-                  lobj += wq[r] * wq[s] * integrand(i,j,af,au,zq[r],zq[s]);
+                  lobj += wq[r] * wq[s] * ObjIntegrand(i,j,af,au,zq[r],zq[s]);
               }
           }
       }
@@ -160,6 +163,12 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **au,
 //ENDOBJECTIVE
 
 //STARTFUNCTION
+PetscReal FunIntegrand(PetscInt i, PetscInt j, PetscReal **af, PetscReal **au,
+                       PetscReal xi, PetscReal eta) {
+  SETERRQ(COMM,1,"NOT YET IMPLEMENTED");
+  return 0;
+}
+
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal **u,
                                  PetscReal **f, PLapCtx *user) {
   SETERRQ(COMM,1,"NOT YET IMPLEMENTED");
@@ -192,7 +201,7 @@ int main(int argc,char **argv) {
   ierr = DMCreateGlobalVector(user.da,&u);CHKERRQ(ierr);
   ierr = VecDuplicate(u,&uexact);CHKERRQ(ierr);
   ierr = VecDuplicate(u,&(user.f));CHKERRQ(ierr);
-  ierr = ExactFLocal(&info,uexact,user.f,&user); CHKERRQ(ierr);
+  ierr = ExactLocal(&info,uexact,user.f,&user); CHKERRQ(ierr);
   VecSet(u,0.0);
 
   ierr = SNESCreate(COMM,&snes); CHKERRQ(ierr);
