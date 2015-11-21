@@ -105,17 +105,27 @@ PetscErrorCode ExactLocal(DMDALocalInfo *info, Vec uexact, Vec f,
 //STARTFEM
 static PetscInt  xi_shift[4]  = {0,  1,  1,  0},
                  eta_shift[4] = {0,  0,  1,  1};
-static PetscReal zq[2]     = {-0.577350269189626,0.577350269189626}, // FIXME: fix quad degree n=2
-                 wq[2]     = {1.0,1.0};
+static PetscReal zq[2] = {-0.577350269189626,0.577350269189626}, // FIXME
+                 wq[2] = {1.0,1.0};
 
-PetscReal chi(PetscInt l, PetscReal xi, PetscReal eta) {
-  const PetscInt  xi_l  = 2 * xi_shift[l]  - 1,   // in {-1,1}
-                  eta_l = 2 * eta_shift[l] - 1;   // in {-1,1}
-  return 0.25 * (1.0 + xi_l * xi) * (1.0 + eta_l * eta);
+PetscReal chi(PetscInt L, PetscReal xi, PetscReal eta) {
+  const PetscInt  xiL  = 2 * xi_shift[L]  - 1,   // in {-1,1}
+                  etaL = 2 * eta_shift[L] - 1;   // in {-1,1}
+  return 0.25 * (1.0 + xiL * xi) * (1.0 + etaL * eta);
 }
 
-// FIXME: add this:
-//PetscReal dchi(PetscInt l, PetscReal xi, PetscReal eta) {
+typedef struct {
+  PetscReal dxi, deta;
+} gradRef;
+
+gradRef dchi(PetscInt L, PetscReal xi, PetscReal eta) {
+  const PetscInt  xiL  = 2 * xi_shift[L]  - 1,
+                  etaL = 2 * eta_shift[L] - 1;
+  gradRef result;
+  result.dxi  = 0.25 * xiL  * (1.0 + etaL * eta);
+  result.deta = 0.25 * etaL * (1.0 + xiL  * xi);
+  return result;
+}
 
 // evaluate the function  v(x,y)  on  \square_{i,j}  using local coords xi,eta
 PetscReal refeval(PetscInt i, PetscInt j, PetscReal **v, PetscReal xi, PetscReal eta) {
