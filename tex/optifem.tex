@@ -91,9 +91,9 @@ The boundary integral is zero because $v\in W_0^{1,p}(\Omega)$.  It follows that
 \end{equation}
 This strong form is the traditional form of the $p$-Laplacian equation.  It reduces to the Poisson equation \eqref{poissonsquare} if $p=2$.
 
-Before proceeding to a numerical solution, the main ideas of the above diversion into theory are simple and thus worth restating:
+Before proceeding to a numerical solution, the main ideas of the above diversion into theory are simple and worth restating:
 \begin{quote}
-Minimization problem \eqref{eq:of:plapmin} for functional $I[u]$ in \eqref{eq:of:functional} is equivalent to the weak form \eqref{eq:of:plapweakform}.  It becomes the strong form \eqref{eq:of:plapstrongform} in cases where the solution $u$ is smooth.  Thus the $p$-Laplacian equation, in either form \eqref{eq:of:plapweakform} or \eqref{eq:of:plapstrongform}, arises from minimization.
+Minimization problem \eqref{eq:of:plapmin} is equivalent to the weak form \eqref{eq:of:plapweakform}.  These become the strong form \eqref{eq:of:plapstrongform} when the solution $u$ is smooth.  Thus the $p$-Laplacian equation, either \eqref{eq:of:plapweakform} or \eqref{eq:of:plapstrongform}, arises from minimization.
 \end{quote}
 
 
@@ -169,13 +169,10 @@ The four functions
 \begin{equation}
 \chi_\ell(\xi,\eta) = \frac{1}{4} \left(1 + \xi_\ell \xi\right) \left(1 + \eta_\ell \eta\right)  \quad \text{ for } \ell=0,1,2,3 \label{eq:of:chidefn}
 \end{equation}
-form a basis of bilinear functions on $\square_\ast$ so that
-    $$\chi_\ell(\xi_{\ell'},\eta_{\ell'}) = \delta_{\ell\ell'}.$$
-Expanding in this basis is easy because
+form a basis of bilinear functions on $\square_\ast$.  The nodal values satisfy $\chi_\ell(\xi_{\ell'},\eta_{\ell'}) = \delta_{\ell\ell'}$ so expanding in this basis uses coefficients equal to the nodal values:
 \begin{equation}
-v(\xi,\eta) = \sum_{\ell=0}^3 v_\ell \chi_\ell(\xi,\eta) \label{eq:of:bilinearrepresentationref}
+v(\xi,\eta) = \sum_{\ell=0}^3 v(\xi_\ell,\eta_\ell) \chi_\ell(\xi,\eta). \label{eq:of:bilinearrepresentationref}
 \end{equation}
-where $v_\ell = v(\xi_\ell,\eta_\ell)$; the coefficients are the nodal values.
 
 \begin{figure}
 \begin{tikzpicture}[scale=3.0]
@@ -214,7 +211,7 @@ where $v_\ell = v(\xi_\ell,\eta_\ell)$; the coefficients are the nodal values.
 \label{fig:of:q1gridandref}
 \end{figure}
 
-The element map $\square_\ast \to \square_{ij}$ pictured in Figure \ref{fig:of:q1gridandref} can be written using the above basis functions $\chi_\ell$, but one can simplify significantly:
+The element map $\square_\ast \to \square_{ij}$ pictured in Figure \ref{fig:of:q1gridandref} can be written using the above basis functions $\chi_\ell$, and one can simplify significantly:
 \begin{align}
 x(\xi,\eta) &= \sum_{\ell=0}^3 x_\ell \chi_\ell(\xi,\eta) = x_i + \frac{h_x}{2} (1+\xi), \label{eq:of:referencemap} \\
 y(\xi,\eta) &= \sum_{\ell=0}^3 y_\ell \chi_\ell(\xi,\eta) = y_j + \frac{h_y}{2} (1+\eta). \notag
@@ -289,21 +286,55 @@ $3$ & $-\sqrt{\frac{3}{5}}, 0, +\sqrt{\frac{3}{5}}$ & $\frac{5}{9}, \frac{8}{9},
 \caption{Nodes and weights for low-degree Gauss-Legendre quadrature rules, for integrals \eqref{eq:of:gauss}.} \label{tab:of:gauss}
 \end{table}
 
+\medskip
+
+Formulas \eqref{eq:of:bilinearref}, \eqref{eq:of:gradrepref}, and \eqref{eq:of:changeofvars} are used to evaluate the integrand in \eqref{eq:of:sumoverelements} on the reference element using the nodal values of $u$ and $f$.  Informally, we define
+\begin{equation}
+G(\xi,\eta) = \left[\frac{1}{p} |\grad u|^p - fu\right]_{\square_\ast}  \label{eq:of:integrandheuristic}
+\end{equation}
+The details are in Exercise \ref{chap:of}.\ref{exer:of:integrand}.
+
+In these terms, using quadrature \eqref{eq:of:tensorgauss}, formula \eqref{eq:of:sumoverelements} becomes computable:
+\begin{align}
+I^h[u] &= \frac{h_x h_y}{4} \sum_{i=0}^{m_x-2} \sum_{j=0}^{m_y-2} \int_{\square_\ast} G(\xi,\eta) \,d\xi\,d\eta \notag \\
+       &\approx \frac{h_x h_y}{4} \sum_{i=0}^{m_x-2} \sum_{j=0}^{m_y-2} \sum_{r=0}^{n-1} \sum_{s=0}^{n-1} w_r w_s G(z_r,z_s) \label{eq:of:quadraturesumoverelements}
+\end{align}
+This is enough for a prototype implementation.
+
 
 \section{Implementation with objective only}
 
-FIXME code uses \texttt{SNESSetObjective()} only, though also \texttt{SNESSetFunction()}; no hand-made Jacobian at all
+Our code is displayed in full in six parts, Codes \ref{code:plapI}--\ref{code:plapVI}, but the last of these, which implements \eqref{eq:of:plapweakform}, is addressed after we get the code running initially.
 
-FIXME try NCG
+The first part (Code \ref{code:plapI}) configures the solve to choose the exponent $p$ and whether we want to use a manufactured solution for verification.  (The exponent, the manufactured-solution boolean flag, and the \pVec for the source term $f$ are all stored in a context \texttt{struct} called ``\texttt{PLapCtx}.''  It is passed among the implementations as needed.)  This part also includes a method to print the resolution, convergence status, and numerical error.
 
-\cinputpart{plap.c}{\CODELOC}{FIXME I}{I}{//STARTCONFIGURE}{//ENDCONFIGURE}{code:plapI}
+The exact solution (Code \ref{code:plapII}) is about as simple as possible for the $p$-laplacian, but it is constructed only in the $p=2$ and $p=4$ cases.\sidenote{If $p=2$ then the strong form \eqref{eq:of:plapstrongform} is the linear Poisson equation addressed in Chapter \ref{chap:st}.}  In brief summary, the exact solution $u(x,y)$ is chosen exactly as in Chapter \ref{chap:st}, namely equation \eqref{eq:st:exactsolution}:
+\begin{equation}
+    u(x,y) = (x^2 - x^4) (y^4 - y^2) \label{eq:of:exactsolution}
+\end{equation}
+FIXME: MAKE IT SO, AND MAKE $f(x,y)=1$ IN NON-MANUFACTURED on the unit square $\Omega$, satisfying zero Dirichlet boundary values $g(x,y)=0$.  Thus, from the strong form \eqref{eq:of:plapstrongform} we find a formula for the source term $f(x,y)$.
 
-\cinputpart{plap.c}{\CODELOC}{FIXME II}{II}{//STARTEXACT}{//ENDEXACT}{code:plapII}
+\clearpage
+\cinputpart{plap.c}{\CODELOC}{Configure the context \texttt{PLapCtx} and print results.}{I}{//STARTCONFIGURE}{//ENDCONFIGURE}{code:plapI}
 
-\cinputpart{plap.c}{\CODELOC}{FIXME III}{III}{//STARTFEM}{//ENDFEM}{code:plapIII}
+The by-hand derivative calculation which generates $f(x,y)$ from the exact solution $u(x,y)$ is acceptable simple in the restricted cases $p=2,4$, but it is still error-prone.  However, because by-hand calculation errors are likely to be un-correlated to implementation errors in other parts of the code, agreement is likely to reflect correctness.
 
-\cinputpart{plap.c}{\CODELOC}{FIXME IV}{IV}{//STARTOBJECTIVE}{//ENDOBJECTIVE}{code:plapIV}
+\clearpage
+\cinputpart{plap.c}{\CODELOC}{Implement exact solution \eqref{eq:of:exactsolution} in the restricted ($p=2,4$) cases.  Compute the source term $f(x,y)$ in all cases.}{II}{//STARTEXACT}{//ENDEXACT}{code:plapII}
 
+Next we show FEM tools in Code \ref{code:plapIII}.  FIXME
+
+\clearpage
+\cinputpart{plap.c}{\CODELOC}{Tools for the $Q^1$ FEM method.  We implement formulas \eqref{eq:of:chidefn}, \eqref{eq:of:bilinearref}, and \eqref{eq:of:gradrepref}; for the last of these a two-element struct holds the two components of the gradient.}{III}{//STARTFEM}{//ENDFEM}{code:plapIII}
+
+We have explained the $Q^1$ FEM implementation of the objective function $I[u]$.  Code \ref{code:plapIV} does that.  FIXME
+
+\clearpage
+\cinputpart{plap.c}{\CODELOC}{Implement the formula $G(\xi,\eta)$ from Exercise \ref{chap:of}.\ref{exer:of:integrand}, formula \eqref{eq:of:tensorgauss}, and formula \eqref{eq:of:quadraturesumoverelements}.}{IV}{//STARTOBJECTIVE}{//ENDOBJECTIVE}{code:plapIV}
+
+The main part, Code \ref{code:plapV}, FIXME DOES THE USUAL STUFF AND CALLS \texttt{SNESSetObjective()} only.  Except \texttt{SNESSetFunction()} is available but no hand-made Jacobian at all.
+
+\clearpage
 \cinputpart{plap.c}{\CODELOC}{FIXME V}{V}{//STARTMAIN}{//ENDMAIN}{code:plapV}
 
 
@@ -331,6 +362,13 @@ FIXME try NCG
     $$\int_{\square_\ast} (1+\xi)^k + (1+\eta)^k\,d\xi\, d\eta = \frac{2^{k+3}}{k+1}$$
 for $k=0,1,\dots,6$, confirm that the $n=1,2,3$ Gauss-Legendre quadrature formulas listed in the text will exactly integrate degree $2n-1$ degree polynomials, but not degree $2n$ polynomials, on the reference element.
 % solution:  matlab/testgauss2d.m
+
+\item \label{exer:of:integrand}  Show that \eqref{eq:of:integrandheuristic} is
+\begin{align*}
+G(\xi,\eta) &= \frac{1}{p} \left[\frac{4}{h_x^2} \left(\sum_{\ell=0}^3 u_\ell \frac{\partial\chi_\ell}{\partial \xi}\right)^2 + \frac{4}{h_y^2} \left(\sum_{\ell=0}^3 u_\ell \frac{\partial\chi_\ell}{\partial \eta}\right)^2\right]^{p/2} \\
+  &\qquad - \left(\sum_{\ell=0}^3 f_\ell \chi_\ell(\xi,\eta)\right) \left(\sum_{\ell=0}^3 u_\ell \chi_\ell(\xi,\eta)\right)
+\end{align*}
+where $u_\ell$ and $f_\ell$ are local-node-numbered values ``extracted'' from $u_{ij}$ and $f_{ij}$, respectively.  Show how the extraction is done.
 
 \item Figure \ref{fig:of:cartoonfunctional} shows the graph of $\Phi(x,y)=\tfrac{1}{4}(x^4+y^4) - 2x + 2y$, a cartoon for the $p$-Laplacian functional $I[u]$ in the case $p=4$.  Solve
     $$\min_{x,y} \Phi(x,y)$$

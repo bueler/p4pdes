@@ -530,17 +530,17 @@ In our 2D case, with a single degree of freedom at each node,\sidenote{The Poiss
 
 At this point we need a specific Poisson problem so our example code can solve it.  To do this we \emph{choose}\sidenote{For the code \texttt{tri.c} in Chapter \ref{chap:ls} we did something similar, i.e.~choosing exact solution $\bu$ before computing $\bb=A\bu$ by matrix multiplication.} an exact solution, taking care that it satisfies homogeneous Dirichlet boundary conditions ($u=0$ along $\partial \mathcal{S}$):
 \begin{equation}
-u(x,y) = (x^2 - x^4) (y^4 - y^2). \label{exactsolution}
+u(x,y) = (x^2 - x^4) (y^4 - y^2). \label{eq:st:exactsolution}
 \end{equation}
-Then we merely differentiate to get $f = -\grad^2 u$.  Thus \eqref{exactsolution} solves \eqref{poissonsquare} with right side
+Then we merely differentiate to get $f = -\grad^2 u$.  Thus \eqref{eq:st:exactsolution} solves \eqref{poissonsquare} with right side
 \begin{equation}
 f(x,y) = 2 (1 - 6 x^2) y^2 (1 - y^2) + 2 (1 - 6 y^2) x^2 (1 - x^2).\label{manufacturedf}
 \end{equation}
-From now on we will refer to $u$ in \eqref{exactsolution} as ``$u_{ex}$'', the exact solution.  This same problem and solution appears in Chapter 4 of \citep{Briggsetal2000}, so these formulas are not original. % page 64
+From now on we will refer to $u$ in \eqref{eq:st:exactsolution} as ``$u_{ex}$'', the exact solution.  This same problem and solution appears in Chapter 4 of \citep{Briggsetal2000}, so these formulas are not original. % page 64
 
 Observe that the truncation error term $O(h^2)$ in equation \eqref{secondderivativeFD} has a coefficient proportional to fourth derivatives \citep{MortonMayers2005} so our FD method will not be exact on this problem.  That is, $u_{ex}$ has nonzero fourth derivatives.  This is \emph{good} for testing, and we would not want to use the simpler form $u(x,y)=(x-x^2)(y^2-y)$, for example, to test convergence rate of the code, because we want the decay of numerical error with refining grids to be generic.
 
-Code \ref{code:poissonexactrhs} shows how \eqref{exactsolution} is implemented as \texttt{formExact()} and how \eqref{manufacturedf} is implemented as \texttt{formRHS()}.  We will reuse these parts in Chapters \ref{chap:mg} and \ref{chap:sc}.
+Code \ref{code:poissonexactrhs} shows how \eqref{eq:st:exactsolution} is implemented as \texttt{formExact()} and how \eqref{manufacturedf} is implemented as \texttt{formRHS()}.  We will reuse these parts in Chapters \ref{chap:mg} and \ref{chap:sc}.
 
 \cinputpart{structuredpoisson.c}{\CODELOC}{Methods which assemble the exact solution and the right-hand side of equation \eqref{poissonsquareFD}.}{II}{//FORMEXACTRHS}{//ENDFORMEXACTRHS}{code:poissonexactrhs}
 

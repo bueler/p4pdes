@@ -123,8 +123,7 @@ gradRef dchi(PetscInt L, PetscReal xi, PetscReal eta) {
   return result;
 }
 
-// evaluate the function  v(xi,eta)  on  reference element using
-// L=0,..,3 values  v_L  and local coords xi,eta
+// evaluate v(xi,eta) on ref. element using local node numbering
 PetscReal eval(const PetscReal v[4], PetscReal xi, PetscReal eta) {
   PetscReal sum = 0.0;
   PetscInt  L;
@@ -133,8 +132,7 @@ PetscReal eval(const PetscReal v[4], PetscReal xi, PetscReal eta) {
   return sum;
 }
 
-// evaluate xi,eta partial derivs of  v(xi,eta)  on  reference element using
-// L=0,..,3 values  v_L  and local coords xi,eta
+// evaluate partial derivs of v(xi,eta) on ref. element
 gradRef deval(const PetscReal v[4], PetscReal xi, PetscReal eta) {
   gradRef   sum = {0.0,0.0}, tmp;
   PetscInt  L;
