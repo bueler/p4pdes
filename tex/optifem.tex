@@ -1,16 +1,20 @@
 
 In the last three Chapters we have introduced six important \PETSc types (object classes).  All are important for solving PDEs:
-\begin{itemize}
-\item[\quad Chapter \ref{chap:ls}:] \pVec, \pMat, \pKSP, \pPC
-\item[\quad Chapter \ref{chap:st}:] \pDMDA
-\item[\quad Chapter \ref{chap:nl}:] \pSNES
-\end{itemize}
 
-Each example in the rest of the book will use \emph{all} of these types.  From now on we will even solve linear PDEs using a \pSNES object.  Linear problems are now merely the case where we know that one Newton iteration suffices in theory.  Always using \pSNES gives us uniform code structure and much more flexibility when it comes to changing the PDE problem.
+\medskip
+\begin{tabular}{ll}
+Chapter \ref{chap:ls}: \pVec, \pMat, \pKSP, \pPC \hspace{.5in} & for linear algebra \\
+Chapter \ref{chap:st}: \pDMDA                    & for structured grids \\
+Chapter \ref{chap:nl}: \pSNES                    & for Newton's method
+\end{tabular}
 
-Though new ideas appear in it, the current Chapter takes a break from introducing new \PETSc types.  Instead we look at a PDE which arises from minimization in a function space, and introduce a structured-grid finite element method.  Our one example is a nonlinear PDE which is Poisson-like, but with solution-dependent diffusivity.
+\bigskip
 
-Also, the example code in this Chapter is shown in full, but it is that last one shown like that.  In later Chapters we show snippets of example codes, assuming the reader can examine the complete codes in the \texttt{p4pdes} repository; see Chapter \ref{chap:gs}.
+Each example in the rest of the book will use \pVec, \pMat, \pKSP, \pPC, and \pSNES.  From now on we will even solve linear PDEs using a \pSNES object; in such cases we know that one Newton iteration suffices in theory.  Always using \pSNES allows uniform code structure and more flexibility when it comes to changing the PDE problem.
+
+Though new ideas do appear, in the current Chapter we take a break from introducing new \PETSc types.  Instead we look at a PDE which arises from minimization in a function space, and we introduce a structured-grid finite element method.  Our one example is a nonlinear PDE which is Poisson-like, but with solution-dependent diffusivity.
+
+Also, the example code in this Chapter is the last one shown in full.  In later Chapters we show snippets of example codes; the reader can examine the complete codes in the \texttt{p4pdes} repository (Chapter \ref{chap:gs}).
 
 
 \section{$p$-Laplacian equation as minimization}
@@ -102,9 +106,9 @@ Such a minimization approach may suffice for initial prototyping.  It can then b
 For the representation of $u$ we introduce a structured-grid finite element method (FEM) using quadrilateral elements.  The gridded unknowns, which live on the same structured grid as in Chapter \ref{chap:st}, now represent a function in a function space.  The resulting code will be similar to a finite difference solution of PDE \eqref{eq:of:plapstrongform}, despite the conceptual changes.
 
 \begin{marginfigure}
-\begin{tikzpicture}[scale=3.5]
-  \draw[->,very thin] (-0.2,0.0) -- (1.2,0.0) node[below] {$x$};
-  \draw[->,very thin] (0.0,-0.2) -- (0.0,1.2) node[left] {$y$};
+\begin{tikzpicture}[scale=3.0]
+  \draw[->,very thin] (-0.05,0.0) -- (1.2,0.0) node[below] {$x$};
+  \draw[->,very thin] (0.0,-0.05) -- (0.0,1.2) node[left] {$y$};
   \draw[line width=1.0pt] (0.0,0.0) -- (0.0,1.0) -- (1.0,1.0) -- (1.0,0.0) -- cycle;
   \pgfmathsetmacro\fourth{1.0/4.0}
   \pgfmathsetmacro\third{1.0/3.0}
@@ -117,21 +121,26 @@ For the representation of $u$ we introduce a structured-grid finite element meth
   \draw[<->] (0.5,1.1) -- (0.75,1.1) node[above,yshift=1mm,xshift=-4mm] {$h_x$};
   \draw[<->] (1.1,\third) -- (1.1,\twothird) node[right,yshift=-5mm] {$h_y$};
   \node at (0.15,0.8) {\large $\Omega$};
-  \node[yshift=-3mm] at (1.0,0.0) {$1$};
-  \node[xshift=-3mm] at (0.0,1.0) {$1$};
-  \node[xshift=-2mm,yshift=-2mm] at (0.0,0.0) {$0$};
+  \node[yshift=-3mm] at (0.0,0.0) {$i=0$};
+  \draw[line width=1.0pt] (0.75,-0.04) -- (0.75,0.02);
+  \node[yshift=-3mm] at (0.75,0.0) {$i=m_x\!-\!2$};
+  \node[xshift=-6mm] at (0.0,0.0) {$j=0$};
+  \draw[line width=1.0pt] (-0.04,\twothird) -- (0.02,\twothird);
+  \node[xshift=-9mm] at (0.0,\twothird) {$j=m_y-2$};
 \end{tikzpicture}
-\caption{Our domain $\Omega$ is a unit square.  The structured grid divides it into elements $\square_{ij}$ of area $h_x h_y$ indexed by their lower-left corners $(x_i,y_j)$.}
+\medskip
+
+\caption{The structured grid of $m_x\times m_y$ points divides the unit square $\Omega$ into elements $\square_{ij}$ of area $h_x h_y$ which we index by their lower-left corners $(x_i,y_j)$.  The last element in the upper right is $\square_{m_x-2,m_y-2}$.}
 \label{fig:of:q1grid}
 \end{marginfigure}
 
-The domain is fixed to be the square $\Omega = (0,1)\times (0,1)$.  Consider the structured grid on $\Omega$ shown in Figure \ref{fig:of:q1grid}.  For positive integers $m_x$ and $m_y$ let $h_x=1/(m_x-1)$ and $h_y=1/(m_y-1)$.  The grid has nodes $(x_i,y_j)$ where $x_i = i h_x$ and $y_j = j h_y$, for indices $0\le i \le m_x-1$ and $0 \le j \le m_y-1$.  The \emph{elements} are the (closed) rectangles
+The domain is fixed in this Chapter to be the square $\Omega = (0,1)\times (0,1)$.  Consider the structured grid on $\Omega$ shown in Figure \ref{fig:of:q1grid}.  For this grid of $m_x$ by $m_y$ points, let $h_x=1/(m_x-1)$ and $h_y=1/(m_y-1)$.  The grid has nodes $(x_i,y_j)$ where $x_i = i h_x$ and $y_j = j h_y$, for indices $0\le i \le m_x-1$ and $0 \le j \le m_y-1$.  The \emph{elements} are the (closed) rectangles
    $$\square_{ij} = [x_i,x_{i+1}] \times [y_j,y_{j+1}].$$
-Observe that $\bigcup_{ij} \square_{ij} = \overline{\Omega}$ and $|\square_{ij}| = h_x h_y$.
+Each element has area $|\square_{ij}| = h_x h_y$.  Observe that $\bigcup  \square_{ij} = \overline \Omega$ where the union runs over $i=0,\dots,m_x-2$ and $j=0,\dots,m_y-2$.
 
-We immediately see that the functional in \eqref{eq:of:functional} can be computed element-by-element, because the element boundaries are of zero measure and integration is additive:
+We immediately see that the functional in \eqref{eq:of:functional} can be computed element-by-element, because the element boundaries are of zero measure and integration is additive.  Let
 \begin{equation}
-I[u] = \sum_{i=0}^{m_x-1} \sum_{j=0}^{m_y-1} \int_{\square_{ij}} \frac{1}{p} |\grad u|^p - fu  \label{eq:of:sumoverelements}
+I^h[u] = \sum_{i=0}^{m_x-2} \sum_{j=0}^{m_y-2} \int_{\square_{ij}} \frac{1}{p} |\grad u|^p - fu  \label{eq:of:sumoverelements}
 \end{equation}
 Integration over a single element $\square_{ij}$ can be addressed once we represent $f$ and $u$.  A very similar sum over elements computes an approximation of the weak form \eqref{eq:of:plapweakform}.
 
@@ -198,15 +207,14 @@ where $v_\ell = v(\xi_\ell,\eta_\ell)$; the coefficients are the nodal values.
   \filldraw (3.0,-0.5) circle (0.8pt) node[xshift=6mm,yshift=-2mm] {$\ell=1$};
   \filldraw (3.0,0.5) circle (0.8pt) node[xshift=6mm,yshift=2mm] {$\ell=2$};
   \filldraw (2.0,0.5) circle (0.8pt) node[xshift=-6mm,yshift=2mm] {$\ell=3$};
-
-% arc
+% arc:
   \draw[->,line width=1.0pt] (2.3,0.55) .. controls (1.8,1.0) and (0.7,1.0) .. (0.6,0.72);
 \end{tikzpicture}
 \caption{Each element $\square_{ij}$ is the image under a map from the reference element $\square_\ast$.  The corners of $\square_\ast$ are numbered $\ell=0,1,2,3$ and the $\ell=0$ corner maps to $(x_i,y_j)$.}
 \label{fig:of:q1gridandref}
 \end{figure}
 
-The element map $\square_\ast \to \square_{ij}$ pictured in Figure \ref{fig:of:q1gridandref} can be written using the above basis functions $\chi_\ell$, but then one can simplify significantly:
+The element map $\square_\ast \to \square_{ij}$ pictured in Figure \ref{fig:of:q1gridandref} can be written using the above basis functions $\chi_\ell$, but one can simplify significantly:
 \begin{align}
 x(\xi,\eta) &= \sum_{\ell=0}^3 x_\ell \chi_\ell(\xi,\eta) = x_i + \frac{h_x}{2} (1+\xi), \label{eq:of:referencemap} \\
 y(\xi,\eta) &= \sum_{\ell=0}^3 y_\ell \chi_\ell(\xi,\eta) = y_j + \frac{h_y}{2} (1+\eta). \notag
@@ -232,13 +240,13 @@ When restricted to a particular element $\square_{ij}$, and then pulled-back to 
 \begin{equation}
   \psi_{p,q}(x(\xi,\eta),y(\xi,\eta)) = \chi_\ell(\xi,\eta).  \label{eq:of:phionref}
 \end{equation}
-However, to evaluate $I[u]$ in \eqref{eq:of:functional} we will want to compute gradients in the original $(x,y)$ variables.  In the same case where \eqref{eq:of:phionref} applies, the following fact is also useful:
+However, to evaluate $I[u]$ in \eqref{eq:of:functional} we will want to compute gradients in the original $(x,y)$ variables:
 \begin{equation}
   (\grad_{x,y} \psi_{p,q})(x(\xi,\eta),y(\xi,\eta)) = \left<\frac{2}{h_x}\frac{\partial\chi_\ell}{\partial \xi},\frac{2}{h_y}\frac{\partial\chi_\ell}{\partial \eta}\right>.   \label{eq:of:gradphionref}
 \end{equation}
 Derivatives $\partial\chi_\ell/\partial \xi$ and $\partial\chi_\ell/\partial \eta$ can be found from formula \eqref{eq:of:chidefn} above.  Checking equations \eqref{eq:of:phionref} and \eqref{eq:of:gradphionref} is an easy exercise.
 
-We are ready to do the element-wise integrals in \eqref{eq:of:sumoverelements}, and a summary shows where we stand:  Suppose we have $v \in S^h$.  It can be represented using hat functions:
+Suppose we have $v \in S^h$.  It can be represented using hat functions:
 \begin{equation}
 v(x,y) = \sum_{i=0}^{m_x-1} \sum_{j=0}^{m_y-1} v_{i,j} \psi_{i,j}(x,y)  \qquad \text{on } \,\Omega. \label{eq:of:bilinearrepresentation}
 \end{equation}
@@ -254,13 +262,12 @@ The coefficient $v_\ell$ is equal to $v_{r,s} = v(x_r,y_s)$ for $(x_r,y_s)\in\sq
 
 \section{Quadrature}
 
-We do not plan to do the integrals exactly in \eqref{eq:of:sumoverelements}, or the corresponding sum for \eqref{eq:of:plapweakform}, but instead by numerical integration (quadrature).  One reason is that for general $p$ it would be quite challenging to exactly-integrate the term ``$|\grad u|^p$.''
+We do not plan to exactly-compute the integrals in \eqref{eq:of:sumoverelements}, or in the corresponding sum for \eqref{eq:of:plapweakform}, but instead we will use numerical integration (quadrature).  One reason is that for general $p$ it would be quite challenging to exactly-integrate the term ``$|\grad u|^p$.''
 
-First we use change-of-variables to transfer the integral to the reference element.  Suppose $v(x,y)$ is any integrable function on element $\square_{i,j}$.  Using the element map and Jacobian formula \eqref{eq:of:elementjacobian} we have
-\begin{align}
-\int_{\square_{ij}} v(x,y)\,dx\,dy &= \int_{\square_\ast} v(\xi,\eta) \det\frac{\partial(x,y)}{\partial(\xi,\eta)}\,d\xi\,d\eta  \notag \\
-&= \frac{h_x h_y}{4} \int_{\square_\ast} v(\xi,\eta) \,d\xi\,d\eta \label{eq:of:changeofvars}
-\end{align}
+First, change-of-variables transfers the integral to the reference element.  Suppose $v(x,y)$ is any integrable function on element $\square_{i,j}$.  Using the element map and \eqref{eq:of:elementjacobian} we have
+\begin{equation}
+\int_{\square_{ij}} v(x,y)\,dx\,dy = \frac{h_x h_y}{4} \int_{\square_\ast} v(\xi,\eta) \,d\xi\,d\eta \label{eq:of:changeofvars}
+\end{equation}
 where $v(\xi,\eta)=v(x(\xi,\eta),y(\xi,\eta))$.
 
 FIXME we do Gauss-Legendre on integrals
@@ -269,7 +276,7 @@ FIXME we do Gauss-Legendre on integrals
 \end{equation}
 which become tensor products for integrals like \eqref{eq:of:changeofvars} over $\square_\ast$,
 \begin{equation}
-\int_{\square_\ast} v(\xi,\eta) \,d\xi\,d\eta \approx \sum_{r=0}^n \sum_{s=0}^n w_r w_s v(z_r,z_s)  \label{eq:of:tensorgauss}
+\int_{\square_\ast} v(\xi,\eta) \,d\xi\,d\eta \approx \sum_{r=0}^{n-1} \sum_{s=0}^{n-1} w_r w_s v(z_r,z_s)  \label{eq:of:tensorgauss}
 \end{equation}
 
 FIXME table with degree $n=1,2,3$ quadrature nodes $z_q$ and weights $w_q$ for integration over $[-1,1]$
