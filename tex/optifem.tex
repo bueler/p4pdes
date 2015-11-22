@@ -262,7 +262,7 @@ The coefficient $v_\ell$ is equal to $v_{r,s} = v(x_r,y_s)$ for $(x_r,y_s)\in\sq
 
 \section{Quadrature}
 
-We do not plan to exactly-compute the integrals in \eqref{eq:of:sumoverelements}, or in the corresponding sum for \eqref{eq:of:plapweakform}, but instead we will use numerical integration (quadrature).  One reason is that for general $p$ it would be quite challenging to exactly-integrate the term ``$|\grad u|^p$.''
+We do not plan to exactly-compute the integrals in \eqref{eq:of:sumoverelements}, or in the corresponding sum for \eqref{eq:of:plapweakform}.  Instead we will use numerical integration (quadrature).  One reason is that for general $p$ it would be quite challenging to exactly-integrate the term ``$|\grad u|^p$.''
 
 First, change-of-variables transfers the integral to the reference element.  Suppose $v(x,y)$ is any integrable function on element $\square_{i,j}$.  Using the element map and \eqref{eq:of:elementjacobian} we have
 \begin{equation}
@@ -270,16 +270,14 @@ First, change-of-variables transfers the integral to the reference element.  Sup
 \end{equation}
 where $v(\xi,\eta)=v(x(\xi,\eta),y(\xi,\eta))$.
 
-FIXME we do Gauss-Legendre on integrals
+Next, recall Gauss-Legendre quadrature on integrals in one dimension \citep{GreenbaumChartier2012}:
 \begin{equation}
-\int_{-1}^1 f(z)\,dz \approx \sum_{q=0}^{n-1} w_q f(z_q)  \label{eq:of:gauss}
+\int_{-1}^1 f(z)\,dz \approx \sum_{q=0}^{n-1} w_q f(z_q).  \label{eq:of:gauss}
 \end{equation}
-which become tensor products for integrals like \eqref{eq:of:changeofvars} over $\square_\ast$,
+The degree $n$ rule \eqref{eq:of:gauss} is exact for polynomials of degree $2n-1$ and less.  For degrees $n=1,2,3$, the quadrature \emph{nodes} $z_q$ and \emph{weights} $w_q$ for integration over the interval $[-1,1]$ are given in \ref{tab:of:gauss}.  Such a one-dimensional rule extends to tensor product formulas for integrals like \eqref{eq:of:changeofvars} over $\square_\ast$, namely
 \begin{equation}
-\int_{\square_\ast} v(\xi,\eta) \,d\xi\,d\eta \approx \sum_{r=0}^{n-1} \sum_{s=0}^{n-1} w_r w_s v(z_r,z_s)  \label{eq:of:tensorgauss}
+\int_{\square_\ast} v(\xi,\eta) \,d\xi\,d\eta \approx \sum_{r=0}^{n-1} \sum_{s=0}^{n-1} w_r w_s v(z_r,z_s).  \label{eq:of:tensorgauss}
 \end{equation}
-
-FIXME table with degree $n=1,2,3$ quadrature nodes $z_q$ and weights $w_q$ for integration over $[-1,1]$
 
 \begin{table}
 \begin{tabular}{lll}
@@ -325,13 +323,13 @@ FIXME try NCG
   \item For $1 < p < \infty$, prove strict convexity \eqref{eq:of:convexity} of functional $I[u]$ on $W_0^{1,p}(\Omega)$.  (\emph{Hint}:  The argument in section 5.3 of \citet{Ciarlet2002} suffices.)
   \end{enumerate}
 
-\item Show that $S^h$ is a linear subspace of $W^{1,p}(\Omega)$ with dimension $(m_x-1)(m_y-1)$.  What precisely is meant by saying $g$ is ``(appropriately) piece-wise linear on $\partial\Omega$'' in the definition of $S_g^h$ (page \pageref{eq:of:Sghdefn})?
+\item Show that $S^h$ is a linear subspace of $W^{1,p}(\Omega)$ with dimension $(m_x-1)(m_y-1)$.  What precisely is meant by saying $g$ is ``(appropriately) piece-wise linear on $\partial\Omega$'' in the definition of $S_g^h$ on page \pageref{eq:of:Sghdefn}?
 
 \item  Use \eqref{eq:of:refcorners} and \eqref{eq:of:chidefn} to show that the two forms of the reference map \eqref{eq:of:referencemap} are the same.  Then use \eqref{eq:of:chidefn}, \eqref{eq:of:referencemap}, and \eqref{eq:of:phionref} to derive \eqref{eq:of:gradphionref}.
 
 \item By testing against the integral
     $$\int_{\square_\ast} (1+\xi)^k + (1+\eta)^k\,d\xi\, d\eta = \frac{2^{k+3}}{k+1}$$
-for $k=0,1,\dots,7$, confirm that the $n=1,2,3,4$ Gauss-Legendre quadrature formulas listed in the text will exactly integrate degree $2n-1$ degree polynomials, but not degree $2n$ polynomials, on the reference element.
+for $k=0,1,\dots,6$, confirm that the $n=1,2,3$ Gauss-Legendre quadrature formulas listed in the text will exactly integrate degree $2n-1$ degree polynomials, but not degree $2n$ polynomials, on the reference element.
 % solution:  matlab/testgauss2d.m
 
 \item Figure \ref{fig:of:cartoonfunctional} shows the graph of $\Phi(x,y)=\tfrac{1}{4}(x^4+y^4) - 2x + 2y$, a cartoon for the $p$-Laplacian functional $I[u]$ in the case $p=4$.  Solve
