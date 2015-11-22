@@ -76,7 +76,7 @@ PetscErrorCode ExactLocal(DMDALocalInfo *info, Vec uexact, Vec f,
       s = sin(2.0*pi*x);
       if (user->manufactured) {
           auex[j][i] = s * py;  //  u(x,y) = sin(2 pi x) y (1 - y)
-          lap = 2.0 * s * (2.0 * pi2 * py + 1.0);           // = u_xx + u_yy
+          lap = - 2.0 * s * (2.0 * pi2 * py + 1.0);         // = u_xx + u_yy
           if (user->p == 2.0) {
             af[j][i] = - lap;
           } else if (user->p == 4.0) {
@@ -85,10 +85,10 @@ PetscErrorCode ExactLocal(DMDALocalInfo *info, Vec uexact, Vec f,
             uy  = s * dpy;
             gs  = 4.0 * pi2 * c*c * py*py + s*s * dpy*dpy;  // = |grad u|^2
             gsx = - 16.0 * pi3 * c*s * py*py + 4.0 * pi * s*c * dpy*dpy;
-            gsy = 4.0 * pi2 * c*c * 2.0 * py*dpy + s*s * 2.0 * dpy*(-2.0);
+            gsy = 8.0 * pi2 * c*c * py*dpy - 4.0 * s*s * dpy;
             af[j][i] = - gsx * ux - gsy * uy - gs * lap;
           } else {
-            SETERRQ(COMM,1,"p!=2 and p!=4 ... HOW DID I GET HERE?");
+            SETERRQ(COMM,1,"p!=2,4 ... HOW DID I GET HERE?");
           }
       } else {
         auex[j][i] = NAN;
