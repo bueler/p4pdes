@@ -57,7 +57,7 @@ PetscErrorCode PrintResult(DMDALocalInfo *info, SNES snes, Vec u, Vec uexact,
 //ENDCONFIGURE
 
 //STARTEXACT
-PetscErrorCode ExactLocal(DMDALocalInfo *info, Vec uexact, Vec f,
+PetscErrorCode ExactLocal(DMDALocalInfo *info, Vec uex, Vec f,
                           PLapCtx *user) {
   PetscErrorCode ierr;
   PetscInt         i,j;
@@ -65,7 +65,7 @@ PetscErrorCode ExactLocal(DMDALocalInfo *info, Vec uexact, Vec f,
                    **auex, **af;
   const PetscReal  pi = PETSC_PI, pi2 = pi * pi, pi3 = pi2 * pi;
 
-  ierr = DMDAVecGetArray(user->da,uexact,&auex); CHKERRQ(ierr);
+  ierr = DMDAVecGetArray(user->da,uex,&auex); CHKERRQ(ierr);
   ierr = DMDAVecGetArray(user->da,f,&af); CHKERRQ(ierr);
   for (j=info->ys; j<info->ys+info->ym; j++) {
     y   = user->hy * j;
@@ -96,43 +96,54 @@ PetscErrorCode ExactLocal(DMDALocalInfo *info, Vec uexact, Vec f,
       }
     }
   }
-  ierr = DMDAVecRestoreArray(user->da,uexact,&auex); CHKERRQ(ierr);
+  ierr = DMDAVecRestoreArray(user->da,uex,&auex); CHKERRQ(ierr);
   ierr = DMDAVecRestoreArray(user->da,f,&af); CHKERRQ(ierr);
   return 0;
 }
 //ENDEXACT
 
 //STARTFEM
-static PetscInt  xi_shift[4]  = {0,  1,  1,  0},
-                 eta_shift[4] = {0,  0,  1,  1};
-static PetscReal zq[2] = {-0.577350269189626,0.577350269189626}, // FIXME
-                 wq[2] = {1.0,1.0};
+static PetscInt  xiShift[4]  = {0,  1,  1,  0},
+                 etaShift[4] = {0,  0,  1,  1};
 
 PetscReal chi(PetscInt L, PetscReal xi, PetscReal eta) {
-  const PetscInt  xiL  = 2 * xi_shift[L]  - 1,   // in {-1,1}
-                  etaL = 2 * eta_shift[L] - 1;   // in {-1,1}
+  const PetscInt  xiL  = 2 * xiShift[L]  - 1,   // in {-1,1}
+                  etaL = 2 * etaShift[L] - 1;   // in {-1,1}
   return 0.25 * (1.0 + xiL * xi) * (1.0 + etaL * eta);
 }
 
 typedef struct {
-  PetscReal dxi, deta;
+  PetscReal xi, eta;
 } gradRef;
 
 gradRef dchi(PetscInt L, PetscReal xi, PetscReal eta) {
-  const PetscInt  xiL  = 2 * xi_shift[L]  - 1,
-                  etaL = 2 * eta_shift[L] - 1;
+  const PetscInt  xiL  = 2 * xiShift[L]  - 1,
+                  etaL = 2 * etaShift[L] - 1;
   gradRef result;
-  result.dxi  = 0.25 * xiL  * (1.0 + etaL * eta);
-  result.deta = 0.25 * etaL * (1.0 + xiL  * xi);
+  result.xi  = 0.25 * xiL  * (1.0 + etaL * eta);
+  result.eta = 0.25 * etaL * (1.0 + xiL  * xi);
   return result;
 }
 
-// evaluate the function  v(x,y)  on  \square_{i,j}  using local coords xi,eta
-PetscReal refeval(PetscInt i, PetscInt j, PetscReal **v, PetscReal xi, PetscReal eta) {
+// evaluate the function  v(xi,eta)  on  reference element using
+// L=0,..,3 values  v_L  and local coords xi,eta
+PetscReal eval(PetscInt v[4], PetscReal xi, PetscReal eta) {
   PetscReal sum = 0.0;
-  PetscInt  l;
-  for (l=0; l<4; l++) {
-    sum += v[j + xi_shift[l]][i + eta_shift[l]] * chi(l,xi,eta);
+  PetscInt  L;
+  for (L=0; L<4; L++)
+    sum += v[L] * chi(L,xi,eta);
+  return sum;
+}
+
+// evaluate xi,eta partial derivs of  v(xi,eta)  on  reference element using
+// L=0,..,3 values  v_L  and local coords xi,eta
+gradRef deval(PetscInt v[4], PetscReal xi, PetscReal eta) {
+  gradRef   sum = {0.0,0.0}, tmp;
+  PetscInt  L;
+  for (L=0; L<4; L++) {
+    tmp = dchi(L,xi,eta);
+    sum.xi  += v[L] * tmp.xi;
+    sum.eta += v[L] * tmp.eta;
   }
   return sum;
 }
@@ -141,23 +152,27 @@ PetscReal refeval(PetscInt i, PetscInt j, PetscReal **v, PetscReal xi, PetscReal
 //STARTOBJECTIVE
 PetscReal ObjIntegrand(PetscInt i, PetscInt j, PetscReal **af, PetscReal **au,
                        PetscReal xi, PetscReal eta) {
-  return refeval(i,j,af,xi,eta) * refeval(i,j,au,xi,eta); // MAJOR FIXME
+  SETERRQ(COMM,1,"NOT YET IMPLEMENTED");
 }
+
+static PetscReal zq[2] = {-0.577350269189626,0.577350269189626}, // FIXME: quad deg
+                 wq[2] = {1.0,1.0};
 
 PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **au,
                                   PetscReal *obj, PLapCtx *user) {
   PetscErrorCode ierr;
   PetscReal      lobj = 0.0, **af;
+  const PetscInt n = 2;  // FIXME: quad deg
   PetscInt       i,j,r,s;
-  MPI_Comm       comm;
+  MPI_Comm       com;
 
   ierr = DMDAVecGetArray(user->da,user->f,&af); CHKERRQ(ierr);
   for (j=info->ys; j<info->ys+info->ym; j++) {
       if (j == info->my - 1) continue;
       for (i=info->xs; i<info->xs+info->xm; i++) {
           if (i == info->mx - 1) continue;
-          for (r=0; r<2; r++) {
-              for (s=0; s<2; s++) {
+          for (r=0; r<n; r++) {
+              for (s=0; s<n; s++) {
                   lobj += wq[r] * wq[s] * ObjIntegrand(i,j,af,au,zq[r],zq[s]);
               }
           }
@@ -166,8 +181,8 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **au,
   ierr = DMDAVecRestoreArray(user->da,user->f,&af); CHKERRQ(ierr);
   lobj *= 0.25 * user->hx * user->hy;
 
-  ierr = PetscObjectGetComm((PetscObject)(info->da),&comm);CHKERRQ(ierr);
-  ierr = MPI_Allreduce(&lobj,obj,1,MPIU_REAL,MPIU_SUM,comm); CHKERRQ(ierr);
+  ierr = PetscObjectGetComm((PetscObject)(info->da),&com);CHKERRQ(ierr);
+  ierr = MPI_Allreduce(&lobj,obj,1,MPIU_REAL,MPIU_SUM,com); CHKERRQ(ierr);
   return 0;
 }
 //ENDOBJECTIVE
