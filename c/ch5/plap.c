@@ -46,11 +46,13 @@ PetscErrorCode PrintResult(DMDALocalInfo *info, SNES snes, Vec u, Vec uexact,
   ierr = SNESGetConvergedReason(snes, &reason); CHKERRQ(ierr);
   ierr = PetscPrintf(COMM,"%s\n",SNESConvergedReasons[reason]); CHKERRQ(ierr);
   if (user->manufactured) {
-      ierr = VecNorm(u,NORM_INFINITY,&unorm); CHKERRQ(ierr);
+      ierr = VecNorm(uexact,NORM_INFINITY,&unorm); CHKERRQ(ierr);
+      ierr = PetscPrintf(COMM,"exact solution norm:   |u_exact|_inf   = %g\n",
+                  unorm); CHKERRQ(ierr);
       ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uxact
       ierr = VecNorm(u,NORM_INFINITY,&errnorm); CHKERRQ(ierr);
-      ierr = PetscPrintf(COMM,"numerical error:  |u-u_exact|_inf/|u|_inf = %g\n",
-                  errnorm/unorm); CHKERRQ(ierr);
+      ierr = PetscPrintf(COMM,"numerical error norm:  |u-u_exact|_inf = %g\n",
+                  errnorm); CHKERRQ(ierr);
   }
   return 0;
 }
@@ -103,13 +105,11 @@ PetscErrorCode ExactLocal(DMDALocalInfo *info, Vec uex, Vec f,
 //ENDEXACT
 
 //STARTFEM
-static PetscInt  xiShift[4]  = {0,  1,  1,  0},
-                 etaShift[4] = {0,  0,  1,  1};
+static PetscReal xiL[4]  = {-1.0,  1.0,  1.0, -1.0},
+                 etaL[4] = {-1.0, -1.0,  1.0,  1.0};
 
 PetscReal chi(PetscInt L, PetscReal xi, PetscReal eta) {
-  const PetscInt  xiL  = 2 * xiShift[L]  - 1,   // in {-1,1}
-                  etaL = 2 * etaShift[L] - 1;   // in {-1,1}
-  return 0.25 * (1.0 + xiL * xi) * (1.0 + etaL * eta);
+  return 0.25 * (1.0 + xiL[L] * xi) * (1.0 + etaL[L] * eta);
 }
 
 typedef struct {
@@ -117,17 +117,15 @@ typedef struct {
 } gradRef;
 
 gradRef dchi(PetscInt L, PetscReal xi, PetscReal eta) {
-  const PetscInt  xiL  = 2 * xiShift[L]  - 1,
-                  etaL = 2 * etaShift[L] - 1;
   gradRef result;
-  result.xi  = 0.25 * xiL  * (1.0 + etaL * eta);
-  result.eta = 0.25 * etaL * (1.0 + xiL  * xi);
+  result.xi  = 0.25 * xiL[L]  * (1.0 + etaL[L] * eta);
+  result.eta = 0.25 * etaL[L] * (1.0 + xiL[L]  * xi);
   return result;
 }
 
 // evaluate the function  v(xi,eta)  on  reference element using
 // L=0,..,3 values  v_L  and local coords xi,eta
-PetscReal eval(PetscInt v[4], PetscReal xi, PetscReal eta) {
+PetscReal eval(const PetscReal v[4], PetscReal xi, PetscReal eta) {
   PetscReal sum = 0.0;
   PetscInt  L;
   for (L=0; L<4; L++)
@@ -137,7 +135,7 @@ PetscReal eval(PetscInt v[4], PetscReal xi, PetscReal eta) {
 
 // evaluate xi,eta partial derivs of  v(xi,eta)  on  reference element using
 // L=0,..,3 values  v_L  and local coords xi,eta
-gradRef deval(PetscInt v[4], PetscReal xi, PetscReal eta) {
+gradRef deval(const PetscReal v[4], PetscReal xi, PetscReal eta) {
   gradRef   sum = {0.0,0.0}, tmp;
   PetscInt  L;
   for (L=0; L<4; L++) {
@@ -151,8 +149,14 @@ gradRef deval(PetscInt v[4], PetscReal xi, PetscReal eta) {
 
 //STARTOBJECTIVE
 PetscReal ObjIntegrand(PetscInt i, PetscInt j, PetscReal **af, PetscReal **au,
-                       PetscReal xi, PetscReal eta) {
-  SETERRQ(COMM,1,"NOT YET IMPLEMENTED");
+                       PetscReal xi, PetscReal eta, PLapCtx *user) {
+  const PetscReal u[4] = {au[j][i],au[j][i+1],au[j+1][i+1],au[j+1][i]},
+                  f[4] = {af[j][i],af[j][i+1],af[j+1][i+1],af[j+1][i]};
+  const gradRef   du = deval(u,xi,eta);
+  PetscReal       z;
+  z =  (4.0 / (user->hx * user->hx)) * du.xi  * du.xi;
+  z += (4.0 / (user->hy * user->hy)) * du.eta * du.eta;
+  return PetscPowScalar(z,user->p/2.0) / user->p - eval(f,xi,eta) * eval(u,xi,eta);
 }
 
 static PetscReal zq[2] = {-0.577350269189626,0.577350269189626}, // FIXME: quad deg
@@ -173,7 +177,7 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **au,
           if (i == info->mx - 1) continue;
           for (r=0; r<n; r++) {
               for (s=0; s<n; s++) {
-                  lobj += wq[r] * wq[s] * ObjIntegrand(i,j,af,au,zq[r],zq[s]);
+                  lobj += wq[r] * wq[s] * ObjIntegrand(i,j,af,au,zq[r],zq[s],user);
               }
           }
       }
