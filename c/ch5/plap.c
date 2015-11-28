@@ -163,6 +163,12 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **au,
   PetscInt       i,j,r,s;
   MPI_Comm       com;
 
+FIXME:  au[j][i]  along boundary (i.e. i==0 or j==0 or i==mx-1 or j=my-1)
+should be zero if we are minimizing over W_0^{1,p}
+
+ONLY SOLUTION I CAN THINK OF:  only interior points can appear as unknowns,
+so meaning of grid must change
+
   ierr = DMDAVecGetArray(user->da,user->f,&af); CHKERRQ(ierr);
   for (j=info->ys; j<info->ys+info->ym; j++) {
       if (j == info->my - 1) continue;
@@ -186,14 +192,31 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **au,
 
 //STARTFUNCTION
 PetscReal FunIntegrand(PetscInt i, PetscInt j, PetscReal **af, PetscReal **au,
-                       PetscReal xi, PetscReal eta) {
+                       PetscReal xi, PetscReal eta, PLapCtx *user) {
   SETERRQ(COMM,1,"NOT YET IMPLEMENTED");
   return 0;
 }
 
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal **u,
-                                 PetscReal **f, PLapCtx *user) {
+                                 PetscReal **FF, PLapCtx *user) {
   SETERRQ(COMM,1,"NOT YET IMPLEMENTED");
+/*
+  PetscErrorCode ierr;
+  PetscReal      **af;
+  const PetscInt n = 2;  // FIXME: quad deg
+  PetscInt       i,j,r,s;
+  ierr = DMDAVecGetArray(user->da,user->f,&af); CHKERRQ(ierr);
+  for (j=info->ys; j<info->ys+info->ym; j++) {
+      for (i=info->xs; i<info->xs+info->xm; i++) {
+          for (r=0; r<n; r++) {
+              for (s=0; s<n; s++) {
+                  FF[j][i] = FunIntegrand(i,j,af,au,zq[r],zq[s],user);
+              }
+          }
+      }
+  }
+  ierr = DMDAVecRestoreArray(user->da,user->f,&af); CHKERRQ(ierr);
+*/
   return 0;
 }
 //ENDFUNCTION
