@@ -2,8 +2,12 @@ static char help[] = "Solve the p-laplacian equation in 2D using Q^1 FEM\n"
 "and an objective function.\n\n";
 
 // RUN AS
-//   ./plap -snes_fd_function   (no residual = gradient function evaluation)
-//   ./plap -snes_fd_color      (no Jacobian = Hessian function evaluation)
+//   ./plap -snes_fd_function -snes_fd
+// which means no residual (= gradient) evaluation and no Jacobian
+// (= Hessian) evaluation
+
+// ALSO (eventually):
+//   ./plap -snes_fd_color
 
 #include <petsc.h>
 
