@@ -6,6 +6,10 @@ static char help[] = "Solve the p-laplacian equation in 2D using Q^1 FEM\n"
 // which means no residual (= gradient) evaluation and no Jacobian
 // (= Hessian) evaluation
 
+// EVIDENCE OF CONVERGENCE WITH OBJECTIVE-ONLY:
+// ./plap -snes_fd -snes_fd_function -snes_monitor -plap_manufactured -snes_monitor_solution draw -ksp_monitor -snes_converged_reason -da_refine X
+// for X=0,1,2,3
+
 // ALSO (eventually):
 //   ./plap -snes_fd_color
 
@@ -44,11 +48,9 @@ PetscErrorCode PrintResult(DMDALocalInfo *info, SNES snes, Vec u, Vec uexact,
                            PLapCtx *user) {
   PetscErrorCode ierr;
   PetscReal            unorm, errnorm;
-  SNESConvergedReason  reason;
 
-  ierr = PetscPrintf(COMM,"on %d x %d grid:  ",info->mx,info->my); CHKERRQ(ierr);
-  ierr = SNESGetConvergedReason(snes, &reason); CHKERRQ(ierr);
-  ierr = PetscPrintf(COMM,"%s\n",SNESConvergedReasons[reason]); CHKERRQ(ierr);
+  ierr = PetscPrintf(COMM,"on a grid of %d x %d = %d unknowns (interior nodes):\n",
+             info->mx,info->my,info->mx * info->my); CHKERRQ(ierr);
   if (user->manufactured) {
       ierr = VecNorm(uexact,NORM_INFINITY,&unorm); CHKERRQ(ierr);
       ierr = PetscPrintf(COMM,"exact solution norm:   |u_exact|_inf   = %g\n",
@@ -72,13 +74,14 @@ PetscErrorCode ExactLocal(DMDALocalInfo *info, Vec uex, Vec f,
 
   ierr = DMDAVecGetArray(user->da,uex,&auex); CHKERRQ(ierr);
   ierr = DMDAVecGetArray(user->da,f,&af); CHKERRQ(ierr);
-  for (j=info->ys; j<info->ys+info->ym; j++) {
-    y   = user->hy * j;  y2  = y * y;  y4  = y2 * y2;
+  // these loops are over ALL grid points
+  // FIXME: in parallel, care needed; currently seg-faults
+  for (j=info->ys-1; j<=info->ys+info->ym; j++) {
+    y   = user->hy * (j + 1);  y2  = y * y;  y4  = y2 * y2;
     py  = y4 - y2;                                 // polynomial in x
-    for (i=info->xs; i<info->xs+info->xm; i++) {
-      x   = user->hx * i;  x2  = x * x;  x4  = x2 * x2;
+    for (i=info->xs-1; i<=info->xs+info->xm; i++) {
+      x   = user->hx * (i + 1);  x2  = x * x;  x4  = x2 * x2;
       px  = x2 - x4;                               // polynomial in y
-      auex[j][i] = px * py;  //  u(x,y) = (x^2 - x^4) (y^4 - y^2)
       uxx = 2.0 * (1.0 - 6.0 * x2) * py;
       uyy = 2.0 * (6.0 * y2 - 1.0) * px;
       lap = uxx + uyy;
@@ -95,6 +98,9 @@ PetscErrorCode ExactLocal(DMDALocalInfo *info, Vec uex, Vec f,
       } else {
         SETERRQ(COMM,1,"p!=2,4 ... HOW DID I GET HERE?");
       }
+      if ((i >= 0) && (i <= info->mx-1) && (j >= 0) && (j <= info->my-1)) {
+        auex[j][i] = px * py;  //  u(x,y) = (x^2 - x^4) (y^4 - y^2)
+      }
     }
   }
   ierr = DMDAVecRestoreArray(user->da,uex,&auex); CHKERRQ(ierr);
@@ -104,8 +110,8 @@ PetscErrorCode ExactLocal(DMDALocalInfo *info, Vec uex, Vec f,
 //ENDEXACT
 
 //STARTFEM
-static PetscReal xiL[4]  = {-1.0,  1.0,  1.0, -1.0},
-                 etaL[4] = {-1.0, -1.0,  1.0,  1.0};
+static PetscReal xiL[4]  = { 1.0, -1.0, -1.0,  1.0},
+                 etaL[4] = { 1.0,  1.0, -1.0, -1.0};
 
 PetscReal chi(PetscInt L, PetscReal xi, PetscReal eta) {
   return 0.25 * (1.0 + xiL[L] * xi) * (1.0 + etaL[L] * eta);
@@ -145,10 +151,9 @@ gradRef deval(const PetscReal v[4], PetscReal xi, PetscReal eta) {
 //ENDFEM
 
 //STARTOBJECTIVE
-PetscReal ObjIntegrand(PetscInt i, PetscInt j, PetscReal **af, PetscReal **au,
+PetscReal ObjIntegrand(PetscInt i, PetscInt j,
+                       const PetscReal f[4], const PetscReal u[4],
                        PetscReal xi, PetscReal eta, PLapCtx *user) {
-  const PetscReal u[4] = {au[j][i],au[j][i+1],au[j+1][i+1],au[j+1][i]},
-                  f[4] = {af[j][i],af[j][i+1],af[j+1][i+1],af[j+1][i]};
   const gradRef   du = deval(u,xi,eta);
   PetscReal       z;
   z =  (4.0 / (user->hx * user->hx)) * du.xi  * du.xi;
@@ -162,25 +167,34 @@ static PetscReal zq[2] = {-0.577350269189626,0.577350269189626}, // FIXME: quad 
 PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **au,
                                   PetscReal *obj, PLapCtx *user) {
   PetscErrorCode ierr;
-  PetscReal      lobj = 0.0, **af;
+  PetscReal      lobj = 0.0, **af, f[4], u[4];
   const PetscInt n = 2;  // FIXME: quad deg
   PetscInt       i,j,r,s;
   MPI_Comm       com;
 
-FIXME:  au[j][i]  along boundary (i.e. i==0 or j==0 or i==mx-1 or j=my-1)
-should be zero if we are minimizing over W_0^{1,p}
+  // fill u ghosts with boundary values:
+  for (j=info->ys-1; j<=info->ys+info->ym; j++) {
+      if ((j == -1) || (j == info->mx)) {
+          for (i=info->xs-1; i<=info->xs+info->xm; i++)
+              au[j][i] = 0.0;    // top and bottom boundary values
+      } else if (info->xs == 0)
+          au[j][-1] = 0.0;       // left boundary values
+      else if (info->xs+info->xm == info->mx)
+          au[j][info->mx] = 0.0; // right boundary values
+  }
 
-ONLY SOLUTION I CAN THINK OF:  only interior points can appear as unknowns,
-so meaning of grid must change
-
+  // the following loops are for a sum over all elements:
   ierr = DMDAVecGetArray(user->da,user->f,&af); CHKERRQ(ierr);
-  for (j=info->ys; j<info->ys+info->ym; j++) {
-      if (j == info->my - 1) continue;
-      for (i=info->xs; i<info->xs+info->xm; i++) {
-          if (i == info->mx - 1) continue;
+  // FIXME: for runs in parallel, need to be clearer on ranges and element
+  // ownership; currently seg faults
+  for (j=info->ys; j<=info->ys+info->ym; j++) {
+      for (i=info->xs; i<=info->xs+info->xm; i++) {
+          // because of ghosts, these values are always valid
+          f[0]=af[j][i];  f[1]=af[j][i-1];  f[2]=af[j-1][i-1];  f[3]=af[j-1][i];
+          u[0]=au[j][i];  u[1]=au[j][i-1];  u[2]=au[j-1][i-1];  u[3]=au[j-1][i];
           for (r=0; r<n; r++) {
               for (s=0; s<n; s++) {
-                  lobj += wq[r] * wq[s] * ObjIntegrand(i,j,af,au,zq[r],zq[s],user);
+                  lobj += wq[r] * wq[s] * ObjIntegrand(i,j,f,u,zq[r],zq[s],user);
               }
           }
       }
@@ -238,21 +252,22 @@ int main(int argc,char **argv) {
   ierr = Configure(&user); CHKERRQ(ierr);
 
   ierr = DMDACreate2d(COMM,
-               DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_BOX,
-               -9,-9,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,
+               DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED, DMDA_STENCIL_BOX,
+               -3,-3,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,
                &(user.da)); CHKERRQ(ierr);
   ierr = DMDASetUniformCoordinates(user.da,0.0,1.0,0.0,1.0,-1.0,-1.0); CHKERRQ(ierr);
   ierr = DMSetApplicationContext(user.da,&user);CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);
-  user.hx = 1.0 / (PetscReal)(info.mx-1);
-  user.hy = 1.0 / (PetscReal)(info.my-1);
+  user.hx = 1.0 / (PetscReal)(info.mx+1);
+  user.hy = 1.0 / (PetscReal)(info.my+1);
 
   ierr = DMCreateGlobalVector(user.da,&u);CHKERRQ(ierr);
   ierr = VecDuplicate(u,&uexact);CHKERRQ(ierr);
-  ierr = VecDuplicate(u,&(user.f));CHKERRQ(ierr);
-  ierr = VecSet(u,1.0); CHKERRQ(ierr);  //FIXME: not good because |grad u| = 0
+  ierr = DMCreateLocalVector(user.da,&(user.f));CHKERRQ(ierr);
+  ierr = VecSet(u,0.0); CHKERRQ(ierr);
   if (user.manufactured) {
     ierr = ExactLocal(&info,uexact,user.f,&user); CHKERRQ(ierr);
+    //ierr = VecCopy(uexact,u); CHKERRQ(ierr);
   } else {
     ierr = VecSet(user.f,1.0); CHKERRQ(ierr);
     ierr = VecSet(uexact,NAN); CHKERRQ(ierr);
