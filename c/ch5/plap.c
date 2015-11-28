@@ -63,38 +63,33 @@ PetscErrorCode ExactLocal(DMDALocalInfo *info, Vec uex, Vec f,
                           PLapCtx *user) {
   PetscErrorCode ierr;
   PetscInt         i,j;
-  PetscReal        x,y, s,c,ux,uy,py,dpy,gs,gsx,gsy,lap,
-                   **auex, **af;
-  const PetscReal  pi = PETSC_PI, pi2 = pi * pi, pi3 = pi2 * pi;
+  PetscReal        x,y, x2,x4,y2,y4, px,py, ux,uy, uxx,uxy,uyy,lap,
+                   gs,gsx,gsy, **auex, **af;
 
   ierr = DMDAVecGetArray(user->da,uex,&auex); CHKERRQ(ierr);
   ierr = DMDAVecGetArray(user->da,f,&af); CHKERRQ(ierr);
   for (j=info->ys; j<info->ys+info->ym; j++) {
-    y   = user->hy * j;
-    py  = y * (1.0 - y);
-    dpy = 1.0 - 2.0 * y;
+    y   = user->hy * j;  y2  = y * y;  y4  = y2 * y2;
+    py  = y4 - y2;                                 // polynomial in x
     for (i=info->xs; i<info->xs+info->xm; i++) {
-      x = user->hx * i;
-      s = sin(2.0*pi*x);
-      if (user->manufactured) {
-          auex[j][i] = s * py;  //  u(x,y) = sin(2 pi x) y (1 - y)
-          lap = - 2.0 * s * (2.0 * pi2 * py + 1.0);         // = u_xx + u_yy
-          if (user->p == 2.0) {
-            af[j][i] = - lap;
-          } else if (user->p == 4.0) {
-            c = cos(2.0*pi*x);
-            ux  = 2.0 * pi * c * py;
-            uy  = s * dpy;
-            gs  = 4.0 * pi2 * c*c * py*py + s*s * dpy*dpy;  // = |grad u|^2
-            gsx = - 16.0 * pi3 * c*s * py*py + 4.0 * pi * s*c * dpy*dpy;
-            gsy = 8.0 * pi2 * c*c * py*dpy - 4.0 * s*s * dpy;
-            af[j][i] = - gsx * ux - gsy * uy - gs * lap;
-          } else {
-            SETERRQ(COMM,1,"p!=2,4 ... HOW DID I GET HERE?");
-          }
+      x   = user->hx * i;  x2  = x * x;  x4  = x2 * x2;
+      px  = x2 - x4;                               // polynomial in y
+      auex[j][i] = px * py;  //  u(x,y) = (x^2 - x^4) (y^4 - y^2)
+      uxx = 2.0 * (1.0 - 6.0 * x2) * py;
+      uyy = 2.0 * (6.0 * y2 - 1.0) * px;
+      lap = uxx + uyy;
+      if (user->p == 2.0) {
+        af[j][i] = - lap;
+      } else if (user->p == 4.0) {
+        ux  = 2.0 * x * (1.0 - 2.0 * x2) * py;
+        uy  = 2.0 * y * (2.0 * y2 - 1.0) * px;
+        gs  = ux * ux + uy * uy;                   // = |grad u|^2
+        uxy = 4.0 * x * y * (1.0 - 2.0 * x2) * (2.0 * y2 - 1.0);
+        gsx = 2.0 * (ux * uxx + uy * uxy);
+        gsy = 2.0 * (ux * uxy + uy * uyy);
+        af[j][i] = - gs * lap - ux * gsx - uy * gsy;
       } else {
-        auex[j][i] = NAN;
-        af[j][i] = s * py;  //  f(x,y) = sin(2 pi x) y (1 - y)
+        SETERRQ(COMM,1,"p!=2,4 ... HOW DID I GET HERE?");
       }
     }
   }
@@ -228,8 +223,13 @@ int main(int argc,char **argv) {
   ierr = DMCreateGlobalVector(user.da,&u);CHKERRQ(ierr);
   ierr = VecDuplicate(u,&uexact);CHKERRQ(ierr);
   ierr = VecDuplicate(u,&(user.f));CHKERRQ(ierr);
-  ierr = ExactLocal(&info,uexact,user.f,&user); CHKERRQ(ierr);
-  VecSet(u,0.0);
+  ierr = VecSet(u,1.0); CHKERRQ(ierr);  //FIXME: not good because |grad u| = 0
+  if (user.manufactured) {
+    ierr = ExactLocal(&info,uexact,user.f,&user); CHKERRQ(ierr);
+  } else {
+    ierr = VecSet(user.f,1.0); CHKERRQ(ierr);
+    ierr = VecSet(uexact,NAN); CHKERRQ(ierr);
+  }
 
   ierr = SNESCreate(COMM,&snes); CHKERRQ(ierr);
   ierr = SNESSetDM(snes,user.da); CHKERRQ(ierr);
