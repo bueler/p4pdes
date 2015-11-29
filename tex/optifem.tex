@@ -200,8 +200,9 @@ v(\xi,\eta) = \sum_{\ell=0}^3 v(\xi_\ell,\eta_\ell) \chi_\ell(\xi,\eta). \label{
   % outline an element
   \draw[line width=1.5pt] (0.5,\third) -- (0.75,\third) -- (0.75,\twothird) -- (0.5,\twothird) -- cycle;
   \node at (0.64,0.5) {$\square_{ij}$};
-  \node at (0.51,-0.1) {$x_i$};
-  \node at (-0.08,0.33) {$y_j$};
+  \node at (0.751,-0.1) {$x_i$};
+  \node at (-0.08,\twothird) {$y_j$};
+  \filldraw (0.75,\twothird) circle (0.7pt);
 
 % (xi,eta) reference element
 % origin of axes at (2.5,0.0) and square has half-width 0.5
@@ -213,10 +214,10 @@ v(\xi,\eta) = \sum_{\ell=0}^3 v(\xi_\ell,\eta_\ell) \chi_\ell(\xi,\eta). \label{
   \node at (2.43,0.6) {$1$};
   \node at (2.4,-0.6) {$-1$};
   \node at (2.8,0.3) {\large $\square_\ast$};
-  \filldraw (2.0,-0.5) circle (0.8pt) node[xshift=-6mm,yshift=-2mm] {$\ell=0$};
-  \filldraw (3.0,-0.5) circle (0.8pt) node[xshift=6mm,yshift=-2mm] {$\ell=1$};
-  \filldraw (3.0,0.5) circle (0.8pt) node[xshift=6mm,yshift=2mm] {$\ell=2$};
-  \filldraw (2.0,0.5) circle (0.8pt) node[xshift=-6mm,yshift=2mm] {$\ell=3$};
+  \filldraw (3.0,0.5) circle (1.0pt) node[xshift=6mm,yshift=2mm] {$\ell=0$};
+  \filldraw (2.0,0.5) circle (0.6pt) node[xshift=-6mm,yshift=2mm] {$\ell=1$};
+  \filldraw (2.0,-0.5) circle (0.6pt) node[xshift=-6mm,yshift=-2mm] {$\ell=2$};
+  \filldraw (3.0,-0.5) circle (0.6pt) node[xshift=6mm,yshift=-2mm] {$\ell=3$};
 % arc:
   \draw[->,line width=1.0pt] (2.3,0.55) .. controls (1.8,1.0) and (0.7,1.0) .. (0.6,0.72);
 \end{tikzpicture}
@@ -226,8 +227,8 @@ v(\xi,\eta) = \sum_{\ell=0}^3 v(\xi_\ell,\eta_\ell) \chi_\ell(\xi,\eta). \label{
 
 The element map $\square_\ast \to \square_{ij}$ pictured in Figure \ref{fig:of:q1gridandref} can be written using the above basis functions $\chi_\ell$, and one can simplify significantly:
 \begin{align}
-x(\xi,\eta) &= \sum_{\ell=0}^3 x_\ell \chi_\ell(\xi,\eta) = x_i + \frac{h_x}{2} (1+\xi), \label{eq:of:referencemap} \\
-y(\xi,\eta) &= \sum_{\ell=0}^3 y_\ell \chi_\ell(\xi,\eta) = y_j + \frac{h_y}{2} (1+\eta). \notag
+x(\xi,\eta) &= \sum_{\ell=0}^3 x_\ell \chi_\ell(\xi,\eta) = x_i + \frac{h_x}{2} (\xi-1), \label{eq:of:referencemap} \\
+y(\xi,\eta) &= \sum_{\ell=0}^3 y_\ell \chi_\ell(\xi,\eta) = y_j + \frac{h_y}{2} (\eta-1). \notag
 \end{align}
 The Jacobian of this map, used in integrals below, is the ratio of the area of $\square_{ij}$ to that of $\square_\ast$:
 \begin{equation}
@@ -256,15 +257,17 @@ However, to evaluate $I[u]$ in \eqref{eq:of:functional} we will want to compute 
 \end{equation}
 Derivatives $\partial\chi_\ell/\partial \xi$ and $\partial\chi_\ell/\partial \eta$ can be found from formula \eqref{eq:of:chidefn} above.  Checking equations \eqref{eq:of:phionref} and \eqref{eq:of:gradphionref} is an easy exercise.
 
-Suppose we have $v \in S^h$.  It can be represented using hat functions:
+Suppose we have $v \in S_0^h$.  It can be represented using hat functions at the interior nodes
 \begin{equation}
-v(x,y) = \sum_{i=0}^{m_x-1} \sum_{j=0}^{m_y-1} v_{i,j} \psi_{i,j}(x,y)  \qquad \text{on } \,\Omega. \label{eq:of:bilinearrepresentation}
+v(x,y) = \sum_{i=0}^{m_x-1} \sum_{j=0}^{m_y-1} v_{i,j} \psi_{i,j}(x,y) \label{eq:of:bilinearrepresentation}
 \end{equation}
-This function is bilinear on element $\square_{i,j}$ and it pulls-back to the reference element $\square_\ast$, using the local node numbering, as
+on $\Omega$.  On the other hand, suppose we have $v \in S^h$ with unspecified boundary values.  It can be written almost the same as \eqref{eq:of:bilinearrepresentation} but with expanded summation ranges of $i=-1,0,\dots,m_x$ and $j=-1,0,\dots,m_y$, respectively, thereby including the hat functions along the boundary.  We will see that \PETSc makes it reasonably natural to represent the latter kinds of functions as having ``ghost values'' off the edge of the grid of interior nodes.
+
+In either case such a function is bilinear on element $\square_{i,j}$ and it pulls-back to the reference element $\square_\ast$, using local node numbering, as
 \begin{equation}
 v(\xi,\eta) = \sum_{\ell=0}^3 v_\ell \chi_\ell(\xi,\eta)  \qquad \text{on } \,\square_\ast. \label{eq:of:bilinearref}
 \end{equation}
-The coefficient $v_\ell$ is equal to $v_{r,s} = v(x_r,y_s)$ for $(x_r,y_s)\in\square_{i,j}$ corresponding under the element map to $(\xi_\ell,\eta_\ell) \in \square_\ast$.  On the reference element the gradient has formula:
+The coefficient $v_\ell$ is equal to $v_{r,s} = v(x_r,y_s)$ for $(x_r,y_s)\in\square_{i,j}$ corresponding under the element map to $(\xi_\ell,\eta_\ell) \in \square_\ast$.  Also, on the reference element the $(x,y)$ gradient has formula:
 \begin{equation}
   (\grad_{x,y} v)(\xi,\eta) = \left<\frac{2}{h_x} \sum_{\ell=0}^3 v_\ell \frac{\partial\chi_\ell}{\partial \xi}, \frac{2}{h_y} \sum_{\ell=0}^3 v_\ell \frac{\partial\chi_\ell}{\partial \eta}\right>. \label{eq:of:gradrepref}
 \end{equation}
@@ -309,8 +312,8 @@ The details are in Exercise \ref{chap:of}.\ref{exer:of:integrand}.
 
 In these terms, using quadrature \eqref{eq:of:tensorgauss}, formula \eqref{eq:of:sumoverelements} becomes computable:
 \begin{align}
-I^h[u] &= \frac{h_x h_y}{4} \sum_{i=0}^{m_x-2} \sum_{j=0}^{m_y-2} \int_{\square_\ast} G(\xi,\eta) \,d\xi\,d\eta \notag \\
-       &\approx \frac{h_x h_y}{4} \sum_{i=0}^{m_x-2} \sum_{j=0}^{m_y-2} \sum_{r=0}^{n-1} \sum_{s=0}^{n-1} w_r w_s G(z_r,z_s) \label{eq:of:quadraturesumoverelements}
+I^h[u] &= \frac{h_x h_y}{4} \sum_{i=0}^{m_x} \sum_{j=0}^{m_y} \int_{\square_\ast} G(\xi,\eta) \,d\xi\,d\eta \notag \\
+       &\approx \frac{h_x h_y}{4} \sum_{i=0}^{m_x} \sum_{j=0}^{m_y} \sum_{r=0}^{n-1} \sum_{s=0}^{n-1} w_r w_s G(z_r,z_s) \label{eq:of:quadraturesumoverelements}
 \end{align}
 This is enough for a prototype implementation.
 
