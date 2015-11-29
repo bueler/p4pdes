@@ -103,44 +103,57 @@ We can use \PETSc to numerically solve the $p$-Laplacian equation as minimizatio
 
 Such a minimization approach may suffice for initial prototyping.  It can then be augmented by additional derivative-computing code, as we show, in which case the problem becomes a nonlinear-residual problem like that of Chapter \ref{chap:nl}.  Initially, however, we will ask \PETSc to use finite differences when it needs derivatives (gradients) in minimizing $I[u]$.  In this case the system of nonlinear equations, with associated residual function, is internal to \PETSc, and only approximate.
 
-For the representation of $u$ we introduce a structured-grid finite element method (FEM) using quadrilateral elements.  The gridded unknowns, which live on the same structured grid as in Chapter \ref{chap:st}, now represent a function in a function space.  The resulting code will be similar to a finite difference solution of PDE \eqref{eq:of:plapstrongform}, despite the conceptual changes.
+For the representation of $u$ we introduce a structured-grid finite element method (FEM) using quadrilateral elements.  The gridded unknowns, which live on a structured grid similar to that in Chapter \ref{chap:st}, now represent a function in a function space.  The resulting code will be similar to a finite difference solution of PDE \eqref{eq:of:plapstrongform}, despite the conceptual changes.
 
-\begin{marginfigure}
-\begin{tikzpicture}[scale=3.0]
+\begin{figure}
+\begin{tikzpicture}[scale=5.0]
+  % axes
   \draw[->,very thin] (-0.05,0.0) -- (1.2,0.0) node[below] {$x$};
   \draw[->,very thin] (0.0,-0.05) -- (0.0,1.2) node[left] {$y$};
+  % grid
   \draw[line width=1.0pt] (0.0,0.0) -- (0.0,1.0) -- (1.0,1.0) -- (1.0,0.0) -- cycle;
+  \pgfmathsetmacro\fifth{1.0/5.0}
   \pgfmathsetmacro\fourth{1.0/4.0}
-  \pgfmathsetmacro\third{1.0/3.0}
-  \pgfmathsetmacro\twothird{2.0/3.0}
-  \draw[xstep=\fourth,ystep=\third,black,thin] (0.0,0.0) grid (1.0,1.0);
-  % outline an element
-  \draw[line width=1.5pt] (0.5,\third) -- (0.75,\third) -- (0.75,\twothird) -- (0.5,\twothird) -- cycle;
-  \node at (0.64,0.5) {$\square_{ij}$};
-  \filldraw (0.5,\third) circle (0.7pt) node[xshift=-4.5mm,yshift=-3mm] {$(x_i,y_j)$};
-  \draw[<->] (0.5,1.1) -- (0.75,1.1) node[above,yshift=1mm,xshift=-4mm] {$h_x$};
-  \draw[<->] (1.1,\third) -- (1.1,\twothird) node[right,yshift=-5mm] {$h_y$};
-  \node at (0.15,0.8) {\large $\Omega$};
-  \node[yshift=-3mm] at (0.0,0.0) {$i=0$};
-  \draw[line width=1.0pt] (0.75,-0.04) -- (0.75,0.02);
-  \node[yshift=-3mm] at (0.75,0.0) {$i=m_x\!-\!2$};
-  \node[xshift=-6mm] at (0.0,0.0) {$j=0$};
-  \draw[line width=1.0pt] (-0.04,\twothird) -- (0.02,\twothird);
-  \node[xshift=-9mm] at (0.0,\twothird) {$j=m_y-2$};
+  \draw[xstep=\fifth,ystep=\fourth,black,thin] (0.0,0.0) grid (1.0,1.0);
+  \node at (0.1,0.85) {\large $\Omega$};
+  % outline an element, showing location and dimensions
+  \draw[line width=1.5pt] (0.6,0.5) -- (0.4,0.5) -- (0.4,0.25) -- (0.6,0.25) -- cycle;
+  \node at (0.5,0.35) {$\square_{ij}$};
+  \filldraw (0.6,0.5) circle (0.7pt) node[xshift=5.2mm,yshift=3mm] {$(x_i,y_j)$};
+  \draw[<->] (0.4,1.05) -- (0.6,1.05) node[above,yshift=1mm,xshift=-4mm] {$h_x$};
+  \draw[<->] (1.05,0.25) -- (1.05,0.5) node[right,yshift=-6mm] {$h_y$};
+  % tick marks for i
+  \draw[line width=1.0pt] (0.2,-0.04) -- (0.2,0.02);
+  \draw[line width=1.0pt] (0.8,-0.04) -- (0.8,0.02);
+  \node[yshift=-4mm] at (0.2,0.0) {$i=0$};
+  \node[yshift=-4mm] at (0.8,0.0) {$i=m_x\!-\!1$};
+  % tick marks for j
+  \draw[line width=1.0pt] (-0.04,0.25) -- (0.02,0.25);
+  \draw[line width=1.0pt] (-0.04,0.75) -- (0.02,0.75);
+  \node[xshift=-7mm] at (0.0,0.25) {$j=0$};
+  \node[xshift=-10mm] at (0.0,0.75) {$j=m_y\!-\!1$};
 \end{tikzpicture}
 \medskip
 
-\caption{The structured grid of $m_x\times m_y$ points divides the unit square $\Omega$ into elements $\square_{ij}$ of area $h_x h_y$ which we index by their lower-left corners $(x_i,y_j)$.  The last element in the upper right is $\square_{m_x-2,m_y-2}$.}
+\caption{The structured grid divides the unit square $\Omega$ into elements $\square_{ij}$ of area $h_x h_y$.  There are $m_x\times m_y$ interior nodes (degrees of freedom).  We index elements by their upper-right corners $(x_i,y_j)$.}
 \label{fig:of:q1grid}
-\end{marginfigure}
+\end{figure}
 
-The domain is fixed in this Chapter to be the square $\Omega = (0,1)\times (0,1)$.  Consider the structured grid on $\Omega$ shown in Figure \ref{fig:of:q1grid}.  For this grid of $m_x$ by $m_y$ points, let $h_x=1/(m_x-1)$ and $h_y=1/(m_y-1)$.  The grid has nodes $(x_i,y_j)$ where $x_i = i h_x$ and $y_j = j h_y$, for indices $0\le i \le m_x-1$ and $0 \le j \le m_y-1$.  The \emph{elements} are the (closed) rectangles
-   $$\square_{ij} = [x_i,x_{i+1}] \times [y_j,y_{j+1}].$$
-Each element has area $|\square_{ij}| = h_x h_y$.  Observe that $\bigcup  \square_{ij} = \overline \Omega$ where the union runs over $i=0,\dots,m_x-2$ and $j=0,\dots,m_y-2$.
+The domain used in this Chapter is the square $\Omega = (0,1)\times (0,1)$.  Consider the structured grid on $\Omega$ shown in Figure \ref{fig:of:q1grid}.  In this structured grid of nodes $(x_i,y_j)$, only \emph{interior} nodes represent unknowns, because the boundary value of $u\in W_g^{1,p}(\Omega)$ are known from $g$.
+
+Let $m_x,m_y$ be positive integers and define $h_x = 1/(m_x+1)$ and $h_y = 1/(m_y+1)$.  Define a grid of $N=m_x\, m_y$ interior nodes by the following formulas which apply for $i=-1,0,\dots,m_x$ and $j=-1,0,\dots,m_y$:
+\begin{equation}
+x_i = (i+1) h_x, \qquad y_j = (j+1) h_y. \label{eq:of:structuredgridindexing}
+\end{equation}
+Note this gives $(m_x+2)(m_y+2)$ total nodes in the grid.  The interior nodes correspond to the $N$ degrees of freedom in the problem.
+
+The grid has $(m_x+1)(m_x+1)$ rectangular \emph{elements}
+   $$\square_{ij} = [x_{i-1},x_i] \times [y_{j-1},y_j]$$
+for $i=0,\dots,m_x$ and $j=0,\dots,m_y$.  Observe that we index the elements by their upper-right node (corner).  Each element has area $|\square_{ij}| = h_x h_y$.  Also $\bigcup  \square_{ij} = \overline \Omega$.
 
 We immediately see that the functional in \eqref{eq:of:functional} can be computed element-by-element, because the element boundaries are of zero measure and integration is additive.  Let
 \begin{equation}
-I^h[u] = \sum_{i=0}^{m_x-2} \sum_{j=0}^{m_y-2} \int_{\square_{ij}} \frac{1}{p} |\grad u|^p - fu  \label{eq:of:sumoverelements}
+I^h[u] = \sum_{i=0}^{m_x} \sum_{j=0}^{m_y} \int_{\square_{ij}} \frac{1}{p} |\grad u|^p - fu  \label{eq:of:sumoverelements}
 \end{equation}
 Integration over a single element $\square_{ij}$ can be addressed once we represent $f$ and $u$.  A very similar sum over elements computes an approximation of the weak form \eqref{eq:of:plapweakform}.
 
