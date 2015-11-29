@@ -47,18 +47,15 @@ PetscErrorCode Configure(PLapCtx *user) {
 PetscErrorCode PrintResult(DMDALocalInfo *info, SNES snes, Vec u, Vec uexact,
                            PLapCtx *user) {
   PetscErrorCode ierr;
-  PetscReal            unorm, errnorm;
-
+  PetscReal unorm, err;
   ierr = PetscPrintf(COMM,"on a grid of %d x %d = %d unknowns (interior nodes):\n",
              info->mx,info->my,info->mx * info->my); CHKERRQ(ierr);
   if (user->manufactured) {
       ierr = VecNorm(uexact,NORM_INFINITY,&unorm); CHKERRQ(ierr);
-      ierr = PetscPrintf(COMM,"exact solution norm:   |u_exact|_inf   = %g\n",
-                  unorm); CHKERRQ(ierr);
+      ierr = PetscPrintf(COMM,"exact solution norm:   |u_exact|_inf   = %g\n",unorm); CHKERRQ(ierr);
       ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uxact
-      ierr = VecNorm(u,NORM_INFINITY,&errnorm); CHKERRQ(ierr);
-      ierr = PetscPrintf(COMM,"numerical error norm:  |u-u_exact|_inf = %g\n",
-                  errnorm); CHKERRQ(ierr);
+      ierr = VecNorm(u,NORM_INFINITY,&err); CHKERRQ(ierr);
+      ierr = PetscPrintf(COMM,"numerical error norm:  |u-u_exact|_inf = %g\n",err); CHKERRQ(ierr);
   }
   return 0;
 }

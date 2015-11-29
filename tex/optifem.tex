@@ -167,7 +167,7 @@ The solution $u$ to minimization problem \eqref{eq:of:plapmin} must, however, ha
 \begin{equation}
 S_g^h = \left\{v \in S^h \, \Big| \, v|_{\partial \Omega} = g\right\} \label{eq:of:Sghdefn}
 \end{equation}
-form an (affine) subspace of $W_g^{1,p}(\Omega)$.  Replacing $W_g^{1,p}(\Omega)$ by $S_g^h$ in problem \eqref{eq:of:plapmin} is a \emph{conforming}\sidenote{A ``nonconforming'' version might only have $u_h \approx g$ on the boundary.  For example, $u_h|_{\partial \Omega}$ might be the piecewise-linear interpolant of $g$.} $Q^1$ FEM.  Note that, given $g$, an element of $S_g^h$ is entirely determined by its values on interior nodes, so $S_g^h$ is an $N=m_x my_y$ dimensional subspace of $S^h$ and $W_g^{1,p}(\Omega)$.
+form an (affine) subspace of $W_g^{1,p}(\Omega)$.  Replacing $W_g^{1,p}(\Omega)$ by $S_g^h$ in problem \eqref{eq:of:plapmin} is a \emph{conforming}\sidenote{A ``nonconforming'' version might only have $u_h \approx g$ on the boundary.  For example, $u_h|_{\partial \Omega}$ might be the piecewise-linear interpolant of $g$.} $Q^1$ FEM.  Note that, given $g$, an element of $S_g^h$ is entirely determined by its values on interior nodes, so $S_g^h$ is an $N=m_x m_y$ dimensional subspace of $S^h$ and $W_g^{1,p}(\Omega)$.
 
 The next step is to describe a bilinear function on a single element $\square_{ij}$, and to thereby build a basis for space $S_g^h$.  We do this by constructing bilinear functions on a \emph{reference element}
     $$\square_\ast = [-1,1]\times[-1,1],$$
@@ -320,28 +320,28 @@ This is enough for a prototype implementation.
 
 \section{Implementation with objective only}
 
-Our code is displayed in full in six parts, Codes \ref{code:plapI}--\ref{code:plapVI}, but the last of these, which implements \eqref{eq:of:plapweakform}, is addressed after we get the code running initially.
+Our code is displayed in full in six parts, Codes \ref{code:plapI}--\ref{code:plapVI}.  However, the last part, which implements \eqref{eq:of:plapweakform}, is shown after we get the code running initially using only an implementation of the objective \eqref{eq:of:functional}.
 
-The first part (Code \ref{code:plapI}) configures the solve to choose the exponent $p$ and whether we want to use a manufactured solution for verification.  (The exponent, the manufactured-solution boolean flag, and the \pVec for the source term $f$ are all stored in a context \texttt{struct} called ``\texttt{PLapCtx}.''  It is passed among the implementations as needed.)  This part also includes a method to print the resolution, convergence status, and numerical error.
+The first part (Code \ref{code:plapI}) configures the problem.  Options choose the exponent $p$ and whether we want to use a manufactured solution for verification.  The corresponding variables are stored in a context \texttt{struct} called ``\texttt{PLapCtx}'' so they can be passed among our functions as needed.  Code \ref{code:plapI} also includes a method to print basic information available at the end of the solve.
 
-The exact solution (Code \ref{code:plapII}) is about as simple as possible for the $p$-laplacian, but it is constructed only in the $p=2$ and $p=4$ cases.\sidenote{If $p=2$ then the strong form \eqref{eq:of:plapstrongform} is the linear Poisson equation addressed in Chapter \ref{chap:st}.}  In brief summary, the exact solution $u(x,y)$ is chosen exactly as in Chapter \ref{chap:st}, namely equation \eqref{eq:st:exactsolution}:
+The exact solution is constructed in Code \ref{code:plapII}.  It is about as simple as possible for the $p$-laplacian, and we only construct it in the $p=2$ and $p=4$ cases.\sidenote{If $p=2$ then the strong form \eqref{eq:of:plapstrongform} is the linear Poisson equation addressed in Chapter \ref{chap:st}.}  In brief summary, the exact solution $u(x,y)$ is chosen exactly as in Chapter \ref{chap:st}, namely equation \eqref{eq:st:exactsolution}:
 \begin{equation}
-    u(x,y) = (x^2 - x^4) (y^4 - y^2) \label{eq:of:exactsolution}
+    u(x,y) = (x^2 - x^4) (y^4 - y^2), \label{eq:of:exactsolution}
 \end{equation}
-FIXME: MAKE IT SO, AND MAKE $f(x,y)=1$ IN NON-MANUFACTURED on the unit square $\Omega$, satisfying zero Dirichlet boundary values $g(x,y)=0$.  Thus, from the strong form \eqref{eq:of:plapstrongform} we find a formula for the source term $f(x,y)$.
+and $f$ is set accordingly by \eqref{eq:of:plapstrongform}.  In cases where we do not test against a manufactured solution, we simply set $f=1$.  For now, only zero Dirichlet boundary values $g(x,y)=0$ are implemented.
+
+The by-hand derivative calculation which generates $f(x,y)$ from the exact solution $u(x,y)$ is acceptably simple in the restricted cases $p=2,4$, but it is still error-prone.  However, because by-hand calculation errors are likely to be un-correlated to implementation errors in other parts of the code, agreement is likely to reflect correctness.
 
 \clearpage
 \cinputpart{plap.c}{\CODELOC}{Configure the context \texttt{PLapCtx} and print results.}{I}{//STARTCONFIGURE}{//ENDCONFIGURE}{code:plapI}
 
-The by-hand derivative calculation which generates $f(x,y)$ from the exact solution $u(x,y)$ is acceptable simple in the restricted cases $p=2,4$, but it is still error-prone.  However, because by-hand calculation errors are likely to be un-correlated to implementation errors in other parts of the code, agreement is likely to reflect correctness.
+\clearpage
+\cinputpart{plap.c}{\CODELOC}{Implement exact solution \eqref{eq:of:exactsolution} in the restricted ($p=2,4$) cases.}{II}{//STARTEXACT}{//ENDEXACT}{code:plapII}
 
 \clearpage
-\cinputpart{plap.c}{\CODELOC}{Implement exact solution \eqref{eq:of:exactsolution} in the restricted ($p=2,4$) cases.  Compute the source term $f(x,y)$ in all cases.}{II}{//STARTEXACT}{//ENDEXACT}{code:plapII}
+\cinputpart{plap.c}{\CODELOC}{Tools for the $Q^1$ FEM method.  We implement formulas \eqref{eq:of:chidefn}, \eqref{eq:of:bilinearref}, and \eqref{eq:of:gradrepref}.  Note that a two-element struct \texttt{gradRef} holds the two components of a gradient.}{III}{//STARTFEM}{//ENDFEM}{code:plapIII}
 
 Next we show FEM tools in Code \ref{code:plapIII}.  FIXME
-
-\clearpage
-\cinputpart{plap.c}{\CODELOC}{Tools for the $Q^1$ FEM method.  We implement formulas \eqref{eq:of:chidefn}, \eqref{eq:of:bilinearref}, and \eqref{eq:of:gradrepref}; for the last of these a two-element struct holds the two components of the gradient.}{III}{//STARTFEM}{//ENDFEM}{code:plapIII}
 
 We have explained the $Q^1$ FEM implementation of the objective function $I[u]$.  Code \ref{code:plapIV} does that.  FIXME
 
@@ -370,7 +370,7 @@ The main part, Code \ref{code:plapV}, FIXME DOES THE USUAL STUFF AND CALLS \text
   \item For $1 < p < \infty$, prove strict convexity \eqref{eq:of:convexity} of functional $I[u]$ on $W_0^{1,p}(\Omega)$.  (\emph{Hint}:  The argument in section 5.3 of \citet{Ciarlet2002} suffices.)
   \end{enumerate}
 
-\item Show that $S^h$ is a linear subspace of $W^{1,p}(\Omega)$ with dimension $(m_x-1)(m_y-1)$.  What precisely is meant by saying $g$ is ``(appropriately) piece-wise linear on $\partial\Omega$'' in the definition of $S_g^h$ on page \pageref{eq:of:Sghdefn}?
+\item Show that $S^h$ is a linear subspace of $W^{1,p}(\Omega)$ with dimension $(m_x+2)(m_y+2)$, and that $S_0^h$ has dimension $m_x m_y$.  What precisely is meant by saying $g$ is ``(appropriately) piece-wise linear on $\partial\Omega$'' in the definition of $S_g^h$ on page \pageref{eq:of:Sghdefn}?
 
 \item  Use \eqref{eq:of:refcorners} and \eqref{eq:of:chidefn} to show that the two forms of the reference map \eqref{eq:of:referencemap} are the same.  Then use \eqref{eq:of:chidefn}, \eqref{eq:of:referencemap}, and \eqref{eq:of:phionref} to derive \eqref{eq:of:gradphionref}.
 
@@ -384,7 +384,7 @@ for $k=0,1,\dots,6$, confirm that the $n=1,2,3$ Gauss-Legendre quadrature formul
 G(\xi,\eta) &= \frac{1}{p} \left[\frac{4}{h_x^2} \left(\sum_{\ell=0}^3 u_\ell \frac{\partial\chi_\ell}{\partial \xi}\right)^2 + \frac{4}{h_y^2} \left(\sum_{\ell=0}^3 u_\ell \frac{\partial\chi_\ell}{\partial \eta}\right)^2\right]^{p/2} \\
   &\qquad - \left(\sum_{\ell=0}^3 f_\ell \chi_\ell(\xi,\eta)\right) \left(\sum_{\ell=0}^3 u_\ell \chi_\ell(\xi,\eta)\right)
 \end{align*}
-where $u_\ell$ and $f_\ell$ are local-node-numbered values ``extracted'' from $u_{ij}$ and $f_{ij}$, respectively.  Show how the extraction is done.
+where $u_\ell$ and $f_\ell$ are local-node-numbered values ``extracted'' from $u_{ij}$ and $f_{ij}$, respectively.  Show how the extraction is done, observing that $f_{ij}$ \emph{is} defined for nodes in $\partial \Omega$, while $u_{ij}$ is not.  (On the other hand, all four values of ``$u_\ell$'' can be, and must be, defined for each element.)
 
 \item Figure \ref{fig:of:cartoonfunctional} shows the graph of $\Phi(x,y)=\tfrac{1}{4}(x^4+y^4) - 2x + 2y$, a cartoon for the $p$-Laplacian functional $I[u]$ in the case $p=4$.  Solve
     $$\min_{x,y} \Phi(x,y)$$
