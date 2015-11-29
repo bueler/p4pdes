@@ -157,7 +157,7 @@ I^h[u] = \sum_{i=0}^{m_x} \sum_{j=0}^{m_y} \int_{\square_{ij}} \frac{1}{p} |\gra
 \end{equation}
 Integration over a single element $\square_{ij}$ can be addressed once we represent $f$ and $u$.  A very similar sum over elements computes an approximation of the weak form \eqref{eq:of:plapweakform}.
 
-So, how should we approximate a function $w \in W^{1,p}(\Omega)$ in a manner compatible with the structured grid of rectangles above?  One simple choice requires that the approximation $w_h \approx w$ be bilinear on each element $\square_{ij}$ and continuous on the whole domain $\Omega$.  These requirements allow us to determine $w_h(x,y)$, for any $(x,y)\in \overline\Omega$, from the nodal values $w_{ij} = w_h(x_i,y_j)$.  Said another way, there is a linear isomorphism between the vector space $\RR^N$ of possible nodal values, with $N=m_x m_y$ equal to the total number of nodes, and an $N$-dimensional linear subspace of $W^{1,p}(\Omega)$, namely
+So, how should we approximate a function $w \in W^{1,p}(\Omega)$ in a manner compatible with the structured grid of rectangles above?  One simple choice requires that the approximation $w_h \approx w$ be bilinear on each element $\square_{ij}$ and continuous on the whole domain $\Omega$.  These requirements allow us to determine $w_h(x,y)$, for any $(x,y)\in \overline\Omega$, from the nodal values $w_{ij} = w_h(x_i,y_j)$.  Said another way, there is a linear isomorphism between the vector space $\RR^{\tilde N}$ of possible nodal values, with $\tilde N$ equal to the total number of nodes, and an $\tilde N$-dimensional linear subspace of $W^{1,p}(\Omega)$, namely
 \begin{equation}
 S^h = \left\{v \in C(\Omega) \, \Big| \, v|_{\square_{ij}} \text{ is bilinear}\right\}. \label{eq:of:Shdefn}
 \end{equation}
@@ -167,7 +167,7 @@ The solution $u$ to minimization problem \eqref{eq:of:plapmin} must, however, ha
 \begin{equation}
 S_g^h = \left\{v \in S^h \, \Big| \, v|_{\partial \Omega} = g\right\} \label{eq:of:Sghdefn}
 \end{equation}
-form an (affine) subspace of $W_g^{1,p}(\Omega)$.  Replacing $W_g^{1,p}(\Omega)$ by $S_g^h$ in problem \eqref{eq:of:plapmin} is a \emph{conforming}\sidenote{A ``nonconforming'' version might only have $u_h \approx g$ on the boundary.  For example, $u_h|_{\partial \Omega}$ might be the piecewise-linear interpolant of $g$.} $Q^1$ FEM.
+form an (affine) subspace of $W_g^{1,p}(\Omega)$.  Replacing $W_g^{1,p}(\Omega)$ by $S_g^h$ in problem \eqref{eq:of:plapmin} is a \emph{conforming}\sidenote{A ``nonconforming'' version might only have $u_h \approx g$ on the boundary.  For example, $u_h|_{\partial \Omega}$ might be the piecewise-linear interpolant of $g$.} $Q^1$ FEM.  Note that, given $g$, an element of $S_g^h$ is entirely determined by its values on interior nodes, so $S_g^h$ is an $N=m_x my_y$ dimensional subspace of $S^h$ and $W_g^{1,p}(\Omega)$.
 
 The next step is to describe a bilinear function on a single element $\square_{ij}$, and to thereby build a basis for space $S_g^h$.  We do this by constructing bilinear functions on a \emph{reference element}
     $$\square_\ast = [-1,1]\times[-1,1],$$
@@ -175,8 +175,8 @@ in variables $\xi$ and $\eta$, as shown in Figure \ref{fig:of:q1gridandref}.\sid
 
 If $v(\xi,\eta)$ is bilinear on $\square_\ast$ then $v(\xi,\eta) = a + b\, \xi + c\, \eta + d\, \xi \eta$.  The monomial basis $\{1,\xi,\eta,\xi\eta\}$ is not, however, a convenient one.  Instead, number the vertices (nodes) of $\square_\ast$ as shown in Figure \ref{fig:of:q1gridandref}:
 \begin{align}
-(\xi_0,\eta_0) &= (-1,-1), \quad (\xi_1,\eta_1) = (+1,-1),    \label{eq:of:refcorners} \\
-(\xi_2,\eta_2) &= (+1,+1), \quad (\xi_3,\eta_3) = (-1,+1). \notag
+(\xi_0,\eta_0) &= (+1,+1), \quad (\xi_1,\eta_1) = (-1,+1),    \label{eq:of:refcorners} \\
+(\xi_2,\eta_2) &= (-1,-1), \quad (\xi_3,\eta_3) = (+1,-1). \notag
 \end{align}
 The four functions
 \begin{equation}
