@@ -359,6 +359,19 @@ The main part, Code \ref{code:plapV}, FIXME DOES THE USUAL STUFF AND CALLS \text
 \cinputpart{plap.c}{\CODELOC}{FIXME VI}{VI}{//STARTFUNCTION}{//ENDFUNCTION}{code:plapVI}
 
 
+\section{FIXME looking at result and performance}
+
+% Do you want the solution of the linear system before the line search (line search may shrink the vector) use -ksp_view_solution or the actual update selected by Newton -snes_monitor_solution_update
+%   If you use the master branch of PETSc then both of these flags take the option
+%    [ascii or binary or draw][:filename][:viewer format]
+%  allowing printing as ascii, binary or drawing the solution in a window (Drawing only works for DMDA 1d or 2d).
+%   Barry
+
+FIXME 
+
+% -log_summary | grep Eval
+
+
 \section{Exercises}
 
 \renewcommand{\labelenumi}{\arabic{chapter}.\arabic{enumi}\quad}
@@ -393,3 +406,4 @@ by hand.  Now write a \PETSc code \texttt{cartoon.c} to solve this problem, star
 
 \item FIXME
 \end{enumerate}
+
