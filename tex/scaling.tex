@@ -21,6 +21,29 @@ FIXME: use CG
 
 FIXME:  ILU?  block Jacobi and GS?
 
+FIXME: somewhere describe Nachtigal et al 1992 result that KSP are strictly inequivalent
+
+\begin{comment}
+> Hi all,
+>
+> Is weighted Jacobi available as a preconditioner ? I can't find it in the
+> list of preconditioners. If not, what is the rationale between this choice
+> ? It is pretty straightforward to code, so if it is not available I can do
+> it without problem I guess, but I am just wondering. In the matrix-free
+> case where SOR is not available by default, it may be better than pure
+> Jacobi, and much easier to parallelize than SOR.
+>
+>   Timothee Nicolas
+
+I believe what you are looking for is defined by the following options
+  -ksp_type richardson
+  -ksp_richardson_scale <value>
+  -pc_type jacobi
+
+Thanks,
+  Dave May
+\end{comment}
+
 \section{Domain-decomposition preconditioners}
 
 FIXME: ASM?
