@@ -888,6 +888,7 @@ $ ./reaction -help | grep snes_linesearch
 
 We have actually only been describing one type of \pSNES solver in the last section, namely the line-search \pSNES type chosen by \texttt{-snes\_type newtonls}.  There are also trust region methods \citep{NocedalWright2006} (\texttt{-snes\_type newtontr}) as well as variations on nonlinear preconditioning, but they are not used in this book.  See the \PETSc User's Manual \citep{petsc-user-ref}.
 
+%FIXME: from petsc-users by Matt:  What happens if you use LU? When debugging a nonlinear solver always use a direct solver for the linear solver (and make sure the direct solver actually worked).
 
 \section{Exercises}
 
