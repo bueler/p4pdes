@@ -491,6 +491,45 @@ where $\omega(\xi,\eta) = f(x(\xi,\eta),y(\xi,\eta)) \chi_q(\xi,\eta)$.
 %\cinputpart{testprealloc.c}{Read mesh \pVecs from file.  Get row ownership range.}{I}{//STARTLOAD}{//ENDLOAD}{code:testpreallocpartone}
 %\cinputpart{testprealloc.c}{Set up \pMat $A$ and actually preallocate it.  Fill it with junk entries so the pattern can be visualized.}{II}{//ENDLOAD}{//ENDTEST}{code:testpreallocparttwo}
 
+\begin{comment}
+From: Fande Kong <fdkong.jd@gmail.com>
+To: PETSc users list <petsc-users@mcs.anl.gov>
+Subject: Re: [petsc-users] Status on parallel mesh reader in DMPlex
+> Message: 2
+>Date: Fri, 18 Dec 2015 08:21:04 -0800
+>From: Justin Chang <jychang48@gmail.com>
+>To: petsc-users <petsc-users@mcs.anl.gov>
+>Subject: [petsc-users] Status on parallel mesh reader in DMPlex
+
+> Hi all,
+
+>What's the status on the implementation of the parallel
+
+I am actually developing a parallel loader. The loader has two steps:
+
+(1) Use 1 core or several cores to read a sequential  mesh, and partition
+it into $np$ parts using a partitioner, $np$ is the number of cores you
+want to use to do a simulation. Usually, $np$ is large, for example, 10,000
+cores. And then we write the partitioned data into the file system as a
+HDF5 file.
+
+(2) Load the partitioned data (HDF5 file) into $np$ cores in parallel.
+
+This idea works pretty well for me at this point.  But, this loader is
+not compatible with DMPlex now. However, I could change the code somehow,
+If this idea is acceptable.
+
+You could also implement it by yourself. It is not too bad.
+
+>mesh reader/generator for DMPlex meshes? Is anyone actively working on
+> this? If so is there a branch that I can peek into?
+
+Parallel generator is highly nontrivial, I think. It is a very hard topic.
+
+> Thanks,
+> Justin
+\end{comment}
+
 
 \section{Solve the Poisson problem}
 
