@@ -43,9 +43,10 @@ cd cstrip/
 set -x
 
 for NAME in *.c; do
-    sed -i 's/ierr = //' $NAME
-    sed -i 's/CHKERRQ(ierr);//' $NAME
-    sed -i '/\/\/STRIP/d' $NAME
-    sed -i '/PetscErrorCode ierr/d' $NAME
+    sed -i.bak 's/ierr = //g' $NAME
+    sed -i.bak 's/CHKERRQ(ierr);//g' $NAME
+    sed -i.bak '/\/\/STRIP/d' $NAME
+    sed -i.bak '/PetscErrorCode ierr/d' $NAME
 done
+rm *.bak
 
