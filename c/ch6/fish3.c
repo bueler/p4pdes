@@ -2,66 +2,68 @@ static char help[] = "Solves a 3D structured-grid Poisson problem with DMDA\n"
 "and SNES.\n\n";
 
 /* in this version, these work:
-  ./fish3 -f3_exactinit -snes_fd
-  ./fish3 -f3_exactinit -snes_fd
-  ./fish3  // only works because Jacobian never used
-but not:
-  ./fish3 -f3_exactinit
+  ./fish3 -snes_fd
 */
 
 #include <petsc.h>
 
-PetscErrorCode formExact(DM da, Vec uexact) {
-    PetscErrorCode ierr;
-    DMDALocalInfo  info;
-    PetscInt       i, j, k;
-    PetscReal      hx, hy, hz, x, y, z, ***auexact;
+typedef struct {
+  DM        da;
+  PetscReal hx, hy, hz;
+  Vec       f;
+} Ctx;
 
-    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-    hx = 1.0/(info.mx-1);  hy = 1.0/(info.my-1);  hz = 1.0/(info.mz-1);
-    ierr = DMDAVecGetArray(da, uexact, &auexact);CHKERRQ(ierr);
-    for (k=info.zs; k<info.zs+info.zm; k++) {
-        z = k * hz;
-        for (j=info.ys; j<info.ys+info.ym; j++) {
-            y = j * hy;
-            for (i=info.xs; i<info.xs+info.xm; i++) {
-                x = i * hx;
-                auexact[k][j][i] = x*x * (1.0 - x*x) * y*y * (y*y - 1.0) * z*z * (z*z - 1.0);
+
+PetscErrorCode formRHS(DMDALocalInfo *info, Ctx *usr) {
+    PetscErrorCode ierr;
+    PetscInt       i, j, k;
+    //PetscReal      x, y, z;
+    PetscReal      ***af;
+
+    ierr = DMDAVecGetArray(usr->da, usr->f, &af);CHKERRQ(ierr);
+    for (k=info->zs; k<info->zs+info->zm; k++) {
+        //z = k * usr->hz;
+        for (j=info->ys; j<info->ys+info->ym; j++) {
+            //y = j * usr->hy;
+            for (i=info->xs; i<info->xs+info->xm; i++) {
+                //x = i * usr->hx;
+                af[k][j][i] = 1.0;
             }
         }
     }
-    ierr = DMDAVecRestoreArray(da, uexact, &auexact);CHKERRQ(ierr);
-    ierr = VecAssemblyBegin(uexact); CHKERRQ(ierr);
-    ierr = VecAssemblyEnd(uexact); CHKERRQ(ierr);
+    ierr = DMDAVecRestoreArray(usr->da, usr->f, &af);CHKERRQ(ierr);
+    ierr = VecAssemblyBegin(usr->f); CHKERRQ(ierr);
+    ierr = VecAssemblyEnd(usr->f); CHKERRQ(ierr);
     return 0;
 }
 
-PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal ***u,
-                                 PetscReal ***F, void *user) {
-    PetscInt       i, j, k;
-    PetscReal      hx, hy, hz, x, y, z, uxx, uyy, uzz, vol, rhs;
 
-    hx = 1.0/(info->mx-1);  hy = 1.0/(info->my-1);  hz = 1.0/(info->my-1);
-    vol = hx * hy * hz;
+PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal ***u,
+                                 PetscReal ***F, Ctx *usr) {
+    PetscErrorCode  ierr;
+    PetscInt        i, j, k;
+    PetscReal       uxx, uyy, uzz, ***af;
+    const PetscReal hx2 = usr->hx*usr->hx,
+                    hy2 = usr->hy*usr->hy,
+                    hz2 = usr->hz*usr->hz;
+
+    ierr = DMDAVecGetArray(usr->da, usr->f, &af);CHKERRQ(ierr);
     for (k=info->zs; k<info->zs+info->zm; k++) {
-        z = k * hz;
         for (j=info->ys; j<info->ys+info->ym; j++) {
-            y = j * hy;
             for (i=info->xs; i<info->xs+info->xm; i++) {
-                x = i * hx;
                 if (i == 0 || j == 0 || k == 0
                     || i == info->mx-1 || j == info->my-1 || k == info->mz-1) {
                     F[k][j][i] = u[k][j][i];
                 } else {
-                    uxx = (u[k][j][i-1] - 2.0 * u[k][j][i] + u[k][j][i+1]) / (hx*hx);
-                    uyy = (u[k][j-1][i] - 2.0 * u[k][j][i] + u[k][j+1][i]) / (hy*hy);
-                    uzz = (u[k-1][j][i] - 2.0 * u[k][j][i] + u[k+1][j][i]) / (hy*hy);
-                    rhs = 0.0 * x * y * z;// FIXME
-                    F[k][j][i] = vol * (rhs - uxx - uyy - uzz);
+                    uxx = (u[k][j][i-1] - 2.0 * u[k][j][i] + u[k][j][i+1]) / hx2;
+                    uyy = (u[k][j-1][i] - 2.0 * u[k][j][i] + u[k][j+1][i]) / hy2;
+                    uzz = (u[k-1][j][i] - 2.0 * u[k][j][i] + u[k+1][j][i]) / hz2;
+                    F[k][j][i] = - uxx - uyy - uzz - af[k][j][i];
                 }
             }
         }
     }
+    ierr = DMDAVecRestoreArray(usr->da, usr->f, &af);CHKERRQ(ierr);
     return 0;
 }
 
@@ -74,19 +76,15 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar ***u,
 //MAIN
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
-    DM             da;
     SNES           snes;
-    Vec            u, uexact;
-    PetscBool      exactinit = PETSC_FALSE;
-    PetscReal      errnorm;
+    Vec            u;
     DMDALocalInfo  info;
+    Ctx            user;
 
     PetscInitialize(&argc,&argv,(char*)0,help);
 
-    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"f3_","options to fish3","");CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-exactinit","use exact solution as initial iterate",
-                    NULL,exactinit,&exactinit,NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsEnd();CHKERRQ(ierr);
+    //ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"f3_","options to fish3","");CHKERRQ(ierr);
+    //ierr = PetscOptionsEnd();CHKERRQ(ierr);
 
     ierr = DMDACreate3d(PETSC_COMM_WORLD,
                 DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
@@ -95,38 +93,40 @@ int main(int argc,char **argv) {
                 PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,
                 1,1,
                 NULL,NULL,NULL,
-                &da); CHKERRQ(ierr);
-    ierr = DMDASetUniformCoordinates(da,0.0,1.0,0.0,1.0,0.0,1.0); CHKERRQ(ierr);
+                &user.da); CHKERRQ(ierr);
+    ierr = DMDASetUniformCoordinates(user.da,0.0,1.0,0.0,1.0,0.0,1.0); CHKERRQ(ierr);
+    ierr = DMSetApplicationContext(user.da,&user); CHKERRQ(ierr);
+    ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);
+    user.hx = 1.0/(info.mx-1);
+    user.hy = 1.0/(info.my-1);
+    user.hz = 1.0/(info.mz-1);
 
     ierr = SNESCreate(PETSC_COMM_WORLD,&snes);CHKERRQ(ierr);
-    ierr = SNESSetDM(snes,da);CHKERRQ(ierr);
-    ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
-            (PetscErrorCode (*)(DMDALocalInfo*,void*,void*,void*))FormFunctionLocal,
-            NULL);CHKERRQ(ierr);
-    ierr = DMDASNESSetJacobianLocal(da,
-            (PetscErrorCode (*)(DMDALocalInfo*,void*,Mat,Mat,void*))FormJacobianLocal,
-            NULL);CHKERRQ(ierr);
+    ierr = SNESSetDM(snes,user.da);CHKERRQ(ierr);
+    ierr = DMDASNESSetFunctionLocal(user.da,INSERT_VALUES,
+            (DMDASNESFunction)FormFunctionLocal,&user);CHKERRQ(ierr);
+    ierr = DMDASNESSetJacobianLocal(user.da,
+            (DMDASNESJacobian)FormJacobianLocal,&user);CHKERRQ(ierr);
     ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
 
-    ierr = DMCreateGlobalVector(da,&u); CHKERRQ(ierr);
-    if (exactinit) {
-      ierr = formExact(da,u); CHKERRQ(ierr);
-    } else {
-      ierr = VecSet(u,0.0); CHKERRQ(ierr);
-    }
+    ierr = DMCreateGlobalVector(user.da,&u); CHKERRQ(ierr);
+    ierr = VecSet(u,0.0); CHKERRQ(ierr);
+
+    ierr = DMCreateGlobalVector(user.da,&user.f); CHKERRQ(ierr);
+    ierr = formRHS(&info,&user); CHKERRQ(ierr);
+    //ierr = VecSet(user.f,1.0); CHKERRQ(ierr);
+
     ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
 
-    ierr = VecDuplicate(u,&uexact); CHKERRQ(ierr);
-    ierr = formExact(da,uexact); CHKERRQ(ierr);
-    ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
-    ierr = VecNorm(u,NORM_INFINITY,&errnorm); CHKERRQ(ierr);
-    ierr = DMDAGetLocalInfo(da,&info);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,
-             "on %d x %d x %d grid:  error |u-uexact|_inf = %g\n",
-             info.mx,info.my,info.mz,errnorm); CHKERRQ(ierr);
+    //ierr = VecDuplicate(u,&uexact); CHKERRQ(ierr);
+    //ierr = formExact(user.da,uexact); CHKERRQ(ierr);
 
-    VecDestroy(&u);  VecDestroy(&uexact);
-    SNESDestroy(&snes);  DMDestroy(&da);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,
+             "on %d x %d x %d grid ...\n",
+             info.mx,info.my,info.mz); CHKERRQ(ierr);
+
+    VecDestroy(&u);  VecDestroy(&user.f);
+    SNESDestroy(&snes);  DMDestroy(&user.da);
     ierr = PetscFinalize(); CHKERRQ(ierr);
     return 0;
 }
