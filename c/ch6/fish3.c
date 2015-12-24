@@ -2,7 +2,10 @@ static char help[] = "Solves a 3D structured-grid Poisson problem with DMDA\n"
 "and SNES.\n\n";
 
 /* in this version, these work:
-  ./fish3 -snes_fd
+  ./fish3 -snes_monitor -ksp_monitor
+  ./fish3 -snes_monitor -ksp_monitor -pc_type lu
+  ./fish3 -snes_monitor -ksp_monitor -ksp_type cg -pc_type icc
+  ./fish3 -snes_monitor -ksp_monitor -snes_fd
 */
 
 #include <petsc.h>
