@@ -64,3 +64,5 @@ The code \texttt{c4poisson.c} is quite short because the two methods \texttt{Com
 % It will contain the solution on the coarse mesh. After SNESSolve() call
 % SNESGetSolution() and it will give back the solution on the fine mesh.
 %  Barry
+
+%EXERCISE: make fish2.c more efficient by NOT doing "divide by hx^2 then mult by vol"  and instead "mult by hy*hz/hx"; measure performance difference; note this is already done by fish3.c

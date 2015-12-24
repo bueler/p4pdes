@@ -58,8 +58,6 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal ***u,
                     uzz = (u[k-1][j][i] - 2.0 * u[k][j][i] + u[k+1][j][i]) / (hy*hy);
                     rhs = 0.0 * x * y * z;// FIXME
                     F[k][j][i] = vol * (rhs - uxx - uyy - uzz);
-                    // EXERCISE: make more efficient by NOT doing "divide by hx^2 then mult by vol"
-                    //           and instead "mult by hy*hz/hx"; measure performance difference
                 }
             }
         }
