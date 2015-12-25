@@ -12,7 +12,6 @@ static char help[] = "Solves a 3D structured-grid Poisson problem with DMDA\n"
 
 typedef struct {
   DM        da;
-  PetscReal hx, hy, hz;
   Vec       f;
 } Ctx;
 
@@ -46,9 +45,10 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal ***u,
     PetscErrorCode  ierr;
     PetscInt        i, j, k;
     PetscReal       uxx, uyy, uzz, ***af;
-    const PetscReal hx2 = usr->hx*usr->hx,
-                    hy2 = usr->hy*usr->hy,
-                    hz2 = usr->hz*usr->hz;
+    const PetscReal hx = 1.0/(info->mx-1),
+                    hy = 1.0/(info->my-1),
+                    hz = 1.0/(info->mz-1),
+                    hx2 = hx*hx,  hy2 = hy*hy,  hz2 = hz*hz;
 
     ierr = DMDAVecGetArray(usr->da, usr->f, &af);CHKERRQ(ierr);
     for (k=info->zs; k<info->zs+info->zm; k++) {
@@ -77,10 +77,12 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar ***u,
     PetscInt        i,j,k,q;
     PetscReal       v[7];
     MatStencil      col[7],row;
-    const PetscReal hx2 = usr->hx*usr->hx,
-                    hy2 = usr->hy*usr->hy,
-                    hz2 = usr->hz*usr->hz,
-                    diag = 2.0*(1.0/hx2 + 1.0/hy2 + 1.0/hz2);
+    const PetscReal hx = 1.0/(info->mx-1),
+                    hy = 1.0/(info->my-1),
+                    hz = 1.0/(info->mz-1),
+                    hx2 = hx*hx,  hy2 = hy*hy,  hz2 = hz*hz;
+    const PetscReal diag = 2.0*(1.0/hx2 + 1.0/hy2 + 1.0/hz2);
+
     for (k=info->zs; k<info->zs+info->zm; k++) {
         row.k = k;
         col[0].k = k;
@@ -152,7 +154,7 @@ int main(int argc,char **argv) {
     ierr = DMDACreate3d(PETSC_COMM_WORLD,
                 DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
                 DMDA_STENCIL_STAR,
-                -5,-5,-5,
+                -3,-3,-3,
                 PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,
                 1,1,
                 NULL,NULL,NULL,
@@ -160,9 +162,6 @@ int main(int argc,char **argv) {
     ierr = DMDASetUniformCoordinates(user.da,0.0,1.0,0.0,1.0,0.0,1.0); CHKERRQ(ierr);
     ierr = DMSetApplicationContext(user.da,&user); CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);
-    user.hx = 1.0/(info.mx-1);
-    user.hy = 1.0/(info.my-1);
-    user.hz = 1.0/(info.mz-1);
 
     ierr = SNESCreate(PETSC_COMM_WORLD,&snes);CHKERRQ(ierr);
     ierr = SNESSetDM(snes,user.da);CHKERRQ(ierr);
