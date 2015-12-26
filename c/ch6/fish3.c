@@ -13,7 +13,12 @@ static char help[] =
 "and\n"
 "   g(y,z) = sin(E (y+1)) sin(F (z+1)).\n\n";
 
-/* in this version, these work:
+/* evidence for convergence:
+$ for LEV in 0 1 2 3 4 5; do ./fish3 -snes_monitor -snes_converged_reason -da_refine $LEV -snes_mf_operator; done
+BUT with regular jacobian it is not clear
+*/
+
+/* in this version, these work???:
   ./fish3 -snes_monitor -ksp_monitor
   ./fish3 -snes_monitor -ksp_monitor -pc_type lu
   ./fish3 -snes_monitor -ksp_monitor -ksp_type cg -pc_type icc
