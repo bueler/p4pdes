@@ -9,7 +9,9 @@ static char help[] =
 "   u(-1,y,z) = u(x,-1,z) = u(x,1,z) = 0\n"
 "   u periodic in z\n"
 "The exact solution is (FIXME: make optional)\n"
-"   u(x,y,z) = C sinh(D (x+1)) sin(E (y+1)) sin(F (z+1)).\n\n";
+"   u(x,y,z) = C sinh(D (x+1)) sin(E (y+1)) sin(F (z+1))\n"
+"and\n"
+"   g(y,z) = sin(E (y+1)) sin(F (z+1)).\n\n";
 
 /* in this version, these work:
   ./fish3 -snes_monitor -ksp_monitor
@@ -22,58 +24,67 @@ static char help[] =
 
 typedef struct {
   DM        da;
-  Vec       f;
+  Vec       g,f;
 } Ctx;
 
 
-PetscErrorCode formExact(DMDALocalInfo *info, Ctx *usr, Vec uex) {
+PetscErrorCode formExact(DMDALocalInfo *info, Ctx *usr, Vec uex, Vec g) {
     PetscErrorCode  ierr;
     PetscInt        i, j, k;
     const PetscReal hx = 2.0/(info->mx-1),
                     hy = 2.0/(info->my-1),
-                    hz = 2.0/(info->mz-1),
+                    hz = 2.0/(info->mz),    // periodic direction
                     D = sqrt(17.0) * PETSC_PI / 2.0,
                     C = 1.0 / sinh(2.0 * D),
                     E = PETSC_PI / 2.0,
                     F = 2.0 * PETSC_PI;
-    PetscReal       x, y, z, ***auex;
+    PetscReal       x, y, z, gg, ***auex, ***ag;
 
     ierr = DMDAVecGetArray(usr->da, uex, &auex);CHKERRQ(ierr);
+    ierr = DMDAVecGetArray(usr->da, g, &ag);CHKERRQ(ierr);
     for (k=info->zs; k<info->zs+info->zm; k++) {
         z = -1.0 + k * hz;
         for (j=info->ys; j<info->ys+info->ym; j++) {
             y = -1.0 + j * hy;
+            gg = sin(E*(y+1.0)) * sin(F*(z+1.0));
             for (i=info->xs; i<info->xs+info->xm; i++) {
                 x = -1.0 + i * hx;
-                auex[k][j][i] = C * sinh(D*(x+1.0)) * sin(E*(y+1.0)) * sin(F*(z+1.0));
+                auex[k][j][i] = C * sinh(D*(x+1.0)) * gg;
+                if (i == info->mx-1)
+                    ag[k][j][i] = gg;
+                else
+                    ag[k][j][i] = 0.0;
             }
         }
     }
     ierr = DMDAVecRestoreArray(usr->da, uex, &auex);CHKERRQ(ierr);
+    ierr = DMDAVecRestoreArray(usr->da, g, &ag);CHKERRQ(ierr);
+    ierr = VecAssemblyBegin(g); CHKERRQ(ierr);
     ierr = VecAssemblyBegin(uex); CHKERRQ(ierr);
+    ierr = VecAssemblyEnd(g); CHKERRQ(ierr);
     ierr = VecAssemblyEnd(uex); CHKERRQ(ierr);
     return 0;
 }
 
 
-// FIXME:  generally wrong from here on
-
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal ***u,
                                  PetscReal ***F, Ctx *usr) {
     PetscErrorCode  ierr;
     PetscInt        i, j, k;
-    PetscReal       uxx, uyy, uzz, ***af;
-    const PetscReal hx = 1.0/(info->mx-1),
-                    hy = 1.0/(info->my-1),
-                    hz = 1.0/(info->mz-1),
+    PetscReal       uxx, uyy, uzz, ***af, ***ag;
+    const PetscReal hx = 2.0/(info->mx-1),
+                    hy = 2.0/(info->my-1),
+                    hz = 2.0/(info->mz),    // periodic direction
                     hx2 = hx*hx,  hy2 = hy*hy,  hz2 = hz*hz;
 
     ierr = DMDAVecGetArray(usr->da, usr->f, &af);CHKERRQ(ierr);
+    ierr = DMDAVecGetArray(usr->da, usr->g, &ag);CHKERRQ(ierr);
     for (k=info->zs; k<info->zs+info->zm; k++) {
         for (j=info->ys; j<info->ys+info->ym; j++) {
             for (i=info->xs; i<info->xs+info->xm; i++) {
-                if (i == 0 || j == 0 || k == 0
-                    || i == info->mx-1 || j == info->my-1 || k == info->mz-1) {
+                if (i == info->mx-1) {
+                    F[k][j][i] = u[k][j][i] - ag[k][j][i];
+                } else if (i == 0 || j == 0 || j == info->my-1) {
                     F[k][j][i] = u[k][j][i];
                 } else {
                     uxx = (u[k][j][i-1] - 2.0 * u[k][j][i] + u[k][j][i+1]) / hx2;
@@ -85,6 +96,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal ***u,
         }
     }
     ierr = DMDAVecRestoreArray(usr->da, usr->f, &af);CHKERRQ(ierr);
+    ierr = DMDAVecRestoreArray(usr->da, usr->g, &ag);CHKERRQ(ierr);
     return 0;
 }
 
@@ -95,9 +107,9 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar ***u,
     PetscInt        i,j,k,q;
     PetscReal       v[7];
     MatStencil      col[7],row;
-    const PetscReal hx = 1.0/(info->mx-1),
-                    hy = 1.0/(info->my-1),
-                    hz = 1.0/(info->mz-1),
+    const PetscReal hx = 2.0/(info->mx-1),
+                    hy = 2.0/(info->my-1),
+                    hz = 2.0/(info->mz),     // periodic direction
                     hx2 = hx*hx,  hy2 = hy*hy,  hz2 = hz*hz;
     const PetscReal diag = 2.0*(1.0/hx2 + 1.0/hy2 + 1.0/hz2);
 
@@ -110,12 +122,16 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar ***u,
             for (i=info->xs; i<info->xs+info->xm; i++) {
                 row.i = i;
                 col[0].i = i;
-                q = 1;   // will insert at least one element
-                if (i == 0 || j == 0 || k == 0
-                        || i == info->mx-1 || j == info->my-1 || k == info->mz-1) {
+                if (i == 0 || j == 0 || i == info->mx-1 || j == info->my-1) {
                     v[0] = 1.0;
+                    q = 1;
                 } else {
                     v[0] = diag;
+                    col[1].k = k-1;  col[1].j = j;  col[1].i = i;
+                    v[1] = - 1.0/hz2;
+                    col[2].k = k+1;  col[2].j = j;  col[2].i = i;
+                    v[2] = - 1.0/hz2;
+                    q = 3;
                     if (i-1 != 0) {
                         v[q] = - 1.0/hx2;
                         col[q].k = k;  col[q].j = j;  col[q].i = i-1;
@@ -136,16 +152,6 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar ***u,
                         col[q].k = k;  col[q].j = j+1;  col[q].i = i;
                         q++;
                     }
-                    if (k-1 != 0) {
-                        v[q] = - 1.0/hz2;
-                        col[q].k = k-1;  col[q].j = j;  col[q].i = i;
-                        q++;
-                    }
-                    if (k+1 != info->mz-1) {
-                        v[q] = - 1.0/hz2;
-                        col[q].k = k+1;  col[q].j = j;  col[q].i = i;
-                        q++;
-                    }
                 }
                 ierr = MatSetValuesStencil(Jpre,1,&row,q,col,v,INSERT_VALUES); CHKERRQ(ierr);
             }
@@ -164,20 +170,21 @@ int main(int argc,char **argv) {
     PetscErrorCode ierr;
     SNES           snes;
     Vec            u, uexact;
+    PetscReal      errnorm;
     DMDALocalInfo  info;
     Ctx            user;
 
     PetscInitialize(&argc,&argv,(char*)0,help);
 
     ierr = DMDACreate3d(PETSC_COMM_WORLD,
-                DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
+                DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DM_BOUNDARY_PERIODIC,
                 DMDA_STENCIL_STAR,
-                -3,-3,-3,
+                -3,-3,-2,
                 PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,
                 1,1,
                 NULL,NULL,NULL,
                 &user.da); CHKERRQ(ierr);
-    ierr = DMDASetUniformCoordinates(user.da,0.0,1.0,0.0,1.0,0.0,1.0); CHKERRQ(ierr);
+    ierr = DMDASetUniformCoordinates(user.da,-1.0,1.0,-1.0,1.0,-1.0,1.0); CHKERRQ(ierr);
     ierr = DMSetApplicationContext(user.da,&user); CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);
 
@@ -196,13 +203,16 @@ int main(int argc,char **argv) {
     ierr = VecSet(user.f,0.0); CHKERRQ(ierr);
 
     ierr = VecDuplicate(u,&uexact); CHKERRQ(ierr);
-    ierr = formExact(&info,&user,uexact); CHKERRQ(ierr);
+    ierr = VecDuplicate(u,&user.g); CHKERRQ(ierr);
+    ierr = formExact(&info,&user,uexact,user.g); CHKERRQ(ierr);
 
     ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
 
+    ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uxact
+    ierr = VecNorm(u,NORM_INFINITY,&errnorm); CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,
-             "on %d x %d x %d grid ...\n",
-             info.mx,info.my,info.mz); CHKERRQ(ierr);
+             "on %d x %d x %d grid:  error |u-uexact|_inf = %g\n",
+             info.mx,info.my,info.mz,errnorm); CHKERRQ(ierr);
 
     VecDestroy(&u);  VecDestroy(&user.f);  VecDestroy(&uexact);
     SNESDestroy(&snes);  DMDestroy(&user.da);
