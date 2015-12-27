@@ -1,27 +1,33 @@
 static char help[] =
-"Solves a 3D structured-grid diffusion-advection problem with DMDA\n"
+"Solves a 3D structured-grid advection-diffusion problem with DMDA\n"
 "and SNES.  The equation is\n"
 "    - eps Laplacian u + W . Grad u = f\n"
-"on the domain  [-1,1]^3\n"
-"FIXME: for now eps=1 and W=0 and f=0\n"
+"on the domain  [-1,1]^3.  Significant restrictions are:\n"
+"   * only Dirichlet and boundary conditions are demonstrated\n"
+"   * W(x,y,z) must be given by a formula\n"
+"   * only centered and first-order-upwind differences for advection\n"
 "The boundary conditions are\n"
 "   u(1,y,z) = g(y,z)\n"
 "   u(-1,y,z) = u(x,-1,z) = u(x,1,z) = 0\n"
 "   u periodic in z\n"
-"The exact solution is (FIXME: make optional)\n"
+"\n"
+"An optional exact solution applies to the W=0 and f=0 case:\n"
 "   u(x,y,z) = C sinh(D (x+1)) sin(E (y+1)) sin(F (z+1))\n"
-"and\n"
-"   g(y,z) = sin(E (y+1)) sin(F (z+1)).\n\n";
+"and  g(y,z) = sin(E (y+1)) sin(F (z+1))  for constants satisfying\n"
+"D^2 - E^2 - F^2 = 0.\n\n";
 
 /* evidence for convergence:
-$ for LEV in 0 1 2 3 4; do ./fish3 -ksp_rtol 1.0e-14 -snes_monitor -snes_converged_reason -da_refine $LEV; done
+$ for LEV in 0 1 2 3 4; do ./ad3 -ksp_rtol 1.0e-14 -snes_monitor -snes_converged_reason -da_refine $LEV; done
 */
 
-/* in this version, these work???:
-  ./fish3 -snes_monitor -ksp_monitor
-  ./fish3 -snes_monitor -ksp_monitor -pc_type lu
-  ./fish3 -snes_monitor -ksp_monitor -ksp_type cg -pc_type icc
-  ./fish3 -snes_monitor -ksp_monitor -snes_fd
+/* all of these work:
+  ./ad3 -snes_monitor -ksp_type preonly -pc_type lu
+  "                   -ksp_type cg -pc_type icc
+  "                   -snes_fd
+  "                   -snes_mf
+  "                   -snes_mf_operator
+
+FIXME: multigrid?
 */
 
 #include <petsc.h>
