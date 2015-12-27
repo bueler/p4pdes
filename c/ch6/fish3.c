@@ -14,8 +14,7 @@ static char help[] =
 "   g(y,z) = sin(E (y+1)) sin(F (z+1)).\n\n";
 
 /* evidence for convergence:
-$ for LEV in 0 1 2 3 4 5; do ./fish3 -snes_monitor -snes_converged_reason -da_refine $LEV -snes_mf_operator; done
-BUT with regular jacobian it is not clear
+$ for LEV in 0 1 2 3 4; do ./fish3 -ksp_rtol 1.0e-14 -snes_monitor -snes_converged_reason -da_refine $LEV; done
 */
 
 /* in this version, these work???:
@@ -114,9 +113,9 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal ***u,
     return 0;
 }
 
+
 PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar ***u,
                                  Mat J, Mat Jpre, Ctx *usr) {
-
     PetscErrorCode  ierr;
     PetscInt        i,j,k,q;
     PetscReal       v[7],diag;
@@ -178,6 +177,7 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar ***u,
     return 0;
 }
 
+
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
     SNES           snes;
@@ -212,7 +212,6 @@ int main(int argc,char **argv) {
     ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
 
     ierr = DMCreateGlobalVector(user.da,&u); CHKERRQ(ierr);
-    ierr = VecSet(u,0.0); CHKERRQ(ierr);
 
     ierr = VecDuplicate(u,&user.f); CHKERRQ(ierr);
     ierr = VecSet(user.f,0.0); CHKERRQ(ierr);
@@ -220,6 +219,7 @@ int main(int argc,char **argv) {
     ierr = VecDuplicate(u,&uexact); CHKERRQ(ierr);
     ierr = VecDuplicate(u,&user.g); CHKERRQ(ierr);
     ierr = formExact(&info,&user,uexact,user.g); CHKERRQ(ierr);
+    ierr = VecCopy(user.g,u); CHKERRQ(ierr);   // g has zeros except at bdry
 
     ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
 
