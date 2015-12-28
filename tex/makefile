@@ -1,6 +1,6 @@
 all: book.pdf
 
-texroots := macros preface getstarted linearsystem structured nonlinear optifem unstructured multigrid scaling stokes dmplex constrained
+texroots := macros preface getstarted linearsystem structured nonlinear optifem advdif precond scaling unstructured dmplex stokes constrained
 texinputs := $(addsuffix .tex, $(texroots))
 
 # for these, see strip.sh
@@ -34,16 +34,16 @@ samplepoly.1.tikz: samplepoly.poly
 squarefour.tikz: squarefour.poly
 	python tri2tikz.py --labelnodes --nodesize 0.5 --nodeoffset -0.1 --scale 3.0 squarefour $@
 
-bump.1.tikz: ../c/ch8/bump.poly
-	(cd ../c/ch8/ && triangle -pqa1.0 bump)
-	python tri2tikz.py --labelnodes --nodeoffset 0.25 --labelelements --scale 1.7 ../c/ch8/bump.1 $@
+bump.1.tikz: ../c/ch9/bump.poly
+	(cd ../c/ch9/ && triangle -pqa1.0 bump)
+	python tri2tikz.py --labelnodes --nodeoffset 0.25 --labelelements --scale 1.7 ../c/ch9/bump.1 $@
 
-bump.poly.tikz: ../c/ch8/bump.poly
-	python tri2tikz.py --scale 0.85 --polyonly ../c/ch8/bump --nodesize 3.0 bump.poly.tikz
+bump.poly.tikz: ../c/ch9/bump.poly
+	python tri2tikz.py --scale 0.85 --polyonly ../c/ch9/bump --nodesize 3.0 bump.poly.tikz
 
-mesh.1.tikz: ../c/ch8/genstructured.py
-	(cd ../c/ch8/ && python genstructured.py mesh.1 5)
-	python tri2tikz.py --labelnodes --nodeoffset 0.05 --nodesize 0.5 --labelelements --scale 5.0 ../c/ch8/mesh.1 $@
+mesh.1.tikz: ../c/ch9/genstructured.py
+	(cd ../c/ch9/ && python genstructured.py mesh.1 5)
+	python tri2tikz.py --labelnodes --nodeoffset 0.05 --nodesize 0.5 --labelelements --scale 5.0 ../c/ch9/mesh.1 $@
 
 .PHONY: clean
 

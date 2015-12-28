@@ -526,7 +526,7 @@ typedef struct {
 In our 2D case, with a single degree of freedom at each node,\sidenote{The Poisson equation \eqref{poissonsquare} is a scalar PDE so the unknown at each grid point is the scalar $u_{i,j}$.  A system of equations like Navier-Stokes would have \texttt{dof}$>1$ when we call \texttt{DMDACreateXd()}, and the ``\texttt{c}'' member of \texttt{MatStencil} would get used.} we only use the \texttt{i} and \texttt{j} members of \texttt{MatStencil}.  From \eqref{poissonsquareFD}, the actual matrix entries are $a_{i,i} = 2\left(h_y/h_x + h_x/h_y\right)$ on the diagonal, and $a_{i,j} = -h_y/h_x$ or $a_{i,j} = -h_x/h_y$ for off-diagonals.
 
 
-\section{A particular problem, an exact solution}
+\section{A particular problem}
 
 At this point we need a specific Poisson problem so our example code can solve it.  To do this we \emph{choose}\sidenote{For the code \texttt{tri.c} in Chapter \ref{chap:ls} we did something similar, i.e.~choosing exact solution $\bu$ before computing $\bb=A\bu$ by matrix multiplication.} an exact solution, taking care that it satisfies homogeneous Dirichlet boundary conditions ($u=0$ along $\partial \mathcal{S}$):
 \begin{equation}

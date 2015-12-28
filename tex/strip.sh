@@ -9,9 +9,9 @@ CH2="vecmatksp.c tri.c"
 CH3="structuredpoisson.c poisson.c"
 CH4="expcircle.c ecjacobian.c reaction.c"
 CH5="plap.c"
-CH6="fish2.c"
-CH8="readmesh.c poissontools.c poissonfem.c"
-CH11="obstacle.c"
+CH6="ad3.c"
+CH9="readmesh.c poissontools.c poissonfem.c"
+CH12="obstacle.c"
 
 mkdir cstrip/
 
@@ -30,11 +30,11 @@ done
 for NAME in $CH6; do
     cp ../c/ch6/$NAME cstrip/$NAME
 done
-for NAME in $CH8; do
-    cp ../c/ch8/$NAME cstrip/$NAME
+for NAME in $CH9; do
+    cp ../c/ch9/$NAME cstrip/$NAME
 done
-for NAME in $CH11; do
-    cp ../c/ch11/$NAME cstrip/$NAME
+for NAME in $CH12; do
+    cp ../c/ch12/$NAME cstrip/$NAME
 done
 
 #ls cstrip/
