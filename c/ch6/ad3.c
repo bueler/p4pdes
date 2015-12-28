@@ -5,7 +5,7 @@ static char help[] =
 "on the domain  [-1,1]^3.  Significant restrictions are:\n"
 "    * only Dirichlet and boundary conditions are demonstrated\n"
 "    * W(x,y,z) must be given by a formula\n"
-"    * only centered and FIXME first-order-upwind differences for advection\n"
+"    * only centered and first-order-upwind differences for advection\n"
 "Boundary conditions:\n"
 "    u(1,y,z) = g(y,z)\n"
 "    u(-1,y,z) = u(x,-1,z) = u(x,1,z) = 0\n"
@@ -34,7 +34,7 @@ FIXME: multigrid?
 typedef struct {
     DM        da;
     PetscReal eps;
-    PetscBool manu;
+    PetscBool manu, upwind;
     Vec       g,f;
 } Ctx;
 
@@ -42,6 +42,7 @@ PetscErrorCode configureCtx(Ctx *usr) {
     PetscErrorCode  ierr;
     usr->eps = 1.0;
     usr->manu = PETSC_FALSE;
+    usr->upwind = PETSC_FALSE;
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"ad3_","ad3 (3D advection-diffusion solver) options",""); CHKERRQ(ierr);
     ierr = PetscOptionsReal("-eps","diffusion coefficient eps with  0 < eps < infty",
                NULL,usr->eps,&(usr->eps),NULL); CHKERRQ(ierr);
@@ -53,6 +54,8 @@ PetscErrorCode configureCtx(Ctx *usr) {
     if (usr->manu == PETSC_FALSE) {
         SETERRQ(PETSC_COMM_WORLD,2,"FIXME: only manufactured solution implemented");
     }
+    ierr = PetscOptionsBool("-upwind","use first-order upwinding",
+               NULL,usr->upwind,&(usr->upwind),NULL);CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
     return 0;
 }
@@ -124,7 +127,8 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal ***u,
                                  PetscReal ***F, Ctx *usr) {
     PetscErrorCode  ierr;
     PetscInt        i, j, k;
-    PetscReal       x, y, z, uxx, uyy, uzz, Wux, Wuy, Wuz,
+    const PetscReal e = usr->eps;
+    PetscReal       x, y, z, uu, uxx, uyy, uzz, Wux, Wuy, Wuz,
                     ***af, ***ag;
     Wind            W;
     Spacings        s;
@@ -143,15 +147,24 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal ***u,
                 } else if (i == 0 || j == 0 || j == info->my-1) {
                     F[k][j][i] = u[k][j][i];
                 } else {
-                    uxx = (u[k][j][i-1] - 2.0 * u[k][j][i] + u[k][j][i+1]) / s.hx2;
-                    uyy = (u[k][j-1][i] - 2.0 * u[k][j][i] + u[k][j+1][i]) / s.hy2;
-                    uzz = (u[k-1][j][i] - 2.0 * u[k][j][i] + u[k+1][j][i]) / s.hz2;
+                    uu = u[k][j][i];
+                    uxx = (u[k][j][i-1] - 2.0 * uu + u[k][j][i+1]) / s.hx2;
+                    uyy = (u[k][j-1][i] - 2.0 * uu + u[k][j+1][i]) / s.hy2;
+                    uzz = (u[k-1][j][i] - 2.0 * uu + u[k+1][j][i]) / s.hz2;
                     W = getWind(x,y,z);
-                    Wux = W.x * (u[k][j][i+1] - u[k][j][i-1]) / (2.0 * s.hx);
-                    Wuy = W.y * (u[k][j+1][i] - u[k][j-1][i]) / (2.0 * s.hy);
-                    Wuz = W.z * (u[k+1][j][i] - u[k-1][j][i]) / (2.0 * s.hz);
-                    F[k][j][i] = - usr->eps * (uxx + uyy + uzz)
-                                 + Wux + Wuy + Wuz
+                    if (usr->upwind) {
+                        Wux = (W.x > 0.0) ? uu - u[k][j][i-1] : u[k][j][i+1] - uu;
+                        Wux *= W.x / s.hx;
+                        Wuy = (W.y > 0.0) ? uu - u[k][j-1][i] : u[k][j+1][i] - uu;
+                        Wuy *= W.y / s.hy;
+                        Wuz = (W.z > 0.0) ? uu - u[k-1][j][i] : u[k+1][j][i] - uu;
+                        Wuz *= W.z / s.hz;
+                    } else {
+                        Wux = W.x * (u[k][j][i+1] - u[k][j][i-1]) / (2.0 * s.hx);
+                        Wuy = W.y * (u[k][j+1][i] - u[k][j-1][i]) / (2.0 * s.hy);
+                        Wuz = W.z * (u[k+1][j][i] - u[k-1][j][i]) / (2.0 * s.hz);
+                    }
+                    F[k][j][i] = - e * (uxx + uyy + uzz) + Wux + Wuy + Wuz
                                  - af[k][j][i];
                 }
             }
@@ -193,28 +206,63 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar ***u,
                 } else {
                     W = getWind(x,y,z);
                     v[0] = diag;
+                    if (usr->upwind) {
+                        v[0] += (W.x / s.hx) * ((W.x > 0.0) ? 1.0 : -1.0);
+                        v[0] += (W.y / s.hy) * ((W.y > 0.0) ? 1.0 : -1.0);
+                        v[0] += (W.z / s.hz) * ((W.z > 0.0) ? 1.0 : -1.0);
+                    }
+                    v[1] = - e / s.hz2;
+                    if (usr->upwind) {
+                        if (W.z > 0.0)
+                            v[q] -= W.z / s.hz;
+                    } else
+                        v[q] -= W.z / (2.0 * s.hz);
                     col[1].k = k-1;  col[1].j = j;  col[1].i = i;
-                    v[1] = - e / s.hz2 - W.z / (2.0 * s.hz);
+                    v[2] = - e / s.hz2;
+                    if (usr->upwind) {
+                        if (W.z <= 0.0)
+                            v[q] += W.z / s.hz;
+                    } else
+                        v[q] += W.z / (2.0 * s.hz);
                     col[2].k = k+1;  col[2].j = j;  col[2].i = i;
-                    v[2] = - e / s.hz2 + W.z / (2.0 * s.hz);
                     q = 3;
                     if (i-1 != 0) {
-                        v[q] = - e / s.hx2 - W.x / (2.0 * s.hx);
+                        v[q] = - e / s.hx2;
+                        if (usr->upwind) {
+                            if (W.x > 0.0)
+                                v[q] -= W.x / s.hx;
+                        } else
+                            v[q] -= W.x / (2.0 * s.hx);
                         col[q].k = k;  col[q].j = j;  col[q].i = i-1;
                         q++;
                     }
                     if (i+1 != info->mx-1) {
-                        v[q] = - e / s.hx2 + W.x / (2.0 * s.hx);
+                        v[q] = - e / s.hx2;
+                        if (usr->upwind) {
+                            if (W.x <= 0.0)
+                                v[q] += W.x / s.hx;
+                        } else
+                            v[q] += W.x / (2.0 * s.hx);
                         col[q].k = k;  col[q].j = j;  col[q].i = i+1;
                         q++;
                     }
                     if (j-1 != 0) {
-                        v[q] = - e / s.hy2 - W.y / (2.0 * s.hy);
+                        v[q] = - e / s.hy2;
+                        if (usr->upwind) {
+                            if (W.y > 0.0)
+                                v[q] -= W.y / s.hy;
+                        } else
+                            v[q] -= W.y / (2.0 * s.hy);
                         col[q].k = k;  col[q].j = j-1;  col[q].i = i;
                         q++;
                     }
                     if (j+1 != info->my-1) {
-                        v[q] = - e / s.hy2 + W.y / (2.0 * s.hy);
+                        v[q] = - e / s.hy2;
+                        if (usr->upwind) {
+                            if (W.y <= 0.0)
+                                v[q] += W.y / s.hy;
+                        } else
+                            v[q] += W.y / (2.0 * s.hy);
                         col[q].k = k;  col[q].j = j+1;  col[q].i = i;
                         q++;
                     }
