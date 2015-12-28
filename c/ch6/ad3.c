@@ -3,45 +3,59 @@ static char help[] =
 "and SNES.  The equation is\n"
 "    - eps Laplacian u + W . Grad u = f\n"
 "on the domain  [-1,1]^3.  Significant restrictions are:\n"
-"   * only Dirichlet and boundary conditions are demonstrated\n"
-"   * W(x,y,z) must be given by a formula\n"
-"   * only centered and first-order-upwind differences for advection\n"
+"    * only Dirichlet and boundary conditions are demonstrated\n"
+"    * W(x,y,z) must be given by a formula\n"
+"    * only centered and first-order-upwind differences for advection\n"
 "The boundary conditions are\n"
-"   u(1,y,z) = g(y,z)\n"
-"   u(-1,y,z) = u(x,-1,z) = u(x,1,z) = 0\n"
-"   u periodic in z\n"
-"\n"
-"An optional exact solution applies to the W=0 and f=0 case:\n"
-"   u(x,y,z) = C sinh(D (x+1)) sin(E (y+1)) sin(F (z+1))\n"
-"and  g(y,z) = sin(E (y+1)) sin(F (z+1))  for constants satisfying\n"
-"D^2 - E^2 - F^2 = 0.\n\n";
+"    u(1,y,z) = g(y,z)\n"
+"    u(-1,y,z) = u(x,-1,z) = u(x,1,z) = 0\n"
+"    u periodic in z\n"
+"An optional exact solution is available:\n"
+"    u(x,y,z) = U(x) sin(E (y+1)) sin(F (z+1))\n"
+"where  U(x) = (exp((x+1)/eps) - 1) / (exp(2/eps) - 1)\n"
+"and constants E,F so that y=+-1 and periodic z boundary conditions.\n"
+"The problem solved has  W=<1,0,0>,  g(y,z) = u(1,y,z),  and\n"
+"f(x,y,z) = eps lambda^2 u(x,y,z)  where  lambda^2 = E^2 + F^2.\n\n";
 
-/* evidence for convergence:
-$ for LEV in 0 1 2 3 4; do ./ad3 -ksp_rtol 1.0e-14 -snes_monitor -snes_converged_reason -da_refine $LEV; done
-*/
+/* evidence for convergence FIXME using -snes_fd:
+  $ for LEV in 0 1 2 3; do ./ad3 -ad3_manu -ksp_rtol 1.0e-14 -snes_monitor -snes_converged_reason -da_refine $LEV -snes_fd; done
 
-/* all of these work:
+using -snes_mf_operator and eps = 40.0:
+  $ for LEV in 0 1 2 3 4; do ./ad3 -ad3_manu -ad3_eps 40.0 -ksp_rtol 1.0e-14 -snes_monitor -snes_converged_reason -da_refine $LEV -snes_mf_operator; done
+
+FIXME:
+all of these work:
   ./ad3 -snes_monitor -ksp_type preonly -pc_type lu
   "                   -ksp_type cg -pc_type icc
   "                   -snes_fd
   "                   -snes_mf
   "                   -snes_mf_operator
-
 FIXME: multigrid?
 */
 
 #include <petsc.h>
 
 typedef struct {
-  DM        da;
-  Vec       g,f;
+    DM        da;
+    PetscReal eps;
+    PetscBool manu;
+    Vec       g,f;
 } Ctx;
 
 typedef struct {
-  PetscReal hx, hy, hz, hx2, hy2, hz2;
+    PetscReal x,y,z;
+} Wind;
+
+Wind getWind(PetscReal x, PetscReal y, PetscReal z) {
+    Wind W = {1.0,0.0,0.0};
+    return W;
+}
+
+typedef struct {
+    PetscReal hx, hy, hz, hx2, hy2, hz2;
 } Spacings;
 
-void fillSpacings(DMDALocalInfo *info, Spacings *s) {
+void getSpacings(DMDALocalInfo *info, Spacings *s) {
     s->hx = 2.0/(info->mx-1);
     s->hy = 2.0/(info->my-1);
     s->hz = 2.0/(info->mz);    // periodic direction
@@ -50,40 +64,41 @@ void fillSpacings(DMDALocalInfo *info, Spacings *s) {
     s->hz2 = s->hz * s->hz;
 }
 
-PetscErrorCode formExact(DMDALocalInfo *info, Ctx *usr, Vec uex, Vec g) {
+
+PetscErrorCode formUexFG(DMDALocalInfo *info, Ctx *usr, Vec uex) {
     PetscErrorCode  ierr;
     PetscInt        i, j, k;
     Spacings        s;
-    const PetscReal D = sqrt(17.0) * PETSC_PI / 2.0,
-                    C = 1.0 / sinh(2.0 * D),
-                    E = PETSC_PI / 2.0,
-                    F = 2.0 * PETSC_PI;
-    PetscReal       x, y, z, gg, ***auex, ***ag;
+    const PetscReal E = PETSC_PI / 2.0,
+                    F = 2.0 * PETSC_PI,
+                    lam2 = E*E + F*F; // lambda = sqrt(17.0) * PETSC_PI / 2.0
+    PetscReal       x, y, z, QQ, UU, ***auex, ***af, ***ag;
 
-    fillSpacings(info,&s);
+    getSpacings(info,&s);
     ierr = DMDAVecGetArray(usr->da, uex, &auex);CHKERRQ(ierr);
-    ierr = DMDAVecGetArray(usr->da, g, &ag);CHKERRQ(ierr);
+    ierr = DMDAVecGetArray(usr->da, usr->f, &af);CHKERRQ(ierr);
+    ierr = DMDAVecGetArray(usr->da, usr->g, &ag);CHKERRQ(ierr);
     for (k=info->zs; k<info->zs+info->zm; k++) {
         z = -1.0 + k * s.hz;
         for (j=info->ys; j<info->ys+info->ym; j++) {
             y = -1.0 + j * s.hy;
-            gg = sin(E*(y+1.0)) * sin(F*(z+1.0));
+            QQ = sin(E*(y+1.0)) * sin(F*(z+1.0));
             for (i=info->xs; i<info->xs+info->xm; i++) {
                 x = -1.0 + i * s.hx;
-                auex[k][j][i] = C * sinh(D*(x+1.0)) * gg;
+                UU = exp((x+1)/usr->eps) - 1.0;
+                UU /= exp(2.0/usr->eps) - 1.0;
+                auex[k][j][i] = UU * QQ;
+                af[k][j][i] = usr->eps * lam2 * auex[k][j][i];
                 if (i == info->mx-1)
-                    ag[k][j][i] = gg;
+                    ag[k][j][i] = QQ;
                 else
                     ag[k][j][i] = 0.0;
             }
         }
     }
     ierr = DMDAVecRestoreArray(usr->da, uex, &auex);CHKERRQ(ierr);
-    ierr = DMDAVecRestoreArray(usr->da, g, &ag);CHKERRQ(ierr);
-    ierr = VecAssemblyBegin(g); CHKERRQ(ierr);
-    ierr = VecAssemblyBegin(uex); CHKERRQ(ierr);
-    ierr = VecAssemblyEnd(g); CHKERRQ(ierr);
-    ierr = VecAssemblyEnd(uex); CHKERRQ(ierr);
+    ierr = DMDAVecRestoreArray(usr->da, usr->f, &af);CHKERRQ(ierr);
+    ierr = DMDAVecRestoreArray(usr->da, usr->g, &ag);CHKERRQ(ierr);
     return 0;
 }
 
@@ -92,15 +107,20 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal ***u,
                                  PetscReal ***F, Ctx *usr) {
     PetscErrorCode  ierr;
     PetscInt        i, j, k;
-    PetscReal       uxx, uyy, uzz, ***af, ***ag;
+    PetscReal       x, y, z, uxx, uyy, uzz, Wux, Wuy, Wuz,
+                    ***af, ***ag;
+    Wind            W;
     Spacings        s;
 
-    fillSpacings(info,&s);
+    getSpacings(info,&s);
     ierr = DMDAVecGetArray(usr->da, usr->f, &af);CHKERRQ(ierr);
     ierr = DMDAVecGetArray(usr->da, usr->g, &ag);CHKERRQ(ierr);
     for (k=info->zs; k<info->zs+info->zm; k++) {
+        z = -1.0 + k * s.hz;
         for (j=info->ys; j<info->ys+info->ym; j++) {
+            y = -1.0 + j * s.hy;
             for (i=info->xs; i<info->xs+info->xm; i++) {
+                x = -1.0 + i * s.hx;
                 if (i == info->mx-1) {
                     F[k][j][i] = u[k][j][i] - ag[k][j][i];
                 } else if (i == 0 || j == 0 || j == info->my-1) {
@@ -109,7 +129,13 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal ***u,
                     uxx = (u[k][j][i-1] - 2.0 * u[k][j][i] + u[k][j][i+1]) / s.hx2;
                     uyy = (u[k][j-1][i] - 2.0 * u[k][j][i] + u[k][j+1][i]) / s.hy2;
                     uzz = (u[k-1][j][i] - 2.0 * u[k][j][i] + u[k+1][j][i]) / s.hz2;
-                    F[k][j][i] = - uxx - uyy - uzz - af[k][j][i];
+                    W = getWind(x,y,z);
+                    Wux = W.x * (u[k][j][i+1] - u[k][j][i-1]) / (2.0 * s.hx);
+                    Wuy = W.y * (u[k][j+1][i] - u[k][j-1][i]) / (2.0 * s.hy);
+                    Wuz = W.z * (u[k+1][j][i] - u[k-1][j][i]) / (2.0 * s.hz);
+                    F[k][j][i] = - usr->eps * (uxx + uyy + uzz)
+                                 + Wux + Wuy + Wuz
+                                 - af[k][j][i];
                 }
             }
         }
@@ -128,7 +154,8 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar ***u,
     MatStencil      col[7],row;
     Spacings        s;
 
-    fillSpacings(info,&s);
+// FIXME
+    getSpacings(info,&s);
     diag = 2.0*(1.0/s.hx2 + 1.0/s.hy2 + 1.0/s.hz2);
     for (k=info->zs; k<info->zs+info->zm; k++) {
         row.k = k;
@@ -188,11 +215,27 @@ int main(int argc,char **argv) {
     PetscErrorCode ierr;
     SNES           snes;
     Vec            u, uexact;
-    PetscReal      errnorm, uexnorm;
+    PetscReal      err, uexnorm;
     DMDALocalInfo  info;
     Ctx            user;
 
     PetscInitialize(&argc,&argv,(char*)0,help);
+
+//FIXME turn into configure method
+    user.eps = 1.0;
+    user.manu = PETSC_FALSE;
+    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"ad3_","ad3 (3D advection-diffusion solver) options",""); CHKERRQ(ierr);
+    ierr = PetscOptionsReal("-eps","diffusion coefficient eps with  0 < eps < infty",
+               NULL,user.eps,&(user.eps),NULL); CHKERRQ(ierr);
+    if (user.eps <= 0.0) {
+        SETERRQ1(PETSC_COMM_WORLD,1,"eps=%.3f invalid ... eps > 0 required",user.eps);
+    }
+    ierr = PetscOptionsBool("-manu","use manufactured solution",
+               NULL,user.manu,&(user.manu),NULL);CHKERRQ(ierr);
+    if (user.manu == PETSC_FALSE) {
+        SETERRQ(PETSC_COMM_WORLD,2,"FIXME: only manufactured solution implemented");
+    }
+    ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
     ierr = DMDACreate3d(PETSC_COMM_WORLD,
                 DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DM_BOUNDARY_PERIODIC,
@@ -209,6 +252,11 @@ int main(int argc,char **argv) {
         SETERRQ(PETSC_COMM_WORLD,1,"grid too coarse ... require (mx,my,mz) > (2,2,3)");
     }
 
+    ierr = DMCreateGlobalVector(user.da,&uexact); CHKERRQ(ierr);
+    ierr = VecDuplicate(uexact,&user.f); CHKERRQ(ierr);
+    ierr = VecDuplicate(uexact,&user.g); CHKERRQ(ierr);
+    ierr = formUexFG(&info,&user,uexact); CHKERRQ(ierr);
+
     ierr = SNESCreate(PETSC_COMM_WORLD,&snes);CHKERRQ(ierr);
     ierr = SNESSetDM(snes,user.da);CHKERRQ(ierr);
     ierr = DMDASNESSetFunctionLocal(user.da,INSERT_VALUES,
@@ -217,26 +265,24 @@ int main(int argc,char **argv) {
             (DMDASNESJacobian)FormJacobianLocal,&user);CHKERRQ(ierr);
     ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
 
-    ierr = DMCreateGlobalVector(user.da,&u); CHKERRQ(ierr);
-
-    ierr = VecDuplicate(u,&user.f); CHKERRQ(ierr);
-    ierr = VecSet(user.f,0.0); CHKERRQ(ierr);
-
-    ierr = VecDuplicate(u,&uexact); CHKERRQ(ierr);
-    ierr = VecDuplicate(u,&user.g); CHKERRQ(ierr);
-    ierr = formExact(&info,&user,uexact,user.g); CHKERRQ(ierr);
+    ierr = VecDuplicate(uexact,&u); CHKERRQ(ierr);
     ierr = VecCopy(user.g,u); CHKERRQ(ierr);   // g has zeros except at bdry
-
     ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
 
-    ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uxact
-    ierr = VecNorm(u,NORM_2,&errnorm); CHKERRQ(ierr);
-    ierr = VecNorm(uexact,NORM_2,&uexnorm); CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,
-             "on %d x %d x %d grid:  error |u-uexact|_2/|uexact|_2 = %g\n",
-             info.mx,info.my,info.mz,errnorm/uexnorm); CHKERRQ(ierr);
+         "done on %d x %d x %d grid with eps=%g",
+         info.mx,info.my,info.mz,user.eps); CHKERRQ(ierr);
+    if (user.manu) {
+        ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uxact
+        ierr = VecNorm(u,NORM_2,&err); CHKERRQ(ierr);
+        ierr = VecNorm(uexact,NORM_2,&uexnorm); CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_WORLD,
+                 ":  error |u-uexact|_2/|uexact|_2 = %g",err/uexnorm); CHKERRQ(ierr);
+    }
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"\n"); CHKERRQ(ierr);
 
-    VecDestroy(&u);  VecDestroy(&user.f);  VecDestroy(&uexact);
+    VecDestroy(&u);  VecDestroy(&uexact);
+    VecDestroy(&user.f);  VecDestroy(&user.g);
     SNESDestroy(&snes);  DMDestroy(&user.da);
     ierr = PetscFinalize(); CHKERRQ(ierr);
     return 0;
