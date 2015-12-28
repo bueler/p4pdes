@@ -42,6 +42,26 @@ typedef struct {
     Vec       g,f;
 } Ctx;
 
+PetscErrorCode configureCtx(Ctx *usr) {
+    PetscErrorCode  ierr;
+    usr->eps = 1.0;
+    usr->manu = PETSC_FALSE;
+    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"ad3_","ad3 (3D advection-diffusion solver) options",""); CHKERRQ(ierr);
+    ierr = PetscOptionsReal("-eps","diffusion coefficient eps with  0 < eps < infty",
+               NULL,usr->eps,&(usr->eps),NULL); CHKERRQ(ierr);
+    if (usr->eps <= 0.0) {
+        SETERRQ1(PETSC_COMM_WORLD,1,"eps=%.3f invalid ... eps > 0 required",usr->eps);
+    }
+    ierr = PetscOptionsBool("-manu","use manufactured solution",
+               NULL,usr->manu,&(usr->manu),NULL);CHKERRQ(ierr);
+    if (usr->manu == PETSC_FALSE) {
+        SETERRQ(PETSC_COMM_WORLD,2,"FIXME: only manufactured solution implemented");
+    }
+    ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+    return 0;
+}
+
+
 typedef struct {
     PetscReal x,y,z;
 } Wind;
@@ -50,6 +70,7 @@ Wind getWind(PetscReal x, PetscReal y, PetscReal z) {
     Wind W = {1.0,0.0,0.0};
     return W;
 }
+
 
 typedef struct {
     PetscReal hx, hy, hz, hx2, hy2, hz2;
@@ -221,21 +242,7 @@ int main(int argc,char **argv) {
 
     PetscInitialize(&argc,&argv,(char*)0,help);
 
-//FIXME turn into configure method
-    user.eps = 1.0;
-    user.manu = PETSC_FALSE;
-    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"ad3_","ad3 (3D advection-diffusion solver) options",""); CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-eps","diffusion coefficient eps with  0 < eps < infty",
-               NULL,user.eps,&(user.eps),NULL); CHKERRQ(ierr);
-    if (user.eps <= 0.0) {
-        SETERRQ1(PETSC_COMM_WORLD,1,"eps=%.3f invalid ... eps > 0 required",user.eps);
-    }
-    ierr = PetscOptionsBool("-manu","use manufactured solution",
-               NULL,user.manu,&(user.manu),NULL);CHKERRQ(ierr);
-    if (user.manu == PETSC_FALSE) {
-        SETERRQ(PETSC_COMM_WORLD,2,"FIXME: only manufactured solution implemented");
-    }
-    ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+    ierr = configureCtx(&user); CHKERRQ(ierr);
 
     ierr = DMDACreate3d(PETSC_COMM_WORLD,
                 DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DM_BOUNDARY_PERIODIC,
