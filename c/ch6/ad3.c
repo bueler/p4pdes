@@ -5,31 +5,27 @@ static char help[] =
 "on the domain  [-1,1]^3.  Significant restrictions are:\n"
 "    * only Dirichlet and boundary conditions are demonstrated\n"
 "    * W(x,y,z) must be given by a formula\n"
-"    * only centered and first-order-upwind differences for advection\n"
-"The boundary conditions are\n"
+"    * only centered and FIXME first-order-upwind differences for advection\n"
+"Boundary conditions:\n"
 "    u(1,y,z) = g(y,z)\n"
 "    u(-1,y,z) = u(x,-1,z) = u(x,1,z) = 0\n"
 "    u periodic in z\n"
 "An optional exact solution is available:\n"
 "    u(x,y,z) = U(x) sin(E (y+1)) sin(F (z+1))\n"
 "where  U(x) = (exp((x+1)/eps) - 1) / (exp(2/eps) - 1)\n"
-"and constants E,F so that y=+-1 and periodic z boundary conditions.\n"
-"The problem solved has  W=<1,0,0>,  g(y,z) = u(1,y,z),  and\n"
-"f(x,y,z) = eps lambda^2 u(x,y,z)  where  lambda^2 = E^2 + F^2.\n\n";
+"and constants E,F so that homogeneous/periodic boundary conditions\n"
+"are satisfied.  The problem solved has  W=<1,0,0>,  g(y,z) = u(1,y,z),\n"
+"and f(x,y,z) = eps lambda^2 u(x,y,z)  where  lambda^2 = E^2 + F^2.\n\n";
 
-/* evidence for convergence FIXME using -snes_fd:
-  $ for LEV in 0 1 2 3; do ./ad3 -ad3_manu -ksp_rtol 1.0e-14 -snes_monitor -snes_converged_reason -da_refine $LEV -snes_fd; done
+/* evidence for convergence:
+  $ for LEV in 0 1 2 3 4 5; do ./ad3 -ad3_manu -ksp_rtol 1.0e-14 -snes_monitor -snes_converged_reason -da_refine $LEV; done
 
-using -snes_mf_operator and eps = 40.0:
-  $ for LEV in 0 1 2 3 4; do ./ad3 -ad3_manu -ad3_eps 40.0 -ksp_rtol 1.0e-14 -snes_monitor -snes_converged_reason -da_refine $LEV -snes_mf_operator; done
-
-FIXME:
 all of these work:
-  ./ad3 -snes_monitor -ksp_type preonly -pc_type lu
-  "                   -ksp_type cg -pc_type icc
-  "                   -snes_fd
-  "                   -snes_mf
-  "                   -snes_mf_operator
+  ./ad3 -ad3_manu -snes_monitor -ksp_type preonly -pc_type lu
+  "                             -snes_fd
+  "                             -snes_mf
+  "                             -snes_mf_operator
+
 FIXME: multigrid?
 */
 
@@ -171,49 +167,54 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar ***u,
                                  Mat J, Mat Jpre, Ctx *usr) {
     PetscErrorCode  ierr;
     PetscInt        i,j,k,q;
-    PetscReal       v[7],diag;
+    PetscReal       v[7],diag,x,y,z;
+    const PetscReal e = usr->eps;
     MatStencil      col[7],row;
     Spacings        s;
+    Wind            W;
 
-// FIXME
     getSpacings(info,&s);
-    diag = 2.0*(1.0/s.hx2 + 1.0/s.hy2 + 1.0/s.hz2);
+    diag = e * 2.0 * (1.0/s.hx2 + 1.0/s.hy2 + 1.0/s.hz2);
     for (k=info->zs; k<info->zs+info->zm; k++) {
+        z = -1.0 + k * s.hz;
         row.k = k;
         col[0].k = k;
         for (j=info->ys; j<info->ys+info->ym; j++) {
+            y = -1.0 + j * s.hy;
             row.j = j;
             col[0].j = j;
             for (i=info->xs; i<info->xs+info->xm; i++) {
+                x = -1.0 + i * s.hx;
                 row.i = i;
                 col[0].i = i;
                 if (i == 0 || j == 0 || i == info->mx-1 || j == info->my-1) {
                     v[0] = 1.0;
                     q = 1;
                 } else {
+                    W = getWind(x,y,z);
                     v[0] = diag;
                     col[1].k = k-1;  col[1].j = j;  col[1].i = i;
-                    v[1] = - 1.0/s.hz2;
+                    v[1] = - e / s.hz2 - W.z / (2.0 * s.hz);
                     col[2].k = k+1;  col[2].j = j;  col[2].i = i;
-                    v[2] = - 1.0/s.hz2;
+                    v[2] = - e / s.hz2 + W.z / (2.0 * s.hz);
                     q = 3;
                     if (i-1 != 0) {
-                        v[q] = - 1.0/s.hx2;
+                        v[q] = - e / s.hx2 - W.x / (2.0 * s.hx);
                         col[q].k = k;  col[q].j = j;  col[q].i = i-1;
                         q++;
                     }
                     if (i+1 != info->mx-1) {
-                        v[q] = - 1.0/s.hx2;
+                        v[q] = - e / s.hx2 + W.x / (2.0 * s.hx);
                         col[q].k = k;  col[q].j = j;  col[q].i = i+1;
                         q++;
                     }
                     if (j-1 != 0) {
-                        v[q] = - 1.0/s.hy2;
+                        v[q] = - e / s.hy2 - W.y / (2.0 * s.hy);
                         col[q].k = k;  col[q].j = j-1;  col[q].i = i;
                         q++;
                     }
                     if (j+1 != info->my-1) {
-                        v[q] = - 1.0/s.hy2;
+                        v[q] = - e / s.hy2 + W.y / (2.0 * s.hy);
                         col[q].k = k;  col[q].j = j+1;  col[q].i = i;
                         q++;
                     }
