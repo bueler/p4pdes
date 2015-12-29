@@ -18,13 +18,13 @@ static char help[] =
 "and f(x,y,z) = eps lambda^2 u(x,y,z)  where  lambda^2 = E^2 + F^2.\n\n";
 
 /* evidence for convergence:
-  $ for LEV in 0 1 2 3 4 5; do ./ad3 -ad3_manu -ksp_rtol 1.0e-14 -snes_monitor -snes_converged_reason -da_refine $LEV; done
+  $ for LEV in 0 1 2 3 4 5; do ./ad3 -ksp_rtol 1.0e-14 -snes_monitor -snes_converged_reason -da_refine $LEV; done
 
 all of these work:
-  ./ad3 -ad3_manu -snes_monitor -ksp_type preonly -pc_type lu
-  "                             -snes_fd
-  "                             -snes_mf
-  "                             -snes_mf_operator
+  ./ad3 -snes_monitor -ksp_type preonly -pc_type lu
+  "                   -snes_fd
+  "                   -snes_mf
+  "                   -snes_mf_operator
 
 FIXME: multigrid?
 */
@@ -34,25 +34,19 @@ FIXME: multigrid?
 typedef struct {
     DM        da;
     PetscReal eps;
-    PetscBool manu, upwind;
+    PetscBool upwind;
     Vec       g,f;
 } Ctx;
 
 PetscErrorCode configureCtx(Ctx *usr) {
     PetscErrorCode  ierr;
     usr->eps = 1.0;
-    usr->manu = PETSC_FALSE;
     usr->upwind = PETSC_FALSE;
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"ad3_","ad3 (3D advection-diffusion solver) options",""); CHKERRQ(ierr);
     ierr = PetscOptionsReal("-eps","diffusion coefficient eps with  0 < eps < infty",
                NULL,usr->eps,&(usr->eps),NULL); CHKERRQ(ierr);
     if (usr->eps <= 0.0) {
         SETERRQ1(PETSC_COMM_WORLD,1,"eps=%.3f invalid ... eps > 0 required",usr->eps);
-    }
-    ierr = PetscOptionsBool("-manu","use manufactured solution",
-               NULL,usr->manu,&(usr->manu),NULL);CHKERRQ(ierr);
-    if (usr->manu == PETSC_FALSE) {
-        SETERRQ(PETSC_COMM_WORLD,2,"FIXME: only manufactured solution implemented");
     }
     ierr = PetscOptionsBool("-upwind","use first-order upwinding",
                NULL,usr->upwind,&(usr->upwind),NULL);CHKERRQ(ierr);
@@ -325,17 +319,12 @@ int main(int argc,char **argv) {
     ierr = VecCopy(user.g,u); CHKERRQ(ierr);   // g has zeros except at bdry
     ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
 
+    ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uxact
+    ierr = VecNorm(u,NORM_2,&err); CHKERRQ(ierr);
+    ierr = VecNorm(uexact,NORM_2,&uexnorm); CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,
-         "done on %d x %d x %d grid with eps=%g",
-         info.mx,info.my,info.mz,user.eps); CHKERRQ(ierr);
-    if (user.manu) {
-        ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uxact
-        ierr = VecNorm(u,NORM_2,&err); CHKERRQ(ierr);
-        ierr = VecNorm(uexact,NORM_2,&uexnorm); CHKERRQ(ierr);
-        ierr = PetscPrintf(PETSC_COMM_WORLD,
-                 ":  error |u-uexact|_2/|uexact|_2 = %g",err/uexnorm); CHKERRQ(ierr);
-    }
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"\n"); CHKERRQ(ierr);
+         "done on %d x %d x %d grid with eps=%g:  error |u-uexact|_2/|uexact|_2 = %g\n",
+         info.mx,info.my,info.mz,user.eps,err/uexnorm); CHKERRQ(ierr);
 
     VecDestroy(&u);  VecDestroy(&uexact);
     VecDestroy(&user.f);  VecDestroy(&user.g);
