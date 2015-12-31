@@ -167,26 +167,26 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **au,
   PetscErrorCode ierr;
   PetscReal      lobj = 0.0, **af, f[4], u[4];
   const PetscInt n = 2;  // FIXME: quad deg
+  const PetscInt XE = info->xs + info->xm, YE = info->ys + info->ym;
   PetscInt       i,j,r,s;
   MPI_Comm       com;
 
   // fill u ghosts with boundary values:
-  for (j=info->ys-1; j<=info->ys+info->ym; j++) {
+  for (j = info->ys-1; j <= YE; j++) {
       if ((j == -1) || (j == info->mx)) {
-          for (i=info->xs-1; i<=info->xs+info->xm; i++)
+          for (i = info->xs-1; i <= XE; i++)
               au[j][i] = 0.0;    // top and bottom boundary values
       } else if (info->xs == 0)
           au[j][-1] = 0.0;       // left boundary values
-      else if (info->xs+info->xm == info->mx)
+      else if (XE == info->mx)
           au[j][info->mx] = 0.0; // right boundary values
   }
 
   // the following loops are for a sum over all elements:
   ierr = DMDAVecGetArray(user->da,user->f,&af); CHKERRQ(ierr);
-  // FIXME: for runs in parallel, need to be clearer on ranges and element
-  // ownership; currently seg faults
-  for (j=info->ys; j<=info->ys+info->ym; j++) {
-      for (i=info->xs; i<=info->xs+info->xm; i++) {
+  // FIXME: for runs in parallel, need to be clearer on ranges and element ownership
+  for (j = info->ys; j <= YE; j++) {
+      for (i = info->xs; i <= XE; i++) {
           // because of ghosts, these values are always valid
           f[0]=af[j][i];  f[1]=af[j][i-1];  f[2]=af[j-1][i-1];  f[3]=af[j-1][i];
           u[0]=au[j][i];  u[1]=au[j][i-1];  u[2]=au[j-1][i-1];  u[3]=au[j-1][i];
@@ -253,11 +253,12 @@ int main(int argc,char **argv) {
                DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED, DMDA_STENCIL_BOX,
                -3,-3,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,
                &(user.da)); CHKERRQ(ierr);
-  ierr = DMDASetUniformCoordinates(user.da,0.0,1.0,0.0,1.0,-1.0,-1.0); CHKERRQ(ierr);
   ierr = DMSetApplicationContext(user.da,&user);CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);
   user.hx = 1.0 / (PetscReal)(info.mx+1);
   user.hy = 1.0 / (PetscReal)(info.my+1);
+  ierr = DMDASetUniformCoordinates(user.da,0.0+user.hx,1.0-user.hx,
+                            0.0+user.hy,1.0-user.hy,-1.0,-1.0); CHKERRQ(ierr);
 
   ierr = DMCreateGlobalVector(user.da,&u);CHKERRQ(ierr);
   ierr = VecDuplicate(u,&uexact);CHKERRQ(ierr);
