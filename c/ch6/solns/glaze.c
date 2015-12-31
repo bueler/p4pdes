@@ -8,10 +8,13 @@ static char help[] =
 "    u(1,y) = 1\n"
 "    u(-1,y) = u(x,-1) = u(x,1) = 0\n\n";
 
-/*FIXME NO JACOBIAN;  only -snes_fd and -snes_mf work for now */
-
-/*evidence of solution compared to figure 3.5 in Elman:
-./glaze -da_refine 4 -snes_monitor -snes_fd -ksp_rtol 1.0e-14 -snes_converged_reason -snes_monitor_solution draw -draw_pause 1 -glaze_eps 0.005
+/* reproduce Figure 3.5 from Elman et al (2005); run takes a couple of minutes
+(and preconditioner choice needs more care):
+$ timer ./glaze -da_refine 7 -glaze_eps 0.005 -ksp_rtol 1.0e-14 -snes_monitor -snes_converged_reason -ksp_converged_reason -ksp_gmres_restart 400 -snes_monitor_solution ascii:glaze.m:ascii_matlab
+$ octave    # or matlab
+>> glaze
+>> x = linspace(-1,1,257);  u = reshape(u_vec,257,257)';
+>> mesh(x,x,u,'edgecolor','k'),  xlabel x,  ylabel y
 */
 
 #include <petsc.h>
@@ -108,100 +111,54 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal **u,
 }
 
 
-/*
 PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar ***u,
                                  Mat J, Mat Jpre, Ctx *usr) {
     PetscErrorCode  ierr;
-    PetscInt        i,j,k,q;
-    PetscReal       v[7],diag,x,y,z;
+    PetscInt        i,j,q;
+    PetscReal       v[5],diag,x,y;
     const PetscReal e = usr->eps;
-    MatStencil      col[7],row;
+    MatStencil      col[5],row;
     Spacings        s;
     Wind            W;
 
     getSpacings(info,&s);
-    diag = e * 2.0 * (1.0/s.hx2 + 1.0/s.hy2 + 1.0/s.hz2);
-    for (k=info->zs; k<info->zs+info->zm; k++) {
-        z = -1.0 + k * s.hz;
-        row.k = k;
-        col[0].k = k;
-        for (j=info->ys; j<info->ys+info->ym; j++) {
-            y = -1.0 + j * s.hy;
-            row.j = j;
-            col[0].j = j;
-            for (i=info->xs; i<info->xs+info->xm; i++) {
-                x = -1.0 + i * s.hx;
-                row.i = i;
-                col[0].i = i;
-                if (i == 0 || j == 0 || i == info->mx-1 || j == info->my-1) {
-                    v[0] = 1.0;
-                    q = 1;
-                } else {
-                    W = getWind(x,y,z);
-                    v[0] = diag;
-                    if (usr->upwind) {
-                        v[0] += (W.x / s.hx) * ((W.x > 0.0) ? 1.0 : -1.0);
-                        v[0] += (W.y / s.hy) * ((W.y > 0.0) ? 1.0 : -1.0);
-                        v[0] += (W.z / s.hz) * ((W.z > 0.0) ? 1.0 : -1.0);
-                    }
-                    v[1] = - e / s.hz2;
-                    if (usr->upwind) {
-                        if (W.z > 0.0)
-                            v[q] -= W.z / s.hz;
-                    } else
-                        v[q] -= W.z / (2.0 * s.hz);
-                    col[1].k = k-1;  col[1].j = j;  col[1].i = i;
-                    v[2] = - e / s.hz2;
-                    if (usr->upwind) {
-                        if (W.z <= 0.0)
-                            v[q] += W.z / s.hz;
-                    } else
-                        v[q] += W.z / (2.0 * s.hz);
-                    col[2].k = k+1;  col[2].j = j;  col[2].i = i;
-                    q = 3;
-                    if (i-1 != 0) {
-                        v[q] = - e / s.hx2;
-                        if (usr->upwind) {
-                            if (W.x > 0.0)
-                                v[q] -= W.x / s.hx;
-                        } else
-                            v[q] -= W.x / (2.0 * s.hx);
-                        col[q].k = k;  col[q].j = j;  col[q].i = i-1;
-                        q++;
-                    }
-                    if (i+1 != info->mx-1) {
-                        v[q] = - e / s.hx2;
-                        if (usr->upwind) {
-                            if (W.x <= 0.0)
-                                v[q] += W.x / s.hx;
-                        } else
-                            v[q] += W.x / (2.0 * s.hx);
-                        col[q].k = k;  col[q].j = j;  col[q].i = i+1;
-                        q++;
-                    }
-                    if (j-1 != 0) {
-                        v[q] = - e / s.hy2;
-                        if (usr->upwind) {
-                            if (W.y > 0.0)
-                                v[q] -= W.y / s.hy;
-                        } else
-                            v[q] -= W.y / (2.0 * s.hy);
-                        col[q].k = k;  col[q].j = j-1;  col[q].i = i;
-                        q++;
-                    }
-                    if (j+1 != info->my-1) {
-                        v[q] = - e / s.hy2;
-                        if (usr->upwind) {
-                            if (W.y <= 0.0)
-                                v[q] += W.y / s.hy;
-                        } else
-                            v[q] += W.y / (2.0 * s.hy);
-                        col[q].k = k;  col[q].j = j+1;  col[q].i = i;
-                        q++;
-                    }
+    diag = e * 2.0 * (1.0/s.hx2 + 1.0/s.hy2);
+    for (j=info->ys; j<info->ys+info->ym; j++) {
+        y = -1.0 + j * s.hy;
+        row.j = j;
+        col[0].j = j;
+        for (i=info->xs; i<info->xs+info->xm; i++) {
+            x = -1.0 + i * s.hx;
+            row.i = i;
+            col[0].i = i;
+            q = 1;
+            if (i == 0 || j == 0 || i == info->mx-1 || j == info->my-1) {
+                v[0] = 1.0;
+            } else {
+                W = getWind(x,y);
+                v[0] = diag;
+                if (i-1 != 0) {
+                    v[q] = - e / s.hx2 - W.x / (2.0 * s.hx);
+                    col[q].j = j;  col[q].i = i-1;
+                    q++;
                 }
-                ierr = MatSetValuesStencil(Jpre,1,&row,q,col,v,INSERT_VALUES); CHKERRQ(ierr);
+                if (i+1 != info->mx-1) {
+                    v[q] = - e / s.hx2 + W.x / (2.0 * s.hx);
+                    col[q].j = j;  col[q].i = i+1;
+                    q++;
+                }
+                if (j-1 != 0) {
+                    v[q] = - e / s.hy2 - W.y / (2.0 * s.hy);
+                    col[q].j = j-1;  col[q].i = i;
+                    q++;
+                }
+                if (j+1 != info->my-1) {
+                    v[q] = - e / s.hy2 + W.y / (2.0 * s.hy);
+                    col[q].j = j+1;  col[q].i = i;
+                    q++;
+                }
             }
+            ierr = MatSetValuesStencil(Jpre,1,&row,q,col,v,INSERT_VALUES); CHKERRQ(ierr);
         }
     }
     ierr = MatAssemblyBegin(Jpre,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
@@ -212,7 +169,6 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar ***u,
     }
     return 0;
 }
-*/
 
 
 int main(int argc,char **argv) {
@@ -242,14 +198,15 @@ int main(int argc,char **argv) {
     }
 
     ierr = DMCreateGlobalVector(user.da,&u); CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject)u,"u_vec");CHKERRQ(ierr);
     ierr = formInitial(&info,&user,u); CHKERRQ(ierr);
 
     ierr = SNESCreate(PETSC_COMM_WORLD,&snes);CHKERRQ(ierr);
     ierr = SNESSetDM(snes,user.da);CHKERRQ(ierr);
     ierr = DMDASNESSetFunctionLocal(user.da,INSERT_VALUES,
             (DMDASNESFunction)FormFunctionLocal,&user);CHKERRQ(ierr);
-//    ierr = DMDASNESSetJacobianLocal(user.da,
-//            (DMDASNESJacobian)FormJacobianLocal,&user);CHKERRQ(ierr);
+    ierr = DMDASNESSetJacobianLocal(user.da,
+            (DMDASNESJacobian)FormJacobianLocal,&user);CHKERRQ(ierr);
     ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
 
     ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
