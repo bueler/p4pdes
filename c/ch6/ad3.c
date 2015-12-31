@@ -31,12 +31,38 @@ FIXME: multigrid?
 
 #include <petsc.h>
 
+//STARTSETUP
 typedef struct {
     DM        da;
     PetscReal eps;
     PetscBool upwind;
     Vec       g,f;
 } Ctx;
+
+typedef struct {
+    PetscReal x,y,z;
+} Wind;
+
+Wind getWind(PetscReal x, PetscReal y, PetscReal z) {
+    Wind W = {1.0,0.0,0.0};
+    return W;
+}
+//ENDSETUP
+
+
+typedef struct {
+    PetscReal hx, hy, hz, hx2, hy2, hz2;
+} Spacings;
+
+void getSpacings(DMDALocalInfo *info, Spacings *s) {
+    s->hx = 2.0/(info->mx-1);
+    s->hy = 2.0/(info->my-1);
+    s->hz = 2.0/(info->mz);    // periodic direction
+    s->hx2 = s->hx * s->hx;
+    s->hy2 = s->hy * s->hy;
+    s->hz2 = s->hz * s->hz;
+}
+
 
 PetscErrorCode configureCtx(Ctx *usr) {
     PetscErrorCode  ierr;
@@ -52,30 +78,6 @@ PetscErrorCode configureCtx(Ctx *usr) {
                NULL,usr->upwind,&(usr->upwind),NULL);CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
     return 0;
-}
-
-
-typedef struct {
-    PetscReal x,y,z;
-} Wind;
-
-Wind getWind(PetscReal x, PetscReal y, PetscReal z) {
-    Wind W = {1.0,0.0,0.0};
-    return W;
-}
-
-
-typedef struct {
-    PetscReal hx, hy, hz, hx2, hy2, hz2;
-} Spacings;
-
-void getSpacings(DMDALocalInfo *info, Spacings *s) {
-    s->hx = 2.0/(info->mx-1);
-    s->hy = 2.0/(info->my-1);
-    s->hz = 2.0/(info->mz);    // periodic direction
-    s->hx2 = s->hx * s->hx;
-    s->hy2 = s->hy * s->hy;
-    s->hz2 = s->hz * s->hz;
 }
 
 
@@ -117,13 +119,13 @@ PetscErrorCode formUexFG(DMDALocalInfo *info, Ctx *usr, Vec uex) {
 }
 
 
+//STARTFUNCTION
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal ***u,
                                  PetscReal ***F, Ctx *usr) {
     PetscErrorCode  ierr;
     PetscInt        i, j, k;
     const PetscReal e = usr->eps;
-    PetscReal       x, y, z, uu, uxx, uyy, uzz, Wux, Wuy, Wuz,
-                    ***af, ***ag;
+    PetscReal       x, y, z, uu, uxx, uyy, uzz, Wux, Wuy, Wuz, ***af, ***ag;
     Wind            W;
     Spacings        s;
 
@@ -147,11 +149,11 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal ***u,
                     uzz = (u[k-1][j][i] - 2.0 * uu + u[k+1][j][i]) / s.hz2;
                     W = getWind(x,y,z);
                     if (usr->upwind) {
-                        Wux = (W.x > 0.0) ? uu - u[k][j][i-1] : u[k][j][i+1] - uu;
+                        Wux = (W.x > 0) ? uu - u[k][j][i-1] : u[k][j][i+1] - uu;
                         Wux *= W.x / s.hx;
-                        Wuy = (W.y > 0.0) ? uu - u[k][j-1][i] : u[k][j+1][i] - uu;
+                        Wuy = (W.y > 0) ? uu - u[k][j-1][i] : u[k][j+1][i] - uu;
                         Wuy *= W.y / s.hy;
-                        Wuz = (W.z > 0.0) ? uu - u[k-1][j][i] : u[k+1][j][i] - uu;
+                        Wuz = (W.z > 0) ? uu - u[k-1][j][i] : u[k+1][j][i] - uu;
                         Wuz *= W.z / s.hz;
                     } else {
                         Wux = W.x * (u[k][j][i+1] - u[k][j][i-1]) / (2.0 * s.hx);
@@ -168,6 +170,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal ***u,
     ierr = DMDAVecRestoreArray(usr->da, usr->g, &ag);CHKERRQ(ierr);
     return 0;
 }
+//ENDFUNCTION
 
 
 PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar ***u,
@@ -287,6 +290,7 @@ int main(int argc,char **argv) {
 
     ierr = configureCtx(&user); CHKERRQ(ierr);
 
+//STARTDMDA
     ierr = DMDACreate3d(PETSC_COMM_WORLD,
                 DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DM_BOUNDARY_PERIODIC,
                 DMDA_STENCIL_STAR,
@@ -295,6 +299,7 @@ int main(int argc,char **argv) {
                 1,1,
                 NULL,NULL,NULL,
                 &user.da); CHKERRQ(ierr);
+//ENDDMDA
     ierr = DMDASetUniformCoordinates(user.da,-1.0,1.0,-1.0,1.0,-1.0,1.0); CHKERRQ(ierr);
     ierr = DMSetApplicationContext(user.da,&user); CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);

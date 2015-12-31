@@ -5,3 +5,20 @@ As in the previous Chapter, this is a big example.
 \section{Linear advection-diffusion equations}
 
 FIXME
+
+\section{3D problem with manufactured solution}
+
+\section{Implementation}
+
+\cinputpart{ad3.c}{\CODELOC}{Create a 3D \pDMDA for a star stencil and a combination of Dirichlet and periodic boundary conditions.}{I}{//STARTDMDA}{//ENDDMDA}{code:ad3I}
+
+\cinputpart{ad3.c}{\CODELOC}{Declare context and wind-vector \texttt{struct}s.}{II}{//STARTSETUP}{//ENDSETUP}{code:ad3II}
+
+\cinputpart{ad3.c}{\CODELOC}{The main part of the implementation is to define the linear equations we are solving, for use as a residual by \pSNES.}{II}{//START}{//END}{code:ad3III}
+
+\section{Convergence and upwinding}
+
+\section{Double-glazing problem}
+
+\section{Preconditioning for advection}
+
