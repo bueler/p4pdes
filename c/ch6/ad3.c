@@ -149,16 +149,19 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal ***u,
                     uzz = (u[k-1][j][i] - 2.0 * uu + u[k+1][j][i]) / s.hz2;
                     W = getWind(x,y,z);
                     if (usr->upwind) {
-                        Wux = (W.x > 0) ? uu - u[k][j][i-1] : u[k][j][i+1] - uu;
+                        Wux = (W.x > 0) ? uu - u[k][j][i-1]
+                                        : u[k][j][i+1] - uu;
                         Wux *= W.x / s.hx;
-                        Wuy = (W.y > 0) ? uu - u[k][j-1][i] : u[k][j+1][i] - uu;
+                        Wuy = (W.y > 0) ? uu - u[k][j-1][i]
+                                        : u[k][j+1][i] - uu;
                         Wuy *= W.y / s.hy;
-                        Wuz = (W.z > 0) ? uu - u[k-1][j][i] : u[k+1][j][i] - uu;
+                        Wuz = (W.z > 0) ? uu - u[k-1][j][i]
+                                        : u[k+1][j][i] - uu;
                         Wuz *= W.z / s.hz;
                     } else {
-                        Wux = W.x * (u[k][j][i+1] - u[k][j][i-1]) / (2.0 * s.hx);
-                        Wuy = W.y * (u[k][j+1][i] - u[k][j-1][i]) / (2.0 * s.hy);
-                        Wuz = W.z * (u[k+1][j][i] - u[k-1][j][i]) / (2.0 * s.hz);
+                        Wux = W.x * (u[k][j][i+1] - u[k][j][i-1]) / (2.0*s.hx);
+                        Wuy = W.y * (u[k][j+1][i] - u[k][j-1][i]) / (2.0*s.hy);
+                        Wuz = W.z * (u[k+1][j][i] - u[k-1][j][i]) / (2.0*s.hz);
                     }
                     F[k][j][i] = - e * (uxx + uyy + uzz) + Wux + Wuy + Wuz
                                  - af[k][j][i];
@@ -292,13 +295,10 @@ int main(int argc,char **argv) {
 
 //STARTDMDA
     ierr = DMDACreate3d(PETSC_COMM_WORLD,
-                DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DM_BOUNDARY_PERIODIC,
-                DMDA_STENCIL_STAR,
-                -3,-3,-3,
-                PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,
-                1,1,
-                NULL,NULL,NULL,
-                &user.da); CHKERRQ(ierr);
+        DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DM_BOUNDARY_PERIODIC,
+        DMDA_STENCIL_STAR, -3,-3,-3, PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,
+        1, 1, NULL,NULL,NULL,
+        &user.da); CHKERRQ(ierr);
 //ENDDMDA
     ierr = DMDASetUniformCoordinates(user.da,-1.0,1.0,-1.0,1.0,-1.0,1.0); CHKERRQ(ierr);
     ierr = DMSetApplicationContext(user.da,&user); CHKERRQ(ierr);
