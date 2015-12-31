@@ -10,11 +10,11 @@ Chapter \ref{chap:nl}: \pSNES                    & for Newton's method
 
 \bigskip
 
-Each example in the rest of the book will use \pVec, \pMat, \pKSP, \pPC, and \pSNES.  From now on we will even solve linear PDEs using a \pSNES object; in such cases we know that one Newton iteration suffices in theory.  Always using \pSNES allows uniform code structure and more flexibility when it comes to changing the PDE problem.
+Each example in the rest of the book will use \pVec, \pMat, \pKSP, \pPC, and \pSNES.  From now on we will even solve linear PDEs using a \pSNES object, for example in Chapter \ref{chap:ad}.  In such cases we know that one Newton iteration suffices in theory.  Always using \pSNES allows uniform code structure and more flexibility when it comes to changing the PDE problem.
 
-Though new ideas do appear, in the current Chapter we take a break from introducing new \PETSc types.  Instead we look at a PDE which arises from minimization in a function space, and we introduce a structured-grid finite element method.  Our one example is a nonlinear PDE which is Poisson-like, but with solution-dependent diffusivity.
+Though new ideas appear in it, the current Chapter takes a break from introducing new \PETSc types.  Instead we look at a PDE which arises from minimization in a function space, and we introduce a structured-grid finite element method.  This example is a nonlinear Poisson-like equation with solution-dependent diffusivity.
 
-Also, the example code in this Chapter is the last one shown in full.  In later Chapters we show snippets of example codes; the reader can examine the complete codes in the \texttt{p4pdes} repository (Chapter \ref{chap:gs}).
+The example code here is the last one shown in full, while in later Chapters we show snippets.  The reader can always examine the complete codes by looking in the \texttt{c/} directory of the \texttt{p4pdes} repository (Chapter \ref{chap:gs}).
 
 
 \section{$p$-Laplacian equation as minimization}
