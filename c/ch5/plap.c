@@ -65,18 +65,19 @@ PetscErrorCode PrintResult(DMDALocalInfo *info, SNES snes, Vec u, Vec uexact,
 PetscErrorCode ExactLocal(DMDALocalInfo *info, Vec uex, Vec f,
                           PLapCtx *user) {
   PetscErrorCode ierr;
+  const PetscInt   XE = info->xs + info->xm, YE = info->ys + info->ym;
   PetscInt         i,j;
   PetscReal        x,y, x2,x4,y2,y4, px,py, ux,uy, uxx,uxy,uyy,lap,
                    gs,gsx,gsy, **auex, **af;
 
   ierr = DMDAVecGetArray(user->da,uex,&auex); CHKERRQ(ierr);
   ierr = DMDAVecGetArray(user->da,f,&af); CHKERRQ(ierr);
-  // these loops are over ALL grid points
-  // FIXME: in parallel, care needed; currently seg-faults
-  for (j=info->ys-1; j<=info->ys+info->ym; j++) {
+  // these loops are over ALL grid points, including ghosts
+  // note f is local (has ghosts) but uex is global (no ghosts)
+  for (j = info->ys-1; j <= YE; j++) {
     y   = user->hy * (j + 1);  y2  = y * y;  y4  = y2 * y2;
     py  = y4 - y2;                                 // polynomial in x
-    for (i=info->xs-1; i<=info->xs+info->xm; i++) {
+    for (i = info->xs-1; i <= XE; i++) {
       x   = user->hx * (i + 1);  x2  = x * x;  x4  = x2 * x2;
       px  = x2 - x4;                               // polynomial in y
       uxx = 2.0 * (1.0 - 6.0 * x2) * py;
@@ -95,7 +96,7 @@ PetscErrorCode ExactLocal(DMDALocalInfo *info, Vec uex, Vec f,
       } else {
         SETERRQ(COMM,1,"p!=2,4 ... HOW DID I GET HERE?");
       }
-      if ((i >= 0) && (i <= info->mx-1) && (j >= 0) && (j <= info->my-1)) {
+      if ((i >= info->xs) && (i < XE) && (j >= info->ys) && (j < YE)) {
         auex[j][i] = px * py;  //  u(x,y) = (x^2 - x^4) (y^4 - y^2)
       }
     }
