@@ -48,8 +48,8 @@ PetscErrorCode PrintResult(DMDALocalInfo *info, SNES snes, Vec u, Vec uexact,
                            PLapCtx *user) {
   PetscErrorCode ierr;
   PetscReal unorm, err;
-  ierr = PetscPrintf(COMM,"on a grid of %d x %d = %d unknowns (interior nodes):\n",
-             info->mx,info->my,info->mx * info->my); CHKERRQ(ierr);
+  ierr = PetscPrintf(COMM,"grid of %d x %d = %d interior nodes (%dx%d elements):\n",
+             info->mx,info->my,info->mx*info->my,info->mx+1,info->my+1); CHKERRQ(ierr);
   if (user->manufactured) {
       ierr = VecNorm(uexact,NORM_INFINITY,&unorm); CHKERRQ(ierr);
       ierr = PetscPrintf(COMM,"exact solution norm:   |u_exact|_inf   = %g\n",unorm); CHKERRQ(ierr);
@@ -74,10 +74,10 @@ PetscErrorCode ExactLocal(DMDALocalInfo *info, Vec uex, Vec f,
   ierr = DMDAVecGetArray(user->da,f,&af); CHKERRQ(ierr);
   // these loops are over ALL grid points, including ghosts
   // note f is local (has ghosts) but uex is global (no ghosts)
-  for (j = info->ys-1; j <= YE; j++) {
+  for (j = info->ys - 1; j <= YE; j++) {
     y   = user->hy * (j + 1);  y2  = y * y;  y4  = y2 * y2;
     py  = y4 - y2;                                 // polynomial in x
-    for (i = info->xs-1; i <= XE; i++) {
+    for (i = info->xs - 1; i <= XE; i++) {
       x   = user->hx * (i + 1);  x2  = x * x;  x4  = x2 * x2;
       px  = x2 - x4;                               // polynomial in y
       uxx = 2.0 * (1.0 - 6.0 * x2) * py;
@@ -148,6 +148,21 @@ gradRef deval(const PetscReal v[4], PetscReal xi, PetscReal eta) {
 }
 //ENDFEM
 
+PetscErrorCode ZeroBoundaryLocal(DMDALocalInfo *info, PetscReal **au) {
+  const PetscInt XE = info->xs + info->xm, YE = info->ys + info->ym;
+  PetscInt       i,j;
+  for (j = info->ys-1; j <= YE; j++) {
+      if ((j == -1) || (j == info->mx)) {
+          for (i = info->xs-1; i <= XE; i++)
+              au[j][i] = 0.0;    // top and bottom boundary values
+      } else if (info->xs == 0)
+          au[j][-1] = 0.0;       // left boundary values
+      else if (XE == info->mx)
+          au[j][info->mx] = 0.0; // right boundary values
+  }
+  return 0;
+}
+
 //STARTOBJECTIVE
 PetscReal ObjIntegrand(PetscInt i, PetscInt j,
                        const PetscReal f[4], const PetscReal u[4],
@@ -159,7 +174,7 @@ PetscReal ObjIntegrand(PetscInt i, PetscInt j,
   return PetscPowScalar(z,user->p/2.0) / user->p - eval(f,xi,eta) * eval(u,xi,eta);
 }
 
-static PetscReal zq[2] = {-0.577350269189626,0.577350269189626}, // FIXME: quad deg
+static PetscReal zq[2] = {-0.577350269189626,0.577350269189626},
                  wq[2] = {1.0,1.0};
 
 PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **au,
@@ -171,28 +186,22 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **au,
   PetscInt       i,j,r,s;
   MPI_Comm       com;
 
-  // fill u ghosts with boundary values:
-  for (j = info->ys-1; j <= YE; j++) {
-      if ((j == -1) || (j == info->mx)) {
-          for (i = info->xs-1; i <= XE; i++)
-              au[j][i] = 0.0;    // top and bottom boundary values
-      } else if (info->xs == 0)
-          au[j][-1] = 0.0;       // left boundary values
-      else if (XE == info->mx)
-          au[j][info->mx] = 0.0; // right boundary values
-  }
-
-  // the following loops are for a sum over all elements:
+  ierr = ZeroBoundaryLocal(info,au); CHKERRQ(ierr);
+  // sum over all elements
   ierr = DMDAVecGetArray(user->da,user->f,&af); CHKERRQ(ierr);
-  // FIXME: for runs in parallel, need to be clearer on ranges and element ownership
   for (j = info->ys; j <= YE; j++) {
       for (i = info->xs; i <= XE; i++) {
-          // because of ghosts, these values are always valid
-          f[0]=af[j][i];  f[1]=af[j][i-1];  f[2]=af[j-1][i-1];  f[3]=af[j-1][i];
-          u[0]=au[j][i];  u[1]=au[j][i-1];  u[2]=au[j-1][i-1];  u[3]=au[j-1][i];
-          for (r=0; r<n; r++) {
-              for (s=0; s<n; s++) {
-                  lobj += wq[r] * wq[s] * ObjIntegrand(i,j,f,u,zq[r],zq[s],user);
+          if ((i < XE) || (j < YE) || (i == info->mx) || (j == info->my)) {
+              // because of ghosts, these values are always valid even in the
+              //     "right" and "top" cases that where i==info->mx or j==info->my
+              f[0] = af[j][i];  f[1] = af[j][i-1];
+                  f[2] = af[j-1][i-1];  f[3] = af[j-1][i];
+              u[0] = au[j][i];  u[1] = au[j][i-1];
+                  u[2] = au[j-1][i-1];  u[3] = au[j-1][i];
+              for (r=0; r<n; r++) {
+                  for (s=0; s<n; s++) {
+                      lobj += wq[r] * wq[s] * ObjIntegrand(i,j,f,u,zq[r],zq[s],user);
+                  }
               }
           }
       }
