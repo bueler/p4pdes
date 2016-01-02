@@ -14,17 +14,16 @@ Each example in the rest of the book will use \pVec, \pMat, \pKSP, \pPC, and \pS
 
 Though new ideas appear in it, the current Chapter takes a break from introducing new \PETSc types.  Instead we look at a PDE which arises from minimization in a function space, and we introduce a structured-grid finite element method.  This example is a nonlinear Poisson-like equation with solution-dependent diffusivity.
 
-The example code here is the last one shown in full, while in later Chapters we show snippets.  The reader can always examine the complete codes by looking in the \texttt{c/} directory of the \texttt{p4pdes} repository (Chapter \ref{chap:gs}).
+The example code here is the last one shown in full.  In later Chapters we show snippets.  The reader can always examine and run the complete codes by looking in the \texttt{c/} directory of the \texttt{p4pdes} repository; see Chapter \ref{chap:gs}.
 
 
 \section{$p$-Laplacian equation as minimization}
 
-Let $\Omega$ be a domain (connected open subset) in $\RR^2$ or $\RR^3$ with well-behaved boundary.\sidenote{A Lipschitz boundary will suffice in theory.  In practice we use polygonal domains, namely a rectangle in the current Chapter and general polygons in Chapter \ref{chap:un}.}  For simplicity, because our numerical method will use the point values of this given function, assume we have chosen $f\in C(\Omega)$.  Consider this functional for $p \ge 1$,
+Let $\Omega$ be a domain (connected open subset) in $\RR^2$ with well-behaved boundary.\sidenote{A Lipschitz boundary will suffice in theory.  In practice we use polygonal domains, namely a rectangle in the current Chapter and general polygons in Chapter \ref{chap:un}.}  For simplicity, noting our numerical method will use the point values of this function, suppose $f\in C(\overline \Omega)$ is given.  Consider this nonliner functional for $p \ge 1$,
 \begin{equation}
     I[u] = \int_\Omega \frac{1}{p} |\grad u|^p - fu.  \label{eq:of:functional}
 \end{equation}
-
-The nonlinear functional $I[u]$ is well-defined on the Sobolev space \citep{AdamsFournier2003,Evans2010} of integrable functions on $\Omega$ which have integrable gradient,
+It is well-defined on the Sobolev space \citep{AdamsFournier2003,Evans2010} of integrable functions on $\Omega$ which have integrable gradient,
 \begin{equation}
     W^{1,p}(\Omega) = \left\{w \,:\, \int_\Omega |w|^p < \infty \,\, \& \, \int_\Omega |\grad w|^p < \infty\right\}. \label{eq:of:sobolevdefn}
 \end{equation}
@@ -99,9 +98,9 @@ Minimization problem \eqref{eq:of:plapmin} is equivalent to the weak form \eqref
 
 \section{Structured $Q^1$ finite elements}
 
-We can use \PETSc to numerically solve the $p$-Laplacian equation as minimization problem \eqref{eq:of:plapmin}, based only on user code that computes the functional $I[u]$ from a representation of $u \in W_g^{1,p}(\Omega)$.  Thus, once we have a finite-dimensional representation of the input $u$, all we need to implement is formula \eqref{eq:of:functional} for $I[u]$.
+Initially, we can use \PETSc to numerically solve the $p$-Laplacian equation as minimization problem \eqref{eq:of:plapmin}, based only on user code that computes the functional $I[u]$ from a representation of $u \in W_g^{1,p}(\Omega)$.  Thus, once we have a finite-dimensional representation of the input $u$, we need to implement formula \eqref{eq:of:functional} for $I[u]$.
 
-Such a minimization approach may suffice for initial prototyping.  It can then be augmented by additional derivative-computing code, as we show, in which case the problem becomes a nonlinear-residual problem like that of Chapter \ref{chap:nl}.  Initially, however, we will ask \PETSc to use finite differences when it needs derivatives (gradients) in minimizing $I[u]$.  In this case the system of nonlinear equations, with associated residual function, is internal to \PETSc, and only approximate.
+Such a minimization approach may suffice for prototyping.  It can then be augmented by additional derivative-computing code so that the problem becomes a nonlinear-residual problem like that of Chapter \ref{chap:nl}.  Initially, however, we will ask \PETSc to use finite differences when it needs derivatives (gradients) in minimizing $I[u]$.  In this case the nonlinear equations, and the associated residual functions, are only approximate and are internal to \PETSc.
 
 For the representation of $u$ we introduce a structured-grid finite element method (FEM) using quadrilateral elements.  The gridded unknowns, which live on a structured grid similar to that in Chapter \ref{chap:st}, now represent a function in a function space.  The resulting code will be similar to a finite difference solution of PDE \eqref{eq:of:plapstrongform}, despite the conceptual changes.
 
@@ -318,9 +317,9 @@ I^h[u] &= \frac{h_x h_y}{4} \sum_{i=0}^{m_x} \sum_{j=0}^{m_y} \int_{\square_\ast
 This is enough for a prototype implementation.
 
 
-\section{Implementation with objective only}
+\section{Objective-only implementation}
 
-Our code is displayed in full in six parts, Codes \ref{code:plapI}--\ref{code:plapVI}.  However, the last part, which implements \eqref{eq:of:plapweakform}, is shown after we get the code running initially using only an implementation of the objective \eqref{eq:of:functional}.
+Our code is displayed in six parts, Codes \ref{code:plapI}--\ref{code:plapVI}.  The last part, which implements \eqref{eq:of:plapweakform}, is only shown after we get the code running initially using only an implementation of the objective \eqref{eq:of:functional}.
 
 The first part (Code \ref{code:plapI}) configures the problem.  Options choose the exponent $p$ and whether we want to use a manufactured solution for verification.  The corresponding variables are stored in a context \texttt{struct} called ``\texttt{PLapCtx}'' so they can be passed among our functions as needed.  Code \ref{code:plapI} also includes a method to print basic information available at the end of the solve.
 
