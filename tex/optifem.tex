@@ -23,7 +23,7 @@ Let $\Omega$ be a domain (connected open subset) in $\RR^2$ with well-behaved bo
 \begin{equation}
     I[u] = \int_\Omega \frac{1}{p} |\grad u|^p - fu.  \label{eq:of:functional}
 \end{equation}
-It is well-defined on the Sobolev space \citep{AdamsFournier2003,Evans2010} of integrable functions on $\Omega$ which have integrable gradient,
+It is well-defined and continuous on the Sobolev space \citep{AdamsFournier2003,Evans2010} of integrable functions on $\Omega$ which have integrable gradient,
 \begin{equation}
     W^{1,p}(\Omega) = \left\{w \,:\, \int_\Omega |w|^p < \infty \,\, \& \, \int_\Omega |\grad w|^p < \infty\right\}. \label{eq:of:sobolevdefn}
 \end{equation}
@@ -44,7 +44,7 @@ For this to make sense one might require $g \in L^p(\partial \Omega)$ and note t
 
 The above considerations also define the vector subspace $W_0^{1,p}(\Omega) \subset W^{1,p}(\Omega)$ in the case where $g=0$.  We will use this subspace for ``test functions'' below.
 
-The functional $I[u]$ has two significant properties.  First, with the boundary conditions, $I[u]$ is \emph{coercive} in the sense that if the input function from $W_g^{1,p}(\Omega)$ is large in norm then the output is large:
+The functional $I[u]$ has two significant properties.  First, $I[u]$ is \emph{coercive} in the sense that if the input function from $W_g^{1,p}(\Omega)$ is large in norm then the output is large:
 \begin{equation}
 \lim_{\|u\|_{W^{1,p}} \to +\infty} I[u] = +\infty.   \label{eq:of:coercivity}
 \end{equation}
@@ -61,7 +61,7 @@ A standard theorem in the calculus of variations \citep[Theorem 8.2.2]{Evans2010
 \end{equation}
 has a unique solution.  Strict convexity is used to show uniqueness, but convexity also implies that $I[u]$ is continuous enough to have a minimum on compact sets in the appropriate topology.\sidenote{Namely $I[u]$ is \emph{weakly lower semi-continuous}. This means, by definition, that $\liminf_{v\rightharpoonup u} I[v] \ge I[u]$, using the weak topology on $W^{1,p}(\Omega)$ \citep[section 8.2]{Evans2010}.}  Compactness arises from coercivity in the sense that bounded, closed subsets of $W^{1,p}(\Omega)$, which arise in the existence proof as sets $\{w\,:\,I[w] \le L\}$, are compact in the weak topology.
 
-Being good calculus students we seek the solution to minimization problem \eqref{eq:of:plapmin} by taking the derivative and setting it to zero.  Fortunately, if $p>1$ then the functional $I[u]$ is smooth enough to have a gradient, as we show next.  The solution of minimization \eqref{eq:of:plapmin} is then also the solution to a nonlinear equation.  It has several names, including \emph{variational equation}, \emph{Euler-Lagrange equation}, and the \emph{weak form of the PDE}.
+Being good calculus students we seek the solution to minimization problem \eqref{eq:of:plapmin} by taking the derivative and setting it to zero.  If $p>1$ then the functional $I[u]$ is smooth enough to have a gradient, as we show next.  The solution of minimization \eqref{eq:of:plapmin} is then also the solution to a nonlinear equation.  It has several names, including \emph{variational equation}, \emph{Euler-Lagrange equation}, and the \emph{weak form of the PDE}.
 
 Assume $\eps\in \RR$ and $u,v \in W^{1,p}(\Omega)$.  Then, by the binomial theorem,
 \begin{align*}
@@ -102,7 +102,7 @@ Initially, we can use \PETSc to numerically solve the $p$-Laplacian equation as 
 
 Such a minimization approach may suffice for prototyping.  It can then be augmented by additional derivative-computing code so that the problem becomes a nonlinear-residual problem like that of Chapter \ref{chap:nl}.  Initially, however, we will ask \PETSc to use finite differences when it needs derivatives (gradients) in minimizing $I[u]$.  In this case the nonlinear equations, and the associated residual functions, are only approximate and are internal to \PETSc.
 
-For the representation of $u$ we introduce a structured-grid finite element method (FEM) using quadrilateral elements.  The gridded unknowns, which live on a structured grid similar to that in Chapter \ref{chap:st}, now represent a function in a function space.  The resulting code will be similar to a finite difference solution of PDE \eqref{eq:of:plapstrongform}, despite the conceptual changes.
+For the representation of $u$ we introduce a structured-grid finite element method (FEM) using quadrilateral elements.  The gridded unknowns, which live on a structured grid somewhat different from that in Chapter \ref{chap:st}, now represent a function in a function space.  The resulting code will be similar to a finite difference solution of PDE \eqref{eq:of:plapstrongform}, despite the conceptual changes.
 
 \begin{figure}
 \begin{tikzpicture}[scale=5.0]
@@ -138,7 +138,7 @@ For the representation of $u$ we introduce a structured-grid finite element meth
 \label{fig:of:q1grid}
 \end{figure}
 
-The domain used in this Chapter is the square $\Omega = (0,1)\times (0,1)$.  Consider the structured grid on $\Omega$ shown in Figure \ref{fig:of:q1grid}.  In this structured grid of nodes $(x_i,y_j)$, only \emph{interior} nodes represent unknowns, because the boundary value of $u\in W_g^{1,p}(\Omega)$ are known from $g$.
+The domain used in this Chapter is the square $\Omega = (0,1)\times (0,1)$.  Consider the structured grid on $\Omega$ shown in Figure \ref{fig:of:q1grid}.  In this structured grid, only \emph{interior} nodes represent unknowns, because the boundary values of $u\in W_g^{1,p}(\Omega)$ are known from $g$.
 
 Let $m_x,m_y$ be positive integers and define $h_x = 1/(m_x+1)$ and $h_y = 1/(m_y+1)$.  Define a grid of $N=m_x\, m_y$ interior nodes by the following formulas which apply for $i=-1,0,\dots,m_x$ and $j=-1,0,\dots,m_y$:
 \begin{equation}
