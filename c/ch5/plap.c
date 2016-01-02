@@ -171,8 +171,7 @@ PetscReal GraduPow(gradRef du, PetscReal P, PLapCtx *user) {
   return PetscPowScalar(z, P / 2.0);
 }
 
-PetscReal ObjIntegrand(PetscInt i, PetscInt j,
-                       const PetscReal f[4], const PetscReal u[4],
+PetscReal ObjIntegrand(const PetscReal f[4], const PetscReal u[4],
                        PetscReal xi, PetscReal eta, PLapCtx *user) {
   const gradRef du = deval(u,xi,eta);
   return GraduPow(du,user->p,user) / user->p - eval(f,xi,eta) * eval(u,xi,eta);
@@ -204,7 +203,7 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **au,
                   u[2] = au[j-1][i-1];  u[3] = au[j-1][i];
               for (r=0; r<n; r++) {
                   for (s=0; s<n; s++) {
-                      lobj += wq[r] * wq[s] * ObjIntegrand(i,j,f,u,zq[r],zq[s],user);
+                      lobj += wq[r] * wq[s] * ObjIntegrand(f,u,zq[r],zq[s],user);
                   }
               }
           }
@@ -220,32 +219,46 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **au,
 //ENDOBJECTIVE
 
 //STARTFUNCTION
-PetscReal FunIntegrand(PetscInt i, PetscInt j, PetscReal **af, PetscReal **au,
+PetscReal FunIntegrand(PetscInt i, PetscInt j,
+                       const PetscReal f[4], const PetscReal u[4],
                        PetscReal xi, PetscReal eta, PLapCtx *user) {
-  SETERRQ(COMM,1,"NOT YET IMPLEMENTED");
+  // FIXME
   return 0;
 }
 
-PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal **u,
+PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal **au,
                                  PetscReal **FF, PLapCtx *user) {
-  SETERRQ(COMM,1,"NOT YET IMPLEMENTED");
-/*
   PetscErrorCode ierr;
-  PetscReal      **af;
+  PetscReal      **af, f[4], u[4], z;
   const PetscInt n = 2;  // FIXME: quad deg
-  PetscInt       i,j,r,s;
+  const PetscInt XE = info->xs + info->xm, YE = info->ys + info->ym;
+  PetscInt       i,j,c,d,r,s;
+
+  ierr = ZeroBoundaryLocal(info,au); CHKERRQ(ierr);
+  // compute component of residual FF for each node (x_i,y_j)
   ierr = DMDAVecGetArray(user->da,user->f,&af); CHKERRQ(ierr);
-  for (j=info->ys; j<info->ys+info->ym; j++) {
-      for (i=info->xs; i<info->xs+info->xm; i++) {
-          for (r=0; r<n; r++) {
-              for (s=0; s<n; s++) {
-                  FF[j][i] = FunIntegrand(i,j,af,au,zq[r],zq[s],user);
+  for (j = info->ys; j < YE; j++) {
+      for (i = info->xs; i < XE; i++) {
+          // sum over four elements which contribute to current node
+          z = 0.0;
+          for (c = i; c < i+2; c++) {
+              for (d = j; d < j+2; d++) {
+                  f[0] = af[d][c];  f[1] = af[d][c-1];
+                      f[2] = af[d-1][c-1];  f[3] = af[d-1][c];
+                  u[0] = au[d][c];  u[1] = au[d][c-1];
+                      u[2] = au[d-1][c-1];  u[3] = au[d-1][c];
+                  for (r=0; r<n; r++) {
+                      for (s=0; s<n; s++) {
+                          SETERRQ(COMM,1,"NOT YET IMPLEMENTED");
+                          z += wq[r] * wq[s] * FunIntegrand(i,j,f,u,zq[r],zq[s],user);
+                      }
+                  }
               }
           }
+          FF[j][i] = 0.25 * user->hx * user->hy * z;
       }
   }
   ierr = DMDAVecRestoreArray(user->da,user->f,&af); CHKERRQ(ierr);
-*/
   return 0;
 }
 //ENDFUNCTION
