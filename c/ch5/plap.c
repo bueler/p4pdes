@@ -2,16 +2,23 @@ static char help[] = "Solve the p-laplacian equation in 2D using Q^1 FEM\n"
 "and an objective function.\n\n";
 
 // RUN AS
+//   ./plap -snes_fd
+//   ./plap -snes_mf
 //   ./plap -snes_fd_function -snes_fd
-// which means no residual (= gradient) evaluation and no Jacobian
-// (= Hessian) evaluation
+// because there is no Jacobian (= Hessian)
 
-// EVIDENCE OF CONVERGENCE WITH OBJECTIVE-ONLY:
-// ./plap -snes_fd -snes_fd_function -snes_monitor -plap_manufactured -snes_monitor_solution draw -ksp_monitor -snes_converged_reason -da_refine X
-// for X=0,1,2,3
+// EVIDENCE OF CONVERGENCE WITH OBJECTIVE-ONLY (note diverged linear solve and crappy errors):
+// for LEV in 0 1 2; do ./plap -snes_fd_function -snes_fd -plap_manufactured -snes_monitor -snes_converged_reason -ksp_type preonly -pc_type cholesky -da_refine $LEV; done
 
-// ALSO (eventually):
-//   ./plap -snes_fd_color
+// CHECK SNES CONVERGENCE WITH -snes_fd_color AND LINEAR CASE p=2:
+// timer ./plap -snes_fd_color -plap_manufactured -ksp_rtol 1.0e-14 -ksp_converged_reason -snes_monitor -snes_converged_reason -ksp_type cg -pc_type icc -da_refine 6
+
+// EVIDENCE OF CONVERGENCE WITH -snes_fd_color AND IN PARALLEL AND LINEAR CASE (p=2):
+// for LEV in 0 1 2 3 4 5 6 7; do mpiexec -n 4 ./plap -snes_fd_color -plap_manufactured -ksp_type cg -pc_type bjacobi -sub_pc_type icc -ksp_rtol 1.0e-14 -ksp_converged_reason -snes_converged_reason -da_refine $LEV; done
+
+// EVIDENCE OF CONVERGENCE WITH -snes_fd_color NOT PARALLEL AND NONLINEAR CASE (p=4):
+// (note number of snes iterations grows)
+// for LEV in 0 1 2 3 4 ; do ./plap -snes_fd_color -plap_manufactured -plap_p 4 -ksp_type preonly -pc_type cholesky -snes_converged_reason -da_refine $LEV; done
 
 #include <petsc.h>
 
@@ -43,25 +50,27 @@ PetscErrorCode Configure(PLapCtx *user) {
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
   return 0;
 }
-
-PetscErrorCode PrintResult(DMDALocalInfo *info, SNES snes, Vec u, Vec uexact,
-                           PLapCtx *user) {
-  PetscErrorCode ierr;
-  PetscReal unorm, err;
-  ierr = PetscPrintf(COMM,"grid of %d x %d = %d interior nodes (%dx%d elements):\n",
-             info->mx,info->my,info->mx*info->my,info->mx+1,info->my+1); CHKERRQ(ierr);
-  if (user->manufactured) {
-      ierr = VecNorm(uexact,NORM_INFINITY,&unorm); CHKERRQ(ierr);
-      ierr = PetscPrintf(COMM,"exact solution norm:   |u_exact|_inf   = %g\n",unorm); CHKERRQ(ierr);
-      ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uxact
-      ierr = VecNorm(u,NORM_INFINITY,&err); CHKERRQ(ierr);
-      ierr = PetscPrintf(COMM,"numerical error norm:  |u-u_exact|_inf = %g\n",err); CHKERRQ(ierr);
-  }
-  return 0;
-}
 //ENDCONFIGURE
 
 //STARTEXACT
+PetscErrorCode InitialValues(DMDALocalInfo *info, Vec u, PLapCtx *user) {
+  PetscErrorCode ierr;
+  PetscInt         i,j;
+  PetscReal        x,y, **au;
+
+  ierr = DMDAVecGetArray(user->da,u,&au); CHKERRQ(ierr);
+  // loop over interior grid points, including ghosts
+  for (j = info->ys; j < info->ys + info->ym; j++) {
+    y = user->hy * (j + 1);
+    for (i = info->xs; i < info->xs + info->xm; i++) {
+      x = user->hx * (i + 1);
+      au[j][i] = x * (1.0 - x) * y * (1.0 - y);  // positive in interior
+    }
+  }
+  ierr = DMDAVecRestoreArray(user->da,u,&au); CHKERRQ(ierr);
+  return 0;
+}
+
 PetscErrorCode ExactLocal(DMDALocalInfo *info, Vec uex, Vec f,
                           PLapCtx *user) {
   PetscErrorCode ierr;
@@ -72,7 +81,7 @@ PetscErrorCode ExactLocal(DMDALocalInfo *info, Vec uex, Vec f,
 
   ierr = DMDAVecGetArray(user->da,uex,&auex); CHKERRQ(ierr);
   ierr = DMDAVecGetArray(user->da,f,&af); CHKERRQ(ierr);
-  // these loops are over ALL grid points, including ghosts
+  // loop over ALL grid points, including ghosts
   // note f is local (has ghosts) but uex is global (no ghosts)
   for (j = info->ys - 1; j <= YE; j++) {
     y   = user->hy * (j + 1);  y2  = y * y;  y4  = y2 * y2;
@@ -164,17 +173,21 @@ PetscErrorCode ZeroBoundaryLocal(DMDALocalInfo *info, PetscReal **au) {
 }
 
 //STARTOBJECTIVE
-PetscReal GraduPow(gradRef du, PetscReal P, PLapCtx *user) {
+PetscReal GradInnerProd(gradRef du, gradRef dv, PLapCtx *user) {
   PetscReal z;
-  z =  (4.0 / (user->hx * user->hx)) * du.xi  * du.xi;
-  z += (4.0 / (user->hy * user->hy)) * du.eta * du.eta;
-  return PetscPowScalar(z, P / 2.0);
+  z =  (4.0 / (user->hx * user->hx)) * du.xi  * dv.xi;
+  z += (4.0 / (user->hy * user->hy)) * du.eta * dv.eta;
+  return z;
+}
+
+PetscReal GradPow(gradRef du, PetscReal P, PLapCtx *user) {
+  return PetscPowScalar(GradInnerProd(du,du,user), P / 2.0);
 }
 
 PetscReal ObjIntegrand(const PetscReal f[4], const PetscReal u[4],
                        PetscReal xi, PetscReal eta, PLapCtx *user) {
   const gradRef du = deval(u,xi,eta);
-  return GraduPow(du,user->p,user) / user->p - eval(f,xi,eta) * eval(u,xi,eta);
+  return GradPow(du,user->p,user) / user->p - eval(f,xi,eta) * eval(u,xi,eta);
 }
 
 static PetscReal zq[2] = {-0.577350269189626,0.577350269189626},
@@ -219,10 +232,13 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **au,
 //ENDOBJECTIVE
 
 //STARTFUNCTION
-PetscReal FunIntegrand(PetscInt i, PetscInt j,
+PetscReal FunIntegrand(PetscInt L,
                        const PetscReal f[4], const PetscReal u[4],
                        PetscReal xi, PetscReal eta, PLapCtx *user) {
-  // FIXME
+  const gradRef du    = deval(u,xi,eta),
+                dchiL = dchi(L,xi,eta);
+  return GradPow(du,user->p - 2.0,user) * GradInnerProd(du,dchiL,user)
+         - eval(f,xi,eta) * chi(L,xi,eta);
   return 0;
 }
 
@@ -231,26 +247,26 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal **au,
   PetscErrorCode ierr;
   PetscReal      **af, f[4], u[4], z;
   const PetscInt n = 2;  // FIXME: quad deg
-  const PetscInt XE = info->xs + info->xm, YE = info->ys + info->ym;
   PetscInt       i,j,c,d,r,s;
+  const PetscInt ell[2][2] = { {0,3}, {1,2} };
 
   ierr = ZeroBoundaryLocal(info,au); CHKERRQ(ierr);
-  // compute component of residual FF for each node (x_i,y_j)
+  // compute residual FF[j][i] for each node (x_i,y_j)
   ierr = DMDAVecGetArray(user->da,user->f,&af); CHKERRQ(ierr);
-  for (j = info->ys; j < YE; j++) {
-      for (i = info->xs; i < XE; i++) {
+  for (j = info->ys; j < info->ys + info->ym; j++) {
+      for (i = info->xs; i < info->xs + info->xm; i++) {
           // sum over four elements which contribute to current node
           z = 0.0;
-          for (c = i; c < i+2; c++) {
-              for (d = j; d < j+2; d++) {
-                  f[0] = af[d][c];  f[1] = af[d][c-1];
-                      f[2] = af[d-1][c-1];  f[3] = af[d-1][c];
-                  u[0] = au[d][c];  u[1] = au[d][c-1];
-                      u[2] = au[d-1][c-1];  u[3] = au[d-1][c];
+          for (c = 0; c < 2; c++) {
+              for (d = 0; d < 2; d++) {
+                  f[0] = af[j+d][i+c];  f[1] = af[j+d][i+c-1];
+                      f[2] = af[j+d-1][i+c-1];  f[3] = af[j+d-1][i+c];
+                  u[0] = au[j+d][i+c];  u[1] = au[j+d][i+c-1];
+                      u[2] = au[j+d-1][i+c-1];  u[3] = au[j+d-1][i+c];
+                  //PetscPrintf(PETSC_COMM_WORLD,"c=%d,d=%d:  ell = %d\n",c,d,ell[c][d]);
                   for (r=0; r<n; r++) {
                       for (s=0; s<n; s++) {
-                          SETERRQ(COMM,1,"NOT YET IMPLEMENTED");
-                          z += wq[r] * wq[s] * FunIntegrand(i,j,f,u,zq[r],zq[s],user);
+                          z += wq[r] * wq[s] * FunIntegrand(ell[c][d],f,u,zq[r],zq[s],user);
                       }
                   }
               }
@@ -286,13 +302,15 @@ int main(int argc,char **argv) {
   ierr = DMDASetUniformCoordinates(user.da,0.0+user.hx,1.0-user.hx,
                             0.0+user.hy,1.0-user.hy,-1.0,-1.0); CHKERRQ(ierr);
 
+  ierr = PetscPrintf(COMM,"grid of %d x %d = %d interior nodes (%dx%d elements)\n",
+            info.mx,info.my,info.mx*info.my,info.mx+1,info.my+1); CHKERRQ(ierr);
+
   ierr = DMCreateGlobalVector(user.da,&u);CHKERRQ(ierr);
   ierr = VecDuplicate(u,&uexact);CHKERRQ(ierr);
   ierr = DMCreateLocalVector(user.da,&(user.f));CHKERRQ(ierr);
-  ierr = VecSet(u,0.0); CHKERRQ(ierr);
+  ierr = InitialValues(&info,u,&user); CHKERRQ(ierr);
   if (user.manufactured) {
     ierr = ExactLocal(&info,uexact,user.f,&user); CHKERRQ(ierr);
-    //ierr = VecCopy(uexact,u); CHKERRQ(ierr);
   } else {
     ierr = VecSet(user.f,1.0); CHKERRQ(ierr);
     ierr = VecSet(uexact,NAN); CHKERRQ(ierr);
@@ -307,7 +325,15 @@ int main(int argc,char **argv) {
   ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
   ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
-  ierr = PrintResult(&info,snes,u,uexact,&user); CHKERRQ(ierr);
+
+  if (user.manufactured) {
+      PetscReal unorm, err;
+      ierr = VecNorm(uexact,NORM_INFINITY,&unorm); CHKERRQ(ierr);
+      ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uxact
+      ierr = VecNorm(u,NORM_INFINITY,&err); CHKERRQ(ierr);
+      ierr = PetscPrintf(COMM,
+          "numerical error:  |u-u_exact|_inf/|u_exact|_inf = %g\n",err/unorm); CHKERRQ(ierr);
+  }
 
   VecDestroy(&u);  VecDestroy(&uexact);  VecDestroy(&(user.f));
   SNESDestroy(&snes);  DMDestroy(&(user.da));
