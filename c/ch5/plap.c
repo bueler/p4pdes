@@ -164,14 +164,18 @@ PetscErrorCode ZeroBoundaryLocal(DMDALocalInfo *info, PetscReal **au) {
 }
 
 //STARTOBJECTIVE
+PetscReal GraduPow(gradRef du, PetscReal P, PLapCtx *user) {
+  PetscReal z;
+  z =  (4.0 / (user->hx * user->hx)) * du.xi  * du.xi;
+  z += (4.0 / (user->hy * user->hy)) * du.eta * du.eta;
+  return PetscPowScalar(z, P / 2.0);
+}
+
 PetscReal ObjIntegrand(PetscInt i, PetscInt j,
                        const PetscReal f[4], const PetscReal u[4],
                        PetscReal xi, PetscReal eta, PLapCtx *user) {
-  const gradRef   du = deval(u,xi,eta);
-  PetscReal       z;
-  z =  (4.0 / (user->hx * user->hx)) * du.xi  * du.xi;
-  z += (4.0 / (user->hy * user->hy)) * du.eta * du.eta;
-  return PetscPowScalar(z,user->p/2.0) / user->p - eval(f,xi,eta) * eval(u,xi,eta);
+  const gradRef du = deval(u,xi,eta);
+  return GraduPow(du,user->p,user) / user->p - eval(f,xi,eta) * eval(u,xi,eta);
 }
 
 static PetscReal zq[2] = {-0.577350269189626,0.577350269189626},
