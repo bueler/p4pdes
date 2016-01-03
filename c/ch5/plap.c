@@ -42,74 +42,74 @@ PetscErrorCode Configure(PLapCtx *user) {
   if (user->p < 1.0) {
       SETERRQ1(COMM,1,"p=%.3f invalid ... p >= 1 required",user->p);
   }
-  ierr = PetscOptionsBool("-manufactured","use manufactured solution (p=2,4 only)",
+  ierr = PetscOptionsBool("-manufactured","use manufactured solution",
                    NULL,user->manufactured,&(user->manufactured),NULL);CHKERRQ(ierr);
-  if ((user->manufactured) && (user->p != 2.0) && (user->p != 4.0)) {
-      SETERRQ1(COMM,2,"no manufactured soln for p=%.3f; use p=2,4",user->p);
-  }
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
   return 0;
 }
 //ENDCONFIGURE
 
 //STARTEXACT
-PetscErrorCode ExactLocal(DMDALocalInfo *info, Vec uex, Vec f,
-                          PLapCtx *user) {
-  PetscErrorCode ierr;
-  const PetscReal  hx = 1.0 / (PetscReal)(info->mx+1),
-                   hy = 1.0 / (PetscReal)(info->my+1);
-  const PetscInt   XE = info->xs + info->xm, YE = info->ys + info->ym;
-  PetscInt         i,j;
-  PetscReal        x,y, x2,x4,y2,y4, px,py, ux,uy, uxx,uxy,uyy,lap,
-                   gs,gsx,gsy, **auex, **af;
+PetscErrorCode ExactLocal(DMDALocalInfo *info, Vec uex, Vec f, PLapCtx *user) {
+    PetscErrorCode ierr;
+    const PetscReal  hx = 1.0 / (PetscReal)(info->mx+1),
+                     hy = 1.0 / (PetscReal)(info->my+1),
+                     p = user->p,
+                     eps = 1.0e-12;
+    const PetscInt   XE = info->xs + info->xm, YE = info->ys + info->ym;
+    PetscInt         i,j;
+    PetscReal        x,y, x2,y2, d2, C, denom, **auex, **af;
 
-  ierr = DMDAVecGetArray(user->da,uex,&auex); CHKERRQ(ierr);
-  ierr = DMDAVecGetArray(user->da,f,&af); CHKERRQ(ierr);
-  // loop over ALL grid points, including ghosts
-  // note f is local (has ghosts) but uex is global (no ghosts)
-  for (j = info->ys - 1; j <= YE; j++) {
-    y   = hy * (j + 1);  y2  = y * y;  y4  = y2 * y2;
-    py  = y4 - y2;                                 // polynomial in x
-    for (i = info->xs - 1; i <= XE; i++) {
-      x   = hx * (i + 1);  x2  = x * x;  x4  = x2 * x2;
-      px  = x2 - x4;                               // polynomial in y
-      uxx = 2.0 * (1.0 - 6.0 * x2) * py;
-      uyy = 2.0 * (6.0 * y2 - 1.0) * px;
-      lap = uxx + uyy;
-      if (user->p == 2.0) {
-        af[j][i] = - lap;
-      } else if (user->p == 4.0) {
-        ux  = 2.0 * x * (1.0 - 2.0 * x2) * py;
-        uy  = 2.0 * y * (2.0 * y2 - 1.0) * px;
-        gs  = ux * ux + uy * uy;                   // = |grad u|^2
-        uxy = 4.0 * x * y * (1.0 - 2.0 * x2) * (2.0 * y2 - 1.0);
-        gsx = 2.0 * (ux * uxx + uy * uxy);
-        gsy = 2.0 * (ux * uxy + uy * uyy);
-        af[j][i] = - gs * lap - ux * gsx - uy * gsy;
-      } else { SETERRQ(COMM,1,"p!=2,4 ... HOW DID I GET HERE?"); }
-      if ((i >= info->xs) && (i < XE) && (j >= info->ys) && (j < YE)) {
-        auex[j][i] = px * py;  //  u(x,y) = (x^2 - x^4) (y^4 - y^2)
-      }
+    ierr = DMDAVecGetArray(user->da,uex,&auex); CHKERRQ(ierr);
+    ierr = DMDAVecGetArray(user->da,f,&af); CHKERRQ(ierr);
+    // loop over ALL grid points, including ghosts
+    // note f is local (has ghosts) but uex is global (no ghosts)
+    for (j = info->ys - 1; j <= YE; j++) {
+        y = hy * (j + 1);  y2 = y * y;
+        for (i = info->xs - 1; i <= XE; i++) {
+            x = hx * (i + 1);  x2 = x * x;
+            d2 = x2 + y2;
+            C = x2 * y2 * d2;
+            if (C > 0.0) {
+                C = PetscPowScalar(C, (p - 2.0)/2.0);
+            }
+            denom = PetscMax(d2,eps);
+            af[j][i] = - C * ((p - 1.0) * d2 + (p - 2.0) * 2.0 * x2 * y2 / denom);
+            if ((i >= info->xs) && (i < XE) && (j >= info->ys) && (j < YE)) {
+                auex[j][i] = 0.5 * x2 * y2;
+            }
+        }
     }
-  }
-  ierr = DMDAVecRestoreArray(user->da,uex,&auex); CHKERRQ(ierr);
-  ierr = DMDAVecRestoreArray(user->da,f,&af); CHKERRQ(ierr);
-  return 0;
+    ierr = DMDAVecRestoreArray(user->da,uex,&auex); CHKERRQ(ierr);
+    ierr = DMDAVecRestoreArray(user->da,f,&af); CHKERRQ(ierr);
+    return 0;
 }
 //ENDEXACT
 
 //STARTBOUNDARY
+PetscReal BoundaryG(PetscReal x, PetscReal y) {
+    return 0.5 * x*x * y*y;
+}
+
 PetscErrorCode SetBoundaryLocal(DMDALocalInfo *info, PetscReal **au) {
-  const PetscInt XE = info->xs + info->xm, YE = info->ys + info->ym;
-  PetscInt       i,j;
+  const PetscInt  XE = info->xs + info->xm, YE = info->ys + info->ym;
+  const PetscReal hx = 1.0 / (PetscReal)(info->mx+1),
+                  hy = 1.0 / (PetscReal)(info->my+1);
+  PetscInt        i,j;
+  PetscReal       x,y;
+
   for (j = info->ys-1; j <= YE; j++) {
+      y = hy * (j + 1);
       if ((j == -1) || (j == info->mx)) {
-          for (i = info->xs-1; i <= XE; i++)
-              au[j][i] = 0.0;    // top and bottom boundary values
-      } else if (info->xs == 0)
-          au[j][-1] = 0.0;       // left boundary values
-      else if (XE == info->mx)
-          au[j][info->mx] = 0.0; // right boundary values
+          for (i = info->xs-1; i <= XE; i++) {
+              x = hx * (i + 1);
+              au[j][i] = BoundaryG(x,y);       // bottom or top boundary values
+          }
+      } else if (info->xs == 0) {
+          au[j][-1] = BoundaryG(0.0,y);        // left boundary values
+      } else if (XE == info->mx) {
+          au[j][info->mx] = BoundaryG(1.0,y);  // right boundary values
+      }
   }
   return 0;
 }
@@ -127,7 +127,7 @@ PetscErrorCode InitialValues(DMDALocalInfo *info, Vec u, PLapCtx *user) {
     y = hy * (j + 1);
     for (i = info->xs; i < info->xs + info->xm; i++) {
       x = hx * (i + 1);
-      au[j][i] = x * (1.0 - x) * y * (1.0 - y);  // positive in interior
+      au[j][i] = x * BoundaryG(0.0,y) + (1.0 - x) * BoundaryG(1.0,y);
     }
   }
   ierr = DMDAVecRestoreArray(user->da,u,&au); CHKERRQ(ierr);
