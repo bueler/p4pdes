@@ -140,37 +140,35 @@ For the representation of $u$ we introduce a structured-grid finite element meth
 
 The domain used in this Chapter is the square $\Omega = (0,1)\times (0,1)$.  Consider the structured grid on $\Omega$ shown in Figure \ref{fig:of:q1grid}.  In this structured grid, only \emph{interior} nodes represent unknowns, because the boundary values of $u\in W_g^{1,p}(\Omega)$ are known from $g$.
 
-Let $m_x,m_y$ be positive integers and define $h_x = 1/(m_x+1)$ and $h_y = 1/(m_y+1)$.  Define a grid of $N=m_x\, m_y$ interior nodes by the following formulas which apply for $i=-1,0,\dots,m_x$ and $j=-1,0,\dots,m_y$:
+Let $m_x,m_y$ be positive integers and define $h_x = 1/(m_x+1)$ and $h_y = 1/(m_y+1)$.  Define a structured grid:
 \begin{equation}
 x_i = (i+1) h_x, \qquad y_j = (j+1) h_y. \label{eq:of:structuredgridindexing}
 \end{equation}
-Note this gives $(m_x+2)(m_y+2)$ total nodes in the grid.  The interior nodes correspond to the $N$ degrees of freedom in the problem.
-
-The grid has $(m_x+1)(m_x+1)$ rectangular \emph{elements}
+These formulas apply for $i=-1,0,\dots,m_x$ and $j=-1,0,\dots,m_y$, giving $\tilde N = (m_x+2)(m_y+2)$ total nodes in the grid, but the $N=m_x\, m_y$ interior nodes are points with $0 \le i \le m_x-1$ and $0 \le j \le m_y-1$.  The interior nodes correspond to the degrees of freedom.  The grid has $(m_x+1)(m_x+1)$ rectangular \emph{elements}
    $$\square_{ij} = [x_{i-1},x_i] \times [y_{j-1},y_j]$$
-for $i=0,\dots,m_x$ and $j=0,\dots,m_y$.  Observe that we index the elements by their upper-right node (corner).  Each element has area $|\square_{ij}| = h_x h_y$.  Also $\bigcup  \square_{ij} = \overline \Omega$.
+for $i=0,\dots,m_x$ and $j=0,\dots,m_y$.  We index the elements by their upper-right node (corner).  Each element has area $|\square_{ij}| = h_x h_y$.
 
-We immediately see that the functional in \eqref{eq:of:functional} can be computed element-by-element, because the element boundaries are of zero measure and integration is additive.  Let
+The functional in \eqref{eq:of:functional} can be computed element-by-element,\footnote{Because element boundaries have zero measure and integration is additive.}
 \begin{equation}
-I^h[u] = \sum_{i=0}^{m_x} \sum_{j=0}^{m_y} \int_{\square_{ij}} \frac{1}{p} |\grad u|^p - fu  \label{eq:of:sumoverelements}
+I[u] = \sum_{i=0}^{m_x} \sum_{j=0}^{m_y} \int_{\square_{ij}} \frac{1}{p} |\grad u|^p - fu  \label{eq:of:sumoverelements}
 \end{equation}
-Integration over a single element $\square_{ij}$ can be addressed once we represent $f$ and $u$.  A very similar sum over elements computes an approximation of the weak form \eqref{eq:of:plapweakform}.
+Integration over a single element $\square_{ij}$ can be addressed once we represent $f$ and $u$.  A similar sum over elements computes an approximation of the weak form \eqref{eq:of:plapweakform}; see (5.FIXME).
 
-So, how should we approximate a function $w \in W^{1,p}(\Omega)$ in a manner compatible with the structured grid of rectangles above?  One simple choice requires that the approximation $w_h \approx w$ be bilinear on each element $\square_{ij}$ and continuous on the whole domain $\Omega$.  These requirements allow us to determine $w_h(x,y)$, for any $(x,y)\in \overline\Omega$, from the nodal values $w_{ij} = w_h(x_i,y_j)$.  Said another way, there is a linear isomorphism between the vector space $\RR^{\tilde N}$ of possible nodal values, with $\tilde N$ equal to the total number of nodes, and an $\tilde N$-dimensional linear subspace of $W^{1,p}(\Omega)$, namely
+How should we approximate a function $w \in W^{1,p}(\Omega)$ in a manner compatible with a structured grid of rectangles?  One simple choice requires that the approximation $w_h$ be bilinear on each element $\square_{ij}$ and continuous on the whole domain $\Omega$.  These requirements determine $w_h(x,y)$ from the nodal values $w_{ij} = w_h(x_i,y_j)$.  Said another way, there is a linear isomorphism between the vector space $\RR^{\tilde N}$, and an $\tilde N$-dimensional linear subspace of $W^{1,p}(\Omega)$, namely
 \begin{equation}
 S^h = \left\{v \in C(\Omega) \, \Big| \, v|_{\square_{ij}} \text{ is bilinear}\right\}. \label{eq:of:Shdefn}
 \end{equation}
 Because the elements are quadrilaterals and the degree of bilinear polynomials is one, $S^h$ is a $Q^1$ \emph{finite element space} \citep{Elmanetal2005}
 
-The solution $u$ to minimization problem \eqref{eq:of:plapmin} must, however, have the boundary values given by $g$.  If $g$ is discontinuous or not piecewise-linear then its use as boundary values conflicts with the restrictions which define $S^h$.  We therefore require $g$ to be continuous and (appropriately) piece-wise linear on $\partial\Omega$.  One may show in that case that the functions
+The solution $u$ to minimization problem \eqref{eq:of:plapmin} must, however, have the boundary values given by $g$.  We require $g$ to be continuous and (appropriately) piece-wise linear on $\partial\Omega$, as otherwise its use conflicts with the restrictions which define $S^h$.  One may then show that the functions
 \begin{equation}
 S_g^h = \left\{v \in S^h \, \Big| \, v|_{\partial \Omega} = g\right\} \label{eq:of:Sghdefn}
 \end{equation}
-form an (affine) subspace of $W_g^{1,p}(\Omega)$.  Replacing $W_g^{1,p}(\Omega)$ by $S_g^h$ in problem \eqref{eq:of:plapmin} is a \emph{conforming}\sidenote{A ``nonconforming'' version might only have $u_h \approx g$ on the boundary.  For example, $u_h|_{\partial \Omega}$ might be the piecewise-linear interpolant of $g$.} $Q^1$ FEM.  Note that, given $g$, an element of $S_g^h$ is entirely determined by its values on interior nodes, so $S_g^h$ is an $N=m_x m_y$ dimensional subspace of $S^h$ and $W_g^{1,p}(\Omega)$.
+form an (affine) subspace of $W_g^{1,p}(\Omega)$.  Replacing $W_g^{1,p}(\Omega)$ by $S_g^h$ in problem \eqref{eq:of:plapmin} is a \emph{conforming}\sidenote{A ``nonconforming'' version might have $u_h|_{\partial \Omega}$ as the piecewise-linear interpolant of $g$.} $Q^1$ FEM.  Because an element of $S_g^h$ is entirely determined by its values on interior nodes, so $S_g^h$ is an $N=m_x m_y$ dimensional affine subspace of $S^h$.
 
 The next step is to describe a bilinear function on a single element $\square_{ij}$, and to thereby build a basis for space $S_g^h$.  We do this by constructing bilinear functions on a \emph{reference element}
-    $$\square_\ast = [-1,1]\times[-1,1],$$
-in variables $\xi$ and $\eta$, as shown in Figure \ref{fig:of:q1gridandref}.\sidenote{One may easily avoid using the reference element in the case here, because all elements are congruent rectangles.  However, we are thinking ahead toward less-structured examples (Chapter \ref{chap:un}).}
+    $$\square_\ast = [-1,1]\times[-1,1]$$
+in variables $\xi$ and $\eta$, as shown in Figure \ref{fig:of:q1gridandref}.\sidenote{One may easily avoid using the reference element because all elements are congruent rectangles.  We are, however, thinking ahead toward unstructured examples (Chapter \ref{chap:un}).}
 
 If $v(\xi,\eta)$ is bilinear on $\square_\ast$ then $v(\xi,\eta) = a + b\, \xi + c\, \eta + d\, \xi \eta$.  The monomial basis $\{1,\xi,\eta,\xi\eta\}$ is not, however, a convenient one.  Instead, number the vertices (nodes) of $\square_\ast$ as shown in Figure \ref{fig:of:q1gridandref}:
 \begin{align}
@@ -220,11 +218,11 @@ v(\xi,\eta) = \sum_{\ell=0}^3 v(\xi_\ell,\eta_\ell) \chi_\ell(\xi,\eta). \label{
 % arc:
   \draw[->,line width=1.0pt] (2.3,0.55) .. controls (1.8,1.0) and (0.7,1.0) .. (0.6,0.72);
 \end{tikzpicture}
-\caption{Each element $\square_{ij}$ is the image under a map from the reference element $\square_\ast$.  The corners of $\square_\ast$ are numbered $\ell=0,1,2,3$ and the $\ell=0$ corner maps to $(x_i,y_j)$.}
+\caption{Each element $\square_{ij}$ is the image under a map from the reference element $\square_\ast$.  The corners of $\square_\ast$ are numbered $\ell=0,1,2,3$.  The $\ell=0$ corner maps to $(x_i,y_j)$.}
 \label{fig:of:q1gridandref}
 \end{figure}
 
-The element map $\square_\ast \to \square_{ij}$ pictured in Figure \ref{fig:of:q1gridandref} can be written using the above basis functions $\chi_\ell$, and one can simplify significantly:
+The element map $\square_\ast \to \square_{ij}$ pictured in Figure \ref{fig:of:q1gridandref} can be written using the above basis functions $\chi_\ell$, or in simplified form:
 \begin{align}
 x(\xi,\eta) &= \sum_{\ell=0}^3 x_\ell \chi_\ell(\xi,\eta) = x_i + \frac{h_x}{2} (\xi-1), \label{eq:of:referencemap} \\
 y(\xi,\eta) &= \sum_{\ell=0}^3 y_\ell \chi_\ell(\xi,\eta) = y_j + \frac{h_y}{2} (\eta-1). \notag
@@ -250,23 +248,23 @@ When restricted to a particular element $\square_{ij}$, and then pulled-back to 
 \begin{equation}
   \psi_{p,q}(x(\xi,\eta),y(\xi,\eta)) = \chi_\ell(\xi,\eta).  \label{eq:of:phionref}
 \end{equation}
-However, to evaluate $I[u]$ in \eqref{eq:of:functional} we will want to compute gradients in the original $(x,y)$ variables:
+However, to evaluate $I[u]$ in \eqref{eq:of:sumoverelements} we will want to compute gradients in the original $(x,y)$ variables:
 \begin{equation}
   (\grad_{x,y} \psi_{p,q})(x(\xi,\eta),y(\xi,\eta)) = \left<\frac{2}{h_x}\frac{\partial\chi_\ell}{\partial \xi},\frac{2}{h_y}\frac{\partial\chi_\ell}{\partial \eta}\right>.   \label{eq:of:gradphionref}
 \end{equation}
-Derivatives $\partial\chi_\ell/\partial \xi$ and $\partial\chi_\ell/\partial \eta$ can be found from formula \eqref{eq:of:chidefn} above.  Checking equations \eqref{eq:of:phionref} and \eqref{eq:of:gradphionref} is an easy exercise.
+Derivatives $\partial\chi_\ell/\partial \xi$ and $\partial\chi_\ell/\partial \eta$ can be found from formula \eqref{eq:of:chidefn} above.  Checking equation \eqref{eq:of:gradphionref} is an easy exercise.
 
-Suppose we have $v \in S_0^h$.  It can be represented using hat functions at the interior nodes
+Suppose we have $v \in S_0^h$.  It can be represented using hat functions at the $N$ interior nodes
 \begin{equation}
 v(x,y) = \sum_{i=0}^{m_x-1} \sum_{j=0}^{m_y-1} v_{i,j} \psi_{i,j}(x,y) \label{eq:of:bilinearrepresentation}
 \end{equation}
-on $\Omega$.  On the other hand, suppose we have $v \in S^h$ with unspecified boundary values.  It can be written almost the same as \eqref{eq:of:bilinearrepresentation} but with expanded summation ranges of $i=-1,0,\dots,m_x$ and $j=-1,0,\dots,m_y$, respectively, thereby including the hat functions along the boundary.  We will see that \PETSc makes it reasonably natural to represent the latter kinds of functions as having ``ghost values'' off the edge of the grid of interior nodes.
+on $\Omega$.  On the other hand, suppose we have $v \in S^h$ with unspecified boundary values.  It can be written almost the same as \eqref{eq:of:bilinearrepresentation} but with expanded summation ranges of $i=-1,0,\dots,m_x$ and $j=-1,0,\dots,m_y$, respectively, including the hat functions along the boundary.  \PETSc makes it easy to represent any function in $S^h$ through ``ghost values'' off the edge of the grid of interior nodes.
 
-In either case such a function is bilinear on element $\square_{i,j}$ and it pulls-back to the reference element $\square_\ast$, using local node numbering, as
+A function in $S^h$ is bilinear on element $\square_{i,j}$ and it pulls-back to the reference element $\square_\ast$, using local node numbering, as
 \begin{equation}
 v(\xi,\eta) = \sum_{\ell=0}^3 v_\ell \chi_\ell(\xi,\eta)  \qquad \text{on } \,\square_\ast. \label{eq:of:bilinearref}
 \end{equation}
-The coefficient $v_\ell$ is equal to $v_{r,s} = v(x_r,y_s)$ for $(x_r,y_s)\in\square_{i,j}$ corresponding under the element map to $(\xi_\ell,\eta_\ell) \in \square_\ast$.  Also, on the reference element the $(x,y)$ gradient has formula:
+The coefficient $v_\ell$ is equal to $v_{r,s} = v(x_r,y_s)$ for $(x_r,y_s)\in\square_{i,j}$ corresponding under the element map to $(\xi_\ell,\eta_\ell) \in \square_\ast$.  Also, by \eqref{eq:of:gradphionref} the $(x,y)$ gradient has formula:
 \begin{equation}
   (\grad_{x,y} v)(\xi,\eta) = \left<\frac{2}{h_x} \sum_{\ell=0}^3 v_\ell \frac{\partial\chi_\ell}{\partial \xi}, \frac{2}{h_y} \sum_{\ell=0}^3 v_\ell \frac{\partial\chi_\ell}{\partial \eta}\right>. \label{eq:of:gradrepref}
 \end{equation}
