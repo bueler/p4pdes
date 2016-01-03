@@ -272,7 +272,7 @@ The coefficient $v_\ell$ is equal to $v_{r,s} = v(x_r,y_s)$ for $(x_r,y_s)\in\sq
 
 \section{Quadrature}
 
-We do not plan to exactly-compute the integrals in \eqref{eq:of:sumoverelements}, or in the corresponding sum for \eqref{eq:of:plapweakform}.  Instead we will use numerical integration (quadrature).  One reason is that for general $p$ it would be quite challenging to exactly-integrate the term ``$|\grad u|^p$.''
+We do not plan to exactly-compute the integrals in \eqref{eq:of:sumoverelements}.  Instead we will use numerical integration, also known a \emph{quadrature}.  Indeed, for general $p$ it would be quite challenging to exactly-integrate the term ``$|\grad u|^p$.''
 
 First, change-of-variables transfers the integral to the reference element.  Suppose $v(x,y)$ is any integrable function on element $\square_{i,j}$.  Using the element map and \eqref{eq:of:elementjacobian} we have
 \begin{equation}
@@ -284,7 +284,7 @@ Next, recall Gauss-Legendre quadrature on integrals in one dimension \citep{Gree
 \begin{equation}
 \int_{-1}^1 f(z)\,dz \approx \sum_{q=0}^{n-1} w_q f(z_q).  \label{eq:of:gauss}
 \end{equation}
-The degree $n$ rule \eqref{eq:of:gauss} is exact for polynomials of degree $2n-1$ and less.  For degrees $n=1,2,3$, the quadrature \emph{nodes} $z_q$ and \emph{weights} $w_q$ for integration over the interval $[-1,1]$ are given in \ref{tab:of:gauss}.  Such a one-dimensional rule extends to tensor product formulas for integrals like \eqref{eq:of:changeofvars} over $\square_\ast$, namely
+The degree $n$ rule \eqref{eq:of:gauss} is exact for polynomials of degree $2n-1$ and less.  For degrees $n=1,2,3$, the quadrature \emph{nodes} $z_q$ and \emph{weights} $w_q$ for integration over the interval $[-1,1]$ are given in Table \ref{tab:of:gauss}.  Rule \eqref{eq:of:gauss} extends to tensor product formulas for integrals over $\square_\ast$:
 \begin{equation}
 \int_{\square_\ast} v(\xi,\eta) \,d\xi\,d\eta \approx \sum_{r=0}^{n-1} \sum_{s=0}^{n-1} w_r w_s v(z_r,z_s).  \label{eq:of:tensorgauss}
 \end{equation}
@@ -299,61 +299,53 @@ $3$ & $-\sqrt{\frac{3}{5}}, 0, +\sqrt{\frac{3}{5}}$ & $\frac{5}{9}, \frac{8}{9},
 \caption{Nodes and weights for low-degree Gauss-Legendre quadrature rules, for integrals \eqref{eq:of:gauss}.} \label{tab:of:gauss}
 \end{table}
 
-\medskip
+\bigskip
 
-Formulas \eqref{eq:of:bilinearref}, \eqref{eq:of:gradrepref}, and \eqref{eq:of:changeofvars} are used to evaluate the integrand in \eqref{eq:of:sumoverelements} on the reference element using the nodal values of $u$ and $f$.  Informally, we define
+Formulas \eqref{eq:of:bilinearref}, \eqref{eq:of:gradrepref}, \eqref{eq:of:changeofvars}, and \eqref{eq:of:tensorgauss} combine to give an easily-computed approximation of integral in \eqref{eq:of:sumoverelements}.  First, on the reference element we define
 \begin{equation}
-G(\xi,\eta) = \left[\frac{1}{p} |\grad u|^p - fu\right]_{\square_\ast}  \label{eq:of:integrandheuristic}
+G(\xi,\eta) = \left[\frac{1}{p} |\grad u|^p - fu\right]_{\square_\ast} \label{eq:of:integrandheuristic}
 \end{equation}
-The details are in Exercise \ref{chap:of}.\ref{exer:of:integrand}.
-
-In these terms, using quadrature \eqref{eq:of:tensorgauss}, formula \eqref{eq:of:sumoverelements} becomes computable:
-\begin{align}
-I^h[u] &= \frac{h_x h_y}{4} \sum_{i=0}^{m_x} \sum_{j=0}^{m_y} \int_{\square_\ast} G(\xi,\eta) \,d\xi\,d\eta \notag \\
-       &\approx \frac{h_x h_y}{4} \sum_{i=0}^{m_x} \sum_{j=0}^{m_y} \sum_{r=0}^{n-1} \sum_{s=0}^{n-1} w_r w_s G(z_r,z_s) \label{eq:of:quadraturesumoverelements}
-\end{align}
-This is enough for a prototype implementation.
+using the nodal values of $u$ and $f$.  (The details are in Exercise \ref{chap:of}.\ref{exer:of:integrand}.)  Then, formula \eqref{eq:of:sumoverelements} becomes
+\begin{equation}
+I^h[u] = \frac{h_x h_y}{4} \quad \underbrace{\sum_{i=0}^{m_x} \sum_{j=0}^{m_y}}_{\begin{smallmatrix} \text{sum} \\ \text{over} \\ \text{elements} \end{smallmatrix}} \quad \underbrace{\sum_{r=0}^{n-1} \sum_{s=0}^{n-1}}_{\begin{smallmatrix} \text{sum} \\ \text{over} \\ \text{quadrature points} \end{smallmatrix}} \, w_r w_s G(z_r,z_s) \label{eq:of:quadraturesumoverelements}
+\end{equation}
+We now have enough detail for a prototype implementation.
 
 
 \section{Objective-only implementation}
 
-Our code is displayed in six parts, Codes \ref{code:plapI}--\ref{code:plapVI}.  The last part, which implements \eqref{eq:of:plapweakform}, is only shown after we get the code running initially using only an implementation of the objective \eqref{eq:of:functional}.
+Our code is displayed in seven parts, Codes \ref{code:plapI}--\ref{code:plapVII}.\footnote{Part \ref{code:plapVII}, which implements \eqref{eq:of:plapweakform}, is shown after we get the code running initially using only an implementation of the objective \eqref{eq:of:functional}.}  The first part configures the problem.  Options choose the exponent $p$ and whether we want to use a manufactured solution for verification.  The corresponding variables are stored in a context \texttt{struct} called ``\texttt{PLapCtx}'' so they can be passed among our functions as needed.
 
-The first part (Code \ref{code:plapI}) configures the problem.  Options choose the exponent $p$ and whether we want to use a manufactured solution for verification.  The corresponding variables are stored in a context \texttt{struct} called ``\texttt{PLapCtx}'' so they can be passed among our functions as needed.  Code \ref{code:plapI} also includes a method to print basic information available at the end of the solve.
+\cinputpart{plap.c}{\CODELOC}{Declare and configure the context \texttt{PLapCtx}.}{I}{//STARTCONFIGURE}{//ENDCONFIGURE}{code:plapI}
 
 The exact solution is constructed in Code \ref{code:plapII}.  It is about as simple as possible for the $p$-laplacian, and we only construct it in the $p=2$ and $p=4$ cases.\sidenote{If $p=2$ then the strong form \eqref{eq:of:plapstrongform} is the linear Poisson equation addressed in Chapter \ref{chap:st}.}  In brief summary, the exact solution $u(x,y)$ is chosen exactly as in Chapter \ref{chap:st}, namely equation \eqref{eq:st:exactsolution}:
 \begin{equation}
     u(x,y) = (x^2 - x^4) (y^4 - y^2), \label{eq:of:exactsolution}
 \end{equation}
-and $f$ is set accordingly by \eqref{eq:of:plapstrongform}.  In cases where we do not test against a manufactured solution, we simply set $f=1$.  For now, only zero Dirichlet boundary values $g(x,y)=0$ are implemented.
+and $f$ is set accordingly by \eqref{eq:of:plapstrongform}.  In cases where we do not test against a manufactured solution, we simply set $f=1$.  For now, only zero Dirichlet boundary values $g(x,y)=0$ are implemented.  The by-hand derivative calculation which generates $f(x,y)$ from the exact solution $u(x,y)$ is acceptably simple in the restricted cases $p=2,4$, but it is still error-prone.  However, because by-hand calculation errors are likely to be un-correlated to implementation errors in other parts of the code, agreement is likely to reflect correctness.
 
-The by-hand derivative calculation which generates $f(x,y)$ from the exact solution $u(x,y)$ is acceptably simple in the restricted cases $p=2,4$, but it is still error-prone.  However, because by-hand calculation errors are likely to be un-correlated to implementation errors in other parts of the code, agreement is likely to reflect correctness.
-
-\clearpage
-\cinputpart{plap.c}{\CODELOC}{Configure the context \texttt{PLapCtx} and print results.}{I}{//STARTCONFIGURE}{//ENDCONFIGURE}{code:plapI}
-
-\clearpage
 \cinputpart{plap.c}{\CODELOC}{Implement exact solution \eqref{eq:of:exactsolution} in the restricted ($p=2,4$) cases.}{II}{//STARTEXACT}{//ENDEXACT}{code:plapII}
 
-\clearpage
-\cinputpart{plap.c}{\CODELOC}{Tools for the $Q^1$ FEM method.  We implement formulas \eqref{eq:of:chidefn}, \eqref{eq:of:bilinearref}, and \eqref{eq:of:gradrepref}.  Note that a two-element struct \texttt{gradRef} holds the two components of a gradient.}{III}{//STARTFEM}{//ENDFEM}{code:plapIII}
+FIXME part \ref{code:plapIII}
 
-Next we show FEM tools in Code \ref{code:plapIII}.  FIXME
+\cinputpart{plap.c}{\CODELOC}{Set boundary and initial values.  The boundary values are set for the ghosted points of a \texttt{Local} \pVec.}{III}{//STARTBOUNDARY}{//ENDBOUNDARY}{code:plapIII}
+
+\cinputpart{plap.c}{\CODELOC}{Tools for the $Q^1$ FEM method.  We implement formulas \eqref{eq:of:chidefn}, \eqref{eq:of:bilinearref}, and \eqref{eq:of:gradrepref}.  Note that a two-element struct \texttt{gradRef} holds the two components of a gradient.}{IV}{//STARTFEM}{//ENDFEM}{code:plapIV}
+
+Next we show FEM tools in Code \ref{code:plapIV}.  FIXME
 
 We have explained the $Q^1$ FEM implementation of the objective function $I[u]$.  Code \ref{code:plapIV} does that.  FIXME
 
-\clearpage
-\cinputpart{plap.c}{\CODELOC}{Implement the formula $G(\xi,\eta)$ from Exercise \ref{chap:of}.\ref{exer:of:integrand}, formula \eqref{eq:of:tensorgauss}, and formula \eqref{eq:of:quadraturesumoverelements}.}{IV}{//STARTOBJECTIVE}{//ENDOBJECTIVE}{code:plapIV}
+\cinputpart{plap.c}{\CODELOC}{Implement the formula $G(\xi,\eta)$ from Exercise \ref{chap:of}.\ref{exer:of:integrand}, formula \eqref{eq:of:tensorgauss}, and formula \eqref{eq:of:quadraturesumoverelements}.}{V}{//STARTOBJECTIVE}{//ENDOBJECTIVE}{code:plapV}
 
-The main part, Code \ref{code:plapV}, FIXME DOES THE USUAL STUFF AND CALLS \texttt{SNESSetObjective()} only.  Except \texttt{SNESSetFunction()} is available but no hand-made Jacobian at all.
+The main part, Code \ref{code:plapVI}, FIXME DOES THE USUAL STUFF AND CALLS \texttt{SNESSetObjective()} only.  Except \texttt{SNESSetFunction()} is available but no hand-made Jacobian at all.
 
-\clearpage
-\cinputpart{plap.c}{\CODELOC}{FIXME V}{V}{//STARTMAIN}{//ENDMAIN}{code:plapV}
+\cinputpart{plap.c}{\CODELOC}{FIXME}{VI}{//STARTMAIN}{//ENDMAIN}{code:plapVI}
 
 
-\section{Residual function $=$ gradient}
+\section{Residual function (gradient) implementation}
 
-\cinputpart{plap.c}{\CODELOC}{FIXME VI}{VI}{//STARTFUNCTION}{//ENDFUNCTION}{code:plapVI}
+\cinputpart{plap.c}{\CODELOC}{FIXME}{VII}{//STARTFUNCTION}{//ENDFUNCTION}{code:plapVII}
 
 
 \section{FIXME looking at result and performance}
@@ -374,7 +366,7 @@ FIXME
 \renewcommand{\labelenumi}{\arabic{chapter}.\arabic{enumi}\quad}
 \renewcommand{\labelenumii}{(\alph{enumii})}
 \begin{enumerate}
-\item  \label{exer:of:twoproperties}  This two-part exercise may be too much of a mathematical excursion for some readers.
+\item  \label{exer:of:twoproperties}  \emph{This two-part exercise is a mathematical excursion which some readers may wish to skip.}
   \begin{enumerate}
   \item For $1 \le p < \infty$, prove coercivity \eqref{eq:of:coercivity} of functional $I[u]$, defined in \eqref{eq:of:functional}, on $W_0^{1,p}(\Omega)$.  (\emph{Hints}:  Use Poincar\`e inequality \citep[Theorem 6.30]{AdamsFournier2003} to convert to replace the leading term with the full $W^{1,p}$ norm.  Use Young's inequality with $\epsilon>0$ \citep[Appendix B]{Evans2010} for the ``$-fu$'' term.  Now choose $\eps$ appropriately.)
   \item For $1 < p < \infty$, prove strict convexity \eqref{eq:of:convexity} of functional $I[u]$ on $W_0^{1,p}(\Omega)$.  (\emph{Hint}:  The argument in section 5.3 of \citet{Ciarlet2002} suffices.)
