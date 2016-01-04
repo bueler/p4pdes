@@ -152,7 +152,7 @@ The functional in \eqref{eq:of:functional} can be computed element-by-element,\f
 \begin{equation}
 I[u] = \sum_{i=0}^{m_x} \sum_{j=0}^{m_y} \int_{\square_{ij}} \frac{1}{p} |\grad u|^p - fu  \label{eq:of:sumoverelements}
 \end{equation}
-Integration over a single element $\square_{ij}$ can be addressed once we represent $f$ and $u$.  A similar sum over elements computes an approximation of the weak form \eqref{eq:of:plapweakform}; see (5.FIXME).
+Integration over a single element $\square_{ij}$ can be addressed once we represent $f$ and $u$.  A related sum over elements computes an approximation of the weak form \eqref{eq:of:plapweakform}; see \eqref{eq:of:weakformbasis} and \eqref{eq:of:weakformdetail}.
 
 How should we approximate a function $w \in W^{1,p}(\Omega)$ in a manner compatible with a structured grid of rectangles?  One simple choice requires that the approximation $w_h$ be bilinear on each element $\square_{ij}$ and continuous on the whole domain $\Omega$.  These requirements determine $w_h(x,y)$ from the nodal values $w_{ij} = w_h(x_i,y_j)$.  Said another way, there is a linear isomorphism between the vector space $\RR^{\tilde N}$, and an $\tilde N$-dimensional linear subspace of $W^{1,p}(\Omega)$, namely
 \begin{equation}
@@ -404,14 +404,19 @@ FIXME
 for $k=0,1,\dots,6$, confirm that the $n=1,2,3$ Gauss-Legendre quadrature formulas listed in the text will exactly integrate degree $2n-1$ degree polynomials, but not degree $2n$ polynomials, on the reference element.
 % solution:  matlab/testgauss2d.m
 
-\item \label{exer:of:integrand}  Show that \eqref{eq:of:integrandheuristic} is
+\item \label{exer:of:integrand}  Show that \eqref{eq:of:integrandheuristic} is, in detail,
 \begin{align*}
 G_{ij}(\xi,\eta) &= \frac{1}{p} \left[\frac{4}{h_x^2} \left(\sum_{\ell=0}^3 u_\ell \frac{\partial\chi_\ell}{\partial \xi}\right)^2 + \frac{4}{h_y^2} \left(\sum_{\ell=0}^3 u_\ell \frac{\partial\chi_\ell}{\partial \eta}\right)^2\right]^{p/2} \\
   &\qquad - \left(\sum_{\ell=0}^3 f_\ell \chi_\ell\right) \left(\sum_{\ell=0}^3 u_\ell \chi_\ell\right)
 \end{align*}
 where $u_\ell$ and $f_\ell$ are local-node-numbered values of $u$ and $f$ on element $\square_{ij}$.
 
-\item \label{exer:of:weakformintegrand}  FIXME
+\item \label{exer:of:weakformintegrand}  Show that \eqref{eq:of:weakformintegrandref} is, in detail,
+\begin{align*}
+H_{ijcd}(\xi,\eta) &= \left[\frac{4}{h_x^2} \left(\sum_{\ell=0}^3 u_\ell \frac{\partial\chi_\ell}{\partial \xi}\right)^2 + \frac{4}{h_y^2} \left(\sum_{\ell=0}^3 u_\ell \frac{\partial\chi_\ell}{\partial \eta}\right)^2\right]^{(p-2)/2} \\
+  &\qquad \cdot \left[\frac{4}{h_x^2} \left(\sum_{\ell=0}^3 u_\ell \frac{\partial\chi_\ell}{\partial \xi}\right) \frac{\partial\chi_{[ij]}}{\partial \xi} + \frac{4}{h_y^2} \left(\sum_{\ell=0}^3 u_\ell \frac{\partial\chi_\ell}{\partial \eta}\right) \frac{\partial\chi_{[ij]}}{\partial \eta}\right] \\
+  &\quad - \left(\sum_{\ell=0}^3 f_\ell \chi_\ell\right) \chi_{[ij]}
+\end{align*}
 
 \item Figure \ref{fig:of:cartoonfunctional} shows the graph of $\Phi(x,y)=\tfrac{1}{4}(x^4+y^4) - 2x + 2y$, a cartoon for the $p$-Laplacian functional $I[u]$ in the case $p=4$.  Solve
     $$\min_{x,y} \Phi(x,y)$$
