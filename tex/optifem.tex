@@ -246,13 +246,13 @@ Such ``hat'' functions, illustrated in Figure \ref{fig:of:q1hat}, form a basis o
 
 When restricted to a particular element $\square_{ij}$, and then pulled-back to the reference element $\square_\ast$, the hat function $\psi_{p,q}$ is either identically zero or it is equal to one of the basis functions $\chi_\ell$.  That is, if node $(\xi_\ell,\eta_\ell) \in \square_\ast$ corresponds to node $(x_p,y_q) \in \overline\Omega$, under the element map onto $\square_{ij}$, then 
 \begin{equation}
-  \psi_{p,q}(x(\xi,\eta),y(\xi,\eta)) = \chi_\ell(\xi,\eta).  \label{eq:of:phionref}
+  \psi_{p,q}(x(\xi,\eta),y(\xi,\eta)) = \chi_\ell(\xi,\eta).  \label{eq:of:psionref}
 \end{equation}
 However, to evaluate $I[u]$ in \eqref{eq:of:sumoverelements} we will want to compute gradients in the original $(x,y)$ variables:
 \begin{equation}
-  (\grad_{x,y} \psi_{p,q})(x(\xi,\eta),y(\xi,\eta)) = \left<\frac{2}{h_x}\frac{\partial\chi_\ell}{\partial \xi},\frac{2}{h_y}\frac{\partial\chi_\ell}{\partial \eta}\right>.   \label{eq:of:gradphionref}
+  (\grad_{x,y} \psi_{p,q})(x(\xi,\eta),y(\xi,\eta)) = \left<\frac{2}{h_x}\frac{\partial\chi_\ell}{\partial \xi},\frac{2}{h_y}\frac{\partial\chi_\ell}{\partial \eta}\right>.   \label{eq:of:gradpsionref}
 \end{equation}
-Derivatives $\partial\chi_\ell/\partial \xi$ and $\partial\chi_\ell/\partial \eta$ can be found from formula \eqref{eq:of:chidefn} above.  Checking equation \eqref{eq:of:gradphionref} is an easy exercise.
+Derivatives $\partial\chi_\ell/\partial \xi$ and $\partial\chi_\ell/\partial \eta$ can be found from formula \eqref{eq:of:chidefn} above.  Checking equation \eqref{eq:of:gradpsionref} is an easy exercise.
 
 Suppose we have $v \in S_0^h$.  It can be represented using hat functions at the $N$ interior nodes
 \begin{equation}
@@ -264,7 +264,7 @@ A function in $S^h$ is bilinear on element $\square_{i,j}$ and it pulls-back to 
 \begin{equation}
 v(\xi,\eta) = \sum_{\ell=0}^3 v_\ell \chi_\ell(\xi,\eta)  \qquad \text{on } \,\square_\ast. \label{eq:of:bilinearref}
 \end{equation}
-The coefficient $v_\ell$ is equal to $v_{r,s} = v(x_r,y_s)$ for $(x_r,y_s)\in\square_{i,j}$ corresponding under the element map to $(\xi_\ell,\eta_\ell) \in \square_\ast$.  Also, by \eqref{eq:of:gradphionref} the $(x,y)$ gradient has formula:
+The coefficient $v_\ell$ is equal to $v_{r,s} = v(x_r,y_s)$ for $(x_r,y_s)\in\square_{i,j}$ corresponding under the element map to $(\xi_\ell,\eta_\ell) \in \square_\ast$.  Also, by \eqref{eq:of:gradpsionref} the $(x,y)$ gradient has formula:
 \begin{equation}
   (\grad_{x,y} v)(\xi,\eta) = \left<\frac{2}{h_x} \sum_{\ell=0}^3 v_\ell \frac{\partial\chi_\ell}{\partial \xi}, \frac{2}{h_y} \sum_{\ell=0}^3 v_\ell \frac{\partial\chi_\ell}{\partial \eta}\right>. \label{eq:of:gradrepref}
 \end{equation}
@@ -303,11 +303,11 @@ $3$ & $-\sqrt{\frac{3}{5}}, 0, +\sqrt{\frac{3}{5}}$ & $\frac{5}{9}, \frac{8}{9},
 
 Formulas \eqref{eq:of:bilinearref}, \eqref{eq:of:gradrepref}, \eqref{eq:of:changeofvars}, and \eqref{eq:of:tensorgauss} combine to give an easily-computed approximation of integral in \eqref{eq:of:sumoverelements}.  First, on the reference element we define
 \begin{equation}
-G(\xi,\eta) = \left[\frac{1}{p} |\grad u|^p - fu\right]_{\square_\ast} \label{eq:of:integrandheuristic}
+G_{ij}(\xi,\eta) = \left[\frac{1}{p} |\grad u|^p - fu\right]_{\square_\ast} \label{eq:of:integrandheuristic}
 \end{equation}
-using the nodal values of $u$ and $f$.  (The details are in Exercise \ref{chap:of}.\ref{exer:of:integrand}.)  Then, formula \eqref{eq:of:sumoverelements} becomes
+using the nodal values of $u$ and $f$ on element $\square_{ij}$.  (The details are in Exercise \ref{chap:of}.\ref{exer:of:integrand}.)  Then, formula \eqref{eq:of:sumoverelements} becomes
 \begin{equation}
-I^h[u] = \frac{h_x h_y}{4} \quad \underbrace{\sum_{i=0}^{m_x} \sum_{j=0}^{m_y}}_{\begin{smallmatrix} \text{sum} \\ \text{over} \\ \text{elements} \end{smallmatrix}} \quad \underbrace{\sum_{r=0}^{n-1} \sum_{s=0}^{n-1}}_{\begin{smallmatrix} \text{sum} \\ \text{over} \\ \text{quadrature points} \end{smallmatrix}} \, w_r w_s G(z_r,z_s) \label{eq:of:quadraturesumoverelements}
+I^h[u] = \frac{h_x h_y}{4} \quad \underbrace{\sum_{i=0}^{m_x} \sum_{j=0}^{m_y}}_{\begin{smallmatrix} \text{sum} \\ \text{over} \\ \text{elements} \end{smallmatrix}} \quad \underbrace{\sum_{r=0}^{n-1} \sum_{s=0}^{n-1}}_{\begin{smallmatrix} \text{sum} \\ \text{over} \\ \text{quadrature points} \end{smallmatrix}} \, w_r w_s G_{ij}(z_r,z_s) \label{eq:of:quadraturesumoverelements}
 \end{equation}
 We now have enough detail for a prototype implementation.
 
@@ -345,6 +345,29 @@ The main part, Code \ref{code:plapVI}, FIXME DOES THE USUAL STUFF AND CALLS \tex
 
 \section{Residual function (gradient) implementation}
 
+As we will see, there are significant limitations to the objective-only implementation above.  Grids other than the very coarsest lead to unreasonable numbers of evaluations of the objective function.  Furthermore the quality of the numerically-approximated finite difference gradient of the objective function, that is, of the residual function, is low.  So we take the next step in user-written code, by implementing a residual function.
+
+Recall \eqref{eq:of:plapweakform}, the weak form of the $p$-Laplacian equation, which says $\grad I[u](v) = 0$ for all $v\in W_0^{1,p}(\Omega)$.  The corresponding statement for $u\in S_g^h$ and all $v \in S_0^h$ can be written out in the basis of hat functions.
+
+Thus we require $u$ to satisfy \eqref{eq:of:plapweakform} for $v=\psi_{ij}$ at each of the $N$ interior nodes:
+\begin{equation}
+\int_\Omega |\grad u|^{p-2} \grad u \cdot \grad \psi_{ij} - f \psi_{ij} = 0. \label{eq:of:weakformbasis}
+\end{equation}
+Note that the support of $\psi_{ij}$ is localized around the node $(x_i,y_j)$,
+    $$\operatorname{supp} \psi_{ij} = \square_{ij} \cup \square_{i+1,j} \cup \square_{i,j+1} \cup \square_{i+1,j+1},$$
+so in fact the integral in \eqref{eq:of:weakformbasis} is over these four elements.  Also, on the reference element we define
+\begin{equation}
+H_{ijcd}(\xi,\eta) = \left[|\grad u|^{p-2} \grad u \cdot \grad \chi_{[ij]} - f \chi_{[ij]}\right]_{\square_\ast} \label{eq:of:weakformintegrandref}
+\end{equation}
+where $\chi_{[ij]}$ denotes the basis function $\chi_\ell$ corresponding to $\psi_{ij}$--- recall equation \eqref{eq:of:psionref}---and where we use the nodal values of $u$ and $f$ on element $\square_{i+c,j+d}$ for $c,d=0,1$.  (Compare equation \eqref{eq:of:integrandheuristic}.  The details for equation \eqref{eq:of:weakformintegrandref} are in Exercise \ref{chap:of}.\ref{exer:of:weakformintegrand}.)  Finally, we do the element integrals implied by \eqref{eq:of:weakformbasis} by using quadrature \eqref{eq:of:tensorgauss}.
+
+In these terms, we rewrite \eqref{eq:of:weakformbasis} as this equation,
+\begin{equation}
+0 = \frac{h_x h_y}{4} \sum_{c=0}^1 \sum_{d=0}^1 \sum_{r=0}^{n-1} \sum_{s=0}^{n-1} w_r w_s H_{ijcd}(z_r,z_s).  \label{eq:of:weakformdetail}
+\end{equation}
+There is one such nonlinear equation for each of the $N$ interior nodes $(x_i,y_j)$.  Solving this system of equations is intended to determine all $N$ values $u_{ij}$.
+
+
 \cinputpart{plap.c}{\CODELOC}{FIXME}{VII}{//STARTFUNCTION}{//ENDFUNCTION}{code:plapVII}
 
 
@@ -374,7 +397,7 @@ FIXME
 
 \item Show that $S^h$ is a linear subspace of $W^{1,p}(\Omega)$ with dimension $(m_x+2)(m_y+2)$, and that $S_0^h$ has dimension $m_x m_y$.  What precisely is meant by saying $g$ is ``(appropriately) piece-wise linear on $\partial\Omega$'' in the definition of $S_g^h$ on page \pageref{eq:of:Sghdefn}?
 
-\item  Use \eqref{eq:of:refcorners} and \eqref{eq:of:chidefn} to show that the two forms of the reference map \eqref{eq:of:referencemap} are the same.  Then use \eqref{eq:of:chidefn}, \eqref{eq:of:referencemap}, and \eqref{eq:of:phionref} to derive \eqref{eq:of:gradphionref}.
+\item  Use \eqref{eq:of:refcorners} and \eqref{eq:of:chidefn} to show that the two forms of the reference map \eqref{eq:of:referencemap} are the same.  Then use \eqref{eq:of:chidefn}, \eqref{eq:of:referencemap}, and \eqref{eq:of:psionref} to derive \eqref{eq:of:gradpsionref}.
 
 \item By testing against the integral
     $$\int_{\square_\ast} (1+\xi)^k + (1+\eta)^k\,d\xi\, d\eta = \frac{2^{k+3}}{k+1}$$
@@ -383,10 +406,12 @@ for $k=0,1,\dots,6$, confirm that the $n=1,2,3$ Gauss-Legendre quadrature formul
 
 \item \label{exer:of:integrand}  Show that \eqref{eq:of:integrandheuristic} is
 \begin{align*}
-G(\xi,\eta) &= \frac{1}{p} \left[\frac{4}{h_x^2} \left(\sum_{\ell=0}^3 u_\ell \frac{\partial\chi_\ell}{\partial \xi}\right)^2 + \frac{4}{h_y^2} \left(\sum_{\ell=0}^3 u_\ell \frac{\partial\chi_\ell}{\partial \eta}\right)^2\right]^{p/2} \\
-  &\qquad - \left(\sum_{\ell=0}^3 f_\ell \chi_\ell(\xi,\eta)\right) \left(\sum_{\ell=0}^3 u_\ell \chi_\ell(\xi,\eta)\right)
+G_{ij}(\xi,\eta) &= \frac{1}{p} \left[\frac{4}{h_x^2} \left(\sum_{\ell=0}^3 u_\ell \frac{\partial\chi_\ell}{\partial \xi}\right)^2 + \frac{4}{h_y^2} \left(\sum_{\ell=0}^3 u_\ell \frac{\partial\chi_\ell}{\partial \eta}\right)^2\right]^{p/2} \\
+  &\qquad - \left(\sum_{\ell=0}^3 f_\ell \chi_\ell\right) \left(\sum_{\ell=0}^3 u_\ell \chi_\ell\right)
 \end{align*}
-where $u_\ell$ and $f_\ell$ are local-node-numbered values ``extracted'' from $u_{ij}$ and $f_{ij}$, respectively.  Show how the extraction is done, observing that $f_{ij}$ \emph{is} defined for nodes in $\partial \Omega$, while $u_{ij}$ is not.  (On the other hand, all four values of ``$u_\ell$'' can be, and must be, defined for each element.)
+where $u_\ell$ and $f_\ell$ are local-node-numbered values of $u$ and $f$ on element $\square_{ij}$.
+
+\item \label{exer:of:weakformintegrand}  FIXME
 
 \item Figure \ref{fig:of:cartoonfunctional} shows the graph of $\Phi(x,y)=\tfrac{1}{4}(x^4+y^4) - 2x + 2y$, a cartoon for the $p$-Laplacian functional $I[u]$ in the case $p=4$.  Solve
     $$\min_{x,y} \Phi(x,y)$$
