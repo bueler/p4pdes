@@ -108,6 +108,9 @@ PetscErrorCode ExactRHSLocal(DMDALocalInfo *info, Vec uex, Vec f, PLapCtx *user)
 //ENDEXACT
 
 //STARTFEM
+static PetscReal zq[2] = {-0.577350269189626,0.577350269189626},
+                 wq[2] = {1.0,1.0};
+
 static PetscReal xiL[4]  = { 1.0, -1.0, -1.0,  1.0},
                  etaL[4] = { 1.0,  1.0, -1.0, -1.0};
 
@@ -167,9 +170,6 @@ PetscReal ObjIntegrand(const PetscReal f[4], const PetscReal u[4],
   const gradRef du = deval(u,xi,eta);
   return GradPow(du,P,info) / P - eval(f,xi,eta) * eval(u,xi,eta);
 }
-
-static PetscReal zq[2] = {-0.577350269189626,0.577350269189626},
-                 wq[2] = {1.0,1.0};
 
 PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **au,
                                   PetscReal *obj, PLapCtx *user) {
