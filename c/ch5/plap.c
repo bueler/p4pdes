@@ -24,7 +24,7 @@ static char help[] = "Solve the p-laplacian equation in 2D using Q^1 FEM\n"
 
 #define COMM PETSC_COMM_WORLD
 
-//STARTBOUNDARY
+//STARTDECLARE
 typedef struct {
   DM        da;
   PetscReal p;
@@ -34,42 +34,42 @@ typedef struct {
 PetscReal BoundaryG(PetscReal x, PetscReal y) {
     return 0.5 * (x+1.0)*(x+1.0) * (y+1.0)*(y+1.0);
 }
+//ENDDECLARE
 
+//STARTBOUNDARY
 PetscErrorCode SetBoundaryLocal(DMDALocalInfo *info, PetscReal **au) {
-  const PetscInt  XE = info->xs + info->xm, YE = info->ys + info->ym;
   const PetscReal hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1);
   PetscInt        i,j;
   PetscReal       x,y;
 
-  for (j = info->ys-1; j <= YE; j++) {
+  for (j = info->ys-1; j <= info->ys + info->ym; j++) {
       y = hy * (j + 1);
       if ((j == -1) || (j == info->mx)) {
-          for (i = info->xs-1; i <= XE; i++) {
+          for (i = info->xs-1; i <= info->xs + info->xm; i++) {
               x = hx * (i + 1);
-              au[j][i] = BoundaryG(x,y);       // bottom or top boundary values
+              au[j][i] = BoundaryG(x,y);       // bottom or top
           }
       } else if (info->xs == 0) {
-          au[j][-1] = BoundaryG(0.0,y);        // left boundary values
-      } else if (XE == info->mx) {
-          au[j][info->mx] = BoundaryG(1.0,y);  // right boundary values
+          au[j][-1] = BoundaryG(0.0,y);        // left
+      } else if (info->xs + info->xm == info->mx) {
+          au[j][info->mx] = BoundaryG(1.0,y);  // right
       }
   }
   return 0;
 }
 
-PetscErrorCode InitialValues(DMDALocalInfo *info, Vec u, PLapCtx *user) {
+PetscErrorCode InitialIterate(DMDALocalInfo *info, Vec u, PLapCtx *user) {
   PetscErrorCode ierr;
   const PetscReal hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1);
   PetscInt        i,j;
   PetscReal       x,y, **au;
 
   ierr = DMDAVecGetArray(user->da,u,&au); CHKERRQ(ierr);
-  // loop over interior grid points, including ghosts
   for (j = info->ys; j < info->ys + info->ym; j++) {
     y = hy * (j + 1);
     for (i = info->xs; i < info->xs + info->xm; i++) {
       x = hx * (i + 1);
-      au[j][i] = x * BoundaryG(0.0,y) + (1.0 - x) * BoundaryG(1.0,y);
+      au[j][i] = (1.0 - x) * BoundaryG(0.0,y) + x * BoundaryG(1.0,y);
     }
   }
   ierr = DMDAVecRestoreArray(user->da,u,&au); CHKERRQ(ierr);
@@ -78,7 +78,7 @@ PetscErrorCode InitialValues(DMDALocalInfo *info, Vec u, PLapCtx *user) {
 //ENDBOUNDARY
 
 //STARTEXACT
-PetscErrorCode ExactLocal(DMDALocalInfo *info, Vec uex, Vec f, PLapCtx *user) {
+PetscErrorCode ExactRHSLocal(DMDALocalInfo *info, Vec uex, Vec f, PLapCtx *user) {
     PetscErrorCode ierr;
     const PetscReal hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1),
                     p = user->p;
@@ -92,7 +92,7 @@ PetscErrorCode ExactLocal(DMDALocalInfo *info, Vec uex, Vec f, PLapCtx *user) {
     for (j = info->ys - 1; j <= YE; j++) {
         y = hy * (j + 1);  y2 = (y+1.0) * (y+1.0);
         for (i = info->xs - 1; i <= XE; i++) {
-            x = hx * (i + 1);  x2 = (x+1.0) * (y+1.0);
+            x = hx * (i + 1);  x2 = (x+1.0) * (x+1.0);
             d2 = x2 + y2;
             C = PetscPowScalar(x2 * y2 * d2, (p - 2.0)/2.0);
             af[j][i] = - C * ((p - 1.0) * d2 + (p - 2.0) * 2.0 * x2 * y2 / d2);
@@ -275,6 +275,7 @@ int main(int argc,char **argv) {
                    NULL,user.p,&(user.p),NULL); CHKERRQ(ierr);
   if (user.p < 1.0) { SETERRQ(COMM,1,"p >= 1 required"); }
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+
   ierr = DMDACreate2d(COMM,
                DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED, DMDA_STENCIL_BOX,
                -3,-3,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,
@@ -287,8 +288,8 @@ int main(int argc,char **argv) {
   ierr = DMCreateGlobalVector(user.da,&u);CHKERRQ(ierr);
   ierr = VecDuplicate(u,&uexact);CHKERRQ(ierr);
   ierr = DMCreateLocalVector(user.da,&(user.f));CHKERRQ(ierr);
-  ierr = InitialValues(&info,u,&user); CHKERRQ(ierr);
-  ierr = ExactLocal(&info,uexact,user.f,&user); CHKERRQ(ierr);
+  ierr = InitialIterate(&info,u,&user); CHKERRQ(ierr);
+  ierr = ExactRHSLocal(&info,uexact,user.f,&user); CHKERRQ(ierr);
 
   ierr = SNESCreate(COMM,&snes); CHKERRQ(ierr);
   ierr = SNESSetDM(snes,user.da); CHKERRQ(ierr);
