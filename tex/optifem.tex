@@ -314,29 +314,32 @@ We now have enough detail for a prototype implementation.
 
 \section{Objective-only implementation}
 
-Our code is displayed in seven parts, Codes \ref{code:plapI}--\ref{code:plapVII}.\footnote{Part \ref{code:plapVII}, which implements \eqref{eq:of:plapweakform}, is shown after we get the code running initially using only an implementation of the objective \eqref{eq:of:functional}.}  The first part configures the problem.  Options choose the exponent $p$ and whether we want to use a manufactured solution for verification.  The corresponding variables are stored in a context \texttt{struct} called ``\texttt{PLapCtx}'' so they can be passed among our functions as needed.
+Our code is displayed in six parts, Codes \ref{code:plapI}--\ref{code:plapVI}.\footnote{Part \ref{code:plapVI}, which implements \eqref{eq:of:plapweakform}, is shown after we get the code running initially using only an implementation of the objective \eqref{eq:of:functional}.}  Before showing these parts we specify a particular problem with an exact solution.
 
-\cinputpart{plap.c}{\CODELOC}{Declare and configure the context \texttt{PLapCtx}.}{I}{//STARTCONFIGURE}{//ENDCONFIGURE}{code:plapI}
-
-The exact solution is constructed in Code \ref{code:plapII}.  It is about as simple as possible for the $p$-laplacian, and we only construct it in the $p=2$ and $p=4$ cases.\sidenote{If $p=2$ then the strong form \eqref{eq:of:plapstrongform} is the linear Poisson equation addressed in Chapter \ref{chap:st}.}  In brief summary, the exact solution $u(x,y)$ is chosen exactly as in Chapter \ref{chap:st}, namely equation \eqref{eq:st:exactsolution}:
+The exact solution is about as simple a manufactured solution as is possible for the $p$-laplacian:
 \begin{equation}
-    u(x,y) = (x^2 - x^4) (y^4 - y^2), \label{eq:of:exactsolution}
+    u(x,y) = \frac{1}{2} (x+1)^2 (y+1)^2. \label{eq:of:exactsolution}
 \end{equation}
-and $f$ is set accordingly by \eqref{eq:of:plapstrongform}.  In cases where we do not test against a manufactured solution, we simply set $f=1$.  For now, only zero Dirichlet boundary values $g(x,y)=0$ are implemented.  The by-hand derivative calculation which generates $f(x,y)$ from the exact solution $u(x,y)$ is acceptably simple in the restricted cases $p=2,4$, but it is still error-prone.  However, because by-hand calculation errors are likely to be un-correlated to implementation errors in other parts of the code, agreement is likely to reflect correctness.
+Then $f$ is set accordingly by \eqref{eq:of:plapstrongform}.  Note that
+\begin{equation}
+\grad u = \left<(x+1)(y+1)^2,(x+1)^2(y+1)\right> \quad \text{and} \quad |\grad u|^{(p-2)/2} = FIXME
+\end{equation}
+
+FIXME: exercise to show $\grad^2 u = d^2$
+
+The by-hand derivative calculation which generates $f(x,y)$ from the exact solution $u(x,y)$ is acceptably simple, but it is still error-prone.  However, because by-hand calculation errors are likely to be un-correlated to implementation errors in other parts of the code, agreement is likely to reflect correctness.
+
+\cinputpart{plap.c}{\CODELOC}{Set boundary and initial values.  The boundary values are set for the ghosted points of a \texttt{Local} \pVec.}{I}{//STARTBOUNDARY}{//ENDBOUNDARY}{code:plapI}
 
 \cinputpart{plap.c}{\CODELOC}{Implement exact solution \eqref{eq:of:exactsolution} in the restricted ($p=2,4$) cases.}{II}{//STARTEXACT}{//ENDEXACT}{code:plapII}
 
-FIXME part \ref{code:plapIII}
+\cinputpart{plap.c}{\CODELOC}{Tools for the $Q^1$ FEM method.  We implement formulas \eqref{eq:of:chidefn}, \eqref{eq:of:bilinearref}, and \eqref{eq:of:gradrepref}.  Note that a two-element struct \texttt{gradRef} holds the two components of a gradient.}{III}{//STARTFEM}{//ENDFEM}{code:plapIII}
 
-\cinputpart{plap.c}{\CODELOC}{Set boundary and initial values.  The boundary values are set for the ghosted points of a \texttt{Local} \pVec.}{III}{//STARTBOUNDARY}{//ENDBOUNDARY}{code:plapIII}
-
-\cinputpart{plap.c}{\CODELOC}{Tools for the $Q^1$ FEM method.  We implement formulas \eqref{eq:of:chidefn}, \eqref{eq:of:bilinearref}, and \eqref{eq:of:gradrepref}.  Note that a two-element struct \texttt{gradRef} holds the two components of a gradient.}{IV}{//STARTFEM}{//ENDFEM}{code:plapIV}
-
-Next we show FEM tools in Code \ref{code:plapIV}.  FIXME
+Next we show FEM tools in Code \ref{code:plapIII}.  FIXME
 
 We have explained the $Q^1$ FEM implementation of the objective function $I[u]$.  Code \ref{code:plapIV} does that.  FIXME
 
-\cinputpart{plap.c}{\CODELOC}{Implement the formula $G(\xi,\eta)$ from Exercise \ref{chap:of}.\ref{exer:of:integrand}, formula \eqref{eq:of:tensorgauss}, and formula \eqref{eq:of:quadraturesumoverelements}.}{V}{//STARTOBJECTIVE}{//ENDOBJECTIVE}{code:plapV}
+\cinputpart{plap.c}{\CODELOC}{Implement the formula $G(\xi,\eta)$ from Exercise \ref{chap:of}.\ref{exer:of:integrand}, formula \eqref{eq:of:tensorgauss}, and formula \eqref{eq:of:quadraturesumoverelements}.}{IV}{//STARTOBJECTIVE}{//ENDOBJECTIVE}{code:plapIV}
 
 Implementing the objective function requires us to be clear on the parallel distribution of nodes and elements.  To do sums over elements like \eqref{eq:of:quadraturesumoverelements} we must assign unique ownership of an element to a rank (process).
 
@@ -403,9 +406,9 @@ Figure \ref{fig:of:parallelgrid} shows the scheme we have implemented.\sidenote{
 \label{fig:of:parallelgrid}
 \end{figure}
 
-The main part, Code \ref{code:plapVI}, FIXME DOES THE USUAL STUFF AND CALLS \texttt{SNESSetObjective()} only.  Except \texttt{SNESSetFunction()} is available but no hand-made Jacobian at all.
+The main part, Code \ref{code:plapV}, FIXME DOES THE USUAL STUFF AND CALLS \texttt{SNESSetObjective()} only.  Except \texttt{SNESSetFunction()} is available but no hand-made Jacobian at all.
 
-\cinputpart{plap.c}{\CODELOC}{FIXME}{VI}{//STARTMAIN}{//ENDMAIN}{code:plapVI}
+\cinputpart{plap.c}{\CODELOC}{FIXME}{V}{//STARTMAIN}{//ENDMAIN}{code:plapV}
 
 
 \section{Residual function (gradient) implementation}
@@ -433,7 +436,7 @@ In these terms, we rewrite \eqref{eq:of:weakformbasis} as this equation,
 There is one such nonlinear equation for each of the $N$ interior nodes $(x_i,y_j)$.  Solving this system of equations is intended to determine all $N$ values $u_{ij}$.
 
 
-\cinputpart{plap.c}{\CODELOC}{FIXME}{VII}{//STARTFUNCTION}{//ENDFUNCTION}{code:plapVII}
+\cinputpart{plap.c}{\CODELOC}{FIXME}{VI}{//STARTFUNCTION}{//ENDFUNCTION}{code:plapVI}
 
 
 \section{FIXME looking at result and performance}
