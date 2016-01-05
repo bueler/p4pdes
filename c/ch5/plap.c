@@ -52,18 +52,15 @@ PetscErrorCode Configure(PLapCtx *user) {
 //STARTEXACT
 PetscErrorCode ExactLocal(DMDALocalInfo *info, Vec uex, Vec f, PLapCtx *user) {
     PetscErrorCode ierr;
-    const PetscReal  hx = 1.0 / (PetscReal)(info->mx+1),
-                     hy = 1.0 / (PetscReal)(info->my+1),
-                     p = user->p,
-                     eps = 1.0e-12;
-    const PetscInt   XE = info->xs + info->xm, YE = info->ys + info->ym;
-    PetscInt         i,j;
-    PetscReal        x,y, x2,y2, d2, C, denom, **auex, **af;
+    const PetscReal hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1),
+                    p = user->p, eps = 1.0e-12;
+    const PetscInt  XE = info->xs + info->xm, YE = info->ys + info->ym;
+    PetscInt        i,j;
+    PetscReal       x,y, x2,y2, d2, C, denom, **auex, **af;
 
     ierr = DMDAVecGetArray(user->da,uex,&auex); CHKERRQ(ierr);
     ierr = DMDAVecGetArray(user->da,f,&af); CHKERRQ(ierr);
-    // loop over ALL grid points, including ghosts
-    // note f is local (has ghosts) but uex is global (no ghosts)
+    // loop over ALL grid points; f has ghosts but uex does not
     for (j = info->ys - 1; j <= YE; j++) {
         y = hy * (j + 1);  y2 = y * y;
         for (i = info->xs - 1; i <= XE; i++) {
@@ -93,8 +90,7 @@ PetscReal BoundaryG(PetscReal x, PetscReal y) {
 
 PetscErrorCode SetBoundaryLocal(DMDALocalInfo *info, PetscReal **au) {
   const PetscInt  XE = info->xs + info->xm, YE = info->ys + info->ym;
-  const PetscReal hx = 1.0 / (PetscReal)(info->mx+1),
-                  hy = 1.0 / (PetscReal)(info->my+1);
+  const PetscReal hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1);
   PetscInt        i,j;
   PetscReal       x,y;
 
@@ -116,10 +112,9 @@ PetscErrorCode SetBoundaryLocal(DMDALocalInfo *info, PetscReal **au) {
 
 PetscErrorCode InitialValues(DMDALocalInfo *info, Vec u, PLapCtx *user) {
   PetscErrorCode ierr;
-  const PetscReal  hx = 1.0 / (PetscReal)(info->mx+1),
-                   hy = 1.0 / (PetscReal)(info->my+1);
-  PetscInt         i,j;
-  PetscReal        x,y, **au;
+  const PetscReal hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1);
+  PetscInt        i,j;
+  PetscReal       x,y, **au;
 
   ierr = DMDAVecGetArray(user->da,u,&au); CHKERRQ(ierr);
   // loop over interior grid points, including ghosts
@@ -178,8 +173,7 @@ gradRef deval(const PetscReal v[4], PetscReal xi, PetscReal eta) {
 
 //STARTOBJECTIVE
 PetscReal GradInnerProd(gradRef du, gradRef dv, DMDALocalInfo *info) {
-  const PetscReal hx = 1.0 / (PetscReal)(info->mx+1),
-                  hy = 1.0 / (PetscReal)(info->my+1);
+  const PetscReal hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1);
   PetscReal       z;
   z =  (4.0 / (hx * hx)) * du.xi  * dv.xi;
   z += (4.0 / (hy * hy)) * du.eta * dv.eta;
@@ -203,8 +197,7 @@ static PetscReal zq[2] = {-0.577350269189626,0.577350269189626},
 PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **au,
                                   PetscReal *obj, PLapCtx *user) {
   PetscErrorCode ierr;
-  const PetscReal hx = 1.0 / (PetscReal)(info->mx+1),
-                  hy = 1.0 / (PetscReal)(info->my+1);
+  const PetscReal hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1);
   PetscReal      lobj = 0.0, **af, f[4], u[4];
   const PetscInt n = 2;  // FIXME: quad deg
   const PetscInt XE = info->xs + info->xm, YE = info->ys + info->ym;
@@ -255,12 +248,11 @@ PetscReal FunIntegrand(PetscInt L,
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal **au,
                                  PetscReal **FF, PLapCtx *user) {
   PetscErrorCode ierr;
-  const PetscReal hx = 1.0 / (PetscReal)(info->mx+1),
-                  hy = 1.0 / (PetscReal)(info->my+1);
-  PetscReal      **af, f[4], u[4], z;
-  const PetscInt n = 2;  // FIXME: quad deg
-  PetscInt       i,j,c,d,r,s;
-  const PetscInt ell[2][2] = { {0,3}, {1,2} };
+  const PetscReal hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1);
+  PetscReal       **af, f[4], u[4], z;
+  const PetscInt  n = 2;  // FIXME: quad deg
+  PetscInt        i,j,c,d,r,s;
+  const PetscInt  ell[2][2] = { {0,3}, {1,2} };
 
   ierr = SetBoundaryLocal(info,au); CHKERRQ(ierr);
   // compute residual FF[j][i] for each node (x_i,y_j)
@@ -308,8 +300,7 @@ int main(int argc,char **argv) {
                &(user.da)); CHKERRQ(ierr);
   ierr = DMSetApplicationContext(user.da,&user);CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);
-  hx = 1.0 / (PetscReal)(info.mx+1);
-  hy = 1.0 / (PetscReal)(info.my+1);
+  hx = 1.0 / (info.mx+1);  hy = 1.0 / (info.my+1);
   ierr = DMDASetUniformCoordinates(user.da,0.0+hx,1.0-hx,0.0+hy,1.0-hy,0.0,1.0); CHKERRQ(ierr);
   ierr = PetscPrintf(COMM,"grid of %d x %d = %d interior nodes (%dx%d elements)\n",
             info.mx,info.my,info.mx*info.my,info.mx+1,info.my+1); CHKERRQ(ierr);
