@@ -298,12 +298,10 @@ int main(int argc,char **argv) {
   Vec            u, uexact;
   PLapCtx        user;
   DMDALocalInfo  info;
-  PetscReal      hx, hy;
+  PetscReal      hx, hy, unorm, err;
 
   PetscInitialize(&argc,&argv,NULL,help);
-
   ierr = Configure(&user); CHKERRQ(ierr);
-
   ierr = DMDACreate2d(COMM,
                DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED, DMDA_STENCIL_BOX,
                -3,-3,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,
@@ -313,7 +311,6 @@ int main(int argc,char **argv) {
   hx = 1.0 / (PetscReal)(info.mx+1);
   hy = 1.0 / (PetscReal)(info.my+1);
   ierr = DMDASetUniformCoordinates(user.da,0.0+hx,1.0-hx,0.0+hy,1.0-hy,0.0,1.0); CHKERRQ(ierr);
-
   ierr = PetscPrintf(COMM,"grid of %d x %d = %d interior nodes (%dx%d elements)\n",
             info.mx,info.my,info.mx*info.my,info.mx+1,info.my+1); CHKERRQ(ierr);
 
@@ -327,7 +324,6 @@ int main(int argc,char **argv) {
     ierr = VecSet(user.f,1.0); CHKERRQ(ierr);
     ierr = VecSet(uexact,NAN); CHKERRQ(ierr);
   }
-
   ierr = SNESCreate(COMM,&snes); CHKERRQ(ierr);
   ierr = SNESSetDM(snes,user.da); CHKERRQ(ierr);
   ierr = DMDASNESSetObjectiveLocal(user.da,
@@ -337,9 +333,7 @@ int main(int argc,char **argv) {
   ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
   ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
-
   if (user.manufactured) {
-      PetscReal unorm, err;
       ierr = VecNorm(uexact,NORM_INFINITY,&unorm); CHKERRQ(ierr);
       ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uxact
       ierr = VecNorm(u,NORM_INFINITY,&err); CHKERRQ(ierr);

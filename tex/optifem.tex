@@ -10,7 +10,7 @@ Chapter \ref{chap:nl}: \pSNES                    & for Newton's method
 
 \bigskip
 
-Each example in the rest of the book will use \pVec, \pMat, \pKSP, \pPC, and \pSNES.  From now on we will even solve linear PDEs using a \pSNES object, for example in Chapter \ref{chap:ad}.  In such cases we know that one Newton iteration suffices in theory.  Always using \pSNES allows uniform code structure and more flexibility when it comes to changing the PDE problem.
+Each example in the rest of the book will use \pVec, \pMat, \pKSP, \pPC, and \pSNES objects.  From now on we will even solve linear PDEs using a \pSNES object, for example in Chapter \ref{chap:ad}.  (In such cases we know that one Newton iteration suffices in theory.)  Always using \pSNES allows uniform code structure and more flexibility when it comes to changing the PDE problem.
 
 Though new ideas appear in it, the current Chapter takes a break from introducing new \PETSc types.  Instead we look at a PDE which arises from minimization in a function space, and we introduce a structured-grid finite element method.  This example is a nonlinear Poisson-like equation with solution-dependent diffusivity.
 
@@ -232,17 +232,17 @@ The Jacobian of this map, used in integrals below, is the ratio of the area of $
 \det\frac{\partial(x,y)}{\partial(\xi,\eta)} = \det\begin{bmatrix} \frac{h_x}{2} & 0 \\ 0 & \frac{h_y}{2} \end{bmatrix} = \frac{h_x h_y}{4}. \label{eq:of:elementjacobian}
 \end{equation}
 
-\begin{marginfigure}
-\input{q1hat.tikz}
-\caption{A hat function $\psi_{p,q} \in S^h$.}
-\label{fig:of:q1hat}
-\end{marginfigure}
-
 For each node $(x_p,y_q)$ in the structured grid there is a continuous, piecewise-bilinear function $\psi_{p,q} \in S^h$, defined on all of $\overline\Omega$, which is equal to one on that node and equal to zero at all others:
 \begin{equation}
   \psi_{p,q}(x_r,y_s) = \delta_{pr} \delta_{qs}.  \label{eq:of:psinodewise}
 \end{equation}
 Such ``hat'' functions, illustrated in Figure \ref{fig:of:q1hat}, form a basis of $S^h$.
+
+\begin{marginfigure}
+\input{q1hat.tikz}
+\caption{A hat function $\psi_{p,q} \in S^h$.}
+\label{fig:of:q1hat}
+\end{marginfigure}
 
 When restricted to a particular element $\square_{ij}$, and then pulled-back to the reference element $\square_\ast$, the hat function $\psi_{p,q}$ is either identically zero or it is equal to one of the basis functions $\chi_\ell$.  That is, if node $(\xi_\ell,\eta_\ell) \in \square_\ast$ corresponds to node $(x_p,y_q) \in \overline\Omega$, under the element map onto $\square_{ij}$, then 
 \begin{equation}
@@ -337,6 +337,71 @@ Next we show FEM tools in Code \ref{code:plapIV}.  FIXME
 We have explained the $Q^1$ FEM implementation of the objective function $I[u]$.  Code \ref{code:plapIV} does that.  FIXME
 
 \cinputpart{plap.c}{\CODELOC}{Implement the formula $G(\xi,\eta)$ from Exercise \ref{chap:of}.\ref{exer:of:integrand}, formula \eqref{eq:of:tensorgauss}, and formula \eqref{eq:of:quadraturesumoverelements}.}{V}{//STARTOBJECTIVE}{//ENDOBJECTIVE}{code:plapV}
+
+Implementing the objective function requires us to be clear on the parallel distribution of nodes and elements.  To do sums over elements like \eqref{eq:of:quadraturesumoverelements} we must assign unique ownership of an element to a rank (process).
+
+Figure \ref{fig:of:parallelgrid} shows the scheme we have implemented.\sidenote{There are other ways to do it, of course.}  The interior nodes are distributed across the processes in the obvious way.  That is, \PETSc's \pDMDA object treats the grid of interior nodes here just as it did the grid of all nodes in Chapter \ref{chap:st}.  Regarding the elements, each rank owns those which are down and left from an owned node.  However, ranks which own $i=m_x-1$ or $j=m_y-1$ nodes, that is, ranks which own the upper or right edges of the grid, also own the elements above and to the right of these nodes.  This implies a slight load imbalance; it is quite tolerable if each rank owns a significant block of nodes.
+
+\newcommand{\gridsansowners}{
+  % grid
+  \draw[line width=1.0pt] (0.0,0.0) -- (0.0,1.0) -- (1.0,1.0) -- (1.0,0.0) -- cycle;
+  \pgfmathsetmacro\fifth{1.0/5.0}
+  \draw[xstep=\fifth,ystep=\fifth,black,thin] (0.0,0.0) grid (1.0,1.0);
+  % prominent nodes
+  \foreach \x in {1,...,4} {
+    \foreach \y in {1,...,4} {
+        \filldraw (\x * \fifth,\y * \fifth) circle (0.4pt);
+    }
+  }
+  % tick marks for i
+  \draw[line width=1.0pt] (0.2,-0.04) -- (0.2,0.02);
+  \draw[line width=1.0pt] (0.8,-0.04) -- (0.8,0.02);
+  \node[yshift=-4mm] at (0.2,0.0) {\small $i=0$};
+  \node[yshift=-4mm] at (0.8,0.0) {\small $m_x\!-\!1$};
+  % tick marks for j
+  \draw[line width=1.0pt] (-0.04,0.2) -- (0.02,0.2);
+  \draw[line width=1.0pt] (-0.04,0.8) -- (0.02,0.8);
+  \node[xshift=-6mm] at (0.0,0.2) {\small $j=0$};
+  \node[xshift=-6.5mm] at (0.0,0.8) {\small $m_y\!-\!1$};
+}
+
+\begin{figure}
+\begin{tikzpicture}[scale=4.2]
+\gridsansowners
+\pgfmathsetmacro\half{0.5*\fifth}
+\pgfmathsetmacro\AA{0.15*\fifth}
+\foreach \x in {1,3} {
+    \foreach \y in {1,3} {
+        \draw[very thick,rounded corners=5pt,gray] (\x*\fifth-\AA,\y*\fifth-\AA) -- (\x*\fifth+\fifth+\AA,\y*\fifth-\AA) -- (\x*\fifth+\fifth+\AA,\y*\fifth+\fifth+\AA) -- (\x*\fifth-\AA,\y*\fifth+\fifth+\AA) -- cycle;
+    }
+}
+\node at (\fifth+\half,\fifth+\half) {\small $0$};
+\node at (3*\fifth+\half,\fifth+\half) {\small $1$};
+\node at (\fifth+\half,3*\fifth+\half) {\small $2$};
+\node at (3*\fifth+\half,3*\fifth+\half) {\small $3$};
+\node at (0.5,-0.25) {\small node ownership};
+\end{tikzpicture}
+\quad
+\begin{tikzpicture}[scale=4.2]
+\gridsansowners
+\pgfmathsetmacro\half{0.5*\fifth}
+\pgfmathsetmacro\bit{0.3*\fifth}
+\pgfmathsetmacro\BB{0.1*\fifth}
+\draw[very thick,rounded corners=5pt,gray] (\BB,\BB) -- (2*\fifth-\BB,\BB) -- (2*\fifth-\BB,2*\fifth-\BB) -- (\BB,2*\fifth-\BB) -- cycle;
+\draw[very thick,rounded corners=5pt,gray] (2*\fifth+\BB,\BB) -- (5*\fifth-\BB,\BB) -- (5*\fifth-\BB,2*\fifth-\BB) -- (2*\fifth+\BB,2*\fifth-\BB) -- cycle;
+\draw[very thick,rounded corners=5pt,gray] (\BB,2*\fifth+\BB) -- (2*\fifth-\BB,2*\fifth+\BB) -- (2*\fifth-\BB,5*\fifth-\BB) -- (\BB,5*\fifth-\BB) -- cycle;
+\draw[very thick,rounded corners=5pt,gray] (2*\fifth+\BB,2*\fifth+\BB) -- (5*\fifth-\BB,2*\fifth+\BB) -- (5*\fifth-\BB,5*\fifth-\BB) -- (2*\fifth+\BB,5*\fifth-\BB) -- cycle;
+\node at (\fifth+\bit,\fifth+\bit) {\small $0$};
+\node at (3*\fifth+\half,\fifth+\bit) {\small $1$};
+\node at (\fifth+\bit,3*\fifth+\half) {\small $2$};
+\node at (3*\fifth+\half,3*\fifth+\half) {\small $3$};
+\node at (0.5,-0.25) {\small element ownership};
+\end{tikzpicture}
+\medskip
+
+\caption{Parallel distribution of interior nodes (left) and elements (right) in a $m_x=4$, $m_y=4$ grid.  Here there are four processes with ranks $0,1,2,3$.}
+\label{fig:of:parallelgrid}
+\end{figure}
 
 The main part, Code \ref{code:plapVI}, FIXME DOES THE USUAL STUFF AND CALLS \texttt{SNESSetObjective()} only.  Except \texttt{SNESSetFunction()} is available but no hand-made Jacobian at all.
 
