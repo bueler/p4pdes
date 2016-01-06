@@ -84,18 +84,21 @@ PetscErrorCode ExactRHSLocal(DMDALocalInfo *info, Vec uex, Vec f, PLapCtx *user)
                     p = user->p;
     const PetscInt  XE = info->xs + info->xm, YE = info->ys + info->ym;
     PetscInt        i,j;
-    PetscReal       x,y, x2,y2,d2, C, **auex, **af;
+    PetscReal       x,y, XX,YY, C,D2,gamma1,gamma2, **auex, **af;
 
+// PetscPrintf(COMM,"xs=%d, xm=%d, mx=%d\n",info->xs,info->xm,info->mx);
     ierr = DMDAVecGetArray(user->da,uex,&auex); CHKERRQ(ierr);
     ierr = DMDAVecGetArray(user->da,f,&af); CHKERRQ(ierr);
     // loop over ALL grid points; f has ghosts but uex does not
     for (j = info->ys - 1; j <= YE; j++) {
-        y = hy * (j + 1);  y2 = (y+1.0) * (y+1.0);
+        y = hy * (j + 1);  YY = (y+1.0)*(y+1.0);
         for (i = info->xs - 1; i <= XE; i++) {
-            x = hx * (i + 1);  x2 = (x+1.0) * (x+1.0);
-            d2 = x2 + y2;
-            C = PetscPowScalar(x2 * y2 * d2, (p - 2.0)/2.0);
-            af[j][i] = - C * ((p - 1.0) * d2 + (p - 2.0) * 2.0 * x2 * y2 / d2);
+            x = hx * (i + 1);  XX = (x+1.0)*(x+1.0);
+            D2 = XX + YY;
+            C = PetscPowScalar(XX * YY * D2, (p - 2.0) / 2.0);
+            gamma1 = 1.0/(x+1.0) + (x+1.0)/D2;
+            gamma2 = 1.0/(y+1.0) + (y+1.0)/D2;
+            af[j][i] = - (p-2.0) * C * (gamma1*(x+1.0)*YY + gamma2*XX*(y+1.0)) - C * D2;
             if ((i >= info->xs) && (i < XE) && (j >= info->ys) && (j < YE)) {
                 auex[j][i] = BoundaryG(x,y);
             }
@@ -299,6 +302,9 @@ int main(int argc,char **argv) {
              (DMDASNESFunction)FormFunctionLocal,&user); CHKERRQ(ierr);
   ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
+//VecView(user.f,PETSC_VIEWER_STDOUT_WORLD);
+//VecView(uexact,PETSC_VIEWER_STDOUT_WORLD);
+//VecView(u,PETSC_VIEWER_STDOUT_WORLD);
   ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
   ierr = VecNorm(uexact,NORM_INFINITY,&unorm); CHKERRQ(ierr);
   ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uxact

@@ -314,19 +314,21 @@ We now have enough detail for a prototype implementation.
 
 \section{Objective-only implementation}
 
-Our code is displayed in seven parts, Codes \ref{code:plapI}--\ref{code:plapVII}.  However, part \ref{code:plapVII}, which implements the weak form \eqref{eq:of:plapweakform}, is shown after we get the code running initially using only an implementation of the objective \eqref{eq:of:functional}.  Before showing the code we specify a particular problem with an exact solution.
+Our code is displayed in seven parts, Codes \ref{code:plapI}--\ref{code:plapVII}.  However, before showing the code we specify a particular problem with an exact solution.  Also note that part \ref{code:plapVII}, which implements the weak form \eqref{eq:of:plapweakform}, is shown after we get the code running initially using only an implementation of the objective \eqref{eq:of:functional}.
 
 The exact solution is about as simple a manufactured solution as is possible for the $p$-Laplacian:
 \begin{equation}
     u(x,y) = \frac{1}{2} (x+1)^2 (y+1)^2. \label{eq:of:exactsolution}
 \end{equation}
-This formula also determines $g$ along $\partial \Omega$.  The source function $f$ is computed by hand\sidenote{Recall the usual caveat about manufactured solutions: The by-hand derivative calculation which generates $f(x,y)$ from the exact solution $u(x,y)$ is acceptably simple, but it is still error-prone.  Because by-hand calculation errors are likely to be un-correlated to code-implementation errors, however, agreement is likely to reflect correctness.} by using the strong form \eqref{eq:of:plapstrongform}.  It is an easy exercise to show that the coefficient of the $p$-Laplacian equation is bounded below and above and thus that the equation is elliptic at the solution:
+This formula also determines $g$ along $\partial \Omega$.  The source function $f$ is computed by hand\sidenote{Recall the usual caveat about manufactured solutions: The by-hand derivative calculation which generates $f(x,y)$ from the exact solution $u(x,y)$ is acceptably simple, but it is still error-prone.  Because by-hand calculation errors are likely to be un-correlated to code-implementation errors, however, agreement is likely to reflect correctness.} from the strong form \eqref{eq:of:plapstrongform}.
+
+It is an easy exercise to show that the coefficient of the $p$-Laplacian equation is bounded below and above and thus that the equation is elliptic at the solution:
 \begin{equation}
 0 < 2^{(p-2)/2} \le |\grad u|^{p-2} \le 2^{7(p-2)/2}.  \label{eq:of:coeffbounds}
 \end{equation}
 However, though we know bounds for the exact solution, they do not apply to the approximations (iterates) involved in solving numerically.
 
-Code \ref{code:plapI} declares a ``context'' \texttt{struct} which will be needed in the call-back functions \texttt{FormObjectiveLocal} (Code \ref{code:plapV}) and \texttt{FormFunctionLocal} (Code \ref{code:plapVII}).  We also declare a function for computing the boundary values $g$; in fact this is just the exact solution \eqref{eq:of:exactsolution}.
+Code \ref{code:plapI} declares a ``context'' \texttt{struct} which will be needed in the call-back functions \texttt{FormObjectiveLocal} (Code \ref{code:plapV}) and \texttt{FormFunctionLocal} (Code \ref{code:plapVII}).  We also declare a function for computing the boundary values $g$, but in fact this is just the exact solution \eqref{eq:of:exactsolution}.
 
 \cinputpart{plap.c}{\CODELOC}{Declare a context and a boundary-value function.}{I}{//STARTDECLARE}{//ENDDECLARE}{code:plapI}
 
@@ -491,7 +493,15 @@ H_{ijcd}(\xi,\eta) &= \left[\frac{4}{h_x^2} \left(\sum_{\ell=0}^3 u_\ell \frac{\
   &\quad - \left(\sum_{\ell=0}^3 f_\ell \chi_\ell\right) \chi_{[ij]}
 \end{align*}
 
-\item For the exact solution \eqref{eq:of:exactsolution}, show \eqref{eq:of:coeffbounds}.
+\item \label{exer:of:checkexactformulas} For the exact solution \eqref{eq:of:exactsolution}, define $C = |\grad u|^{p-2}$ and $D^2=(x+1)^2 + (y+1)^2$ and show that
+    $$C = \left[(x+1)^2 (y+1)^2 D^2\right]^{(p-2)/2}$$
+and that $\grad C = (p-2) C \left<\gamma_1,\gamma_2\right>$ where
+    $$\gamma_1 = \frac{1}{x+1}+ \frac{x+1}{D^2}, \quad \gamma_2 = \frac{1}{y+1}+ \frac{y+1}{D^2}.$$
+Also show that $\Div \grad u = D^2$.  Thus strong form \eqref{eq:of:plapstrongform} implies an implementable formula for the source function,
+    $$f = - \Div \left(C \grad u\right) = - \grad C \cdot \grad u - C\, \Div \grad u.$$
+Confirm that \texttt{ExactRHSLocal()} in \texttt{plap.c} implements these formulas.
+
+\item \label{exer:of:checkexactbounds} For the exact solution \eqref{eq:of:exactsolution}, show \eqref{eq:of:coeffbounds}.
 
 \item Figure \ref{fig:of:cartoonfunctional} shows the graph of $\Phi(x,y)=\tfrac{1}{4}(x^4+y^4) - 2x + 2y$, a cartoon for the $p$-Laplacian functional $I[u]$ in the case $p=4$.  Solve
     $$\min_{x,y} \Phi(x,y)$$
