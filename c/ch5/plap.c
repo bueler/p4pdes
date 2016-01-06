@@ -28,7 +28,7 @@ static char help[] = "Solve the p-laplacian equation in 2D using Q^1 FEM\n"
 typedef struct {
   DM        da;
   PetscReal p;
-  Vec       f;
+  Vec       f,g;
 } PLapCtx;
 
 PetscReal BoundaryG(PetscReal x, PetscReal y) {
@@ -37,24 +37,29 @@ PetscReal BoundaryG(PetscReal x, PetscReal y) {
 //ENDDECLARE
 
 //STARTBOUNDARY
-PetscErrorCode SetBoundaryLocal(DMDALocalInfo *info, PetscReal **au) {
+PetscErrorCode SetGLocal(DMDALocalInfo *info, Vec g, PLapCtx *user) {
+  PetscErrorCode ierr;
   const PetscReal hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1);
   PetscInt        i,j;
-  PetscReal       x,y;
+  PetscReal       x,y, **ag;
 
+  ierr = DMDAVecGetArray(user->da,g,&ag); CHKERRQ(ierr);
   for (j = info->ys-1; j <= info->ys + info->ym; j++) {
       y = hy * (j + 1);
-      if ((j == -1) || (j == info->mx)) {
-          for (i = info->xs-1; i <= info->xs + info->xm; i++) {
-              x = hx * (i + 1);
-              au[j][i] = BoundaryG(x,y);       // bottom or top
+      for (i = info->xs-1; i <= info->xs + info->xm; i++) {
+          x = hx * (i + 1);
+          if ((j == -1) || (j == info->my)) {
+              ag[j][i] = BoundaryG(x,y);    // bottom or top
+          } else if (i == -1) {
+              ag[j][i] = BoundaryG(0.0,y);  // left
+          } else if (i == info->mx) {
+              ag[j][i] = BoundaryG(1.0,y);  // right
+          } else {
+              ag[j][i] = NAN;
           }
-      } else if (info->xs == 0) {
-          au[j][-1] = BoundaryG(0.0,y);        // left
-      } else if (info->xs + info->xm == info->mx) {
-          au[j][info->mx] = BoundaryG(1.0,y);  // right
       }
   }
+  ierr = DMDAVecRestoreArray(user->da,g,&ag); CHKERRQ(ierr);
   return 0;
 }
 
@@ -178,18 +183,19 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **au,
                                   PetscReal *obj, PLapCtx *user) {
   PetscErrorCode ierr;
   const PetscReal hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1);
-  PetscReal      lobj = 0.0, **af, f[4], u[4];
+  PetscReal      lobj = 0.0, **af, **ag, f[4], u[4];
   const PetscInt n = 2;  // FIXME: quad deg
   const PetscInt XE = info->xs + info->xm, YE = info->ys + info->ym;
   PetscInt       i,j,r,s;
   MPI_Comm       com;
 
-  ierr = SetBoundaryLocal(info,au); CHKERRQ(ierr);
   // sum over all elements
   ierr = DMDAVecGetArray(user->da,user->f,&af); CHKERRQ(ierr);
+  ierr = DMDAVecGetArray(user->da,user->g,&ag); CHKERRQ(ierr);
   for (j = info->ys; j <= YE; j++) {
       for (i = info->xs; i <= XE; i++) {
           if ((i < XE) || (j < YE) || (i == info->mx) || (j == info->my)) {
+//FIXME: must modify the u evals to use g
               // because of ghosts, these values are always valid even in the
               //     "right" and "top" cases that where i==info->mx or j==info->my
               f[0] = af[j][i];  f[1] = af[j][i-1];
@@ -205,6 +211,7 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **au,
       }
   }
   ierr = DMDAVecRestoreArray(user->da,user->f,&af); CHKERRQ(ierr);
+  ierr = DMDAVecRestoreArray(user->da,user->g,&ag); CHKERRQ(ierr);
   lobj *= 0.25 * hx * hy;
 
   ierr = PetscObjectGetComm((PetscObject)(info->da),&com);CHKERRQ(ierr);
@@ -229,20 +236,21 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal **au,
                                  PetscReal **FF, PLapCtx *user) {
   PetscErrorCode ierr;
   const PetscReal hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1);
-  PetscReal       **af, f[4], u[4], z;
+  PetscReal       **af, **ag, f[4], u[4], z;
   const PetscInt  n = 2;  // FIXME: quad deg
   PetscInt        i,j,c,d,r,s;
   const PetscInt  ell[2][2] = { {0,3}, {1,2} };
 
-  ierr = SetBoundaryLocal(info,au); CHKERRQ(ierr);
   // compute residual FF[j][i] for each node (x_i,y_j)
   ierr = DMDAVecGetArray(user->da,user->f,&af); CHKERRQ(ierr);
+  ierr = DMDAVecGetArray(user->da,user->g,&ag); CHKERRQ(ierr);
   for (j = info->ys; j < info->ys + info->ym; j++) {
       for (i = info->xs; i < info->xs + info->xm; i++) {
           // sum over four elements which contribute to current node
           z = 0.0;
           for (c = 0; c < 2; c++) {
               for (d = 0; d < 2; d++) {
+//FIXME: must modify the u evals to use g
                   f[0] = af[j+d][i+c];  f[1] = af[j+d][i+c-1];
                       f[2] = af[j+d-1][i+c-1];  f[3] = af[j+d-1][i+c];
                   u[0] = au[j+d][i+c];  u[1] = au[j+d][i+c-1];
@@ -258,6 +266,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal **au,
       }
   }
   ierr = DMDAVecRestoreArray(user->da,user->f,&af); CHKERRQ(ierr);
+  ierr = DMDAVecRestoreArray(user->da,user->g,&ag); CHKERRQ(ierr);
   return 0;
 }
 //ENDFUNCTION
@@ -291,6 +300,9 @@ int main(int argc,char **argv) {
   ierr = DMCreateGlobalVector(user.da,&u);CHKERRQ(ierr);
   ierr = VecDuplicate(u,&uexact);CHKERRQ(ierr);
   ierr = DMCreateLocalVector(user.da,&(user.f));CHKERRQ(ierr);
+  ierr = DMCreateLocalVector(user.da,&(user.g));CHKERRQ(ierr);
+
+  ierr = SetGLocal(&info,user.g,&user); CHKERRQ(ierr);
   ierr = InitialIterate(&info,u,&user); CHKERRQ(ierr);
   ierr = ExactRHSLocal(&info,uexact,user.f,&user); CHKERRQ(ierr);
 
@@ -302,9 +314,6 @@ int main(int argc,char **argv) {
              (DMDASNESFunction)FormFunctionLocal,&user); CHKERRQ(ierr);
   ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
-//VecView(user.f,PETSC_VIEWER_STDOUT_WORLD);
-//VecView(uexact,PETSC_VIEWER_STDOUT_WORLD);
-//VecView(u,PETSC_VIEWER_STDOUT_WORLD);
   ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
   ierr = VecNorm(uexact,NORM_INFINITY,&unorm); CHKERRQ(ierr);
   ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uxact
@@ -312,7 +321,8 @@ int main(int argc,char **argv) {
   ierr = PetscPrintf(COMM,
       "numerical error:  |u-u_exact|_inf/|u_exact|_inf = %g\n",err/unorm); CHKERRQ(ierr);
 
-  VecDestroy(&u);  VecDestroy(&uexact);  VecDestroy(&(user.f));
+  VecDestroy(&u);  VecDestroy(&uexact);
+  VecDestroy(&(user.f));  VecDestroy(&(user.g));
   SNESDestroy(&snes);  DMDestroy(&(user.da));
   PetscFinalize();
   return 0;
