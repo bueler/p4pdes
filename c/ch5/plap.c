@@ -83,7 +83,8 @@ PetscErrorCode InitialIterate(DMDALocalInfo *info, Vec u, PLapCtx *user) {
 //ENDBOUNDARY
 
 //STARTEXACT
-PetscErrorCode ExactRHSLocal(DMDALocalInfo *info, Vec uex, Vec f, PLapCtx *user) {
+PetscErrorCode ExactRHSLocal(DMDALocalInfo *info, Vec uex, Vec f,
+                             PLapCtx *user) {
     PetscErrorCode ierr;
     const PetscReal hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1),
                     p = user->p;
@@ -103,7 +104,8 @@ PetscErrorCode ExactRHSLocal(DMDALocalInfo *info, Vec uex, Vec f, PLapCtx *user)
             C = PetscPowScalar(XX * YY * D2, (p - 2.0) / 2.0);
             gamma1 = 1.0/(x+1.0) + (x+1.0)/D2;
             gamma2 = 1.0/(y+1.0) + (y+1.0)/D2;
-            af[j][i] = - (p-2.0) * C * (gamma1*(x+1.0)*YY + gamma2*XX*(y+1.0)) - C * D2;
+            af[j][i] = - (p-2.0) * C * (gamma1*(x+1.0)*YY + gamma2*XX*(y+1.0))
+                       - C * D2;
             if ((i >= info->xs) && (i < XE) && (j >= info->ys) && (j < YE)) {
                 auex[j][i] = BoundaryG(x,y);
             }
@@ -196,8 +198,9 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **au,
       for (i = info->xs; i <= XE; i++) {
           if ((i < XE) || (j < YE) || (i == info->mx) || (j == info->my)) {
 //FIXME: must modify the u evals to use g
+//PetscPrintf(COMM,"element (i,j)=(%d,%d)\n",i,j);
               // because of ghosts, these values are always valid even in the
-              //     "right" and "top" cases that where i==info->mx or j==info->my
+              //     "right" and "top" cases where i==info->mx or j==info->my
               f[0] = af[j][i];  f[1] = af[j][i-1];
                   f[2] = af[j-1][i-1];  f[3] = af[j-1][i];
               u[0] = au[j][i];  u[1] = au[j][i-1];
