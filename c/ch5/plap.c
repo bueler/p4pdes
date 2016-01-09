@@ -1,5 +1,6 @@
-static char help[] = "Solve the p-Laplacian equation in 2D using Q^1 FEM\n"
-"and an objective function.  No Jacobian implementation so run as one of:\n"
+static char help[] = "Solve the p-Laplacian equation in 2D using Q^1 FEM.\n"
+"Implements an objective function and a residual (gradient) function, but\n"
+"no Jacobian.  Defaults to p=4 and quadrature degree n=2.  Run as one of:\n"
 "   ./plap -snes_fd_color\n"
 "   ./plap -snes_fd\n"
 "   ./plap -snes_mf\n"
@@ -10,34 +11,55 @@ static char help[] = "Solve the p-Laplacian equation in 2D using Q^1 FEM\n"
 // note diverged linear solve from bad gradient
 // redo with -snes_fd_color to see total success
 // this also tests symmetry and positive-definiteness because use Cholesky
-// for LEV in 0 1 2; do ./plap -plap_p 4 -snes_fd_function -snes_fd -snes_monitor -snes_converged_reason -snes_linesearch_type basic -ksp_type preonly -pc_type cholesky -da_refine $LEV; done
+// for LEV in 0 1 2; do ./plap -snes_fd_function -snes_fd -snes_monitor -snes_converged_reason -snes_linesearch_type basic -ksp_type preonly -pc_type cholesky -da_refine $LEV; done
 
 // CHECK FINE-GRID SNES CONVERGENCE WITH -snes_fd_color:
-// timer ./plap -plap_p 4 -snes_fd_color -ksp_converged_reason -snes_monitor -snes_converged_reason -ksp_type cg -pc_type icc -da_refine 6
+// timer ./plap -snes_fd_color -ksp_converged_reason -snes_monitor -snes_converged_reason -ksp_type cg -pc_type icc -da_refine 6
 
 // EVIDENCE OF CONVERGENCE WITH -snes_fd_color AND IN PARALLEL;
 // bt line search fails in parallel?
 // note nonlinear iterations increase with grid
-// for LEV in 0 1 2 3 4 5 6 7; do mpiexec -n 4 ./plap -plap_p 4 -snes_fd_color -snes_linesearch_type basic -ksp_type cg -pc_type bjacobi -sub_pc_type icc -snes_converged_reason -da_refine $LEV; done
+// for LEV in 0 1 2 3 4 5 6 7; do mpiexec -n 4 ./plap -snes_fd_color -snes_linesearch_type basic -ksp_type cg -pc_type bjacobi -sub_pc_type icc -snes_converged_reason -da_refine $LEV; done
+
+// SHOWS n=1 GIVES ROUGH DOUBLE ERROR OVER n=2; n=3 NO BENEFIT:
+// for NN in 1 2 3; do for LEV in 0 2 4 6; do ./plap -snes_fd_color -snes_linesearch_type basic -ksp_type cg -pc_type icc -snes_converged_reason -da_refine $LEV -plap_quaddegree $NN; done; done
 
 
 #include <petsc.h>
 
 #define COMM PETSC_COMM_WORLD
 
-//STARTDECLARE
+//STARTCTX
 typedef struct {
     DM        da;
     PetscReal p;
+    PetscInt  quaddegree;
     Vec       f,g;
 } PLapCtx;
 
+PetscErrorCode ConfigureCtx(PLapCtx *user) {
+    PetscErrorCode ierr;
+    user->p = 4.0;
+    user->quaddegree = 2;
+    ierr = PetscOptionsBegin(COMM,"plap_","p-laplacian solver options",""); CHKERRQ(ierr);
+    ierr = PetscOptionsReal("-p","exponent p with  1 <= p < infty",
+                      NULL,user->p,&(user->p),NULL); CHKERRQ(ierr);
+    if (user->p < 1.0) { SETERRQ(COMM,1,"p >= 1 required"); }
+    ierr = PetscOptionsInt("-quaddegree","quadrature degree n (= 1,2,3 only)",
+                     NULL,user->quaddegree,&(user->quaddegree),NULL); CHKERRQ(ierr);
+    if ((user->quaddegree < 1) || (user->quaddegree > 3)) {
+        SETERRQ(COMM,2,"quadrature degree n=1,2,3 only");
+    }
+    ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+    return 0;
+}
+//ENDCTX
+
+//STARTBOUNDARYINITIAL
 PetscReal BoundaryG(PetscReal x, PetscReal y) {
     return 0.5 * (x+1.0)*(x+1.0) * (y+1.0)*(y+1.0);
 }
-//ENDDECLARE
 
-//STARTBOUNDARYINITIAL
 PetscErrorCode SetGLocal(DMDALocalInfo *info, Vec g, PLapCtx *user) {
     PetscErrorCode ierr;
     const PetscReal hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1);
@@ -113,9 +135,6 @@ PetscErrorCode ExactRHSLocal(DMDALocalInfo *info, Vec uex, Vec f,
 //ENDEXACT
 
 //STARTFEM
-static PetscReal zq[2] = {-0.577350269189626,0.577350269189626},
-                 wq[2] = {1.0,1.0};
-
 static PetscReal xiL[4]  = { 1.0, -1.0, -1.0,  1.0},
                  etaL[4] = { 1.0,  1.0, -1.0, -1.0};
 
@@ -154,6 +173,13 @@ gradRef deval(const PetscReal v[4], PetscReal xi, PetscReal eta) {
     }
     return sum;
 }
+
+static PetscReal zq[3][3] = { {0.0,NAN,NAN},
+                              {-1.0/sqrt(3.0),1.0/sqrt(3.0),NAN},
+                              {-sqrt(3.0/5.0),0.0,sqrt(3.0/5.0)} },
+                 wq[3][3] = { {2.0,NAN,NAN},
+                              {1.0,1.0,NAN},
+                              {5.0/9.0,8.0/9.0,5.0/9.0} };
 //ENDFEM
 
 //STARTTOOLS
@@ -194,9 +220,9 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **au,
                                   PetscReal *obj, PLapCtx *user) {
   PetscErrorCode ierr;
   const PetscReal hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1);
+  const PetscInt  n = user->quaddegree,
+                  XE = info->xs + info->xm, YE = info->ys + info->ym;
   PetscReal       lobj = 0.0, **af, **ag, f[4], u[4];
-  const PetscInt  n = 2;  // FIXME: quad deg
-  const PetscInt  XE = info->xs + info->xm, YE = info->ys + info->ym;
   PetscInt        i,j,r,s;
   MPI_Comm        com;
 
@@ -213,8 +239,8 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **au,
               GetUorG(info,i,j,au,ag,u);
               for (r=0; r<n; r++) {
                   for (s=0; s<n; s++) {
-                      lobj += wq[r] * wq[s]
-                              * ObjIntegrand(info,f,u,zq[r],zq[s],user->p);
+                      lobj += wq[n-1][r] * wq[n-1][s]
+                              * ObjIntegrand(info,f,u,zq[n-1][r],zq[n-1][s],user->p);
                   }
               }
           }
@@ -245,10 +271,10 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal **au,
                                  PetscReal **FF, PLapCtx *user) {
   PetscErrorCode ierr;
   const PetscReal hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1);
+  const PetscInt  n = user->quaddegree,
+                  ell[2][2] = { {0,3}, {1,2} };
   PetscReal       **af, **ag, f[4], u[4], z;
-  const PetscInt  n = 2;  // FIXME: quad deg
   PetscInt        i,j,c,d,r,s;
-  const PetscInt  ell[2][2] = { {0,3}, {1,2} };
 
   // compute residual FF[j][i] for each node (x_i,y_j)
   ierr = DMDAVecGetArray(user->da,user->f,&af); CHKERRQ(ierr);
@@ -264,9 +290,9 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal **au,
                   GetUorG(info,i+c,j+d,au,ag,u);
                   for (r=0; r<n; r++) {
                       for (s=0; s<n; s++) {
-                          z += wq[r] * wq[s]
+                          z += wq[n-1][r] * wq[n-1][s]
                                * FunIntegrand(info,ell[c][d],f,u,
-                                              zq[r],zq[s],user->p);
+                                              zq[n-1][r],zq[n-1][s],user->p);
                       }
                   }
               }
@@ -290,12 +316,7 @@ int main(int argc,char **argv) {
   PetscReal      unorm, err;
 
   PetscInitialize(&argc,&argv,NULL,help);
-  user.p = 2.0;
-  ierr = PetscOptionsBegin(COMM,"plap_","p-laplacian solver options",""); CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-p","exponent p with  1 <= p < infty",
-                   NULL,user.p,&(user.p),NULL); CHKERRQ(ierr);
-  if (user.p < 1.0) { SETERRQ(COMM,1,"p >= 1 required"); }
-  ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+  ierr = ConfigureCtx(&user); CHKERRQ(ierr);
 
   ierr = DMDACreate2d(COMM,
                DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED, DMDA_STENCIL_BOX,
@@ -325,7 +346,7 @@ int main(int argc,char **argv) {
 
   ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
   ierr = VecNorm(uexact,NORM_INFINITY,&unorm); CHKERRQ(ierr);
-  ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uxact
+  ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
   ierr = VecNorm(u,NORM_INFINITY,&err); CHKERRQ(ierr);
   ierr = PetscPrintf(COMM,
       "numerical error:  |u-u_exact|_inf/|u_exact|_inf = %g\n",err/unorm); CHKERRQ(ierr);
