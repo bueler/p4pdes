@@ -95,6 +95,18 @@ Before proceeding to a numerical solution, the main ideas of the above diversion
 Minimization problem \eqref{eq:of:plapmin} is equivalent to the weak form \eqref{eq:of:plapweakform}.  These become the strong form \eqref{eq:of:plapstrongform} when the solution $u$ is smooth.  Thus the $p$-Laplacian equation, either \eqref{eq:of:plapweakform} or \eqref{eq:of:plapstrongform}, arises from minimization.
 \end{quote}
 
+It is also worthwhile pausing to choose a particular test problem for $p$-Laplacian.  We want one that is simple, and for which we know the exact solution:
+\begin{equation}
+    u(x,y) = \frac{1}{2} (x+1)^2 (y+1)^2. \label{eq:of:exactsolution}
+\end{equation}
+This formula also determines $g$ along $\partial \Omega$.  The source function $f$ is computed by hand\sidenote{Recall the usual caveat about manufactured solutions: The by-hand derivative calculation which generates $f(x,y)$ from the exact solution $u(x,y)$ is acceptably simple, but it is still error-prone.  Because by-hand calculation errors are likely to be un-correlated to code-implementation errors, however, agreement is likely to reflect correctness.} from the strong form \eqref{eq:of:plapstrongform}.
+
+It is an easy exercise to show that the coefficient of the $p$-Laplacian equation is bounded below and above and thus that equation \eqref{eq:of:plapweakform} (or \eqref{eq:of:plapstrongform}) is elliptic at the solution:
+\begin{equation}
+0 < 2^{(p-2)/2} \le |\grad u|^{p-2} \le 2^{7(p-2)/2}.  \label{eq:of:coeffbounds}
+\end{equation}
+However, though we know such bounds for the exact solution, they do not apply to the approximations (iterates) in a numerical solution.  We might ``lose ellipticity'' on the way to the solution; see Exercise \ref{chap:of}.\ref{exer:of:regularize}.
+
 
 \section{Structured $Q^1$ finite elements}
 
@@ -314,39 +326,32 @@ We now have enough detail for a prototype implementation.
 
 \section{Objective-only implementation}
 
-Our code is displayed in seven parts, Codes \ref{code:plapI}--\ref{code:plapVII}.  However, before showing the code we specify a particular problem with an exact solution.  Also note that part \ref{code:plapVII}, which implements the weak form \eqref{eq:of:plapweakform}, is shown after we get the code running initially using only an implementation of the objective \eqref{eq:of:functional}.
+Our code is displayed in eight parts, Codes \ref{code:plapCtx}--\ref{code:plapFun}.  However, part \ref{code:plapFun}, which implements the weak form \eqref{eq:of:plapweakform}, is shown after we get the code running initially using only an implementation of the objective \eqref{eq:of:functional}.
 
-The exact solution is about as simple a manufactured solution as is possible for the $p$-Laplacian:
-\begin{equation}
-    u(x,y) = \frac{1}{2} (x+1)^2 (y+1)^2. \label{eq:of:exactsolution}
-\end{equation}
-This formula also determines $g$ along $\partial \Omega$.  The source function $f$ is computed by hand\sidenote{Recall the usual caveat about manufactured solutions: The by-hand derivative calculation which generates $f(x,y)$ from the exact solution $u(x,y)$ is acceptably simple, but it is still error-prone.  Because by-hand calculation errors are likely to be un-correlated to code-implementation errors, however, agreement is likely to reflect correctness.} from the strong form \eqref{eq:of:plapstrongform}.
+Code \ref{code:plapCtx} declares a ``context'' \texttt{struct} which will be needed in the call-back functions \texttt{FormObjectiveLocal} (Code \ref{code:plapObj}) and \texttt{FormFunctionLocal} (Code \ref{code:plapFun}).  Defaults and \PETSc options are set in the \texttt{ConfigureCtx()} function.
 
-It is an easy exercise to show that the coefficient of the $p$-Laplacian equation is bounded below and above and thus that the equation is elliptic at the solution:
-\begin{equation}
-0 < 2^{(p-2)/2} \le |\grad u|^{p-2} \le 2^{7(p-2)/2}.  \label{eq:of:coeffbounds}
-\end{equation}
-However, though we know bounds for the exact solution, they do not apply to the approximations (iterates) involved in solving numerically.
+Next, in Code \ref{code:plapBI} we declare a function \texttt{BoundaryG()} for computing the boundary values $g$.  (In fact this is just the exact solution \eqref{eq:of:exactsolution}.)  The function \texttt{SetGLocal()} sets boundary conditions at the ghosted points of a \texttt{Local} \pVec which is dedicated to this purpose.  Also the function \texttt{InitialIterate()} sets the initial iterate by linearly-interpolating the boundary values into the interior nodes.
 
-Code \ref{code:plapI} declares a ``context'' \texttt{struct} which will be needed in the call-back functions \texttt{FormObjectiveLocal} (Code \ref{code:plapV}) and \texttt{FormFunctionLocal} (Code \ref{code:plapVII}).  We also declare a function for computing the boundary values $g$, but in fact this is just the exact solution \eqref{eq:of:exactsolution}.
+The third part, Code \ref{code:plapEx}, implements exact solution \eqref{eq:of:exactsolution} and computes $f$ from the strong-form equation \eqref{eq:of:plapstrongform}.  In this case $f$ is computed at all grid points, including the ghost points of the \texttt{Local} \pVec which holds $f$, while the exact values of $u$ are only computed at the interior points, the entries of a \texttt{Global} \pVec.\sidenote{For ``fairness'' we will store the exact values of $u$ in a \pVec \texttt{uexact} which is unavailable to the call-back functions used in solving the PDE.}  A main concern in Codes \ref{code:plapBI} and \ref{code:plapEx} is that we be able to integrate $u$, its derivatives, and $f$ on each element, and this requires ghosted values of $f$ and $g$ (below).
 
-\cinputpart{plap.c}{\CODELOC}{Declare a context and a boundary-value function.}{I}{//STARTDECLARE}{//ENDDECLARE}{code:plapI}
+\clearpage
+\cinputpart{plap.c}{\CODELOC}{Declare and configure a context.}{I}{//STARTCTX}{//ENDCTX}{code:plapCtx}
 
-Next, in Code \ref{code:plapII} we set boundary conditions at the ghosted points.  Each time the objective function is evaluated by call-back, an array, \emph{which includes valid ghosts for} $u$, is the input.  At this point we use the function \texttt{SetBoundaryLocal()} to modify the ghost values of $u$ to have the values from $g$ before evaluating the objective function.  We will also use \texttt{SetBoundaryLocal()} in the same way for the residual function call-back  (Code \ref{code:plapVII} below).  Also shown in Code \ref{code:plapII} is the function \texttt{InitialIterate()} which sets the initial iterate by linearly-interpolating the boundary values into the interior nodes.
+We show FEM tools in Code \ref{code:plapFEM}.  The first tools are generic to $Q^1$ methods in 2D, namely the evaluation of basis functions $\chi_\ell$, partial derivatives thereof, at points $(\xi,\eta)$ in the reference element.  We implement formulas \eqref{eq:of:chidefn}, \eqref{eq:of:bilinearref}, and \eqref{eq:of:gradrepref}; for the last, note that a two-element struct \texttt{gradRef} holds the components of a gradient.  We also declare nodes and weights for degree $n=1,2,3$ Gauss-Legendre quadrature; see below for comparison.
 
-\cinputpart{plap.c}{\CODELOC}{Set boundary and initial values.  The boundary values are set for the ghosted points of a \texttt{Local} \pVec.}{II}{//STARTBOUNDARY}{//ENDBOUNDARY}{code:plapII}
+\cinputpart{plap.c}{\CODELOC}{Set boundary and initial values.  The boundary values are set for the ghosted points of a \texttt{Local} \pVec.}{II}{//STARTBDRYINIT}{//ENDBDRYINIT}{code:plapBI}
 
-The third part, Code \ref{code:plapIII}, implements exact solution \eqref{eq:of:exactsolution} and computes $f$ from the strong-form equation \eqref{eq:of:plapstrongform}.  In this case $f$ is computed at all grid points, including the ghost points of the \pVec which holds $f$, while the exact values of $u$ are only computed at the interior points.\sidenote{For ``fairness'' we will store the exact values of $u$ in a \pVec which is unavailable to the call-back functions used in solving the PDE.}  A main concern in Codes \ref{code:plapII} and \ref{code:plapIII} is that we be able to integrate $u$, its derivatives, and $f$ on each element.  This will require ghosted values of $f$ along with the boundary values $g$ which are stored in ghosted values of $u$.
+\cinputpart{plap.c}{\CODELOC}{Compute exact solution $u(x,y)$ from \eqref{eq:of:exactsolution}, and the corresponding source function $f(x,y)$.}{III}{//STARTEXACT}{//ENDEXACT}{code:plapEx}
 
-\cinputpart{plap.c}{\CODELOC}{Compute exact solution $u(x,y)$ from \eqref{eq:of:exactsolution}, and the corresponding source function $f(x,y)$.}{III}{//STARTEXACT}{//ENDEXACT}{code:plapIII}
+\cinputpart{plap.c}{\CODELOC}{Tools for a 2D $Q^1$ FEM method.}{IV}{//STARTFEM}{//ENDFEM}{code:plapFEM}
 
-Next we show FEM tools in Code \ref{code:plapIV}.  FIXME
+FIXME Code \ref{code:plapTool}
 
-\cinputpart{plap.c}{\CODELOC}{Tools for the $Q^1$ FEM method.  We implement formulas \eqref{eq:of:chidefn}, \eqref{eq:of:bilinearref}, and \eqref{eq:of:gradrepref}.  Note that a two-element struct \texttt{gradRef} holds the two components of a gradient.}{IV}{//STARTFEM}{//ENDFEM}{code:plapIV}
+\cinputpart{plap.c}{\CODELOC}{More tools, needed for evaluation of boundary values and functions of the gradient $\grad u$.}{V}{//STARTTOOLS}{//ENDTOOLS}{code:plapTool}
 
-We have explained the $Q^1$ FEM implementation of the objective function $I[u]$.  Code \ref{code:plapIV} does that.  FIXME
+We have explained the $Q^1$ FEM implementation of the objective function $I[u]$.  Code \ref{code:plapObj} does that.  In function \texttt{ObjIntegrand()} we implement the formula $G(\xi,\eta)$ from Exercise \ref{chap:of}.\ref{exer:of:integrand}.  We also see implementations of quadrature formulas \eqref{eq:of:tensorgauss} and \eqref{eq:of:quadraturesumoverelements}.
 
-\cinputpart{plap.c}{\CODELOC}{Implement the formula $G(\xi,\eta)$ from Exercise \ref{chap:of}.\ref{exer:of:integrand}, formula \eqref{eq:of:tensorgauss}, and formula \eqref{eq:of:quadraturesumoverelements}.}{V}{//STARTOBJECTIVE}{//ENDOBJECTIVE}{code:plapV}
+\cinputpart{plap.c}{\CODELOC}{Implement \eqref{eq:of:quadraturesumoverelements} for the objective function $I^h[u]$.}{VI}{//STARTOBJECTIVE}{//ENDOBJECTIVE}{code:plapObj}
 
 Implementing the objective function requires us to be clear on the parallel distribution of nodes and elements.  To do sums over elements like \eqref{eq:of:quadraturesumoverelements} we must assign unique ownership of an element to a rank (process).
 
@@ -413,9 +418,9 @@ Figure \ref{fig:of:parallelgrid} shows the scheme we have implemented.\sidenote{
 \label{fig:of:parallelgrid}
 \end{figure}
 
-The main part, Code \ref{code:plapVI}, FIXME DOES THE USUAL STUFF AND CALLS \texttt{SNESSetObjective()} only.  Except \texttt{SNESSetFunction()} is available but no hand-made Jacobian at all.
+The main part, Code \ref{code:plapMain}, FIXME DOES THE USUAL STUFF AND CALLS \texttt{SNESSetObjective()} only.  Except \texttt{SNESSetFunction()} is available but no hand-made Jacobian at all.
 
-\cinputpart{plap.c}{\CODELOC}{FIXME}{VI}{//STARTMAIN}{//ENDMAIN}{code:plapVI}
+\cinputpart{plap.c}{\CODELOC}{FIXME}{VII}{//STARTMAIN}{//ENDMAIN}{code:plapMain}
 
 
 \section{Residual function (gradient) implementation}
@@ -442,8 +447,7 @@ In these terms, we rewrite \eqref{eq:of:weakformbasis} as this equation,
 \end{equation}
 There is one such nonlinear equation for each of the $N$ interior nodes $(x_i,y_j)$.  Solving this system of equations is intended to determine all $N$ values $u_{ij}$.
 
-
-\cinputpart{plap.c}{\CODELOC}{FIXME}{VII}{//STARTFUNCTION}{//ENDFUNCTION}{code:plapVII}
+\cinputpart{plap.c}{\CODELOC}{FIXME}{VIII}{//STARTFUNCTION}{//ENDFUNCTION}{code:plapFun}
 
 
 \section{FIXME looking at result and performance}
@@ -470,6 +474,18 @@ FIXME
   \item For $1 < p < \infty$, prove strict convexity \eqref{eq:of:convexity} of functional $I[u]$ on $W_0^{1,p}(\Omega)$.  (\emph{Hint}:  The argument in section 5.3 of \citet{Ciarlet2002} suffices.)
   \end{enumerate}
 
+\item \label{exer:of:regularize}  FIXME
+ 
+\item \label{exer:of:checkexactformulas} For the exact solution \eqref{eq:of:exactsolution}, define $C = |\grad u|^{p-2}$ and $D^2=(x+1)^2 + (y+1)^2$ and show that
+    $$C = \left[(x+1)^2 (y+1)^2 D^2\right]^{(p-2)/2}$$
+and that $\grad C = (p-2) C \left<\gamma_1,\gamma_2\right>$ where
+    $$\gamma_1 = \frac{1}{x+1}+ \frac{x+1}{D^2}, \quad \gamma_2 = \frac{1}{y+1}+ \frac{y+1}{D^2}.$$
+Also show that $\Div \grad u = D^2$.  Thus strong form \eqref{eq:of:plapstrongform} implies an implementable formula for the source function,
+    $$f = - \Div \left(C \grad u\right) = - \grad C \cdot \grad u - C\, \Div \grad u.$$
+Note that \texttt{ExactRHSLocal()} in \texttt{plap.c} implements these formulas.
+
+\item \label{exer:of:checkexactbounds} For the exact solution \eqref{eq:of:exactsolution}, show \eqref{eq:of:coeffbounds}.
+
 \item Show that $S^h$ is a linear subspace of $W^{1,p}(\Omega)$ with dimension $(m_x+2)(m_y+2)$, and that $S_0^h$ has dimension $m_x m_y$.  What precisely is meant by saying $g$ is ``(appropriately) piece-wise linear on $\partial\Omega$'' in the definition of $S_g^h$ on page \pageref{eq:of:Sghdefn}?
 
 \item  Use \eqref{eq:of:refcorners} and \eqref{eq:of:chidefn} to show that the two forms of the reference map \eqref{eq:of:referencemap} are the same.  Then use \eqref{eq:of:chidefn}, \eqref{eq:of:referencemap}, and \eqref{eq:of:psionref} to derive \eqref{eq:of:gradpsionref}.
@@ -492,16 +508,6 @@ H_{ijcd}(\xi,\eta) &= \left[\frac{4}{h_x^2} \left(\sum_{\ell=0}^3 u_\ell \frac{\
   &\qquad \cdot \left[\frac{4}{h_x^2} \left(\sum_{\ell=0}^3 u_\ell \frac{\partial\chi_\ell}{\partial \xi}\right) \frac{\partial\chi_{[ij]}}{\partial \xi} + \frac{4}{h_y^2} \left(\sum_{\ell=0}^3 u_\ell \frac{\partial\chi_\ell}{\partial \eta}\right) \frac{\partial\chi_{[ij]}}{\partial \eta}\right] \\
   &\quad - \left(\sum_{\ell=0}^3 f_\ell \chi_\ell\right) \chi_{[ij]}
 \end{align*}
-
-\item \label{exer:of:checkexactformulas} For the exact solution \eqref{eq:of:exactsolution}, define $C = |\grad u|^{p-2}$ and $D^2=(x+1)^2 + (y+1)^2$ and show that
-    $$C = \left[(x+1)^2 (y+1)^2 D^2\right]^{(p-2)/2}$$
-and that $\grad C = (p-2) C \left<\gamma_1,\gamma_2\right>$ where
-    $$\gamma_1 = \frac{1}{x+1}+ \frac{x+1}{D^2}, \quad \gamma_2 = \frac{1}{y+1}+ \frac{y+1}{D^2}.$$
-Also show that $\Div \grad u = D^2$.  Thus strong form \eqref{eq:of:plapstrongform} implies an implementable formula for the source function,
-    $$f = - \Div \left(C \grad u\right) = - \grad C \cdot \grad u - C\, \Div \grad u.$$
-Confirm that \texttt{ExactRHSLocal()} in \texttt{plap.c} implements these formulas.
-
-\item \label{exer:of:checkexactbounds} For the exact solution \eqref{eq:of:exactsolution}, show \eqref{eq:of:coeffbounds}.
 
 \item Figure \ref{fig:of:cartoonfunctional} shows the graph of $\Phi(x,y)=\tfrac{1}{4}(x^4+y^4) - 2x + 2y$, a cartoon for the $p$-Laplacian functional $I[u]$ in the case $p=4$.  Solve
     $$\min_{x,y} \Phi(x,y)$$

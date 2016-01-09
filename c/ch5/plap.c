@@ -48,14 +48,13 @@ PetscErrorCode ConfigureCtx(PLapCtx *user) {
     ierr = PetscOptionsInt("-quaddegree","quadrature degree n (= 1,2,3 only)",
                      NULL,user->quaddegree,&(user->quaddegree),NULL); CHKERRQ(ierr);
     if ((user->quaddegree < 1) || (user->quaddegree > 3)) {
-        SETERRQ(COMM,2,"quadrature degree n=1,2,3 only");
-    }
+        SETERRQ(COMM,2,"quadrature degree n=1,2,3 only"); }
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
     return 0;
 }
 //ENDCTX
 
-//STARTBOUNDARYINITIAL
+//STARTBDRYINIT
 PetscReal BoundaryG(PetscReal x, PetscReal y) {
     return 0.5 * (x+1.0)*(x+1.0) * (y+1.0)*(y+1.0);
 }
@@ -98,7 +97,7 @@ PetscErrorCode InitialIterate(DMDALocalInfo *info, Vec u, PLapCtx *user) {
     ierr = DMDAVecRestoreArray(user->da,u,&au); CHKERRQ(ierr);
     return 0;
 }
-//ENDBOUNDARYINITIAL
+//ENDBDRYINIT
 
 //STARTEXACT
 PetscErrorCode ExactRHSLocal(DMDALocalInfo *info, Vec uex, Vec f,
@@ -240,7 +239,8 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **au,
               for (r=0; r<n; r++) {
                   for (s=0; s<n; s++) {
                       lobj += wq[n-1][r] * wq[n-1][s]
-                              * ObjIntegrand(info,f,u,zq[n-1][r],zq[n-1][s],user->p);
+                              * ObjIntegrand(info,f,u,
+                                             zq[n-1][r],zq[n-1][s],user->p);
                   }
               }
           }
@@ -324,7 +324,8 @@ int main(int argc,char **argv) {
                &(user.da)); CHKERRQ(ierr);
   ierr = DMSetApplicationContext(user.da,&user);CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);
-  ierr = PetscPrintf(COMM,"grid of %d x %d = %d interior nodes (%dx%d elements)\n",
+  ierr = PetscPrintf(COMM,
+           "grid of %d x %d = %d interior nodes (%dx%d elements)\n",
             info.mx,info.my,info.mx*info.my,info.mx+1,info.my+1); CHKERRQ(ierr);
 
   ierr = DMCreateGlobalVector(user.da,&u);CHKERRQ(ierr);
@@ -349,7 +350,8 @@ int main(int argc,char **argv) {
   ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
   ierr = VecNorm(u,NORM_INFINITY,&err); CHKERRQ(ierr);
   ierr = PetscPrintf(COMM,
-      "numerical error:  |u-u_exact|_inf/|u_exact|_inf = %g\n",err/unorm); CHKERRQ(ierr);
+           "numerical error:  |u-u_exact|_inf/|u_exact|_inf = %g\n",
+           err/unorm); CHKERRQ(ierr);
 
   VecDestroy(&u);  VecDestroy(&uexact);
   VecDestroy(&(user.f));  VecDestroy(&(user.g));
