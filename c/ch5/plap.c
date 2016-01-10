@@ -195,11 +195,9 @@ void GetUorG(DMDALocalInfo *info, PetscInt i, PetscInt j,
 }
 
 PetscReal GradInnerProd(DMDALocalInfo *info, gradRef du, gradRef dv) {
-    const PetscReal hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1);
-    PetscReal       z;
-    z =  (4.0 / (hx * hx)) * du.xi  * dv.xi;
-    z += (4.0 / (hy * hy)) * du.eta * dv.eta;
-    return z;
+    const PetscReal hx = 1.0 / (info->mx+1),  hy = 1.0 / (info->my+1),
+                    cx = 4.0 / (hx * hx),  cy = 4.0 / (hy * hy);
+    return cx * du.xi  * dv.xi + cy * du.eta * dv.eta;
 }
 
 PetscReal GradPow(DMDALocalInfo *info, gradRef du, PetscReal P) {
@@ -250,7 +248,7 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **au,
   ierr = DMDAVecRestoreArray(user->da,user->g,&ag); CHKERRQ(ierr);
   lobj *= 0.25 * hx * hy;
 
-  ierr = PetscObjectGetComm((PetscObject)(info->da),&com);CHKERRQ(ierr);
+  ierr = PetscObjectGetComm((PetscObject)(info->da),&com); CHKERRQ(ierr);
   ierr = MPI_Allreduce(&lobj,obj,1,MPIU_REAL,MPIU_SUM,com); CHKERRQ(ierr);
   return 0;
 }
