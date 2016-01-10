@@ -473,8 +473,6 @@ FIXME
   \item For $1 \le p < \infty$, prove coercivity \eqref{eq:of:coercivity} of functional $I[u]$, defined in \eqref{eq:of:functional}, on $W_0^{1,p}(\Omega)$.  (\emph{Hints}:  Use Poincar\`e inequality \citep[Theorem 6.30]{AdamsFournier2003} to convert to replace the leading term with the full $W^{1,p}$ norm.  Use Young's inequality with $\epsilon>0$ \citep[Appendix B]{Evans2010} for the ``$-fu$'' term.  Now choose $\eps$ appropriately.)
   \item For $1 < p < \infty$, prove strict convexity \eqref{eq:of:convexity} of functional $I[u]$ on $W_0^{1,p}(\Omega)$.  (\emph{Hint}:  The argument in section 5.3 of \citet{Ciarlet2002} suffices.)
   \end{enumerate}
-
-\item \label{exer:of:regularize}  FIXME
  
 \item \label{exer:of:checkexactformulas} For the exact solution \eqref{eq:of:exactsolution}, define $C = |\grad u|^{p-2}$ and $D^2=(x+1)^2 + (y+1)^2$ and show that
     $$C = \left[(x+1)^2 (y+1)^2 D^2\right]^{(p-2)/2}$$
@@ -514,7 +512,33 @@ H_{ijcd}(\xi,\eta) &= \left[\frac{4}{h_x^2} \left(\sum_{\ell=0}^3 u_\ell \frac{\
 by hand.  Now write a \PETSc code \texttt{cartoon.c} to solve this problem, starting with a code that only implements $\Phi(x,y)$ by a function \texttt{FormObjective()} and a call to \texttt{SNESSetObjective()}.  After checking that it works using ``\texttt{./cartoon -snes\_fd\_function -snes\_fd},'' add a function \texttt{FormFunction()} and a call to \texttt{SNESSetFunction()} and check that now ``\texttt{./cartoon -snes\_fd}'' works.  (\emph{Hint}:  \texttt{expcircle.c} from Chapter \ref{chap:nl} is a convenient starting point for your code.)
 % solution:  c/ch5/solns/cartoon.c
 
-\item FIXME
+\item \label{exer:of:regularize}  The solution of the $p$-Laplacian equation shown in this Chapter is actually rather ``dangerous'' in the sense that the equation is solved as though it is uniformly elliptic.  This is a solution-dependent and solution-method-dependent situation, however; see \eqref{eq:of:coeffbounds}.  Add to \texttt{FormFunctionLocal()} in \texttt{plap.c} an optional regularization constant $\eps>0$ so that the weak form \eqref{eq:of:plapweakform} becomes
+\begin{equation}
+\int_\Omega \left(|\grad u|^2+\eps^2\right)^{(p-2)/2} \grad u \cdot \grad v - f v = 0 \label{eq:of:plapweakformreg}
+\end{equation}
+The functional \eqref{eq:of:functional}, and \texttt{FormObjectiveLocal()}, can remain unchanged.  Run the code with small values of $\eps$, and note the largest value which still gets 1\% agreement on a selection of grids.
+
+\item \label{exer:of:regularizebad}  Continue the last exercise, but now change the manufactured solution \eqref{eq:of:exactsolution}, i.e.~the function \texttt{ExactRHSLocal()} in \texttt{plap.c}, to be
+\begin{equation}
+    u(x,y) = \frac{1}{2} x^2 y^2. \label{eq:of:exactsolutionbad}
+\end{equation}
+Now $\grad u \to 0$ as $(x,y)\to(0,0)$ in $\Omega$ so that $|\grad u|^{p-2}$ is not bounded-below by a positive constant; compare \eqref{eq:of:coeffbounds}.  Show that $\eps$-regularized cases can converge on fine grids but that the unregularized ($\eps=0$) method runs into trouble.
+
+\item One may approximate the strong form PDE \eqref{eq:of:plapstrongform} by finite differences on a structured grid just like that used in Chapter \ref{chap:st}.  Do so, in a \pSNES-using code \texttt{plapfd.c} that implements the nonlinear residual and the same manufactured solution as here.  At least initially, skip the Jacobian implementation.  Use \texttt{-snes\_fd\_color} and compare to results in this chapter.  What are the differences in your code relative to the code \texttt{plap.c}?
+
+\item It is common to linearize the strong form PDE \eqref{eq:of:plapstrongform} to get an iterative scheme
+\begin{equation}
+- \Div\left(|\grad u^{(k-1)}|^{p-2} \grad u^{(k)}\right) = f,
+\label{eq:of:picard}
+\end{equation}
+a \emph{Picard} iteration.  Implement this method by adding a function \texttt{FormPicardLocal()} to \texttt{plap.c}.  This function computes and assembles a \pMat for the left side, so that \eqref{eq:of:picard} is a linear equation $A\bu = \bb$ at each iteration.  Use \texttt{MatSetValuesStencil()} to insert entries into the \pMat; how many nonzero entries are there per row?  Also add this line to \texttt{main()}:
+\begin{code}
+    DMDASNESSetJacobianLocal(user.da,
+            (DMDASNESJacobian)FormPicardLocal,&user);
+\end{code}
+Options \texttt{-snes\_fd}/\texttt{-snes\_fd\_color}/\texttt{-snes\_mf} are no longer needed.  Run the code and check using \texttt{-log\_summary | grep Eval} that the number of evaluations of \texttt{FormFunctionLocal()} is much smaller than before.  However, are you getting quadratic convergence?  Recover quadratic convergence with option \texttt{-snes\_mf\_operator}, which uses the Picard matrix as a preconditioner; see Chapter \ref{chap:nl}.
+
+\item Improve on the last exercise by implementing the true Jacobian.  Add a user option so that either the Picard or Jacobian matrix is used, and compare performance with: the true Jacobian, the Picard matrix used as the true Jacobian, and the Picard matrix used as the preconditioning material in option \texttt{-snes\_mf\_operator}. 
 
 \end{enumerate}
 
