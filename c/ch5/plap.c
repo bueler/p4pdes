@@ -320,13 +320,11 @@ int main(int argc,char **argv) {
 
   ierr = DMDACreate2d(COMM,
                DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED, DMDA_STENCIL_BOX,
-               -3,-3,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,
-               &(user.da)); CHKERRQ(ierr);
+               -3,-3,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&(user.da)); CHKERRQ(ierr);
   ierr = DMSetApplicationContext(user.da,&user);CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);
-  ierr = PetscPrintf(COMM,
-           "grid of %d x %d = %d interior nodes (%dx%d elements)\n",
-            info.mx,info.my,info.mx*info.my,info.mx+1,info.my+1); CHKERRQ(ierr);
+  ierr = PetscPrintf(COMM,"grid of %d x %d = %d interior nodes (%d elements)\n",
+            info.mx,info.my,info.mx*info.my,(info.mx+1)*(info.my+1)); CHKERRQ(ierr);
 
   ierr = DMCreateGlobalVector(user.da,&u);CHKERRQ(ierr);
   ierr = VecDuplicate(u,&uexact);CHKERRQ(ierr);
@@ -349,8 +347,7 @@ int main(int argc,char **argv) {
   ierr = VecNorm(uexact,NORM_INFINITY,&unorm); CHKERRQ(ierr);
   ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
   ierr = VecNorm(u,NORM_INFINITY,&err); CHKERRQ(ierr);
-  ierr = PetscPrintf(COMM,
-           "numerical error:  |u-u_exact|_inf/|u_exact|_inf = %g\n",
+  ierr = PetscPrintf(COMM,"numerical error:  |u-u_exact|/|u_exact| = %g\n",
            err/unorm); CHKERRQ(ierr);
 
   VecDestroy(&u);  VecDestroy(&uexact);
