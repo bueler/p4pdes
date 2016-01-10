@@ -300,24 +300,27 @@ Next, recall Gauss-Legendre quadrature on integrals in one dimension \citep{Gree
 \begin{equation}
 \int_{-1}^1 f(z)\,dz \approx \sum_{q=0}^{n-1} w_q f(z_q).  \label{eq:of:gauss}
 \end{equation}
-For degrees $n=1,2,3$, the quadrature \emph{nodes} $z_q$ and \emph{weights} $w_q$ for integration over the interval $[-1,1]$ are given in Table \ref{tab:of:gauss}.  The degree $n$ rule is exact for polynomials of degree $2n-1$ and less. 
+For degrees $n=1,2,3$, the quadrature \emph{nodes} $z_q$ and \emph{weights} $w_q$ for integration over the interval $[-1,1]$ are given in Table \ref{tab:of:gauss}.  The degree $n$ rule is exact for polynomials of degree $2n-1$ and less.
 
-Rule \eqref{eq:of:gauss} extends to a product formula for integrals over $\square_\ast$:
-\begin{equation}
-\int_{\square_\ast} v(\xi,\eta) \,d\xi\,d\eta \approx \sum_{r=0}^{n-1} \sum_{s=0}^{n-1} w_r w_s v(z_r,z_s).  \label{eq:of:tensorgauss}
-\end{equation}
+\begin{table}[h]
+\vspace{0.1in}
 
-\begin{table}[ht]
 \begin{tabular}{lll}
 $n$\phantom{foobar} & nodes $z_q$\phantom{foo} & weights $w_q$ \\ \hline
 $1$ & $0$ & $2$ \\
 $2$ & $-\frac{1}{\sqrt{3}}, +\frac{1}{\sqrt{3}}$ & $1,1$ \\
 $3$ & $-\sqrt{\frac{3}{5}}, 0, +\sqrt{\frac{3}{5}}$ & $\frac{5}{9}, \frac{8}{9}, \frac{5}{9}$ \\
 \end{tabular}
+
+\vspace{0.1in}
 \caption{Nodes and weights for low-degree Gauss-Legendre quadrature rules, for integrals \eqref{eq:of:gauss}.} \label{tab:of:gauss}
 \end{table}
 
-\bigskip
+Rule \eqref{eq:of:gauss} extends to a product formula for integrals over $\square_\ast$:
+\begin{equation}
+\int_{\square_\ast} v(\xi,\eta) \,d\xi\,d\eta \approx \sum_{r=0}^{n-1} \sum_{s=0}^{n-1} w_r w_s v(z_r,z_s).  \label{eq:of:tensorgauss}
+\end{equation}
+The $n=2,3$ cases are shown in Figure \ref{fig:of:gausstwod}, while the $n=1$ rule is simply the midpoint rule on $\square_\ast$.
 
 Formulas \eqref{eq:of:bilinearref}, \eqref{eq:of:gradrepref}, \eqref{eq:of:changeofvars}, and \eqref{eq:of:tensorgauss} combine to give an easily-computed approximation of integral in \eqref{eq:of:sumoverelements}.  On the reference element we define
 \begin{equation}
@@ -328,6 +331,37 @@ using the nodal values of $u$ and $f$ on element $\square_{ij}$.  (The details a
 I^h[u] = \frac{h_x h_y}{4} \quad \underbrace{\sum_{i=0}^{m_x} \sum_{j=0}^{m_y}}_{\begin{smallmatrix} \text{sum} \\ \text{over} \\ \text{elements} \end{smallmatrix}} \quad \underbrace{\sum_{r=0}^{n-1} \sum_{s=0}^{n-1}}_{\begin{smallmatrix} \text{sum} \\ \text{over} \\ \text{quadrature points} \end{smallmatrix}} \, w_r w_s G_{ij}(z_r,z_s) \label{eq:of:quadraturesumoverelements}
 \end{equation}
 We now have enough detail for a prototype implementation.
+
+\newcommand{\gausssanspts}{
+  % (xi,eta) reference element is square with half-width 1
+  \draw[->,very thin] (-1.2,0.0) -- (1.2,0.0) node[below] {\small $\xi$};
+  \draw[->,very thin] (0.0,-1.2) -- (0.0,1.2) node[left] {\small $\eta$};
+  \draw[line width=1.5pt] (1.0,1.0) -- (-1.0,1.0) -- (-1.0,-1.0) -- (1.0,-1.0) -- cycle;
+}
+
+\begin{figure}
+\begin{tikzpicture}[scale=1.8]
+\gausssanspts
+\pgfmathsetmacro\gl{1.0/sqrt(3.0)}
+\foreach \x [count=\RR from 0] in {-\gl,\gl} {
+    \foreach \y [count=\SS from 0] in {-\gl,\gl} {
+         \filldraw (\x,\y) circle (1.0pt) node[above] {\small $\RR,\SS$};
+    }
+}
+\end{tikzpicture}
+\qquad\qquad
+\begin{tikzpicture}[scale=1.8]
+\gausssanspts
+\pgfmathsetmacro\gl{sqrt(3.0/5.0)}
+\foreach \x [count=\RR from 0] in {-\gl,0,\gl} {
+    \foreach \y [count=\SS from 0] in {-\gl,0,\gl} {
+         \filldraw (\x,\y) circle (1.0pt) node[above,yshift=-0.4mm] {\small $\RR,\SS$};
+    }
+}
+\end{tikzpicture}
+\caption{The $n=2$ (left) and $n=3$ (right) Gauss-Legendre quadrature points on the reference element $\square_\ast$.  Points $(z_r,z_s)$ are labeled as ``$r,s$''.  See equation \eqref{eq:of:tensorgauss} and Table \ref{tab:of:gauss}.}
+\label{fig:of:gausstwod}
+\end{figure}
 
 
 \section{Objective-only implementation}
