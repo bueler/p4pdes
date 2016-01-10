@@ -366,36 +366,43 @@ We now have enough detail for a prototype implementation.
 
 \section{Objective-only implementation}
 
-Our code is displayed in eight parts, Codes \ref{code:plapCtx}--\ref{code:plapFun}.  However, part \ref{code:plapFun}, which implements the weak form \eqref{eq:of:plapweakform}, is shown after we get the code running initially using only an implementation of the objective \eqref{eq:of:functional}.
+Our program \texttt{plap.c} is displayed in eight parts, Codes \ref{code:plapCtx}--\ref{code:plapFun}.  However, Code \ref{code:plapFun}, which implements the weak form \eqref{eq:of:plapweakform}, is shown after we get it running initially using only an implementation of objective functional \eqref{eq:of:functional}, that is, sum \eqref{eq:of:quadraturesumoverelements}.
 
-Code \ref{code:plapCtx} declares a ``context'' \texttt{struct} which will be needed in the call-back functions \texttt{FormObjectiveLocal} (Code \ref{code:plapObj}) and \texttt{FormFunctionLocal} (Code \ref{code:plapFun}).  Defaults and \PETSc options are set in the \texttt{ConfigureCtx()} function.
+Code \ref{code:plapCtx} declares a ``context'' \texttt{struct PLapCtx} which will be needed in the call-back functions \texttt{FormObjectiveLocal()} (Code \ref{code:plapObj}) and \texttt{FormFunctionLocal()} (Code \ref{code:plapFun}).  Defaults and \PETSc options are then set in the \texttt{ConfigureCtx()} function.
 
-Next, in Code \ref{code:plapBI} we declare a function \texttt{BoundaryG()} for computing the boundary values $g$.  (In fact this is just the exact solution \eqref{eq:of:exactsolution}.)  The function \texttt{SetGLocal()} sets boundary conditions at the ghosted points of a \texttt{Local} \pVec which is dedicated to this purpose.  Also the function \texttt{InitialIterate()} sets the initial iterate by linearly-interpolating the boundary values into the interior nodes.
-
-The third part, Code \ref{code:plapEx}, implements exact solution \eqref{eq:of:exactsolution} and computes $f$ from the strong-form equation \eqref{eq:of:plapstrongform}.  In this case $f$ is computed at all grid points, including the ghost points of the \texttt{Local} \pVec which holds $f$, while the exact values of $u$ are only computed at the interior points, the entries of a \texttt{Global} \pVec.\sidenote{For ``fairness'' we will store the exact values of $u$ in a \pVec \texttt{uexact} which is unavailable to the call-back functions used in solving the PDE.}  A main concern in Codes \ref{code:plapBI} and \ref{code:plapEx} is that we be able to integrate $u$, its derivatives, and $f$ on each element, and this requires ghosted values of $f$ and $g$ (below).
-
-\clearpage
 \cinputpart{plap.c}{\CODELOC}{Declare and configure a context.}{I}{//STARTCTX}{//ENDCTX}{code:plapCtx}
 
-We show FEM tools in Code \ref{code:plapFEM}.  The first tools are generic to $Q^1$ methods in 2D, namely the evaluation of basis functions $\chi_\ell$, partial derivatives thereof, at points $(\xi,\eta)$ in the reference element.  We implement formulas \eqref{eq:of:chidefn}, \eqref{eq:of:bilinearref}, and \eqref{eq:of:gradrepref}; for the last, note that a two-element struct \texttt{gradRef} holds the components of a gradient.  We also declare nodes and weights for degree $n=1,2,3$ Gauss-Legendre quadrature; see below for comparison.
+Next, in Code \ref{code:plapBI} we declare a function \texttt{BoundaryG()} for computing the boundary values $g(x,y)$.  (In fact this is just the exact solution $u(x,y)$ from \eqref{eq:of:exactsolution}.)  The function \texttt{SetGLocal()} sets boundary conditions at the ghosted points of the \texttt{Local} \pVec which stores $g$.  Also the function \texttt{InitialIterate()} sets the initial values of $u$ for the Newton iteration, by linearly-interpolating the boundary values into the interior nodes.
 
-\cinputpart{plap.c}{\CODELOC}{Set boundary and initial values.  The boundary values are set for the ghosted points of a \texttt{Local} \pVec.}{II}{//STARTBDRYINIT}{//ENDBDRYINIT}{code:plapBI}
+The third part, Code \ref{code:plapEx}, implements exact solution \eqref{eq:of:exactsolution} and computes the corresponding source term $f$ from PDE \eqref{eq:of:plapstrongform}.  In this case $f$ is computed at all grid points, including the ghost points of the \texttt{Local} \pVec which holds $f$, while the exact values of $u$ are only computed at the interior points; \texttt{uexact} is a \texttt{Global} \pVec.\sidenote{For ``fairness'' we will store the exact values of $u$ in a \pVec \texttt{uexact} which is unavailable to the call-back functions used in solving the PDE.}
+
+A main concern in Codes \ref{code:plapBI} and \ref{code:plapEx} is that we will be able to integrate $u$, its derivatives, and $f$ on each element.  This requires ghosted values of $f$ and $g$.  These ghosted values are used in Codes \ref{code:plapTool}, \ref{code:plapObj}, and \ref{code:plapFun} below.
+
+We show FEM tools in Code \ref{code:plapFEM}.  These are generic to any $Q^1$ method in 2D which is based on a reference element.  We evaluate basis functions $\chi_\ell$, and their partial derivatives, at points $(\xi,\eta) \in \square_\ast$.  We also implement formulas \eqref{eq:of:chidefn}, \eqref{eq:of:bilinearref}, and \eqref{eq:of:gradrepref}.  Note that a two-element \texttt{struct gradRef} holds the components of a gradient at a point.  We also declare nodes and weights for degree $n=1,2,3$ Gauss-Legendre quadrature, with values from Table \ref{tab:of:gauss}.
+
+\cinputpart{plap.c}{\CODELOC}{Set boundary values and initial iterate.  The boundary values set the ghosted nodes of a \texttt{Local} \pVec.}{II}{//STARTBDRYINIT}{//ENDBDRYINIT}{code:plapBI}
+
+Next, Code \ref{code:plapTool} has functions of convenience; these allow us to avoid code duplication in \texttt{FormObjectiveLocal()} and \texttt{FormFunctionLocal()}.  First is a function \texttt{GetUorG()} which evaluates either $u(x,y)$ or $g(x,y)$ according to whether a point $(x_i,y_j)\in\overline\Omega$ is an interior or boundary node.  Then there are methods which compute point-wise inner products $\grad u\cdot \grad v$ and powers $|\grad u|^P$ from nodal values.
 
 \cinputpart{plap.c}{\CODELOC}{Compute exact solution $u(x,y)$ from \eqref{eq:of:exactsolution}, and the corresponding source function $f(x,y)$.}{III}{//STARTEXACT}{//ENDEXACT}{code:plapEx}
 
-\cinputpart{plap.c}{\CODELOC}{Tools for a 2D $Q^1$ FEM method.}{IV}{//STARTFEM}{//ENDFEM}{code:plapFEM}
 
-FIXME Code \ref{code:plapTool}
+In Code \ref{code:plapObj} we compute the discrete objective functional $I^h[u]$, from \eqref{eq:of:quadraturesumoverelements}, in parallel.  The basic structure is that each rank computes its portion of the sum over all elements.  A local total \texttt{lobj} is incremented in the loop over owned elements by the line
+\begin{code}
+    lobj += wq[n-1][r] * wq[n-1][s] * ObjIntegrand(info,f,u,zq[n-1][r],zq[n-1][s],user->p);
+\end{code}
+which uses both the quadrature weights $w_q$ and nodes $z_q$ (Code \ref{code:plapFEM}).  Function \texttt{ObjIntegrand()} implements $G_{ij}(\xi,\eta)$ from \eqref{eq:of:integrandheuristic}.  Once the local contribution is fully-summed, a reduction across the MPI communicator puts the value of $I^h[u]$ into variable \texttt{obj} on each rank:
+\begin{code}
+    MPI_Allreduce(&lobj,obj,1,MPIU_REAL,MPIU_SUM,com);
+\end{code}
 
-\cinputpart{plap.c}{\CODELOC}{More tools, needed for evaluation of boundary values and functions of the gradient $\grad u$.}{V}{//STARTTOOLS}{//ENDTOOLS}{code:plapTool}
+\cinputpart{plap.c}{\CODELOC}{Tools for any 2D $Q^1$ FEM method.}{IV}{//STARTFEM}{//ENDFEM}{code:plapFEM}
 
-We have explained the $Q^1$ FEM implementation of the objective function $I[u]$.  Code \ref{code:plapObj} does that.  In function \texttt{ObjIntegrand()} we implement the formula $G(\xi,\eta)$ from Exercise \ref{chap:of}.\ref{exer:of:integrand}.  We also see implementations of quadrature formulas \eqref{eq:of:tensorgauss} and \eqref{eq:of:quadraturesumoverelements}.
+However, implementing the objective function requires us to be clearer than we have been so far on the parallel distribution of nodes and elements.  To do a sum over elements we must assign unique ownership of an element to a rank (process).
 
-\cinputpart{plap.c}{\CODELOC}{Implement \eqref{eq:of:quadraturesumoverelements} for the objective function $I^h[u]$.}{VI}{//STARTOBJECTIVE}{//ENDOBJECTIVE}{code:plapObj}
+\cinputpart{plap.c}{\CODELOC}{Functions needed for evaluation of boundary values and functions of the gradient $\grad u$.}{V}{//STARTTOOLS}{//ENDTOOLS}{code:plapTool}
 
-Implementing the objective function requires us to be clear on the parallel distribution of nodes and elements.  To do sums over elements like \eqref{eq:of:quadraturesumoverelements} we must assign unique ownership of an element to a rank (process).
-
-Figure \ref{fig:of:parallelgrid} shows the scheme we have implemented.\sidenote{There are other ways to do it, of course.}  The interior nodes are distributed across the processes in the obvious way.  That is, \PETSc's \pDMDA object treats the grid of interior nodes here just as it did the grid of all nodes in Chapter \ref{chap:st}.  Regarding the elements, each rank owns those which are down and left from an owned node.  However, ranks which own $i=m_x-1$ or $j=m_y-1$ nodes, that is, ranks which own the upper or right edges of the grid, also own the elements above and to the right of these nodes.  This implies a slight load imbalance; it is quite tolerable if each rank owns a significant block of nodes.
+Figure \ref{fig:of:parallelgrid} shows the scheme we have implemented.  The interior nodes are distributed across the processes in the obvious way.  That is, \PETSc's \pDMDA object treats the grid of interior nodes here just as it did the grid of all nodes in Chapter \ref{chap:st}.  Regarding the elements, we decide that each rank owns those which are down and left from an owned node.  However, we also decide that ranks which own $i=m_x-1$ or $j=m_y-1$ nodes, that is, ranks which own the upper or right edges of the grid, also own the elements above and to the right of these nodes.
 
 \newcommand{\gridsansowners}{
   % grid
@@ -458,9 +465,14 @@ Figure \ref{fig:of:parallelgrid} shows the scheme we have implemented.\sidenote{
 \label{fig:of:parallelgrid}
 \end{figure}
 
+\cinputpart{plap.c}{\CODELOC}{Implement \eqref{eq:of:quadraturesumoverelements} for the objective function $I^h[u]$.}{VI}{//STARTOBJECTIVE}{//ENDOBJECTIVE}{code:plapObj}
+
+Our scheme implies a slight load imbalance in the sense that ranks along the upper and right-hand side of the grid do more work.  This imbalance is quite tolerable if each rank owns a significant block of nodes, e.g.~a squarish block of thousands of interior nodes.
+
+\cinputpart{plap.c}{\CODELOC}{In \texttt{main()} we set up \pDMDA, some \pVecs, and the \pSNES.  Then we solve and compute the error.}{VII}{//STARTMAIN}{//ENDMAIN}{code:plapMain}
+
 The main part, Code \ref{code:plapMain}, FIXME DOES THE USUAL STUFF AND CALLS \texttt{SNESSetObjective()} only.  Except \texttt{SNESSetFunction()} is available but no hand-made Jacobian at all.
 
-\cinputpart{plap.c}{\CODELOC}{FIXME}{VII}{//STARTMAIN}{//ENDMAIN}{code:plapMain}
 
 
 \section{Residual function (gradient) implementation}
