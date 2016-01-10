@@ -368,7 +368,7 @@ We now have enough detail for a prototype implementation.
 
 Our program \texttt{plap.c} is displayed in eight parts, Codes \ref{code:plapCtx}--\ref{code:plapFun}.  However, Code \ref{code:plapFun}, which implements the weak form \eqref{eq:of:plapweakform}, is shown after we get it running initially using only an implementation of objective functional \eqref{eq:of:functional}, that is, sum \eqref{eq:of:quadraturesumoverelements}.
 
-Code \ref{code:plapCtx} declares a ``context'' \texttt{struct PLapCtx} which will be needed in the call-back functions \texttt{FormObjectiveLocal()} (Code \ref{code:plapObj}) and \texttt{FormFunctionLocal()} (Code \ref{code:plapFun}).  Defaults and \PETSc options are then set in the \texttt{ConfigureCtx()} function.
+Code \ref{code:plapCtx} declares a ``context'' \texttt{struct PLapCtx} which will be needed in the call-back functions \texttt{FormObjectiveLocal()} (Code \ref{code:plapObj}) and \texttt{FormFunctionLocal()} (Code \ref{code:plapFun}).  Defaults and \PETSc options are then set in the \texttt{ConfigureCtx()} function.  Note that exponent $p$ defaults to 4.
 
 \cinputpart{plap.c}{\CODELOC}{Declare and configure a context.}{I}{//STARTCTX}{//ENDCTX}{code:plapCtx}
 
@@ -471,8 +471,64 @@ Our scheme implies a slight load imbalance in the sense that ranks along the upp
 
 \cinputpart{plap.c}{\CODELOC}{In \texttt{main()} we set up \pDMDA, some \pVecs, and the \pSNES.  Then we solve and compute the error.}{VII}{//STARTMAIN}{//ENDMAIN}{code:plapMain}
 
-The main part, Code \ref{code:plapMain}, FIXME DOES THE USUAL STUFF AND CALLS \texttt{SNESSetObjective()} only.  Except \texttt{SNESSetFunction()} is available but no hand-made Jacobian at all.
+The main part, Code \ref{code:plapMain}, calls the various functions in the previous parts, of course.  We set up \pDMDA, some \pVecs, and \pSNES objects.  Note that we use \texttt{DMCreateGlobalVector()} on \texttt{u} and \texttt{uexact}, but \texttt{DMCreateLocalVector()} on the \pVecs which hold $f$ and $g$.  The latter \pVecs do not change during the run, so we never need to call \texttt{DMGlobalToLocalBegin/End()}.  Also, we tell the \pDMDA to use objective function \texttt{FormObjectiveLocal()} by calling \texttt{DMDASNESSetObjectiveLocal()}.  Similarly, we call \texttt{DMDASNESSetFunctionLocal()} to tell the \pDMDA about \texttt{FormFunctionLocal()}; see Code \ref{code:plapFun} for the implementation.
 
+Then we call \texttt{SNESSolve()}, compute the error, and destroy all the objects at the end.  Regarding that last \texttt{Destroy()} step, the reader might start running the program by confirming that it has no memory leaks:
+\begin{cline}
+$ cd c/ch5/
+$ make plap
+...
+$ valgrind ./plap
+...
+\end{cline}
+%$
+
+The parts above show the objective-only implementation.  To use it requires option \texttt{-snes\_fd\_function}, which does finite differencing on the objective functional $I^h[u]$, equation \eqref{eq:of:quadraturesumoverelements}, to get its gradient $\grad I^h[u]$.  Then the \pSNES solves $F(u) = \grad I^h[u] = 0$.
+
+Of course, even with a residual function $F(u)$ we still need a Jacobian for Newton's method.  To get this we ask \PETSc to finite difference \emph{again}, using either \texttt{-snes\_fd} or \texttt{-snes\_mf}.  Recall from Chapter \ref{chap:nl} that we can ask \PETSc to count C function evaluations, to confirm that only the objective function is evaluated:
+\begin{cline}
+$ ./plap -snes_fd_function -snes_fd -log_summary | grep Eval
+SNESObjectiveEval    2198 1.0 1.8496e-01 1.0 ...
+SNESJacobianEval       7 1.0 2.1275e-01 1.0 ...
+\end{cline}
+%$
+On the default ($3\times 3$ interior nodes) grid we have evaluated the objective functional 2198 times, already a warning about the scalability of this method.\sidenote{The Jacobian evaluation counts report calls to \PETSc's finite difference Jacobian method.}
+
+Actually, experience from Chapter \ref{chap:nl} suggests using a ``coloring'' method, available for our \pDMDA-managed structured grid.  This reduces the evaluation count, especially on a once-refined $5 \times 5$ grid:
+\begin{cline}
+$ ./plap -snes_fd_function -snes_fd -da_refine 1 -log_summary | grep ObjectiveEval
+SNESObjectiveEval   20539 1.0 1.5497e+00 1.0 ...
+$ ./plap -snes_fd_function -snes_fd_color -da_refine 1 -log_summary | grep ObjectiveEval
+SNESObjectiveEval    5410 1.0 4.8340e-01 1.0 ...
+\end{cline}
+These remain disturbingly-large evaluation counts.
+
+Given that we have an implementation with an exact solution, we want to see convergence:\sidenote{Recall the \texttt{alias} set in Chapter \ref{chap:ls}: \texttt{timer='time -f "real \%e"'}.}
+\begin{cline}
+$ for LEV in 0 1 2 3; do
+> timer ./plap -snes_fd_color -snes_fd_function -snes_converged_reason -da_refine $LEV
+> done
+grid of 3 x 3 = 9 interior nodes (16 elements)
+Nonlinear solve converged due to CONVERGED_FNORM_ABS iterations 6
+numerical error:  |u-u_exact|/|u_exact| = 0.0080805
+real 0.22
+grid of 5 x 5 = 25 interior nodes (36 elements)
+Nonlinear solve converged due to CONVERGED_FNORM_ABS iterations 7
+numerical error:  |u-u_exact|/|u_exact| = 0.00292891
+real 0.50
+grid of 9 x 9 = 81 interior nodes (100 elements)
+Nonlinear solve did not converge due to DIVERGED_LINEAR_SOLVE iterations 8
+numerical error:  |u-u_exact|/|u_exact| = 0.000925284
+real 2.73
+grid of 17 x 17 = 289 interior nodes (324 elements)
+Nonlinear solve did not converge due to DIVERGED_LINE_SEARCH iterations 20
+numerical error:  |u-u_exact|/|u_exact| = 0.00025817
+real 47.74
+\end{cline}
+%$
+This is evidence of convergence indeed, with reductions of the error by factors close to $O(\Delta x^2)$, but the rest of the evidence provides copious warnings.  First, performance is terrible, presumably coming from excessive objective evaluation.  Secondly, though errors are small, suggesting that convergence occurred, on the two finer grids we get divergence.  Such troubles are no surprise, as the Jacobian is computed by finite differencing a gradient computed by finite differences!\sidenote{Thank goodness we have 64 bit \texttt{double} precision, to get even this far.}
+
+However, we can see from the small errors that the FEM of this Chapter has allowed us to numerically-solve the $p$-Laplacian PDE using \PETSc's ability to minimize a function.  This is a useful capability for prototyping, and for providing a redundant capability for checking the correctness of better approaches.  Let us move on to one of those, namely actually implementing the weak form \eqref{eq:of:plapweakform}, which is the missing gradient.
 
 
 \section{Residual function (gradient) implementation}
@@ -563,6 +619,19 @@ H_{ijcd}(\xi,\eta) &= \left[\frac{4}{h_x^2} \left(\sum_{\ell=0}^3 u_\ell \frac{\
     $$\min_{x,y} \Phi(x,y)$$
 by hand.  Now write a \PETSc code \texttt{cartoon.c} to solve this problem, starting with a code that only implements $\Phi(x,y)$ by a function \texttt{FormObjective()} and a call to \texttt{SNESSetObjective()}.  After checking that it works using ``\texttt{./cartoon -snes\_fd\_function -snes\_fd},'' add a function \texttt{FormFunction()} and a call to \texttt{SNESSetFunction()} and check that now ``\texttt{./cartoon -snes\_fd}'' works.  (\emph{Hint}:  \texttt{expcircle.c} from Chapter \ref{chap:nl} is a convenient starting point for your code.)
 % solution:  c/ch5/solns/cartoon.c
+
+\item Comment-out the parts of \texttt{plap.c} shown in Code \ref{code:plapFun}, including the \texttt{DMDASNESSetFunctionLocal()} line which tells the \pDMDA and \pSNES about the residual-evaluation function.  You now have a truly ``objective-only'' code.  Confirm that
+\begin{cline}
+./plap -snes_fd -snes_fd_function
+\end{cline}
+works, but that
+\begin{cline}
+./plap -snes_fd
+./plap -snes_mf
+\end{cline}
+do not.  Confirm the evaluation-counting results in the text with ``\texttt{-log\_summary | grep Eval}''.
+%FIXME:  what is "./plap -snes_fd_function" doing?
+
 
 \item \label{exer:of:regularize}  The solution of the $p$-Laplacian equation shown in this Chapter is actually rather ``dangerous'' in the sense that the equation is solved as though it is uniformly elliptic.  Making that assumption is solution- and method-dependent; see \eqref{eq:of:coeffbounds}.  For this reason it is common to \emph{regularize} the $p$-Laplacian by inserting a constant $\eps>0$ so that the weak form \eqref{eq:of:plapweakform} becomes
 \begin{equation}
