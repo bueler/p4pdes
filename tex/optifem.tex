@@ -145,7 +145,7 @@ For the representation of $u$ we introduce a structured-grid finite element meth
 \end{tikzpicture}
 \medskip
 
-\caption{The structured grid divides the unit square $\Omega$ into elements $\square_{ij}$ of area $h_x h_y$.  There are $m_x\times m_y$ interior nodes (degrees of freedom).  We index elements by their upper-right corners $(x_i,y_j)$.}
+\caption{The structured grid divides the unit square $\Omega$ into elements $\square_{ij}$ of area $h_x h_y$.  There are $N=m_x m_y$ interior nodes (degrees of freedom).  We index elements by their upper-right corners.}
 \label{fig:of:q1grid}
 \end{figure}
 
@@ -169,15 +169,9 @@ By showing the grid in Figure \ref{fig:of:q1grid}, and the sum-over-elements for
 \begin{code}
   DMDACreate2d(COMM,
       DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED, DMDA_STENCIL_BOX,
-      -3,-3,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&(user.da));
+      -3,-3,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&da);
 \end{code}
-(Note we set the grid defaults to $m_x=m_y=3$.)
-
-Thus the ghosted points in a \pVec \texttt{v} derived from the \pDMDA by
-\begin{code}
-  DMCreateLocalVector(user.da,&v);
-\end{code}
-can store values at all $\tilde N = (m_x+2)(m_y+2)$ grid points, while a \texttt{Global} \pVec can store the $N=m_x m_y$ degrees of freedom.
+(Note we set the grid defaults to $m_x=m_y=3$.)  Thus if we create a \pVec \texttt{v} using ``\texttt{DMCreateLocalVector(da,\&v)}'' then it can store values at all $\tilde N = (m_x+2)(m_y+2)$ grid points, with the boundary points in the ghosts, while a \texttt{Global} \pVec from \texttt{DMCreateGlobalVector()} can store the $N=m_x m_y$ degrees of freedom.
 
 On the other hand, how should we approximate a function $w \in W^{1,p}(\Omega)$ in a manner compatible with a structured grid of rectangles?  One simple choice requires that the approximation $w_h$ be bilinear on each element $\square_{ij}$ and continuous on the whole domain $\Omega$.  These requirements determine $w_h(x,y)$ from the nodal values $w_{ij} = w_h(x_i,y_j)$.  Said another way, there is a linear isomorphism between the vector space $\RR^{\tilde N}$, and an $\tilde N$-dimensional linear subspace of $W^{1,p}(\Omega)$, namely
 \begin{equation}
@@ -540,36 +534,36 @@ numerical error:  |u-u_exact|/|u_exact| = 0.00025817
 real 47.74
 \end{cline}
 %$
-This is evidence of convergence indeed, with reductions of the error by factors close to $O(\Delta x^2)$, but the rest of the evidence provides copious warnings.  First, performance is terrible, presumably coming from excessive objective evaluation.  Secondly, though errors are small, suggesting that convergence occurred, on the two finer grids we get divergence.  Such troubles are no surprise, as the Jacobian is computed by finite differencing a gradient computed by finite differences!\sidenote{Thank goodness we have 64 bit \texttt{double} precision, to get even this far.}
+
+Thus we have evidence of convergence, with reductions of the error by factors close to $O(\Delta x^2)$, but the rest of the above provides copious warnings.  First, performance is terrible, presumably coming from excessive objective evaluation.  Secondly, though errors are small, suggesting that convergence occurred, on the two finer grids we get divergence.  Such troubles are no surprise, as the Jacobian is computed by finite differencing a gradient computed by finite differences!\sidenote{Thank goodness we have 64 bit \texttt{double} precision, to get even this far.}
 
 However, we can see from the small errors that the FEM of this Chapter has allowed us to numerically-solve the $p$-Laplacian PDE using \PETSc's ability to minimize a function.  This is a useful capability for prototyping, and for providing a redundant capability for checking the correctness of better approaches.  Let us move on to one of those, namely actually implementing the weak form \eqref{eq:of:plapweakform}, which is the missing gradient.
 
 
 \section{Residual function (gradient) implementation}
 
-As we will see, there are significant limitations to the objective-only implementation above.  Grids other than the very coarsest lead to unreasonable numbers of evaluations of the objective function.  Furthermore the quality of the numerically-approximated finite difference gradient of the objective function, that is, of the residual function, is low.  So we take the next step in user-written code, by implementing a residual function.
+The obvious limitation to the objective-only implementation above is that grids other than the very coarsest lead to unreasonable numbers of evaluations of the objective function.  Furthermore the quality of the numerically-approximated finite difference gradient of the objective function, that is, of the residual function, is low, and the second-differenced Jacobian is even worse.  So we take the next, also obvious, step of implementing a residual function.
 
-Recall \eqref{eq:of:plapweakform}, the weak form of the $p$-Laplacian equation, which says $\grad I[u](v) = 0$ for all $v\in W_0^{1,p}(\Omega)$.  The corresponding statement for $u\in S_g^h$ and all $v \in S_0^h$ can be written out in the basis of hat functions.
-
-Thus we require $u$ to satisfy \eqref{eq:of:plapweakform} for $v=\psi_{ij}$ at each of the $N$ interior nodes:
+Recall \eqref{eq:of:plapweakform}, the weak form of the $p$-Laplacian equation, which says $\grad I[u](v) = 0$ for all $v\in W_0^{1,p}(\Omega)$.  The corresponding statement for $u\in S_g^h$ and all $v \in S_0^h$ will be written out in the basis of hat functions in $S_0^h$.  That is, we require $u$ to satisfy \eqref{eq:of:plapweakform} for every $v=\psi_{ij}$ corresponding to one of the $N$ interior nodes:
 \begin{equation}
 \int_\Omega |\grad u|^{p-2} \grad u \cdot \grad \psi_{ij} - f \psi_{ij} = 0. \label{eq:of:weakformbasis}
 \end{equation}
-Note that the support of $\psi_{ij}$ is localized around the node $(x_i,y_j)$,
+
+The support of $\psi_{ij}$ is localized around the node $(x_i,y_j)$,
     $$\operatorname{supp} \psi_{ij} = \square_{ij} \cup \square_{i+1,j} \cup \square_{i,j+1} \cup \square_{i+1,j+1},$$
-so in fact the integral in \eqref{eq:of:weakformbasis} is over these four elements.  Also, on the reference element we define
+so in fact the integral in \eqref{eq:of:weakformbasis} is over just four elements.  On the reference element we define
 \begin{equation}
 H_{ijcd}(\xi,\eta) = \left[|\grad u|^{p-2} \grad u \cdot \grad \chi_{[ij]} - f \chi_{[ij]}\right]_{\square_\ast} \label{eq:of:weakformintegrandref}
 \end{equation}
-where $\chi_{[ij]}$ denotes the basis function $\chi_\ell$ corresponding to $\psi_{ij}$--- recall equation \eqref{eq:of:psionref}---and where we use the nodal values of $u$ and $f$ on element $\square_{i+c,j+d}$ for $c,d=0,1$.  (Compare equation \eqref{eq:of:integrandheuristic}.  The details for equation \eqref{eq:of:weakformintegrandref} are in Exercise \ref{chap:of}.\ref{exer:of:weakformintegrand}.)  Finally, we do the element integrals implied by \eqref{eq:of:weakformbasis} by using quadrature \eqref{eq:of:tensorgauss}.
-
-In these terms, we rewrite \eqref{eq:of:weakformbasis} as this equation,
+where $\chi_{[ij]}$ denotes the basis function $\chi_\ell$ corresponding to $\psi_{ij}$--- recall equation \eqref{eq:of:psionref}---and where we use the nodal values of $u$ and $f$ on element $\square_{i+c,j+d}$ for $c,d=0,1$.  (Details are in Exercise \ref{chap:of}.\ref{exer:of:weakformintegrand}.)  Finally, we do the element integrals implied by \eqref{eq:of:weakformbasis} by using quadrature \eqref{eq:of:tensorgauss}.  Thus, in these terms, we rewrite \eqref{eq:of:weakformbasis} as
 \begin{equation}
-0 = \frac{h_x h_y}{4} \sum_{c=0}^1 \sum_{d=0}^1 \sum_{r=0}^{n-1} \sum_{s=0}^{n-1} w_r w_s H_{ijcd}(z_r,z_s).  \label{eq:of:weakformdetail}
+\frac{h_x h_y}{4} \sum_{c=0}^1 \sum_{d=0}^1 \sum_{r=0}^{n-1} \sum_{s=0}^{n-1} w_r w_s H_{ijcd}(z_r,z_s) = 0.  \label{eq:of:weakformdetail}
 \end{equation}
-There is one such nonlinear equation for each of the $N$ interior nodes $(x_i,y_j)$.  Solving this system of equations is intended to determine all $N$ values $u_{ij}$.
+There is one such nonlinear equation for each of the $N$ interior nodes $(x_i,y_j)$.  Solving this system of equations, a nonlinear system $\bF(\bu)=0$ as in Chapter \ref{chap:nl}, should determine all $N$ values $u_{ij}$.
 
-\cinputpart{plap.c}{\CODELOC}{FIXME}{VIII}{//STARTFUNCTION}{//ENDFUNCTION}{code:plapFun}
+Sum \eqref{eq:of:weakformdetail} is implemented by \texttt{FormFunctionLocal()} in Code \ref{code:plapFun}.  It computes the residual $F_{ij}(u)$ at every interior node $(x_i,y_j)$.  Note that \texttt{FunIntegrand()} in Code \ref{code:plapFun} implements \eqref{eq:of:weakformintegrandref} by reusing tools from Code \ref{code:plapTool}.
+
+\cinputpart{plap.c}{\CODELOC}{The residual function $\bF(\bu)$ corresponding to the weak form \eqref{eq:of:plapweakform}.  These two C functions implement \eqref{eq:of:weakformintegrandref} and \eqref{eq:of:weakformdetail}, respectively.}{VIII}{//STARTFUNCTION}{//ENDFUNCTION}{code:plapFun}
 
 
 \section{FIXME looking at result and performance}
