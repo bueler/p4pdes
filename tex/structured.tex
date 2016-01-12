@@ -44,7 +44,7 @@ Because \eqref{poissonsquare} and \eqref{poissonsquarebcs} form a linear problem
 
 \section{Building a structured grid}
 
-Our FD method is based on a \emph{structured grid} of $MN$ points on the unit square, as in Figure \ref{fig:unitsquaregrid}, with spacing $h_x=1/(M-1)$ and $h_y=1/(N-1)$ in the two directions.  The grid coordinates are $x_i = i\, h_x$ for $i = 0,1,\dots,M-1$ and $y_j = j\, h_y$ for $j=0,1,\dots,N-1$.  The construction of such a 2D grid, and distributing it across processors, uses a \PETSc object not covered in Chapters \ref{chap:gs} and \ref{chap:ls}.
+Our FD method is based on a \emph{structured grid} of $MN$ points on the unit square, as in Figure \ref{fig:unitsquaregrid}, with spacing $h_x=1/(M-1)$ and $h_y=1/(N-1)$ in the two directions.  The grid coordinates are $x_i = i\, h_x$ for $i = 0,1,\dots,M-1$ and $y_j = j\, h_y$ for $j=0,1,\dots,N-1$.  The construction of such a 2D grid, and distributing it across MPI processes, uses a \PETSc object not covered in Chapters \ref{chap:gs} and \ref{chap:ls}.
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
@@ -159,11 +159,11 @@ distributes the grid as in Figure \ref{fig:unitsquaregridparallel}.  Neither \te
       (-\dd,\ydn) -- (\od,\ydn) -- (\od,\yup) -- (-\dd,\yup) -- cycle;
   }
 \end{tikzpicture}
-\caption{Processor domains are far from square if the number of \MPI processes is prime.}
+\caption{Process-owned domains are far from square if the number of \MPI processes is prime.}
 \label{fig:unitsquaregridprime}
 \end{marginfigure}
 
-The observant reader has already noted that if the total number of processes \texttt{K}, in ``\texttt{mpiexec -n K},'' is prime then we get not-at-all-square processor domains.  For instance, the ``bad'' result from running
+The observant reader has already noted that if the total number of processes \texttt{K}, in ``\texttt{mpiexec -n K},'' is prime then we get not-at-all-square process-owned domains.  For instance, the ``bad'' result from running
 \begin{cline}
 $ mpiexec -n 5 ./poisson -da_grid_x 5 -da_grid_y 7
 \end{cline}
@@ -232,7 +232,7 @@ where
 \item[\texttt{bx,by}]  type of ghost nodes the array have; use one of \texttt{DM\_BOUNDARY\_NONE, DM\_BOUNDARY\_GHOSTED, DM\_BOUNDARY\_PERIODIC} \\
 \item[\texttt{stype}] stencil type; use either \texttt{DMDA\_STENCIL\_BOX} or \texttt{DMDA\_STENCIL\_STAR} \\
 \item[\texttt{M,N}]	   global dimension in each direction of the array; use \texttt{-M} and or \texttt{-N} to indicate that it may be set to a different value from the command line with \texttt{-da\_grid\_x <M> -da\_grid\_y <N>} \\
-\item[\texttt{m,n}]   corresponding number of processors in each dimension (or \texttt{PETSC\_DECIDE} to have calculated) \\
+\item[\texttt{m,n}]   corresponding number of processes in each dimension (or \texttt{PETSC\_DECIDE} to have calculated) \\
 \item[\texttt{dof}]     number of degrees of freedom per node \\
 \item[\texttt{s}]       stencil width \\
 \item[\texttt{lx,ly}]  arrays containing the number of nodes in each cell along the x and y coordinates, or \texttt{NULL}; if non-null, these must be of length as m and n, and the corresponding m and n cannot be \texttt{PETSC\_DECIDE}; the sum of the \texttt{lx[]} entries must be M, and the sum of the \texttt{ly[]} entries must be N \\
@@ -723,7 +723,7 @@ $ ./poisson -help | grep ksp_ | less
 \end{cline}
 %$
 
-Recall we used \texttt{-ksp\_view} in Chapter \ref{chap:ls} to expose the linear solver and preconditioner.  The serial \pKSP and \pPC defaults are GMRES and ILU($0$) as the preconditioner, while in parallel the defaults are GMRES and block Jacobi as a preconditioner, but where each diagonal block---there are four in the above parallel run---is preconditioned with ILU($0$).  In Chapter \ref{chap:ls} we pointed out that this parallel preconditioner, like most of them, gives processor-count dependent results.
+Recall we used \texttt{-ksp\_view} in Chapter \ref{chap:ls} to expose the linear solver and preconditioner.  The serial \pKSP and \pPC defaults are GMRES and ILU($0$) as the preconditioner, while in parallel the defaults are GMRES and block Jacobi as a preconditioner, but where each diagonal block---there are four in the above parallel run---is preconditioned with ILU($0$).  In Chapter \ref{chap:ls} we pointed out that this parallel preconditioner, like most of them, gives process-count dependent results.
 
 The serial \PETSc defaults for \pKSP and \pPC give a certain timing and a certain number of iterations on a given grid:
 \begin{cline}
@@ -899,7 +899,7 @@ fish2   & cg         & mg            &  2.60 &    5 \\
 \caption{Time and iteration count for \texttt{-da\_refine 7} runs, a $1025 \times 1025$ grid on a single MPI process on \WORKSTATION.  The \texttt{fish2} code appears in Chapter \ref{chap:mg}.} \label{tab:cgdirectmg}
 \end{table}
 
-Option \texttt{-pc\_factor\_mat\_ordering\_type nd} asks that the direct method be applied using the \emph{nested dissection} ordering \citep{George1973}.  While we give no details, in outline the unknowns and equations are re-ordered to reduce the cost of the factorization.  For LU factorization the nested dissection ordering is actually the \PETSc default for single-processor runs.\sidenote{And for this reason, the result of the \texttt{-ksp\_type preonly -pc\_type lu} was not in Table \ref{tab:poissontiming}.}  In any case, the two direct solvers in Table \ref{tab:cgdirectmg} are clearly competitive with IC($0$)-preconditioned CG.
+Option \texttt{-pc\_factor\_mat\_ordering\_type nd} asks that the direct method be applied using the \emph{nested dissection} ordering \citep{George1973}.  While we give no details, in outline the unknowns and equations are re-ordered to reduce the cost of the factorization.  For LU factorization the nested dissection ordering is actually the \PETSc default for single-process runs.\sidenote{And for this reason, the result of the \texttt{-ksp\_type preonly -pc\_type lu} was not in Table \ref{tab:poissontiming}.}  In any case, the two direct solvers in Table \ref{tab:cgdirectmg} are clearly competitive with IC($0$)-preconditioned CG.
 
 At this point the impulsive reader might give up on Krylov methods, but that also would be premature.  We do need to find a better preconditioner if we are going to have scalable solutions of this Poisson PDE problem.  Finding such methods will eventually show that properly-preconditioned Krylov iterations give both efficient and parallel-scalable solutions of large nonlinear and variable-coefficient elliptic PDE problems in 2D and 3D, something direct methods of linear algebra do not achieve.  Chapters \ref{chap:mg} and \ref{chap:sc} begin to fulfill this promise.
 
