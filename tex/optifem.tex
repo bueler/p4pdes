@@ -165,7 +165,21 @@ I[u] = \sum_{i=0}^{m_x} \sum_{j=0}^{m_y} \int_{\square_{ij}} \frac{1}{p} |\grad 
 \end{equation}
 Integration over a single element $\square_{ij}$ can be addressed once we represent $f$ and $u$.  A related sum over elements computes an approximation of the weak form \eqref{eq:of:plapweakform}; see \eqref{eq:of:weakformbasis} and \eqref{eq:of:weakformdetail} below.
 
-How should we approximate a function $w \in W^{1,p}(\Omega)$ in a manner compatible with a structured grid of rectangles?  One simple choice requires that the approximation $w_h$ be bilinear on each element $\square_{ij}$ and continuous on the whole domain $\Omega$.  These requirements determine $w_h(x,y)$ from the nodal values $w_{ij} = w_h(x_i,y_j)$.  Said another way, there is a linear isomorphism between the vector space $\RR^{\tilde N}$, and an $\tilde N$-dimensional linear subspace of $W^{1,p}(\Omega)$, namely
+By showing the grid in Figure \ref{fig:of:q1grid}, and the sum-over-elements formula \eqref{eq:of:sumoverelements}, we have already motivated how we are going to use \PETSc's \pDMDA structured-grid object.\sidenote{Introduced in Chapter \ref{chap:st}.}  We create this object using a \texttt{BOX} stencil and \texttt{GHOSTED} boundaries in each direction, as in this call extracted from Code \ref{code:plapMain}:
+\begin{code}
+  DMDACreate2d(COMM,
+      DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED, DMDA_STENCIL_BOX,
+      -3,-3,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&(user.da));
+\end{code}
+(Note we set the grid defaults to $m_x=m_y=3$.)
+
+Thus the ghosted points in a \pVec \texttt{v} derived from the \pDMDA by
+\begin{code}
+  DMCreateLocalVector(user.da,&v);
+\end{code}
+can store values at all $\tilde N = (m_x+2)(m_y+2)$ grid points, while a \texttt{Global} \pVec can store the $N=m_x m_y$ degrees of freedom.
+
+On the other hand, how should we approximate a function $w \in W^{1,p}(\Omega)$ in a manner compatible with a structured grid of rectangles?  One simple choice requires that the approximation $w_h$ be bilinear on each element $\square_{ij}$ and continuous on the whole domain $\Omega$.  These requirements determine $w_h(x,y)$ from the nodal values $w_{ij} = w_h(x_i,y_j)$.  Said another way, there is a linear isomorphism between the vector space $\RR^{\tilde N}$, and an $\tilde N$-dimensional linear subspace of $W^{1,p}(\Omega)$, namely
 \begin{equation}
 S^h = \left\{v \in C(\Omega) \, \Big| \, v|_{\square_{ij}} \text{ is bilinear}\right\}. \label{eq:of:Shdefn}
 \end{equation}
