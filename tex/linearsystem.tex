@@ -149,7 +149,7 @@ then the layout looks like Figure \ref{fig:mpitwoveclayout}.  In this case the a
 
 \pMat objects are linear operators and their major ``purpose'' is to multiply \pVecs.  Of course, the result \pVec from a \pMat-\pVec product is a linear combination of the columns of the \pMat.  Thus, in practice, parallel row storage of the \pMat means these things:
 \begin{itemize}
-\item \PETSc internally distributes the rows of the \pMat $A$ the same way as the entries of the intended \emph{output} (i.e.~column) \pVec.  Thus if $Ax=b$ for some $x$ then row $i$ of $A$ is on the rank $m$ MPI process if and if entry $i$ of $b$ is on the rank $m$ process.\sidenote{This is the outcome when \texttt{PETSC\_DECIDE} is used in setting both the \pVec and \pMat sizes and they are of the same dimension.}
+\item \PETSc internally distributes the rows of the \pMat $A$ the same way as the entries of the intended \emph{output} (i.e.~column) \pVec.  Thus if $Ax=b$ for some $x$ then row $i$ of $A$ is on the rank $m$ MPI process if and only if entry $i$ of $b$ is on the rank $m$ process.\sidenote{This is the outcome when \texttt{PETSC\_DECIDE} is used in setting both the \pVec and \pMat sizes and they are of the same dimension.}
 \item Before \PETSc computes a \pMat-\pVec product, \PETSc communicates (``scatters'') the whole \pVec to each process.
 \item After the scatter the \pMat-\pVec product is a local operation, requiring no further communication.
 \end{itemize}
@@ -555,7 +555,7 @@ Vec Object: 1 MPI processes
 ...
 \end{cline}
 %$
-The reason that the residual drops to nearly zero in one iteration is that GMRES sees a preconditioned system with an identity matrix $M^{-1} A = I$ \emph{in this case}.  That is because the ILU operation on this particular $A$ is actually a full LU factorization: $M=LU=A$.  Our $A$ is allocated as dense so the exact LU factorization requires no fill-in.  The next example \texttt{tri.c}, and the examples in later Chapters, are more representative because they involve sparse matrices.
+The reason that the residual drops to nearly zero in one iteration is that GMRES sees a preconditioned system with an identity matrix $M^{-1} A = I$ in \emph{this case}.  That is because the ILU operation on this particular $A$ is actually a full LU factorization: $M=LU=A$.  Our $A$ is allocated as a dense matrix so the exact LU factorization requires no further ``fill-in.''\sidenote{By definition, ``fill-in'' occurs in a sparse matrix \cite{TrefethenBau1997} operation in which previously un-allocated zeros are replaced by non-zeros which use up memory.}  The next example \texttt{tri.c}, and the examples in later Chapters, are more representative because they involve sparse matrices.
 
 For a small system like this, of course, a direct solve can be chosen deliberately.  To see how to do it, first do
 \begin{cline}
@@ -688,7 +688,7 @@ $ alias timer='time -f "real %e"'
 \end{cline}
 %$
 
-The above timing result of $.04$ seconds suggests that this $m=10^4$ dimension system is not yet big enough to be worth testing, so we experiment on what $m$ gives a linear system with noticeable solution time.  Here is a roll-your-own bash loop to time some bigger solves:
+The above timing result of $.04$ seconds suggests that this $m=10^4$ dimension system is not yet big enough to be worth testing, so we experiment on what $m$ gives a linear system with noticeable solution time.  Here is a roll-your-own bash loop to time some bigger systems:
 \begin{cline}
 $ export SIZES="10000 100000 1000000 10000000"
 $ for M in $SIZES; do timer ./tri -tri_m $M; done
@@ -701,11 +701,9 @@ real 0.32
 error for m = 10000000 system is |x-xexact|_2 = 3.5e-10
 real 2.39
 \end{cline}
-We see that the default \PETSc \pKSP and \pPC methods\sidenote{GMRES with ILU($0$) preconditioning.} solve a system of size $m=10^7$ (ten million) in a time of a few seconds on \WORKSTATION.  Will other methods and/or more processors speed up the solution of the linear system of this size?
+We see that the default \PETSc \pKSP and \pPC methods\sidenote{GMRES with ILU($0$) preconditioning.} solve a system of size $m=10^7$ (ten million) in a time of a few seconds on \WORKSTATION.
 
-We can try a direct solve (\texttt{-ksp\_type preonly -pc\_type lu}), the default serial solver (\texttt{-ksp\_type gmres -pc\_type ilu}), and the default parallel solver (\texttt{-ksp\_type gmres -pc\_type bjacobi -sub\_pc\_type ilu}).  We can turn off preconditioning (\texttt{-pc\_type none}) or switch from ILU($0$)-based preconditioning to Jacobi preconditioning (\texttt{-pc\_type jacobi}).
-
-To generate Table \ref{tab:tritiming} below we did 16 runs like this:
+Will other methods and/or more processors speed up the solution of a linear system of this size?  We can try a direct solver (\texttt{-ksp\_type preonly -pc\_type lu}), the default serial solver (\texttt{-ksp\_type gmres -pc\_type ilu}), or the default parallel solver (\texttt{-ksp\_type gmres -pc\_type bjacobi -sub\_pc\_type ilu}).  We can turn off preconditioning (\texttt{-pc\_type none}) or switch from ILU($0$)-based preconditioning to Jacobi preconditioning (\texttt{-pc\_type jacobi}).  In fact, to generate Table \ref{tab:tritiming} below we did 16 runs like this:
 \begin{cline}
 $ timer mpiexec -n N ./tri -tri_m 20000000 -ksp_rtol 1.0e-10 -ksp_type KSP -pc_type PC
 \end{cline}
@@ -755,7 +753,7 @@ In future Chapters, ``real'' linear and non-linear systems will be generated by 
 \label{fig:line-graph-tri}
 \end{marginfigure}
 
-It is worth noting at this point that \PETSc can generate graphics showing convergence of the above iterative (Krylov) methods, at least if X11 windows are installed.  The line graph in Figure \ref{fig:line-graph-tri}, from
+It is worth noting at this point that \PETSc can generate graphics showing convergence of the above iterative (Krylov) methods, at least if \PETSc was built with X Window System support.  The line graph in Figure \ref{fig:line-graph-tri}, from
 \begin{cline}
 $ ./tri -tri_m 1000000 -ksp_rtol 1.0e-10 -pc_type jacobi \
     -ksp_monitor_lg_residualnorm -draw_pause 1
@@ -795,7 +793,7 @@ where each block $M_i$ is the product of the incomplete-Chebyshev factors acting
 
 What if you do not want this dependence?  On the one hand, you can make the reported numerical error nearly process-count-independent by asking that it be small (e.g.~\texttt{-ksp\_rtol 1.0e-14}), but then the difference in iteration count is even stronger ($3$ and $13$ iterations on $N=2$ and $N=20$ processes, respectively).  On the other hand, if you replace ``\texttt{-pc\_type bjacobi -sub\_pc\_type icc}'' with ``\texttt{-pc\_type none}'' or ``\texttt{-pc\_type jacobi}'' then runs on $N=2$ and $N=20$ processes all get identical numerical error results after 12 iterations.\sidenote{I.e.~all four runs show the same numerical error and iteration count.}  These preconditioners do not communicate any information between rows at all, and thus they exhibit no dependence.  However, \emph{good} preconditioners, as we will see, cannot be that trivial.
 
-Fundamentally, preconditioning is useful if can both be applied quickly and if it has a significant spectral effect.  Quick parallel application requires avoiding interprocess communication, but significant spectral effect requires using multi-row information from those rows owned by a process.  We will not fight against this situation, but we must be careful to evaluate parallel preconditioner effectiveness by measuring execution time, or execution time per degree of freedom, for example, and not only counting Krylov iterations.
+Fundamentally, preconditioning is useful if can both be applied quickly \emph{and} it has a desirable effect on the spectrum of the matrix.\sidenote{``Desirable'' is relative to the Krylov solver in use.}  Quick parallel application requires avoiding interprocess communication, but desirable spectral effect generally requires using multi-row information, at least from multiple rows owned by the process.  We will not fight against this situation, but we must be careful to evaluate parallel preconditioner effectiveness by measuring execution time, or execution time per degree of freedom, for example, and not only by counting Krylov iterations.
 
 
 \bigskip

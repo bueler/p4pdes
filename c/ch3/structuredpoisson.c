@@ -61,8 +61,6 @@ PetscErrorCode formExact(DM da, Vec uexact) {
     }
   }
   ierr = DMDAVecRestoreArray(da, uexact, &auexact);CHKERRQ(ierr);
-  ierr = VecAssemblyBegin(uexact); CHKERRQ(ierr);
-  ierr = VecAssemblyEnd(uexact); CHKERRQ(ierr);
   return 0;
 }
 
@@ -90,8 +88,6 @@ PetscErrorCode formRHS(DM da, Vec b) {
     }
   }
   ierr = DMDAVecRestoreArray(da, b, &ab); CHKERRQ(ierr);
-  ierr = VecAssemblyBegin(b); CHKERRQ(ierr);
-  ierr = VecAssemblyEnd(b); CHKERRQ(ierr);
   return 0;
 }
 //ENDFORMEXACTRHS
