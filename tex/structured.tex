@@ -44,7 +44,7 @@ Because \eqref{poissonsquare} and \eqref{poissonsquarebcs} form a linear problem
 
 \section{Building a structured grid}
 
-Our FD method is based on a \emph{structured grid} of $MN$ points on the unit square, as in Figure \ref{fig:unitsquaregrid}, with spacing $h_x=1/(M-1)$ and $h_y=1/(N-1)$ in the two directions.  The grid coordinates are $x_i = i\, h_x$ for $i = 0,1,\dots,M-1$ and $y_j = j\, h_y$ for $j=0,1,\dots,N-1$.  The construction of such a 2D grid, and distributing it across MPI processes, uses a \PETSc object not covered in Chapters \ref{chap:gs} and \ref{chap:ls}.
+Our FD method is based on a \emph{structured grid} of $m_x m_y$ points on the unit square, as in Figure \ref{fig:unitsquaregrid}, with spacing $h_x=1/(m_x-1)$ and $h_y=1/(m_y-1)$ in the two directions.  The grid coordinates are $x_i = i\, h_x$ for $i = 0,1,\dots,m_x-1$ and $y_j = j\, h_y$ for $j=0,1,\dots,m_y-1$.  The construction of such a 2D grid, and distributing it across MPI processes, uses a \PETSc object not covered in Chapters \ref{chap:gs} and \ref{chap:ls}.
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
@@ -52,9 +52,9 @@ Our FD method is based on a \emph{structured grid} of $MN$ points on the unit sq
   \draw[->,gray,very thin] (0.0,0.0) -- (0.0,1.2) node[left] {$y$};
   \draw[line width=1.0pt] (0.0,0.0) -- (0.0,1.0) -- (1.0,1.0) -- (1.0,0.0) -- cycle;
   \node at (0.0,-0.1) {$i=0$};
-  \node at (1.0,-0.1) {$i=M-1$};
+  \node at (1.0,-0.1) {$i=m_x-1$};
   \node at (-0.15,0.0) {$j=0$};
-  \node at (-0.22,1.0) {$j=N-1$};
+  \node at (-0.22,1.0) {$j=m_y-1$};
   \pgfmathsetmacro\fourth{1.0/4.0}
   \pgfmathsetmacro\sixth{1.0/6.0}
   \draw[xstep=\fourth,ystep=\sixth,black,thin] (0.0,0.0) grid (1.0,1.0);
@@ -64,7 +64,7 @@ Our FD method is based on a \emph{structured grid} of $MN$ points on the unit sq
     }
   }
 \end{tikzpicture}
-\caption{A grid on the unit square $\mathcal{S}$, with $M=5$ and $N=7$.}
+\caption{A grid on the unit square $\mathcal{S}$, with $m_x=5$ and $m_y=7$.}
 \label{fig:unitsquaregrid}
 \end{marginfigure}
 
@@ -121,15 +121,15 @@ $ ./poisson -da_grid_x 5 -da_grid_y 7
 %$
 then the particular structured grid shown in Figure \ref{fig:unitsquaregrid} is created.  In this case all points of the grid are ``owned'' by a single MPI process.  However, if we run with multiple \MPI processes by
 \begin{cline}
-$ mpiexec -n K ./poisson -da_grid_x M -da_grid_y N
+$ mpiexec -n K ./poisson -da_grid_x MX -da_grid_y MY
 \end{cline}
 %$
-then \PETSc does the best it can to balance the load of \texttt{MN} grid points among \texttt{K} processes, with the restriction that each \MPI process owns a rectangular subgrid.  For example,
+then \PETSc does the best it can to balance the load of \texttt{MX} \texttt{MY} grid points among \texttt{K} processes, with the restriction that each \MPI process owns a rectangular subgrid.  For example,
 \begin{cline}
 $ mpiexec -n 4 ./poisson -da_grid_x 5 -da_grid_y 7
 \end{cline}
 %$
-distributes the grid as in Figure \ref{fig:unitsquaregridparallel}.  Neither \texttt{M} $=5$ nor \texttt{N} $=7$ is divisible by two, but \PETSc distributes the four ranks across the \texttt{MN} $=35$ grid points relatively uniformly; the rank $0$ process owns 12 points and rank $3$ owns 6, while the other ranks are in between.  In this case the load is only balanced to within a factor of two, but on larger grids this ``\texttt{PETSC\_DECIDE}'' method can do better.
+distributes the grid as in Figure \ref{fig:unitsquaregridparallel}.  Neither $m_x=5$ nor $m_y=7$ is divisible by two, but \PETSc distributes the four ranks across the $35$ grid points relatively uniformly; the rank $0$ process owns 12 points and rank $3$ owns 6, while the other ranks are in between.  In this case the load is only balanced to within a factor of two, but on larger grids this ``\texttt{PETSC\_DECIDE}'' method can do better.
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
@@ -205,7 +205,7 @@ is shown in Figure \ref{fig:unitsquaregridprime}.  Each process' portion of the 
 \label{fig:unitsquaregrideight}
 \end{marginfigure}
 
-Though these defaults can be overridden by runtime options \texttt{-da\_grid\_x} and \texttt{-da\_grid\_y}, the fifth and sixth arguments ``\texttt{-9}'' of \texttt{DMDACreate2d()} in Code \ref{code:dmdacreatetwod} are used to set default dimensions $M=9$ and $N=9$.  Thus
+Though these defaults can be overridden by runtime options \texttt{-da\_grid\_x} and \texttt{-da\_grid\_y}, the fifth and sixth arguments ``\texttt{-9}'' of \texttt{DMDACreate2d()} in Code \ref{code:dmdacreatetwod} are used to set default dimensions $m_x=m_y=9$.  Thus
 \begin{cline}
 $ mpiexec -n 4 ./poisson
 \end{cline}
@@ -266,9 +266,9 @@ as $h$ goes to zero.  This formula, applied to partial derivatives, will approxi
 \begin{equation}
 - \frac{u_{i+1,j} - 2 u_{i,j} + u_{i-1,j}}{h_x^2} - \frac{u_{i,j+1} - 2 u_{i,j} + u_{i,j-1}}{h_y^2} = f_{i,j}. \label{poissonsquareFDearly}
 \end{equation}
-Equation \eqref{poissonsquareFDearly} applies at all interior points, where $1 \le i \le M-2$ and $1 \le j \le N-2$.  The boundary conditions \eqref{poissonsquarebcs} become
+Equation \eqref{poissonsquareFDearly} applies at all interior points, where $1 \le i \le m_x-2$ and $1 \le j \le m_y-2$.  The boundary conditions \eqref{poissonsquarebcs} become
 \begin{equation}
-u_{0,j} = 0, \quad u_{M-1,j} = 0, \quad u_{i,0} = 0, \quad u_{i,N-1} = 0, \label{poissonsquareFDbcs}
+u_{0,j} = 0, \quad u_{m_x-1,j} = 0, \quad u_{i,0} = 0, \quad u_{i,m_y-1} = 0, \label{poissonsquareFDbcs}
 \end{equation}
 for all $i,j$.
 
@@ -294,7 +294,7 @@ At grid location $(x_i,y_j)$, equation \eqref{poissonsquareFDearly} relates the 
 \label{fig:unitsquaregridstencil}
 \end{marginfigure}
 
-We will treat all values $u_{i,j}$ as unknowns, whether on the boundary or in the interior, so we have $L=MN$ unknowns.  Equations \eqref{poissonsquareFDearly} and \eqref{poissonsquareFDbcs} form a linear system of $L$ equations,
+We will treat all values $u_{i,j}$ as unknowns, whether on the boundary or in the interior, so we have $L=m_x m_y$ unknowns.  Equations \eqref{poissonsquareFDearly} and \eqref{poissonsquareFDbcs} form a linear system of $L$ equations,
 \begin{equation}
 A \bu = \bb, \label{poissonlinearsystem}
 \end{equation}
@@ -302,11 +302,11 @@ where $A$ is a $L\times L$ matrix and $\bu,\bb$ are $L\times 1$ column vectors.
 
 However, to show entries of $A$ and $\bb$ in linear system \eqref{poissonlinearsystem} we must globally-order the unknowns.  Such an ordering is implemented inside a \PETSc \pDMDA, and indeed our code (\texttt{poisson.c} below) will use only the grid-wise coordinates $(i,j)$.\sidenote{The ability to assemble \pMats and \pVecs with $(i,j)$-type indexing is one reason structured-grid codes using \pDMDA can be quite short.}  Here we expose the ordering for the purpose of displaying the system in matrix-vector form.
 
-The ordering used in a one-process (serial) run by a 2D \pDMDA is shown in Figure \ref{fig:unitsquaregridordering}.  On an $M$ by $N$ grid one could write it as
+The ordering used in a one-process (serial) run by a 2D \pDMDA is shown in Figure \ref{fig:unitsquaregridordering}.  On an $m_x$ by $m_y$ grid one could write it as
 \begin{equation}
-    U_k = u_{i,j} \quad \text{ where } \quad k = j\,M + i \label{orderingfd}
+    U_k = u_{i,j} \quad \text{ where } \quad k = j\,m_x + i \label{orderingfd}
 \end{equation}
-for $i=0,1,\dots,M-1$ and $j=0,1,\dots,N-1$, so $k=0,1,\dots,MN-1$.  \PETSc does such index transformations inside the \pDMDA implementation.
+for $i=0,1,\dots,m_x-1$ and $j=0,1,\dots,m_y-1$, so $k=0,1,\dots,m_x m_y-1$.  \PETSc does such index transformations inside the \pDMDA implementation.
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=3.5]
@@ -333,12 +333,12 @@ for $i=0,1,\dots,M-1$ and $j=0,1,\dots,N-1$, so $k=0,1,\dots,MN-1$.  \PETSc does
       \filldraw (\x * \third,\y * \half) circle (0.5pt);
     }
 \end{tikzpicture}
-\caption{Ordering of unknowns \eqref{orderingfd} on a $M=4$ and $N=3$ grid.  Index $k$ from \eqref{orderingfd} is shown in \textbf{bold}.}
+\caption{Ordering of unknowns \eqref{orderingfd} on a $m_x=4$ and $m_y=3$ grid.  Index $k$ from \eqref{orderingfd} is shown in \textbf{bold}.}
 \label{fig:unitsquaregridordering}
 \end{marginfigure}
 
 \medskip\noindent\hrulefill
-\begin{example} In the $M=4$ and $N=3$ case (Figure \ref{fig:unitsquaregridordering}) we have grid spacing $h_x=1/3$ and $h_y=1/2$.  Only the $k=5$ and $k=6$ equations are not boundary conditions \eqref{poissonsquareFDbcs}.  The linear system \eqref{poissonlinearsystem} is
+\begin{example} In the $m_x=4$ and $m_y=3$ case (Figure \ref{fig:unitsquaregridordering}) we have grid spacing $h_x=1/3$ and $h_y=1/2$.  Only the $k=5$ and $k=6$ equations are not boundary conditions \eqref{poissonsquareFDbcs}.  The linear system \eqref{poissonlinearsystem} is
 \setcounter{MaxMatrixCols}{20}
 \begin{equation*}
 \begin{bmatrix}
@@ -395,7 +395,7 @@ The matrix $A$ is not symmetric.  Furthermore it is not well-scaled, for such a 
 \medskip
 Before assembling system \eqref{poissonsquareFDearly} and \eqref{poissonsquareFDbcs} by writing \PETSc code, there are two nontrivial observations about it.  These observations lead to an equivalent linear system that is easier to solve both in the sense that we have more options for solving the system,\sidenote{More \pKSP and \pPC choices, and more that converge.} and in the sense that the condition number is smaller.
 
-First, equations \eqref{poissonsquareFDearly} have very different ``scaling'' from equations \eqref{poissonsquareFDbcs}.  For example, if $M=N=1001$, so that $h_x=h_y=0.001$, then the coefficient of $u_{i,j}$ in \eqref{poissonsquareFDearly} is $4/(.001)^2 = 4 \times 10^6$, while the coefficients from \eqref{poissonsquareFDbcs} are equal to 1.  To make the equations better scaled, we multiply \eqref{poissonsquareFDearly} by the grid cell area $h_x h_y$ to get
+First, equations \eqref{poissonsquareFDearly} have very different ``scaling'' from equations \eqref{poissonsquareFDbcs}.  For example, if $m_x=m_y=1001$, so that $h_x=h_y=0.001$, then the coefficient of $u_{i,j}$ in \eqref{poissonsquareFDearly} is $4/(.001)^2 = 4 \times 10^6$, while the coefficients from \eqref{poissonsquareFDbcs} are equal to 1.  To make the equations better scaled, we multiply \eqref{poissonsquareFDearly} by the grid cell area $h_x h_y$ to get
 \begin{equation}
 2 (a + b) u_{i,j} - a \left(u_{i+1,j} + u_{i-1,j}\right) - b \left(u_{i,j+1} + u_{i,j-1}\right) = h_x h_y f_{i,j} \label{poissonsquareFD}
 \end{equation}
@@ -406,7 +406,7 @@ Second, the FD equations can be re-interpreted to give a \emph{symmetric} matrix
 With these two modifications we can redo the last example.
 
 \medskip\noindent\hrulefill
-\begin{example} \label{exampleredo} For the same $M=4$ and $N=3$ case shown in Figure \ref{fig:unitsquaregridordering}, equations \eqref{poissonsquareFDbcs} and \eqref{poissonsquareFD} yield the linear system
+\begin{example} \label{exampleredo} For the same $m_x=4$ and $m_y=3$ case shown in Figure \ref{fig:unitsquaregridordering}, equations \eqref{poissonsquareFDbcs} and \eqref{poissonsquareFD} yield the linear system
 \begin{equation*}
 \begin{bmatrix}
 1 &  &  &  &  &  &  &  &  &  &  &  \\
@@ -587,12 +587,12 @@ Recall that a default $9\times 9$ grid was chosen in calling \texttt{DMDACreate2
 \label{fig:dmM5N7}
 \end{marginfigure}
 
-Options \texttt{-da\_grid\_x M -da\_grid\_y N} set the grid at runtime, and we can examine both the grid (i.e.~the \pDM object) and our assembled \pMat graphically to check these objects.  If X11 or other windowing is correctly linked in your \PETSc installation then
+Options \texttt{-da\_grid\_x MX -da\_grid\_y MY} set the grid at runtime, and we can examine both the grid (i.e.~the \pDM object) and our assembled \pMat graphically to check these objects.  If X11 or other windowing is correctly linked in your \PETSc installation then
 \begin{cline}
 $ ./poisson -da_grid_x 5 -da_grid_y 7 -dm_view draw -draw_pause 5
 \end{cline}
 %$
-gives Figure \ref{fig:dmM5N7}, same as the $M=5$, $N=7$ grid in Figure \ref{fig:unitsquaregrid}, including the global node ordering by formula \eqref{orderingfd}.  Options
+gives Figure \ref{fig:dmM5N7}, same as the $m_x=5$, $m_y=7$ grid in Figure \ref{fig:unitsquaregrid}, including the global node ordering by formula \eqref{orderingfd}.  Options
 \begin{cline}
 $ ./poisson -da_grid_x 5 -da_grid_y 7 -a_mat_view draw -draw_pause 5
 \end{cline}
