@@ -12,19 +12,18 @@ PetscErrorCode formMatrix(DM da, Mat A) {
 
   ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
   hx = 1.0/(info.mx-1);  hy = 1.0/(info.my-1);
-  for (j=info.ys; j<info.ys+info.ym; j++) {
-    for (i=info.xs; i<info.xs+info.xm; i++) {
-      ncols = 0;
-      row.j = j;               // row of A corresponding to (x_i,y_j)
+  for (j = info.ys; j < info.ys+info.ym; j++) {
+    for (i = info.xs; i < info.xs+info.xm; i++) {
+      row.j = j;           // row of A corresponding to (x_i,y_j)
       row.i = i;
-      col[ncols].j = j;        // in this diagonal entry
-      col[ncols].i = i;
+      col[0].j = j;        // in this diagonal entry
+      col[0].i = i;
+      ncols = 1;
       if (i==0 || i==info.mx-1 || j==0 || j==info.my-1) {
-        // if on boundary, just insert diagonal entry
-        v[ncols++] = 1.0;
+        v[0] = 1.0;  // if on boundary, just insert diagonal entry
       } else {
-        v[ncols++] = 2*(hy/hx + hx/hy); // ... everywhere else we build a row
-        // if neighbor is NOT a known boundary value then we put an entry:
+        v[0] = 2*(hy/hx + hx/hy); // ... everywhere else we build a row
+        // if neighbor is NOT a known boundary value then we put an entry
         if (i-1 > 0) {
           col[ncols].j = j;    col[ncols].i = i-1;  v[ncols++] = -hy/hx;  }
         if (i+1 < info.mx-1) {
@@ -53,9 +52,9 @@ PetscErrorCode formExact(DM da, Vec uexact) {
   ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
   hx = 1.0/(info.mx-1);  hy = 1.0/(info.my-1);
   ierr = DMDAVecGetArray(da, uexact, &auexact);CHKERRQ(ierr);
-  for (j=info.ys; j<info.ys+info.ym; j++) {
+  for (j = info.ys; j < info.ys+info.ym; j++) {
     y = j * hy;
-    for (i=info.xs; i<info.xs+info.xm; i++) {
+    for (i = info.xs; i < info.xs+info.xm; i++) {
       x = i * hx;
       auexact[j][i] = x*x * (1.0 - x*x) * y*y * (y*y - 1.0);
     }
