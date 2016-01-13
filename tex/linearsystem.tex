@@ -150,7 +150,7 @@ then the layout looks like Figure \ref{fig:mpitwoveclayout}.  In this case the a
 \pMat objects are linear operators and their major ``purpose'' is to multiply \pVecs.  Of course, the result \pVec from a \pMat-\pVec product is a linear combination of the columns of the \pMat.  Thus, in practice, parallel row storage of the \pMat means these things:
 \begin{itemize}
 \item \PETSc internally distributes the rows of the \pMat $A$ the same way as the entries of the intended \emph{output} (i.e.~column) \pVec.  Thus if $Ax=b$ for some $x$ then row $i$ of $A$ is on the rank $m$ MPI process if and only if entry $i$ of $b$ is on the rank $m$ process.\sidenote{This is the outcome when \texttt{PETSC\_DECIDE} is used in setting both the \pVec and \pMat sizes and they are of the same dimension.}
-\item Before \PETSc computes a \pMat-\pVec product, \PETSc communicates (``scatters'') the whole \pVec to each process.
+\item As \PETSc computes the \pMat-\pVec product, it communicates (``scatters'') the parts of the \pVec needed by each process using MPI calls.
 \item After the scatter the \pMat-\pVec product is a local operation, requiring no further communication.
 \end{itemize}
 
