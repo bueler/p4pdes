@@ -564,18 +564,26 @@ Sum \eqref{eq:of:weakformdetail} is implemented by \texttt{FormFunctionLocal()} 
 
 \cinputpart{plap.c}{\CODELOC}{The residual function $\bF(\bu)$ corresponding to the weak form \eqref{eq:of:plapweakform}.  These two C functions implement \eqref{eq:of:weakformintegrandref} and \eqref{eq:of:weakformdetail}, respectively.}{VIII}{//STARTFUNCTION}{//ENDFUNCTION}{code:plapFun}
 
+FIXME: show result
 
-\section{FIXME looking at result and performance}
+FIXME: compare evals with objective-only
+% -log_summary | grep Eval
 
+FIXME: visualize solution and newton step
 % Do you want the solution of the linear system before the line search (line search may shrink the vector) use -ksp_view_solution or the actual update selected by Newton -snes_monitor_solution_update
 %   If you use the master branch of PETSc then both of these flags take the option
 %    [ascii or binary or draw][:filename][:viewer format]
 %  allowing printing as ascii, binary or drawing the solution in a window (Drawing only works for DMDA 1d or 2d).
 %   Barry
 
-FIXME 
+FIXME: in parallel linesearch: bt vs basic --- I think former fails
 
-% -log_summary | grep Eval
+
+\section{FIXME ellipticity, regularization, and condition number}
+
+pursue this here instead of in Exercise \ref{chap:of}.\ref{exer:of:regularize}
+
+draw conclusions: we have introduced FEM, constructed nontrivial nonlinear PDE example.  usable high-res even without analytical Jacobian.  will return to look at performance of the this example
 
 
 \section{Exercises}
