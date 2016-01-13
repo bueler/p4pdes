@@ -1,9 +1,37 @@
 
+\section{Vector spaces, matrices, and norms}
+
+Vector spaces, matrices, and norms are assumed to be familiar to the reader, but we can set some notation by recalling the basics.
+
+A \emph{real vector space}\sidenote{By careful configuration, \PETSc can handle complex scalars, vectors, and matrices.  However, we use only real versions in this book.} is a set that is closed under addition and multiplication by \emph{scalars}, namely elements of $\RR$, and to which certain algebraic axioms apply, namely the existence of a zero vector plus the appropriate associative, distributive, and commutative axioms \citep{Strang2009}.  The elements of the set are \emph{vectors}.  In this book, on the one hand, we will have functions defined in domains in $\RR^1$, $\RR^2$, or $\RR^3$, such as solutions to PDEs.  On the other hand, we will have computer representations of various finite-size column vectors and matrices.  The abstract sets from which these various objects are taken are, of course, all vector spaces, the former infinite- and the latter finite-dimensional.
+
+However, the unqualified word ``vector'' will be understood in this book to refer to a column vector of finite length, written $\RR^N$.  We will use bold for vectors, but not for entries, thus for example $\bv\in\RR^N$ has entries $v_0,\dots,v_{N-1}$.  For another example, the \emph{standard basis} for $\RR^N$ is the set of vectors $\{\be_i\}_{i=0}^{N-1}$ which have zero entries except for having a one in the $i$th entry: $(\be_i)_j = \delta_{ij}$ (the Kronecker delta).
+
+A \emph{matrix} is a linear map between vector spaces.\sidenote{As is well-known, in polite company one says instead that a matrix is the representation of a linear map from one finite-dimensional vector space to another, with some choice of basis in each space.}  We write $A\in \RR^{M\times N}$ for a matrix that maps from $\RR^N$ to $\RR^M$.
+
+A \emph{vector norm} is a function that gives a well-defined length to a vector, with several properties including the triangle inequality \citep{TrefethenBau1997}.  For $1 \le p < \infty$ this formula defines a norm,
+\begin{equation}
+\|\bv\|_p = \left(\sum_{i=0}^{N-1} |v_i|^p\right)^{1/p}.  \label{eq:ls:vectorpnorm}
+\end{equation}
+The $p=1,2$ cases are especially common, but all vector $p$-norms can obviously be computed with $O(N)$ work.  The maximum norm
+\begin{equation}
+\|\bv\|_\infty = \max_{i=0,\dots,N-1} |v_i|  \label{eq:ls:vectorinfnorm}
+\end{equation}
+is also common.  \PETSc computes one of the $p=1,2,\infty$ norms by a call to \texttt{VecNorm()} on a \PETSc \pVec object; see below for an introduction to these objects.
+
+Choosing vector norms on the input and output vector spaces of a matrix \emph{induces} a \emph{matrix norm} \citep{TrefethenBau1997}, as follows:
+\begin{equation}
+\|A\| = \sup_{\bv \ne 0} \frac{\|A\bv\|}{\|\bv\|} = \sup_{\|\bv\| = 1} \|A\bv\|.  \label{eq:ls:matnorm}
+\end{equation}
+Such matrix norms are generally expensive to compute---i.e.~they may take significantly more than the $O(MN)$ operations needed to examine all the entries of a generic matrix $A\in \RR^{M\times N}$---but those matrix norms induced by the $p=1$ and $\infty$ vector norms are easy to compute by $O(MN)$ formulas \citep{TrefethenBau1997}.  Also common is the \emph{Frobenius} matrix norm; though it can be computed by a $O(MN)$ formula it is not induced from a vector norm.  \PETSc computes $p=1,\infty$ and Frobenius matrix norms with a call to \texttt{MatNorm()} on a \PETSc \pMat object; see below.
+
+FIXME do cond
+
 \section{Some facts of (numerical) life}
 
-Our goal is to compute more interesting quantities than Euler's constant $e$, and at the core of many numerical PDE solutions is a finite-dimensional linear system.  So in this section we both recall basic ideas of numerical linear algebra and apply \PETSc to solve linear systems.
+Our goal is to compute more interesting quantities than Euler's constant $e$---see Chapter \ref{chap:gs}---and at the core of many numerical PDE solutions is a finite-dimensional linear system.  So in this section we both recall basic ideas of numerical linear algebra and apply \PETSc to solve linear systems.
 
-Suppose $\bb\in \RR^{N}$ is a column vector and $A\in\RR^{N\times N}$ is a square matrix.\sidenote{\PETSc can handle complex matrices, but all matrices are real in this book.}  The linear system
+Suppose $\bb\in \RR^{N}$ is a column vector and $A\in\RR^{N\times N}$ is a square matrix.  The linear system
 \begin{equation}
 A \bu = \bb \label{introsystem}
 \end{equation}
@@ -16,7 +44,7 @@ This is simple in theory.
 It is not so simple in practice, however, to solve linear systems on a computer.  Here are two facts to keep in mind while working numerically with linear systems \citep{TrefethenBau1997}:
 \renewcommand{\labelenumi}{\roman{enumi})}
 \begin{enumerate}
-\item \label{limittoaccuracy} \emph{limit to accuracy}:  If real numbers are represented with machine precision $\eps$ then the solution of \eqref{introsystem} can only be computed within an error $\kappa(A) \eps$ where $\kappa(A) = \|A\| \|A^{-1}\|$ is the \emph{condition number} of $A$ (for the induced matrix norm $\|\cdot\|$).
+\item \label{limittoaccuracy} \emph{limit to accuracy}:  If real numbers are represented with machine precision $\eps$ then the solution of \eqref{introsystem} can only be computed within an error $\kappa(A) \eps$, where $\kappa(A) = \|A\| \|A^{-1}\|$ is the \emph{condition number} of $A$ in the induced matrix norm $\|\cdot\|$.
 \item \emph{cost of direct solutions}:  If $A$ is a generic $N\times N$ matrix then computation of solution \eqref{introsolution} by a direct method like Gauss elimination, whether actually forming $A^{-1}$ or not, is an $O(N^3)$ operation.\sidenote{See Lecture 32 in \citet{TrefethenBau1997} for caveats with respect to ``$O(N^3)$.''  Nonetheless it is the right power to state when making this point.}
 \end{enumerate}
 
