@@ -19,19 +19,19 @@ PetscErrorCode formMatrix(DM da, Mat A) {
       row.i = i;
       col[ncols].j = j;        // in this diagonal entry
       col[ncols].i = i;
-      if ( (i==0) || (i==info.mx-1) || (j==0) || (j==info.my-1) ) {
+      if (i==0 || i==info.mx-1 || j==0 || j==info.my-1) {
         // if on boundary, just insert diagonal entry
         v[ncols++] = 1.0;
       } else {
         v[ncols++] = 2*(hy/hx + hx/hy); // ... everywhere else we build a row
         // if neighbor is NOT a known boundary value then we put an entry:
-        if (i-1>0) {
+        if (i-1 > 0) {
           col[ncols].j = j;    col[ncols].i = i-1;  v[ncols++] = -hy/hx;  }
-        if (i+1<info.mx-1) {
+        if (i+1 < info.mx-1) {
           col[ncols].j = j;    col[ncols].i = i+1;  v[ncols++] = -hy/hx;  }
-        if (j-1>0) {
+        if (j-1 > 0) {
           col[ncols].j = j-1;  col[ncols].i = i;    v[ncols++] = -hx/hy;  }
-        if (j+1<info.my-1) {
+        if (j+1 < info.my-1) {
           col[ncols].j = j+1;  col[ncols].i = i;    v[ncols++] = -hx/hy;  }
       }
       ierr = MatSetValuesStencil(A,1,&row,ncols,col,v,INSERT_VALUES); CHKERRQ(ierr);
@@ -67,23 +67,22 @@ PetscErrorCode formExact(DM da, Vec uexact) {
 PetscErrorCode formRHS(DM da, Vec b) {
   PetscErrorCode ierr;
   PetscInt       i, j;
-  PetscReal      hx, hy, x, y, x2, y2, f, **ab;
+  PetscReal      hx, hy, x, y, f, **ab;
   DMDALocalInfo  info;
 
   ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
   hx = 1.0/(info.mx-1);  hy = 1.0/(info.my-1);
   ierr = DMDAVecGetArray(da, b, &ab);CHKERRQ(ierr);
   for (j=info.ys; j<info.ys+info.ym; j++) {
-    y = j * hy;  y2 = y*y;
+    y = j * hy;
     for (i=info.xs; i<info.xs+info.xm; i++) {
-      x = i * hx;  x2 = x*x;
-      if ( (i>0) && (i<info.mx-1) && (j>0) && (j<info.my-1) ) { // if not bdry
-        // f = - (u_xx + u_yy)  where u is exact
-        f = 2.0 * ( (1.0 - 6.0*x2) * y2 * (1.0 - y2)
-                    + (1.0 - 6.0*y2) * x2 * (1.0 - x2) );
+      x = i * hx;
+      if (i==0 || i==info.mx-1 || j==0 || j==info.my-1) {
+        ab[j][i] = 0.0;                    // on bdry the eqn is 1*u = 0
+      } else {  // if not bdry; note  f = - (u_xx + u_yy)  where u is exact
+        f = 2.0 * ( (1.0 - 6.0*x*x) * y*y * (1.0 - y*y)
+                    + (1.0 - 6.0*y*y) * x*x * (1.0 - x*x) );
         ab[j][i] = hx * hy * f;
-      } else {
-        ab[j][i] = 0.0;                          // on bdry the eqn is 1*u = 0
       }
     }
   }
