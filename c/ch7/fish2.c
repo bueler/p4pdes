@@ -57,7 +57,6 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal **au,
   PetscInt        i, j;
   PetscReal       **ab;
 
-  // compute residual FF[j][i] for each node (x_i,y_j)
   ierr = DMDAVecGetArray(user->da,user->b,&ab); CHKERRQ(ierr);
   for (j = info->ys; j < info->ys + info->ym; j++) {
       for (i = info->xs; i < info->xs + info->xm; i++) {

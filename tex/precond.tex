@@ -1,5 +1,5 @@
 
-We now make a transition from Chapters \ref{chap:st} and \ref{chap:un}.  In those chapters we wrote code to assemble the linear system for the problem on the grid or mesh initially chosen at runtime, and then we handed the system, in the form of \pMat and \pVec objects, to the \pKSP for solution.  In this Chapter, by contrast, we give a matrix-building code to \pKSP.  The \pKSP can actually choose the grid during the solution process, and ask our code (i.e.~through a ``call-back'') to assemble the matrix on that grid at that stage of the process.  This means \PETSc \pKSP object can do \emph{geometric multigrid} \citep{Briggsetal2000}.  To get started we recall basic ideas of multigrid.
+When we combine \PETSc \pDMDA and \pSNES objects we get the abilily to do \emph{geometric multigrid} \citep{Briggsetal2000,Trottenbergetal2001} and \emph{domain decomposition} \citep{Smithetal1996,Doleanetal2015} methods.  We will show how these methods act as preconditioners on the linear systems which arise in Newton's method, so this section is about \emph{preconditioned Newton-Krylov} methods.  To get started we introduce the basic ideas of multigrid.
 
 
 \section{Multigrid basics}
@@ -26,23 +26,27 @@ FIXME: for more, read \citep{Briggsetal2000} which is at same level as this book
 
 \section{A multigrid-capable Poisson problem code}
 
-Code \ref{code:multigridone} show most of the code \texttt{c4poisson.c}.  Note the lines which create the \pKSP object and configure it:
-\begin{code}
-  KSP ksp;
-  KSPCreate(PETSC_COMM_WORLD,&ksp);
-  KSPSetDM(ksp,da);
-  KSPSetComputeRHS(ksp,ComputeRHS,NULL);
-  KSPSetComputeOperators(ksp,ComputeA,NULL);
-  KSPSetFromOptions(ksp);
-\end{code}
-That is, we create \texttt{ksp} as in \texttt{c2poisson.c}, but this time we explicitly associate it to the \texttt{DM} object and then we hand it two methods \texttt{ComputeRHS()} and \texttt{ComputeA()} which it can call (i.e.~call back) when it needs the right-hand-side and the matrix of the system to be assembled.
+The code \texttt{c/ch7/fish2.c} (not shown) solves the same 2D Poisson problem
+    $$-\grad^2 u = f,$$
+with homogeneous boundary conditions on the square $\Omega=[0,1]\times[0,1]$, as does \texttt{c/ch3/poisson.c} in Chapter \ref{chap:st}.  In fact there is much overlap between the two codes, with similar C functions which set the exact solution, set the \pVec corresponding to $f$, and set up a \pMat $A$ corresponding to the finite-difference discretized operator $-\grad^2$.
 
-%\cinputpart{fish2.c}{c/ch5/}{Poisson problem on a structured grid again, but this time using \texttt{KSPSetComputeOperators()} so that multigrid is possible.}{I}{//MAIN}{//ENDMAIN}{code:multigridone}
+This time, however, we adopt the approach common to the second half of this book, which is to say we set up a \PETSc \pSNES object.  It does Newton's method, even though the problem is linear.  In \texttt{c/ch7/fish2.c} there is a residual-evaluation function, corresponding to the discretized form of the PDE; heuristically it computes $\bF(\bu) = -\grad^2 u - f$.  The Jacobian of this residual function gives precisely the same matrix as was constructed by \texttt{c/ch3/poisson.c}.
 
-FIXME The code \texttt{c4poisson.c} is quite short because the two methods \texttt{ComputeRHS()} and \texttt{ComputeA()} are quite trivial ``wrappers'' around methods \texttt{formRHS()} and \texttt{formdirichletlaplacian()} from source file \texttt{structuredpoisson.c} in Chapter \ref{chap:st}.  %FIXME See Code \ref{code:multigridtwo}.
+The two codes compute the same solution as long as we tighten the Krylov solver tolerance:\sidenote{Without this tightening \texttt{fish2.c} computes the more accurate solution because the \pSNES asks for iteration so as to ``clean up'' the small residual; note the default tolerances for \texttt{-snes\_rtol} of $10^{-8}$ and for \texttt{-ksp\_rtol} of $10^{-5}$.}
+\begin{cline}
+$ cd c/ch7/
+$ make fish2
+...
+$ ./fish2 -ksp_rtol 1.0e-10
+on 9 x 9 grid:  error |u-uexact|_inf = 0.000763883
+$ cd ../ch3/
+$ make poisson
+...
+$ ./poisson -ksp_rtol 1.0e-10
+on 9 x 9 grid:  error |u-uexact|_inf = 0.000763883
+\end{cline}
 
-%\cinputpart{fish2.c}{c/ch5/}{These methods build the right-hand side and the matrix, for call-back by \texttt{KSPSetComputeRHS()} and \texttt{KSPSetComputeOperators()}, respectively, but they are just wrappers around code reused from Chapter \ref{chap:st}.}{II}{//COMPUTES}{//ENDCOMPUTES}{code:multigridtwo}
-
+FIXME
 
 \section{Grid sequencing on a nonlinear problem}
 
