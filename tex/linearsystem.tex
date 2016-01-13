@@ -62,7 +62,6 @@ We should add another point about computer memory usage to our above list of fac
 \item[iii)] \emph{do not form the inverse}:  The matrices $A$ arising from discretized PDEs are usually sparse, but their inverses $A^{-1}$ are usually dense and may not even fit in memory.
 \end{enumerate}
 The difference in size between $A$ and $A^{-1}$ can be dramatic.  For example, the $N$-dimensional tridiagonal matrix $A$ assembled later in this section occupies $24 N$ bytes, because each allocated real entry occupies 8 bytes using double precision.  The inverse $A^{-1}$, however, is dense and uses $8 N^2$ bytes.  Though we can easily solve $A\bu=\bb$ for this matrix in dimension $N=10^7$, using less than a gigabyte of memory in the solution process,\sidenote{See \texttt{tri.c}.  Do ``\texttt{./tri -tri\_m 10000000 -ksp\_type cg -pc\_type none}.''} simply storing $A^{-1}$ would occupy $800$ terabytes of memory or disk.
-\vfill
 
 
 \section{\PETSc \pVec and \pMat objects}
@@ -669,8 +668,6 @@ error for m = 2 system is |x-xexact|_2 = 8.0e-16
 
 After setting up the new option, next in \texttt{tri.c} the numerical solution \pVec \texttt{x} is created just as we did in the last example \texttt{vecmatksp.c} (Code \ref{code:vecmatksp}).  But now we also want to create \pVecs \texttt{b} and \texttt{xexact}; the former is the right-hand side of the linear system and the latter holds the exact solution to the linear system so that we can evaluate the error in the numerical solution.  Though at this stage we have not filled any entries of \texttt{x}, we can save repetitive function calls to \texttt{VecCreate/SetSizes/SetFromOptions()}, when creating these additional \pVecs, by calling \texttt{VecDuplicate()} to allocate \pVecs just like \texttt{x}.  (There is a different method for copying the contents of \pVecs, namely \texttt{VecCopy()}.  It requires that the two \pVecs are already allocated and have the same layout.)
 
-\cinputpart{tri.c}{\CODELOC}{Assemble and solve.}{II}{//ENDSETUP}{//ENDSOLVE}{code:triparttwo}
-
 Next we assemble the matrix $A$.  This is a boring tridiagonal matrix with $3$ on the diagonal and $-1$ in the super- and sub-diagonals.  Though boring, we want to assemble it efficiently in parallel, something that will be important when solving 2D and 3D PDEs in later chapters.  However, only when \texttt{tri.c} is run do we know how many processes are in use.  The method \texttt{MatGetOwnershipRange()} tells our program, running on a particular process (rank), what rows it owns locally.  In the case of a many structured matrices like this one, we can avoid all interprocess communication by assembling exactly the rows we own.  As seen at the top of Code \ref{code:triparttwo}, we call
 \begin{quote}
 \texttt{MatGetOwnershipRange(A,\&Istart,\&Iend)}
@@ -682,6 +679,8 @@ We need to assemble the right-hand side $\bb$ of the linear system and also the 
 As in \texttt{vecmatksp.c} before we set up  the \pKSP and then call \texttt{KSPSolve()} to approximately solve $A\bx = \bb$.  Option \texttt{-ksp\_monitor} prints the residual norm $\|\bb-A\bx_k\|_2$ at runtime.  In this case we also want to see that the actual error
 	$$\|\bx - \bx_{\text{exact}}\|_2$$
 is small when the \pKSP completes its work.  So, after getting \texttt{x} from \texttt{KSPSolve()} we compute the error with two commands,
+
+\cinputpart{tri.c}{\CODELOC}{Assemble and solve.}{II}{//ENDSETUP}{//ENDSOLVE}{code:triparttwo}
 
 \medskip
 \begin{tabular}{lcrcl}
