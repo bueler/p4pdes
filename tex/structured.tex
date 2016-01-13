@@ -460,11 +460,9 @@ where $\alpha = 2 (h_y/h_x) + 2 (h_x/h_y) = 13/3$ and $\beta = - h_y/h_x = - 3/2
 
 \section{Code for matrix assembly}
 
-Code \ref{code:structuredpoisson} assembles ``$A$'' in linear system \eqref{poissonlinearsystem} from equations \eqref{poissonsquareFD}.  For clarity and code reuse we have isolated this method in a separate file \texttt{structuredpoisson.c}.  It is included by \texttt{poisson.c} shown later in this Chapter, and by programs in Chapters \ref{chap:mg} and \ref{chap:sc}.
+Code \ref{code:poissonMat} assembles ``$A$'' in linear system \eqref{poissonlinearsystem} from equations \eqref{poissonsquareFD}.  Arguments to \texttt{formMatrix()} in Code \ref{code:poissonMat} are the \pDM, the value to put on the diagonal for Dirichlet boundary conditions,\sidenote{The value on the diagonal is different in a time-dependent problem which reuses the code.  See Chapter \ref{chap:sc}.} and the returned (i.e.~modified) \pMat \texttt{A}.
 
-Arguments to \texttt{formdirichletlaplacian()} in Code \ref{code:structuredpoisson} are the \pDM, the value to put on the diagonal for Dirichlet boundary conditions,\sidenote{The value on the diagonal is different in a time-dependent problem which reuses the code.  See Chapter \ref{chap:sc}.} and the returned (i.e.~modified) \pMat \texttt{A}.
-
-\cinputpart{structuredpoisson.c}{\CODELOC}{Fill matrix entries from formulas \eqref{poissonsquareFDbcs} and \eqref{poissonsquareFD} using \texttt{MatSetValuesStencil()}.}{I}{//CREATEMATRIX}{//ENDCREATEMATRIX}{code:structuredpoisson}
+\cinputpart{poisson.c}{\CODELOC}{Fill matrix entries from formulas \eqref{poissonsquareFDbcs} and \eqref{poissonsquareFD} using \texttt{MatSetValuesStencil()}.}{I}{//STARTMATRIX}{//ENDMATRIX}{code:poissonMat}
 
 The ``\texttt{DMDALocalInfo info}'' object needs special description.  It is a \PETSc-defined C structure using six integers to describe both the global grid size and the extent of the locally-owned subgrid, as shown in Figure \ref{fig:localpartofgrid}.  The global size is in members \texttt{info.mx,info.my}.  The local process owns a \texttt{info.xm} by \texttt{info.ym} rectangular subgrid, with a range of indices
 \begin{align*}
@@ -515,9 +513,9 @@ for (j=info.ys; j<info.ys+info.ym; j++) {
 }
 \end{code}
 
-Still considering the code in Code \ref{code:structuredpoisson}, the \pMat object $A$ assembled by \texttt{formdirichletlaplacian()}  has ranges of rows owned by each process, the standard parallel layout \texttt{MATMPIAIJ} of \pMat objects in \PETSc (Chapter \ref{chap:gs}).  However, because we work with the locally-owned subgrid using $(i,j)$ indices, we can forget the actual layout of a \pMat and only focus on the part of the grid owned by the process, instead of worrying about the matrix itself.
+Still considering the code in Code \ref{code:poissonMat}, the \pMat object $A$ assembled by \texttt{formMatrix()}  has ranges of rows owned by each process, the standard parallel layout \texttt{MATMPIAIJ} of \pMat objects in \PETSc (Chapter \ref{chap:gs}).  However, because we work with the locally-owned subgrid using $(i,j)$ indices, we can forget the actual layout of a \pMat and only focus on the part of the grid owned by the process, instead of worrying about the matrix itself.
 
-In particular, local indices $(i,j)$ can be used when inserting entries into \pMat \texttt{A}, which is really a dynamical data structure for matrix assembly.  Thus in Code \ref{code:structuredpoisson} we see one use of \texttt{MatSetValuesStencil()} for each locally-owned grid point.  For a generic interior point this command inserts five coefficients into the matrix.  The key data structure is of type \texttt{MatStencil}, an apparently-trivial struct
+In particular, local indices $(i,j)$ can be used when inserting entries into \pMat \texttt{A}, which is really a dynamical data structure for matrix assembly.  Thus in Code \ref{code:poissonMat} we see one use of \texttt{MatSetValuesStencil()} for each locally-owned grid point.  For a generic interior point this command inserts five coefficients into the matrix.  The key data structure is of type \texttt{MatStencil}, an apparently-trivial struct
 \begin{code}
 typedef struct {
   PetscInt k,j,i,c;
@@ -540,24 +538,22 @@ From now on we will refer to $u$ in \eqref{eq:st:exactsolution} as ``$u_{ex}$'',
 
 Observe that the truncation error term $O(h^2)$ in equation \eqref{secondderivativeFD} has a coefficient proportional to fourth derivatives \citep{MortonMayers2005} so our FD method will not be exact on this problem.  That is, $u_{ex}$ has nonzero fourth derivatives.  This is \emph{good} for testing, and we would not want to use the simpler form $u(x,y)=(x-x^2)(y^2-y)$, for example, to test convergence rate of the code, because we want the decay of numerical error with refining grids to be generic.
 
-Code \ref{code:poissonexactrhs} shows how \eqref{eq:st:exactsolution} is implemented as \texttt{formExact()} and how \eqref{manufacturedf} is implemented as \texttt{formRHS()}.  We will reuse these parts in Chapters \ref{chap:mg} and \ref{chap:sc}.
+Code \ref{code:poissonExactRHS} shows how \eqref{eq:st:exactsolution} is implemented as \texttt{formExact()}, and it shows how \eqref{manufacturedf} is implemented as \texttt{formRHS()}.  The computations in these Codes use only local grid coordinates $(i,j)$.  \PETSc pointer arithmetic (i.e.~tricks) allows us to index the C arrays we get from \texttt{DMDAVecGetArray()} using $(i,j)$.  When we are done with computing \pVecs we restore the C arrays by calling \texttt{DMDAVecRestoreArray()}.
 
-\cinputpart{structuredpoisson.c}{\CODELOC}{Methods which assemble the exact solution and the right-hand side of equation \eqref{poissonsquareFD}.}{II}{//FORMEXACTRHS}{//ENDFORMEXACTRHS}{code:poissonexactrhs}
-
-The computations in Code \ref{code:poissonexactrhs} use only local grid coordinates $(i,j)$.  \PETSc pointer arithmetic (i.e.~tricks) allows us to index the C arrays we get from \texttt{DMDAVecGetArray()} using $(i,j)$.  When we are done with computing \pVecs we restore the C arrays by calling \texttt{DMDAVecRestoreArray()}.
-
-\cinputpart{poisson.c}{\CODELOC}{Set up \pDM, \pMat, and \pVec objects, and assemble the linear system.}{I}{//CREATE}{//ENDCREATE}{code:poissoncreate}
+\cinputpart{poisson.c}{\CODELOC}{Assemble the exact solution \pVec for formula \eqref{eq:st:exactsolution}, and the \pVec for the right-hand-side of equation \eqref{poissonsquareFD} from formula \eqref{manufacturedf}.}{II}{//STARTEXACT}{//ENDRHS}{code:poissonExactRHS}
 
 
 \section{Solving the PDE}
 
-Code \ref{code:poissoncreate} shows how \texttt{poisson.c} creates the various objects needed to solve the Poisson problem, namely one \pDM, one \pMat, and three \pVecs.  A \pDM object can compute matrix and vector sizes from the grid dimensions, so we call \texttt{DMCreateMatrix()} and \texttt{DMCreateGlobalVector()} to create \pMat and \pVec objects, respectively.  Then we call methods from \texttt{structuredpoisson.c} (Codes \ref{code:structuredpoisson} and \ref{code:poissonexactrhs} above) to assemble the matrix and vectors.
+Code \ref{code:poissoncreate} shows how \texttt{poisson.c} creates the various objects needed to solve the Poisson problem, namely one \pDM, one \pMat, and three \pVecs.  A \pDM object can compute matrix and vector sizes from the grid dimensions, so we call \texttt{DMCreateMatrix()} and \texttt{DMCreateGlobalVector()} to create \pMat and \pVec objects, respectively.  Then we call the functions shown in Codes \ref{code:poissonMat} and \ref{code:poissonExactRHS} above to assemble the matrix and vectors.
+
+\cinputpart{poisson.c}{\CODELOC}{Set up \pDM, \pMat, and \pVec objects, and assemble the linear system.}{III}{//STARTCREATE}{//ENDCREATE}{code:poissoncreate}
 
 As in Chapter \ref{chap:ls}, the linear system itself is solved by a \pKSP Krylov space method solver object.  In Code \ref{code:poissonsolve} we create it and tell it about \pMat \texttt{A} through a call to \texttt{KSPSetOperators()}.  Recall there are two ways \texttt{A} is used, namely as the system matrix and as the ``material'' from which the preconditioner is built; this explains why \texttt{A} appears as two arguments of \texttt{KSPSetOperators()}.  We also call \texttt{KSPSetFromOptions()} so that we can change the \pKSP type at runtime (illustrated below).
 
 The system is solved by calling \texttt{KSPSolve()}.  Then we report on the solution by computing the numerical error by the norm $\|u-u_{ex}\|_\infty$.  Finally we wrap up by destroying objects and calling \texttt{PetscFinalize()}.
 
-\cinputpart{poisson.c}{\CODELOC}{Solve using \pKSP, and report on solution.}{II}{//SOLVE}{//ENDSOLVE}{code:poissonsolve}
+\cinputpart{poisson.c}{\CODELOC}{Solve using \pKSP, and report on solution.}{IV}{//STARTSOLVE}{//ENDSOLVE}{code:poissonsolve}
 
 
 \section{Runtime controls and viewers}
@@ -629,7 +625,7 @@ on 4 x 3 grid:  error |u-uexact|_inf = 0.0085927
 
 Additionally, a ``movie'' of the \pKSP iterates $\{\bu_k\}$ comes from running
 \begin{cline}
-$ ./poisson -da_grid_x 100 -da_grid_y 100 -ksp_monitor_solution
+$ ./poisson -da_grid_x 100 -da_grid_y 100 -ksp_monitor_solution draw -draw_pause 0.1
 \end{cline}
 %$
 (not shown).  Alternatively, as in Chapter \ref{chap:ls}, a line graph of the (preconditioned) residual norm is from \texttt{-ksp\_monitor\_lg\_residualnorm} (also not shown).  These various viewing options should be used on under-development PDE-solving code on a structured grid.
@@ -678,21 +674,19 @@ The data is shown in Figure \ref{fig:poisson-conv} as stars.  For the four coars
 This stagnation of convergence is not a sign of an implementation error.  It comes from the default tolerance for the \pKSP object, and we simply need to ask for more accuracy using option \texttt{-ksp\_rtol}.  On a particular grid we can see the effect of a smaller tolerance by using option \texttt{-ksp\_monitor} to watch the residuals:
 \begin{cline}
 $ ./poisson -ksp_monitor
-  0 KSP Residual norm 1.007660904704e-01 
-  1 KSP Residual norm 2.917206076870e-02 
-  2 KSP Residual norm 1.153582666339e-02 
-... 
-  6 KSP Residual norm 6.995040432502e-06 
-  7 KSP Residual norm 8.593881990968e-07 
-on 10 x 10 grid:  error |u-uexact|_inf = 0.000621778
-$ ./poisson -ksp_monitor -ksp_rtol 1.0e-12
-  0 KSP Residual norm 1.007660904704e-01 
-  1 KSP Residual norm 2.917206076870e-02 
-  2 KSP Residual norm 1.153582666339e-02 
+  0 KSP Residual norm 1.020952970432e-01 
+  1 KSP Residual norm 2.656923348626e-02 
 ...
- 13 KSP Residual norm 4.240214646869e-13 
- 14 KSP Residual norm 3.105665682224e-14 
-on 10 x 10 grid:  error |u-uexact|_inf = 0.000621527
+  6 KSP Residual norm 2.152764600588e-06 
+  7 KSP Residual norm 2.650467236964e-07 
+on 9 x 9 grid:  error |u-uexact|_inf = 0.000763959
+$ ./poisson -ksp_monitor -ksp_rtol 1.0e-12
+  0 KSP Residual norm 1.020952970432e-01 
+  1 KSP Residual norm 2.656923348626e-02 
+...
+ 12 KSP Residual norm 3.524000607280e-13 
+ 13 KSP Residual norm 2.674839310683e-14 
+on 9 x 9 grid:  error |u-uexact|_inf = 0.000763883
 \end{cline}
 On this coarse grid the numerical error is nearly the same, but on finer grids the fact that the linear system is solved more exactly also brings the numerical solution significantly closer to the exact one.  In fact, rerunning the above bash loop with the stronger $10^{-12}$ tolerance yields excellent evidence of convergence (dots in Figure \ref{fig:poisson-conv}).  The linear-fit rate of this logarithmic error data is $O(h^{1.9999})$.  Our implementation is correct.
 
@@ -918,14 +912,14 @@ However, to exploit the power of geometric multigrid we also need to do a better
 
 \begin{enumerate}
 
-\item Use \texttt{DMDACreate1d()}, and other appropriate modifications of \texttt{poisson.c} and \texttt{structuredpoisson.c}, to write a code \texttt{poisson1D.c} for the 1D Poisson problem
+\item Use \texttt{DMDACreate1d()}, and other appropriate modifications of \texttt{poisson.c}, to write a code \texttt{poisson1D.c} for the 1D Poisson problem
     $$-u'' = f, \quad u(0)=u(1)=0.$$
 For simplicity, choose exact solution $u(x)=x^2(1-x^2)$ to determine $f(x)$.  Note you can either use \texttt{MatSetValues()} or \texttt{MatSetValuesStencil()} because indexing is easy in 1D.  Show that your results converge on a sequence of refining grids, as done in Figure \ref{fig:poisson-conv}; the errors should go to zero as $O(h^2)$.  Find a grid refinement level, and use \pKSP options as appropriate, to get 11 digit accuracy at every grid point.  \emph{It will never again be this good.}
 %  FD is:  - u_{i-1} + 2 U_i - u_{i+1} = h^2 f_i
 %  for exact u:  u'   = 2x(1-x^2) + x^2(-2x) = 2x - 4x^3
 %                -u'' = -(2 - 12 x^2) = 12x^2 - 2
 
-\item Modify \texttt{structuredpoisson.c} to allow non-homogeneous Dirichlet boundary data $u|_{\partial \mathcal{S}}=g$.  Test the correctness (i.e.~convergence at the expected rate) of your code by solving \eqref{poissonsquare} with both $f$ and $g$ derived from an exact solution $u(x,y)=3x + \sin(20xy)$.  Again examine  numerical errors under grid refinement.
+\item Modify \texttt{poisson.c} to allow non-homogeneous Dirichlet boundary data $u|_{\partial \mathcal{S}}=g$.  Test the correctness (i.e.~convergence at the expected rate) of your code by solving \eqref{poissonsquare} with both $f$ and $g$ derived from an exact solution $u(x,y)=3x + \sin(20xy)$.  Again examine  numerical errors under grid refinement.
 
 \item \label{exer:st:jacobivsnone} Confirm the nearly-identical performance of un-preconditioned and Jacobi-preconditioned CG, by doing
 \begin{cline}

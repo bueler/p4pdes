@@ -6,7 +6,7 @@
 
 # filenames should be distinct
 CH2="vecmatksp.c tri.c"
-CH3="structuredpoisson.c poisson.c"
+CH3="poisson.c"
 CH4="expcircle.c ecjacobian.c reaction.c"
 CH5="plap.c"
 CH6="ad3.c"
