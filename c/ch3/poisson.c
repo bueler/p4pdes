@@ -1,10 +1,98 @@
-
-//CREATE
 static char help[] = "A structured-grid Poisson problem with DMDA+KSP.\n\n";
 
 #include <petsc.h>
-#include "structuredpoisson.h"
 
+//STARTMATRIX
+PetscErrorCode formMatrix(DM da, Mat A) {
+  PetscErrorCode ierr;
+  DMDALocalInfo  info;
+  MatStencil     row, col[5];
+  PetscReal      hx, hy, v[5];
+  PetscInt       i, j, ncols;
+
+  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+  hx = 1.0/(info.mx-1);  hy = 1.0/(info.my-1);
+  for (j=info.ys; j<info.ys+info.ym; j++) {
+    for (i=info.xs; i<info.xs+info.xm; i++) {
+      ncols = 0;
+      row.j = j;               // row of A corresponding to (x_i,y_j)
+      row.i = i;
+      col[ncols].j = j;        // in this diagonal entry
+      col[ncols].i = i;
+      if ( (i==0) || (i==info.mx-1) || (j==0) || (j==info.my-1) ) {
+        // if on boundary, just insert diagonal entry
+        v[ncols++] = 1.0;
+      } else {
+        v[ncols++] = 2*(hy/hx + hx/hy); // ... everywhere else we build a row
+        // if neighbor is NOT a known boundary value then we put an entry:
+        if (i-1>0) {
+          col[ncols].j = j;    col[ncols].i = i-1;  v[ncols++] = -hy/hx;  }
+        if (i+1<info.mx-1) {
+          col[ncols].j = j;    col[ncols].i = i+1;  v[ncols++] = -hy/hx;  }
+        if (j-1>0) {
+          col[ncols].j = j-1;  col[ncols].i = i;    v[ncols++] = -hx/hy;  }
+        if (j+1<info.my-1) {
+          col[ncols].j = j+1;  col[ncols].i = i;    v[ncols++] = -hx/hy;  }
+      }
+      ierr = MatSetValuesStencil(A,1,&row,ncols,col,v,INSERT_VALUES); CHKERRQ(ierr);
+    }
+  }
+  ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+  ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+  return 0;
+}
+//ENDMATRIX
+
+//STARTEXACT
+PetscErrorCode formExact(DM da, Vec uexact) {
+  PetscErrorCode ierr;
+  DMDALocalInfo  info;
+  PetscInt       i, j;
+  PetscReal      hx, hy, x, y, **auexact;
+
+  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+  hx = 1.0/(info.mx-1);  hy = 1.0/(info.my-1);
+  ierr = DMDAVecGetArray(da, uexact, &auexact);CHKERRQ(ierr);
+  for (j=info.ys; j<info.ys+info.ym; j++) {
+    y = j * hy;
+    for (i=info.xs; i<info.xs+info.xm; i++) {
+      x = i * hx;
+      auexact[j][i] = x*x * (1.0 - x*x) * y*y * (y*y - 1.0);
+    }
+  }
+  ierr = DMDAVecRestoreArray(da, uexact, &auexact);CHKERRQ(ierr);
+  return 0;
+}
+
+PetscErrorCode formRHS(DM da, Vec b) {
+  PetscErrorCode ierr;
+  PetscInt       i, j;
+  PetscReal      hx, hy, x, y, x2, y2, f, **ab;
+  DMDALocalInfo  info;
+
+  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+  hx = 1.0/(info.mx-1);  hy = 1.0/(info.my-1);
+  ierr = DMDAVecGetArray(da, b, &ab);CHKERRQ(ierr);
+  for (j=info.ys; j<info.ys+info.ym; j++) {
+    y = j * hy;  y2 = y*y;
+    for (i=info.xs; i<info.xs+info.xm; i++) {
+      x = i * hx;  x2 = x*x;
+      if ( (i>0) && (i<info.mx-1) && (j>0) && (j<info.my-1) ) { // if not bdry
+        // f = - (u_xx + u_yy)  where u is exact
+        f = 2.0 * ( (1.0 - 6.0*x2) * y2 * (1.0 - y2)
+                    + (1.0 - 6.0*y2) * x2 * (1.0 - x2) );
+        ab[j][i] = hx * hy * f;
+      } else {
+        ab[j][i] = 0.0;                          // on bdry the eqn is 1*u = 0
+      }
+    }
+  }
+  ierr = DMDAVecRestoreArray(da, b, &ab); CHKERRQ(ierr);
+  return 0;
+}
+//ENDRHS
+
+//STARTCREATE
 int main(int argc,char **args) {
   PetscErrorCode ierr;
   DM             da;
@@ -33,21 +121,16 @@ int main(int argc,char **args) {
   ierr = VecDuplicate(b,&u); CHKERRQ(ierr);
   ierr = VecDuplicate(b,&uexact); CHKERRQ(ierr);
 
-  // fill known vectors
+  // fill vectors and assemble linear system
   ierr = formExact(da,uexact); CHKERRQ(ierr);
   ierr = formRHS(da,b); CHKERRQ(ierr);
-
-  // assemble linear system
-  ierr = formdirichletlaplacian(da,1.0,A); CHKERRQ(ierr);
+  ierr = formMatrix(da,A); CHKERRQ(ierr);
 //ENDCREATE
-
-//SOLVE
-  // create linear solver context
+//STARTSOLVE
+  // create and solve the linear system
   ierr = KSPCreate(PETSC_COMM_WORLD,&ksp); CHKERRQ(ierr);
   ierr = KSPSetOperators(ksp,A,A); CHKERRQ(ierr);
   ierr = KSPSetFromOptions(ksp); CHKERRQ(ierr);
-
-  // solve
   ierr = KSPSolve(ksp,b,u); CHKERRQ(ierr);
 
   // report on grid and numerical error
