@@ -3,33 +3,41 @@
 
 Vector spaces, matrices, and norms are assumed to be familiar to the reader, but we can set some notation by recalling the basics.
 
-A \emph{real vector space}\sidenote{By careful configuration, \PETSc can handle complex scalars, vectors, and matrices.  However, we use only real versions in this book.} is a set that is closed under addition and multiplication by \emph{scalars}, namely elements of $\RR$, and to which certain algebraic axioms apply, namely the existence of a zero vector plus the appropriate associative, distributive, and commutative axioms \citep{Strang2009}.  The elements of the set are \emph{vectors}.  In this book, on the one hand, we will have functions defined in domains in $\RR^1$, $\RR^2$, or $\RR^3$, such as solutions to PDEs.  On the other hand, we will have computer representations of various finite-size column vectors and matrices.  The abstract sets from which these various objects are taken are, of course, all vector spaces, the former infinite- and the latter finite-dimensional.
+A \emph{real vector space}\sidenote{By careful configuration, \PETSc can handle complex scalars, vectors, and matrices.  However, we use only real versions in this book.} is a set that is closed under addition and multiplication by \emph{scalars}, namely elements of $\RR$, and to which certain algebraic axioms apply, namely the existence of a zero vector plus the appropriate associative, distributive, and commutative axioms \citep{Strang2009}.  The elements of the set are \emph{vectors}.  In this book we will consider functions defined in domains in $\RR^1$, $\RR^2$, or $\RR^3$, such as solutions to PDEs, and regard them as vectors in infinite-dimensional vector space.  On the other hand, we will have computer representations of various finite-size column vectors and matrices.  The abstract sets in which these objects ``live'' are, of course, all vector spaces.
 
-However, the unqualified word ``vector'' will be understood in this book to refer to a column vector of finite length, written $\RR^N$.  We will use bold for vectors, but not for entries, thus for example $\bv\in\RR^N$ has entries $v_0,\dots,v_{N-1}$.  For another example, the \emph{standard basis} for $\RR^N$ is the set of vectors $\{\be_i\}_{i=0}^{N-1}$ which have zero entries except for having a one in the $i$th entry: $(\be_i)_j = \delta_{ij}$ (the Kronecker delta).
+The unqualified word ``vector'' will be understood in this book to refer to a column vector of finite length, written $\RR^N$.  We will use bold for vectors, but not for entries, thus for example $\bv\in\RR^N$ has entries $v_0,\dots,v_{N-1}$.  (Yes, we will break conventions by even numbering vector entries from zero.)  The \emph{standard basis} for $\RR^N$ is the set of vectors $\{\be_i\}_{i=0}^{N-1}$ which have zero entries except for each vector having a one in the $i$th entry: $(\be_i)_j = \delta_{ij}$ (the Kronecker delta).
 
-A \emph{matrix} is a linear map between vector spaces.\sidenote{As is well-known, in polite company one says instead that a matrix is the representation of a linear map from one finite-dimensional vector space to another, with some choice of basis in each space.}  We write $A\in \RR^{M\times N}$ for a matrix that maps from $\RR^N$ to $\RR^M$.
+A \emph{matrix} is a linear map between vector spaces.\sidenote{As is well-known, in polite company one says instead that a matrix is the \emph{representation} of a linear map from one finite-dimensional vector space to another, with some choice of basis in each space.  This distinction is impractical in the world of scientific computation.}  We write $A\in \RR^{M\times N}$ for a matrix that maps from $\RR^N$ to $\RR^M$.
 
-A \emph{vector norm} is a function that gives a well-defined length to a vector, with several properties including the triangle inequality \citep{TrefethenBau1997}.  For $1 \le p < \infty$ this formula defines a norm,
+A \emph{vector norm} is a function $\|\cdot\|:\RR^N \to [0,\infty)$ that gives a well-defined length to a vector.  (Several axioms, including the triangle inequality, must be satisfied \citep{TrefethenBau1997}.)  For $1 \le p < \infty$ this formula defines a norm,
 \begin{equation}
 \|\bv\|_p = \left(\sum_{i=0}^{N-1} |v_i|^p\right)^{1/p}.  \label{eq:ls:vectorpnorm}
 \end{equation}
-The $p=1,2$ cases are especially common, but all vector $p$-norms can obviously be computed with $O(N)$ work.  The maximum norm
+The $p=1,2$ cases are especially common, but all vector $p$-norms can be computed with $O(N)$ work using \eqref{eq:ls:vectorpnorm}.  The maximum norm
 \begin{equation}
 \|\bv\|_\infty = \max_{i=0,\dots,N-1} |v_i|  \label{eq:ls:vectorinfnorm}
 \end{equation}
-is also common.  \PETSc computes one of the $p=1,2,\infty$ norms by a call to \texttt{VecNorm()} on a \PETSc \pVec object; see below for an introduction to these objects.
+is also common.  \PETSc computes any of the $p=1,2,\infty$ norms by a call to \texttt{VecNorm()} on a \PETSc \pVec object; see below for an introduction to these objects.
 
 Choosing vector norms on the input and output vector spaces of a matrix \emph{induces} a \emph{matrix norm} \citep{TrefethenBau1997}, as follows:
 \begin{equation}
 \|A\| = \sup_{\bv \ne 0} \frac{\|A\bv\|}{\|\bv\|} = \sup_{\|\bv\| = 1} \|A\bv\|.  \label{eq:ls:matnorm}
 \end{equation}
-Such matrix norms are generally expensive to compute---i.e.~they may take significantly more than the $O(MN)$ operations needed to examine all the entries of a generic matrix $A\in \RR^{M\times N}$---but those matrix norms induced by the $p=1$ and $\infty$ vector norms are easy to compute by $O(MN)$ formulas \citep{TrefethenBau1997}.  Also common is the \emph{Frobenius} matrix norm; though it can be computed by a $O(MN)$ formula it is not induced from a vector norm.  \PETSc computes $p=1,\infty$ and Frobenius matrix norms with a call to \texttt{MatNorm()} on a \PETSc \pMat object; see below.
+It follows from \eqref{eq:ls:matnorm} that
+    $$\|A \bv\| \le \|A\| \|\bv\|.$$
 
-FIXME do cond
+Generally, induced matrix norms are expensive to compute; as optimization problems they generally take more work than the minimum $O(MN)$ operations needed to examine all the entries of a (generic, dense) matrix $A\in \RR^{M\times N}$.  However, those matrix norms induced by the $p=1,\infty$ vector norms are easy to compute by $O(MN)$ formulas \citep{TrefethenBau1997}.  The \emph{Frobenius} matrix norm can also be computed by a $O(MN)$ formula, though the norm itself is not induced from a vector norm \citep{TrefethenBau1997}.  \PETSc computes $p=1,\infty$ and Frobenius matrix norms with a call to \texttt{MatNorm()} on a \PETSc \pMat object; see below.
+
+We will use vector norms routinely in practice, both inside key algorithms for linear and nonlinear analysis (Chapters \ref{chap:ls}, \ref{chap:st}, \ref{chap:nl}), and in measuring numerical errors in solving PDEs, for example.   But what good are matrix norms?  Though they occasionally appear in algorithms, in this book we will use them only through the desire to measure the \emph{conditioning} of linear systems \citep{TrefethenBau1997}.  By definition, if $\|\cdot\|$ denotes a matrix norm and $A \in \RR^{N\times N}$ is a square matrix then
+\begin{equation}
+    \kappa(A) = \|A\| \|A^{-1}\|
+\end{equation}
+is the \emph{condition number} of $A$; by definition $\kappa(A)=+\infty$ if $A$ is not invertible.  This quantity measures how perturbation-sensitive is the (exact) solution of a linear system $A \bv = \bb$ \citep{TrefethenBau1997}.
+
 
 \section{Some facts of (numerical) life}
 
-Our goal is to compute more interesting quantities than Euler's constant $e$---see Chapter \ref{chap:gs}---and at the core of many numerical PDE solutions is a finite-dimensional linear system.  So in this section we both recall basic ideas of numerical linear algebra and apply \PETSc to solve linear systems.
+Our goal is to compute more interesting quantities than Euler's constant $e$---see Chapter \ref{chap:gs}---and at the core of many numerical PDE solutions is a finite-dimensional linear system.  In this Chapter we both recall basic ideas of numerical linear algebra and apply \PETSc to solve linear systems.
 
 Suppose $\bb\in \RR^{N}$ is a column vector and $A\in\RR^{N\times N}$ is a square matrix.  The linear system
 \begin{equation}
@@ -44,13 +52,13 @@ This is simple in theory.
 It is not so simple in practice, however, to solve linear systems on a computer.  Here are two facts to keep in mind while working numerically with linear systems \citep{TrefethenBau1997}:
 \renewcommand{\labelenumi}{\roman{enumi})}
 \begin{enumerate}
-\item \label{limittoaccuracy} \emph{limit to accuracy}:  If real numbers are represented with machine precision $\eps$ then the solution of \eqref{introsystem} can only be computed within an error $\kappa(A) \eps$, where $\kappa(A) = \|A\| \|A^{-1}\|$ is the \emph{condition number} of $A$ in the induced matrix norm $\|\cdot\|$.
-\item \emph{cost of direct solutions}:  If $A$ is a generic $N\times N$ matrix then computation of solution \eqref{introsolution} by a direct method like Gauss elimination, whether actually forming $A^{-1}$ or not, is an $O(N^3)$ operation.\sidenote{See Lecture 32 in \citet{TrefethenBau1997} for caveats with respect to ``$O(N^3)$.''  Nonetheless it is the right power to state when making this point.}
+\item \label{limittoaccuracy} \emph{limit to accuracy}:  If real numbers are represented with machine precision $\eps$ then the solution of \eqref{introsystem} can only be computed within an error $\kappa(A) \eps$, where $\kappa(A)$ is the \emph{condition number} of $A$.
+\item \emph{cost of direct solutions}:  If $A$ is a generic, dense $N\times N$ matrix then computation of solution \eqref{introsolution} by a direct method, such as Gauss elimination \citep{TrefethenBau1997}, whether actually forming $A^{-1}$ or not, is an $O(N^3)$ operation.\sidenote{See Lecture 32 in \citet{TrefethenBau1997} for caveats with respect to ``$O(N^3)$.''  Nonetheless it is the right power to state when making this point.}
 \end{enumerate}
 
-Fact i) is about conditioning not methods.  Informally speaking, there are matrices $A$ and $\tilde A$ that are the same to within machine precision $\eps$ but for which the infinite-precision solutions to \eqref{introsolution} differ by an amount $\kappa(A) \eps$.  Rounding errors, which act somewhat like random noise added to every arithmetic operation on the computer, effectively perturb $A$ by $\eps$ during each computation, and thus $O(\kappa(A) \eps)$ size errors appear in the solution of the linear system.  \emph{Backward stable} methods, specifically the QR direct method, can be shown to actually achieve this minimal level of inaccuracy \citep{TrefethenBau1997}.
+Fact i) is about conditioning not methods.  Informally speaking, there are matrices $A$ and $\tilde A$ that are the same to within machine precision $\eps$ but for which the exact solutions to \eqref{introsolution} using $A$ and $\tilde A$ differ by an amount $\kappa(A) \eps$.  Rounding errors, which act somewhat like random noise added to every arithmetic operation on the computer, effectively perturb $A$ by $\eps$ during each computation, and thus $O(\kappa(A) \eps)$ size errors appear in the solution of the linear system.  \emph{Backward stable} methods, specifically the QR direct method, can be shown to actually achieve this minimal level of inaccuracy \citep{TrefethenBau1997}.
 
-The precision for the C \texttt{double} type, the default 64-bit representation of real numbers, a type aliased to \texttt{PetscReal} in our \PETSc programs, is $\eps = 2.2 \times 10^{-16}$.  Thus by i), a linear system having $\kappa(A) \approx 10^{10}$, for example, can only be solved to five or six decimal digits of precision.  While a matrix with such a large condition number is ``poorly-conditioned,'' it is possible to see $\kappa(A)\approx 10^{10}$ when discretizing PDEs.  We have to be aware of conditioning when forming expectations about solution accuracy.
+The precision for the C \texttt{double} type, the default 64-bit representation of real numbers, a type aliased to \texttt{PetscReal} in most \PETSc configurations, is $\eps = 2.2 \times 10^{-16}$.  Thus by i), a linear system having $\kappa(A) \approx 10^{10}$, for example, can only be solved to five or six decimal digits of precision.  It is possible to see $\kappa(A)\approx 10^{10}$ for $A$ which come from discretizing PDEs, but such a matrix is regarded as ``poorly-conditioned.''  In any case, we have to be aware of conditioning when forming expectations about solution accuracy.
 
 By ii) a generic linear system with $N=10^6$ equations requires $10^{18}$ or so operations to solve by Gauss elimination, and even modern supercomputers take a while to do a quintillion operations.  However, though general-purpose direct methods are impractical for $N=10^6$ systems, we will successfully solve PDE-generated linear systems of this size on a single processor in a few seconds, and in $O(N)$ operations, in Chapter \ref{chap:mg}.
 %see last line of Table 3.2
@@ -487,15 +495,17 @@ KSPSetOperators(ksp,A,A);
 \end{code}
 Why do we list \texttt{A} twice in calling \texttt{KSPSetOperators()}?  The reason is that at runtime we generally choose a preconditioning method which builds $M^{-1}$ in equation \eqref{introleftpre} or \eqref{introrightpre} from $A$ or from an approximation of $A$.  For example, \emph{incomplete LU} factorization of $A$ (``ILU($0$)'') can be used in generating $M^{-1}$, or $M$ could be the diagonal of $A$ as in the example on page \pageref{example:ls:jacobirichardson}.  The second matrix argument to \texttt{KSPSetOperators()} is this \pMat from which $M^{-1}$ is built.
 
-\cinput{vecmatksp.c}{\CODELOC}{Solve a small linear system.}{//START}{//END}{code:vecmatksp}
-
 Note we do not supply $M$ \emph{itself} because that would obstruct easy choice among preconditioners at runtime, and require the user to write extra code.  Instead we supply ``material'' from which the preconditioning action $M^{-1}$ is built.  The most common such material is $A$ itself, as here.  \PETSc extracts the diagonal from this ``material'' in Jacobi preconditioning, for example.  Or it computes ILU($0$) factors $L$ and $U$ from $A$, in which case $A \approx LU$ may be a poor approximation but $M^{-1} = (LU)^{-1} = U^{-1} L^{-1}$ is applied in preconditioning.
 
 To actually solve the system we call
 \begin{code}
 KSPSolve(ksp,b,x);
 \end{code}
-This supplies the right-hand side of the system, an allocated and assembled \pVec \texttt{b}, and space for the solution, an allocated \pVec \texttt{x}.  After this we display the solution using \texttt{VecView()}.  Everything else about Code \ref{code:vecmatksp} should be self-explanatory, so we compile and run it:
+This supplies the right-hand side of the system, an allocated and assembled \pVec \texttt{b}, and space for the solution, an allocated \pVec \texttt{x}.  After this we display the solution using \texttt{VecView()}.  Everything else about Code \ref{code:vecmatksp} should be self-explanatory.
+
+\cinput{vecmatksp.c}{\CODELOC}{Solve a small linear system.}{//START}{//END}{code:vecmatksp}
+
+Let us compile and run it:
 \begin{cline}
 $ cd c/ch2/
 $ make vecmatksp
@@ -633,6 +643,8 @@ We have seen how \PETSc code sets up and solves linear systems, but there is mor
 \item Using \texttt{VecAXPY()}, \texttt{VecNorm()}, and \texttt{PetscPrintf()} to compute and display the numerical error in a case where the exact solution is known.
 \end{enumerate}
 
+\cinputpart{tri.c}{\CODELOC}{Set up \pVec and \pMat objects for a tridiagonal system.}{I}{//STARTSETUP}{//ENDSETUP}{code:tripartone}
+
 First we build and run the code:
 \begin{cline}
 $ make tri
@@ -647,8 +659,6 @@ Mat Object:(a_) 1 MPI processes
   1 KSP Residual norm 5.519370044893e-16 
 error for m = 4 system is |x-xexact|_2 = 5.1e-16
 \end{cline}
-
-\cinputpart{tri.c}{\CODELOC}{Set up \pVec and \pMat objects for a tridiagonal system.}{I}{//STARTSETUP}{//ENDSETUP}{code:tripartone}
 
 The first new tool used in Code \ref{code:tripartone} is bracketed by \texttt{PetscOptionsBegin()} and \texttt{PetscOptionsEnd()}, namely the call to \texttt{PetscOptionsInt()}.  The \texttt{Begin} method sets a prefix ``\texttt{-tri\_...}'' so that the new option we create is distinguished from the many built-in \PETSc options that start with \texttt{-ksp\_...} or \texttt{-vec\_...} or whatever.  Here \texttt{PetscOptionsInt()} creates option \texttt{-tri\_m} so the user can set the variable \texttt{m}, and leave the default \texttt{m}$=4$ unaltered if the option is not set.
 
@@ -674,13 +684,13 @@ Next we assemble the matrix $A$.  This is a boring tridiagonal matrix with $3$ o
 \end{quote}
 to get the starting and ending row indices for the local process.  These are used as limits in a \texttt{for} loop over the locally own rows.  We use \texttt{MatSetValues()} to actually set the entries of $A$ and \texttt{MatAssemblyBegin/End()} to complete the assembly of $A$.
 
+\cinputpart{tri.c}{\CODELOC}{Assemble and solve.}{II}{//ENDSETUP}{//ENDSOLVE}{code:triparttwo}
+
 We need to assemble the right-hand side $\bb$ of the linear system and also the exact solution $\bx_{\text{exact}}$ to the linear system ($A\bx_{\text{exact}} = \bb$).  The easiest way, for demonstration purposes here, is to \emph{choose} $\bx_{\text{exact}}$ and then compute $\bb$ by multiplying by $A$.  Thus, we set (unimportant) values for \texttt{xexact}, and call \texttt{VecAssemblyBegin/End()} on it.  Then we compute \texttt{b} by calling \texttt{MatMult(A,xexact,b)}.
 
 As in \texttt{vecmatksp.c} before we set up  the \pKSP and then call \texttt{KSPSolve()} to approximately solve $A\bx = \bb$.  Option \texttt{-ksp\_monitor} prints the residual norm $\|\bb-A\bx_k\|_2$ at runtime.  In this case we also want to see that the actual error
 	$$\|\bx - \bx_{\text{exact}}\|_2$$
 is small when the \pKSP completes its work.  So, after getting \texttt{x} from \texttt{KSPSolve()} we compute the error with two commands,
-
-\cinputpart{tri.c}{\CODELOC}{Assemble and solve.}{II}{//ENDSETUP}{//ENDSOLVE}{code:triparttwo}
 
 \medskip
 \begin{tabular}{lcrcl}
