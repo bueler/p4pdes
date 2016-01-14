@@ -172,7 +172,7 @@ gives an approximation of $e^{-20}$ accurate to six digits, and check that it wo
 
 \item \label{exer:gs:nondeterminant}  \emph{Demonstrating the non-commutativity of floating-point addition is an excuse to practice more \PETSc programming in a serial (single-process) context.}
 
-A code called \texttt{shuffle.c}, in subdirectory \texttt{c/ch1/}, permutes the order of the elements stored in a one-dimensional C array and prints the result (not shown).  Look at this code and see how it uses the \PETSc options mechanism and a \PETSc random number generator; note that the wall clock time in seconds is used to seed the latter.  Modify it to create a code \texttt{lntwo.c} which does a $N$-term truncation (partial sum) of the slowly-converging infinite series
+A code called \texttt{shuffle.c}, in subdirectory \texttt{c/ch1/solns/}, permutes the order of the elements stored in a one-dimensional C array and prints the result (not shown).  Look at this code and see how it uses the \PETSc options mechanism and a \PETSc random number generator; note that the wall clock time in seconds is used to seed the latter.  Modify it to create a code \texttt{lntwo.c} which does a $N$-term truncation (partial sum) of the slowly-converging infinite series
 \begin{equation}
 \sum_{n=1}^\infty \frac{(-1)^{n+1}}{n} = \ln 2.
 \label{eq:gs:lntwo}

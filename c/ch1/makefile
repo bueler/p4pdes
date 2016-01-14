@@ -5,12 +5,7 @@ e: e.o  chkopts
 	-${CLINKER} -o e e.o  ${PETSC_LIB}
 	${RM} e.o
 
-shuffle: shuffle.o  chkopts
-	-${CLINKER} -o shuffle shuffle.o  ${PETSC_LIB}
-	${RM} shuffle.o
-
-# etc
-
+# testing
 PROG = e
 TEST = 1
 PROC = 1
@@ -24,5 +19,5 @@ rune_1:
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ e shuffle
+	@rm -f *~ e
 
