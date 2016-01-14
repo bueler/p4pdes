@@ -4,13 +4,13 @@ static char help[] = "Solves a 1D reaction-diffusion problem with DMDA and SNES.
 
 //CALLBACK
 typedef struct {
-  PetscReal rho, M, alpha, beta;
+  double  rho, M, alpha, beta;
 } AppCtx;
 
-PetscErrorCode InitialAndExactLocal(DMDALocalInfo *info, PetscReal *u0,
-                                    PetscReal *uex, AppCtx *user) {
-    PetscInt  i;
-    PetscReal h = 1.0 / (info->mx-1), x;
+PetscErrorCode InitialAndExactLocal(DMDALocalInfo *info, double *u0,
+                                    double *uex, AppCtx *user) {
+    int    i;
+    double h = 1.0 / (info->mx-1), x;
     for (i=info->xs; i<info->xs+info->xm; i++) {
         x = h * i;
         u0[i]  = user->alpha * (1.0 - x) + user->beta * x;
@@ -19,10 +19,10 @@ PetscErrorCode InitialAndExactLocal(DMDALocalInfo *info, PetscReal *u0,
     return 0;
 }
 
-PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal *u,
-                                 PetscReal *f, AppCtx *user) {
-    PetscInt  i;
-    PetscReal h = 1.0 / (info->mx-1), R;
+PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *u,
+                                 double *f, AppCtx *user) {
+    int    i;
+    double h = 1.0 / (info->mx-1), R;
     for (i=info->xs; i<info->xs+info->xm; i++) {
         if (i == 0) {
             f[i] = u[i] - user->alpha;
@@ -36,11 +36,11 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal *u,
     return 0;
 }
 
-PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscReal *u,
+PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, double *u,
                                  Mat J, Mat P, AppCtx *user) {
     PetscErrorCode ierr;
-    PetscInt  i, col[3];
-    PetscReal h = 1.0 / (info->mx-1), dRdu, v[3];
+    int    i, col[3];
+    double h = 1.0 / (info->mx-1), dRdu, v[3];
     for (i=info->xs; i<info->xs+info->xm; i++) {
         if ((i == 0) | (i == info->mx-1)) {
             v[0] = 1.0;
@@ -66,12 +66,12 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscReal *u,
 //MAIN
 int main(int argc,char **args) {
   PetscErrorCode ierr;
-  DM                  da;
-  SNES                snes;
-  AppCtx              user;
-  Vec                 u, uexact;
-  PetscReal           unorm, errnorm, *au, *auex;
-  DMDALocalInfo       info;
+  DM            da;
+  SNES          snes;
+  AppCtx        user;
+  Vec           u, uexact;
+  double        unorm, errnorm, *au, *auex;
+  DMDALocalInfo info;
 
   PetscInitialize(&argc,&args,NULL,help);
   user.rho   = 10.0;

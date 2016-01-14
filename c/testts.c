@@ -26,8 +26,8 @@ int main(int argc,char **argv) {
   ierr = MatSetFromOptions(A); CHKERRQ(ierr);
   ierr = MatSetUp(A); CHKERRQ(ierr);
 
-  PetscInt    i,Istart,Iend;
-  PetscScalar v;
+  int    i,Istart,Iend;
+  double v;
   ierr = MatGetOwnershipRange(A,&Istart,&Iend); CHKERRQ(ierr);
   for (i=Istart; i<Iend; i++) {
     v = 1.0;
@@ -44,7 +44,7 @@ int main(int argc,char **argv) {
   ierr = TSSetRHSJacobian(ts,A,A,TSComputeRHSJacobianConstant,NULL);CHKERRQ(ierr);
 
   // SET INITIAL CONDITION AND AS FOR DURATION
-  PetscReal t0 = 0.0, tf = 1.0, dtinitial = 0.1;
+  double t0 = 0.0, tf = 1.0, dtinitial = 0.1;
   ierr = TSSetInitialTimeStep(ts,t0,dtinitial);CHKERRQ(ierr);
   ierr = TSSetSolution(ts,x);CHKERRQ(ierr);
   ierr = TSSetDuration(ts,100,tf);CHKERRQ(ierr);
@@ -66,7 +66,7 @@ int main(int argc,char **argv) {
 
   // show result:
   // FIXME: does not return tf, as promised in man page for TSGetSolveTime()
-  PetscReal tfreturned;
+  double tfreturned;
   ierr = TSGetSolveTime(ts,&tfreturned);CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
              "result x at t = %g (note |tf-tr_returned| = %e):\n",

@@ -7,13 +7,13 @@ static char help[] = "Implement Gudunov method for system of linear conservation
 #include <petscdmda.h>
 
 
-PetscErrorCode fillsmallmat(const PetscInt d, PetscReal values[d][d], Mat A) {
+PetscErrorCode fillsmallmat(const int d, double values[d][d], Mat A) {
   PetscErrorCode ierr;
-  PetscInt       col[d], row, j;
+  int       col[d], row, j;
   for (j = 0; j < d; j++)
     col[j] = j;
   for (row = 0; row < d; row++) {
-    ierr = MatSetValues(A,1,&row,d,col,(PetscReal*)values[row],INSERT_VALUES); CHKERRQ(ierr);
+    ierr = MatSetValues(A,1,&row,d,col,(double*)values[row],INSERT_VALUES); CHKERRQ(ierr);
   }
   ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
   ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
@@ -26,7 +26,7 @@ int main(int argc,char **argv)
   PetscErrorCode ierr;
   PetscInitialize(&argc,&argv,(char*)0,help);
 
-  const PetscInt d = 2;  // d = DOF
+  const int d = 2;  // d = DOF
   Mat            A, Aminus;
   // these are dense d x d sequential matrices, unrelated to the grid
   //   (each processor owns whole matrix)
@@ -35,7 +35,7 @@ int main(int argc,char **argv)
   ierr = MatSetFromOptions(A); CHKERRQ(ierr);
 
   // fill A
-  PetscReal val[d][d], c = 3.0;
+  double val[d][d], c = 3.0;
   val[0][0] = 0.0;  val[0][1] = c;
   val[1][0] = c;    val[1][1] = 0.0;
   ierr = fillsmallmat(2,val,A); CHKERRQ(ierr);
@@ -56,9 +56,9 @@ int main(int argc,char **argv)
 
   // determine grid locations (cell-centered grid)
   DMDALocalInfo  info;
-  PetscReal      L = 10.0, dx;
+  double      L = 10.0, dx;
   ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-  dx = L / (PetscReal)(info.mx);
+  dx = L / (double)(info.mx);
   ierr = DMDASetUniformCoordinates(da,dx/2,L-dx/2,-1.0,-1.0,-1.0,-1.0);CHKERRQ(ierr);
 
   // u = u(t_n), unew = u(t_n+1)
@@ -84,8 +84,8 @@ int main(int argc,char **argv)
               PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,&viewer); CHKERRQ(ierr);
 
   /* time-stepping loop */
-  PetscReal  t = 0.0, tf = 10.0, dt, nu;
-  PetscInt   n, NN = 10;
+  double  t = 0.0, tf = 10.0, dt, nu;
+  int   n, NN = 10;
   dt = tf / NN;
   nu = dt / dx;
   for (n = 0; n < NN; ++n) {
@@ -96,12 +96,12 @@ int main(int argc,char **argv)
 
     ierr = VecView(u,viewer); CHKERRQ(ierr);
 
-    PetscReal  **au, **aunew, **aF;
-    PetscInt   j, p;
+    double  **au, **aunew, **aF;
+    int   j, p;
     ierr = DMDAVecGetArrayDOF(da, u, &au);CHKERRQ(ierr);
     ierr = DMDAVecGetArrayDOF(da, F, &aF);CHKERRQ(ierr);
     for (j=info.xs; j<info.xs+info.xm; j++) {
-        PetscReal *adq, *aqleft, *aFcell;
+        double *adq, *aqleft, *aFcell;
         ierr = VecGetArray(dq,&adq); CHKERRQ(ierr);
         ierr = VecGetArray(qleft,&aqleft); CHKERRQ(ierr);
         for (p = 0; p < d; p++) {

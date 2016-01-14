@@ -1,9 +1,9 @@
 #include <petsc.h>
 
 int main(int argc, char **args) {
-  PetscErrorCode  ierr;
-  int             rank, i;
-  PetscReal       localval, globalsum;
+  PetscErrorCode ierr;
+  int            rank, i;
+  double         localval, globalsum;
 
   PetscInitialize(&argc,&args,NULL,"Compute e in parallel with PETSc.\n\n");
 

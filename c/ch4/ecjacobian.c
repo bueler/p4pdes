@@ -6,14 +6,14 @@ static char help[] =
 
 //START
 typedef struct {
-  PetscReal b;
+  double  b;
 } AppCtx;
 
 PetscErrorCode FormFunction(SNES snes, Vec x, Vec F, void *ctx) {
-    PetscErrorCode    ierr;
-    AppCtx            *user = (AppCtx*)ctx;
-    const PetscReal   b = user->b, *ax;
-    PetscReal         *aF;
+    PetscErrorCode ierr;
+    AppCtx       *user = (AppCtx*)ctx;
+    const double b = user->b, *ax;
+    double       *aF;
 
     ierr = VecGetArrayRead(x,&ax);CHKERRQ(ierr);
     ierr = VecGetArray(F,&aF);CHKERRQ(ierr);
@@ -25,11 +25,11 @@ PetscErrorCode FormFunction(SNES snes, Vec x, Vec F, void *ctx) {
 }
 
 PetscErrorCode FormJacobian(SNES snes, Vec x, Mat J, Mat P, void *ctx) {
-    PetscErrorCode    ierr;
-    AppCtx            *user = (AppCtx*)ctx;
-    const PetscReal   b = user->b, *ax;
-    PetscReal         v[4];
-    PetscInt          row[2] = {0,1}, col[2] = {0,1};
+    PetscErrorCode ierr;
+    AppCtx       *user = (AppCtx*)ctx;
+    const double b = user->b, *ax;
+    double       v[4];
+    int          row[2] = {0,1}, col[2] = {0,1};
 
     ierr = VecGetArrayRead(x,&ax); CHKERRQ(ierr);
     v[0] = PetscExpReal(b * ax[0]);  v[1] = -1.0;

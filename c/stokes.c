@@ -29,15 +29,15 @@ static char help[] =
 
 
 typedef struct {
-  PetscReal u;
-  PetscReal v;
-  PetscReal p;
+  double u;
+  double v;
+  double p;
 } Field;
 
 typedef struct {
   DM        da;
   Vec       xexact;
-  PetscReal L,     // length of domain in x direction
+  double L,     // length of domain in x direction
             H,     // length of domain in y direction
             g1,    // signed component of gravity in x-direction
             g2,    // signed component of gravity in y-direction
@@ -58,7 +58,7 @@ int main(int argc,char **argv)
 
   PetscInitialize(&argc,&argv,(char*)0,help);
 
-  const PetscReal rg = 1000.0 * 9.81, // = rho g; scale for body force;
+  const double rg = 1000.0 * 9.81, // = rho g; scale for body force;
                                       //     kg / (m^2 s^2);  weight of water
                   theta = PETSC_PI / 9.0; // 20 degrees
   user.L     = 1.0;
@@ -128,7 +128,7 @@ int main(int argc,char **argv)
   ierr = SNESSolve(snes,NULL,x); CHKERRQ(ierr);
 
   if (doerror) {
-    PetscReal  umax, vmax, pmax, uerr, verr, perr;
+    double  umax, vmax, pmax, uerr, verr, perr;
     ierr = VecStrideNorm(user.xexact,0,NORM_INFINITY,&umax); CHKERRQ(ierr);
     ierr = VecStrideNorm(user.xexact,1,NORM_INFINITY,&vmax); CHKERRQ(ierr);
     ierr = VecStrideNorm(user.xexact,2,NORM_INFINITY,&pmax); CHKERRQ(ierr);
@@ -156,15 +156,15 @@ int main(int argc,char **argv)
 PetscErrorCode FormExactSolution(AppCtx* user) {
   PetscErrorCode ierr;
   DMDALocalInfo  info;
-  PetscInt       i,j;
-  PetscReal      hy, y;
+  int       i,j;
+  double      hy, y;
   Field          **ax;
 
   ierr = DMDAGetLocalInfo(user->da,&info); CHKERRQ(ierr);
-  hy = user->H / (PetscReal)(info.my - 1);
+  hy = user->H / (double)(info.my - 1);
   ierr = DMDAVecGetArray(user->da,user->xexact,&ax); CHKERRQ(ierr);
   for (j = info.ys; j < info.ys+info.ym; j++) {
-    y = hy * (PetscReal)j;
+    y = hy * (double)j;
     for (i = info.xs; i < info.xs+info.xm; i++) {
       ax[j][i].u = (user->g1 / user->nu) * y * (user->H - y/2.0);
       ax[j][i].v = 0.0;
@@ -177,16 +177,16 @@ PetscErrorCode FormExactSolution(AppCtx* user) {
 
 
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, Field **x, Field **f, AppCtx *user) {
-  PetscInt       i,j;
-  PetscReal      hx, hy, ux, uxx, uyy, vxx, vy, vyy,
+  int       i,j;
+  double      hx, hy, ux, uxx, uyy, vxx, vy, vyy,
                  px, pxx, py, pyy, uUP, pUP,
                  H = user->H, g1 = user->g1, g2 = user->g2,
                  nu = user->nu, eps = user->ppeps;
 
   PetscFunctionBeginUser;
 
-  hx = user->L / (PetscReal)(info->mx);    // periodic direction
-  hy = user->H / (PetscReal)(info->my-1);  // non-periodic
+  hx = user->L / (double)(info->mx);    // periodic direction
+  hy = user->H / (double)(info->my-1);  // non-periodic
 
   for (j = info->ys; j < info->ys+info->ym; j++) {
     for (i = info->xs; i < info->xs+info->xm; i++) {

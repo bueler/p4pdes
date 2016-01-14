@@ -22,11 +22,12 @@ typedef struct {
     Vec       b;
 } FishCtx;
 
-PetscErrorCode formExactRHS(DMDALocalInfo *info, Vec uexact, Vec b, FishCtx* user) {
+PetscErrorCode formExactRHS(DMDALocalInfo *info, Vec uexact, Vec b,
+                            FishCtx* user) {
   PetscErrorCode ierr;
-  const PetscReal hx = 1.0/(info->mx-1),  hy = 1.0/(info->my-1);
-  PetscInt        i, j;
-  PetscReal       x, y, f, **auexact, **ab;
+  const double hx = 1.0/(info->mx-1),  hy = 1.0/(info->my-1);
+  int          i, j;
+  double       x, y, f, **auexact, **ab;
 
   ierr = DMDAVecGetArray(user->da, uexact, &auexact);CHKERRQ(ierr);
   ierr = DMDAVecGetArray(user->da, b, &ab);CHKERRQ(ierr);
@@ -50,12 +51,12 @@ PetscErrorCode formExactRHS(DMDALocalInfo *info, Vec uexact, Vec b, FishCtx* use
 }
 
 
-PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal **au,
-                                 PetscReal **FF, FishCtx *user) {
+PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
+                                 double **FF, FishCtx *user) {
   PetscErrorCode ierr;
-  const PetscReal hx = 1.0/(info->mx-1),  hy = 1.0/(info->my-1);
-  PetscInt        i, j;
-  PetscReal       **ab;
+  const double hx = 1.0/(info->mx-1),  hy = 1.0/(info->my-1);
+  int          i, j;
+  double       **ab;
 
   ierr = DMDAVecGetArray(user->da,user->b,&ab); CHKERRQ(ierr);
   for (j = info->ys; j < info->ys + info->ym; j++) {
@@ -77,10 +78,10 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal **au,
 PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar **au,
                                  Mat J, Mat Jpre, FishCtx *user) {
     PetscErrorCode  ierr;
-    const PetscReal hx = 1.0/(info->mx-1),  hy = 1.0/(info->my-1);
-    PetscInt        i,j,ncols;
-    PetscReal       v[5];
-    MatStencil      col[5],row;
+    const double hx = 1.0/(info->mx-1),  hy = 1.0/(info->my-1);
+    int          i,j,ncols;
+    double       v[5];
+    MatStencil   col[5],row;
 
     for (j = info->ys; j < info->ys+info->ym; j++) {
         row.j = j;
@@ -121,7 +122,7 @@ int main(int argc,char **argv) {
   Vec            u, uexact;
   FishCtx        user;
   DMDALocalInfo  info;
-  PetscReal      errnorm;
+  double         errnorm;
 
   PetscInitialize(&argc,&argv,NULL,help);
 

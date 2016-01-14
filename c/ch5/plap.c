@@ -31,10 +31,10 @@ static char help[] = "Solve the p-Laplacian equation in 2D using Q^1 FEM.\n"
 
 //STARTCTX
 typedef struct {
-    DM        da;
-    PetscReal p;
-    PetscInt  quaddegree;
-    Vec       f,g;
+    DM      da;
+    double  p;
+    int     quaddegree;
+    Vec     f,g;
 } PLapCtx;
 
 PetscErrorCode ConfigureCtx(PLapCtx *user) {
@@ -55,15 +55,15 @@ PetscErrorCode ConfigureCtx(PLapCtx *user) {
 //ENDCTX
 
 //STARTBDRYINIT
-PetscReal BoundaryG(PetscReal x, PetscReal y) {
+double BoundaryG(double x, double y) {
     return 0.5 * (x+1.0)*(x+1.0) * (y+1.0)*(y+1.0);
 }
 
 PetscErrorCode SetGLocal(DMDALocalInfo *info, Vec g, PLapCtx *user) {
     PetscErrorCode ierr;
-    const PetscReal hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1);
-    PetscInt        i,j;
-    PetscReal       x,y, **ag;
+    const double hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1);
+    double       x,y, **ag;
+    int          i,j;
 
     ierr = DMDAVecGetArray(user->da,g,&ag); CHKERRQ(ierr);
     for (j = info->ys - 1; j <= info->ys + info->ym; j++) {
@@ -82,9 +82,9 @@ PetscErrorCode SetGLocal(DMDALocalInfo *info, Vec g, PLapCtx *user) {
 
 PetscErrorCode InitialIterate(DMDALocalInfo *info, Vec u, PLapCtx *user) {
     PetscErrorCode ierr;
-    const PetscReal hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1);
-    PetscInt        i,j;
-    PetscReal       x,y, **au;
+    const double hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1);
+    double       x,y, **au;
+    int          i,j;
 
     ierr = DMDAVecGetArray(user->da,u,&au); CHKERRQ(ierr);
     for (j = info->ys; j < info->ys + info->ym; j++) {
@@ -103,11 +103,11 @@ PetscErrorCode InitialIterate(DMDALocalInfo *info, Vec u, PLapCtx *user) {
 PetscErrorCode ExactRHSLocal(DMDALocalInfo *info, Vec uex, Vec f,
                              PLapCtx *user) {
     PetscErrorCode ierr;
-    const PetscReal hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1),
-                    p = user->p;
-    const PetscInt  XE = info->xs + info->xm, YE = info->ys + info->ym;
-    PetscInt        i,j;
-    PetscReal       x,y, XX,YY, C,D2,gamma1,gamma2, **auex, **af;
+    const double hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1),
+                 p = user->p;
+    double       x,y, XX,YY, C,D2,gamma1,gamma2, **auex, **af;
+    const int    XE = info->xs + info->xm, YE = info->ys + info->ym;
+    int          i,j;
 
     ierr = DMDAVecGetArray(user->da,uex,&auex); CHKERRQ(ierr);
     ierr = DMDAVecGetArray(user->da,f,&af); CHKERRQ(ierr);
@@ -134,18 +134,18 @@ PetscErrorCode ExactRHSLocal(DMDALocalInfo *info, Vec uex, Vec f,
 //ENDEXACT
 
 //STARTFEM
-static PetscReal xiL[4]  = { 1.0, -1.0, -1.0,  1.0},
-                 etaL[4] = { 1.0,  1.0, -1.0, -1.0};
+static double xiL[4]  = { 1.0, -1.0, -1.0,  1.0},
+              etaL[4] = { 1.0,  1.0, -1.0, -1.0};
 
-PetscReal chi(PetscInt L, PetscReal xi, PetscReal eta) {
+double chi(int L, double xi, double eta) {
     return 0.25 * (1.0 + xiL[L] * xi) * (1.0 + etaL[L] * eta);
 }
 
 typedef struct {
-    PetscReal xi, eta;
+    double  xi, eta;
 } gradRef;
 
-gradRef dchi(PetscInt L, PetscReal xi, PetscReal eta) {
+gradRef dchi(int L, double xi, double eta) {
     gradRef result;
     result.xi  = 0.25 * xiL[L]  * (1.0 + etaL[L] * eta);
     result.eta = 0.25 * etaL[L] * (1.0 + xiL[L]  * xi);
@@ -153,18 +153,18 @@ gradRef dchi(PetscInt L, PetscReal xi, PetscReal eta) {
 }
 
 // evaluate v(xi,eta) on reference element using local node numbering
-PetscReal eval(const PetscReal v[4], PetscReal xi, PetscReal eta) {
-    PetscReal sum = 0.0;
-    PetscInt  L;
+double eval(const double v[4], double xi, double eta) {
+    double sum = 0.0;
+    int    L;
     for (L=0; L<4; L++)
         sum += v[L] * chi(L,xi,eta);
     return sum;
 }
 
 // evaluate partial derivs of v(xi,eta) on reference element
-gradRef deval(const PetscReal v[4], PetscReal xi, PetscReal eta) {
-    gradRef   sum = {0.0,0.0}, tmp;
-    PetscInt  L;
+gradRef deval(const double v[4], double xi, double eta) {
+    gradRef sum = {0.0,0.0}, tmp;
+    int     L;
     for (L=0; L<4; L++) {
         tmp = dchi(L,xi,eta);
         sum.xi  += v[L] * tmp.xi;
@@ -173,17 +173,17 @@ gradRef deval(const PetscReal v[4], PetscReal xi, PetscReal eta) {
     return sum;
 }
 
-static PetscReal zq[3][3] = { {0.0,NAN,NAN},
-                              {-1.0/sqrt(3.0),1.0/sqrt(3.0),NAN},
-                              {-sqrt(3.0/5.0),0.0,sqrt(3.0/5.0)} },
-                 wq[3][3] = { {2.0,NAN,NAN},
-                              {1.0,1.0,NAN},
-                              {5.0/9.0,8.0/9.0,5.0/9.0} };
+static double zq[3][3] = { {0.0,NAN,NAN},
+                           {-1.0/sqrt(3.0),1.0/sqrt(3.0),NAN},
+                           {-sqrt(3.0/5.0),0.0,sqrt(3.0/5.0)} },
+              wq[3][3] = { {2.0,NAN,NAN},
+                           {1.0,1.0,NAN},
+                           {5.0/9.0,8.0/9.0,5.0/9.0} };
 //ENDFEM
 
 //STARTTOOLS
-void GetUorG(DMDALocalInfo *info, PetscInt i, PetscInt j,
-             PetscReal **au, PetscReal **ag, PetscReal *u) {
+void GetUorG(DMDALocalInfo *info, int i, int j,
+             double **au, double **ag, double *u) {
     u[0] = ((i == info->mx) || (j == info->my))
              ? ag[j][i]     : au[j][i];
     u[1] = ((i == 0)  || (j == info->my))
@@ -194,34 +194,33 @@ void GetUorG(DMDALocalInfo *info, PetscInt i, PetscInt j,
              ? ag[j-1][i]   : au[j-1][i];
 }
 
-PetscReal GradInnerProd(DMDALocalInfo *info, gradRef du, gradRef dv) {
-    const PetscReal hx = 1.0 / (info->mx+1),  hy = 1.0 / (info->my+1),
-                    cx = 4.0 / (hx * hx),  cy = 4.0 / (hy * hy);
+double GradInnerProd(DMDALocalInfo *info, gradRef du, gradRef dv) {
+    const double hx = 1.0 / (info->mx+1),  hy = 1.0 / (info->my+1),
+                 cx = 4.0 / (hx * hx),  cy = 4.0 / (hy * hy);
     return cx * du.xi  * dv.xi + cy * du.eta * dv.eta;
 }
 
-PetscReal GradPow(DMDALocalInfo *info, gradRef du, PetscReal P) {
+double GradPow(DMDALocalInfo *info, gradRef du, double P) {
     return PetscPowScalar(GradInnerProd(info,du,du), P / 2.0);
 }
 //ENDTOOLS
 
 //STARTOBJECTIVE
-PetscReal ObjIntegrand(DMDALocalInfo *info,
-                       const PetscReal f[4], const PetscReal u[4],
-                       PetscReal xi, PetscReal eta, PetscReal P) {
+double ObjIntegrand(DMDALocalInfo *info, const double f[4], const double u[4],
+                    double xi, double eta, double P) {
     const gradRef du = deval(u,xi,eta);
     return GradPow(info,du,P) / P - eval(f,xi,eta) * eval(u,xi,eta);
 }
 
-PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **au,
-                                  PetscReal *obj, PLapCtx *user) {
+PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
+                                  double *obj, PLapCtx *user) {
   PetscErrorCode ierr;
-  const PetscReal hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1);
-  const PetscInt  n = user->quaddegree,
-                  XE = info->xs + info->xm, YE = info->ys + info->ym;
-  PetscReal       lobj = 0.0, **af, **ag, f[4], u[4];
-  PetscInt        i,j,r,s;
-  MPI_Comm        com;
+  const double hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1);
+  const int    n = user->quaddegree,
+               XE = info->xs + info->xm, YE = info->ys + info->ym;
+  double       lobj = 0.0, **af, **ag, f[4], u[4];
+  int          i,j,r,s;
+  MPI_Comm     com;
 
   // sum over all elements
   ierr = DMDAVecGetArray(user->da,user->f,&af); CHKERRQ(ierr);
@@ -255,9 +254,9 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **au,
 //ENDOBJECTIVE
 
 //STARTFUNCTION
-PetscReal FunIntegrand(DMDALocalInfo *info, PetscInt L,
-                       const PetscReal f[4], const PetscReal u[4],
-                       PetscReal xi, PetscReal eta, PetscReal P) {
+double FunIntegrand(DMDALocalInfo *info, int L,
+                    const double f[4], const double u[4],
+                    double xi, double eta, double P) {
   const gradRef du    = deval(u,xi,eta),
                 dchiL = dchi(L,xi,eta);
   return GradPow(info,du,P - 2.0) * GradInnerProd(info,du,dchiL)
@@ -265,14 +264,14 @@ PetscReal FunIntegrand(DMDALocalInfo *info, PetscInt L,
   return 0;
 }
 
-PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal **au,
-                                 PetscReal **FF, PLapCtx *user) {
+PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
+                                 double **FF, PLapCtx *user) {
   PetscErrorCode ierr;
-  const PetscReal hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1);
-  const PetscInt  n = user->quaddegree,
-                  ell[2][2] = { {0,3}, {1,2} };
-  PetscReal       **af, **ag, f[4], u[4], z;
-  PetscInt        i,j,c,d,r,s;
+  const double hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1);
+  const int    n = user->quaddegree,
+               ell[2][2] = { {0,3}, {1,2} };
+  double       **af, **ag, f[4], u[4], z;
+  int          i,j,c,d,r,s;
 
   // compute residual FF[j][i] for each node (x_i,y_j)
   ierr = DMDAVecGetArray(user->da,user->f,&af); CHKERRQ(ierr);
@@ -311,7 +310,7 @@ int main(int argc,char **argv) {
   Vec            u, uexact;
   PLapCtx        user;
   DMDALocalInfo  info;
-  PetscReal      unorm, err;
+  double         unorm, err;
 
   PetscInitialize(&argc,&argv,NULL,help);
   ierr = ConfigureCtx(&user); CHKERRQ(ierr);

@@ -4,12 +4,12 @@ static char help[] = "Solve a 4x4 linear system using Vec, Mat, and KSP.\n";
 #include <petsc.h>
 
 int main(int argc,char **args) {
-  Vec            x, b;
-  Mat            A;
-  KSP            ksp;
-  PetscInt       i, j[4] = {0, 1, 2, 3};
-  PetscReal      v[4] = {7.0, 1.0, 1.0, 3.0};
   PetscErrorCode ierr;
+  Vec    x, b;
+  Mat    A;
+  KSP    ksp;
+  int    i, j[4] = {0, 1, 2, 3};
+  double v[4] = {7.0, 1.0, 1.0, 3.0};
 
   PetscInitialize(&argc,&args,NULL,help);
 

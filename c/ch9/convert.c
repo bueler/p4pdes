@@ -26,7 +26,7 @@ int main(int argc,char **args) {
 
   // GET OPTIONS AND BUILD FILENAMES
   PetscBool      fset, docheck, checkset;
-  const PetscInt  MPL = PETSC_MAX_PATH_LEN;
+  const int  MPL = PETSC_MAX_PATH_LEN;
   char fnameroot[MPL], outfilename[MPL],
        nodefilename[MPL], elefilename[MPL], polyfilename[MPL];
   ierr = PetscOptionsBegin(WORLD, "", "options for c3convert", ""); CHKERRQ(ierr);
@@ -50,7 +50,7 @@ int main(int argc,char **args) {
         vBT;      // boundary type of N nodes:
                   //   BT[i] = 0 if interior, 2 if Dirichlet, 3 if Neumann
     ierr = PetscFOpen(WORLD,nodefilename,"r",&nodefile); CHKERRQ(ierr);
-    PetscInt N,   // number of degrees of freedom (= number of all nodes)
+    int N,   // number of degrees of freedom (= number of all nodes)
              ndim, nattr, nbdrymarkers;
     if (4 != fscanf(nodefile,"%d %d %d %d\n",&N,&ndim,&nattr,&nbdrymarkers)) {
       SETERRQ1(SELF,2,"expected 4 values in reading from %s",nodefilename);  }
@@ -65,8 +65,8 @@ int main(int argc,char **args) {
     ierr = VecDuplicate(vx,&vBT); CHKERRQ(ierr);
 
     // FILL 1D VECS FROM NODE FILE
-    PetscInt    i,iplusone;
-    PetscScalar v[3];
+    int    i,iplusone;
+    double v[3];
     for (i = 0; i < N; i++) {
       if (4 != fscanf(nodefile,"%d %lf %lf %lf\n",
                  &iplusone,&(v[0]),&(v[1]),&(v[2]))) {
@@ -89,7 +89,7 @@ int main(int argc,char **args) {
     // READ POLYGON HEADER AND ALLOCATE VEC
     Vec vQ; // array with 2M rows; Q[2*m+q] is node index (0 based)
     ierr = PetscFOpen(WORLD,polyfilename,"r",&polyfile); CHKERRQ(ierr);
-    PetscInt M,   // number of segments in boundary polygon
+    int M,   // number of segments in boundary polygon
              tmpa, tmpb, tmpc, tmpd;
     if (4 != fscanf(polyfile,"%d %d %d %d\n",&tmpa,&tmpb,&tmpc,&tmpd)) {
         SETERRQ1(SELF,2,"expected 4 values in reading from %s",polyfilename);  }
@@ -101,8 +101,8 @@ int main(int argc,char **args) {
     ierr = VecSetBlockSize(vQ,2); CHKERRQ(ierr);
 
     // READ POLYGON SEGMENT
-    PetscInt m, mplusone, q;
-    PetscScalar w[2], discard;
+    int m, mplusone, q;
+    double w[2], discard;
     for (m = 0; m < M; m++) {
       if (4 != fscanf(polyfile,"%d %lf %lf %lf\n",&mplusone,&(w[0]),&(w[1]),&discard)) {
           SETERRQ1(SELF,2,"expected 4 values in reading from %s",polyfilename);  }
@@ -120,7 +120,7 @@ int main(int argc,char **args) {
     // vE[k] is an elementtype struct, with full info on element k
     Vec vE;
     ierr = PetscFOpen(WORLD,elefilename,"r",&elefile); CHKERRQ(ierr);
-    PetscInt K, nthree, nattrele;  // K = number of elements
+    int K, nthree, nattrele;  // K = number of elements
     if (3 != fscanf(elefile,"%d %d %d\n",&K,&nthree,&nattrele)) {
         SETERRQ1(SELF,2,"expected 3 values in reading from %s",elefilename);  }
     if (nthree != 3) {  //STRIP
@@ -135,8 +135,8 @@ int main(int argc,char **args) {
 //STARTREADELEMENTS
     // READ ELEMENTS AND CREATE VEC vE
     elementtype e;
-    PetscInt    k, kplusone, l, qnext;
-    PetscScalar *ax, *ay, *aBT, *aQ;
+    int    k, kplusone, l, qnext;
+    double *ax, *ay, *aBT, *aQ;
     ierr = VecGetArray(vx,&ax); CHKERRQ(ierr);
     ierr = VecGetArray(vy,&ay); CHKERRQ(ierr);
     ierr = VecGetArray(vBT,&aBT); CHKERRQ(ierr);
@@ -160,10 +160,10 @@ int main(int argc,char **args) {
           if ((e.bN[q] > 0) && (e.bN[qnext] > 0)) {
             // end-nodes of this edge are on boundary; is it an edge
             //   in the polygon (= boundary segment list)?
-            const PetscInt ja = (int)e.j[q],
+            const int ja = (int)e.j[q],
                            jb = (int)e.j[qnext];
             for (l = 0; l < M; l++) {
-              const PetscInt qa = (int)(aQ[2*l + 0]),
+              const int qa = (int)(aQ[2*l + 0]),
                              qb = (int)(aQ[2*l + 1]);
               if (  ((ja == qa) && (jb == qb)) || ((ja == qb) && (jb == qa))  ) {
                 e.bE[q] = 1.0;
@@ -173,7 +173,7 @@ int main(int argc,char **args) {
           }
         }
       }
-      ierr = VecSetValuesBlocked(vE,1,&k,(PetscScalar*)&e,INSERT_VALUES); CHKERRQ(ierr);
+      ierr = VecSetValuesBlocked(vE,1,&k,(double*)&e,INSERT_VALUES); CHKERRQ(ierr);
     }
     ierr = VecRestoreArray(vx,&ax); CHKERRQ(ierr);
     ierr = VecRestoreArray(vy,&ay); CHKERRQ(ierr);

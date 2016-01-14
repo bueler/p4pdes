@@ -33,17 +33,17 @@ FIXME: multigrid?
 
 //STARTSETUP
 typedef struct {
-    DM        da;
-    PetscReal eps;
-    PetscBool upwind;
-    Vec       g,f;
+    DM         da;
+    double     eps;
+    PetscBool  upwind;
+    Vec        g,f;
 } Ctx;
 
 typedef struct {
-    PetscReal x,y,z;
+    double  x,y,z;
 } Wind;
 
-Wind getWind(PetscReal x, PetscReal y, PetscReal z) {
+Wind getWind(double x, double y, double z) {
     Wind W = {1.0,0.0,0.0};
     return W;
 }
@@ -51,7 +51,7 @@ Wind getWind(PetscReal x, PetscReal y, PetscReal z) {
 
 
 typedef struct {
-    PetscReal hx, hy, hz, hx2, hy2, hz2;
+    double  hx, hy, hz, hx2, hy2, hz2;
 } Spacings;
 
 void getSpacings(DMDALocalInfo *info, Spacings *s) {
@@ -83,12 +83,11 @@ PetscErrorCode configureCtx(Ctx *usr) {
 
 PetscErrorCode formUexFG(DMDALocalInfo *info, Ctx *usr, Vec uex) {
     PetscErrorCode  ierr;
-    PetscInt        i, j, k;
-    Spacings        s;
-    const PetscReal E = PETSC_PI / 2.0,
-                    F = 2.0 * PETSC_PI,
-                    lam2 = E*E + F*F; // lambda = sqrt(17.0) * PETSC_PI / 2.0
-    PetscReal       x, y, z, QQ, UU, ***auex, ***af, ***ag;
+    int          i, j, k;
+    Spacings     s;
+    const double E = PETSC_PI / 2.0,  F = 2.0 * PETSC_PI,
+                 lam2 = E*E + F*F; // lambda = sqrt(17.0) * PETSC_PI / 2.0
+    double       x, y, z, QQ, UU, ***auex, ***af, ***ag;
 
     getSpacings(info,&s);
     ierr = DMDAVecGetArray(usr->da, uex, &auex);CHKERRQ(ierr);
@@ -120,14 +119,14 @@ PetscErrorCode formUexFG(DMDALocalInfo *info, Ctx *usr, Vec uex) {
 
 
 //STARTFUNCTION
-PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal ***u,
-                                 PetscReal ***F, Ctx *usr) {
-    PetscErrorCode  ierr;
-    PetscInt        i, j, k;
-    const PetscReal e = usr->eps;
-    PetscReal       x, y, z, uu, uxx, uyy, uzz, Wux, Wuy, Wuz, ***af, ***ag;
-    Wind            W;
-    Spacings        s;
+PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***u,
+                                 double ***F, Ctx *usr) {
+    PetscErrorCode ierr;
+    int          i, j, k;
+    const double e = usr->eps;
+    double       x, y, z, uu, uxx, uyy, uzz, Wux, Wuy, Wuz, ***af, ***ag;
+    Wind         W;
+    Spacings     s;
 
     getSpacings(info,&s);
     ierr = DMDAVecGetArray(usr->da, usr->f, &af);CHKERRQ(ierr);
@@ -179,12 +178,12 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal ***u,
 PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar ***u,
                                  Mat J, Mat Jpre, Ctx *usr) {
     PetscErrorCode  ierr;
-    PetscInt        i,j,k,q;
-    PetscReal       v[7],diag,x,y,z;
-    const PetscReal e = usr->eps;
-    MatStencil      col[7],row;
-    Spacings        s;
-    Wind            W;
+    int          i,j,k,q;
+    double       v[7],diag,x,y,z;
+    const double e = usr->eps;
+    MatStencil   col[7],row;
+    Spacings     s;
+    Wind         W;
 
     getSpacings(info,&s);
     diag = e * 2.0 * (1.0/s.hx2 + 1.0/s.hy2 + 1.0/s.hz2);
@@ -285,7 +284,7 @@ int main(int argc,char **argv) {
     PetscErrorCode ierr;
     SNES           snes;
     Vec            u, uexact;
-    PetscReal      err, uexnorm;
+    double         err, uexnorm;
     DMDALocalInfo  info;
     Ctx            user;
 

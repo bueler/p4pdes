@@ -31,9 +31,9 @@ PetscErrorCode createloadname(MPI_Comm comm, PetscViewer viewer, const char pref
 }
 
 PetscErrorCode getcheckmeshsizes(MPI_Comm comm, Vec E, Vec x, Vec y,
-                                 PetscInt *N, PetscInt *K, PetscInt *bs) {
+                                 int *N, int *K, int *bs) {
   PetscErrorCode ierr;
-  PetscInt Ny;
+  int Ny;
   if (N) {
     ierr = VecGetSize(x,N); CHKERRQ(ierr);
     ierr = VecGetSize(y,&Ny); CHKERRQ(ierr);
@@ -52,7 +52,7 @@ PetscErrorCode getcheckmeshsizes(MPI_Comm comm, Vec E, Vec x, Vec y,
 }
 
 PetscErrorCode readmesh(MPI_Comm comm, PetscViewer viewer, Vec *E, Vec *x, Vec *y) {
-  PetscInt bs,N,K;
+  int bs,N,K;
   PetscErrorCode ierr; //STRIP
   ierr = PetscPrintf(comm,"  reading mesh Vec E,x,y from file ...\n"); CHKERRQ(ierr);
   ierr = createloadname(comm, viewer, "E_", "E-element-full-info", E); CHKERRQ(ierr);
@@ -83,8 +83,8 @@ PetscErrorCode showelementSynchronized(MPI_Comm comm, elementtype *et) {
 PetscErrorCode elementVecViewSTDOUT(MPI_Comm comm, Vec E) {
   PetscErrorCode ierr;
   PetscMPIInt    rank;
-  PetscInt       bs = 15, bsread, k, Kstart, Kend;
-  PetscScalar    *ae;
+  int       bs = 15, bsread, k, Kstart, Kend;
+  double    *ae;
   elementtype    *et;
   MPI_Comm_rank(comm,&rank);
   PetscObjectPrintClassNamePrefixType((PetscObject)E,PETSC_VIEWER_STDOUT_WORLD);

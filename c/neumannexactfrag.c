@@ -1,20 +1,20 @@
-PetscScalar lowfreq_exactsoln(PetscScalar x, PetscScalar y) {
+double lowfreq_exactsoln(double x, double y) {
   return cos(2.0*PETSC_PI*x) * cos(2.0*PETSC_PI*y);
 }
 
-PetscScalar lowfreq_f(PetscScalar x, PetscScalar y) {
+double lowfreq_f(double x, double y) {
   return 8.0 * PETSC_PI * PETSC_PI * lowfreq_exactsoln(x,y);
 }
 
-PetscScalar lowfreq_gamma(PetscScalar x, PetscScalar y) {
+double lowfreq_gamma(double x, double y) {
   return 0.0;
 }
 
     // SOLVE HOMOGENEOUS NEUMANN PROBLEM WITH KNOWN SOLN
     // (EVALUATES EXACT SOLUTION AT NODES)
     Vec          u,uexact;
-    PetscScalar  uval, *ax, *ay, uudot, normuexact, normerror;
-    PetscInt     i, Istart,Iend;
+    double  uval, *ax, *ay, uudot, normuexact, normerror;
+    int     i, Istart,Iend;
     KSP          ksp;
     MatNullSpace nullsp;
     ierr = assemble(WORLD,E,&lowfreq_f,NULL,NULL,A,b); CHKERRQ(ierr);

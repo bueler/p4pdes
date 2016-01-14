@@ -6,8 +6,8 @@ static char help[] = "Newton's method for a two-variable system.\n"
 
 PetscErrorCode FormFunction(SNES snes, Vec x, Vec F, void *ctx) {
     PetscErrorCode ierr;
-    const PetscReal  b = 2.0, *ax;
-    PetscReal        *aF;
+    const double b = 2.0, *ax;
+    double       *aF;
 
     ierr = VecGetArrayRead(x,&ax);CHKERRQ(ierr);
     ierr = VecGetArray(F,&aF);CHKERRQ(ierr);

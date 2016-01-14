@@ -2,7 +2,7 @@
 #include "readmesh.h"
 
 
-PetscScalar chi(PetscInt q, PetscScalar xi, PetscScalar eta) {
+double chi(int q, double xi, double eta) {
   if (q==1)
     return xi;
   else if (q==2)
@@ -15,11 +15,11 @@ PetscScalar chi(PetscInt q, PetscScalar xi, PetscScalar eta) {
 //DIRICHLETROWS
 PetscErrorCode dirichletrows(MPI_Comm comm,
                              Vec E,
-                             PetscScalar (*g)(PetscScalar, PetscScalar),
+                             double (*g)(double, double),
                              Mat A, Vec b) {
   PetscErrorCode ierr;  //STRIP
-  PetscInt       bs, Kstart, Kend, k, i, q;
-  PetscScalar    *ae, one=1.0, bi;
+  int       bs, Kstart, Kend, k, i, q;
+  double    *ae, one=1.0, bi;
   elementtype    *et;
   ierr = VecGetBlockSize(E,&bs); CHKERRQ(ierr);
   ierr = VecGetOwnershipRange(E,&Kstart,&Kend); CHKERRQ(ierr);
@@ -49,19 +49,19 @@ PetscErrorCode dirichletrows(MPI_Comm comm,
 //ASSEMBLEADDONE
 PetscErrorCode assembleadd(MPI_Comm comm,
                            Vec E,
-                           PetscScalar (*f)(PetscScalar, PetscScalar),
-                           PetscScalar (*g)(PetscScalar, PetscScalar),
-                           PetscScalar (*gamma)(PetscScalar, PetscScalar),
+                           double (*f)(double, double),
+                           double (*g)(double, double),
+                           double (*gamma)(double, double),
                            Mat A, Vec b) {
   PetscErrorCode ierr;  //STRIP
-  PetscScalar dxi[3]  = {-1.0, 1.0, 0.0},   // grad of basis functions chi0, chi1, chi2
+  double dxi[3]  = {-1.0, 1.0, 0.0},   // grad of basis functions chi0, chi1, chi2
               deta[3] = {-1.0, 0.0, 1.0},   //     on ref element
               quadxi[3]  = {0.5, 0.5, 0.0}, // quadrature points are midpoints of
               quadeta[3] = {0.0, 0.5, 0.5}; //     sides of ref element
-  PetscInt    bs, Kstart, Kend, k, q, r, rnext, i, jj[3];
-  PetscScalar *ae;
+  int    bs, Kstart, Kend, k, q, r, rnext, i, jj[3];
+  double *ae;
   elementtype *et;
-  PetscScalar y20, x02, y01, x10, detJ, vv[3],
+  double y20, x02, y01, x10, detJ, vv[3],
               bval, xquad[3], yquad[3], slen;
   ierr = VecGetBlockSize(E,&bs); CHKERRQ(ierr);
   ierr = VecGetOwnershipRange(E,&Kstart,&Kend); CHKERRQ(ierr);
@@ -138,9 +138,9 @@ PetscErrorCode assembleadd(MPI_Comm comm,
 //FULLASSEMBLE
 PetscErrorCode assemble(MPI_Comm comm,
                         Vec E,
-                        PetscScalar (*f)(PetscScalar, PetscScalar),
-                        PetscScalar (*g)(PetscScalar, PetscScalar),
-                        PetscScalar (*gamma)(PetscScalar, PetscScalar),
+                        double (*f)(double, double),
+                        double (*g)(double, double),
+                        double (*gamma)(double, double),
                         Mat A, Vec b) {
   PetscErrorCode ierr;  //STRIP
   if (g) {

@@ -34,10 +34,10 @@ For examples, try
 
 
 // use both for initial condition at t=0 and exact solution at t=tf
-PetscErrorCode FormSolutionAtTime(DM da, PetscReal t, Vec U) {
+PetscErrorCode FormSolutionAtTime(DM da, double t, Vec U) {
   PetscErrorCode ierr;
-  PetscInt       i,j;
-  PetscReal      **u,hx,hy,x,y,
+  int       i,j;
+  double      **u,hx,hy,x,y,
                  pi = PETSC_PI,
                  c1 = 1.0, K1 = 1.0, L1 = 1.0,
                  c2 = 1.0, K2 = 3.0, L2 = 2.0;
@@ -45,8 +45,8 @@ PetscErrorCode FormSolutionAtTime(DM da, PetscReal t, Vec U) {
 
   PetscFunctionBeginUser;
   ierr = DMDAGetLocalInfo(da,&info);CHKERRQ(ierr);
-  hx = 1.0/(PetscReal)(info.mx-1);
-  hy = 1.0/(PetscReal)(info.my-1);
+  hx = 1.0/(double)(info.mx-1);
+  hy = 1.0/(double)(info.my-1);
   ierr = DMDAVecGetArray(da,U,&u);CHKERRQ(ierr);
   for (j=info.ys; j<info.ys+info.ym; j++) {
     y = j*hy;
@@ -69,8 +69,8 @@ int main(int argc,char **argv) {
   TS             ts;                  // time integrator
   DM             da;                  // grid topology
   Vec            u, uexact;           // numerical and exact solution vectors
-  PetscInt       steps = 10;
-  PetscReal      t0 = 0.0, tf = 0.01, errnorm;
+  int       steps = 10;
+  double      t0 = 0.0, tf = 0.01, errnorm;
   PetscErrorCode ierr;
 
   PetscInitialize(&argc,&argv,(char*)0,help);
@@ -89,14 +89,14 @@ int main(int argc,char **argv) {
 
   // CREATE A, CHANGING SCALING RELATIVE TO POISSON PROBLEM
   Mat  A;
-  PetscReal      hx,hy,dtdefault;
+  double      hx,hy,dtdefault;
   DMDALocalInfo  info;
   ierr = DMSetMatType(da,MATAIJ);CHKERRQ(ierr);
   ierr = DMCreateMatrix(da,&A);CHKERRQ(ierr);
   ierr = MatSetOptionsPrefix(A,"a_"); CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(da,&info);CHKERRQ(ierr);
-  hx = 1.0/(PetscReal)(info.mx-1);
-  hy = 1.0/(PetscReal)(info.my-1);
+  hx = 1.0/(double)(info.mx-1);
+  hy = 1.0/(double)(info.my-1);
 
   ierr = formdirichletlaplacian(da,info,hx,hy,0.0,A); CHKERRQ(ierr);
   ierr = MatScale(A,-1.0/(hx*hy)); CHKERRQ(ierr);
@@ -121,7 +121,7 @@ int main(int argc,char **argv) {
              "on %4d x %4d grid, from t0 = %g to tf = %g, with dt0 = %f:\n",
              info.mx,info.my,t0,tf,dtdefault); CHKERRQ(ierr);
   //FIXME: remove this when -ts_type beuler works
-  PetscReal dtEuler;
+  double dtEuler;
   dtEuler = 1.0/(hx*hx) + 1.0/(hy*hy);
   dtEuler = 1.0 / (2.0 * dtEuler);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
@@ -134,7 +134,7 @@ int main(int argc,char **argv) {
 
   // show result:
   // FIXME: does not return tf, as promised in man page for TSGetSolveTime()
-  PetscReal tfreturned;
+  double tfreturned;
   ierr = TSGetSolveTime(ts,&tfreturned);CHKERRQ(ierr);
 
   ierr = FormSolutionAtTime(da,tfreturned,uexact);CHKERRQ(ierr);

@@ -19,17 +19,17 @@ To see the matrix graphically:\n\
 #include "poissontools.h"
 
 // for manufactured solution:  this serves as uexact and as g
-PetscScalar manufacture_u(PetscScalar x, PetscScalar y) {
+double manufacture_u(double x, double y) {
   return x * x + y * y * y * y * y;
 }
 
 // for manufactured solution:  f = - div(grad u)
-PetscScalar manufacture_f(PetscScalar x, PetscScalar y) {
+double manufacture_f(double x, double y) {
   return - (2.0 + 20.0 * y * y * y);
 }
 
 // for -check 2:  we need f(x,y)=1 when checking sum(b)=area
-PetscScalar check_f(PetscScalar x, PetscScalar y) {
+double check_f(double x, double y) {
   return 1.0;
 }
 
@@ -45,11 +45,11 @@ int main(int argc,char **args) {
 //GETMESH
   Vec      E,     // element data structure
            x, y;  // coords of node
-  PetscInt N,     // number of nodes
+  int N,     // number of nodes
            K,     // number of elements
            bs;    // block size for elementtype
   char     fname[PETSC_MAX_PATH_LEN];
-  PetscInt check = 0;
+  int check = 0;
   PetscBool checkset;
   PetscViewer viewer;
   ierr = PetscOptionsBegin(WORLD, "", "options for c3poisson", ""); CHKERRQ(ierr);
@@ -86,7 +86,7 @@ int main(int argc,char **args) {
   if (check == 1) {
     // CHECK 1: IS U=constant IN KERNEL?
     Vec         uone;
-    PetscScalar normone, normAone;
+    double normone, normAone;
     ierr = assemble(WORLD,E,NULL,NULL,NULL,A,b); CHKERRQ(ierr);
     ierr = VecDuplicate(b,&uone); CHKERRQ(ierr);
     ierr = VecSet(uone,1.0); CHKERRQ(ierr);
@@ -99,7 +99,7 @@ int main(int argc,char **args) {
     ierr = VecDestroy(&uone); CHKERRQ(ierr);
   } else if (check == 2) {
     // CHECK 2: DOES b SUM TO AREA OF REGION?
-    PetscScalar bsum;
+    double bsum;
     ierr = assemble(WORLD,E,&check_f,NULL,NULL,A,b); CHKERRQ(ierr);
     ierr = VecSum(b,&bsum); CHKERRQ(ierr);
     ierr = PetscPrintf(WORLD,"  check 2:  does right side sum to area if f=1?\n"
@@ -112,8 +112,8 @@ int main(int argc,char **args) {
 //SOLVEMANU
     Vec         u, uexact;
     KSP         ksp;
-    PetscScalar *ax, *ay, uval, normdiff;
-    PetscInt    Istart, Iend, i;
+    double *ax, *ay, uval, normdiff;
+    int    Istart, Iend, i;
     // assemble and solve system
     ierr = assemble(WORLD,E,&manufacture_f,&manufacture_u,NULL,A,b); CHKERRQ(ierr);
     ierr = VecDuplicate(b, &u); CHKERRQ(ierr);

@@ -16,10 +16,10 @@ To see the sparsity pattern graphically:\n\
 
 #define DEBUG 1
 
-PetscErrorCode printnnz(MPI_Comm comm, PetscInt mm, PetscInt *dnnz, PetscInt *onnz) {
+PetscErrorCode printnnz(MPI_Comm comm, int mm, int *dnnz, int *onnz) {
   PetscErrorCode ierr;
   PetscMPIInt    rank;
-  PetscInt       iloc;
+  int       iloc;
   MPI_Comm_rank(comm,&rank);
   ierr = PetscSynchronizedPrintf(comm,"showing entries of dnnz[%d] on rank %d (DEBUG)\n",
                                  mm,rank); CHKERRQ(ierr);
@@ -38,13 +38,13 @@ PetscErrorCode printnnz(MPI_Comm comm, PetscInt mm, PetscInt *dnnz, PetscInt *on
 //STARTPREALLOC
 PetscErrorCode prealloc(MPI_Comm comm, Vec E, Vec x, Vec y, Mat A) {
   PetscErrorCode ierr;
-  PetscInt K, bs, Istart, Iend, Kstart, Kend;
+  int K, bs, Istart, Iend, Kstart, Kend;
   ierr = getcheckmeshsizes(comm,E,x,y,NULL,&K,&bs); CHKERRQ(ierr); // K = # of elements
   ierr = VecGetOwnershipRange(x,&Istart,&Iend); CHKERRQ(ierr);
   ierr = VecGetOwnershipRange(E,&Kstart,&Kend); CHKERRQ(ierr);
 
   // ALLOCATE LOCAL ARRAYS FOR NUMBER OF NONZEROS
-  PetscInt mm = Iend - Istart, iloc;
+  int mm = Iend - Istart, iloc;
   int *dnnz, // dnnz[i] is number of nonzeros in row which are in same-processor column
       *onnz; // onnz[i] is number of nonzeros in row which are in other-processor column
   PetscMalloc(mm*sizeof(int),&dnnz);
@@ -55,9 +55,9 @@ PetscErrorCode prealloc(MPI_Comm comm, Vec E, Vec x, Vec y, Mat A) {
   }
 
   // FILL THE NUMBER-OF-NONZEROS ARRAYS: LOOP OVER ELEMENTS
-  PetscInt    i, j, k, q, r;
+  int    i, j, k, q, r;
   elementtype *et;
-  PetscScalar *ae;
+  double *ae;
 #if DEBUG
   PetscMPIInt    rank;
   MPI_Comm_rank(comm,&rank);
@@ -89,8 +89,8 @@ PetscErrorCode prealloc(MPI_Comm comm, Vec E, Vec x, Vec y, Mat A) {
 #if 0
 FIXME:  this part needs a replacement based on looping over E
   // FILL THE NUMBER-OF-NONZEROS ARRAYS: LOOP OVER BOUNDARY SEGMENTS
-  PetscInt    m;
-  PetscScalar *aq;
+  int    m;
+  double *aq;
   ierr = VecGetArray(Q,&aq); CHKERRQ(ierr);
   for (m = 0; m < M; m++) {          // loop over ALL boundary segments
     for (q = 0; q < 2; q++) {        // loop over vertices of current segment
@@ -139,7 +139,7 @@ int main(int argc,char **args) {
   Vec      E,     // full element info
            x, y,  // coords of node
            Q;     // boundary segment index
-  PetscInt N,     // number of nodes = number of rows
+  int N,     // number of nodes = number of rows
            K;     // number of elements
   char     fname[PETSC_MAX_PATH_LEN];
   PetscViewer viewer;
@@ -160,9 +160,9 @@ int main(int argc,char **args) {
   ierr = prealloc(COMM, E, x, y, Q, &A); CHKERRQ(ierr);
 
   // FILL MAT WITH FAKE ENTRIES
-  PetscInt    k, q, r, i, jj[3];
-  PetscInt    Istart,Iend;
-  PetscScalar *ae, vv[3];
+  int    k, q, r, i, jj[3];
+  int    Istart,Iend;
+  double *ae, vv[3];
   elementtype *Eptr;
   ierr = VecGetOwnershipRange(x,&Istart,&Iend); CHKERRQ(ierr);
   ierr = VecGetArray(E,&ae); CHKERRQ(ierr);
