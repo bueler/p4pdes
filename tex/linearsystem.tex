@@ -58,7 +58,7 @@ It is not so simple in practice, however, to solve linear systems on a computer.
 
 Fact i) is about conditioning not methods.  Informally speaking, there are matrices $A$ and $\tilde A$ that are the same to within machine precision $\eps$ but for which the exact solutions to \eqref{introsolution} using $A$ and $\tilde A$ differ by an amount $\kappa(A) \eps$.  Rounding errors, which act somewhat like random noise added to every arithmetic operation on the computer, effectively perturb $A$ by $\eps$ during each computation, and thus $O(\kappa(A) \eps)$ size errors appear in the solution of the linear system.  \emph{Backward stable} methods, specifically the QR direct method, can be shown to actually achieve this minimal level of inaccuracy \citep{TrefethenBau1997}.
 
-The precision for the C \texttt{double} type, the default 64-bit representation of real numbers, a type aliased to \texttt{PetscReal} in most \PETSc configurations, is $\eps = 2.2 \times 10^{-16}$.  Thus by i), a linear system having $\kappa(A) \approx 10^{10}$, for example, can only be solved to five or six decimal digits of precision.  It is possible to see $\kappa(A)\approx 10^{10}$ for $A$ which come from discretizing PDEs, but such a matrix is regarded as ``poorly-conditioned.''  In any case, we have to be aware of conditioning when forming expectations about solution accuracy.
+The precision for the C \texttt{double} type, the default 64-bit representation of real numbers,\sidenote{This type is aliased to \texttt{PetscReal} and \texttt{PetscScalar} in most \PETSc configurations.} is $\eps = 2.2 \times 10^{-16}$.  Thus by i), a linear system having $\kappa(A) \approx 10^{10}$, for example, can only be solved to five or six decimal digits of precision.  It is possible to see $\kappa(A)\approx 10^{10}$ for $A$ which come from discretizing PDEs, but such a matrix is regarded as ``poorly-conditioned.''  In any case, we have to be aware of conditioning when forming expectations about solution accuracy.
 
 By ii) a generic linear system with $N=10^6$ equations requires $10^{18}$ or so operations to solve by Gauss elimination, and even modern supercomputers take a while to do a quintillion operations.  However, though general-purpose direct methods are impractical for $N=10^6$ systems, we will successfully solve PDE-generated linear systems of this size on a single processor in a few seconds, and in $O(N)$ operations (Chapters \ref{chap:st}, \ref{chap:pr}).
 
@@ -108,9 +108,9 @@ Because \PETSc objects are generally distributed across, and accessible from, mu
 
 A \pVec or \pMat stores its entries in parallel across all the processes in the MPI communicator used when creating it.  For example, the create-assemble sequence of a \pVec with four entries might look like this:
 \begin{code}
-Vec x;
-PetscInt   i[4] = {0, 1, 2, 3};
-PetscReal  v[4] = {11.0, 7.0, 5.0, 3.0};
+Vec    x;
+int    i[4] = {0, 1, 2, 3};
+double v[4] = {11.0, 7.0, 5.0, 3.0};
 
 VecCreate(COMM,&x);
 VecSetSizes(x,PETSC_DECIDE,4);
@@ -190,9 +190,9 @@ then the layout looks like Figure \ref{fig:mpitwoveclayout}.  In this case the a
 
 One doesn't really need to know all this to assemble a matrix.  For example, here is one way to create and assemble a $4\times 4$ \pMat object one row at a time:
 \begin{code}
-Mat A;
-PetscInt  i, j[4] = {0, 1, 2, 3};
-PetscReal v[4];
+Mat    A;
+int    i, j[4] = {0, 1, 2, 3};
+double v[4];
 
 MatCreate(PETSC_COMM_WORLD,&A);
 MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,4,4);

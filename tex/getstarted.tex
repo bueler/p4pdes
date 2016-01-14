@@ -91,7 +91,7 @@ rank 0 did 0 flops
 \end{cline}
 %$
 
-``Double precision,'' of course, refers to the 64-bit floating-point representation of real numbers.  This type, which is normally aliased to \texttt{PetscReal} inside \PETSc codes, corresponds to about 15 decimal digit accuracy \citep{TrefethenBau1997}.
+``Double precision,'' of course, refers to the 64-bit floating-point representation of real numbers.  This type, \texttt{double} in the C language, corresponds to about 15 decimal digit accuracy \citep{TrefethenBau1997}.
 
 Perhaps the reader is now worried that this book was written using a cluster with 20 physical processors whereas the reader has a little laptop with only a couple of cores.  Not so.  In fact these 5 and 20 process runs work just fine on the author's 4-core laptop.  MPI processes are created as needed, using an old feature of operating systems: multitasking.  Actual speedup from parallelism is another matter entirely, to which we will return.
 
