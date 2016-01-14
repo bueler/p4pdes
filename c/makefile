@@ -1,6 +1,11 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
+test:
+	(cd ch1/ && make rune_1)
+	(cd ch2/ && make runvecmatksp_1 runtri_1 runtri_2)
+	(cd ch3/ && make runpoisson_1 runpoisson_2 runpoisson_3)
+
 # all codes in text "PETSc for PDEs":
 
 heat: heat.o ch3/structuredpoisson.o chkopts
