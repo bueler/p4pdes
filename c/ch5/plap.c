@@ -249,7 +249,7 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **au,
   lobj *= 0.25 * hx * hy;
 
   ierr = PetscObjectGetComm((PetscObject)(info->da),&com); CHKERRQ(ierr);
-  ierr = MPI_Allreduce(&lobj,obj,1,MPIU_REAL,MPIU_SUM,com); CHKERRQ(ierr);
+  ierr = MPI_Allreduce(&lobj,obj,1,MPI_DOUBLE,MPI_SUM,com); CHKERRQ(ierr);
   return 0;
 }
 //ENDOBJECTIVE
