@@ -257,6 +257,10 @@ for these transformations.  After the completion of this ``editing'' stage we ge
 \end{bmatrix}.
 \end{equation*}
 Note $\tilde a_{ij}=0$ only where the integral $\int_\Omega \grad \phi_j \cdot \grad \phi_i$ is zero, a rare event in this small (coarse)-mesh case.  Now, because the $i=1,2$ nodes live in the (closed) Dirichlet boundary $\partial_D \Omega$, we highlight the $i=1,2$ rows and $j=1,2$ columns which will be edited:\marginnote{{\color{red} \textbf{Caution}}:  The first row or column of any matrix in this book is numbered ``$0$.''}
+
+\newcommand{\redX}{{\color{red} \bm{\underline{\X}}}}
+\newcommand{\blueX}{{\color{blue} \bm{\underline{\X}}}}
+
 \begin{equation*}
 \tilde A = \begin{bmatrix}
 \X & \redX &    & \X & \X \\

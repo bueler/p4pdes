@@ -95,20 +95,20 @@ Consider the lines of code in Code \ref{code:dmdacreatetwod}, an extract from \t
   \pgfmathsetmacro\xbmid{3.5*\fourth}
   \pgfmathsetmacro\yamid{1.5*\sixth}
   \pgfmathsetmacro\ybmid{4.7*\sixth}
-  \draw[thick,rounded corners=8pt,color=red]
+  \draw[very thick,rounded corners=8pt,gray] 
     (-\dd,-\dd) -- (-\dd,\yap) -- (\xap,\yap) -- (\xap,-\dd) -- cycle;
-  \node[color=red] at (\xamid,\yamid) {rank $0$};
-  \draw[thick,rounded corners=8pt,color=red]
+  \node[color=gray,xshift=-1.5mm] at (\xamid,\yamid) {\large $0$};
+  \draw[very thick,rounded corners=8pt,gray] 
     (\xbm,-\dd) -- (\od,-\dd) -- (\od,\yap) -- (\xbm,\yap) -- cycle;
-  \node[color=red] at (\xbmid,\yamid) {rank $1$};
-  \draw[thick,rounded corners=8pt,color=red]
+  \node[color=gray] at (\xbmid,\yamid) {\large $1$};
+  \draw[very thick,rounded corners=8pt,gray] 
     (-\dd,\ybm) -- (\xap,\ybm) -- (\xap,\od) -- (-\dd,\od) -- cycle;
-  \node[color=red] at (\xamid,\ybmid) {rank $2$};
-  \draw[thick,rounded corners=8pt,color=red]
+  \node[color=gray,xshift=-1.5mm] at (\xamid,\ybmid) {\large $2$};
+  \draw[very thick,rounded corners=8pt,gray] 
     (\xbm,\ybm) -- (\od,\ybm) -- (\od,\od) -- (\xbm,\od) -- cycle;
-  \node[color=red] at (\xbmid,\ybmid) {rank $3$};
+  \node[color=gray] at (\xbmid,\ybmid) {\large $3$};
 \end{tikzpicture}
-\caption{The same grid as in Figure \ref{fig:unitsquaregrid}, distributed across four \MPI processes (i.e.~with \texttt{rank} $\in \{0,1,2,3\}$) automatically by \texttt{DMDACreate2d()}.}
+\caption{The same grid as in Figure \ref{fig:unitsquaregrid}, distributed across four \MPI processes, with \texttt{rank} $\in \{0,1,2,3\}$ in gray, by \texttt{DMDACreate2d()}.}
 \label{fig:unitsquaregridparallel}
 \end{marginfigure}
 
@@ -149,13 +149,13 @@ distributes the grid as in Figure \ref{fig:unitsquaregridparallel}.  Neither $m_
   \foreach \y in {0,2} {
     \pgfmathsetmacro\yup{\y * \sixth - 1.4 * \dd}  % less than 1.7 generates flaw?
     \pgfmathsetmacro\ydn{(\y + 1) * \sixth + 1.4 * \dd}
-    \draw[thick,rounded corners=6pt,color=red]
+    \draw[very thick,rounded corners=6pt,gray] 
       (-\dd,\ydn) -- (\od,\ydn) -- (\od,\yup) -- (-\dd,\yup) -- cycle;
   }
   \foreach \y in {4,5,6} {
     \pgfmathsetmacro\yup{\y * \sixth - 1.4 * \dd}  % less than 1.7 generates flaw?
     \pgfmathsetmacro\ydn{\y * \sixth + 1.4 * \dd}
-    \draw[thick,rounded corners=6pt,color=red]
+    \draw[very thick,rounded corners=6pt,gray] 
       (-\dd,\ydn) -- (\od,\ydn) -- (\od,\yup) -- (-\dd,\yup) -- cycle;
   }
 \end{tikzpicture}
@@ -188,20 +188,20 @@ is shown in Figure \ref{fig:unitsquaregridprime}.  Each process' portion of the 
   \pgfmathsetmacro\bm{5*\ninth - 0.04}
   \pgfmathsetmacro\amid{1.5*\ninth}
   \pgfmathsetmacro\bmid{6.5*\ninth}
-  \draw[thick,rounded corners=8pt,color=red]
+  \draw[very thick,rounded corners=8pt,gray] 
     (-\dd,-\dd) -- (-\dd,\ap) -- (\ap,\ap) -- (\ap,-\dd) -- cycle;
-  \node[color=red] at (\amid,\amid) {rank $0$};
-  \draw[thick,rounded corners=8pt,color=red]
+  \node[color=gray] at (\amid,\amid) {\large $0$};
+  \draw[very thick,rounded corners=8pt,gray] 
     (\bm,-\dd) -- (\od,-\dd) -- (\od,\ap) -- (\bm,\ap) -- cycle;
-  \node[color=red] at (\bmid,\amid) {rank $1$};
-  \draw[thick,rounded corners=8pt,color=red]
+  \node[color=gray] at (\bmid,\amid) {\large $1$};
+  \draw[very thick,rounded corners=8pt,gray] 
     (-\dd,\bm) -- (\ap,\bm) -- (\ap,\od) -- (-\dd,\od) -- cycle;
-  \node[color=red] at (\amid,\bmid) {rank $2$};
-  \draw[thick,rounded corners=8pt,color=red]
+  \node[color=gray] at (\amid,\bmid) {\large $2$};
+  \draw[very thick,rounded corners=8pt,gray] 
     (\bm,\bm) -- (\od,\bm) -- (\od,\od) -- (\bm,\od) -- cycle;
-  \node[color=red] at (\bmid,\bmid) {rank $3$};
+  \node[color=gray] at (\bmid,\bmid) {\large $3$};
 \end{tikzpicture}
-\caption{A balanced distribution of a $10\times 10$ grid across four \MPI processes, as created by \texttt{DMDACreate2d()}.}
+\caption{A balanced distribution of a $10\times 10$ grid across four \MPI processes, with \texttt{rank} in gray, as created by \texttt{DMDACreate2d()}.}
 \label{fig:unitsquaregrideight}
 \end{marginfigure}
 
