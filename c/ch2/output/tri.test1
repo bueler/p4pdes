@@ -1,0 +1,9 @@
+Mat Object:(a_) 1 MPI processes
+  type: seqaij
+ 3.00000e+00  -1.00000e+00  0.00000e+00  0.00000e+00 
+ -1.00000e+00  3.00000e+00  -1.00000e+00  0.00000e+00 
+ 0.00000e+00  -1.00000e+00  3.00000e+00  -1.00000e+00 
+ 0.00000e+00  0.00000e+00  -1.00000e+00  3.00000e+00
+  0 KSP Residual norm 3.302822756884e+00 
+  1 KSP Residual norm 5.519370044893e-16 
+error for m = 4 system is |x-xexact|_2 = 5.1e-16
