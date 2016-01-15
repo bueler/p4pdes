@@ -1,0 +1,2 @@
+grid of 3 x 3 = 9 interior nodes (16 elements)
+numerical error:  |u-u_exact|/|u_exact| = 0.0080805
