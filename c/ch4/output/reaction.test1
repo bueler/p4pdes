@@ -1,0 +1,2 @@
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+on 33 point grid:  |u-u_exact|_inf/|u|_inf = 1.1825e-05
