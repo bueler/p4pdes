@@ -310,7 +310,7 @@ int main(int argc,char **argv) {
   Vec            u, uexact;
   PLapCtx        user;
   DMDALocalInfo  info;
-  double         unorm, err;
+  double         unorm, err, hx, hy;
 
   PetscInitialize(&argc,&argv,NULL,help);
   ierr = ConfigureCtx(&user); CHKERRQ(ierr);
@@ -320,8 +320,10 @@ int main(int argc,char **argv) {
                -3,-3,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&(user.da)); CHKERRQ(ierr);
   ierr = DMSetApplicationContext(user.da,&user);CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);
-  ierr = PetscPrintf(COMM,"grid of %d x %d = %d interior nodes (%d elements)\n",
-            info.mx,info.my,info.mx*info.my,(info.mx+1)*(info.my+1)); CHKERRQ(ierr);
+  hx = 1.0 / (info.mx+1);  hy = 1.0 / (info.my+1);
+  ierr = PetscPrintf(COMM,
+            "grid of %d x %d = %d interior nodes (element dims %gx%g)\n",
+            info.mx,info.my,info.mx*info.my,hx,hy); CHKERRQ(ierr);
 
   ierr = DMCreateGlobalVector(user.da,&u);CHKERRQ(ierr);
   ierr = VecDuplicate(u,&uexact);CHKERRQ(ierr);
