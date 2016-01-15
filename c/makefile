@@ -1,10 +1,12 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
+.PHONY: test
+
 test:
-	(cd ch1/ && make rune_1)
-	(cd ch2/ && make runvecmatksp_1 runtri_1 runtri_2)
-	(cd ch3/ && make runpoisson_1 runpoisson_2 runpoisson_3)
+	@(cd ch1/ && make -s rune_1)
+	@(cd ch2/ && make -s runvecmatksp_1 runtri_1 runtri_2)
+	@(cd ch3/ && make -s runpoisson_1 runpoisson_2 runpoisson_3)
 
 # all codes in text "PETSc for PDEs":
 
@@ -33,9 +35,15 @@ testts: testts.o  chkopts
 
 # etc
 
-.PHONY: distclean
+.PHONY: distclean rdistclean
 
-distclean:
-	@rm -f maketmp tmp difftmp
-	@rm -f *~ heat stokes riemann testprealloc testts
+CHAPTERS = ch1 ch2 ch3 ch4 ch5 ch6 ch7 ch9
+rdistclean:
+	for DIR in $(CHAPTERS); do \
+	     (cd $$DIR; rm -f output/*~ solns/*~; ${MAKE} distclean); \
+	done
+
+distclean: rdistclean
+	rm -f maketmp tmp difftmp
+	rm -f *~ heat stokes riemann testprealloc testts
 
