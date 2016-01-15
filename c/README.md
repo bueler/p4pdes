@@ -12,7 +12,7 @@ Follow instructions at [www.mcs.anl.gov/petsc/documentation/installation.html](h
   * My book does not contain PETSc installation instructions or advice.  Maintaining such information is the job of PETSc developers, not me.  Thank goodness.
   * Also, it does not help the reader with debugging C programs.
 
-### compile and run
+### compile and run one code
 
 Do this to build the first code:
 
@@ -21,5 +21,13 @@ Do this to build the first code:
     $ ./e
     $ mpiexec -n 20 ./e
 
+### regression test the codes
+
+    $ make test
+
 Tested with PETSc master branch.
+
+### clean up
+
+    $ make distclean
 
