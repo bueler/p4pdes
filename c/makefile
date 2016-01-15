@@ -8,7 +8,8 @@ test:
 	@(cd ch2/ && make -s runvecmatksp_1 runtri_1 runtri_2)
 	@(cd ch3/ && make -s runpoisson_1 runpoisson_2 runpoisson_3)
 
-# all codes in text "PETSc for PDEs":
+
+# extra codes not in chapters yet
 
 heat: heat.o ch3/structuredpoisson.o chkopts
 	-${CLINKER} -o heat heat.o ch3/structuredpoisson.o ${PETSC_KSP_LIB}
@@ -21,8 +22,6 @@ riemann: riemann.o  chkopts
 stokes: stokes.o  chkopts
 	-${CLINKER} -o stokes stokes.o  ${PETSC_SNES_LIB}
 	${RM} stokes.o
-
-# test codes
 
 testprealloc: testprealloc.o ch4/readmesh.o chkopts
 	-${CLINKER} -o testprealloc testprealloc.o ch4/readmesh.o ${PETSC_KSP_LIB}
