@@ -10,37 +10,14 @@ tri: tri.o  chkopts
 	${RM} tri.o
 
 # testing
-PROG = vecmatksp
-OPTS =
-TEST = 1
-PROC = 1
 runvecmatksp_1:
-	-@${MAKE} ${PROG} > maketmp 2>&1;
-	-@${MPIEXEC} -n ${PROC} ./${PROG} ${OPTS} > tmp 2>&1; \
-	  if (${DIFF} output/${PROG}.test${TEST} tmp) then true; \
-	  else  printf "ERROR: ${PROC}-process test #${TEST} of ${PWD}/${PROG}; diffs above\n"; fi; \
-	  ${RM} -f maketmp tmp
+	-@../testit.sh vecmatksp "" 1 1
 
-PROG = tri
-OPTS = -ksp_monitor -a_mat_view ::ascii_dense
-TEST = 1
-PROC = 1
 runtri_1:
-	-@${MAKE} ${PROG} > maketmp 2>&1;
-	-@${MPIEXEC} -n ${PROC} ./${PROG} ${OPTS} > tmp 2>&1; \
-	  if (${DIFF} output/${PROG}.test${TEST} tmp) then true; \
-	  else  printf "ERROR: ${PROC}-process test #${TEST} of ${PWD}/${PROG}; diffs above\n"; fi; \
-	  ${RM} -f maketmp tmp
+	-@../testit.sh tri "-a_mat_view ::ascii_dense" 1 1
 
-OPTS = -tri_m 2000 -ksp_rtol 1.0e-10 -ksp_type cg -pc_type bjacobi -sub_pc_type icc -ksp_monitor -ksp_converged_reason
-TEST = 2
-PROC = 4
 runtri_2:
-	-@${MAKE} ${PROG} > maketmp 2>&1;
-	-@${MPIEXEC} -n ${PROC} ./${PROG} ${OPTS} > tmp 2>&1; \
-	  if (${DIFF} output/${PROG}.test${TEST} tmp) then true; \
-	  else  printf "ERROR: ${PROC}-process test #${TEST} of ${PWD}/${PROG}; diffs above\n"; fi; \
-	  ${RM} -f maketmp tmp
+	-@../testit.sh tri "-tri_m 2000 -ksp_rtol 1.0e-10 -ksp_type cg -pc_type bjacobi -sub_pc_type icc -ksp_converged_reason" 4 2
 
 # etc
 

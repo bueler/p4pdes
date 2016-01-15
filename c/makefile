@@ -36,5 +36,6 @@ testts: testts.o  chkopts
 .PHONY: distclean
 
 distclean:
+	@rm -f maketmp tmp difftmp
 	@rm -f *~ heat stokes riemann testprealloc testts
 

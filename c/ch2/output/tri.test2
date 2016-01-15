@@ -1,6 +1,2 @@
-  0 KSP Residual norm 6.749626092074e+01 
-  1 KSP Residual norm 9.594945354775e-01 
-  2 KSP Residual norm 3.820103072056e-01 
-  3 KSP Residual norm 1.762014144671e-15 
 Linear solve converged due to CONVERGED_RTOL iterations 3
 error for m = 2000 system is |x-xexact|_2 = 1.3e-14
