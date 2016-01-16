@@ -646,12 +646,10 @@ draw conclusions: we have introduced FEM, constructed nontrivial nonlinear PDE e
   \item For $1 < p < \infty$, prove strict convexity \eqref{eq:of:convexity} of functional $I[u]$ on $W_0^{1,p}(\Omega)$.  (\emph{Hint}:  The argument in section 5.3 of \citet{Ciarlet2002} suffices.)
   \end{enumerate}
  
-\item \label{exer:of:checkexactformulas} FIXME: incorporate alpha
-
-For the exact solution \eqref{eq:of:exactsolution}, define $C = |\grad u|^{p-2}$ and $D^2=(x+1)^2 + (y+1)^2$ and show that
-    $$C = \left[(x+1)^2 (y+1)^2 D^2\right]^{(p-2)/2}$$
+\item \label{exer:of:checkexactformulas}  For the exact solution \eqref{eq:of:exactsolution}, define $C = |\grad u|^{p-2}$ and $D^2=(x+\alpha)^2 + (y+\alpha)^2$ and show that
+    $$C = \left[(x+\alpha)^2 (y+\alpha)^2 D^2\right]^{(p-2)/2}$$
 and that $\grad C = (p-2) C \left<\gamma_1,\gamma_2\right>$ where
-    $$\gamma_1 = \frac{1}{x+1}+ \frac{x+1}{D^2}, \quad \gamma_2 = \frac{1}{y+1}+ \frac{y+1}{D^2}.$$
+    $$\gamma_1 = \frac{1}{x+\alpha}+ \frac{x+\alpha}{D^2}, \quad \gamma_2 = \frac{1}{y+\alpha}+ \frac{y+\alpha}{D^2}.$$
 Also show that $\Div \grad u = D^2$.  Thus strong form \eqref{eq:of:plapstrongform} implies an implementable formula for the source function,
     $$f = - \Div \left(C \grad u\right) = - \grad C \cdot \grad u - C\, \Div \grad u.$$
 Note that \texttt{ExactRHSLocal()} in \texttt{plap.c} implements these formulas.
@@ -699,9 +697,7 @@ works, but that
 ./plap -snes_fd
 ./plap -snes_mf
 \end{cline}
-do not.  Confirm the evaluation-counting results in the text with ``\texttt{-log\_summary | grep Eval}''.
-%FIXME:  what is "./plap -snes_fd_function" doing?
-
+do not.  Look at the output of \texttt{-snes\_view} with each of these.  Also, confirm the evaluation-counting results in the text with ``\texttt{-log\_summary | grep Eval}''.  Note that \texttt{-snes\_fd\_color} is the default when a \pDMDA is used, but user code for a Jacobian is not provided, so that ``\texttt{./plap -snes\_fd\_function}'' is actually the same as ``\texttt{./plap -snes\_fd\_function -snes\_fd\_color};'' both should work with your code.
 
 \item \label{exer:of:regularize}  The solution of the $p$-Laplacian equation shown in this Chapter is actually rather ``dangerous'' in the sense that the equation is solved as though it is uniformly elliptic.  Making that assumption is solution- and method-dependent; see \eqref{eq:of:coeffbounds}.  For this reason it is common to \emph{regularize} the $p$-Laplacian by inserting a constant $\eps>0$ so that the weak form \eqref{eq:of:plapweakform} becomes
 \begin{equation}
@@ -716,6 +712,8 @@ Continue the last exercise, but now change the manufactured solution \eqref{eq:o
     u(x,y) = \frac{1}{2} x^2 y^2. \label{eq:of:exactsolutionbad}
 \end{equation}
 Now $\grad u \to 0$ as $(x,y)\to(0,0)$ in $\Omega$ so that $|\grad u|^{p-2}$ is not bounded-below by a positive constant; compare \eqref{eq:of:coeffbounds}.  Show that $\eps$-regularized cases can converge on fine grids but that the unregularized ($\eps=0$) method runs into trouble.
+
+\item FIXME: with $\alpha=0.3$, for example, it makes a difference to the observed convergence rate what norm we use in $\|u-u_{exact}\|$.  Switch from the $\infty$-norm in the code to the 1-norm and note the difference.
 
 \item One may approximate the strong form PDE \eqref{eq:of:plapstrongform} by finite differences on a structured grid just like that used in Chapter \ref{chap:st}.  Do so, in a \pSNES-using code \texttt{plapfd.c} that implements the nonlinear residual and the same manufactured solution as here.  At least initially, skip the Jacobian implementation.  Use \texttt{-snes\_fd\_color} and compare to results in this chapter.  What are the differences in your code relative to the code \texttt{plap.c}?
 
