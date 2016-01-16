@@ -32,19 +32,22 @@ static char help[] = "Solve the p-Laplacian equation in 2D using Q^1 FEM.\n"
 //STARTCTX
 typedef struct {
     DM      da;
-    double  p;
+    double  p, alpha;
     int     quaddegree;
-    Vec     f,g;
+    Vec     f, g;
 } PLapCtx;
 
 PetscErrorCode ConfigureCtx(PLapCtx *user) {
     PetscErrorCode ierr;
     user->p = 4.0;
+    user->alpha = 1.0;
     user->quaddegree = 2;
     ierr = PetscOptionsBegin(COMM,"plap_","p-laplacian solver options",""); CHKERRQ(ierr);
     ierr = PetscOptionsReal("-p","exponent p with  1 <= p < infty",
                       NULL,user->p,&(user->p),NULL); CHKERRQ(ierr);
     if (user->p < 1.0) { SETERRQ(COMM,1,"p >= 1 required"); }
+    ierr = PetscOptionsReal("-alpha","parameter alpha in exact solution",
+                      NULL,user->alpha,&(user->alpha),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsInt("-quaddegree","quadrature degree n (= 1,2,3 only)",
                      NULL,user->quaddegree,&(user->quaddegree),NULL); CHKERRQ(ierr);
     if ((user->quaddegree < 1) || (user->quaddegree > 3)) {
@@ -54,6 +57,7 @@ PetscErrorCode ConfigureCtx(PLapCtx *user) {
 }
 //ENDCTX
 
+//FIXME:  alpha in here
 //STARTBDRYINIT
 double BoundaryG(double x, double y) {
     return 0.5 * (x+1.0)*(x+1.0) * (y+1.0)*(y+1.0);

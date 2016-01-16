@@ -94,17 +94,13 @@ Before proceeding to a numerical solution, the main ideas of the above theory ar
 Minimization problem \eqref{eq:of:plapmin} is equivalent to the weak form \eqref{eq:of:plapweakform}.  These become the strong form \eqref{eq:of:plapstrongform} when the solution $u$ is smooth.  Thus the $p$-Laplacian equation arises from minimization.
 \end{quote}
 
-It is also worthwhile pausing to choose a particular test problem.  We want a problem for which we know the exact solution, and an easy choice is to ``manufacture'' a test problem by starting with a simple solution:
+We pause to choose a particular test problem, and we want a problem for which the exact solution is known.  An easy choice is to ``manufacture'' a test problem by starting with a simple solution with one parameter $\alpha\in\RR$:
 \begin{equation}
-    u(x,y) = \frac{1}{2} (x+1)^2 (y+1)^2. \label{eq:of:exactsolution}
+    u(x,y) = \frac{1}{2} (x+\alpha)^2 (y+\alpha)^2. \label{eq:of:exactsolution}
 \end{equation}
 This formula also determines $g$ along $\partial \Omega$.  The source function $f$ is then computed by hand\sidenote{The by-hand derivative calculation which generates $f(x,y)$ from the exact solution $u(x,y)$ is acceptably simple, but it is still error-prone.  Because by-hand calculation errors are likely to be un-correlated to code-implementation errors, however, agreement is likely to reflect correctness.} from the strong form \eqref{eq:of:plapstrongform}.
 
-It is an easy exercise to show that the coefficient of the $p$-Laplacian equation is bounded and thus that equation \eqref{eq:of:plapweakform}, or \eqref{eq:of:plapstrongform}, is uniformly elliptic \citep{Evans2010} at the solution \eqref{eq:of:exactsolution}:
-\begin{equation}
-0 < 2^{(p-2)/2} \le |\grad u|^{p-2} \le 2^{7(p-2)/2}.  \label{eq:of:coeffbounds}
-\end{equation}
-However, though such bounds apply at the solution, they do not necessarily apply to the approximations (iterates) in a numerical procedure.  We might ``lose ellipticity'' on the way to the solution; see Exercise \ref{chap:of}.\ref{exer:of:regularize}.
+Exercise \ref{chap:of}.\ref{exer:of:regularize} shows that if $\alpha>0$ then the coefficient of the $p$-Laplacian equation, namely $|\grad u|^{p-2}$, is bounded below by a positive constant, and that it is bounded above.  Thus equation \eqref{eq:of:plapweakform}, or \eqref{eq:of:plapstrongform}, is uniformly elliptic \citep{Evans2010} at the solution \eqref{eq:of:exactsolution}.  However, though such bounds apply at the solution, they do not necessarily apply to the approximations (iterates) in a numerical procedure, so the iteration might ``lose ellipticity'' on the way to the solution.  We will return to such considerations once we have an implementation.
 
 
 \section{Structured $Q^1$ finite elements}
@@ -378,7 +374,7 @@ Our program \texttt{plap.c} is displayed in eight parts, Codes \ref{code:plapCtx
 
 \cinputpart{plap.c}{\CODELOC}{Declare and configure a context.}{I}{//STARTCTX}{//ENDCTX}{code:plapCtx}
 
-Code \ref{code:plapCtx} declares a ``context'' \texttt{struct PLapCtx} which will be needed in the call-back functions \texttt{FormObjectiveLocal()} (Code \ref{code:plapObj}) and \texttt{FormFunctionLocal()} (Code \ref{code:plapFun}).  Defaults and \PETSc options are then set in the \texttt{ConfigureCtx()} function.  Note that exponent $p$ defaults to 4.
+Code \ref{code:plapCtx} declares a ``context'' \texttt{struct PLapCtx} which will be needed in the call-back functions \texttt{FormObjectiveLocal()} (Code \ref{code:plapObj}) and \texttt{FormFunctionLocal()} (Code \ref{code:plapFun}).  Defaults and \PETSc options are then set in the \texttt{ConfigureCtx()} function.  Note that exponent $p$ defaults to 4 and that the default for $\alpha$ in \eqref{eq:of:exactsolution} is 1.
 
 \cinputpart{plap.c}{\CODELOC}{Set boundary values and initial iterate.  The boundary values set the ghosted nodes of a \texttt{Local} \pVec.}{II}{//STARTBDRYINIT}{//ENDBDRYINIT}{code:plapBI}
 
@@ -650,7 +646,9 @@ draw conclusions: we have introduced FEM, constructed nontrivial nonlinear PDE e
   \item For $1 < p < \infty$, prove strict convexity \eqref{eq:of:convexity} of functional $I[u]$ on $W_0^{1,p}(\Omega)$.  (\emph{Hint}:  The argument in section 5.3 of \citet{Ciarlet2002} suffices.)
   \end{enumerate}
  
-\item \label{exer:of:checkexactformulas} For the exact solution \eqref{eq:of:exactsolution}, define $C = |\grad u|^{p-2}$ and $D^2=(x+1)^2 + (y+1)^2$ and show that
+\item \label{exer:of:checkexactformulas} FIXME: incorporate alpha
+
+For the exact solution \eqref{eq:of:exactsolution}, define $C = |\grad u|^{p-2}$ and $D^2=(x+1)^2 + (y+1)^2$ and show that
     $$C = \left[(x+1)^2 (y+1)^2 D^2\right]^{(p-2)/2}$$
 and that $\grad C = (p-2) C \left<\gamma_1,\gamma_2\right>$ where
     $$\gamma_1 = \frac{1}{x+1}+ \frac{x+1}{D^2}, \quad \gamma_2 = \frac{1}{y+1}+ \frac{y+1}{D^2}.$$
@@ -658,7 +656,11 @@ Also show that $\Div \grad u = D^2$.  Thus strong form \eqref{eq:of:plapstrongfo
     $$f = - \Div \left(C \grad u\right) = - \grad C \cdot \grad u - C\, \Div \grad u.$$
 Note that \texttt{ExactRHSLocal()} in \texttt{plap.c} implements these formulas.
 
-\item \label{exer:of:checkexactbounds} For the exact solution \eqref{eq:of:exactsolution}, show \eqref{eq:of:coeffbounds}.
+\item \label{exer:of:checkexactbounds} Suppose $\alpha > 0$.  For the exact solution \eqref{eq:of:exactsolution}, show that
+\begin{equation}
+2^{(p-2)/2} \alpha^{3(p-2)} \le |\grad u|^{p-2} \le 2^{(p-2)/2} \left(1+\alpha\right)^{3(p-2)}.  \label{eq:of:coeffbounds}
+\end{equation}
+By contrast, show that if $-1 \le \alpha \le 0$ then there is a point in $\bar\Omega=[0,1]\times[0,1]$ so that $|\grad u|^{p-2}=0$.
 
 \item Show that $S^h$ is a linear subspace of $W^{1,p}(\Omega)$ with dimension $(m_x+2)(m_y+2)$, and that $S_0^h$ has dimension $m_x m_y$.  What precisely is meant by saying $g$ is ``(appropriately) piece-wise linear on $\partial\Omega$'' in the definition of $S_g^h$ on page \pageref{eq:of:Sghdefn}?  Is our use of exact solution \eqref{eq:of:exactsolution} to give $g$ ``appropriate'' in this sense?
 
@@ -707,7 +709,9 @@ do not.  Confirm the evaluation-counting results in the text with ``\texttt{-log
 \end{equation}
 and thus uniform ellipticity is guaranteed in a ball in $W^{1,p}(\Omega)$ around any solution.  Add this as an optional regularization in \texttt{plap.c}. Specifically, modify function \texttt{FormFunctionLocal()}, but note that \texttt{FormObjectiveLocal()} can remain unchanged.\sidenote{Following this advice means that \texttt{FormFunctionLocal()} only computes an approximate gradient of the objective functional.  However, the line search in the Newton iteration suffers very little as a consequence.}  Run the code with small nonzero values of $\eps$, and note the largest $\eps$ value which still gets 1\% agreement with unregularized results on a selection of grids.
 
-\item \label{exer:of:regularizebad}  Continue the last exercise, but now change the manufactured solution \eqref{eq:of:exactsolution}, i.e.~the function \texttt{ExactRHSLocal()} in \texttt{plap.c}, to be
+\item \label{exer:of:regularizebad}  FIXME: incorporate alpha and/or move to main text
+
+Continue the last exercise, but now change the manufactured solution \eqref{eq:of:exactsolution}, i.e.~the function \texttt{ExactRHSLocal()} in \texttt{plap.c}, to be
 \begin{equation}
     u(x,y) = \frac{1}{2} x^2 y^2. \label{eq:of:exactsolutionbad}
 \end{equation}
