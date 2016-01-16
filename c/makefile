@@ -21,5 +21,5 @@ rdistclean:
 	done
 
 distclean: rdistclean
-	@rm *~
+	@rm -f *~
 
