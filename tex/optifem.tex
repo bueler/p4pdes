@@ -478,65 +478,71 @@ Figure \ref{fig:of:parallelgrid} shows the scheme we have implemented.  The inte
 
 Our scheme implies a slight load imbalance in the sense that ranks along the upper and right-hand side of the grid do more work.  This imbalance is quite tolerable if each rank owns a significant block of nodes, e.g.~a squarish block of thousands of interior nodes.
 
-The main part, Code \ref{code:plapMain}, calls the various functions in the previous parts, of course.  We set up \pDMDA, some \pVecs, and \pSNES objects.  Note that we use \texttt{DMCreateGlobalVector()} on \texttt{u} and \texttt{uexact}, but \texttt{DMCreateLocalVector()} on the \pVecs which hold $f$ and $g$.  The latter \pVecs do not change during the run, so we never need to call \texttt{DMGlobalToLocalBegin/End()}.  Also, we tell the \pDMDA to use objective function \texttt{FormObjectiveLocal()} by calling \texttt{DMDASNESSetObjectiveLocal()}.  Similarly, we call \texttt{DMDASNESSetFunctionLocal()} to tell the \pDMDA about \texttt{FormFunctionLocal()}; see Code \ref{code:plapFun} for the implementation.
+The main part, Code \ref{code:plapMain}, calls the various functions in the previous parts, of course.  We set up \pDMDA, some \pVecs, and \pSNES objects.  We use \texttt{DMCreateGlobalVector()} on \texttt{u} and \texttt{uexact}, but \texttt{DMCreateLocalVector()} on the \pVecs which hold $f$ and $g$.\sidenote{The latter \pVecs do not change during the run, so note that we never need to call \texttt{DMGlobalToLocalBegin/End()}.}  Also, we tell the \pDMDA to use objective function \texttt{FormObjectiveLocal()} by calling
+\begin{code}
+    DMDASNESSetObjectiveLocal(da,(DMDASNESObjective)FormObjectiveLocal,&user);
+\end{code}
+which casts the type of \texttt{FormObjectiveLocal()} to the correct type for the call-back.  Similarly, we call \texttt{DMDASNESSetFunctionLocal()} to tell the \pDMDA about \texttt{FormFunctionLocal()}; see Code \ref{code:plapFun} for the implementation.  Then we call \texttt{SNESSolve()}, compute the error, and destroy all the objects at the end.\sidenote{Regarding that last \texttt{Destroy()} step, the reader should check that it has no memory leaks once the program is built: \texttt{valgrind ./plap}}
 
-Then we call \texttt{SNESSolve()}, compute the error, and destroy all the objects at the end.  Regarding that last \texttt{Destroy()} step, the reader might start running the program by confirming that it has no memory leaks:
+The parts above show the complete objective-only implementation.  To use it requires option \texttt{-snes\_fd\_function}, which does finite differencing on the objective functional $I^h[u]$, equation \eqref{eq:of:quadraturesumoverelements}, to get its gradient $\grad I^h[u]$.  Then the \pSNES solves the corresponding nonlinear system, $\bF(\bu) = \grad I^h[\bu] = 0$ in the notation of Chapter \ref{chap:nl}.
+
+However, even with a residual function $\bF(\bu)$ approximated this way, we still need a Jacobian for Newton's method.  To get that we ask \PETSc to finite difference \emph{again}, using either \texttt{-snes\_fd} or \texttt{-snes\_mf}.  Recall from Chapter \ref{chap:nl} that we can ask \PETSc to count C function evaluations, to confirm that only the objective function is evaluated:
 \begin{cline}
 $ cd c/ch5/
 $ make plap
 ...
-$ valgrind ./plap
-...
+$ ./plap -snes_fd_function -snes_fd
+grid of 3 x 3 = 9 interior nodes (element dims 0.25x0.25)
+numerical error:  |u-u_exact|/|u_exact| = 8.081e-03
 \end{cline}
 %$
 
-The parts above show the objective-only implementation.  To use it requires option \texttt{-snes\_fd\_function}, which does finite differencing on the objective functional $I^h[u]$, equation \eqref{eq:of:quadraturesumoverelements}, to get its gradient $\grad I^h[u]$.  Then the \pSNES solves $F(u) = \grad I^h[u] = 0$.
-
-Of course, even with a residual function $F(u)$ we still need a Jacobian for Newton's method.  To get this we ask \PETSc to finite difference \emph{again}, using either \texttt{-snes\_fd} or \texttt{-snes\_mf}.  Recall from Chapter \ref{chap:nl} that we can ask \PETSc to count C function evaluations, to confirm that only the objective function is evaluated:
+Recall from Chapter \ref{chap:nl} that we can ask \PETSc to count C function evaluations, to confirm that only the objective function is evaluated:
 \begin{cline}
 $ ./plap -snes_fd_function -snes_fd -log_summary | grep Eval
 SNESObjectiveEval    2198 1.0 1.8496e-01 1.0 ...
 SNESJacobianEval       7 1.0 2.1275e-01 1.0 ...
 \end{cline}
 %$
-On the default ($3\times 3$ interior nodes) grid we have evaluated the objective functional 2198 times, already a warning about the scalability of this method.\sidenote{The Jacobian evaluation counts report calls to \PETSc's finite difference Jacobian method.}
+No counts of ``\texttt{SNESFunctionEval}'' evaluations appear.\sidenote{The Jacobian evaluation counts report calls to \PETSc's finite difference Jacobian method.}  On the default ($3\times 3$ interior nodes) grid we have therefore evaluated the objective functional 2198 times!  This should be taken as a not-at-all subtle warning that the method does not scale to fine grids.
 
-Actually, experience from Chapter \ref{chap:nl} suggests using a ``coloring'' method, available for our \pDMDA-managed structured grid.  This reduces the evaluation count, especially on a once-refined $5 \times 5$ grid:
+Experience from Chapter \ref{chap:nl} suggests using a ``coloring'' method, available for our \pDMDA-managed structured grid.  This reduces the evaluation count, here on a once-refined $5 \times 5$ grid:
 \begin{cline}
 $ ./plap -snes_fd_function -snes_fd -da_refine 1 -log_summary | grep ObjectiveEval
 SNESObjectiveEval   20539 1.0 1.5497e+00 1.0 ...
 $ ./plap -snes_fd_function -snes_fd_color -da_refine 1 -log_summary | grep ObjectiveEval
 SNESObjectiveEval    5410 1.0 4.8340e-01 1.0 ...
 \end{cline}
-These remain disturbingly-large evaluation counts.
+Better.  But this remains a disturbingly-large evaluation count.
 
-Given that we have an implementation with an exact solution, we want to see convergence:\sidenote{Recall the \texttt{alias} set in Chapter \ref{chap:ls}: \texttt{timer='time -f "real \%e"'}.}
+Nonetheless, given that we have an implementation with an exact solution, we want to see convergence:
 \begin{cline}
 $ for LEV in 0 1 2 3; do
 > timer ./plap -snes_fd_color -snes_fd_function -snes_converged_reason -da_refine $LEV
 > done
-grid of 3 x 3 = 9 interior nodes (16 elements)
+grid of 3 x 3 = 9 interior nodes (element dims 0.25x0.25)
 Nonlinear solve converged due to CONVERGED_FNORM_ABS iterations 6
-numerical error:  |u-u_exact|/|u_exact| = 0.0080805
-real 0.22
-grid of 5 x 5 = 25 interior nodes (36 elements)
+numerical error:  |u-u_exact|/|u_exact| = 8.081e-03
+real 0.05
+grid of 5 x 5 = 25 interior nodes (element dims 0.166667x0.166667)
 Nonlinear solve converged due to CONVERGED_FNORM_ABS iterations 7
-numerical error:  |u-u_exact|/|u_exact| = 0.00292891
-real 0.50
-grid of 9 x 9 = 81 interior nodes (100 elements)
+numerical error:  |u-u_exact|/|u_exact| = 2.929e-03
+real 0.10
+grid of 9 x 9 = 81 interior nodes (element dims 0.1x0.1)
 Nonlinear solve did not converge due to DIVERGED_LINEAR_SOLVE iterations 8
-numerical error:  |u-u_exact|/|u_exact| = 0.000925284
-real 2.73
-grid of 17 x 17 = 289 interior nodes (324 elements)
+numerical error:  |u-u_exact|/|u_exact| = 9.253e-04
+real 0.63
+grid of 17 x 17 = 289 interior nodes (element dims 0.0555556x0.0555556)
 Nonlinear solve did not converge due to DIVERGED_LINE_SEARCH iterations 20
-numerical error:  |u-u_exact|/|u_exact| = 0.00025817
-real 47.74
+numerical error:  |u-u_exact|/|u_exact| = 2.582e-04
+real 16.48
 \end{cline}
 %$
+For the above runs, recall the \texttt{alias} set in Chapter \ref{chap:ls}: \texttt{timer='time -f "real \%e"'}.  Also, this timing run is done with a ``\texttt{--with-debugging=0}'' configuration, thus a change of \texttt{PETSC\_ARCH}.
 
-Thus we have evidence of convergence, with reductions of the error by factors close to $O(\Delta x^2)$, but the rest of the above provides copious warnings.  First, performance is terrible, presumably coming from excessive objective evaluation.  Secondly, though errors are small, suggesting that convergence occurred, on the two finer grids we get divergence.  Such troubles are no surprise, as the Jacobian is computed by finite differencing a gradient computed by finite differences!\sidenote{Thank goodness we have 64 bit \texttt{double} precision, to get even this far.}
+We have evidence of convergence, with reductions of the error by factors close to $O(\Delta x^2)$, but the above suggests copious caution.  Performance is terrible, because of excessive objective evaluation.  Though errors decrease, on the two finer grids we get divergence of either the iterative linear solver (\texttt{DIVERGED\_LINEAR\_SOLVE}) or the Newton iteration (\texttt{DIVERGED\_LINE\_SEARCH}).  Such troubles are less of a surprise when we observe that the Jacobian is computed by finite-differencing a gradient computed by finite differences.\sidenote{Thank goodness we have 64 bit \texttt{double} precision, to get even this far.}  Presumably the gradient directions computed this way, i.e.~the Newton steps, are too ``noisy.''
 
-However, we can see from the small errors that the FEM of this Chapter has allowed us to numerically-solve the $p$-Laplacian PDE using \PETSc's ability to minimize a function.  This is a useful capability for prototyping, and for providing a redundant capability for checking the correctness of better approaches.  Let us move on to one of those, namely actually implementing the weak form \eqref{eq:of:plapweakform}, which is the missing gradient.
+The prototype FEM method of this Chapter has allowed us to numerically-solve the $p$-Laplacian PDE by using \PETSc's ability to minimize a function.  This is a useful capability, and it provides a redundant capability for checking the correctness of better approaches.  We now try the most obvious ``better approach,'' to implement the weak form \eqref{eq:of:plapweakform}, namely the missing gradient of $I^h[u]$.
 
 
 \section{Residual function (gradient) implementation}
@@ -568,6 +574,8 @@ FIXME: show result
 
 FIXME: compare evals with objective-only
 % -log_summary | grep Eval
+
+FIXME: compare $n=1,2,3$ quadrature points
 
 FIXME: visualize solution and newton step
 % Do you want the solution of the linear system before the line search (line search may shrink the vector) use -ksp_view_solution or the actual update selected by Newton -snes_monitor_solution_update
