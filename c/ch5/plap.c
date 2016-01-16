@@ -109,7 +109,7 @@ PetscErrorCode ExactRHSLocal(DMDALocalInfo *info, Vec uex, Vec f,
                              PLapCtx *user) {
     PetscErrorCode ierr;
     const double hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1),
-                 p = user->p;
+                 p = user->p,  alf = user->alpha;
     double       x,y, XX,YY, C,D2,gamma1,gamma2, **auex, **af;
     const int    XE = info->xs + info->xm, YE = info->ys + info->ym;
     int          i,j;
@@ -118,17 +118,15 @@ PetscErrorCode ExactRHSLocal(DMDALocalInfo *info, Vec uex, Vec f,
     ierr = DMDAVecGetArray(user->da,f,&af); CHKERRQ(ierr);
     // loop over ALL grid points; f has ghosts but uex does not
     for (j = info->ys - 1; j <= YE; j++) {
-FIXME:  use alpha
-        y = hy * (j + 1);  YY = (y+1.0)*(y+1.0);
+        y = hy * (j + 1);  YY = (y+alf)*(y+alf);
         for (i = info->xs - 1; i <= XE; i++) {
-            x = hx * (i + 1);  XX = (x+1.0)*(x+1.0);
+            x = hx * (i + 1);  XX = (x+alf)*(x+alf);
             D2 = XX + YY;
             C = PetscPowScalar(XX * YY * D2, (p - 2.0) / 2.0);
-            gamma1 = 1.0/(x+1.0) + (x+1.0)/D2;
-            gamma2 = 1.0/(y+1.0) + (y+1.0)/D2;
-            af[j][i] = - (p-2.0) * C * (gamma1*(x+1.0)*YY + gamma2*XX*(y+1.0))
+            gamma1 = 1.0/(x+alf) + (x+alf)/D2;
+            gamma2 = 1.0/(y+alf) + (y+alf)/D2;
+            af[j][i] = - (p-2.0) * C * (gamma1*(x+alf)*YY + gamma2*XX*(y+alf))
                        - C * D2;
-END FIXME
             if ((i >= info->xs) && (i < XE) && (j >= info->ys) && (j < YE)) {
                 auex[j][i] = BoundaryG(x,y,user->alpha); // here: exact soln
             }
