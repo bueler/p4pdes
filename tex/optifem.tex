@@ -547,32 +547,53 @@ The prototype FEM method of this Chapter has allowed us to numerically-solve the
 
 \section{Residual function (gradient) implementation}
 
-The obvious limitation to the objective-only implementation above is that grids other than the very coarsest lead to unreasonable numbers of evaluations of the objective function.  Furthermore the quality of the numerically-approximated finite difference gradient of the objective function, that is, of the residual function, is low, and the second-differenced Jacobian is even worse.  So we take the next, also obvious, step of implementing a residual function.
+The clear limitation to the objective-only implementation above is that grids other than the very coarsest lead to unreasonable numbers of evaluations of the objective function.  Furthermore the quality of the numerically-approximated finite difference gradient of the objective function, that is, of the residual function, is low, and the second-differenced Jacobian is even worse.  So we take the next step of implementing a residual function.
 
-Recall \eqref{eq:of:plapweakform}, the weak form of the $p$-Laplacian equation, which says $\grad I[u](v) = 0$ for all $v\in W_0^{1,p}(\Omega)$.  The corresponding statement for $u\in S_g^h$ and all $v \in S_0^h$ will be written out in the basis of hat functions in $S_0^h$.  That is, we require $u$ to satisfy \eqref{eq:of:plapweakform} for every $v=\psi_{ij}$ corresponding to one of the $N$ interior nodes:
+Equation \eqref{eq:of:plapweakform}, the weak form of the $p$-Laplacian equation, says $\grad I[u](v) = 0$ for all $v\in W_0^{1,p}(\Omega)$.  The corresponding statement for $u\in S_g^h$ will be written out for $v$ equal to a hat function (Figure \ref{fig:of:q1hat}); these functions form a basis of $S_0^h$.  That is, we require $u\in S_g^h$ to satisfy \eqref{eq:of:plapweakform} on $v=\psi_{ij}$ corresponding to the $N$ interior nodes:
 \begin{equation}
-\int_\Omega |\grad u|^{p-2} \grad u \cdot \grad \psi_{ij} - f \psi_{ij} = 0. \label{eq:of:weakformbasis}
+\int_\Omega |\grad u|^{p-2} \grad u \cdot \grad \psi_{ij} - f \psi_{ij} = 0, \label{eq:of:weakformbasis}
 \end{equation}
-
-The support of $\psi_{ij}$ is localized around the node $(x_i,y_j)$,
+for $i=0,\dots,m_x-1$ and $j=0,\dots,m_y-1$.  Observe that the support of $\psi_{ij}$ is localized around the node $(x_i,y_j)$,
     $$\operatorname{supp} \psi_{ij} = \square_{ij} \cup \square_{i+1,j} \cup \square_{i,j+1} \cup \square_{i+1,j+1},$$
-so in fact the integral in \eqref{eq:of:weakformbasis} is over just four elements.  On the reference element we define
+so in fact the integral in \eqref{eq:of:weakformbasis} is over only four elements.
+
+\cinputpart{plap.c}{\CODELOC}{The residual function $\bF(\bu)$ corresponding to the weak form \eqref{eq:of:plapweakform}.  These two C functions implement \eqref{eq:of:weakformintegrandref} and \eqref{eq:of:weakformdetail}, respectively.}{VIII}{//STARTFUNCTION}{//ENDFUNCTION}{code:plapFun}
+
+Consider the four elements $\square_{i+c,j+d}$ for $c,d=0,1$.  Using the nodal values of $u$ and $f$ on these elements, on the reference element we construct
 \begin{equation}
 H_{ijcd}(\xi,\eta) = \left[|\grad u|^{p-2} \grad u \cdot \grad \chi_{[ij]} - f \chi_{[ij]}\right]_{\square_\ast} \label{eq:of:weakformintegrandref}
 \end{equation}
-where $\chi_{[ij]}$ denotes the basis function $\chi_\ell$ corresponding to $\psi_{ij}$--- recall equation \eqref{eq:of:psionref}---and where we use the nodal values of $u$ and $f$ on element $\square_{i+c,j+d}$ for $c,d=0,1$.  (Details are in Exercise \ref{chap:of}.\ref{exer:of:weakformintegrand}.)  Finally, we do the element integrals implied by \eqref{eq:of:weakformbasis} by using quadrature \eqref{eq:of:tensorgauss}.  Thus, in these terms, we rewrite \eqref{eq:of:weakformbasis} as
+where $\chi_{[ij]}$ denotes the basis function $\chi_\ell$ corresponding to $\psi_{ij}$--- recall equation \eqref{eq:of:psionref}. (Details are in Exercise \ref{chap:of}.\ref{exer:of:weakformintegrand}.)  We do the element integrals implied by \eqref{eq:of:weakformbasis}, with integrand \eqref{eq:of:weakformintegrandref}, by using quadrature \eqref{eq:of:tensorgauss}.  That is, we rewrite \eqref{eq:of:weakformbasis} as
 \begin{equation}
 \frac{h_x h_y}{4} \sum_{c=0}^1 \sum_{d=0}^1 \sum_{r=0}^{n-1} \sum_{s=0}^{n-1} w_r w_s H_{ijcd}(z_r,z_s) = 0.  \label{eq:of:weakformdetail}
 \end{equation}
 There is one such nonlinear equation for each of the $N$ interior nodes $(x_i,y_j)$.  Solving this system of equations, a nonlinear system $\bF(\bu)=0$ as in Chapter \ref{chap:nl}, should determine all $N$ values $u_{ij}$.
 
-Sum \eqref{eq:of:weakformdetail} is implemented by \texttt{FormFunctionLocal()} in Code \ref{code:plapFun}.  It computes the residual $F_{ij}(u)$ at every interior node $(x_i,y_j)$.  Note that \texttt{FunIntegrand()} in Code \ref{code:plapFun} implements \eqref{eq:of:weakformintegrandref} by reusing tools from Code \ref{code:plapTool}.
+Sum \eqref{eq:of:weakformdetail} is implemented by \texttt{FormFunctionLocal()} in Code \ref{code:plapFun}.  It computes the point-wise residual $F_{ij}(\bu)$ at every interior node $(x_i,y_j)$.  Note that \texttt{FunIntegrand()} in Code \ref{code:plapFun} implements \eqref{eq:of:weakformintegrandref} by reusing tools from Code \ref{code:plapTool}.
 
-\cinputpart{plap.c}{\CODELOC}{The residual function $\bF(\bu)$ corresponding to the weak form \eqref{eq:of:plapweakform}.  These two C functions implement \eqref{eq:of:weakformintegrandref} and \eqref{eq:of:weakformdetail}, respectively.}{VIII}{//STARTFUNCTION}{//ENDFUNCTION}{code:plapFun}
+The new version runs much faster, as expected:
+\begin{cline}
+$ timer ./plap -snes_fd_color -da_refine 3 | grep real
+real 0.06
+$ timer ./plap -snes_fd_color -da_refine 3 -snes_fd_function | grep real
+real 15.13
+\end{cline}
+We can also give convincing convergence at the rate expected in theory for such a $Q^1$ FEM \citep{Elmanetal2005}.  In fact, running
+\begin{cline}
+$ for LEV in 0 1 2 3 4 5 6 7 8; do
+> ./plap -snes_fd_color -snes_converged_reason -da_refine $LEV; done
+\end{cline}
+%$
+generates the convergence result in Figure \ref{fig:of:plap-conv}.
 
-FIXME: show result
+\begin{figure}
+\includegraphics[width=0.8\textwidth]{figs/plap-conv}
+\caption{This convergence evidence suggests \texttt{plap.c} correctly solves the $p$-Laplacian equation, both with the objective-only (four coarsest grids only; circled) and residual (all grids) implementations.}
+\label{fig:of:plap-conv}
+\end{figure}
 
-FIXME: compare evals with objective-only
+
+FIXME: compare eval counts with objective-only
 % -log_summary | grep Eval
 
 FIXME: compare $n=1,2,3$ quadrature points
