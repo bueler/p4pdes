@@ -47,7 +47,7 @@ Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 12
 numerical error:  |u-u_exact|/|u_exact| = 2.011e-06
 """
 
-data = """
+p4data = """
 $ for LEV in 0 1 2 3 4 5 6 7 8; do ./plap -snes_fd_color -snes_converged_reason -da_refine $LEV; done
 grid of 3 x 3 = 9 interior nodes (element dims 0.25x0.25)
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
@@ -81,21 +81,21 @@ numerical error:  |u-u_exact|/|u_exact| = 2.840e-07
 mx = np.array([3, 5, 9, 17,
                33, 65, 129, 257, 513])
 h = 1.0 / (mx+1.0)
-#objerr = [8.081e-03, 2.929e-03, 9.253e-04, 2.582e-04]   # same for first four
+#objp4err = [8.081e-03, 2.929e-03, 9.253e-04, 2.582e-04]   # same for first four
 quad1err = [1.589e-02, 5.491e-03, 1.667e-03, 4.600e-04,
             1.219e-04, 3.138e-05, 7.964e-06, 2.011e-06]
-err = [8.081e-03, 2.929e-03, 9.253e-04, 2.582e-04,
+p4err = [8.081e-03, 2.929e-03, 9.253e-04, 2.582e-04,
        6.863e-05, 1.769e-05, 4.490e-06, 1.135e-06, 2.840e-07]
 
-p = np.polyfit(np.log(h),np.log(err),1)
+p = np.polyfit(np.log(h),np.log(p4err),1)
 print "result:  error decays at rate O(h^%.4f)" % p[0]
 
 fig = plt.figure(figsize=(7,6))
 plt.hold(True)
 
-plt.loglog(h[0:4],err[0:4],'ko',markersize=16.0,markerfacecolor='w')
+plt.loglog(h[0:4],p4err[0:4],'ko',markersize=16.0,markerfacecolor='w')
 plt.loglog(h[0:8],quad1err,'ks',markersize=10.0,markerfacecolor='w')
-plt.loglog(h,err,'ko',markersize=10.0)
+plt.loglog(h,p4err,'ko',markersize=10.0)
 plt.loglog(h,np.exp(np.polyval(p,np.log(h))),'k--',lw=2.0)
 
 plt.text(0.012,4.0e-6,r'$O(h^{%.4f})$' % p[0],fontsize=20.0)
