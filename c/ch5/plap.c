@@ -1,10 +1,10 @@
 static char help[] = "Solve the p-Laplacian equation in 2D using Q^1 FEM.\n"
 "Implements an objective function and a residual (gradient) function, but\n"
 "no Jacobian.  Defaults to p=4 and quadrature degree n=2.  Run as one of:\n"
-"   ./plap -snes_fd_color\n"
-"   ./plap -snes_fd\n"
+"   ./plap -snes_fd_color             [default]\n"
 "   ./plap -snes_mf\n"
-"   ./plap -snes_fd_function -snes_fd\n"
+"   ./plap -snes_fd                   [does not scale]\n"
+"   ./plap -snes_fd_function -snes_fd [does not scale]\n"
 "Uses a manufactured solution.\n\n";
 
 // EVIDENCE OF CONVERGENCE WITH OBJECTIVE-ONLY AND DIRECT SOLVE
@@ -57,10 +57,9 @@ PetscErrorCode ConfigureCtx(PLapCtx *user) {
 }
 //ENDCTX
 
-//FIXME:  alpha in here
 //STARTBDRYINIT
-double BoundaryG(double x, double y) {
-    return 0.5 * (x+1.0)*(x+1.0) * (y+1.0)*(y+1.0);
+double BoundaryG(double x, double y, double alpha) {
+    return 0.5 * (x+alpha)*(x+alpha) * (y+alpha)*(y+alpha);
 }
 
 PetscErrorCode SetGLocal(DMDALocalInfo *info, Vec g, PLapCtx *user) {
@@ -76,7 +75,7 @@ PetscErrorCode SetGLocal(DMDALocalInfo *info, Vec g, PLapCtx *user) {
                 ag[j][i] = NAN;               // invalidate interior
             } else {
                 x = hx * (i + 1);  y = hy * (j + 1);
-                ag[j][i] = BoundaryG(x,y);    // along boundary
+                ag[j][i] = BoundaryG(x,y,user->alpha);  // along boundary
             }
         }
     }
@@ -86,7 +85,8 @@ PetscErrorCode SetGLocal(DMDALocalInfo *info, Vec g, PLapCtx *user) {
 
 PetscErrorCode InitialIterate(DMDALocalInfo *info, Vec u, PLapCtx *user) {
     PetscErrorCode ierr;
-    const double hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1);
+    const double hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1),
+                 alf = user->alpha;
     double       x,y, **au;
     int          i,j;
 
@@ -95,7 +95,8 @@ PetscErrorCode InitialIterate(DMDALocalInfo *info, Vec u, PLapCtx *user) {
         y = hy * (j + 1);
         for (i = info->xs; i < info->xs + info->xm; i++) {
             x = hx * (i + 1);
-            au[j][i] = (1.0 - x) * BoundaryG(0.0,y) + x * BoundaryG(1.0,y);
+            au[j][i] = (1.0 - x) * BoundaryG(0.0,y,alf)
+                       + x * BoundaryG(1.0,y,alf);
         }
     }
     ierr = DMDAVecRestoreArray(user->da,u,&au); CHKERRQ(ierr);
@@ -127,7 +128,7 @@ PetscErrorCode ExactRHSLocal(DMDALocalInfo *info, Vec uex, Vec f,
             af[j][i] = - (p-2.0) * C * (gamma1*(x+1.0)*YY + gamma2*XX*(y+1.0))
                        - C * D2;
             if ((i >= info->xs) && (i < XE) && (j >= info->ys) && (j < YE)) {
-                auex[j][i] = BoundaryG(x,y);   // use as exact solution
+                auex[j][i] = BoundaryG(x,y,user->alpha); // here: exact soln
             }
         }
     }
