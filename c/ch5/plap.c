@@ -346,7 +346,7 @@ int main(int argc,char **argv) {
   ierr = VecNorm(uexact,NORM_INFINITY,&unorm); CHKERRQ(ierr);
   ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
   ierr = VecNorm(u,NORM_INFINITY,&err); CHKERRQ(ierr);
-  ierr = PetscPrintf(COMM,"numerical error:  |u-u_exact|/|u_exact| = %g\n",
+  ierr = PetscPrintf(COMM,"numerical error:  |u-u_exact|/|u_exact| = %.3e\n",
            err/unorm); CHKERRQ(ierr);
 
   VecDestroy(&u);  VecDestroy(&uexact);

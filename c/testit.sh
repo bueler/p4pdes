@@ -6,14 +6,17 @@ rm -f maketmp tmp difftmp
 
 make $1 > maketmp 2>&1;
 
-mpiexec -n $3 ./$1 $2 > tmp
+CMD="mpiexec -n $3 ./$1 $2"
+
+$CMD > tmp
 
 diff output/$1.test$4 tmp > difftmp
 
 CURRDIR=${PWD##*/}
 if [[ -s difftmp ]] ; then
-   echo "ERROR: Test #$4 of $CURRDIR/$1"
-   echo "       on $3 processes FAILED; diffs follow:"
+   echo "FAIL: Test #$4 of $CURRDIR/$1"
+   echo "       command = '$CMD'"
+   echo "       diffs follow:"
    cat difftmp
 else
    echo "PASS: Test #$4 of $CURRDIR/$1"
