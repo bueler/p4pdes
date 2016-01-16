@@ -118,6 +118,7 @@ PetscErrorCode ExactRHSLocal(DMDALocalInfo *info, Vec uex, Vec f,
     ierr = DMDAVecGetArray(user->da,f,&af); CHKERRQ(ierr);
     // loop over ALL grid points; f has ghosts but uex does not
     for (j = info->ys - 1; j <= YE; j++) {
+FIXME:  use alpha
         y = hy * (j + 1);  YY = (y+1.0)*(y+1.0);
         for (i = info->xs - 1; i <= XE; i++) {
             x = hx * (i + 1);  XX = (x+1.0)*(x+1.0);
@@ -127,6 +128,7 @@ PetscErrorCode ExactRHSLocal(DMDALocalInfo *info, Vec uex, Vec f,
             gamma2 = 1.0/(y+1.0) + (y+1.0)/D2;
             af[j][i] = - (p-2.0) * C * (gamma1*(x+1.0)*YY + gamma2*XX*(y+1.0))
                        - C * D2;
+END FIXME
             if ((i >= info->xs) && (i < XE) && (j >= info->ys) && (j < YE)) {
                 auex[j][i] = BoundaryG(x,y,user->alpha); // here: exact soln
             }
