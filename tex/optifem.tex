@@ -509,6 +509,7 @@ SNESObjectiveEval   20539 1.0 1.5497e+00 1.0 ...
 $ ./plap -snes_fd_function -snes_fd_color -da_refine 1 -log_summary | grep ObjectiveEval
 SNESObjectiveEval    5410 1.0 4.8340e-01 1.0 ...
 \end{cline}
+\label{page:of:badEvalcount}
 Better.  But this remains a disturbingly-large evaluation count.
 
 Nonetheless, given that we have an implementation with an exact solution, we want to see convergence:
@@ -565,16 +566,28 @@ where $\chi_{[ij]}$ denotes the basis function $\chi_\ell$ corresponding to $\ps
 \end{equation}
 There is one such nonlinear equation for each of the $N$ interior nodes $(x_i,y_j)$.  Solving this system of equations, a nonlinear system $\bF(\bu)=0$ as in Chapter \ref{chap:nl}, should determine all $N$ values $u_{ij}$.
 
-Sum \eqref{eq:of:weakformdetail} is implemented by \texttt{FormFunctionLocal()} in Code \ref{code:plapFun}.  It computes the point-wise residual $F_{ij}(\bu)$ at every interior node $(x_i,y_j)$.  Note that \texttt{FunIntegrand()} in Code \ref{code:plapFun} implements \eqref{eq:of:weakformintegrandref} by reusing tools from Code \ref{code:plapTool}.
+Sum \eqref{eq:of:weakformdetail} is implemented by \texttt{FormFunctionLocal()} in Code \ref{code:plapFun}.  It computes the point-wise residual $F_{ij}(\bu)$ at every interior node $(x_i,y_j)$.  Note that \texttt{FunIntegrand()} implements \eqref{eq:of:weakformintegrandref} by reusing tools from Code \ref{code:plapTool}.
 
-The new version runs much faster, as expected:
+The version using residual evaluation runs much faster than the objective-only implementation, as expected,
 \begin{cline}
-$ timer ./plap -snes_fd_color -da_refine 3 | grep real
+$ timer ./plap -snes_fd_color -da_refine 3
+...
 real 0.06
-$ timer ./plap -snes_fd_color -da_refine 3 -snes_fd_function | grep real
+$ timer ./plap -snes_fd_color -da_refine 3 -snes_fd_function
+...
 real 15.13
 \end{cline}
-We can also give convincing convergence at the rate expected in theory for such a $Q^1$ FEM \citep{Elmanetal2005}.  In fact, running
+Also, the user-provided-function evaluation counts are now reasonable given that the following run does four Newton iterations on a grid with $N=25$ interior points:
+\begin{cline}
+$ ./plap -snes_fd_color -da_refine 1 -log_summary | grep Eval
+SNESFunctionEval      41 1.0 1.3937e-02 1.0 ...
+SNESObjectiveEval       8 1.0 1.5259e-03 1.0 ...
+...
+\end{cline}
+%$
+Compare the \texttt{-snes\_fd\_function} result on page \pageref{page:of:badEvalcount}.
+
+Furthermore, we can give convincing convergence evidence, at the $O(h^2)$ rate expected from the theory of well-behaved\sidenote{E.g.~convex polygonal domain, smooth source term, and smooth coefficient function.} linear and uniformly-elliptic PDEs for such a $Q^1$ FEM \citep{Elmanetal2005}.  In fact, running
 \begin{cline}
 $ for LEV in 0 1 2 3 4 5 6 7 8; do
 > ./plap -snes_fd_color -snes_converged_reason -da_refine $LEV; done
@@ -584,15 +597,38 @@ generates the convergence result in Figure \ref{fig:of:plap-conv}.
 
 \begin{figure}
 \includegraphics[width=0.8\textwidth]{figs/plap-conv}
-\caption{This convergence evidence suggests \texttt{plap.c} correctly solves the $p$-Laplacian equation, both with the objective-only (four coarsest grids only; circled) and residual (all grids) implementations.}
+\caption{Convergence evidence for the default $p=4$ case suggests \texttt{plap.c} correctly solves the $p$-Laplacian equation \eqref{eq:of:plapweakform}.  Errors are comparable with the objective-only (four coarsest grids only; circled) and residual (solid dots) implementations.  Degree $n=1$ Gauss-Legendre quadrature (squares) generates systematically larger errors than the default $n=2$ degree results; $n=3$ degree results are indistinguishable from the $n=2$ shown here.}
 \label{fig:of:plap-conv}
 \end{figure}
 
+Recall that we have implemented degree $n=1,2,3$ Gauss-Legendre quadrature.  Now is the time to compare these, and it turns out that we can demonstrate a genuine performance/accuracy trade-off on this problem.  Because we are doing timing on a positive-definite and symmetric problem,\sidenote{Observe that if the weak form is derived from an optimization principle then the Jacobian is symmetric.} we use a \texttt{PETSC\_ARCH} corresponding to a \texttt{--with-debugging=0} \PETSc configuration (not shown) and we choose a preconditioned CG method (``\texttt{-ksp\_type cg -pc\_type icc}''; see Chapter \ref{chap:ls}):
+\begin{cline}
+$ for N in 1 2 3; do
+> timer ./plap -snes_fd_color -ksp_type cg -pc_type icc \
+>   -snes_converged_reason -da_refine 6 -plap_quaddegree $N; done
+grid of 129 x 129 = 16641 interior nodes (element dims 0.00769231x0.00769231)
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 11
+numerical error:  |u-u_exact|/|u_exact| = 7.964e-06
+real 6.09
+grid of 129 x 129 = 16641 interior nodes (element dims 0.00769231x0.00769231)
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 11
+numerical error:  |u-u_exact|/|u_exact| = 4.490e-06
+real 13.55
+grid of 129 x 129 = 16641 interior nodes (element dims 0.00769231x0.00769231)
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 11
+numerical error:  |u-u_exact|/|u_exact| = 4.490e-06
+real 23.05
+\end{cline}
 
-FIXME: compare eval counts with objective-only
-% -log_summary | grep Eval
+The results are quite clear in this case:
+\renewcommand{\labelenumi}{\emph{(\roman{enumi})}}
+\begin{enumerate}
+\item higher degree quadrature is more expensive than lower degree,
+\item $n=2$ degree quadrature is the minimum needed to solve our $Q^1$ FEM equations accurately.
+\end{enumerate}
+In fact there is a systematic loss of accuracy using $n=1$ quadrature as shown in Figure \ref{fig:of:plap-conv}.  On the other hand, the $n=3$ errors are systematically indistinquishable from $n=2$ results (not shown), so as expected \citep{Elmanetal2005} there is no justification for using $n>2$ quadrature.
 
-FIXME: compare $n=1,2,3$ quadrature points
+Examining the $n=1,2$ performance difference a bit more carefully, by adding option \texttt{-ksp\_converged\_reason} to the above options (not shown), we see that there are two partly-cancelling performance changes with $n=1$ quadrature.  On the one hand there are more CG iterations with $n=1$.  On the other, the evaluation of the quadrature sum \eqref{eq:of:tensorgauss} in the $n=1$ case is so much faster that we still get twice the speed relative to the $n=2$ case.
 
 FIXME: visualize solution and newton step
 % Do you want the solution of the linear system before the line search (line search may shrink the vector) use -ksp_view_solution or the actual update selected by Newton -snes_monitor_solution_update
