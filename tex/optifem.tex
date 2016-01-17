@@ -595,8 +595,8 @@ $ for LEV in 0 1 2 3 4 5 6 7 8; do
 generates the convergence result in Figure \ref{fig:of:plap-conv}.
 
 \begin{figure}
-\includegraphics[width=0.8\textwidth]{figs/plap-conv}
-\caption{Convergence evidence for the default $p=4$ case suggests \texttt{plap.c} correctly solves the $p$-Laplacian equation \eqref{eq:of:plapweakform}.  Errors are comparable with the objective-only (four coarsest grids only; circled) and residual (solid dots) implementations.  Degree $n=1$ Gauss-Legendre quadrature (squares) generates systematically larger errors than the default $n=2$ degree results; $n=3$ degree results are indistinguishable from the $n=2$ shown here.}
+\includegraphics[width=\textwidth]{figs/plap-conv}
+\caption{Convergence evidence for the default $p=4$ case suggests \texttt{plap.c} correctly solves the $p$-Laplacian equation \eqref{eq:of:plapweakform}.  Errors are comparable with the objective-only (four coarsest grids only; circled) and residual (dots) implementations.  Degree $n=1$ Gauss-Legendre quadrature (squares) generates systematically larger errors than the default $n=2$ degree results; $n=3$ degree results are indistinguishable from the $n=2$ shown here.}
 \label{fig:of:plap-conv}
 \end{figure}
 
@@ -670,9 +670,15 @@ While it is good that everything works with $N=10^6$ degrees of freedom, we are 
 We should also compare convergence for different $p$ values, which represent different degrees of nonlinearity relative to the $p=2$ case.  FIXME
 
 \begin{figure}
-FIXME %\includegraphics[width=0.8\textwidth]{figs/plap-presults}
-\caption{Errors for $p=1.2$ (circles), $p=2$ (squares), and $p=4$ (solid dots).}
-\label{fig:of:plap-presults}
+\includegraphics[width=\textwidth]{figs/plap-perrs}
+\caption{Errors for $p=1.1,2.1,4,10$.}
+\label{fig:of:plap-perrs}
+\end{figure}
+
+\begin{figure}
+\includegraphics[width=0.95\textwidth]{figs/plap-piters}
+\caption{Newton iterations for $p=1.1,2.1,4,10$.}
+\label{fig:of:plap-piters}
 \end{figure}
 
 
