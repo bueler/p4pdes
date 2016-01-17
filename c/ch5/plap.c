@@ -88,8 +88,7 @@ PetscErrorCode SetGLocal(DMDALocalInfo *info, Vec g, PLapCtx *user) {
 
 PetscErrorCode InitialIterate(DMDALocalInfo *info, Vec u, PLapCtx *user) {
     PetscErrorCode ierr;
-    const double hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1),
-                 alf = user->alpha;
+    const double hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1);
     double       x,y, **au;
     int          i,j;
 
@@ -98,8 +97,8 @@ PetscErrorCode InitialIterate(DMDALocalInfo *info, Vec u, PLapCtx *user) {
         y = hy * (j + 1);
         for (i = info->xs; i < info->xs + info->xm; i++) {
             x = hx * (i + 1);
-            au[j][i] = (1.0 - x) * BoundaryG(0.0,y,alf)
-                       + x * BoundaryG(1.0,y,alf);
+            au[j][i] = (1.0 - x) * BoundaryG(0.0,y,user->alpha)
+                       + x * BoundaryG(1.0,y,user->alpha);
         }
     }
     ierr = DMDAVecRestoreArray(user->da,u,&au); CHKERRQ(ierr);
