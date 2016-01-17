@@ -32,7 +32,7 @@ static char help[] = "Solve the p-Laplacian equation in 2D using Q^1 FEM.\n"
 //STARTCTX
 typedef struct {
     DM      da;
-    double  p, alpha;
+    double  p, eps, alpha;
     int     quaddegree;
     Vec     f, g;
 } PLapCtx;
@@ -40,12 +40,15 @@ typedef struct {
 PetscErrorCode ConfigureCtx(PLapCtx *user) {
     PetscErrorCode ierr;
     user->p = 4.0;
+    user->eps = 0.0;
     user->alpha = 1.0;
     user->quaddegree = 2;
     ierr = PetscOptionsBegin(COMM,"plap_","p-laplacian solver options",""); CHKERRQ(ierr);
     ierr = PetscOptionsReal("-p","exponent p with  1 <= p < infty",
                       NULL,user->p,&(user->p),NULL); CHKERRQ(ierr);
     if (user->p < 1.0) { SETERRQ(COMM,1,"p >= 1 required"); }
+    ierr = PetscOptionsReal("-eps","regularization parameter eps",
+                      NULL,user->eps,&(user->eps),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsReal("-alpha","parameter alpha in exact solution",
                       NULL,user->alpha,&(user->alpha),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsInt("-quaddegree","quadrature degree n (= 1,2,3 only)",
@@ -205,16 +208,16 @@ double GradInnerProd(DMDALocalInfo *info, gradRef du, gradRef dv) {
     return cx * du.xi  * dv.xi + cy * du.eta * dv.eta;
 }
 
-double GradPow(DMDALocalInfo *info, gradRef du, double P) {
-    return PetscPowScalar(GradInnerProd(info,du,du), P / 2.0);
+double GradPow(DMDALocalInfo *info, gradRef du, double P, double eps) {
+    return PetscPowScalar(GradInnerProd(info,du,du) + eps * eps, P / 2.0);
 }
 //ENDTOOLS
 
 //STARTOBJECTIVE
 double ObjIntegrand(DMDALocalInfo *info, const double f[4], const double u[4],
-                    double xi, double eta, double P) {
+                    double xi, double eta, double P, double eps) {
     const gradRef du = deval(u,xi,eta);
-    return GradPow(info,du,P) / P - eval(f,xi,eta) * eval(u,xi,eta);
+    return GradPow(info,du,P,eps) / P - eval(f,xi,eta) * eval(u,xi,eta);
 }
 
 PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
@@ -241,8 +244,8 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
               for (r=0; r<n; r++) {
                   for (s=0; s<n; s++) {
                       lobj += wq[n-1][r] * wq[n-1][s]
-                              * ObjIntegrand(info,f,u,
-                                             zq[n-1][r],zq[n-1][s],user->p);
+                              * ObjIntegrand(info,f,u,zq[n-1][r],zq[n-1][s],
+                                             user->p,user->eps);
                   }
               }
           }
@@ -261,10 +264,10 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
 //STARTFUNCTION
 double FunIntegrand(DMDALocalInfo *info, int L,
                     const double f[4], const double u[4],
-                    double xi, double eta, double P) {
+                    double xi, double eta, double P, double eps) {
   const gradRef du    = deval(u,xi,eta),
                 dchiL = dchi(L,xi,eta);
-  return GradPow(info,du,P - 2.0) * GradInnerProd(info,du,dchiL)
+  return GradPow(info,du,P - 2.0,eps) * GradInnerProd(info,du,dchiL)
          - eval(f,xi,eta) * chi(L,xi,eta);
   return 0;
 }
@@ -294,7 +297,8 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                       for (s=0; s<n; s++) {
                           z += wq[n-1][r] * wq[n-1][s]
                                * FunIntegrand(info,ell[c][d],f,u,
-                                              zq[n-1][r],zq[n-1][s],user->p);
+                                              zq[n-1][r],zq[n-1][s],
+                                              user->p,user->eps);
                       }
                   }
               }
