@@ -100,7 +100,7 @@ We pause to choose a particular test problem, and we want a problem for which th
 \end{equation}
 This formula also determines $g$ along $\partial \Omega$.  The source function $f$ is then computed by hand\sidenote{The by-hand derivative calculation which generates $f(x,y)$ from the exact solution $u(x,y)$ is acceptably simple, but it is still error-prone.  Because by-hand calculation errors are likely to be un-correlated to code-implementation errors, however, agreement is likely to reflect correctness.} from the strong form \eqref{eq:of:plapstrongform}.
 
-Exercise \ref{chap:of}.\ref{exer:of:regularize} shows that if $\alpha>0$ then the coefficient of the $p$-Laplacian equation, namely $|\grad u|^{p-2}$, is bounded below by a positive constant, and that it is bounded above.  Thus equation \eqref{eq:of:plapweakform}, or \eqref{eq:of:plapstrongform}, is uniformly elliptic \citep{Evans2010} at the solution \eqref{eq:of:exactsolution}.  However, though such bounds apply at the solution, they do not necessarily apply to the approximations (iterates) in a numerical procedure, so the iteration might ``lose ellipticity'' on the way to the solution.  We will return to such considerations once we have an implementation.
+If $\alpha>0$ then the coefficient of the $p$-Laplacian equation, namely $|\grad u|^{p-2}$, is bounded below by a positive constant, and that it is bounded above.  Thus equation \eqref{eq:of:plapweakform}, or \eqref{eq:of:plapstrongform}, is uniformly elliptic \citep{Evans2010} at the solution \eqref{eq:of:exactsolution}.  However, though such bounds apply at the solution, they do not necessarily apply to the approximations (iterates) in a numerical procedure, so the iteration might ``lose ellipticity'' on the way to the solution.  We will return to such considerations, and consider the $\alpha \le 0$ cases and the corresponding need for regularization, once we have an implementation.
 
 
 \section{Structured $Q^1$ finite elements}
@@ -374,7 +374,7 @@ Our program \texttt{plap.c} is displayed in eight parts, Codes \ref{code:plapCtx
 
 \cinputpart{plap.c}{\CODELOC}{Declare and configure a context.}{I}{//STARTCTX}{//ENDCTX}{code:plapCtx}
 
-Code \ref{code:plapCtx} declares a ``context'' \texttt{struct PLapCtx} which will be needed in the call-back functions \texttt{FormObjectiveLocal()} (Code \ref{code:plapObj}) and \texttt{FormFunctionLocal()} (Code \ref{code:plapFun}).  Defaults and \PETSc options are then set in the \texttt{ConfigureCtx()} function.  Note that exponent $p$ defaults to 4 and that the default for $\alpha$ in \eqref{eq:of:exactsolution} is 1.
+Code \ref{code:plapCtx} declares a ``context'' \texttt{struct PLapCtx} which will be needed in the call-back functions \texttt{FormObjectiveLocal()} (Code \ref{code:plapObj}) and \texttt{FormFunctionLocal()} (Code \ref{code:plapFun}).  Defaults and \PETSc options are then set in the \texttt{ConfigureCtx()} function.  Note that exponent $p$ defaults to 4, the default for $\alpha$ in \eqref{eq:of:exactsolution} is 1, and the default for regularization parameter $\eps$ is zero.  (Until we explain why regularization can sometimes be needed, starting on page \pageref{page:of:regularization}, we do not use it!)
 
 \cinputpart{plap.c}{\CODELOC}{Set boundary values and initial iterate.  The boundary values set the ghosted nodes of a \texttt{Local} \pVec.}{II}{//STARTBDRYINIT}{//ENDBDRYINIT}{code:plapBI}
 
@@ -388,13 +388,15 @@ A main concern in Codes \ref{code:plapBI} and \ref{code:plapEx} is that we will 
 
 We show FEM tools in Code \ref{code:plapFEM}.  These are generic to any $Q^1$ method in 2D which is based on a reference element.  We evaluate basis functions $\chi_\ell$, and their partial derivatives, at points $(\xi,\eta) \in \square_\ast$.  We also implement formulas \eqref{eq:of:chidefn}, \eqref{eq:of:bilinearref}, and \eqref{eq:of:gradrepref}.  Note that a two-element \texttt{struct gradRef} holds the components of a gradient at a point.  We also declare nodes and weights for degree $n=1,2,3$ Gauss-Legendre quadrature, with values from Table \ref{tab:of:gauss}.
 
+\cinputpart{plap.c}{\CODELOC}{Tools for any 2D $Q^1$ FEM method.}{IV}{//STARTFEM}{//ENDFEM}{code:plapFEM}
+
 Next, Code \ref{code:plapTool} has functions of convenience; these allow us to avoid code duplication in \texttt{FormObjectiveLocal()} and \texttt{FormFunctionLocal()}.  First is a function \texttt{GetUorG()} which evaluates either $u(x,y)$ or $g(x,y)$ according to whether a point $(x_i,y_j)\in\overline\Omega$ is an interior or boundary node.  Then there are methods which compute point-wise inner products $\grad u\cdot \grad v$ and powers $|\grad u|^P$ from nodal values.
 
-\cinputpart{plap.c}{\CODELOC}{Tools for any 2D $Q^1$ FEM method.}{IV}{//STARTFEM}{//ENDFEM}{code:plapFEM}
+\cinputpart{plap.c}{\CODELOC}{Functions needed for evaluation of boundary values and functions of the gradient $\grad u$.}{V}{//STARTTOOLS}{//ENDTOOLS}{code:plapTool}
 
 In Code \ref{code:plapObj} we compute the discrete objective functional $I^h[u]$, from \eqref{eq:of:quadraturesumoverelements}, in parallel.  The basic structure is that each rank computes its portion of the sum over all elements.  A local total \texttt{lobj} is incremented in the loop over owned elements by the line
 \begin{code}
-    lobj += wq[n-1][r] * wq[n-1][s] * ObjIntegrand(info,f,u,zq[n-1][r],zq[n-1][s],user->p);
+    lobj += wq[n-1][r] * wq[n-1][s] * ObjIntegrand(info,f,u,zq[n-1][r],zq[n-1][s],...);
 \end{code}
 which uses both the quadrature weights $w_q$ and nodes $z_q$ (Code \ref{code:plapFEM}).  Function \texttt{ObjIntegrand()} implements $G_{ij}(\xi,\eta)$ from \eqref{eq:of:integrandheuristic}.  Once the local contribution is fully-summed, a reduction across the MPI communicator puts the value of $I^h[u]$ into variable \texttt{obj} on each rank:
 \begin{code}
@@ -403,13 +405,9 @@ which uses both the quadrature weights $w_q$ and nodes $z_q$ (Code \ref{code:pla
 
 However, implementing the objective function requires us to be clearer than we have been so far on the parallel distribution of nodes and elements.  To do a sum over elements we must assign unique ownership of an element to a rank (process).
 
-\cinputpart{plap.c}{\CODELOC}{Functions needed for evaluation of boundary values and functions of the gradient $\grad u$.}{V}{//STARTTOOLS}{//ENDTOOLS}{code:plapTool}
-
 \cinputpart{plap.c}{\CODELOC}{Implement \eqref{eq:of:quadraturesumoverelements} for the objective function $I^h[u]$.}{VI}{//STARTOBJECTIVE}{//ENDOBJECTIVE}{code:plapObj}
 
 Figure \ref{fig:of:parallelgrid} shows the scheme we have implemented.  The interior nodes are distributed across the processes in the obvious way.  That is, \PETSc's \pDMDA object treats the grid of interior nodes here just as it did the grid of all nodes in Chapter \ref{chap:st}.  Regarding the elements, we decide that each rank owns those which are down and left from an owned node.  However, we also decide that ranks which own $i=m_x-1$ or $j=m_y-1$ nodes, that is, ranks which own the upper or right edges of the grid, also own the elements above and to the right of these nodes.
-
-\cinputpart{plap.c}{\CODELOC}{In \texttt{main()} we set up \pDMDA, some \pVecs, and the \pSNES.  Then we solve and compute the error.}{VII}{//STARTMAIN}{//ENDMAIN}{code:plapMain}
 
 \newcommand{\gridsansowners}{
   % grid
@@ -480,9 +478,11 @@ The main part, Code \ref{code:plapMain}, calls the various functions in the prev
 \end{code}
 which casts the type of \texttt{FormObjectiveLocal()} to the correct type for the call-back.  Similarly, we call \texttt{DMDASNESSetFunctionLocal()} to tell the \pDMDA about \texttt{FormFunctionLocal()}; see Code \ref{code:plapFun} for the implementation.  Then we call \texttt{SNESSolve()}, compute the error, and destroy all the objects at the end.\sidenote{Regarding that last \texttt{Destroy()} step, the reader should check that it has no memory leaks once the program is built: \texttt{valgrind ./plap}}
 
-The parts above show the complete objective-only implementation.  To use it requires option \texttt{-snes\_fd\_function}, which does finite differencing on the objective functional $I^h[u]$, equation \eqref{eq:of:quadraturesumoverelements}, to get its gradient $\grad I^h[u]$.  Then the \pSNES solves the corresponding nonlinear system, $\bF(\bu) = \grad I^h[\bu] = 0$ in the notation of Chapter \ref{chap:nl}.
+These parts show the complete objective-only implementation.  To use it requires option \texttt{-snes\_fd\_function}, which does finite differencing on the objective functional $I^h[u]$, equation \eqref{eq:of:quadraturesumoverelements}, to get its gradient $\grad I^h[u]$.  Then the \pSNES solves the corresponding nonlinear system, $\bF(\bu) = \grad I^h[\bu] = 0$ in the notation of Chapter \ref{chap:nl}.
 
-However, even with a residual function $\bF(\bu)$ approximated this way, we still need a Jacobian for Newton's method.  To get that we ask \PETSc to finite difference \emph{again}, using either \texttt{-snes\_fd} or \texttt{-snes\_mf}.  Recall from Chapter \ref{chap:nl} that we can ask \PETSc to count C function evaluations, to confirm that only the objective function is evaluated:
+\cinputpart{plap.c}{\CODELOC}{In \texttt{main()} we set up \pDMDA, some \pVecs, and the \pSNES.  Then we solve and compute the error.}{VII}{//STARTMAIN}{//ENDMAIN}{code:plapMain}
+
+However, even with a residual function $\bF(\bu)$ approximated this way, we still need a Jacobian for Newton's method.  To get that we ask \PETSc to finite difference \emph{again}, using either \texttt{-snes\_fd} or \texttt{-snes\_mf}.  For example:
 \begin{cline}
 $ cd c/ch5/
 $ make plap
@@ -500,9 +500,9 @@ SNESObjectiveEval    2198 1.0 1.8496e-01 1.0 ...
 SNESJacobianEval       7 1.0 2.1275e-01 1.0 ...
 \end{cline}
 %$
-No counts of ``\texttt{SNESFunctionEval}'' evaluations appear.\sidenote{The Jacobian evaluation counts report calls to \PETSc's finite difference Jacobian method.}  On the default ($3\times 3$ interior nodes) grid we have therefore evaluated the objective functional 2198 times!  This should be taken as a not-at-all subtle warning that the method does not scale to fine grids.
+No counts of ``\texttt{SNESFunctionEval}'' evaluations appear.  (The Jacobian evaluation counts report calls to \PETSc's finite difference Jacobian method.)  On the default grid of $3\times 3=9$ interior nodes grid we have evaluated the objective functional 2198 times!
 
-Experience from Chapter \ref{chap:nl} suggests using a ``coloring'' method, available for our \pDMDA-managed structured grid.  This reduces the evaluation count, here on a once-refined $5 \times 5$ grid:
+However, experience from Chapter \ref{chap:nl} suggests using a ``coloring'' method, available for our \pDMDA-managed structured grid.  This reduces the evaluation count, here on a once-refined $5 \times 5$ grid:
 \begin{cline}
 $ ./plap -snes_fd_function -snes_fd -da_refine 1 -log_summary | grep ObjectiveEval
 SNESObjectiveEval   20539 1.0 1.5497e+00 1.0 ...
@@ -510,13 +510,13 @@ $ ./plap -snes_fd_function -snes_fd_color -da_refine 1 -log_summary | grep Objec
 SNESObjectiveEval    5410 1.0 4.8340e-01 1.0 ...
 \end{cline}
 \label{page:of:badEvalcount}
-Better.  But this remains a disturbingly-large evaluation count.
+Though better, this remains a disturbingly-large evaluation count.  These counts should be taken as a blunt warning that the method will not scale to fine grids.
 
-Nonetheless, given that we have an implementation with an exact solution, we want to see convergence:
+Nonetheless, given that we have an implementation with an exact solution, we want to see convergence:\sidenote{Recall the \texttt{alias} \texttt{timer='time -f "real \%e"'} (Chapter \ref{chap:ls}).  This timing run is done with a ``\texttt{--with-debugging=0}'' configuration, a change of \texttt{PETSC\_ARCH}.}
 \begin{cline}
 $ for LEV in 0 1 2 3; do
-> timer ./plap -snes_fd_color -snes_fd_function -snes_converged_reason -da_refine $LEV
-> done
+> timer ./plap -snes_fd_color -snes_fd_function \
+>   -snes_converged_reason -da_refine $LEV; done
 grid of 3 x 3 = 9 interior nodes (element dims 0.25x0.25)
 Nonlinear solve converged due to CONVERGED_FNORM_ABS iterations 6
 numerical error:  |u-u_exact|/|u_exact| = 8.081e-03
@@ -535,18 +535,16 @@ numerical error:  |u-u_exact|/|u_exact| = 2.582e-04
 real 16.48
 \end{cline}
 %$
-For the above runs, recall the \texttt{alias} set in Chapter \ref{chap:ls}: \texttt{timer='time -f "real \%e"'}.  Also, this timing run is done with a ``\texttt{--with-debugging=0}'' configuration, thus a change of \texttt{PETSC\_ARCH}.
+This is evidence of convergence, with reductions of the error by factors close to $O(\Delta x^2)$.  However, on the two finer grids we get divergence of either the iterative linear solver (\texttt{DIVERGED\_LINEAR\_SOLVE}) or the Newton iteration (\texttt{DIVERGED\_LINE\_SEARCH}).  Such troubles are unsurprising when we observe that the Jacobian here is computed by finite-differencing a gradient computed by finite differences.\sidenote{Thank goodness we have 64 bit \texttt{double} precision, to get even this far.}  The Newton steps computed this way are too ``noisy.''
 
-We have evidence of convergence, with reductions of the error by factors close to $O(\Delta x^2)$, but the above suggests copious caution.  Performance is terrible, because of excessive objective evaluation.  Though errors decrease, on the two finer grids we get divergence of either the iterative linear solver (\texttt{DIVERGED\_LINEAR\_SOLVE}) or the Newton iteration (\texttt{DIVERGED\_LINE\_SEARCH}).  Such troubles are less of a surprise when we observe that the Jacobian is computed by finite-differencing a gradient computed by finite differences.\sidenote{Thank goodness we have 64 bit \texttt{double} precision, to get even this far.}  Presumably the gradient directions computed this way, i.e.~the Newton steps, are too ``noisy.''
-
-The prototype FEM method of this Chapter has allowed us to numerically-solve the $p$-Laplacian PDE by using \PETSc's ability to minimize a function.  This is a useful capability, and it provides a redundant capability for checking the correctness of better approaches.  We now try the most obvious ``better approach,'' to implement the weak form \eqref{eq:of:plapweakform}, namely the missing gradient of $I^h[u]$.
+Taking stock and summarizing our situation, the prototype FEM method so far has allowed us to numerically-solve the $p$-Laplacian PDE in 2D by using \PETSc's ability to minimize a function.  Though performance is terrible, because of excessive objective evaluation, this useful prototyping capability provides a redundant method for checking the correctness of better approaches.  We now try the most obvious ``better approach'' of offering \PETSc an accurate computation of the gradient of $I^h[u]$.
 
 
 \section{Residual function (gradient) implementation}
 
-The clear limitation of the objective-only implementation is that grids other than the coarsest lead to unreasonable numbers of evaluations of the objective function.  Furthermore the quality of the numerically-approximated finite difference gradient of the objective function, that is, of the residual function, is low.  The second-differenced Jacobian is even worse!  So we take the next step of implementing a residual function, namely equation \eqref{eq:of:plapweakform}, the weak form of the $p$-Laplacian.  This would be the usual starting point for an FEM for such an equation, anyway.
+The clear limitations of the objective-only implementation are that grids other than the coarsest lead to unreasonable numbers of evaluations of the objective function, and that the finite-differenced gradient and Jacobian have low quality.  This is one way of explaining the usual starting point for an FEM for equation \eqref{eq:of:plapweakform}, the weak form of the $p$-Laplacian, namely to provide an implementation of the residual function, as follows.
 
-Equation \eqref{eq:of:plapweakform} says $\grad I[u](v) = 0$ for all $v\in W_0^{1,p}(\Omega)$.  The corresponding statement for $u\in S_g^h$ will be written out for $v$ equal to a hat function (Figure \ref{fig:of:q1hat}); recall such functions form a basis of $S_0^h$.  Thus we require $u\in S_g^h$ to satisfy \eqref{eq:of:plapweakform} on each $v=\psi_{ij}$ corresponding to one of the $N$ interior nodes:
+Equation \eqref{eq:of:plapweakform} says $\grad I[u](v) = 0$ for all $v\in W_0^{1,p}(\Omega)$.  The corresponding statement for $u\in S_g^h$, for $v$ equal to a hat function---see Figure \ref{fig:of:q1hat} and recall such functions form a basis of $S_0^h$---is one equation in the nonlinear system we solve.  That is, we require $u\in S_g^h$ to satisfy \eqref{eq:of:plapweakform} for each $v=\psi_{ij}$ at the $N$ interior nodes:
 \begin{equation}
 \int_\Omega |\grad u|^{p-2} \grad u \cdot \grad \psi_{ij} - f \psi_{ij} = 0, \label{eq:of:weakformbasis}
 \end{equation}
@@ -633,7 +631,7 @@ Examining the $n=1,2$ performance difference a bit more carefully, namely by add
 
 \section{More about the Newton iteration}
 
-We now dig a little deeper and examine three issues of interest.  The first is simply to recall how to visualize the iteration via \PETSc's X Window System monitoring using command-line options.  The second is to compare convergence for different $p$ values.  The third is to do parallel runs; it turns out that they require a return to line search options.
+We now dig a little deeper and examine three issues of interest related to the Newton iteration on this nontrivial nonlinear system.  The first is simply to recall how to visualize the iteration via \PETSc's graphing command-line options.  The second is to compare convergence for different $p$ values (degrees of nonlinearity).  The third is to do parallel runs; it turns out that they require a return to line search options.
 
 FIXME: visualize solution and newton step
 % Do you want the solution of the linear system before the line search (line search may shrink the vector) use -ksp_view_solution or the actual update selected by Newton -snes_monitor_solution_update
@@ -651,15 +649,14 @@ FIXME %\includegraphics[width=0.8\textwidth]{figs/plap-presults}
 FIXME: in parallel linesearch: bt vs basic vs cp;  note bt fails in cases
 
 
-\section{Ellipticity, regularization, and condition number}
+\section{Ellipticity, regularization, and condition number}  \label{page:of:regularization}
 
-The solution of the $p$-Laplacian equation shown in this Chapter is actually rather ``dangerous'' in the sense that the equation is solved as though it is uniformly-elliptic.  Making that assumption is solution- and method-dependent; see \eqref{eq:of:coeffbounds}.  For this reason it is common to \emph{regularize} the $p$-Laplacian by inserting a constant $\eps>0$ so that the weak form \eqref{eq:of:plapweakform} becomes
+The solution of the $p$-Laplacian equation so far in this Chapter is actually rather ``dangerous'' in the sense that the equation is solved as though it is uniformly-elliptic.  Making that assumption is solution- and method-dependent; see \eqref{eq:of:coeffbounds}.  For this reason it is common to \emph{regularize} the $p$-Laplacian by inserting a constant $\eps>0$ so that the weak form \eqref{eq:of:plapweakform} becomes
 \begin{equation}
 \int_\Omega \left(|\grad u|^2+\eps^2\right)^{(p-2)/2} \grad u \cdot \grad v - f v = 0, \label{eq:of:plapweakformreg}
 \end{equation}
-and thus uniform ellipticity is guaranteed in a ball in $W^{1,p}(\Omega)$ around any solution.
+and thus uniform-ellipticity is guaranteed.\sidenote{More precisely, if we linearize the problem around a solution $u\in W^{1,p}(\Omega)$ of the nonlinear problem, then the resulting linear problem is uniformly-elliptic.}  This regularization is already implemented in \texttt{plap.c}, but the default \texttt{eps}$=0$ has been used in all runs so far.
 
-This optional regularization is already implemented in \texttt{plap.c}, but by default \texttt{eps} is set to zero.
 
 FIXME We run the code with small nonzero values of $\eps$, and note the largest $\eps$ value which still gets 1\% agreement with unregularized results on a selection of grids.
 
