@@ -631,16 +631,16 @@ Examining the $n=1,2$ performance difference a bit more carefully, namely by add
 
 \section{More about the Newton iteration}
 
-We now dig a little deeper into the Newton iteration \eqref{eq:nl:newton:eq} on this nontrivial nonlinear system.  Before proceeding, recall how to visualize the iteration via \PETSc's graphing command-line options.  One can see the iterates $\bx_k$ or the Newton step $\bs$ (see \eqref{eq:nl:newton:eq}), respectively:
+We now dig a little deeper into the Newton iteration \eqref{eq:nl:newton:eq} on this nontrivial nonlinear system.  Before proceeding, recall how to visualize the iteration via \PETSc's graphing command-line options.  One can examine the iterates $\bx_k$ or the Newton step $\bs$, respectively:
 \begin{cline}
 $ ./plap -da_refine 6 -snes_monitor -snes_monitor_solution draw -draw_pause 1
 ...
 $ ./plap -da_refine 6 -snes_monitor -snes_monitor_solution_update draw -draw_pause 1
 ...
 \end{cline}
-We see from the latter that near-boundary locations are the last ones to converge.
+The latter shows that near-boundary locations are the last ones to converge.
 
-Given that this is \PETSc, we should test in parallel.  Compare these runs, which choose a reasonable preconditioned Krylov method (see Chapter \ref{chap:ls}), in serial and then in parallel:
+Given that this is \PETSc, we should test in parallel.  Compare these runs, which choose a reasonable preconditioned Krylov method (see Chapter \ref{chap:ls}), in serial and then on four processes:
 \begin{cline}
 $ ./plap -ksp_type cg -pc_type icc -snes_converged_reason -da_refine 6
 grid of 129 x 129 = 16641 interior nodes (element dims 0.00769231x0.00769231)
@@ -651,9 +651,11 @@ grid of 129 x 129 = 16641 interior nodes (element dims 0.00769231x0.00769231)
 Nonlinear solve did not converge due to DIVERGED_LINE_SEARCH iterations 9
 numerical error:  |u-u_exact|/|u_exact| = 2.859e-05
 \end{cline}
-The parallel run did not converge!  By a bit of trial-and-error\sidenote{E.g.~using \texttt{-snes\_monitor -ksp\_converged\_reason}.} one can conclude that coarser grids are sometimes o.k.~in parallel with these options, but that this \texttt{DIVERGED\_LINE\_SEARCH} occurs on most grids.
+The parallel run did not converge!  By a bit of trial-and-error\sidenote{E.g.~using \texttt{-snes\_monitor -ksp\_converged\_reason}.} one finds that coarser grids are sometimes o.k.~in parallel with these options, but this \texttt{DIVERGED\_LINE\_SEARCH} failure occurs on most grids.
 
-For reasons which are not so clear to the author, the default ``back-tracking'' method has difficulties here.  Trying other line search methods (Table \ref{tab:nl:linesearchoptions}) resolves the issue, and line search types \texttt{basic} and \texttt{cp}, the latter of which ``respects'' the objective function we have provided instead of substituting a least-squares merit function (Chapter \ref{chap:nl}), both work fine in parallel.  Here is a rather fine grid solution which takes several minutes:
+For reasons which are not so clear to the author, the default ``back-tracking'' method has difficulties here.  Trying other line search methods (Table \ref{tab:nl:linesearchoptions}) resolves the issue.  Types \texttt{basic} and \texttt{cp}, the latter of which uses the objective function we provided instead of substituting a least-squares merit function (Chapter \ref{chap:nl}), both work just fine in parallel.
+
+Here is a rather fine grid solution which takes several minutes:
 \begin{cline}
 $ timer mpiexec -n 4 ./plap -ksp_type cg -pc_type bjacobi -sub_pc_type icc \
 >    -snes_converged_reason -da_refine 9 -snes_linesearch_type cp
@@ -663,7 +665,7 @@ numerical error:  |u-u_exact|/|u_exact| = 1.493e-07
 real 489.73
 \end{cline}
 %$
-While it is good that everything works with $N=10^6$ degrees of freedom, we are still exposed to the bad scaling, with respect to $N$, of the preconditioned CG method (Chapter \ref{chap:ls}).  In Chapter \ref{chap:pr} we will look at better preconditioning for this example, and in Chapter \ref{chap:sc} we will look at larger processor-counts.
+While it is good that everything works with $N=10^6$ degrees of freedom, we are still exposed to the bad scaling, with respect to $N$, of the preconditioned CG method (Chapter \ref{chap:ls}).  In Chapter \ref{chap:pr} we will look at better preconditioning, and in Chapter \ref{chap:sc} larger processor-counts, for this example.
 
 We should also compare convergence for different $p$ values, which represent different degrees of nonlinearity relative to the $p=2$ case.  FIXME
 
@@ -676,11 +678,11 @@ FIXME %\includegraphics[width=0.8\textwidth]{figs/plap-presults}
 
 \section{Ellipticity, regularization, and condition number}  \label{page:of:regularization}
 
-The solution of the $p$-Laplacian equation so far in this Chapter is actually rather ``dangerous'' in the sense that the equation is solved as though it is uniformly-elliptic.  Making that assumption is solution- and method-dependent; see \eqref{eq:of:coeffbounds}.  For this reason it is common to \emph{regularize} the $p$-Laplacian by inserting a constant $\eps>0$ so that the weak form \eqref{eq:of:plapweakform} becomes
+The solution of the $p$-Laplacian equation so far in this Chapter is actually rather ``dangerous'' in the sense that the equation is solved as though it is uniformly-elliptic.  That assumption is solution- and method-dependent, however; see \eqref{eq:of:coeffbounds}.  For this reason it is common to \emph{regularize} the $p$-Laplacian by inserting a constant $\eps>0$ so that the weak form \eqref{eq:of:plapweakform} becomes
 \begin{equation}
 \int_\Omega \left(|\grad u|^2+\eps^2\right)^{(p-2)/2} \grad u \cdot \grad v - f v = 0, \label{eq:of:plapweakformreg}
 \end{equation}
-and thus uniform-ellipticity is guaranteed.\sidenote{More precisely, if we linearize the problem around a solution $u\in W^{1,p}(\Omega)$ of the nonlinear problem, then the resulting linear problem is uniformly-elliptic.}  This regularization is already implemented in \texttt{plap.c}, but the default \texttt{eps}$=0$ has been used in all runs so far.
+and thus uniform-ellipticity is guaranteed.\sidenote{More precisely, if we linearize the problem around a solution $u\in W^{1,p}(\Omega)$ of the nonlinear problem, then the resulting linear problem is uniformly-elliptic.}  This regularization is already implemented in \texttt{plap.c}, but the default \texttt{eps} $=0$ has been used in all runs so far.
 
 
 FIXME We run the code with small nonzero values of $\eps$, and note the largest $\eps$ value which still gets 1\% agreement with unregularized results on a selection of grids.
