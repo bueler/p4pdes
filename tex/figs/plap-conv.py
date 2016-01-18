@@ -237,10 +237,10 @@ filename='plap-perrs.pdf'
 fig = plt.figure(figsize=(7,6))
 plt.hold(True)
 
-plt.loglog(h[0:p10N],p10err,'kd-',markersize=10.0,label=r'$p=10$')
-plt.loglog(h,p4err,'ko-',markersize=10.0,label=r'$p=4$')
-plt.loglog(h[0:p1p1N],p1p1err,'ks-',markersize=10.0,label=r'$p=1.1$')
-plt.loglog(h[0:p2p1N],p2p1err,'k*-',markersize=10.0,label=r'$p=2.1$')
+plt.loglog(h[0:p10N],p10err,'kd-',markersize=9.0,label=r'$p=10$')
+plt.loglog(h,p4err,'ko-',markersize=9.0,label=r'$p=4$')
+plt.loglog(h[0:p1p1N],p1p1err,'ks-',markersize=8.0,label=r'$p=1.1$')
+plt.loglog(h[0:p2p1N],p2p1err,'k*-',markersize=11.0,label=r'$p=2.1$')
 plt.legend(loc='lower right')
 
 plt.grid(True)
@@ -264,10 +264,10 @@ filename='plap-piters.pdf'
 fig = plt.figure(figsize=(7,6))
 plt.hold(True)
 
-plt.semilogx(h[0:p10N],p10iter,'kd-',markersize=10.0,label=r'$p=10$',markerfacecolor='w')
-plt.semilogx(h,p4iter,'ko-',markersize=10.0,label=r'$p=4$',markerfacecolor='w')
-plt.semilogx(h[0:p1p1N],p1p1iter,'ks-',markersize=10.0,label=r'$p=1.1$',markerfacecolor='w')
-plt.semilogx(h[0:p2p1N],p2p1iter,'k*-',markersize=10.0,label=r'$p=2.1$',markerfacecolor='w')
+plt.semilogx(h[0:p10N],p10iter,'kd-',markersize=9.0,label=r'$p=10$')
+plt.semilogx(h,p4iter,'ko-',markersize=8.0,label=r'$p=4$')
+plt.semilogx(h[0:p1p1N],p1p1iter,'ks-',markersize=8.0,label=r'$p=1.1$')
+plt.semilogx(h[0:p2p1N],p2p1iter,'k*-',markersize=11.0,label=r'$p=2.1$')
 plt.legend(loc='upper right')
 
 plt.grid(True)
