@@ -24,15 +24,22 @@ plt.hold(True)
 
 plt.loglog(h,condA,'ko',markersize=10.0)
 p = np.polyfit(np.log(h),np.log(condA),1)
-print "result with alpha=1:  condition number grows at rate O(h^%.4f)" % p[0]
+print "result with alpha=1:  condition number grows at rate O(h^%.1f)" % p[0]
 plt.loglog(h,np.exp(np.polyval(p,np.log(h))),'k--',lw=2.0)
-plt.text(0.05,2.0e1,r'$O(h^{%.4f})$' % p[0],fontsize=20.0)
+plt.text(0.02,2.5e2,r'$O(h^{%.1f})$' % p[0],fontsize=20.0)
+
+pbadcoarse = np.polyfit(np.log(h[0:3]),np.log(condAbad[0:3]),1)
+print "result with alpha=0.1 (coarse grids):  condition number grows at rate O(h^%.1f)" % pbadcoarse[0]
+pbadfine   = np.polyfit(np.log(h[2:5]),np.log(condAbad[2:5]),1)
+print "result with alpha=0.1 (fine grids):  condition number grows at rate O(h^%.1f)" % pbadfine[0]
 
 plt.loglog(h[0:badN],condAbad,'ks',markersize=8.0)
-pbad = np.polyfit(np.log(h[0:badN]),np.log(condAbad),1)
-print "result with alpha=0.1:  condition number grows at rate O(h^%.4f)" % pbad[0]
-plt.loglog(h[0:badN],np.exp(np.polyval(pbad,np.log(h[0:badN]))),'k--',lw=2.0)
-plt.text(0.07,3.0e4,r'$O(h^{%.4f})$' % pbad[0],fontsize=20.0)
+
+plt.loglog(h[0:3],np.exp(np.polyval(pbadcoarse,np.log(h[0:3]))),'k--',lw=2.0)
+plt.text(0.15,1.5e3,r'$O(h^{%.1f})$' % pbadcoarse[0],fontsize=20.0)
+
+plt.loglog(h[2:5],np.exp(np.polyval(pbadfine,np.log(h[2:5]))),'k--',lw=2.0)
+plt.text(0.02,4.0e4,r'$O(h^{%.1f})$' % pbadfine[0],fontsize=20.0)
 
 plt.grid(True)
 plt.axis((0.006,0.4,6.0,7.0e5))

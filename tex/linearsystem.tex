@@ -30,7 +30,7 @@ Generally, induced matrix norms are expensive to compute; as optimization proble
 
 We will use vector norms routinely in practice, both inside key algorithms for linear and nonlinear analysis (Chapters \ref{chap:ls}, \ref{chap:st}, \ref{chap:nl}), and in measuring numerical errors in solving PDEs, for example.   But what good are matrix norms?  Though they occasionally appear in algorithms, in this book we will use them only through the desire to measure the \emph{conditioning} of linear systems \citep{TrefethenBau1997}.  By definition, if $\|\cdot\|$ denotes a matrix norm and $A \in \RR^{N\times N}$ is a square matrix then
 \begin{equation}
-    \kappa(A) = \|A\| \|A^{-1}\|
+    \kappa(A) = \|A\| \|A^{-1}\|  \label{eq:ls:conddefn}
 \end{equation}
 is the \emph{condition number} of $A$; by definition $\kappa(A)=+\infty$ if $A$ is not invertible.  This quantity measures how perturbation-sensitive is the (exact) solution of a linear system $A \bv = \bb$ \citep{TrefethenBau1997}.
 
