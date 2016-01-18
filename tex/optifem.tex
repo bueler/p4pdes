@@ -716,7 +716,7 @@ We do have bounds on the coefficient for the case of exact solution $u=u_{\text{
 \end{equation}
 if $\alpha > 0$.  (See Exercise \ref{chap:of}.\ref{exer:of:checkexactbounds}.)
 
-For other source terms $f$ or boundary conditions $g$, however, there might be no such bounds.  The Newton iterates could also make the coefficient much larger or smaller, in some parts of the domain, than its values at the solution.  On the practical side, such coefficient bounds, which are our measure of uniform ellipticity, relate to the condition number of the discrete linear system.\sidenote{Recall that the condition number describes the perturbation-sensitivity of a linear system (Chapter \ref{chap:ls}).}  We briefly address these issues, starting with how \PETSc can show the condition number.
+For other source terms $f$ or boundary conditions $g$, however, there might be no such bounds.  The Newton iterates could also make the coefficient much larger or smaller, in some parts of the domain, than its values at the solution.  On the practical side, such coefficient bounds, which are our measure of uniform ellipticity, relate to the condition number of the discrete linear system.  Recall that the condition number describes the perturbation-sensitivity of the linear system, and that its value tends to control the convergence of the CG iteration (Chapter \ref{chap:ls}).
 
 One asks for an estimate of the condition number of the linear system solved at each Newton step by using option
 
@@ -749,24 +749,24 @@ generates the lower curve in Figure \ref{fig:of:plap-conditionnumber}.
 
 \begin{figure}
 \includegraphics[width=0.95\textwidth]{figs/plap-conditionnumber}
-\caption{The condition number of the linearized operator grows at about an $O(h^{-2})$ rate, the expected rate for a uniformly-elliptic linear PDE, when $\alpha=1$ in exact solution \eqref{eq:of:exactsolution} (dots).  However, when $\alpha=0.1$ the lower bound on the coefficient is much smaller, and the practical effect is that the condition number is much bigger and grows faster (squares), even though it may again approach $O(h^{-2})$ growth rate for sufficiently fine, and perhaps unattainable, grids.}
+\caption{The condition number of the linearized operator grows at about the expect $O(h^{-2})$ rate when $\alpha=1$ in exact solution \eqref{eq:of:exactsolution} (dots).  However, when $\alpha=0.1$ the practical effect is that the condition number is much bigger and grows faster (squares).}
 \label{fig:of:plap-conditionnumber}
 \end{figure}
 
-Such condition numbers change as bounds on coefficient $|\grad u|^{p-2}$ in  \eqref{eq:of:plapweakform} change.  Recall that in exact solution \eqref{eq:of:exactsolution} there is a parameter ``$\alpha$'' which has, so far, been set to $\alpha = 1$.  However, if $\alpha=0$ then the exact solution is simply
+Such condition numbers change as bounds on the coefficient $|\grad u|^{p-2}$ in  \eqref{eq:of:plapweakform} change.  The parameter $\alpha$ in exact solution \eqref{eq:of:exactsolution} has, so far, been set to $\alpha = 1$.  However, if $\alpha=0$ then the exact solution is
 \begin{equation}
     u_{\text{exact}}(x,y) = \frac{1}{2} x^2 y^2. \label{eq:of:exactsolutionbad}
 \end{equation}
-Now $\grad u \to 0$ as $(x,y)\to(0,0)$ in $\Omega$ so that $|\grad u|^{p-2}$ is not bounded-below by a positive constant.
+Now $\grad u \to 0$ as $(x,y)\to(0,0)$ in $\Omega$, so that $|\grad u|^{p-2}$ is not bounded-below by a positive constant on $\Omega$.
 
-To see the effect computationally, trying $\alpha=0$ DOES NOT WORK BECAUSE OF $f(0,0)$; see   Exercise \ref{chap:of}.\ref{exer:of:checkexactformulas}
+To see the effect computationally, trying option \texttt{-plap\_alpha 0} does not work because the value of the source term at the lower-left corner, i.e.~$f(0,0)$, is undefined.\sidenote{See Exercise \ref{chap:of}.\ref{exer:of:checkexactformulas}.  To see the run-time effect, just try it.}  However, adding \texttt{-plap\_alpha 0.1} to the above Bash loop yields much larger condition numbers for the coarsest five grids, as shown in Figure \ref{fig:of:plap-conditionnumber}, while on the two finest grids we get \texttt{DIVERGED\_LINEAR\_SOLVE}.
 
-shown in Figure \ref{fig:of:plap-conditionnumber}
+In a bit more detail, we see that when $\alpha=0.1$ both the largest and smallest singular values are smaller than in the $\alpha=1$ case.  But the smallest singular value is much smaller and, as seen in Figure \ref{fig:of:plap-conditionnumber}, the condition number is orders of magnitude larger on the finer grids.  Presumably because it is much more difficult for the coarse-grid problems to approximate the correct continuum values of the Newton steps $\bs$, the growth rate of the condition number as $h\to 0$ is much worse than the $O(h^{-2})$ result for better-behaved coefficients.  This effect is seen in Figure \ref{fig:of:plap-conditionnumber} as a condition number that seems to be ``leveling-out'' as the grids become finer.
 
-BUT computationally used $\alpha=0.01$ and see effect
-% run does not have -ksp_rtol 1.0e-14 ... and it makes a difference
+On a somewhat-fine grid we can get converged runs with $\alpha=0.1$ if we ask for only a default tolerance\sidenote{The default is \texttt{ksp\_rtol 1.0e-5}.} for solving the linear system:
 \begin{cline}
-$ ./plap -ksp_type cg -pc_type none -da_refine 5 -ksp_compute_singularvalues -snes_converged_reason -plap_alpha 0.1
+$ ./plap -ksp_type cg -pc_type none -da_refine 5 -ksp_compute_singularvalues \
+>     -snes_converged_reason -plap_alpha 0.1
 grid of 65 x 65 = 4225 interior nodes (element dims 0.0151515x0.0151515)
 ...
 Iteratively computed extreme singular values: max 22.1875 min 7.68515e-06 max/min 2.88706e+06
@@ -774,17 +774,20 @@ Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 11
 numerical error:  |u-u_exact|/|u_exact| = 1.988e-04
 \end{cline}
 %$
+For comparison to results below, note the estimated condition number $\kappa(A)=2.9\times 10^6$ and numerical error $2.0\times 10^{-4}$.
 
-It is common to \emph{regularize} the $p$-Laplacian by inserting a constant $\eps>0$ so that the weak form \eqref{eq:of:plapweakform} becomes
+Can the condition number be improved?  One common approach is to \emph{regularize} the $p$-Laplacian by inserting a constant $\eps>0$ so that the weak form \eqref{eq:of:plapweakform} becomes
 \begin{equation}
-\int_\Omega \left(|\grad u|^2+\eps^2\right)^{(p-2)/2} \grad u \cdot \grad v - f v = 0, \label{eq:of:plapweakformreg}
+\int_\Omega \left(|\grad u|^2+\eps^2\right)^{(p-2)/2} \grad u \cdot \grad v - f v = 0. \label{eq:of:plapweakformreg}
 \end{equation}
-and thus uniform-ellipticity is guaranteed.  (More precisely, if we linearize the problem around a solution $u\in W^{1,p}(\Omega)$ of the nonlinear problem, then the resulting linear problem is uniformly-elliptic.)  This regularization is already implemented in \texttt{plap.c}, but the default \texttt{eps} $=0$ has been used in all runs so far.
+Thus a lower bound on the coefficient is guaranteed.  In fact, with $\eps>0$, if we linearize the problem around a solution $u\in W^{1,p}(\Omega)$ of \eqref{eq:of:plapweakformreg} then the resulting linear problem is uniformly-elliptic.
 
+This regularization is already implemented in \texttt{plap.c}, but the default \texttt{eps} $=0$ has been used in all runs so far.  Indeed, the \texttt{plap.c} is well-designed so that the user can experiment with the effect of regularization (\texttt{-plap\_eps}) across a range of nonlinearity (\texttt{-plap\_p}) and degeneracy (i.e.~adjustment of uniform-ellipticity bounds through \texttt{-plap\_alpha}).  The reader can form a fact-based opinion of the effectiveness of the regularization strategy.  On the other hand, in some problems closely-related to the $p$-Laplacian, such as the ice sheet flow model shown in Chapter \ref{chap:co}, it is possible to treat the loss of ellipticity as physically-meaningful, and introduce additional information into the problem (i.e.~inequality constraints) which a modified Newton solve can use to get higher-quality solutions.
 
-REGULARIZATION CAN EVEN WORK as in this with $\eps=0.01$ added
+Here we can demonstrate that regularization works in at least one case.  Adding $\eps=0.01$ to the previous run gives \emph{both} a lower estimated condition number and a lower error:
 \begin{cline}
-$ ./plap -ksp_type cg -pc_type none -da_refine 5 -ksp_compute_singularvalues -snes_converged_reason -plap_alpha 0.1 -plap_eps 0.01
+$ ./plap -ksp_type cg -pc_type none -da_refine 5 -ksp_compute_singularvalues \
+>     -snes_converged_reason -plap_alpha 0.1 -plap_eps 0.01
 grid of 65 x 65 = 4225 interior nodes (element dims 0.0151515x0.0151515)
 ...
 Iteratively computed extreme singular values: max 22.1876 min 3.44109e-05 max/min 644783.
@@ -792,17 +795,22 @@ Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 11
 numerical error:  |u-u_exact|/|u_exact| = 1.305e-04
 \end{cline}
 %$
-FIXME reduction of condition number AND error  BUT this is not at all automatic, and we could even be accused of cherry-picking an example
-
-
-FIXME Show that $\eps$-regularized cases can converge on fine grids but that the unregularized ($\eps=0$) method runs into trouble.
-
-FIXME We run the code with small nonzero values of $\eps$, and note the largest $\eps$ value which still gets 1\% agreement with unregularized results on a selection of grids.
+Such a result is not at all automatic!  As the reader can confirm through experimentation,  we could be accused of cherry-picking an example in this case.
 
 
 \section{Summary}
 
-FIXME draw conclusions: we have introduced FEM, constructed nontrivial nonlinear PDE example.  usable high-res even without analytical Jacobian.  will return to look at performance of the this example
+The $p$-Laplacian problem has been used to explore a number of ideas:
+\begin{itemize}
+\item the connection between optimization problems and PDEs,
+\item the implementation of structured-grid $Q^1$ finite element method,
+\item options for the Newton-Krylov method, and
+\item convergence issues for a non-linear elliptic problem.
+\end{itemize}
+
+Only modest success comes from an objective-only implementation, but it is a usable prototyping tool.  Its other effect is to improve the line search.  With the standard residual-evaluation implementation, however, we have achieved substantial success even without an analytical Jacobian, on relatively-high-resolution grids.
+
+We will return to look at performance of this example in Chapter \ref{chap:sc}, and to a related continuum problem in Chapter \ref{chap:co}.
 
 
 \section{Exercises}
