@@ -737,15 +737,15 @@ $ for LEV in 0 1 2 3 4 5 6; do
 >   ./plap -pc_type none -ksp_type cg -ksp_rtol 1.0e-14 -da_refine $LEV \
 >      -ksp_compute_singularvalues; done
 \end{cline}
-generates Figure \ref{fig:of:plap-conditionnumber}.
+generates the lower curve in Figure \ref{fig:of:plap-conditionnumber}.
 
 \begin{figure}
 \includegraphics[width=0.95\textwidth]{figs/plap-conditionnumber}
-\caption{The condition number of the linearized operator grows at about an $O(h^{-2})$ rate, which would be expected for a uniformly-elliptic linear PDE.}
+\caption{The condition number of the linearized operator grows at about an $O(h^{-2})$ rate, the expected rate for a uniformly-elliptic linear PDE, when $\alpha=1$ in exact solution \eqref{eq:of:exactsolution} (dots).  However, when $\alpha=0.1$ the lower bound on the coefficient is much smaller so the condition number is bigger and grows faster (squares).}
 \label{fig:of:plap-conditionnumber}
 \end{figure}
 
-Such condition numbers change if the bounds on coefficient $|\grad u|^{p-2}$ in  \eqref{eq:of:plapweakform} change.  Recall that in \eqref{eq:of:exactsolution} there is a parameter ``$\alpha$'' which has, so far, been set to $\alpha = 1$.  However, if $\alpha=0$ then the exact solution is simply
+Such condition numbers change if the bounds on coefficient $|\grad u|^{p-2}$ in  \eqref{eq:of:plapweakform} change.  Recall that in exact solution \eqref{eq:of:exactsolution} there is a parameter ``$\alpha$'' which has, so far, been set to $\alpha = 1$.  However, if $\alpha=0$ then the exact solution is simply
 \begin{equation}
     u_{\text{exact}}(x,y) = \frac{1}{2} x^2 y^2. \label{eq:of:exactsolutionbad}
 \end{equation}
