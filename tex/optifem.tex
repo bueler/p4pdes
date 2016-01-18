@@ -631,7 +631,9 @@ Examining the $n=1,2$ performance difference a bit more carefully, namely by add
 
 \section{More about the Newton iteration}
 
-We now dig a little deeper into the Newton iteration \eqref{eq:nl:newton:eq} on this nontrivial nonlinear system.  Before proceeding, recall how to visualize the iteration via \PETSc's graphing command-line options.  One can examine the iterates $\bx_k$ or the Newton step $\bs$, respectively:
+We now dig a little deeper into the Newton iteration \eqref{eq:nl:newton:eq} on our nontrivial nonlinear system which arises from discretizing the $p$-Laplacian equation \eqref{eq:of:plapweakform}.  There are three topics: visualization, parallel runs, and dependence on the exponent $p$.
+
+Recall how to visualize the iteration via \PETSc's graphing command-line options.  One can examine the iterates $\bx_k$ or the Newton step $\bs$, respectively:
 \begin{cline}
 $ ./plap -da_refine 6 -snes_monitor -snes_monitor_solution draw -draw_pause 1
 ...
@@ -640,7 +642,7 @@ $ ./plap -da_refine 6 -snes_monitor -snes_monitor_solution_update draw -draw_pau
 \end{cline}
 The latter shows that near-boundary locations are the last ones to converge.
 
-Given that this is \PETSc, we should test in parallel.  Compare these runs, which choose a reasonable preconditioned Krylov method (see Chapter \ref{chap:ls}), in serial and then on four processes:
+Next, compare these runs, in serial and then on four processes, which choose a reasonable preconditioned Krylov method (see Chapter \ref{chap:ls}):
 \begin{cline}
 $ ./plap -ksp_type cg -pc_type icc -snes_converged_reason -da_refine 6
 grid of 129 x 129 = 16641 interior nodes (element dims 0.00769231x0.00769231)
@@ -653,9 +655,9 @@ numerical error:  |u-u_exact|/|u_exact| = 2.859e-05
 \end{cline}
 The parallel run did not converge!  By a bit of trial-and-error\sidenote{E.g.~using \texttt{-snes\_monitor -ksp\_converged\_reason}.} one finds that coarser grids are sometimes o.k.~in parallel with these options, but this \texttt{DIVERGED\_LINE\_SEARCH} failure occurs on most grids.
 
-For reasons which are not so clear to the author, the default ``back-tracking'' method has difficulties here.  Trying other line search methods (Table \ref{tab:nl:linesearchoptions}) resolves the issue.  Types \texttt{basic} and \texttt{cp}, the latter of which uses the objective function we provided instead of substituting a least-squares merit function (Chapter \ref{chap:nl}), both work just fine in parallel.
+For reasons which are not so clear to the author, the default ``back-tracking'' method has difficulties here, but apparently only in parallel.  Trying other line search methods (Table \ref{tab:nl:linesearchoptions}) resolves the issue.  Types \texttt{basic} and \texttt{cp}, the latter of which uses the objective function we provided instead of substituting a least-squares merit function (Chapter \ref{chap:nl}), both work just fine in parallel.
 
-Here is a rather fine grid solution which takes several minutes:
+We have the opportunity to get a fine grid solution.  The following run takes several minutes and converges:
 \begin{cline}
 $ timer mpiexec -n 4 ./plap -ksp_type cg -pc_type bjacobi -sub_pc_type icc \
 >    -snes_converged_reason -da_refine 9 -snes_linesearch_type cp
@@ -665,17 +667,28 @@ numerical error:  |u-u_exact|/|u_exact| = 1.493e-07
 real 489.73
 \end{cline}
 %$
-While it is good that everything works with $N=10^6$ degrees of freedom, we are still exposed to the bad scaling, with respect to $N$, of the preconditioned CG method (Chapter \ref{chap:ls}).  In Chapter \ref{chap:pr} we will look at better preconditioning, and in Chapter \ref{chap:sc} larger processor-counts, for this example.
+The good news is that everything works with $N=10^6$ degrees of freedom.  However, we are still exposed to the bad scaling, with respect to $N$, of the preconditioned CG method (Chapter \ref{chap:ls}); to illustrate this add option \texttt{-ksp\_converged\_reason}.  In Chapter \ref{chap:pr} we will look at better preconditioning, and in Chapter \ref{chap:sc} larger processor-counts, for this same example.
 
-Convergence varies depending on the exponent $p$.  Intuitively, the distance from $p$ to $p_0=2$ is a measure of the degree on nonlinearity, in the sense that when $p=2$ equation \eqref{eq:of:plapweakform} is linear in $u$.  In any case, we can measure the error
+Convergence varies depending on the exponent $p$.  Recall that the Sobolev space $W^{1,p}(\Omega)$ and the (continuous) objective functional $I[u]$ in \eqref{eq:of:functional} are defined for any $1 \le p < \infty$, but that $I[u]$ is not continuously-differentiable when $p=1$.  Also, speaking intuitively, the distance from $p$ to $p=2$ is a measure of the degree of nonlinearity, in the sense that when $p=2$ the objective is quadratic in $u$ and thus equation \eqref{eq:of:plapweakform} is linear in $u$.
 
- values, which represent different degrees of nonlinearity relative to the $p=2$ case.  FIXME
+We can investigate the way our problem actually depends on $p$ by \emph{measuring} the error for a sampling of $p$-values.  For example, we can run this double loop:
+\begin{cline}
+$ for PP in 1.1 2.1 4 10; do
+>   for LEV in 0 1 2 3 4 5 6 7 8; do
+>     ./plap -snes_converged_reason -da_refine $LEV -ksp_type cg -pc_type icc \
+>            -plap_p $PP;
+>   done; done
+\end{cline}
+%$
+This includes the $p=4$ results shown in Figure \ref{fig:of:plap-conv}, but also $p$ near the linear case and $p$ near the extremes: $p=1.1,10$.
 
 \begin{figure}
 \includegraphics[width=\textwidth]{figs/plap-perrs}
-\caption{Errors for $p=1.1,2.1,4,10$.}
+\caption{Relative errors for $p=1.1,2.1,4,10$; compare Figure \ref{fig:of:plap-conv}.}
 \label{fig:of:plap-perrs}
 \end{figure}
+
+The relative error results from our double loop are shown in Figure \ref{fig:of:plap-perrs}.  We see that $p = 1.1 \approx 1$ is not apparently as hard as large $p$.  In fact, for $p=10$ we have non-convergence on the finest grid, and thus that case is not shown, but the \pSNES reports convergence in all other cases.  The fact that, when $p=10$, the measured error \emph{increases} as $h\to 0$ for the finest three grids is suspicious: the solution of the discrete nonlinear equations apparently gets further from the continuum solution?  The corresponding Newton iteration counts are shown in Figure \ref{fig:of:plap-piters}.  Again the $p=10$ case seems to be the most difficult.  In summary, the nonlinearity for large $p$ seems to be more difficult than the cases near $p=1$.
 
 \begin{figure}
 \includegraphics[width=0.95\textwidth]{figs/plap-piters}
@@ -683,14 +696,63 @@ Convergence varies depending on the exponent $p$.  Intuitively, the distance fro
 \label{fig:of:plap-piters}
 \end{figure}
 
+How about $p=1$ itself?  The result of
+\begin{cline}
+for LEV in 0 1 2 3 4 5 6 7 8; do
+>  ./plap -snes_converged_reason -da_refine $LEV -ksp_type cg -pc_type icc \
+>         -plap_p 1; done
+\end{cline}
+%$
+is that we get \texttt{DIVERGED\_LINEAR\_SOLVE} errors on the four finest grids.  One possible approach would be to change to a direct solver, in an attempt to diagnose that error directly.  A different approach, coming from the idea that the underlying objective is not differentiable, is to regularize the problem.
 
-\section{Ellipticity, regularization, and condition number}  \label{page:of:regularization}
 
-The solution of the $p$-Laplacian equation so far in this Chapter is actually rather ``dangerous'' in the sense that the equation is solved as though it is uniformly-elliptic.  That assumption is solution- and method-dependent, however; see \eqref{eq:of:coeffbounds}.  For this reason it is common to \emph{regularize} the $p$-Laplacian by inserting a constant $\eps>0$ so that the weak form \eqref{eq:of:plapweakform} becomes
+\section{Condition number, ellipticity, and regularization}  \label{page:of:regularization}
+
+The solution of the $p$-Laplacian equation so far in this Chapter is ``dangerous'' in the sense that the equation is solved as though it is uniformly-elliptic.  That assumption is solution- and method-dependent, however; see \eqref{eq:of:coeffbounds}.  The degree of ellipticity of our problem relates to the condition number of the discrete linear systems and to the common practice of ``regularization'' of nonlinear elliptic operators.  We briefly address these issues here.
+
+One can ask \PETSc to compute the condition number of each linear system solved at the Newton step from either option \texttt{-ksp\_compute\_singularvalues} or \texttt{-ksp\_compute\_eigenvalues\_explicitly}.  We find the former more convenient; it explicitly states
+\begin{code}
+Iteratively computed extreme singular values: max X min Y max/min Z
+\end{code}
+where \texttt{Z} is the estimated condition number.  However, an important consideration is that the displayed condition number is for the \emph{preconditioned} linear system, that is, system \eqref{introleftpre} instead of system \eqref{introsystem} in Chapter \ref{chap:ls}.  For example, compare the results of
+\begin{cline}
+$ ./plap -pc_type cholesky -ksp_type cg -ksp_compute_singularvalues
+$ ./plap -pc_type none -ksp_type cg -ksp_compute_singularvalues
+\end{cline}
+The former reports a condition number of 1 at the end of the iteration while the latter says it is about 10.75; the latter is correct.
+
+How does this relate to ellipticity?  The theory of the errors of FE methods says that these discrete condition numbers, which describe the solvability of the discrete linear systems (see Chapter \ref{chap:ls}), increase as the grid is refined.  Specifically,  \cite{Elmanetal2005} Theorem 1.32 shows
+    $$\kappa(A) \le C h^{-2}$$
+for a constant $C$ that relates to the (ellipticity) bounds on the coefficient of the operator.  The $O(h^{-2})$ growth rate is, in fact, what we see in practice.  For example, the loop
+\begin{cline}
+$ for LEV in 0 1 2 3 4 5 6; do
+>   ./plap -pc_type none -ksp_type cg -ksp_rtol 1.0e-14 -da_refine $LEV \
+>      -ksp_compute_singularvalues; done
+\end{cline}
+generates Figure \ref{fig:of:plap-conditionnumber}.
+
+\begin{figure}
+%\includegraphics[width=0.95\textwidth]{figs/plap-conditionnumber}
+\caption{The condition number of the linearized operator grows at about an $O(h^{-2})$ rate, which would be expected for a uniformly-elliptic linear PDE.}
+\label{fig:of:plap-conditionnumber}
+\end{figure}
+
+ this data and figure, which looks good
+\begin{code}
+h = [1/4 1/6 1/10 1/18 1/34 1/67 1/130];
+condA = [10.7515 29.2194 95.9797 361.692 1451.27 5947.31 24459.6];
+loglog(h,condA,'ko',h,h.^(-2),'k--')
+p=polyfit(log(h),log(condA),1);
+p(1)
+\end{code}
+with resulting exponent $-2.2108$
+
+
+It is common to \emph{regularize} the $p$-Laplacian by inserting a constant $\eps>0$ so that the weak form \eqref{eq:of:plapweakform} becomes
 \begin{equation}
 \int_\Omega \left(|\grad u|^2+\eps^2\right)^{(p-2)/2} \grad u \cdot \grad v - f v = 0, \label{eq:of:plapweakformreg}
 \end{equation}
-and thus uniform-ellipticity is guaranteed.\sidenote{More precisely, if we linearize the problem around a solution $u\in W^{1,p}(\Omega)$ of the nonlinear problem, then the resulting linear problem is uniformly-elliptic.}  This regularization is already implemented in \texttt{plap.c}, but the default \texttt{eps} $=0$ has been used in all runs so far.
+and thus uniform-ellipticity is guaranteed.  (More precisely, if we linearize the problem around a solution $u\in W^{1,p}(\Omega)$ of the nonlinear problem, then the resulting linear problem is uniformly-elliptic.)  This regularization is already implemented in \texttt{plap.c}, but the default \texttt{eps} $=0$ has been used in all runs so far.
 
 
 FIXME We run the code with small nonzero values of $\eps$, and note the largest $\eps$ value which still gets 1\% agreement with unregularized results on a selection of grids.
@@ -703,29 +765,6 @@ FIXME if $\alpha=0$ then the exact solution is simply
 \end{equation}
 Now $\grad u \to 0$ as $(x,y)\to(0,0)$ in $\Omega$ so that $|\grad u|^{p-2}$ is not bounded-below by a positive constant; compare \eqref{eq:of:coeffbounds}.  Show that $\eps$-regularized cases can converge on fine grids but that the unregularized ($\eps=0$) method runs into trouble.
 
-condition number from either \texttt{-ksp\_compute\_singularvalues} and \texttt{-ksp\_compute\_eigenvalues\_explicitly}
-
-condition number must be with un-preconditioned operator; compare
-\begin{cline}
-$ ./plap -snes_fd_color -pc_type cholesky -ksp_type cg -ksp_compute_singularvalues -da_refine 3
-$ ./plap -snes_fd_color -pc_type none -ksp_type cg -ksp_compute_singularvalues -da_refine 3
-\end{cline}
-
-Elman Thm 1.32 (page 59) shows $\kappa(A) \le C_* h^{-2}$, but this uses uniform ellipticity
-
-result of
-\begin{cline}
-$ for LEV in 0 1 2 3 4 5 6; do ./plap -snes_fd_color -ksp_compute_singularvalues -pc_type none -ksp_type cg -ksp_rtol 1.0e-14 -da_refine $LEV; done
-\end{cline}
-gives this data and figure, which looks good
-\begin{code}
-h = [1/4 1/6 1/10 1/18 1/34 1/67 1/130];
-condA = [10.7515 29.2194 95.9797 361.692 1451.27 5947.31 24459.6];
-loglog(h,condA,'ko',h,h.^(-2),'k--')
-p=polyfit(log(h),log(condA),1);
-p(1)
-\end{code}
-with resulting exponent $-2.2108$
 
 
 \section{Summary}
