@@ -96,11 +96,11 @@ Minimization problem \eqref{eq:of:plapmin} is equivalent to the weak form \eqref
 
 We pause to choose a particular test problem, and we want a problem for which the exact solution is known.  An easy choice is to ``manufacture'' a test problem by starting with a simple solution with one parameter $\alpha\in\RR$:
 \begin{equation}
-    u(x,y) = \frac{1}{2} (x+\alpha)^2 (y+\alpha)^2. \label{eq:of:exactsolution}
+    u_{\text{exact}}(x,y) = \frac{1}{2} (x+\alpha)^2 (y+\alpha)^2. \label{eq:of:exactsolution}
 \end{equation}
-This formula also determines $g$ along $\partial \Omega$.  The source function $f$ is then computed by hand\sidenote{The by-hand derivative calculation which generates $f(x,y)$ from the exact solution $u(x,y)$ is acceptably simple, but it is still error-prone.  Because by-hand calculation errors are likely to be un-correlated to code-implementation errors, however, agreement is likely to reflect correctness.} from the strong form \eqref{eq:of:plapstrongform}.
+This formula also determines $g$ along $\partial \Omega$.  The source function $f$ is then computed by hand\sidenote{The by-hand derivative calculation which generates $f(x,y)$ from the exact solution $u_{\text{exact}}(x,y)$ is acceptably simple, but it is still error-prone.  Because by-hand calculation errors are likely to be un-correlated to code-implementation errors, however, agreement is likely to reflect correctness.} from the strong form \eqref{eq:of:plapstrongform}.
 
-If $\alpha>0$ then the coefficient of the $p$-Laplacian equation, namely $|\grad u|^{p-2}$, is bounded below by a positive constant, and that it is bounded above.  Thus equation \eqref{eq:of:plapweakform}, or \eqref{eq:of:plapstrongform}, is uniformly elliptic \citep{Evans2010} at the solution \eqref{eq:of:exactsolution}.  However, though such bounds apply at the solution, they do not necessarily apply to the approximations (iterates) in a numerical procedure, so the iteration might ``lose ellipticity'' on the way to the solution.  We will return to such considerations, and consider the $\alpha \le 0$ cases and the corresponding need for regularization, once we have an implementation.
+If $\alpha>0$ then the coefficient of the $p$-Laplacian equation, namely $|\grad u|^{p-2}$, is bounded below by a positive constant, and that it is bounded above.  Thus equation \eqref{eq:of:plapweakform}, or \eqref{eq:of:plapstrongform}, is uniformly elliptic \citep{Evans2010} at the solution \eqref{eq:of:exactsolution}.  However, though such bounds apply at the solution $u=u_{\text{exact}}$, they do not necessarily apply to the approximations (iterates) in a numerical procedure, so the iteration might ``lose ellipticity'' on the way to the solution.  We will return to such considerations, and consider the $\alpha \le 0$ cases and the corresponding need for regularization, once we have an implementation.
 
 
 \section{Structured $Q^1$ finite elements}
@@ -596,7 +596,7 @@ generates the convergence result in Figure \ref{fig:of:plap-conv}.
 
 \begin{figure}
 \includegraphics[width=\textwidth]{figs/plap-conv}
-\caption{Convergence evidence for the default $p=4$ case suggests \texttt{plap.c} correctly solves the $p$-Laplacian equation \eqref{eq:of:plapweakform}.  Errors are comparable with the objective-only (four coarsest grids only; circled) and residual (dots) implementations.  Degree $n=1$ Gauss-Legendre quadrature (squares) generates systematically larger errors than the default $n=2$ degree results; $n=3$ degree results are indistinguishable from the $n=2$ shown here.}
+\caption{Convergence evidence for the $p=4$ case suggests \texttt{plap.c} correctly solves $p$-Laplacian equation \eqref{eq:of:plapweakform}.  Relative errors $\|u-u_{\text{exact}}\|_\infty / \|u_{\text{exact}}\|_\infty$ are comparable with the objective-only (four coarsest grids only; circled) and residual (dots) implementations.  Degree $n=1$ Gauss-Legendre quadrature (squares) generates systematically larger errors than the default $n=2$ degree results; $n=3$ degree results are indistinguishable from the $n=2$ shown here.}
 \label{fig:of:plap-conv}
 \end{figure}
 
@@ -667,7 +667,9 @@ real 489.73
 %$
 While it is good that everything works with $N=10^6$ degrees of freedom, we are still exposed to the bad scaling, with respect to $N$, of the preconditioned CG method (Chapter \ref{chap:ls}).  In Chapter \ref{chap:pr} we will look at better preconditioning, and in Chapter \ref{chap:sc} larger processor-counts, for this example.
 
-We should also compare convergence for different $p$ values, which represent different degrees of nonlinearity relative to the $p=2$ case.  FIXME
+Convergence varies depending on the exponent $p$.  Intuitively, the distance from $p$ to $p_0=2$ is a measure of the degree on nonlinearity, in the sense that when $p=2$ equation \eqref{eq:of:plapweakform} is linear in $u$.  In any case, we can measure the error
+
+ values, which represent different degrees of nonlinearity relative to the $p=2$ case.  FIXME
 
 \begin{figure}
 \includegraphics[width=\textwidth]{figs/plap-perrs}
@@ -742,7 +744,7 @@ FIXME draw conclusions: we have introduced FEM, constructed nontrivial nonlinear
   \item For $1 < p < \infty$, prove strict convexity \eqref{eq:of:convexity} of functional $I[u]$ on $W_0^{1,p}(\Omega)$.  (\emph{Hint}:  The argument in section 5.3 of \citet{Ciarlet2002} suffices.)
   \end{enumerate}
  
-\item \label{exer:of:checkexactformulas}  For the exact solution \eqref{eq:of:exactsolution}, define $C = |\grad u|^{p-2}$ and $D^2=(x+\alpha)^2 + (y+\alpha)^2$ and show that
+\item \label{exer:of:checkexactformulas}  For the exact solution $u=u_{\text{exact}}$ in \eqref{eq:of:exactsolution}, define $C = |\grad u|^{p-2}$ and $D^2=(x+\alpha)^2 + (y+\alpha)^2$ and show that
     $$C = \left[(x+\alpha)^2 (y+\alpha)^2 D^2\right]^{(p-2)/2}$$
 and that $\grad C = (p-2) C \left<\gamma_1,\gamma_2\right>$ where
     $$\gamma_1 = \frac{1}{x+\alpha}+ \frac{x+\alpha}{D^2}, \quad \gamma_2 = \frac{1}{y+\alpha}+ \frac{y+\alpha}{D^2}.$$
@@ -750,7 +752,7 @@ Also show that $\Div \grad u = D^2$.  Thus strong form \eqref{eq:of:plapstrongfo
     $$f = - \Div \left(C \grad u\right) = - \grad C \cdot \grad u - C\, \Div \grad u.$$
 Note that \texttt{ExactRHSLocal()} in \texttt{plap.c} implements these formulas.
 
-\item \label{exer:of:checkexactbounds} Suppose $\alpha > 0$.  For the exact solution \eqref{eq:of:exactsolution}, show that
+\item \label{exer:of:checkexactbounds} Suppose $\alpha > 0$.  For the exact solution $u=u_{\text{exact}}$ in \eqref{eq:of:exactsolution}, show that
 \begin{equation}
 2^{(p-2)/2} \alpha^{3(p-2)} \le |\grad u|^{p-2} \le 2^{(p-2)/2} \left(1+\alpha\right)^{3(p-2)}.  \label{eq:of:coeffbounds}
 \end{equation}
@@ -797,21 +799,21 @@ do not.  Look at the output of \texttt{-snes\_view} with each of these.  Also, c
 
 \item FIXME: with $\alpha=0.3$, for example, it makes a difference to the observed convergence rate what norm we use in $\|u-u_{exact}\|$.  Switch from the $\infty$-norm in the code to the 1-norm and note the difference.
 
-\item One may approximate the strong form PDE \eqref{eq:of:plapstrongform} by finite differences on a structured grid just like that used in Chapter \ref{chap:st}.  Do so, in a \pSNES-using code \texttt{plapfd.c} that implements the nonlinear residual and the same manufactured solution as here.  At least initially, skip the Jacobian implementation.  Use \texttt{-snes\_fd\_color} and compare to results in this chapter.  What are the differences in your code relative to the code \texttt{plap.c}?
+\item One may approximate the strong form PDE \eqref{eq:of:plapstrongform} by finite differences using essentially the same structured grid as in this Chapter.  Note that in Chapter \ref{chap:st} we treated the boundary values as unknowns, but with trivial equations, and this can be done for \eqref{eq:of:plapstrongform} too.  Construct such a finite-difference, \pSNES- and \pDMDA-using program \texttt{plapfd.c} that implements the residual function.  (At least initially, there is no need to implement the objective or the Jacobian; compare Exercises \ref{chap:of}.\ref{exer:of:picardimplementation} and \ref{chap:of}.\ref{exer:of:jacobianimplementation} below.)  Use the same manufactured solution \eqref{eq:of:exactsolution} as here.  Compare convergence and performance.  Summarize differences, including ease-of-implementation, in a few sentences.
 
-\item It is common to linearize the strong form PDE \eqref{eq:of:plapstrongform} to get an iterative scheme
+\item \label{exer:of:picardimplementation}  It is common to linearize the strong form PDE \eqref{eq:of:plapstrongform} to get this iterative scheme,
 \begin{equation}
 - \Div\left(|\grad u^{(k-1)}|^{p-2} \grad u^{(k)}\right) = f,
 \label{eq:of:picard}
 \end{equation}
-a \emph{Picard} iteration.  Implement this method by adding a function \texttt{FormPicardLocal()} to \texttt{plap.c}.  This function computes and assembles a \pMat for the left side, so that \eqref{eq:of:picard} is a linear equation $A\bu = \bb$ at each iteration.  Use \texttt{MatSetValuesStencil()} to insert entries into the \pMat; how many nonzero entries are there per row?  Also add this line to \texttt{main()}:
+called a \emph{Picard} iteration.  Implement this method by adding a function \texttt{FormPicardLocal()} to \texttt{plap.c}.  This function computes and assembles a \pMat for the left side, so that \eqref{eq:of:picard} is a linear equation $A\bu = \bb$ at each iteration.  Use \texttt{MatSetValuesStencil()} to insert entries into the \pMat; how many nonzero entries are there per row?  Also add this line to \texttt{main()}:
 \begin{code}
     DMDASNESSetJacobianLocal(user.da,
             (DMDASNESJacobian)FormPicardLocal,&user);
 \end{code}
-Options \texttt{-snes\_fd}/\texttt{-snes\_fd\_color}/\texttt{-snes\_mf} are no longer needed.  Run the code and check using \texttt{-log\_summary | grep Eval} that the number of evaluations of \texttt{FormFunctionLocal()} is much smaller than before.  However, are you getting quadratic convergence?  Recover quadratic convergence with option \texttt{-snes\_mf\_operator}, which uses the Picard matrix as a preconditioner; see Chapter \ref{chap:nl}.
+Run the code and check using \texttt{-log\_summary | grep Eval} that the number of evaluations of \texttt{FormFunctionLocal()} is much smaller than before.  However, are you getting quadratic convergence?  Recover quadratic convergence with option \texttt{-snes\_mf\_operator}, which uses the Picard matrix as precondition ``material''; see Chapter \ref{chap:nl}.
 
-\item Improve on the last exercise by implementing the true Jacobian.  Add a user option so that either the Picard or Jacobian matrix is used, and compare performance with: the true Jacobian, the Picard matrix used as the true Jacobian, and the Picard matrix used as the preconditioning material in option \texttt{-snes\_mf\_operator}. 
+\item \label{exer:of:jacobianimplementation}  Improve on the last exercise by implementing the true Jacobian.  Add a user option so that either the Picard or Jacobian matrix is used, and compare performance with: the true Jacobian, the Picard matrix used as the true Jacobian, and the Picard matrix used as the preconditioning material in option \texttt{-snes\_mf\_operator}.
 
 \end{enumerate}
 
