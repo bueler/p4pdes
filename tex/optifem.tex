@@ -708,22 +708,30 @@ is that we get \texttt{DIVERGED\_LINEAR\_SOLVE} errors on the four finest grids.
 
 \section{Condition number, ellipticity, and regularization}  \label{page:of:regularization}
 
-The solution of the $p$-Laplacian equation so far in this Chapter is ``dangerous'' in the sense that the equation is solved as though it is uniformly-elliptic.  That assumption is solution- and method-dependent, however; see \eqref{eq:of:coeffbounds}.  The degree of ellipticity of our problem relates to the condition number of the discrete linear systems and to the common practice of ``regularization'' of nonlinear elliptic operators.  We briefly address these issues here.
+The solution of the $p$-Laplacian equation so far in this Chapter is ``dangerous'' in the sense that the equation is solved as though it is uniformly-elliptic.  That assumption is solution- and method-dependent, however.  We do have bounds on the coefficient $|\grad u|^{p-2}$ in the $p$-Laplacian weak form equation \eqref{eq:of:plapweakform} for the case of exact solution \eqref{eq:of:exactsolution}---see \eqref{eq:of:coeffbounds} in Exercise \ref{exer:of:checkexactbounds}---but for other source terms $f$ or boundary conditions $g$ there might not be such bounds.  On the practical side, the degree of ellipticity of our problem relates to the condition number of the discrete linear systems and to the common practice of ``regularization'' of nonlinear elliptic operators.  We briefly address these issues here, starting with how \PETSc can help with the condition number.
 
-One can ask \PETSc to compute the condition number of each linear system solved at the Newton step from either option \texttt{-ksp\_compute\_singularvalues} or \texttt{-ksp\_compute\_eigenvalues\_explicitly}.  We find the former more convenient; it explicitly states
+One can ask \PETSc to compute the condition number of the linear system solved at each Newton step by using option\sidenote{The information in \texttt{-ksp\_compute\_eigenvalues\_explicitly} is more complete, and includes the condition number for symmetric systems, but it is less convenient.}
+
+\centerline{\texttt{-ksp\_compute\_singularvalues}}
+
+\noindent which gives a line like
 \begin{code}
 Iteratively computed extreme singular values: max X min Y max/min Z
 \end{code}
-where \texttt{Z} is the estimated condition number.  However, an important consideration is that the displayed condition number is for the \emph{preconditioned} linear system, that is, system \eqref{introleftpre} instead of system \eqref{introsystem} in Chapter \ref{chap:ls}.  For example, compare the results of
+at the completion of each Newton step.  Here \texttt{Z=X/Y} is the estimated condition number.
+
+However, an important consideration is that the displayed condition number is for the \emph{preconditioned} linear system, that is, system \eqref{introleftpre} instead of system \eqref{introsystem} in Chapter \ref{chap:ls}.  For example, compare the results of
 \begin{cline}
 $ ./plap -pc_type cholesky -ksp_type cg -ksp_compute_singularvalues
 $ ./plap -pc_type none -ksp_type cg -ksp_compute_singularvalues
 \end{cline}
-The former reports a condition number of 1 at the end of the iteration while the latter says it is about 10.75; the latter is correct.
+The former reports a condition number of 1 at the end of the iteration while the latter says it is about 10.75; the latter is meaningful in our current context.
 
-How does this relate to ellipticity?  The theory of the errors of FE methods says that these discrete condition numbers, which describe the solvability of the discrete linear systems (see Chapter \ref{chap:ls}), increase as the grid is refined.  Specifically,  \cite{Elmanetal2005} Theorem 1.32 shows
+How does this relate to ellipticity?  The theory of the errors of FE methods says that the discrete-system condition numbers\sidenote{Recall that the condition number describes the perturbation-sensitivity of a linear system (Chapter \ref{chap:ls}).} increase as the grid is refined.  Specifically,  \citet{Elmanetal2005} Theorem 1.32 shows
     $$\kappa(A) \le C h^{-2}$$
-for a constant $C$ that relates to the (ellipticity) bounds on the coefficient of the operator.  The $O(h^{-2})$ growth rate is, in fact, what we see in practice.  For example, the loop
+for a constant $C$ that relates to the (ellipticity) bounds on the coefficient of the operator.  This bound is one of many reasons why finer grid solutions are more difficult to compute than coarser grid solutions.
+
+The $O(h^{-2})$ growth rate is roughly what we see here in practice, even though our equation is nonlinear.  For example, the loop
 \begin{cline}
 $ for LEV in 0 1 2 3 4 5 6; do
 >   ./plap -pc_type none -ksp_type cg -ksp_rtol 1.0e-14 -da_refine $LEV \
@@ -732,21 +740,18 @@ $ for LEV in 0 1 2 3 4 5 6; do
 generates Figure \ref{fig:of:plap-conditionnumber}.
 
 \begin{figure}
-%\includegraphics[width=0.95\textwidth]{figs/plap-conditionnumber}
+\includegraphics[width=0.95\textwidth]{figs/plap-conditionnumber}
 \caption{The condition number of the linearized operator grows at about an $O(h^{-2})$ rate, which would be expected for a uniformly-elliptic linear PDE.}
 \label{fig:of:plap-conditionnumber}
 \end{figure}
 
- this data and figure, which looks good
-\begin{code}
-h = [1/4 1/6 1/10 1/18 1/34 1/67 1/130];
-condA = [10.7515 29.2194 95.9797 361.692 1451.27 5947.31 24459.6];
-loglog(h,condA,'ko',h,h.^(-2),'k--')
-p=polyfit(log(h),log(condA),1);
-p(1)
-\end{code}
-with resulting exponent $-2.2108$
+Such condition numbers change if the bounds on coefficient $|\grad u|^{p-2}$ in  \eqref{eq:of:plapweakform} change.  Recall that in \eqref{eq:of:exactsolution} there is a parameter ``$\alpha$'' which has, so far, been set to $\alpha = 1$.  However, if $\alpha=0$ then the exact solution is simply
+\begin{equation}
+    u_{\text{exact}}(x,y) = \frac{1}{2} x^2 y^2. \label{eq:of:exactsolutionbad}
+\end{equation}
+Now $\grad u \to 0$ as $(x,y)\to(0,0)$ in $\Omega$ so that $|\grad u|^{p-2}$ is not bounded-below by a positive constant; compare \eqref{eq:of:coeffbounds}.  
 
+FIXME measure effect on condition number and also show in Figure \ref{fig:of:plap-conditionnumber}
 
 It is common to \emph{regularize} the $p$-Laplacian by inserting a constant $\eps>0$ so that the weak form \eqref{eq:of:plapweakform} becomes
 \begin{equation}
@@ -754,17 +759,9 @@ It is common to \emph{regularize} the $p$-Laplacian by inserting a constant $\ep
 \end{equation}
 and thus uniform-ellipticity is guaranteed.  (More precisely, if we linearize the problem around a solution $u\in W^{1,p}(\Omega)$ of the nonlinear problem, then the resulting linear problem is uniformly-elliptic.)  This regularization is already implemented in \texttt{plap.c}, but the default \texttt{eps} $=0$ has been used in all runs so far.
 
+FIXME Show that $\eps$-regularized cases can converge on fine grids but that the unregularized ($\eps=0$) method runs into trouble.
 
 FIXME We run the code with small nonzero values of $\eps$, and note the largest $\eps$ value which still gets 1\% agreement with unregularized results on a selection of grids.
-
-FIXME: incorporate alpha
-
-FIXME if $\alpha=0$ then the exact solution is simply
-\begin{equation}
-    u(x,y) = \frac{1}{2} x^2 y^2. \label{eq:of:exactsolutionbad}
-\end{equation}
-Now $\grad u \to 0$ as $(x,y)\to(0,0)$ in $\Omega$ so that $|\grad u|^{p-2}$ is not bounded-below by a positive constant; compare \eqref{eq:of:coeffbounds}.  Show that $\eps$-regularized cases can converge on fine grids but that the unregularized ($\eps=0$) method runs into trouble.
-
 
 
 \section{Summary}
