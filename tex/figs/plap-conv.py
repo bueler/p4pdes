@@ -166,7 +166,8 @@ p10iter = [5, 6, 8, 12,
 
 p2p1N = 9
 p2p1data = """
-$ for LEV in 0 1 2 3 4 5 6 7 8; do ./plap -snes_converged_reason -da_refine $LEV -ksp_type cg -pc_type icc -plap_p 2.1; donegrid of 3 x 3 = 9 interior nodes (element dims 0.25x0.25)
+$ for LEV in 0 1 2 3 4 5 6 7 8; do ./plap -snes_converged_reason -da_refine $LEV -ksp_type cg -pc_type icc -plap_p 2.1; done
+grid of 3 x 3 = 9 interior nodes (element dims 0.25x0.25)
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
 numerical error:  |u-u_exact|/|u_exact| = 5.167e-05
 grid of 5 x 5 = 25 interior nodes (element dims 0.166667x0.166667)
