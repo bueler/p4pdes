@@ -218,11 +218,11 @@ plt.text(0.012,4.0e-6,r'$O(h^{%.4f})$' % p[0],fontsize=20.0)
 
 plt.grid(True)
 plt.axis((1.0e-3,0.35,1.0e-7,3.0e-2))
-plt.xlabel(r'$h_x =h_y$',fontsize=20.0)
+plt.xlabel(r'$h=h_x =h_y$',fontsize=20.0)
 plt.xticks(np.array([0.001, 0.01, 0.1]),
                     (r'$0.001$',r'$0.01$',r'$0.1$'),
                     fontsize=16.0)
-plt.ylabel(r'$|u - u_{ex}|_\infty / |u|_\infty$',fontsize=18.0)
+plt.ylabel('relative error',fontsize=18.0)
 plt.yticks(np.array([1.0e-7, 1.0e-6, 1.0e-5, 1.0e-4, 1.0e-3, 1.0e-2]),
                     (r'$10^{-7}$',r'$10^{-6}$',r'$10^{-5}$',r'$10^{-4}$',r'$10^{-3}$',r'$10^{-2}$'),
                     fontsize=16.0)
@@ -245,11 +245,11 @@ plt.legend(loc='lower right')
 
 plt.grid(True)
 plt.axis((1.0e-3,0.35,3.0e-9,1.5e-1))
-plt.xlabel(r'$h_x =h_y$',fontsize=20.0)
+plt.xlabel(r'$h=h_x =h_y$',fontsize=20.0)
 plt.xticks(np.array([0.001, 0.01, 0.1]),
                     (r'$0.001$',r'$0.01$',r'$0.1$'),
                     fontsize=16.0)
-plt.ylabel(r'$|u - u_{ex}|_\infty / |u|_\infty$',fontsize=18.0)
+plt.ylabel('relative error',fontsize=18.0)
 plt.yticks(np.array([1.0e-7, 1.0e-6, 1.0e-5, 1.0e-4, 1.0e-3, 1.0e-2]),
                     (r'$10^{-7}$',r'$10^{-6}$',r'$10^{-5}$',r'$10^{-4}$',r'$10^{-3}$',r'$10^{-2}$'),
                     fontsize=16.0)
@@ -272,14 +272,11 @@ plt.legend(loc='upper right')
 
 plt.grid(True)
 plt.axis((1.0e-3,0.35,0,25))
-plt.xlabel(r'$h_x =h_y$',fontsize=20.0)
+plt.xlabel(r'$h=h_x =h_y$',fontsize=20.0)
 plt.xticks(np.array([0.001, 0.01, 0.1]),
                     (r'$0.001$',r'$0.01$',r'$0.1$'),
                     fontsize=16.0)
 plt.ylabel('Newton iterations',fontsize=18.0)
-#plt.yticks(np.array([1.0e-7, 1.0e-6, 1.0e-5, 1.0e-4, 1.0e-3, 1.0e-2]),
-#                    (r'$10^{-7}$',r'$10^{-6}$',r'$10^{-5}$',r'$10^{-4}$',r'$10^{-3}$',r'$10^{-2}$'),
-#                    fontsize=16.0)
 
 #plt.show()
 print "writing %s ..." % filename
