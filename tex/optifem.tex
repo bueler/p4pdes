@@ -698,6 +698,7 @@ for LEV in 0 1 2 3 4 5 6 7 8; do
 \end{cline}
 %$
 is that we get \texttt{DIVERGED\_LINEAR\_SOLVE} errors on the four finest grids (not shown).  One possible approach would be to change to a direct solver, in an attempt to resolve that error directly.  A different approach, coming from the idea that the underlying objective is not differentiable, is to regularize the problem by making the weak form more differentiable---see Exercise \ref{chap:of}.\ref{exer:of:regularizepone}.  However, for now we propose no method that resolves the issue.
+\label{page:of:casepone}
 
 \begin{figure}
 \includegraphics[width=0.72\textwidth]{figs/plap-piters}
@@ -823,13 +824,13 @@ We will return to look at performance of this example in Chapter \ref{chap:sc}, 
   \item For $1 < p < \infty$, prove strict convexity \eqref{eq:of:convexity} of functional $I[u]$ on $W_0^{1,p}(\Omega)$.  (\emph{Hint}:  The argument in section 5.3 of \citet{Ciarlet2002} suffices.)
   \end{enumerate}
  
-\item \label{exer:of:checkexactformulas}  For the exact solution $u=u_{\text{exact}}$ in \eqref{eq:of:exactsolution}, define $C = |\grad u|^{p-2}$ and $D^2=(x+\alpha)^2 + (y+\alpha)^2$ and show that
+\item \label{exer:of:checkexactformulas}  For the exact solution $u=u_{\text{exact}}$ in \eqref{eq:of:exactsolution}, define $C = |\grad u|^{p-2}$ and $D^2=(x+\alpha)^2 + (y+\alpha)^2$.  Show that
     $$C = \left[(x+\alpha)^2 (y+\alpha)^2 D^2\right]^{(p-2)/2}$$
 and that $\grad C = (p-2) C \left<\gamma_1,\gamma_2\right>$ where
     $$\gamma_1 = \frac{1}{x+\alpha}+ \frac{x+\alpha}{D^2}, \quad \gamma_2 = \frac{1}{y+\alpha}+ \frac{y+\alpha}{D^2}.$$
-Also show that $\Div \grad u = D^2$.  Thus strong form \eqref{eq:of:plapstrongform} implies an implementable formula for the source function,
+Also show that $\Div \grad u = D^2$.  Thus strong form \eqref{eq:of:plapstrongform} implies the following formula for the source function:
     $$f = - \Div \left(C \grad u\right) = - \grad C \cdot \grad u - C\, \Div \grad u.$$
-Note that \texttt{ExactRHSLocal()} in \texttt{plap.c} implements these formulas.
+Check that \texttt{ExactRHSLocal()} in \texttt{plap.c} implements these formulas.
 
 \item \label{exer:of:checkexactbounds}  For the exact solution $u=u_{\text{exact}}$ in \eqref{eq:of:exactsolution}, show that if $\alpha>0$ then \eqref{eq:of:coeffbounds} holds.  Also show that if $-1 \le \alpha \le 0$ then there is a point in $\bar\Omega=[0,1]\times[0,1]$ so that $|\grad u|^{p-2}=0$.
 
@@ -858,25 +859,29 @@ H_{ijcd}(\xi,\eta) &= \left[\frac{4}{h_x^2} \left(\sum_{\ell=0}^3 u_\ell \frac{\
 
 \item Figure \ref{fig:of:cartoonfunctional} shows the graph of $\Phi(x,y)=\tfrac{1}{4}(x^4+y^4) - 2x + 2y$, a cartoon for the $p$-Laplacian functional $I[u]$ in the case $p=4$.  Solve
     $$\min_{x,y} \Phi(x,y)$$
-by hand.  Now write a \PETSc code \texttt{cartoon.c} to solve this problem, starting with a code that only implements $\Phi(x,y)$ by a function \texttt{FormObjective()} and a call to \texttt{SNESSetObjective()}.  After checking that it works using ``\texttt{./cartoon -snes\_fd\_function -snes\_fd},'' add a function \texttt{FormFunction()} and a call to \texttt{SNESSetFunction()} and check that now ``\texttt{./cartoon -snes\_fd}'' works.  (\emph{Hint}:  \texttt{expcircle.c} from Chapter \ref{chap:nl} is a convenient starting point for your code.)
+by hand.  Now write a \PETSc code \texttt{cartoon.c} to solve this problem, starting with a code that only implements $\Phi(x,y)$ by a function \texttt{FormObjective()} and a call to \texttt{SNESSetObjective()}.  After checking that it works using ``\texttt{./cartoon -snes\_fd\_function -snes\_fd},'' add a function \texttt{FormFunction()} and a call to \texttt{SNESSetFunction()} and check that now ``\texttt{./cartoon -snes\_fd}'' works.
+
+\emph{Hints}.  Note that your code will \emph{not} use a \pDMDA, because there is no underlying grid (or differential equation).  Consider \texttt{expcircle.c} from Chapter \ref{chap:nl} as a starting point for your code.
 % solution:  c/ch5/solns/cartoon.c
 
-\item \label{exer:of:commentoutresidual}  Comment-out the parts of \texttt{plap.c} shown in Code \ref{code:plapFun}, including the \texttt{DMDASNESSetFunctionLocal()} line, which refer to the residual-evaluation \texttt{FormFunctionLocal()}.  You now have a truly ``objective-only'' code.  Confirm that
+\item \label{exer:of:commentoutresidual}  Comment-out those parts of \texttt{plap.c} which are shown in Code \ref{code:plapFun}, and the \texttt{DMDASNESSetFunctionLocal()} line shown in Code \ref{code:plapMain}.  Thus you have removed all references to \texttt{FormFunctionLocal()}, so you have a truly ``objective-only'' code.  Confirm that
 \begin{cline}
 ./plap -snes_fd_color -snes_fd_function
 \end{cline}
-works, but that
+still works, but that
 \begin{cline}
 ./plap -snes_fd
 ./plap -snes_mf
 \end{cline}
-do not.  Look at the output of \texttt{-snes\_view} with each of these.  Also, confirm the evaluation-counting results in the text with ``\texttt{-log\_summary | grep Eval}''.
+do not.  Confirm the evaluation-counting results in the main text which use ``\texttt{-log\_summary | grep Eval}'' on the objective-only implementation.
 
-\item \label{exer:of:regularizepone}  The $p=1$ cases tried on page \pageref{page:of:casepone} are problematic because, in terms of the minimization of $I[u]$,  we are attempting to minimize a not-continuously-differentiable functional.  The regularized weak form \eqref{eq:of:plapweakformreg} may work better.  Add option \texttt{-plap\_eps} $\eps$, and possibly option \texttt{-snes\_max\_it 200} if needed, to the $p=1$ Bash loop shown on page \pageref{page:of:casepone}.  Try various values of regularization parameter $\eps>0$.  Is regularization effective for resolving this non-differentiability problem?
+\item \label{exer:of:regularizepone}  The $p=1$ cases tried on page \pageref{page:of:casepone} are problematic because, in terms of the minimization of $I[u]$,  we are applying a gradient-based method to minimize a non-smooth \citep{NocedalWright2006} functional.  One might suppose that the regularized weak form \eqref{eq:of:plapweakformreg}, which is smooth for $\eps>0$, should work better, but this hypothesis needs testing.  Add option \texttt{-plap\_eps} $\eps$,\sidenote{And possibly option \texttt{-snes\_max\_it 200} if needed.} to the $p=1$ Bash loop shown on page \pageref{page:of:casepone}.  Try various values of regularization parameter $\eps>0$.  Is regularization effective for resolving \emph{this} non-smooth problem?
 
-\item FIXME: with $\alpha=0.3$, for example, it makes a difference to the observed convergence rate what norm we use in $\|u-u_{exact}\|$.  Switch from the $\infty$-norm in the code to the 1-norm and note the difference.
+\item Especially with $\alpha=0.1$, so that the problem is less uniformly-elliptic, the norm we use in evaluating the relative error $\|u-u_{exact}\|/\|u_{exact}\|$ makes a difference to the observed convergence rate.  Add an option to \texttt{plap.c} to choose either the $\infty$-norm or the 1-norm.  Regenerate the main data (i.e.~the dots) Figure \ref{fig:of:plap-conv} in the case $\alpha=0.1$ and using the 1-norm, and recompute the convergence rate $q$ in ``$O(h^q)$''.  What does 1-norm convergence measure?
 
-\item One may approximate the strong form PDE \eqref{eq:of:plapstrongform} by finite differences using essentially the same structured grid as in this Chapter.  Note that in Chapter \ref{chap:st} we treated the boundary values as unknowns, but with trivial equations, and this can be done for \eqref{eq:of:plapstrongform} too.  Construct such a finite-difference, \pSNES- and \pDMDA-using program \texttt{plapfd.c} that implements the residual function.  (At least initially, there is no need to implement the objective or the Jacobian; compare Exercises \ref{chap:of}.\ref{exer:of:picardimplementation} and \ref{chap:of}.\ref{exer:of:jacobianimplementation} below.)  Use the same manufactured solution \eqref{eq:of:exactsolution} as here.  Compare convergence and performance.  Summarize differences, including ease-of-implementation, in a few sentences.
+\item One may approximate the strong form PDE \eqref{eq:of:plapstrongform} by finite differences using essentially the same structured grid as in this Chapter.  However, note that in Chapter \ref{chap:st} we treated the boundary values as unknowns, but with trivial equations.  This can be done for \eqref{eq:of:plapstrongform} too.  Construct such a finite-difference, \pSNES- and \pDMDA-using program \texttt{plapfd.c}.  It should implement the residual function, but, at least initially, there is no need to implement the objective or the Jacobian---compare Exercises \ref{chap:of}.\ref{exer:of:picardimplementation} and \ref{chap:of}.\ref{exer:of:jacobianimplementation} below.  Use the same manufactured solution \eqref{eq:of:exactsolution} as here.  Compare convergence and performance.  Summarize differences, including ease-of-implementation, in a few sentences.
+
+\item  Though we did not mention or show it, the runs in this Chapter generally demonstrate quadratic convergence of the Newton iteration.  Show the evidence for this claim by making a figure, like Figure \ref{fig:newtonconvbasic}, for the runs which are shown as dots in Figure \ref{fig:of:plap-conv}.
 
 \item \label{exer:of:picardimplementation}  It is common to linearize the strong form PDE \eqref{eq:of:plapstrongform} to get this iterative scheme,
 \begin{equation}
@@ -888,9 +893,9 @@ called a \emph{Picard} iteration.  Implement this method by adding a function \t
     DMDASNESSetJacobianLocal(user.da,
             (DMDASNESJacobian)FormPicardLocal,&user);
 \end{code}
-Run the code and check using \texttt{-log\_summary | grep Eval} that the number of evaluations of \texttt{FormFunctionLocal()} is much smaller than before.  However, are you getting quadratic convergence?  Recover quadratic convergence with option \texttt{-snes\_mf\_operator}, which uses the Picard matrix as precondition ``material''; see Chapter \ref{chap:nl}.
+Run the code and check using \texttt{-log\_summary | grep Eval} that the number of evaluations of \texttt{FormFunctionLocal()} is much smaller than before.  Recover quadratic convergence with option \texttt{-snes\_mf\_operator}, which uses the Picard matrix as preconditioner ``material'' (Chapter \ref{chap:nl}).
 
-\item \label{exer:of:jacobianimplementation}  Improve on the last exercise by implementing the true Jacobian.  Add a user option so that either the Picard or Jacobian matrix is used, and compare performance with: the true Jacobian, the Picard matrix used as the true Jacobian, and the Picard matrix used as the preconditioning material in option \texttt{-snes\_mf\_operator}.
+\item \label{exer:of:jacobianimplementation}  Improve on the last exercise by implementing the true Jacobian.  Add a user option so that either the Picard or Jacobian matrix is used, and compare performance with: the true Jacobian, the Picard matrix used as the true Jacobian, and the Picard matrix used with option \texttt{-snes\_mf\_operator}.
 
 \end{enumerate}
 
