@@ -16,4 +16,6 @@ To compile and run the example C codes, upon which the book is based, see the `R
 
 ### PDF of the book
 
-To compile the draft book into a PDF, see the `README.md` in the [`tex/`](https://github.com/bueler/p4pdes/tree/master/tex) subdirectory.  Or email me at [elbueler@alaska.edu](mailto:elbueler@alaska.edu) and I'll send you a PDF ... just a draft for now.
+To get a somewhat-recent draft PDF, go to [the most recent release](https://github.com/bueler/p4pdes/releases).
+
+To compile the draft book into a PDF, see the `README.md` in the [`tex/`](https://github.com/bueler/p4pdes/tree/master/tex) subdirectory.
