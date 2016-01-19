@@ -7,24 +7,6 @@ static char help[] = "Solve the p-Laplacian equation in 2D using Q^1 FEM.\n"
 "   ./plap -snes_fd_function -snes_fd [does not scale]\n"
 "Uses a manufactured solution.\n\n";
 
-// EVIDENCE OF CONVERGENCE WITH OBJECTIVE-ONLY AND DIRECT SOLVE
-// note diverged linear solve from bad gradient
-// redo with -snes_fd_color to see total success
-// this also tests symmetry and positive-definiteness because use Cholesky
-// for LEV in 0 1 2; do ./plap -snes_fd_function -snes_fd -snes_monitor -snes_converged_reason -snes_linesearch_type basic -ksp_type preonly -pc_type cholesky -da_refine $LEV; done
-
-// CHECK FINE-GRID SNES CONVERGENCE WITH -snes_fd_color:
-// timer ./plap -snes_fd_color -ksp_converged_reason -snes_monitor -snes_converged_reason -ksp_type cg -pc_type icc -da_refine 6
-
-// EVIDENCE OF CONVERGENCE WITH -snes_fd_color AND IN PARALLEL;
-// bt line search fails in parallel?
-// note nonlinear iterations increase with grid
-// for LEV in 0 1 2 3 4 5 6 7; do mpiexec -n 4 ./plap -snes_fd_color -snes_linesearch_type basic -ksp_type cg -pc_type bjacobi -sub_pc_type icc -snes_converged_reason -da_refine $LEV; done
-
-// SHOWS n=1 GIVES ROUGH DOUBLE ERROR OVER n=2; n=3 NO BENEFIT:
-// for NN in 1 2 3; do for LEV in 0 2 4 6; do ./plap -snes_fd_color -snes_linesearch_type basic -ksp_type cg -pc_type icc -snes_converged_reason -da_refine $LEV -plap_quaddegree $NN; done; done
-
-
 #include <petsc.h>
 
 #define COMM PETSC_COMM_WORLD
