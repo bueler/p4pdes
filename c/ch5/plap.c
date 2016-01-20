@@ -210,25 +210,25 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
                XE = info->xs + info->xm, YE = info->ys + info->ym;
   double       lobj = 0.0, **af, **ag, f[4], u[4];
   int          i,j,r,s;
+  PetscBool    ownele;
   MPI_Comm     com;
 
-  // sum over all elements
   ierr = DMDAVecGetArray(user->da,user->f,&af); CHKERRQ(ierr);
   ierr = DMDAVecGetArray(user->da,user->g,&ag); CHKERRQ(ierr);
+  // loop over all elements
   for (j = info->ys; j <= YE; j++) {
       for (i = info->xs; i <= XE; i++) {
-          if ((i < XE) || (j < YE) || (i == info->mx) || (j == info->my)) {
-              // because of ghosts, these values are always valid even in the
-              //     "right" and "top" cases where i==info->mx or j==info->my
-              f[0] = af[j][i];  f[1] = af[j][i-1];
-                  f[2] = af[j-1][i-1];  f[3] = af[j-1][i];
-              GetUorG(info,i,j,au,ag,u);
-              for (r=0; r<n; r++) {
-                  for (s=0; s<n; s++) {
-                      lobj += wq[n-1][r] * wq[n-1][s]
-                              * ObjIntegrand(info,f,u,zq[n-1][r],zq[n-1][s],
-                                             user->p,user->eps);
-                  }
+          // owned elements include "right" and "top" edges of grid
+          ownele = (i < XE || j < YE || i == info->mx || j == info->my);
+          if (!ownele) continue;
+          f[0] = af[j][i];  f[1] = af[j][i-1];
+              f[2] = af[j-1][i-1];  f[3] = af[j-1][i];
+          GetUorG(info,i,j,au,ag,u);
+          for (r=0; r<n; r++) {
+              for (s=0; s<n; s++) {
+                  lobj += wq[n-1][r] * wq[n-1][s]
+                          * ObjIntegrand(info,f,u,zq[n-1][r],zq[n-1][s],
+                                         user->p,user->eps);
               }
           }
       }
