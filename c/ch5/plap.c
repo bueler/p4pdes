@@ -205,9 +205,10 @@ double ObjIntegrand(DMDALocalInfo *info, const double f[4], const double u[4],
 PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
                                   double *obj, PLapCtx *user) {
   PetscErrorCode ierr;
-  const double hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1);
+  const double hx = 1.0 / (info->mx+1),  hy = 1.0 / (info->my+1),
+               p = user->p,  eps = user->eps;
   const int    n = user->quaddegree,
-               XE = info->xs + info->xm, YE = info->ys + info->ym;
+               XE = info->xs + info->xm,  YE = info->ys + info->ym;
   double       lobj = 0.0, **af, **ag, f[4], u[4];
   int          i,j,r,s;
   PetscBool    ownele;
@@ -227,8 +228,7 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
           for (r=0; r<n; r++) {
               for (s=0; s<n; s++) {
                   lobj += wq[n-1][r] * wq[n-1][s]
-                          * ObjIntegrand(info,f,u,zq[n-1][r],zq[n-1][s],
-                                         user->p,user->eps);
+                          * ObjIntegrand(info,f,u,zq[n-1][r],zq[n-1][s],p,eps);
               }
           }
       }
@@ -257,35 +257,40 @@ double FunIntegrand(DMDALocalInfo *info, int L,
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                                  double **FF, PLapCtx *user) {
   PetscErrorCode ierr;
-  const double hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1);
+  const double hx = 1.0 / (info->mx+1),  hy = 1.0 / (info->my+1),
+               p = user->p,  eps = user->eps,  C = 0.25 * hx * hy;
   const int    n = user->quaddegree,
-               ell[2][2] = { {0,3}, {1,2} };
-  double       **af, **ag, f[4], u[4], z;
-  int          i,j,c,d,r,s;
+               XE = info->xs + info->xm,  YE = info->ys + info->ym,
+               li[4] = {0,-1,-1,0},  lj[4] = {0,0,-1,-1};
+  double       **af, **ag, f[4], u[4];
+  int          i,j,l,r,s,JJ,II;
+  PetscBool    ownnode;
 
-  // compute residual FF[j][i] for each node (x_i,y_j)
+  // clear residuals
+  for (j = info->ys; j < YE; j++)
+      for (i = info->xs; i < XE; i++)
+          FF[j][i] = 0.0;
   ierr = DMDAVecGetArray(user->da,user->f,&af); CHKERRQ(ierr);
   ierr = DMDAVecGetArray(user->da,user->g,&ag); CHKERRQ(ierr);
-  for (j = info->ys; j < info->ys + info->ym; j++) {
-      for (i = info->xs; i < info->xs + info->xm; i++) {
-          // sum over four elements which contribute to current node
-          z = 0.0;
-          for (c = 0; c < 2; c++) {
-              for (d = 0; d < 2; d++) {
-                  f[0] = af[j+d][i+c];  f[1] = af[j+d][i+c-1];
-                      f[2] = af[j+d-1][i+c-1];  f[3] = af[j+d-1][i+c];
-                  GetUorG(info,i+c,j+d,au,ag,u);
-                  for (r=0; r<n; r++) {
-                      for (s=0; s<n; s++) {
-                          z += wq[n-1][r] * wq[n-1][s]
-                               * FunIntegrand(info,ell[c][d],f,u,
-                                              zq[n-1][r],zq[n-1][s],
-                                              user->p,user->eps);
-                      }
+  // loop over all elements
+  for (j = info->ys; j <= YE; j++) {
+      for (i = info->xs; i <= XE; i++) {
+          f[0] = af[j][i];  f[1] = af[j][i-1];
+              f[2] = af[j-1][i-1];  f[3] = af[j-1][i];
+          GetUorG(info,i,j,au,ag,u);
+          for (l = 0; l < 4; l++) {
+              JJ = j + lj[l];  II = i + li[l];
+              ownnode = (II >= info->xs && II < XE && JJ >= info->ys && JJ < YE);
+              if (!ownnode) continue;
+              for (r=0; r<n; r++) {
+                  for (s=0; s<n; s++) {
+                     FF[JJ][II]
+                         += C * wq[n-1][r] * wq[n-1][s]
+                            * FunIntegrand(info,l,f,u,zq[n-1][r],zq[n-1][s],
+                                           p,eps);
                   }
               }
           }
-          FF[j][i] = 0.25 * hx * hy * z;
       }
   }
   ierr = DMDAVecRestoreArray(user->da,user->f,&af); CHKERRQ(ierr);
