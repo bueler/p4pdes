@@ -21,6 +21,9 @@ runplap_4:
 runplap_5:
 	-@../testit.sh plap "-plap_quaddegree 1" 1 5
 
+runplap_6:
+	-@../testit.sh plap "-snes_converged_reason -ksp_type cg -pc_type icc -da_refine 3" 1 6
+
 # etc
 
 .PHONY: distclean
