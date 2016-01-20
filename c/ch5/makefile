@@ -18,6 +18,9 @@ runplap_3:
 runplap_4:
 	-@../testit.sh plap "-snes_fd_color -snes_converged_reason -da_refine 2 -snes_linesearch_type cp" 4 4
 
+runplap_5:
+	-@../testit.sh plap "-plap_quaddegree 1" 1 5
+
 # etc
 
 .PHONY: distclean
