@@ -3,7 +3,7 @@ This section returns to the linear 2D Poisson equation last seen in Chapter \ref
 
 This example shows that it is possible to avoid using \PETSc's \pDMDA or other mesh-topology infrastructure, but at an increase in the work we have to do.  In Chapter \ref{chap:dp} we return to unstructured FEM methods, but taking advantage of \PETSc's \pDMPlex class.
 
-\section{A general (mixed) 2D Poisson problem}
+\section{A general 2D Poisson problem}
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=0.7]
@@ -19,7 +19,7 @@ This example shows that it is possible to avoid using \PETSc's \pDMDA or other m
 \label{fig:expcirclebasic}
 \end{marginfigure}
 
-Let $\Omega \subset \RR^d$ be a bounded (open) region.  Suppose its boundary $\partial\Omega$ is well-behaved, for instance it is Lipschitz-continuous \citep[section 1.2]{Ciarlet2002} or even polygonal.  Suppose $\partial\Omega$ is decomposed into (measurable) disjoint subsets $\partial_D \Omega$ and $\partial_N \Omega$ whose union is the entire boundary $\partial \Omega$.  The strong form of the \emph{Poisson problem}, including nonhomogeneous Dirichlet and Neumann boundary conditions, is
+Let $\Omega \subset \RR^2$ be a bounded (open) region.  Suppose its boundary $\partial\Omega$ is well-behaved, for instance it is Lipschitz-continuous \citep[section 1.2]{Ciarlet2002} or even polygonal.  Suppose $\partial\Omega$ is decomposed into (measurable) disjoint subsets $\partial_D \Omega$ and $\partial_N \Omega$ whose union is the entire boundary $\partial \Omega$.  The strong form of the \emph{Poisson problem}, including nonhomogeneous Dirichlet and Neumann boundary conditions, is
 \begin{align}
 - \grad^2 u &= f \quad \text{ on } \Omega, \label{eq:un:poissonstrong} \\
 u &= g_D \quad \text{ on } \partial_D \Omega, \notag \\
@@ -49,16 +49,23 @@ Equation \eqref{eq:un:poissonweak} is the \emph{weak formulation}, and any $u \i
 
 The rules for passing between the strong \eqref{eq:un:poissonstrong} and weak \eqref{eq:un:poissonweak} formulations clarify the situation:\begin{itemize}
 \item A function $u \in C^2(\Omega) \cap C(\overline \Omega)$ is well-behaved enough to possibly satisfy the conditions of the strong form.  If it does, then the above derivation shows it solves the weak form.
-\item If $u \in H_{gD}^1(\Omega)$ solves the weak form then we accept it, by definition, as a solution of the Poisson problem, and, in informal speaking, one might even say that it solves \eqref{eq:un:poissonstrong}.  If also it is well-behaved (i.e.~$u \in C^2(\Omega) \cap C(\overline \Omega)$) then reversing the above derivation shows that it solves the strong form.\sidenote{There exist more-or-less technical conditions, from our point of view, on the domain and the boundary data so that one can show $u$ solving \eqref{eq:un:poissonweak} is this well-behaved in some situations \citep{Evans2010}.}
+\item If $u \in H_{gD}^1(\Omega)$ solves the weak form then we accept it, by definition, as a solution of the Poisson problem, and, in informal speaking, one might even say that it solves \eqref{eq:un:poissonstrong}.  If also it is well-behaved (i.e.~$u \in C^2(\Omega) \cap C(\overline \Omega)$) then reversing the above derivation shows that it solves the strong form.
 \end{itemize}
 
-If $\partial_D \Omega$ has positive size, in an appropriate sense, then a solution to weak formulation \eqref{eq:un:poissonweak} exists and is unique.\sidenote{Proofs of this well-posedness claim are in \citet{Ciarlet2002} and in \citet{Evans2010}.}  Also, reminiscent of Chapter \ref{chap:un}, we could formulate our Poisson problem as a minimization; the standard way of doing this gives a formulation equivalent to the weak form \citep{Evans2010}.  However, our goal in this Chapter is to actually implement a numerical method for \eqref{eq:un:poissonweak}, so that we can examine computational options and performance, and thus follow neither of these mathematical tangents.
+If $\partial_D \Omega$ has positive size, in an appropriate sense, then a solution to weak formulation \eqref{eq:un:poissonweak} exists and is unique (\emph{well-posedness}; \citep{Ciarlet2002,Evans2010}).  There exist conditions on the domain and the boundary data under which one can show $u$ solving \eqref{eq:un:poissonweak} is in $C^2(\Omega) \cap C(\overline \Omega)$ (\emph{regularity}; \citep{Evans2010}).  Reminiscent of Chapter \ref{chap:of}, we could re-formulate our Poisson problem as a minimization; the standard way of doing this gives a formulation equivalent to the weak form \citep{Evans2010}.  However, because our goal in this Chapter is to actually implement a numerical method for \eqref{eq:un:poissonweak}, so that we can examine computational options and performance, we follow none of these mathematical tangents.
 
-\section{A finite element method (FEM) for the Poisson problem in the plane}
 
-An FEM for the Poisson problem comes from requiring the weak formulation \eqref{eq:un:poissonweak} to be true for $u$ in a much smaller, indeed finite-dimensional, subspace of $H_g^1(\Omega)$, and for test functions $v$ ranging over a finite-dimensional subspace of $H_0^1(\Omega)$.  In the ``Galerkin'' method here, these subspaces will be essentially the same.  We will build these subspaces, in the current example, using an unstructured triangulation on $\Omega\subset \RR^2$; from now on in this Chapter we restrict to $d=2$ dimensions.
+\section{A finite element method}
 
-Furthermore, to make our finite-dimensional spaces true subspaces of $H^1(\Omega)$---to make our FEM \emph{conforming}---we require that $\Omega$ be polygonal, with $\partial\Omega$ a closed polygon.  Segments of $\partial\Omega$ must have positive length, and be either entirely in $\partial_D\Omega$ or entirely in $\partial_N\Omega$.  We also assume $\partial_D\Omega$ is a closed set so that, at vertices of $\partial \Omega$ where the Dirichlet boundary and Neumann boundary meet, the vertex is Dirichlet.
+A FEM for the Poisson problem comes from requiring the weak formulation \eqref{eq:un:poissonweak} to be true for $u$ in a finite-dimensional (i.e.~small) subspace of $H_{gD}^1(\Omega)$, and for test functions $v$ ranging over a basis of a finite-dimensional subspace of $H_{0D}^1(\Omega)$.  In the \emph{Galerkin} method here, these subspaces will essentially be the same.  We will build them from triangulations of $\Omega$.
+
+To make our test function space $H_{0D}^1(\Omega)$ a true subspace\sidenote{I.e.~to make our FEM \emph{conforming}.} of $H^1(\Omega)$ we require that $\Omega$ be polygonal, with $\partial\Omega$ a closed polygon.  Furthermore we require that segments of $\partial\Omega$ be either entirely in $\partial_D\Omega$ or entirely in $\partial_N\Omega$.  We also assume $\partial_D\Omega$ is a closed set for reasons which will be clarified below.
+
+\begin{marginfigure}
+\input{blob.tikz}
+\caption{FIXME a polygonal $\Omega$}
+\label{fig:un:polygon}
+\end{marginfigure}
 
 By definition, a \emph{triangulation} is a finite set of non-overlapping, non-empty open triangles $\triangle_k\subset \RR^2$ which tile $\Omega$:
 \begin{equation*}
@@ -70,13 +77,13 @@ We index the $K$ triangles in $\Th$ by $k=0,\dots,K-1$.  The $N$ vertices (nodes
 \end{equation*}
 An example triangulation is shown in Figure \ref{fig:number-elements}.
 
+For now the reader can regard the subscript ``$h$'' in ``$\Th$'' as merely-traditional notation.  It denotes the typical or maximum size $h$ (e.g.~diameter) of the triangles, and it serves as a reminder that we want to approximate the solution in the limit $h\to 0$.  Also note that, in contrast to \citet{Elmanetal2005}, which we generally follow, and other references on the FEM or its implementation in languages like \Matlab, our indexing is zero-based.  This is so because we implement in C and we want to avoid any confusion when comparing text and codes.  Breaking long mathematical traditions, rows and columns of vectors and matrices will also have numbering starting with zero in this book.
+
 \begin{marginfigure}
-\input{samplepoly.1.tikz}
-\caption{A triangulation $\Th$ with $K=22$ triangles (elements) numbered $k=0,1,\dots,K-1$ ({\color{red} red}) and $N=16$ nodes numbered $j=0,1,\dots,N-1$  ({\color{blue} blue}).  Nodes $\bx_0$, $\bx_1$, $\bx_2$, $\bx_3$ are in the Dirichlet boundary $\partial_D\Omega$.}
+\input{blob.1.tikz}
+\caption{FIXME A triangulation $\Th$ with $K=22$ triangles (elements) numbered $k=0,1,\dots,K-1$ ({\color{red} red}) and $N=16$ nodes numbered $j=0,1,\dots,N-1$  ({\color{blue} blue}).  Nodes $\bx_0$, $\bx_1$, $\bx_2$, $\bx_3$ are in the Dirichlet boundary $\partial_D\Omega$.}
 \label{fig:number-elements}
 \end{marginfigure}
-
-For now the reader can regard the subscript ``$h$'' in ``$\Th$'' as merely-traditional notation.  It denotes the typical or maximum size $h$ (e.g.~diameter) of the triangles, and it serves as a reminder that we want to approximate the solution in the limit $h\to 0$.  Also note that, in contrast to \citet{Elmanetal2005}, which we generally follow, and other references on the FEM or its implementation in languages like \Matlab, our indexing is zero-based.  This is so because we implement in C and we want to avoid any confusion when comparing text and codes.  Breaking long mathematical traditions, rows and columns of vectors and matrices will also have numbering starting with zero in this book.
 
 We informally call the triangles \emph{elements}, though there is more to the definition of ``element.''  We are going to approximate the Poisson problem with $\Pone$ finite elements, which means that our finite-dimensional subspace contains only piecewise-linear functions which are linear on each triangle $\triangle_k$.
 
@@ -151,12 +158,12 @@ Note that the support (i.e.~nonzero set) of $\phi_j$ includes only the node $\bx
 
 \Triangle uses a simply-formatted ASCII file (extension \texttt{.poly}) as input to describe a polygonal region $\Omega$, and to indicate Dirichlet and Neumann portions of the boundary $\partial \Omega$.  For example, consider the input file \texttt{bump.poly} shown in Code \ref{code:bumppoly}.  This example polygon, a rectangle with a triangular bump in the base, is shown in Figure \ref{fig:bump-poly}.  It will reappear several times in this book as we solve more interesting PDEs on it.  The two apparently-unnecessary vertices introduced along the bottom help identify the Neumann part of the boundary, but note that \texttt{bump.poly} includes a Dirichlet/Neumann flag along each boundary segment.
 
-\inputfromline{../c/ch9/bump.poly}{\CODELOC bump.poly}{A description of the boundary polygon in Figure \ref{fig:triangulation}, suitable for reading by \Triangle.}{16}{code:bumppoly}
+\inputfromline{../c/ch9/blob.poly}{\CODELOC blob.poly}{A description of the boundary polygon in Figure \ref{fig:un:polygon}, suitable for reading by \Triangle.}{8}{code:blobpoly}
 
 The triangulation shown in Figure \ref{fig:triangulation} came from a single command which asks \Triangle to take \texttt{bump.poly} and generate a triangulation which has a polygon output file (option \texttt{-p}), relatively-uniform triangles (option \texttt{-q} for ``quality-checked'' \citep{Shewchuk1996}), and triangles with maximum area of $1.0$ (option \texttt{-a1.0}):
 \begin{marginfigure}
-\input{bump.poly.tikz}
-\caption{The polygon described by \texttt{bump.poly} in Code \ref{code:bumppoly}.  The bold part is the closed Dirichlet boundary.  The lower boundary is Neumann, and has ``extra'' nodes to identify it as such.}
+%\input{bump.poly.tikz}
+\caption{FIXME The polygon described by \texttt{bump.poly} in Code \ref{code:bumppoly}.  The bold part is the closed Dirichlet boundary.  The lower boundary is Neumann, and has ``extra'' nodes to identify it as such.}
 \label{fig:bump-poly}
 \end{marginfigure}
 \begin{cline}
@@ -165,19 +172,20 @@ $ triangle -pqa1.0 bump
 %$
 This command generates three ASCII files, \texttt{bump.1.poly}, \texttt{bump.1.node}, and  \texttt{bump.1.ele}.  These files define the new (i.e.~refined relative to \texttt{bump.poly}) polygonal boundary, the nodes locations, and the elements in the triangulation, respectively.  For example, \texttt{bump.1.node} has the numbering and node locations shown in blue in Figure \ref{fig:triangulation}.
 
+\begin{figure}
+%\input{bump.1.tikz}
+\caption{FIXME A FEM triangulation generated by \Triangle.  {\color{blue} Nodes} are labeled by $j=0,\dots,N-1$ with $N=24$ and {\color{red} elements} are labeled by $k=0,\dots,K-1$ with $K=32$.}
+\label{fig:triangulation}
+\end{figure}
+
+\bigskip
+
 \Triangle includes a minimal visualization tool which shows the triangulation graphically.  The command
 \begin{cline}
 $ showme bump
 \end{cline}
 %$
 displays the boundary polygon (from \texttt{bump.poly} or \texttt{bump.1.poly}) and the triangulation itself (\texttt{bump.1.node} and \texttt{bump.1.ele}).
-
-\begin{figure}
-\bigskip
-\input{bump.1.tikz}
-\caption{A FEM triangulation generated by \Triangle.  {\color{blue} Nodes} are labeled by $j=0,\dots,N-1$ with $N=24$ and {\color{red} elements} are labeled by $k=0,\dots,K-1$ with $K=32$.}
-\label{fig:triangulation}
-\end{figure}
 
 
 \section{Getting a triangular mesh from ASCII files into a \PETSc \pVec}
