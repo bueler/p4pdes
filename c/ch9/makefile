@@ -17,4 +17,4 @@ poissonfem: poissonfem.o readmesh.o poissontools.o chkopts
 
 distclean:
 	@rm -f *~ convert poissonfem
-	@rm -f mesh.?.* bump.?.* square.?.*
+	@rm -f blob.?.* square.?.* mesh.?.*
