@@ -153,7 +153,7 @@ if not polyonly:
                 yc = yc + y[jj]
               xc = xc/3.0
               yc = yc/3.0
-              tikz.write( '  \\draw (%f,%f) node {\\color{red} $%d$};\n' \
+              tikz.write( '  \\draw (%f,%f) node {$%d$};\n' \
                          % (xc+0.7*eleoffset,yc-eleoffset,count))
             count += 1
 
@@ -232,7 +232,7 @@ if not polyonly:
   # plot interior and boundary nodes themselves
   for j in range(N):
     if dolabelnodes:
-      tikz.write( '  \\draw (%f,%f) node {\\color{blue} $%d$};\n' \
+      tikz.write( '  \\draw (%f,%f) node {$%d$};\n' \
                  % (x[j]+0.7*nodeoffset,y[j]-nodeoffset,j))
     tikz.write('  \\filldraw (%f,%f) circle (%fpt);\n' % (x[j],y[j],nodesize))
 

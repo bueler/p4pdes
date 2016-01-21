@@ -80,9 +80,15 @@ An example triangulation is shown in Figure \ref{fig:number-elements}.
 For now the reader can regard the subscript ``$h$'' in ``$\Th$'' as merely-traditional notation.  It denotes the typical or maximum size $h$ (e.g.~diameter) of the triangles, and it serves as a reminder that we want to approximate the solution in the limit $h\to 0$.  Also note that, in contrast to \citet{Elmanetal2005}, which we generally follow, and other references on the FEM or its implementation in languages like \Matlab, our indexing is zero-based.  This is so because we implement in C and we want to avoid any confusion when comparing text and codes.  Breaking long mathematical traditions, rows and columns of vectors and matrices will also have numbering starting with zero in this book.
 
 \begin{marginfigure}
-\input{blob.1.tikz}
-\caption{FIXME A triangulation $\Th$ with $K=22$ triangles (elements) numbered $k=0,1,\dots,K-1$ ({\color{red} red}) and $N=16$ nodes numbered $j=0,1,\dots,N-1$  ({\color{blue} blue}).  Nodes $\bx_0$, $\bx_1$, $\bx_2$, $\bx_3$ are in the Dirichlet boundary $\partial_D\Omega$.}
-\label{fig:number-elements}
+\input{blob.1.elenum.tikz}
+\caption{A triangulation $\Th$ with $K=15$ triangles (elements) numbered $k=0,1,\dots,K-1$.}
+\label{fig:un:number-elements}
+\end{marginfigure}
+
+\begin{marginfigure}
+\input{blob.1.nodenum.tikz}
+\caption{The node number for the same triangulation as in Figure \ref{fig:un:number-elements}.  There are $N=13$ nodes numbered $j=0,1,\dots,N-1$.  Nodes $\bx_0$, $\bx_1$, $\bx_2$, $\bx_3$ are in the Dirichlet boundary $\partial_D\Omega$ (bold segments).}
+\label{fig:un:number-nodes}
 \end{marginfigure}
 
 We informally call the triangles \emph{elements}, though there is more to the definition of ``element.''  We are going to approximate the Poisson problem with $\Pone$ finite elements, which means that our finite-dimensional subspace contains only piecewise-linear functions which are linear on each triangle $\triangle_k$.

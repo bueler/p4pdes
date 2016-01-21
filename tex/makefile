@@ -7,7 +7,7 @@ texinputs := $(addsuffix .tex, $(texroots))
 croots := vecmatksp tri poisson expcircle expcircleJAC reaction plap fish2 readmesh poissontools poissonfem obstacle
 cstrip := $(addprefix cstrip/, $(addsuffix .c, $(croots)))
 
-tikzinputs := blob.tikz blob.1.tikz squarefour.tikz mesh.1.tikz
+tikzinputs := blob.tikz blob.1.elenum.tikz blob.1.nodenum.tikz squarefour.tikz mesh.1.tikz
 
 pdfroots := petscghostvalues
 pdfinputs := $(addprefix figs/, $(addsuffix .pdf, $(pdfroots)))
@@ -27,10 +27,11 @@ book.aux: book.tex book.bib $(texinputs) $(cstrip) $(tikzinputs) $(pdfinputs) $(
 $(cstrip):
 	./strip.sh
 
-blob.tikz blob.1.tikz: ../c/ch9/blob.poly
-	python tri2tikz.py --polyonly --nodesize 3.0 --scale 0.6 ../c/ch9/blob blob.tikz
+blob.tikz blob.1.elenum.tikz blob.1.nodenum.tikz: ../c/ch9/blob.poly
+	python tri2tikz.py --polyonly --nodesize 1.0 --scale 0.6 ../c/ch9/blob blob.tikz
 	triangle -pqa4.0 ../c/ch9/blob
-	python tri2tikz.py --labelnodes --nodesize 3.0 --nodeoffset -0.3 --labelelements --scale 0.6 ../c/ch9/blob.1 blob.1.tikz
+	python tri2tikz.py --labelelements --nodesize 1.0 --scale 0.6 ../c/ch9/blob.1 blob.1.elenum.tikz
+	python tri2tikz.py --labelnodes --nodesize 3.0 --nodeoffset -0.5 --scale 0.6 ../c/ch9/blob.1 blob.1.nodenum.tikz
 
 squarefour.tikz: squarefour.poly
 	python tri2tikz.py --labelnodes --nodesize 0.5 --nodeoffset -0.1 --scale 3.0 squarefour $@
