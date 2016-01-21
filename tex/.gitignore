@@ -7,7 +7,7 @@ cstrip/*.c
 *.?.poly
 *.?.tikz
 squarefour.tikz
-bump.poly*
+blob.tikz
 
 ## Core latex/pdflatex auxiliary files:
 *.aux

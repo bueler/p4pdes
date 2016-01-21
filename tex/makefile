@@ -7,7 +7,7 @@ texinputs := $(addsuffix .tex, $(texroots))
 croots := vecmatksp tri poisson expcircle expcircleJAC reaction plap fish2 readmesh poissontools poissonfem obstacle
 cstrip := $(addprefix cstrip/, $(addsuffix .c, $(croots)))
 
-tikzinputs := samplepoly.1.tikz squarefour.tikz bump.1.tikz bump.poly.tikz mesh.1.tikz
+tikzinputs := blob.tikz blob.1.tikz squarefour.tikz mesh.1.tikz
 
 pdfroots := petscghostvalues
 pdfinputs := $(addprefix figs/, $(addsuffix .pdf, $(pdfroots)))
@@ -27,19 +27,13 @@ book.aux: book.tex book.bib $(texinputs) $(cstrip) $(tikzinputs) $(pdfinputs) $(
 $(cstrip):
 	./strip.sh
 
-samplepoly.1.tikz: samplepoly.poly
-	triangle -pqa4.0 samplepoly
-	python tri2tikz.py --labelnodes --nodesize 2.0 --nodeoffset -0.3 --labelelements --scale 0.6 samplepoly.1 $@
+blob.tikz blob.1.tikz: ../c/ch9/blob.poly
+	python tri2tikz.py --polyonly --nodesize 3.0 --scale 0.6 ../c/ch9/blob blob.tikz
+	triangle -pqa4.0 ../c/ch9/blob
+	python tri2tikz.py --labelnodes --nodesize 3.0 --nodeoffset -0.3 --labelelements --scale 0.6 ../c/ch9/blob.1 blob.1.tikz
 
 squarefour.tikz: squarefour.poly
 	python tri2tikz.py --labelnodes --nodesize 0.5 --nodeoffset -0.1 --scale 3.0 squarefour $@
-
-bump.1.tikz: ../c/ch9/bump.poly
-	(cd ../c/ch9/ && triangle -pqa1.0 bump)
-	python tri2tikz.py --labelnodes --nodeoffset 0.25 --labelelements --scale 1.7 ../c/ch9/bump.1 $@
-
-bump.poly.tikz: ../c/ch9/bump.poly
-	python tri2tikz.py --scale 0.85 --polyonly ../c/ch9/bump --nodesize 3.0 bump.poly.tikz
 
 mesh.1.tikz: ../c/ch9/genstructured.py
 	(cd ../c/ch9/ && python genstructured.py mesh.1 5)
@@ -51,6 +45,6 @@ clean:
 	rm -f *~ *.out *.aux *.log *.bbl *.blg *.synctex.gz *.idx *.ilg *.ind *.toc *.dvi
 	rm -rf cstrip/
 	(cd figs/ && make clean)
-	rm -f bump.?.* samplepoly.?.* bump.poly* squarefour.tikz mesh.?.*
+	rm -f blob.?.* squarefour.tikz mesh.?.*
 	rm -f timing/*~ timing/poisson/*~ timing/tri/*~
 
