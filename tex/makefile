@@ -46,6 +46,6 @@ clean:
 	rm -f *~ *.out *.aux *.log *.bbl *.blg *.synctex.gz *.idx *.ilg *.ind *.toc *.dvi
 	rm -rf cstrip/
 	(cd figs/ && make clean)
-	rm -f blob.?.* squarefour.tikz mesh.?.*
+	rm -f blob*.tikz squarefour.tikz mesh.?.*
 	rm -f timing/*~ timing/poisson/*~ timing/tri/*~
 
