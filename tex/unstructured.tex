@@ -15,8 +15,8 @@ This example shows that it is possible to avoid using \PETSc's \pDMDA or other m
 \draw[->,line width=1.0pt] (2,-3) -- (1.2,-3) node[below] {$\bn$}; % normal vector
 \draw (4,-1) node {$- \grad^2 u = f$ in $\Omega$};
 \end{tikzpicture}
-\caption{Problem \eqref{eq:un:poissonstrong}.}
-\label{fig:expcirclebasic}
+\caption{Problem \eqref{eq:un:poissonstrong} on a domain.}
+\label{fig:un:generalpoissondomain}
 \end{marginfigure}
 
 Let $\Omega \subset \RR^2$ be a bounded (open) region.  Suppose its boundary $\partial\Omega$ is well-behaved, for instance it is Lipschitz-continuous \citep[section 1.2]{Ciarlet2002} or even polygonal.  Suppose $\partial\Omega$ is decomposed into (measurable) disjoint subsets $\partial_D \Omega$ and $\partial_N \Omega$ whose union is the entire boundary $\partial \Omega$.  The strong form of the \emph{Poisson problem}, including nonhomogeneous Dirichlet and Neumann boundary conditions, is
@@ -43,7 +43,7 @@ To weakly-formulate the Poisson problem we choose any $v\in H_{0D}^1(\Omega)$, m
 \end{equation*}
 Next we use the boundary information, namely that $v=0$ on $\partial_D\Omega$ and $\frac{\partial u}{\partial n}=g_N$ on $\partial_N\Omega$ to get this characterization of $u$:
 \begin{equation}
-\int_\Omega \grad u \cdot \grad v = \int_\Omega f v + \int_{\partial_N\Omega} g_N v\quad \text{ for any } v\in H_0^1(\Omega). \label{eq:un:poissonweak}
+\int_\Omega \grad u \cdot \grad v = \int_\Omega f v + \int_{\partial_N\Omega} g_N v\quad \text{ for any } v\in H_{0D}^1(\Omega). \label{eq:un:poissonweak}
 \end{equation}
 Equation \eqref{eq:un:poissonweak} is the \emph{weak formulation}, and any $u \in H_{gD}^1(\Omega)$ satisfying it is a \emph{weak solution}.  A key observation is that we include the Dirichlet boundary condition by requiring $u$ to live in $H_{gD}^1(\Omega)$.  By contrast, both the Neumann boundary data $g_N$ and the source function $f$ explicitly appear in \eqref{eq:un:poissonweak}.
 
@@ -59,41 +59,47 @@ If $\partial_D \Omega$ has positive size, in an appropriate sense, then a soluti
 
 A FEM for the Poisson problem comes from requiring the weak formulation \eqref{eq:un:poissonweak} to be true for $u$ in a finite-dimensional (i.e.~small) subspace of $H_{gD}^1(\Omega)$, and for test functions $v$ ranging over a basis of a finite-dimensional subspace of $H_{0D}^1(\Omega)$.  In the \emph{Galerkin} method here, these subspaces will essentially be the same.  We will build them from triangulations of $\Omega$.
 
-To make our test function space $H_{0D}^1(\Omega)$ a true subspace\sidenote{I.e.~to make our FEM \emph{conforming}.} of $H^1(\Omega)$ we require that $\Omega$ be polygonal, with $\partial\Omega$ a closed polygon.  Furthermore we require that segments of $\partial\Omega$ be either entirely in $\partial_D\Omega$ or entirely in $\partial_N\Omega$.  We also assume $\partial_D\Omega$ is a closed set for reasons which will be clarified below.
-
 \begin{marginfigure}
 \input{blob.tikz}
-\caption{FIXME a polygonal $\Omega$}
+\caption{An example polygonal domain $\Omega$ resembling the domain in Figure \ref{fig:un:generalpoissondomain}.  The bold part of the boundary is $\partial_D\Omega$, and $\partial_N\Omega$ is the remainder.}
 \label{fig:un:polygon}
 \end{marginfigure}
+
+To make our test function space $H_{0D}^1(\Omega)$ a true subspace of $H^1(\Omega)$---so as to make our FEM \emph{conforming}---we require that $\Omega$ be polygonal, with $\partial\Omega$ a closed polygon (Figure \ref{fig:un:polygon}).  Furthermore we require that segments of $\partial\Omega$ be either entirely in $\partial_D\Omega$ or entirely in $\partial_N\Omega$.  We also assume $\partial_D\Omega$ is a closed set for reasons which will be clarified below.
 
 By definition, a \emph{triangulation} is a finite set of non-overlapping, non-empty open triangles $\triangle_k\subset \RR^2$ which tile $\Omega$:
 \begin{equation*}
 \Th = \left\{\triangle_k \quad\Big|\quad \cup_k \overline{\triangle}_k = \overline{\Omega} \quad \text{ and} \quad \Omega_k \cap \Omega_l = \emptyset \text{ if } k\ne l\right\}.
 \end{equation*}
-We index the $K$ triangles in $\Th$ by $k=0,\dots,K-1$.  The $N$ vertices (nodes) in $\Th$ are indexed by $j=0,1,\dots,N-1$, with locations
+We index the $K$ triangles (elements) in $\Th$ by $k=0,\dots,K-1$.  The $N$ vertices (nodes) in $\Th$ are indexed by $j=0,1,\dots,N-1$, with locations
 \begin{equation*}
 \bx_j = (x_j,y_j).
 \end{equation*}
-An example triangulation is shown in Figure \ref{fig:number-elements}.
-
-For now the reader can regard the subscript ``$h$'' in ``$\Th$'' as merely-traditional notation.  It denotes the typical or maximum size $h$ (e.g.~diameter) of the triangles, and it serves as a reminder that we want to approximate the solution in the limit $h\to 0$.  Also note that, in contrast to \citet{Elmanetal2005}, which we generally follow, and other references on the FEM or its implementation in languages like \Matlab, our indexing is zero-based.  This is so because we implement in C and we want to avoid any confusion when comparing text and codes.  Breaking long mathematical traditions, rows and columns of vectors and matrices will also have numbering starting with zero in this book.
 
 \begin{marginfigure}
 \input{blob.1.elenum.tikz}
-\caption{A triangulation $\Th$ with $K=15$ triangles (elements) numbered $k=0,1,\dots,K-1$.}
+\caption{A triangulation $\Th$ with $K=15$ numbered elements.}
 \label{fig:un:number-elements}
 \end{marginfigure}
 
+An example triangulation $\Th$ is shown with element numbering in Figure \ref{fig:un:number-elements} and with node numbering in Figure \ref{fig:un:number-nodes}.  The reader may regard the subscript ``$h$'' in ``$\Th$'' as merely traditional notation, but it denotes the typical or maximum size $h$ (e.g.~diameter) of the triangles; it serves as a reminder that we want to approximate the solution in the limit $h\to 0$.  In contrast to many references--e.g.~\citet{Elmanetal2005}, which we follow in many ways---note that all numbering is zero-based, which is natural in a C implementation, of course.  (As mentioned in Chapter \ref{chap:ls}, in this book even rows and columns of vectors and matrices have numbering starting with zero.)
+
 \begin{marginfigure}
 \input{blob.1.nodenum.tikz}
-\caption{The node number for the same triangulation as in Figure \ref{fig:un:number-elements}.  There are $N=13$ nodes numbered $j=0,1,\dots,N-1$.  Nodes $\bx_0$, $\bx_1$, $\bx_2$, $\bx_3$ are in the Dirichlet boundary $\partial_D\Omega$ (bold segments).}
+\caption{The same triangulation as in Figure \ref{fig:un:number-elements}, with $N=13$ numbered nodes.  Four nodes ($L=4$) are in the Dirichlet boundary $\partial_D\Omega$ (bold).}
 \label{fig:un:number-nodes}
 \end{marginfigure}
 
-We informally call the triangles \emph{elements}, though there is more to the definition of ``element.''  We are going to approximate the Poisson problem with $\Pone$ finite elements, which means that our finite-dimensional subspace contains only piecewise-linear functions which are linear on each triangle $\triangle_k$.
+We have informally called the triangles ``elements,'' but in truth the function space we choose on each element is part of the definition.  Here we will use $P^1$ finite elements \citep{Elmanetal2005} so that our test and trial functions are continuous and linear on each triangle $\triangle_k$.  As in Chapter \ref{chap:of}, for each node $j$ there is a basis (``hat'') function  $\psi_j(x,y)$ which is linear on each triangle, continuous on all of $\overline{\Omega}$, and equal to one at only one node $j$,
+\begin{equation*}
+\psi_j(\bx_i) = \delta_{ij}.
+\end{equation*}
+See Figure \ref{fig:un:hatfunction}.  The functions $\psi_j$ are in $H^1(\Omega)$, with piecewise-constant partial derivatives $\partial\psi_j/\partial x$ and $\partial\psi_j/\partial y$.  The set $\{\psi_j\}_{j=0,\dots,N-1}$ is linearly-independent.  On each triangle, $\psi_j$ has three degrees of freedom; there exist coefficients $A_{kj},B_{kj},C_{kj}\in\RR$ so that
+\begin{equation*}
+\psi_j(x,y) = A_{kj} + B_{kj} x + C_{kj} y \quad \text{ on } \triangle_k.
+\end{equation*}
 
-For each node $j$ there is a $\Pone$ basis function, or ``hat'' function, $\phi_j(x,y)$ which is linear on each triangle, continuous on all of $\overline{\Omega}$, and equal to one on only one node $j$:\marginnote{%
+\begin{marginfigure}
 \begin{tikzpicture}[scale=0.9, z={(.707,.3)}]
     % (2,2,1) is top
     \draw[style=dashed] (0,0,0) -- (2,2,1); % to top from left
@@ -110,55 +116,60 @@ For each node $j$ there is a $\Pone$ basis function, or ``hat'' function, $\phi_
     \draw[color=gray] (2,0.4,1) -- (4,0,3);
     \draw[color=gray] (4,0,0) -- (2,0.4,1);
     \draw[color=gray] (2,0.4,1) -- (0.3,0,4);
-    % draw \phi_j at nodes
+    % draw \psi_j at nodes
     \filldraw (2,2,1) circle (1.25pt);
-    \draw (2,2.5,1) node {$\phi_j(\bx_j)=1$};
+    \draw (2,2.5,1) node {$\psi_j(\bx_j)=1$};
     \draw (2,0.15,1) node {$\bx_j$};
     \filldraw (0,0,0) circle (1.25pt);
     \filldraw (4,0,0) circle (1.25pt);
-    \draw (4,-0.5,0) node {$\phi_j(\bx_i)=0$};
+    \draw (4,-0.5,0) node {$\psi_j(\bx_i)=0$};
     \draw (4.1,0.3,0) node {$\bx_i$};
     \filldraw (4,0,3) circle (1.25pt);
     \filldraw[color=gray] (0.3,0,4) circle (1.25pt);
 \end{tikzpicture}
-}%
-\begin{equation*}
-\phi_j(\bx_i) = \delta_{ij}.
-\end{equation*}
-The functions $\phi_j$ are in $H^1(\Omega)$, with piecewise-constant partial derivatives $\partial\phi_j/\partial x$ and $\partial\phi_j/\partial y$.  Also, the set $\{\phi_j\}_{j=0,\dots,N-1}$ is linearly-independent.  On each triangle, $\phi_j$ has three degrees of freedom, because on $\triangle_k$ there exist coefficients $A_k,B_k,C_k\in\RR$ so that
-\begin{equation*}
-\phi_j(\bx) = A_k + B_k x + C_k y \quad \text{ on } \triangle_k,
-\end{equation*}
-where $\bx = (x,y)$.
+\caption{Hat functions $\psi_j$.}
+\label{fig:un:hatfunction}
+\end{marginfigure}
 
-We can immediately use these basis functions to approximate the Dirichlet data $g$ and extend it to the region $\Omega$.  We will assume from now on that the Dirichlet boundary $\partial_D\Omega$ is closed, and index the $L$ nodes which are in the Dirichlet boundary by $\bx_{j_l} \in \partial_D\Omega$ for $l=0,\dots,L-1$.  (Figure \ref{fig:number-elements} shows an example with $L=4$ and $j_l=l$ for $l=0,1,2,3$, but any subset of boundary points can be Dirichlet as long as the index values $j_l$ are well-defined.)  Now we can define an extended interpolant $\hat g$ of $g$ as the function which has the correct value on the Dirichlet boundary nodes and which extends to all of $\Omega$ in a continuous and piecewise-linear way:
+Hat functions allow us to interpolate and extend the Dirichlet data $g_D$ from its node values in $\partial_D \Omega$ to the whole of $\overline\Omega$, a step which will be useful in our FEM implementation.  We number the $L$ nodes which are in the Dirichlet boundary by $\bx_{j_l} \in \partial_D\Omega$ for $l=0,\dots,L-1$.  (Figure \ref{fig:un:number-elements} shows an example with $L=4$ and $j_l=l$ for $l=0,1,2,3$.)  Now let $\hat g_D \in C(\overline\Omega)$ be the piecewise-linear interpolant of $g_D$ which has value zero at all nodes $\bx_j$ which are not in the Dirichlet boundary $\partial_D \Omega$:
 \begin{equation}
-\hat g(\bx) = \sum_{l=0,\dots,L} g(\bx_{j_l}) \phi_{j_l}(\bx). \label{hatgdefine}
+\hat g_D(x,y) = \sum_{l=0}^{L-1} g_D(\bx_{j_l}) \psi_{j_l}(x,y). \label{eq:un:hatgdefine}
 \end{equation}
 
-By using $\hat g$ and the basis functions $\phi_j$, we can now describe three finite-dimensional subspaces of $H^1(\Omega)$:\sidenote{Traditionally, basis functions for $S_g^h$ are called the \emph{trial} functions, and basis functions for $S_0^h$ are called \emph{test} functions.  We will generally just use the labels ``$S_g^h$'' and ``$S_0^h$.''}
+By using $\hat g$ and the basis functions $\psi_j$, we can specify the two needed finite-dimensional subspaces as the span of certain hat functions.  The test functions are zero along $\partial_D \Omega$,
 \begin{align*}
-S^h &= \Span\{\phi_j \,\big|\, \text{ all } j\,\}, \\
-S_0^h &= \Span\{\phi_j \,\big|\, \bx_j \notin \partial_D \Omega\} \subset S^h, \\
-S_g^h &= S_0^h + \hat g \subset S^h.
+S_{0D}^h &= \left<\psi_j \,:\, \bx_j \notin \partial_D \Omega\right> \\
+         &= \left<\psi_j \,:\, j \neq j_l \text{ for } l=0,\dots,L-1\right>,
 \end{align*}
-Then $\dim(S^h)=N$ while $\dim(S_0^h)=\dim(S_g^h)=N-L$, with $S_g^h$ only an affine subspace of $S^h$.
-
-Our FEM requires that the weak formulation  \eqref{eq:un:poissonweak} be true of $u_h\in S_g^h$ for all $v\in S_0^h$.  Thus we first write $u_h$ in the basis for $S_g^h$ using $N-L$ unknown coefficients $u_j$:
+while the trial functions have value $g_D$ along $\partial_D \Omega$,
 \begin{equation}
-u_h(\bx) = \hat g(\bx) + \sum_{\bx_j \notin \partial_D \Omega} u_j\, \phi_j(\bx). \label{uhexpand}
+S_{gD}^h = \left\{\hat g_D + w \,:\, w \in S_{0D}^h\right\}.
 \end{equation}
-Then we require that the weak formulation hold for all $\phi_i$ in the basis of $S_0^h$.  That is, using definition \eqref{hatgdefine} and expansion \eqref{uhexpand}, we require
-\begin{align}
-\sum_{\bx_j \notin \partial_D \Omega} u_j \int_\Omega \grad \phi_j \cdot \grad \phi_i &= \int_\Omega f \phi_i + \int_{\partial_N\Omega} \gamma \phi_i \label{poissonfem} \\
-&\qquad - \sum_{l=0,\dots,L} g(\bx_{j_l})  \int_\Omega \grad \phi_{j_l} \cdot \grad \phi_i \notag
-\end{align}
-for all $i$ such that $\bx_i \notin \partial_D \Omega$.  The coefficients $u_j$, for all $j$ such that $\bx_j \notin \partial_D \Omega$, are the unknowns in this equation.
+We will seek $u\in S_{gD}^h$.  Note that $\dim(S_{0D}^h)=\dim(S_{gD}^h)=N-L$, and that $S_{0D}^h$ is a linear subspace of $H_{0D}^1(\Omega)$, while $S_{gD}^h$ is merely an affine subspace of $H^1(\Omega)$.
 
-Note that the support (i.e.~nonzero set) of $\phi_j$ includes only the node $\bx_j$ and all triangles (elements) $\triangle_k$ for which $\bx_j$ is a node of $\triangle_k$.  Thus the integral ``$\int_\Omega \grad \phi_j \cdot \grad \phi_i$'' in \eqref{poissonfem} is usually zero.  Specifically, it is zero if $\bx_i$ and $\bx_j$ are not both nodes of at least one triangle in the triangulation.
+The FEM itself can now be stated.  It requires \eqref{eq:un:poissonweak} to be true for $u^h\in S_{gD}^h$ for all $v^h\in S_{0D}^h$.  However, it suffices to consider $v^h$ from a basis of $S_{0D}^h$, so
+\begin{equation}
+\int_\Omega \grad u^h \cdot \grad \psi_i = \int_\Omega f \psi_i + \int_{\partial_N\Omega} g_N \psi_i
+\end{equation}
+for all $i$ such that $\bx_i \notin \partial_D \Omega$.  Now we write $u^h$ using $N-L$ unknown coefficients $u_j\in\RR$:
+\begin{equation}
+u^h(x,y) = \hat g_D(x,y) + \sum_{\bx_j \notin \partial_D \Omega} u_j\, \psi_j(x,y). \label{eq:un:uhexpand}
+\end{equation}
+Moving the known Dirichlet data to the right, and using expansions \eqref{eq:un:hatgdefine} and \eqref{eq:un:uhexpand}, gives
+\begin{align}
+\sum_{\bx_j \notin \partial_D \Omega} u_j \int_\Omega \grad \psi_j \cdot \grad \psi_i &= \int_\Omega f \psi_i + \int_{\partial_N\Omega} g_N \psi_i \label{eq:un:poissonfem} \\
+&\qquad - \sum_{l=0}^{L-1} g_D(\bx_{j_l})  \int_\Omega \grad \psi_{j_l} \cdot \grad \psi_i \notag
+\end{align}
+The coefficients $u_j$ are the unknowns in these equations.
+
+Note that the support (i.e.~nonzero set) of $\psi_j$ includes only the node $\bx_j$ and all triangles (elements) $\triangle_k$ for which $\bx_j$ is a node of $\triangle_k$.  Thus the integral ``$\int_\Omega \grad \psi_j \cdot \grad \psi_i$'' in \eqref{eq:un:poissonfem} is often zero.  Specifically, it is zero if $\bx_i$ and $\bx_j$ are not both nodes of at least one triangle in the triangulation, so \eqref{eq:un:poissonfem} is (generically) a sparse system of equations.
+
+Each equation in \eqref{eq:un:poissonfem} is linear.  It is therefore very common to immediately write the system \eqref{eq:un:poissonfem} as a linear equation ``$A \bu = \bb$'', but we will not do that immediately.  Following the pattern established since Chapter \ref{chap:nl}, we first implement a residual-evaluation function, corresponding to \eqref{eq:un:poissonfem}, within a \PETSc \pSNES instance.  This implementation can immediately be tested with finite-differenced Jacobian.  Once it works we can, and we will, consider matrix assembly.  Before any of that can be accomplished, however, we have to \emph{put the mesh itself into \PETSc data structures}.
 
 
 \section{Triangular meshes from \Triangle}
+
+FIXME from here: \pIS and \pSNES
 
 \PETSc itself does not include any tools for triangulating regions of the plane, sowe use the widely-available and easy-to-use \Triangle\sidenote{See \href{http://www.cs.cmu.edu/~quake/triangle.html}{www.cs.cmu.edu/$\sim$quake/ triangle.html} for documentation and source code. \Triangle may be available as a package in your operating system.} software \citep{Shewchuk1996} for this task.  \Triangle is both limited to planar regions and only capable of writing ASCII files.  Thus it is not a choice for performance, but of convenience.
 
@@ -234,7 +245,7 @@ has $A\in\RR^{N\times N}$ and $\bu,\bb\in\RR^N$, where $N$ is the number of node
 
 For ease of construction we include the node-wise Dirichlet conditions $u_j=g(\bx_j)$ as equations in this linear system, treating such $u_j$ as unknowns, so that the matrix has $N$ rows and columns if there are $N$ nodes in total.  Thus we define $A$ to have entries
 \begin{equation}
-a_{ij} = \int_\Omega \grad \phi_j \cdot \grad \phi_i \label{Aentryfem}
+a_{ij} = \int_\Omega \grad \psi_j \cdot \grad \psi_i \label{Aentryfem}
 \end{equation}
 if $\bx_i \notin \partial_D \Omega$ and $\bx_j \notin \partial_D \Omega$, while otherwise
 \begin{equation*}
@@ -246,17 +257,17 @@ Observe that $A$ is \emph{symmetric}, $a_{ij}=a_{ji}$.  Furthermore $A$ is \emph
 
 For the right side of \eqref{poissonfem}, define the entries
 \begin{equation}
-    b_i = \int_\Omega f \phi_i + \int_{\partial_N\Omega} \gamma \phi_i - \sum_{l=0,\dots,L} g(\bx_{j_l})  \int_\Omega \grad \phi_{j_l} \cdot \grad \phi_i  \label{bentryfem}
+    b_i = \int_\Omega f \psi_i + \int_{\partial_N\Omega} \gamma \psi_i - \sum_{l=0,\dots,L} g(\bx_{j_l})  \int_\Omega \grad \psi_{j_l} \cdot \grad \psi_i  \label{bentryfem}
 \end{equation}
 if $\bx_i \notin \partial_D \Omega$, while if $\bx_i \in \partial_D \Omega$ then
     $$b_i = g(\bx_{i}).$$
 
 In practice we \emph{don't} initially build $A$ or $\bb$ as described above.  We start with a matrix $\tilde A$ and vector $\tilde \bb$ which have the same size as $A$ and $\bb$, respectively, but which ignore the Dirichlet boundary.  We don't even evaluate the function $g$.  All entries of $\tilde A$ are computed by the first formula above for $a_{ij}$, that is, the entries are
 \begin{equation*}
-\tilde a_{ij} = \int_\Omega \grad \phi_i \cdot \grad \phi_j
+\tilde a_{ij} = \int_\Omega \grad \psi_i \cdot \grad \psi_j
 \end{equation*}
 for all $i,j=0,1,\dots,N$.  Also the simpler right-hand side $\tilde \bb\in\RR^N$ has entries
-    $$\tilde b_i = \int_\Omega f \phi_i + \int_{\partial_N\Omega} \gamma \phi_i$$
+    $$\tilde b_i = \int_\Omega f \psi_i + \int_{\partial_N\Omega} \gamma \psi_i$$
 for all $i=0,1,\dots,N$.
 
 This initial linear system $\tilde A\bu=\tilde \bb$ is (obviously) final in the case where there is no Dirichlet boundary (i.e.~$\partial_D \Omega=\emptyset$).  However, in this case $u=C$, where $C\in\RR$ is any constant value, solves $-\grad^2 u=0$ with $\partial u/\partial n = 0$ on the whole boundary $\partial_N \Omega = \partial \Omega$.  The Poisson problem then only determines the solution up to such an additive constant.  Because it does not have a unique solution, when solving \eqref{poissonmatrix} in this Neumann case we will have to inform \PETSc about the null space of constant functions.
@@ -282,7 +293,7 @@ for these transformations.  After the completion of this ``editing'' stage we ge
 \X & \X & \X & \X & \X
 \end{bmatrix}.
 \end{equation*}
-Note $\tilde a_{ij}=0$ only where the integral $\int_\Omega \grad \phi_j \cdot \grad \phi_i$ is zero, a rare event in this small (coarse)-mesh case.  Now, because the $i=1,2$ nodes live in the (closed) Dirichlet boundary $\partial_D \Omega$, we highlight the $i=1,2$ rows and $j=1,2$ columns which will be edited:\marginnote{{\color{red} \textbf{Caution}}:  The first row or column of any matrix in this book is numbered ``$0$.''}
+Note $\tilde a_{ij}=0$ only where the integral $\int_\Omega \grad \psi_j \cdot \grad \psi_i$ is zero, a rare event in this small (coarse)-mesh case.  Now, because the $i=1,2$ nodes live in the (closed) Dirichlet boundary $\partial_D \Omega$, we highlight the $i=1,2$ rows and $j=1,2$ columns which will be edited:\marginnote{{\color{red} \textbf{Caution}}:  The first row or column of any matrix in this book is numbered ``$0$.''}
 
 \newcommand{\redX}{{\color{red} \bm{\underline{\X}}}}
 \newcommand{\blueX}{{\color{blue} \bm{\underline{\X}}}}
@@ -333,13 +344,13 @@ An entry $\tilde a_{ij}$ of the initial matrix $\tilde A$ is not computed in one
 
 For the element-by-element assembly procedure we first define the integral over one triangle $\triangle_k$,
 \begin{equation}
-\text{\texttt{a(k,i,j)}} = \int_{\triangle_k} \grad \phi_i \cdot \grad \phi_. \label{aelementintegral}
+\text{\texttt{a(k,i,j)}} = \int_{\triangle_k} \grad \psi_i \cdot \grad \psi_. \label{aelementintegral}
 \end{equation}
 so that
     $$\tilde a_{ij} = \sum_k \phantom{.}\text{\texttt{a(k,i,j)}}.$$
 Likewise we will compute
 \begin{equation}
-\text{\texttt{b(k,i)}} = \int_{\triangle_k} f \phi_i + \int_{\overline{\triangle}_k \cap \partial_N\Omega} \gamma \phi_i, \label{belementintegral}
+\text{\texttt{b(k,i)}} = \int_{\triangle_k} f \psi_i + \int_{\overline{\triangle}_k \cap \partial_N\Omega} \gamma \psi_i, \label{belementintegral}
 \end{equation}
 so that $\tilde b_i = \sum_{k} \;\text{\texttt{b(k,i)}}$.
 
@@ -412,15 +423,15 @@ y(\xi,\eta) &= y_0 + (y_1-y_0) \xi + (y_2-y_0) \eta. \notag
 \begin{equation}
 \chi_0(\xi,\eta) = 1-\xi-\eta, \qquad \chi_1(\xi,\eta) = \xi, \qquad \chi_2(\xi,\eta) = \eta. \label{chiformulas}
 \end{equation}
-On $\triangle_k$, each of the basis functions $\phi_q$ is the mapped version of the corresponding $\chi_q$:
+On $\triangle_k$, each of the basis functions $\psi_q$ is the mapped version of the corresponding $\chi_q$:
 \begin{equation}
-\phi_q(x(\xi,\eta),y(\xi,\eta)) = \chi_q(\xi,\eta). \label{phichimap}
+\psi_q(x(\xi,\eta),y(\xi,\eta)) = \chi_q(\xi,\eta). \label{phichimap}
 \end{equation}
-From \eqref{trianglemap} and \eqref{phichimap} one can confirm that $\phi_q(x_r,y_r) = \delta_{qr}$.
+From \eqref{trianglemap} and \eqref{phichimap} one can confirm that $\psi_q(x_r,y_r) = \delta_{qr}$.
 
-Now is a good point at which to observe that the set of $\phi_j$, over all nodes $j=0,1,\dots,N$, is a partition of unity.  We can see this by switching to local node coordinate $q$ and using $\chi_0+\chi_1+\chi_2=1$, which is obvious from \eqref{chiformulas}.  That is, if $\bx \in \triangle_k$ then
+Now is a good point at which to observe that the set of $\psi_j$, over all nodes $j=0,1,\dots,N$, is a partition of unity.  We can see this by switching to local node coordinate $q$ and using $\chi_0+\chi_1+\chi_2=1$, which is obvious from \eqref{chiformulas}.  That is, if $\bx \in \triangle_k$ then
 \begin{equation}
-   \sum_j \phi_j(\bx) = \sum_{q=0,1,2} \phi_q(\bx) = \sum_{q=0,1,2} \chi_q =1.  \label{partitionofunity}
+   \sum_j \psi_j(\bx) = \sum_{q=0,1,2} \psi_q(\bx) = \sum_{q=0,1,2} \chi_q =1.  \label{partitionofunity}
 \end{equation}
 
 The Jacobian\sidenote{By definition, the \emph{Jacobian} $J=J(\bx)$ of a smooth map $F$ at a point $\bx$ is its linearization at $\bx$.  That is, if $\by=F(\bx)$ and $\by+\Delta\by = F(\bx+\Delta\bx)$ then $J(\bx)$ satisfies $\Delta \by = J(\bx) \Delta\bx + o(|\Delta\bx|)$.} of map \eqref{trianglemap} is
@@ -438,8 +449,8 @@ J = \begin{bmatrix}
 \end{equation}
 Recalling both the change-of-variables formula for integrals\sidenote{If $F$ is a smooth map from $\bx \in U$ to $\by \in F(U)$, $J$ is the Jacobian of $F$, and $g$ is integrable on $F(U)$, then $$\int_{F(U)} g(\by)\,d\by = \int_U g(F(\bx))\,|\det(J)|\,d\bx.$$} and the chain rule, by \eqref{phichimap} we can write
 \begin{align}
-\text{\texttt{a(k,q,r)}} &= \int_{\triangle_k} \grad\phi_q \cdot \grad\phi_r \label{elementcontrib} \\
-   &= \int_{\triangle_k} \frac{\partial\phi_q}{\partial x} \frac{\partial\phi_r}{\partial x} + \frac{\partial\phi_q}{\partial y} \frac{\partial\phi_r}{\partial y} \; dx \, dy  \notag \\
+\text{\texttt{a(k,q,r)}} &= \int_{\triangle_k} \grad\psi_q \cdot \grad\psi_r \label{elementcontrib} \\
+   &= \int_{\triangle_k} \frac{\partial\psi_q}{\partial x} \frac{\partial\psi_r}{\partial x} + \frac{\partial\psi_q}{\partial y} \frac{\partial\psi_r}{\partial y} \; dx \, dy  \notag \\
    &= \int_{\triangle_\ast} \left(\frac{\partial \chi_q}{\partial \xi} \frac{\partial \xi}{\partial x} + \frac{\partial \chi_q}{\partial \eta} \frac{\partial \eta}{\partial x}\right) \left(\frac{\partial \chi_r}{\partial \xi} \frac{\partial \xi}{\partial x} + \frac{\partial \chi_r}{\partial \eta} \frac{\partial \eta}{\partial x}\right) \notag \\
    &\qquad\qquad + \left(\frac{\partial \chi_q}{\partial \xi} \frac{\partial \xi}{\partial y} + \frac{\partial \chi_q}{\partial \eta} \frac{\partial \eta}{\partial y}\right) \left(\frac{\partial \chi_r}{\partial \xi} \frac{\partial \xi}{\partial y} + \frac{\partial \chi_r}{\partial \eta} \frac{\partial \eta}{\partial y}\right) \; |\det(J)| \; d\xi \, d\eta. \notag
 \end{align}
@@ -579,7 +590,7 @@ In the next part of the code (Code \ref{code:cthreepoissonchecks}) we do two bas
 \cinputpart{poissonfem.c}{\CODELOC}{Do two checks on the construction of the linear system.}{II}{//TWOCHECKS}{//ENDTWOCHECKS}{code:cthreepoissonchecks}
 
 In the second check we verify the construction of $\bb$ in the case where $f\equiv 1$, $\gamma=0$, and $\partial_D\Omega=\emptyset$.  In this case, by formula \eqref{bentryfem} and observation \eqref{partitionofunity}, the sum of the entries of $\bb$ should be the area of the region:
-   $$\sum_j b_j = \sum_j \int_\Omega 1\, \phi_j = \int_\Omega \sum_j \phi_j = |\Omega|.$$
+   $$\sum_j b_j = \sum_j \int_\Omega 1\, \psi_j = \int_\Omega \sum_j \psi_j = |\Omega|.$$
 
 \cinputpart{poissonfem.c}{\CODELOC}{Solve a Dirichlet problem for which we know the solution.}{III}{//SOLVEMANU}{//ENDSOLVEMANU}{code:cthreepoissonsolvemanu}
 
