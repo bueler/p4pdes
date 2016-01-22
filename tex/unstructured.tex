@@ -1,7 +1,7 @@
 
-This section returns to the linear 2D Poisson equation last seen in Chapter \ref{chap:st}, but for general domains and unstructured grids.  We use \PETSc for important tasks we have not yet seen, specifically reading a mesh from a file into \PETSc \pVecs, managing unstructured indexing of that mesh, and implementation of Neumann conditions.  The triangle-based finite element method here is in contrast to the structured $Q^1$ (i.e.~rectangular element) method of Chapter \ref{chap:of}.
+This section returns to the linear 2D Poisson equation last seen in Chapter \ref{chap:st}, but now for general domains and unstructured grids.  We use \PETSc for new tasks including reading a mesh from a file into \PETSc \pVecs, managing unstructured indexing of that mesh, and implementation of Neumann conditions.  The triangle-based finite element method here contrasts with the structured rectangular-element ($Q^1$) method of Chapter \ref{chap:of}.
 
-This example shows that it is possible to avoid using \PETSc's \pDMDA or other mesh-topology infrastructure, but at an increase in the work we have to do.  In Chapter \ref{chap:dp} we return to unstructured FEM methods, but taking advantage of \PETSc's \pDMPlex class.
+This example shows that it is possible to avoid using \PETSc's \pDMDA or other mesh-topology infrastructure, but our work-load increases.  Nonetheless, the current material is representative of many \PETSc applications where direct contact with file formats from outside \PETSc is required.  In this case, we use the well-known, and relatively simple, \texttt{triangle} program for generating unstructured triangular meshes in 2D.  By contrast, in Chapter \ref{chap:dp} we will return to unstructured FEM methods, but in 3D and taking advantage of \PETSc's \pDMPlex class.
 
 \section{A general 2D Poisson problem}
 
@@ -76,18 +76,16 @@ We index the $K$ triangles (elements) in $\Th$ by $k=0,\dots,K-1$.  The $N$ vert
 \bx_j = (x_j,y_j).
 \end{equation*}
 
+An example triangulation $\Th$ is shown in Figure \ref{fig:un:number-mesh}.  The reader may regard the subscript ``$h$'' in ``$\Th$'' as merely traditional notation, but it denotes the typical or maximum size $h$ (e.g.~diameter) of the triangles; it serves as a reminder that we want to approximate the solution in the limit $h\to 0$.  In contrast to many references--e.g.~\citet{Elmanetal2005}, which we follow in many ways---note that all numbering is zero-based, which is natural in a C implementation, of course.  (As mentioned in Chapter \ref{chap:ls}, in this book even rows and columns of vectors and matrices have numbering starting with zero.)
+
 \begin{marginfigure}
 \input{blob.1.elenum.tikz}
-\caption{A triangulation $\Th$ with $K=15$ numbered elements.}
-\label{fig:un:number-elements}
-\end{marginfigure}
 
-An example triangulation $\Th$ is shown with element numbering in Figure \ref{fig:un:number-elements} and with node numbering in Figure \ref{fig:un:number-nodes}.  The reader may regard the subscript ``$h$'' in ``$\Th$'' as merely traditional notation, but it denotes the typical or maximum size $h$ (e.g.~diameter) of the triangles; it serves as a reminder that we want to approximate the solution in the limit $h\to 0$.  In contrast to many references--e.g.~\citet{Elmanetal2005}, which we follow in many ways---note that all numbering is zero-based, which is natural in a C implementation, of course.  (As mentioned in Chapter \ref{chap:ls}, in this book even rows and columns of vectors and matrices have numbering starting with zero.)
+\medskip
 
-\begin{marginfigure}
 \input{blob.1.nodenum.tikz}
-\caption{The same triangulation as in Figure \ref{fig:un:number-elements}, with $N=13$ numbered nodes.  Four nodes ($L=4$) are in the Dirichlet boundary $\partial_D\Omega$ (bold).}
-\label{fig:un:number-nodes}
+\caption{A triangulation of the polygon in Figure \ref{fig:un:polygon}, shown with element numbering (top) and node numbering (bottom).  There are $K=15$ elements, $N=13$ nodes, and $L=4$ nodes in the Dirichlet boundary $\partial_D\Omega$ (bold).}
+\label{fig:un:number-mesh}
 \end{marginfigure}
 
 We have informally called the triangles ``elements,'' but in truth the function space we choose on each element is part of the definition.  Here we will use $P^1$ finite elements \citep{Elmanetal2005} so that our test and trial functions are continuous and linear on each triangle $\triangle_k$.  As in Chapter \ref{chap:of}, for each node $j$ there is a basis (``hat'') function  $\psi_j(x,y)$ which is linear on each triangle, continuous on all of $\overline{\Omega}$, and equal to one at only one node $j$,
@@ -98,6 +96,11 @@ See Figure \ref{fig:un:hatfunction}.  The functions $\psi_j$ are in $H^1(\Omega)
 \begin{equation*}
 \psi_j(x,y) = A_{kj} + B_{kj} x + C_{kj} y \quad \text{ on } \triangle_k.
 \end{equation*}
+
+Hat functions allow us to interpolate and extend the Dirichlet data $g_D$ from its node values in $\partial_D \Omega$ to the whole of $\overline\Omega$, a step which will be useful in our FEM implementation.  We number the $L$ nodes which are in the Dirichlet boundary by $\bx_{j_l} \in \partial_D\Omega$ for $l=0,\dots,L-1$.  (Figure \ref{fig:un:number-elements} shows an example with $L=4$ and $j_l=l$ for $l=0,1,2,3$.)  Now let $\hat g_D \in C(\overline\Omega)$ be the piecewise-linear interpolant of $g_D$ which has value zero at all nodes $\bx_j$ which are not in the Dirichlet boundary $\partial_D \Omega$:
+\begin{equation}
+\hat g_D(x,y) = \sum_{l=0}^{L-1} g_D(\bx_{j_l}) \psi_{j_l}(x,y). \label{eq:un:hatgdefine}
+\end{equation}
 
 \begin{marginfigure}
 \begin{tikzpicture}[scale=0.9, z={(.707,.3)}]
@@ -130,11 +133,6 @@ See Figure \ref{fig:un:hatfunction}.  The functions $\psi_j$ are in $H^1(\Omega)
 \caption{Hat functions $\psi_j$.}
 \label{fig:un:hatfunction}
 \end{marginfigure}
-
-Hat functions allow us to interpolate and extend the Dirichlet data $g_D$ from its node values in $\partial_D \Omega$ to the whole of $\overline\Omega$, a step which will be useful in our FEM implementation.  We number the $L$ nodes which are in the Dirichlet boundary by $\bx_{j_l} \in \partial_D\Omega$ for $l=0,\dots,L-1$.  (Figure \ref{fig:un:number-elements} shows an example with $L=4$ and $j_l=l$ for $l=0,1,2,3$.)  Now let $\hat g_D \in C(\overline\Omega)$ be the piecewise-linear interpolant of $g_D$ which has value zero at all nodes $\bx_j$ which are not in the Dirichlet boundary $\partial_D \Omega$:
-\begin{equation}
-\hat g_D(x,y) = \sum_{l=0}^{L-1} g_D(\bx_{j_l}) \psi_{j_l}(x,y). \label{eq:un:hatgdefine}
-\end{equation}
 
 By using $\hat g$ and the basis functions $\psi_j$, we can specify the two needed finite-dimensional subspaces as the span of certain hat functions.  The test functions are zero along $\partial_D \Omega$,
 \begin{align*}
