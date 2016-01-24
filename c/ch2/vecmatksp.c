@@ -20,6 +20,7 @@ int main(int argc,char **args) {
   ierr = VecSetValues(b,4,j,v,INSERT_VALUES); CHKERRQ(ierr);
   ierr = VecAssemblyBegin(b); CHKERRQ(ierr);
   ierr = VecAssemblyEnd(b); CHKERRQ(ierr);
+//  ierr = VecView(b,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);  //STRIP
 
   ierr = MatCreate(PETSC_COMM_WORLD,&A); CHKERRQ(ierr);
   ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,4,4); CHKERRQ(ierr);
@@ -36,6 +37,7 @@ int main(int argc,char **args) {
   ierr = MatSetValues(A,1,&i,3,j,v,INSERT_VALUES); CHKERRQ(ierr);
   ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
   ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+//  ierr = MatView(A,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);  //STRIP
 
   ierr = KSPCreate(PETSC_COMM_WORLD,&ksp); CHKERRQ(ierr);
   ierr = KSPSetOperators(ksp,A,A); CHKERRQ(ierr);
