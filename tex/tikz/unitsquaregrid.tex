@@ -1,0 +1,18 @@
+\begin{tikzpicture}[scale=3.5]
+  \draw[->,gray,very thin] (0.0,0.0) -- (1.2,0.0) node[below] {$x$};
+  \draw[->,gray,very thin] (0.0,0.0) -- (0.0,1.2) node[left] {$y$};
+  \draw[line width=1.0pt] (0.0,0.0) -- (0.0,1.0) -- (1.0,1.0) -- (1.0,0.0) -- cycle;
+  \node at (0.0,-0.1) {$i=0$};
+  \node at (1.0,-0.1) {$i=m_x-1$};
+  \node at (-0.15,0.0) {$j=0$};
+  \node at (-0.22,1.0) {$j=m_y-1$};
+  \pgfmathsetmacro\fourth{1.0/4.0}
+  \pgfmathsetmacro\sixth{1.0/6.0}
+  \draw[xstep=\fourth,ystep=\sixth,black,thin] (0.0,0.0) grid (1.0,1.0);
+  \foreach \x in {0,...,4} {
+    \foreach \y in {0,...,6} {
+        \filldraw (\x * \fourth,\y * \sixth) circle (0.5pt);
+    }
+  }
+\end{tikzpicture}
+

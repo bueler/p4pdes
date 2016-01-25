@@ -1,0 +1,16 @@
+\begin{tikzpicture}[scale=3.5]
+  \draw[->,gray,very thin] (0.0,0.0) -- (1.2,0.0) node[below] {$x$};
+  \draw[->,gray,very thin] (0.0,0.0) -- (0.0,1.2) node[left] {$y$};
+  \draw[line width=1.0pt] (0.0,0.0) -- (0.0,1.0) -- (1.0,1.0) -- (1.0,0.0) -- cycle;
+  \node at (0.75,-0.1) {$i$};
+  \node at (-0.1,0.666667) {$j$};
+  \filldraw (0.50,0.666667) circle (0.8pt);
+  \filldraw (0.75,0.666667) circle (0.8pt);
+  \filldraw (1.00,0.666667) circle (0.8pt);
+  \filldraw (0.75,0.5) circle (0.8pt);
+  \filldraw (0.75,0.833333) circle (0.8pt);
+  \draw[line width=2.0pt] (0.50,0.666667) -- (1.00,0.666667);
+  \draw[line width=2.0pt] (0.75,0.5)  -- (0.75,0.833333);
+  \draw[xstep=0.25,ystep=0.166667,black,thin] (0.0,0.0) grid (1.0,1.0);
+\end{tikzpicture}
+

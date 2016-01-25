@@ -11,16 +11,7 @@ u &= 0 \quad \text{ on } \partial \mathcal{S}. \label{poissonsquarebcs}
 The next several paragraphs are standard reminders of the context for equations \eqref{poissonsquare} and \eqref{poissonsquarebcs}.
 
 \begin{marginfigure}
-\begin{tikzpicture}[scale=3.5]
-  \draw[->,gray,very thin] (-0.2,0.0) -- (1.2,0.0) node[below] {$x$};
-  \draw[->,gray,very thin] (0.0,-0.2) -- (0.0,1.2) node[left] {$y$};
-  \draw[line width=1.0pt] (0.0,0.0) -- (0.0,1.0) -- (1.0,1.0) -- (1.0,0.0) -- cycle;
-  \node at (0.5,0.5) {$- \grad^2 u = f$};
-  \node at (0.5,-0.1) {$u = 0$};
-  \node at (0.5,1.1) {$u = 0$};
-  \node at (-0.2,0.5) {$u = 0$};
-  \node at (1.2,0.5) {$u = 0$};
-\end{tikzpicture}
+\input{tikz/unitsquare.tex}
 \caption{The Poisson equation on the unit square $\mathcal{S}$, with homogeneous Dirichlet boundary conditions.}
 \label{fig:unitsquare}
 \end{marginfigure}
@@ -47,23 +38,7 @@ Because \eqref{poissonsquare} and \eqref{poissonsquarebcs} form a linear problem
 Our FD method is based on a \emph{structured grid} of $m_x m_y$ points on the unit square, as in Figure \ref{fig:unitsquaregrid}, with spacing $h_x=1/(m_x-1)$ and $h_y=1/(m_y-1)$ in the two directions.  The grid coordinates are $x_i = i\, h_x$ for $i = 0,1,\dots,m_x-1$ and $y_j = j\, h_y$ for $j=0,1,\dots,m_y-1$.  The construction of such a 2D grid, and distributing it across MPI processes, uses a \PETSc object not covered in Chapters \ref{chap:gs} and \ref{chap:ls}.
 
 \begin{marginfigure}
-\begin{tikzpicture}[scale=3.5]
-  \draw[->,gray,very thin] (0.0,0.0) -- (1.2,0.0) node[below] {$x$};
-  \draw[->,gray,very thin] (0.0,0.0) -- (0.0,1.2) node[left] {$y$};
-  \draw[line width=1.0pt] (0.0,0.0) -- (0.0,1.0) -- (1.0,1.0) -- (1.0,0.0) -- cycle;
-  \node at (0.0,-0.1) {$i=0$};
-  \node at (1.0,-0.1) {$i=m_x-1$};
-  \node at (-0.15,0.0) {$j=0$};
-  \node at (-0.22,1.0) {$j=m_y-1$};
-  \pgfmathsetmacro\fourth{1.0/4.0}
-  \pgfmathsetmacro\sixth{1.0/6.0}
-  \draw[xstep=\fourth,ystep=\sixth,black,thin] (0.0,0.0) grid (1.0,1.0);
-  \foreach \x in {0,...,4} {
-    \foreach \y in {0,...,6} {
-        \filldraw (\x * \fourth,\y * \sixth) circle (0.5pt);
-    }
-  }
-\end{tikzpicture}
+\input{tikz/unitsquaregrid.tex}
 \caption{A grid on the unit square $\mathcal{S}$, with $m_x=5$ and $m_y=7$.}
 \label{fig:unitsquaregrid}
 \end{marginfigure}
@@ -73,41 +48,7 @@ Consider the lines of code in Code \ref{code:dmdacreatetwod}, an extract from \t
 \cinputraw{dmdacreate2d.frag}{extract from ch3/poisson.c}{An example of creating a 2D \pDMDA.}{}{//START}{//STOP}{code:dmdacreatetwod}
 
 \begin{marginfigure}
-\begin{tikzpicture}[scale=3.5]
-  \draw[->,gray,very thin] (0.0,0.0) -- (1.2,0.0) node[below] {$x$};
-  \draw[->,gray,very thin] (0.0,0.0) -- (0.0,1.2) node[left] {$y$};
-  \draw[line width=1.0pt] (0.0,0.0) -- (0.0,1.0) -- (1.0,1.0) -- (1.0,0.0) -- cycle;
-  \pgfmathsetmacro\fourth{1.0/4.0}
-  \pgfmathsetmacro\sixth{1.0/6.0}
-  \draw[xstep=\fourth,ystep=\sixth,black,thin] (0.0,0.0) grid (1.0,1.0);
-  \foreach \x in {0,...,4} {
-    \foreach \y in {0,...,6} {
-        \filldraw (\x * \fourth,\y * \sixth) circle (0.5pt);
-    }
-  }
-  \pgfmathsetmacro\dd{0.04}
-  \pgfmathsetmacro\od{1.04}
-  \pgfmathsetmacro\xap{2*\fourth + 0.04}
-  \pgfmathsetmacro\xbm{3*\fourth - 0.04}
-  \pgfmathsetmacro\yap{3*\sixth + 0.04}
-  \pgfmathsetmacro\ybm{4*\sixth - 0.04}
-  \pgfmathsetmacro\xamid{1*\fourth}
-  \pgfmathsetmacro\xbmid{3.5*\fourth}
-  \pgfmathsetmacro\yamid{1.5*\sixth}
-  \pgfmathsetmacro\ybmid{4.7*\sixth}
-  \draw[very thick,rounded corners=8pt,gray] 
-    (-\dd,-\dd) -- (-\dd,\yap) -- (\xap,\yap) -- (\xap,-\dd) -- cycle;
-  \node[color=gray,xshift=-1.5mm] at (\xamid,\yamid) {\large $0$};
-  \draw[very thick,rounded corners=8pt,gray] 
-    (\xbm,-\dd) -- (\od,-\dd) -- (\od,\yap) -- (\xbm,\yap) -- cycle;
-  \node[color=gray] at (\xbmid,\yamid) {\large $1$};
-  \draw[very thick,rounded corners=8pt,gray] 
-    (-\dd,\ybm) -- (\xap,\ybm) -- (\xap,\od) -- (-\dd,\od) -- cycle;
-  \node[color=gray,xshift=-1.5mm] at (\xamid,\ybmid) {\large $2$};
-  \draw[very thick,rounded corners=8pt,gray] 
-    (\xbm,\ybm) -- (\od,\ybm) -- (\od,\od) -- (\xbm,\od) -- cycle;
-  \node[color=gray] at (\xbmid,\ybmid) {\large $3$};
-\end{tikzpicture}
+\input{tikz/unitsquaregridparallel.tex}
 \caption{The same grid as in Figure \ref{fig:unitsquaregrid}, distributed across four \MPI processes, with \texttt{rank} $\in \{0,1,2,3\}$ in gray, by \texttt{DMDACreate2d()}.}
 \label{fig:unitsquaregridparallel}
 \end{marginfigure}
@@ -132,33 +73,7 @@ $ mpiexec -n 4 ./poisson -da_grid_x 5 -da_grid_y 7
 distributes the grid as in Figure \ref{fig:unitsquaregridparallel}.  Neither $m_x=5$ nor $m_y=7$ is divisible by two, but \PETSc distributes the four ranks across the $35$ grid points relatively uniformly; the rank $0$ process owns 12 points and rank $3$ owns 6, while the other ranks are in between.  In this case the load is only balanced to within a factor of two, but on larger grids this ``\texttt{PETSC\_DECIDE}'' method can do better.
 
 \begin{marginfigure}
-\begin{tikzpicture}[scale=3.5]
-  \draw[->,gray,very thin] (0.0,0.0) -- (1.2,0.0) node[below] {$x$};
-  \draw[->,gray,very thin] (0.0,0.0) -- (0.0,1.2) node[left] {$y$};
-  \draw[line width=1.0pt] (0.0,0.0) -- (0.0,1.0) -- (1.0,1.0) -- (1.0,0.0) -- cycle;
-  \pgfmathsetmacro\fourth{1.0/4.0}
-  \pgfmathsetmacro\sixth{1.0/6.0}
-  \draw[xstep=\fourth,ystep=\sixth,black,thin] (0.0,0.0) grid (1.0,1.0);
-  \foreach \x in {0,...,4} {
-    \foreach \y in {0,...,6} {
-        \filldraw (\x * \fourth,\y * \sixth) circle (0.5pt);
-    }
-  }
-  \pgfmathsetmacro\dd{0.04}
-  \pgfmathsetmacro\od{1.04}
-  \foreach \y in {0,2} {
-    \pgfmathsetmacro\yup{\y * \sixth - 1.4 * \dd}  % less than 1.7 generates flaw?
-    \pgfmathsetmacro\ydn{(\y + 1) * \sixth + 1.4 * \dd}
-    \draw[very thick,rounded corners=6pt,gray] 
-      (-\dd,\ydn) -- (\od,\ydn) -- (\od,\yup) -- (-\dd,\yup) -- cycle;
-  }
-  \foreach \y in {4,5,6} {
-    \pgfmathsetmacro\yup{\y * \sixth - 1.4 * \dd}  % less than 1.7 generates flaw?
-    \pgfmathsetmacro\ydn{\y * \sixth + 1.4 * \dd}
-    \draw[very thick,rounded corners=6pt,gray] 
-      (-\dd,\ydn) -- (\od,\ydn) -- (\od,\yup) -- (-\dd,\yup) -- cycle;
-  }
-\end{tikzpicture}
+\input{tikz/unitsquaregridprime.tex}
 \caption{Process-owned domains are far from square if the number of \MPI processes is prime.}
 \label{fig:unitsquaregridprime}
 \end{marginfigure}
@@ -171,36 +86,7 @@ $ mpiexec -n 5 ./poisson -da_grid_x 5 -da_grid_y 7
 is shown in Figure \ref{fig:unitsquaregridprime}.  Each process' portion of the grid has large perimeter-to-area ratio so that interprocess communication will be large.
 
 \begin{marginfigure}
-\begin{tikzpicture}[scale=3.5]
-  \draw[->,gray,very thin] (0.0,0.0) -- (1.2,0.0) node[below] {$x$};
-  \draw[->,gray,very thin] (0.0,0.0) -- (0.0,1.2) node[left] {$y$};
-  \draw[line width=1.0pt] (0.0,0.0) -- (0.0,1.0) -- (1.0,1.0) -- (1.0,0.0) -- cycle;
-  \pgfmathsetmacro\ninth{1.0/9.0}
-  \draw[xstep=\ninth,ystep=\ninth,black,thin] (0.0,0.0) grid (1.0,1.0);
-  \foreach \x in {0,...,9} {
-    \foreach \y in {0,...,9} {
-        \filldraw (\x * \ninth,\y * \ninth) circle (0.3pt);
-    }
-  }
-  \pgfmathsetmacro\dd{0.04}
-  \pgfmathsetmacro\od{1.04}
-  \pgfmathsetmacro\ap{4*\ninth + 0.04}
-  \pgfmathsetmacro\bm{5*\ninth - 0.04}
-  \pgfmathsetmacro\amid{1.5*\ninth}
-  \pgfmathsetmacro\bmid{6.5*\ninth}
-  \draw[very thick,rounded corners=8pt,gray] 
-    (-\dd,-\dd) -- (-\dd,\ap) -- (\ap,\ap) -- (\ap,-\dd) -- cycle;
-  \node[color=gray] at (\amid,\amid) {\large $0$};
-  \draw[very thick,rounded corners=8pt,gray] 
-    (\bm,-\dd) -- (\od,-\dd) -- (\od,\ap) -- (\bm,\ap) -- cycle;
-  \node[color=gray] at (\bmid,\amid) {\large $1$};
-  \draw[very thick,rounded corners=8pt,gray] 
-    (-\dd,\bm) -- (\ap,\bm) -- (\ap,\od) -- (-\dd,\od) -- cycle;
-  \node[color=gray] at (\amid,\bmid) {\large $2$};
-  \draw[very thick,rounded corners=8pt,gray] 
-    (\bm,\bm) -- (\od,\bm) -- (\od,\od) -- (\bm,\od) -- cycle;
-  \node[color=gray] at (\bmid,\bmid) {\large $3$};
-\end{tikzpicture}
+\input{tikz/unitsquaregrideight.tex}
 \caption{A balanced distribution of a $10\times 10$ grid across four \MPI processes, with \texttt{rank} in gray, as created by \texttt{DMDACreate2d()}.}
 \label{fig:unitsquaregrideight}
 \end{marginfigure}
@@ -275,21 +161,7 @@ for all $i,j$.
 At grid location $(x_i,y_j)$, equation \eqref{poissonsquareFDearly} relates the unknown $u_{i,j}$ to its four cardinal neighbors $u_{i+1,j}$, $u_{i-1,j}$, $u_{i,j+1}$, and $u_{i,j-1}$.  This pattern (Figure \ref{fig:unitsquaregridstencil}) is a \emph{stencil}, in particular a ``star'' stencil.  By contrast, a ``box'' stencil would additionally involve the four diagonal neighbors.  In 2D, a star stencil relates five unknowns, while a box stencil relates nine.
 
 \begin{marginfigure}
-\begin{tikzpicture}[scale=3.5]
-  \draw[->,gray,very thin] (0.0,0.0) -- (1.2,0.0) node[below] {$x$};
-  \draw[->,gray,very thin] (0.0,0.0) -- (0.0,1.2) node[left] {$y$};
-  \draw[line width=1.0pt] (0.0,0.0) -- (0.0,1.0) -- (1.0,1.0) -- (1.0,0.0) -- cycle;
-  \node at (0.75,-0.1) {$i$};
-  \node at (-0.1,0.666667) {$j$};
-  \filldraw (0.50,0.666667) circle (0.8pt);
-  \filldraw (0.75,0.666667) circle (0.8pt);
-  \filldraw (1.00,0.666667) circle (0.8pt);
-  \filldraw (0.75,0.5) circle (0.8pt);
-  \filldraw (0.75,0.833333) circle (0.8pt);
-  \draw[line width=2.0pt] (0.50,0.666667) -- (1.00,0.666667);
-  \draw[line width=2.0pt] (0.75,0.5)  -- (0.75,0.833333);
-  \draw[xstep=0.25,ystep=0.166667,black,thin] (0.0,0.0) grid (1.0,1.0);
-\end{tikzpicture}
+\input{tikz/unitsquaregridstencil.tex}
 \caption{This ``star'' stencil simply illustrates FD scheme \eqref{poissonsquareFDearly}.}
 \label{fig:unitsquaregridstencil}
 \end{marginfigure}
@@ -309,30 +181,7 @@ The ordering used in a one-process (serial) run by a 2D \pDMDA is shown in Figur
 for $i=0,1,\dots,m_x-1$ and $j=0,1,\dots,m_y-1$, so $k=0,1,\dots,m_x m_y-1$.  \PETSc does such index transformations inside the \pDMDA implementation.
 
 \begin{marginfigure}
-\begin{tikzpicture}[scale=3.5]
-  \draw[->,gray,very thin] (0.0,0.0) -- (1.2,0.0) node[below] {$x$};
-  \draw[->,gray,very thin] (0.0,0.0) -- (0.0,1.2) node[left] {$y$};
-  \draw[line width=1.0pt] (0.0,0.0) -- (0.0,1.0) -- (1.0,1.0) -- (1.0,0.0) -- cycle;
-  \pgfmathsetmacro\third{1.0/3.0}
-  \pgfmathsetmacro\half{1.0/2.0}
-  \node[gray] at (0.0,-0.1) {$0$};
-  \node[gray] at (\third,-0.1) {$1$};
-  \node at (\half,-0.2) {$i$};
-  \node[gray] at (2*\third,-0.1) {$2$};
-  \node[gray] at (1.0,-0.1) {$3$};
-  \node[gray] at (-0.1,0.0) {$0$};
-  \node[gray] at (-0.1,0.5) {$1$};
-  \node at (-0.25,0.5) {$j$};
-  \node[gray] at (-0.1,1.0) {$2$};
-  \draw[xstep=\third,ystep=\half,black,thin] (0.0,0.0) grid (1.0,1.0);
-  \pgfmathsetmacro\dd{0.05}
-  \foreach \y in {0,1,2}
-    \foreach \x in {0,1,2,3} {
-      \pgfmathsetmacro\k{4*\y+\x}
-      \draw (\x*\third+\dd,\y*\half+\dd) node{$\mathbf{\pgfmathprintnumber[fixed]{\k}}$};
-      \filldraw (\x * \third,\y * \half) circle (0.5pt);
-    }
-\end{tikzpicture}
+\input{tikz/unitsquaregridordering.tex}
 \caption{Ordering of unknowns \eqref{orderingfd} on a $m_x=4$ and $m_y=3$ grid.  Index $k$ from \eqref{orderingfd} is shown in \textbf{bold}.}
 \label{fig:unitsquaregridordering}
 \end{marginfigure}
@@ -472,34 +321,7 @@ The ``\texttt{DMDALocalInfo info}'' object needs special description.  It is a \
 (in two dimensions).  For example, in Figure \ref{fig:unitsquaregridparallel} we have \texttt{info.mx} $=5$, the rank $0$ and $2$ processes have \texttt{info.xs} $=0$ and \texttt{info.xm} $=3$, and the rank $1$ and $3$ processes have \texttt{info.xs} $=3$ and \texttt{info.xm} $=2$.  There are similar $y$ ranges.
 
 \begin{figure}
-\begin{tikzpicture}[scale=8]
-  % global grid, local grid, nodes
-  \draw[xstep=0.1,ystep=0.1,gray,very thin] (0.0,0.0) grid (0.9,0.9);
-  \draw[xstep=0.1,ystep=0.1,black,very thick] (0.3,0.2) grid (0.7,0.6);
-  \foreach \y in {0,...,9}
-    \foreach \x in {0,...,9} {
-      \filldraw (\x * 0.1,\y * 0.1) circle (0.15pt);
-    }
-  % ticks on x-axis at 0, xs, mx
-  \draw[black,thick] (0,-0.03)   -- (0,+0.03);
-  \draw[black,thick] (0.3,-0.03) -- (0.3,+0.03);
-  \draw[black,thick] (0.9,-0.03) -- (0.9,+0.03);
-  \node at (0,-0.06) {\texttt{0}};
-  \node at (0.3,-0.06) {\texttt{info.xs}};
-  \node at (0.9,-0.06) {\texttt{info.mx-1}};
-  % ticks on y-axis at 0, ys, my
-  \draw[black,thick] (-0.03,0)   -- (+0.03,0);
-  \draw[black,thick] (-0.03,0.2) -- (+0.03,0.2);
-  \draw[black,thick] (-0.03,0.9) -- (+0.03,0.9);
-  \node[rotate around={90:(0,0)}] at (-0.07,0) {\texttt{0}};
-  \node[rotate around={90:(-0.2,0.2)}] at (-0.08,0.12) {\texttt{info.ys}};
-  \node[rotate around={90:(0.0,0.9)}] at (-0.20,0.8) {\texttt{info.my-1}};
-  % xm, ym along sides of local patch
-  \draw[<->,] (0.3,-0.13) -- (0.7,-0.13);
-  \node at (0.5,-0.18) {\texttt{info.xm}};
-  \draw[<->,] (-0.15,0.2) -- (-0.15,0.6);
-  \node[rotate around={90:(0.3-0.3,0.4)}] at (-0.28,0.35) {\texttt{info.ym}};
-\end{tikzpicture}
+\input{tikz/localpartofgrid}
 \caption{A \texttt{DMDALocalInfo} struct describes the indices for a local process' part of a 2D grid, plus the global grid size.}
 \label{fig:localpartofgrid}
 \end{figure}

@@ -1,0 +1,36 @@
+\begin{tikzpicture}[scale=3.5]
+  \draw[->,gray,very thin] (0.0,0.0) -- (1.2,0.0) node[below] {$x$};
+  \draw[->,gray,very thin] (0.0,0.0) -- (0.0,1.2) node[left] {$y$};
+  \draw[line width=1.0pt] (0.0,0.0) -- (0.0,1.0) -- (1.0,1.0) -- (1.0,0.0) -- cycle;
+  \pgfmathsetmacro\fourth{1.0/4.0}
+  \pgfmathsetmacro\sixth{1.0/6.0}
+  \draw[xstep=\fourth,ystep=\sixth,black,thin] (0.0,0.0) grid (1.0,1.0);
+  \foreach \x in {0,...,4} {
+    \foreach \y in {0,...,6} {
+        \filldraw (\x * \fourth,\y * \sixth) circle (0.5pt);
+    }
+  }
+  \pgfmathsetmacro\dd{0.04}
+  \pgfmathsetmacro\od{1.04}
+  \pgfmathsetmacro\xap{2*\fourth + 0.04}
+  \pgfmathsetmacro\xbm{3*\fourth - 0.04}
+  \pgfmathsetmacro\yap{3*\sixth + 0.04}
+  \pgfmathsetmacro\ybm{4*\sixth - 0.04}
+  \pgfmathsetmacro\xamid{1*\fourth}
+  \pgfmathsetmacro\xbmid{3.5*\fourth}
+  \pgfmathsetmacro\yamid{1.5*\sixth}
+  \pgfmathsetmacro\ybmid{4.7*\sixth}
+  \draw[very thick,rounded corners=8pt,gray] 
+    (-\dd,-\dd) -- (-\dd,\yap) -- (\xap,\yap) -- (\xap,-\dd) -- cycle;
+  \node[color=gray,xshift=-1.5mm] at (\xamid,\yamid) {\large $0$};
+  \draw[very thick,rounded corners=8pt,gray] 
+    (\xbm,-\dd) -- (\od,-\dd) -- (\od,\yap) -- (\xbm,\yap) -- cycle;
+  \node[color=gray] at (\xbmid,\yamid) {\large $1$};
+  \draw[very thick,rounded corners=8pt,gray] 
+    (-\dd,\ybm) -- (\xap,\ybm) -- (\xap,\od) -- (-\dd,\od) -- cycle;
+  \node[color=gray,xshift=-1.5mm] at (\xamid,\ybmid) {\large $2$};
+  \draw[very thick,rounded corners=8pt,gray] 
+    (\xbm,\ybm) -- (\od,\ybm) -- (\od,\od) -- (\xbm,\od) -- cycle;
+  \node[color=gray] at (\xbmid,\ybmid) {\large $3$};
+\end{tikzpicture}
+
