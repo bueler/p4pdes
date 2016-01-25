@@ -45,7 +45,7 @@ Our FD method is based on a \emph{structured grid} of $m_x m_y$ points on the un
 
 Consider the lines of code in Code \ref{code:dmdacreatetwod}, an extract from \texttt{poisson.c} shown later (Codes \ref{code:poissoncreate} and \ref{code:poissonsolve}).  They create a \PETSc \pDM object, an abstract type for describing the topology (connectedness) and geometry of a grid, the way it is distributed across \MPI processes, and the way each process can access data from its neighboring processes.  This specific case creates a ``\pDMDA'', which is the structured-grid subclass of \pDMs, for grids like Figure \ref{fig:unitsquaregrid}.  Historically-speaking, ``\pDM'' might stand for ``distributed mesh'' and ``\texttt{DA}'' for ``distributed array,'' but in practice ``\pDMDA'' means ``structured grid'' from now on.
 
-\cinputraw{dmdacreate2d.frag}{extract from ch3/poisson.c}{An example of creating a 2D \pDMDA.}{}{//START}{//STOP}{code:dmdacreatetwod}
+\cinputraw{misc/dmdacreate2d.frag}{extract from ch3/poisson.c}{An example of creating a 2D \pDMDA.}{}{//START}{//STOP}{code:dmdacreatetwod}
 
 \begin{marginfigure}
 \input{tikz/unitsquaregridparallel.tex}
