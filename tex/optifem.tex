@@ -276,33 +276,8 @@ I^h[u] = \frac{h_x h_y}{4} \quad \underbrace{\sum_{i=0}^{m_x} \sum_{j=0}^{m_y}}_
 \end{equation}
 We now have enough detail for a prototype implementation.
 
-\newcommand{\gausssanspts}{
-  % (xi,eta) reference element is square with half-width 1
-  \draw[->,very thin] (-1.2,0.0) -- (1.2,0.0) node[below] {\small $\xi$};
-  \draw[->,very thin] (0.0,-1.2) -- (0.0,1.2) node[left] {\small $\eta$};
-  \draw[line width=1.5pt] (1.0,1.0) -- (-1.0,1.0) -- (-1.0,-1.0) -- (1.0,-1.0) -- cycle;
-}
-
 \begin{figure}
-\begin{tikzpicture}[scale=1.8]
-\gausssanspts
-\pgfmathsetmacro\gl{1.0/sqrt(3.0)}
-\foreach \x [count=\RR from 0] in {-\gl,\gl} {
-    \foreach \y [count=\SS from 0] in {-\gl,\gl} {
-         \filldraw (\x,\y) circle (1.0pt) node[above] {\small $\RR,\SS$};
-    }
-}
-\end{tikzpicture}
-\qquad\qquad
-\begin{tikzpicture}[scale=1.8]
-\gausssanspts
-\pgfmathsetmacro\gl{sqrt(3.0/5.0)}
-\foreach \x [count=\RR from 0] in {-\gl,0,\gl} {
-    \foreach \y [count=\SS from 0] in {-\gl,0,\gl} {
-         \filldraw (\x,\y) circle (1.0pt) node[above,yshift=-0.4mm] {\small $\RR,\SS$};
-    }
-}
-\end{tikzpicture}
+\input{tikz/gausstwod.tex}
 \caption{The $n=2$ (left) and $n=3$ (right) Gauss-Legendre quadrature points on the reference element $\square_\ast$.  Points $(z_r,z_s)$ are labeled as ``$r,s$''.  See equation \eqref{eq:of:tensorgauss} and Table \ref{tab:of:gauss}.}
 \label{fig:of:gausstwod}
 \end{figure}
@@ -349,63 +324,8 @@ However, implementing the objective function requires us to be clearer than we h
 
 Figure \ref{fig:of:parallelgrid} shows the scheme we have implemented.  The interior nodes are distributed across the processes in the obvious way.  That is, \PETSc's \pDMDA object treats the grid of interior nodes here just as it did the grid of all nodes in Chapter \ref{chap:st}.  Regarding the elements, we decide that each rank owns those which are down and left from an owned node.  However, we also decide that ranks which own $i=m_x-1$ or $j=m_y-1$ nodes, that is, ranks which own the upper or right edges of the grid, also own the elements above and to the right of these nodes.
 
-\newcommand{\gridsansowners}{
-  % grid
-  \draw[line width=1.0pt] (0.0,0.0) -- (0.0,1.0) -- (1.0,1.0) -- (1.0,0.0) -- cycle;
-  \pgfmathsetmacro\fifth{1.0/5.0}
-  \draw[xstep=\fifth,ystep=\fifth,black,thin] (0.0,0.0) grid (1.0,1.0);
-  % prominent nodes
-  \foreach \x in {1,...,4} {
-    \foreach \y in {1,...,4} {
-        \filldraw (\x * \fifth,\y * \fifth) circle (0.4pt);
-    }
-  }
-  % tick marks for i
-  \draw[line width=1.0pt] (0.2,-0.04) -- (0.2,0.02);
-  \draw[line width=1.0pt] (0.8,-0.04) -- (0.8,0.02);
-  \node[yshift=-4mm] at (0.2,0.0) {\small $i=0$};
-  \node[yshift=-4mm] at (0.8,0.0) {\small $m_x\!-\!1$};
-  % tick marks for j
-  \draw[line width=1.0pt] (-0.04,0.2) -- (0.02,0.2);
-  \draw[line width=1.0pt] (-0.04,0.8) -- (0.02,0.8);
-  \node[xshift=-6mm] at (0.0,0.2) {\small $j=0$};
-  \node[xshift=-6.5mm] at (0.0,0.8) {\small $m_y\!-\!1$};
-}
-
 \begin{figure}
-\begin{tikzpicture}[scale=4.2]
-\gridsansowners
-\pgfmathsetmacro\half{0.5*\fifth}
-\pgfmathsetmacro\AA{0.15*\fifth}
-\foreach \x in {1,3} {
-    \foreach \y in {1,3} {
-        \draw[very thick,rounded corners=5pt,gray] (\x*\fifth-\AA,\y*\fifth-\AA) -- (\x*\fifth+\fifth+\AA,\y*\fifth-\AA) -- (\x*\fifth+\fifth+\AA,\y*\fifth+\fifth+\AA) -- (\x*\fifth-\AA,\y*\fifth+\fifth+\AA) -- cycle;
-    }
-}
-\node at (\fifth+\half,\fifth+\half) {\small $0$};
-\node at (3*\fifth+\half,\fifth+\half) {\small $1$};
-\node at (\fifth+\half,3*\fifth+\half) {\small $2$};
-\node at (3*\fifth+\half,3*\fifth+\half) {\small $3$};
-\node at (0.5,-0.25) {\small node ownership};
-\end{tikzpicture}
-\quad
-\begin{tikzpicture}[scale=4.2]
-\gridsansowners
-\pgfmathsetmacro\half{0.5*\fifth}
-\pgfmathsetmacro\bit{0.3*\fifth}
-\pgfmathsetmacro\BB{0.1*\fifth}
-\draw[very thick,rounded corners=5pt,gray] (\BB,\BB) -- (2*\fifth-\BB,\BB) -- (2*\fifth-\BB,2*\fifth-\BB) -- (\BB,2*\fifth-\BB) -- cycle;
-\draw[very thick,rounded corners=5pt,gray] (2*\fifth+\BB,\BB) -- (5*\fifth-\BB,\BB) -- (5*\fifth-\BB,2*\fifth-\BB) -- (2*\fifth+\BB,2*\fifth-\BB) -- cycle;
-\draw[very thick,rounded corners=5pt,gray] (\BB,2*\fifth+\BB) -- (2*\fifth-\BB,2*\fifth+\BB) -- (2*\fifth-\BB,5*\fifth-\BB) -- (\BB,5*\fifth-\BB) -- cycle;
-\draw[very thick,rounded corners=5pt,gray] (2*\fifth+\BB,2*\fifth+\BB) -- (5*\fifth-\BB,2*\fifth+\BB) -- (5*\fifth-\BB,5*\fifth-\BB) -- (2*\fifth+\BB,5*\fifth-\BB) -- cycle;
-\node at (\fifth+\bit,\fifth+\bit) {\small $0$};
-\node at (3*\fifth+\half,\fifth+\bit) {\small $1$};
-\node at (\fifth+\bit,3*\fifth+\half) {\small $2$};
-\node at (3*\fifth+\half,3*\fifth+\half) {\small $3$};
-\node at (0.5,-0.25) {\small element ownership};
-\end{tikzpicture}
-\medskip
-
+\input{tikz/parallelgrid.tex}
 \caption{Parallel distribution of interior nodes (left) and elements (right) in a $m_x=4$, $m_y=4$ grid.  Here there are four processes with ranks $0,1,2,3$.}
 \label{fig:of:parallelgrid}
 \end{figure}

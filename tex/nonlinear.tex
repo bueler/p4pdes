@@ -474,28 +474,7 @@ $ ./reaction -da_grid_x 7
 Figure \ref{fig:stencilreaction} shows this grid and the three-point stencil for the numerical discretization scheme \eqref{eq:nl:drfdscheme}.  The stencil (equation) at $x_j$ generically involves three unknowns, namely $u_{j-1}$, $u_j$, and $u_{j+1}$.  Thus the $j$th row of the Jacobian $J$ has three nonzero entries.  Exceptions occur at the boundary nodes, where only two unknowns are involved.  In any case, option \texttt{-mat\_view ::ascii\_dense} allows one to see the Jacobian matrices themselves during the Newton iteration.
 
 \begin{figure}
-
-\medskip
-\begin{tikzpicture}[scale=1.0]
-  \node at (0.5,9.3) {$x_0$};
-  \node at (1.5,9.3) {$x_1$};
-  \node at (2.5,9.3) {$x_2$};
-  \node at (3.5,9.3) {$x_3$};
-  \node at (4.5,9.3) {$x_4$};
-  \node at (5.5,9.3) {$x_5$};
-  \node at (6.5,9.3) {$x_6$};
-  \draw[line width=0.7pt] (0.5,9.0) -- (6.5,9.0);
-  \filldraw (0.5,9.0) circle (2.0pt);
-  \filldraw (1.5,9.0) circle (2.0pt);
-  \filldraw (2.5,9.0) circle (2.0pt);
-  \filldraw (3.5,9.0) circle (4.0pt);
-  \filldraw (4.5,9.0) circle (4.0pt);
-  \filldraw (5.5,9.0) circle (4.0pt);
-  \filldraw (6.5,9.0) circle (2.0pt);
-  \draw[line width=2.5pt] (3.5,9.0) -- (5.5,9.0);
-\end{tikzpicture}
-\medskip
-
+\input{tikz/stencilreaction.tex}
 \caption{\texttt{reaction.c} uses discretization \eqref{eq:nl:drfdscheme} at each interior node of the grid.  This corresponds to a three-point stencil, as shown.}
 \label{fig:stencilreaction}
 \end{figure}
@@ -503,55 +482,7 @@ Figure \ref{fig:stencilreaction} shows this grid and the three-point stencil for
 We take the unknowns, or the corresponding grid nodes, to be the vertices of a graph $G=G(J)$, as shown in the top of Figure \ref{fig:fdcolorreaction}.  Graph $G$ has an edge between two vertices if the corresponding unknowns both appear in at least one equation, i.e.~in one instance of equation \eqref{eq:nl:drfdscheme} in this case.
 
 \begin{figure}
-\begin{tikzpicture}[scale=1.0]
-\node at (-2.25,8.0) {colored graph $G(J)$:};
-  \node at (0.5,8.4) {$0$};
-  \node at (1.5,8.4) {$1$};
-  \node at (2.5,8.4) {$2$};
-  \node at (3.5,8.4) {$0$};
-  \node at (4.5,8.4) {$1$};
-  \node at (5.5,8.4) {$2$};
-  \node at (6.5,8.4) {$0$};
-  \draw (0.5,8.0) circle (4.0pt);
-  \draw[line width=0.6pt] (0.65,8.0) -- (1.35,8.0);
-  \draw (1.5,8.0) circle (4.0pt);
-  \draw[line width=0.6pt] (1.65,8.0) -- (2.35,8.0);
-  \draw (2.5,8.0) circle (4.0pt);
-  \draw[line width=0.6pt] (2.65,8.0) -- (3.35,8.0);
-  \draw (3.5,8.0) circle (4.0pt);
-  \draw[line width=0.6pt] (3.65,8.0) -- (4.35,8.0);
-  \draw (4.5,8.0) circle (4.0pt);
-  \draw[line width=0.6pt] (4.65,8.0) -- (5.35,8.0);
-  \draw (5.5,8.0) circle (4.0pt);
-  \draw[line width=0.6pt] (5.65,8.0) -- (6.35,8.0);
-  \draw (6.5,8.0) circle (4.0pt);
-  \draw[line width=0.75pt] (0.6,7.9) .. controls (1.4,7.5) and (1.6,7.5) .. (2.4,7.9);
-  \draw[line width=0.75pt] (1.6,7.9) .. controls (2.4,7.5) and (2.6,7.5) .. (3.4,7.9);
-  \draw[line width=0.75pt] (2.6,7.9) .. controls (3.4,7.5) and (3.6,7.5) .. (4.4,7.9);
-  \draw[line width=0.75pt] (3.6,7.9) .. controls (4.4,7.5) and (4.6,7.5) .. (5.4,7.9);
-  \draw[line width=0.75pt] (4.6,7.9) .. controls (5.4,7.5) and (5.6,7.5) .. (6.4,7.9);
-\node at (-2.4,6.9) {colored columns of $J$:};
-  %\draw[xstep=1.0,ystep=1.0,black,thin] (0.0,0.0) grid (7.0,7.0);
-  \node at (0.5,7.0) {$0$};
-  \node at (0.5,6.2) {$0$};
-  \node at (1.5,7.0) {$1$};
-  \node at (1.5,6.2) {$1$};
-  \node at (1.5,5.4) {$1$};
-  \node at (2.5,6.2) {$2$};
-  \node at (2.5,5.4) {$2$};
-  \node at (2.5,4.6) {$2$};
-  \node at (3.5,5.4) {$0$};
-  \node at (3.5,4.6) {$0$};
-  \node at (3.5,3.8) {$0$};
-  \node at (4.5,4.6) {$1$};
-  \node at (4.5,3.8) {$1$};
-  \node at (4.5,3.0) {$1$};
-  \node at (5.5,3.8) {$2$};
-  \node at (5.5,3.0) {$2$};
-  \node at (5.5,2.2) {$2$};
-  \node at (6.5,3.0) {$0$};
-  \node at (6.5,2.2) {$0$};
-\end{tikzpicture}
+\input{tikz/fdcolorreaction.tex}
 \caption{Graph $G(J)$ is built from the stencil and the grid, with an edge for every pair of unknowns that appears in an equation in system \eqref{eq:nl:equation}.  Coloring this graph---$c=3$ colors suffice in this case---also assigns colors to the columns of $J$.}
 \label{fig:fdcolorreaction}
 \end{figure}
@@ -606,26 +537,7 @@ The exact number of $\bF$ evaluations was 24586, 13, and 4, respectively.
 Before proceeding, consider the structured 2D grid used in Chapter \ref{chap:st}, and in particular finite-difference scheme \eqref{poissonsquareFD} for the Poisson equation \eqref{poissonsquare}.  How would the corresponding graph-coloring approach work?  The stencil of the scheme involves five unknowns $u_{i,j+1}, u_{i-1,j}, u_{i,j}, u_{i+1,j}, u_{i,j-1}$ (Figure \ref{fig:unitsquaregridstencil}).  Therefore the graph $G(J)$ in this case includes a complete graph on five vertices, a $K_5$, as a subgraph at each (generic interior) node in the structured grid, as shown in Figure 4.7.  Clearly $\chi(G(J))\ge 5$.  However, when \PETSc does the default incidence-degree-ordering coloring algorithm then it finds that indeed five colors suffice to color $G(J)$, at least in refined-grid cases.  We will be able to test verify this behavior when we have a \pSNES-based 2D PDE example to work with, as in the next Chapter.
 
 \begin{figure}
-\begin{tikzpicture}[scale=7.0]
-% mesh
-  \draw[xstep=0.25,ystep=0.166667,black,thin,dashed] (0.0,0.333334) grid (1.0,1.0);
-% stencil
-  \filldraw (0.50,0.666667) circle (0.6pt);
-  \filldraw (0.75,0.666667) circle (0.6pt);
-  \filldraw (1.00,0.666667) circle (0.6pt);
-  \filldraw (0.75,0.5) circle (0.6pt);
-  \filldraw (0.75,0.833333) circle (0.6pt);
-% subgraph K_5
-  \draw[line width=2.5pt] (0.50,0.666667) -- (1.00,0.666667);
-  \draw[line width=2.5pt] (0.75,0.5)  -- (0.75,0.833333);
-  \draw[line width=0.75pt] (0.5,0.666667) -- (0.75,0.833333) -- (1.0,0.666667) -- (0.75,0.5) -- cycle;
-  \draw[line width=0.75pt] (0.5,0.666667) .. controls (0.55,0.72) and (0.7,0.72) .. (0.75,0.666667);
-  \draw[line width=0.75pt] (0.75,0.666667) .. controls (0.8,0.72) and (0.95,0.72) .. (1.0,0.666667);
-  \draw[line width=0.75pt] (0.75,0.833333) .. controls (0.8,0.8) and (0.8,0.7) .. (0.75,0.666667);
-  \draw[line width=0.75pt] (0.75,0.666667) .. controls (0.8,0.633333) and (0.8,0.533333) .. (0.75,0.5);
-  \draw[line width=0.75pt] (0.5,0.666667) .. controls (0.7,1.0) and (0.8,1.0) .. (1.0,0.666667);
-  \draw[line width=0.75pt] (0.75,0.833333) .. controls (0.3,0.8) and (0.3,0.533333) .. (0.75,0.5);
-\end{tikzpicture}
+\input{tikz/colorstencilplane.tex}
 \caption{For the 2D finite-difference scheme used in Chapter \ref{chap:st}, the graph $G(J)$ has a $K_5$ at every node because the stencil (thick) involves five unknowns.}
 \label{fig:colorstencilplane}
 \end{figure}
