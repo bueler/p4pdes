@@ -1,7 +1,8 @@
 all: book.pdf
 
-texroots := macros preface getstarted linearsystem structured nonlinear optifem advdif precond scaling unstructured dmplex stokes constrained
-texinputs := $(addsuffix .tex, $(texroots))
+# chapters of the book
+chapsroots := preface getstarted linearsystem structured nonlinear optifem advdif precond scaling unstructured dmplex stokes constrained
+chapsinputs := $(addprefix chaps/, $(addsuffix .tex, $(chapsroots)))
 
 # for these, see strip.sh
 croots := vecmatksp tri poisson expcircle expcircleJAC reaction plap fish2 readmesh poissontools poissonfem obstacle
@@ -19,7 +20,7 @@ book.pdf: book.aux
 	pdflatex book
 	pdflatex book
 
-book.aux: book.tex book.bib $(texinputs) $(cstrip) $(tikzinputs) $(pdfinputs) $(pnginputs)
+book.aux: book.tex book.bib macros.tex $(chapsinputs) $(cstrip) $(tikzinputs) $(pdfinputs) $(pnginputs)
 	(cd figs/ && make)
 	pdflatex book
 	bibtex book.aux
@@ -45,7 +46,8 @@ mesh.1.tikz: ../c/ch9/genstructured.py
 clean:
 	rm -f *~ *.out *.aux *.log *.bbl *.blg *.synctex.gz *.idx *.ilg *.ind *.toc *.dvi
 	rm -rf cstrip/
+	(cd chaps/ && make clean)
 	(cd figs/ && make clean)
 	rm -f blob*.tikz squarefour.tikz mesh.?.*
-	rm -f timing/*~ timing/poisson/*~ timing/tri/*~
+	rm -f tikz/*~ timing/*~ timing/poisson/*~ timing/tri/*~
 
