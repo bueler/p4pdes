@@ -53,7 +53,7 @@ If $\partial_D \Omega$ has positive size, in an appropriate sense, then a soluti
 A FEM for the Poisson problem comes from requiring the weak formulation \eqref{eq:un:poissonweak} to be true for $u$ in a finite-dimensional (i.e.~small) subspace of $H_{gD}^1(\Omega)$, and for test functions $v$ ranging over a basis of a finite-dimensional subspace of $H_{0D}^1(\Omega)$.  In the \emph{Galerkin} method here, these subspaces will essentially be the same.  We will build them from triangulations of $\Omega$.
 
 \begin{marginfigure}
-\input{blob.tikz}
+\input{tmp/blob.tikz}
 \caption{An example polygonal domain $\Omega$ resembling the domain in Figure \ref{fig:un:generalpoissondomain}.  The bold part of the boundary is $\partial_D\Omega$, and $\partial_N\Omega$ is the remainder.}
 \label{fig:un:polygon}
 \end{marginfigure}
@@ -72,11 +72,11 @@ We index the $K$ triangles (elements) in $\Th$ by $k=0,\dots,K-1$.  The $N$ vert
 An example triangulation $\Th$ is shown in Figure \ref{fig:un:number-mesh}.  The reader may regard the subscript ``$h$'' in ``$\Th$'' as merely traditional notation, but it denotes the typical or maximum size $h$ (e.g.~diameter) of the triangles; it serves as a reminder that we want to approximate the solution in the limit $h\to 0$.  In contrast to many references--e.g.~\citet{Elmanetal2005}, which we follow in many ways---note that all numbering is zero-based, which is natural in a C implementation, of course.  (As mentioned in Chapter \ref{chap:ls}, in this book even rows and columns of vectors and matrices have numbering starting with zero.)
 
 \begin{marginfigure}
-\input{blob.1.elenum.tikz}
+\input{tmp/blob.1.elenum.tikz}
 
 \medskip
 
-\input{blob.1.nodenum.tikz}
+\input{tmp/blob.1.nodenum.tikz}
 \caption{A triangulation of the polygon in Figure \ref{fig:un:polygon}, shown with element numbering (top) and node numbering (bottom).  There are $K=15$ elements, $N=13$ nodes, and $L=4$ nodes in the Dirichlet boundary $\partial_D\Omega$ (bold).}
 \label{fig:un:number-mesh}
 \end{marginfigure}
@@ -245,7 +245,7 @@ for these transformations.  After the completion of this ``editing'' stage we ge
 
 \medskip\noindent\hrulefill
 \begin{example} Figure \ref{fig:squarefour} shows a triangulation of the unit square with five nodes.  The matrix $\tilde A$ has the following nonzero pattern; the zero entries are shown as spaces:\begin{marginfigure}
-\input{squarefour.tikz}
+\input{tmp/squarefour.tikz}
 \caption{A triangulation of a square with five nodes.  The top segment is the Dirichlet boundary.}
 \label{fig:squarefour}
 \end{marginfigure}%

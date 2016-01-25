@@ -2,12 +2,7 @@
 ice-bib.bib
 book.pdf
 cstrip/*.c
-*.?.node
-*.?.ele
-*.?.poly
-*.?.tikz
-squarefour.tikz
-blob*tikz
+tmp/*.tikz
 
 ## Core latex/pdflatex auxiliary files:
 *.aux

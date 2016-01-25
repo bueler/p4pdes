@@ -8,7 +8,8 @@ chapsinputs := $(addprefix chaps/, $(addsuffix .tex, $(chapsroots)))
 croots := vecmatksp tri poisson expcircle expcircleJAC reaction plap fish2 readmesh poissontools poissonfem obstacle
 cstrip := $(addprefix cstrip/, $(addsuffix .c, $(croots)))
 
-tikzinputs := blob.tikz blob.1.elenum.tikz blob.1.nodenum.tikz squarefour.tikz mesh.1.tikz
+tmptikzroots := blob blob.1.elenum blob.1.nodenum squarefour mesh.1
+tmptikzinputs := $(addprefix tmp/, $(addsuffix .tikz, $(tmptikzroots)))
 
 pdfroots := petscghostvalues
 pdfinputs := $(addprefix figs/, $(addsuffix .pdf, $(pdfroots)))
@@ -20,34 +21,37 @@ book.pdf: book.aux
 	pdflatex book
 	pdflatex book
 
-book.aux: book.tex book.bib macros.tex $(chapsinputs) $(cstrip) $(tikzinputs) $(pdfinputs) $(pnginputs)
+book.aux: book.tex book.bib macros.tex tmp/ $(chapsinputs) $(cstrip) $(tmptikzinputs) $(pdfinputs) $(pnginputs)
 	(cd figs/ && make)
 	pdflatex book
 	bibtex book.aux
 
+tmp/:
+	mkdir tmp/
+
 $(cstrip):
 	./strip.sh
 
-blob.tikz blob.1.elenum.tikz blob.1.nodenum.tikz: ../c/ch9/blob.poly
-	python tri2tikz.py --polyonly --nodesize 1.0 --scale 0.6 ../c/ch9/blob blob.tikz
+tmp/blob.tikz tmp/blob.1.elenum.tikz tmp/blob.1.nodenum.tikz: tmp/ ../c/ch9/blob.poly
+	python tri2tikz.py --polyonly --nodesize 1.0 --scale 0.6 ../c/ch9/blob tmp/blob.tikz
 	triangle -pqa4.0 ../c/ch9/blob
-	python tri2tikz.py --labelelements --nodesize 1.0 --scale 0.6 ../c/ch9/blob.1 blob.1.elenum.tikz
-	python tri2tikz.py --labelnodes --nodesize 3.0 --nodeoffset -0.5 --scale 0.6 ../c/ch9/blob.1 blob.1.nodenum.tikz
+	python tri2tikz.py --labelelements --nodesize 1.0 --scale 0.6 ../c/ch9/blob.1 tmp/blob.1.elenum.tikz
+	python tri2tikz.py --labelnodes --nodesize 3.0 --nodeoffset -0.5 --scale 0.6 ../c/ch9/blob.1 tmp/blob.1.nodenum.tikz
 
-squarefour.tikz: ../c/ch9/squarefour.poly
+tmp/squarefour.tikz: tmp/ ../c/ch9/squarefour.poly
 	python tri2tikz.py --labelnodes --nodesize 0.5 --nodeoffset -0.1 --scale 3.0 ../c/ch9/squarefour $@
 
-mesh.1.tikz: ../c/ch9/genstructured.py
+tmp/mesh.1.tikz: tmp/ ../c/ch9/genstructured.py
 	(cd ../c/ch9/ && python genstructured.py mesh.1 5)
 	python tri2tikz.py --labelnodes --nodeoffset 0.05 --nodesize 0.5 --labelelements --scale 5.0 ../c/ch9/mesh.1 $@
 
 .PHONY: clean
 
 clean:
-	rm -f *~ *.out *.aux *.log *.bbl *.blg *.synctex.gz *.idx *.ilg *.ind *.toc *.dvi
-	rm -rf cstrip/
+	rm -f *~ .gitignore~
+	rm -f tikz/*~ timing/*~ timing/poisson/*~ timing/tri/*~
+	rm -f *.out *.aux *.log *.bbl *.blg *.synctex.gz *.idx *.ilg *.ind *.toc *.dvi
+	rm -rf cstrip/ tmp/
 	(cd chaps/ && make clean)
 	(cd figs/ && make clean)
-	rm -f blob*.tikz squarefour.tikz mesh.?.*
-	rm -f tikz/*~ timing/*~ timing/poisson/*~ timing/tri/*~
 
