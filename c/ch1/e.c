@@ -1,11 +1,11 @@
 #include <petsc.h>
 
-int main(int argc, char **args) {
+int main(int argc, char **argv) {
   PetscErrorCode ierr;
   int            rank, i;
   double         localval, globalsum;
 
-  PetscInitialize(&argc,&args,NULL,"Compute e in parallel with PETSc.\n\n");
+  PetscInitialize(&argc,&argv,NULL,"Compute e in parallel with PETSc.\n\n");
 
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank); CHKERRQ(ierr);
 
