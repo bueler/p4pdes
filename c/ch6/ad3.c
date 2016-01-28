@@ -10,15 +10,15 @@ static char help[] =
 "    u(1,y,z) = g(y,z)\n"
 "    u(-1,y,z) = u(x,-1,z) = u(x,1,z) = 0\n"
 "    u periodic in z\n"
-"An optional exact solution is available:\n"
+"An exact solution is used to evaluate numerical error:\n"
 "    u(x,y,z) = U(x) sin(E (y+1)) sin(F (z+1))\n"
 "where  U(x) = (exp((x+1)/eps) - 1) / (exp(2/eps) - 1)\n"
 "and constants E,F so that homogeneous/periodic boundary conditions\n"
 "are satisfied.  The problem solved has  W=<1,0,0>,  g(y,z) = u(1,y,z),\n"
 "and f(x,y,z) = eps lambda^2 u(x,y,z)  where  lambda^2 = E^2 + F^2.\n\n";
 
-/* evidence for convergence:
-  $ for LEV in 0 1 2 3 4 5; do ./ad3 -ksp_rtol 1.0e-14 -snes_monitor -snes_converged_reason -da_refine $LEV; done
+/* evidence for convergence plus some feedback on iterations:
+  $ for LEV in 0 1 2 3 4 5 6; do timer mpiexec -n 4 ./ad3 -snes_monitor -snes_converged_reason -ksp_converged_reason -da_refine $LEV; done
 
 all of these work:
   ./ad3 -snes_monitor -ksp_type preonly -pc_type lu
@@ -68,7 +68,8 @@ PetscErrorCode configureCtx(Ctx *usr) {
     PetscErrorCode  ierr;
     usr->eps = 1.0;
     usr->upwind = PETSC_FALSE;
-    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"ad3_","ad3 (3D advection-diffusion solver) options",""); CHKERRQ(ierr);
+    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"ad3_",
+               "ad3 (3D advection-diffusion solver) options",""); CHKERRQ(ierr);
     ierr = PetscOptionsReal("-eps","diffusion coefficient eps with  0 < eps < infty",
                NULL,usr->eps,&(usr->eps),NULL); CHKERRQ(ierr);
     if (usr->eps <= 0.0) {
@@ -303,7 +304,7 @@ int main(int argc,char **argv) {
     ierr = DMSetApplicationContext(user.da,&user); CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);
     if ((info.mx < 2) || (info.my < 2) || (info.mz < 3)) {
-        SETERRQ(PETSC_COMM_WORLD,1,"grid too coarse ... require (mx,my,mz) > (2,2,3)");
+        SETERRQ(PETSC_COMM_WORLD,1,"grid too coarse: require (mx,my,mz) > (2,2,3)");
     }
 
     ierr = DMCreateGlobalVector(user.da,&uexact); CHKERRQ(ierr);
