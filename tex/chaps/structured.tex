@@ -758,7 +758,7 @@ Now confirm that IC($0$) preconditioning gives lower iteration counts but the sa
 
 \item Add \texttt{-log\_summary} to an un-preconditioned CG run, e.g.
 \begin{cline}
-$ ./poisson -ksp_converged_reason -ksp_type cg -pc_type none -log_summary
+$ ./poisson -ksp_converged_reason -ksp_type cg -pc_type none -log_view
 \end{cline}
 %$
 By looking at the ``Count'' column, and noting that the iteration count comes from \texttt{-ksp\_converged\_reason} output, confirm that the computational work of one CG iteration consists of two inner products (\texttt{VecTDot}), three vector updates (\texttt{VecAXPY} and \texttt{VecAYPX}), and one matrix-vector product (\texttt{MatMult}).  Find a pseudo-code for CG in some textbook, and confirm this work pattern.

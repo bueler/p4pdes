@@ -355,7 +355,7 @@ numerical error:  |u-u_exact|/|u_exact| = 8.081e-03
 
 Recall from Chapter \ref{chap:nl} that we can ask \PETSc to count C function evaluations, to confirm that only the objective function is evaluated:
 \begin{cline}
-$ ./plap -snes_fd_function -snes_fd -log_summary | grep Eval
+$ ./plap -snes_fd_function -snes_fd -log_view | grep Eval
 SNESObjectiveEval    2198 1.0 1.8496e-01 1.0 ...
 SNESJacobianEval       7 1.0 2.1275e-01 1.0 ...
 \end{cline}
@@ -364,9 +364,9 @@ No counts of ``\texttt{SNESFunctionEval}'' evaluations appear.  (The Jacobian ev
 
 However, experience from Chapter \ref{chap:nl} suggests using a ``coloring'' method, available for our \pDMDA-managed structured grid.  This reduces the evaluation count, here on a once-refined $5 \times 5$ grid:
 \begin{cline}
-$ ./plap -snes_fd_function -snes_fd -da_refine 1 -log_summary | grep ObjectiveEval
+$ ./plap -snes_fd_function -snes_fd -da_refine 1 -log_view | grep ObjectiveEval
 SNESObjectiveEval   20539 1.0 1.5497e+00 1.0 ...
-$ ./plap -snes_fd_function -snes_fd_color -da_refine 1 -log_summary | grep ObjectiveEval
+$ ./plap -snes_fd_function -snes_fd_color -da_refine 1 -log_view | grep ObjectiveEval
 SNESObjectiveEval    5410 1.0 4.8340e-01 1.0 ...
 \end{cline}
 \label{page:of:badEvalcount}
@@ -438,7 +438,7 @@ real 15.13
 
 Also, the function-evaluation counts are now more reasonable.  For instance, consider the following run which does four Newton iterations on a grid with $N=25$ interior points:
 \begin{cline}
-$ ./plap -da_refine 1 -log_summary | grep Eval
+$ ./plap -da_refine 1 -log_view | grep Eval
 SNESFunctionEval      45 1.0 6.6156e-03 1.0 ...
 SNESObjectiveEval       8 1.0 4.5586e-04 1.0 ...
 SNESJacobianEval       4 1.0 6.4406e-03 1.0 ...

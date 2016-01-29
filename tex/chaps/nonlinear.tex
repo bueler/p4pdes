@@ -491,7 +491,7 @@ Now suppose we color the vertices so that any two vertices which share an edge h
 
 The case of a structured 2D grid, as used in Chapter \ref{chap:st} with a finite-difference scheme \eqref{poissonsquareFD} for the Poisson equation \eqref{poissonsquare}, further illustrates the coloring idea.  The stencil of the scheme involves five unknowns $u_{i,j+1}, u_{i-1,j}, u_{i,j}, u_{i+1,j}, u_{i,j-1}$ (Figure \ref{fig:unitsquaregridstencil}).  Therefore the graph $G(J)$ in this case includes a complete graph on five vertices, a $K_5$ \citep{ChartrandLesniakZhang2011}, as a subgraph at each (generic interior) node in the structured grid, as shown in Figure 4.7.  Clearly $\chi(G(J))\ge 5$.  When \PETSc uses a coloring algorithm then it finds that indeed five colors suffice to color $G(J)$.\sidenote{At least in refined-grid cases using the default incidence-degree-ordering.  Certain coarse grids have lower chromatic number.}  We will be able to verify this behavior when we have a \pSNES-based 2D PDE example to work with, as in the next Chapter.
 % for number of colors on graph in fig:colorstencilplane, in refined-grid cases, compare
-%   $ ./ex5 -da_refine 4 -log_summary -snes_fd_color | grep SNESFunctionEval
+%   $ ./ex5 -da_refine 4 -log_view -snes_fd_color | grep SNESFunctionEval
 % which gives 19 function evals and
 %   $ ./ex5 -da_refine 4 -snes_converged_reason -snes_fd_color
 % which gives 3 iterations
@@ -536,11 +536,11 @@ Compare the run on page \pageref{etc:nl:bestreaction}.
 
 Counting the number of function evaluations in the various cases is a good idea, and there is no need to alter \texttt{reaction.c} to do so: use \texttt{-log\_summary} and look at the output.\sidenote{Do not add print statements!}  Because we want the ``\texttt{SNESFunctionEval}'' lines, \texttt{grep} extracts the count for the runs above:
 \begin{cline}
-$ ./reaction -da_refine 10 -snes_fd -snes_max_funcs 100000 -log_summary | grep SNESFunctionEval
+$ ./reaction -da_refine 10 -snes_fd -snes_max_funcs 100000 -log_view | grep SNESFunctionEval
 SNESFunctionEval   24586 1.0 3.3170e+00 1.0 ...
-$ ./reaction -da_refine 10 -snes_fd_color -log_summary | grep SNESFunctionEval
+$ ./reaction -da_refine 10 -snes_fd_color -log_view | grep SNESFunctionEval
 SNESFunctionEval      13 1.0 4.7762e-03 1.0 ...
-$./reaction -da_refine 10 -log_summary | grep SNESFunctionEval
+$./reaction -da_refine 10 -log_view | grep SNESFunctionEval
 SNESFunctionEval       4 1.0 9.3341e-04 1.0 ...
 \end{cline}
 %$
