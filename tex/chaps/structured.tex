@@ -126,7 +126,7 @@ where
 \end{itemize}
 \normalsize
 
-In Code \ref{code:dmdacreatetwod}, the second and third arguments are \texttt{DM\_BOUNDARY\_NONE} because our Dirichlet boundary conditions do not need communication to the next process' domain, nor periodic wrapping.  In the fourth argument we use \texttt{DMDA\_STENCIL\_STAR} because only cardinal neighbors of a grid point will be used when forming the matrix.\sidenote{Figure \ref{fig:unitsquaregridstencil} below shows the ``stencil'' of our FD method.}  The two \texttt{PETSC\_DECIDE} arguments which follow tell \PETSc to distribute the grid over processes according to the size of (number of processes in) the \MPI communicator using \PETSc internal logic as illustrated above.  The next two arguments, in the ninth and tenth positions, say that our PDE is scalar (\texttt{dof}$=1$) and that the FD method will only need one neighbor in each direction (\texttt{s}$=1$).  The next two arguments after that are \texttt{NULL} because we are \emph{not} telling \PETSc any details about how to distribute processes over the grid; it \texttt{DECIDE}s for itself.  Finally, the \pDMDA object is created via an output argument.
+In Code \ref{code:dmdacreatetwod}, the second and third arguments are \texttt{DM\_BOUNDARY\_NONE} because our Dirichlet boundary conditions do not need communication to the next process' domain, nor periodic wrapping.  In the fourth argument we use \texttt{DMDA\_STENCIL\_STAR} because only cardinal neighbors of a grid point will be used when forming the matrix.\sidenote{Figure \ref{fig:unitsquaregridstencil} below shows the ``stencil'' of our FD method.}  The two \texttt{PETSC\_DECIDE} arguments which follow tell \PETSc to distribute the grid over processes according to the size of (number of processes in) the \MPI communicator using \PETSc internal logic as illustrated above.  The next two arguments, in the ninth and tenth positions, say that our PDE is scalar (\texttt{dof}$=1$) and that the FD method will only need one neighbor in each direction (\texttt{s}$=1$).  The next two arguments after that are \texttt{NULL} because we are \emph{not} telling \PETSc any details about how to distribute processes over the grid; it \texttt{DECIDE}s for itself.\sidenote{For scalar arguments one uses \texttt{PETSC\_DECIDE} to have \PETSc select the value.  For array/pointer arguments one uses \texttt{NULL}.}  Finally, the \pDMDA object is created via an output argument.
 
 The call to \texttt{DMDASetUniformCoordinates()} in Code \ref{code:dmdacreatetwod} sets the domain to be $[0,1]\times[0,1]$ in the sense that the \pDM object knows the spacing and locations of the grid points.  The last two arguments are ignored in this case; they would set limits on the third dimension if \texttt{da} were created with \texttt{DMDACreate3d()}.
 
@@ -142,7 +142,7 @@ The standard \PETSc view of what \pDM s ``look like'' is in Figure \ref{fig:pets
 
 \section{Finite difference method}
 
-We were trying to approximate PDE problem \eqref{poissonsquare} and \eqref{poissonsquarebcs}, not just build a grid.  The following FD method leads to the next step, creating and assembling a \pMat and \pVecs, for the linear system corresponding to the PDE.
+We were attempting to approximate PDE problem \eqref{poissonsquare} and \eqref{poissonsquarebcs}, not just build a grid.  The following FD method leads to the next step of creating and assembling a \pMat and \pVecs, for the linear system corresponding to the PDE.
 
 By a well-known Taylor's theorem argument \citep{MortonMayers2005}, if $F(x)$ is sufficiently smooth then
 \begin{equation}
@@ -244,7 +244,7 @@ The matrix $A$ is not symmetric.  Furthermore it is not well-scaled, for such a 
 \medskip
 Before assembling system \eqref{poissonsquareFDearly} and \eqref{poissonsquareFDbcs} by writing \PETSc code, there are two nontrivial observations about it.  These observations lead to an equivalent linear system that is easier to solve both in the sense that we have more options for solving the system,\sidenote{More \pKSP and \pPC choices, and more that converge.} and in the sense that the condition number is smaller.
 
-First, equations \eqref{poissonsquareFDearly} have very different ``scaling'' from equations \eqref{poissonsquareFDbcs}.  For example, if $m_x=m_y=1001$, so that $h_x=h_y=0.001$, then the coefficient of $u_{i,j}$ in \eqref{poissonsquareFDearly} is $4/(.001)^2 = 4 \times 10^6$, while the coefficients from \eqref{poissonsquareFDbcs} are equal to 1.  To make the equations better scaled, we multiply \eqref{poissonsquareFDearly} by the grid cell area $h_x h_y$ to get
+First, equations \eqref{poissonsquareFDearly} have very different ``scaling'' from equations \eqref{poissonsquareFDbcs}.  For example, if $m_x=m_y=1001$, so that $h_x=h_y=0.001$, then the coefficient of $u_{i,j}$ in \eqref{poissonsquareFDearly} is $4/(.001)^2 = 4 \times 10^6$, while the coefficients from \eqref{poissonsquareFDbcs} are equal to 1.  To make the equations better scaled, we multiply \eqref{poissonsquareFDearly} by the grid cell area $h_x h_y$ to obtain
 \begin{equation}
 2 (a + b) u_{i,j} - a \left(u_{i+1,j} + u_{i-1,j}\right) - b \left(u_{i,j+1} + u_{i,j-1}\right) = h_x h_y f_{i,j} \label{poissonsquareFD}
 \end{equation}
@@ -335,7 +335,7 @@ for (j=info.ys; j<info.ys+info.ym; j++) {
 }
 \end{code}
 
-Still considering the code in Code \ref{code:poissonMat}, the \pMat object $A$ assembled by \texttt{formMatrix()}  has ranges of rows owned by each process, the standard parallel layout \texttt{MATMPIAIJ} of \pMat objects in \PETSc (Chapter \ref{chap:gs}).  However, because we work with the locally-owned subgrid using $(i,j)$ indices, we can forget the actual layout of a \pMat and only focus on the part of the grid owned by the process, instead of worrying about the matrix itself.
+Still considering the code in Code \ref{code:poissonMat}, the \pMat object $A$ assembled by \texttt{formMatrix()}  has ranges of rows owned by each process, the standard parallel layout \texttt{MATMPIAIJ} of \pMat objects in \PETSc (Chapter \ref{chap:gs}).  However, because we work with the locally-owned subgrid using $(i,j)$ indices, we can ignore the actual layout of a \pMat and only focus on the part of the grid owned by the process, instead of worrying about the matrix itself.
 
 In particular, local indices $(i,j)$ can be used when inserting entries into \pMat \texttt{A}, which is really a dynamical data structure for matrix assembly.  Thus in Code \ref{code:poissonMat} we see one use of \texttt{MatSetValuesStencil()} for each locally-owned grid point.  For a generic interior point this command inserts five coefficients into the matrix.  The key data structure is of type \texttt{MatStencil}, an apparently-trivial struct
 \begin{code}
@@ -358,7 +358,7 @@ f(x,y) = 2 (1 - 6 x^2) y^2 (1 - y^2) + 2 (1 - 6 y^2) x^2 (1 - x^2).\label{manufa
 \end{equation}
 From now on we will refer to $u$ in \eqref{eq:st:exactsolution} as ``$u_{ex}$'', the exact solution.  This same problem and solution appears in Chapter 4 of \citep{Briggsetal2000}, so these formulas are not original. % page 64
 
-Observe that the truncation error term $O(h^2)$ in equation \eqref{secondderivativeFD} has a coefficient proportional to fourth derivatives \citep{MortonMayers2005} so our FD method will not be exact on this problem.  That is, $u_{ex}$ has nonzero fourth derivatives.  This is \emph{good} for testing, and we would not want to use the simpler form $u(x,y)=(x-x^2)(y^2-y)$, for example, to test convergence rate of the code, because we want the decay of numerical error with refining grids to be generic.
+Observe that the truncation error term $O(h^2)$ in equation \eqref{secondderivativeFD} has a coefficient proportional to fourth derivatives \citep{MortonMayers2005} so our FD method will not be exact on this problem.  That is, $u$ in \eqref{eq:st:exactsolution} has nonzero fourth derivatives, and this is \emph{good} for testing.  (We would not want to use the simpler form $u(x,y)=(x-x^2)(y^2-y)$, for example, to test convergence rate of the code, because we want the $h\to 0$ decay of numerical error to be generic.  Compare the convergence behavior seen in Exercise \ref{chap:st}.\ref{exer:st:quadraticnongeneric}.)
 
 Code \ref{code:poissonExactRHS} shows how \eqref{eq:st:exactsolution} is implemented as \texttt{formExact()}, and it shows how \eqref{manufacturedf} is implemented as \texttt{formRHS()}.  The computations in these Codes use only local grid coordinates $(i,j)$.  \PETSc pointer arithmetic (i.e.~tricks) allows us to index the C arrays we get from \texttt{DMDAVecGetArray()} using $(i,j)$.  When we are done with computing \pVecs we restore the C arrays by calling \texttt{DMDAVecRestoreArray()}.
 
@@ -405,7 +405,7 @@ Recall that a default $9\times 9$ grid was chosen in calling \texttt{DMDACreate2
 \label{fig:dmM5N7}
 \end{marginfigure}
 
-Options \texttt{-da\_grid\_x MX -da\_grid\_y MY} set the grid at runtime, and we can examine both the grid (i.e.~the \pDM object) and our assembled \pMat graphically to check these objects.  If X11 or other windowing is correctly linked in your \PETSc installation then
+Options \texttt{-da\_grid\_x MX -da\_grid\_y MY} set the grid at runtime, and we can examine both the grid (i.e.~the \pDM object) and our assembled \pMat graphically to check these objects.  If the X window system is correctly linked in your \PETSc installation then
 \begin{cline}
 $ ./poisson -da_grid_x 5 -da_grid_y 7 -dm_view draw -draw_pause 5
 \end{cline}
@@ -469,7 +469,7 @@ In the next three sections we address these in turn, with only a superficial sta
 
 \section{Convergence}
 
-We want to see the numerical errors decrease as we refine the grid.  Such decrease is expected because the finite differences become better approximations of the corresponding derivatives, but we want to \emph{see} it, so we know our actual implementation is correct.  The rate at which the error decreases should match what we expect from theory.
+We want to see the numerical error, namely a norm of the difference between our computed solution and the exact solution, decrease as we refine the grid.  Such decrease is expected because the finite differences become better approximations of the corresponding derivatives, but we want to \emph{see} it, so we know our actual implementation is correct.  The rate at which the error decreases should match what we expect from theory.
 
 Recall that \texttt{poisson.c} already generates the max norm error (Code \ref{code:poissonsolve}), and we know how to refine the grid by factors of two, so here is a bash loop refinement study:
 \label{poissonconvdata}
@@ -539,7 +539,7 @@ $ ./poisson -help | grep ksp_ | less
 \end{cline}
 %$
 
-Recall we used \texttt{-ksp\_view} in Chapter \ref{chap:ls} to expose the linear solver and preconditioner.  The serial \pKSP and \pPC defaults are GMRES and ILU($0$) as the preconditioner, while in parallel the defaults are GMRES and block Jacobi as a preconditioner, but where each diagonal block---there are four in the above parallel run---is preconditioned with ILU($0$).  In Chapter \ref{chap:ls} we pointed out that this parallel preconditioner, like most of them, gives process-count dependent results.
+Recall we used \texttt{-ksp\_view} in Chapter \ref{chap:ls} to expose the linear solver and preconditioner.  The serial \pKSP and \pPC defaults are GMRES and ILU as the preconditioner, while in parallel the defaults are GMRES and block Jacobi as a preconditioner, but where each diagonal block---there are four in the above parallel run---is preconditioned with ILU.  In Chapter \ref{chap:ls} we pointed out that this parallel preconditioner, like most of them, gives process-count dependent results.
 
 The serial \PETSc defaults for \pKSP and \pPC give a certain timing and a certain number of iterations on a given grid:
 \begin{cline}
@@ -575,17 +575,17 @@ minres     & none        & \intime{minres.none} \\
 \caption{Times and number of \pKSP iterations for serial runs of \texttt{poisson.c} on $257\times 257$ grids.  The assembled matrix is \emph{symmetric}, \emph{diagonally-dominant}, and \emph{positive definite}.  All runs were on \WORKSTATION (see page \pageref{defineworkstation}).} \label{tab:poissontiming}
 \end{table}
 
-From Table \ref{tab:poissontiming} we see that for GMRES, having a preconditioner is essential.  That is, ILU($0$) substantially reduces both iteration count and time compared to no preconditioner.
+From Table \ref{tab:poissontiming} we see that for GMRES, having a preconditioner is essential.  That is, ILU substantially reduces both iteration count and time compared to no preconditioner.
 
-The number of iterations suggests that GMRES went through several restarts, which it does by default every 30 iterations.  For the current problem memory overflow is no issue, so we avoid restart using option \texttt{-ksp\_gmres\_restart 200}.  This reduces iteration count but not execution time, and we do not recommend such a procedure for bigger problems.
+The number of iterations suggests that GMRES went through several restarts, which it does by default every 30 iterations.  For the current problem memory overflow is no issue, so we avoid restart using option \texttt{-ksp\_gmres\_restart 200}.  This reduces the iteration count but not execution time, and we do not recommend such a procedure for larger problems.
 
-The system matrix $A$ is symmetric and positive definite, so we recall from Chapter \ref{chap:ls} that the CG (conjugate gradients) Krylov method should apply, and that Cholesky and incomplete Cholesky (IC($0$)) are available as preconditioners.  In Table \ref{tab:poissontiming} we compare these methods also.  Because \texttt{-ksp\_preonly -pc\_type cholesky} is a direct solver, fair comparison to iterative methods suggests we should solve the equations accurately, so we add the tighter tolerance \texttt{-ksp\_rtol 1.0e-10} to all iterative runs in Table \ref{tab:poissontiming}, except for the run where this was further tightened to \texttt{-ksp\_rtol 1.0e-10}.
+The system matrix $A$ is symmetric and positive definite, so we recall from Chapter \ref{chap:ls} that the CG (conjugate gradients) Krylov method should apply, and that Cholesky and ICC (incomplete-Cholesky) direct methods are available as preconditioners.  In Table \ref{tab:poissontiming} we compare these methods also.  Because \texttt{-ksp\_preonly -pc\_type cholesky} is a direct solver, fair comparison to iterative methods suggests we should solve the equations accurately, so we add the tighter tolerance \texttt{-ksp\_rtol 1.0e-10} to all iterative runs in Table \ref{tab:poissontiming}, except for the run where this was further tightened to \texttt{-ksp\_rtol 1.0e-10}.
 
-We see that Jacobi preconditioning has little benefit over \emph{un}-preconditioned CG, because the diagonal is effectively constant,\sidenote{See Exercise \ref{chap:st}.\ref{exer:st:jacobivsnone}.} but that IC($0$) for CG is the best so far.  The direct Cholesky solver is slower, presumably because of fill-in of the band seen in Figure \ref{fig:matM5N7}.
+We see that Jacobi preconditioning has little benefit over \emph{un}-preconditioned CG, because the diagonal is effectively constant,\sidenote{See Exercise \ref{chap:st}.\ref{exer:st:jacobivsnone}.} but that ICC for CG is the best so far.  The direct Cholesky solver is slower, presumably because of fill-in of the band seen in Figure \ref{fig:matM5N7}.
 
 We have so far not mentioned the minimum residual method \citep[MINRES]{Greenbaum1997} which applies to indefinite symmetric matrices, but it is implemented in \PETSc too.  We see that it seems to do no better than CG, at least in their un-preconditioned form.  \citet[][p.~88]{Elmanetal2005}, however, states that ``when solving discrete Poisson problems the convergence of MINRES is almost identical to that of CG.''
 
-If we were to stop now we might conclude that we have found a good \pKSP and \pPC combination for the Poisson equation, namely CG + IC($0$), and proceed to harder problems.  This conclusion would be premature.
+If we were to stop now we might conclude that we have found a good \pKSP and \pPC combination for the Poisson equation, namely \texttt{cg}$+$\texttt{icc}, and proceed to harder problems.  This conclusion would be premature.
 
 
 \section{The scaling flaw in CG iterations}
@@ -610,12 +610,12 @@ Linear solve converged due to CONVERGED_RTOL iterations 606
 on 257 x 257 grid:  error |u-uexact|_inf = 7.69971e-07
 \end{cline}
 
-Of course, this is un-preconditioned CG.  While it is not surprising that \texttt{-pc\_type jacobi} does no better (Exercise \ref{chap:st}.\ref{exer:st:jacobivsnone}), it is easy to check that our favorite method so far has the same poor scaling.  Figure \ref{fig:poisson-cg-scale} shows that though IC($0$) gives somewhat faster solves and lower iteration counts, the \emph{scaling} of those counts is the same as \texttt{-pc\_type none}: the number of iterations doubles with each factor-of-two grid refinement.
+Of course, this is un-preconditioned CG.  While it is not surprising that \texttt{-pc\_type jacobi} does no better (Exercise \ref{chap:st}.\ref{exer:st:jacobivsnone}), it is easy to check that our favorite method so far has the same poor scaling.  Figure \ref{fig:poisson-cg-scale} shows that though ICC gives somewhat faster solves and lower iteration counts, the \emph{scaling} of those counts is the same as \texttt{-pc\_type none}: the number of iterations doubles with each factor-of-two grid refinement.
 
 \begin{figure}
 \bigskip
 \includegraphics[width=0.75\textwidth]{figs/poisson-cg-scale}
-\caption{As the grid is refined ($h\to 0$), un-preconditioned CG scales poorly on our Poisson problem, and IC($0$) preconditioning does not improve the scaling.}
+\caption{As the grid is refined ($h\to 0$), un-preconditioned CG scales poorly on our Poisson problem, and ICC preconditioning does not improve the scaling.}
 \label{fig:poisson-cg-scale}
 \end{figure}
 
@@ -641,15 +641,17 @@ Suppose $\bu_j$ are the iterates from un-preconditioned CG.  Then:\begin{enumera
 
 Part (\emph{i}) of the Theorem is proved by \citet[p.~50]{Greenbaum1997}.  Part (\emph{ii}) follows from (\emph{i}) by using Chebyshev polynomials to construct a polynomial which is small on the interval $[\lambda_{\min}(A),\lambda_{\max}(A)]$ \citep[p.~51]{Greenbaum1997}.  Part (\emph{iii}) follows from (\emph{ii}) by understanding the norm $\|\cdot\|_A$ in terms of the 2-norm and the matrix $\sqrt{A}$; see Exercise \ref{chap:st}.\ref{exer:st:Anorm}.  We state part (\emph{iii}) for the simple reason that $\|\br_k\|_2$ is a quantity computed by \PETSc while $\|\be_k\|_A$ is not.  Parts (\emph{ii}) and (\emph{iii}) are not optimal bounds, though such can be found \citep[p.~51]{Greenbaum1997}.
 
-Consider the number of iterations $j$ needed to reduce $\|\be_j\|_A$ by a factor of $\eps<0$.  Note $(x-1)/(x+1) = 1 - 2/(x+1)$, and recall that $\ln(1-x) \approx -x$ for small $x$.  If $\sqrt{\kappa}$ is large then part (\emph{ii}) of the Theorem says that $\|\be_j\|_A$ is reduced from its initial value $\|\be_0\|_A$ by a factor of $\eps$ if
-    $$j \le \frac{\ln(\eps/2)}{\ln\left(1 - \frac{2}{\sqrt{\kappa}+1}\right)} \approx -\frac{\ln(\eps/2)}{2} (\sqrt{\kappa}+1).$$
-In summary,
+Consider the number of iterations $j$ needed to reduce $\|\be_j\|_A$ by a factor of $\eps>0$.  Note $(x-1)/(x+1) = 1 - 2/(x+1)$, and recall that $\ln(1-x) \approx -x$ for small $x$.  Part (\emph{ii}) of the Theorem says that $\|\be_j\|_A$ is reduced from its initial value $\|\be_0\|_A$ by a factor of $\eps$ if
+    $$2 \left(\frac{\sqrt{\kappa}-1}{\sqrt{\kappa}+1}\right)^j \le \eps$$
+or equivalently if
+    $$j \le \frac{\ln(\eps/2)}{\ln\left(1 - \frac{2}{\sqrt{\kappa}+1}\right)} \approx -\frac{\ln(\eps/2)}{2} (\sqrt{\kappa}+1)$$
+for large $\kappa$.  In summary,
 \begin{equation}
 \frac{\|\be_j\|_A}{\|\be_0\|_A} \le \eps \quad \text{if} \quad j = O\left(\sqrt{\kappa_2(A)}\right).  \label{cgkappaiter}
 \end{equation}
 The same conclusion applies to reducing $\|\br_j\|_2$ by a factor of $\eps$, though the analysis is not so simple; see Exercise \ref{chap:st}.\ref{exer:st:Anorm}.
 
-Though the theorem states a key connection between condition number and iteration count, the precise condition number of a discretized-PDE matrix $A_h$, coming from a mesh with spacing $h$, is not typically available.  On the other hand we can ask \PETSc to approximate eigenvalues of $A_h$ as the Krylov iteration proceeds.\sidenote{We need the iteration to use the \emph{un}-preconditioned operator when computing eigenvalues, so use \texttt{-pc\_type none} or right-side-preconditioning \texttt{-ksp\_pc\_side RIGHT}.}  Doing this will largely explain the poor scaling of CG iteration count for our symmetric-matrix, structured-grid, Poisson problem case:
+Though the theorem states a key connection between condition number and iteration count, the precise condition number of a discretized-PDE matrix $A_h$, coming from a mesh with spacing $h$, is not typically available.  On the other hand we can ask \PETSc to approximate eigenvalues of $A_h$ as the Krylov iteration proceeds.\sidenote{We need the iteration to use the \emph{un}-preconditioned operator when computing eigenvalues, so we use \texttt{-pc\_type none}.}  Doing this will largely explain the poor scaling of CG iteration count for our symmetric-matrix, structured-grid, Poisson problem case:
 \begin{cline}
 $ ./poisson -ksp_type cg -pc_type none -ksp_compute_eigenvalues
 Iteratively computed eigenvalues
@@ -661,7 +663,7 @@ on 9 x 9 grid:  error |u-uexact|_inf = 0.00076388
 %$
 In fact $17$ eigenvalues were printed, because there were $17$ \pKSP iterations and the method computes one additional eigenvalue per iteration.  We suppressed all but the first (smallest) and last (largest), as they suffice for approximating the condition number.  Thus, on the above grid with spacing $h=1/8$:
     $$\kappa_2(A_{h=1/8}) \approx \frac{7.69543}{0.304482} = 25.274.$$
-Re-running with option \texttt{-da\_refine N} for \texttt{N}$=1,2$ we get:
+Re-running with option \texttt{-da\_refine N} for \texttt{N}$=1,2$ we obtain:
 \begin{align*}
     \kappa_2(A_{h=1/16}) &\approx \frac{7.92311}{0.0768589} = 103.09, \\
     \kappa_2(A_{h=1/32}) &\approx \frac{7.98073}{0.0192611} = 414.34.
@@ -678,16 +680,16 @@ exactly as seen experimentally above.  This can be shown by exact analysis using
 \end{equation}
 iterations to solve our discrete Poisson problem to a given relative tolerance using un-preconditioned CG.
 
-We have also seen that IC($0$) preconditioning reduces the time and iteration count, but that it does not improve on scaling \eqref{kofh}; recall Figure \ref{fig:poisson-cg-scale}.  Detailed analysis of the effects of incomplete Cholesky precondition must be difficult, and it will certainly not be pursued here, but we do now have the correct context to understand this claim about the result \citet[][p.~82]{Elmanetal2005}:
+We have also seen that ICC preconditioning reduces the time and iteration count, but that it does not improve on scaling \eqref{kofh}; recall Figure \ref{fig:poisson-cg-scale}.  Detailed analysis of the effects of ICC precondition is difficult, and it will certainly not be pursued here, but we now have the correct context to understand this claim about the result \citet[][p.~82]{Elmanetal2005}:
 \begin{quote}
-One known result [\emph{for CG for the Poisson equation}] is that the asymptotic behavior of the condition number using IC($0$) preconditioning is unchanged: $\kappa(M^{-1} A) = O(h^{-2})$.
+One known result [\emph{for CG for the Poisson equation}] is that the asymptotic behavior of the condition number using [ICC] preconditioning is unchanged: $\kappa(M^{-1} A) = O(h^{-2})$.
 \end{quote}
-So IC($0$) is not as promising a preconditioner as we had first hoped.
+Thus ICC is not as promising a preconditioner as we had first hoped.
 
 
 \section{Krylov is not enough \dots \emph{good} preconditioning is needed}
 
-When solving the sparse linear systems from discretized PDEs, Krylov iterations like CG and preconditioning methods like IC($0$) are useful tools because they can improve upon naively-applied direct linear algebra methods.  However, besides the bad news above that CG iterations scale badly with refining grids, there is more ``bad news'' for our Krylov approach.  Namely, that smartly-applied direct linear algebra techniques can also beat CG+IC($0$), at least in the two-dimensional case of this Chapter.
+When solving the sparse linear systems from discretized PDEs, Krylov iterations such as CG and preconditioning methods such as ICC are useful tools because they can improve upon naively-applied direct linear algebra methods.  However, besides the bad news above that CG iterations scale badly with refining grids, there is more ``bad news'' for our Krylov approach.  Namely, that smartly-applied direct linear algebra techniques can also beat CG+ICC, at least in the two-dimensional case of this Chapter.
 
 Specifically, suppose we run \texttt{poisson} with option \texttt{-da\_refine 7}, to give a $1025 \times 1025$ grid and about $10^6$ degrees of freedom.  Suppose we compare IC($0$)-preconditioned CG iterations with two other methods:
 \begin{cline}
@@ -696,7 +698,7 @@ $ ./poisson -da_refine 7 -ksp_type preonly -pc_type cholesky -pc_factor_mat_orde
 $ ./poisson -da_refine 7 -ksp_type preonly -pc_type lu -pc_factor_mat_ordering_type nd
 \end{cline}
 %$
-(To be precise, we added options \texttt{-ksp\_converged\_reason} and \texttt{-ksp\_rtol 1.0e-10} to the CG run.)  We get the first three rows of Table \ref{tab:cgdirectmg}, the first of which requires no further explanation because it is the best-so-far way of using CG.  The second and third runs, which are faster, are direct methods.
+(To be precise, we added options \texttt{-ksp\_converged\_reason} and \texttt{-ksp\_rtol 1.0e-10} to the CG run.)  We obtain the first three rows of Table \ref{tab:cgdirectmg}, the first of which requires no further explanation because it is the best-so-far way of using CG.  The second and third runs, which are faster, are direct methods.
 %timer ./poisson -da_refine 7 -ksp_type cg -pc_type icc -ksp_converged_reason -ksp_rtol 1.0e-10
 %timer ./poisson -da_refine 7 -ksp_type preonly -pc_type cholesky -pc_factor_mat_ordering_type nd
 %timer ./poisson -da_refine 7 -ksp_type preonly -pc_type lu -pc_factor_mat_ordering_type nd
@@ -715,7 +717,7 @@ fish2   & cg         & mg            &  2.60 &    5 \\
 \caption{Time and iteration count for \texttt{-da\_refine 7} runs, a $1025 \times 1025$ grid on a single MPI process on \WORKSTATION.  The \texttt{fish2} code appears in Chapter \ref{chap:pr}.} \label{tab:cgdirectmg}
 \end{table}
 
-Option \texttt{-pc\_factor\_mat\_ordering\_type nd} asks that the direct method be applied using the \emph{nested dissection} ordering \citep{George1973}.  While we give no details, in outline the unknowns and equations are re-ordered to reduce the cost of the factorization.  For LU factorization the nested dissection ordering is actually the \PETSc default for single-process runs.\sidenote{And for this reason, the result of the \texttt{-ksp\_type preonly -pc\_type lu} was not in Table \ref{tab:poissontiming}.}  In any case, the two direct solvers in Table \ref{tab:cgdirectmg} are clearly competitive with IC($0$)-preconditioned CG.
+Option \texttt{ -pc\_factor\_mat\_ordering\_type nd } indicates that the direct method be applied using the \emph{nested dissection} ordering \citep{George1973}.  While we give no details, in outline the unknowns and equations are re-ordered to reduce the cost of the factorization.  For LU factorization the nested dissection ordering is actually the \PETSc default for single-process runs.\sidenote{And for this reason, the result of the \texttt{-ksp\_type preonly -pc\_type lu} was not in Table \ref{tab:poissontiming}.}  In any case, the two direct solvers in Table \ref{tab:cgdirectmg} are clearly competitive with IC($0$)-preconditioned CG.
 
 At this point the impulsive reader might give up on Krylov methods, but that also would be premature.  We do need to find a better preconditioner if we are going to have scalable solutions of this Poisson PDE problem.  We will eventually show such methods (Chapter \ref{chap:pr}), which give both efficient and parallel-scalable (Chapter \ref{chap:sc}) solutions of large nonlinear and variable-coefficient elliptic PDE problems in 2D and 3D, something direct methods of linear algebra do not achieve.
 
@@ -740,6 +742,8 @@ For simplicity, choose exact solution $u(x)=x^2(1-x^2)$ to determine $f(x)$.  No
 %  FD is:  - u_{i-1} + 2 U_i - u_{i+1} = h^2 f_i
 %  for exact u:  u'   = 2x(1-x^2) + x^2(-2x) = 2x - 4x^3
 %                -u'' = -(2 - 12 x^2) = 12x^2 - 2
+
+\item \label{exer:st:quadraticnongeneric}  Modify \texttt{poisson.c} to use exact solution $u(x,y)=(x-x^2)(y^2-y)$ and the corresponding right-hand side function $f(x,y)$.  Compute numerical errors as you refine the grid.  Why do you get this behavior?
 
 \item Modify \texttt{poisson.c} to allow non-homogeneous Dirichlet boundary data $u|_{\partial \mathcal{S}}=g$.  Test the correctness (i.e.~convergence at the expected rate) of your code by solving \eqref{poissonsquare} with both $f$ and $g$ derived from an exact solution $u(x,y)=3x + \sin(20xy)$.  Again examine  numerical errors under grid refinement.
 
