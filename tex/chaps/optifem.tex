@@ -272,7 +272,7 @@ G_{ij}(\xi,\eta) = \left[\frac{1}{p} |\grad u|^p - fu\right]_{\square_\ast} \lab
 \end{equation}
 using the nodal values of $u$ and $f$ on element $\square_{ij}$.  (The details are in Exercise \ref{chap:of}.\ref{exer:of:integrand}.)  Then formula \eqref{eq:of:sumoverelements} becomes
 \begin{equation}
-I^h[u] = \frac{h_x h_y}{4} \quad \underbrace{\sum_{i=0}^{m_x} \sum_{j=0}^{m_y}}_{\begin{smallmatrix} \text{sum} \\ \text{over} \\ \text{elements} \end{smallmatrix}} \quad \underbrace{\sum_{r=0}^{n-1} \sum_{s=0}^{n-1}}_{\begin{smallmatrix} \text{sum} \\ \text{over} \\ \text{quadrature points} \end{smallmatrix}} \, w_r w_s G_{ij}(z_r,z_s) \label{eq:of:quadraturesumoverelements}
+I^h[u] = \frac{h_x h_y}{4} \quad \underbrace{\sum_{i=0}^{m_x} \sum_{j=0}^{m_y}}_{\begin{smallmatrix} \text{sum} \\ \text{over} \\ \text{elements} \end{smallmatrix}} \quad \underbrace{\sum_{r=0}^{n-1} \sum_{s=0}^{n-1}}_{\begin{smallmatrix} \text{sum} \\ \text{over} \\ \text{quadrature points} \end{smallmatrix}} \, w_r w_s G_{ij}(z_r,z_s). \label{eq:of:quadraturesumoverelements}
 \end{equation}
 We now have enough detail for a prototype implementation.
 
@@ -544,7 +544,7 @@ This includes the $p=4$ results shown in Figure \ref{fig:of:plap-conv}, but also
 \label{fig:of:plap-perrs}
 \end{figure}
 
-The relative errors generated from our double loop are shown in Figure \ref{fig:of:plap-perrs}.  We see that $p = 1.1 \approx 1$ is not apparently as hard as a large value like $p=10$.
+The relative errors generated from our double loop are shown in Figure \ref{fig:of:plap-perrs}.  We see that $p = 1.1 \approx 1$ is not apparently as hard as a large value such as $p=10$.
 
 For $p=10$ we have non-convergence on the finest grid---thus that case is not shown---but the Newton iteration converges in all other cases.  The fact that, when $p=10$, the measured error \emph{increases} as $h\to 0$ for the finest three grids is suspicious: the solution of the discrete nonlinear equations apparently diverges from the exact (continuum) solution.
 
