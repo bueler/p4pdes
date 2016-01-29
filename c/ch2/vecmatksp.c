@@ -9,7 +9,11 @@ int main(int argc,char **args) {
   Mat    A;
   KSP    ksp;
   int    i, j[4] = {0, 1, 2, 3};
-  double v[4] = {7.0, 1.0, 1.0, 3.0};
+  double v[4] = {7.0, 1.0, 1.0, 3.0},
+         aa[4][4] = {{ 1.0,  2.0,  3.0,  0.0},
+                     { 2.0,  1.0, -2.0, -3.0},
+                     {-1.0,  1.0,  1.0,  0.0},
+                     { 0.0,  1.0,  1.0, -1.0}};
 
   PetscInitialize(&argc,&args,NULL,help);
 
@@ -25,15 +29,9 @@ int main(int argc,char **args) {
   ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,4,4); CHKERRQ(ierr);
   ierr = MatSetFromOptions(A); CHKERRQ(ierr);
   ierr = MatSetUp(A); CHKERRQ(ierr);
-  i = 0;  v[0] = 1.0;  v[1] = 2.0;  v[2] = 3.0;
-  ierr = MatSetValues(A,1,&i,3,j,v,INSERT_VALUES); CHKERRQ(ierr);
-  i = 1;  v[0] = 2.0;  v[1] = 1.0;  v[2] = -2.0;  v[3] = -3.0;
-  ierr = MatSetValues(A,1,&i,4,j,v,INSERT_VALUES); CHKERRQ(ierr);
-  i = 2;  v[0] = -1.0;  v[1] = 1.0;  v[2] = 1.0;  v[3] = 0.0;
-  ierr = MatSetValues(A,1,&i,4,j,v,INSERT_VALUES); CHKERRQ(ierr);
-  j[0] = 1;  j[1] = 2;  j[2] = 3;
-  i = 3;  v[0] = 1.0;  v[1] = 1.0;  v[2] = -1.0;
-  ierr = MatSetValues(A,1,&i,3,j,v,INSERT_VALUES); CHKERRQ(ierr);
+  for (i=0; i<4; i++) {
+      ierr = MatSetValues(A,1,&i,4,j,aa[i],INSERT_VALUES); CHKERRQ(ierr);
+  }
   ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
   ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
 //  ierr = MatView(A,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);  //STRIP
