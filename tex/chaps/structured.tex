@@ -471,7 +471,7 @@ In the next three sections we address these in turn, with only a superficial sta
 
 We want to see the numerical error, namely a norm of the difference between our computed solution and the exact solution, decrease as we refine the grid.  Such decrease is expected because the finite differences become better approximations of the corresponding derivatives, but we want to \emph{see} it, so we know our actual implementation is correct.  The rate at which the error decreases should match what we expect from theory.
 
-Recall that \texttt{poisson.c} already generates the max norm error (Code \ref{code:poissonsolve}), and we know how to refine the grid by factors of two, so here is a bash loop refinement study:
+Recall that \texttt{poisson.c} already generates the max norm error (Code \ref{code:poissonsolve}), and we know how to refine the grid by factors of two, so here is a Bash loop refinement study:
 \label{poissonconvdata}
 \begin{cline}
 $ for K in 0 1 2 3 4 5 6; do ./poisson -da_refine $K; done
@@ -510,7 +510,7 @@ $ ./poisson -ksp_monitor -ksp_rtol 1.0e-12
  13 KSP Residual norm 2.674839310683e-14 
 on 9 x 9 grid:  error |u-uexact|_inf = 0.000763883
 \end{cline}
-On this coarse grid the numerical error is nearly the same, but on finer grids the fact that the linear system is solved more exactly also brings the numerical solution significantly closer to the exact one.  In fact, rerunning the above bash loop with the stronger $10^{-12}$ tolerance yields excellent evidence of convergence (dots in Figure \ref{fig:poisson-conv}).  The linear-fit rate of this logarithmic error data is $O(h^{1.9999})$.  Our implementation is correct.
+On this coarse grid the numerical error is nearly the same, but on finer grids the fact that the linear system is solved more exactly also brings the numerical solution significantly closer to the exact one.  In fact, rerunning the above Bash loop with the stronger $10^{-12}$ tolerance yields excellent evidence of convergence (dots in Figure \ref{fig:poisson-conv}).  The linear-fit rate of this logarithmic error data is $O(h^{1.9999})$.  Our implementation is correct.
 
 
 \section{A first look at efficiency}
@@ -594,7 +594,7 @@ Unfortunately, even with the preconditioners tried above, CG has a distinct flaw
 \begin{quote}
 for uniformly refined grids, the number of CG iterations required to meet a fixed tolerance will approximately double with each grid refinement.
 \end{quote}
-This is exactly what we see from the following bash loop:
+This is exactly what we see from the following Bash loop:
 \begin{cline}
 $ for NN in 1 2 3 4 5; do
 > ./poisson -da_refine $NN -ksp_type cg -pc_type none -ksp_converged_reason; done

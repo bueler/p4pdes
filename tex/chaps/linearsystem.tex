@@ -670,7 +670,7 @@ $ alias timer='time -f "real %e"'
 \end{cline}
 %$
 
-The above timing result of $.04$ seconds suggests that this $m=10^4$ dimension system is not yet big enough to be worth testing, so we experiment on what $m$ gives a linear system with noticeable solution time.  Here is a roll-your-own bash loop to time some bigger systems:
+The above timing result of $.04$ seconds suggests that this $m=10^4$ dimension system is not yet big enough to be worth testing, so we experiment on what $m$ gives a linear system with noticeable solution time.  Here is a roll-your-own Bash loop to time some bigger systems:
 \begin{cline}
 $ export SIZES="10000 100000 1000000 10000000"
 $ for M in $SIZES; do timer ./tri -tri_m $M; done

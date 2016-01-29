@@ -414,7 +414,7 @@ One sees that the first Newton step moves us close to the solution (not shown).
 \label{fig:nl:reaction-conv}
 \end{figure}
 
-Noting that our finite difference method has local truncation error $O(h^2)$, and because an exact solution allows computation of the numerical error, we should generate convergence data to check the implementation.  The result of this bash loop
+Noting that our finite difference method has local truncation error $O(h^2)$, and because an exact solution allows computation of the numerical error, we should generate convergence data to check the implementation.  The result of this Bash loop
 \begin{cline}
 $ for N in 0 2 4 6 8 10 12 14 16; do
 >   ./reaction -da_refine $N -snes_rtol 1.0e-10; done
