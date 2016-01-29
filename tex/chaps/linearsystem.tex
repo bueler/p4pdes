@@ -5,9 +5,9 @@ Vector spaces, matrices, and norms are assumed to be familiar to the reader, but
 
 A \emph{real vector space}\sidenote{By careful configuration, \PETSc can handle complex scalars, vectors, and matrices.  However, we use only real versions in this book.} is a set that is closed under addition and multiplication by \emph{scalars}, namely elements of $\RR$, and to which certain algebraic axioms apply, namely the existence of a zero vector plus the appropriate associative, distributive, and commutative axioms \citep{Strang2009}.  The elements of the set are \emph{vectors}.  In this book we will consider functions defined on domains in $\RR^d$, such as solutions to PDEs, and regard them as vectors in infinite-dimensional vector space.  On the other hand, we will have computer representations of various finite-size column vectors and matrices.  The abstract sets in which these objects ``live'' are, of course, all vector spaces.
 
-The unqualified word ``vector'' will be understood in this book to refer to a column vector of finite length, written $\RR^N$.  We will use bold for vectors, but not for entries, thus for example $\bv\in\RR^N$ has entries $v_0,\dots,v_{N-1}$.  (Yes, we will break conventions by even numbering vector entries from zero.)  The \emph{standard basis} for $\RR^N$ is the set of vectors $\{\be_i\}_{i=0}^{N-1}$ which have zero entries except for each vector having a one in the $i$th entry: $(\be_i)_j = \delta_{ij}$ (the Kronecker delta).
+The unqualified word ``vector'' will be understood in this book to refer to a column vector of finite length, written $\RR^N$.  We will use bold for vectors, but not for entries, thus for example $\bv\in\RR^N$ has entries\sidenote{We break tradition by numbering vector entries starting from zero.} $v_0,\dots,v_{N-1}\in \RR$.  The \emph{standard basis} for $\RR^N$ is the set of vectors $\{\be_i\}_{i=0}^{N-1}$ which have zero entries except for each vector having a one in the $i$th entry: $(\be_i)_j = \delta_{ij}$ (the Kronecker delta).
 
-A \emph{matrix} is a linear map between vector spaces.\sidenote{As is well-known, in polite company one says instead that a matrix is the \emph{representation} of a linear map from one finite-dimensional vector space to another, with some choice of basis in each space.  This distinction is impractical in the world of scientific computation.}  We write $A\in \RR^{M\times N}$ for a matrix that maps from $\RR^N$ to $\RR^M$.  There are two related matrices which map in the other direction.  Even if $A$ is non-square one can construct $A^\top\in \RR^{N\times M}$, namely the \emph{transpose} with entries $(A^\top)_{ij}=a_{ji}$.  If the matrix is square and invertible then the \emph{inverse} $A^{-1}\in \RR^{N\times M}$ is the unique matrix satisfying $A^{-1} A = A A^{-1}=I$.
+A \emph{matrix} is a linear map between vector spaces.\sidenote{As is well-known, in polite company one says instead that a matrix is the \emph{representation} of a linear map from one finite-dimensional vector space to another, with some choice of basis in each space.}  We write $A\in \RR^{M\times N}$ for a matrix that maps from $\RR^N$ to $\RR^M$.  There are two related matrices which map in the other direction.  Even if $A$ is non-square one can construct $A^\top\in \RR^{N\times M}$, namely the \emph{transpose} with entries $(A^\top)_{ij}=a_{ji}$.  If the matrix is square and invertible then the \emph{inverse} $A^{-1}\in \RR^{N\times M}$ is the unique matrix satisfying $A^{-1} A = A A^{-1}=I$.
 
 A \emph{vector norm} is a function $\|\cdot\|:\RR^N \to [0,\infty)$ that gives a well-defined length to a vector.  (Several axioms, including the triangle inequality, must be satisfied \citep{TrefethenBau1997}.)  For $1 \le p < \infty$ this formula defines a norm,
 \begin{equation}
@@ -37,7 +37,7 @@ is the \emph{condition number} of $A$; by definition $\kappa(A)=+\infty$ if $A$ 
 
 \section{Some facts of (numerical) life}
 
-Our goal is to compute more interesting quantities than Euler's constant $e$---see Chapter \ref{chap:gs}, including the solutions to finite-dimensional linear systems.  Such linear systems are at the core of many numerical approaches to PDEs.  In this Chapter we both recall basic ideas of numerical linear algebra and apply \PETSc to solve linear systems.
+At the core of many numerical PDE solution methods is a finite-dimensional linear system.  In this Chapter we both recall basic ideas of numerical linear algebra and apply \PETSc to solve linear systems.
 
 Suppose $\bb\in \RR^{N}$ is a column vector and $A\in\RR^{N\times N}$ is a square matrix.  The linear system
 \begin{equation}
@@ -50,23 +50,24 @@ has a unique solution $\bu\in \RR^{N}$ if $A$ is invertible, namely
 This is simple in theory.
 
 It is not so simple in practice, however, to solve linear systems on a computer.  Here are two facts to keep in mind while working numerically with linear systems \citep{TrefethenBau1997}:
-\renewcommand{\labelenumi}{\roman{enumi})}
+\renewcommand{\labelenumi}{Fact \Roman{enumi}.}
 \begin{enumerate}
-\item \label{limittoaccuracy} \emph{limit to accuracy}:  If real numbers are represented with machine precision $\eps$ then the solution of \eqref{introsystem} can only be computed within an error $\kappa(A) \eps$, where $\kappa(A)$ is the \emph{condition number} of $A$.
-\item \emph{cost of direct solutions}:  If $A$ is a generic, dense $N\times N$ matrix then computation of solution \eqref{introsolution} by a direct method, such as Gauss elimination \citep{TrefethenBau1997}, whether actually forming $A^{-1}$ or not, is an $O(N^3)$ operation.\sidenote{See Lecture 32 in \citet{TrefethenBau1997} for caveats with respect to ``$O(N^3)$.''  Nonetheless it is the right power to state when making this point.}
+\item \label{page:ls:limittoaccuracy} \emph{There is a limit to numerical accuracy.}  If real numbers are represented with machine precision $\eps$ then the solution of \eqref{introsystem} can only be computed within an error $\kappa(A) \eps$, where $\kappa(A)$ is the \emph{condition number} of $A$.
+\item \emph{Direct solutions may have a high cost.}  If $A$ is a generic, dense $N\times N$ matrix then computation of solution \eqref{introsolution} by a direct method, such as Gauss elimination \citep{TrefethenBau1997}, whether actually forming $A^{-1}$ or not, is an $O(N^3)$ operation.\sidenote{See Lecture 32 in \citet{TrefethenBau1997} for caveats with respect to ``$O(N^3)$.''  Nonetheless it is the right power to state when making this point.}
 \end{enumerate}
 
-Fact i) is about conditioning not methods.  Informally speaking, there are matrices $A$ and $\tilde A$ that are the same to within machine precision $\eps$ but for which the exact solutions to \eqref{introsystem} using $A$ and $\tilde A$ differ by an amount $\kappa(A) \eps$.  Rounding errors, which act somewhat like random noise added to every arithmetic operation on the computer, effectively perturb $A$ by $\eps$ during each computation, and thus $O(\kappa(A) \eps)$ size errors appear in the solution of the linear system.  \emph{Backward stable} methods, specifically the QR direct method, can be shown to actually achieve this minimal level of inaccuracy \citep{TrefethenBau1997}.
+Fact I is about conditioning not methods.  Informally speaking, there are matrices $A$ and $\tilde A$ that are the same to within machine precision $\eps$ but for which the exact solutions to \eqref{introsystem} using $A$ and $\tilde A$ differ by an amount $\kappa(A) \eps$.  Rounding errors, which act somewhat like random noise added to every arithmetic operation on the computer, effectively perturb $A$ by $\eps$ during each computation, and thus $O(\kappa(A) \eps)$ size errors appear in the solution of the linear system.  \emph{Backward stable} methods, specifically the QR direct method, can be shown to actually achieve this minimal level of inaccuracy \citep{TrefethenBau1997}.
 
 The precision for the C \texttt{double} type, the default 64-bit representation of real numbers,\sidenote{This type is aliased to \texttt{PetscReal} and \texttt{PetscScalar} in most \PETSc configurations.} is $\eps = 2.2 \times 10^{-16}$.  Thus by i), a linear system having $\kappa(A) \approx 10^{10}$, for example, can only be solved to five or six decimal digits of precision.  It is possible to see $\kappa(A)\approx 10^{10}$ for $A$ which come from discretizing PDEs, but such a matrix is regarded as ``poorly-conditioned.''  In any case, we have to be aware of conditioning when forming expectations about solution accuracy.
 
-By ii) a generic linear system with $N=10^6$ equations requires $10^{18}$ or so operations to solve by Gauss elimination, and even modern supercomputers take a while to do a quintillion operations.  However, though general-purpose direct methods are impractical for $N=10^6$ systems, we will successfully solve PDE-generated linear systems of this size on a single processor in a few seconds, and in $O(N)$ operations (Chapters \ref{chap:st}, \ref{chap:pr}).
+By Fact II, a generic linear system with $N=10^6$ equations requires $10^{18}$ or so operations to solve by Gauss elimination, and even modern supercomputers take a while to do a quintillion operations.  However, though general-purpose direct methods are impractical for $N=10^6$ systems, we will successfully solve PDE-generated linear systems of this size on a single processor in a few seconds, and in $O(N)$ operations (Chapters \ref{chap:st}, \ref{chap:pr}).
 
 The key idea is that discretized PDEs generate linear systems with exploitable structure, especially \emph{sparsity}, which means that there are few nonzero entries per matrix row.  For the methods to converge there also needs to be other structure in the linear system such as regularity of the matrix entries arising from the smoothness of the coefficients in the PDE.  This structure will be exploited, and exposed to one degree or another, in serious numerical PDE solutions.  Naive application of direct methods---treating solvers for \eqref{introsystem} as unadjusted black boxes---is too slow.
 
 We should add another point about computer memory usage to our above list of facts-of-life:
 \begin{enumerate}
-\item[iii)] \emph{do not form the inverse}:  The matrices $A$ arising from discretized PDEs are usually sparse, but their inverses $A^{-1}$ are usually dense and may not even fit in memory.
+\setcounter{enumi}{2}
+\item \emph{Generally you should not form the inverse.}  The matrices $A$ arising from discretized PDEs are usually sparse, but their inverses $A^{-1}$ are usually dense and may not even fit in memory.
 \end{enumerate}
 The amount of memory used by $A^{-1}$ can be dramatically larger than that used by $A$.  For example, the $N$-dimensional tridiagonal matrix $A$ assembled later in this section occupies $24 N$ bytes, because each allocated real entry occupies 8 bytes using double precision.  The inverse $A^{-1}$, however, is dense and uses $8 N^2$ bytes.  Though we can easily solve $A\bu=\bb$ for this matrix in dimension $N=10^7$, using less than a gigabyte of memory in the solution process,\sidenote{See \texttt{tri.c}.  Do ``\texttt{./tri -tri\_m 10000000 -ksp\_type cg -pc\_type none}.''} simply storing $A^{-1}$ would occupy $800$ terabytes of memory or disk.
 
@@ -147,10 +148,10 @@ then the layout looks like Figure \ref{fig:mpitwoveclayout}.  In this case the a
 
 \PETSc \pMat objects are comparable to \pVecs, but they are not merely 2D C arrays even in serial (i.e.~in one-process runs).  Compared to \pVecs they require additional choices regarding parallel distribution and storage formats.  Though this is hidden inside the implementation of \pMat, the most common storage format is \emph{parallel compressed sparse row storage}, what \PETSc calls the \texttt{MATMPIAIJ} type.  In this type a range of rows is owned by each process (parallel row storage), within each owned range of rows only the specifically-allocated entries are stored (sparse), and these nonzero entries are stored contiguously in memory using an additional index array (compressed).  The ``specifically-allocated'' entries are generally the nonzero entries, but they are always referred-to as ``nonzero entries'' in sparse representations even though they occasionally have zero values.
 
-\pMat objects are linear operators and their major ``purpose'' is to multiply \pVecs.  Of course, the result \pVec from a \pMat-\pVec product is a linear combination of the columns of the \pMat.  Thus, in practice, parallel row storage of the \pMat means these things:
+\pMat objects are linear operators and their ``purpose'' is to act on (multiply) \pVecs.  Of course, the result \pVec from a \pMat-\pVec product is a linear combination of the columns of the \pMat.  Thus, in practice and by default, parallel row storage of the \pMat means these things:
 \begin{itemize}
 \item \PETSc internally distributes the rows of the \pMat $A$ the same way as the entries of the intended \emph{output} (i.e.~column) \pVec.  Thus if $Ax=b$ for some $x$ then row $i$ of $A$ is on the rank $m$ MPI process if and only if entry $i$ of $b$ is on the rank $m$ process.\sidenote{This is the outcome when \texttt{PETSC\_DECIDE} is used in setting both the \pVec and \pMat sizes and they are of the same dimension.}
-\item As \PETSc computes the \pMat-\pVec product, it communicates (``scatters'') the parts of the \pVec needed by each process using MPI calls.
+\item As \PETSc computes the \pMat-\pVec product, it communicates (``scatters'') the needed portions of the \pVec to the processes using MPI calls.
 \item After the scatter the \pMat-\pVec product is a local operation, requiring no further communication.
 \end{itemize}
 
@@ -178,7 +179,7 @@ MatSetValues(A,1,&i,3,j,v,INSERT_VALUES);
 MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);
 MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);
 \end{code}
-The method \texttt{MatSetValues()} sets multiple values, in this case a row.  The ``\texttt{1,\&i}'' arguments say that we are setting one row with global index \texttt{i}.  The ``\texttt{3,j}'' or ``\texttt{4,j}'' arguments say that integer array \texttt{j} has the 3 or 4 global column indices.
+The method \texttt{MatSetValues()} sets multiple values, in this case a row.  The ``\texttt{1,\&i}'' arguments indicate that we are setting one row with global index \texttt{i}.  The ``\texttt{3,j}'' or ``\texttt{4,j}'' arguments indicate that integer array \texttt{j} has the 3 or 4 global column indices.
 
 \begin{marginfigure}
 \input{tikz/mpitwomatlayout.tex}
@@ -210,16 +211,36 @@ Mat Object: 1 MPI processes
  -1.00000e+00  1.00000e+00  1.00000e+00  0.00000e+00
  0.00000e+00  1.00000e+00  1.00000e+00  -1.00000e+00
 \end{cline}
-The first view shows the compressed sparse storage, with values as pairs with column index and value.  The second view is a traditional (``dense'') display where all zero values are shown, whether allocated or not.  Other possibilities for outputting a \pMat, not shown, include ``\texttt{-mat\_view ::ascii\_matlab},'' which dumps in Matlab's text format, and ``\texttt{-mat\_view binary -viewer\_binary\_filename a.dat}'' which saves to file \texttt{a.dat} in \PETSc's scalable binary format.  In any case, \texttt{-mat\_view} output happens at the completion of the \texttt{MatAssemblyBegin/End()} calls.
+The first view shows the compressed sparse storage, with values as pairs with column index and value.  The second view is a traditional (``dense'') display where all zero values are shown, whether allocated or not.
 
-In the last two cases shown above, the matrix was stored in \emph{serial} compressed sparse row format, the \texttt{MATSEQAIJ} type, because of the one-process run.  If the code is run in parallel, i.e.~by \texttt{mpiexec -n N ./mycode}, then \texttt{-mat\_view}  reports \texttt{type:~mpiaij} corresponding to \pMat type \texttt{MATMPIAIJ}, the ``parallel compressed sparse row storage'' described above.
+The output from option \texttt{-mat\_view} occurs at the completion of the \texttt{MatAssemblyBegin/End()} calls.  The following examples illustrate more possibilities for viewing a \pMat, using the up-to-three-argument option form:\begin{itemize}
+\item show the sparsity pattern graphically using the X window system
+\begin{codeplain}
+-mat_view draw -draw_pause 1
+\end{codeplain}
+\item save to file \texttt{mat.dat} in \PETSc's scalable binary format
+\begin{codeplain}
+-mat_view binary:mat.dat
+\end{codeplain}
+\item save to text file \texttt{mat.m} in Matlab text format
+\begin{codeplain}
+-mat_view ascii:mat.m:ascii_matlab
+\end{codeplain}
+\item print at \texttt{stdout} in Matlab text format
+\begin{codeplain}
+-mat_view ::ascii_matlab
+\end{codeplain}
+\end{itemize}
+In the last form, and in the \texttt{ascii\_dense} case earlier, the first two positional arguments are not needed because the default format is \texttt{ascii} and because \texttt{stdout} is used if there is no file name.  However, the last argument (e.g.~\texttt{ascii\_matlab} or \texttt{ascii\_dense} in these cases) must be put in the third position by starting with two colons.
+
+In the cases shown above the matrix was stored in serial compressed sparse row format, the \texttt{MATSEQAIJ} type, because of the one-process run.  If the code is run in parallel, i.e.~by \texttt{ mpiexec -n N ./mycode }, then \texttt{ -mat\_view }  reports \texttt{ type:~mpiaij } corresponding to \pMat type \texttt{MATMPIAIJ}, the ``parallel compressed sparse row storage'' described above.
 
 
 \section{Numerical linear algebra 1: residual and iterations}
 
-Direct methods like Gauss elimination \citep{TrefethenBau1997} are one way to solve a linear system.  The most powerful methods for our later PDE-solving uses, however, are iterative.  They use the \emph{residual} of some approximation of the solution to the linear system.
+Direct methods like Gauss elimination \citep{TrefethenBau1997} are one way to solve a linear system.  The most powerful methods for solving PDEs, however, are iterative.
 
-By definition, the residual of $\bu_0$ in linear system \eqref{introsystem} is the vector
+By definition, the \emph{residual} of $\bu_0$ in linear system \eqref{introsystem} is the vector
 \begin{equation}
 \br_0 = \bb - A \bu_0. \label{residualdefn}
 \end{equation}
@@ -229,7 +250,7 @@ The \emph{Richardson iteration},\sidenote{Also called \emph{simple iteration} \c
 \begin{equation}
 \bu_{k+1} = \bu_k + \omega (\bb - A \bu_k).  \label{introrichardson}
 \end{equation}
-If significantly fewer than $O(N^2)$ steps were needed to make $\bu_k$ an adequate approximation of the exact solution $\bu$, then the Richardson iteration could improve on Gauss elimination.  On the other hand, the Richardson iteration may not converge, as in the next Example.
+If significantly fewer than $O(N^2)$ steps were needed to make $\bu_k$ an adequate approximation of the exact solution $\bu$, then the Richardson iteration could improve on Gauss elimination.  In many cases the Richardson iteration may not converge, as in the next Example.
 
 \medskip\noindent\hrulefill
 \begin{example} Consider the linear system
@@ -256,9 +277,9 @@ If we rewrite \eqref{introrichardson} as
 \begin{equation}
 \bu_{k+1} = (I - \omega A) \bu_k + \omega \bb  \label{introrewriterichardson}
 \end{equation}
-then it is easy to believe that the ``size'' of the matrix $I-\omega A$ will determine whether $\lim_{k\to\infty} \bu_k$ exists.  To make this precise we recall important definitions.
+then it is easy to believe that the ``size'' of the matrix $I-\omega A$ will determine whether $\lim_{k\to\infty} \bu_k$ exists.  To give a precise meaning to this statement we recall important definitions.
 
-A complex number\sidenote{Though $B$ is real, $\lambda$ may be complex.  Also, if $\lambda$ is an eigenvalue of a real matrix $B$ then so is its complex conjugate $\bar\lambda$.} $\lambda \in \CC$ is an \emph{eigenvalue} of a square matrix $B\in\RR^{N\times N}$ if there is a nonzero vector $\bv\in\CC^N$ so that $B \bv = \lambda \bv$.  The set of all eigenvalues of $B$ is the \emph{spectrum} $\sigma(B)$ of $B$.  The \emph{spectral radius} $\rho(B)$ is the maximum magnitude of the eigenvalues of $B$.  The \emph{singular values} are the square roots of the eigenvalues of the matrix $B^*B$, a symmetric and positive-definite matrix with nonnegative eigenvalues.  Singular values are geometrically-defined as the lengths of semi-axes of the (hyper-)ellipsoid in $\RR^N$ that results from applying $B$ to all vectors in the unit (hyper-)sphere of $\RR^N$ \citep{TrefethenBau1997}.
+A complex number\sidenote{Though $B$ is real, $\lambda$ may be complex.} $\lambda \in \CC$ is an \emph{eigenvalue} of a square matrix $B\in\RR^{N\times N}$ if there is a nonzero vector $\bv\in\CC^N$ so that $B \bv = \lambda \bv$.  The set of all eigenvalues of $B$ is the \emph{spectrum} $\sigma(B)$ of $B$.  The \emph{spectral radius} $\rho(B)$ is the maximum magnitude of the eigenvalues of $B$.  The \emph{singular values} are the square roots of the eigenvalues of the matrix\sidenote{This matrix is always symmetric and it is either positive-definite or positive semi-definite.  Thus it has nonnegative eigenvalues.} $B^\top B$.  Singular values are geometrically-defined as the lengths of semi-axes of the (hyper-)ellipsoid in $\RR^N$ that results from applying $B$ to all vectors in the unit (hyper-)sphere of $\RR^N$ \citep{TrefethenBau1997}.
 
 Properties of a matrix described in terms of its eigenvalues or singular values are generically called ``spectral properties.''  For example, $\|B\|_2$ is the largest singular value of $B$ and $\|B^{-1}\|_2$ is the inverse of the smallest singular value of $B$, so these are spectral properties.  The 2-norm condition number $\kappa(B)=\|B\|_2/\|B^{-1}\|_2$ is thus also a spectral property; it is visualized as the eccentricity of the ellipsoid above.
 
@@ -281,7 +302,7 @@ and
 \end{equation}
 have exactly the same set of solutions as \eqref{introsystem}.  However, matrices $M^{-1} A$ and $A M^{-1}$ generally have different eigenvalues, condition numbers, and so on---different spectral properties---from $A$.
 
-While the accuracy of the approximate solution to \eqref{introsystem} cannot be improved beyond the $\kappa(A) \eps$ level by switching to systems \eqref{introleftpre} or \eqref{introrightpre}, as fact i) on page \pageref{limittoaccuracy} cannot be bypassed, solution methods may take advantage of better spectral properties of $M^{-1} A$ or $A M^{-1}$, compared to those of $A$, to generate approximations to the solution more quickly.  This idea is effective if $M^{-1}$ is easy to apply in the sense that (substantially) fewer operations are needed to solve the system $M\bv=\bc$ than to solve the original system.
+While the accuracy of the approximate solution to \eqref{introsystem} cannot be improved beyond the $\kappa(A) \eps$ level by switching to systems \eqref{introleftpre} or \eqref{introrightpre}, as Fact I on page \pageref{page:ls:limittoaccuracy} cannot be bypassed, solution algorithms may take advantage of better spectral properties of $M^{-1} A$ or $A M^{-1}$, compared to those of $A$, to generate approximations to the solution more quickly.  This idea is effective if $M^{-1}$ is easy to apply in the sense that (substantially) fewer operations are needed to solve the system $M\bv=\bc$ than to solve the original system.
 
 Systems \eqref{introleftpre} and \eqref{introrightpre} are referred to as \emph{preconditioned} versions of \eqref{introsystem}, with \eqref{introleftpre} called \emph{left-preconditioning} and \eqref{introrightpre} \emph{right-preconditioning}.  The next example shows how preconditioning can make the Richardson iteration converge.  In this case the diagonal of $A$ is used as $M$, an example of \emph{Jacobi preconditioning}.
 
@@ -296,13 +317,13 @@ Being diagonal, $M$ is easy to invert and apply.  The preconditioned Richardson 
 \begin{equation}
 \bu_{k+1} = \bu_k + \omega (M^{-1} \bb - M^{-1} A \bu_k),  \label{introprerichardson}
 \end{equation}
-is better behaved.  With $\bu_0 = [0\,\, 0]^*$ and $\omega=1$ again we get this sequence from \eqref{introprerichardson}:
+is better behaved.  With $\bu_0 = [0\,\, 0]^*$ and $\omega=1$ we obtain a sequence from \eqref{introprerichardson},
 \begin{equation}
 \rvect{0}{0}{0}, \rvect{1}{0.8}{1.0}, \rvect{2}{0.9}{1.8}, \rvect{3}{0.98}{1.90}, \dots
 \end{equation}
-This sequence is apparently going to $\bu = [1\,\, 2]^*$.  The explanation is not hard to see; compare
+This sequence is apparently converging to $\bu = [1\,\, 2]^*$.  The explanation is not hard to see; compare
 \begin{equation}
-\rho(I-A) = -9.1 \quad \text{and} \quad \rho(I-M^{-1} A) = 0.32,
+\rho(I-A) = 9.1 \quad \text{and} \quad \rho(I-M^{-1} A) = 0.32,
 \end{equation}
 and recall \eqref{introconvergethm}.
 \end{examplecont}
@@ -315,7 +336,7 @@ First, we surely would want the norm of the \emph{error} itself, i.e.
 \begin{equation}
 \be_0 = \bu_0 - \bu \label{errordefn}
 \end{equation}
-as the direct measure of how wrong $\bu_0$ is.  However, exact knowledge of the error $\be_0$ is equivalent to exact knowledge of the solution $\bu$ itself, if we already have the approximation $\bu_0$.  Only bounds on $\|\be_0\|$ can reasonably be expected, though we can compute the full residual vector $\br_0 = \bb - A \bu_0$ at will.
+as the direct measure of how wrong $\bu_0$ is.  However, exact knowledge of the error $\be_0$ is equivalent to exact knowledge of the solution $\bu$ itself.  Only bounds on $\|\be_0\|$ can reasonably be expected, though we can compute the full residual vector $\br_0 = \bb - A \bu_0$ at will.
 
 Secondly, errors are most meaningful if they are relative.  For instance, knowing ``$\|\be_0\|\le 10^{-6}$'' does not tell us that $\bu_0$ is an accurate solution to the system $A \bu = \bb$ if $\|A^{-1}\|=1$ and $\|\bb\|= 10^{-6}$, in which case we would know in advance that $\|\bu\|\le 10^{-6}$.
 
@@ -328,9 +349,9 @@ where $\kappa(A) = \|A\| \|A^{-1}\|$ is the condition number in the induced norm
 
 \section{Numerical linear algebra 3: Krylov space methods}
 
-The most powerful iterative methods for solving system \eqref{introsystem} generate optimal\sidenote{In various senses.  See Table \ref{tab:krylovcompare} below for two such.} estimates $\bu_k$ which are linear combinations of vectors $\bv,A\bv,A^2\bv,\dots,A^{k-1}\bv$.  Here $\bv$ is a fixed vector; often $\bv=\bb$ or $\bv$ is the initial residual.
+The most powerful iterative methods for solving system \eqref{introsystem} generate optimal\sidenote{In various senses.  See Table \ref{tab:krylovcompare} below for two such.} estimates $\bu_k$ which are linear combinations of vectors $\bv,A\bv,A^2\bv,\dots,A^{k-1}\bv$.  Here $\bv$ is a fixed vector; often $\bv=\bb$ or it is the initial residual.
 
-These methods are collectively called \emph{Krylov space methods} because the span of such vectors is a \emph{Krylov space}.  Examples include the Richardson iteration, conjugate gradient (CG), and minimum residual methods (MINRES or GMRES).\sidenote{We will address these methods in this and the next chapter.  See \citet{Greenbaum1997} or \citet{Saad2003} for details, algorithms, and many more methods.}  The effectiveness of a given Krylov method on a given system depends on the eigenvalues or singular values of the matrix $A$, i.e.~on its spectral properties.  Many Krylov space methods are built into and fully-supported by \PETSc, and we will use them in all later Chapters.
+These methods are collectively called \emph{Krylov space methods} because the span of such vectors is a \emph{Krylov space}.  Examples include the Richardson iteration, conjugate gradient (CG), and minimum residual methods (MINRES or GMRES).\sidenote{We will address these methods in this and the next chapter.  See \citet{Greenbaum1997} or \citet{Saad2003} for details, algorithms, and many more methods.}  The effectiveness of a given Krylov method on a given system depends on the eigenvalues or singular values of the matrix $A$, i.e.~on its spectral properties.  Many Krylov space methods are fully-supported by \PETSc, and we will use them extensively in later Chapters.
 
 To be concrete, for a square matrix $A\in \RR^{N\times N}$ and a vector $\bv\in\RR^N$, a Krylov space is defined as
 \begin{equation}
@@ -358,7 +379,7 @@ For an example in which a polynomial is generated during a Krylov iteration, con
 \end{equation}
 and $q_0(x)=1$.
 %see richpolyplot.py for formulas
-Figure \ref{fig:richpolyplot} shows these polynomials.  It is easy to check that $q_k(x) \to 1/x$ for $x\in (0,2)$, and the Figure suggests it too.  On the other hand, \eqref{introconvergethm} says $q_k(A) \bb \to A^{-1} \bb$ if the spectral condition $\rho(I-A)<1$ holds.  The latter condition says exactly that all eigenvalues of $A$ must be within distance one of $1+0i$ in the complex plane, and thus that all real eigenvalues of $A$ must be in $(0,2)$.
+Figure \ref{fig:richpolyplot} shows these polynomials.  It is easy to verify that $q_k(x) \to 1/x$ for $x\in (0,2)$, and the Figure suggests it as well.  On the other hand, \eqref{introconvergethm} says $q_k(A) \bb \to A^{-1} \bb$ if the spectral condition $\rho(I-A)<1$ holds.  The latter condition says exactly that all eigenvalues of $A$ must be within distance one of $1+0i$ in the complex plane, and thus that all real eigenvalues of $A$ must be in $(0,2)$.
 
 \begin{figure}
 \bigskip
@@ -375,7 +396,7 @@ Define $\Pnone$ to be the set of all real polynomials $p$ of degree $n$ such tha
 \begin{equation}
 \Kone{n}{A,\bv} = \bv + \Span\{A\bv,A^2\bv,\dots\,A^{n-1}\bv\}.
 \end{equation}
-In these terms, Table \ref{tab:krylovcompare} compares three Krylov methods, namely the Richardson iteration \eqref{introrichardson}, conjugate gradients (CG), and generalized minimum residuals (GMRES).  For CG and GMRES as algorithms, see \citet{Greenbaum1997} or \citet{Saad2003}.
+Table \ref{tab:krylovcompare} compares three Krylov methods, namely the Richardson iteration \eqref{introrichardson}, conjugate gradients (CG), and generalized minimum residuals (GMRES).  For CG and GMRES as algorithms, see \citet{Greenbaum1997} or \citet{Saad2003}.
 
 In practice, GMRES uses ``restarts'' to avoid filling memory with its internal representation of the Krylov space.  (This mechanism stops practical GMRES from being a ``pure'' Krylov method.)  The \PETSc default is to restart after 30 iterations, so GMRES uses $\sim 30N$ memory locations on an $N$-dimensional problem, compared to $3N$ for CG and $2N$ for Richardson.
 
@@ -397,7 +418,7 @@ We get access to the many Krylov methods implemented in \PETSc any time we creat
 
 Runtime experimentation with Krylov methods is always appropriate.  For the Poisson problem in Chapter \ref{chap:st}, for example, preconditioned CG is effective, though we will see that the most emphasis should be put on the preconditioning stage.
 
-Our brief introduction of iterative linear algebra is now done, though it is hardly adequate, and we return to \PETSc codes and concrete linear systems.  In the upcoming material the reader can initially treat \PETSc's \pKSP linear solver object as a black box, but then explore how it works through runtime options, recalling the above material as needed.
+Our brief introduction of iterative linear algebra is now completed, though it is hardly adequate, and we return to \PETSc codes and concrete linear systems.  In the upcoming material the reader can initially treat \PETSc's \pKSP linear solver object as a black box, but then explore how it works through runtime options, recalling the above material as needed.
 
 
 \section{A small linear system}
@@ -560,12 +581,12 @@ Surely that's enough runtime options for now.  Of course there will be more, esp
 \section{A sparse system of arbitrary size}
 
 We have seen how \PETSc code sets up and solves linear systems, but there is more to say.  The next example \texttt{tri.c}, split into Codes \ref{code:tripartone} and \ref{code:triparttwo}, introduces the following additional concepts and associated function calls:
-\begin{enumerate}
+\begin{itemize}
 \item Creating an integer option by \texttt{PetscOptionsXXX()} calls, so that the size of the linear system can be controlled at runtime.
 \item Using \texttt{VecDuplicate()} for allocation.
 \item Assembling a system of arbitrary size across an arbitrary number of processes, using \texttt{MatGetOwnershipRange()} to only set locally-owned rows.
 \item Using \texttt{VecAXPY()}, \texttt{VecNorm()}, and \texttt{PetscPrintf()} to compute and display the numerical error in a case where the exact solution is known.
-\end{enumerate}
+\end{itemize}
 
 \cinputpart{tri.c}{\CODELOC}{Set up \pVec and \pMat objects for a tridiagonal system.}{I}{//STARTSETUP}{//ENDSETUP}{code:tripartone}
 
@@ -606,13 +627,13 @@ Next we assemble the matrix $A$.  This is a boring tridiagonal matrix with $3$ o
 \begin{quote}
 \texttt{MatGetOwnershipRange(A,\&Istart,\&Iend)}
 \end{quote}
-to get the starting and ending row indices for the local process.  These are used as limits in a \texttt{for} loop over the locally own rows.  We use \texttt{MatSetValues()} to actually set the entries of $A$ and \texttt{MatAssemblyBegin/End()} to complete the assembly of $A$.
+to obtain the starting and ending row indices for the local process.  These are used as limits in a \texttt{for} loop over the locally own rows.  We use \texttt{MatSetValues()} to actually set the entries of $A$ and \texttt{MatAssemblyBegin/End()} to complete the assembly of $A$.
 
 \cinputpart{tri.c}{\CODELOC}{Assemble and solve.}{II}{//ENDSETUP}{//ENDSOLVE}{code:triparttwo}
 
 We need to assemble the right-hand side $\bb$ of the linear system and also the exact solution $\bx_{\text{exact}}$ to the linear system ($A\bx_{\text{exact}} = \bb$).  The easiest way, for demonstration purposes here, is to \emph{choose} $\bx_{\text{exact}}$ and then compute $\bb$ by multiplying by $A$.  Thus, we set (unimportant) values for \texttt{xexact}, and call \texttt{VecAssemblyBegin/End()} on it.  Then we compute \texttt{b} by calling \texttt{MatMult(A,xexact,b)}.
 
-As in \texttt{vecmatksp.c} before we set up  the \pKSP and then call \texttt{KSPSolve()} to approximately solve $A\bx = \bb$.  Option \texttt{-ksp\_monitor} prints the residual norm $\|\bb-A\bx_k\|_2$ at runtime.  In this case we also want to see that the actual error
+As in \texttt{vecmatksp.c} we set up  the \pKSP and then call \texttt{KSPSolve()} to approximately solve $A\bx = \bb$.  Option \texttt{-ksp\_monitor} prints the residual norm $\|\bb-A\bx_k\|_2$ at runtime.  In this case we also want to see that the actual error
 	$$\|\bx - \bx_{\text{exact}}\|_2$$
 is small when the \pKSP completes its work.  So, after getting \texttt{x} from \texttt{KSPSolve()} we compute the error with two commands,
 
@@ -700,7 +721,7 @@ This Table deserves discussion:
 
 \item A diagonally-dominant tridiagonal problem is very well-behaved for direct methods because no fill-in or pivoting occurs when they are applied, but the reader should not assume that generic $N=10^7$ dimension systems are good candidates for direct solves.
 
-\item Cholesky and CG methods, namely \pKSP method \texttt{cg} and \pPC methods \texttt{cholesky} and \texttt{icc} (incomplete-Cholesky, also denoted ``IC($0$)''), respectively, apply to symmetric positive-definite matrices only.  We see some benefit to using CG on one-process runs, compared to the general (non-symmetric) method GMRES, but the matrix here is so well-behaved that exploiting symmetry gives no noticable benefit.
+\item CG and Cholesky methods, namely \pKSP method \texttt{cg} and \pPC methods \texttt{cholesky} or \texttt{icc} (incomplete-Cholesky), respectively, apply to symmetric positive-definite matrices only.  We see some benefit to using CG on one-process runs, compared to the general (non-symmetric) method GMRES, but the matrix here is so well-behaved that exploiting symmetry gives no noticable benefit.
 
 \item There is some speed-up from $N=1$ to $N=4$ processes on this single node 4-core \WORKSTATION.  The two (or slightly more) times speed-up is relatively uniform across methods.  But apparently using four cores does not guarantee anywhere near four-times speed-up.
 \end{itemize}
@@ -736,7 +757,8 @@ Compare $N=2$ and $N=20$.  We get convergence to the default tolerance in $3$ an
 In general, we observe there is a
 
 \begin{enumerate}
-\item[iv)] \emph{process-count dependence of preconditioning}:  Many preconditioning schemes, including block-Jacobi and Schwarz methods (Chapter \ref{chap:sc}), act differently depending on the number of MPI processes.
+\setcounter{enumi}{3}
+\item \emph{Most preconditioning methods have a process-count dependence.}  Preconditioning schemes, including block-Jacobi and Schwarz methods (Chapter \ref{chap:pr}), act differently depending on the number of MPI processes.
 \end{enumerate}
 
 \noindent Note that this process-count dependence has a stronger influence on final answers than the other parallel ``fact of life'', namely that parallel reductions are not deterministic (Chapter \ref{chap:gs}).
@@ -750,7 +772,7 @@ The difference does not arise in the Krylov iteration implementation.  Rather, t
            & & & M_{N-1}^{-1}
            \end{bmatrix}   \label{eq:ls:parallelpreconditioner}
 \end{equation}
-where each block $M_i$ is the product of the incomplete-Chebyshev factors acting on those rows which are owned on the rank $i$ process.  For any nontrivial preconditioner, even one based on diagonal blocks of a tridiagonal matrix as here, different sets of rows ``communicate'' at the preconditioning stage depending on the process count.
+where each block $M_i$ is the product of the \texttt{icc} factors acting on those rows which are owned on the rank $i$ process.  For any nontrivial preconditioner, even one based on diagonal blocks of a tridiagonal matrix as here, different sets of rows ``communicate'' at the preconditioning stage depending on the process count.
 
 What if you do not want this dependence?  On the one hand, you can make the reported numerical error nearly process-count-independent by asking that it be small (e.g.~\texttt{-ksp\_rtol 1.0e-14}), but then the difference in iteration count is even stronger ($3$ and $13$ iterations on $N=2$ and $N=20$ processes, respectively).  On the other hand, if you replace ``\texttt{-pc\_type bjacobi -sub\_pc\_type icc}'' with ``\texttt{-pc\_type none}'' or ``\texttt{-pc\_type jacobi}'' then runs on $N=2$ and $N=20$ processes all get identical numerical error results after 12 iterations.\sidenote{I.e.~all four runs show the same numerical error and iteration count.}  These preconditioners do not communicate any information between rows at all, and thus they exhibit no dependence.  However, \emph{good} preconditioners, as we will see, cannot be that trivial.
 
@@ -770,15 +792,15 @@ Fundamentally, preconditioning is useful if can both be applied quickly \emph{an
 
 \item On page \pageref{eq:ls:krylovgoal} we note that a Krylov space approximation $p_{n-1}(A)\bb$ to the solution $A^{-1}\bb$ is close if $p_{n-1}(z)$ is close to $1/z$ on the spectrum of $A$.  Prove this for invertible diagonalizable matrices $A=S\Lambda S^{-1}$, with $\Lambda$ diagonal, by showing
 	$$\|p_{n-1}(A) - A^{-1}\| \le \,\kappa(S)\, \max_{\lambda \in \sigma(A)} |p_{n-1}(\lambda) - \lambda^{-1}|$$
-where $\kappa(S) = \|S\| \|S^{-1}\|$ is the condition number.\sidenote{Here $\|\cdot\|$ is any induced matrix norm \citep{TrefethenBau1997}.  However, if $A$ is \emph{normal} then $S$ can be chosen to be unitary, in which case $\kappa(S)=1$ in the $2$-norm.}
+where $\kappa(S) = \|S\| \|S^{-1}\|$ is the condition number.\sidenote{Here $\|\cdot\|$ is any induced matrix norm.  However, if $A$ is \emph{normal} then $S$ can be chosen to be unitary, in which case $\kappa(S)=1$ in the $2$-norm.}
 
-\item For the $\omega=1$ Richardson iteration \eqref{introrichardson} and $\bu_0=\bb$ we get $\bu_k = q_k(A) \bb$ for polynomials $q_k$ given by \eqref{richpolys}.  Show that if $\lim_{k\to\infty} q_k=q_\infty$ exists then $q_\infty(x)=1/x$.  On the other hand, by setting $y=1-x$ and defining $Q_k(y)=q_k(1-y)$, show $Q_k(y)$ is the partial sum of a well-known series with a well-known radius of convergence.
+\item For the $\omega=1$ Richardson iteration \eqref{introrichardson} and $\bu_0=\bb$ we obtain $\bu_k = q_k(A) \bb$ for polynomials $q_k$ given by \eqref{richpolys}.  Show that if $\lim_{k\to\infty} q_k=q_\infty$ exists then $q_\infty(x)=1/x$.  On the other hand, by setting $y=1-x$ and defining $Q_k(y)=q_k(1-y)$, show $Q_k(y)$ is the partial sum of a well-known series with a well-known radius of convergence.
 
 \item Consider Richardson iteration in the example
 \begin{cline}
 ./tri -tri_m 100 -ksp_monitor -ksp_type richardson
 \end{cline}
-Un-preconditioned Richardson iteration fails (i.e.~add \texttt{-pc\_type none}); explain.  The default preconditioner succeeds (i.e.~\texttt{-pc\_type ilu}), but ILU($0$) is cheating because it becomes a complete LU factorization on this tridiagonal and diagonally-dominant $A$; we are really seeing a direct solve.  The same can be said for ICC($0$).  Confirm that, as in the example on page \pageref{introprerichardson}, Richardson iteration succeeds with \texttt{-pc\_type jacobi}.  Explain.
+Explain why adding \texttt{ -pc\_type none } makes this example diverge.  The default preconditioner succeeds (i.e.~\texttt{-pc\_type ilu}), but ILU($0$) is cheating because it becomes a complete LU factorization on this tridiagonal and diagonally-dominant $A$; we are really seeing a direct solve.  The same can be said for \texttt{icc}.  Confirm that, as in the example on page \pageref{introprerichardson}, Richardson iteration succeeds with \texttt{-pc\_type jacobi}.  Explain.
 
 \item The accuracy of direct solves (e.g.~\texttt{-ksp\_type preonly -pc\_type cholesky}) in \texttt{tri.c}, as measured by the reported error norm $\|\bx - \bx_{\text{exact}}\|_2$, decreases with increasing dimension.  Confirm and explain.
 
