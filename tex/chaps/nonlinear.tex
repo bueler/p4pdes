@@ -1,7 +1,7 @@
 
 The simplest thing to say about nonlinear equations is that they change the functional form of the residual, compared to the linear case.  For a linear system the residual $\br$ is a certain function of the unknowns $\bu$, namely $\br = \bF(\bu) = \bb - A \bu$.  Now we consider cases in which $\bF$ is a higher-order polynomial, a transcendental function, or some more general function.
 
-In fact, let us simply suppose for now that $\bF : \RR^N \to \RR^N$ is differentiable.  The input $\bx$ and output $\bF(\bx)$ are column vectors,\sidenote{Our name change $\bu\to\bx$ comes from now thinking more geometrically about the location of $\bx$.} so in that sense $\bF$ acts like square-matrix multiplication $\bx\mapsto A\bx$.  Just as a linear solver like GMRES (Chapter \ref{chap:ls}) reduces the linear residual $\br_k=\bb - A \bu_k$ to zero by generating a sequence $\bu_k$, for nonlinear $\bF$ we want to solve
+Suppose for now that $\bF : \RR^N \to \RR^N$ is differentiable.  The input $\bx$ and output $\bF(\bx)$ are column vectors,\sidenote{Our name change $\bu\to\bx$ comes from now thinking more geometrically about the location of $\bx$.} so in that sense $\bF$ acts like square-matrix multiplication $\bx\mapsto A\bx$.  Just as a linear solver like GMRES (Chapter \ref{chap:ls}) reduces the linear residual $\br_k=\bb - A \bu_k$ to zero by generating a sequence $\bu_k$, for nonlinear $\bF$ we want to solve
 \begin{equation}
    \bF(\bx) = 0   \label{eq:nl:equation}
 \end{equation}
@@ -80,13 +80,13 @@ As also shown in Figure \ref{fig:expcirclebasic}, for $b=2$, if we start the New
 
 \section{Using \pSNES with call-backs} \label{sec:usingsnes}
 
-We will compute the Newton iterates in the above example by using a nonlinear solver object of type \pSNES\sidenote{SNES stands for ``scalable nonlinear equation solver.''} from \PETSc.  Note \pSNES has the usual \texttt{Create/SetFromOptions/Destroy} sequence.  Our code provides a function $\bF$ which is a ``call-back'' in the sense that we supply it to the \pSNES, which then calls it with argument $\bx$ when it needs $\bF(\bx)$ during the Newton iteration.
+We will compute the Newton iterates in the example above by using a nonlinear solver object of type \pSNES\sidenote{SNES stands for ``scalable nonlinear equation solver.''} from \PETSc.  Note \pSNES has the usual \texttt{Create/SetFromOptions/Destroy} sequence.  Our code provides a function $\bF$ which is a ``call-back'' in the sense that we supply it to the \pSNES, which then calls it with argument $\bx$ when it needs $\bF(\bx)$ during the Newton iteration.
 
-Later we will also provide the \pSNES with a function which computes the Jacobian function $J_\bF$.  However, the Jacobian can be approximated by repeated $\bF$ evaluations because a derivative can also be approximated by finite differences.  Thus our first code avoids such a Jacobian ``call-back'' for now.
+Later we will also provide the \pSNES with a function which computes the Jacobian function $J_\bF$.  However, the Jacobian can be approximated by repeated $\bF$ evaluations because a derivative can also be approximated by finite differences.  Thus our first code avoids such a Jacobian ``call-back.''
 
-The whole of \texttt{expcircle.c}, to solve the above Example, is in Code \ref{code:expcircle}.  The \texttt{main()} method starts by allocating \pVec \texttt{x} of fixed dimension 2 which will hold both the initial iterate $\bx_0$.  (Once the Newton iteration is ended it holds the converged estimate of the solution.)  Because both components of $\bx_0$ are $1$, it is initialized using \texttt{VecSet()}.  Next a duplicate \pVec \texttt{r} is created because the \pSNES needs it as space for the (nonlinear) residual.
+The whole of \texttt{expcircle.c}, to solve the above Example, is in Code \ref{code:expcircle}.  The \texttt{main()} method starts by allocating \pVec \texttt{x} of fixed dimension 2 which will hold the initial iterate $\bx_0$.  (Once the Newton iteration is ended it holds the converged estimate of the solution.)  Because both components of $\bx_0$ are $1$, it is initialized using \texttt{VecSet()}.  Next a duplicate \pVec \texttt{r} is created because the \pSNES needs it as space to store the (nonlinear) residual.
 
-Then the \pSNES is created and configured.  Formula \eqref{eq:nl:expcircleF} is in method \texttt{FormFunction()}, which is supplied using \texttt{SNESSetFunction()}.  We call \texttt{SNESSetFromOptions()} because it both gives us run-time control on how the Jacobian is calculated\sidenote{Options \texttt{-snes\_fd} and \texttt{-snes\_mf} are allowed; see Table \ref{tab:snesjacobianoptions:needed} below.} and on how the length of the step $\bs$ is actually determined.\sidenote{Through \texttt{-snes\_linesearch\_type} and related options; see page \pageref{sec:linesearch}.}  Then \eqref{eq:nl:equation} is solved by a call to \texttt{SNESSolve()}.  Finally the new values in \texttt{x}, presumably the converged solution, are printed at the command line using \texttt{VecView()} with a \texttt{STDOUT} viewer.
+Then the \pSNES is created and configured.  Formula \eqref{eq:nl:expcircleF} is in method \texttt{FormFunction()}, which is supplied to the \pSNES object using \texttt{SNESSetFunction()}.  We call \texttt{SNESSetFromOptions()} because it gives us run-time control on how the Jacobian is calculated\sidenote{Options \texttt{-snes\_fd} and \texttt{-snes\_mf} are allowed; see Table \ref{tab:snesjacobianoptions:needed} below.} and on how the length of the step $\bs$ is determined.\sidenote{Through \texttt{-snes\_linesearch\_type} and related options; see page \pageref{sec:linesearch}.}  Then \eqref{eq:nl:equation} is solved by a call to \texttt{SNESSolve()}.  Finally the new values in \texttt{x}, presumably the converged solution, are printed at the command line using \texttt{VecView()} with a \texttt{STDOUT} viewer.
 
 \vfill
 \cinput{expcircle.c}{\CODELOC}{A first \pSNES-using code.  Solves nonlinear system \eqref{eq:nl:equation} with $\bF$ given in \eqref{eq:nl:expcircleF}.}{//START}{//END}{code:expcircle}
@@ -128,7 +128,7 @@ Vec Object: 1 MPI processes
 %$
 Thus after 5 iterations the Newton method has reduced the residual norm by a factor of $10^9$ and stopped with solution $x_0=0.319632$ and $x_1=0.947542$.  Compare Figure \ref{fig:expcirclebasic}.
 
-The above run also uses option \texttt{-snes\_fd}, the purpose of which the reader may already see.  Clearly the Newton iteration \eqref{eq:nl:newton} requires the Jacobian, but we have only supplied the \pSNES with an implementation of function $\bF(\bx)$, not with $J_{\bF}(\bx)$.  As mentioned, the entries of the latter matrix are derivatives which can be approximated by finite differences.  Specifically, let $\delta\ne 0$ and let $\be_j\in \RR^N$ denote the standard unit vector with entry one in the $j$th position and zeros otherwise.  An entry in matrix $J=J_{\bF}(\bx)$ is approximated
+The above run uses option \texttt{-snes\_fd}, the purpose of which the reader may already see.  Clearly the Newton iteration \eqref{eq:nl:newton} requires the Jacobian, but we have only supplied the \pSNES with an implementation of function $\bF(\bx)$, not with $J_{\bF}(\bx)$.  As mentioned, the entries of the latter matrix are derivatives which can be approximated by finite differences.  Specifically, let $\delta\ne 0$ and let $\be_j\in \RR^N$ denote the standard unit vector with entry one in the $j$th position and zeros otherwise.  An entry in matrix $J=J_{\bF}(\bx)$ is approximated
 \begin{equation}
 J_{ij} = \frac{\partial F_i}{\partial x_j} \approx \frac{F_i(\bx+\delta \be_j) - F_i(\bx)}{\delta}.  \label{eq:nl:fdjac}
 \end{equation}
@@ -169,7 +169,7 @@ $ ./expcircle
 %$
 This message is somewhat opaque unless you are conscious of the need to form the Jacobian matrix at each Newton iteration.  That is, \emph{something} must supply a Jacobian at step (\emph{ii}), and the supplied-Jacobian-code case (\emph{ii})a does not work for \texttt{expcircle.c}.
 
-The benefit of using options (\emph{ii})b--(\emph{ii})d above is that we do not need to write any error-prone code based on taking derivatives of our function $\bF$.  Avoiding writing and debugging Jacobian implementations may speed implementation by reducing the time \emph{you} spend on the task.  One possible disadvantage is likely to be apparent to the reader, namely that formula \eqref{eq:nl:fdjac} is only an \emph{approximation} of a Jacobian entry.  However, in most cases using a finite-difference-approximated Jacobian in the Newton step is not problematical \citep{Kelley2003}.
+The benefit of using options (\emph{ii})b--(\emph{ii})d above is that we do not need to write any error-prone code based on taking derivatives of our function $\bF$.  Avoiding writing and debugging Jacobian implementations may speed implementation by reducing the time \emph{you} spend on the task.  One possible disadvantage is likely to be apparent to the reader, namely that formula \eqref{eq:nl:fdjac} is only an \emph{approximation} of a Jacobian entry.  In most cases using a finite-difference-approximated Jacobian in the Newton step is not problematical \citep{Kelley2003}.
 
 On the other hand, there is a significant performance problem in using \eqref{eq:nl:fdjac} naively for PDE-type applications of Newton's method.  In steps (\emph{i}) and (\emph{ii})b together we do $N+1$ calls to \texttt{FormFunction()} per Newton iteration.  This is a worrying amount of work if $N$ is large, as it would be for a system of nonlinear equations coming from discretizing a PDE.  We will therefore return to this issue later in the current Chapter, and provide more detail on (\emph{ii})c and (\emph{ii})d.
 
@@ -220,7 +220,7 @@ Suppose that $\bF:\RR^N\to\RR^N$ is differentiable, $J_{\bF}$ is Lipschitz near 
 \end{theorem}
 
 \medskip
-By definition, a sequence $\{\bx_k\}$ in $\RR^N$ \emph{converges quadratically to} $\bx^*$ if the sequence of errors $\{\be_k\}$ satisfies \eqref{eq:nl:quadraticconvergence} for some $K\ge 0$.  Thus the Theorem says that, under strong assumptions about the regularity and nonsingularity of the Jacobian, the iterates converge quadratically to a solution of \eqref{eq:nl:equation}.  Heuristically, once $\|\be_k\|$ gets reasonably small then, from then on, the number of correct digits in $\bx_k$ \emph{doubles} with each additional iteration.
+By definition, a sequence $\{\bx_k\}$ in $\RR^N$ \emph{converges quadratically to} $\bx^*$ if the sequence of errors $\{\be_k\}$ satisfies \eqref{eq:nl:quadraticconvergence} for some $K\ge 0$.  Thus the Theorem says that, under strong assumptions about the regularity and nonsingularity of the Jacobian, the iterates converge quadratically to a solution of \eqref{eq:nl:equation}.  Heuristically, once $\|\be_k\|$ gets reasonably-small then the number of correct digits in $\bx_k$ \emph{doubles} with each additional iteration.
 
 We seem to see quadratic convergence in Figure \ref{fig:newtonconvbasic}, but actually it shows the residual norm $\|\bF(\bx_k)\|_2$ and not the error norm $\|\be_k\|_2$.  However, the second part of the Theorem says that the residual decrease at the $k$th iteration (i.e.~$\|\bF(\bx_k)\|/\|\bF(\bx_0)\|$) is within a factor, determined by the conditioning of the Jacobian at the solution, of the error decrease ($\|\be_k\|/\|\be_0\|$).
 
@@ -282,7 +282,7 @@ PetscErrorCode (*J)(SNES,Vec,Mat,Mat,void*)
 \end{code}
 Input \pVec \texttt{x} and pointer \texttt{void *ctx} have the same meaning as in \texttt{FormFunction()}.
 
-The difference is that we must set a \pMat as output, based on formula \eqref{eq:nl:ecjacobian} in this case.  In setting-up the output \pMat the roles of \texttt{MatSetValues()}, real array \texttt{v[4]} for the entries themselves, and integer arrays \texttt{row[2]} and \texttt{col[2]} as global indices, are all the same as in Chapter \ref{chap:ls}.  Also just as before, when reading \texttt{x} we can use \texttt{VecGetArrayRead()} and \texttt{VecRestoreArrayRead()}.
+The difference is that we must set a \pMat as output, based on formula \eqref{eq:nl:ecjacobian} in this case.  In setting up the output \pMat the roles of \texttt{MatSetValues()}, real array \texttt{v[4]} for the entries themselves, and integer arrays \texttt{row[2]} and \texttt{col[2]} as global indices, are all the same as in Chapter \ref{chap:ls}.  Also as before, when reading \texttt{x} we can use \texttt{VecGetArrayRead()} and \texttt{VecRestoreArrayRead()}.
 
 \cinputpart{ecjacobian.c}{\CODELOC}{This \texttt{main()} method allocates a \pMat to hold the Jacobian.}{II}{//STARTMAIN}{//ENDMAIN}{code:ecjacobianII}
 
@@ -358,7 +358,7 @@ Equation \eqref{eq:nl:diffusionreaction} is a nonlinear elliptic PDE,\sidenote{B
 \begin{equation}
 u(0)=\alpha \quad \text{and} \quad u(1)=\beta.  \label{eq:nl:drbcs}
 \end{equation}
-(We have chosen a convenient interval $x\in[0,1]$, but for other intervals we can shift and scale $x$ as needed.)  If $R$ is continuous and non-increasing then the nonlinear operator in \eqref{eq:nl:diffusionreaction} is strictly-monotone \citep{KinderlehrerStampacchia1980}.  Because it is also coercive on the appropriate function space,\sidenote{Namely the Sobolev space $H_0^1[0,1]$, after a linear change of variables to set $\alpha=\beta=0$.} which says intuitively that the highest-order (diffusion) term is effective at damping out large variations in $u$ which correspond to a large norm $\|u'\|_2$, abstract arguments show unique existence of a solution.
+(We have chosen a convenient interval $x\in[0,1]$, but for other intervals we can shift and scale $x$ as needed.)  If $R$ is continuous and non-increasing then the nonlinear operator in \eqref{eq:nl:diffusionreaction} is strictly-monotone \citep[page 83]{KinderlehrerStampacchia1980}.  Because it is also coercive on the appropriate function space,\sidenote{Namely the Sobolev space $H_0^1[0,1]$, after a linear change of variables to set $\alpha=\beta=0$.} which says intuitively that the highest-order (diffusion) term is effective at damping out large variations in $u$ which correspond to a large norm $\|u'\|_2$, abstract arguments show unique existence of a solution.
 
 Now we consider the example
 \begin{equation}
@@ -367,27 +367,27 @@ Now we consider the example
 % R(u) = - rho sqrt(|u|) decreasing so -u''+F(u)=0 with F increasing
 This is of form \eqref{eq:nl:diffusionreaction} with $R(u) = - \rho \sqrt{u}$ and $f(x)=0$.  Because $R$ is non-increasing and continuous if $\rho>0$, the corresponding Dirichlet problem is well-posed.
 
-We are actually using \eqref{eq:nl:drsqrt} as a first example, however, because we want to verify our numerical solution using an exact solution, and its form makes this easy.  The solution is found \citep{Ockendonetal2003} by noting that both second-derivative and square-root operations convert certain 4th degree polynomials into quadratic polynomials.  We also get the boundary conditions from the exact solution.  Therefore we substitute $u(x)=M(x+1)^4$ into \eqref{eq:nl:drsqrt} to find $M=(\rho/12)^2$, and we set $\alpha=M$ and $\beta=16 M$.
+We will use \eqref{eq:nl:drsqrt} as a first example because we want to verify our numerical solution using an exact solution.   Exercise 5.50 of \citet[page 240]{Ockendonetal2003} shows how to find the solution.  One observes that both second-derivative and square-root operations convert certain 4th degree polynomials into quadratic polynomials.  Substituting $u(x)=M(x+1)^4$ into \eqref{eq:nl:drsqrt} finds $M=(\rho/12)^2$.  We also obtain the boundary conditions from the exact solution: set $\alpha=M$ and $\beta=16 M$
 
-On an $N$ point grid, the finite-difference scheme we propose for \eqref{eq:nl:diffusionreaction} is
+On an $N$ point grid, the centered finite-difference scheme for \eqref{eq:nl:diffusionreaction}, with $O(h^2)$ local truncation error \citep{MortonMayers2005}, is
 \begin{equation}
 - \frac{u_{j+1} - 2 u_j + u_{j-1}}{h^2} - R(u_j) = f(x_j)   \label{eq:nl:drfdscheme}
 \end{equation}
-where $h=1/(N-1)>0$ is the grid spacing, $x_j = j h$ for $j=0,1,\dots,N-1$, and $u_j \approx u(x_j)$.
+where $h=1/(N-1)>0$, $x_j = j h$ for $j=0,1,\dots,N-1$, and $u_j \approx u(x_j)$.
 
-Code \texttt{reaction.c} shown in Codes \ref{code:reactionI} and \ref{code:reactionII} solves this problem.  We use scheme \eqref{eq:nl:drfdscheme}, a \pSNES object for the Newton iteration, and a \pDMDA object for the grid.
+Code \texttt{reaction.c} shown in Codes \ref{code:reactionI} and \ref{code:reactionII} implements this scheme.  We use a \pSNES object for the Newton iteration and a \pDMDA object for the grid.
 
 \cinputpart{reaction.c}{\CODELOC}{Call-back functions for \texttt{reaction.c}.}{I}{//CALLBACK}{//ENDCALLBACK}{code:reactionI}
 
 Three call-back methods appear in Code \ref{code:reactionI}.  First we compute the initial iterate---a linear function connecting the boundary conditions---and the exact solution in the method \texttt{InitialAndExactLocal()}.  Then we have the residual (\texttt{FormFunctionLocal()}) and Jacobian (\texttt{FormJacobianLocal()}) evaluation functions.
 
-\cinputpart{reaction.c}{\CODELOC}{In \texttt{main()} we create a \pDMDA, then \pVecs, and then a \pSNES.  We hand call-back functions to the \pSNES.  Then we solve the equation, get the numerical error, and clean up.}{II}{//MAIN}{//ENDMAIN}{code:reactionII}
+\cinputpart{reaction.c}{\CODELOC}{In \texttt{main()} we create a \pDMDA, some \pVecs, and a \pSNES.  We hand call-back functions to the \pSNES.  Then we solve the equation, get the numerical error from the exact solution, and clean up.}{II}{//MAIN}{//ENDMAIN}{code:reactionII}
 
 These are ``\texttt{Local}'' methods in the sense that their inputs are C pointers for arrays instead of \pVecs, and our implementation of \texttt{InitialAndExactLocal()} explains how the \texttt{Local} methods work.  As seen in Code \ref{code:reactionII}, before this method is called we use \texttt{DMDAVecGetArray()} on the \pVecs \texttt{u} and \texttt{uexact}.  This gives pointers (type \texttt{double*}) which are then handed to \texttt{InitialAndExactLocal()}.  Also note that a \texttt{DMDALocalInfo} struct is passed in so that the local part of the grid (i.e.~\texttt{info.xs} and etc.) and the global grid size (i.e.~\texttt{info.mx}) can be accessed through this struct without needing the \pDMDA object itself.\sidenote{Recall Figure \ref{fig:localpartofgrid}.}  The call-back done by \pSNES on \texttt{FormFunctionLocal()} and \texttt{FormJacobianLocal()} works the same way.
 
 In \texttt{main()} we use \texttt{DMDASNESSetFunctionLocal()} instead of
 
-\noindent \texttt{SNESSetFunction()}\sidenote{Compare \texttt{ecjacobian.c}.} because our local call-back functions have a different signature based on \pDMDA-derived pointers.  The Jacobian is set by a similar method \texttt{DMDASNESSetJacobianLocal()}.  Also, though we implement a Jacobian, we do not allocate a \pMat to hold it because the \pDMDA object has enough information about the grid and stencil so as to pre-allocate a \pMat internally.
+\noindent \texttt{SNESSetFunction()}\sidenote{Compare \texttt{ecjacobian.c}.} because our local call-back functions have a different signature based on \pDMDA-derived pointers.  The Jacobian is set by a similar method \texttt{DMDASNESSetJacobianLocal()}.  Also, though we implement a Jacobian, we do not allocate a \pMat to hold it because the \pDMDA object has enough information about the grid and stencil so as to allocate the \pMat internally.
 
 
 \section{Convergence under grid refinement}
@@ -429,9 +429,9 @@ is shown in Figure \ref{fig:nl:reaction-conv}.  If we ignore the result on the f
 
 \section{Finite-difference Jacobians by ``coloring''} \label{sec:nl:coloring}
 
-However, when we look closer at the \texttt{-snes\_fd} results from finite-difference Jacobians we see that it is not really working.  There are far too many function evaluations per Newton step to be practical.  This is because, in contrast to the earlier fixed-dimension examples, discretizing a PDE generates an arbitrarily-large number of unknowns.
+When we look closer at the \texttt{-snes\_fd} results from finite-difference Jacobians we see that it is not really working.  There are far too many function evaluations per Newton step to allow use for PDE problems at practical levels of refinement.  The underlying difficulty is that, in contrast to the earlier fixed-dimensional nonlinear examples in the current Chapter, discretizing a PDE generates an arbitrarily-large number of unknowns.  However, the exploitable property of these nonlinear systems, which arise from discretizing PDEs, is that they have a small number of unknowns per equation.
 
-An analytical Jacobian run on a grid of about 8000 nodes requires three Newton iterations and $0.04$ seconds:
+To show the performance target for an improved finite-difference Jacobian algorithm, note that an analytical Jacobian run on a grid of about 8000 nodes requires three Newton iterations and $0.04$ seconds:
 \label{etc:nl:bestreaction}
 \begin{cline}
 $ timer ./reaction -snes_converged_reason -da_refine 10
@@ -440,7 +440,7 @@ on 8193 point grid:  |u-u_exact|_inf/|u|_inf = 1.75603e-10
 real 0.04
 \end{cline}
 %$
-Note that this run used four $\bF$ evaluations and three $J_{\bF}$ evaluations.
+This run used four $\bF$ evaluations and three $J_{\bF}$ evaluations.\sidenote{Use ``\dots \texttt{-log\_summary | grep Eval}'' to confirm.}
 
 By contrast the finite-difference-Jacobian case simply fails at first:
 \begin{cline}
@@ -449,7 +449,7 @@ Nonlinear solve did not converge due to DIVERGED_FUNCTION_COUNT iterations 1
 on 8193 point grid:  |u-u_exact|_inf/|u|_inf = 0.0049428
 \end{cline}
 %$
-The problem is that a single Jacobian evaluation using finite-difference formula \eqref{eq:nl:fdjac} requires $N+1=8194$ evaluations of $\bF$ per Newton iteration, one for each column of $J_{\bF}$ plus one for the right side of \eqref{eq:nl:newton:eq}.  Thus \pSNES's default maximum $\bF$ evaluation count of 10000 is exceeded with just two iterations.\sidenote{Again, ``\texttt{./reaction -help |grep snes\_}'' gets the default value.}  If we raise the function-count limit then we do get convergence, but at more than 100 times increase in run time compared to the analytical Jacobian run:
+The problem is that a single Jacobian evaluation using finite-difference formula \eqref{eq:nl:fdjac} requires $N+1=8194$ evaluations of $\bF$ per Newton iteration, one for each column of $J_{\bF}$ plus one for the right side of \eqref{eq:nl:newton:eq}.  Thus \pSNES's default maximum $\bF$ evaluation count of 10000 is exceeded with just two iterations.\sidenote{``\texttt{./reaction -help |grep snes\_}'' gets the default value for option \texttt{-snes\_max\_funcs}.}  If we raise the function-count limit then we do get convergence, but at more than 100 times increase in run time compared to the analytical Jacobian run:
 \begin{cline}
 $ timer ./reaction -snes_converged_reason -da_refine 10 -snes_fd \
 > -snes_max_funcs 100000
@@ -460,11 +460,11 @@ real 9.04
 %$
 In this run we have evaluated $\bF$ about $3N \approx 24000$ times.  This performance hit is not sustainable when we go to two and three dimensional PDE problems.
 
-Fortunately, given that it saves programmer effort at the initial prototyping stage, there is no need to abandon the finite-difference-Jacobian idea.  The additional tool needed to make it work is applicable to many PDE numerical schemes, especially on structured grids.  Namely, we can exploit the fact that a small set of grid values---a small stencil---is used in approximating the PDE at each location.\sidenote{Finite difference, element, and volume schemes for discretizing PDES all normally have this property.  Spectral methods, by contrast, have a large, sometimes global, stencil, and generally do not benefit.}
+Fortunately there is no need to abandon the finite-difference Jacobian idea.  (The idea definitely saves programmer effort at the initial prototyping stage!)  The additional tool needed to make it work is applicable to many PDE numerical schemes, especially on structured grids.  Namely, we can exploit the fact that a small set of grid values---a small stencil---is used in approximating the PDE at each location.  Finite difference, element, and volume schemes for discretizing PDES all normally have this property.\sidenote{Spectral methods \citep{Trefethen2000}, by contrast, have a large, sometimes global, stencil, and generally do not benefit.}
 
-The idea is to ``color'' the nodes, and thus also color the unknowns of the problem and the columns of the Jacobian, with a small set of colors so that each scalar equation in system \eqref{eq:nl:equation} relates nodes (unknowns) with distinct colors.  The ``colors'' are in fact just integers $\{0,1,2,\dots,c-1\}$, where $c$ is the number of colors used.  From the coloring, evaluations of $\bF$ can be redesigned, relative to the basic formula \eqref{eq:nl:fdjac}, to allow the computation of many columns of $J_{\bF}(\bx)$ simultaneously; this is formula \eqref{eq:nl:fdcolorjac} below.
+The idea is to ``color'' the nodes, and thus also color the unknowns of the problem and the columns of the Jacobian, with a small set of colors so that each scalar equation in system \eqref{eq:nl:equation} relates nodes (unknowns) with distinct colors.  The ``colors'' are in fact merely integers $\{0,1,2,\dots,c-1\}$; here $c$ is the number of colors used.  From the coloring, evaluations of $\bF$ can be redesigned, relative to the basic formula \eqref{eq:nl:fdjac}, to allow the computation of many columns of $J_{\bF}(\bx)$ simultaneously; this is formula \eqref{eq:nl:fdcolorjac} below.
 
-The fact that the number of needed $\bF$ evaluations in this context is one more than the number of colors needed for a (proper) vertex coloring \citep[e.g.~as defined in][]{ChartrandLesniakZhang2011} of a graph associated to the Jacobian matrix was first seen by \citet{ColemanMore1983}; see also the more recent review by \citet{Gebremedhinetal2005}.  Code in \PETSc is already present for such coloring-based finite-difference Jacobian approximations, and for \pDMDA-based structured grids we can invoke it through a run-time option.  Before looking at such runs, however, let's be clear on the coloring in a small example.
+The fact that the number of needed $\bF$ evaluations in this context is one more than the number of colors needed for a (proper) vertex coloring \citep[e.g.~as defined in][]{ChartrandLesniakZhang2011} of a graph associated to the Jacobian matrix was first seen by \citet{ColemanMore1983}; see also the more-recent review by \citet{Gebremedhinetal2005}.  Algorithms exist in \PETSc for such coloring-based finite-difference Jacobian approximations.  For \pDMDA-based structured grids we can invoke these algorithms through run-time options.  Before looking at such runs, however, let's be clear on the coloring in a small example.
 
 Consider the $N=7$ point grid that comes from this command:
 \begin{cline}
@@ -489,28 +489,40 @@ We take the unknowns, or the corresponding grid nodes, to be the vertices of a g
 
 Now suppose we color the vertices so that any two vertices which share an edge have distinct colors.  The coloring in the Figure uses $c=3$ colors.  In the case of this simple graph, $c=3$ is the minimum number needed, so that in this case $\chi(G)=c$ where $\chi(G)$ is the \emph{chromatic number} of $G$ \citep{ChartrandLesniakZhang2011}.
 
-However, optimally-coloring a graph is a hard problem which \PETSc does not attempt to solve.  The \PETSc-implemented ``incidence-degree ordering'' [\emph{default}] and ``smallest-last ordering'' graph-coloring algorithms are relatively-near to optimal in the provable sense that we get $c$-colorings for which $c \le \alpha N^{1/2} \chi(G(J))$ \citep{ColemanMore1983}, for some constant $\alpha>0$, where $N$ is the number of equations in \eqref{eq:nl:equation}.  More importantly, these algorithms do very well in the informal sense that $c$ is quite close to $\chi(G(J))$ for a large selection of test matrices \citep{ColemanMore1983}.
+The case of a structured 2D grid, as used in Chapter \ref{chap:st} with a finite-difference scheme \eqref{poissonsquareFD} for the Poisson equation \eqref{poissonsquare}, further illustrates the coloring idea.  The stencil of the scheme involves five unknowns $u_{i,j+1}, u_{i-1,j}, u_{i,j}, u_{i+1,j}, u_{i,j-1}$ (Figure \ref{fig:unitsquaregridstencil}).  Therefore the graph $G(J)$ in this case includes a complete graph on five vertices, a $K_5$ \citep{ChartrandLesniakZhang2011}, as a subgraph at each (generic interior) node in the structured grid, as shown in Figure 4.7.  Clearly $\chi(G(J))\ge 5$.  When \PETSc uses a coloring algorithm then it finds that indeed five colors suffice to color $G(J)$.\sidenote{At least in refined-grid cases using the default incidence-degree-ordering.  Certain coarse grids have lower chromatic number.}  We will be able to verify this behavior when we have a \pSNES-based 2D PDE example to work with, as in the next Chapter.
+% for number of colors on graph in fig:colorstencilplane, in refined-grid cases, compare
+%   $ ./ex5 -da_refine 4 -log_summary -snes_fd_color | grep SNESFunctionEval
+% which gives 19 function evals and
+%   $ ./ex5 -da_refine 4 -snes_converged_reason -snes_fd_color
+% which gives 3 iterations
+% we conclude  19=N(c+1)+1=3(c+1)+1  so c = 5
 
-Furhtermore, these algorithms run in a time proportional to the sum of squares of the number of nonzeros in each rows of $J$.  Thus we get a reasonably-good coloring not just in polynomial time in $N$, but in substantially-less time than $O(N^2)$ and often in $O(N)$ time for problems coming from discretized PDEs.  (Recall we are trying to improve on the existing $O(N^2)$ cost of the \texttt{-snes\_fd} method.)
+\begin{figure}
+\input{tikz/colorstencilplane.tex}
+\caption{For the 2D finite-difference scheme used in Chapter \ref{chap:st}, the graph $G(J)$ has a $K_5$ at every node (thin lines) because the stencil (thick lines) involves five unknowns.}
+\label{fig:colorstencilplane}
+\end{figure}
 
-We now also have a coloring of the columns of $J$, as shown in the bottom of Figure \ref{fig:fdcolorreaction}.  Each row has distinct colors, which is one way to describe our purpose here.  Next we generate vectors $\bv_0, \bv_1, \dots, \bv_{c-1} \in \RR^N$ by the rule that $\bv_k$ has a $1$ in entry $j$ if $k$ is the color of unknown $j$, and is otherwise zero.  In this $c=3$ case,
+Optimally-coloring a graph is a hard problem which \PETSc does not attempt to solve.  \PETSc includes ``incidence-degree ordering'' [\emph{default}] and ``smallest-last ordering'' graph-coloring algorithms which provide $c$-colorings for which $c \le \alpha N^{1/2} \chi(G(J))$ \citep{ColemanMore1983}, for some constant $\alpha>0$, where $N$ is the number of equations in \eqref{eq:nl:equation}.  These algorithms also do well in the informal sense that $c$ is close to $\chi(G(J))$ for a large selection of test matrices \citep{ColemanMore1983}.  Furthermore, these algorithms run in time proportional to the sum of squares of the number of nonzeros in each rows of $J$.  Thus we get a reasonably-good coloring not just in polynomial time in $N$, but in substantially-less time than $O(N^2)$ and often in $O(N)$ time for problems coming from discretized PDEs.\sidenote{Recall we are trying to improve on the existing $O(N^2)$ cost of the \texttt{-snes\_fd} method.}
+
+The graph coloring also implies a coloring of the columns of $J$, as shown in Figure \ref{fig:fdcolorreaction}.  (Each row has distinct colors, which is one way to describe our purpose here.)  The first step in modifying the finite-difference formulas is to generate vectors $\bv_0, \bv_1, \dots, \bv_{c-1} \in \RR^N$ by the rule that $\bv_k$ has a $1$ in entry $j$ if $k$ is the color of unknown $j$, and is otherwise zero.  In the $c=3$ case shown in Figure \ref{fig:fdcolorreaction},
 \begin{equation}
 \bv_0 = \begin{bmatrix} 1 \\ 0 \\ 0 \\ 1 \\ 0 \\ 0 \\ 1 \end{bmatrix}, \qquad
 \bv_1 = \begin{bmatrix} 0 \\ 1 \\ 0 \\ 0 \\ 1 \\ 0 \\ 0 \end{bmatrix}, \qquad
 \bv_2 = \begin{bmatrix} 0 \\ 0 \\ 1 \\ 0 \\ 0 \\ 1 \\ 0 \end{bmatrix}.
  \label{eq:nl:coloringvecs}
 \end{equation}
-In fact, a function maps from node/unknown index $j$ to color $k$,
+We define a function which maps from node (unknown) index $j$ to color $k$,
 \begin{equation}
 k = k(j),  \label{eq:nl:colorfunc}
 \end{equation}
 and $(\bv_k)_j = \delta_{k,k(j)}$.  Note $k(j) = j\mod 3$\, in this case.
 
-Finally we replace \eqref{eq:nl:fdjac} with
+Then we replace \eqref{eq:nl:fdjac} with
 \begin{equation}
 J_{ij} = \frac{\partial F_i}{\partial x_j} \approx \frac{F_i(\bx+\delta \bv_{k(j)}) - F_i(\bx)}{\delta}.  \label{eq:nl:fdcolorjac}
 \end{equation}
-The right sides of \eqref{eq:nl:fdjac} and \eqref{eq:nl:fdcolorjac} compute exactly the same entries $J_{ij}$, but the latter requires far fewer evaluations of $\bF$.  In particular, all columns of $J$ with color $k$ are computed by \eqref{eq:nl:fdcolorjac} just using the \emph{smallest} $j$ for which $k(j)=k$.  Thus, given a $c$-coloring of $G(J)$ there are exactly $c$ evaluations $\bF(\bx+\delta \bv_{k(j)})$, plus one more for $\bF(\bx)$, to fill $J$ using \eqref{eq:nl:fdcolorjac}.
+The right sides of \eqref{eq:nl:fdjac} and \eqref{eq:nl:fdcolorjac} compute exactly the same entries $J_{ij}$, but \eqref{eq:nl:fdcolorjac} requires far fewer evaluations of $\bF$.  In particular, all columns of $J$ with color $k$ are computed by \eqref{eq:nl:fdcolorjac} just using the \emph{smallest} $j$ for which $k(j)=k$.  Thus, given a $c$-coloring of $G(J)$ there are exactly $c$ evaluations $\bF(\bx+\delta \bv_{k(j)})$, plus one more for $\bF(\bx)$, to fill $J$ using \eqref{eq:nl:fdcolorjac}.
 
 The news is good when we actually try it.  The result is almost as fast in this 1D PDE case as using the analytical Jacobian:
 \begin{cline}
@@ -522,7 +534,7 @@ real 0.06
 %$
 Compare the run on page \pageref{etc:nl:bestreaction}.
 
-Actually counting the number of function evaluations in the various cases is a good idea, and there is no need to alter \texttt{reaction.c} to do so.\sidenote{Do not add print statements!}  Use \texttt{-log\_summary} and look at the output.  Because we want the ``\texttt{SNESFunctionEval}'' lines, \texttt{grep} extracts the count for the runs above:
+Counting the number of function evaluations in the various cases is a good idea, and there is no need to alter \texttt{reaction.c} to do so: use \texttt{-log\_summary} and look at the output.\sidenote{Do not add print statements!}  Because we want the ``\texttt{SNESFunctionEval}'' lines, \texttt{grep} extracts the count for the runs above:
 \begin{cline}
 $ ./reaction -da_refine 10 -snes_fd -snes_max_funcs 100000 -log_summary | grep SNESFunctionEval
 SNESFunctionEval   24586 1.0 3.3170e+00 1.0 ...
@@ -532,27 +544,12 @@ $./reaction -da_refine 10 -log_summary | grep SNESFunctionEval
 SNESFunctionEval       4 1.0 9.3341e-04 1.0 ...
 \end{cline}
 %$
-The exact number of $\bF$ evaluations was 24586, 13, and 4, respectively.
-
-Before proceeding, consider the structured 2D grid used in Chapter \ref{chap:st}, and in particular finite-difference scheme \eqref{poissonsquareFD} for the Poisson equation \eqref{poissonsquare}.  How would the corresponding graph-coloring approach work?  The stencil of the scheme involves five unknowns $u_{i,j+1}, u_{i-1,j}, u_{i,j}, u_{i+1,j}, u_{i,j-1}$ (Figure \ref{fig:unitsquaregridstencil}).  Therefore the graph $G(J)$ in this case includes a complete graph on five vertices, a $K_5$, as a subgraph at each (generic interior) node in the structured grid, as shown in Figure 4.7.  Clearly $\chi(G(J))\ge 5$.  However, when \PETSc does the default incidence-degree-ordering coloring algorithm then it finds that indeed five colors suffice to color $G(J)$, at least in refined-grid cases.  We will be able to test verify this behavior when we have a \pSNES-based 2D PDE example to work with, as in the next Chapter.
-
-\begin{figure}
-\input{tikz/colorstencilplane.tex}
-\caption{For the 2D finite-difference scheme used in Chapter \ref{chap:st}, the graph $G(J)$ has a $K_5$ at every node because the stencil (thick) involves five unknowns.}
-\label{fig:colorstencilplane}
-\end{figure}
-
-% for number of colors on graph in fig:colorstencilplane, in refined-grid cases, compare
-%   $ ./ex5 -da_refine 4 -log_summary -snes_fd_color | grep SNESFunctionEval
-% which gives 19 function evals and
-%   $ ./ex5 -da_refine 4 -snes_converged_reason -snes_fd_color
-% which gives 3 iterations
-% we conclude  19=N(c+1)+1=3(c+1)+1  so c = 5
+The number of $\bF$ evaluations was 24586, 13, and 4, respectively.
 
 
 \section{Jacobian-free Newton-Krylov (JFNK)} \label{sec:JFNK}
 
-Besides the finite-difference Jacobian approach above, using equation \eqref{eq:nl:fdjac} or \eqref{eq:nl:fdcolorjac} to compute the entries of the matrix, there is a different approach which requires no assembled Jacobian matrix at all.  It approximates matrix-vector products by a finite difference formula, and uses a Krylov-type method to solve \eqref{eq:nl:newton:eq} from a space
+Besides the finite-difference Jacobian approach above, using equation \eqref{eq:nl:fdjac} or \eqref{eq:nl:fdcolorjac} to compute the entries of the matrix, there is another approach which requires no assembled Jacobian matrix at all.  It approximates matrix-vector products with the Jacobian matrix by a finite difference formula, and uses a Krylov-type method to solve \eqref{eq:nl:newton:eq} from a space
 \begin{equation}
     \mathcal{K} = \operatorname{span}\{\br,J\br,J^2\br,\dots,J^{m-1}\br\}. \label{eq:nl:krylovagain}
 \end{equation}
@@ -568,11 +565,11 @@ Computing $\br = - \bF(\bx)$, to get the Krylov method started, requires evaluat
 \begin{equation}
 J^{\ell} \br \approx \frac{\bF(\bx+\delta J^{\ell-1}\br) - \bF(\bx)}{\delta} \label{eq:nl:JFNKiteration}
 \end{equation}
-for $\ell=1,\dots,m$.  Equation \eqref{eq:nl:JFNKiteration}, the central calculation in JFNK, uses $m$ evaluations of $\bF$ to compute the whole Krylov basis \eqref{eq:nl:krylovagain}.  By contrast, use of finite difference formula \eqref{eq:nl:fdjac} to compute a generic $N\times N$ Jacobian $J$ requires $N$ evaluations of $\bF$.  Thus JFNK is efficient if \eqref{eq:nl:newton:eq} is solved to desired tolerance in $m\ll N$ Krylov iterations.
+for $\ell=1,\dots,m$.  Equation \eqref{eq:nl:JFNKiteration}, the central calculation in JFNK, uses $m$ evaluations of $\bF$ to compute the whole Krylov basis \eqref{eq:nl:krylovagain}.  By contrast, use of finite difference formula \eqref{eq:nl:fdjac} to compute a generic $N\times N$ Jacobian $J$ requires $N$ evaluations of $\bF$.  Thus JFNK can be efficient if \eqref{eq:nl:newton:eq} is solved to desired tolerance in $m\ll N$ Krylov iterations.
 
 However, there are a few basic points to consider.  First, once you have a matrix you can do many things, such as incomplete matrix factorizations, other than computing a matrix-vector product or a Krylov basis, so giving up on matrices may be premature.  Second, and related, we may need to precondition linear equation \eqref{eq:nl:newton:eq}, in which case we want the Krylov space for the linear operator $M^{-1}J$, not for $J$ itself.  Also, in cases such as structured-grid PDE schemes where it can be applied, we have seen that coloring greatly reduces the cost of using \eqref{eq:nl:fdjac} to assemble $J$.  JFNK is a good strategy to the extent that it actually \emph{works}, and to the extent it beats the competition.
 
-Note JFNK is implemented in \PETSc and invoked by option \texttt{-snes\_mf}, where ``\texttt{mf}'' in stands for ``matrix-free.''  We shall see below, in the important and even essential preconditioned case, that there may be a matrix involved in JFNK anyway.  The method never involves fully-assembling the Jacobian matrix itself, however, and thus the ``Jacobian-free'' label is justified.
+Note JFNK is implemented in \PETSc and invoked by option \texttt{-snes\_mf}, where ``\texttt{mf}'' in stands for ``matrix-free.''\sidenote{The \PETSc API provides functions for even more flexibility and generality than are available at the command line with options \texttt{-snes\_mf}, \texttt{-snes\_fd}, \texttt{-snes\_fd\_color}, and so on.}  We shall see below, in the important and even essential preconditioned case, that there may be a matrix involved in JFNK anyway.  The method never involves fully-assembling the Jacobian matrix itself, however, and thus the ``Jacobian-free'' label is justified.
 
 The issues above can be pursued in more detail on a concrete example, so let us give it a try on a very coarse grid in the 1D diffusion-reaction PDE example \texttt{reaction.c}:
 \begin{cline}
@@ -630,19 +627,21 @@ Also recall that preconditioning matrices $M$ and $M^{-1}$ are usually never ass
 
 At this point we risk overwhelming the reader with options, so we pause to review the possibilities before testing them on the \texttt{reaction.c} problem.
 
-Table \ref{tab:snesjacobianoptions:needed} summarizes options relating to residual and Jacobian call-backs in \pSNES-using codes.  If no Jacobian or approximate Jacobian routine is provided in the user-written code then only finite-difference evaluation of an assembled Jacobian matrix (i.e.~\texttt{-snes\_fd} or \texttt{-snes\_fd\_color}) or finite-difference evaluation of the Jacobian-vector product inside the Krylov method (\texttt{-snes\_mf}, i.e.~JFNK) are available.  If a Jacobian routine \emph{is} provided then the Newton iteration itself occurs when no option is given.  However, the provided Jacobian may be used only to precondition the JFNK Jacobian-vector product, which is option \texttt{-snes\_mf\_operator}.  This last option may give quadratic convergence even if the provided Jacobian is inexact, that is, even if $P$ is a somewhat-poor approximation of the Jacobian.
+Table \ref{tab:snesjacobianoptions:needed} summarizes options relating to residual and Jacobian call-backs in \pSNES-using codes.  If no Jacobian or approximate Jacobian routine is provided in the user-written code then only finite-difference evaluation of an assembled Jacobian matrix (i.e.~\texttt{-snes\_fd} or \texttt{-snes\_fd\_color}) or finite-difference evaluation of the Jacobian-vector product inside the Krylov method (\texttt{-snes\_mf}, i.e.~JFNK) are available.  If a Jacobian routine \emph{is} provided then it is used in the Newton iteration (when no alternative option is given).
+
+However, option \texttt{-snes\_mf\_operator}, which we have not mentioned until now, tells the \pSNES to only use the provided Jacobian when preconditioning the JFNK Jacobian-vector product.  This last option may give quadratic convergence even if the provided Jacobian is inexact, that is, even if the ``material'' $P$ which is used to build $M$ in formulas \eqref{eq:nl:leftpre}--\eqref{eq:nl:JFNKwithrightpre} is only an approximation of the Jacobian $J$.
 
 \begin{table}
 \begin{tabular}{lllll}
- &\underline{no option}\hspace{0.0in} & \underline{\texttt{-snes\_fd}} & \underline{\texttt{-snes\_mf}} & \underline{\texttt{-snes\_mf\_operator}} \\
+ &\underline{\small no option}\hspace{0.0in} & \underline{\small\hspace{-0.05in}$\begin{array}{ll} \text{\texttt{-snes\_fd}} \\ \text{\texttt{-snes\_fd\_color}}\end{array}$} & \underline{\small \texttt{-snes\_mf}} & \underline{\small \texttt{-snes\_mf\_operator}} \\
 only $\bF$      & error           & $\bigcheckmark$ & $\bigcheckmark$ & error \\
-$\bF$ and $P$   & $\bigcheckmark$ & $\checkmark$    & $\checkmark$    & $\bigcheckmark$ \\
+$\bF$ and $P$   & $\checkmark$ & $\checkmark$    & $\checkmark$    & $\bigcheckmark$ \\
 $\bF$ and $J$   & $\bigcheckmark$ & $\checkmark$    & $\checkmark$    & $\checkmark$
 \end{tabular}
-\caption{Jacobian options when using \pSNES, compared by need for user-implemented functions.  Symbol ``$P$'' denotes an easy-to-invert approximate Jacobian while ``$J$'' denotes the actual Jacobian.  A big check mark shows recommended usage.} \label{tab:snesjacobianoptions:needed}
+\caption{Jacobian options when using \pSNES.  The row labels describe which mathematical objects have been provided through user-implemented code.  Symbol ``$P$'' denotes an approximate Jacobian while ``$J$'' denotes the actual Jacobian.  A larger check mark shows recommended usage.} \label{tab:snesjacobianoptions:needed}
 \end{table}
 
-From the code side, at a minimum a method for $\bF$ must be implemented in all cases, as there is no other way for \PETSc to know what equations you are solving.  There are two ways of providing $\bF$:  If the problem is based on a structured grid, as in \texttt{reaction.c} above, use \texttt{DMDASNESSetFunctionLocal()}.  In general, use \texttt{SNESSetFunction()}.  If only $\bF$ is provided, do not create or preallocate a \pMat for the Jacobian, as this is done internally by the \pSNES for \texttt{-snes\_fd} runs, while no assembled Jacobian \pMat exists for \texttt{-snes\_mf} runs.
+From the code side, at a minimum a method for $\bF$ must be implemented in all cases, as there is no other way for \PETSc to know what equations you are solving.\sidenote{Except in the case where the residual function $\bF$ itself represents a derivative (gradient) of an objective function.  See Chapter \ref{chap:of}.}   There are two ways of providing $\bF$:  If the problem is based on a structured grid, as in \texttt{reaction.c} above, use \texttt{DMDASNESSetFunctionLocal()}.  In general, use \texttt{SNESSetFunction()}.  If only $\bF$ is provided, do not create or preallocate a \pMat for the Jacobian, as this is done internally by the \pSNES for \texttt{-snes\_fd} and \texttt{-snes\_fd\_color} runs, while no assembled Jacobian \pMat exists for \texttt{-snes\_mf} runs.
 
 If an exact ($J$) or approximate ($P$) Jacobian function is implemented then there are two cases:
 \begin{quote}
@@ -652,11 +651,14 @@ If an exact ($J$) or approximate ($P$) Jacobian function is implemented then the
   \item In a general, first declare a \pMat variable, say ``\texttt{J}'', and then call \texttt{MatCreate()}, \texttt{MatSetSizes()}, and \texttt{MatSetFromOptions()} on it.  Then call either \texttt{MatSetUp()} or \texttt{MatXAIJPreallocate()} on \texttt{J}, to allocate space for the assembled Jacobian matrix.  Then provide the call-back code for function $J$ or $P$ (e.g.~``\texttt{FormJacobian()}'') and the \pMat \texttt{J} for both \pMat arguments through \texttt{SNESSetJacobian()}.
   \end{enumerate}
 \end{quote}
-In either case (i) or (ii), the user's Jacobian code only needs to set values in the second ``preconditioner'' \pMat argument, assuming in (ii) that \texttt{J} is provided for both \pMat arguments of   \texttt{SNESSetJacobian()} as described above.  The code should, however, \emph{assemble} both \pMat arguments.
+In either case (i) or (ii), the user's Jacobian code only needs to set values in the second ``preconditioner'' \pMat argument.  (This assumes in (ii) that \texttt{J} is provided for both \pMat arguments of \texttt{SNESSetJacobian()}, as described.)  The code should, however, \emph{assemble} both \pMat arguments.
 
-As practical advice for the debugging stage, you know you have correctly- and fully-implemented the Jacobian, and you have found an adequate initial iterate, if all four options in Table \ref{tab:snesjacobianoptions:evals} work and each gives apparent quadratic convergence when looking at the residual norm decay shown by \texttt{-snes\_monitor}.  As the reader may check that this is the situation for the last two codes \texttt{ecjacobian.c} and \texttt{reaction.c}.
+As practical advice for the debugging stage, you know you have correctly- and fully-implemented the Jacobian, and you have found an adequate initial iterate, if all four options (columns) in Table \ref{tab:snesjacobianoptions:needed} work and each gives apparent quadratic convergence when looking at the residual norm decay shown by \texttt{-snes\_monitor}.  As the reader may check, this is the situation for the last two codes \texttt{ecjacobian.c} and \texttt{reaction.c}.
 
-Another way to compare the options, especially in a structured PDE case where option \texttt{-snes\_fd\_color} might be effective, is shown in Table \ref{tab:snesjacobianoptions:evals}.  This Table supposes, rather unrealistically, that the number $q$ of Newton iterations is independent of the option.  For the last column it also assumes, again unrealistically, that the number of Krylov iterations is the same at each Newton iteration (in JFNK).
+Another way to compare the options, especially in a structured PDE case where option \texttt{-snes\_fd\_color} might be effective, is shown in Table \ref{tab:snesjacobianoptions:evals}.  This Table supposes, rather unrealistically, that the number $q$ of Newton iterations is independent of the option.  For the last column it also assumes, again unrealistically, that the number of Krylov iterations is the same at each Newton iteration (in JFNK).  The Table two simple points:\begin{itemize}
+\item Improved performance with \texttt{-snes\_fd\_color} comes from having a $c$-coloring where $c \ll N$.
+\item Improved performance with \texttt{-snes\_mf\_operator} comes from reducing the number $m$ of Krylov iterations.  We know from Chapter \ref{chap:ls} that this is primarily an issue of choosing the right preconditioner so that $m_2 \ll m_1$.
+\end{itemize}
 
 \begin{table}
 \begin{tabular}{lccc}
@@ -669,11 +671,6 @@ Jacobian $J$ or $P$    & $q$ & $\begin{array}{cc} 0 \\ 0 \end{array}$ & $\begin{
 \caption{Jacobian options compared by number of residual and Jacobian evaluations.  Here $q$ is the number of Newton iterations, $N$ is the dimension of the problem, $c$ is the number of colors on $G(J)$, $m_1$ is the dimension of the Krylov space for $J$, and $m_2$ is the Krylov space dimension for the preconditioned operator $M^{-1}J$.} \label{tab:snesjacobianoptions:evals}
 \end{table}
 
-Table \ref{tab:snesjacobianoptions:evals} is useful for making two simple points:\begin{itemize}
-\item Improved performance with \texttt{-snes\_fd\_color} comes from having a $c$-coloring where $c \ll N$.
-\item Improved performance with \texttt{-snes\_mf\_operator} comes from reducing the number $m$ of Krylov iterations.  We already know from Chapter \ref{chap:ls} that this is primarily an issue of choosing the right preconditioner so that $m_2 \ll m_1$.
-\end{itemize}
-
 
 \section{Testing JFNK with preconditioning} \label{sec:testsnesmfoperator}
 
@@ -683,7 +680,7 @@ Specifically, suppose we modify this line in \texttt{reaction.c} (Code \ref{code
 \begin{code}
     col[1] = i;    v[1] = 2.0 - h*h * dRdu;
 \end{code}
-to remove ``\texttt{- h*h * dRdu}'', corresponding to the nonlinear term $\rho \sqrt{u}$ in \eqref{eq:nl:drsqrt}, to get
+to remove ``\texttt{- h*h * dRdu}'', corresponding to the nonlinear term $\rho \sqrt{u}$ in \eqref{eq:nl:drsqrt}, to obtain
 \begin{code}
     col[1] = i;    v[1] = 2.0;
 \end{code}
