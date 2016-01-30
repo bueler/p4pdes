@@ -146,7 +146,15 @@ then the layout looks like Figure \ref{fig:mpitwoveclayout}.  In this case the a
 \label{fig:mpitwoveclayout}
 \end{marginfigure}
 
-\PETSc \pMat objects are comparable to \pVecs, but they are not merely 2D C arrays even in serial (i.e.~in one-process runs).  Compared to \pVecs they require additional choices regarding parallel distribution and storage formats.  Though this is hidden inside the implementation of \pMat, the most common storage format is \emph{parallel compressed sparse row storage}, what \PETSc calls the \texttt{MATMPIAIJ} type.  In this type a range of rows is owned by each process (parallel row storage), within each owned range of rows only the specifically-allocated entries are stored (sparse), and these nonzero entries are stored contiguously in memory using an additional index array (compressed).  The ``specifically-allocated'' entries are generally the nonzero entries, but they are always referred-to as ``nonzero entries'' in sparse representations even though they occasionally have zero values.
+\PETSc \pMat objects are comparable to \pVecs, but they are not merely 2D C arrays even in serial (i.e.~in one-process runs).  Compared to \pVecs they require additional choices regarding parallel distribution and storage formats.  Though this is hidden inside the implementation of \pMat, the most common storage format is \emph{parallel compressed sparse row storage}, what \PETSc calls the \texttt{MATMPIAIJ} type.  In this type a range of rows is owned by each process (parallel row storage), within each owned range of rows only the specifically-allocated entries are stored (sparse), and these nonzero entries are stored contiguously in memory using an additional index array (compressed).  An example is shown in Figure \ref{fig:mpitwomatlayout}.
+
+\begin{marginfigure}
+\input{tikz/mpitwomatlayout.tex}
+\caption{A parallel \pMat layout on two processes.}
+\label{fig:mpitwomatlayout}
+\end{marginfigure}
+
+The ``specifically-allocated'' entries are generally the nonzero entries, but they are always referred-to as ``nonzero entries'' in sparse representations even though they occasionally have zero values.
 
 \pMat objects are linear operators and their ``purpose'' is to act on (multiply) \pVecs.  Of course, the result \pVec from a \pMat-\pVec product is a linear combination of the columns of the \pMat.  Thus, in practice and by default, parallel row storage of the \pMat means these things:
 \begin{itemize}
@@ -155,37 +163,39 @@ then the layout looks like Figure \ref{fig:mpitwoveclayout}.  In this case the a
 \item After the scatter the \pMat-\pVec product is a local operation, requiring no further communication.
 \end{itemize}
 
-One doesn't really need to know all this to assemble a matrix.  For example, here is one way to create and assemble a $4\times 4$ \pMat object one row at a time:
+One doesn't really need to know all this to assemble a matrix.  For example, here is one way to create and assemble a $4\times 4$ \pMat object one row at a time, with a \texttt{for} loop over the row index \texttt{i}:
 \begin{code}
 Mat    A;
 int    i, j[4] = {0, 1, 2, 3};
-double v[4];
+double aA[4][4] = {{ 1.0,  2.0,  3.0,  0.0},
+                   { 2.0,  1.0, -2.0, -3.0},
+                   {-1.0,  1.0,  1.0,  0.0},
+                   { 0.0,  1.0,  1.0, -1.0}};
 
 MatCreate(PETSC_COMM_WORLD,&A);
 MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,4,4);
 MatSetFromOptions(A);
 MatSetUp(A);
-
-i = 0;  v[0] = 1.0;  v[1] = 2.0;  v[2] = 3.0;
-MatSetValues(A,1,&i,3,j,v,INSERT_VALUES);
-i = 1;  v[0] = 2.0;  v[1] = 1.0;  v[2] = -2.0;  v[3] = -3.0;
-MatSetValues(A,1,&i,4,j,v,INSERT_VALUES);
-i = 2;  v[0] = -1.0;  v[1] = 1.0;  v[2] = 1.0;  v[3] = 0.0;
-MatSetValues(A,1,&i,4,j,v,INSERT_VALUES);
-j[0] = 1;  j[1] = 2;  j[2] = 3;
-i = 3;  v[0] = 1.0;  v[1] = 1.0;  v[2] = -1.0;
-MatSetValues(A,1,&i,3,j,v,INSERT_VALUES);
-
+for (i=0; i<4; i++) {
+    MatSetValues(A,1,&i,4,j,aA[i],INSERT_VALUES);
+}
 MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);
 MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);
 \end{code}
-The method \texttt{MatSetValues()} sets multiple values, in this case a row.  The ``\texttt{1,\&i}'' arguments indicate that we are setting one row with global index \texttt{i}.  The ``\texttt{3,j}'' or ``\texttt{4,j}'' arguments indicate that integer array \texttt{j} has the 3 or 4 global column indices.
 
-\begin{marginfigure}
-\input{tikz/mpitwomatlayout.tex}
-\caption{A parallel \pMat layout on two processes.  Blank entries are not allocated.}
-\label{fig:mpitwomatlayout}
-\end{marginfigure}
+The method \texttt{MatSetValues()} sets multiple values, in this case a row.  The ``\texttt{1,\&i}'' arguments indicate that we are setting one row with global index \texttt{i}.  The ``\texttt{4,j}'' arguments indicate that integer array \texttt{j} has the 4 column indices for an entire row.  Note that ``\texttt{aA[i]}'' is a C \emph{pointer}, essentially of type \texttt{double*}, to the $i$th row of $A$.
+
+The above method of setting entries treats the matrix as dense in the sense that every entry is filled, even those with value $0$.  On the other hand, assembly one row at a time is very common in PDE-type applications, where each row represents an equation at a grid/mesh location.  Alternatively, one might only insert the nonzero entries, with integer arrays \texttt{i[]} and \texttt{j[]} indicating the row and column indices of the corresponding entry taken from \texttt{aA[]}.  This time a single \texttt{MatSetValues()} call replaces the \texttt{for} loop:
+\begin{code}
+int    i[13] = {0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3},
+       j[13] = {0, 1, 2, 0, 1, 2, 3, 0, 1, 2, 1, 2, 3};
+double aA[13] = {1.0,  2.0,  3.0,  0.0, 2.0,  1.0, -2.0, -3.0,
+                 -1.0,  1.0,  1.0,  0.0, 0.0,  1.0,  1.0, -1.0};
+...
+MatSetValues(A,13,i,13,j,aA,INSERT_VALUES);
+...
+\end{code}
+See Exercise \ref{chap:ls}.\ref{exer:ls:sparseinsertion}.
 
 If the above lines appeared in \texttt{mycode.c}, and if it were run
 \begin{cline}
@@ -434,13 +444,13 @@ We already know how to create, fill, and destroy \pVec and \pMat objects.  Code 
 \begin{bmatrix} 7 \\ 1 \\ 1 \\ 3 \end{bmatrix}.
 \end{equation}
 
-A \pKSP object solves the linear system, with the specific method chosen at runtime.  It has the expected \texttt{Create/SetFromOptions/Destroy} sequence.  In addition, at the set-up stage for the linear system we tell the \pKSP about the matrix via the command
+A \pKSP object solves the linear system, with the specific solution algorithm only chosen at runtime.  It has the expected \texttt{Create/SetFromOptions/Destroy} sequence.  In addition, at the set-up stage for the linear system we tell the \pKSP about the matrix via the command
 \begin{code}
 KSPSetOperators(ksp,A,A);
 \end{code}
-Why do we list \texttt{A} twice in calling \texttt{KSPSetOperators()}?  The reason is that at runtime we generally choose a preconditioning method which builds $M^{-1}$ in equation \eqref{introleftpre} or \eqref{introrightpre} from $A$ or from an approximation of $A$.  For example, \emph{incomplete LU} factorization of $A$ (``ILU($0$)'') can be used in generating $M^{-1}$, or $M$ could be the diagonal of $A$ as in the example on page \pageref{example:ls:jacobirichardson}.  The second matrix argument to \texttt{KSPSetOperators()} is this \pMat from which $M^{-1}$ is built.
+Why do we list \texttt{A} twice in calling \texttt{KSPSetOperators()}?  The reason is that at runtime we generally choose a preconditioning method which builds $M^{-1}$ in equation \eqref{introleftpre} or \eqref{introrightpre} from $A$ or from an approximation of $A$.  For example, \emph{incomplete LU} factorization of $A$ (``ILU($0$)'') can be used in generating $M^{-1}$.  Alternatively, $M$ could be the diagonal of $A$ as in the example on page \pageref{example:ls:jacobirichardson}.  The second matrix argument to \texttt{KSPSetOperators()} is this \pMat from which $M^{-1}$ is built.
 
-Note we do not supply $M$ \emph{itself} because that would obstruct easy choice among preconditioners at runtime, and require the user to write extra code.  Instead we supply ``material'' from which the preconditioning action $M^{-1}$ is built.  The most common such material is $A$ itself, as here.  \PETSc extracts the diagonal from this ``material'' in Jacobi preconditioning, for example.  Or it computes ILU($0$) factors $L$ and $U$ from $A$, in which case $A \approx LU$ may be a poor approximation but $M^{-1} = (LU)^{-1} = U^{-1} L^{-1}$ is applied in preconditioning.
+Note we do not supply $M$ \emph{itself} because that would obstruct easy choice among preconditioners at runtime, and require the user to write extra code.  Instead we supply ``material'' from which the preconditioning action $M^{-1}$ is built.  The most common such material is $A$ itself, as here.  In Jacobi preconditioning, for example, \PETSc extracts the diagonal from the ``material.''  Or it computes ILU($0$) factors $L$ and $U$ from $A$, in which case $A \approx LU$ is only an approximation, but $M^{-1} = (LU)^{-1} = U^{-1} L^{-1}$ may be a helpful preconditioner.
 
 To actually solve the system we call
 \begin{code}
