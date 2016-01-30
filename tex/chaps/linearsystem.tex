@@ -166,7 +166,7 @@ The ``specifically-allocated'' entries are generally the nonzero entries, but th
 
 \section{Example \pMat assembly}
 
-One doesn't really need to know all this to assemble a matrix.  For example, here is one way to create and assemble a $4\times 4$ \pMat, the matrix shown in Figure \ref{fig:mpitwomatlayout}, one row at a time, with a \texttt{for} loop over the row index \texttt{i}:
+One doesn't really need to know how \PETSc works internally in order to assemble a matrix.  For example, here is one way to fill a $4\times 4$ \pMat, the matrix shown in Figure \ref{fig:mpitwomatlayout}, one row at a time by using a \texttt{for} loop over the row index \texttt{i}:
 \begin{code}
 Mat    A;
 int    i, j[4] = {0, 1, 2, 3};
@@ -186,11 +186,11 @@ MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);
 MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);
 \end{code}
 
-The method \texttt{MatSetValues()} sets multiple values \emph{in a block}, in this case a row.\sidenote{That is, a row is a $1\times 4$ block.}  The ``\texttt{1,\&i}'' arguments indicate that we are setting one row with global index \texttt{i}.  The ``\texttt{4,j}'' arguments indicate that integer array \texttt{j} has the 4 column indices for an entire row.  Note that ``\texttt{aA[i]}'' is a C \emph{pointer}, essentially of type \texttt{double*}, to the $i$th row of $A$.
+The function \texttt{MatSetValues()} sets multiple values \emph{in a block}, in this case a row.\sidenote{Here a row is a $1\times 4$ block.}  The ``\texttt{1,\&i}'' arguments indicate that we are setting one row index \texttt{i}.  The ``\texttt{4,j}'' arguments indicate that integer array \texttt{j} has the 4 column indices for the entire row.  Note that ``\texttt{aA[i]}'' is a C \emph{pointer}, essentially of type \texttt{double*}, to the $i$th row of $A$.
 
-Assembly one row at a time is very common in PDE-type applications, where each row represents an equation at a grid/mesh location.  In such cases there may be only a few nonzero entries per row.  The above method of setting entries treats the matrix as dense, however, and every entry is filled, including those with value $0.0$.
+Assembly one row at a time is common in PDE-type applications, where a row represents the equation at a grid/mesh location.  In such cases there may be only a few nonzero entries per row.  However, the above method of setting entries treats the matrix as dense: every entry is filled including those with value $0.0$.
 
-The same matrix could be formed by inserting only the 13 nonzero entries, as one would expect with a sparse matrix.  In the current case this is mildly awkward because \texttt{MatSetValues()} sets a \emph{block} of entries, as already noted.\sidenote{Essentially because \PETSc is intended to work with matrices arising from problems like PDEs with some underlying structure.}  Here we break up $A$ into three contiguous blocks of nonzeros: call \texttt{MatSetValues()} on a $3\times 3$ block, call \texttt{MatSetValues()} on a $1\times 3$ block, and call \texttt{MatSetValue()} on a single entry.  The \texttt{for} loop is gone but the procedure is not elegant:
+The same matrix could be formed by inserting only the 13 nonzero entries, as one would expect with a sparse matrix.  In the current case this is mildly awkward because \texttt{MatSetValues()} sets a \emph{block} of entries, as already noted.  Here we break up $A$ into three contiguous blocks of nonzeros: we call \texttt{MatSetValues()} on a $3\times 3$ block, then on a $1\times 3$ block, and then we call \texttt{MatSetValue()} on a single entry.  This example illustrates the general block-wise procedure of assembly, and the \texttt{for} loop is gone, but one cannot call it elegant here:
 \begin{code}
 int    i1[3] = {0, 1, 2},
        j1[3] = {0, 1, 2},
@@ -211,14 +211,7 @@ MatSetValue(A,i3,j3,aA3,INSERT_VALUES);
 \end{code}
 Exercise \ref{chap:ls}.\ref{exer:ls:sparseinsertion} asks you to confirm that the solution to the corresponding linear system is the same.
 
-If the above lines appeared in \texttt{mycode.c}, and if it were run
-\begin{cline}
-$ mpiexec -n 2 ./mycode
-\end{cline}
-%$
-then the layout would be as in Figure \ref{fig:mpitwomatlayout}.
-
-\PETSc can show us the entries in the \pMat in different formats at runtime.  Assuming the \pMat was assembled using the second (sparse) method above, we get
+\PETSc can show us the entries in the \pMat in different formats at runtime.  Assuming the \pMat was assembled using the second (sparse) method above, and if the above lines appeared in \texttt{mycode.c}, we could say:
 \begin{cline}
 $ ./mycode -mat_view
 Mat Object: 1 MPI processes
