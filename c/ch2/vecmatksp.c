@@ -8,9 +8,9 @@ int main(int argc,char **args) {
   Vec    x, b;
   Mat    A;
   KSP    ksp;
-  int    i, j[4] = {0, 1, 2, 3};
-  double v[4] = {7.0, 1.0, 1.0, 3.0},
-         aa[4][4] = {{ 1.0,  2.0,  3.0,  0.0},
+  int    i, j[4] = {0, 1, 2, 3};                // j = column indices
+  double ab[4] = {7.0, 1.0, 1.0, 3.0},          // entries of vector b
+         aA[4][4] = {{ 1.0,  2.0,  3.0,  0.0},  // entries of matrix A
                      { 2.0,  1.0, -2.0, -3.0},
                      {-1.0,  1.0,  1.0,  0.0},
                      { 0.0,  1.0,  1.0, -1.0}};
@@ -20,7 +20,7 @@ int main(int argc,char **args) {
   ierr = VecCreate(PETSC_COMM_WORLD,&b); CHKERRQ(ierr);
   ierr = VecSetSizes(b,PETSC_DECIDE,4); CHKERRQ(ierr);
   ierr = VecSetFromOptions(b); CHKERRQ(ierr);
-  ierr = VecSetValues(b,4,j,v,INSERT_VALUES); CHKERRQ(ierr);
+  ierr = VecSetValues(b,4,j,ab,INSERT_VALUES); CHKERRQ(ierr);
   ierr = VecAssemblyBegin(b); CHKERRQ(ierr);
   ierr = VecAssemblyEnd(b); CHKERRQ(ierr);
 //  ierr = VecView(b,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);  //STRIP
@@ -29,8 +29,8 @@ int main(int argc,char **args) {
   ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,4,4); CHKERRQ(ierr);
   ierr = MatSetFromOptions(A); CHKERRQ(ierr);
   ierr = MatSetUp(A); CHKERRQ(ierr);
-  for (i=0; i<4; i++) {
-      ierr = MatSetValues(A,1,&i,4,j,aa[i],INSERT_VALUES); CHKERRQ(ierr);
+  for (i=0; i<4; i++) {   // set entries one row at a time
+      ierr = MatSetValues(A,1,&i,4,j,aA[i],INSERT_VALUES); CHKERRQ(ierr);
   }
   ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
   ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
@@ -49,3 +49,4 @@ int main(int argc,char **args) {
   return 0;
 }
 //END
+
