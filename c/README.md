@@ -1,7 +1,7 @@
 p4pdes/c/
 =========
 
-Codes to support a book on using PETSc for PDEs.
+C codes which support a book on using PETSc for PDEs.
 
   * I will maintain and support these example codes in the long term.
 
@@ -9,8 +9,8 @@ Codes to support a book on using PETSc for PDEs.
 
 Follow instructions at [www.mcs.anl.gov/petsc/documentation/installation.html](http://www.mcs.anl.gov/petsc/documentation/installation.html).
 
-  * My book does not contain PETSc installation instructions or advice.  Maintaining such information is the job of PETSc developers, not me.  Thank goodness.
-  * Also, it does not help the reader with debugging C programs.
+  * My book does not contain PETSc installation instructions, though it has minimal advice.  Maintaining installation information is the job of PETSc developers, not me.  Thank goodness.
+  * Also, my book does not help the reader with debugging C programs.
 
 ### compile and run one code
 
