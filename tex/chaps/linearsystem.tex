@@ -459,17 +459,18 @@ A \pKSP object solves the linear system, with the specific solution algorithm on
 \begin{code}
 KSPSetOperators(ksp,A,A);
 \end{code}
+
 Why do we list \texttt{A} twice in calling \texttt{KSPSetOperators()}?  The reason is that at runtime we generally choose a preconditioning method which builds $M^{-1}$ in equation \eqref{introleftpre} or \eqref{introrightpre} from $A$ or from an approximation of $A$.  For example, \emph{incomplete LU} factorization of $A$ (``ILU($0$)'') can be used in generating $M^{-1}$.  Alternatively, $M$ could be the diagonal of $A$ as in the example on page \pageref{example:ls:jacobirichardson}.  The second matrix argument to \texttt{KSPSetOperators()} is this \pMat from which $M^{-1}$ is built.
 
-Note we do not supply $M$ \emph{itself} because that would obstruct easy choice among preconditioners at runtime, and require the user to write extra code.  Instead we supply ``material'' from which the preconditioning action $M^{-1}$ is built.  The most common such material is $A$ itself, as here.  In Jacobi preconditioning, for example, \PETSc extracts the diagonal from the ``material.''  Or it computes ILU($0$) factors $L$ and $U$ from $A$, in which case $A \approx LU$ is only an approximation, but $M^{-1} = (LU)^{-1} = U^{-1} L^{-1}$ may be a helpful preconditioner.
+\cinput{vecmatksp.c}{\CODELOC}{Solve a small linear system.}{//START}{//END}{code:vecmatksp}
+
+Note that we do not supply $M$ \emph{itself} because that would obstruct easy choice among preconditioners at runtime, and require the user to write extra code.  Instead we supply ``material'' from which the preconditioning action $M^{-1}$ is built.  The most common such material is $A$ itself, as here.  In Jacobi preconditioning, for example, \PETSc extracts the diagonal from the ``material.''  Or it computes ILU($0$) factors $L$ and $U$ from $A$, in which case $A \approx LU$ is only an approximation, but $M^{-1} = (LU)^{-1} = U^{-1} L^{-1}$ may be a helpful preconditioner.
 
 To actually solve the system we call
 \begin{code}
 KSPSolve(ksp,b,x);
 \end{code}
 This supplies the right-hand side of the system, an allocated and assembled \pVec \texttt{b}, and space for the solution, an allocated \pVec \texttt{x}.  After this we display the solution using \texttt{VecView()}.  Everything else about Code \ref{code:vecmatksp} should be self-explanatory.
-
-\cinput{vecmatksp.c}{\CODELOC}{Solve a small linear system.}{//START}{//END}{code:vecmatksp}
 
 Let us compile and run it:
 \begin{cline}
@@ -609,9 +610,7 @@ We have seen how \PETSc code sets up and solves linear systems, but there is mor
 \item Using \texttt{VecAXPY()}, \texttt{VecNorm()}, and \texttt{PetscPrintf()} to compute and display the numerical error in a case where the exact solution is known.
 \end{itemize}
 
-\cinputpart{tri.c}{\CODELOC}{Set up \pVec and \pMat objects for a tridiagonal system.}{I}{//STARTSETUP}{//ENDSETUP}{code:tripartone}
-
-First we build and run the code:
+Build and run the code:
 \begin{cline}
 $ make tri
 $ ./tri -ksp_monitor -a_mat_view ::ascii_dense
@@ -625,6 +624,8 @@ Mat Object:(a_) 1 MPI processes
   1 KSP Residual norm 5.519370044893e-16 
 error for m = 4 system is |x-xexact|_2 = 5.1e-16
 \end{cline}
+
+\cinputpart{tri.c}{\CODELOC}{Set up \pVec and \pMat objects for a tridiagonal system.}{I}{//STARTSETUP}{//ENDSETUP}{code:tripartone}
 
 The first new tool used in Code \ref{code:tripartone} is bracketed by \texttt{PetscOptionsBegin()} and \texttt{PetscOptionsEnd()}, namely the call to \texttt{PetscOptionsInt()}.  The \texttt{Begin} method sets a prefix ``\texttt{-tri\_...}'' so that the new option we create is distinguished from the many built-in \PETSc options that start with \texttt{-ksp\_...} or \texttt{-vec\_...} or whatever.  Here \texttt{PetscOptionsInt()} creates option \texttt{-tri\_m} so the user can set the variable \texttt{m}, and leave the default \texttt{m}$=4$ unaltered if the option is not set.
 
@@ -644,13 +645,13 @@ error for m = 2 system is |x-xexact|_2 = 8.0e-16
 
 After setting up the new option, next in \texttt{tri.c} the numerical solution \pVec \texttt{x} is created just as we did in the last example \texttt{vecmatksp.c} (Code \ref{code:vecmatksp}).  But now we also want to create \pVecs \texttt{b} and \texttt{xexact}; the former is the right-hand side of the linear system and the latter holds the exact solution to the linear system so that we can evaluate the error in the numerical solution.  Though at this stage we have not filled any entries of \texttt{x}, we can save repetitive function calls to \texttt{VecCreate/SetSizes/SetFromOptions()}, when creating these additional \pVecs, by calling \texttt{VecDuplicate()} to allocate \pVecs just like \texttt{x}.  (There is a different method for copying the contents of \pVecs, namely \texttt{VecCopy()}.  It requires that the two \pVecs are already allocated and have the same layout.)
 
+\cinputpart{tri.c}{\CODELOC}{Assemble and solve.}{II}{//ENDSETUP}{//ENDSOLVE}{code:triparttwo}
+
 Next we assemble the matrix $A$.  This is a boring tridiagonal matrix with $3$ on the diagonal and $-1$ in the super- and sub-diagonals.  Though boring, we want to assemble it efficiently in parallel, something that will be important when solving 2D and 3D PDEs in later chapters.  However, only when \texttt{tri.c} is run do we know how many processes are in use.  The method \texttt{MatGetOwnershipRange()} tells our program, running on a particular process (rank), what rows it owns locally.  In the case of a many structured matrices like this one, we can avoid all interprocess communication by assembling exactly the rows we own.  As seen at the top of Code \ref{code:triparttwo}, we call
 \begin{quote}
 \texttt{MatGetOwnershipRange(A,\&Istart,\&Iend)}
 \end{quote}
 to obtain the starting and ending row indices for the local process.  These are used as limits in a \texttt{for} loop over the locally own rows.  We use \texttt{MatSetValues()} to actually set the entries of $A$ and \texttt{MatAssemblyBegin/End()} to complete the assembly of $A$.
-
-\cinputpart{tri.c}{\CODELOC}{Assemble and solve.}{II}{//ENDSETUP}{//ENDSOLVE}{code:triparttwo}
 
 We need to assemble the right-hand side $\bb$ of the linear system and also the exact solution $\bx_{\text{exact}}$ to the linear system ($A\bx_{\text{exact}} = \bb$).  The easiest way, for demonstration purposes here, is to \emph{choose} $\bx_{\text{exact}}$ and then compute $\bb$ by multiplying by $A$.  Thus, we set (unimportant) values for \texttt{xexact}, and call \texttt{VecAssemblyBegin/End()} on it.  Then we compute \texttt{b} by calling \texttt{MatMult(A,xexact,b)}.
 
@@ -817,7 +818,13 @@ where $\kappa(S) = \|S\| \|S^{-1}\|$ is the condition number.\sidenote{Here $\|\
 
 \item For the $\omega=1$ Richardson iteration \eqref{introrichardson} and $\bu_0=\bb$ we obtain $\bu_k = q_k(A) \bb$ for polynomials $q_k$ given by \eqref{richpolys}.  Show that if $\lim_{k\to\infty} q_k=q_\infty$ exists then $q_\infty(x)=1/x$.  On the other hand, by setting $y=1-x$ and defining $Q_k(y)=q_k(1-y)$, show $Q_k(y)$ is the partial sum of a well-known series with a well-known radius of convergence.
 
-\item \label{exer:ls:sparseinsertion}  Modify \texttt{vecmatksp.c} to a new program \texttt{vmksparse.c} which uses the sparse entry insertion method shown on page \pageref{page:ls:sparseinsertion}.  Confirm that the result is the same for the solution of the linear system, but that the \texttt{-mat\_view} results from the two programs are different.
+\item \label{exer:ls:sparseinsertion}  Modify \texttt{vecmatksp.c} to a new program \texttt{vmksparse.c} which uses the sparse insertion method shown on page \pageref{page:ls:sparseinsertion}.  Confirm that the result is the same for the solution of the linear system, but note how the \texttt{-mat\_view} results from the two programs differ.
+
+\item \label{exer:ls:rankzerosetsall}  In the text describing \texttt{vecmatksp.c} we assert that communication might occur during the \texttt{VecAssemblyBegin/End()} calls.  However, as \texttt{vecmatksp.c} is written, each process has all the values it needs.\sidenote{Thus the \texttt{VecAssemblyBegin/End()} calls actually have the effect of ignoring all set values except those that go on the current process.}  To demonstrate a case where communication occurs, modify \texttt{vecmatksp.c} to a new program \texttt{vmkrankzero.c} by adding
+\begin{codeplain}
+MPI_Comm_rank(PETSC_COMM_WORLD,&rank)
+\end{codeplain}
+as in \texttt{e.c} in Chapter \ref{chap:gs}.  Then surround the \texttt{VecSetValues(b,\dots)} and \texttt{MatSetValues(A,\dots)} lines in \texttt{vecmatksp.c} with conditional ``\verb|if (rank == 0) { ... }|'' so that \texttt{...SetValues()} is only called from one process, even in parallel.  In this case, to fill the appropriate entries on each nonzero-rank process, a scatter must occur.  Check that this version of the code gives the same results for the solution of the linear system, and from options \verb|-vec_view -mat_view|.
 
 \item Consider Richardson iteration in the example
 \begin{cline}
