@@ -5,9 +5,9 @@ stokes: stokes.o  chkopts
 	-${CLINKER} -o stokes stokes.o  ${PETSC_LIB}
 	${RM} stokes.o
 
-patterns: patterns.o  chkopts
-	-${CLINKER} -o patterns patterns.o  ${PETSC_LIB}
-	${RM} patterns.o
+pattern: pattern.o  chkopts
+	-${CLINKER} -o pattern pattern.o  ${PETSC_LIB}
+	${RM} pattern.o
 
 
 # etc
@@ -15,5 +15,5 @@ patterns: patterns.o  chkopts
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ patterns stokes
+	@rm -f *~ pattern stokes
 
