@@ -2,7 +2,7 @@ include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
 plap: plap.o chkopts
-	-${CLINKER} -o plap plap.o ${PETSC_SNES_LIB}
+	-${CLINKER} -o plap plap.o ${PETSC_LIB}
 	${RM} plap.o
 
 # testing
