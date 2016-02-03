@@ -3,9 +3,13 @@
 
 This book is about numerically solving linear and nonlinear partial differential equations (PDEs) by writing C code \citep{KernighanRitchie1988} that directly calls \PETSc.  It tries to both explain the ideas and illustrate them through example codes.  The examples come with enough background information and context so that readers can easily use them as a basis for further developments.  Demonstrated performance and scalability are goals, so runtime options are explained and compared, and explored in the exercises.
 
-This book is written from the conviction that \emph{better access to common knowledge among experts} advances scientific computing as a discipline.  An expert in \PETSc may say about this book that ``I knew all that'' \emph{and} that ``this book is a fast on-ramp to what I already know.''  That is precisely my hope.
+The inside front cover lists the PDE problems covered in this book, according the Chapter in which they appear.  These problems are thus not organized by following any of the traditions of the substantial PDE literature \citep[for just a start]{Evans2010,Ockendonetal2003}.  Instead, roughly-speaking, the problems appear in the order in which it is easiest to comprehend the needed algorithms and components from \PETSc (see inside back cover).
 
-So, let's suppose you have taken a mathematics course or two in partial differential equations (PDEs).  You have written a few codes in C, and probably some in \Matlab or Python or similar scripting languages.  You are interested in solving PDE or similar models numerically in parallel on big problems.  Then this book is for you.
+The reader experienced with PDEs will note an absence of purely-hyperbolic problems \citep[compare][]{LeVeque2002}.  This reflects the current book's focus on problems in which (large) linear and nonlinear systems of equations must be solved, where one would want solutions in parallel.
+
+This book is written from the conviction that \emph{better access to common knowledge among experts} advances scientific computing as a discipline.  An expert in PDEs and \PETSc might say, about this book, both that ``I knew all that'' and that ``it is a fast on-ramp to what I already know.''  That is precisely my hope.
+
+So, let's suppose you have taken a mathematics course or two in partial differential equations (PDEs).  You have written a few codes in C, and probably more codes using \Matlab or Python or similar scripting languages.  You are interested in numerically-solving PDE problems in parallel on big machines.  Then this book is for you.
 
 \section{What is \PETSc?}
 
@@ -13,56 +17,62 @@ The Portable, Extensible Toolkit for Scientific computing (\PETSc)\sidenote{Say 
 
 \PETSc is not particularly new.  Version 2.0, the first version to make an impact in the scientific computing world, was developed in 1994.  A well-known monograph \citet{Smithetal1996} uses \PETSc 2.0 for scalable solutions of linear PDEs.  That book focusses on pre-conditioned iterative linear solvers and domain decomposition.  For example, methods such as additive Schwarz are shown to scalably-solve the Poisson equation on irregular domains.
 
-But \PETSc is now at version \PETSCVERSION.  It has evolved into a more powerful toolbox with a much richer API (application program interface).  Typical examples and applications are for nonlinear PDEs.  Nonlinear, multigrid, and multiphysics\sidenote{This buzzword refers to a diverse system of coupled PDEs with nontrivial scalings among the variables.} parts of the API are now highly-visible to users.  The \PETSc strategy is to compose Newton's method and mesh topology tools with a run-time choice of preconditioners and iterative linear solvers.  Navigating this algorithmic ``stack'' requires more user knowledge than a generation ago.
+But \PETSc is now at version \PETSCVERSION.  It has evolved into a more powerful toolbox with a much richer API (application program interface).  Typical examples and applications are for nonlinear PDEs.  Nonlinear, multigrid, and multiphysics\sidenote{This buzzword refers to a diverse system of coupled PDEs with nontrivial scalings among the variables.} parts of the API are now highly-visible to users.
 
-In summary, \PETSc may not be a silver bullet, but it presents users with many powerful tools for solving difficult problems, well beyond iterative linear algebra.  As twenty years have passed since version 2.0 and \citet{Smithetal1996}, a new book about \PETSc is appropriate.
+The modern \PETSc strategy is to combine (``compose'') time-steppers, Newton's method, and tools for describing meshes/grids with preconditioners and iterative linear solvers, so that all of these structures are visible and controllable from the command line.\sidenote{Explaining the meaning of this last sentence is my (book-length) purpose.}  Navigating this algorithmic ``stack,'' which is reflected in a plethora of run-time options, requires much broader user knowledge than did the computer tools of a generation ago.
+
+In summary, \PETSc may not be a silver bullet, but it presents users with many powerful tools for solving difficult problems, well beyond iterative linear algebra.  A new book, genuinely introducing \PETSc to new users, is appropriate.
 
 
 \section{What I need from you, the reader}
 
 To make sense of this book, some of the mathematical theory of PDEs must be familiar.  \citet{Evans2010} is recommended for this theory, but it is not really a prerequisite.
 
-I will also assume that the reader has a bit of \emph{practical intuition} about PDE problems---should I use the common term ``maturity''?---including exposure to nonlinear problems.\sidenote{\citep{Ockendonetal2003} is recommended.}  Of course, all applied mathematicians, distinctly including this author, are wanting when it comes to having the best intuition for nonlinear PDEs.
+I will also assume that the reader has some \emph{practical intuition} about PDE problems---should I use the common term ``maturity''?---including exposure to nonlinear problems.\sidenote{\citep{Ockendonetal2003} is recommended.}  Of course, all applied mathematicians, distinctly including the author, are wanting when it comes to having the best intuition for nonlinear PDEs.
 
-Multiple numerical discretization paradigms will arise here, and at least one numerical approach to PDEs should already be in the reader's toolbox.  That might be the finite element method (FEM) \citep{Braess2007,Elmanetal2005,KarniadakisSherwin2013}, finite differences \citep{MortonMayers2005}, finite volumes \citep{LeVeque2002}.  Spectral methods \citep{Trefethen2000} are outside of our scope.  Previous exposure to multigrid ideas \citep{Briggsetal2000} would be helpful, but the concepts will be reviewed as we approach this key topic.
+Multiple numerical discretization paradigms will arise here.  At least one such numerical approach to PDEs should already be in the reader's toolbox.  That might be the finite element method (FEM) \citep{Braess2007,Elmanetal2005,KarniadakisSherwin2013}, finite differences \citep{MortonMayers2005}, or finite volumes \citep{LeVeque2002}.  (Spectral methods \citep{Trefethen2000} are outside of our scope.)  Previous exposure to multigrid ideas \citep{Briggsetal2000} would be helpful, but the concepts will be reviewed as we approach this key topic.
 
-Many ideas from numerical linear algebra \citep{Greenbaum1997,TrefethenBau1997} will appear, often with no or brief introduction.  The definitions of vector norms and (induced) matrix norms, along with the LU and Cholesky decompositions, are assumed.  The textbook by \citet{TrefethenBau1997} is thus the closest of the above-mentioned texts to an actual prerequisite for the material in this book.
+Many ideas from numerical linear algebra \citep{Greenbaum1997,TrefethenBau1997} will appear, often with only brief introduction.  The definitions of vector norms and (induced) matrix norms, along with the LU and Cholesky decompositions, are assumed.  The textbook by \citet{TrefethenBau1997} is the closest, of the above-mentioned texts, to an actual prerequisite for this book.
 
 Starting in Chapter \ref{chap:un} I will assume that you are interested in working with unstructured grids, though not at the exclusion of structured-grid approaches.  Basics of the FEM method will be reviewed in Chapters \ref{chap:of}, \ref{chap:un}, and \ref{chap:dp}, but the reader with some background understanding will benefit most.  Priority topics for a reader's FEM review include the weak form of a PDE and the idea of assembling the equations element-by-element.
 
 
 \section{There is much that this book does NOT do}
 
-I'll assume you want to solve PDEs, though there are many other uses of \PETSc.  Furthermore, this book\begin{itemize}
+Although there are many other uses of \PETSc, this book assumes you want to solve PDEs.  It attempts to get you started from no previous knowledge of \PETSc, and then it attempts to sample some of the best ideas for numerically solving PDEs.  However, this book\begin{itemize}
+\item  does not seriously help you install \PETSc,
 \item  does not replace either the \PETSc \emph{User's Manual}, or online searches of the \PETSc manual pages, for understanding the API,
-\item  does not help you install \PETSc,\sidenote{The \PETSc team will help with failed installation attempts.  See \href{http://www.mcs.anl.gov/petsc/documentation/bugreporting.html}{\texttt{www.mcs.anl.gov/petsc/ documentation/bugreporting.html}}.}
-\item  does not help with most of the many packages \PETSc links to,
+\item  does not help with most of the (many) packages \PETSc links to,
 \item  does not use Fortran or C++,\sidenote{All examples are in C, utilizing ANSI C99 features.}
 \item  does not do a complete job of teaching the FEM or any other discretization paradigm for PDEs,
-\item  does not seriously address whether its numerical solutions are good models of physical problems,
+\item  does not seriously address whether its numerical solutions are effective models of physical problems,
 \item  does not consider spatial dimensions beyond three,
-\item  does not prove anything,\sidenote{Theorems are stated precisely when appropriate.  In examples we give evidence for convergence and scalability when possible.} and
+\item  does not prove anything,\sidenote{Theorems are stated precisely when appropriate.  Note that in computational examples we give evidence for convergence and scalability, when possible, not just pretty pictures of putative solutions.} and
 \item  does not adequately cover what is known about PDEs, much less what is not known.
 \end{itemize}
 
 
 \section{At the command line}
 
-Before we really get started, what ``computer skills'' do I assume?  In summary, something more than what you need to get started with \Matlab, but certainly less than professional programmer abilities.  The numerical programming here is stereotyped C coding using a modest language subset.
+Before we really get started, what ``computer skills'' does this assume?  In summary, something more than what you need to get started with \Matlab, but certainly less than professional programmer abilities.  The numerical programming here is stereotyped C coding using a modest language subset.
 
-You need to have written and compiled C programs before.   Running and modifying the examples will inevitably expose some subtleties of the C language, but no more than would appear in a first college course in computer programming using C or a similar language.  Concepts of compiling and linking, of including header files, of passing arguments by value and pointer,\sidenote{Recall the C language has no ``pass-by-reference'' syntax, but such is the usual intent when passing a pointer value.} and, perhaps most importantly, the two concepts of pointer variables and arrays-as-pointers, should all be familiar.
+You need to have written and compiled C programs before.   Running and modifying the examples will inevitably expose some subtleties of the C language, but no more than would appear in a first college course in computer programming using C or a similar language.  Concepts of compiling and linking, of including header files, of passing arguments by value and pointer,\sidenote{The C language has no ``pass-by-reference'' syntax, but such is the usual intent when passing a pointer value.} and, perhaps most importantly, the two concepts of pointer variables and arrays-as-pointers, should all be familiar.
 
-\PETSc's configuration process, e.g.~following instructions at
+Using \PETSc's installation and configuration process, e.g.~following instructions at
 \begin{quote}
 \href{http://www.mcs.anl.gov/petsc/documentation/installation.html}{\texttt{www.mcs.anl.gov/petsc/documentation/installation.html}},
 \end{quote}
-finds the compiler, and enables ``\texttt{make}'' as a build command, or it fails.  Therefore the examples included with this book can be run with no more work than to type ``\texttt{make}'' at the command line; with luck this does not lead to compiler errors.  All examples in this book were built and run with the GNU C compiler ``\texttt{gcc}'' (\href{https://gcc.gnu.org/}{\texttt{gcc.gnu.org}}).  Of course, doing the exercises, or modifying the examples, will always require attention to compile-time errors.
+is required before compiling and running the examples in this book.  This process finds the compiler and enables ``\texttt{make}'' as a build command, or it fails.\sidenote{The \PETSc team will help with failed installation attempts.  See \href{http://www.mcs.anl.gov/petsc/documentation/bugreporting.html}{\texttt{www.mcs.anl.gov/petsc/ documentation/bugreporting.html}}.}
+
+After installing and configuring \PETSc, the examples included with this book can be run with no more preparatory work than to type ``\texttt{make}'' at the command line in the appropriate \texttt{c/chN/} directory (see Chapter \ref{chap:gs} on getting started).  All examples in this book were built and run with the GNU C compiler ``\texttt{gcc}'' (\href{https://gcc.gnu.org/}{\texttt{gcc.gnu.org}}).
+
+Of course, doing the exercises or modifying the examples will inevitably require attention to compile-time errors.  The ability to run codes within a debugger is recommended knowledge.
 
 Searching in the \PETSc HTML manual pages for the various commands and data types, online at
 \begin{quote}
 \href{http://www.mcs.anl.gov/petsc/documentation/index.html}{\texttt{www.mcs.anl.gov/petsc/documentation/index.html}}
 \end{quote}
-or downloaded with the \PETSc source, should be the reader's first action for resolving compile-time errors.  The reader should review the \emph{\PETSc User's Manual} \citep{petsc-user-ref}; it explains best why the API is designed in the way it is.
+or downloaded with the \PETSc source, should be one of the reader's first action for resolving compile-time errors.  The reader should review the \emph{\PETSc User's Manual} \citep{petsc-user-ref}; it explains best why the API is designed in the way it is.
 
 Finally, this book assumes a Bash shell---see  \href{https://www.gnu.org/software/bash/bash.html}{\texttt{www.gnu.org/software/ bash/bash.html}}---or a shell that interprets Bash syntax.  Uses of Bash syntax are mostly trivial, but examples of ``for loop'' syntax appear every once in a while:
 \begin{cline}
