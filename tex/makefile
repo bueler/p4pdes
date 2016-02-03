@@ -1,7 +1,7 @@
 all: book.pdf
 
 # chapters of the book
-chapsroots := preface getstarted linearsystem structured nonlinear optifem advdif precond scaling unstructured dmplex stokes constrained
+chapsroots := preface getstarted linearsystem structured nonlinear optifem advdif precond scaling unstructured dmplex systems constrained
 chapsinputs := $(addprefix chaps/, $(addsuffix .tex, $(chapsroots)))
 
 # for these, see strip.sh

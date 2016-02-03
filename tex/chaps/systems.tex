@@ -213,7 +213,7 @@ h_x = \frac{L}{\text{\texttt{Mx}}}, \qquad h_y = \frac{H}{\text{\texttt{My}}-1}.
 The reason for the difference is suggested by Figure \ref{fig:xperiodicgrid}, where we see that each grid point along the $x$-axis represents an entire grid cell, while in the $y$ direction the first and last grid points represent boundary locations.  Of course the main idea of periodicity is that left neighbors of $i=0$ grid locations are ``wrapped-around'' to the right-most grid points, while right neighbors of $i=\text{\texttt{Mx}}-1$ locations are wrapped to the left-most grid points.
 
 \begin{marginfigure}
-\inpute{tikz/xperiodicgrid.tex}
+\input{tikz/xperiodicgrid.tex}
 \caption{Because the grid is periodic in $x$, but not in $y$, the computation of $h_x$ and $h_y$ follows formulas \eqref{hdefinestokes}.}
 \label{fig:xperiodicgrid}
 \end{marginfigure}
