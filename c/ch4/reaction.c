@@ -7,8 +7,8 @@ typedef struct {
   double  rho, M, alpha, beta;
 } AppCtx;
 
-PetscErrorCode InitialAndExactLocal(DMDALocalInfo *info, double *u0,
-                                    double *uex, AppCtx *user) {
+PetscErrorCode InitialAndExact(DMDALocalInfo *info, double *u0,
+                               double *uex, AppCtx *user) {
     int    i;
     double h = 1.0 / (info->mx-1), x;
     for (i=info->xs; i<info->xs+info->xm; i++) {
@@ -80,7 +80,6 @@ int main(int argc,char **args) {
   user.beta  = 16.0 * user.M;
 
   ierr = DMDACreate1d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,-9,1,1,NULL,&da); CHKERRQ(ierr);
-  ierr = DMDASetUniformCoordinates(da,0.0,1.0,-1.0,-1.0,-1.0,-1.0); CHKERRQ(ierr);
   ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
 
@@ -88,7 +87,7 @@ int main(int argc,char **args) {
   ierr = VecDuplicate(u,&uexact); CHKERRQ(ierr);
   ierr = DMDAVecGetArray(da,u,&au); CHKERRQ(ierr);
   ierr = DMDAVecGetArray(da,uexact,&auex); CHKERRQ(ierr);
-  ierr = InitialAndExactLocal(&info,au,auex,&user); CHKERRQ(ierr);
+  ierr = InitialAndExact(&info,au,auex,&user); CHKERRQ(ierr);
   ierr = DMDAVecRestoreArray(da,u,&au); CHKERRQ(ierr);
   ierr = DMDAVecRestoreArray(da,uexact,&auex); CHKERRQ(ierr);
 

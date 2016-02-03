@@ -352,9 +352,9 @@ These ideas are perhaps clearest if we note \eqref{eq:nl:diffusionreaction} is t
 \begin{equation}
 u_t = u_{xx} + R(u) + f(x),  \label{eq:nl:drtimedependent}
 \end{equation}
-which is a generalization of the classical one-dimensional time-evolving heat equation $u_t = u_{xx}$.  A positive sign for $R(u)+f(x)$ models the production (increase) of $u$, while a negative sign models destruction (decrease) of $u$.  If $u$ represents temperature, for instance, in which case $R(u)$ represents a heat-producing or heat-absorbing temperature-dependent reaction, \eqref{eq:nl:diffusionreaction} models the equilibrium temperature distribution.
+which is a generalization of the classical one-dimensional time-evolving heat equation $u_t = u_{xx}$.  A positive sign for $R(u)+f(x)$ models the production (increase) of $u$, while a negative sign models destruction (decrease) of $u$.  If $u$ represents temperature, for instance, in which case $R(u)$ represents a heat-producing or heat-absorbing temperature-dependent reaction, according to its sign, then \eqref{eq:nl:diffusionreaction} models the equilibrium temperature distribution.
 
-We should be concerned about the solvability of \eqref{eq:nl:diffusionreaction} in the case where $R$ is an \emph{increasing} function of $u$.  If $R$ is positive and increasing then the ability of the diffusion term to ``damp-out'' maxima may be exceeded by the increasing production from large values of $u$, so that these terms cannot balance, which is \eqref{eq:nl:diffusionreaction}.  If $R$ is negative and increasing then the analogous concern applies to minima of $u$.  These concerns are demonstrated by the example $R(u) = \lambda e^u$ with $\lambda>0$ in Exercise 4.\ref{exer:nl:bratu}; that problem is not solvable for sufficiently-large $\lambda$.  
+We should be concerned about the solvability of \eqref{eq:nl:diffusionreaction} in the case where $R$ is an \emph{increasing} function of $u$.  If $R$ is positive and increasing then the ability of the diffusion term to ``damp-out'' maxima may be exceeded by the increasing production from large values of $u$, so that these terms in \eqref{eq:nl:diffusionreaction} cannot balance.  If $R$ is negative and increasing then the analogous concern applies to minima of $u$.  These concerns are demonstrated by the example $R(u) = \lambda e^u$ with $\lambda>0$ in Exercise 4.\ref{exer:nl:bratu}; that problem is not solvable for sufficiently-large $\lambda$.
 
 Equation \eqref{eq:nl:diffusionreaction} is a nonlinear elliptic PDE,\sidenote{By mild abuse of the letter ``P''.} but in one-dimension.  Elliptic PDE techniques show the problem is well-posed if $R$ is a \emph{non}-increasing function \citep[pages 93-94]{KinderlehrerStampacchia1980}.  To be concrete, consider Dirichlet boundary conditions
 \begin{equation}
@@ -377,24 +377,29 @@ On an $N$ point grid, the centered finite-difference scheme for \eqref{eq:nl:dif
 \end{equation}
 where $h=1/(N-1)>0$, $x_j = j h$ for $j=0,1,\dots,N-1$, and $u_j \approx u(x_j)$.
 
+\cinputpart{reaction.c}{\CODELOC}{Functions describing the initial iterate, the exact solution, finite-difference equation \eqref{eq:nl:drfdscheme}, and the derivatives of \eqref{eq:nl:drfdscheme}.}{I}{//CALLBACK}{//ENDCALLBACK}{code:reactionI}
+
 Code \texttt{reaction.c} shown in Codes \ref{code:reactionI} and \ref{code:reactionII} implements this scheme.  We use a \pSNES object for the Newton iteration and a \pDMDA object for the grid.
 
-\cinputpart{reaction.c}{\CODELOC}{Call-back functions for \texttt{reaction.c}.}{I}{//CALLBACK}{//ENDCALLBACK}{code:reactionI}
+Three functions appear in Code \ref{code:reactionI}.  The first one (\texttt{InitialAndExact()}) computes both the initial iterate, which is a linear function connecting the boundary conditions, and the exact solution.  Then we have the residual (\texttt{FormFunctionLocal()}) and Jacobian (\texttt{FormJacobianLocal()}) evaluation functions.  These two are ``call-back'' functions which the \pSNES will use when it needs the values of the residual and Jacobian.
 
-Three call-back methods appear in Code \ref{code:reactionI}.  First we compute the initial iterate---a linear function connecting the boundary conditions---and the exact solution in the method \texttt{InitialAndExactLocal()}.  Then we have the residual (\texttt{FormFunctionLocal()}) and Jacobian (\texttt{FormJacobianLocal()}) evaluation functions.
+The functions in Code \ref{code:reactionI} have a common features to their signatures, namely they have arguments of type \texttt{DMDALocalInfo*} and \texttt{double*}.  This reflects two ideas which are worth noting:
+\renewcommand{\labelenumi}{(\emph{\roman{enumi}})}
+\begin{enumerate}
+\item First, the inputs are C array pointers instead of \pVecs.  Our implementation of \texttt{InitialAndExact()} explains how this works.  Before calling it, in Code \ref{code:reactionII} below, we use \texttt{DMDAVecGetArray()} on \pVecs \texttt{u} and \texttt{uexact}.  This gives pointers of type \texttt{double*} which are handed to \texttt{InitialAndExact()}.  Also, a \texttt{DMDALocalInfo} structure\sidenote{Figure \ref{fig:localpartofgrid} shows the information carried by \texttt{DMDALocalInfo}.} is passed so that the local part of the grid and the global grid size (i.e.~\texttt{info.mx}) can be accessed through this \texttt{struct} without needing the \pDMDA object itself.  The \pSNES calls \texttt{FormFunctionLocal()} and \texttt{FormJacobianLocal()} in the same way.
+\item Second, the pointers of type \texttt{double*} passed into \texttt{FormFunctionLocal()} and \texttt{FormJacobianLocal()} have valid ghosts, that is, expressions ``\texttt{u[i+1]}'' and ``\texttt{u[i+1]}'' are valid for \texttt{double *u}.  This feature is used in \texttt{FormFunctionLocal()} because indices $i-1$ and $i+1$ appear in finite-difference equation \eqref{eq:nl:drfdscheme}.  Such behavior occurs ``under the hood,'' however, by having the \pSNES internally allocating a local \pVec, which has valid ghosts, then communicating between processes to update those ghost values, and then using \texttt{DMDAVecGetArray()}/\texttt{DMDAVecRestoreArray()} to get an array with a widened valid index range.
+\end{enumerate}
 
-\cinputpart{reaction.c}{\CODELOC}{In \texttt{main()} we create a \pDMDA, some \pVecs, and a \pSNES.  We hand call-back functions to the \pSNES.  Then we solve the equation, get the numerical error from the exact solution, and clean up.}{II}{//MAIN}{//ENDMAIN}{code:reactionII}
+In \texttt{main()} in Code \ref{code:reactionII} we use \texttt{DMDASNESSetFunctionLocal()} and  \texttt{DMDASNESSetJacobianLocal()}, which are structured-grid-aware versions of \texttt{SNESSetFunction()} and \texttt{DMDASNESSetJacobianLocal()}, respectively, which we saw in \texttt{ecjacobian.c} earlier (Codes \ref{code:ecjacobianI} and \ref{code:ecjacobianII}).  Also observe that, though we do implement a Jacobian, we do not ever (explicitly) allocate a \pMat to hold it in \texttt{reaction.c}.  This is because the \pDMDA object has enough information about the grid and stencil so as to allocate the \pMat internally.
 
-These are ``\texttt{Local}'' methods in the sense that their inputs are C pointers for arrays instead of \pVecs, and our implementation of \texttt{InitialAndExactLocal()} explains how the \texttt{Local} methods work.  As seen in Code \ref{code:reactionII}, before this method is called we use \texttt{DMDAVecGetArray()} on the \pVecs \texttt{u} and \texttt{uexact}.  This gives pointers (type \texttt{double*}) which are then handed to \texttt{InitialAndExactLocal()}.  Also note that a \texttt{DMDALocalInfo} struct is passed in so that the local part of the grid (i.e.~\texttt{info.xs} and etc.) and the global grid size (i.e.~\texttt{info.mx}) can be accessed through this struct without needing the \pDMDA object itself.\sidenote{Recall Figure \ref{fig:localpartofgrid}.}  The call-back done by \pSNES on \texttt{FormFunctionLocal()} and \texttt{FormJacobianLocal()} works the same way.
-
-In \texttt{main()} we use \texttt{DMDASNESSetFunctionLocal()} instead of
-
-\noindent \texttt{SNESSetFunction()}\sidenote{Compare \texttt{ecjacobian.c}.} because our local call-back functions have a different signature based on \pDMDA-derived pointers.  The Jacobian is set by a similar method \texttt{DMDASNESSetJacobianLocal()}.  Also, though we implement a Jacobian, we do not allocate a \pMat to hold it because the \pDMDA object has enough information about the grid and stencil so as to allocate the \pMat internally.
+\clearpage
+\newpage
+\cinputpart{reaction.c}{\CODELOC}{In \texttt{main()} we create a \pDMDA, some \pVecs, and a \pSNES.  We hand call-back functions to the \pSNES.  Then we solve the equation.}{II}{//MAIN}{//ENDMAIN}{code:reactionII}
 
 
 \section{Convergence under grid refinement}
 
-On a modestly-refined grid we can compare the number of \texttt{reaction.c} Newton iterations from both analytical and finite-difference Jacobians.  Recalling that the resolution of a structured grid can be set with either \texttt{-da\_grid\_x M} or \texttt{-da\_refine N}, we do:
+On a modestly-refined grid we can compare the number of \texttt{reaction.c} Newton iterations from both analytical and finite-difference Jacobians.  Recall that the resolution of a structured grid can be set with \texttt{-da\_refine K}.  In fact the results are identical after 6 levels of refinement:
 \begin{cline}
 $ ./reaction -snes_converged_reason -da_refine 6
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
@@ -403,12 +408,12 @@ $ ./reaction -snes_converged_reason -da_refine 6 -snes_fd
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
 on 513 point grid:  |u-u_exact|_inf/|u|_inf = 4.62255e-08
 \end{cline}
-The results are identical.  One can also see the Newton iterates graphically by
+One can also see the Newton iterates graphically by
 \begin{cline}
 $ ./reaction -da_refine 6 -snes_monitor_solution -draw_pause 1
 \end{cline}
 %$
-One sees that the first Newton step moves us close to the solution (not shown).
+One sees that the first Newton step already moves $\bx_k$ close to the solution (not shown).
 
 \begin{figure}
 \includegraphics[width=0.8\textwidth]{figs/reaction-conv}
@@ -426,7 +431,15 @@ on 33 point grid:  |u-u_exact|_inf/|u|_inf = 1.1825e-05
 on 131073 point grid:  |u-u_exact|_inf/|u|_inf = 7.05476e-13
 on 524289 point grid:  |u-u_exact|_inf/|u|_inf = 6.04273e-12
 \end{cline}
-is shown in Figure \ref{fig:nl:reaction-conv}.  If we ignore the result on the finest grid then the convergence rate is $O(h^2)$.\sidenote{Error stagnation always occurs at some level of refinement because of accumulation of round-off error.}  We also see consistent evidence of quadratic convergence by adding \texttt{-snes\_monitor} to the above runs.  Thus we conclude our implementation is correct.
+is shown in Figure \ref{fig:nl:reaction-conv}.  If we ignore the result on the finest grid then the convergence rate is $O(h^2)$.  We also see consistent evidence of quadratic convergence by adding \texttt{-snes\_monitor} to the above runs.  Thus we conclude our implementation is correct.
+
+Before dropping the topic, however, let us not forget the finest grid result in Figure  \ref{fig:nl:reaction-conv}.  At this point the error stopped decreasing at the expected rate.  It is time for another numerical ``fact of life'':
+\renewcommand{\labelenumi}{Fact \Roman{enumi}.}
+\begin{enumerate}
+\setcounter{enumi}{4}
+\item \emph{Error stagnation always occurs at \emph{some} level of refinement.}  For a given floating-point precision, in going down the refinement path for your PDE numerical scheme, at some point the accumulated round-off error will dominate the error from truncation.  You cannot get better accuracy than this point without changing the floating-point precision.  (This point may never be reached on 2D and 3D examples.)
+\end{enumerate}
+
 
 
 \section{Finite-difference Jacobians by ``coloring''} \label{sec:nl:coloring}
