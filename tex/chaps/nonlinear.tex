@@ -173,7 +173,7 @@ The benefit of using options (\emph{ii})b--(\emph{ii})d above is that we do not 
 
 On the other hand, there is a significant performance problem in using \eqref{eq:nl:fdjac} naively for PDE-type applications of Newton's method.  In steps (\emph{i}) and (\emph{ii})b together we do $N+1$ calls to \texttt{FormFunction()} per Newton iteration.  This is a worrying amount of work if $N$ is large, as it would be for a system of nonlinear equations coming from discretizing a PDE.  We will therefore return to this issue later in the current Chapter, and provide more detail on (\emph{ii})c and (\emph{ii})d.
 
-Evaluating $\bF$ can dominate the work in the Newton iteration, and there are systems where it is an intrinsically-expensive function to evaluate.  The work done in solving linear system \eqref{eq:nl:newton:eq} is the other main concern.  A good \PETSc habit, to start right now, is to use \texttt{-log\_summary} to see which kind of work actually dominates.
+Evaluating $\bF$ can dominate the work in the Newton iteration, and there are systems where it is an intrinsically-expensive function to evaluate.  The work done in solving linear system \eqref{eq:nl:newton:eq} is the other main concern.  A good \PETSc habit, to start right now, is to use \texttt{-log\_view} to see which kind of work actually dominates.
 
 
 \section{Residual norm in the Newton iteration}
@@ -440,7 +440,7 @@ on 8193 point grid:  |u-u_exact|_inf/|u|_inf = 1.75603e-10
 real 0.04
 \end{cline}
 %$
-This run used four $\bF$ evaluations and three $J_{\bF}$ evaluations.\sidenote{Use ``\dots \texttt{-log\_summary | grep Eval}'' to confirm.}
+This run used four $\bF$ evaluations and three $J_{\bF}$ evaluations.\sidenote{Use ``\dots \texttt{-log\_view | grep Eval}'' to confirm.}
 
 By contrast the finite-difference-Jacobian case simply fails at first:
 \begin{cline}
@@ -534,7 +534,7 @@ real 0.06
 %$
 Compare the run on page \pageref{etc:nl:bestreaction}.
 
-Counting the number of function evaluations in the various cases is a good idea, and there is no need to alter \texttt{reaction.c} to do so: use \texttt{-log\_summary} and look at the output.\sidenote{Do not add print statements!}  Because we want the ``\texttt{SNESFunctionEval}'' lines, \texttt{grep} extracts the count for the runs above:
+Counting the number of function evaluations in the various cases is a good idea, and there is no need to alter \texttt{reaction.c} to do so: use \texttt{-log\_view} and look at the output.\sidenote{Do not add print statements!}  Because we want the ``\texttt{SNESFunctionEval}'' lines, \texttt{grep} extracts the count for the runs above:
 \begin{cline}
 $ ./reaction -da_refine 10 -snes_fd -snes_max_funcs 100000 -log_view | grep SNESFunctionEval
 SNESFunctionEval   24586 1.0 3.3170e+00 1.0 ...
@@ -835,7 +835,7 @@ This exercise shows that the original Newton iteration can diverge or enter a li
 %  x = 1.39174520027073
     \end{enumerate}
 
-\item Option \texttt{-log\_summary} can show whether function evaluations or linear solves are dominating the cost of Newton's method.  By looking at \texttt{-log\_summary} output, compare where the work is done in these runs: \texttt{./reaction}, \texttt{./reaction -snes\_fd}, \texttt{./reaction -snes\_mf}.  Does the comparison change if you add \texttt{-da\_refine 5}?  Explain as much as you can.  (\emph{Hints}: Look at \texttt{SNESSolve} events for the total time spent in the Newton method, which is $\approx$100\% for these cases.  Within that event, event \texttt{SNESLineSearch} is where function and Jacobian evaluations happen, while the linear solve is the \texttt{KSPSolve} event.  Within the \texttt{SNESLineSearch} event, look at \texttt{SNESFunctionEval} and \texttt{SNESJacobianEval} events.)
+\item Option \texttt{-log\_view} can show whether function evaluations or linear solves are dominating the cost of Newton's method.  By looking at \texttt{-log\_view} output, compare where the work is done in these runs: \texttt{./reaction}, \texttt{./reaction -snes\_fd}, \texttt{./reaction -snes\_mf}.  Does the comparison change if you add \texttt{-da\_refine 5}?  Explain as much as you can.  (\emph{Hints}: Look at \texttt{SNESSolve} events for the total time spent in the Newton method, which is $\approx$100\% for these cases.  Within that event, event \texttt{SNESLineSearch} is where function and Jacobian evaluations happen, while the linear solve is the \texttt{KSPSolve} event.  Within the \texttt{SNESLineSearch} event, look at \texttt{SNESFunctionEval} and \texttt{SNESJacobianEval} events.)
 
 \item \label{exer:nl:symmetrizeJ}  In Chapter \ref{chap:st} we gave some advice which we have not followed in the current Chapter, namely that one should implement Dirichlet conditions in a manner that preserves the symmetry of the matrix in question, which is the Jacobian here.  Modify \texttt{reaction.c} to preserve symmetry, noting that this requires modifying both the $\bF$ and $J$ evaluation routines.  Does this modification improve performance when using the CG iteration?  Does it change our conclusions about un-preconditioned JFNK?
 

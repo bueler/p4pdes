@@ -733,7 +733,7 @@ still works, but that
 ./plap -snes_fd
 ./plap -snes_mf
 \end{cline}
-do not.  Confirm the evaluation-counting results in the main text which use ``\texttt{-log\_summary | grep Eval}'' on the objective-only implementation.
+do not.  Confirm the evaluation-counting results in the main text which use ``\texttt{-log\_view | grep Eval}'' on the objective-only implementation.
 
 \item \label{exer:of:regularizepone}  The $p=1$ cases tried on page \pageref{page:of:casepone} are problematic because, in terms of the minimization of $I[u]$,  we are applying a gradient-based method to minimize a non-smooth \citep{NocedalWright2006} functional.  One might suppose that the regularized weak form \eqref{eq:of:plapweakformreg}, which is smooth for $\eps>0$, should work better, but this hypothesis needs testing.  Add option \texttt{-plap\_eps} $\eps$,\sidenote{And possibly option \texttt{-snes\_max\_it 200} if needed.} to the $p=1$ Bash loop shown on page \pageref{page:of:casepone}.  Try various values of regularization parameter $\eps>0$.  Is regularization effective for resolving \emph{this} non-smooth problem?
 
@@ -753,7 +753,7 @@ called a \emph{Picard} iteration.  Implement this method by adding a function \t
     DMDASNESSetJacobianLocal(user.da,
             (DMDASNESJacobian)FormPicardLocal,&user);
 \end{code}
-Run the code and check using \texttt{-log\_summary | grep Eval} that the number of evaluations of \texttt{FormFunctionLocal()} is much smaller than before.  Recover quadratic convergence with option \texttt{-snes\_mf\_operator}, which uses the Picard matrix as preconditioner ``material'' (Chapter \ref{chap:nl}).
+Run the code and check using \texttt{-log\_view | grep Eval} that the number of evaluations of \texttt{FormFunctionLocal()} is much smaller than before.  Recover quadratic convergence with option \texttt{-snes\_mf\_operator}, which uses the Picard matrix as preconditioner ``material'' (Chapter \ref{chap:nl}).
 
 \item \label{exer:of:jacobianimplementation}  Improve on the last exercise by implementing the true Jacobian.  Add a user option so that either the Picard or Jacobian matrix is used, and compare performance with: the true Jacobian, the Picard matrix used as the true Jacobian, and the Picard matrix used with option \texttt{-snes\_mf\_operator}.
 
