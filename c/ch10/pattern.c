@@ -18,8 +18,53 @@ typedef struct {
             k;    // "dimensionless rate constant" (Pearson 1993)
 } PtnCtx;
 
-extern PetscErrorCode InitialState(Vec,PtnCtx*);
-extern PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo*,double,Field**,Field**,PtnCtx*);
+// Formulas from page 22 of Hundsdorfer & Verwer (2003)
+PetscErrorCode InitialState(Vec x, PtnCtx* user) {
+  PetscErrorCode ierr;
+  DMDALocalInfo  info;
+  int            i,j;
+  double         sx,sy;
+  DMDACoor2d     **aC;
+  Field          **ax;
+
+  ierr = DMDAGetLocalInfo(user->da,&info); CHKERRQ(ierr);
+  ierr = DMDAGetCoordinateArray(user->da,&aC); CHKERRQ(ierr);
+  ierr = DMDAVecGetArray(user->da,x,&ax); CHKERRQ(ierr);
+  for (j = info.ys; j < info.ys+info.ym; j++) {
+    for (i = info.xs; i < info.xs+info.xm; i++) {
+      if ((aC[j][i].x >= 1.0) && (aC[j][i].x <= 1.5)
+              && (aC[j][i].y >= 1.0) && (aC[j][i].y <= 1.5)) {
+          sx = sin(4.0 * PETSC_PI * aC[j][i].x);
+          sy = sin(4.0 * PETSC_PI * aC[j][i].y);
+          ax[j][i].v = 0.5 * sx * sx * sy * sy;
+      } else
+          ax[j][i].v = 0.0;
+      ax[j][i].u = 1.0 - 2.0 * ax[j][i].v;
+    }
+  }
+  ierr = DMDAVecRestoreArray(user->da,x,&ax); CHKERRQ(ierr);
+  ierr = DMDARestoreCoordinateArray(user->da,&aC); CHKERRQ(ierr);
+  return 0;
+}
+
+// in vector form  X_t = G(t,X),  compute G(t,X)
+// in scalar form:
+//     u_t = G^u(t,u,v) = D_u Laplacian u - u v^2 + F (1 - u)
+//     v_t = G^v(t,u,v) = D_v Laplacian v + u v^2 - (F + k) v
+PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, Field **ax, Field **aG, PtnCtx *user) {
+  //PetscErrorCode ierr;
+  int            i, j;
+  //const double   hx = user->L / (double)(info->mx),  // periodic!
+  //               hy = user->L / (double)(info->my);
+
+  for (j = info->ys; j < info->ys + info->ym; j++) {
+      for (i = info->xs; i < info->xs + info->xm; i++) {
+          aG[j][i].u = 0.0;  // FIXME
+          aG[j][i].v = 0.0;  // FIXME
+      }
+  }
+  return 0;
+}
 
 int main(int argc,char **argv)
 {
@@ -83,54 +128,6 @@ int main(int argc,char **argv)
   ierr = TSDestroy(&ts); CHKERRQ(ierr);
   ierr = DMDestroy(&user.da); CHKERRQ(ierr);
   ierr = PetscFinalize();
-  return 0;
-}
-
-// Formulas from page 22 of Hundsdorfer & Verwer (2003)
-PetscErrorCode InitialState(Vec x, PtnCtx* user) {
-  PetscErrorCode ierr;
-  DMDALocalInfo  info;
-  int            i,j;
-  double         sx,sy;
-  DMDACoor2d     **aC;
-  Field          **ax;
-
-  ierr = DMDAGetLocalInfo(user->da,&info); CHKERRQ(ierr);
-  ierr = DMDAGetCoordinateArray(user->da,&aC); CHKERRQ(ierr);
-  ierr = DMDAVecGetArray(user->da,x,&ax); CHKERRQ(ierr);
-  for (j = info.ys; j < info.ys+info.ym; j++) {
-    for (i = info.xs; i < info.xs+info.xm; i++) {
-      if ((aC[j][i].x >= 1.0) && (aC[j][i].x <= 1.5)
-              && (aC[j][i].y >= 1.0) && (aC[j][i].y <= 1.5)) {
-          sx = sin(4.0 * PETSC_PI * aC[j][i].x);
-          sy = sin(4.0 * PETSC_PI * aC[j][i].y);
-          ax[j][i].v = 0.5 * sx * sx * sy * sy;
-      } else
-          ax[j][i].v = 0.0;
-      ax[j][i].u = 1.0 - 2.0 * ax[j][i].v;
-    }
-  }
-  ierr = DMDAVecRestoreArray(user->da,x,&ax); CHKERRQ(ierr);
-  ierr = DMDARestoreCoordinateArray(user->da,&aC); CHKERRQ(ierr);
-  return 0;
-}
-
-// in vector form  X_t = G(t,X),  compute G(t,X)
-// in scalar form:
-//     u_t = G^u(t,u,v) = D_u Laplacian u - u v^2 + F (1 - u)
-//     v_t = G^v(t,u,v) = D_v Laplacian v + u v^2 - (F + k) v
-PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, Field **ax, Field **aG, PtnCtx *user) {
-  //PetscErrorCode ierr;
-  int            i, j;
-  //const double   hx = user->L / (double)(info->mx),  // periodic!
-  //               hy = user->L / (double)(info->my);
-
-  for (j = info->ys; j < info->ys + info->ym; j++) {
-      for (i = info->xs; i < info->xs + info->xm; i++) {
-          aG[j][i].u = 0.0;  // FIXME
-          aG[j][i].v = 0.0;  // FIXME
-      }
-  }
   return 0;
 }
 
