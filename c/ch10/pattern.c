@@ -2,6 +2,9 @@ static char help[] =
 "Solves coupled reaction-diffusion equations (Pearson 1993).  Option prefix -ptn_.\n"
 "\n\n";
 
+// example:
+//    ./pattern -ts_monitor_solution draw -da_refine 5 -ptn_tf 2000 -ptn_steps 400 -ts_monitor -snes_converged_reason
+
 #include <petsc.h>
 
 
@@ -51,16 +54,27 @@ PetscErrorCode InitialState(Vec x, PtnCtx* user) {
 // in scalar form:
 //     u_t = G^u(t,u,v) = D_u Laplacian u - u v^2 + F (1 - u)
 //     v_t = G^v(t,u,v) = D_v Laplacian v + u v^2 - (F + k) v
-PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, Field **ax, Field **aG, PtnCtx *user) {
-  //PetscErrorCode ierr;
+PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, Field **aX,
+                                    Field **aG, PtnCtx *user) {
   int            i, j;
-  //const double   hx = user->L / (double)(info->mx),  // periodic!
-  //               hy = user->L / (double)(info->my);
+  const double   h = user->L / (double)(info->mx),
+                 Cu = user->Du / (6.0 * h * h),
+                 Cv = user->Dv / (6.0 * h * h);
+  double         u, v, uv2, lapu, lapv;
 
   for (j = info->ys; j < info->ys + info->ym; j++) {
       for (i = info->xs; i < info->xs + info->xm; i++) {
-          aG[j][i].u = 0.0;  // FIXME
-          aG[j][i].v = 0.0;  // FIXME
+          u = aX[j][i].u;
+          v = aX[j][i].v;
+          uv2 = u * v * v;
+          lapu =       aX[j+1][i-1].u + 4.0 * aX[j+1][i].u +     aX[j+1][i+1].u
+                 + 4.0 * aX[j][i-1].u -      20.0 * u      + 4.0 * aX[j][i+1].u
+                 +     aX[j-1][i-1].u + 4.0 * aX[j-1][i].u +     aX[j-1][i+1].u;
+          lapv =       aX[j+1][i-1].v + 4.0 * aX[j+1][i].v +     aX[j+1][i+1].v
+                 + 4.0 * aX[j][i-1].v -      20.0 * v      + 4.0 * aX[j][i+1].v
+                 +     aX[j-1][i-1].v + 4.0 * aX[j-1][i].v +     aX[j-1][i+1].v;
+          aG[j][i].u = Cu * lapu - uv2 + user->F * (1.0 - u);
+          aG[j][i].v = Cv * lapv + uv2 - (user->F + user->k) * v;
       }
   }
   return 0;
@@ -72,8 +86,9 @@ int main(int argc,char **argv)
   PtnCtx         user;
   TS             ts;
   Vec            x;
+  DMDALocalInfo  info;
   double         tf = 10.0;
-  int            steps = 10, maxsteps = 200;
+  int            steps = 10;
 
   PetscInitialize(&argc,&argv,(char*)0,help);
 
@@ -84,7 +99,7 @@ int main(int argc,char **argv)
   user.F  = 0.024;
   user.k  = 0.06;
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "ptn_", "options for patterns", ""); CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-L","domain side length",
+  ierr = PetscOptionsReal("-L","square domain side length",
            "pattern.c",user.L,&user.L,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-Du","diffusion coefficient of first equation",
            "pattern.c",user.Du,&user.Du,NULL);CHKERRQ(ierr);
@@ -94,15 +109,23 @@ int main(int argc,char **argv)
            "pattern.c",user.F,&user.F,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-k","dimensionless rate constant",
            "pattern.c",user.k,&user.k,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-tf","final time",
+           "pattern.c",tf,&tf,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-steps","desired number of time-steps",
+           "pattern.c",steps,&steps,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
                       DM_BOUNDARY_PERIODIC, DM_BOUNDARY_PERIODIC,
-                      DMDA_STENCIL_STAR,
-                      -4,-4,PETSC_DECIDE,PETSC_DECIDE,
+                      DMDA_STENCIL_BOX,  // for 9-point stencil
+                      -3,-3,PETSC_DECIDE,PETSC_DECIDE,
                       2,  // degrees of freedom
                       1,  // stencil width
                       NULL,NULL,&user.da); CHKERRQ(ierr);
+  ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,
+           "running on %d x %d grid with square cells of side h = %.6f ...\n",
+           info.mx,info.my,user.L/(double)(info.mx)); CHKERRQ(ierr);
   ierr = DMDASetUniformCoordinates(user.da, 0.0, user.L, 0.0, user.L, -1.0, -1.0); CHKERRQ(ierr);
   ierr = DMSetApplicationContext(user.da,&user); CHKERRQ(ierr);
   ierr = DMDASetFieldName(user.da,0,"u"); CHKERRQ(ierr);
@@ -114,8 +137,8 @@ int main(int argc,char **argv)
   ierr = DMDATSSetRHSFunctionLocal(user.da,INSERT_VALUES,
                                    (DMDATSRHSFunctionLocal)FormRHSFunctionLocal,&user); CHKERRQ(ierr);
 
-  ierr = TSSetType(ts,TSBEULER); CHKERRQ(ierr);
-  ierr = TSSetDuration(ts,maxsteps,tf); CHKERRQ(ierr);
+  ierr = TSSetType(ts,TSCN); CHKERRQ(ierr);             // default to Crank-Nicolson
+  ierr = TSSetDuration(ts,10*steps,tf); CHKERRQ(ierr);  // allow 10 times requested steps
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
   ierr = TSSetInitialTimeStep(ts,0.0,tf/steps); CHKERRQ(ierr);
   ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
