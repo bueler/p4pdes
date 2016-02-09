@@ -102,4 +102,23 @@ Thanks,
   Dave May
 \end{comment}
 
+\begin{comment}
+DAVE MAY petsc-users 2/9/2016:
+...
+To be sure your code is working correctly, test it using a preconditioner
+which isn't dependent on the partitioning of the matrix. I would use these
+options:
+  -pc_type jacobi
+  -ksp_monitor_true_residual
+
+The last option is useful as it will report both the preconditioned
+residual and the true residual. If the operator is singular, or close to
+singular, gmres-ILU or gmres-BJacobi-ILU can report a preconditioned
+residual which is small, but is orders of magnitude different from the true
+residual.
+
+Thanks,
+  Dave
+\end{comment}
+
 %EXERCISE: make fish2.c more efficient by NOT doing "divide by hx^2 then mult by vol"  and instead "mult by hy*hz/hx"; measure performance difference; note this is already done by fish3.c
