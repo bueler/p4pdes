@@ -1,13 +1,14 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
-stokes: stokes.o  chkopts
-	-${CLINKER} -o stokes stokes.o  ${PETSC_LIB}
-	${RM} stokes.o
 
-pattern: pattern.o  chkopts
-	-${CLINKER} -o pattern pattern.o  ${PETSC_LIB}
-	${RM} pattern.o
+convert: convert.o readmesh.o  chkopts
+	-${CLINKER} -o convert convert.o readmesh.o  ${PETSC_LIB}
+	${RM} convert.o readmesh.o
+
+poissonfem: poissonfem.o readmesh.o poissontools.o chkopts
+	-${CLINKER} -o poissonfem poissonfem.o readmesh.o poissontools.o ${PETSC_LIB}
+	${RM} poissonfem.o readmesh.o poissontools.o
 
 
 # etc
@@ -15,5 +16,5 @@ pattern: pattern.o  chkopts
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ pattern stokes
-
+	@rm -f *~ convert poissonfem
+	@rm -f blob.?.* squarefour.?.* square.?.* mesh.?.*

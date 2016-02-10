@@ -1,15 +1,14 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
-ad3: ad3.o  chkopts
-	-${CLINKER} -o ad3 ad3.o  ${PETSC_LIB}
-	${RM} ad3.o
-
+pattern: pattern.o  chkopts
+	-${CLINKER} -o pattern pattern.o  ${PETSC_LIB}
+	${RM} pattern.o
 
 # etc
 
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ ad3
+	@rm -f *~ pattern
 
