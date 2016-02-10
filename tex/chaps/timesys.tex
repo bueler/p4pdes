@@ -1,8 +1,36 @@
 
 \section{\PETSc \pTS objects}
 
+FIXME ODE in form
+    $$\by' = \bg(t,\by)$$
+
+FIXME function $\bg$ is \texttt{TSSetRHSFunction()}, Jacobian $\partial \bg/\partial \by$ is \texttt{TSSetRHSJacobian()}
+
+FIXME show \texttt{ode.c}, which is most similar to \texttt{ecjacobian.c}
+
+FIXME control \texttt{euler,beuler,cn,theta} by setting steps
+
+FIXME control \textt{rk} by \texttt{-ts\_type rk -ts\_atol Z -ts\_rk\_type XX}
+
 \section{Time-dependent heat equation}
+
 
 \section{Coupled reaction-diffusion equations}
 
 FIXME see pages 21--22 of \citep{HundsdorferVerwer2003} and see \citep{Pearson1993}
+
+FIXME show parts of \texttt{pattern.c}
+
+
+\section{Exercises}
+
+\renewcommand{\labelenumi}{\arabic{chapter}.\arabic{enumi}\quad}
+\renewcommand{\labelenumii}{(\alph{enumii})}
+\begin{enumerate}
+\item FIXME which \texttt{-ts\_type} work with \texttt{ode.c}?
+% euler, beuler, rk, theta, cn
+\item FIXME version of \texttt{ode.c} which solves a system
+\item FIXME version of \texttt{ode.c} which solves DAE system
+    $$\bbf(t,\by,\by') = \bg(t,\by)$$
+where $\partial \bg/\partial \by'$ may be singular
+\end{enumerate}
