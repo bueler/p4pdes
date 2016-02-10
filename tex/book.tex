@@ -258,20 +258,21 @@ Chapter
     &     & \tblockeqncode{$p$-Laplace (2D)}{$-\Div\left(|\grad u|^{p-2} \grad u\right) = f$}{plap.c}
 %    &     & \tblockeqncode{$p$-Laplace (2D)}{$\begin{matrix} -\Div\left(D \grad u\right) = f \\ D = |\grad u|^{p-2} \end{matrix}$}{plap.c}
                 &  \\ \bigskip
+\ref{chap:ts}
+    & \tblockeqncode{time-dependent heat (2D)}{$u_t = \grad^2 u + f$}{heat.c}
+          &     & \tblockeqncode{diffusion-reaction (2D))}{$\bu_t = \grad^2 \bu + \bR(\bu)$}{pattern.c} \\ \bigskip
 \ref{chap:ad}
     &  \tblockeqncode{advection-diffusion (3D)}{$- \eps \grad^2 u + \bw \cdot \grad u = f$}{ad3.c}
           &     &      \\ \bigskip
 \ref{chap:pr}
     & \tblockcode{Poisson (2D)}{fish2.c}    &     &     &      \\ \bigskip
 \ref{chap:sc}
-    & \tblockeqncode{time-dependent heat (2D)}{$u_t = \grad^2 u$}{heat.c}
-          &     & \tblockeqncode{porous (3D)}{$u_t = \Div\left(u^{\gamma-1} \grad u\right)$}{porous.c} \\ \bigskip
-%          &     & \tblockeqncode{porous (3D)}{$\begin{matrix} u_t = \Div\left(D \grad u\right) \\ D = u^{\gamma-1} \end{matrix}$}{porous.c} \\ \bigskip
+    &     &     & \tblockeqncode{porous (3D)}{$u_t = \Div\left(u^{\gamma-1} \grad u\right) + f$}{porous.c} \\ \bigskip
 \ref{chap:un}
     & \tblockcode{Poisson (2D)}{femfish.c}    &     &     &      \\ \bigskip
 \ref{chap:sy}
     & \tblockeqncode{Stokes (2D)}{$\begin{matrix} -\grad^2 \bu + \grad p = 0 \\ \Div \bu = 0 \end{matrix}$}{stokes.c}
-          &     & \tblockeqncode{shallow water (1D)}{$\begin{matrix} h_t + (hv)_x = 0 \\ (hv)_t + (hv^2 + \tfrac{1}{2} g h^2)_x = 0 \end{matrix}$}{water.c}     \\ \bigskip
+          &     &      \\ \bigskip
 \ref{chap:dp}
     & \tblockcode{Poisson (2D, 3D)}{plexfish.c}
           &     &      \\ \bigskip
@@ -306,13 +307,14 @@ Chapter
 3   & \XX & \XX & \XX &     &     & \XX &      \\
 4   & \gX & \XX & \gX & \XX &     & \XX &      \\
 5   & \gX & \gX & \gX & \XX &     & \XX &      \\
-6   & \gX & \gX & \XX & \XX &     & \XX &      \\
-7   & \gX & \gX & \XX & \XX &     & \gX &      \\
-8   & \gX & \gX & \XX & \XX &     & \XX & \XX  \\
-9   & \XX & \XX & \gX & \gX &     &     &      \\
-10  & \gX & \gX & \XX & \XX &     & \XX & \XX  \\
-11  & \gX & \gX & \XX & \XX & \XX &     &      \\
-12  & \gX & \gX & \gX & \XX &     & \XX &      \\
+6   & \gX & \gX & \gX & \XX &     & \XX & \XX  \\
+7   & \gX & \gX & \XX & \XX &     & \XX &      \\
+8   & \gX & \gX & \XX & \XX &     & \gX &      \\
+9   & \gX & \gX & \XX & \XX &     & \XX & \XX  \\
+10  & \XX & \XX & \gX & \gX &     &     &      \\
+11  & \gX & \gX & \XX & \XX &     & \XX &      \\
+12  & \gX & \gX & \XX & \XX & \XX &     &      \\
+13  & \gX & \gX & \gX & \XX &     & \XX &      \\
 \bottomrule
 \end{tabular}
 \end{center}
