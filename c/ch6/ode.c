@@ -48,18 +48,15 @@ int main(int argc,char **argv) {
   ierr = TSSetRHSFunction(ts,NULL,FormRHSFunction,NULL); CHKERRQ(ierr);
 
   ierr = TSSetType(ts,TSEULER); CHKERRQ(ierr);
-  //dtinitial = 1.0123456789*(tf-t0)/(double)steps;    // magic number to fix issue #119
-  dtinitial = (tf-t0)/(double)steps;
+  dtinitial = 1.000000123456789*(tf-t0)/(double)steps;    // magic number to fix PETSc issue #119
   ierr = TSSetDuration(ts,100*steps,tf-t0); CHKERRQ(ierr);
   ierr = TSSetExactFinalTime(ts,
     (interpolate) ? TS_EXACTFINALTIME_INTERPOLATE: TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
   ierr = TSSetInitialTimeStep(ts,t0,dtinitial); CHKERRQ(ierr);
   ierr = TSSetFromOptions(ts); CHKERRQ(ierr);
 
-  ierr = VecView(y,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
-
   ierr = PetscPrintf(PETSC_COMM_WORLD,
-             "solving from t0 = %g to tf = %g with y0 = %g and initial dt = %g ...\n",
+             "solving t0 = %.3f to tf = %.3f with y0 = %.3f and initial dt = %.3f ...\n",
              t0,tf,y0,dtinitial); CHKERRQ(ierr);
   ierr = TSSolve(ts,y); CHKERRQ(ierr);
 
