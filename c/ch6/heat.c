@@ -205,7 +205,7 @@ int main(int argc,char **argv)
   ierr = PetscPrintf(PETSC_COMM_WORLD,
            "running on %d x %d grid with %g x %g grid spacing ...\n"
            "    (initial ratio:  k dt / dx^2 = %g)\n",
-           info.mx,info.my,hx,hy,user.k*(tf/steps)/(hx*hx)); CHKERRQ(ierr);
+           info.mx,info.my,hx,hy,user.k*(tf/(double)steps)/(hx*hx)); CHKERRQ(ierr);
 
   ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
   ierr = TSSetProblemType(ts,TS_NONLINEAR); CHKERRQ(ierr);
@@ -215,10 +215,10 @@ int main(int argc,char **argv)
   ierr = DMDATSSetRHSJacobianLocal(user.da,
                                    (DMDATSRHSJacobianLocal)FormRHSJacobianLocal,&user); CHKERRQ(ierr);
 
-  ierr = TSSetType(ts,TSBEULER); CHKERRQ(ierr);
+  ierr = TSSetType(ts,TSBEULER); CHKERRQ(ierr);         // default: Backward Euler
   ierr = TSSetDuration(ts,10*steps,tf); CHKERRQ(ierr);  // allow 10 times requested steps
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
-  ierr = TSSetInitialTimeStep(ts,0.0,tf/steps); CHKERRQ(ierr);
+  ierr = TSSetInitialTimeStep(ts,0.0,tf/(double)steps); CHKERRQ(ierr); // ask for dt=tf/steps
   ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
 
   ierr = DMCreateGlobalVector(user.da,&u); CHKERRQ(ierr);
