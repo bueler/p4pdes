@@ -1,35 +1,91 @@
 static char help[] =
 "Solves time-dependent heat equation in 2D using TS.  Option prefix -heat_.\n"
-"Equation is  u_t = k laplacian u + f.  Boundary conditions are\n"
-"non-homogeneous Neumann in x and periodic in y.  Discretization by\n"
-"finite differences.\n\n";
+"Equation is  u_t = k laplacian u + f.  Domain is (0,1) x (0,1).\n"
+"Boundary conditions are non-homogeneous Neumann in x and periodic in y.\n"
+"Energy is conserved (with default choices).  Discretization by\n"
+"centered finite differences.  Converts the PDE into a system  X_t = G(t,X)\n"
+"(PETSc type 'nonlinear') and uses theta method time-stepping by default.\n";
+
+// $ ./heat -help |grep heat_
+// $ ./heat -help |grep ts_type
+
+//good (use default BEULER):
+// $ ./heat -ts_monitor
+// $ ./heat -ts_monitor -ts_monitor_solution draw -da_refine 4
+
+//explodes (as it should):
+// $ ./heat -ts_monitor -ts_monitor_solution draw -da_refine 4 -ts_type euler
+
+//agonizingly slow (RK is adapting):
+// $ ./heat -ts_monitor -ts_monitor_solution draw -da_refine 4 -ts_type rk
+
+//wobbles (typical Crank-Nicolson):
+// $ ./heat -ts_monitor -ts_monitor_solution draw -da_refine 4 -ts_type cn
+
+//theta methods:
+// $ ./heat -help |grep ts_theta
+// $ ./heat -ts_type theta -ts_theta_theta 1                        // = BEuler
+// $ ./heat -ts_type theta -ts_theta_theta 0.5 -ts_theta_endpoint   // = Crank-Nicolson
+
+//wobbles mostly fixed:
+// $ ./heat -ts_monitor -ts_monitor_solution draw -da_refine 4 -ts_type theta -ts_theta_theta 0.7 -ts_theta_endpoint 1
+
+//good adaptive:
+// $ ./heat -ts_monitor -ts_monitor_solution draw -da_refine 4 -ts_type gl
 
 #include <petsc.h>
 
 typedef struct {
   DM     da;
-  Vec    f;
-  double k,    // conductivity
-         Lx,   // domain length in x:  [0,Lx]
-         Ly;   // domain length in y:  [0,Ly]
+  Vec    f,    // source f(x,y)
+         gamma;// boundary condition; = gamma_0(y) on left boundary
+               //                     = gamma_1(y) on right boundary
+  double k;    // conductivity
 } HeatCtx;
 
 
-PetscErrorCode InitialState(Vec u, HeatCtx* user) {
-  PetscErrorCode ierr;
-  DMDALocalInfo  info;
-  int            i,j;
-  double         **au;
+PetscErrorCode SetSourceF(Vec f, HeatCtx* user) {
+    PetscErrorCode ierr;
+    DMDALocalInfo  info;
+    int            i,j;
+    double         hx, hy, **af, x, y, q;
 
-  ierr = DMDAGetLocalInfo(user->da,&info); CHKERRQ(ierr);
-  ierr = DMDAVecGetArray(user->da,u,&au); CHKERRQ(ierr);
-  for (j = info.ys; j < info.ys+info.ym; j++) {
-    for (i = info.xs; i < info.xs+info.xm; i++) {
-      au[j][i] = 0.0;  // FIXME function of x,y
+    ierr = DMDAGetLocalInfo(user->da,&info); CHKERRQ(ierr);
+    hx = 1.0 / (double)(info.mx-1);
+    hy = 1.0 / (double)(info.my);   // periodic direction
+    ierr = DMDAVecGetArray(user->da,f,&af); CHKERRQ(ierr);
+    for (j = info.ys; j < info.ys+info.ym; j++) {
+        y = hy * j;
+        for (i = info.xs; i < info.xs+info.xm; i++) {
+            x = hx * i;
+            q = (x-0.6) * (x-0.6);
+            af[j][i] = 3.0 * exp(-25.0*q) * sin(2.0*PETSC_PI*y);
+        }
     }
-  }
-  ierr = DMDAVecRestoreArray(user->da,u,&au); CHKERRQ(ierr);
-  return 0;
+    ierr = DMDAVecRestoreArray(user->da,f,&af); CHKERRQ(ierr);
+    return 0;
+}
+
+
+PetscErrorCode SetNeumannValues(Vec gamma, HeatCtx* user) {
+    PetscErrorCode ierr;
+    DMDALocalInfo  info;
+    int            j;
+    double         hy, **agamma, y;
+
+    ierr = VecSet(gamma,NAN); CHKERRQ(ierr);  // start by invalidating
+    ierr = DMDAGetLocalInfo(user->da,&info); CHKERRQ(ierr);
+    hy = 1.0 / (double)(info.my);   // periodic direction
+    ierr = DMDAVecGetArray(user->da,gamma,&agamma); CHKERRQ(ierr);
+    for (j = info.ys; j < info.ys+info.ym; j++) {
+        y = hy * j;
+        if (info.xs == 0)
+            agamma[j][0] = sin(6.0 * PETSC_PI * y);
+        if (info.xs+info.xm == info.mx)
+            agamma[j][info.mx-1] = 0.0;
+    }
+    ierr = DMDAVecRestoreArray(user->da,gamma,&agamma); CHKERRQ(ierr);
+    return 0;
 }
 
 
@@ -37,23 +93,33 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **au,
                                     double **aG, HeatCtx *user) {
   PetscErrorCode ierr;
   int            i, j;
-  const double   hx = user->Lx / (double)(info->mx-1),
-                 hy = user->Ly / (double)(info->my),   // periodic direction
+  const double   hx = 1.0 / (double)(info->mx-1),
+                 hy = 1.0 / (double)(info->my),   // periodic direction
                  hx2 = hx * hx,  hy2 = hy * hy;
-  double         uxx, uyy, **af;
+  double         uleft, uright, uxx, uyy, **af, **agamma;
 
   ierr = DMDAVecGetArray(user->da,user->f,&af); CHKERRQ(ierr);
+  ierr = DMDAVecGetArray(user->da,user->gamma,&agamma); CHKERRQ(ierr);
   for (j = info->ys; j < info->ys + info->ym; j++) {
       for (i = info->xs; i < info->xs + info->xm; i++) {
-          uxx = (au[j][i-1] - 2.0 * au[j][i]+ au[j][i+1]) / hx2;
+          if (i == 0)
+              uleft = au[j][i+1] - 2.0 * hx * agamma[j][i];
+          else
+              uleft = au[j][i-1];
+          if (i == info->mx-1)
+              uright = au[j][i-1] - 2.0 * hx * agamma[j][i];
+          else
+              uright = au[j][i+1];
+          uxx = (uleft - 2.0 * au[j][i]+ uright) / hx2;
           uyy = (au[j-1][i] - 2.0 * au[j][i]+ au[j+1][i]) / hy2;
-          aG[j][i] = user->k * (uxx + uyy) + 0.0 * af[j][i];
-          // FIXME need boundary conditions
+          aG[j][i] = user->k * (uxx + uyy) + af[j][i];
       }
   }
   ierr = DMDAVecRestoreArray(user->da,user->f,&af); CHKERRQ(ierr);
+  ierr = DMDAVecRestoreArray(user->da,user->gamma,&agamma); CHKERRQ(ierr);
   return 0;
 }
+
 
 int main(int argc,char **argv)
 {
@@ -62,14 +128,12 @@ int main(int argc,char **argv)
   TS             ts;
   Vec            u, uexact;
   DMDALocalInfo  info;
-  double         tf = 10.0;
+  double         tf = 10.0, hx, hy;
   int            steps = 10;
 
   PetscInitialize(&argc,&argv,(char*)0,help);
 
   user.k  = 1.0;
-  user.Lx = 1.0;
-  user.Ly = 1.0;
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "heat_", "options for heat", ""); CHKERRQ(ierr);
   ierr = PetscOptionsReal("-k","dimensionless rate constant",
            "heat.c",user.k,&user.k,NULL);CHKERRQ(ierr);
@@ -82,15 +146,20 @@ int main(int argc,char **argv)
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
                       DM_BOUNDARY_NONE, DM_BOUNDARY_PERIODIC,
                       DMDA_STENCIL_STAR,
-                      -3,-3,PETSC_DECIDE,PETSC_DECIDE,
+                      -5,-5,PETSC_DECIDE,PETSC_DECIDE,
                       1,  // degrees of freedom
                       1,  // stencil width
                       NULL,NULL,&user.da); CHKERRQ(ierr);
+  ierr = DMDASetUniformCoordinates(user.da, 0.0, 1.0, 0.0, 1.0, -1.0, -1.0); CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,
-           "running on %d x %d grid ...\n",
-           info.mx,info.my); CHKERRQ(ierr);
   ierr = DMSetApplicationContext(user.da,&user); CHKERRQ(ierr);
+
+  hx = 1.0/(double)(info.mx-1);
+  hy = 1.0/(double)(info.my);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,
+           "running on %d x %d grid with %g x %g grid spacing ...\n"
+           "    (initial ratio:  k dt / dx^2 = %g)\n",
+           info.mx,info.my,hx,hy,user.k*(tf/steps)/(hx*hx)); CHKERRQ(ierr);
 
   ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
   ierr = TSSetProblemType(ts,TS_NONLINEAR); CHKERRQ(ierr);
@@ -98,7 +167,7 @@ int main(int argc,char **argv)
   ierr = DMDATSSetRHSFunctionLocal(user.da,INSERT_VALUES,
                                    (DMDATSRHSFunctionLocal)FormRHSFunctionLocal,&user); CHKERRQ(ierr);
 
-  ierr = TSSetType(ts,TSCN); CHKERRQ(ierr);             // default to Crank-Nicolson
+  ierr = TSSetType(ts,TSBEULER); CHKERRQ(ierr);
   ierr = TSSetDuration(ts,10*steps,tf); CHKERRQ(ierr);  // allow 10 times requested steps
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
   ierr = TSSetInitialTimeStep(ts,0.0,tf/steps); CHKERRQ(ierr);
@@ -107,10 +176,15 @@ int main(int argc,char **argv)
   ierr = DMCreateGlobalVector(user.da,&u); CHKERRQ(ierr);
   ierr = VecDuplicate(u,&uexact); CHKERRQ(ierr);
   ierr = VecDuplicate(u,&(user.f)); CHKERRQ(ierr);
-  ierr = InitialState(u,&user); CHKERRQ(ierr);
-  ierr = TSSolve(ts,u);CHKERRQ(ierr);
+  ierr = VecDuplicate(u,&(user.gamma)); CHKERRQ(ierr);
+  ierr = SetSourceF(user.f,&user); CHKERRQ(ierr);
+  ierr = SetNeumannValues(user.gamma,&user); CHKERRQ(ierr);
 
-  VecDestroy(&u);  VecDestroy(&uexact);  VecDestroy(&(user.f));
+  ierr = VecSet(u,0.0); CHKERRQ(ierr);
+  ierr = TSSolve(ts,u); CHKERRQ(ierr);
+
+  VecDestroy(&u);  VecDestroy(&uexact);
+  VecDestroy(&(user.f));  VecDestroy(&(user.gamma));
   TSDestroy(&ts);  DMDestroy(&user.da);
   PetscFinalize();
   return 0;
