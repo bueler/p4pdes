@@ -1,7 +1,7 @@
 all: book.pdf
 
 # chapters of the book
-chapsroots := preface getstarted linearsystem structured nonlinear optifem advdif precond scaling unstructured dmplex systems constrained
+chapsroots := preface getstarted linearsystem structured nonlinear optifem timesys advdif precond scaling unstructured dmplex stokes constrained
 chapsinputs := $(addprefix chaps/, $(addsuffix .tex, $(chapsroots)))
 
 # for these, see strip.sh
@@ -32,18 +32,21 @@ tmp/:
 $(cstrip):
 	./strip.sh
 
-tmp/blob.tikz tmp/blob.1.elenum.tikz tmp/blob.1.nodenum.tikz: tmp/ ../c/ch9/blob.poly
-	python tri2tikz.py --polyonly --nodesize 1.0 --scale 0.6 ../c/ch9/blob tmp/blob.tikz
-	triangle -pqa4.0 ../c/ch9/blob
-	python tri2tikz.py --labelelements --nodesize 1.0 --scale 0.6 ../c/ch9/blob.1 tmp/blob.1.elenum.tikz
-	python tri2tikz.py --labelnodes --nodesize 3.0 --nodeoffset -0.5 --scale 0.6 ../c/ch9/blob.1 tmp/blob.1.nodenum.tikz
+# location of naive unstructured mesh stuff:
+UNLOC := ch10/
 
-tmp/squarefour.tikz: tmp/ ../c/ch9/squarefour.poly
-	python tri2tikz.py --labelnodes --nodesize 0.5 --nodeoffset -0.1 --scale 3.0 ../c/ch9/squarefour $@
+tmp/blob.tikz tmp/blob.1.elenum.tikz tmp/blob.1.nodenum.tikz: tmp/ ../c/$(UNLOC)blob.poly
+	python tri2tikz.py --polyonly --nodesize 1.0 --scale 0.6 ../c/$(UNLOC)blob tmp/blob.tikz
+	triangle -pqa4.0 ../c/$(UNLOC)blob
+	python tri2tikz.py --labelelements --nodesize 1.0 --scale 0.6 ../c/$(UNLOC)blob.1 tmp/blob.1.elenum.tikz
+	python tri2tikz.py --labelnodes --nodesize 3.0 --nodeoffset -0.5 --scale 0.6 ../c/$(UNLOC)blob.1 tmp/blob.1.nodenum.tikz
 
-tmp/mesh.1.tikz: tmp/ ../c/ch9/genstructured.py
-	(cd ../c/ch9/ && python genstructured.py mesh.1 5)
-	python tri2tikz.py --labelnodes --nodeoffset 0.05 --nodesize 0.5 --labelelements --scale 5.0 ../c/ch9/mesh.1 $@
+tmp/squarefour.tikz: tmp/ ../c/$(UNLOC)squarefour.poly
+	python tri2tikz.py --labelnodes --nodesize 0.5 --nodeoffset -0.1 --scale 3.0 ../c/$(UNLOC)squarefour $@
+
+tmp/mesh.1.tikz: tmp/ ../c/$(UNLOC)genstructured.py
+	(cd ../c/$(UNLOC) && python genstructured.py mesh.1 5)
+	python tri2tikz.py --labelnodes --nodeoffset 0.05 --nodesize 0.5 --labelelements --scale 5.0 ../c/$(UNLOC)mesh.1 $@
 
 .PHONY: clean
 
