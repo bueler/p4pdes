@@ -1,121 +1,96 @@
 static char help[] =
-"Solves time-dependent heat equation using TS.  Option prefix -heat_.\n"
-"Equation is  u_t = k laplacian u + f.  Discretization by finite differences.\n\n";
+"Solves time-dependent heat equation in 2D using TS.  Option prefix -heat_.\n"
+"Equation is  u_t = k laplacian u + f.  Boundary conditions are\n"
+"non-homogeneous Neumann in x and periodic in y.  Discretization by\n"
+"finite differences.\n\n";
 
 #include <petsc.h>
 
 typedef struct {
   DM     da;
   Vec    f;
-  double k;    // conductivity
+  double k,    // conductivity
+         Lx,   // domain length in x:  [0,Lx]
+         Ly;   // domain length in y:  [0,Ly]
 } HeatCtx;
 
-FIXME
+
 PetscErrorCode InitialState(Vec u, HeatCtx* user) {
   PetscErrorCode ierr;
   DMDALocalInfo  info;
   int            i,j;
-  double         sx,sy;
-  DMDACoor2d     **aC;
-  Field          **ax;
+  double         **au;
 
   ierr = DMDAGetLocalInfo(user->da,&info); CHKERRQ(ierr);
-  ierr = DMDAGetCoordinateArray(user->da,&aC); CHKERRQ(ierr);
-  ierr = DMDAVecGetArray(user->da,x,&ax); CHKERRQ(ierr);
+  ierr = DMDAVecGetArray(user->da,u,&au); CHKERRQ(ierr);
   for (j = info.ys; j < info.ys+info.ym; j++) {
     for (i = info.xs; i < info.xs+info.xm; i++) {
-      if ((aC[j][i].x >= 1.0) && (aC[j][i].x <= 1.5)
-              && (aC[j][i].y >= 1.0) && (aC[j][i].y <= 1.5)) {
-          sx = sin(4.0 * PETSC_PI * aC[j][i].x);
-          sy = sin(4.0 * PETSC_PI * aC[j][i].y);
-          ax[j][i].v = 0.5 * sx * sx * sy * sy;
-      } else
-          ax[j][i].v = 0.0;
-      ax[j][i].u = 1.0 - 2.0 * ax[j][i].v;
+      au[j][i] = 0.0;  // FIXME function of x,y
     }
   }
-  ierr = DMDAVecRestoreArray(user->da,x,&ax); CHKERRQ(ierr);
-  ierr = DMDARestoreCoordinateArray(user->da,&aC); CHKERRQ(ierr);
+  ierr = DMDAVecRestoreArray(user->da,u,&au); CHKERRQ(ierr);
   return 0;
 }
 
-FIXME
-PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **au,
-                                    double **ag, HeatCtx *user) {
-  int            i, j;
-  const double   h = user->L / (double)(info->mx),
-                 Cu = user->Du / (6.0 * h * h),
-                 Cv = user->Dv / (6.0 * h * h);
-  double         u, v, uv2, lapu, lapv;
 
+PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **au,
+                                    double **aG, HeatCtx *user) {
+  PetscErrorCode ierr;
+  int            i, j;
+  const double   hx = user->Lx / (double)(info->mx-1),
+                 hy = user->Ly / (double)(info->my),   // periodic direction
+                 hx2 = hx * hx,  hy2 = hy * hy;
+  double         uxx, uyy, **af;
+
+  ierr = DMDAVecGetArray(user->da,user->f,&af); CHKERRQ(ierr);
   for (j = info->ys; j < info->ys + info->ym; j++) {
       for (i = info->xs; i < info->xs + info->xm; i++) {
-          u = aX[j][i].u;
-          v = aX[j][i].v;
-          uv2 = u * v * v;
-          lapu =       aX[j+1][i-1].u + 4.0 * aX[j+1][i].u +     aX[j+1][i+1].u
-                 + 4.0 * aX[j][i-1].u -      20.0 * u      + 4.0 * aX[j][i+1].u
-                 +     aX[j-1][i-1].u + 4.0 * aX[j-1][i].u +     aX[j-1][i+1].u;
-          lapv =       aX[j+1][i-1].v + 4.0 * aX[j+1][i].v +     aX[j+1][i+1].v
-                 + 4.0 * aX[j][i-1].v -      20.0 * v      + 4.0 * aX[j][i+1].v
-                 +     aX[j-1][i-1].v + 4.0 * aX[j-1][i].v +     aX[j-1][i+1].v;
-          aG[j][i].u = Cu * lapu - uv2 + user->F * (1.0 - u);
-          aG[j][i].v = Cv * lapv + uv2 - (user->F + user->k) * v;
+          uxx = (au[j][i-1] - 2.0 * au[j][i]+ au[j][i+1]) / hx2;
+          uyy = (au[j-1][i] - 2.0 * au[j][i]+ au[j+1][i]) / hy2;
+          aG[j][i] = user->k * (uxx + uyy) + 0.0 * af[j][i];
+          // FIXME need boundary conditions
       }
   }
+  ierr = DMDAVecRestoreArray(user->da,user->f,&af); CHKERRQ(ierr);
   return 0;
 }
 
 int main(int argc,char **argv)
 {
   PetscErrorCode ierr;
-  PtnCtx         user;
+  HeatCtx        user;
   TS             ts;
-  Vec            x;
+  Vec            u, uexact;
   DMDALocalInfo  info;
   double         tf = 10.0;
   int            steps = 10;
 
   PetscInitialize(&argc,&argv,(char*)0,help);
 
-  // parameter values from pages 21-22 in Hundsdorfer & Verwer (2003)
-  user.L  = 2.5;
-  user.Du = 8.0e-5;
-  user.Dv = 4.0e-5;
-  user.F  = 0.024;
-  user.k  = 0.06;
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "ptn_", "options for patterns", ""); CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-L","square domain side length",
-           "pattern.c",user.L,&user.L,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-Du","diffusion coefficient of first equation",
-           "pattern.c",user.Du,&user.Du,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-Dv","diffusion coefficient of second equation",
-           "pattern.c",user.Dv,&user.Dv,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-F","dimensionless feed rate",
-           "pattern.c",user.F,&user.F,NULL);CHKERRQ(ierr);
+  user.k  = 1.0;
+  user.Lx = 1.0;
+  user.Ly = 1.0;
+  ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "heat_", "options for heat", ""); CHKERRQ(ierr);
   ierr = PetscOptionsReal("-k","dimensionless rate constant",
-           "pattern.c",user.k,&user.k,NULL);CHKERRQ(ierr);
+           "heat.c",user.k,&user.k,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-tf","final time",
-           "pattern.c",tf,&tf,NULL);CHKERRQ(ierr);
+           "heat.c",tf,&tf,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-steps","desired number of time-steps",
-           "pattern.c",steps,&steps,NULL);CHKERRQ(ierr);
+           "heat.c",steps,&steps,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
-                      DM_BOUNDARY_PERIODIC, DM_BOUNDARY_PERIODIC,
-                      DMDA_STENCIL_BOX,  // for 9-point stencil
+                      DM_BOUNDARY_NONE, DM_BOUNDARY_PERIODIC,
+                      DMDA_STENCIL_STAR,
                       -3,-3,PETSC_DECIDE,PETSC_DECIDE,
-                      2,  // degrees of freedom
+                      1,  // degrees of freedom
                       1,  // stencil width
                       NULL,NULL,&user.da); CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
-           "running on %d x %d grid with square cells of side h = %.6f ...\n",
-           info.mx,info.my,user.L/(double)(info.mx)); CHKERRQ(ierr);
-  ierr = DMDASetUniformCoordinates(user.da, 0.0, user.L, 0.0, user.L, -1.0, -1.0); CHKERRQ(ierr);
+           "running on %d x %d grid ...\n",
+           info.mx,info.my); CHKERRQ(ierr);
   ierr = DMSetApplicationContext(user.da,&user); CHKERRQ(ierr);
-  ierr = DMDASetFieldName(user.da,0,"u"); CHKERRQ(ierr);
-  ierr = DMDASetFieldName(user.da,1,"v"); CHKERRQ(ierr);
 
   ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
   ierr = TSSetProblemType(ts,TS_NONLINEAR); CHKERRQ(ierr);
@@ -129,14 +104,15 @@ int main(int argc,char **argv)
   ierr = TSSetInitialTimeStep(ts,0.0,tf/steps); CHKERRQ(ierr);
   ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
 
-  ierr = DMCreateGlobalVector(user.da,&x); CHKERRQ(ierr);
-  ierr = InitialState(x,&user); CHKERRQ(ierr);
-  ierr = TSSolve(ts,x);CHKERRQ(ierr);
+  ierr = DMCreateGlobalVector(user.da,&u); CHKERRQ(ierr);
+  ierr = VecDuplicate(u,&uexact); CHKERRQ(ierr);
+  ierr = VecDuplicate(u,&(user.f)); CHKERRQ(ierr);
+  ierr = InitialState(u,&user); CHKERRQ(ierr);
+  ierr = TSSolve(ts,u);CHKERRQ(ierr);
 
-  ierr = VecDestroy(&x); CHKERRQ(ierr);
-  ierr = TSDestroy(&ts); CHKERRQ(ierr);
-  ierr = DMDestroy(&user.da); CHKERRQ(ierr);
-  ierr = PetscFinalize();
+  VecDestroy(&u);  VecDestroy(&uexact);  VecDestroy(&(user.f));
+  TSDestroy(&ts);  DMDestroy(&user.da);
+  PetscFinalize();
   return 0;
 }
 
