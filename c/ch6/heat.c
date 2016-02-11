@@ -9,6 +9,9 @@ static char help[] =
 // $ ./heat -help |grep heat_
 // $ ./heat -help |grep ts_type
 
+// $ ./heat -snes_type test      // result suggests jacobian is correct
+// $ ./heat -snes_type test -snes_test_display
+
 //good (use default BEULER):
 // $ ./heat -ts_monitor
 // $ ./heat -ts_monitor -ts_monitor_solution draw -da_refine 4
@@ -28,7 +31,7 @@ static char help[] =
 // $ ./heat -ts_type theta -ts_theta_theta 0.5 -ts_theta_endpoint   // = Crank-Nicolson
 
 //wobbles mostly fixed:
-// $ ./heat -ts_monitor -ts_monitor_solution draw -da_refine 4 -ts_type theta -ts_theta_theta 0.7 -ts_theta_endpoint 1
+// $ ./heat -ts_monitor -ts_monitor_solution draw -da_refine 4 -ts_type theta -ts_theta_theta 0.7 -ts_theta_endpoint
 
 //good adaptive:
 // $ ./heat -ts_monitor -ts_monitor_solution draw -da_refine 4 -ts_type gl
@@ -121,6 +124,49 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **au,
 }
 
 
+PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info, double t, double **au,
+                                    Mat J, Mat P, HeatCtx *user) {
+    PetscErrorCode ierr;
+    int            i, j, ncols;
+    const double   hx = 1.0 / (double)(info->mx-1),
+                   hy = 1.0 / (double)(info->my),   // periodic direction
+                   hx2 = hx * hx,  hy2 = hy * hy,
+                   k = user->k;
+    double         v[5];
+    MatStencil     col[5],row;
+
+    for (j = info->ys; j < info->ys+info->ym; j++) {
+        row.j = j;  col[0].j = j;
+        for (i = info->xs; i < info->xs+info->xm; i++) {
+            ncols = 5;
+            row.i = i;
+            col[0].i = i;
+            v[0] = - 2.0 * k * (1.0 / hx2 + 1.0 / hy2);
+            col[1].j = j-1;  col[1].i = i;    v[1] = k / hy2;
+            col[2].j = j+1;  col[2].i = i;    v[2] = k / hy2;
+            col[3].j = j;    col[3].i = i-1;  v[3] = k / hx2;
+            col[4].j = j;    col[4].i = i+1;  v[4] = k / hx2;
+            if (i == 0) {
+                ncols = 4;
+                col[3].j = j;  col[3].i = i+1;  v[3] = 2.0 * k / hx2;
+            } else if (i == info->mx-1) {
+                ncols = 4;
+                col[3].j = j;  col[3].i = i-1;  v[3] = 2.0 * k / hx2;
+            }
+            ierr = MatSetValuesStencil(P,1,&row,ncols,col,v,INSERT_VALUES); CHKERRQ(ierr);
+        }
+    }
+
+    ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    ierr = MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    if (J != P) {
+        ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+        ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    }
+    return 0;
+}
+
+
 int main(int argc,char **argv)
 {
   PetscErrorCode ierr;
@@ -146,7 +192,7 @@ int main(int argc,char **argv)
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
                       DM_BOUNDARY_NONE, DM_BOUNDARY_PERIODIC,
                       DMDA_STENCIL_STAR,
-                      -5,-5,PETSC_DECIDE,PETSC_DECIDE,
+                      -3,-5,PETSC_DECIDE,PETSC_DECIDE,
                       1,  // degrees of freedom
                       1,  // stencil width
                       NULL,NULL,&user.da); CHKERRQ(ierr);
@@ -166,6 +212,8 @@ int main(int argc,char **argv)
   ierr = TSSetDM(ts,user.da); CHKERRQ(ierr);
   ierr = DMDATSSetRHSFunctionLocal(user.da,INSERT_VALUES,
                                    (DMDATSRHSFunctionLocal)FormRHSFunctionLocal,&user); CHKERRQ(ierr);
+  ierr = DMDATSSetRHSJacobianLocal(user.da,
+                                   (DMDATSRHSJacobianLocal)FormRHSJacobianLocal,&user); CHKERRQ(ierr);
 
   ierr = TSSetType(ts,TSBEULER); CHKERRQ(ierr);
   ierr = TSSetDuration(ts,10*steps,tf); CHKERRQ(ierr);  // allow 10 times requested steps
