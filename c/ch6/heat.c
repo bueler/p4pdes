@@ -1,6 +1,6 @@
 static char help[] =
 "Solves time-dependent heat equation in 2D using TS.  Option prefix -heat_.\n"
-"Equation is  u_t = k laplacian u + f.  Domain is (0,1) x (0,1).\n"
+"Equation is  u_t = D laplacian u + f.  Domain is (0,1) x (0,1).\n"
 "Boundary conditions are non-homogeneous Neumann in x and periodic in y.\n"
 "Energy is conserved (with default choices).  Discretization by\n"
 "centered finite differences.  Converts the PDE into a system  X_t = G(t,X)\n"
@@ -11,8 +11,10 @@ static char help[] =
 // $ ./heat -snes_type test -snes_test_display // result suggests jacobian is correct
 
 //run-time info
-// $ ./heat -ts_monitor -ts_view
-// $ ./heat -heat_monitor_energy -snes_converged_reason
+// $ ./heat -ts_view
+// $ ./heat -dm_view draw -draw_pause 2 -da_refine 1  // shows BOUNDARY_NONE and BOUNDARY_PERIODIC clearly
+// $ ./heat -ts_monitor_solution draw   // note -ts_monitor needed
+// $ ./heat -ts_monitor -heat_monitor -snes_converged_reason
 
 //good (use default BEULER):
 // $ ./heat -ts_monitor -ts_monitor_solution draw -da_refine 4
@@ -44,7 +46,7 @@ typedef struct {
   Vec    f,    // source f(x,y)
          gamma;// boundary condition; = gamma_0(y) on left boundary
                //                     = gamma_1(y) on right boundary
-  double k;    // conductivity
+  double D;    // conductivity
 } HeatCtx;
 
 
@@ -61,24 +63,27 @@ PetscErrorCode Spacings(DM da, double *hx, double *hy) {
 PetscErrorCode EnergyMonitor(TS ts, PetscInt step, PetscReal time, Vec u, void *ctx) {
     PetscErrorCode ierr;
     HeatCtx        *user = (HeatCtx*)ctx;
-    double         lenergy = 0.0, energy, hx, hy, dt;
+    double         lenergy = 0.0, energy, hx, hy, **au;
     int            i,j;
     MPI_Comm       com;
     DMDALocalInfo  info;
 
     ierr = DMDAGetLocalInfo(user->da,&info); CHKERRQ(ierr);
+    ierr = DMDAVecGetArrayRead(user->da,u,&au); CHKERRQ(ierr);
     for (j = info.ys; j < info.ys + info.ym; j++) {
         for (i = info.xs; i < info.xs + info.xm; i++) {
-            lenergy += 0.0; //FIXME
+            if ((i == 0) || (i == info.mx-1))
+                lenergy += 0.5 * au[j][i];
+            else
+                lenergy += au[j][i];
         }
     }
+    ierr = DMDAVecRestoreArrayRead(user->da,u,&au); CHKERRQ(ierr);
     ierr = Spacings(user->da,&hx,&hy); CHKERRQ(ierr);
     lenergy *= hx * hy;
     ierr = PetscObjectGetComm((PetscObject)(user->da),&com); CHKERRQ(ierr);
     ierr = MPI_Allreduce(&lenergy,&energy,1,MPI_DOUBLE,MPI_SUM,com); CHKERRQ(ierr);
-    ierr = TSGetTimeStep(ts,&dt); CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,
-             "%4d time %10.6f dt %.3e:  energy = %g\n",step,time,dt,energy); CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"  energy = %g\n",energy); CHKERRQ(ierr);
     return 0;
 }
 
@@ -148,7 +153,7 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **au,
               uright = au[j][i+1];
           uxx = (uleft - 2.0 * au[j][i]+ uright) / (hx*hx);
           uyy = (au[j-1][i] - 2.0 * au[j][i]+ au[j+1][i]) / (hy*hy);
-          aG[j][i] = user->k * (uxx + uyy) + af[j][i];
+          aG[j][i] = user->D * (uxx + uyy) + af[j][i];
       }
   }
   ierr = DMDAVecRestoreArray(user->da,user->f,&af); CHKERRQ(ierr);
@@ -161,7 +166,7 @@ PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info, double t, double **au,
                                     Mat J, Mat P, HeatCtx *user) {
     PetscErrorCode ierr;
     int            i, j, ncols;
-    const double   k = user->k;
+    const double   D = user->D;
     double         hx, hy, hx2, hy2, v[5];
     MatStencil     col[5],row;
 
@@ -173,17 +178,17 @@ PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info, double t, double **au,
             ncols = 5;
             row.i = i;
             col[0].i = i;
-            v[0] = - 2.0 * k * (1.0 / hx2 + 1.0 / hy2);
-            col[1].j = j-1;  col[1].i = i;    v[1] = k / hy2;
-            col[2].j = j+1;  col[2].i = i;    v[2] = k / hy2;
-            col[3].j = j;    col[3].i = i-1;  v[3] = k / hx2;
-            col[4].j = j;    col[4].i = i+1;  v[4] = k / hx2;
+            v[0] = - 2.0 * D * (1.0 / hx2 + 1.0 / hy2);
+            col[1].j = j-1;  col[1].i = i;    v[1] = D / hy2;
+            col[2].j = j+1;  col[2].i = i;    v[2] = D / hy2;
+            col[3].j = j;    col[3].i = i-1;  v[3] = D / hx2;
+            col[4].j = j;    col[4].i = i+1;  v[4] = D / hx2;
             if (i == 0) {
                 ncols = 4;
-                col[3].j = j;  col[3].i = i+1;  v[3] = 2.0 * k / hx2;
+                col[3].j = j;  col[3].i = i+1;  v[3] = 2.0 * D / hx2;
             } else if (i == info->mx-1) {
                 ncols = 4;
-                col[3].j = j;  col[3].i = i-1;  v[3] = 2.0 * k / hx2;
+                col[3].j = j;  col[3].i = i-1;  v[3] = 2.0 * D / hx2;
             }
             ierr = MatSetValuesStencil(P,1,&row,ncols,col,v,INSERT_VALUES); CHKERRQ(ierr);
         }
@@ -212,11 +217,11 @@ int main(int argc,char **argv)
 
   PetscInitialize(&argc,&argv,(char*)0,help);
 
-  user.k  = 1.0;
+  user.D  = 1.0;
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "heat_", "options for heat", ""); CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-k","dimensionless rate constant",
-           "heat.c",user.k,&user.k,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-monitor_energy","display total heat energy at each step",
+  ierr = PetscOptionsReal("-D","thermal diffusivity",
+           "heat.c",user.D,&user.D,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-monitor","also display total heat energy at each step",
            "heat.c",monitorenergy,&monitorenergy,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-tf","final time",
            "heat.c",tf,&tf,NULL);CHKERRQ(ierr);
@@ -227,7 +232,7 @@ int main(int argc,char **argv)
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
                       DM_BOUNDARY_NONE, DM_BOUNDARY_PERIODIC,
                       DMDA_STENCIL_STAR,
-                      -3,-5,PETSC_DECIDE,PETSC_DECIDE,
+                      -4,-3,PETSC_DECIDE,PETSC_DECIDE,
                       1,  // degrees of freedom
                       1,  // stencil width
                       NULL,NULL,&user.da); CHKERRQ(ierr);
@@ -238,8 +243,8 @@ int main(int argc,char **argv)
   hxhy = PetscMin(hx,hy);  hxhy = hxhy * hxhy;
   ierr = PetscPrintf(PETSC_COMM_WORLD,
            "running on %d x %d grid with %g x %g grid spacing ...\n"
-           "(initial ratio:  k dt / (min{dx,dy}^2) = %g)\n",
-           info.mx,info.my,hx,hy,user.k*(tf/(double)steps)/hxhy); CHKERRQ(ierr);
+           "(initial ratio:  D dt / (min{dx,dy}^2) = %g)\n",
+           info.mx,info.my,hx,hy,user.D*(tf/(double)steps)/hxhy); CHKERRQ(ierr);
 
   ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
   ierr = TSSetProblemType(ts,TS_NONLINEAR); CHKERRQ(ierr);
@@ -250,12 +255,11 @@ int main(int argc,char **argv)
                                    (DMDATSRHSJacobianLocal)FormRHSJacobianLocal,&user); CHKERRQ(ierr);
 
   ierr = TSSetType(ts,TSBEULER); CHKERRQ(ierr);         // default: Backward Euler
-  ierr = TSSetDuration(ts,10*steps,tf); CHKERRQ(ierr);  // allow 10 times requested steps
+  ierr = TSSetDuration(ts,10000*steps,tf); CHKERRQ(ierr);  // allow 10^4 times requested steps
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
   ierr = TSSetInitialTimeStep(ts,0.0,tf/(double)steps); CHKERRQ(ierr); // ask for dt=tf/steps
   ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
   if (monitorenergy) {
-      ierr = TSMonitorCancel(ts); CHKERRQ(ierr);
       ierr = TSMonitorSet(ts,EnergyMonitor,&user,NULL); CHKERRQ(ierr);
   }
 
