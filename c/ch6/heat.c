@@ -8,12 +8,13 @@ static char help[] =
 
 // $ ./heat -help |grep heat_
 // $ ./heat -help |grep ts_type
+// $ ./heat -snes_type test -snes_test_display // result suggests jacobian is correct
 
-// $ ./heat -snes_type test      // result suggests jacobian is correct
-// $ ./heat -snes_type test -snes_test_display
+//run-time info
+// $ ./heat -ts_monitor -ts_view
+// $ ./heat -heat_monitor_energy -snes_converged_reason
 
 //good (use default BEULER):
-// $ ./heat -ts_monitor
 // $ ./heat -ts_monitor -ts_monitor_solution draw -da_refine 4
 
 //explodes (as it should):
@@ -47,6 +48,41 @@ typedef struct {
 } HeatCtx;
 
 
+PetscErrorCode Spacings(DM da, double *hx, double *hy) {
+    PetscErrorCode ierr;
+    DMDALocalInfo  info;
+    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+    if (hx)  *hx = 1.0 / (double)(info.mx-1);
+    if (hy)  *hy = 1.0 / (double)(info.my);   // periodic direction
+    return 0;
+}
+
+
+PetscErrorCode EnergyMonitor(TS ts, PetscInt step, PetscReal time, Vec u, void *ctx) {
+    PetscErrorCode ierr;
+    HeatCtx        *user = (HeatCtx*)ctx;
+    double         lenergy = 0.0, energy, hx, hy, dt;
+    int            i,j;
+    MPI_Comm       com;
+    DMDALocalInfo  info;
+
+    ierr = DMDAGetLocalInfo(user->da,&info); CHKERRQ(ierr);
+    for (j = info.ys; j < info.ys + info.ym; j++) {
+        for (i = info.xs; i < info.xs + info.xm; i++) {
+            lenergy += 0.0; //FIXME
+        }
+    }
+    ierr = Spacings(user->da,&hx,&hy); CHKERRQ(ierr);
+    lenergy *= hx * hy;
+    ierr = PetscObjectGetComm((PetscObject)(user->da),&com); CHKERRQ(ierr);
+    ierr = MPI_Allreduce(&lenergy,&energy,1,MPI_DOUBLE,MPI_SUM,com); CHKERRQ(ierr);
+    ierr = TSGetTimeStep(ts,&dt); CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,
+             "%4d time %10.6f dt %.3e:  energy = %g\n",step,time,dt,energy); CHKERRQ(ierr);
+    return 0;
+}
+
+
 PetscErrorCode SetSourceF(Vec f, HeatCtx* user) {
     PetscErrorCode ierr;
     DMDALocalInfo  info;
@@ -54,8 +90,7 @@ PetscErrorCode SetSourceF(Vec f, HeatCtx* user) {
     double         hx, hy, **af, x, y, q;
 
     ierr = DMDAGetLocalInfo(user->da,&info); CHKERRQ(ierr);
-    hx = 1.0 / (double)(info.mx-1);
-    hy = 1.0 / (double)(info.my);   // periodic direction
+    ierr = Spacings(user->da,&hx,&hy); CHKERRQ(ierr);
     ierr = DMDAVecGetArray(user->da,f,&af); CHKERRQ(ierr);
     for (j = info.ys; j < info.ys+info.ym; j++) {
         y = hy * j;
@@ -78,7 +113,7 @@ PetscErrorCode SetNeumannValues(Vec gamma, HeatCtx* user) {
 
     ierr = VecSet(gamma,NAN); CHKERRQ(ierr);  // start by invalidating
     ierr = DMDAGetLocalInfo(user->da,&info); CHKERRQ(ierr);
-    hy = 1.0 / (double)(info.my);   // periodic direction
+    ierr = Spacings(user->da,NULL,&hy); CHKERRQ(ierr);
     ierr = DMDAVecGetArray(user->da,gamma,&agamma); CHKERRQ(ierr);
     for (j = info.ys; j < info.ys+info.ym; j++) {
         y = hy * j;
@@ -95,12 +130,10 @@ PetscErrorCode SetNeumannValues(Vec gamma, HeatCtx* user) {
 PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **au,
                                     double **aG, HeatCtx *user) {
   PetscErrorCode ierr;
-  int            i, j;
-  const double   hx = 1.0 / (double)(info->mx-1),
-                 hy = 1.0 / (double)(info->my),   // periodic direction
-                 hx2 = hx * hx,  hy2 = hy * hy;
-  double         uleft, uright, uxx, uyy, **af, **agamma;
+  int      i, j;
+  double   hx, hy, uleft, uright, uxx, uyy, **af, **agamma;
 
+  ierr = Spacings(info->da,&hx,&hy); CHKERRQ(ierr);
   ierr = DMDAVecGetArray(user->da,user->f,&af); CHKERRQ(ierr);
   ierr = DMDAVecGetArray(user->da,user->gamma,&agamma); CHKERRQ(ierr);
   for (j = info->ys; j < info->ys + info->ym; j++) {
@@ -113,8 +146,8 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **au,
               uright = au[j][i-1] - 2.0 * hx * agamma[j][i];
           else
               uright = au[j][i+1];
-          uxx = (uleft - 2.0 * au[j][i]+ uright) / hx2;
-          uyy = (au[j-1][i] - 2.0 * au[j][i]+ au[j+1][i]) / hy2;
+          uxx = (uleft - 2.0 * au[j][i]+ uright) / (hx*hx);
+          uyy = (au[j-1][i] - 2.0 * au[j][i]+ au[j+1][i]) / (hy*hy);
           aG[j][i] = user->k * (uxx + uyy) + af[j][i];
       }
   }
@@ -128,13 +161,12 @@ PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info, double t, double **au,
                                     Mat J, Mat P, HeatCtx *user) {
     PetscErrorCode ierr;
     int            i, j, ncols;
-    const double   hx = 1.0 / (double)(info->mx-1),
-                   hy = 1.0 / (double)(info->my),   // periodic direction
-                   hx2 = hx * hx,  hy2 = hy * hy,
-                   k = user->k;
-    double         v[5];
+    const double   k = user->k;
+    double         hx, hy, hx2, hy2, v[5];
     MatStencil     col[5],row;
 
+    ierr = Spacings(info->da,&hx,&hy); CHKERRQ(ierr);
+    hx2 = hx * hx;  hy2 = hy * hy;
     for (j = info->ys; j < info->ys+info->ym; j++) {
         row.j = j;  col[0].j = j;
         for (i = info->xs; i < info->xs+info->xm; i++) {
@@ -174,8 +206,9 @@ int main(int argc,char **argv)
   TS             ts;
   Vec            u, uexact;
   DMDALocalInfo  info;
-  double         tf = 10.0, hx, hy;
+  double         tf = 10.0, hx, hy, hxhy;
   int            steps = 10;
+  PetscBool      monitorenergy = PETSC_FALSE;
 
   PetscInitialize(&argc,&argv,(char*)0,help);
 
@@ -183,6 +216,8 @@ int main(int argc,char **argv)
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "heat_", "options for heat", ""); CHKERRQ(ierr);
   ierr = PetscOptionsReal("-k","dimensionless rate constant",
            "heat.c",user.k,&user.k,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-monitor_energy","display total heat energy at each step",
+           "heat.c",monitorenergy,&monitorenergy,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-tf","final time",
            "heat.c",tf,&tf,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-steps","desired number of time-steps",
@@ -199,13 +234,12 @@ int main(int argc,char **argv)
   ierr = DMDASetUniformCoordinates(user.da, 0.0, 1.0, 0.0, 1.0, -1.0, -1.0); CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);
   ierr = DMSetApplicationContext(user.da,&user); CHKERRQ(ierr);
-
-  hx = 1.0/(double)(info.mx-1);
-  hy = 1.0/(double)(info.my);
+  ierr = Spacings(user.da,&hx,&hy); CHKERRQ(ierr);
+  hxhy = PetscMin(hx,hy);  hxhy = hxhy * hxhy;
   ierr = PetscPrintf(PETSC_COMM_WORLD,
            "running on %d x %d grid with %g x %g grid spacing ...\n"
-           "    (initial ratio:  k dt / dx^2 = %g)\n",
-           info.mx,info.my,hx,hy,user.k*(tf/(double)steps)/(hx*hx)); CHKERRQ(ierr);
+           "(initial ratio:  k dt / (min{dx,dy}^2) = %g)\n",
+           info.mx,info.my,hx,hy,user.k*(tf/(double)steps)/hxhy); CHKERRQ(ierr);
 
   ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
   ierr = TSSetProblemType(ts,TS_NONLINEAR); CHKERRQ(ierr);
@@ -220,6 +254,10 @@ int main(int argc,char **argv)
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
   ierr = TSSetInitialTimeStep(ts,0.0,tf/(double)steps); CHKERRQ(ierr); // ask for dt=tf/steps
   ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
+  if (monitorenergy) {
+      ierr = TSMonitorCancel(ts); CHKERRQ(ierr);
+      ierr = TSMonitorSet(ts,EnergyMonitor,&user,NULL); CHKERRQ(ierr);
+  }
 
   ierr = DMCreateGlobalVector(user.da,&u); CHKERRQ(ierr);
   ierr = VecDuplicate(u,&uexact); CHKERRQ(ierr);
