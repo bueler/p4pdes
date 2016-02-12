@@ -1,5 +1,5 @@
-
-static char help[] = "Scalar ODE solver by TS.  Option prefix -ode_.\n"
+static char help[] =
+"Scalar ODE solver by TS.  Option prefix -ode_.\n"
 "Solves dy/dt = g(t,y) with y(t0) = y0 to compute y(tf), where t0, y0, tf are\n"
 "all set by options.  Serial only.\n"
 "Implemented example has g(t,y) = t + y, so y(1) = e-2 = 0.7182818.\n\n";
@@ -67,11 +67,12 @@ int main(int argc,char **argv) {
 
   ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
   ierr = TSSetProblemType(ts,TS_NONLINEAR); CHKERRQ(ierr);
+  ierr = TSSetType(ts,TSBEULER); CHKERRQ(ierr);
   ierr = TSSetRHSFunction(ts,NULL,FormRHSFunction,NULL); CHKERRQ(ierr);
   ierr = TSSetRHSJacobian(ts,J,J,FormRHSJacobian,NULL); CHKERRQ(ierr);
 
-  ierr = TSSetType(ts,TSEULER); CHKERRQ(ierr);
-  dtinitial = 1.000000123456789*(tf-t0)/(double)steps; // magic number to fix PETSc issue #119
+  // dtinitial = 1.000000123456789*(tf-t0)/(double)steps; //STRIP magic number fix for PETSc issue #119 for Euler
+  dtinitial = (tf-t0)/(double)steps;
   ierr = TSSetDuration(ts,100*steps,tf-t0); CHKERRQ(ierr);
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
   ierr = TSSetInitialTimeStep(ts,t0,dtinitial); CHKERRQ(ierr);
