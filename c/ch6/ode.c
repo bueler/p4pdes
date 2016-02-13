@@ -1,8 +1,16 @@
 static char help[] =
 "Scalar ODE solver by TS.  Option prefix -ode_.\n"
-"Solves dy/dt = g(t,y) with y(t0) = y0 to compute y(tf), where t0, y0, tf are\n"
-"all set by options.  Serial only.\n"
-"Implemented example has g(t,y) = t + y, so y(1) = e-2 = 0.7182818.\n\n";
+"Solves  dy/dt = G(t,y)  with y(t0) = y0 to compute y(tf), where t0, y0, tf\n"
+"are all set by options.  Serial only.  Defaults to Runge-Kutta (= 3BS), but\n"
+"can be used with implicit methods; has implemented Jacobian (J = dG/dy).\n"
+"Implemented example has G(t,y) = t + y, so y(1) = e-2 = 0.7182818.\n\n";
+
+// ./ode -ts_monitor
+// ./ode -ts_monitor -ts_type beuler -ode_steps 1000    // finally close to default RK
+// ./ode -log_view |grep Eval   // compare rk, beuler, cn
+
+// ./ode -ts_type euler   // time-stepping failure; see petsc issue #119
+// ./ode -ts_monitor -ts_type rk -ts_rk_type 1fe -ts_adapt_type none   // correct Euler
 
 #include <petsc.h>
 
@@ -67,11 +75,10 @@ int main(int argc,char **argv) {
 
   ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
   ierr = TSSetProblemType(ts,TS_NONLINEAR); CHKERRQ(ierr);
-  ierr = TSSetType(ts,TSBEULER); CHKERRQ(ierr);
+  ierr = TSSetType(ts,TSRK); CHKERRQ(ierr);
   ierr = TSSetRHSFunction(ts,NULL,FormRHSFunction,NULL); CHKERRQ(ierr);
   ierr = TSSetRHSJacobian(ts,J,J,FormRHSJacobian,NULL); CHKERRQ(ierr);
 
-  // dtinitial = 1.000000123456789*(tf-t0)/(double)steps; //STRIP magic number fix for PETSc issue #119 for Euler
   dtinitial = (tf-t0)/(double)steps;
   ierr = TSSetDuration(ts,100*steps,tf-t0); CHKERRQ(ierr);
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
