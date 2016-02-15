@@ -1,6 +1,9 @@
 static char help[] =
 "Solves coupled reaction-diffusion equations (Pearson 1993).  Option prefix -ptn_.\n"
-"\n\n";
+"Demonstrates form  F(t,X,dot X) = G(t,X)  where F() is IFunction and G() is\n"
+"RHSFunction().  Implements IJacobian().  Defaults to ARKIMEX (adaptive\n"
+"Runge-Kutta implicit-explicit) type of TS.\n\n";
+
 
 // example:
 //    ./pattern -ts_monitor_solution draw -da_refine 5 -ptn_tf 2000 -ptn_steps 400 -ts_monitor -snes_converged_reason
@@ -50,35 +53,58 @@ PetscErrorCode InitialState(Vec x, PtnCtx* user) {
   return 0;
 }
 
-// in vector form  X_t = G(t,X),  compute G(t,X)
-// in scalar form:
-//     u_t = G^u(t,u,v) = D_u Laplacian u - u v^2 + F (1 - u)
-//     v_t = G^v(t,u,v) = D_v Laplacian v + u v^2 - (F + k) v
+// in system form  F(t,X,dot X) = G(t,X),  compute G():
+//     G^u(t,u,v) = - u v^2 + F (1 - u)
+//     G^v(t,u,v) = + u v^2 - (F + k) v
 PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, Field **aX,
                                     Field **aG, PtnCtx *user) {
+  int            i, j;
+  double         uv2;
+
+  for (j = info->ys; j < info->ys + info->ym; j++) {
+      for (i = info->xs; i < info->xs + info->xm; i++) {
+          uv2 = aX[j][i].u * aX[j][i].v * aX[j][i].v;
+          aG[j][i].u = - uv2 + user->F * (1.0 - aX[j][i].u);
+          aG[j][i].v = + uv2 - (user->F + user->k) * aX[j][i].v;
+      }
+  }
+  return 0;
+}
+
+
+// in system form  F(t,X,dot X) = G(t,X),  compute F():
+//     F^u(t,u,v,u_t,v_t) = u_t - D_u Laplacian u
+//     F^v(t,u,v,u_t,v_t) = v_t - D_v Laplacian v
+PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t, Field **aX,
+                                  Field **aXdot, Field **aF, PtnCtx *user) {
   int            i, j;
   const double   h = user->L / (double)(info->mx),
                  Cu = user->Du / (6.0 * h * h),
                  Cv = user->Dv / (6.0 * h * h);
-  double         u, v, uv2, lapu, lapv;
+  double         u, v, lapu, lapv;
 
   for (j = info->ys; j < info->ys + info->ym; j++) {
       for (i = info->xs; i < info->xs + info->xm; i++) {
           u = aX[j][i].u;
           v = aX[j][i].v;
-          uv2 = u * v * v;
           lapu =       aX[j+1][i-1].u + 4.0 * aX[j+1][i].u +     aX[j+1][i+1].u
                  + 4.0 * aX[j][i-1].u -      20.0 * u      + 4.0 * aX[j][i+1].u
                  +     aX[j-1][i-1].u + 4.0 * aX[j-1][i].u +     aX[j-1][i+1].u;
           lapv =       aX[j+1][i-1].v + 4.0 * aX[j+1][i].v +     aX[j+1][i+1].v
                  + 4.0 * aX[j][i-1].v -      20.0 * v      + 4.0 * aX[j][i+1].v
                  +     aX[j-1][i-1].v + 4.0 * aX[j-1][i].v +     aX[j-1][i+1].v;
-          aG[j][i].u = Cu * lapu - uv2 + user->F * (1.0 - u);
-          aG[j][i].v = Cv * lapv + uv2 - (user->F + user->k) * v;
+          aF[j][i].u = aXdot[j][i].u - Cu * lapu;
+          aF[j][i].v = aXdot[j][i].v - Cv * lapv;
       }
   }
   return 0;
 }
+
+
+// in system form  F(t,X,dot X) = G(t,X),  compute Jacobian of F():
+//     FIXME
+/* FIXME */
+
 
 int main(int argc,char **argv)
 {
@@ -136,11 +162,14 @@ int main(int argc,char **argv)
   ierr = TSSetDM(ts,user.da); CHKERRQ(ierr);
   ierr = DMDATSSetRHSFunctionLocal(user.da,INSERT_VALUES,
                                    (DMDATSRHSFunctionLocal)FormRHSFunctionLocal,&user); CHKERRQ(ierr);
+  ierr = DMDATSSetIFunctionLocal(user.da,INSERT_VALUES,
+                                 (DMDATSIFunctionLocal)FormIFunctionLocal,&user); CHKERRQ(ierr);
 
-  ierr = TSSetType(ts,TSCN); CHKERRQ(ierr);             // default to Crank-Nicolson
   ierr = TSSetDuration(ts,10*steps,tf); CHKERRQ(ierr);  // allow 10 times requested steps
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
   ierr = TSSetInitialTimeStep(ts,0.0,tf/steps); CHKERRQ(ierr);
+
+  ierr = TSSetType(ts,TSARKIMEX); CHKERRQ(ierr);
   ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
 
   ierr = DMCreateGlobalVector(user.da,&x); CHKERRQ(ierr);

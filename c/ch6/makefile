@@ -13,14 +13,10 @@ pattern: pattern.o  chkopts
 	-${CLINKER} -o pattern pattern.o  ${PETSC_LIB}
 	${RM} pattern.o
 
-ipattern: ipattern.o  chkopts
-	-${CLINKER} -o ipattern ipattern.o  ${PETSC_LIB}
-	${RM} ipattern.o
-
 # etc
 
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ ode heat pattern ipattern
+	@rm -f *~ ode heat pattern
 
