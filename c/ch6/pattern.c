@@ -5,8 +5,11 @@ static char help[] =
 "Runge-Kutta implicit-explicit) type of TS.\n\n";
 
 
-// example:
+// example works with -ts_fd_color:
 //    ./pattern -ts_monitor_solution draw -da_refine 5 -ptn_tf 2000 -ptn_steps 400 -ts_monitor -snes_converged_reason
+
+// for now, Jacobian not correct:
+//    ./pattern -da_refine 2 -ptn_tf 10 -ptn_steps 2 -ts_monitor -snes_converged_reason -ts_type cn -snes_type test
 
 #include <petsc.h>
 
@@ -61,6 +64,8 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, Field **aX,
   int            i, j;
   double         uv2;
 
+  //PetscPrintf(PETSC_COMM_WORLD,"RHSFunction() called at t=%g\n",t);
+
   for (j = info->ys; j < info->ys + info->ym; j++) {
       for (i = info->xs; i < info->xs + info->xm; i++) {
           uv2 = aX[j][i].u * aX[j][i].v * aX[j][i].v;
@@ -83,6 +88,8 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t, Field **aX,
                  Cv = user->Dv / (6.0 * h * h);
   double         u, v, lapu, lapv;
 
+  //PetscPrintf(PETSC_COMM_WORLD,"IFunction() called at t=%g\n",t);
+
   for (j = info->ys; j < info->ys + info->ym; j++) {
       for (i = info->xs; i < info->xs + info->xm; i++) {
           u = aX[j][i].u;
@@ -103,7 +110,50 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t, Field **aX,
 
 // in system form  F(t,X,dot X) = G(t,X),  compute Jacobian of F():
 //     FIXME
-/* FIXME */
+PetscErrorCode FormIJacobianLocal(DMDALocalInfo *info, double t, Field **aX,
+                                  Field **aXdot, double shift, Mat J, Mat P,
+                                  PtnCtx *user) {
+    PetscErrorCode ierr;
+    int            i, j, s, c;
+    const double   h = user->L / (double)(info->mx),
+                   Cu = user->Du / (6.0 * h * h),
+                   Cv = user->Dv / (6.0 * h * h);
+    double         val[9], CC;
+    MatStencil     col[9], row;
+
+    //ierr = PetscPrintf(PETSC_COMM_WORLD,"IJacobian() called at t=%g\n",t); CHKERRQ(ierr);
+
+    for (j = info->ys; j < info->ys + info->ym; j++) {
+        row.j = j;
+        for (i = info->xs; i < info->xs + info->xm; i++) {
+            row.i = i;
+            for (c = 0; c < 2; c++) { // u,v equations are c=0,1
+                row.c = c;
+                CC = (c == 0) ? Cu : Cv;
+                for (s = 0; s < 9; s++)
+                    col[s].c = c;
+                col[0].i = i;   col[0].j = j;    val[0] = shift + 20.0 * CC;
+                col[1].i = i-1; col[1].j = j;    val[1] = - 4.0 * CC;
+                col[2].i = i+1; col[2].j = j;    val[2] = - 4.0 * CC;
+                col[3].i = i;   col[3].j = j-1;  val[3] = - 4.0 * CC;
+                col[4].i = i;   col[4].j = j+1;  val[4] = - 4.0 * CC;
+                col[5].i = i-1; col[5].j = j-1;  val[5] = - CC;
+                col[6].i = i-1; col[6].j = j+1;  val[6] = - CC;
+                col[7].i = i+1; col[7].j = j-1;  val[7] = - CC;
+                col[8].i = i+1; col[8].j = j+1;  val[8] = - CC;
+                ierr = MatSetValuesStencil(P,1,&row,9,col,val,INSERT_VALUES); CHKERRQ(ierr);
+            }
+        }
+    }
+
+    ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    ierr = MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    if (J != P) {
+        ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+        ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    }
+    return 0;
+}
 
 
 int main(int argc,char **argv)
@@ -164,6 +214,8 @@ int main(int argc,char **argv)
                                    (DMDATSRHSFunctionLocal)FormRHSFunctionLocal,&user); CHKERRQ(ierr);
   ierr = DMDATSSetIFunctionLocal(user.da,INSERT_VALUES,
                                  (DMDATSIFunctionLocal)FormIFunctionLocal,&user); CHKERRQ(ierr);
+  ierr = DMDATSSetIJacobianLocal(user.da,
+                                 (DMDATSIJacobianLocal)FormIJacobianLocal,&user); CHKERRQ(ierr);
 
   ierr = TSSetDuration(ts,10*steps,tf); CHKERRQ(ierr);  // allow 10 times requested steps
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
