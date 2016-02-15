@@ -37,4 +37,14 @@ FIXME show parts of \texttt{pattern.c}
 \item FIXME version of \texttt{ode.c} which solves DAE system
     $$\bbf(t,\by,\by') = \bg(t,\by)$$
 where $\partial \bg/\partial \by'$ may be singular
+\item FIXME for run like
+\begin{cline}
+./pattern -da_refine 6 -ptn_tf 500 -ptn_steps 100 -ts_monitor -snes_converged_reason
+\end{cline}
+which is fastest among these nine ARKIMEX and three $\theta$ methods?:
+\begin{code}
+-ts_type arkimex -ts_arkimex_type [a2|l2|ars122|2c|2d|2e|3|4|5]
+-ts_type theta -ts_theta_endpoint -ts_theta_theta [0.5|0.75|1]
+\end{code}
+Are any other adaptive \pTS types faster?  Also compare final frames from \texttt{-ts\_monitor\_solution draw}; how worried should we be about the effect of time-stepping on the solution of this problem?
 \end{enumerate}
