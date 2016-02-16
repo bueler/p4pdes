@@ -484,7 +484,8 @@ The conclusions are quite clear for our $Q^1$ FEM equations:
 \item $n=2$ degree is the minimum needed for full accuracy.
 \end{enumerate}
 
-In fact there is a systematic loss of accuracy using degree $n=1$ quadrature, as shown in Figure \ref{fig:of:plap-conv}.  On the other hand, the $n=3$ errors are systematically indistinquishable from $n=2$ results (not shown).  As expected \citep{Elmanetal2005}, there is no justification for using $n>2$ quadrature.
+In fact there is a systematic loss of accuracy using degree $n=1$ quadrature, as shown in Figure \ref{fig:of:plap-conv}.  On the other hand, the $n=3$ errors are systematically indistinquishable from $n=2$ results (not shown).  As expected \citep[subsection 1.4.2]{Elmanetal2005}, there is no justification for using $n>2$ quadrature.
+% FIXME: how much of the above is specific to the p=4 case?  what if p=2?  other p?
 
 Examining the $n=1,2$ performance difference a bit more carefully, namely by adding option \texttt{-ksp\_converged\_reason} to the above options (not shown), we see that there are two opposing performance changes with $n=1$ quadrature.  On the one hand there are slightly more CG iterations with $n=1$.  On the other hand, the evaluation of the quadrature sum \eqref{eq:of:tensorgauss} in the $n=1$ case is so much faster that we still get twice the speed relative to the $n=2$ case.
 
