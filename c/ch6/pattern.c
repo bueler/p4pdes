@@ -4,12 +4,16 @@ static char help[] =
 "RHSFunction().  Implements IJacobian().  Defaults to ARKIMEX (adaptive\n"
 "Runge-Kutta implicit-explicit) type of TS.\n\n";
 
+// modest refinement and a bit of feedback:
+//    ./pattern -ts_monitor -ptn_tf 100 -da_refine 5 -snes_converged_reason
 
+// show solution graphically:
+//    ./pattern -ts_monitor_solution draw -da_refine 5 -ptn_tf 2000 -ptn_dt0 5 -ts_monitor -snes_converged_reason
 // example works with -ts_fd_color:
-//    ./pattern -ts_monitor_solution draw -da_refine 5 -ptn_tf 2000 -ptn_steps 400 -ts_monitor -snes_converged_reason
 
-// for now, Jacobian not correct:
-//    ./pattern -da_refine 2 -ptn_tf 10 -ptn_steps 2 -ts_monitor -snes_converged_reason -ts_type cn -snes_type test
+// suggests Jacobian is correct (also with -snes_test_display):
+//    ./pattern -ptn_L 0.5 -ptn_tf 1 -ptn_dt0 1 -ts_monitor -snes_converged_reason -snes_type test
+
 
 #include <petsc.h>
 
@@ -27,12 +31,15 @@ typedef struct {
             k;    // "dimensionless rate constant" (Pearson 1993)
 } PtnCtx;
 
-// Formulas from page 22 of Hundsdorfer & Verwer (2003)
+// Formulas from page 22 of Hundsdorfer & Verwer (2003).  Interpretation here is
+// to always generate 0.5 x 0.5 non-trivial patch in (0,L) x (0,L) domain.
 PetscErrorCode InitialState(Vec x, PtnCtx* user) {
   PetscErrorCode ierr;
   DMDALocalInfo  info;
   int            i,j;
   double         sx,sy;
+  const double   ledge = (user->L - 0.5) / 2.0, // nontrivial initial values on
+                 redge = user->L - ledge;       //   ledge < x,y < redge
   DMDACoor2d     **aC;
   Field          **ax;
 
@@ -41,8 +48,8 @@ PetscErrorCode InitialState(Vec x, PtnCtx* user) {
   ierr = DMDAVecGetArray(user->da,x,&ax); CHKERRQ(ierr);
   for (j = info.ys; j < info.ys+info.ym; j++) {
     for (i = info.xs; i < info.xs+info.xm; i++) {
-      if ((aC[j][i].x >= 1.0) && (aC[j][i].x <= 1.5)
-              && (aC[j][i].y >= 1.0) && (aC[j][i].y <= 1.5)) {
+      if ((aC[j][i].x >= ledge) && (aC[j][i].x <= redge)
+              && (aC[j][i].y >= ledge) && (aC[j][i].y <= redge)) {
           sx = sin(4.0 * PETSC_PI * aC[j][i].x);
           sy = sin(4.0 * PETSC_PI * aC[j][i].y);
           ax[j][i].v = 0.5 * sx * sx * sy * sy;
@@ -63,8 +70,6 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, Field **aX,
                                     Field **aG, PtnCtx *user) {
   int            i, j;
   double         uv2;
-
-  //PetscPrintf(PETSC_COMM_WORLD,"RHSFunction() called at t=%g\n",t);
 
   for (j = info->ys; j < info->ys + info->ym; j++) {
       for (i = info->xs; i < info->xs + info->xm; i++) {
@@ -88,8 +93,6 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t, Field **aX,
                  Cv = user->Dv / (6.0 * h * h);
   double         u, v, lapu, lapv;
 
-  //PetscPrintf(PETSC_COMM_WORLD,"IFunction() called at t=%g\n",t);
-
   for (j = info->ys; j < info->ys + info->ym; j++) {
       for (i = info->xs; i < info->xs + info->xm; i++) {
           u = aX[j][i].u;
@@ -108,8 +111,9 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t, Field **aX,
 }
 
 
-// in system form  F(t,X,dot X) = G(t,X),  compute Jacobian of F():
-//     FIXME
+// in system form  F(t,X,dot X) = G(t,X),  compute combined/shifted
+// Jacobian of F():
+//     J = (shift) dF/d(dot X) + dF/dX
 PetscErrorCode FormIJacobianLocal(DMDALocalInfo *info, double t, Field **aX,
                                   Field **aXdot, double shift, Mat J, Mat P,
                                   PtnCtx *user) {
@@ -122,7 +126,6 @@ PetscErrorCode FormIJacobianLocal(DMDALocalInfo *info, double t, Field **aX,
     MatStencil     col[9], row;
 
     //ierr = PetscPrintf(PETSC_COMM_WORLD,"IJacobian() called at t=%g\n",t); CHKERRQ(ierr);
-
     for (j = info->ys; j < info->ys + info->ym; j++) {
         row.j = j;
         for (i = info->xs; i < info->xs + info->xm; i++) {
@@ -163,8 +166,8 @@ int main(int argc,char **argv)
   TS             ts;
   Vec            x;
   DMDALocalInfo  info;
-  double         tf = 10.0;
-  int            steps = 10;
+  double         tf = 10.0, dt0 = 1.0;
+  int            steps;
 
   PetscInitialize(&argc,&argv,(char*)0,help);
 
@@ -175,7 +178,7 @@ int main(int argc,char **argv)
   user.F  = 0.024;
   user.k  = 0.06;
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "ptn_", "options for patterns", ""); CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-L","square domain side length",
+  ierr = PetscOptionsReal("-L","square domain side length; recommend L >= 0.5",
            "pattern.c",user.L,&user.L,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-Du","diffusion coefficient of first equation",
            "pattern.c",user.Du,&user.Du,NULL);CHKERRQ(ierr);
@@ -187,9 +190,10 @@ int main(int argc,char **argv)
            "pattern.c",user.k,&user.k,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-tf","final time",
            "pattern.c",tf,&tf,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-steps","desired number of time-steps",
-           "pattern.c",steps,&steps,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-dt0","request this initial time step",
+           "pattern.c",dt0,&dt0,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+  steps = ceil(tf / dt0);
 
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
                       DM_BOUNDARY_PERIODIC, DM_BOUNDARY_PERIODIC,
@@ -199,6 +203,9 @@ int main(int argc,char **argv)
                       1,  // stencil width
                       NULL,NULL,&user.da); CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);
+  if (info.mx != info.my) {
+      SETERRQ(PETSC_COMM_WORLD,1,"pattern.c requires mx == my");
+  }
   ierr = PetscPrintf(PETSC_COMM_WORLD,
            "running on %d x %d grid with square cells of side h = %.6f ...\n",
            info.mx,info.my,user.L/(double)(info.mx)); CHKERRQ(ierr);
@@ -217,16 +224,19 @@ int main(int argc,char **argv)
   ierr = DMDATSSetIJacobianLocal(user.da,
                                  (DMDATSIJacobianLocal)FormIJacobianLocal,&user); CHKERRQ(ierr);
 
-  ierr = TSSetDuration(ts,10*steps,tf); CHKERRQ(ierr);  // allow 10 times requested steps
+  ierr = TSSetInitialTimeStep(ts,0.0,dt0); CHKERRQ(ierr);
+  ierr = TSSetDuration(ts,100*steps,tf); CHKERRQ(ierr);  // allow 100 times requested steps
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
-  ierr = TSSetInitialTimeStep(ts,0.0,tf/steps); CHKERRQ(ierr);
 
   ierr = TSSetType(ts,TSARKIMEX); CHKERRQ(ierr);
   ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
 
   ierr = DMCreateGlobalVector(user.da,&x); CHKERRQ(ierr);
   ierr = InitialState(x,&user); CHKERRQ(ierr);
-  ierr = TSSolve(ts,x);CHKERRQ(ierr);
+  ierr = TSSolve(ts,x); CHKERRQ(ierr);
+  ierr = TSGetTotalSteps(ts,&steps); CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,
+           "   ... completed %d total steps\n",steps); CHKERRQ(ierr);
 
   ierr = VecDestroy(&x); CHKERRQ(ierr);
   ierr = TSDestroy(&ts); CHKERRQ(ierr);
