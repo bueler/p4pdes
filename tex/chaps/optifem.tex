@@ -10,7 +10,28 @@ Chapter \ref{chap:nl}: \pSNES                    & for Newton's method
 
 \bigskip
 
-Each example in the rest of the book will use \pVec, \pMat, \pKSP, \pPC, and \pSNES objects.  From now on we will even solve linear PDEs using a \pSNES object, for example in Chapter \ref{chap:ad}.  (In such cases we know that one Newton iteration suffices in theory.)  Always using \pSNES allows uniform code structure and more flexibility when it comes to changing the PDE problem.
+Each structured-grid example in the rest of the book will use all of these objects, though unstructured-grid examples will use some substitute for \pDMDA.  From now on we will even solve linear PDEs using a \pSNES object.  An example is in Chapter \ref{chap:ad}, and in such cases we know that one Newton iteration suffices in theory.  Always using \pSNES allows uniform code structure and more flexibility when it comes to changing the PDE problem.
+
+\begin{figure}
+%\input{tikz/standardstack.tex}
+\begin{tikzpicture}[scale=1.0]
+\draw[line width=1pt] (3,6) node[rounded corners,fill=white,draw,align=center] (usercode) {user code};
+
+\draw[line width=1pt] (0,4) node[fill=white,draw,align=left] (snes) {\pSNES \\ \quad nonlinear solver};
+\draw[line width=1pt] (0,2) node[fill=white,draw,align=left] (ksp)  {\pKSP \\ \quad linear solver};
+\draw[line width=1pt] (0,0) node[fill=white,draw,align=left] (pc)   {\pPC \\ \quad preconditioners};
+\draw[line width=1pt] (3,0) node[fill=white,draw,align=left] (matj)   {\pMat \\ \quad \emph{Jacobian}};
+\draw[line width=1pt] (5,0) node[fill=white,draw,align=left] (vecs)   {\pVec \\ \quad \emph{approx.~solution} \\ \quad \emph{exact solution} \\ \quad \emph{other fields}};
+\draw[->] (snes) -- (ksp);
+\draw[->] (ksp) -- (pc);
+\draw[->] (snes) -- (matj);
+\draw[->] (usercode) -- (vecs);
+\end{tikzpicture}
+\caption{The ``standard \PETSc stack for PDEs,'' used by every example in the rest of the book.  Solid boxes and arrows show the most common cases.}
+\label{fig:of:standardstack}
+\end{figure}
+
+Figure \ref{fig:of:standardstack} shows the ``\PETSc stack'' used in all examples in the rest of the book.  The code \texttt{reaction.c} in Chapter \ref{chap:nl} is already an example.  Initial implementations require user code for a residual or objective implementation, as otherwise \PETSc has \emph{no} description of your problem, but Jacobians are also implemented for most examples.  Arrows from user code represent the create/set/use/destroy sequence (Chapter \ref{chap:ls}).  Downward lines from one \PETSc type to another represent internal sub-objects, sometimes exposed to the user, whether within the code or at the command line at runtime, and sometimes not.
 
 Though new ideas appear in it, the current Chapter takes a break from introducing new \PETSc types.  Instead we look at a PDE which arises from minimization in a function space, and we introduce a structured-grid finite element method.  This example is a nonlinear Poisson-like equation with solution-dependent diffusivity.
 
