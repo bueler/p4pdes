@@ -14,16 +14,19 @@ Each structured-grid example in the rest of the book will use all of these objec
 
 \begin{figure}
 %\input{tikz/standardstack.tex}
-\begin{tikzpicture}[scale=1.0]
-\draw[line width=1pt] (3,6) node[rounded corners,fill=white,draw,align=center] (usercode) {user code};
+\begin{tikzpicture}[scale=0.9]
+\draw[line width=1pt] (3,8) node[rounded corners,fill=white,draw,align=center] (usercode) {user code};
 
-\draw[line width=1pt] (0,4) node[fill=white,draw,align=left] (snes) {\pSNES \\ \quad nonlinear solver};
-\draw[line width=1pt] (0,2) node[fill=white,draw,align=left] (ksp)  {\pKSP \\ \quad linear solver};
-\draw[line width=1pt] (0,0) node[fill=white,draw,align=left] (pc)   {\pPC \\ \quad preconditioners};
-\draw[line width=1pt] (3,0) node[fill=white,draw,align=left] (matj)   {\pMat \\ \quad \emph{Jacobian}};
-\draw[line width=1pt] (5,0) node[fill=white,draw,align=left] (vecs)   {\pVec \\ \quad \emph{approx.~solution} \\ \quad \emph{exact solution} \\ \quad \emph{other fields}};
-\draw[->] (snes) -- (ksp);
-\draw[->] (ksp) -- (pc);
+\draw[line width=1pt] (0,4) node[fill=white,draw,align=left] (snes) {\pSNES \footnotesize nonlinear solver};
+\draw[line width=1pt] (4,4) node[fill=white,draw,align=left] (dmda) {\pDMDA \footnotesize structured grid};
+\draw[line width=1pt,dashed] (8,4) node[fill=white,draw,align=left] (dmda) {\pDMDA \footnotesize unstructured grid};
+
+\draw[line width=1pt] (0,2) node[fill=white,draw,align=left] (ksp)  {\pKSP \footnotesize linear solver};
+\draw[line width=1pt] (0,0) node[fill=white,draw,align=left] (pc)   {\pPC \footnotesize preconditioners};
+\draw[line width=1pt] (3,0) node[fill=white,draw,align=left] (matj)   {\pMat \footnotesize \emph{Jacobian}};
+\draw[line width=1pt] (7,1) node[fill=white,draw,align=left] (vecs)   {\pVec \footnotesize \,\emph{approx.~solution} \\ \qquad \footnotesize\emph{exact solution} \\ \qquad \footnotesize\emph{other fields}};
+\draw (snes) -- (ksp);
+\draw (ksp) -- (pc);
 \draw[->] (snes) -- (matj);
 \draw[->] (usercode) -- (vecs);
 \end{tikzpicture}
