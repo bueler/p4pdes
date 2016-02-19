@@ -75,6 +75,53 @@
 \DefineVerbatimEnvironment{cline}{Verbatim}
 {fontsize=\small,frame=leftline,framerule=0.3mm,framesep=2.0mm}
 
+
+\newcommand{\complabel}[2]{#1 \\ \footnotesize #2}
+\newcommand{\usedlabel}[2]{\complabel{#1}{\emph{#2}}}
+
+% usage: \standardstack{scale}{objective}{Jacobian}{TS}{DMDA}{DMPlex}
+%   where last 5 args are either "dashed" or empty
+\def \standardstack#1#2#3#4#5#6{
+\begin{tikzpicture}[scale=#1,
+                    >={Latex[length=2mm]},
+  component/.style={
+     rectangle,draw,fill=white,align=center,line width=1pt},
+  userfcn/.style={
+     rounded corners,draw,fill=white,draw,align=center,line width=1pt,font={\itshape,\normalsize}}]
+
+\draw[line width=1pt] (3,8) node[userfcn,minimum width=80mm] (usercode) {user code \\ \vspace{10mm}};
+\draw[line width=1pt] (-0.5,8.2) node[userfcn,#2] (objcode) {objective};
+\draw[line width=1pt] (3,7.5) node[userfcn] (rescode) {residual};
+\draw[line width=1pt] (6.7,8.2) node[userfcn,#3] (jaccode) {Jacobian};
+
+\draw[line width=1pt] (-4,4.7) node[component,#4] (ts) {\complabel{\pTS}{time-stepping}};
+
+\draw[line width=1pt] (-0.5,4) node[component] (snes) {\complabel{\pSNES}{nonlinear solver}};
+\draw[line width=1pt] (-0.5,2) node[component] (ksp)  {\complabel{\pKSP}{linear solver}};
+\draw[line width=1pt] (-0.5,0) node[component] (pc)   {\complabel{\pPC}{preconditioner}};
+
+\draw[line width=1pt] (4,4) node[component,#5] (dmda) {\complabel{\pDMDA}{structured grid}};
+\draw[line width=1pt,dashed] (8.5,4.5) node[component,#6] (dmplex) {\complabel{\pDMPlex}{mesh}};
+
+\draw[line width=1pt] (3,0) node[component] (matj)   {\usedlabel{\pMat}{Jacobian}};
+\draw[line width=1pt] (7,0) node[component] (vecs)   {\pVecs \\ \footnotesize  \emph{solution, other fields}};
+
+\path
+   ([xshift=2em]objcode.south) edge[->,bend right,distance=6.5em#2] node {} (vecs)
+   ([xshift=2em]rescode.south) edge[->,bend left] node {} ([xshift=2.5em]vecs.north)
+   ([xshift=1em]jaccode.south) edge[->,#3] node {} ([xshift=1em]vecs.north)
+   (jaccode.south) edge[->,dashed,bend left,#3] node {} (matj)
+   ([xshift=-13em]usercode.south) edge[->,#4] node {} (ts)
+   ([xshift=-10em]usercode.south) edge[->] node {} (snes)
+   ([xshift=2em]usercode.south) edge[->,#5] node {} (dmda)
+   ([xshift=14em]usercode.south) edge[->,#6] node {} (dmplex)
+   ([xshift=9em]usercode.south) edge[->] node {} (vecs)
+   (ts) edge[#4] node {} (snes)
+   (snes) edge node {} (ksp)
+   (ksp) edge node {} (pc);
+\end{tikzpicture}
+}
+
 \newcommand{\bA}{\mathbf{A}}
 \newcommand{\bB}{\mathbf{B}}
 \newcommand{\bE}{\mathbf{E}}
