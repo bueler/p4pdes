@@ -17,7 +17,8 @@ Each structured-grid example in the rest of the book will use all of these objec
 
 \begin{figure}
 %\input{tikz/standardstack.tex}
-\begin{tikzpicture}[>={Stealth[length=2.5mm]},scale=0.9,
+\begin{tikzpicture}[scale=0.7,
+                    >={Stealth[length=2.5mm]},
   component/.style={
      rectangle,
      draw,
@@ -25,33 +26,38 @@ Each structured-grid example in the rest of the book will use all of these objec
      align=center,
      line width=1pt}]
 
-\draw[line width=1pt] (3,8) node[rounded corners,fill=white,draw,align=center,minimum width=80mm,minimum height=15mm] (usercode) {user code \\ \vspace{20mm}};
-\draw[line width=1pt] (0.5,8) node[rounded corners,fill=white,draw,align=center] (objcode) {form objective};
-\draw[line width=1pt] (3,7) node[rounded corners,fill=white,draw,align=center] (rescode) {form residual};
-\draw[line width=1pt] (5,8) node[dashed,rounded corners,fill=white,draw,align=center] (jaccode) {form Jacobian};
+\draw[line width=1pt] (3,8) node[rounded corners,fill=white,draw,align=center,minimum width=80mm] (usercode) {\small user code \\ \vspace{15mm}};
+\draw[line width=1pt] (-0.5,8.2) node[rounded corners,fill=white,draw,align=center] (objcode) {\small form objective};
+\draw[line width=1pt] (3,7) node[rounded corners,fill=white,draw,align=center] (rescode) {\small form residual};
+\draw[line width=1pt] (6,8.2) node[dashed,rounded corners,fill=white,draw,align=center] (jaccode) {\small form Jacobian};
 
-\draw[line width=1pt] (0,4) node[component] (snes) {\complabel{\pSNES}{nonlinear solver}};
+\draw[line width=1pt] (-4,4.7) node[component,dashed] (ts) {\complabel{\pTS}{time-stepping}};
+
+\draw[line width=1pt] (-0.5,4) node[component] (snes) {\complabel{\pSNES}{nonlinear solver}};
+\draw[line width=1pt] (-0.5,2) node[component] (ksp)  {\complabel{\pKSP}{linear solver}};
+\draw[line width=1pt] (-0.5,0) node[component] (pc)   {\complabel{\pPC}{preconditioner}};
+
 \draw[line width=1pt] (4,4) node[component] (dmda) {\complabel{\pDMDA}{structured grid}};
-\draw[line width=1pt,dashed] (8,4) node[component] (dmplex) {\complabel{\pDMPlex}{unstructured grid}};
-
-\draw[line width=1pt] (0,2.5) node[component] (ksp)  {\complabel{\pKSP}{linear solver}};
-\draw[line width=1pt] (0,1) node[component] (pc)   {\complabel{\pPC}{preconditioner}};
+\draw[line width=1pt,dashed] (8.5,4.5) node[component] (dmplex) {\complabel{\pDMPlex}{mesh}};
 
 \draw[line width=1pt] (3,0) node[component] (matj)   {\usedlabel{\pMat}{Jacobian}};
-\draw[line width=1pt] (7,0) node[component] (vecs)   {\pVec \\ \footnotesize  \emph{approx.~solution, exact solution,} \\ \footnotesize \emph{other fields}};
+\draw[line width=1pt] (7,0) node[component] (vecs)   {\pVecs \\ \footnotesize  \emph{approx.~\& exact solutions,} \\ \footnotesize \emph{other fields}};
 
-\draw (snes) -- (ksp);
-\draw (ksp) -- (pc);
-
-\draw[->] (usercode) -- (snes);
-\draw[->] (usercode) -- (dmda);
-
-\draw[->] (objcode) -- (vecs);
-\draw[->] (rescode) -- (vecs);
-\draw[->,dashed] (jaccode) -- (vecs);
-\draw[->,dashed] (jaccode) -- (matj);
+\path
+   ([xshift=2em]objcode.south) edge[->,bend right,distance=5em] node [bottom] {} (vecs)
+   ([xshift=4em]rescode.south) edge[->,bend left] node [bottom] {} ([xshift=2em]vecs.north)
+   ([xshift=4em]jaccode.south) edge[->,dashed] node [bottom] {} ([xshift=-1em]vecs.north)
+   ([xshift=3em]jaccode.south) edge[->,dashed,bend left,distance=5em] node [bottom] {} (matj)
+   ([xshift=-15em]usercode.south) edge[->,dashed] node [bottom] {} (ts)
+   ([xshift=-10em]usercode.south) edge[->] node [bottom] {} (snes)
+   ([xshift=2em]usercode.south) edge[->] node [bottom] {} (dmda)
+   ([xshift=14em]usercode.south) edge[->,dashed] node [bottom] {} (dmplex)
+   ([xshift=4em]usercode.south) edge[->,bend left] node [bottom] {} (vecs)
+   (ts) edge[dashed] node [bottom] {} (snes)
+   (snes) edge node [bottom] {} (ksp)
+   (ksp) edge node [bottom] {} (pc);
 \end{tikzpicture}
-\caption{The ``standard \PETSc stack for PDEs,'' used by every example in the rest of the book.  Solid boxes show the cases used in the current chapter.}
+\caption{The ``standard \PETSc stack for PDEs,'' used by every example in the rest of the book.  Chapter \ref{chap:of} (current) cases are shown as solid.  Arrows should be read as ``acts directly on.''}
 \label{fig:of:standardstack}
 \end{figure}
 
