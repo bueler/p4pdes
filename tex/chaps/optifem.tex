@@ -12,25 +12,46 @@ Chapter \ref{chap:nl}: \pSNES                    & for Newton's method
 
 Each structured-grid example in the rest of the book will use all of these objects, though unstructured-grid examples will use some substitute for \pDMDA.  From now on we will even solve linear PDEs using a \pSNES object.  An example is in Chapter \ref{chap:ad}, and in such cases we know that one Newton iteration suffices in theory.  Always using \pSNES allows uniform code structure and more flexibility when it comes to changing the PDE problem.
 
+\newcommand{\complabel}[2]{#1 \\ \footnotesize #2}
+\newcommand{\usedlabel}[2]{\complabel{#1}{\emph{#2}}}
+
 \begin{figure}
 %\input{tikz/standardstack.tex}
-\begin{tikzpicture}[scale=0.9]
-\draw[line width=1pt] (3,8) node[rounded corners,fill=white,draw,align=center] (usercode) {user code};
+\begin{tikzpicture}[>={Stealth[length=2.5mm]},scale=0.9,
+  component/.style={
+     rectangle,
+     draw,
+     fill=white,
+     align=center,
+     line width=1pt}]
 
-\draw[line width=1pt] (0,4) node[fill=white,draw,align=left] (snes) {\pSNES \footnotesize nonlinear solver};
-\draw[line width=1pt] (4,4) node[fill=white,draw,align=left] (dmda) {\pDMDA \footnotesize structured grid};
-\draw[line width=1pt,dashed] (8,4) node[fill=white,draw,align=left] (dmda) {\pDMDA \footnotesize unstructured grid};
+\draw[line width=1pt] (3,8) node[rounded corners,fill=white,draw,align=center,minimum width=80mm,minimum height=15mm] (usercode) {user code \\ \vspace{20mm}};
+\draw[line width=1pt] (0.5,8) node[rounded corners,fill=white,draw,align=center] (objcode) {form objective};
+\draw[line width=1pt] (3,7) node[rounded corners,fill=white,draw,align=center] (rescode) {form residual};
+\draw[line width=1pt] (5,8) node[dashed,rounded corners,fill=white,draw,align=center] (jaccode) {form Jacobian};
 
-\draw[line width=1pt] (0,2) node[fill=white,draw,align=left] (ksp)  {\pKSP \footnotesize linear solver};
-\draw[line width=1pt] (0,0) node[fill=white,draw,align=left] (pc)   {\pPC \footnotesize preconditioners};
-\draw[line width=1pt] (3,0) node[fill=white,draw,align=left] (matj)   {\pMat \footnotesize \emph{Jacobian}};
-\draw[line width=1pt] (7,1) node[fill=white,draw,align=left] (vecs)   {\pVec \footnotesize \,\emph{approx.~solution} \\ \qquad \footnotesize\emph{exact solution} \\ \qquad \footnotesize\emph{other fields}};
+\draw[line width=1pt] (0,4) node[component] (snes) {\complabel{\pSNES}{nonlinear solver}};
+\draw[line width=1pt] (4,4) node[component] (dmda) {\complabel{\pDMDA}{structured grid}};
+\draw[line width=1pt,dashed] (8,4) node[component] (dmplex) {\complabel{\pDMPlex}{unstructured grid}};
+
+\draw[line width=1pt] (0,2.5) node[component] (ksp)  {\complabel{\pKSP}{linear solver}};
+\draw[line width=1pt] (0,1) node[component] (pc)   {\complabel{\pPC}{preconditioner}};
+
+\draw[line width=1pt] (3,0) node[component] (matj)   {\usedlabel{\pMat}{Jacobian}};
+\draw[line width=1pt] (7,0) node[component] (vecs)   {\pVec \\ \footnotesize  \emph{approx.~solution, exact solution,} \\ \footnotesize \emph{other fields}};
+
 \draw (snes) -- (ksp);
 \draw (ksp) -- (pc);
-\draw[->] (snes) -- (matj);
-\draw[->] (usercode) -- (vecs);
+
+\draw[->] (usercode) -- (snes);
+\draw[->] (usercode) -- (dmda);
+
+\draw[->] (objcode) -- (vecs);
+\draw[->] (rescode) -- (vecs);
+\draw[->,dashed] (jaccode) -- (vecs);
+\draw[->,dashed] (jaccode) -- (matj);
 \end{tikzpicture}
-\caption{The ``standard \PETSc stack for PDEs,'' used by every example in the rest of the book.  Solid boxes and arrows show the most common cases.}
+\caption{The ``standard \PETSc stack for PDEs,'' used by every example in the rest of the book.  Solid boxes show the cases used in the current chapter.}
 \label{fig:of:standardstack}
 \end{figure}
 
