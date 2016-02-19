@@ -166,6 +166,7 @@ int main(int argc,char **argv)
   TS             ts;
   Vec            x;
   DMDALocalInfo  info;
+  PetscBool      no_set_type = PETSC_FALSE;
   double         tf = 10.0, dt0 = 1.0;
   int            steps;
 
@@ -192,6 +193,12 @@ int main(int argc,char **argv)
            "pattern.c",tf,&tf,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-dt0","request this initial time step",
            "pattern.c",dt0,&dt0,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-no_set_type","do not set default TS and Mat types",
+           "pattern.c",no_set_type,&no_set_type,NULL);CHKERRQ(ierr);
+  if (!no_set_type) {
+      PetscOptionsSetValue(NULL,"-ts_type","arkimex");   // definitely superior to CN
+      PetscOptionsSetValue(NULL,"-dm_mat_type","sbaij"); // may save 20%?
+  }
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
   steps = ceil(tf / dt0);
 
@@ -227,8 +234,6 @@ int main(int argc,char **argv)
   ierr = TSSetInitialTimeStep(ts,0.0,dt0); CHKERRQ(ierr);
   ierr = TSSetDuration(ts,100*steps,tf); CHKERRQ(ierr);  // allow 100 times requested steps
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
-
-  ierr = TSSetType(ts,TSARKIMEX); CHKERRQ(ierr);
   ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
 
   ierr = DMCreateGlobalVector(user.da,&x); CHKERRQ(ierr);
