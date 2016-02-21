@@ -1,5 +1,5 @@
 
-The simplest thing to say about nonlinear equations is that they change the functional form of the residual, compared to the linear case.  For a linear system the residual $\br$ is a certain linear (affine) function of the unknowns $\bu$, namely $\br = \bb - A \bu$.  Now we consider cases in which the residual, as a function, might be a higher-order polynomial, a smooth transcendental function, or something more general.
+The simplest thing to say about nonlinear equations is that they change the functional form of the residual, compared to the linear case.  For a linear system the residual $\br$ is a certain linear (affine) function of the unknowns $\bu$, namely $\br = \bb - A \bu$.  Now we consider cases in which the residual, as a function of $\bu$, might be a polynomial, a transcendental function, or something more general.
 
 Suppose that $\bF : \RR^N \to \RR^N$ is differentiable.  The input $\bx$ and output $\bF(\bx)$ are column vectors,\sidenote{Our name change $\bu\to\bx$ comes from now thinking more geometrically about the location of $\bx$.} so in that sense $\bF$ acts like square-matrix multiplication $\bx\mapsto A\bx$.  Just as an iterative linear solver reduces the linear residual $\br_k=\bb - A \bu_k$ to zero by generating a sequence $\bu_k$, for nonlinear $\bF$ we want to solve
 \begin{equation}
@@ -7,16 +7,16 @@ Suppose that $\bF : \RR^N \to \RR^N$ is differentiable.  The input $\bx$ and out
 \end{equation}
 by iteration, generating approximations $\bx_k$ so that $\bF(\bx_k)$ goes to zero.
 
-Newton's method linearizes \eqref{eq:nl:equation} around the most recent iterate $\bx_k$ and then ``moves'' the new iterate $\bx_{k+1}$ to the location which solves the linear problem.  The new location is, we hope, closer to the solution of \eqref{eq:nl:equation}.  Each iteration requires solving a linear system, and we already have \PETSc technology for that.  However, the cost of performing the linearization must be taken into account, choosing a smart distance to move will require additional choices, and all existing choices regarding the linear solver---especially preconditioning---remain active.  Solving a nonlinear problem generally requires all the tools for linear systems considered in Chapter \ref{chap:ls}, and more.
+Newton's method linearizes \eqref{eq:nl:equation} around the most recent iterate $\bx_k$ and then it ``moves'' the new iterate $\bx_{k+1}$ to the location which solves the linear problem.  The new location is, one hopes, closer to the solution of \eqref{eq:nl:equation}.  Each iteration requires solving a linear system, and we already have \PETSc technology for that.  However, the cost of performing the linearization must be taken into account, choosing a smart distance to move will require additional choices, and all existing choices regarding the linear solver---especially preconditioning---remain active.  Indeed, solving a nonlinear system of equations generally requires all the tools for linear systems considered in Chapter \ref{chap:ls}, and more.
 
 Large systems of nonlinear equations often arise in applications from PDE-type physical models with nonlinearities.  However, the current Chapter is largely about finite-dimensional systems of nonlinear equations \eqref{eq:nl:equation} as problems of their own.  Late in this Chapter we will, however, give an example of a discretized one-dimensional nonlinear PDE.
 
 
 \section{Newton's method}
 
-Suppose $\bx_k\in\RR^N$ is an approximation, whether good or bad, to the solution of \eqref{eq:nl:equation}.  If we have already determined a \emph{step} $\bs\in\RR^N$ away from this current iterate $\bx_k$ then $\bx_{k+1} = \bx_k + \bs$ will be the next iterate.  Because $\bF$ is differentiable, by definition
+Suppose $\bx_k\in\RR^N$ is an approximation, whether good or bad, to the solution of \eqref{eq:nl:equation}.  Let $\bs\in\RR^N$.  Because $\bF$ is differentiable, by definition
 \begin{equation}
-    \bF(\bx_{k+1}) = \bF(\bx_k) + J_\bF(\bx_k) \bs + o(\|\bs\|)  \label{eq:nl:expandF}
+    \bF(\bx_{k}+\bs) = \bF(\bx_k) + J_\bF(\bx_k) \bs + o(\|\bs\|)  \label{eq:nl:expandF}
 \end{equation}
 for some square matrix
 \begin{equation}
@@ -25,9 +25,9 @@ J_\bF(\bx_k) = \begin{bmatrix}
     \vdots & \ddots & \vdots \\
     \frac{\partial F_{N-1}}{\partial x_0} & \dots & \frac{\partial F_{N-1}}{\partial x_{N-1}}  \end{bmatrix}  \label{eq:nl:jacdefn}
 \end{equation}
-and some quantity $o(\|\bs\|)$ that goes to zero as the \emph{step length} $\|\bs\|$ goes to zero.  The matrix $J = J_\bF(\bx_k)$ is called the \emph{Jacobian} of $\bF$ at $\bx_k$; we also call the function $\bx \mapsto J_\bF(\bx)$ the Jacobian.
+and some quantity $o(\|\bs\|)$ that goes to zero as the \emph{step length} $\|\bs\|$ goes to zero.  The matrix $J_\bF(\bx_k)$ is called the \emph{Jacobian} of $\bF$ at $\bx_k$; we also call the function $\bx \mapsto J_\bF(\bx)$ the Jacobian.
 
-Each iteration of Newton's method approximately solves \eqref{eq:nl:equation} by truncating \eqref{eq:nl:expandF}---removing ``$+o(\|\bs\|)$''---and seeking $\bs$ so that the updated value $\bF(\bx_{k+1})$ would be zero if the truncated equation were true.  That is, each Newton step computes $\bs$ by the linear equation
+If $\bs$ is regarded as a \emph{step}, away from the current iterate $\bx_k$, then $\bx_{k+1} = \bx_k + \bs$ is the next iterate.  Each iteration of Newton's method approximately solves \eqref{eq:nl:equation} by truncating \eqref{eq:nl:expandF}---removing ``$+o(\|\bs\|)$''---and seeking $\bs$ so that the updated value $\bF(\bx_{k+1})$ would be zero if the truncated equation were true.  That is, each Newton step computes $\bs$ by the linear equation
 \begin{equation}
     0 = \bF(\bx_k) + J_\bF(\bx_k) \bs.
 \end{equation}
@@ -371,13 +371,14 @@ This is of form \eqref{eq:nl:diffusionreaction} with $R(u) = - \rho \sqrt{u}$ an
 
 We will use \eqref{eq:nl:drsqrt} as a first example because we want to verify our numerical solution using an exact solution.   Exercise 5.50 of \citet[page 240]{Ockendonetal2003} shows how to find the solution.  One observes that both second-derivative and square-root operations convert certain 4th degree polynomials into quadratic polynomials.  Substituting $u(x)=M(x+1)^4$ into \eqref{eq:nl:drsqrt} finds $M=(\rho/12)^2$.  We also obtain the boundary conditions from the exact solution: set $\alpha=M$ and $\beta=16 M$
 
+
+\section{Numerical method and implementation} \label{sec:nl:implementation}
+
 On an $N$ point grid, the centered finite-difference scheme for \eqref{eq:nl:diffusionreaction}, with $O(h^2)$ local truncation error \citep{MortonMayers2005}, is
 \begin{equation}
 - \frac{u_{j+1} - 2 u_j + u_{j-1}}{h^2} - R(u_j) = f(x_j)   \label{eq:nl:drfdscheme}
 \end{equation}
 where $h=1/(N-1)>0$, $x_j = j h$ for $j=0,1,\dots,N-1$, and $u_j \approx u(x_j)$.
-
-\cinputpart{reaction.c}{\CODELOC}{Functions describing the initial iterate, the exact solution, finite-difference equation \eqref{eq:nl:drfdscheme}, and the derivatives of \eqref{eq:nl:drfdscheme}.}{I}{//CALLBACK}{//ENDCALLBACK}{code:reactionI}
 
 Code \texttt{reaction.c} shown in Codes \ref{code:reactionI} and \ref{code:reactionII} implements this scheme.  We use a \pSNES object for the Newton iteration and a \pDMDA object for the grid.
 
@@ -392,9 +393,49 @@ The functions in Code \ref{code:reactionI} have a common features to their signa
 
 In \texttt{main()} in Code \ref{code:reactionII} we use \texttt{DMDASNESSetFunctionLocal()} and  \texttt{DMDASNESSetJacobianLocal()}, which are structured-grid-aware versions of \texttt{SNESSetFunction()} and \texttt{DMDASNESSetJacobianLocal()}, respectively, which we saw in \texttt{ecjacobian.c} earlier (Codes \ref{code:ecjacobianI} and \ref{code:ecjacobianII}).  Also observe that, though we do implement a Jacobian, we do not ever (explicitly) allocate a \pMat to hold it in \texttt{reaction.c}.  This is because the \pDMDA object has enough information about the grid and stencil so as to allocate the \pMat internally.
 
-\clearpage
-\newpage
+\cinputpart{reaction.c}{\CODELOC}{Functions describing the initial iterate, the exact solution, finite-difference equation \eqref{eq:nl:drfdscheme}, and the derivatives of \eqref{eq:nl:drfdscheme}.}{I}{//CALLBACK}{//ENDCALLBACK}{code:reactionI}
+
 \cinputpart{reaction.c}{\CODELOC}{In \texttt{main()} we create a \pDMDA, some \pVecs, and a \pSNES.  We hand call-back functions to the \pSNES.  Then we solve the equation.}{II}{//MAIN}{//ENDMAIN}{code:reactionII}
+
+FIXME: text to explain that it is time to show an overview, with 6 \PETSc objects
+
+\begin{figure}
+\begin{tikzpicture}[scale=0.8,
+                    >={Latex[length=2mm]},
+  component/.style={
+     rectangle,draw,fill=white,align=center,line width=1pt},
+  userfcn/.style={
+     rounded corners,draw,fill=white,draw,align=center,line width=1pt,font={\itshape,\normalsize}}]
+
+\draw[line width=1pt] (3,7) node[userfcn,minimum width=70mm] (usercode) {user code \\ \vspace{10mm}};
+\draw[line width=1pt] (1,6.5) node[userfcn] (rescode) {residual};
+\draw[line width=1pt] (5,6.5) node[userfcn] (jaccode) {Jacobian};
+
+\draw[line width=1pt] (-1,4) node[component] (snes) {\complabel{\pSNES}{nonlinear solver}};
+\draw[line width=1pt] (-1,2) node[component] (ksp)  {\complabel{\pKSP}{linear solver}};
+\draw[line width=1pt] (-1,0) node[component] (pc)   {\complabel{\pPC}{preconditioner}};
+
+\draw[line width=1pt] (7,4) node[component] (dmda) {\complabel{\pDMDA}{structured grid}};
+
+\draw[line width=1pt] (2,0) node[component] (matj)   {\usedlabel{\pMat}{Jacobian}};
+\draw[line width=1pt] (6,0) node[component] (vecs)   {\pVecs \\ \footnotesize  \emph{solution, other fields}};
+
+\path
+   ([xshift=-10em]usercode.south) edge[->] node {} (snes)
+   ([xshift=10em]usercode.south) edge[->] node {} (dmda)
+   ([xshift=0em]usercode.south) edge[->] node {} (vecs)
+
+   (rescode.south) edge[->] node {} ([xshift=-2em]vecs.north)
+
+   ([xshift=-1em]jaccode.south) edge[->] node {} (matj)
+   ([xshift=1em]jaccode.south) edge[->,bend right] node {} ([xshift=1em]vecs.north)
+
+   (snes) edge node {} (ksp)
+   (ksp) edge node {} (pc);
+\end{tikzpicture}
+\caption{An overview of our first structured-grid solution of a nonlinear PDE using \PETSc.  Arrows should be read as ``acts directly on.''}
+\label{fig:nl:reactionstack}
+\end{figure}
 
 
 \section{Convergence under grid refinement}
