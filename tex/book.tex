@@ -200,8 +200,8 @@ Copyright \copyright\ \the\year\ \thanklessauthor
 \chapter{Stokes equations}
 \label{chap:ok}
 \renewcommand{\CODELOC}{ch11/}
-%\stubinput{chaps/stokes.tex}{5}
-\input{chaps/stokes.tex}
+\stubinput{chaps/stokes.tex}{5}
+%\input{chaps/stokes.tex}
 
 \chapter{Unstructured grids}
 \label{chap:dp}
@@ -233,16 +233,16 @@ Copyright \copyright\ \the\year\ \thanklessauthor
 \begin{tabular}[t]{l} #1 \end{tabular}
 }
 
+
 \clearpage
 \thispagestyle{empty}
-\noindent \textsc{inside front cover:}
+\noindent \textsc{inside front \& back covers:}
 
-\vfill
 {\large \noindent \textsc{PDE examples}.} \quad Chapter $N$ codes are in directory \texttt{c/ch}$N$\texttt{/}.
 
-\begin{center}
+\medskip
 \small
-\hspace{-10mm}\begin{tabular}{lllll}
+\begin{tabular}{lllll}
 \toprule
 Chapter
     &\multicolumn{1}{c}{linear\phantom{foo}}
@@ -281,43 +281,6 @@ Chapter
                 & \tblockeqncode{ice sheet (2D)}{$\begin{matrix} H_t = \Div\left(D \grad H\right) + f \\ D \text{ nonlinear},\, H \ge 0\end{matrix}$}{ice.c} \\
 \bottomrule
 \end{tabular}
-\end{center}
-\vfill
 
-
-\newpage\thispagestyle{empty}
-\noindent \textsc{inside back cover:}
-
-\vfill
-{\large \noindent \textsc{\PETSc component coverage}}
-
-\begin{center}
-\begin{tabular}{rccccccc}
-\toprule
-Chapter 
-    &\;\pVec\;
-          &\;\pMat\;
-                &\;\texttt{KSP}${+}$\pPC\;
-                      &\pSNES
-                            &\pDMPlex
-                                  &\pDMDA
-                                        &\;\pTS\; \\
-\midrule
-2   & \XX & \XX & \XX &     &     &     &      \\
-3   & \XX & \XX & \XX &     &     & \XX &      \\
-4   & \gX & \XX & \gX & \XX &     & \XX &      \\
-5   & \gX & \gX & \gX & \XX &     & \XX &      \\
-6   & \gX & \gX & \gX & \XX &     & \XX & \XX  \\
-7   & \gX & \gX & \XX & \XX &     & \XX &      \\
-8   & \gX & \gX & \XX & \XX &     & \gX &      \\
-9   & \gX & \gX & \XX & \XX &     & \XX & \XX  \\
-10  & \XX & \XX & \gX & \gX &     &     &      \\
-11  & \gX & \gX & \XX & \XX &     & \XX &      \\
-12  & \gX & \gX & \XX & \XX & \XX &     &      \\
-13  & \gX & \gX & \gX & \XX &     & \XX &      \\
-\bottomrule
-\end{tabular}
-\end{center}
-\vfill
 
 \end{document}
