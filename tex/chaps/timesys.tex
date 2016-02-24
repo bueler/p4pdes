@@ -18,6 +18,13 @@ FIXME control \texttt{rk} by \texttt{-ts\_type rk -ts\_atol Z -ts\_rk\_type XX}
 
 \section{Time-dependent heat equation}
 
+\begin{figure}
+% usage: \standardstack{scale}{objective}{Jacobian}{TS}{DMDA}{DMPlex}
+\standardstack{0.775}{dashed}{}{}{}{dashed}
+\caption{The \PETSc stack used for the time-dependent heat equation program (\texttt{heat.c}) and the next program after that (\texttt{pattern.c}).  Compare Figure \ref{fig:of:standardstack}.  FIXME: \pSNES not directly seen by user code}
+\label{fig:of:tsstack}
+\end{figure}
+
 
 \section{Coupled reaction-diffusion equations}
 

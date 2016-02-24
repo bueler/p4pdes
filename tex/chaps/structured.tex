@@ -685,11 +685,11 @@ One known result [\emph{for CG for the Poisson equation}] is that the asymptotic
 Thus ICC is not as promising a preconditioner as we had first hoped.
 
 
-\section{Krylov is not enough \dots \emph{good} preconditioning is needed}
+\section{Krylov is not enough: better preconditioning needed}
 
-When solving the sparse linear systems from discretized PDEs, Krylov iterations such as CG and preconditioning methods such as ICC are useful tools because they can improve upon naively-applied direct linear algebra methods.  However, besides the bad news above that CG iterations scale badly with refining grids, there is more ``bad news'' for our Krylov approach.  Namely, that smartly-applied direct linear algebra techniques can also beat CG+ICC, at least in the two-dimensional case of this Chapter.
+When solving sparse linear systems arising from discretized PDEs, Krylov iterations (such as CG) and preconditioning methods (such as ICC) can improve upon naively-applied direct linear algebra methods.  The primary bad news about such methods has already appeared: CG iterations scale badly with refining grids, even with ICC preconditioning.  But, on our particular Poisson problem, there is more ``bad news'' for our Krylov approach.  Namely, that smartly-applied direct linear algebra techniques can also beat CG+ICC in this particular two-dimensional case.
 
-Specifically, suppose we run \texttt{poisson} with option \texttt{-da\_refine 7}, to give a $1025 \times 1025$ grid and about $10^6$ degrees of freedom.  Suppose we compare IC($0$)-preconditioned CG iterations with two other methods:
+Specifically, suppose we run \texttt{poisson} with option \texttt{-da\_refine 7}, to give a $1025 \times 1025$ grid and about $10^6$ degrees of freedom.  Suppose we compare ICC-preconditioned CG iterations with two other methods:
 \begin{cline}
 $ ./poisson -da_refine 7 -ksp_type cg -pc_type icc
 $ ./poisson -da_refine 7 -ksp_type preonly -pc_type cholesky -pc_factor_mat_ordering_type nd
@@ -715,17 +715,52 @@ fish2   & cg         & mg            &  2.60 &    5 \\
 \caption{Time and iteration count for \texttt{-da\_refine 7} runs, a $1025 \times 1025$ grid on a single MPI process on \WORKSTATION.  The \texttt{fish2} code appears in Chapter \ref{chap:pr}.} \label{tab:cgdirectmg}
 \end{table}
 
-Option \texttt{ -pc\_factor\_mat\_ordering\_type nd } indicates that the direct method be applied using the \emph{nested dissection} ordering \citep{George1973}.  While we give no details, in outline the unknowns and equations are re-ordered to reduce the cost of the factorization.  For LU factorization the nested dissection ordering is actually the \PETSc default for single-process runs.\sidenote{And for this reason, the result of the \texttt{-ksp\_type preonly -pc\_type lu} was not in Table \ref{tab:poissontiming}.}  In any case, the two direct solvers in Table \ref{tab:cgdirectmg} are clearly competitive with IC($0$)-preconditioned CG.
+Option \texttt{ -pc\_factor\_mat\_ordering\_type nd } indicates that the direct method be applied using the \emph{nested dissection} ordering \citep{George1973}.  While we give no details, in outline the unknowns and equations are re-ordered to reduce the cost of the factorization.  For LU factorization the nested dissection ordering is actually the \PETSc default for single-process runs.\sidenote{The observant reader may have noted the omission of \texttt{-ksp\_type preonly -pc\_type lu} from Table \ref{tab:poissontiming}.}  The two direct solvers in Table \ref{tab:cgdirectmg} are clearly competitive with ICC-preconditioned CG.
 
-At this point the impulsive reader might give up on Krylov methods, but that also would be premature.  We do need to find a better preconditioner if we are going to have scalable solutions of this Poisson PDE problem.  We will eventually show such methods (Chapter \ref{chap:pr}), which give both efficient and parallel-scalable (Chapter \ref{chap:sc}) solutions of large nonlinear and variable-coefficient elliptic PDE problems in 2D and 3D, something direct methods of linear algebra do not achieve.
+The impulsive reader should not give up on Krylov methods; that would be premature.  However, we do need to find a better preconditioner if we are going to have scalable solutions of PDE problems.  Chapter \ref{chap:pr} shows such methods, which give both efficient and parallel-scalable (Chapter \ref{chap:sc}) solutions of large nonlinear and variable-coefficient elliptic PDE problems in 2D and 3D.  This is something direct methods of linear algebra do not achieve.
 
-In particular, we are headed toward geometric multigrid methods (Chapter \ref{chap:pr}).  These methods can act as preconditioners on Krylov iterations, a combination which provides optimal scaling for the structured, rectangular-grid Poisson problem of the current Chapter.  We add one more run to the results in Table \ref{tab:cgdirectmg}, namely
+In particular, we are headed toward geometric multigrid methods (Chapter \ref{chap:pr}).  These methods can act as preconditioners on Krylov iterations, a combination which provides optimal scaling for the structured, rectangular-grid Poisson problem of the current Chapter.  Therefore we have added one more run to the results in Table \ref{tab:cgdirectmg}, namely
 \begin{cline}
 ./fish2 -da_refine 7 -ksp_type cg -pc_type mg
 \end{cline}
-where \texttt{fish2.c} is a Chapter \ref{chap:pr} program for solving the same Poisson problem.  The result shows significant further improvement over the nested-dissection direct methods.
+where \texttt{fish2.c} is a Chapter \ref{chap:pr} program for solving the same Poisson problem.  The result shows significant improvement over both the ICC-preconditioned results and the nested-dissection direct methods.
 
-However, to exploit the power of geometric multigrid we also need to do a better job using \PETSc's tools for assembling the finite linear system.  Specifically, we need to allow the \pDMDA object to ``tell us'' the grid on which we are assembling the linear system, something which is not done in \texttt{poisson.c}.
+
+\section{The \PETSc components used so far}
+
+Now that we have a first PDE-solving \PETSc code, an overview diagram is appropriate.  Figure \ref{fig:st:linearstack} shows that, for this linear PDE, our user code directly acts on \pKSP and \pDMDA objects, and on the \pVec and \pMat objects which hold the linear system.  This diagram should be compared to the ones in later Chapters. 
+
+\begin{figure}
+\begin{tikzpicture}[scale=0.8,
+                    >={Latex[length=2mm]},
+  component/.style={
+     rectangle,draw,fill=white,align=center,line width=1pt},
+  userfcn/.style={
+     rounded corners,draw,fill=white,draw,align=center,line width=1pt,font={\itshape,\normalsize}}]
+
+\draw[line width=1pt] (3,4) node[userfcn,minimum width=70mm] (usercode) {user code \\ \vspace{1mm}};
+
+\draw[line width=1pt] (-1,2) node[component] (ksp)  {\complabel{\pKSP}{linear solver}};
+\draw[line width=1pt] (-1,0) node[component] (pc)   {\complabel{\pPC}{preconditioner}};
+
+\draw[line width=1pt] (7,2) node[component] (dmda) {\complabel{\pDMDA}{structured grid}};
+
+\draw[line width=1pt] (2,0) node[component] (matj)   {\usedlabel{\pMat}{$A$}};
+\draw[line width=1pt] (6,0) node[component] (vecs)   {\pVecs \\ \footnotesize  \emph{solution, other fields}};
+
+\path
+   ([xshift=-10em]usercode.south) edge[->] node {} (ksp)
+   ([xshift=10em]usercode.south) edge[->] node {} (dmda)
+   ([xshift=0em]usercode.south) edge[->] node {} (vecs)
+   ([xshift=-1em]usercode.south) edge[->] node {} (matj)
+
+   (ksp) edge node {} (pc);
+\end{tikzpicture}
+\caption{The simple overview of \texttt{poisson.c}, a structured-grid solution of a linear 2D PDE using \PETSc.  Arrows should be read as ``user code acts directly on.''}
+\label{fig:st:linearstack}
+\end{figure}
+
+In fact, so as to exploit the power of geometric-multigrid preconditioning (Chapter \ref{chap:pr}), our future codes will do a better job of using \PETSc's tools for assembling the finite linear system.  Specifically, the \pDMDA object will ``tell us,'' via ``call-back,'' the grid on which we are assembling the linear system, something which is not done in \texttt{poisson.c}.  The simplest, most-uniform way to do this turns out to be via a generalization which we want anyway: allowing nonlinearity in our PDEs.  That is, starting in the next Chapter, nonlinear problems are addressed using a \pSNES object which is already set-up for call-backs.  Using nonlinear tools from \PETSc, even for linear problems, is simply more convenient if we want geometric-multigrid preconditioners as well.
 
 
 \section{Exercises}

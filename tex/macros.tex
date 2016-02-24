@@ -107,10 +107,10 @@
 \draw[line width=1pt] (7,0) node[component] (vecs)   {\pVecs \\ \footnotesize  \emph{solution, other fields}};
 
 \path
-   ([xshift=2em]objcode.south) edge[->,bend right,distance=6.5em#2] node {} (vecs)
+   ([xshift=2em]objcode.south) edge[->,bend right,distance=6.5em,#2] node {} (vecs)
    ([xshift=2em]rescode.south) edge[->,bend left] node {} ([xshift=2.5em]vecs.north)
    ([xshift=1em]jaccode.south) edge[->,#3] node {} ([xshift=1em]vecs.north)
-   (jaccode.south) edge[->,dashed,bend left,#3] node {} (matj)
+   (jaccode.south) edge[->,bend left,#3] node {} (matj)
    ([xshift=-13em]usercode.south) edge[->,#4] node {} (ts)
    ([xshift=-10em]usercode.south) edge[->] node {} (snes)
    ([xshift=2em]usercode.south) edge[->,#5] node {} (dmda)
