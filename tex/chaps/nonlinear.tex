@@ -1,5 +1,5 @@
 
-The simplest thing to say about nonlinear equations is that they change the functional form of the residual, compared to the linear case.  For a linear system the residual $\br$ is a certain linear (affine) function of the unknowns $\bu$, namely $\br = \bb - A \bu$.  Now we consider cases in which the residual, as a function of $\bu$, might be a polynomial, a transcendental function, or something more general.
+The simplest thing to say about nonlinear equations is that, when compared to the linear case, they change the functional form of the residual.  For a linear system the residual $\br$ is a certain linear (affine) function of the unknowns $\bu$, namely $\br = \bb - A \bu$.  Now we consider cases in which the residual, as a function of $\bu$, might be a polynomial, a transcendental function, or something more general.
 
 Suppose that $\bF : \RR^N \to \RR^N$ is differentiable.  The input $\bx$ and output $\bF(\bx)$ are column vectors,\sidenote{Our name change $\bu\to\bx$ comes from now thinking more geometrically about the location of $\bx$.} so in that sense $\bF$ acts like square-matrix multiplication $\bx\mapsto A\bx$.  Just as an iterative linear solver reduces the linear residual $\br_k=\bb - A \bu_k$ to zero by generating a sequence $\bu_k$, for nonlinear $\bF$ we want to solve
 \begin{equation}
@@ -348,56 +348,54 @@ A two-point boundary value problem gets us started on nonlinear PDE problems.  S
 \end{equation}
 models a time-independent combination of \emph{diffusion} ($u''$) and \emph{reaction} ($R(u)$) processes.  The right-hand side $f(x)$ models an additional location-dependent \emph{source}.
 
-These ideas are perhaps clearest if we note \eqref{eq:nl:diffusionreaction} is the steady-state of the time-dependent model
+This problem is clearest if we note \eqref{eq:nl:diffusionreaction} is the steady-state of the time-dependent model
 \begin{equation}
 u_t = u_{xx} + R(u) + f(x),  \label{eq:nl:drtimedependent}
 \end{equation}
-which is a generalization of the classical one-dimensional time-evolving heat equation $u_t = u_{xx}$.  A positive sign for $R(u)+f(x)$ models the production (increase) of $u$, while a negative sign models destruction (decrease) of $u$.  If $u$ represents temperature, for instance, in which case $R(u)$ represents a heat-producing or heat-absorbing temperature-dependent reaction, according to its sign, then \eqref{eq:nl:diffusionreaction} models the equilibrium temperature distribution.
+which generalizes the one-dimensional, time-evolving heat equation $u_t = u_{xx}$.  A positive sign for $R(u)+f(x)$ clearly models the increase of $u$, and a negative sign the decrease.  If $u$ represents temperature, for instance, in which case $R(u)$ represents a heat-producing or heat-absorbing temperature-dependent reaction, according to its sign, then \eqref{eq:nl:diffusionreaction} models the equilibrium temperature distribution.
 
 We should be concerned about the solvability of \eqref{eq:nl:diffusionreaction} in the case where $R$ is an \emph{increasing} function of $u$.  If $R$ is positive and increasing then the ability of the diffusion term to ``damp-out'' maxima may be exceeded by the increasing production from large values of $u$, so that these terms in \eqref{eq:nl:diffusionreaction} cannot balance.  If $R$ is negative and increasing then the analogous concern applies to minima of $u$.  These concerns are demonstrated by the example $R(u) = \lambda e^u$ with $\lambda>0$ in Exercise 4.\ref{exer:nl:bratu}; that problem is not solvable for sufficiently-large $\lambda$.
 
-Equation \eqref{eq:nl:diffusionreaction} is a nonlinear elliptic PDE,\sidenote{By mild abuse of the letter ``P''.} but in one-dimension.  Elliptic PDE techniques show the problem is well-posed if $R$ is a \emph{non}-increasing function \citep[pages 93-94]{KinderlehrerStampacchia1980}.  To be concrete, consider Dirichlet boundary conditions
+However, if $R$ is a non-increasing function then our worries go away.  In fact, equation \eqref{eq:nl:diffusionreaction} is a nonlinear elliptic PDE,\sidenote{By mild abuse of the letter ``P''.} but in one-dimension.  Elliptic PDE techniques show the problem is well-posed in that case \citep[pages 93-94]{KinderlehrerStampacchia1980}.  To be concrete, consider Dirichlet boundary conditions
 \begin{equation}
-u(0)=\alpha \quad \text{and} \quad u(1)=\beta.  \label{eq:nl:drbcs}
+u(0)=\alpha \quad \text{and} \quad u(1)=\beta  \label{eq:nl:drbcs}
 \end{equation}
-(We have chosen a convenient interval $x\in[0,1]$, but for other intervals we can shift and scale $x$ as needed.)  If $R$ is continuous and non-increasing then the nonlinear operator in \eqref{eq:nl:diffusionreaction} is strictly-monotone \citep[page 83]{KinderlehrerStampacchia1980}.  Because it is also coercive on the appropriate function space,\sidenote{Namely the Sobolev space $H_0^1[0,1]$, after a linear change of variables to set $\alpha=\beta=0$.} which says intuitively that the highest-order (diffusion) term is effective at damping out large variations in $u$ which correspond to a large norm $\|u'\|_2$, abstract arguments show unique existence of a solution.
+on the convenient interval $x\in[0,1]$.  (For other intervals simply shift and scale $x$ as needed.)  If $R$ is continuous and non-increasing then the nonlinear operator in \eqref{eq:nl:diffusionreaction} is strictly-monotone \citep[page 83]{KinderlehrerStampacchia1980}.  Because \eqref{eq:nl:diffusionreaction} is also coercive on the appropriate function space,\sidenote{Namely the Sobolev space $H_0^1[0,1]$, after a linear change of variables to set $\alpha=\beta=0$.} which says intuitively that the highest-order (diffusion) term is effective at damping out large variations in $u$ which correspond to a large norm $\|u'\|_2$, abstract arguments show unique existence of a solution.
 
-Now we consider the example
+So now consider the example
 \begin{equation}
 -u'' + \rho \sqrt{u} = 0. \label{eq:nl:drsqrt}
 \end{equation}
 % R(u) = - rho sqrt(|u|) decreasing so -u''+F(u)=0 with F increasing
 This is of form \eqref{eq:nl:diffusionreaction} with $R(u) = - \rho \sqrt{u}$ and $f(x)=0$.  Because $R$ is non-increasing and continuous if $\rho>0$, the corresponding Dirichlet problem is well-posed.
 
-We will use \eqref{eq:nl:drsqrt} as a first example because we want to verify our numerical solution using an exact solution.   Exercise 5.50 of \citet[page 240]{Ockendonetal2003} shows how to find the solution.  One observes that both second-derivative and square-root operations convert certain 4th degree polynomials into quadratic polynomials.  Substituting $u(x)=M(x+1)^4$ into \eqref{eq:nl:drsqrt} finds $M=(\rho/12)^2$.  We also obtain the boundary conditions from the exact solution: set $\alpha=M$ and $\beta=16 M$
+We will use \eqref{eq:nl:drsqrt} as a first example because we want to verify our numerical solution using an exact solution.   Exercise 5.50 of \citet[page 240]{Ockendonetal2003} shows how to find the solution.  One observes that both second-derivative and square-root operations convert certain 4th degree polynomials into quadratic polynomials.  Substituting $u(x)=M(x+1)^4$ into \eqref{eq:nl:drsqrt} finds $M=(\rho/12)^2$.  We also obtain the boundary conditions from the exact solution: set $\alpha=M$ and $\beta=16 M$.
 
 
 \section{Numerical method and implementation} \label{sec:nl:implementation}
 
-On an $N$ point grid, the centered finite-difference scheme for \eqref{eq:nl:diffusionreaction}, with $O(h^2)$ local truncation error \citep{MortonMayers2005}, is
+On an $N$ point grid, the centered, $O(h^2)$ local truncation error \citep{MortonMayers2005} finite-difference scheme for \eqref{eq:nl:diffusionreaction} is
 \begin{equation}
 - \frac{u_{j+1} - 2 u_j + u_{j-1}}{h^2} - R(u_j) = f(x_j)   \label{eq:nl:drfdscheme}
 \end{equation}
-where $h=1/(N-1)>0$, $x_j = j h$ for $j=0,1,\dots,N-1$, and $u_j \approx u(x_j)$.
+where $h=1/(N-1)>0$, $x_j = j h$ for $j=0,1,\dots,N-1$, and $u_j \approx u(x_j)$.  Our program \texttt{reaction.c} shown in Codes \ref{code:reactionI} and \ref{code:reactionII} implements this scheme.  We use a \pSNES object for the Newton iteration and a \pDMDA object for the grid.
 
-Code \texttt{reaction.c} shown in Codes \ref{code:reactionI} and \ref{code:reactionII} implements this scheme.  We use a \pSNES object for the Newton iteration and a \pDMDA object for the grid.
+Three functions appear in Code \ref{code:reactionI}.  The first one (\texttt{InitialAndExact()}) computes both the initial iterate\sidenote{A linear function connecting the boundary conditions.} and the exact solution.  Then come residual (\texttt{FormFunctionLocal()}) and Jacobian (\texttt{FormJacobianLocal()}) evaluation functions.  These two are ``call-back'' functions which the \pSNES will use when it needs the values of the residual and Jacobian at a given location in the space of candidate solutions.
 
-Three functions appear in Code \ref{code:reactionI}.  The first one (\texttt{InitialAndExact()}) computes both the initial iterate, which is a linear function connecting the boundary conditions, and the exact solution.  Then we have the residual (\texttt{FormFunctionLocal()}) and Jacobian (\texttt{FormJacobianLocal()}) evaluation functions.  These two are ``call-back'' functions which the \pSNES will use when it needs the values of the residual and Jacobian.
-
-The functions in Code \ref{code:reactionI} have a common features to their signatures, namely they have arguments of type \texttt{DMDALocalInfo*} and \texttt{double*}.  This reflects two ideas which are worth noting:
+The functions in Code \ref{code:reactionI} have common features to their signatures.  They each have arguments of type \texttt{DMDALocalInfo*} and \texttt{double*}.  This reflects two ideas which are worth noting:
 \renewcommand{\labelenumi}{(\emph{\roman{enumi}})}
 \begin{enumerate}
-\item First, the inputs are C array pointers instead of \pVecs.  Our implementation of \texttt{InitialAndExact()} explains how this works.  Before calling it, in Code \ref{code:reactionII} below, we use \texttt{DMDAVecGetArray()} on \pVecs \texttt{u} and \texttt{uexact}.  This gives pointers of type \texttt{double*} which are handed to \texttt{InitialAndExact()}.  Also, a \texttt{DMDALocalInfo} structure\sidenote{Figure \ref{fig:localpartofgrid} shows the information carried by \texttt{DMDALocalInfo}.} is passed so that the local part of the grid and the global grid size (i.e.~\texttt{info.mx}) can be accessed through this \texttt{struct} without needing the \pDMDA object itself.  The \pSNES calls \texttt{FormFunctionLocal()} and \texttt{FormJacobianLocal()} in the same way.
-\item Second, the pointers of type \texttt{double*} passed into \texttt{FormFunctionLocal()} and \texttt{FormJacobianLocal()} have valid ghosts, that is, expressions ``\texttt{u[i+1]}'' and ``\texttt{u[i+1]}'' are valid for \texttt{double *u}.  This feature is used in \texttt{FormFunctionLocal()} because indices $i-1$ and $i+1$ appear in finite-difference equation \eqref{eq:nl:drfdscheme}.  Such behavior occurs ``under the hood,'' however, by having the \pSNES internally allocating a local \pVec, which has valid ghosts, then communicating between processes to update those ghost values, and then using \texttt{DMDAVecGetArray()}/\texttt{DMDAVecRestoreArray()} to get an array with a widened valid index range.
+\item First, the inputs are C array pointers instead of \pVecs.  Our implementation of \texttt{InitialAndExact()} explains how this works.  Before calling it, in Code \ref{code:reactionII} below, we use \texttt{DMDAVecGetArray()} on \pVecs \texttt{u} and \texttt{uexact}.  This gives pointers of type \texttt{double*} which are handed to \texttt{InitialAndExact()}.  Also, a \texttt{DMDALocalInfo} structure\sidenote{Figure \ref{fig:localpartofgrid} shows the information carried by \texttt{DMDALocalInfo}.} is passed in so that the local part of the grid and the global grid size (i.e.~\texttt{info.mx}) can be accessed through this \texttt{struct} without needing the \pDMDA object itself.  The \pSNES calls \texttt{FormFunctionLocal()} and \texttt{FormJacobianLocal()} in the same way.
+\item Second, the pointers of type \texttt{double*} passed into \texttt{FormFunctionLocal()} and \texttt{FormJacobianLocal()} have valid ghosts.  That is, expressions ``\texttt{u[i+1]}'' and ``\texttt{u[i+1]}'' are valid ways of dereferencing \texttt{double *u}.  This feature is used in \texttt{FormFunctionLocal()} because indices $i-1$ and $i+1$ appear in finite-difference equation \eqref{eq:nl:drfdscheme}.  Though we never see the corresponding \pVec, ``under the hood'' the \pSNES has allocated a local \pVec with valid ghost locations, then communicated between processes to update those ghost values, and then used \texttt{DMDAVecGetArray()}/\texttt{DMDAVecRestoreArray()} to get an array.  By contrast, the solution vector \texttt{u} we provide to the \pSNES, in Code \ref{code:reactionII} at the \texttt{SNESSolve()} call, has no ghosts because it was allocated with \texttt{DMCreateGlobalVector()}.
 \end{enumerate}
 
-In \texttt{main()} in Code \ref{code:reactionII} we use \texttt{DMDASNESSetFunctionLocal()} and  \texttt{DMDASNESSetJacobianLocal()}, which are structured-grid-aware versions of \texttt{SNESSetFunction()} and \texttt{DMDASNESSetJacobianLocal()}, respectively, which we saw in \texttt{ecjacobian.c} earlier (Codes \ref{code:ecjacobianI} and \ref{code:ecjacobianII}).  Also observe that, though we do implement a Jacobian, we do not ever (explicitly) allocate a \pMat to hold it in \texttt{reaction.c}.  This is because the \pDMDA object has enough information about the grid and stencil so as to allocate the \pMat internally.
+In \texttt{main()} in Code \ref{code:reactionII} we use \texttt{DMDASNESSetFunctionLocal()} and  \texttt{DMDASNESSetJacobianLocal()}.  These are structured-grid-aware versions of \texttt{SNESSetFunction()} and \texttt{SNESSetJacobian()}, respectively, used earlier in \texttt{ecjacobian.c} (Code \ref{code:ecjacobianII}).  Note that, while we do set entries in a Jacobian, in \texttt{reaction.c} we never explicitly allocate a \pMat to hold it.  The \pDMDA object, however, has enough information about the grid and stencil to allocate it internally.
 
 \cinputpart{reaction.c}{\CODELOC}{Functions describing the initial iterate, the exact solution, finite-difference equation \eqref{eq:nl:drfdscheme}, and the derivatives of \eqref{eq:nl:drfdscheme}.}{I}{//CALLBACK}{//ENDCALLBACK}{code:reactionI}
 
 \cinputpart{reaction.c}{\CODELOC}{In \texttt{main()} we create a \pDMDA, some \pVecs, and a \pSNES.  We hand call-back functions to the \pSNES.  Then we solve the equation.}{II}{//MAIN}{//ENDMAIN}{code:reactionII}
 
-FIXME: text to explain that it is time to show an overview, with 6 \PETSc objects
+Though the previous paragraphs give an adequate text summary of program \texttt{reaction.c}, the diagram in Figure \ref{fig:nl:reactionstack} communicates the overall structure much better.  Our program refers to six different major \PETSc types, of which three (\pDMDA, \pSNES, \pVec) involve explicit \texttt{Create()}/action/\texttt{Destroy()} sequences.  Additionally, as noted above, we set entries in a \pMat which is allocated internally.  However, it is essential to remember that each step of Newton's method solves a linear system, and thus that \pKSP and \pPC objects are ``inside'' the \pSNES.  We will see later, both in this and future Chapters, when seeking better performance on fine grids, that exposure and control of these linear solver objects is essential.
 
 \begin{figure}
 \begin{tikzpicture}[scale=0.8,
@@ -433,7 +431,7 @@ FIXME: text to explain that it is time to show an overview, with 6 \PETSc object
    (snes) edge node {} (ksp)
    (ksp) edge node {} (pc);
 \end{tikzpicture}
-\caption{An overview of our first structured-grid solution of a nonlinear PDE using \PETSc.  Arrows should be read as ``acts directly on.''}
+\caption{An overview of \texttt{reaction.c}, our first structured-grid solution of a nonlinear PDE using \PETSc.  Arrows should be read as ``user code acts directly on.''}
 \label{fig:nl:reactionstack}
 \end{figure}
 
