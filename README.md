@@ -1,7 +1,7 @@
 p4pdes
 ======
 
-A book on using [PETSc](http://www.mcs.anl.gov/petsc/) for [partial differential equations](https://en.wikipedia.org/wiki/Partial_differential_equation).
+A book on using [PETSc](http://www.mcs.anl.gov/petsc/) for [partial differential equations](https://en.wikipedia.org/wiki/Partial_differential_equation).  A contract is pending with [SIAM Press](http://www.siam.org/books/).
 
 
 ### blog and slides
