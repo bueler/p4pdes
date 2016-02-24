@@ -1,8 +1,8 @@
 static char help[] =
-"Scalar ODE solver by TS.  Option prefix -ode_.\n"
+"Scalar ODE solver using TS.  Option prefix -ode_.\n"
 "Solves  dy/dt = G(t,y)  with y(t0) = y0 to compute y(tf), where t0, y0, tf\n"
 "are all set by options.  Serial only.  Defaults to Runge-Kutta (= 3BS), but\n"
-"can be used with implicit methods; has implemented Jacobian (J = dG/dy).\n"
+"can be used with implicit methods.  Includes Jacobian (J=dG/dy).\n"
 "Implemented example has G(t,y) = t + y, so y(1) = e-2 = 0.7182818.\n\n";
 
 // ./ode -ts_monitor
