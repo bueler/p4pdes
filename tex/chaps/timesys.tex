@@ -1,12 +1,20 @@
 
+To the reader has become lost in the maze of issues which we have built around the examples so far---whether it is finite elements, line searches, Krylov solvers, preconditioner choices, or whatever causes the confusion---then now for some good news.  \emph{This} Chapter is a point at which we restart with an easy question and a small example.
+
+After all, solving \emph{ordinary} differential equations (ODEs) with \PETSc should be easy.  It is, and so is making the transition, through spatial discretization, to numerical methods for time-dependent, parabolic PDEs like the heat equation.  In this Chapter we look at three examples, a scalar ODE, a system of ODEs arising from finite-difference approximation of the classical heat equation, and finally a system of two coupled nonlinear PDEs which form a two-species reaction/diffusion model.  These time-dependent problems are solved by runtime-choosable, and highly controllable, time-stepping methods from a so-far unused major \PETSc object class: \pTS time-steppers.  We will emphasize, and recall the basics of, both \emph{explicit} and \emph{implicit} time-stepping techniques.  And, in the process, we will end up returning to those important scientific computing issues, such as the rapid solution of large systems of equations, in which we have been engaged in previous Chapters.
+
+
+\section{ODEs and \PETSc \pTS objects}
+
+Consider the ODE in form
+\begin{equation}
+\by' = \bg(t,\by) \label{eq:ts:ode}
+\end{equation}
+where $\by(t) \in \RR^N$ and $\by'=\by'(t)$ denotes $d\by/dt$.
+
 FIXME introduce \pTS, which contains \pSNES inside (and thus the rest)
 
 FIXME build all tools around the ``hard'' time dependent case of stiff + nonlinear, though not DAE
-
-\section{\PETSc \pTS objects}
-
-FIXME ODE in form
-    $$\by' = \bg(t,\by)$$
 
 FIXME function $\bg$ is \texttt{TSSetRHSFunction()}, Jacobian $\partial \bg/\partial \by$ is \texttt{TSSetRHSJacobian()}
 
@@ -16,7 +24,10 @@ FIXME control \texttt{euler,beuler,cn,theta} by setting steps
 
 FIXME control \texttt{rk} by \texttt{-ts\_type rk -ts\_atol Z -ts\_rk\_type XX}
 
+
 \section{Time-dependent heat equation}
+
+FIXME show \texttt{heat.c}
 
 \begin{figure}
 % usage: \standardstack{scale}{objective}{Jacobian}{TS}{DMDA}{DMPlex}
