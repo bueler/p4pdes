@@ -1,5 +1,5 @@
 
-The simplest thing to say about nonlinear equations is that, when compared to the linear case, they change the functional form of the residual.  For a linear system the residual $\br$ is a certain linear (affine) function of the unknowns $\bu$, namely $\br = \bb - A \bu$.  Now we consider cases in which the residual, as a function of $\bu$, might be a polynomial, a transcendental function, or something more general.
+The simplest thing to say about nonlinear equations is that they change the functional form of the residual when compared to the linear case.  For a linear system the residual $\br$ is a certain linear (affine) function of the unknowns $\bu$, namely $\br = \bb - A \bu$.  Now we consider cases in which the residual, as a function of $\bu$, might be a polynomial, a transcendental function, or something more general.
 
 Suppose that $\bF : \RR^N \to \RR^N$ is differentiable.  The input $\bx$ and output $\bF(\bx)$ are column vectors,\sidenote{Our name change $\bu\to\bx$ comes from now thinking more geometrically about the location of $\bx$.} so in that sense $\bF$ acts like square-matrix multiplication $\bx\mapsto A\bx$.  Just as an iterative linear solver reduces the linear residual $\br_k=\bb - A \bu_k$ to zero by generating a sequence $\bu_k$, for nonlinear $\bF$ we want to solve
 \begin{equation}
@@ -395,7 +395,7 @@ In \texttt{main()} in Code \ref{code:reactionII} we use \texttt{DMDASNESSetFunct
 
 \cinputpart{reaction.c}{\CODELOC}{In \texttt{main()} we create a \pDMDA, some \pVecs, and a \pSNES.  We hand call-back functions to the \pSNES.  Then we solve the equation.}{II}{//MAIN}{//ENDMAIN}{code:reactionII}
 
-Though the previous paragraphs give an adequate text summary of program \texttt{reaction.c}, the diagram in Figure \ref{fig:nl:reactionstack} communicates the overall structure much better.  Our program refers to six different major \PETSc types, of which three (\pDMDA, \pSNES, \pVec) involve explicit \texttt{Create()}/action/\texttt{Destroy()} sequences.  Additionally, as noted above, we set entries in a \pMat which is allocated internally.  However, it is essential to remember that each step of Newton's method solves a linear system, and thus that \pKSP and \pPC objects are ``inside'' the \pSNES.  We will see later, both in this and future Chapters, when seeking better performance on fine grids, that exposure and control of these linear solver objects is essential.
+Though the previous paragraphs adequately summarize program \texttt{reaction.c}, the diagram in Figure \ref{fig:nl:reactionstack} communicates the overall structure.  Our program uses six different major \PETSc types, but we apply explicit \texttt{Create()}/configure/act/\texttt{Destroy()} sequences to only three of these (\pDMDA, \pSNES, \pVec).  We do set entries in a \pMat, but it is allocated internally by the \pDMDA object.  However, one must remember that each step of Newton's method solves a linear system, and thus that \pKSP and \pPC objects exist ``inside'' the \pSNES, as revealed by \texttt{-snes\_view} in particular.  When seeking better performance on fine grids, exposure and control of these linear solver objects is essential.
 
 \begin{figure}
 \begin{tikzpicture}[scale=0.8,
@@ -405,9 +405,10 @@ Though the previous paragraphs give an adequate text summary of program \texttt{
   userfcn/.style={
      rounded corners,draw,fill=white,draw,align=center,line width=1pt,font={\itshape,\normalsize}}]
 
-\draw[line width=1pt] (3,7) node[userfcn,minimum width=70mm] (usercode) {user code \\ \vspace{10mm}};
-\draw[line width=1pt] (1,6.5) node[userfcn] (rescode) {residual};
-\draw[line width=1pt] (5,6.5) node[userfcn] (jaccode) {Jacobian};
+\draw[line width=1pt] (3,7) node[userfcn,minimum width=90mm] (usercode) {user code \\ \vspace{15mm}};
+
+\draw[line width=1pt] (1,7.2) node[userfcn] (rescode) {residual \emph{\texttt{FormFunctionLocal()}}};
+\draw[line width=1pt] (5,6.2) node[userfcn] (jaccode) {Jacobian \emph{\texttt{FormJacobianLocal()}}};
 
 \draw[line width=1pt] (-1,4) node[component] (snes) {\complabel{\pSNES}{nonlinear solver}};
 \draw[line width=1pt] (-1,2) node[component] (ksp)  {\complabel{\pKSP}{linear solver}};
@@ -429,9 +430,12 @@ Though the previous paragraphs give an adequate text summary of program \texttt{
    ([xshift=1em]jaccode.south) edge[->,bend right] node {} ([xshift=1em]vecs.north)
 
    (snes) edge node {} (ksp)
-   (ksp) edge node {} (pc);
+   (ksp) edge node {} (pc)
+
+   ([yshift=1em]snes.east) edge[->,dotted,bend right] node {} ([xshift=-2em]rescode.south)
+   ([yshift=-1em]snes.east) edge[->,dotted,bend right] node {} ([xshift=-2em]jaccode.south);
 \end{tikzpicture}
-\caption{An overview of \texttt{reaction.c}, our first structured-grid solution of a nonlinear PDE using \PETSc.  Arrows should be read as ``user code acts directly on.''  Compare Figure \ref{fig:st:linearstack}.}
+\caption{An overview of \texttt{reaction.c}, our first structured-grid solution of a nonlinear PDE using \PETSc.  Solid arrows should be read as ``user code acts directly on.''  Dotted arrows are call-backs.  Compare Figure \ref{fig:st:linearstack}.}
 \label{fig:nl:reactionstack}
 \end{figure}
 

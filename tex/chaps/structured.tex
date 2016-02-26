@@ -728,7 +728,7 @@ where \texttt{fish2.c} is a Chapter \ref{chap:pr} program for solving the same P
 
 \section{The \PETSc components used so far}
 
-Now that we have a first PDE-solving \PETSc code, an overview diagram is appropriate.  Figure \ref{fig:st:linearstack} shows that, for this linear PDE, our user code directly acts on \pKSP and \pDMDA objects, and on the \pVec and \pMat objects which hold the linear system.  This diagram should be compared to the ones in later Chapters. 
+Now that we have a first PDE-solving \PETSc code, an overview diagram is appropriate.  Figure \ref{fig:st:linearstack} shows that, for this linear PDE, our user code directly acts on \pKSP and \pDMDA objects, and on the \pVec and \pMat objects which hold the linear system.  This diagram should be compared to the somewhat more-complicated ones in later Chapters. 
 
 \begin{figure}
 \begin{tikzpicture}[scale=0.8,
@@ -740,7 +740,7 @@ Now that we have a first PDE-solving \PETSc code, an overview diagram is appropr
 
 \draw[line width=1pt] (3,4) node[userfcn,minimum width=70mm] (usercode) {user code \\ \vspace{1mm}};
 
-\draw[line width=1pt] (-1,2) node[component] (ksp)  {\complabel{\pKSP}{linear solver}};
+\draw[line width=1pt] (-1,1.7) node[component] (ksp)  {\complabel{\pKSP}{linear solver}};
 \draw[line width=1pt] (-1,0) node[component] (pc)   {\complabel{\pPC}{preconditioner}};
 
 \draw[line width=1pt] (7,2) node[component] (dmda) {\complabel{\pDMDA}{structured grid}};
@@ -750,9 +750,9 @@ Now that we have a first PDE-solving \PETSc code, an overview diagram is appropr
 
 \path
    ([xshift=-10em]usercode.south) edge[->] node {} (ksp)
+   ([xshift=-3em]usercode.south) edge[->] node {} (matj)
+   ([xshift=2em]usercode.south) edge[->] node {} (vecs)
    ([xshift=10em]usercode.south) edge[->] node {} (dmda)
-   ([xshift=0em]usercode.south) edge[->] node {} (vecs)
-   ([xshift=-1em]usercode.south) edge[->] node {} (matj)
 
    (ksp) edge node {} (pc);
 \end{tikzpicture}
@@ -760,7 +760,7 @@ Now that we have a first PDE-solving \PETSc code, an overview diagram is appropr
 \label{fig:st:linearstack}
 \end{figure}
 
-In fact, so as to exploit the power of geometric-multigrid preconditioning (Chapter \ref{chap:pr}), our future codes will do a better job of using \PETSc's tools for assembling the finite linear system.  Specifically, the \pDMDA object will ``tell us,'' via ``call-back,'' the grid on which we are assembling the linear system, something which is not done in \texttt{poisson.c}.  The simplest, most-uniform way to do this turns out to be via a generalization which we want anyway: allowing nonlinearity in our PDEs.  That is, starting in the next Chapter, nonlinear problems are addressed using a \pSNES object which is already set-up for call-backs.  Using nonlinear tools from \PETSc, even for linear problems, is simply more convenient if we want geometric-multigrid preconditioners as well.
+In fact, so as to exploit the power of geometric-multigrid preconditioning (Chapter \ref{chap:pr}), our future codes will do a better job of using \PETSc's tools for assembling the finite linear system.  Specifically, the \pDMDA object will tell the matrix-forming user code, via ``call-back,'' what is the grid on which we are assembling the linear system.  This was not done in \texttt{poisson.c}.  The simplest, most-uniform way to do this turns out to be via a generalization which we want anyway: allowing nonlinearity in our PDEs.  Thus it is that, starting in the next Chapter, both nonlinear \emph{and linear} problems are addressed using a \pSNES nonlinear solver object---it is introduced in the next Chapter---which is already set-up for such call-backs.  Using nonlinear tools from \PETSc, even for linear problems, is the convenient choice if we want geometric-multigrid preconditioners as well.
 
 
 \section{Exercises}
