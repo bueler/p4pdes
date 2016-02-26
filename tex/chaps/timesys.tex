@@ -1,7 +1,7 @@
 
-To the reader has become lost in the maze of issues which we have built around the examples so far---whether it is finite elements, line searches, Krylov solvers, preconditioner choices, or whatever causes the confusion---then now for some good news.  \emph{This} Chapter is a point at which we restart with an easy question and a small example.
+To the reader has become lost in the maze of issues which we have built around the examples so far---whether it is finite elements, line searches, Krylov solvers, preconditioner choices, or whatever causes the confusion---then now for some good news:  In \emph{this} Chapter we restart with an easy question and a small example.
 
-After all, solving \emph{ordinary} differential equations (ODEs) with \PETSc should be easy.  It is, and so is making the transition, through spatial discretization, to numerical methods for time-dependent, parabolic PDEs like the heat equation.  In this Chapter we look at three examples, a scalar ODE, a system of ODEs arising from finite-difference approximation of the classical heat equation, and finally a system of two coupled nonlinear PDEs which form a two-species reaction/diffusion model.  These time-dependent problems are solved by runtime-choosable, and highly controllable, time-stepping methods from a so-far unused major \PETSc object class: \pTS time-steppers.  We will emphasize, and recall the basics of, both \emph{explicit} and \emph{implicit} time-stepping techniques.  And, in the process, we will end up returning to those important scientific computing issues, such as the rapid solution of large systems of equations, in which we have been engaged in previous Chapters.
+Solving \emph{ordinary} differential equations (ODEs) with \PETSc should be easy.  It is, and so is making the transition, through spatial discretization, to numerical methods for time-dependent, parabolic PDEs like the heat equation.  In this Chapter we look at three examples, a scalar ODE, a system of ODEs arising from finite-difference approximation of the classical heat equation, and finally a system of two coupled nonlinear PDEs which form a two-species reaction/diffusion model.  These time-dependent problems are solved by runtime-choosable, and highly controllable, time-stepping methods from a so-far unused major \PETSc object class: \pTS time-steppers.  We will emphasize, and recall the basics of, both \emph{explicit} and \emph{implicit} time-stepping techniques.  And, in the process, we will end up returning to those important scientific computing issues, such as the rapid solution of large systems of equations, in which we have been engaged in previous Chapters.
 
 
 \section{ODEs and \PETSc \pTS objects}
@@ -32,7 +32,7 @@ FIXME show \texttt{heat.c}
 \begin{figure}
 % usage: \standardstack{scale}{objective}{Jacobian}{TS}{DMDA}{DMPlex}
 \standardstack{0.775}{dashed}{}{}{}{dashed}
-\caption{The \PETSc stack used for the time-dependent heat equation program (\texttt{heat.c}) and the next program after that (\texttt{pattern.c}).  Compare Figure \ref{fig:of:standardstack}.  FIXME: \pSNES not directly seen by user code}
+\caption{The \PETSc stack used for the time-dependent heat and reaction/diffusion problems (\texttt{heat.c,pattern.c}).  Compare Figure \ref{fig:of:standardstack}.  FIXME: \pSNES not directly seen by user code}
 \label{fig:of:tsstack}
 \end{figure}
 
@@ -51,7 +51,7 @@ FIXME show parts of \texttt{pattern.c}
 \begin{enumerate}
 \item FIXME which \texttt{-ts\_type} work with \texttt{ode.c}?
 % euler, beuler, rk, theta, cn
-\item FIXME version of \texttt{ode.c} which solves a system
+\item FIXME \texttt{ode.c} says it is ``serial only''  what happens with \texttt{mpiexec -n 2 ./ode}, and why?
 \item FIXME version of \texttt{ode.c} which solves DAE system
     $$\bbf(t,\by,\by') = \bg(t,\by)$$
 where $\partial \bg/\partial \by'$ may be singular
