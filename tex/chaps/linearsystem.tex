@@ -1,27 +1,31 @@
 
+At the core of many numerical PDE solution methods is the solution of a finite-dimensional linear system.  Because such linear systems become, generally, more-accurate representations of the PDE as their size goes to infinity, it has always been the case that one solves the largest linear systems which the available computing technology can handle.  In any case, solving such linear systems, using algorithms that have the potential to scale to very large sizes, for instance so that the vector solution of the system must be distributed across many processors to even fit in memory, represents the core technology in \PETSc.
+
+In this Chapter we do review the basic ideas of numerical linear algebra, but we move relatively fast; we are done reviewing by page \pageref{subsec:ls:vecmatintro}!\sidenote{\citet{TrefethenBau1997} is thus recommended as a textbook-length treatment.}  Besides stating elementary definitions, our goal is to identify the fundamental constraints which makes solving large systems challenging.  Thus we assert ``facts of life'' about numerically-solving linear systems.  Then the central threads of iterative linear algebra are laid out, namely 1.~iteration to reduce the residual, 2.~preconditioning of systems to improve the convergence of the iteration, and 3.~the ``Krylov space'' idea, and its connection to polynomial approximation, that unifies iterative schemes under one (generous) umbrella.
+
+We then introduce the \PETSc types for representing linear system objects, namely vectors and matrices.  We apply \PETSc to solve a small, fixed-size linear system.  This is followed by a somewhat more-representative example of a sparse, arbitrary-size, tridiagonal system.  The latter example is exploited for a first look at the comparative effectiveness of run-time options, namely Krylov-space and preconditioner methods.
+
+
 \section{Vector spaces, matrices, and norms}
 
 Vector spaces, matrices, and norms are assumed to be familiar to the reader, but we can set some notation by recalling the basics.
 
 A \emph{real vector space} is a set that is closed under addition and multiplication by \emph{scalars} (elements of $\RR$) and to which certain algebraic axioms apply.\sidenote{Namely, the existence of a zero vector plus the appropriate associative, distributive, and commutative axioms \citep{Strang2009}.}  The elements of the set are \emph{vectors}.
 
-By careful configuration, \PETSc can handle complex scalars, vectors, and matrices.  However, we use only real numbers in this book.
-
-The unqualified word ``vector'' will be understood in this book to refer to a column vector of finite length, written $\RR^N$.  On the other hand we will also consider functions defined on domains in $\RR^d$, such as solutions to PDEs, and regard them as vectors in infinite-dimensional vector space.
-
-We will use bold for vectors, but not for entries, thus for example $\bv\in\RR^N$ has entries\sidenote{We break tradition by numbering vector entries starting from zero.} $v_0,\dots,v_{N-1}\in \RR$.  The \emph{standard basis} for $\RR^N$ is the set of vectors $\{\be_i\}_{i=0}^{N-1}$ which have zero entries except for each vector having a one in the $i$th entry: $(\be_i)_j = \delta_{ij}$ (the Kronecker delta).
+The unqualified word ``vector'' will be understood in this book to refer to a column vector of finite length, written $\RR^N$.  (On the other hand we will also consider functions defined on domains in $\RR^d$, such as solutions to PDEs, and regard them as vectors in infinite-dimensional vector space.)  We will use bold for vectors, but not for entries, thus for example $\bv\in\RR^N$ has entries $v_0,\dots,v_{N-1}\in \RR$; note that we break tradition by numbering vector entries starting from zero.  The \emph{standard basis} for $\RR^N$ is the set of vectors $\{\be_i\}_{i=0}^{N-1}$ which have zero entries except for each vector having a one in the $i$th entry: $(\be_i)_j = \delta_{ij}$ (the Kronecker delta).
 
 A \emph{matrix} is a linear map between vector spaces.\sidenote{As is well-known, in polite company one says instead that a matrix is the \emph{representation} of a linear map from one finite-dimensional vector space to another, with some choice of basis in each space.}  We write $A\in \RR^{M\times N}$ for a matrix that maps from $\RR^N$ to $\RR^M$.  There are two related matrices which map in the other direction.  Even if $A$ is non-square one can construct $A^\top\in \RR^{N\times M}$, namely the \emph{transpose} with entries $(A^\top)_{ij}=a_{ji}$.  If the matrix is square and invertible then the \emph{inverse} $A^{-1}\in \RR^{N\times M}$ is the unique matrix satisfying $A^{-1} A = A A^{-1}=I$.
 
-A \emph{vector norm} is a function $\|\cdot\|:\RR^N \to [0,\infty)$ that gives a well-defined length to a vector.  (Several axioms, including the triangle inequality, must be satisfied \citep{TrefethenBau1997}.)  For $1 \le p < \infty$ the following formula defines a norm,
+A \emph{vector norm} is a function $\|\cdot\|:\RR^N \to [0,\infty)$ which assigns a well-defined length to a vector.  (Several axioms, including the triangle inequality, must be satisfied \citep{TrefethenBau1997}.)  For $1 \le p < \infty$ the following formula defines a norm,
 \begin{equation}
 \|\bv\|_p = \left(\sum_{i=0}^{N-1} |v_i|^p\right)^{1/p}.  \label{eq:ls:vectorpnorm}
 \end{equation}
-The $p=1,2$ cases are especially common in practical uses, but all vector $p$-norms can be computed with $O(N)$ work using \eqref{eq:ls:vectorpnorm}.  The maximum norm
+The $p=1,2$ cases are especially common in practical use, but all vector $p$-norms can be computed with $O(N)$ work using \eqref{eq:ls:vectorpnorm}.  The maximum norm also gets frequent application:
 \begin{equation}
-\|\bv\|_\infty = \max_{i=0,\dots,N-1} |v_i|  \label{eq:ls:vectorinfnorm}
+\|\bv\|_\infty = \max_{i=0,\dots,N-1} |v_i|.  \label{eq:ls:vectorinfnorm}
 \end{equation}
-is also common.  \PETSc computes any of the $p=1,2,\infty$ norms by a call to \texttt{VecNorm()} on a \PETSc \pVec object; see below for an introduction to these objects.
+
+(An interruption, regarding the way \PETSc represents the above ideas, is appropriate.   First, by careful configuration, \PETSc can handle complex scalars, vectors, and matrices, but we use only real numbers in this book.  Second, \PETSc computes any of the $p=1,2,\infty$ cases of the vector norms \eqref{eq:ls:vectorpnorm} or \eqref{eq:ls:vectorinfnorm} by a call to \texttt{VecNorm()} on a \PETSc \pVec object; see below for an introduction to \pVec objects.)
 
 Choosing vector norms on the input and output vector spaces of a matrix \emph{induces} a \emph{matrix norm} \citep{TrefethenBau1997}, as follows:
 \begin{equation}
@@ -30,7 +34,7 @@ Choosing vector norms on the input and output vector spaces of a matrix \emph{in
 It follows from \eqref{eq:ls:matnorm} that
     $$\|A \bv\| \le \|A\| \|\bv\|.$$
 
-Generally, induced matrix norms are expensive to compute; as optimization problems they generally take more work than the minimum $O(MN)$ operations needed to examine all the entries of a (generic, dense) matrix $A\in \RR^{M\times N}$.  However, those matrix norms induced by the $p=1,\infty$ vector norms are easy to compute by $O(MN)$ formulas \citep{TrefethenBau1997}.  The \emph{Frobenius} matrix norm can also be computed by a $O(MN)$ formula, though the norm itself is not induced from a vector norm \citep{TrefethenBau1997}.  \PETSc computes $p=1,\infty$ and Frobenius matrix norms with a call to \texttt{MatNorm()} on a \PETSc \pMat object; see below.
+Generally, induced matrix norms are expensive to compute.  In most of the cases, as they are optimization problems, they take more work than the $O(MN)$ operations needed to examine all the entries of a (generic, dense) matrix $A\in \RR^{M\times N}$.  However, those matrix norms induced by the $p=1$ and $p=\infty$ vector norms are easy to compute by $O(MN)$ formulas \citep{TrefethenBau1997}.  The \emph{Frobenius} matrix norm can also be computed by a $O(MN)$ formula, though the norm itself is not induced from a vector norm \citep{TrefethenBau1997}.  Thus it is that \PETSc can compute $p=1,\infty$ and Frobenius matrix norms by a call to \texttt{MatNorm()} on a \PETSc \pMat object (see below) but not other induced norms.
 
 We will use vector norms routinely in practice, both inside key algorithms for linear and nonlinear analysis (Chapters \ref{chap:ls}, \ref{chap:st}, \ref{chap:nl}), and in measuring numerical errors in solving PDEs, for example.   But what good are matrix norms?  Though they occasionally appear in algorithms, in this book we will use them only through the desire to measure the \emph{conditioning} of linear systems \citep{TrefethenBau1997}.  By definition, if $\|\cdot\|$ denotes a matrix norm and $A \in \RR^{N\times N}$ is a square matrix then
 \begin{equation}
@@ -39,9 +43,7 @@ We will use vector norms routinely in practice, both inside key algorithms for l
 is the \emph{condition number} of $A$; by definition $\kappa(A)=+\infty$ if $A$ is not invertible.  This quantity measures how sensitive the (exact) solution of a linear system $A \bv = \bb$ is to perturbations of either the matrix $A$ or the right-hand-side $\bb$ \citep{TrefethenBau1997}.
 
 
-\section{Some facts of (numerical) life}
-
-At the core of many numerical PDE solution methods is a finite-dimensional linear system.  In this Chapter we both recall basic ideas of numerical linear algebra and apply \PETSc to solve linear systems.
+\section{Linear systems, and some facts of (numerical) life}
 
 Suppose $\bb\in \RR^{N}$ is a column vector and $A\in\RR^{N\times N}$ is a square matrix.  The linear system
 \begin{equation}
@@ -53,212 +55,23 @@ has a unique solution $\bu\in \RR^{N}$ if $A$ is invertible, namely
 \end{equation}
 This is simple in theory.
 
-It is not so simple in practice, however, to solve linear systems on a computer.  Here are two facts to keep in mind while working numerically with linear systems \citep{TrefethenBau1997}:
+It is not so simple in practice, however, to solve linear systems on a computer.  Here are three facts to keep in mind while working numerically with linear systems \citep{TrefethenBau1997}:
 \renewcommand{\labelenumi}{Fact \Roman{enumi}.}
 \begin{enumerate}
-\item \label{page:ls:limittoaccuracy} \emph{There is a limit to numerical accuracy.}  If real numbers are represented with machine precision $\eps$ then the solution of \eqref{introsystem} can only be computed within an error $\kappa(A) \eps$, where $\kappa(A)$ is the \emph{condition number} of $A$.
-\item \emph{Direct solutions may have a high cost.}  If $A$ is a generic, dense $N\times N$ matrix then computation of solution \eqref{introsolution} by a direct method, such as Gauss elimination \citep{TrefethenBau1997}, whether actually forming $A^{-1}$ or not, is an $O(N^3)$ operation.\sidenote{See Lecture 32 in \citet{TrefethenBau1997} for caveats with respect to ``$O(N^3)$.''  Nonetheless it is the right power to state when making this point.}
+\item \label{page:ls:limittoaccuracy} \emph{There is an unavoidable limit to numerical accuracy.}  If real numbers are represented with machine precision $\eps$ then the solution of \eqref{introsystem} can only be computed within an error $\kappa(A) \eps$, where $\kappa(A)$ is the \emph{condition number} of $A$.
+\item \emph{Direct solutions may have a high cost.}  For a generic, dense $N\times N$ matrix $A$, computation of the solution to \eqref{introsystem}, by a direct method such as Gauss elimination \citep{TrefethenBau1997}, whether actually forming $A^{-1}$ or not, is an $O(N^3)$ operation.\sidenote{See Lecture 32 in \citet{TrefethenBau1997} for caveats with respect to ``$O(N^3)$.''  Nonetheless it is the right power to state when making this point.}
+\item \emph{Generally you should not form the inverse.}  The matrices $A$ arising from discretized PDEs are usually sparse, but their inverses $A^{-1}$ are usually dense and may not even fit in memory.
 \end{enumerate}
 
-Fact I is about conditioning not methods.  Informally speaking, there are matrices $A$ and $\tilde A$ that are the same to within machine precision $\eps$ but for which the exact solutions to \eqref{introsystem} using $A$ and $\tilde A$ differ by an amount $\kappa(A) \eps$.  Rounding errors, which act somewhat like random noise added to every arithmetic operation on the computer, effectively perturb $A$ by $\eps$ during each computation, and thus $O(\kappa(A) \eps)$ size errors appear in the solution of the linear system.  \emph{Backward stable} methods, specifically the QR direct method, can be shown to actually achieve this minimal level of inaccuracy \citep{TrefethenBau1997}.
+Fact I is about conditioning not methods.  Informally speaking, there are matrices $A$ and $\tilde A$ that are the same to within machine precision $\eps$ but for which the exact solutions to \eqref{introsystem} using $A$ and $\tilde A$ differ by an amount $\kappa(A) \eps$.  Rounding errors, which act somewhat like random noise added to every arithmetic operation on the computer, effectively perturb $A$ by $\eps$ during each computation, and thus $O(\kappa(A) \eps)$ size errors appear in the solution of the linear system.  \emph{Backward stable} methods, specifically the QR direct method, can be shown to essentially achieve this minimal level of inaccuracy \citep{TrefethenBau1997}.
 
-The precision for the C \texttt{double} type, the default 64-bit representation of real numbers,\sidenote{This type is aliased to \texttt{PetscReal} and \texttt{PetscScalar} in most \PETSc configurations.} is $\eps = 2.2 \times 10^{-16}$.  Thus by i), a linear system having $\kappa(A) \approx 10^{10}$, for example, can only be solved to five or six decimal digits of precision.  It is possible to see $\kappa(A)\approx 10^{10}$ for $A$ which come from discretizing PDEs, but such a matrix is regarded as ``poorly-conditioned.''  In any case, we have to be aware of conditioning when forming expectations about solution accuracy.
+The precision for the C \texttt{double} type, the default 64-bit representation of real numbers,\sidenote{This type is aliased to \texttt{PetscReal} and \texttt{PetscScalar} in most \PETSc configurations.} is $\eps = 2.2 \times 10^{-16}$.  Thus by i), a linear system having $\kappa(A) \approx 10^{10}$, for example, can only be solved to five or six decimal digits of precision.  Indeed it is possible to see $\kappa(A)\approx 10^{10}$ for $A$ which come from discretizing a PDE, but such a matrix is regarded as ``poorly-conditioned.''  We would normally inquire whether different discretization choices might generate a new matrix with a smaller condition number.  In any case, expectations about solution accuracy should be informed by estimates of matrix condition numbers.
 
-By Fact II, a generic linear system with $N=10^6$ equations requires $10^{18}$ or so operations to solve by Gauss elimination, and even modern supercomputers take a while to do a quintillion operations.  However, though general-purpose direct methods are impractical for $N=10^6$ systems, we will successfully solve PDE-generated linear systems of this size on a single processor in a few seconds, and in $O(N)$ operations (Chapters \ref{chap:st}, \ref{chap:pr}).
+By Fact II, a generic linear system with $N=10^6$ equations requires $10^{18}$ or so operations to solve by Gauss elimination, and even modern supercomputers take a while to do a quintillion operations.  However, though general-purpose direct methods are impractical for most $N=10^6$ systems, we will successfully solve PDE-generated linear systems of this size on a single processor in a few seconds, and in $O(N)$ operations, using (non-direct) iterative methods (Chapters \ref{chap:st}, \ref{chap:pr}).
 
 A key idea is that discretized PDEs generate linear systems with exploitable structure, especially \emph{sparsity}, which means that there are few nonzero entries per matrix row.  For the methods to converge there also needs to be other structure in the linear system such as regularity of the matrix entries arising from the smoothness of the coefficients in the PDE.  This structure will be exploited, and exposed to one degree or another, in serious numerical PDE solutions.  Naive application of direct methods---treating solvers for \eqref{introsystem} as unadjusted black boxes---is too slow.
 
-We should add another point about computer memory usage to our above list of facts-of-life:
-\begin{enumerate}
-\setcounter{enumi}{2}
-\item \emph{Generally you should not form the inverse.}  The matrices $A$ arising from discretized PDEs are usually sparse, but their inverses $A^{-1}$ are usually dense and may not even fit in memory.
-\end{enumerate}
-The amount of memory used by $A^{-1}$ can be dramatically larger than that used by $A$.  For example, the $N$-dimensional tridiagonal matrix $A$ assembled later in this section occupies $24 N$ bytes, because each allocated real entry occupies 8 bytes using double precision.  The inverse $A^{-1}$, however, is dense and uses $8 N^2$ bytes.  Though we can easily solve $A\bu=\bb$ for this matrix in dimension $N=10^7$, using less than a gigabyte of memory in the solution process,\sidenote{See \texttt{tri.c}.  Do ``\texttt{./tri -tri\_m 10000000 -ksp\_type cg -pc\_type none}.''} simply storing $A^{-1}$ would occupy $800$ terabytes of memory or disk.
-
-
-\section{\PETSc \pVec and \pMat objects}
-
-Although \PETSc is written in C, and not C++ for example, it is a relentlessly object-oriented software library.  To build our first \PETSc code to solve a linear system, we will use the \pVec and \pMat data types, essentially objects, which hold vectors and matrices.
-
-Consider the operations which create and configure a variable \texttt{A} of type \pMat for linear system \eqref{introsystem}:
-\begin{code}
-Mat A;
-MatCreate(COMM,&A);
-MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,N,N);
-MatSetOptionsPrefix(A,"a_");
-MatSetFromOptions(A);
-... fill entries of (i.e. assemble) A ...
-... solve system with A ...
-MatDestroy(&A);
-\end{code}
-We can think of these calls as methods ``owned'' by the \pMat type, in the sense that they manipulate the internal representation of a \pMat, which is hidden.  If not true ``objects'', major \PETSc types are at least abstract data types with a hidden implementation.
-
-Methods for filling entries of \pMat objects treat them abstractly too.  In fact, a \pMat need not even have entries.  It might, instead, contain code that applies a linear operator to vectors.  Furthermore the data structure inside a \pMat depends on runtime choices, the most basic being that the fraction of the matrix entries stored on a given MPI process will depend on the number of processes.
-
-Once \pMat \texttt{A} is created and set up by commands \texttt{MatCreate()}--\texttt{MatSetFromOptions()}, then various ``methods'', i.e.~C functions, become valid for \texttt{A}.  For example, the \texttt{MatSetValues()} function sets entries in \texttt{A}; see below for examples.
-
-In the code fragment above, note the call to \texttt{MatSetOptionsPrefix()}.  Run-time options can address the particular \pMat object through this prefix, which distinguishes different \pMat objects at runtime.  For example, option \texttt{-a\_mat\_view} will print out the entries of \texttt{A}.
- 
-The \pMat example above also illustrates some operations which apply to \emph{all} \PETSc object types:
-\begin{code}
-Object X;
-ObjectCreate(COMM,&X);
-... code sets properties of X ...
-ObjectSetFromOptions(X);  // allows run-time setting of properties
-... code uses X ...
-ObjectDestroy(&X);
-\end{code}
-Because \PETSc objects are generally distributed across, and accessible from, multiple MPI processes, the first argument of an \texttt{ObjectCreate()} method is an MPI communicator (``\texttt{COMM}'').  We will usually use \texttt{PETSC\_COMM\_WORLD}.  It is the communicator generated, unless user code changes it to have a different value, from all \texttt{N} processes when we start a run with ``\verb|mpiexec -n N|.''\sidenote{By contrast, the MPI communicator \texttt{PETSC\_COMM\_SELF} is set by default to hold just the single process on which the code is running.}  Because they are ``collective'' operations \citep{Groppetal1999}, all processes in \texttt{COMM} must call the \texttt{ObjectCreate()} and  \texttt{ObjectDestroy()} methods.
-
-
-\section{Parallel layout of \pVecs and \pMats}
-
-A \pVec or \pMat stores its entries in parallel across all the processes in the MPI communicator.\sidenote{I.e.~the one used when creating it.}  For example, the create-assemble sequence of a \pVec with four entries might look like this:
-\begin{code}
-Vec    x;
-int    i[4] = {0, 1, 2, 3};
-double v[4] = {11.0, 7.0, 5.0, 3.0};
-
-VecCreate(COMM,&x);
-VecSetSizes(x,PETSC_DECIDE,4);
-VecSetFromOptions(x);
-VecSetValues(x,4,i,v,INSERT_VALUES);
-VecAssemblyBegin(x);
-VecAssemblyEnd(x);
-\end{code}
-The four entries of \texttt{Vec x} are set by the call to \texttt{VecSetValues()}, putting values from array \texttt{v} at the indices given by \texttt{i}.
-
-\begin{marginfigure}
-\input{tikz/seqveclayout.tex}
-\caption{A sequential \pVec layout, all on rank $=0$ process.}
-\label{fig:seqveclayout}
-\end{marginfigure}
-
-The reader is allowed to think of a \PETSc \pVec as a one-dimensional C array with its contents split across the processes in the MPI communicator.  For example, if the above code appears in \texttt{mycode.c}, and if it is run sequentially on one process, i.e.~as
-\begin{cline}
-$ ./mycode.c
-\end{cline}
-%$
-then, at the end of the above create-set-assemble sequence, the storage of \texttt{x} looks like Figure \ref{fig:seqveclayout}.  However, if run as
-\begin{cline}
-$ mpiexec -n 2 ./mycode.c
-\end{cline}
-%$
-then the layout looks like Figure \ref{fig:mpitwoveclayout}.  In this case the argument \texttt{PETSC\_DECIDE} in \texttt{VecSetSizes()} is active, and \PETSc's decision will be to put the first two entries of \texttt{x} on the rank $0$ process and the other two on the rank $1$ process. 
-
-\begin{marginfigure}
-\input{tikz/mpitwoveclayout.tex}
-\caption{A parallel \pVec layout on two processes.  Because we call ``\texttt{VecSetSizes(x,PETSC\_DECIDE,4)}'', \PETSc decides to split the storage in the middle.}
-\label{fig:mpitwoveclayout}
-\end{marginfigure}
-
-The operation of setting values in \texttt{x} may require communication between processes, however, because entries which are to be stored on one process could be set by another process.  Such communication occurs between the \texttt{VecAssemblyBegin()} and \texttt{VecAssemblyEnd()} commands.
-  
-\PETSc \pMat objects are comparable to \pVecs, but they are not merely 2D C arrays even in serial (i.e.~in one-process runs).  Compared to \pVecs they require additional choices regarding parallel distribution and storage formats.  Though this is hidden inside the implementation of \pMat, the most common storage format is \emph{parallel compressed sparse row storage}, what \PETSc calls the \texttt{MATMPIAIJ} type.  In this type a range of rows is owned by each process (parallel row storage).  Within each owned range of rows only the specifically-allocated entries are stored (sparse), and these nonzero entries are stored contiguously in memory using an additional index array (compressed).  An example is shown in Figure \ref{fig:mpitwomatlayout}.
-
-The ``specifically-allocated'' entries are generally the nonzero entries, but they are always referred-to as ``nonzero entries'' in sparse representations even though they occasionally have zero values.  Depending on how the \PETSc API is used the blanks in Figure \ref{fig:mpitwomatlayout} could be allocated memory, with value $0.0$, or unallocated.  We show these two possibilities below.
-
-\begin{marginfigure}
-\input{tikz/mpitwomatlayout.tex}
-\caption{A parallel \pMat layout, on two processes, of a $4\times 4$ matrix with 13 nonzero entries.}
-\label{fig:mpitwomatlayout}
-\end{marginfigure}
-
-\pMat objects are linear operators and their ``purpose'' is to act on (multiply) \pVecs.  Of course, the result \pVec from a \pMat-\pVec product is a linear combination of the columns of the \pMat \citep{TrefethenBau1997}.  Thus, in practice and by default, parallel row storage of the \pMat means these things:
-\begin{itemize}
-\item \PETSc internally distributes the rows of the \pMat $A$ the same way as the entries of the intended \emph{output} (i.e.~column) \pVec.  Thus if $A\bx=\bb$ for some \pVec $\bx$ then row $i$ of $A$ is on the rank $m$ MPI process if and only if entry $i$ of \pVec $\bb$ is on the rank $m$ process.\sidenote{This is the outcome when \texttt{PETSC\_DECIDE} is used in setting both the \pVec and \pMat sizes and they have the same number of rows.}
-\item As \PETSc computes the \pMat-\pVec product, it communicates (``scatters'' using MPI calls) the needed portions of the \pVec to the processes.
-\item After the scatter the \pMat-\pVec product is a local operation, requiring no further communication.
-\end{itemize}
-
-
-\section{Example \pMat assembly}
-
-One doesn't really need to know how \PETSc works internally in order to assemble a matrix.  For example, here is one straightforward way to fill a $4\times 4$ matrix, the one shown in Figure \ref{fig:mpitwomatlayout}, one row at a time by using a \texttt{for} loop over the row index \texttt{i}:
-\begin{code}
-Mat    A;
-int    i, j[4] = {0, 1, 2, 3};
-double aA[4][4] = {{ 1.0,  2.0,  3.0,  0.0},
-                   { 2.0,  1.0, -2.0, -3.0},
-                   {-1.0,  1.0,  1.0,  0.0},
-                   { 0.0,  1.0,  1.0, -1.0}};
-
-MatCreate(PETSC_COMM_WORLD,&A);
-MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,4,4);
-MatSetFromOptions(A);
-MatSetUp(A);
-for (i=0; i<4; i++) {
-    MatSetValues(A,1,&i,4,j,aA[i],INSERT_VALUES);
-}
-MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);
-MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);
-\end{code}
-
-The function \texttt{MatSetValues()} sets multiple entries in a \pMat as long as they \emph{form a block}, in this case a row which is a $1\times 4$ block.  (Generally a ``block'' means a product of a list of row indicies and a list of column indices.)  The ``\texttt{1,\&i}'' arguments indicate that we are setting one row index \texttt{i}.  The ``\texttt{4,j}'' arguments indicate that integer array \texttt{j} has the 4 column indices for the entire row.  Note that ``\texttt{aA[i]}'' is a C \emph{pointer}, essentially of type \texttt{double*}, to the $i$th row of $A$.
-
-Assembly one row at a time is common in PDE-type applications, where a row represents the discrete version of the PDE at a grid/mesh location.  In such cases there may be only a few nonzero entries per row.
-
-However, the example above treats the matrix as dense: every entry is filled including those with value $0.0$.  The same matrix could be formed by inserting only the 13 nonzero entries, which is the usage pattern would expect for a sparse matrix.  In the current case this is mildly awkward because \texttt{MatSetValues()} is designed to set a \emph{block} of entries, as already noted.  Here we break up $A$ into three contiguous blocks of nonzeros: we call \texttt{MatSetValues()} on a $3\times 3$ block, then on a $1\times 3$ block, and then we call \texttt{MatSetValue()} on a single entry.  This example illustrates the general block-wise procedure of assembly, and the \texttt{for} loop is gone, but one cannot call it elegant:
-\begin{code}
-int    i1[3] = {0, 1, 2},
-       j1[3] = {0, 1, 2},
-       i2 = 3,
-       j2[3] = {1, 2, 3},
-       i3 = 1,
-       j3 = 3;
-double aA1[9] = { 1.0,  2.0,  3.0,
-                  2.0,  1.0, -2.0,
-                 -1.0,  1.0,  1.0},
-       aA2[3] = { 1.0,  1.0, -1.0},
-       aA3 = -3.0;
-...
-MatSetValues(A,3,i1,3,j1,aA1,INSERT_VALUES);
-MatSetValues(A,1,&i2,3,j2,aA2,INSERT_VALUES);
-MatSetValue(A,i3,j3,aA3,INSERT_VALUES);
-...
-\end{code}
-Exercise \ref{chap:ls}.\ref{exer:ls:sparseinsertion} asks you to confirm that the solution to the corresponding linear system is the same.  \label{page:ls:sparseinsertion}
-
-\PETSc can show us the entries in the \pMat in different formats at runtime.  Assuming the \pMat was assembled using the second (sparse) method above, and that the above lines appeared in \texttt{mycode.c}, then:
-\begin{cline}
-$ ./mycode -mat_view
-Mat Object: 1 MPI processes
-  type: seqaij
-row 0: (0, 1.)  (1, 2.)  (2, 3.) 
-row 1: (0, 2.)  (1, 1.)  (2, -2.)  (3, -3.) 
-row 2: (0, -1.)  (1, 1.)  (2, 1.) 
-row 3: (1, 1.)  (2, 1.)  (3, -1.) 
-$ ./mycode -mat_view ::ascii_dense
-Mat Object: 1 MPI processes
-  type: seqaij
- 1.00000e+00  2.00000e+00  3.00000e+00  0.00000e+00
- 2.00000e+00  1.00000e+00  -2.00000e+00  -3.00000e+00
- -1.00000e+00  1.00000e+00  1.00000e+00  0.00000e+00
- 0.00000e+00  1.00000e+00  1.00000e+00  -1.00000e+00
-\end{cline}
-The first view shows the sparse storage format, with values as pairs with column index and value.  The second view is ``dense'': all zero values are shown, whether allocated or not.
-
-The output from option \texttt{-mat\_view} occurs at the completion of the \texttt{MatAssemblyBegin/End()} calls.  The following examples illustrate more possibilities for viewing a \pMat, using the up-to-three-argument option form:\begin{itemize}
-\item show the sparsity pattern graphically using the X window system
-\begin{codeplain}
--mat_view draw -draw_pause 1
-\end{codeplain}
-\item save to file \texttt{mat.dat} in \PETSc's scalable binary format
-\begin{codeplain}
--mat_view binary:mat.dat
-\end{codeplain}
-\item save to text file \texttt{mat.m} in Matlab text format
-\begin{codeplain}
--mat_view ascii:mat.m:ascii_matlab
-\end{codeplain}
-\item print at \texttt{stdout} in Matlab text format
-\begin{codeplain}
--mat_view ::ascii_matlab
-\end{codeplain}
-\end{itemize}
-In the last form, and in the \texttt{ascii\_dense} case earlier, the first two positional arguments are not needed because the default format is \texttt{ascii} and because \texttt{stdout} is used if there is no file name.  However, the last argument (\texttt{ascii\_dense} or \texttt{ascii\_matlab}, respectively, in these two cases) must be put in the third position by starting with two colons.
-
-In the cases shown above the matrix was stored in serial compressed sparse row format, the \texttt{MATSEQAIJ} type, because of the one-process run.  If the code is run in parallel, i.e.~by \texttt{ mpiexec -n N ./mycode }, then \texttt{ -mat\_view }  reports \texttt{ type:~mpiaij } corresponding to \pMat type \texttt{MATMPIAIJ}, the ``parallel compressed sparse row storage'' described above.
+For simple example illustrating Fact III, the $N$-dimensional tridiagonal matrix $A$ assembled later in this section occupies $24 N$ bytes, because each allocated real entry occupies 8 bytes using double precision.  The inverse $A^{-1}$, however, is dense and uses $8 N^2$ bytes.  Though we can easily solve $A\bu=\bb$ for this matrix in dimension $N=10^7$, using less than a gigabyte of memory in the solution process,\sidenote{See \texttt{tri.c}.  Do ``\texttt{./tri -tri\_m 10000000 -ksp\_type cg -pc\_type none}.''} simply storing $A^{-1}$ would occupy $800$ terabytes of memory or disk.
 
 
 \section{Numerical linear algebra 1: residual and iterations}
@@ -443,12 +256,197 @@ We get access to the many Krylov methods implemented in \PETSc any time we creat
 
 Runtime experimentation with Krylov methods is always appropriate.  For the Poisson problem in Chapter \ref{chap:st}, for example, preconditioned CG is effective, though we will see that the most emphasis should be put on the preconditioning stage.
 
-Our brief introduction of iterative linear algebra is now completed, though it is hardly adequate, and we return to \PETSc codes and concrete linear systems.  In the upcoming material the reader can initially treat \PETSc's \pKSP linear solver object as a black box, but then explore how it works through runtime options, recalling the above material as needed.
+Our brief introduction of iterative linear algebra is now completed, though it is hardly adequate.  We turn to \PETSc objects, concrete linear systems, and example codes.
+
+
+\section{\PETSc \pVec and \pMat objects} \label{subsec:ls:vecmatintro}
+
+Although \PETSc is written in C, and not C++ for example, it is a relentlessly object-oriented software library.  To build our first \PETSc code to solve a linear system, we will use the \pVec and \pMat data types, essentially objects, which hold vectors and matrices.
+
+Consider the operations which create and configure a variable \texttt{A} of type \pMat for linear system \eqref{introsystem}:
+\begin{code}
+Mat A;
+MatCreate(COMM,&A);
+MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,N,N);
+MatSetOptionsPrefix(A,"a_");
+MatSetFromOptions(A);
+... fill entries of (i.e. assemble) A ...
+... solve system with A ...
+MatDestroy(&A);
+\end{code}
+We can think of these calls as methods ``owned'' by the \pMat type, in the sense that they manipulate the internal representation of a \pMat, which is hidden.  If not true ``objects'', major \PETSc types are at least abstract data types with a hidden implementation.
+
+Methods for filling entries of \pMat objects treat them abstractly too.  In fact, a \pMat need not even have entries.  It might, instead, contain code that applies a linear operator to vectors.  Furthermore the data structure inside a \pMat depends on runtime choices, the most basic being that the fraction of the matrix entries stored on a given MPI process will depend on the number of processes.
+
+Once \pMat \texttt{A} is created and set up by commands \texttt{MatCreate()}--\texttt{MatSetFromOptions()}, then various ``methods'', i.e.~C functions, become valid for \texttt{A}.  For example, the \texttt{MatSetValues()} function sets entries in \texttt{A}; see below for examples.
+
+In the code fragment above, note the call to \texttt{MatSetOptionsPrefix()}.  Run-time options can address the particular \pMat object through this prefix, which distinguishes different \pMat objects at runtime.  For example, option \texttt{-a\_mat\_view} will print out the entries of \texttt{A}.
+ 
+The \pMat example above also illustrates some operations which apply to \emph{all} \PETSc object types:
+\begin{code}
+Object X;
+ObjectCreate(COMM,&X);
+... code sets properties of X ...
+ObjectSetFromOptions(X);  // allows run-time setting of properties
+... code uses X ...
+ObjectDestroy(&X);
+\end{code}
+Because \PETSc objects are generally distributed across, and accessible from, multiple MPI processes, the first argument of an \texttt{ObjectCreate()} method is an MPI communicator (``\texttt{COMM}'').  We will usually use \texttt{PETSC\_COMM\_WORLD}.  It is the communicator generated, unless user code changes it to have a different value, from all \texttt{N} processes when we start a run with ``\verb|mpiexec -n N|.''\sidenote{By contrast, the MPI communicator \texttt{PETSC\_COMM\_SELF} is set by default to hold just the single process on which the code is running.}  Because they are ``collective'' operations \citep{Groppetal1999}, all processes in \texttt{COMM} must call the \texttt{ObjectCreate()} and  \texttt{ObjectDestroy()} methods.
+
+
+\section{Parallel layout of \pVecs and \pMats}
+
+A \pVec or \pMat stores its entries in parallel across all the processes in the MPI communicator.\sidenote{I.e.~the one used when creating it.}  For example, the create-assemble sequence of a \pVec with four entries might look like this:
+\begin{code}
+Vec    x;
+int    i[4] = {0, 1, 2, 3};
+double v[4] = {11.0, 7.0, 5.0, 3.0};
+
+VecCreate(COMM,&x);
+VecSetSizes(x,PETSC_DECIDE,4);
+VecSetFromOptions(x);
+VecSetValues(x,4,i,v,INSERT_VALUES);
+VecAssemblyBegin(x);
+VecAssemblyEnd(x);
+\end{code}
+The four entries of \texttt{Vec x} are set by the call to \texttt{VecSetValues()}, putting values from array \texttt{v} at the indices given by \texttt{i}.
+
+\begin{marginfigure}
+\input{tikz/seqveclayout.tex}
+\caption{A sequential \pVec layout, all on rank $=0$ process.}
+\label{fig:seqveclayout}
+\end{marginfigure}
+
+The reader is allowed to think of a \PETSc \pVec as a one-dimensional C array with its contents split across the processes in the MPI communicator.  For example, if the above code appears in \texttt{mycode.c}, and if it is run sequentially on one process, i.e.~as
+\begin{cline}
+$ ./mycode.c
+\end{cline}
+%$
+then, at the end of the above create-set-assemble sequence, the storage of \texttt{x} looks like Figure \ref{fig:seqveclayout}.  However, if run as
+\begin{cline}
+$ mpiexec -n 2 ./mycode.c
+\end{cline}
+%$
+then the layout looks like Figure \ref{fig:mpitwoveclayout}.  In this case the argument \texttt{PETSC\_DECIDE} in \texttt{VecSetSizes()} is active, and \PETSc's decision will be to put the first two entries of \texttt{x} on the rank $0$ process and the other two on the rank $1$ process. 
+
+\begin{marginfigure}
+\input{tikz/mpitwoveclayout.tex}
+\caption{A parallel \pVec layout on two processes.  Because we call ``\texttt{VecSetSizes(x,PETSC\_DECIDE,4)}'', \PETSc decides to split the storage in the middle.}
+\label{fig:mpitwoveclayout}
+\end{marginfigure}
+
+The operation of setting values in \texttt{x} may require communication between processes, however, because entries which are to be stored on one process could be set by another process.  Such communication occurs between the \texttt{VecAssemblyBegin()} and \texttt{VecAssemblyEnd()} commands.
+  
+\PETSc \pMat objects are comparable to \pVecs, but they are not merely 2D C arrays even in serial (i.e.~in one-process runs).  Compared to \pVecs they require additional choices regarding parallel distribution and storage formats.  Though this is hidden inside the implementation of \pMat, the most common storage format is \emph{parallel compressed sparse row storage}, what \PETSc calls the \texttt{MATMPIAIJ} type.  In this type a range of rows is owned by each process (parallel row storage).  Within each owned range of rows only the specifically-allocated entries are stored (sparse), and these nonzero entries are stored contiguously in memory using an additional index array (compressed).  An example is shown in Figure \ref{fig:mpitwomatlayout}.
+
+The ``specifically-allocated'' entries are generally the nonzero entries, but they are always referred-to as ``nonzero entries'' in sparse representations even though they occasionally have zero values.  Depending on how the \PETSc API is used the blanks in Figure \ref{fig:mpitwomatlayout} could be allocated memory, with value $0.0$, or unallocated.  We show these two possibilities below.
+
+\begin{marginfigure}
+\input{tikz/mpitwomatlayout.tex}
+\caption{A parallel \pMat layout, on two processes, of a $4\times 4$ matrix with 13 nonzero entries.}
+\label{fig:mpitwomatlayout}
+\end{marginfigure}
+
+\pMat objects are linear operators and their ``purpose'' is to act on (multiply) \pVecs.  Of course, the result \pVec from a \pMat-\pVec product is a linear combination of the columns of the \pMat \citep{TrefethenBau1997}.  Thus, in practice and by default, parallel row storage of the \pMat means these things:
+\begin{itemize}
+\item \PETSc internally distributes the rows of the \pMat $A$ the same way as the entries of the intended \emph{output} (i.e.~column) \pVec.  Thus if $A\bx=\bb$ for some \pVec $\bx$ then row $i$ of $A$ is on the rank $m$ MPI process if and only if entry $i$ of \pVec $\bb$ is on the rank $m$ process.\sidenote{This is the outcome when \texttt{PETSC\_DECIDE} is used in setting both the \pVec and \pMat sizes and they have the same number of rows.}
+\item As \PETSc computes the \pMat-\pVec product, it communicates (``scatters'' using MPI calls) the needed portions of the \pVec to the processes.
+\item After the scatter the \pMat-\pVec product is a local operation, requiring no further communication.
+\end{itemize}
+
+
+\section{Example \pMat assembly}
+
+One doesn't really need to know how \PETSc works internally in order to assemble a matrix.  For example, here is one straightforward way to fill a $4\times 4$ matrix, the one shown in Figure \ref{fig:mpitwomatlayout}, one row at a time by using a \texttt{for} loop over the row index \texttt{i}:
+\begin{code}
+Mat    A;
+int    i, j[4] = {0, 1, 2, 3};
+double aA[4][4] = {{ 1.0,  2.0,  3.0,  0.0},
+                   { 2.0,  1.0, -2.0, -3.0},
+                   {-1.0,  1.0,  1.0,  0.0},
+                   { 0.0,  1.0,  1.0, -1.0}};
+
+MatCreate(PETSC_COMM_WORLD,&A);
+MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,4,4);
+MatSetFromOptions(A);
+MatSetUp(A);
+for (i=0; i<4; i++) {
+    MatSetValues(A,1,&i,4,j,aA[i],INSERT_VALUES);
+}
+MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);
+MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);
+\end{code}
+
+The function \texttt{MatSetValues()} sets multiple entries in a \pMat as long as they \emph{form a block}, in this case a row which is a $1\times 4$ block.  (Generally a ``block'' means a product of a list of row indicies and a list of column indices.)  The ``\texttt{1,\&i}'' arguments indicate that we are setting one row index \texttt{i}.  The ``\texttt{4,j}'' arguments indicate that integer array \texttt{j} has the 4 column indices for the entire row.  Note that ``\texttt{aA[i]}'' is a C \emph{pointer}, essentially of type \texttt{double*}, to the $i$th row of $A$.
+
+Assembly one row at a time is common in PDE-type applications, where a row represents the discrete version of the PDE at a grid/mesh location.  In such cases there may be only a few nonzero entries per row.
+
+However, the example above treats the matrix as dense: every entry is filled including those with value $0.0$.  The same matrix could be formed by inserting only the 13 nonzero entries, which is the usage pattern would expect for a sparse matrix.  In the current case this is mildly awkward because \texttt{MatSetValues()} is designed to set a \emph{block} of entries, as already noted.  Here we break up $A$ into three contiguous blocks of nonzeros: we call \texttt{MatSetValues()} on a $3\times 3$ block, then on a $1\times 3$ block, and then we call \texttt{MatSetValue()} on a single entry.  This example illustrates the general block-wise procedure of assembly, and the \texttt{for} loop is gone, but one cannot call it elegant:
+\begin{code}
+int    i1[3] = {0, 1, 2},
+       j1[3] = {0, 1, 2},
+       i2 = 3,
+       j2[3] = {1, 2, 3},
+       i3 = 1,
+       j3 = 3;
+double aA1[9] = { 1.0,  2.0,  3.0,
+                  2.0,  1.0, -2.0,
+                 -1.0,  1.0,  1.0},
+       aA2[3] = { 1.0,  1.0, -1.0},
+       aA3 = -3.0;
+...
+MatSetValues(A,3,i1,3,j1,aA1,INSERT_VALUES);
+MatSetValues(A,1,&i2,3,j2,aA2,INSERT_VALUES);
+MatSetValue(A,i3,j3,aA3,INSERT_VALUES);
+...
+\end{code}
+Exercise \ref{chap:ls}.\ref{exer:ls:sparseinsertion} asks you to confirm that the solution to the corresponding linear system is the same.  \label{page:ls:sparseinsertion}
+
+\PETSc can show us the entries in the \pMat in different formats at runtime.  Assuming the \pMat was assembled using the second (sparse) method above, and that the above lines appeared in \texttt{mycode.c}, then:
+\begin{cline}
+$ ./mycode -mat_view
+Mat Object: 1 MPI processes
+  type: seqaij
+row 0: (0, 1.)  (1, 2.)  (2, 3.) 
+row 1: (0, 2.)  (1, 1.)  (2, -2.)  (3, -3.) 
+row 2: (0, -1.)  (1, 1.)  (2, 1.) 
+row 3: (1, 1.)  (2, 1.)  (3, -1.) 
+$ ./mycode -mat_view ::ascii_dense
+Mat Object: 1 MPI processes
+  type: seqaij
+ 1.00000e+00  2.00000e+00  3.00000e+00  0.00000e+00
+ 2.00000e+00  1.00000e+00  -2.00000e+00  -3.00000e+00
+ -1.00000e+00  1.00000e+00  1.00000e+00  0.00000e+00
+ 0.00000e+00  1.00000e+00  1.00000e+00  -1.00000e+00
+\end{cline}
+The first view shows the sparse storage format, with values as pairs with column index and value.  The second view is ``dense'': all zero values are shown, whether allocated or not.
+
+The output from option \texttt{-mat\_view} occurs at the completion of the \texttt{MatAssemblyBegin/End()} calls.  The following examples illustrate more possibilities for viewing a \pMat, using the up-to-three-argument option form:\begin{itemize}
+\item show the sparsity pattern graphically using the X window system
+\begin{codeplain}
+-mat_view draw -draw_pause 1
+\end{codeplain}
+\item save to file \texttt{mat.dat} in \PETSc's scalable binary format
+\begin{codeplain}
+-mat_view binary:mat.dat
+\end{codeplain}
+\item save to text file \texttt{mat.m} in Matlab text format
+\begin{codeplain}
+-mat_view ascii:mat.m:ascii_matlab
+\end{codeplain}
+\item print at \texttt{stdout} in Matlab text format
+\begin{codeplain}
+-mat_view ::ascii_matlab
+\end{codeplain}
+\end{itemize}
+In the last form, and in the \texttt{ascii\_dense} case earlier, the first two positional arguments are not needed because the default format is \texttt{ascii} and because \texttt{stdout} is used if there is no file name.  However, the last argument (\texttt{ascii\_dense} or \texttt{ascii\_matlab}, respectively, in these two cases) must be put in the third position by starting with two colons.
+
+In the cases shown above the matrix was stored in serial compressed sparse row format, the \texttt{MATSEQAIJ} type, because of the one-process run.  If the code is run in parallel, i.e.~by \texttt{ mpiexec -n N ./mycode }, then \texttt{ -mat\_view }  reports \texttt{ type:~mpiaij } corresponding to \pMat type \texttt{MATMPIAIJ}, the ``parallel compressed sparse row storage'' described above.
 
 
 \section{A small linear system}
 
-We already know how to create, fill, and destroy \pVec and \pMat objects.  Code \ref{code:vecmatksp} shows \texttt{vecmatksp.c} which does these steps for the linear system
+We now know how to create, fill, and destroy \pVec and \pMat objects.  Code \ref{code:vecmatksp} shows \texttt{vecmatksp.c} which does these steps for the linear system
 \begin{equation}
 \begin{bmatrix} 1 & 2 & 3 & 0 \\
                 2 & 1 &-2 &-3 \\
