@@ -1,31 +1,32 @@
 
-At the core of many numerical PDE solution methods is the solution of a finite-dimensional linear system.  Because such linear systems become, generally, more-accurate representations of the PDE as their size goes to infinity, it has always been the case that one solves the largest linear systems which the available computing technology can handle.  In any case, solving such linear systems, using algorithms that have the potential to scale to very large sizes, for instance so that the vector solution of the system must be distributed across many processors to even fit in memory, represents the core technology in \PETSc.
+At the core of many numerical PDE solution methods is the solution of a finite-dimensional linear system.  Because such linear systems become more-accurate representations of the PDE as their size goes to infinity, one tends to solve the largest linear systems which the available computing technology can handle.  Solving such linear systems, using algorithms that have the potential to scale to very large sizes---so large, for instance, that the vector solution of the system must be distributed across many processors to even fit in memory---represents the core technology in \PETSc.
 
-In this Chapter we do review the basic ideas of numerical linear algebra, but we move relatively fast; we are done reviewing by page \pageref{subsec:ls:vecmatintro}!\sidenote{\citet{TrefethenBau1997} is thus recommended as a textbook-length treatment.}  Besides stating elementary definitions, our goal is to identify the fundamental constraints which makes solving large systems challenging.  Thus we assert ``facts of life'' about numerically-solving linear systems.  Then the central threads of iterative linear algebra are laid out, namely 1.~iteration to reduce the residual, 2.~preconditioning of systems to improve the convergence of the iteration, and 3.~the ``Krylov space'' idea, and its connection to polynomial approximation, that unifies iterative schemes under one (generous) umbrella.
+This Chapter starts by reviewing the basic ideas of numerical linear algebra, but we move relatively fast; the review is finished by page \pageref{subsec:ls:vecmatintro}.\sidenote{\citet{TrefethenBau1997} is thus recommended as a textbook-length treatment.}  Our goal, besides stating elementary definitions, is to identify the fundamental constraints which makes solving large systems challenging.  Thus we assert several ``facts of life'' about the process.  Then the central threads of iterative linear algebra are laid out, namely iteration to reduce the residual, preconditioning to improve the convergence of the iteration, and the ``Krylov space'' idea, and its connection to polynomial approximation, to unify iterative schemes under one (generous) umbrella.
 
-We then introduce the \PETSc types for representing linear system objects, namely vectors and matrices.  We apply \PETSc to solve a small, fixed-size linear system.  This is followed by a somewhat more-representative example of a sparse, arbitrary-size, tridiagonal system.  The latter example is exploited for a first look at the comparative effectiveness of run-time options, namely Krylov-space and preconditioner methods.
+We then introduce the \PETSc types for storing vectors and matrices.  We apply \PETSc to solve a small linear system.  This is followed by a somewhat more-representative example of a sparse, arbitrary-size, tridiagonal system.  The latter example is exploited for a first look at the comparative effectiveness of the run-time options which choose Krylov-space and preconditioner methods.
 
 
 \section{Vector spaces, matrices, and norms}
 
 Vector spaces, matrices, and norms are assumed to be familiar to the reader, but we can set some notation by recalling the basics.
 
-A \emph{real vector space} is a set that is closed under addition and multiplication by \emph{scalars} (elements of $\RR$) and to which certain algebraic axioms apply.\sidenote{Namely, the existence of a zero vector plus the appropriate associative, distributive, and commutative axioms \citep{Strang2009}.}  The elements of the set are \emph{vectors}.
+A \emph{real vector space} is a set that is closed under addition and multiplication by \emph{scalars} (elements of $\RR$)\sidenote{\PETSc can be configured to handle complex scalars, vectors, and matrices.  However, in this book we use only real numbers.} and to which certain algebraic axioms apply.\sidenote{Namely, the existence of a zero vector plus the appropriate associative, distributive, and commutative axioms \citep{Strang2009}.}  The elements of the set are \emph{vectors}.
 
-The unqualified word ``vector'' will be understood in this book to refer to a column vector of finite length, written $\RR^N$.  (On the other hand we will also consider functions defined on domains in $\RR^d$, such as solutions to PDEs, and regard them as vectors in infinite-dimensional vector space.)  We will use bold for vectors, but not for entries, thus for example $\bv\in\RR^N$ has entries $v_0,\dots,v_{N-1}\in \RR$; note that we break tradition by numbering vector entries starting from zero.  The \emph{standard basis} for $\RR^N$ is the set of vectors $\{\be_i\}_{i=0}^{N-1}$ which have zero entries except for each vector having a one in the $i$th entry: $(\be_i)_j = \delta_{ij}$ (the Kronecker delta).
+The unqualified word ``vector'' will be understood in this book to refer to a column vector of finite length.  The space of such vectors of length $N$ is written $\RR^N$.  On the other hand we will also regard functions defined on domains in $\RR^d$, where $d=1,2,3$, as vectors in infinite-dimensional vector space.  The solutions to PDEs live in such spaces.
 
-A \emph{matrix} is a linear map between vector spaces.\sidenote{As is well-known, in polite company one says instead that a matrix is the \emph{representation} of a linear map from one finite-dimensional vector space to another, with some choice of basis in each space.}  We write $A\in \RR^{M\times N}$ for a matrix that maps from $\RR^N$ to $\RR^M$.  There are two related matrices which map in the other direction.  Even if $A$ is non-square one can construct $A^\top\in \RR^{N\times M}$, namely the \emph{transpose} with entries $(A^\top)_{ij}=a_{ji}$.  If the matrix is square and invertible then the \emph{inverse} $A^{-1}\in \RR^{N\times M}$ is the unique matrix satisfying $A^{-1} A = A A^{-1}=I$.
+We will use bold for vectors, but not for entries, thus for example $\bv\in\RR^N$ has entries $v_0,\dots,v_{N-1}\in \RR$; we break tradition by numbering vector entries starting from zero.  The \emph{standard basis} for $\RR^N$ is the set of vectors $\{\be_i\}_{i=0}^{N-1}$ which are zero except for a one in the $i$th entry: $(\be_i)_j = \delta_{ij}$ (the Kronecker delta).
 
-A \emph{vector norm} is a function $\|\cdot\|:\RR^N \to [0,\infty)$ which assigns a well-defined length to a vector.  (Several axioms, including the triangle inequality, must be satisfied \citep{TrefethenBau1997}.)  For $1 \le p < \infty$ the following formula defines a norm,
+A \emph{matrix} is a linear map between vector spaces.\sidenote{In polite company one says instead that a matrix is the \emph{representation} of a linear map from one finite-dimensional vector space to another, with some choice of basis in each space.}  We write $A\in \RR^{M\times N}$ for a matrix that maps from $\RR^N$ to $\RR^M$.  There are two related matrices which map in the other direction.  If the matrix is square and invertible then the \emph{inverse} $A^{-1}\in \RR^{N\times M}$ is the unique matrix satisfying $A^{-1} A = A A^{-1}=I$.  Even if $A$ is non-square one can construct $A^\top\in \RR^{N\times M}$, namely the \emph{transpose} with entries $(A^\top)_{ij}=a_{ji}$.
+
+A \emph{vector norm} is a function $\|\cdot\|:\RR^N \to [0,\infty)$ which assigns a well-defined length to a vector.\footnote{Several axioms, including the triangle inequality, must be satisfied \citep{TrefethenBau1997}.}  For $1 \le p < \infty$ this formula defines a norm,
 \begin{equation}
 \|\bv\|_p = \left(\sum_{i=0}^{N-1} |v_i|^p\right)^{1/p}.  \label{eq:ls:vectorpnorm}
 \end{equation}
-The $p=1,2$ cases are especially common in practical use, but all vector $p$-norms can be computed with $O(N)$ work using \eqref{eq:ls:vectorpnorm}.  The maximum norm also gets frequent application:
+The $p=1,2$ cases are especially common in practical use, but all vector $p$-norms can be computed with $O(N)$ work.  The maximum norm, which is also the $p\to\infty$ limit of \eqref{eq:ls:vectorpnorm}, is equally wide-spread:
 \begin{equation}
 \|\bv\|_\infty = \max_{i=0,\dots,N-1} |v_i|.  \label{eq:ls:vectorinfnorm}
 \end{equation}
-
-(An interruption, regarding the way \PETSc represents the above ideas, is appropriate.   First, by careful configuration, \PETSc can handle complex scalars, vectors, and matrices, but we use only real numbers in this book.  Second, \PETSc computes any of the $p=1,2,\infty$ cases of the vector norms \eqref{eq:ls:vectorpnorm} or \eqref{eq:ls:vectorinfnorm} by a call to \texttt{VecNorm()} on a \PETSc \pVec object; see below for an introduction to \pVec objects.)
+Note that \PETSc computes the $p=1,2,\infty$ vector norms by a call to \texttt{VecNorm()} on a \PETSc \pVec object; these are introduced below.
 
 Choosing vector norms on the input and output vector spaces of a matrix \emph{induces} a \emph{matrix norm} \citep{TrefethenBau1997}, as follows:
 \begin{equation}
@@ -34,13 +35,13 @@ Choosing vector norms on the input and output vector spaces of a matrix \emph{in
 It follows from \eqref{eq:ls:matnorm} that
     $$\|A \bv\| \le \|A\| \|\bv\|.$$
 
-Generally, induced matrix norms are expensive to compute.  In most of the cases, as they are optimization problems, they take more work than the $O(MN)$ operations needed to examine all the entries of a (generic, dense) matrix $A\in \RR^{M\times N}$.  However, those matrix norms induced by the $p=1$ and $p=\infty$ vector norms are easy to compute by $O(MN)$ formulas \citep{TrefethenBau1997}.  The \emph{Frobenius} matrix norm can also be computed by a $O(MN)$ formula, though the norm itself is not induced from a vector norm \citep{TrefethenBau1997}.  Thus it is that \PETSc can compute $p=1,\infty$ and Frobenius matrix norms by a call to \texttt{MatNorm()} on a \PETSc \pMat object (see below) but not other induced norms.
+Generally, induced matrix norms are expensive to compute.  In most of the cases, they are optimization problems which take more work than the $O(MN)$ operations needed to examine all the entries of a (generic, dense) matrix $A\in \RR^{M\times N}$.  However, the matrix norms induced by the $p=1$ and $p=\infty$ vector norms are easy to compute by $O(MN)$ formulas \citep{TrefethenBau1997}.  The \emph{Frobenius} matrix norm can also be computed by a $O(MN)$ formula, though this norm is not induced from a vector norm \citep{TrefethenBau1997}.  Thus it is that \PETSc can compute $p=1,\infty$ and Frobenius matrix norms by a call to \texttt{MatNorm()} on a \PETSc \pMat object (see below), but not other induced norms.
 
-We will use vector norms routinely in practice, both inside key algorithms for linear and nonlinear analysis (Chapters \ref{chap:ls}, \ref{chap:st}, \ref{chap:nl}), and in measuring numerical errors in solving PDEs, for example.   But what good are matrix norms?  Though they occasionally appear in algorithms, in this book we will use them only through the desire to measure the \emph{conditioning} of linear systems \citep{TrefethenBau1997}.  By definition, if $\|\cdot\|$ denotes a matrix norm and $A \in \RR^{N\times N}$ is a square matrix then
+We will use vector norms routinely in practice, both inside key algorithms for linear and nonlinear analysis (Chapters \ref{chap:ls}, \ref{chap:st}, \ref{chap:nl}), and in measuring numerical errors in solving PDEs, for example.   But what good are matrix norms?  In this book we will use them only through the desire to measure the \emph{conditioning} of linear systems \citep{TrefethenBau1997}.  By definition, if $\|\cdot\|$ denotes a matrix norm and $A \in \RR^{N\times N}$ is a square matrix then
 \begin{equation}
     \kappa(A) = \|A\| \|A^{-1}\|  \label{eq:ls:conddefn}
 \end{equation}
-is the \emph{condition number} of $A$; by definition $\kappa(A)=+\infty$ if $A$ is not invertible.  This quantity measures how sensitive the (exact) solution of a linear system $A \bv = \bb$ is to perturbations of either the matrix $A$ or the right-hand-side $\bb$ \citep{TrefethenBau1997}.
+is the \emph{condition number} of $A$.  (By definition $\kappa(A)=+\infty$ if $A$ is not invertible.)  This quantity measures how sensitive the (exact) solution of a linear system $A \bv = \bb$ is to perturbations of either the matrix $A$ or the right-hand-side $\bb$ \citep{TrefethenBau1997}.
 
 
 \section{Linear systems, and some facts of (numerical) life}
@@ -74,7 +75,7 @@ A key idea is that discretized PDEs generate linear systems with exploitable str
 For simple example illustrating Fact III, the $N$-dimensional tridiagonal matrix $A$ assembled later in this section occupies $24 N$ bytes, because each allocated real entry occupies 8 bytes using double precision.  The inverse $A^{-1}$, however, is dense and uses $8 N^2$ bytes.  Though we can easily solve $A\bu=\bb$ for this matrix in dimension $N=10^7$, using less than a gigabyte of memory in the solution process,\sidenote{See \texttt{tri.c}.  Do ``\texttt{./tri -tri\_m 10000000 -ksp\_type cg -pc\_type none}.''} simply storing $A^{-1}$ would occupy $800$ terabytes of memory or disk.
 
 
-\section{Numerical linear algebra 1: residual and iterations}
+\section{Iterative linear algebra 1: residual and iterations}
 
 Direct methods like Gauss elimination \citep{TrefethenBau1997} are one way to solve a linear system.  The most powerful methods for solving PDEs, however, are iterative.
 
@@ -128,7 +129,7 @@ Exercise \ref{chap:ls}.\ref{exer:ls:showconvergethm} asks you to show that the R
 One can also show that $\rho(B) \le \|B\|$ in any induced matrix norm, so that \eqref{introrichardson} converges if $\|I-\omega A\| < 1$.
 
 
-\section{Numerical linear algebra 2: preconditioning}
+\section{Iterative linear algebra 2: preconditioning}
 
 Considering spectral properties brings us to an important general observation about linear systems.  Namely, that there are many systems which are equivalent to \eqref{introsystem}.  In fact, if $M\in\RR^{N\times N}$ is an invertible matrix then the systems
 \begin{equation}
@@ -185,7 +186,7 @@ These ideas both relate to the conditioning of $A$.  Indeed, the connection betw
 where $\kappa(A) = \|A\| \|A^{-1}\|$ is the condition number in the induced norm.  Proving \eqref{relativenormbounds} is Exercise \ref{chap:ls}.\ref{exer:ls:errornorms}; it requires only straightforward manipulations with norms.
 
 
-\section{Numerical linear algebra 3: Krylov space methods}
+\section{Iterative linear algebra 3: Krylov space methods}
 
 The most powerful iterative methods for solving system \eqref{introsystem} generate optimal\sidenote{In various senses.  See Table \ref{tab:krylovcompare} below for two such.} estimates $\bu_k$ which are linear combinations of vectors $\bv,A\bv,A^2\bv,\dots,A^{k-1}\bv$.  Here $\bv$ is a fixed vector; often $\bv=\bb$ or it is the initial residual.
 
@@ -645,9 +646,9 @@ error for m = 2 system is |x-xexact|_2 = 8.0e-16
 \end{cline}
 %$
 
-After setting up the new option, next in \texttt{tri.c} the numerical solution \pVec \texttt{x} is created just as we did in the last example \texttt{vecmatksp.c} (Code \ref{code:vecmatksp}).  But now we also want to create \pVecs \texttt{b} and \texttt{xexact}; the former is the right-hand side of the linear system and the latter holds the exact solution to the linear system so that we can evaluate the error in the numerical solution.  Though at this stage we have not filled any entries of \texttt{x}, we can save repetitive function calls to \texttt{VecCreate/SetSizes/SetFromOptions()}, when creating these additional \pVecs, by calling \texttt{VecDuplicate()} to allocate \pVecs just like \texttt{x}.  (There is a different method for copying the contents of \pVecs, namely \texttt{VecCopy()}.  It requires that the two \pVecs are already allocated and have the same layout.)
-
 \cinputpart{tri.c}{\CODELOC}{Assemble and solve.}{II}{//ENDSETUP}{//ENDSOLVE}{code:triparttwo}
+
+After setting up the new option, next in \texttt{tri.c} the numerical solution \pVec \texttt{x} is created just as we did in the last example \texttt{vecmatksp.c} (Code \ref{code:vecmatksp}).  But now we also want to create \pVecs \texttt{b} and \texttt{xexact}; the former is the right-hand side of the linear system and the latter holds the exact solution to the linear system so that we can evaluate the error in the numerical solution.  Though at this stage we have not filled any entries of \texttt{x}, we can save repetitive function calls to \texttt{VecCreate/SetSizes/SetFromOptions()}, when creating these additional \pVecs, by calling \texttt{VecDuplicate()} to allocate \pVecs just like \texttt{x}.  (There is a different method for copying the contents of \pVecs, namely \texttt{VecCopy()}.  It requires that the two \pVecs are already allocated and have the same layout.)
 
 Next we assemble the matrix $A$.  This is a boring tridiagonal matrix with $3$ on the diagonal and $-1$ in the super- and sub-diagonals.  Though boring, we want to assemble it efficiently in parallel, something that will be important when solving 2D and 3D PDEs in later chapters.  However, only when \texttt{tri.c} is run do we know how many processes are in use.  The method \texttt{MatGetOwnershipRange()} tells our program, running on a particular process (rank), what rows it owns locally.  In the case of a many structured matrices like this one, we can avoid all interprocess communication by assembling exactly the rows we own.  As seen at the top of Code \ref{code:triparttwo}, we call
 \begin{quote}
