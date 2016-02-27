@@ -11,6 +11,10 @@ static char help[] =
 // ./ode -ts_monitor_solution
 // ./ode -ts_monitor_solution draw -draw_pause 0.1
 
+//-ts_final_time
+//-ts_init_time
+//-ts_dt
+
 // ./ode -ts_monitor -ts_type beuler -ode_steps 1000    // finally close to default RK
 // ./ode -log_view |grep Eval   // compare rk, beuler, cn
 
@@ -19,13 +23,13 @@ static char help[] =
 
 #include <petsc.h>
 
-PetscErrorCode SetInitial(Vec y) {
+PetscErrorCode SetFromExact(double t, Vec y) {
     double *ay;
     VecGetArray(y,&ay);
-    ay[0] = 0.0;
-    ay[1] = 0.0;
+    ay[0] = t - sin(t);
+    ay[1] = 1.0 - cos(t);
     VecRestoreArray(y,&ay);
-    PetscFunctionReturn(0);
+    return 0;
 }
 
 PetscErrorCode FormRHSFunction(TS ts, double t, Vec y, Vec g, void *ptr) {
@@ -61,25 +65,17 @@ PetscErrorCode FormRHSJacobian(TS ts, double t, Vec y, Mat J, Mat P, void *ptr) 
 int main(int argc,char **argv) {
   PetscErrorCode ierr;
   const int N = 2;
-  double    t0 = 0.0,  tf = 1.0,  dt = 0.1;
+  double    t0 = 0.0, tf = 1.0, dt = 0.1, err;
   Vec       y, yexact;
   Mat       J;
   TS        ts;
 
   PetscInitialize(&argc,&argv,(char*)0,help);
 
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "ode_", 
-                           "options for ODE solver ode.c", ""); CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-dt","initial time-step","ode.c",dt,&dt,NULL); CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-t0","initial time","ode.c",t0,&t0,NULL); CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-tf","final time","ode.c",tf,&tf,NULL); CHKERRQ(ierr);
-  ierr = PetscOptionsEnd(); CHKERRQ(ierr);
-
   ierr = VecCreate(PETSC_COMM_WORLD,&y); CHKERRQ(ierr);
   ierr = VecSetSizes(y,PETSC_DECIDE,N); CHKERRQ(ierr);
   ierr = VecSetFromOptions(y); CHKERRQ(ierr);
   ierr = VecDuplicate(y,&yexact); CHKERRQ(ierr);
-  ierr = SetInitialExact(t0,y,tf,yexact); CHKERRQ(ierr);
 
   ierr = MatCreate(PETSC_COMM_WORLD,&J); CHKERRQ(ierr);
   ierr = MatSetSizes(J,PETSC_DECIDE,PETSC_DECIDE,N,N); CHKERRQ(ierr);
@@ -95,17 +91,29 @@ int main(int argc,char **argv) {
   ierr = TSSetInitialTimeStep(ts,t0,dt); CHKERRQ(ierr);
   ierr = TSSetDuration(ts,100*(int)(tf/dt),tf-t0); CHKERRQ(ierr);
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
+
   ierr = TSSetFromOptions(ts); CHKERRQ(ierr);
 
+  ierr = TSGetTime(ts,&t0); CHKERRQ(ierr);
+  ierr = TSGetTimeStep(ts,&dt); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
-             "solving t0 = %.3f to tf = %.3f with initial dt = %.5f ...\n",
-             t0,tf,dt); CHKERRQ(ierr);
+              "solving from t0 = %.3f with initial time step dt = %.5f ...\n",
+              t0,dt); CHKERRQ(ierr);
+
+  ierr = SetFromExact(t0,y); CHKERRQ(ierr);
   ierr = TSSolve(ts,y); CHKERRQ(ierr);
 
-  ierr = VecView(y,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
+  ierr = TSGetTime(ts,&tf); CHKERRQ(ierr);
+  ierr = SetFromExact(tf,yexact); CHKERRQ(ierr);
 
-  VecDestroy(&y); VecDestroy(&yexact);
-  MatDestroy(&J); TSDestroy(&ts);
+  ierr = VecAXPY(y,-1.0,yexact); CHKERRQ(ierr);    // y <- y + (-1.0) yexact
+  ierr = VecNorm(y,NORM_INFINITY,&err); CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,
+              "error at tf = %.3f :  |y-y_exact|_inf = %g\n",
+              tf,err); CHKERRQ(ierr);
+
+  VecDestroy(&y);  VecDestroy(&yexact);
+  MatDestroy(&J);  TSDestroy(&ts);
   PetscFinalize();
   return 0;
 }
