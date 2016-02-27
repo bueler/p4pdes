@@ -1,7 +1,7 @@
 static char help[] =
-"ODE system solver example using TS.  Option prefix -ode_.\n"
-"Solves N-dimensional system  dy/dt = G(t,y)  with y(t0) = y0 to compute y(tf),\n"
-"where t0, tf are set by options but y0 must be set in code.  Serial only.\n"
+"ODE system solver example using TS.  Solves N-dimensional system\n"
+"    dy/dt = G(t,y)\n"
+"with y(t0) = y0 to compute y(tf).  Serial only.\n"
 "Defaults to Runge-Kutta (= 3BS), but can be used with implicit methods.\n"
 "The implemented example, which includes the Jacobian  J = dG/dy,  has\n"
 "G_1 = y_2, G_2 = - y_1 + t, y_1(0) = 0, y_2(0) = 0.  The exact solution is\n"
@@ -41,18 +41,15 @@ PetscErrorCode FormRHSFunction(TS ts, double t, Vec y, Vec g, void *ptr) {
     ag[1] = - ay[0] + t;      // = G_2(t,y)
     VecRestoreArrayRead(y,&ay);
     VecRestoreArray(g,&ag);
-    PetscFunctionReturn(0);
+    return 0;
 }
 
 PetscErrorCode FormRHSJacobian(TS ts, double t, Vec y, Mat J, Mat P, void *ptr) {
     PetscErrorCode ierr;
-    const double *ay;
-    double       v[4] = { 0.0, 1.0,
-                         -1.0, 0.0};
-    int          row[2] = {0, 1},  col[2] = {0, 1};
-    ierr = VecGetArrayRead(y,&ay); CHKERRQ(ierr);
+    int    row[2] = {0, 1},  col[2] = {0, 1};
+    double v[4] = { 0.0, 1.0,
+                   -1.0, 0.0};
     ierr = MatSetValues(P,2,row,2,col,v,INSERT_VALUES); CHKERRQ(ierr);
-    ierr = VecRestoreArrayRead(y,&ay); CHKERRQ(ierr);
     ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
     ierr = MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
     if (J != P) {
@@ -95,12 +92,12 @@ int main(int argc,char **argv) {
   ierr = TSSetFromOptions(ts); CHKERRQ(ierr);
 
   ierr = TSGetTime(ts,&t0); CHKERRQ(ierr);
+  ierr = SetFromExact(t0,y); CHKERRQ(ierr);
   ierr = TSGetTimeStep(ts,&dt); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
               "solving from t0 = %.3f with initial time step dt = %.5f ...\n",
               t0,dt); CHKERRQ(ierr);
 
-  ierr = SetFromExact(t0,y); CHKERRQ(ierr);
   ierr = TSSolve(ts,y); CHKERRQ(ierr);
 
   ierr = TSGetTime(ts,&tf); CHKERRQ(ierr);
