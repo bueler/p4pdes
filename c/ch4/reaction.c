@@ -102,7 +102,7 @@ int main(int argc,char **args) {
   ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
 
   ierr = VecNorm(u,NORM_INFINITY,&unorm); CHKERRQ(ierr);
-  ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uxact
+  ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
   ierr = VecNorm(u,NORM_INFINITY,&errnorm); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
               "on %d point grid:  |u-u_exact|_inf/|u|_inf = %g\n",
