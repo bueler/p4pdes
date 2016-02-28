@@ -31,7 +31,17 @@ FIXME control \texttt{rk} by \texttt{-ts\_type rk -ts\_atol Z -ts\_rk\_type XX}
 
 \section{Time-dependent heat equation}
 
-FIXME show \texttt{heat.c}
+FIXME solve heat equation by implicit
+
+\cinputpart{heat.c}{\CODELOC}{FIXME}{I}{//HEATCTX}{//ENDHEATCTX}{code:ts:heat:heatctx}
+
+\cinputpart{heat.c}{\CODELOC}{FIXME}{II}{//RHSFUNCTION}{//ENDRHSFUNCTION}{code:ts:heat:rhsfunction}
+
+\cinputpart{heat.c}{\CODELOC}{FIXME}{III}{//RHSJACOBIAN}{//ENDRHSJACOBIAN}{code:ts:heat:rhsjacobian}
+
+\cinputpart{heat.c}{\CODELOC}{FIXME}{IV}{//TSSETUP}{//ENDTSSETUP}{code:ts:heat:tssetup}
+
+\cinputpart{heat.c}{\CODELOC}{FIXME}{V}{//MONITOR}{//ENDMONITOR}{code:ts:heat:monitor}
 
 \begin{figure}
 % usage: \standardstack{scale}{objective}{Jacobian}{TS}{DMDA}{DMPlex}
@@ -40,12 +50,24 @@ FIXME show \texttt{heat.c}
 \label{fig:of:tsstack}
 \end{figure}
 
+FIXME show \texttt{-ts\_type theta,beuler,cn}
+
 
 \section{Coupled reaction-diffusion equations}
 
 FIXME see pages 21--22 of \citep{HundsdorferVerwer2003} and see \citep{Pearson1993}
 
-FIXME show parts of \texttt{pattern.c}
+\cinputpart{pattern.c}{\CODELOC}{FIXME}{I}{//FIELDCTX}{//ENDFIELDCTX}{code:ts:pattern:fieldctx}
+
+\cinputpart{pattern.c}{\CODELOC}{FIXME}{II}{//RHSFUNCTION}{//ENDRHSFUNCTION}{code:ts:pattern:rhsfunction}
+
+\cinputpart{pattern.c}{\CODELOC}{FIXME}{III}{//IFUNCTION}{//ENDIFUNCTION}{code:ts:pattern:ifunction}
+
+\cinputpart{pattern.c}{\CODELOC}{FIXME}{IV}{//IJACOBIAN}{//ENDIJACOBIAN}{code:ts:pattern:ijacobian}
+
+\cinputpart{pattern.c}{\CODELOC}{FIXME}{V}{//TSSETUP}{//ENDTSSETUP}{code:ts:pattern:tssetup}
+
+FIXME show use of \texttt{-ts\_type arkimex,theta}
 
 
 \section{Exercises}

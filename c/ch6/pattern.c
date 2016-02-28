@@ -17,7 +17,7 @@ static char help[] =
 
 #include <petsc.h>
 
-
+//FIELDCTX
 typedef struct {
   double u, v;
 } Field;
@@ -30,6 +30,7 @@ typedef struct {
             F,    // "dimensionless feed rate" (Pearson 1993)
             k;    // "dimensionless rate constant" (Pearson 1993)
 } PtnCtx;
+//ENDFIELDCTX
 
 // Formulas from page 22 of Hundsdorfer & Verwer (2003).  Interpretation here is
 // to always generate 0.5 x 0.5 non-trivial patch in (0,L) x (0,L) domain.
@@ -66,6 +67,7 @@ PetscErrorCode InitialState(Vec x, PtnCtx* user) {
 // in system form  F(t,X,dot X) = G(t,X),  compute G():
 //     G^u(t,u,v) = - u v^2 + F (1 - u)
 //     G^v(t,u,v) = + u v^2 - (F + k) v
+//RHSFUNCTION
 PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, Field **aX,
                                     Field **aG, PtnCtx *user) {
   int            i, j;
@@ -80,11 +82,13 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, Field **aX,
   }
   return 0;
 }
+//ENDRHSFUNCTION
 
 
 // in system form  F(t,X,dot X) = G(t,X),  compute F():
 //     F^u(t,u,v,u_t,v_t) = u_t - D_u Laplacian u
 //     F^v(t,u,v,u_t,v_t) = v_t - D_v Laplacian v
+//IFUNCTION
 PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t, Field **aX,
                                   Field **aXdot, Field **aF, PtnCtx *user) {
   int            i, j;
@@ -97,23 +101,25 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t, Field **aX,
       for (i = info->xs; i < info->xs + info->xm; i++) {
           u = aX[j][i].u;
           v = aX[j][i].v;
-          lapu =       aX[j+1][i-1].u + 4.0 * aX[j+1][i].u +     aX[j+1][i+1].u
-                 + 4.0 * aX[j][i-1].u -      20.0 * u      + 4.0 * aX[j][i+1].u
-                 +     aX[j-1][i-1].u + 4.0 * aX[j-1][i].u +     aX[j-1][i+1].u;
-          lapv =       aX[j+1][i-1].v + 4.0 * aX[j+1][i].v +     aX[j+1][i+1].v
-                 + 4.0 * aX[j][i-1].v -      20.0 * v      + 4.0 * aX[j][i+1].v
-                 +     aX[j-1][i-1].v + 4.0 * aX[j-1][i].v +     aX[j-1][i+1].v;
+          lapu =     aX[j+1][i-1].u + 4.0*aX[j+1][i].u +   aX[j+1][i+1].u
+                 + 4.0*aX[j][i-1].u -    20.0*u        + 4.0*aX[j][i+1].u
+                 +   aX[j-1][i-1].u + 4.0*aX[j-1][i].u +   aX[j-1][i+1].u;
+          lapv =     aX[j+1][i-1].v + 4.0*aX[j+1][i].v +   aX[j+1][i+1].v
+                 + 4.0*aX[j][i-1].v -    20.0*v        + 4.0*aX[j][i+1].v
+                 +   aX[j-1][i-1].v + 4.0*aX[j-1][i].v +   aX[j-1][i+1].v;
           aF[j][i].u = aXdot[j][i].u - Cu * lapu;
           aF[j][i].v = aXdot[j][i].v - Cv * lapv;
       }
   }
   return 0;
 }
+//ENDIFUNCTION
 
 
 // in system form  F(t,X,dot X) = G(t,X),  compute combined/shifted
 // Jacobian of F():
 //     J = (shift) dF/d(dot X) + dF/dX
+//IJACOBIAN
 PetscErrorCode FormIJacobianLocal(DMDALocalInfo *info, double t, Field **aX,
                                   Field **aXdot, double shift, Mat J, Mat P,
                                   PtnCtx *user) {
@@ -157,6 +163,7 @@ PetscErrorCode FormIJacobianLocal(DMDALocalInfo *info, double t, Field **aX,
     }
     return 0;
 }
+//ENDIJACOBIAN
 
 
 int main(int argc,char **argv)
@@ -221,15 +228,17 @@ int main(int argc,char **argv)
   ierr = DMDASetFieldName(user.da,0,"u"); CHKERRQ(ierr);
   ierr = DMDASetFieldName(user.da,1,"v"); CHKERRQ(ierr);
 
+//TSSETUP
   ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
   ierr = TSSetProblemType(ts,TS_NONLINEAR); CHKERRQ(ierr);
   ierr = TSSetDM(ts,user.da); CHKERRQ(ierr);
   ierr = DMDATSSetRHSFunctionLocal(user.da,INSERT_VALUES,
-                                   (DMDATSRHSFunctionLocal)FormRHSFunctionLocal,&user); CHKERRQ(ierr);
+           (DMDATSRHSFunctionLocal)FormRHSFunctionLocal,&user); CHKERRQ(ierr);
   ierr = DMDATSSetIFunctionLocal(user.da,INSERT_VALUES,
-                                 (DMDATSIFunctionLocal)FormIFunctionLocal,&user); CHKERRQ(ierr);
+           (DMDATSIFunctionLocal)FormIFunctionLocal,&user); CHKERRQ(ierr);
   ierr = DMDATSSetIJacobianLocal(user.da,
-                                 (DMDATSIJacobianLocal)FormIJacobianLocal,&user); CHKERRQ(ierr);
+           (DMDATSIJacobianLocal)FormIJacobianLocal,&user); CHKERRQ(ierr);
+//TSSETUP
 
   ierr = TSSetInitialTimeStep(ts,0.0,dt0); CHKERRQ(ierr);
   ierr = TSSetDuration(ts,100*steps,tf); CHKERRQ(ierr);  // allow 100 times requested steps

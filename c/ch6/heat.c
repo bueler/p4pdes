@@ -49,7 +49,7 @@ typedef struct {
                //                     = gamma_1(y) on right boundary
   double D;    // conductivity
 } HeatCtx;
-//ENDCTX
+//ENDHEATCTX
 
 PetscErrorCode Spacings(DM da, double *hx, double *hy) {
     PetscErrorCode ierr;
@@ -62,7 +62,8 @@ PetscErrorCode Spacings(DM da, double *hx, double *hy) {
 
 
 //MONITOR
-PetscErrorCode EnergyMonitor(TS ts, PetscInt step, PetscReal time, Vec u, void *ctx) {
+PetscErrorCode EnergyMonitor(TS ts, PetscInt step, PetscReal time, Vec u,
+                             void *ctx) {
     PetscErrorCode ierr;
     HeatCtx        *user = (HeatCtx*)ctx;
     double         lenergy = 0.0, energy, hx, hy, **au;
@@ -258,9 +259,9 @@ int main(int argc,char **argv)
   ierr = TSSetProblemType(ts,TS_NONLINEAR); CHKERRQ(ierr);
   ierr = TSSetDM(ts,user.da); CHKERRQ(ierr);
   ierr = DMDATSSetRHSFunctionLocal(user.da,INSERT_VALUES,
-                                   (DMDATSRHSFunctionLocal)FormRHSFunctionLocal,&user); CHKERRQ(ierr);
+           (DMDATSRHSFunctionLocal)FormRHSFunctionLocal,&user); CHKERRQ(ierr);
   ierr = DMDATSSetRHSJacobianLocal(user.da,
-                                   (DMDATSRHSJacobianLocal)FormRHSJacobianLocal,&user); CHKERRQ(ierr);
+           (DMDATSRHSJacobianLocal)FormRHSJacobianLocal,&user); CHKERRQ(ierr);
 
   ierr = TSSetType(ts,TSBEULER); CHKERRQ(ierr);         // default: Backward Euler
   ierr = TSSetDuration(ts,10000*steps,tf); CHKERRQ(ierr);  // allow 10^4 times requested steps
