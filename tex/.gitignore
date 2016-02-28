@@ -1,6 +1,6 @@
 *~
 book.pdf
-cstrip/*.c
+cstrip/*.c*
 tmp/*.tikz
 
 ## Core latex/pdflatex auxiliary files:

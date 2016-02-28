@@ -5,7 +5,7 @@ chapsroots := preface getstarted linearsystem structured nonlinear optifem times
 chapsinputs := $(addprefix chaps/, $(addsuffix .tex, $(chapsroots)))
 
 # for these, see strip.sh
-croots := vecmatksp tri poisson expcircle expcircleJAC reaction plap fish2 readmesh poissontools poissonfem obstacle
+croots := vecmatksp tri poisson expcircle expcircleJAC reaction plap ode heat fish2 readmesh poissontools poissonfem obstacle
 cstrip := $(addprefix cstrip/, $(addsuffix .c, $(croots)))
 
 tmptikzroots := blob blob.1.elenum blob.1.nodenum squarefour mesh.1
@@ -30,7 +30,7 @@ tmp/:
 	mkdir tmp/
 
 $(cstrip):
-	./strip.sh
+	python strip.py
 
 # location of naive unstructured mesh stuff:
 UNLOC := ch10/

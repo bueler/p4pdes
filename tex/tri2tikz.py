@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# (C) 2014 Ed Bueler
+# (C) 2016 Ed Bueler
 #
 # Create a tikz figure from the .node, .ele, .poly output of triangle,
 # or just from a .poly file (i.e. an input into triangle).
