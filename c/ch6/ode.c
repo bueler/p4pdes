@@ -23,6 +23,7 @@ static char help[] =
 
 #include <petsc.h>
 
+//CALLBACKS
 PetscErrorCode SetFromExact(double t, Vec y) {
     double *ay;
     VecGetArray(y,&ay);
@@ -58,7 +59,9 @@ PetscErrorCode FormRHSJacobian(TS ts, double t, Vec y, Mat J, Mat P, void *ptr) 
     }
     return 0;
 }
+//ENDCALLBACKS
 
+//MAIN
 int main(int argc,char **argv) {
   PetscErrorCode ierr;
   const int N = 2;
@@ -114,4 +117,5 @@ int main(int argc,char **argv) {
   PetscFinalize();
   return 0;
 }
+//ENDMAIN
 

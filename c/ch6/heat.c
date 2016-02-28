@@ -41,6 +41,7 @@ static char help[] =
 
 #include <petsc.h>
 
+//HEATCTX
 typedef struct {
   DM     da;
   Vec    f,    // source f(x,y)
@@ -48,7 +49,7 @@ typedef struct {
                //                     = gamma_1(y) on right boundary
   double D;    // conductivity
 } HeatCtx;
-
+//ENDCTX
 
 PetscErrorCode Spacings(DM da, double *hx, double *hy) {
     PetscErrorCode ierr;
@@ -60,6 +61,7 @@ PetscErrorCode Spacings(DM da, double *hx, double *hy) {
 }
 
 
+//MONITOR
 PetscErrorCode EnergyMonitor(TS ts, PetscInt step, PetscReal time, Vec u, void *ctx) {
     PetscErrorCode ierr;
     HeatCtx        *user = (HeatCtx*)ctx;
@@ -86,6 +88,7 @@ PetscErrorCode EnergyMonitor(TS ts, PetscInt step, PetscReal time, Vec u, void *
     ierr = PetscPrintf(PETSC_COMM_WORLD,"  energy = %g\n",energy); CHKERRQ(ierr);
     return 0;
 }
+//ENDMONITOR
 
 
 PetscErrorCode SetSourceF(Vec f, HeatCtx* user) {
@@ -132,6 +135,7 @@ PetscErrorCode SetNeumannValues(Vec gamma, HeatCtx* user) {
 }
 
 
+//RHSFUNCTION
 PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **au,
                                     double **aG, HeatCtx *user) {
   PetscErrorCode ierr;
@@ -160,8 +164,10 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **au,
   ierr = DMDAVecRestoreArray(user->da,user->gamma,&agamma); CHKERRQ(ierr);
   return 0;
 }
+//ENDRHSFUNCTION
 
 
+//RHSJACOBIAN
 PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info, double t, double **au,
                                     Mat J, Mat P, HeatCtx *user) {
     PetscErrorCode ierr;
@@ -202,6 +208,7 @@ PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info, double t, double **au,
     }
     return 0;
 }
+//ENDRHSJACOBIAN
 
 
 int main(int argc,char **argv)
@@ -246,6 +253,7 @@ int main(int argc,char **argv)
            "(initial ratio:  D dt / (min{dx,dy}^2) = %g)\n",
            info.mx,info.my,hx,hy,user.D*(tf/(double)steps)/hxhy); CHKERRQ(ierr);
 
+//TSSETUP
   ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
   ierr = TSSetProblemType(ts,TS_NONLINEAR); CHKERRQ(ierr);
   ierr = TSSetDM(ts,user.da); CHKERRQ(ierr);
@@ -262,6 +270,7 @@ int main(int argc,char **argv)
   if (monitorenergy) {
       ierr = TSMonitorSet(ts,EnergyMonitor,&user,NULL); CHKERRQ(ierr);
   }
+//ENDTSSETUP
 
   ierr = DMCreateGlobalVector(user.da,&u); CHKERRQ(ierr);
   ierr = VecDuplicate(u,&uexact); CHKERRQ(ierr);
