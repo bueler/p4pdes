@@ -1,14 +1,20 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
-fish2: fish2.o chkopts
-	-${CLINKER} -o fish2 fish2.o ${PETSC_LIB}
-	${RM} fish2.o
+
+convert: convert.o readmesh.o  chkopts
+	-${CLINKER} -o convert convert.o readmesh.o  ${PETSC_LIB}
+	${RM} convert.o readmesh.o
+
+poissonfem: poissonfem.o readmesh.o poissontools.o chkopts
+	-${CLINKER} -o poissonfem poissonfem.o readmesh.o poissontools.o ${PETSC_LIB}
+	${RM} poissonfem.o readmesh.o poissontools.o
+
 
 # etc
 
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ fish2
-
+	@rm -f *~ convert poissonfem
+	@rm -f blob.?.* squarefour.?.* square.?.* mesh.?.*

@@ -179,23 +179,23 @@ Copyright \copyright\ \the\year\ \thanklessauthor
 %\stubinput{chaps/advdif.tex}{20}
 \input{chaps/advdif.tex}
 
+\chapter{Example: An unstructured finite element method}
+\label{chap:un}
+\renewcommand{\CODELOC}{ch8/}
+%\stubinput{chaps/unstructured.tex}{40}
+\input{chaps/unstructured.tex}
+
 \chapter{Preconditioners}
 \label{chap:pr}
-%\renewcommand{\CODELOC}{ch8/}
-\stubinput{chaps/precond.tex}{10}
+\renewcommand{\CODELOC}{ch9/}
+%\stubinput{chaps/precond.tex}{10}
 \input{chaps/precond.tex}
 
 \chapter{Parallel scaling and performance}
 \label{chap:sc}
-\renewcommand{\CODELOC}{ch9/}
+\renewcommand{\CODELOC}{ch10/}
 %\stubinput{chaps/scaling.tex}{5}
 \input{chaps/scaling.tex}
-
-\chapter{Example: An unstructured finite element method}
-\label{chap:un}
-\renewcommand{\CODELOC}{ch10/}
-%\stubinput{chaps/unstructured.tex}{40}
-\input{chaps/unstructured.tex}
 
 \chapter{Stokes equations}
 \label{chap:ok}
@@ -203,16 +203,16 @@ Copyright \copyright\ \the\year\ \thanklessauthor
 \stubinput{chaps/stokes.tex}{5}
 %\input{chaps/stokes.tex}
 
-\chapter{Unstructured grids}
-\label{chap:dp}
-\renewcommand{\CODELOC}{ch12/}
-\stubinput{chaps/dmplex.tex}{0}
-
 \chapter{Constraints and variational inequalities}
 \label{chap:co}
+\renewcommand{\CODELOC}{ch12/}
+%\stubinput{chaps/constrained.tex}{20}
+\input{chaps/constrained.tex}
+
+\chapter{Unstructured grids}
+\label{chap:dp}
 \renewcommand{\CODELOC}{ch13/}
-\stubinput{chaps/constrained.tex}{20}
-%\input{chaps/constrained.tex}
+\stubinput{chaps/dmplex.tex}{0}
 
 %%%%%%%%%%
 
@@ -236,7 +236,7 @@ Copyright \copyright\ \the\year\ \thanklessauthor
 
 \clearpage
 \thispagestyle{empty}
-\noindent \textsc{inside front \& back covers:}
+\noindent \textsc{inside front (or back) cover:}
 
 {\large \noindent \textsc{PDE examples}.} \quad Chapter $N$ codes are in directory \texttt{c/ch}$N$\texttt{/}.
 

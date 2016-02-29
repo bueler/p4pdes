@@ -1,7 +1,7 @@
 all: book.pdf
 
 # chapters of the book
-chapsroots := preface getstarted linearsystem structured nonlinear optifem timesys advdif precond scaling unstructured dmplex stokes constrained
+chapsroots := preface getstarted linearsystem structured nonlinear optifem timesys advdif unstructured precond scaling stokes constrained dmplex
 chapsinputs := $(addprefix chaps/, $(addsuffix .tex, $(chapsroots)))
 
 # for these, see strip.sh
@@ -33,7 +33,7 @@ $(cstrip):
 	python strip.py
 
 # location of naive unstructured mesh stuff:
-UNLOC := ch10/
+UNLOC := ch8/
 
 tmp/blob.tikz tmp/blob.1.elenum.tikz tmp/blob.1.nodenum.tikz: tmp/ ../c/$(UNLOC)blob.poly
 	python tri2tikz.py --polyonly --nodesize 1.0 --scale 0.6 ../c/$(UNLOC)blob tmp/blob.tikz
