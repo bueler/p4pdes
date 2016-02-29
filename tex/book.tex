@@ -256,7 +256,6 @@ Chapter
     &     & \tblockeqncode{diffusion-reaction (1D)}{$- u''-R(u)=f$}{reaction.c} &      \\ \bigskip
 \ref{chap:of}
     &     & \tblockeqncode{$p$-Laplace (2D)}{$-\Div\left(|\grad u|^{p-2} \grad u\right) = f$}{plap.c}
-%    &     & \tblockeqncode{$p$-Laplace (2D)}{$\begin{matrix} -\Div\left(D \grad u\right) = f \\ D = |\grad u|^{p-2} \end{matrix}$}{plap.c}
                 &  \\ \bigskip
 \ref{chap:ts}
     & \tblockeqncode{time-dependent heat (2D)}{$u_t = \grad^2 u + f$}{heat.c}
@@ -264,21 +263,21 @@ Chapter
 \ref{chap:ad}
     &  \tblockeqncode{advection-diffusion (3D)}{$- \eps \grad^2 u + \bw \cdot \grad u = f$}{ad3.c}
           &     &      \\ \bigskip
+\ref{chap:un}
+    & \tblockcode{Poisson (2D)}{femfish.c}    &     &     &      \\ \bigskip
 \ref{chap:pr}
     & \tblockcode{Poisson (2D)}{fish2.c}    &     &     &      \\ \bigskip
 \ref{chap:sc}
     &     &     & \tblockeqncode{porous (3D)}{$u_t = \Div\left(u^{\gamma-1} \grad u\right) + f$}{porous.c} \\ \bigskip
-\ref{chap:un}
-    & \tblockcode{Poisson (2D)}{femfish.c}    &     &     &      \\ \bigskip
 \ref{chap:ok}
     & \tblockeqncode{Stokes (2D)}{$\begin{matrix} -\grad^2 \bu + \grad p = 0 \\ \Div \bu = 0 \end{matrix}$}{stokes.c}
           &     &      \\ \bigskip
-\ref{chap:dp}
-    & \tblockcode{Poisson (2D, 3D)}{plexfish.c}
-          &     &      \\ \bigskip
 \ref{chap:co}
     &     & \tblockeqncode{obstacle (2D)}{$\begin{matrix} -\grad^2 u = f \\ u\ge \psi \end{matrix}$}{obstacle.c}
-                & \tblockeqncode{ice sheet (2D)}{$\begin{matrix} H_t = \Div\left(D \grad H\right) + f \\ D \text{ nonlinear},\, H \ge 0\end{matrix}$}{ice.c} \\
+                & \tblockeqncode{ice sheet (2D)}{$\begin{matrix} H_t = \Div\left(D \grad H\right) + f \\ D \text{ nonlinear},\, H \ge 0\end{matrix}$}{ice.c} \\ \bigskip
+\ref{chap:dp}
+    & \tblockcode{Poisson (2D, 3D)}{plexfish.c}
+          &     &      \\
 \bottomrule
 \end{tabular}
 
