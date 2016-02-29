@@ -103,11 +103,11 @@ Before proceeding to a numerical solution, the main ideas of the above theory ar
 Minimization problem \eqref{eq:of:plapmin} is equivalent to the weak form \eqref{eq:of:plapweakform}.  These become the strong form \eqref{eq:of:plapstrongform} when the solution $u$ is smooth.  Thus the $p$-Laplacian equation arises from minimization.
 \end{quote}
 
-We pause to choose a particular test problem, and we want a problem for which the exact solution is known.  An easy choice is to ``manufacture'' a test problem by starting with a simple solution with one parameter $\alpha\in\RR$:
+We pause to choose a particular test problem for which the exact solution is known.  An easy choice is to ``manufacture'' a test problem by starting with a simple solution with one parameter $\alpha\in\RR$:
 \begin{equation}
     u_{\text{exact}}(x,y) = \frac{1}{2} (x+\alpha)^2 (y+\alpha)^2. \label{eq:of:exactsolution}
 \end{equation}
-This formula also determines $g$ along $\partial \Omega$.  The source function $f$ is then computed by hand\sidenote{The by-hand derivative calculation which generates $f(x,y)$ from the exact solution $u_{\text{exact}}(x,y)$ is acceptably simple, but it is still error-prone.  Because by-hand calculation errors are likely to be un-correlated to code-implementation errors, however, agreement is likely to reflect correctness.} from the strong form \eqref{eq:of:plapstrongform}.
+This formula also determines $g$ along $\partial \Omega$.  The source function $f$ is then computed by-hand from the strong form \eqref{eq:of:plapstrongform}.  (This calculation is error-prone, too, but by-hand errors are not correlated to code implementation errors.  Agreement is likely to reflect correctness.)
 
 If $\alpha>0$ then the coefficient of the $p$-Laplacian equation, namely $|\grad u|^{p-2}$, is bounded below by a positive constant, and that it is bounded above.  Thus equation \eqref{eq:of:plapweakform}, or \eqref{eq:of:plapstrongform}, is uniformly elliptic \citep{Evans2010} at the solution \eqref{eq:of:exactsolution}.  However, though such bounds apply at the solution $u=u_{\text{exact}}$, they do not necessarily apply to the approximations (iterates) in a numerical procedure, so the iteration might ``lose ellipticity'' on the way to the solution.  We will return to such considerations, and consider the $\alpha \le 0$ cases and the corresponding need for regularization, once we have an implementation.
 
@@ -435,7 +435,7 @@ There is one such nonlinear equation for each of the $N$ interior nodes $(x_i,y_
 
 Sum \eqref{eq:of:weakformdetail} is implemented by \texttt{FormFunctionLocal()} in Code \ref{code:plapFun}.  It computes the point-wise residual $F_{ij}(\bu)$ at every interior node $(x_i,y_j)$.  Note that \texttt{FunIntegrand()} implements \eqref{eq:of:weakformintegrandref} by reusing tools from Code \ref{code:plapTool}.
 
-As expected, the version using residual evaluation runs much faster than the objective-only implementation.  In terms of \PETSc options, we use the residual evaluation simply by not adding option \texttt{-snes\_fd\_function}.  Furthermore, because we are using a \pDMDA structured grid and we have \emph{not} provided a Jacobian through calling \texttt{DMDASNESSetJacobianLocal()}, the efficient ``coloring'' form of finite-differencing is the default (i.e.~option \texttt{-snes\_fd\_color}), and thus we do not need it.  So now we compare timing:\sidenote{Somewhat oddly, option \texttt{-snes\_fd\_function} only works as intended, i.e.~avoids use of the residual function, if one of \texttt{-snes\_fd} or \texttt{-snes\_fd\_color} is also present.  See Exercise \ref{exer:of:commentoutresidual} for a direct way of removing the residual evaluation.}
+As expected, the version using residual evaluation runs much faster than the objective-only implementation.  In terms of \PETSc options, we use the residual evaluation simply by not adding option \texttt{-snes\_fd\_function}.  Furthermore, because we are using a \pDMDA structured grid and we have \emph{not} provided a Jacobian through calling \texttt{DMDASNESSetJacobianLocal()}, the efficient ``coloring'' form of finite-differencing is the default (i.e.~option \texttt{-snes\_fd\_color}), and thus we do not need it.  So now we compare timing:\sidenote{Option \texttt{-snes\_fd\_function} only works as intended, i.e.~avoids use of the residual function, if one of \texttt{-snes\_fd} or \texttt{-snes\_fd\_color} is also present.  See Exercise \ref{chap:of}.\ref{exer:of:commentoutresidual} for a direct way of removing the residual evaluation.}
 \begin{cline}
 $ timer ./plap -da_refine 3
 ...
@@ -465,7 +465,7 @@ generates the convergence result in Figure \ref{fig:of:plap-conv}.
 
 \begin{figure}
 \includegraphics[width=0.75\textwidth]{figs/plap-conv}
-\caption{Convergence evidence for the $p=4$ case suggests \texttt{plap.c} correctly solves $p$-Laplacian equation \eqref{eq:of:plapweakform}.  Relative errors $\|u-u_{\text{exact}}\|_\infty / \|u_{\text{exact}}\|_\infty$ are comparable with the objective-only (four coarsest grids only; circled) and residual (dots) implementations.  Degree $n=1$ Gauss-Legendre quadrature (squares) generates systematically larger errors than the default $n=2$ degree results; $n=3$ degree results are indistinguishable from the $n=2$ shown here.}
+\caption{Convergence evidence for the $p=4$ case suggests \texttt{plap.c} correctly solves $p$-Laplacian equation \eqref{eq:of:plapweakform}.  Relative errors $\|u-u_{\text{exact}}\|_\infty / \|u_{\text{exact}}\|_\infty$ are comparable with the objective-only (four coarsest grids only; circled) and residual (dots) implementations.  Degree $n=1$ Gauss-Legendre quadrature (squares) generates systematically larger errors than the default $n=2$ degree results.}
 \label{fig:of:plap-conv}
 \end{figure}
 
@@ -546,7 +546,7 @@ $ for PP in 1.1 2.1 4 10; do
 >   done; done
 \end{cline}
 %$
-This includes the $p=4$ results shown in Figure \ref{fig:of:plap-conv}, but also $p$ near the linear case and $p$ near the extremes: $p=1.1,10$.  Regarding exponent $p=2.1$, and speaking intuitively, the distance from $p$ to $p=2$ is a measure of the degree of nonlinearity.\sidenote{When $p=2$ the objective is quadratic in $u$ and equations \eqref{eq:of:plapweakform}, \eqref{eq:of:plapstrongform} are linear in $u$.}  It is not surprising that the $p=2.1$ case has the smallest errors and the lowest number of Newton iterations.
+This includes the $p=4$ results shown in Figure \ref{fig:of:plap-conv}, but also $p$ near the linear case and $p$ near the extremes: $p=1.1,10$.  Regarding exponent $p=2.1$, and speaking intuitively, the distance from $p$ to $p=2$ is a measure of the degree of nonlinearity.\sidenote{When $p=2$ the objective is quadratic and equation \eqref{eq:of:plapstrongform} is linear (in $u$).}  It is not surprising that the $p=2.1$ case has the smallest errors and the lowest number of Newton iterations.
 
 \begin{figure}
 \includegraphics[width=0.75\textwidth]{figs/plap-perrs}
