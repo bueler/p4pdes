@@ -18,5 +18,5 @@ pattern: pattern.o  chkopts
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ ode heat pattern
+	@rm -f *~ ode heat pattern *.m *.pyc *.dat *.dat.info
 

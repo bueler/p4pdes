@@ -2,4 +2,6 @@ ode
 heat
 pattern
 ipattern
+PetscBinaryIO.py
+petsc_conf.py
 
