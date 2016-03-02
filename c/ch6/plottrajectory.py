@@ -21,7 +21,6 @@ import sys
 import argparse
 from argparse import RawTextHelpFormatter
 import numpy as np
-import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser(description=help,
                                  formatter_class=RawTextHelpFormatter)
@@ -29,6 +28,8 @@ parser.add_argument('tfile',metavar='TDATA',
                     help='file from -ts_monitor binary:TDATA')
 parser.add_argument('yfile',metavar='YDATA',
                     help='file from -ts_monitor_solution binary:YDATA')
+parser.add_argument('--no-plot', dest='plot', action='store_false',
+                    help='do not plot; just save variables t,Y')
 args = parser.parse_args()
 
 tfile = open(args.tfile,'r')
@@ -36,17 +37,21 @@ t = np.fromfile(tfile, dtype='>d')
 tfile.close()
 
 io = PetscBinaryIO.PetscBinaryIO()
-objects = io.readBinaryFile(args.yfile)
-if len(t) != len(objects):
+Y = np.array(io.readBinaryFile(args.yfile)).transpose()
+if len(t) != np.shape(Y)[1]:
     print 'time dimension size mismatch: %d != %d' % (len(t),len(objects))
     sys.exit(2)
 #N = len(objects)
 #d = len(objects[0])
 
-Y = np.array(objects).transpose()
-for k in range(np.shape(Y)[0]):
-    plt.plot(t,Y[k],label='y[%d]' % k)
-plt.xlabel('t')
-plt.legend()
-plt.show()
+if args.plot:
+    import matplotlib.pyplot as plt
+    for k in range(np.shape(Y)[0]):
+        plt.plot(t,Y[k],label='y[%d]' % k)
+    plt.xlabel('t')
+    plt.legend()
+    plt.show()
+else:
+    print 'time t is length=%d, solution Y is shape=(%d,%d)' % \
+        (len(t),np.shape(Y)[0],np.shape(Y)[1])
 
