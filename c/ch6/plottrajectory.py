@@ -41,8 +41,6 @@ Y = np.array(io.readBinaryFile(args.yfile)).transpose()
 if len(t) != np.shape(Y)[1]:
     print 'time dimension size mismatch: %d != %d' % (len(t),len(objects))
     sys.exit(2)
-#N = len(objects)
-#d = len(objects[0])
 
 if args.plot:
     import matplotlib.pyplot as plt

@@ -5,15 +5,19 @@ static char help[] =
 "Runge-Kutta implicit-explicit) type of TS.\n\n";
 
 // modest refinement and a bit of feedback:
-//    ./pattern -ts_monitor -ptn_tf 100 -da_refine 5 -snes_converged_reason
+//    ./pattern -ts_monitor -ts_final_time 100 -da_refine 5 -snes_converged_reason
 
 // show solution graphically:
-//    ./pattern -ts_monitor_solution draw -da_refine 5 -ptn_tf 2000 -ptn_dt0 5 -ts_monitor -snes_converged_reason
+//    ./pattern -ts_monitor_solution draw -da_refine 5 -ts_final_time 2000 -ts_dt 5 -ts_monitor -snes_converged_reason
 // example works with -ts_fd_color:
 
 // suggests Jacobian is correct (also with -snes_test_display):
-//    ./pattern -ptn_L 0.5 -ptn_tf 1 -ptn_dt0 1 -ts_monitor -snes_converged_reason -snes_type test
+//    ./pattern -ptn_L 0.5 -ts_final_time 1 -ts_dt 1 -ts_monitor -snes_converged_reason -snes_type test
 
+// compare runs with
+// -dm_mat_type aij
+// -dm_mat_type baij
+// -dm_mat_type sbaij -ksp_type cg -pc_type icc  # 20% speed up?
 
 #include <petsc.h>
 
@@ -173,9 +177,6 @@ int main(int argc,char **argv)
   TS             ts;
   Vec            x;
   DMDALocalInfo  info;
-  PetscBool      no_set_type = PETSC_FALSE;
-  double         tf = 10.0, dt0 = 1.0;
-  int            steps;
 
   PetscInitialize(&argc,&argv,(char*)0,help);
 
@@ -196,18 +197,7 @@ int main(int argc,char **argv)
            "pattern.c",user.F,&user.F,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-k","dimensionless rate constant",
            "pattern.c",user.k,&user.k,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-tf","final time",
-           "pattern.c",tf,&tf,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-dt0","request this initial time step",
-           "pattern.c",dt0,&dt0,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-no_set_type","do not set default TS and Mat types",
-           "pattern.c",no_set_type,&no_set_type,NULL);CHKERRQ(ierr);
-  if (!no_set_type) {
-      PetscOptionsSetValue(NULL,"-ts_type","arkimex");   // definitely superior to CN
-      PetscOptionsSetValue(NULL,"-dm_mat_type","sbaij"); // may save 20%?
-  }
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
-  steps = ceil(tf / dt0);
 
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
                       DM_BOUNDARY_PERIODIC, DM_BOUNDARY_PERIODIC,
@@ -238,24 +228,19 @@ int main(int argc,char **argv)
            (DMDATSIFunctionLocal)FormIFunctionLocal,&user); CHKERRQ(ierr);
   ierr = DMDATSSetIJacobianLocal(user.da,
            (DMDATSIJacobianLocal)FormIJacobianLocal,&user); CHKERRQ(ierr);
-//TSSETUP
-
-  ierr = TSSetInitialTimeStep(ts,0.0,dt0); CHKERRQ(ierr);
-  ierr = TSSetDuration(ts,100*steps,tf); CHKERRQ(ierr);  // allow 100 times requested steps
+  ierr = TSSetType(ts,TSARKIMEX); CHKERRQ(ierr);
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
+  ierr = TSSetInitialTimeStep(ts,0.0,1.0); CHKERRQ(ierr);
+  ierr = TSSetDuration(ts,1000000,10.0); CHKERRQ(ierr);  // allow 100 times requested steps
   ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
+//ENDTSSETUP
 
   ierr = DMCreateGlobalVector(user.da,&x); CHKERRQ(ierr);
   ierr = InitialState(x,&user); CHKERRQ(ierr);
   ierr = TSSolve(ts,x); CHKERRQ(ierr);
-  ierr = TSGetTotalSteps(ts,&steps); CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,
-           "   ... completed %d total steps\n",steps); CHKERRQ(ierr);
 
-  ierr = VecDestroy(&x); CHKERRQ(ierr);
-  ierr = TSDestroy(&ts); CHKERRQ(ierr);
-  ierr = DMDestroy(&user.da); CHKERRQ(ierr);
-  ierr = PetscFinalize();
+  VecDestroy(&x);  TSDestroy(&ts);  DMDestroy(&user.da);
+  PetscFinalize();
   return 0;
 }
 

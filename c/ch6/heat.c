@@ -17,10 +17,10 @@ static char help[] =
 // $ ./heat -ts_monitor -heat_monitor -snes_converged_reason
 
 //good (use default BEULER):
-// $ ./heat -ts_monitor -ts_monitor_solution draw -da_refine 4
+// $ mpiexec -n 4 ./heat -ts_monitor -heat_monitor -snes_converged_reason -ts_monitor_solution draw -snes_monitor -da_refine 7
 
 //explodes (as it should):
-// $ ./heat -ts_monitor -ts_monitor_solution draw -da_refine 4 -ts_type euler
+// $ ./heat -ts_monitor -ts_monitor_solution draw -da_refine 7 -ts_type rk -ts_rk_type 1fe -ts_adapt_type none
 
 //agonizingly slow (RK is adapting):
 // $ ./heat -ts_monitor -ts_monitor_solution draw -da_refine 4 -ts_type rk
@@ -219,8 +219,7 @@ int main(int argc,char **argv)
   TS             ts;
   Vec            u, uexact;
   DMDALocalInfo  info;
-  double         tf = 10.0, hx, hy, hxhy;
-  int            steps = 10;
+  double         hx, hy, hxhy, t0, dt, tf;
   PetscBool      monitorenergy = PETSC_FALSE;
 
   PetscInitialize(&argc,&argv,(char*)0,help);
@@ -231,10 +230,6 @@ int main(int argc,char **argv)
            "heat.c",user.D,&user.D,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-monitor","also display total heat energy at each step",
            "heat.c",monitorenergy,&monitorenergy,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-tf","final time",
-           "heat.c",tf,&tf,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-steps","desired number of time-steps",
-           "heat.c",steps,&steps,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
@@ -245,14 +240,14 @@ int main(int argc,char **argv)
                       1,  // stencil width
                       NULL,NULL,&user.da); CHKERRQ(ierr);
   ierr = DMDASetUniformCoordinates(user.da, 0.0, 1.0, 0.0, 1.0, -1.0, -1.0); CHKERRQ(ierr);
-  ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);
   ierr = DMSetApplicationContext(user.da,&user); CHKERRQ(ierr);
-  ierr = Spacings(user.da,&hx,&hy); CHKERRQ(ierr);
-  hxhy = PetscMin(hx,hy);  hxhy = hxhy * hxhy;
-  ierr = PetscPrintf(PETSC_COMM_WORLD,
-           "running on %d x %d grid with %g x %g grid spacing ...\n"
-           "(initial ratio:  D dt / (min{dx,dy}^2) = %g)\n",
-           info.mx,info.my,hx,hy,user.D*(tf/(double)steps)/hxhy); CHKERRQ(ierr);
+
+  ierr = DMCreateGlobalVector(user.da,&u); CHKERRQ(ierr);
+  ierr = VecDuplicate(u,&uexact); CHKERRQ(ierr);
+  ierr = VecDuplicate(u,&(user.f)); CHKERRQ(ierr);
+  ierr = VecDuplicate(u,&(user.gamma)); CHKERRQ(ierr);
+  ierr = SetSourceF(user.f,&user); CHKERRQ(ierr);
+  ierr = SetNeumannValues(user.gamma,&user); CHKERRQ(ierr);
 
 //TSSETUP
   ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
@@ -262,26 +257,33 @@ int main(int argc,char **argv)
            (DMDATSRHSFunctionLocal)FormRHSFunctionLocal,&user); CHKERRQ(ierr);
   ierr = DMDATSSetRHSJacobianLocal(user.da,
            (DMDATSRHSJacobianLocal)FormRHSJacobianLocal,&user); CHKERRQ(ierr);
-
-  ierr = TSSetType(ts,TSBEULER); CHKERRQ(ierr);         // default: Backward Euler
-  ierr = TSSetDuration(ts,10000*steps,tf); CHKERRQ(ierr);  // allow 10^4 times requested steps
-  ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
-  ierr = TSSetInitialTimeStep(ts,0.0,tf/(double)steps); CHKERRQ(ierr); // ask for dt=tf/steps
-  ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
   if (monitorenergy) {
       ierr = TSMonitorSet(ts,EnergyMonitor,&user,NULL); CHKERRQ(ierr);
   }
+  ierr = TSSetType(ts,TSBEULER); CHKERRQ(ierr);
+  ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
+  ierr = TSSetInitialTimeStep(ts,0.0,0.01); CHKERRQ(ierr);
+  ierr = TSSetDuration(ts,1000000,0.1); CHKERRQ(ierr);
+  ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
 //ENDTSSETUP
 
-  ierr = DMCreateGlobalVector(user.da,&u); CHKERRQ(ierr);
-  ierr = VecDuplicate(u,&uexact); CHKERRQ(ierr);
-  ierr = VecDuplicate(u,&(user.f)); CHKERRQ(ierr);
-  ierr = VecDuplicate(u,&(user.gamma)); CHKERRQ(ierr);
-  ierr = SetSourceF(user.f,&user); CHKERRQ(ierr);
-  ierr = SetNeumannValues(user.gamma,&user); CHKERRQ(ierr);
+  // report on set up
+  ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);
+  ierr = Spacings(user.da,&hx,&hy); CHKERRQ(ierr);
+  hxhy = PetscMin(hx,hy);  hxhy = hxhy * hxhy;
+  ierr = TSGetTime(ts,&t0); CHKERRQ(ierr);
+  ierr = TSGetTimeStep(ts,&dt); CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,
+           "solving on %d x %d grid from t0=%g with initial step dt=%g ...\n"
+           "(initial stability ratio:  D dt / (min{dx,dy}^2) = %g)\n",
+           info.mx,info.my,t0,dt,user.D*dt/hxhy); CHKERRQ(ierr);
 
   ierr = VecSet(u,0.0); CHKERRQ(ierr);
   ierr = TSSolve(ts,u); CHKERRQ(ierr);
+
+  ierr = TSGetTime(ts,&tf); CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,
+           "... done ... final time tf=%g\n",tf); CHKERRQ(ierr);
 
   VecDestroy(&u);  VecDestroy(&uexact);
   VecDestroy(&(user.f));  VecDestroy(&(user.gamma));

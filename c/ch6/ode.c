@@ -2,7 +2,7 @@ static char help[] =
 "ODE system solver example using TS.  Solves N-dimensional system\n"
 "    dy/dt = G(t,y)\n"
 "with y(t0) = y0 to compute y(tf).  Serial only.\n"
-"Defaults to Runge-Kutta (= 3BS), but can be used with implicit methods.\n"
+"Defaults to explicit Runge-Kutta (= 3BS), but works with implicit methods.\n"
 "The implemented example, which includes the Jacobian  J = dG/dy,  has\n"
 "G_1 = y_2, G_2 = - y_1 + t, y_1(0) = 0, y_2(0) = 0.  The exact solution is\n"
 "y_1(t) = t - sin(t), y_2(t) = 1 - cos(t).\n\n";
@@ -10,6 +10,10 @@ static char help[] =
 // ./ode -ts_monitor
 // ./ode -ts_monitor_solution
 // ./ode -ts_monitor_solution draw -draw_pause 0.1
+
+// compare
+// ./ode -ts_view   # for default explicit RK
+// ./ode -ts_view -ts_type beuler  # has nonlinear solver
 
 //-ts_final_time
 //-ts_init_time
@@ -84,15 +88,16 @@ int main(int argc,char **argv) {
 
   ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
   ierr = TSSetProblemType(ts,TS_NONLINEAR); CHKERRQ(ierr);
-  ierr = TSSetType(ts,TSRK); CHKERRQ(ierr);
   ierr = TSSetRHSFunction(ts,NULL,FormRHSFunction,NULL); CHKERRQ(ierr);
   ierr = TSSetRHSJacobian(ts,J,J,FormRHSJacobian,NULL); CHKERRQ(ierr);
 
+  // set defaults
+  ierr = TSSetType(ts,TSRK); CHKERRQ(ierr);
   ierr = TSSetInitialTimeStep(ts,t0,dt); CHKERRQ(ierr);
   ierr = TSSetDuration(ts,100*(int)(tf/dt),tf-t0); CHKERRQ(ierr);
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
 
-  ierr = TSSetFromOptions(ts); CHKERRQ(ierr);
+  ierr = TSSetFromOptions(ts); CHKERRQ(ierr);  // can override defaults
 
   ierr = TSGetTime(ts,&t0); CHKERRQ(ierr);
   ierr = SetFromExact(t0,y); CHKERRQ(ierr);
