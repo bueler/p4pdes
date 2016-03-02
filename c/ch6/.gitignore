@@ -4,4 +4,7 @@ pattern
 ipattern
 PetscBinaryIO.py
 petsc_conf.py
+*.pyc
+*.dat
+*.dat.info
 
