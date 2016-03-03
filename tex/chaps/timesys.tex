@@ -1,14 +1,16 @@
 
-To the reader has become lost in the maze of issues which have built up around the examples so far---Krylov solvers, preconditioner choices, line searches, finite element details, or whatever causes confusion---some good news:  In \emph{this} Chapter we restart with an easy question and a small example.  Solving \emph{ordinary} differential equations (ODEs) with \PETSc should be easy.  It is, and so is making the transition, through spatial discretization, to numerical methods for time-dependent, parabolic PDEs like the heat equation.
+To the reader who has become lost in the maze of issues which have built up around the examples so far---Krylov solvers, preconditioner choices, line searches, finite element details, or whatever causes confusion---some good news.  In \emph{this} Chapter we restart with an easy question and a small example.
 
-In this Chapter we look at three examples:
+After all, solving \emph{ordinary} differential equations (ODEs) with \PETSc ought to be easy.  Given that we have practice with \PETSc objects, it is.  So is making the transition to numerical methods for time-dependent, parabolic PDEs like the heat equation.  In fact, in this Chapter we look at three examples:
 \begin{itemize}
 \item a linear system of two ODEs,
-\item an arbitrarily-large system of ODEs arising from spatial finite-difference approximation of the classical heat equation,
-\item and another large system arising from two coupled nonlinear PDEs which form a two-species reaction/diffusion model.
+\item an arbitrarily-large system of ODEs arising from spatial finite-difference approximation of the classical heat equation, a PDE,
+\item and another large ODE system arising from two coupled nonlinear PDEs which form a two-species reaction/diffusion model.
 \end{itemize}
 
-These time-dependent problems are solved by runtime-chosen time-stepping methods.  Such methods come from a so-far unused major \PETSc object class: \pTS time-steppers.  Along the way we will recall the basics of \emph{explicit} and \emph{implicit} time-stepping techniques.  In the process we will end up returning to the scientific computing issues in which we have been engaged in previous Chapters, such as the rapid solution of large systems of equations.
+These time-dependent problems are solved by a runtime choice of method from a major \PETSc object class: \pTS time-stepping solvers.  While getting started with these objects we will recall the basics of both \emph{explicit} and \emph{implicit} time-stepping techniques.  Choice of an implicit solver implies the full stack of \PETSc \pSNES/\pKSP/\pPC solvers for the (generally) non-linear equations describing each time step.  Thus the ideas, objects, and choices already exposed by our Chapter \ref{chap:st}--\ref{chap:of} examples will all be useful in the implicit case.
+
+Our \emph{method of lines} approach for the PDE examples above avoids requiring the user to write any code which is time-step specific.  The third example is, however, the first \emph{system} of PDEs addressed so far.  Describing such a system to \PETSc is requires new choices in user code.  In any case, by the end of the examples here we will be lead rather quickly back to the scientific computing issues of previous Chapters, especially the solution of large systems of nonlinear equations.
 
 
 \section{ODEs and \PETSc \pTS objects}
