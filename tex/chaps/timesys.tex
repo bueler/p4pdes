@@ -25,31 +25,44 @@ where $\by(t) \in \RR^N$ and $\by'=\by'(t)$ denotes $d\by/dt$, and suppose
 \end{equation}
 gives an \emph{initial value}.
 
-It is well-known that under reasonable assumptions on the behavior of $g$, the continuum problem \eqref{eq:ts:ode}, \eqref{eq:ts:ode:iv} is a well-posed problem.  That is, it is a problem from which one can make precise predictions forward (or backward) in time, \emph{at least for some short time into the future (or past)} from $t_0$, supposing that the integration to solve the ODE is performed exactly.
+It is well-known that under reasonable assumptions on the behavior of $g$, the continuum problem \eqref{eq:ts:ode}, \eqref{eq:ts:ode:iv} is a well-posed problem for at least a short time away from $t_0$.  That is, one can make precise predictions forward (or backward) from the initial time, supposing that the integration to solve the ODE is performed exactly.
 
-To be specific about regularity of $\bg$ which implies well-posedness, we assume for simplicity that $\bg(t,\by)$ is continuous around the initial point $(t_0,\by_0)$, say in a domain
-   $$\mathcal{D} = \{(t,\by) \,:\, t_0 \le t \le t_f, |\by - \by_0| \le \omega\}$$
-where $\omega > 0$.  We also assume that $\bg$ has additional regularity in its second argument, in the \emph{Lipshitz} sense that output differences bounded proportional to input differences: there is $L\ge 0$ so that
+Let us be specific about sufficient regularity of $\bg$ to imply well-posedness.  We first assume for simplicity that $\bg(t,\by)$ is continuous a product domain (cylinder) around the initial point $(t_0,\by_0)$,
+   $$\mathcal{D} = \{(t,\by) \,:\, |t-t_0| \le \delta, \|\by - \by_0\| \le \omega\}$$
+where $\delta > 0$ and $\omega > 0$.  Then we further assume that $\bg$ is \emph{Lipshitz} in its second argument, so that output differences are bounded by a multiple of input differences: there is $L\ge 0$ so that
    $$\|\bg(t,\by_1) - \bg(t,\by_0)\| \le L \|\by_1-\by_0\|$$
-on $\mathcal{D}$.  FIXME cite
+for $(t,\by_i) \in \mathcal{D}$.  Then the problem \eqref{eq:ts:ode}, \eqref{eq:ts:ode:iv} has a unique continuous, and continuously-differentiable, solution $\by(t)$ on a possibly-shorter interval ($|t-t_0|<\eps$ for some $0 < \eps \le \delta$) \citep[section 17.5]{HirschSmaleDevaney2004}.  Furthermore the solution depends continuously on both the initial value $\by_0$ and the right-hand-side $\bg$.
 
-FIXME example problem
+Our attention to well-posedness is motivated by the following practical concern:  When we run a differential-equation-solving code it produces numbers.\sidenote{It \emph{always} produces numbers!}  These numbers are (essentially) never the exact solution of the differential equation, but they are ``correct'' in a numerical-analysis sense if we can demonstrate convergence to the solution of a well-posed continuum problem.  \emph{Much} more egregious, however, is to produce numbers which represent no continuum solution at all.  Benign-looking scalar nonlinear ODEs can put us in such peril.  In fact, Exercise \ref{chap:ts}.\ref{exer:ts:tan} gives a well-known example where the solution ceases to exist after a certain finite interval of time, though the function $g(t,y)$ is merely a quadratic function of $y$.  Because the scope of the current book includes many nonlinear PDEs, where this concern is yet greater, observing the dangers lurking in ODE problems is appropriate.
 
-FIXME intro numerical esp RK and theta \citep{AscherPetzold1998}
+The following example system of two ODEs generates no such concern with well-posedness.  In fact, for linear systems, including those with continuous coefficients and non-homogeneities, solutions exist for all time \citep[section 17.5]{HirschSmaleDevaney2004}.
+
+\noindent\hrulefill
+\begin{example}  Consider the initial value problem in two dimensions
+\begin{equation}
+   \by' = \begin{bmatrix} y_1 \\ - y_0 + t\end{bmatrix}, \qquad \by(0) = \begin{bmatrix} 0 \\ 0 \end{bmatrix}, \label{eq:ts:example}
+\end{equation}
+that is, the linear system with
+    $$\bg(t,\by) = A \by + \bbf \,\text{ where } A = \begin{bmatrix} 0 & 1 \\ -1 & 0 \end{bmatrix} \text{ and } \bbf(t) = \begin{bmatrix} 0 \\ t\end{bmatrix}.$$
+FIXME solution known
+\end{example}
 
 FIXME introduce \pTS, which contains \pSNES inside (and thus the rest)
-
-FIXME build all tools around the ``hard'' time dependent case of stiff + nonlinear, though not DAE
 
 FIXME function $\bg$ is \texttt{TSSetRHSFunction()}, Jacobian $\partial \bg/\partial \by$ is \texttt{TSSetRHSJacobian()}
 
 FIXME show \texttt{ode.c}, which is most similar to \texttt{ecjacobian.c}
 
+\vfill
 \clearpage
-\newpage
+
 \cinputpart{ode.c}{\CODELOC}{FIXME}{I}{//CALLBACKS}{//ENDCALLBACKS}{code:ts:ode:callbacks}
 
 \cinputpart{ode.c}{\CODELOC}{FIXME}{II}{//MAIN}{//ENDMAIN}{code:ts:ode:main}
+
+FIXME intro numerical esp RK and theta \citep{AscherPetzold1998}
+
+FIXME build all tools around the ``hard'' time dependent case of stiff + nonlinear, though not DAE
 
 FIXME control \texttt{euler,beuler,cn,theta} by setting steps
 
@@ -105,6 +118,7 @@ FIXME final-time greyscale plots using \texttt{PetscBinaryIO.py}
 \renewcommand{\labelenumi}{\arabic{chapter}.\arabic{enumi}\quad}
 \renewcommand{\labelenumii}{(\alph{enumii})}
 \begin{enumerate}
+\item \label{exer:ts:tan}  Consider the scalar ODE initial value problem $y'=1+y^2$, $y(0)=0$.  Show by-hand that $y(t)=\tan t$ is the unique solution to this problem.  Modify \texttt{ode.c} to solve this problem.  Run the code from $t=0$ to $t=t_f=2$.  What run-time observable, actual evidence shows that your estimate of ``$y(2)$'' is meaningless?
 \item FIXME which \texttt{-ts\_type} work with \texttt{ode.c}?
 % euler, beuler, rk, theta, cn
 \item FIXME \texttt{ode.c} says it is ``serial only''  what happens with \texttt{mpiexec -n 2 ./ode}, and why?

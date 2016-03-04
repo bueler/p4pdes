@@ -4,8 +4,8 @@ static char help[] =
 "with y(t0) = y0 to compute y(tf).  Serial only.\n"
 "Defaults to explicit Runge-Kutta (= 3BS), but works with implicit methods.\n"
 "The implemented example, which includes the Jacobian  J = dG/dy,  has\n"
-"G_1 = y_2, G_2 = - y_1 + t, y_1(0) = 0, y_2(0) = 0.  The exact solution is\n"
-"y_1(t) = t - sin(t), y_2(t) = 1 - cos(t).\n\n";
+"G_0 = y_1, G_1 = - y_0 + t, y_0(0) = 0, y_1(0) = 0.  The exact solution is\n"
+"y_0(t) = t - sin(t), y_1(t) = 1 - cos(t).\n\n";
 
 // ./ode -ts_monitor
 // ./ode -ts_monitor_solution
