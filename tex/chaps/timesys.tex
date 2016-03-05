@@ -35,7 +35,7 @@ for $(t,\by_i) \in \mathcal{D}$.  Then the problem \eqref{eq:ts:ode}, \eqref{eq:
 
 Our attention to well-posedness is motivated by the following practical concern:  When we run a differential-equation-solving code it produces numbers.\sidenote{It \emph{always} produces numbers!}  These numbers are (essentially) never the exact solution of the differential equation, but they are ``correct'' in a numerical-analysis sense if we can demonstrate convergence to the solution of a well-posed continuum problem.  \emph{Much} more egregious, however, is to produce numbers which represent no continuum solution at all.  Benign-looking scalar nonlinear ODEs can put us in such peril.  In fact, Exercise \ref{chap:ts}.\ref{exer:ts:tan} gives a well-known example where the solution ceases to exist after a certain finite interval of time, though the function $g(t,y)$ is merely a quadratic function of $y$.  Because the scope of the current book includes many nonlinear PDEs, where this concern is yet greater, observing the dangers lurking in ODE problems is appropriate.
 
-The following example system of two ODEs generates no such concern with well-posedness.  In fact, for linear systems, including those with continuous coefficients and non-homogeneities, solutions exist for all time \citep[section 17.5]{HirschSmaleDevaney2004}.
+For linear systems with continuous coefficients and non-homogeneities, solutions exist for all time \citep[section 17.5]{HirschSmaleDevaney2004}.  The following example ODE system is thus a safe starting point.
 
 \noindent\hrulefill
 \begin{example}  Consider the initial value problem in two dimensions
@@ -44,21 +44,77 @@ The following example system of two ODEs generates no such concern with well-pos
 \end{equation}
 that is, the linear system with
     $$\bg(t,\by) = A \by + \bbf \,\text{ where } A = \begin{bmatrix} 0 & 1 \\ -1 & 0 \end{bmatrix} \text{ and } \bbf(t) = \begin{bmatrix} 0 \\ t\end{bmatrix}.$$
-FIXME solution known
+The exact solution, shown in Figure \ref{fig:ts:ode}, is
+\begin{equation}
+    \by(t) = \begin{bmatrix} t - \sin t \\ 1 - \cos t \end{bmatrix}.\label{eq:ts:examplesoln}
+\end{equation}
+
+\vspace{-3mm}
+\begin{figure}
+\includegraphics[width=0.7\textwidth]{figs/ode}
+\caption{The solution to \eqref{eq:ts:example} is given by \eqref{eq:ts:examplesoln}, with $y_0(t)$ solid and $y_1(t)$ dashed.}
+\label{fig:ts:ode}
+\end{figure}
 \end{example}
+\vspace{-5mm}
+\noindent\hrulefill
+
+\bigskip
+
+This example is solved by \texttt{c/ch6/ode.c}, a program shown in Codes \ref{code:ts:ode:main} and \ref{code:ts:ode:callbacks}.  Our goals now are to summarize both the \texttt{Create}/set-up/\texttt{Solve}/\texttt{Destroy} sequence for the \pTS object and the user code which describes the right-hand-side $\bg(t,\by)$.
+
+First consider these commands extracted from Code \ref{code:ts:ode:main}
+\begin{code}
+  TSCreate(PETSC_COMM_WORLD,&ts);
+  TSSetProblemType(ts,TS_NONLINEAR);
+  TSSetRHSFunction(ts,NULL,FormRHSFunction,NULL);
+  TSSetRHSJacobian(ts,J,J,FormRHSJacobian,NULL);
+\end{code}
+
+\cinputpart{ode.c}{\CODELOC}{The \texttt{main()} part of \texttt{ode.c} creates and configures a \pTS object, plus the \pVecs for approximate and exact solutions, and a \pMat for storing the Jacobian.}{I}{//MAIN}{//ENDMAIN}{code:ts:ode:main}
+
+The second command may be a surprise, but it turns out there is little reason to design \PETSc examples for the linear case only.  By setting the problem type to \texttt{TS\_NONLINEAR} we are saying that the  problem is in a general form \eqref{eq:ts:ode} with a function $\bg(t,\by)$ which will be supplied by user code.\sidenote{We will see in later examples that \pTS of type \texttt{TS\_NONLINEAR} can have even more general forms than \eqref{eq:ts:ode}.}
+
+The \texttt{TSSetRHSFunction()} sets a call-back to a our function named \texttt{FormRHSFunction()} which evaluates $\bg(t,\by)$; see Code \ref{code:ts:ode:callbacks}.  Furthermore we are setting a call-back to a Jacobian.  That is, our function \texttt{FormRHSJacobian()} sets the entries of the \pMat \texttt{J} corresponding to
+    $$\frac{\partial \bg}{\partial \by}(t,\by) = \begin{bmatrix}\phantom{\bigg|} \frac{\partial g_i}{\partial y_j}(t,\by) \phantom{\bigg|}\end{bmatrix}.$$
+Note that an allocated \pMat must be supplied to two of the arguments of \texttt{TSSetRHSJacobian()}, so these \pTS lines are preceded, in Code \ref{code:ts:ode:main}, by a \texttt{Create/SetFromOptions/SetUp} sequence for \texttt{J}.
+
+Then there are additional commands for configuring the \pTS.  All of the following choices can, and often will, be overridden by command-line options:
+\begin{code}
+  TSSetType(ts,TSRK);
+  TSSetInitialTimeStep(ts,t0,dt);
+  TSSetDuration(ts,100*(int)(tf/dt),tf-t0);
+  TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP);
+  TSSetFromOptions(ts);
+\end{code}
+
+\begin{code}
+  TSGetTime(ts,&t0);
+  SetFromExact(t0,y);
+  TSGetTimeStep(ts,&dt);
+  PetscPrintf(...,"solving from t0 = ...",t0,dt);
+  TSSolve(ts,y);
+  TSGetTime(ts,&tf);
+  SetFromExact(tf,yexact);
+  ...
+  PetscPrintf(...,"error at tf = ...",tf,err);
+\end{code}
+
+\cinputpart{ode.c}{\CODELOC}{FIXME}{II}{//CALLBACKS}{//ENDCALLBACKS}{code:ts:ode:callbacks}
+
+\begin{cline}
+$ cd c/ch6/
+$ make ode
+$ ./ode -ts_monitor
+$ ./ode -ts_monitor -ts_final_time 20 -ts_monitor_lg_solution -draw_pause 0.1
+\end{cline}
+
 
 FIXME introduce \pTS, which contains \pSNES inside (and thus the rest)
 
 FIXME function $\bg$ is \texttt{TSSetRHSFunction()}, Jacobian $\partial \bg/\partial \by$ is \texttt{TSSetRHSJacobian()}
 
 FIXME show \texttt{ode.c}, which is most similar to \texttt{ecjacobian.c}
-
-\vfill
-\clearpage
-
-\cinputpart{ode.c}{\CODELOC}{FIXME}{I}{//CALLBACKS}{//ENDCALLBACKS}{code:ts:ode:callbacks}
-
-\cinputpart{ode.c}{\CODELOC}{FIXME}{II}{//MAIN}{//ENDMAIN}{code:ts:ode:main}
 
 FIXME intro numerical esp RK and theta \citep{AscherPetzold1998}
 
@@ -68,7 +124,8 @@ FIXME control \texttt{euler,beuler,cn,theta} by setting steps
 
 FIXME control \texttt{rk} by \texttt{-ts\_type rk -ts\_atol Z -ts\_rk\_type XX}
 
-FIXME generate figures by, and explain usage, \texttt{PetscBinaryIO.py}
+FIXME generate figures by, and explain \texttt{-ts\_monitor binary:t.dat -ts\_monitor\_solution binary:y.dat} usage, via \texttt{PetscBinaryIO.py}; we have helper script \texttt{plottrajectory.py}
+
 
 \section{Time-dependent heat equation}
 
