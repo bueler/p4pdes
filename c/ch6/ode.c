@@ -96,21 +96,18 @@ int main(int argc,char **argv) {
   ierr = TSSetInitialTimeStep(ts,t0,dt); CHKERRQ(ierr);
   ierr = TSSetDuration(ts,100*(int)(tf/dt),tf-t0); CHKERRQ(ierr);
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
-
   ierr = TSSetFromOptions(ts); CHKERRQ(ierr);  // can override defaults
 
+  // solve and compute error based on command-line choices for t0,dt,tf
   ierr = TSGetTime(ts,&t0); CHKERRQ(ierr);
   ierr = SetFromExact(t0,y); CHKERRQ(ierr);
   ierr = TSGetTimeStep(ts,&dt); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
-              "solving from t0 = %.3f with initial time step dt = %.5f ...\n",
+              "solving from t0 = %.3f with initial dt = %.5f ...\n",
               t0,dt); CHKERRQ(ierr);
-
   ierr = TSSolve(ts,y); CHKERRQ(ierr);
-
   ierr = TSGetTime(ts,&tf); CHKERRQ(ierr);
   ierr = SetFromExact(tf,yexact); CHKERRQ(ierr);
-
   ierr = VecAXPY(y,-1.0,yexact); CHKERRQ(ierr);    // y <- y + (-1.0) yexact
   ierr = VecNorm(y,NORM_INFINITY,&err); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
