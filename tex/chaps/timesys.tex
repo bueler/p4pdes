@@ -109,6 +109,14 @@ $ ./ode -ts_monitor
 $ ./ode -ts_monitor -ts_final_time 20 -ts_monitor_lg_solution -draw_pause 0.1
 \end{cline}
 
+\begin{cline}
+$ ./ode 
+solving from t0 = 0.000 with initial dt = 0.10000 ...
+error at tf = 1.000 :  |y-y_exact|_inf = 0.000144484
+$ ./ode -ts_init_time 19.0 -ts_dt 0.01 -ts_final_time 20.0
+solving from t0 = 19.000 with initial dt = 0.01000 ...
+error at tf = 20.000 :  |y-y_exact|_inf = 0.000303815
+\end{cline}
 
 FIXME introduce \pTS, which contains \pSNES inside (and thus the rest)
 
