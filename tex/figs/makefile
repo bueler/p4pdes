@@ -1,6 +1,6 @@
 # list the targets for which we run a script to generate
 # (note there are both .png and .pdf figs which are not re-generated)
-pdfroots := poisson-conv poisson-cg-scale richpolyplot expcirclebasic newtonconvbasic newtonconvdelayed reaction-conv minsurf plap-conv plap-perrs plap-piters plap-conditionnumber
+pdfroots := poisson-conv poisson-cg-scale richpolyplot expcirclebasic newtonconvbasic newtonconvdelayed reaction-conv minsurf plap-conv plap-perrs plap-piters plap-conditionnumber ode
 pdfgens := $(addsuffix .pdf, $(pdfroots))
 
 all: $(pdfgens)
@@ -33,8 +33,12 @@ plap-conv.pdf plap-perrs.pdf plap-piters.pdf: plap-conv.py
 plap-conditionnumber.pdf: plap-conditionnumber.py
 	python plap-conditionnumber.py
 
+ode.pdf: ode-plot.py
+	python ode-plot.py
+
 .PHONY: clean
 
 clean:
-	@rm -f *~ richpolyplot.pdf poisson-conv.pdf poisson-cg-scale.pdf expcirclebasic.pdf newtonconv*pdf reaction-conv.pdf minsurf.pdf plap-*.pdf *.aux *.log
+	@rm -f $(pdfgens)
+	@rm -f *~ *.aux *.log
 

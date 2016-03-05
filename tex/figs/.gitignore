@@ -6,6 +6,7 @@ newtonconv*.pdf
 reaction-conv.pdf
 minsurf.pdf
 plap-*.pdf
+ode.pdf
 
 ## Core latex/pdflatex auxiliary files:
 *.aux
