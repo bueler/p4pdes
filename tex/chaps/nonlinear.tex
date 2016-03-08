@@ -857,7 +857,7 @@ We have actually only been describing one type of \pSNES solver in the last sect
 \renewcommand{\labelenumi}{\arabic{chapter}.\arabic{enumi}\quad}
 \renewcommand{\labelenumii}{(\alph{enumii})}
 \begin{enumerate}
-\item One needs to \emph{see} quadratic convergence to believe it.  Observe that for $x_k$ in both parts (b) and (c) below, the \emph{number of correct digits in $x_k$ doubles} at each iteration.
+\item \label{exer:nl:seeittobelieveit} One needs to \emph{see} quadratic convergence to believe it.  Observe that for $x_k$ in both parts (b) and (c) below, the \emph{number of correct digits in $x_k$ doubles} at each iteration.
     \begin{enumerate}
     \item The sequence $x_k = 1-2^{-n}$ converges to $x^*=1$, but linearly instead of quadratically.  Find $k$ so that $|e_k| < 10^{-16}$.
     \item The sequence $x_k = 1-2^{(-2^n)}$ converges quadratically to $x^*=1$.  Find $k$ so that $|e_k| < 10^{-16}$.  Find the smallest $K$ so that $|e_{k+1}| \le K |e_k|^2$ for all $k$.
@@ -918,6 +918,8 @@ $ mpiexec -n N ./reaction -snes_converged_reason -da_refine M
 \end{cline}
 %$
 with a few values of \texttt{N} and \texttt{M}.  However, \texttt{ecjacobian.c} does not run correctly even on two MPI processes.  Modify so that it does.
+
+\item Along the lines of Exercise \ref{chap:nl}.\ref{exer:nl:seeittobelieveit}, modify \texttt{ecjacobian.c} to \texttt{ecdigits.c} which shows 16 digit results for \texttt{x[0]} and \texttt{x[1]} at each Newton iteration.  You will want to use \texttt{SNESMonitorSet()} so that the call-back code, which you write, has access to the current Newton iterate through \texttt{SNESGetSolution()}.  Also use option \texttt{-snes\_rtol 1.0e-16} at run-time.  You will see the doubling of correct digits that is characteristic of quadratic convergence.  Do you still see it with options \texttt{-snes\_fd} and \texttt{-snes\_mf}?  Note that the decay of the size of the residual, i.e.~the default output from \texttt{-snes\_monitor}, is generally more informative than spewing digits like this.
 
 % from petsc-users by Matt:  What happens if you use LU? When debugging a nonlinear solver always use a direct solver for the linear solver (and make sure the direct solver actually worked).
 
