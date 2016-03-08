@@ -1,10 +1,12 @@
-static char help[] = "Solves a 1D reaction-diffusion problem with DMDA and SNES.\n\n";
+static char help[] =
+"1D reaction-diffusion problem with DMDA and SNES.  Option prefix -rct_.\n\n";
 
 #include <petsc.h>
 
 //CALLBACK
 typedef struct {
-  double  rho, M, alpha, beta;
+  double    rho, M, alpha, beta;
+  PetscBool noRinJ;
 } AppCtx;
 
 PetscErrorCode InitialAndExact(DMDALocalInfo *info, double *u0,
@@ -35,7 +37,9 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *u,
     }
     return 0;
 }
+//ENDCALLBACK
 
+//JACOBIAN
 PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, double *u,
                                  Mat J, Mat P, AppCtx *user) {
     PetscErrorCode ierr;
@@ -48,7 +52,11 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, double *u,
         } else {
             dRdu = - (user->rho / 2.0) / PetscSqrtReal(u[i]);
             col[0] = i-1;  v[0] = - 1.0;
-            col[1] = i;    v[1] = 2.0 - h*h * dRdu;
+            col[1] = i;
+            if (user->noRinJ)
+                v[1] = 2.0;
+            else
+                v[1] = 2.0 - h*h * dRdu;
             col[2] = i+1;  v[2] = - 1.0;
             ierr = MatSetValues(P,1,&i,3,col,v,INSERT_VALUES); CHKERRQ(ierr);
         }
@@ -61,7 +69,7 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, double *u,
     }
     return 0;
 }
-//ENDCALLBACK
+//ENDJACOBIAN
 
 //MAIN
 int main(int argc,char **args) {
@@ -78,6 +86,12 @@ int main(int argc,char **args) {
   user.M     = PetscSqr(user.rho / 12.0);
   user.alpha = user.M;
   user.beta  = 16.0 * user.M;
+  user.noRinJ = PETSC_FALSE;
+
+  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"rct_","options for reaction",""); CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-noRinJ","do not include R(u) term in Jacobian","reaction.c",
+             user.noRinJ,&(user.noRinJ),NULL); CHKERRQ(ierr);
+  ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
   ierr = DMDACreate1d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,-9,1,1,NULL,&da); CHKERRQ(ierr);
   ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
