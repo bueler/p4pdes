@@ -378,22 +378,22 @@ On an $N$ point grid, the centered, $O(h^2)$ local truncation error \citep{Morto
 \begin{equation}
 - \frac{u_{j+1} - 2 u_j + u_{j-1}}{h^2} - R(u_j) = f(x_j)   \label{eq:nl:drfdscheme}
 \end{equation}
-where $h=1/(N-1)>0$, $x_j = j h$ for $j=0,1,\dots,N-1$, and $u_j \approx u(x_j)$.  Our program \texttt{reaction.c} shown in Codes \ref{code:reactionI} and \ref{code:reactionII} implements this scheme.  We use a \pSNES object for the Newton iteration and a \pDMDA object for the grid.
+where $h=1/(N-1)>0$, $x_j = j h$ for $j=0,1,\dots,N-1$, and $u_j \approx u(x_j)$.  Our program \texttt{reaction.c} shown in Codes \ref{code:reactionfunction}--\ref{code:reactionmain} implements this scheme.  We use a \pSNES object for the Newton iteration and a \pDMDA object for the grid.
 
-Three functions appear in Code \ref{code:reactionI}.  The first one (\texttt{InitialAndExact()}) computes both the initial iterate\sidenote{A linear function connecting the boundary conditions.} and the exact solution.  Then come residual (\texttt{FormFunctionLocal()}) and Jacobian (\texttt{FormJacobianLocal()}) evaluation functions.  These two are ``call-back'' functions which the \pSNES will use when it needs the values of the residual and Jacobian at a given location in the space of candidate solutions.
+\cinputpart{reaction.c}{\CODELOC}{C functions describing the initial iterate, the exact solution, and the residual function from finite-difference equation \eqref{eq:nl:drfdscheme}.}{I}{//CALLBACK}{//ENDCALLBACK}{code:reactionfunction}
 
-The functions in Code \ref{code:reactionI} have common features to their signatures.  They each have arguments of type \texttt{DMDALocalInfo*} and \texttt{double*}.  This reflects two ideas which are worth noting:
+Two functions appear in Code \ref{code:reactionfunction}.  The first one (\texttt{InitialAndExact()}) computes both the initial iterate\sidenote{A linear function connecting the boundary conditions.} and the exact solution.  Next is the residual evaluation function \texttt{FormFunctionLocal()}.  The Jacobian evaluation function \texttt{FormJacobianLocal()} appears in Code \ref{code:reactionjacobian}.  These two are ``call-back'' functions which the \pSNES will use when it needs the values of the residual and Jacobian at a given location in the space of candidate solutions.
+
+\cinputpart{reaction.c}{\CODELOC}{A C function describing the derivatives of \eqref{eq:nl:drfdscheme}.}{II}{//JACOBIAN}{//ENDJACOBIAN}{code:reactionjacobian}
+
+These functions have common features to their signatures.  They each have arguments of type \texttt{DMDALocalInfo*} and \texttt{double*}.  This reflects two ideas which are worth noting:
 \renewcommand{\labelenumi}{(\emph{\roman{enumi}})}
 \begin{enumerate}
-\item First, the inputs are C array pointers instead of \pVecs.  Our implementation of \texttt{InitialAndExact()} explains how this works.  Before calling it, in Code \ref{code:reactionII} below, we use \texttt{DMDAVecGetArray()} on \pVecs \texttt{u} and \texttt{uexact}.  This gives pointers of type \texttt{double*} which are handed to \texttt{InitialAndExact()}.  Also, a \texttt{DMDALocalInfo} structure\sidenote{Figure \ref{fig:localpartofgrid} shows the information carried by \texttt{DMDALocalInfo}.} is passed in so that the local part of the grid and the global grid size (i.e.~\texttt{info.mx}) can be accessed through this \texttt{struct} without needing the \pDMDA object itself.  The \pSNES calls \texttt{FormFunctionLocal()} and \texttt{FormJacobianLocal()} in the same way.
-\item Second, the pointers of type \texttt{double*} passed into \texttt{FormFunctionLocal()} and \texttt{FormJacobianLocal()} have valid ghosts.  That is, expressions ``\texttt{u[i+1]}'' and ``\texttt{u[i+1]}'' are valid ways of dereferencing \texttt{double *u}.  This feature is used in \texttt{FormFunctionLocal()} because indices $i-1$ and $i+1$ appear in finite-difference equation \eqref{eq:nl:drfdscheme}.  Though we never see the corresponding \pVec, ``under the hood'' the \pSNES has allocated a local \pVec with valid ghost locations, then communicated between processes to update those ghost values, and then used \texttt{DMDAVecGetArray()}/\texttt{DMDAVecRestoreArray()} to get an array.  By contrast, the solution vector \texttt{u} we provide to the \pSNES, in Code \ref{code:reactionII} at the \texttt{SNESSolve()} call, has no ghosts because it was allocated with \texttt{DMCreateGlobalVector()}.
+\item First, the inputs are C array pointers instead of \pVecs.  Our implementation of \texttt{InitialAndExact()} explains how this works.  Before calling it, in Code \ref{code:reactionfunction} below, we use \texttt{DMDAVecGetArray()} on \pVecs \texttt{u} and \texttt{uexact}.  This gives pointers of type \texttt{double*} which are handed to \texttt{InitialAndExact()}.  Also, a \texttt{DMDALocalInfo} structure\sidenote{Figure \ref{fig:localpartofgrid} shows the information carried by \texttt{DMDALocalInfo}.} is passed in so that the local part of the grid and the global grid size (i.e.~\texttt{info.mx}) can be accessed through this \texttt{struct} without needing the \pDMDA object itself.  The \pSNES calls \texttt{FormFunctionLocal()} and \texttt{FormJacobianLocal()} in the same way.
+\item Second, the pointers of type \texttt{double*} passed into \texttt{FormFunctionLocal()} and \texttt{FormJacobianLocal()} have valid ghosts.  That is, expressions ``\texttt{u[i+1]}'' and ``\texttt{u[i+1]}'' are valid ways of dereferencing \texttt{double *u}.  This feature is used in \texttt{FormFunctionLocal()} because indices $i-1$ and $i+1$ appear in finite-difference equation \eqref{eq:nl:drfdscheme}.  Though we never see the corresponding \pVec, ``under the hood'' the \pSNES has allocated a local \pVec with valid ghost locations, then communicated between processes to update those ghost values, and then used \texttt{DMDAVecGetArray()}/\texttt{DMDAVecRestoreArray()} to get an array.  By contrast, the solution vector \texttt{u} we provide to the \pSNES, in Code \ref{code:reactionmain} at the \texttt{SNESSolve()} call, has no ghosts because it was allocated with \texttt{DMCreateGlobalVector()}.
 \end{enumerate}
 
-In \texttt{main()} in Code \ref{code:reactionII} we use \texttt{DMDASNESSetFunctionLocal()} and  \texttt{DMDASNESSetJacobianLocal()}.  These are structured-grid-aware versions of \texttt{SNESSetFunction()} and \texttt{SNESSetJacobian()}, respectively, used earlier in \texttt{ecjacobian.c} (Code \ref{code:ecjacobianII}).  Note that, while we do set entries in a Jacobian, in \texttt{reaction.c} we never explicitly allocate a \pMat to hold it.  The \pDMDA object, however, has enough information about the grid and stencil to allocate it internally.
-
-\cinputpart{reaction.c}{\CODELOC}{Functions describing the initial iterate, the exact solution, finite-difference equation \eqref{eq:nl:drfdscheme}, and the derivatives of \eqref{eq:nl:drfdscheme}.}{I}{//CALLBACK}{//ENDCALLBACK}{code:reactionI}
-
-\cinputpart{reaction.c}{\CODELOC}{In \texttt{main()} we create a \pDMDA, some \pVecs, and a \pSNES.  We hand call-back functions to the \pSNES.  Then we solve the equation.}{II}{//MAIN}{//ENDMAIN}{code:reactionII}
+In \texttt{main()} in Code \ref{code:reactionmain} we use \texttt{DMDASNESSetFunctionLocal()} and  \texttt{DMDASNESSetJacobianLocal()}.  These are structured-grid-aware versions of \texttt{SNESSetFunction()} and \texttt{SNESSetJacobian()}, respectively, used earlier in \texttt{ecjacobian.c} (Code \ref{code:ecjacobianII}).  Note that, while we do set entries in a Jacobian, in \texttt{reaction.c} we never explicitly allocate a \pMat to hold it.  The \pDMDA object, however, has enough information about the grid and stencil to allocate it internally.
 
 Though the previous paragraphs adequately summarize program \texttt{reaction.c}, the diagram in Figure \ref{fig:nl:reactionstack} communicates the overall structure.  Our program uses six different major \PETSc types, but we apply explicit \texttt{Create()}/configure/act/\texttt{Destroy()} sequences to only three of these (\pDMDA, \pSNES, \pVec).  We do set entries in a \pMat, but it is allocated internally by the \pDMDA object.  However, one must remember that each step of Newton's method solves a linear system, and thus that \pKSP and \pPC objects exist ``inside'' the \pSNES, as revealed by \texttt{-snes\_view} in particular.  When seeking better performance on fine grids, exposure and control of these linear solver objects is essential.
 
@@ -438,6 +438,8 @@ Though the previous paragraphs adequately summarize program \texttt{reaction.c},
 \caption{An overview of \texttt{reaction.c}, our first structured-grid solution of a nonlinear PDE using \PETSc.  Solid arrows should be read as ``user code acts directly on.''  Dotted arrows are call-backs.  Compare Figure \ref{fig:st:linearstack}.}
 \label{fig:nl:reactionstack}
 \end{figure}
+
+\cinputpart{reaction.c}{\CODELOC}{In \texttt{main()} we create a \pDMDA, some \pVecs, and a \pSNES.  We hand call-back functions to the \pSNES.  Then we solve the equation.}{III}{//MAIN}{//ENDMAIN}{code:reactionmain}
 
 
 \section{Convergence under grid refinement}
@@ -692,10 +694,10 @@ only $\bF$      & error           & $\bigcheckmark$ & $\bigcheckmark$ & error \\
 $\bF$ and $P$   & $\checkmark$ & $\checkmark$    & $\checkmark$    & $\bigcheckmark$ \\
 $\bF$ and $J$   & $\bigcheckmark$ & $\checkmark$    & $\checkmark$    & $\checkmark$
 \end{tabular}
-\caption{Jacobian options when using \pSNES.  The row labels describe which mathematical objects have been provided through user-implemented code.  Symbol ``$P$'' denotes an approximate Jacobian while ``$J$'' denotes the actual Jacobian.  A larger check mark shows recommended usage.} \label{tab:snesjacobianoptions:needed}
+\caption{Jacobian options when using \pSNES.  Rows give which mathematical objects have been provided through user code.  Symbol ``$P$'' denotes an approximate Jacobian while ``$J$'' denotes the actual Jacobian.  A large check mark shows recommended usage.} \label{tab:snesjacobianoptions:needed}
 \end{table}
 
-From the code side, at a minimum a method for $\bF$ must be implemented in all cases, as there is no other way for \PETSc to know what equations you are solving.\sidenote{Except in the case where the residual function $\bF$ itself represents a derivative (gradient) of an objective function.  See Chapter \ref{chap:of}.}   There are two ways of providing $\bF$:  If the problem is based on a structured grid, as in \texttt{reaction.c} above, use \texttt{DMDASNESSetFunctionLocal()}.  In general, use \texttt{SNESSetFunction()}.  If only $\bF$ is provided, do not create or preallocate a \pMat for the Jacobian, as this is done internally by the \pSNES for \texttt{-snes\_fd} and \texttt{-snes\_fd\_color} runs, while no assembled Jacobian \pMat exists for \texttt{-snes\_mf} runs.
+From the code side, at minimum a C function for $\bF$ must be implemented in all cases, as there is no other way for \PETSc to know what equations you are solving.\sidenote{Except in the case where the residual function $\bF$ itself represents a derivative (gradient) of an objective function.  See Chapter \ref{chap:of}.}   There are two ways of providing $\bF$:  If the problem is based on a structured grid, as in \texttt{reaction.c} above, use \texttt{DMDASNESSetFunctionLocal()}.  In general, use \texttt{SNESSetFunction()}.  If only $\bF$ is provided, do not create or preallocate a \pMat for the Jacobian, as this is done internally by the \pSNES for \texttt{-snes\_fd} and \texttt{-snes\_fd\_color} runs, while no assembled Jacobian \pMat exists for \texttt{-snes\_mf} runs.
 
 If an exact ($J$) or approximate ($P$) Jacobian function is implemented then there are two cases:
 \begin{quote}
@@ -705,13 +707,14 @@ If an exact ($J$) or approximate ($P$) Jacobian function is implemented then the
   \item In a general, first declare a \pMat variable, say ``\texttt{J}'', and then call \texttt{MatCreate()}, \texttt{MatSetSizes()}, and \texttt{MatSetFromOptions()} on it.  Then call either \texttt{MatSetUp()} or \texttt{MatXAIJPreallocate()} on \texttt{J}, to allocate space for the assembled Jacobian matrix.  Then provide the call-back code for function $J$ or $P$ (e.g.~``\texttt{FormJacobian()}'') and the \pMat \texttt{J} for both \pMat arguments through \texttt{SNESSetJacobian()}.
   \end{enumerate}
 \end{quote}
-In either case (i) or (ii), the user's Jacobian code only needs to set values in the second ``preconditioner'' \pMat argument.  (This assumes in (ii) that \texttt{J} is provided for both \pMat arguments of \texttt{SNESSetJacobian()}, as described.)  The code should, however, \emph{assemble} both \pMat arguments.
+
+Assuming either case (i), or in case (ii) assuming that \texttt{J} is provided for both \pMat arguments of \texttt{SNESSetJacobian()}, as described, the user's Jacobian code only needs to set values in the second \pMat argument, the ``preconditioner material'' argument.  The code should, however, \emph{assemble} both \pMat arguments.  An example is shown in \texttt{FormJacobianLocal()} in Code \ref{code:reactionjacobian}.
 
 As practical advice for the debugging stage, you know you have correctly- and fully-implemented the Jacobian, and you have found an adequate initial iterate, if all four options (columns) in Table \ref{tab:snesjacobianoptions:needed} work and each gives apparent quadratic convergence when looking at the residual norm decay shown by \texttt{-snes\_monitor}.  As the reader may check, this is the situation for the last two codes \texttt{ecjacobian.c} and \texttt{reaction.c}.
 
-Another way to compare the options, especially in a structured PDE case where option \texttt{-snes\_fd\_color} might be effective, is shown in Table \ref{tab:snesjacobianoptions:evals}.  This Table supposes, rather unrealistically, that the number $q$ of Newton iterations is independent of the option.  For the last column it also assumes, again unrealistically, that the number of Krylov iterations is the same at each Newton iteration (in JFNK).  The Table two simple points:\begin{itemize}
+Another way to compare the options, in a structured PDE case where option \texttt{-snes\_fd\_color} is typically effective, is shown in Table \ref{tab:snesjacobianoptions:evals}.  This Table supposes, rather unrealistically, that the number $q$ of Newton iterations is independent of the option.  For \texttt{-snes\_mf} and \texttt{-snes\_mf\_operator} options the Table also assumes, again unrealistically, that the number of Krylov iterations is the same at each Newton iteration.  The Table makes two simple points:\begin{itemize}
 \item Improved performance with \texttt{-snes\_fd\_color} comes from having a $c$-coloring where $c \ll N$.
-\item Improved performance with \texttt{-snes\_mf\_operator} comes from reducing the number $m$ of Krylov iterations.  We know from Chapter \ref{chap:ls} that this is primarily an issue of choosing the right preconditioner so that $m_2 \ll m_1$.
+\item Improved performance with \texttt{-snes\_mf\_operator} comes from reducing the number $m$ of Krylov iterations.  We know from Chapter \ref{chap:ls} that would follow from choosing a preconditioner so that $m_2 \ll m_1$.
 \end{itemize}
 
 \begin{table}
@@ -728,27 +731,26 @@ Jacobian $J$ or $P$    & $q$ & $\begin{array}{cc} 0 \\ 0 \end{array}$ & $\begin{
 
 \section{Testing JFNK with preconditioning} \label{sec:testsnesmfoperator}
 
-We now do refined-grid runs of \texttt{reaction.c} to show the \texttt{-snes\_mf\_operator} option in action.  We have already seen that the \texttt{-snes\_fd\_color} option is effective for reducing evaluations of $\bF$ if a Jacobian is not implemented, but in the same case the un-preconditioned JFNK method \texttt{-snes\_mf} has serious difficulties as it requires unreasonable numbers of Krylov iterations and function evaluations.  Now we can show that \texttt{-snes\_mf\_operator} using only a rough approximation of the Jacobian as a preconditioner gives good performance.
+Refined-grid runs with the \texttt{-snes\_mf\_operator} option may use only a rough approximation of the Jacobian as a preconditioner but still give good performance.  Note that the un-preconditioned JFNK method (i.e.~\texttt{-snes\_mf}) often gives poor convergence---unreasonable numbers of Krylov iterations and function evaluations---because the Krylov method is working on an un-preconditioned form of the linear equations \eqref{eq:nl:newton:eq} for the Newton step.
 
-Specifically, suppose we modify this line in \texttt{reaction.c} (Code \ref{code:reactionI}),
+A boolean variable, set by run-time option \texttt{-rct\_noRinJ}, modifies the way the diagonal of the Jacobian is computed in \texttt{FormJacobianLocal()}.  These lines appear in Code \ref{code:reactionjacobian}:
 \begin{code}
-    col[1] = i;    v[1] = 2.0 - h*h * dRdu;
+    if (user->noRinJ)
+        v[1] = 2.0;
+    else
+        v[1] = 2.0 - h*h * dRdu;
 \end{code}
-to remove ``\texttt{- h*h * dRdu}'', corresponding to the nonlinear term $\rho \sqrt{u}$ in \eqref{eq:nl:drsqrt}, to obtain
-\begin{code}
-    col[1] = i;    v[1] = 2.0;
-\end{code}
-This change, which we call a ``\texttt{J->P}'' below, keeps the tridiagonal sparsity pattern of the Jacobian.  Furthermore it preserves many characteristics of the spectrum of the linearizations of the operator in \eqref{eq:nl:drsqrt} by keeping the highest-order term $u''$.
+The latter case is the correct diagonal entry.  The former case keeps the tridiagonal sparsity pattern of the Jacobian, and it preserves many characteristics of the spectrum of the linearizations of the operator in \eqref{eq:nl:drsqrt} by keeping the highest-order term $-u''$.
 
-With this change, convergence is slowed for no option, that is, when we try to use the new approximate Jacobian as though it were exact.  Specifically, on a coarse grid the number of iterations goes from 4 to 15, and the residual norms suggest that convergence is no longer quadratic:
+With this change, convergence is slowed when we try to use the new approximate Jacobian as though it were exact.  Specifically, on a coarse grid the number of iterations goes from 4 to 15, and the residual norms suggest that convergence is no longer quadratic:
 \begin{cline}
-$ ./reaction -da_refine 4 -snes_monitor    # before change
+$ ./reaction -da_refine 4 -snes_monitor
   0 SNES Function norm 1.671129624018e-02 
   1 SNES Function norm 3.609252641302e-04 
   2 SNES Function norm 4.167490508951e-07 
   3 SNES Function norm 4.935230509260e-13 
 on 129 point grid:  |u-u_exact|_inf/|u|_inf = 7.39662e-07
-$ ./reaction -da_refine 4 -snes_monitor    # with J->P change
+$ ./reaction -da_refine 4 -snes_monitor -rct_noRinJ
   0 SNES Function norm 1.671129624018e-02 
   1 SNES Function norm 3.822032062916e-03 
 ...
@@ -756,25 +758,23 @@ $ ./reaction -da_refine 4 -snes_monitor    # with J->P change
  15 SNES Function norm 1.119521798815e-10 
 on 129 point grid:  |u-u_exact|_inf/|u|_inf = 7.38159e-07
 \end{cline}
-This loss of Newton method performance from a significantly incorrect Jacobian is expected in theory \citep{Kelley2003}.
+This loss of Newton method performance, due to a significantly-incorrect Jacobian, is expected in theory \citep{Kelley2003}.
 
-However, for this modified Jacobian case, \texttt{-snes\_mf\_operator} is now a fast option for higher-resolution grids, fully competitive with the exact Jacobian and finite-difference-by-coloring cases already seen.  Again on a $8000$ point grid, using the approximate Jacobian ``as is'' causes too many Newton iterations and less-than-quadratic convergence:
+However, for this modified Jacobian case, \texttt{-snes\_mf\_operator} is now a fast option for higher-resolution grids, fully competitive with the exact Jacobian and finite-difference-by-coloring cases already seen.  First, on a $8000$ point grid, using the approximate Jacobian ``as is'' again causes slow convergence:
 \begin{cline}
-$ timer ./reaction -snes_converged_reason -da_refine 10    # with J->P change
+$ ./reaction -snes_converged_reason -da_refine 10 -rct_noRinJ
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 15
 on 8193 point grid:  |u-u_exact|_inf/|u|_inf = 1.36236e-09
-real 0.13
 \end{cline}
 %$
 Now we try \texttt{-snes\_mf\_operator}, which is designed for this approximate-Jacobian situation:
 \begin{cline}
-$ timer ./reaction -snes_converged_reason -da_refine 10 -snes_mf_operator  # with J->P change
+$ ./reaction -snes_converged_reason -da_refine 10 -rct_noRinJ -snes_mf_operator
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
 on 8193 point grid:  |u-u_exact|_inf/|u|_inf = 1.80588e-10
-real 0.05
 \end{cline}
 %$
-The number of iterations and the time are significantly reduced, and both are comparable to the exact Jacobian case (page \pageref{etc:nl:bestreaction}).
+The count of Newton iterations\sidenote{And the time; not shown.} is reduced to almost the same as for the exact Jacobian case (page \pageref{etc:nl:bestreaction}).
 
 One might give the following summary advice on \pSNES usage:
 
@@ -801,7 +801,7 @@ This merit function is used in all \pSNES line searches, unless an objective fun
 
 To determine $\lambda_k$ one could perhaps solve the one-dimensional optimization problem
 \begin{equation}
-\min_{0<\lambda} \phi(\bx_k + \lambda \bs_k),  \label{eq:nl:linesearchperhapsopt}
+\min_{\lambda>0} \phi(\bx_k + \lambda \bs_k),  \label{eq:nl:linesearchperhapsopt}
 \end{equation}
 thereby making the residual 2-norm as small as possible along the search direction.  However, solving this optimization problem accurately is rarely-justified because we are merely using the solution to compute the next Newton iterate; we hope the Newton iteration itself, with $\lambda=1$, generates rapid convergence.
 
