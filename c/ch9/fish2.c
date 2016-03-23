@@ -1,4 +1,5 @@
-static char help[] = "A structured-grid Poisson problem with DMDA+SNES.\n"
+static char help[] =
+"Structured-grid Poisson problem with DMDA+SNES.  Option prefix -f2_.\n"
 "Solves  -nabla^2 u = f  by putting it in form  F(u) = -nabla^2 u - f.\n"
 "Multigrid-capable because the call-back works for the grid it is given.\n\n";
 
@@ -12,6 +13,15 @@ real 21.56
 
 FIXME: why does it seg fault with -snes_fd_color, e.g.
   mpiexec -n 2 ./fish2 -da_refine 1 -ksp_type cg -pc_type mg -ksp_converged_reason -ksp_rtol 1.0e-12 -snes_fd_color
+
+compare whether rediscretization happens at each level (former) or Galerkin grid-
+transfer operators are used; needs print statements to tell about residual &
+Jacobian evals:
+$ ./fish2 -da_refine 2 -ksp_type cg -pc_type mg -snes_monitor
+$ ./fish2 -da_refine 2 -ksp_type cg -pc_type mg -snes_monitor -pc_mg_galerkin
+
+choose which linear solver is used on coarse grid (default is preonly+lu):
+$ ./fish2 -da_refine 3 -ksp_type cg -pc_type mg -mg_coarse_ksp_type cg -mg_coarse_pc_type jacobi -ksp_view|less
 */
 
 #include <petsc.h>
@@ -20,6 +30,7 @@ FIXME: why does it seg fault with -snes_fd_color, e.g.
 typedef struct {
     DM        da;
     Vec       b;
+    PetscBool printevals;
 } FishCtx;
 
 PetscErrorCode formExactRHS(DMDALocalInfo *info, Vec uexact, Vec b,
@@ -53,26 +64,30 @@ PetscErrorCode formExactRHS(DMDALocalInfo *info, Vec uexact, Vec b,
 
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                                  double **FF, FishCtx *user) {
-  PetscErrorCode ierr;
-  const double hx = 1.0/(info->mx-1),  hy = 1.0/(info->my-1);
-  int          i, j;
-  double       **ab;
+    PetscErrorCode ierr;
+    const double hx = 1.0/(info->mx-1),  hy = 1.0/(info->my-1);
+    int          i, j;
+    double       **ab;
 
-  ierr = DMDAVecGetArray(user->da,user->b,&ab); CHKERRQ(ierr);
-  for (j = info->ys; j < info->ys + info->ym; j++) {
-      for (i = info->xs; i < info->xs + info->xm; i++) {
-          if (i==0 || i==info->mx-1 || j==0 || j==info->my-1) {
-              FF[j][i] = au[j][i];
-          } else {
-              FF[j][i] = 2*(hy/hx + hx/hy) * au[j][i]
-                         - hy/hx * (au[j][i-1] + au[j][i+1])
-                         - hx/hy * (au[j-1][i] + au[j+1][i])
-                         - ab[j][i];
-          }
-      }
-  }
-  ierr = DMDAVecRestoreArray(user->da,user->b,&ab); CHKERRQ(ierr);
-  return 0;
+    if (user->printevals) {
+        ierr = PetscPrintf(COMM,"    [residual eval on %d x %d grid]\n",
+                           info->mx,info->my); CHKERRQ(ierr);
+    }
+    ierr = DMDAVecGetArray(user->da,user->b,&ab); CHKERRQ(ierr);
+    for (j = info->ys; j < info->ys + info->ym; j++) {
+        for (i = info->xs; i < info->xs + info->xm; i++) {
+            if (i==0 || i==info->mx-1 || j==0 || j==info->my-1) {
+                FF[j][i] = au[j][i];
+            } else {
+                FF[j][i] = 2*(hy/hx + hx/hy) * au[j][i]
+                           - hy/hx * (au[j][i-1] + au[j][i+1])
+                           - hx/hy * (au[j-1][i] + au[j+1][i])
+                           - ab[j][i];
+            }
+        }
+    }
+    ierr = DMDAVecRestoreArray(user->da,user->b,&ab); CHKERRQ(ierr);
+    return 0;
 }
 
 PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar **au,
@@ -83,6 +98,10 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar **au,
     double       v[5];
     MatStencil   col[5],row;
 
+    if (user->printevals) {
+        ierr = PetscPrintf(COMM,"    [Jacobian eval on %d x %d grid]\n",
+                           info->mx,info->my); CHKERRQ(ierr);
+    }
     for (j = info->ys; j < info->ys+info->ym; j++) {
         row.j = j;
         col[0].j = j;
@@ -126,6 +145,12 @@ int main(int argc,char **argv) {
 
   PetscInitialize(&argc,&argv,NULL,help);
 
+  user.printevals = PETSC_FALSE;
+  ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "f2_", "options for fish2", ""); CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-printevals","residual and Jacobian routines report grid",
+           "fish2.c",user.printevals,&user.printevals,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+
   ierr = DMDACreate2d(COMM,
                DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
                -9,-9,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&(user.da)); CHKERRQ(ierr);
@@ -145,6 +170,7 @@ int main(int argc,char **argv) {
              (DMDASNESJacobian)FormJacobianLocal,&user); CHKERRQ(ierr);
   ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
+  ierr = VecSet(u,0.0); CHKERRQ(ierr);
   ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
   ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
   ierr = VecNorm(u,NORM_INFINITY,&errnorm); CHKERRQ(ierr);
