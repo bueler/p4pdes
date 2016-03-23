@@ -1,5 +1,5 @@
 static char help[] =
-"Solves coupled reaction-diffusion equations (Pearson 1993).  Option prefix -ptn_.\n"
+"Coupled reaction-diffusion equations (Pearson 1993).  Option prefix -ptn_.\n"
 "Demonstrates form  F(t,X,dot X) = G(t,X)  where F() is IFunction and G() is\n"
 "RHSFunction().  Implements IJacobian().  Defaults to ARKIMEX (adaptive\n"
 "Runge-Kutta implicit-explicit) type of TS.\n\n";
