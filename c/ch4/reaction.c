@@ -89,8 +89,8 @@ int main(int argc,char **args) {
   user.noRinJ = PETSC_FALSE;
 
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"rct_","options for reaction",""); CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-noRinJ","do not include R(u) term in Jacobian","reaction.c",
-             user.noRinJ,&(user.noRinJ),NULL); CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-noRinJ","do not include R(u) term in Jacobian",
+      "reaction.c",user.noRinJ,&(user.noRinJ),NULL); CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
   ierr = DMDACreate1d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,-9,1,1,NULL,&da); CHKERRQ(ierr);
