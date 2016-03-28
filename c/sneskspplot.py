@@ -2,66 +2,79 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+import argparse
+import sys
 
-# FIXME add parsing so auto-generates from
-#   $ ./program -snes_monitor -ksp_monitor &> foo.txt
-#   $ ./sneskspplot.py foo.txt
+parser = argparse.ArgumentParser(description=
+"""
+Generate residual norm figure from PETSc output.
 
-# ./reaction -ksp_type gmres -pc_type jacobi -snes_monitor
-snes = np.array([1.004378165400e+00 ,
-  2.309787305521e-02,
-  2.741717814657e-05 ,
-  3.457837426841e-11 ])
+Example:
+  $ ./program -snes_monitor -ksp_monitor &> foo.txt
+  $ ./sneskspplot.py foo.txt
+""", formatter_class=argparse.RawTextHelpFormatter)
 
-# ./reaction -ksp_type gmres -pc_type jacobi -snes_monitor -ksp_monitor
-ksp0 = np.array([4.944691520394e-01 ,
-    4.000986244771e-01 ,
-    2.886707778971e-01 ,
-    1.680881213210e-01 ,
-    7.980749093301e-02 ,
-    4.605473807603e-02 ,
-    2.034529122176e-02 ,
-    2.872368209447e-16 ])
-ksp1 = np.array([1.125600209934e-02 ,
-    5.993201527867e-03 ,
-    4.123570619805e-03 ,
-    2.011342933375e-03 ,
-    5.874400753251e-04 ,
-    2.007635529883e-04 ,
-    1.611630233758e-06 ,
-    2.446454487517e-18 ])
-ksp2 = np.array([1.333254262936e-05 ,
-    7.869404871709e-06 ,
-    6.334849998598e-06 ,
-    4.196700444761e-06 ,
-    2.575534285255e-06 ,
-    7.389604225546e-07 ,
-    9.558617748461e-08 ,
-    5.526563734424e-21 ])
+parser.add_argument('infile', metavar='NAME', help='text input file', default='foo')
+parser.add_argument('--noksp', action='store_false', 
+                    help='do not show KSP residuals', dest='showksp',default=True)
+parser.add_argument('--showdata', action='store_true',
+                    help='print raw list of norms', default=False)
+parser.add_argument('-o', help='output filename (.png,.pdf)', dest='output')
 
-ksp = [ksp0, ksp1, ksp2]
+args = parser.parse_args()
+
+infile = open(args.infile, 'r')
+#print 'reading from %s ...' % args.infile
+
+data = []
+for line in infile:
+    # strip comment lines starting with "#"
+    line = line.partition('#')[0]
+    line = line.rstrip()
+    if line: # if content remains
+        ls = line.split()
+        for k in range(len(ls)):
+            if ls[k] == 'SNES' and ls[k+1] == 'Function' and ls[k+2] == 'norm':
+                norm = float(ls[k+3])
+                #print 'found SNES %e' % norm
+                data.append([norm])
+            if args.showksp:
+                if ls[k] == 'KSP' and ls[k+1] == 'Residual' and ls[k+2] == 'norm':
+                    norm = float(ls[k+3])
+                    #print 'found KSP %e' % norm
+                    data[-1].append(norm)
+
+if args.showdata:
+    print data
 
 fig = plt.figure(figsize=(7,6))
-
-plt.semilogy(range(len(snes)),snes,'bo',markersize=10.0,label='SNES residual')
 plt.hold(True)
-for k in range(len(ksp)):
-    jj = float(k) + (np.arange(len(ksp[k])) + 1.0) / float(len(ksp[k]))
+
+# actually plot points
+for k in range(len(data)):
     if k == 0:
-        plt.semilogy(jj,ksp[k],'r+',markersize=10.0,label='KSP residual')
+        plt.semilogy(k,data[k][0],'bo',markersize=10.0,label='SNES residual')
     else:
-        plt.semilogy(jj,ksp[k],'r+',markersize=10.0)
+        plt.semilogy(k,data[k][0],'bo',markersize=10.0)
+    for j in range(len(data[k])-1):
+        jshift = k + (j+1) / float(len(data[k]))
+        if k == 0 and j == 0:
+            plt.semilogy(jshift,data[k][j+1],'r+',markersize=10.0,label='KSP residual')
+        else:
+            plt.semilogy(jshift,data[k][j+1],'r+',markersize=10.0)
+
 plt.hold(False)
-
 plt.grid(True)
-#plt.axis((0.001,0.18,5.0,2000.0))
-plt.xlabel('iteration')
-plt.xticks(range(len(snes)))
+plt.xlabel('SNES iteration',fontsize=18.0)
+plt.xticks(range(len(data)))
 plt.ylabel('residual norm',fontsize=18.0)
-plt.legend(loc='upper right')
 
-plt.show()
-#filename='cg-flaw.pdf'
-#print "writing %s ..." % filename
-#plt.savefig(filename,bbox_inches='tight')
+if args.showksp:
+    plt.legend(loc='upper right')
+
+if args.output:
+    #print "writing %s ..." % args.output
+    plt.savefig(args.output,bbox_inches='tight')
+else:
+    plt.show()
 
