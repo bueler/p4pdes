@@ -1,22 +1,22 @@
 
 To the reader who has become lost in a maze of issues which have built up around the examples so far---Krylov solvers, preconditioner choices, line searches, finite element details, or whatever causes confusion---some good news.  In \emph{this} Chapter we restart with an easy question and a small example.
 
-Solving \emph{ordinary} differential equations (ODEs) with \PETSc ought to be easy.  Given that we have practice with \PETSc objects, it is.  Furthermore, the transition to numerical methods for time-dependent, parabolic PDEs like the heat equation is straightforward.  In fact, in this Chapter we look at three examples:
+Solving ordinary differential equations (ODEs) with \PETSc ought to be easy.  Given that we have practice with \PETSc objects, it is.  Furthermore, the transition to numerical methods for time-dependent, parabolic PDEs like the heat equation is straightforward.  In fact, in this Chapter we look at three examples:
 \begin{itemize}
 \item a linear system of two ODEs,
-\item an arbitrarily-large system of ODEs arising from spatial finite-difference approximation of the time-dependent heat PDE in 2D,
+\item an arbitrarily-large system of ODEs arising from spatial finite-difference approximation of the 2D time-dependent heat PDE,
 \item and another large ODE system arising from two coupled nonlinear PDEs in 2D, forming a two-species reaction/diffusion model.
 \end{itemize}
 These time-dependent problems are solved using a new \PETSc object, a \pTS time-stepping solver.
 
-The particular integration method used by the \pTS can be chosen at run-time.  We will recall the basics of both \emph{explicit} and \emph{implicit} time-stepping techniques.  Because implicit time-stepping implies the full stack of \pSNES/\pKSP/\pPC solvers for the (generally) non-linear equations at each time step, our experience with examples from Chapters \ref{chap:st}--\ref{chap:of} will all be useful.
+The particular integration method used by the \pTS can be chosen at run-time.  We will recall the basics of both \emph{explicit} and \emph{implicit} time-stepping techniques.  Because implicit time-stepping implies the full stack of \pSNES/\pKSP/\pPC solvers for the (generally) non-linear equations at each time step, our experience with examples from Chapters \ref{chap:st}--\ref{chap:of} will be useful.
 
-We discretize the two PDE examples above in space only.  This \emph{method of lines} approach avoids any need to write code specific to a temporal discretization.
+User code will discretize the two PDE examples in space only.  This \emph{method of lines} approach, which is the expected way to solve PDEs using \PETSc \pTS, avoids any need to write code specific to a temporal discretization.
 
-The third example above is the first \emph{system} of PDEs addressed so far.  Describing such a system using \PETSc calls requires some new constructs in the code.
+The third example above is the first \emph{system} of PDEs addressed so far.  Describing such a system using \PETSc calls, a second topic covered in this Chapter, requires some new constructs in the code.  The system here is straightforward to handle, while our next systems example, the Stokes equations in Chapter \ref{chap:ok}, will have more interesting implementation aspects.
 
 
-\section{ODEs and \PETSc \pTS objects}
+\section{Systems of ODEs}
 
 Consider an ODE system in form
 \begin{equation}
@@ -61,36 +61,39 @@ The exact solution, shown in Figure \ref{fig:ts:ode}, is
 \vspace{-5mm}
 \noindent\hrulefill
 
-\bigskip
 
-This example is solved by \texttt{c/ch6/ode.c}, a program shown in Codes \ref{code:ts:ode:main} and \ref{code:ts:ode:callbacks}.  We will summarize user code actions on the \pTS object itself, and those parts of the user code which describe the right-hand-side $\bg(t,\by)$.
+\section{Explicit and implicit time-stepping}  FIXME: gloss Euler, theta methods, and RK methods
+
+
+\section{Implementation with a \PETSc \pTS object}
+
+The above example is solved by \texttt{c/ch6/ode.c}, a program shown in Codes \ref{code:ts:ode:main} and \ref{code:ts:ode:callbacks}.  We will first summarize our code's actions on the \pTS object itself, and then those parts which describe the right-hand-side $\bg(t,\by)$.
 
 \cinputpart{ode.c}{\CODELOC}{The \texttt{main()} part of \texttt{ode.c} creates and configures a \pTS object, plus the \pVecs for approximate and exact solutions, and a \pMat for storing the Jacobian.}{I}{//MAIN}{//ENDMAIN}{code:ts:ode:main}
 
-First consider these commands extracted from Code \ref{code:ts:ode:main}
+Consider these commands extracted from Code \ref{code:ts:ode:main}:
 \begin{code}
   TSCreate(PETSC_COMM_WORLD,&ts);
   TSSetProblemType(ts,TS_NONLINEAR);
   TSSetRHSFunction(ts,NULL,FormRHSFunction,NULL);
   TSSetRHSJacobian(ts,J,J,FormRHSJacobian,NULL);
 \end{code}
-
-Regarding the problem type of the \pTS, it turns out there is little reason to design \PETSc examples for the linear case only.  By setting the problem type to \texttt{TS\_NONLINEAR} we are saying that the  problem is in form \eqref{eq:ts:ode} with a function $\bg(t,\by)$ which will be supplied by user code.\sidenote{In later examples, a \pTS of type \texttt{TS\_NONLINEAR} will have even more general forms than \eqref{eq:ts:ode}.}
+It turns out there is little reason to design \PETSc examples for the linear case only.  By setting the problem type to \texttt{TS\_NONLINEAR} we are saying that the problem is in form \eqref{eq:ts:ode} with a function $\bg(t,\by)$ which will be supplied by user code.\sidenote{As we will see in later examples, a \pTS of type \texttt{TS\_NONLINEAR} may have an even more general form than equation \eqref{eq:ts:ode}.}
 
 Applying \texttt{TSSetRHSFunction()} sets a call-back to our own function---here named \texttt{FormRHSFunction()}---which evaluates $\bg(t,\by)$; see Code \ref{code:ts:ode:callbacks}.  We also set a Jacobian call-back to our function \texttt{FormRHSJacobian()} which sets the entries of the \pMat \texttt{J} corresponding to
     $$\frac{\partial \bg}{\partial \by}(t,\by) = \begin{bmatrix}\phantom{\bigg|} \frac{\partial g_i}{\partial y_j}(t,\by) \phantom{\bigg|}\end{bmatrix}.$$
-Because an allocated \pMat must be supplied to \texttt{TSSetRHSJacobian()}, the above \pTS set-up lines are preceded, in Code \ref{code:ts:ode:main}, by a \texttt{Create/SetUp} sequence for \pMat \texttt{J}.
+Because an allocated \pMat must be supplied to \texttt{TSSetRHSJacobian()}, the above \pTS set-up lines are preceded, in Code \ref{code:ts:ode:main}, by a \texttt{Create/SetUp} sequence for \pMat \texttt{J}.  As usual when setting Jacobians, we assign \texttt{J} to both the Jacobian and preconditioner-material arguments of \texttt{TSSetRHSJacobian()}; compare usage of \texttt{SNESSetJacobian()} and \texttt{DMDASNESSetJacobianLocal()} in Chapters \ref{chap:nl} and \ref{chap:of}.
 
 Next are additional commands for configuring the \pTS.  All of the following choices can, and often will, be overridden by command-line options:
 \begin{code}
   TSSetType(ts,TSRK);
   TSSetInitialTimeStep(ts,t0,dt);
-  TSSetDuration(ts,100*(int)(tf/dt),tf-t0);
+  TSSetDuration(ts,100*(int)((tf-t0)/dt),tf-t0);
   TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP);
   TSSetFromOptions(ts);
 \end{code}
+Note that, despite its name, \texttt{TSSetInitialTimeStep()} sets both the initial time \texttt{t0} and the initial time step \texttt{dt}.  (Note that if the numerical ODE solver chosen at run-time is in fact adaptive then \texttt{dt} is indeed only the \emph{initial} time step, generally modified by the solver after the first step.)  Next, \texttt{TSSetDuration()} sets both the duration of the solve (\texttt{tf-t0}) and the maximum number of steps that the solver is allowed to take.  In this case we set the latter quantity to 100 times the intended number of steps, namely the duration over the initial time step (\texttt{(tf-t0)/dt}), based on our other choices.
 
-FIXME
 
 \begin{code}
   TSGetTime(ts,&t0);

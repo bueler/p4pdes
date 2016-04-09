@@ -94,7 +94,7 @@ int main(int argc,char **argv) {
   // set defaults: method, t0, dt, tf
   ierr = TSSetType(ts,TSRK); CHKERRQ(ierr);
   ierr = TSSetInitialTimeStep(ts,t0,dt); CHKERRQ(ierr);
-  ierr = TSSetDuration(ts,100*(int)(tf/dt),tf-t0); CHKERRQ(ierr);
+  ierr = TSSetDuration(ts,100*(int)((tf-t0)/dt),tf-t0); CHKERRQ(ierr);
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
   ierr = TSSetFromOptions(ts); CHKERRQ(ierr);  // can override defaults
 
