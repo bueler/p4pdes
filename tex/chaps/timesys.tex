@@ -33,8 +33,10 @@ Under reasonable assumptions on the behavior of $g$, the continuum problem \eqre
 
 Let us be specific about sufficient regularity of $\bg$ to imply well-posedness.  We will assume for simplicity that $\bg(t,\by)$ is continuous on a product domain (cylinder) around the initial point $(t_0,\by_0)$,
    $$\mathcal{D} = \{(t,\by) \,:\, |t-t_0| \le \delta, \|\by - \by_0\| \le \omega\}$$
-where $\delta > 0$ and $\omega > 0$.  Then we further assume that $\bg$ is \emph{Lipshitz} in its second argument, so that output differences are bounded by a multiple of input differences: there is $L\ge 0$ so that
-   $$\|\bg(t,\by_1) - \bg(t,\by_0)\| \le L \|\by_1-\by_0\|$$
+where $\delta > 0$ and $\omega > 0$.  Then we further assume that $\bg$ is \emph{Lipschitz} in its second argument, so that output differences are bounded by a multiple of input differences: there is $L\ge 0$ so that
+\begin{equation}
+\|\bg(t,\by_1) - \bg(t,\by_0)\| \le L \|\by_1-\by_0\|  \label{eq:ts:glipschitz}
+\end{equation}
 for $(t,\by_i) \in \mathcal{D}$.  Then the problem \eqref{eq:ts:ode}, \eqref{eq:ts:ode:iv} has a unique continuous, and continuously-differentiable, solution $\by(t)$ on a possibly-shorter interval, namely $|t-t_0|<\eps$ for some $0 < \eps \le \delta$ \citep[section 17.5]{HirschSmaleDevaney2004}.  Furthermore the solution depends continuously on both the initial value $\by_0$ and the right-hand-side $\bg$.
 
 Our brief attention to well-posedness is motivated by the following practical concern:  When we run a numerical differential equation code it will produce numbers.\sidenote{It \emph{always} produces numbers!}  These numbers are (essentially) never the exact solution of the differential equation, but they are ``correct'' in a numerical-analysis sense if we can demonstrate convergence to the solution of a well-posed continuum problem.  Thus we accept ``wrong'' numbers as correct in cases where demonstrably convergent numerical analysis is applied to a well-posed problem.
@@ -66,7 +68,7 @@ The exact solution, shown in Figure \ref{fig:ts:ode}, is
 \noindent\hrulefill
 
 
-\section{Explicit and implicit time-stepping}  The above Example is straightforward to approximate by time-stepping numerical methods which start from the initial values and use the right-hand-side function $g(t,\by)$ to update an approximate solution $\bY(t) \approx \by(t)$.  More commonly, one generates a sequence of values $\bY_\ell$ which approximate the solution at discrete times $t_\ell$, so that $\bY_\ell \approx \by(t_\ell)$.  Because these ideas are easy to find in the literature\sidenote{A good reference is \citep{AscherPetzold1998}, for example.}, and are likely to be in the reader's background in some form, we only give a gloss here.
+\section{Methods and accuracy for ODE initial value problems}  The above Example is straightforward to approximate by time-stepping numerical methods which start from the initial values and use the right-hand-side function $g(t,\by)$ to update an approximate solution $\bY(t) \approx \by(t)$.  More commonly, one generates a sequence of values $\bY_\ell$ which approximate the solution at discrete times $t_\ell$, so that $\bY_\ell \approx \by(t_\ell)$.  Because these ideas are easy to find in the literature\sidenote{A good reference is \citep{AscherPetzold1998}, for example.}, and are likely to be in the reader's background in some form, we only give a gloss here.
 
 Let $t_0<t_1<t_2<\dots<t_L$ be a finite sequence of times, with gaps $\Delta t_\ell = t_\ell - t_{\ell-1}$ for $\ell=1,2,\dots,L$.  Let $\bY_0 = \by(t_0)$ be is the known starting value  \eqref{eq:ts:ode:iv}.  \emph{Euler's method}, also known as the forward Euler method, the simplest approximation of \eqref{eq:ts:ode}, generates $\bY_1,\bY_2,\dots,\bY_L$ from
 \begin{equation}
@@ -76,11 +78,24 @@ The \emph{backward Euler method} is just as easy to state,
 \begin{equation}
 \frac{\bY_\ell - \bY_{\ell-1}}{\Delta t_\ell} = \bg(t_{\ell},\bY_{\ell}).  \label{eq:ts:backwardeuler}
 \end{equation}
-In practice, much more work is required to use \eqref{eq:ts:backwardeuler}, for stepping forward in time, than \eqref{eq:ts:forwardeuler}.  The latter, in fact, generates exactly the kind of nonlinear systems which we can and will solve by Newton's method and \pSNES.
+In practice, much more work is required to use \eqref{eq:ts:backwardeuler}, for stepping forward in time, than \eqref{eq:ts:forwardeuler}.  The latter, an \emph{implicit} method as explored below, generates exactly the kind of nonlinear systems which we can and will solve by Newton's method and \pSNES.
 
-Both of these methods compute a first-order finite difference approximation of the derivative of the trajectory $\by(t)$, by evaluating the right-hand side function $\bg(t,\by)$ at a particular point, but they differ in whether this first-order derivative approximation is on one side or the other of the evaluation point.  FIXME: explain $O(\Delta t^1)$
+Both methods \eqref{eq:ts:forwardeuler} and \eqref{eq:ts:backwardeuler} compute a first-order finite difference approximation of the derivative of the trajectory $\by(t)$ by evaluating the right-hand side function $\bg(t,\by)$ at a particular point.  They differ only in whether this derivative approximation uses a value on one side or the other of the evaluation point.
 
-FIXME: theta methods and RK methods
+They are first-order accurate in the simple sense that, for any twice-continuously-differentiable function $f(t)$, by Taylor's theorem
+    $$\frac{f(t+\Delta t) - f(t)}{\Delta t} = f'(t) + O(\Delta t^1)$$
+as $\Delta t \to 0$.  By this relation one says that the Euler methods have first-order \emph{local truncation error}.  However, under sufficient assumptions of smoothness the deeper meaning of ``first-order accuracy'', as a rate of convergence as $\Delta t\to 0$, also applies.  Certainly one would hope that as $\Delta t \to 0$ the approximations $\bY_\ell$ converge to the values $\by(t_\ell)$ which they are intended to approximate.  In fact, by assuming that the solution exists, that a Lipschitz bound \eqref{eq:ts:glipschitz} applies to $\bg(t,\by)$, and that the solution has bounded second derivative ($|\by(t)''|\le M$), all on some interval $[t_0,t_f]$, one can show that the Euler methods satisfy $|\bY_\ell-\by(t_\ell)| = O(\Delta t^1)$ \citep{AscherPetzold1998}.  In slightly more detail, one can show
+    $$|\bY_\ell-\by(t_\ell)| \le \Delta t\,M (e^{L(t_\ell-t_0)}-1) / 2 L.$$
+This bound itself is rarely useful, but the idea that the \emph{numerical error}\sidenote{Sometimes ``global truncation error''.} $E_\ell = |\bY_\ell-\by(t_\ell)|$ is first-order in $\Delta t$ is the intended meaning of ``first-order accuracy'' for these methods.  In particular, we expect from such statements that reduction of the time step by a given factor will generally reduce the numerical error at a given time by the same factor.
+
+Looking ahead a little bit, in a \PETSc code which uses the \pTS type for solving an ODE initial value problem, one chooses the Euler and backward-Euler methods by options \texttt{-ts\_type euler} and \texttt{-ts\_type beuler}, respectively.
+
+It should be no surprise that there are methods with improved accuracy.  FIXME: theta methods
+
+FIXME: RK methods
+
+
+\section{Implicit time-stepping schemes}  FIXME
 
 
 \section{Implementation with a \PETSc \pTS object}
@@ -209,8 +224,9 @@ FIXME final-time greyscale plots using \texttt{PetscBinaryIO.py}
 \renewcommand{\labelenumii}{(\alph{enumii})}
 \begin{enumerate}
 \item \label{exer:ts:tan}  Consider the scalar ODE initial value problem $y'=1+y^2$, $y(0)=0$.  Show by-hand that $y(t)=\tan t$ is the unique solution to this problem.  Modify \texttt{ode.c} to solve this problem.  Run the code from $t=0$ to $t=t_f=2$.  What run-time observable, actual evidence shows that your estimate of ``$y(2)$'' is meaningless?
-\item FIXME which \texttt{-ts\_type} work with \texttt{ode.c}?
+\item FIXME which \texttt{-ts\_type} work with \texttt{ode.c}?  do \texttt{-help |grep ts\_type} to find all the possibilities, and try 
 % euler, beuler, rk, theta, cn
+\item FIXME confirm the claim in the text that the Jacobian is not used in explicit methods \texttt{-ts\_type euler,rk} by deleting \texttt{FormRHSJacobian()} from \texttt{ode.c}; with it still deleted check that \texttt{-ts\_type beuler,theta,cn} work when used in combination with \texttt{-snes\_fd} or \texttt{-snes\_mf}
 \item FIXME \texttt{ode.c} says it is ``serial only''  what happens with \texttt{mpiexec -n 2 ./ode}, and why?
 \item FIXME version of \texttt{ode.c} which solves DAE system
     $$\bbf(t,\by,\by') = \bg(t,\by)$$
