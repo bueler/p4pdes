@@ -10,12 +10,12 @@ Chapter \ref{chap:nl}: \pSNES                    & for Newton's method
 
 \bigskip
 
-Each structured-grid example in the rest of the book will use all of these objects (Figure \ref{fig:of:standardstack}), though unstructured-grid examples will use a substitute for \pDMDA.  From now on we will even solve linear PDEs using a \pSNES object.  An example is in Chapter \ref{chap:ad}, and in such cases we know that one Newton iteration suffices in theory.  Always using \pSNES allows uniform code structure and more flexibility when it comes to changing the PDE problem.
+Each structured-grid example in the rest of the book will use all of these objects (Figure \ref{fig:of:standardstack}), though unstructured-grid examples will use a substitute for \pDMDA.  From now on we will even solve linear PDEs using a \pSNES object.  (An example is in Chapter \ref{chap:ad}.)  In such cases we know that one Newton iteration suffices in theory.  Always using \pSNES allows uniform code structure and more flexibility when it comes to changing the PDE problem.
 
 \begin{figure}
-% usage: \standardstack{scale}{objective}{Jacobian}{TS}{DMDA}{DMPlex}
-\standardstack{0.775}{}{dashed}{dashed}{}{dashed}
-\caption{The ``standard \PETSc stack for PDEs'' used by every example in the rest of the book.  Chapter \ref{chap:of} usage is shown as solid.  Arrows should be read as ``acts directly on.''  \pTS and \pDMPlex objects are introduced later, in Chapters \ref{chap:ts} and \ref{chap:dp}, respectively.  Compare Figures \ref{fig:st:linearstack} and \ref{fig:nl:reactionstack}.}
+% usage: \standardSNESstack{scale}{objective}{Jacobian}{DMDA}{DMPlex}
+\standardSNESstack{0.775}{}{dashed}{}{dashed}
+\caption{The ``standard \PETSc stack for PDEs'' used by every \pSNES-based example in the rest of the book.  Chapter \ref{chap:of} usage is shown as solid.  Arrows should be read as ``acts directly on.''  (\pDMPlex objects are introduced in Chapter \ref{chap:dp}, respectively.)  Compare Figures \ref{fig:st:linearstack} and \ref{fig:nl:reactionstack}.}
 \label{fig:of:standardstack}
 \end{figure}
 

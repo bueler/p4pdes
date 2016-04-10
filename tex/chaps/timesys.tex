@@ -157,9 +157,9 @@ FIXME solve heat equation by implicit
 \cinputpart{heat.c}{\CODELOC}{FIXME}{V}{//MONITOR}{//ENDMONITOR}{code:ts:heat:monitor}
 
 \begin{figure}
-% usage: \standardstack{scale}{objective}{Jacobian}{TS}{DMDA}{DMPlex}
-\standardstack{0.775}{dashed}{}{}{}{dashed}
-\caption{The \PETSc stack used for the time-dependent heat and reaction/diffusion problems (\texttt{heat.c,pattern.c}).  Compare Figure \ref{fig:of:standardstack}.  FIXME: \pSNES not directly seen by user code}
+% usage: \standardTSstack{scale}{Jacobian}{DMDA}{DMPlex}
+\standardTSstack{0.775}{}{}{dashed}
+\caption{The \PETSc stack used for the time-dependent heat and reaction/diffusion problems (\texttt{heat.c,pattern.c}).  Compare Figure \ref{fig:of:standardstack}.}
 \label{fig:of:tsstack}
 \end{figure}
 
