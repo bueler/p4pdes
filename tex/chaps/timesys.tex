@@ -68,17 +68,17 @@ The exact solution, shown in Figure \ref{fig:ts:ode}, is
 
 \section{Explicit and implicit time-stepping}  The above Example is straightforward to approximate by time-stepping numerical methods which start from the initial values and use the right-hand-side function $g(t,\by)$ to update an approximate solution $\bY(t) \approx \by(t)$.  More commonly, one generates a sequence of values $\bY_\ell$ which approximate the solution at discrete times $t_\ell$, so that $\bY_\ell \approx \by(t_\ell)$.  Because these ideas are easy to find in the literature\sidenote{A good reference is \citep{AscherPetzold1998}, for example.}, and are likely to be in the reader's background in some form, we only give a gloss here.
 
-Let $t_0<t_1<t_2<\dots<t_L$ be a finite sequence of times, with gaps $\Delta t_\ell = t_\ell - t_{\ell-1}$ for $\ell=1,2,\dots,L$.  Let $\bY_0 = \by(t_0)$ be is the known starting value from the full ODE initial value problem formed by \eqref{eq:ts:ode} and \eqref{eq:ts:ode:iv}.
-
-\emph{Euler's method}, also known as the \emph{forward Euler method}, is the simplest approximation of \eqref{eq:ts:ode}, generating $\bY_1,\bY_2,\dots,\bY_L$ from
+Let $t_0<t_1<t_2<\dots<t_L$ be a finite sequence of times, with gaps $\Delta t_\ell = t_\ell - t_{\ell-1}$ for $\ell=1,2,\dots,L$.  Let $\bY_0 = \by(t_0)$ be is the known starting value  \eqref{eq:ts:ode:iv}.  \emph{Euler's method}, also known as the forward Euler method, the simplest approximation of \eqref{eq:ts:ode}, generates $\bY_1,\bY_2,\dots,\bY_L$ from
 \begin{equation}
 \frac{\bY_\ell - \bY_{\ell-1}}{\Delta t_\ell} = \bg(t_{\ell-1},\bY_{\ell-1}). \label{eq:ts:forwardeuler}
 \end{equation}
 The \emph{backward Euler method} is just as easy to state,
 \begin{equation}
-\frac{\bY_\ell - \bY_{\ell-1}}{\Delta t_\ell} = \bg(t_{\ell},\bY_{\ell}),  \label{eq:ts:backwardeuler}
+\frac{\bY_\ell - \bY_{\ell-1}}{\Delta t_\ell} = \bg(t_{\ell},\bY_{\ell}).  \label{eq:ts:backwardeuler}
 \end{equation}
-but we will see that typically much more work goes into actually using it to generate $\bY_1,\bY_2,\dots,\bY_L$.  Both of these methods compute a first-order finite difference approximation of the derivative of the trajectory $\by(t)$ by evaluating the right-hand side function $\bg(t,\by)$ at a particular point.  They differ in whether this first-order derivative approximation is on one side or the other of the evaluation point.
+In practice, much more work is required to use \eqref{eq:ts:backwardeuler}, for stepping forward in time, than \eqref{eq:ts:forwardeuler}.  The latter, in fact, generates exactly the kind of nonlinear systems which we can and will solve by Newton's method and \pSNES.
+
+Both of these methods compute a first-order finite difference approximation of the derivative of the trajectory $\by(t)$, by evaluating the right-hand side function $\bg(t,\by)$ at a particular point, but they differ in whether this first-order derivative approximation is on one side or the other of the evaluation point.  FIXME: explain $O(\Delta t^1)$
 
 FIXME: theta methods and RK methods
 
