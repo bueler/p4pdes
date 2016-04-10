@@ -1,19 +1,21 @@
 
 To the reader who has become lost in a maze of issues which have built up around the examples so far---Krylov solvers, preconditioner choices, line searches, finite element details, or whatever causes confusion---some good news.  In \emph{this} Chapter we restart with an easy question and a small example.
 
-Solving ordinary differential equations (ODEs) with \PETSc ought to be easy.  Given that we have practice with \PETSc objects, it is.  Furthermore, the transition to numerical methods for time-dependent, parabolic PDEs like the heat equation is straightforward.  In fact, in this Chapter we look at three examples:
+Solving ordinary differential equations (ODEs) with \PETSc ought to be easy.  Given that we have practice with \PETSc objects, it is.  Furthermore, the transition to numerical methods for time-dependent, parabolic PDEs like the heat equation is straightforward.
+
+In this Chapter we look at three examples:
 \begin{itemize}
 \item a linear system of two ODEs,
 \item an arbitrarily-large system of ODEs arising from spatial finite-difference approximation of the 2D time-dependent heat PDE,
 \item and another large ODE system arising from two coupled nonlinear PDEs in 2D, forming a two-species reaction/diffusion model.
 \end{itemize}
-These time-dependent problems are solved using a new \PETSc object, a \pTS time-stepping solver.
+These problems are solved using a new \PETSc object, the \pTS time-stepping solver.
 
-The particular integration method used by the \pTS can be chosen at run-time.  We will recall the basics of both \emph{explicit} and \emph{implicit} time-stepping techniques.  Because implicit time-stepping implies the full stack of \pSNES/\pKSP/\pPC solvers for the (generally) non-linear equations at each time step, our experience with examples from Chapters \ref{chap:st}--\ref{chap:of} will be useful.
+The particular integration method used by the \pTS can be chosen at run-time.  We will recall the basics of both \emph{explicit} and \emph{implicit} time-stepping techniques.  Because implicit time-stepping implies the full stack of \pSNES/\pKSP/\pPC solvers for the (generally) non-linear equations at each time step, we will use our experience with examples from previous Chapters.
 
-User code will discretize the two PDE examples in space only.  This \emph{method of lines} approach, which is the expected way to solve PDEs using \PETSc \pTS, avoids any need to write code specific to a temporal discretization.
+User code will discretize the two PDE examples, but in space only.  This \emph{method of lines} approach, which is the most common way to solve PDEs using \PETSc \pTS, avoids any need to write code specific to a temporal discretization.
 
-The third example above is the first \emph{system} of PDEs addressed so far.  Describing such a system using \PETSc calls, a second topic covered in this Chapter, requires some new constructs in the code.  The system here is straightforward to handle, while our next systems example, the Stokes equations in Chapter \ref{chap:ok}, will have more interesting implementation aspects.
+The third example above is the first \emph{system} of PDEs addressed so far.  Implementing such a system in a \PETSc code, which is the second topic covered in this Chapter, requires some new constructs.  However, the system here is straightforward to handle.  Our next systems example, the Stokes equations in Chapter \ref{chap:ok}, will have more interesting implementation details and solver choices.
 
 
 \section{Systems of ODEs}
@@ -27,15 +29,17 @@ where $\by(t) \in \RR^N$ and $\by'=d\by/dt$, and suppose an \emph{initial value}
 \by(t_0) = \by_0.  \label{eq:ts:ode:iv}
 \end{equation}
 
-It is well-known that under reasonable assumptions on the behavior of $g$, the continuum problem \eqref{eq:ts:ode}, \eqref{eq:ts:ode:iv} is a well-posed problem, at least for short times (away from $t_0$).  That is, one can make predictions from such a ODE \emph{initial value problem} (IVP), forward or backward from the initial time, supposing that the integration to solve the ODE is performed exactly.
+Under reasonable assumptions on the behavior of $g$, the continuum problem \eqref{eq:ts:ode}, \eqref{eq:ts:ode:iv} is a well-posed problem, at least for short times (away from $t_0$).  This much is well-known.\sidenote{See \citep{HirschSmaleDevaney2004}, for example.}  Thus one can make predictions from such a ODE \emph{initial value problem} (IVP), forward or backward from the initial time, supposing that the integration to solve the ODE is performed exactly.
 
-Let us be specific about sufficient regularity of $\bg$ to imply well-posedness.  We first assume for simplicity that $\bg(t,\by)$ is continuous a product domain (cylinder) around the initial point $(t_0,\by_0)$,
+Let us be specific about sufficient regularity of $\bg$ to imply well-posedness.  We will assume for simplicity that $\bg(t,\by)$ is continuous on a product domain (cylinder) around the initial point $(t_0,\by_0)$,
    $$\mathcal{D} = \{(t,\by) \,:\, |t-t_0| \le \delta, \|\by - \by_0\| \le \omega\}$$
 where $\delta > 0$ and $\omega > 0$.  Then we further assume that $\bg$ is \emph{Lipshitz} in its second argument, so that output differences are bounded by a multiple of input differences: there is $L\ge 0$ so that
    $$\|\bg(t,\by_1) - \bg(t,\by_0)\| \le L \|\by_1-\by_0\|$$
-for $(t,\by_i) \in \mathcal{D}$.  Then the problem \eqref{eq:ts:ode}, \eqref{eq:ts:ode:iv} has a unique continuous, and continuously-differentiable, solution $\by(t)$ on a possibly-shorter interval ($|t-t_0|<\eps$ for some $0 < \eps \le \delta$) \citep[section 17.5]{HirschSmaleDevaney2004}.  Furthermore the solution depends continuously on both the initial value $\by_0$ and the right-hand-side $\bg$.
+for $(t,\by_i) \in \mathcal{D}$.  Then the problem \eqref{eq:ts:ode}, \eqref{eq:ts:ode:iv} has a unique continuous, and continuously-differentiable, solution $\by(t)$ on a possibly-shorter interval, namely $|t-t_0|<\eps$ for some $0 < \eps \le \delta$ \citep[section 17.5]{HirschSmaleDevaney2004}.  Furthermore the solution depends continuously on both the initial value $\by_0$ and the right-hand-side $\bg$.
 
-Our attention to well-posedness is motivated by the following practical concern:  When we run a differential-equation-solving code it produces numbers.\sidenote{It \emph{always} produces numbers!}  These numbers are (essentially) never the exact solution of the differential equation, but they are ``correct'' in a numerical-analysis sense if we can demonstrate convergence to the solution of a well-posed continuum problem.  \emph{Much} more egregious, however, is to produce numbers which represent no continuum solution at all.  Benign-looking scalar nonlinear ODEs can put us in such peril.  In fact, Exercise \ref{chap:ts}.\ref{exer:ts:tan} gives a well-known example where the solution ceases to exist after a certain finite interval of time, even though the right-hand side function $g(t,y)$ is merely a quadratic function of $y$.  The scope of this book includes many nonlinear PDEs, where this concern is yet greater.
+Our brief attention to well-posedness is motivated by the following practical concern:  When we run a numerical differential equation code it will produce numbers.\sidenote{It \emph{always} produces numbers!}  These numbers are (essentially) never the exact solution of the differential equation, but they are ``correct'' in a numerical-analysis sense if we can demonstrate convergence to the solution of a well-posed continuum problem.  Thus we accept ``wrong'' numbers as correct in cases where demonstrably convergent numerical analysis is applied to a well-posed problem.
+
+\emph{Much} more egregiously wrong, however, are numbers which represent no continuum solution at all.  Benign-looking scalar nonlinear ODEs can put us in such peril.  In fact, Exercise \ref{chap:ts}.\ref{exer:ts:tan} gives a simple, and well-known, example where the solution ceases to exist after a certain finite interval of time.  The approximating code sails right by the end of this interval of time, producing numbers that are infinitely-erroneous.  The examples in this book include several nonlinear PDEs, where this concern is yet greater.  (They are infinite systems of ODEs, effectively, and such systems can fail to be time-reversible, for example.)  Thus we will try to be cautious.  When possible we consider well-posedness, and perhaps even approximate-ability (regularity), prior to implementation.
 
 For linear systems, solutions exist for all time.\sidenote{Assuming continuous coefficients and non-homogeneities \citep[section 17.5]{HirschSmaleDevaney2004}.}  The following example ODE system is thus a safe starting point.
 
@@ -44,7 +48,7 @@ For linear systems, solutions exist for all time.\sidenote{Assuming continuous c
 \begin{equation}
    \by' = \begin{bmatrix} y_1 \\ - y_0 + t\end{bmatrix}, \qquad \by(0) = \begin{bmatrix} 0 \\ 0 \end{bmatrix}, \label{eq:ts:example}
 \end{equation}
-that is, the linear system with
+from initial time $t_0=0$.  This is a linear system with
     $$\bg(t,\by) = A \by + \bbf \,\text{ where } A = \begin{bmatrix} 0 & 1 \\ -1 & 0 \end{bmatrix} \text{ and } \bbf(t) = \begin{bmatrix} 0 \\ t\end{bmatrix}.$$
 The exact solution, shown in Figure \ref{fig:ts:ode}, is
 \begin{equation}
@@ -62,7 +66,21 @@ The exact solution, shown in Figure \ref{fig:ts:ode}, is
 \noindent\hrulefill
 
 
-\section{Explicit and implicit time-stepping}  FIXME: gloss Euler, theta methods, and RK methods
+\section{Explicit and implicit time-stepping}  The above Example is straightforward to approximate by time-stepping numerical methods which start from the initial values and use the right-hand-side function $g(t,\by)$ to update an approximate solution $\bY(t) \approx \by(t)$.  More commonly, one generates a sequence of values $\bY_\ell$ which approximate the solution at discrete times $t_\ell$, so that $\bY_\ell \approx \by(t_\ell)$.  Because these ideas are easy to find in the literature\sidenote{A good reference is \citep{AscherPetzold1998}, for example.}, and are likely to be in the reader's background in some form, we only give a gloss here.
+
+Let $t_0<t_1<t_2<\dots<t_L$ be a finite sequence of times, with gaps $\Delta t_\ell = t_\ell - t_{\ell-1}$ for $\ell=1,2,\dots,L$.  Let $\bY_0 = \by(t_0)$ be is the known starting value from the full ODE initial value problem formed by \eqref{eq:ts:ode} and \eqref{eq:ts:ode:iv}.
+
+\emph{Euler's method}, also known as the \emph{forward Euler method}, is the simplest approximation of \eqref{eq:ts:ode}, generating $\bY_1,\bY_2,\dots,\bY_L$ from
+\begin{equation}
+\frac{\bY_\ell - \bY_{\ell-1}}{\Delta t_\ell} = \bg(t_{\ell-1},\bY_{\ell-1}). \label{eq:ts:forwardeuler}
+\end{equation}
+The \emph{backward Euler method} is just as easy to state,
+\begin{equation}
+\frac{\bY_\ell - \bY_{\ell-1}}{\Delta t_\ell} = \bg(t_{\ell},\bY_{\ell}),  \label{eq:ts:backwardeuler}
+\end{equation}
+but we will see that typically much more work goes into actually using it to generate $\bY_1,\bY_2,\dots,\bY_L$.  Both of these methods compute a first-order finite difference approximation of the derivative of the trajectory $\by(t)$ by evaluating the right-hand side function $\bg(t,\by)$ at a particular point.  They differ in whether this first-order derivative approximation is on one side or the other of the evaluation point.
+
+FIXME: theta methods and RK methods
 
 
 \section{Implementation with a \PETSc \pTS object}
