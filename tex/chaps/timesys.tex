@@ -93,11 +93,32 @@ However, under sufficient assumptions of smoothness, the deeper meaning of ``fir
 
 The idea that the \emph{numerical error}\sidenote{Sometimes ``global truncation error''.} $E_\ell = |\bY_\ell-\by(t_\ell)|$ is first-order in $\Delta t$ is the intended meaning of ``first-order accuracy'' for these methods.  Bound \eqref{eq:ts:eulerbound} itself is rarely used quantitatively.  (Not least because we apply higher-order methods, as below.)  Given the order of a method, we know---or expect---by what power a reduction of the time step will reduce the numerical error.  That is, halving the time step in a first-order method should reduce the numerical error by half, for a second-order method by a fourth, and so on.
 
-It should be no surprise that there are methods with improved accuracy.
+It should be no surprise that there are methods with improved accuracy.  Among these are the \emph{one-step}, but multi-stage, methods.  These methods, of which the \emph{Runge-Kutta} family of methods is best known, use the previous values $\bY_{\ell-1}$ only, and not previous values, to build the next approximation $\bY_\ell$ via multiple evaluations of the right-hand side $\bg$.  For example, for a time step $h=\Delta t$, the \emph{explicit trapezoidal} method \citep{AscherPetzold1998} is a second-order accurate rule which takes a forward Euler step but then ``goes back'' and recomputes the step by the average of values of $\bg$:
+\begin{align}
+\hat\bY_\ell &= \bY_{\ell-1} + h\, \bg(t_{\ell-1},\bY_{\ell-1}) \label{eq:ts:rk2a} \\
+\bY_\ell &= \bY_{\ell-1} + \frac{h}{2} \bg(t_{\ell-1},\bY_{\ell-1}) + \frac{h}{2} \bg(t_\ell,\hat\bY_\ell). \notag
+\end{align}
+Though there are two stages at each time step, only the final result $\bY_\ell$ is used to inform the next time step, and in this sense the method is ``one-step'' (despite being multi-stage).
 
-FIXME: RK methods
+The very well-known fourth-order Runge-Kutta method has four stages.  Instead of stating this scheme with formulas like those above, we say that a multi-stage
 
+FIXME: the above RK methods are all explicit, and only explicit
 
+\begin{tabular}{c|cccc}
+$0$   \\
+$c_2$    & $a_{21}$ \\
+$c_3$    & $a_{31}$ & $a_{32}$ \\
+$c_s$    & $a_{s1}$ & $a_{s2}$  & $a_{s,s - 1}$  \\ \hline
+         & $b_1$    & $b_2$     & $b_{s-1}$     & $b_s$
+\end{tabular}
+
+To further clarify the language for describing ODE schemes, we note that the \emph{second-order Adams-Bashforth} method
+\begin{equation}
+\bY_\ell = \bY_{\ell-1} - \frac{h}{2} \bg(t_{\ell-2},\bY_{\ell-2}) + \frac{3 h}{2} \bg(t_{\ell-1},\bY_{\ell-1})  \label{eq:ts:ab2}
+\end{equation}
+is a \emph{multi-step} method.  It computes a new value $\bY_\ell$ with one additional evaluation of $\bg$ (one stage) but uses two previous values $\bY_{\ell-2},\bY_{\ell-1}$.  Note this only works as stated if the step-size $h=\Delta t$ is independent of $\ell$.  In our casual treatment of time-stepping, we will say no more about multi-step methods (but see Table \ref{tab:ts:tstypes} below).
+
+FIXME: mention adaptive
 
 \section{Implicit time-stepping schemes}
 
@@ -196,6 +217,18 @@ FIXME build all tools around the ``hard'' time dependent case of stiff + nonline
 FIXME control \texttt{euler,beuler,cn,theta} by setting steps
 
 FIXME control \texttt{rk} by \texttt{-ts\_type rk -ts\_atol Z -ts\_rk\_type XX}
+
+FIXME use \texttt{-help} for additional:
+
+\begin{cline}
+$ ./ode -ts_monitor -ts_type theta -help |grep ts_theta
+  -ts_theta_theta <0.5>: Location of stage (0<Theta<=1)
+  -ts_theta_extrapolate: <FALSE> Extrapolate stage solution from previous ...
+  -ts_theta_endpoint: <FALSE> Use the endpoint instead of midpoint form of ...
+  -ts_theta_adapt: <FALSE> Use time-step adaptivity with the Theta method
+$ ./ode -ts_monitor -ts_type rk -help |grep ts_rk
+  -ts_rk_type <3bs> (choose one of) 5dp 5f 4 3bs 3 2a 1fe
+\end{cline}
 
 FIXME generate figures by, and explain \texttt{-ts\_monitor binary:t.dat -ts\_monitor\_solution binary:y.dat} usage, via \texttt{PetscBinaryIO.py}; we have helper script \texttt{plottrajectory.py}
 
