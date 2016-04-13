@@ -100,17 +100,48 @@ It should be no surprise that there are methods with improved accuracy.  Among t
 \end{align}
 Though there are two stages at each time step, only the final result $\bY_\ell$ is used to inform the next time step, and in this sense the method is ``one-step'' (despite being multi-stage).
 
-The very well-known fourth-order Runge-Kutta method has four stages.  Instead of stating this scheme with formulas like those above, we say that a multi-stage
+The very well-known fourth-order Runge-Kutta method has four stages.  Instead of stating this scheme with formulas like the above, we describe a one-step, multi-stage method
+\begin{align}
+FIXME \hat\bY_\ell &= \bY_{\ell-1} + h\, \bg(t_{\ell-1},\bY_{\ell-1}) \label{eq:ts:rkgeneral} \\
+\bY_\ell &= \bY_{\ell-1} + \frac{h}{2} \bg(t_{\ell-1},\bY_{\ell-1}) + \frac{h}{2} \bg(t_\ell,\hat\bY_\ell). \notag
+\end{align}
+by a \emph{Butcher tableau} \citep{Butcher1987}
+\begin{center}
+\begin{tabular}{c|ccccc}
+$0$ \\
+$c_2$    & $a_{21}$\\
+$c_3$    & $a_{31}$ & $a_{32}$\\
+$\vdots$ & $\vdots$ &           & $\ddots$\\
+$c_s$    & $a_{s1}$ & $a_{s2}$  & $\cdots$ & $a_{s,s - 1}$\\ \hline
+         & $b_1$    & $b_2$     & $\cdots$ & $b_{s-1}$     & $b_s$
+\end{tabular}
+\end{center}
+This computes a new value $\bY_\ell$ by computing intermediate results $\hat\bY_i$ along the way.
+
+FIXME
+
+
+\begin{table}
+\begin{tabular}{c|cc}
+$0$   \\
+$1$ & $1$ \\ \hline
+    & $\frac{1}{2}$ & $\frac{1}{2}$
+\end{tabular}
+\hfill
+\begin{tabular}{c|cccc}
+$0$   \\
+$\frac{1}{2}$ & $\frac{1}{2}$ \\
+$\frac{1}{2}$ & $0$           & $\frac{1}{2}$ \\
+$1$           & $0$           & $0$           & $1$  \\ \hline
+              & $\frac{1}{6}$ & $\frac{1}{3}$ & $\frac{1}{3}$ & $\frac{1}{6}$
+\end{tabular}
+\caption{Butcher tableau for the explicit trapezoidal (left) and classical fourth-order Runge-Kutta (right) methods.} \label{tab:ts:twotableau}
+\end{table}
+
 
 FIXME: the above RK methods are all explicit, and only explicit
 
-\begin{tabular}{c|cccc}
-$0$   \\
-$c_2$    & $a_{21}$ \\
-$c_3$    & $a_{31}$ & $a_{32}$ \\
-$c_s$    & $a_{s1}$ & $a_{s2}$  & $a_{s,s - 1}$  \\ \hline
-         & $b_1$    & $b_2$     & $b_{s-1}$     & $b_s$
-\end{tabular}
+
 
 To further clarify the language for describing ODE schemes, we note that the \emph{second-order Adams-Bashforth} method
 \begin{equation}
