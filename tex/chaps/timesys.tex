@@ -11,11 +11,11 @@ In this Chapter we look at three examples:
 \end{itemize}
 These problems are solved using a new \PETSc object, the \pTS time-stepping solver.
 
-The particular integration method used by the \pTS can be chosen at run-time.  We will recall the basics of both \emph{explicit} and \emph{implicit} time-stepping techniques.  Because implicit time-stepping implies the full stack of \pSNES/\pKSP/\pPC solvers for the (generally) non-linear equations at each time step, we will use our experience with examples from previous Chapters.
+The particular integration method used by the \pTS can be chosen at run-time.  We will recall the basics of both \emph{explicit} and \emph{implicit} methods.  Because implicit time-stepping implies the full stack of \pSNES/\pKSP/\pPC solvers for the (generally) non-linear equations at each time step, our experience with \pSNES examples, from previous Chapters, will come in handy.
 
-User code will discretize the two PDE examples, but in space only.  This \emph{method of lines} approach, which is the most common way to solve PDEs using \PETSc \pTS, avoids any need to write code specific to a temporal discretization.
+User code will discretize the two PDE examples in space only.  This \emph{method of lines} approach, which is the most common way to solve PDEs using \PETSc \pTS, avoids any need to write code specific to a temporal discretization.
 
-The third example above is the first \emph{system} of PDEs addressed so far.  Implementing such a system in a \PETSc code, which is the second topic covered in this Chapter, requires some new constructs.  However, the system here is straightforward to handle.  Our next systems example, the Stokes equations in Chapter \ref{chap:ok}, will have more interesting implementation details and solver choices.
+The third example is the first \emph{system} of PDEs addressed so far.  While it requires some new constructs, implementing this system in \PETSc code is straightforward.  However, our next systems example, the Stokes equations in Chapter \ref{chap:ok}, will have more interesting implementation details and solver choices.
 
 
 \section{Systems of ODEs}
@@ -24,29 +24,28 @@ Consider an ODE system in form
 \begin{equation}
 \by' = \bg(t,\by)  \label{eq:ts:ode}
 \end{equation}
-where $\by(t) \in \RR^N$ and $\by'=d\by/dt$, and suppose an \emph{initial value} is given:
+where $\by(t) \in \RR^N$ and $\by'=d\by/dt$.  Suppose an \emph{initial value} is given:
 \begin{equation}
 \by(t_0) = \by_0.  \label{eq:ts:ode:iv}
 \end{equation}
+Under reasonable assumptions on the behavior of $\bg$, the continuum problem \eqref{eq:ts:ode}, \eqref{eq:ts:ode:iv} is a well-posed problem, at least for short times; this much is well-known.\sidenote{See \citep{HirschSmaleDevaney2004}, for example.}  Thus one can make predictions from such a ODE \emph{initial value problem} (IVP), forward or backward from the initial time, supposing that the integration to solve the ODE is performed exactly.
 
-Under reasonable assumptions on the behavior of $g$, the continuum problem \eqref{eq:ts:ode}, \eqref{eq:ts:ode:iv} is a well-posed problem, at least for short times (away from $t_0$).  This much is well-known.\sidenote{See \citep{HirschSmaleDevaney2004}, for example.}  Thus one can make predictions from such a ODE \emph{initial value problem} (IVP), forward or backward from the initial time, supposing that the integration to solve the ODE is performed exactly.
-
-Let us be specific about sufficient regularity of $\bg$ to imply well-posedness.  We will assume for simplicity that $\bg(t,\by)$ is continuous on a product domain (cylinder) around the initial point $(t_0,\by_0)$,
+Let us be specific about sufficient regularity of $\bg$ to imply well-posedness.  We will assume for simplicity that $\bg(t,\by)$ is continuous on a cylinder around the initial point $(t_0,\by_0)$,
    $$\mathcal{D} = \{(t,\by) \,:\, |t-t_0| \le \delta, \|\by - \by_0\| \le \omega\}$$
 where $\delta > 0$ and $\omega > 0$.  Then we further assume that $\bg$ is \emph{Lipschitz} in its second argument, so that output differences are bounded by a multiple of input differences: there is $L\ge 0$ so that
 \begin{equation}
 \|\bg(t,\by_1) - \bg(t,\by_0)\| \le L \|\by_1-\by_0\|  \label{eq:ts:glipschitz}
 \end{equation}
-for $(t,\by_i) \in \mathcal{D}$.  Then the problem \eqref{eq:ts:ode}, \eqref{eq:ts:ode:iv} has a unique continuous, and continuously-differentiable, solution $\by(t)$ on a possibly-shorter interval, namely $|t-t_0|<\eps$ for some $0 < \eps \le \delta$ \citep[section 17.5]{HirschSmaleDevaney2004}.  Furthermore the solution depends continuously on both the initial value $\by_0$ and the right-hand-side $\bg$.
+for $(t,\by_i) \in \mathcal{D}$.  Then the problem \eqref{eq:ts:ode}, \eqref{eq:ts:ode:iv} has a unique continuous, and continuously-differentiable, solution $\by(t)$ on a generally-shorter interval, namely $|t-t_0|<\eps$ for some $0 < \eps \le \delta$ \citep[section 17.5]{HirschSmaleDevaney2004}.  Furthermore the solution depends continuously on both the initial value $\by_0$ and the right-hand-side $\bg$.
 
 Our brief attention to well-posedness is motivated by the following practical concern:  When we run a numerical differential equation code it will produce numbers.\sidenote{It \emph{always} produces numbers!}  These numbers are (essentially) never the exact solution of the differential equation, but they are ``correct'' in a numerical-analysis sense if we can demonstrate convergence to the solution of a well-posed continuum problem.  Thus we accept ``wrong'' numbers as correct in cases where demonstrably convergent numerical analysis is applied to a well-posed problem.
 
-\emph{Much} more egregiously wrong, however, are numbers which represent no continuum solution at all.  Benign-looking scalar nonlinear ODEs can put us in such peril.  In fact, Exercise \ref{chap:ts}.\ref{exer:ts:tan} gives a simple, and well-known, example where the solution ceases to exist after a certain finite interval of time.  The approximating code sails right by the end of this interval of time, producing numbers that are infinitely-erroneous.  The examples in this book include several nonlinear PDEs, where this concern is yet greater.  (They are infinite systems of ODEs, effectively, and such systems can fail to be time-reversible, for example.)  Thus we will try to be cautious.  When possible we consider well-posedness, and perhaps even approximate-ability (regularity), prior to implementation.
+\emph{Much} more egregiously wrong, however, are numbers which represent no continuum solution at all.  Benign-looking scalar nonlinear ODEs can put us in such peril.  In fact, Exercise \ref{chap:ts}.\ref{exer:ts:tan} gives a simple, and well-known, example where the solution ceases to exist after a certain finite interval of time.  The approximating code sails right by the end of this interval of time, producing numbers that are infinitely-erroneous.  The examples in this book include several nonlinear PDEs, where this concern is yet greater.  Thus we will be cautious.  When possible we consider well-posedness, and perhaps even approximate-ability (regularity), prior to implementation.
 
-For linear systems, solutions exist for all time.\sidenote{Assuming continuous coefficients and non-homogeneities \citep[section 17.5]{HirschSmaleDevaney2004}.}  The following example ODE system is thus a safe starting point.
+For linear systems, solutions exist for all time.\sidenote{Assuming continuous coefficients and source functions \citep[section 17.5]{HirschSmaleDevaney2004}.}  The following example ODE system is thus a safe starting point.
 
 \noindent\hrulefill
-\begin{example}  Consider the initial value problem in two dimensions
+\begin{example}  \label{ex:ts:odeeasy} Consider the initial value problem in two dimensions
 \begin{equation}
    \by' = \begin{bmatrix} y_1 \\ - y_0 + t\end{bmatrix}, \qquad \by(0) = \begin{bmatrix} 0 \\ 0 \end{bmatrix}, \label{eq:ts:example}
 \end{equation}
@@ -68,39 +67,68 @@ The exact solution, shown in Figure \ref{fig:ts:ode}, is
 \noindent\hrulefill
 
 
-\section{Methods and accuracy for ODE initial value problems}  The above Example is straightforward to approximate by time-stepping numerical methods which start from the initial values and use the right-hand-side function $g(t,\by)$ to update an approximate solution $\bY(t) \approx \by(t)$.  More commonly, one generates a sequence of values $\bY_\ell$ which approximate the solution at discrete times $t_\ell$, so that $\bY_\ell \approx \by(t_\ell)$.  Because these ideas are easy to find in the literature\sidenote{A good reference is \citep{AscherPetzold1998}, for example.}, and are likely to be in the reader's background in some form, we only give a gloss here.
+\section{Methods and accuracy for ODE initial value problems}  The above Example is straightforward to approximate by any number of time-stepping numerical methods.  They all start from the initial values and use the right-hand-side function $g(t,\by)$ to update an approximate solution $\bY(t) \approx \by(t)$.  They generate sequences $\bY_\ell$ which approximate the solution at discrete times $t_\ell$, so that $\bY_\ell \approx \by(t_\ell)$.  Because these ideas are easy to find in the literature\sidenote{A good reference is \citep{AscherPetzold1998}, for example.}, and are likely to be in the reader's background in some form, we only supply a gloss here.
 
-Let $t_0<t_1<t_2<\dots<t_L$ be a finite sequence of times, with gaps $\Delta t_\ell = t_\ell - t_{\ell-1}$ for $\ell=1,2,\dots,L$.  Let $\bY_0 = \by(t_0)$ be is the known starting value  \eqref{eq:ts:ode:iv}.  \emph{Euler's method}, also known as the forward Euler method, the simplest approximation of \eqref{eq:ts:ode}, generates $\bY_1,\bY_2,\dots,\bY_L$ from
+Let $t_0<t_1<t_2<\dots<t_L$ be a finite sequence of times, with steps $\Delta t_\ell = t_\ell - t_{\ell-1}$ for $\ell=1,2,\dots,L$.  Let $\bY_0 = \by_0$ be the known starting value  \eqref{eq:ts:ode:iv}.  \emph{Euler's method}, also known as the forward Euler method, generates $\bY_1,\bY_2,\dots,\bY_L$ from
 \begin{equation}
 \frac{\bY_\ell - \bY_{\ell-1}}{\Delta t_\ell} = \bg(t_{\ell-1},\bY_{\ell-1}). \label{eq:ts:forwardeuler}
 \end{equation}
-The \emph{backward Euler method} is just as easy to state,
+This is the simplest approximation of \eqref{eq:ts:ode}.  The \emph{backward Euler method} is just as easy to state,
 \begin{equation}
-\frac{\bY_\ell - \bY_{\ell-1}}{\Delta t_\ell} = \bg(t_{\ell},\bY_{\ell}).  \label{eq:ts:backwardeuler}
+\frac{\bY_\ell - \bY_{\ell-1}}{\Delta t_\ell} = \bg(t_{\ell},\bY_{\ell}),  \label{eq:ts:backwardeuler}
 \end{equation}
-In practice, much more work is required to use \eqref{eq:ts:backwardeuler}, for stepping forward in time, than \eqref{eq:ts:forwardeuler}.  The latter, an \emph{implicit} method as explored below, generates exactly the kind of nonlinear systems which we can and will solve by Newton's method and \pSNES.
+but much more work is required to use it in practice.  It is an \emph{implicit} method, as explored below.  In fact, at each step \eqref{eq:ts:backwardeuler} generates exactly the kind of (generally) nonlinear system which we solved in Chapter \ref{chap:nl} by Newton's method and \pSNES.
 
-Both methods \eqref{eq:ts:forwardeuler} and \eqref{eq:ts:backwardeuler} compute a first-order finite difference approximation of the derivative of the trajectory $\by(t)$ by evaluating the right-hand side function $\bg(t,\by)$ at a particular point.  They differ only in whether this derivative approximation uses a value on one side or the other of the evaluation point.
+Both methods \eqref{eq:ts:forwardeuler} and \eqref{eq:ts:backwardeuler} compute a first-order finite difference approximation of the derivative of the trajectory $\by(t)$ by evaluating the right-hand side function $\bg(t,\by)$ at a particular point.  They differ only in the evaluation point.
 
 They are first-order accurate in the simple sense that, for any twice-continuously-differentiable function $f(t)$, by Taylor's theorem
     $$\frac{f(t+\Delta t) - f(t)}{\Delta t} = f'(t) + O(\Delta t^1)$$
-as $\Delta t \to 0$.  By this relation one says that the Euler methods have first-order \emph{local truncation error}.  However, under sufficient assumptions of smoothness the deeper meaning of ``first-order accuracy'', as a rate of convergence as $\Delta t\to 0$, also applies.  Certainly one would hope that as $\Delta t \to 0$ the approximations $\bY_\ell$ converge to the values $\by(t_\ell)$ which they are intended to approximate.  In fact, by assuming that the solution exists, that a Lipschitz bound \eqref{eq:ts:glipschitz} applies to $\bg(t,\by)$, and that the solution has bounded second derivative ($|\by(t)''|\le M$), all on some interval $[t_0,t_f]$, one can show that the Euler methods satisfy $|\bY_\ell-\by(t_\ell)| = O(\Delta t^1)$ \citep{AscherPetzold1998}.  In slightly more detail, one can show
-    $$|\bY_\ell-\by(t_\ell)| \le \Delta t\,M (e^{L(t_\ell-t_0)}-1) / 2 L.$$
-This bound itself is rarely useful, but the idea that the \emph{numerical error}\sidenote{Sometimes ``global truncation error''.} $E_\ell = |\bY_\ell-\by(t_\ell)|$ is first-order in $\Delta t$ is the intended meaning of ``first-order accuracy'' for these methods.  In particular, we expect from such statements that reduction of the time step by a given factor will generally reduce the numerical error at a given time by the same factor.
+as $\Delta t \to 0$.  One says that the Euler methods have first-order \emph{local truncation error}.
 
-Looking ahead a little bit, in a \PETSc code which uses the \pTS type for solving an ODE initial value problem, one chooses the Euler and backward-Euler methods by options \texttt{-ts\_type euler} and \texttt{-ts\_type beuler}, respectively.
+However, under sufficient assumptions of smoothness, the deeper meaning of ``first-order accuracy'' also applies, as a rate of convergence as $\Delta t\to 0$.  Certainly one would hope that the approximations $\bY_\ell$ converge to the values $\by(t_\ell)$.  In fact, by assuming that the solution $\by(t)$ exists, that a Lipschitz bound \eqref{eq:ts:glipschitz} applies to $\bg(t,\by)$, and that the solution has bounded second derivative ($|\by(t)''|\le M$), all on some interval $[t_0,t_f]$, one can show that the Euler methods satisfy $|\bY_\ell-\by(t_\ell)| = O(\Delta t^1)$.  In slightly more detail, one can show
+\begin{equation}
+|\bY_\ell-\by(t_\ell)| \le \frac{\Delta t\,M}{2L} (e^{L(t_\ell-t_0)}-1)  \label{eq:ts:eulerbound}
+\end{equation}
+\citep{AscherPetzold1998}.
 
-It should be no surprise that there are methods with improved accuracy.  FIXME: theta methods
+The idea that the \emph{numerical error}\sidenote{Sometimes ``global truncation error''.} $E_\ell = |\bY_\ell-\by(t_\ell)|$ is first-order in $\Delta t$ is the intended meaning of ``first-order accuracy'' for these methods.  Bound \eqref{eq:ts:eulerbound} itself is rarely used quantitatively.  (Not least because we apply higher-order methods, as below.)  Given the order of a method, we know---or expect---by what power a reduction of the time step will reduce the numerical error.  That is, halving the time step in a first-order method should reduce the numerical error by half, for a second-order method by a fourth, and so on.
+
+It should be no surprise that there are methods with improved accuracy.
 
 FIXME: RK methods
 
 
-\section{Implicit time-stepping schemes}  FIXME
+
+\section{Implicit time-stepping schemes}
+
+FIXME: theta methods
 
 
-\section{Implementation with a \PETSc \pTS object}
 
-The above example is solved by \texttt{c/ch6/ode.c}, a program shown in Codes \ref{code:ts:ode:main} and \ref{code:ts:ode:callbacks}.  We will first summarize our code's actions on the \pTS object itself, and then those parts which describe the right-hand-side $\bg(t,\by)$.
+
+\section{\PETSc \pTS objects}
+
+FIXME introduce \pTS, which contains \pSNES inside (and thus the rest)
+
+In a \PETSc code which uses the \pTS type for solving an ODE initial value problem, one chooses the methods mentioned above by options \texttt{-ts\_type TYPE} where FIXME
+
+\begin{table}
+\small
+\begin{tabular}{lllll}
+\emph{method}                                & \texttt{-ts\_type} & \emph{adaptive?} & \emph{common options} \\ \hline
+forward Euler \eqref{eq:ts:forwardeuler}    & \texttt{euler}  & no & \\
+Runge-Kutta  FIXME                          & \texttt{rk}     & yes & \texttt{-ts\_rk\_type} FIXME \\ \hline
+backward Euler \eqref{eq:ts:backwardeuler}  & \texttt{beuler} & no & \\
+$\theta>0$   FIXME                          & \texttt{theta}  & no & FIXME \\
+Crank-Nicolson                              & \texttt{cn}     & no & 
+\end{tabular}
+\caption{Choices of the best-known ODE integration methods.  Explicit schemes are above the line and implicit below.  Compare Table \ref{tab:ts:tstypes}, which is more complete.} \label{tab:ts:odebasictypes}
+\end{table}
+
+
+\section{Fixed-dimension example }
+
+The Example ODE system on page \pageref{ex:ts:odeeasy} is solved by \texttt{c/ch6/ode.c}, a program shown in Codes \ref{code:ts:ode:main} and \ref{code:ts:ode:callbacks}.  We will first summarize our code's actions on the \pTS object itself, and then those parts which describe the right-hand-side $\bg(t,\by)$.
 
 \cinputpart{ode.c}{\CODELOC}{The \texttt{main()} part of \texttt{ode.c} creates and configures a \pTS object, plus the \pVecs for approximate and exact solutions, and a \pMat for storing the Jacobian.}{I}{//MAIN}{//ENDMAIN}{code:ts:ode:main}
 
@@ -158,13 +186,10 @@ solving from t0 = 19.000 with initial dt = 0.01000 ...
 error at tf = 20.000 :  |y-y_exact|_inf = 0.000303815
 \end{cline}
 
-FIXME introduce \pTS, which contains \pSNES inside (and thus the rest)
 
 FIXME function $\bg$ is \texttt{TSSetRHSFunction()}, Jacobian $\partial \bg/\partial \by$ is \texttt{TSSetRHSJacobian()}
 
-FIXME show \texttt{ode.c}, which is most similar to \texttt{ecjacobian.c}
-
-FIXME intro numerical esp RK and theta \citep{AscherPetzold1998}
+FIXME \texttt{ode.c} is most similar to \texttt{ecjacobian.c}
 
 FIXME build all tools around the ``hard'' time dependent case of stiff + nonlinear, though not DAE
 
