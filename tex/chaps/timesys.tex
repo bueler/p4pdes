@@ -17,10 +17,7 @@ User code will discretize the two PDE examples in space only.  This \emph{method
 
 The third example is the first \emph{system} of PDEs addressed so far.  While it requires some new constructs, implementing this system in \PETSc code is straightforward.  However, our next systems example, the Stokes equations in Chapter \ref{chap:ok}, will have more interesting implementation details and solver choices.
 
-
-\section{Systems of ODEs}
-
-Consider an ODE system in form
+\section{Systems of ODEs}  Consider an ODE system in form
 \begin{equation}
 \by' = \bg(t,\by)  \label{eq:ts:ode}
 \end{equation}
@@ -93,33 +90,34 @@ However, under sufficient assumptions of smoothness, the deeper meaning of ``fir
 
 The idea that the \emph{numerical error}\sidenote{Sometimes ``global truncation error''.} $E_\ell = |\bY_\ell-\by(t_\ell)|$ is first-order in $\Delta t$ is the intended meaning of ``first-order accuracy'' for these methods.  Bound \eqref{eq:ts:eulerbound} itself is rarely used quantitatively.  (Not least because we apply higher-order methods, as below.)  Given the order of a method, we know---or expect---by what power a reduction of the time step will reduce the numerical error.  That is, halving the time step in a first-order method should reduce the numerical error by half, for a second-order method by a fourth, and so on.
 
-It should be no surprise that there are methods with improved accuracy.  Among these are the \emph{one-step}, but multi-stage, methods.  These methods, of which the \emph{Runge-Kutta} family of methods is best known, use the previous values $\bY_{\ell-1}$ only, and not previous values, to build the next approximation $\bY_\ell$ via multiple evaluations of the right-hand side $\bg$.  For example, for a time step $h=\Delta t$, the \emph{explicit trapezoidal} method \citep{AscherPetzold1998} is a second-order accurate rule which takes a forward Euler step but then ``goes back'' and recomputes the step by the average of values of $\bg$:
-\begin{align}
-\hat\bY_\ell &= \bY_{\ell-1} + h\, \bg(t_{\ell-1},\bY_{\ell-1}) \label{eq:ts:rk2a} \\
-\bY_\ell &= \bY_{\ell-1} + \frac{h}{2} \bg(t_{\ell-1},\bY_{\ell-1}) + \frac{h}{2} \bg(t_\ell,\hat\bY_\ell). \notag
-\end{align}
-Though there are two stages at each time step, only the final result $\bY_\ell$ is used to inform the next time step, and in this sense the method is ``one-step'' (despite being multi-stage).
+It should be no surprise that there are methods with improved accuracy compared to the Euler methods.  Among these are the \emph{one-step multi-stage} methods, with the \emph{Runge-Kutta} family best known.  They use $\bY_{\ell-1}$ only, and not previous values, to build the next approximation $\bY_\ell$ from multiple evaluations of the right-hand side $\bg$.
 
-The very well-known fourth-order Runge-Kutta method has four stages.  Instead of stating this scheme with formulas like the above, we describe a one-step, multi-stage method
+\newcommand{\RKtwoa}{RK$2$a\xspace}
+\newcommand{\RKfour}{RK$4$\xspace}
+
+For example, for a time step denoted simply as $h=\Delta t_\ell$, the \emph{explicit trapezoidal} method \citep{AscherPetzold1998} is a second-order accurate rule which takes a forward Euler step but then ``goes back'' and recomputes the step by the average of values of $\bg$:
 \begin{align}
-FIXME \hat\bY_\ell &= \bY_{\ell-1} + h\, \bg(t_{\ell-1},\bY_{\ell-1}) \label{eq:ts:rkgeneral} \\
-\bY_\ell &= \bY_{\ell-1} + \frac{h}{2} \bg(t_{\ell-1},\bY_{\ell-1}) + \frac{h}{2} \bg(t_\ell,\hat\bY_\ell). \notag
+\hat\bY &= \bY_{\ell-1} + h\, \bg(t_{\ell-1},\bY_{\ell-1}) \label{eq:ts:rk2a} \\
+\bY_\ell &= \bY_{\ell-1} + \frac{h}{2} \bg(t_{\ell-1},\bY_{\ell-1}) + \frac{h}{2} \bg(t_\ell,\hat\bY). \notag
+\end{align}
+Though two stages must be computed at each time step, only the final result $\bY_\ell$ is used to inform the next time step (i.e.~which computes $\bY_{\ell+1}$).  In this sense the method is ``one-step,'' despite being multi-stage.  Method \eqref{eq:ts:rk2a} is also called ``\RKtwoa'' because it is one of several possible second-order Runge-Kutta methods.
+
+The well-known fourth-order Runge-Kutta method ``\RKfour'' has four stages.  Instead of stating the scheme with formulas like those in \eqref{eq:ts:rk2a} above, we describe a one-step, $s$-stage method by $s+1$ formulas
+\begin{align}
+\hat\bY_i &= \bY_{\ell-1} + h \sum_{j=1}^s a_{ij}\, \bg(t_{\ell-1} + c_j h, \hat\bY_j), \qquad 1 \le i \le s \label{eq:ts:rkgeneral} \\
+\bY_\ell  &= \bY_{\ell-1} + h \sum_{i=1}^s b_i\, \bg(t_{\ell-1} + c_i h, \hat\bY_i) \notag
 \end{align}
 by a \emph{Butcher tableau} \citep{Butcher1987}
 \begin{center}
-\begin{tabular}{c|ccccc}
-$0$ \\
-$c_2$    & $a_{21}$\\
-$c_3$    & $a_{31}$ & $a_{32}$\\
-$\vdots$ & $\vdots$ &           & $\ddots$\\
-$c_s$    & $a_{s1}$ & $a_{s2}$  & $\cdots$ & $a_{s,s - 1}$\\ \hline
-         & $b_1$    & $b_2$     & $\cdots$ & $b_{s-1}$     & $b_s$
+\begin{tabular}{c|cccc}
+$c_1$    & $a_{11}$ & $a_{12}$ & $\cdots$ & $a_{1s}$ \\
+$c_2$    & $a_{21}$ & $a_{22}$ & $\cdots$ & $a_{2s}$ \\
+$\vdots$ & $\vdots$ & $\vdots$ & $\ddots$ & $\vdots$ \\
+$c_s$    & $a_{s1}$ & $a_{s2}$ & $\cdots$ & $a_{ss}$ \\ \hline
+         & $b_1$    & $b_2$    & $\cdots$ & $b_s$
 \end{tabular}
 \end{center}
-This computes a new value $\bY_\ell$ by computing intermediate results $\hat\bY_i$ along the way.
-
-FIXME
-
+For example, the $s=2$ method \RKtwoa is the left tableau in Table \ref{tab:ts:exampletableau}, and the $s=4$ method \RKfour is the middle tableau.  Note that in both of these methods $\hat\bY_1=\bY_{\ell-1}$, so that the $s+1$ evaluations of $\bg$ suggested by the general formulas \eqref{eq:ts:rkgeneral} are, in fact, only $s$ evaluations.
 
 \begin{table}
 \begin{tabular}{c|cc}
@@ -135,13 +133,16 @@ $\frac{1}{2}$ & $0$           & $\frac{1}{2}$ \\
 $1$           & $0$           & $0$           & $1$  \\ \hline
               & $\frac{1}{6}$ & $\frac{1}{3}$ & $\frac{1}{3}$ & $\frac{1}{6}$
 \end{tabular}
-\caption{Butcher tableau for the explicit trapezoidal (left) and classical fourth-order Runge-Kutta (right) methods.} \label{tab:ts:twotableau}
+\hfill
+\begin{tabular}{c|cc}
+$0$   \\
+$1$ & $1-\theta$ & $\theta$ \\ \hline
+    & $1-\theta$ & $\theta$
+\end{tabular}
+\caption{Butcher tableau for the explicit trapezoidal rule (\RKtwoa; left), explicit fourth-order Runge-Kutta method (\RKfour; middle) and the implicit $\theta$ method (right) in which $0 < \theta \le 1$.} \label{tab:ts:exampletableau}
 \end{table}
 
-
-FIXME: the above RK methods are all explicit, and only explicit
-
-
+A one-step, multi-stage method described by \eqref{eq:ts:rkgeneral}, or the above tableau, computes a new value $\bY_\ell$ via intermediate results $\hat\bY_i$ along the way.  A primary purpose of introducing the tableau form is to suggest the large number of methods which are possible, and thus to suggest, by implication at least, that choosing the \emph{best} technique for a given ODE system is rarely a reasonable goal.  Our goal in this Chapter, in any case, is to suggest some reasonable default choices for broad classes of problems.  And we now invoke the usual \PETSc-user idea: many command-line, run-time options is \emph{not a bad thing}.
 
 To further clarify the language for describing ODE schemes, we note that the \emph{second-order Adams-Bashforth} method
 \begin{equation}
@@ -149,12 +150,27 @@ To further clarify the language for describing ODE schemes, we note that the \em
 \end{equation}
 is a \emph{multi-step} method.  It computes a new value $\bY_\ell$ with one additional evaluation of $\bg$ (one stage) but uses two previous values $\bY_{\ell-2},\bY_{\ell-1}$.  Note this only works as stated if the step-size $h=\Delta t$ is independent of $\ell$.  In our casual treatment of time-stepping, we will say no more about multi-step methods (but see Table \ref{tab:ts:tstypes} below).
 
-FIXME: mention adaptive
+FIXME: mention adaptive via embedded methods, and show 3bs:
+%       A[4][4] = {{0,0,0,0},
+%159:                  {1.0/2.0,0,0,0},
+%160:                  {0,3.0/4.0,0,0},
+%161:                  {2.0/9.0,1.0/3.0,4.0/9.0,0}},
+%162:       b[4]    = {2.0/9.0,1.0/3.0,4.0/9.0,0},
+%163:       bembed[4] = {7.0/24.0,1.0/4.0,1.0/3.0,1.0/8.0};
+%164:     TSRKRegister(TSRK3BS,3,4,&A[0][0],b,NULL,bembed,3,b);
+
 
 \section{Implicit time-stepping schemes}
 
-FIXME: theta methods
+FIXME: methods above are \emph{explicit} if $a_{ij}=0$ for $j\ge i$, that is, if the array $a_{ij}$ in the Butcher tableau is zero on and above the diagonal
 
+FIXME: methods \emph{implicit} otherwise, e.g.~backward Euler \eqref{eq:ts:backwardeuler} or  ``$\theta$''-methods as in 
+\begin{equation}
+FIXME
+\end{equation}
+Shown as right-hand tableau in Table \ref{tab:ts:exampletableau}.
+
+FIXME: demonstrate transformation of an implicit time step into form $\bF(\bx)=0$
 
 
 
