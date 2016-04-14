@@ -91,19 +91,19 @@ The \emph{numerical error} $E_\ell = |\bY_\ell-\by(t_\ell)|$, also called the \e
 \newcommand{\RKthreebs}{RK$3$bs\xspace}
 \newcommand{\RKfour}{RK$4$\xspace}
 
-It should be no surprise that there are methods with improved accuracy compared to the Euler methods.  Among these are the \emph{one-step multi-stage} methods, with the \emph{Runge-Kutta} family best known.  One-step methods use $\bY_{\ell-1}$ only, and not previous values, to build the next approximation $\bY_\ell$, generally from multiple evaluations of the right-hand side $\bg$.  For example, denoting the time-step simply as $h=\Delta t_\ell$, the \emph{explicit trapezoidal} method \citep{AscherPetzold1998} is a second-order rule which takes a forward Euler step but then ``goes back'' and recomputes the step by the average of values of $\bg$:
+It should be no surprise that there are methods with improved accuracy compared to the Euler methods.  Among these are the \emph{one-step multi-stage} methods, with the \emph{Runge-Kutta} family best known.  One-step methods use $\bY_{\ell-1}$ only, and not previous values, to build the next approximation $\bY_\ell$, but generally from multiple evaluations of the right-hand side $\bg$.  For example, denoting the time-step simply as $h=\Delta t_\ell$, the \emph{explicit trapezoidal} method \citep{AscherPetzold1998} is a second-order rule which takes a forward Euler step but then ``goes back'' and recomputes the step by the average of values of $\bg$:
 \begin{align}
 \hat\bY &= \bY_{\ell-1} + h\, \bg(t_{\ell-1},\bY_{\ell-1}) \label{eq:ts:rk2a} \\
 \bY_\ell &= \bY_{\ell-1} + \frac{h}{2} \bg(t_{\ell-1},\bY_{\ell-1}) + \frac{h}{2} \bg(t_\ell,\hat\bY). \notag
 \end{align}
-Though two stages must be computed at each time step, only the final result $\bY_\ell$ is used to inform the next time step (i.e.~which computes $\bY_{\ell+1}$).  In this sense the method is ``one-step'' despite being multi-stage.  Method \eqref{eq:ts:rk2a} is also called ``\RKtwoa'' because it is one of several possible second-order Runge-Kutta methods.
+Though two evaluations of $\bg$ (stages) occur at each time step, only the final result $\bY_\ell$ is used to inform the next time step (i.e.~the one which computes $\bY_{\ell+1}$).  In this sense the method is ``one-step'' despite being multi-stage.  Method \eqref{eq:ts:rk2a} is also called ``\RKtwoa;'' it is one of several possible second-order Runge-Kutta methods.
 
-The well-known fourth-order Runge-Kutta method ``\RKfour'' has four stages.  Instead of stating the scheme with formulas like those in \eqref{eq:ts:rk2a} above, we define tabular notation for any one-step, $s$-stage method.  Namely, the $s+1$ formulas
+The well-known fourth-order Runge-Kutta method ``\RKfour'' has four stages.  Instead of stating this particular scheme using formulas like those in \eqref{eq:ts:rk2a} above, let us define tabular notation for \emph{any} one-step, $s$-stage method.  Namely, the $s+1$ formulas
 \begin{align}
 \hat\bY_i &= \bY_{\ell-1} + h \sum_{j=1}^s a_{ij}\, \bg(t_{\ell-1} + c_j h, \hat\bY_j), \qquad 1 \le i \le s \label{eq:ts:rkgeneral} \\
 \bY_\ell  &= \bY_{\ell-1} + h \sum_{i=1}^s b_i\, \bg(t_{\ell-1} + c_i h, \hat\bY_i) \notag
 \end{align}
-are completely described by a \emph{Butcher tableau} \citep{Butcher1987}
+correspond to the \emph{tableau} \citep{Butcher1987}
 \begin{center}
 \begin{tabular}{c|cccc}
 $c_1$    & $a_{11}$ & $a_{12}$ & $\cdots$ & $a_{1s}$ \\
@@ -113,7 +113,8 @@ $c_s$    & $a_{s1}$ & $a_{s2}$ & $\cdots$ & $a_{ss}$ \\ \hline
          & $b_1$    & $b_2$    & $\cdots$ & $b_s$
 \end{tabular}
 \end{center}
-For example, the $s=2$ method \RKtwoa is the left tableau, and the $s=4$ method \RKfour is the middle tableau, in Table \ref{tab:ts:exampletableau}.  Note that, in all of the methods in Table \ref{tab:ts:exampletableau}, in fact $\hat\bY_1=\bY_{\ell-1}$.
+
+For example, the $s=2$ method \RKtwoa is the left tableau in Table \ref{tab:ts:exampletableau}, and the $s=4$ method \RKfour is the middle one.  Spaces in the tableau correspond to zeros.  Note that, in all of the methods in Table \ref{tab:ts:exampletableau}, in fact $\hat\bY_1=\bY_{\ell-1}$, which is why the first rows are trivial.  Also, because these schemes are \emph{explicit} they have nonzero $a_{ij}$ only strictly below the diagonal; we return to this idea below.
 
 \begin{table}
 \begin{tabular}{c|cc}
@@ -130,51 +131,35 @@ $1$           & $0$           & $0$           & $1$  \\ \hline
               & $\frac{1}{6}$ & $\frac{1}{3}$ & $\frac{1}{3}$ & $\frac{1}{6}$
 \end{tabular}
 \hfill
-\begin{tabular}{c|cc}
+\begin{tabular}{c|cccc}
 $0$   \\
-$1$ & $1-\theta$ & $\theta$ \\ \hline
-    & $1-\theta$ & $\theta$
+$\frac{1}{2}$ & $\frac{1}{2}$ \\
+$\frac{3}{4}$ & $0$           & $\frac{3}{4}$ \\
+$1$           & $\frac{2}{9}$ & $\frac{1}{3}$ & $\frac{4}{9}$ \\ \hline
+              & $\frac{2}{9}$ & $\frac{1}{3}$ & $\frac{4}{9}$ & $0$ \\
+              & $\frac{7}{24}$ & $\frac{1}{4}$ & $\frac{1}{3}$ & $\frac{1}{8}$
 \end{tabular}
 \medskip
-\caption{Butcher tableau for the explicit trapezoidal rule (\RKtwoa; left), explicit fourth-order Runge-Kutta method (\RKfour; middle) and the implicit $\theta$ method ($0 < \theta \le 1$; right).} \label{tab:ts:exampletableau}
+\caption{Tableau for the explicit trapezoidal rule (\RKtwoa; left), the classical fourth-order Runge-Kutta method (\RKfour; middle), and an embedded four-stage, third-order scheme (\RKthreebs, the \PETSc default; right).} \label{tab:ts:exampletableau}
 \end{table}
 
-In summary, a one-step, multi-stage method, whether described by \eqref{eq:ts:rkgeneral} or a Butcher tableau, computes a new value $\bY_\ell$ via intermediate results $\hat\bY_i$.  It helps, in further clarifying the language for describing ODE schemes, to mention alternative families of schemes.  For example, the \emph{second-order Adams-Bashforth} method
+In summary, a one-step, multi-stage method, whether described by \eqref{eq:ts:rkgeneral} or a tableau, computes a new value $\bY_\ell$ via intermediate results $\hat\bY_i$.  For a more interesting example of this approach, we should mention the default time-stepping scheme in \PETSc, not yet described.  It is an \emph{adaptive} Runge-Kutta scheme which is \emph{embedded}.  Let us give meaning to these terms.
+
+An ODE numerical solution method is \emph{adaptive} if it adjusts the time step by a procedure which uses information from the already-computed values.  An adaptive scheme should take shorter steps when the values from $\bg$ are rapidly-changing or irregular, and longer steps when they are smoother and more predictable.  Successfully implementing such strategies, the \emph{error estimation and control} \citep{AscherPetzold1998} done internally by the \PETSc solvers, not visible in our user code,\sidenote{Thank goodness!} is nontrivial and outside our scope.
+
+One strategy to make a Runge-Kutta method adaptive is to choose an \emph{embedded} method.  Such a scheme is in fact two methods which have the same $c_j$ and $a_{ij}$ parts of their tableau (see equation \eqref{eq:ts:rkgeneral}), but different $b_j$ \emph{and} different orders of accuracy.  The Bogacki-Shampine scheme \RKthreebs, the \PETSc default, is an embedded pair, each four stage, but one of third order and one of second order.  Their tableau are shown at right in Table \ref{tab:ts:exampletableau}, with the two different $b_j$ values listed on different rows below the horizontal line.  The difference of the computed values from these two schemes provides a basis on which to decide if the time step was short enough to satisfy the error tolerance/goal \citep{Butcher1987}.  In \RKthreebs one scheme (first $b_j$ row) makes $O(\Delta t^3)$ local truncation errors, while the other (second $b_j$ row) makes $O(\Delta t^2)$ errors.  The difference is turned into an estimate of the error committed by the lower order scheme.  Also the work of computing these two approximations is the same cost as just one, because they share the same locations for evaluations of $\bg$; this is the central meaning of ``embedded.''  Further details of the \RKthreebs scheme, including its stability and efficiency properties, are definitely beyond our scope, but see \citep{BogackiShampine1989}.
+
+In any case, it is a general theme that the cost of an ODE numerical method arises from the (distinct) evaluations of the right-hand side $\bg$ of the ODE, especially if $\bg$ has significant nonlinearities.  The additional arithmetic in implementing the scheme, represented by the coefficients in the tableau, is usually less important.
+
+There are alternative families other than one-step schemes.  For example, the \emph{second-order Adams-Bashforth} method
 \begin{equation}
 \bY_\ell = \bY_{\ell-1} - \frac{h}{2} \bg(t_{\ell-2},\bY_{\ell-2}) + \frac{3 h}{2} \bg(t_{\ell-1},\bY_{\ell-1})  \label{eq:ts:ab2}
 \end{equation}
-is a \emph{multi-step} method.  It computes a new value $\bY_\ell$ with only one additional evaluation of $\bg$ (i.e.~one stage), but using two previous values $\bY_{\ell-2},\bY_{\ell-1}$.  Note this works in a straightforward way only if the step-size $h=\Delta t$ is independent of $\ell$.  A goal of such methods is to achieve order greater than one with only one evaluation of $\bg$ per time step, and this is often achieved in practice.  However, in our casual treatment of time-stepping, we will say no more about multi-step methods (but see Table \ref{tab:ts:tstypes} below).
+is a \emph{multi-step} method.  It computes a new value $\bY_\ell$ with only one additional evaluation of $\bg$ (i.e.~one stage), but using two previous values $\bY_{\ell-2},\bY_{\ell-1}$.  This works in a straightforward way only if the step-size $h=\Delta t$ is independent of $\ell$.  A goal of such methods is to achieve order greater than one with only one evaluation of $\bg$ per time step, and this is often achieved in practice.  Other schemes which combine the multiple stages and multi-step ideas include the \emph{general linear methods} \citep{Butcher1987}.  In our quick treatment of time-stepping, we will say no more about multi-step and general linear methods, but the latter appear as possible \PETSc options in Table \ref{tab:ts:tstypes} below.
 
-We should mention the default Runge-Kutta scheme in \PETSc, which is not one of the above.  It is \emph{adaptive} by being an \emph{embedded} method, and it is worthwhile giving basic meaning to these terms.  An ODE numerical solution method is \emph{adaptive} if it adjusts the time step by a procedure which uses information the already-computed approximate solution.  A Runge-Kutta method is \emph{embedded} if it is in fact two methods which have the same ``$c_j$'' and ``$a_{ij}$'' parts of their tableau, but different ``$b_j$'' and different order of accuracy.  The Bogacki-Shampine Runge-Kutta scheme \RKthreebs, the \PETSc default, is a pair of schemes, each four stage, but one of third order and one of second order.  Their tableau are shown in Table \ref{tab:ts:tableaurk3bs}.
+Clearly there are a very large number of possible methods, whether one-step or multi-step, adaptive or not, and so on.  Many different methods are available from the \PETSc command line (below).  Choosing the ``best'' one for a given ODE system is rarely a reasonable goal.  Our goal in this Chapter is only to suggest some reasonable choices for broad classes of problems.  We also invoke an essential \PETSc mantra here, namely: a rich set of command-line, run-time options is \emph{not a bad thing}.
 
-\begin{table}
-\begin{tabular}{c|cccc}
-$0$   \\
-$\frac{1}{2}$ & $\frac{1}{2}$ \\
-$\frac{3}{4}$ & $0$           & $\frac{3}{4}$ \\
-$1$           & $\frac{2}{9}$ & $\frac{1}{3}$ & $\frac{4}{9}$ \\ \hline
-              & $\frac{2}{9}$ & $\frac{1}{3}$ & $\frac{4}{9}$ & $0$
-\end{tabular}
-\hfill
-\begin{tabular}{c|cccc}
-$0$   \\
-$\frac{1}{2}$ & $\frac{1}{2}$ \\
-$\frac{3}{4}$ & $0$           & $\frac{3}{4}$ \\
-$1$           & $\frac{2}{9}$ & $\frac{1}{3}$ & $\frac{4}{9}$ \\ \hline
-              & $\frac{7}{24}$ & $\frac{1}{4}$ & $\frac{1}{3}$ & $\frac{1}{8}$
-\end{tabular}
-\hfill
-\phantom{foo}
-
-\medskip
-\caption{Tableau for the embedded four-stage, third-order \RKthreebs scheme, the \PETSc default.} \label{tab:ts:tableaurk3bs}
-\end{table}
-
-The first idea behind this pair of schemes is that the difference of their computed values for the next time, that is, the difference of their $\bY_\ell$ values, provides a basis on which to decide if the time step was short enough to satisfy the error tolerance (goal).  In this case, one scheme makes $O(\Delta t^2)$ numerical error and the other one $O(\Delta t^3)$.  The difference can be turned into a bound on the error in from the lower order scheme; the details do not concern us here but see [CITE FIXME].  The second idea is that the work of computing two approximations is nearly the same as just one, because they share the same locations for evaluations of $\bg$; they are ``embedded.''  Indeed it is a general theme that the cost of an ODE numerical method can be understood by counting distinct evaluations of the right-hand side of the ODE, and not accounting for the additional arithmetic represented by the coefficients in the tableau.
-
-Clearly there are a very large number of possible methods, whether one-step or multi-step, adaptive or not, and so on.  Choosing the ``best'' one for a given ODE system is rarely a reasonable goal.  Many different methods are available from the \PETSc command line, and our goal in this Chapter is only to suggest some reasonable default choices for broad classes of problems.  We also invoke the essential \PETSc mantra: a rich set of command-line, run-time options is \emph{not a bad thing}.
-
-\section{Implicit time-stepping schemes, and scheme stability}
+\section{Time-stepping scheme stability, and implicitness}
 
 FIXME: methods above are \emph{explicit} if $a_{ij}=0$ for $j\ge i$, that is, if the array $a_{ij}$ in the Butcher tableau is zero on and above the diagonal
 
@@ -182,7 +167,14 @@ FIXME: methods \emph{implicit} otherwise, e.g.~backward Euler \eqref{eq:ts:backw
 \begin{equation}
 FIXME
 \end{equation}
-Shown as right-hand tableau in Table \ref{tab:ts:exampletableau}.
+Shown as this tableau
+\begin{center}
+\begin{tabular}{c|cc}
+$0$   \\
+$1$ & $1-\theta$ & $\theta$ \\ \hline
+    & $1-\theta$ & $\theta$
+\end{tabular}
+\end{center}
 
 FIXME: demonstrate transformation of an implicit time step into form $\bF(\bx)=0$
 
