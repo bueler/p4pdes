@@ -63,7 +63,6 @@ The exact solution, shown in Figure \ref{fig:ts:ode}, is
 \vspace{-5mm}
 \noindent\hrulefill
 
-
 \section{Methods, and their accuracy, for ODE initial value problems}  The above example ODE system is straightforward to approximate by any number of time-stepping numerical methods.  They all start from the initial values and use the right-hand-side function $g(t,\by)$ to update an approximate solution.  They all generate sequences $\{\bY_\ell\}$ which approximate the solution at discrete times $t_\ell$, so that $\bY_\ell \approx \by(t_\ell)$.  Because these ideas are easy to find in the literature\sidenote{A good reference is \citep{AscherPetzold1998}, for example.}, and are likely to be in the reader's background in some form, we only supply a gloss here.
 
 Let $t_0<t_1<t_2<\dots<t_L$ be a finite sequence of times, with steps $\Delta t_\ell = t_\ell - t_{\ell-1}$ for $\ell=1,2,\dots,L$.  Let $\bY_0 = \by_0$ be the known starting value  \eqref{eq:ts:ode:iv}.  \emph{Euler's method}, also known as the forward Euler method, generates $\bY_1,\bY_2,\dots,\bY_L$ from
@@ -110,7 +109,7 @@ The well-known fourth-order Runge-Kutta method ``\RKfour'' has four stages.  Ins
 \hat\bY_i &= \bY_{\ell-1} + h \sum_{j=1}^s a_{ij}\, \bg(t_{\ell-1} + c_j h, \hat\bY_j), \qquad 1 \le i \le s \label{eq:ts:rkgeneral} \\
 \bY_\ell  &= \bY_{\ell-1} + h \sum_{i=1}^s b_i\, \bg(t_{\ell-1} + c_i h, \hat\bY_i) \notag
 \end{align}
-correspond to the \emph{tableau} \citep{Butcher1987}
+correspond to the \emph{tableau} \citep{Butcher2008}
 \begin{center}
 \begin{tabular}{c|cccc}
 $c_1$    & $a_{11}$ & $a_{12}$ & $\cdots$ & $a_{1s}$ \\
@@ -150,69 +149,25 @@ $1$           & $\frac{2}{9}$ & $\frac{1}{3}$ & $\frac{4}{9}$ \\ \hline
 \caption{Tableau for the explicit trapezoidal rule (\RKtwoa; left), the classical fourth-order Runge-Kutta method (\RKfour; middle), and an embedded four-stage, third-order scheme (\RKthreebs, the \PETSc default; right).} \label{tab:ts:exampletableau}
 \end{table}
 
-In summary, a one-step, multi-stage method, whether described by \eqref{eq:ts:rkgeneral} or a tableau, computes a new value $\bY_\ell$ via intermediate results $\hat\bY_i$.  For a more interesting example of this approach, we describe the default time-stepping scheme in \PETSc, an \emph{adaptive} Runge-Kutta scheme which is \emph{embedded}.  Let us give meaning to these terms.
+In summary, a one-step, multi-stage method, whether described by \eqref{eq:ts:rkgeneral} or a tableau, computes a new value $\bY_\ell$ via intermediate results $\hat\bY_i$.  For a more interesting example of this approach, we describe the default Runge-Kutta scheme in \PETSc, an \emph{adaptive} scheme which is \emph{embedded}.  Let us give meaning to these terms.
 
 An ODE numerical solution method is \emph{adaptive} if it adjusts the time step by a procedure which uses information from the already-computed values.  An adaptive scheme will take shorter steps when the values from $\bg$ are rapidly-changing or irregular, and longer steps when they are smoother and more predictable.  Successfully implementing such strategies, the error estimation and control \citep{AscherPetzold1998} done internally by the \PETSc time-steppers (below), and not visible in our user code,\sidenote{Thank goodness!} is nontrivial and outside our scope.
 
-One strategy to build an adaptive Runge-Kutta method is to make it \emph{embedded}.  Such a scheme is in fact two methods which have the same $c_j$ and $a_{ij}$ coefficients in their tableau, but different $b_j$ \emph{and} different orders of accuracy.  The Bogacki-Shampine scheme \RKthreebs, the \PETSc default, is such an embedded pair.  Each is four stage, but one is of third order and one of second order.  Their tableau are shown at right in Table \ref{tab:ts:exampletableau}, with the $b_j$ coefficients listed on different rows below the horizontal line.  The different results from these two schemes is used to decide if the time step was short enough to satisfy the error tolerance/goal \citep{Butcher1987}.  (In \RKthreebs one scheme (first $b_j$ row) makes $O(\Delta t^3)$ local truncation errors, while the other (second $b_j$ row) makes $O(\Delta t^2)$ errors, and the difference estimates the accuracy of the lower order scheme.)  The work of computing two approximations is the same cost as just one, because they share the same evaluations of $\bg$; this is the central meaning of ``embedded.''  Further details of the \RKthreebs scheme, including its stability and efficiency properties, are beyond our scope, but see \citep{BogackiShampine1989}.
-
-Observe the general theme that the cost of an ODE numerical method arises from the (distinct) evaluations of the right-hand side $\bg$ of the ODE, especially if $\bg$ has significant nonlinearities.  The additional arithmetic in implementing the scheme, represented by the number of coefficients in the tableau, is usually less important.
+One strategy to build an adaptive Runge-Kutta method is to make it \emph{embedded}.  Such a scheme is in fact two methods which have the same $c_j$ and $a_{ij}$ coefficients in their tableau, but different $b_j$ \emph{and} different orders of accuracy.  The Bogacki-Shampine scheme \RKthreebs is such an embedded pair.\sidenote{The reader may have seen it as the \texttt{ode23} method in \Matlab.}  Each is four stage, but one is of third order and one of second order.  Their tableau are shown at right in Table \ref{tab:ts:exampletableau}, with the $b_j$ coefficients listed on different rows below the horizontal line.  The different results from these two schemes is used to decide if the time step was short enough to satisfy the error tolerance/goal \citep{Butcher2008}.  In \RKthreebs specifically, one scheme (first $b_j$ row) makes $O(\Delta t^3)$ local truncation errors, while the other (second $b_j$ row) makes $O(\Delta t^2)$ errors, and the difference estimates the accuracy of the lower order scheme.  The work of computing two approximations is the same cost as just one, because they share the same evaluations of $\bg$; this is the central meaning of ``embedded.''  Further details of the \RKthreebs scheme, including its stability and efficiency properties, are beyond our scope, but see \citep{BogackiShampine1989}.
 
 There are alternative families other than one-step schemes.  For example, the \emph{second-order Adams-Bashforth} method
 \begin{equation}
 \bY_\ell = \bY_{\ell-1} - \frac{h}{2} \bg(t_{\ell-2},\bY_{\ell-2}) + \frac{3 h}{2} \bg(t_{\ell-1},\bY_{\ell-1})  \label{eq:ts:ab2}
 \end{equation}
-is a \emph{multi-step} method.  It computes a new value $\bY_\ell$ with only one additional evaluation of $\bg$ (i.e.~one stage), but using two previous values $\bY_{\ell-2},\bY_{\ell-1}$.  This works in a straightforward way only if the step-size $h=\Delta t$ is independent of $\ell$.  A goal of such methods is to achieve order greater than one with only one evaluation of $\bg$ per time step, and this is often achieved in practice.  Other schemes combine the multiple-stages and multi-step ideas such as the \emph{general linear methods} \citep{Butcher1987}.  In our quick treatment of time-stepping, we will say no more about multi-step and general linear methods, though the latter appear as possible \PETSc options in Table \ref{tab:ts:tstypes} below.
+is a \emph{multi-step} method.  It computes a new value $\bY_\ell$ with only one additional evaluation of $\bg$ (i.e.~one stage), but using two previous values $\bY_{\ell-2},\bY_{\ell-1}$.  This works in a straightforward way only if the step-size $h=\Delta t$ is independent of $\ell$.  A goal of such methods is to achieve order greater than one with only one evaluation of $\bg$ per time step, and this is often achieved in practice.  Other schemes combine the multiple-stages and multi-step ideas such as the \emph{general linear methods} \citep{Butcher2008}.  In our quick treatment of time-stepping, we will say no more about multi-step and general linear methods, though the latter appear as possible \PETSc options in Table \ref{tab:ts:tstypes} below.
+
+The general theme is that the cost of an ODE numerical method is proportional to the number of (distinct) evaluations of the right-hand side $\bg$ of the ODE, especially if $\bg$ has significant nonlinearities.  The additional arithmetic in implementing a particular scheme, represented for example by the number of coefficients in the tableau, is usually less important.
 
 Clearly there are a very large number of possible methods, many of which are available from the \PETSc command line, whether one-step or multi-step, adaptive or not, and so on.   Choosing the ``best'' one for a given ODE system is not a reasonable goal.  Our goal in this Chapter is only to suggest some reasonable choices for broad classes of problems, but we invoke an essential \PETSc mantra here, namely: a rich set of command-line, run-time options is \emph{not a bad thing}.
 
-\section{Time-stepping scheme stability, and implicitness}
+\section{\PETSc \pTS objects, and a first example}  The example ODE system on page \pageref{ex:ts:odeeasy} is a good starting point for our first \PETSc ODE-solving program because it is of small dimension $N=2$ and because we have an exact solution with which to evaluate numerical error.  The program \texttt{c/ch6/ode.c}, shown in Codes \ref{code:ts:ode:main} and \ref{code:ts:ode:callbacks}, uses a \PETSc time-stepping object of type \pTS.  We will first summarize the code's actions on the \pTS object itself, and then show the part which specifies the right-hand-side $\bg(t,\by)$.
 
-FIXME: methods above are \emph{explicit} if $a_{ij}=0$ for $j\ge i$, that is, if the array $a_{ij}$ in the Butcher tableau is zero on and above the diagonal
-
-FIXME: methods \emph{implicit} otherwise, e.g.~backward Euler \eqref{eq:ts:backwardeuler} or  ``$\theta$''-methods as in 
-\begin{equation}
-FIXME
-\end{equation}
-Shown as this tableau
-\begin{center}
-\begin{tabular}{c|cc}
-$0$   \\
-$1$ & $1-\theta$ & $\theta$ \\ \hline
-    & $1-\theta$ & $\theta$
-\end{tabular}
-\end{center}
-
-FIXME: demonstrate transformation of an implicit time step into form $\bF(\bx)=0$
-
-FIXME: explain goal of stability
-
-
-\section{\PETSc \pTS objects}
-
-FIXME introduce \pTS, which contains \pSNES inside (and thus the rest)
-
-In a \PETSc code which uses the \pTS type for solving an ODE initial value problem, one chooses the methods mentioned above by options \texttt{-ts\_type TYPE} where FIXME
-
-\begin{table}
-\small
-\begin{tabular}{lllll}
-\emph{method}                                & \texttt{-ts\_type} & \emph{adaptive?} & \emph{common options} \\ \hline
-forward Euler \eqref{eq:ts:forwardeuler}    & \texttt{euler}  & no & \\
-Runge-Kutta  FIXME                          & \texttt{rk}     & yes & \texttt{-ts\_rk\_type} FIXME \\ \hline
-backward Euler \eqref{eq:ts:backwardeuler}  & \texttt{beuler} & no & \\
-$\theta>0$   FIXME                          & \texttt{theta}  & no & FIXME \\
-Crank-Nicolson                              & \texttt{cn}     & no & 
-\end{tabular}
-\caption{Choices of the best-known ODE integration methods.  Explicit schemes are above the line and implicit below.  Compare Table \ref{tab:ts:tstypes}, which is more complete.} \label{tab:ts:odebasictypes}
-\end{table}
-
-
-\section{Fixed-dimension example }
-
-The Example ODE system on page \pageref{ex:ts:odeeasy} is solved by \texttt{c/ch6/ode.c}, a program shown in Codes \ref{code:ts:ode:main} and \ref{code:ts:ode:callbacks}.  We will first summarize our code's actions on the \pTS object itself, and then those parts which describe the right-hand-side $\bg(t,\by)$.
-
-\cinputpart{ode.c}{\CODELOC}{The \texttt{main()} part of \texttt{ode.c} creates and configures a \pTS object, plus the \pVecs for approximate and exact solutions, and a \pMat for storing the Jacobian.}{I}{//MAIN}{//ENDMAIN}{code:ts:ode:main}
+\cinputpart{ode.c}{\CODELOC}{The \texttt{main()} part of \texttt{ode.c} creates and configures a \pTS object, plus the \pVecs for approximate and exact solutions}{I}{//MAIN}{//ENDMAIN}{code:ts:ode:main}
 
 Consider these commands extracted from Code \ref{code:ts:ode:main}:
 \begin{code}
@@ -268,18 +223,85 @@ solving from t0 = 19.000 with initial dt = 0.01000 ...
 error at tf = 20.000 :  |y-y_exact|_inf = 0.000303815
 \end{cline}
 
+FIXME control \texttt{rk} by \texttt{-ts\_type rk -ts\_atol Z -ts\_rk\_type XX}
 
-\cinputpart{ode.c}{\CODELOC}{FIXME}{III}{//JACOBIAN}{//ENDJACOBIAN}{code:ts:ode:jacobian}
+FIXME use \texttt{-help} for additional:
+
+\begin{cline}
+$ ./ode -ts_monitor -ts_type rk -help |grep ts_rk
+  -ts_rk_type <3bs> (choose one of) 5dp 5f 4 3bs 3 2a 1fe
+\end{cline}
+%$
+
+FIXME generate figures by, and explain \texttt{-ts\_monitor binary:t.dat -ts\_monitor\_solution binary:y.dat} usage, via \texttt{PetscBinaryIO.py}; we have helper script \texttt{plottrajectory.py}
+
+%// ./ode -ts_monitor
+%// ./ode -ts_monitor_solution
+%// ./ode -ts_monitor_solution draw -draw_pause 0.1
+%
+%// compare
+%// ./ode -ts_view   # for default explicit RK
+%// ./ode -ts_view -ts_type beuler  # has nonlinear solver
+%
+%//-ts_final_time
+%//-ts_init_time
+%//-ts_dt
+%
+%// ./ode -ts_monitor -ts_type beuler -ode_steps 1000    // finally close to default RK
+%// ./ode -log_view |grep Eval   // compare rk, beuler, cn
+%
+%// ./ode -ts_type euler   // time-stepping failure; see petsc issue #119
+%// ./ode -ts_monitor -ts_type rk -ts_rk_type 1fe -ts_adapt_type none   // correct Euler
+
+\section{Time-stepping stability and implicitness}
+
+FIXME: methods above are \emph{explicit} if $a_{ij}=0$ for $j\ge i$, that is, if the array $a_{ij}$ in the Butcher tableau is zero on and above the diagonal
+
+FIXME: methods \emph{implicit} otherwise, e.g.~backward Euler \eqref{eq:ts:backwardeuler} or  ``$\theta$''-methods as in 
+\begin{equation}
+FIXME
+\end{equation}
+Shown as this tableau
+\begin{center}
+\begin{tabular}{c|cc}
+$0$   \\
+$1$ & $1-\theta$ & $\theta$ \\ \hline
+    & $1-\theta$ & $\theta$
+\end{tabular}
+\end{center}
+
+FIXME: explain goal of stability
+
+FIXME: demonstrate transformation of an implicit time step into form $\bF(\bx)=0$
+
+FIXME \pTS contains \pSNES inside (and thus the rest)
+
+In a \PETSc code which uses the \pTS type for solving an ODE initial value problem, one chooses the methods mentioned above by options \texttt{-ts\_type TYPE} where FIXME
+
+\begin{table}
+\small
+\begin{tabular}{lllll}
+\emph{method}                                & \texttt{-ts\_type} & \emph{adaptive?} & \emph{common options} \\ \hline
+forward Euler \eqref{eq:ts:forwardeuler}    & \texttt{euler}  & no & \\
+Runge-Kutta  FIXME                          & \texttt{rk}     & yes & \texttt{-ts\_rk\_type} FIXME \\ \hline
+backward Euler \eqref{eq:ts:backwardeuler}  & \texttt{beuler} & no & \\
+$\theta>0$   FIXME                          & \texttt{theta}  & no & FIXME \\
+Crank-Nicolson                              & \texttt{cn}     & no & 
+\end{tabular}
+\caption{Choices of the best-known ODE integration methods.  Explicit schemes are above the line and implicit below.  Compare Table \ref{tab:ts:tstypes}, which is more complete.} \label{tab:ts:odebasictypes}
+\end{table}
+
+\cinputpart{odejac.c}{\CODELOC}{FIXME}{I}{//JACOBIAN}{//ENDJACOBIAN}{code:ts:odejac:jacobian}
+
+\cinputpart{odejac.c}{\CODELOC}{FIXME}{II}{//MATJ}{//ENDMATJ}{code:ts:odejac:mat}
 
 FIXME function $\bg$ is \texttt{TSSetRHSFunction()}, Jacobian $\partial \bg/\partial \by$ is \texttt{TSSetRHSJacobian()}
 
-FIXME \texttt{ode.c} is most similar to \texttt{ecjac.c}
+FIXME \texttt{ode.c} is thus sort of similar to \texttt{ecjac.c}
 
 FIXME build all tools around the ``hard'' time dependent case of stiff + nonlinear, though not DAE
 
 FIXME control \texttt{euler,beuler,cn,theta} by setting steps
-
-FIXME control \texttt{rk} by \texttt{-ts\_type rk -ts\_atol Z -ts\_rk\_type XX}
 
 FIXME use \texttt{-help} for additional:
 
@@ -289,12 +311,8 @@ $ ./ode -ts_monitor -ts_type theta -help |grep ts_theta
   -ts_theta_extrapolate: <FALSE> Extrapolate stage solution from previous ...
   -ts_theta_endpoint: <FALSE> Use the endpoint instead of midpoint form of ...
   -ts_theta_adapt: <FALSE> Use time-step adaptivity with the Theta method
-$ ./ode -ts_monitor -ts_type rk -help |grep ts_rk
-  -ts_rk_type <3bs> (choose one of) 5dp 5f 4 3bs 3 2a 1fe
 \end{cline}
-
-FIXME generate figures by, and explain \texttt{-ts\_monitor binary:t.dat -ts\_monitor\_solution binary:y.dat} usage, via \texttt{PetscBinaryIO.py}; we have helper script \texttt{plottrajectory.py}
-
+%$
 
 \section{Time-dependent heat equation}
 
