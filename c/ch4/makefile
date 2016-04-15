@@ -5,9 +5,9 @@ expcircle: expcircle.o chkopts
 	-${CLINKER} -o expcircle expcircle.o ${PETSC_LIB}
 	${RM} expcircle.o
 
-ecjacobian: ecjacobian.o chkopts
-	-${CLINKER} -o ecjacobian ecjacobian.o ${PETSC_LIB}
-	${RM} ecjacobian.o
+ecjac: ecjac.o chkopts
+	-${CLINKER} -o ecjac ecjac.o ${PETSC_LIB}
+	${RM} ecjac.o
 
 reaction: reaction.o chkopts
 	-${CLINKER} -o reaction reaction.o ${PETSC_LIB}
@@ -20,11 +20,11 @@ runexpcircle_1:
 runexpcircle_2:
 	-@../testit.sh expcircle "-snes_mf" 1 2
 
-runecjacobian_1:
-	-@../testit.sh ecjacobian "" 1 1
+runecjac_1:
+	-@../testit.sh ecjac "" 1 1
 
-runecjacobian_2:
-	-@../testit.sh ecjacobian "-snes_mf_operator" 1 2
+runecjac_2:
+	-@../testit.sh ecjac "-snes_mf_operator" 1 2
 
 runreaction_1:
 	-@../testit.sh reaction "-snes_converged_reason -da_refine 2" 1 1
@@ -43,5 +43,5 @@ runreaction_4:
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ expcircle ecjacobian reaction
+	@rm -f *~ expcircle ecjac reaction
 

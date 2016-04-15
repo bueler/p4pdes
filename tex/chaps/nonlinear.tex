@@ -66,7 +66,7 @@ form intersecting curves in the plane.  The curves intersect twice, as shown in 
 \end{equation}
 for $\bx\in \RR^2$ a column vector: $\bx = [x_0 \,\,\, x_1]^\top$.  Thus
 \begin{equation}
-\label{eq:nl:ecjacobian}
+\label{eq:nl:ecjac}
 J_\bF(\bx) = \begin{bmatrix}
     e^{b x_0} & & -1 \\
     2 x_0   & & 2 x_1 \end{bmatrix}
@@ -145,7 +145,7 @@ It is helpful to describe Newton iteration from the point of view of the actions
 	\item from the current iterate $\bx_k$, $\bF(\bx_k)$ is evaluated using a call-back function as set in \texttt{SNESSetFunction()}, e.g.~\texttt{FormFunction()} above,
 	\item the Jacobian $J=J_{\bF}(\bx_k)$ is
 	    \begin{enumerate}
-	    \item computed and assembled by a call-back to user-supplied code, if it is available, as set using \texttt{SNESSetJacobian()}, e.g.~\texttt{FormJacobian()} in code \texttt{ecjacobian.c} below, \emph{or}
+	    \item computed and assembled by a call-back to user-supplied code, if it is available, as set using \texttt{SNESSetJacobian()}, e.g.~\texttt{FormJacobian()} in code \texttt{ecjac.c} below, \emph{or}
 	    \item computed and assembled by evaluating $\bF(\bx_k+\delta \be_j)$ for $j=0,\dots,N-1$, thus  calling \texttt{FormFunction()} $N$ times, and then using formula \eqref{eq:nl:fdjac} $N^2$ times to compute all entries of $J$, \emph{or}
 	    \item computed and assembled by calling \texttt{FormFunction()} substantially fewer than $N$ times to compute $\bF(\bx_k+\delta \bv)$ for special vectors $\bv$, by using a graph-coloring algorithm based on the sparsity pattern of $J$ to construct the vectors $\bv$, and using formula \eqref{eq:nl:fdcolorjac} below, \emph{or}
 	    \item not assembled, but, in a Krylov iterative method for solving system \eqref{eq:nl:newton:eq}, the action $J \by$, of the Jacobian on vectors $\by$, is computed by finite-differences,
@@ -272,25 +272,25 @@ Many real-world problems do not have the smoothness needed to apply the above Th
 
 \section{Exact Jacobians and passing parameters}
 
-We have yet to exploit two critical possibilities when using a \pSNES, namely passing parameters through the call-back mechanism, so that they can be used inside the residual- and Jacobian-evaluation functions, and providing a user-written Jacobian function $J_{\bF}(\bx)$.  Codes \ref{code:ecjacobianI} and \ref{code:ecjacobianII} show  \texttt{ecjacobian.c}, which implements both of these capabilities.  It is a ``model use'' of \pSNES.\sidenote{For cases without a structured grid of the \pDMDA type (Chapter \ref{chap:st}), anyway.  Compare \texttt{reaction.c} below.}
+We have yet to exploit two critical possibilities when using a \pSNES, namely passing parameters through the call-back mechanism, so that they can be used inside the residual- and Jacobian-evaluation functions, and providing a user-written Jacobian function $J_{\bF}(\bx)$.  Codes \ref{code:ecjacI} and \ref{code:ecjacII} show  \texttt{ecjac.c}, which implements both of these capabilities.  It is a ``model use'' of \pSNES.\sidenote{For cases without a structured grid of the \pDMDA type (Chapter \ref{chap:st}), anyway.  Compare \texttt{reaction.c} below.}
 
-Code \ref{code:ecjacobianI} starts with a declaration of a C \texttt{struct} called \texttt{AppCtx} (``application context'').  It has just one element, the real parameter $b$ which appears in formulas \eqref{eq:nl:expcircleF} and \eqref{eq:nl:ecjacobian}, so a \texttt{struct} is not necessary, but in future examples there will be more than one parameter to pass.  Next, the method \texttt{FormFunction()} is almost the same as the one in \texttt{expcircle.c} (Code \ref{code:expcircle}), but the value of $b$ comes from the \texttt{struct} instead of being hard-wired as before.  In detail, the argument \texttt{void *ctx} is ``cast'' in the sense of the C language \citep{KernighanRitchie1988} to a pointer of type \texttt{AppCtx*}, and then the parameter is extracted, via the pointer, by ``\texttt{user->b}.''\sidenote{Note ``\texttt{user->b}'' and ``\texttt{(*user).b}'' are equivalent expressions in C.}  This awkward-seeming method of passing parameters allows the signature of \texttt{FormFunction()} to be precisely as before.
+Code \ref{code:ecjacI} starts with a declaration of a C \texttt{struct} called \texttt{AppCtx} (``application context'').  It has just one element, the real parameter $b$ which appears in formulas \eqref{eq:nl:expcircleF} and \eqref{eq:nl:ecjac}, so a \texttt{struct} is not necessary, but in future examples there will be more than one parameter to pass.  Next, the method \texttt{FormFunction()} is almost the same as the one in \texttt{expcircle.c} (Code \ref{code:expcircle}), but the value of $b$ comes from the \texttt{struct} instead of being hard-wired as before.  In detail, the argument \texttt{void *ctx} is ``cast'' in the sense of the C language \citep{KernighanRitchie1988} to a pointer of type \texttt{AppCtx*}, and then the parameter is extracted, via the pointer, by ``\texttt{user->b}.''\sidenote{Note ``\texttt{user->b}'' and ``\texttt{(*user).b}'' are equivalent expressions in C.}  This awkward-seeming method of passing parameters allows the signature of \texttt{FormFunction()} to be precisely as before.
 
-\cinputpart{ecjacobian.c}{\CODELOC}{Solves the same nonlinear system as \texttt{expcircle.c}, but with an exact Jacobian and parameter passing.}{I}{//START}{//END}{code:ecjacobianI}
+\cinputpart{ecjac.c}{\CODELOC}{Solves the same nonlinear system as \texttt{expcircle.c}, but with an exact Jacobian and parameter passing.}{I}{//START}{//END}{code:ecjacI}
 
-The function \texttt{FormJacobian()} in Code \ref{code:ecjacobianI} is new.  It has similar structure and semantics to \texttt{FormFunction()}, but a new signature for this kind of call-back, namely
+The function \texttt{FormJacobian()} in Code \ref{code:ecjacI} is new.  It has similar structure and semantics to \texttt{FormFunction()}, but a new signature for this kind of call-back, namely
 \begin{code}
 PetscErrorCode FormJacobian(SNES snes, Vec x, Mat P, Mat J, void *ctx)
 \end{code}
 Input \pVec \texttt{x} and pointer \texttt{void *ctx} have the same meaning as in \texttt{FormFunction()}.
 
-The difference is that we must set a \pMat as output, based on formula \eqref{eq:nl:ecjacobian} in this case.  In setting up the output \pMat the roles of \texttt{MatSetValues()}, real array \texttt{v[4]} for the entries themselves, and integer arrays \texttt{row[2]} and \texttt{col[2]} as global indices, are all the same as in Chapter \ref{chap:ls}.  Also as before, when reading \texttt{x} we can use \texttt{VecGetArrayRead()} and \texttt{VecRestoreArrayRead()}.
+The difference is that we must set a \pMat as output, based on formula \eqref{eq:nl:ecjac} in this case.  In setting up the output \pMat the roles of \texttt{MatSetValues()}, real array \texttt{v[4]} for the entries themselves, and integer arrays \texttt{row[2]} and \texttt{col[2]} as global indices, are all the same as in Chapter \ref{chap:ls}.  Also as before, when reading \texttt{x} we can use \texttt{VecGetArrayRead()} and \texttt{VecRestoreArrayRead()}.
 
-\cinputpart{ecjacobian.c}{\CODELOC}{This \texttt{main()} function allocates a \pMat to hold the Jacobian.}{II}{//STARTMAIN}{//ENDMAIN}{code:ecjacobianII}
+\cinputpart{ecjac.c}{\CODELOC}{This \texttt{main()} function allocates a \pMat to hold the Jacobian.}{II}{//STARTMAIN}{//ENDMAIN}{code:ecjacII}
 
 An interesting detail appears here, however.  There are actually \emph{two} output \pMats for \texttt{FormJacobian()} to set.  The first, called \texttt{J} here, corresponds to the Jacobian matrix itself, which we want to supply in the no-option case.  The second, called \texttt{P} here, is the ``material'' we supply from which \PETSc can build a preconditioner.  Here function \texttt{FormJacobian()} sets the entries of \pMat \texttt{P} to the correct, accurate derivatives of $\bF$, but \texttt{P}  might, in other cases, be a poor approximation of the Jacobian.  When we are done setting entries, we then assemble the \pMat \texttt{P}.  In the no option case we have also set the entries of \pMat \texttt{J}, because it is the same \pMat object as \texttt{P}.  However, and this applies if options \texttt{-snes\_fd} or \texttt{-snes\_mf} or \texttt{-snes\_mf\_operator} are used, if the \pMat \texttt{J} points to a different object then we also assemble it.\sidenote{This odd action is because \texttt{J} might represent a \emph{different} (unassembled) approximation of the Jacobian, e.g.~it is a finite-difference action in the \texttt{-snes\_mf\_operator} usage described later.  In the current case we do not want to modify \texttt{J}, but we do need to tell \PETSc that we are done with it.  Thus these apparently-odd actions on \texttt{J} and \texttt{P} allow \emph{preconditioned} Jacobian-free Newton-Krylov methods to work; see page \pageref{sec:JFNK} below.}
 
-Looking at \texttt{main()} in Code \ref{code:ecjacobianII}, note that we create and configure a $2\times 2$ \pMat \texttt{J} to hold the Jacobian.  Our use of \texttt{MatCreate(), MatSetSizes(), MatSetFromOptions(),} and \texttt{MatSetUp()} on \texttt{J} mimics what we did for linear systems in Chapter \ref{chap:ls}.  However, this time when we set-up the \pSNES we pass \texttt{J} for two arguments,
+Looking at \texttt{main()} in Code \ref{code:ecjacII}, note that we create and configure a $2\times 2$ \pMat \texttt{J} to hold the Jacobian.  Our use of \texttt{MatCreate(), MatSetSizes(), MatSetFromOptions(),} and \texttt{MatSetUp()} on \texttt{J} mimics what we did for linear systems in Chapter \ref{chap:ls}.  However, this time when we set-up the \pSNES we pass \texttt{J} for two arguments,
 \begin{code}
 SNESSetJacobian(snes,J,J,FormJacobian,&user);
 \end{code}
@@ -298,9 +298,9 @@ This means we provide the allocated space in \texttt{J} as both the Jacobian and
 
 Now that we have assembled an exact Jacobian, we see that it and its finite-difference approximation produce nearly the same result on this small and well-behaved example:
 \begin{cline}
-$ make ecjacobian
+$ make ecjac
 ...
-$ ./ecjacobian -snes_monitor
+$ ./ecjac -snes_monitor
   0 SNES Function norm 2.874105323289e+00 
   1 SNES Function norm 8.591392822370e-01 
   2 SNES Function norm 1.609958166309e-01 
@@ -308,7 +308,7 @@ $ ./ecjacobian -snes_monitor
   4 SNES Function norm 6.618107497046e-05 
   5 SNES Function norm 2.419259135755e-09 
 ...
-$ ./ecjacobian -snes_monitor -snes_fd
+$ ./ecjac -snes_monitor -snes_fd
   0 SNES Function norm 2.874105323289e+00 
   1 SNES Function norm 8.591393113962e-01 
   2 SNES Function norm 1.609958353862e-01 
@@ -321,7 +321,7 @@ $ ./ecjacobian -snes_monitor -snes_fd
 
 \PETSc also helps with debugging exact-Jacobian code through option \texttt{-snes\_type test}.  Specifically, for a small selection of inputs $\by$, the finite-difference approximation of the Jacobian $J_{\bF}(\by)$, which needs only \texttt{FormFunction()} evaluations, is compared to the result of \texttt{FormJacobian()} evaluations.  Oddly, this option generates an error message, but at least it causes the run to stop after the test results are shown.  The user must read the output and decide if the comparison shows that the implemented Jacobian is good:
 \begin{cline}
-$ ./ecjacobian -snes_type test
+$ ./ecjac -snes_type test
 Testing hand-coded Jacobian, if the ratio is
 O(1.e-8), the hand-coded Jacobian is probably correct.
 Run with -snes_test_display to show difference
@@ -393,7 +393,7 @@ These functions have common features to their signatures.  They each have argume
 \item Second, the pointers of type \texttt{double*} passed into \texttt{FormFunctionLocal()} and \texttt{FormJacobianLocal()} have valid ghosts.  That is, expressions ``\texttt{u[i+1]}'' and ``\texttt{u[i+1]}'' are valid ways of dereferencing \texttt{double *u}.  This feature is used in \texttt{FormFunctionLocal()} because indices $i-1$ and $i+1$ appear in finite-difference equation \eqref{eq:nl:drfdscheme}.  Though we never see the corresponding \pVec, ``under the hood'' the \pSNES has allocated a local \pVec with valid ghost locations, then communicated between processes to update those ghost values, and then used \texttt{DMDAVecGetArray()}/\texttt{DMDAVecRestoreArray()} to get an array.  By contrast, the solution vector \texttt{u} we provide to the \pSNES, in Code \ref{code:reactionmain} at the \texttt{SNESSolve()} call, has no ghosts because it was allocated with \texttt{DMCreateGlobalVector()}.
 \end{enumerate}
 
-In \texttt{main()} in Code \ref{code:reactionmain} we use \texttt{DMDASNESSetFunctionLocal()} and  \texttt{DMDASNESSetJacobianLocal()}.  These are structured-grid-aware versions of \texttt{SNESSetFunction()} and \texttt{SNESSetJacobian()}, respectively, used earlier in \texttt{ecjacobian.c} (Code \ref{code:ecjacobianII}).  Note that, while we do set entries in a Jacobian, in \texttt{reaction.c} we never explicitly allocate a \pMat to hold it.  The \pDMDA object, however, has enough information about the grid and stencil to allocate it internally.
+In \texttt{main()} in Code \ref{code:reactionmain} we use \texttt{DMDASNESSetFunctionLocal()} and  \texttt{DMDASNESSetJacobianLocal()}.  These are structured-grid-aware versions of \texttt{SNESSetFunction()} and \texttt{SNESSetJacobian()}, respectively, used earlier in \texttt{ecjac.c} (Code \ref{code:ecjacII}).  Note that, while we do set entries in a Jacobian, in \texttt{reaction.c} we never explicitly allocate a \pMat to hold it.  The \pDMDA object, however, has enough information about the grid and stencil to allocate it internally.
 
 Though the previous paragraphs adequately summarize program \texttt{reaction.c}, the diagram in Figure \ref{fig:nl:reactionstack} communicates the overall structure.  Our program uses six different major \PETSc types, but we apply explicit \texttt{Create()}/configure/act/\texttt{Destroy()} sequences to only three of these (\pDMDA, \pSNES, \pVec).  We do set entries in a \pMat, but it is allocated internally by the \pDMDA object.  However, one must remember that each step of Newton's method solves a linear system, and thus that \pKSP and \pPC objects exist ``inside'' the \pSNES, as revealed by \texttt{-snes\_view} in particular.  When seeking better performance on fine grids, exposure and control of these linear solver objects is essential.
 
@@ -710,7 +710,7 @@ If an exact ($J$) or approximate ($P$) Jacobian function is implemented then the
 
 Assuming either case (i), or in case (ii) assuming that \texttt{J} is provided for both \pMat arguments of \texttt{SNESSetJacobian()}, as described, the user's Jacobian code only needs to set values in the second \pMat argument, the ``preconditioner material'' argument.  The code should, however, \emph{assemble} both \pMat arguments.  An example is shown in \texttt{FormJacobianLocal()} in Code \ref{code:reactionjacobian}.
 
-As practical advice for the debugging stage, you know you have correctly- and fully-implemented the Jacobian, and you have found an adequate initial iterate, if all four options (columns) in Table \ref{tab:snesjacobianoptions:needed} work and each gives apparent quadratic convergence when looking at the residual norm decay shown by \texttt{-snes\_monitor}.  As the reader may check, this is the situation for the last two codes \texttt{ecjacobian.c} and \texttt{reaction.c}.
+As practical advice for the debugging stage, you know you have correctly- and fully-implemented the Jacobian, and you have found an adequate initial iterate, if all four options (columns) in Table \ref{tab:snesjacobianoptions:needed} work and each gives apparent quadratic convergence when looking at the residual norm decay shown by \texttt{-snes\_monitor}.  As the reader may check, this is the situation for the last two codes \texttt{ecjac.c} and \texttt{reaction.c}.
 
 Another way to compare the options, in a structured PDE case where option \texttt{-snes\_fd\_color} is typically effective, is shown in Table \ref{tab:snesjacobianoptions:evals}.  This Table supposes, rather unrealistically, that the number $q$ of Newton iterations is independent of the option.  For \texttt{-snes\_mf} and \texttt{-snes\_mf\_operator} options the Table also assumes, again unrealistically, that the number of Krylov iterations is the same at each Newton iteration.  The Table makes two simple points:\begin{itemize}
 \item Improved performance with \texttt{-snes\_fd\_color} comes from having a $c$-coloring where $c \ll N$.
@@ -864,11 +864,11 @@ We have actually only been describing one type of \pSNES solver in the last sect
     \item Let $F(x) = \cos(x-1) - \exp(1-x)$ and $x_0=0.5$.  Using either \PETSc or a quick-and-dirty numerical tool, compute Newton iterates $x_k$ for $k=1,\dots,6$.  Estimate $K$ so that $|e_{k+1}| \le K |e_k|^2$ for large $k$.
     \end{enumerate}
 
-\item Make a tiny modification to \texttt{ecjacobian.c} to set the initial vector to $\bx_0 = [10\,\, 10]^\top$.  Rerun it with option \texttt{-snes\_monitor} and note it does not converge to a solution.  Why does the \pSNES stop?  Add one runtime option so that it converges, thereby producing the data shown in Figure \ref{fig:newtonconvdelayed}.
+\item Make a tiny modification to \texttt{ecjac.c} to set the initial vector to $\bx_0 = [10\,\, 10]^\top$.  Rerun it with option \texttt{-snes\_monitor} and note it does not converge to a solution.  Why does the \pSNES stop?  Add one runtime option so that it converges, thereby producing the data shown in Figure \ref{fig:newtonconvdelayed}.
 
 \item \label{exer:nl:snestestdisplay}  Run and interpret the result:
 \begin{cline}
-$ ./ecjacobian -snes_type test -snes_test_display
+$ ./ecjac -snes_type test -snes_test_display
 \end{cline}
 %$
 
@@ -917,9 +917,9 @@ The exercise itself: Add options and such a manufactured exact solution to the c
 $ mpiexec -n N ./reaction -snes_converged_reason -da_refine M
 \end{cline}
 %$
-with a few values of \texttt{N} and \texttt{M}.  However, \texttt{ecjacobian.c} does not run correctly even on two MPI processes.  Modify so that it does.
+with a few values of \texttt{N} and \texttt{M}.  However, \texttt{ecjac.c} does not run correctly even on two MPI processes.  Modify so that it does.
 
-\item Along the lines of Exercise \ref{chap:nl}.\ref{exer:nl:seeittobelieveit}, modify \texttt{ecjacobian.c} to \texttt{ecdigits.c} which shows 16 digit results for \texttt{x[0]} and \texttt{x[1]} at each Newton iteration.  You will want to use \texttt{SNESMonitorSet()} so that the call-back code, which you write, has access to the current Newton iterate through \texttt{SNESGetSolution()}.  Also use option \texttt{-snes\_rtol 1.0e-16} at run-time.  You will see the doubling of correct digits that is characteristic of quadratic convergence.  Do you still see it with options \texttt{-snes\_fd} and \texttt{-snes\_mf}?  Note that the decay of the size of the residual, i.e.~the default output from \texttt{-snes\_monitor}, is generally more informative than spewing digits like this.
+\item Along the lines of Exercise \ref{chap:nl}.\ref{exer:nl:seeittobelieveit}, modify \texttt{ecjac.c} to \texttt{ecdigits.c} which shows 16 digit results for \texttt{x[0]} and \texttt{x[1]} at each Newton iteration.  You will want to use \texttt{SNESMonitorSet()} so that the call-back code, which you write, has access to the current Newton iterate through \texttt{SNESGetSolution()}.  Also use option \texttt{-snes\_rtol 1.0e-16} at run-time.  You will see the doubling of correct digits that is characteristic of quadratic convergence.  Do you still see it with options \texttt{-snes\_fd} and \texttt{-snes\_mf}?  Note that the decay of the size of the residual, i.e.~the default output from \texttt{-snes\_monitor}, is generally more informative than spewing digits like this.
 
 % from petsc-users by Matt:  What happens if you use LU? When debugging a nonlinear solver always use a direct solver for the linear solver (and make sure the direct solver actually worked).
 

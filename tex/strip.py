@@ -14,7 +14,7 @@ import re
 # filenames should be distinct
 files = { 2 : "vecmatksp.c tri.c",
           3 : "poisson.c",
-          4 : "expcircle.c ecjacobian.c reaction.c",
+          4 : "expcircle.c ecjac.c reaction.c",
           5 : "plap.c",
           6 : "ode.c heat.c pattern.c",
           7 : "ad3.c",
