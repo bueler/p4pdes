@@ -1,14 +1,9 @@
 static char help[] =
-"ODE system solver example using TS.  Solves N-dimensional system\n"
-"    dy/dt = G(t,y)\n"
-"with y(t0) = y0 to compute y(tf).  Serial only.\n"
-"Sets TS type to explicit Runge-Kutta.  The implemented example has\n"
-"G_0 = y_1, G_1 = - y_0 + t, y_0(0) = 0, y_1(0) = 0.  The exact solution is\n"
-"y_0(t) = t - sin(t), y_1(t) = 1 - cos(t).\n\n";
+"ODE system solver example using TS, with Jacobian.  Sets TS type to\n"
+"implicit Crank-Nicolson.  Compare ode.c.\n\n";
 
 #include <petsc.h>
 
-//CALLBACKS
 PetscErrorCode SetFromExact(double t, Vec y) {
     double *ay;
     VecGetArray(y,&ay);
@@ -29,14 +24,31 @@ PetscErrorCode FormRHSFunction(TS ts, double t, Vec y, Vec g, void *ptr) {
     VecRestoreArray(g,&ag);
     return 0;
 }
-//ENDCALLBACKS
 
-//MAIN
+//JACOBIAN
+PetscErrorCode FormRHSJacobian(TS ts, double t, Vec y, Mat J, Mat P,
+                               void *ptr) {
+    PetscErrorCode ierr;
+    int    row[2] = {0, 1},  col[2] = {0, 1};
+    double v[4] = { 0.0, 1.0,
+                   -1.0, 0.0};
+    ierr = MatSetValues(P,2,row,2,col,v,INSERT_VALUES); CHKERRQ(ierr);
+    ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    ierr = MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    if (J != P) {
+        ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+        ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    }
+    return 0;
+}
+//ENDJACOBIAN
+
 int main(int argc,char **argv) {
   PetscErrorCode ierr;
   const int N = 2;
   double    t0 = 0.0, tf = 1.0, dt = 0.1, err;
   Vec       y, yexact;
+  Mat       J;
   TS        ts;
 
   PetscInitialize(&argc,&argv,(char*)0,help);
@@ -46,12 +58,20 @@ int main(int argc,char **argv) {
   ierr = VecSetFromOptions(y); CHKERRQ(ierr);
   ierr = VecDuplicate(y,&yexact); CHKERRQ(ierr);
 
+//MATJ
+  ierr = MatCreate(PETSC_COMM_WORLD,&J); CHKERRQ(ierr);
+  ierr = MatSetSizes(J,PETSC_DECIDE,PETSC_DECIDE,N,N); CHKERRQ(ierr);
+  ierr = MatSetFromOptions(J); CHKERRQ(ierr);
+  ierr = MatSetUp(J); CHKERRQ(ierr);
+//ENDMATJ
+
   ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
   ierr = TSSetProblemType(ts,TS_NONLINEAR); CHKERRQ(ierr);
   ierr = TSSetRHSFunction(ts,NULL,FormRHSFunction,NULL); CHKERRQ(ierr);
+  ierr = TSSetRHSJacobian(ts,J,J,FormRHSJacobian,NULL); CHKERRQ(ierr);
 
   // set defaults: method, t0, dt, tf
-  ierr = TSSetType(ts,TSRK); CHKERRQ(ierr);
+  ierr = TSSetType(ts,TSCN); CHKERRQ(ierr);
   ierr = TSSetInitialTimeStep(ts,t0,dt); CHKERRQ(ierr);
   ierr = TSSetDuration(ts,100*(int)((tf-t0)/dt),tf-t0); CHKERRQ(ierr);
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
@@ -72,9 +92,8 @@ int main(int argc,char **argv) {
               "error at tf = %.3f :  |y-y_exact|_inf = %g\n",tf,err); CHKERRQ(ierr);
 
   VecDestroy(&y);  VecDestroy(&yexact);
-  TSDestroy(&ts);
+  MatDestroy(&J);  TSDestroy(&ts);
   PetscFinalize();
   return 0;
 }
-//ENDMAIN
 

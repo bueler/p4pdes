@@ -1,0 +1,10 @@
+solving from t0 = 0.000 with initial dt = 0.10000 ...
+0 TS dt 0.1 time 0.
+1 TS dt 0.170141 time 0.1
+2 TS dt 0.169917 time 0.270141
+3 TS dt 0.171145 time 0.440058
+4 TS dt 0.173931 time 0.611203
+5 TS dt 0.178719 time 0.785134
+6 TS dt 0.0361473 time 0.963853
+7 TS dt 0.188252 time 1.
+error at tf = 1.000 :  |y-y_exact|_inf = 0.000144484
