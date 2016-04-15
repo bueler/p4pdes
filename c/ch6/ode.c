@@ -48,8 +48,11 @@ PetscErrorCode FormRHSFunction(TS ts, double t, Vec y, Vec g, void *ptr) {
     VecRestoreArray(g,&ag);
     return 0;
 }
+//ENDCALLBACKS
 
-PetscErrorCode FormRHSJacobian(TS ts, double t, Vec y, Mat J, Mat P, void *ptr) {
+//JACOBIAN
+PetscErrorCode FormRHSJacobian(TS ts, double t, Vec y, Mat J, Mat P,
+                               void *ptr) {
     PetscErrorCode ierr;
     int    row[2] = {0, 1},  col[2] = {0, 1};
     double v[4] = { 0.0, 1.0,
@@ -63,7 +66,7 @@ PetscErrorCode FormRHSJacobian(TS ts, double t, Vec y, Mat J, Mat P, void *ptr) 
     }
     return 0;
 }
-//ENDCALLBACKS
+//ENDJACOBIAN
 
 //MAIN
 int main(int argc,char **argv) {
