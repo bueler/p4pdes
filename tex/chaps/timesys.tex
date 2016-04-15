@@ -21,11 +21,11 @@ The third example is the first \emph{system} of PDEs addressed so far.  While it
 \begin{equation}
 \by' = \bg(t,\by)  \label{eq:ts:ode}
 \end{equation}
-where $\by(t) \in \RR^N$ and $\by'=d\by/dt$.  Suppose an \emph{initial value} is given:
+where $\by(t) \in \RR^N$, $\by'=d\by/dt$, and $g(t,\by)$ is continuous in both inputs.  Suppose an \emph{initial value} is given:
 \begin{equation}
 \by(t_0) = \by_0.  \label{eq:ts:ode:iv}
 \end{equation}
-Under reasonable assumptions on the behavior of $\bg$, the continuum problem \eqref{eq:ts:ode}, \eqref{eq:ts:ode:iv} is a well-posed problem, at least for short times; this much is well-known.\sidenote{See \citep{HirschSmaleDevaney2004}, for example.}  Thus one can make predictions from such a ODE \emph{initial value problem} (IVP), forward or backward from the initial time, supposing that the integration to solve the ODE is performed exactly.
+Under additional, but reasonable, assumptions on the behavior of $\bg$, the continuum problem \eqref{eq:ts:ode}, \eqref{eq:ts:ode:iv} is a well-posed problem, at least for short times; this much is well-known.  Thus one can make predictions from such a ODE \emph{initial value problem} (IVP), forward or backward from the initial time.
 
 Let us be specific about sufficient regularity of $\bg$ to imply well-posedness.  We will assume for simplicity that $\bg(t,\by)$ is continuous on a cylinder around the initial point $(t_0,\by_0)$,
    $$\mathcal{D} = \{(t,\by) \,:\, |t-t_0| \le \delta, \|\by - \by_0\| \le \omega\}$$
@@ -39,7 +39,7 @@ Our brief attention to well-posedness is motivated by the following practical co
 
 \emph{Much} more egregiously wrong, however, are numbers which represent no continuum solution at all.  Benign-looking scalar nonlinear ODEs can put us in such peril.  In fact, Exercise \ref{chap:ts}.\ref{exer:ts:tan} gives a simple, and well-known, example where the solution ceases to exist after a certain finite interval of time.  The approximating code sails right by the end of this interval of time, producing numbers that are infinitely-erroneous.  The examples in this book include several nonlinear PDEs, where this concern is yet greater.  Thus we will be cautious.  When possible we consider well-posedness, and perhaps even approximate-ability (regularity), prior to implementation.
 
-For linear systems, solutions exist for all time.\sidenote{Assuming continuous coefficients and source functions \citep[section 17.5]{HirschSmaleDevaney2004}.}  The following example ODE system is thus a safe starting point.
+For linear systems, solutions exist for all time.  The following example ODE system is thus a safe starting point.
 
 \noindent\hrulefill
 \begin{example}  \label{ex:ts:odeeasy} Consider the initial value problem in two dimensions
@@ -64,39 +64,46 @@ The exact solution, shown in Figure \ref{fig:ts:ode}, is
 \noindent\hrulefill
 
 
-\section{Methods and accuracy for ODE initial value problems}  The above example ODE system is straightforward to approximate by any number of time-stepping numerical methods.  They all start from the initial values and use the right-hand-side function $g(t,\by)$ to update an approximate solution.  That is, they generate sequences $\{\bY_\ell\}$ which approximate the solution at discrete times $t_\ell$, so that $\bY_\ell \approx \by(t_\ell)$.  Because these ideas are easy to find in the literature\sidenote{A good reference is \citep{AscherPetzold1998}, for example.}, and are likely to be in the reader's background in some form, we only supply a gloss here.
+\section{Methods, and their accuracy, for ODE initial value problems}  The above example ODE system is straightforward to approximate by any number of time-stepping numerical methods.  They all start from the initial values and use the right-hand-side function $g(t,\by)$ to update an approximate solution.  They all generate sequences $\{\bY_\ell\}$ which approximate the solution at discrete times $t_\ell$, so that $\bY_\ell \approx \by(t_\ell)$.  Because these ideas are easy to find in the literature\sidenote{A good reference is \citep{AscherPetzold1998}, for example.}, and are likely to be in the reader's background in some form, we only supply a gloss here.
 
 Let $t_0<t_1<t_2<\dots<t_L$ be a finite sequence of times, with steps $\Delta t_\ell = t_\ell - t_{\ell-1}$ for $\ell=1,2,\dots,L$.  Let $\bY_0 = \by_0$ be the known starting value  \eqref{eq:ts:ode:iv}.  \emph{Euler's method}, also known as the forward Euler method, generates $\bY_1,\bY_2,\dots,\bY_L$ from
 \begin{equation}
 \frac{\bY_\ell - \bY_{\ell-1}}{\Delta t_\ell} = \bg(t_{\ell-1},\bY_{\ell-1}). \label{eq:ts:forwardeuler}
 \end{equation}
+One can also write this as a formula for the updated value $\bY_\ell$,
+\begin{equation}
+\bY_\ell = \bY_{\ell-1} + \Delta t_\ell \, \bg(t_{\ell-1},\bY_{\ell-1}). \label{eq:ts:forwardeulerupdate}
+\end{equation}
+
 The \emph{backward Euler method} is just as easy to state,
 \begin{equation}
 \frac{\bY_\ell - \bY_{\ell-1}}{\Delta t_\ell} = \bg(t_{\ell},\bY_{\ell}),  \label{eq:ts:backwardeuler}
 \end{equation}
-but much more work is required to use it in practice.  It is an \emph{implicit} method, as explored below.  At each time step \eqref{eq:ts:backwardeuler} generates exactly the kind of (generally) nonlinear system, with unknown values $\bY_\ell$, which we solved in previous Chapters by Newton's method and \pSNES.
+but much more work is required to use it in practice.  Indeed, just writing the analog of \eqref{eq:ts:forwardeulerupdate}, namely a formula by which to compute $\bY_\ell$, would require doing algebra on the function $\bg$.  Backward Euler is an \emph{implicit} method, as explored below.  At each time step \eqref{eq:ts:backwardeuler} generates exactly the kind of (generally) nonlinear system, with unknown values $\bY_\ell$, which we solved in previous Chapters by Newton's method and \pSNES.
 
 Both methods \eqref{eq:ts:forwardeuler} and \eqref{eq:ts:backwardeuler}, which are the simplest approximations of \eqref{eq:ts:ode}, compute a first-order finite difference approximation of the derivative of $\by(t)$ by evaluating the right-hand side function $\bg(t,\by)$ at a particular point.  They differ only in the evaluation point.  They are ``first-order accurate'' in the simple sense that, for any twice-continuously-differentiable function $f(t)$, by Taylor's theorem
     $$\frac{f(t+\Delta t) - f(t)}{\Delta t} = f'(t) + O(\Delta t)$$
 as $\Delta t \to 0$.  One says that the Euler methods have first-order \emph{local truncation error}.
 
-However, under sufficient assumptions of smoothness, the deeper meaning of ``first-order accuracy'' also applies, as a rate of convergence as $\Delta t\to 0$.  Of course, one would hope that the approximations $\bY_\ell$ converge to the values $\by(t_\ell)$ in that limit.  Regarding what is provable, by assuming that the solution $\by(t)$ exists, that a Lipschitz bound \eqref{eq:ts:glipschitz} applies to $\bg(t,\by)$, and that the solution has bounded second derivative ($|\by(t)''|\le M$), all on some interval $[t_0,t_f]$, one can show that the Euler methods satisfy $|\bY_\ell-\by(t_\ell)| = O(\Delta t^1)$.  In slightly more detail, one can show \citep{AscherPetzold1998}
+However, under sufficient assumptions of smoothness, the deeper meaning of ``first-order accuracy'' also applies, as a rate of convergence as $\Delta t\to 0$.  One would hope that the approximations $\bY_\ell$ converge to the values $\by(t_\ell)$ in the same limit, but notice this requires knowing how the errors build up over many steps, and not just knowing the local truncation error at each step.
+
+Regarding what is provable, by assuming that the solution $\by(t)$ exists, that a Lipschitz bound \eqref{eq:ts:glipschitz} applies to $\bg(t,\by)$, and that the solution has bounded second derivative ($|\by(t)''|\le M$), all on some interval $[t_0,t_f]$, one can show that the Euler methods satisfy $|\bY_\ell-\by(t_\ell)| = O(\Delta t^1)$.  In slightly more detail, one can show \citep{AscherPetzold1998}
 \begin{equation}
 |\bY_\ell-\by(t_\ell)| \le \frac{\Delta t\,M}{2L} (e^{L(t_\ell-t_0)}-1).  \label{eq:ts:eulerbound}
 \end{equation}
 
-The \emph{numerical error} $E_\ell = |\bY_\ell-\by(t_\ell)|$, also called the \emph{global truncation error}, is first-order in $\Delta t$ for the Euler methods: $E_\ell = O(\Delta t^1)$.  This statement is the intended meaning of ``first-order accuracy'' for these methods, while bound \eqref{eq:ts:eulerbound} itself is rarely used quantitatively.\sidenote{Not least because we apply higher-order methods, as below.}  The order of a method, $E_\ell = O(\Delta t^p)$ for some $p>0$, tells us what to expect when we shorten the time step, how much a reduction of the time step will reduce the numerical error.  Halving the time step in a first-order method should reduce the numerical error by half, for a second-order method by a fourth, and so on.
+The \emph{numerical error} $E_\ell = |\bY_\ell-\by(t_\ell)|$, also called the \emph{global truncation error}, is first-order in $\Delta t$ for the Euler methods: $E_\ell = O(\Delta t^1)$.  This statement is the intended meaning of ``first-order accuracy'' for these methods, while bound \eqref{eq:ts:eulerbound} itself is rarely used quantitatively.\sidenote{Not least because we apply higher-order methods, as below.}  The order of some method, stated as $E_\ell = O(\Delta t^p)$ for some $p>0$, tells us what to expect when we shorten the time step, namely by how much a reduction of the time step will reduce the numerical error.  Halving the time step in a first-order method should reduce the numerical error by half, for a second-order method by a fourth, and so on.
 
 \newcommand{\RKtwoa}{RK$2$a\xspace}
 \newcommand{\RKthreebs}{RK$3$bs\xspace}
 \newcommand{\RKfour}{RK$4$\xspace}
 
-It should be no surprise that there are methods with improved accuracy compared to the Euler methods.  Among these are the \emph{one-step multi-stage} methods, with the \emph{Runge-Kutta} family best known.  One-step methods use $\bY_{\ell-1}$ only, and not previous values, to build the next approximation $\bY_\ell$, but generally from multiple evaluations of the right-hand side $\bg$.  For example, denoting the time-step simply as $h=\Delta t_\ell$, the \emph{explicit trapezoidal} method \citep{AscherPetzold1998} is a second-order rule which takes a forward Euler step but then ``goes back'' and recomputes the step by the average of values of $\bg$:
+It should be no surprise that there are methods with improved accuracy compared to the Euler methods.  Among these are the \emph{one-step multi-stage} methods, with the \emph{Runge-Kutta} family best known.  One-step methods use $\bY_{\ell-1}$ only, and not previous values, to build the next approximation $\bY_\ell$, but generally by multiple evaluations of the right-hand side $\bg$.  For example, denoting the time-step simply as $h=\Delta t_\ell$, the \emph{explicit trapezoidal} method \citep{AscherPetzold1998} is a second-order rule which takes a forward Euler step but then ``goes back'' and recomputes the step by the average of values of $\bg$:
 \begin{align}
 \hat\bY &= \bY_{\ell-1} + h\, \bg(t_{\ell-1},\bY_{\ell-1}) \label{eq:ts:rk2a} \\
 \bY_\ell &= \bY_{\ell-1} + \frac{h}{2} \bg(t_{\ell-1},\bY_{\ell-1}) + \frac{h}{2} \bg(t_\ell,\hat\bY). \notag
 \end{align}
-Though two evaluations of $\bg$ (stages) occur at each time step, only the final result $\bY_\ell$ is used to inform the next time step (i.e.~the one which computes $\bY_{\ell+1}$).  In this sense the method is ``one-step'' despite being multi-stage.  Method \eqref{eq:ts:rk2a} is also called ``\RKtwoa;'' it is one of several possible second-order Runge-Kutta methods.
+Though two evaluations of $\bg$ (i.e.~the two \emph{stages}) occur at each time step, only the final result $\bY_\ell$ is used to inform the next time step (i.e.~the one which computes $\bY_{\ell+1}$).  In this sense the method is ``one-step'' despite being multi-stage.  Method \eqref{eq:ts:rk2a} is also called ``\RKtwoa;'' it is one of several possible second-order Runge-Kutta methods.
 
 The well-known fourth-order Runge-Kutta method ``\RKfour'' has four stages.  Instead of stating this particular scheme using formulas like those in \eqref{eq:ts:rk2a} above, let us define tabular notation for \emph{any} one-step, $s$-stage method.  Namely, the $s+1$ formulas
 \begin{align}
@@ -114,7 +121,7 @@ $c_s$    & $a_{s1}$ & $a_{s2}$ & $\cdots$ & $a_{ss}$ \\ \hline
 \end{tabular}
 \end{center}
 
-For example, the $s=2$ method \RKtwoa is the left tableau in Table \ref{tab:ts:exampletableau}, and the $s=4$ method \RKfour is the middle one.  Spaces in the tableau correspond to zeros.  Note that, in all of the methods in Table \ref{tab:ts:exampletableau}, in fact $\hat\bY_1=\bY_{\ell-1}$, which is why the first rows are trivial.  Also, because these schemes are \emph{explicit} they have nonzero $a_{ij}$ only strictly below the diagonal; we return to this idea below.
+For example, the $s=2$ method \RKtwoa is the left tableau in Table \ref{tab:ts:exampletableau}, and the $s=4$ method \RKfour is the middle one.  Spaces in the tableau correspond to zeros.  Note that, in all three methods in Table \ref{tab:ts:exampletableau}, $\hat\bY_1=\bY_{\ell-1}$ so the first rows are trivial.  Also, because these schemes are explicit they have nonzero $a_{ij}$ only strictly below the diagonal; we return to this idea below.
 
 \begin{table}
 \begin{tabular}{c|cc}
@@ -143,21 +150,21 @@ $1$           & $\frac{2}{9}$ & $\frac{1}{3}$ & $\frac{4}{9}$ \\ \hline
 \caption{Tableau for the explicit trapezoidal rule (\RKtwoa; left), the classical fourth-order Runge-Kutta method (\RKfour; middle), and an embedded four-stage, third-order scheme (\RKthreebs, the \PETSc default; right).} \label{tab:ts:exampletableau}
 \end{table}
 
-In summary, a one-step, multi-stage method, whether described by \eqref{eq:ts:rkgeneral} or a tableau, computes a new value $\bY_\ell$ via intermediate results $\hat\bY_i$.  For a more interesting example of this approach, we should mention the default time-stepping scheme in \PETSc, not yet described.  It is an \emph{adaptive} Runge-Kutta scheme which is \emph{embedded}.  Let us give meaning to these terms.
+In summary, a one-step, multi-stage method, whether described by \eqref{eq:ts:rkgeneral} or a tableau, computes a new value $\bY_\ell$ via intermediate results $\hat\bY_i$.  For a more interesting example of this approach, we describe the default time-stepping scheme in \PETSc, an \emph{adaptive} Runge-Kutta scheme which is \emph{embedded}.  Let us give meaning to these terms.
 
-An ODE numerical solution method is \emph{adaptive} if it adjusts the time step by a procedure which uses information from the already-computed values.  An adaptive scheme should take shorter steps when the values from $\bg$ are rapidly-changing or irregular, and longer steps when they are smoother and more predictable.  Successfully implementing such strategies, the \emph{error estimation and control} \citep{AscherPetzold1998} done internally by the \PETSc solvers, not visible in our user code,\sidenote{Thank goodness!} is nontrivial and outside our scope.
+An ODE numerical solution method is \emph{adaptive} if it adjusts the time step by a procedure which uses information from the already-computed values.  An adaptive scheme will take shorter steps when the values from $\bg$ are rapidly-changing or irregular, and longer steps when they are smoother and more predictable.  Successfully implementing such strategies, the error estimation and control \citep{AscherPetzold1998} done internally by the \PETSc time-steppers (below), and not visible in our user code,\sidenote{Thank goodness!} is nontrivial and outside our scope.
 
-One strategy to make a Runge-Kutta method adaptive is to choose an \emph{embedded} method.  Such a scheme is in fact two methods which have the same $c_j$ and $a_{ij}$ parts of their tableau (see equation \eqref{eq:ts:rkgeneral}), but different $b_j$ \emph{and} different orders of accuracy.  The Bogacki-Shampine scheme \RKthreebs, the \PETSc default, is an embedded pair, each four stage, but one of third order and one of second order.  Their tableau are shown at right in Table \ref{tab:ts:exampletableau}, with the two different $b_j$ values listed on different rows below the horizontal line.  The difference of the computed values from these two schemes provides a basis on which to decide if the time step was short enough to satisfy the error tolerance/goal \citep{Butcher1987}.  In \RKthreebs one scheme (first $b_j$ row) makes $O(\Delta t^3)$ local truncation errors, while the other (second $b_j$ row) makes $O(\Delta t^2)$ errors.  The difference is turned into an estimate of the error committed by the lower order scheme.  Also the work of computing these two approximations is the same cost as just one, because they share the same locations for evaluations of $\bg$; this is the central meaning of ``embedded.''  Further details of the \RKthreebs scheme, including its stability and efficiency properties, are definitely beyond our scope, but see \citep{BogackiShampine1989}.
+One strategy to build an adaptive Runge-Kutta method is to make it \emph{embedded}.  Such a scheme is in fact two methods which have the same $c_j$ and $a_{ij}$ coefficients in their tableau, but different $b_j$ \emph{and} different orders of accuracy.  The Bogacki-Shampine scheme \RKthreebs, the \PETSc default, is such an embedded pair.  Each is four stage, but one is of third order and one of second order.  Their tableau are shown at right in Table \ref{tab:ts:exampletableau}, with the $b_j$ coefficients listed on different rows below the horizontal line.  The different results from these two schemes is used to decide if the time step was short enough to satisfy the error tolerance/goal \citep{Butcher1987}.  (In \RKthreebs one scheme (first $b_j$ row) makes $O(\Delta t^3)$ local truncation errors, while the other (second $b_j$ row) makes $O(\Delta t^2)$ errors, and the difference estimates the accuracy of the lower order scheme.)  The work of computing two approximations is the same cost as just one, because they share the same evaluations of $\bg$; this is the central meaning of ``embedded.''  Further details of the \RKthreebs scheme, including its stability and efficiency properties, are beyond our scope, but see \citep{BogackiShampine1989}.
 
-In any case, it is a general theme that the cost of an ODE numerical method arises from the (distinct) evaluations of the right-hand side $\bg$ of the ODE, especially if $\bg$ has significant nonlinearities.  The additional arithmetic in implementing the scheme, represented by the coefficients in the tableau, is usually less important.
+Observe the general theme that the cost of an ODE numerical method arises from the (distinct) evaluations of the right-hand side $\bg$ of the ODE, especially if $\bg$ has significant nonlinearities.  The additional arithmetic in implementing the scheme, represented by the number of coefficients in the tableau, is usually less important.
 
 There are alternative families other than one-step schemes.  For example, the \emph{second-order Adams-Bashforth} method
 \begin{equation}
 \bY_\ell = \bY_{\ell-1} - \frac{h}{2} \bg(t_{\ell-2},\bY_{\ell-2}) + \frac{3 h}{2} \bg(t_{\ell-1},\bY_{\ell-1})  \label{eq:ts:ab2}
 \end{equation}
-is a \emph{multi-step} method.  It computes a new value $\bY_\ell$ with only one additional evaluation of $\bg$ (i.e.~one stage), but using two previous values $\bY_{\ell-2},\bY_{\ell-1}$.  This works in a straightforward way only if the step-size $h=\Delta t$ is independent of $\ell$.  A goal of such methods is to achieve order greater than one with only one evaluation of $\bg$ per time step, and this is often achieved in practice.  Other schemes which combine the multiple stages and multi-step ideas include the \emph{general linear methods} \citep{Butcher1987}.  In our quick treatment of time-stepping, we will say no more about multi-step and general linear methods, but the latter appear as possible \PETSc options in Table \ref{tab:ts:tstypes} below.
+is a \emph{multi-step} method.  It computes a new value $\bY_\ell$ with only one additional evaluation of $\bg$ (i.e.~one stage), but using two previous values $\bY_{\ell-2},\bY_{\ell-1}$.  This works in a straightforward way only if the step-size $h=\Delta t$ is independent of $\ell$.  A goal of such methods is to achieve order greater than one with only one evaluation of $\bg$ per time step, and this is often achieved in practice.  Other schemes combine the multiple-stages and multi-step ideas such as the \emph{general linear methods} \citep{Butcher1987}.  In our quick treatment of time-stepping, we will say no more about multi-step and general linear methods, though the latter appear as possible \PETSc options in Table \ref{tab:ts:tstypes} below.
 
-Clearly there are a very large number of possible methods, whether one-step or multi-step, adaptive or not, and so on.  Many different methods are available from the \PETSc command line (below).  Choosing the ``best'' one for a given ODE system is rarely a reasonable goal.  Our goal in this Chapter is only to suggest some reasonable choices for broad classes of problems.  We also invoke an essential \PETSc mantra here, namely: a rich set of command-line, run-time options is \emph{not a bad thing}.
+Clearly there are a very large number of possible methods, many of which are available from the \PETSc command line, whether one-step or multi-step, adaptive or not, and so on.   Choosing the ``best'' one for a given ODE system is not a reasonable goal.  Our goal in this Chapter is only to suggest some reasonable choices for broad classes of problems, but we invoke an essential \PETSc mantra here, namely: a rich set of command-line, run-time options is \emph{not a bad thing}.
 
 \section{Time-stepping scheme stability, and implicitness}
 
