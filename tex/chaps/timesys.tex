@@ -165,7 +165,7 @@ The general theme is that the cost of an ODE numerical method is proportional to
 
 Clearly there are a very large number of possible methods, many of which are available from the \PETSc command line, whether one-step or multi-step, adaptive or not, and so on.   Choosing the ``best'' one for a given ODE system is not a reasonable goal.  Our goal in this Chapter is only to suggest some reasonable choices for broad classes of problems, but we invoke an essential \PETSc mantra here, namely: a rich set of command-line, run-time options is \emph{not a bad thing}.
 
-\section{\PETSc \pTS objects, and a first example}  The example ODE system on page \pageref{ex:ts:odeeasy} is a good starting point for our first \PETSc ODE-solving program because it is of small dimension $N=2$ and because we have an exact solution with which to evaluate numerical error.  The program \texttt{c/ch6/ode.c}, shown in Codes \ref{code:ts:ode:main} and \ref{code:ts:ode:callbacks}, uses a \PETSc time-stepping object of type \pTS.  We will first summarize the code's actions on the \pTS object itself, and then show the part which specifies the right-hand-side $\bg(t,\by)$.
+\section{\PETSc \pTS objects, and a first example}  The example system on page \pageref{ex:ts:odeeasy} is a good starting point for our first \PETSc ODE-solving program because it is of small, fixed dimension ($N=2$) and because we have an exact solution from which to evaluate numerical error.  The program \texttt{c/ch6/ode.c}, shown in Codes \ref{code:ts:ode:main} and \ref{code:ts:ode:callbacks}, uses a \PETSc time-stepping object of type \pTS.  We will first summarize the code's actions on the \pTS object itself, and then show the part which specifies the right-hand-side $\bg(t,\by)$.
 
 \cinputpart{ode.c}{\CODELOC}{The \texttt{main()} part of \texttt{ode.c} creates and configures a \pTS object, plus the \pVecs for approximate and exact solutions}{I}{//MAIN}{//ENDMAIN}{code:ts:ode:main}
 
@@ -174,15 +174,12 @@ Consider these commands extracted from Code \ref{code:ts:ode:main}:
   TSCreate(PETSC_COMM_WORLD,&ts);
   TSSetProblemType(ts,TS_NONLINEAR);
   TSSetRHSFunction(ts,NULL,FormRHSFunction,NULL);
-  TSSetRHSJacobian(ts,J,J,FormRHSJacobian,NULL);
 \end{code}
 It turns out there is little reason to design \PETSc examples for the linear case only.  By setting the problem type to \texttt{TS\_NONLINEAR} we are saying that the problem is in form \eqref{eq:ts:ode} with a function $\bg(t,\by)$ which will be supplied by user code.\sidenote{As we will see in later examples, a \pTS of type \texttt{TS\_NONLINEAR} may have an even more general form than equation \eqref{eq:ts:ode}.}
 
-Applying \texttt{TSSetRHSFunction()} sets a call-back to our own function---here named \texttt{FormRHSFunction()}---which evaluates $\bg(t,\by)$; see Code \ref{code:ts:ode:callbacks}.  We also set a Jacobian call-back to our function \texttt{FormRHSJacobian()} which sets the entries of the \pMat \texttt{J} corresponding to
-    $$\frac{\partial \bg}{\partial \by}(t,\by) = \begin{bmatrix}\phantom{\bigg|} \frac{\partial g_i}{\partial y_j}(t,\by) \phantom{\bigg|}\end{bmatrix}.$$
-Because an allocated \pMat must be supplied to \texttt{TSSetRHSJacobian()}, the above \pTS set-up lines are preceded, in Code \ref{code:ts:ode:main}, by a \texttt{Create/SetUp} sequence for \pMat \texttt{J}.  As usual when setting Jacobians, we assign \texttt{J} to both the Jacobian and preconditioner-material arguments of \texttt{TSSetRHSJacobian()}; compare usage of \texttt{SNESSetJacobian()} and \texttt{DMDASNESSetJacobianLocal()} in Chapters \ref{chap:nl} and \ref{chap:of}.
+FIXME \pVec create
 
-Next are additional commands for configuring the \pTS.  All of the following choices can, and often will, be overridden by command-line options:
+Calling \texttt{TSSetRHSFunction()} sets a call-back to our own function, here named \texttt{FormRHSFunction()}, which evaluates $\bg(t,\by)$; see Code \ref{code:ts:ode:callbacks}.  Next are additional commands for configuring the \pTS.  All of the following choices can, and often will, be overridden by command-line options:
 \begin{code}
   TSSetType(ts,TSRK);
   TSSetInitialTimeStep(ts,t0,dt);
@@ -192,12 +189,9 @@ Next are additional commands for configuring the \pTS.  All of the following cho
 \end{code}
 Note that, despite its name, \texttt{TSSetInitialTimeStep()} sets both the initial time \texttt{t0} and the initial time step \texttt{dt}.  (Note that if the numerical ODE solver chosen at run-time is in fact adaptive then \texttt{dt} is indeed only the \emph{initial} time step, generally modified by the solver after the first step.)  Next, \texttt{TSSetDuration()} sets both the duration of the solve (\texttt{tf-t0}) and the maximum number of steps that the solver is allowed to take.  In this case we set the latter quantity to 100 times the intended number of steps, namely the duration over the initial time step (\texttt{(tf-t0)/dt}), based on our other choices.
 
-
 \begin{code}
   TSGetTime(ts,&t0);
   SetFromExact(t0,y);
-  TSGetTimeStep(ts,&dt);
-  PetscPrintf(...,"solving from t0 = ...",t0,dt);
   TSSolve(ts,y);
   TSGetTime(ts,&tf);
   SetFromExact(tf,yexact);
@@ -216,10 +210,8 @@ $ ./ode -ts_monitor -ts_final_time 20 -ts_monitor_lg_solution -draw_pause 0.1
 
 \begin{cline}
 $ ./ode 
-solving from t0 = 0.000 with initial dt = 0.10000 ...
 error at tf = 1.000 :  |y-y_exact|_inf = 0.000144484
 $ ./ode -ts_init_time 19.0 -ts_dt 0.01 -ts_final_time 20.0
-solving from t0 = 19.000 with initial dt = 0.01000 ...
 error at tf = 20.000 :  |y-y_exact|_inf = 0.000303815
 \end{cline}
 
@@ -290,6 +282,10 @@ Crank-Nicolson                              & \texttt{cn}     & no &
 \end{tabular}
 \caption{Choices of the best-known ODE integration methods.  Explicit schemes are above the line and implicit below.  Compare Table \ref{tab:ts:tstypes}, which is more complete.} \label{tab:ts:odebasictypes}
 \end{table}
+
+FIXME We set a Jacobian call-back to our function \texttt{FormRHSJacobian()} which sets the entries of the \pMat \texttt{J} corresponding to
+    $$\frac{\partial \bg}{\partial \by}(t,\by) = \begin{bmatrix}\phantom{\bigg|} \frac{\partial g_i}{\partial y_j}(t,\by) \phantom{\bigg|}\end{bmatrix}.$$
+Because an allocated \pMat must be supplied to \texttt{TSSetRHSJacobian()}, the above \pTS set-up lines are preceded, in Code \ref{code:ts:ode:main}, by a \texttt{Create/SetUp} sequence for \pMat \texttt{J}.  As usual when setting Jacobians, we assign \texttt{J} to both the Jacobian and preconditioner-material arguments of \texttt{TSSetRHSJacobian()}; compare usage of \texttt{SNESSetJacobian()} and \texttt{DMDASNESSetJacobianLocal()} in Chapters \ref{chap:nl} and \ref{chap:of}.
 
 \cinputpart{odejac.c}{\CODELOC}{FIXME}{I}{//JACOBIAN}{//ENDJACOBIAN}{code:ts:odejac:jacobian}
 

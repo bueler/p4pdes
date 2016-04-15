@@ -70,29 +70,25 @@ int main(int argc,char **argv) {
   ierr = TSSetRHSFunction(ts,NULL,FormRHSFunction,NULL); CHKERRQ(ierr);
   ierr = TSSetRHSJacobian(ts,J,J,FormRHSJacobian,NULL); CHKERRQ(ierr);
 
-  // set defaults: method, t0, dt, tf
+  // set defaults
   ierr = TSSetType(ts,TSCN); CHKERRQ(ierr);
   ierr = TSSetInitialTimeStep(ts,t0,dt); CHKERRQ(ierr);
   ierr = TSSetDuration(ts,100*(int)((tf-t0)/dt),tf-t0); CHKERRQ(ierr);
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
   ierr = TSSetFromOptions(ts); CHKERRQ(ierr);  // can override defaults
 
-  // solve and compute error based on command-line choices for t0, dt, tf
+  // solve and compute error
   ierr = TSGetTime(ts,&t0); CHKERRQ(ierr);
   ierr = SetFromExact(t0,y); CHKERRQ(ierr);
-  ierr = TSGetTimeStep(ts,&dt); CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,
-              "solving from t0 = %.3f with initial dt = %.5f ...\n",t0,dt); CHKERRQ(ierr);
   ierr = TSSolve(ts,y); CHKERRQ(ierr);
   ierr = TSGetTime(ts,&tf); CHKERRQ(ierr);
   ierr = SetFromExact(tf,yexact); CHKERRQ(ierr);
-  ierr = VecAXPY(y,-1.0,yexact); CHKERRQ(ierr);    // y <- y + (-1.0) yexact
+  ierr = VecAXPY(y,-1.0,yexact); CHKERRQ(ierr);    // y <- y - yexact
   ierr = VecNorm(y,NORM_INFINITY,&err); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
               "error at tf = %.3f :  |y-y_exact|_inf = %g\n",tf,err); CHKERRQ(ierr);
 
-  VecDestroy(&y);  VecDestroy(&yexact);
-  MatDestroy(&J);  TSDestroy(&ts);
+  VecDestroy(&y);  VecDestroy(&yexact);  TSDestroy(&ts);  MatDestroy(&J);
   PetscFinalize();
   return 0;
 }
