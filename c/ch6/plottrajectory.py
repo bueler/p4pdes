@@ -10,10 +10,8 @@ Example:
   $ ./ode -ts_monitor binary:t.dat -ts_monitor_solution binary:y.dat
   $ ./plottrajectory t.dat y.dat
 
-Longer example:
-  $ ./ode -ts_final_time 20.0 -ts_dt 0.1 -ts_rtol 1.0e-6 -ts_atol 1.0e-6 \\
-    -ts_monitor binary:t.dat -ts_monitor_solution binary:y.dat
- $ ./plottrajectory t.dat y.dat
+Save in .png:
+  $ ./plottrajectory -o foo.png t.dat y.dat
 '''
 
 import PetscBinaryIO
@@ -30,6 +28,8 @@ parser.add_argument('yfile',metavar='YDATA',
                     help='file from -ts_monitor_solution binary:YDATA')
 parser.add_argument('--no-plot', dest='plot', action='store_false',
                     help='do not plot; just save variables t,Y')
+parser.add_argument('-o',metavar='FILENAME',dest='filename',
+                    help='save image file')
 args = parser.parse_args()
 
 tfile = open(args.tfile,'r')
@@ -42,14 +42,18 @@ if len(t) != np.shape(Y)[1]:
     print 'time dimension size mismatch: %d != %d' % (len(t),len(objects))
     sys.exit(2)
 
+print 'time t is length=%d, solution Y is shape=(%d,%d)' % \
+        (len(t),np.shape(Y)[0],np.shape(Y)[1])
+
 if args.plot:
     import matplotlib.pyplot as plt
     for k in range(np.shape(Y)[0]):
         plt.plot(t,Y[k],label='y[%d]' % k)
     plt.xlabel('t')
     plt.legend()
+
+if args.filename:
+    plt.savefig(args.filename)
+elif args.plot:
     plt.show()
-else:
-    print 'time t is length=%d, solution Y is shape=(%d,%d)' % \
-        (len(t),np.shape(Y)[0],np.shape(Y)[1])
 
