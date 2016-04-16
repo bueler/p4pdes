@@ -165,39 +165,42 @@ The general theme is that the cost of an ODE numerical method is proportional to
 
 Clearly there are a very large number of possible methods, many of which are available from the \PETSc command line, whether one-step or multi-step, adaptive or not, and so on.   Choosing the ``best'' one for a given ODE system is not a reasonable goal.  Our goal in this Chapter is only to suggest some reasonable choices for broad classes of problems, but we invoke an essential \PETSc mantra here, namely: a rich set of command-line, run-time options is \emph{not a bad thing}.
 
-\section{\PETSc \pTS objects, and a first example}  The example system on page \pageref{ex:ts:odeeasy} is a good starting point for our first \PETSc ODE-solving program because it is of small, fixed dimension ($N=2$) and because we have an exact solution from which to evaluate numerical error.  The program \texttt{c/ch6/ode.c}, shown in Codes \ref{code:ts:ode:main} and \ref{code:ts:ode:callbacks}, uses a \PETSc time-stepping object of type \pTS.  We will first summarize the code's actions on the \pTS object itself, and then show the part which specifies the right-hand-side $\bg(t,\by)$.
+\section{\PETSc \pTS objects, and a first example}  The example system on page \pageref{ex:ts:odeeasy} is a good starting point for our first ODE-solving program because it is of small, fixed dimension,\sidenote{Our last fixed-dimension programs were at the start of Chapter \ref{chap:nl}.  Note that \texttt{ode.c} and \texttt{odejac.c} in the current Chapter do not use a \pDMDA grid object, but \texttt{heat.c} and \texttt{pattern.c} do.} and because it has an exact solution from which we evaluate numerical error.  The program is \texttt{c/ch6/ode.c} shown in Codes \ref{code:ts:ode:main} and \ref{code:ts:ode:callbacks}.  It uses a \PETSc time-stepping object of type \pTS.
 
 \cinputpart{ode.c}{\CODELOC}{The \texttt{main()} part of \texttt{ode.c} creates and configures a \pTS object, plus the \pVecs for approximate and exact solutions}{I}{//MAIN}{//ENDMAIN}{code:ts:ode:main}
 
-Consider these commands extracted from Code \ref{code:ts:ode:main}:
+The first thing the code does is to create space for the approximate and exact solutions in \pVecs of fixed size $N=2$.  Then we see these commands which initialize the \pTS:
 \begin{code}
   TSCreate(PETSC_COMM_WORLD,&ts);
   TSSetProblemType(ts,TS_NONLINEAR);
   TSSetRHSFunction(ts,NULL,FormRHSFunction,NULL);
 \end{code}
-It turns out there is little reason to design \PETSc examples for the linear case only.  By setting the problem type to \texttt{TS\_NONLINEAR} we are saying that the problem is in form \eqref{eq:ts:ode} with a function $\bg(t,\by)$ which will be supplied by user code.\sidenote{As we will see in later examples, a \pTS of type \texttt{TS\_NONLINEAR} may have an even more general form than equation \eqref{eq:ts:ode}.}
+By setting the problem type to \texttt{TS\_NONLINEAR} we are saying that the problem is in form \eqref{eq:ts:ode} with a function $\bg(t,\by)$; we ignore the fact here that our particular system is linear.  As we will see in later examples, type \texttt{TS\_NONLINEAR} allows even more general form than equation \eqref{eq:ts:ode}.  Calling \texttt{TSSetRHSFunction()} sets a call-back to our own function \texttt{FormRHSFunction()} which evaluates $\bg(t,\by)$; see Code \ref{code:ts:ode:callbacks}.
 
-FIXME \pVec create
-
-Calling \texttt{TSSetRHSFunction()} sets a call-back to our own function, here named \texttt{FormRHSFunction()}, which evaluates $\bg(t,\by)$; see Code \ref{code:ts:ode:callbacks}.  Next are additional commands for configuring the \pTS.  All of the following choices can, and often will, be overridden by command-line options:
+Then we set the particular \pTS solver to Runge-Kutta:
 \begin{code}
   TSSetType(ts,TSRK);
+\end{code}
+In fact this is nothing but a default choice, which can be overriden by option \texttt{-ts\_type}, as shown below.
+
+After that are additional commands for configuring the time-axis of the \pTS.  All of the following choices can, and often will be, overridden by command-line options:
+\begin{code}
   TSSetInitialTimeStep(ts,t0,dt);
   TSSetDuration(ts,100*(int)((tf-t0)/dt),tf-t0);
   TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP);
   TSSetFromOptions(ts);
 \end{code}
-Note that, despite its name, \texttt{TSSetInitialTimeStep()} sets both the initial time \texttt{t0} and the initial time step \texttt{dt}.  (Note that if the numerical ODE solver chosen at run-time is in fact adaptive then \texttt{dt} is indeed only the \emph{initial} time step, generally modified by the solver after the first step.)  Next, \texttt{TSSetDuration()} sets both the duration of the solve (\texttt{tf-t0}) and the maximum number of steps that the solver is allowed to take.  In this case we set the latter quantity to 100 times the intended number of steps, namely the duration over the initial time step (\texttt{(tf-t0)/dt}), based on our other choices.
+Note that \texttt{TSSetInitialTimeStep()} sets both the initial time \texttt{t0} and the (initial) time step \texttt{dt}.  If the numerical ODE solver chosen at run-time is in fact adaptive then \texttt{dt} is \emph{only} the initial time step, which is then generally modified by the solver after the first step.  Next, \texttt{TSSetDuration()} sets both the duration of the solve (\texttt{tf-t0}) and the maximum number of steps that the solver is allowed to take.  Here that is 100 times the intended number of steps, namely \texttt{(tf-t0)/dt} based on our other choices.
 
+Because of run-time options, the values for the initial time, duration, and initial time step may have changed after the \texttt{TSSetFromOptions()} call.  Thus when we actually ask for the \pTS to solve the problem by time stepping, we ask the \pTS for its current time (\texttt{TSGetTime()}) and set the initial values from that.  Observe that the function that evaluates the exact solution, shown in Code \ref{code:ts:ode:callbacks}, also supplies the initial value here.  Only then do we solve:
 \begin{code}
   TSGetTime(ts,&t0);
   SetFromExact(t0,y);
   TSSolve(ts,y);
-  TSGetTime(ts,&tf);
-  SetFromExact(tf,yexact);
-  ...
-  PetscPrintf(...,"error at tf = ...",tf,err);
 \end{code}
+After \texttt{TSSolve()} comes standard code, relative to previous Chapters, to compute the norm of the numerical error and to destroy (de-allocate) the objects we created.
+
+Other than a \texttt{Create/Set/use/Destroy} sequence for the \pTS as above, the other required part of a \pTS-using code is to define the function $\bg(t,\by)$ which determines our specific PDE.  This is shown in Code \ref{code:ts:ode:callbacks}.  FIXME
 
 \cinputpart{ode.c}{\CODELOC}{FIXME}{II}{//CALLBACKS}{//ENDCALLBACKS}{code:ts:ode:callbacks}
 

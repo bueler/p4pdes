@@ -77,10 +77,12 @@ int main(int argc,char **argv) {
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
   ierr = TSSetFromOptions(ts); CHKERRQ(ierr);  // can override defaults
 
-  // solve and compute error
+  // set initial value and solve
   ierr = TSGetTime(ts,&t0); CHKERRQ(ierr);
   ierr = SetFromExact(t0,y); CHKERRQ(ierr);
   ierr = TSSolve(ts,y); CHKERRQ(ierr);
+
+  // compute error
   ierr = TSGetTime(ts,&tf); CHKERRQ(ierr);
   ierr = SetFromExact(tf,yexact); CHKERRQ(ierr);
   ierr = VecAXPY(y,-1.0,yexact); CHKERRQ(ierr);    // y <- y - yexact
