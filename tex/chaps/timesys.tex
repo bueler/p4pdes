@@ -167,7 +167,7 @@ Clearly there are a very large number of possible methods, many of which are ava
 
 \section{\PETSc \pTS objects, and a first example}  The example system on page \pageref{ex:ts:odeeasy} is a good starting point for our first ODE-solving program because it is of small, fixed dimension,\sidenote{Our last fixed-dimension programs were at the start of Chapter \ref{chap:nl}.  Note that \texttt{ode.c} and \texttt{odejac.c} in the current Chapter do not use a \pDMDA grid object, but \texttt{heat.c} and \texttt{pattern.c} do.} and because it has an exact solution from which we evaluate numerical error.  The program is \texttt{c/ch6/ode.c} shown in Codes \ref{code:ts:ode:main} and \ref{code:ts:ode:callbacks}.  It uses a \PETSc time-stepping object of type \pTS.
 
-\cinputpart{ode.c}{\CODELOC}{The \texttt{main()} part of \texttt{ode.c} creates and configures a \pTS object, plus the \pVecs for approximate and exact solutions}{I}{//MAIN}{//ENDMAIN}{code:ts:ode:main}
+\cinputpart{ode.c}{\CODELOC}{The \texttt{main()} part of \texttt{ode.c} creates and configures a \pTS object, plus the \pVecs for approximate and exact solutions.}{I}{//MAIN}{//ENDMAIN}{code:ts:ode:main}
 
 The first thing the code does is to create space for the approximate and exact solutions in \pVecs of fixed size $N=2$.  Then we see these commands which initialize the \pTS:
 \begin{code}
@@ -192,61 +192,109 @@ After that are additional commands for configuring the time-axis of the \pTS.  A
 \end{code}
 Note that \texttt{TSSetInitialTimeStep()} sets both the initial time \texttt{t0} and the (initial) time step \texttt{dt}.  If the numerical ODE solver chosen at run-time is in fact adaptive then \texttt{dt} is \emph{only} the initial time step, which is then generally modified by the solver after the first step.  Next, \texttt{TSSetDuration()} sets both the duration of the solve (\texttt{tf-t0}) and the maximum number of steps that the solver is allowed to take.  Here that is 100 times the intended number of steps, namely \texttt{(tf-t0)/dt} based on our other choices.
 
-Because of run-time options, the values for the initial time, duration, and initial time step may have changed after the \texttt{TSSetFromOptions()} call.  Thus when we actually ask for the \pTS to solve the problem by time stepping, we ask the \pTS for its current time (\texttt{TSGetTime()}) and set the initial values from that.  Observe that the function that evaluates the exact solution, shown in Code \ref{code:ts:ode:callbacks}, also supplies the initial value here.  Only then do we solve:
-\begin{code}
-  TSGetTime(ts,&t0);
-  SetFromExact(t0,y);
-  TSSolve(ts,y);
-\end{code}
-After \texttt{TSSolve()} comes standard code, relative to previous Chapters, to compute the norm of the numerical error and to destroy (de-allocate) the objects we created.
+Because of run-time options, the values for the initial time, duration, and initial time step may have changed after the \texttt{TSSetFromOptions()} call.  Thus, before we ask for the \pTS to solve the problem by time stepping, we get the current time (\texttt{TSGetTime()}) and set the initial values from that.  The function that evaluates the exact solution, shown in Code \ref{code:ts:ode:callbacks}, also supplies the initial value here.  After \texttt{TSSolve()} comes a bit more standard code, as in previous Chapters, which computes the norm of the numerical error and then destroys (de-allocates) the objects we created.
 
-Other than a \texttt{Create/Set/use/Destroy} sequence for the \pTS as above, the other required part of a \pTS-using code is to define the function $\bg(t,\by)$ which determines our specific PDE.  This is shown in Code \ref{code:ts:ode:callbacks}.  FIXME
+Code \ref{code:ts:ode:callbacks} shows function \texttt{FormRHSFunction()} which evaluates $\bg(t,\by)$ for the example on page \pageref{ex:ts:odeeasy}.  The inputs are \texttt{double t} and \pVec \texttt{y}.  We read the latter into a \texttt{const} array with \texttt{VecGetArrayRead()}, while the output \pVec \texttt{g}, which our code modifies, is accessed through \texttt{VecGetArray()}.  In other words, \texttt{FormRHSFunction()} is similar to the \texttt{FormFunction()} code we wrote in Chapter \ref{chap:nl}.
 
-\cinputpart{ode.c}{\CODELOC}{FIXME}{II}{//CALLBACKS}{//ENDCALLBACKS}{code:ts:ode:callbacks}
+\cinputpart{ode.c}{\CODELOC}{\texttt{SetFromExact()} computes the exact solution, while \texttt{FormRHSFunction()} computes the right-hand side of \eqref{eq:ts:ode}, namely $\bg(t,\by)$.}{II}{//CALLBACKS}{//ENDCALLBACKS}{code:ts:ode:callbacks}
 
+Let us try it out.  Two options to try, when in doubt or just curious, are to \texttt{monitor} and \texttt{view} the \pTS.  First the result of \texttt{monitor}:
 \begin{cline}
 $ cd c/ch6/
 $ make ode
 $ ./ode -ts_monitor
-$ ./ode -ts_monitor -ts_final_time 20 -ts_monitor_lg_solution -draw_pause 0.1
+0 TS dt 0.1 time 0.
+1 TS dt 0.170141 time 0.1
+2 TS dt 0.169917 time 0.270141
+3 TS dt 0.171145 time 0.440058
+...
+86 TS dt 0.206773 time 19.6777
+87 TS dt 0.11548 time 19.8845
+88 TS dt 0.205616 time 20.
+error at tf = 20.000 :  |y-y_exact|_inf = 0.00930352
 \end{cline}
+%$
+It is clear that the time-stepping method is adaptive and, given that we have computed the final numerical error, that it has essentially succeeded.  Comparing Figure \ref{fig:ts:ode}, an error of magnitude $9\times 10^{-3}$ at time $t=20$ is indeed small.
 
+What solution method was used?  Do \texttt{-ts\_view}:
 \begin{cline}
-$ ./ode 
+$ ./ode -ts_view
+TS Object: 1 MPI processes
+  type: rk
+  maximum steps=20000
+  maximum time=20.
+  total number of nonlinear solver iterations=0
+  total number of nonlinear solve failures=0
+  total number of linear solver iterations=0
+  total number of rejected steps=12
+    RK 3bs
+    Abscissa     c =  0.000000  0.500000  0.750000  1.000000 
+  FSAL: yes
+  TSAdapt Object:   1 MPI processes
+...
 error at tf = 1.000 :  |y-y_exact|_inf = 0.000144484
-$ ./ode -ts_init_time 19.0 -ts_dt 0.01 -ts_final_time 20.0
-error at tf = 20.000 :  |y-y_exact|_inf = 0.000303815
 \end{cline}
+%$
+As asserted earlier, the default for type \texttt{TSRK} is \RKthreebs.  Interestingly, the adaptive method tried and then rejected 12 steps in the 88 taken.
 
-FIXME control \texttt{rk} by \texttt{-ts\_type rk -ts\_atol Z -ts\_rk\_type XX}
-
-FIXME use \texttt{-help} for additional:
-
+As with other major \PETSc solver types, there are many control options, so a first response is to get help:
 \begin{cline}
-$ ./ode -ts_monitor -ts_type rk -help |grep ts_rk
-  -ts_rk_type <3bs> (choose one of) 5dp 5f 4 3bs 3 2a 1fe
+$ ./ode -help |grep ts_
 \end{cline}
 %$
 
-FIXME generate figures by, and explain \texttt{-ts\_monitor binary:t.dat -ts\_monitor\_solution binary:y.dat} usage, via \texttt{PetscBinaryIO.py}; we have helper script \texttt{plottrajectory.py}
+Thus we learn about all the basic controls.  For example, to see numerical values of the solution at each time-step, do
+\begin{cline}
+$ ./ode -ts_monitor_solution
+\end{cline}
+%$
+For a run-time graphical (line-graph) view of the solution, do
+\begin{cline}
+$ ./ode -ts_monitor -ts_monitor_lg_solution -draw_pause 0.1
+\end{cline}
+%$
+The result is a movie version of Figure \ref{fig:ts:ode}.
 
-%// ./ode -ts_monitor
-%// ./ode -ts_monitor_solution
-%// ./ode -ts_monitor_solution draw -draw_pause 0.1
-%
-%// compare
-%// ./ode -ts_view   # for default explicit RK
-%// ./ode -ts_view -ts_type beuler  # has nonlinear solver
-%
-%//-ts_final_time
-%//-ts_init_time
-%//-ts_dt
-%
+We are free to adjust the start time, end time, and initial time step at run-time:
+\begin{cline}
+$ ./ode -ts_init_time 1.0 -ts_final_time 2.0 -ts_dt 0.001 -ts_monitor
+\end{cline}
+%$
+We can also turn off adaptive time-stepping,
+\begin{cline}
+$ ./ode -ts_adapt_type none -ts_monitor
+\end{cline}
+%$
+which generates 200 steps of length \texttt{dt}$=0.1$, exactly as we requested.  On the other hand, we can change the key tolerance used in adaptive time-stepping.  One way is to choose the relative tolerance to be much larger or much smaller than the default of $10^{-4}$,
+\begin{cline}
+$ ./ode -ts_monitor -ts_rtol 1.0e-1
+$ ./ode -ts_monitor -ts_rtol 1.0e-10
+\end{cline}
+%$
+These give 18 and 119 steps, and final numerical errors of $1.2$ and $3.4\times 10^{-3}$, respectively.
+
+We can choose the particular solver type with ease, either the major type with \texttt{-ts\_type} or the Runge-Kutta type with \texttt{-ts\_rk\_type} if the solver is already of type \texttt{rk}:
+\begin{cline}
+$ ./ode -help |grep ts_type
+  -ts_type <rk>: TS method (one of) euler beuler cn pseudo gl ssp theta alpha rk
+                 arkimex rosw eimex mimex
+$ ./ode -ts_type rk -help |grep ts_rk
+  -ts_rk_type <3bs> (choose one of) 5dp 5f 4 3bs 3 2a 1fe
+\end{cline}
+
+A careful study of the relative performance of \pTS methods on this first ODE example problem is now possible, of course.  We encourage the reader to pursue it, but we will only return to that after introducing implicit time-stepping and a fundamental concerns with ODE solution methods, namely stability and stiffness.
+
+Before moving on we mention an additional mode of visualization of the solution trajectory.  Figure \ref{fig:ts:ode} was produced by using the script \texttt{plottrajectory.py} in the same directory \texttt{c/ch6/}, like this:
+\begin{cline}
+$ ./ode -ts_monitor binary:t.dat -ts_monitor_solution binary:y.dat
+$ ./plottrajectory.py -o figure.png t.dat y.dat
+\end{cline}
+Running the Python script \texttt{plottrajectory.py} requires copies of, or sym-links to, the Python tools \texttt{PetscBinaryIO.py} and \texttt{petsc\_conf.py} in the \texttt{bin/} directory of your \texttt{\$PETSC\_DIR}.
+
+
 %// ./ode -ts_monitor -ts_type beuler -ode_steps 1000    // finally close to default RK
 %// ./ode -log_view |grep Eval   // compare rk, beuler, cn
-%
-%// ./ode -ts_type euler   // time-stepping failure; see petsc issue #119
-%// ./ode -ts_monitor -ts_type rk -ts_rk_type 1fe -ts_adapt_type none   // correct Euler
+
 
 \section{Time-stepping stability and implicitness}
 
@@ -294,7 +342,7 @@ Because an allocated \pMat must be supplied to \texttt{TSSetRHSJacobian()}, the 
 
 \cinputpart{odejac.c}{\CODELOC}{FIXME}{II}{//MATJ}{//ENDMATJ}{code:ts:odejac:mat}
 
-FIXME function $\bg$ is \texttt{TSSetRHSFunction()}, Jacobian $\partial \bg/\partial \by$ is \texttt{TSSetRHSJacobian()}
+FIXME Jacobian $\partial \bg/\partial \by$ is \texttt{TSSetRHSJacobian()}
 
 FIXME \texttt{ode.c} is thus sort of similar to \texttt{ecjac.c}
 
@@ -330,7 +378,7 @@ FIXME solve heat equation by implicit
 \begin{figure}
 % usage: \standardTSstack{scale}{Jacobian}{DMDA}{DMPlex}
 \standardTSstack{0.775}{}{}{dashed}
-\caption{The \PETSc stack used for the time-dependent heat and reaction/diffusion problems (\texttt{heat.c,pattern.c}).  Compare Figure \ref{fig:of:standardstack}.}
+\caption{The \PETSc stack used for the time-dependent PDE problems in Chapter \ref{chap:ts} (i.e.~\texttt{heat.c,pattern.c}).  Compare Figure \ref{fig:of:standardstack}.}
 \label{fig:of:tsstack}
 \end{figure}
 
@@ -361,11 +409,11 @@ FIXME final-time greyscale plots using \texttt{PetscBinaryIO.py}
 \renewcommand{\labelenumi}{\arabic{chapter}.\arabic{enumi}\quad}
 \renewcommand{\labelenumii}{(\alph{enumii})}
 \begin{enumerate}
-\item \label{exer:ts:tan}  Consider the scalar ODE initial value problem $y'=1+y^2$, $y(0)=0$.  Show by-hand that $y(t)=\tan t$ is the unique solution to this problem.  Modify \texttt{ode.c} to solve this problem.  Run the code from $t=0$ to $t=t_f=2$.  What run-time observable, actual evidence shows that your estimate of ``$y(2)$'' is meaningless?
-\item FIXME which \texttt{-ts\_type} work with \texttt{ode.c}?  do \texttt{-help |grep ts\_type} to find all the possibilities, and try 
+\item \label{exer:ts:tan}  Consider the scalar ODE initial value problem $y'=1+y^2$, $y(0)=0$.  Show by-hand that $y(t)=\tan t$ is the unique solution to this problem.  Modify \texttt{ode.c} to solve this problem.  Run the code from $t=0$ to $t=t_f=2$.  What actual evidence at run-time shows that your estimate of ``$y(2)$'' is totally meaningless?
+\item FIXME which \texttt{-ts\_type} work with \texttt{ode.c}?  do \texttt{-help |grep ts\_type} to find possibilities, and try.  what work with additional option \texttt{-snes\_fd}?  with \texttt{odejac.c}?
 % euler, beuler, rk, theta, cn
-\item FIXME confirm the claim in the text that the Jacobian is not used in explicit methods \texttt{-ts\_type euler,rk} by deleting \texttt{FormRHSJacobian()} from \texttt{ode.c}; with it still deleted check that \texttt{-ts\_type beuler,theta,cn} work when used in combination with \texttt{-snes\_fd} or \texttt{-snes\_mf}
 \item FIXME \texttt{ode.c} says it is ``serial only''  what happens with \texttt{mpiexec -n 2 ./ode}, and why?
+\item FIXME simple stiff system e.g.~with diagonal matrix with 1,-10,-1000 on diagonal.  what happens with RK?  with beuler?
 \item FIXME version of \texttt{ode.c} which solves DAE system
     $$\bbf(t,\by,\by') = \bg(t,\by)$$
 where $\partial \bg/\partial \by'$ may be singular
