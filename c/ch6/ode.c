@@ -35,7 +35,7 @@ PetscErrorCode FormRHSFunction(TS ts, double t, Vec y, Vec g, void *ptr) {
 int main(int argc,char **argv) {
   PetscErrorCode ierr;
   const int N = 2;
-  double    t0 = 0.0, tf = 1.0, dt = 0.1, err;
+  double    t0 = 0.0, tf = 20.0, dt = 0.1, err;
   Vec       y, yexact;
   TS        ts;
 
