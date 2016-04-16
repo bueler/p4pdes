@@ -296,15 +296,21 @@ Running the Python script \texttt{plottrajectory.py} requires copies of, or sym-
 %// ./ode -log_view |grep Eval   // compare rk, beuler, cn
 
 
-\section{Time-stepping stability and implicitness}
+\section{Time-stepping stability and implicitness}  With the exception of the backward Euler method \eqref{eq:ts:backwardeuler}, all of the methods mentioned above are \emph{explicit}.  They can ultimately be written as single formulas which compute $\bY_\ell$ from previous solution values, merely by composing the functions in the statement of the scheme.  For example, the explicit trapezoid rule \eqref{eq:ts:rk2a} can be written
+\begin{equation*}
+\bY_\ell = \bY_{\ell-1} + \frac{h}{2} \bg(t_{\ell-1},\bY_{\ell-1}) + \frac{h}{2} \bg\big(t_\ell,\bY_{\ell-1} + h\, \bg(t_{\ell-1},\bY_{\ell-1})\big).
+\end{equation*}
+In terms of their tableau, explicit Runge-Kutta schemes only have non-zero coefficients $a_{ij}$ strictly below the diagonal.
 
-FIXME: methods above are \emph{explicit} if $a_{ij}=0$ for $j\ge i$, that is, if the array $a_{ij}$ in the Butcher tableau is zero on and above the diagonal
+\emph{Implicit} methods require solving equations.  Backward Euler, for instance, can be written as the (generally) nonlinear system
+    $$\bF(\bY_\ell)=0$$
+for the $N$ real variables, the components of $\bY_\ell$, with $\bF(\bX) = \bX - \bY_{\ell-1} - h \bg(t_\ell,\bX)$.  We will solve such systems, one at each time-step, by Newton's method, naturally.
 
-FIXME: methods \emph{implicit} otherwise, e.g.~backward Euler \eqref{eq:ts:backwardeuler} or  ``$\theta$''-methods as in 
+A family of implicit schemes are the \emph{theta methods}, so-named merely because of their usual parameter:
 \begin{equation}
-FIXME
+\bY_\ell = \bY_{\ell-1} + (1-\theta) h \bg(t_{\ell-1},\bY_{\ell-1}) + \theta h \bg(t_\ell,\bY_{\ell}).  \label{eq:ts:theta}
 \end{equation}
-Shown as this tableau
+These methods are one-step methods with tableau
 \begin{center}
 \begin{tabular}{c|cc}
 $0$   \\
@@ -312,6 +318,11 @@ $1$ & $1-\theta$ & $\theta$ \\ \hline
     & $1-\theta$ & $\theta$
 \end{tabular}
 \end{center}
+We have already listed the $\theta=0$ and $\theta=1$ cases, namely the forward \eqref{eq:ts:forwardeulerupdate} and backward \eqref{eq:ts:backwardeuler} Euler methods; they are first-order accurate.  The $\theta=1/2$ method is the \emph{trapezoid} method, or the \emph{Crank-Nicolson} method to users familiar with PDE cases \citep{MortonMayers2005}, and it is second order $O(\Delta t^2)$.
+
+But the explicit version \eqref{eq:ts:rk2a} is also second order, and so why would one go to the effort of solving a system of equations at each time step?  The answer is that \emph{stability} is obligatory in a numerical scheme while higher-order is only desireable.  Explicit schemes are stable with sufficiently-small time steps, but taking many small time steps is a computational burden.  Before we can address the trade-off between these computational burdens, we relate \emph{stiffness} of certain ODE problems and stability of schemes.
+
+
 
 FIXME: explain goal of stability
 
