@@ -243,7 +243,7 @@ $ ./ode -help |grep ts_
 \end{cline}
 %$
 
-Thus we learn about all the basic controls.  For example, to see numerical values of the solution at each time-step, do
+For example, to see numerical values of the solution at each time-step, do
 \begin{cline}
 $ ./ode -ts_monitor_solution
 \end{cline}
@@ -255,23 +255,30 @@ $ ./ode -ts_monitor -ts_monitor_lg_solution -draw_pause 0.1
 %$
 The result is a movie version of Figure \ref{fig:ts:ode}.
 
-We are free to adjust the start time, end time, and initial time step at run-time:
+Another mode of visualization actually produced that Figure, however.  The Python script \texttt{c/ch6/plottrajectory.py} works with \texttt{binary} output from \pTS monitoring, like this:
+\begin{cline}
+$ ./ode -ts_monitor binary:t.dat -ts_monitor_solution binary:y.dat
+$ ./plottrajectory.py -o figure.png t.dat y.dat
+\end{cline}
+Running \texttt{plottrajectory.py} requires copies of, or sym-links to, the Python tools \texttt{PetscBinaryIO.py} and \texttt{petsc\_conf.py}.  (They are in the \texttt{bin/} directory of your \texttt{\$PETSC\_DIR}.)
+
+We are free to adjust the start time, end time, and initial time step at the command line:
 \begin{cline}
 $ ./ode -ts_init_time 1.0 -ts_final_time 2.0 -ts_dt 0.001 -ts_monitor
 \end{cline}
 %$
-We can also turn off adaptive time-stepping,
+We can also turn off adaptive time-stepping:
 \begin{cline}
 $ ./ode -ts_adapt_type none -ts_monitor
 \end{cline}
 %$
-which generates 200 steps of length \texttt{dt}$=0.1$, exactly as we requested.  On the other hand, we can change the key tolerance used in adaptive time-stepping.  One way is to choose the relative tolerance to be much larger or much smaller than the default of $10^{-4}$,
+(This generates 200 steps using the requested initial step \texttt{dt}$=0.1$.)  On the other hand, we can change the relative tolerance used in adaptive time-stepping from its default value of $10^{-4}$:
 \begin{cline}
 $ ./ode -ts_monitor -ts_rtol 1.0e-1
 $ ./ode -ts_monitor -ts_rtol 1.0e-10
 \end{cline}
 %$
-These give 18 and 119 steps, and final numerical errors of $1.2$ and $3.4\times 10^{-3}$, respectively.
+These runs give 18 and 119 steps, and final numerical errors of $1.2$ and $3.4\times 10^{-3}$, respectively.
 
 We can choose the particular solver type with ease, either the major type with \texttt{-ts\_type} or the Runge-Kutta type with \texttt{-ts\_rk\_type} if the solver is already of type \texttt{rk}:
 \begin{cline}
@@ -282,35 +289,25 @@ $ ./ode -ts_type rk -help |grep ts_rk
   -ts_rk_type <3bs> (choose one of) 5dp 5f 4 3bs 3 2a 1fe
 \end{cline}
 
-A careful study of the relative performance of \pTS methods on this first ODE example problem is now possible, of course.  We encourage the reader to pursue it, but we will only return to that after introducing implicit time-stepping and a fundamental concerns with ODE solution methods, namely stability and stiffness.
+We encourage the reader to compare \pTS methods on this first ODE example problem; see Exercises \ref{chap:ts}.\ref{exer:ts:odepossible} and \ref{chap:ts}.\ref{exer:ts:odeserial}.  However, we defer comparing methods until after introducing the concepts of stiffness and stability.  Furthermore we compare methods on a much larger ODE system, namely one generated from the time-dependent heat equation, a PDE.
 
-Before moving on we mention an additional mode of visualization of the solution trajectory.  Figure \ref{fig:ts:ode} was produced by using the script \texttt{plottrajectory.py} in the same directory \texttt{c/ch6/}, like this:
-\begin{cline}
-$ ./ode -ts_monitor binary:t.dat -ts_monitor_solution binary:y.dat
-$ ./plottrajectory.py -o figure.png t.dat y.dat
-\end{cline}
-Running the Python script \texttt{plottrajectory.py} requires copies of, or sym-links to, the Python tools \texttt{PetscBinaryIO.py} and \texttt{petsc\_conf.py} in the \texttt{bin/} directory of your \texttt{\$PETSC\_DIR}.
+\section{Implicitness, stiffness, and stability}  With the exception of the backward Euler method \eqref{eq:ts:backwardeuler}, all of the methods mentioned above are \emph{explicit}.  They can ultimately be written as single formulas which compute $\bY_\ell$ from previous solution values and a fixed number of applications of the right-hand side $\bg$.
 
-
-%// ./ode -ts_monitor -ts_type beuler -ode_steps 1000    // finally close to default RK
-%// ./ode -log_view |grep Eval   // compare rk, beuler, cn
-
-
-\section{Time-stepping stability and implicitness}  With the exception of the backward Euler method \eqref{eq:ts:backwardeuler}, all of the methods mentioned above are \emph{explicit}.  They can ultimately be written as single formulas which compute $\bY_\ell$ from previous solution values, merely by composing the functions in the statement of the scheme.  For example, the explicit trapezoid rule \eqref{eq:ts:rk2a} can be written
+For example, the explicit trapezoid rule \eqref{eq:ts:rk2a} can be written
 \begin{equation*}
 \bY_\ell = \bY_{\ell-1} + \frac{h}{2} \bg(t_{\ell-1},\bY_{\ell-1}) + \frac{h}{2} \bg\big(t_\ell,\bY_{\ell-1} + h\, \bg(t_{\ell-1},\bY_{\ell-1})\big).
 \end{equation*}
-In terms of their tableau, explicit Runge-Kutta schemes only have non-zero coefficients $a_{ij}$ strictly below the diagonal.
+In terms of their tableau, explicit Runge-Kutta schemes only have non-zero coefficients $a_{ij}$ strictly below the diagonal (Table \ref{tab:ts:exampletableau}).
 
-\emph{Implicit} methods require solving equations.  Backward Euler, for instance, can be written as the (generally) nonlinear system
+\emph{Implicit} methods require solving equations.  For instance, the backward Euler method \eqref{eq:ts:backwardeuler} can be written as the (generally) nonlinear system
     $$\bF(\bY_\ell)=0$$
-for the $N$ real variables, the components of $\bY_\ell$, with $\bF(\bX) = \bX - \bY_{\ell-1} - h \bg(t_\ell,\bX)$.  We will solve such systems, one at each time-step, by Newton's method, naturally.
+for the $N$ real variables, the components of $\bY_\ell$, with $\bF(\bX) = \bX - \bY_{\ell-1} - h \bg(t_\ell,\bX)$.  We will solve such systems by Newton's method, naturally.  At least one nonlinear solve is required at each time-step.
 
-A family of implicit schemes are the \emph{theta methods}, so-named merely because of their usual parameter:
+A family of implicit schemes are the \emph{theta methods} with parameter $0<\theta\le 1$:
 \begin{equation}
-\bY_\ell = \bY_{\ell-1} + (1-\theta) h \bg(t_{\ell-1},\bY_{\ell-1}) + \theta h \bg(t_\ell,\bY_{\ell}).  \label{eq:ts:theta}
+\bY_\ell = \bY_{\ell-1} + (1-\theta) h \bg(t_{\ell-1},\bY_{\ell-1}) + \theta h \bg(t_\ell,\bY_{\ell})  \label{eq:ts:theta}
 \end{equation}
-These methods are one-step methods with tableau
+with tableau
 \begin{center}
 \begin{tabular}{c|cc}
 $0$   \\
@@ -318,9 +315,9 @@ $1$ & $1-\theta$ & $\theta$ \\ \hline
     & $1-\theta$ & $\theta$
 \end{tabular}
 \end{center}
-We have already listed the $\theta=0$ and $\theta=1$ cases, namely the forward \eqref{eq:ts:forwardeulerupdate} and backward \eqref{eq:ts:backwardeuler} Euler methods; they are first-order accurate.  The $\theta=1/2$ method is the \emph{trapezoid} method, or the \emph{Crank-Nicolson} method to users familiar with PDE cases \citep{MortonMayers2005}, and it is second order $O(\Delta t^2)$.
+(The $\theta=0$ case of formula \eqref{eq:ts:theta} is an explicit method, forward Euler \eqref{eq:ts:forwardeulerupdate}.)  The $\theta=1$ case is the backward Euler method \eqref{eq:ts:backwardeuler}; it is first-order accurate.  The $\theta=1/2$ method is the \emph{trapezoid} method, or \emph{Crank-Nicolson} to users familiar with PDE methods \citep{MortonMayers2005}, and it is second-order $O(\Delta t^2)$.
 
-But the explicit version \eqref{eq:ts:rk2a} is also second order, and so why would one go to the effort of solving a system of equations at each time step?  The answer is that \emph{stability} is obligatory in a numerical scheme while higher-order is only desireable.  Explicit schemes are stable with sufficiently-small time steps, but taking many small time steps is a computational burden.  Before we can address the trade-off between these computational burdens, we relate \emph{stiffness} of certain ODE problems and stability of schemes.
+The explicit version \eqref{eq:ts:rk2a} is second-order too, and so why would one go to the effort of solving a system of algebraic equations at each time step?  The answer is that \emph{stability} is obligatory in a numerical scheme while higher-order is merely desirable.  Explicit schemes are stable with sufficiently-small time steps, but taking many small time steps is a computational burden.  Before we can address the trade-off between the computational burden of many time-steps versus that of solving equations, we relate the \emph{stiffness} of certain ODE problems and the stability of schemes.
 
 
 
@@ -355,7 +352,7 @@ Because an allocated \pMat must be supplied to \texttt{TSSetRHSJacobian()}, the 
 
 FIXME Jacobian $\partial \bg/\partial \by$ is \texttt{TSSetRHSJacobian()}
 
-FIXME \texttt{ode.c} is thus sort of similar to \texttt{ecjac.c}
+FIXME \texttt{odejac.c} is thus sort of similar to \texttt{ecjac.c}
 
 FIXME build all tools around the ``hard'' time dependent case of stiff + nonlinear, though not DAE
 
@@ -371,6 +368,11 @@ $ ./ode -ts_monitor -ts_type theta -help |grep ts_theta
   -ts_theta_adapt: <FALSE> Use time-step adaptivity with the Theta method
 \end{cline}
 %$
+
+%// ./ode -ts_monitor -ts_type beuler -ode_steps 1000    // finally close to default RK
+%// ./ode -log_view |grep Eval   // compare rk, beuler, cn
+
+
 
 \section{Time-dependent heat equation}
 
@@ -421,9 +423,9 @@ FIXME final-time greyscale plots using \texttt{PetscBinaryIO.py}
 \renewcommand{\labelenumii}{(\alph{enumii})}
 \begin{enumerate}
 \item \label{exer:ts:tan}  Consider the scalar ODE initial value problem $y'=1+y^2$, $y(0)=0$.  Show by-hand that $y(t)=\tan t$ is the unique solution to this problem.  Modify \texttt{ode.c} to solve this problem.  Run the code from $t=0$ to $t=t_f=2$.  What actual evidence at run-time shows that your estimate of ``$y(2)$'' is totally meaningless?
-\item FIXME which \texttt{-ts\_type} work with \texttt{ode.c}?  do \texttt{-help |grep ts\_type} to find possibilities, and try.  what work with additional option \texttt{-snes\_fd}?  with \texttt{odejac.c}?
+\item \label{exer:ts:odepossible} FIXME which \texttt{-ts\_type} work with \texttt{ode.c}?  do \texttt{-help |grep ts\_type} to find possibilities, and try.  what work with additional option \texttt{-snes\_fd}?  with \texttt{odejac.c}?
 % euler, beuler, rk, theta, cn
-\item FIXME \texttt{ode.c} says it is ``serial only''  what happens with \texttt{mpiexec -n 2 ./ode}, and why?
+\item \label{exer:ts:odeserial} FIXME \texttt{ode.c} says it is ``serial only''  what happens with \texttt{mpiexec -n 2 ./ode}, and why?
 \item FIXME simple stiff system e.g.~with diagonal matrix with 1,-10,-1000 on diagonal.  what happens with RK?  with beuler?
 \item FIXME version of \texttt{ode.c} which solves DAE system
     $$\bbf(t,\by,\by') = \bg(t,\by)$$
