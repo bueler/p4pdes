@@ -3,13 +3,23 @@ static char help[] =
 
 #include <petsc.h>
 
+/* PYTHON:
+import numpy as np
+from scipy.linalg import expm
+B = np.array([[0, 1, 0], [-1, 0, 0.1], [0, 0, -200]])
+y = np.dot(expm(10*B),np.array([1.0,1.0,1.0]).transpose())
+print y
+RESULT:
+[-1.38336255 -0.2954713   0.        ]
+*/
+
 PetscErrorCode FormRHSFunction(TS ts, double t, Vec y, Vec g, void *ptr) {
     const double *ay;
     double       *ag;
     VecGetArrayRead(y,&ay);
     VecGetArray(g,&ag);
     ag[0] = ay[1];
-    ag[1] = - ay[0];
+    ag[1] = - ay[0] + 0.1 * ay[2];
     ag[2] = - 200.0 * ay[2];
     VecRestoreArrayRead(y,&ay);
     VecRestoreArray(g,&ag);
@@ -21,7 +31,7 @@ PetscErrorCode FormRHSJacobian(TS ts, double t, Vec y, Mat J, Mat P,
     PetscErrorCode ierr;
     int    j[3] = {0, 1, 2};
     double v[9] = { 0.0, 1.0, 0.0,
-                   -1.0, 0.0, 0.0,
+                   -1.0, 0.0, 0.1,
                     0.0, 0.0, -200.0};
     ierr = MatSetValues(P,3,j,3,j,v,INSERT_VALUES); CHKERRQ(ierr);
     ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
@@ -36,6 +46,7 @@ PetscErrorCode FormRHSJacobian(TS ts, double t, Vec y, Mat J, Mat P,
 int main(int argc,char **argv) {
   PetscErrorCode ierr;
   const int N = 3;
+  int       steps;
   Vec       y;
   Mat       J;
   TS        ts;
@@ -63,6 +74,11 @@ int main(int argc,char **argv) {
 
   ierr = VecSet(y,1.0); CHKERRQ(ierr);
   ierr = TSSolve(ts,y); CHKERRQ(ierr);
+
+  ierr = VecView(y,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
+  ierr = TSGetTotalSteps(ts,&steps); CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,
+              "total steps = %d\n",steps); CHKERRQ(ierr);
 
   VecDestroy(&y);  TSDestroy(&ts);  MatDestroy(&J);
   PetscFinalize();
