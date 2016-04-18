@@ -493,12 +493,11 @@ FIXME final-time greyscale plots using \texttt{PetscBinaryIO.py}
 \renewcommand{\labelenumi}{\arabic{chapter}.\arabic{enumi}\quad}
 \renewcommand{\labelenumii}{(\alph{enumii})}
 \begin{enumerate}
-\item \label{exer:ts:tan}  Consider the scalar ODE initial value problem $y'=1+y^2$, $y(0)=0$.  Show by-hand that $y(t)=\tan t$ is the unique solution to this problem.  Modify \texttt{ode.c} to solve this problem.  Run the code from $t=0$ to $t=t_f=2$.  What actual evidence at run-time shows that your estimate of ``$y(2)$'' is totally meaningless?
+\item \label{exer:ts:tan}  Consider the scalar ODE initial value problem $y'=1+y^2$, $y(0)=0$.  Show by-hand that $y(t)=\tan t$ is the (unique) solution.  Modify \texttt{ode.c} to solve this problem.  Run the code from $t_0=0$ to $t_f=2$.  What run-time evidence shows that your estimate of ``$y(2)$'' is totally meaningless?
 
-\item \label{exer:ts:odepossible} FIXME which \texttt{-ts\_type} work with \texttt{ode.c}?  do \texttt{-help |grep ts\_type} to find possibilities, and try.  what work with additional option \texttt{-snes\_fd}?  with \texttt{odejac.c}?
-% euler, beuler, rk, theta, cn
+\item \label{exer:ts:odepossible} Which \pTS types work with \texttt{ode.c}, that is, do not give run-time errors?  Do \texttt{-help |grep ts\_type} to find possibilities, and try them.  Which ones work with the additional option \texttt{-snes\_fd}?  Which ones work with \texttt{odejac.c}?  Explain as much as you can.
 
-\item \label{exer:ts:odeserial} FIXME \texttt{ode.c} says it is ``serial only''  what happens with \texttt{mpiexec -n 2 ./ode}, and why?
+\item \label{exer:ts:odeserial} Code \texttt{ode.c} claims it is ``serial only.''  What happens with \texttt{mpiexec -n 2 ./ode}, and why?
 
 \item \label{exer:ts:stiffexample}
   \begin{enumerate}
