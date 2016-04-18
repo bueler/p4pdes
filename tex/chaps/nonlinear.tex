@@ -923,4 +923,19 @@ with a few values of \texttt{N} and \texttt{M}.  However, \texttt{ecjac.c} does 
 
 % from petsc-users by Matt:  What happens if you use LU? When debugging a nonlinear solver always use a direct solver for the linear solver (and make sure the direct solver actually worked).
 
+% from petsc-users: From: Matthew Knepley <knepley@gmail.com>
+%Subject: Re: [petsc-users] snes set function and Jacobian concurrently
+%On Mon, Apr 18, 2016 at 9:34 AM, Hoang Giang Bui <hgbk2008@gmail.com> wrote:
+%> Is it possible to combine the SNESSetFunction and SNESSetJacobian into one
+%> call, i.e. SNESSetFunctionAndJacobian which takes unique function pointer
+%> to compute rhs and Jacobian concurrently? The reason for it is that the
+%> finite element code I'm working on contribute to global rhs and stiffness
+%> at one call, so to cater for SNES would break the existing interface.
+%The Jacobian and Residual are not always formed together, so you would have
+%to stash your computation in a user context
+%and then check that the same X had been passed to both functions. For
+%example, the Residual can be called many times in
+%a line search routine.
+%   Matt
+
 \end{enumerate}
