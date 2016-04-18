@@ -6,11 +6,11 @@ static char help[] =
 /* PYTHON:
 import numpy as np
 from scipy.linalg import expm
-B = np.array([[0, 1, 0], [-1, 0, 0.1], [0, 0, -200]])
+B = np.array([[0, 1, 0], [-1, 0, 0.1], [0, 0, -101]])
 y = np.dot(expm(10*B),np.array([1.0,1.0,1.0]).transpose())
 print y
 RESULT:
-[-1.38336255 -0.2954713   0.        ]
+[-1.383623   -0.29588643  0.        ]
 */
 
 PetscErrorCode FormRHSFunction(TS ts, double t, Vec y, Vec g, void *ptr) {
@@ -20,7 +20,7 @@ PetscErrorCode FormRHSFunction(TS ts, double t, Vec y, Vec g, void *ptr) {
     VecGetArray(g,&ag);
     ag[0] = ay[1];
     ag[1] = - ay[0] + 0.1 * ay[2];
-    ag[2] = - 200.0 * ay[2];
+    ag[2] = - 101.0 * ay[2];
     VecRestoreArrayRead(y,&ay);
     VecRestoreArray(g,&ag);
     return 0;
@@ -32,7 +32,7 @@ PetscErrorCode FormRHSJacobian(TS ts, double t, Vec y, Mat J, Mat P,
     int    j[3] = {0, 1, 2};
     double v[9] = { 0.0, 1.0, 0.0,
                    -1.0, 0.0, 0.1,
-                    0.0, 0.0, -200.0};
+                    0.0, 0.0, -101.0};
     ierr = MatSetValues(P,3,j,3,j,v,INSERT_VALUES); CHKERRQ(ierr);
     ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
     ierr = MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);

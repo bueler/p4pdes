@@ -330,12 +330,12 @@ where
 \begin{equation}
    B = \begin{bmatrix} 0 & 1 & 0 \\
                       -1 & 0 & 0.1 \\
-                       0 & 0 & -200 \end{bmatrix}. \label{eq:ts:stiffexamplematrix}
+                       0 & 0 & -101 \end{bmatrix}. \label{eq:ts:stiffexamplematrix}
 \end{equation}
 The exact solution at a particular time, say $t_f=10$ for concreteness, can be computed by exponentiating a matrix,
 \begin{equation}
-    \by(10) = e^{B t_f} \by(0) = \begin{bmatrix} -1.383362 \\
-                                                 -0.295471 \\
+    \by(10) = e^{B t_f} \by(0) = \begin{bmatrix} -1.383623 \\
+                                                 -0.295886 \\
                                                   0 \end{bmatrix}.\label{eq:ts:stiffsoln}
 \end{equation}
 (To compute this conveniently by machine one needs a sufficiently complete set of dense-matrix capabilities.  The above result was calculated with Python, not \PETSc, but it can be done by hand as well; see Exercise \ref{chap:ts}.\ref{exer:ts:stiffexample}.)
@@ -347,86 +347,56 @@ We have mentioned two $O(\Delta t^2$) methods already, namely the explicit trape
 $ ./stiff -ts_type rk -ts_rk_type 2a -ts_adapt_type none -ts_dt 0.1
 Vec Object: 1 MPI processes
   type: seq
-1.46483e+220
--2.92966e+222
-5.85946e+225
+1.65158e+157
+-1.66809e+159
+1.68494e+162
 total steps = 100
 \end{cline}
 %$
-This is nonsense, and nowhere near the solution.  However, shortening the steps by a factor of 10 still gives an answer which is very wrong, in the third entry anyway, while just an additional factor of two shortening suddenly gives four-digit accuracy:
+This is nonsense; an explosion.  Using 200 steps is not much better.  However, using 1000 steps gives an answer which is has three-digit accuracy:
 \begin{cline}
 $ ./stiff -ts_type rk -ts_rk_type 2a -ts_adapt_type none -ts_dt 0.01
 Vec Object: 1 MPI processes
   type: seq
--1.38341
--0.295741
-1.
+-1.38367
+-0.295656
+1.03141e-301
 total steps = 1000
-$ ./stiff -ts_type rk -ts_rk_type 2a -ts_adapt_type none -ts_dt 0.005
-Vec Object: 1 MPI processes
-  type: seq
--1.38338
--0.295414
-0.
-total steps = 2000
 \end{cline}
 
-Compare the implicit method, again without adaptive time-stepping.  
-
+Compare the implicit method, again without adaptive time-stepping.  For 100 steps we get a reasonable answer and for 100 steps we get about two-digit accuracy:
 \begin{cline}
 $ ./stiff -ts_type cn -ts_adapt_type none -ts_dt 0.1
 Vec Object: 1 MPI processes
   type: seq
--1.38086
--0.306972
-1.92745e-09
+-1.38111
+-0.307389
+3.71505e-18
 total steps = 100
 $ ./stiff -ts_type cn -ts_adapt_type none -ts_dt 0.05
 Vec Object: 1 MPI processes
   type: seq
--1.38274
--0.298352
-6.0499e-36
+-1.383
+-0.298767
+1.6678e-73
 total steps = 200
-$ ./stiff -ts_type cn -ts_adapt_type none -ts_dt 0.01
-Vec Object: 1 MPI processes
-  type: seq
--1.38334
--0.295587
-0.
-total steps = 1000
 \end{cline}
 %$
-
-FIXME: small fixed dimension adaptive \RKthreebs does o.k.~but totally controlled by errors in $y_2(t)$
-\begin{cline}
-$ ./stiff
-Vec Object: 1 MPI processes
-  type: seq
--1.38336
--0.295471
--0.000198683
-total steps = 808
-$ ./stiff -ts_rtol 1.0e-6 -ts_atol 1.0e-6
-Vec Object: 1 MPI processes
-  type: seq
--1.38336
--0.295471
--6.13046e-07
-total steps = 863
-$ ./stiff -ts_rtol 1.0e-2 -ts_atol 1.0e-2
-Vec Object: 1 MPI processes
-  type: seq
--1.38336
--0.295463
--0.016687
-total steps = 798
-\end{cline}
-%$
+This comparison of explicit and implicit trapezoid rules, both putatively $O(\Delta t^2)$ methods, suggests something other than local truncation error is important.
 
 FIXME: figure
 
 FIXME: explain goal of \emph{absolute stability}
+
+FIXME: before going on, note small fixed dimension adaptive \RKthreebs does o.k.~but very insensitive to tolerance (second run uses defaults)
+\begin{cline}
+$ ./stiff -ts_rtol 1.0e-6 -ts_atol 1.0e-6
+$ ./stiff -ts_rtol 1.0e-4 -ts_atol 1.0e-4
+$ ./stiff -ts_rtol 1.0e-3 -ts_atol 1.0e-3
+$ ./stiff -ts_rtol 1.0e-2 -ts_atol 1.0e-2
+\end{cline}
+%$
+gives 430, 411, 405, 403 steps resp.
 
 \section{\pTS support for stiff systems: Jacobians}   FIXME: demonstrate transformation of an implicit time step into form $\bF(\bx)=0$
 
@@ -533,7 +503,7 @@ FIXME final-time greyscale plots using \texttt{PetscBinaryIO.py}
 \item \label{exer:ts:stiffexample}
   \begin{enumerate}
   \item Modify \texttt{odejac.c} to a similar code \texttt{stiff.c} which solves ODE IVP \eqref{eq:ts:stiffexample}.  It can use \texttt{TSGetTotalSteps()} to print the number of steps and \texttt{VecView()} to print the computed solution.  Confirm the results shown in the text for RK methods \texttt{-ts\_rk\_type 2a,3bs} and for \texttt{-ts\_type cn}.
-  \item Show by hand that the eigenvalues of matrix $B$ in \eqref{eq:ts:stiffexamplematrix} are $\lambda=i,-i,-200$.  Use a full eigen-decomposition $B = X \Lambda X^{-1}$, which can be computed by hand, to confirm \eqref{eq:ts:stiffsoln}, noting that
+  \item Show by hand that the eigenvalues of matrix $B$ in \eqref{eq:ts:stiffexamplematrix} are $\lambda=i,-i,-101$.  Use a full eigen-decomposition $B = X \Lambda X^{-1}$, which can be computed by hand, to confirm \eqref{eq:ts:stiffsoln}, noting that
     $$e^{Bt} = X e^{\Lambda t} X^{-1} = X \begin{bmatrix} \lambda_0 &  &  \\
                        & \ddots &  \\
                        & & \lambda_N \end{bmatrix} X^{-1}.$$
