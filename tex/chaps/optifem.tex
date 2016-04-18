@@ -435,7 +435,7 @@ There is one such nonlinear equation for each of the $N$ interior nodes $(x_i,y_
 
 Sum \eqref{eq:of:weakformdetail} is implemented by \texttt{FormFunctionLocal()} in Code \ref{code:plapFun}.  It computes the point-wise residual $F_{ij}(\bu)$ at every interior node $(x_i,y_j)$.  Note that \texttt{FunIntegrand()} implements \eqref{eq:of:weakformintegrandref} by reusing tools from Code \ref{code:plapTool}.
 
-As expected, the version using residual evaluation runs much faster than the objective-only implementation.  In terms of \PETSc options, we use the residual evaluation simply by not adding option \texttt{-snes\_fd\_function}.  Furthermore, because we are using a \pDMDA structured grid and we have \emph{not} provided a Jacobian through calling \texttt{DMDASNESSetJacobianLocal()}, the efficient ``coloring'' form of finite-differencing is the default (i.e.~option \texttt{-snes\_fd\_color}), and thus we do not need it.  So now we compare timing:\sidenote{Option \texttt{-snes\_fd\_function} only works as intended, i.e.~avoids use of the residual function, if one of \texttt{-snes\_fd} or \texttt{-snes\_fd\_color} is also present.  See Exercise \ref{chap:of}.\ref{exer:of:commentoutresidual} for a direct way of removing the residual evaluation.}
+As expected, the version using residual evaluation, i.e.~without option \texttt{-snes\_fd\_function}, runs much faster than the objective-only implementation.  Furthermore, because we are using a \pDMDA structured grid and we have \emph{not} provided a Jacobian through calling \texttt{DMDASNESSetJacobianLocal()}, the efficient ``coloring'' form of finite-differencing is the default (i.e.~option \texttt{-snes\_fd\_color}).  So now we compare timing:\sidenote{Option \texttt{-snes\_fd\_function} only works as intended, i.e.~avoids use of the residual function, if one of \texttt{-snes\_fd} or \texttt{-snes\_fd\_color} is also present.  Compare Exercise \ref{chap:of}.\ref{exer:of:commentoutresidual}.}
 \begin{cline}
 $ timer ./plap -da_refine 3
 ...
@@ -455,7 +455,10 @@ SNESJacobianEval       4 1.0 6.4406e-03 1.0 ...
 %$
 Compare the \texttt{-snes\_fd\_function} result on page \pageref{page:of:badEvalcount}, with 5410 objective evaluations.
 
-Furthermore, we can give convincing evidence that our implementation converges at the $O(h^2)$ rate expected from the theory of well-behaved\sidenote{E.g.~linear uniformly-elliptic PDEs on convex polygonal domains, with smooth source term and coefficient function.  In the current case we could linearize around the exact solution to get such a problem, but in fact our problem is fully-nonlinear.} uniformly-elliptic PDEs for such a $Q^1$ FEM \citep{Elmanetal2005}.  In fact, running
+
+\section{Convergence and quadrature}
+
+We can now give convincing evidence that our implementation converges at the $O(h^2)$ rate expected from the theory of well-behaved\footnote{E.g.~on convex polygonal domains and with smooth coefficient functions.} uniformly-elliptic PDEs for such a $Q^1$ FEM \citep{Elmanetal2005}.  Running
 \begin{cline}
 $ for LEV in 0 1 2 3 4 5 6 7 8; do
 > ./plap -snes_converged_reason -da_refine $LEV; done
@@ -465,11 +468,17 @@ generates the convergence result in Figure \ref{fig:of:plap-conv}.
 
 \begin{figure}
 \includegraphics[width=0.75\textwidth]{figs/plap-conv}
-\caption{Convergence evidence for the $p=4$ case suggests \texttt{plap.c} correctly solves $p$-Laplacian equation \eqref{eq:of:plapweakform}.  Relative errors $\|u-u_{\text{exact}}\|_\infty / \|u_{\text{exact}}\|_\infty$ are comparable with the objective-only (four coarsest grids only; circled) and residual (dots) implementations.  Degree $n=1$ Gauss-Legendre quadrature (squares) generates systematically larger errors than the default $n=2$ degree results.}
+\caption{Convergence evidence for the $p=4$ case suggests \texttt{plap.c} correctly solves $p$-Laplacian equation \eqref{eq:of:plapweakform}.  Relative errors $\|u-u_{\text{exact}}\|_\infty / \|u_{\text{exact}}\|_\infty$ from the residual version (dots) coincide with the objective-only results (four coarsest grids only; circled).  Degree $n=1$ Gauss-Legendre quadrature (squares) generates systematically larger errors than the default $n=2$ degree results.}
 \label{fig:of:plap-conv}
 \end{figure}
 
-Recall that we have implemented Gauss-Legendre quadrature in \texttt{plap.c} for degrees $n=1,2,3$, but so far we have only used the default $n=2$.  Now is the time to compare degrees.  It turns out that we can demonstrate a genuine performance/accuracy trade-off on this problem.  In what follows, because we are timing the runs we use a \texttt{PETSC\_ARCH} from a \texttt{--with-debugging=0} configuration.  Because the Jacobian here is a positive-definite and symmetric,\sidenote{Observe that if an equation is the weak form from an optimization principle then the Jacobian is symmetric.} we choose a preconditioned CG method (``\texttt{-ksp\_type cg -pc\_type icc}''; see Chapter \ref{chap:ls}).  Thus:
+Recall that we have implemented Gauss-Legendre quadrature in \texttt{plap.c} for degrees $n=1,2,3$, but so far we have only used the default $n=2$.  Now we can compare quadrature degrees and demonstrate a genuine performance/accuracy trade-off.  Because we are timing the runs we make two improvements:
+\begin{itemize}
+\item We use a \texttt{--with-debugging=0} \PETSc configuration.
+\item Because the Jacobian is a positive-definite and symmetric,\sidenote{The Jacobian of a weak form from an optimization principle is symmetric.} we choose a preconditioned CG method (``\texttt{-ksp\_type cg -pc\_type icc}''; see Chapter \ref{chap:ls}).
+\end{itemize}
+
+Thus:
 \begin{cline}
 $ for N in 1 2 3; do timer ./plap -ksp_type cg -pc_type icc \
 >   -snes_converged_reason -da_refine 6 -plap_quaddegree $N; done
@@ -486,14 +495,14 @@ Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 11
 numerical error:  |u-u_exact|/|u_exact| = 4.490e-06
 real 8.76
 \end{cline}
-The conclusions are quite clear for our $Q^1$ FEM equations:
+The conclusions are quite clear.  For our solving our $Q^1$ FEM equations:
 \renewcommand{\labelenumi}{\emph{(\roman{enumi})}}
 \begin{enumerate}
 \item higher degree quadrature is more expensive than lower degree,
 \item $n=2$ degree is the minimum needed for full accuracy.
 \end{enumerate}
 
-In fact there is a systematic loss of accuracy using degree $n=1$ quadrature, as shown in Figure \ref{fig:of:plap-conv}.  On the other hand, the $n=3$ errors are systematically indistinquishable from $n=2$ results (not shown).  As expected \citep[subsection 1.4.2]{Elmanetal2005}, there is no justification for using $n>2$ quadrature.
+As shown in Figure \ref{fig:of:plap-conv}, there is a systematic reduction of accuracy using degree $n=1$ quadrature.  The $n=3$ errors are indistinquishable from $n=2$ results (not shown), but this is as expected \citep[subsection 1.4.2]{Elmanetal2005}.  There is no justification for using $n>2$ quadrature with our $Q^1$ FEM.
 % FIXME: how much of the above is specific to the p=4 case?  what if p=2?  other p?
 
 Examining the $n=1,2$ performance difference a bit more carefully, namely by adding option \texttt{-ksp\_converged\_reason} to the above options (not shown), we see that there are two opposing performance changes with $n=1$ quadrature.  On the one hand there are slightly more CG iterations with $n=1$.  On the other hand, the evaluation of the quadrature sum \eqref{eq:of:tensorgauss} in the $n=1$ case is so much faster that we still get twice the speed relative to the $n=2$ case.
@@ -510,7 +519,7 @@ $ ./plap -da_refine 6 -snes_monitor -snes_monitor_solution_update draw -draw_pau
 \end{cline}
 The latter shows that near-boundary locations are the last ones to converge.
 
-Compare the following runs, in serial and then on four processes, which choose a reasonable preconditioned Krylov method (see Chapter \ref{chap:ls}):
+Compare the following runs, in serial and then on four processes:
 \begin{cline}
 $ ./plap -ksp_type cg -pc_type icc -snes_converged_reason -da_refine 6
 grid of 129 x 129 = 16641 interior nodes (element dims 0.00769231x0.00769231)
@@ -534,6 +543,9 @@ real 489.73
 \end{cline}
 %$
 The good news is that everything works with $N=10^6$ degrees of freedom.  However, we are still exposed to the bad scaling, with respect to $N$, of the preconditioned CG method (Chapter \ref{chap:ls}).\sidenote{To illustrate this add option \texttt{-ksp\_converged\_reason}.}  In Chapter \ref{chap:pr} we will look at better preconditioning, and in Chapter \ref{chap:sc} larger processor-counts, for this same example.
+
+
+\section{Dependence on the exponent $p$}
 
 Convergence varies depending on the exponent $p$.  Recall that the Sobolev space $W^{1,p}(\Omega)$ and the objective functional $I[u]$---see equation \eqref{eq:of:functional}---are defined for any $1 \le p < \infty$, but that $I[u]$ is not continuously-differentiable when $p=1$.
 
@@ -567,7 +579,7 @@ for LEV in 0 1 2 3 4 5 6 7 8; do
 >         -ksp_type cg -pc_type icc -plap_p 1; done
 \end{cline}
 %$
-is that we get \texttt{DIVERGED\_LINEAR\_SOLVE} errors on the four finest grids (not shown).  One possible approach would be to change to a direct solver, in an attempt to resolve that error directly.  A different approach, coming from the idea that the underlying objective is not differentiable, is to regularize the problem by making the weak form more differentiable---see Exercise \ref{chap:of}.\ref{exer:of:regularizepone}.  However, for now we propose no method that resolves the issue.
+is that we get \texttt{DIVERGED\_LINEAR\_SOLVE} errors on the four finest grids (not shown).  One possible approach would be to change to a direct solver, in an attempt to resolve that error directly.  A different approach, coming from the idea that the underlying objective is not differentiable, is to regularize the problem by making the weak form more differentiable---see Exercise \ref{chap:of}.\ref{exer:of:regularizepone}.
 \label{page:of:casepone}
 
 \begin{figure}
@@ -577,7 +589,7 @@ is that we get \texttt{DIVERGED\_LINEAR\_SOLVE} errors on the four finest grids 
 \end{figure}
 
 
-\section{Condition number and ellipticity}  \label{page:of:condellip}
+\section{Condition number, ellipticity, and regularization}  \label{page:of:condellip}
 
 The solution of the $p$-Laplacian equation so far in this Chapter is ``dangerous'' in that we have treated the equation as though it is a uniformly-elliptic linear PDE \citep{Evans2010}.  Such a statement is problem- and method-dependent for the $p$-Laplacian because of the solution-dependent coefficient $|\grad u|^{p-2}$ in both the weak \eqref{eq:of:plapweakform} and strong \eqref{eq:of:plapstrongform} forms.  Note that we do have bounds on the coefficient for the case of exact solution $u=u_{\text{exact}}$---see \eqref{eq:of:exactsolution} and Exercise \ref{chap:of}.\ref{exer:of:checkexactbounds}.  Namely, if $\alpha>0$ then
 \begin{equation}
@@ -662,7 +674,7 @@ numerical error:  |u-u_exact|/|u_exact| = 1.305e-04
 %$
 That is, adding $\eps=0.01$ to the previous run gives \emph{both} a lower estimated condition number \emph{and} a lower error.
 
-Such a result is not at all automatic!  As the reader can confirm through experimentation,  we could even be accused of cherry-picking an example to demonstrate this result.  The user can experiment with the effect of regularization (\texttt{-plap\_eps}), across a range of nonlinearities (\texttt{-plap\_p}) and exact solutions\sidenote{Observe that adjusting $\alpha$ controls the exact solution \emph{and} the uniform-ellipticity bounds at the solution.} \texttt{-plap\_alpha}, and thereby form an observation-based opinion of the effectiveness of it. 
+Such a result is not at all automatic!  As the reader can confirm through experimentation,  we have ``cherry-picked'' an example to demonstrate this result.  The user can experiment with the effect of regularization (\texttt{-plap\_eps}), across a range of nonlinearities (\texttt{-plap\_p}) and exact solutions\sidenote{Observe that adjusting $\alpha$ controls the exact solution \emph{and} the uniform-ellipticity bounds at the solution.} \texttt{-plap\_alpha}, and thereby form an observation-based opinion of the effectiveness of it. 
 
 We will see in Chapter \ref{chap:co} that, in certain problems which are related to the $p$-Laplacian, namely the ice sheet flow model shown in that Chapter, a loss of ellipticity (``degeneracy'') is physically-meaningful.  In such cases we introduce additional information into the problem (i.e.~inequality constraints), as well as a modified Newton solver from \PETSc, so as to get higher-quality solutions with minimal regularization.
 
