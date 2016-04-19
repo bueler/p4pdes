@@ -278,10 +278,12 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
           f[0] = af[j][i];  f[1] = af[j][i-1];
               f[2] = af[j-1][i-1];  f[3] = af[j-1][i];
           GetUorG(info,i,j,au,ag,u);
+          // loop over corners of element i,j
           for (l = 0; l < 4; l++) {
               JJ = j + lj[l];  II = i + li[l];
               ownnode = (II >= info->xs && II < XE && JJ >= info->ys && JJ < YE);
               if (!ownnode) continue;
+              // loop over quadrature points
               for (r=0; r<n; r++) {
                   for (s=0; s<n; s++) {
                      FF[JJ][II]
