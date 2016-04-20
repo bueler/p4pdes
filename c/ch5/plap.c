@@ -263,7 +263,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                XE = info->xs + info->xm,  YE = info->ys + info->ym,
                li[4] = {0,-1,-1,0},  lj[4] = {0,0,-1,-1};
   double       **af, **ag, f[4], u[4];
-  int          i,j,l,r,s,JJ,II;
+  int          i,j,l,r,s,PP,QQ;
   PetscBool    ownnode;
 
   // clear residuals
@@ -280,13 +280,14 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
           GetUorG(info,i,j,au,ag,u);
           // loop over corners of element i,j
           for (l = 0; l < 4; l++) {
-              JJ = j + lj[l];  II = i + li[l];
-              ownnode = (II >= info->xs && II < XE && JJ >= info->ys && JJ < YE);
+              PP = i + li[l];
+              QQ = j + lj[l];
+              ownnode = (PP >= info->xs && PP < XE && QQ >= info->ys && QQ < YE);
               if (!ownnode) continue;
               // loop over quadrature points
               for (r=0; r<n; r++) {
                   for (s=0; s<n; s++) {
-                     FF[JJ][II]
+                     FF[QQ][PP]
                          += C * wq[n-1][r] * wq[n-1][s]
                             * FunIntegrand(info,l,f,u,zq[n-1][r],zq[n-1][s],
                                            p,eps);

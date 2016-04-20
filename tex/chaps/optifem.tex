@@ -411,31 +411,38 @@ Taking stock and summarizing our situation, this prototype FEM method has allowe
 
 \section{Residual function (gradient) implementation}
 
-The clear limitations of the objective-only implementation are that grids other than the coarsest lead to unreasonable numbers of evaluations of the objective function, and that the finite-differenced gradient and Jacobian have low quality.  This is one way of explaining the usual starting point for an FEM for equation \eqref{eq:of:plapweakform}, which is to start from the weak form of the $p$-Laplacian.  We should provide an implementation of this weak form as the residual function.
+The clear limitations of the objective-only implementation are that grids other than the coarsest lead to unreasonable numbers of evaluations of the objective function, and that the finite-differenced gradient and Jacobian have low quality.  This is one way of explaining why the weak form of the $p$-Laplacian, equation \eqref{eq:of:plapweakform}, is the traditional starting point for describing an FEM.  We should, therefore, implement the weak form as the residual function ``$\bF(\bx)$'' needed for Newton's method.
 
-Equation \eqref{eq:of:plapweakform} says $\grad I[u](v) = 0$ for all $v\in W_0^{1,p}(\Omega)$.  The corresponding statement for $u\in S_g^h$, for $v$ equal to a hat function---see Figure \ref{fig:of:q1hat} and recall such functions form a basis of $S_0^h$---is one equation in the nonlinear system we solve.  That is, we require $u\in S_g^h$ to satisfy \eqref{eq:of:plapweakform} for each $v=\psi_{ij}$ at the $N$ interior nodes:
+Equation \eqref{eq:of:plapweakform} says $\grad I[u](v) = 0$ for all $v\in W_0^{1,p}(\Omega)$.  The corresponding statement for $u\in S_g^h$, and where $v$ is equal to a hat function---see Figure \ref{fig:of:q1hat} and recall such functions form a basis of $S_0^h$---will be one equation in the nonlinear system we solve.
+
+Thus we require $u\in S_g^h$ to satisfy \eqref{eq:of:plapweakform} for each $v=\psi_{pq}$ corresponding to one of the $N$ interior nodes:
 \begin{equation}
-\int_\Omega |\grad u|^{p-2} \grad u \cdot \grad \psi_{ij} - f \psi_{ij} = 0, \label{eq:of:weakformbasis}
+\int_\Omega |\grad u|^{p-2} \grad u \cdot \grad \psi_{pq} - f \psi_{pq} = 0, \label{eq:of:weakformbasis}
 \end{equation}
-for $i=0,\dots,m_x-1$ and $j=0,\dots,m_y-1$.  Observe that the support of $\psi_{ij}$ is localized around the node $(x_i,y_j)$,
-    $$\operatorname{supp} \psi_{ij} = \square_{ij} \cup \square_{i+1,j} \cup \square_{i,j+1} \cup \square_{i+1,j+1},$$
-so in fact the integral in \eqref{eq:of:weakformbasis} is over only four elements.
+for $p=0,\dots,m_x-1$ and $q=0,\dots,m_y-1$.  Again, however, this integral can be expanded as a sum over elements,
+\begin{equation}
+\sum_{i=0}^{m_x} \sum_{j=0}^{m_y} \int_{\square_{ij}} |\grad u|^{p-2} \grad u \cdot \grad \psi_{pq} - f \psi_{pq} = 0 \label{eq:of:residualsumoverelements}
+\end{equation}
 
 \cinputpart{plap.c}{\CODELOC}{The residual function $\bF(\bu)$ corresponding to the weak form \eqref{eq:of:plapweakform}.  These two C functions implement \eqref{eq:of:weakformintegrandref} and \eqref{eq:of:weakformdetail}, respectively.}{VIII}{//STARTFUNCTION}{//ENDFUNCTION}{code:plapFun}
 
-Consider the four elements $\square_{i+c,j+d}$ for $c,d=0,1$.  Using the nodal values of $u$ and $f$ on these elements, on the reference element we construct
+However, only four distinct hat functions $\psi_{pq}$ can contribute to an integral over the element $\square_{ij}$.  The contributors correspond to the element corners indexed $\ell=0,1,2,3$; recall equation \eqref{eq:of:psionref}.  Therefore we define
 \begin{equation}
-H_{ijcd}(\xi,\eta) = \left[|\grad u|^{p-2} \grad u \cdot \grad \chi_{[ij]} - f \chi_{[ij]}\right]_{\square_\ast} \label{eq:of:weakformintegrandref}
+H_{ij}^\ell(\xi,\eta) = \left[|\grad u|^{p-2} \grad u \cdot \grad \chi_\ell - f \chi_\ell\right]_{\square_\ast}, \label{eq:of:weakformintegrandref}
 \end{equation}
-where $\chi_{[ij]}$ denotes the basis function $\chi_\ell$ corresponding to $\psi_{ij}$--- recall equation \eqref{eq:of:psionref}. (Details are in Exercise \ref{chap:of}.\ref{exer:of:weakformintegrand}.)  We do the element integrals implied by \eqref{eq:of:weakformbasis}, with integrand \eqref{eq:of:weakformintegrandref}, by using quadrature \eqref{eq:of:tensorgauss}.  That is, we rewrite \eqref{eq:of:weakformbasis} as
+where it is understood that the element reference map $\square_\ast \to \square_{ij}$ is in use.  Further details are in Exercise \ref{chap:of}.\ref{exer:of:weakformintegrand}.
+
+We do the element integrals in \eqref{eq:of:residualsumoverelements}, with integrand \eqref{eq:of:weakformintegrandref}, by using quadrature \eqref{eq:of:tensorgauss}.  That is, we construct a component of the residual, the one corresponding to the weak form and test function $\psi_{pq}$, by accumulating contributions from those elements $\square_{ij}$ where $\psi_{pq}$ has value one at the $\ell$th corner of element $\square_{ij}$:
 \begin{equation}
-\frac{h_x h_y}{4} \sum_{c=0}^1 \sum_{d=0}^1 \sum_{r=0}^{n-1} \sum_{s=0}^{n-1} w_r w_s H_{ijcd}(z_r,z_s) = 0.  \label{eq:of:weakformdetail}
+F_{pq}(u) \mathrel{+}= \frac{h_x h_y}{4} \sum_{r=0}^{n-1} \sum_{s=0}^{n-1} w_r w_s H_{ij}^\ell(z_r,z_s).  \label{eq:of:residualcontributions}
 \end{equation}
-There is one such nonlinear equation for each of the $N$ interior nodes $(x_i,y_j)$.  Solving this system of equations, a nonlinear system $\bF(\bu)=0$ as in Chapter \ref{chap:nl}, should determine all $N$ values $u_{ij}$.
+Formula \eqref{eq:of:residualcontributions} is implemented by \texttt{FormFunctionLocal()} in Code \ref{code:plapFun}.  Note that \texttt{FunIntegrand()} implements \eqref{eq:of:weakformintegrandref} by reusing tools from Code \ref{code:plapTool}.
 
-Sum \eqref{eq:of:weakformdetail} is implemented by \texttt{FormFunctionLocal()} in Code \ref{code:plapFun}.  It computes the point-wise residual $F_{ij}(\bu)$ at every interior node $(x_i,y_j)$.  Note that \texttt{FunIntegrand()} implements \eqref{eq:of:weakformintegrandref} by reusing tools from Code \ref{code:plapTool}.
+There is one nonlinear equation $F_{pq}(u)=0$ for each of the $N$ interior nodes $(x_p,y_q)$.  Solving this nonlinear system of equations,
+    $$\bF(\bu)=0,$$
+as in Chapter \ref{chap:nl}, should determine all $N$ nodal values $u_{ij}$.
 
-As expected, the version using residual evaluation, i.e.~without option \texttt{-snes\_fd\_function}, runs much faster than the objective-only implementation.  Furthermore, because we are using a \pDMDA structured grid and we have \emph{not} provided a Jacobian through calling \texttt{DMDASNESSetJacobianLocal()}, the efficient ``coloring'' form of finite-differencing is the default (i.e.~option \texttt{-snes\_fd\_color}).  So now we compare timing:\sidenote{Option \texttt{-snes\_fd\_function} only works as intended, i.e.~avoids use of the residual function, if one of \texttt{-snes\_fd} or \texttt{-snes\_fd\_color} is also present.  Compare Exercise \ref{chap:of}.\ref{exer:of:commentoutresidual}.}
+The new version using residual evaluation, without option \texttt{-snes\_fd\_function}, significantly accelerates the objective-only implementation.  Compare timing:\sidenote{Option \texttt{-snes\_fd\_function} only works as intended, i.e.~avoids use of the residual function, if one of \texttt{-snes\_fd} or \texttt{-snes\_fd\_color} is also present.  Compare Exercise \ref{chap:of}.\ref{exer:of:commentoutresidual}.}
 \begin{cline}
 $ timer ./plap -da_refine 3
 ...
@@ -444,8 +451,9 @@ $ timer ./plap -da_refine 3 -snes_fd_color -snes_fd_function
 ...
 real 15.13
 \end{cline}
+Note that, because we are using a \pDMDA structured grid and we have \emph{not} provided a Jacobian through calling \texttt{DMDASNESSetJacobianLocal()}, the efficient ``coloring'' form of finite-differencing (\texttt{-snes\_fd\_color}) is the default method by which the \pSNES approximates a Jacobian.
 
-Also, the function-evaluation counts are now more reasonable.  For instance, consider the following run which does four Newton iterations on a grid with $N=25$ interior points:
+The reason for the speed-up is that the function-evaluation counts are now reasonable.  For instance, consider the following run which does four Newton iterations on a grid with $N=25$ interior points:
 \begin{cline}
 $ ./plap -da_refine 1 -log_view | grep Eval
 SNESFunctionEval      45 1.0 6.6156e-03 1.0 ...
@@ -453,7 +461,7 @@ SNESObjectiveEval       8 1.0 4.5586e-04 1.0 ...
 SNESJacobianEval       4 1.0 6.4406e-03 1.0 ...
 \end{cline}
 %$
-Compare the \texttt{-snes\_fd\_function} result on page \pageref{page:of:badEvalcount}, with 5410 objective evaluations.
+Compare the earlier \texttt{-snes\_fd\_function} result which generated thousands of objective evaluations.
 
 
 \section{Convergence and quadrature}
@@ -734,10 +742,11 @@ where $u_\ell$ and $f_\ell$ are local-node-numbered values of $u$ and $f$ on ele
 
 \item \label{exer:of:weakformintegrand}  Show that \eqref{eq:of:weakformintegrandref} is, in detail,
 \begin{align*}
-H_{ijcd}(\xi,\eta) &= \left[\frac{4}{h_x^2} \left(\sum_{\ell=0}^3 u_\ell \frac{\partial\chi_\ell}{\partial \xi}\right)^2 + \frac{4}{h_y^2} \left(\sum_{\ell=0}^3 u_\ell \frac{\partial\chi_\ell}{\partial \eta}\right)^2\right]^{(p-2)/2} \\
-  &\qquad \cdot \left[\frac{4}{h_x^2} \left(\sum_{\ell=0}^3 u_\ell \frac{\partial\chi_\ell}{\partial \xi}\right) \frac{\partial\chi_{[ij]}}{\partial \xi} + \frac{4}{h_y^2} \left(\sum_{\ell=0}^3 u_\ell \frac{\partial\chi_\ell}{\partial \eta}\right) \frac{\partial\chi_{[ij]}}{\partial \eta}\right] \\
-  &\quad - \left(\sum_{\ell=0}^3 f_\ell \chi_\ell\right) \chi_{[ij]}
+H_{ij}^L(\xi,\eta) &= \left[\frac{4}{h_x^2} \left(\sum_{\ell=0}^3 u_\ell \frac{\partial\chi_\ell}{\partial \xi}\right)^2 + \frac{4}{h_y^2} \left(\sum_{\ell=0}^3 u_\ell \frac{\partial\chi_\ell}{\partial \eta}\right)^2\right]^{(p-2)/2} \\
+  &\qquad \cdot \left[\frac{4}{h_x^2} \left(\sum_{\ell=0}^3 u_\ell \frac{\partial\chi_\ell}{\partial \xi}\right) \frac{\partial\chi_L}{\partial \xi} + \frac{4}{h_y^2} \left(\sum_{\ell=0}^3 u_\ell \frac{\partial\chi_\ell}{\partial \eta}\right) \frac{\partial\chi_L}{\partial \eta}\right] \\
+  &\quad - \left(\sum_{\ell=0}^3 f_\ell \chi_\ell\right) \chi_L
 \end{align*}
+for $L=0,1,2,3$.
 
 \item Figure \ref{fig:of:cartoonfunctional} shows the graph of $\Phi(x,y)=\tfrac{1}{4}(x^4+y^4) - 2x + 2y$, a cartoon for the $p$-Laplacian functional $I[u]$ in the case $p=4$.  Solve
     $$\min_{x,y} \Phi(x,y)$$
@@ -750,12 +759,7 @@ by hand.  Now write a \PETSc code \texttt{cartoon.c} to solve this problem, star
 \begin{cline}
 ./plap -snes_fd_color -snes_fd_function
 \end{cline}
-still works, but that
-\begin{cline}
-./plap -snes_fd
-./plap -snes_mf
-\end{cline}
-do not.  Confirm the evaluation-counting results in the main text which use ``\texttt{-log\_view | grep Eval}'' on the objective-only implementation.
+still works, but that ``\texttt{./plap -snes\_fd}'' and ``\texttt{./plap -snes\_mf}'' do not.  Confirm the evaluation-counting results in the main text which use ``\texttt{-log\_view | grep Eval}'' on the objective-only implementation.
 
 \item \label{exer:of:regularizepone}  The $p=1$ cases tried on page \pageref{page:of:casepone} are problematic because, in terms of the minimization of $I[u]$,  we are applying a gradient-based method to minimize a non-smooth \citep{NocedalWright2006} functional.  One might suppose that the regularized weak form \eqref{eq:of:plapweakformreg}, which is smooth for $\eps>0$, should work better, but this hypothesis needs testing.  Add option \texttt{-plap\_eps} $\eps$,\sidenote{And possibly option \texttt{-snes\_max\_it 200} if needed.} to the $p=1$ Bash loop shown on page \pageref{page:of:casepone}.  Try various values of regularization parameter $\eps>0$.  Is regularization effective for resolving \emph{this} non-smooth problem?
 
