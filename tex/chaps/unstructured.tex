@@ -1,12 +1,21 @@
 
-This section returns to the linear 2D Poisson equation last seen in Chapter \ref{chap:st}, but now for general domains and unstructured grids.  We use \PETSc for new tasks including these:
+This section returns to the linear 2D Poisson equation last seen in Chapter \ref{chap:st}, but here we build a triangle-based finite element method (FEM) for general domains and unstructured grids.  Our approach is to
+\begin{center}
+\emph{first do element-wise assembly of the residual equations.}
+\end{center}
+
+The residual equations of an FEM are the discretized weak form.  Our direct construction of these equations, which generalizes easily to nonlinear problems, matches the effective aspects of solving the $p$-Laplacian equation in Chapter \ref{chap:of}.  The well-known stiffness matrix ``$A$'', and corresponding linear system ``$A\bx = \bb$,'' as set up in most introductory FEM treatments, arise here as the Jacobian, and the Newton step, respectively, when solving our residual equations.
+
+We use \PETSc for some new tasks:
 \begin{itemize}
 \item reading a triangular mesh from a file into \PETSc \pVecs,
 \item managing unstructured indexing of that mesh, and
-\item implementation of Neumann boundary conditions.
+\item implementing Neumann boundary conditions.
 \end{itemize}
 
-The triangle-based finite element method (FEM) here contrasts with the structured rectangular-element ($Q^1$) FEM of Chapter \ref{chap:of}.  This example shows that it is possible to avoid using \PETSc's \pDMDA or other mesh-topology infrastructure, but, as a consequence, our implementation work-load increases substantially.  Nonetheless, the current material is representative of many \PETSc applications where direct contact with ``outside'' file formats is required.  In this case, we use the well-known, and relatively simple, \texttt{triangle} program for generating unstructured triangular meshes in 2D.  In Chapter \ref{chap:dp} we will return to unstructured FEM methods, but in 3D and taking advantage of \PETSc's \pDMPlex class for unstructured meshes.
+The FEM here contrasts with the structured rectangular-element ($Q^1$) FEM of Chapter \ref{chap:of} in that it does not use \PETSc's \pDMDA or other mesh-topology infrastructure.  As a consequence, our implementation work-load increases substantially; we both find out what we lose and understand better what mesh-topology and indexing tools in \PETSc are doing.  We use the relatively-simple \texttt{triangle} program for generating unstructured triangular meshes in 2D.  In Chapter \ref{chap:dp} we will return to unstructured FEM methods, but in 3D and taking advantage of \PETSc's \pDMPlex class for unstructured meshes.
+
+The example in this Chapter is representative of \PETSc applications where direct contact with file formats and index sets is required.
 
 
 \section{A general 2D Poisson problem}
