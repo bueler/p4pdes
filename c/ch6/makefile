@@ -23,13 +23,13 @@ runode_1:
 	-@../testit.sh ode "-ts_init_time 19.0 -ts_dt 0.01 -ts_final_time 20.0" 1 1
 
 runode_2:
-	-@../testit.sh ode "-ts_type cn -snes_fd" 1 2
+	-@../testit.sh ode "-ts_type cn -snes_fd -ts_final_time 1.0" 1 2
 
 runode_3:
-	-@../testit.sh ode "-ts_monitor" 1 3
+	-@../testit.sh ode "-ts_monitor -ts_final_time 1.0" 1 3
 
 runodejac_1:
-	-@../testit.sh odejac "" 1 1
+	-@../testit.sh odejac "-ts_final_time 1.0" 1 1
 
 
 # etc
