@@ -18,16 +18,16 @@ First we show how to view trajectories as curves in the _t,y_ plane.  One gets m
 One can use PETSc alone for a run-time "line-graph" view:
 
         make ode
-        ./ode -ts_monitor_lg_solution draw -draw_pause 0.2
+        ./ode -ts_monitor_lg_solution -draw_pause 0.1
 
 For saving an image file of type `.png` with the same basic appearance, use `plottrajectory.py`:
 
         ./ode -ts_monitor binary:t.dat -ts_monitor_solution binary:y.dat
         ./plottrajectory.py t.dat y.dat -o result.png
 
-A common error at this stage comes from the script not having access to `PetscBinaryIO.py` and `petsc_conf.py` from `$PETSC_DIR/bin/`.
+(A common error at this stage arises from not copying `PetscBinaryIO.py` and `petsc_conf.py` from `$PETSC_DIR/bin/` to the current directory, or making sym-links.)
 
-Note that without option `-o` (or `-oroot` below), the script simply shows the result on the screen:
+Without option `-o` (or `-oroot` below), the script simply shows the result on the screen:
 
         ./plottrajectory.py t.dat y.dat
 
@@ -37,7 +37,7 @@ The heat equation solution from `heat.c` _can_ be viewed by one of the methods a
 movie for scalar PDE in spatial 2D
 ----------------------------------
 
-If the PETSc code has two spatial dimensions, so that it uses both a `TS` and a 2D `DMDA` object, then viewing the whole trajectory requires a movie.  Codes `heat.c` and `pattern.c` in the current directory are of this type.
+Two of the codes here have two spatial dimensions, namely `heat.c` and `pattern.c`.  They use both a `TS` and a 2D `DMDA` object.  Viewing the trajectory they generate requires making a movie.
 
 PETSc alone can generate a movie at run-time, for instance by
 
@@ -59,17 +59,13 @@ Simply add a filename root to save the frames in individual files:
 
 This generates files `bar000.png`, `bar001.png`, and so on, using the name pattern `bar%03d.png`.
 
-From this collection of image files, the following commands use the [`ffmpeg`](https://www.ffmpeg.org/) tool to generate a `.m4v` format movie:
+Now use the [`ffmpeg`](https://www.ffmpeg.org/) tool to generate a `.m4v` format movie from the collection of `.png` image files:
 
-        ffmpeg -r 4 -i bar%03d.png bar.m4v
+        ffmpeg -r 4 -i bar%03d.png bar.m4v     # set rate to 4 frames/second
 
-Of course one might need to install `ffmpeg`, so something like `sudo apt-get install ffmpeg` might be needed.  Viewing the movie itself requires some viewer; `totem` or `vlc` are possibilities.
+Of course one might need to install `ffmpeg`, so something like `sudo apt-get install ffmpeg` might be needed.  Viewing the movie itself requires some viewer.  (On linux platforms, `totem` or `vlc` are possibilities.)
 
-The compression from the `.m4v` format and `ffmpeg` is already substantial.  In particular, the result of
-
-        ls -lh u.dat bar.m4v
-
-is that `u.dat` is a 6 MB file and `bar.m4v` is a 44 KB file.
+The compression from the `.m4v` format and `ffmpeg` is substantial.  In particular, `u.dat` is 6 MB while `bar.m4v` is only 44 KB.
 
 
 movie for dof>1 PDE in spatial 2D
