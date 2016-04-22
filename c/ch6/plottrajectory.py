@@ -10,7 +10,7 @@ Requires access to bin/PetscBinaryIO.py and bin/petsc_conf.py, e.g. sym-links.
 
 import PetscBinaryIO
 
-from sys import exit
+from sys import exit, stdout
 from time import sleep
 from argparse import ArgumentParser, RawTextHelpFormatter
 import numpy as np
@@ -68,12 +68,14 @@ if frames:
         U = np.reshape(U,(args.my,args.mx,args.dof,len(t)))
         dims = np.shape(U)
         print 'solution U is shape=(%d,%d,%d,%d)' % tuple(dims)
-    print 'time t is length=%d, with mx x my = %d x %d frames' % (dims[-1],dims[1],dims[0])
+    print 'time t has length=%d, with mx x my = %d x %d frames' % (dims[-1],dims[1],dims[0])
 else:
-    print 'time t is length=%d, solution Y is shape=(%d,%d)' % \
+    print 'time t has length=%d, solution Y is shape=(%d,%d)' % \
           (len(t),dims[0],dims[1])
 
 if frames:
+    print 'generating files %s000.png .. %s%03d.png:' % \
+          (args.rootname,args.rootname,len(t)-1)
     if args.dof == 1:
         plt.imshow(U[:,:,0])
     else:
@@ -85,6 +87,8 @@ if frames:
         plt.ion()
         plt.show()
     for k in range(len(t)-1):
+        print '.',
+        stdout.flush()
         if args.dof == 1:
             plt.imshow(U[:,:,k+1])
         else:
@@ -94,6 +98,7 @@ if frames:
             plt.savefig(args.rootname + "%03d.png" % (k+1))
         else:
             plt.pause(0.1)
+    print '.'
 else:
     for k in range(dims[0]):
         plt.plot(t,U[k],label='y[%d]' % k)
