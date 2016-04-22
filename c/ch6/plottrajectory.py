@@ -68,7 +68,7 @@ if frames:
         U = np.reshape(U,(args.my,args.mx,args.dof,len(t)))
         dims = np.shape(U)
         print 'solution U is shape=(%d,%d,%d,%d)' % tuple(dims)
-    print 'time t is length=%d, with mx x my = %d x %d frames' % (dims[2],dims[1],dims[0])
+    print 'time t is length=%d, with mx x my = %d x %d frames' % (dims[-1],dims[1],dims[0])
 else:
     print 'time t is length=%d, solution Y is shape=(%d,%d)' % \
           (len(t),dims[0],dims[1])
