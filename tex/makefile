@@ -38,8 +38,8 @@ UNLOC := ch8/
 tmp/blob.tikz tmp/blob.1.elenum.tikz tmp/blob.1.nodenum.tikz: tmp/ ../c/$(UNLOC)blob.poly
 	python tri2tikz.py --polyonly --nodesize 1.0 --scale 0.6 ../c/$(UNLOC)blob tmp/blob.tikz
 	triangle -pqa4.0 ../c/$(UNLOC)blob
-	python tri2tikz.py --labelelements --nodesize 1.0 --scale 0.6 ../c/$(UNLOC)blob.1 tmp/blob.1.elenum.tikz
-	python tri2tikz.py --labelnodes --nodesize 3.0 --nodeoffset -0.5 --scale 0.6 ../c/$(UNLOC)blob.1 tmp/blob.1.nodenum.tikz
+	python tri2tikz.py --labelelements --nodesize 1.0 --scale 0.5 ../c/$(UNLOC)blob.1 tmp/blob.1.elenum.tikz
+	python tri2tikz.py --labelnodes --nodesize 3.0 --nodeoffset -0.5 --scale 0.48 ../c/$(UNLOC)blob.1 tmp/blob.1.nodenum.tikz
 
 tmp/squarefour.tikz: tmp/ ../c/$(UNLOC)squarefour.poly
 	python tri2tikz.py --labelnodes --nodesize 0.5 --nodeoffset -0.1 --scale 3.0 ../c/$(UNLOC)squarefour $@
