@@ -8,16 +8,6 @@ running a PETSc TS program.  Reads output from
 Requires access to bin/PetscBinaryIO.py and bin/petsc_conf.py, e.g. sym-links.
 '''
 
-# generate frames example:
-#   $ ./heat -ts_monitor binary:t.dat -ts_monitor_solution binary:u.dat -ts_final_time 0.02 -ts_dt 0.001 -da_refine 6
-#   $ ./plottrajectory.py -mx 193 -my 192 t.dat u.dat         # show at screen
-#   $ ./plottrajectory.py -mx 193 -my 192 t.dat u.dat -o bar  # save files to bar%03d.png
-
-# generate movie from frames using ffmpeg (ubuntu specific, probably):
-#   $ sudo apt-get install ffmpeg         # might be needed
-#   $ ffmpeg -r 4 -i bar%03d.png bar.m4v
-#   $ totem var.m4v                       # vlc has trouble
-
 import PetscBinaryIO
 
 from sys import exit
@@ -80,7 +70,7 @@ if frames:
         plt.imshow(U[:,:,k+1])
         plt.title('t = %g' % t[k+1])
         if args.filename:
-            plt.savefig(args.filename + "%03d.png" % k)
+            plt.savefig(args.filename + "%03d.png" % (k+1))
         else:
             plt.pause(0.1)
 else:
