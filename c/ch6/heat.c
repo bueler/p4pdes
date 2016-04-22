@@ -268,14 +268,14 @@ int main(int argc,char **argv)
 //ENDTSSETUP
 
   // report on set up
+  ierr = TSGetTime(ts,&t0); CHKERRQ(ierr);
+  ierr = TSGetTimeStep(ts,&dt); CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);
   ierr = Spacings(user.da,&hx,&hy); CHKERRQ(ierr);
   hxhy = PetscMin(hx,hy);  hxhy = hxhy * hxhy;
-  ierr = TSGetTime(ts,&t0); CHKERRQ(ierr);
-  ierr = TSGetTimeStep(ts,&dt); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
            "solving on %d x %d grid from t0=%g with initial step dt=%g ...\n"
-           "(initial stability ratio:  D dt / (min{dx,dy}^2) = %g)\n",
+           "(initial step stability ratio:  D dt / (min{dx,dy}^2) = %g)\n",
            info.mx,info.my,t0,dt,user.D*dt/hxhy); CHKERRQ(ierr);
 
   ierr = VecSet(u,0.0); CHKERRQ(ierr);
