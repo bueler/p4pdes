@@ -9,7 +9,7 @@ test:
 	@(cd ch3/ && make -s runpoisson_1 runpoisson_2 runpoisson_3)
 	@(cd ch4/ && make -s runexpcircle_1 runexpcircle_2 runecjac_1 runecjac_2 runreaction_1 runreaction_2 runreaction_3 runreaction_4)
 	@(cd ch5/ && make -s runplap_1 runplap_2 runplap_3 runplap_4 runplap_5)
-	@(cd ch6/ && make -s runode_1 runode_2 runode_3 runodejac_1)
+	@(cd ch6/ && make -s runode_1 runode_2 runode_3 runodejac_1 runheat_1 runheat_2 runpattern_1)
 
 # etc
 
