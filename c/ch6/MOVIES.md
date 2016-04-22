@@ -5,7 +5,10 @@ PETSc TS-using codes, like the ones in this directory, can generate binary files
 
 For the two codes that solve PDEs in two spatial dimensions, namely `heat.c` and `pattern.c`, however, one can visualize the full trajectory by generating a _movie_.  We show that kind of result second.
 
-The method here, based on the [python](https://www.python.org/)/[matplotlib](http://matplotlib.org/) script `plottrajectory.py` in the current directory, and is light-weight but not at all full-featured.  For improved visualization one may either improve/modify the script or switch to a more advanced framework like [paraview](http://www.paraview.org/).
+The method here, based on the [python](https://www.python.org/)/[matplotlib](http://matplotlib.org/) script `plottrajectory.py` in the current directory, and is light-weight but not at all full-featured.  This script also needs either local copies of, or sym-links to, `PetscBinaryIO.py` and `petsc_conf.py` which are in `$PETSC_DIR/bin/`.
+
+For improved visualization one may either improve/modify the script or switch to a more advanced framework like [paraview](http://www.paraview.org/).
+
 
 static trajectories
 -------------------
@@ -22,13 +25,14 @@ For saving an image file of type `.png` with the same basic appearance, use `plo
         ./ode -ts_monitor binary:t.dat -ts_monitor_solution binary:y.dat
         ./plottrajectory.py t.dat y.dat -o result.png
 
-Note that
+A common error at this stage comes from the script not having access to `PetscBinaryIO.py` and `petsc_conf.py` from `$PETSC_DIR/bin/`.
+
+Note that without option `-o` (or `-oroot` below), the script simply shows the result on the screen:
 
         ./plottrajectory.py t.dat y.dat
 
-simply shows the result on the screen.
+The heat equation solution from `heat.c` _can_ be viewed by one of the methods above, but it is not the natural and desired visualization.  Just give it a try to see!
 
-The heat equation solution from `heat.c` _can_ be viewed by one of the methods above, but it is not the natural view.  Just give it a try to see!
 
 movie for scalar PDE in spatial 2D
 ----------------------------------
@@ -67,7 +71,8 @@ The compression from the `.m4v` format and `ffmpeg` is already substantial.  In 
 
 is that `u.dat` is a 6 MB file and `bar.m4v` is a 44 KB file.
 
-movie for dof > 1 PDE in spatial 2D
+
+movie for dof>1 PDE in spatial 2D
 -----------------------------------
 
 For problems with multiple degrees of freedom, like `pattern.c`, PETSc opens one window for each component:
