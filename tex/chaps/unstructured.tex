@@ -157,11 +157,36 @@ for all $i$ such that $\bx_i \notin \partial_D \Omega$.  On the other hand we ma
 \begin{equation}
 u^h(x,y) = \hat g_D(x,y) + \sum_{\bx_j \notin \partial_D \Omega} u_j\, \psi_j(x,y). \label{eq:un:uhexpand}
 \end{equation}
-The coefficients $u_j$ are the unknowns.  The complete FEM specification of $u^h$, equivalently the vector $\bu = \{u_i\} \in \RR^{N-L}$ of coefficients, are equations \eqref{eq:un:hatgdefine}, \eqref{eq:un:weakformhat}, and \eqref{eq:un:uhexpand}.
 
-Note that the support (i.e.~nonzero set) of $\psi_j$ includes only the node $\bx_j$ and all triangles (elements) $\triangle_k$ incident to it (i.e.~for which $\bx_j$ is a node of $\triangle_k$).  Thus the integral ``$\int_\Omega \grad \psi_j \cdot \grad \psi_i$'' in \eqref{eq:un:poissonfem} is often zero: it is zero if $\bx_i$ and $\bx_j$ are not both nodes of at least one triangle in the triangulation.  This is the property which makes \eqref{eq:un:poissonfem} a sparse system of equations, and the system matrix a sparse matrix.
+The coefficients $u_j$ in \eqref{eq:un:uhexpand} are the unknowns.  Given the triangulation $\mathcal{T}_h$ of $\Omega$, and given the data of the problem, namely the functions $a,f,g_D,g_N$, the complete FEM specification of $u^h$, equivalently the vector
+\begin{equation}
+\bu = \{u_j\} \in \RR^{N-L},  \label{eq:un:unknowns}
+\end{equation}
+is given by equations \eqref{eq:un:hatgdefine}, \eqref{eq:un:weakformhat}, and \eqref{eq:un:uhexpand}.
 
-Each equation in \eqref{eq:un:poissonfem} is linear.  It is therefore very common to immediately write the system \eqref{eq:un:poissonfem} as a linear equation ``$A \bu = \bb$'', but we will not do that immediately.  Following the pattern established since Chapter \ref{chap:nl}, we first implement a residual-evaluation function, corresponding to \eqref{eq:un:poissonfem}, within a \PETSc \pSNES instance.  This implementation can immediately be tested with finite-differenced Jacobian.  Once it works we can, and we will, consider matrix assembly.  Before any of that can be accomplished, however, we have to \emph{put the mesh itself into \PETSc data structures}.
+In the linear case it is common to now write system \eqref{eq:un:weakformhat} and \eqref{eq:un:uhexpand} as a linear system ``$A \bu = \bb$'', and in particular assemble the \emph{stiffness matrix} $A$ \citep{Elmanetal2005}, but we will not do so.  Following the pattern established since Chapter \ref{chap:nl}, we first implement equation \eqref{eq:un:weakformhat} as a residual-evaluation function $\bF(\bu)$ giving a nonlinear system
+\begin{equation*}
+\bF(\bu) = 0.
+\end{equation*}
+In evaluating $\bF(\bu)$ we use \eqref{eq:un:uhexpand}, and also \eqref{eq:un:hatgdefine}, to get point values of $u^h$ and its gradient $\grad u^h$, for quadrature similar to that in Chapter \ref{chap:of}, from the nodal values $\bu$ on the mesh.  This function, a \pSNES call-back, can be tested for correctness with a finite-differenced Jacobian (Chapter \ref{chap:nl}).  Of course, implementing a residual in the linear case is \emph{mathematically} equivalent to assembling $A$ and $\bb$, but the code needed for the residual has advantages, among them not requiring direct contact with a \pMat object at all.
+
+Once the relatively-straightforward code for evaluating $\bF(\bu)$ is shown to work correctly then we can, and we will, consider matrix assembly for the Jacobian.  Before any of that can be accomplished, however, we both have to be more specific about what \eqref{eq:un:weakformhat} says on each element, and we need to read in the triangular mesh and put it into \PETSc data structures.
+
+
+\section{Element-wise assembly of the residual equations}
+
+Because triangulation $\mathcal{T}_h$ satisfying \eqref{eq:un:triangulation} almost covers $\Omega$ with non-overlapping triangles,\sidenote{The set $\Omega \setminus \cup_k \triangle_k$ has measure zero.} we can write the weak form \eqref{eq:un:weakformhat} as a sum over elements.
+
+To be specific, let $\nu(k,e)=1$ if edge $e$ of $\triangle_k$ is part of $\partial_N\Omega$, and let it be zero otherwise, where $e\in\{0,1,2\}$ indexes the edges of $\triangle_k$.  Let
+\begin{equation}
+F_i^k(\bu) = \int_{\triangle_k} a(u^h) \grad u^h \cdot \grad \psi_i - f(u^h) \psi_i + \sum_{e=0}^2 \nu(k,e) \int_{\partial_e \triangle_k} g_N \psi_i.  \label{eq:un:elementweakform}
+\end{equation}
+Then residual equation \eqref{eq:un:weakformhat} is
+\begin{equation}
+F_i(\bu) = \sum_{\triangle_k \in \mathcal{T}_h} F_i^k(\bu) = 0.  \label{eq:un:elementwisesum}
+\end{equation}
+
+Because the support of the hat function $\psi_i$ only overlaps with a few triangles $\triangle_k$, only a few values $F_i^k(\bu)$ are nonzero.  Also, only a few nodal values $\bu=\{u_j\}$ enter into $F_i^k(\bu)$, namely those values $u_j$ such that the support of $\psi_j$ overlaps with $\triangle_k$.  These facts make \eqref{eq:un:elementwisesum} a \emph{sparse} (generally-nonlinear) system.  The Jacobian $J_\bF(\bu)$ is a sparse matrix, the stiffness matrix.
 
 
 \section{Triangular meshes from \Triangle}
