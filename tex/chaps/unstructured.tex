@@ -188,6 +188,55 @@ F_i(\bu) = \sum_{\triangle_k \in \mathcal{T}_h} F_i^k(\bu) = 0.  \label{eq:un:el
 
 Because the support of the hat function $\psi_i$ only overlaps with a few triangles $\triangle_k$, only a few values $F_i^k(\bu)$ are nonzero.  Also, only a few nodal values $\bu=\{u_j\}$ enter into $F_i^k(\bu)$, namely those values $u_j$ such that the support of $\psi_j$ overlaps with $\triangle_k$.  These facts make \eqref{eq:un:elementwisesum} a \emph{sparse} (generally-nonlinear) system.  The Jacobian $J_\bF(\bu)$ is a sparse matrix, the stiffness matrix.
 
+A standard approach to computing the element integrals \eqref{eq:un:elementweakform} is to refer triangle $\triangle_k$ to a reference triangle $\triangle_\ast$ with vertices $(0,0),\,(1,0),\,(0,1)$, as shown in Figure \ref{fig:isoparametric}.  In Chapter \ref{chap:of} we did the same thing for quadrilaterals, so here we can be relatively brief.
+
+If $\triangle_k$ has vertices $(x_0,y_0),\,(x_1,y_1),\,(x_2,y_2)$ then the linear map from $\triangle_\ast$ to $\triangle_k$ is
+\begin{align}
+x(\xi,\eta) &= x_0 + (x_1-x_0) \xi + (x_2-x_0) \eta, \label{eq:un:trianglemap} \\
+y(\xi,\eta) &= y_0 + (y_1-y_0) \xi + (y_2-y_0) \eta. \notag
+\end{align}
+On $\triangle_\ast$ any linear function is a linear combination of three local (nodal) basis functions:
+\begin{equation}
+\chi_0(\xi,\eta) = 1-\xi-\eta, \qquad \chi_1(\xi,\eta) = \xi, \qquad \chi_2(\xi,\eta) = \eta. \label{eq:un:chiformulas}
+\end{equation}
+If $\bx_i\in\overline{\triangle_k}$ then hat function $\psi_i$ satisfies
+\begin{equation}
+\psi_i(x(\xi,\eta),y(\xi,\eta)) = \chi_q(\xi,\eta) \label{eq:un:phichimap}
+\end{equation}
+for all $(\xi,\eta)\in\triangle_\ast$, where vertex $q$ of $\triangle_\ast$ maps to $\bx_i$.
+
+\begin{marginfigure}
+\input{tikz/isoparametric.tex}
+\caption{Mapping of a triangle $\triangle_k$ from the reference triangle $\triangle_\ast$.}
+\label{fig:isoparametric}
+\end{marginfigure}
+
+%Also, the set of hat functions is a partition of unity.  We can see this by using $\chi_0+\chi_1+\chi_2=1$, which is obvious from \eqref{eq:un:chiformulas}. If $\bx \in \overline{\triangle_k}$ then $\bx=(x(\xi,\eta),y(\xi,\eta))$ for some $(\xi,\eta)\in \overline{\triangle_\ast}$, so by \eqref{eq:un:phichimap} we have
+%\begin{equation}
+%   \sum_j \psi_j(\bx) = \sum_{\bx_j \in \overline{\triangle_k}} \psi_q(\bx) = \sum_{q=0,1,2} \chi_q (\xi,\eta)=1.  \label{partitionofunity}
+%\end{equation}
+
+The Jacobian\sidenote{By definition, the \emph{Jacobian} $J=J(\bx)$ of a smooth map $F$ at a point $\bx$ is its linearization at $\bx$.  That is, if $\by=F(\bx)$ and $\by+\Delta\by = F(\bx+\Delta\bx)$ then $J(\bx)$ satisfies $\Delta \by = J(\bx) \Delta\bx + o(|\Delta\bx|)$.} of map \eqref{trianglemap} is
+% CAUTION: Elman (1.37) uses "Jacobian" for the transpose of this, the true Jacobian (e.g. in Newton later)
+\begin{equation}
+J = \begin{bmatrix}
+    \dfrac{\partial x}{\partial \xi} & \dfrac{\partial x}{\partial \eta} \\[1.0em]
+    \dfrac{\partial y}{\partial \xi} & \dfrac{\partial y}{\partial \eta}
+    \end{bmatrix}
+    =
+    \begin{bmatrix}
+    x_1-x_0 & x_2-x_0 \\
+    y_1-y_0 & y_2-y_0
+    \end{bmatrix}.  \label{trianglejacobian}
+\end{equation}
+Recalling both the change-of-variables formula for integrals\sidenote{If $F$ is a smooth map from $\bx \in U$ to $\by \in F(U)$, $J$ is the Jacobian of $F$, and $g$ is integrable on $F(U)$, then $$\int_{F(U)} g(\by)\,d\by = \int_U g(F(\bx))\,|\det(J)|\,d\bx.$$} and the chain rule, by \eqref{phichimap} we can write
+\begin{align}
+\text{\texttt{a(k,q,r)}} &= \int_{\triangle_k} \grad\psi_q \cdot \grad\psi_r \label{elementcontrib} \\
+   &= \int_{\triangle_k} \frac{\partial\psi_q}{\partial x} \frac{\partial\psi_r}{\partial x} + \frac{\partial\psi_q}{\partial y} \frac{\partial\psi_r}{\partial y} \; dx \, dy  \notag \\
+   &= \int_{\triangle_\ast} \left(\frac{\partial \chi_q}{\partial \xi} \frac{\partial \xi}{\partial x} + \frac{\partial \chi_q}{\partial \eta} \frac{\partial \eta}{\partial x}\right) \left(\frac{\partial \chi_r}{\partial \xi} \frac{\partial \xi}{\partial x} + \frac{\partial \chi_r}{\partial \eta} \frac{\partial \eta}{\partial x}\right) \notag \\
+   &\qquad\qquad + \left(\frac{\partial \chi_q}{\partial \xi} \frac{\partial \xi}{\partial y} + \frac{\partial \chi_q}{\partial \eta} \frac{\partial \eta}{\partial y}\right) \left(\frac{\partial \chi_r}{\partial \xi} \frac{\partial \xi}{\partial y} + \frac{\partial \chi_r}{\partial \eta} \frac{\partial \eta}{\partial y}\right) \; |\det(J)| \; d\xi \, d\eta. \notag
+\end{align}
+
 
 \section{Triangular meshes from \Triangle}
 
@@ -385,54 +434,7 @@ for k = 0 to K-1                // loop through all elements
 \medskip\noindent
 Observe that on each triangle $\triangle_k$ we write ``\texttt{a(k,q,r)}'' for \texttt{a(k,i,j)}, by replacing the global indices $i,j$ by corresponding local node indices $q,r\in\{0,1,2\}$ for triangle $k$.
 
-A standard approach to computing the element-wise integrals \texttt{a(k,q,r)} is to refer triangle $\triangle_k$ to a reference triangle $\triangle_\ast$ with vertices $(0,0),\,(1,0),\,(0,1)$, as shown in Figure \ref{fig:isoparametric}.  The linear map from $\triangle_\ast$ to $\triangle_k$ with vertices $(x_0,y_0),\,(x_1,y_1),\,(x_2,y_2)$, as shown in the Figure, is
-\begin{align}
-x(\xi,\eta) &= x_0 + (x_1-x_0) \xi + (x_2-x_0) \eta, \label{trianglemap} \\
-y(\xi,\eta) &= y_0 + (y_1-y_0) \xi + (y_2-y_0) \eta. \notag
-\end{align}
-
-\begin{marginfigure}
-\input{tikz/isoparametric.tex}
-\caption{Mapping of a triangle $\triangle_k$ from the reference triangle $\triangle_\ast$.}
-\label{fig:isoparametric}
-\end{marginfigure}
-
-\noindent Furthermore, on $\triangle_\ast$ any linear function is a linear combination of these three local basis functions:
-\begin{equation}
-\chi_0(\xi,\eta) = 1-\xi-\eta, \qquad \chi_1(\xi,\eta) = \xi, \qquad \chi_2(\xi,\eta) = \eta. \label{chiformulas}
-\end{equation}
-On $\triangle_k$, each of the basis functions $\psi_q$ is the mapped version of the corresponding $\chi_q$:
-\begin{equation}
-\psi_q(x(\xi,\eta),y(\xi,\eta)) = \chi_q(\xi,\eta). \label{phichimap}
-\end{equation}
-From \eqref{trianglemap} and \eqref{phichimap} one can confirm that $\psi_q(x_r,y_r) = \delta_{qr}$.
-
-Now is a good point at which to observe that the set of $\psi_j$, over all nodes $j=0,1,\dots,N$, is a partition of unity.  We can see this by switching to local node coordinate $q$ and using $\chi_0+\chi_1+\chi_2=1$, which is obvious from \eqref{chiformulas}.  That is, if $\bx \in \triangle_k$ then
-\begin{equation}
-   \sum_j \psi_j(\bx) = \sum_{q=0,1,2} \psi_q(\bx) = \sum_{q=0,1,2} \chi_q =1.  \label{partitionofunity}
-\end{equation}
-
-The Jacobian\sidenote{By definition, the \emph{Jacobian} $J=J(\bx)$ of a smooth map $F$ at a point $\bx$ is its linearization at $\bx$.  That is, if $\by=F(\bx)$ and $\by+\Delta\by = F(\bx+\Delta\bx)$ then $J(\bx)$ satisfies $\Delta \by = J(\bx) \Delta\bx + o(|\Delta\bx|)$.} of map \eqref{trianglemap} is
-% CAUTION: Elman (1.37) uses "Jacobian" for the transpose of this, the true Jacobian (e.g. in Newton later)
-\begin{equation}
-J = \begin{bmatrix}
-    \dfrac{\partial x}{\partial \xi} & \dfrac{\partial x}{\partial \eta} \\[1.0em]
-    \dfrac{\partial y}{\partial \xi} & \dfrac{\partial y}{\partial \eta}
-    \end{bmatrix}
-    =
-    \begin{bmatrix}
-    x_1-x_0 & x_2-x_0 \\
-    y_1-y_0 & y_2-y_0
-    \end{bmatrix}.  \label{trianglejacobian}
-\end{equation}
-Recalling both the change-of-variables formula for integrals\sidenote{If $F$ is a smooth map from $\bx \in U$ to $\by \in F(U)$, $J$ is the Jacobian of $F$, and $g$ is integrable on $F(U)$, then $$\int_{F(U)} g(\by)\,d\by = \int_U g(F(\bx))\,|\det(J)|\,d\bx.$$} and the chain rule, by \eqref{phichimap} we can write
-\begin{align}
-\text{\texttt{a(k,q,r)}} &= \int_{\triangle_k} \grad\psi_q \cdot \grad\psi_r \label{elementcontrib} \\
-   &= \int_{\triangle_k} \frac{\partial\psi_q}{\partial x} \frac{\partial\psi_r}{\partial x} + \frac{\partial\psi_q}{\partial y} \frac{\partial\psi_r}{\partial y} \; dx \, dy  \notag \\
-   &= \int_{\triangle_\ast} \left(\frac{\partial \chi_q}{\partial \xi} \frac{\partial \xi}{\partial x} + \frac{\partial \chi_q}{\partial \eta} \frac{\partial \eta}{\partial x}\right) \left(\frac{\partial \chi_r}{\partial \xi} \frac{\partial \xi}{\partial x} + \frac{\partial \chi_r}{\partial \eta} \frac{\partial \eta}{\partial x}\right) \notag \\
-   &\qquad\qquad + \left(\frac{\partial \chi_q}{\partial \xi} \frac{\partial \xi}{\partial y} + \frac{\partial \chi_q}{\partial \eta} \frac{\partial \eta}{\partial y}\right) \left(\frac{\partial \chi_r}{\partial \xi} \frac{\partial \xi}{\partial y} + \frac{\partial \chi_r}{\partial \eta} \frac{\partial \eta}{\partial y}\right) \; |\det(J)| \; d\xi \, d\eta. \notag
-\end{align}
-The last expression is the low point of this calculation.  From now on the formulas simplify because the integrand is \emph{constant} for the $\Pone$ elements here.  Indeed, by \eqref{trianglejacobian} we see $\det(J)$ is constant, but also the derivatives $\partial \chi_q/\partial\{\xi,\eta\}$ and $\partial\{\xi,\eta\}/\partial\{x,y\}$ are all constant because the functions in question are linear.
+FIXME The last expression is the low point of this calculation.  From now on the formulas simplify because the integrand is \emph{constant} for the $\Pone$ elements here.  Indeed, by \eqref{trianglejacobian} we see $\det(J)$ is constant, but also the derivatives $\partial \chi_q/\partial\{\xi,\eta\}$ and $\partial\{\xi,\eta\}/\partial\{x,y\}$ are all constant because the functions in question are linear.
 
 However, we need computable formulas for ``$\partial \xi/\partial x$'' and similar terms.  Again by the chain rule we can compute
 \begin{equation*}
