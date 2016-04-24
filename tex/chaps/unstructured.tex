@@ -229,35 +229,30 @@ and where node $\xi_i$ corresponds to local node number $q\in\{0,1,2\}$ of $\tri
 
 \section{Triangular meshes from \Triangle}
 
-FIXME from here: \pIS and \pSNES
+\PETSc itself does not include any tools for triangulating regions of the plane.  We use the widely-available \Triangle\sidenote{See \href{http://www.cs.cmu.edu/~quake/triangle.html}{www.cs.cmu.edu/$\sim$quake/ triangle.html} for documentation and source code.  For this Chapter we recommend that your \PETSc configuration include option \texttt{---download-triangle} and that \texttt{\$PETSC\_ARCH/bin} be on your \texttt{PATH}.} software \citep{Shewchuk1996} for this task.  \Triangle is limited to 2D, and it only writes ASCII files, but it has straightforward details.
 
-\PETSc itself does not include any tools for triangulating regions of the plane, so we use the widely-available and easy-to-use \Triangle\sidenote{See \href{http://www.cs.cmu.edu/~quake/triangle.html}{www.cs.cmu.edu/$\sim$quake/ triangle.html} for documentation and source code. \Triangle may be available as a package in your operating system.} software \citep{Shewchuk1996} for this task.  \Triangle is both limited to planar regions and only capable of writing ASCII files.  Thus it is not a choice for performance, but of convenience.
-
-\Triangle uses a simply-formatted ASCII file (extension \texttt{.poly}) as input to describe a polygonal region $\Omega$, and to indicate Dirichlet and Neumann portions of the boundary $\partial \Omega$.  FIXME For example, consider the input file \texttt{bump.poly} shown in Code \ref{code:bumppoly}.  This example polygon, a rectangle with a triangular bump in the base, is shown in Figure \ref{fig:bump-poly}.  It will reappear several times in this book as we solve more interesting PDEs on it.  The two apparently-unnecessary vertices introduced along the bottom help identify the Neumann part of the boundary, but note that \texttt{bump.poly} includes a Dirichlet/Neumann flag along each boundary segment.
+\Triangle uses, as input to describe a polygonal region $\Omega$, a simply-formatted ASCII file with extension \texttt{.poly}.  This input data also indicates Dirichlet and Neumann portions of the boundary $\partial \Omega$.  For example, for the polygon shown in Figure \ref{fig:un:polygon} we create the input file \texttt{blob.poly} shown in Code \ref{code:blobpoly}.
 
 \inputfromline{../c/\CODELOC/blob.poly}{\CODELOC blob.poly}{A description of the boundary polygon in Figure \ref{fig:un:polygon}, suitable for reading by \Triangle.}{8}{code:blobpoly}
 
-The triangulation shown in Figure \ref{fig:triangulation} came from a single command which asks \Triangle to take \texttt{bump.poly} and generate a triangulation which has a polygon output file (option \texttt{-p}), relatively-uniform triangles (option \texttt{-q} for ``quality-checked'' \citep{Shewchuk1996}), and triangles with maximum area of $1.0$ (option \texttt{-a1.0}):
-\begin{marginfigure}
-%\input{bump.poly.tikz}
-\caption{FIXME The polygon described by \texttt{bump.poly} in Code \ref{code:bumppoly}.  The bold part is the closed Dirichlet boundary.  The lower boundary is Neumann, and has ``extra'' nodes to identify it as such.}
-\label{fig:bump-poly}
-\end{marginfigure}
+The triangulation shown in Figure \ref{fig:un:number-mesh} came from a single command which asks \Triangle to take \texttt{blob.poly} and generate a triangulation which has a polygon output file (option \texttt{-p}), relatively-uniform triangles (option \texttt{-q} for ``quality-checked'' \citep{Shewchuk1996}), and triangles with maximum area of $4.0$ (option \texttt{-a4.0}):
 \begin{cline}
-$ triangle -pqa1.0 bump
+$ triangle -pq4.0 blob
 \end{cline}
 %$
-This command generates three ASCII files, \texttt{bump.1.poly}, \texttt{bump.1.node}, and  \texttt{bump.1.ele}.  These files define the new (i.e.~refined relative to \texttt{bump.poly}) polygonal boundary, the nodes locations, and the elements in the triangulation, respectively.
+This command generates three ASCII files, \texttt{blob.1.poly}, \texttt{blob.1.node}, and  \texttt{blob.1.ele}.  These files define the new (i.e.~refined relative to \texttt{blob.poly}) polygonal boundary, node locations, and the elements in the triangulation, respectively.
 
-\Triangle includes a minimal visualization tool which shows the triangulation graphically.  The command
+\Triangle includes a minimal visualization tool.  The command
 \begin{cline}
-$ showme bump
+$ showme blob
 \end{cline}
 %$
-displays the boundary polygon (from \texttt{bump.poly} or \texttt{bump.1.poly}) and the triangulation itself (\texttt{bump.1.node} and \texttt{bump.1.ele}).
+displays the boundary polygon (from \texttt{blob.poly} or \texttt{blob.1.poly}) and the triangulation itself (\texttt{blob.1.node} and \texttt{blob.1.ele}).
 
 
-\section{Getting a triangular mesh from ASCII files into a \PETSc \pVec}
+\section{From ASCII files to \PETSc \pIS and \pVec}
+
+FIXME: Will put \texttt{.node} into \pVec, \texttt{.ele} into \pIS, Dirichlet/Neumann marker into \pIS.  Will read ASCII into Python (not C) and write out \pVec, \pIS with \texttt{PetscBinaryIO.py}.  Then \texttt{unfem.c} will read \pVec, \pIS with \texttt{VecLoad(),ISLoad()}
 
 The ASCII files produced by \Triangle produces are not in a good format for large meshes, but we will accept this for portability and readability.  We will, however, demonstrate how files are read in parallel, based on first doing a mundane and un-scalable task in \PETSc, namely reading the ASCII \Triangle files serially onto a single MPI process and writing out a binary file in \PETSc format.\sidenote{Furthermore we will focus on the scalability of the FEM solution process, once the mesh is loaded.}  The binary file both describes the mesh element-by-element and can be read in parallel.
 
@@ -287,7 +282,43 @@ The first method \texttt{getmeshfile()} finds a \PETSc binary file from the \tex
 \cinputpart{readmesh.c}{\CODELOC}{Read the mesh in parallel from the file.}{II}{//STARTREADMESH}{//ENDREADMESH}{code:readmeshparttwo}
 
 
-\section{Constructing the FEM linear system}
+\section{Assembling an approximate Jacobian}
+
+FIXME EXPLAIN PICARD $\bF(\bu)=0$ to $A(\bu) \bu - \bb(\bu)=0$ to $A(\bu^k) \bu^{k+1} - \bb(\bu^k)=0$ to $A(\bu^k) (\bu^{k+1}-\bu^k) - \bb(\bu^k)= - A(\bu^k) \bu^k$ to $A(\bu^k) \bs = -\bF(\bu^k)$
+
+FIXME Furthermore we do it in parallel.  Recall that \texttt{c3convert.c} above creates a distributed \pVec called \texttt{E}, which is an array of elements of type \texttt{elementtype}, and \texttt{readmesh.c} reads it.
+
+FIXME For the element-by-element assembly procedure we first define the integral over one triangle $\triangle_k$,
+\begin{equation}
+\text{\texttt{a(k,i,j)}} = \int_{\triangle_k} a(u^h) \grad \psi_i \cdot \grad \psi_. \label{aelementintegral}
+\end{equation}
+so that
+    $$\tilde a_{ij} = \sum_k \phantom{.}\text{\texttt{a(k,i,j)}}.$$
+Likewise we will compute
+\begin{equation}
+\text{\texttt{b(k,i)}} = \int_{\triangle_k} f \psi_i + \int_{\overline{\triangle}_k \cap \partial_N\Omega} g_N \psi_i, \label{belementintegral}
+\end{equation}
+so that $\tilde b_i = \sum_{k} \;\text{\texttt{b(k,i)}}$.
+
+FIXME If \texttt{E} denotes an array of \texttt{elementtype} then for each triangle $\triangle_k$ we can get the node index for each of its three vertices.  Using $q=0,1,2$ for these vertices,
+    $$\text{\texttt{E[k].j[q]}} \in \{0,1,\dots,N-1\}.$$
+Thus the element-by-element assembly of $\tilde A$ follows this pseudocode:
+\begin{code}
+A = 0                           // N x N sparse matrix with entries a(i,j)
+b = 0                           // N x 1 column vector with entries b(i)
+for k = 0 to K-1                // loop through all elements
+    for q = 0 to 2
+        i = E[k].j[q]           // row index
+        for r = 0 to 2
+            j = E[k].j[r]       // column index
+            a(i,j) += a(k,q,r)  // add contribution from element k
+            b(i)   += b(k,q)    // ditto
+\end{code}
+\medskip\noindent
+Observe that on each triangle $\triangle_k$ we write ``\texttt{a(k,q,r)}'' for \texttt{a(k,i,j)}, by replacing the global indices $i,j$ by corresponding local node indices $q,r\in\{0,1,2\}$ for triangle $k$.
+
+
+START MOSTLY-DELETE
 
 Now that we can get a triangulation into \PETSc, we can return to the finite-dimensional weak formulation \eqref{poissonfem}.  This linear system
 \begin{equation}
@@ -389,41 +420,11 @@ g(\bx_2) \\
 
 \bigskip
 
+END MOSTLY-DELETE
 
-\section{Assembling the matrix equation, element by element}
+FIXME FROM HERE TO END
 
-An entry $\tilde a_{ij}$ of the initial matrix $\tilde A$ is not computed in one step.  Rather, we compute contributions to these entries from each element in turn; we ``loop over the elements.''  Furthermore we do it in parallel.  Recall that \texttt{c3convert.c} above creates a distributed \pVec called \texttt{E}, which is an array of elements of type \texttt{elementtype}, and \texttt{readmesh.c} reads it.
-
-For the element-by-element assembly procedure we first define the integral over one triangle $\triangle_k$,
-\begin{equation}
-\text{\texttt{a(k,i,j)}} = \int_{\triangle_k} \grad \psi_i \cdot \grad \psi_. \label{aelementintegral}
-\end{equation}
-so that
-    $$\tilde a_{ij} = \sum_k \phantom{.}\text{\texttt{a(k,i,j)}}.$$
-Likewise we will compute
-\begin{equation}
-\text{\texttt{b(k,i)}} = \int_{\triangle_k} f \psi_i + \int_{\overline{\triangle}_k \cap \partial_N\Omega} \gamma \psi_i, \label{belementintegral}
-\end{equation}
-so that $\tilde b_i = \sum_{k} \;\text{\texttt{b(k,i)}}$.
-
-If \texttt{E} denotes an array of \texttt{elementtype} then for each triangle $\triangle_k$ we can get the node index for each of its three vertices.  Using $q=0,1,2$ for these vertices,
-    $$\text{\texttt{E[k].j[q]}} \in \{0,1,\dots,N-1\}.$$
-Thus the element-by-element assembly of $\tilde A$ follows this pseudocode:
-\begin{code}
-A = 0                           // N x N sparse matrix with entries a(i,j)
-b = 0                           // N x 1 column vector with entries b(i)
-for k = 0 to K-1                // loop through all elements
-    for q = 0 to 2
-        i = E[k].j[q]           // row index
-        for r = 0 to 2
-            j = E[k].j[r]       // column index
-            a(i,j) += a(k,q,r)  // add contribution from element k
-            b(i)   += b(k,q)    // ditto
-\end{code}
-\medskip\noindent
-Observe that on each triangle $\triangle_k$ we write ``\texttt{a(k,q,r)}'' for \texttt{a(k,i,j)}, by replacing the global indices $i,j$ by corresponding local node indices $q,r\in\{0,1,2\}$ for triangle $k$.
-
-FIXME The last expression is the low point of this calculation.  From now on the formulas simplify because the integrand is \emph{constant} for the $\Pone$ elements here.  Indeed, by \eqref{trianglejacobian} we see $\det(J)$ is constant, but also the derivatives $\partial \chi_q/\partial\{\xi,\eta\}$ and $\partial\{\xi,\eta\}/\partial\{x,y\}$ are all constant because the functions in question are linear.
+The last expression is the low point of this calculation.  From now on the formulas simplify because the integrand is \emph{constant} for the $\Pone$ elements here.  Indeed, by \eqref{trianglejacobian} we see $\det(J)$ is constant, but also the derivatives $\partial \chi_q/\partial\{\xi,\eta\}$ and $\partial\{\xi,\eta\}/\partial\{x,y\}$ are all constant because the functions in question are linear.
 
 However, we need computable formulas for ``$\partial \xi/\partial x$'' and similar terms.  Again by the chain rule we can compute
 \begin{equation*}

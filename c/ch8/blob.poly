@@ -17,7 +17,7 @@
  7 -1.0 -4.0
  8  2.0 -3.0
  9  0.0 -2.0
-# segments have one marker: 2 = Dirichlet boundary; 3 = Neumann boundary
+# segments (edges) have one marker: 2 = Dirichlet bdry; 3 = Neumann bdry
 9 1
  1   1 2   2
  2   2 3   2
