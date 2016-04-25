@@ -255,12 +255,12 @@ $ ./ode -ts_monitor -ts_monitor_lg_solution -draw_pause 0.1
 %$
 The result is a movie version of Figure \ref{fig:ts:ode}.
 
-Another mode of visualization actually produced that Figure, however.  The Python script \texttt{c/ch6/plottrajectory.py} works with \texttt{binary} output from \pTS monitoring, like this:
+Another mode of visualization actually produced that Figure, however.  The Python script \texttt{c/ch6/plotTS.py} works with \texttt{binary} output from \pTS monitoring, like this:
 \begin{cline}
 $ ./ode -ts_monitor binary:t.dat -ts_monitor_solution binary:y.dat
-$ ./plottrajectory.py -o figure.png t.dat y.dat
+$ ./plotTS.py -o figure.png t.dat y.dat
 \end{cline}
-Running \texttt{plottrajectory.py} requires copies of, or sym-links to, the Python tools \texttt{PetscBinaryIO.py} and \texttt{petsc\_conf.py}.  (They are in the \texttt{bin/} directory of your \texttt{\$PETSC\_DIR}.)
+Running \texttt{plotTS.py} requires copies of, or sym-links to, the Python tools \texttt{PetscBinaryIO.py} and \texttt{petsc\_conf.py}.  (They are in the \texttt{bin/} directory of your \texttt{\$PETSC\_DIR}.)
 
 We are free to adjust the start time, end time, and initial time step at the command line:
 \begin{cline}

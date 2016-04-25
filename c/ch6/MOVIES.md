@@ -5,7 +5,7 @@ PETSc TS-using codes, like the ones in this directory, can generate binary files
 
 For the two codes that solve PDEs in two spatial dimensions, namely `heat.c` and `pattern.c`, however, one can visualize the full trajectory by generating a _movie_.  We show that kind of result second.
 
-The method here, based on the [python](https://www.python.org/)/[matplotlib](http://matplotlib.org/) script `plottrajectory.py` in the current directory, and is light-weight but not at all full-featured.  This script also needs either local copies of, or sym-links to, `PetscBinaryIO.py` and `petsc_conf.py` which are in `$PETSC_DIR/bin/`.
+The method here, based on the [python](https://www.python.org/)/[matplotlib](http://matplotlib.org/) script `plotTS.py` in the current directory, and is light-weight but not at all full-featured.  This script also needs either local copies of, or sym-links to, `PetscBinaryIO.py` and `petsc_conf.py` which are in `$PETSC_DIR/bin/`.
 
 For improved visualization one may either improve/modify the script or switch to a more advanced framework like [paraview](http://www.paraview.org/).
 
@@ -20,16 +20,16 @@ One can use PETSc alone for a run-time "line-graph" view:
         make ode
         ./ode -ts_monitor_lg_solution -draw_pause 0.1
 
-For saving an image file of type `.png` with the same basic appearance, use `plottrajectory.py`:
+For saving an image file of type `.png` with the same basic appearance, use `plotTS.py`:
 
         ./ode -ts_monitor binary:t.dat -ts_monitor_solution binary:y.dat
-        ./plottrajectory.py t.dat y.dat -o result.png
+        ./plotTS.py t.dat y.dat -o result.png
 
 (A common error at this stage arises from not copying `PetscBinaryIO.py` and `petsc_conf.py` from `$PETSC_DIR/bin/` to the current directory, or making sym-links.)
 
 Without option `-o` (or `-oroot` below), the script simply shows the result on the screen:
 
-        ./plottrajectory.py t.dat y.dat
+        ./plotTS.py t.dat y.dat
 
 The heat equation solution from `heat.c` _can_ be viewed by one of the methods above, but it is not the natural and desired visualization.  Just give it a try to see!
 
@@ -51,11 +51,11 @@ The question is how to save a convenient, possibly high-resolution, movie for fu
 
 This run reports that the grid has dimensions 193 by 192.  Adding these grid dimension as options, the same script shows a movie on the screen:
 
-        ./plottrajectory.py -mx 193 -my 192 t.dat u.dat
+        ./plotTS.py -mx 193 -my 192 t.dat u.dat
 
 Simply add a filename root to save the frames in individual files:
 
-        ./plottrajectory.py -mx 193 -my 192 t.dat u.dat -oroot bar
+        ./plotTS.py -mx 193 -my 192 t.dat u.dat -oroot bar
 
 This generates files `bar000.png`, `bar001.png`, and so on, using the name pattern `bar%03d.png`.
 
@@ -77,11 +77,11 @@ For problems with multiple degrees of freedom, like `pattern.c`, PETSc opens one
         ./pattern -ts_adapt_type none -da_refine 4 -ts_final_time 300 -ts_dt 5 \
              -ts_monitor_solution draw
 
-Generating the movie with `plottrajectory.py` requires setting the degrees of freedom `-dof 2`, and choosing one component using either option `-c 0` or `-c 1`.  For example:
+Generating the movie with `plotTS.py` requires setting the degrees of freedom `-dof 2`, and choosing one component using either option `-c 0` or `-c 1`.  For example:
 
         ./pattern -ts_adapt_type none -da_refine 5 -ts_final_time 300 -ts_dt 5 \
              -ts_monitor binary:t.dat -ts_monitor_solution binary:uv.dat
-        ./plottrajectory.py -mx 96 -my 96 -dof 2 -c 0 t.dat uv.dat -oroot foo
+        ./plotTS.py -mx 96 -my 96 -dof 2 -c 0 t.dat uv.dat -oroot foo
 
 Now we generate a movie the same way as above;
 
