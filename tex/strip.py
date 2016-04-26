@@ -18,7 +18,6 @@ files = { 2 : "vecmatksp.c tri.c",
           5 : "plap.c",
           6 : "ode.c odejac.c heat.c pattern.c",
           7 : "ad3.c",
-          8 : "readmesh.c poissontools.c poissonfem.c",
          12 : "obstacle.c"}
 
 if not os.path.exists("cstrip/"):
