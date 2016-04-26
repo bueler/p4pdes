@@ -502,17 +502,12 @@ where $\omega(\xi,\eta) = f(x(\xi,\eta),y(\xi,\eta)) \chi_q(\xi,\eta)$.
 %\cinputpart{testprealloc.c}{Read mesh \pVecs from file.  Get row ownership range.}{I}{//STARTLOAD}{//ENDLOAD}{code:testpreallocpartone}
 %\cinputpart{testprealloc.c}{Set up \pMat $A$ and actually preallocate it.  Fill it with junk entries so the pattern can be visualized.}{II}{//ENDLOAD}{//ENDTEST}{code:testpreallocparttwo}
 
+
 \begin{comment}
 From: Fande Kong <fdkong.jd@gmail.com>
 To: PETSc users list <petsc-users@mcs.anl.gov>
 Subject: Re: [petsc-users] Status on parallel mesh reader in DMPlex
-> Message: 2
->Date: Fri, 18 Dec 2015 08:21:04 -0800
->From: Justin Chang <jychang48@gmail.com>
->To: petsc-users <petsc-users@mcs.anl.gov>
->Subject: [petsc-users] Status on parallel mesh reader in DMPlex
-
-> Hi all,
+Date: Fri, 18 Dec 2015 08:21:04 -0800
 
 >What's the status on the implementation of the parallel
 
@@ -541,6 +536,41 @@ Parallel generator is highly nontrivial, I think. It is a very hard topic.
 > Justin
 \end{comment}
 
+
+\begin{comment}
+   The "trick" is that first partition the element across processes, then partition the vertices (nodal values) subservient to the partitioning of the elements and then you "renumber" the elements and vertices so that the elements on the first process are numbered first, followed by the elements on the second process etc and similarly the vertices on the first process are numbered before the vertices on the second processes etc.
+
+  Now each process just needs to loop over its elements compute the element stiffness/load and call MatSetValues/VecSetValues() the the "new" numbering of the vertices.  The "old" numbering that was on the disk is simply not used in communicating with PETSc, you only use the new PETSc numbering.
+
+   Barry
+
+> On Apr 26, 2016, at 1:03 PM, Jie Cheng <chengj5@rpi.edu> wrote:
+>
+> Hello everyone
+>
+> I have a finite element code to solve nonlinear solid mechanics (using Newton-Raphson iteration) implemented with PETSc. The code is serial, organized as following:
+>
+> 1) Read the connectivity of the unstructured mesh, coordinates of nodes from individual txt files.
+> 1.1) Connectivity file contains [# of elements] rows, and each row lists the global number of nodes on that element. Take 3d hexahedral elements for instance:
+>       223 224 298 297 1 2 76 75
+>       224 225 299 298 2 3 77 76
+>       ? ?
+> 1.2) Coordinates file contains [# of nodes] rows, and each row lists the coordinates of a node, for example:
+>       0                   0.0011                      3.9e-5
+>       2.3677e-5     0.001.9975                3.9e-5
+>       ? ?
+>
+> 2) Create the global stiffness A matrix with MatCreateSeqAIJ since the dimensions and nonzero pattern are known from the connectivity.
+> 3) Loop over the element to compute the element stiffness matrix and right hand side. Then assemble the global stiffness matrix and right hand side.
+> 4) Solve the linear equation with KSPsolve for the displacement increment, then go back to Step 3.
+>
+> The code works fine in serial, now I?m trying to parallelize it. To partition the mesh, I can use partdmesh from METIS, or let PETSc calls it. Either way I will find a way to assign different elements and nodes to different ranks. My question is: since PETSc does not allow us to control the memory distribution of the parallel matrix/vector, how do I make sure the rank happens to have all/most memory it needs for the specific elements? For example, rank 0 is in charged of element n, and needs to insert values to A[ i ][ j ], how do I make sure the i-th row is assigned to rank 0?
+>
+> This question is fundamental for people work with finite element methods. I checked the tutorial codes but did not find an example to follow. Section 3.5 of the manual talks about partition, but it does not say anything about linking the partition with the memory distribution. Could anyone give me some instructions on this issue? Thank you in advance!
+>
+> Best
+> Jie Cheng
+\end{comment}
 
 \section{Solve the Poisson problem}
 
