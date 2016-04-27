@@ -1,0 +1,5 @@
+*.pyc
+*.dat
+PetscBinaryIO.py
+petsc_conf.py
+

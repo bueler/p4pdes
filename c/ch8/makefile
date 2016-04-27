@@ -12,5 +12,5 @@ FIXMEconvert: convert.o readmesh.o  chkopts
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ FIXME
+	@rm -f *~ *.pyc
 
