@@ -237,7 +237,7 @@ and where node $\xi_i$ corresponds to local node number $q\in\{0,1,2\}$ of $\tri
 
 The triangulation shown in Figure \ref{fig:un:number-mesh} came from a single command which asks \Triangle to take \texttt{blob.poly} and generate a triangulation which has a polygon output file (option \texttt{-p}), relatively-uniform triangles (option \texttt{-q} for ``quality-checked'' \citep{Shewchuk1996}), and triangles with maximum area of $4.0$ (option \texttt{-a4.0}):
 \begin{cline}
-$ triangle -pq4.0 blob
+$ triangle -pqa4.0 blob
 \end{cline}
 %$
 This command generates three ASCII files, \texttt{blob.1.poly}, \texttt{blob.1.node}, and  \texttt{blob.1.ele}.  These files define the new (i.e.~refined relative to \texttt{blob.poly}) polygonal boundary, node locations, and the elements in the triangulation, respectively.
