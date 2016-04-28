@@ -1,7 +1,9 @@
 *~
+*.pyc
 book.pdf
 cstrip/*.c*
 tmp/*.tikz
+tri2petsc.py
 
 ## Core latex/pdflatex auxiliary files:
 *.aux

@@ -33,28 +33,32 @@ $(cstrip):
 	python strip.py
 
 # location of naive unstructured mesh stuff:
-UNLOC := ch8/meshes/
+UNLOC := ../c/ch8/meshes/
+TRI2PETSCLOC := ../c/ch8/
 
-tmp/blob.tikz tmp/blob.1.elenum.tikz tmp/blob.1.nodenum.tikz: tmp/ ../c/$(UNLOC)blob.poly
-	python tri2tikz.py --polyonly --nodesize 1.0 --scale 0.6 ../c/$(UNLOC)blob tmp/blob.tikz
-	triangle -pqa4.0 ../c/$(UNLOC)blob
-	python tri2tikz.py --labelelements --nodesize 1.0 --scale 0.5 ../c/$(UNLOC)blob.1 tmp/blob.1.elenum.tikz
-	python tri2tikz.py --labelnodes --nodesize 3.0 --nodeoffset -0.5 --scale 0.48 ../c/$(UNLOC)blob.1 tmp/blob.1.nodenum.tikz
+tmp/blob.tikz tmp/blob.1.elenum.tikz tmp/blob.1.nodenum.tikz: tmp/ $(UNLOC)blob.poly
+	ln -sf $(TRI2PETSCLOC)tri2petsc.py
+	python tri2tikz.py --polyonly --nodesize 1.0 --scale 0.6 $(UNLOC)blob tmp/blob.tikz
+	triangle -pqa4.0 $(UNLOC)blob
+	python tri2tikz.py --labelelements --nodesize 1.0 --scale 0.5 $(UNLOC)blob.1 tmp/blob.1.elenum.tikz
+	python tri2tikz.py --labelnodes --nodesize 3.0 --nodeoffset -0.5 --scale 0.48 $(UNLOC)blob.1 tmp/blob.1.nodenum.tikz
 
-tmp/squarefour.tikz: tmp/ ../c/$(UNLOC)squarefour.poly
-	python tri2tikz.py --labelnodes --nodesize 0.5 --nodeoffset -0.1 --scale 3.0 ../c/$(UNLOC)squarefour $@
+tmp/squarefour.tikz: tmp/ $(UNLOC)squarefour.poly
+	ln -sf $(TRI2PETSCLOC)tri2petsc.py
+	python tri2tikz.py --labelnodes --nodesize 0.5 --nodeoffset -0.1 --scale 3.0 $(UNLOC)squarefour $@
 
-tmp/mesh.1.tikz: tmp/ ../c/$(UNLOC)genstructured.py
+tmp/mesh.1.tikz: tmp/ $(UNLOC)genstructured.py
 	(cd ../c/$(UNLOC) && python genstructured.py mesh.1 5)
-	python tri2tikz.py --labelnodes --nodeoffset 0.05 --nodesize 0.5 --labelelements --scale 5.0 ../c/$(UNLOC)mesh.1 $@
+	ln -sf $(TRI2PETSCLOC)tri2petsc.py
+	python tri2tikz.py --labelnodes --nodeoffset 0.05 --nodesize 0.5 --labelelements --scale 5.0 $(UNLOC)mesh.1 $@
 
 .PHONY: clean
 
 clean:
-	rm -f *~ .gitignore~
+	rm -f *~ *.pyc .gitignore~
 	rm -f tikz/*~ timing/*~ timing/poisson/*~ timing/tri/*~
 	rm -f *.out *.aux *.log *.bbl *.blg *.synctex.gz *.idx *.ilg *.ind *.toc *.dvi
-	rm -rf cstrip/ tmp/
+	rm -rf cstrip/ tmp/ tri2petsc.py
 	(cd chaps/ && make clean)
 	(cd figs/ && make clean)
 
