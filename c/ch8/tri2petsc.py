@@ -66,12 +66,17 @@ def triangle_read_node(filename):
     nodefile.close()
     return N,x,y,bfn
 
-# K,e,xc,yc = triangle_read_ele(filename)
+# K,e,xc,yc = triangle_read_ele(filename,x,y)
+#   in:
+#     filename
+#     x = x coordinate of node
+#     y = y coordinate of node
+#   out:
 #     K = number of elements
 #     e = K x 3 integer array of node indices
 #     xc = x coordinate of element centroid
 #     yc = y coordinate of element centroid
-def triangle_read_ele(filename):
+def triangle_read_ele(filename,x,y):
     elefile  = open(filename,  'r')
     headersread = 0
     count = 0
@@ -90,8 +95,8 @@ def triangle_read_ele(filename):
                 dprint(1,'  header says:  ' + eleheader)
                 K = (int)(eleheader.split()[0])
                 dprint(1,'  reading K = %d elements ...' % K)
-                xcentroid = np.zeros(K)
-                ycentroid = np.zeros(K)
+                xc = np.zeros(K)
+                yc = np.zeros(K)
                 e = np.zeros((K,3),dtype=np.int32)
                 headersread += 1
                 continue
@@ -106,19 +111,19 @@ def triangle_read_ele(filename):
             pp = [int(emabc[1])-1, int(emabc[2])-1, int(emabc[3])-1]
             # compute element centroid
             kk = [0, 1, 2, 0]  # cycle through nodes
-            xc = 0.0
-            yc = 0.0
+            XX = 0.0
+            YY = 0.0
             for k in range(3):
                 jj = pp[kk[k]]
-                xc = xc + x[jj]
-                yc = yc + y[jj]
-            xc = xc/3.0
-            yc = yc/3.0
-            dprint(1,'element %d centered at (%f,%f):' % (count,xc,yc))
+                XX += x[jj]
+                YY += y[jj]
+            XX /= 3.0
+            YY /= 3.0
+            dprint(1,'element %d centered at (%f,%f):' % (count,XX,YY))
             # append this element
             e[count,:] = pp
-            xcentroid[count] = xc
-            ycentroid[count] = yc
+            xc[count] = XX
+            yc[count] = YY
             count += 1
     elefile.close()
     return K,e,xc,yc
@@ -133,7 +138,8 @@ def triangle_read_ele(filename):
 def triangle_read_poly(filename):
     polyfile = open(filename, 'r')
     headersread = 0
-    count = 0
+    ncount = 0
+    scount = 0
     PN = 0
     PS = 0
     px = []
@@ -179,7 +185,7 @@ def triangle_read_poly(filename):
                 px[ncount] = float(nxyb[1])
                 py[ncount] = float(nxyb[2])
                 dprint(1,'  polygon node (%f,%f)' % (px[ncount],py[ncount]))
-                scount += 1
+                ncount += 1
                 continue
             if (headersread == 2) and (scount < PS):
                 # read a line describing a boundary segment
@@ -220,7 +226,7 @@ if __name__ == "__main__":
 
     elename = args.inroot + '.ele'
     print 'reading element triples from %s ' % elename,
-    K,e,xc,yc = triangle_read_ele(elename)
+    K,e,xc,yc = triangle_read_ele(elename,x,y)
     print '... K=%d elements' % K
 
     polyname = args.inroot + '.poly'
@@ -235,5 +241,5 @@ if __name__ == "__main__":
     e = e.flatten()
     oe = e.view(PetscBinaryIO.IS)
     petsc = PetscBinaryIO.PetscBinaryIO()
-    petsc.writeBinaryFile(args.outfile, [ox,oy,oe])
+    petsc.writeBinaryFile(args.outfile,[ox,oy,oe])
 
