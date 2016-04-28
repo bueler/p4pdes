@@ -2,9 +2,9 @@ include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
 
-FIXMEconvert: convert.o readmesh.o  chkopts
-	-${CLINKER} -o convert convert.o readmesh.o  ${PETSC_LIB}
-	${RM} convert.o readmesh.o
+unfem: unfem.o  chkopts
+	-${CLINKER} -o unfem unfem.o  ${PETSC_LIB}
+	${RM} unfem.o
 
 
 # etc
@@ -12,5 +12,5 @@ FIXMEconvert: convert.o readmesh.o  chkopts
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ *.pyc
+	@rm -f *~ *.pyc unfem *.dat *.dat.*
 

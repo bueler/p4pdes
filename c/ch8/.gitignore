@@ -1,5 +1,6 @@
 *.pyc
 *.dat
+*.dat.*
 PetscBinaryIO.py
 petsc_conf.py
-
+unfem

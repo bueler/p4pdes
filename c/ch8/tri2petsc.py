@@ -99,7 +99,9 @@ def triangle_read_ele(filename,x,y):
                 dprint(1,'  reading K = %d elements ...' % K)
                 xc = np.zeros(K)
                 yc = np.zeros(K)
-                e = np.zeros((K,3),dtype=np.int32)
+                #FIXME  see petsc issue #127:
+                #e = np.zeros((K,3),dtype=np.int32)
+                e = np.zeros((K,3))
                 headersread += 1
                 continue
             elif (headersread == 1) and (count >= K):
@@ -236,12 +238,17 @@ if __name__ == "__main__":
     PN,PS,px,py,s,bfs = triangle_read_poly(polyname)
     print '... PN=%d nodes and PS=%d segments' % (PN,PS)
 
-    # FIXME presumably need to write more
+    # FIXME presumably need to write more stuff
+
     print 'writing nodes and elements to petsc binary file %s' % args.outfile
     ox = x.view(PetscBinaryIO.Vec)
     oy = y.view(PetscBinaryIO.Vec)
-    e = e.flatten()
-    oe = e.view(PetscBinaryIO.IS)
+    #FIXME  see petsc issue #127:  oe = e.view(PetscBinaryIO.IS)
+    oe = e.view(PetscBinaryIO.Vec)
     petsc = PetscBinaryIO.PetscBinaryIO()
-    petsc.writeBinaryFile(args.outfile,[ox,oy,oe])
+    #FIXME  error "Not a vector next in file" for this:
+    #petsc.writeBinaryFile(args.outfile,[ox,oy,oe])
+    #so split files
+    petsc.writeBinaryFile(args.outfile+'.node',[ox,oy,])
+    petsc.writeBinaryFile(args.outfile+'.ele',[oe,])
 
