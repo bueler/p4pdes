@@ -23,11 +23,12 @@ def dprint(d,s):
     if d < VERBOSITY:
         print s
 
-# N,x,y,bfn = triangle_read_node(filename)
+# N,x,y,bfn,L = triangle_read_node(filename)
 #     N = number of nodes
-#     x = x coordinates of nodes
-#     y = y coordinates of nodes
-#     bfn = integer flag for boundary nodes; 2 = dirichlet, 3 = neumann
+#     x = x coordinates of nodes; length N
+#     y = y coordinates of nodes; length N
+#     bfn = integer flag for boundary nodes; length N; 2 = dirichlet, 3 = neumann
+#     L = number of dirichlet boundary nodes
 def triangle_read_node(filename):
     nodefile = open(filename, 'r')
     headersread = 0
@@ -64,18 +65,19 @@ def triangle_read_node(filename):
             bfn[count] = int(nxyb[3])
             count += 1
     nodefile.close()
-    return N,x,y,bfn
+    L = np.count_nonzero(bfn == 2)
+    return N,x,y,bfn,L
 
 # K,e,xc,yc = triangle_read_ele(filename,x,y)
 #   in:
 #     filename
-#     x = x coordinate of node
-#     y = y coordinate of node
+#     x = x coordinate of nodes; length N; see triangle_read_node()
+#     y = y coordinate of nodes; length N; see triangle_read_node()
 #   out:
 #     K = number of elements
 #     e = K x 3 integer array of node indices
-#     xc = x coordinate of element centroid
-#     yc = y coordinate of element centroid
+#     xc = x coordinate of element centroid; length K
+#     yc = y coordinate of element centroid; length K
 def triangle_read_ele(filename,x,y):
     elefile  = open(filename,  'r')
     headersread = 0
@@ -129,11 +131,11 @@ def triangle_read_ele(filename,x,y):
     return K,e,xc,yc
 
 # PN,PS,px,py,s,bfs = triangle_read_poly(filename)
-#     PN = number of node locations (in .poly file)
-#     PS = number of segment pairs
+#     PN = number of node locations (in this .poly file)
+#     PS = number of segments
 #     px = x coordinate of node; length PN
 #     py = y coordinate of node; length PN
-#     s = segment pairs; PS x 2
+#     s = segment index pairs; PS x 2
 #     bfs = integer flag for boundary segments; length PS; 2 = dirichlet, 3 = neumann
 def triangle_read_poly(filename):
     polyfile = open(filename, 'r')
@@ -220,22 +222,22 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     nodename = args.inroot + '.node'
-    print 'reading nodes from %s ' % nodename,
-    N,x,y,bfn = triangle_read_node(nodename)
-    print '... N=%d nodes' % N
+    print 'reading nodes from %s ' % nodename
+    N,x,y,bfn,L = triangle_read_node(nodename)
+    print '... N=%d nodes with L=%d on Dirichlet bdry' % (N,L)
 
     elename = args.inroot + '.ele'
-    print 'reading element triples from %s ' % elename,
+    print 'reading element triples from %s ' % elename
     K,e,xc,yc = triangle_read_ele(elename,x,y)
     print '... K=%d elements' % K
 
     polyname = args.inroot + '.poly'
-    print 'reading polygon from %s ' % polyname,
+    print 'reading polygon from %s ' % polyname
     PN,PS,px,py,s,bfs = triangle_read_poly(polyname)
     print '... PN=%d nodes and PS=%d segments' % (PN,PS)
 
     # FIXME presumably need to write more
-    print 'writing node locations and element triples to petsc binary file %s' % args.outfile
+    print 'writing nodes and elements to petsc binary file %s' % args.outfile
     ox = x.view(PetscBinaryIO.Vec)
     oy = y.view(PetscBinaryIO.Vec)
     e = e.flatten()

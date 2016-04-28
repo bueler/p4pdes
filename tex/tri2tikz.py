@@ -67,8 +67,8 @@ print '... PN=%d nodes and PS=%d segments' % (PN,PS)
 if not polyonly:
     nodename = args.inroot + '.node'
     print 'reading nodes from %s ' % nodename,
-    N,x,y,bfn = triangle_read_node(nodename)
-    print '... N=%d nodes' % N
+    N,x,y,bfn,L = triangle_read_node(nodename)
+    print '... N=%d nodes with L=%d on Dirichlet bdry' % (N,L)
 
     elename = args.inroot + '.ele'
     print 'reading element triples from %s ' % elename,
