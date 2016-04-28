@@ -204,8 +204,6 @@ if __name__ == "__main__":
     import PetscBinaryIO
     # need link to petsc/bin/petsc-pythonscripts/PetscBinaryIO.py
 
-    commandline = " ".join(sys.argv[:])
-
     parser = argparse.ArgumentParser(description= \
         'Converts .node, .ele, .poly files from triangle ASCII format into PETSc binary format.')
     # positional filenames

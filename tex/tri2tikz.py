@@ -5,12 +5,14 @@
 # Create a tikz figure from the .node, .ele, .poly output of triangle,
 # or just from a .poly file (i.e. an input into triangle).
 
-import numpy
+import numpy as np
 import argparse
 import sys
 
-commandline = " ".join(sys.argv[:])
+from tri2petsc import triangle_read_node, triangle_read_ele, triangle_read_poly
+# need link to p4pdes/c/ch8/tri2petsc.py
 
+commandline = " ".join(sys.argv[:])
 parser = argparse.ArgumentParser(description='Converts .node, .ele, .poly files from triangle into TikZ format.')
 # boolean options
 parser.add_argument('--labelnodes', action='store_true',
@@ -48,9 +50,6 @@ parser.add_argument('outfile', metavar='FILENAME',
 
 # process options: simpler names, and type conversions
 args = parser.parse_args()
-nodename = args.inroot + '.node'
-elename  = args.inroot + '.ele'
-polyname = args.inroot + '.poly'
 outname  = args.outfile
 dolabelnodes = args.labelnodes
 dolabeleles  = args.labelelements
@@ -61,11 +60,21 @@ nodesize     = (float)(args.nodesize)
 nodeoffset   = (float)(args.nodeoffset)
 eleoffset    = (float)(args.eleoffset)
 
-# always read .poly file
-polyfile = open(polyname, 'r')
+polyname = args.inroot + '.poly'
+print 'reading polygon from %s ' % polyname,
+PN,PS,px,py,s,bfs = triangle_read_poly(polyname)
+print '... PN=%d nodes and PS=%d segments' % (PN,PS)
+
 if not polyonly:
-  nodefile = open(nodename, 'r')
-  elefile = open(elename,  'r')
+    nodename = args.inroot + '.node'
+    print 'reading nodes from %s ' % nodename,
+    N,x,y,bfn = triangle_read_node(nodename)
+    print '... N=%d nodes' % N
+
+    elename = args.inroot + '.ele'
+    print 'reading element triples from %s ' % elename,
+    K,e,xc,yc = triangle_read_ele(elename)
+    print '... K=%d elements' % K
 
 tikz = open(outname, 'w')
 print 'writing to %s ...' % outname
@@ -73,6 +82,8 @@ tikz.write('%% created by script tri2tikz.py command line:%s\n' % '')
 tikz.write('%%   %s\n' % commandline)
 tikz.write('%%%s\n' % '')
 tikz.write('\\begin{tikzpicture}[scale=%f]\n' % scale)
+
+FIXME FROM HERE
 
 # READ .node FILE BUT DO NO PLOTTING
 if not polyonly:
