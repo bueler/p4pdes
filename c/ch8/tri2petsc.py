@@ -10,8 +10,6 @@
 #    $ ./tri2petsc.py meshes/blob.1 foo.dat
 
 # TODO:
-#    * test output with a minimal PETSc code that does nothing more than
-#      VecLoad(), VecView(), ISLoad(), ISView()
 #    * decide on how boundary edges will be indicated
 
 import numpy as np
@@ -99,9 +97,7 @@ def triangle_read_ele(filename,x,y):
                 dprint(1,'  reading K = %d elements ...' % K)
                 xc = np.zeros(K)
                 yc = np.zeros(K)
-                #FIXME  see petsc issue #127:
-                #e = np.zeros((K,3),dtype=np.int32)
-                e = np.zeros((K,3))
+                e = np.zeros((K,3),dtype=np.int32)
                 headersread += 1
                 continue
             elif (headersread == 1) and (count >= K):
@@ -238,17 +234,18 @@ if __name__ == "__main__":
     PN,PS,px,py,s,bfs = triangle_read_poly(polyname)
     print '... PN=%d nodes and PS=%d segments' % (PN,PS)
 
-    # FIXME presumably need to write more stuff
+    #FIXME  presumably need to write more stuff
+    #FIXME  see petsc issue #127:  oe = e.view(PetscBinaryIO.IS) fails
+    #FIXME  split files because error "Not a vector next in file" for this:
+    #petsc.writeBinaryFile(args.outfile,[ox,oy,oe])
 
-    print 'writing nodes and elements to petsc binary file %s' % args.outfile
+    print 'writing nodes to petsc binary file %s.node' % args.outfile
     ox = x.view(PetscBinaryIO.Vec)
     oy = y.view(PetscBinaryIO.Vec)
-    #FIXME  see petsc issue #127:  oe = e.view(PetscBinaryIO.IS)
-    oe = e.view(PetscBinaryIO.Vec)
     petsc = PetscBinaryIO.PetscBinaryIO()
-    #FIXME  error "Not a vector next in file" for this:
-    #petsc.writeBinaryFile(args.outfile,[ox,oy,oe])
-    #so split files
     petsc.writeBinaryFile(args.outfile+'.node',[ox,oy,])
+
+    print 'writing elements to petsc binary file %s.ele' % args.outfile
+    oe = e.flatten().view(PetscBinaryIO.Vec)
     petsc.writeBinaryFile(args.outfile+'.ele',[oe,])
 
