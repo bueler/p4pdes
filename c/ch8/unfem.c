@@ -3,7 +3,7 @@ static char help[] = "Unstructured 2D FEM solution of nonlinear Poisson equation
 
 // example:
 //   $ ./tri2petsc.py meshes/blob.1 foo.dat
-//   $ ./unfem -un_checkload -un_mesh foo.dat
+//   $ ./unfem -un_check -un_mesh foo.dat
 
 #include <petsc.h>
 
@@ -110,15 +110,17 @@ PetscErrorCode UnCtxDestroy(UnCtx *ctx) {
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
     PetscBool   check = PETSC_FALSE;
-    char        meshroot[256] = "foo.dat", nodename[266], elename[266];
+    char        meshroot[256] = "", nodename[266], elename[266];
     UnCtx       mesh;
 
     PetscInitialize(&argc,&argv,NULL,help);
     mesh.e = NULL;
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "un_", "options for unfem", ""); CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-check","check on loaded nodes and elements",
+    ierr = PetscOptionsBool("-check",
+           "check on loaded nodes and elements",
            "unfem.c",check,&check,NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsString("-mesh","file name root of mesh (files have .node,.ele)",
+    ierr = PetscOptionsString("-mesh",
+           "file name root of mesh (files have .node,.ele extensions)",
            "unfem.c",meshroot,meshroot,sizeof(meshroot),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
     strcpy(nodename, meshroot);
@@ -128,7 +130,6 @@ int main(int argc,char **argv) {
 
     ierr = UnCtxReadNodes(&mesh,nodename); CHKERRQ(ierr);
     ierr = UnCtxReadElements(&mesh,elename); CHKERRQ(ierr);
-
     if (check) {
         ierr = UnCtxView(&mesh); CHKERRQ(ierr);
     }
