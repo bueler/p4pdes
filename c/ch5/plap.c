@@ -251,7 +251,6 @@ double FunIntegrand(DMDALocalInfo *info, int L,
                 dchiL = dchi(L,xi,eta);
   return GradPow(info,du,P - 2.0,eps) * GradInnerProd(info,du,dchiL)
          - eval(f,xi,eta) * chi(L,xi,eta);
-  return 0;
 }
 
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
