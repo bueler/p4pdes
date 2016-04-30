@@ -25,8 +25,8 @@ def dprint(d,s):
 #     N = number of nodes
 #     x = x coordinates of nodes; length N
 #     y = y coordinates of nodes; length N
-#     bfn = integer flag for boundary nodes; length N; 2 = dirichlet, 3 = neumann
-#     L = number of dirichlet boundary nodes
+#     bfn = integer flag for boundary nodes; length N; 2 = Dirichlet; nonzero if boundary
+#     L = number of Dirichlet boundary nodes
 def triangle_read_node(filename):
     nodefile = open(filename, 'r')
     headersread = 0
@@ -134,7 +134,7 @@ def triangle_read_ele(filename,x,y):
 #     px = x coordinate of node; length PN
 #     py = y coordinate of node; length PN
 #     s = segment index pairs; PS x 2
-#     bfs = integer flag for boundary segments; length PS; 2 = dirichlet, 3 = neumann
+#     bfs = integer flag for boundary segments; length PS
 def triangle_read_poly(filename):
     polyfile = open(filename, 'r')
     headersread = 0
