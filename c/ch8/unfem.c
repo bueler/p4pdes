@@ -16,11 +16,13 @@ typedef struct {
     int      N,     // number of nodes
              K;     // number of elements
     Vec      x, y;  // coordinates of nodes
-    Element  *e;    // in
-} UnCtx;
+    Element  *e;    // e[0],e[1],e[2] are indices into nodes (in 0,...,N-1)
+    Vec      u,     // approximate solution
+             uexact;// exact solution
+} UF;
 
 //FIXME add Viewer argument?
-PetscErrorCode UnCtxView(UnCtx *ctx) {
+PetscErrorCode UFView(UF *ctx) {
     PetscErrorCode ierr;
     double  *ax, *ay;
     int     n, k;
@@ -41,10 +43,13 @@ PetscErrorCode UnCtxView(UnCtx *ctx) {
     return 0;
 }
 
-PetscErrorCode UnCtxReadNodes(UnCtx *ctx, char *filename) {
+PetscErrorCode UFReadNodes(UF *ctx, char *filename) {
     PetscErrorCode ierr;
     int         m;
     PetscViewer viewer;
+    if (ctx->N > 0) {
+        SETERRQ(PETSC_COMM_WORLD,1,"nodes already created?\n");
+    }
     ierr = VecCreate(PETSC_COMM_WORLD,&ctx->x); CHKERRQ(ierr);
     ierr = VecCreate(PETSC_COMM_WORLD,&ctx->y); CHKERRQ(ierr);
     ierr = VecSetFromOptions(ctx->x); CHKERRQ(ierr);
@@ -56,7 +61,7 @@ PetscErrorCode UnCtxReadNodes(UnCtx *ctx, char *filename) {
     ierr = VecGetSize(ctx->x,&(ctx->N)); CHKERRQ(ierr);
     ierr = VecGetSize(ctx->y,&m); CHKERRQ(ierr);
     if (ctx->N != m) {
-        SETERRQ1(PETSC_COMM_WORLD,1,"node coordinates x,y loaded from %s are not the same size\n",filename);
+        SETERRQ1(PETSC_COMM_WORLD,2,"node coordinates x,y loaded from %s are not the same size\n",filename);
     }
     return 0;
 }
@@ -68,12 +73,15 @@ PetscErrorCode UnCtxReadNodes(UnCtx *ctx, char *filename) {
 //    ierr = ISView(e,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
 //    ISDestroy(&e);
 
-PetscErrorCode UnCtxReadElements(UnCtx *ctx, char *filename) {
+PetscErrorCode UFReadElements(UF *ctx, char *filename) {
     PetscErrorCode ierr;
     double      *ae;
     int         k, m;
     Vec         evec;
     PetscViewer viewer;
+    if (ctx->K > 0) {
+        SETERRQ(PETSC_COMM_WORLD,1,"elements already created?\n");
+    }
     ierr = VecCreate(PETSC_COMM_WORLD,&evec); CHKERRQ(ierr);
     ierr = VecSetFromOptions(evec); CHKERRQ(ierr);
     ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename,FILE_MODE_READ,&viewer); CHKERRQ(ierr);
@@ -81,11 +89,11 @@ PetscErrorCode UnCtxReadElements(UnCtx *ctx, char *filename) {
     ierr = PetscViewerDestroy(&viewer); CHKERRQ(ierr);
     ierr = VecGetSize(evec,&k); CHKERRQ(ierr);
     if (k % 3 != 0) {
-        SETERRQ1(PETSC_COMM_WORLD,1,"evec loaded from %s is wrong size for list of element triples\n",filename);
+        SETERRQ1(PETSC_COMM_WORLD,2,"evec loaded from %s is wrong size for list of element triples\n",filename);
     }
     ctx->K = k/3;
     if (ctx->e) {
-        SETERRQ(PETSC_COMM_WORLD,2,"something wrong ... ctx->e already malloced\n");
+        SETERRQ(PETSC_COMM_WORLD,3,"something wrong ... ctx->e already malloced\n");
     }
     ctx->e = (Element*)malloc(ctx->K * sizeof(Element));
     ierr = VecGetArray(evec,&ae); CHKERRQ(ierr);
@@ -98,7 +106,7 @@ PetscErrorCode UnCtxReadElements(UnCtx *ctx, char *filename) {
     return 0;
 }
 
-PetscErrorCode UnCtxDestroy(UnCtx *ctx) {
+PetscErrorCode UFDestroy(UF *ctx) {
     if (ctx->e)
         free(ctx->e);
     VecDestroy(&(ctx->x));
@@ -106,14 +114,117 @@ PetscErrorCode UnCtxDestroy(UnCtx *ctx) {
     return 0;
 }
 
+PetscErrorCode UFFillExact(UF *ctx) {
+    PetscErrorCode ierr;
+    const double *ay;
+    double       y, *auexact;
+    int          i;
+    if (ctx->N == 0) {
+        SETERRQ(PETSC_COMM_WORLD,1,"nodes must exist before exact solution can be calculated\n");
+    }
+    ierr = VecGetArrayRead(ctx->y,&ay); CHKERRQ(ierr);
+    ierr = VecGetArray(ctx->uexact,&auexact); CHKERRQ(ierr);
+    for (i = 0; i < ctx->N; i++) {
+        y = ay[i];
+        auexact[i] = 1.0 - y*y - y*y*y*y;
+    }
+    ierr = VecRestoreArrayRead(ctx->y,&ay); CHKERRQ(ierr);
+    ierr = VecRestoreArray(ctx->uexact,&auexact); CHKERRQ(ierr);
+    return 0;
+}
+
+
+#define DEBUG_REFERENCE_EVAL 1
+
+double chi(int L, double xi, double eta) {
+#ifdef DEBUG_REFERENCE_EVAL
+    if ((xi < 0.0) || (xi > 1.0) || (eta < 0.0) || (eta > 1.0 - xi)) {
+        PetscPrintf(PETSC_COMM_WORLD,"chi(): coordinates (xi,eta) outside of reference element\n");
+        PetscEnd();
+    }
+#endif
+    switch (L) {
+        case 1 :
+            return xi;
+        case 2 :
+            return eta;
+        default :
+            return 1.0 - xi - eta;
+    }
+}
+
+typedef struct {
+    double  xi, eta;
+} gradRef;
+
+gradRef dchi(int q, double xi, double eta) {
+#ifdef DEBUG_REFERENCE_EVAL
+    if ((xi < 0.0) || (xi > 1.0) || (eta < 0.0) || (eta > 1.0 - xi)) {
+        PetscPrintf(PETSC_COMM_WORLD,"chi(): coordinates (xi,eta) outside of reference element\n");
+        PetscEnd();
+    }
+#endif
+    switch (q) {
+        case 1 :
+            return (gradRef){1.0, 0.0};
+        case 2 :
+            return (gradRef){0.0, 1.0};
+        default :
+            return (gradRef){-1.0, -1.0};
+    }
+}
+
+// evaluate v(xi,eta) on reference element using local node numbering
+double eval(const double v[3], double xi, double eta) {
+    double sum = 0.0;
+    int    q;
+    for (q=0; q<3; q++)
+        sum += v[q] * chi(q,xi,eta);
+    return sum;
+}
+
+// evaluate partial derivs of v(xi,eta) on reference element
+gradRef deval(const double v[3], double xi, double eta) {
+    gradRef sum = {0.0,0.0}, tmp;
+    int     q;
+    for (q=0; q<3; q++) {
+        tmp = dchi(q,xi,eta);
+        sum.xi  += v[q] * tmp.xi;
+        sum.eta += v[q] * tmp.eta;
+    }
+    return sum;
+}
+
+double a_eval(double x, double y, double u) {
+    return 1.0;
+}
+
+double f_eval(double x, double y, double u) {
+    return -2.0 + 12.0 * y * y;
+}
+
+double GradInnerProd(gradRef du, gradRef dv) {
+    //FIXME return cx * du.xi  * dv.xi + cy * du.eta * dv.eta;
+    return 0.0;
+}
+
+double FunIntegrand(int q, const double u[3],
+                    double a, double f, double xi, double eta) {
+  const gradRef du    = deval(u,xi,eta),
+                dchiq = dchi(q,xi,eta);
+  return a * GradInnerProd(du,dchiq) - f * chi(q,xi,eta);
+}
+
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
     PetscBool   check = PETSC_FALSE;
     char        meshroot[256] = "", nodename[266], elename[266];
-    UnCtx       mesh;
+    UF          mesh;
 
     PetscInitialize(&argc,&argv,NULL,help);
+    mesh.N = 0;
+    mesh.K = 0;
     mesh.e = NULL;
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "un_", "options for unfem", ""); CHKERRQ(ierr);
     ierr = PetscOptionsBool("-check",
@@ -128,13 +239,13 @@ int main(int argc,char **argv) {
     strcpy(elename, meshroot);
     strncat(elename, ".ele", 10);
 
-    ierr = UnCtxReadNodes(&mesh,nodename); CHKERRQ(ierr);
-    ierr = UnCtxReadElements(&mesh,elename); CHKERRQ(ierr);
+    ierr = UFReadNodes(&mesh,nodename); CHKERRQ(ierr);
+    ierr = UFReadElements(&mesh,elename); CHKERRQ(ierr);
     if (check) {
-        ierr = UnCtxView(&mesh); CHKERRQ(ierr);
+        ierr = UFView(&mesh); CHKERRQ(ierr);
     }
 
-    UnCtxDestroy(&mesh);
+    UFDestroy(&mesh);
     PetscFinalize();
     return 0;
 }

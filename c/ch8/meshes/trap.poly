@@ -1,0 +1,15 @@
+# A trapezoid domain on which exact solution is known.
+# 4 nodes (vertices), in 2D, no attributes, no vertex markers:
+4 2 0 0
+ 1  2.0  0.0
+ 2  1.0  1.0
+ 3 -1.0  1.0
+ 4 -2.0  0.0
+# 4 segments (edges), one edge marker (2 = Dirichlet)
+4 1
+ 1   1 2   2
+ 2   2 3   2
+ 3   3 4   2
+ 4   4 1   0
+# zero holes; it's simply-connected
+0
