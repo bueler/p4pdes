@@ -235,17 +235,16 @@ if __name__ == "__main__":
     print '... PN=%d nodes and PS=%d segments' % (PN,PS)
 
     #FIXME  presumably need to write more stuff
-    #FIXME  see petsc issue #127:  oe = e.view(PetscBinaryIO.IS) fails
     #FIXME  split files because error "Not a vector next in file" for this:
-    #petsc.writeBinaryFile(args.outfile,[ox,oy,oe])
+    #       petsc.writeBinaryFile(args.outfile,[ox,oy,oe])
 
-    print 'writing nodes to petsc binary file %s.node' % args.outfile
+    print 'writing nodes as Vecs to petsc binary file %s.node' % args.outfile
     ox = x.view(PetscBinaryIO.Vec)
     oy = y.view(PetscBinaryIO.Vec)
     petsc = PetscBinaryIO.PetscBinaryIO()
     petsc.writeBinaryFile(args.outfile+'.node',[ox,oy,])
 
-    print 'writing elements to petsc binary file %s.ele' % args.outfile
-    oe = e.flatten().view(PetscBinaryIO.Vec)
+    print 'writing elements as IS to petsc binary file %s.ele' % args.outfile
+    oe = e.flatten().view(PetscBinaryIO.IS)
     petsc.writeBinaryFile(args.outfile+'.ele',[oe,])
 
