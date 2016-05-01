@@ -1,5 +1,9 @@
 
-static char help[] = "Unstructured 2D FEM solution of nonlinear Poisson equation.\n\n";
+static char help[] = "Unstructured 2D FEM solution of nonlinear Poisson equation.\n"
+"Solves PDE  - div( a(x,y,u) grad u ) = f(x,y,u)  on arbitrary 2D polygonal\n"
+"domain.  Input has nodes, elements, and FIXME stored in PETSc binary files.\n"
+"Allows arbitrary non-homogeneous Dirichlet and Neumann conditions along parts\n"
+"of boundary.\n\n";
 
 // example:
 //   $ ./tri2petsc.py meshes/blob.1 foo.dat
@@ -18,33 +22,48 @@ typedef struct {
              uexact;// exact solution at nodes; length N
 } UF;
 
+
+double a_eval(double x, double y, double u) {
+    return 1.0;
+}
+
+double f_eval(double x, double y, double u) {
+    return -2.0 + 12.0 * y * y;
+}
+
+
 PetscErrorCode UFInitialize(UF *ctx) {
     ctx->N = 0;
     ctx->K = 0;
+    ctx->x = NULL;
+    ctx->y = NULL;
+    ctx->e = NULL;
+    ctx->u = NULL;
+    ctx->uexact = NULL;
     return 0;
 }
 
-//FIXME add Viewer argument?
-PetscErrorCode UFView(UF *ctx) {
+PetscErrorCode UFView(UF *ctx, PetscViewer viewer) {
     PetscErrorCode ierr;
     const double *ax, *ay;
     int          n, k;
     const int    *ae;
+    ierr = PetscViewerASCIIPushSynchronized(viewer); CHKERRQ(ierr);
     if (ctx->N > 0) {
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"%d nodes:\n",ctx->N); CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%d nodes:\n",ctx->N); CHKERRQ(ierr);
         ierr = VecGetArrayRead(ctx->x,&ax); CHKERRQ(ierr);
         ierr = VecGetArrayRead(ctx->y,&ay); CHKERRQ(ierr);
         for (n = 0; n < ctx->N; n++) {
-            ierr = PetscPrintf(PETSC_COMM_WORLD,"    %3d : (%g,%g)\n",
+            ierr = PetscViewerASCIISynchronizedPrintf(viewer,"    %3d : (%g,%g)\n",
                                n,ax[n],ay[n]); CHKERRQ(ierr);
         }
         ierr = VecRestoreArrayRead(ctx->x,&ax); CHKERRQ(ierr);
         ierr = VecRestoreArrayRead(ctx->y,&ay); CHKERRQ(ierr);
     } else {
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"nodes empty\n"); CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"nodes empty\n"); CHKERRQ(ierr);
     }
     if (ctx->K > 0) {
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"%d elements:\n",ctx->K); CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%d elements:\n",ctx->K); CHKERRQ(ierr);
         ierr = ISGetIndices(ctx->e,&ae); CHKERRQ(ierr);
         for (k = 0; k < ctx->K; k++) {
             ierr = PetscPrintf(PETSC_COMM_WORLD,"    %3d : %3d %3d %3d\n",
@@ -52,11 +71,14 @@ PetscErrorCode UFView(UF *ctx) {
         }
         ierr = ISRestoreIndices(ctx->e,&ae); CHKERRQ(ierr);
     } else {
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"elements empty\n"); CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"elements empty\n"); CHKERRQ(ierr);
     }
+    ierr = PetscViewerASCIIPopSynchronized(viewer); CHKERRQ(ierr);
     return 0;
 }
 
+
+// read node coordinates, creating as Vecs, from file
 PetscErrorCode UFReadNodes(UF *ctx, char *filename) {
     PetscErrorCode ierr;
     int         m;
@@ -81,14 +103,12 @@ PetscErrorCode UFReadNodes(UF *ctx, char *filename) {
 }
 
 
+// read element index triples, creating as IS, from file
 PetscErrorCode UFReadElements(UF *ctx, char *filename) {
     PetscErrorCode ierr;
     PetscViewer viewer;
-    const int   *ae;
-    int         k, m;
-    // create IS and load
     if (ctx->K > 0) {
-        SETERRQ(PETSC_COMM_WORLD,2,
+        SETERRQ(PETSC_COMM_WORLD,1,
                 "elements already created? ... stopping\n");
     }
     ierr = ISCreate(PETSC_COMM_WORLD,&(ctx->e)); CHKERRQ(ierr);
@@ -101,16 +121,28 @@ PetscErrorCode UFReadElements(UF *ctx, char *filename) {
                  "IS e loaded from %s is wrong size for list of element triples\n",filename);
     }
     ctx->K /= 3;
-    // check element triples for admissibility
-    if (ctx->N == 0) {
+    return 0;
+}
+
+
+// check element triples for admissibility
+PetscErrorCode UFCheckElements(UF *ctx) {
+    PetscErrorCode ierr;
+    const int   *ae;
+    int         k, m;
+    if ((ctx->K == 0) || (ctx->e == NULL)) {
         SETERRQ(PETSC_COMM_WORLD,1,
+                "number of elements unknown; call UFReadElements() first\n");
+    }
+    if (ctx->N == 0) {
+        SETERRQ(PETSC_COMM_WORLD,2,
                 "node size unknown so element check impossible; call UFReadNodes() first\n");
     }
     ierr = ISGetIndices(ctx->e,&ae); CHKERRQ(ierr);
     for (k = 0; k < ctx->K; k++) {
         for (m = 0; m < 3; m++) {
             if ((ae[3*k+m] < 0) || (ae[3*k+m] >= ctx->N)) {
-                SETERRQ3(PETSC_COMM_WORLD,2,
+                SETERRQ3(PETSC_COMM_WORLD,3,
                    "index e[%d]=%d invalid: not between 0 and N-1=%d\n",
                    3*k+m,ae[3*k+m],ctx->N-1);
             }
@@ -211,14 +243,6 @@ gradRef deval(const double v[3], double xi, double eta) {
     return sum;
 }
 
-double a_eval(double x, double y, double u) {
-    return 1.0;
-}
-
-double f_eval(double x, double y, double u) {
-    return -2.0 + 12.0 * y * y;
-}
-
 double GradInnerProd(gradRef du, gradRef dv) {
     //FIXME return cx * du.xi  * dv.xi + cy * du.eta * dv.eta;
     return 0.0;
@@ -234,15 +258,17 @@ double FunIntegrand(int q, const double u[3],
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
-    PetscBool   check = PETSC_FALSE;
+    PetscBool   view = PETSC_FALSE;
     char        meshroot[256] = "", nodename[266], elename[266];
     UF          mesh;
+    PetscViewer stdoutviewer;
 
     PetscInitialize(&argc,&argv,NULL,help);
+    ierr = PetscViewerASCIIGetStdout(PETSC_COMM_WORLD,&stdoutviewer); CHKERRQ(ierr);
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "un_", "options for unfem", ""); CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-check",
-           "check on loaded nodes and elements",
-           "unfem.c",check,&check,NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-view",
+           "view loaded nodes and elements at stdout",
+           "unfem.c",view,&view,NULL); CHKERRQ(ierr);
     ierr = PetscOptionsString("-mesh",
            "file name root of mesh (files have .node,.ele extensions)",
            "unfem.c",meshroot,meshroot,sizeof(meshroot),NULL); CHKERRQ(ierr);
@@ -255,8 +281,9 @@ int main(int argc,char **argv) {
     ierr = UFInitialize(&mesh); CHKERRQ(ierr);
     ierr = UFReadNodes(&mesh,nodename); CHKERRQ(ierr);
     ierr = UFReadElements(&mesh,elename); CHKERRQ(ierr);
-    if (check) {
-        ierr = UFView(&mesh); CHKERRQ(ierr);
+    ierr = UFCheckElements(&mesh); CHKERRQ(ierr);
+    if (view) {
+        ierr = UFView(&mesh,stdoutviewer); CHKERRQ(ierr);
     }
     ierr = UFFillExact(&mesh); CHKERRQ(ierr);
 
