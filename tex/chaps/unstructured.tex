@@ -161,32 +161,30 @@ for all $i$ such that $\bx_i \notin \partial_D \Omega$.  On the other hand we ma
 u^h(x,y) = \hat g_D(x,y) + \sum_{\bx_j \notin \partial_D \Omega} u_j\, \psi_j(x,y). \label{eq:un:uhexpand}
 \end{equation}
 
-The coefficients $u_j$ in \eqref{eq:un:uhexpand} are the unknowns.  Given the triangulation $\mathcal{T}_h$ of $\Omega$, and given the data of the problem, namely the functions $a,f,g_D,g_N$, the complete FEM specification of $u^h$, equivalently the vector
+The coefficients $u_j$ in \eqref{eq:un:uhexpand} are the unknowns.  Given the triangulation $\mathcal{T}_h$ of $\Omega$ and the data of the problem, namely the functions $a$, $f$, $g_D$, and $g_N$, the complete specification of $u^h$ is given by equations \eqref{eq:un:hatgdefine}, \eqref{eq:un:weakformhat}, and \eqref{eq:un:uhexpand}.
+
+In the linear case it is common to now write system \eqref{eq:un:weakformhat} and \eqref{eq:un:uhexpand} as a linear system ``$A \bu = \bb$.''  That is, the usual next step in an FEM is to ``assemble'' the \emph{stiffness matrix} $A$ \citep{Elmanetal2005}.  Here we will not do so until we have an initial, and verified, numerical solution.  Following the pattern established since Chapter \ref{chap:nl}, we first implement equation \eqref{eq:un:weakformhat} as a residual-evaluation function $\bF(\bu)$, from the representation of $u^h$ as a finite-length vector $\bu$, which gives a nonlinear system $\bF(\bu) = 0$.  In evaluating $\bF$ we use \eqref{eq:un:uhexpand} and \eqref{eq:un:hatgdefine} to get point values of $u^h$ and its gradient $\grad u^h$ on the interior of triangles, which is needed because quadrature similar to that in Chapter \ref{chap:of} is used for the integrals in \eqref{eq:un:weakformhat}.  Of course, implementing a residual in the linear case is \emph{mathematically} equivalent to assembling $A$ and $\bb$, but the code needed for the residual is simpler, in part because it does not require direct contact with a \pMat object at all.
+
+In the next section we describe and the code the element-wise ``assembly,'' that is, evaluation of, the residual function $\bF$, as a \pSNES call-back.  Before that code can be written we have to be more specific about what \eqref{eq:un:weakformhat} says on each element, and we need to read in the triangular mesh and put it into \PETSc data structures.  These tools can be tested for correctness with a finite-differenced Jacobian (Chapter \ref{chap:nl}).  Once this is all shown to work correctly, by comparison to an exact solution, then we will re-consider matrix assembly, namely for the Jacobian derivative of $\bF$.
+
+
+\section{Assembly of the residual equations}
+
+By expression \eqref{eq:un:uhexpand} we see that $N-n_D$ real values $\{u_j\}$, for $j$ such that $\bx_j \notin \partial_D \Omega$, are needed to determine the FEM solution $u^h$.  However, it will be easier to write code if we \emph{increase} the size of the resulting nonlinear system, up to dimension $N$, by including the values of $u^h$ at nodes in the Dirichlet boundary as unknowns.  Thus we define
 \begin{equation}
-\bu = \{u_j\} \in \RR^{N-n_D},  \label{eq:un:unknowns}
+\bu = \{u_j\}_{j=0}^{N-1} \in \RR^N.  \label{eq:un:unknowns}
 \end{equation}
-is given by equations \eqref{eq:un:hatgdefine}, \eqref{eq:un:weakformhat}, and \eqref{eq:un:uhexpand}.
+To enforce the boundary conditions, the components of the residual corresponding to Dirichlet boundary are simple differences,
+\begin{equation}
+F_i(\bu) = u_i - g_D(\bx_i) \qquad \text{ if } \bx_i \in \partial_D\Omega.  \label{eq:un:dirichletresiduals}
+\end{equation}
 
-In the linear case it is common to now write system \eqref{eq:un:weakformhat} and \eqref{eq:un:uhexpand} as a linear system ``$A \bu = \bb$.''  In particular, the usual next step in an FEM is to assemble the \emph{stiffness matrix} $A$ \citep{Elmanetal2005}, but we will not do so until we have an initial, verified solution.  Following the pattern established since Chapter \ref{chap:nl}, we first implement equation \eqref{eq:un:weakformhat} as a residual-evaluation function $\bF(\bu)$ giving a nonlinear system
-\begin{equation*}
-\bF(\bu) = 0.
-\end{equation*}
-In evaluating $\bF(\bu)$ we use \eqref{eq:un:uhexpand}, and also \eqref{eq:un:hatgdefine}, to get point values of $u^h$ and its gradient $\grad u^h$, for quadrature similar to that in Chapter \ref{chap:of}, from the nodal values $\bu$ on the mesh.  This function, a \pSNES call-back, can be tested for correctness with a finite-differenced Jacobian (Chapter \ref{chap:nl}).  Of course, implementing a residual in the linear case is \emph{mathematically} equivalent to assembling $A$ and $\bb$, but the code needed for the residual is simpler, in part because it does not require direct contact with a \pMat object at all.
-
-Once the code for evaluating $\bF(\bu)$ is shown to work correctly then we will consider matrix assembly, for the Jacobian.  Before any of that can be accomplished, however, we both have to be more specific about what \eqref{eq:un:weakformhat} says on each element, and we need to read in the triangular mesh and put it into \PETSc data structures.
-
-
-\section{Element-wise assembly of the residual equations}
-
-Because triangulation $\mathcal{T}_h$ satisfying \eqref{eq:un:triangulation} almost\sidenote{The set $\Omega \setminus \cup_k \triangle_k$ has measure zero.} covers $\Omega$ with non-overlapping triangles, we can write the weak form \eqref{eq:un:weakformhat} as a sum over elements.
-
-To be specific, for each $\triangle_k \in \mathcal{T}_h$ let
+Now, because triangulation $\mathcal{T}_h$ satisfying \eqref{eq:un:triangulation} almost\sidenote{The set $\Omega \setminus \cup_k \triangle_k$ has measure zero.} covers $\Omega$ with non-overlapping triangles, we can write the weak form \eqref{eq:un:weakformhat} as a sum over elements.  To be specific, for each $\triangle_k \in \mathcal{T}_h$, $k=0,\dots,K-1$, let
 \begin{equation}
 F_i^k(\bu) = \int_{\triangle_k} a(u^h) \grad u^h \cdot \grad \psi_i - f(u^h) \psi_i.  \label{eq:un:elementweakform}
 \end{equation}
-Note $k=0,\dots,K-1$.
 
-Suppose $n_N$ is the number of edges which are in the Neumann boundary.  We call these edges (Neumann) \emph{segments} for distinctive language.  For each segment $s_\nu$, where $\nu=0,\dots,n_N-1$, let
+Suppose $n_N$ is the number of edges which are in the Neumann boundary.  We call these edges (Neumann) \emph{segments} for distinctive language.  For each segment $s_\nu$, $\nu=0,\dots,n_N-1$, let
 \begin{equation}
 \varphi_i^\nu = \int_{s_\nu} g_N \psi_i.  \label{eq:un:segmentweakform}
 \end{equation}
@@ -196,7 +194,7 @@ Before proceeding, observe that $n_D$ is the number of \emph{nodes} in the Diric
 
 Then residual equation \eqref{eq:un:weakformhat} is
 \begin{equation}
-F_i(\bu) = \sum_{k=0}^{K-1} F_i^k(\bu) + \sum_{\nu=0}^{n_N-1} \varphi_i^\nu = 0.  \label{eq:un:elementwisesum}
+F_i(\bu) = \sum_{k=0}^{K-1} F_i^k(\bu) + \sum_{\nu=0}^{n_N-1} \varphi_i^\nu = 0  \qquad \text{ if } \bx_i \notin \partial_D\Omega. \label{eq:un:elementwisesum}
 \end{equation}
 Because the support of the hat function $\psi_i$ only overlaps with a few triangles $\triangle_k$, only a few values of $F_i^k(\bu)$ and $\varphi_i^\nu$ are nonzero.  Also, only a few nodal values $\bu=\{u_j\}$ enter into $F_i^k(\bu)$, namely those values $u_j$ such that the support of $\psi_j$ overlaps with $\triangle_k$.  These facts make \eqref{eq:un:elementwisesum} a \emph{sparse}, and generally nonlinear, system.  The Jacobian $J_\bF(\bu)$ is a sparse matrix, the stiffness matrix.
 
@@ -234,9 +232,9 @@ F_i^k(\bu) = \rho_k \int_{\triangle_\ast} H_q^k(\bu,\xi,\eta)\,d\xi\,d\eta \labe
 \end{equation}
 where
 \begin{equation}
-H_q^k(\bu,\xi,\eta) = \left[a(u^h) \grad u^h \cdot \grad \chi_q - f(u^h) \chi_q\right]_{\triangle_\ast}  \label{eq:un:elementintegrand}
+H_q^k(\bu,\xi,\eta) = \left[a(u^h) \grad u^h \cdot \grad \psi_i - f(u^h) \psi_i\right]_{\triangle_\ast}  \label{eq:un:elementintegrand}
 \end{equation}
-and where node $\xi_i$ corresponds to local node number $q\in\{0,1,2\}$ of $\triangle_\ast$.  Note that ``$\grad$'' in \eqref{eq:un:elementintegrand} refers to derivatives in variables $x,y$.  Exercises \ref{chap:un}.\ref{exer:un:gradientdetails} and \ref{chap:un}.\ref{exer:un:elementintegranddetails} addresses the details implicit in \eqref{eq:un:elementintegrand}.
+for $q=0,1,2$.  Here node $\bx_i$ corresponds to local node number $q$ on $\triangle_\ast$.  Note that ``$\grad$'' in \eqref{eq:un:elementintegrand} refers to derivatives in variables $x,y$.  Exercises \ref{chap:un}.\ref{exer:un:gradientdetails} and \ref{chap:un}.\ref{exer:un:elementintegranddetails} addresses the details implicit in \eqref{eq:un:elementintegrand}.
 
 
 \section{Triangular meshes from \Triangle}
