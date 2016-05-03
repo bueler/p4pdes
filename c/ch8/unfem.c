@@ -21,10 +21,10 @@ typedef struct {
              bf;    // boundary flag; length N
                     //     if bf[i] > 0 then (x_i,y_i) is on boundary
                     //     if bf[i] == 2 then (x_i,y_i) is on Dirichlet boundary
-    // length N Vecs
+    // length N Vecs:
     Vec      x,     // x-coordinate of node
              y,     // y-coordinate of node
-             gD,    // Dirichlet boundary condition extended to all nodes
+             gD,    // Dirichlet boundary value at node (if bf[i]==2; otherwise nan)
              uexact;// exact solution at node
 } UF;
 
@@ -90,7 +90,7 @@ PetscErrorCode UFView(UF *ctx, PetscViewer viewer) {
     const int    *ae, *abf;
     ierr = PetscViewerASCIIPushSynchronized(viewer); CHKERRQ(ierr);
     if ((ctx->x) && (ctx->y) && (ctx->N > 0)) {
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%d nodes:\n",ctx->N); CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%d nodes at (x,y) coordinates:\n",ctx->N); CHKERRQ(ierr);
         ierr = VecGetArrayRead(ctx->x,&ax); CHKERRQ(ierr);
         ierr = VecGetArrayRead(ctx->y,&ay); CHKERRQ(ierr);
         for (n = 0; n < ctx->N; n++) {
@@ -435,6 +435,8 @@ int main(int argc,char **argv) {
     }
 
     ierr = VecDuplicate(mesh.uexact,&u); CHKERRQ(ierr);
+    ierr = VecSet(u,0.0); CHKERRQ(ierr);
+    // SNESSolve() here
     ierr = VecDestroy(&u); CHKERRQ(ierr);
 
     UFDestroy(&mesh);
