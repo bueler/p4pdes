@@ -238,13 +238,14 @@ if __name__ == "__main__":
     #FIXME  split files because error "Not a vector next in file" for this:
     #       petsc.writeBinaryFile(args.outfile,[ox,oy,oe])
 
-    print 'writing nodes as Vecs to petsc binary file %s.node' % args.outfile
+    print 'writing node coordinates as Vecs to petsc binary file %s.node' % args.outfile
     ox = x.view(PetscBinaryIO.Vec)
     oy = y.view(PetscBinaryIO.Vec)
     petsc = PetscBinaryIO.PetscBinaryIO()
     petsc.writeBinaryFile(args.outfile+'.node',[ox,oy,])
 
-    print 'writing elements as IS to petsc binary file %s.ele' % args.outfile
+    print 'writing elements and boundary flags as IS to petsc binary file %s.ele' % args.outfile
     oe = e.flatten().view(PetscBinaryIO.IS)
-    petsc.writeBinaryFile(args.outfile+'.ele',[oe,])
+    obfn = bfn.view(PetscBinaryIO.IS)
+    petsc.writeBinaryFile(args.outfile+'.ele',[oe,obfn,])
 
