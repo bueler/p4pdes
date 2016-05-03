@@ -14,12 +14,19 @@ static char help[] = "Unstructured 2D FEM solution of nonlinear Poisson equation
 typedef struct {
     int      N,     // number of nodes
              K;     // number of elements
-    Vec      x, y;  // coordinates of nodes; length N
-    IS       e;     // element triples;  if ISGetIndices() gets array ae[] then
+    IS       e,     // element triples; length K
+                    //     if ISGetIndices() gets array ae[] then
                     //     for k=0,...,K-1 the values ae[3*k+0],ae[3*k+1],ae[3*k+2]
                     //     are indices into node-based Vecs (in 0,...,N-1)
-    Vec      u,     // approximate solution at nodes; length N
-             uexact;// exact solution at nodes; length N
+             bf;    // boundary flag; length N
+                    //     if bf[i] > 0 then (x_i,y_i) is on boundary
+                    //     if bf[i] == 2 then (x_i,y_i) is on Dirichlet boundary
+    // length N Vecs
+    Vec      x,     // x-coordinate of node
+             y,     // y-coordinate of node
+             gD,    // Dirichlet boundary condition extended to all nodes
+             u,     // approximate solution at node
+             uexact;// exact solution at node
 } UF;
 
 
@@ -35,13 +42,30 @@ double f_eval(double x, double y, double u) {
 PetscErrorCode UFInitialize(UF *ctx) {
     ctx->N = 0;
     ctx->K = 0;
+    ctx->e = NULL;
+    ctx->bf = NULL;
     ctx->x = NULL;
     ctx->y = NULL;
-    ctx->e = NULL;
+    ctx->gD = NULL;
     ctx->u = NULL;
     ctx->uexact = NULL;
     return 0;
 }
+
+PetscErrorCode UFDestroy(UF *ctx) {
+    ISDestroy(&(ctx->e));
+    ISDestroy(&(ctx->bf));
+    VecDestroy(&(ctx->x));
+    VecDestroy(&(ctx->y));
+    VecDestroy(&(ctx->gD));
+    VecDestroy(&(ctx->u));
+    VecDestroy(&(ctx->uexact));
+    return 0;
+}
+
+FIXME fill bf, fill gD, allocate u
+
+FIXME also view bf, view gD
 
 PetscErrorCode UFView(UF *ctx, PetscViewer viewer) {
     PetscErrorCode ierr;
@@ -153,14 +177,6 @@ PetscErrorCode UFCheckElements(UF *ctx) {
     return 0;
 }
 
-PetscErrorCode UFDestroy(UF *ctx) {
-    ISDestroy(&(ctx->e));
-    VecDestroy(&(ctx->x));
-    VecDestroy(&(ctx->y));
-    VecDestroy(&(ctx->uexact));
-    return 0;
-}
-
 PetscErrorCode UFFillExact(UF *ctx) {
     PetscErrorCode ierr;
     const double *ay;
@@ -181,6 +197,27 @@ PetscErrorCode UFFillExact(UF *ctx) {
     return 0;
 }
 
+// evaluate u or g, according to whether the node is on
+// the Dirichlet boundary or not, at the 3 vertices of triangle k
+PetscErrorCode UFGetUorG(UF *ctx, int k, double *uvertex) {
+    PetscErrorCode ierr;
+    const int    *ae, *abf;
+    const double *au, *agD;
+    int          i, m;
+    ierr = ISGetIndices(ctx->e,&ae); CHKERRQ(ierr);
+    ierr = ISGetIndices(ctx->bf,&abf); CHKERRQ(ierr);
+    ierr = VecGetArrayRead(ctx->u,&au); CHKERRQ(ierr);
+    ierr = VecGetArrayRead(ctx->gD,&agD); CHKERRQ(ierr);
+    for (m = 0; m < 3; m++) {
+        i = ae[3*k+m];   // node index for vertex m of triangle k
+        uvertex[m] = (abf[i] == 2) ? agD[i] : au[i];
+    }
+    ierr = VecRestoreArrayRead(ctx->gD,&agD); CHKERRQ(ierr);
+    ierr = VecRestoreArrayRead(ctx->u,&au); CHKERRQ(ierr);
+    ierr = ISRestoreIndices(ctx->bf,&abf); CHKERRQ(ierr);
+    ierr = ISRestoreIndices(ctx->e,&ae); CHKERRQ(ierr);
+    return 0;
+}
 
 #define DEBUG_REFERENCE_EVAL 1
 
@@ -248,12 +285,15 @@ double GradInnerProd(gradRef du, gradRef dv) {
     return 0.0;
 }
 
+
 double FunIntegrand(int q, const double u[3],
                     double a, double f, double xi, double eta) {
   const gradRef du    = deval(u,xi,eta),
                 dchiq = dchi(q,xi,eta);
   return a * GradInnerProd(du,dchiq) - f * chi(q,xi,eta);
 }
+
+FIXME PetscErrorCode FormFunction(Vec u, Vec F, void *ctx)
 
 
 int main(int argc,char **argv) {
