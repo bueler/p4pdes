@@ -419,18 +419,18 @@ Thus we require $u\in S_g^h$ to satisfy \eqref{eq:of:plapweakform} for each $v=\
 \begin{equation}
 \int_\Omega |\grad u|^{p-2} \grad u \cdot \grad \psi_{pq} - f \psi_{pq} = 0, \label{eq:of:weakformbasis}
 \end{equation}
-for $p=0,\dots,m_x-1$ and $q=0,\dots,m_y-1$.  Again, however, this integral can be expanded as a sum over elements,
+for $p=0,\dots,m_x-1$ and $q=0,\dots,m_y-1$.  Again this integral can be expanded as a sum over elements,
 \begin{equation}
 \sum_{i=0}^{m_x} \sum_{j=0}^{m_y} \int_{\square_{ij}} |\grad u|^{p-2} \grad u \cdot \grad \psi_{pq} - f \psi_{pq} = 0 \label{eq:of:residualsumoverelements}
 \end{equation}
 
-\cinputpart{plap.c}{\CODELOC}{The residual function $\bF(\bu)$ corresponding to the weak form \eqref{eq:of:plapweakform}.  These two C functions implement \eqref{eq:of:weakformintegrandref} and \eqref{eq:of:weakformdetail}, respectively.}{VIII}{//STARTFUNCTION}{//ENDFUNCTION}{code:plapFun}
+\cinputpart{plap.c}{\CODELOC}{The residual function $\bF(\bu)$ corresponding to the weak form \eqref{eq:of:plapweakform}.  These two C functions implement \eqref{eq:of:weakformintegrandref} and \eqref{eq:of:residualcontributions}, respectively.}{VIII}{//STARTFUNCTION}{//ENDFUNCTION}{code:plapFun}
 
-However, only four distinct hat functions $\psi_{pq}$ can contribute to an integral over the element $\square_{ij}$.  The contributors correspond to the element corners indexed $\ell=0,1,2,3$; recall equation \eqref{eq:of:psionref}.  Therefore we define
+However, only four distinct hat functions $\psi_{pq}$ contribute to the integral over $\square_{ij}$.  They correspond to the element corners indexed by $\ell=0,1,2,3$; recall equation \eqref{eq:of:psionref}.  Therefore we define
 \begin{equation}
-H_{ij}^\ell(\xi,\eta) = \left[|\grad u|^{p-2} \grad u \cdot \grad \chi_\ell - f \chi_\ell\right]_{\square_\ast}, \label{eq:of:weakformintegrandref}
+H_{ij}^\ell(\xi,\eta) = \left[|\grad u|^{p-2} \grad u \cdot \grad \psi_{pq} - f \psi_{pq}\right]_{\square_\ast}, \label{eq:of:weakformintegrandref}
 \end{equation}
-where it is understood that the element reference map $\square_\ast \to \square_{ij}$ is in use.  Further details are in Exercise \ref{chap:of}.\ref{exer:of:weakformintegrand}.
+where it is understood that the element reference map $\square_\ast \to \square_{ij}$ is in use and that $(p,q)$ is the global node index corresponding to local index $\ell$.  Also, ``$\grad$'' is in the $(x,y)$ variables, so chain rule \eqref{eq:of:gradpsionref} applies.  Further details are in Exercise \ref{chap:of}.\ref{exer:of:weakformintegrand}.
 
 We do the element integrals in \eqref{eq:of:residualsumoverelements}, with integrand \eqref{eq:of:weakformintegrandref}, by using quadrature \eqref{eq:of:tensorgauss}.  That is, we construct a component of the residual, the one corresponding to the weak form and test function $\psi_{pq}$, by accumulating contributions from those elements $\square_{ij}$ where $\psi_{pq}$ has value one at the $\ell$th corner of element $\square_{ij}$:
 \begin{equation}
@@ -740,13 +740,12 @@ G_{ij}(\xi,\eta) &= \frac{1}{p} \left[\frac{4}{h_x^2} \left(\sum_{\ell=0}^3 u_\e
 \end{align*}
 where $u_\ell$ and $f_\ell$ are local-node-numbered values of $u$ and $f$ on element $\square_{ij}$.
 
-\item \label{exer:of:weakformintegrand}  Show that \eqref{eq:of:weakformintegrandref} is, in detail,
+\item \label{exer:of:weakformintegrand}  Show that for local node index $L=0,1,2,3$, \eqref{eq:of:weakformintegrandref} is, in detail,
 \begin{align*}
 H_{ij}^L(\xi,\eta) &= \left[\frac{4}{h_x^2} \left(\sum_{\ell=0}^3 u_\ell \frac{\partial\chi_\ell}{\partial \xi}\right)^2 + \frac{4}{h_y^2} \left(\sum_{\ell=0}^3 u_\ell \frac{\partial\chi_\ell}{\partial \eta}\right)^2\right]^{(p-2)/2} \\
   &\qquad \cdot \left[\frac{4}{h_x^2} \left(\sum_{\ell=0}^3 u_\ell \frac{\partial\chi_\ell}{\partial \xi}\right) \frac{\partial\chi_L}{\partial \xi} + \frac{4}{h_y^2} \left(\sum_{\ell=0}^3 u_\ell \frac{\partial\chi_\ell}{\partial \eta}\right) \frac{\partial\chi_L}{\partial \eta}\right] \\
-  &\quad - \left(\sum_{\ell=0}^3 f_\ell \chi_\ell\right) \chi_L
+  &\quad - \left(\sum_{\ell=0}^3 f_\ell \chi_\ell\right) \chi_L.
 \end{align*}
-for $L=0,1,2,3$.
 
 \item Figure \ref{fig:of:cartoonfunctional} shows the graph of $\Phi(x,y)=\tfrac{1}{4}(x^4+y^4) - 2x + 2y$, a cartoon for the $p$-Laplacian functional $I[u]$ in the case $p=4$.  Solve
     $$\min_{x,y} \Phi(x,y)$$
