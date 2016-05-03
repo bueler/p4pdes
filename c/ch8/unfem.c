@@ -25,7 +25,6 @@ typedef struct {
     Vec      x,     // x-coordinate of node
              y,     // y-coordinate of node
              gD,    // Dirichlet boundary condition extended to all nodes
-             u,     // approximate solution at node
              uexact;// exact solution at node
 } UF;
 
@@ -47,7 +46,6 @@ PetscErrorCode UFInitialize(UF *ctx) {
     ctx->x = NULL;
     ctx->y = NULL;
     ctx->gD = NULL;
-    ctx->u = NULL;
     ctx->uexact = NULL;
     return 0;
 }
@@ -58,22 +56,40 @@ PetscErrorCode UFDestroy(UF *ctx) {
     VecDestroy(&(ctx->x));
     VecDestroy(&(ctx->y));
     VecDestroy(&(ctx->gD));
-    VecDestroy(&(ctx->u));
     VecDestroy(&(ctx->uexact));
     return 0;
 }
 
-FIXME fill bf, fill gD, allocate u
 
-FIXME also view bf, view gD
+PetscErrorCode UFViewNodalScalarVec(UF *ctx, PetscViewer viewer, Vec v, const char name[]) {
+    PetscErrorCode ierr;
+    const double *av;
+    int          n;
+    ierr = PetscViewerASCIIPushSynchronized(viewer); CHKERRQ(ierr);
+    if ((v) && (ctx->N > 0)) {
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%d values of %s at nodes:\n",
+                   ctx->N,name); CHKERRQ(ierr);
+        ierr = VecGetArrayRead(v,&av); CHKERRQ(ierr);
+        for (n = 0; n < ctx->N; n++) {
+            ierr = PetscViewerASCIISynchronizedPrintf(viewer,"    %3d : %g\n",
+                               n,av[n]); CHKERRQ(ierr);
+        }
+        ierr = VecRestoreArrayRead(v,&av); CHKERRQ(ierr);
+    } else {
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%s empty/unallocated\n",name); CHKERRQ(ierr);
+    }
+    ierr = PetscViewerASCIIPopSynchronized(viewer); CHKERRQ(ierr);
+    return 0;
+}
+
 
 PetscErrorCode UFView(UF *ctx, PetscViewer viewer) {
     PetscErrorCode ierr;
     const double *ax, *ay;
     int          n, k;
-    const int    *ae;
+    const int    *ae, *abf;
     ierr = PetscViewerASCIIPushSynchronized(viewer); CHKERRQ(ierr);
-    if (ctx->N > 0) {
+    if ((ctx->x) && (ctx->y) && (ctx->N > 0)) {
         ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%d nodes:\n",ctx->N); CHKERRQ(ierr);
         ierr = VecGetArrayRead(ctx->x,&ax); CHKERRQ(ierr);
         ierr = VecGetArrayRead(ctx->y,&ay); CHKERRQ(ierr);
@@ -84,9 +100,9 @@ PetscErrorCode UFView(UF *ctx, PetscViewer viewer) {
         ierr = VecRestoreArrayRead(ctx->x,&ax); CHKERRQ(ierr);
         ierr = VecRestoreArrayRead(ctx->y,&ay); CHKERRQ(ierr);
     } else {
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"nodes empty\n"); CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"node coordinates empty/unallocated\n"); CHKERRQ(ierr);
     }
-    if (ctx->K > 0) {
+    if ((ctx->e) && (ctx->K > 0)) {
         ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%d elements:\n",ctx->K); CHKERRQ(ierr);
         ierr = ISGetIndices(ctx->e,&ae); CHKERRQ(ierr);
         for (k = 0; k < ctx->K; k++) {
@@ -95,14 +111,28 @@ PetscErrorCode UFView(UF *ctx, PetscViewer viewer) {
         }
         ierr = ISRestoreIndices(ctx->e,&ae); CHKERRQ(ierr);
     } else {
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"elements empty\n"); CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"element index triples empty/unallocated\n"); CHKERRQ(ierr);
+    }
+    if ((ctx->bf) && (ctx->N > 0)) {
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%d boundary flags at nodes (0 = interior, 2 = Dirichlet):\n",ctx->N); CHKERRQ(ierr);
+        ierr = ISGetIndices(ctx->bf,&abf); CHKERRQ(ierr);
+        for (n = 0; n < ctx->N; n++) {
+            ierr = PetscViewerASCIISynchronizedPrintf(viewer,"    %3d : %1d\n",
+                               n,abf[n]); CHKERRQ(ierr);
+        }
+        ierr = ISRestoreIndices(ctx->bf,&abf); CHKERRQ(ierr);
+    } else {
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"boundary flags empty/unallocated\n"); CHKERRQ(ierr);
     }
     ierr = PetscViewerASCIIPopSynchronized(viewer); CHKERRQ(ierr);
+    // view remaining nodal scalars
+    ierr = UFViewNodalScalarVec(ctx,viewer,ctx->gD, "gD"); CHKERRQ(ierr);
+    ierr = UFViewNodalScalarVec(ctx,viewer,ctx->uexact, "uexact"); CHKERRQ(ierr);
     return 0;
 }
 
 
-// read node coordinates, creating as Vecs, from file
+// read node coordinates from file and create all nodal-based Vecs
 PetscErrorCode UFReadNodes(UF *ctx, char *filename) {
     PetscErrorCode ierr;
     int         m;
@@ -123,28 +153,44 @@ PetscErrorCode UFReadNodes(UF *ctx, char *filename) {
     if (ctx->N != m) {
         SETERRQ1(PETSC_COMM_WORLD,2,"node coordinates x,y loaded from %s are not the same size\n",filename);
     }
+    ierr = VecDuplicate(ctx->x,&ctx->gD); CHKERRQ(ierr);
+    ierr = VecDuplicate(ctx->x,&ctx->uexact); CHKERRQ(ierr);
     return 0;
 }
 
 
-// read element index triples, creating as IS, from file
+// read element index triples and boundary flags, creating as IS, from file
 PetscErrorCode UFReadElements(UF *ctx, char *filename) {
     PetscErrorCode ierr;
     PetscViewer viewer;
+    int         n_bf;
     if (ctx->K > 0) {
         SETERRQ(PETSC_COMM_WORLD,1,
                 "elements already created? ... stopping\n");
     }
+    if (ctx->N == 0) {
+        SETERRQ(PETSC_COMM_WORLD,2,
+                "node coordinates not created ... do that first ... stopping\n");
+    }
+    // create and load e
     ierr = ISCreate(PETSC_COMM_WORLD,&(ctx->e)); CHKERRQ(ierr);
     ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename,FILE_MODE_READ,&viewer); CHKERRQ(ierr);
     ierr = ISLoad(ctx->e,viewer); CHKERRQ(ierr);
-    ierr = PetscViewerDestroy(&viewer); CHKERRQ(ierr);
     ierr = ISGetSize(ctx->e,&(ctx->K)); CHKERRQ(ierr);
     if (ctx->K % 3 != 0) {
-        SETERRQ1(PETSC_COMM_WORLD,2,
+        SETERRQ1(PETSC_COMM_WORLD,3,
                  "IS e loaded from %s is wrong size for list of element triples\n",filename);
     }
     ctx->K /= 3;
+    // create and load bf
+    ierr = ISCreate(PETSC_COMM_WORLD,&(ctx->bf)); CHKERRQ(ierr);
+    ierr = ISLoad(ctx->bf,viewer); CHKERRQ(ierr);
+    ierr = PetscViewerDestroy(&viewer); CHKERRQ(ierr);
+    ierr = ISGetSize(ctx->bf,&n_bf); CHKERRQ(ierr);
+    if (n_bf != ctx->N) {
+        SETERRQ1(PETSC_COMM_WORLD,4,
+                 "IS bf loaded from %s is wrong size\n",filename);
+    }
     return 0;
 }
 
@@ -177,6 +223,38 @@ PetscErrorCode UFCheckElements(UF *ctx) {
     return 0;
 }
 
+
+// check boundary flags for admissibility
+PetscErrorCode UFCheckBoundaryFlags(UF *ctx) {
+    PetscErrorCode ierr;
+    const int   *abf;
+    int         n;
+    if (ctx->bf == NULL) {
+        SETERRQ(PETSC_COMM_WORLD,1,
+                "boundary flags not allocated; call UFReadNodes() first\n");
+    }
+    if (ctx->N == 0) {
+        SETERRQ(PETSC_COMM_WORLD,2,
+                "node size unknown so boundary flag check impossible; call UFReadElements() first\n");
+    }
+    ierr = ISGetIndices(ctx->bf,&abf); CHKERRQ(ierr);
+    for (n = 0; n < ctx->N; n++) {
+        switch (abf[n]) {
+            case 0 :
+            case 1 :
+            case 2 :
+                break;
+            default :
+                SETERRQ2(PETSC_COMM_WORLD,3,
+                   "boundary flag bf[%d]=%d invalid: not in {0,1,2}\n",
+                   n,abf[n]);
+        }
+    }
+    ierr = ISRestoreIndices(ctx->bf,&abf); CHKERRQ(ierr);
+    return 0;
+}
+
+
 PetscErrorCode UFFillExact(UF *ctx) {
     PetscErrorCode ierr;
     const double *ay;
@@ -185,7 +263,6 @@ PetscErrorCode UFFillExact(UF *ctx) {
     if (ctx->N == 0) {
         SETERRQ(PETSC_COMM_WORLD,1,"nodes must exist before exact solution can be calculated\n");
     }
-    ierr = VecDuplicate(ctx->y,&ctx->uexact); CHKERRQ(ierr);
     ierr = VecGetArrayRead(ctx->y,&ay); CHKERRQ(ierr);
     ierr = VecGetArray(ctx->uexact,&auexact); CHKERRQ(ierr);
     for (i = 0; i < ctx->N; i++) {
@@ -197,23 +274,49 @@ PetscErrorCode UFFillExact(UF *ctx) {
     return 0;
 }
 
+
+PetscErrorCode UFFillDirichletFromExact(UF *ctx) {
+    PetscErrorCode ierr;
+    const double *auexact;
+    const int    *abf;
+    double       *agD;
+    int          i;
+    if (ctx->N == 0) {
+        SETERRQ(PETSC_COMM_WORLD,1,"nodes must exist\n");
+    }
+    ierr = ISGetIndices(ctx->bf,&abf); CHKERRQ(ierr);
+    ierr = VecGetArrayRead(ctx->uexact,&auexact); CHKERRQ(ierr);
+    ierr = VecGetArray(ctx->gD,&agD); CHKERRQ(ierr);
+    for (i = 0; i < ctx->N; i++) {
+        if (abf[i] == 2)
+            agD[i] = auexact[i];
+        else
+            agD[i] = NAN;
+    }
+    ierr = VecGetArray(ctx->gD,&agD); CHKERRQ(ierr);
+    ierr = VecRestoreArrayRead(ctx->uexact,&auexact); CHKERRQ(ierr);
+    ierr = ISRestoreIndices(ctx->bf,&abf); CHKERRQ(ierr);
+    return 0;
+}
+
+
 // evaluate u or g, according to whether the node is on
 // the Dirichlet boundary or not, at the 3 vertices of triangle k
-PetscErrorCode UFGetUorG(UF *ctx, int k, double *uvertex) {
+PetscErrorCode UFGetUorG(UF *ctx, Vec u, int k, double *uvertex) {
     PetscErrorCode ierr;
     const int    *ae, *abf;
     const double *au, *agD;
     int          i, m;
     ierr = ISGetIndices(ctx->e,&ae); CHKERRQ(ierr);
     ierr = ISGetIndices(ctx->bf,&abf); CHKERRQ(ierr);
-    ierr = VecGetArrayRead(ctx->u,&au); CHKERRQ(ierr);
     ierr = VecGetArrayRead(ctx->gD,&agD); CHKERRQ(ierr);
+    ierr = VecGetArrayRead(u,&au); CHKERRQ(ierr);
     for (m = 0; m < 3; m++) {
         i = ae[3*k+m];   // node index for vertex m of triangle k
         uvertex[m] = (abf[i] == 2) ? agD[i] : au[i];
     }
+    ierr = VecRestoreArrayRead(u,&au); CHKERRQ(ierr);
     ierr = VecRestoreArrayRead(ctx->gD,&agD); CHKERRQ(ierr);
-    ierr = VecRestoreArrayRead(ctx->u,&au); CHKERRQ(ierr);
     ierr = ISRestoreIndices(ctx->bf,&abf); CHKERRQ(ierr);
     ierr = ISRestoreIndices(ctx->e,&ae); CHKERRQ(ierr);
     return 0;
@@ -293,7 +396,8 @@ double FunIntegrand(int q, const double u[3],
   return a * GradInnerProd(du,dchiq) - f * chi(q,xi,eta);
 }
 
-FIXME PetscErrorCode FormFunction(Vec u, Vec F, void *ctx)
+
+//FIXME PetscErrorCode FormFunction(Vec u, Vec F, void *ctx)  ?
 
 
 int main(int argc,char **argv) {
@@ -302,6 +406,7 @@ int main(int argc,char **argv) {
     char        meshroot[256] = "", nodename[266], elename[266];
     UF          mesh;
     PetscViewer stdoutviewer;
+    Vec         u;
 
     PetscInitialize(&argc,&argv,NULL,help);
     ierr = PetscViewerASCIIGetStdout(PETSC_COMM_WORLD,&stdoutviewer); CHKERRQ(ierr);
@@ -322,10 +427,15 @@ int main(int argc,char **argv) {
     ierr = UFReadNodes(&mesh,nodename); CHKERRQ(ierr);
     ierr = UFReadElements(&mesh,elename); CHKERRQ(ierr);
     ierr = UFCheckElements(&mesh); CHKERRQ(ierr);
+    ierr = UFCheckBoundaryFlags(&mesh); CHKERRQ(ierr);
+    ierr = UFFillExact(&mesh); CHKERRQ(ierr);
+    ierr = UFFillDirichletFromExact(&mesh); CHKERRQ(ierr);
     if (view) {
         ierr = UFView(&mesh,stdoutviewer); CHKERRQ(ierr);
     }
-    ierr = UFFillExact(&mesh); CHKERRQ(ierr);
+
+    ierr = VecDuplicate(mesh.uexact,&u); CHKERRQ(ierr);
+    ierr = VecDestroy(&u); CHKERRQ(ierr);
 
     UFDestroy(&mesh);
     PetscFinalize();
