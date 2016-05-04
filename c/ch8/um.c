@@ -90,43 +90,6 @@ PetscErrorCode UMReadNodes(UM *mesh, char *rootname) {
     return 0;
 }
 
-PetscErrorCode UMReadElements(UM *mesh, char *rootname) {
-    PetscErrorCode ierr;
-    PetscViewer viewer;
-    int         n_bf;
-    char        filename[266];
-    strcpy(filename, rootname);
-    strncat(filename, ".ele", 10);
-    if (mesh->K > 0) {
-        SETERRQ(PETSC_COMM_WORLD,1,
-                "elements already created? ... stopping\n");
-    }
-    if (mesh->N == 0) {
-        SETERRQ(PETSC_COMM_WORLD,2,
-                "node coordinates not created ... do that first ... stopping\n");
-    }
-    // create and load e
-    ierr = ISCreate(PETSC_COMM_WORLD,&(mesh->e)); CHKERRQ(ierr);
-    ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename,FILE_MODE_READ,&viewer); CHKERRQ(ierr);
-    ierr = ISLoad(mesh->e,viewer); CHKERRQ(ierr);
-    ierr = ISGetSize(mesh->e,&(mesh->K)); CHKERRQ(ierr);
-    if (mesh->K % 3 != 0) {
-        SETERRQ1(PETSC_COMM_WORLD,3,
-                 "IS e loaded from %s is wrong size for list of element triples\n",filename);
-    }
-    mesh->K /= 3;
-    // create and load bf
-    ierr = ISCreate(PETSC_COMM_WORLD,&(mesh->bf)); CHKERRQ(ierr);
-    ierr = ISLoad(mesh->bf,viewer); CHKERRQ(ierr);
-    ierr = PetscViewerDestroy(&viewer); CHKERRQ(ierr);
-    ierr = ISGetSize(mesh->bf,&n_bf); CHKERRQ(ierr);
-    if (n_bf != mesh->N) {
-        SETERRQ1(PETSC_COMM_WORLD,4,
-                 "IS bf loaded from %s is wrong size\n",filename);
-    }
-    return 0;
-}
-
 PetscErrorCode UMCheckElements(UM *mesh) {
     PetscErrorCode ierr;
     const int   *ae;
@@ -191,6 +154,45 @@ PetscErrorCode UMAssertValid(UM *mesh) {
     }
     ierr = UMCheckElements(mesh); CHKERRQ(ierr);
     ierr = UMCheckBoundaryFlags(mesh); CHKERRQ(ierr);
+    return 0;
+}
+
+PetscErrorCode UMReadElements(UM *mesh, char *rootname) {
+    PetscErrorCode ierr;
+    PetscViewer viewer;
+    int         n_bf;
+    char        filename[266];
+    strcpy(filename, rootname);
+    strncat(filename, ".ele", 10);
+    if (mesh->K > 0) {
+        SETERRQ(PETSC_COMM_WORLD,1,
+                "elements already created? ... stopping\n");
+    }
+    if (mesh->N == 0) {
+        SETERRQ(PETSC_COMM_WORLD,2,
+                "node coordinates not created ... do that first ... stopping\n");
+    }
+    // create and load e
+    ierr = ISCreate(PETSC_COMM_WORLD,&(mesh->e)); CHKERRQ(ierr);
+    ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename,FILE_MODE_READ,&viewer); CHKERRQ(ierr);
+    ierr = ISLoad(mesh->e,viewer); CHKERRQ(ierr);
+    ierr = ISGetSize(mesh->e,&(mesh->K)); CHKERRQ(ierr);
+    if (mesh->K % 3 != 0) {
+        SETERRQ1(PETSC_COMM_WORLD,3,
+                 "IS e loaded from %s is wrong size for list of element triples\n",filename);
+    }
+    mesh->K /= 3;
+    // create and load bf
+    ierr = ISCreate(PETSC_COMM_WORLD,&(mesh->bf)); CHKERRQ(ierr);
+    ierr = ISLoad(mesh->bf,viewer); CHKERRQ(ierr);
+    ierr = PetscViewerDestroy(&viewer); CHKERRQ(ierr);
+    ierr = ISGetSize(mesh->bf,&n_bf); CHKERRQ(ierr);
+    if (n_bf != mesh->N) {
+        SETERRQ1(PETSC_COMM_WORLD,4,
+                 "IS bf loaded from %s is wrong size\n",filename);
+    }
+    // mesh should be complete now
+    ierr = UMAssertValid(mesh); CHKERRQ(ierr);
     return 0;
 }
 

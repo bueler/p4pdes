@@ -1,7 +1,7 @@
 #ifndef UM_H_
 #define UM_H_
 
-// Abstract data type (object) for holding unstructured mesh.
+// abstractish data type (object) for holding unstructured mesh
 
 typedef struct {
     int      N,     // number of nodes
@@ -18,26 +18,20 @@ typedef struct {
              y;     // y-coordinate of node
 } UM;
 
-
 PetscErrorCode UMInitialize(UM *mesh);
 PetscErrorCode UMDestroy(UM *mesh);
 
+// view node coordinates, element triples, boundary flags to STDOUT
 PetscErrorCode UMView(UM *mesh, PetscViewer viewer);
 
 // read node coordinates from file and create all nodal-based Vecs
 PetscErrorCode UMReadNodes(UM *mesh, char *rootname);
 
 // read element index triples and boundary flags, creating as IS, from file
+// call UMReadNodes() firsts
 PetscErrorCode UMReadElements(UM *mesh, char *rootname);
 
-// check element triples for admissibility
-PetscErrorCode UMCheckElements(UM *mesh);
-
-// check boundary flags for admissibility
-PetscErrorCode UMCheckBoundaryFlags(UM *mesh);
-
-PetscErrorCode UMAssertValid(UM *mesh);
-
+// allocate Vec v with size equal to N = number of nodes
 PetscErrorCode UMCreateGlobalVec(UM *mesh, Vec *v);
 #endif
 
