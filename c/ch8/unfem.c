@@ -114,6 +114,15 @@ double chi(int L, double xi, double eta) {
     }
 }
 
+// evaluate v(xi,eta) on reference element using local node numbering
+double eval(const double v[3], double xi, double eta) {
+    double sum = 0.0;
+    int    q;
+    for (q=0; q<3; q++)
+        sum += v[q] * chi(q,xi,eta);
+    return sum;
+}
+
 typedef struct {
     double  xi, eta;
 } gradRef;
@@ -135,35 +144,36 @@ gradRef dchi(int q, double xi, double eta) {
     }
 }
 
-// evaluate v(xi,eta) on reference element using local node numbering
-double eval(const double v[3], double xi, double eta) {
-    double sum = 0.0;
-    int    q;
-    for (q=0; q<3; q++)
-        sum += v[q] * chi(q,xi,eta);
-    return sum;
-}
+typedef struct {
+    double  x, y;
+} grad;
 
+//FIXME should evaluate w.r.t. (x,y)
 // evaluate partial derivs of v(xi,eta) on reference element
-gradRef deval(const double v[3], double xi, double eta) {
-    gradRef sum = {0.0,0.0}, tmp;
+grad gradeval(const double v[3], double xi, double eta) {
+    gradRef tmp;
+    grad    sum = {0.0,0.0};
     int     q;
     for (q=0; q<3; q++) {
         tmp = dchi(q,xi,eta);
-        sum.xi  += v[q] * tmp.xi;
-        sum.eta += v[q] * tmp.eta;
+        // FIXME in here
+        sum.x += v[q] * tmp.xi;
+        sum.y += v[q] * tmp.eta;
     }
     return sum;
 }
 
-double GradInnerProd(gradRef du, gradRef dv) {
-    //FIXME return cx * du.xi  * dv.xi + cy * du.eta * dv.eta;
-    return 0.0;
+double GradInnerProd(grad du, grad dv) {
+    return du.x * dv.x + du.y * dv.y;
 }
 
-double FunIntegrand(int q, const double u[3],
+double FunIntegrand(int ell, const double u[3],
                     double a, double f, double xi, double eta) {
-  return a * GradInnerProd(deval(u,xi,eta),dchi(q,xi,eta)) - f * chi(q,xi,eta);
+  grad dpsi;
+  //FIXME: dpsi from  dchi(ell,xi,eta)
+  dpsi.x = 0.0;
+  dpsi.y = 0.0;
+  return a * GradInnerProd(gradeval(u,xi,eta),dpsi) - f * chi(ell,xi,eta);
 }
 
 PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
@@ -171,9 +181,9 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
     unfemCtx     *user = (unfemCtx*)ctx;
     const int    Q = 3; // number of quadrature points
     // quadrature points and weights from bottom page 7 of Shaodeng notes
-    const double xiq[3]  = {1.0/6.0, 2.0/3.0, 1.0/6.0},
-                 etaq[3] = {1.0/6.0, 1.0/6.0, 2.0/3.0},
-                 wq[3]   = {1.0/6.0, 1.0/6.0, 1.0/6.0};
+    const double xi[3]  = {1.0/6.0, 2.0/3.0, 1.0/6.0},
+                 eta[3] = {1.0/6.0, 1.0/6.0, 2.0/3.0},
+                 w[3]   = {1.0/6.0, 1.0/6.0, 1.0/6.0};
     double       *aF, unode[3],
                  uquad[Q], aquad[Q], fquad[Q],
                  dx1, dx2, dy1, dy2, rho, xx, yy, sum;
@@ -210,9 +220,9 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
         // get all function values at quadrature nodes on element
         ierr = GetUorG(u,k,unode,user); CHKERRQ(ierr);
         for (q = 0; q < Q; q++) {
-            uquad[q] = eval(unode,xiq[q],etaq[q]);
-            xx = ax[en[0]] + dx1 * xiq[q] + dx2 * etaq[q];
-            yy = ay[en[0]] + dy1 * xiq[q] + dy2 * etaq[q];
+            uquad[q] = eval(unode,xi[q],eta[q]);
+            xx = ax[en[0]] + dx1 * xi[q] + dx2 * eta[q];
+            yy = ay[en[0]] + dy1 * xi[q] + dy2 * eta[q];
             aquad[q] = a_fcn(uquad[q],xx,yy);
             fquad[q] = f_fcn(uquad[q],xx,yy);
         }
@@ -221,8 +231,8 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
             if (abf[en[l]] < 2) { // if NOT a Dirichlet node
                 sum = 0.0;
                 for (q = 0; q < Q; q++) {
-                    sum += wq[q] * FunIntegrand(q,unode,aquad[q],fquad[q],
-                                                xiq[q],etaq[q]);
+                    sum += w[q] * FunIntegrand(l,unode,aquad[q],fquad[q],
+                                               xi[q],eta[q]);
                 }
                 aF[en[l]] += rho * sum;
             }
@@ -236,7 +246,6 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
     return 0;
 }
 
-
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
     PetscBool   view = PETSC_FALSE;
@@ -244,6 +253,7 @@ int main(int argc,char **argv) {
     unfemCtx    user;
     SNES        snes;
     Vec         r, u, uexact;
+    double      err;
 
     PetscInitialize(&argc,&argv,NULL,help);
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "un_", "options for unfem", ""); CHKERRQ(ierr);
@@ -285,6 +295,12 @@ int main(int argc,char **argv) {
     ierr = VecDuplicate(uexact,&u); CHKERRQ(ierr);
     ierr = VecSet(u,0.0); CHKERRQ(ierr);
     ierr = SNESSolve(snes,NULL,u);CHKERRQ(ierr);
+
+    // measure error
+    ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
+    ierr = VecNorm(u,NORM_INFINITY,&err); CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"result:  |u-u_exact|_inf = %g\n",
+                       err); CHKERRQ(ierr);
 
     // clean-up
     VecDestroy(&(user.gD));  VecDestroy(&uexact);
