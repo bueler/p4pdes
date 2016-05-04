@@ -163,9 +163,7 @@ double GradInnerProd(gradRef du, gradRef dv) {
 
 double FunIntegrand(int q, const double u[3],
                     double a, double f, double xi, double eta) {
-  const gradRef du    = deval(u,xi,eta),
-                dchiq = dchi(q,xi,eta);
-  return a * GradInnerProd(du,dchiq) - f * chi(q,xi,eta);
+  return a * GradInnerProd(deval(u,xi,eta),dchi(q,xi,eta)) - f * chi(q,xi,eta);
 }
 
 PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
@@ -203,11 +201,13 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
         en = ae + 3*k;        // en[0], en[1], en[2] are nodes of element k
         ierr = PetscPrintf(PETSC_COMM_WORLD,"element k=%3d:  en[0]=%d, en[1]=%d, en[2]=%d\n",
                            k, en[0], en[1], en[2]); CHKERRQ(ierr);
+        // get geometry of element
         dx1 = ax[en[1]] - ax[en[0]];
         dx2 = ax[en[2]] - ax[en[0]];
         dy1 = ay[en[1]] - ay[en[0]];
         dy2 = ay[en[2]] - ay[en[0]];
         rho = fabs(dx1 * dy2 - dx2 * dy1);
+        // get all function values at quadrature nodes on element
         ierr = GetUorG(u,k,unode,user); CHKERRQ(ierr);
         for (q = 0; q < Q; q++) {
             uquad[q] = eval(unode,xiq[q],etaq[q]);
@@ -216,11 +216,13 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
             aquad[q] = a_fcn(uquad[q],xx,yy);
             fquad[q] = f_fcn(uquad[q],xx,yy);
         }
+        // residual contribution for each node of element
         for (l = 0; l < 3; l++) {
             if (abf[en[l]] < 2) { // if NOT a Dirichlet node
                 sum = 0.0;
                 for (q = 0; q < Q; q++) {
-                    sum += wq[q] * FunIntegrand(q,unode,aquad[q],fquad[q],xiq[q],etaq[q]);
+                    sum += wq[q] * FunIntegrand(q,unode,aquad[q],fquad[q],
+                                                xiq[q],etaq[q]);
                 }
                 aF[en[l]] += rho * sum;
             }
