@@ -95,12 +95,12 @@ const double xi[3]  = {1.0/6.0, 2.0/3.0, 1.0/6.0},
 PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
     PetscErrorCode ierr;
     unfemCtx     *user = (unfemCtx*)ctx;
+    const int    *abf, *ae, *en;
+    const double *ax, *ay, *agD, *au;
     double       *aF, unode[3], gradu[2], gradpsi[3][2],
                  uquad[Q], aquad[Q], fquad[Q],
                  dx1, dx2, dy1, dy2, detJ, xx, yy, sum;
     int          n, k, l, q;
-    const int    *abf, *ae, *en;
-    const double *ax, *ay, *agD, *au;
 
     ierr = VecSet(F,0.0); CHKERRQ(ierr);
     ierr = VecGetArray(F,&aF); CHKERRQ(ierr);
@@ -186,7 +186,7 @@ int main(int argc,char **argv) {
            "unfem.c",meshroot,meshroot,sizeof(meshroot),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
-    // read mesh/context object of type UM
+    // read mesh object of type UM
     ierr = UMInitialize(&(user.mesh)); CHKERRQ(ierr);
     ierr = UMReadNodes(&(user.mesh),meshroot); CHKERRQ(ierr);
     ierr = UMReadElements(&(user.mesh),meshroot); CHKERRQ(ierr);

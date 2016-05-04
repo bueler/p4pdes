@@ -1,21 +1,20 @@
 #ifndef UM_H_
 #define UM_H_
 
-// abstractish data type (object) for holding unstructured mesh
+// abstract data type (object) for holding unstructured mesh
 
 typedef struct {
     int      N,     // number of nodes
              K;     // number of elements
     IS       e,     // element triples; length K
-                    //     if ISGetIndices() gets array ae[] then
-                    //     for k=0,...,K-1 the values ae[3*k+0],ae[3*k+1],ae[3*k+2]
+                    //     if ISGetIndices() gets array ae[] then for
+                    //     k=0,...,K-1 the values ae[3*k+0],ae[3*k+1],ae[3*k+2]
                     //     are indices into node-based Vecs (in 0,...,N-1)
              bf;    // boundary flag; length N
                     //     if bf[i] > 0 then (x_i,y_i) is on boundary
                     //     if bf[i] == 2 then (x_i,y_i) is on Dirichlet boundary
-    // length N Vecs:
-    Vec      x,     // x-coordinate of node
-             y;     // y-coordinate of node
+    Vec      x,     // x-coordinate of node; length N
+             y;     // y-coordinate of node; length N
 } UM;
 
 PetscErrorCode UMInitialize(UM *mesh);
