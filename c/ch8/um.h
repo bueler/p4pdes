@@ -1,5 +1,5 @@
-#ifndef UF_H_
-#define UF_H_
+#ifndef UM_H_
+#define UM_H_
 
 // Abstract data type (object) for holding unstructured mesh.
 
@@ -16,28 +16,28 @@ typedef struct {
     // length N Vecs:
     Vec      x,     // x-coordinate of node
              y;     // y-coordinate of node
-} UF;
+} UM;
 
 
-PetscErrorCode UFInitialize(UF *mesh);
-PetscErrorCode UFDestroy(UF *mesh);
+PetscErrorCode UMInitialize(UM *mesh);
+PetscErrorCode UMDestroy(UM *mesh);
 
-PetscErrorCode UFView(UF *mesh, PetscViewer viewer);
+PetscErrorCode UMView(UM *mesh, PetscViewer viewer);
 
 // read node coordinates from file and create all nodal-based Vecs
-PetscErrorCode UFReadNodes(UF *mesh, char *rootname);
+PetscErrorCode UMReadNodes(UM *mesh, char *rootname);
 
 // read element index triples and boundary flags, creating as IS, from file
-PetscErrorCode UFReadElements(UF *mesh, char *rootname);
+PetscErrorCode UMReadElements(UM *mesh, char *rootname);
 
 // check element triples for admissibility
-PetscErrorCode UFCheckElements(UF *mesh);
+PetscErrorCode UMCheckElements(UM *mesh);
 
 // check boundary flags for admissibility
-PetscErrorCode UFCheckBoundaryFlags(UF *mesh);
+PetscErrorCode UMCheckBoundaryFlags(UM *mesh);
 
-PetscErrorCode UFAssertValid(UF *mesh);
+PetscErrorCode UMAssertValid(UM *mesh);
 
-PetscErrorCode UFCreateGlobalVec(UF *mesh, Vec *v);
+PetscErrorCode UMCreateGlobalVec(UM *mesh, Vec *v);
 #endif
 

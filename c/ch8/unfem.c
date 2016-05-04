@@ -12,10 +12,10 @@ static char help[] = "Unstructured 2D FEM solution of nonlinear Poisson equation
 //   $ ./unfem -un_view -un_mesh foo.dat
 
 #include <petsc.h>
-#include "uf.h"
+#include "um.h"
 
 typedef struct {
-    UF  mesh;
+    UM  mesh;
     Vec gD;
 } unfemCtx;
 
@@ -37,7 +37,7 @@ PetscErrorCode FillExact(Vec uexact, unfemCtx *ctx) {
     const double *ax, *ay;
     double       *auexact;
     int          i;
-    ierr = UFAssertValid(&(ctx->mesh)); CHKERRQ(ierr);
+    ierr = UMAssertValid(&(ctx->mesh)); CHKERRQ(ierr);
     ierr = VecGetArrayRead(ctx->mesh.x,&ax); CHKERRQ(ierr);
     ierr = VecGetArrayRead(ctx->mesh.y,&ay); CHKERRQ(ierr);
     ierr = VecGetArray(uexact,&auexact); CHKERRQ(ierr);
@@ -56,7 +56,7 @@ PetscErrorCode FillDirichletFromExact(Vec uexact, Vec gD, unfemCtx *ctx) {
     const int    *abf;
     double       *agD;
     int          i;
-    ierr = UFAssertValid(&(ctx->mesh)); CHKERRQ(ierr);
+    ierr = UMAssertValid(&(ctx->mesh)); CHKERRQ(ierr);
     ierr = ISGetIndices(ctx->mesh.bf,&abf); CHKERRQ(ierr);
     ierr = VecGetArrayRead(uexact,&auexact); CHKERRQ(ierr);
     ierr = VecGetArray(gD,&agD); CHKERRQ(ierr);
@@ -190,21 +190,20 @@ int main(int argc,char **argv) {
            "unfem.c",meshroot,meshroot,sizeof(meshroot),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
-    // initialize and read mesh/context object of type UF
-    ierr = UFInitialize(&(user.mesh)); CHKERRQ(ierr);
-    ierr = UFReadNodes(&(user.mesh),meshroot); CHKERRQ(ierr);
-    ierr = UFReadElements(&(user.mesh),meshroot); CHKERRQ(ierr);
-    ierr = UFAssertValid(&(user.mesh)); CHKERRQ(ierr);
+    // initialize and read mesh/context object of type UM
+    ierr = UMInitialize(&(user.mesh)); CHKERRQ(ierr);
+    ierr = UMReadNodes(&(user.mesh),meshroot); CHKERRQ(ierr);
+    ierr = UMReadElements(&(user.mesh),meshroot); CHKERRQ(ierr);
 
     // fill fields
-    ierr = UFCreateGlobalVec(&(user.mesh),&uexact); CHKERRQ(ierr);
+    ierr = UMCreateGlobalVec(&(user.mesh),&uexact); CHKERRQ(ierr);
     ierr = FillExact(uexact,&user); CHKERRQ(ierr);
     ierr = VecDuplicate(uexact,&(user.gD)); CHKERRQ(ierr);
     ierr = FillDirichletFromExact(uexact,user.gD,&user); CHKERRQ(ierr);
     if (view) {
         PetscViewer stdoutviewer;
         ierr = PetscViewerASCIIGetStdout(PETSC_COMM_WORLD,&stdoutviewer); CHKERRQ(ierr);
-        ierr = UFView(&(user.mesh),stdoutviewer); CHKERRQ(ierr);
+        ierr = UMView(&(user.mesh),stdoutviewer); CHKERRQ(ierr);
         ierr = PetscObjectSetName((PetscObject)(user.gD),"gD");
         ierr = VecView(user.gD,stdoutviewer); CHKERRQ(ierr);
         ierr = PetscObjectSetName((PetscObject)uexact,"uexact");
@@ -218,7 +217,7 @@ int main(int argc,char **argv) {
 
     // clean-up
     VecDestroy(&u);  VecDestroy(&(user.gD));  VecDestroy(&uexact);
-    UFDestroy(&(user.mesh));
+    UMDestroy(&(user.mesh));
     PetscFinalize();
     return 0;
 }

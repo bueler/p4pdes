@@ -1,7 +1,7 @@
 #include <petsc.h>
-#include "uf.h"
+#include "um.h"
 
-PetscErrorCode UFInitialize(UF *mesh) {
+PetscErrorCode UMInitialize(UM *mesh) {
     mesh->N = 0;
     mesh->K = 0;
     mesh->e = NULL;
@@ -11,7 +11,7 @@ PetscErrorCode UFInitialize(UF *mesh) {
     return 0;
 }
 
-PetscErrorCode UFDestroy(UF *mesh) {
+PetscErrorCode UMDestroy(UM *mesh) {
     ISDestroy(&(mesh->e));
     ISDestroy(&(mesh->bf));
     VecDestroy(&(mesh->x));
@@ -19,7 +19,7 @@ PetscErrorCode UFDestroy(UF *mesh) {
     return 0;
 }
 
-PetscErrorCode UFView(UF *mesh, PetscViewer viewer) {
+PetscErrorCode UMView(UM *mesh, PetscViewer viewer) {
     PetscErrorCode ierr;
     const double *ax, *ay;
     int          n, k;
@@ -64,7 +64,7 @@ PetscErrorCode UFView(UF *mesh, PetscViewer viewer) {
     return 0;
 }
 
-PetscErrorCode UFReadNodes(UF *mesh, char *rootname) {
+PetscErrorCode UMReadNodes(UM *mesh, char *rootname) {
     PetscErrorCode ierr;
     int         m;
     PetscViewer viewer;
@@ -90,7 +90,7 @@ PetscErrorCode UFReadNodes(UF *mesh, char *rootname) {
     return 0;
 }
 
-PetscErrorCode UFReadElements(UF *mesh, char *rootname) {
+PetscErrorCode UMReadElements(UM *mesh, char *rootname) {
     PetscErrorCode ierr;
     PetscViewer viewer;
     int         n_bf;
@@ -127,17 +127,17 @@ PetscErrorCode UFReadElements(UF *mesh, char *rootname) {
     return 0;
 }
 
-PetscErrorCode UFCheckElements(UF *mesh) {
+PetscErrorCode UMCheckElements(UM *mesh) {
     PetscErrorCode ierr;
     const int   *ae;
     int         k, m;
     if ((mesh->K == 0) || (mesh->e == NULL)) {
         SETERRQ(PETSC_COMM_WORLD,1,
-                "number of elements unknown; call UFReadElements() first\n");
+                "number of elements unknown; call UMReadElements() first\n");
     }
     if (mesh->N == 0) {
         SETERRQ(PETSC_COMM_WORLD,2,
-                "node size unknown so element check impossible; call UFReadNodes() first\n");
+                "node size unknown so element check impossible; call UMReadNodes() first\n");
     }
     ierr = ISGetIndices(mesh->e,&ae); CHKERRQ(ierr);
     for (k = 0; k < mesh->K; k++) {
@@ -154,17 +154,17 @@ PetscErrorCode UFCheckElements(UF *mesh) {
     return 0;
 }
 
-PetscErrorCode UFCheckBoundaryFlags(UF *mesh) {
+PetscErrorCode UMCheckBoundaryFlags(UM *mesh) {
     PetscErrorCode ierr;
     const int   *abf;
     int         n;
     if (mesh->bf == NULL) {
         SETERRQ(PETSC_COMM_WORLD,1,
-                "boundary flags not allocated; call UFReadNodes() first\n");
+                "boundary flags not allocated; call UMReadNodes() first\n");
     }
     if (mesh->N == 0) {
         SETERRQ(PETSC_COMM_WORLD,2,
-                "node size unknown so boundary flag check impossible; call UFReadNodes() first\n");
+                "node size unknown so boundary flag check impossible; call UMReadNodes() first\n");
     }
     ierr = ISGetIndices(mesh->bf,&abf); CHKERRQ(ierr);
     for (n = 0; n < mesh->N; n++) {
@@ -183,20 +183,20 @@ PetscErrorCode UFCheckBoundaryFlags(UF *mesh) {
     return 0;
 }
 
-PetscErrorCode UFAssertValid(UF *mesh) {
+PetscErrorCode UMAssertValid(UM *mesh) {
     PetscErrorCode ierr;
     if ((mesh->N == 0) || (!(mesh->x)) || (!(mesh->y))) {
         SETERRQ(PETSC_COMM_WORLD,1,
-                "nodes not created; call UFReadNodes() first\n");
+                "nodes not created; call UMReadNodes() first\n");
     }
-    ierr = UFCheckElements(mesh); CHKERRQ(ierr);
-    ierr = UFCheckBoundaryFlags(mesh); CHKERRQ(ierr);
+    ierr = UMCheckElements(mesh); CHKERRQ(ierr);
+    ierr = UMCheckBoundaryFlags(mesh); CHKERRQ(ierr);
     return 0;
 }
 
-PetscErrorCode UFCreateGlobalVec(UF *mesh, Vec *v) {
+PetscErrorCode UMCreateGlobalVec(UM *mesh, Vec *v) {
     PetscErrorCode ierr;
-    ierr = UFAssertValid(mesh); CHKERRQ(ierr);
+    ierr = UMAssertValid(mesh); CHKERRQ(ierr);
     ierr = VecDuplicate(mesh->x,v); CHKERRQ(ierr);
     return 0;
 }
