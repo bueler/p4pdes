@@ -222,19 +222,19 @@ On $\triangle_\ast$ any linear function is a linear combination of three local (
 \end{equation}
 If $\bx_i\in\overline{\triangle_k}$ then hat function $\psi_i$ satisfies
 \begin{equation}
-\psi_i(x(\xi,\eta),y(\xi,\eta)) = \chi_q(\xi,\eta) \label{eq:un:psichimap}
+\psi_i(x(\xi,\eta),y(\xi,\eta)) = \chi_\ell(\xi,\eta) \label{eq:un:psichimap}
 \end{equation}
-for all $(\xi,\eta)\in\triangle_\ast$, where vertex $q$ of $\triangle_\ast$ maps to $\bx_i$.
+for all $(\xi,\eta)\in\triangle_\ast$, where vertex $\ell$ of $\triangle_\ast$ maps to $\bx_i$.
 
 Recalling both the change-of-variables formula for integrals and the chain rule, by \eqref{eq:un:psichimap} we can write
 \begin{equation}
-F_i^k(\bu) = \rho_k \int_{\triangle_\ast} H_q^k(\bu,\xi,\eta)\,d\xi\,d\eta \label{eq:un:elementintegralreference}
+F_i^k(\bu) = \rho_k \int_{\triangle_\ast} H_\ell^k(\bu,\xi,\eta)\,d\xi\,d\eta \label{eq:un:elementintegralreference}
 \end{equation}
 where
 \begin{equation}
-H_q^k(\bu,\xi,\eta) = \left[a(u^h) \grad u^h \cdot \grad \psi_i - f(u^h) \psi_i\right]_{\triangle_\ast}  \label{eq:un:elementintegrand}
+H_\ell^k(\bu,\xi,\eta) = \left[a(u^h) \grad u^h \cdot \grad \psi_i - f(u^h) \psi_i\right]_{\triangle_\ast}  \label{eq:un:elementintegrand}
 \end{equation}
-for $q=0,1,2$.  Here node $\bx_i$ corresponds to local node number $q$ on $\triangle_\ast$.  Note that ``$\grad$'' in \eqref{eq:un:elementintegrand} refers to derivatives in variables $x,y$.  Exercises \ref{chap:un}.\ref{exer:un:gradientdetails} and \ref{chap:un}.\ref{exer:un:elementintegranddetails} addresses the details implicit in \eqref{eq:un:elementintegrand}.
+for vertex $\ell \in \{0,1,2\}$ of $\triangle_\ast$ corresponding to node $\bx_i$ incident to $\triangle_k$.  Note that ``$\grad$'' in \eqref{eq:un:elementintegrand} refers to derivatives in variables $x,y$.  Exercises \ref{chap:un}.\ref{exer:un:gradientdetails} and \ref{chap:un}.\ref{exer:un:elementintegranddetails} addresses the details implicit in \eqref{eq:un:elementintegrand}.
 
 
 \section{Triangular meshes from \Triangle}
@@ -620,9 +620,9 @@ In the second check we verify the construction of $\bb$ in the case where $f\equ
     \end{pmatrix}$$
 be the Jacobian.  Use the chain rule and \eqref{eq:un:psichimap} to show that
 \begin{equation}
-\grad_{x,y} \psi_i = \frac{1}{\det J} \left<\Delta y_2 \frac{\partial \chi_q}{\partial \xi} - \Delta y_1 \frac{\partial \chi_q}{\partial \eta}, - \Delta x_2 \frac{\partial \chi_q}{\partial \xi} + \Delta x_1 \frac{\partial \chi_q}{\partial \eta}\right>. \label{eq:un:gradpsionref}
+\grad_{x,y} \psi_i = \frac{1}{\det J} \left<\Delta y_2 \frac{\partial \chi_\ell}{\partial \xi} - \Delta y_1 \frac{\partial \chi_\ell}{\partial \eta}, - \Delta x_2 \frac{\partial \chi_\ell}{\partial \xi} + \Delta x_1 \frac{\partial \chi_\ell}{\partial \eta}\right>. \label{eq:un:gradpsionref}
 \end{equation}
-Here $\det J = \Delta x_1 \Delta y_2 - \Delta x_2 \Delta y_1$ and indices $i$ and $q$ have the same relationship as in \eqref{eq:un:psichimap}.  Compare formula \eqref{eq:of:gradpsionref} for the structured case; why is \eqref{eq:un:gradpsionref} more complicated?  % underlying reason is that affine map here includes rotations, while in Chapter \ref{chap:of} it was just translation and axes scaling
+Here indices $i$ and $\ell$ have the same relationship as in \eqref{eq:un:psichimap}.  Comparing formula \eqref{eq:of:gradpsionref} for the structured case, what is the underlying reason why \eqref{eq:un:gradpsionref} is a bit more complicated?  % underlying reason is that affine map here includes rotations, while in Chapter \ref{chap:of} it was just translation and axes scaling
 \item  \label{exer:un:elementintegranddetails}  FIXME
 \end{enumerate}
 
