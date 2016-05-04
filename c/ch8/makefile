@@ -13,4 +13,5 @@ unfem: unfem.o um.o chkopts
 
 distclean:
 	@rm -f *~ *.pyc unfem *.dat *.dat.*
+	(cd meshes/ && ${MAKE} clean)
 

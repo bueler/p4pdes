@@ -22,4 +22,5 @@ for N in $LEVS; do
     'grep' result: foo.txt
     'grep' SNESFunctionEval foo.txt
 done
+rm -f foo.txt
 
