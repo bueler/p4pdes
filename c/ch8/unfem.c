@@ -21,6 +21,7 @@ typedef struct {
     UM  mesh;
     Vec gD;
     //Vec gN;  <--- FIXME TODO
+    int quaddeg;
 } unfemCtx;
 
 double a_fcn(double u, double x, double y) {
@@ -86,19 +87,25 @@ double InnerProd(const double V[2], const double W[2]) {
     return V[0] * W[0] + V[1] * W[1];
 }
 
-// quadrature points and weights from bottom page 7 of Shaodeng notes
-const int    Q = 3; // number of quadrature points
-const double xi[3]  = {1.0/6.0, 2.0/3.0, 1.0/6.0},
-             eta[3] = {1.0/6.0, 1.0/6.0, 2.0/3.0},
-             w[3]   = {1.0/6.0, 1.0/6.0, 1.0/6.0};
+// quadrature points and weights from Shaodeng notes
+const int    Q[3] = {1, 3, 4};
+const double w[3][4] = {{1.0/2.0, NAN, NAN, NAN},
+                        {1.0/6.0, 1.0/6.0, 1.0/6.0, NAN},
+                        {-27.0/96.0, 25.0/96.0, 25.0/96.0, 25.0/96.0}},
+             xi[3][4]  = {{1.0/3.0, NAN, NAN, NAN},
+                          {1.0/6.0, 2.0/3.0, 1.0/6.0, NAN},
+                          {1.0/3.0, 1.0/5.0, 3.0/5.0, 1.0/5.0}},
+             eta[3][4] = {{1.0/3.0, NAN, NAN, NAN},
+                          {1.0/6.0, 1.0/6.0, 2.0/3.0, NAN},
+                          {1.0/3.0, 1.0/5.0, 1.0/5.0, 3.0/5.0}};
 
 PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
     PetscErrorCode ierr;
     unfemCtx     *user = (unfemCtx*)ctx;
-    const int    *abf, *ae, *en;
+    const int    *abf, *ae, *en, deg = user->quaddeg - 1;
     const double *ax, *ay, *agD, *au;
     double       *aF, unode[3], gradu[2], gradpsi[3][2],
-                 uquad[Q], aquad[Q], fquad[Q],
+                 uquad[4], aquad[4], fquad[4],
                  dx1, dx2, dy1, dy2, detJ, xx, yy, sum;
     int          n, k, l, q;
 
@@ -138,10 +145,11 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
             gradu[1] += unode[l] * gradpsi[l][1];
         }
         // function values at quadrature points on element
-        for (q = 0; q < Q; q++) {
-            uquad[q] = eval(unode,xi[q],eta[q]);
-            xx = ax[en[0]] + dx1 * xi[q] + dx2 * eta[q];
-            yy = ay[en[0]] + dy1 * xi[q] + dy2 * eta[q];
+//    ierr = PetscPrintf(PETSC_COMM_WORLD,"deg = %d, Q[deg] = %d\n", deg, Q[deg]); CHKERRQ(ierr);
+        for (q = 0; q < Q[deg]; q++) {
+            uquad[q] = eval(unode,xi[deg][q],eta[deg][q]);
+            xx = ax[en[0]] + dx1 * xi[deg][q] + dx2 * eta[deg][q];
+            yy = ay[en[0]] + dy1 * xi[deg][q] + dy2 * eta[deg][q];
             aquad[q] = a_fcn(uquad[q],xx,yy);
             fquad[q] = f_fcn(uquad[q],xx,yy);
         }
@@ -149,9 +157,9 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
         for (l = 0; l < 3; l++) {
             if (abf[en[l]] < 2) { // if NOT a Dirichlet node
                 sum = 0.0;
-                for (q = 0; q < Q; q++) {
-                    sum += w[q] * ( aquad[q] * InnerProd(gradu,gradpsi[l])
-                                    - fquad[q] * chi(l,xi[q],eta[q]) );
+                for (q = 0; q < Q[deg]; q++) {
+                    sum += w[deg][q] * ( aquad[q] * InnerProd(gradu,gradpsi[l])
+                                         - fquad[q] * chi(l,xi[deg][q],eta[deg][q]) );
                 }
                 aF[en[l]] += fabs(detJ) * sum;
             }
@@ -177,13 +185,17 @@ int main(int argc,char **argv) {
     double      err;
 
     PetscInitialize(&argc,&argv,NULL,help);
+    user.quaddeg = 2;
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "un_", "options for unfem", ""); CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-view",
-           "view loaded nodes and elements at stdout",
-           "unfem.c",view,&view,NULL); CHKERRQ(ierr);
     ierr = PetscOptionsString("-mesh",
            "file name root of mesh (files have .node,.ele extensions)",
            "unfem.c",meshroot,meshroot,sizeof(meshroot),NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsInt("-quaddeg",
+           "quadrature degree (1,2,3)",
+           "unfem.c",user.quaddeg,&(user.quaddeg),NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-view",
+           "view loaded nodes and elements at stdout",
+           "unfem.c",view,&view,NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
     // read mesh object of type UM
@@ -215,8 +227,8 @@ int main(int argc,char **argv) {
     // measure error
     ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
     ierr = VecNorm(u,NORM_INFINITY,&err); CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"result:  |u-u_exact|_inf = %g\n",
-                       err); CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"result for N=%d nodes:  |u-u_exact|_inf = %g\n",
+                       user.mesh.N,err); CHKERRQ(ierr);
 
     // clean-up
     SNESDestroy(&snes);
