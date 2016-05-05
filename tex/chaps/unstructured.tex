@@ -89,6 +89,12 @@ A FEM for the Poisson problem comes from requiring the weak formulation \eqref{e
 
 To make our test function space $H_{0}^1(\Omega)$ a true subspace of $H^1(\Omega)$ we require that $\Omega$ be polygonal, with $\partial\Omega$ a closed polygon (Figure \ref{fig:un:polygon}).  Furthermore we require that segments of $\partial\Omega$ be either entirely in $\partial_D\Omega$ or entirely in $\partial_N\Omega$.  We also assume $\partial_D\Omega$ is a closed set.
 
+\begin{marginfigure}
+\input{tmp/blob.tikz}
+\caption{A polygonal domain $\Omega$ with $\partial_D\Omega$ in bold.}
+\label{fig:un:polygon}
+\end{marginfigure}
+
 By definition, a \emph{triangulation} is a finite set of non-overlapping, non-empty open triangles $\triangle_k\subset \RR^2$ which tile $\Omega$:
 \begin{equation}
 \Th = \left\{\triangle_k \,\Big|\, \cup_k \overline{\triangle}_k = \overline{\Omega} \, \text{ and} \,\, \Omega_k \cap \Omega_l = \emptyset \, \text{ if } k\ne l\right\}. \label{eq:un:triangulation}
@@ -97,12 +103,6 @@ We index the $K$ triangles (elements) in $\Th$ by $k=0,\dots,K-1$.  The $N$ vert
 \begin{equation*}
 \bx_j = (x_j,y_j).
 \end{equation*}
-
-\begin{marginfigure}
-\input{tmp/blob.tikz}
-\caption{A polygonal domain $\Omega$ with $\partial_D\Omega$ in bold.}
-\label{fig:un:polygon}
-\end{marginfigure}
 
 An example triangulation $\Th$ is shown in Figure \ref{fig:un:number-mesh}.  The subscript ``$h$'' in ``$\Th$,'' traditional notation, denotes the typical or maximum size $h$ (e.g.~diameter) of the triangles.  It serves as a reminder of our desired limit $h\to 0$.  In contrast to many references--e.g.~\citet{Elmanetal2005}, which we follow in many ways---all numbering here is zero-based, suitable for a C implementation.
 
@@ -232,6 +232,35 @@ where
 H_\ell^k(\bu,\xi,\eta) = \left[a(u^h) \grad u^h \cdot \grad \psi_i - f(u^h) \psi_i\right]_{\triangle_\ast}  \label{eq:un:elementintegrand}
 \end{equation}
 for the vertex $\ell \in \{0,1,2\}$ of $\triangle_\ast$ corresponding to the node $\bx_i$.  Note that ``$\grad$'' in \eqref{eq:un:elementintegrand} refers to derivatives in variables $x,y$.  Exercises \ref{chap:un}.\ref{exer:un:gradientdetails} and \ref{chap:un}.\ref{exer:un:elementintegranddetails} addresses the details implicit in \eqref{eq:un:elementintegralreference} and \eqref{eq:un:elementintegrand}.
+
+As in Chapter \ref{chap:of}, the integrals \eqref{eq:un:elementintegralreference} will be done approximately by quadrature.  If there are $Q$ quadrature points in $\triangle_\ast$ at locations $(\xi_q,\eta_q)$ and with weights $w_q$ then the rule for \eqref{eq:un:elementintegralreference} is
+\begin{equation}
+F_i^k(\bu) \approx |\det J_k| \sum_{q=0}^{Q-1} w_q H_\ell^k(\bu,\xi_q,\eta_q). \label{eq:un:elementquadraturereference}
+\end{equation}
+
+Unlike in Chapter \ref{chap:of}, however, the elements are not rectangular.  Quadrature rules based on products of one-dimensional integrals can be built \citep{KarniadakisSherwin2013}, but there are also rules constructed specifically for integrating on the reference triangle $\triangle_\ast$.  Degree $1,2,3$ cases appear in Table \ref{tab:un:quadrature}.
+
+\begin{table}[h]
+\vspace{0.1in}
+
+\begin{tabular}{lccc}
+degree & $Q$ & weights $w_q$ & nodes $(\xi_q,\eta_q)$ \\ \hline
+$1$ & $1$ & $1/2$ & $(1/3,1/3)$ \\ \hline
+$2$ & $3$ & \begin{tabular}{c}
+            $1/6$ \\
+            $1/6$ \\
+            $1/6$
+            \end{tabular} & \begin{tabular}{c}
+            $(1/6,1/6)$ \\
+            $(2/3,1/6)$ \\
+            $(1/6,2/3)$
+            \end{tabular} \\ \hline
+$3$ & $4$ & FIXME & FIXME
+\end{tabular}
+
+\vspace{0.1in}
+\caption{Symmetric quadrature rules on the reference triangle $\triangle_\ast$.} \label{tab:un:quadrature}
+\end{table}
 
 FIXME: go ahead and address quadrature here
 
