@@ -145,7 +145,6 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
             gradu[1] += unode[l] * gradpsi[l][1];
         }
         // function values at quadrature points on element
-//    ierr = PetscPrintf(PETSC_COMM_WORLD,"deg = %d, Q[deg] = %d\n", deg, Q[deg]); CHKERRQ(ierr);
         for (q = 0; q < Q[deg]; q++) {
             uquad[q] = eval(unode,xi[deg][q],eta[deg][q]);
             xx = ax[en[0]] + dx1 * xi[deg][q] + dx2 * eta[deg][q];

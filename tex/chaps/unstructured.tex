@@ -227,18 +227,18 @@ Recalling both the change-of-variables formula for integrals and the chain rule,
 \begin{equation}
 F_i^k(\bu) = |\det J_k| \int_{\triangle_\ast} H_\ell^k(\bu,\xi,\eta)\,d\xi\,d\eta \label{eq:un:elementintegralreference}
 \end{equation}
-where
+where the integrand is
 \begin{equation}
-H_\ell^k(\bu,\xi,\eta) = \left[a(u^h) \grad u^h \cdot \grad \psi_i - f(u^h) \psi_i\right]_{\triangle_\ast}  \label{eq:un:elementintegrand}
+H_\ell^k(\bu,\xi,\eta) = \left[a(u^h) \grad u^h \cdot \grad \psi_i - f(u^h) \psi_i\right]_{\triangle_\ast}.  \label{eq:un:elementintegrand}
 \end{equation}
-for the vertex $\ell \in \{0,1,2\}$ of $\triangle_\ast$ corresponding to the node $\bx_i$.  Note that ``$\grad$'' in \eqref{eq:un:elementintegrand} refers to derivatives in variables $x,y$.  Exercises \ref{chap:un}.\ref{exer:un:gradientdetails} and \ref{chap:un}.\ref{exer:un:elementintegranddetails} addresses the details implicit in \eqref{eq:un:elementintegralreference} and \eqref{eq:un:elementintegrand}.
+Here the vertex $\ell \in \{0,1,2\}$ of $\triangle_\ast$ corresponds to the node $\bx_i$.  Note that ``$\grad$'' in \eqref{eq:un:elementintegrand} refers to derivatives in variables $x,y$.  Exercises \ref{chap:un}.\ref{exer:un:gradientdetails} and \ref{chap:un}.\ref{exer:un:elementintegranddetails} addresses the details implicit in \eqref{eq:un:elementintegralreference} and \eqref{eq:un:elementintegrand}.
 
-As in Chapter \ref{chap:of}, the integrals \eqref{eq:un:elementintegralreference} will be done approximately by quadrature.  If there are $Q$ quadrature points in $\triangle_\ast$ at locations $(\xi_q,\eta_q)$ and with weights $w_q$ then the rule for \eqref{eq:un:elementintegralreference} is
+As in Chapter \ref{chap:of}, the integrals \eqref{eq:un:elementintegralreference} will be approximated using quadrature.  Generally, if there are $Q$ quadrature points $(\xi_q,\eta_q) \in \triangle_\ast$ with weights $w_q$ then
 \begin{equation}
 F_i^k(\bu) \approx |\det J_k| \sum_{q=0}^{Q-1} w_q H_\ell^k(\bu,\xi_q,\eta_q). \label{eq:un:elementquadraturereference}
 \end{equation}
 
-Unlike in Chapter \ref{chap:of}, however, the elements are not rectangular.  Quadrature rules based on products of one-dimensional integrals can be built \citep{KarniadakisSherwin2013}, but there are also rules constructed specifically for integrating on the reference triangle $\triangle_\ast$.  Degree $1,2,3$ cases appear in Table \ref{tab:un:quadrature}.
+Unlike in Chapter \ref{chap:of}, however, the elements are not rectangular.  Quadrature rules based on products of one-dimensional integrals can be built \citep{KarniadakisSherwin2013}, but here we use rules constructed for the reference triangle $\triangle_\ast$.  Some cases which are exact for polynomials of degrees $1,2,3$ appear in Table \ref{tab:un:quadrature}.  These are symmetrical Gaussian rules \citep{Dunavant1985} with $Q=1,3,4$ points, respectively (Exercise \ref{chap:un}.\ref{exer:un:checkquadrature}).  Note that the sum of the weights is $1/2$ because the area of $\triangle_\ast$ is $1/2$.
 
 \begin{table}[h]
 \vspace{0.1in}
@@ -255,29 +255,38 @@ $2$ & $3$ & \begin{tabular}{c}
             $(2/3,1/6)$ \\
             $(1/6,2/3)$
             \end{tabular} \\ \hline
-$3$ & $4$ & FIXME & FIXME
+$3$ & $4$ & \begin{tabular}{c}
+            $-27/96$ \\
+            $25/96$ \\
+            $25/96$ \\
+            $25/96$
+            \end{tabular} & \begin{tabular}{c}
+            $(1/3,1/3)$ \\
+            $(1/5,1/5)$ \\
+            $(3/5,1/5)$ \\
+            $(1/5,3/5)$
+            \end{tabular}
 \end{tabular}
 
 \vspace{0.1in}
-\caption{Symmetric quadrature rules on the reference triangle $\triangle_\ast$.} \label{tab:un:quadrature}
+\caption{Symmetric quadrature rules, on the reference triangle $\triangle_\ast$, used to compute \eqref{eq:un:elementquadraturereference}.} \label{tab:un:quadrature}
 \end{table}
 
-FIXME: go ahead and address quadrature here
 
 \section{Triangular meshes from \Triangle}
 
-\PETSc itself does not include tools for triangulating regions of the plane.  We use the widely-available \Triangle\sidenote{See \href{http://www.cs.cmu.edu/~quake/triangle.html}{www.cs.cmu.edu/$\sim$quake/ triangle.html} for documentation and source code.  For this Chapter we recommend that your \PETSc configuration include option \texttt{---download-triangle} and that \texttt{\$PETSC\_ARCH/bin} be on your \texttt{PATH}.} software \citep{Shewchuk1996} for this task.  \Triangle is limited to 2D, and it only writes ASCII files, but it has straightforward details.
+\PETSc itself does not include tools for triangulating regions of the plane.  We use the widely-available \Triangle\sidenote{See \href{http://www.cs.cmu.edu/~quake/triangle.html}{www.cs.cmu.edu/$\sim$quake/ triangle.html} for documentation and source code.} software \citep{Shewchuk1996} for this task.  \Triangle is limited to 2D, and it only writes ASCII files, but it has straightforward details.
 
-\Triangle uses, as input to describe a polygonal region $\Omega$, a simply-formatted ASCII file with extension \texttt{.poly}.  This input data also indicates Dirichlet and Neumann portions of the boundary $\partial \Omega$.  For example, for the polygon shown in Figure \ref{fig:un:polygon} we create the input file \texttt{blob.poly} shown in Code \ref{code:blobpoly}.
+As input to describe a polygonal region $\Omega$, \Triangle uses an ASCII file with extension \texttt{.poly}.  This input also indicates Dirichlet and Neumann portions of the boundary $\partial \Omega$.  For example, the polygon shown in Figure \ref{fig:un:polygon} was created from the hand-built input file \texttt{blob.poly} shown in Code \ref{code:blobpoly}.  Note that \Triangle takes and generates files with 1-based indexing.
 
 \inputfromline{../c/\CODELOC/meshes/blob.poly}{\CODELOC blob.poly}{A description of the boundary polygon in Figure \ref{fig:un:polygon}, suitable for reading by \Triangle.}{8}{code:blobpoly}
 
-The triangulation shown in Figure \ref{fig:un:number-mesh} came from a single command which asks \Triangle to take \texttt{blob.poly} and generate a triangulation which has a polygon output file (option \texttt{-p}), relatively-uniform triangles (option \texttt{-q} for ``quality-checked'' \citep{Shewchuk1996}), and triangles with maximum area of $4.0$ (option \texttt{-a4.0}):
+The triangulation shown in Figure \ref{fig:un:number-mesh} came from a single command which asks \Triangle to generate a triangulation, for the \texttt{blob.poly} polygon, which has a polygon output file (option \texttt{-p}), relatively-uniform triangles (option \texttt{-q} for ``quality-checked'' \citep{Shewchuk1996}), and triangles with maximum area of $4.0$ (option \texttt{-a4.0}):
 \begin{cline}
 $ triangle -pqa4.0 blob
 \end{cline}
 %$
-This command generates three ASCII files, \texttt{blob.1.poly}, \texttt{blob.1.node}, and  \texttt{blob.1.ele}.  These files define the new (i.e.~refined relative to \texttt{blob.poly}) polygonal boundary, node locations, and the elements in the triangulation, respectively.
+This command generates three ASCII files, \texttt{blob.1.poly}, \texttt{blob.1.node}, and  \texttt{blob.1.ele}.  These files define the polygonal boundary, node locations, and elements in the triangulation, respectively.
 
 \Triangle includes a minimal visualization tool.  The command
 \begin{cline}
@@ -650,6 +659,19 @@ be the Jacobian.  Use the chain rule and \eqref{eq:un:psichimap} to show that
 \grad_{x,y} \psi_i = \frac{1}{\det J_k} \left<\Delta y_2 \frac{\partial \chi_\ell}{\partial \xi} - \Delta y_1 \frac{\partial \chi_\ell}{\partial \eta}, - \Delta x_2 \frac{\partial \chi_\ell}{\partial \xi} + \Delta x_1 \frac{\partial \chi_\ell}{\partial \eta}\right>. \label{eq:un:gradpsionref}
 \end{equation}
 Here indices $i$ and $\ell$ have the same relationship as in \eqref{eq:un:psichimap}.  Comparing formula \eqref{eq:of:gradpsionref} for the structured case, what is the underlying reason why \eqref{eq:un:gradpsionref} is a bit more complicated?  % underlying reason is that affine map here includes rotations, while in Chapter \ref{chap:of} it was just translation and axes scaling
-\item  \label{exer:un:elementintegranddetails}  FIXME
+\item  \label{exer:un:elementintegranddetails}  Formula \eqref{eq:un:elementintegrand} might require some interpretation before the implementation becomes clear.  Confirm that, with only mild abuses of notation, formulas \eqref{eq:un:trianglemap} and \eqref{eq:un:psichimap} lead to the valid expansions
+\begin{align*}
+a(u^h) &= a(u^h,\xi,\eta) = a(u^h,x(\xi,\eta),y(\xi,\eta)), \\
+f(u^h) &= f(u^h,\xi,\eta) = f(u^h,x(\xi,\eta),y(\xi,\eta)), \\
+\psi_i &= \chi_{\ell}(\xi,\eta), \\
+u^h &= \sum_{j=0}^{N-1} \left\{\begin{matrix} g_D(\bx_j) \\ u_j \end{matrix}\right\} \chi_{\ell'}(\xi,\eta), \\
+\grad u^h &= \grad_{x,y} u^h = \sum_{j=0}^{N-1} \left\{\begin{matrix} g_D(\bx_j) \\ u_j \end{matrix}\right\} \grad_{x,y} \psi_j.
+\end{align*}
+For the third formula, node $\bx_i$ corresponds to vertex $\ell$ on $\triangle_\ast$.  In the fourth and fifth formulas, node $\bx_j$ corresponds to vertex $\ell'$ on $\triangle_\ast$, and the two cases for the coefficient are when $\bx_j \in \partial_D \Omega$ and $\bx_j \notin \partial_D \Omega$, respectively.  Note that \eqref{eq:un:gradpsionref} allows us to expand $\grad_{x,y} \psi_j$ in the fifth formula.  Taken together, these expansions make \eqref{eq:un:elementintegrand} meaningful and implementable.
+\item  \label{exer:un:checkquadrature}  The degree of accuracy $n=1,2,3$ of the quadrature rules in Table \ref{tab:un:quadrature} can be checked by comparing the exact integral
+\begin{equation}
+\iint_{\triangle_\ast} \xi^i \eta^j\,d\xi d\eta = \frac{i!\,j!}{(i+j+2)!}, \label{eq:un:checkquadrature}
+\end{equation}
+for all cases with $0\le i+j\le n$, against the quadrature result.  Also one should show an inexact quadrature result for some case with $i+j=n+1$.  Write a small program, in the language of your choice, which does these things.
 \end{enumerate}
 
