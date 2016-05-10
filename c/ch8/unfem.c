@@ -189,8 +189,8 @@ int main(int argc,char **argv) {
     // set parameters and exact solution
     user.a_fcn = &a_lin;
     user.f_fcn = &f_lin;
-    user.gD_fcn = &gD_lin;
     user.uexact_fcn = &uexact_lin;
+    user.gD_fcn = &gD_lin;
     switch (user.solncase) {
         case 0 :
             break;
@@ -199,6 +199,11 @@ int main(int argc,char **argv) {
             user.f_fcn = &f_nonlin;
             break;
         case 2 :
+            user.a_fcn = &a_square;
+            user.f_fcn = &f_square;
+            user.uexact_fcn = &uexact_square;
+            user.gD_fcn = &gD_square;
+            break;
         default :
             SETERRQ(PETSC_COMM_WORLD,1,"other solution cases not implemented");
     }
