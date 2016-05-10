@@ -1,19 +1,12 @@
 
-static char help[] = "Unstructured 2D FEM solution of nonlinear Poisson equation.\n"
-"Solves PDE  - div( a(u,x,y) grad u ) = f(u,x,y)  on arbitrary 2D polygonal\n"
-"domain, with Dirichlet data g_D(x,y) on portion of boundary.\n"
-"Functions a(), f(), g_D(), and u_exact() are given as formulas.\n"
+static char help[] = "Unstructured 2D FEM solution of nonlinear Poisson equation\n"
+"    - div( a(u,x,y) grad u ) = f(u,x,y)\n"
+"on arbitrary 2D polygonal domain, with boundary data g_D(x,y), g_N(x,y).\n"
+"Functions a(), f(), g_D(), g_N(), and u_exact() are given as formulas.\n"
 "(There are three different solution cases implemented for these functions.)\n"
 "Input files in PETSc binary format contain node coordinates, elements, and\n"
-"boundary flags stored in files.  Allows non-homogeneous Dirichlet\n"
-"and Neumann conditions along subsets of boundary.\n\n";
-
-// example:
-//   $ ./tri2petsc.py meshes/trap.1 trap.1.dat
-//   $ ./unfem -un_view -un_mesh trap.1.dat -snes_fd
-
-// with view of mat:
-//   $ ./unfem -un_mesh trap.1.dat -snes_fd -snes_monitor -ksp_monitor -mat_view draw -draw_pause 1
+"boundary flags.  Allows non-homogeneous Dirichlet and Neumann conditions\n"
+"along subsets of boundary.\n\n";
 
 #include <petsc.h>
 #include "um.h"
@@ -142,10 +135,9 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
         for (l = 0; l < 3; l++) {
             if (abf[en[l]] < 2) { // if NOT a Dirichlet node
                 sum = 0.0;
-                for (q = 0; q < Q[deg]; q++) {
+                for (q = 0; q < Q[deg]; q++)
                     sum += w[deg][q] * ( aquad[q] * InnerProd(gradu,gradpsi[l])
                                          - fquad[q] * chi(l,xi[deg][q],eta[deg][q]) );
-                }
                 aF[en[l]] += fabs(detJ) * sum;
             }
         }
@@ -159,13 +151,120 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
     return 0;
 }
 
+PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
+    PetscErrorCode ierr;
+    unfemCtx     *user = (unfemCtx*)ctx;
+    const int    *abf, *ae, *en, deg = user->quaddeg - 1;
+    const double *ax, *ay, *au;
+    double       unode[3], gradpsi[3][2],
+                 uquad[4], aquad[4], v[9],
+                 dx1, dx2, dy1, dy2, detJ, xx, yy, sum;
+    int          n, k, l, m, q, cr, cv, row[3];
+
+    ierr = MatZeroEntries(P); CHKERRQ(ierr);
+    ierr = ISGetIndices(user->mesh.bf,&abf); CHKERRQ(ierr);
+    for (n = 0; n < user->mesh.N; n++) {
+        if (abf[n] == 2) {
+            v[0] = 1.0;
+            ierr = MatSetValues(P,1,&n,1,&n,v,ADD_VALUES); CHKERRQ(ierr);
+        }
+    }
+    ierr = ISGetIndices(user->mesh.e,&ae); CHKERRQ(ierr);
+    ierr = VecGetArrayRead(u,&au); CHKERRQ(ierr);
+    ierr = VecGetArrayRead(user->mesh.x,&ax); CHKERRQ(ierr);
+    ierr = VecGetArrayRead(user->mesh.y,&ay); CHKERRQ(ierr);
+    for (k = 0; k < user->mesh.K; k++) {
+        en = ae + 3*k;  // en[0], en[1], en[2] are nodes of element k
+        // geometry of element
+        dx1 = ax[en[1]] - ax[en[0]];
+        dx2 = ax[en[2]] - ax[en[0]];
+        dy1 = ay[en[1]] - ay[en[0]];
+        dy2 = ay[en[2]] - ay[en[0]];
+        detJ = dx1 * dy2 - dx2 * dy1;
+        // gradients of hat functions and u on element
+        for (l = 0; l < 3; l++) {
+            gradpsi[l][0] = ( dy2 * dchi[l][0] - dy1 * dchi[l][1]) / detJ;
+            gradpsi[l][1] = (-dx2 * dchi[l][0] + dx1 * dchi[l][1]) / detJ;
+            unode[l] = (abf[en[l]] == 2) ? user->gD_fcn(ax[en[l]],ay[en[l]]) : au[en[l]];
+        }
+        // function values at quadrature points on element
+        for (q = 0; q < Q[deg]; q++) {
+            uquad[q] = eval(unode,xi[deg][q],eta[deg][q]);
+            xx = ax[en[0]] + dx1 * xi[deg][q] + dx2 * eta[deg][q];
+            yy = ay[en[0]] + dy1 * xi[deg][q] + dy2 * eta[deg][q];
+            aquad[q] = user->a_fcn(uquad[q],xx,yy);
+        }
+        // generate 3x3 element stiffness matrix: FIXME should use symmetric storages
+        cr = 0; // count rows
+        cv = 0; // count values
+        for (l = 0; l < 3; l++) {
+            if (abf[en[l]] != 2) {
+                row[cr] = en[l];
+                cr++;
+                for (m = 0; m < 3; m++) {
+                    if (abf[en[m]] != 2) {
+                        sum = 0.0;
+                        for (q = 0; q < Q[deg]; q++) {
+                            sum += w[deg][q] * aquad[q] * InnerProd(gradpsi[l],gradpsi[m]);
+                        }
+                        v[cv] = fabs(detJ) * sum;
+                        cv++;
+                    }
+                }
+            }
+        }
+        // insert element stiffness matrix
+        ierr = MatSetValues(P,cr,row,cr,row,v,ADD_VALUES); CHKERRQ(ierr);
+    }
+    ierr = ISRestoreIndices(user->mesh.e,&ae); CHKERRQ(ierr);
+    ierr = ISRestoreIndices(user->mesh.bf,&abf); CHKERRQ(ierr);
+    ierr = VecRestoreArrayRead(u,&au); CHKERRQ(ierr);
+    ierr = VecRestoreArrayRead(user->mesh.x,&ax); CHKERRQ(ierr);
+    ierr = VecRestoreArrayRead(user->mesh.y,&ay); CHKERRQ(ierr);
+
+    ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    ierr = MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    if (A != P) {
+        ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+        ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    }
+    return 0;
+}
+
+// nnz[n] = number of nonzeros in row n
+//        = 1 if Dirichlet, degree+1 if interior, degree+2 if Neumann
+// for interior nodes, (vertex) degree = number of incident elements,
+// but for Neumann nodes we need to add one
+PetscErrorCode JacobianGetNNZ(int *nnz, unfemCtx *user) {
+    PetscErrorCode ierr;
+    const int    *abf, *ae, *en;
+    int          n, k, l;
+
+    ierr = ISGetIndices(user->mesh.bf,&abf); CHKERRQ(ierr);
+    for (n = 0; n < user->mesh.N; n++)
+        nnz[n] = (abf[n] == 1) ? 2 : 1;
+    ierr = ISGetIndices(user->mesh.e,&ae); CHKERRQ(ierr);
+    for (k = 0; k < user->mesh.K; k++) {
+        en = ae + 3*k;  // en[0], en[1], en[2] are nodes of element k
+        // FIXME should use symmetric storage
+        for (l = 0; l < 3; l++)
+            if (abf[en[l]] != 2)
+                nnz[en[l]] += 1;
+    }
+    ierr = ISRestoreIndices(user->mesh.e,&ae); CHKERRQ(ierr);
+    ierr = ISRestoreIndices(user->mesh.bf,&abf); CHKERRQ(ierr);
+    return 0;
+}
+
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
     PetscBool   view = PETSC_FALSE;
     char        meshroot[256] = "";
     unfemCtx    user;
     SNES        snes;
+    Mat         A;
     Vec         r, u, uexact;
+    int         *nnz;
     double      err;
 
     PetscInitialize(&argc,&argv,NULL,help);
@@ -218,10 +317,23 @@ int main(int argc,char **argv) {
         ierr = UMView(&(user.mesh),stdoutviewer); CHKERRQ(ierr);
     }
 
+    // setup matrix for Picard (Jacobian-lite), including preallocation
+    ierr = MatCreate(PETSC_COMM_WORLD,&A); CHKERRQ(ierr);
+    ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,user.mesh.N,user.mesh.N); CHKERRQ(ierr);
+    ierr = MatSetFromOptions(A); CHKERRQ(ierr);
+    nnz = (int *)malloc(sizeof(int)*(user.mesh.N));
+    ierr = JacobianGetNNZ(nnz,&user); CHKERRQ(ierr);
+    ierr = MatSeqAIJSetPreallocation(A,-1,nnz); CHKERRQ(ierr);
+    //FIXME parallel version: ierr = MatMPIAIJSetPreallocation(); CHKERRQ(ierr);
+    free(nnz);
+
     // configure SNES
+    ierr = VecCreate(PETSC_COMM_WORLD,&r); CHKERRQ(ierr);
+    ierr = VecSetSizes(r,PETSC_DECIDE,user.mesh.N); CHKERRQ(ierr);
+    ierr = VecSetFromOptions(r); CHKERRQ(ierr);
     ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
-    ierr = UMCreateGlobalVec(&(user.mesh),&r); CHKERRQ(ierr);
     ierr = SNESSetFunction(snes,r,FormFunction,&user);CHKERRQ(ierr);
+    ierr = SNESSetJacobian(snes,A,A,FormPicard,&user);CHKERRQ(ierr);
     ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
 
     // set initial iterate and solve
@@ -234,11 +346,13 @@ int main(int argc,char **argv) {
     ierr = FillExact(uexact,&user); CHKERRQ(ierr);
     ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
     ierr = VecNorm(u,NORM_INFINITY,&err); CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"result for N=%d nodes:  |u-u_exact|_inf = %g\n",
-                       user.mesh.N,err); CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,
+               "case %d result for N=%d nodes:  |u-u_exact|_inf = %g\n",
+               user.solncase,user.mesh.N,err); CHKERRQ(ierr);
 
     // clean-up
     SNESDestroy(&snes);  UMDestroy(&(user.mesh));
+    MatDestroy(&A);
     VecDestroy(&u);  VecDestroy(&r);  VecDestroy(&uexact);
     PetscFinalize();
     return 0;

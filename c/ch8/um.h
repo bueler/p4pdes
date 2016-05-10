@@ -29,8 +29,5 @@ PetscErrorCode UMReadNodes(UM *mesh, char *rootname);
 // read element index triples and boundary flags, creating as IS, from file
 // call UMReadNodes() firsts
 PetscErrorCode UMReadElements(UM *mesh, char *rootname);
-
-// allocate Vec v with size equal to N = number of nodes
-PetscErrorCode UMCreateGlobalVec(UM *mesh, Vec *v);
 #endif
 

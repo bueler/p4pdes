@@ -196,10 +196,3 @@ PetscErrorCode UMReadElements(UM *mesh, char *rootname) {
     return 0;
 }
 
-PetscErrorCode UMCreateGlobalVec(UM *mesh, Vec *v) {
-    PetscErrorCode ierr;
-    ierr = UMAssertValid(mesh); CHKERRQ(ierr);
-    ierr = VecDuplicate(mesh->x,v); CHKERRQ(ierr);
-    return 0;
-}
-
