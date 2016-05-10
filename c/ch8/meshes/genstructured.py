@@ -55,9 +55,9 @@ for j in range(N-1):
         # write second triangle in cell
         ele.write(' %4d  %4d  %4d  %4d\n' % (k, A, B, C))
         k += 1
-        A1 = C
+        A1 = B
         B1 = C + 1
-        C1 = B
+        C1 = C
         ele.write(' %4d  %4d  %4d  %4d\n' % (k, A1, B1, C1))
 ele.write('# created by: %s\n' % commandline)
 ele.close()
