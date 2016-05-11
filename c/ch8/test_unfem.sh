@@ -56,8 +56,10 @@ make unfem
 
 # run unfem and show error, evals, time results
 for (( N=1; N<=${1:-4}; N++ )); do
+    cmd="./unfem -log_view -un_mesh ${NAME}.${N}.dat ${OPTIONS}"
+    echo "running:  $cmd"
     rm -f foo.txt
-    ./unfem -un_mesh $NAME.$N.dat $OPTIONS -snes_max_funcs 100000 -log_view &> foo.txt
+    $cmd &> foo.txt
     'grep' "result for N" foo.txt
     'grep' SNESFunctionEval foo.txt | awk '{print $1,$2}'
     'grep' SNESJacobianEval foo.txt | awk '{print $1,$2}'
