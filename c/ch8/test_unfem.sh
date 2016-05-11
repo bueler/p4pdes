@@ -12,7 +12,7 @@
 # or
 #   ./test_unfem.sh          (same as ./test_unfem.sh 4 1 0)
 
-OPTIONS="-un_quaddeg ${2:-1} -un_case ${3:-0} $4"
+OPTIONS="-un_quaddeg ${2:-1} -un_case ${3:-0} -ksp_type cg -pc_type icc $4"
 # NOTE:   ${2:-1}  expands to $2 if set, otherwise as 1
 
 # generate .poly,.node,.ele files, in meshes/, at each level of refinement
@@ -41,7 +41,7 @@ else  # generate  trap.?.* from trap.poly
     area[8]=0.000002
     cd meshes/
     triangle -pqa${area[0]} $NAME
-    for (( N=1; N<=${1:-4}; N++ )); do
+    for (( N=1; N<${1:-4}; N++ )); do
         triangle -rpqa${area[$N]} $NAME.$N
     done
     cd ..
