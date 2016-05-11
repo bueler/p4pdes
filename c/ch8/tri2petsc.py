@@ -55,7 +55,7 @@ def triangle_read_node(filename):
                 break # nothing more to read
             # read content if headersread = 1 and count is small
             nxyb = line.split()
-            if count+1 != int(nxyb[0]):
+            if count != int(nxyb[0]):
                 print 'ERROR: INDEXING WRONG IN READING NODES'
                 sys.exit(2)
             x[count] = float(nxyb[1])
@@ -104,11 +104,11 @@ def triangle_read_ele(filename,x,y):
                 break # nothing more to read
             # read content if headersread = 1 and count is small
             emabc = line.split()
-            if count+1 != int(emabc[0]):
+            if count != int(emabc[0]):
                 print 'ERROR: INDEXING WRONG IN READING ELEMENTS'
                 sys.exit(2)
             # node indices for this element
-            pp = [int(emabc[1])-1, int(emabc[2])-1, int(emabc[3])-1]
+            pp = [int(emabc[1]), int(emabc[2]), int(emabc[3])]
             # compute element centroid
             kk = [0, 1, 2, 0]  # cycle through nodes
             XX = 0.0
@@ -179,7 +179,7 @@ def triangle_read_poly(filename):
                 # read a line describing a node on the boundary
                 # note px[], py[] should exist
                 nxyb = line.split()
-                if ncount+1 != int(nxyb[0]):
+                if ncount != int(nxyb[0]):
                     print 'ERROR: INDEXING WRONG IN READING NODES ON POLYGON'
                     sys.exit(2)
                 px[ncount] = float(nxyb[1])
@@ -191,10 +191,10 @@ def triangle_read_poly(filename):
                 # read a line describing a boundary segment
                 # note s[] should exist
                 pjkb = line.split()
-                if scount+1 != int(pjkb[0]):
+                if scount != int(pjkb[0]):
                     print 'ERROR: INDEXING WRONG IN READING POLYGON SEGMENTS'
                     sys.exit(2)
-                s[scount,:] = [int(pjkb[1])-1, int(pjkb[2])-1]
+                s[scount,:] = [int(pjkb[1]), int(pjkb[2])]
                 bfs[scount] = int(pjkb[3])
                 dprint(1,'polygon segment (%d,%d)' % tuple(s[scount,:]))
                 scount += 1

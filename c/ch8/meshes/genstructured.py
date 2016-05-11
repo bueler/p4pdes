@@ -22,7 +22,7 @@ N    = (int)(args.N)
 h    = 1.0 / ((float)(N) - 1.0)
 
 def n(i,j):                 # computes node index from local
-    return j*N + i + 1
+    return j*N + i
 
 # write .node file
 node = open(args.file + '.node', 'w')
@@ -48,7 +48,7 @@ ele.write('%d  3  0\n' % K)  # K triangles, 3 nodes per triangle, no attributes
 for j in range(N-1):
     for i in range(N-1):
         # write first triangle in cell
-        k = 2*(j*(N-1) + i) + 1
+        k = 2*(j*(N-1) + i)
         A = n(i,j)
         B = A + 1
         C = n(i,j+1)
@@ -72,7 +72,7 @@ topright    = N*N
 topleft     = N*(N-1)+1
 poly.write('0  2  0  1\n')          # no nodes in this file
 poly.write('%d  1\n' % (M))         # M boundary segments, one marker
-count = 1
+count = 0
 j = 0                               # bottom segments
 for i in range(N-1):
     poly.write(' %4d  %4d  %4d    2\n' % (count,n(i,j),n(i,j)+1))

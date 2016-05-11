@@ -1,4 +1,4 @@
 .PHONY: clean
 
 clean:
-	@rm -f *~ blob.?.* trap.?.* square.?.*
+	@rm -f *~ blob.?.* trap.?.* square.?.* square.1?.*
