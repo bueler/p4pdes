@@ -244,8 +244,10 @@ if __name__ == "__main__":
     petsc = PetscBinaryIO.PetscBinaryIO()
     petsc.writeBinaryFile(args.outfile+'.node',[ox,oy,])
 
-    print 'writing elements and boundary flags as IS to petsc binary file %s.ele' % args.outfile
+    print 'writing elements, boundary flags, segments as IS to petsc binary file %s.ele' % args.outfile
     oe = e.flatten().view(PetscBinaryIO.IS)
     obfn = bfn.view(PetscBinaryIO.IS)
-    petsc.writeBinaryFile(args.outfile+'.ele',[oe,obfn,])
+    os = s.flatten().view(PetscBinaryIO.IS)
+    obfs = bfs.view(PetscBinaryIO.IS)
+    petsc.writeBinaryFile(args.outfile+'.ele',[oe,obfn,os,obfs])
 

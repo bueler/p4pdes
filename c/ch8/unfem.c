@@ -82,7 +82,7 @@ const double w[3][4] = {{1.0/2.0, NAN, NAN, NAN},
 PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
     PetscErrorCode ierr;
     unfemCtx     *user = (unfemCtx*)ctx;
-    const int    *abf, *ae, *en, deg = user->quaddeg - 1;
+    const int    *abfn, *ae, *en, deg = user->quaddeg - 1;
     const double *ax, *ay, *au;
     double       *aF, unode[3], gradu[2], gradpsi[3][2],
                  uquad[4], aquad[4], fquad[4],
@@ -92,12 +92,12 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
     ierr = VecSet(F,0.0); CHKERRQ(ierr);
     ierr = VecGetArray(F,&aF); CHKERRQ(ierr);
     // Dirichlet node residuals
-    ierr = ISGetIndices(user->mesh.bf,&abf); CHKERRQ(ierr);
+    ierr = ISGetIndices(user->mesh.bfn,&abfn); CHKERRQ(ierr);
     ierr = VecGetArrayRead(u,&au); CHKERRQ(ierr);
     ierr = VecGetArrayRead(user->mesh.x,&ax); CHKERRQ(ierr);
     ierr = VecGetArrayRead(user->mesh.y,&ay); CHKERRQ(ierr);
     for (n = 0; n < user->mesh.N; n++) {
-        if (abf[n] == 2)
+        if (abfn[n] == 2)
             aF[n] = au[n] - user->gD_fcn(ax[n],ay[n]);
     }
     // add element contributions to residuals
@@ -119,7 +119,7 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
         gradu[0] = 0.0;
         gradu[1] = 0.0;
         for (l = 0; l < 3; l++) {
-            unode[l] = (abf[en[l]] == 2) ? user->gD_fcn(ax[en[l]],ay[en[l]]) : au[en[l]];
+            unode[l] = (abfn[en[l]] == 2) ? user->gD_fcn(ax[en[l]],ay[en[l]]) : au[en[l]];
             gradu[0] += unode[l] * gradpsi[l][0];
             gradu[1] += unode[l] * gradpsi[l][1];
         }
@@ -133,7 +133,7 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
         }
         // residual contribution for each node of element
         for (l = 0; l < 3; l++) {
-            if (abf[en[l]] < 2) { // if NOT a Dirichlet node
+            if (abfn[en[l]] < 2) { // if NOT a Dirichlet node
                 sum = 0.0;
                 for (q = 0; q < Q[deg]; q++)
                     sum += w[deg][q] * ( aquad[q] * InnerProd(gradu,gradpsi[l])
@@ -143,7 +143,7 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
         }
     }
     ierr = ISRestoreIndices(user->mesh.e,&ae); CHKERRQ(ierr);
-    ierr = ISRestoreIndices(user->mesh.bf,&abf); CHKERRQ(ierr);
+    ierr = ISRestoreIndices(user->mesh.bfn,&abfn); CHKERRQ(ierr);
     ierr = VecRestoreArrayRead(u,&au); CHKERRQ(ierr);
     ierr = VecRestoreArrayRead(user->mesh.x,&ax); CHKERRQ(ierr);
     ierr = VecRestoreArrayRead(user->mesh.y,&ay); CHKERRQ(ierr);
@@ -154,7 +154,7 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
 PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
     PetscErrorCode ierr;
     unfemCtx     *user = (unfemCtx*)ctx;
-    const int    *abf, *ae, *en, deg = user->quaddeg - 1;
+    const int    *abfn, *ae, *en, deg = user->quaddeg - 1;
     const double *ax, *ay, *au;
     double       unode[3], gradpsi[3][2],
                  uquad[4], aquad[4], v[9],
@@ -162,9 +162,9 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
     int          n, k, l, m, q, cr, cv, row[3];
 
     ierr = MatZeroEntries(P); CHKERRQ(ierr);
-    ierr = ISGetIndices(user->mesh.bf,&abf); CHKERRQ(ierr);
+    ierr = ISGetIndices(user->mesh.bfn,&abfn); CHKERRQ(ierr);
     for (n = 0; n < user->mesh.N; n++) {
-        if (abf[n] == 2) {
+        if (abfn[n] == 2) {
             v[0] = 1.0;
             ierr = MatSetValues(P,1,&n,1,&n,v,ADD_VALUES); CHKERRQ(ierr);
         }
@@ -185,7 +185,7 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
         for (l = 0; l < 3; l++) {
             gradpsi[l][0] = ( dy2 * dchi[l][0] - dy1 * dchi[l][1]) / detJ;
             gradpsi[l][1] = (-dx2 * dchi[l][0] + dx1 * dchi[l][1]) / detJ;
-            unode[l] = (abf[en[l]] == 2) ? user->gD_fcn(ax[en[l]],ay[en[l]]) : au[en[l]];
+            unode[l] = (abfn[en[l]] == 2) ? user->gD_fcn(ax[en[l]],ay[en[l]]) : au[en[l]];
         }
         // function values at quadrature points on element
         for (q = 0; q < Q[deg]; q++) {
@@ -198,11 +198,11 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
         cr = 0; // count rows
         cv = 0; // count values
         for (l = 0; l < 3; l++) {
-            if (abf[en[l]] != 2) {
+            if (abfn[en[l]] != 2) {
                 row[cr] = en[l];
                 cr++;
                 for (m = 0; m < 3; m++) {
-                    if (abf[en[m]] != 2) {
+                    if (abfn[en[m]] != 2) {
                         sum = 0.0;
                         for (q = 0; q < Q[deg]; q++) {
                             sum += w[deg][q] * aquad[q] * InnerProd(gradpsi[l],gradpsi[m]);
@@ -217,7 +217,7 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
         ierr = MatSetValues(P,cr,row,cr,row,v,ADD_VALUES); CHKERRQ(ierr);
     }
     ierr = ISRestoreIndices(user->mesh.e,&ae); CHKERRQ(ierr);
-    ierr = ISRestoreIndices(user->mesh.bf,&abf); CHKERRQ(ierr);
+    ierr = ISRestoreIndices(user->mesh.bfn,&abfn); CHKERRQ(ierr);
     ierr = VecRestoreArrayRead(u,&au); CHKERRQ(ierr);
     ierr = VecRestoreArrayRead(user->mesh.x,&ax); CHKERRQ(ierr);
     ierr = VecRestoreArrayRead(user->mesh.y,&ay); CHKERRQ(ierr);
@@ -233,7 +233,7 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
 
 PetscErrorCode JacobianPreallocation(Mat J, unfemCtx *user) {
     PetscErrorCode ierr;
-    const int    *abf, *ae, *en;
+    const int    *abfn, *ae, *en;
     int          *nnz, n, k, l;
 
     // nnz[n] = number of nonzeros in row n
@@ -241,19 +241,19 @@ PetscErrorCode JacobianPreallocation(Mat J, unfemCtx *user) {
     // for interior nodes, (vertex) degree = number of incident elements,
     // but for Neumann nodes we need to add one
     nnz = (int *)malloc(sizeof(int)*(user->mesh.N));
-    ierr = ISGetIndices(user->mesh.bf,&abf); CHKERRQ(ierr);
+    ierr = ISGetIndices(user->mesh.bfn,&abfn); CHKERRQ(ierr);
     for (n = 0; n < user->mesh.N; n++)
-        nnz[n] = (abf[n] == 1) ? 2 : 1;
+        nnz[n] = (abfn[n] == 1) ? 2 : 1;
     ierr = ISGetIndices(user->mesh.e,&ae); CHKERRQ(ierr);
     for (k = 0; k < user->mesh.K; k++) {
         en = ae + 3*k;  // en[0], en[1], en[2] are nodes of element k
         // FIXME should use symmetric storage
         for (l = 0; l < 3; l++)
-            if (abf[en[l]] != 2)
+            if (abfn[en[l]] != 2)
                 nnz[en[l]] += 1;
     }
     ierr = ISRestoreIndices(user->mesh.e,&ae); CHKERRQ(ierr);
-    ierr = ISRestoreIndices(user->mesh.bf,&abf); CHKERRQ(ierr);
+    ierr = ISRestoreIndices(user->mesh.bfn,&abfn); CHKERRQ(ierr);
     ierr = MatSeqAIJSetPreallocation(J,-1,nnz); CHKERRQ(ierr);
     free(nnz);
     return 0;
