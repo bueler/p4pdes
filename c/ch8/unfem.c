@@ -19,7 +19,7 @@ typedef struct {
     double (*a_fcn)(double, double, double);
     double (*f_fcn)(double, double, double);
     double (*gD_fcn)(double, double);
-    double (*gN_fcn)(double, double);
+    double (*gN_fcn)(double, double);  // FIXME non-homo Neumann test case needed
     double (*uexact_fcn)(double, double);
 } unfemCtx;
 
@@ -82,12 +82,13 @@ const double w[3][4] = {{1.0/2.0, NAN, NAN, NAN},
 PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
     PetscErrorCode ierr;
     unfemCtx     *user = (unfemCtx*)ctx;
-    const int    *abfn, *ae, *en, deg = user->quaddeg - 1;
+    const int    *abfn, *ae, *as, *abfs, *en, deg = user->quaddeg - 1;
     const double *ax, *ay, *au;
     double       *aF, unode[3], gradu[2], gradpsi[3][2],
                  uquad[4], aquad[4], fquad[4],
-                 dx1, dx2, dy1, dy2, detJ, xx, yy, sum;
-    int          n, k, l, q;
+                 dx1, dx2, dy1, dy2, detJ,
+                 ls, sint, xx, yy, sum;
+    int          n, p, na, nb, k, l, q;
 
     ierr = VecSet(F,0.0); CHKERRQ(ierr);
     ierr = VecGetArray(F,&aF); CHKERRQ(ierr);
@@ -97,10 +98,28 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
     ierr = VecGetArrayRead(user->mesh.x,&ax); CHKERRQ(ierr);
     ierr = VecGetArrayRead(user->mesh.y,&ay); CHKERRQ(ierr);
     for (n = 0; n < user->mesh.N; n++) {
-        if (abfn[n] == 2)
+        if (abfn[n] == 2)  // node is Dirichlet
             aF[n] = au[n] - user->gD_fcn(ax[n],ay[n]);
     }
-    // add element contributions to residuals
+    // Neumann segment contributions
+    ierr = ISGetIndices(user->mesh.s,&as); CHKERRQ(ierr);
+    ierr = ISGetIndices(user->mesh.bfs,&abfs); CHKERRQ(ierr);
+    for (p = 0; p < user->mesh.PS; p++) {
+        if (abfs[p] == 1) {  // segment is Neumann
+            na = as[2*p+0];  // nodes at end of segment
+            nb = as[2*p+1];
+            ls = sqrt(pow(ax[na]-ax[nb],2) + pow(ay[na]-ay[nb],2)); // length of segment
+            // midpoint rule; psi_na=psi_nb=0.5 at midpoint of segment
+            sint = 0.5 * user->gN_fcn(0.5*(ax[na]+ax[nb]),0.5*(ay[na]+ay[nb])) * ls;
+            if (abfn[na] != 2)  // node at end of segment could be Dirichlet
+                aF[na] -= sint;
+            if (abfn[nb] != 2)
+                aF[nb] -= sint;
+        }
+    }
+    ierr = ISRestoreIndices(user->mesh.s,&as); CHKERRQ(ierr);
+    ierr = ISRestoreIndices(user->mesh.bfs,&abfs); CHKERRQ(ierr);
+    // element contributions
     ierr = ISGetIndices(user->mesh.e,&ae); CHKERRQ(ierr);
     for (k = 0; k < user->mesh.K; k++) {
         en = ae + 3*k;  // en[0], en[1], en[2] are nodes of element k
@@ -194,7 +213,7 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
             yy = ay[en[0]] + dy1 * xi[deg][q] + dy2 * eta[deg][q];
             aquad[q] = user->a_fcn(uquad[q],xx,yy);
         }
-        // generate 3x3 element stiffness matrix: FIXME should use symmetric storages
+        // generate 3x3 element stiffness matrix: FIXME should use symmetric storage
         cr = 0; // count rows
         cv = 0; // count values
         for (l = 0; l < 3; l++) {
