@@ -22,6 +22,10 @@ double gD_lin(double x, double y) {
     return uexact_lin(x,y);
 }
 
+double gN_lin(double x, double y) {
+    return 0.0;
+}
+
 // NONLINEAR PROBLEM, NONHOMOGENEOUS DIRICHLET, HOMOGENEOUS NEUMANN
 
 double a_nonlin(double u, double x, double y) {
@@ -35,8 +39,8 @@ double f_nonlin(double u, double x, double y) {
 }
 
 // uexact_nonlin = uexact_lin
-
 // gD_nonlin = gD_lin
+// gN_nonlin = gN_lin
 
 // LINEAR PROBLEM, HOMOGENEOUS DIRICHLET, SQUARE DOMAIN, CHAPTER 3
 
@@ -63,5 +67,6 @@ double gD_square(double x, double y) {
     return uexact_square(x,y);
 }
 
+// gN_fcn() will be NULL in square case, and cause seg fault if called
 #endif
 

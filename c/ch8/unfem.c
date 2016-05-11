@@ -19,7 +19,7 @@ typedef struct {
     double (*a_fcn)(double, double, double);
     double (*f_fcn)(double, double, double);
     double (*gD_fcn)(double, double);
-    //double (*gN_fcn)(double, double);  <--- FIXME TODO
+    double (*gN_fcn)(double, double);
     double (*uexact_fcn)(double, double);
 } unfemCtx;
 
@@ -292,6 +292,7 @@ int main(int argc,char **argv) {
     user.f_fcn = &f_lin;
     user.uexact_fcn = &uexact_lin;
     user.gD_fcn = &gD_lin;
+    user.gN_fcn = &gN_lin;
     switch (user.solncase) {
         case 0 :
             break;
@@ -304,6 +305,7 @@ int main(int argc,char **argv) {
             user.f_fcn = &f_square;
             user.uexact_fcn = &uexact_square;
             user.gD_fcn = &gD_square;
+            user.gN_fcn = NULL;  // seg fault if ever called
             break;
         default :
             SETERRQ(PETSC_COMM_WORLD,1,"other solution cases not implemented");

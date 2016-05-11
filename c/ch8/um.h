@@ -35,7 +35,7 @@ PetscErrorCode UMView(UM *mesh, PetscViewer viewer);
 PetscErrorCode UMReadNodes(UM *mesh, char *rootname);
 
 // read element index triples, boundary segments, and boundary node/segment flags,
-// creating as IS, from file; call UMReadNodes() first
+// each creating as an IS, from file; call UMReadNodes() first
 PetscErrorCode UMReadElements(UM *mesh, char *rootname);
 #endif
 
