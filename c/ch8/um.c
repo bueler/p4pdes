@@ -4,6 +4,7 @@
 PetscErrorCode UMInitialize(UM *mesh) {
     mesh->N = 0;
     mesh->K = 0;
+    mesh->PS = 0;
     mesh->x = NULL;
     mesh->y = NULL;
     mesh->e = NULL;
