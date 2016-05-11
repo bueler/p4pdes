@@ -231,15 +231,16 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
     return 0;
 }
 
-// nnz[n] = number of nonzeros in row n
-//        = 1 if Dirichlet, degree+1 if interior, degree+2 if Neumann
-// for interior nodes, (vertex) degree = number of incident elements,
-// but for Neumann nodes we need to add one
-PetscErrorCode JacobianGetNNZ(int *nnz, unfemCtx *user) {
+PetscErrorCode JacobianPreallocation(Mat J, unfemCtx *user) {
     PetscErrorCode ierr;
     const int    *abf, *ae, *en;
-    int          n, k, l;
+    int          *nnz, n, k, l;
 
+    // nnz[n] = number of nonzeros in row n
+    //        = 1 if Dirichlet, degree+1 if interior, degree+2 if Neumann
+    // for interior nodes, (vertex) degree = number of incident elements,
+    // but for Neumann nodes we need to add one
+    nnz = (int *)malloc(sizeof(int)*(user->mesh.N));
     ierr = ISGetIndices(user->mesh.bf,&abf); CHKERRQ(ierr);
     for (n = 0; n < user->mesh.N; n++)
         nnz[n] = (abf[n] == 1) ? 2 : 1;
@@ -253,6 +254,8 @@ PetscErrorCode JacobianGetNNZ(int *nnz, unfemCtx *user) {
     }
     ierr = ISRestoreIndices(user->mesh.e,&ae); CHKERRQ(ierr);
     ierr = ISRestoreIndices(user->mesh.bf,&abf); CHKERRQ(ierr);
+    ierr = MatSeqAIJSetPreallocation(J,-1,nnz); CHKERRQ(ierr);
+    free(nnz);
     return 0;
 }
 
@@ -264,7 +267,6 @@ int main(int argc,char **argv) {
     SNES        snes;
     Mat         A;
     Vec         r, u, uexact;
-    int         *nnz;
     double      err;
 
     PetscInitialize(&argc,&argv,NULL,help);
@@ -321,11 +323,7 @@ int main(int argc,char **argv) {
     ierr = MatCreate(PETSC_COMM_WORLD,&A); CHKERRQ(ierr);
     ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,user.mesh.N,user.mesh.N); CHKERRQ(ierr);
     ierr = MatSetFromOptions(A); CHKERRQ(ierr);
-    nnz = (int *)malloc(sizeof(int)*(user.mesh.N));
-    ierr = JacobianGetNNZ(nnz,&user); CHKERRQ(ierr);
-    ierr = MatSeqAIJSetPreallocation(A,-1,nnz); CHKERRQ(ierr);
-    //FIXME parallel version: ierr = MatMPIAIJSetPreallocation(); CHKERRQ(ierr);
-    free(nnz);
+    ierr = JacobianPreallocation(A,&user); CHKERRQ(ierr);
 
     // configure SNES
     ierr = VecCreate(PETSC_COMM_WORLD,&r); CHKERRQ(ierr);
