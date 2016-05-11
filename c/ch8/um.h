@@ -1,7 +1,7 @@
 #ifndef UM_H_
 #define UM_H_
 
-// abstract data type (object) for holding unstructured mesh
+// data type and functions for unstructured mesh
 
 typedef struct {
     int      N,     // number of nodes
