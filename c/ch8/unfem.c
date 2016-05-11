@@ -108,6 +108,7 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
         if (abfs[p] == 1) {  // segment is Neumann
             na = as[2*p+0];  // nodes at end of segment
             nb = as[2*p+1];
+            //PetscPrintf(PETSC_COMM_WORLD,"segment %d=(%d,%d) is Neumann\n",p,na,nb); //STRIP
             ls = sqrt(pow(ax[na]-ax[nb],2) + pow(ay[na]-ay[nb],2)); // length of segment
             // midpoint rule; psi_na=psi_nb=0.5 at midpoint of segment
             sint = 0.5 * user->gN_fcn(0.5*(ax[na]+ax[nb]),0.5*(ay[na]+ay[nb])) * ls;
@@ -296,7 +297,7 @@ int main(int argc,char **argv) {
     user.solncase = 0;
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "un_", "options for unfem", ""); CHKERRQ(ierr);
     ierr = PetscOptionsInt("-case",
-           "exact solution cases: 0=linear, 1=nonlinear, 2=chapter3",
+           "exact solution cases: 0=linear, 1=nonlinear, 2=nonhomoNeumann, 3=chapter3",
            "unfem.c",user.solncase,&(user.solncase),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsString("-mesh",
            "file name root of mesh (files have .node,.ele extensions)",
@@ -323,6 +324,9 @@ int main(int argc,char **argv) {
             user.f_fcn = &f_nonlin;
             break;
         case 2 :
+            user.gN_fcn = &gN_linneu;
+            break;
+        case 3 :
             user.a_fcn = &a_square;
             user.f_fcn = &f_square;
             user.uexact_fcn = &uexact_square;
