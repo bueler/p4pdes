@@ -213,7 +213,7 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
             yy = ay[en[0]] + dy1 * xi[deg][q] + dy2 * eta[deg][q];
             aquad[q] = user->a_fcn(uquad[q],xx,yy);
         }
-        // generate 3x3 element stiffness matrix: FIXME should use symmetric storage
+        // generate 3x3 element stiffness matrix
         cr = 0; // count rows
         cv = 0; // count values
         for (l = 0; l < 3; l++) {
@@ -247,6 +247,10 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
         ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
         ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
     }
+    ierr = MatSetOption(P,MAT_NEW_NONZERO_LOCATION_ERR,PETSC_TRUE); CHKERRQ(ierr);
+    //PetscBool sym = PETSC_FALSE;
+    // ierr = MatIsSymmetric(P,1.0e-12,&sym); CHKERRQ(ierr);
+    // if (!sym) { SETERRQ(PETSC_COMM_WORLD,1,"assembled matrix not symmetric ... stopping\n"); }
     return 0;
 }
 
@@ -266,7 +270,6 @@ PetscErrorCode JacobianPreallocation(Mat J, unfemCtx *user) {
     ierr = ISGetIndices(user->mesh.e,&ae); CHKERRQ(ierr);
     for (k = 0; k < user->mesh.K; k++) {
         en = ae + 3*k;  // en[0], en[1], en[2] are nodes of element k
-        // FIXME should use symmetric storage
         for (l = 0; l < 3; l++)
             if (abfn[en[l]] != 2)
                 nnz[en[l]] += 1;
@@ -344,6 +347,7 @@ int main(int argc,char **argv) {
     ierr = MatCreate(PETSC_COMM_WORLD,&A); CHKERRQ(ierr);
     ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,user.mesh.N,user.mesh.N); CHKERRQ(ierr);
     ierr = MatSetFromOptions(A); CHKERRQ(ierr);
+    ierr = MatSetOption(A,MAT_SYMMETRIC,PETSC_TRUE); CHKERRQ(ierr);
     ierr = JacobianPreallocation(A,&user); CHKERRQ(ierr);
 
     // configure SNES
