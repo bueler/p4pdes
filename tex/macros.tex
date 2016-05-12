@@ -79,9 +79,9 @@
 \newcommand{\complabel}[2]{#1 \\ \footnotesize #2}
 \newcommand{\usedlabel}[2]{\complabel{#1}{\emph{#2}}}
 
-% usage: \standardSNESstack{scale}{objective}{Jacobian}{DMDA}{DMPlex}
-%   where last 4 args are either "dashed" or empty
-\def \standardSNESstack#1#2#3#4#5{
+% usage: \standardSNESstack{scale}{objective}{Jacobian}{DMDA}
+%   where last 3 args are either "dashed" or empty
+\def \standardSNESstack#1#2#3#4{
 \begin{tikzpicture}[scale=#1,
                     >={Latex[length=2mm]},
   component/.style={
@@ -89,17 +89,16 @@
   userfcn/.style={
      rounded corners,draw,fill=white,draw,align=center,line width=1pt,font={\itshape,\normalsize}}]
 
-\draw[line width=1pt] (3,8) node[userfcn,minimum width=80mm] (usercode) {user code \\ \vspace{10mm}};
-\draw[line width=1pt] (-0.5,8.2) node[userfcn,#2] (objcode) {objective};
-\draw[line width=1pt] (3,7.5) node[userfcn] (rescode) {residual};
-\draw[line width=1pt] (6.7,8.2) node[userfcn,#3] (jaccode) {Jacobian};
+\draw[line width=1pt] (3,7) node[userfcn,minimum width=95mm] (usercode) {user code \\ \vspace{10mm}};
+\draw[line width=1pt] (-0.5,7.2) node[userfcn,#2] (objcode) {objective};
+\draw[line width=1pt] (3,6.5) node[userfcn] (rescode) {residual};
+\draw[line width=1pt] (6.7,7.2) node[userfcn,#3] (jaccode) {Jacobian};
 
 \draw[line width=1pt] (-0.5,4) node[component] (snes) {\complabel{\pSNES}{nonlinear solver}};
 \draw[line width=1pt] (-0.5,2) node[component] (ksp)  {\complabel{\pKSP}{linear solver}};
 \draw[line width=1pt] (-0.5,0) node[component] (pc)   {\complabel{\pPC}{preconditioner}};
 
 \draw[line width=1pt] (4,4) node[component,#4] (dmda) {\complabel{\pDMDA}{structured grid}};
-\draw[line width=1pt,dashed] (8.5,4.5) node[component,#5] (dmplex) {\complabel{\pDMPlex}{mesh}};
 
 \draw[line width=1pt] (3,0) node[component] (matj)   {\usedlabel{\pMat}{Jacobian}};
 \draw[line width=1pt] (7,0) node[component] (vecs)   {\pVecs \\ \footnotesize  \emph{solution, other fields}};
@@ -111,16 +110,15 @@
    (jaccode.south) edge[->,bend left,#3] node {} (matj)
    ([xshift=-10em]usercode.south) edge[->] node {} (snes)
    ([xshift=2em]usercode.south) edge[->,#4] node {} (dmda)
-   ([xshift=14em]usercode.south) edge[->,#5] node {} (dmplex)
    ([xshift=9em]usercode.south) edge[->] node {} (vecs)
    (snes) edge node {} (ksp)
    (ksp) edge node {} (pc);
 \end{tikzpicture}
 }
 
-% usage: \standardTSstack{scale}{Jacobian}{DMDA}{DMPlex}
-%   where last 3 args are either "dashed" or empty
-\def \standardTSstack#1#2#3#4{
+% usage: \standardTSstack{scale}{Jacobian}{DMDA}
+%   where last 2 args are either "dashed" or empty
+\def \standardTSstack#1#2#3{
 \begin{tikzpicture}[scale=#1,
                     >={Latex[length=2mm]},
   component/.style={
@@ -128,9 +126,9 @@
   userfcn/.style={
      rounded corners,draw,fill=white,draw,align=center,line width=1pt,font={\itshape,\normalsize}}]
 
-\draw[line width=1pt] (3,8) node[userfcn,minimum width=80mm] (usercode) {user code \\ \vspace{10mm}};
-\draw[line width=1pt] (1,7.7) node[userfcn] (rescode) {right side};
-\draw[line width=1pt] (5.5,7.7) node[userfcn,#2] (jaccode) {Jacobian};
+\draw[line width=1pt] (3,8) node[userfcn,minimum width=90mm] (usercode) {user code \\ \vspace{10mm}};
+\draw[line width=1pt] (1,7.7) node[userfcn] (rescode) {right-hand side (RHS)};
+\draw[line width=1pt] (5.5,7.7) node[userfcn,#2] (jaccode) {RHS Jacobian};
 
 \draw[line width=1pt] (-0.5,5.0) node[component] (ts) {\complabel{\pTS}{time-stepping}};
 
@@ -138,20 +136,18 @@
 \draw[line width=1pt] (-0.5,1) node[component] (ksp)  {\complabel{\pKSP}{linear solver}};
 \draw[line width=1pt] (-0.5,-1) node[component] (pc)   {\complabel{\pPC}{preconditioner}};
 
-\draw[line width=1pt] (4,4) node[component,#3] (dmda) {\complabel{\pDMDA}{structured grid}};
-\draw[line width=1pt,dashed] (8.5,4.5) node[component,#4] (dmplex) {\complabel{\pDMPlex}{mesh}};
+\draw[line width=1pt] (3.5,3.5) node[component,#3] (dmda) {\complabel{\pDMDA}{structured grid}};
 
 \draw[line width=1pt] (3,0) node[component] (matj)   {\usedlabel{\pMat}{Jacobian}};
 \draw[line width=1pt] (7,0) node[component] (vecs)   {\pVecs \\ \footnotesize  \emph{solution, other fields}};
 
 \path
-   ([xshift=2em]rescode.south) edge[->,bend left] node {} ([xshift=2.5em]vecs.north)
-   ([xshift=1em]jaccode.south) edge[->,#2] node {} ([xshift=1em]vecs.north)
+   ([xshift=2em]rescode.south) edge[->,bend left] node {} ([xshift=-2em]vecs.north)
+   ([xshift=1.3em]jaccode.south) edge[->,#2] node {} ([xshift=0em]vecs.north)
    (jaccode.south) edge[->,bend left,#2] node {} (matj)
    ([xshift=-10em]usercode.south) edge[->] node {} (ts)
    ([xshift=2em]usercode.south) edge[->,#3] node {} (dmda)
-   ([xshift=14em]usercode.south) edge[->,#4] node {} (dmplex)
-   ([xshift=9em]usercode.south) edge[->] node {} (vecs)
+   ([xshift=10em]usercode.south) edge[->] node {} ([xshift=2em]vecs.north)
    (ts) edge node {} (snes)
    (snes) edge node {} (ksp)
    (ksp) edge node {} (pc);
