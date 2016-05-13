@@ -10,7 +10,7 @@ static char help[] = "Unstructured 2D FEM solution of nonlinear Poisson equation
 
 #include <petsc.h>
 #include "um.h"
-#include "solutioncases.h"
+#include "cases.h"
 
 typedef struct {
     UM     mesh;

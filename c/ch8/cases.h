@@ -1,5 +1,5 @@
-#ifndef SOLUTIONCASES_H_
-#define SOLUTIONCASES_H_
+#ifndef CASES_H_
+#define CASES_H_
 
 // -----------------------------------------------------------------------------
 // CASE 0
