@@ -304,7 +304,7 @@ $ cd c/ch8/meshes
 $ triangle -pqa0.5 trap
 \end{cline}
 %$
-This command generates three ASCII files, \texttt{trap.1.node}, \texttt{trap.1.ele}, and \texttt{trap.1.poly}, defining the new node locations, elements (i.e.~as triples of node indices), and segments in the polynomial boundary (as pairs of node indices), respectively.\sidenote{The reader should examine these various files while referring to the Figures.}  The triangulation has $N=8$ nodes, $K=6$ elements, $P=8$ boundary segments, $n_D=5$ Dirichlet nodes, and $n_N=4$ segments in the Neumann boundary.  Observe that, whereas \texttt{trap.poly} describes the boundary using only 4 segments, additional nodes have been added in the meshing process.
+This command generates three ASCII files, \texttt{trap.1.node}, \texttt{trap.1.ele}, and \texttt{trap.1.poly}, defining the new node locations, elements (i.e.~as triples of node indices), and segments in the polynomial boundary (as pairs of node indices), respectively.
 
 \begin{figure}
 \input{tmp/trap.1.tikz}
@@ -312,18 +312,26 @@ This command generates three ASCII files, \texttt{trap.1.node}, \texttt{trap.1.e
 \label{fig:un:trapone}
 \end{figure}
 
+\inputwhole{misc/trap.1.node}{\CODELOC meshes/trap.1.node}{\Triangle-generated ASCII file for node locations and nodal boundary flags.}{code:traponenode}
+
+\inputwhole{misc/trap.1.ele}{\CODELOC meshes/trap.1.ele}{\Triangle-generated ASCII file with element index triples.}{code:traponeele}
+
+As seen in Figure \ref{fig:un:trapone} and in the listings Code \ref{code:traponenode}, \ref{code:traponeele}, \ref{code:traponepoly}, the triangulation in files \texttt{trap.1.\{node,ele,poly\}} has $N=8$ nodes, $K=6$ elements, $P=8$ boundary segments, $n_D=5$ Dirichlet nodes, and $n_N=4$ segments in the Neumann boundary.  By giving value ``$2$'' to the Dirichlet nodes in the original \texttt{trap.poly} input, and because \Triangle itself uses ``$0$'' for non-boundary and ``$1$'' for un-flagged boundary nodes, we have this boundary flag scheme:
+\begin{itemize}
+\item[0] interior node,
+\item[1] Neumann boundary node or segment, and
+\item[2] Dirichlet node or segment.
+\end{itemize}
+Observe that, though \texttt{trap.poly} describes the boundary using only 4 segments, additional boundary nodes and segments have been added in generating the triangulation.
+
+\inputwhole{misc/trap.1.poly}{\CODELOC meshes/trap.1.poly}{\Triangle-generated ASCII file for the boundary polygon, as segments with nodal indices, and with segment boundary flags.}{code:traponepoly}
+
 We will test the FEM on a sequence of refined grids.  For an example of a refinement, the command
 \begin{cline}
 $ triangle -rpqa0.1 trap.1
 \end{cline}
 %$
-generates ASCII files \texttt{trap.2.\{node,ele,poly\}} with $N=33$ nodes, $K=33$ elements, and $P=19$ boundary segments for the mesh shown in Figure \ref{fig:un:traptwo}.  Refinement (option \texttt{-r}) here means that nodes in the \texttt{trap.1} files are retained, but there is no such inclusion relationship for the edges or triangles.  Also, we see that the symmetry of the triangulation in the \texttt{trap.1} files was coincidental and is not intrinsic to the original triangulation or refinement algorithms.
-
-\begin{figure}
-\input{tmp/trap.2.tikz}
-\caption{The triangulation described by \texttt{trap.2.\{node,ele,poly\}}.}
-\label{fig:un:traptwo}
-\end{figure}
+generates ASCII files \texttt{trap.2.\{node,ele,poly\}} with $N=33$ nodes, $K=33$ elements, and $P=19$ boundary segments for the mesh shown in Figure \ref{fig:un:traptwo}.  Refinement (option \texttt{-r}) here means that nodes in the \texttt{trap.1} files are retained, but there is no such inclusion relationship for the edges or triangles.  We see that the symmetry of the triangulation in the \texttt{trap.1} files was essentiall coincidental.  Symmetry is not intrinsic to the original triangulation or refinement algorithms, even when the original data is symmetric.
 
 \Triangle includes a minimal visualization tool.  The command
 \begin{cline}
@@ -332,38 +340,84 @@ $ showme trap
 %$
 displays graphically the boundary polygon from \texttt{trap.poly} and/or one of the levels of  triangulation from the \texttt{trap.\{1,2\}} files.
 
+\begin{figure}
+\input{tmp/trap.2.tikz}
+\caption{The triangulation described by \texttt{trap.2.\{node,ele,poly\}}.}
+\label{fig:un:traptwo}
+\end{figure}
 
-\section{From ASCII files to \PETSc \pIS and \pVec}
+
+\section{From ASCII files to \PETSc \pVecs and \pISs}
 
 Our plan is to traverse the lists of elements $\triangle_k$ and Neumann boundary segments $s_\nu$ so as to compute the residuals $F_i(\bu)$ from equations \eqref{eq:un:elementquadraturereference} and \eqref{eq:un:segmentquadrature}, respectively.  The traversal is fast if the mesh data are stored in \PETSc objects, so we first convert the above \Triangle-generated ASCII files into \pVecs and \pISs using a Python script \texttt{tri2petsc.py}.
 
-FIXME: node coordinates into \pVec and \texttt{.vec}
+An abstract description clarifies what is needed.  There are two kinds of ``data'' to describe the mesh, \emph{geometrical} and \emph{topological}.  Here the geometry is described simply by the locations of the nodes, a pair of real numbers.  For simplicity we store these $x$ and $y$ coordinates as separate length-$N$ (sequential) \pVecs.  For the topology we need descriptions of which elements (triangles) are incident to which nodes (vertices), a task which only requires integer indices.  That is, we refer to a node simply by a global index into the coordinate \pVecs for $(x,y)$.  Thus each element is, topologically, just a triple of integers in the range $0,\dots,N-1$.  Similarly, a segment of the polygonal boundary is simply a pair of node indices referring to the endpoints.
 
-FIXME: explain what is an \pIS; we use it here to store node topology
+The \PETSc \pIS type is convenient for storing these integers.\sidenote{In this Chapter we do not exploit the ``main purpose'' of an \pIS in distributed (multi-process) indexing.}  The reader may regard an \pIS as an ``integer-valued \pVec'' without any loss of meaning in the current use.  The \pIS storing the element index triples holds $3K$ integers and the \pIS for boundary segments holds $2P$ integers.
 
-FIXME: element triples, segment pairs, Dirichlet/Neumann markers into \pIS.  Will read ASCII into Python (not C) and write out \pVec, \pIS with \texttt{PetscBinaryIO.py}.  C code will read \pVec, \pIS with \texttt{VecLoad(),ISLoad()}
+Some care is needed in recording the Dirichlet and Neumann parts of the boundary.  First, one cannot tell if an edge in the triangulation is a boundary segment just from whether the endpoints are in the boundary.\sidenote{For example, the edge from node 5 to node 7 in Figure \ref{fig:un:number-mesh} is not a boundary segment.}  Second, the endpoints of a boundary segment could be nodes in the (closed) Dirchlet boundary, while the segment itself is in the (relatively-open) Neumann boundary.  Therefore, despite the apparent redundancy, we will separately store the flags for the nodes, indicating whether they are interior ($0$) or boundary ($>0$) or Dirichlet boundary ($2$), and the flags for the boundary segments indicating whether they are in the Neumann ($1$) or Dirichlet ($2$) boundary, according to the scheme indicated earlier.  Two more \pISs are used to store these flags.
 
-FIXME THIS IS STILL A VALID POINT  In this part there is an important detail about triangulations, which affects the data structure for elements.  Namely, we cannot tell if an edge of an element is in the boundary just by whether both endpoints are in the boundary.  For example, edge from node 5 (on the Dirichlet boundary) to node 7 (on the Neumann boundary) in Figure \ref{fig:un:number-mesh} is not in the boundary.  Thus we need to have list of flags for the boundary segments themselves.
+Thus the Python script \texttt{tri2petsc.py} (not shown) reads three files in \Triangle-generated ASCII format, as described above, with extensions \texttt{.node,.ele,.poly}.  Then it writes two files in \PETSc binary format with extensions \texttt{.vec,.is}.  The first output file holds two \pVecs with the node coordinates.  The second output file holds four \pISs (element triples, nodal boundary flags, boundary segment pairs, and boundary segment flags).  Our C code will then load these binary data with \PETSc functions  \texttt{VecLoad()} and \texttt{ISLoad()}, respectively.
 
-Let's try it out.  The script \texttt{tri2petsc.py} uses Python modules from the \PETSc source directory, and a convenient method to access these is through symbolic links.  For an example usage,
+Let's try it out.  Because \texttt{tri2petsc.py} uses Python modules from the \PETSc source directory, we generate some symbolic links:
 \begin{cline}
-$ cd ..
+$ cd ..                                # back to c/ch8/
 $ ln -s ~/petsc/bin/petsc_conf.py
 $ ln -s ~/petsc/bin/PetscBinaryIO.py
 $ ./tri2petsc.py meshes/trap.1 trap.1
 \end{cline}
-%$
 This generates two files \texttt{trap.1.vec} and \texttt{trap.1.is}.
 
-FIXME on the C code side we need to have a data structure, a ``context'' struct accessible to the \texttt{FormFunction()} method, which holds the mesh.  so we build a \texttt{UM} data type, a struct, in \texttt{c/\CODELOC um.[h|c]}, to hold the mesh; show the struct
+On the C code side we need to have a data structure for storage of the mesh.  Therefore we define a new ``\texttt{UM}'' data type, for ``unstructured mesh,'' a C \texttt{struct}, in \texttt{c/\CODELOC um.h}, to hold the mesh.  See Code \ref{code:umstruct}.  The tedious C functions \texttt{UMInitialize()}, \texttt{UMDestroy()}, \texttt{UMView()}, \texttt{UMReadVecs()}, and \texttt{UMReadISs()} in \texttt{c/\CODELOC um.c} (not shown) have the task of reading the \texttt{.vec,.is} binary files so as to allocate and fill a \texttt{UM} instance.  It should go without saying that this \texttt{UM} data type is superceded by \PETSc-supported tools in Chapter \ref{chap:dp}.
 
-\cinput{um.h}{\CODELOC}{FIXME}{//STARTUM}{//ENDUM}{code:umstruct}
+\cinput{um.h}{\CODELOC}{An unstructured-mesh data type.}{//STARTUM}{//ENDUM}{code:umstruct}
 
-FIXME node coordinates in \pVecs \texttt{x,y}; element index triples, segment index pairs are \pIS which hold indices into \texttt{x,y}; also boundary flags are \pIS; code not shown
 
 \section{Initial implementation}
 
+With these unstructured mesh tools in hand we can return to implementing the FEM.  We will build the minimal \pSNES-using C code which can work.  It is called \texttt{c/ch8/unfem.c}.  It has a ``context'' \texttt{struct}, which includes a \texttt{UM} instance, and a residual-computation function \texttt{FormFunction()}.  For the FEM we have enough information to transfer integrals to the reference triangle, and we set up the quadrature data structures.  The code creates and destroys \pVecs for holding the approximate solution, the exact solution (below), and the residual.  There is then nothing else to do, other than to call \texttt{SNESSolve()}.
+
+Before showing these details, and because the reader might have become too comfortable with \pDMDA-using structured grid examples, a look at the beginning of Chapter \ref{chap:nl} might be appropriate.  Indeed, Figure \ref{fig:un:unfemstack} shows the structure of \texttt{unfem.c}, including the approximate Jacobian (\texttt{FormPicard()}) which we will eventually implement.  In terms of \PETSc objects it has the same structure as the grid-free nonlinear equations-solving example \texttt{ecjac.c} in Chapter \ref{chap:nl}.
+
+\begin{figure}
+\begin{tikzpicture}[scale=0.8,
+                    >={Latex[length=2mm]},
+  component/.style={
+     rectangle,draw,fill=white,align=center,line width=1pt},
+  userfcn/.style={
+     rounded corners,draw,fill=white,draw,align=center,line width=1pt,font={\itshape,\normalsize}}]
+
+\draw[line width=1pt] (3,7) node[userfcn,minimum width=110mm] (usercode) {user code \\ \vspace{15mm}};
+
+\draw[line width=1pt] (0,7.2) node[userfcn] (rescode) {residual \emph{\texttt{FormFunction()}}};
+\draw[line width=1pt] (5.5,6.2) node[userfcn] (jaccode) {approximate Jacobian \emph{\texttt{FormPicard()}}};
+
+\draw[line width=1pt] (-1,4) node[component] (snes) {\complabel{\pSNES}{nonlinear solver}};
+\draw[line width=1pt] (-1,2) node[component] (ksp)  {\complabel{\pKSP}{linear solver}};
+\draw[line width=1pt] (-1,0) node[component] (pc)   {\complabel{\pPC}{preconditioner}};
+
+\draw[line width=1pt] (2,0) node[component] (matj)   {\usedlabel{\pMat}{Jacobian}};
+\draw[line width=1pt] (6,0) node[component] (vecs)   {\pVecs \\ \footnotesize  \emph{solution, other fields}};
+
+\path
+   ([xshift=-10em]usercode.south) edge[->] node {} (snes)
+   ([xshift=0em]usercode.south) edge[->] node {} (vecs)
+
+   (rescode.south) edge[->] node {} ([xshift=-2em]vecs.north)
+
+   ([xshift=-1em]jaccode.south) edge[->] node {} (matj)
+   ([xshift=1em]jaccode.south) edge[->,bend right] node {} ([xshift=1em]vecs.north)
+
+   (snes) edge node {} (ksp)
+   (ksp) edge node {} (pc);
+\end{tikzpicture}
+\caption{The solver structure of \texttt{unfem.c}.}
+\label{fig:un:unfemstack}
+\end{figure}
+
+
 FIXME show extracts of \texttt{main()} and most of \texttt{FormFunction()} in \texttt{c/\CODELOC unfem.c}
+
 
 \section{Example problems and initial testing}
 
