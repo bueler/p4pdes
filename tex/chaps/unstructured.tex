@@ -26,6 +26,7 @@ In contrast with earlier and latter Chapters, we generate a code that only works
 
 The residual equations $\bF(\bu)=0$, the nonlinear system seen by the \pSNES solver, is the discretized weak form of the PDE.  Our direct construction of these equations roughly follows the residual implementations of Chapters \ref{chap:nl}, \ref{chap:of}, and \ref{chap:ts}.  The well-known stiffness matrix $A$, and corresponding linear system $A\bx = \bb$, which form the major pieces of the standard construction in typical FEM introductions \citep{Braess2007,Elmanetal2005}, arise here as the Jacobian, and Newton step, respectively, when solving $\bF(\bu)=0$.  In our first runs, which we do before writing any Jacobian-assembly user code, the \pSNES solver approximates this linear system through finite-differencing of evaluations of $\bF$.  In the end we will only assemble a Jacobian which is accurate for the linear case; for the smooth nonlinear case tested here, this inaccurate linearization suffices.
 
+
 \section{A 2D nonlinear Poisson problem}
 
 \begin{marginfigure}
@@ -51,6 +52,7 @@ The data of problem \eqref{eq:un:poissonstrong}, besides the region $\Omega$ and
 Problem \eqref{eq:un:poissonstrong} is not the most general (nonlinear) Poisson problem.  Specifically, one could allow more general \emph{Robin} boundary conditions $\alpha u + \beta \frac{\partial u}{\partial n} = \gamma$ where, generally, $\alpha,\beta,\gamma$ could vary along the boundary \citep{Elmanetal2005}.  One could also allow $a$ and/or $f$ to depend on the gradient of $u$, as does $a=|\grad u|^{p-2}$ in the $p$-Laplacian equation of Chapter \ref{chap:of}.
 
 As \eqref{eq:un:poissonstrong} is stated there may be no solution where ``$\Div(a\grad u)$'' makes sense as a continuous function, even for polygonal regions and continuous data.  That is, there may be no $u\in C^2(\Omega) \cap C(\overline \Omega)$ so that $-\Div(a\grad u) = f$.  A solution exists, however, in the linear case at least, if we convert \eqref{eq:un:poissonstrong} to a \emph{weak form}.  A weak formulation arose in Chapter \ref{chap:of} as the gradient of an objective function, but the weak form here is generally not of that type.  We will derive it from the strong form in the traditional way, by multiplying by a test function and integrating.
+
 
 \section{Weak form with general boundary values}
 
@@ -277,7 +279,7 @@ $3$ & $4$ & \begin{tabular}{c}
 For the Neumann boundary contributions we use the midpoint rule.  Observe that hat function $\psi_i$ has value $1/2$ at the midpoint of any edge which is incident to $\bx_i$.  Thus
 %FIXME this may be a noticable source of inaccuracy
 \begin{equation}
-\varphi_i^\nu \approx g_N(x_m,y_m) \psi_i(x_m,y_m) |s_\nu| = \frac{1}{2} |s_\nu|\, g_N(x_m,y_m), \label{eq:un:segmentmidpoint}
+\varphi_i^\nu \approx g_N(x_m,y_m) \psi_i(x_m,y_m) |s_\nu| = \frac{1}{2} |s_\nu|\, g_N(x_m,y_m), \label{eq:un:segmentquadrature}
 \end{equation}
 if $\bx_i \in \overline{s_\nu}$, and it is zero otherwise.  Here $(x_m,y_m)$ is the midpoint, and $|s_\nu|$ is the length, of segment $s_\nu$.
 
@@ -298,6 +300,7 @@ if $\bx_i \in \overline{s_\nu}$, and it is zero otherwise.  Here $(x_m,y_m)$ is 
 
 The triangulation shown in Figure \ref{fig:un:trapone} came from a single command which asks \Triangle to generate a triangulation from \texttt{trap.poly}.  The command asks for a polygon output file (option \texttt{-p}), relatively-uniform triangles (option \texttt{-q} for ``quality-checked,'' with no interior angles less than $20^\circ$ \citep{Shewchuk1996}), and triangles with a maximum area (option \texttt{-a}) of $0.5$:
 \begin{cline}
+$ cd c/ch8/meshes
 $ triangle -pqa0.5 trap
 \end{cline}
 %$
@@ -332,13 +335,29 @@ displays graphically the boundary polygon from \texttt{trap.poly} and/or one of 
 
 \section{From ASCII files to \PETSc \pIS and \pVec}
 
-FIXME: Will put \texttt{.node} into \pVec, \texttt{.ele} into \pIS, Dirichlet/Neumann marker into \pIS.  Will read ASCII into Python (not C) and write out \pVec, \pIS with \texttt{PetscBinaryIO.py}.  C code will read \pVec, \pIS with \texttt{VecLoad(),ISLoad()}
+Our plan is to traverse the lists of elements $\triangle_k$ and Neumann boundary segments $s_\nu$ so as to compute the residuals $F_i(\bu)$ from equations \eqref{eq:un:elementquadraturereference} and \eqref{eq:un:segmentquadrature}, respectively.  The traversal is fast if the mesh data are stored in \PETSc objects, so we first convert the above \Triangle-generated ASCII files into \pVecs and \pISs using a Python script \texttt{tri2petsc.py}.
 
-FIXME: YES WE DO THIS IN Python NOW.  The ASCII files produced by \Triangle are not in a good format for large meshes, but we will accept this for portability and readability.  We will, however, demonstrate how files are read in parallel, based on first doing a mundane and un-scalable task in \PETSc, namely reading the ASCII \Triangle files serially, in a Python program, and writing out a binary file in \PETSc format.  Of course we will focus on the scalability of the FEM solution process, once the mesh is loaded.
+FIXME: node coordinates into \pVec and \texttt{.vec}
+
+FIXME: explain what is an \pIS; we use it here to store node topology
+
+FIXME: element triples, segment pairs, Dirichlet/Neumann markers into \pIS.  Will read ASCII into Python (not C) and write out \pVec, \pIS with \texttt{PetscBinaryIO.py}.  C code will read \pVec, \pIS with \texttt{VecLoad(),ISLoad()}
 
 FIXME THIS IS STILL A VALID POINT  In this part there is an important detail about triangulations, which affects the data structure for elements.  Namely, we cannot tell if an edge of an element is in the boundary just by whether both endpoints are in the boundary.  For example, edge from node 5 (on the Dirichlet boundary) to node 7 (on the Neumann boundary) in Figure \ref{fig:un:number-mesh} is not in the boundary.  Thus we need to have list of flags for the boundary segments themselves.
 
-FIXME we build a \texttt{UM} data type, a struct, in \texttt{c/\CODELOC um.[h|c]}, to hold the mesh; show the struct
+Let's try it out.  The script \texttt{tri2petsc.py} uses Python modules from the \PETSc source directory, and a convenient method to access these is through symbolic links.  For an example usage,
+\begin{cline}
+$ cd ..
+$ ln -s ~/petsc/bin/petsc_conf.py
+$ ln -s ~/petsc/bin/PetscBinaryIO.py
+$ ./tri2petsc.py meshes/trap.1 trap.1
+\end{cline}
+%$
+This generates two files \texttt{trap.1.vec} and \texttt{trap.1.is}.
+
+FIXME on the C code side we need to have a data structure, a ``context'' struct accessible to the \texttt{FormFunction()} method, which holds the mesh.  so we build a \texttt{UM} data type, a struct, in \texttt{c/\CODELOC um.[h|c]}, to hold the mesh; show the struct
+
+\cinput{um.h}{\CODELOC}{FIXME}{//STARTUM}{//ENDUM}{code:umstruct}
 
 FIXME node coordinates in \pVecs \texttt{x,y}; element index triples, segment index pairs are \pIS which hold indices into \texttt{x,y}; also boundary flags are \pIS; code not shown
 
@@ -379,8 +398,7 @@ FIXME introduce \texttt{genstructured.py} and case 3; compares well in serial to
 
 compare for \texttt{--with-debugging=0} build (note $1025^2=1050625$):
 \begin{cline}
-$ timer ./poisson -da_refine 7 -ksp_converged_reason -ksp_type cg -pc_type icc
-Linear solve converged due to CONVERGED_RTOL iterations 721
+$ timer ./poisson -da_refine 7 -ksp_type cg -pc_type icc
 on 1025 x 1025 grid:  error |u-uexact|_inf = 5.29691e-08
 real 18.67
 $ timer ./unfem -un_mesh square.10.dat -un_quaddeg 1 -un_case 3 -ksp_type cg -pc_type icc

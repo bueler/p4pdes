@@ -1,7 +1,8 @@
 *~
 *.pyc
 book.pdf
-cstrip/*.c*
+cstrip/*.c
+cstrip/*.h
 tmp/*.tikz
 tri2petsc.py
 
