@@ -449,6 +449,16 @@ Again this is computed by quadrature, similar to \eqref{eq:un:elementintegralref
 
 FIXME essential for speed
 
+compare for \texttt{--with-debugging=0} build:
+\begin{cline}
+$ timer ./unfem -un_mesh square.7 -un_case 3 -un_noprealloc
+case 3 result for N=16641 nodes:  |u-u_exact|_inf = 5.36847e-06
+real 6.55
+$ timer ./unfem -un_mesh square.7 -un_case 3
+case 3 result for N=16641 nodes:  |u-u_exact|_inf = 5.36847e-06
+real 0.24
+\end{cline}
+
 \section{Performance relative to \pDMDA structured grid}
 
 FIXME introduce \texttt{genstructured.py} and case 3; compares well in serial to Chapter 3 example

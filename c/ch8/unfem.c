@@ -249,9 +249,6 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
         ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
     }
     ierr = MatSetOption(P,MAT_NEW_NONZERO_LOCATION_ERR,PETSC_TRUE); CHKERRQ(ierr);
-    //PetscBool sym = PETSC_FALSE;
-    // ierr = MatIsSymmetric(P,1.0e-12,&sym); CHKERRQ(ierr);
-    // if (!sym) { SETERRQ(PETSC_COMM_WORLD,1,"assembled matrix not symmetric ... stopping\n"); }
     return 0;
 }
 
@@ -284,7 +281,7 @@ PetscErrorCode JacobianPreallocation(Mat J, unfemCtx *user) {
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
-    PetscBool   view = PETSC_FALSE;
+    PetscBool   view = PETSC_FALSE, noprealloc = PETSC_FALSE;
     char        meshroot[256] = "";
     unfemCtx    user;
     SNES        snes;
@@ -308,6 +305,9 @@ int main(int argc,char **argv) {
     ierr = PetscOptionsBool("-view",
            "view loaded nodes and elements at stdout",
            "unfem.c",view,&view,NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-noprealloc",
+           "do not perform preallocation before matrix assembly",
+           "unfem.c",noprealloc,&noprealloc,NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
     // set parameters and exact solution
@@ -352,7 +352,11 @@ int main(int argc,char **argv) {
     ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,user.mesh.N,user.mesh.N); CHKERRQ(ierr);
     ierr = MatSetFromOptions(A); CHKERRQ(ierr);
     ierr = MatSetOption(A,MAT_SYMMETRIC,PETSC_TRUE); CHKERRQ(ierr);
-    ierr = JacobianPreallocation(A,&user); CHKERRQ(ierr);
+    if (noprealloc) {
+        ierr = MatSetUp(A); CHKERRQ(ierr);
+    } else {
+        ierr = JacobianPreallocation(A,&user); CHKERRQ(ierr);
+    }
 
     // configure SNES
     ierr = VecCreate(PETSC_COMM_WORLD,&r); CHKERRQ(ierr);
