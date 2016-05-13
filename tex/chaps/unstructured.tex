@@ -305,6 +305,19 @@ $ showme blob
 displays the boundary polygon (from \texttt{blob.poly} or \texttt{blob.1.poly}) and the triangulation itself (\texttt{blob.1.node} and \texttt{blob.1.ele}).
 
 
+\begin{figure}
+\input{tikz/trap.tex}
+\caption{FIXME}
+\label{fig:un:trap}
+\end{figure}
+
+\begin{figure}
+\input{tmp/trap.1.tikz}
+\caption{FIXME}
+\label{fig:un:trapone}
+\end{figure}
+
+
 \section{From ASCII files to \PETSc \pIS and \pVec}
 
 FIXME: Will put \texttt{.node} into \pVec, \texttt{.ele} into \pIS, Dirichlet/Neumann marker into \pIS.  Will read ASCII into Python (not C) and write out \pVec, \pIS with \texttt{PetscBinaryIO.py}.  C code will read \pVec, \pIS with \texttt{VecLoad(),ISLoad()}

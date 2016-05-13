@@ -8,7 +8,7 @@ chapsinputs := $(addprefix chaps/, $(addsuffix .tex, $(chapsroots)))
 croots := vecmatksp tri poisson expcircle expcircleJAC reaction plap ode heat fish2 readmesh poissontools poissonfem obstacle
 cstrip := $(addprefix cstrip/, $(addsuffix .c, $(croots)))
 
-tmptikzroots := blob blob.1.elenum blob.1.nodenum mesh.1
+tmptikzroots := blob blob.1.elenum blob.1.nodenum trap.1 mesh.1
 tmptikzinputs := $(addprefix tmp/, $(addsuffix .tikz, $(tmptikzroots)))
 
 pdfroots := petscghostvalues
@@ -42,6 +42,11 @@ tmp/blob.tikz tmp/blob.1.elenum.tikz tmp/blob.1.nodenum.tikz: tmp/ $(UNLOC)blob.
 	triangle -pqa4.0 $(UNLOC)blob
 	python tri2tikz.py --labelelements --nodesize 1.0 --scale 0.5 $(UNLOC)blob.1 tmp/blob.1.elenum.tikz
 	python tri2tikz.py --labelnodes --nodesize 3.0 --nodeoffset -0.5 --scale 0.48 $(UNLOC)blob.1 tmp/blob.1.nodenum.tikz
+
+tmp/trap.1.tikz: tmp/ $(UNLOC)trap.poly
+	ln -sf $(TRI2PETSCLOC)tri2petsc.py
+	triangle -pqa0.5 $(UNLOC)trap
+	python tri2tikz.py --nodesize 1.0 --scale 2.5 $(UNLOC)trap.1 tmp/trap.1.tikz
 
 tmp/mesh.1.tikz: tmp/ $(UNLOC)genstructured.py
 	(cd ../c/$(UNLOC) && python genstructured.py mesh.1 5)
