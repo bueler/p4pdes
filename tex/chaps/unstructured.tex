@@ -1,27 +1,30 @@
 
-This Chapter returns to the Poisson equation in two dimensions.  We implement a finite element method (FEM) for an unstructured triangular mesh covering a general domain.
+This Chapter returns to the Poisson equation in two dimensions.  We implement a finite element method (FEM) for an unstructured triangular mesh covering a general polygonal domain.
 
-Our approach is to first
+Our approach is to
 \begin{center}
-\emph{do element-wise assembly of the residual equations,}
+\emph{first do element-wise assembly of the residual equations,}
 \end{center}
-and thereby get a functioning, \pSNES-using code without even thinking about matrices as we write code.  Indeed the code can already solve certain nonlinear Poisson equations at this stage.  Only after making sure it works do we
+and thereby get a functioning, \pSNES-using code.  We will not even think about matrices as we write the initial code which solves a variety of nonlinear Poisson equations.  Only after making sure it works do we
 \begin{center}
-\emph{write additional code to assemble the Jacobian matrix.}
+\emph{then write additional code to assemble a Jacobian matrix.}
 \end{center}
 
-In this Chapter we use \PETSc for these new tasks:
+In this Chapter we do these new tasks:
 \begin{itemize}
-\item reading a triangular mesh from a file into \PETSc \pVecs and \pISs,
-\item managing unstructured indexing of that mesh, and
-\item implementing general Neumann/Dirichlet boundary conditions.
+\item implement Neumann boundary conditions,
+\item read a triangular mesh from a file into \PETSc \pVecs and \pISs,
+\item implement unstructured indexing of that mesh, and
+\item do explicit pre-allocation of a \PETSc \pMat.
 \end{itemize}
 
-The FEM here contrasts with the structured rectangular-element ($Q^1$) FEM of Chapter \ref{chap:of} primarily in that it does not use \PETSc's \pDMDA.  We implement our own modest mesh-topology infrastructure, and, as a consequence our work-load increases substantially.  Thus we find out what we lose by not using \pDMDA, and understand better what the mesh-topology and indexing tools in \PETSc are doing.
+The example here contrasts with the structured rectangular-element ($Q^1$) FEM of Chapter \ref{chap:of} in that it does not use \PETSc's \pDMDA.  Instead we implement our own modest mesh-topology infrastructure.  As a consequence, our work-load increases substantially.  First we use the relatively-simple \Triangle program to generate ASCII files describing a triangulation (mesh).  Then a \PETSc \pIS type holds the global indices of nodes and triangles (elements).  \PETSc \pVec and \pMat objects for the solution and Jacobian, respectively, are indexed through the \pIS values.
 
-On the other hand, this example is representative of \PETSc applications where direct contact with file formats and index sets is required.  We use the relatively-simple \texttt{triangle} program to generate ASCII files describing the mesh.  Our code uses a \PETSc \pIS type for managing the indexing of nodes and triangles.  In Chapter \ref{chap:dp} we will return to unstructured FEM methods, and there take advantage of \PETSc's \pDMPlex class for some of the unstructured mesh tasks done ``by-hand'' here.
+The benefits of \PETSc's mesh-topology \pDM tools---only \pDMDA has been tried so far---become clearer through forgoing them here.  In Chapter \ref{chap:dp} we will return to unstructured FEM methods, and take advantage of \PETSc's advanced \pDMPlex class.  It replaces, and improves upon, much of the ``by-hand'' labor here.
 
-The residual equations $\bF(\bu)=0$, as seen by the \pSNES solver, are the FEM discretization of the weak form of the PDE.  Our direct construction of these equations roughly follows the residual implementations of Chapters \ref{chap:nl} and \ref{chap:of}.  The well-known stiffness matrix $A$, and corresponding linear system $A\bx = \bb$, which form the major pieces of the standard construction in typical FEM introductions \citep{Braess2007,Elmanetal2005}, arise here as the Jacobian, and Newton step, respectively, when solving $\bF(\bu)=0$.  In our first runs, which we do before writing Jacobian-assembly user code, we allow \PETSc \pSNES to approximate this linear-system-construction through finite-differencing and (many) evaluations of $\bF$.
+In contrast with earlier and latter Chapters, we generate a code that only works on one MPI process (i.e.~a serial code).  At the end of the Chapter we look briefly at the additional constructs needed to distribute a mesh across many processes.  Instead of even attempting an \emph{ad hoc} approach to these constructs, however, these considerations only motivate the \pDMPlex example in Chapter \ref{chap:dp}.
+
+The residual equations $\bF(\bu)=0$, the nonlinear system seen by the \pSNES solver, is the discretized weak form of the PDE.  Our direct construction of these equations roughly follows the residual implementations of Chapters \ref{chap:nl}, \ref{chap:of}, and \ref{chap:ts}.  The well-known stiffness matrix $A$, and corresponding linear system $A\bx = \bb$, which form the major pieces of the standard construction in typical FEM introductions \citep{Braess2007,Elmanetal2005}, arise here as the Jacobian, and Newton step, respectively, when solving $\bF(\bu)=0$.  In our first runs, which we do before writing any Jacobian-assembly user code, the \pSNES solver approximates this linear system through finite-differencing of evaluations of $\bF$.  In the end we will only assemble a Jacobian which is accurate for the linear case; for the smooth nonlinear case tested here, this inaccurate linearization suffices.
 
 \section{A 2D nonlinear Poisson problem}
 
@@ -76,26 +79,24 @@ Consider the linear case where functions $a$ and $f$ are independent of $u$.  If
 
 In nonlinear cases each particular problem must be analyzed for well-posedness.  In terms of practical computation, particular nonlinear cases covered by our method, and solvable using our code, include 2D versions of
 \begin{itemize}
-\item the \emph{Bratu} equation\sidenote{See Exercise \ref{chap:nl}.\ref{exer:nl:bratu} for the 1D version.} if $a\equiv 1$ and $f=\lambda e^u$, and
+\item the \emph{Bratu} equation\sidenote{Exercises \ref{chap:nl}.\ref{exer:nl:bratu} and \ref{chap:un}.\ref{exer:un:bratu} solve the 1D and 2D versions, respectively.} if $a\equiv 1$ and $f=\lambda e^u$, and
 \item ``uniformized'' versions of the \emph{porous medium} equation \citep{Ockendonetal2003}, in which, for example, $a=u^{m-1}+\eps$ for some $m\ge 1$ and $\eps>0$.
 \end{itemize}
 
 
-\section{A $P^1$ finite element method}
+\section{A $P^1$ finite element method (FEM)}
 
-%FIXME: can be generalized to P^2 since $\psi_i$ keeps nodal meaning? new nodes are in 1-to-1 correspondence with triangle edges, which triangle can generate?
+A FEM for the Poisson problem comes from requiring the weak formulation \eqref{eq:un:poissonweak} to be true for $u$ in a finite-dimensional subspace of $H_{g}^1(\Omega)$, and for test functions $v$ ranging over a basis of a finite-dimensional subspace of $H_{0}^1(\Omega)$.\sidenote{An FEM is \emph{conforming} if these subspace claims are accurate.  Otherwise one is guilty of \emph{variational crimes} \citep{Ciarlet2002} with \emph{nonconforming elements} \citep{Braess2007}.}  In the \emph{Galerkin} method here, these subspaces, built upon a triangulation of $\Omega$, will be nearly the same.
 
-A FEM for the Poisson problem comes from requiring the weak formulation \eqref{eq:un:poissonweak} to be true for $u$ in a finite-dimensional subspace of $H_{g}^1(\Omega)$, and for test functions $v$ ranging over a basis of a finite-dimensional subspace of $H_{0}^1(\Omega)$.\sidenote{An FEM is \emph{conforming} if these subspace claims are accurate.  Otherwise one is guilty of \emph{variational crimes} \citep{Ciarlet2002} with \emph{nonconforming elements} \citep{Braess2007}, but such nonconforming methods may be useful.}  In the \emph{Galerkin} method here, these subspaces, built upon a triangulation of $\Omega$, will be nearly the same.
-
-To make our test function space $H_{0}^1(\Omega)$ a true subspace of $H^1(\Omega)$ we require that $\Omega$ be polygonal, with $\partial\Omega$ a closed polygon (Figure \ref{fig:un:polygon}).  Furthermore we require that segments of $\partial\Omega$ be either entirely in $\partial_D\Omega$ or entirely in $\partial_N\Omega$.
-
-We will assume $\partial_D\Omega$ is a closed and \emph{non-empty} set.
+To make our test function space $H_{0}^1(\Omega)$ a true subspace of $H^1(\Omega)$ we require that $\Omega$ be polygonal, with $\partial\Omega$ a closed polygon (Figure \ref{fig:un:polygon}).  Furthermore we require that segments which form the polygon $\partial\Omega$ be either entirely in $\partial_D\Omega$ or entirely in $\partial_N\Omega$.
 
 \begin{marginfigure}
 \input{tmp/blob.tikz}
 \caption{A polygonal domain $\Omega$ with $\partial_D\Omega$ in bold.}
 \label{fig:un:polygon}
 \end{marginfigure}
+
+We will assume $\partial_D\Omega$ is a closed set.  Furthermore we assume it contains at least one segment of positive length.  As suggested above, this leads to well-posedness of the continuum problem, at least in the linear case.
 
 By definition, a \emph{triangulation} is a finite set of non-overlapping, non-empty open triangles $\triangle_k\subset \RR^2$ which tile $\Omega$:
 \begin{equation}
@@ -108,6 +109,8 @@ We index the $K$ triangles (elements) in $\Th$ by $k=0,\dots,K-1$.  The $N$ vert
 
 An example triangulation $\Th$ is shown in Figure \ref{fig:un:number-mesh}.  The subscript ``$h$'' in ``$\Th$,'' traditional notation, denotes the typical or maximum size $h$ (e.g.~diameter) of the triangles.  It serves as a reminder of our desired limit $h\to 0$.  In contrast to many references--e.g.~\citet{Elmanetal2005}, which we follow in many ways---all numbering here is zero-based, suitable for a C implementation.
 
+We will use $P^1$ finite elements \citep{Elmanetal2005} so that our test and trial functions are continuous and linear on each $\triangle_k$.  On each triangle $\triangle_k$, such functions have three degrees of freedom.  We make think of these as the coefficients in the linear formula $a + b x + c y$, but in fact there are better local bases than $\{1,x,y\}$; see below.
+
 \begin{marginfigure}
 \input{tmp/blob.1.elenum.tikz}
 
@@ -117,8 +120,6 @@ An example triangulation $\Th$ is shown in Figure \ref{fig:un:number-mesh}.  The
 \caption{A triangulation of the polygon in Figure \ref{fig:un:polygon}, with element (top) and node (bottom) numbering.  There are $K=15$ elements, $N=13$ nodes, and $n_D=4$ nodes in $\partial_D\Omega$.}
 \label{fig:un:number-mesh}
 \end{marginfigure}
-
-We will use $P^1$ finite elements \citep{Elmanetal2005} so that our test and trial functions are continuous and linear on each $\triangle_k$.  On each triangle $\triangle_k$, such functions have three degrees of freedom.  We make think of these as the coefficients in the linear formula $a + b x + c y$, but in fact there are better local bases than $\{1,x,y\}$; see below.
 
 For each node $j$ there is a basis (``hat'') function  $\psi_j(x,y)$ which is linear on each triangle, continuous on all of $\overline{\Omega}$, and equal to one at only one node $j$,
 \begin{equation*}
@@ -154,16 +155,16 @@ The FEM itself can now be stated.  It requires \eqref{eq:un:poissonweak} to be t
 \begin{equation}
 \int_\Omega a(u^h) \grad u^h \cdot \grad \psi_i = \int_\Omega f(u^h) \psi_i + \int_{\partial_N\Omega} g_N \psi_i \label{eq:un:weakformhat}
 \end{equation}
-for all $i$ such that $\bx_i \notin \partial_D \Omega$.  On the other hand we may write $u^h$ using $N-n_D$ unknown coefficients $u_j\in\RR$:
+for all $i$ such that $\bx_i \notin \partial_D \Omega$.  On the other hand we may expand $u^h$ using $N-n_D$ unknown coefficients $u_j\in\RR$:
 \begin{equation}
 u^h(x,y) = \hat g_D(x,y) + \sum_{\bx_j \notin \partial_D \Omega} u_j\, \psi_j(x,y). \label{eq:un:uhexpand}
 \end{equation}
 
 The coefficients $u_j$ in \eqref{eq:un:uhexpand} are the unknowns.  Given the triangulation $\mathcal{T}_h$ of $\Omega$ and the data of the problem, namely the functions $a$, $f$, $g_D$, and $g_N$, the complete specification of the FEM solution $u^h$ is given by equations \eqref{eq:un:hatgdefine}, \eqref{eq:un:weakformhat}, and \eqref{eq:un:uhexpand}.
 
-In the linear case it is common to now write system \eqref{eq:un:weakformhat} and \eqref{eq:un:uhexpand} as a linear system $A \bu = \bb$.  That is, the usual next step in an FEM is to assemble the \emph{stiffness matrix} $A$ \citep{Elmanetal2005}.  Here we will not do so until we have an initial, and verified, numerical solution.  Following the pattern established since Chapter \ref{chap:nl}, we first implement equation \eqref{eq:un:weakformhat} as a residual-evaluation function $\bF(\bu)$, from the representation of $u^h$ as a vector $\bu$, giving a nonlinear system $\bF(\bu) = 0$.  In evaluating $\bF$ we use \eqref{eq:un:uhexpand} to get point values of $u^h$ and its gradient $\grad u^h$ on the interior of triangles.  These point values allow quadrature, similar to that in Chapter \ref{chap:of}, to approximate the integrals in \eqref{eq:un:weakformhat}.  Implementing a residual in the linear case is mathematically equivalent to assembling $A$ and $\bb$, but the residual-evaluation code here is simpler because it does not require direct contact with a \pMat object at all.
+In the linear case it is common to now write system \eqref{eq:un:weakformhat} and \eqref{eq:un:uhexpand} as a linear system $A \bu = \bb$.  The usual next step in an FEM is to assemble the \emph{stiffness matrix} $A$ \citep{Elmanetal2005}.  However, we will not do so until we have an initial, and verified, numerical solution.  Following the pattern established since Chapter \ref{chap:nl}, we first implement equation \eqref{eq:un:weakformhat} as a residual-evaluation function $\bF(\bu)$, from the representation of $u^h$ as a vector $\bu$.  In evaluating $\bF$ we use \eqref{eq:un:uhexpand} to get point values of $u^h$ and its gradient $\grad u^h$ on the interior of triangles.  These point values allow quadrature, similar to that in Chapter \ref{chap:of}, to approximate the integrals in \eqref{eq:un:weakformhat}.  Implementing a residual in the linear case is mathematically equivalent to assembling $A$ and $\bb$, but the residual-evaluation code here is simpler because it does not require direct contact with a \pMat object at all.
 
-In the next section we describe and the code the element-wise ``assembly,'' that is, evaluation of, the residual function $\bF$, as a \pSNES call-back.  Before that can be written we will be more specific about what \eqref{eq:un:weakformhat} says on each element, and we will read-in the triangular mesh and put it into \PETSc data structures.  These tools can be tested for correctness with a finite-differenced Jacobian (Chapter \ref{chap:nl}).  Once this is all shown to work correctly, via comparison to an exact solution, then we will re-consider matrix assembly, namely for the Jacobian derivative of $\bF$.
+In the next section we describe and the code the element-wise ``assembly,'' that is, evaluation of, the residual function $\bF$, as a \pSNES call-back.  However, before that can be written we need to be more specific about what \eqref{eq:un:weakformhat} says on each element.  Also we will read-in the triangular mesh and put it into \PETSc data structures.  These tools can be tested for correctness with a finite-differenced Jacobian (Chapter \ref{chap:nl}).  Once this is all shown to work correctly, via comparison to an exact solution, then we will re-consider matrix assembly, namely for the Jacobian derivative of $\bF$.
 
 
 \section{Assembly of the residual equations}
@@ -185,29 +186,29 @@ F_i^k(\bu) = \int_{\triangle_k} a(u^h) \grad u^h \cdot \grad \psi_i - f(u^h) \ps
 \end{equation}
 Suppose $n_N$ is the number of edges which are in the Neumann boundary.  We call these edges (Neumann) \emph{segments} for distinctive language.  For each segment $s_\nu$, $\nu=0,\dots,n_N-1$, let
 \begin{equation}
-\varphi_i^\nu = \int_{s_\nu} g_N \psi_i.  \label{eq:un:segmentweakform}
+\varphi_i^\nu = \int_{s_\nu} g_N \psi_i,  \label{eq:un:segmentweakform}
 \end{equation}
-(These values do not depend on the solution $u^h$.)  Then residual equation \eqref{eq:un:weakformhat} is
+and note that $\varphi_i^\nu$ does not depend on the solution $u^h$.  Then residual equation \eqref{eq:un:weakformhat} is
 \begin{equation}
-F_i(\bu) = \sum_{k=0}^{K-1} F_i^k(\bu) + \sum_{\nu=0}^{n_N-1} \varphi_i^\nu = 0  \qquad \text{ if } \bx_i \notin \partial_D\Omega. \label{eq:un:elementwisesum}
+F_i(\bu) = \sum_{k=0}^{K-1} F_i^k(\bu) - \sum_{\nu=0}^{n_N-1} \varphi_i^\nu = 0  \qquad \text{ if } \bx_i \notin \partial_D\Omega. \label{eq:un:elementwisesum}
 \end{equation}
-Together, equations \eqref{eq:un:dirichletresiduals} and \eqref{eq:un:elementwisesum} form the (generally) nonlinear system, of dimension $N$, which we hand to a \pSNES solver:
+Together, equations \eqref{eq:un:dirichletresiduals} and \eqref{eq:un:elementwisesum} form the (generally) nonlinear system, of dimension $N$, which we supply to the \pSNES solver:
 \begin{equation}
 \bF(\bu)=0. \label{eq:un:fullsystem}
 \end{equation}
 
 Observe that $n_D$ is the number of \emph{nodes} in the Dirichlet boundary, whereas $n_N$ is the number of \emph{segments} (edges) in the Neumann boundary.  The former correspond to degrees of freedom, while the latter are domains of integration.  Managing the mesh correctly requires making this distinction.
 
-Because the support of the hat function $\psi_i$ only overlaps with a few triangles $\triangle_k$, for each $i$ only a few values $F_i^k(\bu)$ and $\varphi_i^\nu$ are nonzero.  Also, only a few nodal values $\bu=\{u_j\}$ enter into $F_i^k(\bu)$, namely those values $u_j$ such that the support of $\psi_j$ overlaps with $\triangle_k$.  These facts make \eqref{eq:un:fullsystem} a \emph{sparse} nonlinear system.  The Jacobian $J_\bF(\bu)$ is, therefore, a sparse matrix.
+Because the support of the hat function $\psi_i$ only overlaps with a few triangles $\triangle_k$, only a few values $F_i^k(\bu)$ and $\varphi_i^\nu$ are nonzero.  Also, only a few nodal values $\bu=\{u_j\}$ enter into $F_i^k(\bu)$, namely those values $u_j$ such that the support of $\psi_j$ overlaps with $\triangle_k$.  These facts make \eqref{eq:un:fullsystem} a \emph{sparse} nonlinear system.
 
-We will compute the element integrals \eqref{eq:un:elementweakform} by referring $\triangle_k$ to a reference triangle $\triangle_\ast$ with vertices $(0,0),\,(1,0),\,(0,1)$, as shown in Figure \ref{fig:isoparametric}.  In Chapter \ref{chap:of} we did the same thing for quadrilaterals, so here we can be relatively brief.
+We will compute the element integrals \eqref{eq:un:elementweakform} by referring $\triangle_k$ to a reference triangle $\triangle_\ast$ with vertices $(0,0),\,(1,0),\,(0,1)$, as shown in Figure \ref{fig:isoparametric}.  In Chapter \ref{chap:of} we did the same thing for quadrilaterals, so now we can be brief.
 
 If $\triangle_k$ has vertices $(x_0,y_0),\,(x_1,y_1),\,(x_2,y_2)$ then the linear map from $\triangle_\ast$ to $\triangle_k$ is
 \begin{align}
 x(\xi,\eta) &= x_0 + (x_1-x_0) \xi + (x_2-x_0) \eta, \label{eq:un:trianglemap} \\
 y(\xi,\eta) &= y_0 + (y_1-y_0) \xi + (y_2-y_0) \eta. \notag
 \end{align}
-The Jacobian determinant $\det J_k$ of map \eqref{eq:un:trianglemap}, needed for change-of-variables to integrate over the reference element, is a constant on each element.  Its magnitude is the ratio of the area of $\triangle_k$ to the area of the reference element $\triangle_\ast$.  See Exercise \ref{chap:un}.\ref{exer:un:gradientdetails}.
+The Jacobian determinant of map \eqref{eq:un:trianglemap}, needed for change-of-variables to integrate over the reference element, is constant on each element.  Its magnitude is the ratio of the area of $\triangle_k$ to the area of the reference element $\triangle_\ast$, equal to $2|\triangle_k|$ because $|\triangle_\ast|=1/2$.  See Exercise \ref{chap:un}.\ref{exer:un:gradientdetails}.
 
 \begin{marginfigure}
 \input{tikz/isoparametric.tex}
@@ -223,24 +224,23 @@ If $\bx_i\in\overline{\triangle_k}$ then hat function $\psi_i$ satisfies
 \begin{equation}
 \psi_i(x(\xi,\eta),y(\xi,\eta)) = \chi_\ell(\xi,\eta) \label{eq:un:psichimap}
 \end{equation}
-for all $(\xi,\eta)\in\triangle_\ast$, where vertex $\ell$ of $\triangle_\ast$ maps to $\bx_i$.
+for all $(\xi,\eta)\in\triangle_\ast$, where vertex $\ell \in \{0,1,2\}$ of $\triangle_\ast$ maps to $\bx_i$.
 
 Recalling both the change-of-variables formula for integrals and the chain rule, we can write
 \begin{equation}
-F_i^k(\bu) = |\det J_k| \int_{\triangle_\ast} H_\ell^k(\bu,\xi,\eta)\,d\xi\,d\eta \label{eq:un:elementintegralreference}
+F_i^k(\bu) = 2 |\triangle_k| \int_{\triangle_\ast} H_\ell^k(\bu,\xi,\eta)\,d\xi\,d\eta \label{eq:un:elementintegralreference}
 \end{equation}
 where the integrand is
 \begin{equation}
 H_\ell^k(\bu,\xi,\eta) = \left[a(u^h) \grad u^h \cdot \grad \psi_i - f(u^h) \psi_i\right]_{\triangle_\ast}.  \label{eq:un:elementintegrand}
 \end{equation}
-Here the vertex $\ell \in \{0,1,2\}$ of $\triangle_\ast$ corresponds to the node $\bx_i$.  Note that ``$\grad$'' in \eqref{eq:un:elementintegrand} refers to derivatives in variables $x,y$.  Exercises \ref{chap:un}.\ref{exer:un:gradientdetails} and \ref{chap:un}.\ref{exer:un:elementintegranddetails} addresses the details implicit in \eqref{eq:un:elementintegralreference} and \eqref{eq:un:elementintegrand}.
+Here vertex $\ell$ of $\triangle_\ast$ corresponds to the node $\bx_i$.  Note that ``$\grad$'' in \eqref{eq:un:elementintegrand} refers to derivatives in variables $x,y$.  Exercises \ref{chap:un}.\ref{exer:un:gradientdetails} and \ref{chap:un}.\ref{exer:un:elementintegranddetails} addresses the details implicit in \eqref{eq:un:elementintegralreference} and \eqref{eq:un:elementintegrand}.
 
 As in Chapter \ref{chap:of}, the integrals \eqref{eq:un:elementintegralreference} will be approximated using quadrature.  Generally, if there are $Q$ quadrature points $(\xi_q,\eta_q) \in \triangle_\ast$ with weights $w_q$ then
 \begin{equation}
-F_i^k(\bu) \approx |\det J_k| \sum_{q=0}^{Q-1} w_q H_\ell^k(\bu,\xi_q,\eta_q). \label{eq:un:elementquadraturereference}
+F_i^k(\bu) \approx 2 |\triangle_k| \sum_{q=0}^{Q-1} w_q H_\ell^k(\bu,\xi_q,\eta_q). \label{eq:un:elementquadraturereference}
 \end{equation}
-
-Unlike in Chapter \ref{chap:of}, however, the elements are not rectangular.  Quadrature rules based on products of one-dimensional integrals can be built \citep{KarniadakisSherwin2013}, but here we use rules constructed for the reference triangle $\triangle_\ast$.  Some cases which are exact for polynomials of degrees $1,2,3$ appear in Table \ref{tab:un:quadrature}.  These are symmetrical Gaussian rules \citep{Dunavant1985} with $Q=1,3,4$ points, respectively (Exercise \ref{chap:un}.\ref{exer:un:checkquadrature}).  Note that the sum of the weights is $1/2$ because the area of $\triangle_\ast$ is $1/2$.
+We use symmetric quadrature rules constructed for the reference triangle $\triangle_\ast$.\sidenote{Unsymmetric quadrature rules based on tensor products of one-dimensional integrals \citep{KarniadakisSherwin2013} are an alternative.}  Table \ref{tab:un:quadrature} shows degree $1,2,3$ Gaussian rules \citep{Dunavant1985} with $Q=1,3,4$ points, respectively (Exercise \ref{chap:un}.\ref{exer:un:checkquadrature}).  Note that the sum of the weights is $1/2$ because $|\triangle_\ast|=1/2$.
 
 \begin{table}[h]
 \vspace{0.1in}
@@ -271,17 +271,24 @@ $3$ & $4$ & \begin{tabular}{c}
 \end{tabular}
 
 \vspace{0.1in}
-\caption{Symmetric quadrature rules, on the reference triangle $\triangle_\ast$, used to compute \eqref{eq:un:elementquadraturereference}.} \label{tab:un:quadrature}
+\caption{Symmetric quadrature rules on the reference triangle $\triangle_\ast$.  See \eqref{eq:un:elementquadraturereference}.} \label{tab:un:quadrature}
 \end{table}
+
+For the Neumann boundary contributions we use the midpoint rule.  Observe that hat function $\psi_i$ has value $1/2$ at the midpoint of any edge which is incident to $\bx_i$.  Thus
+%FIXME this may be a noticable source of inaccuracy
+\begin{equation}
+\varphi_i^\nu \approx g_N(x_m,y_m) \psi_i(x_m,y_m) |s_\nu| = \frac{1}{2} |s_\nu|\, g_N(x_m,y_m), \label{eq:un:segmentmidpoint}
+\end{equation}
+if $\bx_i \in \overline{s_\nu}$, and it is zero otherwise.  Here $(x_m,y_m)$ is the midpoint, and $|s_\nu|$ is the length, of segment $s_\nu$.
 
 
 \section{Triangular meshes from \Triangle}
 
 \PETSc itself does not include tools for triangulating regions of the plane.  We use the widely-available \Triangle\sidenote{See \href{http://www.cs.cmu.edu/~quake/triangle.html}{www.cs.cmu.edu/$\sim$quake/ triangle.html} for documentation and source code.} software \citep{Shewchuk1996} for this task.  \Triangle is limited to 2D, and it only writes ASCII files, but it has straightforward details.
 
-As input to describe a polygonal region $\Omega$, \Triangle uses an ASCII file with extension \texttt{.poly}.  This input also indicates Dirichlet and Neumann portions of the boundary $\partial \Omega$.  For example, the polygon shown in Figure \ref{fig:un:polygon} was created from the hand-built input file \texttt{blob.poly} shown in Code \ref{code:blobpoly}.  Note that \Triangle takes and generates files with 1-based indexing.
+As input to describe a polygonal region $\Omega$, \Triangle uses an ASCII file with extension \texttt{.poly}.  This input also indicates Dirichlet and Neumann portions of the boundary $\partial \Omega$.  FIXME: use trap.poly.  For example, the polygon shown in Figure \ref{fig:un:polygon} was created from the hand-built input file \texttt{blob.poly} shown in Code \ref{code:blobpoly}.
 
-\inputfromline{../c/\CODELOC/meshes/blob.poly}{\CODELOC blob.poly}{A description of the boundary polygon in Figure \ref{fig:un:polygon}, suitable for reading by \Triangle.}{8}{code:blobpoly}
+\inputfromline{../c/\CODELOC/meshes/blob.poly}{\CODELOC blob.poly}{FIXME: use trap.poly.  A description of the boundary polygon in Figure \ref{fig:un:polygon}, suitable for reading by \Triangle.}{8}{code:blobpoly}
 
 The triangulation shown in Figure \ref{fig:un:number-mesh} came from a single command which asks \Triangle to generate a triangulation, for the \texttt{blob.poly} polygon, which has a polygon output file (option \texttt{-p}), relatively-uniform triangles (option \texttt{-q} for ``quality-checked'' \citep{Shewchuk1996}), and triangles with maximum area of $4.0$ (option \texttt{-a4.0}):
 \begin{cline}
@@ -300,90 +307,69 @@ displays the boundary polygon (from \texttt{blob.poly} or \texttt{blob.1.poly}) 
 
 \section{From ASCII files to \PETSc \pIS and \pVec}
 
-FIXME: Will put \texttt{.node} into \pVec, \texttt{.ele} into \pIS, Dirichlet/Neumann marker into \pIS.  Will read ASCII into Python (not C) and write out \pVec, \pIS with \texttt{PetscBinaryIO.py}.  Then \texttt{unfem.c} will read \pVec, \pIS with \texttt{VecLoad(),ISLoad()}
+FIXME: Will put \texttt{.node} into \pVec, \texttt{.ele} into \pIS, Dirichlet/Neumann marker into \pIS.  Will read ASCII into Python (not C) and write out \pVec, \pIS with \texttt{PetscBinaryIO.py}.  C code will read \pVec, \pIS with \texttt{VecLoad(),ISLoad()}
 
 FIXME: YES WE DO THIS IN Python NOW.  The ASCII files produced by \Triangle are not in a good format for large meshes, but we will accept this for portability and readability.  We will, however, demonstrate how files are read in parallel, based on first doing a mundane and un-scalable task in \PETSc, namely reading the ASCII \Triangle files serially, in a Python program, and writing out a binary file in \PETSc format.  Of course we will focus on the scalability of the FEM solution process, once the mesh is loaded.
 
 FIXME THIS IS STILL A VALID POINT  In this part there is an important detail about triangulations, which affects the data structure for elements.  Namely, we cannot tell if an edge of an element is in the boundary just by whether both endpoints are in the boundary.  For example, edge from node 5 (on the Dirichlet boundary) to node 7 (on the Neumann boundary) in Figure \ref{fig:un:number-mesh} is not in the boundary.  Thus we need to have list of flags for the boundary segments themselves.
 
+FIXME we build a \texttt{UM} data type, a struct, in \texttt{c/\CODELOC um.[h|c]}, to hold the mesh; show the struct
+
+FIXME node coordinates in \pVecs \texttt{x,y}; element index triples, segment index pairs are \pIS which hold indices into \texttt{x,y}; also boundary flags are \pIS; code not shown
+
+\section{Initial implementation}
+
+FIXME show extracts of \texttt{main()} and most of \texttt{FormFunction()} in \texttt{c/\CODELOC unfem.c}
+
+\section{Example problems and initial testing}
+
+FIXME explain cases 0, 1, 2, showing different trapezoid boundary conditions
+
+FIXME demo convergence with \texttt{-snes\_fd}
 
 \section{Assembling an approximate Jacobian}
 
-FIXME EXPLAIN PICARD $\bF(\bu)=0$ to $A(\bu) \bu - \bb(\bu)=0$ to $A(\bu^k) \bu^{k+1} - \bb(\bu^k)=0$ to $A(\bu^k) (\bu^{k+1}-\bu^k) - \bb(\bu^k)= - A(\bu^k) \bu^k$ to $A(\bu^k) \bs = -\bF(\bu^k)$
+FIXME EXPLAIN PICARD $\bF(\bu)=0$ to $A(\bu) \bu - \bb(\bu)=0$ to $A(\bu^k) \bu^{k+1} - \bb(\bu^k)=0$ to $A(\bu^k) (\bu^{k+1}-\bu^k) - \bb(\bu^k)= - A(\bu^k) \bu^k$ to $A(\bu^k) \bs = -\bF(\bu^k)$  The linear system at a step, $A(\bu^k) \bs = -\bF(\bu^k)$, has $A=A(\bu^k)\in\RR^{N\times N}$ and $\bb=-\bF(\bu^k)\in\RR^N$, where $N$ is the number of nodes.  \pMat and \pVec objects store the problem, and, unlike in the \texttt{-snes\_fd} and \texttt{-snes\_mf} cases used above, wherein the \pMat object stayed invisibly inside the \pSNES solver, we now assemble the \pMat.
 
-FIXME Furthermore we do it in parallel.  Recall that \texttt{c3convert.c} above creates a distributed \pVec called \texttt{E}, which is an array of elements of type \texttt{elementtype}, and \texttt{readmesh.c} reads it.
-
-FIXME For the element-by-element assembly procedure we first define the integral over one triangle $\triangle_k$,
+FIXME by considering \eqref{eq:un:dirichletresiduals}, \eqref{eq:un:elementweakform}, and \eqref{eq:un:elementwisesum}, the entries of this Picard/Jacobian matrix are
 \begin{equation}
-\text{\texttt{a(k,i,j)}} = \int_{\triangle_k} a(u^h) \grad \psi_i \cdot \grad \psi_. \label{aelementintegral}
+A_{ij}(\bu) =  \begin{cases}
+               1, & i \in \partial_D\Omega \text{ or } j \in \partial_D\Omega, \\
+               \sum_{k=0}^{K-1} A_{ij}^k(\bu), & \text{otherwise},
+               \end{cases} \label{eq:un:picardentry}
 \end{equation}
-so that
-    $$\tilde a_{ij} = \sum_k \phantom{.}\text{\texttt{a(k,i,j)}}.$$
-Likewise we will compute
+where
 \begin{equation}
-\text{\texttt{b(k,i)}} = \int_{\triangle_k} f \psi_i + \int_{\overline{\triangle}_k \cap \partial_N\Omega} g_N \psi_i, \label{belementintegral}
+A_{ij}^k(\bu) = \int_{\triangle_k} a(u^h) \grad\psi_j \cdot \grad\psi_i \label{eq:un:picardentryelement}
 \end{equation}
-so that $\tilde b_i = \sum_{k} \;\text{\texttt{b(k,i)}}$.
+Again this is computed by quadrature, similar to \eqref{eq:un:elementintegralreference} and \eqref{eq:un:elementquadraturereference}.  This matrix is evidently symmetric, $a_{ij}=a_{ji}$, and sparse.  Furthermore it is positive-definite if $a(u,x,y)>0$, and thus the conjugate gradient Krylov method applies to the equations for the Newton step; see Chapter \ref{chap:ls}.
 
+\section{Preallocate a \pMat (serial)}
 
-FIXME IS NOW THE JACOBIAN This linear system
-\begin{equation}
-A \bu = \bb, \label{poissonmatrix}
-\end{equation}
-has $A\in\RR^{N\times N}$ and $\bu,\bb\in\RR^N$, where $N$ is the number of nodes.  \pMat and \pVec objects store the problem
+FIXME essential for speed
 
-FIXME $A$ is \emph{symmetric}, $a_{ij}=a_{ji}$ and \emph{sparse}
+\section{Performance relative to \pDMDA structured grid}
 
-FIXME For the right side define the entries
-\begin{equation}
-    b_i = \int_\Omega f \psi_i + \int_{\partial_N\Omega} \gamma \psi_i - \sum_{l=0,\dots,L} g(\bx_{j_l})  \int_\Omega \grad \psi_{j_l} \cdot \grad \psi_i  \label{bentryfem}
-\end{equation}
-if $\bx_i \notin \partial_D \Omega$, while if $\bx_i \in \partial_D \Omega$ then
-    $$b_i = g(\bx_{i}).$$
+FIXME introduce \texttt{genstructured.py} and case 3; compares well in serial to Chapter 3 example
 
+compare for \texttt{--with-debugging=0} build (note $1025^2=1050625$):
+\begin{cline}
+$ timer ./poisson -da_refine 7 -ksp_converged_reason -ksp_type cg -pc_type icc
+Linear solve converged due to CONVERGED_RTOL iterations 721
+on 1025 x 1025 grid:  error |u-uexact|_inf = 5.29691e-08
+real 18.67
+$ timer ./unfem -un_mesh square.10.dat -un_quaddeg 1 -un_case 3 -ksp_type cg -pc_type icc
+case 3 result for N=1050625 nodes:  |u-u_exact|_inf = 9.89813e-08
+real 24.47
+\end{cline}
 
-%\section{Preallocate a \pMat}
-%FIXME: figure showing parallel partition of elements
-%\cinputpart{testprealloc.c}{Read mesh \pVecs from file.  Get row ownership range.}{I}{//STARTLOAD}{//ENDLOAD}{code:testpreallocpartone}
-%\cinputpart{testprealloc.c}{Set up \pMat $A$ and actually preallocate it.  Fill it with junk entries so the pattern can be visualized.}{II}{//ENDLOAD}{//ENDTEST}{code:testpreallocparttwo}
+\section{Next steps}
 
+FIXME: parallel approach could use \Triangle \texttt{.neigh} file as adjacency graph for elements, run \texttt{MatPartitioning} stuff (see manual), apply partitioning to get \pIS (or \texttt{AO}), and have nodes and edges follow along
 
-\begin{comment}
-   The "trick" is that first partition the element across processes, then partition the vertices (nodal values) subservient to the partitioning of the elements and then you "renumber" the elements and vertices so that the elements on the first process are numbered first, followed by the elements on the second process etc and similarly the vertices on the first process are numbered before the vertices on the second processes etc.
+FIXME: paraphrase Barry: The ``trick'' is that first partition the element across processes, then partition the vertices (nodal values) subordinate to the partitioning of the elements and then you renumber the elements and vertices so that the elements on the first process are numbered first, followed by the elements on the second process etc and similarly the vertices on the first process are numbered before the vertices on the second processes etc.  Each process loops over its elements computing the element stiffness/load and calling \texttt{MatSetValues/VecSetValues()} using the ``new'' numbering of the vertices.  The ``old'' numbering that was on the disk is not used in communicating with PETSc.
 
-  Now each process just needs to loop over its elements compute the element stiffness/load and call MatSetValues/VecSetValues() the the "new" numbering of the vertices.  The "old" numbering that was on the disk is simply not used in communicating with PETSc, you only use the new PETSc numbering.
-
-   Barry
-
-> On Apr 26, 2016, at 1:03 PM, Jie Cheng <chengj5@rpi.edu> wrote:
->
-> Hello everyone
->
-> I have a finite element code to solve nonlinear solid mechanics (using Newton-Raphson iteration) implemented with PETSc. The code is serial, organized as following:
->
-> 1) Read the connectivity of the unstructured mesh, coordinates of nodes from individual txt files.
-> 1.1) Connectivity file contains [# of elements] rows, and each row lists the global number of nodes on that element. Take 3d hexahedral elements for instance:
->       223 224 298 297 1 2 76 75
->       224 225 299 298 2 3 77 76
->       ? ?
-> 1.2) Coordinates file contains [# of nodes] rows, and each row lists the coordinates of a node, for example:
->       0                   0.0011                      3.9e-5
->       2.3677e-5     0.001.9975                3.9e-5
->       ? ?
->
-> 2) Create the global stiffness A matrix with MatCreateSeqAIJ since the dimensions and nonzero pattern are known from the connectivity.
-> 3) Loop over the element to compute the element stiffness matrix and right hand side. Then assemble the global stiffness matrix and right hand side.
-> 4) Solve the linear equation with KSPsolve for the displacement increment, then go back to Step 3.
->
-> The code works fine in serial, now I?m trying to parallelize it. To partition the mesh, I can use partdmesh from METIS, or let PETSc calls it. Either way I will find a way to assign different elements and nodes to different ranks. My question is: since PETSc does not allow us to control the memory distribution of the parallel matrix/vector, how do I make sure the rank happens to have all/most memory it needs for the specific elements? For example, rank 0 is in charged of element n, and needs to insert values to A[ i ][ j ], how do I make sure the i-th row is assigned to rank 0?
->
-> This question is fundamental for people work with finite element methods. I checked the tutorial codes but did not find an example to follow. Section 3.5 of the manual talks about partition, but it does not say anything about linking the partition with the memory distribution. Could anyone give me some instructions on this issue? Thank you in advance!
->
-> Best
-> Jie Cheng
-\end{comment}
-
-
+FIXME: see approach to mesh topology in chapter 10 of \citep{Loggetal2012}
 
 
 \section{Exercises}
@@ -418,5 +404,8 @@ For the third formula, node $\bx_i$ corresponds to vertex $\ell$ on $\triangle_\
 \iint_{\triangle_\ast} \xi^i \eta^j\,d\xi d\eta = \frac{i!\,j!}{(i+j+2)!}, \label{eq:un:checkquadrature}
 \end{equation}
 for all cases with $0\le i+j\le n$, against the quadrature result.  Also one should show an inexact quadrature result for some case with $i+j=n+1$.  Write a small program, in the language of your choice, which does these things.
+\item \label{exer:un:basisfreeresidual} FIXME motivated by \citep{Loggetal2012}: replace $\bF(\bu)$ with $\bF(\bu;v)$ so that residual equation no longer requires basis of $S^h$ for its definition; advantages/disadvantages?
+\item \label{exer:un:truejacobian} FIXME implement the true Jacobian in the $a=a(x,y)$ case, so that we only add a diagonal $\partial f/\partial u$ term; test on case 2 example and see if improved \pSNES convergence
+\item \label{exer:un:bratu} FIXME using result from previous exercise, solve Bratu; compute critical $\lambda$; equals 6.81 according to \pSNES example \texttt{ex5.c}
 \end{enumerate}
 
