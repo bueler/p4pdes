@@ -84,7 +84,7 @@ In nonlinear cases each particular problem must be analyzed for well-posedness. 
 \end{itemize}
 
 
-\section{A $P^1$ finite element method (FEM)}
+\section{A $P^1$ FEM}
 
 A FEM for the Poisson problem comes from requiring the weak formulation \eqref{eq:un:poissonweak} to be true for $u$ in a finite-dimensional subspace of $H_{g}^1(\Omega)$, and for test functions $v$ ranging over a basis of a finite-dimensional subspace of $H_{0}^1(\Omega)$.\sidenote{An FEM is \emph{conforming} if these subspace claims are accurate.  Otherwise one is guilty of \emph{variational crimes} \citep{Ciarlet2002} with \emph{nonconforming elements} \citep{Braess2007}.}  In the \emph{Galerkin} method here, these subspaces, built upon a triangulation of $\Omega$, will be nearly the same.
 
@@ -282,40 +282,52 @@ For the Neumann boundary contributions we use the midpoint rule.  Observe that h
 if $\bx_i \in \overline{s_\nu}$, and it is zero otherwise.  Here $(x_m,y_m)$ is the midpoint, and $|s_\nu|$ is the length, of segment $s_\nu$.
 
 
-\section{Triangular meshes from \Triangle}
+\section{Triangulations from \Triangle}
 
-\PETSc itself does not include tools for triangulating regions of the plane.  We use the widely-available \Triangle\sidenote{See \href{http://www.cs.cmu.edu/~quake/triangle.html}{www.cs.cmu.edu/$\sim$quake/ triangle.html} for documentation and source code.} software \citep{Shewchuk1996} for this task.  \Triangle is limited to 2D, and it only writes ASCII files, but it has straightforward details.
+\PETSc does not include tools for triangulating regions of the plane, that is, for generating unstructured meshes.  We use the widely-available \Triangle\sidenote{See \href{http://www.cs.cmu.edu/~quake/triangle.html}{www.cs.cmu.edu/$\sim$quake/ triangle.html} for documentation.} software \citep{Shewchuk1996} for this task.  \Triangle is limited to 2D, but the ASCII files it generates have straightforward details.
 
-As input to describe a polygonal region $\Omega$, \Triangle uses an ASCII file with extension \texttt{.poly}.  This input also indicates Dirichlet and Neumann portions of the boundary $\partial \Omega$.  FIXME: use trap.poly.  For example, the polygon shown in Figure \ref{fig:un:polygon} was created from the hand-built input file \texttt{blob.poly} shown in Code \ref{code:blobpoly}.
-
-\inputfromline{../c/\CODELOC/meshes/blob.poly}{\CODELOC blob.poly}{FIXME: use trap.poly.  A description of the boundary polygon in Figure \ref{fig:un:polygon}, suitable for reading by \Triangle.}{8}{code:blobpoly}
-
-The triangulation shown in Figure \ref{fig:un:number-mesh} came from a single command which asks \Triangle to generate a triangulation, for the \texttt{blob.poly} polygon, which has a polygon output file (option \texttt{-p}), relatively-uniform triangles (option \texttt{-q} for ``quality-checked'' \citep{Shewchuk1996}), and triangles with maximum area of $4.0$ (option \texttt{-a4.0}):
-\begin{cline}
-$ triangle -pqa4.0 blob
-\end{cline}
-%$
-This command generates three ASCII files, \texttt{blob.1.poly}, \texttt{blob.1.node}, and  \texttt{blob.1.ele}.  These files define the polygonal boundary, node locations, and elements in the triangulation, respectively.
-
-\Triangle includes a minimal visualization tool.  The command
-\begin{cline}
-$ showme blob
-\end{cline}
-%$
-displays the boundary polygon (from \texttt{blob.poly} or \texttt{blob.1.poly}) and the triangulation itself (\texttt{blob.1.node} and \texttt{blob.1.ele}).
-
+\Triangle inputs an ASCII file with extension \texttt{.poly} for describing a polygonal region.  This input also indicates Dirichlet and Neumann portions of the boundary.  For example, the hand-built input file \texttt{trap.poly} in Code \ref{code:trappoly} generates the polygon shown in Figure \ref{fig:un:trap}.
 
 \begin{figure}
 \input{tikz/trap.tex}
-\caption{FIXME}
+\caption{Polygonal region $\Omega$ with Dirichlet ($\partial_D\Omega$) and Neumann ($\partial_N \Omega$) boundaries as indicated, corresponding to \texttt{trap.poly} in Code \ref{code:trappoly}.}
 \label{fig:un:trap}
 \end{figure}
 
+\inputwhole{../c/\CODELOC/meshes/trap.poly}{\CODELOC trap.poly}{A description of the boundary polygon in Figure \ref{fig:un:trap}, suitable for reading by \Triangle.}{code:trappoly}
+
+The triangulation shown in Figure \ref{fig:un:trapone} came from a single command which asks \Triangle to generate a triangulation from \texttt{trap.poly}.  The command asks for a polygon output file (option \texttt{-p}), relatively-uniform triangles (option \texttt{-q} for ``quality-checked,'' with no interior angles less than $20^\circ$ \citep{Shewchuk1996}), and triangles with a maximum area (option \texttt{-a}) of $0.5$:
+\begin{cline}
+$ triangle -pqa0.5 trap
+\end{cline}
+%$
+This command generates three ASCII files, \texttt{trap.1.node}, \texttt{trap.1.ele}, and \texttt{trap.1.poly}, defining the new node locations, elements (i.e.~as triples of node indices), and segments in the polynomial boundary (as pairs of node indices), respectively.\sidenote{The reader should examine these various files while referring to the Figures.}  The triangulation has $N=8$ nodes, $K=6$ elements, $P=8$ boundary segments, $n_D=5$ Dirichlet nodes, and $n_N=4$ segments in the Neumann boundary.  Observe that, whereas \texttt{trap.poly} describes the boundary using only 4 segments, additional nodes have been added in the meshing process.
+
 \begin{figure}
 \input{tmp/trap.1.tikz}
-\caption{FIXME}
+\caption{The triangulation described by \texttt{trap.1.\{node,ele,poly\}}.}
 \label{fig:un:trapone}
 \end{figure}
+
+We will test the FEM on a sequence of refined grids.  For an example of a refinement, the command
+\begin{cline}
+$ triangle -rpqa0.1 trap.1
+\end{cline}
+%$
+generates ASCII files \texttt{trap.2.\{node,ele,poly\}} with $N=33$ nodes, $K=33$ elements, and $P=19$ boundary segments for the mesh shown in Figure \ref{fig:un:traptwo}.  Refinement (option \texttt{-r}) here means that nodes in the \texttt{trap.1} files are retained, but there is no such inclusion relationship for the edges or triangles.  Also, we see that the symmetry of the triangulation in the \texttt{trap.1} files was coincidental and is not intrinsic to the original triangulation or refinement algorithms.
+
+\begin{figure}
+\input{tmp/trap.2.tikz}
+\caption{The triangulation described by \texttt{trap.2.\{node,ele,poly\}}.}
+\label{fig:un:traptwo}
+\end{figure}
+
+\Triangle includes a minimal visualization tool.  The command
+\begin{cline}
+$ showme trap
+\end{cline}
+%$
+displays graphically the boundary polygon from \texttt{trap.poly} and/or one of the levels of  triangulation from the \texttt{trap.\{1,2\}} files.
 
 
 \section{From ASCII files to \PETSc \pIS and \pVec}
