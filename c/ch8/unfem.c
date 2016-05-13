@@ -104,7 +104,7 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
     // Neumann segment contributions
     ierr = ISGetIndices(user->mesh.s,&as); CHKERRQ(ierr);
     ierr = ISGetIndices(user->mesh.bfs,&abfs); CHKERRQ(ierr);
-    for (p = 0; p < user->mesh.PS; p++) {
+    for (p = 0; p < user->mesh.P; p++) {
         if (abfs[p] == 1) {  // segment is Neumann
             na = as[2*p+0];  // nodes at end of segment
             nb = as[2*p+1];
@@ -339,8 +339,8 @@ int main(int argc,char **argv) {
 
     // read mesh object of type UM
     ierr = UMInitialize(&(user.mesh)); CHKERRQ(ierr);
-    ierr = UMReadNodes(&(user.mesh),meshroot); CHKERRQ(ierr);
-    ierr = UMReadElements(&(user.mesh),meshroot); CHKERRQ(ierr);
+    ierr = UMReadVecs(&(user.mesh),meshroot); CHKERRQ(ierr);
+    ierr = UMReadISs(&(user.mesh),meshroot); CHKERRQ(ierr);
     if (view) {
         PetscViewer stdoutviewer;
         ierr = PetscViewerASCIIGetStdout(PETSC_COMM_WORLD,&stdoutviewer); CHKERRQ(ierr);

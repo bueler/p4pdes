@@ -2,15 +2,12 @@
 #
 # (C) 2016 Ed Bueler
 #
-# Create a petsc binary file from the .node, .ele, .poly output of triangle.
+# Create PETSc binary files from the .node, .ele, .poly output of triangle.
 
-# example to put Vec x,y (node coordinates) and IS e (element index map) in foo.dat:
+# example to put Vecs x,y (node coordinates) and ISs e,bfn,s,bfs in foo.dat.{vec,is}
 #    $ (cd tex/ && make)       # creates blob.1.* in c/ch8/meshes/
 #    $ cd c/ch8/
 #    $ ./tri2petsc.py meshes/blob.1 foo.dat
-
-# TODO:
-#    * decide on how boundary edges will be indicated
 
 import numpy as np
 import sys
@@ -234,20 +231,16 @@ if __name__ == "__main__":
     PN,PS,px,py,s,bfs = triangle_read_poly(polyname)
     print '... PN=%d nodes and PS=%d segments' % (PN,PS)
 
-    #FIXME  presumably need to write more stuff
-    #FIXME  split files because error "Not a vector next in file" for this:
-    #       petsc.writeBinaryFile(args.outfile,[ox,oy,oe])
-
-    print 'writing node coordinates as Vecs to petsc binary file %s.node' % args.outfile
+    print 'writing node coordinates as Vecs to petsc binary file %s.vec' % args.outfile
     ox = x.view(PetscBinaryIO.Vec)
     oy = y.view(PetscBinaryIO.Vec)
     petsc = PetscBinaryIO.PetscBinaryIO()
-    petsc.writeBinaryFile(args.outfile+'.node',[ox,oy,])
+    petsc.writeBinaryFile(args.outfile+'.vec',[ox,oy,])
 
-    print 'writing elements, boundary flags, segments as IS to petsc binary file %s.ele' % args.outfile
+    print 'writing elements, segments, and boundary flags as ISs to petsc binary file %s.is' % args.outfile
     oe = e.flatten().view(PetscBinaryIO.IS)
     obfn = bfn.view(PetscBinaryIO.IS)
     os = s.flatten().view(PetscBinaryIO.IS)
     obfs = bfs.view(PetscBinaryIO.IS)
-    petsc.writeBinaryFile(args.outfile+'.ele',[oe,obfn,os,obfs])
+    petsc.writeBinaryFile(args.outfile+'.is',[oe,obfn,os,obfs])
 

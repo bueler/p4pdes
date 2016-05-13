@@ -52,16 +52,16 @@ else  # generate  trap.?.* from trap.poly
     cd ..
 fi
 
-# generate .dat.node, .dat.ele files
+# generate .vec, .is files
 for (( N=1; N<=${1:-4}; N++ )); do
-    ./tri2petsc.py meshes/$NAME.$N $NAME.$N.dat
+    ./tri2petsc.py meshes/$NAME.$N $NAME.$N
 done
 
 make unfem
 
 # run unfem and show error, evals, time results
 for (( N=1; N<=${1:-4}; N++ )); do
-    cmd="./unfem -log_view -un_mesh ${NAME}.${N}.dat ${OPTIONS}"
+    cmd="./unfem -log_view -un_mesh ${NAME}.${N} ${OPTIONS}"
     echo "running:  $cmd"
     rm -f foo.txt
     $cmd &> foo.txt

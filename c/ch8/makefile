@@ -12,6 +12,6 @@ unfem: unfem.o um.o chkopts
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ *.pyc unfem *.dat *.dat.*
+	@rm -f *~ *.pyc unfem *.vec *.is
 	(cd meshes/ && ${MAKE} clean)
 
