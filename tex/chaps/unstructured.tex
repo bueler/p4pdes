@@ -283,7 +283,33 @@ if $\bx_i \in \overline{s_\nu}$, and it is zero otherwise.  Here $(x_m,y_m)$ is 
 
 \section{Example problems}
 
-FIXME explain cases 0, 1, 2, showing different trapezoid boundary conditions
+Let us set up some cases on a trapezoidal domain, with known exact solutions, for testing the FEM.  The first two cases are designed to test the implementation of the PDE and of Dirichlet boundary conditions.  One of these problems is linear and the other is nonlinear.  An additional case tests the non-homogeneous Neumann boundary condition implementation.
+
+All three cases are based on manufactured solutions.  Let
+\begin{equation}
+  u_{\text{exact}}(x,y) = 1 - y^2 - \frac{1}{4} y^4. \label{eq:un:exactsolution}
+\end{equation}
+This function also computes the Dirichlet boundary values $g_D(x,y)$ in all cases.  Because the domain is not aligned with the coordinate axes, and because fourth-order polynomials generate non-zero interpolation errors in a $P^1$ FEM, the numerical error generated with this exact solution will decay at the generic rate.
+
+\begin{figure}
+\input{tikz/trap.tex}
+\caption{Exact solution cases $0$ and $1$ solve Poisson equations on a trapezoidal region $\Omega$.  Boundary subsets $\partial_D\Omega$, $\partial_N \Omega$ are as indicated.  See \texttt{trap.poly} in Code \ref{code:trappoly}.}
+\label{fig:un:trap}
+\end{figure}
+
+The remaining details are case-specific:
+\begin{itemize}
+\item[case $0$] \emph{Linear}.  Use Figure \ref{fig:un:trap} boundary conditions.  Noting $\partial u_{\text{exact}}/\partial n = \partial u_{\text{exact}}/\partial y = 0$ on the Neumann boundary $\partial_N \Omega$, where $y=0$, let $g_N=0$.  Let $a=1$ and determine $f$ by differentiating the exact solution: $f(x,y) = -\grad^2 u_{\text{exact}} = 2 + 3 y^2$.
+\item[case $1$] \emph{Nonlinear}.  Again use Figure \ref{fig:un:trap} boundary conditions and $g_N=0$.  However, let $a(u) = 1+u^2$ and compute the corresponding $f(u)$ by differentiation.
+\item[case $2$] \emph{Non-homogeneous Neumann}.  Use Figure \ref{fig:un:trapneu} boundary conditions.  Let $a$, $f$ be as in case $0$.  Determine the (non-zero) value $g_N$ by differentiating $u_{\text{exact}}$ along the Neumann boundary, a line segment with outward unit normal vector $\bn = \left<1/\sqrt{2},1/\sqrt{2}\right>$.
+\end{itemize}
+See \texttt{c/\CODELOC cases.h} (not shown) for all remaining details.
+
+\begin{figure}
+\input{tikz/trapneu.tex}
+\caption{Case $2$ uses the same region as in cases $0$ and $1$, but with different boundary conditions.  See \texttt{c/\CODELOC meshes/trapneu.poly} (not shown).}
+\label{fig:un:trapneu}
+\end{figure}
 
 
 \section{Triangulations from \Triangle}
@@ -292,13 +318,7 @@ FIXME explain cases 0, 1, 2, showing different trapezoid boundary conditions
 
 \Triangle inputs an ASCII file with extension \texttt{.poly} for describing a polygonal region.  This input also indicates Dirichlet and Neumann portions of the boundary.  For example, the hand-built input file \texttt{trap.poly} in Code \ref{code:trappoly} generates the polygon shown in Figure \ref{fig:un:trap}.
 
-\begin{figure}
-\input{tikz/trap.tex}
-\caption{Polygonal region $\Omega$ with Dirichlet ($\partial_D\Omega$) and Neumann ($\partial_N \Omega$) boundaries as indicated, corresponding to \texttt{trap.poly} in Code \ref{code:trappoly}.}
-\label{fig:un:trap}
-\end{figure}
-
-\inputwhole{../c/\CODELOC/meshes/trap.poly}{\CODELOC trap.poly}{A description of the boundary polygon in Figure \ref{fig:un:trap}, suitable for reading by \Triangle.}{code:trappoly}
+\inputwhole{../c/\CODELOC/meshes/trap.poly}{\CODELOC meshes/trap.poly}{A description of the boundary polygon in Figure \ref{fig:un:trap}, suitable for reading by \Triangle.}{code:trappoly}
 
 The triangulation shown in Figure \ref{fig:un:trapone} came from a single command which asks \Triangle to generate a triangulation from \texttt{trap.poly}.  The command asks for a polygon output file (option \texttt{-p}), relatively-uniform triangles (option \texttt{-q} for ``quality-checked,'' with no interior angles less than $20^\circ$ \citep{Shewchuk1996}), and triangles with a maximum area (option \texttt{-a}) of $0.5$:
 \begin{cline}
