@@ -277,11 +277,15 @@ $3$ & $4$ & \begin{tabular}{c}
 \end{table}
 
 For the Neumann boundary contributions we use the midpoint rule.  Observe that hat function $\psi_i$ has value $1/2$ at the midpoint of any edge which is incident to $\bx_i$.  Thus
-%FIXME this may be a noticable source of inaccuracy
 \begin{equation}
 \varphi_i^\nu \approx g_N(x_m,y_m) \psi_i(x_m,y_m) |s_\nu| = \frac{1}{2} |s_\nu|\, g_N(x_m,y_m), \label{eq:un:segmentquadrature}
 \end{equation}
 if $\bx_i \in \overline{s_\nu}$, and it is zero otherwise.  Here $(x_m,y_m)$ is the midpoint, and $|s_\nu|$ is the length, of segment $s_\nu$.
+
+
+\section{Example problems}
+
+FIXME explain cases 0, 1, 2, showing different trapezoid boundary conditions
 
 
 \section{Triangulations from \Triangle}
@@ -331,7 +335,7 @@ We will test the FEM on a sequence of refined grids.  For an example of a refine
 $ triangle -rpqa0.1 trap.1
 \end{cline}
 %$
-generates ASCII files \texttt{trap.2.\{node,ele,poly\}} with $N=33$ nodes, $K=33$ elements, and $P=19$ boundary segments for the mesh shown in Figure \ref{fig:un:traptwo}.  Refinement (option \texttt{-r}) here means that nodes in the \texttt{trap.1} files are retained, but there is no such inclusion relationship for the edges or triangles.  We see that the symmetry of the triangulation in the \texttt{trap.1} files was essentiall coincidental.  Symmetry is not intrinsic to the original triangulation or refinement algorithms, even when the original data is symmetric.
+generates ASCII files \texttt{trap.2.\{node,ele,poly\}} with $N=33$ nodes, $K=33$ elements, and $P=19$ boundary segments for the mesh shown in Figure \ref{fig:un:traptwo}.  Refinement (option \texttt{-r}) here means that nodes in the \texttt{trap.1} files are retained, but there is no such inclusion relationship for the edges or triangles.  We see that the symmetry of the \texttt{trap.1} mesh was essentially coincidental.  Even if the original data are symmetric, symmetry is not preserved by the \Triangle algorithms.
 
 \Triangle includes a minimal visualization tool.  The command
 \begin{cline}
@@ -422,11 +426,10 @@ Figure \ref{fig:un:unfemstack} shows the structure of \texttt{unfem.c}, includin
 FIXME show extracts of \texttt{main()} and most of \texttt{FormFunction()} in \texttt{c/\CODELOC unfem.c}
 
 
-\section{Example problems and initial testing}
-
-FIXME explain cases 0, 1, 2, showing different trapezoid boundary conditions
+\section{Initial testing}
 
 FIXME demo convergence with \texttt{-snes\_fd}
+
 
 \section{Assembling an approximate Jacobian}
 
