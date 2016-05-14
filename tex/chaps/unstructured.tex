@@ -451,12 +451,12 @@ FIXME essential for speed
 
 compare for \texttt{--with-debugging=0} build:
 \begin{cline}
-$ timer ./unfem -un_mesh square.7 -un_case 3 -un_noprealloc
-case 3 result for N=16641 nodes:  |u-u_exact|_inf = 5.36847e-06
-real 6.55
-$ timer ./unfem -un_mesh square.7 -un_case 3
-case 3 result for N=16641 nodes:  |u-u_exact|_inf = 5.36847e-06
-real 0.24
+$ timer ./unfem -un_mesh meshes/trap.7 -un_noprealloc
+case 0 result for N=46421 nodes:  |u-u_exact|_inf = 6.55365e-05
+real 56.30
+$ timer ./unfem -un_mesh meshes/trap.7
+case 0 result for N=46421 nodes:  |u-u_exact|_inf = 6.55365e-05
+real 0.97
 \end{cline}
 
 \section{Performance relative to \pDMDA structured grid}
@@ -465,10 +465,16 @@ FIXME introduce \texttt{genstructured.py} and case 3; compares well in serial to
 
 compare for \texttt{--with-debugging=0} build (note $1025^2=1050625$):
 \begin{cline}
+$ cd c/ch3/
+$ make poisson
 $ timer ./poisson -da_refine 7 -ksp_type cg -pc_type icc
 on 1025 x 1025 grid:  error |u-uexact|_inf = 5.29691e-08
 real 18.67
-$ timer ./unfem -un_mesh square.10.dat -un_quaddeg 1 -un_case 3 -ksp_type cg -pc_type icc
+$ cd ../ch8/
+$ ./genstructured.py meshes/square.10 1025
+$ ./tri2petsc.py meshes/square.10 meshes/square.10
+$ make unfem
+$ timer ./unfem -un_mesh meshes/square.10 -un_quaddeg 1 -un_case 3
 case 3 result for N=1050625 nodes:  |u-u_exact|_inf = 9.89813e-08
 real 24.47
 \end{cline}
