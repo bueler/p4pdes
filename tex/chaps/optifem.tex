@@ -143,7 +143,7 @@ The functional in \eqref{eq:of:functional} can be computed element-by-element,\f
 \begin{equation}
 I[u] = \sum_{i=0}^{m_x} \sum_{j=0}^{m_y} \int_{\square_{ij}} \frac{1}{p} |\grad u|^p - fu  \label{eq:of:sumoverelements}
 \end{equation}
-Integration over a single element $\square_{ij}$ can be addressed once we represent $f$ and $u$.  A related sum over elements computes an approximation of the weak form \eqref{eq:of:plapweakform}; see \eqref{eq:of:weakformbasis} and \eqref{eq:of:weakformdetail} below.
+Integration over a single element $\square_{ij}$ can be addressed once we represent $f$ and $u$.  A related sum over elements computes an approximation of the weak form \eqref{eq:of:plapweakform}; see \eqref{eq:of:weakformbasis} and \eqref{eq:of:residualsumoverelements} below.
 
 By showing the grid in Figure \ref{fig:of:q1grid}, and the sum-over-elements formula \eqref{eq:of:sumoverelements}, we have already motivated how we are going to use \PETSc's \pDMDA structured-grid object.\sidenote{Introduced in Chapter \ref{chap:st}.}  We create this object using a \texttt{BOX} stencil and \texttt{GHOSTED} boundaries in each direction, as in this call extracted from Code \ref{code:plapMain}:
 \begin{code}

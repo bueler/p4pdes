@@ -157,7 +157,7 @@ There are alternative families other than one-step schemes.  For example, the \e
 \begin{equation}
 \bY_\ell = \bY_{\ell-1} - \frac{h}{2} \bg(t_{\ell-2},\bY_{\ell-2}) + \frac{3 h}{2} \bg(t_{\ell-1},\bY_{\ell-1})  \label{eq:ts:ab2}
 \end{equation}
-is a \emph{multi-step} method.  It computes a new value $\bY_\ell$ with only one additional evaluation of $\bg$ (i.e.~one stage), but using two previous values $\bY_{\ell-2},\bY_{\ell-1}$.  This works in a straightforward way only if the step-size $h=\Delta t$ is independent of $\ell$.  A goal of such methods is to achieve order greater than one with only one evaluation of $\bg$ per time step, and this is often achieved in practice.  Other schemes combine the multiple-stages and multi-step ideas such as the \emph{general linear methods} \citep{Butcher2008}.  In our quick treatment of time-stepping, we will say no more about multi-step and general linear methods, though the latter appear as possible \PETSc options in Table \ref{tab:ts:tstypes} below.
+is a \emph{multi-step} method.  It computes a new value $\bY_\ell$ with only one additional evaluation of $\bg$ (i.e.~one stage), but using two previous values $\bY_{\ell-2},\bY_{\ell-1}$.  This works in a straightforward way only if the step-size $h=\Delta t$ is independent of $\ell$.  A goal of such methods is to achieve order greater than one with only one evaluation of $\bg$ per time step, and this is often achieved in practice.  Other schemes combine the multiple-stages and multi-step ideas such as the \emph{general linear methods} \citep{Butcher2008}.  In our quick treatment of time-stepping, we will say no more about multi-step and general linear methods, though the latter appear as possible \PETSc options in Table \ref{tab:ts:odebasictypes} below.
 
 The general theme is that the cost of an ODE numerical method is proportional to the number of (distinct) evaluations of the right-hand side $\bg$ of the ODE, especially if $\bg$ has significant nonlinearities.  The additional arithmetic in implementing a particular scheme, represented for example by the number of coefficients in the tableau, is usually less important.
 
@@ -410,7 +410,7 @@ backward Euler \eqref{eq:ts:backwardeuler}  & \texttt{beuler} & no & \\
 $\theta>0$   FIXME                          & \texttt{theta}  & no & FIXME \\
 Crank-Nicolson                              & \texttt{cn}     & no & 
 \end{tabular}
-\caption{Choices of the best-known ODE integration methods.  Explicit schemes are above the line and implicit below.  Compare Table \ref{tab:ts:tstypes}, which is more complete.} \label{tab:ts:odebasictypes}
+\caption{Choices of the best-known ODE integration methods.  Explicit schemes are above the line and implicit below.} \label{tab:ts:odebasictypes}
 \end{table}
 
 FIXME We set a Jacobian call-back to our function \texttt{FormRHSJacobian()} which sets the entries of the \pMat \texttt{J} corresponding to
