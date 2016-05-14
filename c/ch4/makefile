@@ -38,9 +38,11 @@ runreaction_3:
 runreaction_4:
 	-@../testit.sh reaction "-snes_converged_reason -snes_linesearch_type cp" 1 4
 
+test: runexpcircle_1 runexpcircle_2 runecjac_1 runecjac_2 runreaction_1 runreaction_2 runreaction_3 runreaction_4
+
 # etc
 
-.PHONY: distclean
+.PHONY: distclean runexpcircle_1 runexpcircle_2 runecjac_1 runecjac_2 runreaction_1 runreaction_2 runreaction_3 runreaction_4 test
 
 distclean:
 	@rm -f *~ expcircle ecjac reaction

@@ -19,9 +19,11 @@ runtri_1:
 runtri_2:
 	-@../testit.sh tri "-tri_m 2000 -ksp_rtol 1.0e-10 -ksp_type cg -pc_type bjacobi -sub_pc_type icc -ksp_converged_reason" 4 2
 
+test: runvecmatksp_1 runtri_1 runtri_2
+
 # etc
 
-.PHONY: distclean
+.PHONY: distclean runvecmatksp_1 runtri_1 runtri_2 test
 
 distclean:
 	@rm -f *~ vecmatksp tri

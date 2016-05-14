@@ -21,9 +21,11 @@ runplap_4:
 runplap_5:
 	-@../testit.sh plap "-plap_quaddegree 1" 1 5
 
+test: runplap_1 runplap_2 runplap_3 runplap_4 runplap_5
+
 # etc
 
-.PHONY: distclean
+.PHONY: distclean runplap_1 runplap_2 runplap_3 runplap_4 runplap_5 test
 
 distclean:
 	@rm -f *~ plap
