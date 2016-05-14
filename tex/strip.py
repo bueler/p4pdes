@@ -17,7 +17,7 @@ files = { 2 : "vecmatksp.c tri.c",
           4 : "expcircle.c ecjac.c reaction.c",
           5 : "ode.c odejac.c heat.c pattern.c",
           6 : "plap.c",
-          7 : "um.h",
+          7 : "um.h unfem.c",
           8 : "ad3.c",
          12 : "obstacle.c"}
 

@@ -12,6 +12,7 @@ static char help[] = "Unstructured 2D FEM solution of nonlinear Poisson equation
 #include "um.h"
 #include "cases.h"
 
+//STARTCTX
 typedef struct {
     UM     mesh;
     int    solncase,
@@ -19,9 +20,10 @@ typedef struct {
     double (*a_fcn)(double, double, double);
     double (*f_fcn)(double, double, double);
     double (*gD_fcn)(double, double);
-    double (*gN_fcn)(double, double);  // FIXME non-homo Neumann test case needed
+    double (*gN_fcn)(double, double);
     double (*uexact_fcn)(double, double);
 } unfemCtx;
+//ENDCTX
 
 PetscErrorCode FillExact(Vec uexact, unfemCtx *ctx) {
     PetscErrorCode ierr;
@@ -40,19 +42,15 @@ PetscErrorCode FillExact(Vec uexact, unfemCtx *ctx) {
     return 0;
 }
 
+//STARTFEM
 double chi(int L, double xi, double eta) {
-    if (L == 0) {
+    if (L == 0)
         return 1.0 - xi - eta;
-    } else if (L == 1) {
-        return xi;
-    } else {
-        return eta;
-    }
+    else
+        return (L == 1) ? xi : eta;
 }
 
-const double dchi[3][2] = {{-1.0,-1.0},
-                           { 1.0, 0.0},
-                           { 0.0, 1.0}};
+const double dchi[3][2] = {{-1.0,-1.0},{ 1.0, 0.0},{ 0.0, 1.0}};
 
 // evaluate v(xi,eta) on reference element using local node numbering
 double eval(const double v[3], double xi, double eta) {
@@ -68,16 +66,17 @@ double InnerProd(const double V[2], const double W[2]) {
 }
 
 // quadrature points and weights from Shaodeng notes
-const int    Q[3] = {1, 3, 4};
-const double w[3][4] = {{1.0/2.0, NAN, NAN, NAN},
-                        {1.0/6.0, 1.0/6.0, 1.0/6.0, NAN},
-                        {-27.0/96.0, 25.0/96.0, 25.0/96.0, 25.0/96.0}},
-             xi[3][4]  = {{1.0/3.0, NAN, NAN, NAN},
-                          {1.0/6.0, 2.0/3.0, 1.0/6.0, NAN},
-                          {1.0/3.0, 1.0/5.0, 3.0/5.0, 1.0/5.0}},
-             eta[3][4] = {{1.0/3.0, NAN, NAN, NAN},
-                          {1.0/6.0, 1.0/6.0, 2.0/3.0, NAN},
-                          {1.0/3.0, 1.0/5.0, 1.0/5.0, 3.0/5.0}};
+const int    Q[3] = {1, 3, 4};  // number of quadrature points
+const double w[3][4]   = {{1.0/2.0,    NAN,       NAN,       NAN},
+                          {1.0/6.0,    1.0/6.0,   1.0/6.0,   NAN},
+                          {-27.0/96.0, 25.0/96.0, 25.0/96.0, 25.0/96.0}},
+             xi[3][4]  = {{1.0/3.0,    NAN,       NAN,       NAN},
+                          {1.0/6.0,    2.0/3.0,   1.0/6.0,   NAN},
+                          {1.0/3.0,    1.0/5.0,   3.0/5.0,   1.0/5.0}},
+             eta[3][4] = {{1.0/3.0,    NAN,       NAN,       NAN},
+                          {1.0/6.0,    1.0/6.0,   2.0/3.0,   NAN},
+                          {1.0/3.0,    1.0/5.0,   1.0/5.0,   3.0/5.0}};
+//ENDFEM
 
 PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
     PetscErrorCode ierr;
@@ -87,16 +86,18 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
     double       *aF, unode[3], gradu[2], gradpsi[3][2],
                  uquad[4], aquad[4], fquad[4],
                  dx1, dx2, dy1, dy2, detJ,
-                 ls, sint, xx, yy, sum;
+                 ls, xmid, ymid, sint, xx, yy, sum;
     int          n, p, na, nb, k, l, q;
 
+    ierr = VecGetArrayRead(u,&au); CHKERRQ(ierr);
     ierr = VecSet(F,0.0); CHKERRQ(ierr);
     ierr = VecGetArray(F,&aF); CHKERRQ(ierr);
-    // Dirichlet node residuals
-    ierr = ISGetIndices(user->mesh.bfn,&abfn); CHKERRQ(ierr);
-    ierr = VecGetArrayRead(u,&au); CHKERRQ(ierr);
     ierr = VecGetArrayRead(user->mesh.x,&ax); CHKERRQ(ierr);
     ierr = VecGetArrayRead(user->mesh.y,&ay); CHKERRQ(ierr);
+
+//STARTBDRYRESIDUALS
+    // Dirichlet node residuals
+    ierr = ISGetIndices(user->mesh.bfn,&abfn); CHKERRQ(ierr);
     for (n = 0; n < user->mesh.N; n++) {
         if (abfn[n] == 2)  // node is Dirichlet
             aF[n] = au[n] - user->gD_fcn(ax[n],ay[n]);
@@ -108,10 +109,14 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
         if (abfs[p] == 1) {  // segment is Neumann
             na = as[2*p+0];  // nodes at end of segment
             nb = as[2*p+1];
-            ls = sqrt(pow(ax[na]-ax[nb],2) + pow(ay[na]-ay[nb],2)); // length of segment
+            // length of segment
+            ls = sqrt(pow(ax[na]-ax[nb],2) + pow(ay[na]-ay[nb],2));
             // midpoint rule; psi_na=psi_nb=0.5 at midpoint of segment
-            sint = 0.5 * user->gN_fcn(0.5*(ax[na]+ax[nb]),0.5*(ay[na]+ay[nb])) * ls;
-            if (abfn[na] != 2)  // node at end of segment could be Dirichlet
+            xmid = 0.5*(ax[na]+ax[nb]);
+            ymid = 0.5*(ay[na]+ay[nb]);
+            sint = 0.5 * user->gN_fcn(xmid,ymid) * ls;
+            // nodes at end of segment could be Dirichlet
+            if (abfn[na] != 2)
                 aF[na] -= sint;
             if (abfn[nb] != 2)
                 aF[nb] -= sint;
@@ -119,6 +124,9 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
     }
     ierr = ISRestoreIndices(user->mesh.s,&as); CHKERRQ(ierr);
     ierr = ISRestoreIndices(user->mesh.bfs,&abfs); CHKERRQ(ierr);
+//ENDBDRYRESIDUALS
+
+//STARTELEMENTRESIDUALS
     // element contributions
     ierr = ISGetIndices(user->mesh.e,&ae); CHKERRQ(ierr);
     for (k = 0; k < user->mesh.K; k++) {
@@ -163,6 +171,8 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
     }
     ierr = ISRestoreIndices(user->mesh.e,&ae); CHKERRQ(ierr);
     ierr = ISRestoreIndices(user->mesh.bfn,&abfn); CHKERRQ(ierr);
+//ENDELEMENTRESIDUALS
+
     ierr = VecRestoreArrayRead(u,&au); CHKERRQ(ierr);
     ierr = VecRestoreArrayRead(user->mesh.x,&ax); CHKERRQ(ierr);
     ierr = VecRestoreArrayRead(user->mesh.y,&ay); CHKERRQ(ierr);
@@ -170,6 +180,7 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
     return 0;
 }
 
+//STARTFORMPICARD
 PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
     PetscErrorCode ierr;
     unfemCtx     *user = (unfemCtx*)ctx;
@@ -250,7 +261,9 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
     ierr = MatSetOption(P,MAT_NEW_NONZERO_LOCATION_ERR,PETSC_TRUE); CHKERRQ(ierr);
     return 0;
 }
+//ENDFORMPICARD
 
+//STARTPREALLOC
 PetscErrorCode JacobianPreallocation(Mat J, unfemCtx *user) {
     PetscErrorCode ierr;
     const int    *abfn, *ae, *en;
@@ -277,7 +290,9 @@ PetscErrorCode JacobianPreallocation(Mat J, unfemCtx *user) {
     free(nnz);
     return 0;
 }
+//ENDPREALLOC
 
+//STARTMAIN
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
     PetscBool   view = PETSC_FALSE, noprealloc = PETSC_FALSE;
@@ -393,4 +408,5 @@ int main(int argc,char **argv) {
     PetscFinalize();
     return 0;
 }
+//ENDMAIN
 
