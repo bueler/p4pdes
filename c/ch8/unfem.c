@@ -285,6 +285,8 @@ int main(int argc,char **argv) {
     char        meshroot[256] = "";
     unfemCtx    user;
     SNES        snes;
+    KSP         ksp;
+    PC          pc;
     Mat         A;
     Vec         r, u, uexact;
     double      err;
@@ -363,9 +365,13 @@ int main(int argc,char **argv) {
     ierr = VecSetSizes(r,PETSC_DECIDE,user.mesh.N); CHKERRQ(ierr);
     ierr = VecSetFromOptions(r); CHKERRQ(ierr);
     ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
-    ierr = SNESSetFunction(snes,r,FormFunction,&user);CHKERRQ(ierr);
-    ierr = SNESSetJacobian(snes,A,A,FormPicard,&user);CHKERRQ(ierr);
-    ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
+    ierr = SNESSetFunction(snes,r,FormFunction,&user); CHKERRQ(ierr);
+    ierr = SNESSetJacobian(snes,A,A,FormPicard,&user); CHKERRQ(ierr);
+    ierr = SNESGetKSP(snes,&ksp); CHKERRQ(ierr);
+    ierr = KSPSetType(ksp,KSPCG); CHKERRQ(ierr);
+    ierr = KSPGetPC(ksp,&pc); CHKERRQ(ierr);
+    ierr = PCSetType(pc,PCICC); CHKERRQ(ierr);
+    ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
     // set initial iterate and solve
     ierr = VecDuplicate(r,&u); CHKERRQ(ierr);
