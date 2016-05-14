@@ -15,10 +15,10 @@ test:
 
 .PHONY: distclean rdistclean
 
-CHAPTERS = ch1 ch2 ch3 ch4 ch5 ch6 ch7 ch9
+CHAPTERS = ch1 ch2 ch3 ch4 ch5 ch6 ch7 ch8 ch9
 rdistclean:
 	for DIR in $(CHAPTERS); do \
-	     (cd $$DIR; rm -f output/*~ solns/*~; ${MAKE} distclean; rm -f maketmp tmp difftmp); \
+	     (cd $$DIR; ${MAKE} distclean; rm -f output/*~ solns/*~; rm -f maketmp tmp difftmp); \
 	done
 
 distclean: rdistclean
