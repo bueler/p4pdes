@@ -90,13 +90,13 @@ A FEM for the Poisson problem comes from requiring the weak formulation \eqref{e
 
 To make our test function space $H_{0}^1(\Omega)$ a true subspace of $H^1(\Omega)$ we require that $\Omega$ be polygonal, with $\partial\Omega$ a closed polygon (Figure \ref{fig:un:polygon}).  Furthermore we require that segments which form the polygon $\partial\Omega$ be either entirely in $\partial_D\Omega$ or entirely in $\partial_N\Omega$.
 
+We will assume $\partial_D\Omega$ is a closed set.  Furthermore we assume it contains at least one segment of positive length.  As suggested above, this leads to well-posedness of the continuum problem, at least in the linear case.
+
 \begin{marginfigure}
 \input{tmp/blob.tikz}
 \caption{A polygonal domain $\Omega$ with $\partial_D\Omega$ in bold.}
 \label{fig:un:polygon}
 \end{marginfigure}
-
-We will assume $\partial_D\Omega$ is a closed set.  Furthermore we assume it contains at least one segment of positive length.  As suggested above, this leads to well-posedness of the continuum problem, at least in the linear case.
 
 By definition, a \emph{triangulation} is a finite set of non-overlapping, non-empty open triangles $\triangle_k\subset \RR^2$ which tile $\Omega$:
 \begin{equation}
@@ -111,6 +111,12 @@ An example triangulation $\Th$ is shown in Figure \ref{fig:un:number-mesh}.  The
 
 We will use $P^1$ finite elements \citep{Elmanetal2005} so that our test and trial functions are continuous and linear on each $\triangle_k$.  On each triangle $\triangle_k$, such functions have three degrees of freedom.  We make think of these as the coefficients in the linear formula $a + b x + c y$, but in fact there are better local bases than $\{1,x,y\}$; see below.
 
+For each node $j$ there is a basis (``hat'') function  $\psi_j(x,y)$ which is linear on each triangle, continuous on all of $\overline{\Omega}$, and equal to one at only one node $j$,
+\begin{equation*}
+\psi_j(\bx_i) = \delta_{ij}.
+\end{equation*}
+See Figure \ref{fig:un:hatfunction}.  (Compare Figure \ref{fig:of:q1hat}.)  Functions $\psi_j$ are in $H^1(\Omega)$ \citep{Braess2007}, with piecewise-constant partial derivatives $\partial\psi_j/\partial x$ and $\partial\psi_j/\partial y$.  The set $\{\psi_j\}_{j=0,\dots,N-1}$ is linearly-independent.
+
 \begin{marginfigure}
 \input{tmp/blob.1.elenum.tikz}
 
@@ -121,22 +127,10 @@ We will use $P^1$ finite elements \citep{Elmanetal2005} so that our test and tri
 \label{fig:un:number-mesh}
 \end{marginfigure}
 
-For each node $j$ there is a basis (``hat'') function  $\psi_j(x,y)$ which is linear on each triangle, continuous on all of $\overline{\Omega}$, and equal to one at only one node $j$,
-\begin{equation*}
-\psi_j(\bx_i) = \delta_{ij}.
-\end{equation*}
-See Figure \ref{fig:un:hatfunction}.  (Compare Figure \ref{fig:of:q1hat}.)  Functions $\psi_j$ are in $H^1(\Omega)$ \citep{Braess2007}, with piecewise-constant partial derivatives $\partial\psi_j/\partial x$ and $\partial\psi_j/\partial y$.  The set $\{\psi_j\}_{j=0,\dots,N-1}$ is linearly-independent.
-
 Hat functions allow us to interpolate and extend the Dirichlet data $g_D$ from its node values in $\partial_D \Omega$ to the whole of $\overline\Omega$, a useful step in our FEM implementation.  We number the $n_D$ nodes which are in the Dirichlet boundary by $\bx_{j_l} \in \partial_D\Omega$ for $l=0,\dots,n_D-1$.  (Figure \ref{fig:un:number-mesh} shows $n_D=4$ and $j_l=l$.)  Now let $\hat g_D \in C(\overline\Omega)$ be the piecewise-linear interpolant of $g_D$ which has value zero at all nodes $\bx_j$ which are not in the Dirichlet boundary $\partial_D \Omega$:
 \begin{equation}
 \hat g_D(x,y) = \sum_{l=0}^{n_D-1} g_D(\bx_{j_l}) \psi_{j_l}(x,y). \label{eq:un:hatgdefine}
 \end{equation}
-
-\begin{marginfigure}
-\input{tikz/hatfunction.tex}
-\caption{Hat functions $\psi_j$.}
-\label{fig:un:hatfunction}
-\end{marginfigure}
 
 We can specify the needed finite-dimensional subspaces in terms of $\hat g_D$ and the span of certain basis functions $\psi_j$.  The \emph{test functions} are zero along $\partial_D \Omega$,
 \begin{align*}
@@ -150,6 +144,12 @@ Note that $S_{0}^h$ is a linear subspace of $H_{0}^1(\Omega)$ while $S_{g}^h$ is
 \begin{equation}
 \dim(S_{0}^h)=\dim(S_{g}^h)=N-n_D.
 \end{equation}
+
+\begin{marginfigure}
+\input{tikz/hatfunction.tex}
+\caption{Hat functions $\psi_j$.}
+\label{fig:un:hatfunction}
+\end{marginfigure}
 
 The FEM itself can now be stated.  It requires \eqref{eq:un:poissonweak} to be true for $u^h\in S_{g}^h$ for all $v^h\in S_{0}^h$.  However, it suffices to consider $v^h$ from a basis of $S_{0}^h$, so we require
 \begin{equation}
@@ -283,13 +283,13 @@ if $\bx_i \in \overline{s_\nu}$, and it is zero otherwise.  Here $(x_m,y_m)$ is 
 
 \section{Example problems}
 
-Let us set up some cases on a trapezoidal domain, with known exact solutions, for testing the FEM.  The first two cases are designed to test the implementation of the PDE and of Dirichlet boundary conditions.  One of these problems is linear and the other is nonlinear.  An additional case tests the non-homogeneous Neumann boundary condition implementation.
+Let us set up some cases on a trapezoidal domain, with known exact solutions, for testing the FEM.  The first two cases are designed to test the implementation of the PDE and of Dirichlet boundary conditions.  One of these problems is linear and the other is nonlinear.  An additional case tests the non-homogeneous Neumann boundary condition implementation.  These cases are about as simple as possible given that they test the important parts of our code (below).  That is, we the errors from the FEM will only converge a the theoretical rate $O(h^2)$ if our implementation is correct.
 
 All three cases are based on manufactured solutions.  Let
 \begin{equation}
   u_{\text{exact}}(x,y) = 1 - y^2 - \frac{1}{4} y^4. \label{eq:un:exactsolution}
 \end{equation}
-This function also computes the Dirichlet boundary values $g_D(x,y)$ in all cases.  Because the domain is not aligned with the coordinate axes, and because fourth-order polynomials generate non-zero interpolation errors in a $P^1$ FEM, the numerical error generated with this exact solution will decay at the generic rate.
+This function also computes the Dirichlet boundary values $g_D(x,y)$ in all cases.  Because the domain is not aligned with the coordinate axes, and because fourth-order polynomials generate non-zero interpolation errors in a $P^1$ FEM, the numerical error generated with this exact solution will decay no more rapidly than the generic rate.
 
 \begin{figure}
 \input{tikz/trap.tex}
@@ -297,11 +297,11 @@ This function also computes the Dirichlet boundary values $g_D(x,y)$ in all case
 \label{fig:un:trap}
 \end{figure}
 
-The remaining details are case-specific:
+Other details are case-specific:
 \begin{itemize}
-\item[case $0$] \emph{Linear}.  Use Figure \ref{fig:un:trap} boundary conditions.  Noting $\partial u_{\text{exact}}/\partial n = \partial u_{\text{exact}}/\partial y = 0$ on the Neumann boundary $\partial_N \Omega$, where $y=0$, let $g_N=0$.  Let $a=1$ and determine $f$ by differentiating the exact solution: $f(x,y) = -\grad^2 u_{\text{exact}} = 2 + 3 y^2$.
-\item[case $1$] \emph{Nonlinear}.  Again use Figure \ref{fig:un:trap} boundary conditions and $g_N=0$.  However, let $a(u) = 1+u^2$ and compute the corresponding $f(u)$ by differentiation.
-\item[case $2$] \emph{Non-homogeneous Neumann}.  Use Figure \ref{fig:un:trapneu} boundary conditions.  Let $a$, $f$ be as in case $0$.  Determine the (non-zero) value $g_N$ by differentiating $u_{\text{exact}}$ along the Neumann boundary, a line segment with outward unit normal vector $\bn = \left<1/\sqrt{2},1/\sqrt{2}\right>$.
+\item[case $0$:] \emph{Linear}.  Use Figure \ref{fig:un:trap} boundary conditions.  Noting $\partial u_{\text{exact}}/\partial n = \partial u_{\text{exact}}/\partial y = 0$ on the Neumann boundary $\partial_N \Omega$, where $y=0$, let $g_N=0$.  Let $a=1$ and determine $f$ by differentiating the exact solution: $f(x,y) = -\grad^2 u_{\text{exact}} = 2 + 3 y^2$.
+\item[case $1$:] \emph{Nonlinear}.  Again use Figure \ref{fig:un:trap} boundary conditions and $g_N=0$.  However, let $a(u) = 1+u^2$ and compute the corresponding $f(u)$ by differentiation.
+\item[case $2$:] \emph{Non-homogeneous Neumann}.  Use Figure \ref{fig:un:trapneu} boundary conditions.  Let $a$, $f$ be as in case $0$.  Determine the (non-zero) value $g_N$ by differentiating $u_{\text{exact}}$ along the Neumann boundary, a line segment with outward unit normal vector $\bn = \left<1/\sqrt{2},1/\sqrt{2}\right>$.
 \end{itemize}
 See \texttt{c/\CODELOC cases.h} (not shown) for all remaining details.
 
