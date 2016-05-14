@@ -33,27 +33,29 @@ $(cstrip):
 	python strip.py
 
 # location of naive unstructured mesh stuff:
-UNLOC := ../c/ch8/meshes/
-TRI2PETSCLOC := ../c/ch8/
+UNLOC := ../c/ch8/
 
-tmp/blob.tikz tmp/blob.1.elenum.tikz tmp/blob.1.nodenum.tikz: tmp/ $(UNLOC)blob.poly
-	ln -sf $(TRI2PETSCLOC)tri2petsc.py
-	python tri2tikz.py --polyonly --nodesize 1.0 --scale 0.6 $(UNLOC)blob tmp/blob.tikz
-	triangle -pqa4.0 $(UNLOC)blob
-	python tri2tikz.py --labelelements --nodesize 1.0 --scale 0.5 $(UNLOC)blob.1 tmp/blob.1.elenum.tikz
-	python tri2tikz.py --labelnodes --nodesize 3.0 --nodeoffset -0.5 --scale 0.48 $(UNLOC)blob.1 tmp/blob.1.nodenum.tikz
+tmp/blob.tikz tmp/blob.1.elenum.tikz tmp/blob.1.nodenum.tikz: tmp/ $(UNLOC)meshes/blob.poly
+	ln -sf $(UNLOC)tri2petsc.py
+	python tri2tikz.py --polyonly --nodesize 1.0 --scale 0.6 $(UNLOC)meshes/blob tmp/blob.tikz
+	triangle -pqa4.0 $(UNLOC)meshes/blob
+	python tri2tikz.py --labelelements --nodesize 1.0 --scale 0.5 $(UNLOC)meshes/blob.1 tmp/blob.1.elenum.tikz
+	python tri2tikz.py --labelnodes --nodesize 3.0 --nodeoffset -0.5 --scale 0.48 $(UNLOC)meshes/blob.1 tmp/blob.1.nodenum.tikz
+	rm -f tri2petsc.py*
 
-tmp/trap.1.tikz tmp/trap.2.tikz: tmp/ $(UNLOC)trap.poly
-	ln -sf $(TRI2PETSCLOC)tri2petsc.py
-	triangle -pqa0.5 $(UNLOC)trap
-	python tri2tikz.py --nodesize 0.7 --scale 2.5 $(UNLOC)trap.1 tmp/trap.1.tikz
-	triangle -rpqa0.1 $(UNLOC)trap.1
-	python tri2tikz.py --nodesize 0.7 --scale 2.5 $(UNLOC)trap.2 tmp/trap.2.tikz
+tmp/trap.1.tikz tmp/trap.2.tikz: tmp/ $(UNLOC)meshes/trap.poly
+	ln -sf $(UNLOC)tri2petsc.py
+	triangle -pqa0.5 $(UNLOC)meshes/trap
+	python tri2tikz.py --nodesize 0.7 --scale 2.5 $(UNLOC)meshes/trap.1 tmp/trap.1.tikz
+	triangle -rpqa0.1 $(UNLOC)meshes/trap.1
+	python tri2tikz.py --nodesize 0.7 --scale 2.5 $(UNLOC)meshes/trap.2 tmp/trap.2.tikz
+	rm -f tri2petsc.py*
 
 tmp/mesh.1.tikz: tmp/ $(UNLOC)genstructured.py
-	(cd ../c/$(UNLOC) && python genstructured.py mesh.1 5)
-	ln -sf $(TRI2PETSCLOC)tri2petsc.py
-	python tri2tikz.py --labelnodes --nodeoffset 0.05 --nodesize 0.5 --labelelements --scale 5.0 $(UNLOC)mesh.1 $@
+	python $(UNLOC)genstructured.py mesh.1 5
+	ln -sf $(UNLOC)tri2petsc.py
+	python tri2tikz.py --labelnodes --nodeoffset 0.05 --nodesize 0.5 --labelelements --scale 5.0 mesh.1 $@
+	rm -f mesh.1.* tri2petsc.py*
 
 .PHONY: clean
 
@@ -61,7 +63,7 @@ clean:
 	rm -f *~ *.pyc .gitignore~
 	rm -f tikz/*~ timing/*~ timing/poisson/*~ timing/tri/*~
 	rm -f *.out *.aux *.log *.bbl *.blg *.synctex.gz *.idx *.ilg *.ind *.toc *.dvi
-	rm -rf cstrip/ tmp/ tri2petsc.py
+	rm -rf cstrip/ tmp/
 	(cd chaps/ && make clean)
 	(cd figs/ && make clean)
 
