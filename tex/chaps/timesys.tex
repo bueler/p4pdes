@@ -1,7 +1,5 @@
 
-To the reader who has become lost in a maze of issues which have built up around the examples so far---Krylov solvers, preconditioner choices, line searches, finite element details, or whatever causes confusion---some good news.  In \emph{this} Chapter we restart with an easy question and a small example.
-
-Solving ordinary differential equations (ODEs) with \PETSc ought to be easy.  Given that we have practice with \PETSc objects, it is.  Furthermore, the transition to numerical methods for time-dependent, parabolic PDEs like the heat equation is straightforward.
+Solving ordinary differential equations (ODEs) with \PETSc ought to be easy.  Given that we have practice with \PETSc objects, it is, and so in this Chapter we restart with an easy question and a small example.  The transition to numerical methods for time-dependent, parabolic PDEs like the heat equation is also straightforward.
 
 In this Chapter we look at three examples:
 \begin{itemize}
@@ -165,7 +163,7 @@ The general theme is that the cost of an ODE numerical method is proportional to
 
 Clearly there are a very large number of possible methods, many of which are available from the \PETSc command line, whether one-step or multi-step, adaptive or not, and so on.   Choosing the ``best'' one for a given ODE system is not a reasonable goal.  Our goal in this Chapter is only to suggest some reasonable choices for broad classes of problems, but we invoke an essential \PETSc mantra here, namely: a rich set of command-line, run-time options is \emph{not a bad thing}.
 
-\section{\PETSc \pTS objects, and a first example}  The example system on page \pageref{ex:ts:odeeasy} is a good starting point for our first ODE-solving program because it is of small, fixed dimension,\sidenote{Our last fixed-dimension programs were at the start of Chapter \ref{chap:nl}.  Note that \texttt{ode.c} and \texttt{odejac.c} in the current Chapter do not use a \pDMDA grid object, but \texttt{heat.c} and \texttt{pattern.c} do.} and because it has an exact solution from which we evaluate numerical error.  The program is \texttt{c/ch6/ode.c} shown in Codes \ref{code:ts:ode:main} and \ref{code:ts:ode:callbacks}.  It uses a \PETSc time-stepping object of type \pTS.
+\section{\PETSc \pTS objects, and a first example}  The example system on page \pageref{ex:ts:odeeasy} is a good starting point for our first ODE-solving program because it is of small, fixed dimension,\sidenote{Our last fixed-dimension programs were at the start of Chapter \ref{chap:nl}.  Note that \texttt{ode.c} and \texttt{odejac.c} in the current Chapter do not use a \pDMDA grid object, but \texttt{heat.c} and \texttt{pattern.c} do.} and because it has an exact solution from which we evaluate numerical error.  The program is \texttt{c/\CODELOC ode.c} shown in Codes \ref{code:ts:ode:main} and \ref{code:ts:ode:callbacks}.  It uses a \PETSc time-stepping object of type \pTS.
 
 \cinputpart{ode.c}{\CODELOC}{The \texttt{main()} part of \texttt{ode.c} creates and configures a \pTS object, plus the \pVecs for approximate and exact solutions.}{I}{//MAIN}{//ENDMAIN}{code:ts:ode:main}
 
@@ -200,7 +198,7 @@ Code \ref{code:ts:ode:callbacks} shows function \texttt{FormRHSFunction()} which
 
 Let us try it out.  Two options to try, when in doubt or just curious, are to \texttt{monitor} and \texttt{view} the \pTS.  First the result of \texttt{monitor}:
 \begin{cline}
-$ cd c/ch6/
+$ cd c/ch5/
 $ make ode
 $ ./ode -ts_monitor
 0 TS dt 0.1 time 0.
@@ -255,7 +253,7 @@ $ ./ode -ts_monitor -ts_monitor_lg_solution -draw_pause 0.1
 %$
 The result is a movie version of Figure \ref{fig:ts:ode}.
 
-Another mode of visualization actually produced that Figure, however.  The Python script \texttt{c/ch6/plotTS.py} works with \texttt{binary} output from \pTS monitoring, like this:
+Another mode of visualization actually produced that Figure, however.  The Python script \texttt{c/\CODELOC plotTS.py} works with \texttt{binary} output from \pTS monitoring, like this:
 \begin{cline}
 $ ./ode -ts_monitor binary:t.dat -ts_monitor_solution binary:y.dat
 $ ./plotTS.py -o figure.png t.dat y.dat

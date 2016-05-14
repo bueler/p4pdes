@@ -2,12 +2,12 @@
 #
 # (C) 2016 Ed Bueler
 #
-# Create PETSc binary files from the .node, .ele, .poly output of triangle.
+# Create PETSc binary files .vec,.is from .node,.ele,.poly output of triangle.
 
-# example to put Vecs x,y (node coordinates) and ISs e,bfn,s,bfs in foo.dat.{vec,is}
-#    $ (cd tex/ && make)       # creates blob.1.* in c/ch8/meshes/
-#    $ cd c/ch8/
-#    $ ./tri2petsc.py meshes/blob.1 foo.dat
+# example to put Vecs x,y (node coordinates) and ISs e,bfn,s,bfs in foo.{vec,is}
+#    $ cd c/ch7/
+#    $ triangle -pqa0.5 meshes/trap
+#    $ ./tri2petsc.py meshes/trap.1 foo
 
 import numpy as np
 import sys

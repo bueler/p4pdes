@@ -1,49 +1,30 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
-ode: ode.o  chkopts
-	-${CLINKER} -o ode ode.o  ${PETSC_LIB}
-	${RM} ode.o
-
-odejac: odejac.o  chkopts
-	-${CLINKER} -o odejac odejac.o  ${PETSC_LIB}
-	${RM} odejac.o
-
-heat: heat.o  chkopts
-	-${CLINKER} -o heat heat.o  ${PETSC_LIB}
-	${RM} heat.o
-
-pattern: pattern.o  chkopts
-	-${CLINKER} -o pattern pattern.o  ${PETSC_LIB}
-	${RM} pattern.o
-
+plap: plap.o chkopts
+	-${CLINKER} -o plap plap.o ${PETSC_LIB}
+	${RM} plap.o
 
 # testing
-runode_1:
-	-@../testit.sh ode "-ts_init_time 19.0 -ts_dt 0.01 -ts_final_time 20.0" 1 1
+runplap_1:
+	-@../testit.sh plap "-snes_fd -snes_fd_function" 1 1
 
-runode_2:
-	-@../testit.sh ode "-ts_type cn -snes_fd -ts_final_time 1.0" 1 2
+runplap_2:
+	-@../testit.sh plap "-snes_fd_color" 1 2
 
-runode_3:
-	-@../testit.sh ode "-ts_monitor -ts_final_time 1.0" 1 3
+runplap_3:
+	-@../testit.sh plap "-snes_converged_reason -ksp_type cg -pc_type icc -da_refine 3" 1 3
 
-runodejac_1:
-	-@../testit.sh odejac "-ts_final_time 1.0" 1 1
+runplap_4:
+	-@../testit.sh plap "-snes_fd_color -snes_converged_reason -da_refine 2 -snes_linesearch_type cp" 4 4
 
-runheat_1:
-	-@../testit.sh heat "-da_refine 1 -ts_monitor" 1 1
-
-runheat_2:
-	-@../testit.sh heat "-da_refine 2" 2 2
-
-runpattern_1:
-	-@../testit.sh pattern "-da_refine 2 -ts_final_time 30 -ts_dt 5 -ts_monitor" 1 1
+runplap_5:
+	-@../testit.sh plap "-plap_quaddegree 1" 1 5
 
 # etc
 
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ ode odejac heat pattern *.pyc *.dat *.dat.info
+	@rm -f *~ plap
 

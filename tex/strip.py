@@ -15,10 +15,10 @@ import re
 files = { 2 : "vecmatksp.c tri.c",
           3 : "poisson.c",
           4 : "expcircle.c ecjac.c reaction.c",
-          5 : "plap.c",
-          6 : "ode.c odejac.c heat.c pattern.c",
-          7 : "ad3.c",
-          8 : "um.h",
+          5 : "ode.c odejac.c heat.c pattern.c",
+          6 : "plap.c",
+          7 : "um.h",
+          8 : "ad3.c",
          12 : "obstacle.c"}
 
 if not os.path.exists("cstrip/"):

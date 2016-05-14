@@ -304,7 +304,7 @@ FIXME explain cases 0, 1, 2, showing different trapezoid boundary conditions
 
 The triangulation shown in Figure \ref{fig:un:trapone} came from a single command which asks \Triangle to generate a triangulation from \texttt{trap.poly}.  The command asks for a polygon output file (option \texttt{-p}), relatively-uniform triangles (option \texttt{-q} for ``quality-checked,'' with no interior angles less than $20^\circ$ \citep{Shewchuk1996}), and triangles with a maximum area (option \texttt{-a}) of $0.5$:
 \begin{cline}
-$ cd c/ch8/meshes
+$ cd c/ch7meshes
 $ triangle -pqa0.5 trap
 \end{cline}
 %$
@@ -365,7 +365,7 @@ Thus the Python script \texttt{tri2petsc.py} (not shown) reads three files in \T
 
 Let's try it out.  Because \texttt{tri2petsc.py} uses Python modules from the \PETSc source directory, we generate some symbolic links:
 \begin{cline}
-$ cd ..                                # back to c/ch8/
+$ cd ..                                # back to c/ch7
 $ ln -s ~/petsc/bin/petsc_conf.py
 $ ln -s ~/petsc/bin/PetscBinaryIO.py
 $ ./tri2petsc.py meshes/trap.1 trap.1
@@ -379,7 +379,7 @@ On the C code side we need to have a data structure for storage of the mesh.  Th
 
 \section{Initial implementation}
 
-With these unstructured mesh tools in hand we can return to implementing the FEM.  We will build the minimal \pSNES-using C code which can work.  It is called \texttt{c/ch8/unfem.c}.  It has a ``context'' \texttt{struct}, which includes a \texttt{UM} instance, and a residual-computation function \texttt{FormFunction()}.  For the FEM we have enough information to transfer integrals to the reference triangle, and we set up the quadrature data structures.  The code creates and destroys \pVecs for holding the approximate solution, the exact solution (below), and the residual.  There is then nothing else to do, other than to call \texttt{SNESSolve()}.
+With these unstructured mesh tools in hand we can return to implementing the FEM.  We will build the minimal \pSNES-using C code which can work.  It is called \texttt{c/\CODELOC unfem.c}.  It has a ``context'' \texttt{struct}, which includes a \texttt{UM} instance, and a residual-computation function \texttt{FormFunction()}.  For the FEM we have enough information to transfer integrals to the reference triangle, and we set up the quadrature data structures.  The code creates and destroys \pVecs for holding the approximate solution, the exact solution (below), and the residual.  There is then nothing else to do, other than to call \texttt{SNESSolve()}.
 
 Figure \ref{fig:un:unfemstack} shows the structure of \texttt{unfem.c}, including the approximate Jacobian which we will eventually implement.  Before showing the user-written code, and because the reader might have become too comfortable with \pDMDA-using structured grid examples in recent Chapters, recalling the first example in Chapter \ref{chap:nl} might be appropriate.  In terms of \PETSc objects and calls to the \PETSc API, \texttt{unfem.c} has similar structure as example \texttt{ecjac.c} in Chapter \ref{chap:nl}.
 
@@ -473,7 +473,7 @@ $ make poisson
 $ timer ./poisson -da_refine 7 -ksp_type cg -pc_type icc
 on 1025 x 1025 grid:  error |u-uexact|_inf = 5.29691e-08
 real 18.67
-$ cd ../ch8/
+$ cd ../ch7
 $ ./genstructured.py meshes/square.10 1025
 $ ./tri2petsc.py meshes/square.10 meshes/square.10
 $ make unfem

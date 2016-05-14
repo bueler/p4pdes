@@ -3,9 +3,9 @@
 
 This book is about numerically solving linear and nonlinear partial differential equations (PDEs) by writing C code \citep{KernighanRitchie1988} that directly calls \PETSc.  It tries to both explain the ideas and illustrate them through example codes.  The examples come with enough background information and context so that readers can use them as a basis for further developments.  Demonstrated performance and scalability are goals, so runtime options are explained and compared, and explored in the exercises.
 
-The inside front cover lists the PDE problems covered in this book, according the Chapter in which they appear.  These problems are thus not organized by following any of the traditions of the substantial PDE literature \citep[for just a start]{Evans2010,Ockendonetal2003}.  Instead, roughly-speaking, the problems appear in the order in which it is easiest to appreciate the needed algorithms and components from \PETSc.
+The inside covers list the PDE examples in this book, according the Chapter in which they appear.  They are not organized following any of the traditions of the substantial PDE literature \citep[for just a start]{Evans2010,Ockendonetal2003}.  Instead they appear in the order in which it is easiest to appreciate the needed algorithms and components from \PETSc.
 
-The reader experienced with PDEs will note an absence of purely-hyperbolic problems \citep[compare][]{LeVeque2002}.  This reflects the current book's focus on problems in which (large) linear and nonlinear systems of equations must be solved, at each time-step or to compute steady state solutions, in the contex where one wants solutions at scale.
+The reader experienced with PDEs will note an absence of purely-hyperbolic problems \citep[compare][]{LeVeque2002}.  This reflects the current book's focus on problems in which (large) linear and nonlinear systems of equations must be solved, either at each time-step or to compute a steady state solution.
 
 This book is written from the conviction that \emph{better access to common knowledge among experts} advances scientific computing as a discipline.  An expert in PDEs and \PETSc might say, about this book, both that ``I knew all that'' and that the book ``is a fast on-ramp to what I already know.''  Such is precisely my hope.
 

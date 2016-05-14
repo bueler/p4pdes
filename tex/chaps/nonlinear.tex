@@ -395,9 +395,10 @@ These functions have common features to their signatures.  They each have argume
 
 In \texttt{main()} in Code \ref{code:reactionmain} we use \texttt{DMDASNESSetFunctionLocal()} and  \texttt{DMDASNESSetJacobianLocal()}.  These are structured-grid-aware versions of \texttt{SNESSetFunction()} and \texttt{SNESSetJacobian()}, respectively, used earlier in \texttt{ecjac.c} (Code \ref{code:ecjacII}).  Note that, while we do set entries in a Jacobian, in \texttt{reaction.c} we never explicitly allocate a \pMat to hold it.  The \pDMDA object, however, has enough information about the grid and stencil to allocate it internally.
 
-Though the previous paragraphs adequately summarize program \texttt{reaction.c}, the diagram in Figure \ref{fig:nl:reactionstack} communicates the overall structure.  Our program uses six different major \PETSc types, but we apply explicit \texttt{Create()}/configure/act/\texttt{Destroy()} sequences to only three of these (\pDMDA, \pSNES, \pVec).  We do set entries in a \pMat, but it is allocated internally by the \pDMDA object.  However, one must remember that each step of Newton's method solves a linear system, and thus that \pKSP and \pPC objects exist ``inside'' the \pSNES, as revealed by \texttt{-snes\_view} in particular.  When seeking better performance on fine grids, exposure and control of these linear solver objects is essential.
-
+Though the previous paragraphs adequately summarize program \texttt{reaction.c}, the diagram in Figure \ref{fig:nl:reactionstack} communicates the overall structure.  Arrows from the large ``user code'' block, i.e.~\texttt{main()} in general, represent the create/set/use/destroy sequence, as introduced in Chapter \ref{chap:ls}, for the major \PETSc components (e.g.~\pSNES and \pDMDA), but user code also acts upon the \pVecs which store the important fields, and upon the \pMat Jacobian matrix if present.  Downward lines from one \PETSc type to another represent internal sub-objects.  Such sub-components are sometimes exposed to the user, whether within the code or at the command line at runtime, and sometimes not.
+  
 \begin{figure}
+\medskip
 \begin{tikzpicture}[scale=0.8,
                     >={Latex[length=2mm]},
   component/.style={
@@ -435,11 +436,14 @@ Though the previous paragraphs adequately summarize program \texttt{reaction.c},
    ([yshift=1em]snes.east) edge[->,dotted,bend right] node {} ([xshift=-2em]rescode.south)
    ([yshift=-1em]snes.east) edge[->,dotted,bend right] node {} ([xshift=-2em]jaccode.south);
 \end{tikzpicture}
+\medskip
 \caption{An overview of \texttt{reaction.c}, our first structured-grid solution of a nonlinear PDE using \PETSc.  Solid arrows should be read as ``user code acts directly on.''  Dotted arrows are call-backs.  Compare Figure \ref{fig:st:linearstack}.}
 \label{fig:nl:reactionstack}
 \end{figure}
 
 \cinputpart{reaction.c}{\CODELOC}{In \texttt{main()} we create a \pDMDA, some \pVecs, and a \pSNES.  We hand call-back functions to the \pSNES.  Then we solve the equation.}{III}{//MAIN}{//ENDMAIN}{code:reactionmain}
+
+Our program uses six different major \PETSc types, but we apply explicit \texttt{Create()}/configure/act/\texttt{Destroy()} sequences to only three of these (\pDMDA, \pSNES, \pVec).  We set entries in a \pMat, but it is allocated internally by the \pDMDA object.  Recalling that each step of Newton's method solves a linear system, it should make sense that \pKSP and \pPC objects exist ``inside'' the \pSNES.  This fact is revealed by \texttt{-snes\_view}, in particular.  When seeking better performance on fine grids, exposure and control of these linear solver objects is essential.
 
 
 \section{Convergence under grid refinement}

@@ -1,2 +1,14 @@
-plap
+ode
+odejac
+heat
+pattern
+
+PetscBinaryIO.py
+petsc_conf.py
+*.pyc
+*.dat
+*.dat.info
+
+*.png
+*.m4v
 

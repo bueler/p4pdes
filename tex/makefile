@@ -33,7 +33,7 @@ $(cstrip):
 	python strip.py
 
 # location of naive unstructured mesh stuff:
-UNLOC := ../c/ch8/
+UNLOC := ../c/ch7/
 
 tmp/blob.tikz tmp/blob.1.elenum.tikz tmp/blob.1.nodenum.tikz: tmp/ $(UNLOC)meshes/blob.poly
 	ln -sf $(UNLOC)tri2petsc.py

@@ -1,9 +1,10 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
-ad3: ad3.o  chkopts
-	-${CLINKER} -o ad3 ad3.o  ${PETSC_LIB}
-	${RM} ad3.o
+
+unfem: unfem.o um.o chkopts
+	-${CLINKER} -o unfem unfem.o um.o  ${PETSC_LIB}
+	${RM} unfem.o um.o
 
 
 # etc
@@ -11,5 +12,6 @@ ad3: ad3.o  chkopts
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ ad3
+	@rm -f *~ *.pyc unfem
+	(cd meshes/ && ${MAKE} clean)
 

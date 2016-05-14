@@ -4,7 +4,7 @@
 
 \usepackage{xspace}
 
-\newcommand{\PETSCVERSION}{3.6\xspace}
+\newcommand{\PETSCVERSION}{3.7\xspace}
 
 \newcommand{\CODELOC}{}  % each Chapter redefines this
 
@@ -160,28 +160,26 @@ Copyright \copyright\ \the\year\ \thanklessauthor
 \renewcommand{\CODELOC}{ch4/}
 \input{chaps/nonlinear.tex}
 
-\chapter{FEM example I: Nonlinear optimization}
-\label{chap:of}
-\renewcommand{\CODELOC}{ch5/}
-\input{chaps/optifem.tex}
-
 \chapter{Time-stepping, and systems of PDEs}
 \label{chap:ts}
-\renewcommand{\CODELOC}{ch6/}
-%\stubinput{chaps/timesys.tex}{30}
+\renewcommand{\CODELOC}{ch5/}
 \input{chaps/timesys.tex}
+
+\chapter{FEM example I: Nonlinear optimization}
+\label{chap:of}
+\renewcommand{\CODELOC}{ch6/}
+\input{chaps/optifem.tex}
+
+\chapter{FEM example II: Unstructured meshes}
+\label{chap:un}
+\renewcommand{\CODELOC}{ch7/}
+\input{chaps/unstructured.tex}
 
 \chapter{Advection-diffusion equations}
 \label{chap:ad}
-\renewcommand{\CODELOC}{ch7/}
+\renewcommand{\CODELOC}{ch8/}
 \stubinput{chaps/advdif.tex}{20}
 %\input{chaps/advdif.tex}
-
-\chapter{FEM example II: Unstructured mesh}
-\label{chap:un}
-\renewcommand{\CODELOC}{ch8/}
-%\stubinput{chaps/unstructured.tex}{40}
-\input{chaps/unstructured.tex}
 
 \chapter{Preconditioners}
 \label{chap:pr}
@@ -213,6 +211,9 @@ Copyright \copyright\ \the\year\ \thanklessauthor
 \stubinput{chaps/dmplex.tex}{0}
 
 %\chapter{Epilog}
+
+% approach: construction needed before analysis; experts are confident about discretization, and proceed to discussions of performance, but we have built a number of concrete, documented examples before getting there
+
 %three slogans:
 %  1. every problem is nonlinear
 %  2. every computation is parallel
@@ -241,11 +242,10 @@ Copyright \copyright\ \the\year\ \thanklessauthor
 }
 
 
+% inside cover(s) content
 \clearpage
 \thispagestyle{empty}
-\noindent \textsc{inside front (or back) cover:}
-
-{\large \noindent \textsc{PDE examples}.} \quad Chapter $N$ codes are in directory \texttt{c/ch}$N$\texttt{/}.
+\noindent {\large \noindent \textsc{PDE examples}.} \quad Chapter $N$ codes are in directory \texttt{c/ch}$N$\texttt{/}.
 
 \medskip
 \small
@@ -261,21 +261,22 @@ Chapter
           &     &      \\ \bigskip
 \ref{chap:nl}
     &     & \tblockeqncode{diffusion-reaction (1D)}{$- u''-R(u)=f$}{reaction.c} &      \\ \bigskip
-\ref{chap:of}
-    &     & \tblockeqncode{$p$-Laplace (2D)}{$-\Div\left(|\grad u|^{p-2} \grad u\right) = f$}{plap.c}
-                &  \\ \bigskip
 \ref{chap:ts}
     & \tblockeqncode{time-dependent heat (2D)}{$u_t = \grad^2 u + f$}{heat.c}
           &     & \tblockeqncode{diffusion-reaction (2D))}{$\bu_t = \grad^2 \bu + \bR(\bu)$}{pattern.c} \\ \bigskip
+\ref{chap:of}
+    &     & \tblockeqncode{$p$-Laplace (2D)}{$-\Div\left(|\grad u|^{p-2} \grad u\right) = f$}{plap.c}
+                &  \\ \bigskip
+\ref{chap:un}
+    &     & \tblockeqncode{nonlinear Poisson (2D)}{$-\Div\left(a(u) \grad u\right) = f(u)$}{unfem.c}    &     &      \\ \bigskip
 \ref{chap:ad}
     &  \tblockeqncode{advection-diffusion (3D)}{$- \eps \grad^2 u + \bw \cdot \grad u = f$}{ad3.c}
           &     &      \\ \bigskip
-\ref{chap:un}
-    & \tblockcode{Poisson (2D)}{femfish.c}    &     &     &      \\ \bigskip
 \ref{chap:pr}
     & \tblockcode{Poisson (2D)}{fish2.c}    &     &     &      \\ \bigskip
 \ref{chap:sc}
-    &     &     & \tblockeqncode{porous (3D)}{$u_t = \Div\left(u^{\gamma-1} \grad u\right) + f$}{porous.c} \\ \bigskip
+%    &     &     & \tblockeqncode{porous (3D)}{$u_t = \Div\left(u^{\gamma-1} \grad u\right) + f$}{porous.c} \\ \bigskip
+    &     &     &  \\ \bigskip
 \ref{chap:ok}
     & \tblockeqncode{Stokes (2D)}{$\begin{matrix} -\grad^2 \bu + \grad p = 0 \\ \Div \bu = 0 \end{matrix}$}{stokes.c}
           &     &      \\ \bigskip

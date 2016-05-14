@@ -1,27 +1,30 @@
 
-In the last three Chapters we have introduced six important \PETSc types (object classes).  All are important for solving PDEs:
+In the last four Chapters we have introduced seven important \PETSc types (object classes).  All are important for solving PDEs:
 
 \medskip
 \begin{tabular}{ll}
 Chapter \ref{chap:ls}: \pVec, \pMat, \pKSP, \pPC \hspace{.5in} & for linear algebra \\
 Chapter \ref{chap:st}: \pDMDA                    & for structured grids \\
-Chapter \ref{chap:nl}: \pSNES                    & for Newton's method
+Chapter \ref{chap:nl}: \pSNES                    & for Newton's method \\
+Chapter \ref{chap:ts}: \pTS                      & for time-stepping
 \end{tabular}
 
 \bigskip
 
-Each structured-grid example in the rest of the book will use all of these objects (Figure \ref{fig:of:standardstack}), though unstructured-grid examples will use a substitute for \pDMDA (Chapter \ref{chap:dp}).  From now on we will even solve linear PDEs using a \pSNES object.  (An example is in Chapter \ref{chap:ad}.)  In such cases we know that one Newton iteration suffices in theory.  Always using \pSNES allows uniform code structure and more flexibility when it comes to changing the PDE problem.
+The structured-grid, steady-state examples in this and later Chapters will use the first six of these objects (Figure \ref{fig:of:standardstack}).  Unstructured-grid examples in Chapters \ref{chap:un} and \ref{chap:dp} will replace the \pDMDA mesh-topology object with naive and advanced (\pDMPlex) substitutes, respectively.
+
+In other words, from now on we will even solve \emph{linear} PDEs using a nonlinear-solver \pSNES object.  Examples are in Chapters \ref{chap:un} and \ref{chap:ad}.  In such cases we know that one Newton iteration suffices in theory.  Always using \pSNES allows uniform code structure and more flexibility when it comes to changing the PDE problem.
+
+Though new ideas appear here, the current Chapter takes a break from introducing new \PETSc types.  Instead we look at a PDE which arises from minimization in a function space, and we introduce a structured-grid finite element method.  This example is a nonlinear Poisson-like equation with solution-dependent diffusivity.
 
 \begin{figure}
 % usage: \standardSNESstack{scale}{objective}{Jacobian}{DMDA}
 \standardSNESstack{0.9}{}{dashed}{}
-\caption{The ``standard \PETSc stack for PDEs'' for \pSNES- and \pDMDA-based examples.  Chapter \ref{chap:of} usage is shown as solid.  Arrows should be read as ``acts directly on.''  Compare Figures \ref{fig:st:linearstack} and \ref{fig:nl:reactionstack}.}
+\caption{The ``\PETSc stack'' for \pSNES- and \pDMDA-based examples which solve a PDE arising from minimization of an objective function.  Compare Figures \ref{fig:st:linearstack} and \ref{fig:nl:reactionstack}.}
 \label{fig:of:standardstack}
 \end{figure}
 
-Figure \ref{fig:of:standardstack} shows the ``stack'' of \PETSc components for solving nonlinear PDEs.  Initial implementations require user code for a residual (or objective) implementation---otherwise \PETSc has \emph{no} description of your problem---but Jacobians are also often implemented.  In the Figure, arrows from the larger user code block\sidenote{Generally, \texttt{main()}.} represent the create/set/use/destroy sequence, as introduced in Chapter \ref{chap:ls}, for the major \PETSc components (e.g.~\pSNES and \pDMDA in Chapters \ref{chap:nl} and \ref{chap:of}), but user code also acts upon the \pVecs which store the important fields, and on the \pMat Jacobian matrix.  Downward lines from one \PETSc type to another represent internal sub-objects.  Such sub-components are sometimes exposed to the user, whether within the code or at the command line at runtime, and sometimes not.
-
-Though new ideas appear here, the current Chapter takes a break from introducing new \PETSc types.  Instead we look at a PDE which arises from minimization in a function space, and we introduce a structured-grid finite element method.  This example is a nonlinear Poisson-like equation with solution-dependent diffusivity.
+Figure \ref{fig:of:standardstack} shows the ``stack'' of \PETSc components for solving PDEs which arise from optimization problems.  Initial implementations require user code for an objective function and/or a residual function---otherwise \PETSc has \emph{no} description of your problem---but Jacobians are also often implemented.
 
 The example code in the current Chapter is the last one shown in full.  In later Chapters we show snippets.  The reader can always examine and run the complete codes by looking in the \texttt{c/} directory of the \texttt{p4pdes} repository.
 
@@ -353,7 +356,7 @@ These parts show the complete objective-only implementation.  To use it requires
 
 However, even with a residual function $\bF(\bu)$ approximated this way, we still need a Jacobian for Newton's method.  To get that we ask \PETSc to finite difference \emph{again}, using either \texttt{-snes\_fd} or \texttt{-snes\_mf}.  For example:
 \begin{cline}
-$ cd c/ch5/
+$ cd c/ch6/
 $ make plap
 ...
 $ ./plap -snes_fd_function -snes_fd
@@ -752,7 +755,7 @@ H_{ij}^L(\xi,\eta) &= \left[\frac{4}{h_x^2} \left(\sum_{\ell=0}^3 u_\ell \frac{\
 by hand.  Now write a \PETSc code \texttt{cartoon.c} to solve this problem, starting with a code that only implements $\Phi(x,y)$ by a function \texttt{FormObjective()} and a call to \texttt{SNESSetObjective()}.  After checking that it works using ``\texttt{./cartoon -snes\_fd\_function -snes\_fd},'' add a function \texttt{FormFunction()} and a call to \texttt{SNESSetFunction()} and check that now ``\texttt{./cartoon -snes\_fd}'' works.
 
 \emph{Hints}.  Note that your code will \emph{not} use a \pDMDA, because there is no underlying grid (or differential equation).  Consider \texttt{expcircle.c} from Chapter \ref{chap:nl} as a starting point for your code.
-% solution:  c/ch5/solns/cartoon.c
+% solution:  c/\CODELOC solns/cartoon.c
 
 \item \label{exer:of:commentoutresidual}  Comment-out those parts of \texttt{plap.c} which are shown in Code \ref{code:plapFun}, and the \texttt{DMDASNESSetFunctionLocal()} line shown in Code \ref{code:plapMain}.  Thus you have removed all references to \texttt{FormFunctionLocal()}, so you have a truly ``objective-only'' code.  Confirm that
 \begin{cline}
