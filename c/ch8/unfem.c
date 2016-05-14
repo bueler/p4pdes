@@ -108,7 +108,6 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
         if (abfs[p] == 1) {  // segment is Neumann
             na = as[2*p+0];  // nodes at end of segment
             nb = as[2*p+1];
-            //PetscPrintf(PETSC_COMM_WORLD,"segment %d=(%d,%d) is Neumann\n",p,na,nb); //STRIP
             ls = sqrt(pow(ax[na]-ax[nb],2) + pow(ay[na]-ay[nb],2)); // length of segment
             // midpoint rule; psi_na=psi_nb=0.5 at midpoint of segment
             sint = 0.5 * user->gN_fcn(0.5*(ax[na]+ax[nb]),0.5*(ay[na]+ay[nb])) * ls;
@@ -360,7 +359,7 @@ int main(int argc,char **argv) {
         ierr = JacobianPreallocation(A,&user); CHKERRQ(ierr);
     }
 
-    // configure SNES
+    // configure SNES, including resetting default KSP and PC
     ierr = VecCreate(PETSC_COMM_WORLD,&r); CHKERRQ(ierr);
     ierr = VecSetSizes(r,PETSC_DECIDE,user.mesh.N); CHKERRQ(ierr);
     ierr = VecSetFromOptions(r); CHKERRQ(ierr);
