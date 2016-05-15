@@ -146,7 +146,10 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
         gradu[0] = 0.0;
         gradu[1] = 0.0;
         for (l = 0; l < 3; l++) {
-            unode[l] = (abfn[en[l]] == 2) ? user->gD_fcn(ax[en[l]],ay[en[l]]) : au[en[l]];
+            if (abfn[en[l]] == 2)
+                unode[l] = user->gD_fcn(ax[en[l]],ay[en[l]]);
+            else
+                unode[l] = au[en[l]];
             gradu[0] += unode[l] * gradpsi[l][0];
             gradu[1] += unode[l] * gradpsi[l][1];
         }
@@ -163,8 +166,9 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
             if (abfn[en[l]] < 2) { // if NOT a Dirichlet node
                 sum = 0.0;
                 for (q = 0; q < Q[deg]; q++)
-                    sum += w[deg][q] * ( aquad[q] * InnerProd(gradu,gradpsi[l])
-                                         - fquad[q] * chi(l,xi[deg][q],eta[deg][q]) );
+                    sum += w[deg][q]
+                             * ( aquad[q] * InnerProd(gradu,gradpsi[l])
+                                 - fquad[q] * chi(l,xi[deg][q],eta[deg][q]) );
                 aF[en[l]] += fabs(detJ) * sum;
             }
         }
@@ -180,7 +184,6 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
     return 0;
 }
 
-//STARTFORMPICARD
 PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
     PetscErrorCode ierr;
     unfemCtx     *user = (unfemCtx*)ctx;
@@ -203,6 +206,7 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
     ierr = VecGetArrayRead(u,&au); CHKERRQ(ierr);
     ierr = VecGetArrayRead(user->mesh.x,&ax); CHKERRQ(ierr);
     ierr = VecGetArrayRead(user->mesh.y,&ay); CHKERRQ(ierr);
+//STARTPICARD
     for (k = 0; k < user->mesh.K; k++) {
         en = ae + 3*k;  // en[0], en[1], en[2] are nodes of element k
         // geometry of element
@@ -215,7 +219,10 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
         for (l = 0; l < 3; l++) {
             gradpsi[l][0] = ( dy2 * dchi[l][0] - dy1 * dchi[l][1]) / detJ;
             gradpsi[l][1] = (-dx2 * dchi[l][0] + dx1 * dchi[l][1]) / detJ;
-            unode[l] = (abfn[en[l]] == 2) ? user->gD_fcn(ax[en[l]],ay[en[l]]) : au[en[l]];
+            if (abfn[en[l]] == 2)
+                unode[l] = user->gD_fcn(ax[en[l]],ay[en[l]]);
+            else
+                unode[l] = au[en[l]];
         }
         // function values at quadrature points on element
         for (q = 0; q < Q[deg]; q++) {
@@ -235,7 +242,8 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
                     if (abfn[en[m]] != 2) {
                         sum = 0.0;
                         for (q = 0; q < Q[deg]; q++) {
-                            sum += w[deg][q] * aquad[q] * InnerProd(gradpsi[l],gradpsi[m]);
+                            sum += w[deg][q] * aquad[q]
+                                       * InnerProd(gradpsi[l],gradpsi[m]);
                         }
                         v[cv] = fabs(detJ) * sum;
                         cv++;
@@ -246,6 +254,7 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
         // insert element stiffness matrix
         ierr = MatSetValues(P,cr,row,cr,row,v,ADD_VALUES); CHKERRQ(ierr);
     }
+//ENDPICARD
     ierr = ISRestoreIndices(user->mesh.e,&ae); CHKERRQ(ierr);
     ierr = ISRestoreIndices(user->mesh.bfn,&abfn); CHKERRQ(ierr);
     ierr = VecRestoreArrayRead(u,&au); CHKERRQ(ierr);
@@ -261,18 +270,16 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
     ierr = MatSetOption(P,MAT_NEW_NONZERO_LOCATION_ERR,PETSC_TRUE); CHKERRQ(ierr);
     return 0;
 }
-//ENDFORMPICARD
 
+/* In this procedure, note that nnz[n] is the number of nonzeros in row n.
+It is one for Dirichlet rows.  It is one more than the vertex degree for
+interior points, and two more for Neumann nodes. */
 //STARTPREALLOC
 PetscErrorCode JacobianPreallocation(Mat J, unfemCtx *user) {
     PetscErrorCode ierr;
     const int    *abfn, *ae, *en;
     int          *nnz, n, k, l;
 
-    // nnz[n] = number of nonzeros in row n
-    //        = 1 if Dirichlet, degree+1 if interior, degree+2 if Neumann
-    // for interior nodes, (vertex) degree = number of incident elements,
-    // but for Neumann nodes we need to add one
     nnz = (int *)malloc(sizeof(int)*(user->mesh.N));
     ierr = ISGetIndices(user->mesh.bfn,&abfn); CHKERRQ(ierr);
     for (n = 0; n < user->mesh.N; n++)
@@ -292,7 +299,6 @@ PetscErrorCode JacobianPreallocation(Mat J, unfemCtx *user) {
 }
 //ENDPREALLOC
 
-//STARTMAIN
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
     PetscBool   view = PETSC_FALSE, noprealloc = PETSC_FALSE;
@@ -353,6 +359,7 @@ int main(int argc,char **argv) {
             SETERRQ(PETSC_COMM_WORLD,1,"other solution cases not implemented");
     }
 
+//STARTMAIN
     // read mesh object of type UM
     ierr = UMInitialize(&(user.mesh)); CHKERRQ(ierr);
     ierr = UMReadVecs(&(user.mesh),meshroot); CHKERRQ(ierr);
@@ -391,6 +398,7 @@ int main(int argc,char **argv) {
     ierr = VecDuplicate(r,&u); CHKERRQ(ierr);
     ierr = VecSet(u,0.0); CHKERRQ(ierr);
     ierr = SNESSolve(snes,NULL,u);CHKERRQ(ierr);
+//ENDMAIN
 
     // measure error relative to exact solution
     ierr = VecDuplicate(r,&uexact); CHKERRQ(ierr);
@@ -408,5 +416,4 @@ int main(int argc,char **argv) {
     PetscFinalize();
     return 0;
 }
-//ENDMAIN
 

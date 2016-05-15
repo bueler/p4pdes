@@ -94,7 +94,7 @@ We will assume $\partial_D\Omega$ is a closed set.  Furthermore we assume it con
 
 \begin{marginfigure}
 \input{tmp/blob.tikz}
-\caption{A polygonal domain $\Omega$ with $\partial_D\Omega$ in bold.}
+\caption{A polygonal domain $\Omega$.  The Dirichlet portion of the boundary $\partial_D\Omega$ is shown in bold.}
 \label{fig:un:polygon}
 \end{marginfigure}
 
@@ -322,7 +322,7 @@ See \texttt{c/\CODELOC cases.h} (not shown) for all remaining details.
 
 The triangulation shown in Figure \ref{fig:un:trapone} came from applying \Triangle to \texttt{trap.poly}.  We ask for a polygon output file (option \texttt{-p}), relatively-uniform triangles (\texttt{-q} for ``quality-checked,'' with no interior angles less than $20^\circ$ \citep{Shewchuk1996}), and triangles with a maximum area (\texttt{-a}) of $0.5$:
 \begin{cline}
-$ cd c/ch7meshes
+$ cd c/ch7/meshes
 $ triangle -pqa0.5 trap
 \end{cline}
 %$
@@ -383,7 +383,7 @@ Thus the Python script \texttt{tri2petsc.py} (not shown) reads three files in \T
 
 Let's try it out.  Because \texttt{tri2petsc.py} uses Python modules from the \PETSc source directory, we first generate some symbolic links:
 \begin{cline}
-$ cd ..                                # back to c/ch7
+$ cd c/ch7/
 $ ln -s ~/petsc/bin/petsc_conf.py
 $ ln -s ~/petsc/bin/PetscBinaryIO.py
 $ ./tri2petsc.py meshes/trap.1 trap.1
@@ -442,7 +442,7 @@ Before showing this code, and because the reader might have become too comfortab
 \end{figure}
 
 
-FIXME show extracts of \texttt{main()} and most of \texttt{FormFunction()} in \texttt{c/\CODELOC unfem.c}
+FIXME show extracts of context, FEM stuff, most of \texttt{FormFunction()}, and most of \texttt{main()} in \texttt{c/\CODELOC unfem.c}
 
 \cinputpart{unfem.c}{\CODELOC}{FIXME}{I}{//STARTCTX}{//ENDCTX}{code:unfemctx}
 
@@ -451,6 +451,8 @@ FIXME show extracts of \texttt{main()} and most of \texttt{FormFunction()} in \t
 \cinputpart{unfem.c}{\CODELOC}{FIXME}{III}{//STARTBDRYRESIDUALS}{//ENDBDRYRESIDUALS}{code:unfembdryresiduals}
 
 \cinputpart{unfem.c}{\CODELOC}{FIXME}{IV}{//STARTELEMENTRESIDUALS}{//ENDELEMENTRESIDUALS}{code:unfemelementresiduals}
+
+\cinputpart{unfem.c}{\CODELOC}{FIXME}{V}{//STARTMAIN}{//ENDMAIN}{code:unfemmain}
 
 
 \section{Initial testing}
@@ -475,9 +477,14 @@ A_{ij}^k(\bu) = \int_{\triangle_k} a(u^h) \grad\psi_j \cdot \grad\psi_i \label{e
 \end{equation}
 Again this is computed by quadrature, similar to \eqref{eq:un:elementintegralreference} and \eqref{eq:un:elementquadraturereference}.  This matrix is evidently symmetric, $a_{ij}=a_{ji}$, and sparse.  Furthermore it is positive-definite if $a(u,x,y)>0$, and thus the conjugate gradient Krylov method applies to the equations for the Newton step; see Chapter \ref{chap:ls}.
 
+\cinputpart{unfem.c}{\CODELOC}{FIXME}{VI}{//STARTPICARD}{//ENDPICARD}{code:unfempicard}
+
+
 \section{Preallocate a \pMat (serial)}
 
 FIXME essential for speed
+
+\cinputpart{unfem.c}{\CODELOC}{FIXME}{VII}{//STARTPREALLOC}{//ENDPREALLOC}{code:unfemprealloc}
 
 compare for \texttt{--with-debugging=0} build:
 \begin{cline}
