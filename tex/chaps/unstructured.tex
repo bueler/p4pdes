@@ -100,12 +100,9 @@ We will assume $\partial_D\Omega$ is a closed set.  Furthermore we assume it con
 
 By definition, a \emph{triangulation} is a finite set of non-overlapping, non-empty open triangles $\triangle_k\subset \RR^2$ which tile $\Omega$:
 \begin{equation}
-\Th = \left\{\triangle_k \,\Big|\, \cup_k \overline{\triangle}_k = \overline{\Omega} \, \text{ and} \,\, \Omega_k \cap \Omega_l = \emptyset \, \text{ if } k\ne l\right\}. \label{eq:un:triangulation}
+\Th = \left\{\triangle_k \,\Big|\, \cup_k \overline{\triangle}_k = \overline{\Omega} \, \text{ and} \,\, \triangle_k \cap \triangle_l = \emptyset \, \text{ if } k\ne l\right\}. \label{eq:un:triangulation}
 \end{equation}
-We index the $K$ triangles (elements) in $\Th$ by $k=0,\dots,K-1$.  The $N$ vertices (nodes) in $\Th$ are indexed by $j=0,1,\dots,N-1$, with locations
-\begin{equation*}
-\bx_j = (x_j,y_j).
-\end{equation*}
+Let $K$ be the number of triangles and $N$ be the number of nodes.  The locations of the nodes are pairs $\bx_i=(x_i,y_i)$ for $i=0,\dots,N-1$.
 
 An example triangulation $\Th$ is shown in Figure \ref{fig:un:number-mesh}.  The subscript ``$h$'' in ``$\Th$,'' traditional notation, denotes the typical or maximum size $h$ (e.g.~diameter) of the triangles.  It serves as a reminder of our desired limit $h\to 0$.  In contrast to many references--e.g.~\citet{Elmanetal2005}, which we follow in many ways---all numbering here is zero-based, suitable for a C implementation.
 
