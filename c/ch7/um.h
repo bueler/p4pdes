@@ -19,22 +19,24 @@ typedef struct {
                     //     values s[2*p+0],s[2*p+1]
                     //     are indices into node-based Vecs
              bfs;   // flag for boundary segment; length P
-                    //     if abfs[i] == 1 then segment i is on Neumann bdry
-                    //     if abfs[i] == 2 then segment i is on Dirichlet bdry
+                    //     if abfs[p] == 1 then segment p is on Neumann bdry
+                    //     if abfs[p] == 2 then segment p is on Dirichlet bdry
 } UM;
 //ENDUM
 
 PetscErrorCode UMInitialize(UM *mesh);
 PetscErrorCode UMDestroy(UM *mesh);
 
-// view node coordinates, element triples, boundary flags to STDOUT
+// view node coordinates, element triples, boundary segments, and boundary node/segment flags
 PetscErrorCode UMView(UM *mesh, PetscViewer viewer);
 
-// read node coordinates from file and create all nodal-based Vecs
+// read node coordinates from file
+// create as Vecs
 PetscErrorCode UMReadVecs(UM *mesh, char *rootname);
 
-// read element index triples, boundary segments, and boundary node/segment flags,
-// each created as an IS, from file; call UMReadNodes() first
+// read element triples, boundary segments, and boundary node/segment flags
+// each created as an IS
+// call UMReadNodes() first
 PetscErrorCode UMReadISs(UM *mesh, char *rootname);
 #endif
 
