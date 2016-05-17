@@ -1,28 +1,30 @@
 
-This Chapter returns to the Poisson equation in two dimensions.  We implement a finite element method (FEM) for an unstructured triangular mesh which covers a general polygonal domain.  Our code solves certain nonlinear generalizations of the standard linear problem, but these are different nonlinear forms from the $p$-Laplacian problem in the previous Chapter.
+In this Chapter we implement a finite element method (FEM) for an unstructured triangular mesh which covers a general polygonal domain.  Our code solves certain linear and nonlinear Poisson equation problems with reasonably-general boundary conditions.
 
 Our approach is to
 \begin{center}
 \emph{first do element-wise assembly of the residual equations,}
 \end{center}
-and thereby get a functioning \pSNES-based code.  We will not even think about matrices as we write the initial code.  Only after making sure it works do we
+and thereby get a functioning \pSNES-based code.  We will not even think about matrices in writing the initial code.  Only after making sure it works do we
 \begin{center}
 \emph{then write additional code to assemble an approximate Jacobian matrix.}
 \end{center}
 
-We do the following new tasks:
+Similar to the example in the last Chapter, the residual equations $\bF(\bu)=0$, the nonlinear system seen by the \pSNES solver, is the discretized weak form of the PDE.  Our direct construction of these equations roughly follows the residual implementations of Chapters \ref{chap:nl}--\ref{chap:of}.  The FEM ``stiffness'' matrix $A$, a major piece in typical FEM introductions \citep{Braess2007,Elmanetal2005}, arises here as the Jacobian when solving $\bF(\bu)=0$.  In our first runs, done before writing any matrix-assembly code, the \pSNES solver approximates this linear system through finite-differencing of evaluations of $\bF$.  Eventually we do assemble a Jacobian, but one that is only correct for the linear case.  For the smooth nonlinear case tested here, however, this inaccurate linearization suffices.
+
+We do the following new tasks in this Chapter:
 \begin{itemize}
-\item implement Neumann boundary conditions,
 \item read a triangular mesh from a file into \PETSc \pVecs and \pISs,
-\item index that mesh unstructured way, and
-\item pre-allocate a \PETSc \pMat.
+\item index that mesh unstructured way,
+\item pre-allocate a \PETSc \pMat, and
+\item implement Neumann boundary conditions.
 \end{itemize}
 
-The example here contrasts with the rectangular-element ($Q^1$) FEM of the last Chapter in that it does not use a \pDMDA.  That type is limited to structured-grid topology.  Instead we implement a minimal, and naive, mesh-topology infrastructure, which substantially increases our workload.  The relatively-simple \Triangle program generates ASCII files describing the mesh.  An ``index set'' \pIS  type holds the global indices of nodes and triangles (elements).  \pVec and \pMat objects, used for the solution and Jacobian respectively, are indexed through the \pIS values.  Thus the benefits of \PETSc's mesh-topology \pDM tools, including \pDMDA in previous Chapters and \pDMPlex in Chapter \ref{chap:dp}, become clearer by forgoing them here.
+The example here contrasts with the rectangular-element ($Q^1$) FEM of the last Chapter by not using a \pDMDA and a structured grid.  Instead we implement a minimal, though naive, mesh-topology infrastructure.  (Doing so substantially increases our workload!)  The relatively-simple \Triangle program generates ASCII files describing the mesh.  An ``index set'' \pIS  type holds the global indices of nodes and triangles (elements).  \pVec and \pMat objects, used for the solution and Jacobian respectively, are indexed through the \pIS values.
 
-In contrast with earlier and latter Chapters, we generate a code that only works on one MPI process (i.e.~a serial code).  At the end of the Chapter briefly consider the additional constructs needed to distribute a mesh across many processes.  Instead of even attempting an \emph{ad hoc} approach, however, these considerations motivate the \pDMPlex example in Chapter \ref{chap:dp}.
+In contrast with both earlier and later Chapters, we generate a code that only works on one MPI process (i.e.~a serial code).  However, at the end of the Chapter we briefly consider, though we do not implement, the additional constructs needed to distribute a mesh across many processes.  These considerations motivate the \pDMPlex example in Chapter \ref{chap:dp}.
 
-The residual equations $\bF(\bu)=0$, the nonlinear system seen by the \pSNES solver, is the discretized weak form of the PDE.  Our direct construction of these equations roughly follows the residual implementations of Chapters \ref{chap:nl}--\ref{chap:of}.  The FEM ``stiffness'' matrix $A$, and corresponding linear system $A\bx = \bb$, which is to say the major pieces of typical FEM introductions \citep{Braess2007,Elmanetal2005}, arise here as the Jacobian, and Newton step, respectively, when solving $\bF(\bu)=0$.  In our first runs, done before writing any matrix-assembly code, the \pSNES solver approximates this linear system through finite-differencing of evaluations of $\bF$.  Eventually we will only assemble a Jacobian which is accurate for the linear case.  For the smooth nonlinear case tested here, this inaccurate linearization suffices.
+Though our naive approach succeeds in solving the problem, at least in serial, the benefits of \PETSc's mesh-topology \pDM tools, including \pDMDA in previous Chapters and \pDMPlex in Chapter \ref{chap:dp}, become clearer by forgoing them here.
 
 
 \section{A 2D nonlinear Poisson problem}
@@ -33,55 +35,58 @@ The residual equations $\bF(\bu)=0$, the nonlinear system seen by the \pSNES sol
 \label{fig:un:generalpoissondomain}
 \end{marginfigure}
 
-Let $\Omega \subset \RR^2$ be a bounded (open) region.  Suppose its boundary $\partial\Omega$ is well-behaved (polygonal or Lipschitz-continuous \citep[section 1.2]{Ciarlet2002}).  Suppose $\partial\Omega$ is decomposed into (measurable) disjoint subsets $\partial_D \Omega$ and $\partial_N \Omega$ whose union is the entire boundary $\partial \Omega$.
+Let $\Omega \subset \RR^2$ be a bounded (open) region as in Figure \ref{fig:un:generalpoissondomain}.  Suppose its boundary $\partial\Omega$ is well-behaved, for example polygonal or Lipschitz-continuous \citep[section 1.2]{Ciarlet2002}.  Suppose $\partial\Omega$ is decomposed into (measurable) disjoint subsets $\partial_D \Omega$ and $\partial_N \Omega$ whose union is the entire boundary $\partial \Omega$.
 
-The Poisson problem in Chapter \ref{chap:st} is based on the equation $- \grad^2 u = f$.  We allow a more general nonlinear form here.  Let $a(x,y,u)$ and $f(x,y,u)$ be continuous functions, and assume there is $\eps>0$ so that
-    $$a(x,y,u) \ge \eps > 0.$$
-That is, we require \emph{uniform ellipticity} \citep{Evans2010}.  The strong form also includes boundary conditions, here nonhomogeneous Dirichlet and Neumann boundary conditions.  Thus the  nonlinear Poisson (diffusion) \emph{strong form} we solve is to find $u(x,y)$ so that
+The Poisson problem in Chapter \ref{chap:st} is based on the equation $- \grad^2 u = f$, but we allow a more general nonlinear form here.  Let $a(u,x,y)$ and $f(u,x,y)$ be continuous functions, and assume there is $\eps>0$ so that
+    $$a(u,x,y) \ge \eps > 0.$$
+That is, we require \emph{uniform ellipticity} \citep{Evans2010}.  The strong form also includes boundary conditions, here of nonhomogeneous Dirichlet and Neumann type.  Thus the  nonlinear Poisson (diffusion) \emph{strong form} we solve is to find $u(x,y)$ so that
 \begin{align}
-- \Div \left(a(x,y,u) \grad u\right) &= f(x,y,u) \quad \text{ on } \Omega, \label{eq:un:poissonstrong} \\
+- \Div \left(a(u,x,y) \grad u\right) &= f(u,x,y) \quad \text{ on } \Omega, \label{eq:un:poissonstrong} \\
 u &= g_D \quad \text{ on } \partial_D \Omega, \notag \\
 \frac{\partial u}{\partial n} &= g_N \quad \text{ on } \partial_N \Omega. \notag
 \end{align}
-By definition, $\partial u/\partial n = \bn \cdot \grad u$ where $\bn$ is the outward unit normal on $\partial \Omega$.
+By definition, $\partial u/\partial n = \bn \cdot \grad u$ where $\bn$ is the outward unit normal on $\partial \Omega$ (Figure \ref{fig:un:generalpoissondomain}).
 
-The data of problem \eqref{eq:un:poissonstrong}, besides the region $\Omega$ and its boundary, includes a \emph{diffusion coefficient} $a$, a \emph{source term} $f$, \emph{Dirichlet data} $g_D$, and \emph{Neumann data} $g_N$.  For the purpose of numerical solutions we will simply assume that the boundary data is continuous.  Poisson problem \eqref{poissonsquare} in Chapter \ref{chap:st} is the homogeneous Dirichlet case where $\Omega$ is the square, $a\equiv 1$, $f=f(x,y)$ is independent of the solution $u$, $\partial_D \Omega = \partial \Omega$, $\partial_N \Omega = \emptyset$, and $g_D=0$.
+The data of problem \eqref{eq:un:poissonstrong}, besides the region $\Omega$ and its boundary, includes a \emph{diffusion coefficient} $a$, a \emph{source term} $f$, \emph{Dirichlet data} $g_D$, and \emph{Neumann data} $g_N$.  For the purpose of numerical solutions we will simply assume these data are continuous.  Poisson problem \eqref{poissonsquare} in Chapter \ref{chap:st} is the homogeneous Dirichlet case where $\Omega$ is the square, $a\equiv 1$, $f=f(x,y)$ is independent of the solution $u$, $\partial_D \Omega = \partial \Omega$, $\partial_N \Omega = \emptyset$, and $g_D=0$.
 
-Problem \eqref{eq:un:poissonstrong} is not the most general (nonlinear) Poisson problem.  Specifically, one could allow more general \emph{Robin} boundary conditions $\alpha u + \beta \frac{\partial u}{\partial n} = \gamma$ where, generally, $\alpha,\beta,\gamma$ could vary along the boundary \citep{Elmanetal2005}.  One could also allow $a$ and/or $f$ to depend on the gradient of $u$, as does $a=|\grad u|^{p-2}$ in the $p$-Laplacian equation of Chapter \ref{chap:of}.
+Problem \eqref{eq:un:poissonstrong} is not the most general (nonlinear) Poisson problem.  Specifically, one could allow more general \emph{Robin} boundary conditions $\alpha u + \beta \frac{\partial u}{\partial n} = \gamma$ where, generally, $\alpha,\beta,\gamma$ could vary along the boundary \citep{Elmanetal2005}; see Exercise \ref{chap:un}.\ref{exer:un:robin}.  One could also allow $a$ and/or $f$ to depend on the gradient of $u$, as does $a=|\grad u|^{p-2}$ in the $p$-Laplacian equation of Chapter \ref{chap:of}.
 
-As \eqref{eq:un:poissonstrong} is stated there may be no solution where ``$\Div(a\grad u)$'' makes sense as a continuous function, even for polygonal regions and continuous data.  That is, there may be no $u\in C^2(\Omega) \cap C(\overline \Omega)$ so that $-\Div(a\grad u) = f$.  A solution exists, however, in the linear case at least, if we convert \eqref{eq:un:poissonstrong} to a \emph{weak form}.  A weak formulation arose in Chapter \ref{chap:of} as the gradient of an objective function, but the weak form here is generally not of that type.  We will derive it from the strong form in the traditional way, by multiplying by a test function and integrating.
+As \eqref{eq:un:poissonstrong} is stated there may be no solution where ``$\Div(a\grad u)$'' makes sense as a continuous function, even for polygonal regions and continuous data, for example.  That is, there may be no $u\in C^2(\Omega) \cap C(\overline \Omega)$ so that \eqref{eq:un:poissonstrong} applies at all points.  A solution exists, however, in the linear case at least, if we convert \eqref{eq:un:poissonstrong} to a \emph{weak form}.  Such a weak formulation already arose in Chapter \ref{chap:of} as the gradient of an objective function, but the weak form here does not have a minimization origin in general; see Exercise \ref{chap:un}.\ref{eq:un:nottheobjective}.  In this Chapter we will derive the weak form from the strong form in the traditional way, by multiplying by a test function and integrating.
 
 
 \section{Weak form with general boundary values}
 
-Recall $L^2(\Omega)$ is the space of square-integrable real functions on $\Omega$.  Define the following Sobolev space \citep{Evans2010}:
+Recall $L^2(\Omega)$ is the space of square-integrable real functions on $\Omega$.  Define the following Hilbert space:
     $$H^1(\Omega) = \left\{u \,:\, u \in L^2(\Omega) \,\&\, \grad u \in L^2(\Omega)\right\}.$$
-Definition \eqref{eq:of:sobolevdefn} of $W^{1,p}(\Omega)$ includes this space so that $H^1(\Omega) = W^{1,2}(\Omega)$.  This Chapter uses the notation with ``$H$'' standing for Hilbert.
+Definition \eqref{eq:of:sobolevdefn} of Sobolev spaces $W^{1,p}(\Omega)$ includes this space: $H^1(\Omega) = W^{1,2}(\Omega)$.
 
-We use two subsets of $H^1(\Omega)$: \emph{trial functions} come from $H_{g}^1(\Omega)$, which denotes the functions with value $g_D$ along $\partial_D \Omega$, and \emph{test functions} come from $H_{0}^1(\Omega)$, with value $0$ along $\partial_D \Omega$.  Note that $H_{0}^1(\Omega)$ is a linear subspace of $H^1(\Omega)$ while generally $H_{g}^1(\Omega)$ is not.
+We use two subsets of $H^1(\Omega)$: \emph{trial functions} come from $H_{g}^1(\Omega)$, the functions with value $g_D$ along $\partial_D \Omega$, and \emph{test functions} come from $H_{0}^1(\Omega)$, with value $0$ along $\partial_D \Omega$.  Note that $H_{0}^1(\Omega)$ is a linear subspace of $H^1(\Omega)$ while generally $H_{g}^1(\Omega)$ is not.
 
 Now choose any $v\in H_{0}^1(\Omega)$, multiply the first equation in \eqref{eq:un:poissonstrong} by $v$, and integrate by parts:
 \begin{equation*}
 \int_\Omega a(u) \grad u \cdot \grad v - \int_{\partial\Omega} \frac{\partial u}{\partial n} v = \int_\Omega f(u) v.
 \end{equation*}
-(In writing such integrals we generally show dependence on the solution $u$ but suppress it for $x,y$ so that $a(x,y,u)=a(u)$, and similarly for $f$.)  Next we use the boundary information, namely that $v=0$ on $\partial_D\Omega$ and $\frac{\partial u}{\partial n}=g_N$ on $\partial_N\Omega$:
+In writing such integrals we will generally show dependence on the solution $u$ but suppress it for $x,y$ so that $a(u,x,y)=a(u)$, and similarly for $f$.
+
+Next we use the boundary information, that $v=0$ on $\partial_D\Omega$ and $\partial u/\partial n=g_N$ on $\partial_N\Omega$:
 \begin{equation}
 \int_\Omega a(u) \grad u \cdot \grad v = \int_\Omega f(u) v + \int_{\partial_N\Omega} g_N v\quad \text{ for any } v\in H_{0}^1(\Omega). \label{eq:un:poissonweak}
 \end{equation}
-Equation \eqref{eq:un:poissonweak} is the \emph{weak formulation} of \eqref{eq:un:poissonstrong}, and any $u \in H_{g}^1(\Omega)$ satisfying it is a \emph{weak solution}.  Observe that the Dirichlet boundary conditions $g_D$ are incorporated into defining $H_{g}^1(\Omega)$ while the Neumann boundary data $g_N$ appears in the weak form \eqref{eq:un:poissonweak}.
+Equation \eqref{eq:un:poissonweak} is the \emph{weak formulation} of \eqref{eq:un:poissonstrong}.  Any $u \in H_{g}^1(\Omega)$ satisfying \eqref{eq:un:poissonweak} is a \emph{weak solution}.  Observe that the Dirichlet boundary conditions $g_D$ are incorporated into defining $H_{g}^1(\Omega)$ while the Neumann boundary data $g_N$ appears in the weak form \eqref{eq:un:poissonweak}.
 
-Summarizing the ``rules'' for passing between the strong \eqref{eq:un:poissonstrong} and weak \eqref{eq:un:poissonweak} formulations might clarify the situation:\begin{itemize}
-\item A well-behaved function $u \in C^2(\Omega) \cap C(\overline \Omega)$ which satisfies the strong form also solves the weak form.  (The derivation above shows this.)
-\item If $u \in H_{g}^1(\Omega)$ solves the weak form then we accept it, by definition, as a solution.   If it is also well-behaved (i.e.~$u \in C^2(\Omega) \cap C(\overline \Omega)$) then we may reverse the derivation to show it solves the strong form.  (Not shown, but see \citet{Evans2010}.)
+Here are the ``rules'' for passing between the strong \eqref{eq:un:poissonstrong} and weak \eqref{eq:un:poissonweak} formulations:\begin{itemize}
+\item A well-behaved function $u \in C^2(\Omega) \cap C(\overline \Omega)$ which satisfies \eqref{eq:un:poissonstrong} also solves \eqref{eq:un:poissonweak}.  The derivation above shows this.
+\item If $u \in H_{g}^1(\Omega)$ solves \eqref{eq:un:poissonweak} then we accept it, by definition, as a solution.   If it is also well-behaved, $u \in C^2(\Omega) \cap C(\overline \Omega)$, then we may reverse the derivation to show it solves \eqref{eq:un:poissonstrong}.
 \end{itemize}
 
-Consider the linear case where functions $a$ and $f$ are independent of $u$.  If $\partial_D \Omega$ has positive measure then a solution to weak formulation \eqref{eq:un:poissonweak} exists and is unique (\emph{well-posedness}; \citep{Ciarlet2002,Evans2010}).  There exist conditions on the domain (e.g.~convex polygon) and the boundary data under which one can furthermore show that $u$ solving \eqref{eq:un:poissonweak} is in $C^2(\Omega) \cap C(\overline \Omega)$ (\emph{regularity}; \citep{Evans2010}).  Such theoretical matters are mostly beyond our scope.
+For the linear case, where functions $a$ and $f$ are independent of $u$, the theory is relatively complete.  If $\partial_D \Omega$ has positive measure then it is a theorem that a solution to \eqref{eq:un:poissonweak} exists and is unique (\emph{well-posedness}; \citep{Ciarlet2002,Evans2010}).  Furthermore there exist conditions on the domain (e.g.~it is a convex polygon) and the boundary data, from which one can show that $u$ solving \eqref{eq:un:poissonweak} is in $C^2(\Omega) \cap C(\overline \Omega)$ (\emph{regularity}; \citep{Evans2010}).  Such theoretical matters are, however, beyond our scope.
 
-In nonlinear cases each particular problem must be analyzed for well-posedness.  In terms of practical computation, particular nonlinear cases covered by our method, and solvable using our code, include 2D versions of
+In nonlinear cases each particular problem must be analyzed for well-posedness.  In terms of practical computation, however, some nonlinear cases are covered by our method and are solvable using our code.  These include the 2D versions of
 \begin{itemize}
-\item the \emph{Bratu} equation\sidenote{Exercises \ref{chap:nl}.\ref{exer:nl:bratu} and \ref{chap:un}.\ref{exer:un:bratu} solve the 1D and 2D versions, respectively.} if $a\equiv 1$ and $f=\lambda e^u$, and
-\item ``uniformized'' versions of the \emph{porous medium} equation \citep{Ockendonetal2003}, in which, for example, $a=u^{m-1}+\eps$ for some $m\ge 1$ and $\eps>0$.
+\item the \emph{Bratu} equation wherein $a\equiv 1$ and $f=\lambda e^u$, and
+\item ``uniformized'' \emph{porous medium} equations \citep{Ockendonetal2003}, in which, for example, $a=u^{m-1}+\eps$ for some $m\ge 1$ and $\eps>0$.
 \end{itemize}
+For the former see Exercise \ref{chap:un}.\ref{exer:un:bratu}.\sidenote{Exercise \ref{chap:nl}.\ref{exer:nl:bratu} solves the 1D version.}  We will test our code on an easy case of the latter, namely with $a(u)=1+u^2$; see the exact solution \eqref{eq:un:exactsolution} in ``case 1,'' later in this Chapter.
 
 
 \section{A $P^1$ FEM}
@@ -527,6 +532,15 @@ FIXME: see approach to mesh topology in chapter 10 of \citep{Loggetal2012}
 \renewcommand{\labelenumi}{\arabic{chapter}.\arabic{enumi}\quad}
 \renewcommand{\labelenumii}{(\alph{enumii})}
 \begin{enumerate}
+\item \label{exer:un:notminimization}  The text asserts that problems \eqref{eq:un:poissonstrong} and \eqref{eq:un:poissonweak} do not arise from a minimization principle.  For simplicity in this Exercise, suppose that $f$ is independent of $u$, use homogeneous Dirichlet boundary conditions on $\partial \Omega$, and feel free to consider only the 1D version of the problem.  First show, by following the technique that derived \eqref{eq:of:plapweakform}, that if $\partial a/\partial u \ne 0$ then the Euler-Lagrange equation of
+\begin{equation}
+  \tilde I[u] = \int_\Omega \frac{1}{2} a(u) |\grad u|^2 - f u  \label{eq:un:nottheobjective}
+\end{equation}
+is \emph{not} the weak form \eqref{eq:un:poissonweak}.  This fact does not exclude the possibility that some other minimization problem leads to \eqref{eq:un:poissonweak}, of course, only that \eqref{eq:un:nottheobjective} is not it.  Therefore, show next that if $\partial a/\partial u \ne 0$ then the residuals \eqref{eq:un:elementwisesum} do \emph{not} satisfy
+\begin{equation}
+  \frac{\partial F_i(u)}{\partial u_j} = \frac{\partial F_j(u)}{\partial u_i}.  \label{eq:un:symmetryresidualsdonthave}
+\end{equation}
+Why does this exclude a minimization principle?
 \item  \label{exer:un:gradientdetails}  For the map \eqref{eq:un:trianglemap} from $\triangle_\ast$ to $\triangle_k$, let
     $$J_k = \frac{\partial (x,y)}{\partial (\xi,\eta)} = \begin{pmatrix}
     x_1 - x_0 & x_2 - x_0 \\
@@ -559,5 +573,6 @@ for all cases with $0\le i+j\le n$, against the quadrature result.  Also one sho
 \item \label{exer:un:bratu} FIXME using result from previous exercise, solve Bratu; compute critical $\lambda$; equals 6.81 according to \pSNES example \texttt{ex5.c}
 \item \label{exer:un:gaussneumann}  In \texttt{unfem.c} we use the midpoint rule, the one-point Gauss rule, for quadrature \eqref{eq:un:segmentquadrature} computing the Neumann boundary segment contributions $\varphi_\nu^i$.  Modify \texttt{unfem.c} to optionally allow two-point Gaussian quadrature for this purpose.  Only in case 2 will this make any difference.  Show that accuracy improves for coarse grids, but that this benefit disappears under grid refinement.
 % see c/ch7/solns/segmentgauss.c.snippet
+\item \label{exer:un:robin} FIXME implement Robin boundary condition
 \end{enumerate}
 
