@@ -165,26 +165,24 @@ In the next section we describe and the code the element-wise evaluation of the 
 
 \section{Assembly of the residual equations}
 
-Expression \eqref{eq:un:uhexpand} shows that $N-n_D$ real values $\{u_j\}$, for $j$ such that $\bx_j \notin \partial_D \Omega$, are needed to determine the FEM solution $u^h$.  However, it will be easier to write code if we \emph{increase} the size of the resulting nonlinear system, up to dimension $N$, by including the values of $u^h$ at nodes in the Dirichlet boundary as unknowns.  Thus we define
+In expression \eqref{eq:un:uhexpand}, $N-n_D$ values $\{u_j\}$ determine the FEM solution $u^h$.  However, it will be easier to write code if we \emph{increase} the size of the resulting nonlinear system up to dimension $N$ by including the nodal values in the Dirichlet boundary as unknowns:
 \begin{equation}
 \bu = \{u_j\}_{j=0}^{N-1} \in \RR^N  \label{eq:un:unknowns}
 \end{equation}
-as the description of the FEM solution.
-
 To enforce the boundary conditions, the components of the residual corresponding to Dirichlet boundary must be zero:
 \begin{equation}
 F_i(\bu) = u_i - g_D(\bx_i) \qquad \text{ if } \bx_i \in \partial_D\Omega.  \label{eq:un:dirichletresiduals}
 \end{equation}
 
-Because triangulation $\mathcal{T}_h$ satisfying \eqref{eq:un:triangulation} almost\sidenote{The set $\Omega \setminus \cup_k \triangle_k$ has measure zero.} covers $\Omega$ with non-overlapping triangles, we can write the weak form \eqref{eq:un:weakformhat} as a sum over elements.  To be specific, for each $\triangle_k \in \mathcal{T}_h$, $k=0,\dots,K-1$, let
+Triangulation $\mathcal{T}_h$ almost\sidenote{The set $\Omega \setminus \cup_k \triangle_k$ has measure zero.} covers $\Omega$ with non-overlapping triangles so we can write the weak form \eqref{eq:un:weakformhat} as a sum over elements.  To be specific, for each $k=0,\dots,K-1$ let
 \begin{equation}
 F_i^k(\bu) = \int_{\triangle_k} a(u^h) \grad u^h \cdot \grad \psi_i - f(u^h) \psi_i.  \label{eq:un:elementweakform}
 \end{equation}
-Suppose $n_N$ is the number of edges which are in the Neumann boundary.  We call these edges (Neumann) \emph{segments} for distinctive language.  For each segment $s_\nu$, $\nu=0,\dots,n_N-1$, let
+Suppose $n_N$ is the number of segments (edges) which are in the Neumann boundary.  For each segment $s_\nu$, $\nu=0,\dots,n_N-1$, let
 \begin{equation}
-\varphi_i^\nu = \int_{s_\nu} g_N \psi_i,  \label{eq:un:segmentweakform}
+\varphi_i^\nu = \int_{s_\nu} g_N \psi_i.  \label{eq:un:segmentweakform}
 \end{equation}
-and note that $\varphi_i^\nu$ does not depend on the solution $u^h$.  Then residual equation \eqref{eq:un:weakformhat} is
+Note that $\varphi_i^\nu$ does \emph{not} depend on the solution $u^h$.  Then residual equation \eqref{eq:un:weakformhat} is
 \begin{equation}
 F_i(\bu) = \sum_{k=0}^{K-1} F_i^k(\bu) - \sum_{\nu=0}^{n_N-1} \varphi_i^\nu = 0  \qquad \text{ if } \bx_i \notin \partial_D\Omega. \label{eq:un:elementwisesum}
 \end{equation}
@@ -193,18 +191,16 @@ Together, equations \eqref{eq:un:dirichletresiduals} and \eqref{eq:un:elementwis
 \bF(\bu)=0. \label{eq:un:fullsystem}
 \end{equation}
 
-Observe that $n_D$ is the number of \emph{nodes} in the Dirichlet boundary, whereas $n_N$ is the number of \emph{segments} (edges) in the Neumann boundary.  The former correspond to degrees of freedom, while the latter are domains of integration.  Managing the mesh correctly requires making this distinction.
+Observe that $n_D$ is the number of \emph{nodes} in the Dirichlet boundary, whereas $n_N$ is the number of \emph{segments} in the Neumann boundary.  The former are degrees of freedom, while the latter are domains of integration.
 
-Because the support of the hat function $\psi_i$ only overlaps with a few triangles $\triangle_k$, only a few values $F_i^k(\bu)$ and $\varphi_i^\nu$ are nonzero.  Also, only a few nodal values $\bu=\{u_j\}$ enter into $F_i^k(\bu)$, namely those values $u_j$ such that the support of $\psi_j$ overlaps with $\triangle_k$.  These facts make \eqref{eq:un:fullsystem} a \emph{sparse} nonlinear system.
+Because the support of the hat function $\psi_i$ only overlaps with a few triangles $\triangle_k$, only a few values $F_i^k(\bu)$ and $\varphi_i^\nu$ are nonzero.  Also, only a few nodal values $\bu=\{u_j\}$ enter into $F_i^k(\bu)$, namely those values $u_j$ such that the support of $\psi_j$ overlaps with $\triangle_k$.  These facts make \eqref{eq:un:fullsystem} a sparse nonlinear system.
 
-We will compute the element integrals \eqref{eq:un:elementweakform} by referring $\triangle_k$ to a reference triangle $\triangle_\ast$ with vertices $(0,0),\,(1,0),\,(0,1)$, as shown in Figure \ref{fig:isoparametric}.  In Chapter \ref{chap:of} we did the same thing for quadrilaterals, so now we can be brief.
-
-If $\triangle_k$ has vertices $(x_0,y_0),\,(x_1,y_1),\,(x_2,y_2)$ then the linear map from $\triangle_\ast$ to $\triangle_k$ is
+We will compute the element integrals \eqref{eq:un:elementweakform} by referring $\triangle_k$ to a reference triangle $\triangle_\ast$ with vertices $(0,0),\,(1,0),\,(0,1)$, as shown in Figure \ref{fig:isoparametric}.  (In Chapter \ref{chap:of} we did a similar thing for quadrilaterals.)  If $\triangle_k$ has vertices $(x_0,y_0),\,(x_1,y_1),\,(x_2,y_2)$ then the linear map from $\triangle_\ast$ to $\triangle_k$ is
 \begin{align}
 x(\xi,\eta) &= x_0 + (x_1-x_0) \xi + (x_2-x_0) \eta, \label{eq:un:trianglemap} \\
 y(\xi,\eta) &= y_0 + (y_1-y_0) \xi + (y_2-y_0) \eta. \notag
 \end{align}
-The Jacobian determinant of map \eqref{eq:un:trianglemap}, needed for change-of-variables to integrate over the reference element, is constant on each element.  Its magnitude is the ratio of the area of $\triangle_k$ to the area of the reference element $\triangle_\ast$, equal to $2|\triangle_k|$ because $|\triangle_\ast|=1/2$.  See Exercise \ref{chap:un}.\ref{exer:un:gradientdetails}.
+The Jacobian determinant of this map, which is needed when integrating over the reference element, is constant on each element.  Its magnitude $2|\triangle_k|$ is the ratio of the area $|\triangle_k|$ to the area $|\triangle_\ast|=1/2$.
 
 \begin{marginfigure}
 \input{tikz/isoparametric.tex}
@@ -232,11 +228,11 @@ H_\ell^k(\bu,\xi,\eta) = \left[a(u^h) \grad u^h \cdot \grad \psi_i - f(u^h) \psi
 \end{equation}
 Here vertex $\ell$ of $\triangle_\ast$ corresponds to the node $\bx_i$.  Note that ``$\grad$'' in \eqref{eq:un:elementintegrand} refers to derivatives in variables $x,y$.  Exercises \ref{chap:un}.\ref{exer:un:gradientdetails} and \ref{chap:un}.\ref{exer:un:elementintegranddetails} addresses the details implicit in \eqref{eq:un:elementintegralreference} and \eqref{eq:un:elementintegrand}.
 
-As in Chapter \ref{chap:of}, the integrals \eqref{eq:un:elementintegralreference} will be approximated using quadrature.  Generally, if there are $Q$ quadrature points $(\xi_q,\eta_q) \in \triangle_\ast$ with weights $w_q$ then
+As in Chapter \ref{chap:of}, integrals \eqref{eq:un:elementintegralreference} will be approximated using quadrature.  Generally, if there are $Q$ quadrature points $(\xi_q,\eta_q) \in \triangle_\ast$ with weights $w_q$ then
 \begin{equation}
 F_i^k(\bu) \approx 2 |\triangle_k| \sum_{q=0}^{Q-1} w_q H_\ell^k(\bu,\xi_q,\eta_q). \label{eq:un:elementquadraturereference}
 \end{equation}
-We use symmetric quadrature rules constructed for the reference triangle $\triangle_\ast$.\sidenote{Unsymmetric quadrature rules based on tensor products of one-dimensional integrals \citep{KarniadakisSherwin2013} are an alternative.}  Table \ref{tab:un:quadrature} shows degree $1,2,3$ Gaussian rules \citep{Dunavant1985} with $Q=1,3,4$ points, respectively (Exercise \ref{chap:un}.\ref{exer:un:checkquadrature}).  Note that the sum of the weights is $1/2$ because $|\triangle_\ast|=1/2$.
+We use symmetric quadrature rules constructed for the reference triangle $\triangle_\ast$.  (Unsymmetric quadrature rules based on tensor products of one-dimensional integrals \citep{KarniadakisSherwin2013} are an alternative.)  Table \ref{tab:un:quadrature} shows the degree $1,2,3$ Gaussian rules \citep{Dunavant1985} with $Q=1,3,4$ points, respectively (Exercise \ref{chap:un}.\ref{exer:un:checkquadrature}).  Note that the sum of the weights is $1/2$ because $|\triangle_\ast|=1/2$.
 
 \begin{table}[h]
 \vspace{0.1in}
@@ -270,11 +266,11 @@ $3$ & $4$ & \begin{tabular}{c}
 \caption{Symmetric quadrature rules on the reference triangle $\triangle_\ast$.  See \eqref{eq:un:elementquadraturereference}.} \label{tab:un:quadrature}
 \end{table}
 
-For the Neumann boundary contributions we use the midpoint rule.  Observe that hat function $\psi_i$ has value $1/2$ at the midpoint of any edge which is incident to $\bx_i$.  Thus
+For the Neumann boundary contributions we use the midpoint rule; compare Exercise \ref{chap:un}.\ref{exer:un:gaussneumann}.  Observe that hat function $\psi_i$ has value $1/2$ at the midpoint of any edge which is incident to $\bx_i$.  If $(x_m,y_m)$ is the midpoint and $|s_\nu|$ is the length of segment $s_\nu$, and if $\bx_i\in \overline{s_\nu}$ then
 \begin{equation}
-\varphi_i^\nu \approx g_N(x_m,y_m) \psi_i(x_m,y_m) |s_\nu| = \frac{1}{2} |s_\nu|\, g_N(x_m,y_m), \label{eq:un:segmentquadrature}
+\varphi_i^\nu \approx g_N(x_m,y_m) \psi_i(x_m,y_m) |s_\nu| = \frac{1}{2} |s_\nu|\, g_N(x_m,y_m). \label{eq:un:segmentquadrature}
 \end{equation}
-if $\bx_i \in \overline{s_\nu}$, and it is zero otherwise.  Here $(x_m,y_m)$ is the midpoint, and $|s_\nu|$ is the length, of segment $s_\nu$.
+Otherwise, if $\bx_i \notin \overline{s_\nu}$, then $\varphi_i^\nu=0$.
 
 
 \section{Example problems}
@@ -565,7 +561,7 @@ for all cases with $0\le i+j\le n$, against the quadrature result.  Also one sho
 \item \label{exer:un:basisfreeresidual} FIXME motivated by \citep{Loggetal2012}: replace $\bF(\bu)$ with $\bF(\bu;v)$ so that residual equation no longer requires basis of $S^h$ for its definition; advantages/disadvantages?
 \item \label{exer:un:truejacobian} FIXME implement the true Jacobian in the $a=a(x,y)$ case, so that we only add a diagonal $\partial f/\partial u$ term; test on case 1 example and see if improved \pSNES convergence
 \item \label{exer:un:bratu} FIXME using result from previous exercise, solve Bratu; compute critical $\lambda$; equals 6.81 according to \pSNES example \texttt{ex5.c}
-\item \label{exer:un:gaussneumann}  In \texttt{unfem.c} we use the midpoint rule, the one-point Gauss rule, for quadrature \eqref{eq:un:segmentquadrature} computing the Neumann boundary segment contributions $\varphi_\nu^i$.  Modify \texttt{unfem.c} to optionally allow two-point Gaussian quadrature for this purpose.  Only in case 2 will this make any difference.  Show that accuracy improves for coarse grids, but that this benefit disappears under grid refinement.
+\item \label{exer:un:gaussneumann}  In \texttt{unfem.c} we use the midpoint rule, the one-point Gauss rule, for quadrature \eqref{eq:un:segmentquadrature} computing the Neumann boundary segment contributions $\varphi_\nu^i$.  Modify \texttt{unfem.c} to optionally allow two-point Gaussian quadrature for this purpose.  Only in case 2 will this make any difference.  Show that accuracy noticeably improves for coarse grids, but that this benefit disappears under grid refinement.
 % see c/ch7/solns/segmentgauss.c.snippet
 \item \label{exer:un:robin} FIXME implement Robin boundary condition
 \end{enumerate}
