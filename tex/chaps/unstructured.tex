@@ -89,13 +89,11 @@ In nonlinear cases each particular problem must be analyzed for well-posedness. 
 For the former see Exercise \ref{chap:un}.\ref{exer:un:bratu}.\sidenote{Exercise \ref{chap:nl}.\ref{exer:nl:bratu} solves the 1D version.}  We will test our code on an easy case of the latter, namely with $a(u)=1+u^2$; see the exact solution \eqref{eq:un:exactsolution} in ``case 1,'' later in this Chapter.
 
 
-\section{A $P^1$ FEM}
+\section{A $P^1$ finite element method}
 
-A FEM for the Poisson problem comes from requiring the weak formulation \eqref{eq:un:poissonweak} to be true for $u$ in a finite-dimensional subspace of $H_{g}^1(\Omega)$, and for test functions $v$ ranging over a basis of a finite-dimensional subspace of $H_{0}^1(\Omega)$.\sidenote{An FEM is \emph{conforming} if these subspace claims are accurate.  Otherwise one is guilty of \emph{variational crimes} \citep{Ciarlet2002} with \emph{nonconforming elements} \citep{Braess2007}.}  In the \emph{Galerkin} method here, these subspaces, built upon a triangulation of $\Omega$, will be nearly the same.
+Our FEM for the Poisson problem requires weak formulation \eqref{eq:un:poissonweak} to be true for $u$ from a finite-dimensional subspace of $H_{g}^1(\Omega)$, and for all test functions $v$ in a finite-dimensional subspace of $H_{0}^1(\Omega)$.  In the \emph{Galerkin} method here, these subspaces, both built from a triangulation of $\Omega$, are nearly the same.
 
-To make our test function space $H_{0}^1(\Omega)$ a true subspace of $H^1(\Omega)$ we require that $\Omega$ be polygonal, with $\partial\Omega$ a closed polygon (Figure \ref{fig:un:polygon}).  Furthermore we require that segments which form the polygon $\partial\Omega$ be either entirely in $\partial_D\Omega$ or entirely in $\partial_N\Omega$.
-
-We will assume $\partial_D\Omega$ is a closed set.  Furthermore we assume it contains at least one segment of positive length.  As suggested above, this leads to well-posedness of the continuum problem, at least in the linear case.
+We require $\Omega$ to be polygonal, so that $\partial\Omega$ is a closed polygon (Figure \ref{fig:un:polygon}), and we require that the segments forming $\partial\Omega$ are either entirely in $\partial_D\Omega$ or entirely in $\partial_N\Omega$.  Furthermore we assume $\partial_D\Omega$ is closed and contains at least one segment of positive length, leading to well-posedness of the continuum problem, at least in the linear case.
 
 \begin{marginfigure}
 \input{tmp/blob.tikz}
@@ -103,21 +101,17 @@ We will assume $\partial_D\Omega$ is a closed set.  Furthermore we assume it con
 \label{fig:un:polygon}
 \end{marginfigure}
 
-By definition, a \emph{triangulation} is a finite set of non-overlapping, non-empty open triangles $\triangle_k\subset \RR^2$ which tile $\Omega$:
+By definition, a \emph{triangulation} is a finite set of non-overlapping, non-empty open triangles $\triangle_k$ which tile $\Omega$:
 \begin{equation}
 \Th = \left\{\triangle_k \,\Big|\, \cup_k \overline{\triangle}_k = \overline{\Omega} \, \text{ and} \,\, \triangle_k \cap \triangle_l = \emptyset \, \text{ if } k\ne l\right\}. \label{eq:un:triangulation}
 \end{equation}
-Let $K$ be the number of triangles and $N$ be the number of nodes.  The locations of the nodes are pairs $\bx_i=(x_i,y_i)$ for $i=0,\dots,N-1$.
+Let $K$ be the number of triangles, which are indexed $k=0,\dots,K-1$.  The $N$ nodes are located at $\bx_i=(x_i,y_i)$ for $i=0,\dots,N-1$.  (In contrast to many references, such as \citet{Elmanetal2005} which we follow in many ways, numbering here is zero-based, suitable for a C implementation.)  An example triangulation $\Th$ is shown in Figure \ref{fig:un:number-mesh}.  The subscript ``$h$'' in ``$\Th$'' denotes the typical or maximum size $h$ (e.g.~diameter) of the triangles, for now just a reminder of our desired limit $h\to 0$.  
 
-An example triangulation $\Th$ is shown in Figure \ref{fig:un:number-mesh}.  The subscript ``$h$'' in ``$\Th$,'' traditional notation, denotes the typical or maximum size $h$ (e.g.~diameter) of the triangles.  It serves as a reminder of our desired limit $h\to 0$.  In contrast to many references--e.g.~\citet{Elmanetal2005}, which we follow in many ways---all numbering here is zero-based, suitable for a C implementation.
-
-We will use $P^1$ finite elements \citep{Elmanetal2005} so that our test and trial functions are continuous and linear on each $\triangle_k$.  On each triangle $\triangle_k$, such functions have three degrees of freedom.  We make think of these as the coefficients in the linear formula $a + b x + c y$, but in fact there are better local bases than $\{1,x,y\}$; see below.
-
-For each node $j$ there is a basis (``hat'') function  $\psi_j(x,y)$ which is linear on each triangle, continuous on all of $\overline{\Omega}$, and equal to one at only one node $j$,
+We will use $P^1$ finite elements \citep{Elmanetal2005}, and thus the functions in use are continuous on the whole of $\overline\Omega$ while being linear on each triangle $\triangle_k$.  Such functions have three degrees of freedom on each $\triangle_k$, which one may think of as the coefficients in the linear formula $a + b x + c y$.  In fact there are more convenient local bases than $\{1,x,y\}$, as follows.  For each node $j$ there is a basis (``hat'') function  $\psi_j(x,y)$ which is linear on each triangle, continuous on all of $\overline{\Omega}$, and equal to one at only one node $j$,
 \begin{equation*}
 \psi_j(\bx_i) = \delta_{ij}.
 \end{equation*}
-See Figure \ref{fig:un:hatfunction}.  (Compare Figure \ref{fig:of:q1hat}.)  Functions $\psi_j$ are in $H^1(\Omega)$ \citep{Braess2007}, with piecewise-constant partial derivatives $\partial\psi_j/\partial x$ and $\partial\psi_j/\partial y$.  The set $\{\psi_j\}_{j=0,\dots,N-1}$ is linearly-independent.
+See Figure \ref{fig:un:hatfunction} and compare Figure \ref{fig:of:q1hat}.  Functions $\psi_j$ are in $H^1(\Omega)$ \citep{Braess2007}, with piecewise-constant partial derivatives $\partial\psi_j/\partial x$ and $\partial\psi_j/\partial y$.  The set $\{\psi_j\}_{j=0,\dots,N-1}$ is linearly-independent.
 
 \begin{marginfigure}
 \input{tmp/blob.1.elenum.tikz}
@@ -129,16 +123,16 @@ See Figure \ref{fig:un:hatfunction}.  (Compare Figure \ref{fig:of:q1hat}.)  Func
 \label{fig:un:number-mesh}
 \end{marginfigure}
 
-Hat functions allow us to interpolate and extend the Dirichlet data $g_D$ from its node values in $\partial_D \Omega$ to the whole of $\overline\Omega$, a useful step in our FEM implementation.  We number the $n_D$ nodes which are in the Dirichlet boundary by $\bx_{j_l} \in \partial_D\Omega$ for $l=0,\dots,n_D-1$.  (Figure \ref{fig:un:number-mesh} shows $n_D=4$ and $j_l=l$.)  Now let $\hat g_D \in C(\overline\Omega)$ be the piecewise-linear interpolant of $g_D$ which has value zero at all nodes $\bx_j$ which are not in the Dirichlet boundary $\partial_D \Omega$:
+Hat functions allow us to interpolate and extend the Dirichlet data $g_D$ from its nodal values on $\partial_D \Omega$ to the whole of $\overline\Omega$.  We number the $n_D$ nodes which are in the Dirichlet boundary by $\bx_{j_l} \in \partial_D\Omega$ for $l=0,\dots,n_D-1$.  Let $\hat g_D \in C(\overline\Omega)$ be the piecewise-linear interpolant of $g_D$ which has value zero at all the nodes $\bx_j$ which are not in the Dirichlet boundary $\partial_D \Omega$:
 \begin{equation}
 \hat g_D(x,y) = \sum_{l=0}^{n_D-1} g_D(\bx_{j_l}) \psi_{j_l}(x,y). \label{eq:un:hatgdefine}
 \end{equation}
 
-We can specify the needed finite-dimensional subspaces in terms of $\hat g_D$ and the span of certain basis functions $\psi_j$.  The \emph{test functions} are zero along $\partial_D \Omega$,
+Using \eqref{eq:un:hatgdefine} we can specify the finite-dimensional subspaces used in the method in terms of $\hat g_D$ and the span of certain basis functions $\psi_j$.  First, the \emph{test functions} are zero along $\partial_D \Omega$,
 \begin{align*}
 S_{0}^h &= \Span\left<\psi_j \,:\, \bx_j \notin \partial_D \Omega\right> = \Span\left<\psi_j \,:\, j \neq j_l\right>.
 \end{align*}
-The \emph{trial functions} have value $g_D$ along $\partial_D \Omega$,
+Second, the \emph{trial functions} have value $g_D$ along $\partial_D \Omega$,
 \begin{equation}
 S_{g}^h = \left\{\hat g_D + w \,:\, w \in S_{0}^h\right\}.
 \end{equation}
@@ -153,7 +147,7 @@ Note that $S_{0}^h$ is a linear subspace of $H_{0}^1(\Omega)$ while $S_{g}^h$ is
 \label{fig:un:hatfunction}
 \end{marginfigure}
 
-The FEM itself can now be stated.  It requires \eqref{eq:un:poissonweak} to be true for $u^h\in S_{g}^h$ for all $v^h\in S_{0}^h$.  However, it suffices to consider $v^h$ from a basis of $S_{0}^h$, so we require
+The FEM itself can now be stated.  It requires \eqref{eq:un:poissonweak} to be true for some $u^h\in S_{g}^h$ and for all $v^h\in S_{0}^h$.  By linearity it suffices to consider only a basis of test functions $S_{0}^h$, so we require
 \begin{equation}
 \int_\Omega a(u^h) \grad u^h \cdot \grad \psi_i = \int_\Omega f(u^h) \psi_i + \int_{\partial_N\Omega} g_N \psi_i \label{eq:un:weakformhat}
 \end{equation}
@@ -164,9 +158,9 @@ u^h(x,y) = \hat g_D(x,y) + \sum_{\bx_j \notin \partial_D \Omega} u_j\, \psi_j(x,
 
 The coefficients $u_j$ in \eqref{eq:un:uhexpand} are the unknowns.  Given the triangulation $\mathcal{T}_h$ of $\Omega$ and the data of the problem, namely the functions $a$, $f$, $g_D$, and $g_N$, the complete specification of the FEM solution $u^h$ is given by equations \eqref{eq:un:hatgdefine}, \eqref{eq:un:weakformhat}, and \eqref{eq:un:uhexpand}.
 
-In the linear case it is common to now write system \eqref{eq:un:weakformhat} and \eqref{eq:un:uhexpand} as a linear system $A \bu = \bb$.  The usual next step in an FEM is to assemble the \emph{stiffness matrix} $A$ \citep{Elmanetal2005}.  However, we will not do so until we have an initial, and verified, numerical solution.  Following the pattern established since Chapter \ref{chap:nl}, we first implement equation \eqref{eq:un:weakformhat} as a residual-evaluation function $\bF(\bu)$, from the representation of $u^h$ as a vector $\bu$.  In evaluating $\bF$ we use \eqref{eq:un:uhexpand} to get point values of $u^h$ and its gradient $\grad u^h$ on the interior of triangles.  These point values allow quadrature, similar to that in Chapter \ref{chap:of}, to approximate the integrals in \eqref{eq:un:weakformhat}.  Implementing a residual in the linear case is mathematically equivalent to assembling $A$ and $\bb$, but the residual-evaluation code here is simpler because it does not require direct contact with a \pMat object at all.
+In the linear case it is common to now write system \eqref{eq:un:weakformhat} and \eqref{eq:un:uhexpand} as a linear system $A \bu = \bb$.  The usual next step in an FEM is to assemble the \emph{stiffness matrix} $A$ \citep{Elmanetal2005}.  However, we will not assemble a matrix until we have an initial, and verified, numerical solution.  Following the pattern established since Chapter \ref{chap:nl}, we first implement equation \eqref{eq:un:weakformhat} as a residual-evaluation function $\bF(\bu)$, from the representation of $u^h$ as a vector $\bu$.  In evaluating $\bF$ we use \eqref{eq:un:uhexpand} to get point values of $u^h$ and its gradient $\grad u^h$ on the interior of triangles.  These point values allow quadrature, similar to that in Chapter \ref{chap:of}, to approximate the integrals in \eqref{eq:un:weakformhat}.  Implementing a residual in the linear case is mathematically equivalent to assembling $A$ and $\bb$, but the residual-evaluation code here is simpler because it does not require direct contact with a \PETSc \pMat object at all.
 
-In the next section we describe and the code the element-wise ``assembly,'' that is, evaluation of, the residual function $\bF$, as a \pSNES call-back.  However, before that can be written we need to be more specific about what \eqref{eq:un:weakformhat} says on each element.  Also we will read-in the triangular mesh and put it into \PETSc data structures.  These tools can be tested for correctness with a finite-differenced Jacobian (Chapter \ref{chap:nl}).  Once this is all shown to work correctly, via comparison to an exact solution, then we will re-consider matrix assembly, namely for the Jacobian derivative of $\bF$.
+In the next section we describe and the code the element-wise evaluation of the residual function $\bF$ as a \PETSc \pSNES call-back.  However, before the code can be written we need to be more specific about what \eqref{eq:un:weakformhat} says on each element.  Also we will need to read the triangular mesh into \PETSc data structures \pVec and \pIS.  These tools can be tested for correctness with a finite-differenced Jacobian (Chapter \ref{chap:nl}).  Once this is all shown to work correctly, via comparison to an exact solution, then we will consider matrix assembly for the Jacobian.
 
 
 \section{Assembly of the residual equations}
