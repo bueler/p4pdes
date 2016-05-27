@@ -275,13 +275,7 @@ Otherwise, if $\bx_i \notin \overline{s_\nu}$, then $\varphi_i^\nu=0$.
 
 \section{Example problems}
 
-Let us set up some cases on a trapezoidal domain, with known exact solutions, for testing the FEM.  The first two cases are designed to test the implementation of the PDE and of Dirichlet boundary conditions.  One of these problems is linear and the other is nonlinear.  An additional case tests the non-homogeneous Neumann boundary condition implementation.  These cases are about as simple as possible given that they test the important parts of our code (below).  That is, we the errors from the FEM will only converge a the theoretical rate $O(h^2)$ if our implementation is correct.
-
-All three cases are based on manufactured solutions.  Let
-\begin{equation}
-  u_{\text{exact}}(x,y) = 1 - y^2 - \frac{1}{4} y^4. \label{eq:un:exactsolution}
-\end{equation}
-This function also computes the Dirichlet boundary values $g_D(x,y)$ in all cases.  Because the domain is not aligned with the coordinate axes, and because fourth-order polynomials generate non-zero interpolation errors in a $P^1$ FEM, the numerical error generated with this exact solution will decay no more rapidly than the generic rate.
+Let us set up some simple cases with known exact solutions.  The first two cases both test the implementation of the PDE and of Dirichlet boundary conditions, and homogeneous Neumann boundary conditions, but one problem is linear and the other nonlinear.  An additional case tests the general Neumann boundary condition implementation.  Our goal for these problems is that the measured numerical errors from the FEM will only converge at the theoretical rate $O(h^2)$ if our implementation is correct.
 
 \begin{figure}
 \input{tikz/trap.tex}
@@ -289,9 +283,13 @@ This function also computes the Dirichlet boundary values $g_D(x,y)$ in all case
 \label{fig:un:trap}
 \end{figure}
 
-Other details are case-specific:
+All three cases are based on the same manufactured solution
+\begin{equation}
+  u_{\text{exact}}(x,y) = 1 - y^2 - \frac{1}{4} y^4. \label{eq:un:exactsolution}
+\end{equation}
+This formula also computes the Dirichlet boundary values $g_D(x,y)$ in all cases, but other details are case-specific:
 \begin{itemize}
-\item[case $0$:] \emph{Linear}.  Use Figure \ref{fig:un:trap} boundary conditions.  Noting $\partial u_{\text{exact}}/\partial n = \partial u_{\text{exact}}/\partial y = 0$ on the Neumann boundary $\partial_N \Omega$, where $y=0$, let $g_N=0$.  Let $a=1$ and determine $f$ by differentiating the exact solution: $f(x,y) = -\grad^2 u_{\text{exact}} = 2 + 3 y^2$.
+\item[case $0$:] \emph{Linear}.  Use Figure \ref{fig:un:trap} boundary conditions.  Noting $\partial u_{\text{exact}}/\partial n = -\partial u_{\text{exact}}/\partial y = 0$ on the Neumann boundary $\partial_N \Omega$, where $y=0$, let $g_N=0$.  Let $a=1$ and determine $f$ by differentiating the exact solution: $f(x,y) = -\grad^2 u_{\text{exact}} = 2 + 3 y^2$.
 \item[case $1$:] \emph{Nonlinear}.  Again use Figure \ref{fig:un:trap} boundary conditions and $g_N=0$.  However, let $a(u) = 1+u^2$ and compute the corresponding $f(u)$ by differentiation.
 \item[case $2$:] \emph{Non-homogeneous Neumann}.  Use Figure \ref{fig:un:trapneu} boundary conditions.  Let $a$, $f$ be as in case $0$.  Determine the (non-zero) value $g_N$ by differentiating $u_{\text{exact}}$ along the Neumann boundary, a line segment with outward unit normal vector $\bn = \left<1/\sqrt{2},1/\sqrt{2}\right>$.
 \end{itemize}
@@ -308,17 +306,17 @@ See \texttt{c/\CODELOC cases.h} (not shown) for all remaining details.
 
 \PETSc does not include tools for triangulating regions of the plane, that is, for the initial generation of an unstructured mesh.  We use the widely-available \Triangle\sidenote{See \href{http://www.cs.cmu.edu/~quake/triangle.html}{www.cs.cmu.edu/$\sim$quake/ triangle.html} for documentation.} software \citep{Shewchuk1996} for this task.  \Triangle is limited to 2D, but the ASCII files it generates have straightforward details.
 
-\Triangle inputs an ASCII file, with extension \texttt{.poly}, describing a polygonal region along with integer flags to indicate special vertices or segments on the boundary.  For example, the input file \texttt{trap.poly} (Code \ref{code:trappoly}) generates the polygon shown in Figure \ref{fig:un:trap}.
-
 \inputwhole{../c/\CODELOC/meshes/trap.poly}{\CODELOC meshes/trap.poly}{A description of the boundary polygon in Figure \ref{fig:un:trap}, suitable for reading by \Triangle.}{code:trappoly}
 
-The triangulation shown in Figure \ref{fig:un:trapone} came from applying \Triangle to \texttt{trap.poly}.  We ask for a polygon output file (option \texttt{-p}), relatively-uniform triangles (\texttt{-q} for ``quality-checked,'' with no interior angles less than $20^\circ$ \citep{Shewchuk1996}), and triangles with a maximum area (\texttt{-a}) of $0.5$:
+\Triangle inputs an ASCII file, with extension \texttt{.poly}, describing a polygonal region $\Omega$ by giving the coordinates of the nodes in $\partial \Omega$.  Integer flags are used indicate special vertices or segments on the boundary.  For example, the input file \texttt{trap.poly} (Code \ref{code:trappoly}) generates the polygon shown in Figure \ref{fig:un:trap}.
+
+The triangulation shown in Figure \ref{fig:un:trapone} came from applying \Triangle to \texttt{trap.poly}, as follows.  We ask for a polygon output file (option \texttt{-p}), relatively-uniform triangles (\texttt{-q} for ``quality-checked,'' with no interior angles less than $20^\circ$ \citep{Shewchuk1996}), and triangles with a maximum area (\texttt{-a}) of $0.5$:
 \begin{cline}
 $ cd c/ch7/meshes
 $ triangle -pqa0.5 trap
 \end{cline}
 %$
-This command generates three ASCII files, \texttt{trap.1.node}, \texttt{trap.1.ele}, and \texttt{trap.1.poly}; see Codes \ref{code:traponenode}--\ref{code:traponepoly}.  They define the new node locations, elements as triples of node indices, and segments in the polynomial boundary as pairs of node indices, respectively.  This triangulation has $N=8$ nodes, $K=6$ elements, $P=8$ boundary segments, $n_D=5$ Dirichlet nodes, and $n_N=4$ segments in the Neumann boundary.
+This command generates three ASCII files, \texttt{trap.1.node}, \texttt{trap.1.ele}, and \texttt{trap.1.poly}; see Codes \ref{code:traponenode}--\ref{code:traponepoly}.  They define the new node locations, elements (triples of nodal indices), and segments in the polynomial boundary (pairs of nodal indices), respectively.  This triangulation has $N=8$ nodes, $K=6$ elements, $P=8$ boundary segments, $n_D=5$ Dirichlet nodes, and $n_N=4$ segments in the Neumann boundary.
 
 \begin{figure}
 \input{tmp/trap.1.tikz}
@@ -358,7 +356,7 @@ generates ASCII files \texttt{trap.2.\{node,ele,poly\}} with $N=33$ nodes, $K=33
 $ showme trap
 \end{cline}
 %$
-displays the boundary polygon from \texttt{trap.poly} and levels of the triangulation (\texttt{trap.\{1,2\}.\{node,ele,poly\}}).
+displays the boundary polygon from \texttt{trap.poly} and all so-far generated levels of the triangulation (\texttt{trap.\{1,2\}.\{node,ele,poly\}}).
 
 
 \section{From ASCII files to \PETSc \pVecs and \pISs}

@@ -46,9 +46,9 @@ tmp/blob.tikz tmp/blob.1.elenum.tikz tmp/blob.1.nodenum.tikz: tmp/ $(UNLOC)meshe
 tmp/trap.1.tikz tmp/trap.2.tikz: tmp/ $(UNLOC)meshes/trap.poly
 	ln -sf $(UNLOC)tri2petsc.py
 	triangle -pqa0.5 $(UNLOC)meshes/trap
-	python tri2tikz.py --nodesize 0.7 --scale 2.5 $(UNLOC)meshes/trap.1 tmp/trap.1.tikz
+	python tri2tikz.py --nodesize 0.9 --scale 2.5 $(UNLOC)meshes/trap.1 tmp/trap.1.tikz
 	triangle -rpqa0.1 $(UNLOC)meshes/trap.1
-	python tri2tikz.py --nodesize 0.7 --scale 2.5 $(UNLOC)meshes/trap.2 tmp/trap.2.tikz
+	python tri2tikz.py --nodesize 0.8 --scale 2.5 $(UNLOC)meshes/trap.2 tmp/trap.2.tikz
 	rm -f tri2petsc.py*
 
 tmp/mesh.1.tikz: tmp/ $(UNLOC)genstructured.py
