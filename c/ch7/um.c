@@ -5,8 +5,7 @@ PetscErrorCode UMInitialize(UM *mesh) {
     mesh->N = 0;
     mesh->K = 0;
     mesh->P = 0;
-    mesh->x = NULL;
-    mesh->y = NULL;
+    mesh->loc = NULL;
     mesh->e = NULL;
     mesh->bfn = NULL;
     mesh->s = NULL;
@@ -15,8 +14,7 @@ PetscErrorCode UMInitialize(UM *mesh) {
 }
 
 PetscErrorCode UMDestroy(UM *mesh) {
-    VecDestroy(&(mesh->x));
-    VecDestroy(&(mesh->y));
+    VecDestroy(&(mesh->loc));
     ISDestroy(&(mesh->e));
     ISDestroy(&(mesh->bfn));
     ISDestroy(&(mesh->s));
@@ -26,21 +24,19 @@ PetscErrorCode UMDestroy(UM *mesh) {
 
 PetscErrorCode UMView(UM *mesh, PetscViewer viewer) {
     PetscErrorCode ierr;
-    const double *ax, *ay;
+    const Node   *aloc;
     int          n, k;
     const int    *ae, *abfn, *as, *abfs;
 
     ierr = PetscViewerASCIIPushSynchronized(viewer); CHKERRQ(ierr);
-    if ((mesh->x) && (mesh->y) && (mesh->N > 0)) {
+    if ((mesh->loc) && (mesh->N > 0)) {
         ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%d nodes at (x,y) coordinates:\n",mesh->N); CHKERRQ(ierr);
-        ierr = VecGetArrayRead(mesh->x,&ax); CHKERRQ(ierr);
-        ierr = VecGetArrayRead(mesh->y,&ay); CHKERRQ(ierr);
+        ierr = VecGetArrayRead(mesh->loc,&aloc); CHKERRQ(ierr);
         for (n = 0; n < mesh->N; n++) {
             ierr = PetscViewerASCIISynchronizedPrintf(viewer,"    %3d : (%g,%g)\n",
-                               n,ax[n],ay[n]); CHKERRQ(ierr);
+                               n,aloc[n].x,aloc[n].y); CHKERRQ(ierr);
         }
-        ierr = VecRestoreArrayRead(mesh->x,&ax); CHKERRQ(ierr);
-        ierr = VecRestoreArrayRead(mesh->y,&ay); CHKERRQ(ierr);
+        ierr = VecRestoreArrayRead(mesh->loc,&aloc); CHKERRQ(ierr);
     } else {
         ierr = PetscViewerASCIISynchronizedPrintf(viewer,"node coordinates empty/unallocated\n"); CHKERRQ(ierr);
     }
@@ -92,9 +88,9 @@ PetscErrorCode UMView(UM *mesh, PetscViewer viewer) {
     return 0;
 }
 
-PetscErrorCode UMReadVecs(UM *mesh, char *rootname) {
+PetscErrorCode UMReadNodes(UM *mesh, char *rootname) {
     PetscErrorCode ierr;
-    int         m;
+    int         m, twoN;
     PetscViewer viewer;
     char        filename[266];
     strcpy(filename, rootname);
@@ -102,19 +98,16 @@ PetscErrorCode UMReadVecs(UM *mesh, char *rootname) {
     if (mesh->N > 0) {
         SETERRQ(PETSC_COMM_WORLD,1,"nodes already created?\n");
     }
-    ierr = VecCreate(PETSC_COMM_WORLD,&mesh->x); CHKERRQ(ierr);
-    ierr = VecCreate(PETSC_COMM_WORLD,&mesh->y); CHKERRQ(ierr);
-    ierr = VecSetFromOptions(mesh->x); CHKERRQ(ierr);
-    ierr = VecSetFromOptions(mesh->y); CHKERRQ(ierr);
+    ierr = VecCreate(PETSC_COMM_WORLD,&mesh->loc); CHKERRQ(ierr);
+    ierr = VecSetFromOptions(mesh->loc); CHKERRQ(ierr);
     ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename,FILE_MODE_READ,&viewer); CHKERRQ(ierr);
-    ierr = VecLoad(mesh->x,viewer); CHKERRQ(ierr);
-    ierr = VecLoad(mesh->y,viewer); CHKERRQ(ierr);
+    ierr = VecLoad(mesh->loc,viewer); CHKERRQ(ierr);
     ierr = PetscViewerDestroy(&viewer); CHKERRQ(ierr);
-    ierr = VecGetSize(mesh->x,&(mesh->N)); CHKERRQ(ierr);
-    ierr = VecGetSize(mesh->y,&m); CHKERRQ(ierr);
-    if (mesh->N != m) {
-        SETERRQ1(PETSC_COMM_WORLD,2,"node coordinates x,y loaded from %s are not the same size\n",filename);
+    ierr = VecGetSize(mesh->loc,&twoN); CHKERRQ(ierr);
+    if (twoN % 2 != 0) {
+        SETERRQ1(PETSC_COMM_WORLD,2,"node locations loaded from %s are not N pairs\n",filename);
     }
+    mesh->N = twoN / 2;
     return 0;
 }
 

@@ -1,14 +1,18 @@
 #ifndef UM_H_
 #define UM_H_
 
+// location of node
+typedef struct {
+    double   x,y;
+} Node;
+
 // data type and functions for unstructured mesh
 //STARTUM
 typedef struct {
     int      N,     // number of nodes
              K,     // number of elements
              P;     // number of boundary segments
-    Vec      x,     // x-coordinate of node; length N
-             y;     // y-coordinate of node; length N
+    Vec      loc;   // location of node; length N, dof=2 Vec, with Node entries
     IS       e,     // element triples; length 3K
                     //     values e[3*k+0],e[3*k+1],e[3*k+2]
                     //     are indices into node-based Vecs
@@ -30,9 +34,8 @@ PetscErrorCode UMDestroy(UM *mesh);
 // view node coordinates, element triples, boundary segments, and boundary node/segment flags
 PetscErrorCode UMView(UM *mesh, PetscViewer viewer);
 
-// read node coordinates from file
-// create as Vecs
-PetscErrorCode UMReadVecs(UM *mesh, char *rootname);
+// read node coordinates from file; create loc Vec
+PetscErrorCode UMReadNodes(UM *mesh, char *rootname);
 
 // read element triples, boundary segments, and boundary node/segment flags
 // each created as an IS
