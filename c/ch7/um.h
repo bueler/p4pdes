@@ -1,13 +1,13 @@
 #ifndef UM_H_
 #define UM_H_
 
+//STARTUM
 // location of node
 typedef struct {
     double   x,y;
 } Node;
 
 // data type and functions for unstructured mesh
-//STARTUM
 typedef struct {
     int      N,     // number of nodes
              K,     // number of elements

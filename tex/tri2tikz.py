@@ -67,12 +67,12 @@ print '... PN=%d nodes and PS=%d segments' % (PN,PS)
 if not polyonly:
     nodename = args.inroot + '.node'
     print 'reading nodes from %s ' % nodename,
-    N,x,y,bfn,L = triangle_read_node(nodename)
+    N,loc,bfn,L = triangle_read_node(nodename)
     print '... N=%d nodes with L=%d on Dirichlet bdry' % (N,L)
 
     elename = args.inroot + '.ele'
     print 'reading element triples from %s ' % elename,
-    K,e,xc,yc = triangle_read_ele(elename,x,y)
+    K,e,xc,yc = triangle_read_ele(elename,loc)
     print '... K=%d elements' % K
 
 tikz = open(args.outfile, 'w')
@@ -91,16 +91,16 @@ if not polyonly:
             jto   = e[ke,l[k+1]]
             if (not noboundary) or (bfn[jfrom] == 0) or (bfn[jto] == 0):
                 tikz.write('  \\draw[gray,very thin] (%f,%f) -- (%f,%f);\n' \
-                           % (x[jfrom],y[jfrom],x[jto],y[jto]))
+                           % (loc[2*jfrom+0],loc[2*jfrom+1],loc[2*jto+0],loc[2*jto+1]))
             if dolabeleles:
                 tikz.write( '  \\draw (%f,%f) node {$%d$};\n' \
                            % (xc[ke]+0.7*eleoffset,yc[ke]-eleoffset,ke))
     # plot all nodes, with labels if wanted; looks better if *after* edges
     for j in range(N):
-        tikz.write('  \\filldraw (%f,%f) circle (%fpt);\n' % (x[j],y[j],nodesize))
+        tikz.write('  \\filldraw (%f,%f) circle (%fpt);\n' % (loc[2*j+0],loc[2*j+1],nodesize))
         if dolabelnodes:
             tikz.write( '  \\draw (%f,%f) node {$%d$};\n' \
-                       % (x[j]+0.7*nodeoffset,y[j]-nodeoffset,j))
+                       % (loc[2*j+0]+0.7*nodeoffset,loc[2*j+1]-nodeoffset,j))
 
 if not noboundary:
     # go through boundary segments and plot with weight from type
@@ -116,7 +116,7 @@ if not noboundary:
                        % (mywidth,px[jfrom],py[jfrom],px[jto],py[jto]))
         else:
             tikz.write('  \\draw[line width=%s] (%f,%f) -- (%f,%f);\n' \
-                       % (mywidth,x[jfrom],y[jfrom],x[jto],y[jto]))
+                       % (mywidth,loc[2*jfrom+0],loc[2*jfrom+1],loc[2*jto+0],loc[2*jto+1]))
 
 tikz.write('\\end{tikzpicture}\n')
 tikz.close()
