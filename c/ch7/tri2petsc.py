@@ -4,7 +4,7 @@
 #
 # Create PETSc binary files .vec,.is from .node,.ele,.poly output of triangle.
 
-# example to put Vecs x,y (node coordinates) and ISs e,bfn,s,bfs in foo.{vec,is}
+# example to put Vec loc (node coordinates x,y) and ISs e,bfn,s,bfs in foo.{vec,is}
 #    $ cd c/ch7/
 #    $ triangle -pqa0.5 meshes/trap
 #    $ ./tri2petsc.py meshes/trap.1 foo
@@ -18,10 +18,9 @@ def dprint(d,s):
     if d < VERBOSITY:
         print s
 
-# N,x,y,bfn,L = triangle_read_node(filename)
+# N,loc,bfn,L = triangle_read_node(filename)
 #     N = number of nodes
-#     x = x coordinates of nodes; length N
-#     y = y coordinates of nodes; length N
+#     loc = x,y coordinates of nodes; length 2N
 #     bfn = integer flag for boundary nodes; length N; 2 = Dirichlet; nonzero if boundary
 #     L = number of Dirichlet boundary nodes
 def triangle_read_node(filename):
@@ -29,8 +28,7 @@ def triangle_read_node(filename):
     headersread = 0
     count = 0
     N = 0
-    x = []
-    y = []
+    loc = []
     bfn = []
     for line in nodefile:
         # strip comment
@@ -43,8 +41,7 @@ def triangle_read_node(filename):
                 dprint(1,'  header says:  ' + nodeheader)
                 N = (int)(nodeheader.split()[0])
                 dprint(1,'  reading N = %d nodes ...' % N)
-                x = np.zeros(N)
-                y = np.zeros(N)
+                loc = np.zeros(2*N)
                 bfn = np.zeros(N,dtype=np.int32)
                 headersread += 1
                 continue
@@ -55,25 +52,24 @@ def triangle_read_node(filename):
             if count != int(nxyb[0]):
                 print 'ERROR: INDEXING WRONG IN READING NODES'
                 sys.exit(2)
-            x[count] = float(nxyb[1])
-            y[count] = float(nxyb[2])
+            loc[2*count+0] = float(nxyb[1])
+            loc[2*count+1] = float(nxyb[2])
             bfn[count] = int(nxyb[3])
             count += 1
     nodefile.close()
     L = np.count_nonzero(bfn == 2)
-    return N,x,y,bfn,L
+    return N,loc,bfn,L
 
 # K,e,xc,yc = triangle_read_ele(filename,x,y)
 #   in:
 #     filename
-#     x = x coordinate of nodes; length N; see triangle_read_node()
-#     y = y coordinate of nodes; length N; see triangle_read_node()
+#     loc = x,y coordinate of nodes; length 2*N; see triangle_read_node()
 #   out:
 #     K = number of elements
 #     e = K x 3 integer array of node indices
 #     xc = x coordinate of element centroid; length K
 #     yc = y coordinate of element centroid; length K
-def triangle_read_ele(filename,x,y):
+def triangle_read_ele(filename,loc):
     elefile  = open(filename,  'r')
     headersread = 0
     count = 0
@@ -112,8 +108,8 @@ def triangle_read_ele(filename,x,y):
             YY = 0.0
             for k in range(3):
                 jj = pp[kk[k]]
-                XX += x[jj]
-                YY += y[jj]
+                XX += loc[2*jj+0]
+                YY += loc[2*jj+1]
             XX /= 3.0
             YY /= 3.0
             dprint(1,'element %d centered at (%f,%f):' % (count,XX,YY))
@@ -218,12 +214,12 @@ if __name__ == "__main__":
 
     nodename = args.inroot + '.node'
     print 'reading nodes from %s ' % nodename
-    N,x,y,bfn,L = triangle_read_node(nodename)
+    N,loc,bfn,L = triangle_read_node(nodename)
     print '... N=%d nodes with L=%d on Dirichlet bdry' % (N,L)
 
     elename = args.inroot + '.ele'
     print 'reading element triples from %s ' % elename
-    K,e,xc,yc = triangle_read_ele(elename,x,y)
+    K,e,xc,yc = triangle_read_ele(elename,loc)
     print '... K=%d elements' % K
 
     polyname = args.inroot + '.poly'
@@ -231,11 +227,10 @@ if __name__ == "__main__":
     PN,PS,px,py,s,bfs = triangle_read_poly(polyname)
     print '... PN=%d nodes and PS=%d segments' % (PN,PS)
 
-    print 'writing node coordinates as Vecs to petsc binary file %s.vec' % args.outfile
-    ox = x.view(PetscBinaryIO.Vec)
-    oy = y.view(PetscBinaryIO.Vec)
+    print 'writing node coordinates as Vec to petsc binary file %s.vec' % args.outfile
+    oloc = loc.view(PetscBinaryIO.Vec)
     petsc = PetscBinaryIO.PetscBinaryIO()
-    petsc.writeBinaryFile(args.outfile+'.vec',[ox,oy,])
+    petsc.writeBinaryFile(args.outfile+'.vec',[oloc,])
 
     print 'writing elements, segments, and boundary flags as ISs to petsc binary file %s.is' % args.outfile
     oe = e.flatten().view(PetscBinaryIO.IS)
