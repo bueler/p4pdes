@@ -27,17 +27,15 @@ typedef struct {
 
 PetscErrorCode FillExact(Vec uexact, unfemCtx *ctx) {
     PetscErrorCode ierr;
-    const double *ax, *ay;
+    const Node   *aloc;
     double       *auexact;
     int          i;
-    ierr = VecGetArrayRead(ctx->mesh.x,&ax); CHKERRQ(ierr);
-    ierr = VecGetArrayRead(ctx->mesh.y,&ay); CHKERRQ(ierr);
+    ierr = VecGetArrayRead(ctx->mesh.loc,(const double **)&aloc); CHKERRQ(ierr);
     ierr = VecGetArray(uexact,&auexact); CHKERRQ(ierr);
     for (i = 0; i < ctx->mesh.N; i++) {
-        auexact[i] = ctx->uexact_fcn(ax[i],ay[i]);
+        auexact[i] = ctx->uexact_fcn(aloc[i].x,aloc[i].y);
     }
-    ierr = VecRestoreArrayRead(ctx->mesh.y,&ay); CHKERRQ(ierr);
-    ierr = VecRestoreArrayRead(ctx->mesh.x,&ax); CHKERRQ(ierr);
+    ierr = VecRestoreArrayRead(ctx->mesh.loc,(const double **)&aloc); CHKERRQ(ierr);
     ierr = VecRestoreArray(uexact,&auexact); CHKERRQ(ierr);
     return 0;
 }
@@ -82,7 +80,8 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
     PetscErrorCode ierr;
     unfemCtx     *user = (unfemCtx*)ctx;
     const int    *abfn, *ae, *as, *abfs, *en, deg = user->quaddeg - 1;
-    const double *ax, *ay, *au;
+    const Node   *aloc;
+    const double *au;
     double       *aF, unode[3], gradu[2], gradpsi[3][2],
                  uquad[4], aquad[4], fquad[4],
                  dx1, dx2, dy1, dy2, detJ,
@@ -92,15 +91,14 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
     ierr = VecGetArrayRead(u,&au); CHKERRQ(ierr);
     ierr = VecSet(F,0.0); CHKERRQ(ierr);
     ierr = VecGetArray(F,&aF); CHKERRQ(ierr);
-    ierr = VecGetArrayRead(user->mesh.x,&ax); CHKERRQ(ierr);
-    ierr = VecGetArrayRead(user->mesh.y,&ay); CHKERRQ(ierr);
+    ierr = VecGetArrayRead(user->mesh.loc,(const double **)&aloc); CHKERRQ(ierr);
 
 //STARTBDRYRESIDUALS
     // Dirichlet node residuals
     ierr = ISGetIndices(user->mesh.bfn,&abfn); CHKERRQ(ierr);
     for (n = 0; n < user->mesh.N; n++) {
         if (abfn[n] == 2)  // node is Dirichlet
-            aF[n] = au[n] - user->gD_fcn(ax[n],ay[n]);
+            aF[n] = au[n] - user->gD_fcn(aloc[n].x,aloc[n].y);
     }
     // Neumann segment contributions
     ierr = ISGetIndices(user->mesh.s,&as); CHKERRQ(ierr);
@@ -110,10 +108,10 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
             na = as[2*p+0];  // nodes at end of segment
             nb = as[2*p+1];
             // length of segment
-            ls = sqrt(pow(ax[na]-ax[nb],2) + pow(ay[na]-ay[nb],2));
+            ls = sqrt(pow(aloc[na].x-aloc[nb].x,2) + pow(aloc[na].y-aloc[nb].y,2));
             // midpoint rule; psi_na=psi_nb=0.5 at midpoint of segment
-            xmid = 0.5*(ax[na]+ax[nb]);
-            ymid = 0.5*(ay[na]+ay[nb]);
+            xmid = 0.5*(aloc[na].x+aloc[nb].x);
+            ymid = 0.5*(aloc[na].y+aloc[nb].y);
             sint = 0.5 * user->gN_fcn(xmid,ymid) * ls;
             // nodes at end of segment could be Dirichlet
             if (abfn[na] != 2)
@@ -132,10 +130,10 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
     for (k = 0; k < user->mesh.K; k++) {
         en = ae + 3*k;  // en[0], en[1], en[2] are nodes of element k
         // geometry of element
-        dx1 = ax[en[1]] - ax[en[0]];
-        dx2 = ax[en[2]] - ax[en[0]];
-        dy1 = ay[en[1]] - ay[en[0]];
-        dy2 = ay[en[2]] - ay[en[0]];
+        dx1 = aloc[en[1]].x - aloc[en[0]].x;
+        dx2 = aloc[en[2]].x - aloc[en[0]].x;
+        dy1 = aloc[en[1]].y - aloc[en[0]].y;
+        dy2 = aloc[en[2]].y - aloc[en[0]].y;
         detJ = dx1 * dy2 - dx2 * dy1;
         // gradients of hat functions
         for (l = 0; l < 3; l++) {
@@ -147,7 +145,7 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
         gradu[1] = 0.0;
         for (l = 0; l < 3; l++) {
             if (abfn[en[l]] == 2)
-                unode[l] = user->gD_fcn(ax[en[l]],ay[en[l]]);
+                unode[l] = user->gD_fcn(aloc[en[l]].x,aloc[en[l]].y);
             else
                 unode[l] = au[en[l]];
             gradu[0] += unode[l] * gradpsi[l][0];
@@ -156,8 +154,8 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
         // function values at quadrature points on element
         for (q = 0; q < Q[deg]; q++) {
             uquad[q] = eval(unode,xi[deg][q],eta[deg][q]);
-            xx = ax[en[0]] + dx1 * xi[deg][q] + dx2 * eta[deg][q];
-            yy = ay[en[0]] + dy1 * xi[deg][q] + dy2 * eta[deg][q];
+            xx = aloc[en[0]].x + dx1 * xi[deg][q] + dx2 * eta[deg][q];
+            yy = aloc[en[0]].y + dy1 * xi[deg][q] + dy2 * eta[deg][q];
             aquad[q] = user->a_fcn(uquad[q],xx,yy);
             fquad[q] = user->f_fcn(uquad[q],xx,yy);
         }
@@ -178,8 +176,7 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
 //ENDELEMENTRESIDUALS
 
     ierr = VecRestoreArrayRead(u,&au); CHKERRQ(ierr);
-    ierr = VecRestoreArrayRead(user->mesh.x,&ax); CHKERRQ(ierr);
-    ierr = VecRestoreArrayRead(user->mesh.y,&ay); CHKERRQ(ierr);
+    ierr = VecRestoreArrayRead(user->mesh.loc,(const double **)&aloc); CHKERRQ(ierr);
     ierr = VecRestoreArray(F,&aF); CHKERRQ(ierr);
     return 0;
 }
@@ -188,7 +185,8 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
     PetscErrorCode ierr;
     unfemCtx     *user = (unfemCtx*)ctx;
     const int    *abfn, *ae, *en, deg = user->quaddeg - 1;
-    const double *ax, *ay, *au;
+    const Node   *aloc;
+    const double *au;
     double       unode[3], gradpsi[3][2],
                  uquad[4], aquad[4], v[9],
                  dx1, dx2, dy1, dy2, detJ, xx, yy, sum;
@@ -204,31 +202,30 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
     }
     ierr = ISGetIndices(user->mesh.e,&ae); CHKERRQ(ierr);
     ierr = VecGetArrayRead(u,&au); CHKERRQ(ierr);
-    ierr = VecGetArrayRead(user->mesh.x,&ax); CHKERRQ(ierr);
-    ierr = VecGetArrayRead(user->mesh.y,&ay); CHKERRQ(ierr);
+    ierr = VecGetArrayRead(user->mesh.loc,(const double **)&aloc); CHKERRQ(ierr);
 //STARTPICARD
     for (k = 0; k < user->mesh.K; k++) {
         en = ae + 3*k;  // en[0], en[1], en[2] are nodes of element k
         // geometry of element
-        dx1 = ax[en[1]] - ax[en[0]];
-        dx2 = ax[en[2]] - ax[en[0]];
-        dy1 = ay[en[1]] - ay[en[0]];
-        dy2 = ay[en[2]] - ay[en[0]];
+        dx1 = aloc[en[1]].x - aloc[en[0]].x;
+        dx2 = aloc[en[2]].x - aloc[en[0]].x;
+        dy1 = aloc[en[1]].y - aloc[en[0]].y;
+        dy2 = aloc[en[2]].y - aloc[en[0]].y;
         detJ = dx1 * dy2 - dx2 * dy1;
         // gradients of hat functions and u on element
         for (l = 0; l < 3; l++) {
             gradpsi[l][0] = ( dy2 * dchi[l][0] - dy1 * dchi[l][1]) / detJ;
             gradpsi[l][1] = (-dx2 * dchi[l][0] + dx1 * dchi[l][1]) / detJ;
             if (abfn[en[l]] == 2)
-                unode[l] = user->gD_fcn(ax[en[l]],ay[en[l]]);
+                unode[l] = user->gD_fcn(aloc[en[l]].x,aloc[en[l]].y);
             else
                 unode[l] = au[en[l]];
         }
         // function values at quadrature points on element
         for (q = 0; q < Q[deg]; q++) {
             uquad[q] = eval(unode,xi[deg][q],eta[deg][q]);
-            xx = ax[en[0]] + dx1 * xi[deg][q] + dx2 * eta[deg][q];
-            yy = ay[en[0]] + dy1 * xi[deg][q] + dy2 * eta[deg][q];
+            xx = aloc[en[0]].x + dx1 * xi[deg][q] + dx2 * eta[deg][q];
+            yy = aloc[en[0]].y + dy1 * xi[deg][q] + dy2 * eta[deg][q];
             aquad[q] = user->a_fcn(uquad[q],xx,yy);
         }
         // generate 3x3 element stiffness matrix
@@ -258,8 +255,7 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
     ierr = ISRestoreIndices(user->mesh.e,&ae); CHKERRQ(ierr);
     ierr = ISRestoreIndices(user->mesh.bfn,&abfn); CHKERRQ(ierr);
     ierr = VecRestoreArrayRead(u,&au); CHKERRQ(ierr);
-    ierr = VecRestoreArrayRead(user->mesh.x,&ax); CHKERRQ(ierr);
-    ierr = VecRestoreArrayRead(user->mesh.y,&ay); CHKERRQ(ierr);
+    ierr = VecRestoreArrayRead(user->mesh.loc,(const double **)&aloc); CHKERRQ(ierr);
 
     ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
     ierr = MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
@@ -362,7 +358,7 @@ int main(int argc,char **argv) {
 //STARTMAIN
     // read mesh object of type UM
     ierr = UMInitialize(&(user.mesh)); CHKERRQ(ierr);
-    ierr = UMReadVecs(&(user.mesh),meshroot); CHKERRQ(ierr);
+    ierr = UMReadNodes(&(user.mesh),meshroot); CHKERRQ(ierr);
     ierr = UMReadISs(&(user.mesh),meshroot); CHKERRQ(ierr);
     if (view) {
         PetscViewer stdoutviewer;

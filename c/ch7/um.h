@@ -28,11 +28,9 @@ typedef struct {
 } UM;
 //ENDUM
 
-PetscErrorCode UMInitialize(UM *mesh);
-PetscErrorCode UMDestroy(UM *mesh);
+//"methods" below are listed in typical call order
 
-// view node coordinates, element triples, boundary segments, and boundary node/segment flags
-PetscErrorCode UMView(UM *mesh, PetscViewer viewer);
+PetscErrorCode UMInitialize(UM *mesh);
 
 // read node coordinates from file; create loc Vec
 PetscErrorCode UMReadNodes(UM *mesh, char *rootname);
@@ -41,5 +39,10 @@ PetscErrorCode UMReadNodes(UM *mesh, char *rootname);
 // each created as an IS
 // call UMReadNodes() first
 PetscErrorCode UMReadISs(UM *mesh, char *rootname);
+
+// view node coordinates, element triples, boundary segments, and boundary node/segment flags
+PetscErrorCode UMView(UM *mesh, PetscViewer viewer);
+
+PetscErrorCode UMDestroy(UM *mesh);
 #endif
 

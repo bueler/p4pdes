@@ -31,12 +31,12 @@ PetscErrorCode UMView(UM *mesh, PetscViewer viewer) {
     ierr = PetscViewerASCIIPushSynchronized(viewer); CHKERRQ(ierr);
     if ((mesh->loc) && (mesh->N > 0)) {
         ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%d nodes at (x,y) coordinates:\n",mesh->N); CHKERRQ(ierr);
-        ierr = VecGetArrayRead(mesh->loc,&aloc); CHKERRQ(ierr);
+        ierr = VecGetArrayRead(mesh->loc,(const double **)&aloc); CHKERRQ(ierr);
         for (n = 0; n < mesh->N; n++) {
             ierr = PetscViewerASCIISynchronizedPrintf(viewer,"    %3d : (%g,%g)\n",
                                n,aloc[n].x,aloc[n].y); CHKERRQ(ierr);
         }
-        ierr = VecRestoreArrayRead(mesh->loc,&aloc); CHKERRQ(ierr);
+        ierr = VecRestoreArrayRead(mesh->loc,(const double **)&aloc); CHKERRQ(ierr);
     } else {
         ierr = PetscViewerASCIISynchronizedPrintf(viewer,"node coordinates empty/unallocated\n"); CHKERRQ(ierr);
     }
@@ -90,7 +90,7 @@ PetscErrorCode UMView(UM *mesh, PetscViewer viewer) {
 
 PetscErrorCode UMReadNodes(UM *mesh, char *rootname) {
     PetscErrorCode ierr;
-    int         m, twoN;
+    int         twoN;
     PetscViewer viewer;
     char        filename[266];
     strcpy(filename, rootname);
@@ -132,7 +132,7 @@ PetscErrorCode UMCheckElements(UM *mesh) {
                    3*k+m,ae[3*k+m],mesh->N-1);
             }
         }
-        // FIXME: could add check of distinct indices
+        // FIXME: could add check for distinct indices
     }
     ierr = ISRestoreIndices(mesh->e,&ae); CHKERRQ(ierr);
     return 0;
@@ -202,7 +202,7 @@ PetscErrorCode UMCheckBoundaryData(UM *mesh) {
 
 PetscErrorCode UMAssertValid(UM *mesh) {
     PetscErrorCode ierr;
-    if ((mesh->N == 0) || (!(mesh->x)) || (!(mesh->y))) {
+    if ((mesh->N == 0) || (!(mesh->loc))) {
         SETERRQ(PETSC_COMM_WORLD,1,
                 "nodes not created; call UMReadNodes() first\n");
     }
