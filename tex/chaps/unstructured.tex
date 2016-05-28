@@ -51,7 +51,7 @@ The data of problem \eqref{eq:un:poissonstrong}, besides the region $\Omega$ and
 
 Problem \eqref{eq:un:poissonstrong} is not the most general (nonlinear) Poisson problem.  Specifically, one could allow more general \emph{Robin} boundary conditions $\alpha u + \beta \frac{\partial u}{\partial n} = \gamma$ where, generally, $\alpha,\beta,\gamma$ could vary along the boundary \citep{Elmanetal2005}; see Exercise \ref{chap:un}.\ref{exer:un:robin}.  One could also allow $a$ and/or $f$ to depend on the gradient of $u$, as does $a=|\grad u|^{p-2}$ in the $p$-Laplacian equation of Chapter \ref{chap:of}.
 
-As \eqref{eq:un:poissonstrong} is stated there may be no solution where ``$\Div(a\grad u)$'' makes sense as a continuous function, even for polygonal regions and continuous data, for example.  That is, there may be no $u\in C^2(\Omega) \cap C(\overline \Omega)$ so that \eqref{eq:un:poissonstrong} applies at all points.  A solution exists, however, in the linear case at least, if we convert \eqref{eq:un:poissonstrong} to a \emph{weak form}.  Such a weak formulation already arose in Chapter \ref{chap:of} as the gradient of an objective function, but the weak form here does not have a minimization origin in general; see Exercise \ref{chap:un}.\ref{eq:un:nottheobjective}.  In this Chapter we will derive the weak form from the strong form in the traditional way, by multiplying by a test function and integrating.
+As \eqref{eq:un:poissonstrong} is stated there may be no solution where ``$\Div(a\grad u)$'' makes sense as a continuous function, even for polygonal regions and continuous data, for example.  That is, there may be no $u\in C^2(\Omega) \cap C(\overline \Omega)$ so that \eqref{eq:un:poissonstrong} applies at all points.  A solution exists, however, in the linear case at least, if we convert \eqref{eq:un:poissonstrong} to a \emph{weak form}.  Such a weak formulation already arose in Chapter \ref{chap:of} as the gradient of an objective function, but the weak form here generally does not have a minimization origin; see Exercise \ref{chap:un}.\ref{eq:un:nottheobjective}.  In this Chapter we will derive the weak form from the strong form in the traditional way, by multiplying by a test function and integrating.
 
 
 \section{Weak form with general boundary values}
@@ -506,7 +506,8 @@ case 3 result for N=1050625 nodes:  |u-u_exact|_inf = 9.89813e-08
 real 24.47
 \end{cline}
 
-\section{Next steps}
+
+\section{Toward parallel unstructured meshes}
 
 FIXME: parallel approach could use \Triangle \texttt{.neigh} file as adjacency graph for elements, run \texttt{MatPartitioning} stuff (see manual), apply partitioning to get \pIS (or \texttt{AO}), and have nodes and edges follow along
 
@@ -515,20 +516,25 @@ FIXME: paraphrase Barry: The ``trick'' is that first partition the element acros
 FIXME: see approach to mesh topology in chapter 10 of \citep{Loggetal2012}
 
 
+\section{Summary}
+
+FIXME motivated by \citep{Loggetal2012}: replace $\bF(\bu)$ with $\bF(\bu;v)$ so that residual equation no longer requires basis of $S^h$ for its definition; advantages/disadvantages?
+
+
 \section{Exercises}
 
 \renewcommand{\labelenumi}{\arabic{chapter}.\arabic{enumi}\quad}
 \renewcommand{\labelenumii}{(\alph{enumii})}
 \begin{enumerate}
-\item \label{exer:un:notminimization}  The text asserts that problems \eqref{eq:un:poissonstrong} and \eqref{eq:un:poissonweak} do not arise from a minimization principle.  For simplicity in this Exercise, suppose that $f$ is independent of $u$, use homogeneous Dirichlet boundary conditions on $\partial \Omega$, and feel free to consider only the 1D version of the problem.  First show, by following the technique that derived \eqref{eq:of:plapweakform}, that if $\partial a/\partial u \ne 0$ then the Euler-Lagrange equation of
+\item \label{exer:un:notminimization}  The text asserts that problems \eqref{eq:un:poissonstrong} and \eqref{eq:un:poissonweak} do not generally arise from a minimization principle, and this Exercise expands on the claim.  For simplicity suppose that $f$ is independent of $u$, use homogeneous Dirichlet boundary conditions on $\partial \Omega$, and feel free to consider only the 1D version of the problem.  First show, by following the technique that derived \eqref{eq:of:plapweakform}, that if $\partial a/\partial u \ne 0$ then the Euler-Lagrange equation of
 \begin{equation}
-  \tilde I[u] = \int_\Omega \frac{1}{2} a(u) |\grad u|^2 - f u  \label{eq:un:nottheobjective}
+  \tilde I[u] = \int_\Omega \frac{1}{2} a(u) |\grad u|^2 - f u,  \label{eq:un:nottheobjective}
 \end{equation}
-is \emph{not} the weak form \eqref{eq:un:poissonweak}.  This fact does not exclude the possibility that some other minimization problem leads to \eqref{eq:un:poissonweak}, of course, only that \eqref{eq:un:nottheobjective} is not it.  Therefore, show next that if $\partial a/\partial u \ne 0$ then the residuals \eqref{eq:un:elementwisesum} do \emph{not} satisfy
+which represents merely a reasonable guess, is \emph{not} the weak form \eqref{eq:un:poissonweak}.  This does not exclude the possibility that some other minimization problem leads to \eqref{eq:un:poissonweak}, however.  Therefore, show next that if $\partial a/\partial u \ne 0$ then the residuals \eqref{eq:un:elementwisesum} satisfy
 \begin{equation}
-  \frac{\partial F_i(u)}{\partial u_j} = \frac{\partial F_j(u)}{\partial u_i}.  \label{eq:un:symmetryresidualsdonthave}
+  \frac{\partial F_i(u)}{\partial u_j} \ne \frac{\partial F_j(u)}{\partial u_i} \label{eq:un:symmetryresidualsdonthave}
 \end{equation}
-Why does this exclude a minimization principle?
+for some $u$.  Explain why this excludes a minimization principle.
 \item  \label{exer:un:gradientdetails}  For the map \eqref{eq:un:trianglemap} from $\triangle_\ast$ to $\triangle_k$, let
     $$J_k = \frac{\partial (x,y)}{\partial (\xi,\eta)} = \begin{pmatrix}
     x_1 - x_0 & x_2 - x_0 \\
@@ -542,25 +548,26 @@ be the Jacobian.  Use the chain rule and \eqref{eq:un:psichimap} to show that
 \grad_{x,y} \psi_i = \frac{1}{\det J_k} \left<\Delta y_2 \frac{\partial \chi_\ell}{\partial \xi} - \Delta y_1 \frac{\partial \chi_\ell}{\partial \eta}, - \Delta x_2 \frac{\partial \chi_\ell}{\partial \xi} + \Delta x_1 \frac{\partial \chi_\ell}{\partial \eta}\right>. \label{eq:un:gradpsionref}
 \end{equation}
 Here indices $i$ and $\ell$ have the same relationship as in \eqref{eq:un:psichimap}.  Comparing formula \eqref{eq:of:gradpsionref} for the structured case, what is the underlying reason why \eqref{eq:un:gradpsionref} is a bit more complicated?  % underlying reason is that affine map here includes rotations, while in Chapter \ref{chap:of} it was just translation and axes scaling
-\item  \label{exer:un:elementintegranddetails}  Formula \eqref{eq:un:elementintegrand} might require some interpretation before the implementation becomes clear.  Confirm that, with only mild abuses of notation, formulas \eqref{eq:un:trianglemap} and \eqref{eq:un:psichimap} lead to the valid expansions
-\begin{align*}
-a(u^h) &= a(u^h,\xi,\eta) = a(u^h,x(\xi,\eta),y(\xi,\eta)), \\
-f(u^h) &= f(u^h,\xi,\eta) = f(u^h,x(\xi,\eta),y(\xi,\eta)), \\
-\psi_i &= \chi_{\ell}(\xi,\eta), \\
-u^h &= \sum_{j=0}^{N-1} \left\{\begin{matrix} g_D(\bx_j) \\ u_j \end{matrix}\right\} \chi_{\ell'}(\xi,\eta), \\
-\grad u^h &= \grad_{x,y} u^h = \sum_{j=0}^{N-1} \left\{\begin{matrix} g_D(\bx_j) \\ u_j \end{matrix}\right\} \grad_{x,y} \psi_j.
-\end{align*}
-For the third formula, node $\bx_i$ corresponds to vertex $\ell$ on $\triangle_\ast$.  In the fourth and fifth formulas, node $\bx_j$ corresponds to vertex $\ell'$ on $\triangle_\ast$, and the two cases for the coefficient are when $\bx_j \in \partial_D \Omega$ and $\bx_j \notin \partial_D \Omega$, respectively.  Note that \eqref{eq:un:gradpsionref} allows us to expand $\grad_{x,y} \psi_j$ in the fifth formula.  Taken together, these expansions make \eqref{eq:un:elementintegrand} meaningful and implementable.
+\item  \label{exer:un:elementintegranddetails}  Formula \eqref{eq:un:elementintegrand} might require some interpretation before the implementation becomes clear, which is the goal of this Exercise.  Confirm that formulas \eqref{eq:un:trianglemap} and \eqref{eq:un:psichimap} lead to these expansions of expressions in \eqref{eq:un:elementintegrand}:
+\begin{align}
+a(u^h) &= a(u^h,x(\xi,\eta),y(\xi,\eta)), \label{eq:un:adetails} \\
+f(u^h) &= f(u^h,x(\xi,\eta),y(\xi,\eta)), \label{eq:un:fdetails} \\
+\psi_i &= \chi_{\ell}(\xi,\eta), \label{eq:un:psichidetails} \\
+u^h &= \sum_{j=0}^{N-1} \left\{\begin{matrix} g_D(\bx_j) \\ u_j \end{matrix}\right\} \chi_{\ell'}(\xi,\eta), \label{eq:un:udetails} \\
+\grad u^h &= \grad_{x,y} u^h = \sum_{j=0}^{N-1} \left\{\begin{matrix} g_D(\bx_j) \\ u_j \end{matrix}\right\} \grad_{x,y} \psi_j. \label{eq:un:gradudetails}
+\end{align}
+In \eqref{eq:un:psichidetails} node $\bx_i$ corresponds to vertex $\ell$ on $\triangle_\ast$.  In \eqref{eq:un:udetails} and \eqref{eq:un:gradudetails}, the two cases for computing the coefficient are when $\bx_j \in \partial_D \Omega$ and $\bx_j \notin \partial_D \Omega$, respectively; also node $\bx_j$ corresponds to vertex $\ell'$ on $\triangle_\ast$.  Note that \eqref{eq:un:gradpsionref} allows us to expand $\grad_{x,y} \psi_j$ in \eqref{eq:un:gradudetails}.  Taken together, these expansions make \eqref{eq:un:elementintegrand} implementable.
 \item  \label{exer:un:checkquadrature}  The degree of accuracy $n=1,2,3$ of the quadrature rules in Table \ref{tab:un:quadrature} can be checked by comparing the exact integral
 \begin{equation}
 \iint_{\triangle_\ast} \xi^i \eta^j\,d\xi d\eta = \frac{i!\,j!}{(i+j+2)!}, \label{eq:un:checkquadrature}
 \end{equation}
-for all cases with $0\le i+j\le n$, against the quadrature result.  Also one should show an inexact quadrature result for some case with $i+j=n+1$.  Write a small program, in the language of your choice, which does these things.
-\item \label{exer:un:basisfreeresidual} FIXME motivated by \citep{Loggetal2012}: replace $\bF(\bu)$ with $\bF(\bu;v)$ so that residual equation no longer requires basis of $S^h$ for its definition; advantages/disadvantages?
+for all cases with $0\le i+j\le n$, against the quadrature result.  Also one should show an inexact quadrature result for some case with $i+j=n+1$.  Write a small program, in the language of your choice, which does so.
+\item \label{exer:un:gaussneumann}  In \texttt{unfem.c} we use the midpoint rule, the one-point Gauss rule, for quadrature when computing the Neumann boundary segment contributions $\varphi_\nu^i$; see equation \eqref{eq:un:segmentquadrature}.  Modify \texttt{unfem.c} to optionally use two-point Gaussian quadrature instead.  Only in case 2 will this make any difference.  Show that accuracy noticeably improves for coarse grids, but that this benefit disappears under grid refinement.
+% see c/ch7/solns/segmentgauss.c.snippet
+\item \label{exer:un:allneumannfailure}  We have assumed that the Dirichlet boundary $\partial_D \Omega$ has positive measure (length) so that the linear problem, at least, is known to have a unique solution.  By contrast, confirm experimentally that if $\partial_D\Omega$ is empty then the equations no longer have a unique solution.  This can be done by modifying the case 2 exact solution to use Neumann boundary conditions on the whole of $\partial \Omega$.  A direct solve for the linear equations (\texttt{-ksp\_type preonly -pc\_type lu}) will fail; explain the error message which results.
+\item \label{exer:un:allneumannresolution}  Continuing the above Exercise, use \texttt{SNESGetKSP()} and \texttt{KSPSetNullSpace()} to tell the linear solver that the linearization of the Neumann-only problem has constant functions as its null space.  Confirm that direct and iterative solvers now succeed as in the case with non-empty Dirichlet boundary.
 \item \label{exer:un:truejacobian} FIXME implement the true Jacobian in the $a=a(x,y)$ case, so that we only add a diagonal $\partial f/\partial u$ term; test on case 1 example and see if improved \pSNES convergence
 \item \label{exer:un:bratu} FIXME using result from previous exercise, solve Bratu; compute critical $\lambda$; equals 6.81 according to \pSNES example \texttt{ex5.c}
-\item \label{exer:un:gaussneumann}  In \texttt{unfem.c} we use the midpoint rule, the one-point Gauss rule, for quadrature \eqref{eq:un:segmentquadrature} computing the Neumann boundary segment contributions $\varphi_\nu^i$.  Modify \texttt{unfem.c} to optionally allow two-point Gaussian quadrature for this purpose.  Only in case 2 will this make any difference.  Show that accuracy noticeably improves for coarse grids, but that this benefit disappears under grid refinement.
-% see c/ch7/solns/segmentgauss.c.snippet
 \item \label{exer:un:robin} FIXME implement Robin boundary condition
 \end{enumerate}
 
