@@ -308,7 +308,7 @@ int main(int argc,char **argv) {
     double      err;
 
     PetscInitialize(&argc,&argv,NULL,help);
-    user.quaddeg = 2;
+    user.quaddeg = 1;
     user.solncase = 0;
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "un_", "options for unfem", ""); CHKERRQ(ierr);
     ierr = PetscOptionsInt("-case",
