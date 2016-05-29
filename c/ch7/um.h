@@ -43,6 +43,10 @@ PetscErrorCode UMReadISs(UM *mesh, char *rootname);
 // view node coordinates, element triples, boundary segments, and boundary node/segment flags
 PetscErrorCode UMView(UM *mesh, PetscViewer viewer);
 
+// get a length-N array of structs, of type Node above, for node locations
+PetscErrorCode UMGetNodeCoordArrayRead(UM *mesh, const Node **xy);
+PetscErrorCode UMRestoreNodeCoordArrayRead(UM *mesh, const Node **xy);
+
 PetscErrorCode UMDestroy(UM *mesh);
 #endif
 

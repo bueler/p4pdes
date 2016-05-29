@@ -200,17 +200,6 @@ PetscErrorCode UMCheckBoundaryData(UM *mesh) {
     return 0;
 }
 
-PetscErrorCode UMAssertValid(UM *mesh) {
-    PetscErrorCode ierr;
-    if ((mesh->N == 0) || (!(mesh->loc))) {
-        SETERRQ(PETSC_COMM_WORLD,1,
-                "nodes not created; call UMReadNodes() first\n");
-    }
-    ierr = UMCheckElements(mesh); CHKERRQ(ierr);
-    ierr = UMCheckBoundaryData(mesh); CHKERRQ(ierr);
-    return 0;
-}
-
 PetscErrorCode UMReadISs(UM *mesh, char *rootname) {
     PetscErrorCode ierr;
     PetscViewer viewer;
@@ -222,7 +211,7 @@ PetscErrorCode UMReadISs(UM *mesh, char *rootname) {
         SETERRQ(PETSC_COMM_WORLD,1,
                 "elements already created? ... stopping\n");
     }
-    if (mesh->N == 0) {
+    if ((!mesh->loc) || (mesh->N == 0)) {
         SETERRQ(PETSC_COMM_WORLD,2,
                 "node coordinates not created ... do that first ... stopping\n");
     }
@@ -263,7 +252,28 @@ PetscErrorCode UMReadISs(UM *mesh, char *rootname) {
     }
     // mesh should be complete now
     ierr = PetscViewerDestroy(&viewer); CHKERRQ(ierr);
-    ierr = UMAssertValid(mesh); CHKERRQ(ierr);
+    ierr = UMCheckElements(mesh); CHKERRQ(ierr);
+    ierr = UMCheckBoundaryData(mesh); CHKERRQ(ierr);
+    return 0;
+}
+
+
+PetscErrorCode UMGetNodeCoordArrayRead(UM *mesh, const Node **xy) {
+    PetscErrorCode ierr;
+    if ((!mesh->loc) || (mesh->N == 0)) {
+        SETERRQ(PETSC_COMM_WORLD,1,"node coordinates not created ... stopping\n");
+    }
+    ierr = VecGetArrayRead(mesh->loc,(const double **)xy); CHKERRQ(ierr);
+    return 0;
+}
+
+
+PetscErrorCode UMRestoreNodeCoordArrayRead(UM *mesh, const Node **xy) {
+    PetscErrorCode ierr;
+    if ((!mesh->loc) || (mesh->N == 0)) {
+        SETERRQ(PETSC_COMM_WORLD,1,"node coordinates not created ... stopping\n");
+    }
+    ierr = VecRestoreArrayRead(mesh->loc,(const double **)xy); CHKERRQ(ierr);
     return 0;
 }
 
