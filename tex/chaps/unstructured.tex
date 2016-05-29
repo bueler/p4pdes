@@ -432,17 +432,25 @@ Before showing this code, and because the reader might have become too comfortab
 \end{figure}
 
 
-FIXME show extracts of context, FEM stuff, most of \texttt{FormFunction()}, and most of \texttt{main()} in \texttt{c/\CODELOC unfem.c}
+FIXME show extracts of context, actions in \texttt{main()} for reading mesh and for setting up solver
 
 \cinputpart{unfem.c}{\CODELOC}{FIXME}{I}{//STARTCTX}{//ENDCTX}{code:unfemctx}
 
-\cinputpart{unfem.c}{\CODELOC}{FIXME}{II}{//STARTFEM}{//ENDFEM}{code:unfemfem}
+\cinputpart{unfem.c}{\CODELOC}{FIXME}{II}{//STARTMAINREADMESH}{//ENDMAINREADMESH}{code:unfemmainreadmesh}
 
-\cinputpart{unfem.c}{\CODELOC}{FIXME}{III}{//STARTBDRYRESIDUALS}{//ENDBDRYRESIDUALS}{code:unfembdryresiduals}
+\cinputpart{unfem.c}{\CODELOC}{FIXME}{III}{//STARTMAINSOLVER}{//ENDMAINSOLVER}{code:unfemmainsolver}
 
-\cinputpart{unfem.c}{\CODELOC}{FIXME}{IV}{//STARTELEMENTRESIDUALS}{//ENDELEMENTRESIDUALS}{code:unfemelementresiduals}
 
-\cinputpart{unfem.c}{\CODELOC}{FIXME}{V}{//STARTMAIN}{//ENDMAIN}{code:unfemmain}
+FIXME show FEM stuff
+
+\cinputpart{unfem.c}{\CODELOC}{FIXME}{IV}{//STARTFEM}{//ENDFEM}{code:unfemfem}
+
+FIXME show residual evaluation \texttt{FormFunction()}
+
+\cinputpart{unfem.c}{\CODELOC}{FIXME}{V}{//STARTBDRYRESIDUALS}{//ENDBDRYRESIDUALS}{code:unfembdryresiduals}
+
+\cinputpart{unfem.c}{\CODELOC}{FIXME}{VI}{//STARTELEMENTRESIDUALS}{//ENDELEMENTRESIDUALS}{code:unfemelementresiduals}
+
 
 
 \section{Initial testing}
@@ -467,14 +475,16 @@ A_{ij}^k(\bu) = \int_{\triangle_k} a(u^h) \grad\psi_j \cdot \grad\psi_i \label{e
 \end{equation}
 Again this is computed by quadrature, similar to \eqref{eq:un:elementintegralreference} and \eqref{eq:un:elementquadraturereference}.  This matrix is evidently symmetric, $a_{ij}=a_{ji}$, and sparse.  Furthermore it is positive-definite if $a(u,x,y)>0$, and thus the conjugate gradient Krylov method applies to the equations for the Newton step; see Chapter \ref{chap:ls}.
 
-\cinputpart{unfem.c}{\CODELOC}{FIXME}{VI}{//STARTPICARD}{//ENDPICARD}{code:unfempicard}
+\cinputpart{unfem.c}{\CODELOC}{FIXME}{VII}{//STARTMAINMAT}{//ENDMAINMAT}{code:unfemmainmat}
+
+\cinputpart{unfem.c}{\CODELOC}{FIXME}{VIII}{//STARTPICARD}{//ENDPICARD}{code:unfempicard}
 
 
 \section{Preallocate a \pMat (serial)}
 
 FIXME essential for speed
 
-\cinputpart{unfem.c}{\CODELOC}{FIXME}{VII}{//STARTPREALLOC}{//ENDPREALLOC}{code:unfemprealloc}
+\cinputpart{unfem.c}{\CODELOC}{FIXME}{IX}{//STARTPREALLOC}{//ENDPREALLOC}{code:unfemprealloc}
 
 compare for \texttt{--with-debugging=0} build:
 \begin{cline}

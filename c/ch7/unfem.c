@@ -84,7 +84,7 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
     const double *au;
     double       *aF, unode[3], gradu[2], gradpsi[3][2],
                  uquad[4], aquad[4], fquad[4],
-                 dx1, dx2, dy1, dy2, detJ,
+                 dx, dy, dx1, dx2, dy1, dy2, detJ,
                  ls, xmid, ymid, sint, xx, yy, sum;
     int          n, p, na, nb, k, l, q;
 
@@ -108,7 +108,9 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
             na = as[2*p+0];  // nodes at end of segment
             nb = as[2*p+1];
             // length of segment
-            ls = sqrt(pow(aloc[na].x-aloc[nb].x,2) + pow(aloc[na].y-aloc[nb].y,2));
+            dx = aloc[na].x-aloc[nb].x
+            dy = aloc[na].y-aloc[nb].y;
+            ls = sqrt(dx * dx + dy * dy);
             // midpoint rule; psi_na=psi_nb=0.5 at midpoint of segment
             xmid = 0.5*(aloc[na].x+aloc[nb].x);
             ymid = 0.5*(aloc[na].y+aloc[nb].y);
@@ -356,7 +358,7 @@ int main(int argc,char **argv) {
             SETERRQ(PETSC_COMM_WORLD,1,"other solution cases not implemented");
     }
 
-//STARTREADMESH
+//STARTMAINREADMESH
     // read mesh object of type UM
     ierr = UMInitialize(&mesh); CHKERRQ(ierr);
     ierr = UMReadNodes(&mesh,meshroot); CHKERRQ(ierr);
@@ -367,9 +369,9 @@ int main(int argc,char **argv) {
         ierr = UMView(&mesh,stdoutviewer); CHKERRQ(ierr);
     }
     user.mesh = &mesh;
-//ENDREADMESH
+//ENDMAINREADMESH
 
-//STARTMAT
+//STARTMAINMAT
     // setup matrix for Picard iteration, including preallocation
     ierr = MatCreate(PETSC_COMM_WORLD,&A); CHKERRQ(ierr);
     ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,mesh.N,mesh.N); CHKERRQ(ierr);
@@ -380,9 +382,9 @@ int main(int argc,char **argv) {
     } else {
         ierr = JacobianPreallocation(A,&user); CHKERRQ(ierr);
     }
-//ENDMAT
+//ENDMAINMAT
 
-//STARTSOLVER
+//STARTMAINSOLVER
     // configure SNES, including resetting default KSP and PC
     ierr = VecCreate(PETSC_COMM_WORLD,&r); CHKERRQ(ierr);
     ierr = VecSetSizes(r,PETSC_DECIDE,mesh.N); CHKERRQ(ierr);
@@ -400,7 +402,7 @@ int main(int argc,char **argv) {
     ierr = VecDuplicate(r,&u); CHKERRQ(ierr);
     ierr = VecSet(u,0.0); CHKERRQ(ierr);
     ierr = SNESSolve(snes,NULL,u);CHKERRQ(ierr);
-//ENDSOLVER
+//ENDMAINSOLVER
 
     // measure error relative to exact solution
     ierr = VecDuplicate(r,&uexact); CHKERRQ(ierr);
