@@ -64,7 +64,7 @@ for (( N=1; N<=${1:-4}; N++ )); do
     'grep' "result for N" foo.txt
     'grep' SNESFunctionEval foo.txt | awk '{print $1,$2}'
     'grep' SNESJacobianEval foo.txt | awk '{print $1,$2}'
-    'grep' "Main Stage:" foo.txt | awk '{print $1,$2,$3,$4}'
+    'grep' "Time (sec):" foo.txt | awk '{print $1,$2,$3}'
 done
 rm -f foo.txt
 

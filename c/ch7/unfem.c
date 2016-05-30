@@ -22,6 +22,7 @@ typedef struct {
     double (*gD_fcn)(double, double);
     double (*gN_fcn)(double, double);
     double (*uexact_fcn)(double, double);
+    PetscLogStage stages[4];  //STRIP
 } unfemCtx;
 //ENDCTX
 
@@ -63,7 +64,7 @@ double InnerProd(const double V[2], const double W[2]) {
     return V[0] * W[0] + V[1] * W[1];
 }
 
-// quadrature points and weights from Shaodeng notes
+// quadrature points and weights
 const int    Q[3] = {1, 3, 4};  // number of quadrature points
 const double w[3][4]   = {{1.0/2.0,    NAN,       NAN,       NAN},
                           {1.0/6.0,    1.0/6.0,   1.0/6.0,   NAN},
@@ -88,6 +89,7 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
                  ls, xmid, ymid, sint, xx, yy, sum;
     int          n, p, na, nb, k, l, q;
 
+    PetscLogStagePush(user->stages[2]);  //STRIP
     ierr = VecGetArrayRead(u,&au); CHKERRQ(ierr);
     ierr = VecSet(F,0.0); CHKERRQ(ierr);
     ierr = VecGetArray(F,&aF); CHKERRQ(ierr);
@@ -180,6 +182,7 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
     ierr = UMRestoreNodeCoordArrayRead(user->mesh,&aloc); CHKERRQ(ierr);
     ierr = VecRestoreArrayRead(u,&au); CHKERRQ(ierr);
     ierr = VecRestoreArray(F,&aF); CHKERRQ(ierr);
+    PetscLogStagePop();  //STRIP
     return 0;
 }
 
@@ -194,6 +197,7 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
                  dx1, dx2, dy1, dy2, detJ, xx, yy, sum;
     int          n, k, l, m, q, cr, cv, row[3];
 
+    PetscLogStagePush(user->stages[3]);  //STRIP
     ierr = MatZeroEntries(P); CHKERRQ(ierr);
     ierr = ISGetIndices(user->mesh->bfn,&abfn); CHKERRQ(ierr);
     for (n = 0; n < user->mesh->N; n++) {
@@ -266,6 +270,7 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
         ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
     }
     ierr = MatSetOption(P,MAT_NEW_NONZERO_LOCATION_ERR,PETSC_TRUE); CHKERRQ(ierr);
+    PetscLogStagePop();  //STRIP
     return 0;
 }
 
@@ -311,6 +316,11 @@ int main(int argc,char **argv) {
     double      err;
 
     PetscInitialize(&argc,&argv,NULL,help);
+    ierr = PetscLogStageRegister("Read mesh      ", &user.stages[0]); CHKERRQ(ierr);
+    ierr = PetscLogStageRegister("Solver         ", &user.stages[1]); CHKERRQ(ierr);
+    ierr = PetscLogStageRegister("Residual eval  ", &user.stages[2]); CHKERRQ(ierr);
+    ierr = PetscLogStageRegister("Jacobian eval  ", &user.stages[3]); CHKERRQ(ierr);
+
     user.quaddeg = 1;
     user.solncase = 0;
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "un_", "options for unfem", ""); CHKERRQ(ierr);
@@ -365,6 +375,7 @@ int main(int argc,char **argv) {
     strncat(issname, ".is", 3);
 
 //STARTMAINREADMESH
+    PetscLogStagePush(user.stages[0]);  //STRIP
     // read mesh object of type UM
     ierr = UMInitialize(&mesh); CHKERRQ(ierr);
     ierr = UMReadNodes(&mesh,nodesname); CHKERRQ(ierr);
@@ -375,6 +386,7 @@ int main(int argc,char **argv) {
         ierr = UMView(&mesh,stdoutviewer); CHKERRQ(ierr);
     }
     user.mesh = &mesh;
+    PetscLogStagePop();  //STRIP
 //ENDMAINREADMESH
 
 //STARTMAINMAT
@@ -407,7 +419,9 @@ int main(int argc,char **argv) {
     // set initial iterate and solve
     ierr = VecDuplicate(r,&u); CHKERRQ(ierr);
     ierr = VecSet(u,0.0); CHKERRQ(ierr);
+    PetscLogStagePush(user.stages[1]);  //STRIP
     ierr = SNESSolve(snes,NULL,u);CHKERRQ(ierr);
+    PetscLogStagePop();  //STRIP
 //ENDMAINSOLVER
 
     // measure error relative to exact solution
