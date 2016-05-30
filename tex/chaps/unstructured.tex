@@ -382,10 +382,11 @@ This generates two files \texttt{meshes/trap.1.\{vec,is\}}.
 
 Our C code is, for the first time in the book, designed in a modular way.  We separate the representation of the mesh, and the functions that read it from files, from the standard tasks of computing the residual and setting up the \PETSc solver which apply in previous Chapters.  In fact, the reader should examine these files in \texttt{c/ch7/}:
 \begin{itemize}
-\item \texttt{um.h} and \texttt{um.c}:\quad  Declares a simple unstructured mesh object, a C \texttt{struct} called ``\texttt{UM},'' and provides an interface for it.  The major functions read a mesh from binary files, view it, and provide access to it.
+\item \texttt{um.h} and \texttt{um.c}:\quad  Declares a simple unstructured-mesh representation as a C \texttt{struct} called ``\texttt{UM},'' and provides an interface for it.  The major functions read a mesh from binary files and view it.
 \item \texttt{cases.h}:\quad  Exact solutions and boundary conditions for the problem cases above.
 \item \texttt{unfem.c}:\quad  Contains a residual evaluation function (\texttt{FormFunction()}) and a \texttt{main()} function.  The latter reads options, calls \texttt{UM} functions to read the mesh, sets up a \pSNES solver object, runs the solver, and reports the numerical error.
 \end{itemize}
+We first describe the mesh representation before addressing the approximation and solution of the PDE problem in the main program \texttt{unfem.c}.  We will not show file \texttt{cases.h} at all because it is adequately-documented by the material on the example problem cases above.
 
 \cinputpart{um.h}{\CODELOC}{\texttt{UM} is an unstructured-mesh data type.}{I}{//STARTSTRUCT}{//ENDSTRUCT}{code:umstruct}
 
