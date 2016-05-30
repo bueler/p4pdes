@@ -359,7 +359,7 @@ $ showme trap
 displays the boundary polygon from \texttt{trap.poly} and all so-far generated levels of the triangulation (\texttt{trap.\{1,2\}.\{node,ele,poly\}}).
 
 
-\section{From ASCII files to \PETSc \pVecs and \pISs}
+\section{Loading the mesh into \PETSc \pVecs and \pISs}
 
 Our plan is to traverse all of the elements $\triangle_k \in \mathcal{T}_h$, and the Neumann boundary segments $s_\nu$, so as to compute the quantities in \eqref{eq:un:elementquadraturereference} and \eqref{eq:un:segmentquadrature}.  The traversal is reasonably fast if the mesh data are stored in \PETSc objects.  We first convert the \Triangle-generated ASCII files into \pVecs and \pISs using a Python script \texttt{tri2petsc.py}.
 
@@ -380,21 +380,22 @@ $ ./tri2petsc.py meshes/trap.1 trap.1
 \end{cline}
 This generates two files \texttt{meshes/trap.1.\{vec,is\}}.
 
-Our C code is, for the first time in the book, designed in a modular way.  We separate the loading of the mesh, and the particular functions for the above problem cases and exact solutions, from the central tasks of computing the residual and setting up the \PETSc solver.  The reader should look at these files in \texttt{c/ch7/}:
+Our C code is, for the first time in the book, designed in a modular way.  We separate the representation of the mesh, and the functions that read it from files, from the standard tasks of computing the residual and setting up the \PETSc solver which apply in previous Chapters.  In fact, the reader should examine these files in \texttt{c/ch7/}:
 \begin{itemize}
-\item \texttt{um.h} FIXME
-\item \texttt{um.c} 
-\item \texttt{cases.h} 
-\item \texttt{unfem.c} 
+\item \texttt{um.h} and \texttt{um.c}:\quad  Declares a simple unstructured mesh object, a C \texttt{struct} called ``\texttt{UM},'' and provides an interface for it.  The major functions read a mesh from binary files, view it, and provide access to it.
+\item \texttt{cases.h}:\quad  Exact solutions and boundary conditions for the problem cases above.
+\item \texttt{unfem.c}:\quad  Contains a residual evaluation function (\texttt{FormFunction()}) and a \texttt{main()} function.  The latter reads options, calls \texttt{UM} functions to read the mesh, sets up a \pSNES solver object, runs the solver, and reports the numerical error.
 \end{itemize}
 
- load these binary data with \PETSc functions  \texttt{VecLoad()} and \texttt{ISLoad()}, respectively.
+\cinputpart{um.h}{\CODELOC}{\texttt{UM} is an unstructured-mesh data type.}{I}{//STARTSTRUCT}{//ENDSTRUCT}{code:umstruct}
 
-It is convenient for the C code to have a data structure for all mesh information, so we define a new \texttt{UM} (``unstructured mesh'') data type, a C \texttt{struct}.  See Code \ref{code:umstruct}.  Of course, this \texttt{UM} data type is superceded by advanced, \PETSc-supported tools in Chapter \ref{chap:dp}.
+The \texttt{UM} (``unstructured mesh'') \texttt{struct} is declared in Code \ref{code:umstruct}.  The ``methods'' for this ``object'' are declared in Code \ref{code:umdeclare}, and the order in which they are shown suggests the order in which they are typically called.  \texttt{UMInitialize()} should be called before anything else, and \texttt{UMDestroy()} last.  Function \texttt{UMReadNodes()} should be called before \texttt{UMReadISs()}; these load binary data using \PETSc functions  \texttt{VecLoad()} and \texttt{ISLoad()}, respectively.
+Because we suppose that the implementations of these functions, in file \texttt{c/ch7/um.c}, is more tedious than illuminating, we have chosen not to display it at all.
 
-\cinput{um.h}{\CODELOC}{An unstructured-mesh data type.}{//STARTUM}{//ENDUM}{code:umstruct}
+Despite our attempt at modularity, this representation of an unstructured mesh is deliberately simple and even naive.  It provides a suggestive example which motivates Chapter \ref{chap:dp} coverage of much more advanced \PETSc support for unstructured meshes.
 
-Admittedly-tedious C functions \texttt{UMInitialize()}, \texttt{UMDestroy()}, \texttt{UMView()}, \texttt{UMReadVecs()}, and \texttt{UMReadISs()} in \texttt{c/\CODELOC um.c} (not shown) have the task of reading \texttt{.vec,.is} binary files and allocating/filling/destroying a \texttt{UM} instance.
+\cinputpart{um.h}{\CODELOC}{The ``methods'' for the \texttt{UM} unstructured-mesh data type.}{II}{//STARTDECLARE}{//ENDDECLARE}{code:umdeclare}
+
 
 \section{Initial implementation}
 
