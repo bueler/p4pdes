@@ -361,15 +361,15 @@ displays the boundary polygon from \texttt{trap.poly} and all so-far generated l
 
 \section{From ASCII files to \PETSc \pVecs and \pISs}
 
-Our plan is to traverse the lists of elements $\triangle_k \in \mathcal{T}_h$, and Neumann boundary segments $s_\nu$, so as to compute the residuals $F_i(\bu)$ from equations \eqref{eq:un:elementquadraturereference} and \eqref{eq:un:segmentquadrature}, respectively.  The traversal is fast if the mesh data are stored in \PETSc objects, so we first convert the above \Triangle-generated ASCII files into \pVecs and \pISs using a Python script \texttt{tri2petsc.py}.
+Our plan is to traverse all of the elements $\triangle_k \in \mathcal{T}_h$, and the Neumann boundary segments $s_\nu$, so as to compute the quantities in \eqref{eq:un:elementquadraturereference} and \eqref{eq:un:segmentquadrature}.  The traversal is reasonably fast if the mesh data are stored in \PETSc objects.  We first convert the \Triangle-generated ASCII files into \pVecs and \pISs using a Python script \texttt{tri2petsc.py}.
 
-An abstract description clarifies the data types.  There are two kinds of ``data'' to describe a mesh, \emph{geometrical} and \emph{topological}.  Here the geometry is simply the location, a pair of real numbers, for all the nodes.  For simplicity we store these $x$ and $y$ coordinates as separate length $N$ (sequential) \pVecs.  For the topology we need descriptions of which elements (triangles) are incident to which nodes (vertices).  This task only requires integer indices as we refer to a node simply by a global index into the coordinate \pVecs for $x$ and $y$.  Thus the topology of the elements is given by providing a triple of integers, in the range $0,\dots,N-1$, for each element.  Similarly, a segment of the polygonal boundary is simply a pair of nodal indices referring to the endpoints.
+An abstract description clarifies the way we store the mesh in \PETSc objects.  There are two kinds of ``data'' to describe a mesh, \emph{geometrical} and \emph{topological}.  Here the geometry is simply the nodal locations, pairs of real numbers for each node.  We store these coordinates in a length $2N$ sequential \pVec.  For the topology we have descriptions of which elements (triangles) are incident to which nodes (vertices).  This task only requires integer indices.  The topology of the elements is given by a triple of integers, each node index in the range $0,\dots,N-1$, for each element.  Similarly, a segment of the polygonal boundary is simply a pair of nodal indices identifying the endpoints of segment.
 
-The \PETSc \pIS ``index set'' type is convenient for storing these indices.  The reader may regard an \pIS simply as an ``integer-valued \pVec'' in the current use.\sidenote{In this Chapter we do not exploit the ``main purpose'' of an \pIS in distributed (multi-process) indexing.}  The \pIS storing the element index triples holds $3K$ integers and the \pIS for boundary segments holds $2P$ integers.
+The \PETSc \pIS ``index set'' type is convenient for storing these indices.  The reader may for now regard an \pIS simply as an ``integer-valued \pVec.''\sidenote{In this Chapter we do not exploit the ``main purpose'' of an \pIS in distributed (multi-process) indexing.}  The \pIS storing the element index triples holds $3K$ integers and the \pIS for boundary segments holds $2P$ integers.
 
-Some care is needed in recording the Dirichlet and Neumann parts of the boundary.  First, one cannot tell if an edge in the triangulation is a boundary segment just from whether the endpoints are in the boundary.\sidenote{For example, the edge from node 5 to node 7 in Figure \ref{fig:un:number-mesh} is not a boundary segment.}  Second, the endpoints of a boundary segment could be nodes in the (closed) Dirchlet boundary, while the segment itself is in the (relatively-open) Neumann boundary.  Therefore, despite the apparent redundancy, we will separately store flags for the \emph{nodes}, indicating whether they are interior ($0$) or Neumann boundary ($1$) or Dirichlet boundary ($2$), and for the \emph{segments} on the boundary, either $1$ for Neumann or $2$ for Dirichlet.  This scheme is the one used by \Triangle.  Two more \pISs are used to store these flags.
+Some care is needed in recording the Dirichlet and Neumann parts of the boundary.  First, one cannot tell if an edge is a boundary segment just from whether the endpoints are in the boundary.\sidenote{For example, the edge from node 5 to node 7 in Figure \ref{fig:un:number-mesh} is not a boundary segment.}  Second, even if the endpoints of a boundary segment are in the (closed) Dirchlet boundary, the segment itself might be in the (relatively-open) Neumann boundary.  Therefore, despite the apparent redundancy, we will separately store flags for the \emph{nodes}, indicating whether they are interior ($0$) or Neumann boundary ($1$) or Dirichlet boundary ($2$), and for the \emph{segments} on the boundary, either $1$ for Neumann or $2$ for Dirichlet.  This scheme is already shown in \Triangle outputs above (Codes \ref{code:traponenode}--\ref{code:traponepoly}).  Two more \pISs are used to store these flags.
 
-Thus the Python script \texttt{tri2petsc.py} (not shown) reads three files in \Triangle-generated ASCII format, as described above, with extensions \texttt{.node,.ele,.poly}.  Then it writes two files in \PETSc binary format with extensions \texttt{.vec,.is}.  The first output file holds two \pVecs with the node coordinates.  The second output file holds four \pISs (element triples, nodal boundary flags, boundary segment pairs, and boundary segment flags).
+Thus the Python script \texttt{tri2petsc.py} (not shown) reads three files in \Triangle-generated ASCII format, as described above, with extensions \texttt{.node,.ele,.poly}.  Then it writes two files in \PETSc binary format with extensions \texttt{.vec,.is}.  The first output file holds a \pVec with the node coordinates.  The second output file holds four \pISs (element triples, nodal boundary flags, boundary segment pairs, and boundary segment flags).
 
 Let's try it out.  Because \texttt{tri2petsc.py} uses Python modules from the \PETSc source directory, we first generate some symbolic links:
 \begin{cline}
@@ -378,7 +378,17 @@ $ ln -s ~/petsc/bin/petsc_conf.py
 $ ln -s ~/petsc/bin/PetscBinaryIO.py
 $ ./tri2petsc.py meshes/trap.1 trap.1
 \end{cline}
-This generates two files \texttt{trap.1.vec} and \texttt{trap.1.is}.  Our C code will then load these binary data with \PETSc functions  \texttt{VecLoad()} and \texttt{ISLoad()}, respectively.
+This generates two files \texttt{meshes/trap.1.\{vec,is\}}.
+
+Our C code is, for the first time in the book, designed in a modular way.  We separate the loading of the mesh, and the particular functions for the above problem cases and exact solutions, from the central tasks of computing the residual and setting up the \PETSc solver.  The reader should look at these files in \texttt{c/ch7/}:
+\begin{itemize}
+\item \texttt{um.h} FIXME
+\item \texttt{um.c} 
+\item \texttt{cases.h} 
+\item \texttt{unfem.c} 
+\end{itemize}
+
+ load these binary data with \PETSc functions  \texttt{VecLoad()} and \texttt{ISLoad()}, respectively.
 
 It is convenient for the C code to have a data structure for all mesh information, so we define a new \texttt{UM} (``unstructured mesh'') data type, a C \texttt{struct}.  See Code \ref{code:umstruct}.  Of course, this \texttt{UM} data type is superceded by advanced, \PETSc-supported tools in Chapter \ref{chap:dp}.
 
