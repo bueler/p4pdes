@@ -88,13 +88,10 @@ PetscErrorCode UMView(UM *mesh, PetscViewer viewer) {
     return 0;
 }
 
-PetscErrorCode UMReadNodes(UM *mesh, char *rootname) {
+PetscErrorCode UMReadNodes(UM *mesh, char *filename) {
     PetscErrorCode ierr;
     int         twoN;
     PetscViewer viewer;
-    char        filename[266];
-    strcpy(filename, rootname);
-    strncat(filename, ".vec", 10);
     if (mesh->N > 0) {
         SETERRQ(PETSC_COMM_WORLD,1,"nodes already created?\n");
     }
@@ -200,13 +197,10 @@ PetscErrorCode UMCheckBoundaryData(UM *mesh) {
     return 0;
 }
 
-PetscErrorCode UMReadISs(UM *mesh, char *rootname) {
+PetscErrorCode UMReadISs(UM *mesh, char *filename) {
     PetscErrorCode ierr;
     PetscViewer viewer;
     int         n_bfn, n_bfs;
-    char        filename[266];
-    strcpy(filename, rootname);
-    strncat(filename, ".is", 10);
     if ((mesh->K > 0) || (mesh->P > 0)) {
         SETERRQ(PETSC_COMM_WORLD,1,
                 "elements already created? ... stopping\n");

@@ -108,7 +108,7 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
             na = as[2*p+0];  // nodes at end of segment
             nb = as[2*p+1];
             // length of segment
-            dx = aloc[na].x-aloc[nb].x
+            dx = aloc[na].x-aloc[nb].x;
             dy = aloc[na].y-aloc[nb].y;
             ls = sqrt(dx * dx + dy * dy);
             // midpoint rule; psi_na=psi_nb=0.5 at midpoint of segment
@@ -300,7 +300,7 @@ PetscErrorCode JacobianPreallocation(Mat J, unfemCtx *user) {
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
     PetscBool   view = PETSC_FALSE, noprealloc = PETSC_FALSE;
-    char        meshroot[256] = "";
+    char        root[256] = "", nodesname[256], issname[256];
     UM          mesh;
     unfemCtx    user;
     SNES        snes;
@@ -318,8 +318,8 @@ int main(int argc,char **argv) {
            "exact solution cases: 0=linear, 1=nonlinear, 2=nonhomoNeumann, 3=chapter3",
            "unfem.c",user.solncase,&(user.solncase),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsString("-mesh",
-           "file name root of mesh (files have .node,.ele extensions)",
-           "unfem.c",meshroot,meshroot,sizeof(meshroot),NULL); CHKERRQ(ierr);
+           "file name root of mesh stored in PETSc binary with .vec,.is extensions",
+           "unfem.c",root,root,sizeof(root),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsInt("-quaddeg",
            "quadrature degree (1,2,3)",
            "unfem.c",user.quaddeg,&(user.quaddeg),NULL); CHKERRQ(ierr);
@@ -358,11 +358,17 @@ int main(int argc,char **argv) {
             SETERRQ(PETSC_COMM_WORLD,1,"other solution cases not implemented");
     }
 
+    // determine filenames
+    strcpy(nodesname, root);
+    strncat(nodesname, ".vec", 4);
+    strcpy(issname, root);
+    strncat(issname, ".is", 3);
+
 //STARTMAINREADMESH
     // read mesh object of type UM
     ierr = UMInitialize(&mesh); CHKERRQ(ierr);
-    ierr = UMReadNodes(&mesh,meshroot); CHKERRQ(ierr);
-    ierr = UMReadISs(&mesh,meshroot); CHKERRQ(ierr);
+    ierr = UMReadNodes(&mesh,nodesname); CHKERRQ(ierr);
+    ierr = UMReadISs(&mesh,issname); CHKERRQ(ierr);
     if (view) {
         PetscViewer stdoutviewer;
         ierr = PetscViewerASCIIGetStdout(PETSC_COMM_WORLD,&stdoutviewer); CHKERRQ(ierr);
