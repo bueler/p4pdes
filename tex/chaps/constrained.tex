@@ -61,3 +61,35 @@ where $r_{\text{free}} = 0.69797$, $A = 0.68026$, and $B = 0.47152$.
 %> I see from Section 5.7 of the manual that SNES supports box constraints on variables, which is great. However, I was also hoping to also be able to consider general linear inequality constraints, so I was wondering if anyone has any suggestions on how (or if) that could be done with PETSc?
 %> Thanks,
 %> David
+
+
+%Date: Sat, 11 Jun 2016 12:19:59 -0500
+%From: Barry Smith <bsmith@mcs.anl.gov>
+%To: Justin Chang <jychang48@gmail.com>
+%   Justin,
+%For bound constrained optimization problems, there is:
+%   TRON -- a truncated Newton method from your favorite inventor of such methods
+%   BLMVM -- a limited memory quasi-Newton method for bound constraints (projected quasi-Newton)
+%There used to be the KT solvers that was just a wrapper around the complementarity
+%methods.  Jason -- what happened to this?
+%Anyways, from the gradient and Hessian (or Hessian vector product), you can apply the
+%complementarity solvers to the optimality conditions:
+%   ASLS -- active set family (e.g. projected newton)
+%   SSLS -- semismooth family
+%For more general constraints, there is:
+%   IPM -- interior-point method
+%I have not used it or tested it though.
+%For PDE constrained problems, there is:
+%   LCL -- linearly constrained augmented Lagrangian.
+%ROL has imitations either directly copied from our code or written from our papers.
+%
+%> On Jun 10, 2016, at 5:57 PM, Justin Chang <jychang48@gmail.com> wrote:
+%> Hi all,
+%> Does PETSc currently have any of these solvers for bounded constraint problems:
+%>   1) Semismooth Newton methods (aka primal-dual active-set methods)
+%>   2) Projected Newton methods
+%> Trilinos' Rapid Optimization Library (ROL) has them, and I have seen papers and books claiming that these solvers are state-of-the-art.
+%> I see there's SNESVINEWTONSSLS and TAOGPCG but are these the same as the above methods?
+%> Thanks,
+%> Justin
+
