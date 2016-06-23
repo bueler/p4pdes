@@ -7,11 +7,12 @@ LOC=$1
 function run() {
   rm -f tmp
   set -x
-  /usr/bin/time -f "%e" $LOC/unfem -log_view -un_mesh $LOC/meshes/trap.$1 $2 &> tmp
+  $LOC/unfem -log_view -un_mesh $LOC/meshes/trap.$1 $2 &> tmp
   set +x
-  grep "|u-u_exact|" tmp | awk '{print $NF}' >> $OUT
-  grep "SNESFunctionEval" tmp | awk '{print $2}' >> $OUT
-  grep "Time (sec):" tmp | awk '{print $3}' >> $OUT
+  grep "|u-u_exact|" tmp | awk '{print $10}' >> $OUT      # h
+  grep "|u-u_exact|" tmp | awk '{print $NF}' >> $OUT      # error
+  grep "SNESFunctionEval" tmp | awk '{print $2}' >> $OUT  # evals
+  grep "Time (sec):" tmp | awk '{print $3}' >> $OUT       # time
   rm tmp
 }
 

@@ -36,6 +36,9 @@ plap-conditionnumber.pdf: plap-conditionnumber.py
 ode.pdf: ode-plot.py
 	python ode-plot.py
 
+unfem-snesfd.pdf unfem-time.pdf unfem-error.pdf: unfem-graphs.py
+	python unfem-graphs.py
+
 .PHONY: clean
 
 clean:
