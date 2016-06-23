@@ -5,8 +5,9 @@ expcirclebasic.pdf
 newtonconv*.pdf
 reaction-conv.pdf
 minsurf.pdf
-plap-*.pdf
 ode.pdf
+plap-*.pdf
+unfem-*.pdf
 
 ## Core latex/pdflatex auxiliary files:
 *.aux

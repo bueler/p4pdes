@@ -469,6 +469,12 @@ FIXME show residual evaluation \texttt{FormFunction()}
 
 FIXME demo convergence with \texttt{-snes\_fd}
 
+\begin{figure}
+\includegraphics[width=\textwidth]{figs/unfem-snesfd}
+\caption{FIXME error and evals}
+\label{fig:un:unfem-snesfd}
+\end{figure}
+
 
 \section{Assembling an approximate Jacobian}
 
@@ -491,6 +497,12 @@ Again this is computed by quadrature, similar to \eqref{eq:un:elementintegralref
 
 \cinputpart{unfem.c}{\CODELOC}{FIXME}{VIII}{//STARTPICARD}{//ENDPICARD}{code:unfempicard}
 
+\begin{figure}
+\includegraphics[width=\textwidth]{figs/unfem-error}
+\caption{FIXME errors and convergence rate}
+\label{fig:un:unfem-error}
+\end{figure}
+
 
 \section{Preallocate a \pMat (serial)}
 
@@ -507,6 +519,13 @@ $ timer ./unfem -un_mesh meshes/trap.7
 case 0 result for N=46421 nodes:  |u-u_exact|_inf = 6.55365e-05
 real 0.97
 \end{cline}
+
+\begin{figure}
+%\includegraphics[width=\textwidth]{figs/unfem-times}
+\caption{FIXME stage times}
+\label{fig:un:unfem-times}
+\end{figure}
+
 
 \section{Performance relative to \pDMDA structured grid}
 
