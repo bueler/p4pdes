@@ -313,7 +313,7 @@ int main(int argc,char **argv) {
     PC          pc;
     Mat         A;
     Vec         r, u, uexact;
-    double      err;
+    double      err, h_max;
 
     PetscInitialize(&argc,&argv,NULL,help);
     ierr = PetscLogStageRegister("Read mesh      ", &user.stages[0]); CHKERRQ(ierr);
@@ -380,6 +380,7 @@ int main(int argc,char **argv) {
     ierr = UMInitialize(&mesh); CHKERRQ(ierr);
     ierr = UMReadNodes(&mesh,nodesname); CHKERRQ(ierr);
     ierr = UMReadISs(&mesh,issname); CHKERRQ(ierr);
+    ierr = UMStats(&mesh, &h_max, NULL, NULL, NULL); CHKERRQ(ierr);
     if (view) {
         PetscViewer stdoutviewer;
         ierr = PetscViewerASCIIGetStdout(PETSC_COMM_WORLD,&stdoutviewer); CHKERRQ(ierr);
@@ -430,8 +431,8 @@ int main(int argc,char **argv) {
     ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
     ierr = VecNorm(u,NORM_INFINITY,&err); CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,
-               "case %d result for N=%d nodes:  |u-u_exact|_inf = %g\n",
-               user.solncase,mesh.N,err); CHKERRQ(ierr);
+               "case %d result for N=%d nodes with max h = %.3e:  |u-u_exact|_inf = %g\n",
+               user.solncase,mesh.N,h_max,err); CHKERRQ(ierr);
 
     // clean-up
     SNESDestroy(&snes);

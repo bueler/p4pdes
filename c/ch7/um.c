@@ -252,6 +252,53 @@ PetscErrorCode UMReadISs(UM *mesh, char *filename) {
 }
 
 
+PetscErrorCode UMStats(UM *mesh, double *maxh, double *meanh, double *maxa, double *meana) {
+    PetscErrorCode ierr;
+    const int   *ae;
+    const Node  *aloc;
+    int         k;
+    double      x[3], y[3], ax, ay, bx, by, cx, cy, h, a,
+                Maxh = 0.0, Maxa = 0.0, Sumh = 0.0, Suma = 0.0;
+    if ((mesh->K == 0) || (mesh->e == NULL)) {
+        SETERRQ(PETSC_COMM_WORLD,1,
+                "number of elements unknown; call UMReadElements() first\n");
+    }
+    if (mesh->N == 0) {
+        SETERRQ(PETSC_COMM_WORLD,2,
+                "node size unknown so element check impossible; call UMReadNodes() first\n");
+    }
+    ierr = UMGetNodeCoordArrayRead(mesh,&aloc); CHKERRQ(ierr);
+    ierr = ISGetIndices(mesh->e,&ae); CHKERRQ(ierr);
+    for (k = 0; k < mesh->K; k++) {
+        x[0] = aloc[ae[3*k]].x;
+        y[0] = aloc[ae[3*k]].y;
+        x[1] = aloc[ae[3*k+1]].x;
+        y[1] = aloc[ae[3*k+1]].y;
+        x[2] = aloc[ae[3*k+2]].x;
+        y[2] = aloc[ae[3*k+2]].y;
+        ax = x[1] - x[0];
+        ay = y[1] - y[0];
+        bx = x[2] - x[0];
+        by = y[2] - y[0];
+        cx = x[1] - x[2];
+        cy = y[1] - y[2];
+        h = PetscMax(ax*ax+ay*ay, PetscMax(bx*bx+by*by, cx*cx+cy*cy));
+        h = sqrt(h);
+        a = 0.5 * PetscAbs(ax*by-ay*bx);
+        Maxh = PetscMax(Maxh,h);
+        Sumh += h;
+        Maxa = PetscMax(Maxa,a);
+        Suma += a;
+    }
+    ierr = ISRestoreIndices(mesh->e,&ae); CHKERRQ(ierr);
+    ierr = UMRestoreNodeCoordArrayRead(mesh,&aloc); CHKERRQ(ierr);
+    if (maxh)  *maxh = Maxh;
+    if (maxa)  *maxa = Maxa;
+    if (meanh)  *meanh = Sumh / mesh->K;
+    if (meana)  *meana = Suma / mesh->K;
+    return 0;
+}
+
 PetscErrorCode UMGetNodeCoordArrayRead(UM *mesh, const Node **xy) {
     PetscErrorCode ierr;
     if ((!mesh->loc) || (mesh->N == 0)) {
