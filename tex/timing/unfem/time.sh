@@ -16,7 +16,7 @@ function run() {
   rm tmp
 }
 
-(cd $LOC/ && ./gentraps.sh trap 8)
+(cd $LOC/ && ./gentraps.sh trap 9)
 
 export OUT=snes-fd-ErrorsEvalsTimes
 rm -f $OUT
@@ -26,7 +26,7 @@ done
 
 export OUT=ErrorsEvalsTimes
 rm -f $OUT
-for N in 1 2 3 4 5 6 7 8; do
+for N in 1 2 3 4 5 6 7 8 9; do
     run $N
 done
 
