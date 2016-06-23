@@ -1,1 +1,1 @@
-case 3 result for N=9 nodes with max h = 7.071e-01:  |u-u_exact|_inf = 0.0159947
+case 3 result for N=9 nodes with max_h = 7.071e-01 :  |u-u_exact|_inf = 0.0159947

@@ -1,1 +1,1 @@
-case 0 result for N=8 nodes with max h = 1.414e+00:  |u-u_exact|_inf = 0.230159
+case 0 result for N=8 nodes with max_h = 1.414e+00 :  |u-u_exact|_inf = 0.230159
