@@ -3,22 +3,24 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def getheet(name):
+def getstats(name):
     eet = np.loadtxt('../timing/unfem/' + name)
     N = len(eet)
-    eet = np.reshape(eet,(N/4,4))
+    eet = np.reshape(eet,(N/6,6))
     h = eet[:,0]
     err = eet[:,1]
     evals = np.array(eet[:,2],dtype=int)
-    time = eet[:,3]
-    return h, err, evals, time
+    readmeshstagetime = eet[:,3]
+    setupstagetime = eet[:,4]
+    solverstagetime = eet[:,5]
+    return h, err, evals, readmeshstagetime, setupstagetime, solverstagetime
 
 def saveit(outname):
     print "writing %s ..." % outname
     plt.savefig(outname,bbox_inches='tight')
     plt.clf()
 
-h, err, evals, time = getheet('snes-fd-ErrorsEvalsTimes')
+h, err, evals, _, _, _ = getstats('snes-fd-ErrorsEvalsTimes')
 
 fig, ax1 = plt.subplots()
 ax1.loglog(h,err,'ko',markersize=16.0,markerfacecolor='w')
@@ -33,7 +35,7 @@ ax1.set_xlim(3.0e-2,3.0)
 saveit('unfem-snesfd.pdf')
 
 snesfderr = err.copy()
-h, err, evals, time = getheet('ErrorsEvalsTimes')
+h, err, _, rmst, sust, sost = getstats('ErrorsEvalsTimes')
 p = np.polyfit(np.log(h),np.log(err),1)
 print 'convergence at rate h^%.3f' % p[0]
 

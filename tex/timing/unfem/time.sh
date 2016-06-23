@@ -12,7 +12,9 @@ function run() {
   grep "|u-u_exact|" tmp | awk '{print $10}' >> $OUT      # h
   grep "|u-u_exact|" tmp | awk '{print $NF}' >> $OUT      # error
   grep "SNESFunctionEval" tmp | awk '{print $2}' >> $OUT  # evals
-  grep "Time (sec):" tmp | awk '{print $3}' >> $OUT       # time
+  grep "Read mesh      :" tmp | awk '{print $5}' >> $OUT  # stage time
+  grep "Set-up         :" tmp | awk '{print $4}' >> $OUT  # stage time
+  grep "Solver         :" tmp | awk '{print $4}' >> $OUT  # stage time
   rm tmp
 }
 

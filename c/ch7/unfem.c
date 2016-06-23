@@ -22,7 +22,7 @@ typedef struct {
     double (*gD_fcn)(double, double);
     double (*gN_fcn)(double, double);
     double (*uexact_fcn)(double, double);
-    PetscLogStage stages[4];  //STRIP
+    PetscLogStage readstage, setupstage, solverstage, resstage, jacstage;  //STRIP
 } unfemCtx;
 //ENDCTX
 
@@ -89,7 +89,7 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
                  ls, xmid, ymid, sint, xx, yy, sum;
     int          n, p, na, nb, k, l, q;
 
-    PetscLogStagePush(user->stages[2]);  //STRIP
+    PetscLogStagePush(user->resstage);  //STRIP
     ierr = VecGetArrayRead(u,&au); CHKERRQ(ierr);
     ierr = VecSet(F,0.0); CHKERRQ(ierr);
     ierr = VecGetArray(F,&aF); CHKERRQ(ierr);
@@ -197,7 +197,7 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
                  dx1, dx2, dy1, dy2, detJ, xx, yy, sum;
     int          n, k, l, m, q, cr, cv, row[3];
 
-    PetscLogStagePush(user->stages[3]);  //STRIP
+    PetscLogStagePush(user->jacstage);  //STRIP
     ierr = MatZeroEntries(P); CHKERRQ(ierr);
     ierr = ISGetIndices(user->mesh->bfn,&abfn); CHKERRQ(ierr);
     for (n = 0; n < user->mesh->N; n++) {
@@ -316,10 +316,11 @@ int main(int argc,char **argv) {
     double      err, h_max;
 
     PetscInitialize(&argc,&argv,NULL,help);
-    ierr = PetscLogStageRegister("Read mesh      ", &user.stages[0]); CHKERRQ(ierr);
-    ierr = PetscLogStageRegister("Solver         ", &user.stages[1]); CHKERRQ(ierr);
-    ierr = PetscLogStageRegister("Residual eval  ", &user.stages[2]); CHKERRQ(ierr);
-    ierr = PetscLogStageRegister("Jacobian eval  ", &user.stages[3]); CHKERRQ(ierr);
+    ierr = PetscLogStageRegister("Read mesh      ", &user.readstage); CHKERRQ(ierr);  //STRIP
+    ierr = PetscLogStageRegister("Set-up         ", &user.setupstage); CHKERRQ(ierr);  //STRIP
+    ierr = PetscLogStageRegister("Solver         ", &user.solverstage); CHKERRQ(ierr);  //STRIP
+    ierr = PetscLogStageRegister("Residual eval  ", &user.resstage); CHKERRQ(ierr);  //STRIP
+    ierr = PetscLogStageRegister("Jacobian eval  ", &user.jacstage); CHKERRQ(ierr);  //STRIP
 
     user.quaddeg = 1;
     user.solncase = 0;
@@ -375,7 +376,7 @@ int main(int argc,char **argv) {
     strncat(issname, ".is", 3);
 
 //STARTMAINREADMESH
-    PetscLogStagePush(user.stages[0]);  //STRIP
+    PetscLogStagePush(user.readstage);  //STRIP
     // read mesh object of type UM
     ierr = UMInitialize(&mesh); CHKERRQ(ierr);
     ierr = UMReadNodes(&mesh,nodesname); CHKERRQ(ierr);
@@ -391,6 +392,7 @@ int main(int argc,char **argv) {
 //ENDMAINREADMESH
 
 //STARTMAINMAT
+    PetscLogStagePush(user.setupstage);  //STRIP
     // setup matrix for Picard iteration, including preallocation
     ierr = MatCreate(PETSC_COMM_WORLD,&A); CHKERRQ(ierr);
     ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,mesh.N,mesh.N); CHKERRQ(ierr);
@@ -420,7 +422,8 @@ int main(int argc,char **argv) {
     // set initial iterate and solve
     ierr = VecDuplicate(r,&u); CHKERRQ(ierr);
     ierr = VecSet(u,0.0); CHKERRQ(ierr);
-    PetscLogStagePush(user.stages[1]);  //STRIP
+    PetscLogStagePop();  //STRIP
+    PetscLogStagePush(user.solverstage);  //STRIP
     ierr = SNESSolve(snes,NULL,u);CHKERRQ(ierr);
     PetscLogStagePop();  //STRIP
 //ENDMAINSOLVER
