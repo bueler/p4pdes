@@ -43,9 +43,10 @@ PetscErrorCode UMReadISs(UM *mesh, char *filename);
 // view all fields in UM to the viewer
 PetscErrorCode UMView(UM *mesh, PetscViewer viewer);
 
-// compute statistics for mesh:  maxh,meanh = maximum/mean of triangle side lengths;
-// maxa,meana = maximum/mean of triangle areas
-PetscErrorCode UMStats(UM *mesh, double *maxh, double *meanh, double *maxa, double *meana);
+// compute statistics for mesh:  maxh,meanh = maximum/mean of triangle side
+// lengths; maxa,meana = maximum/mean of triangle areas
+PetscErrorCode UMStats(UM *mesh, double *maxh, double *meanh, double *maxa,
+                       double *meana);
 
 // give access to a length-N array of Node structs
 PetscErrorCode UMGetNodeCoordArrayRead(UM *mesh, const Node **xy);
