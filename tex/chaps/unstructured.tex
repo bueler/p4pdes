@@ -1,16 +1,12 @@
 
-In this Chapter we implement a finite element method (FEM) for an unstructured triangular mesh which covers a general polygonal domain.  Our code solves certain linear and nonlinear Poisson equation problems with reasonably-general boundary conditions.
-
-Our approach is to
+In this Chapter we implement a finite element method (FEM) for an unstructured triangular mesh on a general polygonal domain.  Our code solves certain linear and nonlinear Poisson equation problems with reasonably-general boundary conditions.  The approach is to
 \begin{center}
 \emph{first do element-wise assembly of the residual equations,}
 \end{center}
 and thereby get a functioning \pSNES-based code.  We will not even think about matrices in writing the initial code.  Only after making sure it works do we
 \begin{center}
-\emph{then write additional code to assemble an approximate Jacobian matrix.}
+\emph{write additional code to assemble an approximate Jacobian matrix.}
 \end{center}
-
-Similar to the example in the last Chapter, the residual equations $\bF(\bu)=0$, the nonlinear system seen by the \pSNES solver, is the discretized weak form of the PDE.  Our direct construction of these equations roughly follows the residual implementations of Chapters \ref{chap:nl}--\ref{chap:of}.  The FEM ``stiffness'' matrix $A$, a major piece in typical FEM introductions \citep{Braess2007,Elmanetal2005}, arises here as the Jacobian when solving $\bF(\bu)=0$.  In our first runs, done before writing any matrix-assembly code, the \pSNES solver approximates this linear system through finite-differencing of evaluations of $\bF$.  Eventually we do assemble a Jacobian, but one that is only correct for the linear case.  For the smooth nonlinear case tested here, however, this inaccurate linearization suffices.
 
 We do the following new tasks in this Chapter:
 \begin{itemize}
@@ -20,11 +16,13 @@ We do the following new tasks in this Chapter:
 \item implement Neumann boundary conditions.
 \end{itemize}
 
+Similarly to the example in the last Chapter, the residual equations $\bF(\bu)=0$, which is to say the nonlinear system seen by the \pSNES solver, is the discretized weak form of the PDE.  Our direct construction of these equations roughly follows the residual implementations of Chapters \ref{chap:nl}--\ref{chap:of}.
+
+The FEM ``stiffness'' matrix $A$, a major piece in typical FEM introductions \citep{Braess2007,Elmanetal2005}, arises here as the Jacobian when solving $\bF(\bu)=0$.  In our first runs, done before writing any matrix-assembly code, the \pSNES solver approximates this linear system through finite-differencing evaluations of $\bF$.  Eventually we do assemble a Jacobian, but one that is only correct for the linear case.  For the smooth nonlinear case tested here, however, this inaccurate linearization suffices.
+
 The example here contrasts with the rectangular-element ($Q^1$) FEM of the last Chapter by not using a \pDMDA and a structured grid.  Instead we implement a minimal, though naive, mesh-topology infrastructure.  (Doing so substantially increases our workload!)  The relatively-simple \Triangle program generates ASCII files describing the mesh.  An ``index set'' \pIS  type holds the global indices of nodes and triangles (elements).  \pVec and \pMat objects, used for the solution and Jacobian respectively, are indexed through the \pIS values.
 
-In contrast with both earlier and later Chapters, we generate a code that only works on one MPI process (i.e.~a serial code).  However, at the end of the Chapter we briefly consider, though we do not implement, the additional constructs needed to distribute a mesh across many processes.  These considerations motivate the \pDMPlex example in Chapter \ref{chap:dp}.
-
-Though our naive approach succeeds in solving the problem, at least in serial, the benefits of \PETSc's mesh-topology \pDM tools, including \pDMDA in previous Chapters and \pDMPlex in Chapter \ref{chap:dp}, become clearer by forgoing them here.
+In contrast with both earlier and later Chapters, we generate a code that only works on one MPI process (i.e.~a serial code).  However, at the end of the Chapter we briefly consider, though we do not implement, the additional constructs needed to distribute a mesh across many processes.  These considerations motivate the \pDMPlex example in Chapter \ref{chap:dp}.  In fact, the benefits of \PETSc's mesh-topology \pDM tools, including \pDMDA in previous Chapters and \pDMPlex in Chapter \ref{chap:dp}, become clearer by forgoing them here.
 
 
 \section{A 2D nonlinear Poisson problem}
@@ -35,11 +33,13 @@ Though our naive approach succeeds in solving the problem, at least in serial, t
 \label{fig:un:generalpoissondomain}
 \end{marginfigure}
 
-Let $\Omega \subset \RR^2$ be a bounded (open) region as in Figure \ref{fig:un:generalpoissondomain}.  Suppose its boundary $\partial\Omega$ is well-behaved, for example polygonal or Lipschitz-continuous \citep[section 1.2]{Ciarlet2002}.  Suppose $\partial\Omega$ is decomposed into (measurable) disjoint subsets $\partial_D \Omega$ and $\partial_N \Omega$ whose union is the entire boundary $\partial \Omega$.
+Let $\Omega \subset \RR^2$ be a bounded (open) region as in Figure \ref{fig:un:generalpoissondomain}.  We suppose its boundary $\partial\Omega$ is well-behaved, for example polygonal or Lipschitz-continuous \citep[section 1.2]{Ciarlet2002}.  Also we decompose the boundary into (measurable) disjoint subsets $\partial_D \Omega$ and $\partial_N \Omega$.
 
-The Poisson problem in Chapter \ref{chap:st} is based on the equation $- \grad^2 u = f$, but we allow a more general nonlinear form here.  Let $a(u,x,y)$ and $f(u,x,y)$ be continuous functions, and assume there is $\eps>0$ so that
-    $$a(u,x,y) \ge \eps > 0.$$
-That is, we require \emph{uniform ellipticity} \citep{Evans2010}.  The strong form also includes boundary conditions, here of nonhomogeneous Dirichlet and Neumann type.  Thus the  nonlinear Poisson (diffusion) \emph{strong form} we solve is to find $u(x,y)$ so that
+Chapter \ref{chap:st} solves the Poisson equation $- \grad^2 u = f$.  Here we allow a more general nonlinear form.  Let $a(u,x,y)$ and $f(u,x,y)$ be continuous functions, and assume there is $\eps$ so that
+\begin{equation}
+a(u,x,y) \ge \eps > 0, \label{eq:un:uniformelliptic}
+\end{equation}
+that is, \emph{uniform ellipticity} \citep{Evans2010}.  Boundary conditions are also needed, and here we consider nonhomogeneous Dirichlet and Neumann type.  Thus the  nonlinear Poisson \emph{strong form} we solve is to find $u(x,y)$ so that
 \begin{align}
 - \Div \left(a(u,x,y) \grad u\right) &= f(u,x,y) \quad \text{ on } \Omega, \label{eq:un:poissonstrong} \\
 u &= g_D \quad \text{ on } \partial_D \Omega, \notag \\
@@ -47,11 +47,11 @@ u &= g_D \quad \text{ on } \partial_D \Omega, \notag \\
 \end{align}
 By definition, $\partial u/\partial n = \bn \cdot \grad u$ where $\bn$ is the outward unit normal on $\partial \Omega$ (Figure \ref{fig:un:generalpoissondomain}).
 
-The data of problem \eqref{eq:un:poissonstrong}, besides the region $\Omega$ and its boundary, includes a \emph{diffusion coefficient} $a$, a \emph{source term} $f$, \emph{Dirichlet data} $g_D$, and \emph{Neumann data} $g_N$.  For the purpose of numerical solutions we will simply assume these data are continuous.  Poisson problem \eqref{poissonsquare} in Chapter \ref{chap:st} is the homogeneous Dirichlet case where $\Omega$ is the square, $a\equiv 1$, $f=f(x,y)$ is independent of the solution $u$, $\partial_D \Omega = \partial \Omega$, $\partial_N \Omega = \emptyset$, and $g_D=0$.
+The data of problem \eqref{eq:un:poissonstrong}, besides the region $\Omega$ and its boundary, includes a \emph{diffusion coefficient} $a$, a \emph{source term} $f$, \emph{Dirichlet data} $g_D$, and \emph{Neumann data} $g_N$.  For the purpose of numerical solutions we will assume these data are continuous.  Poisson problem \eqref{poissonsquare} in Chapter \ref{chap:st} is the homogeneous Dirichlet case where $\Omega$ is a square, $a\equiv 1$, $f=f(x,y)$, $\partial_D \Omega = \partial \Omega$, $\partial_N \Omega = \emptyset$, and $g_D=0$.
 
-Problem \eqref{eq:un:poissonstrong} is not the most general (nonlinear) Poisson problem.  Specifically, one could allow more general \emph{Robin} boundary conditions $\alpha u + \beta \frac{\partial u}{\partial n} = \gamma$ where, generally, $\alpha,\beta,\gamma$ could vary along the boundary \citep{Elmanetal2005}; see Exercise \ref{chap:un}.\ref{exer:un:robin}.  One could also allow $a$ and/or $f$ to depend on the gradient of $u$, as does $a=|\grad u|^{p-2}$ in the $p$-Laplacian equation of Chapter \ref{chap:of}.
+One could allow more general boundary conditions in \eqref{eq:un:poissonstrong}, in particular \emph{Robin} conditions $\alpha u + \beta \frac{\partial u}{\partial n} = \gamma$ where $\alpha,\beta,\gamma$ could vary along the boundary \citep{Elmanetal2005}; see Exercise \ref{chap:un}.\ref{exer:un:robin}.  One could also allow $a$ and/or $f$ to depend on the gradient of $u$; recall $a=|\grad u|^{p-2}$ in the $p$-Laplacian equation of Chapter \ref{chap:of}, for example.
 
-As \eqref{eq:un:poissonstrong} is stated there may be no solution where ``$\Div(a\grad u)$'' makes sense as a continuous function, even for polygonal regions and continuous data, for example.  That is, there may be no $u\in C^2(\Omega) \cap C(\overline \Omega)$ so that \eqref{eq:un:poissonstrong} applies at all points.  A solution exists, however, in the linear case at least, if we convert \eqref{eq:un:poissonstrong} to a \emph{weak form}.  Such a weak formulation already arose in Chapter \ref{chap:of} as the gradient of an objective function, but the weak form here generally does not have a minimization origin; see Exercise \ref{chap:un}.\ref{eq:un:nottheobjective}.  In this Chapter we will derive the weak form from the strong form in the traditional way, by multiplying by a test function and integrating.
+As \eqref{eq:un:poissonstrong} is stated there may be no solution where ``$\Div(a\grad u)$'' makes sense as a continuous function, even for polygonal regions and continuous data.  That is, there may be no $u\in C^2(\Omega) \cap C(\overline \Omega)$ so that \eqref{eq:un:poissonstrong} applies at all points.  In the linear case, at least, a solution exists if we convert \eqref{eq:un:poissonstrong} to a \emph{weak form}.  Such a weak formulation already arose in Chapter \ref{chap:of} as the gradient of an objective function, but the weak form here generally does not have a minimization origin; see Exercise \ref{chap:un}.\ref{exer:un:notminimization}.  In this Chapter we will derive the weak form from the strong form in the traditional way, by multiplying by a test function and integrating.
 
 
 \section{Weak form with general boundary values}
@@ -471,7 +471,7 @@ FIXME demo convergence with \texttt{-snes\_fd}
 
 \begin{figure}
 \includegraphics[width=\textwidth]{figs/unfem-snesfd}
-\caption{FIXME error and evals}
+\caption{FIXME error and evals using \texttt{-snes\_fd}}
 \label{fig:un:unfem-snesfd}
 \end{figure}
 
