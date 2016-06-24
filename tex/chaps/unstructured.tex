@@ -86,9 +86,9 @@ For the former see Exercise \ref{chap:un}.\ref{exer:un:bratu}.\sidenote{Exercise
 
 \section{A $P^1$ finite element method}
 
-Our FEM for the Poisson problem seeks $u$, from a finite-dimensional subspace of $W^{1,2}_g(\Omega)$, for which \eqref{eq:un:poissonweak} holds for all test functions $v$ in a finite-dimensional subspace of $W^{1,2}_0(\Omega)$.  In the \emph{Galerkin} method here, these subspaces, both built from a triangulation of $\Omega$, are nearly the same.
+Our FEM for the Poisson problem seeks $u$, from a finite-dimensional subspace of $W^{1,2}_g(\Omega)$, for which \eqref{eq:un:poissonweak} holds for all test functions $v$ in a finite-dimensional subspace of $W^{1,2}_0(\Omega)$.  In the \emph{Galerkin} method here, these subspaces, both built from a triangulation of $\Omega$, are essentially the same.
 
-We require $\Omega$ to be polygonal, so that $\partial\Omega$ is a closed polygon (Figure \ref{fig:un:polygon}), and we require that the segments forming $\partial\Omega$ are either entirely in $\partial_D\Omega$ or entirely in $\partial_N\Omega$.  Furthermore we assume $\partial_D\Omega$ is closed and contains at least one segment of positive length, leading to well-posedness of the continuum problem, at least in the linear case.
+We require $\Omega$ to be polygonal, so that $\partial\Omega$ is a closed polygon (Figure \ref{fig:un:polygon}), and we require that the segments forming $\partial\Omega$ are either entirely in $\partial_D\Omega$ or entirely in $\partial_N\Omega$.  Furthermore we assume $\partial_D\Omega$ is closed and contains at least one segment of positive length.  (This leads to well-posedness of the continuum problem, at least in the linear case.)
 
 \begin{marginfigure}
 \input{tmp/blob.tikz}
@@ -100,13 +100,17 @@ By definition, a \emph{triangulation} is a finite set of non-overlapping, non-em
 \begin{equation}
 \Th = \left\{\triangle_k \,\Big|\, \cup_k \overline{\triangle}_k = \overline{\Omega} \, \text{ and} \,\, \triangle_k \cap \triangle_l = \emptyset \, \text{ if } k\ne l\right\}. \label{eq:un:triangulation}
 \end{equation}
-Let $K$ be the number of triangles, which are indexed $k=0,\dots,K-1$.  The $N$ nodes are located at $\bx_i=(x_i,y_i)$ for $i=0,\dots,N-1$.  (In contrast to many references, such as \citet{Elmanetal2005} which we follow in many ways, numbering here is zero-based, suitable for a C implementation.)  An example triangulation $\Th$ is shown in Figure \ref{fig:un:number-mesh}.  The subscript ``$h$'' in ``$\Th$'' denotes the typical or maximum size $h$ (e.g.~diameter) of the triangles, for now just a reminder of our desired limit $h\to 0$.  
+An example triangulation $\Th$ is shown in Figure \ref{fig:un:number-mesh}.  The subscript ``$h$'' in notation ``$\Th$'' denotes the typical or maximum size $h$ (e.g.~diameter) of the triangles.  It is a reminder of our desired limit $h\to 0$.
 
-We will use $P^1$ finite elements \citep{Elmanetal2005}, and thus the functions in use are continuous on the whole of $\overline\Omega$ while being linear on each triangle $\triangle_k$.  Such functions have three degrees of freedom on each $\triangle_k$, which one may think of as the coefficients in the linear formula $a + b x + c y$.  In fact there are more convenient local bases than $\{1,x,y\}$, as follows.  For each node $j$ there is a basis (``hat'') function  $\psi_j(x,y)$ which is linear on each triangle, continuous on all of $\overline{\Omega}$, and equal to one at only one node $j$,
-\begin{equation*}
-\psi_j(\bx_i) = \delta_{ij}.
-\end{equation*}
-See Figure \ref{fig:un:hatfunction} and compare Figure \ref{fig:of:q1hat}.  Functions $\psi_j$ are in $W^{1,2}(\Omega)$ \citep{Braess2007}, with piecewise-constant partial derivatives $\partial\psi_j/\partial x$ and $\partial\psi_j/\partial y$.  The set $\{\psi_j\}_{j=0,\dots,N-1}$ is linearly-independent.
+In contrast to many references, such as \citet{Elmanetal2005} which we follow in many ways, numbering here is zero-based, suitable for a C implementation.  Thus the $K$ triangles $\triangle_k$ in the triangulation are indexed $k=0,\dots,K-1$.  The $N$ nodes are located at $\bx_i=(x_i,y_i)$ for $i=0,\dots,N-1$. 
+
+In a $P^1$ finite element method the functions are linear on each $\triangle_k$ and continuous on the whole of $\overline\Omega$.  Such functions have three degrees of freedom on each $\triangle_k$, which one may think of as the coefficients in the linear formula $a + b x + c y$.
+
+In fact there are more convenient local bases than $\{1,x,y\}$, as follows.  For each node $j$ let $\psi_j(x,y)$ denote the basis (``hat'') function which is linear on each triangle, continuous on all of $\overline{\Omega}$, and equal to one at only one node $j$, so that
+\begin{equation}
+\psi_j(\bx_i) = \delta_{ij}.  \label{eq:un:hatdelta}
+\end{equation}
+See Figure \ref{fig:un:hatfunction} and compare Figure \ref{fig:of:q1hat}.  Functions $\psi_j$ are in $W^{1,2}(\Omega)$ \citep{Braess2007}, with piecewise-constant partial derivatives $\partial\psi_j/\partial x$ and $\partial\psi_j/\partial y$.  It follows easily from \eqref{eq:un:hatdelta} that the set $\{\psi_j\}_{j=0,\dots,N-1}$ is linearly-independent.
 
 \begin{marginfigure}
 \input{tmp/blob.1.elenum.tikz}
@@ -118,20 +122,20 @@ See Figure \ref{fig:un:hatfunction} and compare Figure \ref{fig:of:q1hat}.  Func
 \label{fig:un:number-mesh}
 \end{marginfigure}
 
-Hat functions allow us to interpolate and extend the Dirichlet data $g_D$ from its nodal values on $\partial_D \Omega$ to the whole of $\overline\Omega$.  We number the $n_D$ nodes which are in the Dirichlet boundary by $\bx_{j_l} \in \partial_D\Omega$ for $l=0,\dots,n_D-1$.  Let $\hat g_D \in C(\overline\Omega)$ be the piecewise-linear interpolant of $g_D$ which has value zero at all the nodes $\bx_j$ which are not in the Dirichlet boundary $\partial_D \Omega$:
+These hat functions allow us to interpolate and extend the Dirichlet data $g_D$ from its nodal values on $\partial_D \Omega$ to the whole of $\overline\Omega$.  We number the $n_D$ nodes which are in the Dirichlet boundary by $\bx_{j_l} \in \partial_D\Omega$ for $l=0,\dots,n_D-1$.  Let $\hat g_D \in C(\overline\Omega)$ be the piecewise-linear interpolant of $g_D$ which has value zero at all the nodes $\bx_j$ which are \emph{not} in the Dirichlet boundary $\partial_D \Omega$:
 \begin{equation}
 \hat g_D(x,y) = \sum_{l=0}^{n_D-1} g_D(\bx_{j_l}) \psi_{j_l}(x,y). \label{eq:un:hatgdefine}
 \end{equation}
 
-Using \eqref{eq:un:hatgdefine} we can specify the finite-dimensional subspaces used in the method in terms of $\hat g_D$ and the span of certain basis functions $\psi_j$.  First, the \emph{test functions} are zero along $\partial_D \Omega$,
+Using hat functions $\psi_j$ and also $\hat g_D$ we can now specify the finite-dimensional subspaces of $W^{1,2}(\Omega)$ used in the method.  First, the \emph{test functions}
 \begin{align*}
 S_{0}^h &= \Span\left<\psi_j \,:\, \bx_j \notin \partial_D \Omega\right> = \Span\left<\psi_j \,:\, j \neq j_l\right>.
 \end{align*}
-Second, the \emph{trial functions} have value $g_D$ along $\partial_D \Omega$,
+These are zero along $\partial_D \Omega$.  Second, the \emph{trial functions} have value $g_D$ along $\partial_D \Omega$,
 \begin{equation}
 S_{g}^h = \left\{\hat g_D + w \,:\, w \in S_{0}^h\right\}.
 \end{equation}
-Note that $S_{0}^h$ is a linear subspace of $W^{1,2}_0(\Omega)$ while $S_{g}^h$ is merely an affine subspace of $W^{1,2}(\Omega)$.  Also
+Note that $S_{0}^h$ is a linear subspace of $W^{1,2}_0(\Omega)$ while $S_{g}^h$ is merely an affine subspace of $W^{1,2}(\Omega)$, and that
 \begin{equation}
 \dim(S_{0}^h)=\dim(S_{g}^h)=N-n_D.
 \end{equation}
@@ -142,20 +146,23 @@ Note that $S_{0}^h$ is a linear subspace of $W^{1,2}_0(\Omega)$ while $S_{g}^h$ 
 \label{fig:un:hatfunction}
 \end{marginfigure}
 
-The FEM itself can now be stated.  It requires \eqref{eq:un:poissonweak} to be true for some $u^h\in S_{g}^h$ and for all $v^h\in S_{0}^h$.  By linearity it suffices to consider only a basis of test functions $S_{0}^h$, so we require
+The FEM itself can now be stated.  It seeks $u^h\in S_{g}^h$ so that \eqref{eq:un:poissonweak} holds for all $v^h\in S_{0}^h$.  By linearity it suffices to consider only a basis of test functions $S_{0}^h$, so we require
 \begin{equation}
 \int_\Omega a(u^h) \grad u^h \cdot \grad \psi_i = \int_\Omega f(u^h) \psi_i + \int_{\partial_N\Omega} g_N \psi_i \label{eq:un:weakformhat}
 \end{equation}
-for all $i$ such that $\bx_i \notin \partial_D \Omega$.  On the other hand we may expand $u^h$ using $N-n_D$ unknown coefficients $u_j\in\RR$:
+for all $i$ such that $\bx_i \notin \partial_D \Omega$.
+
+On the other hand we may expand $u^h$ using $N-n_D$ unknown coefficients $u_j\in\RR$:
 \begin{equation}
 u^h(x,y) = \hat g_D(x,y) + \sum_{\bx_j \notin \partial_D \Omega} u_j\, \psi_j(x,y). \label{eq:un:uhexpand}
 \end{equation}
+The coefficients $u_j$ in \eqref{eq:un:uhexpand} are the unknowns.
 
-The coefficients $u_j$ in \eqref{eq:un:uhexpand} are the unknowns.  Given the triangulation $\mathcal{T}_h$ of $\Omega$ and the data of the problem, namely the functions $a$, $f$, $g_D$, and $g_N$, the complete specification of the FEM solution $u^h$ is given by equations \eqref{eq:un:hatgdefine}, \eqref{eq:un:weakformhat}, and \eqref{eq:un:uhexpand}.
+Given the triangulation $\mathcal{T}_h$ of $\Omega$ and the data of the problem, namely the functions $a$, $f$, $g_D$, and $g_N$, the complete specification of the FEM solution $u^h$ is given by equations \eqref{eq:un:hatgdefine}, \eqref{eq:un:weakformhat}, and \eqref{eq:un:uhexpand}.
 
-In the linear case it is common to now write system \eqref{eq:un:weakformhat} and \eqref{eq:un:uhexpand} as a linear system $A \bu = \bb$.  The usual next step in an FEM is to assemble the \emph{stiffness matrix} $A$ \citep{Elmanetal2005}.  However, we will not assemble a matrix until we have an initial, and verified, numerical solution.  Following the pattern established since Chapter \ref{chap:nl}, we first implement equation \eqref{eq:un:weakformhat} as a residual-evaluation function $\bF(\bu)$, from the representation of $u^h$ as a vector $\bu$.  In evaluating $\bF$ we use \eqref{eq:un:uhexpand} to get point values of $u^h$ and its gradient $\grad u^h$ on the interior of triangles.  These point values allow quadrature, similar to that in Chapter \ref{chap:of}, to approximate the integrals in \eqref{eq:un:weakformhat}.  Implementing a residual in the linear case is mathematically equivalent to assembling $A$ and $\bb$, but the residual-evaluation code here is simpler because it does not require direct contact with a \PETSc \pMat object at all.
+As a next step in the linear case it is common to write system \eqref{eq:un:weakformhat} and \eqref{eq:un:uhexpand} in matrix-vector form as $A \bu = \bb$, and then to assemble the \emph{stiffness matrix} $A$ \citep{Elmanetal2005}.  However, as said earlier, we will not assemble a matrix until we have an initial, verified numerical solution.  Following the pattern established since Chapter \ref{chap:nl}, we first implement equation \eqref{eq:un:weakformhat} as a residual function $\bF(\bu)$, a \PETSc \pSNES call-back, in which the input $\bu$ is the representation of $u^h$ as a vector of nodal values.  In evaluating $\bF$ we use \eqref{eq:un:uhexpand} to get point values of $u^h$, and its gradient $\grad u^h$, on the interior of triangles.  These point values allow quadrature, similar to that in Chapter \ref{chap:of}, to approximate the integrals in \eqref{eq:un:weakformhat}.  Implementing a residual in the linear case is mathematically equivalent to assembling $A$ and $\bb$, but the residual-evaluation code requires no direct contact with a \PETSc \pMat object at all.  These tools can be tested for correctness with a finite-differenced Jacobian (Chapter \ref{chap:nl}).  Once this is all shown to work correctly, via comparison to an exact solution, then we will consider matrix assembly for the Jacobian.
 
-In the next section we describe and the code the element-wise evaluation of the residual function $\bF$ as a \PETSc \pSNES call-back.  However, before the code can be written we need to be more specific about what \eqref{eq:un:weakformhat} says on each element.  Also we will need to read the triangular mesh into \PETSc data structures \pVec and \pIS.  These tools can be tested for correctness with a finite-differenced Jacobian (Chapter \ref{chap:nl}).  Once this is all shown to work correctly, via comparison to an exact solution, then we will consider matrix assembly for the Jacobian.
+Before the code can be written we need to be more specific about what \eqref{eq:un:weakformhat} says on each element, and we will need to read the triangular mesh into \PETSc data structures.
 
 
 \section{Assembly of the residual equations}
@@ -164,12 +171,12 @@ In expression \eqref{eq:un:uhexpand}, $N-n_D$ values $\{u_j\}$ determine the FEM
 \begin{equation}
 \bu = \{u_j\}_{j=0}^{N-1} \in \RR^N  \label{eq:un:unknowns}
 \end{equation}
-To enforce the boundary conditions, the components of the residual corresponding to Dirichlet boundary must be zero:
+To enforce the boundary conditions, the components of the residual corresponding to the Dirichlet boundary must be zero:
 \begin{equation}
 F_i(\bu) = u_i - g_D(\bx_i) \qquad \text{ if } \bx_i \in \partial_D\Omega.  \label{eq:un:dirichletresiduals}
 \end{equation}
 
-Triangulation $\mathcal{T}_h$ almost\sidenote{The set $\Omega \setminus \cup_k \triangle_k$ has measure zero.} covers $\Omega$ with non-overlapping triangles so we can write the weak form \eqref{eq:un:weakformhat} as a sum over elements.  To be specific, for each $k=0,\dots,K-1$ let
+Triangulation $\mathcal{T}_h$ covers\sidenote{At least, the set $\Omega \setminus \cup_k \triangle_k$ has measure zero.} $\Omega$ with non-overlapping triangles so we can write integral \eqref{eq:un:weakformhat} as a sum over elements.  To be specific, for each $k=0,\dots,K-1$ let
 \begin{equation}
 F_i^k(\bu) = \int_{\triangle_k} a(u^h) \grad u^h \cdot \grad \psi_i - f(u^h) \psi_i.  \label{eq:un:elementweakform}
 \end{equation}
@@ -177,25 +184,25 @@ Suppose $n_N$ is the number of segments (edges) which are in the Neumann boundar
 \begin{equation}
 \varphi_i^\nu = \int_{s_\nu} g_N \psi_i.  \label{eq:un:segmentweakform}
 \end{equation}
-Note that $\varphi_i^\nu$ does \emph{not} depend on the solution $u^h$.  Then residual equation \eqref{eq:un:weakformhat} is
+Note that $\varphi_i^\nu$ does \emph{not} depend on the solution $u^h$.  Then \eqref{eq:un:weakformhat} is
 \begin{equation}
 F_i(\bu) = \sum_{k=0}^{K-1} F_i^k(\bu) - \sum_{\nu=0}^{n_N-1} \varphi_i^\nu = 0  \qquad \text{ if } \bx_i \notin \partial_D\Omega. \label{eq:un:elementwisesum}
 \end{equation}
-Together, equations \eqref{eq:un:dirichletresiduals} and \eqref{eq:un:elementwisesum} form the (generally) nonlinear system, of dimension $N$, which we supply to the \pSNES solver:
+Together, equations \eqref{eq:un:dirichletresiduals} and \eqref{eq:un:elementwisesum} form a (generally) nonlinear system, of dimension $N$, which we supply to the \pSNES solver:
 \begin{equation}
 \bF(\bu)=0. \label{eq:un:fullsystem}
 \end{equation}
 
 Observe that $n_D$ is the number of \emph{nodes} in the Dirichlet boundary, whereas $n_N$ is the number of \emph{segments} in the Neumann boundary.  The former are degrees of freedom, while the latter are domains of integration.
 
-Because the support of the hat function $\psi_i$ only overlaps with a few triangles $\triangle_k$, only a few values $F_i^k(\bu)$ and $\varphi_i^\nu$ are nonzero.  Also, only a few nodal values $\bu=\{u_j\}$ enter into $F_i^k(\bu)$, namely those values $u_j$ such that the support of $\psi_j$ overlaps with $\triangle_k$.  These facts make \eqref{eq:un:fullsystem} a sparse nonlinear system.
+Because the support of the hat function $\psi_i$ only overlaps with a few triangles $\triangle_k$, for each $i$ only a few values $F_i(\bu)$ and $\varphi_i^\nu$ are nonzero.  Also, only a few nodal values $\bu=\{u_j\}$ enter into $F_i^k(\bu)$, namely those values $u_j$ such that the support of $\psi_j$ overlaps with $\psi_i$.  These facts make \eqref{eq:un:fullsystem} a sparse nonlinear system.
 
-We will compute the element integrals \eqref{eq:un:elementweakform} by referring $\triangle_k$ to a reference triangle $\triangle_\ast$ with vertices $(0,0),\,(1,0),\,(0,1)$, as shown in Figure \ref{fig:isoparametric}.  (In Chapter \ref{chap:of} we did a similar thing for quadrilaterals.)  If $\triangle_k$ has vertices $(x_0,y_0),\,(x_1,y_1),\,(x_2,y_2)$ then the linear map from $\triangle_\ast$ to $\triangle_k$ is
+We will compute the element integrals \eqref{eq:un:elementweakform} by referring $\triangle_k$ to a reference triangle $\triangle_\ast$ with vertices $(0,0),\,(1,0),\,(0,1)$, as shown in Figure \ref{fig:isoparametric}.  (In Chapter \ref{chap:of} we did something similar for quadrilaterals.)  If $\triangle_k$ has vertices $(x_0,y_0),\,(x_1,y_1),\,(x_2,y_2)$ then the linear map from $\triangle_\ast$ to $\triangle_k$ is
 \begin{align}
 x(\xi,\eta) &= x_0 + (x_1-x_0) \xi + (x_2-x_0) \eta, \label{eq:un:trianglemap} \\
 y(\xi,\eta) &= y_0 + (y_1-y_0) \xi + (y_2-y_0) \eta. \notag
 \end{align}
-The Jacobian determinant of this map, which is needed when integrating over the reference element, is constant on each element.  Its magnitude $2|\triangle_k|$ is the ratio of the area $|\triangle_k|$ to the area $|\triangle_\ast|=1/2$.
+The Jacobian determinant of this map, needed for integrating, is constant on each element.  Its magnitude $2|\triangle_k|$ is the ratio of the triangle areas.
 
 \begin{marginfigure}
 \input{tikz/isoparametric.tex}
@@ -207,7 +214,7 @@ On $\triangle_\ast$ any linear function is a linear combination of three local (
 \begin{equation}
 \chi_0(\xi,\eta) = 1-\xi-\eta, \qquad \chi_1(\xi,\eta) = \xi, \qquad \chi_2(\xi,\eta) = \eta. \label{eq:un:chiformulas}
 \end{equation}
-If $\bx_i\in\overline{\triangle_k}$ then hat function $\psi_i$ satisfies
+If $\bx_i\in\overline{\triangle_k}$ then $\psi_i$ satisfies
 \begin{equation}
 \psi_i(x(\xi,\eta),y(\xi,\eta)) = \chi_\ell(\xi,\eta) \label{eq:un:psichimap}
 \end{equation}
@@ -221,13 +228,13 @@ where the integrand is
 \begin{equation}
 H_\ell^k(\bu,\xi,\eta) = \left[a(u^h) \grad u^h \cdot \grad \psi_i - f(u^h) \psi_i\right]_{\triangle_\ast}.  \label{eq:un:elementintegrand}
 \end{equation}
-Here vertex $\ell$ of $\triangle_\ast$ corresponds to the node $\bx_i$.  Note that ``$\grad$'' in \eqref{eq:un:elementintegrand} refers to derivatives in variables $x,y$.  Exercises \ref{chap:un}.\ref{exer:un:gradientdetails} and \ref{chap:un}.\ref{exer:un:elementintegranddetails} addresses the details implicit in \eqref{eq:un:elementintegralreference} and \eqref{eq:un:elementintegrand}.
+Here vertex $\ell$ of $\triangle_\ast$ corresponds to the node $\bx_i$.  Note that ``$\grad$'' in \eqref{eq:un:elementintegrand} refers to derivatives in variables $x,y$.  Exercises \ref{chap:un}.\ref{exer:un:gradientdetails} and \ref{chap:un}.\ref{exer:un:elementintegranddetails} addresses the remaining details implicit in \eqref{eq:un:elementintegralreference} and \eqref{eq:un:elementintegrand}.
 
-As in Chapter \ref{chap:of}, integrals \eqref{eq:un:elementintegralreference} will be approximated using quadrature.  Generally, if there are $Q$ quadrature points $(\xi_q,\eta_q) \in \triangle_\ast$ with weights $w_q$ then
+As in Chapter \ref{chap:of}, integrals \eqref{eq:un:elementintegralreference} are approximated using quadrature.  Generally, if there are $Q$ quadrature points $(\xi_q,\eta_q) \in \triangle_\ast$ with weights $w_q$ then
 \begin{equation}
 F_i^k(\bu) \approx 2 |\triangle_k| \sum_{q=0}^{Q-1} w_q H_\ell^k(\bu,\xi_q,\eta_q). \label{eq:un:elementquadraturereference}
 \end{equation}
-We use symmetric quadrature rules constructed for the reference triangle $\triangle_\ast$.  (Unsymmetric quadrature rules based on tensor products of one-dimensional integrals \citep{KarniadakisSherwin2013} are an alternative.)  Table \ref{tab:un:quadrature} shows the degree $1,2,3$ Gaussian rules \citep{Dunavant1985} with $Q=1,3,4$ points, respectively (Exercise \ref{chap:un}.\ref{exer:un:checkquadrature}).  Note that the sum of the weights is $1/2$ because $|\triangle_\ast|=1/2$.
+We use symmetric quadrature rules constructed for the reference triangle $\triangle_\ast$ \citep{Dunavant1985}.  (Unsymmetric quadrature rules based on tensor products of one-dimensional integrals \citep{KarniadakisSherwin2013} are an alternative.)  Table \ref{tab:un:quadrature} shows the degree $1,2,3$ Gaussian rules with $Q=1,3,4$ points, respectively (Exercise \ref{chap:un}.\ref{exer:un:checkquadrature}).  Note that the sum of the weights is $1/2$ because $|\triangle_\ast|=1/2$.
 
 \begin{table}[h]
 \vspace{0.1in}
@@ -258,10 +265,10 @@ $3$ & $4$ & \begin{tabular}{c}
 \end{tabular}
 
 \vspace{0.1in}
-\caption{Symmetric quadrature rules on the reference triangle $\triangle_\ast$.  See \eqref{eq:un:elementquadraturereference}.} \label{tab:un:quadrature}
+\caption{Symmetric quadrature rules with $Q$ points on the reference triangle $\triangle_\ast$.  See \eqref{eq:un:elementquadraturereference}.} \label{tab:un:quadrature}
 \end{table}
 
-For the Neumann boundary contributions we use the midpoint rule; compare Exercise \ref{chap:un}.\ref{exer:un:gaussneumann}.  Observe that hat function $\psi_i$ has value $1/2$ at the midpoint of any edge which is incident to $\bx_i$.  If $(x_m,y_m)$ is the midpoint and $|s_\nu|$ is the length of segment $s_\nu$, and if $\bx_i\in \overline{s_\nu}$ then
+For the Neumann boundary contributions we use the midpoint rule; compare Exercise \ref{chap:un}.\ref{exer:un:gaussneumann}.  Observe that hat function $\psi_i$ has value $1/2$ at the midpoint of an edge incident to $\bx_i$.  If $(x_m,y_m)$ is this midpoint, $|s_\nu|$ is the length of segment $s_\nu$, and $\bx_i\in \overline{s_\nu}$ then
 \begin{equation}
 \varphi_i^\nu \approx g_N(x_m,y_m) \psi_i(x_m,y_m) |s_\nu| = \frac{1}{2} |s_\nu|\, g_N(x_m,y_m). \label{eq:un:segmentquadrature}
 \end{equation}
