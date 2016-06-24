@@ -277,7 +277,7 @@ Otherwise, if $\bx_i \notin \overline{s_\nu}$, then $\varphi_i^\nu=0$.
 
 \section{Example problems}
 
-Let us set up some simple cases with known exact solutions.  The first two cases both test the implementation of the PDE and of Dirichlet boundary conditions, and homogeneous Neumann boundary conditions, but one problem is linear and the other nonlinear.  An additional case tests the general Neumann boundary condition implementation.  Our goal for these problems is that the measured numerical errors from the FEM will only converge at the theoretical rate $O(h^2)$ if our implementation is correct.
+Now let us set up some simple cases with known exact solutions.  The three cases test the implementation of the PDE and the boundary conditions.  Two problems are linear and one is nonlinear.  Our goal for these problems is that the measured numerical errors from the FEM will only converge at the optimum, theoretical rate $O(h^2)$ \citep{Elmanetal2005} if our implementation is correct.
 
 \begin{figure}
 \input{tikz/trap.tex}
@@ -291,9 +291,9 @@ All three cases are based on the same manufactured solution
 \end{equation}
 This formula also computes the Dirichlet boundary values $g_D(x,y)$ in all cases, but other details are case-specific:
 \begin{itemize}
-\item[case $0$:] \emph{Linear}.  Use Figure \ref{fig:un:trap} boundary conditions.  Noting $\partial u_{\text{exact}}/\partial n = -\partial u_{\text{exact}}/\partial y = 0$ on the Neumann boundary $\partial_N \Omega$, where $y=0$, let $g_N=0$.  Let $a=1$ and determine $f$ by differentiating the exact solution: $f(x,y) = -\grad^2 u_{\text{exact}} = 2 + 3 y^2$.
+\item[case $0$:] \emph{Linear}.  Use Figure \ref{fig:un:trap} boundary conditions.  Noting $\partial u_{\text{exact}}/\partial n = -\partial u_{\text{exact}}/\partial y = 0$ on the Neumann boundary $\partial_N \Omega = \{y=0\}$, let $g_N=0$.  Let $a=1$ and determine $f$ by differentiating the exact solution, so that $f(x,y) = 2 + 3 y^2$.
 \item[case $1$:] \emph{Nonlinear}.  Again use Figure \ref{fig:un:trap} boundary conditions and $g_N=0$.  However, let $a(u) = 1+u^2$ and compute the corresponding $f(u)$ by differentiation.
-\item[case $2$:] \emph{Non-homogeneous Neumann}.  Use Figure \ref{fig:un:trapneu} boundary conditions.  Let $a$, $f$ be as in case $0$.  Determine the (non-zero) value $g_N$ by differentiating $u_{\text{exact}}$ along the Neumann boundary, a line segment with outward unit normal vector $\bn = \left<1/\sqrt{2},1/\sqrt{2}\right>$.
+\item[case $2$:] \emph{Non-homogeneous Neumann}.  Use Figure \ref{fig:un:trapneu} boundary conditions.  Let $a$, $f$ be the same as in case $0$.  Determine the (non-zero) value $g_N$ by differentiating $u_{\text{exact}}$ along the Neumann boundary, a line segment with outward unit normal vector $\bn = \left<1/1\right>/\sqrt{2}$.
 \end{itemize}
 See \texttt{c/\CODELOC cases.h} (not shown) for all remaining details.
 
@@ -306,7 +306,7 @@ See \texttt{c/\CODELOC cases.h} (not shown) for all remaining details.
 
 \section{Triangulations from \Triangle}
 
-\PETSc does not include tools for triangulating regions of the plane, that is, for the initial generation of an unstructured mesh.  We use the widely-available \Triangle\sidenote{See \href{http://www.cs.cmu.edu/~quake/triangle.html}{www.cs.cmu.edu/$\sim$quake/ triangle.html} for documentation.} software \citep{Shewchuk1996} for this task.  \Triangle is limited to 2D, but the ASCII files it generates have straightforward details.
+\PETSc does not include tools for triangulating regions of the plane, that is, for the generation of an unstructured mesh.  We use the widely-available \Triangle\sidenote{See \href{http://www.cs.cmu.edu/~quake/triangle.html}{www.cs.cmu.edu/$\sim$quake/ triangle.html} for documentation.} software \citep{Shewchuk1996} for this task.  \Triangle is limited to 2D, but the ASCII files it generates have straightforward details.
 
 \inputwhole{../c/\CODELOC/meshes/trap.poly}{\CODELOC meshes/trap.poly}{A description of the boundary polygon in Figure \ref{fig:un:trap}, suitable for reading by \Triangle.}{code:trappoly}
 
