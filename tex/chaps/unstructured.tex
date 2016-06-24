@@ -56,42 +56,37 @@ As \eqref{eq:un:poissonstrong} is stated there may be no solution where ``$\Div(
 
 \section{Weak form with general boundary values}
 
-Recall $L^2(\Omega)$ is the space of square-integrable real functions on $\Omega$.  Define the following Hilbert space:
-    $$H^1(\Omega) = \left\{u \,:\, u \in L^2(\Omega) \,\&\, \grad u \in L^2(\Omega)\right\}.$$
-Definition \eqref{eq:of:sobolevdefn} of Sobolev spaces $W^{1,p}(\Omega)$ includes this space: $H^1(\Omega) = W^{1,2}(\Omega)$.
+Recall $L^2(\Omega)$ is the space of square-integrable real functions on $\Omega$ and that $W^{1,2}(\Omega)$ is the Sobolev space in which the gradient is also square integrable.\sidenote{See definition \eqref{eq:of:sobolevdefn}.}  We use two subsets of $W^{1,2}(\Omega)$: \emph{trial functions} from $W^{1,2}_g(\Omega)$, the functions with value $g_D$ along $\partial_D \Omega$, and \emph{test functions} from $W^{1,2}_0(\Omega)$, with value $0$ along $\partial_D \Omega$.
 
-We use two subsets of $H^1(\Omega)$: \emph{trial functions} come from $H_{g}^1(\Omega)$, the functions with value $g_D$ along $\partial_D \Omega$, and \emph{test functions} come from $H_{0}^1(\Omega)$, with value $0$ along $\partial_D \Omega$.  Note that $H_{0}^1(\Omega)$ is a linear subspace of $H^1(\Omega)$ while generally $H_{g}^1(\Omega)$ is not.
-
-Now choose any $v\in H_{0}^1(\Omega)$, multiply the first equation in \eqref{eq:un:poissonstrong} by $v$, and integrate by parts:
+Now choose any $v\in W^{1,2}_0(\Omega)$, multiply the first equation in \eqref{eq:un:poissonstrong} by $v$, and integrate by parts:
 \begin{equation*}
 \int_\Omega a(u) \grad u \cdot \grad v - \int_{\partial\Omega} \frac{\partial u}{\partial n} v = \int_\Omega f(u) v.
 \end{equation*}
-In writing such integrals we will generally show dependence on the solution $u$ but suppress it for $x,y$ so that $a(u,x,y)=a(u)$, and similarly for $f$.
-
-Next we use the boundary information, that $v=0$ on $\partial_D\Omega$ and $\partial u/\partial n=g_N$ on $\partial_N\Omega$:
+(In writing such integrals we will generally show dependence on the solution $u$ but suppress it for $x,y$ so that $a(u,x,y)=a(u)$, and similarly for $f$.)  Next we use the boundary information, that $v=0$ on $\partial_D\Omega$ and $\partial u/\partial n=g_N$ on $\partial_N\Omega$:
 \begin{equation}
-\int_\Omega a(u) \grad u \cdot \grad v = \int_\Omega f(u) v + \int_{\partial_N\Omega} g_N v\quad \text{ for any } v\in H_{0}^1(\Omega). \label{eq:un:poissonweak}
+\int_\Omega a(u) \grad u \cdot \grad v = \int_\Omega f(u) v + \int_{\partial_N\Omega} g_N v\quad \text{ for any } v\in W^{1,2}_0(\Omega). \label{eq:un:poissonweak}
 \end{equation}
-Equation \eqref{eq:un:poissonweak} is the \emph{weak formulation} of \eqref{eq:un:poissonstrong}.  Any $u \in H_{g}^1(\Omega)$ satisfying \eqref{eq:un:poissonweak} is a \emph{weak solution}.  Observe that the Dirichlet boundary conditions $g_D$ are incorporated into defining $H_{g}^1(\Omega)$ while the Neumann boundary data $g_N$ appears in the weak form \eqref{eq:un:poissonweak}.
+
+Equation \eqref{eq:un:poissonweak} is the \emph{weak formulation} of \eqref{eq:un:poissonstrong}.  Any $u \in W^{1,2}_g(\Omega)$ satisfying \eqref{eq:un:poissonweak} is a \emph{weak solution}.  Observe that the Dirichlet boundary conditions $g_D$ are incorporated into defining $W^{1,2}_g(\Omega)$ while the Neumann boundary data $g_N$ appears in the weak form \eqref{eq:un:poissonweak}.
 
 Here are the ``rules'' for passing between the strong \eqref{eq:un:poissonstrong} and weak \eqref{eq:un:poissonweak} formulations:\begin{itemize}
 \item A well-behaved function $u \in C^2(\Omega) \cap C(\overline \Omega)$ which satisfies \eqref{eq:un:poissonstrong} also solves \eqref{eq:un:poissonweak}.  The derivation above shows this.
-\item If $u \in H_{g}^1(\Omega)$ solves \eqref{eq:un:poissonweak} then we accept it, by definition, as a solution.   If it is also well-behaved, $u \in C^2(\Omega) \cap C(\overline \Omega)$, then we may reverse the derivation to show it solves \eqref{eq:un:poissonstrong}.
+\item If $u \in W^{1,2}_g(\Omega)$ solves \eqref{eq:un:poissonweak} then we accept it, by definition, as a solution.   If it is also well-behaved, $u \in C^2(\Omega) \cap C(\overline \Omega)$, then we may reverse the derivation to show it solves \eqref{eq:un:poissonstrong}.
 \end{itemize}
 
-For the linear case, where functions $a$ and $f$ are independent of $u$, the theory is relatively complete.  If $\partial_D \Omega$ has positive measure then it is a theorem that a solution to \eqref{eq:un:poissonweak} exists and is unique (\emph{well-posedness}; \citep{Ciarlet2002,Evans2010}).  Furthermore there exist conditions on the domain (e.g.~it is a convex polygon) and the boundary data, from which one can show that $u$ solving \eqref{eq:un:poissonweak} is in $C^2(\Omega) \cap C(\overline \Omega)$ (\emph{regularity}; \citep{Evans2010}).  Such theoretical matters are, however, beyond our scope.
+For the linear case, where functions $a$ and $f$ are independent of $u$, the theory of \eqref{eq:un:poissonweak} is relatively complete.  If $\partial_D \Omega$ has positive measure then a solution to \eqref{eq:un:poissonweak} exists and is unique (\emph{well-posedness}; \citep{Ciarlet2002,Evans2010}).  Furthermore there exist conditions on the domain (e.g.~it is a convex polygon) and the boundary data, from which one can show that $u$ solving \eqref{eq:un:poissonweak} is in $C^2(\Omega) \cap C(\overline \Omega)$ (\emph{regularity}; \citep{Evans2010}).  Such theoretical matters are, however, beyond our scope.
 
-In nonlinear cases each particular problem must be analyzed for well-posedness.  In terms of practical computation, however, some nonlinear cases are covered by our method and are solvable using our code.  These include the 2D versions of
+In nonlinear cases each particular problem must be analyzed for well-posedness.  In terms of practical computation, however, some important nonlinear cases are covered by our method and are solvable using the code we construct in this Chapter.  These include the 2D versions of
 \begin{itemize}
 \item the \emph{Bratu} equation wherein $a\equiv 1$ and $f=\lambda e^u$, and
 \item ``uniformized'' \emph{porous medium} equations \citep{Ockendonetal2003}, in which, for example, $a=u^{m-1}+\eps$ for some $m\ge 1$ and $\eps>0$.
 \end{itemize}
-For the former see Exercise \ref{chap:un}.\ref{exer:un:bratu}.\sidenote{Exercise \ref{chap:nl}.\ref{exer:nl:bratu} solves the 1D version.}  We will test our code on an easy case of the latter, namely with $a(u)=1+u^2$; see the exact solution \eqref{eq:un:exactsolution} in ``case 1,'' later in this Chapter.
+For the former see Exercise \ref{chap:un}.\ref{exer:un:bratu}.\sidenote{Exercise \ref{chap:nl}.\ref{exer:nl:bratu} solves the 1D version.}  Later in the Chapter we test our code on an easy case of the porous medium equation, namely with $a(u)=1+u^2$.
 
 
 \section{A $P^1$ finite element method}
 
-Our FEM for the Poisson problem requires weak formulation \eqref{eq:un:poissonweak} to be true for $u$ from a finite-dimensional subspace of $H_{g}^1(\Omega)$, and for all test functions $v$ in a finite-dimensional subspace of $H_{0}^1(\Omega)$.  In the \emph{Galerkin} method here, these subspaces, both built from a triangulation of $\Omega$, are nearly the same.
+Our FEM for the Poisson problem seeks $u$, from a finite-dimensional subspace of $W^{1,2}_g(\Omega)$, for which \eqref{eq:un:poissonweak} holds for all test functions $v$ in a finite-dimensional subspace of $W^{1,2}_0(\Omega)$.  In the \emph{Galerkin} method here, these subspaces, both built from a triangulation of $\Omega$, are nearly the same.
 
 We require $\Omega$ to be polygonal, so that $\partial\Omega$ is a closed polygon (Figure \ref{fig:un:polygon}), and we require that the segments forming $\partial\Omega$ are either entirely in $\partial_D\Omega$ or entirely in $\partial_N\Omega$.  Furthermore we assume $\partial_D\Omega$ is closed and contains at least one segment of positive length, leading to well-posedness of the continuum problem, at least in the linear case.
 
@@ -111,7 +106,7 @@ We will use $P^1$ finite elements \citep{Elmanetal2005}, and thus the functions 
 \begin{equation*}
 \psi_j(\bx_i) = \delta_{ij}.
 \end{equation*}
-See Figure \ref{fig:un:hatfunction} and compare Figure \ref{fig:of:q1hat}.  Functions $\psi_j$ are in $H^1(\Omega)$ \citep{Braess2007}, with piecewise-constant partial derivatives $\partial\psi_j/\partial x$ and $\partial\psi_j/\partial y$.  The set $\{\psi_j\}_{j=0,\dots,N-1}$ is linearly-independent.
+See Figure \ref{fig:un:hatfunction} and compare Figure \ref{fig:of:q1hat}.  Functions $\psi_j$ are in $W^{1,2}(\Omega)$ \citep{Braess2007}, with piecewise-constant partial derivatives $\partial\psi_j/\partial x$ and $\partial\psi_j/\partial y$.  The set $\{\psi_j\}_{j=0,\dots,N-1}$ is linearly-independent.
 
 \begin{marginfigure}
 \input{tmp/blob.1.elenum.tikz}
@@ -136,7 +131,7 @@ Second, the \emph{trial functions} have value $g_D$ along $\partial_D \Omega$,
 \begin{equation}
 S_{g}^h = \left\{\hat g_D + w \,:\, w \in S_{0}^h\right\}.
 \end{equation}
-Note that $S_{0}^h$ is a linear subspace of $H_{0}^1(\Omega)$ while $S_{g}^h$ is merely an affine subspace of $H^1(\Omega)$.  Also
+Note that $S_{0}^h$ is a linear subspace of $W^{1,2}_0(\Omega)$ while $S_{g}^h$ is merely an affine subspace of $W^{1,2}(\Omega)$.  Also
 \begin{equation}
 \dim(S_{0}^h)=\dim(S_{g}^h)=N-n_D.
 \end{equation}
