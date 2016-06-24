@@ -77,15 +77,15 @@ const double w[3][4]   = {{1.0/2.0,    NAN,       NAN,       NAN},
                           {1.0/3.0,    1.0/5.0,   1.0/5.0,   3.0/5.0}};
 //ENDFEM
 
+//STARTBDRYRESIDUALS
 PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
     PetscErrorCode ierr;
     unfemCtx     *user = (unfemCtx*)ctx;
     const int    *abfn, *ae, *as, *abfs, *en, deg = user->quaddeg - 1;
     const Node   *aloc;
     const double *au;
-    double       *aF, unode[3], gradu[2], gradpsi[3][2],
-                 uquad[4], aquad[4], fquad[4],
-                 dx, dy, dx1, dx2, dy1, dy2, detJ,
+    double       *aF, unode[3], gradu[2], gradpsi[3][2], uquad[4], aquad[4],
+                 fquad[4], dx, dy, dx1, dx2, dy1, dy2, detJ,
                  ls, xmid, ymid, sint, xx, yy, sum;
     int          n, p, na, nb, k, l, q;
 
@@ -95,7 +95,6 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
     ierr = VecGetArray(F,&aF); CHKERRQ(ierr);
     ierr = UMGetNodeCoordArrayRead(user->mesh,&aloc); CHKERRQ(ierr);
 
-//STARTBDRYRESIDUALS
     // Dirichlet node residuals
     ierr = ISGetIndices(user->mesh->bfn,&abfn); CHKERRQ(ierr);
     for (n = 0; n < user->mesh->N; n++) {
@@ -177,14 +176,13 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
     }
     ierr = ISRestoreIndices(user->mesh->e,&ae); CHKERRQ(ierr);
     ierr = ISRestoreIndices(user->mesh->bfn,&abfn); CHKERRQ(ierr);
-//ENDELEMENTRESIDUALS
-
     ierr = UMRestoreNodeCoordArrayRead(user->mesh,&aloc); CHKERRQ(ierr);
     ierr = VecRestoreArrayRead(u,&au); CHKERRQ(ierr);
     ierr = VecRestoreArray(F,&aF); CHKERRQ(ierr);
     PetscLogStagePop();  //STRIP
     return 0;
 }
+//ENDELEMENTRESIDUALS
 
 PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
     PetscErrorCode ierr;
@@ -434,7 +432,7 @@ int main(int argc,char **argv) {
     ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
     ierr = VecNorm(u,NORM_INFINITY,&err); CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,
-               "case %d result for N=%d nodes with max_h = %.3e :  |u-u_exact|_inf = %g\n",
+               "case %d result for N=%d nodes with h_max = %.3e :  |u-u_ex|_inf = %g\n",
                user.solncase,mesh.N,h_max,err); CHKERRQ(ierr);
 
     // clean-up
