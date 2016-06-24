@@ -378,7 +378,7 @@ Let's try it out.  Because \texttt{tri2petsc.py} uses Python modules from the \P
 $ cd c/ch7/
 $ ln -s ~/petsc/bin/petsc_conf.py
 $ ln -s ~/petsc/bin/PetscBinaryIO.py
-$ ./tri2petsc.py meshes/trap.1 trap.1
+$ ./tri2petsc.py meshes/trap.1 meshes/trap.1
 \end{cline}
 This generates two files \texttt{meshes/trap.1.\{vec,is\}}.
 
@@ -403,9 +403,7 @@ Despite our attempt at modularity, our representation of an unstructured mesh is
 
 \section{Initial implementation}
 
-With an unstructured mesh in hand we can return to implementing the FEM.  We build the minimal \pSNES-using C code which works, called \texttt{c/\CODELOC unfem.c}.  In its initial implementation it has a ``context'' \texttt{struct}, which includes a \texttt{UM} instance, a residual-computation function \texttt{FormFunction()}, and a \texttt{main()} function.  The latter reads options and then creates\sidenote{And destroys at the end.} a \pSNES and \pVecs for holding the approximate solution, the exact solution, and the residual.  For the FEM itself we need enough information to transfer integrals to the reference triangle, and we need quadrature data structures, so we set these up.  There is then nothing else to do, other than to call \texttt{SNESSolve()}.  Figure \ref{fig:un:unfemstack} shows the structure of \texttt{unfem.c}, including the approximate Jacobian (implementation shown later).
-
-Before showing this code, and because the reader might have become too comfortable with \pDMDA-using structured-grid examples in recent Chapters, recalling the first example in Chapter \ref{chap:nl} might be appropriate.  In terms of \PETSc objects and calls to the \PETSc API, \texttt{unfem.c} has a similar structure to \texttt{ecjac.c} in Chapter \ref{chap:nl}.
+With an unstructured mesh in hand we can return to implementing the FEM.  We build the minimal \pSNES-using C code\sidenote{The reader might observe that, in terms of \PETSc objects and calls, \texttt{unfem.c} is similar to \texttt{ecjac.c} in Chapter \ref{chap:nl} in the sense that there is no use of a \PETSc interface for grid topology.} which works, called \texttt{c/\CODELOC unfem.c}.  It has a ``context'' \texttt{struct} which includes a \texttt{UM} instance (Code \eqref{code:unfemctx}).  It has a residual-computation function \texttt{FormFunction()} and a \texttt{main()} function.  The latter reads options and then creates a \pSNES and \pVecs for holding the approximate and exact solutions and the residual.  For the FEM itself we need enough information to transfer integrals to the reference triangle, so we set up straightforward quadrature data structures.  There is then nothing else to do, other than to call \texttt{SNESSolve()}.  Figure \ref{fig:un:unfemstack} shows the structure of \texttt{unfem.c}, including the approximate Jacobian which is implemented later.
 
 \begin{figure}
 \begin{tikzpicture}[scale=0.8,
@@ -425,8 +423,8 @@ Before showing this code, and because the reader might have become too comfortab
 \draw[line width=1pt] (-1,0) node[component] (pc)   {\complabel{\pPC}{preconditioner}};
 
 \draw[line width=1pt] (2,2) node[component] (matj)   {\usedlabel{\pMat}{Jacobian}};
-\draw[line width=1pt] (3.5,0) node[component] (vecs)   {\pVecs \\ \footnotesize  \emph{solution, other fields}};
-\draw[line width=1pt] (7.5,0) node[component] (iss)   {\pISs \\ \footnotesize  \emph{node indices, bdry flags}};
+\draw[line width=1pt] (3.5,0) node[component] (vecs)   {\pVecs \\ \footnotesize  \emph{node coordinates, solution}};
+\draw[line width=1pt] (7.5,0) node[component] (iss)   {\pISs \\ \footnotesize  \emph{indices, bdry flags}};
 
 \path
    ([xshift=-10em]usercode.south) edge[->] node {} (snes)
@@ -446,29 +444,48 @@ Before showing this code, and because the reader might have become too comfortab
 \label{fig:un:unfemstack}
 \end{figure}
 
+\cinputpart{unfem.c}{\CODELOC}{Context for solving FEM \eqref{eq:un:weakformhat} on an unstructured mesh.}{I}{//STARTCTX}{//ENDCTX}{code:unfemctx}
 
-FIXME show extracts of context, actions in \texttt{main()} for reading mesh and for setting up solver
+Extracts from \texttt{c/ch7/unfem.c}, displaying all essential parts of the initial implementation, are shown in Codes \ref{code:unfemctx}--\ref{code:unfemelementresiduals}.  So that the residual-evaluation function \texttt{FormFunction()} has access to functions $a$, $f$, $g_D$, and $g_N$ in FEM \eqref{eq:un:weakformhat}, we define a solution context \texttt{struct unfemCtx} in Code \ref{code:unfemctx}.
 
-\cinputpart{unfem.c}{\CODELOC}{FIXME}{I}{//STARTCTX}{//ENDCTX}{code:unfemctx}
+\cinputpart{unfem.c}{\CODELOC}{The first job in \texttt{main()} is to read an unstructured mesh from \PETSc binary-format files.}{II}{//STARTMAINREADMESH}{//ENDMAINREADMESH}{code:unfemmainreadmesh}
 
-\cinputpart{unfem.c}{\CODELOC}{FIXME}{II}{//STARTMAINREADMESH}{//ENDMAINREADMESH}{code:unfemmainreadmesh}
+Code \ref{code:unfemmainreadmesh} shows how the mesh is read from \PETSc binary files via calls to the ``methods'' of the \texttt{UM} object described earlier.  The remaining major jobs of the \texttt{main()} function are in Code \ref{code:unfemmainsolver}, namely allocating \pVecs and configuring a \pSNES solver object.
 
-\cinputpart{unfem.c}{\CODELOC}{FIXME}{III}{//STARTMAINSOLVER}{//ENDMAINSOLVER}{code:unfemmainsolver}
+\cinputpart{unfem.c}{\CODELOC}{Setting-up a \pSNES object is similar to grid-less examples in Chapter \ref{chap:nl}.  We also set the default \pKSP and \pPC appropriately to our symmetric, positive-definite problem.}{III}{//STARTMAINSOLVER}{//ENDMAINSOLVER}{code:unfemmainsolver}
 
+Though we do not, for now, need to do any work to assemble it, the symmetry and positive-definiteness of the Jacobian matrix is already relevant here.  In the linear case, in which $\partial a/\partial u=0$ and $\partial f/\partial u=0$ in \eqref{eq:un:poissonweak}, the Jacobian $J_{ij} = \partial F_i/\partial u_j$ is symmetric and positive-definite.\sidenote{We return to this idea, and prove the claim, in the subsection below on assembling an approximate Jacobian.}  This fact is sufficient reason to reset the default \pKSP and \pPC types to the conjugate gradient (CG) and incomplete-Cholesky (ICC) types, respectively.  This is done in Code \ref{code:unfemmainsolver} by first getting a pointer to the \pKSP inside the \pSNES (Figure \ref{fig:un:unfemstack}), and then setting its type.  Similarly, accessing a pointer to the \pPC inside the \pKSP allows us to set the \pPC type.
 
-FIXME show FEM stuff
+\cinputpart{unfem.c}{\CODELOC}{Our FEM uses local basis functions $\chi_\ell$ and some quadrature tools.}{IV}{//STARTFEM}{//ENDFEM}{code:unfemfem}
 
-\cinputpart{unfem.c}{\CODELOC}{FIXME}{IV}{//STARTFEM}{//ENDFEM}{code:unfemfem}
+Code \ref{code:unfemfem} shows FEM details (``tools'') appearing in \texttt{c/ch7/unfem.c}.  For example, the first few lines there correspond to equation \eqref{eq:un:chiformulas} for the local basis functions $\chi_\ell(\eta,\xi)$, the gradients $\grad \chi_\ell$, and evaluation of linear combinations $\sum_\ell v_\ell \chi_\ell$.  The remaining lines define arrays for the quadrature rules in Table \ref{tab:un:quadrature}.
 
 FIXME show residual evaluation \texttt{FormFunction()}
 
-\cinputpart{unfem.c}{\CODELOC}{FIXME}{V}{//STARTBDRYRESIDUALS}{//ENDBDRYRESIDUALS}{code:unfembdryresiduals}
+\cinputpart{unfem.c}{\CODELOC}{\texttt{FormFunction()} first evaluates Dirichlet boundary residuals \eqref{eq:un:dirichletresiduals} and Neumann boundary integrals \eqref{eq:un:segmentweakform}.}{V}{//STARTBDRYRESIDUALS}{//ENDBDRYRESIDUALS}{code:unfembdryresiduals}
 
-\cinputpart{unfem.c}{\CODELOC}{FIXME}{VI}{//STARTELEMENTRESIDUALS}{//ENDELEMENTRESIDUALS}{code:unfemelementresiduals}
+\cinputpart{unfem.c}{\CODELOC}{Next, \texttt{FormFunction()} traverses the elements to compute residuals \eqref{eq:un:elementintegralreference}.}{VI}{//STARTELEMENTRESIDUALS}{//ENDELEMENTRESIDUALS}{code:unfemelementresiduals}
 
 
 
 \section{Initial testing}
+
+FIXME first run; the result is not shown 
+
+\begin{cline}
+$ ./unfem -un_mesh meshes/trap.1 -un_view -snes_fd
+...
+case 0 result for N=8 nodes with h_max = 1.414e+00 :  |u-u_ex|_inf = 0.230159
+\end{cline}
+%$
+
+FIXME graphical \pMat view; figure showing result for \texttt{trap.1,2,3}?
+
+\begin{cline}
+$ ./tri2petsc.py meshes/trap.2 meshes/trap.2
+$ ./unfem -un_mesh meshes/trap.2 -mat_view draw -draw_pause 2
+case 0 result for N=33 nodes with h_max = 6.212e-01 :  |u-u_ex|_inf = 0.0289678
+\end{cline}
 
 FIXME demo convergence with \texttt{-snes\_fd}
 
@@ -481,7 +498,12 @@ FIXME demo convergence with \texttt{-snes\_fd}
 
 \section{Assembling an approximate Jacobian}
 
-FIXME EXPLAIN PICARD $\bF(\bu)=0$ to $A(\bu) \bu - \bb(\bu)=0$ to $A(\bu^k) \bu^{k+1} - \bb(\bu^k)=0$ to $A(\bu^k) (\bu^{k+1}-\bu^k) - \bb(\bu^k)= - A(\bu^k) \bu^k$ to $A(\bu^k) \bs = -\bF(\bu^k)$  The linear system at a step, $A(\bu^k) \bs = -\bF(\bu^k)$, has $A=A(\bu^k)\in\RR^{N\times N}$ and $\bb=-\bF(\bu^k)\in\RR^N$, where $N$ is the number of nodes.  \pMat and \pVec objects store the problem, and, unlike in the \texttt{-snes\_fd} and \texttt{-snes\_mf} cases used above, wherein the \pMat object stayed invisibly inside the \pSNES solver, we now assemble the \pMat.
+FIXME EXPLAIN PICARD $\bF(\bu)=0$ to $A(\bu) \bu - \bb(\bu)=0$ to $A(\bu^k) \bu^{k+1} - \bb(\bu^k)=0$ to $A(\bu^k) (\bu^{k+1}-\bu^k) - \bb(\bu^k)= - A(\bu^k) \bu^k$ to $A(\bu^k) \bs = -\bF(\bu^k)$
+
+FIXME compare
+    $$-\Div\left(a(u^k) \grad u^{k+1}\right) = f(u^k)$$
+
+FIXME The linear system at a step, $A(\bu^k) \bs = -\bF(\bu^k)$, has $A=A(\bu^k)\in\RR^{N\times N}$ and $\bb=-\bF(\bu^k)\in\RR^N$, where $N$ is the number of nodes.  \pMat and \pVec objects store the problem, and, unlike in the \texttt{-snes\_fd} and \texttt{-snes\_mf} cases used above, wherein the \pMat object stayed invisibly inside the \pSNES solver, we now assemble the \pMat.
 
 FIXME by considering \eqref{eq:un:dirichletresiduals}, \eqref{eq:un:elementweakform}, and \eqref{eq:un:elementwisesum}, the entries of this Picard/Jacobian matrix are
 \begin{equation}
@@ -517,9 +539,10 @@ compare for \texttt{--with-debugging=0} build:
 \begin{cline}
 $ timer ./unfem -un_mesh meshes/trap.7 -un_noprealloc
 case 0 result for N=46421 nodes:  |u-u_exact|_inf = 6.55365e-05
+case 0 result for N=46421 nodes with h_max = 2.210e-02 :  |u-u_ex|_inf = 6.55083e-05
 real 56.30
 $ timer ./unfem -un_mesh meshes/trap.7
-case 0 result for N=46421 nodes:  |u-u_exact|_inf = 6.55365e-05
+case 0 result for N=46421 nodes with h_max = 2.210e-02 :  |u-u_ex|_inf = 6.55083e-05
 real 0.97
 \end{cline}
 
@@ -540,7 +563,7 @@ $ ./genstructured.py meshes/square.10 1025
 $ ./tri2petsc.py meshes/square.10 meshes/square.10
 $ make unfem
 $ timer ./unfem -un_mesh meshes/square.10 -un_quaddeg 1 -un_case 3
-case 3 result for N=1050625 nodes:  |u-u_exact|_inf = 9.89813e-08
+case 3 result for N=1050625 nodes with h_max = 1.381e-03 :  |u-u_ex|_inf = 9.89813e-08
 real 24.47
 \end{cline}
 
