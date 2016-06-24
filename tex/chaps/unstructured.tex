@@ -520,12 +520,6 @@ case 0 result for N=46421 nodes:  |u-u_exact|_inf = 6.55365e-05
 real 0.97
 \end{cline}
 
-\begin{figure}
-%\includegraphics[width=\textwidth]{figs/unfem-times}
-\caption{FIXME stage times}
-\label{fig:un:unfem-times}
-\end{figure}
-
 
 \section{Performance relative to \pDMDA structured grid}
 
@@ -546,6 +540,15 @@ $ timer ./unfem -un_mesh meshes/square.10 -un_quaddeg 1 -un_case 3
 case 3 result for N=1050625 nodes:  |u-u_exact|_inf = 9.89813e-08
 real 24.47
 \end{cline}
+
+
+\section{Measuring stages}
+
+\begin{figure}
+\includegraphics[width=\textwidth]{figs/unfem-times}
+\caption{FIXME stage times}
+\label{fig:un:unfem-times}
+\end{figure}
 
 
 \section{Toward parallel unstructured meshes}
