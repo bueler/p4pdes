@@ -668,6 +668,12 @@ In \eqref{eq:un:psichidetails} node $\bx_i$ corresponds to vertex $\ell$ on $\tr
 for all cases with $0\le i+j\le n$, against the quadrature result.  Also one should show an inexact quadrature result for some case with $i+j=n+1$.  Write a small program, in the language of your choice, which does so.
 \item \label{exer:un:gaussneumann}  In \texttt{unfem.c} we use the midpoint rule, the one-point Gauss rule, for quadrature when computing the Neumann boundary segment contributions $\varphi_\nu^i$; see equation \eqref{eq:un:segmentquadrature}.  Modify \texttt{unfem.c} to optionally use two-point Gaussian quadrature instead.  Only in case 2 will this make any difference.  Show that accuracy noticeably improves for coarse grids, but that this benefit disappears under grid refinement.
 % see c/ch7/solns/segmentgauss.c.snippet
+\item FIXME the result of
+\begin{cline}
+./unfem -un_mesh meshes/trapneu.1 -un_case 2
+\end{cline}
+report a numerical error of zero; why?; explains missing marker on coarsest grid in numerical error Figure FIXME
+\item FIXME use \texttt{-un_quaddeg 2,3} on cases 0,1,2 (default is \texttt{-un_quaddeg 1}); does it make a substantial difference in any cases?; explain why it is noticable for the nonlinear case 1
 \item \label{exer:un:allneumannfailure}  We have assumed that the Dirichlet boundary $\partial_D \Omega$ has positive measure (length) so that the linear problem, at least, is known to have a unique solution.  By contrast, confirm experimentally that if $\partial_D\Omega$ is empty then the equations no longer have a unique solution.  This can be done by modifying the case 2 exact solution to use Neumann boundary conditions on the whole of $\partial \Omega$.  A direct solve for the linear equations (\texttt{-ksp\_type preonly -pc\_type lu}) will fail; explain the error message which results.
 \item \label{exer:un:allneumannresolution}  Continuing the above Exercise, use \texttt{SNESGetKSP()} and \texttt{KSPSetNullSpace()} to tell the linear solver that the linearization of the Neumann-only problem has constant functions as its null space.  Confirm that direct and iterative solvers now succeed as in the case with non-empty Dirichlet boundary.
 \item \label{exer:un:truejacobian} FIXME implement the true Jacobian in the $a=a(x,y)$ case, so that we only add a diagonal $\partial f/\partial u$ term; test on case 1 example and see if improved \pSNES convergence
