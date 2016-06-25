@@ -479,7 +479,7 @@ case 0 result for N=8 nodes with h_max = 1.414e+00 :  |u-u_ex|_inf = 0.230159
 \end{cline}
 %$
 
-FIXME graphical \pMat view; figure showing result for \texttt{trap.1,2,3}?
+FIXME graphical \pMat view
 
 \begin{cline}
 $ ./tri2petsc.py meshes/trap.2 meshes/trap.2
@@ -487,7 +487,39 @@ $ ./unfem -un_mesh meshes/trap.2 -mat_view draw -draw_pause 2
 case 0 result for N=33 nodes with h_max = 6.212e-01 :  |u-u_ex|_inf = 0.0289678
 \end{cline}
 
+FIXME figure showing result for \texttt{trap.1,2,3}
+
+\begin{figure}
+\includegraphics[width=0.31\textwidth]{figs/trap1mat} \, \includegraphics[width=0.31\textwidth]{figs/trap2mat} \, \includegraphics[width=0.31\textwidth]{figs/trap3mat}
+\caption{FIXME matrix sparsity patterns for the meshes \texttt{trap.1,2,3}}
+\label{fig:un:unfem-matsparsity}
+\end{figure}
+
+FIXME go ahead and generate refined grids, until \texttt{meshes/trap.8.*} which has $10^6$ nodes; use following snippet of Bash code:
+\begin{code}
+area[0]=0.5
+area[1]=0.1
+area[2]=0.02
+area[3]=0.005
+area[4]=0.001
+area[5]=0.0002
+area[6]=0.00005
+area[7]=0.00001
+area[8]=0.000002
+triangle -pqa${area[0]} meshes/trap
+for (( N=1; N<9; N++ )); do
+    triangle -rpqa${area[$N]} meshes/trap.$N      # generate .poly,.node,.ele
+    ./tri2petsc.py meshes/trap.$N meshes/trap.$N  # generate .vec,.is
+done
+\end{code}
+
 FIXME demo convergence with \texttt{-snes\_fd}
+
+\begin{cline}
+$ ./tri2petsc.py meshes/trap.2 meshes/trap.2
+$ ./unfem -un_mesh meshes/trap.2 -mat_view draw -draw_pause 2
+case 0 result for N=33 nodes with h_max = 6.212e-01 :  |u-u_ex|_inf = 0.0289678
+\end{cline}
 
 \begin{figure}
 \includegraphics[width=\textwidth]{figs/unfem-snesfd}

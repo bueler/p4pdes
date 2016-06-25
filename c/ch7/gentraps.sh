@@ -3,7 +3,7 @@
 # generate trapezoidal unstructured meshes using triangle and tri2petsc.py
 
 # example:
-#   ./generate_traps.sh trap 5
+#   ./gentraps.sh trap 5
 
 NAME=$1
 LEV=$2
@@ -17,14 +17,11 @@ area[5]=0.0002
 area[6]=0.00005
 area[7]=0.00001
 area[8]=0.000002
-
 triangle -pqa${area[0]} meshes/$NAME
 for (( N=1; N<$LEV; N++ )); do
+    # generate .poly, .node, .ele for meshes
     triangle -rpqa${area[$N]} meshes/$NAME.$N
-done
-
-# generate .vec, .is files
-for (( N=1; N<=$LEV; N++ )); do
+    # generate .vec, .is files
     ./tri2petsc.py meshes/$NAME.$N meshes/$NAME.$N
 done
 

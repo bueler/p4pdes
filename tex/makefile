@@ -14,7 +14,7 @@ tmptikzinputs := $(addprefix tmp/, $(addsuffix .tikz, $(tmptikzroots)))
 pdfroots := petscghostvalues
 pdfinputs := $(addprefix figs/, $(addsuffix .pdf, $(pdfroots)))
 
-pngroots := dmM5N7 line-graph-tri matM5N7
+pngroots := dmM5N7 line-graph-tri matM5N7 trap1mat trap2mat trap3mat
 pnginputs := $(addprefix figs/, $(addsuffix .png, $(pngroots)))
 
 book.pdf: book.aux
