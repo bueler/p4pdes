@@ -398,7 +398,7 @@ Despite our attempt at modularity, our representation of an unstructured mesh is
 
 \section{Initial implementation}
 
-With an unstructured mesh in hand we can return to implementing the FEM.  We build the minimal \pSNES-using C code\sidenote{The reader might observe that, in terms of \PETSc objects and calls, \texttt{unfem.c} is similar to \texttt{ecjac.c} in Chapter \ref{chap:nl} in the sense that there is no use of a \PETSc interface for grid topology.} which works, called \texttt{c/\CODELOC unfem.c}.  It has a ``context'' \texttt{struct} which includes a \texttt{UM} instance (Code \eqref{code:unfemctx}).  It has a residual-computation function \texttt{FormFunction()} and a \texttt{main()} function.  The latter reads options and then creates a \pSNES and \pVecs for holding the approximate and exact solutions and the residual.  For the FEM itself we need enough information to transfer integrals to the reference triangle, so we set up straightforward quadrature data structures.  There is then nothing else to do, other than to call \texttt{SNESSolve()}.  Figure \ref{fig:un:unfemstack} shows the structure of \texttt{unfem.c}, including the approximate Jacobian which is implemented later.
+With an unstructured mesh in hand we can return to implementing the FEM.  We build a \pSNES-using code\sidenote{The reader might observe that, in terms of \PETSc objects and calls, \texttt{unfem.c} is similar to \texttt{ecjac.c} in Chapter \ref{chap:nl} in the sense that there is no use of a \PETSc interface for grid topology.} which works, called \texttt{c/\CODELOC unfem.c}.  The most important parts are a residual-computation function \texttt{FormFunction()} and a \texttt{main()} function.  Figure \ref{fig:un:unfemstack} shows the structure, including the approximate-Jacobian \texttt{FormPicard()} which we implement later.  Extracts from \texttt{c/ch7/unfem.c}, displaying all essentials of the initial implementation, are shown in Codes \ref{code:unfemctx}--\ref{code:unfemelementresiduals}.
 
 \begin{figure}
 \begin{tikzpicture}[scale=0.8,
@@ -435,32 +435,37 @@ With an unstructured mesh in hand we can return to implementing the FEM.  We bui
    (snes) edge node {} (ksp)
    (ksp) edge node {} (pc);
 \end{tikzpicture}
-\caption{The \PETSc object structure of \texttt{unfem.c}.}
+\caption{The structure of \texttt{unfem.c}.}
 \label{fig:un:unfemstack}
 \end{figure}
 
-\cinputpart{unfem.c}{\CODELOC}{Context for solving FEM \eqref{eq:un:weakformhat} on an unstructured mesh.}{I}{//STARTCTX}{//ENDCTX}{code:unfemctx}
+So that the residual-evaluation function \texttt{FormFunction()} has access to functions $a$, $f$, $g_D$, $g_N$ in FEM \eqref{eq:un:weakformhat}, we define a solution context \texttt{struct unfemCtx} in Code \ref{code:unfemctx}.  This \texttt{struct} also includes the mesh, that is, it includes a pointer to a \texttt{UM} instance.
 
-Extracts from \texttt{c/ch7/unfem.c}, displaying all essential parts of the initial implementation, are shown in Codes \ref{code:unfemctx}--\ref{code:unfemelementresiduals}.  So that the residual-evaluation function \texttt{FormFunction()} has access to functions $a$, $f$, $g_D$, and $g_N$ in FEM \eqref{eq:un:weakformhat}, we define a solution context \texttt{struct unfemCtx} in Code \ref{code:unfemctx}.
+\cinputpart{unfem.c}{\CODELOC}{Context for solving FEM \eqref{eq:un:weakformhat}, \eqref{eq:un:uhexpand} on an unstructured mesh.}{I}{//STARTCTX}{//ENDCTX}{code:unfemctx}
 
-\cinputpart{unfem.c}{\CODELOC}{The first job in \texttt{main()} is to read an unstructured mesh from \PETSc binary-format files.}{II}{//STARTMAINREADMESH}{//ENDMAINREADMESH}{code:unfemmainreadmesh}
+Only an extract of the \texttt{main()} function is displayed here (Code \ref{code:unfemmain}).  We do not show the first actions of \texttt{main()}, which are to read options and choose appropriate functions $a,f,g_D,g_N$ for the problem case.  The lines shown in Code \ref{code:unfemmain} start with reading a mesh from \PETSc binary files via calls to the ``methods'' of the \texttt{UM} object.  Then \pVecs are allocated and the \pSNES solver is configured.  We set a call-back to \texttt{FormFunction()} by using \texttt{SNESSetFunction()}.
 
-Code \ref{code:unfemmainreadmesh} shows how the mesh is read from \PETSc binary files via calls to the ``methods'' of the \texttt{UM} object described earlier.  The remaining major jobs of the \texttt{main()} function are in Code \ref{code:unfemmainsolver}, namely allocating \pVecs and configuring a \pSNES solver object.
+\cinputpart{unfem.c}{\CODELOC}{An extract of \texttt{main()}: read the mesh, set-up \pVecs, configure \pSNES, and reset the default \pKSP and \pPC for our symmetric, positive-definite problem.}{II}{//STARTMAININITIAL}{//ENDMAININITIAL}{code:unfemmain}
 
-\cinputpart{unfem.c}{\CODELOC}{Setting-up a \pSNES object is similar to grid-less examples in Chapter \ref{chap:nl}.  We also set the default \pKSP and \pPC appropriately to our symmetric, positive-definite problem.}{III}{//STARTMAINSOLVER}{//ENDMAINSOLVER}{code:unfemmainsolver}
+Though we do not, for now, need to do any work to assemble it, the symmetry and positive-definiteness of the Jacobian matrix is already relevant here.  In the linear case, in which $\partial a/\partial u=0$ and $\partial f/\partial u=0$ in \eqref{eq:un:poissonweak}, the Jacobian $J_{ij} = \partial F_i/\partial u_j$ is symmetric and positive-definite.\sidenote{We prove the claim below in the subsection on assembling an approximate Jacobian.}  This fact is sufficient reason to reset the default \pKSP and \pPC types to the conjugate gradient (CG) and incomplete-Cholesky (ICC) types, respectively.  This is done in Code \ref{code:unfemmain} by first getting a pointer to the \pKSP inside the \pSNES---see Figure \ref{fig:un:unfemstack}---and then setting its type.  Getting a pointer to the \pPC inside the \pKSP then allows us to set the \pPC type as well.
 
-Though we do not, for now, need to do any work to assemble it, the symmetry and positive-definiteness of the Jacobian matrix is already relevant here.  In the linear case, in which $\partial a/\partial u=0$ and $\partial f/\partial u=0$ in \eqref{eq:un:poissonweak}, the Jacobian $J_{ij} = \partial F_i/\partial u_j$ is symmetric and positive-definite.\sidenote{We return to this idea, and prove the claim, in the subsection below on assembling an approximate Jacobian.}  This fact is sufficient reason to reset the default \pKSP and \pPC types to the conjugate gradient (CG) and incomplete-Cholesky (ICC) types, respectively.  This is done in Code \ref{code:unfemmainsolver} by first getting a pointer to the \pKSP inside the \pSNES (Figure \ref{fig:un:unfemstack}), and then setting its type.  Similarly, accessing a pointer to the \pPC inside the \pKSP allows us to set the \pPC type.
+The extract in Code \ref{code:unfemmain} also shows that an analytical Jacobian \pMat \texttt{A} is allocated, and a \pSNES call-back is set with \texttt{SNESSetJacobian()}.  We return to these actions below, but for now we note they are ignored if \texttt{-snes\_fd} is used, as we do initially.
 
-\cinputpart{unfem.c}{\CODELOC}{Our FEM uses local basis functions $\chi_\ell$ and some quadrature tools.}{IV}{//STARTFEM}{//ENDFEM}{code:unfemfem}
+\cinputpart{unfem.c}{\CODELOC}{Our FEM uses local basis functions $\chi_\ell$ and some quadrature tools.}{III}{//STARTFEM}{//ENDFEM}{code:unfemfem}
 
-Code \ref{code:unfemfem} shows FEM details (``tools'') appearing in \texttt{c/ch7/unfem.c}.  For example, the first few lines there correspond to equation \eqref{eq:un:chiformulas} for the local basis functions $\chi_\ell(\eta,\xi)$, the gradients $\grad \chi_\ell$, and evaluation of linear combinations $\sum_\ell v_\ell \chi_\ell$.  The remaining lines define arrays for the quadrature rules in Table \ref{tab:un:quadrature}.
+Code \ref{code:unfemfem} shows FEM details (``tools'') appearing in \texttt{c/ch7/unfem.c}.  For example, the first few displayed lines correspond to equation \eqref{eq:un:chiformulas} for the local basis functions $\chi_\ell(\eta,\xi)$.  There are also functions to evaluate the gradients $\grad \chi_\ell$ and linear combinations $\sum_\ell v_\ell \chi_\ell$.  The remaining lines define arrays for the quadrature rules in Table \ref{tab:un:quadrature}.
 
-FIXME show residual evaluation \texttt{FormFunction()}
+The C function that evaluates $\bF(\bu)$ is called \texttt{FormFunction()}.  It is shown in Codes \ref{code:unfembdryresiduals}--\ref{code:unfemelementresiduals}.  Note that \texttt{Vec u} is an input, and thus it is accessed using a \texttt{const double *} pointer and \texttt{VecGetArrayRead()}, while \texttt{Vec F} is an output accessed using a \texttt{double *} pointer and \texttt{VecGetArray()}.  Function \texttt{UMGetNodeCoordArrayRead()} gives a pointer to an array of \texttt{Node}s, simply a two-member \texttt{struct} holding the coordinates of a point in $\RR^2$ (not shown).  When accessing indices we use \texttt{ISGetIndices()} instead.  All of these \texttt{Get} functions have a matching \texttt{Restore}.
 
-\cinputpart{unfem.c}{\CODELOC}{\texttt{FormFunction()} first evaluates Dirichlet boundary residuals \eqref{eq:un:dirichletresiduals} and Neumann boundary integrals \eqref{eq:un:segmentweakform}.}{V}{//STARTBDRYRESIDUALS}{//ENDBDRYRESIDUALS}{code:unfembdryresiduals}
+\cinputpart{unfem.c}{\CODELOC}{\texttt{FormFunction()} first evaluates \eqref{eq:un:dirichletresiduals} and \eqref{eq:un:segmentweakform} for the boundary contributions.}{IV}{//STARTBDRYRESIDUALS}{//ENDBDRYRESIDUALS}{code:unfembdryresiduals}
 
-\cinputpart{unfem.c}{\CODELOC}{Next, \texttt{FormFunction()} traverses the elements to compute residuals \eqref{eq:un:elementintegralreference}.}{VI}{//STARTELEMENTRESIDUALS}{//ENDELEMENTRESIDUALS}{code:unfemelementresiduals}
+\cinputpart{unfem.c}{\CODELOC}{Next, \texttt{FormFunction()} traverses the elements to compute residuals \eqref{eq:un:elementweakform}.}{V}{//STARTELEMENTRESIDUALS}{//ENDELEMENTRESIDUALS}{code:unfemelementresiduals}
 
+Code \ref{code:unfembdryresiduals} show that \texttt{FormFunction()} first loops through all $N$ nodes and computes the residual \eqref{eq:un:dirichletresiduals} for each node in the Dirichlet boundary.  Then it loops through all $P$ segments of polygon $\partial \Omega$ and computes the Neumann boundary integrals \eqref{eq:un:segmentweakform} by the midpoint rule.  (These are nonzero for the nodes $\bx_i$ such that the support of the hat function $\psi_i$ has nontrivial overlap (intersection) with a Neumann segment $s_\nu$.)
+
+The rest of \texttt{FormFunction()}, shown in Code \ref{code:unfemelementresiduals}, implements \eqref{eq:un:elementweakform} and \eqref{eq:un:elementwisesum}.  The integrand function $H_\ell^k$ in \eqref{eq:un:elementintegrand} and the quadrature \eqref{eq:un:elementquadraturereference} are computed according to details laid-out in Exercises \ref{chap:un}.\ref{exer:un:gradientdetails} and \ref{chap:un}.\ref{exer:un:elementintegranddetails}.
+
+Before we do initial testing it might be wise for the reader to browse the files in \texttt{c/ch7/}, including \texttt{unfem.c}.
 
 
 \section{Initial testing}
@@ -509,6 +514,7 @@ for (( N=1; N<9; N++ )); do
     ./tri2petsc.py $OUT $OUT                    # generate .vec,.is
 done
 \end{code}
+%$
 
 FIXME demo convergence with \texttt{-snes\_fd}
 
@@ -547,9 +553,9 @@ A_{ij}^k(\bu) = \int_{\triangle_k} a(u^h) \grad\psi_j \cdot \grad\psi_i \label{e
 \end{equation}
 Again this is computed by quadrature, similar to \eqref{eq:un:elementintegralreference} and \eqref{eq:un:elementquadraturereference}.  This matrix is evidently symmetric, $a_{ij}=a_{ji}$, and sparse.  Furthermore it is positive-definite if $a(u,x,y)>0$, and thus the conjugate gradient Krylov method applies to the equations for the Newton step; see Chapter \ref{chap:ls}.
 
-\cinputpart{unfem.c}{\CODELOC}{FIXME}{VII}{//STARTMAINMAT}{//ENDMAINMAT}{code:unfemmainmat}
+FIXME comment on allocation of \pMat in Code \ref{code:unfemmain}
 
-\cinputpart{unfem.c}{\CODELOC}{FIXME}{VIII}{//STARTPICARD}{//ENDPICARD}{code:unfempicard}
+\cinputpart{unfem.c}{\CODELOC}{FIXME}{VI}{//STARTPICARD}{//ENDPICARD}{code:unfempicard}
 
 \begin{figure}
 \includegraphics[width=\textwidth]{figs/unfem-error}
@@ -562,7 +568,7 @@ Again this is computed by quadrature, similar to \eqref{eq:un:elementintegralref
 
 FIXME essential for speed
 
-\cinputpart{unfem.c}{\CODELOC}{FIXME}{IX}{//STARTPREALLOC}{//ENDPREALLOC}{code:unfemprealloc}
+\cinputpart{unfem.c}{\CODELOC}{FIXME}{VII}{//STARTPREALLOC}{//ENDPREALLOC}{code:unfemprealloc}
 
 compare for \texttt{--with-debugging=0} build:
 \begin{cline}

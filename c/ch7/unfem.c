@@ -101,6 +101,7 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
         if (abfn[n] == 2)  // node is Dirichlet
             aF[n] = au[n] - user->gD_fcn(aloc[n].x,aloc[n].y);
     }
+
     // Neumann segment contributions
     ierr = ISGetIndices(user->mesh->s,&as); CHKERRQ(ierr);
     ierr = ISGetIndices(user->mesh->bfs,&abfs); CHKERRQ(ierr);
@@ -174,6 +175,7 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
             }
         }
     }
+
     ierr = ISRestoreIndices(user->mesh->e,&ae); CHKERRQ(ierr);
     ierr = ISRestoreIndices(user->mesh->bfn,&abfn); CHKERRQ(ierr);
     ierr = UMRestoreNodeCoordArrayRead(user->mesh,&aloc); CHKERRQ(ierr);
@@ -373,24 +375,37 @@ int main(int argc,char **argv) {
     strcpy(issname, root);
     strncat(issname, ".is", 3);
 
-//STARTMAINREADMESH
+//STARTMAININITIAL
     PetscLogStagePush(user.readstage);  //STRIP
     // read mesh object of type UM
     ierr = UMInitialize(&mesh); CHKERRQ(ierr);
     ierr = UMReadNodes(&mesh,nodesname); CHKERRQ(ierr);
     ierr = UMReadISs(&mesh,issname); CHKERRQ(ierr);
     ierr = UMStats(&mesh, &h_max, NULL, NULL, NULL); CHKERRQ(ierr);
-    if (view) {
-        PetscViewer stdoutviewer;
-        ierr = PetscViewerASCIIGetStdout(PETSC_COMM_WORLD,&stdoutviewer); CHKERRQ(ierr);
-        ierr = UMView(&mesh,stdoutviewer); CHKERRQ(ierr);
-    }
+    if (view) {  //STRIP
+        PetscViewer stdoutviewer;  //STRIP
+        ierr = PetscViewerASCIIGetStdout(PETSC_COMM_WORLD,&stdoutviewer); CHKERRQ(ierr);  //STRIP
+        ierr = UMView(&mesh,stdoutviewer); CHKERRQ(ierr);  //STRIP
+    }  //STRIP
     user.mesh = &mesh;
     PetscLogStagePop();  //STRIP
-//ENDMAINREADMESH
 
-//STARTMAINMAT
+    // configure Vecs and SNES
     PetscLogStagePush(user.setupstage);  //STRIP
+    ierr = VecCreate(PETSC_COMM_WORLD,&r); CHKERRQ(ierr);
+    ierr = VecSetSizes(r,PETSC_DECIDE,mesh.N); CHKERRQ(ierr);
+    ierr = VecSetFromOptions(r); CHKERRQ(ierr);
+    ierr = VecDuplicate(r,&u); CHKERRQ(ierr);
+    ierr = VecSet(u,0.0); CHKERRQ(ierr);
+    ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
+    ierr = SNESSetFunction(snes,r,FormFunction,&user); CHKERRQ(ierr);
+
+    // reset default KSP and PC
+    ierr = SNESGetKSP(snes,&ksp); CHKERRQ(ierr);
+    ierr = KSPSetType(ksp,KSPCG); CHKERRQ(ierr);
+    ierr = KSPGetPC(ksp,&pc); CHKERRQ(ierr);
+    ierr = PCSetType(pc,PCICC); CHKERRQ(ierr);
+
     // setup matrix for Picard iteration, including preallocation
     ierr = MatCreate(PETSC_COMM_WORLD,&A); CHKERRQ(ierr);
     ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,mesh.N,mesh.N); CHKERRQ(ierr);
@@ -401,30 +416,15 @@ int main(int argc,char **argv) {
     } else {
         ierr = JacobianPreallocation(A,&user); CHKERRQ(ierr);
     }
-//ENDMAINMAT
-
-//STARTMAINSOLVER
-    // configure SNES, including resetting default KSP and PC
-    ierr = VecCreate(PETSC_COMM_WORLD,&r); CHKERRQ(ierr);
-    ierr = VecSetSizes(r,PETSC_DECIDE,mesh.N); CHKERRQ(ierr);
-    ierr = VecSetFromOptions(r); CHKERRQ(ierr);
-    ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
-    ierr = SNESSetFunction(snes,r,FormFunction,&user); CHKERRQ(ierr);
     ierr = SNESSetJacobian(snes,A,A,FormPicard,&user); CHKERRQ(ierr);
-    ierr = SNESGetKSP(snes,&ksp); CHKERRQ(ierr);
-    ierr = KSPSetType(ksp,KSPCG); CHKERRQ(ierr);
-    ierr = KSPGetPC(ksp,&pc); CHKERRQ(ierr);
-    ierr = PCSetType(pc,PCICC); CHKERRQ(ierr);
     ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
-
-    // set initial iterate and solve
-    ierr = VecDuplicate(r,&u); CHKERRQ(ierr);
-    ierr = VecSet(u,0.0); CHKERRQ(ierr);
     PetscLogStagePop();  //STRIP
+
+    // solve
     PetscLogStagePush(user.solverstage);  //STRIP
     ierr = SNESSolve(snes,NULL,u);CHKERRQ(ierr);
     PetscLogStagePop();  //STRIP
-//ENDMAINSOLVER
+//ENDMAININITIAL
 
     // measure error relative to exact solution
     ierr = VecDuplicate(r,&uexact); CHKERRQ(ierr);
