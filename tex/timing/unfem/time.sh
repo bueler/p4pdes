@@ -15,6 +15,7 @@ function run() {
   grep "Read mesh      :" tmp | awk '{print $5}' >> $2  # stage time
   grep "Set-up         :" tmp | awk '{print $4}' >> $2  # stage time
   grep "Solver         :" tmp | awk '{print $4}' >> $2  # stage time
+  rm -f tmp
 }
 
 # case 0
