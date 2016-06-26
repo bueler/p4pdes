@@ -37,18 +37,18 @@ saveit('unfem-snesfd.pdf')
 
 # figure for case 0,1,2 errors
 h0, err0, _, rmst, sust, sost = getstats('ErrorsEvalsTimes')
-p = np.polyfit(np.log(h0),np.log(err0),1)
+p = np.polyfit(np.log(h0[2:-1]),np.log(err0[2:-1]),1)
 print 'convergence for case 0 at rate h^%.3f' % p[0]
 plt.loglog(h0,err0,'ko',markersize=9.0,markerfacecolor='k',
            label=r'case 0  $O(h^{%.3f})$' % p[0])
 plt.hold(True)
 h, err, _, _, _, _ = getstats('case1-ErrorsEvalsTimes')
-p = np.polyfit(np.log(h),np.log(err),1)
+p = np.polyfit(np.log(h[2:-1]),np.log(err[2:-1]),1)
 print 'convergence for case 1 at rate h^%.3f' % p[0]
 plt.loglog(h,err,'ks',markersize=14.0,markerfacecolor='w',alpha=1.0,
            label=r'case 1  $O(h^{%.3f})$' % p[0])
 h, err, _, _, _, _ = getstats('case2-ErrorsEvalsTimes')
-p = np.polyfit(np.log(h[1:]),np.log(err[1:]),1)
+p = np.polyfit(np.log(h[2:-1]),np.log(err[2:-1]),1)
 print 'convergence for case 2 at rate h^%.3f' % p[0]
 plt.loglog(h,err,'kd',markersize=14.0,markerfacecolor='w',alpha=1.0,
            label=r'case 2  $O(h^{%.3f})$' % p[0])
