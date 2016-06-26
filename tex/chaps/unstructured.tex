@@ -470,32 +470,24 @@ Before we do initial testing it might be wise for the reader to browse the files
 
 \section{Initial testing}
 
-FIXME first run; the result is not shown 
-
+Let's try it.\sidenote{The reader should understand that showing the actual process of debugging in a textbook is hard.  Bugs occurred, and were found, as this subsection was created.}  The first run uses the coarse triangulation in Figure \ref{fig:un:trapone}.  Because our first tests use only the residual evaluation function \texttt{FormFunction()}, and not an analytical Jacobian, we add \texttt{-snes\_fd}:
 \begin{cline}
-$ ./unfem -un_mesh meshes/trap.1 -un_view -snes_fd
-...
-case 0 result for N=8 nodes with h_max = 1.414e+00 :  |u-u_ex|_inf = 0.230159
+$ cd c/ch7/
+$ make unfem
+$ ./unfem -un_mesh meshes/trap.1 -snes_fd
+case 0 result for N=8 nodes with h = 1.414e+00 :  |u-u_ex|_inf = 0.230159
 \end{cline}
 %$
+Note that \texttt{unfem} describes the mesh by the number of nodes $N$ and the maximum triangle side length $h$.  Also note that \texttt{unfem} defaults to the ``case $0$'' exact solution---see the description of this linear problem on page \pageref{eq:un:exactsolution}---and quadrature of degree 1.
 
-FIXME graphical \pMat view
-
+The actual test we care about, for code correctness, is whether the error decreases at the theoretically-optimum rate as the mesh is refined.  For the next level of refinement note that we have already generated the mesh (\texttt{trap.2} in Figure \ref{fig:un:traptwo}), but that it needs to be converted to \PETSc binary files for reading by \texttt{unfem}:
 \begin{cline}
 $ ./tri2petsc.py meshes/trap.2 meshes/trap.2
-$ ./unfem -un_mesh meshes/trap.2 -mat_view draw -draw_pause 2
-case 0 result for N=33 nodes with h_max = 6.212e-01 :  |u-u_ex|_inf = 0.0289678
+$ ./unfem -un_mesh meshes/trap.2 -snes_fd -mat_view draw -draw_pause 2
+case 0 result for N=33 nodes with h = 6.212e-01 :  |u-u_ex|_inf = 0.0289678
 \end{cline}
 
-FIXME figure showing result for \texttt{trap.1,2,3}
-
-\begin{figure}
-\includegraphics[width=0.31\textwidth]{figs/trap1mat} \, \includegraphics[width=0.31\textwidth]{figs/trap2mat} \, \includegraphics[width=0.31\textwidth]{figs/trap3mat}
-\caption{FIXME matrix sparsity patterns for the meshes \texttt{trap.1,2,3}}
-\label{fig:un:unfem-matsparsity}
-\end{figure}
-
-FIXME go ahead and generate refined grids, until \texttt{meshes/trap.8.*} which has $10^6$ nodes; use following snippet of Bash code:
+The error is already an order of magnitude smaller.  So as to measure a convergence rate, however, we generate, by the following snippet of Bash code, nine levels of refined grids  \texttt{trap.1}--\texttt{trap.9}.  The last of these has $N\approx 10^6$ nodes:
 \begin{code}
 area[0]=0.5
 area[1]=0.1
@@ -516,18 +508,38 @@ done
 \end{code}
 %$
 
-FIXME demo convergence with \texttt{-snes\_fd}
-
-\begin{cline}
-$ ./tri2petsc.py meshes/trap.2 meshes/trap.2
-$ ./unfem -un_mesh meshes/trap.2 -mat_view draw -draw_pause 2
-case 0 result for N=33 nodes with h_max = 6.212e-01 :  |u-u_ex|_inf = 0.0289678
-\end{cline}
-
 \begin{figure}
 \includegraphics[width=\textwidth]{figs/unfem-snesfd}
-\caption{FIXME error and evals using \texttt{-snes\_fd}}
+\caption{Numerical error (left axis) and number of evaluations of \texttt{FormFunction()} (right axis) using \texttt{-snes\_fd} runs on meshes \texttt{trap.1}--\texttt{trap.5}.}
 \label{fig:un:unfem-snesfd}
+\end{figure}
+
+A bit of testing shows, however, that these \texttt{-snes\_fd} are far too slow, and even fail with a too-many-evaluations error,\sidenote{Add \texttt{-snes\_converged\_reason} to see the error message.} for levels \texttt{trap.6}--\texttt{trap.9}.  The following snippet of Bash code tests the available coarser levels and generates the results shown in Figure \ref{fig:un:unfem-snesfd}:
+\begin{code}
+for (( N=1; N<=5; N++ )); do
+    rm -f foo
+    ./unfem -un_mesh meshes/trap.$N -snes_fd -log_view > foo
+    grep "|u-u_ex|_inf" foo
+    grep "SNESFunctionEval" foo
+done
+\end{code}
+%$
+The evidence suggests convergence, but we will do more work before being confident of the rate.
+
+Of course, there is no mystery in why these runs slow down dramatically with refinement.  As explained in Chapter \ref{chap:nl}, because there is no structured-grid information to allow coloring, the number of evaluations of \texttt{FormFunction()} scales with the number of nodes (unknowns) $N$.\sidenote{The number of evaluations shown in Figure \ref{fig:un:unfem-snesfd} is essentially $2N$.}  Obviously, this is an unsustainable amount of work as the grid is refined.  We are motivated to write additional code for an analytical Jacobian in the next subsection.
+
+Before moving on, however, we can view the symmetry and sparsity pattern of the finite-differenced Jacobian using X windows:
+\begin{cline}
+$ ./unfem -un_mesh meshes/trap.2 -snes_fd -mat_view draw -draw_pause 2
+case 0 result for N=33 nodes with h = 6.212e-01 :  |u-u_ex|_inf = 0.0289678
+\end{cline}
+%$
+The middle frame of Figure \ref{fig:un:unfem-matsparsity} shows the result sandwiched between comparable results for the coarser \texttt{trap.1} and the further-refined \texttt{trap.3} meshes.
+
+\begin{figure}
+\includegraphics[width=0.31\textwidth]{figs/trap1mat} \, \includegraphics[width=0.31\textwidth]{figs/trap2mat} \, \includegraphics[width=0.31\textwidth]{figs/trap3mat}
+\caption{Matrix sparsity patterns from \texttt{unfem.c} applied to the meshes \texttt{trap.1,2,3} with $N=8,33,136$ nodes, respectively.}
+\label{fig:un:unfem-matsparsity}
 \end{figure}
 
 
@@ -573,11 +585,10 @@ FIXME essential for speed
 compare for \texttt{--with-debugging=0} build:
 \begin{cline}
 $ timer ./unfem -un_mesh meshes/trap.7 -un_noprealloc
-case 0 result for N=46421 nodes:  |u-u_exact|_inf = 6.55365e-05
-case 0 result for N=46421 nodes with h_max = 2.210e-02 :  |u-u_ex|_inf = 6.55083e-05
+case 0 result for N=46421 nodes with h = 2.210e-02 :  |u-u_ex|_inf = 6.55083e-05
 real 56.30
 $ timer ./unfem -un_mesh meshes/trap.7
-case 0 result for N=46421 nodes with h_max = 2.210e-02 :  |u-u_ex|_inf = 6.55083e-05
+case 0 result for N=46421 nodes with h = 2.210e-02 :  |u-u_ex|_inf = 6.55083e-05
 real 0.97
 \end{cline}
 
@@ -598,7 +609,7 @@ $ ./genstructured.py meshes/square.10 1025
 $ ./tri2petsc.py meshes/square.10 meshes/square.10
 $ make unfem
 $ timer ./unfem -un_mesh meshes/square.10 -un_quaddeg 1 -un_case 3
-case 3 result for N=1050625 nodes with h_max = 1.381e-03 :  |u-u_ex|_inf = 9.89813e-08
+case 3 result for N=1050625 nodes with h = 1.381e-03 :  |u-u_ex|_inf = 9.89813e-08
 real 24.47
 \end{cline}
 
@@ -669,6 +680,11 @@ In \eqref{eq:un:psichidetails} node $\bx_i$ corresponds to vertex $\ell$ on $\tr
 for all cases with $0\le i+j\le n$, against the quadrature result.  Also one should show an inexact quadrature result for some case with $i+j=n+1$.  Write a small program, in the language of your choice, which does so.
 \item \label{exer:un:gaussneumann}  In \texttt{unfem.c} we use the midpoint rule, the one-point Gauss rule, for quadrature when computing the Neumann boundary segment contributions $\varphi_\nu^i$; see equation \eqref{eq:un:segmentquadrature}.  Modify \texttt{unfem.c} to optionally use two-point Gaussian quadrature instead.  Only in case 2 will this make any difference.  Show that accuracy noticeably improves for coarse grids, but that this benefit disappears under grid refinement.
 % see c/ch7/solns/segmentgauss.c.snippet
+\item FIXME compare the results of these two runs, which each solve the (default) linear case 0 problem:
+\begin{cline}
+$ ./unfem -un_mesh meshes/trap.2 -snes_monitor -ksp_rtol 1.0e-14
+$ ./unfem -un_mesh meshes/trap.2 -snes_monitor -ksp_rtol 1.0e-14 -snes_fd
+\end{cline}
 \item FIXME the result of
 \begin{cline}
 ./unfem -un_mesh meshes/trapneu.1 -un_case 2
