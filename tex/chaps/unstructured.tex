@@ -563,11 +563,13 @@ where
 \begin{equation}
 A_{ij}^k(\bu) = \int_{\triangle_k} a(u^h) \grad\psi_j \cdot \grad\psi_i \label{eq:un:picardentryelement}
 \end{equation}
-Again this is computed by quadrature, similar to \eqref{eq:un:elementintegralreference} and \eqref{eq:un:elementquadraturereference}.  This matrix is evidently symmetric, $a_{ij}=a_{ji}$, and sparse.  Furthermore it is positive-definite if $a(u,x,y)>0$, and thus the conjugate gradient Krylov method applies to the equations for the Newton step; see Chapter \ref{chap:ls}.
-
-FIXME comment on allocation of \pMat in Code \ref{code:unfemmain}
+Again this is computed by quadrature, similar to \eqref{eq:un:elementintegralreference} and \eqref{eq:un:elementquadraturereference}.
 
 \cinputpart{unfem.c}{\CODELOC}{FIXME}{VI}{//STARTPICARD}{//ENDPICARD}{code:unfempicard}
+
+This matrix is evidently symmetric, $a_{ij}=a_{ji}$, and sparse.  Furthermore it is positive-definite if $a(u,x,y)>0$, and thus the conjugate gradient Krylov method applies to the equations for the Newton step; see Chapter \ref{chap:ls}.
+
+FIXME comment on allocation of \pMat in Code \ref{code:unfemmain}
 
 \begin{figure}
 \includegraphics[width=\textwidth]{figs/unfem-error}
@@ -580,8 +582,6 @@ FIXME comment on allocation of \pMat in Code \ref{code:unfemmain}
 
 FIXME essential for speed
 
-\cinputpart{unfem.c}{\CODELOC}{FIXME}{VII}{//STARTPREALLOC}{//ENDPREALLOC}{code:unfemprealloc}
-
 compare for \texttt{--with-debugging=0} build:
 \begin{cline}
 $ timer ./unfem -un_mesh meshes/trap.7 -un_noprealloc
@@ -591,6 +591,8 @@ $ timer ./unfem -un_mesh meshes/trap.7
 case 0 result for N=46421 nodes with h = 2.210e-02 :  |u-u_ex|_inf = 6.55083e-05
 real 0.97
 \end{cline}
+
+\cinputpart{unfem.c}{\CODELOC}{FIXME}{VII}{//STARTPREALLOC}{//ENDPREALLOC}{code:unfemprealloc}
 
 
 \section{Performance relative to \pDMDA structured grid}
