@@ -1,28 +1,28 @@
 
-In this Chapter we implement a finite element method (FEM) for an unstructured triangular mesh on a general polygonal domain.  Our code solves certain linear and nonlinear Poisson equation problems with reasonably-general boundary conditions.  The approach is to
+In this Chapter we implement a finite element method (FEM) for an unstructured triangular mesh on a general polygonal domain in the plane.  Our code solves certain linear and nonlinear Poisson equation problems with reasonably-general boundary conditions.  The approach is to
 \begin{center}
 \emph{first do element-wise assembly of the residual equations,}
 \end{center}
-and thereby get a functioning \pSNES-based code.  We will not even think about matrices in writing the initial code.  Only after making sure it works do we
+and thereby get a functioning \pSNES-based code.  No explicit matrix construction is needed in writing the initial code.  Only after making sure it works do we
 \begin{center}
 \emph{write additional code to assemble an approximate Jacobian matrix.}
 \end{center}
 
 We do the following new tasks in this Chapter:
 \begin{itemize}
+\item implement Neumann boundary conditions,
 \item read a triangular mesh from a file into \PETSc \pVecs and \pISs,
-\item index that mesh unstructured way,
-\item pre-allocate a \PETSc \pMat, and
-\item implement Neumann boundary conditions.
+\item index that mesh in an unstructured way, and
+\item pre-allocate a \PETSc \pMat.
 \end{itemize}
 
 Similarly to the example in the last Chapter, the residual equations $\bF(\bu)=0$, which is to say the nonlinear system seen by the \pSNES solver, is the discretized weak form of the PDE.  Our direct construction of these equations roughly follows the residual implementations of Chapters \ref{chap:nl}--\ref{chap:of}.
 
-The FEM ``stiffness'' matrix $A$, a major piece in typical FEM introductions \citep{Braess2007,Elmanetal2005}, arises here as the Jacobian when solving $\bF(\bu)=0$.  In our first runs, done before writing any matrix-assembly code, the \pSNES solver approximates this linear system through finite-differencing evaluations of $\bF$.  Eventually we do assemble a Jacobian, but one that is only correct for the linear case.  For the smooth nonlinear case tested here, however, this inaccurate linearization suffices.
+The FEM ``stiffness'' matrix $A$, a major piece in typical FEM introductions \citep{Braess2007,Elmanetal2005}, arises here as the Jacobian when solving $\bF(\bu)=0$.  In our first runs the \pSNES solver approximates this linear system through finite-differencing evaluations of $\bF$.  Eventually we do assemble a Jacobian, but one that is only correct for the linear case.  For the smooth nonlinear case tested here, however, this ``Picard'' approximate linearization suffices.
 
-The example here contrasts with the rectangular-element ($Q^1$) FEM of the last Chapter by not using a \pDMDA and a structured grid.  Instead we implement a minimal, though naive, mesh-topology infrastructure.  (Doing so substantially increases our workload!)  The relatively-simple \Triangle program generates ASCII files describing the mesh.  An ``index set'' \pIS  type holds the global indices of nodes and triangles (elements).  \pVec and \pMat objects, used for the solution and Jacobian respectively, are indexed through the \pIS values.
+The example here contrasts with the rectangular-element ($Q^1$) FEM of the last Chapter by not using a \pDMDA and a structured grid.  Instead we implement our own minimal mesh-topology infrastructure, which substantially increases our workload.  The relatively-simple \Triangle program generates the ASCII files which define input meshes.  An ``index set'' \pIS  type holds the global indices of nodes and triangles (elements).  \pVec and \pMat objects, used for the solution and Jacobian respectively, are indexed through the \pIS values.
 
-In contrast with both earlier and later Chapters, we generate a code that only works on one MPI process (i.e.~a serial code).  However, at the end of the Chapter we briefly consider, though we do not implement, the additional constructs needed to distribute a mesh across many processes.  These considerations motivate the \pDMPlex example in Chapter \ref{chap:dp}.  In fact, the benefits of \PETSc's mesh-topology \pDM tools, including \pDMDA in previous Chapters and \pDMPlex in Chapter \ref{chap:dp}, become clearer by forgoing them here.
+In contrast with both earlier and later Chapters, we generate a code that only works on one MPI process (i.e.~a serial code).  However, at the end of the Chapter we briefly consider the additional constructs needed to distribute a mesh across many processes.  These considerations motivate the \pDMPlex example in Chapter \ref{chap:dp}.  The benefits of \PETSc's mesh-topology \pDM tools, including \pDMDA in previous Chapters and \pDMPlex in Chapter \ref{chap:dp}, become clearer by forgoing them here.
 
 
 \section{A 2D nonlinear Poisson problem}
@@ -35,60 +35,57 @@ In contrast with both earlier and later Chapters, we generate a code that only w
 
 Let $\Omega \subset \RR^2$ be a bounded (open) region as in Figure \ref{fig:un:generalpoissondomain}.  We suppose its boundary $\partial\Omega$ is well-behaved, for example polygonal or Lipschitz-continuous \citep[section 1.2]{Ciarlet2002}.  Also we decompose the boundary into (measurable) disjoint subsets $\partial_D \Omega$ and $\partial_N \Omega$.
 
-Chapter \ref{chap:st} solves the Poisson equation $- \grad^2 u = f$.  Here we allow a more general nonlinear form.  Let $a(u,x,y)$ and $f(u,x,y)$ be continuous functions, and assume there is $\eps$ so that
+Chapter \ref{chap:st} solves the Poisson equation $- \grad^2 u = f$.  Here we allow a more general nonlinear form.  Let $a(u,x,y)$ and $f(u,x,y)$ be given and assume there is $\eps$ so that
 \begin{equation}
 a(u,x,y) \ge \eps > 0, \label{eq:un:uniformelliptic}
 \end{equation}
-that is, \emph{uniform ellipticity} \citep{Evans2010}.  Boundary conditions are also needed, and here we consider nonhomogeneous Dirichlet and Neumann type.  Thus the  nonlinear Poisson \emph{strong form} we solve is to find $u(x,y)$ so that
+that is, \emph{uniform ellipticity} \citep{Evans2010}.  Boundary conditions are also needed, and we allow nonhomogeneous Dirichlet and Neumann type.  Let $\partial u/\partial n = \bn \cdot \grad u$ where $\bn$ is the outward unit normal on $\partial \Omega$ (Figure \ref{fig:un:generalpoissondomain}).  The nonlinear Poisson \emph{strong form} we solve finds $u(x,y)$ so that
 \begin{align}
 - \Div \left(a(u,x,y) \grad u\right) &= f(u,x,y) \quad \text{ on } \Omega, \label{eq:un:poissonstrong} \\
 u &= g_D \quad \text{ on } \partial_D \Omega, \notag \\
 \frac{\partial u}{\partial n} &= g_N \quad \text{ on } \partial_N \Omega. \notag
 \end{align}
-By definition, $\partial u/\partial n = \bn \cdot \grad u$ where $\bn$ is the outward unit normal on $\partial \Omega$ (Figure \ref{fig:un:generalpoissondomain}).
 
-The data of problem \eqref{eq:un:poissonstrong}, besides the region $\Omega$ and its boundary, includes a \emph{diffusion coefficient} $a$, a \emph{source term} $f$, \emph{Dirichlet data} $g_D$, and \emph{Neumann data} $g_N$.  For the purpose of numerical solutions we will assume these data are continuous.  Poisson problem \eqref{poissonsquare} in Chapter \ref{chap:st} is the homogeneous Dirichlet case where $\Omega$ is a square, $a\equiv 1$, $f=f(x,y)$, $\partial_D \Omega = \partial \Omega$, $\partial_N \Omega = \emptyset$, and $g_D=0$.
+The data of problem \eqref{eq:un:poissonstrong} includes a \emph{diffusion coefficient} $a$, a \emph{source term} $f$, \emph{Dirichlet data} $g_D$, and \emph{Neumann data} $g_N$.  For the purpose of numerical solutions we will assume these data are continuous.  Poisson problem \eqref{poissonsquare} in Chapter \ref{chap:st} is the homogeneous Dirichlet case where $\Omega$ is a square, $a = 1$, $f=f(x,y)$, $\partial_D \Omega = \partial \Omega$, $\partial_N \Omega = \emptyset$, and $g_D=0$.
 
-One could allow more general boundary conditions in \eqref{eq:un:poissonstrong}, in particular \emph{Robin} conditions $\alpha u + \beta \frac{\partial u}{\partial n} = \gamma$ where $\alpha,\beta,\gamma$ could vary along the boundary \citep{Elmanetal2005}; see Exercise \ref{chap:un}.\ref{exer:un:robin}.  One could also allow $a$ and/or $f$ to depend on the gradient of $u$; recall $a=|\grad u|^{p-2}$ in the $p$-Laplacian equation of Chapter \ref{chap:of}, for example.
+More general boundary conditions are conceivable in \eqref{eq:un:poissonstrong}, in particular \emph{Robin} conditions $\alpha u + \beta \frac{\partial u}{\partial n} = \gamma$ where $\alpha,\beta,\gamma$ could vary along the boundary \citep{Elmanetal2005}; see Exercise \ref{chap:un}.\ref{exer:un:robin}.  One could also allow $a$ and/or $f$ to depend on the gradient of $u$; recall $a=|\grad u|^{p-2}$ in the $p$-Laplacian equation of Chapter \ref{chap:of}, for example, but our code is limited to problem \eqref{eq:un:poissonstrong}.
 
-As \eqref{eq:un:poissonstrong} is stated there may be no solution where ``$\Div(a\grad u)$'' makes sense as a continuous function, even for polygonal regions and continuous data.  That is, there may be no $u\in C^2(\Omega) \cap C(\overline \Omega)$ so that \eqref{eq:un:poissonstrong} applies at all points.  In the linear case, at least, a solution exists if we convert \eqref{eq:un:poissonstrong} to a \emph{weak form}.  Such a weak formulation already arose in Chapter \ref{chap:of} as the gradient of an objective function, but the weak form here generally does not have a minimization origin; see Exercise \ref{chap:un}.\ref{exer:un:notminimization}.  In this Chapter we will derive the weak form from the strong form in the traditional way, by multiplying by a test function and integrating.
+As \eqref{eq:un:poissonstrong} is stated there may be no solution where ``$\Div(a\grad u)$'' makes sense as a continuous function, even for polygonal regions and continuous data.  That is, there may be no $u\in C^2(\Omega) \cap C(\overline \Omega)$ so that \eqref{eq:un:poissonstrong} applies at all points.  On the other hand, at least in the linear case, a solution exists if we convert \eqref{eq:un:poissonstrong} to a weak formulation.  It already arose in Chapter \ref{chap:of} as the gradient of an objective function, but the weak form in this Chapter generally does not have a minimization origin; see Exercise \ref{chap:un}.\ref{exer:un:notminimization}.  Here we derive the weak form from the strong form simply by multiplying by a test function and integrating.
 
 
 \section{Weak form with general boundary values}
 
-Recall $L^2(\Omega)$ is the space of square-integrable real functions on $\Omega$ and that $W^{1,2}(\Omega)$ is the Sobolev space in which the gradient is also square integrable.\sidenote{See definition \eqref{eq:of:sobolevdefn}.}  We use two subsets of $W^{1,2}(\Omega)$: \emph{trial functions} from $W^{1,2}_g(\Omega)$, the functions with value $g_D$ along $\partial_D \Omega$, and \emph{test functions} from $W^{1,2}_0(\Omega)$, with value $0$ along $\partial_D \Omega$.
+Recall $L^2(\Omega)$ is the space of square-integrable real functions on $\Omega$ and that $W^{1,2}(\Omega)$ is the Sobolev space in which the gradient is also square integrable.\sidenote{See definition \eqref{eq:of:sobolevdefn}.}  We use two subsets of $W^{1,2}(\Omega)$: \emph{trial functions} $W^{1,2}_g(\Omega)$, with value $g_D$ along $\partial_D \Omega$, and \emph{test functions} $W^{1,2}_0(\Omega)$, with value $0$ along $\partial_D \Omega$.
 
-Now choose any $v\in W^{1,2}_0(\Omega)$, multiply the first equation in \eqref{eq:un:poissonstrong} by $v$, and integrate by parts:
+Choose any $v\in W^{1,2}_0(\Omega)$, multiply the first equation in \eqref{eq:un:poissonstrong} by $v$, and integrate by parts:
 \begin{equation*}
 \int_\Omega a(u) \grad u \cdot \grad v - \int_{\partial\Omega} \frac{\partial u}{\partial n} v = \int_\Omega f(u) v.
 \end{equation*}
-(In writing such integrals we will generally show dependence on the solution $u$ but suppress it for $x,y$ so that $a(u,x,y)=a(u)$, and similarly for $f$.)  Next we use the boundary information, that $v=0$ on $\partial_D\Omega$ and $\partial u/\partial n=g_N$ on $\partial_N\Omega$:
+(In writing such integrals we show dependence on the solution $u$ but suppress it for $x,y$.)  Next use the boundary information, $v=0$ on $\partial_D\Omega$ and $\partial u/\partial n=g_N$ on $\partial_N\Omega$:
 \begin{equation}
 \int_\Omega a(u) \grad u \cdot \grad v = \int_\Omega f(u) v + \int_{\partial_N\Omega} g_N v\quad \text{ for any } v\in W^{1,2}_0(\Omega). \label{eq:un:poissonweak}
 \end{equation}
 
-Equation \eqref{eq:un:poissonweak} is the \emph{weak formulation} of \eqref{eq:un:poissonstrong}.  Any $u \in W^{1,2}_g(\Omega)$ satisfying \eqref{eq:un:poissonweak} is a \emph{weak solution}.  Observe that the Dirichlet boundary conditions $g_D$ are incorporated into defining $W^{1,2}_g(\Omega)$ while the Neumann boundary data $g_N$ appears in the weak form \eqref{eq:un:poissonweak}.
-
-Here are the ``rules'' for passing between the strong \eqref{eq:un:poissonstrong} and weak \eqref{eq:un:poissonweak} formulations:\begin{itemize}
+Equation \eqref{eq:un:poissonweak} is the \emph{weak formulation} of \eqref{eq:un:poissonstrong}.  Any $u \in W^{1,2}_g(\Omega)$ satisfying \eqref{eq:un:poissonweak} is a \emph{weak solution}.  Observe that the Dirichlet boundary conditions $g_D$ are incorporated into defining $W^{1,2}_g(\Omega)$ while the Neumann boundary data $g_N$ appears in \eqref{eq:un:poissonweak}.  Recall the ``rules'' for passing between the strong \eqref{eq:un:poissonstrong} and weak \eqref{eq:un:poissonweak} formulations:\begin{itemize}
 \item A well-behaved function $u \in C^2(\Omega) \cap C(\overline \Omega)$ which satisfies \eqref{eq:un:poissonstrong} also solves \eqref{eq:un:poissonweak}.  The derivation above shows this.
-\item If $u \in W^{1,2}_g(\Omega)$ solves \eqref{eq:un:poissonweak} then we accept it, by definition, as a solution.   If it is also well-behaved, $u \in C^2(\Omega) \cap C(\overline \Omega)$, then we may reverse the derivation to show it solves \eqref{eq:un:poissonstrong}.
+\item If $u \in W^{1,2}_g(\Omega)$ solves \eqref{eq:un:poissonweak} then we accept it, by definition, as a solution.   If it is also well-behaved, e.g.~$u \in C^2(\Omega) \cap C(\overline \Omega)$, then we may reverse the derivation to show it solves \eqref{eq:un:poissonstrong}.
 \end{itemize}
 
-For the linear case, where functions $a$ and $f$ are independent of $u$, the theory of \eqref{eq:un:poissonweak} is relatively complete.  If $\partial_D \Omega$ has positive measure then a solution to \eqref{eq:un:poissonweak} exists and is unique (\emph{well-posedness}; \citep{Ciarlet2002,Evans2010}).  Furthermore there exist conditions on the domain (e.g.~it is a convex polygon) and the boundary data, from which one can show that $u$ solving \eqref{eq:un:poissonweak} is in $C^2(\Omega) \cap C(\overline \Omega)$ (\emph{regularity}; \citep{Evans2010}).  Such theoretical matters are, however, beyond our scope.
+For the linear case, where functions $a$ and $f$ are independent of $u$, the theory of \eqref{eq:un:poissonweak} is relatively-complete.  In fact, if $\partial_D \Omega$ has positive measure then a solution to \eqref{eq:un:poissonweak} exists and is unique (\emph{well-posedness}; \citep{Ciarlet2002,Evans2010}).  Furthermore there exist conditions on the domain (e.g.~it is a convex polygon) and the boundary data, from which one can show that $u$ solving \eqref{eq:un:poissonweak} is in $C^2(\Omega) \cap C(\overline \Omega)$ (\emph{regularity}; \citep{Evans2010}).
 
 In nonlinear cases each particular problem must be analyzed for well-posedness.  In terms of practical computation, however, some important nonlinear cases are covered by our method and are solvable using the code we construct in this Chapter.  These include the 2D versions of
 \begin{itemize}
 \item the \emph{Bratu} equation wherein $a\equiv 1$ and $f=\lambda e^u$, and
 \item ``uniformized'' \emph{porous medium} equations \citep{Ockendonetal2003}, in which, for example, $a=u^{m-1}+\eps$ for some $m\ge 1$ and $\eps>0$.
 \end{itemize}
-For the former see Exercise \ref{chap:un}.\ref{exer:un:bratu}.\sidenote{Exercise \ref{chap:nl}.\ref{exer:nl:bratu} solves the 1D version.}  Later in the Chapter we test our code on an easy case of the porous medium equation, namely with $a(u)=1+u^2$.
+For the former see Exercise \ref{chap:un}.\ref{exer:un:bratu}.\sidenote{Exercise \ref{chap:nl}.\ref{exer:nl:bratu} solves the 1D version.}  In this Chapter we test our code on an easy case of the latter, namely with $a(u)=1+u^2$.
 
 
 \section{A $P^1$ finite element method}
 
 Our FEM for the Poisson problem seeks $u$, from a finite-dimensional subspace of $W^{1,2}_g(\Omega)$, for which \eqref{eq:un:poissonweak} holds for all test functions $v$ in a finite-dimensional subspace of $W^{1,2}_0(\Omega)$.  In the \emph{Galerkin} method here, these subspaces, both built from a triangulation of $\Omega$, are essentially the same.
 
-We require $\Omega$ to be polygonal, so that $\partial\Omega$ is a closed polygon (Figure \ref{fig:un:polygon}), and we require that the segments forming $\partial\Omega$ are either entirely in $\partial_D\Omega$ or entirely in $\partial_N\Omega$.  Furthermore we assume $\partial_D\Omega$ is closed and contains at least one segment of positive length.  (This leads to well-posedness of the continuum problem, at least in the linear case.)
+First, assume $\Omega$ is polygonal so that $\partial\Omega$ is a closed polygon (Figure \ref{fig:un:polygon}).  We also require that the segments forming $\partial\Omega$ are either entirely in $\partial_D\Omega$ or entirely in $\partial_N\Omega$ and that $\partial_D\Omega$ is closed and contains at least one segment of positive length.  (This leads to well-posedness of the continuum problem, at least in the linear case.)
 
 \begin{marginfigure}
 \input{tmp/blob.tikz}
@@ -100,13 +97,11 @@ By definition, a \emph{triangulation} is a finite set of non-overlapping, non-em
 \begin{equation}
 \Th = \left\{\triangle_k \,\Big|\, \cup_k \overline{\triangle}_k = \overline{\Omega} \, \text{ and} \,\, \triangle_k \cap \triangle_l = \emptyset \, \text{ if } k\ne l\right\}. \label{eq:un:triangulation}
 \end{equation}
-An example triangulation $\Th$ is shown in Figure \ref{fig:un:number-mesh}.  The subscript ``$h$'' in notation ``$\Th$'' denotes the typical or maximum size $h$ (e.g.~diameter) of the triangles.  It is a reminder of our desired limit $h\to 0$.
+An example triangulation $\Th$ is shown in Figure \ref{fig:un:number-mesh}.  The subscript ``$h$'' in notation ``$\Th$'' denotes the typical or maximum size $h$ (e.g.~maximum side length) of the triangles.  It is also a reminder of our desired limit $h\to 0$.
 
-In contrast to many references, such as \citet{Elmanetal2005} which we follow in many ways, numbering here is zero-based, suitable for a C implementation.  Thus the $K$ triangles $\triangle_k$ in the triangulation are indexed $k=0,\dots,K-1$.  The $N$ nodes are located at $\bx_i=(x_i,y_i)$ for $i=0,\dots,N-1$. 
+In contrast to many references, such as \citet{Elmanetal2005}, which we follow in many other ways, numbering here is zero-based, suitable for a C implementation.  Thus the $K$ triangles $\triangle_k$ in the triangulation are indexed $k=0,\dots,K-1$.  The $N$ nodes are located at $\bx_i=(x_i,y_i)$ for $i=0,\dots,N-1$. 
 
-In a $P^1$ finite element method the functions are linear on each $\triangle_k$ and continuous on the whole of $\overline\Omega$.  Such functions have three degrees of freedom on each $\triangle_k$, which one may think of as the coefficients in the linear formula $a + b x + c y$.
-
-In fact there are more convenient local bases than $\{1,x,y\}$, as follows.  For each node $j$ let $\psi_j(x,y)$ denote the basis (``hat'') function which is linear on each triangle, continuous on all of $\overline{\Omega}$, and equal to one at only one node $j$, so that
+In our $P^1$ finite element method the functions are linear on each $\triangle_k$ and continuous on the whole of $\overline\Omega$.  Such functions have three degrees of freedom on each $\triangle_k$, which one may think of as the coefficients in the linear formula $a + b x + c y$.  There are, however, more convenient local bases than $\{1,x,y\}$, as follows.  For each node $j$ let $\psi_j(x,y)$ denote the basis (``hat'') function which is linear on each triangle, continuous on $\overline{\Omega}$, and equal to one at only one node $j$, so that
 \begin{equation}
 \psi_j(\bx_i) = \delta_{ij}.  \label{eq:un:hatdelta}
 \end{equation}
@@ -122,16 +117,16 @@ See Figure \ref{fig:un:hatfunction} and compare Figure \ref{fig:of:q1hat}.  Func
 \label{fig:un:number-mesh}
 \end{marginfigure}
 
-These hat functions allow us to interpolate and extend the Dirichlet data $g_D$ from its nodal values on $\partial_D \Omega$ to the whole of $\overline\Omega$.  We number the $n_D$ nodes which are in the Dirichlet boundary by $\bx_{j_l} \in \partial_D\Omega$ for $l=0,\dots,n_D-1$.  Let $\hat g_D \in C(\overline\Omega)$ be the piecewise-linear interpolant of $g_D$ which has value zero at all the nodes $\bx_j$ which are \emph{not} in the Dirichlet boundary $\partial_D \Omega$:
+These hat functions allow us to interpolate and extend the Dirichlet data $g_D$ from its nodal values on $\partial_D \Omega$ to $\overline\Omega$.  First number the $n_D$ nodes which are in the Dirichlet boundary by $\bx_{j_l} \in \partial_D\Omega$ for $l=0,\dots,n_D-1$.  Then let $\hat g_D \in C(\overline\Omega)$ be the piecewise-linear interpolant of $g_D$ which has value zero at all the nodes $\bx_j$ which are \emph{not} in the Dirichlet boundary $\partial_D \Omega$.  It has an easy expansion in hat functions:
 \begin{equation}
 \hat g_D(x,y) = \sum_{l=0}^{n_D-1} g_D(\bx_{j_l}) \psi_{j_l}(x,y). \label{eq:un:hatgdefine}
 \end{equation}
 
-Using hat functions $\psi_j$ and also $\hat g_D$ we can now specify the finite-dimensional subspaces of $W^{1,2}(\Omega)$ used in the method.  First, the \emph{test functions}
+Using $\psi_j$ and $\hat g_D$ we can now specify the finite-dimensional subspaces of $W^{1,2}(\Omega)$ for the method.  First, the \emph{test functions} are
 \begin{align*}
-S_{0}^h &= \Span\left<\psi_j \,:\, \bx_j \notin \partial_D \Omega\right> = \Span\left<\psi_j \,:\, j \neq j_l\right>.
+S_{0}^h &= \Span\left<\psi_j \,:\, \bx_j \notin \partial_D \Omega\right> = \Span\left<\psi_j \,:\, j \neq j_l\right>,
 \end{align*}
-These are zero along $\partial_D \Omega$.  Second, the \emph{trial functions} have value $g_D$ along $\partial_D \Omega$,
+zero along $\partial_D \Omega$.  Second, the \emph{trial functions} have value $g_D$ along $\partial_D \Omega$,
 \begin{equation}
 S_{g}^h = \left\{\hat g_D + w \,:\, w \in S_{0}^h\right\}.
 \end{equation}
@@ -158,11 +153,11 @@ u^h(x,y) = \hat g_D(x,y) + \sum_{\bx_j \notin \partial_D \Omega} u_j\, \psi_j(x,
 \end{equation}
 The coefficients $u_j$ in \eqref{eq:un:uhexpand} are the unknowns.
 
-Given the triangulation $\mathcal{T}_h$ of $\Omega$ and the data of the problem, namely the functions $a$, $f$, $g_D$, and $g_N$, the complete specification of the FEM solution $u^h$ is given by equations \eqref{eq:un:hatgdefine}, \eqref{eq:un:weakformhat}, and \eqref{eq:un:uhexpand}.
+Given the triangulation $\mathcal{T}_h$ of $\Omega$ and the data of the problem, namely the functions $a$, $f$, $g_D$, and $g_N$, the complete specification of the FEM solution $u^h$ is given by equations \eqref{eq:un:hatgdefine}, \eqref{eq:un:weakformhat}, and \eqref{eq:un:uhexpand}.  This FEM problem can be shown to be well-posed, in the linear case at least, by the same theory that applies to the continuum problem.
 
-As a next step in the linear case it is common to write system \eqref{eq:un:weakformhat} and \eqref{eq:un:uhexpand} in matrix-vector form as $A \bu = \bb$, and then to assemble the \emph{stiffness matrix} $A$ \citep{Elmanetal2005}.  However, as said earlier, we will not assemble a matrix until we have an initial, verified numerical solution.  Following the pattern established since Chapter \ref{chap:nl}, we first implement equation \eqref{eq:un:weakformhat} as a residual function $\bF(\bu)$, a \PETSc \pSNES call-back, in which the input $\bu$ is the representation of $u^h$ as a vector of nodal values.  In evaluating $\bF$ we use \eqref{eq:un:uhexpand} to get point values of $u^h$, and its gradient $\grad u^h$, on the interior of triangles.  These point values allow quadrature, similar to that in Chapter \ref{chap:of}, to approximate the integrals in \eqref{eq:un:weakformhat}.  Implementing a residual in the linear case is mathematically equivalent to assembling $A$ and $\bb$, but the residual-evaluation code requires no direct contact with a \PETSc \pMat object at all.  These tools can be tested for correctness with a finite-differenced Jacobian (Chapter \ref{chap:nl}).  Once this is all shown to work correctly, via comparison to an exact solution, then we will consider matrix assembly for the Jacobian.
+As a next step in the linear case it is common to write system \eqref{eq:un:weakformhat} and \eqref{eq:un:uhexpand} in matrix-vector form as $A \bu = \bb$, and then to assemble the \emph{stiffness matrix} $A$ \citep{Elmanetal2005}.  However, as said earlier, we will not assemble a matrix until we have an initial, verified numerical solution.  Following the pattern established since Chapter \ref{chap:nl}, we first implement equation \eqref{eq:un:weakformhat} as a residual function $\bF(\bu)$, a \PETSc \pSNES call-back, in which the input $\bu$ is the representation of $u^h$ as a vector of nodal values.  In evaluating $\bF$ we use \eqref{eq:un:uhexpand} to get point values of $u^h$, and its gradient $\grad u^h$, on the interior of triangles.  These point values allow quadrature, similar to that in Chapter \ref{chap:of}, to approximate the integrals in \eqref{eq:un:weakformhat}.  Implementing a residual in the linear case is mathematically equivalent to assembling $A$ and $\bb$, but the residual-evaluation code requires no direct contact with a \PETSc \pMat object.  Our solution can then be tested for correctness with a finite-differenced Jacobian (Chapter \ref{chap:nl}).  Once it is shown to work correctly, via comparison to an exact solution, then we re-consider matrix assembly for the Jacobian.
 
-Before the code can be written we need to be more specific about what \eqref{eq:un:weakformhat} says on each element, and we will need to read the triangular mesh into \PETSc data structures.
+Before the code can be written we need to be more specific about what \eqref{eq:un:weakformhat} says on each element, and we need to read a triangular mesh into \PETSc data structures.
 
 
 \section{Assembly of the residual equations}
@@ -176,7 +171,7 @@ To enforce the boundary conditions, the components of the residual corresponding
 F_i(\bu) = u_i - g_D(\bx_i) \qquad \text{ if } \bx_i \in \partial_D\Omega.  \label{eq:un:dirichletresiduals}
 \end{equation}
 
-Triangulation $\mathcal{T}_h$ covers\sidenote{At least, the set $\Omega \setminus \cup_k \triangle_k$ has measure zero.} $\Omega$ with non-overlapping triangles so we can write integral \eqref{eq:un:weakformhat} as a sum over elements.  To be specific, for each $k=0,\dots,K-1$ let
+Triangulation $\mathcal{T}_h$ covers $\Omega$ with non-overlapping triangles, so we can write integral \eqref{eq:un:weakformhat} as a sum over elements.  In fact, for each $k=0,\dots,K-1$ let
 \begin{equation}
 F_i^k(\bu) = \int_{\triangle_k} a(u^h) \grad u^h \cdot \grad \psi_i - f(u^h) \psi_i.  \label{eq:un:elementweakform}
 \end{equation}
@@ -184,11 +179,11 @@ Suppose $n_N$ is the number of segments (edges) which are in the Neumann boundar
 \begin{equation}
 \varphi_i^\nu = \int_{s_\nu} g_N \psi_i.  \label{eq:un:segmentweakform}
 \end{equation}
-Note that $\varphi_i^\nu$ does \emph{not} depend on the solution $u^h$.  Then \eqref{eq:un:weakformhat} is
+(Note that $\varphi_i^\nu$ does \emph{not} depend on the solution $u^h$.)  Then \eqref{eq:un:weakformhat} becomes the statement that the following residual components are zero:
 \begin{equation}
-F_i(\bu) = \sum_{k=0}^{K-1} F_i^k(\bu) - \sum_{\nu=0}^{n_N-1} \varphi_i^\nu = 0  \qquad \text{ if } \bx_i \notin \partial_D\Omega. \label{eq:un:elementwisesum}
+F_i(\bu) = \sum_{k=0}^{K-1} F_i^k(\bu) - \sum_{\nu=0}^{n_N-1} \varphi_i^\nu  \qquad \text{ if } \bx_i \notin \partial_D\Omega. \label{eq:un:elementwisesum}
 \end{equation}
-Together, equations \eqref{eq:un:dirichletresiduals} and \eqref{eq:un:elementwisesum} form a (generally) nonlinear system, of dimension $N$, which we supply to the \pSNES solver:
+Together, equations \eqref{eq:un:dirichletresiduals} and \eqref{eq:un:elementwisesum} form a (generally) nonlinear system, of dimension $N$, which the \pSNES is asked to solve:
 \begin{equation}
 \bF(\bu)=0. \label{eq:un:fullsystem}
 \end{equation}
