@@ -470,7 +470,7 @@ Before we do initial testing it might be wise for the reader to browse the files
 
 \section{Initial testing}
 
-Let's try it.\sidenote{The reader should understand that showing the actual process of debugging in a textbook is hard.  Bugs occurred, and were found, as this subsection was created.}  The first run uses the coarse triangulation in Figure \ref{fig:un:trapone}.  Because our first tests use only the residual evaluation function \texttt{FormFunction()}, and not an analytical Jacobian, we add \texttt{-snes\_fd}:
+Let's try it.\sidenote{The reader should understand that showing the actual process of debugging in a textbook is hard.  Bugs occurred, and were found, as this subsection was created.}  The first run uses the coarse triangulation in Figure \ref{fig:un:trapone}, and, because we initially test only the residual evaluation function \texttt{FormFunction()} and not an analytical Jacobian, we add \texttt{-snes\_fd}:
 \begin{cline}
 $ cd c/ch7/
 $ make unfem
@@ -478,16 +478,16 @@ $ ./unfem -un_mesh meshes/trap.1 -snes_fd
 case 0 result for N=8 nodes with h = 1.414e+00 :  |u-u_ex|_inf = 0.230159
 \end{cline}
 %$
-Note that \texttt{unfem} describes the mesh by the number of nodes $N$ and the maximum triangle side length $h$.  Also note that \texttt{unfem} defaults to the ``case $0$'' exact solution---see the description of this linear problem on page \pageref{eq:un:exactsolution}---and quadrature of degree 1.
+Note that \texttt{unfem} describes the mesh by the number of nodes $N$ and the maximum triangle side length $h$.  Also \texttt{unfem} defaults to the ``case $0$'' exact solution---see the description of this linear problem on page \pageref{eq:un:exactsolution}---and quadrature of degree 1.
 
-The actual test we care about, for code correctness, is whether the error decreases at the theoretically-optimum rate as the mesh is refined.  For the next level of refinement note that we have already generated the mesh (\texttt{trap.2} in Figure \ref{fig:un:traptwo}), but that it needs to be converted to \PETSc binary files for reading by \texttt{unfem}:
+The actual test we care about, for code correctness, is whether the error decreases at the theoretically-optimum rate as the mesh is refined.  For the next level of refinement note that we have already generated the mesh (\texttt{trap.2} in Figure \ref{fig:un:traptwo}), but that it first needs to be converted to \PETSc binary files for reading by \texttt{unfem}:
 \begin{cline}
 $ ./tri2petsc.py meshes/trap.2 meshes/trap.2
 $ ./unfem -un_mesh meshes/trap.2 -snes_fd -mat_view draw -draw_pause 2
 case 0 result for N=33 nodes with h = 6.212e-01 :  |u-u_ex|_inf = 0.0289678
 \end{cline}
 
-The error is already an order of magnitude smaller.  So as to measure a convergence rate, however, we generate, by the following snippet of Bash code, nine levels of refined grids  \texttt{trap.1}--\texttt{trap.9}.  The last of these has $N\approx 10^6$ nodes:
+The error is already an order of magnitude smaller.  So as to measure a convergence rate we start by writing the following snippet of Bash code for nine levels of refined grids  \texttt{trap.1}--\texttt{trap.9}.  The last of these has $N\approx 10^6$ nodes:
 \begin{code}
 area[0]=0.5
 area[1]=0.1
@@ -509,26 +509,39 @@ done
 %$
 
 \begin{figure}
-\includegraphics[width=\textwidth]{figs/unfem-snesfd}
-\caption{Numerical error (left axis) and number of evaluations of \texttt{FormFunction()} (right axis) using \texttt{-snes\_fd} runs on meshes \texttt{trap.1}--\texttt{trap.5}.}
-\label{fig:un:unfem-snesfd}
+\includegraphics[width=\textwidth]{figs/unfem-fdmf}
+\caption{Numerical error (left axis) and number of evaluations of \texttt{FormFunction()} (right axis) using \texttt{-snes\_fd} and \texttt{-snes\_mf}.}
+\label{fig:un:unfem-fdmf}
 \end{figure}
 
-A bit of testing shows, however, that these \texttt{-snes\_fd} are far too slow, and even fail with a too-many-evaluations error,\sidenote{Add \texttt{-snes\_converged\_reason} to see the error message.} for levels \texttt{trap.6}--\texttt{trap.9}.  The following snippet of Bash code tests the available coarser levels and generates the results shown in Figure \ref{fig:un:unfem-snesfd}:
+A bit of testing shows, however, that \texttt{-snes\_fd} runs are far too slow, and even fail with a too-many-evaluations error,\sidenote{Add \texttt{-snes\_converged\_reason} to see the error message.} for levels \texttt{trap.6}--\texttt{trap.9}.  On the other hand, the matrix-free Newton-Krylov method (see Chapter \ref{chap:nl}) is also available without an assembled Jacobian, i.e.~with option \texttt{-snes\_mf}.  For example, 
+\begin{cline}
+$ ./unfem -un_mesh meshes/trap.3 -snes_mf
+case 0 result for N=136 nodes with h = 2.813e-01 :  |u-u_ex|_inf = 0.00777117
+\end{cline}
+%$
+
+How far we can go with \texttt{-snes\_fd} and \texttt{-snes\_mf}?  The following snippet of Bash code uses those coarser meshes which complete without errors and in reasonable time for \texttt{-snes\_mf}:
 \begin{code}
-for (( N=1; N<=5; N++ )); do
+for (( N=1; N<=7; N++ )); do
     rm -f foo
-    ./unfem -un_mesh meshes/trap.$N -snes_fd -log_view > foo
+    ./unfem -un_mesh meshes/trap.$N -snes_mf -log_view > foo
     grep "|u-u_ex|_inf" foo
     grep "SNESFunctionEval" foo
 done
 \end{code}
 %$
-The evidence suggests convergence, but we will do more work before being confident of the rate.
+A similar loop with ``\texttt{N=1; N<=5; N++}'' does the \texttt{-snes\_fd} runs.  The results are shown in Figure \ref{fig:un:unfem-fdmf}:
 
-Of course, there is no mystery in why these runs slow down dramatically with refinement.  As explained in Chapter \ref{chap:nl}, because there is no structured-grid information to allow coloring, the number of evaluations of \texttt{FormFunction()} scales with the number of nodes (unknowns) $N$.\sidenote{The number of evaluations shown in Figure \ref{fig:un:unfem-snesfd} is essentially $2N$.}  Obviously, this is an unsustainable amount of work as the grid is refined.  We are motivated to write additional code for an analytical Jacobian in the next subsection.
+The graph of errors in Figure \ref{fig:un:unfem-fdmf} suggests convergence, but we will confirm the rate of convergence using an analytical Jacobian (next subsection).  Note that errors from the \texttt{-snes\_fd} and  \texttt{-snes\_mf} runs coincide for all grids where both complete successfully.
 
-Before moving on, however, we can view the symmetry and sparsity pattern of the finite-differenced Jacobian using X windows:
+These runs slow dramatically with refinement.  The reason is not a mystery: see the graph of the number of residual evaluations, as a function of the mesh spacing, in Figure \ref{fig:un:unfem-fdmf}.  As explained in Chapter \ref{chap:nl},\sidenote{Also, there is no structured-grid information to allow coloring, i.e.~\texttt{-snes\_fd\_color}.  That option was quite effective in Chapter \ref{chap:of}, for example.} for option \texttt{-snes\_fd} the number of evaluations of \texttt{FormFunction()} scales with the number of nodes (unknowns) $N$.  Indeed, the number of evaluations shown in Figure \ref{fig:un:unfem-fdmf} is essentially $2N$ for \texttt{-snes\_fd}.
+
+Recall from Chapter \ref{chap:nl} that a different issue arises to explain the large number of residual evaluations for option \texttt{-snes\_mf}.  This number scales with the number of Krylov solver iterations.  Such iterations grow rapidly with refinement because---this is \emph{pure} matrix-free Newton-Krylov---we can have no preconditioning on each the linear system.
+
+As in earlier Chapters, by now we are motivated to write additional code for an analytical Jacobian; see the next subsection.
+
+Before moving on, however, we can already examine the symmetry and sparsity pattern of the Jacobian using X windows:
 \begin{cline}
 $ ./unfem -un_mesh meshes/trap.2 -snes_fd -mat_view draw -draw_pause 2
 case 0 result for N=33 nodes with h = 6.212e-01 :  |u-u_ex|_inf = 0.0289678
