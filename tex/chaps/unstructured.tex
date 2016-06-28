@@ -470,24 +470,33 @@ Before we do initial testing it might be wise for the reader to browse the files
 
 \section{Initial testing}
 
-Let's try it.\sidenote{The reader should understand that showing the actual process of debugging in a textbook is hard.  Bugs occurred, and were found, as this subsection was created.}  The first run uses the coarse triangulation in Figure \ref{fig:un:trapone}, and, because we initially test only the residual evaluation function \texttt{FormFunction()} and not an analytical Jacobian, we add \texttt{-snes\_fd}:
+Our first run\sidenote{Showing the actual process of debugging in a textbook is difficult, and not really attempted.  Bugs occurred and were found!} uses the coarse triangulation in Figure \ref{fig:un:trapone}.  Because we initially test only the residual evaluation function \texttt{FormFunction()} and not an analytical Jacobian, we add \texttt{-snes\_fd}:
 \begin{cline}
 $ cd c/ch7/
 $ make unfem
+...
 $ ./unfem -un_mesh meshes/trap.1 -snes_fd
 case 0 result for N=8 nodes with h = 1.414e+00 :  |u-u_ex|_inf = 0.230159
 \end{cline}
 %$
-Note that \texttt{unfem} describes the mesh by the number of nodes $N$ and the maximum triangle side length $h$.  Also \texttt{unfem} defaults to the ``case $0$'' exact solution---see the description of this linear problem on page \pageref{eq:un:exactsolution}---and quadrature of degree 1.
+Note that \texttt{unfem} describes the mesh by the number of nodes $N$ and the maximum triangle side length $h$.  Also \texttt{unfem} defaults to the ``case $0$'' exact solution---see the description of this linear problem on page \pageref{eq:un:exactsolution}---and quadrature of degree $1$.
 
-The actual test we care about, for code correctness, is whether the error decreases at the theoretically-optimum rate as the mesh is refined.  For the next level of refinement note that we have already generated the mesh (\texttt{trap.2} in Figure \ref{fig:un:traptwo}), but that it first needs to be converted to \PETSc binary files for reading by \texttt{unfem}:
+Next we refine the mesh and meanwhile examine the symmetry and sparsity pattern of the Jacobian using X windows.  We have already generated the mesh (\texttt{trap.2} in Figure \ref{fig:un:traptwo}), but it needs to be converted to \PETSc binary files:
 \begin{cline}
 $ ./tri2petsc.py meshes/trap.2 meshes/trap.2
 $ ./unfem -un_mesh meshes/trap.2 -snes_fd -mat_view draw -draw_pause 2
 case 0 result for N=33 nodes with h = 6.212e-01 :  |u-u_ex|_inf = 0.0289678
 \end{cline}
+%$
+The middle frame of Figure \ref{fig:un:unfem-matsparsity} shows the result, sandwiched between comparable results for a coarser and a finer mesh.  Note the error is an order of magnitude smaller than with mesh \texttt{trap.1}.
 
-The error is already an order of magnitude smaller.  So as to measure a convergence rate we start by writing the following snippet of Bash code for nine levels of refined grids  \texttt{trap.1}--\texttt{trap.9}.  The last of these has $N\approx 10^6$ nodes:
+\begin{figure}
+\includegraphics[width=0.31\textwidth]{figs/trap1mat} \, \includegraphics[width=0.31\textwidth]{figs/trap2mat} \, \includegraphics[width=0.31\textwidth]{figs/trap3mat}
+\caption{Matrix sparsity patterns from \texttt{unfem.c} applied to the meshes \texttt{trap.1,2,3} with $N=8,33,136$ nodes, respectively.}
+\label{fig:un:unfem-matsparsity}
+\end{figure}
+
+The verification test we care about is whether the error decreases at the theoretically-expected rate as the mesh is refined.  We start by writing the following snippet of Bash code for nine levels of refined grids  \texttt{trap.1}--\texttt{trap.9}.  The last of these has $N\approx 10^6$ nodes:
 \begin{code}
 area[0]=0.5
 area[1]=0.1
@@ -508,13 +517,9 @@ done
 \end{code}
 %$
 
-\begin{figure}
-\includegraphics[width=\textwidth]{figs/unfem-fdmf}
-\caption{Numerical error (left axis) and number of evaluations of \texttt{FormFunction()} (right axis) using \texttt{-snes\_fd} and \texttt{-snes\_mf}.}
-\label{fig:un:unfem-fdmf}
-\end{figure}
+A bit of testing with these meshes shows, however, that \texttt{-snes\_fd} runs are far too slow.  The runs fail with a too-many-evaluations error,\sidenote{Add \texttt{-snes\_converged\_reason} to see the error message.} for levels \texttt{trap.6}--\texttt{trap.9}.
 
-A bit of testing shows, however, that \texttt{-snes\_fd} runs are far too slow, and even fail with a too-many-evaluations error,\sidenote{Add \texttt{-snes\_converged\_reason} to see the error message.} for levels \texttt{trap.6}--\texttt{trap.9}.  On the other hand, the matrix-free Newton-Krylov method (see Chapter \ref{chap:nl}) is also available without an assembled Jacobian, i.e.~with option \texttt{-snes\_mf}.  For example, 
+On the other hand, the matrix-free Newton-Krylov method (see Chapter \ref{chap:nl}) is also available without an assembled Jacobian, i.e.~with option \texttt{-snes\_mf}.  For example, 
 \begin{cline}
 $ ./unfem -un_mesh meshes/trap.3 -snes_mf
 case 0 result for N=136 nodes with h = 2.813e-01 :  |u-u_ex|_inf = 0.00777117
@@ -533,32 +538,50 @@ done
 %$
 A similar loop with ``\texttt{N=1; N<=5; N++}'' does the \texttt{-snes\_fd} runs.  The results are shown in Figure \ref{fig:un:unfem-fdmf}:
 
-The graph of errors in Figure \ref{fig:un:unfem-fdmf} suggests convergence, but we will confirm the rate of convergence using an analytical Jacobian (next subsection).  Note that errors from the \texttt{-snes\_fd} and  \texttt{-snes\_mf} runs coincide for all grids where both complete successfully.
-
-These runs slow dramatically with refinement.  The reason is not a mystery: see the graph of the number of residual evaluations, as a function of the mesh spacing, in Figure \ref{fig:un:unfem-fdmf}.  As explained in Chapter \ref{chap:nl},\sidenote{Also, there is no structured-grid information to allow coloring, i.e.~\texttt{-snes\_fd\_color}.  That option was quite effective in Chapter \ref{chap:of}, for example.} for option \texttt{-snes\_fd} the number of evaluations of \texttt{FormFunction()} scales with the number of nodes (unknowns) $N$.  Indeed, the number of evaluations shown in Figure \ref{fig:un:unfem-fdmf} is essentially $2N$ for \texttt{-snes\_fd}.
-
-Recall from Chapter \ref{chap:nl} that a different issue arises to explain the large number of residual evaluations for option \texttt{-snes\_mf}.  This number scales with the number of Krylov solver iterations.  Such iterations grow rapidly with refinement because---this is \emph{pure} matrix-free Newton-Krylov---we can have no preconditioning on each the linear system.
-
-As in earlier Chapters, by now we are motivated to write additional code for an analytical Jacobian; see the next subsection.
-
-Before moving on, however, we can already examine the symmetry and sparsity pattern of the Jacobian using X windows:
-\begin{cline}
-$ ./unfem -un_mesh meshes/trap.2 -snes_fd -mat_view draw -draw_pause 2
-case 0 result for N=33 nodes with h = 6.212e-01 :  |u-u_ex|_inf = 0.0289678
-\end{cline}
-%$
-The middle frame of Figure \ref{fig:un:unfem-matsparsity} shows the result sandwiched between comparable results for the coarser \texttt{trap.1} and the further-refined \texttt{trap.3} meshes.
-
 \begin{figure}
-\includegraphics[width=0.31\textwidth]{figs/trap1mat} \, \includegraphics[width=0.31\textwidth]{figs/trap2mat} \, \includegraphics[width=0.31\textwidth]{figs/trap3mat}
-\caption{Matrix sparsity patterns from \texttt{unfem.c} applied to the meshes \texttt{trap.1,2,3} with $N=8,33,136$ nodes, respectively.}
-\label{fig:un:unfem-matsparsity}
+\includegraphics[width=\textwidth]{figs/unfem-fdmf}
+\caption{Numerical error (left axis) and number of evaluations of \texttt{FormFunction()} (right axis) using \texttt{-snes\_fd} and \texttt{-snes\_mf}.}
+\label{fig:un:unfem-fdmf}
 \end{figure}
+
+The errors in Figure \ref{fig:un:unfem-fdmf} from \texttt{-snes\_fd} and  \texttt{-snes\_mf} runs coincide for all grids where both methods complete successfully.  These results suggest convergence, but we will confirm the rate of convergence using an analytical Jacobian (below).
+
+The runs so far slow-down dramatically with refinement.  The reason is not a mystery: Figure \ref{fig:un:unfem-fdmf} show the rapidly-growing number of residual evaluations as a function of the mesh spacing.  With \texttt{-snes\_fd} the number of evaluations of \texttt{FormFunction()} is proportional to the number of nodes/unknowns $N$ (Chapter \ref{chap:nl}).  By contrast, the number of residual evaluations for option \texttt{-snes\_mf} scales with the number of Krylov solver iterations.  Such iterations grow rapidly with refinement because, without an analytical Jacobian or an approximation thereof, we apply the Krylov method directly to the un-preconditioned linear system.
 
 
 \section{Assembling an approximate Jacobian}
 
-FIXME EXPLAIN PICARD $\bF(\bu)=0$ to $A(\bu) \bu - \bb(\bu)=0$ to $A(\bu^k) \bu^{k+1} - \bb(\bu^k)=0$ to $A(\bu^k) (\bu^{k+1}-\bu^k) - \bb(\bu^k)= - A(\bu^k) \bu^k$ to $A(\bu^k) \bs = -\bF(\bu^k)$
+At this point, as in earlier Chapters, writing additional code for an analytical Jacobian is now well-motivated.  However, so as to illustrate this common alternative technique, we do not construct the full Jacobian but instead construct the \emph{Picard} linearization.
+
+Recall that the Newton method linearizes the algebraic system \eqref{eq:un:fullsystem}, namely
+\begin{equation*}
+\bF(\bu)=0.
+\end{equation*}
+The steps of the Newton method solve linear systems
+\begin{equation}
+J(\bu^k) \bs = -\bF(\bu^k)  \label{eq:un:newtonstep}
+\end{equation}
+where $\bs = \bu^{k+1}-\bu^k$ is the step which computes the new iterate.
+
+In our case system \eqref{eq:un:fullsystem} has a nearly-linear form in the sense that the FEM \eqref{eq:un:weakformhat}, \eqref{eq:un:uhexpand} has the form
+\begin{equation}
+A(\bu) \bu = \bb(\bu) \label{eq:un:picardformsystem}
+\end{equation}
+so that the residual is in the form $\bF(\bu) = A(\bu) \bu - \bb(\bu)$.  That is, the residual function $\bF(\bu)$ can be regarded as a matrix-vector multiplication for the left side of \eqref{eq:un:weakformhat}, containing all derivative terms, and a right side which is zeroth-order.  In general, and in the ``case $1$'' problem in particular, functions $A(\bu)$ and $\bb(\bu)$ are nonlinear.
+
+A reasonably-obvious iteration applies to \eqref{eq:un:picardformsystem}.  The matrix and right-hand side can be ``frozen,'' based on a current iterate, and the linear system solved for a new iterate:
+\begin{equation}
+A(\bu^k) \bu^{k+1} = \bb(\bu^k). \label{eq:un:picardnaive}
+\end{equation}
+Though it is the usual form of the Picard iteration, it is interesting and useful to note that \eqref{eq:un:picardnaive} can be transformed to the form \eqref{eq:un:newtonstep}, which allows us to use any of \PETSc's Newton machinery for the Picard iteration.  First make this simple transformation of \eqref{eq:un:picardnaive}:
+\begin{equation*}
+A(\bu^k) (\bu^{k+1}-\bu^k) = - \left(A(\bu^k) \bu^k - \bb(\bu^k)\right).
+\end{equation*}
+Exactly as in the Newton iteration \eqref{eq:un:newtonstep} above, let $\bs = \bu^{k+1}-\bu^k$.  From the form of the residual in \eqref{eq:un:picardformsystem}, we now have
+\begin{equation}
+A(\bu^k) \bs = -\bF(\bu^k).  \label{eq:un:picardstep}
+\end{equation}
+This is just Newton's method with a different matrix.
 
 FIXME compare
     $$-\Div\left(a(u^k) \grad u^{k+1}\right) = f(u^k)$$

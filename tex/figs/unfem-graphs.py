@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+# uses data files from  tex/timing/unfem/
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -31,8 +33,8 @@ def saveit(outname):
     plt.savefig(outname,bbox_inches='tight')
     plt.clf()
 
-_, _, hfd, errfd, evalsfd, _, _ = getstats('snes-fd-ErrorsEvalsTimes')
-_, _, hmf, errmf, evalsmf, _, _ = getstats('snes-mf-ErrorsEvalsTimes')
+_, _, hfd, errfd, evalsfd, _, _ = getstats('snes-fd-case0')
+_, _, hmf, errmf, evalsmf, _, _ = getstats('snes-mf-case0')
 
 # figure for -snes_fd, -snes_mf runs with both errors and evals
 _, ax1 = plt.subplots()
@@ -51,10 +53,10 @@ ax2.legend(loc='lower center')
 ax1.set_xlim(1.0e-2,3.0)
 saveit('unfem-fdmf.pdf')
 
-_, _, h0, err0, _, sost, ost = getstats('ErrorsEvalsTimes')
+_, _, h0, err0, _, sost, ost = getstats('case0')
 ost = ost.sum(1)
-_, _, h1, err1, _, _, _ = getstats('case1-ErrorsEvalsTimes')
-_, _, h2, err2, _, _, _ = getstats('case2-ErrorsEvalsTimes')
+_, _, h1, err1, _, _, _ = getstats('case1')
+_, _, h2, err2, _, _, _ = getstats('case2')
 
 # figure for case 0,1,2 errors
 p = np.polyfit(np.log(h0[2:-1]),np.log(err0[2:-1]),1)

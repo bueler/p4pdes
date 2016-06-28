@@ -24,31 +24,30 @@ function run() {
       echo "Jacobian eval line EMPTY"
   fi
   echo >> $2
-  #grep "Jacobian eval  :" tmp | awk '{print $5}' >> $2          # stage time (and newline)
   rm -f tmp jetmp
 }
 
 # case 0
 NAME=trap
 (cd $LOC/ && ./gentraps.sh $NAME 9)
-OUT=snes-fd-ErrorsEvalsTimes
+OUT=snes-fd-case0
 rm -f $OUT
 for N in 1 2 3 4 5; do
     run $NAME $OUT $N "-snes_fd"
 done
-OUT=snes-mf-ErrorsEvalsTimes
+OUT=snes-mf-case0
 rm -f $OUT
 for N in 1 2 3 4 5 6 7; do
     run $NAME $OUT $N "-snes_mf"
 done
-OUT=ErrorsEvalsTimes
+OUT=case0
 rm -f $OUT
 for N in 1 2 3 4 5 6 7 8 9; do
     run $NAME $OUT $N
 done
 
 #case 1
-export OUT=case1-ErrorsEvalsTimes
+export OUT=case1
 rm -f $OUT
 for N in 1 2 3 4 5 6 7 8 9; do
     run $NAME $OUT $N "-un_case 1"
@@ -57,7 +56,7 @@ done
 #case 2
 NAME=trapneu
 (cd $LOC/ && ./gentraps.sh $NAME 9)
-export OUT=case2-ErrorsEvalsTimes
+export OUT=case2
 rm -f $OUT
 for N in 1 2 3 4 5 6 7 8 9; do
     run $NAME $OUT $N "-un_case 2"
