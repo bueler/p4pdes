@@ -549,57 +549,65 @@ The errors in Figure \ref{fig:un:unfem-fdmf} from \texttt{-snes\_fd} and  \textt
 The runs so far slow-down dramatically with refinement.  The reason is not a mystery: Figure \ref{fig:un:unfem-fdmf} show the rapidly-growing number of residual evaluations as a function of the mesh spacing.  With \texttt{-snes\_fd} the number of evaluations of \texttt{FormFunction()} is proportional to the number of nodes/unknowns $N$ (Chapter \ref{chap:nl}).  By contrast, the number of residual evaluations for option \texttt{-snes\_mf} scales with the number of Krylov solver iterations.  Such iterations grow rapidly with refinement because, without an analytical Jacobian or an approximation thereof, we apply the Krylov method directly to the un-preconditioned linear system.
 
 
-\section{Assembling an approximate Jacobian}
+\section{Picard iteration as a Newton-like step}
 
-At this point, as in earlier Chapters, writing additional code for an analytical Jacobian is now well-motivated.  However, so as to illustrate this common alternative technique, we do not construct the full Jacobian but instead construct the \emph{Picard} linearization.
+At this point writing additional code for an analytical Jacobian is well-motivated.  In part because it is easier, and in part to illustrate a common technique, in this Chapter we do not construct the full Jacobian but instead the \emph{Picard matrix}, an approximate linearization.
 
-Recall that the Newton method linearizes the algebraic system \eqref{eq:un:fullsystem}, namely
-\begin{equation*}
-\bF(\bu)=0.
-\end{equation*}
-The steps of the Newton method solve linear systems
+Recall that the Newton method linearizes the algebraic system \eqref{eq:un:fullsystem}, namely $\bF(\bu)=0$.  Given the current iterate $\bu^k$ the method solves a linear system
 \begin{equation}
 J(\bu^k) \bs = -\bF(\bu^k)  \label{eq:un:newtonstep}
 \end{equation}
-where $\bs = \bu^{k+1}-\bu^k$ is the step which computes the new iterate.
+for $\bs = \bu^{k+1}-\bu^k$, the step for computing the new iterate $\bu^{k+1}$.
 
-In our case system \eqref{eq:un:fullsystem} has a nearly-linear form in the sense that the FEM \eqref{eq:un:weakformhat}, \eqref{eq:un:uhexpand} has the form
+In our case system \eqref{eq:un:fullsystem} has a nearly-linear form already.  In fact, the FEM \eqref{eq:un:weakformhat}, \eqref{eq:un:uhexpand} has the form
 \begin{equation}
 A(\bu) \bu = \bb(\bu) \label{eq:un:picardformsystem}
 \end{equation}
-so that the residual is in the form $\bF(\bu) = A(\bu) \bu - \bb(\bu)$.  That is, the residual function $\bF(\bu)$ can be regarded as a matrix-vector multiplication for the left side of \eqref{eq:un:weakformhat}, containing all derivative terms, and a right side which is zeroth-order.  In general, and in the ``case $1$'' problem in particular, functions $A(\bu)$ and $\bb(\bu)$ are nonlinear.
+and the residual is in the form $\bF(\bu) = A(\bu) \bu - \bb(\bu)$.  The left side of \eqref{eq:un:weakformhat} contains all the derivative terms and it can be regarded as a matrix-vector multiplication for computing $\bF(\bu)$.  In general, and in the ``case $1$'' test problem in particular, functions $A(\bu)$ and $\bb(\bu)$ are nonlinear.
 
-A reasonably-obvious iteration applies to \eqref{eq:un:picardformsystem}.  The matrix and right-hand side can be ``frozen,'' based on a current iterate, and the linear system solved for a new iterate:
+A reasonably-obvious iteration applies to \eqref{eq:un:picardformsystem}.  The matrix $A(\bu)$ and right-hand side $\bb(\bu)$ can be ``frozen'' at the current iterate and the linear system solved for a new iterate:
 \begin{equation}
 A(\bu^k) \bu^{k+1} = \bb(\bu^k). \label{eq:un:picardnaive}
 \end{equation}
-Though it is the usual form of the Picard iteration, it is interesting and useful to note that \eqref{eq:un:picardnaive} can be transformed to the form \eqref{eq:un:newtonstep}, which allows us to use any of \PETSc's Newton machinery for the Picard iteration.  First make this simple transformation of \eqref{eq:un:picardnaive}:
+
+Equation \eqref{eq:un:picardnaive} is the usual form of the Picard iteration.  To illustrate how natural is the Picard approach, at the level of the continuum equation we propose to turn \eqref{eq:un:poissonstrong} into the iteration
+    $$-\Div\left(a(u^k) \grad u^{k+1}\right) = f(u^k).$$
+
+However, it is useful to transform \eqref{eq:un:picardnaive} into form \eqref{eq:un:newtonstep} so that we may use \PETSc's \pSNES machinery for the Picard iteration.  We first subtract $A(\bu^k) \bu^k$ from each side of \eqref{eq:un:picardnaive}:
 \begin{equation*}
 A(\bu^k) (\bu^{k+1}-\bu^k) = - \left(A(\bu^k) \bu^k - \bb(\bu^k)\right).
 \end{equation*}
-Exactly as in the Newton iteration \eqref{eq:un:newtonstep} above, let $\bs = \bu^{k+1}-\bu^k$.  From the form of the residual in \eqref{eq:un:picardformsystem}, we now have
+As before let $\bs = \bu^{k+1}-\bu^k$.  Note the appearance of the residual on the right side.  We now have
 \begin{equation}
 A(\bu^k) \bs = -\bF(\bu^k).  \label{eq:un:picardstep}
 \end{equation}
-This is just Newton's method with a different matrix.
+This is just like the Newton equation \eqref{eq:un:newtonstep} but with a different matrix $A=A(\bu)\in\RR^{N\times N}$ replacing the Jacobian $J=J(\bu)$.
 
-FIXME compare
-    $$-\Div\left(a(u^k) \grad u^{k+1}\right) = f(u^k)$$
+The matrix is the same as the Jacobian, $A=J$, in the linear case where $\partial a/\partial u=0$ and $\partial f/\partial u=0$.  More generally we expect $A$ to be a good spectral approximation (see Chapter \ref{chap:ls}) of $J$ because it captures the highest-order derivative terms in the PDE \eqref{eq:un:poissonstrong}, which generate the largest eigenvalues.
 
-FIXME The linear system at a step, $A(\bu^k) \bs = -\bF(\bu^k)$, has $A=A(\bu^k)\in\RR^{N\times N}$ and $\bb=-\bF(\bu^k)\in\RR^N$, where $N$ is the number of nodes.  \pMat and \pVec objects store the problem, and, unlike in the \texttt{-snes\_fd} and \texttt{-snes\_mf} cases used above, wherein the \pMat object stayed invisibly inside the \pSNES solver, we now assemble the \pMat.
 
-FIXME by considering \eqref{eq:un:dirichletresiduals}, \eqref{eq:un:elementweakform}, and \eqref{eq:un:elementwisesum}, the entries of this Picard/Jacobian matrix are
+\section{Assembling the Picard matrix}
+
+Our plan is now to write a function called \texttt{FormPicard()} which computes \texttt{A} $=A(\bu)$ from the current iterate.  Then we will pass \texttt{FormPicard()} and a \pMat \texttt{A} to \texttt{SNESSetJacobian()}.  In the linear cases $0$ and $2$, this provides the correct Jacobian.  We will see that this approximation of the Jacobian is highly-effective in the nonlinear case $1$.
+
+Considering \eqref{eq:un:dirichletresiduals}, \eqref{eq:un:elementweakform}, and \eqref{eq:un:elementwisesum}, we see that the entries of $A$ are sums over elements
 \begin{equation}
 A_{ij}(\bu) =  \begin{cases}
                1, & i \in \partial_D\Omega \text{ or } j \in \partial_D\Omega, \\
                \sum_{k=0}^{K-1} A_{ij}^k(\bu), & \text{otherwise},
                \end{cases} \label{eq:un:picardentry}
 \end{equation}
-where
+where on triangle $\triangle_k$ we compute
 \begin{equation}
 A_{ij}^k(\bu) = \int_{\triangle_k} a(u^h) \grad\psi_j \cdot \grad\psi_i \label{eq:un:picardentryelement}
 \end{equation}
-Again this is computed by quadrature, similar to \eqref{eq:un:elementintegralreference} and \eqref{eq:un:elementquadraturereference}.
+
+Of course, we have already computed integral \eqref{eq:un:picardentryelement}, namely in evaluating \eqref{eq:un:elementintegralreference}.  This gives us a software choice, whether to
+\begin{itemize}
+\item[option 1] FIXME side-effect
+\item[option 2] FIXME code duplication
+\end{itemize}
+FIXME we choose option 2 because \texttt{FormFunction()} is already tested, and because the cost of evaluating either $\bF(\bu)$ or $A(\bu)$ shrinks to insignificance compared to the solver (below).  FIXME and we do it by quadrature
 
 \cinputpart{unfem.c}{\CODELOC}{FIXME}{VI}{//STARTPICARD}{//ENDPICARD}{code:unfempicard}
 
