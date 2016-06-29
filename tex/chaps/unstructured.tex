@@ -496,7 +496,7 @@ The middle frame of Figure \ref{fig:un:unfem-matsparsity} shows the result, sand
 \label{fig:un:unfem-matsparsity}
 \end{figure}
 
-The verification test we care about is whether the error decreases at the theoretically-expected rate as the mesh is refined.  We start by writing the following snippet of Bash code for nine levels of refined grids  \texttt{trap.1}--\texttt{trap.9}.  The last of these has $N\approx 10^6$ nodes:
+The verification test we care about is whether the error decreases at the theoretically-expected rate as the mesh is refined.  We start by writing the following snippet of Bash code for nine levels of refined grids \texttt{trap.1}--\texttt{trap.9}:
 \begin{code}
 area[0]=0.5
 area[1]=0.1
@@ -551,7 +551,7 @@ The runs so far slow-down dramatically with refinement.  The reason is not a mys
 
 \section{Picard iteration as a Newton-like step}
 
-Writing additional code for an analytical Jacobian is now well-motivated, but we do not construct the full Jacobian.  Instead we build a \emph{Picard matrix}, an approximate linearization.  This approximation is somewhat easier to construct than the Jacobian, and it also allows us to illustrate a common technique.
+Writing additional code for an analytical Jacobian is now well-motivated, but still we do not construct the full Jacobian.  Instead we build a \emph{Picard matrix}, an approximate linearization.  This approximation is easier to construct than the Jacobian, and thus it is a common technique.
 
 Recall that the Newton method linearizes the algebraic system \eqref{eq:un:fullsystem}, $\bF(\bu)=0$.  Given the current iterate $\bu^k$ the method solves
 \begin{equation}
@@ -583,45 +583,34 @@ A(\bu^k) \bs = -\bF(\bu^k).  \label{eq:un:picardstep}
 This is just like the Newton equation \eqref{eq:un:newtonstep} but with a different matrix $A=A(\bu)\in\RR^{N\times N}$ replacing the Jacobian $J=J(\bu)$.  In the linear case where $\partial a/\partial u=0$ and $\partial f/\partial u=0$ the matrices are the same, $A=J$.  Generally we expect $A$ to be a good spectral approximation (see Chapter \ref{chap:ls}) of $J$ because it captures the highest-order derivative terms in the PDE \eqref{eq:un:poissonstrong}, which generate the largest eigenvalues.  We will see, in particular, that this approximation of the Jacobian is highly-effective in the nonlinear ``case $1$'' above.
 
 
-\section{Assembling the Picard matrix}
+\section{Assembling and pre-allocating the Picard matrix}
 
-Thus our plan is to write a function called \texttt{FormPicard()} which computes a \pMat \texttt{A} $=A(\bu)$ from the current iterate.  Then we will pass \texttt{FormPicard()} and \texttt{A} to \texttt{SNESSetJacobian()}.  Considering \eqref{eq:un:dirichletresiduals}, \eqref{eq:un:elementweakform}, and \eqref{eq:un:elementwisesum}, we see that the entries of $A$ are sums over elements
+Thus our plan is to write a function called \texttt{FormPicard()} which computes a \pMat \texttt{A} $=A(\bu)$ from the current estimate $\bu$ of the solution.  Then we will pass \texttt{FormPicard()} to \texttt{SNESSetJacobian()}.
+
+Considering equations \eqref{eq:un:dirichletresiduals}, \eqref{eq:un:elementweakform}, and \eqref{eq:un:elementwisesum}, we first define an element-wise contribution
+\begin{equation}
+A_{ij}^k(\bu) = \int_{\triangle_k} a(u^h) \grad\psi_j \cdot \grad\psi_i. \label{eq:un:picardentryelement}
+\end{equation}
+Then the entries of $A$ are sums over elements
 \begin{equation}
 A_{ij}(\bu) =  \begin{cases}
                1, & i \in \partial_D\Omega \text{ or } j \in \partial_D\Omega, \\
                \sum_{k=0}^{K-1} A_{ij}^k(\bu), & \text{otherwise},
                \end{cases} \label{eq:un:picardentry}
 \end{equation}
-where on triangle $\triangle_k$ we compute
-\begin{equation}
-A_{ij}^k(\bu) = \int_{\triangle_k} a(u^h) \grad\psi_j \cdot \grad\psi_i \label{eq:un:picardentryelement}
-\end{equation}
+This matrix is symmetric, $A_{ij}=A_{ji}$, and sparse because $A_{ij}=0$ if the supports of $\psi_i$ and $\psi_j$ do not overlap.
 
-We have already computed integral \eqref{eq:un:picardentryelement}, namely in evaluating \eqref{eq:un:elementintegralreference}, so we face a software choice, whether to
-\begin{itemize}
-\item[\emph{side-effect} option] re-write \texttt{FormFunction()} so that it also computes \texttt{A}, or
-\item[\emph{code duplication} option] FIXME 
-\end{itemize}
-FIXME we choose option 2 because \texttt{FormFunction()} is already tested, and because the cost of evaluating either $\bF(\bu)$ or $A(\bu)$ shrinks to insignificance compared to the solver (below).  FIXME and we do it by quadrature
+Integral \eqref{eq:un:picardentryelement} is already computed by \texttt{FormFunction()}, when evaluating \eqref{eq:un:elementintegralreference}, but we go ahead and write an additional method \texttt{FormPicard()} which does this bit of redundant work.\sidenote{An alternative might be to modify \texttt{FormFunction()} so that it has the ``side effect'' of assembling the \pMat, but then we must be careful to only regenerate the \pMat when needed.}  This ``code duplication'' option is appropriate in part because \texttt{FormFunction()} is already tested.  On the other hand, as we will see shortly, there is actually very little cost generating the entries of $A(\bu)$ anyway, because, once \texttt{FormPicard()} exists, the evaluation of $\bF(\bu)$ and/or $A(\bu)$ involves less computation than the iterative solvers.
 
-\cinputpart{unfem.c}{\CODELOC}{FIXME}{VI}{//STARTPICARD}{//ENDPICARD}{code:unfempicard}
+Writing \texttt{FormPicard()} is quite straightforward, given that \texttt{FormFunction()} already exists, and thus it is not shown.  Indeed, the finicky part of the residual evaluation has to do with boundary conditions, but the corresponding actions for assembling the Picard matrix are generally simpler.  One decides whether or not a node on a given element is in the Dirichlet boundary or not, and in the latter case one computes an integral.  One detail of note is that we call \texttt{MatSetValues()} with final option \texttt{ADD\_VALUES}.
 
-This matrix is evidently symmetric, $a_{ij}=a_{ji}$, and sparse.  Furthermore it is positive-definite if $a(u,x,y)>0$, and thus the conjugate gradient Krylov method applies to the equations for the Newton step; see Chapter \ref{chap:ls}.
+Correctly allocating memory for \pMat \texttt{A} \emph{does} matter, however.  In structured-grid cases in previous Chapters we have benefited, without being conscious of it, from \PETSc's accurate preallocation of memory for Jacobian matrices; this operation is hidden when we use \texttt{DMDASNESSetJacobianLocal()}.  Here we must do it ourselves, and we make it optional so as to demonstrate its importance (below).
 
-FIXME comment on allocation of \pMat in Code \ref{code:unfemmain}
+Noting that in this Chapter all constructions are serial, the technique shown in Code \ref{code:unfemprealloc} is effective for pre-allocation.  We call \texttt{MatSeqAIJSetPreallocation()} with an array \texttt{nnz} of integers.  Entry \texttt{nnz[n]} is the number of nonzeros in row $n$ of \texttt{A}.  We compute this number by traversing the elements, just as in \texttt{FormPicard()} and \texttt{FormFunction()}, deciding whether to increment \texttt{nnz[n]} for the node according to whether it is in the Dirichlet boundary or not.  The only subtlety is that for an interior node with (edge) degree $d$ the number of incident elements is $d-1$ while for a Neumann boundary node the number of incident elements is $d-2$; in either case \texttt{nnz[n]} $=d+1$.
 
-\begin{figure}
-\includegraphics[width=\textwidth]{figs/unfem-error}
-\caption{FIXME errors and convergence rate}
-\label{fig:un:unfem-error}
-\end{figure}
+\cinputpart{unfem.c}{\CODELOC}{Efficiency requires pre-allocation of Picard matrix \pMat \texttt{A}.}{V}{//STARTPREALLOC}{//ENDPREALLOC}{code:unfemprealloc}
 
-
-\section{Preallocate a \pMat (serial)}
-
-FIXME essential for speed
-
-compare for \texttt{--with-debugging=0} build:
+Pre-allocation makes a difference.  For an example we consider the \texttt{trap.7} mesh and use a version of \PETSc configured with \texttt{--with-debugging=0}:
 \begin{cline}
 $ timer ./unfem -un_mesh meshes/trap.7 -un_noprealloc
 case 0 result for N=46421 nodes with h = 2.210e-02 :  |u-u_ex|_inf = 6.55083e-05
@@ -630,13 +619,51 @@ $ timer ./unfem -un_mesh meshes/trap.7
 case 0 result for N=46421 nodes with h = 2.210e-02 :  |u-u_ex|_inf = 6.55083e-05
 real 0.97
 \end{cline}
+The latter version with pre-allocation is about 60 times faster.
 
-\cinputpart{unfem.c}{\CODELOC}{FIXME}{VII}{//STARTPREALLOC}{//ENDPREALLOC}{code:unfemprealloc}
+
+\section{Convergence and stage times}
+
+Now we measure convergence down to reasonably-fine grids.  Earlier we generated grids \texttt{trap.1}--\texttt{trap.9}.  The last of these has $N\approx 10^6$ nodes and a maximum element edge length of $h=4\times 10^{-3}$.
+
+Repeating the following loop for \texttt{CASE=0,1,2} generates the results seen in Figure \ref{fig:un:unfem-error}:
+\begin{code}
+for N in 1 2 3 4 5 6 7 8 9; do
+    ./unfem -un_mesh meshes/trap.$N -un_case $CASE -log_view
+done
+\end{code}
+The Figure includes rates of convergence computed by logarithmic regression using the results for meshes \texttt{trap.3}--\texttt{trap.8}.
+
+This evidence strongly suggests that our code has no bugs.  In particular, the meaning of $h$ as the maximum edge length, and given that our meshes arise from the \Triangle algorithm, in which we have only imprecise control of element shapes, through imposing an area constraint and a minimum angle condition, the rates seen in Figure \ref{fig:un:unfem-error} are probably indistinguishable from the theoretical rate $O(h^2)$ \citep{Braess2007}.
+
+\begin{figure}
+\includegraphics[width=\textwidth]{figs/unfem-error}
+\caption{Numerical errors and convergence rates for exact solution cases $0$, $1$, $2$, as a function of the maximum mesh edge length $h$.}
+\label{fig:un:unfem-error}
+\end{figure}
+
+Note that the runs above used option \texttt{-log\_view}.  Although these lines are not shown in earlier displayed code, we added \emph{logging} to the code using bracketing \PETSc commands like
+\begin{code}
+    PetscLogStagePush(stage);
+    ... action ...
+    PetscLogStagePop();
+\end{code}
+where we have a \texttt{stage} for reading the mesh, setting-up the rest of the data structures, residual evaluation, Picard matrix (Jacobian) evaluation, and calling the solver (i.e.~\texttt{SNESSolve()}).  Note that residual and Picard matrix happen ``inside'' the solver but are counted separately.  Also note that, again, we have used a version of \PETSc configured with \texttt{--with-debugging=0}.
+
+The result is shown in Figure \ref{fig:un:unfem-times}.  In fact this timing data is of almost no value for the coarser grids (e.g.~\texttt{trap.1}--\texttt{trap.5}), where various operating-system-level noise makes interpreting the numbers difficult.  For the finer \texttt{trap.6}--\texttt{trap.9} grids, however, the lesson is quite clear: the solver, consisting primarily of the ICC-preconditioned CG iteration, \emph{dominates over the cost of everything else}.  On the finest grid the solver takes about $98\%$ of the time.  Here ``everything else'' includes reading the mesh from a file, pre-allocating the \pMat, setting up \pVecs, evaluating the residual function $\bF(\bu)$, and assembling the matrix $A(\bu)$.  Thus our performance focus in Chapter \ref{chap:sc} will be on the solver.
+
+\begin{figure}
+\includegraphics[width=\textwidth]{figs/unfem-times}
+\caption{Stage times: the solver versus everything else, including our residual/Picard evaluation code.  The solver matters for fine grids.}
+\label{fig:un:unfem-times}
+\end{figure}
 
 
 \section{Performance relative to \pDMDA structured grid}
 
-FIXME introduce \texttt{genstructured.py} and case 3; compares well in serial to Chapter 3 example
+It is still a reasonable question to ask: Is this code ``efficient''?  There \emph{is} a reasonable way to answer this question, at least if we assume that \PETSc handles structured-grid problems efficiently.  We will run \texttt{unfem.c} on a structured-grid problem and compare the result to a code which uses all of \PETSc's \pDMDA structured topology interface.
+
+First we generate a structured triangulation using a Python script \texttt{genstructured.py} which writes FIXME and case 3; compares well in serial to Chapter 3 example
 
 compare for \texttt{--with-debugging=0} build (note $1025^2=1050625$):
 \begin{cline}
@@ -653,15 +680,6 @@ $ timer ./unfem -un_mesh meshes/square.10 -un_quaddeg 1 -un_case 3
 case 3 result for N=1050625 nodes with h = 1.381e-03 :  |u-u_ex|_inf = 9.89813e-08
 real 24.47
 \end{cline}
-
-
-\section{Measuring stages}
-
-\begin{figure}
-\includegraphics[width=\textwidth]{figs/unfem-times}
-\caption{FIXME stage times}
-\label{fig:un:unfem-times}
-\end{figure}
 
 
 \section{Toward parallel unstructured meshes}

@@ -209,7 +209,6 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
     ierr = ISGetIndices(user->mesh->e,&ae); CHKERRQ(ierr);
     ierr = VecGetArrayRead(u,&au); CHKERRQ(ierr);
     ierr = UMGetNodeCoordArrayRead(user->mesh,&aloc); CHKERRQ(ierr);
-//STARTPICARD
     for (k = 0; k < user->mesh->K; k++) {
         en = ae + 3*k;  // en[0], en[1], en[2] are nodes of element k
         // geometry of element
@@ -257,7 +256,6 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
         // insert element stiffness matrix
         ierr = MatSetValues(P,cr,row,cr,row,v,ADD_VALUES); CHKERRQ(ierr);
     }
-//ENDPICARD
     ierr = ISRestoreIndices(user->mesh->e,&ae); CHKERRQ(ierr);
     ierr = ISRestoreIndices(user->mesh->bfn,&abfn); CHKERRQ(ierr);
     ierr = VecRestoreArrayRead(u,&au); CHKERRQ(ierr);
