@@ -53,9 +53,9 @@ ax2.legend(loc='lower center')
 ax1.set_xlim(1.0e-2,3.0)
 saveit('unfem-fdmf.pdf')
 
-_, _, h0, err0, _, sost, ost = getstats('case0')
-ost = ost.sum(1)
-_, _, h1, err1, _, _, _ = getstats('case1')
+_, _, h0, err0, _, _, _ = getstats('case0')
+_, _, h1, err1, _, sost1, ost1 = getstats('case1')
+ost1 = ost1.sum(1)
 _, _, h2, err2, _, _, _ = getstats('case2')
 
 # figure for case 0,1,2 errors
@@ -81,9 +81,10 @@ plt.ylabel(r'$\|u-u_{ex}\|_\infty$',fontsize=18.0)
 plt.xlim(2.0e-3,3.0)
 saveit('unfem-error.pdf')
 
-plt.loglog(h0,sost,'k*',markersize=14.0,markeredgewidth=2.0,label='solver')
+# figure for case 1 stage timing
+plt.loglog(h1,sost1,'k*',markersize=14.0,markeredgewidth=2.0,label='solver')
 plt.hold(True)
-plt.loglog(h0,ost,'kx',markersize=12.0,markeredgewidth=2.0,label='other stages')
+plt.loglog(h1,ost1,'kx',markersize=12.0,markeredgewidth=2.0,label='other stages')
 plt.grid(True)
 plt.xlabel(r'$h$',fontsize=20.0)
 plt.ylabel('time for stage  (seconds)',fontsize=18.0)

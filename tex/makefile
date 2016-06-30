@@ -21,7 +21,7 @@ book.pdf: book.aux
 	pdflatex book
 	pdflatex book
 
-book.aux: book.tex book.bib macros.tex tmp/ $(chapsinputs) $(cstrip) $(tmptikzinputs) $(pdfinputs) $(pnginputs)
+book.aux: book.tex book.bib macros.tex $(chapsinputs) $(cstrip) $(tmptikzinputs) $(pdfinputs) $(pnginputs)
 	(cd figs/ && make)
 	pdflatex book
 	bibtex book.aux
@@ -52,9 +52,9 @@ tmp/trap.1.tikz tmp/trap.2.tikz: tmp/ $(UNLOC)meshes/trap.poly
 	rm -f tri2petsc.py*
 
 tmp/mesh.1.tikz: tmp/ $(UNLOC)genstructured.py
-	python $(UNLOC)genstructured.py mesh.1 5
+	python $(UNLOC)genstructured.py mesh.1 4
 	ln -sf $(UNLOC)tri2petsc.py
-	python tri2tikz.py --labelnodes --nodeoffset 0.05 --nodesize 0.5 --labelelements --scale 5.0 mesh.1 $@
+	python tri2tikz.py --labelnodes --nodeoffset 0.07 --nodesize 0.5 --scale 4.0 mesh.1 $@
 	rm -f mesh.1.* tri2petsc.py*
 
 .PHONY: clean

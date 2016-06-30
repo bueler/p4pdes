@@ -27,7 +27,7 @@ function run() {
   rm -f tmp jetmp
 }
 
-# case 0
+# case 0: linear, homo neumann
 NAME=trap
 (cd $LOC/ && ./gentraps.sh $NAME 9)
 OUT=snes-fd-case0
@@ -46,14 +46,14 @@ for N in 1 2 3 4 5 6 7 8 9; do
     run $NAME $OUT $N
 done
 
-#case 1
+#case 1: nonlinear, homo neumann
 export OUT=case1
 rm -f $OUT
 for N in 1 2 3 4 5 6 7 8 9; do
     run $NAME $OUT $N "-un_case 1"
 done
 
-#case 2
+#case 2: linear, non-homo neumann
 NAME=trapneu
 (cd $LOC/ && ./gentraps.sh $NAME 9)
 export OUT=case2
