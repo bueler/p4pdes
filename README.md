@@ -9,7 +9,7 @@ To compile and run the example C codes, upon which the book is based, see the `R
 
 ### PDF of the book
 
-To get an incomplete draft PDF, find the `book.pdf` link at [the most recent release](https://github.com/bueler/p4pdes/releases).  To compile a PDF from the current LaTeX sources, see the `README.md` in the [`tex/`](https://github.com/bueler/p4pdes/tree/master/tex) subdirectory.  However, starting in about June 2016, development of the book itself will move into a private repo.
+To get an incomplete draft PDF, find the `book.pdf` link at [the most recent release](https://github.com/bueler/p4pdes/releases).  To compile a PDF from the current LaTeX sources, see the `README.md` in the [`tex/`](https://github.com/bueler/p4pdes/tree/master/tex) subdirectory.  However, starting some time in July 2016, development of the book itself will move into a private repo.
 
 ### Blog and slides for a course
 
