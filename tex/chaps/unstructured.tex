@@ -551,36 +551,42 @@ The runs so far slow-down dramatically with refinement.  The reason is not a mys
 
 \section{Picard iteration as a Newton-like step}
 
-Writing additional code for an analytical Jacobian is now well-motivated, but we do not construct the full Jacobian.  Instead we build a \emph{Picard matrix}, an approximate linearization.  This approximation is somewhat easier to construct than the Jacobian, and it also allows us to illustrate a common technique.
+Writing additional code for an analytical Jacobian is now well-motivated, but we do not construct the full Jacobian.  Instead we build a \emph{Picard matrix}, an approximate linearization.  This approximation is somewhat easier to construct than the Jacobian, which makes this approach a common technique.
 
-Recall that the Newton method linearizes the algebraic system \eqref{eq:un:fullsystem}, $\bF(\bu)=0$.  Given the current iterate $\bu^k$ the method solves
-\begin{equation}
-J(\bu^k) \bs = -\bF(\bu^k),  \label{eq:un:newtonstep}
-\end{equation}
-a linear system for $\bs = \bu^{k+1}-\bu^k$, to compute the new iterate $\bu^{k+1}$.
-
-In our case system \eqref{eq:un:fullsystem} has nearly-linear form already.  In fact, the FEM \eqref{eq:un:weakformhat}, \eqref{eq:un:uhexpand} has the form
+To explain, observe that our nonlinear system \eqref{eq:un:fullsystem}, namely $\bF(\bu)=0$, has nearly-linear form already.  In fact, the FEM \eqref{eq:un:weakformhat}, \eqref{eq:un:uhexpand} has the form
 \begin{equation}
 A(\bu) \bu = \bb(\bu) \label{eq:un:picardformsystem}
 \end{equation}
-and the residual is $\bF(\bu) = A(\bu) \bu - \bb(\bu)$.  The left side of \eqref{eq:un:weakformhat} contains all the derivative terms, and it can be regarded as a matrix-vector multiplication for computing $\bF(\bu)$.  In general, and in the ``case $1$'' test problem in particular, functions $A(\bu)$ and $\bb(\bu)$ are nonlinear.
+and the residual is just $\bF(\bu) = A(\bu) \bu - \bb(\bu)$.  The left side of \eqref{eq:un:weakformhat} contains all the derivative terms, which we group into the term $A(\bu) \bu$, which can then be regarded as a matrix-vector multiplication when computing $\bF(\bu)$.  The other zeroth-order terms go into $\bb(\bu)$.  In general, and in the ``case $1$'' test problem in particular, functions $A(\bu)$ and $\bb(\bu)$ are nonlinear.
 
-An obvious iteration applies to \eqref{eq:un:picardformsystem}.  The matrix $A(\bu)$ and right-hand side $\bb(\bu)$ can be ``frozen'' at the current iterate and the linear system solved for a new iterate:
+Consider what happens when the matrix $A(\bu)$ and right-hand side $\bb(\bu)$ of \eqref{eq:un:picardformsystem} are ``frozen'' at some current iterate and the linear system solved for a new iterate:
 \begin{equation}
 A(\bu^k) \bu^{k+1} = \bb(\bu^k). \label{eq:un:picardnaive}
 \end{equation}
-Equation \eqref{eq:un:picardnaive} is the usual form of the Picard iteration.  At the level of the continuum equation, we would convert \eqref{eq:un:poissonstrong} into the iteration
-    $$-\Div\left(a(u^k) \grad u^{k+1}\right) = f(u^k).$$
+This is the canonical form of a \emph{Picard iteration}.  Picard himself used the iteration to prove the existence of solutions to ODE IVPs (see Chapter \ref{chap:ts}) by demonstrating its convergence in that context \citep{HirschSmaleDevaney2004}.  Under strong hypotheses on the functions $A(\bu)\in\RR^{N\times N}$ and $\bb(\bu)\in\RR^{N}$, one can prove convergence of \eqref{eq:un:picardnaive}---see Exercise \ref{chap:un}.\ref{exer:un:picardconvergence}---but generally we have no more \emph{a priori} knowledge about the convergence of \eqref{eq:un:picardnaive} than we do for the Newton iteration (see Chapter \ref{chap:nl}).
 
-It is useful to transform \eqref{eq:un:picardnaive} into a Newton-like step, so that we may use \PETSc's \pSNES machinery for the Picard iteration.  We first subtract $A(\bu^k) \bu^k$ from each side,
+At the level of the continuum equation, Picard iteration for our PDE problem \eqref{eq:un:poissonstrong} solves a linear PDE problem
+\begin{equation}
+-\Div\left(a(u^k) \grad u^{k+1}\right) = f(u^k) \label{eq:un:picardcontinuum}
+\end{equation}
+at each iteration.  Our approach to \eqref{eq:un:poissonstrong} therefore \emph{could} have been to only write code---i.e.~\texttt{FormFunction()}---for the linear case with $a=a(x,y)$, $f=f(x,y)$, and then to ``hard-code'' the Picard iteration, thinking of it as \eqref{eq:un:picardnaive} or \eqref{eq:un:picardcontinuum} according to taste.
+
+Our actual approach is more powerful.  While we may do the Picard iteration \eqref{eq:un:picardnaive} as stated, in our approach we may also use \pSNES's line-search to globalize convergence and we can use the Picard matrix in pre-conditioning the Jacobian-free Newton-Krylov method---see below; recall Chapter \ref{chap:nl} discusses JFNK in some generality---so that we are actually running Newton's method while taking advantage of code which assembles the Picard matrix.  As a first step we must transform \eqref{eq:un:picardnaive} into a Newton-like form, so that \PETSc's \pSNES machinery applies.
+
+Recall that the Newton method linearizes $\bF(\bu)=0$ into a system
+\begin{equation}
+J(\bu^k) \bs = -\bF(\bu^k),  \label{eq:un:newtonstep}
+\end{equation}
+for the step $\bs = \bu^{k+1}-\bu^k$.  Here we first subtract $A(\bu^k) \bu^k$ from each side of \eqref{eq:un:picardnaive},
 \begin{equation*}
 A(\bu^k) (\bu^{k+1}-\bu^k) = - \left(A(\bu^k) \bu^k - \bb(\bu^k)\right).
 \end{equation*}
-As before let $\bs = \bu^{k+1}-\bu^k$.  Note the appearance of the residual on the right side.  We now have
+Note the appearance of the step $\bs$, and of the residual on the right side, so that we have
 \begin{equation}
 A(\bu^k) \bs = -\bF(\bu^k).  \label{eq:un:picardstep}
 \end{equation}
-This is just like the Newton equation \eqref{eq:un:newtonstep} but with a different matrix $A=A(\bu)\in\RR^{N\times N}$ replacing the Jacobian $J=J(\bu)$.  In the linear case where $\partial a/\partial u=0$ and $\partial f/\partial u=0$ the matrices are the same, $A=J$.  Generally we expect $A$ to be a good spectral approximation (see Chapter \ref{chap:ls}) of $J$ because it captures the highest-order derivative terms in the PDE \eqref{eq:un:poissonstrong}, which generate the largest eigenvalues.  We will see, in particular, that this approximation of the Jacobian is highly-effective in the nonlinear ``case $1$'' above.
+
+Obviously, equation \eqref{eq:un:picardstep} is the same as \eqref{eq:un:newtonstep} but with the Picard matrix $A=A(\bu)$ replacing the Jacobian matrix $J=J(\bu)$.  For the linear case of PDE \eqref{eq:un:poissonstrong}, when $\partial a/\partial u=0$ and $\partial f/\partial u=0$, these matrices are the same, $A=J$.  For the general (nonlinear) case we expect $A$ to be a good spectral approximation (see Chapter \ref{chap:ls}) of $J$.  This is because $A$ and $J$ capture the highest-order derivative terms in the PDE in the same way.  These terms in the PDE dominate the locations of the largest eigenvalues, which in turn dominate the convergence of many Krylov methods (again, see Chapter \ref{chap:ls}).  We will see, in particular, that this approximation of the Jacobian is highly-effective when we use it as a pre-conditioner in the nonlinear ``case $1$.''
 
 
 \section{Assembling the Picard matrix}
@@ -594,15 +600,10 @@ A_{ij}(\bu) =  \begin{cases}
 \end{equation}
 where on triangle $\triangle_k$ we compute
 \begin{equation}
-A_{ij}^k(\bu) = \int_{\triangle_k} a(u^h) \grad\psi_j \cdot \grad\psi_i \label{eq:un:picardentryelement}
+A_{ij}^k(\bu) = \int_{\triangle_k} a(u^h) \grad\psi_j \cdot \grad\psi_i. \label{eq:un:picardentryelement}
 \end{equation}
 
-We have already computed integral \eqref{eq:un:picardentryelement}, namely in evaluating \eqref{eq:un:elementintegralreference}, so we face a software choice, whether to
-\begin{itemize}
-\item[\emph{side-effect} option] re-write \texttt{FormFunction()} so that it also computes \texttt{A}, or
-\item[\emph{code duplication} option] FIXME 
-\end{itemize}
-FIXME we choose option 2 because \texttt{FormFunction()} is already tested, and because the cost of evaluating either $\bF(\bu)$ or $A(\bu)$ shrinks to insignificance compared to the solver (below).  FIXME and we do it by quadrature
+As we have already computed integral \eqref{eq:un:picardentryelement}, namely in evaluating \eqref{eq:un:elementintegralreference}, we face a software-design choice.  On the one hand we could re-write \texttt{FormFunction()} so that it also computes \texttt{A} as a side-effect.  On the other hand we could write a separate C function \texttt{FormPicard()} which duplicates code but only computes matrix entries.  We choose the second option because \texttt{FormFunction()} is already tested, and because the cost of evaluating either $\bF(\bu)$ or $A(\bu)$ shrinks to insignificance compared to the solver (below).  
 
 \cinputpart{unfem.c}{\CODELOC}{FIXME}{VI}{//STARTPICARD}{//ENDPICARD}{code:unfempicard}
 
@@ -721,6 +722,11 @@ In \eqref{eq:un:psichidetails} node $\bx_i$ corresponds to vertex $\ell$ on $\tr
 for all cases with $0\le i+j\le n$, against the quadrature result.  Also one should show an inexact quadrature result for some case with $i+j=n+1$.  Write a small program, in the language of your choice, which does so.
 \item \label{exer:un:gaussneumann}  In \texttt{unfem.c} we use the midpoint rule, the one-point Gauss rule, for quadrature when computing the Neumann boundary segment contributions $\varphi_\nu^i$; see equation \eqref{eq:un:segmentquadrature}.  Modify \texttt{unfem.c} to optionally use two-point Gaussian quadrature instead.  Only in case 2 will this make any difference.  Show that accuracy noticeably improves for coarse grids, but that this benefit disappears under grid refinement.
 % see c/ch7/solns/segmentgauss.c.snippet
+\item \label{exer:un:picardconvergence}  In this Exercise let $\|\cdot\|$ denote the $2$-norm: $\|w\| = \sqrt{\bw^\top \bw}$ for $\bw\in\RR^N$.  Assume that the right-hand side of \eqref{eq:un:picardnaive} is bounded, $\|\bb(\bu)\| \le B_b$, and that the nonlinearities are Lipschitz, $\|A(\bu)-A(\bv)\| \le L_A \|\bu-\bv\|$ and $\|\bb(\bu)-\bb(\bv)\| \le L_b \|\bu-\bv\|$.  Assume also that $A(\bu)$ is uniformly positive-definite, so that there is $\delta>0$ for which
+    $$\bw^\top A(\bu) \bw \ge \frac{\|\bw\|^2}{\delta}.$$
+for all $\bu\in \RR^N$; equivalently this says $\|A^{-1}(\bu)\| \le \delta$.  (This assumption follows, for the FEM matrix in this Chapter, from our assumption of uniform ellipticity of the continuum problem.)  Show that the sequence generated by \eqref{eq:un:picardnaive} is well-defined and bounded, $\|\bu_k\| \le \delta B_b$.  Then show that \eqref{eq:un:picardnaive} is a strict contraction, $\|\bu^{k+1}-\bu^{k}\| \le \alpha \|\bu^{k}-\bu^{k-1}\|$ for some $0\le \alpha < 1$, under the (very strong) assumption that
+    $$\alpha = \delta \left(L_A B_b \delta + L_b\right) < 1.$$
+It follows from the Banach fixed point theorem that the Picard iteration converges; show this.  These techniques are a great deal more credible and useful when Picard iteration is applied to ODE IVPs \citep{HirschSmaleDevaney2004}; explain why.
 \item FIXME compare the results of these two runs, which each solve the (default) linear case 0 problem:
 \begin{cline}
 $ ./unfem -un_mesh meshes/trap.2 -snes_monitor -ksp_rtol 1.0e-14
