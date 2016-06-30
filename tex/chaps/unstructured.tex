@@ -664,37 +664,41 @@ We made stages for reading the mesh, setting-up other data structures, residual 
 
 The result timing these stages for the nonlinear ``case $1$'' runs, again using a \texttt{--with-debugging=0} version of \PETSc, is summarized in Figure \ref{fig:un:unfem-times}.  For the finer \texttt{trap.5}--\texttt{trap.9} grids\sidenote{The timing data for coarse grids is polluted by operating-system-level noise.} the lesson is quite clear: the solver, here ICC-preconditioned CG iteration, \emph{dominates over the cost of everything else}.  On the finest grid the solver takes about $98\%$ of the time.  Here ``everything else'' includes reading the mesh from a file, pre-allocating the \pMat, setting up \pVecs, evaluating the residual function $\bF(\bu)$, and assembling the matrix $A(\bu)$.  Note that on the finest grids there were only five evaluations of \texttt{FormFunction()} and four of \texttt{FormPicard()}.
 
-Unsurprisingly, our performance focus in Chapter \ref{chap:sc} will be on the solver.
+Unsurprisingly, our performance focus in Chapter \ref{chap:sc} will be on solvers.
 
 
 \section{Performance relative to \pDMDA structured grid}
 
-It is a reasonable question to ask: Is this code ``efficient''?  At least there is a reasonable answer this question.  It assumes that \PETSc handles structured-grid problems efficiently.
+It is a reasonable question to ask whether a given code is ``efficient.''  For \texttt{unfem.c} there is even a reasonable \emph{answer} which assumes that \PETSc \pDMDA handles structured-grid problems efficiently.  We will run \texttt{unfem.c} on a structured grid---managed as though it is an unstructured triangulation---and then compare timing and numerical error from a code using a \pDMDA for the same grid.
 
-We will run \texttt{unfem.c} on a structured-grid problem and compare the result to a code for the same structured grid which uses a \pDMDA structured grid.  First we generate a structured triangulation using Python script \texttt{genstructured.py} (not shown).  FIXME example shown
-
-FIXME compares well in serial to Chapter 3 example
-
+First we generate a triangulation, in \Triangle format, for the unit square domain $\mathcal{S}=(0,1)\times (0,1)$ using Python script \texttt{c/ch7/genstructured.py} (not shown).  For example the commands
+\begin{cline}
+$ ./genstructured.py foursquare 4
+...
+$ showme foursquare
+\end{cline}
+%$
+generate and then view the small grid shown in Figure \ref{fig:un:smallstructured}.
 
 \begin{marginfigure}
 \input{tmp/mesh.1.tikz}
-\caption{A structured triangulation of the unit square with $N=16$ nodes.  The entire boundary is Dirichlet.}
-\label{fig:structuredfem}
+\caption{A structured triangulation on the unit square with $N=16$ nodes.}
+\label{fig:un:smallstructured}
 \end{marginfigure}
 
-compare for \texttt{--with-debugging=0} build (note $1025^2=1050625$) from current directory \texttt{c/ch7/}:
+An additional ``case $3$'' is implemented in \texttt{unfem.c} for this square domain.  This linear problem, with exclusively Dirichlet boundary conditions, is the one also solved by \texttt{poisson.c} in Chapter \ref{chap:st}.  We run this case, for a \texttt{--with-debugging=0} build, on a fine grid with $2^10=1024$ subintervals in each direction, and thus $N=1025^2$ unknowns:
 \begin{cline}
-$ ./genstructured.py meshes/square.10 1025
+$ ./genstructured.py square 1025
 ...
-$ ./tri2petsc.py meshes/square.10 meshes/square.10
+$ ./tri2petsc.py square square
 ...
-$ timer ./unfem -un_mesh meshes/square.10 -un_case 3
+$ timer ./unfem -un_mesh square -un_case 3
 case 3 result for N=1050625 nodes with h = 1.381e-03 :  |u-u_ex|_inf = 9.89813e-08
 real 24.47
 \end{cline}
 %$
 
-versus with \pDMDA
+Because they solve the same problem on the same grid, we can compare the result from \texttt{poisson.c}, which uses a \pDMDA and finite differences:
 \begin{cline}
 $ cd ../ch3/
 $ make poisson
@@ -704,12 +708,30 @@ on 1025 x 1025 grid:  error |u-uexact|_inf = 5.29691e-08
 real 18.67
 \end{cline}
 %$
+The timing and errror are nearly the same.
+
+The message is clear.  Our approach, which consists especially of
+\begin{itemize}
+\item reading an unstructured mesh from \PETSc binary files,
+\item evaluating the residual and system matrix by traversing the boundary and elements using unstructured indexing,
+\item using \pSNES even on a linear problem, and
+\item pre-allocating the matrix by traversal of the elements
+\end{itemize}
+is nearly as fast---only $30\%$ slower---than using finite differences on a \pDMDA structured grid.  This suggests that our approach, \emph{though for now limited to the serial case only}, is effective.
+
 
 \section{Toward parallel unstructured meshes}
 
-FIXME: parallel approach could use \Triangle \texttt{.neigh} file as adjacency graph for elements, run \texttt{MatPartitioning} stuff (see manual), apply partitioning to get \pIS (or \texttt{AO}), and have nodes and edges follow along
+We have only a start on solving PDEs by the FEM on unstructured meshes.  This Chapter's relatively-naive approach is fine for serial computations, but it must be transformed completely for parallel computations.  We will eventually use the advanced \PETSc tools for parallel unstructured mesh management in Chapter \ref{chap:dp}, but a strategy starting from the tools used in this Chapter can be sketched.
 
-FIXME: paraphrase Barry: The ``trick'' is that first partition the element across processes, then partition the vertices (nodal values) subordinate to the partitioning of the elements and then you renumber the elements and vertices so that the elements on the first process are numbered first, followed by the elements on the second process etc and similarly the vertices on the first process are numbered before the vertices on the second processes etc.  Each process loops over its elements computing the element stiffness/load and calling \texttt{MatSetValues/VecSetValues()} using the ``new'' numbering of the vertices.  The ``old'' numbering that was on the disk is not used in communicating with PETSc.
+First, generating the mesh itself in parallel is outside our scope.  Therefore let us assume that the mesh is already given in a file, with nodes and elements\sidenote{And the boundary nodes and segments, but we ignor the boundary in this sketch.} numbered by some ``global'' indexing scheme, just as done in this Chapter.  For example, a mesh of $K$ elements are indexed $0,\dots,K-1$ in the file.
+
+An approach is then to partition the list of elements across the processors.  This could be based on goals of geometric compactness of the partition ``patches,'' and/or load-balancing considerations.  Each element is to be ``owned'' by exactly one process, so that element-wise integrals occur just once, and there are no ``ghost'' elements per se.
+
+A \texttt{MatPartitioning} object and an integer-entry adjacency matrix (type \texttt{MATMPIADJ}) are then created for this element partitioning.\sidenote{\Triangle's \texttt{.neigh} file could provide the needed adjacency graph for the elements.}  Then the output of a call to \texttt{MatPartitioningApply()} is an \pIS which each processor can use to get ``local'' indexing for its patch \citep{petsc-user-ref}.  Continuing our $K$ element example, if the elements are partitioned between two processors then the rank $0$ processor would index elements as $0,\dots,K_0-1$ and the rank $1$ as $0,\dots,K_1-1$, where $K_0+K_1=K$.
+
+% paraphrasing Barry from petsc-users
+FIXME then partition the nodes subordinate to the partitioning of the elements; use \texttt{AO}; Each process loops over its elements computing the element stiffness/load and calling \texttt{MatSetValues/VecSetValues()} using the ``new'' numbering of the vertices.  The ``old'' numbering that was on the disk is not used in communicating with PETSc.
 
 FIXME: see approach to mesh topology in chapter 10 of \citep{Loggetal2012}
 
