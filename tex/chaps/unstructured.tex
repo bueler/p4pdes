@@ -735,24 +735,22 @@ FIXME then partition the nodes subordinate to the partitioning of the elements; 
 
 FIXME: see approach to mesh topology in chapter 10 of \citep{Loggetal2012}
 
-%FIXME motivated by \citep{Loggetal2012}: replace $\bF(\bu)$ with $\bF(\bu;v)$; residual equation no longer requires basis of $S^h$ for its definition; advantages/disadvantages?
-
 
 \section{Exercises}
 
 \renewcommand{\labelenumi}{\arabic{chapter}.\arabic{enumi}\quad}
 \renewcommand{\labelenumii}{(\alph{enumii})}
 \begin{enumerate}
-\item \label{exer:un:notminimization}  The text asserts that problems \eqref{eq:un:poissonstrong} and \eqref{eq:un:poissonweak} do not generally arise from a minimization principle, and this Exercise expands on the claim.  For simplicity suppose that $f$ is independent of $u$, use homogeneous Dirichlet boundary conditions on $\partial \Omega$, and feel free to consider only the 1D version of the problem.  First show, by following the technique that derived \eqref{eq:of:plapweakform}, that if $\partial a/\partial u \ne 0$ then the Euler-Lagrange equation of
+\item \label{exer:un:notminimization}  The text asserts that our PDE problem \eqref{eq:un:poissonstrong} does not generally arise from a minimization principle.  This Exercise expands on the claim.  For simplicity suppose that $f$ is independent of $u$, use homogeneous Dirichlet boundary conditions on $\partial \Omega$.  (Also, feel free to consider only the 1D version of the problem.)  First show, by following the technique that derived \eqref{eq:of:plapweakform}, that if $\partial a/\partial u \ne 0$ then the Euler-Lagrange equation of
 \begin{equation}
   \tilde I[u] = \int_\Omega \frac{1}{2} a(u) |\grad u|^2 - f u,  \label{eq:un:nottheobjective}
 \end{equation}
-which represents merely a reasonable guess, is \emph{not} the weak form \eqref{eq:un:poissonweak}.  This does not exclude the possibility that some other minimization problem leads to \eqref{eq:un:poissonweak}, however.  Therefore, show next that if $\partial a/\partial u \ne 0$ then the residuals \eqref{eq:un:elementwisesum} satisfy
+a reasonable guess, is \emph{not} the weak form \eqref{eq:un:poissonweak}.  This does not exclude that some other minimization problem leads to \eqref{eq:un:poissonweak}, however.  Therefore, show next that if $\partial a/\partial u \ne 0$ then the residuals \eqref{eq:un:elementwisesum} satisfy
 \begin{equation}
   \frac{\partial F_i(u)}{\partial u_j} \ne \frac{\partial F_j(u)}{\partial u_i} \label{eq:un:symmetryresidualsdonthave}
 \end{equation}
-for some $u$.  Explain why this excludes a minimization principle.
-\item  \label{exer:un:gradientdetails}  For the map \eqref{eq:un:trianglemap} from $\triangle_\ast$ to $\triangle_k$, let
+for some $u$.  Explain why this \emph{does} exclude minimization.
+\item  \label{exer:un:gradientdetails}  For the map \eqref{eq:un:trianglemap} from $\triangle_\ast$ to $\triangle_k$, note
     $$J_k = \frac{\partial (x,y)}{\partial (\xi,\eta)} = \begin{pmatrix}
     x_1 - x_0 & x_2 - x_0 \\
     y_1 - y_0 & y_2 - y_0 \end{pmatrix}
@@ -760,12 +758,12 @@ for some $u$.  Explain why this excludes a minimization principle.
     \Delta x_1 & \Delta x_2 \\
     \Delta y_1 & \Delta y_2
     \end{pmatrix}$$
-be the Jacobian.  Use the chain rule and \eqref{eq:un:psichimap} to show that
+is the Jacobian.  Use the chain rule and \eqref{eq:un:psichimap} to show that
 \begin{equation}
 \grad_{x,y} \psi_i = \frac{1}{\det J_k} \left<\Delta y_2 \frac{\partial \chi_\ell}{\partial \xi} - \Delta y_1 \frac{\partial \chi_\ell}{\partial \eta}, - \Delta x_2 \frac{\partial \chi_\ell}{\partial \xi} + \Delta x_1 \frac{\partial \chi_\ell}{\partial \eta}\right>. \label{eq:un:gradpsionref}
 \end{equation}
-Here indices $i$ and $\ell$ have the same relationship as in \eqref{eq:un:psichimap}.  Comparing formula \eqref{eq:of:gradpsionref} for the structured case, what is the underlying reason why \eqref{eq:un:gradpsionref} is a bit more complicated?  % underlying reason is that affine map here includes rotations, while in Chapter \ref{chap:of} it was just translation and axes scaling
-\item  \label{exer:un:elementintegranddetails}  Formula \eqref{eq:un:elementintegrand} might require some interpretation before the implementation becomes clear, which is the goal of this Exercise.  Confirm that formulas \eqref{eq:un:trianglemap} and \eqref{eq:un:psichimap} lead to these expansions of expressions in \eqref{eq:un:elementintegrand}:
+Here indices $i$ and $\ell$ have the same relationship as in \eqref{eq:un:psichimap}.  Compare formula \eqref{eq:of:gradpsionref} for the structured case.
+\item  \label{exer:un:elementintegranddetails}  Formula \eqref{eq:un:elementintegrand} might require some interpretation before the implementation becomes clear, and thus this Exercise.  Confirm that formulas \eqref{eq:un:trianglemap} and \eqref{eq:un:psichimap} lead to the following expansions of expressions, which together make \eqref{eq:un:elementintegrand} implementable:
 \begin{align}
 a(u^h) &= a(u^h,x(\xi,\eta),y(\xi,\eta)), \label{eq:un:adetails} \\
 f(u^h) &= f(u^h,x(\xi,\eta),y(\xi,\eta)), \label{eq:un:fdetails} \\
@@ -773,34 +771,46 @@ f(u^h) &= f(u^h,x(\xi,\eta),y(\xi,\eta)), \label{eq:un:fdetails} \\
 u^h &= \sum_{j=0}^{N-1} \left\{\begin{matrix} g_D(\bx_j) \\ u_j \end{matrix}\right\} \chi_{\ell'}(\xi,\eta), \label{eq:un:udetails} \\
 \grad u^h &= \grad_{x,y} u^h = \sum_{j=0}^{N-1} \left\{\begin{matrix} g_D(\bx_j) \\ u_j \end{matrix}\right\} \grad_{x,y} \psi_j. \label{eq:un:gradudetails}
 \end{align}
-In \eqref{eq:un:psichidetails} node $\bx_i$ corresponds to vertex $\ell$ on $\triangle_\ast$.  In \eqref{eq:un:udetails} and \eqref{eq:un:gradudetails}, the two cases for computing the coefficient are when $\bx_j \in \partial_D \Omega$ and $\bx_j \notin \partial_D \Omega$, respectively; also node $\bx_j$ corresponds to vertex $\ell'$ on $\triangle_\ast$.  Note that \eqref{eq:un:gradpsionref} allows us to expand $\grad_{x,y} \psi_j$ in \eqref{eq:un:gradudetails}.  Taken together, these expansions make \eqref{eq:un:elementintegrand} implementable.
+In \eqref{eq:un:psichidetails} the node $\bx_i$ corresponds to vertex $\ell$ on $\triangle_\ast$.  In \eqref{eq:un:udetails} and \eqref{eq:un:gradudetails}, the two cases for computing the coefficient are when $\bx_j \in \partial_D \Omega$ and $\bx_j \notin \partial_D \Omega$, respectively; also note that node $\bx_j$ corresponds to vertex $\ell'$ on $\triangle_\ast$.  Note that \eqref{eq:un:gradpsionref} allows us to expand $\grad_{x,y} \psi_j$ in \eqref{eq:un:gradudetails}.
 \item  \label{exer:un:checkquadrature}  The degree of accuracy $n=1,2,3$ of the quadrature rules in Table \ref{tab:un:quadrature} can be checked by comparing the exact integral
 \begin{equation}
 \iint_{\triangle_\ast} \xi^i \eta^j\,d\xi d\eta = \frac{i!\,j!}{(i+j+2)!}, \label{eq:un:checkquadrature}
 \end{equation}
-for all cases with $0\le i+j\le n$, against the quadrature result.  Also one should show an inexact quadrature result for some case with $i+j=n+1$.  Write a small program, in the language of your choice, which does so.
-\item \label{exer:un:gaussneumann}  In \texttt{unfem.c} we use the midpoint rule, the one-point Gauss rule, for quadrature when computing the Neumann boundary segment contributions $\varphi_\nu^i$; see equation \eqref{eq:un:segmentquadrature}.  Modify \texttt{unfem.c} to optionally use two-point Gaussian quadrature instead.  Only in case 2 will this make any difference.  Show that accuracy noticeably improves for coarse grids, but that this benefit disappears under grid refinement.
+for all cases with $0\le i+j\le n$, against the quadrature result.  Also one can show that the quadrature result is \emph{not} exact for some case with $i+j=n+1$.  Write a small program, in the language of your choice, which checks these assertions.
+\item \label{exer:un:gaussneumann}  In \texttt{unfem.c} we use the midpoint rule when computing the Neumann boundary segment contributions $\varphi_\nu^i$; see equation \eqref{eq:un:segmentquadrature}.  Modify \texttt{unfem.c} to optionally use two-point Gaussian quadrature instead.  Only in case 2 will this make any difference.  Show that accuracy noticeably improves for coarse grids, but that this benefit disappears under grid refinement.
 % see c/ch7/solns/segmentgauss.c.snippet
-\item \label{exer:un:picardconvergence}  In this Exercise let $\|\cdot\|$ denote the $2$-norm: $\|w\| = \sqrt{\bw^\top \bw}$ for $\bw\in\RR^N$.  Assume that the right-hand side of \eqref{eq:un:picardnaive} is bounded, $\|\bb(\bu)\| \le B_b$, and that the nonlinearities are Lipschitz, $\|A(\bu)-A(\bv)\| \le L_A \|\bu-\bv\|$ and $\|\bb(\bu)-\bb(\bv)\| \le L_b \|\bu-\bv\|$.  Assume also that $A(\bu)$ is uniformly positive-definite, so that there is $\delta>0$ for which
-    $$\bw^\top A(\bu) \bw \ge \frac{\|\bw\|^2}{\delta}.$$
-for all $\bu\in \RR^N$; equivalently this says $\|A^{-1}(\bu)\| \le \delta$.  (This assumption follows, for the FEM matrix in this Chapter, from our assumption of uniform ellipticity of the continuum problem.)  Show that the sequence generated by \eqref{eq:un:picardnaive} is well-defined and bounded, $\|\bu_k\| \le \delta B_b$.  Then show that \eqref{eq:un:picardnaive} is a strict contraction, $\|\bu^{k+1}-\bu^{k}\| \le \alpha \|\bu^{k}-\bu^{k-1}\|$ for some $0\le \alpha < 1$, under the (very strong) assumption that
-    $$\alpha = \delta \left(L_A B_b \delta + L_b\right) < 1.$$
-It follows from the Banach fixed point theorem that the Picard iteration converges; show this.  These techniques are a great deal more credible and useful when Picard iteration is applied to ODE IVPs \citep{HirschSmaleDevaney2004}; explain why.
-\item FIXME compare the results of these two runs, which each solve the (default) linear case 0 problem:
+\item \label{exer:un:picardconvergence}  In this Exercise about Picard iteration let $\|\cdot\|$ denote the $2$-norm: $\|w\| = \sqrt{\bw^\top \bw}$ for $\bw\in\RR^N$.  Assume that the right-hand side of \eqref{eq:un:picardnaive} is bounded, $\|\bb(\bu)\| \le B_b$, and that the functions are Lipschitz, $\|A(\bu)-A(\bv)\| \le L_A \|\bu-\bv\|$ and $\|\bb(\bu)-\bb(\bv)\| \le L_b \|\bu-\bv\|$.  Assume also that $A(\bu)$ is uniformly positive-definite, so that there is $\delta>0$ for which $\bw^\top A(\bu) \bw \ge \|\bw\|^2/\delta$ for all $\bu, \bw \in \RR^N$; equivalently this says $\|A^{-1}(\bu)\| \le \delta$.  (\emph{For the FEM matrix in this Chapter, the existence of $\delta$ follows from uniform-ellipticity assumption \eqref{eq:un:uniformelliptic}.})  Show that the sequence generated by \eqref{eq:un:picardnaive} is well-defined and bounded, $\|\bu_k\| \le \delta B_b$.  Now let $\alpha = \delta \left(L_A B_b \delta + L_b\right)$.  Show that \eqref{eq:un:picardnaive} satisfies $\|\bu^{k+1}-\bu^{k}\| \le \alpha \|\bu^{k}-\bu^{k-1}\|$ under the (very strong) assumption that $\alpha < 1$.  It follows from a geometric series argument that the Picard iteration converges; show this.  (\emph{These norm techniques for analysing Picard iteration are more useful when applied to ODE IVPs \citep{HirschSmaleDevaney2004}.  In that case the map is close to the identity for small time intervals $[0,T]$, and the analog of ``$\alpha$'' scales with $T$ and the relevant Lipschitz constant.  Thus existence is easy to show for small times.})
+\item Explain why the first of these two runs, which each solve the (default) linear ``case $0$'' problem, requires fewer \pSNES iterations:
 \begin{cline}
-$ ./unfem -un_mesh meshes/trap.2 -snes_monitor -ksp_rtol 1.0e-14
-$ ./unfem -un_mesh meshes/trap.2 -snes_monitor -ksp_rtol 1.0e-14 -snes_fd
+$ ./unfem -un_mesh meshes/trap.3 -snes_monitor -ksp_rtol 1.0e-14
+$ ./unfem -un_mesh meshes/trap.3 -snes_monitor -ksp_rtol 1.0e-14 -snes_fd
 \end{cline}
-\item FIXME the result of
+Now explain why the \emph{second} of these two runs, which solve the nonlinear ``case $1$'' problem, requires fewer \pSNES iterations:
 \begin{cline}
-./unfem -un_mesh meshes/trapneu.1 -un_case 2
+$ ./unfem -un_case 1 -un_mesh meshes/trap.3 -snes_monitor
+$ ./unfem -un_case 1 -un_mesh meshes/trap.3 -snes_monitor -snes_fd
 \end{cline}
-report a numerical error of zero; why?; explains missing marker on coarsest grid in numerical error Figure FIXME
-\item FIXME use \texttt{-un\_quaddeg 2,3} on cases 0,1,2 (default is \texttt{-un\_quaddeg 1}); does it make a substantial difference in any cases?; explain why it is noticable for the nonlinear case 1
-\item \label{exer:un:allneumannfailure}  We have assumed that the Dirichlet boundary $\partial_D \Omega$ has positive measure (length) so that the linear problem, at least, is known to have a unique solution.  By contrast, confirm experimentally that if $\partial_D\Omega$ is empty then the equations no longer have a unique solution.  This can be done by modifying the case 2 exact solution to use Neumann boundary conditions on the whole of $\partial \Omega$.  A direct solve for the linear equations (\texttt{-ksp\_type preonly -pc\_type lu}) will fail; explain the error message which results.
-\item \label{exer:un:allneumannresolution}  Continuing the above Exercise, use \texttt{SNESGetKSP()} and \texttt{KSPSetNullSpace()} to tell the linear solver that the linearization of the Neumann-only problem has constant functions as its null space.  Confirm that direct and iterative solvers now succeed as in the case with non-empty Dirichlet boundary.
-\item \label{exer:un:truejacobian} FIXME implement the true Jacobian in the $a=a(x,y)$ case, so that we only add a diagonal $\partial f/\partial u$ term; test on case 1 example and see if improved \pSNES convergence
-\item \label{exer:un:bratu} FIXME using result from previous exercise, solve Bratu; compute critical $\lambda$; equals 6.81 according to \pSNES example \texttt{ex5.c}
-\item \label{exer:un:robin} FIXME implement Robin boundary condition
+(\emph{If it is clear then congratulations!  You are becoming a \pSNES pro.})
+\item The result of
+\begin{cline}
+$ ./unfem -un_mesh meshes/trapneu.1 -un_case 2
+\end{cline}
+%$
+is a numerical error of zero; why?  (\emph{This explains a missing marker on the coarsest grid in Figure \ref{fig:un:unfem-error}.})
+\item The default quadrature degree corresponds to option \texttt{-un\_quaddeg 1}.  To try all the implemented degrees do something like this:
+\begin{code}
+for CASE in 0 1; do
+    for DEG in 1 2 3; do
+        ./unfem -un_mesh meshes/trap.3 -un_case $CASE -un_quaddeg $DEG -snes_converged_reason
+    done
+done
+\end{code}
+Why is the difference between degrees $1$ and $2$ only substantial in the nonlinear ``case $1$''?  Why isn't there a larger difference between degrees $2$ and $3$?
+\item \label{exer:un:allneumannfailure}  We have assumed that the Dirichlet boundary $\partial_D \Omega$ has positive measure (length) so that the linear problem, at least, is known to have a unique solution.  By contrast, confirm experimentally that if $\partial_D\Omega$ is empty then the equations no longer have a unique solution.  This can be done by modifying the ``case $2$'' exact solution to use only Neumann boundary conditions.  A direct solve for the linear equations (\texttt{-ksp\_type preonly -pc\_type lu}) will fail; explain the error message which results.
+\item \label{exer:un:allneumannresolution}  FIXME Continuing the above Exercise, use \texttt{SNESGetKSP()} and \texttt{KSPSetNullSpace()} to tell the linear solver that the linearization of the Neumann-only problem has constant functions as its null space.  Confirm that direct and iterative solvers now succeed as in the case with non-empty Dirichlet boundary.
+\item \label{exer:un:truejacobian} Implement the true Jacobian in the $a=a(x,y)$ case, that is, with the correct linearization when $\partial f/\partial u\ne 0$.  This will add a diagonal term to the matrix.  A test case is appropriate, and, in preparation for the next Exercise, it might be built by manufacturing a solution to the equation $-\nabla^2 u = f(u,x,y)$ where $f(u,x,y) = e^u + F(x,y)$ and where $F(x,y)$ is generated by differentiation from a chosen exact solution.  Compare results from Picard and Newton iteration in this case.  (\emph{This exercise requires a bit of coding.  In preparation for the next problem you may want to call your new code \texttt{bratu2.c}, starting it from a copy of \texttt{unfem.c}, with appropriately modified makefile.})
+\item \label{exer:un:bratu} Use the code from the previous Exercise to solve the Bratu equation $-\nabla^2 u = \lambda e^u$ with homogeneous Dirichlet boundary conditions on the unit square $\mathcal{S}=(0,1)\times(0,1)$.  Compute the critical value of $\lambda$ as you did in the 1D problem in Exercise \ref{eq:nl:bratuoned}, again comparing results from Picard and Newton iteration.
+% equals 6.81 according to \pSNES example \texttt{ex5.c}
+\item \label{exer:un:robin} Implement and test a version of \texttt{unfem.c} which can handle Robin boundary conditions.
 \end{enumerate}
 
