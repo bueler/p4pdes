@@ -1,7 +1,7 @@
 
-\section{Stokes equations}
+\section{Equations for incompressible fluids}
 
-FIXME: lay out theory e.g.~from \citep{Acheson1990,Elmanetal2005,Ockendonetal2003}
+FIXME: lay out theory e.g.~from \citep{Acheson1990,Ockendonetal2003}
 
 Thus the incompressible variable-viscosity Navier-Stokes has these main equations
 \begin{align}
@@ -61,6 +61,18 @@ In the constant viscosity case we write the Stokes equations as
 - \Div \bu &= 0
 \end{align}
 This is a Poisson-like problem for $\bu$, but with an unknown pressure generating a source term, in addition to the body force $\bg$.  We have negated the second equation because it helps with symmetry.
+
+
+\section{Weak form of the Stokes equations}
+
+FIXME: theory from \citep{Braess2007,Elmanetal2005}
+
+
+
+\section{Smallest-possible example}
+
+FIXME: dimension 6 from $\bu\in Q^1$ and $p\in P^0$ on 4-element mesh with symmetry
+
 
 \section{Fluid flowing down a slope}
 
@@ -193,15 +205,15 @@ These equations correspond to block structure of the numerical approximation,
 which we write as $A\bz = \bbf$ for the rest of this Chapter.  We show parameters $\nu>0$ and $\eps \in \RR$ to emphasize that we can play with problems of different viscosity and with more or less pressure-Poisson regularization, respectively. 
 
 
-\section{A finite difference, structured-grid approach}
+\section{Finite element, structured-grid approach}
 
-In this section we apply centered finite differences to equations \eqref{ppstokes2du}--\eqref{ppstokes2dincomp} using boundary conditions \eqref{bcstokestop}--\eqref{bcstokesperiodic} to get a symmetric linear system
+In this section we apply FIXME to equations \eqref{ppstokes2du}--\eqref{ppstokes2dincomp} using boundary conditions \eqref{bcstokestop}--\eqref{bcstokesperiodic} to get a symmetric linear system
 \begin{equation}
   A \bz = \bbf \label{linsysstokes}
 \end{equation}
-with block structure \eqref{blockppstokes}.  We do not, however, describe this linear system to \PETSc using \pMat for $A$ and a \pVec for $\bbf$ in \eqref{linsysstokes}.  Rather we treat the linear problem as nonlinear, following the examples in Chapter \ref{chap:nl}.  Because we are using a structured grid managed by a \PETSc \pDMDA object, we provide a residual-evaluation routine for the locally-owned part of the structured grid.
+with block structure \eqref{blockppstokes}.  As usual we treat the linear problem as nonlinear, and we use a structured grid, so our code has a \pSNES and \pDMDA objects.  We first provide a residual-evaluation routine for the locally-owned part of the structured grid.
 
-To get started on the FD equations, and recalling the notation from Chapter \ref{chap:st}, suppose that we have a grid of \texttt{Mx} points in the $x$ direction and \texttt{My} points in the $y$ direction.  Periodicity in the $x$ direction means that there is a difference in the computation of grid spacing:
+FIXME: replace with $Q^2--Q^1$ (Taylor-Hood) finite elements:  To get started on the FD equations, and recalling the notation from Chapter \ref{chap:st}, suppose that we have a grid of \texttt{Mx} points in the $x$ direction and \texttt{My} points in the $y$ direction.  Periodicity in the $x$ direction means that there is a difference in the computation of grid spacing:
 \begin{equation}
 h_x = \frac{L}{\text{\texttt{Mx}}}, \qquad h_y = \frac{H}{\text{\texttt{My}}-1}. \label{hdefinestokes}
 \end{equation}
@@ -252,7 +264,7 @@ p_{i,J+1} = \frac{h_y^2}{\eps} \frac{u_{i+1,J}-u_{i-1,J}}{2h_x} - p_{i,J-1},\lab
 \end{equation}
 which is substituted into \eqref{fdtopv}.
 
-FIXME: the resulting code is \texttt{c7stokes.c}
+FIXME: the resulting code is \texttt{stokes.c}
 
 
 \section{Preconditioners for indefinite systems}
@@ -264,8 +276,6 @@ and if $M$ has eigenvalue $\lambda$ so that
 then
     $$M \begin{bmatrix} -\bx \\ \by \end{bmatrix} = - \lambda \begin{bmatrix} -\bx \\ \by \end{bmatrix}$$
 and (w.o.l.o.g.) this is a lin.-indep. eigenvector so $M$ also has eigenvalue $-\lambda$
-
-%\caveat{But \PETSc should help with unstructured meshes too.}
 
 
 \section{Exercises}
