@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# (C) 2014 Ed Bueler
+# (C) 2014-2016 Ed Bueler
 
 
 import numpy
@@ -37,7 +37,7 @@ for j in range(N):
         else:
             bdry = 0
         node.write(' %4d  %.14f  %.14f  %4d\n' % (n(i,j), x, y, bdry))
-node.write('# created by: %s\n' % commandline)
+node.write('# created by command: %s\n' % commandline)
 node.close()
 
 # write .ele file
