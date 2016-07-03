@@ -3,7 +3,7 @@
 
 FIXME: lay out theory e.g.~from \citep{Acheson1990,Ockendonetal2003}
 
-FIXME in this section our notation hits a bit of an ``indexing crisis'', so in this section we write for the velocity field
+FIXME in this section our notation hits a bit of an ``subscripting crisis'', so in this section we write for the velocity field
     $$\bu = \left<u^x,u^y,u^z\right>$$
 so that superscript denotes component
 
@@ -14,66 +14,39 @@ The incompressible variable-viscosity Navier-Stokes has these main equations
 \Div \bu &= 0 \label{eq:ok:stokesgeneralincomp}
 \end{align}
 where
-  $$\grad \bu = \renewcommand{\arraystretch}{1.3}\begin{bmatrix}
+\begin{equation}
+\grad \bu = \renewcommand{\arraystretch}{1.3}\begin{bmatrix}
     \frac{\partial u^x}{\partial x} & \frac{\partial u^y}{\partial x} & \frac{\partial u^z}{\partial x} \\
     \frac{\partial u^x}{\partial y} & \frac{\partial u^y}{\partial y} & \frac{\partial u^z}{\partial y} \\
     \frac{\partial u^x}{\partial z} & \frac{\partial u^y}{\partial z} & \frac{\partial u^z}{\partial z}
-    \end{bmatrix}$$
+    \end{bmatrix}  \label{eq:ok:gradudefinition}
+\end{equation}
 and
     $$D \bu = \frac{1}{2} \left(\grad \bu + \grad \bu^{\top}\right).$$
 
 FIXME: theory where Froude $\approx 0$
 
-Thus the variable-viscosity Stokes equations, in terms of velocity, are
+The variable-viscosity Stokes equations, in terms of velocity, are
 \begin{align*}
 - \Div \left(\nu \left(\grad \bu + \grad \bu^{\top}\right)\right) + \grad p &= \bg \\
 \Div \bu &= 0
 \end{align*}
 
-We will, however, first consider the case where the viscosity $\nu$ is constant.  In such case the velocity second derivative term can be simplified, and recognized as an application of the Laplacian operator.  Observe that by commuting mixed derivatives and using incompressibility we have
-\begin{align*}
-\Div \left(\grad \bu^{\top}\right) &= \renewcommand{\arraystretch}{1.3}\begin{bmatrix}
-    \frac{\partial}{\partial x} & \frac{\partial}{\partial y} & \frac{\partial}{\partial z}
-    \end{bmatrix}
-    \begin{bmatrix}
-    \frac{\partial u^x}{\partial x} & \frac{\partial u^y}{\partial x} & \frac{\partial u^z}{\partial x} \\
-    \frac{\partial u^x}{\partial y} & \frac{\partial u^y}{\partial y} & \frac{\partial u^z}{\partial y} \\
-    \frac{\partial u^x}{\partial z} & \frac{\partial u^y}{\partial z} & \frac{\partial u^z}{\partial z}
-    \end{bmatrix} \\
-  &= \begin{bmatrix}
-    \frac{\partial}{\partial x}\left(\Div \bu\right) & \frac{\partial}{\partial y }\left(\Div \bu\right) & \frac{\partial}{\partial x} \left(\Div \bu\right)
-    \end{bmatrix}
-    = 0.
-\end{align*}
-On the other hand,
-\begin{align*}
-\Div \left(\grad \bu\right) &= \renewcommand{\arraystretch}{1.3}\begin{bmatrix}
-    \frac{\partial}{\partial x} & \frac{\partial}{\partial y} & \frac{\partial}{\partial z}
-    \end{bmatrix}
-    \begin{bmatrix}
-    \frac{\partial u^x}{\partial x} & \frac{\partial u^y}{\partial x} & \frac{\partial u^z}{\partial x} \\
-    \frac{\partial u^x}{\partial y} & \frac{\partial u^y}{\partial y} & \frac{\partial u^z}{\partial y} \\
-    \frac{\partial u^x}{\partial z} & \frac{\partial u^y}{\partial z} & \frac{\partial u^z}{\partial z}
-    \end{bmatrix} \\
-  &= \begin{bmatrix} \grad^2 u^x & \grad^2 u^y & \grad^2 u^z \end{bmatrix} = \grad^2 \bu.
-\end{align*}
-The last equality defines the symbol ``$\grad^2 \bu$.''
-
-In the constant viscosity case we write the Stokes equations as
+We will, however, first consider the case where the viscosity $\nu$ is constant.  In such case the velocity second derivative term can be simplified, and recognized as an application of the Laplacian operator (Exercise \ref{chap:ok}.\ref{exer:ok:constantviscositystokes}).  In fact for this Chapter the Stokes equations are
 \begin{align}
-- \nu \grad^2 \bu + \grad p &= \bg \\
-\Div \bu &= 0
+- \nu \grad^2 \bu + \grad p &= \bg  \label{eq:ok:constantviscositystokes} \\
+\Div \bu &= 0  \label{eq:ok:constantviscosityincomp}
 \end{align}
-This is a Poisson-like problem for $\bu$, but with pressure as an additional unknown and with an additional equation stating incompressiblity.  Note that body force and the pressure gradient are together balanced by the viscous stresses.
+This is a Poisson-like problem for $\bu$, but with pressure as an additional unknown and with an additional equation stating incompressiblity.  Note that body force and the pressure gradient are together balanced by the viscous stresses. 
 
 
 \section{Weak form of the Stokes equations}
 
-FIXME: theory from \citep{Braess2007,Elmanetal2005}
+FIXME: theory from \citep{Braess2007,Elmanetal2005}; derive quickly by multiplying \eqref{eq:ok:constantviscositystokes}--\eqref{eq:ok:constantviscosityincomp} by test functions and integrating
 
-FIXME assume $\bu=\bu_D$ (known) on $\partial_D\Omega$ and $\partial \bu/\partial n - \bn p = 0$ on $\partial_N\Omega$, i.e.~arbitrary Dirichlet but homogeneous Neumann; contrast \citep{Elmanetal2005}
+FIXME assume $\bu=\bu_D$ (known) on $\partial_D\Omega$.  restrict to $\partial \bu/\partial n - \bn p = 0$ on $\partial_N\Omega$; i.e.~arbitrary Dirichlet but homogeneous Neumann; contrast \citep{Elmanetal2005}
 
-if $\bu \in W_D^{1,2}(\Omega)^3$ and $p \in L^2(\Omega)$ solves
+If $\bu \in W_D^{1,2}(\Omega)^3$ and $p \in L^2(\Omega)$ solves
 \begin{equation}
 \int_\Omega \grad \bu \,:\, \grad \bv - p \Div \bv = \int_\Omega \bg \cdot \bv \label{eq:ok:weakstokesvelocity}
 \end{equation}
@@ -81,22 +54,46 @@ for all $\bv \in W_0^{1,2}(\Omega)^3$ and
 \begin{equation}
 \int_\Omega q \Div \bu = 0 \label{eq:ok:weakstokespressure}
 \end{equation}
-for all $q \in L^2(\Omega)$ then we say $\bu,p$ solve the \emph{weak form of the Stokes} equations
+for all $q \in L^2(\Omega)$ then we say $\bu,p$ solve the \emph{weak form of the Stokes} equations.  For more clarity we note that in the 2D case the product of velocity gradients is
+     $$\grad \bu \,:\, \grad \bv = \grad u^x \cdot \grad v^x + \grad u^y \cdot \grad v^y.$$
+when expanded in components.
 
 
 \section{Smallest-possible example}
 
-FIXME: dimension 6 problem from using $\bu\in Q^1$ and $p\in P^0$ on 2-element mesh (i.e.~4-element, but with symmetry); goal is to show how inf-sup condition relates to linear independence of constraints
+FIXME: dimension 8 problem from using $\bu\in Q^1$ and $p\in P^0$ on 4-elementmesh; goal of this example is to show how inf-sup condition relates to linear independence of constraints
 
-We consider a ``Poiseuille flow'' \citep{Elmanetal2005} in 2D on $\Omega=(-1,1)\times(-1,1)$.  On the top and bottom we have homogeneous Dirichlet boundary conditions $\bu=\left<0,0\right>$.  On the left side we have Dirichlet inflow boundary conditions $\bu(-1,y) = \left<1-y^2,0\right>$.  On the right side we have a Neumann stress-free boundary condition $\frac{\partial \bu}{\partial n} - \bn p = \left<\frac{\partial u^x}{\partial x}-p,\frac{\partial u^y}{\partial x}\right> = 0$, noting $\bn = \left<1,0\right>$.
+We consider a ``Poiseuille flow'' \citep{Elmanetal2005} in 2D on $\Omega=(-1,1)\times(-1,1)$.  On the top and bottom we have homogeneous Dirichlet boundary conditions $\bu=\left<0,0\right>$.  On the left side we have Dirichlet inflow boundary conditions $\bu(-1,y) = \left<1-y^2,0\right>$.  On the right side we have a Neumann stress-free boundary condition $\partial \bu/\partial n - \bn p = 0$, noting $\bn = \left<1,0\right>$.
 
-For the smallest-possible example that help us think, we have just two elements $\square_0,\square_1$, with the parts below the $y$-axis known by symmetry as in Figure \ref{fig:ok:poiseuille}.  The open circles ``{\large $\circ$}'' denote velocity unknowns and the ``$\times$'' denote pressure unknowns.  At locations ``$\bullet$'' we impose Dirichlet boundary conditions.  At locations $(-1,1),(0,1),(1,1)$ along the top we have $\bu=0$.  At location $(-1,0)$ we have inflow: $\bu = \left<1,0\right>$.
+\newcommand{\one}{{\large \mathbb{1}}}
+
+This small example will help us think.  We have four elements $\square_0,\dots,\square_3$ as in Figure \ref{fig:ok:poiseuille}.  Because seven of the nine nodes correspond to Dirichlet boundary conditions on the velocity, only one of which is non-zero, we incorporate the non-homogeneity into the solution---i.e.~the trial function space approximates $W_D^{1,2}(\Omega)$ in the usual way of FEM methods---by the expression
+\begin{equation}
+\bu = \left<\psi_{-1}+\alpha_0\psi_0+\alpha_1\psi_1,\beta_0\psi_0+\beta_1\psi_1\right>  \label{eq:ok:smallexpansionvelocity}
+\end{equation}
+where $\psi_{-1},\psi_0,\psi_1$ denote $Q^1$ hat functions at points $(-1,0),(0,0),(1,0)$, respectively, and $\alpha_0,\alpha_1,\beta_0,\beta_1$ are unknown scalars.  The one boundary node on the Neumann boundary is thus treated (almost) the same as an interior node.  The velocity test functions use the same basis, and there are two test functions for each node where the solution is unknown: $\bv_i \in \left\{\left<\psi_0,0\right>, \left<0,\psi_0\right>, \left<\psi_1,0\right>, \left<0,\psi_1\right>\right\}$.
 
 \begin{figure}
 \input{tikz/poiseuille.tex}
-\caption{$\Omega=(-1,1)\times(-1,1)$ for Poiseuille flow, with a very-coarse grid.}
+\caption{$\Omega=(-1,1)\times(-1,1)$ for Poiseuille flow, with a very-coarse grid of four elements $\square_k$.  Open circles ``{\large $\circ$}'' are velocity unknowns, ``$\bullet$'' are Dirichlet boundary conditions, and ``$\times$'' are pressure unknowns.}
 \label{fig:ok:poiseuille}
 \end{figure}
+
+The pressure solution is in terms of $P^0$ basis functions, which are characteristic functions on the elements $\one_j = \one_{\square_j}$, so
+\begin{equation}
+p = \gamma_0 \one_0 + \gamma_1 \one_1 + \gamma_2 \one_2 + \gamma_3 \one_3.  \label{eq:ok:smallexpansionpressure}
+\end{equation}
+The pressure test functions are from this same basis, $q_i \in \{\one_0,\one_1,\one_2,\one_3\}$.
+
+Using \eqref{eq:ok:smallexpansionvelocity}, \eqref{eq:ok:smallexpansionpressure} in \eqref{eq:ok:weakstokesvelocity}, it is easy to show that we have
+\begin{equation}
+FIXME = - \int_\Omega \grad \psi_{-1} \cdot \grad v_i^x
+\end{equation}
+for $i=0,1,2,3$.  Similarly, using \eqref{eq:ok:smallexpansionvelocity} in \eqref{eq:ok:weakstokespressure} we have
+\begin{equation}
+\int_{\square_i} FIXME
+\end{equation}
+for $i=0,1,2,3$.
 
 
 \section{Fluid flowing down a slope}
@@ -306,5 +303,17 @@ and (w.o.l.o.g.) this is a lin.-indep. eigenvector so $M$ also has eigenvalue $-
 
 \renewcommand{\labelenumi}{\arabic{chapter}.\arabic{enumi}\quad}
 \begin{enumerate}
-\item FIXME: apply chapter 2 idea of making more symmetric boundary conditions
+\item \label{exer:ok:constantviscositystokes}  Starting from \eqref{eq:ok:gradudefinition}, by commuting mixed derivatives and using incompressibility show that
+\begin{equation*}
+\Div \left(\grad \bu^{\top}\right) = \begin{bmatrix}
+    \frac{\partial}{\partial x}\left(\Div \bu\right) & \frac{\partial}{\partial y }\left(\Div \bu\right) & \frac{\partial}{\partial x} \left(\Div \bu\right)
+    \end{bmatrix}
+    = 0.
+\end{equation*}
+On the other hand,
+\begin{equation*}
+\Div \left(\grad \bu\right) = \begin{bmatrix} \grad^2 u^x & \grad^2 u^y & \grad^2 u^z \end{bmatrix} = \grad^2 \bu.
+\end{equation*}
+defines the symbol ``$\grad^2 \bu$.''  Thereby we derive \eqref{eq:ok:constantviscositystokes}
+%\item FIXME: apply chapter 2 idea of making more symmetric boundary conditions
 \end{enumerate}
