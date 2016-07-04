@@ -59,7 +59,7 @@ for all $q \in L^2(\Omega)$ then we say $\bu,p$ solve the \emph{weak form of the
 when expanded in components.
 
 
-\section{Smallest-possible example}
+\section{A small example step \dots in the wrong direction}
 
 FIXME: dimension 8 problem from using $\bu\in Q^1$ and $p\in P^0$ on 4-elementmesh; goal of this example is to show how inf-sup condition relates to linear independence of constraints
 
@@ -85,18 +85,20 @@ p = \gamma_0 \one_0 + \gamma_1 \one_1 + \gamma_2 \one_2 + \gamma_3 \one_3.  \lab
 \end{equation}
 The pressure test functions are from this same basis, $q_i \in \{\one_0,\one_1,\one_2,\one_3\}$.
 
-Using \eqref{eq:ok:smallexpansionvelocity}, \eqref{eq:ok:smallexpansionpressure} in \eqref{eq:ok:weakstokesvelocity}, it is easy to show that we have
+Using \eqref{eq:ok:smallexpansionvelocity} and \eqref{eq:ok:smallexpansionpressure} with test functions $\bv_i$ in \eqref{eq:ok:weakstokesvelocity}, it is easy to show that we have
 \begin{align}
 &\alpha_0 \int_\Omega \grad \psi_0 \cdot \grad v_i^x + \alpha_1 \int_\Omega \grad \psi_0 \cdot \grad v_i^x \label{eq:ok:smallconcretevelocity} \\
 &\qquad + \beta_0 \int_\Omega \grad \psi_0 \cdot \grad v_i^y + \beta_1 \int_\Omega \grad \psi_0 \cdot \grad v_i^y \notag \\
 &\qquad - \gamma_0 \int_{\square_0} \Div \bv_i - \gamma_1 \int_{\square_1} \Div \bv_i - \gamma_2 \int_{\square_2} \Div \bv_i - \gamma_3 \int_{\square_3} \Div \bv_i \notag \\
 &= - \int_\Omega \grad \psi_{-1} \cdot \grad v_i^x \notag
 \end{align}
-for $i=0,1,2,3$.  Similarly, using \eqref{eq:ok:smallexpansionvelocity} in \eqref{eq:ok:weakstokespressure} we have
-\begin{equation}
-\int_{\square_i} FIXME \label{eq:ok:smallconcretepressure} 
-\end{equation}
-for $i=0,1,2,3$.
+for $i=0,1,2,3$.  Similarly, using \eqref{eq:ok:smallexpansionvelocity} in \eqref{eq:ok:weakstokespressure} with test functions $q_i$ we have four more equations,
+\begin{align}
+\alpha_0 \int_{\square_0} \frac{\partial \psi_0}{\partial x} + \hspace{21mm} \beta_0 \int_{\square_0} \frac{\partial \psi_0}{\partial y} \hspace{21mm} &= - \int_{\square_0} \frac{\partial \psi_{-1}}{\partial x}, \notag \\ 
+\alpha_0 \int_{\square_1} \frac{\partial \psi_0}{\partial x} + \alpha_1 \int_{\square_1} \frac{\partial \psi_1}{\partial x} + \beta_0 \int_{\square_1} \frac{\partial \psi_0}{\partial y} + \beta_1 \int_{\square_1} \frac{\partial \psi_1}{\partial y} &= 0, \notag \\
+\alpha_0 \int_{\square_2} \frac{\partial \psi_0}{\partial x} + \hspace{21mm} \beta_0 \int_{\square_2} \frac{\partial \psi_0}{\partial y} \hspace{21mm} &= - \int_{\square_2} \frac{\partial \psi_{-1}}{\partial x}, \notag \\
+\alpha_0 \int_{\square_3} \frac{\partial \psi_0}{\partial x} + \alpha_1 \int_{\square_3} \frac{\partial \psi_1}{\partial x} + \beta_0 \int_{\square_3} \frac{\partial \psi_0}{\partial y} + \beta_1 \int_{\square_3} \frac{\partial \psi_1}{\partial y} &= 0. \label{eq:ok:smallconcretepressure}
+\end{align}
 
 
 \section{Fluid flowing down a slope}
