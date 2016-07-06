@@ -32,9 +32,9 @@ The variable-viscosity Stokes equations, in terms of velocity, are
 \Div \bu &= 0
 \end{align*}
 
-We will, however, first consider the case where the viscosity $\nu$ is constant.  In such case the velocity second derivative term can be simplified, and recognized as an application of the Laplacian operator (Exercise \ref{chap:ok}.\ref{exer:ok:constantviscositystokes}).  In fact for this Chapter the Stokes equations are
+We will, however, first consider the case where the viscosity $\nu=1$ is constant.  In such case the velocity second derivative term can be simplified, and recognized as an application of the Laplacian operator (Exercise \ref{chap:ok}.\ref{exer:ok:constantviscositystokes}).  For this Chapter the Stokes equations are
 \begin{align}
-- \nu \grad^2 \bu + \grad p &= \bg  \label{eq:ok:constantviscositystokes} \\
+- \grad^2 \bu + \grad p &= \bg  \label{eq:ok:constantviscositystokes} \\
 \Div \bu &= 0  \label{eq:ok:constantviscosityincomp}
 \end{align}
 This is a Poisson-like problem for $\bu$, but with pressure as an additional unknown and with an additional equation stating incompressiblity.  Note that body force and the pressure gradient are together balanced by the viscous stresses. 
@@ -47,31 +47,23 @@ FIXME: theory from \citep{Braess2007,Elmanetal2005}; derive quickly by multiplyi
 FIXME assume $\bu=\bu_D$ (known) on $\partial_D\Omega$.  restrict to $\partial \bu/\partial n - \bn p = 0$ on $\partial_N\Omega$; i.e.~arbitrary Dirichlet but homogeneous Neumann; contrast \citep{Elmanetal2005}
 
 If $\bu \in W_D^{1,2}(\Omega)^3$ and $p \in L^2(\Omega)$ solves
-\begin{equation}
-\int_\Omega \grad \bu \,:\, \grad \bv - p \Div \bv = \int_\Omega \bg \cdot \bv \label{eq:ok:weakstokesvelocity}
-\end{equation}
-for all $\bv \in W_0^{1,2}(\Omega)^3$ and
-\begin{equation}
-\int_\Omega q \Div \bu = 0 \label{eq:ok:weakstokespressure}
-\end{equation}
-for all $q \in L^2(\Omega)$ then we say $\bu,p$ solve the \emph{weak form of the Stokes} equations.  For more clarity we note that in the 2D case the product of velocity gradients is
+\begin{align}
+\int_\Omega \grad \bu \,:\, \grad \bv - p \Div \bv &= \int_\Omega \bg \cdot \bv \label{eq:ok:weakstokesvelocity} \\
+\int_\Omega q \Div \bu &= 0 \label{eq:ok:weakstokespressure}
+\end{align}
+for all $\bv \in W_0^{1,2}(\Omega)^3$ and $q \in L^2(\Omega)$ then we say $\bu,p$ solve the \emph{weak form of the Stokes} equations.  For clarity, in the 2D case the product of velocity gradients is
      $$\grad \bu \,:\, \grad \bv = \grad u^x \cdot \grad v^x + \grad u^y \cdot \grad v^y.$$
-when expanded in components.
 
 
 \section{A small example step \dots in the wrong direction}
 
-FIXME: dimension 8 problem from using $\bu\in Q^1$ and $p\in P^0$ on 4-elementmesh; goal of this example is to show how inf-sup condition relates to linear independence of constraints
+FIXME: dimension 8 problem from using $\bu\in Q^1$ and $p\in P^0$ on 4-element mesh; goal of this example is to show how inf-sup condition relates to linear independence of constraints
 
-We consider a ``Poiseuille flow'' \citep{Elmanetal2005} in 2D on $\Omega=(-1,1)\times(-1,1)$.  On the top and bottom we have homogeneous Dirichlet boundary conditions $\bu=\left<0,0\right>$.  On the left side we have Dirichlet inflow boundary conditions $\bu(-1,y) = \left<1-y^2,0\right>$.  On the right side we have a Neumann stress-free boundary condition $\partial \bu/\partial n - \bn p = 0$, noting $\bn = \left<1,0\right>$.
+We consider a ``Poiseuille flow'' \citep{Elmanetal2005} in 2D on $\Omega=(-1,1)\times(-1,1)$ with no body force so $\bg=0$.  On the top and bottom we have homogeneous Dirichlet boundary conditions $\bu=\left<0,0\right>$.  On the left side we have Dirichlet inflow boundary conditions $\bu(-1,y) = \left<1-y^2,0\right>$.  On the right side we have a Neumann stress-free boundary condition $\partial \bu/\partial n - \bn p = 0$, noting $\bn = \left<1,0\right>$.
 
 \newcommand{\one}{{\large \mathbb{1}}}
 
-This small example will help us think.  We have four elements $\square_0,\dots,\square_3$ as in Figure \ref{fig:ok:poiseuille}.  Because seven of the nine nodes correspond to Dirichlet boundary conditions on the velocity, only one of which is non-zero, we incorporate the non-homogeneity into the solution---i.e.~the trial function space approximates $W_D^{1,2}(\Omega)$ in the usual way of FEM methods---by the expression
-\begin{equation}
-\bu = \left<\psi_{-1}+\alpha_0\psi_0+\alpha_1\psi_1,\beta_0\psi_0+\beta_1\psi_1\right>  \label{eq:ok:smallexpansionvelocity}
-\end{equation}
-where $\psi_{-1},\psi_0,\psi_1$ denote $Q^1$ hat functions at points $(-1,0),(0,0),(1,0)$, respectively, and $\alpha_0,\alpha_1,\beta_0,\beta_1$ are unknown scalars.  The one boundary node on the Neumann boundary is thus treated (almost) the same as an interior node.  The velocity test functions use the same basis, and there are two test functions for each node where the solution is unknown: $\bv_i \in \left\{\left<\psi_0,0\right>, \left<0,\psi_0\right>, \left<\psi_1,0\right>, \left<0,\psi_1\right>\right\}$.
+This small example will help us think.  We have nine total nodes and four elements ($\square_k$) as in Figure \ref{fig:ok:poiseuille}.
 
 \begin{figure}
 \input{tikz/poiseuille.tex}
@@ -79,26 +71,73 @@ where $\psi_{-1},\psi_0,\psi_1$ denote $Q^1$ hat functions at points $(-1,0),(0,
 \label{fig:ok:poiseuille}
 \end{figure}
 
+Six of the nodes correspond to homogeneous Dirichlet boundary conditions on the velocity.  The single non-homogeneous Dirichlet boundary condition, at location $(-1,0)$, is incorporated into the solution by the expression
+\begin{equation} 
+\bu = \left<\psi_{-1}+\alpha_0\psi_0+\alpha_1\psi_1,\beta_0\psi_0+\beta_1\psi_1\right>  \label{eq:ok:smallexpansionvelocity}
+\end{equation}
+where $\psi_{-1},\psi_0,\psi_1$ denote $Q^1$ hat functions at points $(-1,0),(0,0),(1,0)$, respectively, and $\alpha_0,\alpha_1,\beta_0,\beta_1$ are unknown scalars.  (Because the boundary data is interpolated, the trial function space is only approximately inside the solution space $W_D^{1,2}(\Omega)^2$ for the continuous problem.)
+
 The pressure solution is in terms of $P^0$ basis functions, which are characteristic functions on the elements $\one_j = \one_{\square_j}$, so
 \begin{equation}
 p = \gamma_0 \one_0 + \gamma_1 \one_1 + \gamma_2 \one_2 + \gamma_3 \one_3.  \label{eq:ok:smallexpansionpressure}
 \end{equation}
-The pressure test functions are from this same basis, $q_i \in \{\one_0,\one_1,\one_2,\one_3\}$.
 
-Using \eqref{eq:ok:smallexpansionvelocity} and \eqref{eq:ok:smallexpansionpressure} with test functions $\bv_i$ in \eqref{eq:ok:weakstokesvelocity}, it is easy to show that we have
+Inserting \eqref{eq:ok:smallexpansionvelocity} and \eqref{eq:ok:smallexpansionpressure} into \eqref{eq:ok:weakstokesvelocity} gives
 \begin{align}
-&\alpha_0 \int_\Omega \grad \psi_0 \cdot \grad v_i^x + \alpha_1 \int_\Omega \grad \psi_0 \cdot \grad v_i^x \label{eq:ok:smallconcretevelocity} \\
-&\qquad + \beta_0 \int_\Omega \grad \psi_0 \cdot \grad v_i^y + \beta_1 \int_\Omega \grad \psi_0 \cdot \grad v_i^y \notag \\
-&\qquad - \gamma_0 \int_{\square_0} \Div \bv_i - \gamma_1 \int_{\square_1} \Div \bv_i - \gamma_2 \int_{\square_2} \Div \bv_i - \gamma_3 \int_{\square_3} \Div \bv_i \notag \\
-&= - \int_\Omega \grad \psi_{-1} \cdot \grad v_i^x \notag
+&\alpha_0 \int_\Omega \grad \psi_0 \cdot \grad v^x + \beta_0 \int_\Omega \grad \psi_0 \cdot \grad v^y \label{eq:ok:smallconcretevelocity} \\
+&\qquad + \alpha_1 \int_\Omega \grad \psi_1 \cdot \grad v^x + \beta_1 \int_\Omega \grad \psi_1 \cdot \grad v^y \notag \\
+&\qquad - \gamma_0 \int_{\square_0} \Div \bv - \gamma_1 \int_{\square_1} \Div \bv - \gamma_2 \int_{\square_2} \Div \bv - \gamma_3 \int_{\square_3} \Div \bv \notag \\
+&= - \int_\Omega \grad \psi_{-1} \cdot \grad v^x \notag
 \end{align}
-for $i=0,1,2,3$.  Similarly, using \eqref{eq:ok:smallexpansionvelocity} in \eqref{eq:ok:weakstokespressure} with test functions $q_i$ we have four more equations,
+for test functions $\bv \in W_0^{1,2}(\Omega)^2$.  Inserting \eqref{eq:ok:smallexpansionvelocity} into \eqref{eq:ok:weakstokespressure}, and changing the sign to give symmetry (see below), gives
 \begin{align}
-\alpha_0 \int_{\square_0} \frac{\partial \psi_0}{\partial x} + \hspace{21mm} \beta_0 \int_{\square_0} \frac{\partial \psi_0}{\partial y} \hspace{21mm} &= - \int_{\square_0} \frac{\partial \psi_{-1}}{\partial x}, \notag \\ 
-\alpha_0 \int_{\square_1} \frac{\partial \psi_0}{\partial x} + \alpha_1 \int_{\square_1} \frac{\partial \psi_1}{\partial x} + \beta_0 \int_{\square_1} \frac{\partial \psi_0}{\partial y} + \beta_1 \int_{\square_1} \frac{\partial \psi_1}{\partial y} &= 0, \notag \\
-\alpha_0 \int_{\square_2} \frac{\partial \psi_0}{\partial x} + \hspace{21mm} \beta_0 \int_{\square_2} \frac{\partial \psi_0}{\partial y} \hspace{21mm} &= - \int_{\square_2} \frac{\partial \psi_{-1}}{\partial x}, \notag \\
-\alpha_0 \int_{\square_3} \frac{\partial \psi_0}{\partial x} + \alpha_1 \int_{\square_3} \frac{\partial \psi_1}{\partial x} + \beta_0 \int_{\square_3} \frac{\partial \psi_0}{\partial y} + \beta_1 \int_{\square_3} \frac{\partial \psi_1}{\partial y} &= 0. \label{eq:ok:smallconcretepressure}
+&- \alpha_0 \int_\Omega q \frac{\partial \psi_0}{\partial x} - \beta_0 \int_\Omega q \frac{\partial \psi_0}{\partial y} - \alpha_1 \int_\Omega q \frac{\partial \psi_1}{\partial x} - \beta_1 \int_\Omega q \frac{\partial \psi_1}{\partial y}  \label{eq:ok:smallconcretepressure} \\
+&= \int_\Omega q \frac{\partial \psi_{-1}}{\partial x} \notag
 \end{align}
+for test functions $q \in L^2(\Omega)$.
+
+There are eight unknown scalars in system \eqref{eq:ok:smallconcretevelocity}, \eqref{eq:ok:smallconcretepressure}, namely $\alpha_j,\beta_j,\gamma_j$.  We choose velocity test functions from the basis of $Q^1$ hat functions at $(0,0),(1,0)$, so
+\begin{equation}
+\bv_i \in \left\{\left<\psi_0,0\right>, \left<0,\psi_0\right>, \left<\psi_1,0\right>, \left<0,\psi_1\right>\right\},  \label{eq:ok:smallvelocitytest}
+\end{equation}
+and pressure test functions from a $P^0$ basis,
+\begin{equation}
+q_i \in \{\one_0,\one_1,\one_2,\one_3\}.  \label{eq:ok:smallpressuretest}
+\end{equation}
+By using these in equations \eqref{eq:ok:smallconcretevelocity} and \eqref{eq:ok:smallconcretepressure} we get the following $N=8$ dimensional matrix problem to solve,
+\begin{equation}
+\begin{bmatrix}
+r   &     & t   &     & b_0 & b_1 & b_2 & b_3 \\
+    & r   &     & t   & c_0 & c_1 & c_2 & c_3 \\
+t   &     & s   &     &     & d_1 &     & d_3 \\
+    & t   &     & s   &     & e_1 &     & e_3 \\
+b_0 & c_0 &     &     \\
+b_1 & c_1 & d_1 & e_1 \\
+b_2 & c_2 &     &     \\
+b_3 & c_3 & d_3 & e_3
+\end{bmatrix} 
+\begin{bmatrix}
+\alpha_0 \\ \beta_0 \\ \alpha_1 \\ \beta_1 \\ \gamma_0 \\ \gamma_1 \\ \gamma_2 \\ \gamma_3
+\end{bmatrix}
+=
+\begin{bmatrix}
+f_0 \\
+0 \\
+0 \\
+0 \\
+g_0 \\
+0 \\
+g_2 \\
+0
+\end{bmatrix}  \label{eq:ok:smallmatrixproblem}
+\end{equation} 
+wherein all blank entries are zero.
+
+Exercise \ref{chap:ok}.\ref{exer:ok:smalldetails} computes $r,s,t,b_j,c_j,d_j,e_j,f_0,g_j$.  FIXME
+
+
+
+
 
 
 \section{Fluid flowing down a slope}
@@ -308,6 +347,7 @@ and (w.o.l.o.g.) this is a lin.-indep. eigenvector so $M$ also has eigenvalue $-
 
 \renewcommand{\labelenumi}{\arabic{chapter}.\arabic{enumi}\quad}
 \begin{enumerate}
+
 \item \label{exer:ok:constantviscositystokes}  Starting from \eqref{eq:ok:gradudefinition}, by commuting mixed derivatives and using incompressibility show that
 \begin{equation*}
 \Div \left(\grad \bu^{\top}\right) = \begin{bmatrix}
@@ -321,4 +361,10 @@ On the other hand,
 \end{equation*}
 defines the symbol ``$\grad^2 \bu$.''  Thereby we derive \eqref{eq:ok:constantviscositystokes}
 %\item FIXME: apply chapter 2 idea of making more symmetric boundary conditions
+
+\item \label{exer:ok:smalldetails}  FIXME
+%f_0 = - \int_\Omega \grad \psi_{-1} \cdot \grad \psi_0
+%g_0 = \int_{\square_0} \partial \psi_{-1}/\partial x
+%g_2 = \int_{\square_2} \partial \psi_{-1}/\partial x
+
 \end{enumerate}
