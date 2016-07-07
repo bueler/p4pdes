@@ -55,7 +55,7 @@ for all $\bv \in W_0^{1,2}(\Omega)^3$ and $q \in L^2(\Omega)$ then we say $\bu,p
      $$\grad \bu \,:\, \grad \bv = \grad u^x \cdot \grad v^x + \grad u^y \cdot \grad v^y.$$
 
 
-\section{A small example step \dots in the wrong direction}
+\section{Example I: A small step}
 
 FIXME: dimension 8 problem from using $\bu\in Q^1$ and $p\in P^0$ on 4-element mesh; goal of this example is to show how inf-sup condition relates to linear independence of constraints
 
@@ -135,8 +135,12 @@ wherein all blank entries are zero.
 
 Exercise \ref{chap:ok}.\ref{exer:ok:smalldetails} computes $r,s,t,b_j,c_j,d_j,e_j,f_0,g_j$.  FIXME
 
+FIXME  I believe this gives a solvable system (sort of by accident)
 
 
+\section{Example II: A stumble}
+
+FIXME \emph{enclose} with Dirichlet outflow matching inflow; observe compatibility required (\citep{Elmanetal2005} (5.4)) but satisfied; gives $B \in \RR^{4\times 2}$ for which $B^\top$ has two-dimensional null space instead of $\Null(B^\top) = \left<\mathbf{1}\right>$ as it is supposed to; see \citep{Elmanetal2005} (5.47) and (5.64)
 
 
 
