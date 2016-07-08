@@ -48,14 +48,15 @@ FIXME: theory from \citep{Braess2007,Elmanetal2005}; derive quickly
 
 We assume that the boundary is decomposed disjointly, $\partial\Omega = \partial_D\Omega \cup \partial_N\Omega$, and on these portions we will allow (arbitrary) Dirichlet and Neumann boundary conditions.  The former correspond to having the velocity $\bu$ equal to a known function.  The derivation of the weak form, as follows, establishes the form of the latter.
 
-Suppose $\bu$, $p$ are (classical) solutions to \eqref{eq:ok:constantviscositystokes}, \eqref{eq:ok:constantviscosityincomp}.  Suppose $\bv$, a smooth velocity test function, satisfies $\bv=0$ on $\partial_D\Omega$.  Multiplying \eqref{eq:ok:constantviscositystokes} by $\bv$ and integrating-by-parts---see Exercise \ref{exer:ok:weakderive} for details and notation---we get
+Suppose $\bu$, $p$ are (classical) solutions to \eqref{eq:ok:constantviscositystokes}, \eqref{eq:ok:constantviscosityincomp}.  Suppose $\bv$, a smooth velocity test function, satisfies $\bv=0$ on $\partial_D\Omega$.  Multiplying \eqref{eq:ok:constantviscositystokes} by $\bv$ and integrating-by-parts we get
 \begin{equation}
-\int_{\partial_N \Omega} \left[- \mu \frac{\partial \bu}{\partial n} + p \bn \right] \cdot \bv + \int_\Omega \mu \grad \bu : \grad \bv - p \Div \bv = \int_\Omega \rho \bg \cdot \bv. \label{eq:ok:weakstokeswithboundary}
+\int_{\partial_N \Omega} \left[- \mu \frac{\partial \bu}{\partial n} + p \bn \right] \cdot \bv + \int_\Omega \mu \grad \bu : \grad \bv - p \Div \bv = \int_\Omega \rho \bg \cdot \bv, \label{eq:ok:weakstokeswithboundary}
 \end{equation}
+where $\bn$ denotes the outward normal unit vector field on $\partial \Omega$, which we assume is adequately smooth.  See Exercise \ref{exer:ok:weakderive} for notation and additional details.
 
-The quantity in square brackets has units of stress, and we assume it is equal to a known function on the Neumann part of the boundary:
+The quantity in square brackets in \eqref{eq:ok:weakstokeswithboundary} has units of stress, and we assume it is equal to a known function on the Neumann part of the boundary:
 \begin{equation}
-\mu \frac{\partial \bu}{\partial n} - p \bn = \bbf_N \quad \text{on } \partial_N \Omega.  \label{eq:ok:neumannbc}
+\sigma\cdot \bn = \mu \frac{\partial \bu}{\partial n} - p \bn = \bbf_N \quad \text{on } \partial_N \Omega.  \label{eq:ok:neumannbc}
 \end{equation}
 
 Define
@@ -72,36 +73,44 @@ for all $\bv \in \mathcal{V}_0 = W_0^{1,2}(\Omega)^3$ and $q \in L^2(\Omega)$.
 
 \section{Example I: A small step}
 
-Before constructing an FEM for the differential equations above, building a small, concrete case \emph{by hand} is worthwhile.  This will guide our expectations about the form of the discrete equations; it will help us think.
+Before constructing a convergent FEM for the differential equations above, which is nontrivial, let us build a small, concrete case \emph{by hand} from a very coarse grid.  This will guide our expectations about the form of the discrete equations, and it will help us think.  It will also expose the need for compatibility between the FEM spaces for velocity and pressure.
 
-We consider a ``Poiseuille flow'' \citep{Acheson1990,Elmanetal2005} in 2D on $\Omega=(-1,1)\times(-1,1)$ with constant viscosity $\mu=1$ and no body force $\rho \bg=0$.  The fluid problem we have in mind has an exact, steady solution (Figure \ref{fig:ok:poiseuillesolutions}) where the pressure is, for now, only determined up to a constant:
-\begin{equation}
-u^x = 1-y^2, \quad u^y=0, \quad p = -2x + C.  \label{eq:ok:poiseuilleexact}
-\end{equation}
-That is, the strictly horizontal (rightward) flow is driven (balanced) by a pressure gradient which is also horizontal.  On the top and bottom $y=\pm 1$ we have homogeneous Dirichlet boundary conditions $\bu=\left<0,0\right>$.  On the left side $x=-1$ we have Dirichlet inflow boundary conditions $\bu(-1,y) = \left<1-y^2,0\right>$.  On the right side $x=+1$ we choose a Neumann stress-free boundary condition $\partial \bu/\partial n - \bn p = 0$, noting $\bn = \left<1,0\right>$.
+We consider a two-dimensional ``Poiseuille flow'' \citep{Acheson1990,Elmanetal2005} on $\Omega=(-1,1)\times(-1,1)$ with constant viscosity $\mu=1$ and no body force $\rho \bg=0$ (Figure \ref{fig:ok:poiseuillesolutions}).  On the left side $x=-1$ we have a Dirichlet in-flow boundary condition $\bu = \left<1-y^2,0\right>$.  On the right side $x=+1$ we choose a homogeneous Neumann (``stress-free'') boundary condition $\partial \bu/\partial n - \bn p = 0$.  On $y=\pm 1$ boundaries we have homogeneous Dirichlet (``no-slip'') boundary conditions $\bu=\left<0,0\right>$. 
 
 \begin{figure}
 \input{tikz/poiseuillesolutions.tex}
-\caption{In a Poiseuille flow the gradient of the pressure (left; contours of constant pressure) is balanced by viscous shear forces from vertical variation in the velocity (right).}
+\caption{In a Poiseuille flow viscous shear forces from vertical variation in the velocity $\bu$ (left) are balanced by the gradient of the pressure $p$ (right; contours of constant pressure).}
 \label{fig:ok:poiseuillesolutions}
 \end{figure}
 
-The small example comes from the tiny grid in Figure \ref{fig:ok:poiseuilletinygrid} with nine nodes and four square elements.  Six of the nodes correspond to homogeneous Dirichlet boundary conditions on the velocity.  The single non-homogeneous Dirichlet boundary condition, at location $(-1,0)$, is incorporated into the solution by the expression
-\begin{equation} 
-\bu = \left<\psi_{-1}+\alpha_0\psi_0+\alpha_1\psi_1,\beta_0\psi_0+\beta_1\psi_1\right>  \label{eq:ok:smallexpansionvelocity}
+The fluid problem we have in mind has an exact, steady solution,
+\begin{equation}
+u^x = 1-y^2, \quad u^y=0, \quad p = -2(x-1).  \label{eq:ok:poiseuilleexact}
 \end{equation}
-where $\psi_{-1},\psi_0,\psi_1$ denote $Q^1$ hat functions at points $(-1,0),(0,0),(1,0)$, respectively, and $\alpha_0,\alpha_1,\beta_0,\beta_1$ are unknown scalars.  (Because the boundary data is interpolated, the trial function space is only approximately inside the solution space $W_D^{1,2}(\Omega)^2$ for the continuous problem.)
+This strictly-horizontal flow is driven, or balanced, by a horizontal pressure gradient.  This pressure gradient is balanced by viscous forces arising from the variation in $y$ of the $u^x$, that is, by ``shearing'' motion.
+
+The grid in Figure \ref{fig:ok:poiseuilletinygrid}, with nine nodes and four elements, is already complicated enough because we will work-out the details by hand.  Consider functions which are minimally smooth for the weak formation \eqref{eq:ok:weakstokesvelocity}, \eqref{eq:ok:weakstokespressure}.  Specifically, let $u^x,u^y$ be from the $Q^1$ (bilinear) FEM space, as in Chapter \ref{chap:of}, and $p$ from $P^0$, the space of functions which are piecewise-constant on each element.  Thus the velocity functions are continuous, and in $W^{1,2}(\Omega)^2$, while the pressure functions are discontinuous but in $L^2(\Omega)$.
 
 \begin{figure}
 \input{tikz/poiseuilletinygrid.tex}
-\caption{$\Omega=(-1,1)\times(-1,1)$ for Poiseuille flow, with a very-coarse grid of four elements $\square_k$.  Open circles ``{\large $\circ$}'' are velocity unknowns, ``$\bullet$'' are Dirichlet boundary conditions, and ``$\times$'' are pressure unknowns.}
+\caption{Domain $\Omega=(-1,1)\times(-1,1)$ with a coarse grid of four elements $\square_k$.  Solid ``$\bullet$'' nodes are velocity unknowns, open circles ``{\large $\circ$}'' are velocity (Dirichlet) boundary conditions, and ``$\times$'' are pressure unknowns.}
 \label{fig:ok:poiseuilletinygrid}
 \end{figure}
 
-The pressure solution is in terms of $P^0$ basis functions, which are characteristic functions on the elements $\one_j = \one_{\square_j}$, so
+Because of boundary conditions and other choices, the weak form (continuum) Poiseuille problem is
+\begin{equation}
+\int_\Omega \grad \bu : \grad \bv - p \Div \bv = 0, \qquad
+\int_\Omega q \Div \bu = 0 \label{eq:ok:smallstokesboth}
+\end{equation}
+for test functions $\bv,q$.  To build the corresponding discrete FEM system, for the grid shown in Figure \ref{fig:ok:poiseuilletinygrid}, trial functions $\bu,p$ are needed.  The six nodes on $y=\pm 1$ correspond to homogeneous Dirichlet conditions $\bu=0$.  Letting $\psi_{-1},\psi_0,\psi_1$ denote $Q^1$ hat functions (Figure \ref{fig:of:q1hat}) at points $(x,y)=(-1,0),(0,0),(1,0)$, respectively, the non-homogeneous Dirichlet node at $(-1,0)$ is incorporated into the solution by the expression
+\begin{equation} 
+\bu = \left<\psi_{-1}+\alpha_0\psi_0+\alpha_1\psi_1,\beta_0\psi_0+\beta_1\psi_1\right>. \label{eq:ok:smallexpansionvelocity}
+\end{equation}
+(Because the boundary data is interpolated, this trial function is only ``approximately in'' $\mathcal{V}_D$.)  On the other hand, the pressure is expanded in $P^0$ basis functions, namely characteristic functions $\one_j = \one_{\square_j}$:
 \begin{equation}
 p = \gamma_0 \one_0 + \gamma_1 \one_1 + \gamma_2 \one_2 + \gamma_3 \one_3.  \label{eq:ok:smallexpansionpressure}
 \end{equation}
+In summary there are four velocity ($\alpha_0,\beta_0,\alpha_1,\beta_1$) and four pressure ($\gamma_0,\gamma_1,\gamma_2,\gamma_3$) degrees of freedom.
 
 Inserting \eqref{eq:ok:smallexpansionvelocity} and \eqref{eq:ok:smallexpansionpressure} into \eqref{eq:ok:weakstokesvelocity} gives
 \begin{align}
@@ -117,15 +126,15 @@ for test functions $\bv \in W_0^{1,2}(\Omega)^2$.  Inserting \eqref{eq:ok:smalle
 \end{align}
 for test functions $q \in L^2(\Omega)$.
 
-There are eight unknown scalars in system \eqref{eq:ok:smallconcretevelocity}, \eqref{eq:ok:smallconcretepressure}, namely $\alpha_j,\beta_j,\gamma_j$.  We choose velocity test functions from the basis of $Q^1$ hat functions at $(0,0),(1,0)$, so
+As noted, there are eight unknown scalars in system \eqref{eq:ok:smallconcretevelocity}, \eqref{eq:ok:smallconcretepressure}.  So we choose four velocity test functions from the basis of $Q^1$ hat functions at locations of velocity unknowns,
 \begin{equation}
 \bv_i \in \left\{\left<\psi_0,0\right>, \left<0,\psi_0\right>, \left<\psi_1,0\right>, \left<0,\psi_1\right>\right\},  \label{eq:ok:smallvelocitytest}
 \end{equation}
-and pressure test functions from a $P^0$ basis,
+and four pressure test functions from a $P^0$ basis,
 \begin{equation}
 q_i \in \{\one_0,\one_1,\one_2,\one_3\}.  \label{eq:ok:smallpressuretest}
 \end{equation}
-By using these in equations \eqref{eq:ok:smallconcretevelocity} and \eqref{eq:ok:smallconcretepressure} we get the following $N=8$ dimensional matrix problem to solve,
+By using \eqref{eq:ok:smallvelocitytest}, \eqref{eq:ok:smallpressuretest} in equations \eqref{eq:ok:smallconcretevelocity}, \eqref{eq:ok:smallconcretepressure} we get an $N=8$ dimensional matrix problem:
 \begin{equation}
 \begin{bmatrix}
 r   &     & t   &     & b_0 & b_1 & b_2 & b_3 \\
@@ -142,21 +151,45 @@ b_3 & c_3 & d_3 & e_3
 \end{bmatrix}
 =
 \begin{bmatrix}
-f_0 \\
+r_0 \\
 0 \\
 0 \\
 0 \\
-g_0 \\
+s_0 \\
 0 \\
-g_2 \\
+s_2 \\
 0
-\end{bmatrix}  \label{eq:ok:smallmatrixproblem}
+\end{bmatrix}.  \label{eq:ok:smallmatrixproblem}
 \end{equation} 
-wherein all blank entries are zero.
+All blank entries are zero.  Exercise \ref{chap:ok}.\ref{exer:ok:smalldetails} describes how to compute the non-zero entries.
 
-Exercise \ref{chap:ok}.\ref{exer:ok:smalldetails} computes $r,s,t,b_j,c_j,d_j,e_j,f_0,g_j$.  FIXME
-
-FIXME  I believe this gives a solvable system (sort of by accident)
+The system is obviously in symmetric, block form
+\begin{equation}
+\begin{bmatrix}
+A & B^\top \\
+B &
+\end{bmatrix} 
+\begin{bmatrix}
+\bu^h \\ \bp^h
+\end{bmatrix}
+=
+\begin{bmatrix}
+\br \\
+\bs
+\end{bmatrix}.  \label{eq:ok:smallblockform}
+\end{equation}
+Based on the results of Exercise \ref{chap:ok}.\ref{exer:ok:smalldetails}, we have concretely that
+    $$A = \frac{1}{3} \begin{bmatrix}
+     8 &    & -1 &    \\
+       &  8 &    & -1 \\
+    -1 &    &  4 &    \\
+       & -1 &    &  4
+    \end{bmatrix},
+    \quad
+    B = \frac{1}{2} \begin{bmatrix}
+     FIXME
+    \end{bmatrix}.$$
+FIXME  this gives a solvable system (sort of by accident)
 
 
 \section{Example II: A stumble}
@@ -165,29 +198,23 @@ FIXME \emph{enclose} with Dirichlet outflow matching inflow; observe compatibili
 
 
 
+\clearpage
+\newpage
 \section{Fluid flowing down a slope}
 
-FIXME: reduce to 2D with gravity body force.
-
-The particular problem we will solve is a constant-thickness flow down a slope of angle $\theta$, using rotated coordinates as in Figure \ref{fig:ok:slabonslope}.  First we simplify the appearance of the field equations.  Write $u=u_1$ and $v=u_2$.  Then the three scalar equations are
-\begin{align}
--\nu \grad^2 u + p_x &= g_1 \label{eq:ok:stokes2du} \\
--\nu \grad^2 v + p_y &= g_2 \label{eq:ok:stokes2dv} \\
-- u_x - v_y &= 0 \label{eq:ok:stokes2dincomp}
-\end{align}
-where $\nu$ is constant and $\bg = (g_1,g_2) = (\rho g \sin \theta, - \rho g \cos \theta)$.
+The particular problems we will solve in \texttt{stokes.c} are the above Poiseuille flow problem (FIXME see Exercise) and additionally a constant-thickness flow down a slope of angle $\theta$, using rotated coordinates as in Figure \ref{fig:ok:slabonslope}.  The weak form is \eqref{eq:ok:weakstokesvelocity}, \eqref{eq:ok:weakstokespressure} in 2D with $\bg = (g\sin\theta,-g\cos\theta)$ for $g>0,\theta\in(-\pi/2,\pi/2)$ fixed.
 
 \begin{marginfigure}
 \input{tikz/slabonslope.tex}
-\caption{Geometry and boundary conditions of our first Stokes problem, for sticky fluid flowing down a slope.}
+\caption{Geometry and boundary conditions of our first Stokes problem, for a rectangular block flowing and sliding down a slope.  ``Slip'' is $\bt \cdot \sigma \cdot \bn$ given, where $\bt$ ranges over tangential vectors.  ``Non-penetration'' is $\bu\cdot\bn=0$.}
 \label{fig:ok:slabonslope}
 \end{marginfigure}
 
-Because the flow is actually intended to be infinite in the $x$ direction, for a numerical approximation we will require the solution to be periodic in $x$, so the domain is the rectangle $[0,L]\times[0,H]$ (in the rotated coordinates), where $H$ is the thickness and $L$ the length.  We assume a stress-free top and no slip at the base.  Because the normal direction to the top is in the (rotated) $y$-direction, the top boundary condition is
+The domain is the rectangle $[0,L]\times[0,H]$ (in the rotated coordinates), where $H$ is the thickness and $L$ the length.  We assume a stress-free top and no penetration at the base.  FIXME  Because the normal direction to the top is in the (rotated) $y$-direction, the top boundary condition is
   $$\sigma\cdot\bn = 0 \iff
 \begin{bmatrix}
-2 \nu u_x - p & \nu (u_y+v_x) \\
-\nu (u_y+v_x) & 2 \nu v_y - p
+2 \mu u_x - p & \mu (u_y+v_x) \\
+\mu (u_y+v_x) & 2 \mu v_y - p
 \end{bmatrix} \begin{bmatrix}
 0 \\ 1
 \end{bmatrix} = \begin{bmatrix}
@@ -195,21 +222,20 @@ Because the flow is actually intended to be infinite in the $x$ direction, for a
 \end{bmatrix}.$$
 Thus, with the no-slip base, we have these boundary conditions,
 \begin{align}
-\text{top $y=H$:}&    & &\begin{array}{l} u_y + v_x = 0 \\ 2 \nu v_y = p\end{array}  \label{eq:ok:bcstokestop} \\
-\text{bottom $y=0$:}& & &\begin{array}{l} u = 0 \\ v = 0 \end{array} \label{eq:ok:bcstokesbottom} \\
-\text{sides $x=0$ and $x=L$:}&
-                      & &u,v,p \text{ are periodic}. \label{eq:ok:bcstokesperiodic}
+\text{top $y=H$:}&    & &\begin{array}{l} u_y + v_x = 0 \\ 2 \mu v_y = p\end{array}  \label{eq:ok:bcstokestop} \\
+\text{bottom $y=0$:}& & &\begin{array}{l} u = 0 \\ v = 0 \end{array} \label{eq:ok:bcstokesbottom}
 \end{align}
 
-This boundary-value problem, consisting of field equations \eqref{eq:ok:stokes2du}--\eqref{eq:ok:stokes2dincomp} and boundary conditions \eqref{eq:ok:bcstokestop}--\eqref{eq:ok:bcstokesperiodic}, has a well-known exact solution, which makes this a good example for our first numerical approach:
+FIXME: make exercise.  This boundary-value problem has a well-known exact solution in the no-slip case, which makes this a good example for our first numerical approach:
 \begin{align}
-u &= \frac{g_1}{\nu} y \left(H - \frac{y}{2}\right), \label{eq:ok:exactstokesu} \\
+u &= \frac{\rho g_1}{\mu} y \left(H - \frac{y}{2}\right), \label{eq:ok:exactstokesu} \\
 v &= 0, \label{eq:ok:exactstokesv} \\
-p &= -g_2 (H-y).\label{eq:ok:exactstokesp}
+p &= - \rho g_2 (H-y).\label{eq:ok:exactstokesp}
 \end{align}
 
 
-
+\clearpage
+\newpage
 \section{Finite element, structured-grid approach}
 
 In this section we apply FIXME to get a symmetric linear system
@@ -218,10 +244,10 @@ In this section we apply FIXME to get a symmetric linear system
 \end{equation}
 with block structure FIXME.  As usual we treat the linear problem as nonlinear, and we use a structured grid, so our code has a \pSNES and \pDMDA objects.  We first provide a residual-evaluation routine for the locally-owned part of the structured grid.
 
-FIXME: replace with $Q^2$--$P^{-1}$ finite elements
 
+\section{A stable $Q^2-P^{-1}$ FEM}
 
-FIXME: the resulting code is \texttt{stokes.c}
+FIXME:  write \texttt{stokes.c} here
 
 
 \section{Preconditioners for indefinite systems}
@@ -267,7 +293,7 @@ where, by definition,
 \grad \bu : \grad \bv &= \grad u^x \cdot \grad v^x + \grad u^y \cdot \grad v^y + \grad u^z \cdot \grad v^z.
 \end{align*}
 
-\item \label{exer:ok:poiseuilleverify}  Confirm that equations \eqref{eq:ok:poiseuilleexact} exactly solve the constant-viscosity Stokes equations \eqref{eq:ok:constantviscositystokes} and \eqref{eq:ok:constantviscosityincomp}.
+\item \label{exer:ok:poiseuilleverify}  Confirm that equations \eqref{eq:ok:poiseuilleexact} exactly solve the $\mu=1$, $\rho\bg=0$ Stokes equations \eqref{eq:ok:constantviscositystokes} and \eqref{eq:ok:constantviscosityincomp}.
 
 \item \label{exer:ok:smalldetails}  FIXME
 %f_0 = - \int_\Omega \grad \psi_{-1} \cdot \grad \psi_0
