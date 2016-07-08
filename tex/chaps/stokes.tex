@@ -1,30 +1,29 @@
 
 \section{Equations for incompressible fluids}
 
-FIXME: lay out 3D theory e.g.~from \citep{Acheson1990,Fowler1997}
+Roughly-speaking, a \emph{fluid} is a mathematical abstraction in which the density and the velocity of a mass of particles are given by continuous functions.  We present only enough of the theory of fluids to give an example of solving the Stokes model for slow, very-viscous fluids, and we keep to the constant-density case.  A comprehensive introduction to modeling of fluids, from \citep{Acheson1990} or \citep{Fowler1997} for example, is recommended.
 
-FIXME in this section our notation hits a bit of an ``subscripting crisis'', so we use a superscript for components of the velocity field
-    $$\bu = \left<u^x,u^y,u^z\right>$$
-
-Consider an incompressible fluid of constant density $\rho$ and \emph{(dynamic) viscosity} $\mu$ subject to a \emph{body force} $\rho \bg$ where $\bg$ has units of acceleration.  The incompressible variable-viscosity Navier-Stokes model has these main equations
+Consider an incompressible fluid with velocity $\bu=\bu(t,x,y,z)$, of constant density $\rho$, with \emph{(dynamic) viscosity} $\mu$, and subject to a \emph{body force} $\rho \bg$ where $\bg$ has units of acceleration.  The incompressible variable-viscosity \emph{Navier-Stokes model} has these main equations
 \begin{align}
 \rho \left(\frac{\partial \bu}{\partial t} + \bu \cdot \grad \bu\right) &= \Div \sigma + \rho \bg, \label{eq:ok:nsmomentum} \\
 \Div \bu &= 0, \label{eq:ok:nsincomp} \\
 \sigma &= 2 \mu\, D \bu - p I. \label{eq:ok:nsflowlaw}
 \end{align}
-The spatial derivatives in these equations are nontrivial, of course, so we observe that
+Equation \eqref{eq:ok:nsmomentum} is an equation of \emph{momentum conservation} (or \emph{balance}), which is to say a statement of Newton's second law ``$ma=F$,'' and \eqref{eq:ok:nsincomp} states incompressibility.  The \emph{flow law} \eqref{eq:ok:nsflowlaw} relates the stress tensor $\sigma=\sigma_{ij}$ to the \emph{strain rate tensor}, the symmetrized velocity gradient
+    $$D \bu = \frac{1}{2} \left(\grad \bu + \grad \bu^{\top}\right).$$
+Because of the symmetry of the stress and strain-rate tensors, equations \eqref{eq:ok:nsmomentum}, \eqref{eq:ok:nsincomp}, \eqref{eq:ok:nsflowlaw} represent $3+1+6=10$ scalar equations, respectively.
+
+Our notation has hit a ``subscripting crisis'', so we use a superscript for components of the velocity field, namely $\bu = \left<u^x,u^y,u^z\right>$.  In this notation the spatial derivatives in the above equations are, by definition,
 \begin{equation}
 \grad \bu = \renewcommand{\arraystretch}{1.3}\begin{bmatrix}
     \frac{\partial u^x}{\partial x} & \frac{\partial u^y}{\partial x} & \frac{\partial u^z}{\partial x} \\
     \frac{\partial u^x}{\partial y} & \frac{\partial u^y}{\partial y} & \frac{\partial u^z}{\partial y} \\
     \frac{\partial u^x}{\partial z} & \frac{\partial u^y}{\partial z} & \frac{\partial u^z}{\partial z}
-    \end{bmatrix}  \label{eq:ok:gradudefinition}
+    \end{bmatrix}, \quad
+\Div \bu = \frac{\partial u^x}{\partial x} + \frac{\partial u^y}{\partial y} + \frac{\partial u^z}{\partial z}. \label{eq:ok:graddivudefinition}
 \end{equation}
-and
-    $$D \bu = \frac{1}{2} \left(\grad \bu + \grad \bu^{\top}\right)$$
-by definition.  Equation \eqref{eq:ok:nsmomentum} is an equation of \emph{momentum conservation} (or \emph{balance}), which is to say a statement of Newton's second law, and \eqref{eq:ok:nsincomp} is a statement of incompressibility.  Especially for very-viscous fluids where the \emph{flow law} \eqref{eq:ok:nsflowlaw} is a major focus, $D\bu$ is sometimes called the \emph{strain rate tensor}.
 
-To give some additional physical meaning to these equations, if we measure distances in meters, mass in kilograms, and time in seconds (``MKS units'') then the sides of \eqref{eq:ok:nsmomentum} are in units $\text{kg}\, \text{m}^{-2}\, \text{s}^{-2}$, that is, they are \emph{stress gradients}.  In fact the \emph{Newton}, a unit of force, is $\text{N}=\text{kg}\, \text{m}\, \text{s}^{-2}$, and the sides of \eqref{eq:ok:nsmomentum} are in units $\text{N}\, \text{m}^{-3}$, which we may interpret as a force-per-unit-area (stress $\text{N}\, \text{m}^{-2}$, a \emph{Pascal}) per meter.  In these terms, the velocity gradients $\grad \bu$ and $D\bu$ have units of $\text{s}^{-1}$ and the dynamic viscosity $\mu$ has units $\text{Pa}\, \text{s} = \text{kg}\, \text{m}^{-1}\, \text{s}^{-1}$. \label{page:ok:units}
+To give some additional physical meaning to equations \eqref{eq:ok:nsmomentum}--\eqref{eq:ok:nsflowlaw}, if we measure distances in meters, mass in kilograms, and time in seconds (``MKS units'') then the quantities which are balanced in \eqref{eq:ok:nsmomentum} are in units $\text{kg}\, \text{m}^{-2}\, \text{s}^{-2}$, namely \emph{stress gradients}.  In fact, noting that the MKS unit of force is the Newton ($\text{N}=\text{kg}\, \text{m}\, \text{s}^{-2}$), the quantities in \eqref{eq:ok:nsmomentum} are forces per unit area, or stress in Pascals ($\text{Pa} = \text{N}\, \text{m}^{-2}$) per meter.  The velocity derivatives $\grad \bu$ and $D\bu$ have units of $\text{s}^{-1}$ and the dynamic viscosity $\mu$ has units $\text{Pa}\, \text{s} = \text{kg}\, \text{m}^{-1}\, \text{s}^{-1}$.
 
 FIXME: theory where Froude $\approx 0$
 
@@ -73,23 +72,31 @@ for all $\bv \in \mathcal{V}_0 = W_0^{1,2}(\Omega)^3$ and $q \in L^2(\Omega)$.
 
 \section{Example I: A small step}
 
-We consider a ``Poiseuille flow'' \citep{Elmanetal2005} in 2D on $\Omega=(-1,1)\times(-1,1)$ with no body force so $\bg=0$.  On the top and bottom we have homogeneous Dirichlet boundary conditions $\bu=\left<0,0\right>$.  On the left side we have Dirichlet inflow boundary conditions $\bu(-1,y) = \left<1-y^2,0\right>$.  On the right side we have a Neumann stress-free boundary condition $\partial \bu/\partial n - \bn p = 0$, noting $\bn = \left<1,0\right>$.
+Before constructing an FEM for the differential equations above, building a small, concrete case \emph{by hand} is worthwhile.  This will guide our expectations about the form of the discrete equations; it will help us think.
 
-\newcommand{\one}{{\large \mathbb{1}}}
-
-This small example will help us think.  We have nine total nodes and four elements ($\square_k$) as in Figure \ref{fig:ok:poiseuille}.
+We consider a ``Poiseuille flow'' \citep{Acheson1990,Elmanetal2005} in 2D on $\Omega=(-1,1)\times(-1,1)$ with constant viscosity $\mu=1$ and no body force $\rho \bg=0$.  The fluid problem we have in mind has an exact, steady solution (Figure \ref{fig:ok:poiseuillesolutions}) where the pressure is, for now, only determined up to a constant:
+\begin{equation}
+u^x = 1-y^2, \quad u^y=0, \quad p = -2x + C.  \label{eq:ok:poiseuilleexact}
+\end{equation}
+That is, the strictly horizontal (rightward) flow is driven (balanced) by a pressure gradient which is also horizontal.  On the top and bottom $y=\pm 1$ we have homogeneous Dirichlet boundary conditions $\bu=\left<0,0\right>$.  On the left side $x=-1$ we have Dirichlet inflow boundary conditions $\bu(-1,y) = \left<1-y^2,0\right>$.  On the right side $x=+1$ we choose a Neumann stress-free boundary condition $\partial \bu/\partial n - \bn p = 0$, noting $\bn = \left<1,0\right>$.
 
 \begin{figure}
-\input{tikz/poiseuille.tex}
-\caption{$\Omega=(-1,1)\times(-1,1)$ for Poiseuille flow, with a very-coarse grid of four elements $\square_k$.  Open circles ``{\large $\circ$}'' are velocity unknowns, ``$\bullet$'' are Dirichlet boundary conditions, and ``$\times$'' are pressure unknowns.}
-\label{fig:ok:poiseuille}
+\input{tikz/poiseuillesolutions.tex}
+\caption{In a Poiseuille flow the gradient of the pressure (left; contours of constant pressure) is balanced by viscous shear forces from vertical variation in the velocity (right).}
+\label{fig:ok:poiseuillesolutions}
 \end{figure}
 
-Six of the nodes correspond to homogeneous Dirichlet boundary conditions on the velocity.  The single non-homogeneous Dirichlet boundary condition, at location $(-1,0)$, is incorporated into the solution by the expression
+The small example comes from the tiny grid in Figure \ref{fig:ok:poiseuilletinygrid} with nine nodes and four square elements.  Six of the nodes correspond to homogeneous Dirichlet boundary conditions on the velocity.  The single non-homogeneous Dirichlet boundary condition, at location $(-1,0)$, is incorporated into the solution by the expression
 \begin{equation} 
 \bu = \left<\psi_{-1}+\alpha_0\psi_0+\alpha_1\psi_1,\beta_0\psi_0+\beta_1\psi_1\right>  \label{eq:ok:smallexpansionvelocity}
 \end{equation}
 where $\psi_{-1},\psi_0,\psi_1$ denote $Q^1$ hat functions at points $(-1,0),(0,0),(1,0)$, respectively, and $\alpha_0,\alpha_1,\beta_0,\beta_1$ are unknown scalars.  (Because the boundary data is interpolated, the trial function space is only approximately inside the solution space $W_D^{1,2}(\Omega)^2$ for the continuous problem.)
+
+\begin{figure}
+\input{tikz/poiseuilletinygrid.tex}
+\caption{$\Omega=(-1,1)\times(-1,1)$ for Poiseuille flow, with a very-coarse grid of four elements $\square_k$.  Open circles ``{\large $\circ$}'' are velocity unknowns, ``$\bullet$'' are Dirichlet boundary conditions, and ``$\times$'' are pressure unknowns.}
+\label{fig:ok:poiseuilletinygrid}
+\end{figure}
 
 The pressure solution is in terms of $P^0$ basis functions, which are characteristic functions on the elements $\one_j = \one_{\square_j}$, so
 \begin{equation}
@@ -232,9 +239,8 @@ and (w.o.l.o.g.) this is a lin.-indep. eigenvector so $M$ also has eigenvalue $-
 
 \renewcommand{\labelenumi}{\arabic{chapter}.\arabic{enumi}\quad}
 \begin{enumerate}
-\item Confirm the claims about units on page \pageref{page:ok:units}, and the consistency of units in equations \eqref{eq:ok:nsmomentum}--\eqref{eq:ok:nsincomp}.
 
-\item \label{exer:ok:constantviscositystokes}  Starting from \eqref{eq:ok:gradudefinition}, by commuting mixed derivatives and using incompressibility show that
+\item \label{exer:ok:constantviscositystokes}  Starting from \eqref{eq:ok:graddivudefinition}, by commuting mixed derivatives and using incompressibility show that
 \begin{equation*}
 \Div \left(\grad \bu^{\top}\right) = \begin{bmatrix}
     \frac{\partial}{\partial x}\left(\Div \bu\right) & \frac{\partial}{\partial y }\left(\Div \bu\right) & \frac{\partial}{\partial x} \left(\Div \bu\right)
@@ -245,7 +251,7 @@ On the other hand,
 \begin{equation*}
 \Div \left(\grad \bu\right) = \begin{bmatrix} \grad^2 u^x & \grad^2 u^y & \grad^2 u^z \end{bmatrix} = \grad^2 \bu.
 \end{equation*}
-defines the symbol ``$\grad^2 \bu$.''  Thereby derive \eqref{eq:ok:constantviscositystokes}
+defines the symbol ``$\grad^2 \bu$.''  Thereby derive \eqref{eq:ok:constantviscositystokes} from \eqref{eq:ok:varstokesmomentum}.
 
 \item \label{exer:ok:weakderive} Derive \eqref{eq:ok:weakstokeswithboundary} from \eqref{eq:ok:constantviscositystokes} and \eqref{eq:ok:constantviscosityincomp}:  Multiply (dot product) by test function $\bv$, integrate over $\Omega$, and expand the vector notation to get
     $$\int_\Omega - \mu \Div (\grad u^x) v^x - \mu \Div (\grad u^y) v^y - \mu \Div (\grad u^z) v^z + \grad p \cdot \bv - \rho \bg \cdot \bv = 0.$$
@@ -255,11 +261,13 @@ Then use a product rule and the divergence theorem to convert to
    &\qquad  + \int_\Omega \mu \grad \bu : \grad \bv - p \Div \bv - \rho \bg \cdot \bv \\
    &= \int_{\partial_N \Omega} \left[- \mu \frac{\partial \bu}{\partial n} + p \bn \right] \cdot \bv + \int_\Omega \mu \grad \bu : \grad \bv - p \Div \bv - \rho \bg \cdot \bv = 0
 \end{align*}
-where
-    $$\frac{\partial \bu}{\partial n} = \left<\bn\cdot \grad u^x,\bn\cdot \grad u^y,\bn\cdot \grad u^z\right>$$
-and
-     $$\grad \bu : \grad \bv = \grad u^x \cdot \grad v^x + \grad u^y \cdot \grad v^y + \grad u^z \cdot \grad v^z$$
-by definition.
+where, by definition,
+\begin{align*}
+\frac{\partial \bu}{\partial n} &= \left<\bn\cdot \grad u^x,\bn\cdot \grad u^y,\bn\cdot \grad u^z\right>, \\
+\grad \bu : \grad \bv &= \grad u^x \cdot \grad v^x + \grad u^y \cdot \grad v^y + \grad u^z \cdot \grad v^z.
+\end{align*}
+
+\item \label{exer:ok:poiseuilleverify}  Confirm that equations \eqref{eq:ok:poiseuilleexact} exactly solve the constant-viscosity Stokes equations \eqref{eq:ok:constantviscositystokes} and \eqref{eq:ok:constantviscosityincomp}.
 
 \item \label{exer:ok:smalldetails}  FIXME
 %f_0 = - \int_\Omega \grad \psi_{-1} \cdot \grad \psi_0
