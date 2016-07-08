@@ -73,8 +73,6 @@ for all $\bv \in \mathcal{V}_0 = W_0^{1,2}(\Omega)^3$ and $q \in L^2(\Omega)$.
 
 \section{Example I: A small step}
 
-FIXME: dimension 8 problem from using $\bu\in Q^1$ and $p\in P^0$ on 4-element mesh; goal of this example is to show how inf-sup condition relates to linear independence of constraints
-
 We consider a ``Poiseuille flow'' \citep{Elmanetal2005} in 2D on $\Omega=(-1,1)\times(-1,1)$ with no body force so $\bg=0$.  On the top and bottom we have homogeneous Dirichlet boundary conditions $\bu=\left<0,0\right>$.  On the left side we have Dirichlet inflow boundary conditions $\bu(-1,y) = \left<1-y^2,0\right>$.  On the right side we have a Neumann stress-free boundary condition $\partial \bu/\partial n - \bn p = 0$, noting $\bn = \left<1,0\right>$.
 
 \newcommand{\one}{{\large \mathbb{1}}}
@@ -202,152 +200,19 @@ u &= \frac{g_1}{\nu} y \left(H - \frac{y}{2}\right), \label{eq:ok:exactstokesu} 
 v &= 0, \label{eq:ok:exactstokesv} \\
 p &= -g_2 (H-y).\label{eq:ok:exactstokesp}
 \end{align}
-It is not hard to explain how this solution is derived.  First, the solution of the problem is unique by standard arguments with the weak formulation \citep[p.~223]{Elmanetal2005}.  Thus the solution is independent of $x$ because the transformation $x\mapsto x+c$ changes none of the equations or boundary conditions.  Next, by \eqref{eq:ok:stokes2du} and boundary conditions \eqref{eq:ok:bcstokestop}, \eqref{eq:ok:bcstokesbottom}, $u=u(y)$ solves the easy two-point boundary value problem $-\nu u_{yy} = g_1$, $u(0)=0$, $u_y(H)=0$ which gives \eqref{eq:ok:exactstokesu}.  But then by \eqref{eq:ok:stokes2dincomp} and the boundary condition \eqref{eq:ok:bcstokesbottom}, $v=0$.  Finally for the pressure $p=p(y)$, equations \eqref{eq:ok:stokes2dv} and \eqref{eq:ok:bcstokestop} say $p_y=g_2$ and $p(H)=0$ thus \eqref{eq:ok:exactstokesp}.
 
-
-\section{Block structure and symmetry}
-
-FIXME: Laplacians are something we understand, so lets proceed with eqns \eqref{eq:ok:stokes2du}, \eqref{eq:ok:stokes2dv}
-
-FIXME: any way we do \eqref{eq:ok:stokes2dincomp} we get block structure for the full system ``$A \bz = \bbf$.''  Informally the structure is
-  $$\begin{bmatrix}
-    -\nu\grad^2 & 0 & \partial/\partial x \\
-    0 & -\nu\grad^2 & \partial/\partial y \\
-    -\partial/\partial x & -\partial/\partial y & 0
-    \end{bmatrix}
-    \begin{bmatrix}
-    \bu \\ \bv \\ \bp
-    \end{bmatrix}
-    =
-    \begin{bmatrix}
-    g_1 \\ g_2 \\ 0
-    \end{bmatrix}
-    $$
-but let's write
-  $$\begin{bmatrix}
-    \nu L_1 & 0 & G_1 \\
-    0 & \nu L_2 & G_2 \\
-    B_1 & B_2 & 0
-    \end{bmatrix}
-    \begin{bmatrix}
-    \bu \\ \bv \\ \bp
-    \end{bmatrix}
-    =
-    \begin{bmatrix}
-    g_1 \\ g_2 \\ 0
-    \end{bmatrix}
-    $$
-where $L_i$, $G_i$, $B_i$ are matrices.  We expect that Laplacian-approximation matrices $L_1$ and $L_2$, which essentially differ only in their boundary conditions, can be built as symmetric positive-definite matrices.
-
-FIXME: $A$ certainly not invertible if approx to ``$\Div \bu$'' (i.e.~$\begin{bmatrix} B_1 & B_2 \end{bmatrix}$) has more rows than columns
-
-FIXME: careful implementation of finite differences are required so as to make symmetric, i.e.~make $B_1=G_1^\top$, $B_2=G_2^\top$:
-    $$\begin{bmatrix}
-    \nu L_1 & 0 & G_1 \\
-    0 & \nu L_1 & G_2 \\
-    G_1^\top & G_2^\top & 0
-    \end{bmatrix}
-    \begin{bmatrix}
-    \bu \\ \bv \\ \bp
-    \end{bmatrix}
-    =
-    \begin{bmatrix}
-    g_1 \\ g_2 \\ 0
-    \end{bmatrix}$$
-Now system is symmetric, but not positive definite.
-
-Before proceeding let us observe that the pressure can be seen to solve its own equation, at least assuming smoothness of the solution to \eqref{eq:ok:stokes2du}--\eqref{eq:ok:stokes2dincomp}.  By taking the $x$ and $y$ derivatives of \eqref{eq:ok:stokes2dincomp} we get equations $u_{xx} + v_{yx} = 0$ and $u_{xy} + v_{yy} = 0$.  These allow us to replace $u_{xx}$ and $v_{yy}$ in \eqref{eq:ok:stokes2du}, \eqref{eq:ok:stokes2dv} with mixed derivatives, respectively, to get:
-\begin{align}
--\nu \left(-v_{yx} + u_{yy}\right) + p_x &= g^x \label{eq:ok:mixedstokes2du} \\
--\nu \left(v_{xx} - u_{xy}\right) + p_y &= g^y \label{eq:ok:mixedstokes2dv}
-\end{align}
-Now, taking the $x$ derivative of \eqref{eq:ok:mixedstokes2du} and the $y$-derivative of \eqref{eq:ok:mixedstokes2dv}, and noting components $g^j$ are constant, and adding the results, the velocity derivatives cancel entirely.  We conclude that $p$ actually solves Laplace's equation,
-\begin{equation}
-\grad^2 p = 0. \label{eq:ok:pressurepoisson}
-\end{equation}
-The derivation here is not original; we have arrived at the well-known \emph{pressure-Poisson} equation \citep[FIXME: check]{Ockendonetal2003}.
-
-The appearance of the Laplacian in a decoupled equation opens up the possibility that we can make our linear system ``more positive definite'' by adding a multiple of equation \eqref{eq:ok:pressurepoisson} to the Stokes system.  Concretely, if $\eps\ge 0$ then this system is equivalent to \eqref{eq:ok:stokes2du}--\eqref{eq:ok:stokes2dincomp}:
-\begin{align}
--\nu \grad^2 u + p_x &= g^x \label{eq:ok:ppstokes2du} \\
--\nu \grad^2 v + p_y &= g^y \label{eq:ok:ppstokes2dv} \\
-- u_x - v_y - \eps \grad^2 p &= 0 \label{eq:ok:ppstokes2dincomp}
-\end{align}
-These equations correspond to block structure of the numerical approximation,
-\begin{equation}
-\begin{bmatrix}
-    \nu L_1 & 0 & G_1 \\
-    0 & \nu L_1 & G_2 \\
-    G_1^\top & G_2^\top & \eps L_3
-    \end{bmatrix}
-    \begin{bmatrix}
-    \bu \\ \bv \\ \bp
-    \end{bmatrix}
-    =
-    \begin{bmatrix}
-    g^x \\ g^y \\ 0
-    \end{bmatrix} \label{eq:ok:blockppstokes}
-\end{equation}
-which we write as $A\bz = \bbf$ for the rest of this Chapter.  We show parameters $\nu>0$ and $\eps \in \RR$ to emphasize that we can play with problems of different viscosity and with more or less pressure-Poisson regularization, respectively. 
 
 
 \section{Finite element, structured-grid approach}
 
-In this section we apply FIXME to equations \eqref{eq:ok:ppstokes2du}--\eqref{eq:ok:ppstokes2dincomp} using boundary conditions \eqref{eq:ok:bcstokestop}--\eqref{eq:ok:bcstokesperiodic} to get a symmetric linear system
+In this section we apply FIXME to get a symmetric linear system
 \begin{equation}
   A \bz = \bbf \label{eq:ok:linsysstokes}
 \end{equation}
-with block structure \eqref{eq:ok:blockppstokes}.  As usual we treat the linear problem as nonlinear, and we use a structured grid, so our code has a \pSNES and \pDMDA objects.  We first provide a residual-evaluation routine for the locally-owned part of the structured grid.
+with block structure FIXME.  As usual we treat the linear problem as nonlinear, and we use a structured grid, so our code has a \pSNES and \pDMDA objects.  We first provide a residual-evaluation routine for the locally-owned part of the structured grid.
 
-FIXME: replace with $Q^2$--$Q^1$ (Taylor-Hood) finite elements:  To get started on the FD equations, and recalling the notation from Chapter \ref{chap:st}, suppose that we have a grid of \texttt{Mx} points in the $x$ direction and \texttt{My} points in the $y$ direction.  Periodicity in the $x$ direction means that there is a difference in the computation of grid spacing:
-\begin{equation}
-h_x = \frac{L}{\text{\texttt{Mx}}}, \qquad h_y = \frac{H}{\text{\texttt{My}}-1}. \label{eq:ok:hdefinestokes}
-\end{equation}
-The reason for the difference is suggested by Figure \ref{fig:ok:xperiodicgrid}, where we see that each grid point along the $x$-axis represents an entire grid cell, while in the $y$ direction the first and last grid points represent boundary locations.  Of course the main idea of periodicity is that left neighbors of $i=0$ grid locations are ``wrapped-around'' to the right-most grid points, while right neighbors of $i=\text{\texttt{Mx}}-1$ locations are wrapped to the left-most grid points.
+FIXME: replace with $Q^2$--$P^{-1}$ finite elements
 
-\begin{marginfigure}
-\input{tikz/xperiodicgrid.tex}
-\caption{Because the grid is periodic in $x$, but not in $y$, the computation of $h_x$ and $h_y$ follows formulas \eqref{eq:ok:hdefinestokes}.}
-\label{fig:ok:xperiodicgrid}
-\end{marginfigure}
-
-The FD equations for interior points, including the periodic boundaries, i.e.~any location $(i,j)$ where $0 < j < \text{\texttt{My}}-1$, are the approximations to equations \eqref{eq:ok:ppstokes2du}--\eqref{eq:ok:ppstokes2dincomp}:
-\begin{align}
--\nu \Big(\frac{u_{i+1,j} - 2 u_{i,j} + u_{i-1,j}}{h_x^2} &+ \frac{u_{i,j+1} - 2 u_{i,j} + u_{i,j-1}}{h_y^2}\Big) \notag \\
-&\qquad + \frac{p_{i+1,j}-p_{i-1,j}}{2h_x} - g_1 = 0 \label{eq:ok:fdstokes2du} \\
--\nu \Big(\frac{v_{i+1,j} - 2 v_{i,j} + v_{i-1,j}}{h_x^2} &+ \frac{v_{i,j+1} - 2 v_{i,j} + v_{i,j-1}}{h_y^2}\Big) \notag \\
-&\qquad + \frac{p_{i,j+1}-p_{i,j-1}}{2h_y} - g_2 = 0 \label{eq:ok:fdstokes2dv} \\
-- \frac{u_{i+1,j}-u_{i-1,j}}{2h_x} - \frac{v_{i,j+1}-v_{i,j-1}}{2h_y} &- \eps \Big(\frac{p_{i+1,j} - 2 p_{i,j} + p_{i-1,j}}{h_x^2} \notag \\
-&\qquad\quad + \frac{p_{i,j+1} - 2 p_{i,j} + p_{i,j-1}}{h_y^2}\Big) = 0 \label{eq:ok:fdstokes2dincomp}
-\end{align}
-In the above formulas, so as to address periodicity in the $x$ direction, in the case $i=0$ we interpret an ``$i-1$'' subscript as $\text{\texttt{Mx}}-1$, while if $i=\text{\texttt{Mx}}-1$ then we interpret an ``$i+1$'' subscript as $0$.
-
-At the bottom $y=0$ we set fields from the Dirichlet boundary conditions \eqref{eq:ok:bcstokesbottom}, and from the exact solution for $p$:
-\begin{equation}
-  u_{i,0} = v_{i,0} = 0, \quad p_{i,0} = - g_2 H. \label{eq:ok:fdbcstokesbottom}
-\end{equation}
-For the top ($y=H$) boundary conditions, let $J=\text{\texttt{My}}-1$, the upper most index in the $y$ direction.  We set $p$ from the exact solution, $p_{i,J} = 0$.
-
-The remaining top boundary conditions \eqref{eq:ok:bcstokestop} require care.  Approximating the first of equations \eqref{eq:ok:bcstokestop} at $(x_i,y_J)$ by centered FD formulas gives
-\begin{equation}
-  \frac{u_{i,J+1}-u_{i,J-1}}{2h_y} + \frac{v_{i+1,J}-v_{i-1,J}}{2h_x} = 0, \label{eq:ok:earlyfdbcstokestop}
-\end{equation}
-but the notional point ``$u_{i,J+1}$'' is outside the domain.  We add equation \eqref{eq:ok:fdstokes2du} at the same point, solved for $u_{i,J+1}$,
-\begin{equation}
-  u_{i,J+1} = 2 u_{i,J} - u_{i,J-1} - h_y^2 \left(\frac{g_1}{\nu} + \frac{u_{i+1,J} - 2 u_{i,J} + u_{i-1,J}}{h_x^2}\right) \label{eq:ok:earlyfdstokes2dutop} 
-\end{equation}
-and incorporating $p_{i-1,J}=p_{i+1,J}=0$ also, and substitute this into \eqref{eq:ok:earlyfdbcstokestop}.
-
-The second of equations \eqref{eq:ok:bcstokestop} says $v_y=0$ at $(x_i,y_J)$ because $p_{i,J}=0$, so $v_{i,J+1} = v_{i,J-1}$ from the centered FD approximation.  But then \eqref{eq:ok:fdstokes2dv} and \eqref{eq:ok:fdstokes2dincomp} become the pair of equations
-\begin{align}
--\nu \Big(\frac{v_{i+1,J} - 2 v_{i,J} + v_{i-1,J}}{h_x^2} + \frac{2 v_{i,J-1} - 2 v_{i,J}}{h_y^2}\Big) + \frac{p_{i,J+1}-p_{i,J-1}}{2h_y} - g_2 = 0 \label{eq:ok:fdtopv} \\
-\frac{u_{i+1,J}-u_{i-1,J}}{2h_x}  - \eps \frac{p_{i,J+1} + p_{i,J-1}}{h_y^2} = 0. \label{eq:ok:earlytoppressure}
-\end{align}
-These equations both have the notional ``$p_{i,J+1}$,'' so we eliminate it by rewriting equation \eqref{eq:ok:earlytoppressure},
-\begin{equation}
-p_{i,J+1} = \frac{h_y^2}{\eps} \frac{u_{i+1,J}-u_{i-1,J}}{2h_x} - p_{i,J-1},\label{eq:ok:fdtoppressureelim}
-\end{equation}
-which is substituted into \eqref{eq:ok:fdtopv}.
 
 FIXME: the resulting code is \texttt{stokes.c}
 
@@ -369,6 +234,19 @@ and (w.o.l.o.g.) this is a lin.-indep. eigenvector so $M$ also has eigenvalue $-
 \begin{enumerate}
 \item Confirm the claims about units on page \pageref{page:ok:units}, and the consistency of units in equations \eqref{eq:ok:nsmomentum}--\eqref{eq:ok:nsincomp}.
 
+\item \label{exer:ok:constantviscositystokes}  Starting from \eqref{eq:ok:gradudefinition}, by commuting mixed derivatives and using incompressibility show that
+\begin{equation*}
+\Div \left(\grad \bu^{\top}\right) = \begin{bmatrix}
+    \frac{\partial}{\partial x}\left(\Div \bu\right) & \frac{\partial}{\partial y }\left(\Div \bu\right) & \frac{\partial}{\partial x} \left(\Div \bu\right)
+    \end{bmatrix}
+    = 0.
+\end{equation*}
+On the other hand,
+\begin{equation*}
+\Div \left(\grad \bu\right) = \begin{bmatrix} \grad^2 u^x & \grad^2 u^y & \grad^2 u^z \end{bmatrix} = \grad^2 \bu.
+\end{equation*}
+defines the symbol ``$\grad^2 \bu$.''  Thereby derive \eqref{eq:ok:constantviscositystokes}
+
 \item \label{exer:ok:weakderive} Derive \eqref{eq:ok:weakstokeswithboundary} from \eqref{eq:ok:constantviscositystokes} and \eqref{eq:ok:constantviscosityincomp}:  Multiply (dot product) by test function $\bv$, integrate over $\Omega$, and expand the vector notation to get
     $$\int_\Omega - \mu \Div (\grad u^x) v^x - \mu \Div (\grad u^y) v^y - \mu \Div (\grad u^z) v^z + \grad p \cdot \bv - \rho \bg \cdot \bv = 0.$$
 Then use a product rule and the divergence theorem to convert to
@@ -382,20 +260,6 @@ where
 and
      $$\grad \bu : \grad \bv = \grad u^x \cdot \grad v^x + \grad u^y \cdot \grad v^y + \grad u^z \cdot \grad v^z$$
 by definition.
-
-\item \label{exer:ok:constantviscositystokes}  Starting from \eqref{eq:ok:gradudefinition}, by commuting mixed derivatives and using incompressibility show that
-\begin{equation*}
-\Div \left(\grad \bu^{\top}\right) = \begin{bmatrix}
-    \frac{\partial}{\partial x}\left(\Div \bu\right) & \frac{\partial}{\partial y }\left(\Div \bu\right) & \frac{\partial}{\partial x} \left(\Div \bu\right)
-    \end{bmatrix}
-    = 0.
-\end{equation*}
-On the other hand,
-\begin{equation*}
-\Div \left(\grad \bu\right) = \begin{bmatrix} \grad^2 u^x & \grad^2 u^y & \grad^2 u^z \end{bmatrix} = \grad^2 \bu.
-\end{equation*}
-defines the symbol ``$\grad^2 \bu$.''  Thereby we derive \eqref{eq:ok:constantviscositystokes}
-%\item FIXME: apply chapter 2 idea of making more symmetric boundary conditions
 
 \item \label{exer:ok:smalldetails}  FIXME
 %f_0 = - \int_\Omega \grad \psi_{-1} \cdot \grad \psi_0
