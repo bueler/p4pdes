@@ -1,19 +1,18 @@
 
 \section{Equations for incompressible fluids}
 
-FIXME: lay out theory e.g.~from \citep{Acheson1990,Ockendonetal2003}
+FIXME: lay out 3D theory e.g.~from \citep{Acheson1990,Fowler1997}
 
-FIXME in this section our notation hits a bit of an ``subscripting crisis'', so in this section we write for the velocity field
+FIXME in this section our notation hits a bit of an ``subscripting crisis'', so we use a superscript for components of the velocity field
     $$\bu = \left<u^x,u^y,u^z\right>$$
-so that superscript denotes component
 
-The incompressible variable-viscosity Navier-Stokes has these main equations
+Consider an incompressible fluid of constant density $\rho$ and \emph{(dynamic) viscosity} $\mu$ subject to a \emph{body force} $\rho \bg$ where $\bg$ has units of acceleration.  The incompressible variable-viscosity Navier-Stokes model has these main equations
 \begin{align}
-\rho \left(\frac{\partial \bu}{\partial t} + \bu \cdot \grad \bu\right) &= \Div \sigma + \bg \label{eq:ok:stokesgeneralconserve} \\
-\sigma &= 2 \nu\, D \bu - p I \label{eq:ok:stokesgenerallaw} \\
-\Div \bu &= 0 \label{eq:ok:stokesgeneralincomp}
+\rho \left(\frac{\partial \bu}{\partial t} + \bu \cdot \grad \bu\right) &= \Div \sigma + \rho \bg, \label{eq:ok:nsmomentum} \\
+\Div \bu &= 0, \label{eq:ok:nsincomp} \\
+\sigma &= 2 \mu\, D \bu - p I. \label{eq:ok:nsflowlaw}
 \end{align}
-where
+The spatial derivatives in these equations are nontrivial, of course, so we observe that
 \begin{equation}
 \grad \bu = \renewcommand{\arraystretch}{1.3}\begin{bmatrix}
     \frac{\partial u^x}{\partial x} & \frac{\partial u^y}{\partial x} & \frac{\partial u^z}{\partial x} \\
@@ -22,23 +21,26 @@ where
     \end{bmatrix}  \label{eq:ok:gradudefinition}
 \end{equation}
 and
-    $$D \bu = \frac{1}{2} \left(\grad \bu + \grad \bu^{\top}\right).$$
+    $$D \bu = \frac{1}{2} \left(\grad \bu + \grad \bu^{\top}\right)$$
+by definition.  Equation \eqref{eq:ok:nsmomentum} is an equation of \emph{momentum conservation} (or \emph{balance}), which is to say a statement of Newton's second law, and \eqref{eq:ok:nsincomp} is a statement of incompressibility.  Especially for very-viscous fluids where the \emph{flow law} \eqref{eq:ok:nsflowlaw} is a major focus, $D\bu$ is sometimes called the \emph{strain rate tensor}.
+
+To give some additional physical meaning to these equations, if we measure distances in meters, mass in kilograms, and time in seconds (``MKS units'') then the sides of \eqref{eq:ok:nsmomentum} are in units $\text{kg}\, \text{m}^{-2}\, \text{s}^{-2}$, that is, they are \emph{stress gradients}.  In fact the \emph{Newton}, a unit of force, is $\text{N}=\text{kg}\, \text{m}\, \text{s}^{-2}$, and the sides of \eqref{eq:ok:nsmomentum} are in units $\text{N}\, \text{m}^{-3}$, which we may interpret as a force-per-unit-area (stress $\text{N}\, \text{m}^{-2}$, a \emph{Pascal}) per meter.  In these terms, the velocity gradients $\grad \bu$ and $D\bu$ have units of $\text{s}^{-1}$ and the dynamic viscosity $\mu$ has units $\text{Pa}\, \text{s} = \text{kg}\, \text{m}^{-1}\, \text{s}^{-1}$. \label{page:ok:units}
 
 FIXME: theory where Froude $\approx 0$
 
-The variable-viscosity Stokes equations, in terms of velocity, are
-\begin{align*}
-- \Div \left(\nu \left(\grad \bu + \grad \bu^{\top}\right)\right) + \grad p &= \bg \\
-\Div \bu &= 0
-\end{align*}
-
-We will, however, first consider the case where the viscosity $\nu=1$ is constant.  In such case the velocity second derivative term can be simplified, and recognized as an application of the Laplacian operator (Exercise \ref{chap:ok}.\ref{exer:ok:constantviscositystokes}).  For this Chapter the Stokes equations are
+In the \emph{(variable-viscosity) Stokes model} the body force, the pressure gradient, and the viscous stress gradients are in balance.  This is the model which arises when we set the entire acceleration term on the left side of \eqref{eq:ok:nsmomentum} to zero:
 \begin{align}
-- \grad^2 \bu + \grad p &= \bg  \label{eq:ok:constantviscositystokes} \\
+- \Div \left(\mu \left(\grad \bu + \grad \bu^{\top}\right)\right) + \grad p &= \rho \bg \label{eq:ok:varstokesmomentum} \\
+\Div \bu &= 0 \label{eq:ok:varstokesincomp}
+\end{align}
+A shallow case of these equations will be addressed in Chapter \ref{chap:co}, with a nontrivial model for the variable viscosity $\mu$.
+
+In the current Chapter, however, we consider the case where the viscosity $\mu$ is constant.  In such case the velocity second derivative term is a Laplacian operator (Exercise \ref{chap:ok}.\ref{exer:ok:constantviscositystokes}).  Thus for this Chapter the Stokes equations are
+\begin{align}
+- \mu \grad^2 \bu + \grad p &= \rho \bg  \label{eq:ok:constantviscositystokes} \\
 \Div \bu &= 0  \label{eq:ok:constantviscosityincomp}
 \end{align}
-This is a Poisson-like problem for $\bu$, but with pressure as an additional unknown and with an additional equation stating incompressiblity.  Note that body force and the pressure gradient are together balanced by the viscous stresses. 
-
+This is a Poisson-like problem for $\bu$, but with pressure as an additional unknown and with an additional equation stating incompressiblity.
 
 \section{Weak form of the Stokes equations}
 
@@ -351,6 +353,7 @@ and (w.o.l.o.g.) this is a lin.-indep. eigenvector so $M$ also has eigenvalue $-
 
 \renewcommand{\labelenumi}{\arabic{chapter}.\arabic{enumi}\quad}
 \begin{enumerate}
+\item Confirm the claims about units on page \pageref{page:ok:units}, and the consistency of units in equations \eqref{eq:ok:nsmomentum}--\eqref{eq:ok:nsincomp}.
 
 \item \label{exer:ok:constantviscositystokes}  Starting from \eqref{eq:ok:gradudefinition}, by commuting mixed derivatives and using incompressibility show that
 \begin{equation*}
