@@ -42,19 +42,33 @@ In the current Chapter, however, we consider the case where the viscosity $\mu$ 
 \end{align}
 This is a Poisson-like problem for $\bu$, but with pressure as an additional unknown and with an additional equation stating incompressiblity.
 
+
 \section{Weak form of the Stokes equations}
 
-FIXME: theory from \citep{Braess2007,Elmanetal2005}; derive quickly by multiplying \eqref{eq:ok:constantviscositystokes}--\eqref{eq:ok:constantviscosityincomp} by test functions and integrating
+FIXME: theory from \citep{Braess2007,Elmanetal2005}; derive quickly
 
-FIXME assume $\bu=\bu_D$ (known) on $\partial_D\Omega$.  restrict to $\partial \bu/\partial n - \bn p = 0$ on $\partial_N\Omega$; i.e.~arbitrary Dirichlet but homogeneous Neumann; contrast \citep{Elmanetal2005}
+We assume that the boundary is decomposed disjointly, $\partial\Omega = \partial_D\Omega \cup \partial_N\Omega$, and on these portions we will allow (arbitrary) Dirichlet and Neumann boundary conditions.  The former correspond to having the velocity $\bu$ equal to a known function.  The derivation of the weak form, as follows, establishes the form of the latter.
 
-If $\bu \in W_D^{1,2}(\Omega)^3$ and $p \in L^2(\Omega)$ solves
+Suppose $\bu$, $p$ are (classical) solutions to \eqref{eq:ok:constantviscositystokes}, \eqref{eq:ok:constantviscosityincomp}.  Suppose $\bv$, a smooth velocity test function, satisfies $\bv=0$ on $\partial_D\Omega$.  Multiplying \eqref{eq:ok:constantviscositystokes} by $\bv$ and integrating-by-parts---see Exercise \ref{exer:ok:weakderive} for details and notation---we get
+\begin{equation}
+\int_{\partial_N \Omega} \left[- \mu \frac{\partial \bu}{\partial n} + p \bn \right] \cdot \bv + \int_\Omega \mu \grad \bu : \grad \bv - p \Div \bv = \int_\Omega \rho \bg \cdot \bv. \label{eq:ok:weakstokeswithboundary}
+\end{equation}
+
+The quantity in square brackets has units of stress, and we assume it is equal to a known function on the Neumann part of the boundary:
+\begin{equation}
+\mu \frac{\partial \bu}{\partial n} - p \bn = \bbf_N \quad \text{on } \partial_N \Omega.  \label{eq:ok:neumannbc}
+\end{equation}
+
+Define
+\begin{equation}
+\mathcal{V}_D = \left\{\bw \in W^{1,2}(\Omega)^3 \,\Big|\, \bw = \bbf_D \, \text{ on } \partial_D \Omega\right\}. \label{eq:ok:dirichletbc}
+\end{equation}
+We say $\bu \in \mathcal{V}_D$ and $p \in L^2(\Omega)$ solve the \emph{weak form of the Stokes equations} if
 \begin{align}
-\int_\Omega \grad \bu \,:\, \grad \bv - p \Div \bv &= \int_\Omega \bg \cdot \bv \label{eq:ok:weakstokesvelocity} \\
+\int_\Omega \mu \grad \bu : \grad \bv - p \Div \bv &= \int_\Omega \rho \bg \cdot \bv + \int_{\partial_N \Omega} \bbf_N \cdot \bv \label{eq:ok:weakstokesvelocity} \\
 \int_\Omega q \Div \bu &= 0 \label{eq:ok:weakstokespressure}
 \end{align}
-for all $\bv \in W_0^{1,2}(\Omega)^3$ and $q \in L^2(\Omega)$ then we say $\bu,p$ solve the \emph{weak form of the Stokes} equations.  For clarity, in the 2D case the product of velocity gradients is
-     $$\grad \bu \,:\, \grad \bv = \grad u^x \cdot \grad v^x + \grad u^y \cdot \grad v^y.$$
+for all $\bv \in \mathcal{V}_0 = W_0^{1,2}(\Omega)^3$ and $q \in L^2(\Omega)$.
 
 
 \section{Example I: A small step}
@@ -354,6 +368,20 @@ and (w.o.l.o.g.) this is a lin.-indep. eigenvector so $M$ also has eigenvalue $-
 \renewcommand{\labelenumi}{\arabic{chapter}.\arabic{enumi}\quad}
 \begin{enumerate}
 \item Confirm the claims about units on page \pageref{page:ok:units}, and the consistency of units in equations \eqref{eq:ok:nsmomentum}--\eqref{eq:ok:nsincomp}.
+
+\item \label{exer:ok:weakderive} Derive \eqref{eq:ok:weakstokeswithboundary} from \eqref{eq:ok:constantviscositystokes} and \eqref{eq:ok:constantviscosityincomp}:  Multiply (dot product) by test function $\bv$, integrate over $\Omega$, and expand the vector notation to get
+    $$\int_\Omega - \mu \Div (\grad u^x) v^x - \mu \Div (\grad u^y) v^y - \mu \Div (\grad u^z) v^z + \grad p \cdot \bv - \rho \bg \cdot \bv = 0.$$
+Then use a product rule and the divergence theorem to convert to
+\begin{align*}
+   &\int_{\partial \Omega} \left[- \mu v^x \grad u^x - \mu v^y \grad u^y - \mu v^z \grad u^z + p \bv\right] \cdot \bn \\
+   &\qquad  + \int_\Omega \mu \grad \bu : \grad \bv - p \Div \bv - \rho \bg \cdot \bv \\
+   &= \int_{\partial_N \Omega} \left[- \mu \frac{\partial \bu}{\partial n} + p \bn \right] \cdot \bv + \int_\Omega \mu \grad \bu : \grad \bv - p \Div \bv - \rho \bg \cdot \bv = 0
+\end{align*}
+where
+    $$\frac{\partial \bu}{\partial n} = \left<\bn\cdot \grad u^x,\bn\cdot \grad u^y,\bn\cdot \grad u^z\right>$$
+and
+     $$\grad \bu : \grad \bv = \grad u^x \cdot \grad v^x + \grad u^y \cdot \grad v^y + \grad u^z \cdot \grad v^z$$
+by definition.
 
 \item \label{exer:ok:constantviscositystokes}  Starting from \eqref{eq:ok:gradudefinition}, by commuting mixed derivatives and using incompressibility show that
 \begin{equation*}
