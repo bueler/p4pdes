@@ -68,7 +68,7 @@ double gN_linneu(double x, double y) {
 
 // -----------------------------------------------------------------------------
 // CASE 3
-// LINEAR PROBLEM, HOMOGENEOUS DIRICHLET, SQUARE DOMAIN, CHAPTER 3
+// LINEAR PROBLEM, HOMOGENEOUS DIRICHLET ONLY, SQUARE DOMAIN, CHAPTER 3
 // USE: genstructured.py to generate meshes
 
 double a_square(double u, double x, double y) {
@@ -95,6 +95,24 @@ double gD_square(double x, double y) {
 }
 
 // gN_fcn() = NULL in square case; want seg fault if called
+
+
+// -----------------------------------------------------------------------------
+// CASE 4
+// LINEAR PROBLEM, HOMOGENEOUS DIRICHLET ONLY; NO EXACT SOLN
+// USE: koch.poly from kochmesh.py (or genstructured.py)
+
+double a_koch(double u, double x, double y) {
+    return 1.0;
+}
+
+double f_koch(double u, double x, double y) {
+    return 1.0;
+}
+
+double gD_koch(double x, double y) {
+    return 0.0;
+}
 
 #endif
 

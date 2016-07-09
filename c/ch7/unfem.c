@@ -324,7 +324,7 @@ int main(int argc,char **argv) {
     user.solncase = 0;
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "un_", "options for unfem", ""); CHKERRQ(ierr);
     ierr = PetscOptionsInt("-case",
-           "exact solution cases: 0=linear, 1=nonlinear, 2=nonhomoNeumann, 3=chapter3",
+           "exact solution cases: 0=linear, 1=nonlinear, 2=nonhomoNeumann, 3=chapter3, 4=koch",
            "unfem.c",user.solncase,&(user.solncase),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsString("-mesh",
            "file name root of mesh stored in PETSc binary with .vec,.is extensions",
@@ -361,6 +361,13 @@ int main(int argc,char **argv) {
             user.f_fcn = &f_square;
             user.uexact_fcn = &uexact_square;
             user.gD_fcn = &gD_square;
+            user.gN_fcn = NULL;  // seg fault if ever called
+            break;
+        case 4 :
+            user.a_fcn = &a_koch;
+            user.f_fcn = &f_koch;
+            user.uexact_fcn = NULL;
+            user.gD_fcn = &gD_koch;
             user.gN_fcn = NULL;  // seg fault if ever called
             break;
         default :
@@ -424,19 +431,26 @@ int main(int argc,char **argv) {
     PetscLogStagePop();  //STRIP
 //ENDMAININITIAL
 
-    // measure error relative to exact solution
-    ierr = VecDuplicate(r,&uexact); CHKERRQ(ierr);
-    ierr = FillExact(uexact,&user); CHKERRQ(ierr);
-    ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
-    ierr = VecNorm(u,NORM_INFINITY,&err); CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,
-               "case %d result for N=%d nodes with h = %.3e :  |u-u_ex|_inf = %g\n",
-               user.solncase,mesh.N,h_max,err); CHKERRQ(ierr);
+    // measure error relative to exact solution, if possible
+    if (user.uexact_fcn) {
+        ierr = VecDuplicate(r,&uexact); CHKERRQ(ierr);
+        ierr = FillExact(uexact,&user); CHKERRQ(ierr);
+        ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
+        ierr = VecNorm(u,NORM_INFINITY,&err); CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_WORLD,
+                   "case %d result for N=%d nodes with h = %.3e :  |u-u_ex|_inf = %g\n",
+                   user.solncase,mesh.N,h_max,err); CHKERRQ(ierr);
+        VecDestroy(&uexact);
+    } else {
+        ierr = PetscPrintf(PETSC_COMM_WORLD,
+                   "case %d completed for N=%d nodes with h = %.3e (no exact solution)\n",
+                   user.solncase,mesh.N,h_max); CHKERRQ(ierr);
+    }
 
     // clean-up
     SNESDestroy(&snes);
     MatDestroy(&A);
-    VecDestroy(&u);  VecDestroy(&r);  VecDestroy(&uexact);
+    VecDestroy(&u);  VecDestroy(&r);
     UMDestroy(&mesh);
     PetscFinalize();
     return 0;
