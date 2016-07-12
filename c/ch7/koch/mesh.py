@@ -6,7 +6,7 @@ import numpy as np
 import argparse
 
 parser = argparse.ArgumentParser(description='Generate a .poly file for a Koch snowflake.')
-parser.add_argument('-l', type=int, metavar='LEVEL', default=3, help='recursion level for snowflake; default=3; levels 1 .. 5 easily achievable')
+parser.add_argument('-l', type=int, metavar='LEVEL', default=3, help='recursion level for snowflake; default=3; note levels 1 .. 8 finish in seconds')
 parser.add_argument('-o', default='koch.poly', metavar='FILE', help='output filename; default=koch.poly')
 args = parser.parse_args()
 

@@ -40,4 +40,5 @@ test: rununfem_1 rununfem_2 rununfem_3 rununfem_4
 distclean:
 	@rm -f *~ *.pyc unfem PetscBinaryIO.py petsc_conf.py
 	(cd meshes/ && ${MAKE} clean)
+	(cd koch/ && ${MAKE} clean)
 

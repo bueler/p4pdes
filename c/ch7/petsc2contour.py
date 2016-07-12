@@ -2,9 +2,6 @@
 #
 # (C) 2016 Ed Bueler
 
-#TODO:
-#  * write up and put in book
-
 import argparse
 import sys
 import matplotlib.pyplot as plt
@@ -14,13 +11,14 @@ import PetscBinaryIO
 
 parser = argparse.ArgumentParser(description=
 '''Contour plot of a solution on a triangulation.  Reads PETSc binary
-format files .vec,.is,.soln.''')
+files .vec,.is,.soln.  (.soln file is generated from unfem option
+-un_view_solution)''')
 parser.add_argument('-i', metavar='ROOT',
                     help='root of input file name for files .vec,.is,.soln')
 parser.add_argument('-o', metavar='PDFFILE', default='',
                     help='output file name (image in PDF format)')
 parser.add_argument('--contours', metavar='C', type=np.double, nargs='+',
-                    default=np.nan, help='contour levels')
+                    default=np.nan, help='contour levels; space-separated list')
 args = parser.parse_args()
 
 root = args.i
