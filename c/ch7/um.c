@@ -22,7 +22,7 @@ PetscErrorCode UMDestroy(UM *mesh) {
     return 0;
 }
 
-PetscErrorCode UMView(UM *mesh, PetscViewer viewer) {
+PetscErrorCode UMViewASCII(UM *mesh, PetscViewer viewer) {
     PetscErrorCode ierr;
     const Node   *aloc;
     int          n, k;
@@ -88,6 +88,23 @@ PetscErrorCode UMView(UM *mesh, PetscViewer viewer) {
     return 0;
 }
 
+
+PetscErrorCode UMViewSolutionBinary(UM *mesh, char *filename, Vec u) {
+    PetscErrorCode ierr;
+    int         Nu;
+    PetscViewer viewer;
+    ierr = VecGetSize(u,&Nu); CHKERRQ(ierr);
+    if (Nu != mesh->N) {
+        SETERRQ2(PETSC_COMM_WORLD,1,
+           "incompatible sizes of u (=%d) and number of nodes (=%d)\n",Nu,mesh->N);
+    }
+    ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename,FILE_MODE_WRITE,&viewer); CHKERRQ(ierr);
+    ierr = VecView(u,viewer); CHKERRQ(ierr);
+    ierr = PetscViewerDestroy(&viewer); CHKERRQ(ierr);
+    return 0;
+}
+
+
 PetscErrorCode UMReadNodes(UM *mesh, char *filename) {
     PetscErrorCode ierr;
     int         twoN;
@@ -107,6 +124,7 @@ PetscErrorCode UMReadNodes(UM *mesh, char *filename) {
     mesh->N = twoN / 2;
     return 0;
 }
+
 
 PetscErrorCode UMCheckElements(UM *mesh) {
     PetscErrorCode ierr;

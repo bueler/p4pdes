@@ -302,8 +302,10 @@ PetscErrorCode JacobianPreallocation(Mat J, unfemCtx *user) {
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
-    PetscBool   view = PETSC_FALSE, noprealloc = PETSC_FALSE;
-    char        root[256] = "", nodesname[256], issname[256];
+    PetscBool   view = PETSC_FALSE,
+                viewsoln = PETSC_FALSE,
+                noprealloc = PETSC_FALSE;
+    char        root[256] = "", nodesname[256], issname[256], solnname[256];
     UM          mesh;
     unfemCtx    user;
     SNES        snes;
@@ -335,6 +337,9 @@ int main(int argc,char **argv) {
     ierr = PetscOptionsBool("-view",
            "view loaded nodes and elements at stdout",
            "unfem.c",view,&view,NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-view_solution",
+           "view solution u(x,y) to binary file; uses root name of mesh plus .soln\nsee petsc2tricontour.py to view graphically",
+           "unfem.c",viewsoln,&viewsoln,NULL); CHKERRQ(ierr);
     ierr = PetscOptionsBool("-noprealloc",
            "do not perform preallocation before matrix assembly",
            "unfem.c",noprealloc,&noprealloc,NULL); CHKERRQ(ierr);
@@ -390,7 +395,7 @@ int main(int argc,char **argv) {
     if (view) {  //STRIP
         PetscViewer stdoutviewer;  //STRIP
         ierr = PetscViewerASCIIGetStdout(PETSC_COMM_WORLD,&stdoutviewer); CHKERRQ(ierr);  //STRIP
-        ierr = UMView(&mesh,stdoutviewer); CHKERRQ(ierr);  //STRIP
+        ierr = UMViewASCII(&mesh,stdoutviewer); CHKERRQ(ierr);  //STRIP
     }  //STRIP
     user.mesh = &mesh;
     PetscLogStagePop();  //STRIP
@@ -431,8 +436,13 @@ int main(int argc,char **argv) {
     PetscLogStagePop();  //STRIP
 //ENDMAININITIAL
 
-    // measure error relative to exact solution, if possible
+    if (viewsoln) {
+        strcpy(solnname, root);
+        strncat(solnname, ".soln", 5);
+        ierr = UMViewSolutionBinary(&mesh,solnname,u); CHKERRQ(ierr);
+    }
     if (user.uexact_fcn) {
+        // measure error relative to exact solution
         ierr = VecDuplicate(r,&uexact); CHKERRQ(ierr);
         ierr = FillExact(uexact,&user); CHKERRQ(ierr);
         ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
