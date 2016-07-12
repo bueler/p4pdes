@@ -3,17 +3,7 @@
 # (C) 2016 Ed Bueler
 
 #TODO:
-#  * make output filename option
-#  * put example in .sh script
 #  * write up and put in book
-
-# example:
-#  ./kochmesh.py -l 5
-#  triangle -pqa0.00002 koch.poly
-#  showme koch
-#  ./tri2petsc.py koch.1 koch.1
-#  ./unfem -un_mesh koch.1 -un_case 4 -un_view_solution
-#  ./petsc2tricontour.py -i koch.1 --contours 0.00003 0.0001 0.0003 0.001 0.003 0.01 0.02 0.03 0.05 0.1
 
 import argparse
 import sys
@@ -22,9 +12,13 @@ import matplotlib.tri as tri
 import numpy as np
 import PetscBinaryIO
 
-parser = argparse.ArgumentParser(description='Read and show a contour plot of a solution on a triangulation.  Reads PETSc binary format files .vec,.is,.soln.')
+parser = argparse.ArgumentParser(description=
+'''Contour plot of a solution on a triangulation.  Reads PETSc binary
+format files .vec,.is,.soln.''')
 parser.add_argument('-i', metavar='ROOT',
                     help='root of input file name for files .vec,.is,.soln')
+parser.add_argument('-o', metavar='PDFFILE', default='',
+                    help='output file name (image in PDF format)')
 parser.add_argument('--contours', metavar='C', type=np.double, nargs='+',
                     default=np.nan, help='contour levels')
 args = parser.parse_args()
@@ -79,7 +73,7 @@ else:
 x = xy[:, 0]
 y = xy[:, 1]
 
-print 'solution has minimum %.6e, maximum %.6e ... plotting ...' % (u.min(),u.max())
+print 'solution has minimum %.6e, maximum %.6e' % (u.min(),u.max())
 
 if (args.contours == np.nan):
     NC = 10
@@ -94,6 +88,10 @@ plt.gca().set_aspect('equal')
 plt.tricontour(x, y, ele, u, C, colors='k', extend='neither', linewidth=2.0, linestyles='solid')
 plt.axis('off')
 
-plt.show()
-#plt.savefig('foo.pdf',bbox_inches='tight')
+if len(args.o) > 0:
+    print 'saving contour map in %s ...' % args.o
+    plt.savefig(args.o,bbox_inches='tight')
+else:
+    print 'plotting to screen (-o not given) ...'
+    plt.show()
 
