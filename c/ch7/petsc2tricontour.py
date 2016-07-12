@@ -1,73 +1,99 @@
-"""
-Contour plots of unstructured triangular grids.
-From http://matplotlib.org/examples/pylab_examples/tricontour_demo.html.
-"""
+#!/usr/bin/env python
+#
+# (C) 2016 Ed Bueler
+
+#TODO:
+#  * make output filename option
+#  * put example in .sh script
+#  * write up and put in book
+
+# example:
+#  ./kochmesh.py -l 5
+#  triangle -pqa0.00002 koch.poly
+#  showme koch
+#  ./tri2petsc.py koch.1 koch.1
+#  ./unfem -un_mesh koch.1 -un_case 4 -un_view_solution
+#  ./petsc2tricontour.py -i koch.1 --contours 0.00003 0.0001 0.0003 0.001 0.003 0.01 0.02 0.03 0.05 0.1
+
+import argparse
+import sys
 import matplotlib.pyplot as plt
 import matplotlib.tri as tri
 import numpy as np
-import math
+import PetscBinaryIO
 
-# You can specify your own triangulation rather than perform a Delaunay
-# triangulation of the points, where each triangle is given by the indices of
-# the three points that make up the triangle, ordered in either a clockwise or
-# anticlockwise manner.
+parser = argparse.ArgumentParser(description='Read and show a contour plot of a solution on a triangulation.  Reads PETSc binary format files .vec,.is,.soln.')
+parser.add_argument('-i', metavar='ROOT',
+                    help='root of input file name for files .vec,.is,.soln')
+parser.add_argument('--contours', metavar='C', type=np.double, nargs='+',
+                    default=np.nan, help='contour levels')
+args = parser.parse_args()
 
-xy = np.asarray([
-    [-0.101, 0.872], [-0.080, 0.883], [-0.069, 0.888], [-0.054, 0.890],
-    [-0.045, 0.897], [-0.057, 0.895], [-0.073, 0.900], [-0.087, 0.898],
-    [-0.090, 0.904], [-0.069, 0.907], [-0.069, 0.921], [-0.080, 0.919],
-    [-0.073, 0.928], [-0.052, 0.930], [-0.048, 0.942], [-0.062, 0.949],
-    [-0.054, 0.958], [-0.069, 0.954], [-0.087, 0.952], [-0.087, 0.959],
-    [-0.080, 0.966], [-0.085, 0.973], [-0.087, 0.965], [-0.097, 0.965],
-    [-0.097, 0.975], [-0.092, 0.984], [-0.101, 0.980], [-0.108, 0.980],
-    [-0.104, 0.987], [-0.102, 0.993], [-0.115, 1.001], [-0.099, 0.996],
-    [-0.101, 1.007], [-0.090, 1.010], [-0.087, 1.021], [-0.069, 1.021],
-    [-0.052, 1.022], [-0.052, 1.017], [-0.069, 1.010], [-0.064, 1.005],
-    [-0.048, 1.005], [-0.031, 1.005], [-0.031, 0.996], [-0.040, 0.987],
-    [-0.045, 0.980], [-0.052, 0.975], [-0.040, 0.973], [-0.026, 0.968],
-    [-0.020, 0.954], [-0.006, 0.947], [ 0.003, 0.935], [ 0.006, 0.926],
-    [ 0.005, 0.921], [ 0.022, 0.923], [ 0.033, 0.912], [ 0.029, 0.905],
-    [ 0.017, 0.900], [ 0.012, 0.895], [ 0.027, 0.893], [ 0.019, 0.886],
-    [ 0.001, 0.883], [-0.012, 0.884], [-0.029, 0.883], [-0.038, 0.879],
-    [-0.057, 0.881], [-0.062, 0.876], [-0.078, 0.876], [-0.087, 0.872],
-    [-0.030, 0.907], [-0.007, 0.905], [-0.057, 0.916], [-0.025, 0.933],
-    [-0.077, 0.990], [-0.059, 0.993]])
-#x = np.degrees(xy[:, 0])
-#y = np.degrees(xy[:, 1])
-#x0 = -5
-#y0 = 52
-#z = np.exp(-0.01*((x - x0)*(x - x0) + (y - y0)*(y - y0)))
+root = args.i
+
+io = PetscBinaryIO.PetscBinaryIO()
+vecfile  = open(root+'.vec')
+isfile   = open(root+'.is')
+solnfile = open(root+'.soln')
+
+print 'reading triangulation from files %s,%s ...' % (root+'.vec',root+'.is')
+objecttype = io.readObjectType(vecfile)
+if objecttype == 'Vec':
+    xy = io.readVec(vecfile)
+    N = len(xy)
+    if N % 2 != 0:
+        print 'nodes in .vec file invalid'
+        sys.exit()
+    N /= 2
+    xy = np.reshape(xy,(N,2))
+else:
+    print 'no valid .vec file'
+    sys.exit()
+objecttype = io.readObjectType(isfile)
+if objecttype == 'IS':
+    ele = io.readIS(isfile)
+    K = len(ele)
+    if K % 3 != 0:
+        print 'elements (triangles) in .is file invalid'
+        sys.exit()
+    K /= 3
+    if (ele.max() > N) or (ele.min() < 0):
+        print 'elements contain invalid indices'
+        sys.exit()
+    ele = np.reshape(ele,(K,3))
+else:
+    print 'no valid .is file'
+    sys.exit()
+
+print 'reading solution from file %s ...' % (root+'.soln')
+objecttype = io.readObjectType(solnfile)
+if objecttype == 'Vec':
+    u = io.readVec(solnfile)
+    if len(u) != N:
+        print 'solution vec is wrong size'
+        sys.exit()
+else:
+    print 'no valid .soln file'
+    sys.exit()
+
 x = xy[:, 0]
 y = xy[:, 1]
-z = (x+0.02)*(x+0.02)+(y-0.9)*(y-0.95)
 
-triangles = np.asarray([
-    [67, 66,  1], [65,  2, 66], [ 1, 66,  2], [64,  2, 65], [63,  3, 64],
-    [60, 59, 57], [ 2, 64,  3], [ 3, 63,  4], [ 0, 67,  1], [62,  4, 63],
-    [57, 59, 56], [59, 58, 56], [61, 60, 69], [57, 69, 60], [ 4, 62, 68],
-    [ 6,  5,  9], [61, 68, 62], [69, 68, 61], [ 9,  5, 70], [ 6,  8,  7],
-    [ 4, 70,  5], [ 8,  6,  9], [56, 69, 57], [69, 56, 52], [70, 10,  9],
-    [54, 53, 55], [56, 55, 53], [68, 70,  4], [52, 56, 53], [11, 10, 12],
-    [69, 71, 68], [68, 13, 70], [10, 70, 13], [51, 50, 52], [13, 68, 71],
-    [52, 71, 69], [12, 10, 13], [71, 52, 50], [71, 14, 13], [50, 49, 71],
-    [49, 48, 71], [14, 16, 15], [14, 71, 48], [17, 19, 18], [17, 20, 19],
-    [48, 16, 14], [48, 47, 16], [47, 46, 16], [16, 46, 45], [23, 22, 24],
-    [21, 24, 22], [17, 16, 45], [20, 17, 45], [21, 25, 24], [27, 26, 28],
-    [20, 72, 21], [25, 21, 72], [45, 72, 20], [25, 28, 26], [44, 73, 45],
-    [72, 45, 73], [28, 25, 29], [29, 25, 31], [43, 73, 44], [73, 43, 40],
-    [72, 73, 39], [72, 31, 25], [42, 40, 43], [31, 30, 29], [39, 73, 40],
-    [42, 41, 40], [72, 33, 31], [32, 31, 33], [39, 38, 72], [33, 72, 38],
-    [33, 38, 34], [37, 35, 38], [34, 38, 35], [35, 37, 36]])
+print 'solution has minimum %.6e, maximum %.6e ... plotting ...' % (u.min(),u.max())
 
-# Rather than create a Triangulation object, can simply pass x, y and triangles
-# arrays to tripcolor directly.  It would be better to use a Triangulation
-# object if the same triangulation was to be used more than once to save
-# duplicated calculations.
+if (args.contours == np.nan):
+    NC = 10
+    print 'plotting with %d automatic contours ...' % NC
+    du = u.max() - u.min()
+    C = np.linspace(u.min()+du/(2*NC),u.max()-du/(2*NC),NC)
+else:
+    C = np.array(args.contours)
+
 plt.figure()
 plt.gca().set_aspect('equal')
-plt.tricontourf(x, y, triangles, z)
-plt.colorbar()
-plt.title('Contour plot of user-specified triangulation')
+plt.tricontour(x, y, ele, u, C, colors='k', extend='neither', linewidth=2.0, linestyles='solid')
+plt.axis('off')
 
 plt.show()
+#plt.savefig('foo.pdf',bbox_inches='tight')
 
