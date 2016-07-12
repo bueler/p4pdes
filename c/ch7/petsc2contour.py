@@ -85,7 +85,7 @@ else:
 
 plt.figure()
 plt.gca().set_aspect('equal')
-plt.tricontour(x, y, ele, u, C, colors='k', extend='neither', linewidth=2.0, linestyles='solid')
+plt.tricontour(x, y, ele, u, C, colors='k', extend='neither', linewidths=0.5, linestyles='solid')
 plt.axis('off')
 
 if len(args.o) > 0:
