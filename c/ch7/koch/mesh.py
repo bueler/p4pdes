@@ -49,8 +49,8 @@ for j in range(N):
     nodes[j] /= r
 
 # generate triangle-readable .poly file
-print "writing triangle-readable file  koch.poly  ..."
-f = open('koch.poly', 'w')
+print "writing triangle-readable file  %s  ..." % args.o
+f = open(args.o, 'w')
 f.write('# N=%d nodes (vertices), in 2D, no attributes, no vertex markers\n' % N)
 f.write('%d 2 0 0\n' % N)
 for j in range(N):
