@@ -57,9 +57,9 @@ tmp/mesh.1.tikz: tmp/ $(UNLOC)genstructured.py
 	python tri2tikz.py --labelnodes --nodeoffset 0.07 --nodesize 0.5 --scale 4.0 mesh.1 $@
 	rm -f mesh.1.* tri2petsc.py*
 
-tmp/koch.tikz tmp/koch.1.tikz: tmp/ $(UNLOC)koch/mesh.py
+tmp/koch.tikz tmp/koch.1.tikz: tmp/ $(UNLOC)koch/polygon.py
 	ln -sf $(UNLOC)tri2petsc.py
-	$(UNLOC)koch/mesh.py -l 2 -o $(UNLOC)koch/koch.poly
+	$(UNLOC)koch/polygon.py -l 2 -o $(UNLOC)koch/koch.poly
 	python tri2tikz.py --polyonly --polydirichletwidth 1.0 --scale 3.0 $(UNLOC)koch/koch tmp/koch.tikz
 	triangle -pqa0.025 $(UNLOC)koch/koch
 	python tri2tikz.py --nodesize 0.2 --polydirichletwidth 1.0 --scale 3.0 $(UNLOC)koch/koch.1 tmp/koch.1.tikz
