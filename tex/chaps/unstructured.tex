@@ -544,47 +544,44 @@ The runs slow-down dramatically with refinement, but the reason is no mystery.  
 
 \section{Picard iteration as a Newton-like step}
 
-Writing additional code for an analytical Jacobian is now well-motivated, but we do not construct the full Jacobian.  Instead we build a \emph{Picard matrix}, an approximate linearization.  This approximation is somewhat easier to construct than the Jacobian, which makes this approach a common technique.
+Writing additional code for an analytical Jacobian is now well-motivated.  We do not, however, construct the Jacobian in general.  Instead we build a \emph{Picard matrix}, an approximate linearization.  It is somewhat easier to construct than the Jacobian, which makes this a common technique.
 
-To explain, observe that our nonlinear system \eqref{eq:un:fullsystem}, namely $\bF(\bu)=0$, has nearly-linear form already.  In fact, the FEM \eqref{eq:un:weakformhat}, \eqref{eq:un:uhexpand} has the form
+To explain, observe that our nonlinear system \eqref{eq:un:fullsystem}, namely $\bF(\bu)=0$, has nearly-linear form already.\sidenote{In fact, PDE \eqref{eq:un:poissonstrong} is \emph{quasilinear} \citep{Evans2010}.}  In fact, the FEM \eqref{eq:un:weakformhat}, \eqref{eq:un:uhexpand} has the form
 \begin{equation}
 A(\bu) \bu = \bb(\bu) \label{eq:un:picardformsystem}
 \end{equation}
-and the residual is just $\bF(\bu) = A(\bu) \bu - \bb(\bu)$.  The left side of \eqref{eq:un:weakformhat} contains all the derivative terms, which we group into the term $A(\bu) \bu$, which can then be regarded as a matrix-vector multiplication when computing $\bF(\bu)$.  The other zeroth-order terms go into $\bb(\bu)$.  In general, and in the ``case $1$'' test problem in particular, functions $A(\bu)$ and $\bb(\bu)$ are nonlinear.
+for $A(\bu)\in\RR^{N\times N}$ and $\bb(\bu)\in\RR^{N}$.  Note that the residual is $\bF(\bu) = A(\bu) \bu - \bb(\bu)$.  The left side of \eqref{eq:un:weakformhat} contains all the derivative terms, which we group into the term $A(\bu) \bu$; it is regarded as a matrix-vector multiplication when computing $\bF(\bu)$.  The zeroth-order terms go into $\bb(\bu)$.  In general, and in the ``case $1$'' test problem in particular, functions $A(\bu)$ and $\bb(\bu)$ are nonlinear.
 
-Consider what happens when the matrix $A(\bu)$ and right-hand side $\bb(\bu)$ of \eqref{eq:un:picardformsystem} are ``frozen'' at some current iterate and the linear system solved for a new iterate:
+Suppose the matrix $A(\bu)$ and right-hand side $\bb(\bu)$ of \eqref{eq:un:picardformsystem} are ``frozen'' at some current iterate and the linear system solved for a new iterate:
 \begin{equation}
 A(\bu^k) \bu^{k+1} = \bb(\bu^k). \label{eq:un:picardnaive}
 \end{equation}
-This is the canonical form of a \emph{Picard iteration}.  Picard himself used the iteration to prove the existence of solutions to ODE IVPs (see Chapter \ref{chap:ts}) by demonstrating its convergence in that context \citep{HirschSmaleDevaney2004}.  Under strong hypotheses on the functions $A(\bu)\in\RR^{N\times N}$ and $\bb(\bu)\in\RR^{N}$, one can prove convergence of \eqref{eq:un:picardnaive}---see Exercise \ref{chap:un}.\ref{exer:un:picardconvergence}---but generally we have no more \emph{a priori} knowledge about the convergence of \eqref{eq:un:picardnaive} than we do for the Newton iteration (see Chapter \ref{chap:nl}).
-
-At the level of the continuum equation, Picard iteration for our PDE problem \eqref{eq:un:poissonstrong} solves a linear PDE problem
+This is the canonical form of \emph{Picard iteration}.\sidenote{Picard used the iteration to prove the existence of solutions to ODE IVPs (see Chapter \ref{chap:ts}) by demonstrating its convergence in that context \citep{HirschSmaleDevaney2004}.}  Under strong hypotheses on the functions $A(\bu)$ and $\bb(\bu)$, one can prove convergence of \eqref{eq:un:picardnaive}---see Exercise \ref{chap:un}.\ref{exer:un:picardconvergence}.  It is common, however, to have no more \emph{a priori} knowledge about the convergence of \eqref{eq:un:picardnaive} than we do for the Newton iteration (Chapter \ref{chap:nl}).  Similarly to \eqref{eq:un:picardnaive}, for the continuum problem \eqref{eq:un:poissonstrong} Picard iteration solves a linear PDE at each iteration:
 \begin{equation}
--\Div\left(a(u^k) \grad u^{k+1}\right) = f(u^k) \label{eq:un:picardcontinuum}
+-\Div\left(a(u^k) \grad u^{k+1}\right) = f(u^k). \label{eq:un:picardcontinuum}
 \end{equation}
-at each iteration.  Our approach to \eqref{eq:un:poissonstrong} therefore \emph{could} have been to only write code---i.e.~\texttt{FormFunction()}---for the linear case with $a=a(x,y)$, $f=f(x,y)$, and then to ``hard-code'' the Picard iteration, thinking of it as \eqref{eq:un:picardnaive} or \eqref{eq:un:picardcontinuum} according to taste.
 
-Our actual approach is more powerful.  While we may do the Picard iteration \eqref{eq:un:picardnaive} as stated, in our approach we may also use \pSNES's line-search to globalize convergence and we can use the Picard matrix in pre-conditioning the Jacobian-free Newton-Krylov method---see below; recall Chapter \ref{chap:nl} discusses JFNK in some generality---so that we are actually running Newton's method while taking advantage of code which assembles the Picard matrix.  As a first step we must transform \eqref{eq:un:picardnaive} into a Newton-like form, so that \PETSc's \pSNES machinery applies.
+Our approach to \eqref{eq:un:poissonstrong} therefore \emph{could} have been to only write code---i.e.~\texttt{FormFunction()}---for the linear case with $a=a(x,y)$, $f=f(x,y)$, and then to ``hard-code'' the Picard iteration, thinking of it as \eqref{eq:un:picardnaive} or \eqref{eq:un:picardcontinuum} according to taste.  However, our actual approach is more powerful.  Instead of doing iteration \eqref{eq:un:picardnaive} as stated, we use \pSNES's line-search to globalize convergence.  Also we allow the use of the Picard matrix in pre-conditioning the Jacobian-free Newton-Krylov method---see below---so that we are actually running Newton's method using only code which assembles the Picard matrix.  These approaches become possible if we transform \eqref{eq:un:picardnaive} into Newton-like form, as follows.
 
 Recall that the Newton method linearizes $\bF(\bu)=0$ into a system
 \begin{equation}
 J(\bu^k) \bs = -\bF(\bu^k),  \label{eq:un:newtonstep}
 \end{equation}
-for the step $\bs = \bu^{k+1}-\bu^k$.  Here we first subtract $A(\bu^k) \bu^k$ from each side of \eqref{eq:un:picardnaive},
+for the step $\bs = \bu^{k+1}-\bu^k$.  Thus we first subtract $A(\bu^k) \bu^k$ from each side of \eqref{eq:un:picardnaive},
 \begin{equation*}
 A(\bu^k) (\bu^{k+1}-\bu^k) = - \left(A(\bu^k) \bu^k - \bb(\bu^k)\right).
 \end{equation*}
-Note the appearance of the step $\bs$, and of the residual on the right side, so that we have
+Note the appearance of the step $\bs$, and of the residual on the right side.  We have
 \begin{equation}
 A(\bu^k) \bs = -\bF(\bu^k).  \label{eq:un:picardstep}
 \end{equation}
 
-Obviously, equation \eqref{eq:un:picardstep} is the same as \eqref{eq:un:newtonstep} but with the Picard matrix $A=A(\bu)$ replacing the Jacobian matrix $J=J(\bu)$.  For the linear case of PDE \eqref{eq:un:poissonstrong}, when $\partial a/\partial u=0$ and $\partial f/\partial u=0$, these matrices are the same, $A=J$.  For the general (nonlinear) case we expect $A$ to be a good spectral approximation (see Chapter \ref{chap:ls}) of $J$.  This is because $A$ and $J$ capture the highest-order derivative terms in the PDE in the same way.  These terms in the PDE dominate the locations of the largest eigenvalues, which in turn dominate the convergence of many Krylov methods (again, see Chapter \ref{chap:ls}).  We will see, in particular, that this approximation of the Jacobian is highly-effective when we use it as a pre-conditioner in the nonlinear ``case $1$.''
+Equation \eqref{eq:un:picardstep} has inserted the Picard matrix $A=A(\bu)$ where the Jacobian matrix $J=J(\bu)$ appears in \eqref{eq:un:newtonstep}.  For the linear case of PDE \eqref{eq:un:poissonstrong}, when $\partial a/\partial u=0$ and $\partial f/\partial u=0$, these matrices are the same, $A=J$.  For the general nonlinear case we expect $A$ to be a good spectral approximation of $J$ because $A$ captures the highest-order derivative terms in the PDE.  These terms  dominate the locations of the largest eigenvalues, which in turn controls the convergence of many Krylov methods (Chapter \ref{chap:ls}).
 
 
 \section{Assembling and pre-allocating the Picard matrix}
 
-Thus our plan is to write a function called \texttt{FormPicard()} which computes a \pMat \texttt{A} $=A(\bu)$ from the current estimate $\bu$ of the solution.  Then we will pass \texttt{FormPicard()} to \texttt{SNESSetJacobian()}.
+Our plan is to write a function \texttt{FormPicard()} which computes a \pMat \texttt{A} $=A(\bu)$ from the current estimate $\bu$ of the solution.  Then we pass \texttt{FormPicard()} to \texttt{SNESSetJacobian()}.
 
 Considering equations \eqref{eq:un:dirichletresiduals}, \eqref{eq:un:elementweakform}, and \eqref{eq:un:elementwisesum}, let
 \begin{equation}
@@ -597,18 +594,19 @@ A_{ij}(\bu) =  \begin{cases}
                \sum_{k=0}^{K-1} A_{ij}^k(\bu), & \text{otherwise}.
                \end{cases} \label{eq:un:picardentry}
 \end{equation}
+This matrix is evidently symmetric and positive-definite (see \eqref{eq:un:uniformelliptic}).
 
-As we have already computed integral \eqref{eq:un:picardentryelement}, namely in evaluating \eqref{eq:un:elementintegralreference}, we face a software-design choice.  We could perhaps re-write \texttt{FormFunction()} so that it also computes \texttt{A} as a side-effect, or we could factor out the code for the integrals \eqref{eq:un:picardentryelement} into a separate routine.  In fact we simply write a separate C function \texttt{FormPicard()}.  While this duplicates code, \texttt{FormFunction()} is already tested.  In any case, for fine meshes the cost of evaluating $\bF(\bu)$ and $A(\bu)$ is small compared to the solver (below).
+We have already computed integral \eqref{eq:un:picardentryelement}, namely in evaluating \eqref{eq:un:elementintegralreference}.  Though we could re-write \texttt{FormFunction()} so that it also computes \texttt{A} as a side-effect, or we could factor out the code for the integrals \eqref{eq:un:picardentryelement} into a separate routine, it is simplest to write a separate C function \texttt{FormPicard()} because \texttt{FormFunction()}, already tested, is not touched.  In any case, for fine meshes the cost of evaluating $\bF(\bu)$ and $A(\bu)$ is small compared to the solver (below).
 
-Writing \texttt{FormPicard()} (not shown) is quite straightforward, as the finicky parts of residual evaluation relating to boundary conditions---see Codes \ref{code:unfembdryresiduals} and \ref{code:unfemelementresiduals}---are generally not needed.  One detail of note is that we call \texttt{MatSetValues()} with final option \texttt{ADD\_VALUES} to do sum \eqref{eq:un:picardentry}.
+\texttt{FormPicard()} (not shown) is quite straightforward to write because the finicky parts of residual evaluation relate to boundary conditions---see Codes \ref{code:unfembdryresiduals} and \ref{code:unfemelementresiduals}.  One detail of note is that \texttt{MatSetValues()} is called with argument \texttt{ADD\_VALUES} to do sum \eqref{eq:un:picardentry}.
 
-Correctly allocating memory for \pMat \texttt{A} \emph{does} matter, however.  In structured-grid cases in previous Chapters we have benefited, without being conscious of it, from \PETSc's accurate pre-allocation of memory for Jacobian matrices.  Such pre-allocation is hidden when using a \pDMDA structured grid.
+Correctly allocating memory for \pMat \texttt{A} \emph{does} matter, however.  In structured-grid cases in previous Chapters we have benefited, without being conscious of it, from \PETSc's accurate pre-allocation of memory for Jacobian matrices.  It occurs automatically when using a \pDMDA structured grid, but here we must do it ourselves.  Code \ref{code:unfemprealloc} calls \texttt{MatSeqAIJSetPreallocation()} with an array \texttt{nnz} of integers; this suffices because \texttt{unfem.c} is serial.  We compute \texttt{nnz[n]}, the number of nonzeros in row $n$ of \texttt{A}, by traversing the elements just as in \texttt{FormFunction()}.  For Dirichlet boundary nodes \texttt{nnz[n]} is one, while otherwise it is $d+1$ where $d$ is the (edge) degree of the node.  The only subtlety is that for an interior node the number of incident elements is $d-1$ while for a Neumann boundary node it is $d-2$.
 
-Here we must do it ourselves.  Because all constructions in this Chapter are serial, the technique shown in Code \ref{code:unfemprealloc}, in which we call \texttt{MatSeqAIJSetPreallocation()} with an array \texttt{nnz} of integers, suffices.  We compute \texttt{nnz[n]}, the number of nonzeros in row $n$ of \texttt{A}, by traversing the elements just as in \texttt{FormFunction()}.  We decide whether to increment \texttt{nnz[n]} for a node according to whether it is in the Dirichlet boundary or not.  The only subtlety is that for an interior node with (edge) degree $d$ the number of incident elements is $d-1$ while for a Neumann boundary node the number of incident elements is $d-2$; in either case \texttt{nnz[n]} $=d+1$.
+Recall that Code \ref{code:unfemmain} uses \texttt{MatSetUp()} as the default alternative to calling \texttt{Preallocation()}.  For a typical matrix type, the method in \texttt{MatSetUp()} generates a dynamic list of matrix entries from calls to \texttt{MatSetValues()}.  When \texttt{MatAssemblyBegin/End()} are called it then allocates the matrix in compressed sparse row storage format (Chapter \ref{chap:ls}) and copies entries into that.  These intrinsically-expensive actions generate significant memory-system-access delays.
 
-\cinputpart{unfem.c}{\CODELOC}{Efficiency requires pre-allocation of Picard matrix \pMat \texttt{A}.}{V}{//STARTPREALLOC}{//ENDPREALLOC}{code:unfemprealloc}
+\cinputpart{unfem.c}{\CODELOC}{Pre-allocation of Picard matrix \pMat \texttt{A}.}{V}{//STARTPREALLOC}{//ENDPREALLOC}{code:unfemprealloc}
 
-Pre-allocation of the sparse matrix \pMat \texttt{A} makes a difference.  For example, using a version of \PETSc configured with \texttt{--with-debugging=0}, we get 60 times faster performance with pre-allocation even on a medium-resolution mesh:
+Pre-allocation makes a big difference.  For example, using a version of \PETSc configured with \texttt{--with-debugging=0}, we get 60 times faster performance with pre-allocation even on a medium-resolution mesh:
 \begin{cline}
 $ timer ./unfem -un_mesh meshes/trap.7 -un_noprealloc
 case 0 result for N=46421 nodes with h = 2.210e-02 :  |u-u_ex|_inf = 6.55083e-05
@@ -618,12 +616,19 @@ case 0 result for N=46421 nodes with h = 2.210e-02 :  |u-u_ex|_inf = 6.55083e-05
 real 0.97
 \end{cline}
 
-Code \ref{code:unfemmain} shows that \texttt{MatSetUp()} is the default alternative to calling \texttt{JacobianPreallocation()}.  The default allocation method in \PETSc, invoked by \texttt{MatSetUp()}, generates a dynamic list of matrix entries as they are inserted by \texttt{MatSetValues()}.  Then \texttt{MatAssemblyBegin/End()} allocates the matrix in its usual compressed sparse row storage format (Chapter \ref{chap:ls}) and then copies entries into that.  These actions are intrinsically expensive; they generate significant memory-access delays.
 
+\section{Convergence and timing}
 
-\section{Convergence and stage times}
-
-Now we can measure convergence down to reasonably-fine grids.  Earlier we generated grids \texttt{trap.1}--\texttt{trap.9}.  The last of these has $N\approx 10^6$ nodes and a maximum element edge length of $h=4\times 10^{-3}$.
+Now we can measure convergence down to reasonably-fine grids.  Earlier we generated grids \texttt{trap.1}--\texttt{trap.9}.  The last of these has $N\approx 10^6$ nodes and a maximum element edge length of $h=4\times 10^{-3}$.  The following Bash snippet generates the results seen in Figure \ref{fig:un:unfem-error}:
+\begin{code}
+for CASE in 0 1 2; do
+    for N in 1 2 3 4 5 6 7 8 9; do
+        ./unfem -un_mesh meshes/trap.$N -un_case $CASE -log_view
+    done
+done
+\end{code}
+Rates of convergence in the Figure are computed by logarithmic regression.
+% using the results for meshes \texttt{trap.3}--\texttt{trap.8}.
 
 \begin{figure}
 \includegraphics[width=\textwidth]{figs/unfem-error}
@@ -631,38 +636,77 @@ Now we can measure convergence down to reasonably-fine grids.  Earlier we genera
 \label{fig:un:unfem-error}
 \end{figure}
 
-Repeating the following loop for \texttt{CASE=0,1,2} generates the results seen in Figure \ref{fig:un:unfem-error}:
-\begin{code}
-for N in 1 2 3 4 5 6 7 8 9; do
-    ./unfem -un_mesh meshes/trap.$N -un_case $CASE -log_view
-done
-\end{code}
-Rates of convergence in the Figure are computed by logarithmic regression.
-% using the results for meshes \texttt{trap.3}--\texttt{trap.8}.
-This evidence suggests that our code has no substantial numerical bugs.  Though $h$ is the maximum edge length from \Triangle-generated meshes, in which we have little control of element shapes,\sidenote{Recall we impose an area constraint and a minimum angle condition.} the rates seen in Figure \ref{fig:un:unfem-error} are close to the theoretical rate $O(h^2)$ \citep{Braess2007}.
+This evidence suggests that our code has no numerical bugs.  Though $h$ is the maximum edge length from \Triangle-generated meshes, in which we have only modest control of element shapes,\sidenote{Recall we impose an area constraint and a minimum angle condition.} the rates seen in Figure \ref{fig:un:unfem-error} are close to the theoretical rate $O(h^2)$ \citep{Braess2007}.
 
-The runs above also used option \texttt{-log\_view}.  In \texttt{unfem.c} we added \emph{logging of stages} to the code using bracketing \PETSc commands like
+The runs above also used option \texttt{-log\_view}.  In \texttt{unfem.c} we added logging of stages to the code using bracketing \PETSc commands like
 \begin{code}
     PetscLogStagePush(stage);
     ... action ...
     PetscLogStagePop();
 \end{code}
-We made stages for reading the mesh, setting-up other data structures, residual evaluation, matrix evaluation, and calling the solver (i.e.~\texttt{SNESSolve()}).  While residual and Picard matrix evaluation happen ``inside'' the solver, they are counted separately.
+We set stages for reading the mesh, setting-up other data structures, residual evaluation, matrix evaluation, and calling the solver (i.e.~\texttt{SNESSolve()}).  While residual and Picard matrix evaluation happen ``inside'' the solver, they are counted separately.
 
 \begin{figure}
 \includegraphics[width=\textwidth]{figs/unfem-times}
-\caption{Stage times for ``case $1$'': the solver versus everything else.}
+\caption{Stage times for ``case $1$'': the solver costs more than everything else.}
 \label{fig:un:unfem-times}
 \end{figure}
 
-The result timing these stages for the nonlinear ``case $1$'' runs, again using a \texttt{--with-debugging=0} version of \PETSc, is summarized in Figure \ref{fig:un:unfem-times}.  For the finer \texttt{trap.5}--\texttt{trap.9} grids\sidenote{The timing data for coarse grids is polluted by operating-system-level noise.} the lesson is quite clear: the solver, here ICC-preconditioned CG iteration, \emph{dominates over the cost of everything else}.  On the finest grid the solver takes about $98\%$ of the time.  Here ``everything else'' includes reading the mesh from a file, pre-allocating the \pMat, setting up \pVecs, evaluating the residual function $\bF(\bu)$, and assembling the matrix $A(\bu)$.  Note that on the finest grids there were only five evaluations of \texttt{FormFunction()} and four of \texttt{FormPicard()}.
+The timing results for the nonlinear ``case $1$'' runs, again using a \texttt{--with-debugging=0} version of \PETSc, is summarized in Figure \ref{fig:un:unfem-times}.  For the finer \texttt{trap.5}--\texttt{trap.9} grids\sidenote{Timing data for coarse grids is polluted by operating-system noise.} the lesson is quite clear: the solver, here ICC-preconditioned CG iteration, \emph{dominates over the cost of everything else}.  On the finest grid the solver takes about $98\%$ of the time.  Here ``everything else'' includes reading the mesh from a file, pre-allocating the \pMat, setting up \pVecs, evaluating the residual function $\bF(\bu)$, and assembling the matrix $A(\bu)$.  Note that on the finest grids there were only five evaluations of \texttt{FormFunction()} and four of \texttt{FormPicard()}.  In conclusion, our performance focus in Chapter \ref{chap:sc} will be on solvers.
 
-Unsurprisingly, our performance focus in Chapter \ref{chap:sc} will be on solvers.
+
+\section{Preconditioned JFNK versus Picard iteration}
+
+The above runs did Picard iteration using the matrix we assembled in \texttt{FormPicard()}.  Such an iteration is not expected to be quadratically-convergent like Newton.  We can recover quadratic convergence, however, by using the Jacobian-free Newton-Krylov (JFNK) method described in Chapter 4.  Furthermore, we can use the assembled Picard matrix from \texttt{FormPicard()} for preconditioning to reduce the number of Krylov iterations to a reasonable level.
+
+For example, suppose we define the following common options which define a nonlinear problem (case $1$) and ask the \pSNES to fully-converge:
+\begin{code}
+OPTIONS="-un_mesh meshes/trap.7 -un_case 1 -snes_monitor -snes_converged_reason \
+ -snes_rtol 1.0e-12 -snes_stol 1.0e-12"
+\end{code}
+First, Picard iteration:
+\begin{cline}
+$ timer ./unfem $OPTIONS
+  0 SNES Function norm 3.081400684787e+01 
+  1 SNES Function norm 1.870612568295e-02 
+  2 SNES Function norm 4.393584241767e-05 
+  3 SNES Function norm 1.499474998467e-06 
+  4 SNES Function norm 3.241692297924e-07 
+  5 SNES Function norm 3.808259697262e-08 
+  6 SNES Function norm 4.617229888438e-09 
+  7 SNES Function norm 9.102596825071e-10 
+  8 SNES Function norm 9.409667934047e-11 
+  9 SNES Function norm 1.413048344594e-11 
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 9
+case 1 result for N=46421 nodes with h = 2.210e-02 :  |u-u_ex|_inf = 6.52846e-05
+real 10.51
+\end{cline}
+Second is Picard-matrix-preconditioned JFNK:
+\begin{cline}
+$ timer ./unfem $OPTIONS -snes_mf_operator
+  0 SNES Function norm 3.081400684787e+01 
+  1 SNES Function norm 2.103388830244e+01 
+  2 SNES Function norm 3.074978769509e+00 
+  3 SNES Function norm 1.272280930525e-01 
+  4 SNES Function norm 3.523741442353e-04 
+  5 SNES Function norm 3.959655045717e-09 
+  6 SNES Function norm 8.861144493199e-14 
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 6
+case 1 result for N=46421 nodes with h = 2.210e-02 :  |u-u_ex|_inf = 6.52847e-05
+real 33.85
+\end{cline}
+A third run with \texttt{-snes\_mf}, i.e.~un-preconditioned JFNK, shows the same number of iterations, and nearly the same residual norms, but takes $77$ seconds.
+
+This is interesting.  The Picard-iteration run is distinctly faster.  Also it shows a big drop in residual in the first few iterations, but then the residual norm decreases by roughly an order-of-magnitude per iteration.  By contrast, the second and third runs show quadratic convergence with a classic drop in the residual norm.
+
+In summary, the Picard matrix can indeed be used to precondition the linear system arising from finite-difference approximation of the the action of the Jacobian (i.e.~\texttt{-snes\_mf\_operator} as JFNK).  However, the Picard step itself is a surprisingly good one in this case, despite not being the exact linearization around the current iterate.  The timing difference above is certainly related to the number of Krylov iterations taken, requiring more work to diagnose.\sidenote{Start by adding \texttt{-ksp\_converged\_reason} and \texttt{-snes\_view}.}
+
+It is not clear how general this situation is.  Nor is there a ``conclusion'' to offer.  We can, however, say confidently that if the user writes code to assemble a Picard-type linearization then both Picard iteration and Picard-preconditioned JFNK are available options at the \PETSc command line.
 
 
 \section{Performance relative to \pDMDA structured grid}
 
-It is a reasonable question to ask whether a given code is ``efficient.''  For \texttt{unfem.c} there is even a reasonable \emph{answer} which assumes that \PETSc \pDMDA handles structured-grid problems efficiently.  We will run \texttt{unfem.c} on a structured grid---managed as though it is an unstructured triangulation---and then compare timing and numerical error from a code using a \pDMDA for the same grid.
+It is a reasonable question to ask whether a given code is ``efficient.''  For \texttt{unfem.c} there is even a reasonable \emph{answer}.  This assumes that \PETSc \pDMDA handles structured-grid problems efficiently.  We will run \texttt{unfem.c} on a structured grid---managed as though it is an unstructured triangulation---and then compare timing and numerical error from a code using a \pDMDA for the same grid.
 
 First we generate a triangulation, in \Triangle format, for the unit square domain $\mathcal{S}=(0,1)\times (0,1)$ using Python script \texttt{c/ch7/genstructured.py} (not shown).  For example the commands
 \begin{cline}
@@ -679,7 +723,7 @@ generate and then view the small grid shown in Figure \ref{fig:un:smallstructure
 \label{fig:un:smallstructured}
 \end{marginfigure}
 
-An additional ``case $3$'' is implemented in \texttt{unfem.c} for this square domain.  This linear problem, with exclusively Dirichlet boundary conditions, is the one also solved by \texttt{poisson.c} in Chapter \ref{chap:st}.  We run this case, for a \texttt{--with-debugging=0} build, on a fine grid with $2^10=1024$ subintervals in each direction, and thus $N=1025^2$ unknowns:
+An additional ``case $3$'' is implemented in \texttt{unfem.c} for this square domain.  This linear problem, with exclusively Dirichlet boundary conditions and an exact solution, is the one also solved by \texttt{poisson.c} in Chapter \ref{chap:st}.  We run this case, for a \texttt{--with-debugging=0} build, on a fine grid with $2^{10}=1024$ subintervals in each direction, and thus $N=1025^2$ unknowns:
 \begin{cline}
 $ ./genstructured.py square 1025
 ...
@@ -690,8 +734,7 @@ case 3 result for N=1050625 nodes with h = 1.381e-03 :  |u-u_ex|_inf = 9.89813e-
 real 24.47
 \end{cline}
 %$
-
-Because they solve the same problem on the same grid, we can compare the result from \texttt{poisson.c}, which uses a \pDMDA and finite differences:
+Compare the result from \texttt{poisson.c}, which uses \pDMDA and finite differences:
 \begin{cline}
 $ cd ../ch3/
 $ make poisson
@@ -701,16 +744,16 @@ on 1025 x 1025 grid:  error |u-uexact|_inf = 5.29691e-08
 real 18.67
 \end{cline}
 %$
-The timing and errror are nearly the same.
+The timing and error are very similar.
 
 The message is clear.  Our approach, which consists especially of
 \begin{itemize}
 \item reading an unstructured mesh from \PETSc binary files,
-\item evaluating the residual and system matrix by traversing the boundary and elements using unstructured indexing,
+\item evaluating the residual and Picard matrix by traversing the boundary and elements using unstructured indexing,
 \item using \pSNES even on a linear problem, and
 \item pre-allocating the matrix by traversal of the elements
 \end{itemize}
-is nearly as fast---only $30\%$ slower---than using finite differences on a \pDMDA structured grid.  This suggests that our approach, \emph{though for now limited to the serial case only}, is effective.
+is nearly as fast as using finite differences on a \pDMDA structured grid.
 
 
 \section{Toward parallel unstructured meshes}

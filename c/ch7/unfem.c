@@ -276,7 +276,7 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
 It is one for Dirichlet rows.  It is one more than the vertex degree for
 interior points, and two more for Neumann nodes. */
 //STARTPREALLOC
-PetscErrorCode JacobianPreallocation(Mat J, unfemCtx *user) {
+PetscErrorCode Preallocation(Mat J, unfemCtx *user) {
     PetscErrorCode ierr;
     const int    *abfn, *ae, *en;
     int          *nnz, n, k, l;
@@ -424,7 +424,7 @@ int main(int argc,char **argv) {
     if (noprealloc) {
         ierr = MatSetUp(A); CHKERRQ(ierr);
     } else {
-        ierr = JacobianPreallocation(A,&user); CHKERRQ(ierr);
+        ierr = Preallocation(A,&user); CHKERRQ(ierr);
     }
     ierr = SNESSetJacobian(snes,A,A,FormPicard,&user); CHKERRQ(ierr);
     ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
