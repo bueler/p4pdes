@@ -42,7 +42,7 @@ ax1.loglog(hmf,errmf,'ko',markersize=16.0,markeredgewidth=2.0,markerfacecolor='w
 #on top: ax1.loglog(hfd,errfd,'ks',markersize=12.0,markeredgewidth=2.0,markerfacecolor='w')
 ax1.grid(True)
 ax1.set_xlabel(r'$h$',fontsize=20.0)
-ax1.set_ylabel(r'$\|u-u_{ex}\|_\infty$  (circles)',fontsize=18.0)
+ax1.set_ylabel(r'$\|u-u_{ex}\|_\infty$  (open circles)',fontsize=18.0)
 ax2 = ax1.twinx()
 ax2.loglog(hfd,evalsfd,'k*',markersize=16.0,markeredgewidth=2.0,label=r'-snes_fd')
 ax2.hold(True)
