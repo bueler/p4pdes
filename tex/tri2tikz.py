@@ -96,9 +96,9 @@ if not polyonly:
             if (not noboundary) or (bfn[jfrom] == 0) or (bfn[jto] == 0):
                 tikz.write('  \\draw[gray,very thin] (%f,%f) -- (%f,%f);\n' \
                            % (loc[2*jfrom+0],loc[2*jfrom+1],loc[2*jto+0],loc[2*jto+1]))
-            if dolabeleles:
-                tikz.write( '  \\draw (%f,%f) node {$%d$};\n' \
-                           % (xc[ke]+0.7*eleoffset,yc[ke]-eleoffset,ke))
+        if dolabeleles:
+            tikz.write( '  \\draw (%f,%f) node {$%d$};\n' \
+                       % (xc[ke]+0.7*eleoffset,yc[ke]-eleoffset,ke))
     # plot all nodes, with labels if wanted; looks better if *after* edges
     for j in range(N):
         tikz.write('  \\filldraw (%f,%f) circle (%fpt);\n' % (loc[2*j+0],loc[2*j+1],nodesize))
