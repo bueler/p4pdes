@@ -10,7 +10,7 @@ import argparse
 import sys
 
 from tri2petsc import triangle_read_node, triangle_read_ele, triangle_read_poly
-# need link to p4pdes/c/ch8/tri2petsc.py
+# need link to c/ch7/tri2petsc.py
 
 commandline = " ".join(sys.argv[:])
 parser = argparse.ArgumentParser(description='Converts .node, .ele, .poly files from triangle into TikZ format.')
@@ -40,6 +40,9 @@ parser.add_argument('--nodeoffset', action='store', metavar='X',
 parser.add_argument('--eleoffset', action='store', metavar='X',
                     help='offset to use in labeling elements (triangles)',
                     default=0.0)
+parser.add_argument('--polydirichletwidth', action='store', metavar='X',
+                    help='linewidth used in showing Dirichlet part of polygon',
+                    default=2.5)
 # positional filenames
 parser.add_argument('inroot', metavar='NAMEROOT',
                     help='root of input file name for .node,.ele,.poly',
@@ -58,6 +61,7 @@ scale        = (float)(args.scale)
 nodesize     = (float)(args.nodesize)
 nodeoffset   = (float)(args.nodeoffset)
 eleoffset    = (float)(args.eleoffset)
+pdlw         = (float)(args.polydirichletwidth)
 
 polyname = args.inroot + '.poly'
 print 'reading polygon from %s ' % polyname,
@@ -108,7 +112,7 @@ if not noboundary:
         jfrom = s[js,0]
         jto = s[js,1]
         if bfs[js] == 2: # check boundary type
-            mywidth = '2.5pt'   # strong line for Dirichlet part
+            mywidth = '%fpt' % pdlw   # strong line for Dirichlet part
         else:
             mywidth = '0.75pt'  # weak line for Neumann
         if polyonly:

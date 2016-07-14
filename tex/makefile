@@ -8,7 +8,7 @@ chapsinputs := $(addprefix chaps/, $(addsuffix .tex, $(chapsroots)))
 croots := vecmatksp tri poisson expcircle expcircleJAC reaction plap ode heat fish2 readmesh poissontools poissonfem obstacle
 cstrip := $(addprefix cstrip/, $(addsuffix .c, $(croots)))
 
-tmptikzroots := blob blob.1.elenum blob.1.nodenum trap.1 trap.2 mesh.1
+tmptikzroots := blob blob.1.elenum blob.1.nodenum trap.1 trap.2 mesh.1 koch koch.1
 tmptikzinputs := $(addprefix tmp/, $(addsuffix .tikz, $(tmptikzroots)))
 
 pdfroots := petscghostvalues
@@ -56,6 +56,14 @@ tmp/mesh.1.tikz: tmp/ $(UNLOC)genstructured.py
 	ln -sf $(UNLOC)tri2petsc.py
 	python tri2tikz.py --labelnodes --nodeoffset 0.07 --nodesize 0.5 --scale 4.0 mesh.1 $@
 	rm -f mesh.1.* tri2petsc.py*
+
+tmp/koch.tikz tmp/koch.1.tikz: tmp/ $(UNLOC)koch/mesh.py
+	ln -sf $(UNLOC)tri2petsc.py
+	$(UNLOC)koch/mesh.py -l 2 -o $(UNLOC)koch/koch.poly
+	python tri2tikz.py --polyonly --polydirichletwidth 1.0 --scale 3.0 $(UNLOC)koch/koch tmp/koch.tikz
+	triangle -pqa0.025 $(UNLOC)koch/koch
+	python tri2tikz.py --nodesize 0.2 --polydirichletwidth 1.0 --scale 3.0 $(UNLOC)koch/koch.1 tmp/koch.1.tikz
+	rm -f tri2petsc.py*
 
 .PHONY: clean
 
