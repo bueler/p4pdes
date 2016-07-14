@@ -808,21 +808,19 @@ $ ../petsc2contour.py -i koch5.1 --contours $CONTOURS
 \end{figure}
 
 
-
 \section{Toward parallel unstructured meshes}
 
-We have only a start on solving PDEs by the FEM on unstructured meshes.  This Chapter's relatively-naive approach is fine for serial computations, but it must be transformed completely for parallel computations.  We will eventually use the advanced \PETSc tools for parallel unstructured mesh management in Chapter \ref{chap:dp}, but a strategy starting from the tools used in this Chapter can be sketched.
+This Chapter's relatively-naive approach to unstructured meshes is acceptable for serial computations, but it must be completely transformed for parallel computations.  We will use \PETSc tools for parallel unstructured mesh management in Chapter \ref{chap:dp}, but a strategy starting from the tools here can be sketched.
 
-First, generating the mesh itself in parallel is outside our scope.  Therefore let us assume that the mesh is already given in a file, with nodes and elements\sidenote{And the boundary nodes and segments, but we ignor the boundary in this sketch.} numbered by some ``global'' indexing scheme, just as done in this Chapter.  For example, a mesh of $K$ elements are indexed $0,\dots,K-1$ in the file.
+Generating the mesh itself in parallel is outside of our scope,
+% FIXME: ref to parallel mesh generation
+so let us assume that the mesh is already given in a file, with nodes and elements\sidenote{And the boundary nodes and segments, but we ignore the boundary in this sketch.} numbered by the same indexing scheme as in this Chapter.  This is referred-to as the ``global'' indexing.
 
-An approach is then to partition the list of elements across the processors.  This could be based on goals of geometric compactness of the partition ``patches,'' and/or load-balancing considerations.  Each element is to be ``owned'' by exactly one process, so that element-wise integrals occur just once, and there are no ``ghost'' elements per se.
-
-A \texttt{MatPartitioning} object and an integer-entry adjacency matrix (type \texttt{MATMPIADJ}) are then created for this element partitioning.\sidenote{\Triangle's \texttt{.neigh} file could provide the needed adjacency graph for the elements.}  Then the output of a call to \texttt{MatPartitioningApply()} is an \pIS which each processor can use to get ``local'' indexing for its patch \citep{petsc-user-ref}.  Continuing our $K$ element example, if the elements are partitioned between two processors then the rank $0$ processor would index elements as $0,\dots,K_0-1$ and the rank $1$ as $0,\dots,K_1-1$, where $K_0+K_1=K$.
+Next, the list of elements is partitioned across the processors.  This could be based on geometric compactness of each ``patch'' in the partition or on load-balancing considerations.  Each element must be owned by exactly one process, so that element-wise integrals occur just once; there are no ``ghost'' elements per se.  A \texttt{MatPartitioning} object and an integer-entry adjacency matrix (type \texttt{MATMPIADJ}) are then created for this element partitioning.\sidenote{\Triangle's \texttt{.neigh} file could provide the needed adjacency graph for the elements.}  A call to \texttt{MatPartitioningApply()} generates an \pIS which each processor can use to get ``local'' indexing for its patch \citep{petsc-user-ref}.  For example, if $K$ elements are partitioned between two processors then the rank $0$ processor would locally-index elements as $0,\dots,k_0-1$ and the rank $1$ as $0,\dots,k_1-1$, where $k_0+k_1=K$, while the global indices run $0,\dots,K-1$.
 
 % paraphrasing Barry from petsc-users
 FIXME then partition the nodes subordinate to the partitioning of the elements; use \texttt{AO}; Each process loops over its elements computing the element stiffness/load and calling \texttt{MatSetValues/VecSetValues()} using the ``new'' numbering of the vertices.  The ``old'' numbering that was on the disk is not used in communicating with PETSc.
 
-FIXME: see approach to mesh topology in chapter 10 of \citep{Loggetal2012}
 
 
 \section{Exercises}
