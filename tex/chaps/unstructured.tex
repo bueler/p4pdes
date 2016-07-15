@@ -810,16 +810,27 @@ $ ../petsc2contour.py -i koch5.1 --contours $CONTOURS
 
 \section{Toward parallel unstructured meshes}
 
-This Chapter's relatively-naive approach to unstructured meshes is acceptable for serial computations, but it must be completely transformed for parallel computations.  We will use \PETSc tools for parallel unstructured mesh management in Chapter \ref{chap:dp}, but a strategy starting from the tools here can be sketched.
+This Chapter's relatively-naive approach to unstructured meshes is acceptable for serial computations, but it must be completely transformed in parallel.  In Chapter \ref{chap:dp} we will use \PETSc tools for parallel unstructured meshes, but a strategy based on the tools in the current Chapter can be sketched.
 
-Generating the mesh itself in parallel is outside of our scope,
-% FIXME: ref to parallel mesh generation
-so let us assume that the mesh is already given in a file, with nodes and elements\sidenote{And the boundary nodes and segments, but we ignore the boundary in this sketch.} numbered by the same indexing scheme as in this Chapter.  This is referred-to as the ``global'' indexing.
+Generating the mesh itself in parallel is outside of our scope.  Thus we assume that the mesh is already given in a file, however generated, with nodes and elements\sidenote{And the boundary nodes and segments, but we ignore the boundary in this sketch.} numbered by the same indexing scheme as in this Chapter.  This is the ``global'' indexing.
 
-Next, the list of elements is partitioned across the processors.  This could be based on geometric compactness of each ``patch'' in the partition or on load-balancing considerations.  Each element must be owned by exactly one process, so that element-wise integrals occur just once; there are no ``ghost'' elements per se.  A \texttt{MatPartitioning} object and an integer-entry adjacency matrix (type \texttt{MATMPIADJ}) are then created for this element partitioning.\sidenote{\Triangle's \texttt{.neigh} file could provide the needed adjacency graph for the elements.}  A call to \texttt{MatPartitioningApply()} generates an \pIS which each processor can use to get ``local'' indexing for its patch \citep{petsc-user-ref}.  For example, if $K$ elements are partitioned between two processors then the rank $0$ processor would locally-index elements as $0,\dots,k_0-1$ and the rank $1$ as $0,\dots,k_1-1$, where $k_0+k_1=K$, while the global indices run $0,\dots,K-1$.
+Because we integrate the weak form \eqref{eq:un:poissonweak} element-by-element, in parallel each element is owned by exactly one process.  Thus the list of \emph{elements} is partitioned across the processors (Figure \ref{fig:un:parallelunstructured}).  Such a disjoint element partitioning induces a list of nodes, and FEM unknowns, which must be accessible on a given process.  The same basic facts apply to edges, although boundary segments do have an (induced) disjoint partition.  Shared nodes may be regarded as ``ghost'' nodes on neighboring processors (Figure \ref{fig:petscghostvalues}).
+
+\begin{figure}
+\input{tikz/parallelunstructured.tex}
+\caption{In a parallel partition of an unstructured mesh, elements (top) are uniquely-owned by processes, but nodes (bottom) may be shared (gray circles).}
+\label{fig:un:parallelunstructured}
+\end{figure}
+
+Partitioning is not done by \PETSc either, but it can be done in parallel by using ParMETIS \citep{KarypisKumar1999}, for example.  The partitioning could seek geometrically-compact partitions, or it could be based on load-balancing considerations.  The goal of ParMETIS is to reduce inter-process communication by seeking to minimize the number of edges which are incident to elements in different partitions, while balancing the number of elements.
+
+The element partitioning can be recorded in a \texttt{MatPartitioning} object and an integer-entry adjacency matrix of type \texttt{MATMPIADJ}.\sidenote{For the naive approach in the current Chapter, \Triangle's \texttt{.neigh} file provides the adjacency graph for the elements.}  A call to \texttt{MatPartitioningApply()} generates an \pIS which each processor can use to get ``local'' indexing for its patch \citep{petsc-user-ref}.  For example, if $K$ elements are partitioned between two processors then the rank $0$ processor would locally-index elements as $0,\dots,k_0-1$ and the rank $1$ as $0,\dots,k_1-1$, where $k_0+k_1=K$, while the global indices run $0,\dots,K-1$.
 
 % paraphrasing Barry from petsc-users
 FIXME then partition the nodes subordinate to the partitioning of the elements; use \texttt{AO}; Each process loops over its elements computing the element stiffness/load and calling \texttt{MatSetValues/VecSetValues()} using the ``new'' numbering of the vertices.  The ``old'' numbering that was on the disk is not used in communicating with PETSc.
+
+
+
 
 
 
