@@ -87,18 +87,18 @@ tikz.write('%%%s\n' % '')
 tikz.write('\\begin{tikzpicture}[scale=%f]\n' % scale)
 
 if not polyonly:
-    # go through elements and draw edges and label centroids
+    # go through elements: label centroids and draw edges
     for ke in range(K):
-        l = [0, 1, 2, 0]  # cycle through local node index
-        for k in range(3):
-            jfrom = e[ke,l[k]]
-            jto   = e[ke,l[k+1]]
-            if (not noboundary) or (bfn[jfrom] == 0) or (bfn[jto] == 0):
-                tikz.write('  \\draw[gray,very thin] (%f,%f) -- (%f,%f);\n' \
-                           % (loc[2*jfrom+0],loc[2*jfrom+1],loc[2*jto+0],loc[2*jto+1]))
         if dolabeleles:
             tikz.write( '  \\draw (%f,%f) node {$%d$};\n' \
                        % (xc[ke]+0.7*eleoffset,yc[ke]-eleoffset,ke))
+        j = e[ke,0]
+        tikz.write('  \\draw[gray,very thin] (%f,%f) ' % (loc[2*j+0],loc[2*j+1]))
+        l = [1, 2, 0]  # cycle through local node index
+        for k in range(3):
+            j = e[ke,l[k]]
+            tikz.write('-- (%f,%f) ' % (loc[2*j+0],loc[2*j+1]))
+        tikz.write(';\n')
     # plot all nodes, with labels if wanted; looks better if *after* edges
     for j in range(N):
         tikz.write('  \\filldraw (%f,%f) circle (%fpt);\n' % (loc[2*j+0],loc[2*j+1],nodesize))
