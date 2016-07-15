@@ -1,5 +1,5 @@
 
-In the last four Chapters we have introduced seven important \PETSc types (object classes).  All are important for solving PDEs:
+In the last four Chapters we have introduced seven \PETSc types (object classes).  All are important for solving PDEs:
 
 \medskip
 \begin{tabular}{ll}
@@ -11,22 +11,22 @@ Chapter \ref{chap:ts}: \pTS                      & for time-stepping
 
 \bigskip
 
-The structured-grid, steady-state examples in this and later Chapters will use the first six of these objects (Figure \ref{fig:of:standardstack}).  Unstructured-grid examples in Chapters \ref{chap:un} and \ref{chap:dp} will replace the \pDMDA mesh-topology object with naive and advanced (\pDMPlex) substitutes, respectively.
+The structured-grid, steady-state examples in this and later Chapters will use all of these objects except the \pTS.  Unstructured-grid examples will replace the \pDMDA mesh-topology object with naive (Chapter \ref{chap:un}) or advanced (\pDMPlex; Chapter \ref{chap:dp}) substitutes.
 
-In other words, from now on we will even solve \emph{linear} PDEs using a nonlinear-solver \pSNES object.  Examples are in Chapters \ref{chap:un} and \ref{chap:ad}.  In such cases we know that one Newton iteration suffices in theory.  Always using \pSNES allows uniform code structure and more flexibility when it comes to changing the PDE problem.
+In particular, from now on we will even solve \emph{linear} PDEs using a \pSNES object.  In such cases we know that one Newton iteration suffices in theory.  However, always using \pSNES allows uniform code structure and more flexibility when it comes to changing the PDE problem.
 
-Though new ideas appear here, the current Chapter takes a break from introducing new \PETSc types.  Instead we look at a PDE which arises from minimization in a function space, and we introduce a structured-grid finite element method.  This example is a nonlinear Poisson-like equation with solution-dependent diffusivity.
+Though new ideas appear here, the current Chapter takes a break from introducing new \PETSc types.  Instead we look at a PDE which arises from minimization in a function space, namely a nonlinear Poisson-like equation with solution-dependent diffusivity.  We then introduce a structured-grid finite element method (FEM) to solve it.
+
+Figure \ref{fig:of:standardstack} shows the ``stack'' of \PETSc components used to solve PDEs which arise from optimization problems.  Initial implementations \emph{require} user code for an objective function or a residual function; without one of these \PETSc has no description of the problem.  Note that the residual is the gradient of the objective function in this context.  We demonstrate that, for this particular problem at least, a residual (gradient) implementation is essential for reasonable time to solution.  The Jacobian of the residual equations, also known as the \emph{Hessian} of the objective function, is also often implemented, we do not go that far here.
+
+The example code in the current Chapter is the last one shown in full.  In later Chapters we show snippets.  The reader can always examine and run the complete codes by looking in the \texttt{c/} directory of the \texttt{p4pdes} repository.
 
 \begin{figure}
 % usage: \standardSNESstack{scale}{objective}{Jacobian}{DMDA}
 \standardSNESstack{0.9}{}{dashed}{}
-\caption{The ``\PETSc stack'' for \pSNES- and \pDMDA-based examples which solve a PDE arising from minimization of an objective function.  Compare Figures \ref{fig:st:linearstack} and \ref{fig:nl:reactionstack}.}
+\caption{The ``\PETSc stack'' for structured-grid solution of a PDE arising from minimization of an objective function.  Compare Figures \ref{fig:st:linearstack} and \ref{fig:nl:reactionstack}.}
 \label{fig:of:standardstack}
 \end{figure}
-
-Figure \ref{fig:of:standardstack} shows the ``stack'' of \PETSc components for solving PDEs which arise from optimization problems.  Initial implementations require user code for an objective function and/or a residual function---otherwise \PETSc has \emph{no} description of your problem---but Jacobians are also often implemented.
-
-The example code in the current Chapter is the last one shown in full.  In later Chapters we show snippets.  The reader can always examine and run the complete codes by looking in the \texttt{c/} directory of the \texttt{p4pdes} repository.
 
 
 \section{$p$-Laplacian equation as minimization}
