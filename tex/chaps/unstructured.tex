@@ -824,14 +824,9 @@ Because we integrate the weak form \eqref{eq:un:poissonweak} element-by-element,
 
 Partitioning is not done by \PETSc either, but it can be done in parallel by using ParMETIS \citep{KarypisKumar1999}, for example.  The partitioning could seek geometrically-compact partitions, or it could be based on load-balancing considerations.  The goal of ParMETIS is to reduce inter-process communication by seeking to minimize the number of edges which are incident to elements in different partitions, while balancing the number of elements.
 
-The element partitioning can be recorded in a \texttt{MatPartitioning} object and an integer-entry adjacency matrix of type \texttt{MATMPIADJ}.\sidenote{For the naive approach in the current Chapter, \Triangle's \texttt{.neigh} file provides the adjacency graph for the elements.}  A call to \texttt{MatPartitioningApply()} generates an \pIS which each processor can use to get ``local'' indexing for its patch \citep{petsc-user-ref}.  For example, if $K$ elements are partitioned between two processors then the rank $0$ processor would locally-index elements as $0,\dots,k_0-1$ and the rank $1$ as $0,\dots,k_1-1$, where $k_0+k_1=K$, while the global indices run $0,\dots,K-1$.
+The element partitioning can be recorded in a \texttt{MatPartitioning} object and an integer-entry adjacency matrix of type \texttt{MATMPIADJ}.\sidenote{For the naive approach in the current Chapter, \Triangle's \texttt{.neigh} file provides the adjacency graph for the elements.}  Each process calls \texttt{MatCreateMPIAdj()} with, in essense, a list of which elements it owns.  One may then generate additional indexing structures so that each processor can use to get ``local'' indexing for its patch \citep{petsc-user-ref}.  Then each process loops over its elements computing the element contributions to integrals using the local numbering of the vertices.
 
-% paraphrasing Barry from petsc-users
-FIXME then partition the nodes subordinate to the partitioning of the elements; use \texttt{AO}; Each process loops over its elements computing the element stiffness/load and calling \texttt{MatSetValues/VecSetValues()} using the ``new'' numbering of the vertices.  The ``old'' numbering that was on the disk is not used in communicating with PETSc.
-
-
-
-
+Implementing the above strategy as naively as in this Chapter would be possible, but it is unnecessary because \PETSc contains tools for these jobs.  The above steps can be treated more abstractly.  Note that the highest-dimensional geometric objects in the triangulation are the elements.  If they are disjointly-partitioned then the operation needed in doing element-by-element assembly of the residual (or stiffness matrix, etc.) requires the ``closure'' of lower-dimensional objects (i.e.~edges and nodes) incident to a given element.  In fact one would want a \pVec with the values of the unknown function $u(x,y)$, for example, at all nodes in the closure of the owned elements, for example.  These concepts are demonstrated, based on applying the \pDMPlex type, in Chapter \ref{chap:dp}.
 
 
 \section{Exercises}
