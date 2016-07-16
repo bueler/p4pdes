@@ -13,7 +13,9 @@ These problems are solved using a \PETSc \pTS time-stepping object.  The particu
 User code will semi-discretize the above two PDE examples in space.  This \emph{method of lines} approach, a common way to solve PDEs using \PETSc \pTS, avoids any need to write code specific to a temporal discretization.  Though the last of the above examples is a \emph{system} of PDEs, the additional \PETSc constructs needed for this kind of system are quite easy to write.
 
 
-\section{Systems of ODEs}  Consider an ODE system in form
+\section{Systems of ODEs}
+
+Consider an ODE system in form
 \begin{equation}
 \by' = \bg(t,\by)  \label{eq:ts:ode}
 \end{equation}
@@ -60,7 +62,9 @@ The exact solution, shown in Figure \ref{fig:ts:ode}, is
 \noindent\hrulefill
 
 
-\section{Methods, and their accuracy, for ODE initial value problems}  The above example ODE system can be approximated by almost any time-stepping numerical method.  They all start from the initial values and use the right-hand-side function $g(t,\by)$ to update an approximate solution, generating sequences $\{\bY_\ell\}$ which approximate the solution at discrete times $t_\ell$.  The goal, of course, is that $\bY_\ell \approx \by(t_\ell)$.  Because these ideas are easy to find in the literature\sidenote{A good reference is \citep{AscherPetzold1998}, for example.}, and are likely to be in the reader's background in some form, we only supply a gloss here.
+\section{Methods, and their accuracy, for ODE initial value problems}
+
+The above example ODE system can be approximated by almost any time-stepping numerical method.  They all start from the initial values and use the right-hand-side function $g(t,\by)$ to update an approximate solution, generating sequences $\{\bY_\ell\}$ which approximate the solution at discrete times $t_\ell$.  The goal, of course, is that $\bY_\ell \approx \by(t_\ell)$.  Because these ideas are easy to find in the literature\sidenote{A good reference is \citep{AscherPetzold1998}, for example.}, and are likely to be in the reader's background in some form, we only supply a gloss here.
 
 Let $t_0<t_1<t_2<\dots<t_L$ be a finite sequence of times, with steps $\Delta t_\ell = t_\ell - t_{\ell-1}$ for $\ell=1,2,\dots,L$.  Let $\bY_0 = \by_0$ be the known starting value  \eqref{eq:ts:ode:iv}.  \emph{Euler's method}, also known as the forward Euler method, generates $\bY_1,\bY_2,\dots,\bY_L$ from
 \begin{equation}
@@ -164,7 +168,9 @@ A general theme when comparing methods is that the cost is proportional to the n
 A large number of possible methods are available from the \PETSc command line.   Choosing the ``best'' one for a given ODE system is often not a reasonable goal.  Our goal in this Chapter is only to suggest some reasonable choices for broad classes of problems.  In any case we might invoke an essential \PETSc mantra here: a rich set of command-line, run-time options is \emph{not a bad thing}.
 
 
-\section{\PETSc \pTS objects, and a first example}  The example system on page \pageref{ex:ts:odeeasy} is a good starting point for our first ODE-solving program because it is of small and fixed dimension\sidenote{Our last fixed-dimension programs were at the start of Chapter \ref{chap:nl}.  Later codes \texttt{heat.c} and \texttt{pattern.c} in this Chapter us a \pDMDA grid and have run-time-controlled dimension.} and because it has an exact solution from which we may evaluate numerical error.
+\section{\PETSc \pTS: a first example}
+
+The example system on page \pageref{ex:ts:odeeasy} is a good starting point for our first ODE-solving program because it is of small and fixed dimension\sidenote{Our last fixed-dimension programs were at the start of Chapter \ref{chap:nl}.  Later codes \texttt{heat.c} and \texttt{pattern.c} in this Chapter us a \pDMDA grid and have run-time-controlled dimension.} and because it has an exact solution from which we may evaluate numerical error.
 
 \cinputpart{ode.c}{\CODELOC}{The \texttt{main()} part of \texttt{ode.c} creates and configures a \pTS object, plus the \pVecs for approximate and exact solutions.}{I}{//MAIN}{//ENDMAIN}{code:ts:ode:main}
 
@@ -189,13 +195,13 @@ Next we set the particular \pTS solver to Runge-Kutta:
 \end{code}
 (These choices can also be overridden by command-line options.)  Note that \texttt{TSSetInitialTimeStep()} sets both the initial time \texttt{t0} and the step \texttt{dt}.  If the numerical ODE method chosen at run-time is adaptive then \texttt{dt} is \emph{only} the initial time step because the method generally modifies the step after the first one.  \texttt{TSSetDuration()} sets both the duration (\texttt{tf-t0}) and the maximum number of steps that the solver is allowed to take; we set the latter to 100 times the intended number of steps of length \texttt{dt}.
 
-Because of run-time options, the values for the initial time, duration, and initial time step may have changed after the \texttt{TSSetFromOptions()} call.  Thus, before we ask for the \pTS to solve the problem by time stepping, we get the current time (\texttt{TSGetTime()}) and set the initial values from that.  The function that evaluates the exact solution, shown in Code \ref{code:ts:ode:callbacks}, also supplies the initial value here.  After \texttt{TSSolve()} comes a bit more standard code, as in previous Chapters, which computes the norm of the numerical error and then destroys (de-allocates) the objects we created.
+The values for the initial time, duration, and initial time step can all have changed after the \texttt{TSSetFromOptions()} call because of run-time options.  Thus, before we ask for the \pTS to solve the problem by time stepping, we get the current time (\texttt{TSGetTime()}) and we set the initial values from that.  The function that evaluates the exact solution, including the initial values, is shown in Code \ref{code:ts:ode:callbacks}.  After a call to \texttt{TSSolve()} comes a bit more standard code which computes the norm of the numerical error and then destroys the objects we created.
 
-Code \ref{code:ts:ode:callbacks} shows function \texttt{FormRHSFunction()} which evaluates $\bg(t,\by)$ for the example on page \pageref{ex:ts:odeeasy}.  The inputs are \texttt{double t} and \pVec \texttt{y}.  We read the latter into a \texttt{const} array with \texttt{VecGetArrayRead()}, while the output \pVec \texttt{g}, which our code modifies, is accessed through \texttt{VecGetArray()}.  In other words, \texttt{FormRHSFunction()} is similar to the \texttt{FormFunction()} code we wrote in Chapter \ref{chap:nl}.
+Code \ref{code:ts:ode:callbacks} shows function \texttt{FormRHSFunction()} which evaluates $\bg(t,\by)$ for the example on page \pageref{ex:ts:odeeasy}.  The input \pVec \texttt{y} is read the latter into a \texttt{const} array with \texttt{VecGetArrayRead()}, while the output \pVec \texttt{g}, which our code modifies, is accessed through \texttt{VecGetArray()}.  Note that \texttt{FormRHSFunction()} is similar in signature to \texttt{FormFunction()} in Chapter \ref{chap:nl} examples.
 
 \cinputpart{ode.c}{\CODELOC}{\texttt{SetFromExact()} computes the exact solution, while \texttt{FormRHSFunction()} computes the right-hand side of \eqref{eq:ts:ode}, namely $\bg(t,\by)$.}{II}{//CALLBACKS}{//ENDCALLBACKS}{code:ts:ode:callbacks}
 
-Let us try it out.  Two options to try, when in doubt or just curious, are to \texttt{monitor} and \texttt{view} the \pTS.  First the result of \texttt{monitor}:
+Let us try it out.  At the start it makes sense to \texttt{monitor} and \texttt{view} the \pTS.  First the result of \texttt{-ts\_monitor}:
 \begin{cline}
 $ cd c/ch5/
 $ make ode
@@ -211,7 +217,7 @@ $ ./ode -ts_monitor
 error at tf = 20.000 :  |y-y_exact|_inf = 0.00930352
 \end{cline}
 %$
-It is clear that the time-stepping method is adaptive and, given that we have computed the final numerical error, that it has essentially succeeded.  Comparing Figure \ref{fig:ts:ode}, an error of magnitude $9\times 10^{-3}$ at time $t=20$ is indeed small.
+It is clear that the time-stepping method is adaptive and, given the small numerical error, that it has essentially succeeded.  Comparing Figure \ref{fig:ts:ode}, an error of magnitude $9\times 10^{-3}$ at time $t=20$ is indeed small.
 
 What solution method was used?  Do \texttt{-ts\_view}:
 \begin{cline}
@@ -232,15 +238,18 @@ TS Object: 1 MPI processes
 error at tf = 1.000 :  |y-y_exact|_inf = 0.000144484
 \end{cline}
 %$
-As asserted earlier, the default for type \texttt{TSRK} is \RKthreebs.  Interestingly, the adaptive method tried and then rejected 12 steps in the 88 taken.
+As asserted earlier, the default for type \texttt{TSRK} is \RKthreebs.  Interestingly, the adaptive method tried and then rejected $12$ steps in addition to the $88$ which were accepted.
 
-As with other major \PETSc solver types, there are many control options, so a first response is to get help:
+
+\section{Controlling \pTS}
+
+As with other major \PETSc solver types, there are many control options.  Let's recall how to get help:
 \begin{cline}
 $ ./ode -help |grep ts_
 \end{cline}
 %$
 
-For example, to see numerical values of the solution at each time-step, do
+To see numerical values of the solution at each time-step, do
 \begin{cline}
 $ ./ode -ts_monitor_solution
 \end{cline}
@@ -250,14 +259,14 @@ For a run-time graphical (line-graph) view of the solution, do
 $ ./ode -ts_monitor -ts_monitor_lg_solution -draw_pause 0.1
 \end{cline}
 %$
-The result is a movie version of Figure \ref{fig:ts:ode}.
+The result is a X windows graphic of the evolving solution, similar to Figure \ref{fig:ts:ode}.  
 
-Another mode of visualization actually produced that Figure, however.  The Python script \texttt{c/\CODELOC plotTS.py} works with \texttt{binary} output from \pTS monitoring, like this:
+Figure \ref{fig:ts:ode} was actually produced by a Python script called \texttt{c/\CODELOC plotTS.py}.  It takes as input a binary output from \pTS monitoring, which is generated like this:
 \begin{cline}
 $ ./ode -ts_monitor binary:t.dat -ts_monitor_solution binary:y.dat
 $ ./plotTS.py -o figure.png t.dat y.dat
 \end{cline}
-Running \texttt{plotTS.py} requires copies of, or sym-links to, the Python tools \texttt{PetscBinaryIO.py} and \texttt{petsc\_conf.py}.  (They are in the \texttt{bin/} directory of your \texttt{\$PETSC\_DIR}.)
+(Running \texttt{plotTS.py} requires copies of, or sym-links to, Python scripts \texttt{PetscBinaryIO.py} and \texttt{petsc\_conf.py} from the \texttt{bin/} directory of your \texttt{\$PETSC\_DIR}.)
 
 We are free to adjust the start time, end time, and initial time step at the command line:
 \begin{cline}
@@ -269,15 +278,22 @@ We can also turn off adaptive time-stepping:
 $ ./ode -ts_adapt_type none -ts_monitor
 \end{cline}
 %$
-(This generates 200 steps using the requested initial step \texttt{dt}$=0.1$.)  On the other hand, we can change the relative tolerance used in adaptive time-stepping from its default value of $10^{-4}$:
+This generates $200$ steps using the requested initial step \texttt{dt}$=0.1$.
+
+We can also change the relative and absolute tolerances used in adaptive time-stepping away from their default values of $10^{-4}$:
 \begin{cline}
 $ ./ode -ts_monitor -ts_rtol 1.0e-1
-$ ./ode -ts_monitor -ts_rtol 1.0e-10
+$ ./ode -ts_monitor -ts_rtol 1.0e-6
+$ ./ode -ts_monitor -ts_rtol 1.0e-6 -ts_atol 1.0e-6
 \end{cline}
 %$
-These runs give 18 and 119 steps, and final numerical errors of $1.2$ and $3.4\times 10^{-3}$, respectively.
-
-We can choose the particular solver type with ease, either the major type with \texttt{-ts\_type} or the Runge-Kutta type with \texttt{-ts\_rk\_type} if the solver is already of type \texttt{rk}:
+These runs give $19$, $117$, and $392$ steps, respectively, while the corresponding final numerical errors are $1.3 \times 10^0$, $3.6\times 10^{-3}$, and $1.2\times 10^{-4}$.  The reader should note, emphatically, that:
+\begin{quote}
+Supplying a particular value to \texttt{-ts\_rtol} and/or \texttt{-ts\_atol} \emph{does not} cause the final numerical error to be bounded by the same value.
+\end{quote}
+After all, the numerical error \emph{accumulates} with the steps, and can grow exponentially.
+  
+The time-stepping method itself is easy to set by using \texttt{-ts\_type}.  If Runge-Kutta is chosen then the flavor is assigned with \texttt{-ts\_rk\_type}:
 \begin{cline}
 $ ./ode -help |grep ts_type
   -ts_type <rk>: TS method (one of) euler beuler cn pseudo gl ssp theta alpha rk
@@ -286,9 +302,12 @@ $ ./ode -ts_type rk -help |grep ts_rk
   -ts_rk_type <3bs> (choose one of) 5dp 5f 4 3bs 3 2a 1fe
 \end{cline}
 
-We encourage the reader to compare \pTS methods on this first ODE example problem; see Exercises \ref{chap:ts}.\ref{exer:ts:odepossible} and \ref{chap:ts}.\ref{exer:ts:odeserial}.  However, we defer comparing methods until after introducing the concepts of stiffness and stability.  Furthermore we compare methods on a much larger ODE system, namely one generated from the time-dependent heat equation, a PDE.
+Various \pTS methods can be compared on this first ODE example problem; see Exercises \ref{chap:ts}.\ref{exer:ts:odepossible} and \ref{chap:ts}.\ref{exer:ts:odeserial}.  However, we defer showing the results of a comparison until after introducing the concepts of stiffness and stability.  At that point we show results from a much larger ODE system, one generated from the time-dependent heat equation, a PDE.
 
-\section{Implicitness, stiffness, and stability}  With the exception of the backward Euler method \eqref{eq:ts:backwardeuler}, all of the methods mentioned above are \emph{explicit}.  They can be written as single formulas which compute $\bY_\ell$ from previous solution values via a fixed number of applications of the right-hand side $\bg$.  For example, the explicit trapezoid rule \eqref{eq:ts:rk2a} can be written
+
+\section{Implicitness, stiffness, and stability}
+
+With the exception of the backward Euler method \eqref{eq:ts:backwardeuler}, all of the methods mentioned above are \emph{explicit}.  They can be written as single formulas which compute $\bY_\ell$ from previous solution values via a fixed number of applications of the right-hand side $\bg$.  For example, the explicit trapezoid rule \eqref{eq:ts:rk2a} can be written
 \begin{equation*}
 \bY_\ell = \bY_{\ell-1} + \frac{h}{2} \bg(t_{\ell-1},\bY_{\ell-1}) + \frac{h}{2} \bg\big(t_\ell,\bY_{\ell-1} + h\, \bg(t_{\ell-1},\bY_{\ell-1})\big).
 \end{equation*}
@@ -395,7 +414,10 @@ $ ./stiff -ts_rtol 1.0e-2 -ts_atol 1.0e-2
 %$
 gives 430, 411, 405, 403 steps resp.
 
-\section{\pTS support for stiff systems: Jacobians}   FIXME: demonstrate transformation of an implicit time step into form $\bF(\bx)=0$
+
+\section{Jacobians for stiff systems}
+
+FIXME: demonstrate transformation of an implicit time step into form $\bF(\bx)=0$
 
 FIXME \pTS contains \pSNES inside (and thus the rest)
 
@@ -439,7 +461,6 @@ $ ./ode -ts_monitor -ts_type theta -help |grep ts_theta
 
 %// ./ode -ts_monitor -ts_type beuler -ode_steps 1000    // finally close to default RK
 %// ./ode -log_view |grep Eval   // compare rk, beuler, cn
-
 
 
 \section{Time-dependent heat equation}
