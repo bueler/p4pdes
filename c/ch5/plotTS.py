@@ -40,11 +40,8 @@ if args.mx > 0 and args.my < 1:
     args.my = args.mx
 frames = (args.mx > 0)
 
-tfile = open(args.tfile,'r')
-t = np.fromfile(tfile, dtype='>d')
-tfile.close()
-
 io = PetscBinaryIO.PetscBinaryIO()
+t = np.array(io.readBinaryFile(args.tfile)).flatten()
 U = np.array(io.readBinaryFile(args.ufile)).transpose()
 dims = np.shape(U)
 
