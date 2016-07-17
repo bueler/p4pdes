@@ -1,14 +1,16 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
-fish2: fish2.o chkopts
-	-${CLINKER} -o fish2 fish2.o ${PETSC_LIB}
-	${RM} fish2.o
+obstacle: obstacle.o  chkopts
+	-${CLINKER} -o obstacle obstacle.o  ${PETSC_LIB}
+	${RM} obstacle.o
+
+# test codes
 
 # etc
 
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ fish2
+	@rm -f *~ obstacle
 

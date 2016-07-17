@@ -138,9 +138,9 @@ Copyright \copyright\ \the\year\ \thanklessauthor
 
 \mainmatter
 
-%\setcounter{chapter}{0}
+\setcounter{chapter}{0}
 
-%%PART = Essentials
+\part*{Part I: Essentials}
 
 \chapter{Getting started with PETSc}
 \label{chap:gs}
@@ -167,7 +167,7 @@ Copyright \copyright\ \the\year\ \thanklessauthor
 \renewcommand{\CODELOC}{ch5/}
 \input{chaps/timesys.tex}
 
-%%PART = Constructions
+\part*{Part II: Constructions}
 
 \chapter{FEM example I: Nonlinear optimization}
 \label{chap:of}
@@ -185,31 +185,31 @@ Copyright \copyright\ \the\year\ \thanklessauthor
 \stubinput{chaps/advdif.tex}{20}
 %\input{chaps/advdif.tex}
 
-%%PART = Advances
+\chapter{Constraints and variational inequalities}
+\label{chap:co}
+\renewcommand{\CODELOC}{ch9/}
+\stubinput{chaps/constrained.tex}{20}
+%\input{chaps/constrained.tex}
+
+\chapter{Stokes equations}
+\label{chap:ok}
+\renewcommand{\CODELOC}{ch10/}
+\stubinput{chaps/stokes.tex}{5}
+%\input{chaps/stokes.tex}
+
+\part*{Part III: Advances}
 
 \chapter{Preconditioners}
 \label{chap:pr}
-\renewcommand{\CODELOC}{ch9/}
+\renewcommand{\CODELOC}{ch11/}
 \stubinput{chaps/precond.tex}{10}
 %\input{chaps/precond.tex}
 
 \chapter{Parallel scaling and performance}
 \label{chap:sc}
-\renewcommand{\CODELOC}{ch10/}
+\renewcommand{\CODELOC}{ch12/}
 \stubinput{chaps/scaling.tex}{5}
 %\input{chaps/scaling.tex}
-
-\chapter{Stokes equations}
-\label{chap:ok}
-\renewcommand{\CODELOC}{ch11/}
-%\stubinput{chaps/stokes.tex}{5}
-\input{chaps/stokes.tex}
-
-\chapter{Constraints and variational inequalities}
-\label{chap:co}
-\renewcommand{\CODELOC}{ch12/}
-\stubinput{chaps/constrained.tex}{20}
-%\input{chaps/constrained.tex}
 
 \chapter{Unstructured meshes with \pDMPlex}
 \label{chap:dp}
