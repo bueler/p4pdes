@@ -5,14 +5,10 @@ riemann: riemann.o  chkopts
 	-${CLINKER} -o riemann riemann.o  ${PETSC_KSP_LIB}
 	${RM} riemann.o
 
-testprealloc: testprealloc.o ch10/readmesh.o chkopts
-	-${CLINKER} -o testprealloc testprealloc.o ch10/readmesh.o ${PETSC_KSP_LIB}
-	${RM} testprealloc.o ch10/readmesh.o
-
 # etc
 
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ riemann testprealloc
+	@rm -f *~ riemann
 
