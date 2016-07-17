@@ -19,7 +19,7 @@ files = { 2 : "vecmatksp.c tri.c",
           6 : "plap.c",
           7 : "um.h unfem.c",
           8 : "ad3.c",
-         12 : "obstacle.c"}
+          9 : "obstacle.c"}
 
 if not os.path.exists("cstrip/"):
     os.makedirs("cstrip/")
