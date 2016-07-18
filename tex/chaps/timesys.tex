@@ -452,13 +452,17 @@ It is natural to distinguish between the large stability regions of implicit sch
 
 No explicit Runge-Kutta methods are A-stable.  In fact, when such a scheme is applied to the test equation we can write it as $Y_\ell = p(z) Y_{\ell-1}$ for a \emph{polynomial} function $p(z)$.  Because $|p(z)|\to\infty$ as $|z|\to \infty$ for any non-constant polynomial, the absolute-stability region $|p(z)|\le 1$ is bounded.
 
-Finally, one can distinguish between the two implicit methods above by a concept which generalizes absolute stability.  A scheme has \emph{stiff decay} if 
+Finally, one can distinguish between the implicit methods above, namely backward Euler and trapezoid, by a stronger condition than absolute stability.  First, suppose $\gamma(t)$ is a bounded and measurable function and consider the modified test problem
+\begin{equation}
+y' = \lambda \left(y - \gamma(t)\right), \qquad y(0)=1. \label{eq:ts:stiffdecaytestproblem}
+\end{equation}
+The exact solution of this problem is asymptotic to $\gamma(t)$ as $\Re(\lambda) \to -\infty$ (Exercise \ref{chap:ts}.\ref{exer:ts:stiffdecayasymptotic}).  We say that a scheme has \emph{stiff decay} if, when it is applied to \eqref{eq:ts:stiffdecaytestproblem}, it yields approximations $\{Y_\ell\}$ with the property that for $t$ fixed, and $\ell h = t$ so that $Y_\ell \approx y(t)$,
+\begin{equation}
+|Y_\ell - \gamma(t)| \to 0 \qquad \text{as} \qquad h \Re(\lambda) = \Re z \to -\infty. \label{eq:ts:stiffdecaydefn}
+\end{equation}
+In short, a scheme has stiff decay if it can ``follow'' any nonhomogeneity $\gamma(t)$, that is, in the limit of sufficiently-negative eigenvalues (i.e.~$\Re \lambda < 0$) in the ODE.
 
-FIXME
-
-when it is applied to the modified test problem
-
-FIXME
+The backward Euler has stiff decay, but the trapezoid rule does not \citep{AscherPetzold1998}.  For this reason the backward Euler scheme is often a ``stable method of last resort'' in solving PDE (or PDE-like) problems with diffusive or heat-like character and ``rough'' data in the problem.  The diffusivity implies that the high spatial frequencies are strongly damped, i.e.~$\Re(\lambda)\ll 0$.  See Chapter \ref{chap:co} for an example.
 
 
 
@@ -580,6 +584,10 @@ done
 Conclude that for the Example problem on page \pageref{ex:ts:odestiff}, about 400 steps are necessary to get any accuracy at all (i.e.~at least one digit) using method RK3bs.
 
 \item \label{exer:ts:absstabcases}  Confirm formulas \eqref{eq:ts:absstabcases}.  Sketch the regions of absolute stability shown in Figure \ref{fig:ts:absstabregions} and locate the $z$-values corresponding to the runs shown in Figure \ref{fig:ts:absstabfail}.
+
+\item \label{exer:ts:stiffdecayasymptotic}  Show that \eqref{eq:ts:stiffdecaytestproblem} has solution
+    $$y(t) = e^{\lambda t} - \lambda \int_0^t e^{\lambda (t-s)} \gamma(s)\,ds.$$
+Then show that the family of functions $D_\lambda(x) = -\lambda e^{\lambda x}$ form a Dirac delta function \citep{Evans2010} in the sense that, for any continuous function $\varphi(x)$, $\int_{0}^\infty D_\lambda(x) \varphi(x)\,dx = \varphi(0)$ as $\Re\lambda \to -\infty$.  Conclude that the solution to \eqref{eq:ts:stiffdecaytestproblem} is asymptotic to $\gamma(t)$ as $\Re\lambda \to -\infty$.
 
 \item FIXME version of \texttt{ode.c} which solves DAE system
     $$\bbf(t,\by,\by') = \bg(t,\by)$$
