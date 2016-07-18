@@ -307,7 +307,7 @@ Various \pTS methods can be compared on this first ODE example problem; see Exer
 
 \section{Implicitness, stiffness, and stability}
 
-With the exception of the backward Euler method \eqref{eq:ts:backwardeuler}, the above methods are \emph{explicit}.  They compute $\bY_\ell$ from previous solution values via a fixed number of applications of the right-hand side $\bg$.  For example, the explicit trapezoid rule \eqref{eq:ts:rk2a} can be written
+With the exception of the backward Euler method \eqref{eq:ts:backwardeuler}, the above methods are \emph{explicit}.  They compute $\bY_\ell$ from previous solution values via a fixed number of applications of the right-hand side $\bg$.  For example, the \RKtwoa (explicit trapezoid) rule \eqref{eq:ts:rk2a} can be written
 \begin{equation}
 \bY_\ell = \bY_{\ell-1} + \frac{h}{2} \bg(t_{\ell-1},\bY_{\ell-1}) + \frac{h}{2} \bg\big(t_\ell,\bY_{\ell-1} + h\, \bg(t_{\ell-1},\bY_{\ell-1})\big). \label{eq:ts:rk2aexplicit}
 \end{equation}
@@ -317,7 +317,7 @@ In terms of their tableau, explicit Runge-Kutta schemes only have non-zero coeff
     $$\bF(\bY_\ell)=0$$
 for the $N$ real variables, the components of $\bY_\ell$, where
     $$\bF(\bX) = \bX - \bY_{\ell-1} - h \bg(t_\ell,\bX).$$
-We will solve such systems by Newton's method.
+We will solve such systems by Newton's method, for which we will need to differentiate $\bg$ either exactly or by finite-differences.  In contrast with an explicit scheme, we will also need to evaluate $\bg$ an unknown number of times during the iterative solution process.
 
 A family of implicit methods are the \emph{theta ($\theta$) methods}, $0<\theta\le 1$,
 \begin{equation}
@@ -331,20 +331,18 @@ $1$ & $1-\theta$ & $\theta$ \\ \hline
     & $1-\theta$ & $\theta$
 \end{tabular}
 \end{center}
-The $\theta=0$ case is the explicit forward Euler method \eqref{eq:ts:forwardeulerupdate}, while the $\theta=1$ case is the backward Euler method \eqref{eq:ts:backwardeuler}; these have first-order local truncation error.  The $\theta=1/2$ case is the \emph{trapezoid} method---also known as \emph{Crank-Nicolson} \citep{MortonMayers2005} in the context of the PDE methods which we will pursue below---has second-order $O(\Delta t^2)$ local truncation error.
+The $\theta=0$ case is the explicit forward Euler method \eqref{eq:ts:forwardeulerupdate}, while the $\theta=1$ case is the backward Euler method \eqref{eq:ts:backwardeuler}; these have first-order local truncation error.  The $\theta=1/2$ case is the \emph{trapezoid} method, also known as \emph{Crank-Nicolson} \citep{MortonMayers2005} in the context of the PDE methods which we will pursue below.  It has second-order $O(\Delta t^2)$ local truncation error.
 
-Both the explicit trapezoid rule \eqref{eq:ts:rk2aexplicit} and the $\theta=1/2$ case of \eqref{eq:ts:theta} are thus second-order.  Why would one go to the effort of solving a system of algebraic equations at each time step so as to use the latter implicit scheme?  The answer is another ``numerical fact of life'',
+Both the \RKtwoa rule \eqref{eq:ts:rk2aexplicit} and the $\theta=1/2$ case of \eqref{eq:ts:theta} are second-order.  Why would one make the effort to solve a system of algebraic equations at each time step so as to use the latter implicit scheme?  The answer is another ``numerical fact of life'',
 \begin{quote}
 \emph{stability} is obligatory in a numerical scheme, whereas higher-order error properties are merely desirable.
 \end{quote}
 
-Some discussion is appropriate before giving a precise definition of ``stable'' for an ODE method.  In fact there are multiple useful definitions of ``stable'', and we will focus below on ``absolutely stable,'' plus some closely-related definitions.
+Some informal discussion of the concepts of the ``stability'' of numerical schemes and the ``stiffness'' of ODE problems is appropriate even before giving precise definitions of these concepts.  Note there are multiple useful definitions of stability; we will focus below on ``absolute stability,'' plus some closely-related definitions.
 
-Most explicit schemes \emph{are} stable when they take sufficiently-small time steps, but this computational burden may be avoidable.  While here is, clearly, a trade-off between the computational burden of many time-steps and that of solving equations, some computations, with certain accuracy goals, can succeed if done implicitly even though they are too costly by stable explicit time-stepping.
+Most explicit schemes are ``conditionally stable'' in the informal sense that they give good results when used with sufficiently-small time steps.  This computational burden may be avoidable, despite the obvious trade-off of many time-steps versus solving equations.  Some computations, with some accuracy goals, can succeed if done implicitly even though they are too costly by (conditionally-stable) explicit time-stepping.  This is characteristic of the discretized heat-equation-type PDE examples later in this Chapter.
 
-The ``stiffness'' of certain ODE problems drives the investigation of the stability of different methods.    Stiffness is supposed to be a property of the problem not the method.  However, there is no precise way to decide if a particular ODE system is ``stiff'' without introducing a parameter or other data.  In that sense ``stiff'' is like ``sparse''; one must append ``\dots enough so that'' something specific happens, if one needs to be quantitative.
-
-As a practical definition, however, an ODE system is \emph{stiff} if it has some short time-scales which do not need to be resolved as accurately as certain other time-scales, but which cause explicit schemes to take short time-steps.  An example is appropriate.
+The ``stiffness'' of certain ODE problems drives the investigation of the stability of different methods.  As a practical definition, an ODE system is \emph{stiff} if it has short time-scales which do not need to be resolved as accurately as some other time-scales, but which cause explicit schemes to take short time-steps.  An example is appropriate.
 
 \noindent\hrulefill
 \begin{example}  \label{ex:ts:odestiff}  Consider the linear ODE IVP, in $N=3$ dimensions,
@@ -359,16 +357,14 @@ where
 \end{equation}
 The exact solution at a particular time, say $t_f=10$ for concreteness, can be found by computing eigenvalues and thereby exponentiating a matrix (Exercise \ref{chap:ts}.\ref{exer:ts:stiffexample}).  To an absolute accuracy of $10^{-7}$ the solution is
 \begin{equation}
-    \by(10) = e^{B t_f} \by(0) = \begin{bmatrix} -1.383623 \\
+    \by(t_f) = e^{B t_f} \by(0) = \begin{bmatrix} -1.383623 \\
                                                  -0.295886 \\
                                                   0 \end{bmatrix}.\label{eq:ts:stiffsoln}
 \end{equation}
-\end{example}
-\noindent\hrulefill
 
-In the Example, the eigenvalue $\lambda_{\min}=-101$ (Exercise \ref{chap:ts}.\ref{exer:ts:stiffexample}), an entry of $B$ in this case, corresponds to a very short timescale and rapid decay rate.
+The eigenvalue $\lambda_{\min}=-101$ (Exercise \ref{chap:ts}.\ref{exer:ts:stiffexample}) of $B$, which is also an entry of $B$ in this case, corresponds to a very short timescale and rapid decay rate.  Precisely following this fast time scale, especially in a relative-magnitude sense, is not needed to produce accurate values for the first two components of $\by(t_f)$, in particular.
 
-Considering the two $O(\Delta t^2$) methods already, the explicit and implicit trapezoid rules, we can write a modification \texttt{stiff.c} of \texttt{ode.c} (Exercise \ref{chap:ts}.\ref{exer:ts:stiffcode}) to compare these methods, in the case of no adaptive time-stepping, on the Example problem.  Starting with the explicit method, take 200 steps from $t_0=0$ to $t_f=10$:
+Considering the two $O(\Delta t^2$) methods introduced already, the explicit and implicit trapezoid rules, we write a modification of \texttt{ode.c} called \texttt{stiff.c} (Exercise \ref{chap:ts}.\ref{exer:ts:stiffcode}) to compare these methods on this problem.  Starting with the explicit method, we take 200 steps from $t_0=0$ to $t_f=10$:
 \begin{cline}
 $ ./stiff -ts_type rk -ts_rk_type 2a -ts_adapt_type none -ts_dt 0.05
 Vec Object: 1 MPI processes
@@ -379,7 +375,7 @@ Vec Object: 1 MPI processes
 total steps = 200
 \end{cline}
 %$
-This is clearly nonsense; an explosion.  However, using 1000 steps gives an answer which is has three-digit accuracy:
+This is clearly nonsense; an explosion.  However, using 1000 steps gives an answer which has (roughly) three-digit accuracy:
 \begin{cline}
 $ ./stiff -ts_type rk -ts_rk_type 2a -ts_adapt_type none -ts_dt 0.01
 Vec Object: 1 MPI processes
@@ -390,7 +386,7 @@ Vec Object: 1 MPI processes
 total steps = 1000
 \end{cline}
 %$
-By contrast, for 200 steps of the implicit method we get about two-digit accuracy:
+By contrast, for 200 steps of the implicit method we get two-digit accuracy:
 \begin{cline}
 $ ./stiff -ts_type cn -ts_adapt_type none -ts_dt 0.05
 Vec Object: 1 MPI processes
@@ -401,14 +397,57 @@ Vec Object: 1 MPI processes
 total steps = 200
 \end{cline}
 %$
+\end{example}
+\noindent\hrulefill
 
-As a practical matter the explicit scheme would adapt its time step.  However, for a stiff problem the adaptive step length is controlled by stability issues and not error reduction.  Thus a stiffness ``symptom'' for an adaptive, explicit (conditionally-stable) scheme is that the number of steps is insensitive to the accuracy goal.  See Exercise \ref{chap:ts}.\ref{exer:ts:stiffadaptive}.
+Roughly-speaking, the problem with explicit schemes on an Example like this is that the schemes are sensitive to the magnitudes of the eigenvalues, one of which is large, even though the size of the solution component for that eigenvalue (i.e..~$e^{\lambda_{\min} t_t}$) is tiny.
 
-In any case, comparisons of explicit and implicit methods on stiff examples clearly shows that something other than local truncation error is important in determining the way the numerical error builds-up after many time steps.
+As a practical matter one would use the explicit scheme with adaptive time-stepping.  However, for a stiff problem and an explicit scheme, a ``symptom'' still emerges, namely that the number of steps is insensitive to the accuracy goal (Exercise \ref{chap:ts}.\ref{exer:ts:stiffadaptive}).
 
-FIXME: figure
+Stiffness is supposed to be a property of the problem not the method.  However, there is no precise way to decide if a particular ODE system is stiff without introducing a parameter or other data; a problem may be stiff for one accuracy goal and not for others.  Indeed the word ``stiff'' is like ``sparse'' in the sense one must append ``\dots enough so that [something specific]'' if one needs to be quantitative.
 
-An ODE numerial method is \emph{absolutely stable} if FIXME
+In any case, comparisons of explicit and implicit methods on many stiff examples clearly shows that something other than local truncation error is important in determining the way the numerical error builds-up after many time steps.  So finally we should define our terms.
+
+
+\section{Absolute stability}
+
+Given $\lambda \in \CC$, let
+\begin{equation}
+y' = \lambda y, \qquad y(0)=1, \label{eq:ts:absstabtestproblem}
+\end{equation}
+a scalar ODE IVP, be the \emph{test equation}.\sidenote{More precisely, a \emph{parameterized family} of test \emph{problems}.}  We know that the solution is $y(t) = e^{\lambda t}$.
+
+An ODE numerical method with step size $h$ is \emph{absolutely stable} for a given value of $\lambda$ if it generates iterates $\{Y_\ell\}$ for test equation \eqref{eq:ts:absstabtestproblem} with the property
+\begin{equation}
+|Y_\ell| \le |Y_{\ell-1}|. \label{eq:ts:absstab}
+\end{equation}
+However, the definition is not usually treated as dependent on two parameters because, for any of the one-step methods, application of the method to the test equation gives
+    $$Y_\ell = f(h\lambda) Y_{\ell-1}$$
+for some function $f(z)$.  Therefore we say that a numerical method is \emph{absolutely stable for a given} $z\in\CC$ if \eqref{eq:ts:absstab} applies when the scheme is applied to the test equation \eqref{eq:ts:absstabtestproblem} in a case where $h\lambda=z$.
+
+A brief analysis is appropriate.  Applying the methods so far to the test equation gives these formulas in the form $Y_\ell = f(z) Y_{\ell-1}$ (Exercise \ref{chap:ts}.\ref{exer:ts:absstabcases}):
+\begin{align}
+\text{Euler}              && Y_\ell &= \left(1+z\right) Y_{\ell-1}, \label{eq:ts:absstabcases} \\
+\text{\RKtwoa}            && Y_\ell &= \left(1+z + \frac{1}{2} z^2\right) Y_{\ell-1}, \notag \\
+\text{trapezoid}          && Y_\ell &= \left(\frac{1+\frac{1}{2} z}{1-\frac{1}{2}z}\right) Y_{\ell-1}, \notag \\
+\text{backward Euler}     && Y_\ell &= \left(\frac{1}{1-z}\right) Y_{\ell-1}. \notag
+\end{align}
+To get absolute stability from these methods requires $|f(z)|\le 1$.  The corresponding \emph{regions of absolute stability} of the several methods are shown in Figure \ref{fig:ts:absstabregions}; the above methods are listed by increasing size of their region.
+
+\begin{figure}
+\includegraphics[width=0.8\textwidth]{figs/absstabregions}
+\caption{Regions (shades of grey) of absolute stability $|f(z)|\le 1$ for the four methods in \eqref{eq:ts:absstabcases}, from Euler (darkest) to backward Euler (lightest).}
+\label{fig:ts:absstabregions}
+\end{figure}
+
+What does it look like when absolute stability fails to hold?  Consider the test problem with $\lambda=-1$.  With $h=0.5$ and $h=2.2$, the (explicit) Euler method gives results shown in Figure \ref{fig:ts:absstabfail}.  The exact solution is a decaying exponential, and a sufficiently-small stepsize ($h=0.5$) gives a qualitatively-correct result.  For a larger stepsize ($h=2.2$) both the Euler and the \RKtwoa rules generate a sequence of $\{Y_\ell\}$ which grows in magnitude; this is qualitatively wrong.  The fact that $z=h\lambda$ satisfies $|1+z|<1$ in one case and $|1+z|>1$ in the other illustrates the above analysis of the Euler method.
+
+\begin{figure}
+\includegraphics[width=1.0\textwidth]{figs/absstabfail}
+\caption{Large time steps cause a failure of absolute stability, and qualitatively-unreasonable results, for explicit methods like Euler and \RKtwoa.}
+\label{fig:ts:absstabfail}
+\end{figure}
+
 
 FIXME: mention A-stable
 
@@ -532,6 +571,8 @@ for POW in 2 3 4 5 6 7 8 9 10; do
 done
 \end{code}
 Conclude that for the Example problem on page \pageref{ex:ts:odestiff}, about 400 steps are necessary to get any accuracy at all (i.e.~at least one digit) using method RK3bs.
+
+\item \label{exer:ts:absstabcases}  Confirm formulas \eqref{eq:ts:absstabcases}.  Sketch the regions of absolute stability shown in Figure \ref{fig:ts:absstabregions} and locate the $z$-values corresponding to the runs shown in Figure \ref{fig:ts:absstabfail}.
 
 \item FIXME version of \texttt{ode.c} which solves DAE system
     $$\bbf(t,\by,\by') = \bg(t,\by)$$

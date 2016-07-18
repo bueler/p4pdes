@@ -1,6 +1,6 @@
 # list the targets for which we run a script to generate
 # (note there are both .png and .pdf figs which are not re-generated)
-pdfroots := poisson-conv poisson-cg-scale richpolyplot expcirclebasic newtonconvbasic newtonconvdelayed reaction-conv minsurf plap-conv plap-perrs plap-piters plap-conditionnumber ode unfem-fdmf unfem-error unfem-times
+pdfroots := poisson-conv poisson-cg-scale richpolyplot expcirclebasic newtonconvbasic newtonconvdelayed reaction-conv minsurf ode absstabfail absstabregions plap-conv plap-perrs plap-piters plap-conditionnumber unfem-fdmf unfem-error unfem-times
 pdfgens := $(addsuffix .pdf, $(pdfroots))
 
 all: $(pdfgens)
@@ -27,14 +27,17 @@ minsurf.pdf: minsurf.tex
 	pdflatex minsurf
 	pdfcrop minsurf.pdf minsurf.pdf
 
+ode.pdf: ode-plot.py
+	python ode-plot.py
+
+absstabfail.pdf absstabregions.pdf: absstab.py
+	python absstab.py
+
 plap-conv.pdf plap-perrs.pdf plap-piters.pdf: plap-conv.py
 	python plap-conv.py
 
 plap-conditionnumber.pdf: plap-conditionnumber.py
 	python plap-conditionnumber.py
-
-ode.pdf: ode-plot.py
-	python ode-plot.py
 
 unfem-fdmf.pdf unfem-error.pdf unfem-times.pdf: unfem-graphs.py
 	python unfem-graphs.py
