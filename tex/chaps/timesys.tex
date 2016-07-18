@@ -364,7 +364,7 @@ The exact solution at a particular time, say $t_f=10$ for concreteness, can be f
 
 The eigenvalue $\lambda_{\min}=-101$ (Exercise \ref{chap:ts}.\ref{exer:ts:stiffexample}) of $B$, which is also an entry of $B$ in this case, corresponds to a very short timescale and rapid decay rate.  Precisely following this fast time scale, especially in a relative-magnitude sense, is not needed to produce accurate values for the first two components of $\by(t_f)$, in particular.
 
-Considering the two $O(\Delta t^2$) methods introduced already, the explicit and implicit trapezoid rules, we write a modification of \texttt{ode.c} called \texttt{stiff.c} (Exercise \ref{chap:ts}.\ref{exer:ts:stiffcode}) to compare these methods on this problem.  Starting with the explicit method, we take 200 steps from $t_0=0$ to $t_f=10$:
+Considering the two $O(\Delta t^2$) methods introduced already, the explicit and implicit trapezoid rules, we write a modification of \texttt{ode.c} called \texttt{stiff.c} (Exercise \ref{chap:ts}.\ref{exer:ts:stiffcode}) to compare these methods on this problem.  Starting with the explicit \RKtwoa method, we take 200 steps from $t_0=0$ to $t_f=10$:
 \begin{cline}
 $ ./stiff -ts_type rk -ts_rk_type 2a -ts_adapt_type none -ts_dt 0.05
 Vec Object: 1 MPI processes
@@ -386,7 +386,7 @@ Vec Object: 1 MPI processes
 total steps = 1000
 \end{cline}
 %$
-By contrast, for 200 steps of the implicit method we get two-digit accuracy:
+By contrast, for 200 steps of the implicit trapezoid (Crank-Nicolson) method we get two-digit accuracy:
 \begin{cline}
 $ ./stiff -ts_type cn -ts_adapt_type none -ts_dt 0.05
 Vec Object: 1 MPI processes
@@ -423,7 +423,7 @@ An ODE numerical method with step size $h$ is \emph{absolutely stable} for a giv
 \end{equation}
 However, the definition is not usually treated as dependent on two parameters because, for any of the one-step methods, application of the method to the test equation gives
     $$Y_\ell = f(h\lambda) Y_{\ell-1}$$
-for some function $f(z)$.  Therefore we say that a numerical method is \emph{absolutely stable for a given} $z\in\CC$ if \eqref{eq:ts:absstab} applies when the scheme is applied to the test equation \eqref{eq:ts:absstabtestproblem} in a case where $h\lambda=z$.
+for some function $f(z)$.  Therefore we say that a numerical method is \emph{absolutely stable for a given} $z\in\CC$ if \eqref{eq:ts:absstab} applies when the scheme is applied to the test equation \eqref{eq:ts:absstabtestproblem} in a case where $h\lambda=z$ \citep{AscherPetzold1998}.
 
 A brief analysis is appropriate.  Applying the methods so far to the test equation gives these formulas in the form $Y_\ell = f(z) Y_{\ell-1}$ (Exercise \ref{chap:ts}.\ref{exer:ts:absstabcases}):
 \begin{align}
@@ -432,11 +432,11 @@ A brief analysis is appropriate.  Applying the methods so far to the test equati
 \text{trapezoid}          && Y_\ell &= \left(\frac{1+\frac{1}{2} z}{1-\frac{1}{2}z}\right) Y_{\ell-1}, \notag \\
 \text{backward Euler}     && Y_\ell &= \left(\frac{1}{1-z}\right) Y_{\ell-1}. \notag
 \end{align}
-To get absolute stability from these methods requires $|f(z)|\le 1$.  The corresponding \emph{regions of absolute stability} of the several methods are shown in Figure \ref{fig:ts:absstabregions}; the above methods are listed by increasing size of their region.
+To get absolute stability from these methods requires $|f(z)|\le 1$.  The corresponding \emph{regions of absolute stability} of the several methods are shown in Figure \ref{fig:ts:absstabregions}; the above methods are listed in order of increasing region size.
 
 \begin{figure}
 \includegraphics[width=0.8\textwidth]{figs/absstabregions}
-\caption{Regions (shades of grey) of absolute stability $|f(z)|\le 1$ for the four methods in \eqref{eq:ts:absstabcases}, from Euler (darkest) to backward Euler (lightest).}
+\caption{Regions (shades of grey) of absolute stability $|f(z)|\le 1$ for the four methods in \eqref{eq:ts:absstabcases}, from Euler (darkest) to backward Euler (lightest).  Both implicit methods are absolutely stable on the left half-plane $\Im(z)\le 0$.}
 \label{fig:ts:absstabregions}
 \end{figure}
 
@@ -444,14 +444,21 @@ What does it look like when absolute stability fails to hold?  Consider the test
 
 \begin{figure}
 \includegraphics[width=1.0\textwidth]{figs/absstabfail}
-\caption{Large time steps cause a failure of absolute stability, and qualitatively-unreasonable results, for explicit methods like Euler and \RKtwoa.}
+\caption{Solutions to the test problem \eqref{eq:ts:absstabtestproblem} with $\lambda=-1$.  Large time steps $h$ cause a failure of absolute stability, and qualitatively-unreasonable results, for explicit methods like Euler and \RKtwoa.}
 \label{fig:ts:absstabfail}
 \end{figure}
 
+It is natural to distinguish between the large stability regions of implicit schemes and the smaller ones of explicit schemes.  A numerical scheme is \emph{A-stable} if it is absolutely-stable for all $z$ in the left half-plane, that is, for all $z$ such that $\Im(z)\le 0$ \citep{AscherPetzold1998}.  The implicit schemes above are A-stable.\sidenote{This is not true of \emph{all} implicit Runge-Kutta methods, however.}
 
-FIXME: mention A-stable
+No explicit Runge-Kutta methods are A-stable.  In fact, when such a scheme is applied to the test equation we can write it as $Y_\ell = p(z) Y_{\ell-1}$ for a \emph{polynomial} function $p(z)$.  Because $|p(z)|\to\infty$ as $|z|\to \infty$ for any non-constant polynomial, the absolute-stability region $|p(z)|\le 1$ is bounded.
 
-FIXME: mention stiff decay; distinguishes backward Euler and trapezoid/CN
+Finally, one can distinguish between the two implicit methods above by a concept which generalizes absolute stability.  A scheme has \emph{stiff decay} if 
+
+FIXME
+
+when it is applied to the modified test problem
+
+FIXME
 
 
 

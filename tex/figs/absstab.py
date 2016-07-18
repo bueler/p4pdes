@@ -42,9 +42,9 @@ lam = -1.0
 t = np.linspace(0.0,tf,101.0)
 plt.plot(t,np.exp(lam*t),'k',label='exact')
 plt.hold(True)
-hctfwl = [(0.5,'k--',1.0,feuler,'$h=0.5$ Euler'),
-          (2.2,'k--',2.0,feuler,'$h=2.2$ Euler'),
-          (2.2,'k:', 3.0,frk2a, '$h=2.2$ RK2a')] 
+hctfwl = [(0.5,'ko--',1.0,feuler,'$h=0.5$ Euler'),
+          (2.2,'ko--',2.5,feuler,'$h=2.2$ Euler'),
+          (2.2,'ko:', 4.0,frk2a, '$h=2.2$ RK2a')]
 for h,ltype,lwidth,f,label in hctfwl:
     N = int(tf / h) + 1
     z = h * lam
