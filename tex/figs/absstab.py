@@ -25,7 +25,7 @@ fc = [(fbeuler,'0.8'),
       (feuler,'0.2')]
 fig = plt.figure(figsize=(7,6))
 for F,c in fc:
-    plt.contour(x,y,abs(F(zz)),[1,1],colors='k',linewidths=2.0)
+    plt.contour(x,y,abs(F(zz)),[1],colors='k',linewidths=2.0)
     plt.hold(True)
     if len(c) > 0:
         plt.contourf(x,y,abs(F(zz)),levels=[0.0,1.0],colors=c,extend='min')
