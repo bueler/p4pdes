@@ -46,6 +46,7 @@ PetscErrorCode FormRHSJacobian(TS ts, double t, Vec y, Mat J, Mat P,
 int main(int argc,char **argv) {
   PetscErrorCode ierr;
   const int N = 2;
+  int       steps;
   double    t0 = 0.0, tf = 20.0, dt = 0.1, err;
   Vec       y, yexact;
   Mat       J;
@@ -58,20 +59,20 @@ int main(int argc,char **argv) {
   ierr = VecSetFromOptions(y); CHKERRQ(ierr);
   ierr = VecDuplicate(y,&yexact); CHKERRQ(ierr);
 
+  ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
+  ierr = TSSetProblemType(ts,TS_NONLINEAR); CHKERRQ(ierr);
+  ierr = TSSetRHSFunction(ts,NULL,FormRHSFunction,NULL); CHKERRQ(ierr);
+
 //MATJ
   ierr = MatCreate(PETSC_COMM_WORLD,&J); CHKERRQ(ierr);
   ierr = MatSetSizes(J,PETSC_DECIDE,PETSC_DECIDE,N,N); CHKERRQ(ierr);
   ierr = MatSetFromOptions(J); CHKERRQ(ierr);
   ierr = MatSetUp(J); CHKERRQ(ierr);
+  ierr = TSSetRHSJacobian(ts,J,J,FormRHSJacobian,NULL); CHKERRQ(ierr);
+  ierr = TSSetType(ts,TSCN); CHKERRQ(ierr);
 //ENDMATJ
 
-  ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
-  ierr = TSSetProblemType(ts,TS_NONLINEAR); CHKERRQ(ierr);
-  ierr = TSSetRHSFunction(ts,NULL,FormRHSFunction,NULL); CHKERRQ(ierr);
-  ierr = TSSetRHSJacobian(ts,J,J,FormRHSJacobian,NULL); CHKERRQ(ierr);
-
-  // set defaults
-  ierr = TSSetType(ts,TSCN); CHKERRQ(ierr);
+  // set time axis
   ierr = TSSetInitialTimeStep(ts,t0,dt); CHKERRQ(ierr);
   ierr = TSSetDuration(ts,100*(int)((tf-t0)/dt),tf-t0); CHKERRQ(ierr);
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
@@ -82,15 +83,18 @@ int main(int argc,char **argv) {
   ierr = SetFromExact(t0,y); CHKERRQ(ierr);
   ierr = TSSolve(ts,y); CHKERRQ(ierr);
 
-  // compute error
+  // compute error and report
+  ierr = TSGetTotalSteps(ts,&steps); CHKERRQ(ierr);
   ierr = TSGetTime(ts,&tf); CHKERRQ(ierr);
   ierr = SetFromExact(tf,yexact); CHKERRQ(ierr);
   ierr = VecAXPY(y,-1.0,yexact); CHKERRQ(ierr);    // y <- y - yexact
   ierr = VecNorm(y,NORM_INFINITY,&err); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
-              "error at tf = %.3f :  |y-y_exact|_inf = %g\n",tf,err); CHKERRQ(ierr);
+              "error at tf = %.3f with %d steps:  |y-y_exact|_inf = %g\n",
+              tf,steps,err); CHKERRQ(ierr);
 
-  VecDestroy(&y);  VecDestroy(&yexact);  TSDestroy(&ts);  MatDestroy(&J);
+  MatDestroy(&J);
+  VecDestroy(&y);  VecDestroy(&yexact);  TSDestroy(&ts);
   PetscFinalize();
   return 0;
 }

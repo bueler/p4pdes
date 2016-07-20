@@ -1,1 +1,1 @@
-error at tf = 1.000 :  |y-y_exact|_inf = 0.000699989
+error at tf = 1.000 with 10 steps:  |y-y_exact|_inf = 0.000699989
