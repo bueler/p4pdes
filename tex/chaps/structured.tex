@@ -1,5 +1,5 @@
 
-We start with the Poisson problem on a square---a clich\'e, of course.  It is a straightforward PDE problem on which to learn key parts of \PETSc.  Discretizing the PDE generates a linear system which is more interesting than the tridiagonal system we solved in Chapter \ref{chap:ls}.   We will build a structured grid using a \pDMDA, then assemble a \pMat in parallel based on this grid, and then solve the linear system in parallel using a \pKSP object.
+We start with the Poisson problem on a square---a clich\'e, of course.  It is a straightforward PDE problem on which to learn key parts of \PETSc.  Discretizing the PDE generates a linear system which is more interesting than the tridiagonal system we solved in Chapter \ref{chap:ls}.   We will build a structured grid using a ``\pDMDA'' object, introduced in this Chapter, and then assemble a \pMat in parallel based on this grid, and then solve the linear system in parallel using a \pKSP object.
 
 \section{Poisson problem on a square domain}
 
@@ -43,9 +43,11 @@ Because \eqref{poissonsquare} and \eqref{poissonsquarebcs} form a linear problem
 
 Our FD method is based on a grid of $m_x m_y$ points on the unit square, as in Figure \ref{fig:unitsquaregrid}, with spacing $h_x=1/(m_x-1)$ and $h_y=1/(m_y-1)$ in the two directions.  The grid coordinates are $x_i = i\, h_x$ for $i = 0,1,\dots,m_x-1$ and $y_j = j\, h_y$ for $j=0,1,\dots,m_y-1$.
 
-The construction of such a 2D grid, and distributing it across MPI processes, uses a new \PETSc object.  Consider the lines of code in Code \ref{code:dmdacreatetwod}, an extract from \texttt{poisson.c} shown later (Codes \ref{code:poissoncreate} and \ref{code:poissonsolve}).  They create an instance of the \PETSc \pDM type for describing the topology (connectedness) of the grid, the way it is distributed across \MPI processes, and the way each process can access data from its neighboring processes.  This specific case here is a ``\pDMDA'', a structured-grid subclass of \pDMs.  Historically-speaking, ``\pDM'' might stand for ``distributed mesh'' and ``\texttt{DA}'' for ``distributed array,'' but in practice ``\pDMDA'' means ``structured grid'' from now on.
+The construction of such a 2D grid, and distributing it across MPI processes, uses a new \PETSc object.  Consider the lines of code in Code \ref{code:dmdacreatetwod}, an extract from \texttt{poisson.c} shown later (Codes \ref{code:poissoncreate} and \ref{code:poissonsolve}).  They create an instance of the \PETSc \pDM type for describing the topology (connectedness) of the grid, the way it is distributed across \MPI processes, and the way each process can access data from its neighboring processes.  This specific case here is a ``\pDMDA'', a structured-grid subclass of \pDMs.
 
 \cinputraw{misc/dmdacreate2d.frag}{extract from ch3/poisson.c}{Creating a 2D \pDMDA.}{}{//START}{//STOP}{code:dmdacreatetwod}
+
+The name ``\pDM'' might stand for ``distributed mesh'' or ``domain management'', though \PETSc expresses no opinion \citep{petsc-user-ref}.  However, ``\texttt{DA}'' stands for ``distributed array,'' and ``\pDMDA'' certainly means ``structured grid'' in practice.
 
 \begin{marginfigure}
 \input{tikz/unitsquaregridparallel.tex}
