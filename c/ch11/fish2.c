@@ -11,17 +11,22 @@ $ timer mpiexec -n 4 ./fish2 -da_refine 9 -ksp_type cg -pc_type mg -ksp_converge
 on 4097 x 4097 grid:  error |u-uexact|_inf = 3.00114e-09
 real 21.56
 
-FIXME: why does it seg fault with -snes_fd_color, e.g.
+FIXME: why does it seg fault in parallel with -snes_fd_color, e.g.
   mpiexec -n 2 ./fish2 -da_refine 1 -ksp_type cg -pc_type mg -ksp_converged_reason -ksp_rtol 1.0e-12 -snes_fd_color
 
 compare whether rediscretization happens at each level (former) or Galerkin grid-
-transfer operators are used; needs print statements to tell about residual &
+transfer operators are used (latter); needs print statements to tell about residual &
 Jacobian evals:
 $ ./fish2 -da_refine 2 -ksp_type cg -pc_type mg -snes_monitor
 $ ./fish2 -da_refine 2 -ksp_type cg -pc_type mg -snes_monitor -pc_mg_galerkin
 
 choose which linear solver is used on coarse grid (default is preonly+lu):
 $ ./fish2 -da_refine 3 -ksp_type cg -pc_type mg -mg_coarse_ksp_type cg -mg_coarse_pc_type jacobi -ksp_view|less
+
+speed determined by how many mg levels; MGLEV=3 seems to be optimal here at
+RLEV=5, but at higher refinement (e.g. RLEV=7), MGLEV=RLEV seems optimal;
+has to do with time of coarse solve?
+$ timer ./fish2 -da_refine 5 -ksp_type cg -pc_type mg -pc_mg_levels MGLEV
 */
 
 #include <petsc.h>
