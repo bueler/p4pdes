@@ -186,14 +186,16 @@ Next we set the particular \pTS solver to Runge-Kutta:
 \begin{code}
   TSSetType(ts,TSRK);
 \end{code}
-(This is only a default choice as it can be overridden by run-time option \texttt{-ts\_type}.)  Then some additional commands configure the time-axis of the \pTS:
+This is only a default choice as it can be overridden by run-time option \texttt{-ts\_type}.
+
+Then some additional commands configure the time-axis of the \pTS, but again these choices can be overridden by command-line options:
 \begin{code}
   TSSetInitialTimeStep(ts,t0,dt);
   TSSetDuration(ts,100*(int)((tf-t0)/dt),tf-t0);
   TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP);
   TSSetFromOptions(ts);
 \end{code}
-(These choices can also be overridden by command-line options.)  Note that \texttt{TSSetInitialTimeStep()} sets both the initial time \texttt{t0} and the step \texttt{dt}.  If the numerical ODE method chosen at run-time is adaptive then \texttt{dt} is \emph{only} the initial time step because the method generally modifies the step after the first one.  \texttt{TSSetDuration()} sets both the duration (\texttt{tf-t0}) and the maximum number of steps that the solver is allowed to take; we set the latter to 100 times the intended number of steps of length \texttt{dt}.
+Note that \texttt{TSSetInitialTimeStep()} sets both the initial time \texttt{t0} and the step \texttt{dt}.  If the numerical ODE method chosen at run-time is adaptive then \texttt{dt} is \emph{only} the initial time step because the method generally modifies the step after the first one.  \texttt{TSSetDuration()} sets both the duration (\texttt{tf-t0}) and the maximum number of steps that the solver is allowed to take; we set the latter to 100 times the intended number of steps of length \texttt{dt}.
 
 The values for the initial time, duration, and initial time step can all have changed after the \texttt{TSSetFromOptions()} call because of run-time options.  Thus, before we ask for the \pTS to solve the problem by time stepping, we get the current time (\texttt{TSGetTime()}) and we set the initial values from that.  The function that evaluates the exact solution, including the initial values, is shown in Code \ref{code:ts:ode:callbacks}.  After a call to \texttt{TSSolve()} comes a bit more standard code which computes the norm of the numerical error and then destroys the objects we created.
 
@@ -214,7 +216,7 @@ $ ./ode -ts_monitor
 86 TS dt 0.206773 time 19.6777
 87 TS dt 0.11548 time 19.8845
 88 TS dt 0.205616 time 20.
-error at tf = 20.000 :  |y-y_exact|_inf = 0.00930352
+error at tf = 20.000 with 88 steps:  |y-y_exact|_inf = 0.00930352
 \end{cline}
 %$
 It is clear that the time-stepping method is adaptive and, given the small numerical error, that it has essentially succeeded.  Comparing Figure \ref{fig:ts:ode}, an error of magnitude $9\times 10^{-3}$ at time $t=20$ is indeed small.
@@ -235,7 +237,6 @@ TS Object: 1 MPI processes
   FSAL: yes
   TSAdapt Object:   1 MPI processes
 ...
-error at tf = 1.000 :  |y-y_exact|_inf = 0.000144484
 \end{cline}
 %$
 As asserted earlier, the default for type \texttt{TSRK} is \RKthreebs.  Interestingly, the adaptive method tried and then rejected $12$ steps in addition to the $88$ which were accepted.
@@ -313,11 +314,13 @@ With the exception of the backward Euler method \eqref{eq:ts:backwardeuler}, the
 \end{equation}
 In terms of their tableau, explicit Runge-Kutta schemes only have non-zero coefficients $a_{ij}$ below the diagonal (Table \ref{tab:ts:exampletableau}).
 
-\emph{Implicit} methods, by contrast, require solving equations.  For instance, the backward Euler method \eqref{eq:ts:backwardeuler} can be written as the (generally) nonlinear system
-    $$\bF(\bY_\ell)=0$$
-for the $N$ real variables, the components of $\bY_\ell$, where
-    $$\bF(\bX) = \bX - \bY_{\ell-1} - h \bg(t_\ell,\bX).$$
-We will solve such systems by Newton's method, for which we will need to differentiate $\bg$ either exactly or by finite-differences.  In contrast with an explicit scheme, we will also need to evaluate $\bg$ an unknown number of times during the iterative solution process.
+\emph{Implicit} methods, by contrast, require solving equations.  At each time step the implicit scheme can be written as the (generally) nonlinear system
+\begin{equation}
+    \bF(\bY_\ell)=0.  \label{eq:ts:implicitgenericsystem}
+\end{equation}
+for the $N$ real variables, the components of $\bY_\ell$.  For example, the backward Euler method \eqref{eq:ts:backwardeuler} corresponds to the function $\bF(\bX) = \bX - \bY_{\ell-1} - h \bg(t_\ell,\bX)$.
+
+We will solve system \eqref{eq:ts:implicitgenericsystem} by Newton's method, for which we will need to differentiate $\bg$ either exactly or by finite-differences.  In contrast with an explicit scheme, we will also need to evaluate $\bg$ an unknown number of times during the iterative solution process.
 
 A family of implicit methods are the \emph{theta ($\theta$) methods}, $0<\theta\le 1$,
 \begin{equation}
@@ -460,9 +463,9 @@ The exact solution of this problem is asymptotic to $\gamma(t)$ as $\Re(\lambda)
 \begin{equation}
 |Y_\ell - \gamma(t)| \to 0 \qquad \text{as} \qquad h \Re(\lambda) = \Re z \to -\infty. \label{eq:ts:stiffdecaydefn}
 \end{equation}
-In short, a scheme has stiff decay if it can ``follow'' any nonhomogeneity $\gamma(t)$, that is, in the limit of sufficiently-negative eigenvalues (i.e.~$\Re \lambda < 0$) in the ODE.
+In short, a scheme has stiff decay if it can ``follow'' any nonhomogeneity $\gamma(t)$, that is, in the limit of sufficiently-negative eigenvalues (i.e.~$\Re \lambda < 0$) in the ODE.  The backward Euler has stiff decay, but the trapezoid rule does not \citep{AscherPetzold1998}.
 
-The backward Euler has stiff decay, but the trapezoid rule does not \citep{AscherPetzold1998}.  For this reason the backward Euler scheme is often a ``stable method of last resort'' in solving PDE (or PDE-like) problems with diffusive or heat-like character and ``rough'' data in the problem.  The diffusivity implies that the high spatial frequencies are strongly damped, i.e.~$\Re(\lambda)\ll 0$.  See Chapter \ref{chap:co} for an example.
+A lower-order but stiff-decay scheme like backward Euler scheme may be chosen as a ``stable method of last resort'' in solving PDE (or PDE-like) problems which combine diffusive (heat-equation-like) character and ``rough'' data in the problem.  Diffusiveness implies that the high spatial frequencies are strongly damped, i.e.~$\Re(\lambda)\ll 0$, while the roughness of the data corresponds to the need to ``follow'' a not-necessarily-smooth parameter analogous to $\gamma(t)$ in \eqref{eq:ts:stiffdecaydefn}.  See Chapter \ref{chap:co} for an example.
 
 
 
