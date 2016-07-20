@@ -465,15 +465,44 @@ The exact solution of this problem is asymptotic to $\gamma(t)$ as $\Re(\lambda)
 \end{equation}
 In short, a scheme has stiff decay if it can ``follow'' any nonhomogeneity $\gamma(t)$, that is, in the limit of sufficiently-negative eigenvalues (i.e.~$\Re \lambda < 0$) in the ODE.  The backward Euler has stiff decay, but the trapezoid rule does not \citep{AscherPetzold1998}.
 
-A lower-order but stiff-decay scheme like backward Euler scheme may be chosen as a ``stable method of last resort'' in solving PDE (or PDE-like) problems which combine diffusive (heat-equation-like) character and ``rough'' data in the problem.  Diffusiveness implies that the high spatial frequencies are strongly damped, i.e.~$\Re(\lambda)\ll 0$, while the roughness of the data corresponds to the need to ``follow'' a not-necessarily-smooth parameter analogous to $\gamma(t)$ in \eqref{eq:ts:stiffdecaydefn}.  See Chapter \ref{chap:co} for an example.
+A lower-order but stiff-decay scheme like backward Euler scheme may be chosen as a ``stable method of last resort'' in solving PDE (or PDE-like) problems which combine diffusive (heat-equation-like) character and ``rough'' data in the problem.  Diffusiveness implies that the high spatial frequencies are strongly damped, i.e.~corresponding to $\Re(\lambda)\ll 0$ above, while the roughness of the data corresponds to the need to ``follow'' a not-necessarily-smooth parameter like $\gamma(t)$ in \eqref{eq:ts:stiffdecaydefn}.  See Chapter \ref{chap:co} for an example.
 
 
 
-\section{Jacobians for stiff systems}
+\section{Jacobians for implicit methods}
 
-FIXME: demonstrate transformation of an implicit time step into form $\bF(\bx)=0$
+As already stated, implicit methods require solving nonlinear equations \eqref{eq:ts:implicitgenericsystem} at each time step, namely
+\begin{equation}
+  \bF(\bY_\ell) = 0. \label{eq:ts:implicitgenericsystemAGAIN}
+\end{equation}
+A proposal to use Newton's method to solve \eqref{eq:ts:implicitgenericsystemAGAIN} should not surprise the reader; see the previous Chapter.  An initial iterate is even obvious: $\bY_\ell^0 = \bY_{\ell-1}$, the last value of the solution.  Newton's method requires the Jacobian derivative of $\bF$, however.
 
-FIXME \pTS contains \pSNES inside (and thus the rest)
+For a representative example, the $\theta$ method \eqref{eq:ts:theta} corresponds to the residual function
+\begin{equation}
+  \bF(\bX) = \bX - \bY_{\ell-1} - (1-\theta) h \bg(t_{\ell-1},\bY_{\ell-1}) - \theta h \bg(t_\ell,\bX)  \label{eq:ts:thetasystem}
+\end{equation}
+wherein $\bY_{\ell-1}$ is known from the previous time step.  The Jacobian of \eqref{eq:ts:thetasystem} is
+   $$J(\bX) = \frac{\partial \bF}{\partial \bX} = I - \theta h \frac{\partial \bg}{\partial \by}(t_\ell,\bX).$$
+
+There is no need, however, to write user code specific to the $\theta$ method or any other ODE method.  First, the \pTS contains a \pSNES inside, though we typically do not call it directly as it is used internally for implicit time-stepping.  Second, each \PETSc-implemented implicit time-stepping method in \pTS can convert user-supplied code for the Jacobian derivative of the right-hand side of \eqref{eq:ts:ode}, that is, code to compute
+\begin{equation}
+\frac{\partial \bg}{\partial \by} = \begin{bmatrix}\phantom{\bigg|} \frac{\partial g_i}{\partial y_j}(t,\by) \phantom{\bigg|}\end{bmatrix}, \label{eq:ts:rhsjacobian}
+\end{equation}
+into the necessary Jacobian of $\bF$ for Newton's method on \eqref{eq:ts:implicitgenericsystemAGAIN}.
+
+An example program \texttt{odejac.c} is shown in Codes \ref{code:ts:odejac:jacobian} and  \ref{code:ts:odejac:mat}.  More precisely, only the needed additions to \texttt{ode.c} are shown.
+
+\cinputpart{odejac.c}{\CODELOC}{To do implicit time-stepping we add a C function \texttt{FormRHSJacobian()}, which computes the derivatives of the right-hand side of \eqref{eq:ts:ode}, namely $\partial \bg/\partial \by$, for the example ODE system \eqref{eq:ts:example}.}{I}{//JACOBIAN}{//ENDJACOBIAN}{code:ts:odejac:jacobian}
+
+The new program calls \texttt{TSSetRHSJacobian()} to set a Jacobian call-back to our C function \texttt{FormRHSJacobian()}.  Our code merely sets the entries of the \pMat holding the derivative \eqref{eq:ts:rhsjacobian} of the right-hand side in Example ODE \eqref{eq:ts:example}.  An allocated \pMat, here called \texttt{J} for simplicity, is also supplied to \texttt{TSSetRHSJacobian()}, and we assign \texttt{J} to both the Jacobian and preconditioner-material arguments of \texttt{TSSetRHSJacobian()}; compare usage of \texttt{SNESSetJacobian()} and \texttt{DMDASNESSetJacobianLocal()} in programs in Chapter \ref{chap:nl}.
+
+\cinputpart{odejac.c}{\CODELOC}{We also create a \pMat to hold $\partial \bg/\partial \by$, call \texttt{TSSetRHSJacobian()}, and reset the \pTS type to the implicit Crank-Nicolson ($\theta=1/2$) method.}{II}{//MATJ}{//ENDMATJ}{code:ts:odejac:mat}
+
+The reader might note that \texttt{odejac.c} is quite similar in structure to \texttt{ecjac.c} in Chapter \ref{chap:nl}, but with calls to \pSNES replaced by corresponding calls to \pTS.
+
+FIXME we assume the ``hard'' time dependent case of stiff + nonlinear
+
+FIXME: table shows RK subtypes, and columns for order and adaptive; no ``common options''
 
 \begin{table}
 \small
@@ -482,28 +511,15 @@ FIXME \pTS contains \pSNES inside (and thus the rest)
 forward Euler \eqref{eq:ts:forwardeuler}    & \texttt{euler}  & no & \\
 Runge-Kutta  FIXME                          & \texttt{rk}     & yes & \texttt{-ts\_rk\_type} FIXME \\ \hline
 backward Euler \eqref{eq:ts:backwardeuler}  & \texttt{beuler} & no & \\
-$\theta>0$   FIXME                          & \texttt{theta}  & no & FIXME \\
-Crank-Nicolson                              & \texttt{cn}     & no & 
+$\theta>0$   FIXME                          & \texttt{theta}  & optional & FIXME \\
+Crank-Nicolson                              & \texttt{cn}     & optional & 
 \end{tabular}
-\caption{Choices of the best-known ODE integration methods.  Explicit schemes are above the line and implicit below.} \label{tab:ts:odebasictypes}
+\caption{Choosing some of the best-known ODE integration methods.  Explicit schemes are above the line and implicit below.} \label{tab:ts:odebasictypes}
 \end{table}
-
-FIXME We set a Jacobian call-back to our function \texttt{FormRHSJacobian()} which sets the entries of the \pMat \texttt{J} corresponding to
-    $$\frac{\partial \bg}{\partial \by}(t,\by) = \begin{bmatrix}\phantom{\bigg|} \frac{\partial g_i}{\partial y_j}(t,\by) \phantom{\bigg|}\end{bmatrix}.$$
-Because an allocated \pMat must be supplied to \texttt{TSSetRHSJacobian()}, the \pTS set-up lines are preceded, in Code \ref{code:ts:ode:main}, by a \texttt{Create/SetUp} sequence for \pMat \texttt{J}.  As usual when setting Jacobians, we assign \texttt{J} to both the Jacobian and preconditioner-material arguments of \texttt{TSSetRHSJacobian()}; compare usage of \texttt{SNESSetJacobian()} and \texttt{DMDASNESSetJacobianLocal()} in Chapters \ref{chap:nl} and \ref{chap:of}.
-
-\cinputpart{odejac.c}{\CODELOC}{FIXME}{I}{//JACOBIAN}{//ENDJACOBIAN}{code:ts:odejac:jacobian}
-
-\cinputpart{odejac.c}{\CODELOC}{FIXME}{II}{//MATJ}{//ENDMATJ}{code:ts:odejac:mat}
-
-FIXME \texttt{odejac.c} is similar to \texttt{ecjac.c}
-
-FIXME build all tools around the ``hard'' time dependent case of stiff + nonlinear, though not DAE
 
 FIXME control \texttt{euler,beuler,cn,theta} by setting steps
 
 FIXME use \texttt{-help} for additional:
-
 \begin{cline}
 $ ./ode -ts_monitor -ts_type theta -help |grep ts_theta
   -ts_theta_theta <0.5>: Location of stage (0<Theta<=1)
@@ -512,9 +528,30 @@ $ ./ode -ts_monitor -ts_type theta -help |grep ts_theta
   -ts_theta_adapt: <FALSE> Use time-step adaptivity with the Theta method
 \end{cline}
 %$
+In particular, the following are equivalent,
+\begin{cline}
+$ ./odejac -ts_type cn
+$ ./odejac -ts_type theta -ts_theta_theta 0.5 -ts_theta_endpoint
+\end{cline}
+and the following is the adaptive form of Crank-Nicolson,
+\begin{cline}
+$ ./odejac -ts_type cn -ts_theta_adapt
+\end{cline}
+%$
 
-%// ./ode -ts_monitor -ts_type beuler -ode_steps 1000    // finally close to default RK
-%// ./ode -log_view |grep Eval   // compare rk, beuler, cn
+If the reader has followed all of the above then it will also be clear that we could have used implicit time-stepping with the earlier, Jacobian-free program \texttt{ode.c}.  Though
+\begin{cline}
+$ ./ode -ts_type cn
+\end{cline}
+%$
+gives an error message---can the reader predict it?---the addition of a finite-difference option for the underlying \pSNES does the job.  That is,
+\begin{cline}
+$ ./ode -ts_type cn -snes_fd
+$ ./ode -ts_type cn -snes_mf
+$ ./odejac
+\end{cline}
+%$
+all give the same result.\sidenote{Very nearly; see Exercise \ref{chap:ts}.\ref{exer:ts:fdjacobian}.}
 
 
 \section{Time-dependent heat equation}
@@ -591,6 +628,15 @@ Conclude that for the Example problem on page \pageref{ex:ts:odestiff}, about 40
 \item \label{exer:ts:stiffdecayasymptotic}  Show that \eqref{eq:ts:stiffdecaytestproblem} has solution
     $$y(t) = e^{\lambda t} - \lambda \int_0^t e^{\lambda (t-s)} \gamma(s)\,ds.$$
 Then show that the family of functions $D_\lambda(x) = -\lambda e^{\lambda x}$ form a Dirac delta function \citep{Evans2010} in the sense that, for any continuous function $\varphi(x)$, $\int_{0}^\infty D_\lambda(x) \varphi(x)\,dx = \varphi(0)$ as $\Re\lambda \to -\infty$.  Conclude that the solution to \eqref{eq:ts:stiffdecaytestproblem} is asymptotic to $\gamma(t)$ as $\Re\lambda \to -\infty$.
+
+\item \label{exer:ts:fdjacobian}   Looking deeper at the three runs
+\begin{cline}
+$ ./ode -ts_type cn -snes_fd
+$ ./ode -ts_type cn -snes_mf
+$ ./odejac
+\end{cline}
+%$
+for instance by adding option \texttt{-snes\_monitor}, we see that the results differ in the size of residual norms and even in the number of Newton iterations.  Explain
 
 \item FIXME version of \texttt{ode.c} which solves DAE system
     $$\bbf(t,\by,\by') = \bg(t,\by)$$
