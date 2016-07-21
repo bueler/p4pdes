@@ -6,7 +6,7 @@ static char help[] =
 /* best solve I can get given the memory limitations of my machine:
 PETSC_ARCH=linux-c-opt
 
-$ timer mpiexec -n 4 ./fish2 -da_refine 9 -ksp_type cg -pc_type mg -ksp_converged_reason -ksp_rtol 1.0e-12
+$ timer mpiexec -n 4 ./fish2 -da_refine FIXME -ksp_type cg -pc_type mg -ksp_converged_reason -ksp_rtol 1.0e-12
   Linear solve converged due to CONVERGED_RTOL iterations 6
 on 4097 x 4097 grid:  error |u-uexact|_inf = 3.00114e-09
 real 21.56
@@ -17,16 +17,16 @@ FIXME: why does it seg fault in parallel with -snes_fd_color, e.g.
 compare whether rediscretization happens at each level (former) or Galerkin grid-
 transfer operators are used (latter); needs print statements to tell about residual &
 Jacobian evals:
-$ ./fish2 -da_refine 2 -ksp_type cg -pc_type mg -snes_monitor
-$ ./fish2 -da_refine 2 -ksp_type cg -pc_type mg -snes_monitor -pc_mg_galerkin
+$ ./fish2 -da_refine FIXME -ksp_type cg -pc_type mg -snes_monitor
+$ ./fish2 -da_refine FIXME -ksp_type cg -pc_type mg -snes_monitor -pc_mg_galerkin
 
 choose which linear solver is used on coarse grid (default is preonly+lu):
-$ ./fish2 -da_refine 3 -ksp_type cg -pc_type mg -mg_coarse_ksp_type cg -mg_coarse_pc_type jacobi -ksp_view|less
+$ ./fish2 -da_refine FIXME -ksp_type cg -pc_type mg -mg_coarse_ksp_type cg -mg_coarse_pc_type jacobi -ksp_view|less
 
 speed determined by how many mg levels; MGLEV=3 seems to be optimal here at
 RLEV=5, but at higher refinement (e.g. RLEV=7), MGLEV=RLEV seems optimal;
 has to do with time of coarse solve?
-$ timer ./fish2 -da_refine 5 -ksp_type cg -pc_type mg -pc_mg_levels MGLEV
+$ timer ./fish2 -da_refine FIXME -ksp_type cg -pc_type mg -pc_mg_levels MGLEV
 */
 
 #include <petsc.h>
@@ -158,7 +158,7 @@ int main(int argc,char **argv) {
 
   ierr = DMDACreate2d(COMM,
                DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
-               -9,-9,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&(user.da)); CHKERRQ(ierr);
+               -3,-3,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&(user.da)); CHKERRQ(ierr);
   ierr = DMSetApplicationContext(user.da,&user);CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);
 
