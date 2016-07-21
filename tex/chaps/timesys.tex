@@ -367,7 +367,7 @@ The exact solution at a particular time, say $t_f=10$ for concreteness, can be f
 
 The eigenvalue $\lambda_{\min}=-101$ (Exercise \ref{chap:ts}.\ref{exer:ts:stiffexample}) of $B$, which is also an entry of $B$ in this case, corresponds to a very short timescale and rapid decay rate.  Precisely following this fast time scale, especially in a relative-magnitude sense, is not needed to produce accurate values for the first two components of $\by(t_f)$, in particular.
 
-Considering the two $O(\Delta t^2$) methods introduced already, the explicit and implicit trapezoid rules, we write a modification of \texttt{ode.c} called \texttt{stiff.c} (Exercise \ref{chap:ts}.\ref{exer:ts:stiffcode}) to compare these methods on this problem.  Starting with the explicit \RKtwoa method, we take 200 steps from $t_0=0$ to $t_f=10$:
+Considering the two $O(\Delta t^2$) methods introduced already, the explicit (\RKtwoa) and implicit (Crank-Nicolson) trapezoid rules, we write a modification of \texttt{ode.c} called \texttt{stiff.c} (Exercise \ref{chap:ts}.\ref{exer:ts:stiffcode}) to compare these methods on this problem.  Starting with the explicit \RKtwoa method, we take 200 steps from $t_0=0$ to $t_f=10$:
 \begin{cline}
 $ ./stiff -ts_type rk -ts_rk_type 2a -ts_adapt_type none -ts_dt 0.05
 Vec Object: 1 MPI processes
@@ -389,7 +389,7 @@ Vec Object: 1 MPI processes
 total steps = 1000
 \end{cline}
 %$
-By contrast, for 200 steps of the implicit trapezoid (Crank-Nicolson) method we get two-digit accuracy:
+By contrast, for 200 steps of Crank-Nicolson we get two-digit accuracy:
 \begin{cline}
 $ ./stiff -ts_type cn -ts_adapt_type none -ts_dt 0.05
 Vec Object: 1 MPI processes
@@ -432,7 +432,7 @@ A brief analysis is appropriate.  Applying the methods so far to the test equati
 \begin{align}
 \text{Euler}              && Y_\ell &= \left(1+z\right) Y_{\ell-1}, \label{eq:ts:absstabcases} \\
 \text{\RKtwoa}            && Y_\ell &= \left(1+z + \frac{1}{2} z^2\right) Y_{\ell-1}, \notag \\
-\text{trapezoid}          && Y_\ell &= \left(\frac{1+\frac{1}{2} z}{1-\frac{1}{2}z}\right) Y_{\ell-1}, \notag \\
+\text{Crank-Nicolson}     && Y_\ell &= \left(\frac{1+\frac{1}{2} z}{1-\frac{1}{2}z}\right) Y_{\ell-1}, \notag \\
 \text{backward Euler}     && Y_\ell &= \left(\frac{1}{1-z}\right) Y_{\ell-1}. \notag
 \end{align}
 To get absolute stability from these methods requires $|f(z)|\le 1$.  The corresponding \emph{regions of absolute stability} of the several methods are shown in Figure \ref{fig:ts:absstabregions}; the above methods are listed in order of increasing region size.
@@ -473,73 +473,50 @@ A lower-order but stiff-decay scheme like backward Euler scheme may be chosen as
 
 As already stated, implicit methods require solving nonlinear equations \eqref{eq:ts:implicitgenericsystem} at each time step, namely
 \begin{equation}
-  \bF(\bY_\ell) = 0. \label{eq:ts:implicitgenericsystemAGAIN}
+  \bF(\bY_\ell) = 0, \label{eq:ts:implicitgenericsystemAGAIN}
 \end{equation}
-A proposal to use Newton's method to solve \eqref{eq:ts:implicitgenericsystemAGAIN} should not surprise the reader; see the previous Chapter.  An initial iterate is even obvious: $\bY_\ell^0 = \bY_{\ell-1}$, the last value of the solution.  Newton's method requires the Jacobian derivative of $\bF$, however.
+and a proposal to use Newton's method to solve \eqref{eq:ts:implicitgenericsystemAGAIN} should be surprise; see the previous Chapter.  It is even obvious that the last value of the solution can be used as an initial iterate: $\bY_\ell^0 = \bY_{\ell-1}$.  However, Newton's method requires the Jacobian derivative of $\bF$.
 
 For a representative example, the $\theta$ method \eqref{eq:ts:theta} corresponds to the residual function
 \begin{equation}
   \bF(\bX) = \bX - \bY_{\ell-1} - (1-\theta) h \bg(t_{\ell-1},\bY_{\ell-1}) - \theta h \bg(t_\ell,\bX)  \label{eq:ts:thetasystem}
 \end{equation}
-wherein $\bY_{\ell-1}$ is known from the previous time step.  The Jacobian of \eqref{eq:ts:thetasystem} is
+wherein $\bY_{\ell-1}$ is known from the previous time step.  The Jacobian is
    $$J(\bX) = \frac{\partial \bF}{\partial \bX} = I - \theta h \frac{\partial \bg}{\partial \by}(t_\ell,\bX).$$
 
-There is no need, however, to write user code specific to the $\theta$ method or any other ODE method.  First, the \pTS contains a \pSNES inside, though we typically do not call it directly as it is used internally for implicit time-stepping.  Second, each \PETSc-implemented implicit time-stepping method in \pTS can convert user-supplied code for the Jacobian derivative of the right-hand side of \eqref{eq:ts:ode}, that is, code to compute
+There is no need, however, to write Jacobian user code which is specific to the $\theta$ method (or any other ODE method).  First, the \pTS contains a \pSNES inside it.  Second, each \PETSc-implemented implicit time-stepping method in \pTS knows how to convert user-supplied code for the Jacobian derivative of the right-hand side of \eqref{eq:ts:ode}, that is, user-supplied code to compute
 \begin{equation}
 \frac{\partial \bg}{\partial \by} = \begin{bmatrix}\phantom{\bigg|} \frac{\partial g_i}{\partial y_j}(t,\by) \phantom{\bigg|}\end{bmatrix}, \label{eq:ts:rhsjacobian}
 \end{equation}
 into the necessary Jacobian of $\bF$ for Newton's method on \eqref{eq:ts:implicitgenericsystemAGAIN}.
 
-An example program \texttt{odejac.c} is shown in Codes \ref{code:ts:odejac:jacobian} and  \ref{code:ts:odejac:mat}.  More precisely, only the needed additions to \texttt{ode.c} are shown.
+An example \texttt{odejac.c} is shown in Codes \ref{code:ts:odejac:jacobian} and  \ref{code:ts:odejac:mat}; only the needed additions to \texttt{ode.c} are shown.  Note \texttt{odejac.c} is quite similar in structure to \texttt{ecjac.c} in Chapter \ref{chap:nl}, but with calls to \pSNES replaced by corresponding calls to \pTS.
 
-\cinputpart{odejac.c}{\CODELOC}{To do implicit time-stepping we add a C function \texttt{FormRHSJacobian()}, which computes the derivatives of the right-hand side of \eqref{eq:ts:ode}, namely $\partial \bg/\partial \by$, for the example ODE system \eqref{eq:ts:example}.}{I}{//JACOBIAN}{//ENDJACOBIAN}{code:ts:odejac:jacobian}
+\cinputpart{odejac.c}{\CODELOC}{To do implicit time-stepping we add a C function \texttt{FormRHSJacobian()}, which computes derivatives of the right-hand side of example ODE system \eqref{eq:ts:example}.}{I}{//JACOBIAN}{//ENDJACOBIAN}{code:ts:odejac:jacobian}
 
-The new program calls \texttt{TSSetRHSJacobian()} to set a Jacobian call-back to our C function \texttt{FormRHSJacobian()}.  Our code merely sets the entries of the \pMat holding the derivative \eqref{eq:ts:rhsjacobian} of the right-hand side in Example ODE \eqref{eq:ts:example}.  An allocated \pMat, here called \texttt{J} for simplicity, is also supplied to \texttt{TSSetRHSJacobian()}, and we assign \texttt{J} to both the Jacobian and preconditioner-material arguments of \texttt{TSSetRHSJacobian()}; compare usage of \texttt{SNESSetJacobian()} and \texttt{DMDASNESSetJacobianLocal()} in programs in Chapter \ref{chap:nl}.
+The new program calls \texttt{TSSetRHSJacobian()} to set a call-back to \texttt{FormRHSJacobian()}.  Our code sets the entries of the \pMat holding the derivative \eqref{eq:ts:rhsjacobian} of the right-hand side in Example ODE \eqref{eq:ts:example}.  An allocated \pMat, here called \texttt{J} for simplicity, is supplied to \texttt{TSSetRHSJacobian()}.  We assign \texttt{J} to both the Jacobian and preconditioner-material arguments of \texttt{TSSetRHSJacobian()}; compare usage of \texttt{SNESSetJacobian()} in Chapter \ref{chap:nl}.
 
-\cinputpart{odejac.c}{\CODELOC}{We also create a \pMat to hold $\partial \bg/\partial \by$, call \texttt{TSSetRHSJacobian()}, and reset the \pTS type to the implicit Crank-Nicolson ($\theta=1/2$) method.}{II}{//MATJ}{//ENDMATJ}{code:ts:odejac:mat}
+\cinputpart{odejac.c}{\CODELOC}{A \pMat is created to hold $\partial \bg/\partial \by$.  The \pTS type is reset to the implicit Crank-Nicolson method.}{II}{//MATJ}{//ENDMATJ}{code:ts:odejac:mat}
 
-The reader might note that \texttt{odejac.c} is quite similar in structure to \texttt{ecjac.c} in Chapter \ref{chap:nl}, but with calls to \pSNES replaced by corresponding calls to \pTS.
-
-FIXME we assume the ``hard'' time dependent case of stiff + nonlinear
-
-FIXME: table shows RK subtypes, and columns for order and adaptive; no ``common options''
-
-\begin{table}
-\small
-\begin{tabular}{lllll}
-\emph{method}                                & \texttt{-ts\_type} & \emph{adaptive?} & \emph{common options} \\ \hline
-forward Euler \eqref{eq:ts:forwardeuler}    & \texttt{euler}  & no & \\
-Runge-Kutta  FIXME                          & \texttt{rk}     & yes & \texttt{-ts\_rk\_type} FIXME \\ \hline
-backward Euler \eqref{eq:ts:backwardeuler}  & \texttt{beuler} & no & \\
-$\theta>0$   FIXME                          & \texttt{theta}  & optional & FIXME \\
-Crank-Nicolson                              & \texttt{cn}     & optional & 
-\end{tabular}
-\caption{Choosing some of the best-known ODE integration methods.  Explicit schemes are above the line and implicit below.} \label{tab:ts:odebasictypes}
-\end{table}
-
-FIXME control \texttt{euler,beuler,cn,theta} by setting steps
-
-FIXME use \texttt{-help} for additional:
+Running this new program is straightforward.  We can compare the implicit (Crank-Nicolson), which is not adaptive, to the default explicit \RKthreebs method:
 \begin{cline}
-$ ./ode -ts_monitor -ts_type theta -help |grep ts_theta
-  -ts_theta_theta <0.5>: Location of stage (0<Theta<=1)
-  -ts_theta_extrapolate: <FALSE> Extrapolate stage solution from previous ...
-  -ts_theta_endpoint: <FALSE> Use the endpoint instead of midpoint form of ...
-  -ts_theta_adapt: <FALSE> Use time-step adaptivity with the Theta method
+$ make odejac
+$ ./odejac
+error at tf = 20.000 with 200 steps:  |y-y_exact|_inf = 0.0151358
+$ ./odejac -ts_type rk
+error at tf = 20.000 with 88 steps:  |y-y_exact|_inf = 0.00930352
 \end{cline}
 %$
-In particular, the following are equivalent,
+As expected, the former evaluated the Jacobian at every time step, while the latter did not:
 \begin{cline}
-$ ./odejac -ts_type cn
-$ ./odejac -ts_type theta -ts_theta_theta 0.5 -ts_theta_endpoint
-\end{cline}
-and the following is the adaptive form of Crank-Nicolson,
-\begin{cline}
-$ ./odejac -ts_type cn -ts_theta_adapt
+$ ./odejac -log_view | grep SNESJacobianEval
+SNESJacobianEval     200 1.0 ...
+$ ./odejac -ts_type rk -log_view | grep SNESJacobianEval
+$
 \end{cline}
 %$
 
-If the reader has followed all of the above then it will also be clear that we could have used implicit time-stepping with the earlier, Jacobian-free program \texttt{ode.c}.  Though
+If the reader has followed the above construction then it will also be clear that we could have used implicit time-stepping with the earlier, Jacobian-free program \texttt{ode.c}.  Though
 \begin{cline}
 $ ./ode -ts_type cn
 \end{cline}
@@ -551,7 +528,62 @@ $ ./ode -ts_type cn -snes_mf
 $ ./odejac
 \end{cline}
 %$
-all give the same result.\sidenote{Very nearly; see Exercise \ref{chap:ts}.\ref{exer:ts:fdjacobian}.}
+all give the same result,\sidenote{Very nearly; see Exercise \ref{chap:ts}.\ref{exer:ts:fdjacobian}.} and all call the \pSNES to solve a system of equations at each time step.
+
+As a summary, Table \ref{tab:ts:odebasictypes} shows the \pTS types considered so far, including the order of the local truncation error.
+
+\begin{table}
+\small
+\begin{tabular}{lllll}
+\emph{method}                                & \texttt{-ts\_type} & \emph{order} & \emph{adaptive?} \\ \hline
+forward Euler \eqref{eq:ts:forwardeuler}    & \texttt{euler}  & $1$ & no \\
+Runge-Kutta \eqref{eq:ts:rkgeneral}         & \texttt{rk}     &     &    \\
+\qquad \texttt{-ts\_rk\_type 2a}            &                 & $2$ & yes \\
+\qquad \texttt{-ts\_rk\_type 3bs} \emph{[default]} &          & $3$ & yes \\
+\qquad \texttt{-ts\_rk\_type 4}             &                 & $4$ & no \\
+\qquad \texttt{-ts\_rk\_type 5f}            &                 & $5$ & yes \\
+\qquad \texttt{-ts\_rk\_type 5dp}           &                 & $5$ & yes \\
+ \hline
+$\theta$ method \eqref{eq:ts:theta}         & \texttt{theta}  & $1$ or $2$ & optional \\
+\qquad backward Euler \eqref{eq:ts:backwardeuler}  & \texttt{beuler} & $1$ & optional \\
+\qquad Crank-Nicolson                       & \texttt{cn}     & $2$ & optional 
+\end{tabular}
+\caption{Basic ODE integration methods; \PETSc has many more.  Explicit schemes are above the line and implicit below.} \label{tab:ts:odebasictypes}
+\end{table}
+
+\medskip
+
+As the Table suggests, the backward Euler and Crank-Nicolson methods are actually implemented as $\theta$ method special cases.  Knowing this, it is wise to ask for help:
+\begin{cline}
+$ ./odejac -ts_monitor -ts_type theta -help |grep ts_theta
+  -ts_theta_theta <0.5>: Location of stage (0<Theta<=1)
+  -ts_theta_endpoint: <FALSE> Use the endpoint instead of midpoint form ...
+  -ts_theta_adapt: <FALSE> Use time-step adaptivity with the Theta method
+  -ts_theta_initial_guess_extrapolate: <FALSE> Extrapolate stage initial guess ...
+\end{cline}
+%$
+In particular, the following are equivalent (backward Euler),
+\begin{cline}
+$ ./odejac -ts_type beuler
+$ ./odejac -ts_type theta -ts_theta_theta 1.0
+\end{cline}
+and the following are equivalent (Crank-Nicolson),
+\begin{cline}
+$ ./odejac -ts_type cn
+$ ./odejac -ts_type theta -ts_theta_theta 0.5 -ts_theta_endpoint
+\end{cline}
+These methods are optionally adaptive; for example:
+\begin{cline}
+$ ./odejac -ts_type cn -ts_theta_adapt
+\end{cline}
+%$
+is the adaptive (though not embedded) form of Crank-Nicolson.
+
+From now on for the rest of the book, when we consider numerical solutions to ODEs we will generally use tools suitable for the ``hard'' time-dependent case where the ODE \eqref{eq:ts:ode} is nonlinear \emph{and} where the ODE is stiff enough so that an implicit time-stepping method is automatically under consideration.  That is, we will solve problems of the form $\by' = \bg(t,\by)$ by using the \pSNES inside the \pTS object to do implicit time-stepping.
+
+Later in this Chapter we will try a type not shown in the Table, \texttt{-ts\_type arkimex}, on a nontrivial example.  This method\sidenote{Class of methods, actually.} has properties combining the benefits of implicit and explicit methods.  Furthermore, the example will be based on ODE system form which is more general than \eqref{eq:ts:ode}.
+
+In any case, our goal in this Chapter is to solve \emph{partial} differential equations, not only ODEs.  We now have the tools to return to that task.
 
 
 \section{Time-dependent heat equation}
