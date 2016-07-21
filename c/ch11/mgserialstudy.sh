@@ -20,7 +20,7 @@ for (( MGLEV=$REFINE; MGLEV>2; MGLEV-=2 )); do
         for MGSMOOTHTYPE in chebyshev cg richardson; do
             for MGSMOOTHIT in 1 2 3; do
                 echo "case:  -pc_mg_levels $MGLEV -pc_mg_cycle_type $MGVW -mg_levels_ksp_type $MGSMOOTHTYPE -mg_levels_ksp_max_it $MGSMOOTHIT"
-                /usr/bin/time --portability -f "real %e" ./fish2 -ksp_type cg -pc_type mg -da_refine $REFINE -ksp_converged_reason -pc_mg_levels $MGLEV -pc_mg_cycle_type $MGVW -mg_levels_ksp_type $MGSMOOTHTYPE -mg_levels_ksp_max_it $MGSMOOTHIT
+                /usr/bin/time --portability -f "real %e" ./fish2 -ksp_type cg -pc_type mg -da_refine $REFINE -ksp_rtol 1.0e-12 -ksp_converged_reason -pc_mg_levels $MGLEV -pc_mg_cycle_type $MGVW -mg_levels_ksp_type $MGSMOOTHTYPE -mg_levels_ksp_max_it $MGSMOOTHIT
             done
         done
     done
