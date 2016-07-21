@@ -583,10 +583,28 @@ From now on for the rest of the book, when we consider numerical solutions to OD
 
 Later in this Chapter we will try a type not shown in the Table, \texttt{-ts\_type arkimex}, on a nontrivial example.  This method\sidenote{Class of methods, actually.} has properties combining the benefits of implicit and explicit methods.  Furthermore, the example will be based on ODE system form which is more general than \eqref{eq:ts:ode}.
 
-In any case, our goal in this Chapter is to solve \emph{partial} differential equations, not only ODEs.  We now have the tools to return to that task.
-
 
 \section{Time-dependent heat equation}
+
+Our goal is to solve \emph{partial} differential equations, not only ODEs.  We now have the tools to return to that task.  The well-known ideas in this subsection also appear in \citep{HundsdorferVerwer2003,LeVeque2007,MortonMayers2005}.
+
+Consider the time-dependent heat equation in two space dimensions (2D)
+\begin{equation}
+\frac{\partial u}{\partial t} = D_0 \grad^2 u + f(x,y) \label{eq:ts:heatequation}
+\end{equation}
+for the temperature $u=u(t,x,y)$ at some time $t$ and location $(x,y)$.  Concretely the domain is $(t,x,y) \in [0,T] \times \mathcal{S}$ where $\mathcal{S} =(0,1)\times (0,1)$ is the unit square.  In this case the \emph{diffusivity} $D_0>0$ is constant and the \emph{source term} $f(x,y)$ is time-independent.
+
+We can convert a time-dependent PDE like \eqref{eq:ts:heatequation} into a system of ODEs by \emph{semi-discretization in space}, also known as the \emph{method of lines}.\sidenote{The latter name makes sense by considering the 1D version of \eqref{eq:ts:heatequation}, plotting the time dimension $t$ as continuous and space $x$ as discrete.}  Our discretization of the spatial derivatives in \eqref{eq:ts:heatequation} will be exactly the same as in Chapter \ref{chap:st}.  We use \pDMDA to put a grid of $m_x m_y$ points labeled $(x_i,y_j)$ on $\mathcal{S}$; see Figure \ref{fig:unitsquaregrid}.  Then we replace the spatial derivatives in \eqref{eq:ts:heatequation} by finite differences while keeping the time derivatives.  Thus if $h_x,h_y$ is the grid spacing then
+\begin{equation}
+u_{i,j}' = D_0 \frac{u_{i+1,j} - 2 u_{i,j} + u_{i-1,j}}{h_x^2} + D_0 \frac{u_{i,j+1} - 2 u_{i,j} + u_{i,j-1}}{h_y^2} + f_{i,j}. \label{eq:ts:molheat}
+\end{equation}
+where $u_{i,j}'(t) \approx u(t,x_i,y_j)$ and $f_{i,j} = f(x_i,y_j)$.
+
+Equations \eqref{eq:ts:molheat} is a system of ODEs.  We will solve it implicitly but there is no need to think about the time-integration method now.  We only need to put the equations into the form of an ODE system \eqref{eq:ts:ode}.
+
+FIXME needs boundary conditions
+
+FIXME exact solution possible, but here we demo energy monitor
 
 FIXME solve heat equation by implicit
 
@@ -607,7 +625,37 @@ FIXME solve heat equation by implicit
 \label{fig:of:tsstack}
 \end{figure}
 
-FIXME show \texttt{-ts\_type theta,beuler,cn}
+FIXME
+
+\begin{code}
+run info
+ $ ./heat -ts_view
+ $ ./heat -ts_monitor -heat_monitor -snes_converged_reason
+
+run-time graphics
+ $ ./heat -da_refine 4 -ts_monitor -ts_monitor_solution draw -draw_pause 0.1
+ $ mpiexec -n 4 ./heat -da_refine 1 -dm_view draw -draw_pause 2
+
+good (use default BEULER):
+ $ mpiexec -n 4 ./heat -ts_monitor -heat_monitor -snes_converged_reason -ts_monitor_solution draw -snes_monitor -da_refine 7
+
+complete linear solve add -ksp_rtol 1.0e-12
+
+explodes (as it should):
+ $ ./heat -ts_monitor -ts_monitor_solution draw -da_refine 4 -ts_type rk -ts_adapt_type none
+
+agonizingly slow (RK is adapting):
+ $ ./heat -ts_monitor -ts_monitor_solution draw -da_refine 4 -ts_type rk
+
+wobbles (typical Crank-Nicolson):
+ $ ./heat -ts_monitor -ts_monitor_solution draw -da_refine 4 -ts_type cn
+
+suppress wobbles by weighting implicitness more:
+ $ ./heat -ts_monitor -ts_monitor_solution draw -da_refine 4 -ts_type theta -ts_theta_theta 0.6 -ts_theta_endpoint
+
+better adaptive than rk:
+ $ ./heat -ts_monitor -ts_monitor_solution draw -da_refine 4 -ts_type glle
+\end{code}
 
 
 \section{Coupled reaction-diffusion equations}
