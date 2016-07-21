@@ -1,53 +1,21 @@
 static char help[] =
 "Solves time-dependent heat equation in 2D using TS.  Option prefix -heat_.\n"
-"Equation is  u_t = D laplacian u + f.  Domain is (0,1) x (0,1).\n"
+"Equation is  u_t = D_0 laplacian u + f.  Domain is (0,1) x (0,1).\n"
 "Boundary conditions are non-homogeneous Neumann in x and periodic in y.\n"
-"Energy is conserved (with default choices).  Discretization by\n"
-"centered finite differences.  Converts the PDE into a system  X_t = G(t,X)\n"
-"(PETSc type 'nonlinear') and uses theta method time-stepping by default.\n";
-
-// $ ./heat -help |grep heat_
-// $ ./heat -help |grep ts_type
-// $ ./heat -snes_type test -snes_test_display // result suggests jacobian is correct
-
-//run-time info
-// $ ./heat -ts_view
-// $ ./heat -dm_view draw -draw_pause 2 -da_refine 1  // shows BOUNDARY_NONE and BOUNDARY_PERIODIC clearly
-// $ ./heat -ts_monitor_solution draw   // note -ts_monitor needed
-// $ ./heat -ts_monitor -heat_monitor -snes_converged_reason
-
-//good (use default BEULER):
-// $ mpiexec -n 4 ./heat -ts_monitor -heat_monitor -snes_converged_reason -ts_monitor_solution draw -snes_monitor -da_refine 7
-
-//explodes (as it should):
-// $ ./heat -ts_monitor -ts_monitor_solution draw -da_refine 7 -ts_type rk -ts_rk_type 1fe -ts_adapt_type none
-
-//agonizingly slow (RK is adapting):
-// $ ./heat -ts_monitor -ts_monitor_solution draw -da_refine 4 -ts_type rk
-
-//wobbles (typical Crank-Nicolson):
-// $ ./heat -ts_monitor -ts_monitor_solution draw -da_refine 4 -ts_type cn
-
-//theta methods:
-// $ ./heat -help |grep ts_theta
-// $ ./heat -ts_type theta -ts_theta_theta 1                        // = BEuler
-// $ ./heat -ts_type theta -ts_theta_theta 0.5 -ts_theta_endpoint   // = Crank-Nicolson
-
-//wobbles mostly fixed:
-// $ ./heat -ts_monitor -ts_monitor_solution draw -da_refine 4 -ts_type theta -ts_theta_theta 0.7 -ts_theta_endpoint
-
-//good adaptive:
-// $ ./heat -ts_monitor -ts_monitor_solution draw -da_refine 4 -ts_type gl
+"Energy is conserved (for these particular conditions/source) and an extra\n"
+"'monitor' is demonstrated.  Discretization is by centered finite differences.\n"
+"Converts the PDE into a system  X_t = G(t,X) (PETSc type 'nonlinear') by\n"
+"method of lines.  Uses backward Euler time-stepping by default.\n";
 
 #include <petsc.h>
 
 //HEATCTX
 typedef struct {
   DM     da;
-  Vec    f,    // source f(x,y)
-         gamma;// boundary condition; = gamma_0(y) on left boundary
-               //                     = gamma_1(y) on right boundary
-  double D;    // conductivity
+  Vec    f,     // source f(x,y)
+         gamma; // Neumann boundary condition; = gamma_0(y) on left boundary
+                //                             = gamma_1(y) on right boundary
+  double D0;    // conductivity
 } HeatCtx;
 //ENDHEATCTX
 
@@ -158,7 +126,7 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **au,
               uright = au[j][i+1];
           uxx = (uleft - 2.0 * au[j][i]+ uright) / (hx*hx);
           uyy = (au[j-1][i] - 2.0 * au[j][i]+ au[j+1][i]) / (hy*hy);
-          aG[j][i] = user->D * (uxx + uyy) + af[j][i];
+          aG[j][i] = user->D0 * (uxx + uyy) + af[j][i];
       }
   }
   ierr = DMDAVecRestoreArray(user->da,user->f,&af); CHKERRQ(ierr);
@@ -173,7 +141,7 @@ PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info, double t, double **au,
                                     Mat J, Mat P, HeatCtx *user) {
     PetscErrorCode ierr;
     int            i, j, ncols;
-    const double   D = user->D;
+    const double   D = user->D0;
     double         hx, hy, hx2, hy2, v[5];
     MatStencil     col[5],row;
 
@@ -224,10 +192,10 @@ int main(int argc,char **argv)
 
   PetscInitialize(&argc,&argv,(char*)0,help);
 
-  user.D  = 1.0;
+  user.D0  = 1.0;
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "heat_", "options for heat", ""); CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-D","thermal diffusivity",
-           "heat.c",user.D,&user.D,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-D0","constant thermal diffusivity",
+           "heat.c",user.D0,&user.D0,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-monitor","also display total heat energy at each step",
            "heat.c",monitorenergy,&monitorenergy,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
@@ -275,8 +243,8 @@ int main(int argc,char **argv)
   hxhy = PetscMin(hx,hy);  hxhy = hxhy * hxhy;
   ierr = PetscPrintf(PETSC_COMM_WORLD,
            "solving on %d x %d grid from t0=%g with initial step dt=%g ...\n"
-           "(initial step stability ratio:  D dt / (min{dx,dy}^2) = %g)\n",
-           info.mx,info.my,t0,dt,user.D*dt/hxhy); CHKERRQ(ierr);
+           "(initial step stability ratio:  D0 dt / (min{dx,dy}^2) = %g)\n",
+           info.mx,info.my,t0,dt,user.D0*dt/hxhy); CHKERRQ(ierr);
 
   ierr = VecSet(u,0.0); CHKERRQ(ierr);
   ierr = TSSolve(ts,u); CHKERRQ(ierr);

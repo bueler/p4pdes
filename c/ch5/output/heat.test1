@@ -1,5 +1,5 @@
 solving on 7 x 6 grid from t0=0. with initial step dt=0.01 ...
-(initial step stability ratio:  D dt / (min{dx,dy}^2) = 0.36)
+(initial step stability ratio:  D0 dt / (min{dx,dy}^2) = 0.36)
 0 TS dt 0.01 time 0.
 1 TS dt 0.01 time 0.01
 2 TS dt 0.01 time 0.02
