@@ -1,32 +1,25 @@
 static char help[] =
-"Structured-grid Poisson problem with DMDA+SNES.  Option prefix -f2_.\n"
+"Structured-grid Poisson problem using DMDA+SNES.  Option prefix -f2_.\n"
 "Solves  -nabla^2 u = f  by putting it in form  F(u) = -nabla^2 u - f.\n"
-"Multigrid-capable because the call-back works for the grid it is given.\n\n";
+"Homogeneous Dirichlet boundary conditions on unit square.\n"
+"Multigrid-capable because call-backs discretize for the grid it is given.\n\n";
 
-/* best solve I can get given the memory limitations of my machine:
-PETSC_ARCH=linux-c-opt
+/*
 
-$ timer mpiexec -n 4 ./fish2 -da_refine FIXME -ksp_type cg -pc_type mg -ksp_converged_reason -ksp_rtol 1.0e-12
-  Linear solve converged due to CONVERGED_RTOL iterations 6
-on 4097 x 4097 grid:  error |u-uexact|_inf = 3.00114e-09
-real 21.56
+see mgserialstudy.sh for multigrid parameter study
 
-FIXME: why does it seg fault in parallel with -snes_fd_color, e.g.
-  mpiexec -n 2 ./fish2 -da_refine 1 -ksp_type cg -pc_type mg -ksp_converged_reason -ksp_rtol 1.0e-12 -snes_fd_color
+multigrid seg faults in parallel with -snes_fd_color, but -pc_mg_galerkin fixes it:
+  bad:   mpiexec -n 2 ./fish2 -da_refine 4 -pc_type mg -f2_printevals -snes_fd_color
+  good:  mpiexec -n 2 ./fish2 -da_refine 4 -pc_type mg -f2_printevals -snes_fd_color -pc_mg_galerkin
 
 compare whether rediscretization happens at each level (former) or Galerkin grid-
-transfer operators are used (latter); needs print statements to tell about residual &
-Jacobian evals:
-$ ./fish2 -da_refine FIXME -ksp_type cg -pc_type mg -snes_monitor
-$ ./fish2 -da_refine FIXME -ksp_type cg -pc_type mg -snes_monitor -pc_mg_galerkin
+transfer operators are used (latter); note print statements reporting evals differ
+$ ./fish2 -da_refine 4 -pc_type mg -snes_monitor -f2_printevals
+$ ./fish2 -da_refine 4 -pc_type mg -snes_monitor -f2_printevals -pc_mg_galerkin
 
-choose which linear solver is used on coarse grid (default is preonly+lu):
-$ ./fish2 -da_refine FIXME -ksp_type cg -pc_type mg -mg_coarse_ksp_type cg -mg_coarse_pc_type jacobi -ksp_view|less
+choose linear solver for coarse grid (default is preonly+lu):
+$ ./fish2 -da_refine 4 -pc_type mg -mg_coarse_ksp_type cg -mg_coarse_pc_type jacobi -ksp_view|less
 
-speed determined by how many mg levels; MGLEV=3 seems to be optimal here at
-RLEV=5, but at higher refinement (e.g. RLEV=7), MGLEV=RLEV seems optimal;
-has to do with time of coarse solve?
-$ timer ./fish2 -da_refine FIXME -ksp_type cg -pc_type mg -pc_mg_levels MGLEV
 */
 
 #include <petsc.h>
@@ -143,6 +136,7 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar **au,
 int main(int argc,char **argv) {
   PetscErrorCode ierr;
   SNES           snes;
+  KSP            ksp;
   Vec            u, uexact;
   FishCtx        user;
   DMDALocalInfo  info;
@@ -173,6 +167,8 @@ int main(int argc,char **argv) {
              (DMDASNESFunction)FormFunctionLocal,&user); CHKERRQ(ierr);
   ierr = DMDASNESSetJacobianLocal(user.da,
              (DMDASNESJacobian)FormJacobianLocal,&user); CHKERRQ(ierr);
+  ierr = SNESGetKSP(snes,&ksp); CHKERRQ(ierr);
+  ierr = KSPSetType(ksp,KSPCG); CHKERRQ(ierr);
   ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
   ierr = VecSet(u,0.0); CHKERRQ(ierr);

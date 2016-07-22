@@ -1,0 +1,3 @@
+  Linear solve converged due to CONVERGED_RTOL iterations 3
+  Linear solve converged due to CONVERGED_RTOL iterations 4
+on 33 x 33 grid:  error |u-uexact|_inf = 4.91715e-05
