@@ -586,27 +586,29 @@ Later in this Chapter we will try a type not shown in the Table, \texttt{-ts\_ty
 
 \section{Time-dependent heat equation}
 
-We now have the tools to return to solving \emph{partial} differential equations.  The well-known idea \citep{HundsdorferVerwer2003,LeVeque2007,MortonMayers2005} in this subsection is that a time-dependent PDE generates an arbitrarily-large system of ODEs when the space variables are discretized.
+We now have the tools to return to solving \emph{partial} differential equations.  The well-known\sidenote{See \citep{HundsdorferVerwer2003,LeVeque2007,MortonMayers2005}.} idea in this subsection is that a time-dependent PDE generates an arbitrarily-large system of ODEs when the space variables are discretized.
 
 Consider the time-dependent heat equation in two space dimensions (2D)
 \begin{equation}
 \frac{\partial u}{\partial t} = D_0 \grad^2 u + f(x,y). \label{eq:ts:heatequation}
 \end{equation}
-We seek the temperature $u(t,x,y)$ for $(t,x,y) \in [0,T] \times \mathcal{S}$ where $\mathcal{S} =(0,1)\times (0,1)$ is the unit square.  In this particular case the \emph{diffusivity} $D_0>0$ is constant and the \emph{source term} $f(x,y)$ is time-independent.
+We seek the temperature $u(t,x,y)$ at times $t \in [0,T]$ and points $(x,y) \in \mathcal{S} =(0,1)\times (0,1)$, the unit square.  For simplicity we set the \emph{diffusivity} $D_0>0$ to be constant and the \emph{heat source} $f(x,y)$ to be time-independent.
 
-We can convert a time-dependent PDE like \eqref{eq:ts:heatequation} into a system of ODEs by \emph{semi-discretization in space}, also known as the \emph{method of lines}.\sidenote{Visualize the continuous-time, discrete-space ODE domain as lines $(t,x_i,y_j)$.}  Our discretization of spatial derivatives in \eqref{eq:ts:heatequation} is the same as in Chapter \ref{chap:st}.  We use \pDMDA to put a grid of $m_x m_y$ points labeled $(x_i,y_j)$ on $\mathcal{S}$; see Figure \ref{fig:unitsquaregrid}.  Then we replace the spatial derivatives in \eqref{eq:ts:heatequation} by finite differences while keeping the time derivatives.  If $h_x,h_y$ is the grid spacing then
+A time-dependent PDE like \eqref{eq:ts:heatequation} becomes a system of ODEs by \emph{semi-discretization in space}, also known as the \emph{method of lines}.  (One visualizes the continuous-time, discrete-space ODE domain as lines $(t,x_i,y_j)$ in the three-dimensional space-time.)
+
+For the example here we discretize spatial derivatives in \eqref{eq:ts:heatequation} the same way we did in Chapter \ref{chap:st}.  We use a \pDMDA to put a grid of $m_x m_y$ points labeled $(x_i,y_j)$ on $\mathcal{S}$; see Figure \ref{fig:unitsquaregrid} in Chapter \ref{chap:st}.  Then we replace the spatial derivatives in \eqref{eq:ts:heatequation} by centered finite differences while keeping the time derivatives unmodified.  If $h_x,h_y$ are the grid spacings then we get
 \begin{equation}
 u_{i,j}' = D_0 \frac{u_{i+1,j} - 2 u_{i,j} + u_{i-1,j}}{h_x^2} + D_0 \frac{u_{i,j+1} - 2 u_{i,j} + u_{i,j-1}}{h_y^2} + f_{i,j}. \label{eq:ts:molheat}
 \end{equation}
 where
 \begin{equation}
-u_{i,j}'(t) \approx u(t,x_i,y_j) \label{eq:ts:molumeaning}
+u_{i,j}(t) \approx u(t,x_i,y_j) \label{eq:ts:molumeaning}
 \end{equation}
 and $f_{i,j} = f(x_i,y_j)$.
 
-Equations \eqref{eq:ts:molheat} is a system of ODEs which we can solve explicitly or implicitly.  Our code will allow either, and there is no need to think about the time-integration method now.  We only need to put the equations into the form of an ODE system \eqref{eq:ts:ode}.  First, however, we need to fully-specify a well-posed problem, including a concrete source term, boundary conditions, and initial conditions.
+Equations \eqref{eq:ts:molheat} form a system of ODEs in form \eqref{eq:ts:ode}, which we can solve explicitly or implicitly, but there is no need to think about numerical time-integration now.\sidenote{Time-stepping-method agnosticism is central to the method of lines.}  We do need, however, to fully-specify a well-posed problem, including concrete source term, boundary conditions, and initial conditions.
 
-For variety, and as a representative example of real-world applications, we construct a problem where the exact solution is not known,\sidenote{\emph{Knowable}, perhaps, but we do not bother.} but where a scalar quantity is conserved.  We choose\sidenote{Again, for variety.  Also we can demonstrate this feature of \pDMDA.} periodic boundary conditions along the $y=0,1$ top and bottom boundaries and Neumann boundary conditions along the other boundaries.  On the left ($x=0$) we have a non-homogeneous Neumann boundary condition, and on the right a homogeneous one.   See Figure \ref{fig:ts:heatsquare}.
+For variety, and as an example which is representative of real-world applications, we specify a problem where the exact solution is not known\sidenote{The exact solution is \emph{knowable}, perhaps, but we do not bother.} but where a scalar quantity is conserved.  We choose, arbitrarily but also for a bit of variety, to have periodic boundary conditions along the $y=0$ and $y=1$ (top and bottom) boundaries and to have Neumann boundary conditions along the other boundaries.  On the left ($x=0$) we have a non-homogeneous Neumann boundary condition, and on the right ($x=1$) a homogeneous one.   See Figure \ref{fig:ts:heatsquare}.
 
 \begin{figure}
 \input{tikz/heatsquare.tex}
@@ -614,16 +616,15 @@ For variety, and as a representative example of real-world applications, we cons
 \label{fig:ts:heatsquare}
 \end{figure}
 
-In the interior we choose a particular formula for the source term, which takes both positive and negative values,
+In the interior we choose a particular formula for the source term, which takes both positive and negative values, $f(x,y) = 3 e^{-25(x-0.6)^2} \sin(2 \pi y)$, and a non-homogeneous boundary condition as $\gamma(y) = \sin(6\pi y)$.  It is easy to verify (Exercise \ref{chap:ts}.\ref{exer:ts:zerototalsource}) that the totals of these sources is zero:
 \begin{equation}
-f(x,y) = FIXME \label{eq:ts:sourceformula}
-\end{equation}
-It is easy to verify (Exercise \ref{chap:ts}.\ref{exer:ts:zerototalsource}) that the total input from the source term is zero:
-\begin{equation}
-\int_{\mathcal{S}} f(x,y)\,dx\,dy = 0. \label{eq:ts:zerototalsource}
+\int_{\mathcal{S}} f(x,y)\,dx\,dy = 0, \qquad \int_0^1 \gamma(y)\,dy = 0. \label{eq:ts:zerototalsource}
 \end{equation}
 
-Physically-speaking, the FIXME
+Physically-speaking, the total thermal energy of the solution is proportional to the integral of $u$ over $\mathcal{S}$.  (More precisely, for a material with density $\rho$ and heat capacity $c$ the energy (joules) contained in the material  $\rho c$ times the integral of $u$.)  On the other hand, the derivation of heat equation \eqref{eq:ts:heatequation} arises from the principles of conservation of internal (thermal) energy \citep{Ockendonetal2003}.  Thus equation \eqref{eq:ts:heatequation} determines the evolution of that total energy, namely
+\begin{equation}
+\frac{d}{dt} \left(\int_{\mathcal{S}} u(t,x,y)\,dx\,dy\right) = FIXME
+\end{equation}
 
 FIXME demo energy monitor
 
