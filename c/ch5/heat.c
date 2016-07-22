@@ -13,8 +13,8 @@ static char help[] =
 typedef struct {
   DM     da;
   Vec    f,     // source f(x,y)
-         gamma; // Neumann boundary condition; = gamma_0(y) on left boundary
-                //                             = gamma_1(y) on right boundary
+         gamma; // Neumann boundary condition; = gamma(y) on left boundary
+                //                             = 0        on right boundary
   double D0;    // conductivity
 } HeatCtx;
 //ENDHEATCTX

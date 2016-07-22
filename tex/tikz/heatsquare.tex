@@ -1,0 +1,14 @@
+\begin{tikzpicture}[scale=5.0]
+  \draw[->,gray,very thin] (-0.2,0.0) -- (1.2,0.0) node[below] {$x$};
+  \draw[->,gray,very thin] (0.0,-0.2) -- (0.0,1.2) node[left] {$y$};
+  \draw[line width=1.0pt] (0.0,0.0) -- (0.0,1.0);
+  \draw[line width=1.0pt] (1.0,0.0) -- (1.0,1.0);
+  \draw[line width=1.5pt,dashed] (0.0,0.0) -- (1.0,0.0);
+  \draw[line width=1.5pt,dashed] (0.0,1.0) -- (1.0,1.0);
+  \node at (0.5,0.5) {$\frac{\partial u}{\partial t} = D_0 \grad^2 u + f(x,y)$};
+  \node at (0.5,-0.1) {(periodic)};
+  \node at (0.5,1.1) {(periodic)};
+  \node[rotate=90] at (-0.1,0.5) {$\frac{\partial u}{\partial n} = \gamma(y)$};
+  \node[rotate=-90] at (1.1,0.5) {$\frac{\partial u}{\partial n} = 0$};
+\end{tikzpicture}
+
