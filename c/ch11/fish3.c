@@ -92,43 +92,70 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***au,
     return 0;
 }
 
-#if 0
-PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar **au,
+
+PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar ***au,
                                  Mat J, Mat Jpre, FishCtx *user) {
     PetscErrorCode  ierr;
-    const double hx = 1.0/(info->mx-1),  hy = 1.0/(info->my-1);
-    int          i,j,ncols;
-    double       v[5];
-    MatStencil   col[5],row;
+    const double hx = 1.0/(info->mx-1),
+                 hy = 1.0/(info->my-1),
+                 hz = 1.0/(info->mz-1),
+                 h = pow(hx*hy*hz,1.0/3.0),
+                 cx = h*h / (hx*hx),
+                 cy = h*h / (hy*hy),
+                 cz = h*h / (hz*hz);
+    int          i,j,k,ncols;
+    double       v[7];
+    MatStencil   col[7],row;
 
     if (user->printevals) {
-        ierr = PetscPrintf(COMM,"    [Jacobian eval on %d x %d grid]\n",
-                           info->mx,info->my); CHKERRQ(ierr);
+        ierr = PetscPrintf(COMM,"    [Jacobian eval on %d x %d x %d grid]\n",
+                           info->mx,info->my,info->mz); CHKERRQ(ierr);
     }
-    for (j = info->ys; j < info->ys+info->ym; j++) {
-        row.j = j;
-        col[0].j = j;
-        for (i = info->xs; i < info->xs+info->xm; i++) {
-            row.i = i;
-            col[0].i = i;
-            ncols = 1;
-            if (i==0 || i==info->mx-1 || j==0 || j==info->my-1) {
-                v[0] = 1.0;
-            } else {
-                v[0] = 2*(hy/hx + hx/hy);
-                if (i-1 > 0) {
-                col[ncols].j = j;    col[ncols].i = i-1;  v[ncols++] = -hy/hx;  }
-                if (i+1 < info->mx-1) {
-                col[ncols].j = j;    col[ncols].i = i+1;  v[ncols++] = -hy/hx;  }
-                if (j-1 > 0) {
-                col[ncols].j = j-1;  col[ncols].i = i;    v[ncols++] = -hx/hy;  }
-                if (j+1 < info->my-1) {
-                col[ncols].j = j+1;  col[ncols].i = i;    v[ncols++] = -hx/hy;  }
+    for (k = info->zs; k < info->zs+info->zm; k++) {
+        row.k = k;
+        col[0].k = k;
+        for (j = info->ys; j < info->ys+info->ym; j++) {
+            row.j = j;
+            col[0].j = j;
+            for (i = info->xs; i < info->xs+info->xm; i++) {
+                row.i = i;
+                col[0].i = i;
+                ncols = 1;
+                if (   i==0 || i==info->mx-1
+                    || j==0 || j==info->my-1
+                    || k==0 || k==info->mz-1) {
+                    v[0] = 1.0;
+                } else {
+                    v[0] = 2.0 * (cx + cy + cz);
+                    if (i-1 > 0) {
+                        col[ncols].k = k;    col[ncols].j = j;    col[ncols].i = i-1;
+                        v[ncols++] = - cx;
+                    }
+                    if (i+1 < info->mx-1) {
+                        col[ncols].k = k;    col[ncols].j = j;    col[ncols].i = i+1;
+                        v[ncols++] = - cx;
+                    }
+                    if (j-1 > 0) {
+                        col[ncols].k = k;    col[ncols].j = j-1;  col[ncols].i = i;
+                        v[ncols++] = - cy;
+                    }
+                    if (j+1 < info->my-1) {
+                        col[ncols].k = k;    col[ncols].j = j+1;  col[ncols].i = i;
+                        v[ncols++] = - cy;
+                    }
+                    if (k-1 > 0) {
+                        col[ncols].k = k-1;  col[ncols].j = j;    col[ncols].i = i;
+                        v[ncols++] = - cz;
+                    }
+                    if (k+1 < info->mz-1) {
+                        col[ncols].k = k+1;  col[ncols].j = j;    col[ncols].i = i;
+                        v[ncols++] = - cz;
+                    }
+                }
+                ierr = MatSetValuesStencil(Jpre,1,&row,ncols,col,v,INSERT_VALUES); CHKERRQ(ierr);
             }
-            ierr = MatSetValuesStencil(Jpre,1,&row,ncols,col,v,INSERT_VALUES); CHKERRQ(ierr);
         }
     }
-
     ierr = MatAssemblyBegin(Jpre,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
     ierr = MatAssemblyEnd(Jpre,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
     if (J != Jpre) {
@@ -137,7 +164,7 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar **au,
     }
     return 0;
 }
-#endif
+
 
 int main(int argc,char **argv) {
   PetscErrorCode ierr;
@@ -174,8 +201,8 @@ int main(int argc,char **argv) {
   ierr = SNESSetDM(snes,user.da); CHKERRQ(ierr);
   ierr = DMDASNESSetFunctionLocal(user.da,INSERT_VALUES,
              (DMDASNESFunction)FormFunctionLocal,&user); CHKERRQ(ierr);
-//  ierr = DMDASNESSetJacobianLocal(user.da,
-//             (DMDASNESJacobian)FormJacobianLocal,&user); CHKERRQ(ierr);
+  ierr = DMDASNESSetJacobianLocal(user.da,
+             (DMDASNESJacobian)FormJacobianLocal,&user); CHKERRQ(ierr);
   ierr = SNESGetKSP(snes,&ksp); CHKERRQ(ierr);
   ierr = KSPSetType(ksp,KSPCG); CHKERRQ(ierr);
   ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
