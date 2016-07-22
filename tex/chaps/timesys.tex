@@ -616,18 +616,22 @@ For variety, and as an example which is representative of real-world application
 \label{fig:ts:heatsquare}
 \end{figure}
 
-In the interior we choose a particular formula for the source term, which takes both positive and negative values, $f(x,y) = 3 e^{-25(x-0.6)^2} \sin(2 \pi y)$, and a non-homogeneous boundary condition as $\gamma(y) = \sin(6\pi y)$.  It is easy to verify (Exercise \ref{chap:ts}.\ref{exer:ts:zerototalsource}) that the totals of these sources is zero:
+In the interior we choose a particular formula for the source term which takes both positive and negative values, $f(x,y) = 3 e^{-25(x-0.6)^2} \sin(2 \pi y)$.  For the non-homogeneous boundary condition,
+	$$\frac{\partial u}{\partial n} = -\frac{\partial u}{\partial x} = \gamma(y),$$
+where $n$ denotes the outward unit normal direction, we choose $\gamma(y) = \sin(6\pi y)$.  It is easy to verify (Exercise \ref{chap:ts}.\ref{exer:ts:zerototalsource}) that the totals of these particular sources are zero:
 \begin{equation}
 \int_{\mathcal{S}} f(x,y)\,dx\,dy = 0, \qquad \int_0^1 \gamma(y)\,dy = 0. \label{eq:ts:zerototalsource}
 \end{equation}
 
-Physically-speaking, the total thermal energy of the solution is proportional to the integral of $u$ over $\mathcal{S}$.  (More precisely, for a material with density $\rho$ and heat capacity $c$ the energy (joules) contained in the material  $\rho c$ times the integral of $u$.)  On the other hand, the derivation of heat equation \eqref{eq:ts:heatequation} arises from the principles of conservation of internal (thermal) energy \citep{Ockendonetal2003}.  Thus equation \eqref{eq:ts:heatequation} determines the evolution of that total energy, namely
-\begin{equation}
-\frac{d}{dt} \left(\int_{\mathcal{S}} u(t,x,y)\,dx\,dy\right) = FIXME
-\end{equation}
+Physically-speaking, total thermal energy is proportional to the integral of $u$ over $\mathcal{S}$.  (For a material with density $\rho$ and heat capacity $c$ the energy (joules) contained in the material is $\rho c$ times the integral of $u$.)  On the other hand, heat equation \eqref{eq:ts:heatequation} is derived from the principle of conservation of internal (thermal) energy \citep{Ockendonetal2003}.  In fact, equation \eqref{eq:ts:heatequation} determines the evolution of that total energy, and it turns out that it is independent of time because of our particular choices:
+\begin{align}
+\frac{d}{dt} \left(\int_{\mathcal{S}} u(t,x,y)\,dx\,dy\right) &= D_0 \int_{\partial \mathcal{S}} \frac{\partial u}{\partial n}\,ds + \int_{\mathcal{S}} f(x,y)\,dx\,dy \label{eq:ts:conservedscalar} \\
+   &= D_0 \int_0^1 \gamma(y)\,dy + \int_{\mathcal{S}} f(x,y)\,dx\,dy \notag \\
+   &= 0. \notag
+\end{align}
+See Exercise \ref{chap:ts}.\ref{exer:ts:zerototalsource}.
 
-FIXME demo energy monitor
-
+FIXME want discrete version to conserve too; demo energy monitor
 
 FIXME solve heat equation by implicit
 
@@ -732,18 +736,16 @@ Conclude that for the Example problem on page \pageref{ex:ts:odestiff}, about 40
     $$y(t) = e^{\lambda t} - \lambda \int_0^t e^{\lambda (t-s)} \gamma(s)\,ds.$$
 Then show that the family of functions $D_\lambda(x) = -\lambda e^{\lambda x}$ form a Dirac delta function \citep{Evans2010} in the sense that, for any continuous function $\varphi(x)$, $\int_{0}^\infty D_\lambda(x) \varphi(x)\,dx = \varphi(0)$ as $\Re\lambda \to -\infty$.  Conclude that the solution to \eqref{eq:ts:stiffdecaytestproblem} is asymptotic to $\gamma(t)$ as $\Re\lambda \to -\infty$.
 
-\item \label{exer:ts:fdjacobian}   Looking deeper at the three runs
+\item \label{exer:ts:fdjacobian}   Adding option \texttt{-snes\_monitor} so a to look deeper, the results of these three runs
 \begin{cline}
-$ ./ode -ts_type cn -snes_fd
-$ ./ode -ts_type cn -snes_mf
-$ ./odejac
+$ ./ode -ts_type cn -snes_fd -snes_monitor
+$ ./ode -ts_type cn -snes_mf -snes_monitor
+$ ./odejac -snes_monitor
 \end{cline}
 %$
-for instance by adding option \texttt{-snes\_monitor}, we see that the results differ in the size of residual norms and even in the number of Newton iterations.  Explain
+differ in the size of residual norms and even in the number of Newton iterations.  Explain.
 
-\item FIXME version of \texttt{ode.c} which solves DAE system
-    $$\bbf(t,\by,\by') = \bg(t,\by)$$
-where $\partial \bg/\partial \by'$ may be singular
+\item \label{exer:ts:zerototalsource}  Show \eqref{eq:ts:zerototalsource}.  Then fill in the details to show \eqref{eq:ts:conservedscalar}, taking note that the periodic boundary condition amounts to treating those ``boundary'' locations as interior points of a (topologically) cylindrical surface.
 
 \item FIXME for run like
 \begin{cline}
@@ -755,4 +757,5 @@ which is fastest among these nine ARKIMEX and three $\theta$ methods?:
 -ts_type theta -ts_theta_endpoint -ts_theta_theta [0.5|0.75|1]
 \end{code}
 Are any other adaptive \pTS types faster?  Also compare final frames from \texttt{-ts\_monitor\_solution draw}; how worried should we be about the effect of time-stepping on the solution of this problem?
+
 \end{enumerate}
