@@ -110,7 +110,7 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **au,
   ierr = DMDAVecGetArray(user->da,user->gamma,&agamma); CHKERRQ(ierr);
   for (j = info->ys; j < info->ys + info->ym; j++) {
       for (i = info->xs; i < info->xs + info->xm; i++) {
-          // apply Neumann b.c. if appropriate to determine left/right neighbors
+          // apply Neumann b.c. (if needed) to determine left/right neighbor
           ul = (i == 0)    ? au[j][i+1] + 2.0 * hx * agamma[j][i] : au[j][i-1];
           ur = (i == mx-1) ? au[j][i-1]                           : au[j][i+1];
           uxx = (ul - 2.0 * au[j][i]+ ur) / (hx*hx);
