@@ -178,7 +178,7 @@ int main(int argc,char **argv)
   PetscErrorCode ierr;
   HeatCtx        user;
   TS             ts;
-  Vec            u, uexact;
+  Vec            u;
   DMDALocalInfo  info;
   double         hx, hy, hxhy, t0, dt, tf;
   PetscBool      monitorenergy = PETSC_FALSE;
@@ -204,7 +204,6 @@ int main(int argc,char **argv)
   ierr = DMDASetUniformCoordinates(user.da, 0.0, 1.0, 0.0, 1.0, -1.0, -1.0); CHKERRQ(ierr);
   ierr = DMSetApplicationContext(user.da,&user); CHKERRQ(ierr);
   ierr = DMCreateGlobalVector(user.da,&u); CHKERRQ(ierr);
-  ierr = VecDuplicate(u,&uexact); CHKERRQ(ierr);
   ierr = VecDuplicate(u,&(user.f)); CHKERRQ(ierr);
   ierr = VecDuplicate(u,&(user.gamma)); CHKERRQ(ierr);
   ierr = SetSource(user.f,&user); CHKERRQ(ierr);
@@ -248,8 +247,7 @@ int main(int argc,char **argv)
   ierr = PetscPrintf(PETSC_COMM_WORLD,
            "... done ... final time tf=%g\n",tf); CHKERRQ(ierr);
 
-  VecDestroy(&u);  VecDestroy(&uexact);
-  VecDestroy(&(user.f));  VecDestroy(&(user.gamma));
+  VecDestroy(&u);  VecDestroy(&(user.f));  VecDestroy(&(user.gamma));
   TSDestroy(&ts);  DMDestroy(&user.da);
   PetscFinalize();
   return 0;
