@@ -594,9 +594,7 @@ Consider the time-dependent heat equation in two space dimensions (2D)
 \end{equation}
 We seek the temperature $u(t,x,y)$ at times $t \in [0,T]$ and points $(x,y) \in \mathcal{S} =(0,1)\times (0,1)$, the unit square.  For simplicity we set the \emph{diffusivity} $D_0>0$ to be constant and the \emph{heat source} $f(x,y)$ to be time-independent.
 
-A time-dependent PDE like \eqref{eq:ts:heatequation} becomes a system of ODEs by \emph{semi-discretization in space}, also known as the \emph{method of lines}.  (One visualizes the continuous-time, discrete-space ODE domain as lines $(t,x_i,y_j)$ in the three-dimensional space-time.)
-
-For the example here we discretize spatial derivatives in \eqref{eq:ts:heatequation} the same way we did in Chapter \ref{chap:st}.  We use a \pDMDA to put a grid of $m_x m_y$ points labeled $(x_i,y_j)$ on $\mathcal{S}$; see Figure \ref{fig:unitsquaregrid} in Chapter \ref{chap:st}.  Then we replace the spatial derivatives in \eqref{eq:ts:heatequation} by centered finite differences while keeping the time derivatives unmodified.  If $h_x,h_y$ are the grid spacings then we get
+A time-dependent PDE like \eqref{eq:ts:heatequation} becomes a system of ODEs by \emph{semi-discretization in space}, also known as the \emph{method of lines}.\sidenote{This name imagines the continuous-time, discrete-space ODE domain as lines $(t,x_i,y_j)$ in the three-dimensional space-time.}  For the example here we discretize spatial derivatives in \eqref{eq:ts:heatequation} the same way we did in Chapter \ref{chap:st}.  We use a \pDMDA to put a grid of $m_x m_y$ points labeled $(x_i,y_j)$ on $\mathcal{S}$.  (Compare Figure \ref{fig:unitsquaregrid} in Chapter \ref{chap:st} and Figure \ref{fig:ts:heatdefaultgrid} below.  We have more to say about the latter.)  Then we replace the spatial derivatives in \eqref{eq:ts:heatequation} by centered finite differences while keeping the time derivatives unmodified.  If $h_x,h_y$ are the grid spacings then we get
 \begin{equation}
 u_{i,j}' = D_0 \frac{u_{i+1,j} - 2 u_{i,j} + u_{i-1,j}}{h_x^2} + D_0 \frac{u_{i,j+1} - 2 u_{i,j} + u_{i,j-1}}{h_y^2} + f_{i,j}. \label{eq:ts:molheat}
 \end{equation}
@@ -606,9 +604,9 @@ u_{i,j}(t) \approx u(t,x_i,y_j) \label{eq:ts:molumeaning}
 \end{equation}
 and $f_{i,j} = f(x_i,y_j)$.
 
-Equations \eqref{eq:ts:molheat} form a system of ODEs in form \eqref{eq:ts:ode}, which we can solve explicitly or implicitly, but there is no need to think about numerical time-integration now.\sidenote{Time-stepping-method agnosticism is central to the method of lines.}  We do need, however, to fully-specify a well-posed problem, including concrete source term, boundary conditions, and initial conditions.
+Equations \eqref{eq:ts:molheat} are actually a system of ODEs in form \eqref{eq:ts:ode}.  We can consider solving it explicitly or implicitly, but in fact there is no need to think about numerical time-integration now.\sidenote{Time-stepping-method agnosticism is central to the method of lines.}  We do need, however, to fully-specify a well-posed problem, including a concrete source term, boundary conditions, and initial conditions.
 
-For variety, and as an example which is representative of real-world applications, we specify a problem where the exact solution is not known\sidenote{The exact solution is \emph{knowable}, perhaps, but we do not bother.} but where a scalar quantity is conserved.  We choose, arbitrarily but also for a bit of variety, to have periodic boundary conditions along the $y=0$ and $y=1$ (top and bottom) boundaries and to have Neumann boundary conditions along the other boundaries.  On the left ($x=0$) we have a non-homogeneous Neumann boundary condition, and on the right ($x=1$) a homogeneous one.   See Figure \ref{fig:ts:heatsquare}.
+For variety, and as an example which is representative of real-world applications, we specify a problem without a known\sidenote{The exact solution is \emph{knowable}, perhaps, but we do not bother.} exact solution, but in which a scalar quantity is conserved.  We choose, arbitrarily but also for variety, to have periodic boundary conditions along the $y=0$ and $y=1$ (top and bottom) boundaries.  On the left ($x=0$) we have a non-homogeneous Neumann condition, and on the right ($x=1$) a homogeneous Neumann one.   See Figure \ref{fig:ts:heatsquare}.
 
 \begin{figure}
 \input{tikz/heatsquare.tex}
@@ -616,32 +614,48 @@ For variety, and as an example which is representative of real-world application
 \label{fig:ts:heatsquare}
 \end{figure}
 
-In the interior we choose a particular formula for the source term which takes both positive and negative values, $f(x,y) = 3 e^{-25(x-0.6)^2} \sin(2 \pi y)$.  For the non-homogeneous boundary condition,
+In the interior we choose a particular formula for the source term,
+    $$f(x,y) = 3 e^{-25(x-0.6)^2} \sin(2 \pi y).$$
+Note that this takes both positive and negative values.  For the non-homogeneous boundary condition along the left side we have
 	$$\frac{\partial u}{\partial n} = -\frac{\partial u}{\partial x} = \gamma(y),$$
-where $n$ denotes the outward unit normal direction, we choose $\gamma(y) = \sin(6\pi y)$.  It is easy to verify (Exercise \ref{chap:ts}.\ref{exer:ts:zerototalsource}) that the totals of these particular sources are zero:
+where $n$ denotes the outward unit normal direction, with $\gamma(y) = \sin(6\pi y)$.  It is easy to verify (Exercise \ref{chap:ts}.\ref{exer:ts:zerototalsource}) that the totals of these particular sources are zero:
 \begin{equation}
 \int_{\mathcal{S}} f(x,y)\,dx\,dy = 0, \qquad \int_0^1 \gamma(y)\,dy = 0. \label{eq:ts:zerototalsource}
 \end{equation}
 
-Physically-speaking, total thermal energy is proportional to the integral of $u$ over $\mathcal{S}$.  (For a material with density $\rho$ and heat capacity $c$ the energy (joules) contained in the material is $\rho c$ times the integral of $u$.)  On the other hand, heat equation \eqref{eq:ts:heatequation} is derived from the principle of conservation of internal (thermal) energy \citep{Ockendonetal2003}.  In fact, equation \eqref{eq:ts:heatequation} determines the evolution of that total energy, and it turns out that it is independent of time because of our particular choices:
+Physically-speaking, total thermal (internal) energy is proportional to the integral of $u$ over $\mathcal{S}$.  (For a material with density $\rho$ and heat capacity $c$ the energy is $\rho c$ times the integral.)  On the other hand, equation \eqref{eq:ts:heatequation} is derived from the principle of conservation of energy \citep{Ockendonetal2003}.  Equation \eqref{eq:ts:heatequation} thus determines the evolution of total thermal energy, which is independent of time because of our particular choices:
 \begin{align}
-\frac{d}{dt} \left(\int_{\mathcal{S}} u(t,x,y)\,dx\,dy\right) &= D_0 \int_{\partial \mathcal{S}} \frac{\partial u}{\partial n}\,ds + \int_{\mathcal{S}} f(x,y)\,dx\,dy \label{eq:ts:conservedscalar} \\
-   &= D_0 \int_0^1 \gamma(y)\,dy + \int_{\mathcal{S}} f(x,y)\,dx\,dy \notag \\
+\frac{d}{dt} \left(\int_{\mathcal{S}} u(t,x,y)\,dx\,dy\right) &= D_0 \int_0^1 \gamma(y)\,dy + \int_{\mathcal{S}} f(x,y)\,dx\,dy \label{eq:ts:conservedscalar} \\
    &= 0. \notag
 \end{align}
-See Exercise \ref{chap:ts}.\ref{exer:ts:zerototalsource}.
+(See Exercise \ref{chap:ts}.\ref{exer:ts:zerototalsource}.)  We want our discretized version \eqref{eq:ts:molheat} to conserve energy too, so a feature of this example, shown below, is to add a energy ``monitor'' call-back to the \pTS object.
 
-FIXME want discrete version to conserve too; demo energy monitor
 
-FIXME solve heat equation by implicit
+\section{Implementation}
 
-\cinputpart{heat.c}{\CODELOC}{FIXME}{I}{//HEATCTX}{//ENDHEATCTX}{code:ts:heat:heatctx}
+The program \texttt{c/ch5/heat.c}, shown in Codes \ref{code:ts:heat:heatctx}--\ref{code:ts:heat:monitor} is straightforward to write based on our Chapter \ref{chap:st} and \ref{chap:nl} experience with \pDMDA.  It uses a \pTS object essentially as in the examples so far in this Chapter.  It has a simple context \texttt{struct} so that call-backs have access to the constant $D_0$ and functions $f$, $\gamma$ (Code \ref{code:ts:heat:heatctx}).
+
+\cinputpart{heat.c}{\CODELOC}{A context \texttt{struct} gives call-backs access to constants and functions.}{I}{//HEATCTX}{//ENDHEATCTX}{code:ts:heat:heatctx}
+
+In Code \ref{code:ts:heat:dmdasetup}, an extract of \texttt{main()}, we set up the grid \pDMDA object.  We specify periodicity in the $y$ direction so that, both in serial and in parallel, ghost points are available in the $y$ direction, below and above, respectively, the first and last ``real'' locations.
+
+\cinputpart{heat.c}{\CODELOC}{Set up the \pDMDA grid object and allocate \pVecs for the solution $u$, heat source $f$, and Neumann boundary condition $\gamma$.}{II}{//DMDASETUP}{//ENDDMDASETUP}{code:ts:heat:dmdasetup}
+
+The default grid of $m_x \times m_y = 5\times 4$ points, specified through arguments to \texttt{DMDACreate2d()} as shown in Code \ref{code:ts:heat:dmdasetup}, actually has square cells as shown in Figure \ref{fig:ts:heatdefaultgrid}.  In fact, the spacings of the grid are $1/(m_x-1)$ and $1/m_y$ respectively---see the helper function \texttt{Spacings()} in \texttt{heat.c} (not shown).  The grid points shown along the lower boundary $y=0$ in Figure \ref{fig:ts:heatdefaultgrid} are also ``present'' on the upper boundary $y=1$.
+
+\begin{figure}
+\input{tikz/heatdefaultgrid.tex}
+\caption{The default $5\times 4$ point grid for \texttt{heat.c} corresponds to square cells because of the periodicity in $y$.}
+\label{fig:ts:heatdefaultgrid}
+\end{figure}
+
+Code \ref{code:ts:heat:dmdasetup} includes calls to \texttt{SetSource()} and \texttt{SetNeumanValues()} (not shown) to set $f,\gamma$ respectively.  A small idea here is that the non-homogeneous Neumann boundary value $\gamma(y)$ is allocated on a 2D grid even though it is only needed at points on the left boundary.  A slightly-less wasteful alternative, though requiring more code, would create a separate 1D \pDMDA for this boundary (Exercise \ref{chap:ts}.\ref{exer:ts:heatneumanndmda}).
+
+\cinputpart{heat.c}{\CODELOC}{FIXME}{III}{//TSSETUP}{//ENDTSSETUP}{code:ts:heat:tssetup}
 
 \cinputpart{heat.c}{\CODELOC}{FIXME}{II}{//RHSFUNCTION}{//ENDRHSFUNCTION}{code:ts:heat:rhsfunction}
 
 \cinputpart{heat.c}{\CODELOC}{FIXME}{III}{//RHSJACOBIAN}{//ENDRHSJACOBIAN}{code:ts:heat:rhsjacobian}
-
-\cinputpart{heat.c}{\CODELOC}{FIXME}{IV}{//TSSETUP}{//ENDTSSETUP}{code:ts:heat:tssetup}
 
 \cinputpart{heat.c}{\CODELOC}{FIXME}{V}{//MONITOR}{//ENDMONITOR}{code:ts:heat:monitor}
 
@@ -745,7 +759,9 @@ $ ./odejac -snes_monitor
 %$
 differ in the size of residual norms and even in the number of Newton iterations.  Explain.
 
-\item \label{exer:ts:zerototalsource}  Show \eqref{eq:ts:zerototalsource}.  Then fill in the details to show \eqref{eq:ts:conservedscalar}, taking note that the periodic boundary condition amounts to treating those ``boundary'' locations as interior points of a (topologically) cylindrical surface.
+\item \label{exer:ts:zerototalsource}  Show \eqref{eq:ts:zerototalsource}.  Then fill in the details to show \eqref{eq:ts:conservedscalar}.  Observe that the periodic boundary condition amounts to treating the top/bottom boundary locations as interior points of a (topologically) cylindrical surface.
+
+\item \label{exer:ts:heatneumanndmda} Write a new version of \texttt{heat.c} which creates a \texttt{DMDACreate1d()} and uses it to allocate and access the \pVec \texttt{gamma}.  The new code will not waste memory in a 2D array for this purpose, as does \texttt{heat.c}.
 
 \item FIXME for run like
 \begin{cline}
