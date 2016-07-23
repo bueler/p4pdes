@@ -592,21 +592,22 @@ Consider the time-dependent heat equation in two space dimensions (2D)
 \begin{equation}
 \frac{\partial u}{\partial t} = D_0 \grad^2 u + f(x,y). \label{eq:ts:heatequation}
 \end{equation}
-We seek the temperature $u(t,x,y)$ at times $t \in [0,T]$ and points $(x,y) \in \mathcal{S} =(0,1)\times (0,1)$, the unit square.  For simplicity we set the \emph{diffusivity} $D_0>0$ to be constant and the \emph{heat source} $f(x,y)$ to be time-independent.
+We seek the temperature $u(t,x,y)$ at times $t \in [0,T]$ and points $(x,y)$ in the unit square $\mathcal{S} =(0,1)\times (0,1)$.  For simplicity we set the \emph{diffusivity} $D_0>0$ to be constant and the \emph{heat source} $f(x,y)$ to be time-independent.
 
-A time-dependent PDE like \eqref{eq:ts:heatequation} becomes a system of ODEs by \emph{semi-discretization in space}, also known as the \emph{method of lines}.\sidenote{This name imagines the continuous-time, discrete-space ODE domain as lines $(t,x_i,y_j)$ in the three-dimensional space-time.}  For the example here we discretize spatial derivatives in \eqref{eq:ts:heatequation} the same way we did in Chapter \ref{chap:st}.  We use a \pDMDA to put a grid of $m_x m_y$ points labeled $(x_i,y_j)$ on $\mathcal{S}$.  (Compare Figure \ref{fig:unitsquaregrid} in Chapter \ref{chap:st} and Figure \ref{fig:ts:heatdefaultgrid} below.  We have more to say about the latter.)  Then we replace the spatial derivatives in \eqref{eq:ts:heatequation} by centered finite differences while keeping the time derivatives unmodified.  If $h_x,h_y$ are the grid spacings then we get
+Any time-dependent PDE like \eqref{eq:ts:heatequation} becomes a system of ODEs by \emph{semi-discretization in space}, also known as the \emph{method of lines}.  (The latter name imagines the continuous-time, discrete-space ODE domain as lines $(t,x_i,y_j)$ in the three-dimensional space-time.)
+
+For the example here we discretize spatial derivatives the same way we did in Chapter \ref{chap:st}.  We use a \pDMDA to put a grid of $m_x m_y$ points $(x_i,y_j)$ on $\mathcal{S}$.  (Compare Figure \ref{fig:unitsquaregrid} in Chapter \ref{chap:st} and Figure \ref{fig:ts:heatdefaultgrid} below.)  Then we replace the spatial derivatives in \eqref{eq:ts:heatequation} by centered finite differences while keeping the time derivatives; they become ordinary derivatives.  If $h_x,h_y$ are the grid spacings then we get
 \begin{equation}
 u_{i,j}' = D_0 \frac{u_{i+1,j} - 2 u_{i,j} + u_{i-1,j}}{h_x^2} + D_0 \frac{u_{i,j+1} - 2 u_{i,j} + u_{i,j-1}}{h_y^2} + f_{i,j}. \label{eq:ts:molheat}
 \end{equation}
-where
+where $f_{i,j} = f(x_i,y_j)$ and
 \begin{equation}
-u_{i,j}(t) \approx u(t,x_i,y_j) \label{eq:ts:molumeaning}
+u_{i,j}(t) \approx u(t,x_i,y_j). \label{eq:ts:molumeaning}
 \end{equation}
-and $f_{i,j} = f(x_i,y_j)$.
 
-Equations \eqref{eq:ts:molheat} are actually a system of ODEs in form \eqref{eq:ts:ode}.  We can consider solving it explicitly or implicitly, but in fact there is no need to think about numerical time-integration now.\sidenote{Time-stepping-method agnosticism is central to the method of lines.}  We do need, however, to fully-specify a well-posed problem, including a concrete source term, boundary conditions, and initial conditions.
+Equations \eqref{eq:ts:molheat} are actually a system of ODEs in form \eqref{eq:ts:ode}.  We can solve it numerically, explicitly or implicitly, but in fact there is no need to think about time-stepping methods now.\sidenote{This agnosticism is central to the method of lines.}  We do, however, need to fully-specify a well-posed problem.  We need a concrete source term, boundary conditions, and initial conditions.
 
-For variety, and as an example which is representative of real-world applications, we specify a problem without a known\sidenote{The exact solution is \emph{knowable}, perhaps, but we do not bother.} exact solution, but in which a scalar quantity is conserved.  We choose, arbitrarily but also for variety, to have periodic boundary conditions along the $y=0$ and $y=1$ (top and bottom) boundaries.  On the left ($x=0$) we have a non-homogeneous Neumann condition, and on the right ($x=1$) a homogeneous Neumann one.   See Figure \ref{fig:ts:heatsquare}.
+For variety, and as an example which is representative of real-world applications, we specify a problem without a known\sidenote{The exact solution is \emph{knowable}, perhaps, but we do not bother.} exact solution, but in which a scalar quantity is conserved.  We choose, somewhat arbitrarily but also for variety, to have periodic boundary conditions along the top and bottom boundaries; see Figure \ref{fig:ts:heatsquare}.  On the left ($x=0$) we choose a non-homogeneous Neumann condition, and on the right ($x=1$) a homogeneous Neumann one.
 
 \begin{figure}
 \input{tikz/heatsquare.tex}
@@ -614,34 +615,41 @@ For variety, and as an example which is representative of real-world application
 \label{fig:ts:heatsquare}
 \end{figure}
 
-In the interior we choose a particular formula for the source term,
+For the source term we choose a particular formula which takes both positive and negative values,
     $$f(x,y) = 3 e^{-25(x-0.6)^2} \sin(2 \pi y).$$
-Note that this takes both positive and negative values.  For the non-homogeneous boundary condition along the left side we have
-	$$\frac{\partial u}{\partial n} = -\frac{\partial u}{\partial x} = \gamma(y),$$
-where $n$ denotes the outward unit normal direction, with $\gamma(y) = \sin(6\pi y)$.  It is easy to verify (Exercise \ref{chap:ts}.\ref{exer:ts:zerototalsource}) that the totals of these particular sources are zero:
+For the boundary condition along the left side we set
+	$$-\frac{\partial u}{\partial x} = \gamma(y)$$
+with $\gamma(y) = \sin(6\pi y)$.  It is easy to verify (Exercise \ref{chap:ts}.\ref{exer:ts:zerototalsource}) that the totals of these particular sources are zero:
 \begin{equation}
 \int_{\mathcal{S}} f(x,y)\,dx\,dy = 0, \qquad \int_0^1 \gamma(y)\,dy = 0. \label{eq:ts:zerototalsource}
 \end{equation}
 
-Physically-speaking, total thermal (internal) energy is proportional to the integral of $u$ over $\mathcal{S}$.  (For a material with density $\rho$ and heat capacity $c$ the energy is $\rho c$ times the integral.)  On the other hand, equation \eqref{eq:ts:heatequation} is derived from the principle of conservation of energy \citep{Ockendonetal2003}.  Equation \eqref{eq:ts:heatequation} thus determines the evolution of total thermal energy, which is independent of time because of our particular choices:
+Physically-speaking, total thermal energy is proportional to the integral of $u$ over $\mathcal{S}$.  (For a material with density $\rho$ and heat capacity $c$ the internal energy is $\rho c$ times the integral.)  On the other hand, equation \eqref{eq:ts:heatequation} is derived from the principle of conservation of energy \citep{Ockendonetal2003}.  Equation \eqref{eq:ts:heatequation} thus determines that the total energy is independent of time because of our particular choices:
 \begin{align}
 \frac{d}{dt} \left(\int_{\mathcal{S}} u(t,x,y)\,dx\,dy\right) &= D_0 \int_0^1 \gamma(y)\,dy + \int_{\mathcal{S}} f(x,y)\,dx\,dy \label{eq:ts:conservedscalar} \\
    &= 0. \notag
 \end{align}
-(See Exercise \ref{chap:ts}.\ref{exer:ts:zerototalsource}.)  We want our discretized version \eqref{eq:ts:molheat} to conserve energy too, so a feature of this example, shown below, is to add a energy ``monitor'' call-back to the \pTS object.
+(Again, see Exercise \ref{chap:ts}.\ref{exer:ts:zerototalsource}.)  We want our discretized equations \eqref{eq:ts:molheat} to conserve energy too; see the ``energy monitor'' below.
 
 
 \section{Implementation}
 
-The program \texttt{c/ch5/heat.c}, shown in Codes \ref{code:ts:heat:heatctx}--\ref{code:ts:heat:monitor} is straightforward to write based on our Chapter \ref{chap:st} and \ref{chap:nl} experience with \pDMDA.  It uses a \pTS object essentially as in the examples so far in this Chapter.  It has a simple context \texttt{struct} so that call-backs have access to the constant $D_0$ and functions $f$, $\gamma$ (Code \ref{code:ts:heat:heatctx}).
+The program \texttt{c/ch5/heat.c} shown in Codes \ref{code:ts:heat:heatctx}--\ref{code:ts:heat:monitor} is straightforward to write based on our Chapter \ref{chap:st} and \ref{chap:nl} experience with \pDMDA and our experience with \pTS in this Chapter.  The overall structure of \texttt{heat.c}, in terms of \PETSc components, is shown in Figure \ref{fig:ts:stack}.
 
 \cinputpart{heat.c}{\CODELOC}{A context \texttt{struct} gives call-backs access to constants and functions.}{I}{//HEATCTX}{//ENDHEATCTX}{code:ts:heat:heatctx}
 
-In Code \ref{code:ts:heat:dmdasetup}, an extract of \texttt{main()}, we set up the grid \pDMDA object.  We specify periodicity in the $y$ direction so that, both in serial and in parallel, ghost points are available in the $y$ direction, below and above, respectively, the first and last ``real'' locations.
+Code \ref{code:ts:heat:heatctx} shows the context \texttt{struct}, so that call-backs have access to the constant $D_0$ and functions $f$, $\gamma$.  Code \ref{code:ts:heat:dmdasetup}, which is an extract of \texttt{main()}, sets up the grid \pDMDA object.  The grid is shown in Figure \ref{fig:ts:heatdefaultgrid}; grid points along the lower boundary $y=0$ are also on the upper boundary $y=1$.  By specifying periodicity, ghost points are set up so that the $(x_i,y_{j\pm 1})$ neighbor of a grid point $(x_i,y_j)$ is always available.\sidenote{This applies both in serial and in parallel.}  The default grid of $m_x \times m_y = 5\times 4$ points, set by arguments to \texttt{DMDACreate2d()} as shown in Code \ref{code:ts:heat:dmdasetup}, actually has square cells.  In fact, the spacings of the grid are $1/(m_x-1)$ and $1/m_y$ respectively---see the helper function \texttt{Spacings()} in \texttt{heat.c} (not shown).
 
-\cinputpart{heat.c}{\CODELOC}{Set up the \pDMDA grid object and allocate \pVecs for the solution $u$, heat source $f$, and Neumann boundary condition $\gamma$.}{II}{//DMDASETUP}{//ENDDMDASETUP}{code:ts:heat:dmdasetup}
+\begin{figure}
+% usage: \standardTSstack{scale}{Jacobian}{DMDA}
+\standardTSstack{0.775}{}{}
+\caption{The \PETSc ``stack'' used for time-dependent, structured-grid PDE examples \texttt{heat.c,pattern.c}.}
+\label{fig:ts:stack}
+\end{figure}
 
-The default grid of $m_x \times m_y = 5\times 4$ points, specified through arguments to \texttt{DMDACreate2d()} as shown in Code \ref{code:ts:heat:dmdasetup}, actually has square cells as shown in Figure \ref{fig:ts:heatdefaultgrid}.  In fact, the spacings of the grid are $1/(m_x-1)$ and $1/m_y$ respectively---see the helper function \texttt{Spacings()} in \texttt{heat.c} (not shown).  The grid points shown along the lower boundary $y=0$ in Figure \ref{fig:ts:heatdefaultgrid} are also ``present'' on the upper boundary $y=1$.
+Code \ref{code:ts:heat:dmdasetup} includes calls to \texttt{SetSource()} and \texttt{SetNeumanValues()} (not shown) to set $f,\gamma$ respectively.  A small idea here is that the non-homogeneous Neumann boundary value $\gamma(y)$ is allocated on a 2D grid even though it is only needed at points on the left boundary.  A slightly-less wasteful alternative, though requiring more code, would create a separate 1D \pDMDA for this boundary (Exercise \ref{chap:ts}.\ref{exer:ts:heatneumanndmda}).
+
+\cinputpart{heat.c}{\CODELOC}{Set up the \pDMDA grid object and needed \pVecs.}{II}{//DMDASETUP}{//ENDDMDASETUP}{code:ts:heat:dmdasetup}
 
 \begin{figure}
 \input{tikz/heatdefaultgrid.tex}
@@ -649,22 +657,18 @@ The default grid of $m_x \times m_y = 5\times 4$ points, specified through argum
 \label{fig:ts:heatdefaultgrid}
 \end{figure}
 
-Code \ref{code:ts:heat:dmdasetup} includes calls to \texttt{SetSource()} and \texttt{SetNeumanValues()} (not shown) to set $f,\gamma$ respectively.  A small idea here is that the non-homogeneous Neumann boundary value $\gamma(y)$ is allocated on a 2D grid even though it is only needed at points on the left boundary.  A slightly-less wasteful alternative, though requiring more code, would create a separate 1D \pDMDA for this boundary (Exercise \ref{chap:ts}.\ref{exer:ts:heatneumanndmda}).
+\cinputpart{heat.c}{\CODELOC}{Create the \pTS.  Associate the \pDMDA, the RHS evaluation, the Jacobian-of-RHS evaluation, and the energy monitor code to it.}{III}{//TSSETUP}{//ENDTSSETUP}{code:ts:heat:tssetup}
 
-\cinputpart{heat.c}{\CODELOC}{FIXME}{III}{//TSSETUP}{//ENDTSSETUP}{code:ts:heat:tssetup}
+The next part (Code \ref{code:ts:heat:tssetup}) creates and configures the \pTS.  A new call, compared to previous \pTS examples anyway, is \texttt{TSSetDM()}.  (The \pTS determines the size $N=m_x m_y$ of the system of ODEs through this association to a \pDMDA grid object, for example.)  The same extract also shows the calls, specific to this context with both \pDMDA and \pTS, for assigning ``local'' grid-aware functions \texttt{FormRHSFunctionLocal()} and \texttt{FormRHSJacobianLocal()}; these appear in Codes \ref{code:ts:heat:rhsfunction} and \ref{code:ts:heat:rhsjacobian}.  Also we set the default \pTS type to backward Euler, because the system \eqref{eq:ts:molheat} is stiff and that method has stiff decay, though of course we may override this choice.
 
-\cinputpart{heat.c}{\CODELOC}{FIXME}{II}{//RHSFUNCTION}{//ENDRHSFUNCTION}{code:ts:heat:rhsfunction}
+\cinputpart{heat.c}{\CODELOC}{Evaluate the ODE RHS $\bg(t,\by)$ for ODE system \eqref{eq:ts:molheat}.}{II}{//RHSFUNCTION}{//ENDRHSFUNCTION}{code:ts:heat:rhsfunction}
 
-\cinputpart{heat.c}{\CODELOC}{FIXME}{III}{//RHSJACOBIAN}{//ENDRHSJACOBIAN}{code:ts:heat:rhsjacobian}
+\cinputpart{heat.c}{\CODELOC}{Evaluate the Jacobian of the ODE RHS.}{III}{//RHSJACOBIAN}{//ENDRHSJACOBIAN}{code:ts:heat:rhsjacobian}
+
+A feature of this example (Code \ref{code:ts:heat:monitor}) is to add a energy ``monitor'' call-back to the \pTS object to check that the total energy is constant in the discretized system.
 
 \cinputpart{heat.c}{\CODELOC}{FIXME}{V}{//MONITOR}{//ENDMONITOR}{code:ts:heat:monitor}
 
-\begin{figure}
-% usage: \standardTSstack{scale}{Jacobian}{DMDA}
-\standardTSstack{0.775}{}{}
-\caption{The \PETSc stack used for the time-dependent, structured-grid PDE problems in Chapter \ref{chap:ts} (i.e.~\texttt{heat.c,pattern.c}).  Compare Figure \ref{fig:of:standardstack}.}
-\label{fig:of:tsstack}
-\end{figure}
 
 FIXME
 
