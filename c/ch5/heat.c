@@ -52,7 +52,7 @@ PetscErrorCode EnergyMonitor(TS ts, PetscInt step, PetscReal time, Vec u,
     lenergy *= hx * hy;
     ierr = PetscObjectGetComm((PetscObject)(user->da),&com); CHKERRQ(ierr);
     ierr = MPI_Allreduce(&lenergy,&energy,1,MPI_DOUBLE,MPI_SUM,com); CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"  energy = %g\n",energy); CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"  energy = %.2e\n",energy); CHKERRQ(ierr);
     return 0;
 }
 //ENDMONITOR
