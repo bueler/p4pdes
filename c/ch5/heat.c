@@ -84,18 +84,17 @@ PetscErrorCode SetNeumannValues(Vec gamma, HeatCtx* user) {
     int            j;
     double         hy, **agamma, y;
 
-    ierr = VecSet(gamma,NAN); CHKERRQ(ierr);  // start by invalidating
+    ierr = VecSet(gamma,NAN); CHKERRQ(ierr);  // invalidate
     ierr = DMDAGetLocalInfo(user->da,&info); CHKERRQ(ierr);
-    ierr = Spacings(user->da,NULL,&hy); CHKERRQ(ierr);
-    ierr = DMDAVecGetArray(user->da,gamma,&agamma); CHKERRQ(ierr);
-    for (j = info.ys; j < info.ys+info.ym; j++) {
-        y = hy * j;
-        if (info.xs == 0)
+    if (info.xs == 0) { // only a process that owns i=0 will do the following
+        ierr = Spacings(user->da,NULL,&hy); CHKERRQ(ierr);
+        ierr = DMDAVecGetArray(user->da,gamma,&agamma); CHKERRQ(ierr);
+        for (j = info.ys; j < info.ys+info.ym; j++) {
+            y = hy * j;
             agamma[j][0] = sin(6.0 * PETSC_PI * y);
-        if (info.xs+info.xm == info.mx)
-            agamma[j][info.mx-1] = 0.0;
+        }
+        ierr = DMDAVecRestoreArray(user->da,gamma,&agamma); CHKERRQ(ierr);
     }
-    ierr = DMDAVecRestoreArray(user->da,gamma,&agamma); CHKERRQ(ierr);
     return 0;
 }
 
@@ -103,23 +102,19 @@ PetscErrorCode SetNeumannValues(Vec gamma, HeatCtx* user) {
 PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **au,
                                     double **aG, HeatCtx *user) {
   PetscErrorCode ierr;
-  int      i, j;
-  double   hx, hy, uleft, uright, uxx, uyy, **af, **agamma;
+  int      i, j, mx = info->mx;
+  double   hx, hy, ul, ur, uxx, uyy, **af, **agamma;
 
   ierr = Spacings(info->da,&hx,&hy); CHKERRQ(ierr);
   ierr = DMDAVecGetArray(user->da,user->f,&af); CHKERRQ(ierr);
   ierr = DMDAVecGetArray(user->da,user->gamma,&agamma); CHKERRQ(ierr);
   for (j = info->ys; j < info->ys + info->ym; j++) {
       for (i = info->xs; i < info->xs + info->xm; i++) {
-          if (i == 0)
-              uleft = au[j][i+1] - 2.0 * hx * agamma[j][i];
-          else
-              uleft = au[j][i-1];
-          if (i == info->mx-1)
-              uright = au[j][i-1] - 2.0 * hx * agamma[j][i];
-          else
-              uright = au[j][i+1];
-          uxx = (uleft - 2.0 * au[j][i]+ uright) / (hx*hx);
+          // apply Neumann b.c. if appropriate to determine left/right neighbors
+          ul = (i == 0)    ? au[j][i+1] + 2.0 * hx * agamma[j][i] : au[j][i-1];
+          ur = (i == mx-1) ? au[j][i-1]                           : au[j][i+1];
+          uxx = (ul - 2.0 * au[j][i]+ ur) / (hx*hx);
+          // j-1, j+1 values always valid because DMDA is periodic in y
           uyy = (au[j-1][i] - 2.0 * au[j][i]+ au[j+1][i]) / (hy*hy);
           aG[j][i] = user->D0 * (uxx + uyy) + af[j][i];
       }
@@ -144,7 +139,7 @@ PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info, double t, double **au,
     for (j = info->ys; j < info->ys+info->ym; j++) {
         row.j = j;  col[0].j = j;
         for (i = info->xs; i < info->xs+info->xm; i++) {
-            ncols = 5;
+            // set up a standard 5-point stencil for the row
             row.i = i;
             col[0].i = i;
             v[0] = - 2.0 * D * (1.0 / hx2 + 1.0 / hy2);
@@ -152,6 +147,8 @@ PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info, double t, double **au,
             col[2].j = j+1;  col[2].i = i;    v[2] = D / hy2;
             col[3].j = j;    col[3].i = i-1;  v[3] = D / hx2;
             col[4].j = j;    col[4].i = i+1;  v[4] = D / hx2;
+            ncols = 5;
+            // if at the boundary, edit the row back to 4 nonzeros
             if (i == 0) {
                 ncols = 4;
                 col[3].j = j;  col[3].i = i+1;  v[3] = 2.0 * D / hx2;
@@ -195,13 +192,10 @@ int main(int argc,char **argv)
 
 //DMDASETUP
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
-               DM_BOUNDARY_NONE, DM_BOUNDARY_PERIODIC,
-               DMDA_STENCIL_STAR,
+               DM_BOUNDARY_NONE, DM_BOUNDARY_PERIODIC, DMDA_STENCIL_STAR,
                -5,-4,PETSC_DECIDE,PETSC_DECIDE,  // default to hx=hx=0.25 grid
-               1,                                // degrees of freedom
-               1,                                // stencil width
+               1,1,                       // degrees of freedom, stencil width
                NULL,NULL,&user.da); CHKERRQ(ierr);
-  ierr = DMDASetUniformCoordinates(user.da, 0.0, 1.0, 0.0, 1.0, -1.0, -1.0); CHKERRQ(ierr);
   ierr = DMSetApplicationContext(user.da,&user); CHKERRQ(ierr);
   ierr = DMCreateGlobalVector(user.da,&u); CHKERRQ(ierr);
   ierr = VecDuplicate(u,&(user.f)); CHKERRQ(ierr);
