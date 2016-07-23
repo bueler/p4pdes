@@ -28,7 +28,6 @@ PetscErrorCode Spacings(DM da, double *hx, double *hy) {
     return 0;
 }
 
-
 //MONITOR
 PetscErrorCode EnergyMonitor(TS ts, PetscInt step, PetscReal time, Vec u,
                              void *ctx) {
@@ -59,8 +58,7 @@ PetscErrorCode EnergyMonitor(TS ts, PetscInt step, PetscReal time, Vec u,
 }
 //ENDMONITOR
 
-
-PetscErrorCode SetSourceF(Vec f, HeatCtx* user) {
+PetscErrorCode SetSource(Vec f, HeatCtx* user) {
     PetscErrorCode ierr;
     DMDALocalInfo  info;
     int            i,j;
@@ -80,7 +78,6 @@ PetscErrorCode SetSourceF(Vec f, HeatCtx* user) {
     ierr = DMDAVecRestoreArray(user->da,f,&af); CHKERRQ(ierr);
     return 0;
 }
-
 
 PetscErrorCode SetNeumannValues(Vec gamma, HeatCtx* user) {
     PetscErrorCode ierr;
@@ -102,7 +99,6 @@ PetscErrorCode SetNeumannValues(Vec gamma, HeatCtx* user) {
     ierr = DMDAVecRestoreArray(user->da,gamma,&agamma); CHKERRQ(ierr);
     return 0;
 }
-
 
 //RHSFUNCTION
 PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **au,
@@ -134,7 +130,6 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **au,
   return 0;
 }
 //ENDRHSFUNCTION
-
 
 //RHSJACOBIAN
 PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info, double t, double **au,
@@ -179,7 +174,6 @@ PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info, double t, double **au,
 }
 //ENDRHSJACOBIAN
 
-
 int main(int argc,char **argv)
 {
   PetscErrorCode ierr;
@@ -200,22 +194,23 @@ int main(int argc,char **argv)
            "heat.c",monitorenergy,&monitorenergy,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
+//DMDASETUP
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
-                      DM_BOUNDARY_NONE, DM_BOUNDARY_PERIODIC,
-                      DMDA_STENCIL_STAR,
-                      -4,-3,PETSC_DECIDE,PETSC_DECIDE,
-                      1,  // degrees of freedom
-                      1,  // stencil width
-                      NULL,NULL,&user.da); CHKERRQ(ierr);
+               DM_BOUNDARY_NONE, DM_BOUNDARY_PERIODIC,
+               DMDA_STENCIL_STAR,
+               -5,-4,PETSC_DECIDE,PETSC_DECIDE,  // default to hx=hx=0.25 grid
+               1,                                // degrees of freedom
+               1,                                // stencil width
+               NULL,NULL,&user.da); CHKERRQ(ierr);
   ierr = DMDASetUniformCoordinates(user.da, 0.0, 1.0, 0.0, 1.0, -1.0, -1.0); CHKERRQ(ierr);
   ierr = DMSetApplicationContext(user.da,&user); CHKERRQ(ierr);
-
   ierr = DMCreateGlobalVector(user.da,&u); CHKERRQ(ierr);
   ierr = VecDuplicate(u,&uexact); CHKERRQ(ierr);
   ierr = VecDuplicate(u,&(user.f)); CHKERRQ(ierr);
   ierr = VecDuplicate(u,&(user.gamma)); CHKERRQ(ierr);
-  ierr = SetSourceF(user.f,&user); CHKERRQ(ierr);
+  ierr = SetSource(user.f,&user); CHKERRQ(ierr);
   ierr = SetNeumannValues(user.gamma,&user); CHKERRQ(ierr);
+//ENDDMDASETUP
 
 //TSSETUP
   ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
@@ -242,13 +237,14 @@ int main(int argc,char **argv)
   ierr = Spacings(user.da,&hx,&hy); CHKERRQ(ierr);
   hxhy = PetscMin(hx,hy);  hxhy = hxhy * hxhy;
   ierr = PetscPrintf(PETSC_COMM_WORLD,
-           "solving on %d x %d grid from t0=%g with initial step dt=%g ...\n"
-           "(initial step stability ratio:  D0 dt / (min{dx,dy}^2) = %g)\n",
-           info.mx,info.my,t0,dt,user.D0*dt/hxhy); CHKERRQ(ierr);
+           "solving on %d x %d grid with dx=%g x dy=%g cells ...\n"
+           "t0=%g and initial step dt=%g (so D0 dt / (min{dx,dy}^2) = %g)\n",
+           info.mx,info.my,hx,hy,
+           t0,dt,user.D0*dt/hxhy); CHKERRQ(ierr);
 
-  ierr = VecSet(u,0.0); CHKERRQ(ierr);
+  // solve
+  ierr = VecSet(u,0.0); CHKERRQ(ierr);   // initial condition
   ierr = TSSolve(ts,u); CHKERRQ(ierr);
-
   ierr = TSGetTime(ts,&tf); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
            "... done ... final time tf=%g\n",tf); CHKERRQ(ierr);

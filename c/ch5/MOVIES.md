@@ -47,15 +47,15 @@ PETSc alone can generate a movie at run-time, for instance by
 The question is how to save a convenient, possibly high-resolution, movie for future viewing.  Here is an example.  First generate and save the solution in PETSc binary-format files:
 
         ./heat -ts_monitor binary:t.dat -ts_monitor_solution binary:u.dat \
-            -ts_final_time 0.02 -ts_dt 0.001 -da_refine 6
+            -ts_final_time 0.02 -ts_dt 0.001 -da_refine 5
 
 This run reports that the grid has dimensions 193 by 192.  Adding these grid dimension as options, the same script shows a movie on the screen:
 
-        ./plotTS.py -mx 193 -my 192 t.dat u.dat
+        ./plotTS.py -mx 129 -my 128 t.dat u.dat
 
 Simply add a filename root to save the frames in individual files:
 
-        ./plotTS.py -mx 193 -my 192 t.dat u.dat -oroot bar
+        ./plotTS.py -mx 129 -my 128 t.dat u.dat -oroot bar
 
 This generates files `bar000.png`, `bar001.png`, and so on, using the name pattern `bar%03d.png`.
 
