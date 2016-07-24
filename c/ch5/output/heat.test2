@@ -1,5 +1,5 @@
-solving on 17 x 16 grid with dx=0.0625 x dy=0.0625 cells ...
-t0=0. and initial step dt=0.01 (so D0 dt / (min{dx,dy}^2) = 2.56)
+solving on 17 x 16 grid with dx=0.0625 x dy=0.0625 cells, t0=0.,
+and initial step dt=0.01 (so D0 dt / (min{dx,dy}^2) = 2.56) ...
   energy = 0.00e+00
   energy = 1.29e-14
   energy = 3.07e-14
@@ -11,4 +11,3 @@ t0=0. and initial step dt=0.01 (so D0 dt / (min{dx,dy}^2) = 2.56)
   energy = 4.78e-14
   energy = 4.87e-14
   energy = 4.94e-14
-... done ... final time tf=0.1

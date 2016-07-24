@@ -12,9 +12,9 @@ static char help[] =
 //HEATCTX
 typedef struct {
   DM     da;
+  double D0;    // conductivity
   Vec    f,     // source f(x,y)
          gamma; // Neumann boundary condition; = gamma(y) on left boundary
-  double D0;    // conductivity
 } HeatCtx;
 //ENDHEATCTX
 
@@ -177,7 +177,7 @@ int main(int argc,char **argv)
   TS             ts;
   Vec            u;
   DMDALocalInfo  info;
-  double         hx, hy, hxhy, t0, dt, tf;
+  double         hx, hy, hxhy, t0, dt;
   PetscBool      monitorenergy = PETSC_FALSE;
 
   PetscInitialize(&argc,&argv,(char*)0,help);
@@ -220,26 +220,22 @@ int main(int argc,char **argv)
   ierr = TSSetInitialTimeStep(ts,0.0,0.01); CHKERRQ(ierr);
   ierr = TSSetDuration(ts,1000000,0.1); CHKERRQ(ierr);
   ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
-//ENDTSSETUP
 
-  // report on set up
-  ierr = TSGetTime(ts,&t0); CHKERRQ(ierr);
-  ierr = TSGetTimeStep(ts,&dt); CHKERRQ(ierr);
-  ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);
-  ierr = Spacings(user.da,&hx,&hy); CHKERRQ(ierr);
-  hxhy = PetscMin(hx,hy);  hxhy = hxhy * hxhy;
-  ierr = PetscPrintf(PETSC_COMM_WORLD,
-           "solving on %d x %d grid with dx=%g x dy=%g cells ...\n"
-           "t0=%g and initial step dt=%g (so D0 dt / (min{dx,dy}^2) = %g)\n",
-           info.mx,info.my,hx,hy,
-           t0,dt,user.D0*dt/hxhy); CHKERRQ(ierr);
-
-  // solve
+  // report on set up //STRIP
+  ierr = TSGetTime(ts,&t0); CHKERRQ(ierr); //STRIP
+  ierr = TSGetTimeStep(ts,&dt); CHKERRQ(ierr); //STRIP
+  ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr); //STRIP
+  ierr = Spacings(user.da,&hx,&hy); CHKERRQ(ierr); //STRIP
+  hxhy = PetscMin(hx,hy);  hxhy = hxhy * hxhy; //STRIP
+  ierr = PetscPrintf(PETSC_COMM_WORLD, //STRIP
+           "solving on %d x %d grid with dx=%g x dy=%g cells, t0=%g,\n" //STRIP
+           "and initial step dt=%g (so D0 dt / (min{dx,dy}^2) = %g) ...\n", //STRIP
+           info.mx,info.my,hx,hy, //STRIP
+           t0,dt,user.D0*dt/hxhy); CHKERRQ(ierr); //STRIP
+  // solve //STRIP
   ierr = VecSet(u,0.0); CHKERRQ(ierr);   // initial condition
   ierr = TSSolve(ts,u); CHKERRQ(ierr);
-  ierr = TSGetTime(ts,&tf); CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,
-           "... done ... final time tf=%g\n",tf); CHKERRQ(ierr);
+//ENDTSSETUP
 
   VecDestroy(&u);  VecDestroy(&(user.f));  VecDestroy(&(user.gamma));
   TSDestroy(&ts);  DMDestroy(&user.da);

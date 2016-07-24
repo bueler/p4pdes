@@ -1,5 +1,5 @@
-solving on 9 x 8 grid with dx=0.125 x dy=0.125 cells ...
-t0=0. and initial step dt=0.01 (so D0 dt / (min{dx,dy}^2) = 0.64)
+solving on 9 x 8 grid with dx=0.125 x dy=0.125 cells, t0=0.,
+and initial step dt=0.01 (so D0 dt / (min{dx,dy}^2) = 0.64) ...
 0 TS dt 0.01 time 0.
 1 TS dt 0.01 time 0.01
 2 TS dt 0.01 time 0.02
@@ -11,4 +11,3 @@ t0=0. and initial step dt=0.01 (so D0 dt / (min{dx,dy}^2) = 0.64)
 8 TS dt 0.01 time 0.08
 9 TS dt 0.01 time 0.09
 10 TS dt 0.01 time 0.1
-... done ... final time tf=0.1
