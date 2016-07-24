@@ -47,5 +47,5 @@ test: runode_1 runode_2 runode_3 runodejac_1 runheat_1 runheat_2 runpattern_1
 .PHONY: distclean runode_1 runode_2 runode_3 runodejac_1 runheat_1 runheat_2 runpattern_1 test
 
 distclean:
-	@rm -f *~ ode odejac heat pattern *.pyc *.dat *.dat.info
+	@rm -f *~ ode odejac heat pattern *.pyc *.dat *.dat.info *.png PetscBinaryIO.py petsc_conf.py
 
