@@ -70,13 +70,17 @@ else:
     print 'time t has length=%d, solution Y is shape=(%d,%d)' % \
           (len(t),dims[0],dims[1])
 
+framescmap = 'jet'  # close to the PETSc X windows default
+#framescmap = 'inferno'
+#framescmap = 'gray'
+
 if frames:
     print 'generating files %s000.png .. %s%03d.png:' % \
           (args.rootname,args.rootname,len(t)-1)
     if args.dof == 1:
-        plt.imshow(U[:,:,0])
+        plt.imshow(U[:,:,0],cmap=framescmap)
     else:
-        plt.imshow(U[:,:,args.c,0])
+        plt.imshow(U[:,:,args.c,0],cmap=framescmap)
     plt.title('t = %g' % t[0])
     if args.rootname:
         plt.savefig(args.rootname + "%03d.png" % 0)
@@ -87,9 +91,9 @@ if frames:
         print '.',
         stdout.flush()
         if args.dof == 1:
-            plt.imshow(U[:,:,k+1])
+            plt.imshow(U[:,:,k+1],cmap=framescmap)
         else:
-            plt.imshow(U[:,:,args.c,k+1])
+            plt.imshow(U[:,:,args.c,k+1],cmap=framescmap)
         plt.title('t = %g' % t[k+1])
         if args.rootname:
             plt.savefig(args.rootname + "%03d.png" % (k+1))
