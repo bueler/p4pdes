@@ -586,7 +586,7 @@ Later in this Chapter we will try a type not shown in the Table, \texttt{-ts\_ty
 
 \section{Time-dependent heat equation}
 
-We now have the tools to return to solving \emph{partial} differential equations.  The well-known\sidenote{See \citep{HundsdorferVerwer2003,LeVeque2007,MortonMayers2005}.} idea in this subsection is that a time-dependent PDE generates an arbitrarily-large system of ODEs when the space variables are discretized.
+We now have the tools to return to solving \emph{partial} differential equations.  The well-known\sidenote{See \citep{HundsdorferVerwer2003,LeVeque2007,MortonMayers2005}.} theme in the remainder of this Chapter is that time-dependent PDEs generate arbitrarily-large system of ODEs when the space variables are discretized.
 
 Consider the time-dependent heat equation in two space dimensions (2D)
 \begin{equation}
@@ -600,20 +600,9 @@ We seek the temperature $u(t,x,y)$ at times $t \in [0,T]$ and points $(x,y)$ in 
 \label{fig:ts:heatsquare}
 \end{figure}
 
-Any time-dependent PDE like \eqref{eq:ts:heatequation} becomes a system of ODEs by \emph{semi-discretization in space}, also known as the \emph{method of lines}.  (This name imagines the continuous-time, discrete-space ODE domain as lines $(t,x_i,y_j)$ in the three-dimensional space-time.)
+Before the numerics we need to specify a well-posed problem with boundary conditions, an initial condition, and a concrete source term.  As an example which is representative of real-world applications, we specify a problem \emph{without} a known\sidenote{The exact solution is \emph{knowable}, perhaps, but we do not bother.} exact solution, but in which a scalar quantity is conserved.
 
-For the example here we discretize spatial derivatives the same way we did in Chapter \ref{chap:st}.  We use a \pDMDA to put a grid of $N = m_x m_y$ points $(x_i,y_j)$ on $\mathcal{S}$.  (Compare Figure \ref{fig:unitsquaregrid} in Chapter \ref{chap:st} and Figure \ref{fig:ts:heatdefaultgrid} below.)  Then we replace the spatial derivatives in \eqref{eq:ts:heatequation} by centered finite differences while keeping the time derivatives as is; in fact they become ordinary derivatives.  If $h_x,h_y$ are the grid spacings then we get
-\begin{equation}
-u_{i,j}' = D_0 \frac{u_{i+1,j} - 2 u_{i,j} + u_{i-1,j}}{h_x^2} + D_0 \frac{u_{i,j+1} - 2 u_{i,j} + u_{i,j-1}}{h_y^2} + f_{i,j}. \label{eq:ts:molheat}
-\end{equation}
-where $f_{i,j} = f(x_i,y_j)$ and
-\begin{equation}
-u_{i,j}(t) \approx u(t,x_i,y_j). \label{eq:ts:molumeaning}
-\end{equation}
-
-Equations \eqref{eq:ts:molheat} form a system of ODEs, i.e.~equation \eqref{eq:ts:ode}.  We can solve the system numerically, explicitly or implicitly, but there is no need to think about time-stepping methods now.\sidenote{This deliberate ambiguity about time-stepping is central to the method of lines.}  We do, however, need to fully-specify a well-posed problem.  We need boundary conditions, an initial condition, and a concrete source term.
-
-For variety, and as an example which is representative of real-world applications, we specify a problem \emph{without} a known\sidenote{The exact solution is \emph{knowable}, perhaps, but we do not bother.} exact solution, but in which a scalar quantity is conserved.  Somewhat arbitrarily, but also for variety, we have periodic boundary conditions along the top and bottom boundaries.  On the left ($x=0$) and right ($x=1$) we choose non-homogeneous and homogeneous Neumann conditions, respectively.  As a simple initial condition we choose zero temperature: $u(0,x,y)=0$.
+Somewhat arbitrarily---for the sake of variety---we have periodic boundary conditions along the top and bottom boundaries.  On the left ($x=0$) and right ($x=1$) we choose non-homogeneous and homogeneous Neumann conditions, respectively.  As a simple initial condition we choose zero temperature: $u(0,x,y)=0$.
 
 For the source term we choose a particular formula which takes both positive and negative values,
     $$f(x,y) = 3 e^{-25(x-0.6)^2} \sin(2 \pi y).$$
@@ -634,11 +623,25 @@ Physically-speaking, total thermal energy is proportional to the integral of $u$
 (Again, see Exercise \ref{chap:ts}.\ref{exer:ts:zerototalsource}.)  We want our discretized equations \eqref{eq:ts:molheat} to conserve energy too, and we address this below.
 
 
+\section{Method of lines}  Any time-dependent PDE like \eqref{eq:ts:heatequation} becomes a system of ODEs by \emph{semi-discretization in space}, also known as the \emph{method of lines}.  (This name imagines the continuous-time, discrete-space ODE domain as lines $(t,x_i,y_j)$ in the three-dimensional space-time.)
+
+Suppose we discretize spatial derivatives the same way we did in Chapter \ref{chap:st}: we put a grid of $N = m_x m_y$ points $(x_i,y_j)$, with equal grid spacings $h_x,h_y$ in each direction, on $\mathcal{S}$.  (Compare Figure \ref{fig:unitsquaregrid} in Chapter \ref{chap:st} and Figure \ref{fig:ts:heatdefaultgrid} below.)  Then we replace the spatial derivatives in \eqref{eq:ts:heatequation} by centered finite differences while keeping the time derivatives.  That is, partial derivatives in $t$ become ordinary derivatives:
+\begin{equation}
+u_{i,j}' = D_0 \frac{u_{i+1,j} - 2 u_{i,j} + u_{i-1,j}}{h_x^2} + D_0 \frac{u_{i,j+1} - 2 u_{i,j} + u_{i,j-1}}{h_y^2} + f_{i,j}. \label{eq:ts:molheat}
+\end{equation}
+where $f_{i,j} = f(x_i,y_j)$ and
+\begin{equation}
+u_{i,j}(t) \approx u(t,x_i,y_j). \label{eq:ts:molumeaning}
+\end{equation}
+
+Equations \eqref{eq:ts:molheat} form a system of ODEs, i.e.~equation \eqref{eq:ts:ode}.  We can solve the system numerically, explicitly or implicitly, but there is no need to think about time-stepping methods now.  This deliberate ambiguity about time-stepping is central to the method of lines.
+
+
 \section{Implementation}
 
-The program \texttt{c/ch5/heat.c} shown in Codes \ref{code:ts:heat:heatctx}--\ref{code:ts:heat:monitor} is straightforward to write based on our experiences in Chapters \ref{chap:st} and \ref{chap:nl} with \pDMDA and with \pTS in this Chapter.  Note that Code \ref{code:ts:heat:heatctx} simply shows a context \texttt{struct}, from which call-backs have access to the constant $D_0$ and functions $f$, $\gamma$.   The overall structure of \texttt{heat.c}, in terms of \PETSc components, is shown in Figure \ref{fig:ts:stack}.
+The program \texttt{c/ch5/heat.c} shown in Codes \ref{code:ts:heat:heatctx}--\ref{code:ts:heat:monitor} is easy to write based on our experiences with \pDMDA in Chapters \ref{chap:st} and \ref{chap:nl} and with \pTS in this Chapter.   The overall structure of \texttt{heat.c}, in terms of \PETSc components, is shown in Figure \ref{fig:ts:stack}.
 
-\cinputpart{heat.c}{\CODELOC}{A context \texttt{struct} gives call-backs access to constants and functions.}{I}{//HEATCTX}{//ENDHEATCTX}{code:ts:heat:heatctx}
+\cinputpart{heat.c}{\CODELOC}{A context \texttt{struct} gives call-backs access to the \pDMDA and to the constant $D_0$ and functions $f$, $\gamma$.}{I}{//HEATCTX}{//ENDHEATCTX}{code:ts:heat:heatctx}
 
 Code \ref{code:ts:heat:dmdasetup}, which is an extract of \texttt{main()}, sets up the \pDMDA object for the grid shown in Figure \ref{fig:ts:heatdefaultgrid}.  By specifying periodicity, grid points along the lower boundary $y=0$ are also (conceptually) located on the upper boundary $y=1$.  Also, ghost points are set up so that the $(x_i,y_{j\pm 1})$ neighbor of a grid point $(x_i,y_j)$ is always available.\sidenote{This applies both in serial and in parallel.}  The default grid of $m_x \times m_y = 5\times 4$ points, set by arguments to \texttt{DMDACreate2d()}, actually has square cells.  In fact, the spacings of the grid are $h_x=1/(m_x-1)$ and $h_y=1/m_y$ respectively---see the helper function \texttt{Spacings()} in \texttt{heat.c} (not shown).
 
@@ -649,9 +652,9 @@ Code \ref{code:ts:heat:dmdasetup}, which is an extract of \texttt{main()}, sets 
 \label{fig:ts:stack}
 \end{figure}
 
-Code \ref{code:ts:heat:dmdasetup} includes calls to \texttt{SetSource()} and \texttt{SetNeumanValues()} (not shown) to set $f,\gamma$ respectively.  A small idea here is that the non-homogeneous Neumann boundary value $\gamma(y)$ is allocated on a 2D grid even though it is only needed at points on the left boundary.  A less-wasteful design, though requiring more code, would create a separate 1D \pDMDA for this boundary (Exercise \ref{chap:ts}.\ref{exer:ts:heatneumanndmda}).
-
 \cinputpart{heat.c}{\CODELOC}{Set up the \pDMDA grid object and needed \pVecs.}{II}{//DMDASETUP}{//ENDDMDASETUP}{code:ts:heat:dmdasetup}
+
+Code \ref{code:ts:heat:dmdasetup} includes calls to \texttt{SetSource()} and \texttt{SetNeumanValues()} (not shown) to set $f,\gamma$ respectively.  A small idea here is that the non-homogeneous Neumann boundary value $\gamma(y)$ is allocated on a 2D grid even though it is only needed at points on the left boundary.  A less-wasteful design, though requiring more code, would create a separate 1D \pDMDA for this boundary (Exercise \ref{chap:ts}.\ref{exer:ts:heatneumanndmda}).
 
 \begin{figure}
 \input{tikz/heatdefaultgrid.tex}
@@ -661,38 +664,94 @@ Code \ref{code:ts:heat:dmdasetup} includes calls to \texttt{SetSource()} and \te
 
 \cinputpart{heat.c}{\CODELOC}{Create the \pTS.  Associate the \pDMDA, the RHS evaluation, the Jacobian-of-RHS evaluation, and the energy monitor code to it.}{III}{//TSSETUP}{//ENDTSSETUP}{code:ts:heat:tssetup}
 
-The next part (Code \ref{code:ts:heat:tssetup}) creates and configures the \pTS.  The \pTS determines the size $N=m_x m_y$ of the system of ODEs through an association to the \pDMDA grid object, set by calling \texttt{TSSetDM()}.  The same extract also assigns ``local'' grid-aware functions \texttt{FormRHSFunctionLocal()} and \texttt{FormRHSJacobianLocal()}  describing the right-hand side function $\bg(t,\by)$ defined by the finite difference formula \eqref{eq:ts:molheat}.  Also we set the default \pTS type to backward Euler, a stiff-decay method which can handle the stiff system \eqref{eq:ts:molheat}; of course we may override this choice.
+The next part, another extract of \texttt{main()} shown in Code \ref{code:ts:heat:tssetup},\sidenote{A few lines before and after these extracts---these are not shown---read options and destroy objects, respectively.} starts by creating and configuring the \pTS.  The \pTS knows the size $N$ of the system of ODEs through an association to the \pDMDA grid object, set by calling \texttt{TSSetDM()}.  We also assign to the \pDMDA the ``local'' grid-aware functions \texttt{FormRHSFunctionLocal()} and \texttt{FormRHSJacobianLocal()}.  Also we set the default \pTS type to backward Euler, a stiff-decay method which can handle the stiff system \eqref{eq:ts:molheat}; we may and we will override this choice.  Then we set the zero initial condition and call \texttt{TSSolve()}.
 
 \cinputpart{heat.c}{\CODELOC}{Evaluate the ODE RHS $\bg(t,\by)$ for ODE system \eqref{eq:ts:molheat}.}{II}{//RHSFUNCTION}{//ENDRHSFUNCTION}{code:ts:heat:rhsfunction}
 
-Codes \ref{code:ts:heat:rhsfunction} evaluate the RHS $\bg(t,\by)$ of ODE system \eqref{eq:ts:molheat}, and Code \ref{code:ts:heat:rhsjacobian} evaluates its derivatives (Jacobian).  The finite difference formula \eqref{eq:ts:molheat} applies at most points in a straightforward way, both in computing the function and the derivative matrix; it is the same 5-point stencil shown in Figure \ref{fig:unitsquaregridstencil}.
+\texttt{FormRHSFunctionLocal()} in Code \ref{code:ts:heat:rhsfunction} evaluates the RHS $\bg(t,\by)$ of ODE system \eqref{eq:ts:molheat}.  \texttt{FormRHSJacobianLocal()} in Code \ref{code:ts:heat:rhsjacobian} evaluates its derivatives (Jacobian).  These functions are where the finite difference formula \eqref{eq:ts:molheat} is applied.  Application at most points is straightforward; it is the same 5-point stencil shown in Figure \ref{fig:unitsquaregridstencil}.
 
-At the left and right boundaries, however, a Neumann condition is applied.  For example, at a grid point $(x_0,y_j)=(0,y_j)$ we have \eqref{eq:ts:leftneumannbc}, which becomes
+A Neumann condition is needed at the left and right boundaries, however.  For example, at point $(x_0,y_j)=(0,y_j)$ we have \eqref{eq:ts:leftneumannbc}, which becomes
      $$- \frac{u_{+1,j} - u_{-1,j}}{2 h_x} = \gamma(y_j),$$
-using a centered finite difference approximation and a notional value ``$u_{-1,j}$'' \citep{MortonMayers2005}, or equivalently $u_{-1,j} = u_{+1,j} + 2 h_x \gamma(y_j)$.  This replacement for ``$u_{-1,j}$'' is put into \eqref{eq:ts:molheat} so that it becomes meaningful.  Note that in parallel only some MPI processes own the $i=0$ and $i=m_x-1$ parts of the grid, and thus access to \pVec \texttt{u} must be protected by conditionals.
+using a $O(h^2)$ centered finite difference approximation and a notional value ``$u_{-1,j}$'' \citep{MortonMayers2005}.  Writing this as a formula for $u_{-1,j}$, namely $u_{-1,j} = u_{+1,j} + 2 h_x \gamma(y_j)$, it replaces the notional value to give a meaningful version of \eqref{eq:ts:molheat} at the left boundary.  A simpler, homogeneous version of this technique applies at the right boundary.
+
+Note that, in parallel, only certain MPI processes have access to the $i=0$ and $i=m_x-1$ parts of the grid.  This is why access to boundary values in array \texttt{au} must be protected by conditionals using information from the \texttt{DMDALocalInfo} object; recall Figure \ref{fig:localpartofgrid}.
 
 \cinputpart{heat.c}{\CODELOC}{Evaluate the Jacobian of \eqref{eq:ts:molheat}.}{III}{//RHSJACOBIAN}{//ENDRHSJACOBIAN}{code:ts:heat:rhsjacobian}
 
-A feature of this example is an energy ``monitor'' call-back so that we can see if the total energy is constant in the discretized system.  Code \ref{code:ts:heat:tssetup} shows that we use \texttt{TSMonitorSet()} to set a call-back to our function \texttt{EnergyMonitor()}, and Code \ref{code:ts:heat:monitor} shows the function itself.  We apply the trapezoid rule for integration to do the integral.\sidenote{This quadrature can also be interpreted as the midpoint rule, in a grid-point-centered cell interpretation, with modifications at the boundaries.}  \texttt{EnergyMonitor()} is also one of those rare cases of a ``raw'' MPI call.  We put each process' contribution to the integral into \texttt{lenergy} and then do \texttt{MPI\_Allreduce()} to get the value \texttt{energy} for the whole (global) grid.
+A feature of this heat equation example is an energy ``monitor'' call-back which reports the total energy in the discretized system.  Code \ref{code:ts:heat:tssetup} shows that we (optionally) use \texttt{TSMonitorSet()} to set a call-back to our function \texttt{EnergyMonitor()}, itself shown in Code \ref{code:ts:heat:monitor}.  The trapezoid rule\sidenote{This quadrature can also be interpreted as the midpoint rule, in a grid-point-centered cell interpretation, though with modifications at the boundaries.} is used to do the integral $\int_{\mathcal{S}} u\,dx\,dy$.  Note that \texttt{EnergyMonitor()} uses a ``raw'' MPI call; we put each rank's contribution into a local variable \texttt{lenergy} and then use \texttt{MPI\_Allreduce()} to get \texttt{energy} which is the integral over the whole grid.  Also, a monitor set with \texttt{TSMonitorSet()} is \emph{additional} to the default monitor from option \texttt{-ts\_monitor}.
 
 \cinputpart{heat.c}{\CODELOC}{Compute and then print the total thermal energy at the current time.}{V}{//MONITOR}{//ENDMONITOR}{code:ts:heat:monitor}
 
 
-\section{Runs with \texttt{heat.c}}
+\section{Runs of \texttt{heat.c}; visualization}
+
+A helpful first run, which serves as a reminder of the \pTS/\pSNES/\pKSP/\pPC/etc.~stack shown in Figure \ref{fig:ts:stack}, is
+\begin{cline}
+$ ./heat -ts_view
+\end{cline}
+%$
+The full page of output is not shown.
+
+A view of the time-stepping action, including convergence of the backward Euler equations at each step and the output of the energy monitor, comes from
+\begin{cline}
+$ ./heat -ts_monitor -heat_monitor -snes_converged_reason
+solving on 5 x 4 grid with dx=0.25 x dy=0.25 cells, t0=0.,
+and initial step dt=0.01 (so D0 dt / (min{dx,dy}^2) = 0.16) ...
+  energy = 0.00e+00
+0 TS dt 0.01 time 0.
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+  energy = -6.43e-14
+1 TS dt 0.01 time 0.01
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+  energy = -1.02e-13
+...
+9 TS dt 0.01 time 0.09
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+  energy = -1.62e-13
+10 TS dt 0.01 time 0.1
+\end{cline}
+%$
+Because the initial thermal energy is zero, without rounding error or any implementation errors we should see ``\texttt{energy = 0.00e+00}'' at every time step.  Noting the coarseness of the grid, and the correspondingly large magnitude of any errors of size comparable to truncation error, the above result shows energy is conserved to within rounding error.
+
+At each step we see two Newton iterations even though the system of equations to solve at each time step is linear; see \eqref{eq:ts:heatequation}.  The resolution of this situation is either to ask for a direct solve of the equations at each time step, or to tighten the tolerance for the Krylov iteration:
+\begin{cline}
+$ ./heat -ts_monitor -heat_monitor -snes_converged_reason -ksp_type preonly -pc_type lu
+$ ./heat -ts_monitor -heat_monitor -snes_converged_reason -ksp_rtol 1.0e-12
+\end{cline}
+The results (not shown) in both cases reveal one \pSNES iteration per time step.  The latter technique is generally more scalable to large grids.
+
+FIXME parallel run showing \pDMDA layout
+\begin{cline}
+$ mpiexec -n 4 ./heat -da_refine 5 -dm_view -ts_monitor
+\end{cline}
+%$
+
+FIXME run-time graphics
+\begin{cline}
+$ ./heat -da_refine 5 -ts_monitor_solution draw -draw_pause 0.1
+\end{cline}
+%$
+For example, Figure \ref{fig:ts:heatfinaltime} shows a grayscale version of the last frame frame of the run-time movie
+\begin{cline}
+./heat -da_refine 5 -ts_final_time 0.02 -ts_dt 0.001 -ts_monitor -ts_monitor_solution draw
+\end{cline}
+
+\begin{figure}
+\includegraphics[width=0.8\textwidth]{figs/heatfinaltime}
+\caption{Temperature as grayscale from a \texttt{heat.c} run.}
+\label{fig:ts:heatfinaltime}
+\end{figure}
+
+
+\section{Performance, stability, and stiffness}
+
+The rest of the results FIXME no exact; visualize with \texttt{-ts\_monitor\_solution draw} to see claimed instability effects
+
+FIXME stdout shows $D_0 \Delta t / \Delta x^2$; explain
 
 \begin{code}
-run info
- $ ./heat -ts_view
- $ ./heat -ts_monitor -heat_monitor -snes_converged_reason
-
-run-time graphics
- $ ./heat -da_refine 4 -ts_monitor -ts_monitor_solution draw -draw_pause 0.1
- $ mpiexec -n 4 ./heat -da_refine 1 -dm_view draw -draw_pause 2
-
 good (use default BEULER):
  $ mpiexec -n 4 ./heat -ts_monitor -heat_monitor -snes_converged_reason -ts_monitor_solution draw -snes_monitor -da_refine 7
-
-complete linear solve add -ksp_rtol 1.0e-12
 
 explodes (as it should):
  $ ./heat -ts_monitor -ts_monitor_solution draw -da_refine 4 -ts_type rk -ts_adapt_type none
@@ -709,6 +768,7 @@ suppress wobbles by weighting implicitness more:
 better adaptive than rk:
  $ ./heat -ts_monitor -ts_monitor_solution draw -da_refine 4 -ts_type glle
 \end{code}
+
 
 
 \section{Coupled reaction-diffusion equations}
