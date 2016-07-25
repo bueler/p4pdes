@@ -750,7 +750,7 @@ $ ./plotTS.py -mx 129 -my 128 t.dat u.dat -oroot bar
 Files \texttt{bar000.png} \dots \texttt{bar010.png} are generated in this case.  Note that \texttt{plotTS.py} needs access to (e.g.~POSIX symbolic links to) \texttt{PetscBinaryIO.py} and \texttt{petsc\_conf.py} from \texttt{\$PETSC\_DIR/bin/}.  The documentation \texttt{MOVIES.md}, in the same directory, also describes how to generate a movie in \texttt{.m4v} format.
 
 
-\section{Behavior of methods}
+\section{Time-stepping performance on the heat equation}
 
 We can apply our knowledge of the relative properties of schemes, from earlier in this Chapter, to this heat equation example.  To summarize the example, the method of lines converts the heat equation \eqref{eq:ts:heatequation} into a large, stiff, and linear system of ODEs in form \eqref{eq:ts:ode}.  If we choose an implicit time-stepping method then \PETSc allows us to solve equations \eqref{eq:ts:implicitgenericsystemAGAIN} at each time step in parallel using the stack of tools shown in Figure \ref{fig:ts:stack}.  The code \texttt{heat.c} sets the backward Euler method as the default method (\texttt{-ts\_type beuler}).
 
@@ -787,7 +787,7 @@ Recalling Table \ref{tab:ts:odebasictypes}, we now consider other ODE methods.  
 
 For a heat or diffusion equation problem like the one under consideration, we may conclude that runs a), f), and g) represent a selection of good things to try.
 
-Finally note that when we run \texttt{heat.c} it prints out the value of $\nu = D_0 \Delta t / (h_x h_y)$.\sidenote{The \emph{initial} $\Delta t$ value is used, so in adaptive cases this report is of minimal utility.}  This ratio controls the conditional stability of explicit methods,\sidenote{Note that $\nu$ is relevant to diffusions, and it is not the better-known ``CFL'' constant of hyperbolic problems \citep{LeVeque2002} which possess characteristic curves.  Of course the concepts are related.} and the degree of stiffness of the ODE problem.  Indeed, theorems showing that $\nu \lesssim 1$ is either necessary or sufficient, or both, for the conditional stability of fully-discrete explicit methods for the heat equation can be found in \citep{MortonMayers2005}.  (See \citep{LeVeque2007} for the connection to stiffness and the absolute stability of methods.)  Our treatment, based on the method of lines, will not pursue such essential numerical PDE theory further.
+Note that when we run \texttt{heat.c} it prints out the value of $\nu = D_0 \Delta t / (h_x h_y)$.\sidenote{The \emph{initial} $\Delta t$ value is used, so in adaptive cases this report is of minimal utility.}  This ratio controls the conditional stability of explicit methods,\sidenote{Note that $\nu$ is relevant to diffusions, and it is not the better-known ``CFL'' constant of hyperbolic problems \citep{LeVeque2002} which possess characteristic curves.  Of course the concepts are related.} and the degree of stiffness of the ODE problem.  Indeed, theorems showing that $\nu \lesssim 1$ is either necessary or sufficient, or both, for the conditional stability of fully-discrete explicit methods for the heat equation can be found in \citep{MortonMayers2005}.  (See \citep{LeVeque2007} for the connection to stiffness and the absolute stability of methods.)  Our treatment, based on the method of lines, will not pursue such essential numerical PDE theory further.
 
 
 
@@ -795,19 +795,88 @@ Finally note that when we run \texttt{heat.c} it prints out the value of $\nu = 
 
 FIXME see pages 21--22 of \citep{HundsdorferVerwer2003} and see \citep{Pearson1993}
 
+\begin{align}
+\frac{\partial u}{\partial t} &= D_u \grad^2 u - u v^2 + \phi (1 - u), \label{eq:ts:pattern:pde} \\
+\frac{\partial v}{\partial t} &= D_v \grad^2 u + u v^2 - (\phi + \kappa) v. \notag
+\end{align}
+
+\begin{equation}
+\bF(t,\by,\by') = \bG(t,\by) \label{eq:ts:pattern:imexform}
+\end{equation}
+
+In this example,
+\begin{equation}
+\by = \begin{bmatrix} \bu \\ \bv \end{bmatrix}  \label{eq:ts:pattern:blockvars}
+\end{equation}
+and
+\begin{align}
+\bF(t,\by,\by') &= \by' - \begin{bmatrix}
+D_u A & \\ & D_v A \end{bmatrix} \by,  \label{eq:ts:pattern:blockode} \\
+\bG(t,\by) &= \begin{bmatrix}
+- \bu \bv^2 + \phi (1-\bu) \\
++ \bu \bv^2 - (\phi + \kappa) \bv
+\end{bmatrix}
+\end{align}
+where $A$ is the centered finite-difference approximation of the Laplacian $\grad^2$.
+
+Form \eqref{eq:ts:pattern:blockvars} is notional.  Actual order of grid values in memory is
+\begin{equation}
+\by = \begin{bmatrix} u_{0,0} \\ v_{0,0} \\ u_{1,0} \\ v_{1,0} \\ \vdots \end{bmatrix}, \label{eq:ts:pattern:interleaved}
+\end{equation}
+that is, the components $u,v$ are interleaved.\sidenote{Regarding the particular order on the grid, which is intrinsic to \pDMDA, see Chapter \ref{chap:st}.}
+
+The function \texttt{FormIJacobianLocal()} computes
+\begin{equation}
+J = (\text{shift}) \frac{\partial \bF}{\partial \by'} + \frac{\partial \bF}{\partial \by}
+\label{eq:ts:pattern:jacobianshift}
+\end{equation}
+
 \cinputpart{pattern.c}{\CODELOC}{FIXME}{I}{//FIELDCTX}{//ENDFIELDCTX}{code:ts:pattern:fieldctx}
 
-\cinputpart{pattern.c}{\CODELOC}{FIXME}{II}{//RHSFUNCTION}{//ENDRHSFUNCTION}{code:ts:pattern:rhsfunction}
+\cinputpart{pattern.c}{\CODELOC}{FIXME}{II}{//TSSETUP}{//ENDTSSETUP}{code:ts:pattern:tssetup}
 
-\cinputpart{pattern.c}{\CODELOC}{FIXME}{III}{//IFUNCTION}{//ENDIFUNCTION}{code:ts:pattern:ifunction}
+\cinputpart{pattern.c}{\CODELOC}{FIXME}{III}{//RHSFUNCTION}{//ENDRHSFUNCTION}{code:ts:pattern:rhsfunction}
 
-\cinputpart{pattern.c}{\CODELOC}{FIXME}{IV}{//IJACOBIAN}{//ENDIJACOBIAN}{code:ts:pattern:ijacobian}
+\cinputpart{pattern.c}{\CODELOC}{FIXME}{IV}{//IFUNCTION}{//ENDIFUNCTION}{code:ts:pattern:ifunction}
 
-\cinputpart{pattern.c}{\CODELOC}{FIXME}{V}{//TSSETUP}{//ENDTSSETUP}{code:ts:pattern:tssetup}
+\cinputpart{pattern.c}{\CODELOC}{FIXME}{V}{//IJACOBIAN}{//ENDIJACOBIAN}{code:ts:pattern:ijacobian}
 
-FIXME show use of \texttt{-ts\_type arkimex,theta}
+FIXME a run which takes about 10 seconds and does something worth visualizing
+\begin{cline}
+$ ./pattern -ts_monitor -da_refine 5
+\end{cline}
+%$
+note differences when additional on above run:
+\begin{cline}
+-snes_monitor -ksp_rtol 1.0e-10     # arkimex solves three linear problems per step
+-ts_type beuler -snes_monitor       # one nonlinear problem per step; not quadratic convergence because we don't have full Jacobian
+-ts_type beuler -snes_monitor -snes_mf_operator # get back quadratic convergence
+\end{cline}
+
+FIXME relative performance using \texttt{-ts\_type beuler,cn,bdf,arkimex}
 
 FIXME final-time greyscale plots using \texttt{PetscBinaryIO.py}
+
+\begin{figure}
+\includegraphics[width=0.4\textwidth]{figs/pattern000} \qquad
+\includegraphics[width=0.4\textwidth]{figs/pattern350}
+
+\smallskip
+\includegraphics[width=0.4\textwidth]{figs/pattern510} \qquad
+\includegraphics[width=0.4\textwidth]{figs/pattern650}
+% use run:
+%    
+\caption{Component $u$ as grayscale in frames at $t=0,350$ (top) and $t=510,650$ (bottom) from \texttt{pattern.c} run on a $256\times 256$ grid.}
+\label{fig:ts:pattern:figureversuspearson}
+\end{figure}
+
+To generate Figure \ref{fig:ts:pattern:figureversuspearson} we use
+\begin{cline}
+$ mpiexec -n 4 ./pattern -ts_monitor -da_refine 6 -ts_dt 10 -ts_final_time 650 \
+   -ts_type cn -snes_mf_operator -snes_monitor
+\end{cline}
+%$
+About one minute on a lap-top, and we see good quadratic convergence.  That is, $\Delta t=10.0$ and $65$ total time steps on a second-order method, while \citep{Pearson1993} used first-order forward Euler explicit time-stepping, $\Delta t = 0.01$, and $65000$ time steps.
 
 
 \section{Exercises}
@@ -855,15 +924,15 @@ differ in the size of residual norms and even in the number of Newton iterations
 
 \item \label{exer:ts:heatneumanndmda} Write a new version of \texttt{heat.c} which creates a \texttt{DMDACreate1d()} and uses it to allocate and access the \pVec \texttt{gamma}.  The new code will not waste memory in a 2D array for this purpose, as does \texttt{heat.c}.
 
-\item FIXME for run like
-\begin{cline}
-./pattern -da_refine 6 -ptn_tf 500 -ptn_steps 100 -ts_monitor -snes_converged_reason
-\end{cline}
-which is fastest among these nine ARKIMEX and three $\theta$ methods?:
+\item \label{exer:ts:patternfulljacobian}  Add \texttt{FormRHSJacobianLocal()} to \texttt{pattern.c} so that the full Jacobian is available.  Compare timing of the run that produced Figure \ref{fig:ts:pattern:figureversuspearson}, but with and without option \texttt{-snes\_mf\_operator}.
+
+\item \label{exer:ts:patternperformancestudy} FIXME for run like what produced Figure \ref{fig:ts:pattern:figureversuspearson}; which is fastest among these ARKIMEX, BDF, and Crank-Nicolson runs, all of which are adaptive and at least second order?:
 \begin{code}
 -ts_type arkimex -ts_arkimex_type [a2|l2|ars122|2c|2d|2e|3|4|5]
--ts_type theta -ts_theta_endpoint -ts_theta_theta [0.5|0.75|1]
+-ts_type bdf -ts_bdf_adapt -ts_bdf_order [2|3|4|5|6]
+-ts_type cn -ts_theta_adapt
 \end{code}
-Are any other adaptive \pTS types faster?  Also compare final frames from \texttt{-ts\_monitor\_solution draw}; how worried should we be about the effect of time-stepping on the solution of this problem?
+Because the exact solution is unknown, it may be wise to compare some frames with visualization (e.g.~\texttt{-ts\_monitor\_solution draw}) so that you can be reasonably sure that the solution is reliable.
+
 
 \end{enumerate}
