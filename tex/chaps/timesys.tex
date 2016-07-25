@@ -683,16 +683,16 @@ A feature of this heat equation example is an energy ``monitor'' call-back which
 \cinputpart{heat.c}{\CODELOC}{Compute and then print the total thermal energy at the current time.}{V}{//MONITOR}{//ENDMONITOR}{code:ts:heat:monitor}
 
 
-\section{Runs of \texttt{heat.c}; visualization}
+\section{Running \texttt{heat.c}, and visualization}
 
-A helpful first run, which serves as a reminder of the \pTS/\pSNES/\pKSP/\pPC/etc.~stack shown in Figure \ref{fig:ts:stack}, is
+A helpful first run, which reminds us of the \pTS/\pSNES/\pKSP/\pPC/etc.~stack shown in Figure \ref{fig:ts:stack}, is
 \begin{cline}
 $ ./heat -ts_view
 \end{cline}
 %$
 The full page of output is not shown.
 
-A view of the time-stepping action, including convergence of the backward Euler equations at each step and the output of the energy monitor, comes from
+A view of the time-stepping action, including convergence of the discrete equations \eqref{eq:ts:implicitgenericsystemAGAIN} at each time step, for the backward Euler method in this case, and the output of the energy monitor, comes from
 \begin{cline}
 $ ./heat -ts_monitor -heat_monitor -snes_converged_reason
 solving on 5 x 4 grid with dx=0.25 x dy=0.25 cells, t0=0.,
@@ -711,62 +711,73 @@ and initial step dt=0.01 (so D0 dt / (min{dx,dy}^2) = 0.16) ...
 10 TS dt 0.01 time 0.1
 \end{cline}
 %$
-Because the initial thermal energy is zero, without rounding error or any implementation errors we should see ``\texttt{energy = 0.00e+00}'' at every time step.  Noting the coarseness of the grid, and the correspondingly large magnitude of any errors of size comparable to truncation error, the above result shows energy is conserved to within rounding error.
 
-At each step we see two Newton iterations even though the system of equations to solve at each time step is linear; see \eqref{eq:ts:heatequation}.  The resolution of this situation is either to ask for a direct solve of the equations at each time step, or to tighten the tolerance for the Krylov iteration:
+Because the initial thermal energy is zero we should see ``\texttt{energy = 0.00e+00}'' at every time step.  That is what we \emph{would} see if there were no rounding error or implementation mistakes.  Noting the coarseness of the grid, so that errors of size comparable to truncation error would be many orders of magnitude larger than seen here, the above actual result shows energy is conserved to within rounding error.
+
+We also see two Newton iterations per time step even though equations \eqref{eq:ts:implicitgenericsystemAGAIN} are linear.\sidenote{Because \eqref{eq:ts:heatequation} is a linear PDE, of course.}  This occurs because the \pKSP iteration halts at an insufficiently-tight tolerance, based on the \emph{preconditioned} residual of the linear system, relative to the desired \pSNES tolerance.  We can resolve this, if needed, by tightening the tolerance for the Krylov iteration or even asking for a direct solve:
 \begin{cline}
-$ ./heat -ts_monitor -heat_monitor -snes_converged_reason -ksp_type preonly -pc_type lu
 $ ./heat -ts_monitor -heat_monitor -snes_converged_reason -ksp_rtol 1.0e-12
+$ ./heat -ts_monitor -heat_monitor -snes_converged_reason -ksp_type preonly -pc_type lu
 \end{cline}
-The results (not shown) in both cases reveal one \pSNES iteration per time step.  The latter technique is generally more scalable to large grids.
+Both techniques result in one \pSNES iteration per time step, but the only the former acts the same in serial and parallel.
 
-FIXME parallel run showing \pDMDA layout
+Because we use \pDMDA, the structured grid on the domain $\mathcal{S}$ is decomposed in parallel.\sidenote{We do not consider ``parallel-in-time'' decompositions in this book.}  One can show the parallel decomposition at run-time either as text or graphically, for example:
 \begin{cline}
-$ mpiexec -n 4 ./heat -da_refine 5 -dm_view -ts_monitor
+$ mpiexec -n 4 ./heat -da_refine 1 -dm_view
+$ mpiexec -n 4 ./heat -da_refine 1 -dm_view draw -draw_pause 1
+\end{cline}
+Furthermore it is good to remember, and to check using \texttt{-ts\_view}, that these runs use a nontrivial (default) stack of parallel, iterative tools at each time step: Newton's method with line-search (\texttt{-snes\_type newtonls}), the GMRES iteration (\texttt{-ksp\_type gmres}), block Jacobi as the parallel preconditioner (\texttt{-pc\_type bjacobi}), and ILU as the preconditioner on each rank's block (\texttt{-sub\_pc\_type ilu}).
+
+A run-time graphical (X windows) view of the evolving solution, a movie, comes from:
+\begin{cline}
+$ ./heat -da_refine 5 -ts_final_time 0.02 -ts_dt 0.001 -ts_monitor \
+    -ts_monitor_solution draw
 \end{cline}
 %$
-
-FIXME run-time graphics
-\begin{cline}
-$ ./heat -da_refine 5 -ts_monitor_solution draw -draw_pause 0.1
-\end{cline}
-%$
-For example, Figure \ref{fig:ts:heatfinaltime} shows a grayscale version of the last frame frame of the run-time movie
-\begin{cline}
-./heat -da_refine 5 -ts_final_time 0.02 -ts_dt 0.001 -ts_monitor -ts_monitor_solution draw
-\end{cline}
-
+Figure \ref{fig:ts:heatfinaltime} shows a grayscale version of the last frame of this movie.  The variation in temperature at the left side is from the non-homogeneous boundary condition $\gamma(y)$, while in the interior the variation is caused by the heat source $f(x,y)$.
+  
 \begin{figure}
-\includegraphics[width=0.8\textwidth]{figs/heatfinaltime}
-\caption{Temperature as grayscale from a \texttt{heat.c} run.}
+\includegraphics[width=0.7\textwidth]{figs/heatfinaltime}
+\caption{Temperature as grayscale in the final frame from a \texttt{heat.c} run.}
 \label{fig:ts:heatfinaltime}
 \end{figure}
+
+For off-line viewing, a Python script \texttt{plotTS.py} in directory \texttt{c/ch5/} can be used to generate either a trajectory like Figure \ref{fig:ts:ode} or a sequence of frames like Figure \ref{fig:ts:heatfinaltime}.  Any format supported by the Python library Matplotlib (\href{http://matplotlib.org/}{\texttt{matplotlib.org}}) is allowed, but \texttt{.png} is the default.  One first generates \PETSc binary file output, from a run with a given resolution $m_x \times m_y$, and then the sequence of images from that:
+\begin{cline}
+$ ./heat -da_refine 5 -ts_monitor binary:t.dat -ts_monitor_solution binary:u.dat
+$ ./plotTS.py -mx 129 -my 128 t.dat u.dat -oroot bar
+\end{cline}
+Files \texttt{bar000.png} \dots \texttt{bar010.png} are generated in this case.  Note that \texttt{plotTS.py} needs access to (e.g.~POSIX symbolic links to) \texttt{PetscBinaryIO.py} and \texttt{petsc\_conf.py} from \texttt{\$PETSC\_DIR/bin/}.  The documentation \texttt{MOVIES.md}, in the same directory, also describes how to generate a movie in \texttt{.m4v} format.
 
 
 \section{Performance, stability, and stiffness}
 
-The rest of the results FIXME no exact; visualize with \texttt{-ts\_monitor\_solution draw} to see claimed instability effects
+It is time to recall some of the theory from earlier in this Chapter, and apply it to this heat equation example.  To summarize the example, the method of lines converts the heat equation \eqref{eq:ts:heatequation} into a large, stiff, and linear system of ODEs in form \eqref{eq:ts:ode}.  If we choose an implicit time-stepping method then \PETSc allows us to solve equations \eqref{eq:ts:implicitgenericsystemAGAIN}, which must be solved at each time step, in parallel using the stack of tools shown in Figure \ref{fig:ts:stack}.  The code \texttt{heat.c} sets the implicit, A-stable, and stiff-decay backward Euler method as the default method (\texttt{-ts\_type beuler}).
 
-FIXME stdout shows $D_0 \Delta t / \Delta x^2$; explain
+Here is a run on which we can compare various solver choices:\sidenote{For issues other than timeing, consider adding options \texttt{ -snes\_converged\_reason -ts\_monitor\_solution draw} to monitor convergence and visualize.  Some effects below are seen in the visualizations.}
+\begin{cline}
+$ ./heat -da_refine 5 -ts_monitor -heat_monitor
+\end{cline}
+%$
+This run, which takes $M=10$ steps to reach the final time $t_f=0.1$ using an $O(\Delta t^1)$ method, gives reasonable results in a few seconds, on a reasonably-fine grid, using the default settings.
+
+Recalling Table \ref{tab:ts:odebasictypes}, we consider some other ODE methods.  They are compared by relative time $R$---where $R>1$ is the factor by which another method is slower---and number of steps $M$.
+\begin{itemize}
+\item \texttt{-ts\_type rk}  \hfill $R=4.5$, $M=5201$
+\begin{quote} The \RKthreebs adaptive method.  It detects the stiffness and takes many inappropriately-small time steps, with larger total run-time. \end{quote}
+\item \texttt{-ts\_type rk -ts\_adapt\_type none}  \hfill $R=0.012$, $M=10$
+\begin{quote} This is the same method but with adaptivity turned off.  The solution explodes to size $10^{72}$ after $M=10$ steps!  The fact that it is fast is irrelevant.\end{quote}
+\item \texttt{-ts\_type cn}  \hfill $R=0.84$, $M=10$
+\begin{quote} This is the $\theta=0.5$ method with $O(\Delta t^2)$ local truncation error.  Visualization shows a problem.  Instead of smoothly growing in size as in the first run, features oscillate unstably.  This is a well-known consequence of a method which is A-stable, so that the oscillations do eventually decay---but without the stiff-decay property. \end{quote}
+\item FIXME
+\end{itemize}
+
+FIXME runs show $D_0 \Delta t / \Delta x^2$; explain
 
 \begin{code}
-good (use default BEULER):
- $ mpiexec -n 4 ./heat -ts_monitor -heat_monitor -snes_converged_reason -ts_monitor_solution draw -snes_monitor -da_refine 7
+suppress wobbles by weighting implicitness more: -ts_type theta -ts_theta_theta 0.7 -ts_theta_endpoint
 
-explodes (as it should):
- $ ./heat -ts_monitor -ts_monitor_solution draw -da_refine 4 -ts_type rk -ts_adapt_type none
-
-agonizingly slow (RK is adapting):
- $ ./heat -ts_monitor -ts_monitor_solution draw -da_refine 4 -ts_type rk
-
-wobbles (typical Crank-Nicolson):
- $ ./heat -ts_monitor -ts_monitor_solution draw -da_refine 4 -ts_type cn
-
-suppress wobbles by weighting implicitness more:
- $ ./heat -ts_monitor -ts_monitor_solution draw -da_refine 4 -ts_type theta -ts_theta_theta 0.6 -ts_theta_endpoint
-
-better adaptive than rk:
- $ ./heat -ts_monitor -ts_monitor_solution draw -da_refine 4 -ts_type glle
+better adaptive than rk: -ts_type bdf -ts_bdf_adapt -ts_bdf_order 3
 \end{code}
 
 
