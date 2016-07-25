@@ -229,7 +229,7 @@ int main(int argc,char **argv)
   hxhy = PetscMin(hx,hy);  hxhy = hxhy * hxhy; //STRIP
   ierr = PetscPrintf(PETSC_COMM_WORLD, //STRIP
            "solving on %d x %d grid with dx=%g x dy=%g cells, t0=%g,\n" //STRIP
-           "and initial step dt=%g (so D0 dt / (min{dx,dy}^2) = %g) ...\n", //STRIP
+           "and initial step dt=%g (so D0 dt / (dx dy) = %g) ...\n", //STRIP
            info.mx,info.my,hx,hy, //STRIP
            t0,dt,user.D0*dt/hxhy); CHKERRQ(ierr); //STRIP
   // solve //STRIP
