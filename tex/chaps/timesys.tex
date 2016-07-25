@@ -696,7 +696,7 @@ A view of the time-stepping action, including convergence of the discrete equati
 \begin{cline}
 $ ./heat -ts_monitor -heat_monitor -snes_converged_reason
 solving on 5 x 4 grid with dx=0.25 x dy=0.25 cells, t0=0.,
-and initial step dt=0.01 (so D0 dt / (min{dx,dy}^2) = 0.16) ...
+and initial step dt=0.01 (so D0 dt / (dx dy) = 0.16) ...
   energy = 0.00e+00
 0 TS dt 0.01 time 0.
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
@@ -750,7 +750,7 @@ $ ./plotTS.py -mx 129 -my 128 t.dat u.dat -oroot bar
 Files \texttt{bar000.png} \dots \texttt{bar010.png} are generated in this case.  Note that \texttt{plotTS.py} needs access to (e.g.~POSIX symbolic links to) \texttt{PetscBinaryIO.py} and \texttt{petsc\_conf.py} from \texttt{\$PETSC\_DIR/bin/}.  The documentation \texttt{MOVIES.md}, in the same directory, also describes how to generate a movie in \texttt{.m4v} format.
 
 
-\section{Performance, stability, and stiffness}
+\section{Behavior of methods}
 
 We can apply our knowledge of the relative properties of schemes, from earlier in this Chapter, to this heat equation example.  To summarize the example, the method of lines converts the heat equation \eqref{eq:ts:heatequation} into a large, stiff, and linear system of ODEs in form \eqref{eq:ts:ode}.  If we choose an implicit time-stepping method then \PETSc allows us to solve equations \eqref{eq:ts:implicitgenericsystemAGAIN} at each time step in parallel using the stack of tools shown in Figure \ref{fig:ts:stack}.  The code \texttt{heat.c} sets the backward Euler method as the default method (\texttt{-ts\_type beuler}).
 
@@ -762,7 +762,7 @@ $ ./heat -da_refine 5 -ts_monitor -heat_monitor
 This run, which takes $M=10$ steps to reach the final time $t_f=0.1$ using an $O(\Delta t^1)$ method, gives reasonable results in a few seconds,  % 4.11 seconds
 on a modestly-refined grid of $N \approx 1.6 \times 10^4$ points, using the default settings.
 
-Recalling Table \ref{tab:ts:odebasictypes}, we now consider other ODE methods.  They are compared by number of steps $M$ and---this is very informal---by their relative wall-clock time $R$:\sidenote{Thus $R=1$ for a method which is the same speed as backward Euler, $R<1$ for a faster method, and $R>1$ for a slower method.}
+Recalling Table \ref{tab:ts:odebasictypes}, we now consider other ODE methods.  These cases, which add the options shown to the run above, are compared by number of steps $M$ and---this is very informal---by their relative wall-clock time $R$:\sidenote{Thus $R=1$ for a method which is the same speed as backward Euler, $R<1$ for a faster method, and $R>1$ for a slower method.}
 \renewcommand{\labelenumi}{\alph{enumi})}
 \begin{enumerate}
 \item \texttt{-ts\_type beuler}  \hfill $R=1$, $M=10$
@@ -785,7 +785,9 @@ Recalling Table \ref{tab:ts:odebasictypes}, we now consider other ODE methods.  
 \begin{quote} This implicit, A-stable, and stiff-decay multistep method \citep{AscherPetzold1998} uses backward differentiation formula \eqref{eq:ts:bdf2}, but with additional tweaks to make it adaptive.  As a multi-step formula it requires additional techniques to get started (not addressed).\end{quote}
 \end{enumerate}
 
-FIXME runs show $D_0 \Delta t / \Delta x^2$; explain
+For a heat or diffusion equation problem like the one under consideration, we may conclude that runs a), f), and g) represent a selection of good things to try.
+
+Finally note that when we run \texttt{heat.c} it prints out the value of $\nu = D_0 \Delta t / (h_x h_y)$.\sidenote{The \emph{initial} $\Delta t$ value is used, so in adaptive cases this report is of minimal utility.}  This ratio controls the conditional stability of explicit methods,\sidenote{Note that $\nu$ is relevant to diffusions, and it is not the better-known ``CFL'' constant of hyperbolic problems \citep{LeVeque2002} which possess characteristic curves.  Of course the concepts are related.} and the degree of stiffness of the ODE problem.  Indeed, theorems showing that $\nu \lesssim 1$ is either necessary or sufficient, or both, for the conditional stability of fully-discrete explicit methods for the heat equation can be found in \citep{MortonMayers2005}.  (See \citep{LeVeque2007} for the connection to stiffness and the absolute stability of methods.)  Our treatment, based on the method of lines, will not pursue such essential numerical PDE theory further.
 
 
 
