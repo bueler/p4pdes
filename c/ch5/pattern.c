@@ -31,8 +31,8 @@ typedef struct {
   double    L,    // domain side length
             Du,   // diffusion coefficient of first equation
             Dv,   // diffusion coefficient of second equation
-            F,    // "dimensionless feed rate" (Pearson 1993)
-            k;    // "dimensionless rate constant" (Pearson 1993)
+            phi,  // = "dimensionless feed rate" F in (Pearson 1993)
+            kappa;// = "dimensionless rate constant" k in (Pearson 1993)
 } PtnCtx;
 //ENDFIELDCTX
 
@@ -69,8 +69,8 @@ PetscErrorCode InitialState(Vec x, PtnCtx* user) {
 }
 
 // in system form  F(t,X,dot X) = G(t,X),  compute G():
-//     G^u(t,u,v) = - u v^2 + F (1 - u)
-//     G^v(t,u,v) = + u v^2 - (F + k) v
+//     G^u(t,u,v) = - u v^2 + phi (1 - u)
+//     G^v(t,u,v) = + u v^2 - (phi + kappa) v
 //RHSFUNCTION
 PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, Field **aX,
                                     Field **aG, PtnCtx *user) {
@@ -80,8 +80,8 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, Field **aX,
   for (j = info->ys; j < info->ys + info->ym; j++) {
       for (i = info->xs; i < info->xs + info->xm; i++) {
           uv2 = aX[j][i].u * aX[j][i].v * aX[j][i].v;
-          aG[j][i].u = - uv2 + user->F * (1.0 - aX[j][i].u);
-          aG[j][i].v = + uv2 - (user->F + user->k) * aX[j][i].v;
+          aG[j][i].u = - uv2 + user->phi * (1.0 - aX[j][i].u);
+          aG[j][i].v = + uv2 - (user->phi + user->kappa) * aX[j][i].v;
       }
   }
   return 0;
@@ -181,11 +181,11 @@ int main(int argc,char **argv)
   PetscInitialize(&argc,&argv,(char*)0,help);
 
   // parameter values from pages 21-22 in Hundsdorfer & Verwer (2003)
-  user.L  = 2.5;
-  user.Du = 8.0e-5;
-  user.Dv = 4.0e-5;
-  user.F  = 0.024;
-  user.k  = 0.06;
+  user.L      = 2.5;
+  user.Du     = 8.0e-5;
+  user.Dv     = 4.0e-5;
+  user.phi    = 0.024;
+  user.kappa  = 0.06;
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "ptn_", "options for patterns", ""); CHKERRQ(ierr);
   ierr = PetscOptionsReal("-L","square domain side length; recommend L >= 0.5",
            "pattern.c",user.L,&user.L,NULL);CHKERRQ(ierr);
@@ -193,16 +193,16 @@ int main(int argc,char **argv)
            "pattern.c",user.Du,&user.Du,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-Dv","diffusion coefficient of second equation",
            "pattern.c",user.Dv,&user.Dv,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-F","dimensionless feed rate",
-           "pattern.c",user.F,&user.F,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-k","dimensionless rate constant",
-           "pattern.c",user.k,&user.k,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-phi","dimensionless feed rate (=F in (Pearson, 1993))",
+           "pattern.c",user.phi,&user.phi,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-kappa","dimensionless rate constant (=k in (Pearson, 1993))",
+           "pattern.c",user.kappa,&user.kappa,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
                       DM_BOUNDARY_PERIODIC, DM_BOUNDARY_PERIODIC,
                       DMDA_STENCIL_BOX,  // for 9-point stencil
-                      -3,-3,PETSC_DECIDE,PETSC_DECIDE,
+                      -4,-4,PETSC_DECIDE,PETSC_DECIDE,
                       2,  // degrees of freedom
                       1,  // stencil width
                       NULL,NULL,&user.da); CHKERRQ(ierr);
@@ -230,8 +230,8 @@ int main(int argc,char **argv)
            (DMDATSIJacobianLocal)FormIJacobianLocal,&user); CHKERRQ(ierr);
   ierr = TSSetType(ts,TSARKIMEX); CHKERRQ(ierr);
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
-  ierr = TSSetInitialTimeStep(ts,0.0,1.0); CHKERRQ(ierr);
-  ierr = TSSetDuration(ts,1000000,10.0); CHKERRQ(ierr);  // allow 100 times requested steps
+  ierr = TSSetInitialTimeStep(ts,0.0,5.0); CHKERRQ(ierr);  // t_0 = 0.0, dt = 5.0
+  ierr = TSSetDuration(ts,1000000,200.0); CHKERRQ(ierr);   // t_f = 200
   ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
 //ENDTSSETUP
 
