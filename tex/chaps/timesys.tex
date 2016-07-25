@@ -157,11 +157,11 @@ We now describe the default Runge-Kutta scheme in \PETSc.  It is \emph{adaptive}
 
 One strategy to build an adaptive Runge-Kutta method is to make it \emph{embedded}.  Such a scheme is in fact two methods which have the same $c_j$ and $a_{ij}$ coefficients in their tableau, but different $b_j$ \emph{and} different orders of accuracy.  The Bogacki-Shampine scheme \RKthreebs is such an embedded pair shown at right in Table \ref{tab:ts:exampletableau}.\sidenote{It is the \texttt{ode23} method in \Matlab.}  Each is four-stage, but one is of third-order and one of second-order.  In the tableau the $b_j$ coefficients are listed on different rows below the horizontal line.  The different results from these two schemes is used to decide if the time step was short enough to satisfy the error tolerance/goal \citep{Butcher2008}.  In \RKthreebs specifically, one scheme (first $b_j$ row) makes $O(\Delta t^3)$ local truncation errors, while the other (second $b_j$ row) makes $O(\Delta t^2)$ errors, and the difference estimates the accuracy of the lower order scheme.  The work of computing two approximations is nearly the same cost as just one, because they share the same evaluations of $\bg$; this is the central meaning of ``embedded.''  Further details of the \RKthreebs scheme, including its stability and efficiency properties, are beyond our scope, but see \citep{BogackiShampine1989}.
 
-There are alternative families other than one-step schemes.  For example, the \emph{second-order Adams-Bashforth} method
+There are alternative families other than one-step schemes.  For example, the \emph{second-order backwards differentiation formula}
 \begin{equation}
-\bY_\ell = \bY_{\ell-1} - \frac{h}{2} \bg(t_{\ell-2},\bY_{\ell-2}) + \frac{3 h}{2} \bg(t_{\ell-1},\bY_{\ell-1})  \label{eq:ts:ab2}
+\bY_\ell = \frac{4}{3} \bY_{\ell-1} - \frac{1}{3} \bY_{\ell-2} + \frac{2}{3} h \bg(t_\ell,\bY_{\ell}) \label{eq:ts:bdf2}
 \end{equation}
-is a \emph{multi-step} method.  It computes a new value $\bY_\ell$ with only one additional evaluation of $\bg$ (i.e.~one stage), but using two previous values $\bY_{\ell-2},\bY_{\ell-1}$.  This works in a straightforward way only if the step-size $h=\Delta t$ is independent of $\ell$.  A goal of such methods is to achieve order greater than one with only one evaluation of $\bg$ per time step, and this is often achieved in practice.  Other schemes such as the \emph{general linear methods} \citep{Butcher2008} combine the multi-stage and multi-step ideas.  However, in our quick treatment of time-stepping, we will say no more about multi-step and general linear methods.
+is a \emph{multi-step} method.  It uses \emph{two} previous values $\bY_{\ell-2},\bY_{\ell-1}$.  This works in a straightforward way only if the step-size $h=\Delta t$ is independent of $\ell$.  Other schemes such as the \emph{general linear methods} \citep{Butcher2008} combine the multi-stage and multi-step ideas.  However, in our quick treatment of time-stepping, we will say little more about multi-step and general linear methods.
 
 A general theme when comparing methods is that the cost is proportional to the number of (distinct) evaluations of the right-hand side $\bg$.  At least for explicit schemes, the additional arithmetic in a particular scheme, represented for example by the number of coefficients in the tableau, is often less important.  Implicit schemes, however, also require a solver for the algebraic system that arises at each step.  Solving this system, including but not limited to additional evaluations of $\bg$ that this causes (e.g.~as needed in the Newton iteration), dominates the cost of an implicit scheme.
 
@@ -545,17 +545,17 @@ Runge-Kutta \eqref{eq:ts:rkgeneral}         & \texttt{rk}     &     &    \\
 \qquad \texttt{-ts\_rk\_type 5dp}           &                 & $5$ & yes \\
  \hline
 $\theta$ method \eqref{eq:ts:theta}         & \texttt{theta}  & $1$ or $2$ & optional \\
-\qquad backward Euler \eqref{eq:ts:backwardeuler}  & \texttt{beuler} & $1$ & optional \\
-\qquad Crank-Nicolson                       & \texttt{cn}     & $2$ & optional 
+\qquad backward Euler \eqref{eq:ts:backwardeuler}: $\theta=1$  & \texttt{beuler} & $1$ & optional \\
+\qquad Crank-Nicolson: $\theta=1/2$                     & \texttt{cn}     & $2$ & optional 
 \end{tabular}
 \caption{Basic ODE integration methods; \PETSc has many more.  Explicit schemes are above the line and implicit below.} \label{tab:ts:odebasictypes}
 \end{table}
 
 \medskip
 
-As the Table suggests, the backward Euler and Crank-Nicolson methods are actually implemented as $\theta$ method special cases.  Knowing this, it is wise to ask for help:
+As the Table suggests, the backward Euler and Crank-Nicolson methods are actually implemented as $\theta$-method special cases.  Knowing this, it is wise to ask for help:
 \begin{cline}
-$ ./odejac -ts_monitor -ts_type theta -help |grep ts_theta
+$ ./odejac -ts_type theta -help |grep ts_theta
   -ts_theta_theta <0.5>: Location of stage (0<Theta<=1)
   -ts_theta_endpoint: <FALSE> Use the endpoint instead of midpoint form ...
   -ts_theta_adapt: <FALSE> Use time-step adaptivity with the Theta method
@@ -752,33 +752,40 @@ Files \texttt{bar000.png} \dots \texttt{bar010.png} are generated in this case. 
 
 \section{Performance, stability, and stiffness}
 
-It is time to recall some of the theory from earlier in this Chapter, and apply it to this heat equation example.  To summarize the example, the method of lines converts the heat equation \eqref{eq:ts:heatequation} into a large, stiff, and linear system of ODEs in form \eqref{eq:ts:ode}.  If we choose an implicit time-stepping method then \PETSc allows us to solve equations \eqref{eq:ts:implicitgenericsystemAGAIN}, which must be solved at each time step, in parallel using the stack of tools shown in Figure \ref{fig:ts:stack}.  The code \texttt{heat.c} sets the implicit, A-stable, and stiff-decay backward Euler method as the default method (\texttt{-ts\_type beuler}).
+We can apply our knowledge of the relative properties of schemes, from earlier in this Chapter, to this heat equation example.  To summarize the example, the method of lines converts the heat equation \eqref{eq:ts:heatequation} into a large, stiff, and linear system of ODEs in form \eqref{eq:ts:ode}.  If we choose an implicit time-stepping method then \PETSc allows us to solve equations \eqref{eq:ts:implicitgenericsystemAGAIN} at each time step in parallel using the stack of tools shown in Figure \ref{fig:ts:stack}.  The code \texttt{heat.c} sets the backward Euler method as the default method (\texttt{-ts\_type beuler}).
 
 Here is a run on which we can compare various solver choices:\sidenote{For issues other than timeing, consider adding options \texttt{ -snes\_converged\_reason -ts\_monitor\_solution draw} to monitor convergence and visualize.  Some effects below are seen in the visualizations.}
 \begin{cline}
 $ ./heat -da_refine 5 -ts_monitor -heat_monitor
 \end{cline}
 %$
-This run, which takes $M=10$ steps to reach the final time $t_f=0.1$ using an $O(\Delta t^1)$ method, gives reasonable results in a few seconds, on a reasonably-fine grid, using the default settings.
+This run, which takes $M=10$ steps to reach the final time $t_f=0.1$ using an $O(\Delta t^1)$ method, gives reasonable results in a few seconds,  % 4.11 seconds
+on a modestly-refined grid of $N \approx 1.6 \times 10^4$ points, using the default settings.
 
-Recalling Table \ref{tab:ts:odebasictypes}, we consider some other ODE methods.  They are compared by relative time $R$---where $R>1$ is the factor by which another method is slower---and number of steps $M$.
-\begin{itemize}
+Recalling Table \ref{tab:ts:odebasictypes}, we now consider other ODE methods.  They are compared by number of steps $M$ and---this is very informal---by their relative wall-clock time $R$:\sidenote{Thus $R=1$ for a method which is the same speed as backward Euler, $R<1$ for a faster method, and $R>1$ for a slower method.}
+\renewcommand{\labelenumi}{\alph{enumi})}
+\begin{enumerate}
+\item \texttt{-ts\_type beuler}  \hfill $R=1$, $M=10$
+\begin{quote} The implicit, A-stable, stiff-decay, and $O(\Delta^1)$ local truncation error method which is the default for \texttt{heat.c}. \end{quote}
 \item \texttt{-ts\_type rk}  \hfill $R=4.5$, $M=5201$
-\begin{quote} The \RKthreebs adaptive method.  It detects the stiffness and takes many inappropriately-small time steps, with larger total run-time. \end{quote}
+\begin{quote} The \RKthreebs adaptive method.  It detects the stiffness as a difference between the embedded schemes, and thus takes many inappropriately-short time steps and too much time.  (The effect gets worse, relative to a), on further-refined grids.) \end{quote}
 \item \texttt{-ts\_type rk -ts\_adapt\_type none}  \hfill $R=0.012$, $M=10$
-\begin{quote} This is the same method but with adaptivity turned off.  The solution explodes to size $10^{72}$ after $M=10$ steps!  The fact that it is fast is irrelevant.\end{quote}
+\begin{quote} The same method as b), but sans adaptivity.  The numerical solution explodes to size $10^{72}$ after $M=10$ steps!  (Fast is irrelevant.)\end{quote}
 \item \texttt{-ts\_type cn}  \hfill $R=0.84$, $M=10$
-\begin{quote} This is the $\theta=0.5$ method with $O(\Delta t^2)$ local truncation error.  Visualization shows a problem.  Instead of smoothly growing in size as in the first run, features oscillate unstably.  This is a well-known consequence of a method which is A-stable, so that the oscillations do eventually decay---but without the stiff-decay property. \end{quote}
-\item FIXME
-\end{itemize}
+\begin{quote} Crank-Nicolson is the $\theta=1/2$ method; it has $O(\Delta t^2)$ local truncation error.  Visualization shows a problem.  Instead of smoothly growing in size as with \texttt{beuler}, features oscillate unstably.  This is a well-known consequence of a method which is A-stable but not stiff-decay.  (The oscillations do eventually decay, unlike c).) \end{quote}
+\item \texttt{-ts\_type theta -ts\_theta\_theta 0.7 -ts\_theta\_endpoint}
+
+\hfill $R=0.91$, $M=10$
+\begin{quote} By moving the $\theta$ value toward the more-stable $\theta=1$ (i.e.~\texttt{beuler}) end, we tame the instability of Crank-Nicolson.  But now the order is back to $O(\Delta t^1)$ like run a). \end{quote}
+\item \texttt{-ts\_type cn -ts\_theta\_adapt}  \hfill $R=2.3$, $M=31$
+\begin{quote} By adding adaptivity to Crank-Nicolson we also control the oscillations, and now we have $O(\Delta t^2)$ local truncation error as well.  The trade-off between speed and accuracy can be controlled by options \texttt{-ts\_rtol} and \texttt{-ts\_atol} (not shown).  \end{quote}
+\item \texttt{-ts\_type bdf -ts\_bdf\_adapt -ts\_bdf\_order 2}
+
+\hfill $R=2.4$, $M=28$
+\begin{quote} This implicit, A-stable, and stiff-decay multistep method \citep{AscherPetzold1998} uses backward differentiation formula \eqref{eq:ts:bdf2}, but with additional tweaks to make it adaptive.  As a multi-step formula it requires additional techniques to get started (not addressed).\end{quote}
+\end{enumerate}
 
 FIXME runs show $D_0 \Delta t / \Delta x^2$; explain
-
-\begin{code}
-suppress wobbles by weighting implicitness more: -ts_type theta -ts_theta_theta 0.7 -ts_theta_endpoint
-
-better adaptive than rk: -ts_type bdf -ts_bdf_adapt -ts_bdf_order 3
-\end{code}
 
 
 
