@@ -38,7 +38,7 @@ typedef struct {
 
 // Formulas from page 22 of Hundsdorfer & Verwer (2003).  Interpretation here is
 // to always generate 0.5 x 0.5 non-trivial patch in (0,L) x (0,L) domain.
-PetscErrorCode InitialState(Vec x, PatternCtx* user) {
+PetscErrorCode InitialState(Vec x, double noiselevel, PatternCtx* user) {
   PetscErrorCode ierr;
   DMDALocalInfo  info;
   int            i,j;
@@ -48,6 +48,13 @@ PetscErrorCode InitialState(Vec x, PatternCtx* user) {
   DMDACoor2d     **aC;
   Field          **ax;
 
+  ierr = VecSet(x,0.0); CHKERRQ(ierr);
+  if (noiselevel > 0.0) {
+      // noise added to usual initial condition is uniform on [0,noiselevel],
+      //     independently for each location and component
+      ierr = VecSetRandom(x,NULL); CHKERRQ(ierr);
+      ierr = VecScale(x,noiselevel); CHKERRQ(ierr);
+  }
   ierr = DMDAGetLocalInfo(user->da,&info); CHKERRQ(ierr);
   ierr = DMDAGetCoordinateArray(user->da,&aC); CHKERRQ(ierr);
   ierr = DMDAVecGetArray(user->da,x,&ax); CHKERRQ(ierr);
@@ -57,10 +64,9 @@ PetscErrorCode InitialState(Vec x, PatternCtx* user) {
               && (aC[j][i].y >= ledge) && (aC[j][i].y <= redge)) {
           sx = sin(4.0 * PETSC_PI * aC[j][i].x);
           sy = sin(4.0 * PETSC_PI * aC[j][i].y);
-          ax[j][i].v = 0.5 * sx * sx * sy * sy;
-      } else
-          ax[j][i].v = 0.0;
-      ax[j][i].u = 1.0 - 2.0 * ax[j][i].v;
+          ax[j][i].v += 0.5 * sx * sx * sy * sy;
+      }
+      ax[j][i].u += 1.0 - 2.0 * ax[j][i].v;
     }
   }
   ierr = DMDAVecRestoreArray(user->da,x,&ax); CHKERRQ(ierr);
@@ -177,6 +183,7 @@ int main(int argc,char **argv)
   TS             ts;
   Vec            x;
   DMDALocalInfo  info;
+  double         noiselevel = -1.0;  // negative value means no initial noise
 
   PetscInitialize(&argc,&argv,(char*)0,help);
 
@@ -187,6 +194,9 @@ int main(int argc,char **argv)
   user.phi    = 0.024;
   user.kappa  = 0.06;
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "ptn_", "options for patterns", ""); CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-noisy_init",
+           "initialize u,v with this much random noise (e.g. 0.2) on top of usual initial values",
+           "pattern.c",noiselevel,&noiselevel,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-L","square domain side length; recommend L >= 0.5",
            "pattern.c",user.L,&user.L,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-Du","diffusion coefficient of first equation",
@@ -236,7 +246,7 @@ int main(int argc,char **argv)
 //ENDTSSETUP
 
   ierr = DMCreateGlobalVector(user.da,&x); CHKERRQ(ierr);
-  ierr = InitialState(x,&user); CHKERRQ(ierr);
+  ierr = InitialState(x,noiselevel,&user); CHKERRQ(ierr);
   ierr = TSSolve(ts,x); CHKERRQ(ierr);
 
   VecDestroy(&x);  TSDestroy(&ts);  DMDestroy(&user.da);
