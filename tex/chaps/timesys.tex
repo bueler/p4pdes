@@ -792,68 +792,88 @@ Note that when we run \texttt{heat.c} it prints out the value of $\nu = D_0 \Del
 
 \section{Coupled reaction-diffusion equations}
 
-The last example, in which we solve the time-dependent heat equation \eqref{eq:ts:heatequation}, uses a MOL discretization, a 2D \pDMDA, and centered finite differences to produce a stiff ODE system.  Our next example does the same, but it is more interesting in three particular ways:
+The next example also uses a MOL discretization, a 2D \pDMDA, and centered finite differences to produce a stiff ODE system.  However, it is more interesting in three particular ways:
 \begin{itemize}
-\item it is a \emph{system} of two coupled PDEs
-\item which are \emph{nonlinear} reaction-diffusion equations, and
-\item we \emph{separate the stiff part} so that implicit/explicit (\emph{IMEX}) numerical methods can give benefits from both strategies.
+\item It is a \emph{system} of two coupled, scalar PDEs.
+\item They are \emph{nonlinear} reaction-diffusion equations.
+\item We \emph{separate the stiff part} so that implicit/explicit (\emph{IMEX}) numerical methods are effective.
 \end{itemize}
 
-Consider the following system of two coupled, scalar PDEs \citep{Pearson1993,HundsdorferVerwer2003}
+This reaction-diffusion system was studied by \citep{Pearson1993}:
 \begin{align}
 \frac{\partial u}{\partial t} &= D_u \grad^2 u - u v^2 + \phi (1 - u), \label{eq:ts:pattern:pde} \\
 \frac{\partial v}{\partial t} &= D_v \grad^2 u + u v^2 - (\phi + \kappa) v. \notag
 \end{align}
-Here $u(t,x,y)$ and $v(t,x,y)$ represent chemical concentrations defined for $t\in[0,T]$ and $(x,y)$ in the a square domain $\mathcal{S} = [0,L)\times [0,L)$.  The boundary conditions on $\mathcal{S}$ are periodic, so in effect there is no boundary.  The \emph{diffusion coefficients} $D_u>0,D_v>0$ are generally different for the two chemicals.  Constant $\phi>0$ describes the ``feed rate'' for $u$, while $\kappa>0$ gives the rate of a chemical reaction that eliminates $v$ by converting it into an inert product \citep{Pearson1993}.  The interaction between the two species, which converts $u$ into $v$, occurs at a rate $u v^2$.
+Here $u(t,x,y)$ and $v(t,x,y)$ are concentrations of two different chemicals.  Both chemicals diffuse in space but the \emph{diffusion coefficients} $D_u>0,D_v>0$ are generally different.  A chemical interaction between the two converts $u$ into $v$ and occurs at a rate $u v^2$; this term makes the system nonlinear.  Constant $\phi>0$ describes the external supply (``feed rate'') of $u$, while $\kappa>0$ gives the rate of an additional chemical reaction that eliminates $v$ by converting it into an inert product \citep{Pearson1993}.
 
-This reaction-diffusion model produces a ``surprising variety of irregular spatiotemporal patterns'' \citep{Pearson1993}, but of course one needs a computer to reveal them.  This problem makes an excellent illustration of the value of implicit time-stepping in the presence of stiff diffusive terms.  While Pearson used explicit, first-order forward-Euler to do the numerical experiments, which required a parallel supercomputer,\sidenote{Namely, a Connection Machine at the Los Alamos Advanced Computing Laboratory.} we will take implicit or partially-implicit time steps $1000$ times longer.
+We consider an initial/boundary value problem for \eqref{eq:ts:pattern:pde} \citep{HundsdorferVerwer2003} in which $u,v$ are defined for $t\in[0,T]$ and for $(x,y)$ in the square domain $\mathcal{S} = [0,L)\times [0,L)$.  An initial condition is chosen, optionally with noise added to break symmetries, to generate ``spot multiplication''; see \citep{Pearson1993}.  The boundary conditions on $\mathcal{S}$ are periodic, so in effect there is no boundary.
 
-As in the heat equation, the Laplacian $\grad^2$ in \eqref{eq:ts:pattern:pde} generates a stiff ODE system when MOL is applied.  With this in mind, \PETSc allows us to write the discretized system in the form
+This reaction-diffusion model produces a ``surprising variety of irregular spatiotemporal patterns'' \citep{Pearson1993}, but of course one needs a computer to reveal them.  While Pearson used explicit, first-order forward-Euler to do the numerical experiments, which required a parallel supercomputer,\sidenote{Namely, a Connection Machine at the Los Alamos Advanced Computing Laboratory.} we will take implicit (or partly-implicit) time steps $1000$ times longer.  This problem illustrates the value of implicit time-stepping in the presence of stiff diffusive terms.
+
+As in the heat equation, the Laplacian $\grad^2$ in \eqref{eq:ts:pattern:pde} generates a stiff ODE system when MOL is applied \citep{HundsdorferVerwer2003}.  With such situations in mind, \PETSc allows us to write the discretized system in the form
 \begin{equation}
-\bF(t,\by,\by') = \bG(t,\by). \label{eq:ts:pattern:imexform}
+\bF(t,\by,\by') = \bG(t,\by), \label{eq:ts:pattern:imexform}
 \end{equation}
-This form is suitable for a larger class of problems than we need, including \emph{differential-algebraic equations} (DAEs) wherein $\partial \bF/\partial \by'$ is singular.  On the other hand the same form allows one to put the stiff terms in $\bF$ and the nonstiff in $\bG$, so that IMEX methods can apply different schemes to each part; such \emph{is} our purpose.  (Note that form \eqref{eq:ts:ode} is the case of \eqref{eq:ts:pattern:imexform} in which $\partial \bF/\partial \by'$ is the identity.  If $\partial \bF/\partial \by'$ is invertible then in theory \eqref{eq:ts:pattern:imexform} can be converted to \eqref{eq:ts:ode}, but this is often impractical.)  In the particular case of the MOL discretization of \eqref{eq:ts:pattern:pde}, either form would work but the IMEX methods need \eqref{eq:ts:pattern:imexform}; see Exercise \ref{chap:ts}.\ref{exer:ts:patternrhsonlyform}.
+and then put the stiff terms in $\bF$ and the nonstiff in $\bG$, so that methods can apply different schemes to each part.  This general form is also suitable for \emph{differential-algebraic equations} (DAEs) wherein $\partial \bF/\partial \by'$ is singular.  Note that form \eqref{eq:ts:ode} is the case of \eqref{eq:ts:pattern:imexform} in which $\partial \bF/\partial \by'$ is the identity.  If $\partial \bF/\partial \by'$ is invertible then in theory \eqref{eq:ts:pattern:imexform} can be converted to \eqref{eq:ts:ode}, but this is often impractical.
 
-\cinputpart{pattern.c}{\CODELOC}{\texttt{struct}s: for point-wise values of the solution and a ``context'' for use by call-backs.}{I}{//FIELDCTX}{//ENDFIELDCTX}{code:ts:pattern:fieldctx}
+In the particular case of the MOL discretization of \eqref{eq:ts:pattern:pde}, either form \eqref{eq:ts:ode} or \eqref{eq:ts:pattern:imexform} can be made to work, but \eqref{eq:ts:pattern:imexform} increases options for effective time-stepping methods.  See Exercise \ref{chap:ts}.\ref{exer:ts:patternrhsonlyform}.
 
-To get started immediately with the implementation, Code \ref{code:ts:pattern:fieldctx} shows the definition of \texttt{struct}s named \texttt{Field} and \texttt{PatternCtx}.  The former is the point-wise value of the solution of PDE \eqref{eq:ts:pattern:pde}, that is, a pair $(u,v)$.  The latter is the standard ``context'' struct so that call-backs can get the values of the constants in \eqref{eq:ts:pattern:pde}.
+\cinputpart{pattern.c}{\CODELOC}{\texttt{Field} is for point-wise values of the solution.  \texttt{PatternCtx} is a ``context'' for use by call-backs.}{I}{//FIELDCTX}{//ENDFIELDCTX}{code:ts:pattern:fieldctx}
 
-Now consider the spatial discretization of \eqref{eq:ts:pattern:pde}.  Speaking conceptually, this results in a vector $\bu$ of the discrete values $u_{i,j}(t) \approx u(t,x_i,y_j)$ and a similar vector $\bv$.  Together these form the state vector of the ODE system \eqref{eq:ts:pattern:imexform}, 
+To get started with the implementation \texttt{c/ch5/pattern.c}, Code \ref{code:ts:pattern:fieldctx} shows the definition of \texttt{struct}s named \texttt{Field} and \texttt{PatternCtx}.  The former is the point-wise value of the solution of PDE \eqref{eq:ts:pattern:pde}, that is, a pair $(u,v)$.  The latter is the standard ``context'' struct so that call-backs can get the values of the constants in \eqref{eq:ts:pattern:pde}.
+
+\cinputpart{pattern.c}{\CODELOC}{Create a 2D \pDMDA which has two degrees of freedom and a ``box'' stencil.}{II}{//DMDACREATE}{//ENDDMDACREATE}{code:ts:pattern:dmdacreate}
+
+Next we display two extracts of \texttt{main()}.  First, Code \ref{code:ts:pattern:dmdacreate} shows how a 2D \pDMDA with two degrees of freedom (i.e.~$(u,v)$ at each point) is created.  We use a ``box'' stencil because of the 9-point finite difference stencil used for $\grad^2$ (below).
+
+\cinputpart{pattern.c}{\CODELOC}{Set up the \pTS and its callbacks.}{III}{//TSSETUP}{//ENDTSSETUP}{code:ts:pattern:tssetup}
+
+Second, Code \ref{code:ts:pattern:tssetup} shows the set-up of the \pTS object.  This part differs from the \texttt{heat.c} case because we set three different call-backs using the \PETSc API:
+\begin{itemize}
+\item \texttt{DMDATSSetIFunctionLocal()} and \texttt{DMDATSSetIJacobianLocal()} set call-backs for $\bF$ in \eqref{eq:ts:pattern:imexform}, and
+\item \texttt{DMDATSSetRHSFunctionLocal()} sets a call-back for $\bG$ in \eqref{eq:ts:pattern:imexform}.
+\end{itemize}
+The call-back functions themselves are shown below.  Note that \texttt{DMDATSSetRHSJacobianLocal()} exists but we do not use it; compare Exercises \ref{chap:ts}.\ref{exer:ts:patternfulljacobian} and \ref{chap:ts}.\ref{exer:ts:patternrhsonlyform}.
+
+We set the ARKIMEX = \emph{adaptive Runge-Kutta implicit/explicit} \citep{AscherRuuthSpiteri1997} as the time-stepping method.  This method will treat $\bF$ in \eqref{eq:ts:pattern:imexform} implicitly and $\bG$ explicitly.  However, other non-split implicit methods work quite well on this example, including Crank-Nicolson and BDF (Exercise \ref{chap:ts}.\ref{exer:ts:patternperformancestudy}).
+
+Now consider the spatial discretization (MOL) of \eqref{eq:ts:pattern:pde}.  Speaking conceptually, MOL results in a vector $\bu$ of the discrete values $u_{i,j}(t) \approx u(t,x_i,y_j)$ and a similar vector $\bv$.  Together these form the state vector of the ODE system \eqref{eq:ts:pattern:imexform}, 
 \begin{equation}
 \by = \begin{bmatrix} \bu \\ \bv \end{bmatrix}.  \label{eq:ts:pattern:blockvars}
 \end{equation}
-To implement this MOL-discretized form we will write \texttt{FormIFunction()} which computes
+Supposing \texttt{Field **aY} is an array for a \pVec holding the gridded approximation to $\by$, we can reference the components by their names, as \text{aY[j][i].u} and \text{aY[j][i].v}, respectively.
+
+\cinputpart{pattern.c}{\CODELOC}{Evaluate $\bF$ in \eqref{eq:ts:pattern:imexform}.}{IV}{//IFUNCTION}{//ENDIFUNCTION}{code:ts:pattern:ifunction}
+
+To implement the discretized form we write \texttt{FormIFunctionLocal()} which computes
 \begin{equation}
 \bF(t,\by,\by') = \by' - \begin{bmatrix} D_u A \bu \\ D_v A \bv \end{bmatrix},  \label{eq:ts:pattern:blockifunction}
 \end{equation}
-where $A$ is the centered finite-difference approximation of the scalar Laplacian $\grad^2$, and \texttt{FormRHSFunction()} which computes
+where $A$ is the centered finite-difference approximation of the scalar Laplacian $\grad^2$.  We also write \texttt{FormRHSFunctionLocal()} which computes
 \begin{equation}
 \bG(t,\by) = \begin{bmatrix}
 - \bu \bv^2 + \phi (1-\bu) \\
 + \bu \bv^2 - (\phi + \kappa) \bv
 \end{bmatrix}. \label{eq:ts:pattern:blockrhsfunction}
 \end{equation}
-(These functions appear in Codes \ref{code:ts:pattern:ifunction} and \ref{code:ts:pattern:rhsfunction} below.)
+These functions appear in Codes \ref{code:ts:pattern:ifunction} and \ref{code:ts:pattern:rhsfunction}, respectively.
 
-Forms \eqref{eq:ts:pattern:blockvars}--\eqref{eq:ts:pattern:blockrhsfunction} are, in fact, only notional.  The actual order of the grid values in memory is
+\cinputpart{pattern.c}{\CODELOC}{Evaluate $\bG$ in \eqref{eq:ts:pattern:imexform}.}{V}{//RHSFUNCTION}{//ENDRHSFUNCTION}{code:ts:pattern:rhsfunction}
+
+The ordering of unknowns implied in \eqref{eq:ts:pattern:blockvars}--\eqref{eq:ts:pattern:blockrhsfunction} is, in fact, only notional.  The actual order of the grid values in memory is
 \begin{equation}
 \by = \begin{bmatrix} u_{0,0} \\ v_{0,0} \\ u_{1,0} \\ v_{1,0} \\ \vdots \end{bmatrix}. \label{eq:ts:pattern:interleaved}
 \end{equation}
-That is, the components $u,v$ are interleaved.  (The particular grid order comes from the \pDMDA; see Chapter \ref{chap:st}.)  However, we do \emph{not} need to be aware of the order in memory to write the code.  Indeed, use of \texttt{DMDAVecGetArray()} and \texttt{MatSetValuesStencil()}---see below in Code \ref{code:ts:pattern:tssetup}---allow us to refer to values of $u$ and $v$ by the component name (i.e.~using C \texttt{struct} member notation ``\texttt{.u}'' or ``\texttt{.v}''; see below) and the grid indices $i,j$.
+That is, the components $u,v$ are interleaved.\sidenote{The particular $i,j$ grid order comes from the \pDMDA; see Chapter \ref{chap:st}.}  However, we do \emph{not} need to be aware of the order in memory to write the code because \texttt{DMDAVecGetArray()} and \texttt{MatSetValuesStencil()} allow us to refer to values of $u$ and $v$ by component name (for \pVecs, in Codes \ref{code:ts:pattern:ifunction}--\ref{code:ts:pattern:rhsfunction}) or component index (using \texttt{c=0,1} for \pMat entries in Code \ref{code:ts:pattern:ijacobian}).
 
-We will also write some Jacobian code, but only for the stiff part $\bF$.  The function \texttt{FormIJacobianLocal()}---see Code \ref{code:ts:pattern:ijacobian}---computes
+We write Jacobian code only for the stiff part $\bF$.  Solvers which work with general ODE form \eqref{eq:ts:pattern:imexform} require the Jacobian function (\texttt{FormIJacobianLocal()} in Code \ref{code:ts:pattern:ijacobian}) to compute a certain combination
 \begin{equation}
 J = (\text{shift}) \frac{\partial \bF}{\partial \by'} + \frac{\partial \bF}{\partial \by}
 \label{eq:ts:pattern:jacobianshift}
 \end{equation}
+because $\bF$ depends on both $\by$ and $\by'$.  In our case it is nearly trivial because $\partial \bF/\partial \by'$ is the identity.
 
-\cinputpart{pattern.c}{\CODELOC}{FIXME}{II}{//TSSETUP}{//ENDTSSETUP}{code:ts:pattern:tssetup}
-
-\cinputpart{pattern.c}{\CODELOC}{FIXME}{III}{//IFUNCTION}{//ENDIFUNCTION}{code:ts:pattern:ifunction}
-
-\cinputpart{pattern.c}{\CODELOC}{FIXME}{IV}{//RHSFUNCTION}{//ENDRHSFUNCTION}{code:ts:pattern:rhsfunction}
-
-\cinputpart{pattern.c}{\CODELOC}{FIXME}{V}{//IJACOBIAN}{//ENDIJACOBIAN}{code:ts:pattern:ijacobian}
+\cinputpart{pattern.c}{\CODELOC}{Compute the derivative \eqref{eq:ts:pattern:jacobianshift} of $\bF$.}{VI}{//IJACOBIAN}{//ENDIJACOBIAN}{code:ts:pattern:ijacobian}
 
 FIXME a run which takes about 10 seconds and does something worth visualizing
 \begin{cline}
@@ -893,17 +913,17 @@ $ mpiexec -n 4 ./pattern -ts_monitor -da_refine 6 -ts_dt 10 -ts_final_time 650 \
 About one minute on a lap-top, and we see good quadratic convergence.  That is, $\Delta t=10.0$ and $65$ total time steps on a second-order method, while \citep{Pearson1993} used first-order forward Euler explicit time-stepping, $\Delta t = 0.01$, and $65000$ time steps.
 
 \begin{figure}
-%\includegraphics[width=0.45\textwidth]{figs/snakes}
+\includegraphics[width=0.7\textwidth]{figs/snakes}
 \caption{FIXME}
 \label{fig:ts:pattern:snakes}
 \end{figure}
 
 FIXME add optional noisy initial condition; generate Figure \ref{fig:ts:pattern:snakes} using options
 \begin{cline}
-$ mpiexec -n 4 ./pattern -ptn_noisyinitial -ptn_phi 0.05 -ptn_kappa 0.063 -ts_monitor -ts_monitor_solution draw -da_refine REF -ts_final_time TIME 
+$ mpiexec -n 4 ./pattern -ptn_phi 0.05 -ptn_kappa 0.063 -ts_monitor binary:t.dat -ts_monitor_solution binary:uv.dat -da_refine 6 -ts_final_time 15000 -ptn_noisy_init 0.15
 \end{cline}
 %$
-where REF=7 and TIME=5000(?)
+
 
 
 \section{Exercises}
