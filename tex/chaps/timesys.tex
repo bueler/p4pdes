@@ -790,42 +790,55 @@ For a heat or diffusion equation problem like the one under consideration, we ma
 Note that when we run \texttt{heat.c} it prints out the value of $\nu = D_0 \Delta t / (h_x h_y)$.\sidenote{The \emph{initial} $\Delta t$ value is used, so in adaptive cases this report is of minimal utility.}  This ratio controls the conditional stability of explicit methods,\sidenote{Note that $\nu$ is relevant to diffusions, and it is not the better-known ``CFL'' constant of hyperbolic problems \citep{LeVeque2002} which possess characteristic curves.  Of course the concepts are related.} and the degree of stiffness of the ODE problem.  Indeed, theorems showing that $\nu \lesssim 1$ is either necessary or sufficient, or both, for the conditional stability of fully-discrete explicit methods for the heat equation can be found in \citep{MortonMayers2005}.  (See \citep{LeVeque2007} for the connection to stiffness and the absolute stability of methods.)  Our treatment, based on the method of lines, will not pursue such essential numerical PDE theory further.
 
 
-
 \section{Coupled reaction-diffusion equations}
 
-FIXME see pages 21--22 of \citep{HundsdorferVerwer2003} and see \citep{Pearson1993}
+The last example, in which we solve the time-dependent heat equation \eqref{eq:ts:heatequation}, uses a method of lines discretization, a 2D \pDMDA, and centered finite differences to produce a stiff ODE system.  This next example does the same, but it is more interesting in three particular ways:
+\begin{itemize}
+\item it is a \emph{system} of two coupled PDEs
+\item which are \emph{nonlinear} reaction-diffusion equations, and
+\item we \emph{split} the stiff part of the equations from the non-stiff, so that implicit/explicit (IMEX) numerical methods give benefits from both strategies.
+\end{itemize}
 
+Consider the following PDEs from \citep{Pearson1993,HundsdorferVerwer2003}
 \begin{align}
 \frac{\partial u}{\partial t} &= D_u \grad^2 u - u v^2 + \phi (1 - u), \label{eq:ts:pattern:pde} \\
 \frac{\partial v}{\partial t} &= D_v \grad^2 u + u v^2 - (\phi + \kappa) v. \notag
 \end{align}
+where $u(t,x,y),v(t,x,y)$ represent chemical concentrations defined for $t\in[0,T]$ and $(x,y)\in [0,L)\times [0,L)$, and where the boundary conditions are periodic.  Here $D_u>0,D_v>0$ are \emph{diffusion coefficients}, $\phi>0$ is the ``feed rate'' for the $u$ (chemical) species, and $\kappa>0$ is a rate constant for a chemical reaction that eliminates the $v$ species by converting it into an inert product \citep{Pearson1993}.  The interaction between the two species occurs at a rate $u v^2$ and this reaction effectively converts $u$ into $v$, so that ``$-u v^2$'' and ``$+u v^2$ appear in the two equations, respectively.
 
-\begin{equation}
-\bF(t,\by,\by') = \bG(t,\by) \label{eq:ts:pattern:imexform}
-\end{equation}
+This simple reaction-diffusion model produces a ``surprising variety of irregular spatiotemporal patterns'' \citep{Pearson1993}, but of course one needs a computer to reveal them.  While it is less novel to solve this problem than in 1993, it is an excellent illustration of the value of implicit time-stepping in the presence of stiff diffusive terms.  Pearson used first-order forward Euler explicit time-stepping to do the numerical experiments, requiring a parallel supercomputer,\sidenote{Namely, a Connection Machine at the Los Alamos Advanced Computing Laboratory.} but will take time steps $1000$ times longer and do the computations easily at a small or large level of parallelism.
 
-In this example,
+As explained for the heat equation, the Laplacian derivative $\grad^2$ generates a stiff ODE system when the method of lines is applied.  With this in mind, \PETSc allows us to write the discretized (i.e.~method of lines) system in the form
 \begin{equation}
-\by = \begin{bmatrix} \bu \\ \bv \end{bmatrix}  \label{eq:ts:pattern:blockvars}
+\bF(t,\by,\by') = \bG(t,\by). \label{eq:ts:pattern:imexform}
 \end{equation}
-and
-\begin{align}
-\bF(t,\by,\by') &= \by' - \begin{bmatrix}
-D_u A & \\ & D_v A \end{bmatrix} \by,  \label{eq:ts:pattern:blockode} \\
-\bG(t,\by) &= \begin{bmatrix}
+This form can handle a larger class of problems than we need, including those \emph{differential-algebraic equations} in which $\partial \bF/\partial \by'$ is singular.  We do not need that capability, but the same form allows one to put the stiff terms in $\bF$ and the nonstiff in $\bG$, and have advanced ODE time-stepping methods apply different schemes to each part; such \emph{is} our purpose.
+
+To be specific, and speaking conceptually, from discretizing \eqref{eq:ts:pattern:pde} we have a vector $\bu$ of the discrete values $u_{i,j}(t) \approx u(t,x_i,y_j)$ and a similar vector $\bv$.  Together these are the state variables for the ODE: 
+\begin{equation}
+\by = \begin{bmatrix} \bu \\ \bv \end{bmatrix}.  \label{eq:ts:pattern:blockvars}
+\end{equation}
+To implement the method-of-lines discretized form of \eqref{eq:ts:pattern:pde} we write functions \texttt{FormIFunction()} which computes
+\begin{equation}
+\bF(t,\by,\by') = \by' - \begin{bmatrix} D_u A \bu \\ D_v A \bv \end{bmatrix},  \label{eq:ts:pattern:blockifunction}
+\end{equation}
+where $A$ is the centered finite-difference approximation of the scalar Laplacian $\grad^2$, and \texttt{FormRHSFunction()} which computes
+\begin{equation}
+\bG(t,\by) = \begin{bmatrix}
 - \bu \bv^2 + \phi (1-\bu) \\
 + \bu \bv^2 - (\phi + \kappa) \bv
-\end{bmatrix}
-\end{align}
-where $A$ is the centered finite-difference approximation of the Laplacian $\grad^2$.
-
-Form \eqref{eq:ts:pattern:blockvars} is notional.  Actual order of grid values in memory is
-\begin{equation}
-\by = \begin{bmatrix} u_{0,0} \\ v_{0,0} \\ u_{1,0} \\ v_{1,0} \\ \vdots \end{bmatrix}, \label{eq:ts:pattern:interleaved}
+\end{bmatrix}. \label{eq:ts:pattern:blockrhsfunction}
 \end{equation}
-that is, the components $u,v$ are interleaved.\sidenote{Regarding the particular order on the grid, which is intrinsic to \pDMDA, see Chapter \ref{chap:st}.}
 
-The function \texttt{FormIJacobianLocal()} computes
+Forms \eqref{eq:ts:pattern:blockvars}--\eqref{eq:ts:pattern:blockrhsfunction} are, in fact, only notional.  The actual order of the grid values in memory is
+\begin{equation}
+\by = \begin{bmatrix} u_{0,0} \\ v_{0,0} \\ u_{1,0} \\ v_{1,0} \\ \vdots \end{bmatrix}. \label{eq:ts:pattern:interleaved}
+\end{equation}
+That is, the components $u,v$ are interleaved.  (Regarding the particular order on the grid, which is intrinsic to \pDMDA, see Chapter \ref{chap:st}.)
+
+However, we do \emph{not} need to be aware of the order in memory to write the code.  Indeed, use of \texttt{DMDAVecGetArray()} and \texttt{MatSetValuesStencil()} allow us to refer to values of $u$ and $v$ by the component name (i.e.~using C \texttt{struct} member notation ``\texttt{.u}'' or ``\texttt{.v}''; see below) and the grid indices $i,j$.
+
+We do write some Jacobian code, but only for the stiff part $\bF$.  The function \texttt{FormIJacobianLocal()} computes
 \begin{equation}
 J = (\text{shift}) \frac{\partial \bF}{\partial \by'} + \frac{\partial \bF}{\partial \by}
 \label{eq:ts:pattern:jacobianshift}
@@ -858,15 +871,15 @@ FIXME relative performance using \texttt{-ts\_type beuler,cn,bdf,arkimex}
 FIXME final-time greyscale plots using \texttt{PetscBinaryIO.py}
 
 \begin{figure}
-\includegraphics[width=0.4\textwidth]{figs/pattern000} \qquad
-\includegraphics[width=0.4\textwidth]{figs/pattern350}
+\includegraphics[width=0.45\textwidth]{figs/pattern000} \quad
+\includegraphics[width=0.45\textwidth]{figs/pattern350}
 
-\smallskip
-\includegraphics[width=0.4\textwidth]{figs/pattern510} \qquad
-\includegraphics[width=0.4\textwidth]{figs/pattern650}
+\medskip \medskip
+\includegraphics[width=0.45\textwidth]{figs/pattern510} \quad
+\includegraphics[width=0.45\textwidth]{figs/pattern650}
 % use run:
 %    
-\caption{Component $u$ as grayscale in frames at $t=0,350$ (top) and $t=510,650$ (bottom) from \texttt{pattern.c} run on a $256\times 256$ grid.}
+\caption{Component $u$ as grayscale in frames at $t=0,350$ (top) and $t=510,650$ (bottom) from \texttt{pattern.c} run on a $256\times 256$ grid.  Compare Figure 4 in \citep{Pearson1993}.}
 \label{fig:ts:pattern:figureversuspearson}
 \end{figure}
 
@@ -877,6 +890,19 @@ $ mpiexec -n 4 ./pattern -ts_monitor -da_refine 6 -ts_dt 10 -ts_final_time 650 \
 \end{cline}
 %$
 About one minute on a lap-top, and we see good quadratic convergence.  That is, $\Delta t=10.0$ and $65$ total time steps on a second-order method, while \citep{Pearson1993} used first-order forward Euler explicit time-stepping, $\Delta t = 0.01$, and $65000$ time steps.
+
+\begin{figure}
+%\includegraphics[width=0.45\textwidth]{figs/snakes}
+\caption{FIXME}
+\label{fig:ts:pattern:snakes}
+\end{figure}
+
+FIXME add optional noisy initial condition; generate Figure \ref{fig:ts:pattern:snakes} using options
+\begin{cline}
+$ mpiexec -n 4 ./pattern -ptn_noisyinitial -ptn_phi 0.05 -ptn_kappa 0.063 -ts_monitor -ts_monitor_solution draw -da_refine REF -ts_final_time TIME 
+\end{cline}
+%$
+where REF=7 and TIME=5000(?)
 
 
 \section{Exercises}
