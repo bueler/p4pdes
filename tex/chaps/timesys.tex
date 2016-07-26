@@ -10,7 +10,7 @@ In this Chapter we look at three examples:
 
 These problems are solved using a \PETSc \pTS time-stepping object.  The particular integration method used by the \pTS can be chosen at run-time.  Because many possible methods exist, a review of numerical time-stepping is appropriate.  We will recall the basics of both \emph{explicit} and \emph{implicit} methods.  Because implicit time-stepping methods need the full stack of \pSNES/\pKSP/\pPC solvers for the (generally) non-linear equations at each time step, our experience with \pSNES examples from previous Chapters will come in handy.
 
-User code will semi-discretize the above two PDE examples in space.  This \emph{method of lines} approach, a common way to solve PDEs using \PETSc \pTS, avoids any need to write code specific to a temporal discretization.  Though the last of the above examples is a \emph{system} of PDEs, the additional \PETSc constructs needed for this kind of system are quite easy to write.
+User code will semi-discretize the above two PDE examples in space.  This ``method of lines'' approach, a common way to solve PDEs using \PETSc \pTS, avoids any need to write code specific to a temporal discretization.  Though the last of the above examples is a \emph{system} of PDEs, the additional \PETSc constructs needed for this kind of system are quite easy to write.
 
 
 \section{Systems of ODEs}
@@ -623,7 +623,7 @@ Physically-speaking, total thermal energy is proportional to the integral of $u$
 (Again, see Exercise \ref{chap:ts}.\ref{exer:ts:zerototalsource}.)  We want our discretized equations \eqref{eq:ts:molheat} to conserve energy too, and we address this below.
 
 
-\section{Method of lines}  Any time-dependent PDE like \eqref{eq:ts:heatequation} becomes a system of ODEs by \emph{semi-discretization in space}, also known as the \emph{method of lines}.  (This name imagines the continuous-time, discrete-space ODE domain as lines $(t,x_i,y_j)$ in the three-dimensional space-time.)
+\section{Method of lines}  Any time-dependent PDE like \eqref{eq:ts:heatequation} becomes a system of ODEs by \emph{semi-discretization in space}, also known as the \emph{method of lines} (MOL).  (This name imagines the continuous-time, discrete-space ODE domain as lines $(t,x_i,y_j)$ in the three-dimensional space-time.)
 
 Suppose we discretize spatial derivatives the same way we did in Chapter \ref{chap:st}: we put a grid of $N = m_x m_y$ points $(x_i,y_j)$, with equal grid spacings $h_x,h_y$ in each direction, on $\mathcal{S}$.  (Compare Figure \ref{fig:unitsquaregrid} in Chapter \ref{chap:st} and Figure \ref{fig:ts:heatdefaultgrid} below.)  Then we replace the spatial derivatives in \eqref{eq:ts:heatequation} by centered finite differences while keeping the time derivatives.  That is, partial derivatives in $t$ become ordinary derivatives:
 \begin{equation}
@@ -634,7 +634,7 @@ where $f_{i,j} = f(x_i,y_j)$ and
 u_{i,j}(t) \approx u(t,x_i,y_j). \label{eq:ts:molumeaning}
 \end{equation}
 
-Equations \eqref{eq:ts:molheat} form a system of ODEs, i.e.~equation \eqref{eq:ts:ode}.  We can solve the system numerically, explicitly or implicitly, but there is no need to think about time-stepping methods now.  This deliberate ambiguity about time-stepping is central to the method of lines.
+Equations \eqref{eq:ts:molheat} form a system of ODEs, i.e.~equation \eqref{eq:ts:ode}.  We can solve the system numerically, explicitly or implicitly, but there is no need to think about time-stepping methods now.  This deliberate ambiguity about time-stepping is central to the MOL.
 
 
 \section{Implementation}
@@ -752,7 +752,7 @@ Files \texttt{bar000.png} \dots \texttt{bar010.png} are generated in this case. 
 
 \section{Time-stepping performance on the heat equation}
 
-We can apply our knowledge of the relative properties of schemes, from earlier in this Chapter, to this heat equation example.  To summarize the example, the method of lines converts the heat equation \eqref{eq:ts:heatequation} into a large, stiff, and linear system of ODEs in form \eqref{eq:ts:ode}.  If we choose an implicit time-stepping method then \PETSc allows us to solve equations \eqref{eq:ts:implicitgenericsystemAGAIN} at each time step in parallel using the stack of tools shown in Figure \ref{fig:ts:stack}.  The code \texttt{heat.c} sets the backward Euler method as the default method (\texttt{-ts\_type beuler}).
+We can apply our knowledge of the relative properties of schemes, from earlier in this Chapter, to this heat equation example.  To summarize the example, MOL converts the heat equation \eqref{eq:ts:heatequation} into a large, stiff, and linear system of ODEs in form \eqref{eq:ts:ode}.  If we choose an implicit time-stepping method then \PETSc allows us to solve equations \eqref{eq:ts:implicitgenericsystemAGAIN} at each time step in parallel using the stack of tools shown in Figure \ref{fig:ts:stack}.  The code \texttt{heat.c} sets the backward Euler method as the default method (\texttt{-ts\_type beuler}).
 
 Here is a run on which we can compare various solver choices:\sidenote{For issues other than timeing, consider adding options \texttt{ -snes\_converged\_reason -ts\_monitor\_solution draw} to monitor convergence and visualize.  Some effects below are seen in the visualizations.}
 \begin{cline}
@@ -787,38 +787,42 @@ Recalling Table \ref{tab:ts:odebasictypes}, we now consider other ODE methods.  
 
 For a heat or diffusion equation problem like the one under consideration, we may conclude that runs a), f), and g) represent a selection of good things to try.
 
-Note that when we run \texttt{heat.c} it prints out the value of $\nu = D_0 \Delta t / (h_x h_y)$.\sidenote{The \emph{initial} $\Delta t$ value is used, so in adaptive cases this report is of minimal utility.}  This ratio controls the conditional stability of explicit methods,\sidenote{Note that $\nu$ is relevant to diffusions, and it is not the better-known ``CFL'' constant of hyperbolic problems \citep{LeVeque2002} which possess characteristic curves.  Of course the concepts are related.} and the degree of stiffness of the ODE problem.  Indeed, theorems showing that $\nu \lesssim 1$ is either necessary or sufficient, or both, for the conditional stability of fully-discrete explicit methods for the heat equation can be found in \citep{MortonMayers2005}.  (See \citep{LeVeque2007} for the connection to stiffness and the absolute stability of methods.)  Our treatment, based on the method of lines, will not pursue such essential numerical PDE theory further.
+Note that when we run \texttt{heat.c} it prints out the value of $\nu = D_0 \Delta t / (h_x h_y)$.\sidenote{The \emph{initial} $\Delta t$ value is used, so in adaptive cases this report is of minimal utility.}  This ratio controls the conditional stability of explicit methods,\sidenote{Note that $\nu$ is relevant to diffusions, and it is not the better-known ``CFL'' constant of hyperbolic problems \citep{LeVeque2002} which possess characteristic curves.  Of course the concepts are related.} and the degree of stiffness of the ODE problem.  Indeed, theorems showing that $\nu \lesssim 1$ is either necessary or sufficient, or both, for the conditional stability of fully-discrete explicit methods for the heat equation can be found in \citep{MortonMayers2005}.  (See \citep{LeVeque2007} for the connection to stiffness and the absolute stability of methods.)  Our treatment, based on MOL, will not pursue such essential numerical PDE theory further.
 
 
 \section{Coupled reaction-diffusion equations}
 
-The last example, in which we solve the time-dependent heat equation \eqref{eq:ts:heatequation}, uses a method of lines discretization, a 2D \pDMDA, and centered finite differences to produce a stiff ODE system.  This next example does the same, but it is more interesting in three particular ways:
+The last example, in which we solve the time-dependent heat equation \eqref{eq:ts:heatequation}, uses a MOL discretization, a 2D \pDMDA, and centered finite differences to produce a stiff ODE system.  Our next example does the same, but it is more interesting in three particular ways:
 \begin{itemize}
 \item it is a \emph{system} of two coupled PDEs
 \item which are \emph{nonlinear} reaction-diffusion equations, and
-\item we \emph{split} the stiff part of the equations from the non-stiff, so that implicit/explicit (IMEX) numerical methods give benefits from both strategies.
+\item we \emph{separate the stiff part} so that implicit/explicit (\emph{IMEX}) numerical methods can give benefits from both strategies.
 \end{itemize}
 
-Consider the following PDEs from \citep{Pearson1993,HundsdorferVerwer2003}
+Consider the following system of two coupled, scalar PDEs \citep{Pearson1993,HundsdorferVerwer2003}
 \begin{align}
 \frac{\partial u}{\partial t} &= D_u \grad^2 u - u v^2 + \phi (1 - u), \label{eq:ts:pattern:pde} \\
 \frac{\partial v}{\partial t} &= D_v \grad^2 u + u v^2 - (\phi + \kappa) v. \notag
 \end{align}
-where $u(t,x,y),v(t,x,y)$ represent chemical concentrations defined for $t\in[0,T]$ and $(x,y)\in [0,L)\times [0,L)$, and where the boundary conditions are periodic.  Here $D_u>0,D_v>0$ are \emph{diffusion coefficients}, $\phi>0$ is the ``feed rate'' for the $u$ (chemical) species, and $\kappa>0$ is a rate constant for a chemical reaction that eliminates the $v$ species by converting it into an inert product \citep{Pearson1993}.  The interaction between the two species occurs at a rate $u v^2$ and this reaction effectively converts $u$ into $v$, so that ``$-u v^2$'' and ``$+u v^2$ appear in the two equations, respectively.
+Here $u(t,x,y)$ and $v(t,x,y)$ represent chemical concentrations defined for $t\in[0,T]$ and $(x,y)$ in the a square domain $\mathcal{S} = [0,L)\times [0,L)$.  The boundary conditions on $\mathcal{S}$ are periodic, so in effect there is no boundary.  The \emph{diffusion coefficients} $D_u>0,D_v>0$ are generally different for the two chemicals.  Constant $\phi>0$ describes the ``feed rate'' for $u$, while $\kappa>0$ gives the rate of a chemical reaction that eliminates $v$ by converting it into an inert product \citep{Pearson1993}.  The interaction between the two species, which converts $u$ into $v$, occurs at a rate $u v^2$.
 
-This simple reaction-diffusion model produces a ``surprising variety of irregular spatiotemporal patterns'' \citep{Pearson1993}, but of course one needs a computer to reveal them.  While it is less novel to solve this problem than in 1993, it is an excellent illustration of the value of implicit time-stepping in the presence of stiff diffusive terms.  Pearson used first-order forward Euler explicit time-stepping to do the numerical experiments, requiring a parallel supercomputer,\sidenote{Namely, a Connection Machine at the Los Alamos Advanced Computing Laboratory.} but will take time steps $1000$ times longer and do the computations easily at a small or large level of parallelism.
+This reaction-diffusion model produces a ``surprising variety of irregular spatiotemporal patterns'' \citep{Pearson1993}, but of course one needs a computer to reveal them.  This problem makes an excellent illustration of the value of implicit time-stepping in the presence of stiff diffusive terms.  While Pearson used explicit, first-order forward-Euler to do the numerical experiments, which required a parallel supercomputer,\sidenote{Namely, a Connection Machine at the Los Alamos Advanced Computing Laboratory.} we will take implicit or partially-implicit time steps $1000$ times longer.
 
-As explained for the heat equation, the Laplacian derivative $\grad^2$ generates a stiff ODE system when the method of lines is applied.  With this in mind, \PETSc allows us to write the discretized (i.e.~method of lines) system in the form
+As in the heat equation, the Laplacian $\grad^2$ in \eqref{eq:ts:pattern:pde} generates a stiff ODE system when MOL is applied.  With this in mind, \PETSc allows us to write the discretized system in the form
 \begin{equation}
 \bF(t,\by,\by') = \bG(t,\by). \label{eq:ts:pattern:imexform}
 \end{equation}
-This form can handle a larger class of problems than we need, including those \emph{differential-algebraic equations} in which $\partial \bF/\partial \by'$ is singular.  We do not need that capability, but the same form allows one to put the stiff terms in $\bF$ and the nonstiff in $\bG$, and have advanced ODE time-stepping methods apply different schemes to each part; such \emph{is} our purpose.
+This form is suitable for a larger class of problems than we need, including \emph{differential-algebraic equations} (DAEs) wherein $\partial \bF/\partial \by'$ is singular.  On the other hand the same form allows one to put the stiff terms in $\bF$ and the nonstiff in $\bG$, so that IMEX methods can apply different schemes to each part; such \emph{is} our purpose.  (Note that form \eqref{eq:ts:ode} is the case of \eqref{eq:ts:pattern:imexform} in which $\partial \bF/\partial \by'$ is the identity.  If $\partial \bF/\partial \by'$ is invertible then in theory \eqref{eq:ts:pattern:imexform} can be converted to \eqref{eq:ts:ode}, but this is often impractical.)  In the particular case of the MOL discretization of \eqref{eq:ts:pattern:pde}, either form would work but the IMEX methods need \eqref{eq:ts:pattern:imexform}; see Exercise \ref{chap:ts}.\ref{exer:ts:patternrhsonlyform}.
 
-To be specific, and speaking conceptually, from discretizing \eqref{eq:ts:pattern:pde} we have a vector $\bu$ of the discrete values $u_{i,j}(t) \approx u(t,x_i,y_j)$ and a similar vector $\bv$.  Together these are the state variables for the ODE: 
+\cinputpart{pattern.c}{\CODELOC}{\texttt{struct}s: for point-wise values of the solution and a ``context'' for use by call-backs.}{I}{//FIELDCTX}{//ENDFIELDCTX}{code:ts:pattern:fieldctx}
+
+To get started immediately with the implementation, Code \ref{code:ts:pattern:fieldctx} shows the definition of \texttt{struct}s named \texttt{Field} and \texttt{PatternCtx}.  The former is the point-wise value of the solution of PDE \eqref{eq:ts:pattern:pde}, that is, a pair $(u,v)$.  The latter is the standard ``context'' struct so that call-backs can get the values of the constants in \eqref{eq:ts:pattern:pde}.
+
+Now consider the spatial discretization of \eqref{eq:ts:pattern:pde}.  Speaking conceptually, this results in a vector $\bu$ of the discrete values $u_{i,j}(t) \approx u(t,x_i,y_j)$ and a similar vector $\bv$.  Together these form the state vector of the ODE system \eqref{eq:ts:pattern:imexform}, 
 \begin{equation}
 \by = \begin{bmatrix} \bu \\ \bv \end{bmatrix}.  \label{eq:ts:pattern:blockvars}
 \end{equation}
-To implement the method-of-lines discretized form of \eqref{eq:ts:pattern:pde} we write functions \texttt{FormIFunction()} which computes
+To implement this MOL-discretized form we will write \texttt{FormIFunction()} which computes
 \begin{equation}
 \bF(t,\by,\by') = \by' - \begin{bmatrix} D_u A \bu \\ D_v A \bv \end{bmatrix},  \label{eq:ts:pattern:blockifunction}
 \end{equation}
@@ -829,28 +833,25 @@ where $A$ is the centered finite-difference approximation of the scalar Laplacia
 + \bu \bv^2 - (\phi + \kappa) \bv
 \end{bmatrix}. \label{eq:ts:pattern:blockrhsfunction}
 \end{equation}
+(These functions appear in Codes \ref{code:ts:pattern:ifunction} and \ref{code:ts:pattern:rhsfunction} below.)
 
 Forms \eqref{eq:ts:pattern:blockvars}--\eqref{eq:ts:pattern:blockrhsfunction} are, in fact, only notional.  The actual order of the grid values in memory is
 \begin{equation}
 \by = \begin{bmatrix} u_{0,0} \\ v_{0,0} \\ u_{1,0} \\ v_{1,0} \\ \vdots \end{bmatrix}. \label{eq:ts:pattern:interleaved}
 \end{equation}
-That is, the components $u,v$ are interleaved.  (Regarding the particular order on the grid, which is intrinsic to \pDMDA, see Chapter \ref{chap:st}.)
+That is, the components $u,v$ are interleaved.  (The particular grid order comes from the \pDMDA; see Chapter \ref{chap:st}.)  However, we do \emph{not} need to be aware of the order in memory to write the code.  Indeed, use of \texttt{DMDAVecGetArray()} and \texttt{MatSetValuesStencil()}---see below in Code \ref{code:ts:pattern:tssetup}---allow us to refer to values of $u$ and $v$ by the component name (i.e.~using C \texttt{struct} member notation ``\texttt{.u}'' or ``\texttt{.v}''; see below) and the grid indices $i,j$.
 
-However, we do \emph{not} need to be aware of the order in memory to write the code.  Indeed, use of \texttt{DMDAVecGetArray()} and \texttt{MatSetValuesStencil()} allow us to refer to values of $u$ and $v$ by the component name (i.e.~using C \texttt{struct} member notation ``\texttt{.u}'' or ``\texttt{.v}''; see below) and the grid indices $i,j$.
-
-We do write some Jacobian code, but only for the stiff part $\bF$.  The function \texttt{FormIJacobianLocal()} computes
+We will also write some Jacobian code, but only for the stiff part $\bF$.  The function \texttt{FormIJacobianLocal()}---see Code \ref{code:ts:pattern:ijacobian}---computes
 \begin{equation}
 J = (\text{shift}) \frac{\partial \bF}{\partial \by'} + \frac{\partial \bF}{\partial \by}
 \label{eq:ts:pattern:jacobianshift}
 \end{equation}
 
-\cinputpart{pattern.c}{\CODELOC}{FIXME}{I}{//FIELDCTX}{//ENDFIELDCTX}{code:ts:pattern:fieldctx}
-
 \cinputpart{pattern.c}{\CODELOC}{FIXME}{II}{//TSSETUP}{//ENDTSSETUP}{code:ts:pattern:tssetup}
 
-\cinputpart{pattern.c}{\CODELOC}{FIXME}{III}{//RHSFUNCTION}{//ENDRHSFUNCTION}{code:ts:pattern:rhsfunction}
+\cinputpart{pattern.c}{\CODELOC}{FIXME}{III}{//IFUNCTION}{//ENDIFUNCTION}{code:ts:pattern:ifunction}
 
-\cinputpart{pattern.c}{\CODELOC}{FIXME}{IV}{//IFUNCTION}{//ENDIFUNCTION}{code:ts:pattern:ifunction}
+\cinputpart{pattern.c}{\CODELOC}{FIXME}{IV}{//RHSFUNCTION}{//ENDRHSFUNCTION}{code:ts:pattern:rhsfunction}
 
 \cinputpart{pattern.c}{\CODELOC}{FIXME}{V}{//IJACOBIAN}{//ENDIJACOBIAN}{code:ts:pattern:ijacobian}
 
@@ -950,15 +951,15 @@ differ in the size of residual norms and even in the number of Newton iterations
 
 \item \label{exer:ts:heatneumanndmda} Write a new version of \texttt{heat.c} which creates a \texttt{DMDACreate1d()} and uses it to allocate and access the \pVec \texttt{gamma}.  The new code will not waste memory in a 2D array for this purpose, as does \texttt{heat.c}.
 
-\item \label{exer:ts:patternfulljacobian}  Add \texttt{FormRHSJacobianLocal()} to \texttt{pattern.c} so that the full Jacobian is available.  Compare timing of the run that produced Figure \ref{fig:ts:pattern:figureversuspearson}, but with and without option \texttt{-snes\_mf\_operator}.
+\item \label{exer:ts:patternfulljacobian}  Modify \texttt{pattern.c} by \emph{adding} \texttt{FormRHSJacobianLocal()} so that the full Jacobian is available; make no other changes.  Compare timing of the run that produced Figure \ref{fig:ts:pattern:figureversuspearson}, but with and without option \texttt{-snes\_mf\_operator}.
 
-\item \label{exer:ts:patternperformancestudy} FIXME for run like what produced Figure \ref{fig:ts:pattern:figureversuspearson}; which is fastest among these ARKIMEX, BDF, and Crank-Nicolson runs, all of which are adaptive and at least second order?:
+\item \label{exer:ts:patternrhsonlyform}  Modify \texttt{pattern.c} by \emph{converting to form} \eqref{eq:ts:ode}; make no other changes.  Thus \texttt{FormIFunctionLocal()} and \texttt{FormIJacobianLocal()} will be removed, while the new \texttt{FormRHSJacobianLocal()} will only compute the $\grad^2$ parts of the (new) function $\bg(t,\by)$.  Compare performance and demonstrate, in particular, that \texttt{-ts\_type arkimex} is no longer effective.
+
+\item \label{exer:ts:patternperformancestudy}  Consider a fixed run like the one which produced Figure \ref{fig:ts:pattern:figureversuspearson}.  Which is fastest among the following IMEX, BDF, and Crank-Nicolson runs, all of which are adaptive and at least second order?:
 \begin{code}
 -ts_type arkimex -ts_arkimex_type [a2|l2|ars122|2c|2d|2e|3|4|5]
 -ts_type bdf -ts_bdf_adapt -ts_bdf_order [2|3|4|5|6]
 -ts_type cn -ts_theta_adapt
 \end{code}
-Because the exact solution is unknown, it may be wise to compare some frames with visualization (e.g.~\texttt{-ts\_monitor\_solution draw}) so that you can be reasonably sure that the solution is reliable.
-
 
 \end{enumerate}

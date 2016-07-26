@@ -33,12 +33,12 @@ typedef struct {
             Dv,   // diffusion coefficient of second equation
             phi,  // = "dimensionless feed rate" F in (Pearson 1993)
             kappa;// = "dimensionless rate constant" k in (Pearson 1993)
-} PtnCtx;
+} PatternCtx;
 //ENDFIELDCTX
 
 // Formulas from page 22 of Hundsdorfer & Verwer (2003).  Interpretation here is
 // to always generate 0.5 x 0.5 non-trivial patch in (0,L) x (0,L) domain.
-PetscErrorCode InitialState(Vec x, PtnCtx* user) {
+PetscErrorCode InitialState(Vec x, PatternCtx* user) {
   PetscErrorCode ierr;
   DMDALocalInfo  info;
   int            i,j;
@@ -73,7 +73,7 @@ PetscErrorCode InitialState(Vec x, PtnCtx* user) {
 //     G^v(t,u,v) = + u v^2 - (phi + kappa) v
 //RHSFUNCTION
 PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, Field **aX,
-                                    Field **aG, PtnCtx *user) {
+                                    Field **aG, PatternCtx *user) {
   int            i, j;
   double         uv2;
 
@@ -94,7 +94,7 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, Field **aX,
 //     F^v(t,u,v,u_t,v_t) = v_t - D_v Laplacian v
 //IFUNCTION
 PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t, Field **aX,
-                                  Field **aXdot, Field **aF, PtnCtx *user) {
+                                  Field **aXdot, Field **aF, PatternCtx *user) {
   int            i, j;
   const double   h = user->L / (double)(info->mx),
                  Cu = user->Du / (6.0 * h * h),
@@ -126,7 +126,7 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t, Field **aX,
 //IJACOBIAN
 PetscErrorCode FormIJacobianLocal(DMDALocalInfo *info, double t, Field **aX,
                                   Field **aXdot, double shift, Mat J, Mat P,
-                                  PtnCtx *user) {
+                                  PatternCtx *user) {
     PetscErrorCode ierr;
     int            i, j, s, c;
     const double   h = user->L / (double)(info->mx),
@@ -173,7 +173,7 @@ PetscErrorCode FormIJacobianLocal(DMDALocalInfo *info, double t, Field **aX,
 int main(int argc,char **argv)
 {
   PetscErrorCode ierr;
-  PtnCtx         user;
+  PatternCtx     user;
   TS             ts;
   Vec            x;
   DMDALocalInfo  info;
