@@ -1,18 +1,8 @@
 static char help[] =
 "Coupled reaction-diffusion equations (Pearson 1993).  Option prefix -ptn_.\n"
-"Demonstrates form  F(t,X,dot X) = G(t,X)  where F() is IFunction and G() is\n"
+"Demonstrates form  F(t,Y,dot Y) = G(t,Y)  where F() is IFunction and G() is\n"
 "RHSFunction().  Implements IJacobian().  Defaults to ARKIMEX (adaptive\n"
 "Runge-Kutta implicit-explicit) type of TS.\n\n";
-
-// modest refinement and a bit of feedback:
-//    ./pattern -ts_monitor -ts_final_time 100 -da_refine 5 -snes_converged_reason
-
-// show solution graphically:
-//    ./pattern -ts_monitor_solution draw -da_refine 5 -ts_final_time 2000 -ts_dt 5 -ts_monitor -snes_converged_reason
-// example works with -ts_fd_color:
-
-// suggests Jacobian is correct (also with -snes_test_display):
-//    ./pattern -ptn_L 0.5 -ts_final_time 1 -ts_dt 1 -ts_monitor -snes_converged_reason -snes_type test
 
 // compare runs with
 // -dm_mat_type aij
@@ -38,7 +28,7 @@ typedef struct {
 
 // Formulas from page 22 of Hundsdorfer & Verwer (2003).  Interpretation here is
 // to always generate 0.5 x 0.5 non-trivial patch in (0,L) x (0,L) domain.
-PetscErrorCode InitialState(Vec x, double noiselevel, PatternCtx* user) {
+PetscErrorCode InitialState(Vec Y, double noiselevel, PatternCtx* user) {
   PetscErrorCode ierr;
   DMDALocalInfo  info;
   int            i,j;
@@ -46,48 +36,48 @@ PetscErrorCode InitialState(Vec x, double noiselevel, PatternCtx* user) {
   const double   ledge = (user->L - 0.5) / 2.0, // nontrivial initial values on
                  redge = user->L - ledge;       //   ledge < x,y < redge
   DMDACoor2d     **aC;
-  Field          **ax;
+  Field          **aY;
 
-  ierr = VecSet(x,0.0); CHKERRQ(ierr);
+  ierr = VecSet(Y,0.0); CHKERRQ(ierr);
   if (noiselevel > 0.0) {
       // noise added to usual initial condition is uniform on [0,noiselevel],
       //     independently for each location and component
-      ierr = VecSetRandom(x,NULL); CHKERRQ(ierr);
-      ierr = VecScale(x,noiselevel); CHKERRQ(ierr);
+      ierr = VecSetRandom(Y,NULL); CHKERRQ(ierr);
+      ierr = VecScale(Y,noiselevel); CHKERRQ(ierr);
   }
   ierr = DMDAGetLocalInfo(user->da,&info); CHKERRQ(ierr);
   ierr = DMDAGetCoordinateArray(user->da,&aC); CHKERRQ(ierr);
-  ierr = DMDAVecGetArray(user->da,x,&ax); CHKERRQ(ierr);
+  ierr = DMDAVecGetArray(user->da,Y,&aY); CHKERRQ(ierr);
   for (j = info.ys; j < info.ys+info.ym; j++) {
     for (i = info.xs; i < info.xs+info.xm; i++) {
       if ((aC[j][i].x >= ledge) && (aC[j][i].x <= redge)
               && (aC[j][i].y >= ledge) && (aC[j][i].y <= redge)) {
           sx = sin(4.0 * PETSC_PI * aC[j][i].x);
           sy = sin(4.0 * PETSC_PI * aC[j][i].y);
-          ax[j][i].v += 0.5 * sx * sx * sy * sy;
+          aY[j][i].v += 0.5 * sx * sx * sy * sy;
       }
-      ax[j][i].u += 1.0 - 2.0 * ax[j][i].v;
+      aY[j][i].u += 1.0 - 2.0 * aY[j][i].v;
     }
   }
-  ierr = DMDAVecRestoreArray(user->da,x,&ax); CHKERRQ(ierr);
+  ierr = DMDAVecRestoreArray(user->da,Y,&aY); CHKERRQ(ierr);
   ierr = DMDARestoreCoordinateArray(user->da,&aC); CHKERRQ(ierr);
   return 0;
 }
 
-// in system form  F(t,X,dot X) = G(t,X),  compute G():
+// in system form  F(t,Y,dot Y) = G(t,Y),  compute G():
 //     G^u(t,u,v) = - u v^2 + phi (1 - u)
 //     G^v(t,u,v) = + u v^2 - (phi + kappa) v
 //RHSFUNCTION
-PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, Field **aX,
+PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, Field **aY,
                                     Field **aG, PatternCtx *user) {
   int            i, j;
   double         uv2;
 
   for (j = info->ys; j < info->ys + info->ym; j++) {
       for (i = info->xs; i < info->xs + info->xm; i++) {
-          uv2 = aX[j][i].u * aX[j][i].v * aX[j][i].v;
-          aG[j][i].u = - uv2 + user->phi * (1.0 - aX[j][i].u);
-          aG[j][i].v = + uv2 - (user->phi + user->kappa) * aX[j][i].v;
+          uv2 = aY[j][i].u * aY[j][i].v * aY[j][i].v;
+          aG[j][i].u = - uv2 + user->phi * (1.0 - aY[j][i].u);
+          aG[j][i].v = + uv2 - (user->phi + user->kappa) * aY[j][i].v;
       }
   }
   return 0;
@@ -95,12 +85,12 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, Field **aX,
 //ENDRHSFUNCTION
 
 
-// in system form  F(t,X,dot X) = G(t,X),  compute F():
+// in system form  F(t,Y,dot Y) = G(t,Y),  compute F():
 //     F^u(t,u,v,u_t,v_t) = u_t - D_u Laplacian u
 //     F^v(t,u,v,u_t,v_t) = v_t - D_v Laplacian v
 //IFUNCTION
-PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t, Field **aX,
-                                  Field **aXdot, Field **aF, PatternCtx *user) {
+PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t, Field **aY,
+                                  Field **aYdot, Field **aF, PatternCtx *user) {
   int            i, j;
   const double   h = user->L / (double)(info->mx),
                  Cu = user->Du / (6.0 * h * h),
@@ -109,16 +99,16 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t, Field **aX,
 
   for (j = info->ys; j < info->ys + info->ym; j++) {
       for (i = info->xs; i < info->xs + info->xm; i++) {
-          u = aX[j][i].u;
-          v = aX[j][i].v;
-          lapu =     aX[j+1][i-1].u + 4.0*aX[j+1][i].u +   aX[j+1][i+1].u
-                 + 4.0*aX[j][i-1].u -    20.0*u        + 4.0*aX[j][i+1].u
-                 +   aX[j-1][i-1].u + 4.0*aX[j-1][i].u +   aX[j-1][i+1].u;
-          lapv =     aX[j+1][i-1].v + 4.0*aX[j+1][i].v +   aX[j+1][i+1].v
-                 + 4.0*aX[j][i-1].v -    20.0*v        + 4.0*aX[j][i+1].v
-                 +   aX[j-1][i-1].v + 4.0*aX[j-1][i].v +   aX[j-1][i+1].v;
-          aF[j][i].u = aXdot[j][i].u - Cu * lapu;
-          aF[j][i].v = aXdot[j][i].v - Cv * lapv;
+          u = aY[j][i].u;
+          v = aY[j][i].v;
+          lapu =     aY[j+1][i-1].u + 4.0*aY[j+1][i].u +   aY[j+1][i+1].u
+                 + 4.0*aY[j][i-1].u -    20.0*u        + 4.0*aY[j][i+1].u
+                 +   aY[j-1][i-1].u + 4.0*aY[j-1][i].u +   aY[j-1][i+1].u;
+          lapv =     aY[j+1][i-1].v + 4.0*aY[j+1][i].v +   aY[j+1][i+1].v
+                 + 4.0*aY[j][i-1].v -    20.0*v        + 4.0*aY[j][i+1].v
+                 +   aY[j-1][i-1].v + 4.0*aY[j-1][i].v +   aY[j-1][i+1].v;
+          aF[j][i].u = aYdot[j][i].u - Cu * lapu;
+          aF[j][i].v = aYdot[j][i].v - Cv * lapv;
       }
   }
   return 0;
@@ -126,12 +116,12 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t, Field **aX,
 //ENDIFUNCTION
 
 
-// in system form  F(t,X,dot X) = G(t,X),  compute combined/shifted
+// in system form  F(t,Y,dot Y) = G(t,Y),  compute combined/shifted
 // Jacobian of F():
-//     J = (shift) dF/d(dot X) + dF/dX
+//     J = (shift) dF/d(dot Y) + dF/dY
 //IJACOBIAN
-PetscErrorCode FormIJacobianLocal(DMDALocalInfo *info, double t, Field **aX,
-                                  Field **aXdot, double shift, Mat J, Mat P,
+PetscErrorCode FormIJacobianLocal(DMDALocalInfo *info, double t, Field **aY,
+                                  Field **aYdot, double shift, Mat J, Mat P,
                                   PatternCtx *user) {
     PetscErrorCode ierr;
     int            i, j, s, c;
@@ -209,24 +199,25 @@ int main(int argc,char **argv)
            "pattern.c",user.kappa,&user.kappa,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
+//DMDACREATE
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
-                      DM_BOUNDARY_PERIODIC, DM_BOUNDARY_PERIODIC,
-                      DMDA_STENCIL_BOX,  // for 9-point stencil
-                      -4,-4,PETSC_DECIDE,PETSC_DECIDE,
-                      2,  // degrees of freedom
-                      1,  // stencil width
-                      NULL,NULL,&user.da); CHKERRQ(ierr);
+               DM_BOUNDARY_PERIODIC, DM_BOUNDARY_PERIODIC,
+               DMDA_STENCIL_BOX,  // for 9-point stencil
+               -4,-4,PETSC_DECIDE,PETSC_DECIDE,
+               2, 1,              // degrees of freedom, stencil width
+               NULL,NULL,&user.da); CHKERRQ(ierr);
+//ENDDMDACREATE
+  ierr = DMDASetFieldName(user.da,0,"u"); CHKERRQ(ierr);
+  ierr = DMDASetFieldName(user.da,1,"v"); CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);
   if (info.mx != info.my) {
       SETERRQ(PETSC_COMM_WORLD,1,"pattern.c requires mx == my");
   }
+  ierr = DMDASetUniformCoordinates(user.da, 0.0, user.L, 0.0, user.L, -1.0, -1.0); CHKERRQ(ierr);
+  ierr = DMSetApplicationContext(user.da,&user); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
            "running on %d x %d grid with square cells of side h = %.6f ...\n",
            info.mx,info.my,user.L/(double)(info.mx)); CHKERRQ(ierr);
-  ierr = DMDASetUniformCoordinates(user.da, 0.0, user.L, 0.0, user.L, -1.0, -1.0); CHKERRQ(ierr);
-  ierr = DMSetApplicationContext(user.da,&user); CHKERRQ(ierr);
-  ierr = DMDASetFieldName(user.da,0,"u"); CHKERRQ(ierr);
-  ierr = DMDASetFieldName(user.da,1,"v"); CHKERRQ(ierr);
 
 //TSSETUP
   ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
