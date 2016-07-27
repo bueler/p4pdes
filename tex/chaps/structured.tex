@@ -378,7 +378,7 @@ As in Chapter \ref{chap:ls}, the linear system itself is solved by a \pKSP linea
 \cinputpart{poisson.c}{\CODELOC}{Solve using \pKSP, and report on solution.}{IV}{//STARTSOLVE}{//ENDSOLVE}{code:poissonsolve}
 
 
-\section{Runtime controls and viewers}
+\section{Runtime control and visualization}
 
 In a first run we see the residuals decrease:
 \begin{cline}
@@ -452,19 +452,28 @@ on 17 x 17 grid:  error |u-uexact|_inf = 0.000196764
 \end{cline}
 %$
 
-A ``movie'' of the \pKSP iterates $\{\bu_k\}$ comes from running
+We can generate a X windows ``movie'' of \pKSP iterates $\{\bu_k\}$ on a further-refined grid:
 \begin{cline}
 $ ./poisson -da_refine 4 -ksp_monitor_solution draw -draw_pause 0.1
+on 129 x 129 grid:  error |u-uexact|_inf = 3.76924e-06
 \end{cline}
 %$
-(not shown).  Alternatively, as in Chapter \ref{chap:ls}, a line graph of the (preconditioned) residual norm is from \texttt{-ksp\_monitor\_lg\_residualnorm} (also not shown).
+The last frame is shown as a contour map in Figure \ref{fig:st:poisson4contour}.
 
-We have delayed questions of convergence and efficiency until runtime.  Indeed, the \PETSc paradigm says that choices of solver and parameters can be made at runtime, once we have adequately-described the problem in terms of \PETSc objects.  Here is what we might want to know now:\begin{itemize}
+\begin{figure}
+\includegraphics[width=0.9\textwidth]{figs/poisson4contour}
+\caption{Contours of the computed solution $u(x,y)$ on a $129\times 129$ grid.}
+\label{fig:st:poisson4contour}
+\end{figure}
+
+As in Chapter \ref{chap:ls}, we can visualize the \pKSP convergence.  Recall that a line graph of the (preconditioned) residual norm comes from \texttt{-ksp\_monitor\_lg\_residualnorm} (not shown).
+
+We have delayed questions of convergence and efficiency until runtime.  Indeed, the \PETSc paradigm is that choices of solver and parameters should be made at runtime, once we have adequately-described the problem in terms of \PETSc objects.  Here is what we might want to know now:\begin{itemize}
 \item is our numerical method correctly implemented? (\emph{convergence})
 \item what is going on inside \PETSc? (\emph{exposure})
 \item how do we get high performance? (\emph{efficiency})
 \end{itemize}
-In the next three sections we address these in turn, though our stab at ``efficiency'' is only superficial.  Attaining efficiency requires better choices for preconditioners than we have now.
+In the next three sections we address these in turn, though our stab at ``efficiency'' is only preliminary.  Attaining efficiency requires better choices for preconditioners than we have now.
 
 
 \section{Convergence}
