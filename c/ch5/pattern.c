@@ -1,13 +1,12 @@
 static char help[] =
 "Coupled reaction-diffusion equations (Pearson 1993).  Option prefix -ptn_.\n"
 "Demonstrates form  F(t,Y,dot Y) = G(t,Y)  where F() is IFunction and G() is\n"
-"RHSFunction().  Implements IJacobian().  Defaults to ARKIMEX (adaptive\n"
-"Runge-Kutta implicit-explicit) type of TS.\n\n";
+"RHSFunction().  Implements IJacobian().  Defaults to ARKIMEX (= adaptive\n"
+"Runge-Kutta implicit-explicit) TS type.\n\n";
 
 // compare runs with
-// -dm_mat_type aij
-// -dm_mat_type baij
-// -dm_mat_type sbaij -ksp_type cg -pc_type icc  # 20% speed up?
+//    -dm_mat_type aij|baij|sbaij
+//    -dm_mat_type sbaij -ksp_type cg -pc_type icc  # 20% speed up?
 
 #include <petsc.h>
 
@@ -131,7 +130,6 @@ PetscErrorCode FormIJacobianLocal(DMDALocalInfo *info, double t, Field **aY,
     double         val[9], CC;
     MatStencil     col[9], row;
 
-    //ierr = PetscPrintf(PETSC_COMM_WORLD,"IJacobian() called at t=%g\n",t); CHKERRQ(ierr);
     for (j = info->ys; j < info->ys + info->ym; j++) {
         row.j = j;
         for (i = info->xs; i < info->xs + info->xm; i++) {
