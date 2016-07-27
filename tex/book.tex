@@ -278,20 +278,19 @@ Chapter
 \ref{chap:ad}
     &  \tblockeqncode{advection-diffusion (3D)}{$- \eps \grad^2 u + \bw \cdot \grad u = f$}{ad3.c}
           &     &      \\ \bigskip
-\ref{chap:pr}
-    & \tblockcode{Poisson (2D)}{fish2.c}    &     &     &      \\ \bigskip
-\ref{chap:sc}
-%    &     &     & \tblockeqncode{porous (3D)}{$u_t = \Div\left(u^{\gamma-1} \grad u\right) + f$}{porous.c} \\ \bigskip
-    &     &     &  \\ \bigskip
-\ref{chap:ok}
-    & \tblockeqncode{Stokes (2D)}{$\begin{matrix} -\grad^2 \bu + \grad p = 0 \\ \Div \bu = 0 \end{matrix}$}{stokes.c}
-          &     &      \\ \bigskip
 \ref{chap:co}
     &     & \tblockeqncode{obstacle (2D)}{$\begin{matrix} -\grad^2 u = f \\ u\ge \psi \end{matrix}$}{obstacle.c}
                 & \tblockeqncode{ice sheet (2D)}{$\begin{matrix} H_t = \Div\left(D \grad H\right) + f \\ D \text{ nonlinear},\, H \ge 0\end{matrix}$}{ice.c} \\ \bigskip
+\ref{chap:ok}
+    & \tblockeqncode{Stokes (2D)}{$\begin{matrix} -\grad^2 \bu + \grad p = 0 \\ \Div \bu = 0 \end{matrix}$}{stokes.c}
+          &     &      \\ \bigskip
+\ref{chap:pr}
+    & \tblockcode{Poisson (2D,3D)}{\begin{tabular}{l} fish2.c \\ fish3.c\end{tabular}}    &     &     &      \\ \bigskip
+\ref{chap:sc}
+%    &     &     & \tblockeqncode{porous (3D)}{$u_t = \Div\left(u^{\gamma-1} \grad u\right) + f$}{porous.c} \\ \bigskip
+    &     &     &  \\ \bigskip
 \ref{chap:dp}
-    & \tblockcode{Poisson (2D, 3D)}{plexfish.c}
-          &     &      \\
+    &     &     &      \\
 \bottomrule
 \end{tabular}
 
