@@ -849,7 +849,7 @@ To implement the discretized form we write \texttt{FormIFunctionLocal()} which c
 \begin{equation}
 \bF(t,\by,\by') = \by' - \begin{bmatrix} D_u A \bu \\ D_v A \bv \end{bmatrix},  \label{eq:ts:pattern:blockifunction}
 \end{equation}
-where $A$ is the centered finite-difference approximation of the scalar Laplacian $\grad^2$.  We also write \texttt{FormRHSFunctionLocal()} which computes
+where $A$ is a centered finite-difference approximation of the scalar Laplacian $\grad^2$.  We also write \texttt{FormRHSFunctionLocal()} which computes
 \begin{equation}
 \bG(t,\by) = \begin{bmatrix}
 - \bu \bv^2 + \phi (1-\bu) \\
@@ -866,30 +866,51 @@ The ordering of unknowns implied in \eqref{eq:ts:pattern:blockvars}--\eqref{eq:t
 \end{equation}
 That is, the components $u,v$ are interleaved.\sidenote{The particular $i,j$ grid order comes from the \pDMDA; see Chapter \ref{chap:st}.}  However, we do \emph{not} need to be aware of the order in memory to write the code because \texttt{DMDAVecGetArray()} and \texttt{MatSetValuesStencil()} allow us to refer to values of $u$ and $v$ by component name (for \pVecs, in Codes \ref{code:ts:pattern:ifunction}--\ref{code:ts:pattern:rhsfunction}) or component index (using \texttt{c=0,1} for \pMat entries in Code \ref{code:ts:pattern:ijacobian}).
 
-We write Jacobian code only for the stiff part $\bF$.  Solvers which work with general ODE form \eqref{eq:ts:pattern:imexform} require the Jacobian function (\texttt{FormIJacobianLocal()} in Code \ref{code:ts:pattern:ijacobian}) to compute a certain combination
-\begin{equation}
-J = (\text{shift}) \frac{\partial \bF}{\partial \by'} + \frac{\partial \bF}{\partial \by}
-\label{eq:ts:pattern:jacobianshift}
-\end{equation}
-because $\bF$ depends on both $\by$ and $\by'$.  In our case it is nearly trivial because $\partial \bF/\partial \by'$ is the identity.
-
 \cinputpart{pattern.c}{\CODELOC}{Compute the derivative \eqref{eq:ts:pattern:jacobianshift} of $\bF$.}{VI}{//IJACOBIAN}{//ENDIJACOBIAN}{code:ts:pattern:ijacobian}
 
-FIXME a run which takes about 10 seconds and does something worth visualizing
+As recommended for reaction-diffusion models \citep[section III.6]{HundsdorferVerwer2003}, we use a $9$-point stencil for the Laplacian $\grad^2$.  The $5$-point stencil used in \texttt{heat.c}, and in Chapter \ref{chap:st} as well, corresponds to adding the following stencil submatrix for each grid point:
+\begin{equation}
+A^{[5]} = \frac{1}{h^2} \begin{bmatrix}
+	 & 1 & \\
+	1 & -4 & 1 \\
+	  &  1 & 
+	\end{bmatrix}.  \label{eq:ts:pattern:fivepoint}
+\end{equation}
+Note the ``star'' character to the nonzero entries.  In \texttt{pattern.c} we use
+\begin{equation}
+A^{[9]} = \frac{1}{6h^2} \begin{bmatrix}
+	1 &   4 & 1\\
+	4 & -20 & 4 \\
+	1 &   4 & 1
+	\end{bmatrix}.  \label{eq:ts:pattern:ninepoint}
+\end{equation}
+Note the ``box'' character.  Both of these approximations of the Laplacian have $O(h^2)$ local trunction error, but the latter is better at isotropic diffusion.  See Exercise \ref{chap:ts}.\ref{exer:ts:barkley}.
+
+We write Jacobian code only for the stiff part $\bF$, with the idea that only that part needs to be treated implicitly for stability.  However, examples like \texttt{pattern.c}, which work with general ODE form \eqref{eq:ts:pattern:imexform}, require that the Jacobian function (\texttt{FormIJacobianLocal()} in Code \ref{code:ts:pattern:ijacobian}) computes a shifted combination of the derivatives of $\bF$:
+\begin{equation}
+J = (\text{\texttt{shift}}) \frac{\partial \bF}{\partial \by'} + \frac{\partial \bF}{\partial \by}.
+\label{eq:ts:pattern:jacobianshift}
+\end{equation}
+In our case $\partial \bF/\partial \by'$ is the identity so $J$ equals $\partial \bF/\partial \by$ plus a constant along the diagonal.
+
+Since we have now given a sketch of the whole code, it is time to try it our.  FIXME first show
+\begin{cline}
+-ts_type beuler -snes_monitor
+-ts_type beuler -snes_monitor -snes_mf_operator
+\end{cline}
+In both cases there is one nonlinear solve per step.  Quadratic convergence is not seen on in the first case because we don't have full Jacobian.  The second recovers it.
+
+FIXME now with ARKIMEX This run takes about 10 seconds and does something worth visualizing
 \begin{cline}
 $ ./pattern -ts_monitor -da_refine 5
 \end{cline}
 %$
-note differences when additional on above run:
+FIXME unline BEULER runs above, here three \pSNES solves per step, but each is actually linear because the $\bF$ is linear
 \begin{cline}
--snes_monitor -ksp_rtol 1.0e-10     # arkimex solves three linear problems per step
--ts_type beuler -snes_monitor       # one nonlinear problem per step; not quadratic convergence because we don't have full Jacobian
--ts_type beuler -snes_monitor -snes_mf_operator # get back quadratic convergence
+-snes_monitor -ksp_rtol 1.0e-10
 \end{cline}
 
-FIXME relative performance using \texttt{-ts\_type beuler,cn,bdf,arkimex}
-
-FIXME final-time greyscale plots using \texttt{PetscBinaryIO.py}
+See Exercise \ref{chap:ts}.\ref{exer:ts:patternperformancestudy} for more on the relative performance of stiff solvers on this problem.
 
 \begin{figure}
 \includegraphics[width=0.45\textwidth]{figs/pattern000} \quad
@@ -904,7 +925,7 @@ FIXME final-time greyscale plots using \texttt{PetscBinaryIO.py}
 \label{fig:ts:pattern:figureversuspearson}
 \end{figure}
 
-To generate Figure \ref{fig:ts:pattern:figureversuspearson} we use
+FIXME To generate Figure \ref{fig:ts:pattern:figureversuspearson} we use
 \begin{cline}
 $ mpiexec -n 4 ./pattern -ts_monitor -da_refine 6 -ts_dt 10 -ts_final_time 650 \
    -ts_type cn -snes_mf_operator -snes_monitor
@@ -920,7 +941,9 @@ About one minute on a lap-top, and we see good quadratic convergence.  That is, 
 
 FIXME add optional noisy initial condition; generate Figure \ref{fig:ts:pattern:snakes} using options
 \begin{cline}
-$ mpiexec -n 4 ./pattern -ptn_phi 0.05 -ptn_kappa 0.063 -ts_monitor binary:t.dat -ts_monitor_solution binary:uv.dat -da_refine 6 -ts_final_time 15000 -ptn_noisy_init 0.15
+$ mpiexec -n 4 ./pattern -da_refine 6 -ptn_phi 0.05 -ptn_kappa 0.063 \
+    -ts_final_time 15000 -ptn_noisy_init 0.15 \
+    -ts_monitor binary:t.dat -ts_monitor_solution binary:uv.dat
 \end{cline}
 %$
 
@@ -974,6 +997,16 @@ differ in the size of residual norms and even in the number of Newton iterations
 \item \label{exer:ts:patternfulljacobian}  Modify \texttt{pattern.c} by \emph{adding} \texttt{FormRHSJacobianLocal()} so that the full Jacobian is available; make no other changes.  Compare timing of the run that produced Figure \ref{fig:ts:pattern:figureversuspearson}, but with and without option \texttt{-snes\_mf\_operator}.
 
 \item \label{exer:ts:patternrhsonlyform}  Modify \texttt{pattern.c} by \emph{converting to form} \eqref{eq:ts:ode}; make no other changes.  Thus \texttt{FormIFunctionLocal()} and \texttt{FormIJacobianLocal()} will be removed, while the new \texttt{FormRHSJacobianLocal()} will only compute the $\grad^2$ parts of the (new) function $\bg(t,\by)$.  Compare performance and demonstrate, in particular, that \texttt{-ts\_type arkimex} is no longer effective.
+
+\item \label{exer:ts:barkley}  Consider this pair of reaction-diffusion equations from \citep{Barkley1995}:
+\begin{align}
+\frac{\partial u}{\partial t} &= \grad^2 u + \frac{1}{\eps} u (1-u) \left(u - \frac{1}{\alpha} (v + \beta)\right), \label{eq:ts:pattern:barkleypde} \\
+\frac{\partial v}{\partial t} &= \delta \grad^2 v + u - v \notag
+\end{align}
+The spatial domain is $[0,80]\times[0,80]$, homogeneous Neumann boundary conditions apply on the whole boundary, and $t>0$.  The suggested parameter values in \citep[section III.6]{HundsdorferVerwer2003} are $\alpha=0.25,\beta=0.001,\delta=0,\eps=0.002$ and the initial conditions are
+    $$u(0,x,y) = \begin{cases} 0, & x < 40, \\ 1, & x \ge 40 \end{cases}, \qquad
+      v(0,x,y) = \begin{cases} 0, & y < 40, \\ \frac{1}{2}\alpha, & y \ge 40.\end{cases}$$
+Hundsdorfer and Verwer show that there is a significant difference between using the $5$-point stencil \eqref{eq:ts:pattern:fivepoint} and the $9$-point stencil \eqref{eq:ts:pattern:ninepoint}, in the sense that the natural spiraling patterns generated by this problem become cartesian-grid-aligned.  Reproduce this result by modifying \texttt{pattern.c} into \texttt{barkley.c} which uses the new equations and which allows the user to choose between the $5$-point and $9$-point stencils at run-time.
 
 \item \label{exer:ts:patternperformancestudy}  Consider a fixed run like the one which produced Figure \ref{fig:ts:pattern:figureversuspearson}.  Which is fastest among the following IMEX, BDF, and Crank-Nicolson runs, all of which are adaptive and at least second order?:
 \begin{code}
