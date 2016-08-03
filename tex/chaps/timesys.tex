@@ -1,16 +1,14 @@
 
-Solving ordinary differential equations (ODEs) with \PETSc ought to be easy.  Because we have practice with \PETSc objects, it is.  This Chapter ``restarts'' on an easy problem, and a small example, but the goal is to transition to numerical methods for time-dependent, parabolic PDEs like the heat equation.  This transition, too, is straightforward.
-
-In this Chapter we look at three examples:
+Because we now have practice with \PETSc objects, solving systems of ordinary differential equations (ODEs) is straightforward.  In fact, this Chapter ``restarts'' with an easy and small ODE example problem.  Then we transition to numerical methods for time-dependent, parabolic PDEs like the heat equation, including nonlinear systems.  We look at three examples:
 \begin{itemize}
 \item a linear system of two ODEs,
-\item an arbitrarily-large system of ODEs arising from spatial finite-difference approximation of the 2D time-dependent heat PDE,
-\item and another large ODE system arising from two coupled nonlinear PDEs in 2D, forming a two-species reaction/diffusion model.
+\item an arbitrarily-large system of ODEs arising from spatial (2D) finite-difference approximation of the time-dependent heat PDE,
+\item and a similar approach to coupled nonlinear PDEs in 2D, namely a two-chemical reaction/diffusion model.
 \end{itemize}
 
-These problems are solved using a \PETSc \pTS time-stepping object.  The particular integration method used by the \pTS can be chosen at run-time.  Because many possible methods exist, a review of numerical time-stepping is appropriate.  We will recall the basics of both \emph{explicit} and \emph{implicit} methods.  Because implicit time-stepping methods need the full stack of \pSNES/\pKSP/\pPC solvers for the (generally) non-linear equations at each time step, our experience with \pSNES examples from previous Chapters will come in handy.
+These problems are solved using a \PETSc \pTS time-stepping object.  The particular integration method used by the \pTS can be chosen at run-time.  Because many possible methods exist, a review of numerical time-stepping is appropriate, and we recall the basics of both \emph{explicit} and \emph{implicit} methods.  Because implicit time-stepping methods need the full stack of \pSNES/\pKSP/\pPC solvers for the (generally) non-linear equations at each time step, our experience with \pSNES examples from previous Chapters comes in handy.
 
-User code will semi-discretize the above two PDE examples in space.  This ``method of lines'' approach, a common way to solve PDEs using \PETSc \pTS, avoids any need to write code specific to a temporal discretization.  Though the last of the above examples is a \emph{system} of PDEs, the additional \PETSc constructs needed for this kind of system are quite easy to write.
+User code in the two PDE examples only needs to semi-discretize in space.  This ``method of lines'' approach, a common way to solve PDEs using \pTS, avoids any need to write code specific to any particular integration method.  Though the last of the above examples is a \emph{system} of PDEs, the additional \PETSc constructs for such systems are also easy to write.
 
 
 \section{Systems of ODEs}
@@ -23,7 +21,7 @@ where $\by(t) \in \RR^N$ and $\by'=d\by/dt$.  Suppose an \emph{initial value} is
 \begin{equation}
 \by(t_0) = \by_0.  \label{eq:ts:ode:iv}
 \end{equation}
-Under reasonable assumptions on the behavior of the \emph{right-hand-side function} $\bg$, the continuum problem \eqref{eq:ts:ode}, \eqref{eq:ts:ode:iv} is a well-posed problem, at least for short times.\sidenote{This claim is well-known and will be stated with precision momentarily.}  Thus one can make predictions from such a ODE \emph{initial value problem} (IVP), forward or backward from the initial time.
+Under reasonable assumptions on the behavior of the \emph{right-hand-side function} $\bg$, the continuum problem \eqref{eq:ts:ode}, \eqref{eq:ts:ode:iv} is a well-posed problem, at least for short times, as we .  One can make predictions from such a ODE \emph{initial value problem} (IVP), forward or backward from the initial time.
 
 Let us be specific about sufficient regularity of $\bg$ to imply well-posedness.  We will assume for simplicity that $\bg(t,\by)$ is continuous on a cylinder around the initial point $(t_0,\by_0)$,
    $$\mathcal{D} = \{(t,\by) \,:\, |t-t_0| \le \delta, \|\by - \by_0\| \le \omega\}$$
