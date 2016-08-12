@@ -718,42 +718,41 @@ Files \texttt{bar000.png} \dots \texttt{bar010.png} are generated in this case. 
 
 \section{Time-stepping performance on the heat equation}
 
-We can apply our knowledge of the relative properties of schemes, from earlier in this Chapter, to this heat equation example.  To summarize the example, MOL converts the heat equation \eqref{eq:ts:heatequation} into a large, stiff, and linear system of ODEs in form \eqref{eq:ts:ode}.  If we choose an implicit time-stepping method then \PETSc allows us to solve equations \eqref{eq:ts:implicitgenericsystemAGAIN} at each time step in parallel using the stack of tools shown in Figure \ref{fig:ts:stack}.  The code \texttt{heat.c} sets the backward Euler method as the default method (\texttt{-ts\_type beuler}).
+We can apply our knowledge of the relative properties of schemes to this heat equation example.  To summarize the example, MOL converts the heat equation \eqref{eq:ts:heatequation} into a large, stiff, and linear system of ODEs in form \eqref{eq:ts:ode}.  If we choose an implicit time-stepping method then \PETSc allows us to solve equations \eqref{eq:ts:implicitgenericsystemAGAIN} at each time step in parallel using the stack of tools shown in Figure \ref{fig:ts:stack}.
 
-Here is a run on which we can compare various solver choices:\sidenote{For issues other than timeing, consider adding options \texttt{ -snes\_converged\_reason -ts\_monitor\_solution draw} to monitor convergence and visualize.  Some effects below are seen in the visualizations.}
+Here, for example, is a run on which we can compare solvers:
 \begin{cline}
 $ ./heat -da_refine 5 -ts_monitor -heat_monitor
 \end{cline}
 %$
-This run, which takes $M=10$ steps to reach the final time $t_f=0.1$ using an $O(\Delta t^1)$ method, gives reasonable results in a few seconds,  % 4.11 seconds
-on a modestly-refined grid of $N \approx 1.6 \times 10^4$ points, using the default settings.
+This run, which takes $M=10$ steps to reach the final time $t_f=0.1$ using the default $O(\Delta t^1)$ backward Euler method, on a modestly-refined grid of $N \approx 1.6 \times 10^4$ points, gives reasonable results in a few seconds. % 4.11 seconds
 
-Recalling Table \ref{tab:ts:odebasictypes}, we now consider other ODE methods.  These cases, which add the options shown to the run above, are compared by number of steps $M$ and---this is very informal---by their relative wall-clock time $R$:\sidenote{Thus $R=1$ for a method which is the same speed as backward Euler, $R<1$ for a faster method, and $R>1$ for a slower method.}
-\renewcommand{\labelenumi}{\alph{enumi})}
+Recalling Table \ref{tab:ts:odebasictypes}, we now compare ODE methods.  The following cases, which add the options shown to the run above, are compared by number of steps $M$ and---this is very informal---by their relative wall-clock time $R$.  That is, $R<1$ for a method faster than backward Euler, and $R>1$ for a slower method:
+\renewcommand{\labelenumi}{\textbf{\alph{enumi})}}
 \begin{enumerate}
 \item \texttt{-ts\_type beuler}  \hfill $R=1$, $M=10$
 \begin{quote} The implicit, A-stable, stiff-decay, and $O(\Delta^1)$ local truncation error method which is the default for \texttt{heat.c}. \end{quote}
 \item \texttt{-ts\_type rk}  \hfill $R=4.5$, $M=5201$
-\begin{quote} The \RKthreebs adaptive method.  It detects the stiffness as a difference between the embedded schemes, and thus takes many inappropriately-short time steps and too much time.  (The effect gets worse, relative to a), on further-refined grids.) \end{quote}
+\begin{quote} The \RKthreebs adaptive method.  It detects the stiffness as a difference between the embedded schemes, and thus takes many inappropriately-short time steps and too much time.  The effect gets worse, relative to \textbf{a)}, on further-refined grids. \end{quote}
 \item \texttt{-ts\_type rk -ts\_adapt\_type none}  \hfill $R=0.012$, $M=10$
-\begin{quote} The same method as b), but sans adaptivity.  The numerical solution explodes to size $10^{72}$ after $M=10$ steps!  (Fast is irrelevant.)\end{quote}
+\begin{quote} The same method as \textbf{b)}, but sans adaptivity.  The numerical solution explodes to size $10^{72}$ after $M=10$ steps; complete failure!\end{quote}
 \item \texttt{-ts\_type cn}  \hfill $R=0.84$, $M=10$
-\begin{quote} Crank-Nicolson is the $\theta=1/2$ method; it has $O(\Delta t^2)$ local truncation error.  Visualization shows a problem.  Instead of smoothly growing in size as with \texttt{beuler}, features oscillate unstably.  This is a well-known consequence of a method which is A-stable but not stiff-decay.  (The oscillations do eventually decay, unlike c).) \end{quote}
+\begin{quote} Crank-Nicolson is the $\theta=1/2$ method; it has $O(\Delta t^2)$ local truncation error.  Visualization shows a problem.  Instead of smoothly growing in size as with \texttt{beuler}, features oscillate unstably.  This is a well-known consequence of a method which is A-stable but not stiff-decay.  (The oscillations do decay with the time-step, unlike \textbf{c)}.) \end{quote}
 \item \texttt{-ts\_type theta -ts\_theta\_theta 0.7 -ts\_theta\_endpoint}
 
 \hfill $R=0.91$, $M=10$
-\begin{quote} By moving the $\theta$ value toward the more-stable $\theta=1$ (i.e.~\texttt{beuler}) end, we tame the instability of Crank-Nicolson.  But now the order is back to $O(\Delta t^1)$ like run a). \end{quote}
+\begin{quote} By moving the $\theta$ value toward the more-stable $\theta=1$ (i.e.~\texttt{beuler}) end, we tame the instability of Crank-Nicolson.  But now the order is back to $O(\Delta t^1)$ like run \textbf{a)}. \end{quote}
 \item \texttt{-ts\_type cn -ts\_theta\_adapt}  \hfill $R=2.3$, $M=31$
 \begin{quote} By adding adaptivity to Crank-Nicolson we also control the oscillations, and now we have $O(\Delta t^2)$ local truncation error as well.  The trade-off between speed and accuracy can be controlled by options \texttt{-ts\_rtol} and \texttt{-ts\_atol} (not shown).  \end{quote}
 \item \texttt{-ts\_type bdf -ts\_bdf\_adapt -ts\_bdf\_order 2}
 
 \hfill $R=2.4$, $M=28$
-\begin{quote} This implicit, A-stable, and stiff-decay multistep method \citep{AscherPetzold1998} uses backward differentiation formula \eqref{eq:ts:bdf2}, but with additional tweaks to make it adaptive.  As a multi-step formula it requires additional techniques to get started (not addressed).\end{quote}
+\begin{quote} This implicit, A-stable, and stiff-decay multistep method \citep{AscherPetzold1998} uses backward differentiation formula \eqref{eq:ts:bdf2}, but with additional tweaks to make it adaptive.  As a multi-step formula it requires additional techniques to get started; these are not addressed here by see \citep{Butcher2008}.\end{quote}
 \end{enumerate}
 
-For a heat or diffusion equation problem like the one under consideration, we may conclude that runs a), f), and g) represent a selection of good things to try.
+For a heat or diffusion equation problem like the one under consideration, we conclude that runs \textbf{a)}, \textbf{f)}, and \textbf{g)} represent a selection of good things to try.
 
-Note that when we run \texttt{heat.c} it prints out the value of $\nu = D_0 \Delta t / (h_x h_y)$.\sidenote{The \emph{initial} $\Delta t$ value is used, so in adaptive cases this report is of minimal utility.}  This ratio controls the conditional stability of explicit methods,\sidenote{Note that $\nu$ is relevant to diffusions, and it is not the better-known ``CFL'' constant of hyperbolic problems \citep{LeVeque2002} which possess characteristic curves.  Of course the concepts are related.} and the degree of stiffness of the ODE problem.  Indeed, theorems showing that $\nu \lesssim 1$ is either necessary or sufficient, or both, for the conditional stability of fully-discrete explicit methods for the heat equation can be found in \citep{MortonMayers2005}.  (See \citep{LeVeque2007} for the connection to stiffness and the absolute stability of methods.)  Our treatment, based on MOL, will not pursue such essential numerical PDE theory further.
+Note that when we run \texttt{heat.c} it prints out the value of $\nu = D_0 \Delta t / (h_x h_y)$.\sidenote{The \emph{initial} $\Delta t$ value is used, so in adaptive cases this report is of minimal utility.}  This ratio controls the conditional stability of explicit methods, and the degree of stiffness of the ODE problem.  Indeed, theorems showing that $\nu \lesssim 1$ is either necessary or sufficient, or both, for the conditional stability of fully-discrete explicit methods for the heat equation, can be found in \citep{MortonMayers2005}.  See \citep{LeVeque2007} for additional discussion of the connection between stiffness and the absolute stability of methods.  Our treatment, based on MOL, will not pursue such numerical PDE theory further.
 
 
 \section{Coupled reaction-diffusion equations}
@@ -762,27 +761,27 @@ The next example also uses a MOL discretization, a 2D \pDMDA, and centered finit
 \begin{itemize}
 \item It is a \emph{system} of two coupled, scalar PDEs.
 \item They are \emph{nonlinear} reaction-diffusion equations.
-\item We \emph{separate the stiff part} so that implicit/explicit (\emph{IMEX}) numerical methods are effective.
+\item We \emph{separate} the stiff part so that implicit/explicit (\emph{IMEX}) numerical methods are effective.
 \end{itemize}
 
-This reaction-diffusion system was studied by \citep{Pearson1993}:
+The following reaction-diffusion system was studied by \citep{Pearson1993}:
 \begin{align}
 \frac{\partial u}{\partial t} &= D_u \grad^2 u - u v^2 + \phi (1 - u), \label{eq:ts:pattern:pde} \\
 \frac{\partial v}{\partial t} &= D_v \grad^2 u + u v^2 - (\phi + \kappa) v. \notag
 \end{align}
-Here $u(t,x,y)$ and $v(t,x,y)$ are concentrations of two different chemicals.  Both chemicals diffuse in space but the \emph{diffusion coefficients} $D_u>0,D_v>0$ are generally different.  A chemical interaction between the two converts $u$ into $v$ and occurs at a rate $u v^2$; this term makes the system nonlinear.  Constant $\phi>0$ describes the external supply (``feed rate'') of $u$, while $\kappa>0$ gives the rate of an additional chemical reaction that eliminates $v$ by converting it into an inert product \citep{Pearson1993}.
+Here $u(t,x,y)$ and $v(t,x,y)$ are concentrations of two different chemicals.  Both diffuse in space but the \emph{diffusion coefficients} $D_u>0,D_v>0$ are generally different.  A chemical interaction between the two converts $u$ into $v$ at a rate $u v^2$; this term makes the system nonlinear.  Constant $\phi>0$ describes the external supply (``feed rate'') of $u$, while $\kappa>0$ gives the rate of an additional chemical reaction that eliminates $v$ by converting it into an inert product \citep{Pearson1993}.
 
-We consider an initial/boundary value problem for \eqref{eq:ts:pattern:pde} \citep{HundsdorferVerwer2003} in which $u,v$ are defined for $t\in[0,T]$ and for $(x,y)$ in the square domain $\mathcal{S} = [0,L)\times [0,L)$.  An initial condition is chosen, optionally with noise added to break symmetries, to generate ``spot multiplication''; see \citep{Pearson1993}.  The boundary conditions on $\mathcal{S}$ are periodic, so in effect there is no boundary.
+We consider an initial/boundary value problem for \eqref{eq:ts:pattern:pde} in which $u,v$ are defined in a square domain $\mathcal{S} = [0,L)\times [0,L)$.  The boundary conditions on $\mathcal{S}$ are periodic, so in effect there is no boundary.  An initial condition is chosen, optionally with noise added to break symmetries, to generate ``spot multiplication'' \citep{HundsdorferVerwer2003,Pearson1993}; see below.
 
-This reaction-diffusion model produces a ``surprising variety of irregular spatiotemporal patterns'' \citep{Pearson1993}, but of course one needs a computer to reveal them.  While Pearson used explicit, first-order forward-Euler to do the numerical experiments, which required a parallel supercomputer,\sidenote{Namely, a Connection Machine at the Los Alamos Advanced Computing Laboratory.} we will take implicit (or partly-implicit) time steps $1000$ times longer.  This problem illustrates the value of implicit time-stepping in the presence of stiff diffusive terms.
+This reaction-diffusion model produces a ``surprising variety of irregular spatiotemporal patterns'' \citep{Pearson1993}, but of course one needs a computer to reveal them.  While Pearson used explicit, first-order forward-Euler to do the numerical experiments, which required a parallel supercomputer at the time,\sidenote{Namely, a Connection Machine at the Los Alamos Advanced Computing Laboratory.} we will take implicit (or partly-implicit) time steps $1000$ times longer.  While this problem illustrates the value of implicit time-stepping in the presence of stiff diffusive terms, custom explicit time-stepping codes using GPU hardware are demonstably suitable to the problem [FIXME: CITE Karl Sims etc. or Sanderson et al]
 
-As in the heat equation, the Laplacian $\grad^2$ in \eqref{eq:ts:pattern:pde} generates a stiff ODE system when MOL is applied \citep{HundsdorferVerwer2003}.  With such situations in mind, \PETSc allows us to write the discretized system in the form
+As in the heat equation, the Laplacian $\grad^2$ in \eqref{eq:ts:pattern:pde} generates a stiff ODE system when MOL is applied \citep{HundsdorferVerwer2003}.  With such situations in mind, \PETSc allows us to write the discretized system in the particular ODE form
 \begin{equation}
-\bF(t,\by,\by') = \bG(t,\by), \label{eq:ts:pattern:imexform}
+\bF(t,\by,\by') = \bG(t,\by). \label{eq:ts:pattern:imexform}
 \end{equation}
-and then put the stiff terms in $\bF$ and the nonstiff in $\bG$, so that methods can apply different schemes to each part.  This general form is also suitable for \emph{differential-algebraic equations} (DAEs) wherein $\partial \bF/\partial \by'$ is singular.  Note that form \eqref{eq:ts:ode} is the case of \eqref{eq:ts:pattern:imexform} in which $\partial \bF/\partial \by'$ is the identity.  If $\partial \bF/\partial \by'$ is invertible then in theory \eqref{eq:ts:pattern:imexform} can be converted to \eqref{eq:ts:ode}, but this is often impractical.
+In this form we put the stiff terms in $\bF$ and the nonstiff in $\bG$, so that methods can apply different schemes to each part.  Note that form \eqref{eq:ts:ode} is the case of \eqref{eq:ts:pattern:imexform} in which $\partial \bF/\partial \by'$ is the identity.  In the particular case of the MOL discretization of \eqref{eq:ts:pattern:pde}, either form \eqref{eq:ts:ode} or \eqref{eq:ts:pattern:imexform} can be made to work, but \eqref{eq:ts:pattern:imexform} expands our options for effective time-stepping methods; see Exercise \ref{chap:ts}.\ref{exer:ts:patternrhsonlyform}.
 
-In the particular case of the MOL discretization of \eqref{eq:ts:pattern:pde}, either form \eqref{eq:ts:ode} or \eqref{eq:ts:pattern:imexform} can be made to work, but \eqref{eq:ts:pattern:imexform} increases options for effective time-stepping methods.  See Exercise \ref{chap:ts}.\ref{exer:ts:patternrhsonlyform}.
+(Form \eqref{eq:ts:pattern:imexform} is also suitable for \emph{differential-algebraic equations} (DAEs) wherein $\partial \bF/\partial \by'$ is singular, but such problems are outside of our scope.  If $\partial \bF/\partial \by'$ is invertible then in theory \eqref{eq:ts:pattern:imexform} can be converted to \eqref{eq:ts:ode}, but this is often impractical.)
 
 \cinputpart{pattern.c}{\CODELOC}{\texttt{Field} is for point-wise values of the solution.  \texttt{PatternCtx} is a ``context'' for use by call-backs.}{I}{//FIELDCTX}{//ENDFIELDCTX}{code:ts:pattern:fieldctx}
 
@@ -790,7 +789,7 @@ To get started with the implementation \texttt{c/ch5/pattern.c}, Code \ref{code:
 
 \cinputpart{pattern.c}{\CODELOC}{Create a 2D \pDMDA which has two degrees of freedom and a ``box'' stencil.}{II}{//DMDACREATE}{//ENDDMDACREATE}{code:ts:pattern:dmdacreate}
 
-Next we display two extracts of \texttt{main()}.  First, Code \ref{code:ts:pattern:dmdacreate} shows how a 2D \pDMDA with two degrees of freedom (i.e.~$(u,v)$ at each point) is created.  We use a ``box'' stencil because of the 9-point finite difference stencil used for $\grad^2$ (below).
+Next we display two extracts of \texttt{main()}.  First, Code \ref{code:ts:pattern:dmdacreate} shows how a 2D \pDMDA with two degrees of freedom (i.e.~$u,v$ at each point) is created.  We use a ``box'' stencil because of the 9-point finite difference stencil used for $\grad^2$ (below).
 
 \cinputpart{pattern.c}{\CODELOC}{Set up the \pTS and its callbacks.}{III}{//TSSETUP}{//ENDTSSETUP}{code:ts:pattern:tssetup}
 
@@ -807,7 +806,7 @@ Now consider the spatial discretization (MOL) of \eqref{eq:ts:pattern:pde}.  Spe
 \begin{equation}
 \by = \begin{bmatrix} \bu \\ \bv \end{bmatrix}.  \label{eq:ts:pattern:blockvars}
 \end{equation}
-Supposing \texttt{Field **aY} is an array for a \pVec holding the gridded approximation to $\by$, we can reference the components by their names, as \text{aY[j][i].u} and \text{aY[j][i].v}, respectively.
+Supposing \texttt{Field **aY} is a C array for a \pVec holding the gridded approximation to $\by$, we can reference the components by their names, as \texttt{aY[j][i].u} and \texttt{aY[j][i].v}, respectively.
 
 \cinputpart{pattern.c}{\CODELOC}{Evaluate $\bF$ in \eqref{eq:ts:pattern:imexform}.}{IV}{//IFUNCTION}{//ENDIFUNCTION}{code:ts:pattern:ifunction}
 
@@ -842,7 +841,7 @@ A^{[5]} = \frac{1}{h^2} \begin{bmatrix}
 	  &  1 & 
 	\end{bmatrix}.  \label{eq:ts:pattern:fivepoint}
 \end{equation}
-Note the ``star'' character to the nonzero entries.  In \texttt{pattern.c} we use
+Note the ``star'' character to the nonzero entries.  In \texttt{pattern.c} we use instead
 \begin{equation}
 A^{[9]} = \frac{1}{6h^2} \begin{bmatrix}
 	1 &   4 & 1\\
@@ -850,7 +849,7 @@ A^{[9]} = \frac{1}{6h^2} \begin{bmatrix}
 	1 &   4 & 1
 	\end{bmatrix}.  \label{eq:ts:pattern:ninepoint}
 \end{equation}
-Note the ``box'' character.  Both of these approximations of the Laplacian have $O(h^2)$ local trunction error, but the latter is better at isotropic diffusion.  See Exercise \ref{chap:ts}.\ref{exer:ts:barkley}.
+Note the ``box'' character.  Both of these approximations of the Laplacian have $O(h^2)$ local trunction error, but, as demonstrated in Exercise \ref{chap:ts}.\ref{exer:ts:barkley}, the latter is better at isotropic diffusion.
 
 We write Jacobian code only for the stiff part $\bF$, with the idea that only that part needs to be treated implicitly for stability.  However, examples like \texttt{pattern.c}, which work with general ODE form \eqref{eq:ts:pattern:imexform}, require that the Jacobian function (\texttt{FormIJacobianLocal()} in Code \ref{code:ts:pattern:ijacobian}) computes a shifted combination of the derivatives of $\bF$:
 \begin{equation}
