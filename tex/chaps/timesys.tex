@@ -1,9 +1,9 @@
 
-Because we now have practice with \PETSc objects, solving systems of ordinary differential equations (ODEs) is straightforward.  In fact, this Chapter ``restarts'' with an easy and small ODE example problem.  Then we transition to numerical methods for time-dependent, parabolic PDEs like the heat equation, including nonlinear systems.  We look at three examples:
+Because we now have practice with \PETSc objects, solving systems of ordinary differential equations (ODEs) is straightforward.  In fact, this Chapter ``restarts'' with a small, even easy, ODE example problem.  Then we transition to numerical methods for time-dependent, parabolic PDEs like the heat equation.  We look at three examples:
 \begin{itemize}
 \item a linear system of two ODEs,
 \item an arbitrarily-large system of ODEs arising from spatial (2D) finite-difference approximation of the time-dependent heat PDE,
-\item and a similar approach to coupled nonlinear PDEs in 2D, namely a two-chemical reaction/diffusion model.
+\item and a similar approach to a pair of coupled nonlinear PDEs in 2D, a two-chemical reaction/diffusion model.
 \end{itemize}
 
 These problems are solved using a \PETSc \pTS time-stepping object.  The particular integration method used by the \pTS can be chosen at run-time.  Because many possible methods exist, a review of numerical time-stepping is appropriate, and we recall the basics of both \emph{explicit} and \emph{implicit} methods.  Because implicit time-stepping methods need the full stack of \pSNES/\pKSP/\pPC solvers for the (generally) non-linear equations at each time step, our experience with \pSNES examples from previous Chapters comes in handy.
@@ -314,7 +314,7 @@ Implicit methods include the \emph{theta ($\theta$) method} family,
 \begin{equation}
 \bY_\ell = \bY_{\ell-1} + (1-\theta) h \bg(t_{\ell-1},\bY_{\ell-1}) + \theta h \bg(t_\ell,\bY_{\ell}),  \label{eq:ts:theta}
 \end{equation}
-with $0<\theta\le 1$ and tableau
+with $0 \le \theta\le 1$ and tableau
 \begin{center}
 \begin{tabular}{c|cc}
 $0$   \\
@@ -329,11 +329,11 @@ Both the \RKtwoa rule \eqref{eq:ts:rk2a} and the $\theta=1/2$ case of \eqref{eq:
 \emph{stability} is obligatory in a numerical scheme, whereas higher-order error properties are merely desirable.
 \end{quote}
 
-Some informal discussion of the concepts of the ``stability'' of numerical schemes and the ``stiffness'' of ODE problems is appropriate even before giving precise definitions of these concepts.  Note there are multiple useful definitions of stability; we will focus below on ``absolute stability,'' plus some closely-related definitions.
+Informal discussion of the concepts of the ``stability'' of numerical schemes and the ``stiffness'' of ODE problems is needed before giving precise definitions.  Note that, though there are multiple useful definitions of stability, we will focus below on ``absolute stability,'' plus closely-related terms.
 
-Most explicit schemes are ``conditionally stable'' in the informal sense that they give good results when used with sufficiently-small time steps.  This computational burden may be avoidable, despite the obvious trade-off of many time-steps versus solving equations.  Some computations, with some accuracy goals, can succeed if done implicitly even though they are too costly by (conditionally-stable) explicit time-stepping.  This is characteristic of the discretized heat-equation-type PDE examples later in this Chapter.
+Most explicit schemes are ``conditionally stable'' in the sense that they give good results when used with sufficiently-small time steps.  The computational burden of many small steps may be avoidable, however.  There is an obvious trade-off of many explicity time-steps versus solving implicit equations.  Some computations, with some accuracy goals, can succeed if done implicitly even though they are too costly by (conditionally-stable) explicit time-stepping, and this is characteristic of the discretized heat-equation-type PDE examples later in this Chapter.
 
-The ``stiffness'' of certain ODE problems drives the investigation of the stability of different methods.  As a practical definition, an ODE system is \emph{stiff} if it has short time-scales which do not need to be resolved as accurately as some other time-scales, but which cause explicit schemes to take short time-steps.  An example is appropriate.
+The ``stiffness'' of certain ODE problems drives the investigation of the stability of different methods.  As a practical definition, an ODE system is \emph{stiff} if it has short time-scales which do not need to be resolved.  These short scales cause explicit schemes to take too-small time-steps.  An example is appropriate.
 
 \noindent\hrulefill
 \begin{example}  \label{ex:ts:odestiff}  Consider the linear ODE IVP, in $N=3$ dimensions,
@@ -346,16 +346,16 @@ where
                       -1 & 0 & 0.1 \\
                        0 & 0 & -101 \end{bmatrix}. \label{eq:ts:stiffexamplematrix}
 \end{equation}
-The exact solution at a particular time, say $t_f=10$ for concreteness, can be found by computing eigenvalues and thereby exponentiating a matrix (Exercise \ref{chap:ts}.\ref{exer:ts:stiffexample}).  To an absolute accuracy of $10^{-7}$ the solution is
+The exact solution at a particular time, say $t_f=10$ for concreteness, can be found by exponentiating a matrix (Exercise \ref{chap:ts}.\ref{exer:ts:stiffexample}).  To an absolute accuracy of $10^{-7}$ the solution is
 \begin{equation}
     \by(t_f) = e^{B t_f} \by(0) = \begin{bmatrix} -1.383623 \\
                                                  -0.295886 \\
                                                   0 \end{bmatrix}.\label{eq:ts:stiffsoln}
 \end{equation}
 
-The eigenvalue $\lambda_{\min}=-101$ (Exercise \ref{chap:ts}.\ref{exer:ts:stiffexample}) of $B$, which is also an entry of $B$ in this case, corresponds to a very short timescale and rapid decay rate.  Precisely following this fast time scale, especially in a relative-magnitude sense, is not needed to produce accurate values for the first two components of $\by(t_f)$, in particular.
+The eigenvalue $\lambda_{\min}=-101$ (Exercise \ref{chap:ts}.\ref{exer:ts:stiffexample}) of $B$, corresponds to a very short timescale and rapid decay rate.  Precisely following this fast time scale, especially in a relative-magnitude sense, is not needed to produce accurate values for the first two components of $\by(t_f)$.
 
-Considering the two $O(\Delta t^2$) methods introduced already, the explicit (\RKtwoa) and implicit (Crank-Nicolson) trapezoid rules, we write a modification of \texttt{ode.c} called \texttt{stiff.c} (Exercise \ref{chap:ts}.\ref{exer:ts:stiffcode}) to compare these methods on this problem.  Starting with the explicit \RKtwoa method, we take 200 steps from $t_0=0$ to $t_f=10$:
+Consider the two $O(\Delta t^2$) methods introduced above, the explicit (\RKtwoa) and implicit (Crank-Nicolson) trapezoid rules.  We write a modification of \texttt{ode.c} called \texttt{stiff.c} (Exercise \ref{chap:ts}.\ref{exer:ts:stiffcode}) to compare them on this problem.  Starting with the explicit \RKtwoa method, we take 200 steps from $t_0=0$ to $t_f=10$:
 \begin{cline}
 $ ./stiff -ts_type rk -ts_rk_type 2a -ts_adapt_type none -ts_dt 0.05
 Vec Object: 1 MPI processes
@@ -391,13 +391,9 @@ total steps = 200
 \end{example}
 \noindent\hrulefill
 
-Roughly-speaking, the problem with explicit schemes on an Example like this is that the schemes are sensitive to the magnitudes of the eigenvalues, one of which is large, even though the size of the solution component for that eigenvalue (i.e..~$e^{\lambda_{\min} t_t}$) is tiny.
+Roughly-speaking, the difficulty with explicit schemes on an Example like this is that the schemes are sensitive to the magnitudes of the eigenvalues, one of which is large, even though the size of the solution component for that eigenvalue (i.e.~$e^{\lambda_{\min} t_t}$) is tiny.  As a practical matter one would use the explicit scheme with adaptive time-stepping.  However, for a stiff problem and an explicit scheme, the ``symptom'' still emerges that the number of steps is insensitive to the accuracy goal (Exercise \ref{chap:ts}.\ref{exer:ts:stiffadaptive}).
 
-As a practical matter one would use the explicit scheme with adaptive time-stepping.  However, for a stiff problem and an explicit scheme, a ``symptom'' still emerges, namely that the number of steps is insensitive to the accuracy goal (Exercise \ref{chap:ts}.\ref{exer:ts:stiffadaptive}).
-
-Stiffness is supposed to be a property of the problem not the method.  However, there is no precise way to decide if a particular ODE system is stiff without introducing a parameter or other data; a problem may be stiff for one accuracy goal and not for others.  Indeed the word ``stiff'' is like ``sparse'' in the sense one must append ``\dots enough so that [something specific]'' if one needs to be quantitative.
-
-In any case, comparisons of explicit and implicit methods on many stiff examples clearly shows that something other than local truncation error is important in determining the way the numerical error builds-up after many time steps.  So finally we should define our terms.
+Stiffness is usually supposed to be a property of the problem not the method.  However, there is no precise way to decide if a particular ODE system is stiff without introducing a parameter or other data; a problem may be stiff for one accuracy goal and not for others.  Indeed the word ``stiff'' is like ``sparse'' in the sense one must supply ``\dots enough so that \dots''---that is, if one needs to be quantitative.
 
 
 \section{Absolute stability}
@@ -414,24 +410,24 @@ An ODE numerical method with step size $h$ is \emph{absolutely stable} for a giv
 \end{equation}
 However, the definition is not usually treated as dependent on two parameters because, for any of the one-step methods, application of the method to the test equation gives
     $$Y_\ell = f(h\lambda) Y_{\ell-1}$$
-for some function $f(z)$.  Therefore we say that a numerical method is \emph{absolutely stable for a given} $z\in\CC$ if \eqref{eq:ts:absstab} applies when the scheme is applied to the test equation \eqref{eq:ts:absstabtestproblem} in a case where $h\lambda=z$ \citep{AscherPetzold1998}.
+for some function $f(z)$.  Therefore we say that a numerical method is \emph{absolutely stable for a given} $z\in\CC$ if \eqref{eq:ts:absstab} applies when the scheme is applied to the test equation \eqref{eq:ts:absstabtestproblem} in a case where $h\lambda=z$ \citep{AscherPetzold1998}.  Again, examples are appropriate.
 
-A brief analysis is appropriate.  Applying the methods so far to the test equation gives these formulas in the form $Y_\ell = f(z) Y_{\ell-1}$ (Exercise \ref{chap:ts}.\ref{exer:ts:absstabcases}):
+Applying the methods so far to \eqref{eq:ts:absstabtestproblem} gives these formulas in the form $Y_\ell = f(z) Y_{\ell-1}$ (Exercise \ref{chap:ts}.\ref{exer:ts:absstabcases}):
 \begin{align}
 \text{Euler}              && Y_\ell &= \left(1+z\right) Y_{\ell-1}, \label{eq:ts:absstabcases} \\
 \text{\RKtwoa}            && Y_\ell &= \left(1+z + \frac{1}{2} z^2\right) Y_{\ell-1}, \notag \\
 \text{Crank-Nicolson}     && Y_\ell &= \left(\frac{1+\frac{1}{2} z}{1-\frac{1}{2}z}\right) Y_{\ell-1}, \notag \\
 \text{backward Euler}     && Y_\ell &= \left(\frac{1}{1-z}\right) Y_{\ell-1}. \notag
 \end{align}
-To get absolute stability from these methods requires $|f(z)|\le 1$.  The corresponding \emph{regions of absolute stability} of the several methods are shown in Figure \ref{fig:ts:absstabregions}; the above methods are listed in order of increasing region size.
+To get absolute stability from these methods requires $|f(z)|\le 1$.  The corresponding \emph{regions of absolute stability} of the several methods are shown in Figure \ref{fig:ts:absstabregions}; the above methods are listed in order of increasing region size.  Note that both of the implicit methods are absolutely stable on the entire left half-plane $\Im(z)\le 0$.
 
 \begin{figure}
 \includegraphics[width=0.8\textwidth]{figs/absstabregions}
-\caption{Regions (shades of grey) of absolute stability $|f(z)|\le 1$ for the four methods in \eqref{eq:ts:absstabcases}, from Euler (darkest) to backward Euler (lightest).  Both implicit methods are absolutely stable on the left half-plane $\Im(z)\le 0$.}
+\caption{Shaded regions of absolute stability $|f(z)|\le 1$ for the four methods in \eqref{eq:ts:absstabcases}, from Euler (darkest) to backward Euler (lightest).}
 \label{fig:ts:absstabregions}
 \end{figure}
 
-What does it look like when absolute stability fails to hold?  Consider the test problem with $\lambda=-1$.  With $h=0.5$ and $h=2.2$, the (explicit) Euler method gives results shown in Figure \ref{fig:ts:absstabfail}.  The exact solution is a decaying exponential, and a sufficiently-small stepsize ($h=0.5$) gives a qualitatively-correct result.  For a larger stepsize ($h=2.2$) both the Euler and the \RKtwoa rules generate a sequence of $\{Y_\ell\}$ which grows in magnitude; this is qualitatively wrong.  The fact that $z=h\lambda$ satisfies $|1+z|<1$ in one case and $|1+z|>1$ in the other illustrates the above analysis of the Euler method.
+What does it look like when absolute stability fails to hold?  Consider the test problem with $\lambda=-1$.  With $h=0.5$ and $h=2.2$, the (explicit) Euler method gives results shown in Figure \ref{fig:ts:absstabfail}.  The exact solution is a decaying exponential, and a sufficiently-small stepsize ($h=0.5$) gives a qualitatively-correct result.  For a larger stepsize ($h=2.2$) both the Euler and the \RKtwoa rules generate a sequence of $\{Y_\ell\}$ which grows in magnitude; this is qualitatively wrong.  Observe that $z=h\lambda$ satisfies $|1+z|<1$ when $h=0.5$ and $|1+z|>1$ when $h=2.2$.
 
 \begin{figure}
 \includegraphics[width=1.0\textwidth]{figs/absstabfail}
@@ -439,11 +435,11 @@ What does it look like when absolute stability fails to hold?  Consider the test
 \label{fig:ts:absstabfail}
 \end{figure}
 
-It is natural to distinguish between the large stability regions of implicit schemes and the smaller ones of explicit schemes.  A numerical scheme is \emph{A-stable} if it is absolutely-stable for all $z$ in the left half-plane, that is, for all $z$ such that $\Im(z)\le 0$ \citep{AscherPetzold1998}.  The implicit schemes above are A-stable.\sidenote{This is not true of \emph{all} implicit Runge-Kutta methods, however.}
+It is natural to distinguish between the large stability regions of implicit schemes and the smaller ones of explicit schemes.  Thus, by definition, a numerical scheme is \emph{A-stable} if it is absolutely-stable for all $z$ in the left half-plane, that is, for all $z$ such that $\Im(z)\le 0$ \citep{AscherPetzold1998}.  The implicit schemes above are A-stable.\sidenote{This is not true of \emph{all} implicit Runge-Kutta methods, however.}
 
 No explicit Runge-Kutta methods are A-stable.  In fact, when such a scheme is applied to the test equation we can write it as $Y_\ell = p(z) Y_{\ell-1}$ for a \emph{polynomial} function $p(z)$.  Because $|p(z)|\to\infty$ as $|z|\to \infty$ for any non-constant polynomial, the absolute-stability region $|p(z)|\le 1$ is bounded.
 
-Finally, one can distinguish between the implicit methods above, namely backward Euler and trapezoid, by a stronger condition than absolute stability.  First, suppose $\gamma(t)$ is a bounded and measurable function and consider the modified test problem
+One may distinguish between the two implicit methods above, namely backward Euler and trapezoid, via a stronger condition than absolute stability.  First, suppose $\gamma(t)$ is a bounded and measurable function and consider the modified test problem
 \begin{equation}
 y' = \lambda \left(y - \gamma(t)\right), \qquad y(0)=1. \label{eq:ts:stiffdecaytestproblem}
 \end{equation}
@@ -461,9 +457,9 @@ A lower-order but stiff-decay scheme like backward Euler scheme may be chosen as
 
 As already stated, implicit methods require solving nonlinear equations \eqref{eq:ts:implicitgenericsystem} at each time step, namely
 \begin{equation}
-  \bF(\bY_\ell) = 0, \label{eq:ts:implicitgenericsystemAGAIN}
+  \bF(\bY_\ell) = 0. \label{eq:ts:implicitgenericsystemAGAIN}
 \end{equation}
-and a proposal to use Newton's method to solve \eqref{eq:ts:implicitgenericsystemAGAIN} should be surprise; see the previous Chapter.  It is even obvious that the last value of the solution can be used as an initial iterate: $\bY_\ell^0 = \bY_{\ell-1}$.  However, Newton's method requires the Jacobian derivative of $\bF$.
+A proposal to use Newton's method to solve \eqref{eq:ts:implicitgenericsystemAGAIN} is natural, and thus, regarding \PETSc constructs, the \pTS contains a \pSNES inside it.  It is even obvious that the last value of the solution can be used as an initial iterate: $\bY_\ell^0 = \bY_{\ell-1}$.  However, Newton's method requires the Jacobian derivative of $\bF$.
 
 For a representative example, the $\theta$ method \eqref{eq:ts:theta} corresponds to the residual function
 \begin{equation}
@@ -472,17 +468,15 @@ For a representative example, the $\theta$ method \eqref{eq:ts:theta} correspond
 wherein $\bY_{\ell-1}$ is known from the previous time step.  The Jacobian is
    $$J(\bX) = \frac{\partial \bF}{\partial \bX} = I - \theta h \frac{\partial \bg}{\partial \by}(t_\ell,\bX).$$
 
-There is no need, however, to write Jacobian user code which is specific to the $\theta$ method (or any other ODE method).  First, the \pTS contains a \pSNES inside it.  Second, each \PETSc-implemented implicit time-stepping method in \pTS knows how to convert user-supplied code for the Jacobian derivative of the right-hand side of \eqref{eq:ts:ode}, that is, user-supplied code to compute
+There is no need, however, to write Jacobian user code which is specific to the $\theta$ method (or any other ODE method).  In fact, each implicit \pTS method ``knows'' how to convert user-supplied code for the Jacobian derivative of the right-hand side of \eqref{eq:ts:ode}, that is, user-supplied code for
 \begin{equation}
 \frac{\partial \bg}{\partial \by} = \begin{bmatrix}\phantom{\bigg|} \frac{\partial g_i}{\partial y_j}(t,\by) \phantom{\bigg|}\end{bmatrix}, \label{eq:ts:rhsjacobian}
 \end{equation}
 into the necessary Jacobian of $\bF$ for Newton's method on \eqref{eq:ts:implicitgenericsystemAGAIN}.
 
-An example \texttt{odejac.c} is shown in Codes \ref{code:ts:odejac:jacobian} and  \ref{code:ts:odejac:mat}; only the needed additions to \texttt{ode.c} are shown.  Note \texttt{odejac.c} is quite similar in structure to \texttt{ecjac.c} in Chapter \ref{chap:nl}, but with calls to \pSNES replaced by corresponding calls to \pTS.
+We have written an example \texttt{odejac.c} based on minimal modifications, as shown in Codes \ref{code:ts:odejac:jacobian} and  \ref{code:ts:odejac:mat}, to \texttt{ode.c}.\sidenote{Note \texttt{odejac.c} is similar in structure to \texttt{ecjac.c} in Chapter \ref{chap:nl}, but with calls to \pSNES replaced by corresponding calls to \pTS.}  The new program calls \texttt{TSSetRHSJacobian()} to set a call-back to \texttt{FormRHSJacobian()}.  The latter sets the entries of the \pMat holding the derivative \eqref{eq:ts:rhsjacobian}.  An allocated \pMat, here called \texttt{J} for simplicity, is supplied to \texttt{TSSetRHSJacobian()}.  We assign \texttt{J} to both the Jacobian and preconditioner-material arguments of \texttt{TSSetRHSJacobian()}; compare usage of \texttt{SNESSetJacobian()} in Chapter \ref{chap:nl}.
 
-\cinputpart{odejac.c}{\CODELOC}{To do implicit time-stepping we add a C function \texttt{FormRHSJacobian()}, which computes derivatives of the right-hand side of example ODE system \eqref{eq:ts:example}.}{I}{//JACOBIAN}{//ENDJACOBIAN}{code:ts:odejac:jacobian}
-
-The new program calls \texttt{TSSetRHSJacobian()} to set a call-back to \texttt{FormRHSJacobian()}.  Our code sets the entries of the \pMat holding the derivative \eqref{eq:ts:rhsjacobian} of the right-hand side in Example ODE \eqref{eq:ts:example}.  An allocated \pMat, here called \texttt{J} for simplicity, is supplied to \texttt{TSSetRHSJacobian()}.  We assign \texttt{J} to both the Jacobian and preconditioner-material arguments of \texttt{TSSetRHSJacobian()}; compare usage of \texttt{SNESSetJacobian()} in Chapter \ref{chap:nl}.
+\cinputpart{odejac.c}{\CODELOC}{To do implicit time-stepping we add \texttt{FormRHSJacobian()} which computes derivative \eqref{eq:ts:rhsjacobian}.}{I}{//JACOBIAN}{//ENDJACOBIAN}{code:ts:odejac:jacobian}
 
 \cinputpart{odejac.c}{\CODELOC}{A \pMat is created to hold $\partial \bg/\partial \by$.  The \pTS type is reset to the implicit Crank-Nicolson method.}{II}{//MATJ}{//ENDMATJ}{code:ts:odejac:mat}
 
@@ -504,7 +498,7 @@ $
 \end{cline}
 %$
 
-If the reader has followed the above construction then it will also be clear that we could have used implicit time-stepping with the earlier, Jacobian-free program \texttt{ode.c}.  Though
+If the reader has followed the above construction then it will also be clear that we could have used implicit time-stepping with the earlier, Jacobian-free program \texttt{ode.c}.  In fact, though
 \begin{cline}
 $ ./ode -ts_type cn
 \end{cline}
@@ -565,11 +559,11 @@ These methods are optionally adaptive; for example:
 $ ./odejac -ts_type cn -ts_theta_adapt
 \end{cline}
 %$
-is the adaptive (though not embedded) form of Crank-Nicolson.
+is the adaptive, though not embedded, form of Crank-Nicolson.
 
-From now on for the rest of the book, when we consider numerical solutions to ODEs we will generally use tools suitable for the ``hard'' time-dependent case where the ODE \eqref{eq:ts:ode} is nonlinear \emph{and} where the ODE is stiff enough so that an implicit time-stepping method is automatically under consideration.  That is, we will solve problems of the form $\by' = \bg(t,\by)$ by using the \pSNES inside the \pTS object to do implicit time-stepping.
+From now on for the rest of the book, when we consider numerical solutions to ODEs we will generally use tools suitable for the ``hard'' time-dependent case where the ODE \eqref{eq:ts:ode} is nonlinear \emph{and} where the ODE is stiff enough so that an implicit time-stepping method is automatically under consideration.  That is, we will solve problems of the form $\by' = \bg(t,\by)$ by using the \pSNES inside the \pTS object to allow implicit time-stepping.
 
-Later in this Chapter we will try a type not shown in the Table, \texttt{-ts\_type arkimex}, on a nontrivial example.  This method\sidenote{Class of methods, actually.} has properties combining the benefits of implicit and explicit methods.  Furthermore, the example will be based on ODE system form which is more general than \eqref{eq:ts:ode}.
+Later in this Chapter we will try a type not shown in the Table, \texttt{-ts\_type arkimex}, on a nontrivial example.  This method\sidenote{Class of methods, actually.} has properties combining the benefits of implicit and explicit methods.  The example is, however, based on an ODE system form which is more general than \eqref{eq:ts:ode}.
 
 
 \section{Time-dependent heat equation}
@@ -588,22 +582,19 @@ We seek the temperature $u(t,x,y)$ at times $t \in [0,T]$ and points $(x,y)$ in 
 \label{fig:ts:heatsquare}
 \end{figure}
 
-Before the numerics we need to specify a well-posed problem with boundary conditions, an initial condition, and a concrete source term.  As an example which is representative of real-world applications, we specify a problem \emph{without} a known\sidenote{The exact solution is \emph{knowable}, perhaps, but we do not bother.} exact solution, but in which a scalar quantity is conserved.
-
-Somewhat arbitrarily---for the sake of variety---we have periodic boundary conditions along the top and bottom boundaries.  On the left ($x=0$) and right ($x=1$) we choose non-homogeneous and homogeneous Neumann conditions, respectively.  As a simple initial condition we choose zero temperature: $u(0,x,y)=0$.
-
-For the source term we choose a particular formula which takes both positive and negative values,
+Before addressing numerics we need to specify a well-posed problem with an initial condition, a concrete source term, and boundary conditions.  As a simple initial condition we choose zero temperature: $u(0,x,y)=0$.  For the source term we choose a particular formula which takes both positive and negative values,
     $$f(x,y) = 3 e^{-25(x-0.6)^2} \sin(2 \pi y).$$
-For the boundary condition along the left side we set
+On the left ($x=0$) and right ($x=1$) we choose non-homogeneous and homogeneous Neumann conditions, respectively.  Along the left side we set
 \begin{equation}
 -\frac{\partial u}{\partial x} = \gamma(y) \label{eq:ts:leftneumannbc}
 \end{equation}
-with $\gamma(y) = \sin(6\pi y)$.  It is easy to verify (Exercise \ref{chap:ts}.\ref{exer:ts:zerototalsource}) that the totals of these particular sources are zero:
+with $\gamma(y) = \sin(6\pi y)$.  For the sake of variety we choose periodic boundary conditions along the top and bottom boundaries.
+
+The above conditions form a problem without a known\sidenote{The exact solution is \emph{knowable}, perhaps, but we do not bother.} exact solution, but in which a scalar quantity is conserved.  Physically-speaking, the total thermal energy in a material with density $\rho$ and heat capacity $c$ is $\rho c$ times the integral of $u$ over $\mathcal{S}$.  In this context, observe that equation \eqref{eq:ts:heatequation} is derived from the principle of conservation of energy \citep{Ockendonetal2003}.  On the other hand, it is easy to verify (Exercise \ref{chap:ts}.\ref{exer:ts:zerototalsource}) that the particular sources integrate to zero:
 \begin{equation}
 \int_{\mathcal{S}} f(x,y)\,dx\,dy = 0, \qquad \int_0^1 \gamma(y)\,dy = 0. \label{eq:ts:zerototalsource}
 \end{equation}
-
-Physically-speaking, total thermal energy is proportional to the integral of $u$ over $\mathcal{S}$.  (For a material with density $\rho$ and heat capacity $c$ the internal energy is $\rho c$ times the integral.)  On the other hand, equation \eqref{eq:ts:heatequation} is derived from the principle of conservation of energy \citep{Ockendonetal2003}.  Given our particular choices, equation \eqref{eq:ts:heatequation} implies that the total energy is independent of time:
+Thus, given our particular choices, equation \eqref{eq:ts:heatequation} implies that the total energy is independent of time:
 \begin{align}
 \frac{d}{dt} \left(\int_{\mathcal{S}} u(t,x,y)\,dx\,dy\right) &= D_0 \int_0^1 \gamma(y)\,dy + \int_{\mathcal{S}} f(x,y)\,dx\,dy \label{eq:ts:conservedscalar} \\
    &= 0. \notag
@@ -611,34 +602,24 @@ Physically-speaking, total thermal energy is proportional to the integral of $u$
 (Again, see Exercise \ref{chap:ts}.\ref{exer:ts:zerototalsource}.)  We want our discretized equations \eqref{eq:ts:molheat} to conserve energy too, and we address this below.
 
 
-\section{Method of lines}  Any time-dependent PDE like \eqref{eq:ts:heatequation} becomes a system of ODEs by \emph{semi-discretization in space}, also known as the \emph{method of lines} (MOL).  (This name imagines the continuous-time, discrete-space ODE domain as lines $(t,x_i,y_j)$ in the three-dimensional space-time.)
-
-Suppose we discretize spatial derivatives the same way we did in Chapter \ref{chap:st}: we put a grid of $N = m_x m_y$ points $(x_i,y_j)$, with equal grid spacings $h_x,h_y$ in each direction, on $\mathcal{S}$.  (Compare Figure \ref{fig:unitsquaregrid} in Chapter \ref{chap:st} and Figure \ref{fig:ts:heatdefaultgrid} below.)  Then we replace the spatial derivatives in \eqref{eq:ts:heatequation} by centered finite differences while keeping the time derivatives.  That is, partial derivatives in $t$ become ordinary derivatives:
+\section{Method of lines}  Any time-dependent PDE like \eqref{eq:ts:heatequation} becomes a system of ODEs by \emph{semi-discretization in space}, also known as the \emph{method of lines} (MOL), a name which imagines the continuous-time, discrete-space ODE domain as lines $(t,x_i,y_j)$ in the three-dimensional space-time.  Suppose we discretize spatial derivatives the same way we did in Chapter \ref{chap:st}: we put a grid of $N = m_x m_y$ points $(x_i,y_j)$, with equal grid spacings $h_x,h_y$ in each direction, on $\mathcal{S}$.  (Compare Figure \ref{fig:unitsquaregrid} in Chapter \ref{chap:st} and Figure \ref{fig:ts:heatdefaultgrid} below.)  Then we replace the spatial derivatives in \eqref{eq:ts:heatequation} by centered finite differences while keeping the time derivatives.  By this procedure, partial derivatives in $t$ become ordinary derivatives:
 \begin{equation}
 u_{i,j}' = D_0 \frac{u_{i+1,j} - 2 u_{i,j} + u_{i-1,j}}{h_x^2} + D_0 \frac{u_{i,j+1} - 2 u_{i,j} + u_{i,j-1}}{h_y^2} + f_{i,j}. \label{eq:ts:molheat}
 \end{equation}
-where $f_{i,j} = f(x_i,y_j)$ and
-\begin{equation}
-u_{i,j}(t) \approx u(t,x_i,y_j). \label{eq:ts:molumeaning}
-\end{equation}
-
-Equations \eqref{eq:ts:molheat} form a system of ODEs, i.e.~equation \eqref{eq:ts:ode}.  We can solve the system numerically, explicitly or implicitly, but there is no need to think about time-stepping methods now.  This deliberate ambiguity about time-stepping is central to the MOL.
-
-
-\section{Implementation}
-
-The program \texttt{c/ch5/heat.c} shown in Codes \ref{code:ts:heat:heatctx}--\ref{code:ts:heat:monitor} is easy to write based on our experiences with \pDMDA in Chapters \ref{chap:st} and \ref{chap:nl} and with \pTS in this Chapter.   The overall structure of \texttt{heat.c}, in terms of \PETSc components, is shown in Figure \ref{fig:ts:stack}.
-
-\cinputpart{heat.c}{\CODELOC}{A context \texttt{struct} gives call-backs access to the \pDMDA and to the constant $D_0$ and functions $f$, $\gamma$.}{I}{//HEATCTX}{//ENDHEATCTX}{code:ts:heat:heatctx}
-
-Code \ref{code:ts:heat:dmdasetup}, which is an extract of \texttt{main()}, sets up the \pDMDA object for the grid shown in Figure \ref{fig:ts:heatdefaultgrid}.  By specifying periodicity, grid points along the lower boundary $y=0$ are also (conceptually) located on the upper boundary $y=1$.  Also, ghost points are set up so that the $(x_i,y_{j\pm 1})$ neighbor of a grid point $(x_i,y_j)$ is always available.\sidenote{This applies both in serial and in parallel.}  The default grid of $m_x \times m_y = 5\times 4$ points, set by arguments to \texttt{DMDACreate2d()}, actually has square cells.  In fact, the spacings of the grid are $h_x=1/(m_x-1)$ and $h_y=1/m_y$ respectively---see the helper function \texttt{Spacings()} in \texttt{heat.c} (not shown).
+Here $f_{i,j} = f(x_i,y_j)$ and $u_{i,j}(t) \approx u(t,x_i,y_j)$.  Equations \eqref{eq:ts:molheat} form a system of ODEs \eqref{eq:ts:ode}.  We can solve the system numerically, either explicitly or implicitly, but there is no need to think about time-stepping methods now.  Such deliberate ambiguity about time-stepping is central to the MOL.
 
 \begin{figure}
 % usage: \standardTSstack{scale}{Jacobian}{DMDA}
 \standardTSstack{0.75}{}{}
-\caption{The \PETSc ``stack'' used for time-dependent, structured-grid PDE examples \texttt{heat.c} and \texttt{pattern.c} in this Chapter.}
+\caption{The \PETSc ``stack'' used for time-dependent, structured-grid PDE examples based on the MOL, such as \texttt{heat.c} and \texttt{pattern.c} in this Chapter.}
 \label{fig:ts:stack}
 \end{figure}
+
+The program \texttt{c/ch5/heat.c}, which implements \eqref{eq:ts:molheat} and which has overall \PETSc component structure shown in Figure \ref{fig:ts:stack}, appears in Codes \ref{code:ts:heat:heatctx}--\ref{code:ts:heat:monitor}.  It is easy to write based on our experiences with \pDMDA in Chapters \ref{chap:st} and \ref{chap:nl} and with \pTS in this Chapter.  As a first part, Code \ref{code:ts:heat:heatctx} shows that we create a context \texttt{struct} to hold parameters, sources, and the grid.
+
+\cinputpart{heat.c}{\CODELOC}{A context \texttt{struct} gives call-backs access to the \pDMDA and to the constant $D_0$ and functions $f$, $\gamma$.}{I}{//HEATCTX}{//ENDHEATCTX}{code:ts:heat:heatctx}
+
+Code \ref{code:ts:heat:dmdasetup}, an extract of \texttt{main()}, sets up the \pDMDA object for the grid shown in Figure \ref{fig:ts:heatdefaultgrid}.  By specifying periodicity, grid points along the lower boundary $y=0$ are also (conceptually) located on the upper boundary $y=1$.  Both in serial and in parallel, through the automatic allocation of ghost points, the $(x_i,y_{j\pm 1})$ neighbor of a grid point $(x_i,y_j)$ is always available.  The default grid of $m_x \times m_y = 5\times 4$ points, set by arguments to \texttt{DMDACreate2d()}, actually has square cells because the spacings are $h_x=1/(m_x-1)$ and $h_y=1/m_y$ respectively---see function \texttt{Spacings()} in \texttt{heat.c} (not shown).
 
 \cinputpart{heat.c}{\CODELOC}{Set up the \pDMDA grid object and needed \pVecs.}{II}{//DMDASETUP}{//ENDDMDASETUP}{code:ts:heat:dmdasetup}
 
@@ -652,21 +633,17 @@ Code \ref{code:ts:heat:dmdasetup} includes calls to \texttt{SetSource()} and \te
 
 \cinputpart{heat.c}{\CODELOC}{Create the \pTS.  Associate the \pDMDA, the RHS evaluation, the Jacobian-of-RHS evaluation, and the energy monitor code to it.}{III}{//TSSETUP}{//ENDTSSETUP}{code:ts:heat:tssetup}
 
-The next part, another extract of \texttt{main()} shown in Code \ref{code:ts:heat:tssetup},\sidenote{A few lines before and after these extracts---these are not shown---read options and destroy objects, respectively.} starts by creating and configuring the \pTS.  The \pTS knows the size $N$ of the system of ODEs through an association to the \pDMDA grid object, set by calling \texttt{TSSetDM()}.  We also assign to the \pDMDA the ``local'' grid-aware functions \texttt{FormRHSFunctionLocal()} and \texttt{FormRHSJacobianLocal()}.  Also we set the default \pTS type to backward Euler, a stiff-decay method which can handle the stiff system \eqref{eq:ts:molheat}; we may and we will override this choice.  Then we set the zero initial condition and call \texttt{TSSolve()}.
+The next part, another extract of \texttt{main()} shown in Code \ref{code:ts:heat:tssetup}, starts by creating and configuring the \pTS.  Through an association to the \pDMDA grid object (\texttt{TSSetDM()}), the \pTS ``knows'' the dimension $N$ of the system of ODEs.  We also assign to the \pDMDA the ``local'' grid-aware functions \texttt{FormRHSFunctionLocal()} and \texttt{FormRHSJacobianLocal()}.  We set the \pTS type to backward Euler because a stiff-decay method is suited to the stiff system \eqref{eq:ts:molheat}; we may override this choice.  Then we set the zero initial condition and call \texttt{TSSolve()}.
+
+\texttt{FormRHSFunctionLocal()} in Code \ref{code:ts:heat:rhsfunction} evaluates the RHS $\bg(t,\by)$ of ODE system \eqref{eq:ts:molheat}, while \texttt{FormRHSJacobianLocal()} in Code \ref{code:ts:heat:rhsjacobian} evaluates its derivatives; these functions are where finite difference formula \eqref{eq:ts:molheat} is applied.  Application at most points is straightforward; it is the same 5-point stencil shown in Figure \ref{fig:unitsquaregridstencil}.  A Neumann condition is needed at the left and right boundaries, however.  For example, at point $(x_0,y_j)=(0,y_j)$ we have \eqref{eq:ts:leftneumannbc}, which becomes
+     $$- \frac{u_{+1,j} - u_{-1,j}}{2 h_x} = \gamma(y_j),$$
+using a $O(h^2)$ centered finite difference approximation and a notional value ``$u_{-1,j}$'' \citep{MortonMayers2005}.  Writing this as a formula for $u_{-1,j}$, namely $u_{-1,j} = u_{+1,j} + 2 h_x \gamma(y_j)$ gives a meaningful version of \eqref{eq:ts:molheat} at the left boundary.  The homogeneous version of this technique applies at the right boundary.  In parallel only certain MPI processes have access to the $i=0$ and $i=m_x-1$ parts of the grid.  This is why access to boundary values in array called ``\texttt{au}'' must be protected by conditionals using information from the \texttt{DMDALocalInfo} object; recall Figure \ref{fig:localpartofgrid}.
 
 \cinputpart{heat.c}{\CODELOC}{Evaluate the ODE RHS $\bg(t,\by)$ for ODE system \eqref{eq:ts:molheat}.}{II}{//RHSFUNCTION}{//ENDRHSFUNCTION}{code:ts:heat:rhsfunction}
 
-\texttt{FormRHSFunctionLocal()} in Code \ref{code:ts:heat:rhsfunction} evaluates the RHS $\bg(t,\by)$ of ODE system \eqref{eq:ts:molheat}.  \texttt{FormRHSJacobianLocal()} in Code \ref{code:ts:heat:rhsjacobian} evaluates its derivatives (Jacobian).  These functions are where the finite difference formula \eqref{eq:ts:molheat} is applied.  Application at most points is straightforward; it is the same 5-point stencil shown in Figure \ref{fig:unitsquaregridstencil}.
-
-A Neumann condition is needed at the left and right boundaries, however.  For example, at point $(x_0,y_j)=(0,y_j)$ we have \eqref{eq:ts:leftneumannbc}, which becomes
-     $$- \frac{u_{+1,j} - u_{-1,j}}{2 h_x} = \gamma(y_j),$$
-using a $O(h^2)$ centered finite difference approximation and a notional value ``$u_{-1,j}$'' \citep{MortonMayers2005}.  Writing this as a formula for $u_{-1,j}$, namely $u_{-1,j} = u_{+1,j} + 2 h_x \gamma(y_j)$, it replaces the notional value to give a meaningful version of \eqref{eq:ts:molheat} at the left boundary.  A simpler, homogeneous version of this technique applies at the right boundary.
-
-Note that, in parallel, only certain MPI processes have access to the $i=0$ and $i=m_x-1$ parts of the grid.  This is why access to boundary values in array \texttt{au} must be protected by conditionals using information from the \texttt{DMDALocalInfo} object; recall Figure \ref{fig:localpartofgrid}.
+A completely-new feature of this heat equation example is an energy ``monitor'' call-back which reports the total energy in the discretized system.  In Code \ref{code:ts:heat:tssetup} we use \texttt{TSMonitorSet()} to set a call-back to our function \texttt{EnergyMonitor()} shown in Code \ref{code:ts:heat:monitor}; note that such a monitor is \emph{additional} to the default one from option \texttt{-ts\_monitor}.  The trapezoid rule is used to do the integral $\int u\,dx\,dy$ giving each rank's contribution in local variable \texttt{lenergy}.  Then \texttt{EnergyMonitor()} uses a rare direct MPI call (\texttt{MPI\_Allreduce()}) to get the integral over the whole grid.
 
 \cinputpart{heat.c}{\CODELOC}{Evaluate the Jacobian of \eqref{eq:ts:molheat}.}{III}{//RHSJACOBIAN}{//ENDRHSJACOBIAN}{code:ts:heat:rhsjacobian}
-
-A feature of this heat equation example is an energy ``monitor'' call-back which reports the total energy in the discretized system.  Code \ref{code:ts:heat:tssetup} shows that we (optionally) use \texttt{TSMonitorSet()} to set a call-back to our function \texttt{EnergyMonitor()}, itself shown in Code \ref{code:ts:heat:monitor}.  The trapezoid rule\sidenote{This quadrature can also be interpreted as the midpoint rule, in a grid-point-centered cell interpretation, though with modifications at the boundaries.} is used to do the integral $\int_{\mathcal{S}} u\,dx\,dy$.  Note that \texttt{EnergyMonitor()} uses a ``raw'' MPI call; we put each rank's contribution into a local variable \texttt{lenergy} and then use \texttt{MPI\_Allreduce()} to get \texttt{energy} which is the integral over the whole grid.  Also, a monitor set with \texttt{TSMonitorSet()} is \emph{additional} to the default monitor from option \texttt{-ts\_monitor}.
 
 \cinputpart{heat.c}{\CODELOC}{Compute and then print the total thermal energy at the current time.}{V}{//MONITOR}{//ENDMONITOR}{code:ts:heat:monitor}
 
@@ -675,12 +652,12 @@ A feature of this heat equation example is an energy ``monitor'' call-back which
 
 A helpful first run, which reminds us of the \pTS/\pSNES/\pKSP/\pPC/etc.~stack shown in Figure \ref{fig:ts:stack}, is
 \begin{cline}
+$ make heat
 $ ./heat -ts_view
 \end{cline}
-%$
 The full page of output is not shown.
 
-A view of the time-stepping action, including convergence of the discrete equations \eqref{eq:ts:implicitgenericsystemAGAIN} at each time step, for the backward Euler method in this case, and the output of the energy monitor, comes from
+A view of the time-stepping action, including convergence of Newton method as it solves the discrete equations \eqref{eq:ts:implicitgenericsystemAGAIN} at each time step, for the backward Euler method in this case, and the output of the energy monitor, comes from
 \begin{cline}
 $ ./heat -ts_monitor -heat_monitor -snes_converged_reason
 solving on 5 x 4 grid with dx=0.25 x dy=0.25 cells, t0=0.,
@@ -702,14 +679,14 @@ and initial step dt=0.01 (so D0 dt / (dx dy) = 0.16) ...
 
 Because the initial thermal energy is zero we should see ``\texttt{energy = 0.00e+00}'' at every time step.  That is what we \emph{would} see if there were no rounding error or implementation mistakes.  Noting the coarseness of the grid, so that errors of size comparable to truncation error would be many orders of magnitude larger than seen here, the above actual result shows energy is conserved to within rounding error.
 
-We also see two Newton iterations per time step even though equations \eqref{eq:ts:implicitgenericsystemAGAIN} are linear.\sidenote{Because \eqref{eq:ts:heatequation} is a linear PDE, of course.}  This occurs because the \pKSP iteration halts at an insufficiently-tight tolerance, based on the \emph{preconditioned} residual of the linear system, relative to the desired \pSNES tolerance.  We can resolve this, if needed, by tightening the tolerance for the Krylov iteration or even asking for a direct solve:
+We also see two Newton iterations per time step even though equations \eqref{eq:ts:implicitgenericsystemAGAIN} are linear.\sidenote{Because \eqref{eq:ts:heatequation} is a linear PDE, of course.}  This occurs because the \pKSP iteration halts at an insufficiently-tight tolerance, based on the (preconditioned) residual of the linear system, relative to the desired \pSNES tolerance.  We can resolve this, if needed, by tightening the tolerance for the Krylov iteration or even asking for a direct solve:
 \begin{cline}
 $ ./heat -ts_monitor -heat_monitor -snes_converged_reason -ksp_rtol 1.0e-12
 $ ./heat -ts_monitor -heat_monitor -snes_converged_reason -ksp_type preonly -pc_type lu
 \end{cline}
-Both techniques result in one \pSNES iteration per time step, but the only the former acts the same in serial and parallel.
+Both techniques result in one \pSNES iteration per time step, but the only the former is valid in parallel.
 
-Because we use \pDMDA, the structured grid on the domain $\mathcal{S}$ is decomposed in parallel.\sidenote{We do not consider ``parallel-in-time'' decompositions in this book.}  One can show the parallel decomposition at run-time either as text or graphically, for example:
+Because we use \pDMDA, the structured grid on the domain $\mathcal{S}$ is decomposed in parallel, as one may see at run-time either as text or graphically:
 \begin{cline}
 $ mpiexec -n 4 ./heat -da_refine 1 -dm_view
 $ mpiexec -n 4 ./heat -da_refine 1 -dm_view draw -draw_pause 1
@@ -730,12 +707,13 @@ Figure \ref{fig:ts:heatfinaltime} shows a grayscale version of the last frame of
 \label{fig:ts:heatfinaltime}
 \end{figure}
 
-For off-line viewing, a Python script \texttt{plotTS.py} in directory \texttt{c/ch5/} can be used to generate either a trajectory like Figure \ref{fig:ts:ode} or a sequence of frames like Figure \ref{fig:ts:heatfinaltime}.  Any format supported by the Python library Matplotlib (\href{http://matplotlib.org/}{\texttt{matplotlib.org}}) is allowed, but \texttt{.png} is the default.  One first generates \PETSc binary file output, from a run with a given resolution $m_x \times m_y$, and then the sequence of images from that:
+For off-line viewing, a Python script \texttt{plotTS.py} in directory \texttt{c/ch5/} can be used to generate either a trajectory like Figure \ref{fig:ts:ode} or a sequence of frames like Figure \ref{fig:ts:heatfinaltime}.  Any format supported by the Python library Matplotlib (\href{http://matplotlib.org/}{\texttt{matplotlib.org}}) is allowed, but \texttt{.png} is the default.  One first generates \PETSc binary file output, from a run with a given resolution $m_x \times m_y$, and then the sequence of images from that:\sidenote{As noted earlier, \texttt{plotTS.py} needs access to \texttt{PetscBinaryIO.py} and \texttt{petsc\_conf.py} from \texttt{\$PETSC\_DIR/bin/}.}
 \begin{cline}
-$ ./heat -da_refine 5 -ts_monitor binary:t.dat -ts_monitor_solution binary:u.dat
+$ ./heat -da_refine 5 -ts_monitor binary:t.dat \
+    -ts_monitor_solution binary:u.dat
 $ ./plotTS.py -mx 129 -my 128 t.dat u.dat -oroot bar
 \end{cline}
-Files \texttt{bar000.png} \dots \texttt{bar010.png} are generated in this case.  Note that \texttt{plotTS.py} needs access to (e.g.~POSIX symbolic links to) \texttt{PetscBinaryIO.py} and \texttt{petsc\_conf.py} from \texttt{\$PETSC\_DIR/bin/}.  The documentation \texttt{MOVIES.md}, in the same directory, also describes how to generate a movie in \texttt{.m4v} format.
+Files \texttt{bar000.png} \dots \texttt{bar010.png} are generated in this case.  Documentation file \texttt{MOVIES.md}, also in directory \texttt{c/ch5/}, describes how to generate a movie in \texttt{.m4v} format.
 
 
 \section{Time-stepping performance on the heat equation}
