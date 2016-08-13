@@ -878,26 +878,26 @@ $ ./pattern -da_refine 4 -ts_type cn -ts_monitor -snes_monitor \
 \end{cline}
 %$
 
-Results from monitoring the \pTS and \pSNES from the (default) ARKIMEX method look quite different.  For example,
+Results from \pTS and \pSNES monitoring on a (default) ARKIMEX run look quite different.  For example,
 \begin{cline}
 $ ./pattern -da_refine 4 -ts_monitor -snes_monitor
 \end{cline}
 %$
-shows \emph{three} \pSNES solves per step, with each solve requiring at most a couple of iterations.  This behavior is explained by noting that the default third-order ARKIMEX method, namely \texttt{-ts\_type arkimex -ts\_arkimex\_type 3}, has one explicit stage and three implicit stages \citep{AscherRuuthSpiteri1997}.
+shows \emph{three} \pSNES solves per step, with each solve requiring at most a couple of iterations.  The explanation is that the default third-order ARKIMEX method, namely \texttt{-ts\_type arkimex -ts\_arkimex\_type 3}, has one explicit stage and three implicit stages \citep{AscherRuuthSpiteri1997}.
 %implementation says "Third order ARK IMEX scheme with L-stable implicit part.  This method has one explicit stage and three implicit stages. References: Kennedy and Carpenter 2003." but the reference is unfollowable
-However, each of the implicit \pSNES stages in this case is actually a \emph{linear} problem because $\bF$ is linear in $\bY$.  (That is, we have split-off the stiff linear diffusion term as $\bF$.)  Adjusting the \pKSP tolerance confirms this understanding; the following generates one Newton step per implicit stage:
+For our problem each of the implicit \pSNES stages is linear because $\bF$ is linear in $\bY$; that is, we have split-off only the stiff linear diffusion term as $\bF$ in form \eqref{eq:ts:pattern:imexform}.  Adjusting the \pKSP tolerance confirms this understanding; the following generates one Newton step per implicit stage:
 \begin{cline}
 $ ./pattern -da_refine 4 -ts_monitor -snes_monitor -ksp_rtol 1e-10
 \end{cline}
 %$
 
-Returning to the pretty images in our original source \citet{Pearson1993}, let us visualize pattern formation.  To generate Figure \ref{fig:ts:pattern:pearson} we used this run:
+We can now reproduce images from \citet{Pearson1993}.  To generate Figure \ref{fig:ts:pattern:pearson} we used a $256\times 256$ grid and default parameter values $D_u=8\times 10^{-5}$, $D_v=4\times 10^{-5}$, $\phi=0.024$, $\kappa=0.06$:
 \begin{cline}
 $ mpiexec -n 4 ./pattern -da_refine 6 -ts_monitor -snes_monitor \
-    -ts_dt 10 -ts_final_time 650 -ts_type cn -snes_mf_operator
+    -ts_dt 10 -ts_final_time 650 -ts_adapt_type none
 \end{cline}
 %$
-That is, we ask for $65$ total time steps of $\Delta t=10.0$ using the second-order Crank-Nicolson method.  By contrast \citep{Pearson1993} used forward-Euler explicit time-stepping with $65000$ time steps of $\Delta t = 0.01$.  Our run took about one minute on a lap-top, and the run displayed good quadratic convergence on the implicit solves.
+This (roughly) one minute run uses $65$ total time steps of fixed length $\Delta t=10.0$.  By contrast \citep{Pearson1993} used forward-Euler explicit time-stepping with $65000$ time steps of $\Delta t = 0.01$.
 
 \begin{figure}
 \includegraphics[width=0.45\textwidth]{figs/pattern000} \quad
@@ -906,13 +906,13 @@ That is, we ask for $65$ total time steps of $\Delta t=10.0$ using the second-or
 \medskip \medskip
 \includegraphics[width=0.45\textwidth]{figs/pattern510} \quad
 \includegraphics[width=0.45\textwidth]{figs/pattern650}
-\caption{Component $u$ as grayscale in frames at $t=0$ and $t=350$ (top) and $t=510$ and $t=650$ (bottom) from \texttt{pattern.c} run on a $256\times 256$ grid.  Compare Figure 4 in \citep{Pearson1993}.}
+\caption{Component $u$ as grayscale in frames at $t=0$ and $t=350$ (top) and $t=510$ and $t=650$ (bottom) from \texttt{pattern.c}.  Compare Figure 4 in \citep{Pearson1993}.}
 \label{fig:ts:pattern:pearson}
 \end{figure}
 
-The run which generates Figure \ref{fig:ts:pattern:pearson} would complete faster using the adaptive ARKIMEX method.  Exercise \ref{chap:ts}.\ref{exer:ts:patternperformancestudy} compares the relative performance of stiff solvers on this problem.  However, it is easiest to duplicate the time-steps shown in Figure 4 in \citet{Pearson1993} using \texttt{plotTS.py} and a non-adaptive method.  
+The run which generates Figure \ref{fig:ts:pattern:pearson} would complete faster using adaptivity, but it is easiest to duplicate the time-steps shown in Figure 4 in \citet{Pearson1993} by using fixed time steps (and \texttt{plotTS.py}).  Exercise \ref{chap:ts}.\ref{exer:ts:patternperformancestudy} compares the relative performance of a number of adaptive stiff solvers on this problem.
 
-FIXME add optional noisy initial condition; generate Figure \ref{fig:ts:pattern:snakes} using options
+Now the reader may want to explore the $\phi,\kappa$ parameter space of the pattern-formation problem \eqref{eq:ts:pattern:pde}.  By adding noise to the four-spot initial condition (Figure \ref{fig:ts:pattern:pearson}) one can generate reasonably-generic patterns after sufficient run-duration.  For example, Figure \ref{fig:ts:pattern:snakes} was generated by setting different values for the parameters, adding noise, and lengthening the run:
 \begin{cline}
 $ mpiexec -n 4 ./pattern -da_refine 6 -ptn_phi 0.05 -ptn_kappa 0.063 \
     -ts_final_time 15000 -ptn_noisy_init 0.15 \
@@ -922,11 +922,9 @@ $ mpiexec -n 4 ./pattern -da_refine 6 -ptn_phi 0.05 -ptn_kappa 0.063 \
 
 \begin{figure}
 \includegraphics[width=0.7\textwidth]{figs/snakes}
-\caption{FIXME}
+\caption{Pattern generated from parameter values $\phi=0.05$, $\kappa=0.063$.}
 \label{fig:ts:pattern:snakes}
 \end{figure}
-
-FIXME See 
 
 
 \section{Exercises}
