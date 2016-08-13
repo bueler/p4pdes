@@ -859,46 +859,45 @@ In our case $\partial \bF/\partial \by'$ is the identity, and thus $J$ equals $\
 
 \section{Generating patterns}
 
-We have now given a sketch of the whole code, so it is time to try it out.  Here is a reasonable run including visualization of solution components $(u,v)$ at each time-step:
+Having given a sketch of the whole code, it is time to try it out.  This run, of about ten seconds, includes visualization of solution components $(u,v)$ at each time-step:
 \begin{cline}
 $ make pattern
 $ ./pattern -da_refine 5 -ts_monitor -ts_monitor_solution draw
 \end{cline}
-In this run, which takes about ten seconds, the adaptive time-stepping of the default ARKIMEX method is clear.
+The adaptive time-stepping of the default ARKIMEX method is clear in the text output.
 
-Before comparing methods or showing pretty pictures, let us consider the consequences of split ``IMEX'' form \eqref{eq:ts:pattern:imexform}, and of the fact that we have provided only an incomplete Jacobian.  For an implicit method which does not take advantage of the split form, such as Crank-Nicolson, we do \emph{not} see quadratic convergence of the Newton iteration at each time step.  This is because we have not provided a full Jacobian for the whole ODE, i.e.~including for the right-hand-side $\bG$ in \eqref{eq:ts:pattern:imexform}.  For example, try
+However, before comparing methods or showing pretty pictures, consider the consequences of split ``IMEX'' form \eqref{eq:ts:pattern:imexform}.  Note we have provided only an incomplete Jacobian.  With an implicit method like Crank-Nicolson, which does not take advantage of the split form, we do \emph{not} see quadratic convergence of the Newton iteration at each time step.  This is because we have not provided a full Jacobian for the whole ODE, i.e.~including for the right-hand-side $\bG$ in \eqref{eq:ts:pattern:imexform}.  For example, in
 \begin{cline}
 $ ./pattern -da_refine 4 -ts_type cn -ts_monitor -snes_monitor
 \end{cline}
 %$
-What we see is that the residual decays roughly-linearly at each Newton iteration.  Results from backward Euler and other $\theta$ methods are similar.  To recover quadratic convergence at each step one might ask for some finite-differencing, here in JFNK (Chapter \ref{chap:nl}) form:
+the residual decays (roughly) linearly at each Newton iteration.  (As expected there is one nonlinear solve per step, but each requires many iterations.)  Results from backward Euler and other $\theta$ methods are similar.  To recover quadratic convergence one might ask for some finite-differencing, here in JFNK (Chapter \ref{chap:nl}) form; it turns out this is about twice as fast:
 \begin{cline}
 $ ./pattern -da_refine 4 -ts_type cn -ts_monitor -snes_monitor \
     -snes_mf_operator
 \end{cline}
 %$
 
-In both of the above Crank-Nicolson cases there is one nonlinear solve per step.  For the default ARKIMEX method we see \emph{three} \pSNES solves per step.  For example, do
+Results from monitoring the \pTS and \pSNES from the (default) ARKIMEX method look quite different.  For example,
 \begin{cline}
 $ ./pattern -da_refine 4 -ts_monitor -snes_monitor
 \end{cline}
 %$
-This behavior is explained by noting that the default ARKIMEX method, namely \texttt{-ts\_type arkimex -ts\_arkimex\_type 3}, is third-order with one explicit stage and three implicit stages \citep{AscherRuuthSpiteri1997}.
+shows \emph{three} \pSNES solves per step, with each solve requiring at most a couple of iterations.  This behavior is explained by noting that the default third-order ARKIMEX method, namely \texttt{-ts\_type arkimex -ts\_arkimex\_type 3}, has one explicit stage and three implicit stages \citep{AscherRuuthSpiteri1997}.
 %implementation says "Third order ARK IMEX scheme with L-stable implicit part.  This method has one explicit stage and three implicit stages. References: Kennedy and Carpenter 2003." but the reference is unfollowable
-However, each of the implicit \pSNES solves in this case is actually \emph{linear} because $\bF$ is linear in $\bY$; we have split off the stiff linear diffusion term as $\bF$.  Adjusting the linear solver tolerance confirms this understanding.  That is, the following generates one Newton step per implicit solve:
+However, each of the implicit \pSNES stages in this case is actually a \emph{linear} problem because $\bF$ is linear in $\bY$.  (That is, we have split-off the stiff linear diffusion term as $\bF$.)  Adjusting the \pKSP tolerance confirms this understanding; the following generates one Newton step per implicit stage:
 \begin{cline}
-$ ./pattern -da_refine 4 -ts_monitor -snes_monitor \
-    -ksp_rtol 1.0e-10
+$ ./pattern -da_refine 4 -ts_monitor -snes_monitor -ksp_rtol 1e-10
 \end{cline}
 %$
 
-Returning to the attention-grabbing images in our original source \citet{Pearson1993}, let us visualize the pattern formation.  To generate Figure \ref{fig:ts:pattern:figureversuspearson} we used
+Returning to the pretty images in our original source \citet{Pearson1993}, let us visualize pattern formation.  To generate Figure \ref{fig:ts:pattern:pearson} we used this run:
 \begin{cline}
-$ mpiexec -n 4 ./pattern -da_refine 6 -ts_type cn -ts_monitor \
-    -snes_mf_operator -snes_monitor -ts_dt 10 -ts_final_time 650
+$ mpiexec -n 4 ./pattern -da_refine 6 -ts_monitor -snes_monitor \
+    -ts_dt 10 -ts_final_time 650 -ts_type cn -snes_mf_operator
 \end{cline}
 %$
-That is, we ask for $65$ total time steps of $\Delta t=10.0$ using the second-order Crank-Nicolson method.  By contrast \citep{Pearson1993} used forward-Euler explicit time-stepping with $65000$ time steps of $\Delta t = 0.01$.  Our run took about one minute on a lap-top, and the run displayed good quadratic convergence on the implicit solves.  The run would complete faster using the default ARKIMEX method, but it is adaptive and we wish to duplicate the time-steps for Figure 4 in \citet{Pearson1993}.
+That is, we ask for $65$ total time steps of $\Delta t=10.0$ using the second-order Crank-Nicolson method.  By contrast \citep{Pearson1993} used forward-Euler explicit time-stepping with $65000$ time steps of $\Delta t = 0.01$.  Our run took about one minute on a lap-top, and the run displayed good quadratic convergence on the implicit solves.
 
 \begin{figure}
 \includegraphics[width=0.45\textwidth]{figs/pattern000} \quad
@@ -908,8 +907,10 @@ That is, we ask for $65$ total time steps of $\Delta t=10.0$ using the second-or
 \includegraphics[width=0.45\textwidth]{figs/pattern510} \quad
 \includegraphics[width=0.45\textwidth]{figs/pattern650}
 \caption{Component $u$ as grayscale in frames at $t=0$ and $t=350$ (top) and $t=510$ and $t=650$ (bottom) from \texttt{pattern.c} run on a $256\times 256$ grid.  Compare Figure 4 in \citep{Pearson1993}.}
-\label{fig:ts:pattern:figureversuspearson}
+\label{fig:ts:pattern:pearson}
 \end{figure}
+
+The run which generates Figure \ref{fig:ts:pattern:pearson} would complete faster using the adaptive ARKIMEX method.  Exercise \ref{chap:ts}.\ref{exer:ts:patternperformancestudy} compares the relative performance of stiff solvers on this problem.  However, it is easiest to duplicate the time-steps shown in Figure 4 in \citet{Pearson1993} using \texttt{plotTS.py} and a non-adaptive method.  
 
 FIXME add optional noisy initial condition; generate Figure \ref{fig:ts:pattern:snakes} using options
 \begin{cline}
@@ -925,7 +926,7 @@ $ mpiexec -n 4 ./pattern -da_refine 6 -ptn_phi 0.05 -ptn_kappa 0.063 \
 \label{fig:ts:pattern:snakes}
 \end{figure}
 
-FIXME See Exercise \ref{chap:ts}.\ref{exer:ts:patternperformancestudy} for more on the relative performance of stiff solvers on this problem.
+FIXME See 
 
 
 \section{Exercises}
@@ -987,11 +988,16 @@ The spatial domain is $[0,80]\times[0,80]$, homogeneous Neumann boundary conditi
       v(0,x,y) = \begin{cases} 0, & y < 40, \\ \frac{1}{2}\alpha, & y \ge 40.\end{cases}$$
 Hundsdorfer and Verwer show that there is a significant difference between using the $5$-point stencil \eqref{eq:ts:pattern:fivepoint} and the $9$-point stencil \eqref{eq:ts:pattern:ninepoint}, in the sense that the natural spiraling patterns generated by this problem become cartesian-grid-aligned.  Reproduce this result by modifying \texttt{pattern.c} into \texttt{barkley.c} which uses the new equations and which allows the user to choose between the $5$-point and $9$-point stencils at run-time.
 
-\item \label{exer:ts:patternperformancestudy}  Consider a fixed run like the one which produced Figure \ref{fig:ts:pattern:figureversuspearson}.  Which is fastest among the following IMEX, BDF, and Crank-Nicolson runs, all of which are adaptive and at least second order?:
+\item \label{exer:ts:patternperformancestudy}  Consider a fixed run like the one which produced Figure \ref{fig:ts:pattern:pearson}, namely
+\begin{code}
+mpiexec -n 4 ./pattern -da_refine 6 -ts_monitor -snes_monitor \
+    -ts_dt 10 -ts_final_time 650
+\end{code}
+Which is fastest among the following IMEX, BDF, and Crank-Nicolson runs, all of which are adaptive and at least second order?:
 \begin{code}
 -ts_type arkimex -ts_arkimex_type [a2|l2|ars122|2c|2d|2e|3|4|5]
 -ts_type bdf -ts_bdf_adapt -ts_bdf_order [2|3|4|5|6]
--ts_type cn -ts_theta_adapt
+-ts_type cn -snes_mf_operator -ts_theta_adapt
 \end{code}
 
 \end{enumerate}
