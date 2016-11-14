@@ -68,8 +68,10 @@ int main(int argc,char **args) {
   PetscInitialize(&argc,&args,(char*)0,help);
   ierr = DMDACreate1d(PETSC_COMM_WORLD,
                DM_BOUNDARY_NONE,
-               -9,1,1,NULL,
+               9,1,1,NULL,
                &da); CHKERRQ(ierr);
+  ierr = DMSetFromOptions(da); CHKERRQ(ierr);
+  ierr = DMSetUp(da); CHKERRQ(ierr);
   ierr = DMDASetUniformCoordinates(da,0.0,1.0,-1.0,-1.0,-1.0,-1.0); CHKERRQ(ierr);
   ierr = DMCreateMatrix(da,&A);CHKERRQ(ierr);
   ierr = MatSetOptionsPrefix(A,"a_"); CHKERRQ(ierr);

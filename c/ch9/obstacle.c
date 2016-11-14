@@ -188,10 +188,12 @@ int main(int argc,char **argv)
 //CREATE
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
       DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
-      -11,-11,                   // override with -da_grid_x,_y or -da_refine
+      11,11,                     // override with -da_grid_x,_y or -da_refine
       PETSC_DECIDE,PETSC_DECIDE, // num of procs in each dim
       1,1,NULL,NULL,             // dof = 1 and stencil width = 1
       &da);CHKERRQ(ierr);
+  ierr = DMSetFromOptions(da); CHKERRQ(ierr);
+  ierr = DMSetUp(da); CHKERRQ(ierr);
   ierr = DMDASetUniformCoordinates(da,-2.0,2.0,-2.0,2.0,-1.0,-1.0);CHKERRQ(ierr);
   ierr = DMSetApplicationContext(da,&user);CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);

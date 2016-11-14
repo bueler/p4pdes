@@ -105,16 +105,18 @@ int main(int argc,char **args) {
   // default size (9 x 9) can be changed using -da_grid_x M -da_grid_y N
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
                DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
-               -9,-9,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,
+               9,9,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,
                &da); CHKERRQ(ierr);
 
   // create linear system matrix A
-  ierr = DMCreateMatrix(da,&A);CHKERRQ(ierr);
+  ierr = DMSetFromOptions(da); CHKERRQ(ierr);
+  ierr = DMSetUp(da); CHKERRQ(ierr);
+  ierr = DMCreateMatrix(da,&A); CHKERRQ(ierr);
   ierr = MatSetOptionsPrefix(A,"a_"); CHKERRQ(ierr);
   ierr = MatSetFromOptions(A); CHKERRQ(ierr);
 
   // create right-hand-side (RHS) b, approx solution u, exact solution uexact
-  ierr = DMCreateGlobalVector(da,&b);CHKERRQ(ierr);
+  ierr = DMCreateGlobalVector(da,&b); CHKERRQ(ierr);
   ierr = VecDuplicate(b,&u); CHKERRQ(ierr);
   ierr = VecDuplicate(b,&uexact); CHKERRQ(ierr);
 

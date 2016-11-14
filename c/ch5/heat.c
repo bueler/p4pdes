@@ -193,9 +193,11 @@ int main(int argc,char **argv)
 //DMDASETUP
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
                DM_BOUNDARY_NONE, DM_BOUNDARY_PERIODIC, DMDA_STENCIL_STAR,
-               -5,-4,PETSC_DECIDE,PETSC_DECIDE,  // default to hx=hx=0.25 grid
+               5,4,PETSC_DECIDE,PETSC_DECIDE,  // default to hx=hx=0.25 grid
                1,1,                       // degrees of freedom, stencil width
                NULL,NULL,&user.da); CHKERRQ(ierr);
+  ierr = DMSetFromOptions(user.da); CHKERRQ(ierr);
+  ierr = DMSetUp(user.da); CHKERRQ(ierr);
   ierr = DMSetApplicationContext(user.da,&user); CHKERRQ(ierr);
   ierr = DMCreateGlobalVector(user.da,&u); CHKERRQ(ierr);
   ierr = VecDuplicate(u,&(user.f)); CHKERRQ(ierr);

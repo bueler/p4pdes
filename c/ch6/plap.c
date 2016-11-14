@@ -315,7 +315,9 @@ int main(int argc,char **argv) {
 
   ierr = DMDACreate2d(COMM,
                DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED, DMDA_STENCIL_BOX,
-               -3,-3,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&(user.da)); CHKERRQ(ierr);
+               3,3,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&(user.da)); CHKERRQ(ierr);
+  ierr = DMSetFromOptions(user.da); CHKERRQ(ierr);
+  ierr = DMSetUp(user.da); CHKERRQ(ierr);
   ierr = DMSetApplicationContext(user.da,&user);CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);
   hx = 1.0 / (info.mx+1);  hy = 1.0 / (info.my+1);

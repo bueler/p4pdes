@@ -186,9 +186,11 @@ int main(int argc,char **argv) {
   ierr = DMDACreate3d(COMM,
                DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
                DMDA_STENCIL_STAR,
-               -3,-3,-3,PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,
+               3,3,3,PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,
                1,1,
                NULL,NULL,NULL,&(user.da)); CHKERRQ(ierr);
+  ierr = DMSetFromOptions(user.da); CHKERRQ(ierr);
+  ierr = DMSetUp(user.da); CHKERRQ(ierr);
   ierr = DMSetApplicationContext(user.da,&user);CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);
 

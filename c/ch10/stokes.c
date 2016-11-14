@@ -55,6 +55,8 @@ int main(int argc,char **argv)
 
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
                       FIXME); CHKERRQ(ierr);
+  ierr = DMSetFromOptions(user.da); CHKERRQ(ierr);
+  ierr = DMSetUp(user.da); CHKERRQ(ierr);
   ierr = DMDASetUniformCoordinates(user.da, 0.0, user.H, 0.0, user.L, -1.0, -1.0); CHKERRQ(ierr);
   ierr = DMSetApplicationContext(user.da,&user); CHKERRQ(ierr);
   ierr = DMCreateGlobalVector(user.da,&x); CHKERRQ(ierr);

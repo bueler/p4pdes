@@ -201,10 +201,12 @@ int main(int argc,char **argv)
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
                DM_BOUNDARY_PERIODIC, DM_BOUNDARY_PERIODIC,
                DMDA_STENCIL_BOX,  // for 9-point stencil
-               -4,-4,PETSC_DECIDE,PETSC_DECIDE,
+               4,4,PETSC_DECIDE,PETSC_DECIDE,
                2, 1,              // degrees of freedom, stencil width
                NULL,NULL,&user.da); CHKERRQ(ierr);
 //ENDDMDACREATE
+  ierr = DMSetFromOptions(user.da); CHKERRQ(ierr);
+  ierr = DMSetUp(user.da); CHKERRQ(ierr);
   ierr = DMDASetFieldName(user.da,0,"u"); CHKERRQ(ierr);
   ierr = DMDASetFieldName(user.da,1,"v"); CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);

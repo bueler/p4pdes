@@ -296,10 +296,12 @@ int main(int argc,char **argv) {
 //STARTDMDA
     ierr = DMDACreate3d(PETSC_COMM_WORLD,
         DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DM_BOUNDARY_PERIODIC,
-        DMDA_STENCIL_STAR, -3,-3,-3, PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,
+        DMDA_STENCIL_STAR, 3,3,3, PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,
         1, 1, NULL,NULL,NULL,
         &user.da); CHKERRQ(ierr);
 //ENDDMDA
+    ierr = DMSetFromOptions(user.da); CHKERRQ(ierr);
+    ierr = DMSetUp(user.da); CHKERRQ(ierr);
     ierr = DMDASetUniformCoordinates(user.da,-1.0,1.0,-1.0,1.0,-1.0,1.0); CHKERRQ(ierr);
     ierr = DMSetApplicationContext(user.da,&user); CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);
