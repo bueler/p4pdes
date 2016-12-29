@@ -2,6 +2,8 @@ static char help[] =
 "Structured-grid Poisson problem in 3D using DMDA+SNES.  Option prefix -f3_.\n"
 "Compare fish2.c.\n\n";
 
+/* see study/*.sh for multigrid parameter study */
+
 #include <petsc.h>
 #define COMM PETSC_COMM_WORLD
 

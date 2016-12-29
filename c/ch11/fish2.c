@@ -4,9 +4,11 @@ static char help[] =
 "Homogeneous Dirichlet boundary conditions on unit square.\n"
 "Multigrid-capable because call-backs discretize for the grid it is given.\n\n";
 
-/*
+/* see study/*.sh for multigrid parameter study
 
-see mgserialstudy.sh for multigrid parameter study
+this makes sense and the latter shows V-cycles:
+$ ./fish2 -da_refine 3 -pc_type mg -snes_monitor -ksp_converged_reason
+$ ./fish2 -da_refine 3 -pc_type mg -snes_monitor -ksp_converged_reason -mg_levels_ksp_monitor|less
 
 multigrid seg faults in parallel with -snes_fd_color, but -pc_mg_galerkin fixes it:
   bad:   mpiexec -n 2 ./fish2 -da_refine 4 -pc_type mg -f2_printevals -snes_fd_color
