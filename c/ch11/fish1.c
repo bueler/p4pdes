@@ -6,11 +6,12 @@ static char help[] =
 
 /* see study/mgstudy.sh for multigrid parameter study
 
-view the snes with multigrid:
+view the basics with multigrid:
 $ ./fish1 -da_refine 3 -pc_type mg -snes_view|less
+$ ./fish1 -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -snes_monitor -ksp_converged_reason
 
 this makes sense and shows V-cycles:
-$ ./fish1 -da_refine 3 -pc_type mg -snes_monitor -ksp_converged_reason -mg_levels_ksp_monitor|less
+$ ./fish1 -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -snes_monitor -ksp_converged_reason -mg_levels_ksp_monitor|less
 
 this additionally generate .m files with solutions at levels:
 $ ./fish1 -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -snes_monitor_solution ascii:u.m:ascii_matlab
