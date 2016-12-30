@@ -4,7 +4,7 @@ static char help[] =
 "Homogeneous Dirichlet boundary conditions on unit square.\n"
 "Multigrid-capable because call-backs discretize for the grid it is given.\n\n";
 
-/* see study/*.sh for multigrid parameter study
+/* see study/mgstudy.sh for multigrid parameter study
 
 this makes sense and the latter shows V-cycles:
 $ ./fish2 -da_refine 3 -pc_type mg -snes_monitor -ksp_converged_reason
