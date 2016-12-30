@@ -15,6 +15,9 @@ fish3: fish3.o chkopts
 
 # testing
 
+runfish1_1:
+	-@../testit.sh fish1 "-da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -snes_monitor_short -ksp_converged_reason" 1 1
+
 runfish2_1:
 	-@../testit.sh fish2 "-da_refine 1 -pc_type mg -ksp_converged_reason" 1 1
 
@@ -27,7 +30,7 @@ runfish3_1:
 runfish3_2:
 	-@../testit.sh fish3 "-snes_fd_color -ksp_rtol 1.0e-12 -pc_type mg -pc_mg_galerkin -ksp_converged_reason -da_refine 2" 2 2
 
-test: runfish2_1 runfish2_2 runfish3_1 runfish3_2
+test: runfish1_1 runfish2_1 runfish2_2 runfish3_1 runfish3_2
 
 # etc
 
