@@ -18,8 +18,10 @@ $ ./fish1 -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -snes_monitor_solution asci
 $ ./fish1 -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -mg_levels_3_ksp_monitor_solution ascii:errlevel3.m:ascii_matlab
 $ ./fish1 -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -mg_levels_2_ksp_monitor_solution ascii:errlevel2.m:ascii_matlab
 $ ./fish1 -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -mg_levels_1_ksp_monitor_solution ascii:errlevel1.m:ascii_matlab
-$ ./fish1 -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -mg_coarse_ksp_monitor_solution ascii:errcoarse.m:ascii_matlab
 
+because default -mg_coarse_ksp_type is preonly, without changing that we get nothing:
+$ ./fish1 -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -mg_coarse_ksp_type cg -snes_monitor -ksp_converged_reason -mg_levels_ksp_monitor -mg_coarse_ksp_monitor|less
+$ ./fish1 -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -mg_coarse_ksp_type cg -mg_coarse_ksp_monitor_solution ascii:errcoarse.m:ascii_matlab
 
 FD jacobian with coloring is actually faster (and it is clear what is going on):
 $ timer ./fish1 -snes_monitor -da_refine 16 -f1_printevals
