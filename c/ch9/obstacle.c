@@ -138,7 +138,7 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar **au,
 int main(int argc,char **argv) {
   PetscErrorCode ierr;
   SNES           snes;
-  Vec            u, r, uexact;   /* solution, residual, exact solution */
+  Vec            u, uexact;   /* solution, exact solution */
   ObsCtx         user;
   double         error1,errorinf;
   DMDALocalInfo  info;
@@ -158,7 +158,6 @@ int main(int argc,char **argv) {
 
   /* setup */
   ierr = DMCreateGlobalVector(user.da,&u);CHKERRQ(ierr);
-  ierr = VecDuplicate(u,&r);CHKERRQ(ierr);
   ierr = VecDuplicate(u,&uexact);CHKERRQ(ierr);
   ierr = VecDuplicate(u,&(user.g));CHKERRQ(ierr);
   ierr = VecDuplicate(u,&(user.psi));CHKERRQ(ierr);
@@ -179,16 +178,16 @@ int main(int argc,char **argv) {
   ierr = SNESSolve(snes,NULL,u);CHKERRQ(ierr);
 
   /* compare to exact */
-  ierr = VecWAXPY(r,-1.0,uexact,u);CHKERRQ(ierr); /* r = u - uexact */
-  ierr = VecNorm(r,NORM_1,&error1);CHKERRQ(ierr);
+  ierr = VecAXPY(u,-1.0,uexact);CHKERRQ(ierr); /* u <- u - uexact */
+  ierr = VecNorm(u,NORM_1,&error1);CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);
   error1 /= (double)info.mx * (double)info.my;
-  ierr = VecNorm(r,NORM_INFINITY,&errorinf);CHKERRQ(ierr);
+  ierr = VecNorm(u,NORM_INFINITY,&errorinf);CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
       "errors on %3d x %3d grid: av |u-uexact| = %.3e, |u-uexact|_inf = %.3e\n",
       info.mx,info.my,error1,errorinf);CHKERRQ(ierr);
 
-  VecDestroy(&u);  VecDestroy(&r);  VecDestroy(&uexact);
+  VecDestroy(&u);  VecDestroy(&uexact);
   VecDestroy(&(user.psi));  VecDestroy(&(user.g));
   SNESDestroy(&snes);  DMDestroy(&(user.da));
   PetscFinalize();
