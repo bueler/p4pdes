@@ -1,7 +1,7 @@
-  0 SNES Function norm 205.587 
-  1 SNES Function norm 117.168 
-  2 SNES Function norm 20.5715 
-  3 SNES Function norm 2.09401 
-  4 SNES Function norm 0.0118411 
-  5 SNES Function norm 5.23444e-08 
+  0 SNES Function norm 3.47026 
+  1 SNES Function norm 1.83076 
+  2 SNES Function norm 0.321429 
+  3 SNES Function norm 0.0327188 
+  4 SNES Function norm 0.000185018 
+  5 SNES Function norm 8.179e-10 
 errors on  33 x  33 grid: av |u-uexact| = 8.183e-04, |u-uexact|_inf = 5.747e-03
