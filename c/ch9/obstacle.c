@@ -69,20 +69,19 @@ PetscErrorCode FormBounds(SNES snes, Vec Xl, Vec Xu) {
 }
 
 /* FormFunctionLocal - Evaluates nonlinear function, F(x) on local process patch */
-PetscErrorCode FormFunctionLocal(DMDALocalInfo *info,PetscScalar **x,PetscScalar **f,ObsCtx *user)
-{
+PetscErrorCode FormFunctionLocal(DMDALocalInfo *info,PetscScalar **x,PetscScalar **f,ObsCtx *user) {
   PetscErrorCode ierr;
   int     i, j;
-  double  dx, dy, uxx, uyy, **ag;
-  GridSpaces(info,&dx,&dy);
+  double  dx, dy, hxhy, hyhx, uxx, uyy, **ag;
+  GridSpaces(info,&dx,&dy);  hxhy = dx / dy;  hyhx = dy / dx;
   ierr = DMDAVecGetArray(info->da, user->g, &ag);CHKERRQ(ierr);
   for (j=info->ys; j<info->ys+info->ym; j++) {
     for (i=info->xs; i<info->xs+info->xm; i++) {
       if (i == 0 || j == 0 || i == info->mx-1 || j == info->my-1) {
         f[j][i] = x[j][i] - ag[j][i];
       } else {
-        uxx     = (x[j][i-1] - 2.0 * x[j][i] + x[j][i+1]) / (dx*dx);
-        uyy     = (x[j-1][i] - 2.0 * x[j][i] + x[j+1][i]) / (dy*dy);
+        uxx     = hyhx * (x[j][i-1] - 2.0 * x[j][i] + x[j][i+1]);
+        uyy     = hxhy * (x[j-1][i] - 2.0 * x[j][i] + x[j+1][i]);
         f[j][i] = - uxx - uyy;
       }
     }
@@ -97,10 +96,8 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar **au,
   PetscErrorCode ierr;
   int        i, j, ncols;
   MatStencil col[5], row;
-  double     v[5], dx, dy, oxx, oyy;
-  GridSpaces(info,&dx,&dy);
-  oxx = 1.0 / (dx * dx);
-  oyy = 1.0 / (dy * dy);
+  double     v[5], dx, dy, hxhy, hyhx;
+  GridSpaces(info,&dx,&dy);  hxhy = dx / dy;  hyhx = dy / dx;
   for (j=info->ys; j<info->ys+info->ym; j++) {
       row.j = j;
       col[0].j = j;
@@ -111,16 +108,16 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar **au,
         v[0] = 1.0;
         ierr = MatSetValuesStencil(jac,1,&row,1,col,v,INSERT_VALUES);CHKERRQ(ierr);
       } else { /* interior grid points */
-        v[0] = 2.0 * (oxx + oyy);
+        v[0] = 2.0 * (hyhx + hxhy);
         ncols = 1;
         if (i-1 > 0) {
-            col[ncols].j = j;    col[ncols].i = i-1;  v[ncols++] = -oxx;  }
+            col[ncols].j = j;    col[ncols].i = i-1;  v[ncols++] = -hyhx;  }
         if (i+1 < info->mx-1) {
-            col[ncols].j = j;    col[ncols].i = i+1;  v[ncols++] = -oxx;  }
+            col[ncols].j = j;    col[ncols].i = i+1;  v[ncols++] = -hyhx;  }
         if (j-1 > 0) {
-            col[ncols].j = j-1;  col[ncols].i = i;    v[ncols++] = -oyy;  }
+            col[ncols].j = j-1;  col[ncols].i = i;    v[ncols++] = -hxhy;  }
         if (j+1 < info->my-1) {
-            col[ncols].j = j+1;  col[ncols].i = i;    v[ncols++] = -oyy;  }
+            col[ncols].j = j+1;  col[ncols].i = i;    v[ncols++] = -hxhy;  }
         ierr = MatSetValuesStencil(jac,1,&row,ncols,col,v,INSERT_VALUES);CHKERRQ(ierr);
       }
     }
@@ -145,6 +142,7 @@ int main(int argc,char **argv) {
 
   PetscInitialize(&argc,&argv,NULL,help);
 
+  /* setup */
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
       DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
       3,3,                       // override with -da_refine or -da_grid_x,_y
@@ -155,8 +153,6 @@ int main(int argc,char **argv) {
   ierr = DMSetUp(user.da); CHKERRQ(ierr);
   ierr = DMDASetUniformCoordinates(user.da,-2.0,2.0,-2.0,2.0,-1.0,-1.0);CHKERRQ(ierr);
   ierr = DMSetApplicationContext(user.da,&user);CHKERRQ(ierr);
-
-  /* setup */
   ierr = DMCreateGlobalVector(user.da,&u);CHKERRQ(ierr);
   ierr = VecDuplicate(u,&uexact);CHKERRQ(ierr);
   ierr = VecDuplicate(u,&(user.g));CHKERRQ(ierr);
