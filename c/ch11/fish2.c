@@ -114,13 +114,13 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar **au,
             } else {
                 v[0] = 2*(hy/hx + hx/hy);
                 if (i-1 > 0) {
-                col[ncols].j = j;    col[ncols].i = i-1;  v[ncols++] = -hy/hx;  }
+                    col[ncols].j = j;    col[ncols].i = i-1;  v[ncols++] = -hy/hx;  }
                 if (i+1 < info->mx-1) {
-                col[ncols].j = j;    col[ncols].i = i+1;  v[ncols++] = -hy/hx;  }
+                    col[ncols].j = j;    col[ncols].i = i+1;  v[ncols++] = -hy/hx;  }
                 if (j-1 > 0) {
-                col[ncols].j = j-1;  col[ncols].i = i;    v[ncols++] = -hx/hy;  }
+                    col[ncols].j = j-1;  col[ncols].i = i;    v[ncols++] = -hx/hy;  }
                 if (j+1 < info->my-1) {
-                col[ncols].j = j+1;  col[ncols].i = i;    v[ncols++] = -hx/hy;  }
+                    col[ncols].j = j+1;  col[ncols].i = i;    v[ncols++] = -hx/hy;  }
             }
             ierr = MatSetValuesStencil(Jpre,1,&row,ncols,col,v,INSERT_VALUES); CHKERRQ(ierr);
         }
