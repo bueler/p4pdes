@@ -1,0 +1,6 @@
+Matrix is symmetric (tolerance 0.)
+Matrix is symmetric (tolerance 0.)
+Matrix is symmetric (tolerance 0.)
+Matrix is symmetric (tolerance 0.)
+Matrix is symmetric (tolerance 0.)
+errors on  17 x  17 grid: av |u-uexact| = 2.707e-03, |u-uexact|_inf = 1.428e-02

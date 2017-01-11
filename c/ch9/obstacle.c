@@ -11,33 +11,32 @@ Parallel runs, spatial refinement only, robust PC:
 
 #include <petsc.h>
 
-/* application context for obstacle problem solver */
 typedef struct {
-  PetscReal dx, dy;
+  DM  da;
   Vec psi,  // obstacle
       g;    // Dirichlet boundary conditions
 } ObsCtx;
 
-PetscErrorCode FormDirichletPsiExactInitial(DM da,Vec Uexact,Vec U0,PetscBool feasibleU0, ObsCtx *user)
-{
+void GridSpaces(DMDALocalInfo *info, double *dx, double *dy) {
+  *dx = 4.0 / (PetscReal)(info->mx-1);
+  *dy = 4.0 / (PetscReal)(info->my-1);
+}
+
+PetscErrorCode FormDirichletPsiExact(Vec Uexact, ObsCtx *user) {
   PetscErrorCode ierr;
-  PetscInt       i,j;
-  PetscReal      **ag, **apsi, **au0, **auexact,
-                 x, y, r,
-                 pi = PETSC_PI, afree = 0.69797, A = 0.68026, B = 0.47152;
+  int            i,j;
+  double         **ag, **apsi, **auexact, dx, dy, x, y, r,
+                 afree = 0.69797, A = 0.68026, B = 0.47152;
   DMDALocalInfo  info;
-
-  PetscFunctionBeginUser;
-  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-
-  ierr = DMDAVecGetArray(da, user->g, &ag);CHKERRQ(ierr);
-  ierr = DMDAVecGetArray(da, user->psi, &apsi);CHKERRQ(ierr);
-  ierr = DMDAVecGetArray(da, Uexact, &auexact);CHKERRQ(ierr);
-  ierr = DMDAVecGetArray(da, U0, &au0);CHKERRQ(ierr);
+  ierr = DMDAGetLocalInfo(user->da,&info); CHKERRQ(ierr);
+  GridSpaces(&info,&dx,&dy);
+  ierr = DMDAVecGetArray(user->da, user->g, &ag);CHKERRQ(ierr);
+  ierr = DMDAVecGetArray(user->da, user->psi, &apsi);CHKERRQ(ierr);
+  ierr = DMDAVecGetArray(user->da, Uexact, &auexact);CHKERRQ(ierr);
   for (j=info.ys; j<info.ys+info.ym; j++) {
-    y = -2.0 + j * user->dy;
+    y = -2.0 + j * dy;
     for (i=info.xs; i<info.xs+info.xm; i++) {
-      x = -2.0 + i * user->dx;
+      x = -2.0 + i * dx;
       r = PetscSqrtReal(x * x + y * y);
       if (r <= 1.0)
         apsi[j][i] = PetscSqrtReal(1.0 - r * r);
@@ -51,182 +50,148 @@ PetscErrorCode FormDirichletPsiExactInitial(DM da,Vec Uexact,Vec U0,PetscBool fe
         ag[j][i] = auexact[j][i];
       else
         ag[j][i] = NAN;
-      if (feasibleU0) {
-        au0[j][i] = auexact[j][i] + PetscCosReal(pi*x/4.0)*PetscCosReal(pi*y/4.0);
-      } else
-        au0[j][i] = 0.;
     }
   }
-  ierr = DMDAVecRestoreArray(da, user->g, &ag);CHKERRQ(ierr);
-  ierr = DMDAVecRestoreArray(da, user->psi, &apsi);CHKERRQ(ierr);
-  ierr = DMDAVecRestoreArray(da, Uexact, &auexact);CHKERRQ(ierr);
-  ierr = DMDAVecRestoreArray(da, U0, &au0);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  ierr = DMDAVecRestoreArray(user->da, user->g, &ag);CHKERRQ(ierr);
+  ierr = DMDAVecRestoreArray(user->da, user->psi, &apsi);CHKERRQ(ierr);
+  ierr = DMDAVecRestoreArray(user->da, Uexact, &auexact);CHKERRQ(ierr);
+  return 0;
 }
 
 //  for call-back: tell SNESVI (variational inequality) that we want  psi <= u < +infinity
-PetscErrorCode FormBounds(SNES snes, Vec Xl, Vec Xu)
-{
+PetscErrorCode FormBounds(SNES snes, Vec Xl, Vec Xu) {
   PetscErrorCode ierr;
-  ObsCtx         *user;
-
-  PetscFunctionBeginUser;
+  ObsCtx *user;
   ierr = SNESGetApplicationContext(snes,&user);CHKERRQ(ierr);
   ierr = VecCopy(user->psi,Xl);CHKERRQ(ierr);  /* u >= psi */
   ierr = VecSet(Xu,PETSC_INFINITY);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  return 0;
 }
 
 /* FormFunctionLocal - Evaluates nonlinear function, F(x) on local process patch */
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info,PetscScalar **x,PetscScalar **f,ObsCtx *user)
 {
   PetscErrorCode ierr;
-  PetscInt       i,j;
-  PetscReal      uxx,uyy,**ag;
-
-  PetscFunctionBeginUser;
+  int     i, j;
+  double  dx, dy, uxx, uyy, **ag;
+  GridSpaces(info,&dx,&dy);
   ierr = DMDAVecGetArray(info->da, user->g, &ag);CHKERRQ(ierr);
   for (j=info->ys; j<info->ys+info->ym; j++) {
     for (i=info->xs; i<info->xs+info->xm; i++) {
       if (i == 0 || j == 0 || i == info->mx-1 || j == info->my-1) {
         f[j][i] = x[j][i] - ag[j][i];
       } else {
-        uxx     = (x[j][i-1] - 2.0 * x[j][i] + x[j][i+1]) / (user->dx*user->dx);
-        uyy     = (x[j-1][i] - 2.0 * x[j][i] + x[j+1][i]) / (user->dy*user->dy);
+        uxx     = (x[j][i-1] - 2.0 * x[j][i] + x[j][i+1]) / (dx*dx);
+        uyy     = (x[j-1][i] - 2.0 * x[j][i] + x[j+1][i]) / (dy*dy);
         f[j][i] = - uxx - uyy;
       }
     }
   }
   ierr = DMDAVecRestoreArray(info->da, user->g, &ag);CHKERRQ(ierr);
-
-  ierr = PetscLogFlops(10.0*info->ym*info->xm);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  return 0;
 }
 
-
 /* FormJacobianLocal - Evaluates Jacobian matrix on local process patch */
-// FIXME can be formed symmetrically
-PetscErrorCode FormJacobianLocal(DMDALocalInfo *info,PetscScalar **x,Mat A,Mat jac, ObsCtx *user)
-{
+PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar **au,
+                                 Mat A, Mat jac, ObsCtx *user) {
   PetscErrorCode ierr;
-  PetscInt       i,j;
-  MatStencil     col[5],row;
-  PetscReal      v[5],oxx,oyy;
-
-  PetscFunctionBeginUser;
-  oxx = 1.0 / (user->dx * user->dx);
-  oyy = 1.0 / (user->dy * user->dy);
-
+  int        i, j, ncols;
+  MatStencil col[5], row;
+  double     v[5], dx, dy, oxx, oyy;
+  GridSpaces(info,&dx,&dy);
+  oxx = 1.0 / (dx * dx);
+  oyy = 1.0 / (dy * dy);
   for (j=info->ys; j<info->ys+info->ym; j++) {
+      row.j = j;
+      col[0].j = j;
     for (i=info->xs; i<info->xs+info->xm; i++) {
-      row.j = j; row.i = i;
+      row.i = i;
+      col[0].i = i;
       if (i == 0 || j == 0 || i == info->mx-1 || j == info->my-1) { /* boundary */
         v[0] = 1.0;
-        ierr = MatSetValuesStencil(jac,1,&row,1,&row,v,INSERT_VALUES);CHKERRQ(ierr);
+        ierr = MatSetValuesStencil(jac,1,&row,1,col,v,INSERT_VALUES);CHKERRQ(ierr);
       } else { /* interior grid points */
-        v[0] = -oyy;                 col[0].j = j - 1;  col[0].i = i;
-        v[1] = -oxx;                 col[1].j = j;      col[1].i = i - 1;
-        v[2] = 2.0 * (oxx + oyy);    col[2].j = j;      col[2].i = i;
-        v[3] = -oxx;                 col[3].j = j;      col[3].i = i + 1;
-        v[4] = -oyy;                 col[4].j = j + 1;  col[4].i = i;
-        ierr = MatSetValuesStencil(jac,1,&row,5,col,v,INSERT_VALUES);CHKERRQ(ierr);
+        v[0] = 2.0 * (oxx + oyy);
+        ncols = 1;
+        if (i-1 > 0) {
+            col[ncols].j = j;    col[ncols].i = i-1;  v[ncols++] = -oxx;  }
+        if (i+1 < info->mx-1) {
+            col[ncols].j = j;    col[ncols].i = i+1;  v[ncols++] = -oxx;  }
+        if (j-1 > 0) {
+            col[ncols].j = j-1;  col[ncols].i = i;    v[ncols++] = -oyy;  }
+        if (j+1 < info->my-1) {
+            col[ncols].j = j+1;  col[ncols].i = i;    v[ncols++] = -oyy;  }
+        ierr = MatSetValuesStencil(jac,1,&row,ncols,col,v,INSERT_VALUES);CHKERRQ(ierr);
       }
     }
   }
-
-  /* Assemble matrix, using the 2-step process: */
   ierr = MatAssemblyBegin(jac,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(jac,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   if (A != jac) {
     ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
     ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   }
-  /* Tell the matrix we will never add a new nonzero location to the
-     matrix. If we do, it will generate an error. */
   ierr = MatSetOption(jac,MAT_NEW_NONZERO_LOCATION_ERR,PETSC_TRUE);CHKERRQ(ierr);
-
-  ierr = PetscLogFlops(2.0*info->ym*info->xm);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  return 0;
 }
 
-int main(int argc,char **argv)
-{
-  PetscErrorCode      ierr;
-  SNES                snes;
-  Vec                 u, r, uexact;   /* solution, residual vector, exact solution */
-  DM                  da;
-  ObsCtx              user;
-  PetscReal           error1,errorinf;
-  PetscBool           feasible = PETSC_FALSE,fdflg = PETSC_FALSE;
+int main(int argc,char **argv) {
+  PetscErrorCode ierr;
+  SNES           snes;
+  Vec            u, r, uexact;   /* solution, residual, exact solution */
+  ObsCtx         user;
+  double         error1,errorinf;
   DMDALocalInfo  info;
 
   PetscInitialize(&argc,&argv,NULL,help);
 
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
       DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
-      5,5,                       // override with -da_grid_x,_y or -da_refine
+      3,3,                       // override with -da_refine or -da_grid_x,_y
       PETSC_DECIDE,PETSC_DECIDE, // num of procs in each dim
       1,1,NULL,NULL,             // dof = 1 and stencil width = 1
-      &da);CHKERRQ(ierr);
-  ierr = DMSetFromOptions(da); CHKERRQ(ierr);
-  ierr = DMSetUp(da); CHKERRQ(ierr);
-  ierr = DMDASetUniformCoordinates(da,-2.0,2.0,-2.0,2.0,-1.0,-1.0);CHKERRQ(ierr);
-  ierr = DMSetApplicationContext(da,&user);CHKERRQ(ierr);
-  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-  user.dx = 4.0 / (PetscReal)(info.mx-1);
-  user.dy = 4.0 / (PetscReal)(info.my-1);
+      &(user.da));CHKERRQ(ierr);
+  ierr = DMSetFromOptions(user.da); CHKERRQ(ierr);
+  ierr = DMSetUp(user.da); CHKERRQ(ierr);
+  ierr = DMDASetUniformCoordinates(user.da,-2.0,2.0,-2.0,2.0,-1.0,-1.0);CHKERRQ(ierr);
+  ierr = DMSetApplicationContext(user.da,&user);CHKERRQ(ierr);
 
-  ierr = DMCreateGlobalVector(da,&u);CHKERRQ(ierr);
+  /* setup */
+  ierr = DMCreateGlobalVector(user.da,&u);CHKERRQ(ierr);
   ierr = VecDuplicate(u,&r);CHKERRQ(ierr);
   ierr = VecDuplicate(u,&uexact);CHKERRQ(ierr);
   ierr = VecDuplicate(u,&(user.g));CHKERRQ(ierr);
   ierr = VecDuplicate(u,&(user.psi));CHKERRQ(ierr);
-
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"","options to obstacle problem","");CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-fd","use coloring to compute Jacobian by finite differences",
-                    NULL,fdflg,&fdflg,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-feasible","use feasible initial guess",
-                    NULL,feasible,&feasible,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsEnd();CHKERRQ(ierr);
-
-  ierr = FormDirichletPsiExactInitial(da,uexact,u,feasible,&user);CHKERRQ(ierr);
+  ierr = FormDirichletPsiExact(uexact,&user);CHKERRQ(ierr);
   ierr = SNESCreate(PETSC_COMM_WORLD,&snes);CHKERRQ(ierr);
-  ierr = SNESSetDM(snes,da);CHKERRQ(ierr);
+  ierr = SNESSetDM(snes,user.da);CHKERRQ(ierr);
   ierr = SNESSetApplicationContext(snes,&user);CHKERRQ(ierr);
   ierr = SNESSetType(snes,SNESVINEWTONRSLS);CHKERRQ(ierr);
   ierr = SNESVISetComputeVariableBounds(snes,&FormBounds);CHKERRQ(ierr);
-  ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
-            (PetscErrorCode (*)(DMDALocalInfo*,void*,void*,void*))FormFunctionLocal,
-            &user);CHKERRQ(ierr);
-  if (!fdflg) {
-    ierr = DMDASNESSetJacobianLocal(da,
-              (PetscErrorCode (*)(DMDALocalInfo*,void*,Mat,Mat,void*))FormJacobianLocal,
-              &user);CHKERRQ(ierr);
-  }
+  ierr = DMDASNESSetFunctionLocal(user.da,INSERT_VALUES,
+             (DMDASNESFunction)FormFunctionLocal,&user); CHKERRQ(ierr);
+  ierr = DMDASNESSetJacobianLocal(user.da,
+             (DMDASNESJacobian)FormJacobianLocal,&user); CHKERRQ(ierr);
   ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
 
-  /* report on setup */
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"setup done on %D x %D grid\n",
-                     info.mx, info.my);CHKERRQ(ierr);
-
-  /* solve nonlinear system */
+  /* solve */
+  ierr = VecSet(u,0.0); CHKERRQ(ierr);
   ierr = SNESSolve(snes,NULL,u);CHKERRQ(ierr);
 
   /* compare to exact */
   ierr = VecWAXPY(r,-1.0,uexact,u);CHKERRQ(ierr); /* r = u - uexact */
   ierr = VecNorm(r,NORM_1,&error1);CHKERRQ(ierr);
-  error1 /= (PetscReal)info.mx * (PetscReal)info.my;
+  ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);
+  error1 /= (double)info.mx * (double)info.my;
   ierr = VecNorm(r,NORM_INFINITY,&errorinf);CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
-               "errors:    av |u-uexact|  = %.3e\n"
-               "           |u-uexact|_inf = %.3e\n",
-               (double)error1,(double)errorinf);CHKERRQ(ierr);
+      "errors on %3d x %3d grid: av |u-uexact| = %.3e, |u-uexact|_inf = %.3e\n",
+      info.mx,info.my,error1,errorinf);CHKERRQ(ierr);
 
-  VecDestroy(&u); VecDestroy(&r); VecDestroy(&uexact);
-  VecDestroy(&(user.psi)); VecDestroy(&(user.g));
-  SNESDestroy(&snes); DMDestroy(&da);
-
-  ierr = PetscFinalize();CHKERRQ(ierr);
+  VecDestroy(&u);  VecDestroy(&r);  VecDestroy(&uexact);
+  VecDestroy(&(user.psi));  VecDestroy(&(user.g));
+  SNESDestroy(&snes);  DMDestroy(&(user.da));
+  PetscFinalize();
   return 0;
 }
 
