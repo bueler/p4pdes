@@ -10,6 +10,7 @@ Parallel runs, spatial refinement only, robust PC:
 */
 
 #include <petsc.h>
+#include "../ch11/jacobians.c"
 
 typedef struct {
   DM  da;
@@ -90,48 +91,6 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info,PetscScalar **x,PetscScalar
   return 0;
 }
 
-/* FormJacobianLocal - Evaluates Jacobian matrix on local process patch */
-PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar **au,
-                                 Mat A, Mat jac, ObsCtx *user) {
-  PetscErrorCode ierr;
-  int        i, j, ncols;
-  MatStencil col[5], row;
-  double     v[5], dx, dy, hxhy, hyhx;
-  GridSpaces(info,&dx,&dy);  hxhy = dx / dy;  hyhx = dy / dx;
-  for (j=info->ys; j<info->ys+info->ym; j++) {
-      row.j = j;
-      col[0].j = j;
-    for (i=info->xs; i<info->xs+info->xm; i++) {
-      row.i = i;
-      col[0].i = i;
-      if (i == 0 || j == 0 || i == info->mx-1 || j == info->my-1) { /* boundary */
-        v[0] = 1.0;
-        ierr = MatSetValuesStencil(jac,1,&row,1,col,v,INSERT_VALUES);CHKERRQ(ierr);
-      } else { /* interior grid points */
-        v[0] = 2.0 * (hyhx + hxhy);
-        ncols = 1;
-        if (i-1 > 0) {
-            col[ncols].j = j;    col[ncols].i = i-1;  v[ncols++] = -hyhx;  }
-        if (i+1 < info->mx-1) {
-            col[ncols].j = j;    col[ncols].i = i+1;  v[ncols++] = -hyhx;  }
-        if (j-1 > 0) {
-            col[ncols].j = j-1;  col[ncols].i = i;    v[ncols++] = -hxhy;  }
-        if (j+1 < info->my-1) {
-            col[ncols].j = j+1;  col[ncols].i = i;    v[ncols++] = -hxhy;  }
-        ierr = MatSetValuesStencil(jac,1,&row,ncols,col,v,INSERT_VALUES);CHKERRQ(ierr);
-      }
-    }
-  }
-  ierr = MatAssemblyBegin(jac,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(jac,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  if (A != jac) {
-    ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-    ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  }
-  ierr = MatSetOption(jac,MAT_NEW_NONZERO_LOCATION_ERR,PETSC_TRUE);CHKERRQ(ierr);
-  return 0;
-}
-
 int main(int argc,char **argv) {
   PetscErrorCode ierr;
   SNES           snes;
@@ -151,8 +110,8 @@ int main(int argc,char **argv) {
       &(user.da));CHKERRQ(ierr);
   ierr = DMSetFromOptions(user.da); CHKERRQ(ierr);
   ierr = DMSetUp(user.da); CHKERRQ(ierr);
-  ierr = DMDASetUniformCoordinates(user.da,-2.0,2.0,-2.0,2.0,-1.0,-1.0);CHKERRQ(ierr);
   ierr = DMSetApplicationContext(user.da,&user);CHKERRQ(ierr);
+  ierr = DMDASetUniformCoordinates(user.da,-2.0,2.0,-2.0,2.0,-1.0,-1.0);CHKERRQ(ierr);
   ierr = DMCreateGlobalVector(user.da,&u);CHKERRQ(ierr);
   ierr = VecDuplicate(u,&uexact);CHKERRQ(ierr);
   ierr = VecDuplicate(u,&(user.g));CHKERRQ(ierr);
@@ -166,7 +125,7 @@ int main(int argc,char **argv) {
   ierr = DMDASNESSetFunctionLocal(user.da,INSERT_VALUES,
              (DMDASNESFunction)FormFunctionLocal,&user); CHKERRQ(ierr);
   ierr = DMDASNESSetJacobianLocal(user.da,
-             (DMDASNESJacobian)FormJacobianLocal,&user); CHKERRQ(ierr);
+             (DMDASNESJacobian)Form2DJacobianLocal,&user); CHKERRQ(ierr);
   ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
 
   /* solve */
