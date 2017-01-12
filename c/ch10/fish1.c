@@ -1,5 +1,5 @@
 static char help[] =
-"Structured-grid Poisson problem using DMDA+SNES.  Option prefix -f1_.\n"
+"Structured-grid Poisson problem using DMDA+SNES.\n"
 "Solves  -u'' = f  by putting it in form  F(u) = -u'' - f.\n"
 "Homogeneous Dirichlet boundary conditions on unit interval.\n"
 "Multigrid-capable because call-backs discretize for the grid it is given.\n\n";
@@ -69,7 +69,6 @@ PetscErrorCode formExactRHS(DMDALocalInfo *info, Vec uexact, Vec b,
   ierr = DMDAVecRestoreArray(user->da, b, &ab);CHKERRQ(ierr);
   return 0;
 }
-
 
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *au,
                                  double *FF, FishCtx *user) {

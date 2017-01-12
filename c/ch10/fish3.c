@@ -1,6 +1,5 @@
 static char help[] =
-"Structured-grid Poisson problem in 3D using DMDA+SNES.  Option prefix -f3_.\n"
-"Compare fish2.c.\n\n";
+"Structured-grid Poisson problem in 3D using DMDA+SNES.  Compare fish2.c.\n\n";
 
 /* see study/mgstudy.sh for multigrid parameter study */
 

@@ -1,5 +1,5 @@
 static char help[] =
-"Structured-grid Poisson problem using DMDA+SNES.  Option prefix -f2_.\n"
+"Structured-grid Poisson problem using DMDA+SNES.\n"
 "Solves  -nabla^2 u = f  by putting it in form  F(u) = -nabla^2 u - f.\n"
 "Homogeneous Dirichlet boundary conditions on unit square.\n"
 "Multigrid-capable because call-backs discretize for the grid it is given.\n\n";
@@ -69,10 +69,6 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
     int          i, j;
     double       **ab;
 
-    if (user->printevals) {
-        ierr = PetscPrintf(COMM,"    [residual eval on %d x %d grid]\n",
-                           info->mx,info->my); CHKERRQ(ierr);
-    }
     ierr = DMDAVecGetArray(user->da,user->b,&ab); CHKERRQ(ierr);
     for (j = info->ys; j < info->ys + info->ym; j++) {
         for (i = info->xs; i < info->xs + info->xm; i++) {

@@ -1,6 +1,7 @@
-static const char help[] = "Solves obstacle problem in 2D as a variational inequality.\n\
-An elliptic problem with solution  u  constrained to be above a given function  psi. \n\
-Exact solution is known.  Because of the constraint, the problem is nonlinear.\n";
+static const char help[] = "Solves obstacle problem in 2D as a variational\n\
+inequality.  An elliptic problem with solution  u  constrained to be above a\n\
+given function  psi.  Exact solution is known.  Because of the constraint,\n\
+the problem is nonlinear.\n";
 
 /*
 Parallel runs, spatial refinement only, robust PC:
@@ -10,7 +11,7 @@ Parallel runs, spatial refinement only, robust PC:
 */
 
 #include <petsc.h>
-#include "../ch11/jacobians.c"
+#include "../ch10/jacobians.c"
 
 typedef struct {
   DM  da;

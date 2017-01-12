@@ -1,47 +1,27 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
-fish1: fish1.o chkopts
-	-${CLINKER} -o fish1 fish1.o ${PETSC_LIB}
-	${RM} fish1.o
-
-fish2: fish2.o chkopts
-	-${CLINKER} -o fish2 fish2.o ${PETSC_LIB}
-	${RM} fish2.o
-
-fish3: fish3.o chkopts
-	-${CLINKER} -o fish3 fish3.o ${PETSC_LIB}
-	${RM} fish3.o
+obstacle: obstacle.o  chkopts
+	-${CLINKER} -o obstacle obstacle.o  ${PETSC_LIB}
+	${RM} obstacle.o
 
 # testing
 
-runfish1_1:
-	-@../testit.sh fish1 "-da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -snes_monitor_short -ksp_converged_reason" 1 1
+runobstacle_1:
+	-@../testit.sh obstacle "-da_refine 3 -snes_monitor_short -ksp_rtol 1.0e-12 -snes_rtol 1.0e-10 -ksp_converged_reason" 1 1
 
-runfish2_1:
-	-@../testit.sh fish2 "-da_refine 1 -pc_type mg -ksp_converged_reason" 1 1
+runobstacle_2:
+	-@../testit.sh obstacle "-da_refine 4 -snes_monitor_short -pc_type asm -sub_pc_type lu" 4 2
 
-runfish2_2:
-	-@../testit.sh fish2 "-da_refine 4 -pc_type mg -pc_mg_cycle_type w -mg_levels_ksp_type richardson -mg_levels_ksp_max_it 1 -ksp_converged_reason" 2 2
+runobstacle_3:
+	-@../testit.sh obstacle "-da_refine 3 -mat_is_symmetric" 1 3
 
-runfish2_3:
-	-@../testit.sh fish2 "-da_refine 3 -mat_is_symmetric" 1 3
-
-runfish3_1:
-	-@../testit.sh fish3 "-ksp_converged_reason -snes_converged_reason -da_refine 1" 1 1
-
-runfish3_2:
-	-@../testit.sh fish3 "-snes_fd_color -ksp_rtol 1.0e-12 -pc_type mg -pc_mg_galerkin -ksp_converged_reason -da_refine 2" 2 2
-
-runfish3_3:
-	-@../testit.sh fish3 "-da_refine 2 -mat_is_symmetric" 1 3
-
-test: runfish1_1 runfish2_1 runfish2_2 runfish2_3 runfish3_1 runfish3_2 runfish3_3
+test: runobstacle_1 runobstacle_2 runobstacle_3
 
 # etc
 
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ fish1 fish2 fish3
+	@rm -f *~ obstacle
 
