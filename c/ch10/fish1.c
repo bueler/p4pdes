@@ -1,8 +1,8 @@
 static char help[] =
-"Structured-grid Poisson problem using DMDA+SNES.\n"
+"Structured-grid Poisson problem in 1D using DMDA+SNES.\n"
 "Solves  -u'' = f  by putting it in form  F(u) = -u'' - f.\n"
 "Homogeneous Dirichlet boundary conditions on unit interval.\n"
-"Multigrid-capable because call-backs discretize for the grid it is given.\n\n";
+"Multigrid-capable because call-backs discretize for the supplied grid.\n\n";
 
 /* see study/mgstudy.sh for multigrid parameter study
 
@@ -43,30 +43,29 @@ $ ./fish1 -da_refine 4 -pc_type mg -mg_coarse_ksp_type cg -mg_coarse_pc_type jac
 
 typedef struct {
     DM        da;
-    Vec       b;
+    Vec       f;
 } FishCtx;
 
-PetscErrorCode formExactRHS(DMDALocalInfo *info, Vec uexact, Vec b,
+PetscErrorCode formExactRHS(DMDALocalInfo *info, Vec uexact, Vec f,
                             FishCtx* user) {
   PetscErrorCode ierr;
   int          i;
-  double       xmax[1], xmin[1], hx, x, f, *auexact, *ab;
+  double       xmax[1], xmin[1], hx, x, *auexact, *af;
   ierr = DMDAGetBoundingBox(info->da,xmin,xmax); CHKERRQ(ierr);
   hx = (xmax[0] - xmin[0]) / (info->mx - 1);
   ierr = DMDAVecGetArray(user->da, uexact, &auexact);CHKERRQ(ierr);
-  ierr = DMDAVecGetArray(user->da, b, &ab);CHKERRQ(ierr);
+  ierr = DMDAVecGetArray(user->da, f, &af);CHKERRQ(ierr);
   for (i=info->xs; i<info->xs+info->xm; i++) {
       x = xmin[0] + i * hx;
       auexact[i] = x*x * (1.0 - x*x);
       if (i==0 || i==info->mx-1) {
-        ab[i] = 0.0;                    // on bdry the eqn is 1*u = 0
+        af[i] = 0.0;                    // on bdry the eqn is 1*u = 0
       } else {  // if not bdry; note  f = - u''  where u is exact
-        f = 12.0 * x*x - 2.0;
-        ab[i] = hx * hx * f;
+        af[i] = 12.0 * x*x - 2.0;
       }
   }
   ierr = DMDAVecRestoreArray(user->da, uexact, &auexact);CHKERRQ(ierr);
-  ierr = DMDAVecRestoreArray(user->da, b, &ab);CHKERRQ(ierr);
+  ierr = DMDAVecRestoreArray(user->da, f, &af);CHKERRQ(ierr);
   return 0;
 }
 
@@ -74,17 +73,18 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *au,
                                  double *FF, FishCtx *user) {
     PetscErrorCode ierr;
     int          i;
-    double       *ab;
-
-    ierr = DMDAVecGetArray(user->da,user->b,&ab); CHKERRQ(ierr);
+    double       xmax[1], xmin[1], hx, *af;
+    ierr = DMDAGetBoundingBox(info->da,xmin,xmax); CHKERRQ(ierr);
+    hx = (xmax[0] - xmin[0]) / (info->mx - 1);
+    ierr = DMDAVecGetArray(user->da,user->f,&af); CHKERRQ(ierr);
     for (i = info->xs; i < info->xs + info->xm; i++) {
         if (i==0 || i==info->mx-1) {
             FF[i] = au[i];
         } else {
-            FF[i] = 2.0 * au[i] - au[i-1] - au[i+1] - ab[i];
+            FF[i] = 2.0 * au[i] - au[i-1] - au[i+1] - hx * hx * af[i];
         }
     }
-    ierr = DMDAVecRestoreArray(user->da,user->b,&ab); CHKERRQ(ierr);
+    ierr = DMDAVecRestoreArray(user->da,user->f,&af); CHKERRQ(ierr);
     return 0;
 }
 
@@ -108,10 +108,10 @@ int main(int argc,char **argv) {
   ierr = DMCreateGlobalVector(user.da,&u);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject)u,"u");CHKERRQ(ierr);
   ierr = VecDuplicate(u,&uexact);CHKERRQ(ierr);
-  ierr = VecDuplicate(u,&(user.b));CHKERRQ(ierr);
+  ierr = VecDuplicate(u,&(user.f));CHKERRQ(ierr);
 
   ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);
-  ierr = formExactRHS(&info,uexact,user.b,&user); CHKERRQ(ierr);
+  ierr = formExactRHS(&info,uexact,user.f,&user); CHKERRQ(ierr);
 
   ierr = SNESCreate(COMM,&snes); CHKERRQ(ierr);
   ierr = SNESSetDM(snes,user.da); CHKERRQ(ierr);
@@ -130,7 +130,7 @@ int main(int argc,char **argv) {
   ierr = PetscPrintf(COMM,"on %d grid:  error |u-uexact|_inf = %g\n",
            info.mx,errnorm); CHKERRQ(ierr);
 
-  VecDestroy(&u);  VecDestroy(&uexact);  VecDestroy(&(user.b));
+  VecDestroy(&u);  VecDestroy(&uexact);  VecDestroy(&(user.f));
   SNESDestroy(&snes);  DMDestroy(&(user.da));
   PetscFinalize();
   return 0;
