@@ -36,16 +36,17 @@ typedef struct {
 PetscErrorCode formExactRHS(DMDALocalInfo *info, Vec uexact, Vec b,
                             FishCtx* user) {
   PetscErrorCode ierr;
-  const double hx = 1.0/(info->mx-1),  hy = 1.0/(info->my-1);
   int          i, j;
-  double       x, y, f, **auexact, **ab;
-
+  double       xymin[2], xymax[2], hx, hy, x, y, f, **auexact, **ab;
+  ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
+  hx = (xymax[0] - xymin[0]) / (info->mx - 1);
+  hy = (xymax[1] - xymin[1]) / (info->my - 1);
   ierr = DMDAVecGetArray(user->da, uexact, &auexact);CHKERRQ(ierr);
   ierr = DMDAVecGetArray(user->da, b, &ab);CHKERRQ(ierr);
   for (j=info->ys; j<info->ys+info->ym; j++) {
-    y = j * hy;
+    y = xymin[1] + j * hy;
     for (i=info->xs; i<info->xs+info->xm; i++) {
-      x = i * hx;
+      x = xymin[0] + i * hx;
       auexact[j][i] = x*x * (1.0 - x*x) * y*y * (y*y - 1.0);
       if (i==0 || i==info->mx-1 || j==0 || j==info->my-1) {
         ab[j][i] = 0.0;                    // on bdry the eqn is 1*u = 0
@@ -61,14 +62,14 @@ PetscErrorCode formExactRHS(DMDALocalInfo *info, Vec uexact, Vec b,
   return 0;
 }
 
-
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                                  double **FF, FishCtx *user) {
     PetscErrorCode ierr;
-    const double hx = 1.0/(info->mx-1),  hy = 1.0/(info->my-1);
     int          i, j;
-    double       **ab;
-
+    double       hx, hy, xymin[2], xymax[2], **ab;
+    ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
+    hx = (xymax[0] - xymin[0]) / (info->mx - 1);
+    hy = (xymax[1] - xymin[1]) / (info->my - 1);
     ierr = DMDAVecGetArray(user->da,user->b,&ab); CHKERRQ(ierr);
     for (j = info->ys; j < info->ys + info->ym; j++) {
         for (i = info->xs; i < info->xs + info->xm; i++) {

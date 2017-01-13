@@ -15,21 +15,22 @@ typedef struct {
 PetscErrorCode formExactRHS(DMDALocalInfo *info, Vec uexact, Vec b,
                             FishCtx* user) {
     PetscErrorCode ierr;
-    const double hx = 1.0/(info->mx-1),
-                 hy = 1.0/(info->my-1),
-                 hz = 1.0/(info->mz-1),
-                 h = pow(hx*hy*hz,1.0/3.0);
-    int          i, j, k;
-    double       x, y, z, f, ***auexact, ***ab,
-                 aa, bb, cc, ddaa, ddbb, ddcc;
+    int    i, j, k;
+    double xyzmin[3], xyzmax[3], hx, hy, hz, h, x, y, z, f,
+           ***auexact, ***ab, aa, bb, cc, ddaa, ddbb, ddcc;
+    ierr = DMDAGetBoundingBox(info->da,xyzmin,xyzmax); CHKERRQ(ierr);
+    hx = (xyzmax[0] - xyzmin[0]) / (info->mx - 1);
+    hy = (xyzmax[1] - xyzmin[1]) / (info->my - 1);
+    hz = (xyzmax[2] - xyzmin[2]) / (info->mz - 1);
+    h = pow(hx*hy*hz,1.0/3.0);
     ierr = DMDAVecGetArray(user->da, uexact, &auexact);CHKERRQ(ierr);
     ierr = DMDAVecGetArray(user->da, b, &ab);CHKERRQ(ierr);
     for (k=info->zs; k<info->zs+info->zm; k++) {
-        z = k * hz;
+        z = xyzmin[2] + k * hz;
         for (j=info->ys; j<info->ys+info->ym; j++) {
-            y = j * hy;
+            y = xyzmin[1] + j * hy;
             for (i=info->xs; i<info->xs+info->xm; i++) {
-                x = i * hx;
+                x = xyzmin[0] + i * hx;
                 aa = x*x * (1.0 - x*x);
                 bb = y*y * (y*y - 1.0);
                 cc = z*z * (z*z - 1.0);
@@ -53,20 +54,19 @@ PetscErrorCode formExactRHS(DMDALocalInfo *info, Vec uexact, Vec b,
     return 0;
 }
 
-
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***au,
                                  double ***FF, FishCtx *user) {
     PetscErrorCode ierr;
-    const double hx = 1.0/(info->mx-1),
-                 hy = 1.0/(info->my-1),
-                 hz = 1.0/(info->mz-1),
-                 h = pow(hx*hy*hz,1.0/3.0),
-                 cx = h*h / (hx*hx),
-                 cy = h*h / (hy*hy),
-                 cz = h*h / (hz*hz);
-    int          i, j, k;
-    double       ***ab;
-
+    int    i, j, k;
+    double xyzmin[3], xyzmax[3], hx, hy, hz, h, cx, cy, cz, ***ab;
+    ierr = DMDAGetBoundingBox(info->da,xyzmin,xyzmax); CHKERRQ(ierr);
+    hx = (xyzmax[0] - xyzmin[0]) / (info->mx - 1);
+    hy = (xyzmax[1] - xyzmin[1]) / (info->my - 1);
+    hz = (xyzmax[2] - xyzmin[2]) / (info->mz - 1);
+    h = pow(hx*hy*hz,1.0/3.0);
+    cx = h*h / (hx*hx);
+    cy = h*h / (hy*hy);
+    cz = h*h / (hz*hz);
     ierr = DMDAVecGetArray(user->da,user->b,&ab); CHKERRQ(ierr);
     for (k = info->zs; k < info->zs + info->zm; k++) {
         for (j = info->ys; j < info->ys + info->ym; j++) {
@@ -88,7 +88,6 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***au,
     ierr = DMDAVecRestoreArray(user->da,user->b,&ab); CHKERRQ(ierr);
     return 0;
 }
-
 
 int main(int argc,char **argv) {
   PetscErrorCode ierr;

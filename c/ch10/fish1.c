@@ -49,14 +49,14 @@ typedef struct {
 PetscErrorCode formExactRHS(DMDALocalInfo *info, Vec uexact, Vec b,
                             FishCtx* user) {
   PetscErrorCode ierr;
-  const double hx = 1.0/(info->mx-1);
   int          i;
-  double       x, f, *auexact, *ab;
-
+  double       xmax[1], xmin[1], hx, x, f, *auexact, *ab;
+  ierr = DMDAGetBoundingBox(info->da,xmin,xmax); CHKERRQ(ierr);
+  hx = (xmax[0] - xmin[0]) / (info->mx - 1);
   ierr = DMDAVecGetArray(user->da, uexact, &auexact);CHKERRQ(ierr);
   ierr = DMDAVecGetArray(user->da, b, &ab);CHKERRQ(ierr);
   for (i=info->xs; i<info->xs+info->xm; i++) {
-      x = i * hx;
+      x = xmin[0] + i * hx;
       auexact[i] = x*x * (1.0 - x*x);
       if (i==0 || i==info->mx-1) {
         ab[i] = 0.0;                    // on bdry the eqn is 1*u = 0
