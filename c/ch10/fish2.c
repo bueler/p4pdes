@@ -29,7 +29,6 @@ $ ./fish2 -da_refine 4 -pc_type mg -mg_coarse_ksp_type cg -mg_coarse_pc_type jac
 #define COMM PETSC_COMM_WORLD
 
 typedef struct {
-    DM        da;
     Vec       f;
 } FishCtx;
 
@@ -41,8 +40,8 @@ PetscErrorCode formExactRHS(DMDALocalInfo *info, Vec uexact, Vec f,
   ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
   hx = (xymax[0] - xymin[0]) / (info->mx - 1);
   hy = (xymax[1] - xymin[1]) / (info->my - 1);
-  ierr = DMDAVecGetArray(user->da, uexact, &auexact);CHKERRQ(ierr);
-  ierr = DMDAVecGetArray(user->da, f, &af);CHKERRQ(ierr);
+  ierr = DMDAVecGetArray(info->da, uexact, &auexact);CHKERRQ(ierr);
+  ierr = DMDAVecGetArray(info->da, f, &af);CHKERRQ(ierr);
   for (j=info->ys; j<info->ys+info->ym; j++) {
     y = xymin[1] + j * hy;
     for (i=info->xs; i<info->xs+info->xm; i++) {
@@ -56,8 +55,8 @@ PetscErrorCode formExactRHS(DMDALocalInfo *info, Vec uexact, Vec f,
       }
     }
   }
-  ierr = DMDAVecRestoreArray(user->da, uexact, &auexact);CHKERRQ(ierr);
-  ierr = DMDAVecRestoreArray(user->da, f, &af);CHKERRQ(ierr);
+  ierr = DMDAVecRestoreArray(info->da, uexact, &auexact);CHKERRQ(ierr);
+  ierr = DMDAVecRestoreArray(info->da, f, &af);CHKERRQ(ierr);
   return 0;
 }
 
@@ -69,7 +68,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
     ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
     hx = (xymax[0] - xymin[0]) / (info->mx - 1);
     hy = (xymax[1] - xymin[1]) / (info->my - 1);
-    ierr = DMDAVecGetArray(user->da,user->f,&af); CHKERRQ(ierr);
+    ierr = DMDAVecGetArray(info->da,user->f,&af); CHKERRQ(ierr);
     for (j = info->ys; j < info->ys + info->ym; j++) {
         for (i = info->xs; i < info->xs + info->xm; i++) {
             if (i==0 || i==info->mx-1 || j==0 || j==info->my-1) {
@@ -82,12 +81,13 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
             }
         }
     }
-    ierr = DMDAVecRestoreArray(user->da,user->f,&af); CHKERRQ(ierr);
+    ierr = DMDAVecRestoreArray(info->da,user->f,&af); CHKERRQ(ierr);
     return 0;
 }
 
 int main(int argc,char **argv) {
   PetscErrorCode ierr;
+  DM             da;
   SNES           snes;
   KSP            ksp;
   Vec            u, uexact;
@@ -99,25 +99,25 @@ int main(int argc,char **argv) {
 
   ierr = DMDACreate2d(COMM,
                DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
-               3,3,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&(user.da)); CHKERRQ(ierr);
-  ierr = DMSetFromOptions(user.da); CHKERRQ(ierr);
-  ierr = DMSetUp(user.da); CHKERRQ(ierr);  // this must be called BEFORE SetUniformCoordinates
-  ierr = DMSetApplicationContext(user.da,&user);CHKERRQ(ierr);
-  ierr = DMDASetUniformCoordinates(user.da,0.0,1.0,0.0,1.0,0.0,1.0);CHKERRQ(ierr);
+               3,3,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&da); CHKERRQ(ierr);
+  ierr = DMSetFromOptions(da); CHKERRQ(ierr);
+  ierr = DMSetUp(da); CHKERRQ(ierr);  // this must be called BEFORE SetUniformCoordinates
+  ierr = DMSetApplicationContext(da,&user);CHKERRQ(ierr);
+  ierr = DMDASetUniformCoordinates(da,0.0,1.0,0.0,1.0,0.0,1.0);CHKERRQ(ierr);
 
-  ierr = DMCreateGlobalVector(user.da,&u);CHKERRQ(ierr);
+  ierr = DMCreateGlobalVector(da,&u);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject)u,"u");CHKERRQ(ierr);
   ierr = VecDuplicate(u,&uexact);CHKERRQ(ierr);
   ierr = VecDuplicate(u,&(user.f));CHKERRQ(ierr);
 
-  ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);
+  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
   ierr = formExactRHS(&info,uexact,user.f,&user); CHKERRQ(ierr);
 
   ierr = SNESCreate(COMM,&snes); CHKERRQ(ierr);
-  ierr = SNESSetDM(snes,user.da); CHKERRQ(ierr);
-  ierr = DMDASNESSetFunctionLocal(user.da,INSERT_VALUES,
+  ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
+  ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
              (DMDASNESFunction)FormFunctionLocal,&user); CHKERRQ(ierr);
-  ierr = DMDASNESSetJacobianLocal(user.da,
+  ierr = DMDASNESSetJacobianLocal(da,
              (DMDASNESJacobian)Form2DJacobianLocal,&user); CHKERRQ(ierr);
   ierr = SNESGetKSP(snes,&ksp); CHKERRQ(ierr);
   ierr = KSPSetType(ksp,KSPCG); CHKERRQ(ierr);
@@ -131,7 +131,7 @@ int main(int argc,char **argv) {
            info.mx,info.my,errnorm); CHKERRQ(ierr);
 
   VecDestroy(&u);  VecDestroy(&uexact);  VecDestroy(&(user.f));
-  SNESDestroy(&snes);  DMDestroy(&(user.da));
+  SNESDestroy(&snes);  DMDestroy(&da);
   PetscFinalize();
   return 0;
 }
