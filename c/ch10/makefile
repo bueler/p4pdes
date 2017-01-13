@@ -13,6 +13,10 @@ fish3: fish3.o chkopts
 	-${CLINKER} -o fish3 fish3.o ${PETSC_LIB}
 	${RM} fish3.o
 
+minimal: minimal.o chkopts
+	-${CLINKER} -o minimal minimal.o ${PETSC_LIB}
+	${RM} minimal.o
+
 # testing
 
 runfish1_1:
@@ -43,5 +47,5 @@ test: runfish1_1 runfish2_1 runfish2_2 runfish2_3 runfish3_1 runfish3_2 runfish3
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ fish1 fish2 fish3
+	@rm -f *~ fish1 fish2 fish3 minimal
 
