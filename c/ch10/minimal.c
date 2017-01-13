@@ -82,6 +82,9 @@ int main(int argc,char **argv) {
 
   PetscInitialize(&argc,&argv,NULL,help);
 
+FIXME add option between pure laplacian and minimal surface equations, with
+      comparison of surface areas for same boundary conditions, via objective
+
   ierr = DMDACreate2d(COMM,
                DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
                DMDA_STENCIL_BOX,  // contrast with fish2
