@@ -40,7 +40,14 @@ runfish3_2:
 runfish3_3:
 	-@../testit.sh fish3 "-da_refine 2 -mat_is_symmetric" 1 3
 
-test: runfish1_1 runfish2_1 runfish2_2 runfish2_3 runfish3_1 runfish3_2 runfish3_3
+runminimal_1:
+	-@../testit.sh minimal "-snes_fd_color -da_refine 4 -snes_monitor_short" 1 1
+
+runminimal_2:
+	-@../testit.sh minimal "-snes_fd_color -mat_is_symmetric 1.0e-7 -mse_laplace -da_refine 3" 1 2
+
+
+test: runfish1_1 runfish2_1 runfish2_2 runfish2_3 runfish3_1 runfish3_2 runfish3_3 runminimal_1 runminimal_2
 
 # etc
 
