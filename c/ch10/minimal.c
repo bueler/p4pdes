@@ -14,28 +14,27 @@ static char help[] =
 #define COMM PETSC_COMM_WORLD
 
 typedef struct {
-    Vec       g;
+    Vec       g;  // Dirichlet boundary values (invalid in interior)
+    double    H;  // height of tent along y=0 boundary
 } MinimalCtx;
 
 PetscErrorCode formDirichlet(DMDALocalInfo *info, Vec uexact, Vec g,
                              MinimalCtx* user) {
   PetscErrorCode ierr;
   int          i, j;
-  double       xymin[2], xymax[2], hx, hy, x, y, **ag;
+  double       xymin[2], xymax[2], hx, x, **ag;
   ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
   hx = (xymax[0] - xymin[0]) / (info->mx - 1);
-  hy = (xymax[1] - xymin[1]) / (info->my - 1);
   ierr = DMDAVecGetArray(info->da, g, &ag);CHKERRQ(ierr);
   for (j=info->ys; j<info->ys+info->ym; j++) {
-    y = xymin[1] + j * hy;
     for (i=info->xs; i<info->xs+info->xm; i++) {
       x = xymin[0] + i * hx;
-      auexact[j][i] = x*x * (1.0 - x*x) * y*y * (y*y - 1.0);
-      if (i==0 || i==info->mx-1 || j==0 || j==info->my-1) {
-FIXME
-        af[j][i] = 0.0;
+      if (j==0) {
+        ag[j][i] = 2.0 * user->H * (x < 0.5 ? x : (1.0 - x));
+      } else if (i==0 || i==info->mx-1 || j==info->my-1) {
+        ag[j][i] = 0.0;
       } else {  // if not bdry then invalidate
-        af[j][i] = NAN;
+        ag[j][i] = NAN;
       }
     }
   }
@@ -43,13 +42,18 @@ FIXME
   return 0;
 }
 
-FIXME   write FormObjectiveLocal()
+// FIXME   write computeArea()
+
+// the diffusivity as a function of  z = |nabla u|^2
+double DD(double z) { 
+    return 1.0 / sqrt(1.0 + z);
+}
 
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                                  double **FF, MinimalCtx *user) {
     PetscErrorCode ierr;
     int          i, j;
-    double       hx, hy, xymin[2], xymax[2], **af;
+    double       hx, hy, ux, uy, De, Dw, Dn, Ds, xymin[2], xymax[2], **ag;
     ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
     hx = (xymax[0] - xymin[0]) / (info->mx - 1);
     hy = (xymax[1] - xymin[1]) / (info->my - 1);
@@ -59,11 +63,26 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
             if (i==0 || i==info->mx-1 || j==0 || j==info->my-1) {
                 FF[j][i] = au[j][i] - ag[j][i];
             } else {
+                // gradient of u squared at east point  (i+1/2,j):
+                ux = (au[j][i+1] - au[j][i]) / hx;
+                uy = (au[j+1][i] + au[j+1][i+1] - au[j-1][i] - au[j-1][i+1]) / (4.0 * hy);
+                De = DD(ux * ux + uy * uy);
 FIXME
-                FF[j][i] = 2.0 * (hy/hx + hx/hy) * au[j][i]
-                           - hy/hx * (au[j][i-1] + au[j][i+1])
-                           - hx/hy * (au[j-1][i] + au[j+1][i])
-                           - hx * hy * af[j][i];
+                //                       at west point  (i-1/2,j):
+                ux = (au[j][i] - au[j][i-1]) / hx;
+                uy = (au[j+1][i-1] + au[j+1][i] - au[j-1][i-1] - au[j-1][i]) / (4.0 * hy);
+                GSw = ux * ux + uy * uy;
+                //                      at north point  (i,j+1/2):
+                ux = (au[j][i+1] + au[j+1][i+1] - au[j][i-1] - au[j+1][i-1]) / (4.0 * hx);
+                uy = (au[j+1][i] - au[j][i]) / hy;
+                GSn = ux * ux + uy * uy;
+                //                      at south point  (i,j-1/2):
+                //FIXME
+                GSs = ux * ux + uy * uy;
+                FF[j][i] = - hy/hx * ( De * (au[j][i+1] + au[j][i])
+                                       - Dw * (au[j][i] + au[j][i-1]) )
+                           - hx/hy * ( Dn * (au[j+1][i] + au[j][i])
+                                       - Ds * (au[j][i] + au[j-1][i]) );
             }
         }
     }
