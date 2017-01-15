@@ -3,11 +3,13 @@ static char help[] =
 "Option prefix mse_.\n"
 "Solves\n"
 "            /         nabla u         \\ \n"
-"  - nabla . | ----------------------- | = 0\n"
+"  - nabla . | ----------------------- | = f(x,y)\n"
 "            \\  sqrt(1 + |nabla u|^2)  / \n"
-"subject to Dirichlet boundary conditions  u = g  on boundary of unit square.\n"
-"Allows re-use of Jacobian (Laplacian) from fish2 as preconditioner.\n"
-"Multigrid-capable.\n\n";
+"subject to Dirichlet boundary conditions  u = g(x,y)  on boundary of unit\n"
+"square.  Main example has \"tent\" boundary condition.  Nonzero RHS is only\n"
+"used in an optional manufactured solution.  Allows re-use of Jacobian\n"
+"(Laplacian) from fish2 as preconditioner, which is suitable only for\n"
+"low-amplitude data (g and f).  Multigrid-capable.\n\n";
 
 /* evidence of parallel:
 
@@ -40,7 +42,12 @@ double GG(double H, double x) {
 // the coefficient (diffusivity) of minimal surface equation, as a function
 //   of  z = |nabla u|^2
 double DD(double z) { 
-    return 1.0 / sqrt(1.0 + z);
+    return pow(1.0 + z,-0.5);
+}
+
+// this derivative is only used in manufacturing a solution
+double dDD(double z) { 
+    return -0.5 * pow(1.0 + z,-1.5);
 }
 
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
