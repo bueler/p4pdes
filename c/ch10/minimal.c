@@ -16,8 +16,15 @@ static char help[] =
 typedef struct {
     double    H;       // height of tent along y=0 boundary
     PetscBool laplace; // solve Laplace equation instead of minimal surface
-    Vec       ucopy;   // workspace
 } MinimalCtx;
+
+double GG(double H, double x) {
+    return 2.0 * H * (x < 0.5 ? x : (1.0 - x));
+}
+
+// FIXME   make it work in parallel
+
+// FIXME   add RHS f(x,y) and manufacture a solution
 
 // FIXME   write computeArea()
 
@@ -30,50 +37,47 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                                  double **FF, MinimalCtx *user) {
     PetscErrorCode ierr;
     int          i, j;
-    double       xymin[2], xymax[2], hx, hy, x, g,
-                 ux, uy, De, Dw, Dn, Ds, **av;
+    double       xymin[2], xymax[2], hx, hy, x,
+                 dux, duy, De, Dw, Dn, Ds, **av;
     ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
     hx = (xymax[0] - xymin[0]) / (info->mx - 1);
     hy = (xymax[1] - xymin[1]) / (info->my - 1);
-    ierr = DMDAVecGetArray(info->da,user->ucopy,&av); CHKERRQ(ierr);
     for (j = info->ys; j < info->ys + info->ym; j++) {
         for (i = info->xs; i < info->xs + info->xm; i++) {
+            x = xymin[0] + i * hx;
             if (j==0) {
-                x = xymin[0] + i * hx;
-                g = 2.0 * user->H * (x < 0.5 ? x : (1.0 - x));
-                FF[j][i] = au[j][i] - g;
-                av[j][i] = g;
+                FF[j][i] = au[j][i] - GG(user->H,x);
             } else if (i==0 || i==info->mx-1 || j==info->my-1) {
                 FF[j][i] = au[j][i];
-                av[j][i] = 0.0;
             } else {
-                av[j][i] = au[j][i];
-            }
-        }
-    }
-    for (j = info->ys; j < info->ys + info->ym; j++) {
-        for (i = info->xs; i < info->xs + info->xm; i++) {
-            if (i>0 && j>0 && i<info->mx-1 && j<info->my-1) {
+                if (i+1 == info->mx-1) {
+                    ue 
+                }
+FIXME  too sleepy to decide how to do this
+                ue = (i+1 == info->mx-1) ? 0.0 : au[j][i+1];
+                uw = (i-1 == 0)          ? 0.0 : au[j][i-1];
+                un = (j+1 == info->my-1) ? 0.0 : au[j+1][i];
+                us = (j-1 == 0)          ? GG(user->H,xs) : au[j-1][i];
                 if (user->laplace) {
                     De = 1.0;  Dw = 1.0;
                     Dn = 1.0;  Ds = 1.0;
                 } else {
                     // gradient of u squared at east point  (i+1/2,j):
-                    ux = (av[j][i+1] - av[j][i]) / hx;
-                    uy = (av[j+1][i] + av[j+1][i+1] - av[j-1][i] - av[j-1][i+1]) / (4.0 * hy);
-                    De = DD(ux * ux + uy * uy);
+                    dux = (av[j][i+1] - av[j][i]) / hx;
+                    duy = (av[j+1][i] + av[j+1][i+1] - av[j-1][i] - av[j-1][i+1]) / (4.0 * hy);
+                    De = DD(dux * dux + duy * duy);
                     // ...                   at west point  (i-1/2,j):
-                    ux = (av[j][i] - av[j][i-1]) / hx;
-                    uy = (av[j+1][i-1] + av[j+1][i] - av[j-1][i-1] - av[j-1][i]) / (4.0 * hy);
-                    Dw = DD(ux * ux + uy * uy);
+                    dux = (av[j][i] - av[j][i-1]) / hx;
+                    duy = (av[j+1][i-1] + av[j+1][i] - av[j-1][i-1] - av[j-1][i]) / (4.0 * hy);
+                    Dw = DD(dux * dux + duy * duy);
                     // ...                  at north point  (i,j+1/2):
-                    ux = (av[j][i+1] + av[j+1][i+1] - av[j][i-1] - av[j+1][i-1]) / (4.0 * hx);
-                    uy = (av[j+1][i] - av[j][i]) / hy;
-                    Dn = DD(ux * ux + uy * uy);
+                    dux = (av[j][i+1] + av[j+1][i+1] - av[j][i-1] - av[j+1][i-1]) / (4.0 * hx);
+                    duy = (av[j+1][i] - av[j][i]) / hy;
+                    Dn = DD(dux * dux + duy * duy);
                     // ...                  at south point  (i,j-1/2):
-                    ux = (av[j][i+1] + av[j-1][i+1] - av[j][i-1] - av[j-1][i-1]) / (4.0 * hx);
-                    uy = (av[j][i] - av[j-1][i]) / hy;
-                    Ds = DD(ux * ux + uy * uy);
+                    dux = (av[j][i+1] + av[j-1][i+1] - av[j][i-1] - av[j-1][i-1]) / (4.0 * hx);
+                    duy = (av[j][i] - av[j-1][i]) / hy;
+                    Ds = DD(dux * dux + duy * duy);
                 }
                 // evaluate residual
                 FF[j][i] = - hy/hx * (   De * (av[j][i+1] - av[j][i])
@@ -83,7 +87,6 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
             }
         }
     }
-    ierr = DMDAVecRestoreArray(info->da,user->ucopy,&av); CHKERRQ(ierr);
     return 0;
 }
 
@@ -121,7 +124,6 @@ int main(int argc,char **argv) {
 
     ierr = DMCreateGlobalVector(da,&u);CHKERRQ(ierr);
     ierr = PetscObjectSetName((PetscObject)u,"u");CHKERRQ(ierr);
-    ierr = VecDuplicate(u,&(user.ucopy));CHKERRQ(ierr);
 
     ierr = SNESCreate(COMM,&snes); CHKERRQ(ierr);
     ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
@@ -140,8 +142,7 @@ int main(int argc,char **argv) {
     ierr = PetscPrintf(COMM,"done on %d x %d grid ...\n",
                        info.mx,info.my); CHKERRQ(ierr);
 
-    VecDestroy(&u);  VecDestroy(&(user.ucopy));
-    SNESDestroy(&snes);  DMDestroy(&da);
+    VecDestroy(&u);  SNESDestroy(&snes);  DMDestroy(&da);
     PetscFinalize();
     return 0;
 }
