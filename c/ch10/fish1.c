@@ -72,7 +72,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *au,
                                  double *FF, FishCtx *user) {
     PetscErrorCode ierr;
     int          i;
-    double       xmax[1], xmin[1], hx, *af;
+    double       xmax[1], xmin[1], hx, ue, uw, *af;
     ierr = DMDAGetBoundingBox(info->da,xmin,xmax); CHKERRQ(ierr);
     hx = (xmax[0] - xmin[0]) / (info->mx - 1);
     ierr = DMDAVecGetArray(info->da,user->f,&af); CHKERRQ(ierr);
@@ -80,7 +80,9 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *au,
         if (i==0 || i==info->mx-1) {
             FF[i] = au[i];
         } else {
-            FF[i] = 2.0 * au[i] - au[i-1] - au[i+1] - hx * hx * af[i];
+            ue = (i+1 == info->mx-1) ? 0.0 : au[i+1];
+            uw = (i-1 == 0)          ? 0.0 : au[i-1];
+            FF[i] = 2.0 * au[i] - uw - ue - hx * hx * af[i];
         }
     }
     ierr = DMDAVecRestoreArray(info->da,user->f,&af); CHKERRQ(ierr);
