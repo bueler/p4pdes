@@ -11,11 +11,42 @@ static char help[] =
 "(Laplacian) from fish2 as preconditioner, which is suitable only for\n"
 "low-amplitude data (g and f).  Multigrid-capable.\n\n";
 
-/* evidence of parallel:
+/* 
+snes_fd_color is ten times faster than snes_mf_operator?  (and multigrid gives some speedup over ilu):
+    $ timer ./minimal -snes_mf_operator -snes_converged_reason -da_refine 6
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 27
+    done on 129 x 129 grid ...
+    real 90.47
+    $ timer ./minimal -snes_fd_color -snes_converged_reason -da_refine 6
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 28
+    done on 129 x 129 grid ...
+    real 8.09
+    $ timer ./minimal -snes_mf_operator -snes_converged_reason -da_refine 6 -ksp_type gmres -pc_type mg
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 27
+    done on 129 x 129 grid ...
+    real 49.46
+    $ timer ./minimal -snes_fd_color -snes_converged_reason -da_refine 6 -ksp_type gmres -pc_type mg
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 28
+    done on 129 x 129 grid ...
+    real 6.06
 
-timer mpiexec -n N ./minimal -snes_fd_color -snes_converged_reason -da_refine 6 -pc_type mg -snes_max_it 200
-Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 34
+parallel multigrid choices for linear and nonlinear problems; note GMRES vs CG; note also similar performance for fish2 and for minimal -mse_laplace:
+    $ timer mpiexec -n 2 ./minimal -snes_fd_color -snes_converged_reason -da_refine 7 -ksp_type gmres -pc_type mg -snes_max_it 500
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 65
+    done on 257 x 257 grid ...
+    real 59.47
+    $ timer mpiexec -n 2 ./minimal -mse_laplace -snes_converged_reason -da_refine 7 -ksp_type cg -pc_type mg
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+    done on 257 x 257 grid ...
+    real 0.97
+    $ timer mpiexec -n 2 ./fish2 -snes_converged_reason -da_refine 7 -ksp_type cg -pc_type mg
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+    on 257 x 257 grid:  error |u-uexact|_inf = 7.68279e-07
+    real 0.72
 
+evidence of parallel:
+    timer mpiexec -n N ./minimal -snes_fd_color -snes_converged_reason -da_refine 6 -pc_type mg -snes_max_it 200
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 34
 gives 4.0 sec on N=1 and 2.1 sec on N=2
 */
 
