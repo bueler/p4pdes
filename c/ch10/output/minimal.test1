@@ -1,8 +1,2 @@
-  0 SNES Function norm 2.33046 
-  1 SNES Function norm 0.0560246 
-  2 SNES Function norm 0.0224853 
-  3 SNES Function norm 0.00181802 
-  4 SNES Function norm 4.40573e-05 
-  5 SNES Function norm 2.86981e-08 
-  6 SNES Function norm < 1.e-11
-done on 17 x 17 grid ...
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+done on 5 x 5 grid ...

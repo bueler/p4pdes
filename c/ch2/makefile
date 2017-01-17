@@ -17,7 +17,7 @@ runtri_1:
 	-@../testit.sh tri "-a_mat_view ::ascii_dense" 1 1
 
 runtri_2:
-	-@../testit.sh tri "-tri_m 2000 -ksp_rtol 1.0e-10 -ksp_type cg -pc_type bjacobi -sub_pc_type icc -ksp_converged_reason" 4 2
+	-@../testit.sh tri "-tri_m 1000 -ksp_rtol 1.0e-10 -ksp_type cg -pc_type bjacobi -sub_pc_type icc -ksp_converged_reason" 2 2
 
 test: runvecmatksp_1 runtri_1 runtri_2
 

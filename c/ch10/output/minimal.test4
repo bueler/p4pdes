@@ -1,8 +1,7 @@
-  0 SNES Function norm 2.33046 
-  1 SNES Function norm 0.0560242 
-  2 SNES Function norm 0.0224851 
-  3 SNES Function norm 0.00181799 
-  4 SNES Function norm 4.406e-05 
-  5 SNES Function norm 2.87172e-08 
-  6 SNES Function norm < 1.e-11
-done on 17 x 17 grid ...
+  0 SNES Function norm 1.68825 
+  1 SNES Function norm 0.0580538 
+  2 SNES Function norm 0.00553405 
+  3 SNES Function norm 0.000121777 
+  4 SNES Function norm 5.72286e-08 
+  5 SNES Function norm < 1.e-11
+done on 9 x 9 grid ...
