@@ -56,7 +56,7 @@ runminimal_2:
 	-@../testit.sh minimal "-snes_fd_color -da_refine 2 -mat_is_symmetric 1.0e-7 -mse_laplace -ksp_type cg -ksp_converged_reason" 1 2
 
 runminimal_3:
-	-@../testit.sh minimal "-snes_mf_operator -da_refine 2 -snes_monitor_short" 2 3
+	-@../testit.sh minimal "-snes_mf_operator -da_refine 2 -snes_converged_reason" 2 3
 
 runminimal_4:
 	-@../testit.sh minimal "-snes_fd_color -da_refine 2 -snes_monitor_short -pc_type mg" 2 4
