@@ -22,6 +22,14 @@ $ ./fish2 -da_refine 4 -pc_type mg -snes_monitor -pc_mg_galerkin
 choose linear solver for coarse grid (default is preonly+lu):
 $ ./fish2 -da_refine 4 -pc_type mg -mg_coarse_ksp_type cg -mg_coarse_pc_type jacobi -ksp_view|less
 
+to generate classical jacobi/gauss-seidel results, add
+   PetscViewer viewer;
+   PetscViewerASCIIOpen(COMM,"rhs.m",&viewer);
+   PetscViewerPushFormat(viewer,PETSC_VIEWER_ASCII_MATLAB);
+   VecView(user.f,viewer);
+after setting user.f, and then do:
+$ ./fish2 -da_refine 1 -snes_monitor -ksp_monitor -snes_max_it 1 -ksp_type richardson -pc_type jacobi|sor
+with e.g. -ksp_monitor_solution :foo.m:ascii_matlab
 */
 
 #include <petsc.h>
