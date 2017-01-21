@@ -11,7 +11,7 @@ Parallel runs, spatial refinement only, robust PC:
 */
 
 #include <petsc.h>
-#include "../ch10/jacobians.c"
+#include "../ch6/jacobians.c"
 
 typedef struct {
   DM  da;
