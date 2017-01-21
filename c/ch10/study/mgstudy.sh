@@ -4,7 +4,7 @@ set -e
 EXEC=$1
 REFINE=$2
 
-# serial multigrid parameter study on fixed-size problem using executable EXEC:
+# multigrid parameter study on fixed-size problem using executable EXEC:
 #     -pc_mg_levels             <REFINE+1|REFINE-1|...|3>
 #     -pc_mg_cycle_type         <v|w>
 #     -mg_levels_ksp_type       <chebyshev|richardson>   WHICH SMOOTHER?
@@ -12,9 +12,10 @@ REFINE=$2
 #     -mg_levels_pc_type        <jacobi|sor>
 
 # use PETSC_ARCH with --with-debugging=0
-# run as:
+# run as in these examples:
 #    $ ./mgstudy.sh ../fish2 9 &> fish2refine9.txt
 #    $ ./mgstudy.sh ../fish3 5 &> fish3refine5.txt
+#    $ ./mgstudy.sh "mpiexec -n 2 ../fish2" 5 &> fish2refine5mpi2.txt
 
 for (( MGLEV=$(( REFINE + 1 )); MGLEV>2; MGLEV-=2 )); do
     for MGVW in v w; do
