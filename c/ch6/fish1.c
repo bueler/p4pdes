@@ -129,7 +129,7 @@ int main(int argc,char **argv) {
   ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
   ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
   ierr = VecNorm(u,NORM_INFINITY,&errnorm); CHKERRQ(ierr);
-  ierr = PetscPrintf(COMM,"on %d grid:  error |u-uexact|_inf = %g\n",
+  ierr = PetscPrintf(COMM,"on %d point grid:  error |u-uexact|_inf = %g\n",
            info.mx,errnorm); CHKERRQ(ierr);
 
   VecDestroy(&u);  VecDestroy(&uexact);  VecDestroy(&(user.f));
