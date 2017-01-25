@@ -112,7 +112,6 @@ int main(int argc,char **args) {
   ierr = DMSetFromOptions(da); CHKERRQ(ierr);
   ierr = DMSetUp(da); CHKERRQ(ierr);
   ierr = DMCreateMatrix(da,&A); CHKERRQ(ierr);
-  ierr = MatSetOptionsPrefix(A,"a_"); CHKERRQ(ierr);
   ierr = MatSetFromOptions(A); CHKERRQ(ierr);
 
   // create right-hand-side (RHS) b, approx solution u, exact solution uexact
