@@ -1,5 +1,6 @@
 /vecmatksp
 /tri
-
-/e1matven
+/loadsolve
+*.dat
+*.dat.info
 
