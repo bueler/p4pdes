@@ -7,13 +7,22 @@ static char help[] =
 "  ./loadsolve -f Ab.dat\n\n";
 
 /*
-extended small system example:
+small system example:
 ./tri -ksp_view_mat binary:Ab.dat -ksp_view_rhs binary:Ab.dat::append
 ./loadsolve -f Ab.dat -ksp_view_mat -ksp_view_rhs -ksp_view_solution
 
-extended small system example where RHS missing:
+small system example where RHS missing:
 ./tri -ksp_view_mat binary:A.dat
 ./loadsolve -f A.dat -norhs -ksp_view_mat -ksp_view_rhs
+
+large tridiagonal system (m=10^7) example:
+./tri -tri_m 10000000 -ksp_view_mat binary:large.dat -ksp_view_rhs binary:large.dat::append
+./loadsolve -f large.dat -log_view
+
+use of PetscTime() and PetscTimeSubtract() seems to produce same result as -log_view:
+./loadsolve -f large.dat -log_view |grep KSPSolve
+PetscTime says KSPSolve took 0.907355 seconds
+KSPSolve               1 1.0 9.0734e-01 ...
 */
 
 #include <petsc.h>
@@ -23,7 +32,7 @@ int main(int argc,char **args) {
   Vec         x, b;
   Mat         A;
   KSP         ksp;
-  PetscBool   flg, norhs=PETSC_FALSE;
+  PetscBool   flg, norhs=PETSC_FALSE, notime=PETSC_FALSE;
   char        file[PETSC_MAX_PATH_LEN] = "";     /* input file name */
   PetscViewer lsfile;              /* viewer */
 
@@ -34,8 +43,9 @@ int main(int argc,char **args) {
                             "loadsolve.c",file,file,PETSC_MAX_PATH_LEN,&flg);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-norhs","do not try to load right-hand-side b from file (use zero instead)",
                           "loadsolve.c",norhs,&norhs,NULL); CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-notime","do not report timing of KSPSolve",
+                          "loadsolve.c",notime,&notime,NULL); CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
-
   if (!flg) {
       ierr = PetscPrintf(PETSC_COMM_WORLD,
          "no input file ... ending  (usage: loadsolve -f file.dat)\n"); CHKERRQ(ierr);
@@ -65,9 +75,17 @@ int main(int argc,char **args) {
   ierr = KSPSetOperators(ksp,A,A); CHKERRQ(ierr);
   ierr = KSPSetFromOptions(ksp); CHKERRQ(ierr);
   ierr = VecDuplicate(b,&x);CHKERRQ(ierr);
-  ierr = KSPSolve(ksp,b,x); CHKERRQ(ierr);
 
-// FIXME time solution
+  if (!notime) {
+      PetscLogDouble solvetime;
+      ierr = PetscTime(&solvetime);CHKERRQ(ierr);
+      ierr = KSPSolve(ksp,b,x); CHKERRQ(ierr);
+      ierr = PetscTimeSubtract(&solvetime);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_WORLD,
+             "PetscTime says KSPSolve took %f seconds\n",-solvetime); CHKERRQ(ierr);
+  } else {
+      ierr = KSPSolve(ksp,b,x); CHKERRQ(ierr);
+  }
 
   KSPDestroy(&ksp);  MatDestroy(&A);
   VecDestroy(&x);  VecDestroy(&b);
