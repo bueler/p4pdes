@@ -1,10 +1,11 @@
 static char help[] =
-"Load a matrix and right-hand-side from a binary file (PETSc format): A x = b.\n"
-"Solve the system and provide timing information.\n"
-"For example, save a system from tri.c:\n"
+"Load a matrix  A  and right-hand-side  b  from a binary file (PETSc format).\n"
+"Solve the system  A x = b  and provide timing of KSPSolve in seconds.\n"
+"Example.  First save a system from tri.c:\n"
 "  ./tri -ksp_view_mat binary:Ab.dat -ksp_view_rhs binary:Ab.dat::append\n"
-"then load and solve it\n"
-"  ./loadsolve -f Ab.dat\n\n";
+"then load it and time the solution:\n"
+"  ./loadsolve -f Ab.dat\n"
+"(This is a simpler code than src/ksp/ksp/examples/tutorials/ex10.c.)\n";
 
 /*
 small system example:
@@ -17,12 +18,12 @@ small system example where RHS missing:
 
 large tridiagonal system (m=10^7) example:
 ./tri -tri_m 10000000 -ksp_view_mat binary:large.dat -ksp_view_rhs binary:large.dat::append
-./loadsolve -f large.dat -log_view
+./loadsolve -f large.dat
 
 use of PetscTime() and PetscTimeSubtract() seems to produce same result as -log_view:
-./loadsolve -f large.dat -log_view |grep KSPSolve
-PetscTime says KSPSolve took 0.907355 seconds
-KSPSolve               1 1.0 9.0734e-01 ...
+./loadsolve -f large.dat -log_view &> foo
+grep KSPSolve foo
+head -n 1 foo
 */
 
 #include <petsc.h>
@@ -32,9 +33,12 @@ int main(int argc,char **args) {
   Vec         x, b;
   Mat         A;
   KSP         ksp;
-  PetscBool   flg, norhs=PETSC_FALSE, notime=PETSC_FALSE;
+  PetscBool   flg,
+              norhs = PETSC_FALSE,
+              notime = PETSC_FALSE,
+              verbose = PETSC_FALSE;
   char        file[PETSC_MAX_PATH_LEN] = "";     /* input file name */
-  PetscViewer lsfile;              /* viewer */
+  PetscViewer lsfile;
 
   PetscInitialize(&argc,&args,NULL,help);
 
@@ -45,15 +49,19 @@ int main(int argc,char **args) {
                           "loadsolve.c",norhs,&norhs,NULL); CHKERRQ(ierr);
   ierr = PetscOptionsBool("-notime","do not report timing of KSPSolve",
                           "loadsolve.c",notime,&notime,NULL); CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-verbose","say what is going on",
+                          "loadsolve.c",verbose,&verbose,NULL); CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
-  if (!flg) {
+  if (!flg || strlen(file)==0) {
       ierr = PetscPrintf(PETSC_COMM_WORLD,
          "no input file ... ending  (usage: loadsolve -f file.dat)\n"); CHKERRQ(ierr);
-      return 0;
+      return 1;
   }
 
-  ierr = PetscPrintf(PETSC_COMM_WORLD,
-     "reading linear system from %s ...\n",file); CHKERRQ(ierr);
+  if (verbose) {
+      ierr = PetscPrintf(PETSC_COMM_WORLD,
+         "reading linear system from %s ...\n",file); CHKERRQ(ierr);
+  }
   ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,file,FILE_MODE_READ,&lsfile);CHKERRQ(ierr);
   ierr = MatCreate(PETSC_COMM_WORLD,&A);CHKERRQ(ierr);
   ierr = MatSetFromOptions(A);CHKERRQ(ierr);
@@ -64,8 +72,10 @@ int main(int argc,char **args) {
   if (norhs || VecLoad(b,lsfile)) {
       int m;
       ierr = MatGetSize(A,&m,NULL); CHKERRQ(ierr);
-      ierr = PetscPrintf(PETSC_COMM_WORLD,
-         "right-hand-side b missing from input file ... using zero vector of length %d\n",m); CHKERRQ(ierr);
+      if (verbose) {
+          ierr = PetscPrintf(PETSC_COMM_WORLD,
+             "right-hand-side b missing from input file ... using zero vector of length %d\n",m); CHKERRQ(ierr);
+      }
       ierr = VecSetSizes(b,PETSC_DECIDE,m); CHKERRQ(ierr);
       ierr = VecSet(b,0.0); CHKERRQ(ierr);
   }
@@ -81,8 +91,11 @@ int main(int argc,char **args) {
       ierr = PetscTime(&solvetime);CHKERRQ(ierr);
       ierr = KSPSolve(ksp,b,x); CHKERRQ(ierr);
       ierr = PetscTimeSubtract(&solvetime);CHKERRQ(ierr);
-      ierr = PetscPrintf(PETSC_COMM_WORLD,
-             "PetscTime says KSPSolve took %f seconds\n",-solvetime); CHKERRQ(ierr);
+      if (verbose) {
+          ierr = PetscPrintf(PETSC_COMM_WORLD,
+                 "PetscTime says KSPSolve took this many seconds:\n"); CHKERRQ(ierr);
+      }
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"%f\n",-solvetime); CHKERRQ(ierr);
   } else {
       ierr = KSPSolve(ksp,b,x); CHKERRQ(ierr);
   }

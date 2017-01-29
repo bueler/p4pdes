@@ -25,7 +25,7 @@ runtri_2:
 
 runloadsolve_1:
 	-@./tri -ksp_view_mat binary:Ab.dat -ksp_view_rhs binary:Ab.dat::append > /dev/null
-	-@../testit.sh loadsolve "-notime -f Ab.dat -ksp_view_mat -ksp_view_rhs -ksp_view_solution" 1 1
+	-@../testit.sh loadsolve "-notime -verbose -f Ab.dat -ksp_view_mat -ksp_view_rhs -ksp_view_solution" 1 1
 
 test: runvecmatksp_1 runtri_1 runtri_2 runloadsolve_1
 
