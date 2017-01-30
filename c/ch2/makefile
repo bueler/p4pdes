@@ -34,5 +34,5 @@ test: runvecmatksp_1 runtri_1 runtri_2 runloadsolve_1
 .PHONY: distclean runvecmatksp_1 runtri_1 runtri_2 test
 
 distclean:
-	@rm -f *~ vecmatksp tri
+	@rm -f *~ vecmatksp tri loadsolve
 

@@ -95,7 +95,7 @@ int main(int argc,char **args) {
           ierr = PetscPrintf(PETSC_COMM_WORLD,
                  "PetscTime says KSPSolve took this many seconds:\n"); CHKERRQ(ierr);
       }
-      ierr = PetscPrintf(PETSC_COMM_WORLD,"%f\n",-solvetime); CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"%.2f\n",-solvetime); CHKERRQ(ierr);
   } else {
       ierr = KSPSolve(ksp,b,x); CHKERRQ(ierr);
   }
