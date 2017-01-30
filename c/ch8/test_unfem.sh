@@ -38,7 +38,7 @@ else  # generate  trap.?.* from trap.poly
         NAME=trap
     fi
     LEV=${1:-4}
-    ./gentraps.sh $NAME $((LEV+1))
+    ./gentraps.sh $NAME $LEV
 fi
 
 make unfem
