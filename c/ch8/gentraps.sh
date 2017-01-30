@@ -17,6 +17,7 @@ area[5]=0.0002
 area[6]=0.00005
 area[7]=0.00001
 area[8]=0.000002
+area[9]=0.0000005
 triangle -pqa${area[0]} meshes/$NAME
 ./tri2petsc.py meshes/$NAME.1 meshes/$NAME.1
 for (( N=1; N<$LEV; N++ )); do
