@@ -38,7 +38,8 @@ test: rununfem_1 rununfem_2 rununfem_3 rununfem_4
 .PHONY: distclean rununfem_1 rununfem_2 rununfem_3 rununfem_4 test petscPyScripts
 
 distclean:
-	@rm -f *~ *.pyc unfem PetscBinaryIO.py petsc_conf.py
+	@rm -f *~ unfem *tmp
+	@rm -f *.pyc PetscBinaryIO.py petsc_conf.py
 	(cd meshes/ && ${MAKE} clean)
 	(cd koch/ && ${MAKE} clean)
 

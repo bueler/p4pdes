@@ -14,5 +14,5 @@ test: rune_1
 .PHONY: distclean rune_1 test
 
 distclean:
-	@rm -f *~ e
+	@rm -f *~ e *tmp
 

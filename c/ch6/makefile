@@ -76,5 +76,5 @@ test: test_fish1 test_fish2 test_fish3 test_minimal
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ fish1 fish2 fish3 minimal
+	@rm -f *~ fish1 fish2 fish3 minimal *tmp
 

@@ -22,5 +22,5 @@ test: runpoisson_1 runpoisson_2 runpoisson_3
 .PHONY: distclean runpoisson_1 runpoisson_2 runpoisson_3 test
 
 distclean:
-	@rm -f *~ poisson
+	@rm -f *~ poisson *tmp
 

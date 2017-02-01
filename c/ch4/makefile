@@ -45,5 +45,5 @@ test: runexpcircle_1 runexpcircle_2 runecjac_1 runecjac_2 runreaction_1 runreact
 .PHONY: distclean runexpcircle_1 runexpcircle_2 runecjac_1 runecjac_2 runreaction_1 runreaction_2 runreaction_3 runreaction_4 test
 
 distclean:
-	@rm -f *~ expcircle ecjac reaction
+	@rm -f *~ expcircle ecjac reaction *tmp
 

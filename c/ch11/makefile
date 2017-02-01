@@ -23,5 +23,5 @@ test: runobstacle_1 runobstacle_2 runobstacle_3
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ obstacle
+	@rm -f *~ obstacle *tmp
 
