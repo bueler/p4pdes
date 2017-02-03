@@ -5,6 +5,10 @@ obstacle: obstacle.o  chkopts
 	-${CLINKER} -o obstacle obstacle.o  ${PETSC_LIB}
 	${RM} obstacle.o
 
+ice: ice.o  chkopts
+	-${CLINKER} -o ice ice.o  ${PETSC_LIB}
+	${RM} ice.o
+
 # testing
 
 runobstacle_1:
@@ -23,5 +27,5 @@ test: runobstacle_1 runobstacle_2 runobstacle_3
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ obstacle *tmp
+	@rm -f *~ obstacle ice *tmp
 
