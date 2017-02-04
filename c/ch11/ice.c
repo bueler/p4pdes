@@ -17,31 +17,25 @@ static const char help[] =
 #include <petsc.h>
 
 typedef struct {
-  double ela,   // equilibrium line altitude (m)
-            zgrad; // vertical derivative (gradient) of CMB (s^-1)
+    double ela,   // equilibrium line altitude (m)
+           zgrad; // vertical derivative (gradient) of CMB (s^-1)
 } CMBModel;
 
-typedef struct {
-  // grid independent data:
-  double L,      // spatial domain is [0,L] x [0,L]
-            tf,     // time domain is [0,tf]
-            secpera,// number of seconds in a year
-            g,      // acceleration of gravity
-            rho_ice,// ice density
-            n_ice,  // Glen exponent for SIA flux term
-            A_ice,  // ice softness
-            Gamma,  // coefficient for SIA flux term
-            D0,     // representative(?) value of diffusivity
-            eps,    // regularization parameter for D
-            delta,  // dimensionless regularization for slope in SIA formulas
-            lambda, // amount of upwinding; lambda=0 is none and lambda=1 is "full"
-            initmagic;// constant, in years, used to multiply CMB fo initial H
-  CMBModel  *cmb;
-  // describe the fine grid:
-  DM        da;
-  Vec       Hexact, // the exact thickness (valid in verification case)
-            Hinit;  // initial state
-  double    dx, dy; // grid spacings
+typedef struct {  // this is all grid independent data
+    double L,      // spatial domain is [0,L] x [0,L]
+           tf,     // time domain is [0,tf]
+           secpera,// number of seconds in a year
+           g,      // acceleration of gravity
+           rho_ice,// ice density
+           n_ice,  // Glen exponent for SIA flux term
+           A_ice,  // ice softness
+           Gamma,  // coefficient for SIA flux term
+           D0,     // representative(?) value of diffusivity
+           eps,    // regularization parameter for D
+           delta,  // dimensionless regularization for slope in SIA formulas
+           lambda, // amount of upwinding; lambda=0 is none and lambda=1 is "full"
+           initmagic;// constant, in years, used to multiply CMB fo initial H
+    CMBModel  *cmb;
 } AppCtx;
 
 
@@ -58,13 +52,15 @@ extern PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo*, double,
                           double**, double**, AppCtx*);
 
 int main(int argc,char **argv) {
-  PetscErrorCode      ierr;
-  TS                  ts;
-  SNES                snes;
-  Vec                 H;
-  AppCtx              user;
-  CMBModel            cmb;
-  DMDALocalInfo       info;
+  PetscErrorCode ierr;
+  DM             da;
+  TS             ts;
+  SNES           snes;
+  Vec            H, Hexact, Hinit;
+  AppCtx         user;
+  CMBModel       cmb;
+  DMDALocalInfo  info;
+  double         dx,dy;
 
   PetscInitialize(&argc,&argv,(char*)0,help);
 
@@ -72,46 +68,46 @@ int main(int argc,char **argv) {
   ierr = SetFromOptionsCMBModel(&cmb,"cmb_",user.secpera);
   user.cmb = &cmb;
 
-  // this DMDA is used for scalar fields on nodes; cell-centered grid
+  // this DMDA is the cell-centered grid
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
                       DM_BOUNDARY_PERIODIC,DM_BOUNDARY_PERIODIC,
                       DMDA_STENCIL_BOX,
                       18,18,PETSC_DECIDE,PETSC_DECIDE,
                       1, 1,        // dof=1, stencilwidth=1
-                      NULL,NULL,&user.da);
-  ierr = DMSetFromOptions(user.da); CHKERRQ(ierr);
-  ierr = DMSetUp(user.da); CHKERRQ(ierr);  // this must be called BEFORE SetUniformCoordinates
-  ierr = DMSetApplicationContext(user.da, &user);CHKERRQ(ierr);
+                      NULL,NULL,&da);
+  ierr = DMSetFromOptions(da); CHKERRQ(ierr);
+  ierr = DMSetUp(da); CHKERRQ(ierr);  // this must be called BEFORE SetUniformCoordinates
+  ierr = DMSetApplicationContext(da, &user);CHKERRQ(ierr);
 
-  // compute grid spacing
-  ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);
-  user.dx = user.L / (double)(info.mx);
-  user.dy = user.L / (double)(info.my);
-  ierr = DMDASetUniformCoordinates(user.da, 0.0, user.L, 0.0, user.L, 0.0,1.0); CHKERRQ(ierr);
+  // compute and report grid spacing
+  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+  dx = user.L / (double)(info.mx);
+  dy = user.L / (double)(info.my);
+  ierr = DMDASetUniformCoordinates(da, 0.0, user.L, 0.0, user.L, 0.0,1.0); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
              "solving on [0,L] x [0,L] with  L=%.3f km;\n"
              "fine grid is  %d x %d  points with spacing  dx = %.6f km  and  dy = %.6f km ...\n",
-             user.L/1000.0,info.mx,info.my,user.dx/1000.0,user.dy/1000.0);
+             user.L/1000.0,info.mx,info.my,dx/1000.0,dy/1000.0);
 
-  ierr = DMCreateGlobalVector(user.da,&H);CHKERRQ(ierr);
+  ierr = DMCreateGlobalVector(da,&H);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject)H,"thickness solution H"); CHKERRQ(ierr);
 
   // Hexact is valid only in verification case
-  ierr = VecDuplicate(H,&user.Hexact); CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)(user.Hexact),"exact/observed thickness H"); CHKERRQ(ierr);
+  ierr = VecDuplicate(H,&Hexact); CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject)(Hexact),"exact/observed thickness H"); CHKERRQ(ierr);
 
-  // fill user.Hinitial according to chop-scale-CMB
-  ierr = VecDuplicate(H,&user.Hinit); CHKERRQ(ierr);
-  ierr = ChopScaleCMBforInitialH(user.Hinit,&user); CHKERRQ(ierr);
+  // fill Hinitial according to chop-scale-CMB
+  ierr = VecDuplicate(H,&Hinit); CHKERRQ(ierr);
+  ierr = ChopScaleCMBforInitialH(Hinit,&user); CHKERRQ(ierr);
 
   // initialize the TS
   ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
   ierr = TSSetProblemType(ts,TS_NONLINEAR); CHKERRQ(ierr);
   ierr = TSSetType(ts,TSBEULER); CHKERRQ(ierr);
-  ierr = TSSetDM(ts,user.da); CHKERRQ(ierr);
-  ierr = DMDATSSetIFunctionLocal(user.da,INSERT_VALUES,
+  ierr = TSSetDM(ts,da); CHKERRQ(ierr);
+  ierr = DMDATSSetIFunctionLocal(da,INSERT_VALUES,
            (DMDATSIFunctionLocal)FormIFunctionLocal,&user); CHKERRQ(ierr);
-  ierr = DMDATSSetRHSFunctionLocal(user.da,INSERT_VALUES,
+  ierr = DMDATSSetRHSFunctionLocal(da,INSERT_VALUES,
            (DMDATSRHSFunctionLocal)FormRHSFunctionLocal,&user); CHKERRQ(ierr);
   ierr = TSGetSNES(ts,&snes); CHKERRQ(ierr);
   ierr = SNESSetType(snes,SNESVINEWTONRSLS);CHKERRQ(ierr);
@@ -123,12 +119,12 @@ int main(int argc,char **argv) {
   ierr = TSSetDuration(ts,1000000,0.1); CHKERRQ(ierr);
   ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
 
-  ierr = VecCopy(user.Hinit,H); CHKERRQ(ierr);
+  ierr = VecCopy(Hinit,H); CHKERRQ(ierr);
   ierr = TSSolve(ts,H); CHKERRQ(ierr);
 
   // clean up
-  VecDestroy(&H);  VecDestroy(&user.Hinit);  VecDestroy(&user.Hexact);
-  TSDestroy(&ts);  DMDestroy(&user.da);
+  VecDestroy(&H);  VecDestroy(&Hinit);  VecDestroy(&Hexact);
+  TSDestroy(&ts);  DMDestroy(&da);
   PetscFinalize();
   return 0;
 }
@@ -147,8 +143,7 @@ PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
   user->delta  = 1.0e-4;
   user->lambda = 0.25;       // amount of upwinding; some trial-and-error with bedstep soln; 0.1 gives some Newton convergence difficulties on refined grid (=125m); earlier M* used 0.5
   user->cmb    = NULL;
-#define domeL  750.0e3 // radius of exact ice sheet
-  user->L      = 900.0e3;    // m
+  user->L      = 900.0e3;    // m; note  domeL=750.0e3 is radius of verification ice sheet
   user->D0     = 10.0;       // m^2 / s
   user->eps    = 0.001;
 
@@ -229,7 +224,6 @@ typedef struct {
     double x,y;
 } Grad;
 
-
 double getdelta(Grad gH, Grad gb, const AppCtx *user) {
     const double n = user->n_ice;
     if (n > 1.0) {
@@ -240,7 +234,6 @@ double getdelta(Grad gH, Grad gb, const AppCtx *user) {
     } else
         return user->Gamma;
 }
-
 
 Grad getW(double delta, Grad gb) {
     Grad W;
@@ -254,7 +247,6 @@ double DCS(double delta, double H, double n, double eps, double D0) {
   return (1.0 - eps) * delta * PetscPowReal(PetscAbsReal(H),n+2.0) + eps * D0;
 }
 
-
 double getflux(Grad gH, Grad gb, double H, double Hup,
                PetscBool xdir, const AppCtx *user) {
   const double n     = user->n_ice,
@@ -267,24 +259,23 @@ double getflux(Grad gH, Grad gb, double H, double Hup,
       return - myD * gH.y + myW.y * PetscPowReal(PetscAbsReal(Hup),n+2.0);
 }
 
-
-#define WEIGHTS \
-const double x[4] = { 1.0-xi,      xi,  xi, 1.0-xi}, \
-                y[4] = {1.0-eta, 1.0-eta, eta,    eta};
-
-#define GWEIGHTS \
-const double gx[4] = {-1.0,  1.0, 1.0, -1.0}, \
-                gy[4] = {-1.0, -1.0, 1.0,  1.0};
+// gradients of weights for Q^1 interpolant
+const double gx[4] = {-1.0,  1.0, 1.0, -1.0},
+             gy[4] = {-1.0, -1.0, 1.0,  1.0};
 
 double fieldatpt(PetscInt u, PetscInt v, double xi, double eta, double **f) {
-  WEIGHTS
-  return x[0] * y[0] * f[v][u] + x[1] * y[1] * f[v][u+1] + x[2] * y[2] * f[v+1][u+1] + x[3] * y[3] * f[v+1][u];
+  // weights for Q^1 interpolant
+  const double x[4] = { 1.0-xi,      xi,  xi, 1.0-xi},
+               y[4] = {1.0-eta, 1.0-eta, eta,    eta};
+  return   x[0] * y[0] * f[v][u]     + x[1] * y[1] * f[v][u+1]
+         + x[2] * y[2] * f[v+1][u+1] + x[3] * y[3] * f[v+1][u];
 }
 
 Grad gradfatpt(PetscInt u, PetscInt v, double xi, double eta, double dx, double dy, double **f) {
   Grad gradf;
-  WEIGHTS
-  GWEIGHTS
+  // weights for Q^1 interpolant
+  const double x[4] = { 1.0-xi,      xi,  xi, 1.0-xi},
+               y[4] = {1.0-eta, 1.0-eta, eta,    eta};
   gradf.x =   gx[0] * y[0] * f[v][u]     + gx[1] * y[1] * f[v][u+1]
             + gx[2] * y[2] * f[v+1][u+1] + gx[3] * y[3] * f[v+1][u];
   gradf.y =    x[0] *gy[0] * f[v][u]     +  x[1] *gy[1] * f[v][u+1]
@@ -294,23 +285,18 @@ Grad gradfatpt(PetscInt u, PetscInt v, double xi, double eta, double dx, double 
   return gradf;
 }
 
-
 // indexing of the 8 quadrature points along the boundary of the control volume in M*
 // point s=0,...,7 is in element (j,k) = (j+je[s],k+ke[s])
 static const PetscInt  je[8] = {0,  0, -1, -1, -1, -1,  0,  0},
                        ke[8] = {0,  0,  0,  0, -1, -1, -1, -1},
                        ce[8] = {0,  3,  1,  0,  2,  1,  3,  2};
 
-// coefficients of quadrature evaluations along the boundary of the control volume in M*
-#define FLUXINTCOEFFS \
-const double coeff[8] = {dy/2, dx/2, dx/2, -dy/2, -dy/2, -dx/2, -dx/2, dy/2};
-
 // direction of flux at 4 points in each element
 static const PetscBool xdire[4] = {PETSC_TRUE, PETSC_FALSE, PETSC_TRUE, PETSC_FALSE};
 
 // local (element-wise) coords of quadrature points for M*
 static const double locx[4] = {  0.5, 0.75,  0.5, 0.25},
-                       locy[4] = { 0.25,  0.5, 0.75,  0.5};
+                    locy[4] = { 0.25,  0.5, 0.75,  0.5};
 
 
 /* FormIFunctionLocal  =  IFunction call-back by TS using DMDA info.
@@ -352,8 +338,10 @@ at "%":
 PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t,
                                   double **aH, double **aHdot, double **FF,
                                   AppCtx *user) {
-  const double    dx = user->dx, dy = user->dy;
-  FLUXINTCOEFFS
+  const double    dx = user->L / (double)(info->mx),
+                  dy = user->L / (double)(info->my);
+  // coefficients of quadrature evaluations along the boundary of the control volume in M*
+  const double coeff[8] = {dy/2, dx/2, dx/2, -dy/2, -dy/2, -dx/2, -dx/2, dy/2};
   const PetscBool upwind = (user->lambda > 0.0);
   const double    upmin = (1.0 - user->lambda) * 0.5,
                   upmax = (1.0 + user->lambda) * 0.5;
