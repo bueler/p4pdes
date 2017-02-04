@@ -17,20 +17,21 @@ static const char help[] =
 #include <petsc.h>
 
 typedef struct {
-  PetscReal ela,   // equilibrium line altitude (m)
+  double ela,   // equilibrium line altitude (m)
             zgrad; // vertical derivative (gradient) of CMB (s^-1)
 } CMBModel;
 
 typedef struct {
   // grid independent data:
-  PetscReal L,      // spatial domain is [0,L] x [0,L]
+  double L,      // spatial domain is [0,L] x [0,L]
             tf,     // time domain is [0,tf]
             secpera,// number of seconds in a year
             g,      // acceleration of gravity
             rho_ice,// ice density
             n_ice,  // Glen exponent for SIA flux term
-            A_ice, // ice softness
+            A_ice,  // ice softness
             Gamma,  // coefficient for SIA flux term
+            D0,     // representative(?) value of diffusivity
             eps,    // regularization parameter for D
             delta,  // dimensionless regularization for slope in SIA formulas
             lambda, // amount of upwinding; lambda=0 is none and lambda=1 is "full"
@@ -50,6 +51,7 @@ extern PetscErrorCode M_CMBModel(CMBModel*, double, double*);
 extern PetscErrorCode dMds_CMBModel(CMBModel*, double, double*);
 extern PetscErrorCode ChopScaleCMBforInitialH(Vec,AppCtx*);
 extern PetscErrorCode FormBounds(SNES,Vec,Vec);
+extern PetscErrorCode FormBedLocal(DMDALocalInfo*, double**, AppCtx*);
 extern PetscErrorCode FormIFunctionLocal(DMDALocalInfo*, double,
                           double**, double**, double**, AppCtx*);
 extern PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo*, double,
@@ -83,8 +85,8 @@ int main(int argc,char **argv) {
 
   // compute grid spacing
   ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);
-  user.dx = user.L / (PetscReal)(info.mx);
-  user.dy = user.L / (PetscReal)(info.my);
+  user.dx = user.L / (double)(info.mx);
+  user.dy = user.L / (double)(info.my);
   ierr = DMDASetUniformCoordinates(user.da, 0.0, user.L, 0.0, user.L, 0.0,1.0); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
              "solving on [0,L] x [0,L] with  L=%.3f km;\n"
@@ -143,10 +145,12 @@ PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
   user->A_ice  = 1.0e-16/user->secpera; // = 3.17e-24  1/(Pa^3 s); EISMINT I value
   user->initmagic = 1000.0;  // a
   user->delta  = 1.0e-4;
-  user->lambda = 0.25;  // amount of upwinding; some trial-and-error with bedstep soln; 0.1 gives some Newton convergence difficulties on refined grid (=125m); earlier M* used 0.5
-  user->cmb = NULL;
+  user->lambda = 0.25;       // amount of upwinding; some trial-and-error with bedstep soln; 0.1 gives some Newton convergence difficulties on refined grid (=125m); earlier M* used 0.5
+  user->cmb    = NULL;
 #define domeL  750.0e3 // radius of exact ice sheet
-  user->L = 900.0e3;    // m
+  user->L      = 900.0e3;    // m
+  user->D0     = 10.0;       // m^2 / s
+  user->eps    = 0.001;
 
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"ice_","options to ice","");CHKERRQ(ierr);
   ierr = PetscOptionsReal(
@@ -174,7 +178,7 @@ PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode SetFromOptionsCMBModel(CMBModel *cmb, const char *optprefix, PetscReal secpera) {
+PetscErrorCode SetFromOptionsCMBModel(CMBModel *cmb, const char *optprefix, double secpera) {
   PetscErrorCode ierr;
   cmb->ela   = 2000.0; // m
   cmb->zgrad = 0.001;  // a^-1
@@ -192,7 +196,7 @@ PetscErrorCode SetFromOptionsCMBModel(CMBModel *cmb, const char *optprefix, Pets
 }
 
 
-PetscErrorCode M_CMBModel(CMBModel *cmb, PetscReal s, PetscReal *M) {
+PetscErrorCode M_CMBModel(CMBModel *cmb, double s, double *M) {
   *M = cmb->zgrad * (s - cmb->ela);
 // FIXME:  add this to formula
 /*
@@ -204,7 +208,7 @@ PetscErrorCode M_CMBModel(CMBModel *cmb, PetscReal s, PetscReal *M) {
 }
 
 
-PetscErrorCode dMdH_CMBModel(CMBModel *cmb, PetscReal s, PetscReal *dMds) {
+PetscErrorCode dMdH_CMBModel(CMBModel *cmb, double s, double *dMds) {
   *dMds = cmb->zgrad;
   PetscFunctionReturn(0);
 }
@@ -218,4 +222,202 @@ PetscErrorCode FormBounds(SNES snes, Vec Xl, Vec Xu) {
   ierr = VecSet(Xu,PETSC_INFINITY); CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
+
+
+// value of gradient at a point
+typedef struct {
+    double x,y;
+} Grad;
+
+
+double getdelta(Grad gH, Grad gb, const AppCtx *user) {
+    const double n = user->n_ice;
+    if (n > 1.0) {
+        const double sx = gH.x + gb.x,
+                        sy = gH.y + gb.y,
+                        slopesqr = sx * sx + sy * sy + user->delta * user->delta;
+        return user->Gamma * PetscPowReal(slopesqr,(n-1.0)/2);
+    } else
+        return user->Gamma;
+}
+
+
+Grad getW(double delta, Grad gb) {
+    Grad W;
+    W.x = - delta * gb.x;
+    W.y = - delta * gb.y;
+    return W;
+}
+
+/* D(eps)=(1-eps) delta H^{n+2} + eps D_0   so   D(1)=D_0 and D(0)=delta H^{n+2}. */
+double DCS(double delta, double H, double n, double eps, double D0) {
+  return (1.0 - eps) * delta * PetscPowReal(PetscAbsReal(H),n+2.0) + eps * D0;
+}
+
+
+double getflux(Grad gH, Grad gb, double H, double Hup,
+               PetscBool xdir, const AppCtx *user) {
+  const double n     = user->n_ice,
+                  delta = getdelta(gH,gb,user),
+                  myD   = DCS(delta,H,n,user->eps,user->D0);
+  const Grad      myW   = getW(delta,gb);
+  if (xdir)
+      return - myD * gH.x + myW.x * PetscPowReal(PetscAbsReal(Hup),n+2.0);
+  else
+      return - myD * gH.y + myW.y * PetscPowReal(PetscAbsReal(Hup),n+2.0);
+}
+
+
+#define WEIGHTS \
+const double x[4] = { 1.0-xi,      xi,  xi, 1.0-xi}, \
+                y[4] = {1.0-eta, 1.0-eta, eta,    eta};
+
+#define GWEIGHTS \
+const double gx[4] = {-1.0,  1.0, 1.0, -1.0}, \
+                gy[4] = {-1.0, -1.0, 1.0,  1.0};
+
+double fieldatpt(PetscInt u, PetscInt v, double xi, double eta, double **f) {
+  WEIGHTS
+  return x[0] * y[0] * f[v][u] + x[1] * y[1] * f[v][u+1] + x[2] * y[2] * f[v+1][u+1] + x[3] * y[3] * f[v+1][u];
+}
+
+Grad gradfatpt(PetscInt u, PetscInt v, double xi, double eta, double dx, double dy, double **f) {
+  Grad gradf;
+  WEIGHTS
+  GWEIGHTS
+  gradf.x =   gx[0] * y[0] * f[v][u]     + gx[1] * y[1] * f[v][u+1]
+            + gx[2] * y[2] * f[v+1][u+1] + gx[3] * y[3] * f[v+1][u];
+  gradf.y =    x[0] *gy[0] * f[v][u]     +  x[1] *gy[1] * f[v][u+1]
+            +  x[2] *gy[2] * f[v+1][u+1] +  x[3] *gy[3] * f[v+1][u];
+  gradf.x /= dx;
+  gradf.y /= dy;
+  return gradf;
+}
+
+
+// indexing of the 8 quadrature points along the boundary of the control volume in M*
+// point s=0,...,7 is in element (j,k) = (j+je[s],k+ke[s])
+static const PetscInt  je[8] = {0,  0, -1, -1, -1, -1,  0,  0},
+                       ke[8] = {0,  0,  0,  0, -1, -1, -1, -1},
+                       ce[8] = {0,  3,  1,  0,  2,  1,  3,  2};
+
+// coefficients of quadrature evaluations along the boundary of the control volume in M*
+#define FLUXINTCOEFFS \
+const double coeff[8] = {dy/2, dx/2, dx/2, -dy/2, -dy/2, -dx/2, -dx/2, dy/2};
+
+// direction of flux at 4 points in each element
+static const PetscBool xdire[4] = {PETSC_TRUE, PETSC_FALSE, PETSC_TRUE, PETSC_FALSE};
+
+// local (element-wise) coords of quadrature points for M*
+static const double locx[4] = {  0.5, 0.75,  0.5, 0.25},
+                       locy[4] = { 0.25,  0.5, 0.75,  0.5};
+
+
+/* FormIFunctionLocal  =  IFunction call-back by TS using DMDA info.
+
+FIXME: move m_{j,k} into RHS part
+
+Evaluates residual FF on local process patch:
+   FF_{j,k} = \int_{\partial V_{j,k}} \mathbf{q} \cdot \mathbf{n} - m_{j,k} \Delta x \Delta y
+where V_{j,k} is the control volume centered at (x_j,y_k).
+
+Regarding indexing the location along the boundary of the control volume where
+flux is evaluated, this shows four elements and one control volume centered
+at (x_j,y_k).  The boundary of the control volume has 8 points, numbered s=0,...,7:
+   -------------------
+  |         |         |
+  |    ..2..|..1..    |
+  |   3:    |    :0   |
+k |--------- ---------|
+  |   4:    |    :7   |
+  |    ..5..|..6..    |
+  |         |         |
+   -------------------
+            j
+
+Regarding flux-component indexing on the element indexed by (j,k) node, as shown,
+the value  aq[k][j][c]  for c=0,1,2,3, is an x-component at "*" and a y-component
+at "%":
+   -------------------
+  |         :         |
+  |         *2        |
+  |    3    :    1    |
+  |....%.... ....%....|
+  |         :         |
+  |         *0        |
+  |         :         |
+  @-------------------
+(j,k)
+*/
+PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t,
+                                  double **aH, double **aHdot, double **FF,
+                                  AppCtx *user) {
+  const double    dx = user->dx, dy = user->dy;
+  FLUXINTCOEFFS
+  const PetscBool upwind = (user->lambda > 0.0);
+  const double    upmin = (1.0 - user->lambda) * 0.5,
+                  upmax = (1.0 + user->lambda) * 0.5;
+  int             j, k;
+  double          **am, **ab, ***aqquad;   // FIXME elim all of these
+
+  PetscFunctionBeginUser;
+
+  // loop over locally-owned elements, including ghosts, to get fluxes at
+  // c = 0,1,2,3 points in element;  note start at (xs-1,ys-1)
+  for (k = info->ys-1; k < info->ys + info->ym; k++) {
+      for (j = info->xs-1; j < info->xs + info->xm; j++) {
+          int    c;
+          double H, Hup;
+          Grad   gH, gb;
+          for (c=0; c<4; c++) {
+              H  = fieldatpt(j,k,locx[c],locy[c],aH);
+              gH = gradfatpt(j,k,locx[c],locy[c],dx,dy,aH);
+              gb = gradfatpt(j,k,locx[c],locy[c],dx,dy,ab);           // FIXME calculuate ab[][] on the fly
+              if (upwind) {
+                  double lxup = locx[c], lyup = locy[c];
+                  if (xdire[c] == PETSC_TRUE)
+                      lxup = (gb.x <= 0.0) ? upmin : upmax;
+                  else
+                      lyup = (gb.y <= 0.0) ? upmin : upmax;
+                  Hup = fieldatpt(j,k,lxup,lyup,aH);
+              } else
+                  Hup = H;
+              aqquad[k][j][c] = getflux(gH,gb,H,Hup,xdire[c],user);   // FIXME: store these in c=0,1,2,3 arrays
+          }
+      }
+  }
+  // FIXME:  calculation of m by CMB model goes to RHS
+  // if CMB m depends on surface elevation, compute it; OVERWRITES Vec user->m
+  if (user->cmb != NULL) {   // FIXME error if cmb is NULL
+      for (k=info->ys; k<info->ys+info->ym; k++) {
+          for (j=info->xs; j<info->xs+info->xm; j++) {
+              M_CMBModel(user->cmb,ab[k][j] + aH[k][j],&(am[k][j]));
+              //PetscPrintf(PETSC_COMM_WORLD,"am[%d][%d] = %.5e\n",k,j,am[k][j]);
+          }
+      }
+  }
+  // loop over nodes, not including ghosts, to get residual from quadature over
+  // s = 0,1,...,7 points on boundary of control volume (rectangle) around node
+  for (k=info->ys; k<info->ys+info->ym; k++) {
+      for (j=info->xs; j<info->xs+info->xm; j++) {
+          PetscInt s;
+          // This is the integral over the control volume boundary using two
+          // quadrature points on each side of of the four sides of the
+          // rectangular control volume.
+          // For M*: two instances of midpoint rule on each side, with two
+          //         different values of aq[][] per side
+
+          // FIXME add in correct here dHdt etc. to get F(t,H,dHdt)
+          FF[k][j] = - am[k][j] * dx * dy;
+          for (s=0; s<8; s++)
+              FF[k][j] += coeff[s] * aqquad[k+ke[s]][j+je[s]][ce[s]];
+
+          // FIXME remove "recovery step idea" from this ODE in time version
+          //if (user->dtres > 0.0)
+          //FF[k][j] += (aH[k][j] - aHprev[k][j]) * dx * dy / user->dtres;
+      }
+  }
+  PetscFunctionReturn(0);
+}
+
 
