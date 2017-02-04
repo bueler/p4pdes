@@ -21,10 +21,11 @@ typedef struct {
            zgrad; // vertical derivative (gradient) of CMB (s^-1)
 } CMBModel;
 
-typedef struct {  // this is all grid independent data
-    double L,      // spatial domain is [0,L] x [0,L]
+typedef struct {  // context is all grid-independent info
+    double secpera,// number of seconds in a year
+           L,      // spatial domain is [0,L] x [0,L]
            tf,     // time domain is [0,tf]
-           secpera,// number of seconds in a year
+           dtinit, // user-requested initial time step
            g,      // acceleration of gravity
            rho_ice,// ice density
            n_ice,  // Glen exponent for SIA flux term
@@ -38,14 +39,13 @@ typedef struct {  // this is all grid independent data
     CMBModel  *cmb;
 } AppCtx;
 
+extern PetscErrorCode SetFromOptions_CMBModel(CMBModel*, const char*, double);
+extern PetscErrorCode M_CMBModel(CMBModel*, double, double*);
 
 extern PetscErrorCode SetFromOptionsAppCtx(AppCtx*);
-extern PetscErrorCode SetFromOptionsCMBModel(CMBModel*, const char*, double);
-extern PetscErrorCode M_CMBModel(CMBModel*, double, double*);
-extern PetscErrorCode dMds_CMBModel(CMBModel*, double, double*);
-extern PetscErrorCode ChopScaleCMBforInitialH(Vec,AppCtx*);
+extern PetscErrorCode ChopScaleInitialH(Vec,AppCtx*);
 extern PetscErrorCode FormBounds(SNES,Vec,Vec);
-extern PetscErrorCode FormBedLocal(DMDALocalInfo*, double**, AppCtx*);
+extern PetscErrorCode FormBedLocal(DMDALocalInfo*, double**, AppCtx*);  //TODO
 extern PetscErrorCode FormIFunctionLocal(DMDALocalInfo*, double,
                           double**, double**, double**, AppCtx*);
 extern PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo*, double,
@@ -55,8 +55,8 @@ int main(int argc,char **argv) {
   PetscErrorCode ierr;
   DM             da;
   TS             ts;
-  SNES           snes;
-  Vec            H, Hexact, Hinit;
+  SNES           snes;   // no need to destroy (owned by TS)
+  Vec            H, Hexact;
   AppCtx         user;
   CMBModel       cmb;
   DMDALocalInfo  info;
@@ -65,29 +65,29 @@ int main(int argc,char **argv) {
   PetscInitialize(&argc,&argv,(char*)0,help);
 
   ierr = SetFromOptionsAppCtx(&user); CHKERRQ(ierr);
-  ierr = SetFromOptionsCMBModel(&cmb,"cmb_",user.secpera);
+  ierr = SetFromOptionsCMBModel(&cmb,"ice_cmb_",user.secpera);
   user.cmb = &cmb;
 
   // this DMDA is the cell-centered grid
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
                       DM_BOUNDARY_PERIODIC,DM_BOUNDARY_PERIODIC,
                       DMDA_STENCIL_BOX,
-                      18,18,PETSC_DECIDE,PETSC_DECIDE,
+                      4,4,PETSC_DECIDE,PETSC_DECIDE,
                       1, 1,        // dof=1, stencilwidth=1
                       NULL,NULL,&da);
   ierr = DMSetFromOptions(da); CHKERRQ(ierr);
   ierr = DMSetUp(da); CHKERRQ(ierr);  // this must be called BEFORE SetUniformCoordinates
   ierr = DMSetApplicationContext(da, &user);CHKERRQ(ierr);
+  ierr = DMDASetUniformCoordinates(da, 0.0, user.L, 0.0, user.L, 0.0,1.0); CHKERRQ(ierr);
 
-  // compute and report grid spacing
+  // report on space-time grid
   ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
   dx = user.L / (double)(info.mx);
   dy = user.L / (double)(info.my);
-  ierr = DMDASetUniformCoordinates(da, 0.0, user.L, 0.0, user.L, 0.0,1.0); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
-             "solving on [0,L] x [0,L] with  L=%.3f km;\n"
-             "fine grid is  %d x %d  points with spacing  dx = %.6f km  and  dy = %.6f km ...\n",
-             user.L/1000.0,info.mx,info.my,dx/1000.0,dy/1000.0);
+     "solving on [0,L] x [0,L] with  L=%.3f km;\n"
+     "fine grid is  %d x %d  points with spacing  dx = %.6f km  and  dy = %.6f km ...\n",
+     user.L/1000.0,info.mx,info.my,dx/1000.0,dy/1000.0);
 
   ierr = DMCreateGlobalVector(da,&H);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject)H,"thickness solution H"); CHKERRQ(ierr);
@@ -95,10 +95,6 @@ int main(int argc,char **argv) {
   // Hexact is valid only in verification case
   ierr = VecDuplicate(H,&Hexact); CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject)(Hexact),"exact/observed thickness H"); CHKERRQ(ierr);
-
-  // fill Hinitial according to chop-scale-CMB
-  ierr = VecDuplicate(H,&Hinit); CHKERRQ(ierr);
-  ierr = ChopScaleCMBforInitialH(Hinit,&user); CHKERRQ(ierr);
 
   // initialize the TS
   ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
@@ -109,71 +105,34 @@ int main(int argc,char **argv) {
            (DMDATSIFunctionLocal)FormIFunctionLocal,&user); CHKERRQ(ierr);
   ierr = DMDATSSetRHSFunctionLocal(da,INSERT_VALUES,
            (DMDATSRHSFunctionLocal)FormRHSFunctionLocal,&user); CHKERRQ(ierr);
+
+  // configure the SNES to solve NCP/VI at each step
   ierr = TSGetSNES(ts,&snes); CHKERRQ(ierr);
   ierr = SNESSetType(snes,SNESVINEWTONRSLS);CHKERRQ(ierr);
   ierr = SNESVISetComputeVariableBounds(snes,&FormBounds);CHKERRQ(ierr);
 
-  // FIXME finalize setting of time axis
+  // set time axis defaults
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
-  ierr = TSSetInitialTimeStep(ts,0.0,0.01); CHKERRQ(ierr);
-  ierr = TSSetDuration(ts,1000000,0.1); CHKERRQ(ierr);
+  ierr = TSSetInitialTimeStep(ts,0.0,user.dtinit); CHKERRQ(ierr);
+  ierr = TSSetDuration(ts,100 * (int) ceil(user.tf/user.dtinit),user.tf); CHKERRQ(ierr);
   ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
 
-  ierr = VecCopy(Hinit,H); CHKERRQ(ierr);
+  // fill H according to chop-scale-CMB
+  // FIXME optionally initialize using verification dome solution
+  ierr = ChopScaleCMBforInitialH(H,&user); CHKERRQ(ierr);
+
+  // solve
   ierr = TSSolve(ts,H); CHKERRQ(ierr);
 
   // clean up
-  VecDestroy(&H);  VecDestroy(&Hinit);  VecDestroy(&Hexact);
+  VecDestroy(&H);  VecDestroy(&Hexact);
   TSDestroy(&ts);  DMDestroy(&da);
   PetscFinalize();
   return 0;
 }
 
 
-PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
-  PetscErrorCode ierr;
-
-  user->L  = 3.0;
-  user->n_ice  = 3.0;
-  user->g      = 9.81;       // m/s^2
-  user->rho_ice= 910.0;      // kg/m^3
-  user->secpera= 31556926.0;
-  user->A_ice  = 1.0e-16/user->secpera; // = 3.17e-24  1/(Pa^3 s); EISMINT I value
-  user->initmagic = 1000.0;  // a
-  user->delta  = 1.0e-4;
-  user->lambda = 0.25;       // amount of upwinding; some trial-and-error with bedstep soln; 0.1 gives some Newton convergence difficulties on refined grid (=125m); earlier M* used 0.5
-  user->cmb    = NULL;
-  user->L      = 900.0e3;    // m; note  domeL=750.0e3 is radius of verification ice sheet
-  user->D0     = 10.0;       // m^2 / s
-  user->eps    = 0.001;
-
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"ice_","options to ice","");CHKERRQ(ierr);
-  ierr = PetscOptionsReal(
-      "-A", "set value of ice softness A in units Pa-3 s-1",
-      "ice.c",user->A_ice,&user->A_ice,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal(
-      "-delta", "dimensionless regularization for slope in SIA formulas",
-      "ice.c",user->delta,&user->delta,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal(
-      "-initmagic", "constant, in years, used to multiply CMB to get initial iterate for thickness",
-      "ice.c",user->initmagic,&user->initmagic,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal(
-      "-lambda", "amount of upwinding; lambda=0 is none and lambda=1 is full",
-      "ice.c",user->lambda,&user->lambda,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal(
-      "-n", "value of Glen exponent n",
-      "ice.c",user->n_ice,&user->n_ice,NULL);CHKERRQ(ierr);
-  if (user->n_ice <= 1.0) {
-      SETERRQ1(PETSC_COMM_WORLD,11,"ERROR: n = %f not allowed ... n > 1 is required\n",user->n_ice); }
-  ierr = PetscOptionsEnd();CHKERRQ(ierr);
-
-  // derived constant computed after n,A get set
-  user->Gamma = 2.0 * PetscPowReal(user->rho_ice*user->g,user->n_ice) * user->A_ice / (user->n_ice+2.0);
-
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode SetFromOptionsCMBModel(CMBModel *cmb, const char *optprefix, double secpera) {
+PetscErrorCode SetFromOptions_CMBModel(CMBModel *cmb, const char *optprefix, double secpera) {
   PetscErrorCode ierr;
   cmb->ela   = 2000.0; // m
   cmb->zgrad = 0.001;  // a^-1
@@ -190,21 +149,85 @@ PetscErrorCode SetFromOptionsCMBModel(CMBModel *cmb, const char *optprefix, doub
   PetscFunctionReturn(0);
 }
 
-
 PetscErrorCode M_CMBModel(CMBModel *cmb, double s, double *M) {
   *M = cmb->zgrad * (s - cmb->ela);
-// FIXME:  add this to formula
-/*
-  ierr = VecCopy(user->m,Hinitial); CHKERRQ(ierr);
-  ierr = VecTrueChop(Hinitial,0.0); CHKERRQ(ierr);
-  ierr = VecScale(Hinitial,user->initmagic * user->secpera); CHKERRQ(ierr);
-*/
   PetscFunctionReturn(0);
 }
 
 
-PetscErrorCode dMdH_CMBModel(CMBModel *cmb, double s, double *dMds) {
-  *dMds = cmb->zgrad;
+PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
+  PetscErrorCode ierr;
+  PetscBool      set;
+
+  user->secpera= 31556926.0;
+  user->L      = 900.0e3;    // m; note  domeL=750.0e3 is radius of verification ice sheet
+  user->tf     = 10.0 * user->secpera;  // default to 10 years
+  user->dtinit = 1.0 * user->secpera;   // default to 1 year as initial step
+  user->g      = 9.81;       // m/s^2
+  user->rho_ice= 910.0;      // kg/m^3
+  user->n_ice  = 3.0;
+  user->A_ice  = 1.0e-16/user->secpera; // = 3.17e-24  1/(Pa^3 s); EISMINT I value
+  user->D0     = 10.0;       // m^2 / s
+  user->eps    = 0.001;
+  user->delta  = 1.0e-4;
+  user->lambda = 0.25;
+  user->initmagic = 1000.0;  // a
+  user->cmb    = NULL;
+
+  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"ice_","options to ice","");CHKERRQ(ierr);
+  ierr = PetscOptionsReal(
+      "-A", "set value of ice softness A in units Pa-3 s-1",
+      "ice.c",user->A_ice,&user->A_ice,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal(
+      "-delta", "dimensionless regularization for slope in SIA formulas",
+      "ice.c",user->delta,&user->delta,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal(
+      "-dtinit", "initial time step in units a = years",
+      "ice.c",user->dtinit,&user->dtinit,&set);CHKERRQ(ierr);
+  if (set)   user->dtinit /= user->secpera;
+  ierr = PetscOptionsReal(
+      "-eps", "dimensionless regularization for less-degenerate diffusivity",
+      "ice.c",user->eps,&user->eps,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal(
+      "-initmagic", "constant, in years, used to multiply CMB to get initial iterate for thickness",
+      "ice.c",user->initmagic,&user->initmagic,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal(
+      "-lambda", "amount of upwinding; lambda=0 is none and lambda=1 is full",
+      "ice.c",user->lambda,&user->lambda,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal(
+      "-n", "value of Glen exponent n",
+      "ice.c",user->n_ice,&user->n_ice,NULL);CHKERRQ(ierr);
+  if (user->n_ice <= 1.0) {
+      SETERRQ1(PETSC_COMM_WORLD,11,
+          "ERROR: n = %f not allowed ... n > 1 is required\n",user->n_ice); }
+  ierr = PetscOptionsReal(
+      "-tf", "final time in units a = years",
+      "ice.c",user->tf,&user->tf,&set);CHKERRQ(ierr);
+  if (set)   user->tf /= user->secpera;
+  ierr = PetscOptionsEnd();CHKERRQ(ierr);
+
+  // derived constant computed after other ice properties are set
+  user->Gamma = 2.0 * PetscPowReal(user->rho_ice*user->g,user->n_ice) 
+                    * user->A_ice / (user->n_ice+2.0);
+
+  PetscFunctionReturn(0);
+}
+
+
+PetscErrorCode ChopScaleInitialH(Vec H, AppCtx *user) {
+  PetscErrorCode  ierr;
+  int             N;
+  double          *aH;
+  ierr = VecCopy(user->m,H); CHKERRQ(ierr);
+// FIXME:  needs bed elevation to get going
+//  ierr = VecTrueChop(H,0.0); CHKERRQ(ierr);
+  ierr = VecGetLocalSize(v, &n); CHKERRQ(ierr);
+  ierr = VecGetArray(v, &a); CHKERRQ(ierr);
+  for (i = 0; i < n; ++i) {
+      if (a[i] < tol)  a[i] = tol;
+  }
+  ierr = VecRestoreArray(v, &a); CHKERRQ(ierr);
+  ierr = VecScale(H,user->initmagic * user->secpera); CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
