@@ -17,13 +17,24 @@ static const char help[] =
 "\n"
 "This example uses SNESVI because of constraint  H(x,y) >= 0.\n\n";
 
-// FIXME:  only V=0 version so far
+// TODO:   1) only V=0 version so far
+//         2) good -ts_monitor
+//         3) verification case with dome
+//         4) implement IJacobian
 
 /* I'll be damned if this doesn't seem to work ... try:
 
 ./ice -ts_view
 
-mpiexec -n 2 ./ice -ts_monitor -snes_fd_color -da_refine 5 -ts_monitor_solution draw -snes_converged_reason -ice_tf 10000.0 -ice_dtinit 100.0 -ice_cmb_ela 1500.0
+mpiexec -n 2 ./ice -snes_fd_color -da_refine 5 -ts_monitor_solution draw -snes_converged_reason -ice_tf 10000.0 -ice_dtinit 100.0 -ice_cmb_ela 1500.0
+
+for MG:
+
+mpiexec -n 4 ./ice -snes_fd_color -da_refine 7 -ts_monitor_solution draw -snes_converged_reason -ice_tf 2.0 -ice_dtinit 1.0 -ksp_converged_reason -pc_type mg -pc_mg_levels 4 -mg_levels_ksp_monitor
+
+for ASM:
+
+mpiexec -n 4 ./ice -snes_fd_color -da_refine 7 -ts_monitor_solution draw -snes_converged_reason -ice_tf 2.0 -ice_dtinit 1.0 -ksp_converged_reason -pc_type asm -sub_pc_type lu
 
 */
 
@@ -50,6 +61,7 @@ typedef struct {
 } AppCtx;
 
 extern PetscErrorCode SetFromOptionsAppCtx(AppCtx*);
+extern PetscErrorCode IceMonitor(TS, int, double, Vec, void*);
 extern PetscErrorCode FormBedLocal(DMDALocalInfo*, double**, AppCtx*);
 extern PetscErrorCode ChopScaleCMBInitialHLocal(DMDALocalInfo*, double**, AppCtx*);
 extern PetscErrorCode FormBounds(SNES,Vec,Vec);
@@ -92,9 +104,9 @@ int main(int argc,char **argv) {
   dx = user.L / (double)(info.mx);
   dy = user.L / (double)(info.my);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
-     "solving on [0,L] x [0,L] with  L=%.3f km;\n"
-     "fine grid is  %d x %d  points with spacing  dx = %.6f km  and  dy = %.6f km ...\n",
-     user.L/1000.0,info.mx,info.my,dx/1000.0,dy/1000.0);
+     "solving on domain [0,L] x [0,L] (L=%.3f km) and time interval [0,tf] (tf=%.3f a)\n"
+     "grid is %d x %d points with spacing dx=%.3f km and dy=%.3f km\n",
+     user.L/1000.0,user.tf/user.secpera,info.mx,info.my,dx/1000.0,dy/1000.0);
 
   ierr = DMCreateGlobalVector(da,&H);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject)H,"thickness solution H"); CHKERRQ(ierr);
@@ -112,6 +124,7 @@ int main(int argc,char **argv) {
            (DMDATSIFunctionLocal)FormIFunctionLocal,&user); CHKERRQ(ierr);
   ierr = DMDATSSetRHSFunctionLocal(da,INSERT_VALUES,
            (DMDATSRHSFunctionLocal)FormRHSFunctionLocal,&user); CHKERRQ(ierr);
+  ierr = TSMonitorSet(ts,IceMonitor,&user,NULL); CHKERRQ(ierr);
 
   // configure the SNES to solve NCP/VI at each step
   ierr = TSGetSNES(ts,&snes); CHKERRQ(ierr);
@@ -147,8 +160,8 @@ PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
 
   user->secpera= 31556926.0;
   user->L      = 900.0e3;    // m; note  domeL=750.0e3 is radius of verification ice sheet
-  user->tf     = 10.0 * user->secpera;  // default to 10 years
-  user->dtinit = 1.0 * user->secpera;   // default to 1 year as initial step
+  user->tf     = 100.0 * user->secpera;  // default to 100 years
+  user->dtinit = 10.0 * user->secpera;   // default to 10 year as initial step
   user->g      = 9.81;       // m/s^2
   user->rho_ice= 910.0;      // kg/m^3
   user->n_ice  = 3.0;
@@ -200,6 +213,15 @@ PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
 }
 
 
+PetscErrorCode IceMonitor(TS ts, int step, double time, Vec H, void *ctx) {
+    // FIXME  see EnergyMonitor() in c/ch5/heat.c for example with more content
+    PetscErrorCode ierr;
+    //FIXME how to get dt? how to override
+    AppCtx         *user = (AppCtx*)ctx;
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"%3d: time %.3f a\n",step,time/user->secpera); CHKERRQ(ierr);
+    return 0;
+}
+
 PetscErrorCode FormBedLocal(DMDALocalInfo *info, double **ab, AppCtx *user) {
   int          j,k,r,s;
   const double dx = user->L / (double)(info->mx),
@@ -210,7 +232,7 @@ PetscErrorCode FormBedLocal(DMDALocalInfo *info, double **ab, AppCtx *user) {
   const int    nc = 4,
                jc[4] = {1, 3, 6, 8},
                kc[4] = {1, 3, 4, 7};
-  const double scalec = 500.0,
+  const double scalec = 750.0,
                C[4][4] = { { 2.00000000,  0.33000000, -0.55020034,  0.54495520},
                            { 0.50000000,  0.45014486,  0.60551833, -0.52250644},
                            { 0.93812068,  0.32638429, -0.24654812,  0.33887052},

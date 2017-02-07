@@ -25,16 +25,16 @@ cr = np.array([[ 2.00000000,  0.33000000, -0.55020034,  0.54495520],
                [ 0.50000000,  0.45014486,  0.60551833, -0.52250644],
                [ 0.93812068,  0.32638429, -0.24654812,  0.33887052],
                [ 0.17592361, -0.35496741,  0.22694547, -0.05280704]])
-c = 500.0 * cr
+c = 750.0 * cr
 
-# use ELA = 1000.0 m
+# use ELA = 2000.0 m
 
 b = np.zeros(np.shape(xx))
 for j in range(nc):
     for k in range(nc):
         b += c[j,k] * np.sin(jc[j] * pi * xx / L) * np.sin(kc[k] * pi * yy / L)
 
-surface = False
+surface = True
 fig = plt.figure()
 if surface:
     ax = fig.gca(projection='3d')
