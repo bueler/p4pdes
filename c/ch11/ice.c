@@ -55,11 +55,11 @@ typedef struct {
               n_ice,  // Glen exponent for SIA flux term
               A_ice,  // ice softness
               Gamma,  // coefficient for SIA flux term
-              D0,     // representative(?) value of diffusivity
+              D0,     // representative value of diffusivity (used in regularizing D)
               eps,    // regularization parameter for D
               delta,  // dimensionless regularization for slope in SIA formulas
               lambda, // amount of upwinding; lambda=0 is none and lambda=1 is "full"
-              initmagic;// constant, in years, used to multiply CMB fo initial H
+              initmagic;// constant, in years, used to multiply CMB for initial H
     PetscBool verif;
     CMBModel  *cmb;// defined in cmbmodel.h
 } AppCtx;
@@ -202,6 +202,9 @@ PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
       "-A", "set value of ice softness A in units Pa-3 s-1",
       "ice.c",user->A_ice,&user->A_ice,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal(
+      "-D0", "representative value of diffusivity (used in regularizing D) in units m2 s-1",
+      "ice.c",user->D0,&user->D0,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal(
       "-delta", "dimensionless regularization for slope in SIA formulas",
       "ice.c",user->delta,&user->delta,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal(
@@ -209,7 +212,7 @@ PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
       "ice.c",user->dtinit,&user->dtinit,&set);CHKERRQ(ierr);
   if (set)   user->dtinit *= user->secpera;
   ierr = PetscOptionsReal(
-      "-eps", "dimensionless regularization for less-degenerate diffusivity",
+      "-eps", "dimensionless regularization for diffusivity D",
       "ice.c",user->eps,&user->eps,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal(
       "-initmagic", "constant, in years, used to multiply CMB to get initial iterate for thickness",
@@ -223,6 +226,9 @@ PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
   if (user->n_ice <= 1.0) {
       SETERRQ1(PETSC_COMM_WORLD,11,
           "ERROR: n = %f not allowed ... n > 1 is required\n",user->n_ice); }
+  ierr = PetscOptionsReal(
+      "-rho", "ice density in units kg m3",
+      "ice.c",user->rho_ice,&user->rho_ice,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal(
       "-tf", "final time in seconds; input units are years",
       "ice.c",user->tf,&user->tf,&set);CHKERRQ(ierr);
