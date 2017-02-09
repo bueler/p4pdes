@@ -58,7 +58,7 @@ mpiexec -n 4 ./ice -snes_fd_color -da_refine 7 -ts_monitor_solution draw -snes_c
 */
 
 #include <petsc.h>
-#include "cmbmodel.h"
+#include "icecmb.h"
 
 // context is entirely grid-independent info
 typedef struct {
@@ -80,7 +80,7 @@ typedef struct {
     CMBModel  *cmb;// defined in cmbmodel.h
 } AppCtx;
 
-#include "exactdome.h"
+#include "iceverif.h"
 
 extern PetscErrorCode SetFromOptionsAppCtx(AppCtx*);
 extern PetscErrorCode IceMonitor(TS, int, double, Vec, void*);
