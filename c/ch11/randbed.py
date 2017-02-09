@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 from mpl_toolkits.mplot3d import axes3d
 
-L = 900.0e3
+L = 1800.0e3
 Nx = 80
 Ny = 80
 pi = np.pi
