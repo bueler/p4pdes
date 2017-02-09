@@ -1,29 +1,46 @@
 static const char help[] =
 "Solves time-dependent nonlinear ice sheet problem in 2D:\n"
-"(*)    H_t + div (q^x,q^y) = m - div(V H)\n"
-"where q is the nonsliding shallow ice approximation flux,\n"
-"      (q^x,q^y) = - Gamma H^{n+2} |grad s|^{n-1} grad s.\n"
-"In these equations  H(x,y)  is ice thickness,  b(x,y)  is bed elevation,\n"
-"s(x,y) = H(x,y) + b(x,y)  is surface elevation,  V(x,y)  is an imposed\n"
+"(*)    H_t + div q = m - div(V H)\n"
+"where q = (q^x,q^y) is the nonsliding shallow ice approximation flux,\n"
+"       q = - Gamma H^{n+2} |grad s|^{n-1} grad s\n"
+"always subject to the constraint\n"
+"       H(t,x,y) >= 0.\n"
+"In these equations  H(t,x,y)  is ice thickness,  b(x,y)  is bed elevation,\n"
+"s(t,x,y) = H(t,x,y) + b(x,y)  is surface elevation,  V(x,y)  is an imposed\n"
 "sliding velocity, and  m(x,y),  the climatic mass balance, is the primary\n"
-"source term.  Note  n > 1  and  Gamma = 2 A (rho g)^n / (n+2).  The domain\n"
-"is the square  [0,L] x [0,L],  with periodic boundary conditions.\n"
+"source term.  Note  n > 1  and  Gamma = 2 A (rho g)^n / (n+2).\n"
 "\n"
-"Equation (*) is first semi-discretized in space (i.e. MOL) by a Q1\n"
-"structured-grid FVE method (Bueler, 2016).  The resulting ODE in time is\n"
+"The domain is square  [0,L] x [0,L]  with periodic boundary conditions.\n"
+"\n"
+"Equation (*) is semi-discretized in space by a Q1 structured-grid FVE method\n"
+"(Bueler, 2016), so this is method-of-lines.  The resulting ODE in time is\n"
 "written in the form\n"
 "      F(H,H_t) = G(H)\n"
 "and F,G are supplied to PETSc TS as an IFunction and RHSFunction, resp.\n"
-"\n"
-"This example uses SNESVI because of constraint  H(x,y) >= 0.\n\n";
+"There is no Jacobian, of either side; -snes_fd_color is the default method.\n"
+"Requires SNESVI (-snes_type vinewtonrsls|vinewtonssls) because of constraint.\n\n";
 
 // TODO:   1) only V=0 version so far
-//         2) better -ts_monitor
-//         3) implement IJacobian
+//         2) implement IJacobian
+//         3) implement Halfar for verif  (helps show adaptive)
 
-/* I'll be damned if this doesn't seem to work ... try:
+/* try:
 
 ./ice -ts_view
+./ice -da_refine 3                      # only meaningful at this res and higher
+
+./ice -snes_type vinewtonrsls           # DEFAULT
+./ice -snes_type vinewtonssls           # slightly more robust?
+(other -snes_types like newtonls not allowed because don't support bounds)
+
+./ice -ts_type beuler                   # DEFAULT
+./ice -ts_type cn                       # mis-behaves on long time steps
+./ice -ts_type cn -ts_theta_adapt       # good
+./ice -ts_type theta -ts_theta_adapt    # good
+./ice -ts_type bdf -ts_bdf_adapt -ts_bdf_order 2|3|4|5|6  # good
+
+# start with short time step and it will find good time scale
+./ice -snes_converged_reason -da_refine 4 -ts_type bdf -ts_bdf_adapt -ts_bdf_order 4 -ice_dtinit 0.1
 
 verif:
 
@@ -38,7 +55,6 @@ mpiexec -n 4 ./ice -snes_fd_color -da_refine 7 -ts_monitor_solution draw -snes_c
 for ASM:
 
 mpiexec -n 4 ./ice -snes_fd_color -da_refine 7 -ts_monitor_solution draw -snes_converged_reason -ice_tf 2.0 -ice_dtinit 1.0 -ksp_converged_reason -pc_type asm -sub_pc_type lu
-
 */
 
 #include <petsc.h>
@@ -188,7 +204,7 @@ PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
   user->g      = 9.81;       // m/s^2
   user->rho_ice= 910.0;      // kg/m^3
   user->n_ice  = 3.0;
-  user->A_ice  = 1.0e-16/user->secpera; // = 3.17e-24  1/(Pa^3 s); EISMINT I value
+  user->A_ice  = 3.1689e-24; // 1/(Pa^3 s); EISMINT I value
   user->D0     = 1.0;       // m^2 / s
   user->eps    = 0.001;
   user->delta  = 1.0e-4;
@@ -247,11 +263,34 @@ PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
 
 
 PetscErrorCode IceMonitor(TS ts, int step, double time, Vec H, void *ctx) {
-    // FIXME  see EnergyMonitor() in c/ch5/heat.c for example with more content
     PetscErrorCode ierr;
-    //FIXME how to get dt? how to override
     AppCtx         *user = (AppCtx*)ctx;
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"%3d: time %.3f a\n",step,time/user->secpera); CHKERRQ(ierr);
+    double         lvol = 0.0, vol, larea = 0.0, area, darea, **aH;
+    int            j, k;
+    MPI_Comm       com;
+    DM             da;
+    DMDALocalInfo  info;
+
+    ierr = TSGetDM(ts,&da);CHKERRQ(ierr);
+    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+    darea = user->L * user->L / (double)(info.mx * info.my);
+    ierr = DMDAVecGetArrayRead(da,H,&aH); CHKERRQ(ierr);
+    for (k = info.ys; k < info.ys + info.ym; k++) {
+        for (j = info.xs; j < info.xs + info.xm; j++) {
+            if (aH[k][j] > 0.0) {
+                larea += darea;
+                lvol += aH[k][j];
+            }
+        }
+    }
+    ierr = DMDAVecRestoreArrayRead(da,H,&aH); CHKERRQ(ierr);
+    lvol *= darea;
+    ierr = PetscObjectGetComm((PetscObject)(da),&com); CHKERRQ(ierr);
+    ierr = MPI_Allreduce(&lvol,&vol,1,MPI_DOUBLE,MPI_SUM,com); CHKERRQ(ierr);
+    ierr = MPI_Allreduce(&larea,&area,1,MPI_DOUBLE,MPI_SUM,com); CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,
+        "%3d: time %.3f a,  volume %.1f 10^3 km^3,  area %.1f 10^3 km^2\n",
+        step,time/user->secpera,vol/1.0e12,area/1.0e9); CHKERRQ(ierr);
     return 0;
 }
 
@@ -409,12 +448,14 @@ static const double locx[4] = {  0.5, 0.75,  0.5, 0.25},
 /* FormIFunctionLocal  =  IFunction call-back by TS using DMDA info.
 
 Evaluates residual FF on local process patch:
-   FF_{j,k} = \int_{\partial V_{j,k}} \mathbf{q} \cdot \mathbf{n} - m_{j,k} \Delta x \Delta y
+   FF_{j,k} = \int_{\partial V_{j,k}} \mathbf{q} \cdot \mathbf{n}
+              - m_{j,k} \Delta x \Delta y
 where V_{j,k} is the control volume centered at (x_j,y_k).
 
-Regarding indexing the location along the boundary of the control volume where
-flux is evaluated, this shows four elements and one control volume centered
-at (x_j,y_k).  The boundary of the control volume has 8 points, numbered s=0,...,7:
+Regarding indexing locations along the boundary of the control volume where
+flux is evaluated, this figure shows four elements and one control volume
+centered at (x_j,y_k).  The boundary of the control volume has 8 points,
+numbered s=0,...,7:
    -------------------
   |         |         |
   |    ..2..|..1..    |
@@ -426,9 +467,9 @@ k |--------- ---------|
    -------------------
             j
 
-Regarding flux-component indexing on the element indexed by (j,k) node, as shown,
-the value  aq[k][j][c]  for c=0,1,2,3, is an x-component at "*" and a y-component
-at "%":
+Regarding flux-component indexing on the element indexed by (j,k) node,
+the value  (aqquad[c])[k][j] for c=0,1,2,3 is an x-component at "*" and
+a y-component at "%"; note (x_j,y_k) is lower-left corner:
    -------------------
   |         :         |
   |         *2        |
@@ -447,7 +488,7 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t,
   const double    dx = user->L / (double)(info->mx),
                   dy = user->L / (double)(info->my);
   // coefficients of quadrature evaluations along the boundary of the control volume in M*
-  const double coeff[8] = {dy/2, dx/2, dx/2, -dy/2, -dy/2, -dx/2, -dx/2, dy/2};
+  const double    coeff[8] = {dy/2, dx/2, dx/2, -dy/2, -dy/2, -dx/2, -dx/2, dy/2};
   const PetscBool upwind = (user->lambda > 0.0);
   const double    upmin = (1.0 - user->lambda) * 0.5,
                   upmax = (1.0 + user->lambda) * 0.5;
@@ -459,7 +500,6 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t,
   PetscFunctionBeginUser;
 
   ierr = DMCreateLocalVector(info->da, &b); CHKERRQ(ierr);
-
   if (user->verif) {
       ierr = VecSet(b,0.0); CHKERRQ(ierr);
   } else {
@@ -470,7 +510,6 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t,
       ierr = DMLocalToLocalEnd(info->da,b,INSERT_VALUES,b); CHKERRQ(ierr);
   }
   ierr = DMDAVecGetArray(info->da,b,&ab); CHKERRQ(ierr);
-
   for (c = 0; c < 4; c++) {
       ierr = DMCreateLocalVector(info->da, &(qquad[c])); CHKERRQ(ierr);
       ierr = DMDAVecGetArray(info->da,qquad[c],&(aqquad[c])); CHKERRQ(ierr);
