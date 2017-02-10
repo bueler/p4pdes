@@ -21,7 +21,7 @@ runobstacle_3:
 	-@../testit.sh obstacle "-da_refine 3 -mat_is_symmetric" 1 3
 
 runice_1:
-	-@../testit.sh ice "-da_refine 2 -ice_verif -ice_eps 0.0 -ice_tf 40 -ice_dtinit 10" 1 1
+	-@../testit.sh ice "-da_refine 2 -ice_verif 1 -ice_eps 0.0 -ice_tf 40 -ice_dtinit 10" 1 1
 
 test: runobstacle_1 runobstacle_2 runobstacle_3 runice_1
 

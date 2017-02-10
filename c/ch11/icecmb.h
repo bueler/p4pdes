@@ -1,5 +1,5 @@
-#ifndef CMBMODEL_H_
-#define CMBMODEL_H_
+#ifndef ICECMB_H_
+#define ICECMB_H_
 
 // a simple parameterized model for the climatic mass balance (CMB), i.e.
 // the annual balance of snowfall minus melt, treated as season-less

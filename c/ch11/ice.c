@@ -22,7 +22,6 @@ static const char help[] =
 
 // TODO:   1) only V=0 version so far
 //         2) implement IJacobian
-//         3) implement Halfar for verif  (helps show adaptive)
 
 /* try:
 
@@ -42,9 +41,12 @@ static const char help[] =
 # start with short time step and it will find good time scale
 ./ice -snes_converged_reason -da_refine 4 -ts_type bdf -ts_bdf_adapt -ts_bdf_order 4 -ice_dtinit 0.1
 
-verif:
-
-for N in 2 3 4 5 6; do ./ice -ice_verif -ice_eps 0.0 -ice_dtinit 50.0 -ice_tf 2000.0 -da_refine $N; done
+verif with dome=1, halfar=2:
+for TEST in 1 2; do
+    for N in 2 3 4 5 6; do
+        ./ice -ice_monitor 0 -ice_verif $TEST -ice_eps 0.0 -ice_dtinit 50.0 -ice_tf 2000.0 -da_refine $N
+    done
+done
 
 mpiexec -n 2 ./ice -snes_fd_color -da_refine 5 -ts_monitor_solution draw -snes_converged_reason -ice_tf 10000.0 -ice_dtinit 100.0
 
@@ -76,7 +78,8 @@ typedef struct {
               delta,  // dimensionless regularization for slope in SIA formulas
               lambda, // amount of upwinding; lambda=0 is none and lambda=1 is "full"
               initmagic;// constant, in years, used to multiply CMB for initial H
-    PetscBool verif;
+    int       verif;  // 0 = not verification, 1 = dome, 2 = Halfar (1983)
+    PetscBool monitor;// use -ice_monitor
     CMBModel  *cmb;// defined in cmbmodel.h
 } AppCtx;
 
@@ -142,7 +145,9 @@ int main(int argc,char **argv) {
            (DMDATSIFunctionLocal)FormIFunctionLocal,&user); CHKERRQ(ierr);
   ierr = DMDATSSetRHSFunctionLocal(da,INSERT_VALUES,
            (DMDATSRHSFunctionLocal)FormRHSFunctionLocal,&user); CHKERRQ(ierr);
-  ierr = TSMonitorSet(ts,IceMonitor,&user,NULL); CHKERRQ(ierr);
+  if (user.monitor) {
+      ierr = TSMonitorSet(ts,IceMonitor,&user,NULL); CHKERRQ(ierr);
+  }
 
   // configure the SNES to solve NCP/VI at each step
   ierr = TSGetSNES(ts,&snes); CHKERRQ(ierr);
@@ -157,8 +162,12 @@ int main(int argc,char **argv) {
 
   // set up initial condition on fine grid
   ierr = DMDAVecGetArray(da,H,&aH); CHKERRQ(ierr);
-  if (user.verif) {
+  if (user.verif == 1) {
       ierr = DomeThicknessLocal(&info,aH,&user); CHKERRQ(ierr);
+  } else if (user.verif == 2) {
+      double t0;
+      ierr = TSGetTime(ts,&t0); CHKERRQ(ierr);
+      ierr = HalfarThicknessLocal(&info,t0,aH,&user); CHKERRQ(ierr);
   } else {
       // fill H according to chop-scale-CMB
       ierr = ChopScaleCMBInitialHLocal(&info,aH,&user); CHKERRQ(ierr);
@@ -169,12 +178,20 @@ int main(int argc,char **argv) {
   ierr = TSSolve(ts,H); CHKERRQ(ierr);
 
   // compute error in verification case
-  if (user.verif) {
+  if (user.verif > 0) {
       Vec Hexact;
       double infnorm, onenorm;
       ierr = VecDuplicate(H,&Hexact); CHKERRQ(ierr);
       ierr = DMDAVecGetArray(da,Hexact,&aH); CHKERRQ(ierr);
-      ierr = DomeThicknessLocal(&info,aH,&user); CHKERRQ(ierr);
+      if (user.verif == 1) {
+          ierr = DomeThicknessLocal(&info,aH,&user); CHKERRQ(ierr);
+      } else if (user.verif == 2) {
+          double tf;
+          ierr = TSGetTime(ts,&tf); CHKERRQ(ierr);
+          ierr = HalfarThicknessLocal(&info,tf,aH,&user); CHKERRQ(ierr);
+      } else {
+          SETERRQ(PETSC_COMM_WORLD,3,"invalid user.verif ... how did I get here?\n");
+      }
       ierr = DMDAVecRestoreArray(da,Hexact,&aH); CHKERRQ(ierr);
       ierr = VecAXPY(H,-1.0,Hexact); CHKERRQ(ierr);    // H <- H + (-1.0) Hexact
       VecDestroy(&Hexact);
@@ -210,7 +227,8 @@ PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
   user->delta  = 1.0e-4;
   user->lambda = 0.25;
   user->initmagic = 1000.0;  // a
-  user->verif  = PETSC_FALSE;
+  user->verif  = 0;
+  user->monitor = PETSC_TRUE;
   user->cmb    = NULL;
 
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"ice_","options to ice","");CHKERRQ(ierr);
@@ -236,12 +254,17 @@ PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
   ierr = PetscOptionsReal(
       "-lambda", "amount of upwinding; lambda=0 is none and lambda=1 is full",
       "ice.c",user->lambda,&user->lambda,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool(
+      "-monitor", "use the ice monitor which shows ice sheet volume and area",
+      "ice.c",user->monitor,&user->monitor,&set);CHKERRQ(ierr);
+  if (!set)   user->monitor = PETSC_TRUE;
   ierr = PetscOptionsReal(
       "-n", "value of Glen exponent n",
       "ice.c",user->n_ice,&user->n_ice,NULL);CHKERRQ(ierr);
   if (user->n_ice <= 1.0) {
-      SETERRQ1(PETSC_COMM_WORLD,11,
-          "ERROR: n = %f not allowed ... n > 1 is required\n",user->n_ice); }
+      SETERRQ1(PETSC_COMM_WORLD,1,
+          "ERROR: n = %f not allowed ... n > 1 is required\n",user->n_ice);
+  }
   ierr = PetscOptionsReal(
       "-rho", "ice density in units kg m3",
       "ice.c",user->rho_ice,&user->rho_ice,NULL);CHKERRQ(ierr);
@@ -249,9 +272,14 @@ PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
       "-tf", "final time in seconds; input units are years",
       "ice.c",user->tf,&user->tf,&set);CHKERRQ(ierr);
   if (set)   user->tf *= user->secpera;
-  ierr = PetscOptionsBool(
-      "-verif","use exact dome solution and compute error",
-      "ice.c",user->verif,&(user->verif),NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt(
+      "-verif","1 = dome exact solution; 2 = halfar exact solution",
+      "ice.c",user->verif,&(user->verif),&set);CHKERRQ(ierr);
+  if ((set) && ((user->verif < 0) || (user->verif > 2))) {
+      SETERRQ1(PETSC_COMM_WORLD,2,
+          "ERROR: verif = %d not allowed ... 0 <= verif <= 2 is required\n",
+          user->verif);
+  }
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
 
   // derived constant computed after other ice properties are set
@@ -277,7 +305,7 @@ PetscErrorCode IceMonitor(TS ts, int step, double time, Vec H, void *ctx) {
     ierr = DMDAVecGetArrayRead(da,H,&aH); CHKERRQ(ierr);
     for (k = info.ys; k < info.ys + info.ym; k++) {
         for (j = info.xs; j < info.xs + info.xm; j++) {
-            if (aH[k][j] > 0.0) {
+            if (aH[k][j] > 1.0) {
                 larea += darea;
                 lvol += aH[k][j];
             }
@@ -500,7 +528,7 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t,
   PetscFunctionBeginUser;
 
   ierr = DMCreateLocalVector(info->da, &b); CHKERRQ(ierr);
-  if (user->verif) {
+  if (user->verif > 0) {
       ierr = VecSet(b,0.0); CHKERRQ(ierr);
   } else {
       ierr = DMDAVecGetArray(info->da,b,&ab); CHKERRQ(ierr);
@@ -581,8 +609,10 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **aH,
       y = k * dy;
       for (j=info->xs; j<info->xs+info->xm; j++) {
           x = j * dx;
-          if (user->verif) {
+          if (user->verif == 1) {
               GG[k][j] = DomeCMB(x,y,user) * dx * dy;
+          } else if (user->verif == 2) {
+              GG[k][j] = 0.0;
           } else {
               GG[k][j] = M_CMBModel(user->cmb,ab[k][j] + aH[k][j]) * dx * dy;
           }
