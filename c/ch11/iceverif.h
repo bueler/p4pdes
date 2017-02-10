@@ -70,7 +70,7 @@ PetscErrorCode HalfarThicknessLocal(DMDALocalInfo *info, double t_in, double **a
                  halfarH0 = 3600.0,   // t=t0 center thickness of exact ice sheet (m)
                  halfaralpha = 1.0/9.0,
                  halfarbeta = 1.0/18.0,
-                 n = user->n_ice,    // FIXME error if n!= 3
+                 n = user->n_ice,
                  q = 1.0 + 1.0 / n,
                  m = n / (2.0*n + 1.0),
                  // for t0, see equation (9) in Bueler et al (2005); normally 422.45 a
@@ -82,6 +82,11 @@ PetscErrorCode HalfarThicknessLocal(DMDALocalInfo *info, double t_in, double **a
   int            j, k;
 
   PetscFunctionBeginUser;
+  if (user->n_ice != 3.0) {
+      SETERRQ1(PETSC_COMM_WORLD,4,
+          "ERROR: n = %f not allowed ... n == 3.0 is required for Halfar verification\n",
+          user->n_ice);
+  }
   t = (t_in + halfart0) / halfart0;   // so t=0 thickness is t0 state in usual Halfar t-axis
   for (k=info->ys; k<info->ys+info->ym; k++) {
       y = k * dy;

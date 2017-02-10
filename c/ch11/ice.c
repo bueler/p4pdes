@@ -41,12 +41,18 @@ static const char help[] =
 # start with short time step and it will find good time scale
 ./ice -snes_converged_reason -da_refine 4 -ts_type bdf -ts_bdf_adapt -ts_bdf_order 4 -ice_dtinit 0.1
 
+# recovery from convergence failures works!  (failure here triggered by n=4):
+./ice -da_refine 3 -ice_n 4 -ts_max_snes_failures -1 -snes_converged_reason
+
 verif with dome=1, halfar=2:
 for TEST in 1 2; do
     for N in 2 3 4 5 6; do
         ./ice -ice_monitor 0 -ice_verif $TEST -ice_eps 0.0 -ice_dtinit 50.0 -ice_tf 2000.0 -da_refine $N
     done
 done
+
+actual test B from Bueler et al 2005:
+./ice -ice_verif 2 -ice_eps 0 -ice_dtinit 100 -ice_tf 25000 -ice_L 2200e3 -da_refine $N
 
 mpiexec -n 2 ./ice -snes_fd_color -da_refine 5 -ts_monitor_solution draw -snes_converged_reason -ice_tf 10000.0 -ice_dtinit 100.0
 
@@ -57,6 +63,13 @@ mpiexec -n 4 ./ice -snes_fd_color -da_refine 7 -ts_monitor_solution draw -snes_c
 for ASM:
 
 mpiexec -n 4 ./ice -snes_fd_color -da_refine 7 -ts_monitor_solution draw -snes_converged_reason -ice_tf 2.0 -ice_dtinit 1.0 -ksp_converged_reason -pc_type asm -sub_pc_type lu
+
+recommended "new PISM":
+mpiexec -n N ./ice -da_refine M \
+   -snes_type vinewtonrsls \
+   -ts_type bdf -ts_bdf_adapt -ts_bdf_order 4 \
+   -ts_max_snes_failures -1 \
+   -pc_type asm -sub_pc_type lu
 */
 
 #include <petsc.h>
@@ -252,6 +265,9 @@ PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
       "-initmagic", "constant, in years, used to multiply CMB to get initial iterate for thickness",
       "ice.c",user->initmagic,&user->initmagic,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal(
+      "-L", "side length of domain in meters",
+      "ice.c",user->L,&user->L,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal(
       "-lambda", "amount of upwinding; lambda=0 is none and lambda=1 is full",
       "ice.c",user->lambda,&user->lambda,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool(
@@ -305,7 +321,7 @@ PetscErrorCode IceMonitor(TS ts, int step, double time, Vec H, void *ctx) {
     ierr = DMDAVecGetArrayRead(da,H,&aH); CHKERRQ(ierr);
     for (k = info.ys; k < info.ys + info.ym; k++) {
         for (j = info.xs; j < info.xs + info.xm; j++) {
-            if (aH[k][j] > 1.0) {
+            if (aH[k][j] > 1.0) {  // for volume/area its helpful to not count tinys
                 larea += darea;
                 lvol += aH[k][j];
             }
