@@ -536,7 +536,7 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t,
   const PetscBool upwind = (user->lambda > 0.0);
   const double    upmin = (1.0 - user->lambda) * 0.5,
                   upmax = (1.0 + user->lambda) * 0.5;
-  int             c, j, k;
+  int             c, j, k, s;
   double          H, Hup, lxup, lyup, **aqquad[4], **ab;
   Grad            gH, gb;
   Vec             qquad[4], b;
@@ -587,7 +587,6 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t,
   // s = 0,1,...,7 points on boundary of control volume (rectangle) around node
   for (k=info->ys; k<info->ys+info->ym; k++) {
       for (j=info->xs; j<info->xs+info->xm; j++) {
-          PetscInt s;
           FF[k][j] = aHdot[k][j] * dx * dy;
           // add the integral over the control volume boundary using two
           // quadrature points on each of the four sides of the
@@ -613,11 +612,30 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **aH,
   PetscErrorCode  ierr;
   const double    dx = user->L / (double)(info->mx),
                   dy = user->L / (double)(info->my);
-  int             j, k;
-  double          **ab, y, x;
-  Vec             b;
+  int             j, k, s, c;
+  Vec             b, VH[4];
+  Grad            gb;
+  double          **ab, **aVH[4], y, x, m, H;
 
   PetscFunctionBeginUser;
+
+  for (c = 0; c < 4; c++) {
+      ierr = DMCreateLocalVector(info->da, &(VH[c])); CHKERRQ(ierr);
+      ierr = DMDAVecGetArray(info->da,VH[c],&(aVH[c])); CHKERRQ(ierr);
+  }
+
+  // loop over locally-owned elements, including ghosts, to get fluxes at
+  // c = 0,1,2,3 points in element;  note start at (xs-1,ys-1)
+  for (k = info->ys-1; k < info->ys + info->ym; k++) {
+      for (j = info->xs-1; j < info->xs + info->xm; j++) {
+          for (c=0; c<4; c++) {
+              H  = fieldatptArray(j,k,locx[c],locy[c],aH);
+              gb = gradfatptArray(j,k,locx[c],locy[c],dx,dy,ab);
+              aVH[c][k][j] = FIXME: use H, gb;
+          }
+      }
+  }
+
   ierr = DMCreateLocalVector(info->da, &b); CHKERRQ(ierr);
   ierr = DMDAVecGetArray(info->da,b,&ab); CHKERRQ(ierr);
   ierr = FormBedLocal(info,ab,user); CHKERRQ(ierr);
@@ -626,16 +644,29 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **aH,
       for (j=info->xs; j<info->xs+info->xm; j++) {
           x = j * dx;
           if (user->verif == 1) {
-              GG[k][j] = DomeCMB(x,y,user) * dx * dy;
+              m = DomeCMB(x,y,user);
           } else if (user->verif == 2) {
-              GG[k][j] = 0.0;
+              m = 0.0;
           } else {
-              GG[k][j] = M_CMBModel(user->cmb,ab[k][j] + aH[k][j]) * dx * dy;
-          }
+              m = M_CMBModel(user->cmb,ab[k][j] + aH[k][j]);
+          }          
+          GG[k][j] = m * dx * dy;
+
+          // add the integral over the control volume boundary using two
+          // quadrature points on each of the four sides of the
+          // rectangular control volume
+          for (s=0; s<8; s++)
+              GG[k][j] += coeff[s] * aVH[ce[s]][k+ke[s]][j+je[s]];
       }
   }
   ierr = DMDAVecRestoreArray(info->da,b,&ab); CHKERRQ(ierr);
   ierr = VecDestroy(&b); CHKERRQ(ierr);
+
+  for (c = 0; c < 4; c++) {
+      ierr = DMDAVecRestoreArray(info->da,VH[c],&(aVH[c])); CHKERRQ(ierr);
+      ierr = VecDestroy(info->da, &(VH[c])); CHKERRQ(ierr);
+  }
+
   PetscFunctionReturn(0);
 }
 
