@@ -421,17 +421,20 @@ Grad getW(double delta, Grad gb) {
     return W;
 }
 
-/* D(eps)=(1-eps) delta H^{n+2} + eps D_0   so   D(1)=D_0 and D(0)=delta H^{n+2}. */
+/* DCS = diffusion from the continuation scheme:
+   D(eps) = (1-eps) delta H^{n+2} + eps D_0
+so   D(1)=D_0 and D(0)=delta H^{n+2}. */
 double DCS(double delta, double H, double n, double eps, double D0) {
   return (1.0 - eps) * delta * PetscPowReal(PetscAbsReal(H),n+2.0) + eps * D0;
 }
 
-double getflux(Grad gH, Grad gb, double H, double Hup,
-               PetscBool xdir, const AppCtx *user) {
+/* ice flux from the non-sliding SIA on a general bed */
+double getSIAflux(Grad gH, Grad gb, double H, double Hup,
+                  PetscBool xdir, const AppCtx *user) {
   const double n     = user->n_ice,
-                  delta = getdelta(gH,gb,user),
-                  myD   = DCS(delta,H,n,user->eps,user->D0);
-  const Grad      myW   = getW(delta,gb);
+               delta = getdelta(gH,gb,user),
+               myD   = DCS(delta,H,n,user->eps,user->D0);
+  const Grad   myW   = getW(delta,gb);
   if (xdir)
       return - myD * gH.x + myW.x * PetscPowReal(PetscAbsReal(Hup),n+2.0);
   else
@@ -578,7 +581,7 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t,
                   Hup = fieldatptArray(j,k,lxup,lyup,aH);
               } else
                   Hup = H;
-              aqquad[c][k][j] = getflux(gH,gb,H,Hup,xdire[c],user);
+              aqquad[c][k][j] = getSIAflux(gH,gb,H,Hup,xdire[c],user);
           }
       }
   }
