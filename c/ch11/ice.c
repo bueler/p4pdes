@@ -106,7 +106,7 @@ typedef struct {
 
 extern PetscErrorCode SetFromOptionsAppCtx(AppCtx*);
 extern PetscErrorCode IceMonitor(TS, int, double, Vec, void*);
-extern PetscErrorCode FormBedLocal(DMDALocalInfo*, double**, AppCtx*);
+extern PetscErrorCode FormBedLocal(DMDALocalInfo*, int, double**, AppCtx*);
 extern PetscErrorCode ChopScaleCMBInitialHLocal(DMDALocalInfo*, double**, AppCtx*);
 extern PetscErrorCode FormBounds(SNES,Vec,Vec);
 extern PetscErrorCode FormIFunctionLocal(DMDALocalInfo*, double,
@@ -345,7 +345,7 @@ PetscErrorCode IceMonitor(TS ts, int step, double time, Vec H, void *ctx) {
     return 0;
 }
 
-PetscErrorCode FormBedLocal(DMDALocalInfo *info, double **ab, AppCtx *user) {
+PetscErrorCode FormBedLocal(DMDALocalInfo *info, int stencilwidth, double **ab, AppCtx *user) {
   int          j,k,r,s;
   const double dx = user->L / (double)(info->mx),
                dy = user->L / (double)(info->my),
@@ -361,9 +361,9 @@ PetscErrorCode FormBedLocal(DMDALocalInfo *info, double **ab, AppCtx *user) {
                            { 0.93812068,  0.32638429, -0.24654812,  0.33887052},
                            { 0.17592361, -0.35496741,  0.22694547, -0.05280704} };
   // go through owned portion of grid and compute  b(x,y)
-  for (k = info->ys; k < info->ys + info->ym; k++) {
+  for (k = info->ys-stencilwidth; k < info->ys + info->ym+stencilwidth; k++) {
       y = k * dy;
-      for (j = info->xs; j < info->xs + info->xm; j++) {
+      for (j = info->xs-stencilwidth; j < info->xs + info->xm+stencilwidth; j++) {
           x = j * dx;
           // b(x,y) is sum of a few sines
           b = 0.0;
@@ -383,7 +383,7 @@ PetscErrorCode ChopScaleCMBInitialHLocal(DMDALocalInfo *info, double **aH, AppCt
   PetscErrorCode  ierr;
   int             j,k;
   double          M;
-  ierr = FormBedLocal(info,aH,user); CHKERRQ(ierr);  // H(x,y) <- b(x,y)
+  ierr = FormBedLocal(info,0,aH,user); CHKERRQ(ierr);  // H(x,y) <- b(x,y)
   for (k = info->ys; k < info->ys + info->ym; k++) {
       for (j = info->xs; j < info->xs + info->xm; j++) {
           M = M_CMBModel(user->cmb, aH[k][j]);       // M <- CMB(b(x,y))
@@ -562,14 +562,11 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t,
   ierr = DMCreateLocalVector(info->da, &b); CHKERRQ(ierr);
   if (user->verif > 0) {
       ierr = VecSet(b,0.0); CHKERRQ(ierr);
+      ierr = DMDAVecGetArray(info->da,b,&ab); CHKERRQ(ierr);
   } else {
       ierr = DMDAVecGetArray(info->da,b,&ab); CHKERRQ(ierr);
-      ierr = FormBedLocal(info,ab,user); CHKERRQ(ierr);
-      ierr = DMDAVecRestoreArray(info->da,b,&ab); CHKERRQ(ierr);
-      ierr = DMLocalToLocalBegin(info->da,b,INSERT_VALUES,b); CHKERRQ(ierr);
-      ierr = DMLocalToLocalEnd(info->da,b,INSERT_VALUES,b); CHKERRQ(ierr);
+      ierr = FormBedLocal(info,1,ab,user); CHKERRQ(ierr);  // get stencil width
   }
-  ierr = DMDAVecGetArray(info->da,b,&ab); CHKERRQ(ierr);
   for (c = 0; c < 4; c++) {
       ierr = DMCreateLocalVector(info->da, &(qquad[c])); CHKERRQ(ierr);
       ierr = DMDAVecGetArray(info->da,qquad[c],&(aqquad[c])); CHKERRQ(ierr);
@@ -636,6 +633,14 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **aH,
 
   PetscFunctionBeginUser;
 
+  ierr = DMCreateLocalVector(info->da, &b); CHKERRQ(ierr);
+  if (user->verif > 0) {
+      ierr = VecSet(b,0.0); CHKERRQ(ierr);
+      ierr = DMDAVecGetArray(info->da,b,&ab); CHKERRQ(ierr);
+  } else {
+      ierr = DMDAVecGetArray(info->da,b,&ab); CHKERRQ(ierr);
+      ierr = FormBedLocal(info,1,ab,user); CHKERRQ(ierr);  // get stencil width
+  }
   for (c = 0; c < 4; c++) {
       ierr = DMCreateLocalVector(info->da, &(VH[c])); CHKERRQ(ierr);
       ierr = DMDAVecGetArray(info->da,VH[c],&(aVH[c])); CHKERRQ(ierr);
@@ -657,9 +662,6 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **aH,
       }
   }
 
-  ierr = DMCreateLocalVector(info->da, &b); CHKERRQ(ierr);
-  ierr = DMDAVecGetArray(info->da,b,&ab); CHKERRQ(ierr);
-  ierr = FormBedLocal(info,ab,user); CHKERRQ(ierr);
   for (k=info->ys; k<info->ys+info->ym; k++) {
       y = k * dy;
       for (j=info->xs; j<info->xs+info->xm; j++) {
@@ -680,13 +682,13 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **aH,
               GG[k][j] += coeff[s] * aVH[ce[s]][k+ke[s]][j+je[s]];
       }
   }
-  ierr = DMDAVecRestoreArray(info->da,b,&ab); CHKERRQ(ierr);
-  ierr = VecDestroy(&b); CHKERRQ(ierr);
 
   for (c = 0; c < 4; c++) {
       ierr = DMDAVecRestoreArray(info->da,VH[c],&(aVH[c])); CHKERRQ(ierr);
       ierr = VecDestroy(&(VH[c])); CHKERRQ(ierr);
   }
+  ierr = DMDAVecRestoreArray(info->da,b,&ab); CHKERRQ(ierr);
+  ierr = VecDestroy(&b); CHKERRQ(ierr);
 
   PetscFunctionReturn(0);
 }
