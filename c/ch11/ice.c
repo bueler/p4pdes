@@ -441,6 +441,12 @@ double getSIAflux(Grad gH, Grad gb, double H, double Hup,
       return - myD * gH.y + myW.y * PetscPowReal(PetscAbsReal(Hup),n+2.0);
 }
 
+/* velocity from sliding model  FIXME returns 0 */
+double getslidingvelocity(Grad gb, double H, double Hup,
+                          PetscBool xdir, const AppCtx *user) {
+  return 0.0;
+}
+
 // gradients of weights for Q^1 interpolant
 const double gx[4] = {-1.0,  1.0, 1.0, -1.0},
              gy[4] = {-1.0, -1.0, 1.0,  1.0};
@@ -562,7 +568,7 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t,
       ierr = DMDAVecGetArray(info->da,qquad[c],&(aqquad[c])); CHKERRQ(ierr);
   }
 
-  // loop over locally-owned elements, including ghosts, to get fluxes at
+  // loop over locally-owned elements, including ghosts, to get fluxes q at
   // c = 0,1,2,3 points in element;  note start at (xs-1,ys-1)
   for (k = info->ys-1; k < info->ys + info->ym; k++) {
       for (j = info->xs-1; j < info->xs + info->xm; j++) {
@@ -609,12 +615,13 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t,
 }
 
 
-// FIXME this only implements the V = 0 case
 PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **aH,
                                     double **GG, AppCtx *user) {
   PetscErrorCode  ierr;
   const double    dx = user->L / (double)(info->mx),
                   dy = user->L / (double)(info->my);
+  // coefficients of quadrature evaluations along the boundary of the control volume in M*
+  const double    coeff[8] = {dy/2, dx/2, dx/2, -dy/2, -dy/2, -dx/2, -dx/2, dy/2};
   int             j, k, s, c;
   Vec             b, VH[4];
   Grad            gb;
@@ -627,14 +634,18 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **aH,
       ierr = DMDAVecGetArray(info->da,VH[c],&(aVH[c])); CHKERRQ(ierr);
   }
 
-  // loop over locally-owned elements, including ghosts, to get fluxes at
+  // loop over locally-owned elements, including ghosts, to get fluxes VH at
   // c = 0,1,2,3 points in element;  note start at (xs-1,ys-1)
   for (k = info->ys-1; k < info->ys + info->ym; k++) {
       for (j = info->xs-1; j < info->xs + info->xm; j++) {
           for (c=0; c<4; c++) {
               H  = fieldatptArray(j,k,locx[c],locy[c],aH);
-              gb = gradfatptArray(j,k,locx[c],locy[c],dx,dy,ab);
-              aVH[c][k][j] = FIXME: use H, gb;
+              // FIXME to use bed, need to get stencil width on b as in FormFunctionLocal()
+              //gb = gradfatptArray(j,k,locx[c],locy[c],dx,dy,ab);
+              gb.x = 0.0;
+              gb.y = 0.0;
+              // FIXME this form does not do any upwinding:
+              aVH[c][k][j] = getslidingvelocity(gb,H,H,xdire[c],user) * H;
           }
       }
   }
@@ -667,7 +678,7 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **aH,
 
   for (c = 0; c < 4; c++) {
       ierr = DMDAVecRestoreArray(info->da,VH[c],&(aVH[c])); CHKERRQ(ierr);
-      ierr = VecDestroy(info->da, &(VH[c])); CHKERRQ(ierr);
+      ierr = VecDestroy(&(VH[c])); CHKERRQ(ierr);
   }
 
   PetscFunctionReturn(0);
