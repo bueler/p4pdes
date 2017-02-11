@@ -23,7 +23,10 @@ runobstacle_3:
 runice_1:
 	-@../testit.sh ice "-da_refine 2 -ice_verif 1 -ice_eps 0.0 -ice_tf 40 -ice_dtinit 10" 1 1
 
-test: runobstacle_1 runobstacle_2 runobstacle_3 runice_1
+runice_2:
+	-@../testit.sh ice "-da_refine 3 -ice_verif 2 -ice_eps 0.0 -ice_tf 10 -ice_dtinit 1 -ts_type bdf -ts_bdf_adapt -ts_bdf_order 4" 4 2
+
+test: runobstacle_1 runobstacle_2 runobstacle_3 runice_1 runice_2
 
 # etc
 

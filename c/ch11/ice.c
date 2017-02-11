@@ -25,6 +25,8 @@ static const char help[] =
 
 /* try:
 
+./ice -snes_fd_color                    # default; same as ./ice
+
 ./ice -ts_view
 ./ice -da_refine 3                      # only meaningful at this res and higher
 
@@ -38,6 +40,12 @@ static const char help[] =
 ./ice -ts_type theta -ts_theta_adapt    # good
 ./ice -ts_type bdf -ts_bdf_adapt -ts_bdf_order 2|3|4|5|6  # good
 
+# show converging ice caps on mountains (runs away later):
+mpiexec -n 2 ./ice -da_refine 5 -ts_monitor_solution draw -snes_converged_reason -ice_tf 10000.0 -ice_dtinit 100.0
+
+# same as above but with BDF4 adaptive; shows nontriviality:
+mpiexec -n 6 ./ice -da_refine 5 -ts_monitor_solution draw -snes_converged_reason -ice_tf 10000.0 -ice_dtinit 100.0 -ts_type bdf -ts_bdf_order 4 -ts_bdf_adapt -ts_max_snes_failures -1
+
 # start with short time step and it will find good time scale
 ./ice -snes_converged_reason -da_refine 4 -ts_type bdf -ts_bdf_adapt -ts_bdf_order 4 -ice_dtinit 0.1
 
@@ -47,14 +55,12 @@ static const char help[] =
 verif with dome=1, halfar=2:
 for TEST in 1 2; do
     for N in 2 3 4 5 6; do
-        ./ice -ice_monitor 0 -ice_verif $TEST -ice_eps 0.0 -ice_dtinit 50.0 -ice_tf 2000.0 -da_refine $N
+        mpiexec -n 6 ./ice -ice_monitor 0 -ice_verif $TEST -ice_eps 0.0 -ice_dtinit 50.0 -ice_tf 2000.0 -ts_type beuler -da_refine $N
     done
 done
 
 actual test B from Bueler et al 2005:
 ./ice -ice_verif 2 -ice_eps 0 -ice_dtinit 100 -ice_tf 25000 -ice_L 2200e3 -da_refine $N
-
-mpiexec -n 2 ./ice -snes_fd_color -da_refine 5 -ts_monitor_solution draw -snes_converged_reason -ice_tf 10000.0 -ice_dtinit 100.0
 
 for MG:
 
@@ -143,8 +149,9 @@ int main(int argc,char **argv) {
   dy = user.L / (double)(info.my);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
      "solving on domain [0,L] x [0,L] (L=%.3f km) and time interval [0,tf] (tf=%.3f a)\n"
-     "grid is %d x %d points with spacing dx=%.3f km and dy=%.3f km\n",
-     user.L/1000.0,user.tf/user.secpera,info.mx,info.my,dx/1000.0,dy/1000.0);
+     "grid: %d x %d points, spacing dx=%.3f km x dy=%.3f km, dtinit=%.3f a\n",
+     user.L/1000.0,user.tf/user.secpera,
+     info.mx,info.my,dx/1000.0,dy/1000.0,user.dtinit/user.secpera);
 
   ierr = DMCreateGlobalVector(da,&H);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject)H,"H"); CHKERRQ(ierr);
@@ -211,8 +218,8 @@ int main(int argc,char **argv) {
       ierr = VecNorm(H,NORM_INFINITY,&infnorm); CHKERRQ(ierr);
       ierr = VecNorm(H,NORM_1,&onenorm); CHKERRQ(ierr);
       ierr = PetscPrintf(PETSC_COMM_WORLD,
-          "errors: |u-uexact|_inf = %.3f, |u-uexact|_average = %.3f\n",
-          infnorm,onenorm/(double)(info.mx*info.my)); CHKERRQ(ierr);
+          "errors on verif %d: |u-uexact|_inf = %.3f, |u-uexact|_average = %.3f\n",
+          user.verif,infnorm,onenorm/(double)(info.mx*info.my)); CHKERRQ(ierr);
   }
 
   // clean up
