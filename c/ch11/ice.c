@@ -73,6 +73,9 @@ for ASM:
 
 mpiexec -n 4 ./ice -snes_fd_color -da_refine 7 -ts_monitor_solution draw -snes_converged_reason -ice_tf 2.0 -ice_dtinit 1.0 -ksp_converged_reason -pc_type asm -sub_pc_type lu
 
+succeeded with 6688 time steps (dtav = 1.5 a), 2796 rejected steps, and 41 DIVERGED solves:
+mpiexec -n 6 ./ice -da_refine 4 -ts_monitor_solution draw -snes_converged_reason -ice_tf 10000.0 -ice_dtinit 100.0 -ts_type bdf -ts_bdf_order 2 -ts_bdf_adapt -ice_maxslide 500 -ts_max_snes_failures -1 -ts_adapt_monitor -ts_monitor -ts_adapt_scale_solve_failed 0.9 | tee bar-lev4.txt
+
 recommended "new PISM":
 mpiexec -n N ./ice -da_refine M \
    -snes_type vinewtonrsls \
