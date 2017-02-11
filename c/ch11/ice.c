@@ -40,6 +40,9 @@ static const char help[] =
 ./ice -ts_type theta -ts_theta_adapt    # good
 ./ice -ts_type bdf -ts_bdf_adapt -ts_bdf_order 2|3|4|5|6  # good
 
+./ice -ts_monitor -ts_adapt_monitor   # more info on adapt
+./ice -ts_type bdf -ts_bdf_adapt -ts_adapt_scale_solve_failed 0.9   # SEEMS TO HELP
+ 
 # show converging ice caps on mountains (runs away later):
 mpiexec -n 2 ./ice -da_refine 5 -ts_monitor_solution draw -snes_converged_reason -ice_tf 10000.0 -ice_dtinit 100.0
 
@@ -73,8 +76,8 @@ mpiexec -n 4 ./ice -snes_fd_color -da_refine 7 -ts_monitor_solution draw -snes_c
 recommended "new PISM":
 mpiexec -n N ./ice -da_refine M \
    -snes_type vinewtonrsls \
-   -ts_type bdf -ts_bdf_adapt -ts_bdf_order 4 \
-   -ts_max_snes_failures -1 \
+   -ts_type bdf -ts_bdf_adapt -ts_bdf_order 2 \
+   -ts_max_snes_failures -1 -ts_adapt_scale_solve_failed 0.9 \
    -pc_type asm -sub_pc_type lu
 */
 
@@ -96,7 +99,8 @@ typedef struct {
               eps,    // regularization parameter for D
               delta,  // dimensionless regularization for slope in SIA formulas
               lambda, // amount of upwinding; lambda=0 is none and lambda=1 is "full"
-              initmagic;// constant, in years, used to multiply CMB for initial H
+              maxslide,// maximum sliding speed in bed-slope-based model
+              initmagic;// constant used to multiply CMB for initial H
     int       verif;  // 0 = not verification, 1 = dome, 2 = Halfar (1983)
     PetscBool monitor;// use -ice_monitor
     CMBModel  *cmb;// defined in cmbmodel.h
@@ -234,19 +238,20 @@ PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
   PetscErrorCode ierr;
   PetscBool      set;
 
-  user->secpera= 31556926.0;
+  user->secpera= 31556926.0;  // number of seconds in a year
   user->L      = 1800.0e3;    // m; note  domeL=750.0e3 is radius of verification ice sheet
   user->tf     = 100.0 * user->secpera;  // default to 100 years
   user->dtinit = 10.0 * user->secpera;   // default to 10 year as initial step
-  user->g      = 9.81;       // m/s^2
-  user->rho_ice= 910.0;      // kg/m^3
+  user->g      = 9.81;        // m/s^2
+  user->rho_ice= 910.0;       // kg/m^3
   user->n_ice  = 3.0;
-  user->A_ice  = 3.1689e-24; // 1/(Pa^3 s); EISMINT I value
-  user->D0     = 1.0;       // m^2 / s
+  user->A_ice  = 3.1689e-24;  // 1/(Pa^3 s); EISMINT I value
+  user->D0     = 1.0;         // m^2 / s
   user->eps    = 0.001;
   user->delta  = 1.0e-4;
   user->lambda = 0.25;
-  user->initmagic = 1000.0;  // a
+  user->maxslide = 100.0 / user->secpera; // m/s; only used on non-flat beds
+  user->initmagic = 1000.0 * user->secpera; // s
   user->verif  = 0;
   user->monitor = PETSC_TRUE;
   user->cmb    = NULL;
@@ -269,14 +274,19 @@ PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
       "-eps", "dimensionless regularization for diffusivity D",
       "ice.c",user->eps,&user->eps,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal(
-      "-initmagic", "constant, in years, used to multiply CMB to get initial iterate for thickness",
-      "ice.c",user->initmagic,&user->initmagic,NULL);CHKERRQ(ierr);
+      "-initmagic", "constant used to multiply CMB to get initial iterate for thickness; input units are years",
+      "ice.c",user->initmagic,&user->initmagic,&set);CHKERRQ(ierr);
+  if (set)   user->initmagic *= user->secpera;
   ierr = PetscOptionsReal(
       "-L", "side length of domain in meters",
       "ice.c",user->L,&user->L,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal(
       "-lambda", "amount of upwinding; lambda=0 is none and lambda=1 is full",
       "ice.c",user->lambda,&user->lambda,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal(
+      "-maxslide", "maximum sliding speed in bed-slope-based model; input units are m/a",
+      "ice.c",user->maxslide,&user->maxslide,&set);CHKERRQ(ierr);
+  if (set)   user->maxslide /= user->secpera;
   ierr = PetscOptionsBool(
       "-monitor", "use the ice monitor which shows ice sheet volume and area",
       "ice.c",user->monitor,&user->monitor,&set);CHKERRQ(ierr);
@@ -388,7 +398,7 @@ PetscErrorCode ChopScaleCMBInitialHLocal(DMDALocalInfo *info, double **aH, AppCt
       for (j = info->xs; j < info->xs + info->xm; j++) {
           M = M_CMBModel(user->cmb, aH[k][j]);       // M <- CMB(b(x,y))
           aH[k][j] =  (M < 0.0) ? 0.0 : M;           // H(x,y) <- max{CMB(b(x,y)), 0.0}
-          aH[k][j] *= user->initmagic * user->secpera;
+          aH[k][j] *= user->initmagic;
       }
   }
   PetscFunctionReturn(0);
@@ -448,10 +458,26 @@ double getSIAflux(Grad gH, Grad gb, double H, double Hup,
       return - myD * gH.y + myW.y * PetscPowReal(PetscAbsReal(Hup),n+2.0);
 }
 
-/* velocity from sliding model  FIXME returns 0 */
-double getslidingvelocity(Grad gb, double H, double Hup,
-                          PetscBool xdir, const AppCtx *user) {
-  return 0.0;
+/* velocity from sliding model: ice flows downhill on steep enough slopes
+on [minslope,maxslope] get speed linear up to maxspeed
+maxslope=0.02 (note: 4000m/200e3m = 0.02) gives sliding velocity of maxslide */
+double getslidingvelocity(Grad gb, double H, PetscBool xdir, const AppCtx *user) {
+  const double slope = PetscSqrtReal(gb.x * gb.x + gb.y * gb.y);
+  if (slope > 0.0) {
+      const double minslope = 0.001, maxslope = 0.02;
+      double       speed;
+      if (slope <= minslope)
+          speed = 0.0;
+      else if (slope >= maxslope)
+          speed = user->maxslide;
+      else
+          speed = user->maxslide * (slope - minslope) / (maxslope - minslope);
+      if (xdir)
+          return - speed * gb.x / slope;
+      else
+          return - speed * gb.y / slope;
+  } else
+      return 0.0;
 }
 
 // gradients of weights for Q^1 interpolant
@@ -601,9 +627,8 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t,
   for (k=info->ys; k<info->ys+info->ym; k++) {
       for (j=info->xs; j<info->xs+info->xm; j++) {
           FF[k][j] = aHdot[k][j] * dx * dy;
-          // add the integral over the control volume boundary using two
-          // quadrature points on each of the four sides of the
-          // rectangular control volume
+          // now add integral over control volume boundary using two
+          // quadrature points on each side
           for (s=0; s<8; s++)
               FF[k][j] += coeff[s] * aqquad[ce[s]][k+ke[s]][j+je[s]];
       }
@@ -626,10 +651,13 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **aH,
                   dy = user->L / (double)(info->my);
   // coefficients of quadrature evaluations along the boundary of the control volume in M*
   const double    coeff[8] = {dy/2, dx/2, dx/2, -dy/2, -dy/2, -dx/2, -dx/2, dy/2};
+  const PetscBool upwind = (user->lambda > 0.0);
+  const double    upmin = (1.0 - user->lambda) * 0.5,
+                  upmax = (1.0 + user->lambda) * 0.5;
   int             j, k, s, c;
   Vec             b, VH[4];
   Grad            gb;
-  double          **ab, **aVH[4], y, x, m, H;
+  double          **ab, **aVH[4], y, x, m, H, Hup, lxup, lyup;
 
   PetscFunctionBeginUser;
 
@@ -652,12 +680,19 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **aH,
       for (j = info->xs-1; j < info->xs + info->xm; j++) {
           for (c=0; c<4; c++) {
               H  = fieldatptArray(j,k,locx[c],locy[c],aH);
-              // FIXME to use bed, need to get stencil width on b as in FormFunctionLocal()
-              //gb = gradfatptArray(j,k,locx[c],locy[c],dx,dy,ab);
-              gb.x = 0.0;
-              gb.y = 0.0;
-              // FIXME this form does not do any upwinding:
-              aVH[c][k][j] = getslidingvelocity(gb,H,H,xdire[c],user) * H;
+              gb = gradfatptArray(j,k,locx[c],locy[c],dx,dy,ab);
+              if (upwind) {
+                  if (xdire[c] == PETSC_TRUE) {
+                      lxup = (gb.x <= 0.0) ? upmin : upmax;
+                      lyup = locy[c];
+                  } else {
+                      lxup = locx[c];
+                      lyup = (gb.y <= 0.0) ? upmin : upmax;
+                  }
+                  Hup = fieldatptArray(j,k,lxup,lyup,aH);
+              } else
+                  Hup = H;
+              aVH[c][k][j] = getslidingvelocity(gb,H,xdire[c],user) * Hup;
           }
       }
   }
@@ -674,10 +709,8 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **aH,
               m = M_CMBModel(user->cmb,ab[k][j] + aH[k][j]);
           }          
           GG[k][j] = m * dx * dy;
-
-          // add the integral over the control volume boundary using two
-          // quadrature points on each of the four sides of the
-          // rectangular control volume
+          // now add integral over control volume boundary using two
+          // quadrature points on each side
           for (s=0; s<8; s++)
               GG[k][j] += coeff[s] * aVH[ce[s]][k+ke[s]][j+je[s]];
       }
