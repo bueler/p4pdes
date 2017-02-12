@@ -21,10 +21,11 @@ static const char help[] =
 "Requires SNESVI (-snes_type vinewtonrsls|vinewtonssls) because of constraint.\n\n";
 
 // TODO:   1) implement IJacobian
+//         2) -ice_explicit_monitor
 
 /* try:
 
-./ice -snes_fd_color                    # default; same as ./ice
+./ice -snes_fd_color                    # DEFAULT; same as ./ice
 
 ./ice -ts_view
 ./ice -da_refine 3                      # only meaningful at this res and higher
@@ -41,7 +42,9 @@ static const char help[] =
 ./ice -ts_type bdf -ts_bdf_adapt -ts_bdf_order 2|3|4|5|6  # good
 
 # time-stepping control options
--ts_adapt_basic_clip 0.3,1.2        # recommended!: don't lengthen too much, but allow
+-ts_adapt_type basic                # DEFAULT
+-ts_adapt_basic_clip 0.5,1.2        # DEFAULT and recommended:
+                                      don't lengthen too much, but allow
                                       significantly shorter, in response to estimate of
                                       local truncation error (default: 0.1,10.0)
 -ts_max_snes_failures -1            # recommended: do retry solve
@@ -55,7 +58,7 @@ QUESTIONS ABOUT TS:
   2) why not -ts_adapt_wnormtype 1?  citation?
 
 # shows nontriviality converging ice caps on mountains (runs away later):
-mpiexec -n 2 ./ice -da_refine 5 -ts_monitor_solution draw -snes_converged_reason -ice_tf 10000.0 -ice_dtinit 100.0 -ts_adapt_basic_clip 0.3,1.2 -ts_max_snes_failures -1 -ts_adapt_scale_solve_failed 0.9
+mpiexec -n 2 ./ice -da_refine 5 -ts_monitor_solution draw -snes_converged_reason -ice_tf 10000.0 -ice_dtinit 100.0 -ts_max_snes_failures -1 -ts_adapt_scale_solve_failed 0.9
 
 # start with short time step and it will find good time scale
 ./ice -snes_converged_reason -da_refine 4 -ice_dtinit 0.1
@@ -86,7 +89,8 @@ recommended "new PISM":
 mpiexec -n N ./ice -da_refine M \
    -snes_type vinewtonrsls \
    -ts_type arkimex \    #(OR -ts_type bdf -ts_bdf_adapt -ts_bdf_order 4)
-   -ts_max_snes_failures -1 -ts_adapt_scale_solve_failed 0.9 -ts_adapt_basic_clip 0.3,1.2 \
+   -ts_adapt_type basic -ts_adapt_basic_clip 0.5,1.2 \
+   -ts_max_snes_failures -1 -ts_adapt_scale_solve_failed 0.9 \
    -pc_type asm -sub_pc_type lu
 */
 
@@ -132,6 +136,7 @@ int main(int argc,char **argv) {
   DM             da;
   TS             ts;
   SNES           snes;   // no need to destroy (owned by TS)
+  TSAdapt        adapt;
   Vec            H;
   AppCtx         user;
   CMBModel       cmb;
@@ -173,6 +178,9 @@ int main(int argc,char **argv) {
   ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
   ierr = TSSetProblemType(ts,TS_NONLINEAR); CHKERRQ(ierr);
   ierr = TSSetType(ts,TSARKIMEX); CHKERRQ(ierr);
+  ierr = TSGetAdapt(ts,&adapt); CHKERRQ(ierr);
+  ierr = TSAdaptSetType(adapt,TSADAPTBASIC); CHKERRQ(ierr);
+  ierr = TSAdaptBasicSetClip(adapt,0.5,1.2); CHKERRQ(ierr);
   ierr = TSSetDM(ts,da); CHKERRQ(ierr);
   ierr = DMDATSSetIFunctionLocal(da,INSERT_VALUES,
            (DMDATSIFunctionLocal)FormIFunctionLocal,&user); CHKERRQ(ierr);
@@ -191,6 +199,8 @@ int main(int argc,char **argv) {
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
   ierr = TSSetInitialTimeStep(ts,0.0,user.dtinit); CHKERRQ(ierr);
   ierr = TSSetDuration(ts,100 * (int) ceil(user.tf/user.dtinit),user.tf); CHKERRQ(ierr);
+
+  // now allow it all to be changed at runtime
   ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
 
   // set up initial condition on fine grid
