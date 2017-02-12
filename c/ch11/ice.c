@@ -715,7 +715,7 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **aH,
           // now add integral over control volume boundary using two
           // quadrature points on each side
           for (s=0; s<8; s++)
-              GG[k][j] += coeff[s] * aVH[ce[s]][k+ke[s]][j+je[s]];
+              GG[k][j] -= coeff[s] * aVH[ce[s]][k+ke[s]][j+je[s]];
       }
   }
 
