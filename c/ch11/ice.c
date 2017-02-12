@@ -33,23 +33,32 @@ static const char help[] =
 ./ice -snes_type vinewtonssls           # slightly more robust?
 (other -snes_types like newtonls not allowed because don't support bounds)
 
-./ice -ts_type beuler                   # DEFAULT
+./ice -ts_type arkimex                  # DEFAULT
+./ice -ts_type beuler                   # robust
 ./ice -ts_type cn                       # mis-behaves on long time steps
 ./ice -ts_type cn -ts_theta_adapt       # good
 ./ice -ts_type theta -ts_theta_adapt    # good
 ./ice -ts_type bdf -ts_bdf_adapt -ts_bdf_order 2|3|4|5|6  # good
 
-./ice -ts_monitor -ts_adapt_monitor   # more info on adapt
-./ice -ts_type bdf -ts_bdf_adapt -ts_adapt_scale_solve_failed 0.9   # SEEMS TO HELP
- 
-# show converging ice caps on mountains (runs away later):
-mpiexec -n 2 ./ice -da_refine 5 -ts_monitor_solution draw -snes_converged_reason -ice_tf 10000.0 -ice_dtinit 100.0
+# time-stepping control options
+-ts_adapt_basic_clip 0.3,1.2        # recommended!: don't lengthen too much, but allow
+                                      significantly shorter, in response to estimate of
+                                      local truncation error (default: 0.1,10.0)
+-ts_max_snes_failures -1            # recommended: do retry solve
+-ts_adapt_scale_solve_failed 0.9    # recommended: try a slightly-easier problem
+-ts_max_reject 50                   # recommended?:  keep trying if lte is too big
 
-# same as above but with BDF4 adaptive; shows nontriviality:
-mpiexec -n 6 ./ice -da_refine 5 -ts_monitor_solution draw -snes_converged_reason -ice_tf 10000.0 -ice_dtinit 100.0 -ts_type bdf -ts_bdf_order 4 -ts_bdf_adapt -ts_max_snes_failures -1
+./ice -ts_monitor -ts_adapt_monitor   # more info on adapt
+
+QUESTIONS ABOUT TS:
+  1) how to block -ts_type X if X does not use SNES at all
+  2) why not -ts_adapt_wnormtype 1?  citation?
+
+# shows nontriviality converging ice caps on mountains (runs away later):
+mpiexec -n 2 ./ice -da_refine 5 -ts_monitor_solution draw -snes_converged_reason -ice_tf 10000.0 -ice_dtinit 100.0 -ts_adapt_basic_clip 0.3,1.2 -ts_max_snes_failures -1 -ts_adapt_scale_solve_failed 0.9
 
 # start with short time step and it will find good time scale
-./ice -snes_converged_reason -da_refine 4 -ts_type bdf -ts_bdf_adapt -ts_bdf_order 4 -ice_dtinit 0.1
+./ice -snes_converged_reason -da_refine 4 -ice_dtinit 0.1
 
 # recovery from convergence failures works!  (failure here triggered by n=4):
 ./ice -da_refine 3 -ice_n 4 -ts_max_snes_failures -1 -snes_converged_reason
@@ -57,7 +66,7 @@ mpiexec -n 6 ./ice -da_refine 5 -ts_monitor_solution draw -snes_converged_reason
 verif with dome=1, halfar=2:
 for TEST in 1 2; do
     for N in 2 3 4 5 6; do
-        mpiexec -n 6 ./ice -ice_monitor 0 -ice_verif $TEST -ice_eps 0.0 -ice_dtinit 50.0 -ice_tf 2000.0 -ts_type beuler -da_refine $N
+        mpiexec -n 2 ./ice -ice_monitor 0 -ice_verif $TEST -ice_eps 0.0 -ice_dtinit 50.0 -ice_tf 2000.0 -da_refine $N
     done
 done
 
@@ -65,11 +74,9 @@ actual test B from Bueler et al 2005:
 ./ice -ice_verif 2 -ice_eps 0 -ice_dtinit 100 -ice_tf 25000 -ice_L 2200e3 -da_refine $N
 
 for MG:
-
 mpiexec -n 4 ./ice -snes_fd_color -da_refine 7 -ts_monitor_solution draw -snes_converged_reason -ice_tf 2.0 -ice_dtinit 1.0 -ksp_converged_reason -pc_type mg -pc_mg_levels 4 -mg_levels_ksp_monitor
 
 for ASM:
-
 mpiexec -n 4 ./ice -snes_fd_color -da_refine 7 -ts_monitor_solution draw -snes_converged_reason -ice_tf 2.0 -ice_dtinit 1.0 -ksp_converged_reason -pc_type asm -sub_pc_type lu
 
 succeeded with 3624 time steps (dtav = 2.76 a), 1534 rejected steps, and 0 DIVERGED solves:
@@ -78,8 +85,8 @@ mpiexec -n 2 ./ice -da_refine 4 -snes_converged_reason -ice_tf 10000.0 -ice_dtin
 recommended "new PISM":
 mpiexec -n N ./ice -da_refine M \
    -snes_type vinewtonrsls \
-   -ts_type bdf -ts_bdf_adapt -ts_bdf_order 2 \
-   -ts_max_snes_failures -1 -ts_adapt_scale_solve_failed 0.9 \
+   -ts_type arkimex \    #(OR -ts_type bdf -ts_bdf_adapt -ts_bdf_order 4)
+   -ts_max_snes_failures -1 -ts_adapt_scale_solve_failed 0.9 -ts_adapt_basic_clip 0.3,1.2 \
    -pc_type asm -sub_pc_type lu
 */
 
@@ -165,7 +172,7 @@ int main(int argc,char **argv) {
   // initialize the TS
   ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
   ierr = TSSetProblemType(ts,TS_NONLINEAR); CHKERRQ(ierr);
-  ierr = TSSetType(ts,TSBEULER); CHKERRQ(ierr);
+  ierr = TSSetType(ts,TSARKIMEX); CHKERRQ(ierr);
   ierr = TSSetDM(ts,da); CHKERRQ(ierr);
   ierr = DMDATSSetIFunctionLocal(da,INSERT_VALUES,
            (DMDATSIFunctionLocal)FormIFunctionLocal,&user); CHKERRQ(ierr);
