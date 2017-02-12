@@ -253,7 +253,7 @@ PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
   user->eps    = 0.001;
   user->delta  = 1.0e-4;
   user->lambda = 0.25;
-  user->maxslide = 100.0 / user->secpera; // m/s; only used on non-flat beds
+  user->maxslide = 200.0 / user->secpera; // m/s; only used on non-flat beds
   user->initmagic = 1000.0 * user->secpera; // s
   user->verif  = 0;
   user->monitor = PETSC_TRUE;
