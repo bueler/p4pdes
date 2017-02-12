@@ -1,6 +1,6 @@
 static const char help[] =
 "Solves time-dependent nonlinear ice sheet problem in 2D:\n"
-"(*)    H_t + div q = m - div(V H)\n"
+"(*)    H_t + div (q + V H) = m\n"
 "where q = (q^x,q^y) is the nonsliding shallow ice approximation flux,\n"
 "       q = - Gamma H^{n+2} |grad s|^{n-1} grad s\n"
 "always subject to the constraint\n"
@@ -20,8 +20,7 @@ static const char help[] =
 "There is no Jacobian, of either side; -snes_fd_color is the default method.\n"
 "Requires SNESVI (-snes_type vinewtonrsls|vinewtonssls) because of constraint.\n\n";
 
-// TODO:   1) only V=0 version so far
-//         2) implement IJacobian
+// TODO:   1) implement IJacobian
 
 /* try:
 
@@ -73,8 +72,8 @@ for ASM:
 
 mpiexec -n 4 ./ice -snes_fd_color -da_refine 7 -ts_monitor_solution draw -snes_converged_reason -ice_tf 2.0 -ice_dtinit 1.0 -ksp_converged_reason -pc_type asm -sub_pc_type lu
 
-succeeded with 6688 time steps (dtav = 1.5 a), 2796 rejected steps, and 41 DIVERGED solves:
-mpiexec -n 6 ./ice -da_refine 4 -ts_monitor_solution draw -snes_converged_reason -ice_tf 10000.0 -ice_dtinit 100.0 -ts_type bdf -ts_bdf_order 2 -ts_bdf_adapt -ice_maxslide 500 -ts_max_snes_failures -1 -ts_adapt_monitor -ts_monitor -ts_adapt_scale_solve_failed 0.9 | tee bar-lev4.txt
+succeeded with 3624 time steps (dtav = 2.76 a), 1534 rejected steps, and 0 DIVERGED solves:
+mpiexec -n 2 ./ice -da_refine 4 -snes_converged_reason -ice_tf 10000.0 -ice_dtinit 100.0 -ts_type bdf -ts_bdf_order 2 -ts_bdf_adapt -ice_maxslide 100 -ts_max_snes_failures -1 -ts_adapt_monitor -ts_monitor -ts_adapt_scale_solve_failed 0.9 | tee bar-lev4.txt
 
 recommended "new PISM":
 mpiexec -n N ./ice -da_refine M \
@@ -588,7 +587,7 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t,
 
   PetscFunctionBeginUser;
 
-  ierr = DMCreateLocalVector(info->da, &b); CHKERRQ(ierr);
+  ierr = DMGetLocalVector(info->da, &b); CHKERRQ(ierr);
   if (user->verif > 0) {
       ierr = VecSet(b,0.0); CHKERRQ(ierr);
       ierr = DMDAVecGetArray(info->da,b,&ab); CHKERRQ(ierr);
@@ -597,7 +596,7 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t,
       ierr = FormBedLocal(info,1,ab,user); CHKERRQ(ierr);  // get stencil width
   }
   for (c = 0; c < 4; c++) {
-      ierr = DMCreateLocalVector(info->da, &(qquad[c])); CHKERRQ(ierr);
+      ierr = DMGetLocalVector(info->da, &(qquad[c])); CHKERRQ(ierr);
       ierr = DMDAVecGetArray(info->da,qquad[c],&(aqquad[c])); CHKERRQ(ierr);
   }
 
@@ -620,7 +619,8 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t,
                   Hup = fieldatptArray(j,k,lxup,lyup,aH);
               } else
                   Hup = H;
-              aqquad[c][k][j] = getSIAflux(gH,gb,H,Hup,xdire[c],user);
+              aqquad[c][k][j] = getSIAflux(gH,gb,H,Hup,xdire[c],user)
+                                + getslidingvelocity(gb,H,xdire[c],user) * Hup;
           }
       }
   }
@@ -639,10 +639,10 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t,
 
   for (c = 0; c < 4; c++) {
       ierr = DMDAVecRestoreArray(info->da,qquad[c],&(aqquad[c])); CHKERRQ(ierr);
-      ierr = VecDestroy(&(qquad[c])); CHKERRQ(ierr);
+      ierr = DMRestoreLocalVector(info->da, &(qquad[c])); CHKERRQ(ierr);
   }
   ierr = DMDAVecRestoreArray(info->da,b,&ab); CHKERRQ(ierr);
-  ierr = VecDestroy(&b); CHKERRQ(ierr);
+  ierr = DMRestoreLocalVector(info->da, &b); CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -652,54 +652,14 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **aH,
   PetscErrorCode  ierr;
   const double    dx = user->L / (double)(info->mx),
                   dy = user->L / (double)(info->my);
-  // coefficients of quadrature evaluations along the boundary of the control volume in M*
-  const double    coeff[8] = {dy/2, dx/2, dx/2, -dy/2, -dy/2, -dx/2, -dx/2, dy/2};
-  const PetscBool upwind = (user->lambda > 0.0);
-  const double    upmin = (1.0 - user->lambda) * 0.5,
-                  upmax = (1.0 + user->lambda) * 0.5;
-  int             j, k, s, c;
-  Vec             b, VH[4];
-  Grad            gb;
-  double          **ab, **aVH[4], y, x, m, H, Hup, lxup, lyup;
+  int             j, k;
+  Vec             b;
+  double          **ab, y, x, m;
 
   PetscFunctionBeginUser;
-
-  ierr = DMCreateLocalVector(info->da, &b); CHKERRQ(ierr);
-  if (user->verif > 0) {
-      ierr = VecSet(b,0.0); CHKERRQ(ierr);
-      ierr = DMDAVecGetArray(info->da,b,&ab); CHKERRQ(ierr);
-  } else {
-      ierr = DMDAVecGetArray(info->da,b,&ab); CHKERRQ(ierr);
-      ierr = FormBedLocal(info,1,ab,user); CHKERRQ(ierr);  // get stencil width
-  }
-  for (c = 0; c < 4; c++) {
-      ierr = DMCreateLocalVector(info->da, &(VH[c])); CHKERRQ(ierr);
-      ierr = DMDAVecGetArray(info->da,VH[c],&(aVH[c])); CHKERRQ(ierr);
-  }
-
-  // loop over locally-owned elements, including ghosts, to get fluxes VH at
-  // c = 0,1,2,3 points in element;  note start at (xs-1,ys-1)
-  for (k = info->ys-1; k < info->ys + info->ym; k++) {
-      for (j = info->xs-1; j < info->xs + info->xm; j++) {
-          for (c=0; c<4; c++) {
-              H  = fieldatptArray(j,k,locx[c],locy[c],aH);
-              gb = gradfatptArray(j,k,locx[c],locy[c],dx,dy,ab);
-              if (upwind) {
-                  if (xdire[c] == PETSC_TRUE) {
-                      lxup = (gb.x <= 0.0) ? upmin : upmax;
-                      lyup = locy[c];
-                  } else {
-                      lxup = locx[c];
-                      lyup = (gb.y <= 0.0) ? upmin : upmax;
-                  }
-                  Hup = fieldatptArray(j,k,lxup,lyup,aH);
-              } else
-                  Hup = H;
-              aVH[c][k][j] = getslidingvelocity(gb,H,xdire[c],user) * Hup;
-          }
-      }
-  }
-
+  ierr = DMGetLocalVector(info->da, &b); CHKERRQ(ierr);
+  ierr = DMDAVecGetArray(info->da,b,&ab); CHKERRQ(ierr);
+  ierr = FormBedLocal(info,0,ab,user); CHKERRQ(ierr);  // stencil width NOT needed
   for (k=info->ys; k<info->ys+info->ym; k++) {
       y = k * dy;
       for (j=info->xs; j<info->xs+info->xm; j++) {
@@ -712,20 +672,10 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **aH,
               m = M_CMBModel(user->cmb,ab[k][j] + aH[k][j]);
           }          
           GG[k][j] = m * dx * dy;
-          // now add integral over control volume boundary using two
-          // quadrature points on each side
-          for (s=0; s<8; s++)
-              GG[k][j] -= coeff[s] * aVH[ce[s]][k+ke[s]][j+je[s]];
       }
   }
-
-  for (c = 0; c < 4; c++) {
-      ierr = DMDAVecRestoreArray(info->da,VH[c],&(aVH[c])); CHKERRQ(ierr);
-      ierr = VecDestroy(&(VH[c])); CHKERRQ(ierr);
-  }
   ierr = DMDAVecRestoreArray(info->da,b,&ab); CHKERRQ(ierr);
-  ierr = VecDestroy(&b); CHKERRQ(ierr);
-
+  ierr = DMRestoreLocalVector(info->da, &b); CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
