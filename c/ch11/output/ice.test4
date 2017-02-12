@@ -1,0 +1,15 @@
+solving on domain [0,L] x [0,L] (L=1800.000 km) and time interval [0,tf] (tf=20.000 a)
+grid: 12 x 12 points, spacing dx=150.000 km x dy=150.000 km, dtinit=1.000 a
+  0: time 0.000 a,  volume 69.7 10^3 km^3,  area 135.0 10^3 km^2
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+  1: time 1.000 a,  volume 69.8 10^3 km^3,  area 135.0 10^3 km^2
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+  2: time 11.000 a,  volume 70.5 10^3 km^3,  area 135.0 10^3 km^2
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+  3: time 20.000 a,  volume 71.2 10^3 km^3,  area 157.5 10^3 km^2

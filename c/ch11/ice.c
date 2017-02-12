@@ -629,11 +629,11 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t,
   // s = 0,1,...,7 points on boundary of control volume (rectangle) around node
   for (k=info->ys; k<info->ys+info->ym; k++) {
       for (j=info->xs; j<info->xs+info->xm; j++) {
-          FF[k][j] = aHdot[k][j] * dx * dy;
+          FF[k][j] = aHdot[k][j];
           // now add integral over control volume boundary using two
           // quadrature points on each side
           for (s=0; s<8; s++)
-              FF[k][j] += coeff[s] * aqquad[ce[s]][k+ke[s]][j+je[s]];
+              FF[k][j] += coeff[s] * aqquad[ce[s]][k+ke[s]][j+je[s]] / (dx * dy);
       }
   }
 
@@ -669,9 +669,9 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **aH,
           } else if (user->verif == 2) {
               m = 0.0;
           } else {
-              m = M_CMBModel(user->cmb,ab[k][j] + aH[k][j]);
-          }          
-          GG[k][j] = m * dx * dy;
+              m = M_CMBModel(user->cmb,ab[k][j] + aH[k][j]);  // s = b + H is surface elevation
+          }
+          GG[k][j] = m;
       }
   }
   ierr = DMDAVecRestoreArray(info->da,b,&ab); CHKERRQ(ierr);
