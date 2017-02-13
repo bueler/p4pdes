@@ -65,7 +65,7 @@ mpiexec -n 2 ./ice -da_refine 5 -ts_monitor_solution draw -snes_converged_reason
 verif with dome=1, halfar=2:
 for TEST in 1 2; do
     for N in 2 3 4 5 6; do
-        mpiexec -n 2 ./ice -ice_monitor 0 -ice_verif $TEST -ice_eps 0.0 -ice_dtinit 50.0 -ice_tf 2000.0 -da_refine $N
+        mpiexec -n 2 ./ice -ice_monitor 0 -ice_verif $TEST -ice_eps 0.0 -ice_dtinit 50.0 -ice_tf 2000.0 -da_refine $N -ts_type beuler
     done
 done
 
@@ -108,8 +108,7 @@ typedef struct {
               eps,    // regularization parameter for D
               delta,  // dimensionless regularization for slope in SIA formulas
               lambda, // amount of upwinding; lambda=0 is none and lambda=1 is "full"
-              maxslide,// maximum sliding speed in bed-slope-based model
-              initmagic;// constant used to multiply CMB for initial H
+              maxslide;// maximum sliding speed in bed-slope-based model
     int       verif;  // 0 = not verification, 1 = dome, 2 = Halfar (1983)
     PetscBool monitor;// use -ice_monitor
     CMBModel  *cmb;// defined in cmbmodel.h
@@ -120,7 +119,6 @@ typedef struct {
 extern PetscErrorCode SetFromOptionsAppCtx(AppCtx*);
 extern PetscErrorCode IceMonitor(TS, int, double, Vec, void*);
 extern PetscErrorCode FormBedLocal(DMDALocalInfo*, int, double**, AppCtx*);
-extern PetscErrorCode ChopScaleCMBInitialHLocal(DMDALocalInfo*, double**, AppCtx*);
 extern PetscErrorCode FormBounds(SNES,Vec,Vec);
 extern PetscErrorCode FormIFunctionLocal(DMDALocalInfo*, double,
                           double**, double**, double**, AppCtx*);
@@ -209,7 +207,8 @@ int main(int argc,char **argv) {
       ierr = HalfarThicknessLocal(&info,t0,aH,&user); CHKERRQ(ierr);
   } else {
       // fill H according to chop-scale-CMB
-      ierr = ChopScaleCMBInitialHLocal(&info,aH,&user); CHKERRQ(ierr);
+      ierr = FormBedLocal(&info,0,aH,&user); CHKERRQ(ierr);  // H(x,y) <- b(x,y)
+      ierr = ChopScaleInitialHLocal_CMBModel(&cmb,&info,aH,aH); CHKERRQ(ierr);
   }
   ierr = DMDAVecRestoreArray(da,H,&aH); CHKERRQ(ierr);
 
@@ -266,7 +265,6 @@ PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
   user->delta  = 1.0e-4;
   user->lambda = 0.25;
   user->maxslide = 200.0 / user->secpera; // m/s; only used on non-flat beds
-  user->initmagic = 1000.0 * user->secpera; // s
   user->verif  = 0;
   user->monitor = PETSC_TRUE;
   user->cmb    = NULL;
@@ -288,10 +286,6 @@ PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
   ierr = PetscOptionsReal(
       "-eps", "dimensionless regularization for diffusivity D",
       "ice.c",user->eps,&user->eps,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal(
-      "-initmagic", "constant used to multiply CMB to get initial iterate for thickness; input units are years",
-      "ice.c",user->initmagic,&user->initmagic,&set);CHKERRQ(ierr);
-  if (set)   user->initmagic *= user->secpera;
   ierr = PetscOptionsReal(
       "-L", "side length of domain in meters",
       "ice.c",user->L,&user->L,NULL);CHKERRQ(ierr);
@@ -398,22 +392,6 @@ PetscErrorCode FormBedLocal(DMDALocalInfo *info, int stencilwidth, double **ab, 
               }
           }
           ab[k][j] = scalec * b;
-      }
-  }
-  PetscFunctionReturn(0);
-}
-
-
-PetscErrorCode ChopScaleCMBInitialHLocal(DMDALocalInfo *info, double **aH, AppCtx *user) {
-  PetscErrorCode  ierr;
-  int             j,k;
-  double          M;
-  ierr = FormBedLocal(info,0,aH,user); CHKERRQ(ierr);  // H(x,y) <- b(x,y)
-  for (k = info->ys; k < info->ys + info->ym; k++) {
-      for (j = info->xs; j < info->xs + info->xm; j++) {
-          M = M_CMBModel(user->cmb, aH[k][j]);       // M <- CMB(b(x,y))
-          aH[k][j] =  (M < 0.0) ? 0.0 : M;           // H(x,y) <- max{CMB(b(x,y)), 0.0}
-          aH[k][j] *= user->initmagic;
       }
   }
   PetscFunctionReturn(0);
