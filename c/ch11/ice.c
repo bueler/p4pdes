@@ -53,10 +53,6 @@ static const char help[] =
 
 ./ice -ts_monitor -ts_adapt_monitor   # more info on adapt
 
-QUESTIONS ABOUT TS:
-  1) how to block -ts_type X if X does not use SNES at all
-  2) why not -ts_adapt_wnormtype 1?  citation?
-
 # shows nontriviality converging ice caps on mountains (runs away later):
 mpiexec -n 2 ./ice -da_refine 5 -ts_monitor_solution draw -snes_converged_reason -ice_tf 10000.0 -ice_dtinit 100.0 -ts_max_snes_failures -1 -ts_adapt_scale_solve_failed 0.9
 
