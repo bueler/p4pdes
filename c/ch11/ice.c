@@ -332,6 +332,7 @@ PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
 }
 
 
+// this basic monitor gives current time, volume, area
 PetscErrorCode IceMonitor(TS ts, int step, double time, Vec H, void *ctx) {
     PetscErrorCode ierr;
     AppCtx         *user = (AppCtx*)ctx;
@@ -361,6 +362,46 @@ PetscErrorCode IceMonitor(TS ts, int step, double time, Vec H, void *ctx) {
     ierr = PetscPrintf(PETSC_COMM_WORLD,
         "%3d: time %.3f a,  volume %.1f 10^3 km^3,  area %.1f 10^3 km^2\n",
         step,time/user->secpera,vol/1.0e12,area/1.0e9); CHKERRQ(ierr);
+    return 0;
+}
+
+// this monitor reports on max diffusivity, velocity, explicit time-step limits (for comparison)
+PetscErrorCode IceExplicitMonitor(TS ts, int step, double time, Vec H, void *ctx) {
+    PetscErrorCode ierr;
+    AppCtx         *user = (AppCtx*)ctx;
+    Vec            b;
+    double         lmaxdiff = 0.0, maxdiff,
+                   lmaxV = 0.0, maxV,
+                   dx, dy, **ab, **aH;
+    int            j, k;
+    MPI_Comm       com;
+    DM             da;
+    DMDALocalInfo  info;
+
+    ierr = TSGetDM(ts,&da);CHKERRQ(ierr);
+    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+    dx = user->L / (double)(info.mx);
+    dy = user->L / (double)(info.my);
+    ierr = DMGetLocalVector(da, &b); CHKERRQ(ierr);
+    ierr = DMDAVecGetArray(da,b,&ab); CHKERRQ(ierr);
+    ierr = FormBedLocal(info,1,ab,user); CHKERRQ(ierr);  // get stencil width
+    ierr = DMDAVecGetArrayRead(da,H,&aH); CHKERRQ(ierr);
+    for (k = info.ys; k < info.ys + info.ym; k++) {
+        for (j = info.xs; j < info.xs + info.xm; j++) {
+            lmaxdiff = PetscMax(lmaxdiff,FIXME);  // FIXME units?
+            lmaxV = PetscMax(lmaxV,FIXME);
+        }
+    }
+    ierr = DMDAVecRestoreArrayRead(da,H,&aH); CHKERRQ(ierr);
+    ierr = DMDAVecRestoreArray(da,b,&ab); CHKERRQ(ierr);
+    ierr = DMRestoreLocalVector(da, &b); CHKERRQ(ierr);
+
+    ierr = PetscObjectGetComm((PetscObject)(da),&com); CHKERRQ(ierr);
+    ierr = MPI_Allreduce(&lmaxdiff,&maxdiff,1,MPI_DOUBLE,MPI_MAX,com); CHKERRQ(ierr);
+    ierr = MPI_Allreduce(&lmaxV,&maxV,1,MPI_DOUBLE,MPI_MAX,com); CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,
+        "    max D = %.3f,  max |V| = %.3f m/a;  explicit limits: dtdiff = %.3f a, dtCFL = %.3f a\n",
+        maxdiff,maxV*user->secpera,FIXME,FIXME); CHKERRQ(ierr);
     return 0;
 }
 
@@ -431,7 +472,7 @@ Grad getW(double delta, Grad gb) {
     return W;
 }
 
-/* DCS = diffusion from the continuation scheme:
+/* DCS = diffusivity from the continuation scheme:
    D(eps) = (1-eps) delta H^{n+2} + eps D_0
 so   D(1)=D_0 and D(0)=delta H^{n+2}. */
 double DCS(double delta, double H, double n, double eps, double D0) {
