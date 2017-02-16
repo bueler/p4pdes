@@ -7,7 +7,7 @@ import sys
 
 parser = argparse.ArgumentParser(description=
 """
-Generate residual norm figure from PETSc output.
+Generate residual norm figure from PETSc monitor output from a SNES+KSP solve.
 
 Example:
   $ ./program -snes_monitor -ksp_monitor &> foo.txt
@@ -19,12 +19,13 @@ parser.add_argument('--noksp', action='store_false',
                     help='do not show KSP residuals', dest='showksp',default=True)
 parser.add_argument('--showdata', action='store_true',
                     help='print raw list of norms', default=False)
+parser.add_argument('--color', action='store_true',
+                    help='use color in plot', default=False)
 parser.add_argument('-o', help='output filename (.png,.pdf)', dest='output')
 
 args = parser.parse_args()
 
 infile = open(args.infile, 'r')
-#print 'reading from %s ...' % args.infile
 
 data = []
 for line in infile:
@@ -36,12 +37,10 @@ for line in infile:
         for k in range(len(ls)):
             if ls[k] == 'SNES' and ls[k+1] == 'Function' and ls[k+2] == 'norm':
                 norm = float(ls[k+3])
-                #print 'found SNES %e' % norm
                 data.append([norm])
             if args.showksp:
                 if ls[k] == 'KSP' and ls[k+1] == 'Residual' and ls[k+2] == 'norm':
                     norm = float(ls[k+3])
-                    #print 'found KSP %e' % norm
                     data[-1].append(norm)
 
 if args.showdata:
@@ -51,17 +50,22 @@ fig = plt.figure(figsize=(7,6))
 plt.hold(True)
 
 # actually plot points
+snesmarker = 'ko'
+kspmarker = 'k+'
+if args.color:
+    snesmarker = 'bo'
+    kspmarker = 'r+'
 for k in range(len(data)):
     if k == 0:
-        plt.semilogy(k,data[k][0],'bo',markersize=10.0,label='SNES residual')
+        plt.semilogy(k,data[k][0],snesmarker,markersize=9.0,label='SNES residual')
     else:
-        plt.semilogy(k,data[k][0],'bo',markersize=10.0)
+        plt.semilogy(k,data[k][0],snesmarker,markersize=9.0)
     for j in range(len(data[k])-1):
         jshift = k + (j+1) / float(len(data[k]))
         if k == 0 and j == 0:
-            plt.semilogy(jshift,data[k][j+1],'r+',markersize=10.0,label='KSP residual')
+            plt.semilogy(jshift,data[k][j+1],kspmarker,markersize=10.0,label='KSP residual')
         else:
-            plt.semilogy(jshift,data[k][j+1],'r+',markersize=10.0)
+            plt.semilogy(jshift,data[k][j+1],kspmarker,markersize=10.0)
 
 plt.hold(False)
 plt.grid(True)
@@ -73,7 +77,6 @@ if args.showksp:
     plt.legend(loc='upper right')
 
 if args.output:
-    #print "writing %s ..." % args.output
     plt.savefig(args.output,bbox_inches='tight')
 else:
     plt.show()

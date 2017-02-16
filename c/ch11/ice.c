@@ -243,8 +243,7 @@ int main(int argc,char **argv) {
   // clean up
   VecDestroy(&H);
   TSDestroy(&ts);  DMDestroy(&da);
-  PetscFinalize();
-  return 0;
+  return PetscFinalize();
 }
 
 
@@ -269,6 +268,7 @@ PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
   user->monitor = PETSC_TRUE;
   user->cmb    = NULL;
 
+  PetscFunctionBeginUser;
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"ice_","options to ice","");CHKERRQ(ierr);
   ierr = PetscOptionsReal(
       "-A", "set value of ice softness A in units Pa-3 s-1",
@@ -342,6 +342,7 @@ PetscErrorCode IceMonitor(TS ts, int step, double time, Vec H, void *ctx) {
     DM             da;
     DMDALocalInfo  info;
 
+    PetscFunctionBeginUser;
     ierr = TSGetDM(ts,&da);CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
     darea = user->L * user->L / (double)(info.mx * info.my);
@@ -362,7 +363,7 @@ PetscErrorCode IceMonitor(TS ts, int step, double time, Vec H, void *ctx) {
     ierr = PetscPrintf(PETSC_COMM_WORLD,
         "%3d: time %.3f a,  volume %.1f 10^3 km^3,  area %.1f 10^3 km^2\n",
         step,time/user->secpera,vol/1.0e12,area/1.0e9); CHKERRQ(ierr);
-    return 0;
+    PetscFunctionReturn(0);
 }
 
 // this monitor reports on max diffusivity, velocity, explicit time-step limits (for comparison)
@@ -420,6 +421,7 @@ PetscErrorCode FormBedLocal(DMDALocalInfo *info, int stencilwidth, double **ab, 
                            { 0.50000000,  0.45014486,  0.60551833, -0.52250644},
                            { 0.93812068,  0.32638429, -0.24654812,  0.33887052},
                            { 0.17592361, -0.35496741,  0.22694547, -0.05280704} };
+  PetscFunctionBeginUser;
   // go through owned portion of grid and compute  b(x,y)
   for (k = info->ys-stencilwidth; k < info->ys + info->ym+stencilwidth; k++) {
       y = k * dy;
@@ -454,7 +456,7 @@ typedef struct {
     double x,y;
 } Grad;
 
-double getdelta(Grad gH, Grad gb, const AppCtx *user) {
+static double getdelta(Grad gH, Grad gb, const AppCtx *user) {
     const double n = user->n_ice;
     if (n > 1.0) {
         const double sx = gH.x + gb.x,
@@ -465,7 +467,7 @@ double getdelta(Grad gH, Grad gb, const AppCtx *user) {
         return user->Gamma;
 }
 
-Grad getW(double delta, Grad gb) {
+static Grad getW(double delta, Grad gb) {
     Grad W;
     W.x = - delta * gb.x;
     W.y = - delta * gb.y;
@@ -475,13 +477,13 @@ Grad getW(double delta, Grad gb) {
 /* DCS = diffusivity from the continuation scheme:
    D(eps) = (1-eps) delta H^{n+2} + eps D_0
 so   D(1)=D_0 and D(0)=delta H^{n+2}. */
-double DCS(double delta, double H, double n, double eps, double D0) {
+static double DCS(double delta, double H, double n, double eps, double D0) {
   return (1.0 - eps) * delta * PetscPowReal(PetscAbsReal(H),n+2.0) + eps * D0;
 }
 
 /* ice flux from the non-sliding SIA on a general bed */
-double getSIAflux(Grad gH, Grad gb, double H, double Hup,
-                  PetscBool xdir, const AppCtx *user) {
+static double getSIAflux(Grad gH, Grad gb, double H, double Hup,
+                         PetscBool xdir, const AppCtx *user) {
   const double n     = user->n_ice,
                delta = getdelta(gH,gb,user),
                myD   = DCS(delta,H,n,user->eps,user->D0);
@@ -495,7 +497,7 @@ double getSIAflux(Grad gH, Grad gb, double H, double Hup,
 /* velocity from sliding model: ice flows downhill on steep enough slopes
 on [minslope,maxslope] get speed linear up to maxspeed
 maxslope=0.02 (note: 4000m/200e3m = 0.02) gives sliding velocity of maxslide */
-double getslidingvelocity(Grad gb, double H, PetscBool xdir, const AppCtx *user) {
+static double getslidingvelocity(Grad gb, double H, PetscBool xdir, const AppCtx *user) {
   const double slope = PetscSqrtReal(gb.x * gb.x + gb.y * gb.y);
   if (slope > 0.0) {
       const double minslope = 0.001, maxslope = 0.02;
@@ -515,10 +517,10 @@ double getslidingvelocity(Grad gb, double H, PetscBool xdir, const AppCtx *user)
 }
 
 // gradients of weights for Q^1 interpolant
-const double gx[4] = {-1.0,  1.0, 1.0, -1.0},
-             gy[4] = {-1.0, -1.0, 1.0,  1.0};
+static const double gx[4] = {-1.0,  1.0, 1.0, -1.0},
+                    gy[4] = {-1.0, -1.0, 1.0,  1.0};
 
-double fieldatpt(double xi, double eta, double f[4]) {
+static double fieldatpt(double xi, double eta, double f[4]) {
   // weights for Q^1 interpolant
   double x[4] = { 1.0-xi,      xi,  xi, 1.0-xi},
          y[4] = {1.0-eta, 1.0-eta, eta,    eta};
@@ -526,13 +528,13 @@ double fieldatpt(double xi, double eta, double f[4]) {
          + x[2] * y[2] * f[2] + x[3] * y[3] * f[3];
 }
 
-double fieldatptArray(int u, int v, double xi, double eta, double **f) {
+static double fieldatptArray(int u, int v, double xi, double eta, double **f) {
   double ff[4] = {f[v][u], f[v][u+1], f[v+1][u+1], f[v+1][u]};
   return fieldatpt(xi,eta,ff);
 }
 
 
-Grad gradfatpt(double xi, double eta, double dx, double dy, double f[4]) {
+static Grad gradfatpt(double xi, double eta, double dx, double dy, double f[4]) {
   Grad gradf;
   // weights for Q^1 interpolant
   double x[4] = { 1.0-xi,      xi,  xi, 1.0-xi},
@@ -546,7 +548,7 @@ Grad gradfatpt(double xi, double eta, double dx, double dy, double f[4]) {
   return gradf;
 }
 
-Grad gradfatptArray(int u, int v, double xi, double eta, double dx, double dy, double **f) {
+static Grad gradfatptArray(int u, int v, double xi, double eta, double dx, double dy, double **f) {
   double ff[4] = {f[v][u], f[v][u+1], f[v+1][u+1], f[v+1][u]};
   return gradfatpt(xi,eta,dx,dy,ff);
 }
@@ -618,7 +620,6 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t,
   Vec             qquad[4], b;
 
   PetscFunctionBeginUser;
-
   ierr = DMGetLocalVector(info->da, &b); CHKERRQ(ierr);
   if (user->verif > 0) {
       ierr = VecSet(b,0.0); CHKERRQ(ierr);
