@@ -20,8 +20,7 @@ static const char help[] =
 "There is no Jacobian, of either side; -snes_fd_color is the default method.\n"
 "Requires SNESVI (-snes_type vinewtonrsls|vinewtonssls) because of constraint.\n\n";
 
-// TODO:   1) implement IJacobian
-//         2) -ice_explicit_monitor
+// TODO:   1)implement IJacobian
 
 /* try:
 
@@ -51,7 +50,7 @@ static const char help[] =
 -ts_adapt_scale_solve_failed 0.9    # recommended: try a slightly-easier problem
 -ts_max_reject 50                   # recommended?:  keep trying if lte is too big
 
-./ice -ts_monitor -ts_adapt_monitor   # more info on adapt
+./ice -ts_monitor -ts_adapt_monitor -ice_dtlimits  # more info on adapt and comparison to explicit
 
 # shows nontriviality converging ice caps on mountains (runs away later):
 mpiexec -n 2 ./ice -da_refine 5 -ts_monitor_solution draw -snes_converged_reason -ice_tf 10000.0 -ice_dtinit 100.0 -ts_max_snes_failures -1 -ts_adapt_scale_solve_failed 0.9
@@ -97,7 +96,7 @@ mpiexec -n N ./ice -da_refine M \
 typedef struct {
     double    secpera,// number of seconds in a year
               L,      // spatial domain is [0,L] x [0,L]
-              tf,     // time domain is [0,tf]
+              tf,     // final time; time domain is [0,tf]
               dtinit, // user-requested initial time step
               g,      // acceleration of gravity
               rho_ice,// ice density
@@ -108,9 +107,13 @@ typedef struct {
               eps,    // regularization parameter for D
               delta,  // dimensionless regularization for slope in SIA formulas
               lambda, // amount of upwinding; lambda=0 is none and lambda=1 is "full"
-              maxslide;// maximum sliding speed in bed-slope-based model
+              maxslide,// maximum sliding speed in bed-slope-based model
+              locmaxD,// maximum of diffusivity from last residual evaluation
+              locmaxV,// maximum absolute velocity component from last residual eval
+              dtexplicitsum;// running sum of explicit dt limit
     int       verif;  // 0 = not verification, 1 = dome, 2 = Halfar (1983)
-    PetscBool monitor;// use -ice_monitor
+    PetscBool monitor,// use -ice_monitor
+              dtlimits;// also monitor time step limits for explicit schemes
     CMBModel  *cmb;// defined in cmbmodel.h
 } AppCtx;
 
@@ -118,6 +121,7 @@ typedef struct {
 
 extern PetscErrorCode SetFromOptionsAppCtx(AppCtx*);
 extern PetscErrorCode IceMonitor(TS, int, double, Vec, void*);
+extern PetscErrorCode ExplicitLimitsMonitor(TS, int, double, Vec, void*);
 extern PetscErrorCode FormBedLocal(DMDALocalInfo*, int, double**, AppCtx*);
 extern PetscErrorCode FormBounds(SNES,Vec,Vec);
 extern PetscErrorCode FormIFunctionLocal(DMDALocalInfo*, double,
@@ -183,6 +187,9 @@ int main(int argc,char **argv) {
   if (user.monitor) {
       ierr = TSMonitorSet(ts,IceMonitor,&user,NULL); CHKERRQ(ierr);
   }
+  if (user.dtlimits) {
+      ierr = TSMonitorSet(ts,ExplicitLimitsMonitor,&user,NULL); CHKERRQ(ierr);
+  }
 
   // configure the SNES to solve NCP/VI at each step
   ierr = TSGetSNES(ts,&snes); CHKERRQ(ierr);
@@ -214,6 +221,16 @@ int main(int argc,char **argv) {
 
   // solve
   ierr = TSSolve(ts,H); CHKERRQ(ierr);
+
+  // time-stepping summary if -ice_dtlimits
+  if (user.dtlimits) {
+      int count;
+      ierr = TSGetTimeStepNumber(ts,&count); CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_WORLD,
+          "average dt %.5f a, average dtexplicit %.5f a\n",
+          (user.tf/user.secpera)/(double)count,
+          (user.dtexplicitsum/user.secpera)/(double)count); CHKERRQ(ierr);
+  }
 
   // compute error in verification case
   if (user.verif > 0) {
@@ -264,8 +281,10 @@ PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
   user->delta  = 1.0e-4;
   user->lambda = 0.25;
   user->maxslide = 200.0 / user->secpera; // m/s; only used on non-flat beds
+  user->dtexplicitsum = 0.0;
   user->verif  = 0;
   user->monitor = PETSC_TRUE;
+  user->dtlimits = PETSC_FALSE;
   user->cmb    = NULL;
 
   PetscFunctionBeginUser;
@@ -283,6 +302,9 @@ PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
       "-dtinit", "initial time step in seconds; input units are years",
       "ice.c",user->dtinit,&user->dtinit,&set);CHKERRQ(ierr);
   if (set)   user->dtinit *= user->secpera;
+  ierr = PetscOptionsBool(
+      "-dtlimits", "monitor the time-step limits which would apply to an explicit scheme",
+      "ice.c",user->dtlimits,&user->dtlimits,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal(
       "-eps", "dimensionless regularization for diffusivity D",
       "ice.c",user->eps,&user->eps,NULL);CHKERRQ(ierr);
@@ -367,43 +389,45 @@ PetscErrorCode IceMonitor(TS ts, int step, double time, Vec H, void *ctx) {
 }
 
 // this monitor reports on max diffusivity, velocity, explicit time-step limits (for comparison)
-PetscErrorCode IceExplicitMonitor(TS ts, int step, double time, Vec H, void *ctx) {
+PetscErrorCode ExplicitLimitsMonitor(TS ts, int step, double time, Vec H, void *ctx) {
     PetscErrorCode ierr;
     AppCtx         *user = (AppCtx*)ctx;
-    Vec            b;
-    double         lmaxdiff = 0.0, maxdiff,
-                   lmaxV = 0.0, maxV,
-                   dx, dy, **ab, **aH;
-    int            j, k;
+    double         maxD, maxV, dd, dtD=PETSC_INFINITY, dtCFL=PETSC_INFINITY;
     MPI_Comm       com;
     DM             da;
     DMDALocalInfo  info;
 
+    PetscFunctionBeginUser;
+    if (time <= 0.0) {
+        PetscFunctionReturn(0);
+    }
+    // globalize maxD, maxV
     ierr = TSGetDM(ts,&da);CHKERRQ(ierr);
+    ierr = PetscObjectGetComm((PetscObject)(da),&com); CHKERRQ(ierr);
+    ierr = MPI_Allreduce(&(user->locmaxD),&maxD,1,MPI_DOUBLE,MPI_MAX,com); CHKERRQ(ierr);
+    ierr = MPI_Allreduce(&(user->locmaxV),&maxV,1,MPI_DOUBLE,MPI_MAX,com); CHKERRQ(ierr);
+    // compute explicit limits
     ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-    dx = user->L / (double)(info.mx);
-    dy = user->L / (double)(info.my);
-    ierr = DMGetLocalVector(da, &b); CHKERRQ(ierr);
-    ierr = DMDAVecGetArray(da,b,&ab); CHKERRQ(ierr);
-    ierr = FormBedLocal(info,1,ab,user); CHKERRQ(ierr);  // get stencil width
-    ierr = DMDAVecGetArrayRead(da,H,&aH); CHKERRQ(ierr);
-    for (k = info.ys; k < info.ys + info.ym; k++) {
-        for (j = info.xs; j < info.xs + info.xm; j++) {
-            lmaxdiff = PetscMax(lmaxdiff,FIXME);  // FIXME units?
-            lmaxV = PetscMax(lmaxV,FIXME);
+    dd = PetscMin(user->L / (double)(info.mx), user->L / (double)(info.my));
+    if (maxD <= 0.0) {
+        ierr = PetscPrintf(PETSC_COMM_WORLD,
+            "    [NO -ice_dtlimits output: maxD is zero]\n"); CHKERRQ(ierr);
+    } else {
+        dtD = dd * dd / (4.0*maxD);
+        ierr = PetscPrintf(PETSC_COMM_WORLD,
+            "    max D_SIA %.3f m2s-1,  max |V_slide| %.3f ma-1,  dtD %.3e a",
+            maxD,maxV*user->secpera,dtD/user->secpera); CHKERRQ(ierr);
+        if (maxV > 0.0) {
+            dtCFL = dd / maxV;
+            ierr = PetscPrintf(PETSC_COMM_WORLD,
+                ",  dtCFL %.3e a\n",dtCFL/user->secpera); CHKERRQ(ierr);
+            user->dtexplicitsum += PetscMin(dtD,dtCFL);
+        } else {
+            ierr = PetscPrintf(PETSC_COMM_WORLD,"\n"); CHKERRQ(ierr);
+            user->dtexplicitsum += dtD;
         }
     }
-    ierr = DMDAVecRestoreArrayRead(da,H,&aH); CHKERRQ(ierr);
-    ierr = DMDAVecRestoreArray(da,b,&ab); CHKERRQ(ierr);
-    ierr = DMRestoreLocalVector(da, &b); CHKERRQ(ierr);
-
-    ierr = PetscObjectGetComm((PetscObject)(da),&com); CHKERRQ(ierr);
-    ierr = MPI_Allreduce(&lmaxdiff,&maxdiff,1,MPI_DOUBLE,MPI_MAX,com); CHKERRQ(ierr);
-    ierr = MPI_Allreduce(&lmaxV,&maxV,1,MPI_DOUBLE,MPI_MAX,com); CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,
-        "    max D = %.3f,  max |V| = %.3f m/a;  explicit limits: dtdiff = %.3f a, dtCFL = %.3f a\n",
-        maxdiff,maxV*user->secpera,FIXME,FIXME); CHKERRQ(ierr);
-    return 0;
+    PetscFunctionReturn(0);
 }
 
 PetscErrorCode FormBedLocal(DMDALocalInfo *info, int stencilwidth, double **ab, AppCtx *user) {
@@ -481,25 +505,36 @@ static double DCS(double delta, double H, double n, double eps, double D0) {
   return (1.0 - eps) * delta * PetscPowReal(PetscAbsReal(H),n+2.0) + eps * D0;
 }
 
-/* ice flux from the non-sliding SIA on a general bed */
-static double getSIAflux(Grad gH, Grad gb, double H, double Hup,
-                         PetscBool xdir, const AppCtx *user) {
+/* ice flux component from the non-sliding SIA on a general bed */
+PetscErrorCode getSIAflux(Grad gH, Grad gb, double H, double Hup, PetscBool xdir,
+                          double *D, double *q, const AppCtx *user) {
   const double n     = user->n_ice,
                delta = getdelta(gH,gb,user),
                myD   = DCS(delta,H,n,user->eps,user->D0);
   const Grad   myW   = getW(delta,gb);
-  if (xdir)
-      return - myD * gH.x + myW.x * PetscPowReal(PetscAbsReal(Hup),n+2.0);
-  else
-      return - myD * gH.y + myW.y * PetscPowReal(PetscAbsReal(Hup),n+2.0);
+  if (D) {
+      *D = myD;
+  }
+  if (xdir && q) {
+      *q = - myD * gH.x + myW.x * PetscPowReal(PetscAbsReal(Hup),n+2.0);
+  } else {
+      *q = - myD * gH.y + myW.y * PetscPowReal(PetscAbsReal(Hup),n+2.0);
+  }
+  PetscFunctionReturn(0);
 }
 
-/* velocity from sliding model: ice flows downhill on steep enough slopes
+/* velocity component from sliding model: ice flows downhill on steep enough slopes
 on [minslope,maxslope] get speed linear up to maxspeed
 maxslope=0.02 (note: 4000m/200e3m = 0.02) gives sliding velocity of maxslide */
-static double getslidingvelocity(Grad gb, double H, PetscBool xdir, const AppCtx *user) {
+PetscErrorCode getslidingvelocity(Grad gb, double H, PetscBool xdir,
+                                  double *V, const AppCtx *user) {
   const double slope = PetscSqrtReal(gb.x * gb.x + gb.y * gb.y);
-  if (slope > 0.0) {
+  if (!V) {
+      SETERRQ(PETSC_COMM_WORLD,8,"only output of getslidingvelocity() is V, but V=NULL\n");
+  }
+  if (slope <= 0.0) {
+      *V = 0.0;
+  } else {
       const double minslope = 0.001, maxslope = 0.02;
       double       speed;
       if (slope <= minslope)
@@ -508,12 +543,13 @@ static double getslidingvelocity(Grad gb, double H, PetscBool xdir, const AppCtx
           speed = user->maxslide;
       else
           speed = user->maxslide * (slope - minslope) / (maxslope - minslope);
-      if (xdir)
-          return - speed * gb.x / slope;
-      else
-          return - speed * gb.y / slope;
-  } else
-      return 0.0;
+      if (xdir) {
+          *V = - speed * gb.x / slope;
+      } else {
+          *V = - speed * gb.y / slope;
+      }
+  }
+  PetscFunctionReturn(0);
 }
 
 // gradients of weights for Q^1 interpolant
@@ -615,11 +651,14 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t,
   const double    upmin = (1.0 - user->lambda) * 0.5,
                   upmax = (1.0 + user->lambda) * 0.5;
   int             c, j, k, s;
-  double          H, Hup, lxup, lyup, **aqquad[4], **ab;
+  double          H, Hup, lxup, lyup, **aqquad[4], **ab,
+                  D_ckj, q_ckj, V_ckj;
   Grad            gH, gb;
   Vec             qquad[4], b;
 
   PetscFunctionBeginUser;
+  user->locmaxD = 0.0;
+  user->locmaxV = 0.0;
   ierr = DMGetLocalVector(info->da, &b); CHKERRQ(ierr);
   if (user->verif > 0) {
       ierr = VecSet(b,0.0); CHKERRQ(ierr);
@@ -652,8 +691,15 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t,
                   Hup = fieldatptArray(j,k,lxup,lyup,aH);
               } else
                   Hup = H;
-              aqquad[c][k][j] = getSIAflux(gH,gb,H,Hup,xdire[c],user)
-                                + getslidingvelocity(gb,H,xdire[c],user) * Hup;
+              ierr = getSIAflux(gH,gb,H,Hup,xdire[c],
+                                &D_ckj, &q_ckj, user); CHKERRQ(ierr);
+              ierr = getslidingvelocity(gb,H,xdire[c],
+                                &V_ckj, user); CHKERRQ(ierr);
+              aqquad[c][k][j] = q_ckj + V_ckj * Hup;
+              if (user->dtlimits) {
+                  user->locmaxD = PetscMax(user->locmaxD,D_ckj);
+                  user->locmaxV = PetscMax(user->locmaxV,PetscAbs(V_ckj));
+              }
           }
       }
   }
