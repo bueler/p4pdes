@@ -24,10 +24,10 @@ runice_1:
 	-@../testit.sh ice "-da_refine 2 -ice_verif 1 -ice_eps 0.0 -ice_tf 40 -ice_dtinit 10 -ts_type beuler" 1 1
 
 runice_2:
-	-@../testit.sh ice "-da_refine 3 -ice_verif 2 -ice_eps 0.0 -ice_tf 10 -ice_dtinit 1" 4 2
+	-@../testit.sh ice "-da_refine 2 -ice_verif 2 -ice_eps 0.0 -ice_tf 10 -ice_dtinit 3" 2 2
 
 runice_3:
-	-@../testit.sh ice "-da_refine 3 -ice_tf 10 -ice_dtinit 1 -ice_maxslide 500 -ts_type bdf -ts_bdf_order 2" 1 3
+	-@../testit.sh ice "-da_refine 1 -ice_tf 4 -ice_dtinit 1 -ice_maxslide 500 -ts_type bdf -ts_bdf_order 2" 1 3
 
 runice_4:
 	-@../testit.sh ice "-da_refine 2 -ice_tf 20 -ice_dtinit 1 -snes_converged_reason  -ts_adapt_basic_clip 0.1,10.0" 1 4
