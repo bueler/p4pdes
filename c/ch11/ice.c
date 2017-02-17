@@ -17,14 +17,15 @@ static const char help[] =
 "written in the form\n"
 "      F(H,H_t) = G(H)\n"
 "and F,G are supplied to PETSc TS as an IFunction and RHSFunction, resp.\n"
-"There is no Jacobian, of either side; -snes_fd_color is the default method.\n"
-"Requires SNESVI (-snes_type vinewtonrsls|vinewtonssls) because of constraint.\n\n";
-
-// TODO:   1)implement IJacobian
+"An IJacobian is supplied, but -snes_fd_color works well too.\n"
+"Requires SNESVI (-snes_type vinewtonrsls|vinewtonssls) because of constraint,\n"
+"so, with current PETSc design, explicit TS types do not work.\n\n";
 
 /* try:
 
-./ice -snes_fd_color                    # DEFAULT; same as ./ice
+./ice                                   # DEFAULT uses analytical jacobian
+./ice -snes_fd_color
+./ice -snes_mf_operator
 
 ./ice -ts_view
 ./ice -da_refine 3                      # only meaningful at this res and higher
@@ -126,6 +127,8 @@ extern PetscErrorCode FormBedLocal(DMDALocalInfo*, int, double**, AppCtx*);
 extern PetscErrorCode FormBounds(SNES,Vec,Vec);
 extern PetscErrorCode FormIFunctionLocal(DMDALocalInfo*, double,
                           double**, double**, double**, AppCtx*);
+extern PetscErrorCode FormIJacobianLocal(DMDALocalInfo*, double,
+                          double**, double**, Mat, Mat, AppCtx *user);
 extern PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo*, double,
                           double**, double**, AppCtx*);
 
@@ -182,6 +185,8 @@ int main(int argc,char **argv) {
   ierr = TSSetDM(ts,da); CHKERRQ(ierr);
   ierr = DMDATSSetIFunctionLocal(da,INSERT_VALUES,
            (DMDATSIFunctionLocal)FormIFunctionLocal,&user); CHKERRQ(ierr);
+  ierr = DMDATSSetIJacobianLocal(da,INSERT_VALUES,
+           (DMDATSIJacobianLocal)FormIJacobianLocal,&user); CHKERRQ(ierr);
   ierr = DMDATSSetRHSFunctionLocal(da,INSERT_VALUES,
            (DMDATSRHSFunctionLocal)FormRHSFunctionLocal,&user); CHKERRQ(ierr);
   if (user.monitor) {
@@ -484,11 +489,35 @@ static double getdelta(Grad gH, Grad gb, const AppCtx *user) {
     const double n = user->n_ice;
     if (n > 1.0) {
         const double sx = gH.x + gb.x,
-                        sy = gH.y + gb.y,
-                        slopesqr = sx * sx + sy * sy + user->delta * user->delta;
+                     sy = gH.y + gb.y,
+                     slopesqr = sx * sx + sy * sy + user->delta * user->delta;
         return user->Gamma * PetscPowReal(slopesqr,(n-1.0)/2);
-    } else
+    } else {
         return user->Gamma;
+    }
+}
+
+/*
+Regularized derivative of delta with respect to nodal value H_l, at point (x,y)
+on element u,v:
+   d delta / dl = (d delta / d gH.x) * (d gH.x / dl) + (d delta / d gH.y) * (d gH.y / dl),
+but
+   d delta / d gH.x = Gamma * (n-1) * |gH + gb|^{n-3.0} * (gH.x + gb.x)
+   d delta / d gH.y = Gamma * (n-1) * |gH + gb|^{n-3.0} * (gH.y + gb.y)
+However, power n-3.0 can be negative, which generates NaN in areas where the
+surface gradient gH+gb is zero or tiny.
+*/
+static double DdeltaDl(Grad gH, Grad gb, Grad dgHdl, const AppCtx *user) {
+    const double n = user->n_ice;
+    if (n > 1.0) {
+        const double sx = gH.x + gb.x,
+                     sy = gH.y + gb.y,
+                     slopesqr = sx * sx + sy * sy + user->delta * user->delta,
+                     tmp = user->Gamma * (n-1) * PetscPowReal(slopesqr,(n-3.0)/2);
+        return tmp * sx * dgHdl.x + tmp * sy * dgHdl.y;
+    } else {
+        return 0.0;
+    }
 }
 
 static Grad getW(double delta, Grad gb) {
@@ -498,11 +527,38 @@ static Grad getW(double delta, Grad gb) {
     return W;
 }
 
+/*
+Derivative of pseudo-velocity W with respect to nodal value H_l, at point
+(x,y) on element u,v.  Since  W = - delta * grad b:
+   d W.x / dl = - (d delta / dl) * gb.x
+   d W.y / dl = - (d delta / dl) * gb.y
+*/
+static Grad DWDl(double ddeltadl, Grad gb) {
+    Grad dWdl;
+    dWdl.x = - ddeltadl * gb.x;
+    dWdl.y = - ddeltadl * gb.y;
+    return dWdl;
+}
+
 /* DCS = diffusivity from the continuation scheme:
    D(eps) = (1-eps) delta H^{n+2} + eps D_0
 so   D(1)=D_0 and D(0)=delta H^{n+2}. */
-static double DCS(double delta, double H, double n, double eps, double D0) {
-  return (1.0 - eps) * delta * PetscPowReal(PetscAbsReal(H),n+2.0) + eps * D0;
+static double DCS(double delta, double H, AppCtx *user) {
+  return (1.0 - user->eps) * delta * PetscPowReal(PetscAbsReal(H),user->n_ice+2.0)
+         + user->eps * user->D0;
+}
+
+/*
+Derivative of diffusivity D = DCS with respect to nodal value H_l.  Since
+  D = (1-eps) delta H^{n+2} + eps D0
+it follows that
+  d D / dl = (1-eps) [ (d delta / dl) H^{n+2} + delta (n+2) H^{n+1} (d H / dl) ]
+           = (1-eps) H^{n+1} [ (d delta / dl) H + delta (n+2) (d H / dl) ]
+*/
+static double DDCSDl(double delta, double ddeltadl, double H, double dHdl,
+                     AppCtx *user) {
+    const double Hpow = PetscPowReal(PetscAbsReal(H),user->n_ice+1.0);
+    return (1.0 - user->eps) * Hpow * ( ddeltadl * H + delta * (user->n_ice+2.0) * dHdl );
 }
 
 /* ice flux component from the non-sliding SIA on a general bed */
@@ -521,6 +577,25 @@ PetscErrorCode getSIAflux(Grad gH, Grad gb, double H, double Hup, PetscBool xdir
       *q = - myD * gH.y + myW.y * PetscPowReal(PetscAbsReal(Hup),n+2.0);
   }
   PetscFunctionReturn(0);
+}
+
+static double DfluxDl(Grad gH, Grad gb, Grad dgHdl,
+                  double H, double dHdl, double Hup, double dHupdl,
+                  PetscBool xdir, const AppCtx *user) {
+    const double n        = nCS(user->n,user->eps,user->cs),
+                    delta    = getdelta(gH,gb,user),
+                    D        = DCS(delta,H,n,user->eps,user->cs);
+    const Grad      W        = getW(delta,gb);
+    const double ddeltadl = DdeltaDl(gH,gb,dgHdl,user),
+                    dDdl     = DDcontDl(delta,ddeltadl,H,dHdl,user),
+                    Huppow   = PetscPowReal(PetscAbsReal(Hup),n+1.0),
+                    Huppow2  = Huppow * Hup,
+                    dHuppow  = (n+2.0) * Huppow * dHupdl;
+    const Grad      dWdl     = DWDl(ddeltadl,gb);
+    if (xdir)
+        return - dDdl * gH.x - D * dgHdl.x + dWdl.x * Huppow2 + W.x * dHuppow;
+    else
+        return - dDdl * gH.y - D * dgHdl.y + dWdl.y * Huppow2 + W.y * dHuppow;
 }
 
 /* velocity component from sliding model: ice flows downhill on steep enough slopes
@@ -569,6 +644,11 @@ static double fieldatptArray(int u, int v, double xi, double eta, double **f) {
   return fieldatpt(xi,eta,ff);
 }
 
+static double dfieldatpt(int l, double xi, double eta) {
+  const double x[4] = { 1.0-xi,      xi,  xi, 1.0-xi},
+               y[4] = {1.0-eta, 1.0-eta, eta,    eta};
+  return x[l] * y[l];
+}
 
 static Grad gradfatpt(double xi, double eta, double dx, double dy, double f[4]) {
   Grad gradf;
@@ -584,9 +664,21 @@ static Grad gradfatpt(double xi, double eta, double dx, double dy, double f[4]) 
   return gradf;
 }
 
-static Grad gradfatptArray(int u, int v, double xi, double eta, double dx, double dy, double **f) {
+static Grad gradfatptArray(int u, int v, double xi, double eta, double dx, double dy,
+                           double **f) {
   double ff[4] = {f[v][u], f[v][u+1], f[v+1][u+1], f[v+1][u]};
   return gradfatpt(xi,eta,dx,dy,ff);
+}
+
+static Grad dgradfatpt(int l, double xi, double eta, double dx, double dy) {
+  Grad dgradfdl;
+  const double x[4] = { 1.0-xi,      xi,  xi, 1.0-xi},
+               y[4] = {1.0-eta, 1.0-eta, eta,    eta},
+               gx[4] = {-1.0,  1.0, 1.0, -1.0},
+               gy[4] = {-1.0, -1.0, 1.0,  1.0};
+  dgradfdl.x = gx[l] *  y[l] / dx;
+  dgradfdl.y =  x[l] * gy[l] / dy;
+  return dgradfdl;
 }
 
 // indexing of the 8 quadrature points along the boundary of the control volume in M*
@@ -725,6 +817,106 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t,
   PetscFunctionReturn(0);
 }
 
+
+// use j,k for x,y directions in loops and MatSetValuesStencil
+typedef struct {
+  PetscInt foo,k,j,bar;
+} MyStencil;
+
+
+PetscErrorCode FormIJacobianLocal(DMDALocalInfo *info, double t,
+                                  double **aH, double **aHdot,
+                                  Mat J, Mat P, AppCtx *user) {
+  PetscErrorCode  ierr;
+  const double    dx = user->dx, dy = user->dy;
+  const double    coeff[8] = {dy/2, dx/2, dx/2, -dy/2, -dy/2, -dx/2, -dx/2, dy/2};
+  const PetscBool upwind = (user->lambda > 0.0);
+  const double    upmin = (1.0 - user->lambda) * 0.5,
+                  upmax = (1.0 + user->lambda) * 0.5;
+  int             j, k, count;
+  double          **ab, ***adQ;
+  Vec             dQloc;
+  MyStencil       col[34],row;
+  double          val[34];
+
+FIXME everything here should be doubted
+
+  PetscFunctionBeginUser;
+  ierr = MatZeroEntries(J); CHKERRQ(ierr);  // because using ADD_VALUES below
+  ierr = DMGetLocalVector(user->sixteenda,&dQloc);CHKERRQ(ierr);
+  ierr = DMDAVecGetArray(user->da, user->bloc, &ab);CHKERRQ(ierr);
+  ierr = DMDAVecGetArrayDOF(user->sixteenda, dQloc, &adQ);CHKERRQ(ierr);
+  // loop over locally-owned elements, including ghosts, to get DfluxDl for
+  // l=0,1,2,3 at c = 0,1,2,3 points in element;  note start at (xs-1,ys-1)
+  for (k = info->ys-1; k < info->ys + info->ym; k++) {
+      for (j = info->xs-1; j < info->xs + info->xm; j++) {
+          PetscInt  c, l;
+          Grad      gH, gb;
+          double H, Hup;
+          for (c=0; c<4; c++) {
+              double lxup = locx[c], lyup = locy[c];
+              H  = fieldatpt(j,k,locx[c],locy[c],aH);
+              gH = gradfatpt(j,k,locx[c],locy[c],dx,dy,aH);
+              gb = gradfatpt(j,k,locx[c],locy[c],dx,dy,ab);
+              Hup = H;
+              if (upwind) {
+                  if (xdire[c])
+                      lxup = (gb.x <= 0.0) ? upmin : upmax;
+                  else
+                      lyup = (gb.y <= 0.0) ? upmin : upmax;
+                  Hup = fieldatpt(j,k,lxup,lyup,aH);
+              }
+              for (l=0; l<4; l++) {
+                  Grad      dgHdl;
+                  double dHdl, dHupdl;
+                  dgHdl  = dgradfatpt(l,locx[c],locy[c],dx,dy);
+                  dHdl   = dfieldatpt(l,locx[c],locy[c]);
+                  dHupdl = (upwind) ? dfieldatpt(l,lxup,lyup) : dHdl;
+                  adQ[k][j][4*c+l] = DfluxDl(gH,gb,dgHdl,H,dHdl,Hup,dHupdl,xdire[c],user);
+              }
+          }
+      }
+  }
+  // loop over nodes, not including ghosts, to get derivative of residual with respect to nodal value
+  for (k=info->ys; k<info->ys+info->ym; k++) {
+      row.k = k;
+      for (j=info->xs; j<info->xs+info->xm; j++) {
+          row.j = j;
+          PetscInt s, u, v, l;
+          for (s=0; s<8; s++) {
+              u = j + je[s];
+              v = k + ke[s];
+              for (l=0; l<4; l++) {
+                  const PetscInt djfroml[4] = { 0,  1,  1,  0},
+                                 dkfroml[4] = { 0,  0,  1,  1};
+                  col[4*s+l].j = u + djfroml[l];
+                  col[4*s+l].k = v + dkfroml[l];
+                  val[4*s+l] = coeff[s] * adQ[v][u][4*ce[s]+l];
+              }
+          }
+          count = 32;
+          if (user->dtjac > 0.0) {
+              // add another stencil for diagonal, from time-derivative term
+              col[32].j = j;
+              col[32].k = k;
+              val[32]   = dx * dy / user->dtjac;
+              count++;
+          }
+          ierr = MatSetValuesStencil(jac,1,(MatStencil*)&row,count,(MatStencil*)col,val,ADD_VALUES);CHKERRQ(ierr);
+      }
+  }
+  ierr = DMDAVecRestoreArray(user->da, user->bloc, &ab);CHKERRQ(ierr);
+  ierr = DMDAVecRestoreArrayDOF(user->sixteenda, dQloc, &adQ);CHKERRQ(ierr);
+  ierr = DMRestoreLocalVector(user->sixteenda,&dQloc);CHKERRQ(ierr);
+
+  ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  if (P != J) {
+    ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+    ierr = MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
 
 PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **aH,
                                     double **GG, AppCtx *user) {
