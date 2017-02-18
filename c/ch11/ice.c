@@ -15,9 +15,13 @@ static const char help[] =
 "Equation (*) is semi-discretized in space by a Q1 structured-grid FVE method\n"
 "(Bueler, 2016), so this is method-of-lines.  The resulting ODE in time is\n"
 "written in the form\n"
-"      F(H,H_t) = G(H)\n"
-"and F,G are supplied to PETSc TS as an IFunction and RHSFunction, resp.\n"
-"An IJacobian is supplied, but -snes_fd_color works well too.\n"
+"      F(t,H,H_t) = G(t,H)\n"
+"with these callbacks:\n"
+"      FormIFunction()   evaluates F(H,H_t) = H_t + div (q + V H)\n"
+"      FormRHSFunction() evaluates G(t,H) = m\n"
+"      FormIJacobian()   evaluates (shift) dF/dH_t + dF/dH.\n"
+"Options -snes_fd_color works well but is slower by a factor of two or so.\n"
+"\n"
 "Requires SNESVI (-snes_type vinewtonrsls|vinewtonssls) because of constraint,\n"
 "so, with current PETSc design, explicit TS types do not work.\n\n";
 
@@ -128,7 +132,7 @@ extern PetscErrorCode FormBounds(SNES,Vec,Vec);
 extern PetscErrorCode FormIFunctionLocal(DMDALocalInfo*, double,
                           double**, double**, double**, AppCtx*);
 extern PetscErrorCode FormIJacobianLocal(DMDALocalInfo*, double,
-                          double**, double**, Mat, Mat, AppCtx *user);
+                          double**, double**, double, Mat, Mat, AppCtx *user);
 extern PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo*, double,
                           double**, double**, AppCtx*);
 
@@ -198,8 +202,8 @@ int main(int argc,char **argv) {
 
   // configure the SNES to solve NCP/VI at each step
   ierr = TSGetSNES(ts,&snes); CHKERRQ(ierr);
-  ierr = SNESSetType(snes,SNESVINEWTONRSLS);CHKERRQ(ierr);
-  ierr = SNESVISetComputeVariableBounds(snes,&FormBounds);CHKERRQ(ierr);
+  ierr = SNESSetType(snes,SNESVINEWTONRSLS); CHKERRQ(ierr);
+  ierr = SNESVISetComputeVariableBounds(snes,&FormBounds); CHKERRQ(ierr);
 
   // set time axis defaults
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
@@ -597,7 +601,7 @@ static double DSIAfluxDl(Grad gH, Grad gb, Grad dgHdl,
 /* Velocity component from "artificial" sliding model: ice flows downhill on
 steep-enough slopes.  On [minslope,maxslope] get speed linear up to maxspeed.
 Note maxslope=0.02 (4000m/200e3m = 0.02) gives sliding velocity of maxslide. */
-PetscErrorCode slidingvelocity(Grad gb, double H, PetscBool xdir,
+PetscErrorCode slidingvelocity(Grad gb, PetscBool xdir,
                                double *V, const AppCtx *user) {
   const double slope = PetscSqrtReal(gb.x * gb.x + gb.y * gb.y),
                minslope = 0.001,
@@ -740,7 +744,7 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t,
                   upmax = (1.0 + user->lambda) * 0.5;
   int             c, j, k, s;
   double          H, Hup, lxup, lyup, **aqquad[4], **ab,
-                  D_ckj, q_ckj, V_ckj;
+                  DSIA_ckj, qSIA_ckj, V_ckj;
   Grad            gH, gb;
   Vec             qquad[4], b;
 
@@ -780,12 +784,11 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t,
               } else
                   Hup = H;
               ierr = SIAflux(gH,gb,H,Hup,xdire[c],
-                             &D_ckj, &q_ckj, user); CHKERRQ(ierr);
-              ierr = slidingvelocity(gb,H,xdire[c],
-                             &V_ckj, user); CHKERRQ(ierr);
-              aqquad[c][k][j] = q_ckj + V_ckj * Hup;
+                             &DSIA_ckj,&qSIA_ckj,user); CHKERRQ(ierr);
+              ierr = slidingvelocity(gb,xdire[c],&V_ckj,user); CHKERRQ(ierr);
+              aqquad[c][k][j] = qSIA_ckj + V_ckj * Hup;
               if (user->dtlimits) {
-                  user->locmaxD = PetscMax(user->locmaxD,D_ckj);
+                  user->locmaxD = PetscMax(user->locmaxD,DSIA_ckj);
                   user->locmaxV = PetscMax(user->locmaxV,PetscAbs(V_ckj));
               }
           }
@@ -820,7 +823,7 @@ typedef struct {
 } MyStencil;
 
 PetscErrorCode FormIJacobianLocal(DMDALocalInfo *info, double t,
-                                  double **aH, double **aHdot,
+                                  double **aH, double **aHdot, double shift,
                                   Mat J, Mat P, AppCtx *user) {
   PetscErrorCode  ierr;
   const double    dx = user->L / (double)(info->mx),
@@ -829,15 +832,14 @@ PetscErrorCode FormIJacobianLocal(DMDALocalInfo *info, double t,
   const PetscBool upwind = (user->lambda > 0.0);
   const double    upmin = (1.0 - user->lambda) * 0.5,
                   upmax = (1.0 + user->lambda) * 0.5;
-  int             j, k, c, l, s, u, v, count;
-  double          H, Hup, **aqquad[16], **ab,
-                  val[34];
+  int             j, k, c, l, s, u, v;
+  double          H, Hup, **aDqDlquad[16], **ab, val[33], DqSIADl_clkj, V_ckj;
   Grad            gH, gb;
-  Vec             qquad[4], b;
-  MyStencil       col[34],row;
+  Vec             DqDlquad[16], b;
+  MyStencil       col[33],row;
 
   PetscFunctionBeginUser;
-  ierr = MatZeroEntries(J); CHKERRQ(ierr);  // because using ADD_VALUES below
+  ierr = MatZeroEntries(P); CHKERRQ(ierr);  // because using ADD_VALUES below
 
   ierr = DMGetLocalVector(info->da, &b); CHKERRQ(ierr);
   if (user->verif > 0) {
@@ -848,8 +850,8 @@ PetscErrorCode FormIJacobianLocal(DMDALocalInfo *info, double t,
       ierr = FormBedLocal(info,1,ab,user); CHKERRQ(ierr);  // get stencil width
   }
   for (c = 0; c < 16; c++) {
-      ierr = DMGetLocalVector(info->da, &(qquad[c])); CHKERRQ(ierr);
-      ierr = DMDAVecGetArray(info->da,qquad[c],&(aqquad[c])); CHKERRQ(ierr);
+      ierr = DMGetLocalVector(info->da, &(DqDlquad[c])); CHKERRQ(ierr);
+      ierr = DMDAVecGetArray(info->da,DqDlquad[c],&(aDqDlquad[c])); CHKERRQ(ierr);
   }
 
   // loop over locally-owned elements, including ghosts, to get DfluxDl for
@@ -873,13 +875,15 @@ PetscErrorCode FormIJacobianLocal(DMDALocalInfo *info, double t,
               } else {
                   Hup = H;
               }
+              ierr = slidingvelocity(gb,xdire[c],&V_ckj,user); CHKERRQ(ierr);
               for (l=0; l<4; l++) {
                   Grad   dgHdl;
                   double dHdl, dHupdl;
                   dgHdl  = dgradfatpt(l,locx[c],locy[c],dx,dy);
                   dHdl   = dfieldatpt(l,locx[c],locy[c]);
                   dHupdl = (upwind) ? dfieldatpt(l,lxup,lyup) : dHdl;
-                  aqquad[4*c+l][k][j] = DfluxDl(gH,gb,dgHdl,H,dHdl,Hup,dHupdl,xdire[c],user);
+                  DqSIADl_clkj = DSIAfluxDl(gH,gb,dgHdl,H,dHdl,Hup,dHupdl,xdire[c],user);
+                  aDqDlquad[4*c+l][k][j] = DqSIADl_clkj + V_ckj * dHupdl;
               }
           }
       }
@@ -899,36 +903,31 @@ PetscErrorCode FormIJacobianLocal(DMDALocalInfo *info, double t,
                             dkfroml[4] = { 0,  0,  1,  1};
                   col[4*s+l].j = u + djfroml[l];
                   col[4*s+l].k = v + dkfroml[l];
-                  val[4*s+l] = coeff[s] * aqquad[4*ce[s]+l][v][u];
+                  val[4*s+l]   = coeff[s] * aDqDlquad[4*ce[s]+l][v][u] / (dx * dy);
               }
           }
-          count = 32;
-          FIXME;
-          if (user->dtjac > 0.0) {
-              // add another stencil for diagonal, from time-derivative term
-              col[32].j = j;
-              col[32].k = k;
-              val[32]   = dx * dy / user->dtjac;
-              count++;
-          }
-          ierr = MatSetValuesStencil(jac,1,(MatStencil*)&row,
-                                     count,(MatStencil*)col,val,ADD_VALUES);CHKERRQ(ierr);
+          col[32].j = j;
+          col[32].k = k;
+          val[32]   = shift;
+          ierr = MatSetValuesStencil(P,1,(MatStencil*)&row,
+                                     33,(MatStencil*)col,val,ADD_VALUES);CHKERRQ(ierr);
       }
   }
 
   for (c = 0; c < 16; c++) {
-      ierr = DMDAVecRestoreArray(info->da,qquad[c],&(aqquad[c])); CHKERRQ(ierr);
-      ierr = DMRestoreLocalVector(info->da, &(qquad[c])); CHKERRQ(ierr);
+      ierr = DMDAVecRestoreArray(info->da,DqDlquad[c],&(aDqDlquad[c])); CHKERRQ(ierr);
+      ierr = DMRestoreLocalVector(info->da, &(DqDlquad[c])); CHKERRQ(ierr);
   }
   ierr = DMDAVecRestoreArray(info->da,b,&ab); CHKERRQ(ierr);
   ierr = DMRestoreLocalVector(info->da, &b); CHKERRQ(ierr);
 
-  ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  if (P != J) {
-    ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-    ierr = MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  ierr = MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  if (J != P) {
+    ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+    ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   }
+  //ierr = MatView(J,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
