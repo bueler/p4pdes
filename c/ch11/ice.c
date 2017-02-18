@@ -1,7 +1,7 @@
 static const char help[] =
 "Solves time-dependent nonlinear ice sheet problem in 2D:\n"
 "(*)    H_t + div (q + V H) = m\n"
-"where q = (q^x,q^y) is the nonsliding shallow ice approximation flux,\n"
+"where q = (q^x,q^y) is the nonsliding shallow ice approximation (SIA) flux,\n"
 "       q = - Gamma H^{n+2} |grad s|^{n-1} grad s\n"
 "always subject to the constraint\n"
 "       H(t,x,y) >= 0.\n"
@@ -127,8 +127,8 @@ extern PetscErrorCode FormBedLocal(DMDALocalInfo*, int, double**, AppCtx*);
 extern PetscErrorCode FormBounds(SNES,Vec,Vec);
 extern PetscErrorCode FormIFunctionLocal(DMDALocalInfo*, double,
                           double**, double**, double**, AppCtx*);
-extern PetscErrorCode FormIJacobianLocal(DMDALocalInfo*, double,
-                          double**, double**, Mat, Mat, AppCtx *user);
+//extern PetscErrorCode FormIJacobianLocal(DMDALocalInfo*, double,
+//                          double**, double**, Mat, Mat, AppCtx *user);
 extern PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo*, double,
                           double**, double**, AppCtx*);
 
@@ -185,8 +185,8 @@ int main(int argc,char **argv) {
   ierr = TSSetDM(ts,da); CHKERRQ(ierr);
   ierr = DMDATSSetIFunctionLocal(da,INSERT_VALUES,
            (DMDATSIFunctionLocal)FormIFunctionLocal,&user); CHKERRQ(ierr);
-  ierr = DMDATSSetIJacobianLocal(da,INSERT_VALUES,
-           (DMDATSIJacobianLocal)FormIJacobianLocal,&user); CHKERRQ(ierr);
+//  ierr = DMDATSSetIJacobianLocal(da,INSERT_VALUES,
+//           (DMDATSIJacobianLocal)FormIJacobianLocal,&user); CHKERRQ(ierr);
   ierr = DMDATSSetRHSFunctionLocal(da,INSERT_VALUES,
            (DMDATSRHSFunctionLocal)FormRHSFunctionLocal,&user); CHKERRQ(ierr);
   if (user.monitor) {
@@ -485,7 +485,14 @@ typedef struct {
     double x,y;
 } Grad;
 
-static double getdelta(Grad gH, Grad gb, const AppCtx *user) {
+/* We factor the SIA flux as
+    q = - H^{n+2} sigma(|grad s|) grad s
+where sigma is the slope-dependent part
+    sigma(z) = Gamma z^{n-1}.
+Also
+    D = H^{n+2} sigma(|grad s|)
+so that q = - D grad s.  */
+static double sigma(Grad gH, Grad gb, const AppCtx *user) {
     const double n = user->n_ice;
     if (n > 1.0) {
         const double sx = gH.x + gb.x,
@@ -497,17 +504,14 @@ static double getdelta(Grad gH, Grad gb, const AppCtx *user) {
     }
 }
 
-/*
-Regularized derivative of delta with respect to nodal value H_l, at point (x,y)
-on element u,v:
-   d delta / dl = (d delta / d gH.x) * (d gH.x / dl) + (d delta / d gH.y) * (d gH.y / dl),
+/* Regularized derivative of sigma with respect to nodal value H_l:
+   d sigma / dl = (d sigma / d gH.x) * (d gH.x / dl) + (d sigma / d gH.y) * (d gH.y / dl),
 but
-   d delta / d gH.x = Gamma * (n-1) * |gH + gb|^{n-3.0} * (gH.x + gb.x)
-   d delta / d gH.y = Gamma * (n-1) * |gH + gb|^{n-3.0} * (gH.y + gb.y)
+   d sigma / d gH.x = Gamma * (n-1) * |gH + gb|^{n-3.0} * (gH.x + gb.x)
+   d sigma / d gH.y = Gamma * (n-1) * |gH + gb|^{n-3.0} * (gH.y + gb.y)
 However, power n-3.0 can be negative, which generates NaN in areas where the
-surface gradient gH+gb is zero or tiny.
-*/
-static double DdeltaDl(Grad gH, Grad gb, Grad dgHdl, const AppCtx *user) {
+surface gradient gH+gb is zero or tiny, so we add delta^2 to |grad s|^2. */
+static double DsigmaDl(Grad gH, Grad gb, Grad dgHdl, const AppCtx *user) {
     const double n = user->n_ice;
     if (n > 1.0) {
         const double sx = gH.x + gb.x,
@@ -520,104 +524,97 @@ static double DdeltaDl(Grad gH, Grad gb, Grad dgHdl, const AppCtx *user) {
     }
 }
 
-static Grad getW(double delta, Grad gb) {
+/* Pseudo-velocity from bed slope:  W = - sigma * grad b. */
+static Grad W(double sigma, Grad gb) {
     Grad W;
-    W.x = - delta * gb.x;
-    W.y = - delta * gb.y;
+    W.x = - sigma * gb.x;
+    W.y = - sigma * gb.y;
     return W;
 }
 
-/*
-Derivative of pseudo-velocity W with respect to nodal value H_l, at point
-(x,y) on element u,v.  Since  W = - delta * grad b:
-   d W.x / dl = - (d delta / dl) * gb.x
-   d W.y / dl = - (d delta / dl) * gb.y
-*/
-static Grad DWDl(double ddeltadl, Grad gb) {
+/* Derivative of pseudo-velocity W with respect to nodal value H_l. */
+static Grad DWDl(double dsigmadl, Grad gb) {
     Grad dWdl;
-    dWdl.x = - ddeltadl * gb.x;
-    dWdl.y = - ddeltadl * gb.y;
+    dWdl.x = - dsigmadl * gb.x;
+    dWdl.y = - dsigmadl * gb.y;
     return dWdl;
 }
 
 /* DCS = diffusivity from the continuation scheme:
-   D(eps) = (1-eps) delta H^{n+2} + eps D_0
-so   D(1)=D_0 and D(0)=delta H^{n+2}. */
-static double DCS(double delta, double H, AppCtx *user) {
-  return (1.0 - user->eps) * delta * PetscPowReal(PetscAbsReal(H),user->n_ice+2.0)
+     D(eps) = (1-eps) sigma H^{n+2} + eps D_0
+so D(1)=D_0 and D(0)=sigma H^{n+2}. */
+static double DCS(double sigma, double H, const AppCtx *user) {
+  return (1.0 - user->eps) * sigma * PetscPowReal(PetscAbsReal(H),user->n_ice+2.0)
          + user->eps * user->D0;
 }
 
-/*
-Derivative of diffusivity D = DCS with respect to nodal value H_l.  Since
-  D = (1-eps) delta H^{n+2} + eps D0
+/* Derivative of diffusivity D = DCS with respect to nodal value H_l.  Since
+  D = (1-eps) sigma H^{n+2} + eps D0
 it follows that
-  d D / dl = (1-eps) [ (d delta / dl) H^{n+2} + delta (n+2) H^{n+1} (d H / dl) ]
-           = (1-eps) H^{n+1} [ (d delta / dl) H + delta (n+2) (d H / dl) ]
-*/
-static double DDCSDl(double delta, double ddeltadl, double H, double dHdl,
-                     AppCtx *user) {
+  d D / dl = (1-eps) [ (d sigma / dl) H^{n+2} + sigma (n+2) H^{n+1} (d H / dl) ]
+           = (1-eps) H^{n+1} [ (d sigma / dl) H + sigma (n+2) (d H / dl) ]    */
+static double DDCSDl(double sigma, double dsigmadl, double H, double dHdl,
+                     const AppCtx *user) {
     const double Hpow = PetscPowReal(PetscAbsReal(H),user->n_ice+1.0);
-    return (1.0 - user->eps) * Hpow * ( ddeltadl * H + delta * (user->n_ice+2.0) * dHdl );
+    return (1.0 - user->eps) * Hpow * ( dsigmadl * H + sigma * (user->n_ice+2.0) * dHdl );
 }
 
-/* ice flux component from the non-sliding SIA on a general bed */
-PetscErrorCode getSIAflux(Grad gH, Grad gb, double H, double Hup, PetscBool xdir,
-                          double *D, double *q, const AppCtx *user) {
-  const double n     = user->n_ice,
-               delta = getdelta(gH,gb,user),
-               myD   = DCS(delta,H,n,user->eps,user->D0);
-  const Grad   myW   = getW(delta,gb);
+/* Flux component from the non-sliding SIA on a general bed. */
+PetscErrorCode SIAflux(Grad gH, Grad gb, double H, double Hup, PetscBool xdir,
+                       double *D, double *q, const AppCtx *user) {
+  const double mysig = sigma(gH,gb,user),
+               myD   = DCS(mysig,H,user);
+  const Grad   myW   = W(mysig,gb);
+  PetscFunctionBeginUser;
   if (D) {
       *D = myD;
   }
   if (xdir && q) {
-      *q = - myD * gH.x + myW.x * PetscPowReal(PetscAbsReal(Hup),n+2.0);
+      *q = - myD * gH.x + myW.x * PetscPowReal(PetscAbsReal(Hup),user->n_ice+2.0);
   } else {
-      *q = - myD * gH.y + myW.y * PetscPowReal(PetscAbsReal(Hup),n+2.0);
+      *q = - myD * gH.y + myW.y * PetscPowReal(PetscAbsReal(Hup),user->n_ice+2.0);
   }
   PetscFunctionReturn(0);
 }
 
-static double DfluxDl(Grad gH, Grad gb, Grad dgHdl,
-                  double H, double dHdl, double Hup, double dHupdl,
-                  PetscBool xdir, const AppCtx *user) {
-    const double n        = nCS(user->n,user->eps,user->cs),
-                    delta    = getdelta(gH,gb,user),
-                    D        = DCS(delta,H,n,user->eps,user->cs);
-    const Grad      W        = getW(delta,gb);
-    const double ddeltadl = DdeltaDl(gH,gb,dgHdl,user),
-                    dDdl     = DDcontDl(delta,ddeltadl,H,dHdl,user),
-                    Huppow   = PetscPowReal(PetscAbsReal(Hup),n+1.0),
-                    Huppow2  = Huppow * Hup,
-                    dHuppow  = (n+2.0) * Huppow * dHupdl;
-    const Grad      dWdl     = DWDl(ddeltadl,gb);
+static double DSIAfluxDl(Grad gH, Grad gb, Grad dgHdl,
+                         double H, double dHdl, double Hup, double dHupdl,
+                         PetscBool xdir, const AppCtx *user) {
+    const double Huppow   = PetscPowReal(PetscAbsReal(Hup),user->n_ice+1.0),
+                 dHuppow  = (user->n_ice+2.0) * Huppow * dHupdl,
+                 mysig    = sigma(gH,gb,user),
+                 myD      = DCS(mysig,H,user),
+                 dsigmadl = DsigmaDl(gH,gb,dgHdl,user),
+                 dDdl     = DDCSDl(mysig,dsigmadl,H,dHdl,user);
+    const Grad   myW      = W(mysig,gb),
+                 dWdl     = DWDl(dsigmadl,gb);
     if (xdir)
-        return - dDdl * gH.x - D * dgHdl.x + dWdl.x * Huppow2 + W.x * dHuppow;
+        return - dDdl * gH.x - myD * dgHdl.x + dWdl.x * Huppow * Hup + myW.x * dHuppow;
     else
-        return - dDdl * gH.y - D * dgHdl.y + dWdl.y * Huppow2 + W.y * dHuppow;
+        return - dDdl * gH.y - myD * dgHdl.y + dWdl.y * Huppow * Hup + myW.y * dHuppow;
 }
 
-/* velocity component from sliding model: ice flows downhill on steep enough slopes
-on [minslope,maxslope] get speed linear up to maxspeed
-maxslope=0.02 (note: 4000m/200e3m = 0.02) gives sliding velocity of maxslide */
-PetscErrorCode getslidingvelocity(Grad gb, double H, PetscBool xdir,
-                                  double *V, const AppCtx *user) {
-  const double slope = PetscSqrtReal(gb.x * gb.x + gb.y * gb.y);
+/* Velocity component from "artificial" sliding model: ice flows downhill on
+steep-enough slopes.  On [minslope,maxslope] get speed linear up to maxspeed.
+Note maxslope=0.02 (4000m/200e3m = 0.02) gives sliding velocity of maxslide. */
+PetscErrorCode slidingvelocity(Grad gb, double H, PetscBool xdir,
+                               double *V, const AppCtx *user) {
+  const double slope = PetscSqrtReal(gb.x * gb.x + gb.y * gb.y),
+               minslope = 0.001,
+               maxslope = 0.02;
+  PetscFunctionBeginUser;
   if (!V) {
-      SETERRQ(PETSC_COMM_WORLD,8,"only output of getslidingvelocity() is V, but V=NULL\n");
+      SETERRQ(PETSC_COMM_WORLD,8,"V = NULL\n");
   }
-  if (slope <= 0.0) {
+  if (slope <= minslope) {
       *V = 0.0;
   } else {
-      const double minslope = 0.001, maxslope = 0.02;
-      double       speed;
-      if (slope <= minslope)
-          speed = 0.0;
-      else if (slope >= maxslope)
+      double  speed;
+      if (slope >= maxslope) {
           speed = user->maxslide;
-      else
+      } else {
           speed = user->maxslide * (slope - minslope) / (maxslope - minslope);
+      }
       if (xdir) {
           *V = - speed * gb.x / slope;
       } else {
@@ -652,7 +649,6 @@ static double dfieldatpt(int l, double xi, double eta) {
 
 static Grad gradfatpt(double xi, double eta, double dx, double dy, double f[4]) {
   Grad gradf;
-  // weights for Q^1 interpolant
   double x[4] = { 1.0-xi,      xi,  xi, 1.0-xi},
          y[4] = {1.0-eta, 1.0-eta, eta,    eta};
   gradf.x =   gx[0] * y[0] * f[0] + gx[1] * y[1] * f[1]
@@ -783,10 +779,10 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t,
                   Hup = fieldatptArray(j,k,lxup,lyup,aH);
               } else
                   Hup = H;
-              ierr = getSIAflux(gH,gb,H,Hup,xdire[c],
-                                &D_ckj, &q_ckj, user); CHKERRQ(ierr);
-              ierr = getslidingvelocity(gb,H,xdire[c],
-                                &V_ckj, user); CHKERRQ(ierr);
+              ierr = SIAflux(gH,gb,H,Hup,xdire[c],
+                             &D_ckj, &q_ckj, user); CHKERRQ(ierr);
+              ierr = slidingvelocity(gb,H,xdire[c],
+                             &V_ckj, user); CHKERRQ(ierr);
               aqquad[c][k][j] = q_ckj + V_ckj * Hup;
               if (user->dtlimits) {
                   user->locmaxD = PetscMax(user->locmaxD,D_ckj);
@@ -823,7 +819,7 @@ typedef struct {
   PetscInt foo,k,j,bar;
 } MyStencil;
 
-
+#if 0
 PetscErrorCode FormIJacobianLocal(DMDALocalInfo *info, double t,
                                   double **aH, double **aHdot,
                                   Mat J, Mat P, AppCtx *user) {
@@ -917,6 +913,7 @@ FIXME everything here should be doubted
   }
   PetscFunctionReturn(0);
 }
+#endif
 
 PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **aH,
                                     double **GG, AppCtx *user) {
