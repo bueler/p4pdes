@@ -127,8 +127,8 @@ extern PetscErrorCode FormBedLocal(DMDALocalInfo*, int, double**, AppCtx*);
 extern PetscErrorCode FormBounds(SNES,Vec,Vec);
 extern PetscErrorCode FormIFunctionLocal(DMDALocalInfo*, double,
                           double**, double**, double**, AppCtx*);
-//extern PetscErrorCode FormIJacobianLocal(DMDALocalInfo*, double,
-//                          double**, double**, Mat, Mat, AppCtx *user);
+extern PetscErrorCode FormIJacobianLocal(DMDALocalInfo*, double,
+                          double**, double**, Mat, Mat, AppCtx *user);
 extern PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo*, double,
                           double**, double**, AppCtx*);
 
@@ -185,8 +185,8 @@ int main(int argc,char **argv) {
   ierr = TSSetDM(ts,da); CHKERRQ(ierr);
   ierr = DMDATSSetIFunctionLocal(da,INSERT_VALUES,
            (DMDATSIFunctionLocal)FormIFunctionLocal,&user); CHKERRQ(ierr);
-//  ierr = DMDATSSetIJacobianLocal(da,INSERT_VALUES,
-//           (DMDATSIJacobianLocal)FormIJacobianLocal,&user); CHKERRQ(ierr);
+  ierr = DMDATSSetIJacobianLocal(da,
+           (DMDATSIJacobianLocal)FormIJacobianLocal,&user); CHKERRQ(ierr);
   ierr = DMDATSSetRHSFunctionLocal(da,INSERT_VALUES,
            (DMDATSRHSFunctionLocal)FormRHSFunctionLocal,&user); CHKERRQ(ierr);
   if (user.monitor) {
@@ -819,78 +819,91 @@ typedef struct {
   PetscInt foo,k,j,bar;
 } MyStencil;
 
-#if 0
 PetscErrorCode FormIJacobianLocal(DMDALocalInfo *info, double t,
                                   double **aH, double **aHdot,
                                   Mat J, Mat P, AppCtx *user) {
   PetscErrorCode  ierr;
-  const double    dx = user->dx, dy = user->dy;
+  const double    dx = user->L / (double)(info->mx),
+                  dy = user->L / (double)(info->my);
   const double    coeff[8] = {dy/2, dx/2, dx/2, -dy/2, -dy/2, -dx/2, -dx/2, dy/2};
   const PetscBool upwind = (user->lambda > 0.0);
   const double    upmin = (1.0 - user->lambda) * 0.5,
                   upmax = (1.0 + user->lambda) * 0.5;
-  int             j, k, count;
-  double          **ab, ***adQ;
-  Vec             dQloc;
+  int             j, k, c, l, s, u, v, count;
+  double          H, Hup, **aqquad[16], **ab,
+                  val[34];
+  Grad            gH, gb;
+  Vec             qquad[4], b;
   MyStencil       col[34],row;
-  double          val[34];
-
-FIXME everything here should be doubted
 
   PetscFunctionBeginUser;
   ierr = MatZeroEntries(J); CHKERRQ(ierr);  // because using ADD_VALUES below
-  ierr = DMGetLocalVector(user->sixteenda,&dQloc);CHKERRQ(ierr);
-  ierr = DMDAVecGetArray(user->da, user->bloc, &ab);CHKERRQ(ierr);
-  ierr = DMDAVecGetArrayDOF(user->sixteenda, dQloc, &adQ);CHKERRQ(ierr);
+
+  ierr = DMGetLocalVector(info->da, &b); CHKERRQ(ierr);
+  if (user->verif > 0) {
+      ierr = VecSet(b,0.0); CHKERRQ(ierr);
+      ierr = DMDAVecGetArray(info->da,b,&ab); CHKERRQ(ierr);
+  } else {
+      ierr = DMDAVecGetArray(info->da,b,&ab); CHKERRQ(ierr);
+      ierr = FormBedLocal(info,1,ab,user); CHKERRQ(ierr);  // get stencil width
+  }
+  for (c = 0; c < 16; c++) {
+      ierr = DMGetLocalVector(info->da, &(qquad[c])); CHKERRQ(ierr);
+      ierr = DMDAVecGetArray(info->da,qquad[c],&(aqquad[c])); CHKERRQ(ierr);
+  }
+
   // loop over locally-owned elements, including ghosts, to get DfluxDl for
-  // l=0,1,2,3 at c = 0,1,2,3 points in element;  note start at (xs-1,ys-1)
+  // l=0,1,2,3 at c=0,1,2,3 points in element;  note start at (xs-1,ys-1)
   for (k = info->ys-1; k < info->ys + info->ym; k++) {
       for (j = info->xs-1; j < info->xs + info->xm; j++) {
-          PetscInt  c, l;
-          Grad      gH, gb;
-          double H, Hup;
           for (c=0; c<4; c++) {
               double lxup = locx[c], lyup = locy[c];
-              H  = fieldatpt(j,k,locx[c],locy[c],aH);
-              gH = gradfatpt(j,k,locx[c],locy[c],dx,dy,aH);
-              gb = gradfatpt(j,k,locx[c],locy[c],dx,dy,ab);
-              Hup = H;
+              H  = fieldatptArray(j,k,locx[c],locy[c],aH);
+              gH = gradfatptArray(j,k,locx[c],locy[c],dx,dy,aH);
+              gb = gradfatptArray(j,k,locx[c],locy[c],dx,dy,ab);
               if (upwind) {
-                  if (xdire[c])
+                  if (xdire[c] == PETSC_TRUE) {
                       lxup = (gb.x <= 0.0) ? upmin : upmax;
-                  else
+                      lyup = locy[c];
+                  } else {
+                      lxup = locx[c];
                       lyup = (gb.y <= 0.0) ? upmin : upmax;
-                  Hup = fieldatpt(j,k,lxup,lyup,aH);
+                  }
+                  Hup = fieldatptArray(j,k,lxup,lyup,aH);
+              } else {
+                  Hup = H;
               }
               for (l=0; l<4; l++) {
-                  Grad      dgHdl;
+                  Grad   dgHdl;
                   double dHdl, dHupdl;
                   dgHdl  = dgradfatpt(l,locx[c],locy[c],dx,dy);
                   dHdl   = dfieldatpt(l,locx[c],locy[c]);
                   dHupdl = (upwind) ? dfieldatpt(l,lxup,lyup) : dHdl;
-                  adQ[k][j][4*c+l] = DfluxDl(gH,gb,dgHdl,H,dHdl,Hup,dHupdl,xdire[c],user);
+                  aqquad[4*c+l][k][j] = DfluxDl(gH,gb,dgHdl,H,dHdl,Hup,dHupdl,xdire[c],user);
               }
           }
       }
   }
-  // loop over nodes, not including ghosts, to get derivative of residual with respect to nodal value
+
+  // loop over nodes, not including ghosts, to get derivative of residual
+  // with respect to nodal value
   for (k=info->ys; k<info->ys+info->ym; k++) {
       row.k = k;
       for (j=info->xs; j<info->xs+info->xm; j++) {
           row.j = j;
-          PetscInt s, u, v, l;
           for (s=0; s<8; s++) {
               u = j + je[s];
               v = k + ke[s];
               for (l=0; l<4; l++) {
-                  const PetscInt djfroml[4] = { 0,  1,  1,  0},
-                                 dkfroml[4] = { 0,  0,  1,  1};
+                  const int djfroml[4] = { 0,  1,  1,  0},
+                            dkfroml[4] = { 0,  0,  1,  1};
                   col[4*s+l].j = u + djfroml[l];
                   col[4*s+l].k = v + dkfroml[l];
-                  val[4*s+l] = coeff[s] * adQ[v][u][4*ce[s]+l];
+                  val[4*s+l] = coeff[s] * aqquad[4*ce[s]+l][v][u];
               }
           }
           count = 32;
+          FIXME;
           if (user->dtjac > 0.0) {
               // add another stencil for diagonal, from time-derivative term
               col[32].j = j;
@@ -898,12 +911,17 @@ FIXME everything here should be doubted
               val[32]   = dx * dy / user->dtjac;
               count++;
           }
-          ierr = MatSetValuesStencil(jac,1,(MatStencil*)&row,count,(MatStencil*)col,val,ADD_VALUES);CHKERRQ(ierr);
+          ierr = MatSetValuesStencil(jac,1,(MatStencil*)&row,
+                                     count,(MatStencil*)col,val,ADD_VALUES);CHKERRQ(ierr);
       }
   }
-  ierr = DMDAVecRestoreArray(user->da, user->bloc, &ab);CHKERRQ(ierr);
-  ierr = DMDAVecRestoreArrayDOF(user->sixteenda, dQloc, &adQ);CHKERRQ(ierr);
-  ierr = DMRestoreLocalVector(user->sixteenda,&dQloc);CHKERRQ(ierr);
+
+  for (c = 0; c < 16; c++) {
+      ierr = DMDAVecRestoreArray(info->da,qquad[c],&(aqquad[c])); CHKERRQ(ierr);
+      ierr = DMRestoreLocalVector(info->da, &(qquad[c])); CHKERRQ(ierr);
+  }
+  ierr = DMDAVecRestoreArray(info->da,b,&ab); CHKERRQ(ierr);
+  ierr = DMRestoreLocalVector(info->da, &b); CHKERRQ(ierr);
 
   ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
@@ -913,7 +931,7 @@ FIXME everything here should be doubted
   }
   PetscFunctionReturn(0);
 }
-#endif
+
 
 PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **aH,
                                     double **GG, AppCtx *user) {
