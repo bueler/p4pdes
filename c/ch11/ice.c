@@ -29,7 +29,6 @@ static const char help[] =
 
 ./ice                                   # DEFAULT uses analytical jacobian
 ./ice -snes_fd_color
-./ice -snes_mf_operator
 
 ./ice -ts_view
 ./ice -da_refine 3                      # only meaningful at this res and higher
@@ -57,7 +56,17 @@ static const char help[] =
 
 ./ice -ts_monitor -ts_adapt_monitor -ice_dtlimits  # more info on adapt and comparison to explicit
 
-# shows nontriviality converging ice caps on mountains (runs away later):
+# PC possibilities
+-pc_type gamg -pc_gamg_threshold 0.0 -pc_gamg_agg_nsmooths 1  # defaults
+-pc_type gamg -pc_gamg_threshold 0.2 -pc_gamg_agg_nsmooths 1  # a little faster?
+-pc_type lu
+-pc_type ilu
+-pc_type asm -sub_pc_type lu
+-pc_type asm -sub_pc_type ilu
+-pc_type mg
+-pc_type mg -pc_mg_levels 4 -mg_levels_ksp_monitor
+
+# shows nontriviality converging ice caps on mountains:
 mpiexec -n 2 ./ice -da_refine 5 -ts_monitor_solution draw -snes_converged_reason -ice_tf 10000.0 -ice_dtinit 100.0 -ts_max_snes_failures -1 -ts_adapt_scale_solve_failed 0.9
 
 # start with short time step and it will find good time scale
@@ -76,22 +85,13 @@ done
 actual test B from Bueler et al 2005:
 ./ice -ice_verif 2 -ice_eps 0 -ice_dtinit 100 -ice_tf 25000 -ice_L 2200e3 -da_refine $N
 
-for MG:
-mpiexec -n 4 ./ice -snes_fd_color -da_refine 7 -ts_monitor_solution draw -snes_converged_reason -ice_tf 2.0 -ice_dtinit 1.0 -ksp_converged_reason -pc_type mg -pc_mg_levels 4 -mg_levels_ksp_monitor
-
-for ASM:
-mpiexec -n 4 ./ice -snes_fd_color -da_refine 7 -ts_monitor_solution draw -snes_converged_reason -ice_tf 2.0 -ice_dtinit 1.0 -ksp_converged_reason -pc_type asm -sub_pc_type lu
-
-succeeded with 3624 time steps (dtav = 2.76 a), 1534 rejected steps, and 0 DIVERGED solves:
-mpiexec -n 2 ./ice -da_refine 4 -snes_converged_reason -ice_tf 10000.0 -ice_dtinit 100.0 -ts_type bdf -ts_bdf_order 2 -ts_bdf_adapt -ice_maxslide 100 -ts_max_snes_failures -1 -ts_adapt_monitor -ts_monitor -ts_adapt_scale_solve_failed 0.9 | tee bar-lev4.txt
-
 recommended "new PISM":
 mpiexec -n N ./ice -da_refine M \
    -snes_type vinewtonrsls \
    -ts_type arkimex \    #(OR -ts_type bdf -ts_bdf_adapt -ts_bdf_order 4)
    -ts_adapt_type basic -ts_adapt_basic_clip 0.5,1.2 \
    -ts_max_snes_failures -1 -ts_adapt_scale_solve_failed 0.9 \
-   -pc_type asm -sub_pc_type lu
+   -pc_type gamg
 */
 
 #include <petsc.h>
