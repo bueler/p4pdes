@@ -262,7 +262,7 @@ int main(int argc,char **argv) {
       ierr = VecNorm(H,NORM_INFINITY,&infnorm); CHKERRQ(ierr);
       ierr = VecNorm(H,NORM_1,&onenorm); CHKERRQ(ierr);
       ierr = PetscPrintf(PETSC_COMM_WORLD,
-          "errors on verif %d: |u-uexact|_inf = %.3f, |u-uexact|_average = %.3f\n",
+          "errors on verif %d: |H-Hexact|_inf = %.3f, |H-Hexact|_average = %.3f\n",
           user.verif,infnorm,onenorm/(double)(info.mx*info.my)); CHKERRQ(ierr);
   }
 
