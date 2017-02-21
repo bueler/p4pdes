@@ -1,5 +1,4 @@
 5
-3
 solving on domain [0,L] x [0,L] (L=1800.000 km) and time interval [0,tf] (tf=10.000 a)
 grid: 96 x 96 points, spacing dx=18.750 km x dy=18.750 km, dtinit=10.000 a
   0: time 0.000 a,  volume 3996.8 10^3 km^3,  area 1762.4 10^3 km^2
@@ -7,20 +6,19 @@ grid: 96 x 96 points, spacing dx=18.750 km x dy=18.750 km, dtinit=10.000 a
     Linear solve converged due to CONVERGED_RTOL iterations 3
     1 SNES Function norm 3.821900199912e-08 
     Linear solve converged due to CONVERGED_RTOL iterations 4
-    2 SNES Function norm 6.926219927827e-12 
+    2 SNES Function norm 6.926219927876e-12 
     Linear solve converged due to CONVERGED_RTOL iterations 4
-    3 SNES Function norm 4.414220495474e-18 
+    3 SNES Function norm 4.414215264989e-18 
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
   1: time 10.000 a,  volume 3996.8 10^3 km^3,  area 1822.9 10^3 km^2
     max D_SIA 1.579 m2s-1,  max |V_slide| 0.000 ma-1,  dtD 1.764e+00 a
 average dt 10.00000 a, average dtexplicit 1.76418 a
-errors on verif 2: |u-uexact|_inf = 212.283, |u-uexact|_average = 1.195
+errors on verif 2: |H-Hexact|_inf = 212.283, |H-Hexact|_average = 1.195
 
-real	0m36.507s
-user	0m32.919s
-sys	1m53.720s
+real	0m45.077s
+user	0m32.339s
+sys	3m45.288s
 6
-4
 solving on domain [0,L] x [0,L] (L=1800.000 km) and time interval [0,tf] (tf=10.000 a)
 grid: 192 x 192 points, spacing dx=9.375 km x dy=9.375 km, dtinit=10.000 a
   0: time 0.000 a,  volume 3997.3 10^3 km^3,  area 1763.9 10^3 km^2
@@ -35,13 +33,12 @@ grid: 192 x 192 points, spacing dx=9.375 km x dy=9.375 km, dtinit=10.000 a
   1: time 10.000 a,  volume 3997.3 10^3 km^3,  area 1802.5 10^3 km^2
     max D_SIA 1.564 m2s-1,  max |V_slide| 0.000 ma-1,  dtD 4.452e-01 a
 average dt 10.00000 a, average dtexplicit 0.44521 a
-errors on verif 2: |u-uexact|_inf = 191.644, |u-uexact|_average = 0.800
+errors on verif 2: |H-Hexact|_inf = 191.644, |H-Hexact|_average = 0.800
 
-real	0m42.009s
-user	0m24.313s
-sys	2m25.091s
+real    0m42.009s
+user    0m24.313s
+sys     2m25.091s
 7
-5
 solving on domain [0,L] x [0,L] (L=1800.000 km) and time interval [0,tf] (tf=10.000 a)
 grid: 384 x 384 points, spacing dx=4.688 km x dy=4.688 km, dtinit=10.000 a
   0: time 0.000 a,  volume 3997.8 10^3 km^3,  area 1765.9 10^3 km^2
@@ -51,20 +48,19 @@ grid: 384 x 384 points, spacing dx=4.688 km x dy=4.688 km, dtinit=10.000 a
     Linear solve converged due to CONVERGED_RTOL iterations 4
     2 SNES Function norm 3.124083326260e-08 
     Linear solve converged due to CONVERGED_RTOL iterations 4
-    3 SNES Function norm 1.625117436779e-11 
+    3 SNES Function norm 1.625117436732e-11 
     Linear solve converged due to CONVERGED_RTOL iterations 4
-    4 SNES Function norm 4.140138059688e-17 
+    4 SNES Function norm 4.140109655711e-17 
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
   1: time 10.000 a,  volume 3997.8 10^3 km^3,  area 1794.7 10^3 km^2
     max D_SIA 1.556 m2s-1,  max |V_slide| 0.000 ma-1,  dtD 1.118e-01 a
 average dt 10.00000 a, average dtexplicit 0.11185 a
-errors on verif 2: |u-uexact|_inf = 147.696, |u-uexact|_average = 0.429
+errors on verif 2: |H-Hexact|_inf = 147.696, |H-Hexact|_average = 0.429
 
-real	0m51.837s
-user	0m24.233s
-sys	3m25.776s
+real	0m52.348s
+user	0m19.647s
+sys	4m58.002s
 8
-6
 solving on domain [0,L] x [0,L] (L=1800.000 km) and time interval [0,tf] (tf=10.000 a)
 grid: 768 x 768 points, spacing dx=2.344 km x dy=2.344 km, dtinit=10.000 a
   0: time 0.000 a,  volume 3997.9 10^3 km^3,  area 1766.8 10^3 km^2
@@ -76,20 +72,19 @@ grid: 768 x 768 points, spacing dx=2.344 km x dy=2.344 km, dtinit=10.000 a
     Linear solve converged due to CONVERGED_RTOL iterations 4
     3 SNES Function norm 1.621392081178e-08 
     Linear solve converged due to CONVERGED_RTOL iterations 4
-    4 SNES Function norm 4.485044499311e-12 
+    4 SNES Function norm 4.485365589782e-12 
     Linear solve converged due to CONVERGED_RTOL iterations 4
-    5 SNES Function norm 9.590224312866e-17 
+    5 SNES Function norm 9.590071061327e-17 
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
   1: time 10.000 a,  volume 3997.9 10^3 km^3,  area 1788.1 10^3 km^2
     max D_SIA 1.552 m2s-1,  max |V_slide| 0.000 ma-1,  dtD 2.803e-02 a
 average dt 10.00000 a, average dtexplicit 0.02803 a
-errors on verif 2: |u-uexact|_inf = 84.593, |u-uexact|_average = 0.250
+errors on verif 2: |H-Hexact|_inf = 84.593, |H-Hexact|_average = 0.250
 
-real	1m13.210s
-user	0m44.346s
-sys	5m22.032s
+real	0m38.503s
+user	0m15.020s
+sys	3m8.857s
 9
-7
 solving on domain [0,L] x [0,L] (L=1800.000 km) and time interval [0,tf] (tf=10.000 a)
 grid: 1536 x 1536 points, spacing dx=1.172 km x dy=1.172 km, dtinit=10.000 a
   0: time 0.000 a,  volume 3997.9 10^3 km^3,  area 1767.0 10^3 km^2
@@ -107,22 +102,21 @@ grid: 1536 x 1536 points, spacing dx=1.172 km x dy=1.172 km, dtinit=10.000 a
     Linear solve converged due to CONVERGED_RTOL iterations 4
     6 SNES Function norm 1.652963388277e-06 
     Linear solve converged due to CONVERGED_RTOL iterations 3
-    7 SNES Function norm 1.674826575326e-08 
+    7 SNES Function norm 1.674771297597e-08 
     Linear solve converged due to CONVERGED_RTOL iterations 3
-    8 SNES Function norm 4.436427902091e-12 
+    8 SNES Function norm 4.442991572034e-12 
     Linear solve converged due to CONVERGED_RTOL iterations 4
-    9 SNES Function norm 7.661236187402e-16 
+    9 SNES Function norm 7.661324034636e-16 
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 9
   1: time 10.000 a,  volume 3997.9 10^3 km^3,  area 1785.4 10^3 km^2
     max D_SIA 1.550 m2s-1,  max |V_slide| 0.000 ma-1,  dtD 7.017e-03 a
 average dt 10.00000 a, average dtexplicit 0.00702 a
-errors on verif 2: |u-uexact|_inf = 95.569, |u-uexact|_average = 0.215
+errors on verif 2: |H-Hexact|_inf = 95.569, |H-Hexact|_average = 0.215
 
-real	2m20.544s
-user	1m29.865s
-sys	11m26.853s
+real	0m34.031s
+user	0m29.049s
+sys	2m22.616s
 10
-8
 solving on domain [0,L] x [0,L] (L=1800.000 km) and time interval [0,tf] (tf=10.000 a)
 grid: 3072 x 3072 points, spacing dx=0.586 km x dy=0.586 km, dtinit=10.000 a
   0: time 0.000 a,  volume 3997.9 10^3 km^3,  area 1767.1 10^3 km^2
@@ -152,20 +146,19 @@ grid: 3072 x 3072 points, spacing dx=0.586 km x dy=0.586 km, dtinit=10.000 a
     Linear solve converged due to CONVERGED_RTOL iterations 4
    12 SNES Function norm 1.164111816373e-06 
     Linear solve converged due to CONVERGED_RTOL iterations 3
-   13 SNES Function norm 3.737354906907e-09 
+   13 SNES Function norm 3.737479871458e-09 
     Linear solve converged due to CONVERGED_RTOL iterations 3
-   14 SNES Function norm 1.047934960261e-13 
+   14 SNES Function norm 1.079728822186e-13 
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 14
   1: time 10.000 a,  volume 3997.9 10^3 km^3,  area 1784.4 10^3 km^2
     max D_SIA 1.550 m2s-1,  max |V_slide| 0.000 ma-1,  dtD 1.755e-03 a
 average dt 10.00000 a, average dtexplicit 0.00176 a
-errors on verif 2: |u-uexact|_inf = 96.746, |u-uexact|_average = 0.220
+errors on verif 2: |H-Hexact|_inf = 96.746, |H-Hexact|_average = 0.220
 
-real	4m9.674s
-user	3m46.290s
-sys	19m49.247s
+real	1m13.338s
+user	2m21.351s
+sys	5m42.566s
 11
-9
 solving on domain [0,L] x [0,L] (L=1800.000 km) and time interval [0,tf] (tf=10.000 a)
 grid: 6144 x 6144 points, spacing dx=0.293 km x dy=0.293 km, dtinit=10.000 a
   0: time 0.000 a,  volume 3997.9 10^3 km^3,  area 1767.1 10^3 km^2
@@ -183,1171 +176,79 @@ grid: 6144 x 6144 points, spacing dx=0.293 km x dy=0.293 km, dtinit=10.000 a
     Linear solve converged due to CONVERGED_RTOL iterations 3
     6 SNES Function norm 1.227887843375e-04 
     Linear solve converged due to CONVERGED_RTOL iterations 3
-    7 SNES Function norm 1.090391914354e-04 
+    7 SNES Function norm 1.090391914779e-04 
     Linear solve converged due to CONVERGED_RTOL iterations 3
-    8 SNES Function norm 9.723806149831e-05 
+    8 SNES Function norm 9.723806058426e-05 
     Linear solve converged due to CONVERGED_RTOL iterations 3
-    9 SNES Function norm 8.695408973275e-05 
+    9 SNES Function norm 8.695408895273e-05 
     Linear solve converged due to CONVERGED_RTOL iterations 3
-   10 SNES Function norm 7.789660903165e-05 
+   10 SNES Function norm 7.789660874065e-05 
     Linear solve converged due to CONVERGED_RTOL iterations 3
-   11 SNES Function norm 6.520334746194e-05 
+   11 SNES Function norm 6.520335496388e-05 
     Linear solve converged due to CONVERGED_RTOL iterations 3
-   12 SNES Function norm 4.479602534177e-05 
+   12 SNES Function norm 4.479602271173e-05 
     Linear solve converged due to CONVERGED_RTOL iterations 3
-   13 SNES Function norm 3.197359432589e-05 
+   13 SNES Function norm 3.197359706616e-05 
     Linear solve converged due to CONVERGED_RTOL iterations 3
-   14 SNES Function norm 2.135601356047e-06 
+   14 SNES Function norm 2.135600581070e-06 
     Linear solve converged due to CONVERGED_RTOL iterations 3
-   15 SNES Function norm 7.376994155072e-09 
+   15 SNES Function norm 7.376589955450e-09 
     Linear solve converged due to CONVERGED_RTOL iterations 3
-   16 SNES Function norm 1.312736616072e-13 
+   16 SNES Function norm 1.313436497048e-13 
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 16
   1: time 10.000 a,  volume 3997.9 10^3 km^3,  area 1784.1 10^3 km^2
     max D_SIA 1.549 m2s-1,  max |V_slide| 0.000 ma-1,  dtD 4.390e-04 a
 average dt 10.00000 a, average dtexplicit 0.00044 a
-errors on verif 2: |u-uexact|_inf = 98.240, |u-uexact|_average = 0.223
+errors on verif 2: |H-Hexact|_inf = 98.240, |H-Hexact|_average = 0.223
 
-real	7m6.460s
-user	12m20.611s
-sys	30m20.733s
+real	2m59.758s
+user	10m4.539s
+sys	12m11.260s
 12
-10
 solving on domain [0,L] x [0,L] (L=1800.000 km) and time interval [0,tf] (tf=10.000 a)
 grid: 12288 x 12288 points, spacing dx=0.146 km x dy=0.146 km, dtinit=10.000 a
   0: time 0.000 a,  volume 3997.9 10^3 km^3,  area 1767.1 10^3 km^2
     0 SNES Function norm 8.376354047489e-04 
-[n16][[2983,1],2][btl_tcp_endpoint.c:618:mca_btl_tcp_endpoint_recv_blocking] [n16][[2983,1],4][btl_tcp_endpoint.c:618:mca_btl_tcp_endpoint_recv_blocking] recv(31, 0/8) failed: Connection reset by peer (104)
-[n16][[2983,1],0][btl_tcp_endpoint.c:618:mca_btl_tcp_endpoint_recv_blocking] recv(34, 0/8) failed: Connection reset by peer (104)
-[n16:85511] pml_ob1_sendreq.c:188 FATAL
-[n16:85612] pml_ob1_sendreq.c:188 FATAL
-[n16:85597] pml_ob1_sendreq.c:188 FATAL
-[n16][[2983,1],3][btl_tcp_endpoint.c:618:mca_btl_tcp_endpoint_recv_blocking] recv(30, 0/8) failed: Connection reset by peer (104)
-[n16:85606] pml_ob1_sendreq.c:188 FATAL
-recv(29, 0/8) failed: Connection reset by peer (104)
-[n20][[2983,1],39][btl_tcp_endpoint.c:818:mca_btl_tcp_endpoint_complete_connect] connect() to 10.55.60.17 failed: Connection reset by peer (104)
-[n22][[2983,1],51][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n23][[2983,1],63][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n18][[2983,1],19][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] [n19][[2983,1],31][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n20][[2983,1],34][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n22][[2983,1],48][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n23][[2983,1],58][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] [n18][[2983,1],16][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n19][[2983,1],25][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] [n20][[2983,1],39][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] [n22][[2983,1],49][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n23][[2983,1],59][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n18][[2983,1],17][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)[n20][[2983,1],33][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n22][[2983,1],50][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)[n18][[2983,1],18][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
+    Linear solve converged due to CONVERGED_RTOL iterations 4
+    1 SNES Function norm 8.162159512600e-04 
+    Linear solve converged due to CONVERGED_RTOL iterations 4
+    2 SNES Function norm 7.141949783887e-04 
+    Linear solve converged due to CONVERGED_RTOL iterations 3
+    3 SNES Function norm 5.572928337510e-04 
+    Linear solve converged due to CONVERGED_RTOL iterations 3
+    4 SNES Function norm 4.454885334066e-04 
+    Linear solve converged due to CONVERGED_RTOL iterations 3
+    5 SNES Function norm 3.711719592233e-04 
+    Linear solve converged due to CONVERGED_RTOL iterations 3
+    6 SNES Function norm 3.197065573471e-04 
+    Linear solve converged due to CONVERGED_RTOL iterations 3
+    7 SNES Function norm 2.803903147623e-04 
+    Linear solve converged due to CONVERGED_RTOL iterations 3
+    8 SNES Function norm 2.481788273035e-04 
+    Linear solve converged due to CONVERGED_RTOL iterations 3
+    9 SNES Function norm 2.207844942463e-04 
+    Linear solve converged due to CONVERGED_RTOL iterations 3
+   10 SNES Function norm 1.970180629530e-04 
+    Linear solve converged due to CONVERGED_RTOL iterations 3
+   11 SNES Function norm 1.751826915729e-04 
+    Linear solve converged due to CONVERGED_RTOL iterations 3
+   12 SNES Function norm 1.423743289429e-04 
+    Linear solve converged due to CONVERGED_RTOL iterations 3
+   13 SNES Function norm 9.003419582081e-05 
+    Linear solve converged due to CONVERGED_RTOL iterations 3
+   14 SNES Function norm 5.682554679750e-05 
+    Linear solve converged due to CONVERGED_RTOL iterations 3
+   15 SNES Function norm 3.703207790389e-06 
+    Linear solve converged due to CONVERGED_RTOL iterations 3
+   16 SNES Function norm 1.222377548707e-08 
+    Linear solve converged due to CONVERGED_RTOL iterations 3
+   17 SNES Function norm 4.148335159902e-13 
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 17
+  1: time 10.000 a,  volume 3997.9 10^3 km^3,  area 1784.0 10^3 km^2
+    max D_SIA 1.549 m2s-1,  max |V_slide| 0.000 ma-1,  dtD 1.098e-04 a
+average dt 10.00000 a, average dtexplicit 0.00011 a
+errors on verif 2: |H-Hexact|_inf = 98.109, |H-Hexact|_average = 0.223
 
-[n20][[2983,1],38][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n22][[2983,1],53][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-
-[n18][[2983,1],20][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)[n22][[2983,1],54][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n23][[2983,1],56][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] [n22][[2983,1],55][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n22][[2983,1],52][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n23][[2983,1],57][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n18][[2983,1],22][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-
-[n23][[2983,1],61][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n18][[2983,1],23][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
--------------------------------------------------------
-Primary job  terminated normally, but 1 process returned
-a non-zero exit code.. Per user-direction, the job has been aborted.
--------------------------------------------------------
-[n18][[2983,1],18][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n19][[2983,1],25][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] [n21][[2983,1],41][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n20][[2983,1],33][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] [n17][[2983,1],13][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n22][[2983,1],50][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n23][[2983,1],62][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
---------------------------------------------------------------------------
-MPI_ABORT was invoked on rank 6 in communicator MPI_COMM_WORLD 
-with errorcode 59.
-
-NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
-You may or may not see output from other processes, depending on
-exactly when Open MPI kills them.
---------------------------------------------------------------------------
-[1]PETSC ERROR: ------------------------------------------------------------------------
-[1]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[1]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[1]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[1]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[1]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[1]PETSC ERROR: to get more information on the crash.
-[1]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[1]PETSC ERROR: Signal received
-[1]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[1]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[1]PETSC ERROR: ./ice on a linux-c-opt named n16 by elbueler Mon Feb 20 15:40:58 2017
-[1]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[1]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[6]PETSC ERROR: ------------------------------------------------------------------------
-[6]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[6]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[6]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[6]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[6]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[6]PETSC ERROR: to get more information on the crash.
-[6]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[6]PETSC ERROR: Signal received
-[6]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[6]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[6]PETSC ERROR: ./ice on a linux-c-opt named n16 by elbueler Mon Feb 20 15:40:58 2017
-[6]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[6]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[5]PETSC ERROR: ------------------------------------------------------------------------
-[5]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[5]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[5]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[5]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[5]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[5]PETSC ERROR: to get more information on the crash.
-[5]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[5]PETSC ERROR: Signal received
-[5]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[5]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[5]PETSC ERROR: ./ice on a linux-c-opt named n16 by elbueler Mon Feb 20 15:40:58 2017
-[5]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[5]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[7]PETSC ERROR: ------------------------------------------------------------------------
-[7]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[7]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[7]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[7]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[7]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[7]PETSC ERROR: to get more information on the crash.
-[7]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[7]PETSC ERROR: Signal received
-[7]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[7]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[7]PETSC ERROR: ./ice on a linux-c-opt named n16 by elbueler Mon Feb 20 15:40:58 2017
-[7]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[7]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[n18][[2983,1],22][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)[n21][[2983,1],42][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n20][[2983,1],38][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n17][[2983,1],14][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n22][[2983,1],48][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n23][[2983,1],62][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n18][[2983,1],23][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-
-[n21][[2983,1],43][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)[n17][[2983,1],15][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n22][[2983,1],49][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n23][[2983,1],58][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n23][[2983,1],57][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] [n18][[2983,1],16][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n19][[2983,1],25][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] [n21][[2983,1],44][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-
-[n17][[2983,1],14][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n22][[2983,1],51][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n18][[2983,1],17][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)[n21][[2983,1],45][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n20][[2983,1],34][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] [n17][[2983,1],11][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n22][[2983,1],55][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n23][[2983,1],59][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n18][[2983,1],19][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-
-[n21][[2983,1],46][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)[n17][[2983,1],12][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n22][[2983,1],52][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)[n23][[2983,1],61][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n18][[2983,1],20][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n19][[2983,1],25][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] [n21][[2983,1],47][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-
-[n17][[2983,1],13][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n22][[2983,1],53][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n18][[2983,1],20][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)[n21][[2983,1],40][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n20][[2983,1],34][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n22][[2983,1],54][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n23][[2983,1],63][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-
-[n18][[2983,1],18][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-
-[n21][[2983,1],40][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n20][[2983,1],33][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] [n22][[2983,1],52][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n18][[2983,1],22][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n19][[2983,1],31][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n21][[2983,1],43][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n20][[2983,1],38][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n22][[2983,1],53][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n23][[2983,1],56][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n23][[2983,1],61][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n18][[2983,1],23][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n21][[2983,1],42][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n20][[2983,1],34][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] [n22][[2983,1],49][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n22][[2983,1],50][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n23][[2983,1],59][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] [n18][[2983,1],16][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n21][[2983,1],40][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n20][[2983,1],38][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n18][[2983,1],17][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)[n22][[2983,1],48][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n22][[2983,1],51][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-
-[n18][[2983,1],16][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n20][[2983,1],33][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] [n22][[2983,1],55][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n23][[2983,1],56][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n18][[2983,1],17][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n23][[2983,1],58][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n18][[2983,1],20][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)[n22][[2983,1],54][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-
-[n22][[2983,1],48][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n23][[2983,1],63][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n18][[2983,1],18][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)[n22][[2983,1],49][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n23][[2983,1],57][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n18][[2983,1],22][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n18][[2983,1],23][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-
-[n22][[2983,1],50][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n23][[2983,1],57][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] [n18][[2983,1],19][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n18][[2983,1],19][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[35]PETSC ERROR: #1 VecScatterCreate_PtoS() line 2320 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vpscat.c
-[35]PETSC ERROR: #2 VecScatterCreate_StoP() line 2732 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vpscat.c
-[35]PETSC ERROR: #3 VecScatterCreate_PtoP() line 2919 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vpscat.c
-[35]PETSC ERROR: #4 VecScatterCreate() line 1606 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vscat.c
-[35]PETSC ERROR: [n22][[2983,1],51][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n23][[2983,1],63][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[21]PETSC ERROR: [36]PETSC ERROR: [n22][[2983,1],53][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)[n22][[2983,1],54][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-
-#1 VecScatterCreate_PtoS() line 2320 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vpscat.c
-[37]PETSC ERROR: #1 VecScatterCreate_PtoS() line 2320 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vpscat.c
-[37]PETSC ERROR: #2 VecScatterCreate_StoP() line 2732 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vpscat.c
-[37]PETSC ERROR: #3 VecScatterCreate_PtoP() line 2919 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vpscat.c
-[37]PETSC ERROR: #4 VecScatterCreate() line 1606 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vscat.c
-[37]PETSC ERROR: #5 PCSetUp_Redundant() line 140 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/impls/redundant/redundant.c
-[37]PETSC ERROR: #6 PCSetUp() line 924 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/interface/precon.c
-[37]PETSC ERROR: #7 KSPSetUp() line 379 in /import/u/u1/uaf/elbueler/petsc/src/ksp/ksp/interface/itfunc.c
-[37]PETSC ERROR: #8 PCSetUp_MG() line 820 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/impls/mg/mg.c
-[37]PETSC ERROR: #9 PCSetUp() line 924 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/interface/precon.c
-[37]PETSC ERROR: #10 KSPSetUp() line 379 in /import/u/u1/uaf/elbueler/petsc/src/ksp/ksp/interface/itfunc.c
-[37]PETSC ERROR: #11 SNESSolve_VINEWTONRSLS() line 484 in /import/u/u1/uaf/elbueler/petsc/src/snes/impls/vi/rs/virs.c
-[37]PETSC ERROR: #12 SNESSolve() line 3967 in /import/u/u1/uaf/elbueler/petsc/src/snes/interface/snes.c
-[37]PETSC ERROR: [n22][[2983,1],55][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n23][[2983,1],61][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[21]PETSC ERROR: #2 VecScatterCreate_StoP() line 2732 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vpscat.c
-#5 PCSetUp_Redundant() line 140 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/impls/redundant/redundant.c
-[35]PETSC ERROR: #6 PCSetUp() line 924 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/interface/precon.c
-[35]PETSC ERROR: #7 KSPSetUp() line 379 in /import/u/u1/uaf/elbueler/petsc/src/ksp/ksp/interface/itfunc.c
-[35]PETSC ERROR: #8 PCSetUp_MG() line 820 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/impls/mg/mg.c
-[35]PETSC ERROR: #9 PCSetUp() line 924 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/interface/precon.c
-[35]PETSC ERROR: #10 KSPSetUp() line 379 in /import/u/u1/uaf/elbueler/petsc/src/ksp/ksp/interface/itfunc.c
-[35]PETSC ERROR: #11 SNESSolve_VINEWTONRSLS() line 484 in /import/u/u1/uaf/elbueler/petsc/src/snes/impls/vi/rs/virs.c
-[35]PETSC ERROR: #12 SNESSolve() line 3967 in /import/u/u1/uaf/elbueler/petsc/src/snes/interface/snes.c
-[35]PETSC ERROR: #13 TS_SNESSolve() line 171 in /import/u/u1/uaf/elbueler/petsc/src/ts/impls/implicit/theta/theta.c
-[35]PETSC ERROR: #14 TSStep_Theta() line 211 in /import/u/u1/uaf/elbueler/petsc/src/ts/impls/implicit/theta/theta.c
-[35]PETSC ERROR: #15 TSStep() line 3809 in /import/u/u1/uaf/elbueler/petsc/src/ts/interface/ts.c
-[35]PETSC ERROR: #16 TSSolve() line 4054 in /import/u/u1/uaf/elbueler/petsc/src/ts/interface/ts.c
-[35]PETSC ERROR: #17 main() line 232 in /u1/uaf/elbueler/p4pdes/c/ch11/ice.c
-[35]PETSC ERROR: PETSc Option Table entries:
-[35]PETSC ERROR: -da_refine 12
-[35]PETSC ERROR: -ice_dtinit 10.0
-[35]PETSC ERROR: -ice_dtlimits
-[35]PETSC ERROR: -ice_tf 10.0
-[35]PETSC ERROR: -ice_verif 2
-[35]PETSC ERROR: -ksp_converged_reason
-[35]PETSC ERROR: -pc_mg_levels 10
-[35]PETSC ERROR: -pc_type mg
-[35]PETSC ERROR: -snes_converged_reason
-[35]PETSC ERROR: -snes_monitor
-[35]PETSC ERROR: -ts_type beuler
-[35]PETSC ERROR: ----------------End of Error Message -------send entire error message to petsc-maint@mcs.anl.gov----------
-[n22][[2983,1],52][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n23][[2983,1],58][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] [n23][[2983,1],59][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[21]PETSC ERROR: #1 VecScatterCreate_PtoS() line 2320 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vpscat.c
-[36]PETSC ERROR: mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)#3 VecScatterCreate_PtoP() line 2919 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vpscat.c
-[21]PETSC ERROR: #2 VecScatterCreate_StoP() line 2732 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vpscat.c
-
-#4 VecScatterCreate() line 1606 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vscat.c
-[36]PETSC ERROR: [n23][[2983,1],62][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-[n23][[2983,1],62][btl_tcp_frag.c:237:mca_btl_tcp_frag_recv] mca_btl_tcp_frag_recv: readv failed: Connection reset by peer (104)
-#3 VecScatterCreate_PtoP() line 2919 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vpscat.c
-[60]PETSC ERROR: [21]PETSC ERROR: #5 PCSetUp_Redundant() line 140 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/impls/redundant/redundant.c
-[36]PETSC ERROR: #1 VecScatterCreate_PtoS() line 2320 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vpscat.c
-#4 VecScatterCreate() line 1606 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vscat.c
-[60]PETSC ERROR: [21]PETSC ERROR: #6 PCSetUp() line 924 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/interface/precon.c
-#13 TS_SNESSolve() line 171 in /import/u/u1/uaf/elbueler/petsc/src/ts/impls/implicit/theta/theta.c
-[37]PETSC ERROR: #14 TSStep_Theta() line 211 in /import/u/u1/uaf/elbueler/petsc/src/ts/impls/implicit/theta/theta.c
-[37]PETSC ERROR: #15 TSStep() line 3809 in /import/u/u1/uaf/elbueler/petsc/src/ts/interface/ts.c
-[37]PETSC ERROR: #16 TSSolve() line 4054 in /import/u/u1/uaf/elbueler/petsc/src/ts/interface/ts.c
-[37]PETSC ERROR: #17 main() line 232 in /u1/uaf/elbueler/p4pdes/c/ch11/ice.c
-[37]PETSC ERROR: PETSc Option Table entries:
-[37]PETSC ERROR: -da_refine 12
-[37]PETSC ERROR: -ice_dtinit 10.0
-[37]PETSC ERROR: -ice_dtlimits
-[37]PETSC ERROR: -ice_tf 10.0
-[37]PETSC ERROR: #2 VecScatterCreate_StoP() line 2732 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vpscat.c
--ice_verif 2
-[37]PETSC ERROR: -ksp_converged_reason
-[37]PETSC ERROR: -pc_mg_levels 10
-[37]PETSC ERROR: -pc_type mg
-[37]PETSC ERROR: -snes_converged_reason
-[37]PETSC ERROR: -snes_monitor
-[37]PETSC ERROR: -ts_type beuler
-[60]PETSC ERROR: [21]PETSC ERROR: #3 VecScatterCreate_PtoP() line 2919 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vpscat.c
-#7 KSPSetUp() line 379 in /import/u/u1/uaf/elbueler/petsc/src/ksp/ksp/interface/itfunc.c
-[37]PETSC ERROR: ----------------End of Error Message -------send entire error message to petsc-maint@mcs.anl.gov----------
-[21]PETSC ERROR: [36]PETSC ERROR: [60]PETSC ERROR: #8 PCSetUp_MG() line 820 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/impls/mg/mg.c
-#5 PCSetUp_Redundant() line 140 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/impls/redundant/redundant.c
-#4 VecScatterCreate() line 1606 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vscat.c
-[21]PETSC ERROR: [36]PETSC ERROR: [60]PETSC ERROR: #9 PCSetUp() line 924 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/interface/precon.c
-#6 PCSetUp() line 924 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/interface/precon.c
-#5 PCSetUp_Redundant() line 140 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/impls/redundant/redundant.c
-[21]PETSC ERROR: [36]PETSC ERROR: [60]PETSC ERROR: #10 KSPSetUp() line 379 in /import/u/u1/uaf/elbueler/petsc/src/ksp/ksp/interface/itfunc.c
-#7 KSPSetUp() line 379 in /import/u/u1/uaf/elbueler/petsc/src/ksp/ksp/interface/itfunc.c
-#6 PCSetUp() line 924 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/interface/precon.c
-[21]PETSC ERROR: [36]PETSC ERROR: [60]PETSC ERROR: #11 SNESSolve_VINEWTONRSLS() line 484 in /import/u/u1/uaf/elbueler/petsc/src/snes/impls/vi/rs/virs.c
-#8 PCSetUp_MG() line 820 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/impls/mg/mg.c
-[21]PETSC ERROR: [36]PETSC ERROR: #9 PCSetUp() line 924 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/interface/precon.c
-#12 SNESSolve() line 3967 in /import/u/u1/uaf/elbueler/petsc/src/snes/interface/snes.c
-#7 KSPSetUp() line 379 in /import/u/u1/uaf/elbueler/petsc/src/ksp/ksp/interface/itfunc.c
-[21]PETSC ERROR: [36]PETSC ERROR: [60]PETSC ERROR: #13 TS_SNESSolve() line 171 in /import/u/u1/uaf/elbueler/petsc/src/ts/impls/implicit/theta/theta.c
-#10 KSPSetUp() line 379 in /import/u/u1/uaf/elbueler/petsc/src/ksp/ksp/interface/itfunc.c
-[21]PETSC ERROR: [36]PETSC ERROR: #8 PCSetUp_MG() line 820 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/impls/mg/mg.c
-#14 TSStep_Theta() line 211 in /import/u/u1/uaf/elbueler/petsc/src/ts/impls/implicit/theta/theta.c
-#11 SNESSolve_VINEWTONRSLS() line 484 in /import/u/u1/uaf/elbueler/petsc/src/snes/impls/vi/rs/virs.c
-[60]PETSC ERROR: [21]PETSC ERROR: [36]PETSC ERROR: #9 PCSetUp() line 924 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/interface/precon.c
-#12 SNESSolve() line 3967 in /import/u/u1/uaf/elbueler/petsc/src/snes/interface/snes.c
-[60]PETSC ERROR: #15 TSStep() line 3809 in /import/u/u1/uaf/elbueler/petsc/src/ts/interface/ts.c
-[21]PETSC ERROR: [36]PETSC ERROR: #10 KSPSetUp() line 379 in /import/u/u1/uaf/elbueler/petsc/src/ksp/ksp/interface/itfunc.c
-#13 TS_SNESSolve() line 171 in /import/u/u1/uaf/elbueler/petsc/src/ts/impls/implicit/theta/theta.c
-[60]PETSC ERROR: #16 TSSolve() line 4054 in /import/u/u1/uaf/elbueler/petsc/src/ts/interface/ts.c
-[21]PETSC ERROR: [36]PETSC ERROR: #11 SNESSolve_VINEWTONRSLS() line 484 in /import/u/u1/uaf/elbueler/petsc/src/snes/impls/vi/rs/virs.c
-#17 main() line 232 in /u1/uaf/elbueler/p4pdes/c/ch11/ice.c
-#14 TSStep_Theta() line 211 in /import/u/u1/uaf/elbueler/petsc/src/ts/impls/implicit/theta/theta.c
-[60]PETSC ERROR: [21]PETSC ERROR: [36]PETSC ERROR: #12 SNESSolve() line 3967 in /import/u/u1/uaf/elbueler/petsc/src/snes/interface/snes.c
-[60]PETSC ERROR: PETSc Option Table entries:
-#15 TSStep() line 3809 in /import/u/u1/uaf/elbueler/petsc/src/ts/interface/ts.c
-[21]PETSC ERROR: [36]PETSC ERROR: #13 TS_SNESSolve() line 171 in /import/u/u1/uaf/elbueler/petsc/src/ts/impls/implicit/theta/theta.c
--da_refine 12
-#16 TSSolve() line 4054 in /import/u/u1/uaf/elbueler/petsc/src/ts/interface/ts.c
-[60]PETSC ERROR: [21]PETSC ERROR: [36]PETSC ERROR: #14 TSStep_Theta() line 211 in /import/u/u1/uaf/elbueler/petsc/src/ts/impls/implicit/theta/theta.c
--ice_dtinit 10.0
-#17 main() line 232 in /u1/uaf/elbueler/p4pdes/c/ch11/ice.c
-[60]PETSC ERROR: [21]PETSC ERROR: [36]PETSC ERROR: #15 TSStep() line 3809 in /import/u/u1/uaf/elbueler/petsc/src/ts/interface/ts.c
-PETSc Option Table entries:
-[60]PETSC ERROR: -ice_dtlimits
-[36]PETSC ERROR: #16 TSSolve() line 4054 in /import/u/u1/uaf/elbueler/petsc/src/ts/interface/ts.c
-[21]PETSC ERROR: -ice_tf 10.0
--da_refine 12
-[60]PETSC ERROR: [36]PETSC ERROR: #17 main() line 232 in /u1/uaf/elbueler/p4pdes/c/ch11/ice.c
-[21]PETSC ERROR: -ice_dtinit 10.0
-[60]PETSC ERROR: -ice_verif 2
-[21]PETSC ERROR: [36]PETSC ERROR: PETSc Option Table entries:
--ksp_converged_reason
--ice_dtlimits
-[60]PETSC ERROR: [36]PETSC ERROR: -da_refine 12
-[21]PETSC ERROR: -pc_mg_levels 10
--ice_tf 10.0
-[60]PETSC ERROR: [21]PETSC ERROR: [36]PETSC ERROR: -ice_dtinit 10.0
-[60]PETSC ERROR: -pc_type mg
--ice_verif 2
-[36]PETSC ERROR: -ice_dtlimits
-[21]PETSC ERROR: -snes_converged_reason
--ksp_converged_reason
-[60]PETSC ERROR: [21]PETSC ERROR: [36]PETSC ERROR: -ice_tf 10.0
--snes_monitor
--pc_mg_levels 10
-[60]PETSC ERROR: [21]PETSC ERROR: [36]PETSC ERROR: -ice_verif 2
-[60]PETSC ERROR: -ts_type beuler
--pc_type mg
-[21]PETSC ERROR: [36]PETSC ERROR: -ksp_converged_reason
-----------------End of Error Message -------send entire error message to petsc-maint@mcs.anl.gov----------
--snes_converged_reason
-[60]PETSC ERROR: [36]PETSC ERROR: -pc_mg_levels 10
-[60]PETSC ERROR: -snes_monitor
--pc_type mg
-[36]PETSC ERROR: [60]PETSC ERROR: -ts_type beuler
--snes_converged_reason
-[36]PETSC ERROR: ----------------End of Error Message -------send entire error message to petsc-maint@mcs.anl.gov----------
-[60]PETSC ERROR: [32]PETSC ERROR: -snes_monitor
-#1 VecScatterCreate_PtoS() line 2320 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vpscat.c
-[60]PETSC ERROR: [32]PETSC ERROR: -ts_type beuler
-#2 VecScatterCreate_StoP() line 2732 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vpscat.c
-[60]PETSC ERROR: [32]PETSC ERROR: ----------------End of Error Message -------send entire error message to petsc-maint@mcs.anl.gov----------
-#3 VecScatterCreate_PtoP() line 2919 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vpscat.c
-[32]PETSC ERROR: #4 VecScatterCreate() line 1606 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vscat.c
-[32]PETSC ERROR: #5 PCSetUp_Redundant() line 140 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/impls/redundant/redundant.c
-[32]PETSC ERROR: #6 PCSetUp() line 924 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/interface/precon.c
-[32]PETSC ERROR: #7 KSPSetUp() line 379 in /import/u/u1/uaf/elbueler/petsc/src/ksp/ksp/interface/itfunc.c
-[32]PETSC ERROR: #8 PCSetUp_MG() line 820 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/impls/mg/mg.c
-[32]PETSC ERROR: #9 PCSetUp() line 924 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/interface/precon.c
-[32]PETSC ERROR: #10 KSPSetUp() line 379 in /import/u/u1/uaf/elbueler/petsc/src/ksp/ksp/interface/itfunc.c
-[32]PETSC ERROR: #11 SNESSolve_VINEWTONRSLS() line 484 in /import/u/u1/uaf/elbueler/petsc/src/snes/impls/vi/rs/virs.c
-[32]PETSC ERROR: #12 SNESSolve() line 3967 in /import/u/u1/uaf/elbueler/petsc/src/snes/interface/snes.c
-[32]PETSC ERROR: #13 TS_SNESSolve() line 171 in /import/u/u1/uaf/elbueler/petsc/src/ts/impls/implicit/theta/theta.c
-[32]PETSC ERROR: #14 TSStep_Theta() line 211 in /import/u/u1/uaf/elbueler/petsc/src/ts/impls/implicit/theta/theta.c
-[32]PETSC ERROR: #15 TSStep() line 3809 in /import/u/u1/uaf/elbueler/petsc/src/ts/interface/ts.c
-[32]PETSC ERROR: #16 TSSolve() line 4054 in /import/u/u1/uaf/elbueler/petsc/src/ts/interface/ts.c
-[32]PETSC ERROR: #17 main() line 232 in /u1/uaf/elbueler/p4pdes/c/ch11/ice.c
-[32]PETSC ERROR: PETSc Option Table entries:
-[32]PETSC ERROR: -da_refine 12
-[32]PETSC ERROR: -ice_dtinit 10.0
-[32]PETSC ERROR: -ice_dtlimits
-[32]PETSC ERROR: -ice_tf 10.0
-[32]PETSC ERROR: -ice_verif 2
-[32]PETSC ERROR: -ksp_converged_reason
-[32]PETSC ERROR: -pc_mg_levels 10
-[32]PETSC ERROR: -pc_type mg
-[32]PETSC ERROR: -snes_converged_reason
-[32]PETSC ERROR: -snes_monitor
-[32]PETSC ERROR: -ts_type beuler
-[32]PETSC ERROR: ----------------End of Error Message -------send entire error message to petsc-maint@mcs.anl.gov----------
-[30]PETSC ERROR: #1 VecScatterCreate_PtoS() line 2320 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vpscat.c
-[30]PETSC ERROR: #2 VecScatterCreate_StoP() line 2732 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vpscat.c
-[30]PETSC ERROR: #3 VecScatterCreate_PtoP() line 2919 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vpscat.c
-[30]PETSC ERROR: #4 VecScatterCreate() line 1606 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vscat.c
-[30]PETSC ERROR: #5 PCSetUp_Redundant() line 140 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/impls/redundant/redundant.c
-[30]PETSC ERROR: #6 PCSetUp() line 924 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/interface/precon.c
-[30]PETSC ERROR: #7 KSPSetUp() line 379 in /import/u/u1/uaf/elbueler/petsc/src/ksp/ksp/interface/itfunc.c
-[30]PETSC ERROR: #8 PCSetUp_MG() line 820 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/impls/mg/mg.c
-[30]PETSC ERROR: #9 PCSetUp() line 924 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/interface/precon.c
-[30]PETSC ERROR: #10 KSPSetUp() line 379 in /import/u/u1/uaf/elbueler/petsc/src/ksp/ksp/interface/itfunc.c
-[30]PETSC ERROR: #11 SNESSolve_VINEWTONRSLS() line 484 in /import/u/u1/uaf/elbueler/petsc/src/snes/impls/vi/rs/virs.c
-[30]PETSC ERROR: #12 SNESSolve() line 3967 in /import/u/u1/uaf/elbueler/petsc/src/snes/interface/snes.c
-[30]PETSC ERROR: #13 TS_SNESSolve() line 171 in /import/u/u1/uaf/elbueler/petsc/src/ts/impls/implicit/theta/theta.c
-[30]PETSC ERROR: #14 TSStep_Theta() line 211 in /import/u/u1/uaf/elbueler/petsc/src/ts/impls/implicit/theta/theta.c
-[30]PETSC ERROR: #15 TSStep() line 3809 in /import/u/u1/uaf/elbueler/petsc/src/ts/interface/ts.c
-[30]PETSC ERROR: #16 TSSolve() line 4054 in /import/u/u1/uaf/elbueler/petsc/src/ts/interface/ts.c
-[30]PETSC ERROR: #17 main() line 232 in /u1/uaf/elbueler/p4pdes/c/ch11/ice.c
-[30]PETSC ERROR: PETSc Option Table entries:
-[30]PETSC ERROR: -da_refine 12
-[30]PETSC ERROR: -ice_dtinit 10.0
-[30]PETSC ERROR: -ice_dtlimits
-[30]PETSC ERROR: -ice_tf 10.0
-[30]PETSC ERROR: -ice_verif 2
-[30]PETSC ERROR: -ksp_converged_reason
-[30]PETSC ERROR: -pc_mg_levels 10
-[30]PETSC ERROR: -pc_type mg
-[30]PETSC ERROR: -snes_converged_reason
-[30]PETSC ERROR: -snes_monitor
-[30]PETSC ERROR: -ts_type beuler
-[30]PETSC ERROR: ----------------End of Error Message -------send entire error message to petsc-maint@mcs.anl.gov----------
-[24]PETSC ERROR: [26]PETSC ERROR: #1 VecScatterCreate_PtoS() line 2320 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vpscat.c
-[26]PETSC ERROR: #2 VecScatterCreate_StoP() line 2732 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vpscat.c
-[26]PETSC ERROR: #3 VecScatterCreate_PtoP() line 2919 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vpscat.c
-[26]PETSC ERROR: #4 VecScatterCreate() line 1606 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vscat.c
-[26]PETSC ERROR: #5 PCSetUp_Redundant() line 140 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/impls/redundant/redundant.c
-[26]PETSC ERROR: #6 PCSetUp() line 924 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/interface/precon.c
-[26]PETSC ERROR: #7 KSPSetUp() line 379 in /import/u/u1/uaf/elbueler/petsc/src/ksp/ksp/interface/itfunc.c
-[26]PETSC ERROR: #8 PCSetUp_MG() line 820 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/impls/mg/mg.c
-[26]PETSC ERROR: #9 PCSetUp() line 924 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/interface/precon.c
-[26]PETSC ERROR: #10 KSPSetUp() line 379 in /import/u/u1/uaf/elbueler/petsc/src/ksp/ksp/interface/itfunc.c
-[27]PETSC ERROR: #1 VecScatterCreate_PtoS() line 2320 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vpscat.c
-[29]PETSC ERROR: #1 VecScatterCreate_PtoS() line 2320 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vpscat.c
-[29]PETSC ERROR: [26]PETSC ERROR: #11 SNESSolve_VINEWTONRSLS() line 484 in /import/u/u1/uaf/elbueler/petsc/src/snes/impls/vi/rs/virs.c
-[26]PETSC ERROR: #12 SNESSolve() line 3967 in /import/u/u1/uaf/elbueler/petsc/src/snes/interface/snes.c
-[26]PETSC ERROR: #13 TS_SNESSolve() line 171 in /import/u/u1/uaf/elbueler/petsc/src/ts/impls/implicit/theta/theta.c
-[26]PETSC ERROR: #14 TSStep_Theta() line 211 in /import/u/u1/uaf/elbueler/petsc/src/ts/impls/implicit/theta/theta.c
-[26]PETSC ERROR: #15 TSStep() line 3809 in /import/u/u1/uaf/elbueler/petsc/src/ts/interface/ts.c
-[26]PETSC ERROR: #16 TSSolve() line 4054 in /import/u/u1/uaf/elbueler/petsc/src/ts/interface/ts.c
-[26]PETSC ERROR: #17 main() line 232 in /u1/uaf/elbueler/p4pdes/c/ch11/ice.c
-[26]PETSC ERROR: PETSc Option Table entries:
-[26]PETSC ERROR: -da_refine 12
-[26]PETSC ERROR: -ice_dtinit 10.0
-[26]PETSC ERROR: -ice_dtlimits
-[26]PETSC ERROR: -ice_tf 10.0
-[26]PETSC ERROR: -ice_verif 2
-[26]PETSC ERROR: -ksp_converged_reason
-[26]PETSC ERROR: -pc_mg_levels 10
-[26]PETSC ERROR: -pc_type mg
-[26]PETSC ERROR: -snes_converged_reason
-[26]PETSC ERROR: -snes_monitor
-[26]PETSC ERROR: -ts_type beuler
-[26]PETSC ERROR: ----------------End of Error Message -------send entire error message to petsc-maint@mcs.anl.gov----------
-[27]PETSC ERROR: #2 VecScatterCreate_StoP() line 2732 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vpscat.c
-[27]PETSC ERROR: #3 VecScatterCreate_PtoP() line 2919 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vpscat.c
-[27]PETSC ERROR: #4 VecScatterCreate() line 1606 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vscat.c
-[27]PETSC ERROR: #5 PCSetUp_Redundant() line 140 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/impls/redundant/redundant.c
-[27]PETSC ERROR: #6 PCSetUp() line 924 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/interface/precon.c
-[27]PETSC ERROR: #7 KSPSetUp() line 379 in /import/u/u1/uaf/elbueler/petsc/src/ksp/ksp/interface/itfunc.c
-[27]PETSC ERROR: #8 PCSetUp_MG() line 820 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/impls/mg/mg.c
-[27]PETSC ERROR: #9 PCSetUp() line 924 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/interface/precon.c
-[27]PETSC ERROR: #10 KSPSetUp() line 379 in /import/u/u1/uaf/elbueler/petsc/src/ksp/ksp/interface/itfunc.c
-[27]PETSC ERROR: #11 SNESSolve_VINEWTONRSLS() line 484 in /import/u/u1/uaf/elbueler/petsc/src/snes/impls/vi/rs/virs.c
-[27]PETSC ERROR: #12 SNESSolve() line 3967 in /import/u/u1/uaf/elbueler/petsc/src/snes/interface/snes.c
-[27]PETSC ERROR: #13 TS_SNESSolve() line 171 in /import/u/u1/uaf/elbueler/petsc/src/ts/impls/implicit/theta/theta.c
-[27]PETSC ERROR: #14 TSStep_Theta() line 211 in /import/u/u1/uaf/elbueler/petsc/src/ts/impls/implicit/theta/theta.c
-[27]PETSC ERROR: #15 TSStep() line 3809 in /import/u/u1/uaf/elbueler/petsc/src/ts/interface/ts.c
-[27]PETSC ERROR: #16 TSSolve() line 4054 in /import/u/u1/uaf/elbueler/petsc/src/ts/interface/ts.c
-[27]PETSC ERROR: #17 main() line 232 in /u1/uaf/elbueler/p4pdes/c/ch11/ice.c
-[27]PETSC ERROR: PETSc Option Table entries:
-[27]PETSC ERROR: #2 VecScatterCreate_StoP() line 2732 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vpscat.c
-[29]PETSC ERROR: #3 VecScatterCreate_PtoP() line 2919 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vpscat.c
-[29]PETSC ERROR: #4 VecScatterCreate() line 1606 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vscat.c
-[29]PETSC ERROR: #5 PCSetUp_Redundant() line 140 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/impls/redundant/redundant.c
-[29]PETSC ERROR: #6 PCSetUp() line 924 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/interface/precon.c
-[29]PETSC ERROR: #7 KSPSetUp() line 379 in /import/u/u1/uaf/elbueler/petsc/src/ksp/ksp/interface/itfunc.c
-[29]PETSC ERROR: #8 PCSetUp_MG() line 820 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/impls/mg/mg.c
-[29]PETSC ERROR: #9 PCSetUp() line 924 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/interface/precon.c
-[29]PETSC ERROR: #10 KSPSetUp() line 379 in /import/u/u1/uaf/elbueler/petsc/src/ksp/ksp/interface/itfunc.c
-[29]PETSC ERROR: #11 SNESSolve_VINEWTONRSLS() line 484 in /import/u/u1/uaf/elbueler/petsc/src/snes/impls/vi/rs/virs.c
-[29]PETSC ERROR: #12 SNESSolve() line 3967 in /import/u/u1/uaf/elbueler/petsc/src/snes/interface/snes.c
-[29]PETSC ERROR: #13 TS_SNESSolve() line 171 in /import/u/u1/uaf/elbueler/petsc/src/ts/impls/implicit/theta/theta.c
-[29]PETSC ERROR: #14 TSStep_Theta() line 211 in /import/u/u1/uaf/elbueler/petsc/src/ts/impls/implicit/theta/theta.c
-[29]PETSC ERROR: #15 TSStep() line 3809 in /import/u/u1/uaf/elbueler/petsc/src/ts/interface/ts.c
-[29]PETSC ERROR: #16 TSSolve() line 4054 in /import/u/u1/uaf/elbueler/petsc/src/ts/interface/ts.c
-[29]PETSC ERROR: #17 main() line 232 in /u1/uaf/elbueler/p4pdes/c/ch11/ice.c
-[29]PETSC ERROR: PETSc Option Table entries:
-[29]PETSC ERROR: -da_refine 12
-[29]PETSC ERROR: -da_refine 12
-[27]PETSC ERROR: -ice_dtinit 10.0
-[27]PETSC ERROR: -ice_dtlimits
-[27]PETSC ERROR: -ice_tf 10.0
-[27]PETSC ERROR: -ice_verif 2
-[27]PETSC ERROR: -ksp_converged_reason
-[27]PETSC ERROR: -pc_mg_levels 10
-[27]PETSC ERROR: -pc_type mg
-[27]PETSC ERROR: -snes_converged_reason
-[27]PETSC ERROR: -snes_monitor
-[27]PETSC ERROR: -ts_type beuler
-[27]PETSC ERROR: ----------------End of Error Message -------send entire error message to petsc-maint@mcs.anl.gov----------
--ice_dtinit 10.0
-[29]PETSC ERROR: -ice_dtlimits
-[29]PETSC ERROR: -ice_tf 10.0
-[29]PETSC ERROR: -ice_verif 2
-[29]PETSC ERROR: -ksp_converged_reason
-[29]PETSC ERROR: -pc_mg_levels 10
-[29]PETSC ERROR: -pc_type mg
-[29]PETSC ERROR: -snes_converged_reason
-[29]PETSC ERROR: -snes_monitor
-[29]PETSC ERROR: -ts_type beuler
-[29]PETSC ERROR: ----------------End of Error Message -------send entire error message to petsc-maint@mcs.anl.gov----------
-#1 VecScatterCreate_PtoS() line 2320 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vpscat.c
-[24]PETSC ERROR: #2 VecScatterCreate_StoP() line 2732 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vpscat.c
-[24]PETSC ERROR: #3 VecScatterCreate_PtoP() line 2919 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vpscat.c
-[24]PETSC ERROR: #4 VecScatterCreate() line 1606 in /import/u/u1/uaf/elbueler/petsc/src/vec/vec/utils/vscat.c
-[24]PETSC ERROR: #5 PCSetUp_Redundant() line 140 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/impls/redundant/redundant.c
-[24]PETSC ERROR: #6 PCSetUp() line 924 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/interface/precon.c
-[24]PETSC ERROR: #7 KSPSetUp() line 379 in /import/u/u1/uaf/elbueler/petsc/src/ksp/ksp/interface/itfunc.c
-[24]PETSC ERROR: #8 PCSetUp_MG() line 820 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/impls/mg/mg.c
-[24]PETSC ERROR: #9 PCSetUp() line 924 in /import/u/u1/uaf/elbueler/petsc/src/ksp/pc/interface/precon.c
-[24]PETSC ERROR: #10 KSPSetUp() line 379 in /import/u/u1/uaf/elbueler/petsc/src/ksp/ksp/interface/itfunc.c
-[24]PETSC ERROR: #11 SNESSolve_VINEWTONRSLS() line 484 in /import/u/u1/uaf/elbueler/petsc/src/snes/impls/vi/rs/virs.c
-[24]PETSC ERROR: #12 SNESSolve() line 3967 in /import/u/u1/uaf/elbueler/petsc/src/snes/interface/snes.c
-[24]PETSC ERROR: #13 TS_SNESSolve() line 171 in /import/u/u1/uaf/elbueler/petsc/src/ts/impls/implicit/theta/theta.c
-[24]PETSC ERROR: #14 TSStep_Theta() line 211 in /import/u/u1/uaf/elbueler/petsc/src/ts/impls/implicit/theta/theta.c
-[24]PETSC ERROR: #15 TSStep() line 3809 in /import/u/u1/uaf/elbueler/petsc/src/ts/interface/ts.c
-[24]PETSC ERROR: #16 TSSolve() line 4054 in /import/u/u1/uaf/elbueler/petsc/src/ts/interface/ts.c
-[24]PETSC ERROR: #17 main() line 232 in /u1/uaf/elbueler/p4pdes/c/ch11/ice.c
-[24]PETSC ERROR: PETSc Option Table entries:
-[24]PETSC ERROR: -da_refine 12
-[24]PETSC ERROR: -ice_dtinit 10.0
-[24]PETSC ERROR: -ice_dtlimits
-[24]PETSC ERROR: -ice_tf 10.0
-[24]PETSC ERROR: -ice_verif 2
-[24]PETSC ERROR: -ksp_converged_reason
-[24]PETSC ERROR: -pc_mg_levels 10
-[24]PETSC ERROR: -pc_type mg
-[24]PETSC ERROR: -snes_converged_reason
-[24]PETSC ERROR: -snes_monitor
-[24]PETSC ERROR: -ts_type beuler
-[24]PETSC ERROR: ----------------End of Error Message -------send entire error message to petsc-maint@mcs.anl.gov----------
-[39]PETSC ERROR: ------------------------------------------------------------------------
-[39]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[39]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[39]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[39]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[39]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[39]PETSC ERROR: to get more information on the crash.
-[39]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[39]PETSC ERROR: Signal received
-[39]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[39]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[39]PETSC ERROR: ./ice on a linux-c-opt named n20 by elbueler Mon Feb 20 15:40:58 2017
-[39]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[39]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[38]PETSC ERROR: ------------------------------------------------------------------------
-[38]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[38]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[38]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[38]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[38]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[38]PETSC ERROR: to get more information on the crash.
-[38]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[38]PETSC ERROR: Signal received
-[38]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[38]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[38]PETSC ERROR: ./ice on a linux-c-opt named n20 by elbueler Mon Feb 20 15:40:58 2017
-[38]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[38]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[34]PETSC ERROR: ------------------------------------------------------------------------
-[34]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[34]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[34]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[34]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[34]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[34]PETSC ERROR: to get more information on the crash.
-[34]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[34]PETSC ERROR: Signal received
-[34]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[34]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[34]PETSC ERROR: ./ice on a linux-c-opt named n20 by elbueler Mon Feb 20 15:40:58 2017
-[34]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[34]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[20]PETSC ERROR: ------------------------------------------------------------------------
-[20]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[20]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[20]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[20]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[20]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[20]PETSC ERROR: to get more information on the crash.
-[20]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[20]PETSC ERROR: Signal received
-[20]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[20]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[20]PETSC ERROR: ./ice on a linux-c-opt named n18 by elbueler Mon Feb 20 15:40:58 2017
-[20]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[20]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[18]PETSC ERROR: ------------------------------------------------------------------------
-[18]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[18]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[18]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[18]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[18]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[18]PETSC ERROR: to get more information on the crash.
-[18]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[18]PETSC ERROR: Signal received
-[18]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[18]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[18]PETSC ERROR: ./ice on a linux-c-opt named n18 by elbueler Mon Feb 20 15:40:58 2017
-[18]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[18]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[22]PETSC ERROR: ------------------------------------------------------------------------
-[22]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[22]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[22]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[22]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[22]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[22]PETSC ERROR: to get more information on the crash.
-[22]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[22]PETSC ERROR: Signal received
-[22]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[22]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[22]PETSC ERROR: ./ice on a linux-c-opt named n18 by elbueler Mon Feb 20 15:40:58 2017
-[22]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[22]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[16]PETSC ERROR: ------------------------------------------------------------------------
-[16]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[16]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[16]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[16]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[16]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[16]PETSC ERROR: to get more information on the crash.
-[16]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[16]PETSC ERROR: Signal received
-[16]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[16]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[16]PETSC ERROR: ./ice on a linux-c-opt named n18 by elbueler Mon Feb 20 15:40:58 2017
-[16]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[16]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[19]PETSC ERROR: ------------------------------------------------------------------------
-[19]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[19]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[19]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[19]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[19]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[19]PETSC ERROR: to get more information on the crash.
-[19]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[19]PETSC ERROR: Signal received
-[19]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[19]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[19]PETSC ERROR: ./ice on a linux-c-opt named n18 by elbueler Mon Feb 20 15:40:58 2017
-[19]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[19]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[23]PETSC ERROR: ------------------------------------------------------------------------
-[23]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[23]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[23]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[23]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[23]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[23]PETSC ERROR: to get more information on the crash.
-[23]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[23]PETSC ERROR: Signal received
-[23]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[23]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[23]PETSC ERROR: ./ice on a linux-c-opt named n18 by elbueler Mon Feb 20 15:40:58 2017
-[23]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[23]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[17]PETSC ERROR: ------------------------------------------------------------------------
-[17]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[17]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[17]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[17]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[17]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[17]PETSC ERROR: to get more information on the crash.
-[17]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[17]PETSC ERROR: Signal received
-[17]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[17]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[17]PETSC ERROR: ./ice on a linux-c-opt named n18 by elbueler Mon Feb 20 15:40:58 2017
-[17]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[17]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[14]PETSC ERROR: ------------------------------------------------------------------------
-[14]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[14]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[14]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[14]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[14]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[14]PETSC ERROR: to get more information on the crash.
-[14]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[14]PETSC ERROR: Signal received
-[14]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[14]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[14]PETSC ERROR: ./ice on a linux-c-opt named n17 by elbueler Mon Feb 20 15:40:58 2017
-[14]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[14]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[11]PETSC ERROR: ------------------------------------------------------------------------
-[11]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[11]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[11]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[11]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[11]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[11]PETSC ERROR: to get more information on the crash.
-[11]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[11]PETSC ERROR: Signal received
-[11]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[11]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[11]PETSC ERROR: ./ice on a linux-c-opt named n17 by elbueler Mon Feb 20 15:40:58 2017
-[11]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[11]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[12]PETSC ERROR: ------------------------------------------------------------------------
-[12]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[12]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[12]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[12]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[12]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[12]PETSC ERROR: to get more information on the crash.
-[12]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[12]PETSC ERROR: Signal received
-[12]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[12]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[12]PETSC ERROR: ./ice on a linux-c-opt named n17 by elbueler Mon Feb 20 15:40:58 2017
-[12]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[12]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[15]PETSC ERROR: ------------------------------------------------------------------------
-[15]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[15]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[15]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[15]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[15]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[15]PETSC ERROR: to get more information on the crash.
-[15]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[15]PETSC ERROR: Signal received
-[15]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[15]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[15]PETSC ERROR: ./ice on a linux-c-opt named n17 by elbueler Mon Feb 20 15:40:58 2017
-[15]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[15]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[13]PETSC ERROR: ------------------------------------------------------------------------
-[13]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[13]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[13]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[13]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[13]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[13]PETSC ERROR: to get more information on the crash.
-[13]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[13]PETSC ERROR: Signal received
-[13]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[13]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[13]PETSC ERROR: ./ice on a linux-c-opt named n17 by elbueler Mon Feb 20 15:40:58 2017
-[13]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[13]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[8]PETSC ERROR: ------------------------------------------------------------------------
-[8]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[8]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[8]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[8]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[8]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[8]PETSC ERROR: to get more information on the crash.
-[8]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[8]PETSC ERROR: Signal received
-[8]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[8]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[8]PETSC ERROR: ./ice on a linux-c-opt named n17 by elbueler Mon Feb 20 15:40:58 2017
-[8]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[8]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[9]PETSC ERROR: ------------------------------------------------------------------------
-[9]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[9]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[9]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[9]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[9]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[9]PETSC ERROR: to get more information on the crash.
-[9]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[9]PETSC ERROR: Signal received
-[9]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[9]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[9]PETSC ERROR: ./ice on a linux-c-opt named n17 by elbueler Mon Feb 20 15:40:58 2017
-[9]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[9]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[10]PETSC ERROR: ------------------------------------------------------------------------
-[10]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[10]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[10]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[10]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[10]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[10]PETSC ERROR: to get more information on the crash.
-[10]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[10]PETSC ERROR: Signal received
-[10]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[10]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[10]PETSC ERROR: ./ice on a linux-c-opt named n17 by elbueler Mon Feb 20 15:40:58 2017
-[10]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[10]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[28]PETSC ERROR: ------------------------------------------------------------------------
-[28]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[28]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[28]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[28]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[28]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[28]PETSC ERROR: to get more information on the crash.
-[28]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[28]PETSC ERROR: Signal received
-[28]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[28]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[28]PETSC ERROR: ./ice on a linux-c-opt named n19 by elbueler Mon Feb 20 15:40:58 2017
-[28]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[28]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[31]PETSC ERROR: ------------------------------------------------------------------------
-[31]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[31]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[31]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[31]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[31]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[31]PETSC ERROR: to get more information on the crash.
-[31]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[31]PETSC ERROR: Signal received
-[31]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[31]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[31]PETSC ERROR: ./ice on a linux-c-opt named n19 by elbueler Mon Feb 20 15:40:58 2017
-[31]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[31]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[54]PETSC ERROR: ------------------------------------------------------------------------
-[54]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[54]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[54]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[54]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[54]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[54]PETSC ERROR: to get more information on the crash.
-[54]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[54]PETSC ERROR: Signal received
-[54]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[54]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[54]PETSC ERROR: ./ice on a linux-c-opt named n22 by elbueler Mon Feb 20 15:40:58 2017
-[54]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[54]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[52]PETSC ERROR: ------------------------------------------------------------------------
-[52]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[52]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[52]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[52]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[52]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[52]PETSC ERROR: to get more information on the crash.
-[52]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[52]PETSC ERROR: Signal received
-[52]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[52]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[52]PETSC ERROR: ./ice on a linux-c-opt named n22 by elbueler Mon Feb 20 15:40:58 2017
-[52]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[52]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[51]PETSC ERROR: ------------------------------------------------------------------------
-[51]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[51]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[51]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[51]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[51]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[51]PETSC ERROR: to get more information on the crash.
-[51]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[51]PETSC ERROR: Signal received
-[51]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[51]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[51]PETSC ERROR: ./ice on a linux-c-opt named n22 by elbueler Mon Feb 20 15:40:58 2017
-[51]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[51]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[48]PETSC ERROR: ------------------------------------------------------------------------
-[48]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[48]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[48]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[48]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[48]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[48]PETSC ERROR: to get more information on the crash.
-[48]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[48]PETSC ERROR: Signal received
-[48]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[48]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[48]PETSC ERROR: ./ice on a linux-c-opt named n22 by elbueler Mon Feb 20 15:40:58 2017
-[48]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[48]PETSC ERROR: [49]PETSC ERROR: ------------------------------------------------------------------------
-[49]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[49]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[49]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[49]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[49]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[49]PETSC ERROR: to get more information on the crash.
-[49]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[49]PETSC ERROR: Signal received
-[49]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[49]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[49]PETSC ERROR: ./ice on a linux-c-opt named n22 by elbueler Mon Feb 20 15:40:58 2017
-[49]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[49]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[53]PETSC ERROR: ------------------------------------------------------------------------
-[53]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[53]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[53]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[53]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[53]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[53]PETSC ERROR: to get more information on the crash.
-[53]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[53]PETSC ERROR: Signal received
-[53]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[53]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[53]PETSC ERROR: ./ice on a linux-c-opt named n22 by elbueler Mon Feb 20 15:40:58 2017
-[53]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[53]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[50]PETSC ERROR: ------------------------------------------------------------------------
-[50]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[50]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[50]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[50]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[50]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[50]PETSC ERROR: to get more information on the crash.
-[50]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[50]PETSC ERROR: Signal received
-[50]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[50]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[50]PETSC ERROR: ./ice on a linux-c-opt named n22 by elbueler Mon Feb 20 15:40:58 2017
-[50]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[50]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[55]PETSC ERROR: ------------------------------------------------------------------------
-[55]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[55]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[55]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[55]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[55]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[55]PETSC ERROR: to get more information on the crash.
-[55]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[55]PETSC ERROR: Signal received
-[55]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[55]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[55]PETSC ERROR: ./ice on a linux-c-opt named n22 by elbueler Mon Feb 20 15:40:58 2017
-[55]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[55]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[40]PETSC ERROR: ------------------------------------------------------------------------
-[40]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[40]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[40]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[40]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[40]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[40]PETSC ERROR: to get more information on the crash.
-[40]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[40]PETSC ERROR: Signal received
-[40]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[40]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[40]PETSC ERROR: ./ice on a linux-c-opt named n21 by elbueler Mon Feb 20 15:40:58 2017
-[40]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[40]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[47]PETSC ERROR: ------------------------------------------------------------------------
-[47]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[47]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[47]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[47]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[47]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[47]PETSC ERROR: to get more information on the crash.
-[47]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[47]PETSC ERROR: Signal received
-[47]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[47]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[47]PETSC ERROR: ./ice on a linux-c-opt named n21 by elbueler Mon Feb 20 15:40:58 2017
-[47]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[47]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[41]PETSC ERROR: ------------------------------------------------------------------------
-[41]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[41]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[41]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[41]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[41]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[41]PETSC ERROR: to get more information on the crash.
-[41]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[41]PETSC ERROR: Signal received
-[41]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[41]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[41]PETSC ERROR: ./ice on a linux-c-opt named n21 by elbueler Mon Feb 20 15:40:58 2017
-[41]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[41]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[43]PETSC ERROR: ------------------------------------------------------------------------
-[43]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[43]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[43]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[43]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[43]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[43]PETSC ERROR: to get more information on the crash.
-[43]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[43]PETSC ERROR: Signal received
-[43]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[43]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[43]PETSC ERROR: ./ice on a linux-c-opt named n21 by elbueler Mon Feb 20 15:40:58 2017
-[43]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[43]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[42]PETSC ERROR: ------------------------------------------------------------------------
-[42]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[42]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[42]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[42]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[42]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[42]PETSC ERROR: to get more information on the crash.
-[42]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[42]PETSC ERROR: Signal received
-[42]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[42]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[42]PETSC ERROR: ./ice on a linux-c-opt named n21 by elbueler Mon Feb 20 15:40:58 2017
-[42]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[42]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[44]PETSC ERROR: ------------------------------------------------------------------------
-[44]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[44]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[44]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[44]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[44]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[44]PETSC ERROR: to get more information on the crash.
-[44]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[44]PETSC ERROR: Signal received
-[44]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[44]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[44]PETSC ERROR: ./ice on a linux-c-opt named n21 by elbueler Mon Feb 20 15:40:58 2017
-[44]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[44]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[45]PETSC ERROR: ------------------------------------------------------------------------
-[45]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[45]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[45]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[45]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[45]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[45]PETSC ERROR: to get more information on the crash.
-[45]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[45]PETSC ERROR: Signal received
-[45]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[45]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[45]PETSC ERROR: ./ice on a linux-c-opt named n21 by elbueler Mon Feb 20 15:40:58 2017
-[45]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[45]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[46]PETSC ERROR: ------------------------------------------------------------------------
-[46]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[46]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[46]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[46]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[46]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[46]PETSC ERROR: to get more information on the crash.
-[46]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[46]PETSC ERROR: Signal received
-[46]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[46]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[46]PETSC ERROR: ./ice on a linux-c-opt named n21 by elbueler Mon Feb 20 15:40:58 2017
-[46]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[46]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[59]PETSC ERROR: ------------------------------------------------------------------------
-[59]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[59]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[59]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[59]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[59]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[59]PETSC ERROR: to get more information on the crash.
-[59]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[59]PETSC ERROR: Signal received
-[59]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[59]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[59]PETSC ERROR: ./ice on a linux-c-opt named n23 by elbueler Mon Feb 20 15:40:58 2017
-[59]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[59]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[57]PETSC ERROR: ------------------------------------------------------------------------
-[57]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[57]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[57]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[57]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[57]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[57]PETSC ERROR: to get more information on the crash.
-[57]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[57]PETSC ERROR: Signal received
-[57]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[57]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[57]PETSC ERROR: ./ice on a linux-c-opt named n23 by elbueler Mon Feb 20 15:40:58 2017
-[57]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[57]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[56]PETSC ERROR: ------------------------------------------------------------------------
-[56]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[56]PETSC ERROR: [58]PETSC ERROR: ------------------------------------------------------------------------
-[58]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[58]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[58]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[58]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[58]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[58]PETSC ERROR: to get more information on the crash.
-[58]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[58]PETSC ERROR: Signal received
-[58]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[58]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[58]PETSC ERROR: ./ice on a linux-c-opt named n23 by elbueler Mon Feb 20 15:40:58 2017
-[58]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[58]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[61]PETSC ERROR: ------------------------------------------------------------------------
-[61]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[61]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[61]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[61]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[61]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[61]PETSC ERROR: to get more information on the crash.
-[61]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[61]PETSC ERROR: Signal received
-[61]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[61]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[61]PETSC ERROR: ./ice on a linux-c-opt named n23 by elbueler Mon Feb 20 15:40:58 2017
-[61]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[61]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[63]PETSC ERROR: ------------------------------------------------------------------------
-[63]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[63]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[63]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[63]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[63]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[63]PETSC ERROR: to get more information on the crash.
-[63]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[63]PETSC ERROR: Signal received
-[63]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[63]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[63]PETSC ERROR: ./ice on a linux-c-opt named n23 by elbueler Mon Feb 20 15:40:58 2017
-[63]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[63]PETSC ERROR: #1 User provided function() line 0 in  unknown file
-[62]PETSC ERROR: ------------------------------------------------------------------------
-[62]PETSC ERROR: Caught signal number 15 Terminate: Some process (or the batch system) has told this process to end
-[62]PETSC ERROR: Try option -start_in_debugger or -on_error_attach_debugger
-[62]PETSC ERROR: or see http://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind
-[62]PETSC ERROR: or try http://valgrind.org on GNU/linux and Apple Mac OS X to find memory corruption errors
-[62]PETSC ERROR: configure using --with-debugging=yes, recompile, link, and run 
-[62]PETSC ERROR: to get more information on the crash.
-[62]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[62]PETSC ERROR: Signal received
-[62]PETSC ERROR: See http://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.
-[62]PETSC ERROR: Petsc Development GIT revision: v3.7.5-3160-g23de1d8  GIT Date: 2017-02-20 12:49:30 -0600
-[62]PETSC ERROR: ./ice on a linux-c-opt named n23 by elbueler Mon Feb 20 15:40:58 2017
-[62]PETSC ERROR: Configure options --download-fblaslapack=1 --with-debugging=0
-[62]PETSC ERROR: #1 User provided function() line 0 in  unknown file
---------------------------------------------------------------------------
-mpiexec detected that one or more processes exited with non-zero status, thus causing
-the job to be terminated. The first process to do so was:
-
-  Process name: [[2983,1],3]
-  Exit code:    255
---------------------------------------------------------------------------
-[n16:83683] 51 more processes have sent help message help-mpi-api.txt / mpi-abort
-[n16:83683] Set MCA parameter "orte_base_help_aggregate" to 0 to see all help / error messages
-
-real	1m1.770s
-user	2m53.895s
-sys	2m1.830s
+real	10m16.286s
+user	42m5.403s
+sys	38m22.469s

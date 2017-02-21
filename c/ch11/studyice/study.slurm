@@ -19,6 +19,7 @@ for LEV in 5 6 7 8 9 10 11 12; do
       -pc_type gamg -pc_gamg_agg_nsmooths 0
       # -pc_type asm -sub_pc_type gamg
       # -pc_type mg -pc_mg_levels $(( $LEV - 1 ))
+      # -pc_type mg -pc_mg_levels $(( $LEV - 2 ))
       # -pc_type asm -sub_pc_type ilu
 done
 
