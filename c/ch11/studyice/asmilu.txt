@@ -1,0 +1,185 @@
+solving on domain [0,L] x [0,L] (L=1800.000 km) and time interval [0,tf] (tf=10.000 a)
+grid: 48 x 48 points, spacing dx=37.500 km x dy=37.500 km, dtinit=10.000 a
+  0: time 0.000 a,  volume 3991.7 10^3 km^3,  area 1750.8 10^3 km^2
+    Linear solve converged due to CONVERGED_RTOL iterations 4
+    Linear solve converged due to CONVERGED_RTOL iterations 4
+    Linear solve converged due to CONVERGED_RTOL iterations 4
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+  1: time 10.000 a,  volume 3991.7 10^3 km^3,  area 1846.4 10^3 km^2
+    max D_SIA 1.606 m2s-1,  max |V_slide| 0.000 ma-1,  dtD 6.936e+00 a
+average dt 10.00000 a, average dtexplicit 6.93613 a
+errors on verif 2: |u-uexact|_inf = 222.266, |u-uexact|_average = 2.198
+
+real	0m20.270s
+user	0m20.988s
+sys	0m24.536s
+solving on domain [0,L] x [0,L] (L=1800.000 km) and time interval [0,tf] (tf=10.000 a)
+grid: 96 x 96 points, spacing dx=18.750 km x dy=18.750 km, dtinit=10.000 a
+  0: time 0.000 a,  volume 3996.8 10^3 km^3,  area 1762.4 10^3 km^2
+    Linear solve converged due to CONVERGED_RTOL iterations 7
+    Linear solve converged due to CONVERGED_RTOL iterations 5
+    Linear solve converged due to CONVERGED_RTOL iterations 6
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+  1: time 10.000 a,  volume 3996.8 10^3 km^3,  area 1822.9 10^3 km^2
+    max D_SIA 1.579 m2s-1,  max |V_slide| 0.000 ma-1,  dtD 1.764e+00 a
+average dt 10.00000 a, average dtexplicit 1.76418 a
+errors on verif 2: |u-uexact|_inf = 212.283, |u-uexact|_average = 1.195
+
+real	0m16.610s
+user	0m9.418s
+sys	0m11.820s
+solving on domain [0,L] x [0,L] (L=1800.000 km) and time interval [0,tf] (tf=10.000 a)
+grid: 192 x 192 points, spacing dx=9.375 km x dy=9.375 km, dtinit=10.000 a
+  0: time 0.000 a,  volume 3997.3 10^3 km^3,  area 1763.9 10^3 km^2
+    Linear solve converged due to CONVERGED_RTOL iterations 12
+    Linear solve converged due to CONVERGED_RTOL iterations 7
+    Linear solve converged due to CONVERGED_RTOL iterations 9
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+  1: time 10.000 a,  volume 3997.3 10^3 km^3,  area 1802.5 10^3 km^2
+    max D_SIA 1.564 m2s-1,  max |V_slide| 0.000 ma-1,  dtD 4.452e-01 a
+average dt 10.00000 a, average dtexplicit 0.44521 a
+errors on verif 2: |u-uexact|_inf = 191.644, |u-uexact|_average = 0.800
+
+real	0m17.962s
+user	0m13.571s
+sys	0m17.463s
+solving on domain [0,L] x [0,L] (L=1800.000 km) and time interval [0,tf] (tf=10.000 a)
+grid: 384 x 384 points, spacing dx=4.688 km x dy=4.688 km, dtinit=10.000 a
+  0: time 0.000 a,  volume 3997.8 10^3 km^3,  area 1765.9 10^3 km^2
+    Linear solve converged due to CONVERGED_RTOL iterations 21
+    Linear solve converged due to CONVERGED_RTOL iterations 10
+    Linear solve converged due to CONVERGED_RTOL iterations 13
+    Linear solve converged due to CONVERGED_RTOL iterations 19
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+  1: time 10.000 a,  volume 3997.8 10^3 km^3,  area 1794.7 10^3 km^2
+    max D_SIA 1.556 m2s-1,  max |V_slide| 0.000 ma-1,  dtD 1.118e-01 a
+average dt 10.00000 a, average dtexplicit 0.11185 a
+errors on verif 2: |u-uexact|_inf = 147.696, |u-uexact|_average = 0.429
+
+real	0m19.605s
+user	0m17.061s
+sys	0m23.677s
+solving on domain [0,L] x [0,L] (L=1800.000 km) and time interval [0,tf] (tf=10.000 a)
+grid: 768 x 768 points, spacing dx=2.344 km x dy=2.344 km, dtinit=10.000 a
+  0: time 0.000 a,  volume 3997.9 10^3 km^3,  area 1766.8 10^3 km^2
+    Linear solve converged due to CONVERGED_RTOL iterations 38
+    Linear solve converged due to CONVERGED_RTOL iterations 16
+    Linear solve converged due to CONVERGED_RTOL iterations 18
+    Linear solve converged due to CONVERGED_RTOL iterations 22
+    Linear solve converged due to CONVERGED_RTOL iterations 42
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+  1: time 10.000 a,  volume 3997.9 10^3 km^3,  area 1788.1 10^3 km^2
+    max D_SIA 1.552 m2s-1,  max |V_slide| 0.000 ma-1,  dtD 2.803e-02 a
+average dt 10.00000 a, average dtexplicit 0.02803 a
+errors on verif 2: |u-uexact|_inf = 84.593, |u-uexact|_average = 0.250
+
+real	0m21.332s
+user	0m23.775s
+sys	0m28.459s
+solving on domain [0,L] x [0,L] (L=1800.000 km) and time interval [0,tf] (tf=10.000 a)
+grid: 1536 x 1536 points, spacing dx=1.172 km x dy=1.172 km, dtinit=10.000 a
+  0: time 0.000 a,  volume 3997.9 10^3 km^3,  area 1767.0 10^3 km^2
+    Linear solve converged due to CONVERGED_RTOL iterations 61
+    Linear solve converged due to CONVERGED_RTOL iterations 62
+    Linear solve converged due to CONVERGED_RTOL iterations 63
+    Linear solve converged due to CONVERGED_RTOL iterations 64
+    Linear solve converged due to CONVERGED_RTOL iterations 66
+    Linear solve converged due to CONVERGED_RTOL iterations 26
+    Linear solve converged due to CONVERGED_RTOL iterations 29
+    Linear solve converged due to CONVERGED_RTOL iterations 48
+    Linear solve converged due to CONVERGED_RTOL iterations 83
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 9
+  1: time 10.000 a,  volume 3997.9 10^3 km^3,  area 1785.4 10^3 km^2
+    max D_SIA 1.550 m2s-1,  max |V_slide| 0.000 ma-1,  dtD 7.017e-03 a
+average dt 10.00000 a, average dtexplicit 0.00702 a
+errors on verif 2: |u-uexact|_inf = 95.569, |u-uexact|_average = 0.215
+
+real	0m47.697s
+user	1m31.448s
+sys	1m54.394s
+solving on domain [0,L] x [0,L] (L=1800.000 km) and time interval [0,tf] (tf=10.000 a)
+grid: 3072 x 3072 points, spacing dx=0.586 km x dy=0.586 km, dtinit=10.000 a
+  0: time 0.000 a,  volume 3997.9 10^3 km^3,  area 1767.1 10^3 km^2
+    Linear solve converged due to CONVERGED_RTOL iterations 120
+    Linear solve converged due to CONVERGED_RTOL iterations 122
+    Linear solve converged due to CONVERGED_RTOL iterations 127
+    Linear solve converged due to CONVERGED_RTOL iterations 128
+    Linear solve converged due to CONVERGED_RTOL iterations 130
+    Linear solve converged due to CONVERGED_RTOL iterations 131
+    Linear solve converged due to CONVERGED_RTOL iterations 132
+    Linear solve converged due to CONVERGED_RTOL iterations 133
+    Linear solve converged due to CONVERGED_RTOL iterations 133
+    Linear solve converged due to CONVERGED_RTOL iterations 134
+    Linear solve converged due to CONVERGED_RTOL iterations 136
+    Linear solve converged due to CONVERGED_RTOL iterations 52
+    Linear solve converged due to CONVERGED_RTOL iterations 72
+    Linear solve converged due to CONVERGED_RTOL iterations 144
+    Linear solve converged due to CONVERGED_RTOL iterations 254
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 15
+  1: time 10.000 a,  volume 3997.9 10^3 km^3,  area 1784.4 10^3 km^2
+    max D_SIA 1.550 m2s-1,  max |V_slide| 0.000 ma-1,  dtD 1.755e-03 a
+average dt 10.00000 a, average dtexplicit 0.00176 a
+errors on verif 2: |u-uexact|_inf = 96.746, |u-uexact|_average = 0.220
+
+real	2m38.640s
+user	8m19.589s
+sys	6m38.306s
+solving on domain [0,L] x [0,L] (L=1800.000 km) and time interval [0,tf] (tf=10.000 a)
+grid: 6144 x 6144 points, spacing dx=0.293 km x dy=0.293 km, dtinit=10.000 a
+  0: time 0.000 a,  volume 3997.9 10^3 km^3,  area 1767.1 10^3 km^2
+    Linear solve converged due to CONVERGED_RTOL iterations 235
+    Linear solve converged due to CONVERGED_RTOL iterations 230
+    Linear solve converged due to CONVERGED_RTOL iterations 241
+    Linear solve converged due to CONVERGED_RTOL iterations 260
+    Linear solve converged due to CONVERGED_RTOL iterations 262
+    Linear solve converged due to CONVERGED_RTOL iterations 263
+    Linear solve converged due to CONVERGED_RTOL iterations 264
+    Linear solve converged due to CONVERGED_RTOL iterations 265
+    Linear solve converged due to CONVERGED_RTOL iterations 265
+    Linear solve converged due to CONVERGED_RTOL iterations 266
+    Linear solve converged due to CONVERGED_RTOL iterations 266
+    Linear solve converged due to CONVERGED_RTOL iterations 267
+    Linear solve converged due to CONVERGED_RTOL iterations 267
+    Linear solve converged due to CONVERGED_RTOL iterations 43
+    Linear solve converged due to CONVERGED_RTOL iterations 183
+    Linear solve converged due to CONVERGED_RTOL iterations 352
+    Linear solve converged due to CONVERGED_RTOL iterations 577
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 17
+  1: time 10.000 a,  volume 3997.9 10^3 km^3,  area 1784.1 10^3 km^2
+    max D_SIA 1.549 m2s-1,  max |V_slide| 0.000 ma-1,  dtD 4.390e-04 a
+average dt 10.00000 a, average dtexplicit 0.00044 a
+errors on verif 2: |u-uexact|_inf = 98.240, |u-uexact|_average = 0.223
+
+real	9m58.791s
+user	36m58.523s
+sys	22m32.386s
+solving on domain [0,L] x [0,L] (L=1800.000 km) and time interval [0,tf] (tf=10.000 a)
+grid: 12288 x 12288 points, spacing dx=0.146 km x dy=0.146 km, dtinit=10.000 a
+  0: time 0.000 a,  volume 3997.9 10^3 km^3,  area 1767.1 10^3 km^2
+    Linear solve converged due to CONVERGED_RTOL iterations 444
+    Linear solve converged due to CONVERGED_RTOL iterations 480
+    Linear solve converged due to CONVERGED_RTOL iterations 593
+    Linear solve converged due to CONVERGED_RTOL iterations 679
+    Linear solve converged due to CONVERGED_RTOL iterations 579
+    Linear solve converged due to CONVERGED_RTOL iterations 657
+    Linear solve converged due to CONVERGED_RTOL iterations 717
+    Linear solve converged due to CONVERGED_RTOL iterations 930
+    Linear solve converged due to CONVERGED_RTOL iterations 577
+    Linear solve converged due to CONVERGED_RTOL iterations 662
+    Linear solve converged due to CONVERGED_RTOL iterations 629
+    Linear solve converged due to CONVERGED_RTOL iterations 752
+    Linear solve converged due to CONVERGED_RTOL iterations 946
+    Linear solve converged due to CONVERGED_RTOL iterations 783
+    Linear solve converged due to CONVERGED_RTOL iterations 63
+    Linear solve converged due to CONVERGED_RTOL iterations 479
+    Linear solve converged due to CONVERGED_RTOL iterations 779
+    Linear solve converged due to CONVERGED_RTOL iterations 1728
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 18
+  1: time 10.000 a,  volume 3997.9 10^3 km^3,  area 1784.0 10^3 km^2
+    max D_SIA 1.549 m2s-1,  max |V_slide| 0.000 ma-1,  dtD 1.098e-04 a
+average dt 10.00000 a, average dtexplicit 0.00011 a
+errors on verif 2: |u-uexact|_inf = 98.109, |u-uexact|_average = 0.223
+
+real	74m5.175s
+user	300m57.424s
+sys	145m24.437s
