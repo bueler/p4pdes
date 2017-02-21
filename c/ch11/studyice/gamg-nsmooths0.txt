@@ -1,0 +1,254 @@
+5
+solving on domain [0,L] x [0,L] (L=1800.000 km) and time interval [0,tf] (tf=10.000 a)
+grid: 96 x 96 points, spacing dx=18.750 km x dy=18.750 km, dtinit=10.000 a
+  0: time 0.000 a,  volume 3996.8 10^3 km^3,  area 1762.4 10^3 km^2
+    0 SNES Function norm 2.396478735621e-06 
+    Linear solve converged due to CONVERGED_RTOL iterations 4
+    1 SNES Function norm 3.821831465533e-08 
+    Linear solve converged due to CONVERGED_RTOL iterations 4
+    2 SNES Function norm 6.924889796604e-12 
+    Linear solve converged due to CONVERGED_RTOL iterations 4
+    3 SNES Function norm 6.462908264089e-18 
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+  1: time 10.000 a,  volume 3996.8 10^3 km^3,  area 1822.9 10^3 km^2
+    max D_SIA 1.579 m2s-1,  max |V_slide| 0.000 ma-1,  dtD 1.764e+00 a
+average dt 10.00000 a, average dtexplicit 1.76418 a
+errors on verif 2: |H-Hexact|_inf = 212.283, |H-Hexact|_average = 1.195
+
+real	0m19.852s
+user	0m30.973s
+sys	0m21.771s
+6
+solving on domain [0,L] x [0,L] (L=1800.000 km) and time interval [0,tf] (tf=10.000 a)
+grid: 192 x 192 points, spacing dx=9.375 km x dy=9.375 km, dtinit=10.000 a
+  0: time 0.000 a,  volume 3997.3 10^3 km^3,  area 1763.9 10^3 km^2
+    0 SNES Function norm 5.339532096741e-06 
+    Linear solve converged due to CONVERGED_RTOL iterations 4
+    1 SNES Function norm 3.508304882435e-07 
+    Linear solve converged due to CONVERGED_RTOL iterations 4
+    2 SNES Function norm 6.562018413878e-10 
+    Linear solve converged due to CONVERGED_RTOL iterations 4
+    3 SNES Function norm 7.621330802362e-15 
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+  1: time 10.000 a,  volume 3997.3 10^3 km^3,  area 1802.5 10^3 km^2
+    max D_SIA 1.564 m2s-1,  max |V_slide| 0.000 ma-1,  dtD 4.452e-01 a
+average dt 10.00000 a, average dtexplicit 0.44521 a
+errors on verif 2: |H-Hexact|_inf = 191.644, |H-Hexact|_average = 0.800
+
+real	0m13.332s
+user	0m1.456s
+sys	0m3.536s
+7
+solving on domain [0,L] x [0,L] (L=1800.000 km) and time interval [0,tf] (tf=10.000 a)
+grid: 384 x 384 points, spacing dx=4.688 km x dy=4.688 km, dtinit=10.000 a
+  0: time 0.000 a,  volume 3997.8 10^3 km^3,  area 1765.9 10^3 km^2
+    0 SNES Function norm 1.147730651225e-05 
+    Linear solve converged due to CONVERGED_RTOL iterations 5
+    1 SNES Function norm 2.530160498029e-06 
+    Linear solve converged due to CONVERGED_RTOL iterations 4
+    2 SNES Function norm 3.124103551273e-08 
+    Linear solve converged due to CONVERGED_RTOL iterations 4
+    3 SNES Function norm 1.624554276759e-11 
+    Linear solve converged due to CONVERGED_RTOL iterations 5
+    4 SNES Function norm 3.362408762249e-17 
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+  1: time 10.000 a,  volume 3997.8 10^3 km^3,  area 1794.7 10^3 km^2
+    max D_SIA 1.556 m2s-1,  max |V_slide| 0.000 ma-1,  dtD 1.118e-01 a
+average dt 10.00000 a, average dtexplicit 0.11185 a
+errors on verif 2: |H-Hexact|_inf = 147.696, |H-Hexact|_average = 0.429
+
+real	0m14.756s
+user	0m4.767s
+sys	0m12.001s
+8
+solving on domain [0,L] x [0,L] (L=1800.000 km) and time interval [0,tf] (tf=10.000 a)
+grid: 768 x 768 points, spacing dx=2.344 km x dy=2.344 km, dtinit=10.000 a
+  0: time 0.000 a,  volume 3997.9 10^3 km^3,  area 1766.8 10^3 km^2
+    0 SNES Function norm 2.447051987457e-05 
+    Linear solve converged due to CONVERGED_RTOL iterations 6
+    1 SNES Function norm 1.892549242917e-05 
+    Linear solve converged due to CONVERGED_RTOL iterations 5
+    2 SNES Function norm 1.390657269376e-06 
+    Linear solve converged due to CONVERGED_RTOL iterations 5
+    3 SNES Function norm 1.621437415321e-08 
+    Linear solve converged due to CONVERGED_RTOL iterations 5
+    4 SNES Function norm 4.492352576381e-12 
+    Linear solve converged due to CONVERGED_RTOL iterations 7
+    5 SNES Function norm 9.681326938847e-17 
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+  1: time 10.000 a,  volume 3997.9 10^3 km^3,  area 1788.1 10^3 km^2
+    max D_SIA 1.552 m2s-1,  max |V_slide| 0.000 ma-1,  dtD 2.803e-02 a
+average dt 10.00000 a, average dtexplicit 0.02803 a
+errors on verif 2: |H-Hexact|_inf = 84.593, |H-Hexact|_average = 0.250
+
+real	0m14.580s
+user	0m5.658s
+sys	0m9.507s
+9
+solving on domain [0,L] x [0,L] (L=1800.000 km) and time interval [0,tf] (tf=10.000 a)
+grid: 1536 x 1536 points, spacing dx=1.172 km x dy=1.172 km, dtinit=10.000 a
+  0: time 0.000 a,  volume 3997.9 10^3 km^3,  area 1767.0 10^3 km^2
+    0 SNES Function norm 5.251530147632e-05 
+    Linear solve converged due to CONVERGED_RTOL iterations 9
+    1 SNES Function norm 4.692008203369e-05 
+    Linear solve converged due to CONVERGED_RTOL iterations 9
+    2 SNES Function norm 4.199413968693e-05 
+    Linear solve converged due to CONVERGED_RTOL iterations 9
+    3 SNES Function norm 3.567333863151e-05 
+    Linear solve converged due to CONVERGED_RTOL iterations 9
+    4 SNES Function norm 2.613538670626e-05 
+    Linear solve converged due to CONVERGED_RTOL iterations 9
+    5 SNES Function norm 2.435813184714e-05 
+    Linear solve converged due to CONVERGED_RTOL iterations 6
+    6 SNES Function norm 1.652980735849e-06 
+    Linear solve converged due to CONVERGED_RTOL iterations 6
+    7 SNES Function norm 1.673576615962e-08 
+    Linear solve converged due to CONVERGED_RTOL iterations 7
+    8 SNES Function norm 4.265078812313e-12 
+    Linear solve converged due to CONVERGED_RTOL iterations 10
+    9 SNES Function norm 7.672509449369e-16 
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 9
+  1: time 10.000 a,  volume 3997.9 10^3 km^3,  area 1785.4 10^3 km^2
+    max D_SIA 1.550 m2s-1,  max |V_slide| 0.000 ma-1,  dtD 7.017e-03 a
+average dt 10.00000 a, average dtexplicit 0.00702 a
+errors on verif 2: |H-Hexact|_inf = 95.569, |H-Hexact|_average = 0.215
+
+real	0m23.376s
+user	0m32.467s
+sys	0m48.705s
+10
+solving on domain [0,L] x [0,L] (L=1800.000 km) and time interval [0,tf] (tf=10.000 a)
+grid: 3072 x 3072 points, spacing dx=0.586 km x dy=0.586 km, dtinit=10.000 a
+  0: time 0.000 a,  volume 3997.9 10^3 km^3,  area 1767.1 10^3 km^2
+    0 SNES Function norm 1.137251699530e-04 
+    Linear solve converged due to CONVERGED_RTOL iterations 12
+    1 SNES Function norm 1.005837225212e-04 
+    Linear solve converged due to CONVERGED_RTOL iterations 12
+    2 SNES Function norm 8.938554780549e-05 
+    Linear solve converged due to CONVERGED_RTOL iterations 12
+    3 SNES Function norm 7.969828127516e-05 
+    Linear solve converged due to CONVERGED_RTOL iterations 12
+    4 SNES Function norm 7.120135450374e-05 
+    Linear solve converged due to CONVERGED_RTOL iterations 12
+    5 SNES Function norm 6.368822517572e-05 
+    Linear solve converged due to CONVERGED_RTOL iterations 12
+    6 SNES Function norm 5.701993171677e-05 
+    Linear solve converged due to CONVERGED_RTOL iterations 12
+    7 SNES Function norm 5.108999836938e-05 
+    Linear solve converged due to CONVERGED_RTOL iterations 12
+    8 SNES Function norm 4.580894203388e-05 
+    Linear solve converged due to CONVERGED_RTOL iterations 12
+    9 SNES Function norm 3.875538426475e-05 
+    Linear solve converged due to CONVERGED_RTOL iterations 12
+   10 SNES Function norm 2.746354480998e-05 
+    Linear solve converged due to CONVERGED_RTOL iterations 12
+   11 SNES Function norm 2.060903290169e-05 
+    Linear solve converged due to CONVERGED_RTOL iterations 8
+   12 SNES Function norm 1.164086986042e-06 
+    Linear solve converged due to CONVERGED_RTOL iterations 8
+   13 SNES Function norm 3.732117861085e-09 
+    Linear solve converged due to CONVERGED_RTOL iterations 10
+   14 SNES Function norm 1.155353705534e-13 
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 14
+  1: time 10.000 a,  volume 3997.9 10^3 km^3,  area 1784.4 10^3 km^2
+    max D_SIA 1.550 m2s-1,  max |V_slide| 0.000 ma-1,  dtD 1.755e-03 a
+average dt 10.00000 a, average dtexplicit 0.00176 a
+errors on verif 2: |H-Hexact|_inf = 96.746, |H-Hexact|_average = 0.220
+
+real	1m3.423s
+user	3m24.291s
+sys	3m18.312s
+11
+solving on domain [0,L] x [0,L] (L=1800.000 km) and time interval [0,tf] (tf=10.000 a)
+grid: 6144 x 6144 points, spacing dx=0.293 km x dy=0.293 km, dtinit=10.000 a
+  0: time 0.000 a,  volume 3997.9 10^3 km^3,  area 1767.1 10^3 km^2
+    0 SNES Function norm 2.722999615614e-04 
+    Linear solve converged due to CONVERGED_RTOL iterations 16
+    1 SNES Function norm 2.425185458819e-04 
+    Linear solve converged due to CONVERGED_RTOL iterations 16
+    2 SNES Function norm 2.104635188776e-04 
+    Linear solve converged due to CONVERGED_RTOL iterations 16
+    3 SNES Function norm 1.824169324925e-04 
+    Linear solve converged due to CONVERGED_RTOL iterations 16
+    4 SNES Function norm 1.587552627210e-04 
+    Linear solve converged due to CONVERGED_RTOL iterations 16
+    5 SNES Function norm 1.391050884228e-04 
+    Linear solve converged due to CONVERGED_RTOL iterations 16
+    6 SNES Function norm 1.227886203510e-04 
+    Linear solve converged due to CONVERGED_RTOL iterations 16
+    7 SNES Function norm 1.090390246108e-04 
+    Linear solve converged due to CONVERGED_RTOL iterations 16
+    8 SNES Function norm 9.723789670509e-05 
+    Linear solve converged due to CONVERGED_RTOL iterations 16
+    9 SNES Function norm 8.695393035769e-05 
+    Linear solve converged due to CONVERGED_RTOL iterations 16
+   10 SNES Function norm 7.789645597513e-05 
+    Linear solve converged due to CONVERGED_RTOL iterations 16
+   11 SNES Function norm 6.520323953998e-05 
+    Linear solve converged due to CONVERGED_RTOL iterations 16
+   12 SNES Function norm 4.479602774281e-05 
+    Linear solve converged due to CONVERGED_RTOL iterations 16
+   13 SNES Function norm 3.197363991356e-05 
+    Linear solve converged due to CONVERGED_RTOL iterations 11
+   14 SNES Function norm 2.135601044202e-06 
+    Linear solve converged due to CONVERGED_RTOL iterations 12
+   15 SNES Function norm 7.376348026842e-09 
+    Linear solve converged due to CONVERGED_RTOL iterations 14
+   16 SNES Function norm 1.729873510435e-13 
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 16
+  1: time 10.000 a,  volume 3997.9 10^3 km^3,  area 1784.1 10^3 km^2
+    max D_SIA 1.549 m2s-1,  max |V_slide| 0.000 ma-1,  dtD 4.390e-04 a
+average dt 10.00000 a, average dtexplicit 0.00044 a
+errors on verif 2: |H-Hexact|_inf = 98.240, |H-Hexact|_average = 0.223
+
+real	4m8.568s
+user	17m40.123s
+sys	13m45.699s
+12
+solving on domain [0,L] x [0,L] (L=1800.000 km) and time interval [0,tf] (tf=10.000 a)
+grid: 12288 x 12288 points, spacing dx=0.146 km x dy=0.146 km, dtinit=10.000 a
+  0: time 0.000 a,  volume 3997.9 10^3 km^3,  area 1767.1 10^3 km^2
+    0 SNES Function norm 8.376354047489e-04 
+    Linear solve converged due to CONVERGED_RTOL iterations 21
+    1 SNES Function norm 8.162160456032e-04 
+    Linear solve converged due to CONVERGED_RTOL iterations 21
+    2 SNES Function norm 7.141955216678e-04 
+    Linear solve converged due to CONVERGED_RTOL iterations 22
+    3 SNES Function norm 5.572940525747e-04 
+    Linear solve converged due to CONVERGED_RTOL iterations 22
+    4 SNES Function norm 4.454901116398e-04 
+    Linear solve converged due to CONVERGED_RTOL iterations 22
+    5 SNES Function norm 3.711733093033e-04 
+    Linear solve converged due to CONVERGED_RTOL iterations 22
+    6 SNES Function norm 3.197076796111e-04 
+    Linear solve converged due to CONVERGED_RTOL iterations 23
+    7 SNES Function norm 2.803913274816e-04 
+    Linear solve converged due to CONVERGED_RTOL iterations 22
+    8 SNES Function norm 2.481797950029e-04 
+    Linear solve converged due to CONVERGED_RTOL iterations 23
+    9 SNES Function norm 2.207854054627e-04 
+    Linear solve converged due to CONVERGED_RTOL iterations 23
+   10 SNES Function norm 1.970189155164e-04 
+    Linear solve converged due to CONVERGED_RTOL iterations 23
+   11 SNES Function norm 1.751835041547e-04 
+    Linear solve converged due to CONVERGED_RTOL iterations 23
+   12 SNES Function norm 1.423750860272e-04 
+    Linear solve converged due to CONVERGED_RTOL iterations 23
+   13 SNES Function norm 9.003475825453e-05 
+    Linear solve converged due to CONVERGED_RTOL iterations 23
+   14 SNES Function norm 5.682582363018e-05 
+    Linear solve converged due to CONVERGED_RTOL iterations 15
+   15 SNES Function norm 3.703221267306e-06 
+    Linear solve converged due to CONVERGED_RTOL iterations 16
+   16 SNES Function norm 1.222418645285e-08 
+    Linear solve converged due to CONVERGED_RTOL iterations 22
+   17 SNES Function norm 4.921891005011e-13 
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 17
+  1: time 10.000 a,  volume 3997.9 10^3 km^3,  area 1784.0 10^3 km^2
+    max D_SIA 1.549 m2s-1,  max |V_slide| 0.000 ma-1,  dtD 1.098e-04 a
+average dt 10.00000 a, average dtexplicit 0.00011 a
+errors on verif 2: |H-Hexact|_inf = 98.109, |H-Hexact|_average = 0.223
+
+real	16m39.116s
+user	90m23.205s
+sys	41m6.458s
