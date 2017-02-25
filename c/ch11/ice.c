@@ -92,6 +92,9 @@ mpiexec -n N ./ice -da_refine M \
    -ts_adapt_type basic -ts_adapt_basic_clip 0.5,1.2 \
    -ts_max_snes_failures -1 -ts_adapt_scale_solve_failed 0.9 \
    -pc_type gamg
+
+run to generate final-time result in file ice_192_50000.dat:
+mpiexec -n 4 ./ice -da_refine 6 -pc_type mg -pc_mg_levels 2 -ts_monitor_solution draw -ice_dtlimits -ice_tf 50000 -ts_max_snes_failures -1 -ts_adapt_scale_solve_failed 0.9 -ice_dump
 */
 
 #include <petsc.h>
@@ -118,7 +121,8 @@ typedef struct {
               dtexplicitsum;// running sum of explicit dt limit
     int       verif;  // 0 = not verification, 1 = dome, 2 = Halfar (1983)
     PetscBool monitor,// use -ice_monitor
-              dtlimits;// also monitor time step limits for explicit schemes
+              dtlimits,// also monitor time step limits for explicit schemes
+              dump;   // dump state (H,b) at final time
     CMBModel  *cmb;// defined in cmbmodel.h
 } AppCtx;
 
@@ -241,6 +245,26 @@ int main(int argc,char **argv) {
           (user.dtexplicitsum/user.secpera)/(double)count); CHKERRQ(ierr);
   }
 
+  // dump state if requested
+  if (user.dump) {
+      char           filename[1024];
+      PetscViewer    viewer;
+      Vec            b;
+      double         **ab;
+      ierr = VecDuplicate(H,&b);CHKERRQ(ierr);
+      ierr = PetscObjectSetName((PetscObject)b,"b"); CHKERRQ(ierr);
+      ierr = DMDAVecGetArray(da,b,&ab); CHKERRQ(ierr);
+      ierr = FormBedLocal(&info,0,ab,&user); CHKERRQ(ierr);
+      ierr = DMDAVecRestoreArray(da,b,&ab); CHKERRQ(ierr);
+      ierr = sprintf(filename,"ice_%d_%d.dat",info.mx,(int)(user.tf/user.secpera));
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"writing PETSC binary file %s ...\n",filename); CHKERRQ(ierr);
+      ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename,FILE_MODE_WRITE,&viewer); CHKERRQ(ierr);
+      ierr = VecView(b,viewer); CHKERRQ(ierr);
+      ierr = VecView(H,viewer); CHKERRQ(ierr);
+      ierr = PetscViewerDestroy(&viewer); CHKERRQ(ierr);
+      VecDestroy(&b);
+  }
+
   // compute error in verification case
   if (user.verif > 0) {
       Vec Hexact;
@@ -294,6 +318,7 @@ PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
   user->verif  = 0;
   user->monitor = PETSC_TRUE;
   user->dtlimits = PETSC_FALSE;
+  user->dump   = PETSC_FALSE;
   user->cmb    = NULL;
 
   PetscFunctionBeginUser;
@@ -314,6 +339,9 @@ PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
   ierr = PetscOptionsBool(
       "-dtlimits", "monitor the time-step limits which would apply to an explicit scheme",
       "ice.c",user->dtlimits,&user->dtlimits,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool(
+      "-dump", "save final state (H, b)",
+      "ice.c",user->dump,&user->dump,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal(
       "-eps", "dimensionless regularization for diffusivity D",
       "ice.c",user->eps,&user->eps,NULL);CHKERRQ(ierr);
