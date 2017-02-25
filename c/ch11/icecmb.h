@@ -5,38 +5,47 @@
 // the annual balance of snowfall minus melt, treated as season-less
 typedef struct {
     double secpera,
-           ela,   // equilibrium line altitude (m)
-           zgrad, // vertical derivative (gradient) of CMB (s^-1)
-           initmagic;// constant used to multiply CMB for initial H
+           ela,        // equilibrium line altitude (m)
+           zgradabove, // vertical derivative (gradient) of CMB (s^-1), above ela
+           zgradbelow, // vertical derivative (gradient) of CMB (s^-1), below ela
+           initmagic;  // constant used to multiply CMB for initial H
 } CMBModel;
 
 PetscErrorCode SetFromOptions_CMBModel(CMBModel *cmb, const char *optprefix, double secpera) {
   PetscErrorCode ierr;
   PetscBool      set;
-  cmb->secpera= 31556926.0;  // number of seconds in a year
-  cmb->ela   = 2000.0; // m
-  cmb->zgrad = 0.001;  // a^-1
-  cmb->initmagic = 1000.0 * cmb->secpera; // s
+  cmb->secpera    = 31556926.0;  // number of seconds in a year
+  cmb->ela        = 2000.0; // m
+  cmb->zgradabove = 0.001; // a^-1
+  cmb->zgradbelow = 0.002; // a^-1
+  cmb->initmagic  = 1000.0 * cmb->secpera; // s
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD,optprefix,
             "options to climatic mass balance (CMB) model, if used","");CHKERRQ(ierr);
   ierr = PetscOptionsReal(
       "-ela", "equilibrium line altitude, in m",
       "icecmb.h",cmb->ela,&cmb->ela,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal(
-      "-initmagic",
-      "constant used to multiply CMB to get initial iterate for thickness; input units are years",
+      "-initmagic", "used to multiply CMB to get initial thickness iterate; input in a",
       "icecmb.h",cmb->initmagic,&cmb->initmagic,&set);CHKERRQ(ierr);
   if (set)   cmb->initmagic *= cmb->secpera;
   ierr = PetscOptionsReal(
-      "-zgrad", "vertical derivative (gradient) of CMB, in a^-1",
-      "icecmb.h",cmb->zgrad,&cmb->zgrad,NULL);CHKERRQ(ierr);
+      "-zgradabove", "vertical derivative (gradient) of CMB above ela; input in a^-1",
+      "icecmb.h",cmb->zgradabove,&cmb->zgradabove,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal(
+      "-zgradbelow", "vertical derivative (gradient) of CMB below ela; input in a^-1",
+      "icecmb.h",cmb->zgradbelow,&cmb->zgradbelow,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
-  cmb->zgrad /= secpera;
+  cmb->zgradabove /= secpera;
+  cmb->zgradbelow /= secpera;
   PetscFunctionReturn(0);
 }
 
 double M_CMBModel(CMBModel *cmb, double s) {
-  return cmb->zgrad * (s - cmb->ela);
+  if (s > cmb->ela) {
+      return cmb->zgradabove * (s - cmb->ela);
+  } else {
+      return cmb->zgradbelow * (s - cmb->ela);
+  }
 }
 
 // initialize by formula based on surface elevation:

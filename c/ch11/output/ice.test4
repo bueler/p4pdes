@@ -12,4 +12,4 @@ grid: 12 x 12 points, spacing dx=150.000 km x dy=150.000 km, dtinit=1.000 a
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
-  3: time 20.000 a,  volume 71.2 10^3 km^3,  area 157.5 10^3 km^2
+  3: time 20.000 a,  volume 71.2 10^3 km^3,  area 135.0 10^3 km^2
