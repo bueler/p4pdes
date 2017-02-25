@@ -87,21 +87,28 @@ usekeys = ['asm-ilu','asm-gamg','gamg-ns0','mg']
 lev = [5,6,7,8,9,10,11,12]
 L = 1800.0e3
 
+def writeit(name):
+    print 'saving figure %s' % name
+    plt.savefig(name,bbox_inches='tight')
+
 plt.figure(1)
 data = np.array(results['mg'][1])
 mx = data[:,0]
 h = L / mx
 snes = data[:,2]
 plt.semilogx(1000.0 / h,snes,'k*',ms=14)  # vs 975m
-plt.semilogx([0.04,0.5],[3.0,3.0],'k--',lw=2.0)
-plt.semilogx([0.5,10.0],[3.0,20.0],'k--',lw=2.0)
 plt.grid('on')
 plt.xlabel('h (km)')
 plt.ylabel('Newton iteration count')
 plt.xticks([0.04,0.1,0.2,0.5,1.0,2.0,5.0,10.0],['20','10','5','2','1','0.5','0.2','0.1'])
 plt.yticks([1, 3, 5, 10, 15],['1', '3','5','10','15'])
 plt.axis([0.04,10.0,0.0,20.0])
-plt.savefig('newtoniters.pdf',bbox_inches='tight')
+writeit('newtoniters.pdf')
+
+plt.semilogx([0.04,0.25],[3.0,3.0],'k--',lw=2.0)
+plt.semilogx([0.25,5.0],[3.0,20.0],'k--',lw=2.0)
+plt.xticks([0.04,0.1,0.2,0.5,1.0,2.0,5.0,10.0],['20','10','5','2','1','0.5','0.2','0.1'])
+writeit('newtonitersFIT.pdf')
 
 plt.figure(2)
 for method in usekeys:
@@ -115,7 +122,7 @@ plt.xlabel('refinement level')
 plt.ylabel('Krylov iterations per Newton step')
 plt.yticks([2, 3, 4, 10, 100, 1000],['2','3','4','10','100','1000'])
 plt.legend(fontsize=12,loc='upper left')
-plt.savefig('pcksppernewton.pdf',bbox_inches='tight')
+writeit('pcksppernewton.pdf')
 
 plt.figure(3)
 times = []
@@ -123,12 +130,13 @@ for method in usekeys:
     options = results[method][0]
     data = np.array(results[method][1])
     mx = data[4:,0]
+    snes = data[4:,2]
     time = data[4:,3]
-    times = times + list(time)
     m = mx * mx  # number of degrees of freedom
-    plt.loglog(lev[4:],time,'o',ms=12,label=options)
-    #plt.loglog(lev,(1.0e3 * time / m) / snes,'s',ms=10,label='time (ms) per DOF per Newton')
-plt.axis([8.8,12.2,min(times)/2.0,2.0*max(times)])
+    timeper = (1.0e6 * time / m) / snes
+    plt.loglog(lev[4:],timeper,'o',ms=12,label=options)
+plt.axis([8.8,12.2,2.0e-1,1.0e1])
+plt.yticks([0.5, 1.0, 3.0, 5.0],['0.5','1','3','5'])
 plt.grid('on')
 xlabeldof = []
 L = 1800.000e3
@@ -137,9 +145,9 @@ for k in range(4):
     dx = int(L / (3 * 2**lev[4+k]))
     xlabeldof += ['%d\n%s\n%d m' % (lev[4+k],dof[k],dx)]
 plt.xticks(lev[4:],xlabeldof)
-plt.ylabel('wall clock in seconds')
+plt.ylabel(r'wall time ($10^{-6}$ s) per d.o.f. per Newton')
 plt.legend(fontsize=12,loc='upper left')
-plt.savefig('pctime.pdf',bbox_inches='tight')
+writeit('pctimeperdof.pdf')
 
 #plt.show()
 
