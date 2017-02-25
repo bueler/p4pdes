@@ -9,9 +9,11 @@
 
 # we see the success of gamg and mg as the number of Krylov iterations is nearly
 
-# the issue, as much as any other, is seen in the increase in Newton iterations
-# I think this is from the moving free boundary
-# FIXME: calculate how many grid spaces the free boundary moves in this Halfar solution in this time interval
+# the issue, as much as any other, is seen in the increase in Newton iterations,
+# but this is from the moving free boundary:  the Halfar solution margin moves
+# 975m ~~ 1km in the 10 year run, so we expect to see Newton iteration count
+# start to rise as refinement approaches 1km, and then have the count be a
+# small constant plus something proportional to (1 km)/(dx km); this is about what we see
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -83,18 +85,23 @@ results = {
 
 usekeys = ['asm-ilu','asm-gamg','gamg-ns0','mg']
 lev = [5,6,7,8,9,10,11,12]
+L = 1800.0e3
 
 plt.figure(1)
-for method in usekeys:
-    options = results[method][0]
-    data = np.array(results[method][1])
-    snes = data[:,2]
-    plt.semilogy(lev,snes,'k*',ms=14,label=options)
+data = np.array(results['mg'][1])
+mx = data[:,0]
+h = L / mx
+snes = data[:,2]
+plt.semilogx(1000.0 / h,snes,'k*',ms=14)  # vs 975m
+plt.semilogx([0.04,0.5],[3.0,3.0],'k--',lw=2.0)
+plt.semilogx([0.5,10.0],[3.0,20.0],'k--',lw=2.0)
 plt.grid('on')
-plt.xlabel('refinement level')
-plt.ylabel('Newton iterations')
-plt.yticks([2, 3, 4, 5, 10, 20],['2','3','4','5','10','20'])
-plt.axis([5.0,12.0,2.0,20.0])
+plt.xlabel('h (km)')
+plt.ylabel('Newton iteration count')
+plt.xticks([0.04,0.1,0.2,0.5,1.0,2.0,5.0,10.0],['20','10','5','2','1','0.5','0.2','0.1'])
+plt.yticks([1, 3, 5, 10, 15],['1', '3','5','10','15'])
+plt.axis([0.04,10.0,0.0,20.0])
+plt.savefig('newtoniters.pdf',bbox_inches='tight')
 
 plt.figure(2)
 for method in usekeys:
@@ -102,12 +109,13 @@ for method in usekeys:
     data = np.array(results[method][1])
     kspsum = data[:,1]
     snes = data[:,2]
-    plt.semilogy(lev,kspsum / snes,'o',ms=14,label=options)
+    plt.semilogy(lev,kspsum / snes,'o',ms=12,label=options)
 plt.grid('on')
 plt.xlabel('refinement level')
 plt.ylabel('Krylov iterations per Newton step')
 plt.yticks([2, 3, 4, 10, 100, 1000],['2','3','4','10','100','1000'])
 plt.legend(fontsize=12,loc='upper left')
+plt.savefig('pcksppernewton.pdf',bbox_inches='tight')
 
 plt.figure(3)
 times = []
@@ -118,21 +126,20 @@ for method in usekeys:
     time = data[4:,3]
     times = times + list(time)
     m = mx * mx  # number of degrees of freedom
-    plt.loglog(lev[4:],time,'*',ms=14,label=options)
+    plt.loglog(lev[4:],time,'o',ms=12,label=options)
     #plt.loglog(lev,(1.0e3 * time / m) / snes,'s',ms=10,label='time (ms) per DOF per Newton')
 plt.axis([8.8,12.2,min(times)/2.0,2.0*max(times)])
 plt.grid('on')
-plt.xlabel('refinement level (dof, $\Delta x$)')
 xlabeldof = []
 L = 1800.000e3
+dof = [r'$2.4\times 10^6$', r'$9.4\times 10^6$', r'$3.8\times 10^7$', r'$1.5\times 10^8$']
 for k in range(4):
-    dof = '$10^{%.1f}$' % np.log10(m[k])
     dx = int(L / (3 * 2**lev[4+k]))
-    xlabeldof += ['%d (%s, %d)' % (lev[4+k],dof,dx)]
-print xlabeldof
+    xlabeldof += ['%d\n%s\n%d m' % (lev[4+k],dof[k],dx)]
 plt.xticks(lev[4:],xlabeldof)
-plt.ylabel('time in seconds')
+plt.ylabel('wall clock in seconds')
 plt.legend(fontsize=12,loc='upper left')
+plt.savefig('pctime.pdf',bbox_inches='tight')
 
-plt.show()
+#plt.show()
 
