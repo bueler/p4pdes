@@ -114,11 +114,14 @@ plt.figure(2)
 for method in usekeys:
     options = results[method][0]
     data = np.array(results[method][1])
+    h = L / data[:,0]
     kspsum = data[:,1]
     snes = data[:,2]
-    plt.semilogy(lev,kspsum / snes,'o',ms=12,label=options)
+    plt.loglog(1000.0 / h,kspsum / snes,'o',ms=12,label=options)
 plt.grid('on')
-plt.xlabel('refinement level')
+plt.xlabel('h (km)')
+plt.xticks([0.04,0.1,0.2,0.5,1.0,2.0,5.0,10.0],['20','10','5','2','1','0.5','0.2','0.1'])
+plt.gca().set_xlim(0.04,10.0)
 plt.ylabel('Krylov iterations per Newton step')
 plt.yticks([2, 3, 4, 10, 100, 1000],['2','3','4','10','100','1000'])
 plt.legend(fontsize=12,loc='upper left')
@@ -143,7 +146,7 @@ L = 1800.000e3
 dof = [r'$2.4\times 10^6$', r'$9.4\times 10^6$', r'$3.8\times 10^7$', r'$1.5\times 10^8$']
 for k in range(4):
     dx = int(L / (3 * 2**lev[4+k]))
-    xlabeldof += ['%d\n%s\n%d m' % (lev[4+k],dof[k],dx)]
+    xlabeldof += ['%s\n%d m' % (dof[k],dx)]
 plt.xticks(lev[4:],xlabeldof)
 plt.ylabel(r'wall time ($10^{-6}$ s) per d.o.f. per Newton')
 plt.legend(fontsize=12,loc='upper left')

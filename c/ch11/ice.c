@@ -94,7 +94,7 @@ mpiexec -n N ./ice -da_refine M \
    -pc_type gamg
 
 run to generate final-time result in file ice_192_50000.dat:
-mpiexec -n 4 ./ice -da_refine 6 -pc_type mg -pc_mg_levels 2 -ice_dtlimits -ice_tf 50000 -ice_dtinit 1.0 -ts_max_snes_failures -1 -ts_adapt_scale_solve_failed 0.9 -ice_dump
+mpiexec -n 4 ./ice -da_refine 6 -pc_type mg -pc_mg_levels 4 -ice_dtlimits -ice_tf 50000 -ice_dtinit 1.0 -ts_max_snes_failures -1 -ts_adapt_scale_solve_failed 0.9 -ice_dump
 */
 
 #include <petsc.h>
