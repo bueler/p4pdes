@@ -48,7 +48,7 @@ plt.axis([8.8,12.2,10.0,70.0])
 plt.yticks([20, 40, 60],['20','40','60'])
 writeit('timepernewtonweak.pdf')
 
-plt.text(lev[1]+0.5,60.0,r'$\frac{\Delta t}{\Delta t_{FE}}$',color='r',fontsize=30)
+plt.text(lev[0]+0.1,60.0,r'the good news: $\frac{\Delta t}{\Delta t_{FE}}$',color='r',fontsize=30)
 for k in range(4):
     plt.text(lev[k]-0.2,30.0,'%.1e' % dtratios[k],color='r',fontsize=12)
 writeit('withdtratioweak.pdf')
