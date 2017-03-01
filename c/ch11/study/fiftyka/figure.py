@@ -31,9 +31,9 @@ def writeit(fname):
     plt.savefig(fname,bbox_inches='tight')
 
 plt.figure(1)
-plt.semilogy(lev,dtactual,'o',ms=12,label=r'average $\Delta t$ from ARKIMEX(3)')
-plt.semilogy(lev,dtFE,'*',ms=12,label=r'$\Delta t_{FE}$')
-plt.semilogy(lev,dtCFL,'s',ms=12,label=r'$\Delta t_{CFL}$')
+plt.semilogy(lev,dtactual,'o',ms=14,label=r'average $\Delta t$ ARKIMEX(3)')
+plt.semilogy(lev,dtCFL,'*',ms=14,label=r'$\Delta t_{CFL}$')
+plt.semilogy(lev,dtFE,'s',ms=14,label=r'$\Delta t_{FE}$')
 plt.grid('on')
 xticlabel = []
 for k in range(4):
@@ -41,10 +41,9 @@ for k in range(4):
 plt.xticks(lev,xticlabel)
 plt.xlabel('h  (km)')
 plt.ylabel('time step (a)')
-#plt.axis([8.8,12.2,10.0,70.0])  FIXME
-#plt.yticks([20, 40, 60],['20','40','60'])
-plt.legend(fontsize=12,loc='upper right')
-#writeit('timepernewtonweak.pdf')
+plt.axis([lev[0]-0.2,lev[-1]+0.2,1.0e-2,1.0e2])
+plt.legend(fontsize=14,loc='lower left')
+writeit('dtfiftyka.pdf')
 
-plt.show()
+#plt.show()
 
