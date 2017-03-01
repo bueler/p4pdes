@@ -18,7 +18,6 @@ time mpiexec -np $SLURM_NTASKS -machinefile ./nodes.$SLURM_JOB_ID ../ice \
     -ice_dtlimits -ice_tf 50000 -ice_dtinit 1.0 \
     -ts_max_snes_failures -1 -ts_adapt_scale_solve_failed 0.9 \
     -ice_dump -snes_converged_reason
-done
 
 # Clean up the machinefile
 rm ./nodes.$SLURM_JOB_ID
