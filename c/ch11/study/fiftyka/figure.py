@@ -31,7 +31,7 @@ def writeit(fname):
     plt.savefig(fname,bbox_inches='tight')
 
 plt.figure(1)
-plt.semilogy(lev,dtactual,'o',ms=14,label=r'average $\Delta t$ ARKIMEX(3)')
+plt.semilogy(lev,dtactual,'o',ms=14,label=r'average $\Delta t$')
 plt.semilogy(lev,dtCFL,'*',ms=14,label=r'$\Delta t_{CFL}$')
 plt.semilogy(lev,dtFE,'s',ms=14,label=r'$\Delta t_{FE}$')
 plt.grid('on')
