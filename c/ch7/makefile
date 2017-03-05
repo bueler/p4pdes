@@ -5,6 +5,10 @@ plap: plap.o chkopts
 	-${CLINKER} -o plap plap.o ${PETSC_LIB}
 	${RM} plap.o
 
+plapold: plapold.o chkopts
+	-${CLINKER} -o plapold plapold.o ${PETSC_LIB}
+	${RM} plapold.o
+
 # testing
 runplap_1:
 	-@../testit.sh plap "-snes_fd -snes_fd_function" 1 1
