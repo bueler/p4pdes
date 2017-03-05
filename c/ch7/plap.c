@@ -42,13 +42,13 @@ PetscErrorCode ConfigureCtx(PLapCtx *user) {
 //ENDCTX
 
 //STARTBDRYINIT
-// BoundaryG() is both the exact solution and the Dirichlet boundary value
+// both the exact solution and the Dirichlet boundary value
 double BoundaryG(double x, double y, double alpha) {
     return 0.5 * (x+alpha)*(x+alpha) * (y+alpha)*(y+alpha);
 }
 
-// right hand side of p-Laplacian PDE
-double f(double x, double y, double p, double alpha) {
+// right hand side of PDE
+double FRHS(double x, double y, double p, double alpha) {
     const double xs = x + alpha,  ys = y + alpha,  // shifted
                  XX = xs * xs,  YY = ys * ys,  D2 = XX + YY,
                  gamma1 = 1.0 / xs + xs / D2,
@@ -58,44 +58,27 @@ double f(double x, double y, double p, double alpha) {
            - C * D2;
 }
 
-PetscErrorCode InitialIterate(DMDALocalInfo *info, Vec u, PLapCtx *user) {
+PetscErrorCode InitialIterateUExact(DMDALocalInfo *info, Vec u, Vec uexact, PLapCtx *user) {
     PetscErrorCode ierr;
     const double hx = 1.0 / (info->mx-1), hy = 1.0 / (info->my-1);
-    double       x,y, **au;
+    double       x, y, **au, **auex;
     int          i,j;
-
     ierr = DMDAVecGetArray(user->da,u,&au); CHKERRQ(ierr);
+    ierr = DMDAVecGetArray(user->da,uexact,&auex); CHKERRQ(ierr);
     for (j = info->ys; j < info->ys + info->ym; j++) {
         y = hy * j;
         for (i = info->xs; i < info->xs + info->xm; i++) {
             x = hx * i;
             au[j][i] = (1.0 - x) * BoundaryG(0.0,y,user->alpha)
                        + x * BoundaryG(1.0,y,user->alpha);
-        }
-    }
-    ierr = DMDAVecRestoreArray(user->da,u,&au); CHKERRQ(ierr);
-    return 0;
-}
-//ENDBDRYINIT
-
-//STARTEXACT
-PetscErrorCode UExactLocal(DMDALocalInfo *info, Vec uex, PLapCtx *user) {
-    PetscErrorCode ierr;
-    const double hx = 1.0 / (info->mx-1), hy = 1.0 / (info->my-1);
-    double       **auex;
-    int          i,j;
-    ierr = DMDAVecGetArray(user->da,uex,&auex); CHKERRQ(ierr);
-    for (j = info->ys; j <= info->ys + info->ym; j++) {
-        y = hy * j;
-        for (i = info->xs; i <= info->xs + info->xm; i++) {
-            x = hx * i;
             auex[j][i] = BoundaryG(x,y,user->alpha); // here: exact soln
         }
     }
-    ierr = DMDAVecRestoreArray(user->da,uex,&auex); CHKERRQ(ierr);
+    ierr = DMDAVecRestoreArray(user->da,u,&au); CHKERRQ(ierr);
+    ierr = DMDAVecRestoreArray(user->da,uexact,&auex); CHKERRQ(ierr);
     return 0;
 }
-//ENDEXACT
+//ENDBDRYINIT
 
 //STARTFEM
 static double xiL[4]  = { 1.0, -1.0, -1.0,  1.0},
@@ -144,11 +127,11 @@ static double
     wq[3][3] = { {2.0,NAN,NAN},
                  {1.0,1.0,NAN},
                  {0.555555555555556,0.888888888888889,0.555555555555556} };
-//ENDFEM
+//ENDFEM 
 
 //STARTTOOLS
 double GradInnerProd(DMDALocalInfo *info, gradRef du, gradRef dv) {
-    const double hx = 1.0 / (info->mx+1),  hy = 1.0 / (info->my+1),
+    const double hx = 1.0 / (info->mx-1),  hy = 1.0 / (info->my-1),
                  cx = 4.0 / (hx * hx),  cy = 4.0 / (hy * hy);
     return cx * du.xi  * dv.xi + cy * du.eta * dv.eta;
 }
@@ -157,20 +140,20 @@ double GradPow(DMDALocalInfo *info, gradRef du, double P, double eps) {
     return PetscPowScalar(GradInnerProd(info,du,du) + eps * eps, P / 2.0);
 }
 
-// FIXME: this assumes upper-right point of element is (i,j)
-void GetUorG(DMDALocalInfo *info, int i, int j,
-             double **au, double **ag, double *u) {
-    const double hx = 1.0 / (info->mx - 1),
-                 hy = 1.0 / (info->my - 1),
-                 x = i * hx, y = j * hy;
-    u[0] = ((i == info->mx) || (j == info->my))
-             ? BoundaryG(x,y)       : au[j][i];
-    u[1] = ((i == 0)  || (j == info->my))
-             ? BoundaryG(x-hx,y)    : au[j][i-1];
-    u[2] = ((i == 0)  || (j == 0))
-             ? BoundaryG(x-hx,y-hy) : au[j-1][i-1];
-    u[3] = ((i == info->mx) || (j == 0))
-             ? ag[j-1][i]   : au[j-1][i];
+// gets either u(x,y) or g(x,y) for the nodes of the given element (i,j),
+// where (i,j) denotes the upper-right node of the element
+void GetUorGElement(DMDALocalInfo *info, int i, int j,
+                    double **au, double alpha, double *u) {
+    const double hx = 1.0 / (info->mx - 1),  hy = 1.0 / (info->my - 1),
+                 x = i * hx,  y = j * hy;  // (x,y) for node (i,j)
+    u[0] = ((i == info->mx-1) || (j == info->my-1))
+             ? BoundaryG(x,y,alpha)       : au[j][i];
+    u[1] = ((i-1 == 0)        || (j == info->my-1))
+             ? BoundaryG(x-hx,y,alpha)    : au[j][i-1];
+    u[2] = ((i-1 == 0)        || (j-1 == 0))
+             ? BoundaryG(x-hx,y-hy,alpha) : au[j-1][i-1];
+    u[3] = ((i == info->mx-1) || (j-1 == 0))
+             ? BoundaryG(x,y-hy,alpha)    : au[j-1][i];
 }
 //ENDTOOLS
 
@@ -234,51 +217,62 @@ double FunIntegrand(DMDALocalInfo *info, int L,
          - eval(f,xi,eta) * chi(L,xi,eta);
 }
 
-// FIXME will have to re-diagram element "ownership"; goal is to compute each
-// FF[j][i] over nodes (i,j) with
-//   i \in {info->xs, ..., info->ys + info->ym - 1}  (and same
-// for j) but this requires evaluating element contributions all around these
-// nodes
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                                  double **FF, PLapCtx *user) {
-  PetscErrorCode ierr;
   const double hx = 1.0 / (info->mx-1),  hy = 1.0 / (info->my-1),
-               p = user->p,  eps = user->eps,  C = 0.25 * hx * hy;
+               p = user->p,  alpha = user->alpha,  eps = user->eps,
+               C = 0.25 * hx * hy;
   const int    n = user->quaddegree,
-               li[4] = {0,-1,-1,0},  lj[4] = {0,0,-1,-1};
+               li[4] = { 0,-1,-1, 0},
+               lj[4] = { 0, 0,-1,-1},
+               // inclusive range of indices for elements which can contribute
+               // to the nodal residuals in my processor's patch
+               iS = (info->xs < 1) ? 1 : info->xs,
+               jS = (info->ys < 1) ? 1 : info->ys,
+               iE = (info->xs + info->xm > info->mx-1) ? info->mx-1 : info->xs + info->xm,
+               jE = (info->ys + info->ym > info->my-1) ? info->my-1 : info->ys + info->ym;
   double       x, y, f[4], u[4];
   int          i,j,l,r,s,PP,QQ;
 
-  // clear residuals
+  // set boundary residuals and clear other residuals
   for (j = info->ys; j < info->ys + info->ym; j++) {
-      for (i = info->xs; i < info->ys + info->ym; i++) {
-          FF[j][i] = 0.0;
-      }
-  }
-  // loop over all elements, adding element contribution
-  for (j = info->ys; j <= info->ys + info->ym; j++) {  // note upper limit =
       y = j * hy;
-      for (i = info->xs; i <= info->xs + info->xm; i++) {  // note upper limit =
+      for (i = info->xs; i < info->xs + info->xm; i++) {
           x = i * hx;
+          // if the node (i,j) is on boundary use g(x,y)
           if (i==0 || i==info->mx-1 || j==0 || j==info->my-1) {
               FF[j][i] = au[j][i] - BoundaryG(x,y,user->alpha);
           } else {
-              f[0] = af[j][i];  f[1] = af[j][i-1];
-                  f[2] = af[j-1][i-1];  f[3] = af[j-1][i];
-              GetUorG(info,i,j,au,ag,u);
-              // loop over corners of element i,j
-              for (l = 0; l < 4; l++) {
-                  PP = i + li[l];
-                  QQ = j + lj[l];
-                  if (PP > 0 || PP < info->mx-1 || QQ > 0 || QQ < info->my-1) {
-                      // loop over quadrature points
-                      for (r=0; r<n; r++) {
-                          for (s=0; s<n; s++) {
-                             FF[QQ][PP]
-                                 += C * wq[n-1][r] * wq[n-1][s]
-                                    * FunIntegrand(info,l,f,u,zq[n-1][r],zq[n-1][s],
-                                                   p,eps);
-                          }
+              FF[j][i] = 0.0;
+          }
+      }
+  }
+
+  //PetscPrintf(COMM,"iS=%d,iE=%d,jS=%d,jE=%d\n",iS,iE,jS,jE);
+  // loop over all elements, adding element contribution
+  for (j = jS; j <= jE; j++) {  // note upper limit "="
+      y = j * hy;
+      for (i = iS; i <= iE; i++) {  // note upper limit "="
+          x = i * hx;   // (x,y) is location of (i,j) node (upper-right on element)
+          f[0] = FRHS(x,   y,   p,alpha);
+          f[1] = FRHS(x-hx,y,   p,alpha);
+          f[2] = FRHS(x-hx,y-hy,p,alpha);
+          f[3] = FRHS(x,   y-hy,p,alpha);
+          GetUorGElement(info,i,j,au,alpha,u);
+          // loop over corners of element i,j
+          for (l = 0; l < 4; l++) {
+              PP = i + li[l];
+              QQ = j + lj[l];
+              // add contribution from element only if the node (PP,QQ) is
+              // an unknown (= interior node)
+              if (PP > 0 && PP < info->mx-1 && QQ > 0 && QQ < info->my-1) {
+                  // loop over quadrature points
+                  for (r=0; r<n; r++) {
+                      for (s=0; s<n; s++) {
+                         FF[QQ][PP]
+                             += C * wq[n-1][r] * wq[n-1][s]
+                                * FunIntegrand(info,l,f,u,zq[n-1][r],zq[n-1][s],
+                                               p,eps);
                       }
                   }
               }
@@ -296,7 +290,7 @@ int main(int argc,char **argv) {
   Vec            u, uexact;
   PLapCtx        user;
   DMDALocalInfo  info;
-  double         unorm, err, hx, hy;
+  double         err, hx, hy;
 
   PetscInitialize(&argc,&argv,NULL,help);
   ierr = ConfigureCtx(&user); CHKERRQ(ierr);
@@ -315,12 +309,8 @@ int main(int argc,char **argv) {
 
   ierr = DMCreateGlobalVector(user.da,&u);CHKERRQ(ierr);
   ierr = VecDuplicate(u,&uexact);CHKERRQ(ierr);
-  ierr = DMCreateLocalVector(user.da,&(user.f));CHKERRQ(ierr);
-  ierr = DMCreateLocalVector(user.da,&(user.g));CHKERRQ(ierr);
 
-  ierr = SetGLocal(&info,user.g,&user); CHKERRQ(ierr);
-  ierr = InitialIterate(&info,u,&user); CHKERRQ(ierr);
-  ierr = ExactRHSLocal(&info,uexact,user.f,&user); CHKERRQ(ierr);
+  ierr = InitialIterateUExact(&info,u,uexact,&user); CHKERRQ(ierr);
 
   ierr = SNESCreate(COMM,&snes); CHKERRQ(ierr);
   ierr = SNESSetDM(snes,user.da); CHKERRQ(ierr);
@@ -331,14 +321,12 @@ int main(int argc,char **argv) {
   ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
   ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
-  ierr = VecNorm(uexact,NORM_INFINITY,&unorm); CHKERRQ(ierr);
   ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
   ierr = VecNorm(u,NORM_INFINITY,&err); CHKERRQ(ierr);
-  ierr = PetscPrintf(COMM,"numerical error:  |u-u_exact|/|u_exact| = %.3e\n",
-           err/unorm); CHKERRQ(ierr);
+  ierr = PetscPrintf(COMM,"numerical error:  |u-u_exact|_inf = %.3e\n",
+           err); CHKERRQ(ierr);
 
   VecDestroy(&u);  VecDestroy(&uexact);
-  VecDestroy(&(user.f));  VecDestroy(&(user.g));
   SNESDestroy(&snes);  DMDestroy(&(user.da));
   PetscFinalize();
   return 0;
