@@ -17,7 +17,7 @@ runplap_2:
 	-@../testit.sh plap "-snes_fd_color" 1 2
 
 runplap_3:
-	-@../testit.sh plap "-snes_converged_reason -ksp_type cg -pc_type icc -da_refine 3" 1 3
+	-@../testit.sh plap "-snes_converged_reason -ksp_converged_reason -ksp_type cg -pc_type icc -da_refine 3" 1 3
 
 runplap_4:
 	-@../testit.sh plap "-snes_fd_color -snes_converged_reason -da_refine 2 -snes_linesearch_type cp" 4 4

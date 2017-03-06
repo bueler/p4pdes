@@ -1,2 +1,2 @@
-grid of 3 x 3 = 9 interior nodes (element dims 0.25x0.25)
-numerical error:  |u-u_exact|/|u_exact| = 1.589e-02
+grid of 3 x 3 = 9 nodes (element dims 0.5x0.5)
+numerical error:  |u-u_exact|_inf = 3.877e-01
