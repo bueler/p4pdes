@@ -157,8 +157,14 @@ void GetUorGElement(DMDALocalInfo *info, int i, int j,
 }
 //ENDTOOLS
 
-#if 0
+
 //STARTOBJECTIVE
+double ObjBoundary(DMDALocalInfo *info, int i, int j, double **au, double alpha) {
+    const double hx = 1.0 / (info->mx-1),  hy = 1.0 / (info->my-1),
+                 x = i * hx, y = j * hy;
+    return 0.5 * PetscSqr(au[j][i] - BoundaryG(x,y,alpha));
+}
+
 double ObjIntegrand(DMDALocalInfo *info, const double f[4], const double u[4],
                     double xi, double eta, double P, double eps) {
     const gradRef du = deval(u,xi,eta);
@@ -168,44 +174,54 @@ double ObjIntegrand(DMDALocalInfo *info, const double f[4], const double u[4],
 PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
                                   double *obj, PLapCtx *user) {
   PetscErrorCode ierr;
-  const double hx = 1.0 / (info->mx+1),  hy = 1.0 / (info->my+1),
-               p = user->p,  eps = user->eps;
-  const int    n = user->quaddegree,
-               XE = info->xs + info->xm,  YE = info->ys + info->ym;
-  double       lobj = 0.0, **af, **ag, f[4], u[4];
+  const double hx = 1.0 / (info->mx-1),  hy = 1.0 / (info->my-1);
+  const int    n = user->quaddegree;
+  double       x, y, lobj = 0.0, f[4], u[4];
   int          i,j,r,s;
-  PetscBool    ownele;
   MPI_Comm     com;
 
-  ierr = DMDAVecGetArray(user->da,user->f,&af); CHKERRQ(ierr);
-  ierr = DMDAVecGetArray(user->da,user->g,&ag); CHKERRQ(ierr);
+  // start with contribution from owned boundary nodes
+  for (j = info->ys; j < info->ys + info->ym; j++) {
+      if (info->xs == 0) {
+          lobj += ObjBoundary(info,0,j,au,user->alpha);
+      } else if (info->xs+info->xm-1 = info->mx-1) {
+          lobj += ObjBoundary(info,info->mx-1,j,au,user->alpha);
+      }
+      if (j == 0) {
+          for (i = info->xs+1; i < info->xs+info->xm; i++) {
+              lobj += ObjBoundary(info,i,0,au,user->alpha);
+          }
+          FIXME
+      } else if (j == info->my-1) {
+          LOOP OVER INTERIOR
+      }
+  }
+
   // loop over all elements
-  for (j = info->ys; j <= YE; j++) {
-      for (i = info->xs; i <= XE; i++) {
-          // owned elements include "right" and "top" edges of grid
-          ownele = (i < XE || j < YE || i == info->mx || j == info->my);
-          if (!ownele) continue;
-          f[0] = af[j][i];  f[1] = af[j][i-1];
-              f[2] = af[j-1][i-1];  f[3] = af[j-1][i];
-          GetUorG(info,i,j,au,ag,u);
+  for (j = info->ys+1; j < info->ys+info->ym; j++) {
+      y = j * hy;
+      for (i = info->xs+1; i < info->xs+info->xm; i++) {
+          x = i * hx;   // (x,y) is location of (i,j) node (upper-right on element)
+          f[0] = FRHS(x,   y,   user->p,user->alpha);
+          f[1] = FRHS(x-hx,y,   user->p,user->alpha);
+          f[2] = FRHS(x-hx,y-hy,user->p,user->alpha);
+          f[3] = FRHS(x,   y-hy,user->p,user->alpha);
+          GetUorGElement(info,i,j,au,user->alpha,u);
           for (r=0; r<n; r++) {
               for (s=0; s<n; s++) {
                   lobj += wq[n-1][r] * wq[n-1][s]
-                          * ObjIntegrand(info,f,u,zq[n-1][r],zq[n-1][s],p,eps);
+                          * ObjIntegrand(info,f,u,zq[n-1][r],zq[n-1][s],user->p,user->eps);
               }
           }
       }
   }
-  ierr = DMDAVecRestoreArray(user->da,user->f,&af); CHKERRQ(ierr);
-  ierr = DMDAVecRestoreArray(user->da,user->g,&ag); CHKERRQ(ierr);
-  lobj *= 0.25 * hx * hy;
 
+  lobj *= 0.25 * hx * hy;
   ierr = PetscObjectGetComm((PetscObject)(info->da),&com); CHKERRQ(ierr);
   ierr = MPI_Allreduce(&lobj,obj,1,MPI_DOUBLE,MPI_SUM,com); CHKERRQ(ierr);
   return 0;
 }
 //ENDOBJECTIVE
-#endif
 
 //STARTFUNCTION
 double FunIntegrand(DMDALocalInfo *info, int L,
@@ -220,7 +236,6 @@ double FunIntegrand(DMDALocalInfo *info, int L,
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                                  double **FF, PLapCtx *user) {
   const double hx = 1.0 / (info->mx-1),  hy = 1.0 / (info->my-1),
-               p = user->p,  alpha = user->alpha,  eps = user->eps,
                C = 0.25 * hx * hy;
   const int    n = user->quaddegree,
                li[4] = { 0,-1,-1, 0},
@@ -238,9 +253,9 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
   for (j = info->ys; j < info->ys + info->ym; j++) {
       y = j * hy;
       for (i = info->xs; i < info->xs + info->xm; i++) {
-          x = i * hx;
           // if the node (i,j) is on boundary use g(x,y)
           if (i==0 || i==info->mx-1 || j==0 || j==info->my-1) {
+              x = i * hx;
               FF[j][i] = au[j][i] - BoundaryG(x,y,user->alpha);
           } else {
               FF[j][i] = 0.0;
@@ -253,11 +268,11 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
       y = j * hy;
       for (i = iS; i <= iE; i++) {  // note upper limit "="
           x = i * hx;   // (x,y) is location of (i,j) node (upper-right on element)
-          f[0] = FRHS(x,   y,   p,alpha);
-          f[1] = FRHS(x-hx,y,   p,alpha);
-          f[2] = FRHS(x-hx,y-hy,p,alpha);
-          f[3] = FRHS(x,   y-hy,p,alpha);
-          GetUorGElement(info,i,j,au,alpha,u);
+          f[0] = FRHS(x,   y,   user->p,user->alpha);
+          f[1] = FRHS(x-hx,y,   user->p,user->alpha);
+          f[2] = FRHS(x-hx,y-hy,user->p,user->alpha);
+          f[3] = FRHS(x,   y-hy,user->p,user->alpha);
+          GetUorGElement(info,i,j,au,user->alpha,u);
           // loop over corners of element i,j
           for (l = 0; l < 4; l++) {
               PP = i + li[l];
@@ -274,7 +289,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                          FF[QQ][PP]
                              += C * wq[n-1][r] * wq[n-1][s]
                                 * FunIntegrand(info,l,f,u,zq[n-1][r],zq[n-1][s],
-                                               p,eps);
+                                               user->p,user->eps);
                       }
                   }
               }
@@ -316,8 +331,8 @@ int main(int argc,char **argv) {
 
   ierr = SNESCreate(COMM,&snes); CHKERRQ(ierr);
   ierr = SNESSetDM(snes,user.da); CHKERRQ(ierr);
-//  ierr = DMDASNESSetObjectiveLocal(user.da,
-//             (DMDASNESObjective)FormObjectiveLocal,&user); CHKERRQ(ierr);
+  ierr = DMDASNESSetObjectiveLocal(user.da,
+             (DMDASNESObjective)FormObjectiveLocal,&user); CHKERRQ(ierr);
   ierr = DMDASNESSetFunctionLocal(user.da,INSERT_VALUES,
              (DMDASNESFunction)FormFunctionLocal,&user); CHKERRQ(ierr);
   ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
