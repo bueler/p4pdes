@@ -225,7 +225,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
   const int    n = user->quaddegree,
                li[4] = { 0,-1,-1, 0},
                lj[4] = { 0, 0,-1,-1},
-               // inclusive range of indices for elements which can contribute
+               // inclusive ranges of indices for elements which can contribute
                // to the nodal residuals in my processor's patch
                iS = (info->xs < 1) ? 1 : info->xs,
                jS = (info->ys < 1) ? 1 : info->ys,
@@ -248,7 +248,6 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
       }
   }
 
-  //PetscPrintf(COMM,"iS=%d,iE=%d,jS=%d,jE=%d\n",iS,iE,jS,jE);
   // loop over all elements, adding element contribution
   for (j = jS; j <= jE; j++) {  // note upper limit "="
       y = j * hy;
@@ -264,8 +263,11 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
               PP = i + li[l];
               QQ = j + lj[l];
               // add contribution from element only if the node (PP,QQ) is
-              // an unknown (= interior node)
-              if (PP > 0 && PP < info->mx-1 && QQ > 0 && QQ < info->my-1) {
+              // 1. actually an unknown (= interior node) AND
+              // 2. we own it
+              if (   PP > 0 && PP < info->mx-1 && QQ > 0 && QQ < info->my-1
+                  && PP >= info->xs && PP < info->xs+info->xm
+                  && QQ >= info->ys && QQ < info->ys+info->ym) {
                   // loop over quadrature points
                   for (r=0; r<n; r++) {
                       for (s=0; s<n; s++) {
