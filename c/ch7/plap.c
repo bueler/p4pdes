@@ -1,10 +1,10 @@
 static char help[] = "Solve the p-Laplacian equation in 2D using Q^1 FEM.\n"
 "Implements an objective function and a residual (gradient) function, but\n"
 "no Jacobian.  Defaults to p=4 and quadrature degree n=2.  Run as one of:\n"
-"   ./plap -snes_fd_color             [default]\n"
+"   ./plap -snes_fd_color                   [default]\n"
 "   ./plap -snes_mf\n"
-"   ./plap -snes_fd                   [does not scale]\n"
-"   ./plap -snes_fd_function -snes_fd [does not scale]\n"
+"   ./plap -snes_fd                         [does not scale]\n"
+"   ./plap -snes_fd_function -snes_fd_color [does not scale]\n"
 "Uses a manufactured solution.\n\n";
 
 #include <petsc.h>
@@ -159,10 +159,9 @@ void GetUorGElement(DMDALocalInfo *info, int i, int j,
 
 
 //STARTOBJECTIVE
-double ObjBoundary(DMDALocalInfo *info, int i, int j, double **au, double alpha) {
-    const double hx = 1.0 / (info->mx-1),  hy = 1.0 / (info->my-1),
-                 x = i * hx, y = j * hy;
-    return 0.5 * PetscSqr(au[j][i] - BoundaryG(x,y,alpha));
+double ObjBoundary(DMDALocalInfo *info, double x, double y, double u, double alpha) {
+    const double g = BoundaryG(x,y,alpha);
+    return 0.5 * (u - g) * (u - g);
 }
 
 double ObjIntegrand(DMDALocalInfo *info, const double f[4], const double u[4],
@@ -177,27 +176,12 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
   const double hx = 1.0 / (info->mx-1),  hy = 1.0 / (info->my-1);
   const int    n = user->quaddegree;
   double       x, y, lobj = 0.0, f[4], u[4];
-  int          i,j,r,s;
+  int          i,j,jS,jE,r,s;
   MPI_Comm     com;
 
-  // start with contribution from owned boundary nodes
-  for (j = info->ys; j < info->ys + info->ym; j++) {
-      if (info->xs == 0) {
-          lobj += ObjBoundary(info,0,j,au,user->alpha);
-      } else if (info->xs+info->xm-1 = info->mx-1) {
-          lobj += ObjBoundary(info,info->mx-1,j,au,user->alpha);
-      }
-      if (j == 0) {
-          for (i = info->xs+1; i < info->xs+info->xm; i++) {
-              lobj += ObjBoundary(info,i,0,au,user->alpha);
-          }
-          FIXME
-      } else if (j == info->my-1) {
-          LOOP OVER INTERIOR
-      }
-  }
+ierr = PetscPrintf(COMM,"----FormObjectiveLocal() END\n"); CHKERRQ(ierr);
 
-  // loop over all elements
+  // loop over all elements: get unique integral contribution from each element
   for (j = info->ys+1; j < info->ys+info->ym; j++) {
       y = j * hy;
       for (i = info->xs+1; i < info->xs+info->xm; i++) {
@@ -215,8 +199,43 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
           }
       }
   }
-
   lobj *= 0.25 * hx * hy;
+
+  // add unique contribution from each owned boundary node
+  if (info->ys == 0) { // bottom of square
+      for (i = info->xs; i < info->xs + info->xm; i++) {
+          x = i * hx;
+          lobj += ObjBoundary(info,x,0.0,au[0][i],user->alpha);
+ierr = PetscPrintf(COMM,"bdry contrib i,j=%d,%d\n",i,0); CHKERRQ(ierr);
+      }
+  }
+  if (info->ys + info->ym == info->my) { // top of square
+      for (i = info->xs; i < info->xs + info->xm; i++) {
+          x = i * hx;
+          lobj += ObjBoundary(info,x,1.0,au[info->my-1][i],user->alpha);
+ierr = PetscPrintf(COMM,"bdry contrib i,j=%d,%d\n",i,info->my-1); CHKERRQ(ierr);
+      }
+  }
+  // don't look at bottom and top anymore
+  jS = (info->ys == 0) ? 1 : 0;
+  jE = (info->ys + info->ym == info->my) ? info->my - 1 : info->my;
+  if (info->xs == 0) { // left side of square
+      for (j = jS; j < jE; j++) {
+          y = j * hy;
+          lobj += ObjBoundary(info,0.0,y,au[j][0],user->alpha);
+ierr = PetscPrintf(COMM,"bdry contrib i,j=%d,%d\n",0,j); CHKERRQ(ierr);
+      }
+  }
+  if (info->xs + info->xm == info->mx) { // right side of square
+      for (j = jS; j < jE; j++) {
+          y = j * hy;
+          lobj += ObjBoundary(info,1.0,y,au[j][info->mx-1],user->alpha);
+ierr = PetscPrintf(COMM,"bdry contrib i,j=%d,%d\n",info->mx-1,j); CHKERRQ(ierr);
+      }
+  }
+
+ierr = PetscPrintf(COMM,"----FormObjectiveLocal() END\n"); CHKERRQ(ierr);
+
   ierr = PetscObjectGetComm((PetscObject)(info->da),&com); CHKERRQ(ierr);
   ierr = MPI_Allreduce(&lobj,obj,1,MPI_DOUBLE,MPI_SUM,com); CHKERRQ(ierr);
   return 0;
@@ -326,7 +345,6 @@ int main(int argc,char **argv) {
 
   ierr = DMCreateGlobalVector(user.da,&u);CHKERRQ(ierr);
   ierr = VecDuplicate(u,&uexact);CHKERRQ(ierr);
-
   ierr = InitialIterateUExact(&info,u,uexact,&user); CHKERRQ(ierr);
 
   ierr = SNESCreate(COMM,&snes); CHKERRQ(ierr);
