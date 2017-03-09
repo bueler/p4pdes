@@ -1,4 +1,6 @@
-static char help[] = "Solve the p-Laplacian equation in 2D using Q^1 FEM.\n"
+static char help[] = "Solves a p-Laplacian equation in 2D using Q^1 FEM:\n"
+"   - div (|grad u|^{p-2} grad u) + c u = f\n"
+"where c(x,y), f(x,y) are given.  Periodic boundary conditions on unit square.\n"
 "Implements an objective function and a residual (gradient) function, but\n"
 "no Jacobian.  Defaults to p=4 and quadrature degree n=2.  Run as one of:\n"
 "   ./plap -snes_fd_color                   [default]\n"
@@ -14,7 +16,7 @@ static char help[] = "Solve the p-Laplacian equation in 2D using Q^1 FEM.\n"
 //STARTCTX
 typedef struct {
     DM      da;
-    double  p, eps, alpha;
+    double  p, eps;
     int     quaddegree;
 } PLapCtx;
 
@@ -22,7 +24,6 @@ PetscErrorCode ConfigureCtx(PLapCtx *user) {
     PetscErrorCode ierr;
     user->p = 4.0;
     user->eps = 0.0;
-    user->alpha = 1.0;
     user->quaddegree = 2;
     ierr = PetscOptionsBegin(COMM,"plap_","p-laplacian solver options",""); CHKERRQ(ierr);
     ierr = PetscOptionsReal("-p","exponent p with  1 <= p < infty",
@@ -30,8 +31,6 @@ PetscErrorCode ConfigureCtx(PLapCtx *user) {
     if (user->p < 1.0) { SETERRQ(COMM,1,"p >= 1 required"); }
     ierr = PetscOptionsReal("-eps","regularization parameter eps",
                       NULL,user->eps,&(user->eps),NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-alpha","parameter alpha in exact solution",
-                      NULL,user->alpha,&(user->alpha),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsInt("-quaddegree","quadrature degree n (= 1,2,3 only)",
                      NULL,user->quaddegree,&(user->quaddegree),NULL); CHKERRQ(ierr);
     if ((user->quaddegree < 1) || (user->quaddegree > 3)) {
@@ -42,11 +41,7 @@ PetscErrorCode ConfigureCtx(PLapCtx *user) {
 //ENDCTX
 
 //STARTBDRYINIT
-// both the exact solution and the Dirichlet boundary value
-double BoundaryG(double x, double y, double alpha) {
-    return 0.5 * (x+alpha)*(x+alpha) * (y+alpha)*(y+alpha);
-}
-
+FIXME
 // right hand side of PDE
 double FRHS(double x, double y, double p, double alpha) {
     const double xs = x + alpha,  ys = y + alpha,  // shifted
@@ -56,6 +51,10 @@ double FRHS(double x, double y, double p, double alpha) {
                  C = PetscPowScalar(XX * YY * D2, (p - 2.0) / 2.0);
     return - (p - 2.0) * C * (gamma1 * (x + alpha) * YY + gamma2 * XX * (y + alpha))
            - C * D2;
+}
+
+double UExact(double x, double y, double alpha) {
+    return 0.5 * (x+alpha)*(x+alpha) * (y+alpha)*(y+alpha);
 }
 
 PetscErrorCode InitialIterateUExact(DMDALocalInfo *info, Vec u, Vec uexact, PLapCtx *user) {
