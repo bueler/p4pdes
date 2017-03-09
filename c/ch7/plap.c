@@ -1,7 +1,7 @@
 static char help[] = "Solves a p-Laplacian equation in 2D using Q^1 FEM:\n"
 "   - div (|grad u|^{p-2} grad u) + c u = f\n"
 "where c(x,y), f(x,y) are given.  Periodic boundary conditions on unit square.\n"
-"Implements an objective function and a residual (gradient) function, but\n"
+"Implements an objective function and a residual (= gradient = weak form), but\n"
 "no Jacobian.  Defaults to p=4 and quadrature degree n=2.  Run as one of:\n"
 "   ./plap -snes_fd_color                   [default]\n"
 "   ./plap -snes_mf\n"
@@ -15,7 +15,6 @@ static char help[] = "Solves a p-Laplacian equation in 2D using Q^1 FEM:\n"
 
 //STARTCTX
 typedef struct {
-    DM      da;
     double  p, eps;
     int     quaddegree;
 } PLapCtx;
@@ -41,41 +40,19 @@ PetscErrorCode ConfigureCtx(PLapCtx *user) {
 //ENDCTX
 
 //STARTBDRYINIT
-FIXME
+double Uexact(double x, double y) {
+    return sin(2.0 * PETSC_PI * (x + 2.0 * y));
+}
+
+// coefficient of linear term in PDE
+double Ccoeff(double x, double y) {
+    return 1.0;
+}
+
 // right hand side of PDE
-double FRHS(double x, double y, double p, double alpha) {
-    const double xs = x + alpha,  ys = y + alpha,  // shifted
-                 XX = xs * xs,  YY = ys * ys,  D2 = XX + YY,
-                 gamma1 = 1.0 / xs + xs / D2,
-                 gamma2 = 1.0 / ys + ys / D2,
-                 C = PetscPowScalar(XX * YY * D2, (p - 2.0) / 2.0);
-    return - (p - 2.0) * C * (gamma1 * (x + alpha) * YY + gamma2 * XX * (y + alpha))
-           - C * D2;
-}
-
-double UExact(double x, double y, double alpha) {
-    return 0.5 * (x+alpha)*(x+alpha) * (y+alpha)*(y+alpha);
-}
-
-PetscErrorCode InitialIterateUExact(DMDALocalInfo *info, Vec u, Vec uexact, PLapCtx *user) {
-    PetscErrorCode ierr;
-    const double hx = 1.0 / (info->mx-1), hy = 1.0 / (info->my-1);
-    double       x, y, **au, **auex;
-    int          i,j;
-    ierr = DMDAVecGetArray(user->da,u,&au); CHKERRQ(ierr);
-    ierr = DMDAVecGetArray(user->da,uexact,&auex); CHKERRQ(ierr);
-    for (j = info->ys; j < info->ys + info->ym; j++) {
-        y = hy * j;
-        for (i = info->xs; i < info->xs + info->xm; i++) {
-            x = hx * i;
-            au[j][i] = (1.0 - x) * BoundaryG(0.0,y,user->alpha)
-                       + x * BoundaryG(1.0,y,user->alpha);
-            auex[j][i] = BoundaryG(x,y,user->alpha); // here: exact soln
-        }
-    }
-    ierr = DMDAVecRestoreArray(user->da,u,&au); CHKERRQ(ierr);
-    ierr = DMDAVecRestoreArray(user->da,uexact,&auex); CHKERRQ(ierr);
-    return 0;
+// FIXME
+double Frhs(double x, double y, double p) {
+    return x * y * y * y * y;
 }
 //ENDBDRYINIT
 
@@ -135,97 +112,58 @@ double GradInnerProd(DMDALocalInfo *info, gradRef du, gradRef dv) {
     return cx * du.xi  * dv.xi + cy * du.eta * dv.eta;
 }
 
-double GradPow(DMDALocalInfo *info, gradRef du, double P, double eps) {
-    return PetscPowScalar(GradInnerProd(info,du,du) + eps * eps, P / 2.0);
-}
-
-// gets either u(x,y) or g(x,y) for the nodes of the given element (i,j),
-// where (i,j) denotes the upper-right node of the element
-void GetUorGElement(DMDALocalInfo *info, int i, int j,
-                    double **au, double alpha, double *u) {
-    const double hx = 1.0 / (info->mx - 1),  hy = 1.0 / (info->my - 1),
-                 x = i * hx,  y = j * hy;  // (x,y) for node (i,j)
-    u[0] = ((i == info->mx-1) || (j == info->my-1))
-             ? BoundaryG(x,   y,   alpha) : au[j][i];
-    u[1] = ((i-1 == 0)        || (j == info->my-1))
-             ? BoundaryG(x-hx,y,   alpha) : au[j][i-1];
-    u[2] = ((i-1 == 0)        || (j-1 == 0))
-             ? BoundaryG(x-hx,y-hy,alpha) : au[j-1][i-1];
-    u[3] = ((i == info->mx-1) || (j-1 == 0))
-             ? BoundaryG(x,   y-hy,alpha) : au[j-1][i];
+double GradPow(DMDALocalInfo *info, gradRef du, double p, double eps) {
+    return PetscPowScalar(GradInnerProd(info,du,du) + eps * eps, p / 2.0);
 }
 //ENDTOOLS
 
 
 //STARTOBJECTIVE
-double ObjBoundary(DMDALocalInfo *info, double x, double y, double u, double alpha) {
-    const double g = BoundaryG(x,y,alpha);
-    return 0.5 * (u - g) * (u - g);
-}
-
-double ObjIntegrand(DMDALocalInfo *info, const double f[4], const double u[4],
-                    double xi, double eta, double p, double eps) {
+double ObjIntegrand(DMDALocalInfo *info, double xi, double eta,
+                    const double u[4], const double c[4], const double f[4],
+                    double p, double eps) {
     const gradRef du = deval(u,xi,eta);
-    return GradPow(info,du,p,eps) / p - eval(f,xi,eta) * eval(u,xi,eta);
+    const double  uu = eval(u,xi,eta);
+    return (1.0 / p) * GradPow(info,du,p,eps)
+           + 0.5 * eval(c,xi,eta) * uu * uu - eval(f,xi,eta) * uu;
 }
 
 PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
                                   double *obj, PLapCtx *user) {
   PetscErrorCode ierr;
-  const double hx = 1.0 / (info->mx-1),  hy = 1.0 / (info->my-1);
+  const double hx = 1.0 / info->mx,  hy = 1.0 / info->my;
   const int    n = user->quaddegree;
-  double       x, y, lobj = 0.0, f[4], u[4];
-  int          i,j,jS,jE,r,s;
+  double       x, y, lobj = 0.0, u[4], c[4], f[4];
+  int          i,j,r,s;
   MPI_Comm     com;
 
   // loop over all elements: get unique integral contribution from each element
-  for (j = info->ys+1; j < info->ys+info->ym; j++) {
+  for (j = info->ys; j < info->ys+info->ym; j++) {
       y = j * hy;
-      for (i = info->xs+1; i < info->xs+info->xm; i++) {
+      for (i = info->xs; i < info->xs+info->xm; i++) {
           x = i * hx;   // (x,y) is location of (i,j) node (upper-right on element)
-          f[0] = FRHS(x,   y,   user->p,user->alpha);
-          f[1] = FRHS(x-hx,y,   user->p,user->alpha);
-          f[2] = FRHS(x-hx,y-hy,user->p,user->alpha);
-          f[3] = FRHS(x,   y-hy,user->p,user->alpha);
-          GetUorGElement(info,i,j,au,user->alpha,u);
+          u[0] = au[j][i];
+          u[1] = au[j][i-1];
+          u[2] = au[j-1][i-1];
+          u[3] = au[j-1][i];
+          c[0] = Ccoeff(x,   y);
+          c[1] = Ccoeff(x-hx,y);
+          c[2] = Ccoeff(x-hx,y-hy);
+          c[3] = Ccoeff(x,   y-hy);
+          f[0] = Frhs(x,   y,   user->p);
+          f[1] = Frhs(x-hx,y,   user->p);
+          f[2] = Frhs(x-hx,y-hy,user->p);
+          f[3] = Frhs(x,   y-hy,user->p);
           for (r=0; r<n; r++) {
               for (s=0; s<n; s++) {
                   lobj += wq[n-1][r] * wq[n-1][s]
-                          * ObjIntegrand(info,f,u,zq[n-1][r],zq[n-1][s],user->p,user->eps);
+                          * ObjIntegrand(info,zq[n-1][r],zq[n-1][s],
+                                         u,c,f,user->p,user->eps);
               }
           }
       }
   }
   lobj *= 0.25 * hx * hy;
-
-  // add unique contribution from each owned boundary node
-  if (info->ys == 0) {                   // own bottom of square?
-      for (i = info->xs; i < info->xs + info->xm; i++) {
-          x = i * hx;
-          lobj += ObjBoundary(info,x,0.0,au[0][i],user->alpha);
-      }
-  }
-  if (info->ys + info->ym == info->my) { // own top of square?
-      for (i = info->xs; i < info->xs + info->xm; i++) {
-          x = i * hx;
-          lobj += ObjBoundary(info,x,1.0,au[info->my-1][i],user->alpha);
-      }
-  }
-  // don't look at bottom and top anymore
-  jS = (info->ys == 0) ? 1 : 0;
-  jE = (info->ys + info->ym == info->my) ? info->my - 1 : info->my;
-  if (info->xs == 0) {                   // own left side of square?
-      for (j = jS; j < jE; j++) {
-          y = j * hy;
-          lobj += ObjBoundary(info,0.0,y,au[j][0],user->alpha);
-      }
-  }
-  if (info->xs + info->xm == info->mx) { // own right side of square?
-      for (j = jS; j < jE; j++) {
-          y = j * hy;
-          lobj += ObjBoundary(info,1.0,y,au[j][info->mx-1],user->alpha);
-      }
-  }
 
   ierr = PetscObjectGetComm((PetscObject)(info->da),&com); CHKERRQ(ierr);
   ierr = MPI_Allreduce(&lobj,obj,1,MPI_DOUBLE,MPI_SUM,com); CHKERRQ(ierr);
@@ -234,6 +172,7 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
 //ENDOBJECTIVE
 
 //STARTFUNCTION
+#if 0
 double FunIntegrand(DMDALocalInfo *info, int L,
                     const double f[4], const double u[4],
                     double xi, double eta, double P, double eps) {
@@ -308,55 +247,60 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
   }
   return 0;
 }
+#endif
 //ENDFUNCTION
 
 //STARTMAIN
 int main(int argc,char **argv) {
   PetscErrorCode ierr;
   SNES           snes;
-  Vec            u, uexact;
+  Vec            u;
   PLapCtx        user;
+  DM             da;
   DMDALocalInfo  info;
-  double         err, hx, hy;
+  double         hx, hy;
 
   PetscInitialize(&argc,&argv,NULL,help);
   ierr = ConfigureCtx(&user); CHKERRQ(ierr);
 
   ierr = DMDACreate2d(COMM,
-               DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_BOX,
-               3,3,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&(user.da)); CHKERRQ(ierr);
-  ierr = DMSetFromOptions(user.da); CHKERRQ(ierr);
-  ierr = DMSetUp(user.da); CHKERRQ(ierr);
-  ierr = DMSetApplicationContext(user.da,&user);CHKERRQ(ierr);
-  ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);
-  hx = 1.0 / (info.mx-1);  hy = 1.0 / (info.my-1);
+               DM_BOUNDARY_PERIODIC, DM_BOUNDARY_PERIODIC, DMDA_STENCIL_BOX,
+               2,2,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&da); CHKERRQ(ierr);
+  ierr = DMSetFromOptions(da); CHKERRQ(ierr);
+  ierr = DMSetUp(da); CHKERRQ(ierr);
+  ierr = DMSetApplicationContext(da,&user);CHKERRQ(ierr);
+  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+  hx = 1.0 / info.mx;  hy = 1.0 / info.my;
   ierr = PetscPrintf(COMM,
             "grid of %d x %d = %d nodes (element dims %gx%g)\n",
             info.mx,info.my,info.mx*info.my,hx,hy); CHKERRQ(ierr);
 
-  ierr = DMCreateGlobalVector(user.da,&u);CHKERRQ(ierr);
-  ierr = VecDuplicate(u,&uexact);CHKERRQ(ierr);
-  ierr = InitialIterateUExact(&info,u,uexact,&user); CHKERRQ(ierr);
+  ierr = DMCreateGlobalVector(da,&u);CHKERRQ(ierr);
+//  ierr = VecDuplicate(u,&uexact);CHKERRQ(ierr);
 
   ierr = SNESCreate(COMM,&snes); CHKERRQ(ierr);
-  ierr = SNESSetDM(snes,user.da); CHKERRQ(ierr);
-  ierr = DMDASNESSetObjectiveLocal(user.da,
+  ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
+  ierr = DMDASNESSetObjectiveLocal(da,
              (DMDASNESObjective)FormObjectiveLocal,&user); CHKERRQ(ierr);
-  ierr = DMDASNESSetFunctionLocal(user.da,INSERT_VALUES,
-             (DMDASNESFunction)FormFunctionLocal,&user); CHKERRQ(ierr);
+//  ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
+//             (DMDASNESFunction)FormFunctionLocal,&user); CHKERRQ(ierr);
   ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
-//ierr = VecSet(u,0.0); CHKERRQ(ierr);
 //ierr = VecCopy(uexact,u); CHKERRQ(ierr);
 
+  ierr = VecSet(u,0.0); CHKERRQ(ierr);
   ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
+
+#if 0
   ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
   ierr = VecNorm(u,NORM_INFINITY,&err); CHKERRQ(ierr);
   ierr = PetscPrintf(COMM,"numerical error:  |u-u_exact|_inf = %.3e\n",
            err); CHKERRQ(ierr);
+#endif
 
-  VecDestroy(&u);  VecDestroy(&uexact);
-  SNESDestroy(&snes);  DMDestroy(&(user.da));
+  VecDestroy(&u);
+//  VecDestroy(&uexact);
+  SNESDestroy(&snes);  DMDestroy(&da);
   PetscFinalize();
   return 0;
 }
