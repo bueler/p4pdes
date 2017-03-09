@@ -147,13 +147,13 @@ void GetUorGElement(DMDALocalInfo *info, int i, int j,
     const double hx = 1.0 / (info->mx - 1),  hy = 1.0 / (info->my - 1),
                  x = i * hx,  y = j * hy;  // (x,y) for node (i,j)
     u[0] = ((i == info->mx-1) || (j == info->my-1))
-             ? BoundaryG(x,y,alpha)       : au[j][i];
+             ? BoundaryG(x,   y,   alpha) : au[j][i];
     u[1] = ((i-1 == 0)        || (j == info->my-1))
-             ? BoundaryG(x-hx,y,alpha)    : au[j][i-1];
+             ? BoundaryG(x-hx,y,   alpha) : au[j][i-1];
     u[2] = ((i-1 == 0)        || (j-1 == 0))
              ? BoundaryG(x-hx,y-hy,alpha) : au[j-1][i-1];
     u[3] = ((i == info->mx-1) || (j-1 == 0))
-             ? BoundaryG(x,y-hy,alpha)    : au[j-1][i];
+             ? BoundaryG(x,   y-hy,alpha) : au[j-1][i];
 }
 //ENDTOOLS
 
@@ -165,9 +165,9 @@ double ObjBoundary(DMDALocalInfo *info, double x, double y, double u, double alp
 }
 
 double ObjIntegrand(DMDALocalInfo *info, const double f[4], const double u[4],
-                    double xi, double eta, double P, double eps) {
+                    double xi, double eta, double p, double eps) {
     const gradRef du = deval(u,xi,eta);
-    return GradPow(info,du,P,eps) / P - eval(f,xi,eta) * eval(u,xi,eta);
+    return GradPow(info,du,p,eps) / p - eval(f,xi,eta) * eval(u,xi,eta);
 }
 
 PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
@@ -178,8 +178,6 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
   double       x, y, lobj = 0.0, f[4], u[4];
   int          i,j,jS,jE,r,s;
   MPI_Comm     com;
-
-ierr = PetscPrintf(COMM,"----FormObjectiveLocal() END\n"); CHKERRQ(ierr);
 
   // loop over all elements: get unique integral contribution from each element
   for (j = info->ys+1; j < info->ys+info->ym; j++) {
@@ -202,39 +200,33 @@ ierr = PetscPrintf(COMM,"----FormObjectiveLocal() END\n"); CHKERRQ(ierr);
   lobj *= 0.25 * hx * hy;
 
   // add unique contribution from each owned boundary node
-  if (info->ys == 0) { // bottom of square
+  if (info->ys == 0) {                   // own bottom of square?
       for (i = info->xs; i < info->xs + info->xm; i++) {
           x = i * hx;
           lobj += ObjBoundary(info,x,0.0,au[0][i],user->alpha);
-ierr = PetscPrintf(COMM,"bdry contrib i,j=%d,%d\n",i,0); CHKERRQ(ierr);
       }
   }
-  if (info->ys + info->ym == info->my) { // top of square
+  if (info->ys + info->ym == info->my) { // own top of square?
       for (i = info->xs; i < info->xs + info->xm; i++) {
           x = i * hx;
           lobj += ObjBoundary(info,x,1.0,au[info->my-1][i],user->alpha);
-ierr = PetscPrintf(COMM,"bdry contrib i,j=%d,%d\n",i,info->my-1); CHKERRQ(ierr);
       }
   }
   // don't look at bottom and top anymore
   jS = (info->ys == 0) ? 1 : 0;
   jE = (info->ys + info->ym == info->my) ? info->my - 1 : info->my;
-  if (info->xs == 0) { // left side of square
+  if (info->xs == 0) {                   // own left side of square?
       for (j = jS; j < jE; j++) {
           y = j * hy;
           lobj += ObjBoundary(info,0.0,y,au[j][0],user->alpha);
-ierr = PetscPrintf(COMM,"bdry contrib i,j=%d,%d\n",0,j); CHKERRQ(ierr);
       }
   }
-  if (info->xs + info->xm == info->mx) { // right side of square
+  if (info->xs + info->xm == info->mx) { // own right side of square?
       for (j = jS; j < jE; j++) {
           y = j * hy;
           lobj += ObjBoundary(info,1.0,y,au[j][info->mx-1],user->alpha);
-ierr = PetscPrintf(COMM,"bdry contrib i,j=%d,%d\n",info->mx-1,j); CHKERRQ(ierr);
       }
   }
-
-ierr = PetscPrintf(COMM,"----FormObjectiveLocal() END\n"); CHKERRQ(ierr);
 
   ierr = PetscObjectGetComm((PetscObject)(info->da),&com); CHKERRQ(ierr);
   ierr = MPI_Allreduce(&lobj,obj,1,MPI_DOUBLE,MPI_SUM,com); CHKERRQ(ierr);
@@ -354,6 +346,9 @@ int main(int argc,char **argv) {
   ierr = DMDASNESSetFunctionLocal(user.da,INSERT_VALUES,
              (DMDASNESFunction)FormFunctionLocal,&user); CHKERRQ(ierr);
   ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
+
+//ierr = VecSet(u,0.0); CHKERRQ(ierr);
+//ierr = VecCopy(uexact,u); CHKERRQ(ierr);
 
   ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
   ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
