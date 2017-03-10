@@ -196,8 +196,8 @@ double GradPow(DMDALocalInfo *info, gradRef du, double P, double eps) {
 //ENDTOOLS
 
 //STARTOBJECTIVE
-double ObjIntegrand(DMDALocalInfo *info, const double f[4], const double u[4],
-                    double xi, double eta, double P, double eps) {
+double ObjIntegrandRef(DMDALocalInfo *info, const double f[4], const double u[4],
+                       double xi, double eta, double P, double eps) {
     const gradRef du = deval(u,xi,eta);
     return GradPow(info,du,P,eps) / P - eval(f,xi,eta) * eval(u,xi,eta);
 }
@@ -209,7 +209,7 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
                p = user->p,  eps = user->eps;
   const int    n = user->quaddegree,
                XE = info->xs + info->xm,  YE = info->ys + info->ym;
-  double       lobj = 0.0, **af, **ag, f[4], u[4];
+  double       lobj = 0.0, **af, **ag, u[4];
   int          i,j,r,s;
   PetscBool    ownele;
   MPI_Comm     com;
@@ -222,13 +222,12 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
           // owned elements include "right" and "top" edges of grid
           ownele = (i < XE || j < YE || i == info->mx || j == info->my);
           if (!ownele) continue;
-          f[0] = af[j][i];  f[1] = af[j][i-1];
-              f[2] = af[j-1][i-1];  f[3] = af[j-1][i];
+          const double f[4] = {af[j][i], af[j][i-1], af[j-1][i-1], af[j-1][i]};
           GetUorG(info,i,j,au,ag,u);
           for (r=0; r<n; r++) {
               for (s=0; s<n; s++) {
                   lobj += wq[n-1][r] * wq[n-1][s]
-                          * ObjIntegrand(info,f,u,zq[n-1][r],zq[n-1][s],p,eps);
+                          * ObjIntegrandRef(info,f,u,zq[n-1][r],zq[n-1][s],p,eps);
               }
           }
       }
@@ -244,9 +243,9 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
 //ENDOBJECTIVE
 
 //STARTFUNCTION
-double FunIntegrand(DMDALocalInfo *info, int L,
-                    const double f[4], const double u[4],
-                    double xi, double eta, double P, double eps) {
+double FunIntegrandRef(DMDALocalInfo *info, int L,
+                       const double f[4], const double u[4],
+                       double xi, double eta, double P, double eps) {
   const gradRef du    = deval(u,xi,eta),
                 dchiL = dchi(L,xi,eta);
   return GradPow(info,du,P - 2.0,eps) * GradInnerProd(info,du,dchiL)
@@ -261,7 +260,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
   const int    n = user->quaddegree,
                XE = info->xs + info->xm,  YE = info->ys + info->ym,
                li[4] = {0,-1,-1,0},  lj[4] = {0,0,-1,-1};
-  double       **af, **ag, f[4], u[4];
+  double       **af, **ag, u[4];
   int          i,j,l,r,s,PP,QQ;
   PetscBool    ownnode;
 
@@ -274,8 +273,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
   // loop over all elements
   for (j = info->ys; j <= YE; j++) {
       for (i = info->xs; i <= XE; i++) {
-          f[0] = af[j][i];  f[1] = af[j][i-1];
-              f[2] = af[j-1][i-1];  f[3] = af[j-1][i];
+          const double f[4] = {af[j][i], af[j][i-1], af[j-1][i-1], af[j-1][i]};
           GetUorG(info,i,j,au,ag,u);
           // loop over corners of element i,j
           for (l = 0; l < 4; l++) {
@@ -288,8 +286,8 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                   for (s=0; s<n; s++) {
                      FF[QQ][PP]
                          += C * wq[n-1][r] * wq[n-1][s]
-                            * FunIntegrand(info,l,f,u,zq[n-1][r],zq[n-1][s],
-                                           p,eps);
+                            * FunIntegrandRef(info,l,f,u,zq[n-1][r],zq[n-1][s],
+                                              p,eps);
                   }
               }
           }
