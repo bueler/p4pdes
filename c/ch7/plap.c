@@ -13,7 +13,6 @@ static char help[] = "Solve the p-Laplacian equation in 2D using Q^1 FEM.\n"
 
 //STARTCTX
 typedef struct {
-    DM      da;
     double  p, eps, alpha;
     int     quaddegree;
 } PLapCtx;
@@ -65,7 +64,7 @@ PetscErrorCode InitialIterateLocal(DMDALocalInfo *info, Vec u, PLapCtx *user) {
     double       x,y, **au;
     int          i,j;
 
-    ierr = DMDAVecGetArray(user->da,u,&au); CHKERRQ(ierr);
+    ierr = DMDAVecGetArray(info->da,u,&au); CHKERRQ(ierr);
     for (j = info->ys; j < info->ys + info->ym; j++) {
         y = hy * (j + 1);
         for (i = info->xs; i < info->xs + info->xm; i++) {
@@ -74,7 +73,7 @@ PetscErrorCode InitialIterateLocal(DMDALocalInfo *info, Vec u, PLapCtx *user) {
                        + x * Uexact(1.0,y,user->alpha);
         }
     }
-    ierr = DMDAVecRestoreArray(user->da,u,&au); CHKERRQ(ierr);
+    ierr = DMDAVecRestoreArray(info->da,u,&au); CHKERRQ(ierr);
     return 0;
 }
 
@@ -84,7 +83,7 @@ PetscErrorCode GetUexactLocal(DMDALocalInfo *info, Vec uex, PLapCtx *user) {
     double       x,y, **auex;
     int          i,j;
 
-    ierr = DMDAVecGetArray(user->da,uex,&auex); CHKERRQ(ierr);
+    ierr = DMDAVecGetArray(info->da,uex,&auex); CHKERRQ(ierr);
     for (j = info->ys; j < info->ys + info->ym; j++) {
         y = hy * (j + 1);
         for (i = info->xs; i < info->xs + info->xm; i++) {
@@ -92,7 +91,7 @@ PetscErrorCode GetUexactLocal(DMDALocalInfo *info, Vec uex, PLapCtx *user) {
             auex[j][i] = Uexact(x,y,user->alpha);
         }
     }
-    ierr = DMDAVecRestoreArray(user->da,uex,&auex); CHKERRQ(ierr);
+    ierr = DMDAVecRestoreArray(info->da,uex,&auex); CHKERRQ(ierr);
     return 0;
 }
 
@@ -279,6 +278,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
 //STARTMAIN
 int main(int argc,char **argv) {
   PetscErrorCode ierr;
+  DM             da;
   SNES           snes;
   Vec            u, uexact;
   PLapCtx        user;
@@ -290,24 +290,24 @@ int main(int argc,char **argv) {
 
   ierr = DMDACreate2d(COMM,
                DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED, DMDA_STENCIL_BOX,
-               3,3,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&(user.da)); CHKERRQ(ierr);
-  ierr = DMSetFromOptions(user.da); CHKERRQ(ierr);
-  ierr = DMSetUp(user.da); CHKERRQ(ierr);
-  ierr = DMSetApplicationContext(user.da,&user);CHKERRQ(ierr);
-  ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);
+               3,3,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&da); CHKERRQ(ierr);
+  ierr = DMSetFromOptions(da); CHKERRQ(ierr);
+  ierr = DMSetUp(da); CHKERRQ(ierr);
+  ierr = DMSetApplicationContext(da,&user);CHKERRQ(ierr);
+  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
   hx = 1.0 / (info.mx+1);  hy = 1.0 / (info.my+1);
   ierr = PetscPrintf(COMM,
             "grid of %d x %d = %d interior nodes (element dims %gx%g)\n",
             info.mx,info.my,info.mx*info.my,hx,hy); CHKERRQ(ierr);
 
-  ierr = DMCreateGlobalVector(user.da,&u);CHKERRQ(ierr);
+  ierr = DMCreateGlobalVector(da,&u);CHKERRQ(ierr);
   ierr = InitialIterateLocal(&info,u,&user); CHKERRQ(ierr);
 
   ierr = SNESCreate(COMM,&snes); CHKERRQ(ierr);
-  ierr = SNESSetDM(snes,user.da); CHKERRQ(ierr);
-  ierr = DMDASNESSetObjectiveLocal(user.da,
+  ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
+  ierr = DMDASNESSetObjectiveLocal(da,
              (DMDASNESObjective)FormObjectiveLocal,&user); CHKERRQ(ierr);
-  ierr = DMDASNESSetFunctionLocal(user.da,INSERT_VALUES,
+  ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
              (DMDASNESFunction)FormFunctionLocal,&user); CHKERRQ(ierr);
   ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
@@ -320,8 +320,7 @@ int main(int argc,char **argv) {
   ierr = PetscPrintf(COMM,"numerical error:  |u-u_exact|/|u_exact| = %.3e\n",
            err/unorm); CHKERRQ(ierr);
 
-  VecDestroy(&u);  VecDestroy(&uexact);
-  SNESDestroy(&snes);  DMDestroy(&(user.da));
+  VecDestroy(&u);  VecDestroy(&uexact);  SNESDestroy(&snes);  DMDestroy(&da);
   PetscFinalize();
   return 0;
 }
