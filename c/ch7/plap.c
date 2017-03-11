@@ -16,8 +16,8 @@ typedef struct {
     DM      da;
     double  p, eps, alpha;
     int     quaddegree;
-    Vec     f, g;
 } PLapCtx;
+//ENDCTX
 
 PetscErrorCode ConfigureCtx(PLapCtx *user) {
     PetscErrorCode ierr;
@@ -40,35 +40,26 @@ PetscErrorCode ConfigureCtx(PLapCtx *user) {
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
     return 0;
 }
-//ENDCTX
 
-//STARTBDRYINIT
-double BoundaryG(double x, double y, double alpha) {
+//STARTEXACT
+double Uexact(double x, double y, double alpha) {
     return 0.5 * (x+alpha)*(x+alpha) * (y+alpha)*(y+alpha);
 }
 
-PetscErrorCode SetGLocal(DMDALocalInfo *info, Vec g, PLapCtx *user) {
-    PetscErrorCode ierr;
-    const double hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1);
-    double       x,y, **ag;
-    int          i,j;
-
-    ierr = DMDAVecGetArray(user->da,g,&ag); CHKERRQ(ierr);
-    for (j = info->ys - 1; j <= info->ys + info->ym; j++) {
-        for (i = info->xs - 1; i <= info->xs + info->xm; i++) {
-            if ((i >= 0) && (i < info->mx) && (j >= 0) && (j < info->my)) {
-                ag[j][i] = NAN;               // invalidate interior
-            } else {
-                x = hx * (i + 1);  y = hy * (j + 1);
-                ag[j][i] = BoundaryG(x,y,user->alpha);  // along boundary
-            }
-        }
-    }
-    ierr = DMDAVecRestoreArray(user->da,g,&ag); CHKERRQ(ierr);
-    return 0;
+double Frhs(double x, double y, PLapCtx *user) {
+    const double alf = user->alpha,
+                 XX = (x+alf)*(x+alf),
+                 YY = (y+alf)*(y+alf),
+                 D2 = XX + YY,
+                 C = PetscPowScalar(XX * YY * D2, (user->p - 2.0) / 2.0),
+                 gamma1 = 1.0/(x+alf) + (x+alf)/D2,
+                 gamma2 = 1.0/(y+alf) + (y+alf)/D2;
+    return - (user->p - 2.0) * C * (gamma1*(x+alf)*YY + gamma2*XX*(y+alf))
+           - C * D2;
 }
+//ENDEXACT
 
-PetscErrorCode InitialIterate(DMDALocalInfo *info, Vec u, PLapCtx *user) {
+PetscErrorCode InitialIterateLocal(DMDALocalInfo *info, Vec u, PLapCtx *user) {
     PetscErrorCode ierr;
     const double hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1);
     double       x,y, **au;
@@ -79,48 +70,31 @@ PetscErrorCode InitialIterate(DMDALocalInfo *info, Vec u, PLapCtx *user) {
         y = hy * (j + 1);
         for (i = info->xs; i < info->xs + info->xm; i++) {
             x = hx * (i + 1);
-            au[j][i] = (1.0 - x) * BoundaryG(0.0,y,user->alpha)
-                       + x * BoundaryG(1.0,y,user->alpha);
+            au[j][i] = (1.0 - x) * Uexact(0.0,y,user->alpha)
+                       + x * Uexact(1.0,y,user->alpha);
         }
     }
     ierr = DMDAVecRestoreArray(user->da,u,&au); CHKERRQ(ierr);
     return 0;
 }
-//ENDBDRYINIT
 
-//STARTEXACT
-PetscErrorCode ExactRHSLocal(DMDALocalInfo *info, Vec uex, Vec f,
-                             PLapCtx *user) {
+PetscErrorCode GetUexactLocal(DMDALocalInfo *info, Vec uex, PLapCtx *user) {
     PetscErrorCode ierr;
-    const double hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1),
-                 p = user->p,  alf = user->alpha;
-    double       x,y, XX,YY, C,D2,gamma1,gamma2, **auex, **af;
-    const int    XE = info->xs + info->xm, YE = info->ys + info->ym;
+    const double hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1);
+    double       x,y, **auex;
     int          i,j;
 
     ierr = DMDAVecGetArray(user->da,uex,&auex); CHKERRQ(ierr);
-    ierr = DMDAVecGetArray(user->da,f,&af); CHKERRQ(ierr);
-    // loop over ALL grid points; f has ghosts but uex does not
-    for (j = info->ys - 1; j <= YE; j++) {
-        y = hy * (j + 1);  YY = (y+alf)*(y+alf);
-        for (i = info->xs - 1; i <= XE; i++) {
-            x = hx * (i + 1);  XX = (x+alf)*(x+alf);
-            D2 = XX + YY;
-            C = PetscPowScalar(XX * YY * D2, (p - 2.0) / 2.0);
-            gamma1 = 1.0/(x+alf) + (x+alf)/D2;
-            gamma2 = 1.0/(y+alf) + (y+alf)/D2;
-            af[j][i] = - (p-2.0) * C * (gamma1*(x+alf)*YY + gamma2*XX*(y+alf))
-                       - C * D2;
-            if ((i >= info->xs) && (i < XE) && (j >= info->ys) && (j < YE)) {
-                auex[j][i] = BoundaryG(x,y,user->alpha); // here: exact soln
-            }
+    for (j = info->ys; j < info->ys + info->ym; j++) {
+        y = hy * (j + 1);
+        for (i = info->xs; i < info->xs + info->xm; i++) {
+            x = hx * (i + 1);
+            auex[j][i] = Uexact(x,y,user->alpha);
         }
     }
     ierr = DMDAVecRestoreArray(user->da,uex,&auex); CHKERRQ(ierr);
-    ierr = DMDAVecRestoreArray(user->da,f,&af); CHKERRQ(ierr);
     return 0;
 }
-//ENDEXACT
 
 //STARTFEM
 static double xiL[4]  = { 1.0, -1.0, -1.0,  1.0},
@@ -172,16 +146,18 @@ static double
 //ENDFEM
 
 //STARTTOOLS
-void GetUorG(DMDALocalInfo *info, int i, int j,
-             double **au, double **ag, double *u) {
+void GetUorG(DMDALocalInfo *info, int i, int j, double **au, double *u,
+             PLapCtx *user) {
+    const double hx = 1.0 / (info->mx+1),  hy = 1.0 / (info->my+1),
+                 x = hx * (i + 1),  y = hy * (j + 1);
     u[0] = ((i == info->mx) || (j == info->my))
-             ? ag[j][i]     : au[j][i];
+             ? Uexact(x,   y,   user->alpha) : au[j][i];
     u[1] = ((i == 0)  || (j == info->my))
-             ? ag[j][i-1]   : au[j][i-1];
+             ? Uexact(x-hx,y,   user->alpha) : au[j][i-1];
     u[2] = ((i == 0)  || (j == 0))
-             ? ag[j-1][i-1] : au[j-1][i-1];
+             ? Uexact(x-hx,y-hy,user->alpha) : au[j-1][i-1];
     u[3] = ((i == info->mx) || (j == 0))
-             ? ag[j-1][i]   : au[j-1][i];
+             ? Uexact(x,   y-hy,user->alpha) : au[j-1][i];
 }
 
 double GradInnerProd(DMDALocalInfo *info, gradRef du, gradRef dv) {
@@ -197,43 +173,43 @@ double GradPow(DMDALocalInfo *info, gradRef du, double P, double eps) {
 
 //STARTOBJECTIVE
 double ObjIntegrandRef(DMDALocalInfo *info, const double f[4], const double u[4],
-                       double xi, double eta, double P, double eps) {
+                       double xi, double eta, double p, double eps) {
     const gradRef du = deval(u,xi,eta);
-    return GradPow(info,du,P,eps) / P - eval(f,xi,eta) * eval(u,xi,eta);
+    return GradPow(info,du,p,eps) / p - eval(f,xi,eta) * eval(u,xi,eta);
 }
 
 PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
                                   double *obj, PLapCtx *user) {
   PetscErrorCode ierr;
-  const double hx = 1.0 / (info->mx+1),  hy = 1.0 / (info->my+1),
-               p = user->p,  eps = user->eps;
+  const double hx = 1.0 / (info->mx+1),  hy = 1.0 / (info->my+1);
   const int    n = user->quaddegree,
                XE = info->xs + info->xm,  YE = info->ys + info->ym;
-  double       lobj = 0.0, **af, **ag, u[4];
+  double       x, y, lobj = 0.0, u[4];
   int          i,j,r,s;
-  PetscBool    ownele;
   MPI_Comm     com;
 
-  ierr = DMDAVecGetArray(user->da,user->f,&af); CHKERRQ(ierr);
-  ierr = DMDAVecGetArray(user->da,user->g,&ag); CHKERRQ(ierr);
   // loop over all elements
   for (j = info->ys; j <= YE; j++) {
+      y = hy * (j + 1);
       for (i = info->xs; i <= XE; i++) {
+          x = hx * (i + 1);
           // owned elements include "right" and "top" edges of grid
-          ownele = (i < XE || j < YE || i == info->mx || j == info->my);
-          if (!ownele) continue;
-          const double f[4] = {af[j][i], af[j][i-1], af[j-1][i-1], af[j-1][i]};
-          GetUorG(info,i,j,au,ag,u);
-          for (r=0; r<n; r++) {
-              for (s=0; s<n; s++) {
-                  lobj += wq[n-1][r] * wq[n-1][s]
-                          * ObjIntegrandRef(info,f,u,zq[n-1][r],zq[n-1][s],p,eps);
+          if (i < XE || j < YE || i == info->mx || j == info->my) {
+              const double f[4] = {Frhs(x,   y,   user),
+                                   Frhs(x-hx,y,   user),
+                                   Frhs(x-hx,y-hy,user),
+                                   Frhs(x,   y-hy,user)};
+              GetUorG(info,i,j,au,u,user);
+              for (r=0; r<n; r++) {
+                  for (s=0; s<n; s++) {
+                      lobj += wq[n-1][r] * wq[n-1][s]
+                              * ObjIntegrandRef(info,f,u,zq[n-1][r],zq[n-1][s],
+                                                user->p,user->eps);
+                  }
               }
           }
       }
   }
-  ierr = DMDAVecRestoreArray(user->da,user->f,&af); CHKERRQ(ierr);
-  ierr = DMDAVecRestoreArray(user->da,user->g,&ag); CHKERRQ(ierr);
   lobj *= 0.25 * hx * hy;
 
   ierr = PetscObjectGetComm((PetscObject)(info->da),&com); CHKERRQ(ierr);
@@ -245,56 +221,57 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
 //STARTFUNCTION
 double FunIntegrandRef(DMDALocalInfo *info, int L,
                        const double f[4], const double u[4],
-                       double xi, double eta, double P, double eps) {
+                       double xi, double eta, double p, double eps) {
   const gradRef du    = deval(u,xi,eta),
                 dchiL = dchi(L,xi,eta);
-  return GradPow(info,du,P - 2.0,eps) * GradInnerProd(info,du,dchiL)
+  return GradPow(info,du,p - 2.0,eps) * GradInnerProd(info,du,dchiL)
          - eval(f,xi,eta) * chi(L,xi,eta);
 }
 
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                                  double **FF, PLapCtx *user) {
-  PetscErrorCode ierr;
-  const double hx = 1.0 / (info->mx+1),  hy = 1.0 / (info->my+1),
-               p = user->p,  eps = user->eps,  C = 0.25 * hx * hy;
+  const double hx = 1.0 / (info->mx+1),  hy = 1.0 / (info->my+1);
   const int    n = user->quaddegree,
                XE = info->xs + info->xm,  YE = info->ys + info->ym,
                li[4] = {0,-1,-1,0},  lj[4] = {0,0,-1,-1};
-  double       **af, **ag, u[4];
+  double       x, y, u[4];
   int          i,j,l,r,s,PP,QQ;
-  PetscBool    ownnode;
 
   // clear residuals
   for (j = info->ys; j < YE; j++)
       for (i = info->xs; i < XE; i++)
           FF[j][i] = 0.0;
-  ierr = DMDAVecGetArray(user->da,user->f,&af); CHKERRQ(ierr);
-  ierr = DMDAVecGetArray(user->da,user->g,&ag); CHKERRQ(ierr);
+
   // loop over all elements
   for (j = info->ys; j <= YE; j++) {
+      y = hy * (j + 1);
       for (i = info->xs; i <= XE; i++) {
-          const double f[4] = {af[j][i], af[j][i-1], af[j-1][i-1], af[j-1][i]};
-          GetUorG(info,i,j,au,ag,u);
+          x = hx * (i + 1);
+          const double f[4] = {Frhs(x,   y,   user),
+                               Frhs(x-hx,y,   user),
+                               Frhs(x-hx,y-hy,user),
+                               Frhs(x,   y-hy,user)};
+          GetUorG(info,i,j,au,u,user);
           // loop over corners of element i,j
           for (l = 0; l < 4; l++) {
               PP = i + li[l];
               QQ = j + lj[l];
-              ownnode = (PP >= info->xs && PP < XE && QQ >= info->ys && QQ < YE);
-              if (!ownnode) continue;
-              // loop over quadrature points
-              for (r=0; r<n; r++) {
-                  for (s=0; s<n; s++) {
-                     FF[QQ][PP]
-                         += C * wq[n-1][r] * wq[n-1][s]
-                            * FunIntegrandRef(info,l,f,u,zq[n-1][r],zq[n-1][s],
-                                              p,eps);
+              // only update residual if we own node
+              if (PP >= info->xs && PP < XE && QQ >= info->ys && QQ < YE) {
+                  // loop over quadrature points
+                  for (r=0; r<n; r++) {
+                      for (s=0; s<n; s++) {
+                         FF[QQ][PP]
+                             += 0.25 * hx * hy * wq[n-1][r] * wq[n-1][s]
+                                * FunIntegrandRef(info,l,f,u,
+                                                  zq[n-1][r],zq[n-1][s],
+                                                  user->p,user->eps);
+                      }
                   }
               }
           }
       }
   }
-  ierr = DMDAVecRestoreArray(user->da,user->f,&af); CHKERRQ(ierr);
-  ierr = DMDAVecRestoreArray(user->da,user->g,&ag); CHKERRQ(ierr);
   return 0;
 }
 //ENDFUNCTION
@@ -324,13 +301,7 @@ int main(int argc,char **argv) {
             info.mx,info.my,info.mx*info.my,hx,hy); CHKERRQ(ierr);
 
   ierr = DMCreateGlobalVector(user.da,&u);CHKERRQ(ierr);
-  ierr = VecDuplicate(u,&uexact);CHKERRQ(ierr);
-  ierr = DMCreateLocalVector(user.da,&(user.f));CHKERRQ(ierr);
-  ierr = DMCreateLocalVector(user.da,&(user.g));CHKERRQ(ierr);
-
-  ierr = SetGLocal(&info,user.g,&user); CHKERRQ(ierr);
-  ierr = InitialIterate(&info,u,&user); CHKERRQ(ierr);
-  ierr = ExactRHSLocal(&info,uexact,user.f,&user); CHKERRQ(ierr);
+  ierr = InitialIterateLocal(&info,u,&user); CHKERRQ(ierr);
 
   ierr = SNESCreate(COMM,&snes); CHKERRQ(ierr);
   ierr = SNESSetDM(snes,user.da); CHKERRQ(ierr);
@@ -340,6 +311,8 @@ int main(int argc,char **argv) {
              (DMDASNESFunction)FormFunctionLocal,&user); CHKERRQ(ierr);
   ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
+  ierr = VecDuplicate(u,&uexact);CHKERRQ(ierr);
+  ierr = GetUexactLocal(&info,uexact,&user); CHKERRQ(ierr);
   ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
   ierr = VecNorm(uexact,NORM_INFINITY,&unorm); CHKERRQ(ierr);
   ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
@@ -348,7 +321,6 @@ int main(int argc,char **argv) {
            err/unorm); CHKERRQ(ierr);
 
   VecDestroy(&u);  VecDestroy(&uexact);
-  VecDestroy(&(user.f));  VecDestroy(&(user.g));
   SNESDestroy(&snes);  DMDestroy(&(user.da));
   PetscFinalize();
   return 0;
