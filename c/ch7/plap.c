@@ -58,16 +58,15 @@ double Frhs(double x, double y, PLapCtx *user) {
 }
 //ENDEXACT
 
+//STARTINITIALITERATE
 PetscErrorCode InitialIterateLocal(DMDALocalInfo *info, Vec u, PLapCtx *user) {
     PetscErrorCode ierr;
     const double hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1);
     double       x,y, **au;
-    int          i,j;
-
     ierr = DMDAVecGetArray(info->da,u,&au); CHKERRQ(ierr);
-    for (j = info->ys; j < info->ys + info->ym; j++) {
+    for (int j = info->ys; j < info->ys + info->ym; j++) {
         y = hy * (j + 1);
-        for (i = info->xs; i < info->xs + info->xm; i++) {
+        for (int i = info->xs; i < info->xs + info->xm; i++) {
             x = hx * (i + 1);
             au[j][i] = (1.0 - x) * Uexact(0.0,y,user->alpha)
                        + x * Uexact(1.0,y,user->alpha);
@@ -76,17 +75,16 @@ PetscErrorCode InitialIterateLocal(DMDALocalInfo *info, Vec u, PLapCtx *user) {
     ierr = DMDAVecRestoreArray(info->da,u,&au); CHKERRQ(ierr);
     return 0;
 }
+//ENDINITIALITERATE
 
 PetscErrorCode GetUexactLocal(DMDALocalInfo *info, Vec uex, PLapCtx *user) {
     PetscErrorCode ierr;
     const double hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1);
     double       x,y, **auex;
-    int          i,j;
-
     ierr = DMDAVecGetArray(info->da,uex,&auex); CHKERRQ(ierr);
-    for (j = info->ys; j < info->ys + info->ym; j++) {
+    for (int j = info->ys; j < info->ys + info->ym; j++) {
         y = hy * (j + 1);
-        for (i = info->xs; i < info->xs + info->xm; i++) {
+        for (int i = info->xs; i < info->xs + info->xm; i++) {
             x = hx * (i + 1);
             auex[j][i] = Uexact(x,y,user->alpha);
         }
@@ -103,37 +101,36 @@ double chi(int L, double xi, double eta) {
     return 0.25 * (1.0 + xiL[L] * xi) * (1.0 + etaL[L] * eta);
 }
 
+// evaluate v(xi,eta) on reference element using local node numbering
+double eval(const double v[4], double xi, double eta) {
+    double sum = 0.0;
+    for (int L=0; L<4; L++)
+        sum += v[L] * chi(L,xi,eta);
+    return sum;
+}
+//ENDFEM
+
+//STARTGRADFEM
 typedef struct {
     double  xi, eta;
 } gradRef;
 
 gradRef dchi(int L, double xi, double eta) {
-    gradRef result;
-    result.xi  = 0.25 * xiL[L]  * (1.0 + etaL[L] * eta);
-    result.eta = 0.25 * etaL[L] * (1.0 + xiL[L]  * xi);
+    const gradRef result = {0.25 * xiL[L]  * (1.0 + etaL[L] * eta),
+                            0.25 * etaL[L] * (1.0 + xiL[L]  * xi)};
     return result;
-}
-
-// evaluate v(xi,eta) on reference element using local node numbering
-double eval(const double v[4], double xi, double eta) {
-    double sum = 0.0;
-    int    L;
-    for (L=0; L<4; L++)
-        sum += v[L] * chi(L,xi,eta);
-    return sum;
 }
 
 // evaluate partial derivs of v(xi,eta) on reference element
 gradRef deval(const double v[4], double xi, double eta) {
     gradRef sum = {0.0,0.0}, tmp;
-    int     L;
-    for (L=0; L<4; L++) {
+    for (int L=0; L<4; L++) {
         tmp = dchi(L,xi,eta);
-        sum.xi  += v[L] * tmp.xi;
-        sum.eta += v[L] * tmp.eta;
+        sum.xi += v[L] * tmp.xi;  sum.eta += v[L] * tmp.eta;
     }
     return sum;
 }
+//ENDGRADFEM
 
 static double
     zq[3][3] = { {0.0,NAN,NAN},
@@ -142,7 +139,6 @@ static double
     wq[3][3] = { {2.0,NAN,NAN},
                  {1.0,1.0,NAN},
                  {0.555555555555556,0.888888888888889,0.555555555555556} };
-//ENDFEM
 
 //STARTTOOLS
 void GetUorG(DMDALocalInfo *info, int i, int j, double **au, double *u,
@@ -275,7 +271,6 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
 }
 //ENDFUNCTION
 
-//STARTMAIN
 int main(int argc,char **argv) {
   PetscErrorCode ierr;
   DM             da;
@@ -324,5 +319,4 @@ int main(int argc,char **argv) {
   PetscFinalize();
   return 0;
 }
-//ENDMAIN
 
