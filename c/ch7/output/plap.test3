@@ -1,3 +1,3 @@
-grid of 17 x 17 = 289 interior nodes (element dims 0.0555556x0.0555556)
+grid of 9 x 9 = 81 interior nodes (element dims 0.1x0.1)
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
-numerical error:  |u-u_exact|/|u_exact| = 2.582e-04
+numerical error:  |u-u_exact|_inf = 6.029e-03

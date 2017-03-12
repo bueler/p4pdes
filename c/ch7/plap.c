@@ -278,7 +278,7 @@ int main(int argc,char **argv) {
   Vec            u, uexact;
   PLapCtx        user;
   DMDALocalInfo  info;
-  double         unorm, err, hx, hy;
+  double         err, hx, hy;
 
   PetscInitialize(&argc,&argv,NULL,help);
   ierr = ConfigureCtx(&user); CHKERRQ(ierr);
@@ -296,7 +296,6 @@ int main(int argc,char **argv) {
             info.mx,info.my,info.mx*info.my,hx,hy); CHKERRQ(ierr);
 
   ierr = DMCreateGlobalVector(da,&u);CHKERRQ(ierr);
-  ierr = InitialIterateLocal(&info,u,&user); CHKERRQ(ierr);
 
   ierr = SNESCreate(COMM,&snes); CHKERRQ(ierr);
   ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
@@ -306,14 +305,15 @@ int main(int argc,char **argv) {
              (DMDASNESFunction)FormFunctionLocal,&user); CHKERRQ(ierr);
   ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
+  ierr = InitialIterateLocal(&info,u,&user); CHKERRQ(ierr);
+  ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
+
   ierr = VecDuplicate(u,&uexact);CHKERRQ(ierr);
   ierr = GetUexactLocal(&info,uexact,&user); CHKERRQ(ierr);
-  ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
-  ierr = VecNorm(uexact,NORM_INFINITY,&unorm); CHKERRQ(ierr);
   ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
   ierr = VecNorm(u,NORM_INFINITY,&err); CHKERRQ(ierr);
-  ierr = PetscPrintf(COMM,"numerical error:  |u-u_exact|/|u_exact| = %.3e\n",
-           err/unorm); CHKERRQ(ierr);
+  ierr = PetscPrintf(COMM,"numerical error:  |u-u_exact|_inf = %.3e\n",
+           err); CHKERRQ(ierr);
 
   VecDestroy(&u);  VecDestroy(&uexact);  SNESDestroy(&snes);  DMDestroy(&da);
   PetscFinalize();
