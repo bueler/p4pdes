@@ -1,0 +1,3 @@
+grid of 3 x 3 = 9 interior nodes (element dims 0.25x0.25)
+Nonlinear solve converged due to CONVERGED_FNORM_ABS iterations 179
+numerical error:  |u-u_exact|_inf = 3.789e-02
