@@ -13,8 +13,9 @@ static char help[] = "Solve the p-Laplacian equation in 2D using Q^1 FEM.\n"
 
 //STARTCTX
 typedef struct {
-    double  p, eps, alpha;
-    int     quaddegree;
+    double    p, eps, alpha;
+    int       quaddegree;
+    PetscBool no_residual;
 } PLapCtx;
 //ENDCTX
 
@@ -24,18 +25,21 @@ PetscErrorCode ConfigureCtx(PLapCtx *user) {
     user->eps = 0.0;
     user->alpha = 1.0;
     user->quaddegree = 2;
+    user->no_residual = PETSC_FALSE;
     ierr = PetscOptionsBegin(COMM,"plap_","p-laplacian solver options",""); CHKERRQ(ierr);
     ierr = PetscOptionsReal("-p","exponent p with  1 <= p < infty",
-                      NULL,user->p,&(user->p),NULL); CHKERRQ(ierr);
+                      "plap.c",user->p,&(user->p),NULL); CHKERRQ(ierr);
     if (user->p < 1.0) { SETERRQ(COMM,1,"p >= 1 required"); }
     ierr = PetscOptionsReal("-eps","regularization parameter eps",
-                      NULL,user->eps,&(user->eps),NULL); CHKERRQ(ierr);
+                      "plap.c",user->eps,&(user->eps),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsReal("-alpha","parameter alpha in exact solution",
-                      NULL,user->alpha,&(user->alpha),NULL); CHKERRQ(ierr);
+                      "plap.c",user->alpha,&(user->alpha),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsInt("-quaddegree","quadrature degree n (= 1,2,3 only)",
-                     NULL,user->quaddegree,&(user->quaddegree),NULL); CHKERRQ(ierr);
+                     "plap.c",user->quaddegree,&(user->quaddegree),NULL); CHKERRQ(ierr);
     if ((user->quaddegree < 1) || (user->quaddegree > 3)) {
         SETERRQ(COMM,2,"quadrature degree n=1,2,3 only"); }
+    ierr = PetscOptionsBool("-no_residual","do not set the residual evaluation function",
+                      "plap.c",user->no_residual,&(user->no_residual),NULL);CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
     return 0;
 }
@@ -295,16 +299,17 @@ int main(int argc,char **argv) {
             "grid of %d x %d = %d interior nodes (element dims %gx%g)\n",
             info.mx,info.my,info.mx*info.my,hx,hy); CHKERRQ(ierr);
 
-  ierr = DMCreateGlobalVector(da,&u);CHKERRQ(ierr);
-
   ierr = SNESCreate(COMM,&snes); CHKERRQ(ierr);
   ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
   ierr = DMDASNESSetObjectiveLocal(da,
              (DMDASNESObjective)FormObjectiveLocal,&user); CHKERRQ(ierr);
-  ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
-             (DMDASNESFunction)FormFunctionLocal,&user); CHKERRQ(ierr);
+  if (!user.no_residual) {
+      ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
+                 (DMDASNESFunction)FormFunctionLocal,&user); CHKERRQ(ierr);
+  }
   ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
+  ierr = DMCreateGlobalVector(da,&u);CHKERRQ(ierr);
   ierr = InitialIterateLocal(&info,u,&user); CHKERRQ(ierr);
   ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
 
