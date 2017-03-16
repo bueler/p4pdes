@@ -282,7 +282,7 @@ int main(int argc,char **argv) {
   Vec            u, uexact;
   PLapCtx        user;
   DMDALocalInfo  info;
-  double         err, hx, hy;
+  double         err;
 
   PetscInitialize(&argc,&argv,NULL,help);
   ierr = ConfigureCtx(&user); CHKERRQ(ierr);
@@ -294,10 +294,9 @@ int main(int argc,char **argv) {
   ierr = DMSetUp(da); CHKERRQ(ierr);
   ierr = DMSetApplicationContext(da,&user);CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-  hx = 1.0 / (info.mx+1);  hy = 1.0 / (info.my+1);
   ierr = PetscPrintf(COMM,
-            "grid of %d x %d = %d interior nodes (element dims %gx%g)\n",
-            info.mx,info.my,info.mx*info.my,hx,hy); CHKERRQ(ierr);
+            "grid of %d x %d = %d interior nodes\n",
+            info.mx,info.my,info.mx*info.my); CHKERRQ(ierr);
 
   ierr = SNESCreate(COMM,&snes); CHKERRQ(ierr);
   ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
