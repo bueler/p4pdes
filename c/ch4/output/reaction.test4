@@ -1,2 +1,2 @@
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-on 9 point grid:  |u-u_exact|_inf/|u|_inf = 0.000188753
+on 9 point grid:  |u-u_exact|_inf = 0.00209725
