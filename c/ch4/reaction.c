@@ -5,15 +5,14 @@ static char help[] =
 
 //CALLBACK
 typedef struct {
-  double    rho, M, alpha, beta;
-  PetscBool noRinJ;
+    double    rho, M, alpha, beta;
+    PetscBool noRinJ;
 } AppCtx;
 
 PetscErrorCode InitialAndExact(DMDALocalInfo *info, double *u0,
                                double *uex, AppCtx *user) {
-    int    i;
     double h = 1.0 / (info->mx-1), x;
-    for (i=info->xs; i<info->xs+info->xm; i++) {
+    for (int i=info->xs; i<info->xs+info->xm; i++) {
         x = h * i;
         u0[i]  = user->alpha * (1.0 - x) + user->beta * x;
         uex[i] = user->M * PetscPowReal(x + 1.0,4.0);
@@ -22,17 +21,16 @@ PetscErrorCode InitialAndExact(DMDALocalInfo *info, double *u0,
 }
 
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *u,
-                                 double *f, AppCtx *user) {
-    int    i;
+                                 double *FF, AppCtx *user) {
     double h = 1.0 / (info->mx-1), R;
-    for (i=info->xs; i<info->xs+info->xm; i++) {
+    for (int i=info->xs; i<info->xs+info->xm; i++) {
         if (i == 0) {
-            f[i] = u[i] - user->alpha;
+            FF[i] = u[i] - user->alpha;
         } else if (i == info->mx-1) {
-            f[i] = u[i] - user->beta;
+            FF[i] = u[i] - user->beta;
         } else {  // interior location
             R = - user->rho * PetscSqrtReal(u[i]);
-            f[i] = - u[i+1] + 2.0 * u[i] - u[i-1] - h*h * R;
+            FF[i] = - u[i+1] + 2.0 * u[i] - u[i-1] - h*h * R;
         }
     }
     return 0;
