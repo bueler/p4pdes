@@ -4,7 +4,7 @@ static char help[] =
 
 #include <petsc.h>
 
-//START
+//STARTFORM
 typedef struct {
   double  b;
 } AppCtx;
@@ -44,7 +44,7 @@ PetscErrorCode FormJacobian(SNES snes, Vec x, Mat J, Mat P, void *ctx) {
     }
     return 0;
 }
-//END
+//ENDFORM
 
 //STARTMAIN
 int main(int argc,char **argv)

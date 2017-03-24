@@ -3,7 +3,7 @@ static char help[] =
 
 #include <petsc.h>
 
-//CALLBACK
+//STARTCALLBACK
 typedef struct {
     double    rho, M, alpha, beta;
     PetscBool noRinJ;
@@ -37,7 +37,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *u,
 }
 //ENDCALLBACK
 
-//JACOBIAN
+//STARTJACOBIAN
 PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, double *u,
                                  Mat J, Mat P, AppCtx *user) {
     PetscErrorCode ierr;
@@ -69,7 +69,7 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, double *u,
 }
 //ENDJACOBIAN
 
-//MAIN
+//STARTMAIN
 int main(int argc,char **args) {
   PetscErrorCode ierr;
   DM            da;

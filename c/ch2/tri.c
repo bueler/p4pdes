@@ -30,6 +30,7 @@ int main(int argc,char **args) {
   ierr = MatSetFromOptions(A); CHKERRQ(ierr);
   ierr = MatSetUp(A); CHKERRQ(ierr);
 //ENDSETUP
+//STARTSOLVE
   ierr = MatGetOwnershipRange(A,&Istart,&Iend); CHKERRQ(ierr);
   for (i=Istart; i<Iend; i++) {
     if (i == 0) {

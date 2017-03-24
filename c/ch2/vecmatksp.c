@@ -1,4 +1,4 @@
-//START
+//STARTWHOLE
 static char help[] = "Solve a 4x4 linear system using Vec, Mat, and KSP.\n";
 
 #include <petsc.h>
@@ -48,5 +48,5 @@ int main(int argc,char **args) {
   PetscFinalize();
   return 0;
 }
-//END
+//ENDWHOLE
 

@@ -88,7 +88,7 @@ PetscErrorCode formRHS(DM da, Vec b) {
   ierr = DMDAVecRestoreArray(da, b, &ab); CHKERRQ(ierr);
   return 0;
 }
-//ENDRHS
+//ENDEXACT
 
 //STARTCREATE
 int main(int argc,char **args) {

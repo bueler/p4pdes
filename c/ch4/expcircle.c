@@ -1,4 +1,4 @@
-//START
+//STARTWHOLE
 static char help[] = "Newton's method for a two-variable system.\n"
     "No analytical Jacobian.  Run with -snes_fd or -snes_mf.\n\n";
 
@@ -40,4 +40,4 @@ int main(int argc,char **argv) {
     PetscFinalize();
     return 0;
 }
-//END
+//ENDWHOLE
