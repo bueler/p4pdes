@@ -10,7 +10,7 @@ static char help[] =
 
 #include <petsc.h>
 
-//FIELDCTX
+//STARTFIELDCTX
 typedef struct {
   double u, v;
 } Field;
@@ -66,7 +66,7 @@ PetscErrorCode InitialState(Vec Y, double noiselevel, PatternCtx* user) {
 // in system form  F(t,Y,dot Y) = G(t,Y),  compute G():
 //     G^u(t,u,v) = - u v^2 + phi (1 - u)
 //     G^v(t,u,v) = + u v^2 - (phi + kappa) v
-//RHSFUNCTION
+//STARTRHSFUNCTION
 PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, Field **aY,
                                     Field **aG, PatternCtx *user) {
   int            i, j;
@@ -87,7 +87,7 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, Field **aY,
 // in system form  F(t,Y,dot Y) = G(t,Y),  compute F():
 //     F^u(t,u,v,u_t,v_t) = u_t - D_u Laplacian u
 //     F^v(t,u,v,u_t,v_t) = v_t - D_v Laplacian v
-//IFUNCTION
+//STARTIFUNCTION
 PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t, Field **aY,
                                   Field **aYdot, Field **aF, PatternCtx *user) {
   int            i, j;
@@ -118,7 +118,7 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t, Field **aY,
 // in system form  F(t,Y,dot Y) = G(t,Y),  compute combined/shifted
 // Jacobian of F():
 //     J = (shift) dF/d(dot Y) + dF/dY
-//IJACOBIAN
+//STARTIJACOBIAN
 PetscErrorCode FormIJacobianLocal(DMDALocalInfo *info, double t, Field **aY,
                                   Field **aYdot, double shift, Mat J, Mat P,
                                   PatternCtx *user) {
@@ -197,7 +197,7 @@ int main(int argc,char **argv)
            "pattern.c",user.kappa,&user.kappa,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
-//DMDACREATE
+//STARTDMDACREATE
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
                DM_BOUNDARY_PERIODIC, DM_BOUNDARY_PERIODIC,
                DMDA_STENCIL_BOX,  // for 9-point stencil
@@ -219,7 +219,7 @@ int main(int argc,char **argv)
            "running on %d x %d grid with square cells of side h = %.6f ...\n",
            info.mx,info.my,user.L/(double)(info.mx)); CHKERRQ(ierr);
 
-//TSSETUP
+//STARTTSSETUP
   ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
   ierr = TSSetProblemType(ts,TS_NONLINEAR); CHKERRQ(ierr);
   ierr = TSSetDM(ts,user.da); CHKERRQ(ierr);

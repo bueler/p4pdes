@@ -25,7 +25,7 @@ PetscErrorCode FormRHSFunction(TS ts, double t, Vec y, Vec g, void *ptr) {
     return 0;
 }
 
-//JACOBIAN
+//STARTJACOBIAN
 PetscErrorCode FormRHSJacobian(TS ts, double t, Vec y, Mat J, Mat P,
                                void *ptr) {
     PetscErrorCode ierr;
@@ -63,7 +63,7 @@ int main(int argc,char **argv) {
   ierr = TSSetProblemType(ts,TS_NONLINEAR); CHKERRQ(ierr);
   ierr = TSSetRHSFunction(ts,NULL,FormRHSFunction,NULL); CHKERRQ(ierr);
 
-//MATJ
+//STARTMATJ
   ierr = MatCreate(PETSC_COMM_WORLD,&J); CHKERRQ(ierr);
   ierr = MatSetSizes(J,PETSC_DECIDE,PETSC_DECIDE,N,N); CHKERRQ(ierr);
   ierr = MatSetFromOptions(J); CHKERRQ(ierr);

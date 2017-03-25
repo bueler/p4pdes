@@ -8,7 +8,7 @@ static char help[] =
 
 #include <petsc.h>
 
-//CALLBACKS
+//STARTCALLBACKS
 PetscErrorCode SetFromExact(double t, Vec y) {
     double *ay;
     VecGetArray(y,&ay);
@@ -31,7 +31,7 @@ PetscErrorCode FormRHSFunction(TS ts, double t, Vec y, Vec g, void *ptr) {
 }
 //ENDCALLBACKS
 
-//MAIN
+//STARTMAIN
 int main(int argc,char **argv) {
   PetscErrorCode ierr;
   const int N = 2;

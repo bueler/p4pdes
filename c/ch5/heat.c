@@ -9,7 +9,7 @@ static char help[] =
 
 #include <petsc.h>
 
-//HEATCTX
+//STARTHEATCTX
 typedef struct {
   DM     da;
   double D0;    // conductivity
@@ -27,7 +27,7 @@ PetscErrorCode Spacings(DM da, double *hx, double *hy) {
     return 0;
 }
 
-//MONITOR
+//STARTMONITOR
 PetscErrorCode EnergyMonitor(TS ts, PetscInt step, PetscReal time, Vec u,
                              void *ctx) {
     PetscErrorCode ierr;
@@ -98,7 +98,7 @@ PetscErrorCode SetNeumannValues(Vec gamma, HeatCtx* user) {
     return 0;
 }
 
-//RHSFUNCTION
+//STARTRHSFUNCTION
 PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **au,
                                     double **aG, HeatCtx *user) {
   PetscErrorCode ierr;
@@ -125,7 +125,7 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **au,
 }
 //ENDRHSFUNCTION
 
-//RHSJACOBIAN
+//STARTRHSJACOBIAN
 PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info, double t, double **au,
                                     Mat J, Mat P, HeatCtx *user) {
     PetscErrorCode ierr;
@@ -190,7 +190,7 @@ int main(int argc,char **argv)
            "heat.c",monitorenergy,&monitorenergy,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
-//DMDASETUP
+//STARTDMDASETUP
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
                DM_BOUNDARY_NONE, DM_BOUNDARY_PERIODIC, DMDA_STENCIL_STAR,
                5,4,PETSC_DECIDE,PETSC_DECIDE,  // default to hx=hx=0.25 grid
@@ -206,7 +206,7 @@ int main(int argc,char **argv)
   ierr = SetNeumannValues(user.gamma,&user); CHKERRQ(ierr);
 //ENDDMDASETUP
 
-//TSSETUP
+//STARTTSSETUP
   ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
   ierr = TSSetProblemType(ts,TS_NONLINEAR); CHKERRQ(ierr);
   ierr = TSSetDM(ts,user.da); CHKERRQ(ierr);
