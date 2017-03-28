@@ -10,6 +10,11 @@ static char help[] =
 // try:
 //   ./advect -da_refine 5 -ts_monitor_solution draw -ts_monitor -ts_rk_type 5dp
 
+// reproduce Figure 2.3 (left) in Hundsdorfer & Verwer:  FIXME: only first-order upwind for now
+//   export ADVOPTS="-da_grid_x 100 -da_grid_y 100 -ts_monitor_solution draw -ts_monitor -ts_adapt_type none -ts_dt 0.003"
+//   ./advect $ADVOPTS
+//   ./advect $ADVOPTS -adv_windx 1.0 -adv_windy 0.0
+
 // exercise: evaluate error by reusing FormInitial()
 
 typedef struct {
@@ -60,22 +65,35 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **au,
                                     double **aG, AdvectCtx *user) {
     PetscErrorCode ierr;
     DMDACoor2d   **coords;
-    int          i, j;
-    double       hx, hy, x, y, a, fluxL, fluxR, fluxN, fluxS;
+    int          i, j, l;
+    const int    dir[4] = {0, 1, 0, 1},
+                 upi[4] = {0, 0, 1, 0},  dni[4] = {1, 0, 0, 0},
+                 upj[4] = {0, 0, 0, 1},  dnj[4] = {0, 1, 0, 0};
+    double       hx, hy, x, y, a,
+                 xshift[4], yshift[4], flux[4];
+
+    // to compute fluxes on boundaries we traverse midpoints of cell boundaries
+    // in this order:
+    //    ---1---
+    //   |       |
+    //   2   *   0
+    //   |       |
+    //    ---3---
+    hx = 1.0 / info->mx;  hy = 1.0 / info->my;
+    xshift[0] =   hx / 2.0;  yshift[0] = 0.0;
+    xshift[1] =        0.0;  yshift[1] =   hy / 2.0;
+    xshift[2] = - hx / 2.0;  yshift[2] = 0.0;
+    xshift[3] =        0.0;  yshift[3] = - hy / 2.0;
     ierr = DMDAGetCoordinateArray(info->da, &coords); CHKERRQ(ierr);
     for (j = info->ys; j < info->ys + info->ym; j++) {
         for (i = info->xs; i < info->xs + info->xm; i++) {
-            hx = 1.0 / info->mx;  hy = 1.0 / info->my;
             x = coords[j][i].x;  y = coords[j][i].y;
-            a = a_wind(x + hx/2,y,0,user);
-            fluxR = a * ( (a >= 0) ? au[j][i] : au[j][i+1] );
-            a = a_wind(x - hx/2,y,0,user);
-            fluxL = a * ( (a >= 0) ? au[j][i-1] : au[j][i] );
-            a = a_wind(x,y + hy/2,0,user);
-            fluxN = a * ( (a >= 0) ? au[j][i] : au[j+1][i] );
-            a = a_wind(x,y - hy/2,0,user);
-            fluxS = a * ( (a >= 0) ? au[j-1][i] : au[j][i] );
-            aG[j][i] = - (fluxR - fluxL) / hx - (fluxN - fluxS) / hy
+            for (l = 0; l < 4; l++) {
+                a = a_wind(x + xshift[l],y + yshift[l],dir[l],user);
+                flux[l] = a * ( (a >= 0) ? au[j-upj[l]][i-upi[l]]
+                                         : au[j+dnj[l]][i+dni[l]] );
+            }
+            aG[j][i] = - (flux[0] - flux[2]) / hx - (flux[1] - flux[3]) / hy
                        + g_source(x,y,au[j][i],user);
         }
     }
