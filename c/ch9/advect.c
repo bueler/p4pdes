@@ -43,9 +43,11 @@ int main(int argc,char **argv) {
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
     ierr = DMDACreate2d(PETSC_COMM_WORLD,
-               DM_BOUNDARY_PERIODIC, DM_BOUNDARY_PERIODIC, DMDA_STENCIL_STAR,
+               DM_BOUNDARY_PERIODIC, DM_BOUNDARY_PERIODIC,
+               DMDA_STENCIL_STAR,              // no diagonal differencing
                4,4,PETSC_DECIDE,PETSC_DECIDE,  // default to hx=hx=0.25 grid
-               1,1,                       // degrees of freedom, stencil width
+               1,                              // degrees of freedom
+               2,                              // stencil width needed for flux-limiting
                NULL,NULL,&da); CHKERRQ(ierr);
     ierr = DMSetFromOptions(da); CHKERRQ(ierr);
     ierr = DMSetUp(da); CHKERRQ(ierr);
@@ -54,8 +56,6 @@ int main(int argc,char **argv) {
     hx = 1.0 / info.mx;  hy = 1.0 / info.my;
     ierr = DMDASetUniformCoordinates(da,0.0+hx/2.0,1.0-hx/2.0,
                                         0.0+hy/2.0,1.0-hy/2.0,0.0,1.0);CHKERRQ(ierr);
-
-    ierr = DMCreateGlobalVector(da,&u); CHKERRQ(ierr);
 
     ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
     ierr = TSSetProblemType(ts,TS_NONLINEAR); CHKERRQ(ierr);
@@ -75,7 +75,8 @@ int main(int argc,char **argv) {
            "and initial step dt=%g ...\n",
            info.mx,info.my,hx,hy,t0,dt); CHKERRQ(ierr);
 
-    ierr = VecSet(u,0.0); CHKERRQ(ierr);   // initial condition  FIXME
+    ierr = DMCreateGlobalVector(da,&u); CHKERRQ(ierr);
+    ierr = VecSet(u,0.0); CHKERRQ(ierr);   // initial condition  FIXME cones
     ierr = TSSolve(ts,u); CHKERRQ(ierr);
 
     VecDestroy(&u);  TSDestroy(&ts);  DMDestroy(&da);
