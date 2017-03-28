@@ -9,11 +9,16 @@ ad3: ad3.o  chkopts
 	-${CLINKER} -o ad3 ad3.o  ${PETSC_LIB}
 	${RM} ad3.o
 
+# testing
+runadvect_1:
+	-@../testit.sh advect "-da_refine 1 -ts_monitor -ts_rk_type 5f" 1 1
+
+test: runadvect_1
 
 # etc
 
-.PHONY: distclean
+.PHONY: distclean runadvect_1
 
 distclean:
-	@rm -f *~ advect ad3
+	@rm -f *~ *tmp advect ad3
 
