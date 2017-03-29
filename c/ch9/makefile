@@ -11,7 +11,7 @@ ad3: ad3.o  chkopts
 
 # testing
 runadvect_1:
-	-@../testit.sh advect "-da_refine 1 -ts_monitor -ts_rk_type 5f" 1 1
+	-@../testit.sh advect "-da_refine 1 -ts_monitor -ts_rk_type 5f -adv_firstorder" 1 1
 
 test: runadvect_1
 

@@ -1,24 +1,31 @@
 static char help[] =
 "Solves time-dependent pure-advection equation in 2D using TS.  Option prefix -adv_.\n"
-"Equation is  u_t + div(a(x,y) u) = f.  Domain is (0,1) x (0,1).\n"
+"Domain is (0,1) x (0,1).  Equation is\n"
+"  u_t + div(a(x,y) u) = g(x,y,u).\n"
 "Boundary conditions are periodic in x and y and cells are grid-point centered.\n"
-"Allows comparison of first-order upwind and flux-limited (non-oscillatory)\n"
-"finite difference method-of-lines discretizations.\n";
+"Uses van Leer (1974) flux-limited (non-oscillatory) method-of-lines discretization.\n";
 
 #include <petsc.h>
 
 // try:
 //   ./advect -da_refine 5 -ts_monitor_solution draw -ts_monitor -ts_rk_type 5dp
 
-// reproduce Figure 2.3 (left) in Hundsdorfer & Verwer:  FIXME: only first-order upwind for now
+// reproduce Figure 2.3 (left) in Hundsdorfer & Verwer:
 //   export ADVOPTS="-da_grid_x 100 -da_grid_y 100 -ts_monitor_solution draw -ts_monitor -ts_adapt_type none -ts_dt 0.003"
 //   ./advect $ADVOPTS
 //   ./advect $ADVOPTS -adv_windx 1.0 -adv_windy 0.0
 
+// one lap of circular motion, computed in parallel:
+//   mpiexec -n 4 ./advect -da_refine 5 -adv_circlewind -adv_conex 0.3 -adv_coney 0.3 -ts_final_time 3.1416 -ts_monitor -ts_monitor_solution draw
+
+// implicit:
+// mpiexec -n 4 ./advect -ts_monitor_solution draw -ts_monitor -adv_circlewind -ts_final_time 0.5 -adv_conex 0.3 -adv_coney 0.3 -ts_type cn -da_refine 6 -snes_monitor -ts_dt 0.05
+
 // exercise: evaluate error by reusing FormInitial()
 
 typedef struct {
-    PetscBool  circlewind;   // if true, wind is equivalent to rigid rotation
+    PetscBool  firstorder,   // if true, use first-order upwinding
+               circlewind;   // if true, wind is equivalent to rigid rotation
     double     windx, windy, // x,y components of wind (if not circular)
                conex, coney, coner, coneh; // parameters for cone initial cond.
 } AdvectCtx;
@@ -49,7 +56,7 @@ PetscErrorCode FormInitial(DMDALocalInfo *info, Vec u, AdvectCtx* user) {
 
 static double a_wind(double x, double y, int dir, AdvectCtx* user) {
     if (user->circlewind) {
-        return (dir == 0) ? -y : x;
+        return (dir == 0) ? - 2.0 * (y - 0.5) : 2.0 * (x - 0.5);
     } else {
         return (dir == 0) ? user->windx : user->windy;
     }
@@ -59,6 +66,12 @@ static double g_source(double x, double y, double u, AdvectCtx* user) {
     return 0.0;
 }
 
+/* the van Leet (1974) limiter is formula (1.11) in section III.1 of
+Hundsdorfer & Verwer */
+static double limiter(double theta) {
+    return 0.5 * (theta + PetscAbsReal(theta)) / (1.0 + PetscAbsReal(theta));
+}
+
 /* method-of-lines discretization gives ODE system  u' = G(t,u)
 FIXME only first-order upwind for now */
 PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **au,
@@ -66,10 +79,12 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **au,
     PetscErrorCode ierr;
     DMDACoor2d   **coords;
     int          i, j, l;
-    const int    dir[4] = {0, 1, 0, 1},
-                 upi[4] = {0, 0, 1, 0},  dni[4] = {1, 0, 0, 0},
-                 upj[4] = {0, 0, 0, 1},  dnj[4] = {0, 1, 0, 0};
-    double       hx, hy, x, y, a,
+    const int    dir[4] = {0, 1, 0, 1},  // use x (dir==0) or y (dir==1) component of velocity
+                 aposi[4]   = { 0, 0,-1, 0},  anegi[4]   = { 1, 0, 0, 0},
+                 aposj[4]   = { 0, 0, 0,-1},  anegj[4]   = { 0, 1, 0, 0},
+                 posfari[4] = {-1, 0,-2, 0},  negfari[4] = { 2, 0, 1, 0},
+                 posfarj[4] = { 0,-1, 0,-2},  negfarj[4] = { 0, 2, 0, 1};
+    double       hx, hy, x, y, a, u_up, u_dn, u_far, theta,
                  xshift[4], yshift[4], flux[4];
 
     // to compute fluxes on boundaries we traverse midpoints of cell boundaries
@@ -90,8 +105,29 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **au,
             x = coords[j][i].x;  y = coords[j][i].y;
             for (l = 0; l < 4; l++) {
                 a = a_wind(x + xshift[l],y + yshift[l],dir[l],user);
-                flux[l] = a * ( (a >= 0) ? au[j-upj[l]][i-upi[l]]
-                                         : au[j+dnj[l]][i+dni[l]] );
+                if (user->firstorder) {
+                    u_up = (a >= 0) ? au[j + aposj[l]][i + aposi[l]]
+                                    : au[j + anegj[l]][i + anegi[l]];
+                    flux[l] = a * u_up;
+                } else {
+                    // use formulas (1.2), (1.3), (1.6) on pages 216--217 of
+                    // Hundsdorfer & Verwer;  note limiter(theta) = psi(theta)
+                    if (a >= 0.0) {
+                        u_dn  = au[j +   anegj[l]][i +   anegi[l]];
+                        u_up  = au[j +   aposj[l]][i +   aposi[l]];
+                        u_far = au[j + posfarj[l]][i + posfari[l]];
+                    } else {
+                        u_dn  = au[j +   aposj[l]][i +   aposi[l]];
+                        u_up  = au[j +   anegj[l]][i +   anegi[l]];
+                        u_far = au[j + negfarj[l]][i + negfari[l]];
+                    }
+                    if (u_dn != u_up) {
+                        theta = (u_up - u_far) / (u_dn - u_up);
+                        flux[l] = a * ( u_up + limiter(theta) * (u_dn - u_up) );
+                    } else {
+                        flux[l] = a * u_up;
+                    }
+                }
             }
             aG[j][i] = - (flux[0] - flux[2]) / hx - (flux[1] - flux[3]) / hy
                        + g_source(x,y,au[j][i],user);
@@ -112,22 +148,30 @@ int main(int argc,char **argv) {
 
     PetscInitialize(&argc,&argv,(char*)0,help);
 
-    user.circlewind = PETSC_FALSE;
-    user.windx = 1.0;
-    user.windy = 1.0;
-
-    // the cone initial condition is for reproducing results from
+    // the wind, and the cone initial condition, are from
     // Hundsdorfer & Verwer, "Numerical Solution of Time-Dependent Advection-
     // Diffusion-Reaction Equations", Springer 2003, page 303
-    // ... these could be set from options
+    user.windx = 1.0;
+    user.windy = 1.0;
     user.conex = 0.2;
     user.coney = 0.2;
     user.coner = 0.1;
     user.coneh = 1.0;
-
+    user.circlewind = PETSC_FALSE;
+    user.firstorder = PETSC_FALSE;
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "adv_", "options for advect.c", ""); CHKERRQ(ierr);
     ierr = PetscOptionsBool("-circlewind","if true, wind is equivalent to rigid rotation",
            "advect.c",user.circlewind,&user.circlewind,NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsReal("-coneh","cone height",
+           "advect.c",user.coneh,&user.coneh,NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsReal("-coner","cone radius",
+           "advect.c",user.coner,&user.coner,NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsReal("-conex","x component of cone center",
+           "advect.c",user.conex,&user.conex,NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsReal("-coney","y component of cone center",
+           "advect.c",user.coney,&user.coney,NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-firstorder","if true, use first-order upwinding",
+           "advect.c",user.firstorder,&user.firstorder,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsReal("-windx","x component of wind (if not circular)",
            "advect.c",user.windx,&user.windx,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsReal("-windy","y component of wind (if not circular)",
@@ -137,7 +181,7 @@ int main(int argc,char **argv) {
     ierr = DMDACreate2d(PETSC_COMM_WORLD,
                DM_BOUNDARY_PERIODIC, DM_BOUNDARY_PERIODIC,
                DMDA_STENCIL_STAR,              // no diagonal differencing
-               4,4,PETSC_DECIDE,PETSC_DECIDE,  // default to hx=hx=0.25 grid
+               5,5,PETSC_DECIDE,PETSC_DECIDE,  // default to hx=hx=0.2 grid (allows -snes_fd_color)
                1,                              // degrees of freedom
                2,                              // stencil width needed for flux-limiting
                NULL,NULL,&da); CHKERRQ(ierr);
