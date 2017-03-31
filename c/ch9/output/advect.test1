@@ -1,12 +1,13 @@
-solving on 8 x 8 grid with dx=0.125 x dy=0.125 cells, t0=0.,
+solving on 10 x 10 grid with dx=0.1 x dy=0.1 cells, t0=0.,
 and initial step dt=0.1 ...
 0 TS dt 0.1 time 0.
-1 TS dt 0.0371361 time 0.0344053
-2 TS dt 0.0446685 time 0.0715414
-3 TS dt 0.0530813 time 0.11621
-4 TS dt 0.0638596 time 0.169291
-5 TS dt 0.0772054 time 0.233151
-6 TS dt 0.092978 time 0.310356
-7 TS dt 0.110589 time 0.403334
-8 TS dt 0.0860767 time 0.513923
-9 TS dt 0.150893 time 0.6
+1 TS dt 0.0333168 time 0.0308782
+2 TS dt 0.0400064 time 0.064195
+3 TS dt 0.047643 time 0.104201
+4 TS dt 0.0569598 time 0.151844
+5 TS dt 0.067716 time 0.208804
+6 TS dt 0.0799982 time 0.27652
+7 TS dt 0.0936481 time 0.356518
+8 TS dt 0.108336 time 0.450167
+9 TS dt 0.0414977 time 0.558502
+10 TS dt 0.144047 time 0.6
