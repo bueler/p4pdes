@@ -1,9 +1,10 @@
 static char help[] =
-"Solves time-dependent pure-advection equation in 2D using TS.  Option prefix -adv_.\n"
+"Time-dependent pure-advection equation in 2D using TS.  Option prefix -adv_.\n"
 "Domain is (0,1) x (0,1).  Equation is\n"
 "  u_t + div(a(x,y) u) = g(x,y,u).\n"
-"Boundary conditions are periodic in x and y and cells are grid-point centered.\n"
-"Uses van Leer (1974) flux-limited (non-oscillatory) method-of-lines discretization.\n";
+"Boundary conditions are periodic in x and y.  Cells are grid-point centered.\n"
+"Uses van Leer (1974) flux-limited (non-oscillatory) method-of-lines\n"
+"discretization [default], or first-order upwind.\n";
 
 #include <petsc.h>
 
@@ -72,8 +73,7 @@ static double limiter(double theta) {
     return 0.5 * (theta + PetscAbsReal(theta)) / (1.0 + PetscAbsReal(theta));
 }
 
-/* method-of-lines discretization gives ODE system  u' = G(t,u)
-FIXME only first-order upwind for now */
+/* method-of-lines discretization gives ODE system  u' = G(t,u) */
 PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **au,
                                     double **aG, AdvectCtx *user) {
     PetscErrorCode ierr;
@@ -159,8 +159,9 @@ int main(int argc,char **argv) {
     user.coneh = 1.0;
     user.circlewind = PETSC_FALSE;
     user.firstorder = PETSC_FALSE;
-    ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "adv_", "options for advect.c", ""); CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-circlewind","if true, wind is equivalent to rigid rotation",
+    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,
+           "adv_", "options for advect.c", ""); CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-circlewind","if true, wind is rigid rotation",
            "advect.c",user.circlewind,&user.circlewind,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsReal("-coneh","cone height",
            "advect.c",user.coneh,&user.coneh,NULL);CHKERRQ(ierr);
@@ -181,17 +182,20 @@ int main(int argc,char **argv) {
     ierr = DMDACreate2d(PETSC_COMM_WORLD,
                DM_BOUNDARY_PERIODIC, DM_BOUNDARY_PERIODIC,
                DMDA_STENCIL_STAR,              // no diagonal differencing
-               5,5,PETSC_DECIDE,PETSC_DECIDE,  // default to hx=hx=0.2 grid (allows -snes_fd_color)
+               5,5,PETSC_DECIDE,PETSC_DECIDE,  // default to hx=hx=0.2 grid
+                                               //   (mx=my=5 allows -snes_fd_color)
                1,                              // degrees of freedom
-               2,                              // stencil width needed for flux-limiting
+               2,                              // stencil width (flux-limiting)
                NULL,NULL,&da); CHKERRQ(ierr);
     ierr = DMSetFromOptions(da); CHKERRQ(ierr);
     ierr = DMSetUp(da); CHKERRQ(ierr);
     ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
+
+    // grid is cell-centered
     ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
     hx = 1.0 / info.mx;  hy = 1.0 / info.my;
-    ierr = DMDASetUniformCoordinates(da,0.0+hx/2.0,1.0-hx/2.0,
-                                        0.0+hy/2.0,1.0-hy/2.0,0.0,1.0);CHKERRQ(ierr);
+    ierr = DMDASetUniformCoordinates(da,
+        0.0+hx/2.0,1.0-hx/2.0,0.0+hy/2.0,1.0-hy/2.0,0.0,1.0);CHKERRQ(ierr);
 
     ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
     ierr = TSSetProblemType(ts,TS_NONLINEAR); CHKERRQ(ierr);
