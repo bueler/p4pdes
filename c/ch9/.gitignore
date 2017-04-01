@@ -1,2 +1,5 @@
 /ad3
 /advect
+*.pyc
+PetscBinaryIO.py
+petsc_conf.py

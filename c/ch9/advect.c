@@ -67,19 +67,20 @@ static double g_source(double x, double y, double u, AdvectCtx* user) {
     return 0.0;
 }
 
-/* the van Leet (1974) limiter is formula (1.11) in section III.1 of
+/* the van Leer (1974) limiter is formula (1.11) in section III.1 of
 Hundsdorfer & Verwer */
-static double limiter(double theta) {
-    return 0.5 * (theta + PetscAbsReal(theta)) / (1.0 + PetscAbsReal(theta));
+//STARTLIMITER
+static double limiter(double th) {
+    return 0.5 * (th + PetscAbsReal(th)) / (1.0 + PetscAbsReal(th));
 }
 
 /* method-of-lines discretization gives ODE system  u' = G(t,u) */
-PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **au,
-                                    double **aG, AdvectCtx *user) {
+PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t,
+        double **au, double **aG, AdvectCtx *user) {
     PetscErrorCode ierr;
     DMDACoor2d   **coords;
     int          i, j, l;
-    const int    dir[4] = {0, 1, 0, 1},  // use x (dir==0) or y (dir==1) component of velocity
+    const int    dir[4] = {0, 1, 0, 1},  // use x (0) or y (1) component
                  aposi[4]   = { 0, 0,-1, 0},  anegi[4]   = { 1, 0, 0, 0},
                  aposj[4]   = { 0, 0, 0,-1},  anegj[4]   = { 0, 1, 0, 0},
                  posfari[4] = {-1, 0,-2, 0},  negfari[4] = { 2, 0, 1, 0},
@@ -87,13 +88,9 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **au,
     double       hx, hy, x, y, a, u_up, u_dn, u_far, theta,
                  xshift[4], yshift[4], flux[4];
 
-    // to compute fluxes on boundaries we traverse midpoints of cell boundaries
-    // in this order:
-    //    ---1---
-    //   |       |
-    //   2   *   0
-    //   |       |
-    //    ---3---
+    // fluxes on cell boundaries are traversed in this order:   --1--
+    // (cell center at *)                                       2 * 0
+    //                                                          --3--
     hx = 1.0 / info->mx;  hy = 1.0 / info->my;
     xshift[0] =   hx / 2.0;  yshift[0] = 0.0;
     xshift[1] =        0.0;  yshift[1] =   hy / 2.0;
@@ -109,9 +106,8 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **au,
                     u_up = (a >= 0) ? au[j + aposj[l]][i + aposi[l]]
                                     : au[j + anegj[l]][i + anegi[l]];
                     flux[l] = a * u_up;
-                } else {
-                    // use formulas (1.2), (1.3), (1.6) on pages 216--217 of
-                    // Hundsdorfer & Verwer;  note limiter(theta) = psi(theta)
+                } else { // use formulas (1.2), (1.3), (1.6) on
+                         // pp 216--217 of Hundsdorfer & Verwer
                     if (a >= 0.0) {
                         u_dn  = au[j +   anegj[l]][i +   anegi[l]];
                         u_up  = au[j +   aposj[l]][i +   aposi[l]];
@@ -121,21 +117,21 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **au,
                         u_up  = au[j +   anegj[l]][i +   anegi[l]];
                         u_far = au[j + negfarj[l]][i + negfari[l]];
                     }
+                    flux[l] = a * u_up;
                     if (u_dn != u_up) {
                         theta = (u_up - u_far) / (u_dn - u_up);
-                        flux[l] = a * ( u_up + limiter(theta) * (u_dn - u_up) );
-                    } else {
-                        flux[l] = a * u_up;
+                        flux[l] += a * limiter(theta) * (u_dn - u_up);
                     }
                 }
             }
-            aG[j][i] = - (flux[0] - flux[2]) / hx - (flux[1] - flux[3]) / hy
+            aG[j][i] = - (flux[0] - flux[2])/hx - (flux[1] - flux[3])/hy
                        + g_source(x,y,au[j][i],user);
         }
     }
     ierr = DMDARestoreCoordinateArray(info->da, &coords); CHKERRQ(ierr);
     return 0;
 }
+//ENDLIMITER
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
@@ -145,6 +141,8 @@ int main(int argc,char **argv) {
     Vec            u;
     DMDALocalInfo  info;
     double         hx, hy, t0, dt;
+    PetscBool      dump = PETSC_FALSE;
+    char           fileroot[PETSC_MAX_PATH_LEN] = "";
 
     PetscInitialize(&argc,&argv,(char*)0,help);
 
@@ -171,6 +169,8 @@ int main(int argc,char **argv) {
            "advect.c",user.conex,&user.conex,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsReal("-coney","y component of cone center",
            "advect.c",user.coney,&user.coney,NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsString("-dumpto","filename root for initial/final state",
+           "advect.c",fileroot,fileroot,PETSC_MAX_PATH_LEN,&dump);CHKERRQ(ierr);
     ierr = PetscOptionsBool("-firstorder","if true, use first-order upwinding",
            "advect.c",user.firstorder,&user.firstorder,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsReal("-windx","x component of wind (if not circular)",
@@ -218,7 +218,29 @@ int main(int argc,char **argv) {
 
     ierr = DMCreateGlobalVector(da,&u); CHKERRQ(ierr);
     ierr = FormInitial(&info,u,&user); CHKERRQ(ierr);
+    if (dump) {
+        PetscViewer  viewer;
+        char         filename[PETSC_MAX_PATH_LEN] = "";
+        ierr = sprintf(filename,"%s_initial.dat",fileroot);
+        ierr = PetscPrintf(PETSC_COMM_WORLD,
+            "writing PETSC binary file %s ...\n",filename); CHKERRQ(ierr);
+        ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename,
+            FILE_MODE_WRITE,&viewer); CHKERRQ(ierr);
+        ierr = VecView(u,viewer); CHKERRQ(ierr);
+        ierr = PetscViewerDestroy(&viewer); CHKERRQ(ierr);
+    }
     ierr = TSSolve(ts,u); CHKERRQ(ierr);
+    if (dump) {
+        PetscViewer  viewer;
+        char         filename[PETSC_MAX_PATH_LEN] = "";
+        ierr = sprintf(filename,"%s_final.dat",fileroot);
+        ierr = PetscPrintf(PETSC_COMM_WORLD,
+            "writing PETSC binary file %s ...\n",filename); CHKERRQ(ierr);
+        ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename,
+            FILE_MODE_WRITE,&viewer); CHKERRQ(ierr);
+        ierr = VecView(u,viewer); CHKERRQ(ierr);
+        ierr = PetscViewerDestroy(&viewer); CHKERRQ(ierr);
+    }
 
     VecDestroy(&u);  TSDestroy(&ts);  DMDestroy(&da);
     PetscFinalize();
