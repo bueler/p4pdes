@@ -11,18 +11,13 @@ static char help[] =
 // try:
 //   ./advect -da_refine 5 -ts_monitor_solution draw -ts_monitor -ts_rk_type 5dp
 
-// reproduce Figure 2.3 (left) in Hundsdorfer & Verwer:
-//   export ADVOPTS="-da_grid_x 100 -da_grid_y 100 -ts_monitor_solution draw -ts_monitor -ts_adapt_type none -ts_dt 0.003"
-//   ./advect $ADVOPTS
-//   ./advect $ADVOPTS -adv_windx 1.0 -adv_windy 0.0
-
 // one lap of circular motion, computed in parallel:
-//   mpiexec -n 4 ./advect -da_refine 5 -adv_circlewind -adv_conex 0.3 -adv_coney 0.3 -ts_final_time 3.1416 -ts_monitor -ts_monitor_solution draw
+//   mpiexec -n 4 ./advect -da_refine 5 -adv_circlewind -adv_conex 0.3 -adv_coney 0.3 -ts_final_time 3.1416 -ts_monitor -ts_monitor_solution draw -ksp_rtol 1.0e-10
 
 // implicit:
-// mpiexec -n 4 ./advect -ts_monitor_solution draw -ts_monitor -adv_circlewind -ts_final_time 0.5 -adv_conex 0.3 -adv_coney 0.3 -ts_type cn -da_refine 6 -snes_monitor -ts_dt 0.05
+// mpiexec -n 4 ./advect -ts_monitor_solution draw -ts_monitor -adv_circlewind -ts_final_time 0.5 -adv_conex 0.3 -adv_coney 0.3 -ts_type cn -da_refine 6 -snes_monitor -ts_dt 0.05 -ksp_rtol 1.0e-10
 
-// exercise: evaluate error by reusing FormInitial()
+// FIXME need Jacobian using first-order
 
 typedef struct {
     PetscBool  firstorder,   // if true, use first-order upwinding
@@ -73,35 +68,33 @@ Hundsdorfer & Verwer */
 static double limiter(double th) {
     return 0.5 * (th + PetscAbsReal(th)) / (1.0 + PetscAbsReal(th));
 }
+//ENDLIMITER
 
 /* method-of-lines discretization gives ODE system  u' = G(t,u) */
+//STARTFUNCTION
 PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t,
         double **au, double **aG, AdvectCtx *user) {
-    PetscErrorCode ierr;
-    DMDACoor2d   **coords;
     int          i, j, l;
     const int    dir[4] = {0, 1, 0, 1},  // use x (0) or y (1) component
+                 xsh[4]     = { 1, 0,-1, 0},  ysh[4]     = { 0, 1, 0,-1},
                  aposi[4]   = { 0, 0,-1, 0},  anegi[4]   = { 1, 0, 0, 0},
                  aposj[4]   = { 0, 0, 0,-1},  anegj[4]   = { 0, 1, 0, 0},
                  posfari[4] = {-1, 0,-2, 0},  negfari[4] = { 2, 0, 1, 0},
                  posfarj[4] = { 0,-1, 0,-2},  negfarj[4] = { 0, 2, 0, 1};
-    double       hx, hy, x, y, a, u_up, u_dn, u_far, theta,
-                 xshift[4], yshift[4], flux[4];
+    double       hx, hy, halfx, halfy, x, y, a, u_up, u_dn, u_far, theta,
+                 flux[4];
 
-    // fluxes on cell boundaries are traversed in this order:   --1--
-    // (cell center at *)                                       2 * 0
-    //                                                          --3--
+    // fluxes on cell boundaries are traversed in this order (=l): ,-1-,
+    // cell center at * has coordinates (x,y):                     2 * 0
+    //                                                             '-3-'
     hx = 1.0 / info->mx;  hy = 1.0 / info->my;
-    xshift[0] =   hx / 2.0;  yshift[0] = 0.0;
-    xshift[1] =        0.0;  yshift[1] =   hy / 2.0;
-    xshift[2] = - hx / 2.0;  yshift[2] = 0.0;
-    xshift[3] =        0.0;  yshift[3] = - hy / 2.0;
-    ierr = DMDAGetCoordinateArray(info->da, &coords); CHKERRQ(ierr);
+    halfx = hx / 2.0;     halfy = hy / 2.0;
     for (j = info->ys; j < info->ys + info->ym; j++) {
+        y = (j + 0.5) * hy;
         for (i = info->xs; i < info->xs + info->xm; i++) {
-            x = coords[j][i].x;  y = coords[j][i].y;
-            for (l = 0; l < 4; l++) {
-                a = a_wind(x + xshift[l],y + yshift[l],dir[l],user);
+            x = (i + 0.5) * hx;
+            for (l = 0; l < 4; l++) {   // loop over cell boundaries
+                a = a_wind(x + halfx*xsh[l],y + halfy*ysh[l],dir[l],user);
                 if (user->firstorder) {
                     u_up = (a >= 0) ? au[j + aposj[l]][i + aposi[l]]
                                     : au[j + anegj[l]][i + anegi[l]];
@@ -128,10 +121,9 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t,
                        + g_source(x,y,au[j][i],user);
         }
     }
-    ierr = DMDARestoreCoordinateArray(info->da, &coords); CHKERRQ(ierr);
     return 0;
 }
-//ENDLIMITER
+//ENDFUNCTION
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
