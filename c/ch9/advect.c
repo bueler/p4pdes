@@ -17,7 +17,10 @@ static char help[] =
 // implicit:
 // mpiexec -n 4 ./advect -ts_monitor_solution draw -ts_monitor -adv_circlewind -ts_final_time 0.5 -adv_conex 0.3 -adv_coney 0.3 -ts_type cn -da_refine 6 -snes_monitor -ts_dt 0.05 -ksp_rtol 1.0e-10
 
-// FIXME need Jacobian using first-order
+// with -adv_firstorder, -snes_type test suggests Jacobian is correct
+
+// testing Jacobian options (fails with XX=-snes_mf_operator; use -ksp_view_mat ::ascii_matlab  etc.):
+// ./advect -da_refine 0 -ts_monitor -adv_circlewind -adv_conex 0.3 -adv_coney 0.3 -ts_type beuler -snes_monitor_short -ts_final_time 0.01 -ts_dt 0.01 -snes_rtol 1.0e-4 -adv_firstorder XX
 
 typedef struct {
     PetscBool  firstorder,   // if true, use first-order upwinding
@@ -50,6 +53,7 @@ PetscErrorCode FormInitial(DMDALocalInfo *info, Vec u, AdvectCtx* user) {
     return 0;
 }
 
+// velocity  a(x,y) = ( a^x(x,y), a^y(x,y) )
 static double a_wind(double x, double y, int dir, AdvectCtx* user) {
     if (user->circlewind) {
         return (dir == 0) ? - 2.0 * (y - 0.5) : 2.0 * (x - 0.5);
@@ -58,7 +62,13 @@ static double a_wind(double x, double y, int dir, AdvectCtx* user) {
     }
 }
 
+// source  g(x,y,u)
 static double g_source(double x, double y, double u, AdvectCtx* user) {
+    return 0.0;
+}
+
+//         d g(x,y,u) / d u
+static double dg_source(double x, double y, double u, AdvectCtx* user) {
     return 0.0;
 }
 
@@ -124,6 +134,84 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t,
     return 0;
 }
 //ENDFUNCTION
+
+PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info, double t,
+        double **au, Mat J, Mat P, AdvectCtx *user) {
+    PetscErrorCode ierr;
+    const int    dir[4] = {0, 1, 0, 1},  // use x (0) or y (1) component
+                 xsh[4]   = { 1, 0,-1, 0},  ysh[4]   = { 0, 1, 0,-1};
+    int          i, j, l, ncols;
+    double       hx, hy, halfx, halfy, x, y, a, v[5];
+    MatStencil   col[5],row;
+
+    ierr = MatZeroEntries(P); CHKERRQ(ierr);
+    hx = 1.0 / info->mx;  hy = 1.0 / info->my;
+    halfx = hx / 2.0;     halfy = hy / 2.0;
+    for (j = info->ys; j < info->ys+info->ym; j++) {
+        y = (j + 0.5) * hy;
+        row.j = j;  col[0].j = j;
+        for (i = info->xs; i < info->xs+info->xm; i++) {
+            x = (i + 0.5) * hx;
+            row.i = i;  col[0].i = i;
+            v[0] = dg_source(x,y,au[j][i],user);
+            ncols = 1;
+            for (l = 0; l < 4; l++) {   // loop over cell boundaries
+                a = a_wind(x + halfx*xsh[l],y + halfy*ysh[l],dir[l],user);
+                // u_up = (a >= 0) ? au[j + aposj[l]][i + aposi[l]]
+                //                  : au[j + anegj[l]][i + anegi[l]];
+                //  flux[l] = a * u_up;
+                if (a >= 0.0) {
+                    switch (l) {
+                        case 0:
+                            col[ncols].j = j;  col[ncols].i = i;
+                            v[ncols++] = - a / hx;
+                            break;
+                        case 1:
+                            col[ncols].j = j;  col[ncols].i = i;
+                            v[ncols++] = - a / hy;
+                            break;
+                        case 2:
+                            col[ncols].j = j;  col[ncols].i = i-1;
+                            v[ncols++] = a / hx;
+                            break;
+                        case 3:
+                            col[ncols].j = j-1;  col[ncols].i = i;
+                            v[ncols++] = a / hy;
+                            break;
+                    }
+                } else {  // a < 0
+                    switch (l) {
+                        case 0:
+                            col[ncols].j = j;  col[ncols].i = i+1;
+                            v[ncols++] = - a / hx;
+                            break;
+                        case 1:
+                            col[ncols].j = j+1;  col[ncols].i = i;
+                            v[ncols++] = - a / hy;
+                            break;
+                        case 2:
+                            col[ncols].j = j;  col[ncols].i = i;
+                            v[ncols++] = a / hx;
+                            break;
+                        case 3:
+                            col[ncols].j = j;  col[ncols].i = i;
+                            v[ncols++] = a / hy;
+                            break;
+                    }
+                }
+            }
+            ierr = MatSetValuesStencil(P,1,&row,ncols,col,v,ADD_VALUES); CHKERRQ(ierr);
+        }
+    }
+
+    ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    ierr = MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    if (J != P) {
+        ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+        ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    }
+    return 0;
+}
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
@@ -194,6 +282,8 @@ int main(int argc,char **argv) {
     ierr = TSSetDM(ts,da); CHKERRQ(ierr);
     ierr = DMDATSSetRHSFunctionLocal(da,INSERT_VALUES,
            (DMDATSRHSFunctionLocal)FormRHSFunctionLocal,&user); CHKERRQ(ierr);
+    ierr = DMDATSSetRHSJacobianLocal(da,
+           (DMDATSRHSJacobianLocal)FormRHSJacobianLocal,&user); CHKERRQ(ierr);
     ierr = TSSetType(ts,TSRK); CHKERRQ(ierr);
     ierr = TSRKSetType(ts,TSRK2A); CHKERRQ(ierr);
     ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);

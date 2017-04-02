@@ -14,9 +14,9 @@ ad3: ad3.o  chkopts
 runadvect_1:
 	-@../testit.sh advect "-da_refine 1 -ts_monitor -ts_rk_type 5f -adv_firstorder" 1 1
 
-# parallel and implicit and circlewind
+# parallel and implicit and circlewind and -snes_fd_color
 runadvect_2:
-	-@../testit.sh advect "-da_refine 2 -ts_monitor -adv_circlewind -adv_conex 0.3 -adv_coney 0.3 -ts_type beuler -snes_monitor_short -ts_final_time 0.01 -ts_dt 0.01 -snes_rtol 1.0e-4" 2 2
+	-@../testit.sh advect "-da_refine 2 -ts_monitor -adv_circlewind -adv_conex 0.3 -adv_coney 0.3 -ts_type beuler -snes_monitor_short -ts_final_time 0.01 -ts_dt 0.01 -snes_rtol 1.0e-4 -snes_fd_color" 2 2
 
 test: runadvect_1 runadvect_2
 
