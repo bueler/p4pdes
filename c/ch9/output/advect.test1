@@ -1,5 +1,5 @@
 solving on 10 x 10 grid with dx=0.1 x dy=0.1 cells, t0=0.,
-and initial step dt=0.1 ...
+initial step dt=0.1, and NONE limiter ...
 0 TS dt 0.1 time 0.
 1 TS dt 0.0333168 time 0.0308782
 2 TS dt 0.0400064 time 0.064195

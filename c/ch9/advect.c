@@ -3,30 +3,53 @@ static char help[] =
 "Domain is (0,1) x (0,1).  Equation is\n"
 "  u_t + div(a(x,y) u) = g(x,y,u).\n"
 "Boundary conditions are periodic in x and y.  Cells are grid-point centered.\n"
-"Uses van Leer (1974) flux-limited (non-oscillatory) method-of-lines\n"
-"discretization [default], or first-order upwind.\n";
+"Uses flux-limited (non-oscillatory) method-of-lines discretization.\n"
+"Limiters are van Leer (1974) [default], Koren (1993), or NONE = first-order\n"
+"upwind.\n\n";
 
 #include <petsc.h>
 
 // try:
-//   ./advect -da_refine 5 -ts_monitor_solution draw -ts_monitor -ts_rk_type 5dp
+//   ./advect -da_refine 5 -ts_monitor_solution draw -ts_monitor -ts_rk_type 5dp -adv_limiter KOREN
 
 // one lap of circular motion, computed in parallel:
 //   mpiexec -n 4 ./advect -da_refine 5 -adv_circlewind -adv_conex 0.3 -adv_coney 0.3 -ts_final_time 3.1416 -ts_monitor -ts_monitor_solution draw
 
-// implicit:
-// mpiexec -n 4 ./advect -ts_monitor_solution draw -ts_monitor -adv_circlewind -ts_final_time 0.5 -adv_conex 0.3 -adv_coney 0.3 -ts_type cn -da_refine 6 -snes_monitor -ts_dt 0.05 -ksp_rtol 1.0e-10
+// implicit and evidence that smoother limiter is better: succeeds with XX=NONE,VANLEER
+// but not with XX=KOREN; note removing -snes_fd_color helps sort of
+// mpiexec -n 4 ./advect -ts_monitor_solution draw -ts_monitor -adv_circlewind -ts_final_time 0.2 -adv_conex 0.3 -adv_coney 0.3 -ts_type cn -da_refine 6 -snes_monitor -ts_dt 0.02 -snes_fd_color -adv_limiter XX
 
-// with -adv_firstorder, -snes_type test suggests Jacobian is correct
+// with -adv_limiter NONE, -snes_type test suggests Jacobian is correct
 
-// testing Jacobian options (fails with XX=-snes_mf_operator; use -ksp_view_mat ::ascii_matlab  etc.):
-// ./advect -da_refine 0 -ts_monitor -adv_circlewind -adv_conex 0.3 -adv_coney 0.3 -ts_type beuler -snes_monitor_short -ts_final_time 0.01 -ts_dt 0.01 -snes_rtol 1.0e-4 -adv_firstorder XX
+// testing Jacobian option -snes_mf_operator
+// (FAILS with "No support for this operation for this object type ...
+// Not written for this matrix type"  see petsc-users):
+// ./advect -da_refine 1 -ts_monitor -adv_circlewind -adv_conex 0.3 -adv_coney 0.3 -ts_type beuler -snes_monitor_short -ts_final_time 0.01 -ts_dt 0.01 -snes_mf_operator
+
+//STARTLIMITER
+/* the van Leer (1974) limiter is formula (1.11) in section III.1 of
+Hundsdorfer & Verwer */
+static double vanleer(double th) {
+    return 0.5 * (th + PetscAbsReal(th)) / (1.0 + PetscAbsReal(th));
+}
+
+/* the Koren (1993) limiter is formula (1.7) in same source */
+static double koren(double th) {
+    const double z = (1.0/3.0) + (1.0/6.0) * th;
+    return PetscMax(0.0, PetscMin(1.0, PetscMin(z, th)));
+}
+
+typedef enum {NONE, VANLEER, KOREN} LimiterType;
+static const char *LimiterTypes[] = {"NONE","VANLEER","KOREN",
+                                     "LimiterType", "", NULL};
+static void* limiterfcnptr[] = {NULL, &vanleer, &koren};
+//ENDLIMITER
 
 typedef struct {
-    PetscBool  firstorder,   // if true, use first-order upwinding
-               circlewind;   // if true, wind is equivalent to rigid rotation
+    PetscBool  circlewind;   // if true, wind is equivalent to rigid rotation
     double     windx, windy, // x,y components of wind (if not circular)
                conex, coney, coner, coneh; // parameters for cone initial cond.
+    double     (*limiter)(double);
 } AdvectCtx;
 
 PetscErrorCode FormInitial(DMDALocalInfo *info, Vec u, AdvectCtx* user) {
@@ -72,14 +95,6 @@ static double dg_source(double x, double y, double u, AdvectCtx* user) {
     return 0.0;
 }
 
-/* the van Leer (1974) limiter is formula (1.11) in section III.1 of
-Hundsdorfer & Verwer */
-//STARTLIMITER
-static double limiter(double th) {
-    return 0.5 * (th + PetscAbsReal(th)) / (1.0 + PetscAbsReal(th));
-}
-//ENDLIMITER
-
 /* method-of-lines discretization gives ODE system  u' = G(t,u)
 so our finite volume scheme computes
     G_ij = - (fluxE - fluxW)/hx - (fluxN - fluxS)/hy + g(x,y,U_ij)
@@ -115,14 +130,14 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t,
                 u_up = (a >= 0.0) ? au[j][i] : au[j+l][i+(1-l)];
                 flux = a * u_up;
                 // use flux-limiter
-                if (!user->firstorder) { // use formulas (1.2), (1.3), (1.6)
-                                         // (pp 216--217) Hundsdorfer&Verwer
+                if (user->limiter != NULL) {
+                    // formulas (1.2),(1.3),(1.6) Hundsdorfer&Verwer pp 216--217
                     u_dn = (a >= 0.0) ? au[j+l][i+(1-l)] : au[j][i];
                     if (u_dn != u_up) {
                         u_far = (a >= 0.0) ? au[j-l][i-(1-l)]
                                            : au[j+2*l][i+2*(1-l)];
                         theta = (u_up - u_far) / (u_dn - u_up);
-                        flux += a * limiter(theta) * (u_dn - u_up);
+                        flux += a * (*user->limiter)(theta) * (u_dn - u_up);
                     }
                 }
                 // update G_ij on both sides of computed flux, if we own it
@@ -202,6 +217,7 @@ int main(int argc,char **argv) {
     DM             da;
     Vec            u;
     DMDALocalInfo  info;
+    LimiterType    limiterchoice = VANLEER;
     double         hx, hy, t0, dt;
     PetscBool      dump = PETSC_FALSE;
     char           fileroot[PETSC_MAX_PATH_LEN] = "";
@@ -218,7 +234,6 @@ int main(int argc,char **argv) {
     user.coner = 0.1;
     user.coneh = 1.0;
     user.circlewind = PETSC_FALSE;
-    user.firstorder = PETSC_FALSE;
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD,
            "adv_", "options for advect.c", ""); CHKERRQ(ierr);
     ierr = PetscOptionsBool("-circlewind","if true, wind is rigid rotation",
@@ -233,8 +248,10 @@ int main(int argc,char **argv) {
            "advect.c",user.coney,&user.coney,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsString("-dumpto","filename root for initial/final state",
            "advect.c",fileroot,fileroot,PETSC_MAX_PATH_LEN,&dump);CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-firstorder","if true, use first-order upwinding",
-           "advect.c",user.firstorder,&user.firstorder,NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsEnum("-limiter","flux-limiter type",
+           "advect.c",LimiterTypes,
+           (PetscEnum)limiterchoice,(PetscEnum*)&limiterchoice,NULL); CHKERRQ(ierr);
+    user.limiter = limiterfcnptr[limiterchoice];
     ierr = PetscOptionsReal("-windx","x component of wind (if not circular)",
            "advect.c",user.windx,&user.windx,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsReal("-windy","y component of wind (if not circular)",
@@ -277,8 +294,8 @@ int main(int argc,char **argv) {
     ierr = TSGetTimeStep(ts,&dt); CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,
            "solving on %d x %d grid with dx=%g x dy=%g cells, t0=%g,\n"
-           "and initial step dt=%g ...\n",
-           info.mx,info.my,hx,hy,t0,dt); CHKERRQ(ierr);
+           "initial step dt=%g, and %s limiter ...\n",
+           info.mx,info.my,hx,hy,t0,dt,LimiterTypes[limiterchoice]); CHKERRQ(ierr);
 
     ierr = DMCreateGlobalVector(da,&u); CHKERRQ(ierr);
     ierr = FormInitial(&info,u,&user); CHKERRQ(ierr);

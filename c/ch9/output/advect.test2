@@ -1,5 +1,5 @@
 solving on 20 x 20 grid with dx=0.05 x dy=0.05 cells, t0=0.,
-and initial step dt=0.01 ...
+initial step dt=0.01, and VANLEER limiter ...
 0 TS dt 0.01 time 0.
     0 SNES Function norm 13.0905 
     1 SNES Function norm 0.133227 
