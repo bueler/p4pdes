@@ -103,8 +103,8 @@ but only east (E) and north (N) fluxes are computed
 //STARTFUNCTION
 PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t,
         double **au, double **aG, AdvectCtx *user) {
-    int          i, j, l;
-    double       hx, hy, halfx, halfy, x, y, a, u_up, u_dn, u_far, theta, flux;
+    int     i, j, l;
+    double  hx, hy, halfx, halfy, x, y, a, u_up, u_dn, u_far, theta, flux;
 
     // clear G first
     for (j = info->ys; j < info->ys + info->ym; j++)
@@ -158,11 +158,11 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t,
 PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info, double t,
         double **au, Mat J, Mat P, AdvectCtx *user) {
     PetscErrorCode ierr;
-    const int    dir[4] = {0, 1, 0, 1},  // use x (0) or y (1) component
-                 xsh[4]   = { 1, 0,-1, 0},  ysh[4]   = { 0, 1, 0,-1};
-    int          i, j, l, nc;
-    double       hx, hy, halfx, halfy, x, y, a, v[5];
-    MatStencil   col[5],row;
+    const int   dir[4] = {0, 1, 0, 1},  // use x (0) or y (1) component
+                xsh[4]   = { 1, 0,-1, 0},  ysh[4]   = { 0, 1, 0,-1};
+    int         i, j, l, nc;
+    double      hx, hy, halfx, halfy, x, y, a, v[5];
+    MatStencil  col[5],row;
 
     ierr = MatZeroEntries(P); CHKERRQ(ierr);
     hx = 1.0 / info->mx;  hy = 1.0 / info->my;
@@ -207,6 +207,20 @@ PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info, double t,
         ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
         ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
     }
+    return 0;
+}
+
+PetscErrorCode dumptobinary(const char* root, const char* append, Vec u) {
+    PetscErrorCode ierr;
+    PetscViewer  viewer;
+    char filename[PETSC_MAX_PATH_LEN] = "";
+    sprintf(filename,"%s%s.dat",root,append);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,
+        "writing PETSC binary file %s ...\n",filename); CHKERRQ(ierr);
+    ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename,
+        FILE_MODE_WRITE,&viewer); CHKERRQ(ierr);
+    ierr = VecView(u,viewer); CHKERRQ(ierr);
+    ierr = PetscViewerDestroy(&viewer); CHKERRQ(ierr);
     return 0;
 }
 
@@ -263,8 +277,7 @@ int main(int argc,char **argv) {
                DMDA_STENCIL_STAR,              // no diagonal differencing
                5,5,PETSC_DECIDE,PETSC_DECIDE,  // default to hx=hx=0.2 grid
                                                //   (mx=my=5 allows -snes_fd_color)
-               1,                              // degrees of freedom
-               2,                              // stencil width (flux-limiting)
+               1, 2,                           // d.o.f & stencil width
                NULL,NULL,&da); CHKERRQ(ierr);
     ierr = DMSetFromOptions(da); CHKERRQ(ierr);
     ierr = DMSetUp(da); CHKERRQ(ierr);
@@ -299,29 +312,9 @@ int main(int argc,char **argv) {
 
     ierr = DMCreateGlobalVector(da,&u); CHKERRQ(ierr);
     ierr = FormInitial(&info,u,&user); CHKERRQ(ierr);
-    if (dump) {
-        PetscViewer  viewer;
-        char         filename[PETSC_MAX_PATH_LEN] = "";
-        ierr = sprintf(filename,"%s_initial.dat",fileroot);
-        ierr = PetscPrintf(PETSC_COMM_WORLD,
-            "writing PETSC binary file %s ...\n",filename); CHKERRQ(ierr);
-        ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename,
-            FILE_MODE_WRITE,&viewer); CHKERRQ(ierr);
-        ierr = VecView(u,viewer); CHKERRQ(ierr);
-        ierr = PetscViewerDestroy(&viewer); CHKERRQ(ierr);
-    }
+    if (dump) { ierr = dumptobinary(fileroot,"_initial",u); CHKERRQ(ierr); }
     ierr = TSSolve(ts,u); CHKERRQ(ierr);
-    if (dump) {
-        PetscViewer  viewer;
-        char         filename[PETSC_MAX_PATH_LEN] = "";
-        ierr = sprintf(filename,"%s_final.dat",fileroot);
-        ierr = PetscPrintf(PETSC_COMM_WORLD,
-            "writing PETSC binary file %s ...\n",filename); CHKERRQ(ierr);
-        ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename,
-            FILE_MODE_WRITE,&viewer); CHKERRQ(ierr);
-        ierr = VecView(u,viewer); CHKERRQ(ierr);
-        ierr = PetscViewerDestroy(&viewer); CHKERRQ(ierr);
-    }
+    if (dump) { ierr = dumptobinary(fileroot,"_final",u); CHKERRQ(ierr); }
 
     VecDestroy(&u);  TSDestroy(&ts);  DMDestroy(&da);
     PetscFinalize();
