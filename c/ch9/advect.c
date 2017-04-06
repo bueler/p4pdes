@@ -12,7 +12,7 @@ static char help[] =
 //   ./advect -da_refine 5 -ts_monitor_solution draw -ts_monitor -ts_rk_type 5dp
 
 // one lap of circular motion, computed in parallel:
-//   mpiexec -n 4 ./advect -da_refine 5 -adv_circlewind -adv_conex 0.3 -adv_coney 0.3 -ts_final_time 3.1416 -ts_monitor -ts_monitor_solution draw -ksp_rtol 1.0e-10
+//   mpiexec -n 4 ./advect -da_refine 5 -adv_circlewind -adv_conex 0.3 -adv_coney 0.3 -ts_final_time 3.1416 -ts_monitor -ts_monitor_solution draw
 
 // implicit:
 // mpiexec -n 4 ./advect -ts_monitor_solution draw -ts_monitor -adv_circlewind -ts_final_time 0.5 -adv_conex 0.3 -adv_coney 0.3 -ts_type cn -da_refine 6 -snes_monitor -ts_dt 0.05 -ksp_rtol 1.0e-10
@@ -105,23 +105,18 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t,
             x = (i + 0.5) * hx;
             for (l = 0; l < 4; l++) {   // loop over cell boundaries
                 a = a_wind(x + halfx*xsh[l],y + halfy*ysh[l],dir[l],user);
-                if (user->firstorder) {
-                    u_up = (a >= 0) ? au[j + aposj[l]][i + aposi[l]]
-                                    : au[j + anegj[l]][i + anegi[l]];
-                    flux[l] = a * u_up;
-                } else { // use formulas (1.2), (1.3), (1.6) on
-                         // pp 216--217 of Hundsdorfer & Verwer
-                    if (a >= 0.0) {
-                        u_dn  = au[j +   anegj[l]][i +   anegi[l]];
-                        u_up  = au[j +   aposj[l]][i +   aposi[l]];
-                        u_far = au[j + posfarj[l]][i + posfari[l]];
-                    } else {
-                        u_dn  = au[j +   aposj[l]][i +   aposi[l]];
-                        u_up  = au[j +   anegj[l]][i +   anegi[l]];
-                        u_far = au[j + negfarj[l]][i + negfari[l]];
-                    }
-                    flux[l] = a * u_up;
+                // first-order flux
+                u_up = (a >= 0.0) ? au[j + aposj[l]][i + aposi[l]]
+                                  : au[j + anegj[l]][i + anegi[l]];
+                flux[l] = a * u_up;
+                // use flux-limiter
+                if (!user->firstorder) { // use formulas (1.2), (1.3), (1.6) on
+                                         // pp 216--217 of Hundsdorfer & Verwer
+                    u_dn = (a >= 0.0) ? au[j +   anegj[l]][i +   anegi[l]]
+                                      : au[j +   aposj[l]][i +   aposi[l]];
                     if (u_dn != u_up) {
+                        u_far = (a >= 0.0) ? au[j + posfarj[l]][i + posfari[l]]
+                                           : au[j + negfarj[l]][i + negfari[l]];
                         theta = (u_up - u_far) / (u_dn - u_up);
                         flux[l] += a * limiter(theta) * (u_dn - u_up);
                     }
@@ -149,17 +144,15 @@ PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info, double t,
     halfx = hx / 2.0;     halfy = hy / 2.0;
     for (j = info->ys; j < info->ys+info->ym; j++) {
         y = (j + 0.5) * hy;
-        row.j = j;  col[0].j = j;
+        row.j = j;
         for (i = info->xs; i < info->xs+info->xm; i++) {
             x = (i + 0.5) * hx;
-            row.i = i;  col[0].i = i;
+            row.i = i;
+            col[0].j = j;  col[0].i = i;
             v[0] = dg_source(x,y,au[j][i],user);
             ncols = 1;
             for (l = 0; l < 4; l++) {   // loop over cell boundaries
                 a = a_wind(x + halfx*xsh[l],y + halfy*ysh[l],dir[l],user);
-                // u_up = (a >= 0) ? au[j + aposj[l]][i + aposi[l]]
-                //                  : au[j + anegj[l]][i + anegi[l]];
-                //  flux[l] = a * u_up;
                 if (a >= 0.0) {
                     switch (l) {
                         case 0:
