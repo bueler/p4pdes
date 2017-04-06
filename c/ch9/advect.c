@@ -145,7 +145,7 @@ PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info, double t,
     PetscErrorCode ierr;
     const int    dir[4] = {0, 1, 0, 1},  // use x (0) or y (1) component
                  xsh[4]   = { 1, 0,-1, 0},  ysh[4]   = { 0, 1, 0,-1};
-    int          i, j, l, ncols;
+    int          i, j, l, nc;
     double       hx, hy, halfx, halfy, x, y, a, v[5];
     MatStencil   col[5],row;
 
@@ -160,50 +160,29 @@ PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info, double t,
             row.i = i;
             col[0].j = j;  col[0].i = i;
             v[0] = dg_source(x,y,au[j][i],user);
-            ncols = 1;
+            nc = 1;
             for (l = 0; l < 4; l++) {   // loop over cell boundaries
                 a = a_wind(x + halfx*xsh[l],y + halfy*ysh[l],dir[l],user);
-                if (a >= 0.0) {
-                    switch (l) {
-                        case 0:
-                            col[ncols].j = j;  col[ncols].i = i;
-                            v[ncols++] = - a / hx;
-                            break;
-                        case 1:
-                            col[ncols].j = j;  col[ncols].i = i;
-                            v[ncols++] = - a / hy;
-                            break;
-                        case 2:
-                            col[ncols].j = j;  col[ncols].i = i-1;
-                            v[ncols++] = a / hx;
-                            break;
-                        case 3:
-                            col[ncols].j = j-1;  col[ncols].i = i;
-                            v[ncols++] = a / hy;
-                            break;
-                    }
-                } else {  // a < 0
-                    switch (l) {
-                        case 0:
-                            col[ncols].j = j;  col[ncols].i = i+1;
-                            v[ncols++] = - a / hx;
-                            break;
-                        case 1:
-                            col[ncols].j = j+1;  col[ncols].i = i;
-                            v[ncols++] = - a / hy;
-                            break;
-                        case 2:
-                            col[ncols].j = j;  col[ncols].i = i;
-                            v[ncols++] = a / hx;
-                            break;
-                        case 3:
-                            col[ncols].j = j;  col[ncols].i = i;
-                            v[ncols++] = a / hy;
-                            break;
-                    }
+                switch (l) {
+                    case 0:
+                        col[nc].j = j;  col[nc].i = (a >= 0.0) ? i : i+1;
+                        v[nc++] = - a / hx;
+                        break;
+                    case 1:
+                        col[nc].j = (a >= 0.0) ? j : j+1;  col[nc].i = i;
+                        v[nc++] = - a / hy;
+                        break;
+                    case 2:
+                        col[nc].j = j;  col[nc].i = (a >= 0.0) ? i-1 : i;
+                        v[nc++] = a / hx;
+                        break;
+                    case 3:
+                        col[nc].j = (a >= 0.0) ? j-1 : j;  col[nc].i = i;
+                        v[nc++] = a / hy;
+                        break;
                 }
             }
-            ierr = MatSetValuesStencil(P,1,&row,ncols,col,v,ADD_VALUES); CHKERRQ(ierr);
+            ierr = MatSetValuesStencil(P,1,&row,nc,col,v,ADD_VALUES); CHKERRQ(ierr);
         }
     }
 
