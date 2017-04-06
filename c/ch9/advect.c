@@ -80,50 +80,60 @@ static double limiter(double th) {
 }
 //ENDLIMITER
 
-/* method-of-lines discretization gives ODE system  u' = G(t,u) */
+/* method-of-lines discretization gives ODE system  u' = G(t,u)
+so our finite volume scheme computes
+    G_ij = - (fluxE - fluxW)/hx - (fluxN - fluxS)/hy + g(x,y,U_ij)
+but only east (E) and north (N) fluxes are computed
+*/
 //STARTFUNCTION
 PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t,
         double **au, double **aG, AdvectCtx *user) {
     int          i, j, l;
-    const int    dir[4] = {0, 1, 0, 1},  // use x (0) or y (1) component
-                 xsh[4]     = { 1, 0,-1, 0},  ysh[4]     = { 0, 1, 0,-1},
-                 aposi[4]   = { 0, 0,-1, 0},  anegi[4]   = { 1, 0, 0, 0},
-                 aposj[4]   = { 0, 0, 0,-1},  anegj[4]   = { 0, 1, 0, 0},
-                 posfari[4] = {-1, 0,-2, 0},  negfari[4] = { 2, 0, 1, 0},
-                 posfarj[4] = { 0,-1, 0,-2},  negfarj[4] = { 0, 2, 0, 1};
-    double       hx, hy, halfx, halfy, x, y, a, u_up, u_dn, u_far, theta,
-                 flux[4];
+    double       hx, hy, halfx, halfy, x, y, a, u_up, u_dn, u_far, theta, flux;
 
+    // clear G first
+    for (j = info->ys; j < info->ys + info->ym; j++)
+        for (i = info->xs; i < info->xs + info->xm; i++)
+            aG[j][i] = 0.0;
     // fluxes on cell boundaries are traversed in this order (=l): ,-1-,
-    // cell center at * has coordinates (x,y):                     2 * 0
-    //                                                             '-3-'
+    // cell center at * has coordinates (x,y):                     | * 0
+    //                                                             '---'
     hx = 1.0 / info->mx;  hy = 1.0 / info->my;
     halfx = hx / 2.0;     halfy = hy / 2.0;
-    for (j = info->ys; j < info->ys + info->ym; j++) {
+    for (j = info->ys-1; j < info->ys + info->ym; j++) {  // note start: -1
         y = (j + 0.5) * hy;
-        for (i = info->xs; i < info->xs + info->xm; i++) {
+        for (i = info->xs-1; i < info->xs + info->xm; i++) {  // ditto
             x = (i + 0.5) * hx;
-            for (l = 0; l < 4; l++) {   // loop over cell boundaries
-                a = a_wind(x + halfx*xsh[l],y + halfy*ysh[l],dir[l],user);
+            if ((i >= info->xs) && (j >= info->ys)) {
+                aG[j][i] += g_source(x,y,au[j][i],user);
+            }
+            for (l = 0; l < 2; l++) {   // get E, N fluxes on cell boundaries
+                if ((l == 0) && (j < info->ys))  continue;
+                if ((l == 1) && (i < info->xs))  continue;
+                a = a_wind(x + halfx*(1-l),y + halfy*l,l,user);
                 // first-order flux
-                u_up = (a >= 0.0) ? au[j + aposj[l]][i + aposi[l]]
-                                  : au[j + anegj[l]][i + anegi[l]];
-                flux[l] = a * u_up;
+                u_up = (a >= 0.0) ? au[j][i] : au[j+l][i+(1-l)];
+                flux = a * u_up;
                 // use flux-limiter
-                if (!user->firstorder) { // use formulas (1.2), (1.3), (1.6) on
-                                         // pp 216--217 of Hundsdorfer & Verwer
-                    u_dn = (a >= 0.0) ? au[j +   anegj[l]][i +   anegi[l]]
-                                      : au[j +   aposj[l]][i +   aposi[l]];
+                if (!user->firstorder) { // use formulas (1.2), (1.3), (1.6)
+                                         // (pp 216--217) Hundsdorfer&Verwer
+                    u_dn = (a >= 0.0) ? au[j+l][i+(1-l)] : au[j][i];
                     if (u_dn != u_up) {
-                        u_far = (a >= 0.0) ? au[j + posfarj[l]][i + posfari[l]]
-                                           : au[j + negfarj[l]][i + negfari[l]];
+                        u_far = (a >= 0.0) ? au[j-l][i-(1-l)]
+                                           : au[j+2*l][i+2*(1-l)];
                         theta = (u_up - u_far) / (u_dn - u_up);
-                        flux[l] += a * limiter(theta) * (u_dn - u_up);
+                        flux += a * limiter(theta) * (u_dn - u_up);
                     }
                 }
+                // update G_ij on both sides of computed flux, if we own it
+                if (l == 0) {
+                    if (i >= info->xs)              aG[j][i]   -= flux / hx;
+                    if (i+1 < info->xs + info->xm)  aG[j][i+1] += flux / hx;
+                } else {
+                    if (j >= info->ys)              aG[j][i]   -= flux / hy;
+                    if (j+1 < info->ys + info->ym)  aG[j+1][i] += flux / hy;
+                }
             }
-            aG[j][i] = - (flux[0] - flux[2])/hx - (flux[1] - flux[3])/hy
-                       + g_source(x,y,au[j][i],user);
         }
     }
     return 0;
