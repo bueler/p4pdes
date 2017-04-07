@@ -109,16 +109,16 @@ but only east (E) and north (N) fluxes are computed
 //STARTFUNCTION
 PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t,
         double **au, double **aG, AdvectCtx *user) {
-    int     i, j, l;
+    int     i, j, q;
     double  hx, hy, halfx, halfy, x, y, a, u_up, u_dn, u_far, theta, flux;
 
     // clear G first
     for (j = info->ys; j < info->ys + info->ym; j++)
         for (i = info->xs; i < info->xs + info->xm; i++)
             aG[j][i] = 0.0;
-    // fluxes on cell boundaries are traversed in this order (=l): ,-1-,
-    // cell center at * has coordinates (x,y):                     | * 0
-    //                                                             '---'
+    // fluxes on cell boundaries are traversed in this order:  ,-1-,
+    // cell center at * has coordinates (x,y):                 | * 0
+    // q = 0,1 is cell boundary index                          '---'
     hx = 1.0 / info->mx;  hy = 1.0 / info->my;
     halfx = hx / 2.0;     halfy = hy / 2.0;
     for (j = info->ys-1; j < info->ys + info->ym; j++) { // note -1
@@ -128,26 +128,26 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t,
             if ((i >= info->xs) && (j >= info->ys)) {
                 aG[j][i] += g_source(x,y,au[j][i],user);
             }
-            for (l = 0; l < 2; l++) {   // get E,N fluxes on cell bdry
-                if ((l == 0) && (j < info->ys))  continue;
-                if ((l == 1) && (i < info->xs))  continue;
-                a = a_wind(x + halfx*(1-l),y + halfy*l,l,user);
+            for (q = 0; q < 2; q++) {   // get E,N fluxes on cell bdry
+                if ((q == 0) && (j < info->ys))  continue;
+                if ((q == 1) && (i < info->xs))  continue;
+                a = a_wind(x + halfx*(1-q),y + halfy*q,q,user);
                 // first-order flux
-                u_up = (a >= 0.0) ? au[j][i] : au[j+l][i+(1-l)];
+                u_up = (a >= 0.0) ? au[j][i] : au[j+q][i+(1-q)];
                 flux = a * u_up;
                 // use flux-limiter
                 if (user->limiter != NULL) {
                     // formulas (1.2),(1.3),(1.6); H&V pp 216--217
-                    u_dn = (a >= 0.0) ? au[j+l][i+(1-l)] : au[j][i];
+                    u_dn = (a >= 0.0) ? au[j+q][i+(1-q)] : au[j][i];
                     if (u_dn != u_up) {
-                        u_far = (a >= 0.0) ? au[j-l][i-(1-l)]
-                                           : au[j+2*l][i+2*(1-l)];
+                        u_far = (a >= 0.0) ? au[j-q][i-(1-q)]
+                                           : au[j+2*q][i+2*(1-q)];
                         theta = (u_up - u_far) / (u_dn - u_up);
                         flux += a * (*user->limiter)(theta)*(u_dn-u_up);
                     }
                 }
                 // update owned G_ij on both sides of computed flux
-                if (l == 0) {
+                if (q == 0) {
                     if (i >= info->xs)
                         aG[j][i]   -= flux / hx;
                     if (i+1 < info->xs + info->xm)
