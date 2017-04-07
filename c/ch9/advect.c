@@ -1,5 +1,6 @@
 static char help[] =
-"Time-dependent pure-advection equation in 2D using TS.  Option prefix -adv_.\n"
+"Time-dependent pure-advection equation, in flux-conservative form, in 2D\n"
+"using TS.  Option prefix -adv_.\n"
 "Domain is (0,1) x (0,1).  Equation is\n"
 "  u_t + div(a(x,y) u) = g(x,y,u).\n"
 "Boundary conditions are periodic in x and y.  Cells are grid-point centered.\n"
@@ -215,10 +216,12 @@ PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info, double t,
     return 0;
 }
 
+// dumps to file; does nothing if root is empty or NULL
 PetscErrorCode dumptobinary(const char* root, const char* append, Vec u) {
     PetscErrorCode ierr;
     PetscViewer  viewer;
     char filename[PETSC_MAX_PATH_LEN] = "";
+    if ((!root) || (strlen(root) == 0))  return 0;
     sprintf(filename,"%s%s.dat",root,append);
     ierr = PetscPrintf(PETSC_COMM_WORLD,
         "writing PETSC binary file %s ...\n",filename); CHKERRQ(ierr);
@@ -238,7 +241,6 @@ int main(int argc,char **argv) {
     DMDALocalInfo  info;
     LimiterType    limiterchoice = VANLEER;
     double         hx, hy, t0, dt;
-    PetscBool      dump = PETSC_FALSE;
     char           fileroot[PETSC_MAX_PATH_LEN] = "";
 
     PetscInitialize(&argc,&argv,(char*)0,help);
@@ -266,7 +268,7 @@ int main(int argc,char **argv) {
     ierr = PetscOptionsReal("-coney","y component of cone center",
            "advect.c",user.coney,&user.coney,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsString("-dumpto","filename root for initial/final state",
-           "advect.c",fileroot,fileroot,PETSC_MAX_PATH_LEN,&dump);CHKERRQ(ierr);
+           "advect.c",fileroot,fileroot,PETSC_MAX_PATH_LEN,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsEnum("-limiter","flux-limiter type",
            "advect.c",LimiterTypes,
            (PetscEnum)limiterchoice,(PetscEnum*)&limiterchoice,NULL); CHKERRQ(ierr);
@@ -317,9 +319,9 @@ int main(int argc,char **argv) {
 
     ierr = DMCreateGlobalVector(da,&u); CHKERRQ(ierr);
     ierr = FormInitial(&info,u,&user); CHKERRQ(ierr);
-    if (dump) { ierr = dumptobinary(fileroot,"_initial",u); CHKERRQ(ierr); }
+    ierr = dumptobinary(fileroot,"_initial",u); CHKERRQ(ierr);
     ierr = TSSolve(ts,u); CHKERRQ(ierr);
-    if (dump) { ierr = dumptobinary(fileroot,"_final",u); CHKERRQ(ierr); }
+    ierr = dumptobinary(fileroot,"_final",u); CHKERRQ(ierr);
 
     VecDestroy(&u);  TSDestroy(&ts);  DMDestroy(&da);
     PetscFinalize();
