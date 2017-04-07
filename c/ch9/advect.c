@@ -4,9 +4,9 @@ static char help[] =
 "Domain is (0,1) x (0,1).  Equation is\n"
 "  u_t + div(a(x,y) u) = g(x,y,u).\n"
 "Boundary conditions are periodic in x and y.  Cells are grid-point centered.\n"
-"Uses flux-limited (non-oscillatory) method-of-lines discretization.\n"
-"Limiters are van Leer (1974) [default], Koren (1993), centered, or NONE\n"
-"(= first-order upwind).\n\n";
+"Uses flux-limited (non-oscillatory) method-of-lines discretization\n"
+"(Hundsdorfer & Verwer 2003). Limiters are van Leer (1974) [default],\n"
+"Koren (1993), centered, or NONE (= first-order upwind).\n\n";
 
 #include <petsc.h>
 
@@ -121,14 +121,14 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t,
     //                                                             '---'
     hx = 1.0 / info->mx;  hy = 1.0 / info->my;
     halfx = hx / 2.0;     halfy = hy / 2.0;
-    for (j = info->ys-1; j < info->ys + info->ym; j++) {  // note start: -1
+    for (j = info->ys-1; j < info->ys + info->ym; j++) { // note -1
         y = (j + 0.5) * hy;
-        for (i = info->xs-1; i < info->xs + info->xm; i++) {  // ditto
+        for (i = info->xs-1; i < info->xs + info->xm; i++) {
             x = (i + 0.5) * hx;
             if ((i >= info->xs) && (j >= info->ys)) {
                 aG[j][i] += g_source(x,y,au[j][i],user);
             }
-            for (l = 0; l < 2; l++) {   // get E, N fluxes on cell boundaries
+            for (l = 0; l < 2; l++) {   // get E,N fluxes on cell bdry
                 if ((l == 0) && (j < info->ys))  continue;
                 if ((l == 1) && (i < info->xs))  continue;
                 a = a_wind(x + halfx*(1-l),y + halfy*l,l,user);
@@ -137,22 +137,26 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t,
                 flux = a * u_up;
                 // use flux-limiter
                 if (user->limiter != NULL) {
-                    // formulas (1.2),(1.3),(1.6) Hundsdorfer&Verwer pp 216--217
+                    // formulas (1.2),(1.3),(1.6); H&V pp 216--217
                     u_dn = (a >= 0.0) ? au[j+l][i+(1-l)] : au[j][i];
                     if (u_dn != u_up) {
                         u_far = (a >= 0.0) ? au[j-l][i-(1-l)]
                                            : au[j+2*l][i+2*(1-l)];
                         theta = (u_up - u_far) / (u_dn - u_up);
-                        flux += a * (*user->limiter)(theta) * (u_dn - u_up);
+                        flux += a * (*user->limiter)(theta)*(u_dn-u_up);
                     }
                 }
-                // update G_ij on both sides of computed flux, if we own it
+                // update owned G_ij on both sides of computed flux
                 if (l == 0) {
-                    if (i >= info->xs)              aG[j][i]   -= flux / hx;
-                    if (i+1 < info->xs + info->xm)  aG[j][i+1] += flux / hx;
+                    if (i >= info->xs)
+                        aG[j][i]   -= flux / hx;
+                    if (i+1 < info->xs + info->xm)
+                        aG[j][i+1] += flux / hx;
                 } else {
-                    if (j >= info->ys)              aG[j][i]   -= flux / hy;
-                    if (j+1 < info->ys + info->ym)  aG[j+1][i] += flux / hy;
+                    if (j >= info->ys)
+                        aG[j][i]   -= flux / hy;
+                    if (j+1 < info->ys + info->ym)
+                        aG[j+1][i] += flux / hy;
                 }
             }
         }
