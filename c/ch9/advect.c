@@ -48,7 +48,7 @@ static double koren(double th) {
 typedef enum {NONE, CENTERED, VANLEER, KOREN} LimiterType;
 static const char *LimiterTypes[] = {"NONE","CENTERED","VANLEER","KOREN",
                                      "LimiterType", "", NULL};
-static void* limiterfcnptr[] = {NULL, &centered, &vanleer, &koren};
+static void* limiterptr[] = {NULL, &centered, &vanleer, &koren};
 //ENDLIMITER
 
 typedef struct {
@@ -276,7 +276,7 @@ int main(int argc,char **argv) {
     ierr = PetscOptionsEnum("-limiter","flux-limiter type",
            "advect.c",LimiterTypes,
            (PetscEnum)limiterchoice,(PetscEnum*)&limiterchoice,NULL); CHKERRQ(ierr);
-    user.limiter = limiterfcnptr[limiterchoice];
+    user.limiter = limiterptr[limiterchoice];
     ierr = PetscOptionsReal("-windx","x component of wind (if not circular)",
            "advect.c",user.windx,&user.windx,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsReal("-windy","y component of wind (if not circular)",
