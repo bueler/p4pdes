@@ -4,8 +4,8 @@ static char help[] =
 "  u_t + div(a(x,y) u) = g(x,y,u).\n"
 "Boundary conditions are periodic in x and y.  Cells are grid-point centered.\n"
 "Uses flux-limited (non-oscillatory) method-of-lines discretization.\n"
-"Limiters are van Leer (1974) [default], Koren (1993), or NONE = first-order\n"
-"upwind.\n\n";
+"Limiters are van Leer (1974) [default], Koren (1993), centered, or NONE\n"
+"(= first-order upwind).\n\n";
 
 #include <petsc.h>
 
@@ -27,6 +27,11 @@ static char help[] =
 // ./advect -da_refine 1 -ts_monitor -adv_circlewind -adv_conex 0.3 -adv_coney 0.3 -ts_type beuler -snes_monitor_short -ts_final_time 0.01 -ts_dt 0.01 -snes_mf_operator
 
 //STARTLIMITER
+/* the centered-space method is a trivial (and poor) limiter */
+static double centered(double th) {
+    return 0.5;
+}
+
 /* the van Leer (1974) limiter is formula (1.11) in section III.1 of
 Hundsdorfer & Verwer */
 static double vanleer(double th) {
@@ -39,10 +44,10 @@ static double koren(double th) {
     return PetscMax(0.0, PetscMin(1.0, PetscMin(z, th)));
 }
 
-typedef enum {NONE, VANLEER, KOREN} LimiterType;
-static const char *LimiterTypes[] = {"NONE","VANLEER","KOREN",
+typedef enum {NONE, CENTERED, VANLEER, KOREN} LimiterType;
+static const char *LimiterTypes[] = {"NONE","CENTERED","VANLEER","KOREN",
                                      "LimiterType", "", NULL};
-static void* limiterfcnptr[] = {NULL, &vanleer, &koren};
+static void* limiterfcnptr[] = {NULL, &centered, &vanleer, &koren};
 //ENDLIMITER
 
 typedef struct {
