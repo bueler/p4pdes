@@ -1,13 +1,14 @@
-solving on 10 x 10 grid with dx=0.1 x dy=0.1 cells, t0=0.,
-initial step dt=0.1, and NONE limiter ...
+solving problem 'straight' on 10 x 10 grid with dx=0.2 x dy=0.2 cells,
+  t0=0., initial dt=0.1, and 'none' limiter ...
 0 TS dt 0.1 time 0.
-1 TS dt 0.0333168 time 0.0308782
-2 TS dt 0.0400064 time 0.064195
-3 TS dt 0.047643 time 0.104201
-4 TS dt 0.0569598 time 0.151844
-5 TS dt 0.067716 time 0.208804
-6 TS dt 0.0799982 time 0.27652
-7 TS dt 0.0936481 time 0.356518
-8 TS dt 0.108336 time 0.450167
-9 TS dt 0.0414977 time 0.558502
-10 TS dt 0.144047 time 0.6
+1 TS dt 0.0305577 time 0.0281663
+2 TS dt 0.0355308 time 0.0587241
+3 TS dt 0.0410652 time 0.0942549
+4 TS dt 0.0475703 time 0.13532
+5 TS dt 0.0549066 time 0.18289
+6 TS dt 0.0630821 time 0.237797
+7 TS dt 0.072071 time 0.300879
+8 TS dt 0.0818055 time 0.37295
+9 TS dt 0.0920875 time 0.454755
+10 TS dt 0.053157 time 0.546843
+11 TS dt 0.116047 time 0.6
