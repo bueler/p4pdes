@@ -105,10 +105,15 @@ PetscErrorCode FormInitial(DMDALocalInfo *info, Vec u, AdvectCtx* user) {
 
 // velocity  a(x,y) = ( a^x(x,y), a^y(x,y) )
 static double a_wind(double x, double y, int dir, AdvectCtx* user) {
-    if (user->problem == ROTATION) {
-        return (dir == 0) ? 2.0 * y : - 2.0 * x;
-    } else {
-        return (dir == 0) ? user->windx : user->windy;
+    switch (user->problem) {
+        case ROTATION:
+            return (dir == 0) ? 2.0 * y : - 2.0 * x;
+        case STRAIGHT:
+            return (dir == 0) ? user->windx : user->windy;
+        default:
+            PetscPrintf(PETSC_COMM_WORLD,"bad problem ... ending\n");
+            PetscEnd();
+            return 0.0;
     }
 }
 
