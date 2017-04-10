@@ -20,6 +20,10 @@ static char help[] =
 /* evidence for convergence plus some feedback on iterations, but bad KSP iterations because GMRES+BJACOBI+ILU:
   $ for LEV in 0 1 2 3 4 5 6; do timer mpiexec -n 4 ./ad3 -snes_monitor -snes_converged_reason -ksp_converged_reason -ksp_rtol 1.0e-14 -da_refine $LEV; done
 
+eventually algebraic multigrid is superior (tip-over point at -da_refine 6):
+$ timer ./ad3 -snes_monitor -ksp_converged_reason -ksp_rtol 1.0e-11 -da_refine 6 -pc_type gamg
+$ timer ./ad3 -snes_monitor -ksp_converged_reason -ksp_rtol 1.0e-11 -da_refine 6
+
 all of these work:
   ./ad3 -snes_monitor -ksp_type preonly -pc_type lu
   "                   -snes_fd
@@ -33,7 +37,6 @@ FIXME: multigrid?
 
 //STARTSETUP
 typedef struct {
-    DM         da;
     double     eps;
     PetscBool  upwind;
 } Ctx;
@@ -104,7 +107,7 @@ PetscErrorCode formUex(DMDALocalInfo *info, Ctx *usr, Vec uex) {
     double       x, y, z, QQ, UU, ***auex;
 
     getSpacings(info,&s);
-    ierr = DMDAVecGetArray(usr->da, uex, &auex);CHKERRQ(ierr);
+    ierr = DMDAVecGetArray(info->da, uex, &auex);CHKERRQ(ierr);
     for (k=info->zs; k<info->zs+info->zm; k++) {
         z = -1.0 + k * s.hz;
         for (j=info->ys; j<info->ys+info->ym; j++) {
@@ -118,7 +121,7 @@ PetscErrorCode formUex(DMDALocalInfo *info, Ctx *usr, Vec uex) {
             }
         }
     }
-    ierr = DMDAVecRestoreArray(usr->da, uex, &auex);CHKERRQ(ierr);
+    ierr = DMDAVecRestoreArray(info->da, uex, &auex);CHKERRQ(ierr);
     return 0;
 }
 
@@ -283,6 +286,7 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar ***u,
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
+    DM             da;
     SNES           snes;
     Vec            u, uexact;
     double         err, uexnorm;
@@ -298,25 +302,25 @@ int main(int argc,char **argv) {
         DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DM_BOUNDARY_PERIODIC,
         DMDA_STENCIL_STAR, 3,3,3, PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,
         1, 1, NULL,NULL,NULL,
-        &user.da); CHKERRQ(ierr);
+        &da); CHKERRQ(ierr);
 //ENDDMDA
-    ierr = DMSetFromOptions(user.da); CHKERRQ(ierr);
-    ierr = DMSetUp(user.da); CHKERRQ(ierr);
-    ierr = DMDASetUniformCoordinates(user.da,-1.0,1.0,-1.0,1.0,-1.0,1.0); CHKERRQ(ierr);
-    ierr = DMSetApplicationContext(user.da,&user); CHKERRQ(ierr);
-    ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);
+    ierr = DMSetFromOptions(da); CHKERRQ(ierr);
+    ierr = DMSetUp(da); CHKERRQ(ierr);
+    ierr = DMDASetUniformCoordinates(da,-1.0,1.0,-1.0,1.0,-1.0,1.0); CHKERRQ(ierr);
+    ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
+    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
     if ((info.mx < 2) || (info.my < 2) || (info.mz < 3)) {
         SETERRQ(PETSC_COMM_WORLD,1,"grid too coarse: require (mx,my,mz) >= (2,2,3)");
     }
 
-    ierr = DMCreateGlobalVector(user.da,&uexact); CHKERRQ(ierr);
+    ierr = DMCreateGlobalVector(da,&uexact); CHKERRQ(ierr);
     ierr = formUex(&info,&user,uexact); CHKERRQ(ierr);
 
     ierr = SNESCreate(PETSC_COMM_WORLD,&snes);CHKERRQ(ierr);
-    ierr = SNESSetDM(snes,user.da);CHKERRQ(ierr);
-    ierr = DMDASNESSetFunctionLocal(user.da,INSERT_VALUES,
+    ierr = SNESSetDM(snes,da);CHKERRQ(ierr);
+    ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
             (DMDASNESFunction)FormFunctionLocal,&user);CHKERRQ(ierr);
-    ierr = DMDASNESSetJacobianLocal(user.da,
+    ierr = DMDASNESSetJacobianLocal(da,
             (DMDASNESJacobian)FormJacobianLocal,&user);CHKERRQ(ierr);
     ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
 
@@ -332,7 +336,7 @@ int main(int argc,char **argv) {
          info.mx,info.my,info.mz,user.eps,err/uexnorm); CHKERRQ(ierr);
 
     VecDestroy(&u);  VecDestroy(&uexact);
-    SNESDestroy(&snes);  DMDestroy(&user.da);
+    SNESDestroy(&snes);  DMDestroy(&da);
     PetscFinalize();
     return 0;
 }
