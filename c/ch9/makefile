@@ -22,7 +22,10 @@ runadvect_2:
 runadvect_3:
 	-@../testit.sh advect "-da_refine 1 -ts_monitor -adv_limiter koren -adv_windy 0.0 -ts_final_time 0.02 -ts_dt 0.01 -ts_type cn -snes_converged_reason" 1 3
 
-test: runadvect_1 runadvect_2 runadvect_3
+runad3_1:
+	-@../testit.sh ad3 "-da_refine 1 -snes_converged_reason" 1 1
+
+test: runadvect_1 runadvect_2 runadvect_3 runad3_1
 
 # etc
 

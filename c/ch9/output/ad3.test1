@@ -1,0 +1,2 @@
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+done on 5 x 5 x 6 grid with eps=1.:  error |u-uexact|_2/|uexact|_2 = 0.197621
