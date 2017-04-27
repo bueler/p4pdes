@@ -1,6 +1,6 @@
 static char help[] =
 "Solves a 3D structured-grid advection-diffusion problem with DMDA\n"
-"and SNES.  The equation is\n"
+"and SNES.  Option prefix -ad3_...  The equation is\n"
 "    - eps Laplacian u + W . Grad u = f\n"
 "on the domain  [-1,1]^3,  with boundary conditions:\n"
 "    u(1,y,z) = g(y,z)\n"
@@ -20,7 +20,9 @@ static char help[] =
 /* evidence for convergence plus some feedback on iterations, but bad KSP iterations because GMRES+BJACOBI+ILU:
   $ for LEV in 0 1 2 3 4 5 6; do timer mpiexec -n 4 ./ad3 -snes_monitor -snes_converged_reason -ksp_converged_reason -ksp_rtol 1.0e-14 -da_refine $LEV; done
 
-eventually algebraic multigrid is superior (tip-over point at -da_refine 6):
+can go to LEV 7 if -ksp_type bicg or -ksp_type bcgs  ... GMRES is mem hog
+
+eventually untuned algebraic multigrid is superior (tip-over point at -da_refine 6):
 $ timer ./ad3 -snes_monitor -ksp_converged_reason -ksp_rtol 1.0e-11 -da_refine 6 -pc_type gamg
 $ timer ./ad3 -snes_monitor -ksp_converged_reason -ksp_rtol 1.0e-11 -da_refine 6
 
