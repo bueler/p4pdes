@@ -105,7 +105,7 @@ int main(int argc,char **argv) {
   Vec            u, uexact;
   FishCtx        user;
   DMDALocalInfo  info;
-  double         errnorm;
+  double         errinf,err2h;
 
   PetscInitialize(&argc,&argv,NULL,help);
 
@@ -138,9 +138,12 @@ int main(int argc,char **argv) {
   ierr = VecSet(u,0.0); CHKERRQ(ierr);
   ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
   ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
-  ierr = VecNorm(u,NORM_INFINITY,&errnorm); CHKERRQ(ierr);
-  ierr = PetscPrintf(COMM,"on %d x %d grid:  error |u-uexact|_inf = %g\n",
-           info.mx,info.my,errnorm); CHKERRQ(ierr);
+  ierr = VecNorm(u,NORM_INFINITY,&errinf); CHKERRQ(ierr);
+  ierr = VecNorm(u,NORM_2,&err2h); CHKERRQ(ierr);
+  err2h /= (info.mx-1);
+  ierr = PetscPrintf(COMM,
+           "on %d x %d grid:  error |u-uexact|_inf = %g, |...|_h = %.2e\n",
+           info.mx,info.my,errinf,err2h); CHKERRQ(ierr);
 
   VecDestroy(&u);  VecDestroy(&uexact);  VecDestroy(&(user.f));
   SNESDestroy(&snes);  DMDestroy(&da);
