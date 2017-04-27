@@ -113,8 +113,7 @@ int main(int argc,char **argv) {
                DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
                DMDA_STENCIL_STAR,
                3,3,3,PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,
-               1,1,
-               NULL,NULL,NULL,&da); CHKERRQ(ierr);
+               1,1,NULL,NULL,NULL,&da); CHKERRQ(ierr);
   ierr = DMSetFromOptions(da); CHKERRQ(ierr);
   ierr = DMSetUp(da); CHKERRQ(ierr);  // this must be called BEFORE SetUniformCoordinates
   ierr = DMSetApplicationContext(da,&user);CHKERRQ(ierr);
