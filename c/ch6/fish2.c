@@ -140,7 +140,7 @@ int main(int argc,char **argv) {
   ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
   ierr = VecNorm(u,NORM_INFINITY,&errinf); CHKERRQ(ierr);
   ierr = VecNorm(u,NORM_2,&err2h); CHKERRQ(ierr);
-  err2h /= (info.mx-1);
+  err2h /= PetscSqrtReal((double)(info.mx-1)*(info.my-1));// like continuous L2
   ierr = PetscPrintf(COMM,
            "on %d x %d grid:  error |u-uexact|_inf = %g, |...|_h = %.2e\n",
            info.mx,info.my,errinf,err2h); CHKERRQ(ierr);
