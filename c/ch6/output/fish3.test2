@@ -1,2 +1,2 @@
   Linear solve converged due to CONVERGED_RTOL iterations 8
-on 9 x 9 x 9 grid:  error |u-uexact|_inf = 0.000169304
+on 9 x 9 x 9 grid:  error |u-uexact|_inf = 0.000169304, |...|_h = 6.09e-05
