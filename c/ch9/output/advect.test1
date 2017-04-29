@@ -10,5 +10,9 @@ solving problem 'straight' on 10 x 10 grid with dx=0.2 x dy=0.2 cells,
 7 TS dt 0.072071 time 0.300879
 8 TS dt 0.0818055 time 0.37295
 9 TS dt 0.0920875 time 0.454755
-10 TS dt 0.053157 time 0.546843
-11 TS dt 0.116047 time 0.6
+10 TS dt 0.102577 time 0.546843
+11 TS dt 0.112988 time 0.64942
+12 TS dt 0.123459 time 0.762408
+13 TS dt 0.114133 time 0.885867
+14 TS dt 0.147917 time 1.
+errors |u-uexact|_{1,h} = 3.0014e-01, |u-uexact|_{2,h} = 3.8348e-01

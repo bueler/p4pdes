@@ -12,6 +12,11 @@ static char help[] =
 // try:
 //   ./advect -da_refine 5 -ts_monitor_solution draw -ts_monitor -ts_rk_type 5dp -adv_limiter koren
 
+// shows, via L1 and L2 errors in case where exact solution is known, this
+// limiter order for L1 error (tested for LEV = 1 ... 8):
+//   centered < none < vanleer < koren             [rightward is better]
+// for LIMITER in centered none vanleer koren; do mpiexec -n 4 ./advect -ts_final_time 1.0 -adv_limiter $LIMITER -da_refine $LEV; done
+
 // one lap of circular motion, computed in parallel, reproducing LeVeque Figure 20.5:
 //   mpiexec -n 4 ./advect -da_grid_x 80 -da_grid_y 80 -ts_monitor_solution draw -ts_monitor -ts_rk_type 2a -adv_problem rotation -ts_final_time 3.1415926
 
@@ -49,8 +54,8 @@ static void* limiterptr[] = {NULL, &centered, &vanleer, &koren};
 //ENDLIMITER
 
 //STARTCTX
-typedef enum {ROTATION, STRAIGHT} ProblemType;
-static const char *ProblemTypes[] = {"rotation","straight",
+typedef enum {STRAIGHT, ROTATION} ProblemType;
+static const char *ProblemTypes[] = {"straight","rotation",
                                      "ProblemType", "", NULL};
 
 typedef struct {
@@ -106,10 +111,10 @@ PetscErrorCode FormInitial(DMDALocalInfo *info, Vec u, AdvectCtx* user) {
 // velocity  a(x,y) = ( a^x(x,y), a^y(x,y) )
 static double a_wind(double x, double y, int dir, AdvectCtx* user) {
     switch (user->problem) {
-        case ROTATION:
-            return (dir == 0) ? 2.0 * y : - 2.0 * x;
         case STRAIGHT:
             return (dir == 0) ? user->windx : user->windy;
+        case ROTATION:
+            return (dir == 0) ? 2.0 * y : - 2.0 * x;
         default:
             PetscPrintf(PETSC_COMM_WORLD,"bad problem ... ending\n");
             PetscEnd();
@@ -270,7 +275,7 @@ int main(int argc,char **argv) {
     Vec            u;
     DMDALocalInfo  info;
     LimiterType    limiterchoice = VANLEER;
-    double         hx, hy, t0, dt;
+    double         hx, hy, t0, dt, tf;
     char           fileroot[PETSC_MAX_PATH_LEN] = "";
 
     PetscInitialize(&argc,&argv,(char*)0,help);
@@ -339,6 +344,23 @@ int main(int argc,char **argv) {
     ierr = dumptobinary(fileroot,"_initial",u); CHKERRQ(ierr);
     ierr = TSSolve(ts,u); CHKERRQ(ierr);
     ierr = dumptobinary(fileroot,"_final",u); CHKERRQ(ierr);
+
+    ierr = TSGetTime(ts,&tf); CHKERRQ(ierr);
+    if ((user.problem == STRAIGHT) && (PetscAbs(fmod(tf+1.0e-9,1.0)) <= 1.0e-8)
+        && (fmod(user.windx,2.0) == 0.0) && (fmod(user.windy,2.0) == 0.0)) {
+        // exact solution is same as initial condition
+        Vec uexact;
+        double norms[2];
+        ierr = VecDuplicate(u,&uexact); CHKERRQ(ierr);
+        ierr = FormInitial(&info,uexact,&user); CHKERRQ(ierr);
+        ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr); // u <- u + (-1.0) uexact
+        ierr = VecNorm(u,NORM_1_AND_2,norms); CHKERRQ(ierr);
+        norms[0] *= hx * hy;
+        norms[1] *= PetscSqrtReal(hx * hy);
+        ierr = PetscPrintf(PETSC_COMM_WORLD,
+           "errors |u-uexact|_{1,h} = %.4e, |u-uexact|_{2,h} = %.4e\n",
+           norms[0],norms[1]); CHKERRQ(ierr);
+    }
 
     VecDestroy(&u);  TSDestroy(&ts);  DMDestroy(&da);
     PetscFinalize();
