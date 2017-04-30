@@ -1,14 +1,18 @@
 static char help[] =
-"Time-dependent pure-advection equation, in flux-conservative form, in 2D.\n"
+"Time-dependent advection equation, in flux-conservative form, in 2D.\n"
 "Option prefix -adv_.  Domain is (-1,1) x (-1,1).  Equation is\n"
 "  u_t + div(a(x,y) u) = g(x,y,u).\n"
 "Boundary conditions are periodic in x and y.  Cells are grid-point centered.\n"
-"Uses flux-limited (non-oscillatory) method-of-lines discretization\n"
-"(Hundsdorfer & Verwer 2003).  Limiters are van Leer (1974) [default],\n"
-"Koren (1993), centered, or none (= first-order upwind).\n"
-"Two problems:
-"  STRAIGHT reproduces Figure 6.2, page 303, in Hundsdorfer & Verwer (2003)
-"  ROTATION reproduces Figure 20.5, page 461, in LeVeque (2002).\n\n";
+"Uses flux-limited (non-oscillatory) method-of-lines discretization:\n"
+"  none       first-order upwinding (limiter = 0)\n"
+"  centered   linear centered fluxes\n"
+"  vanleer    van Leer (1974) limiter\n"
+"  koren      Koren (1993) limiter [default].\n"
+"Solves either of two problems with initial conditions from:\n"
+"  straight   Figure 6.2, page 303, in Hundsdorfer & Verwer (2003) [default]\n"
+"  rotation   Figure 20.5, page 461, in LeVeque (2002).\n"
+"For the former problem, if final time is an integer and velocities are kept\n"
+"at default values, then exact solution is available; reports L1, L2 errors.\n\n";
 
 #include <petsc.h>
 
@@ -32,41 +36,6 @@ static char help[] =
 
 // see petsc pull request https://bitbucket.org/petsc/petsc/pull-requests/662/barry-fix-even-huger-flaw-in-ts/diff regarding -snes_mf_operator
 
-//STARTLIMITER
-/* the centered-space method is a trivial (and poor) limiter */
-static double centered(double th) {
-    return 0.5;
-}
-
-/* the van Leer (1974) limiter is formula (1.11) in section III.1 of
-Hundsdorfer & Verwer */
-static double vanleer(double th) {
-    return 0.5 * (th + PetscAbsReal(th)) / (1.0 + PetscAbsReal(th));
-}
-
-/* the Koren (1993) limiter is formula (1.7) in same source */
-static double koren(double th) {
-    const double z = (1.0/3.0) + (1.0/6.0) * th;
-    return PetscMax(0.0, PetscMin(1.0, PetscMin(z, th)));
-}
-
-typedef enum {NONE, CENTERED, VANLEER, KOREN} LimiterType;
-static const char *LimiterTypes[] = {"none","centered","vanleer","koren",
-                                     "LimiterType", "", NULL};
-static void* limiterptr[] = {NULL, &centered, &vanleer, &koren};
-//ENDLIMITER
-
-//STARTCTX
-typedef enum {STRAIGHT, ROTATION} ProblemType;
-static const char *ProblemTypes[] = {"straight","rotation",
-                                     "ProblemType", "", NULL};
-
-typedef struct {
-    ProblemType problem;
-    double      windx, windy; // x,y components of wind (if problem = STRAIGHT)
-    double      (*limiter)(double);
-} AdvectCtx;
-//ENDCTX
 
 // equal to 1 in a disc of radius 0.2 around (-0.6,-0.6)
 static double stump(double x, double y) {
@@ -88,6 +57,24 @@ static double box(double x, double y) {
         return 0.0;
 }
 
+//STARTCTX
+typedef enum {STRAIGHT, ROTATION} ProblemType;
+static const char *ProblemTypes[] = {"straight","rotation",
+                                     "ProblemType", "", NULL};
+
+typedef enum {STUMP, CONE, BOX} InitialShapeType;
+static const char *InitialShapeTypes[] = {"stump", "cone", "box",
+                                          "InitialShapeType", "", NULL};
+static void* initialshapeptr[] = {&stump, &cone, &box};
+
+typedef struct {
+    ProblemType      problem;
+    double           windx, windy;  // x,y velocity if problem==STRAIGHT
+    double           (*limiter)(double);
+    double           (*initialshape)(double,double); // if problem==STRAIGHT
+} AdvectCtx;
+//ENDCTX
+
 PetscErrorCode FormInitial(DMDALocalInfo *info, Vec u, AdvectCtx* user) {
     PetscErrorCode ierr;
     int          i, j;
@@ -102,7 +89,7 @@ PetscErrorCode FormInitial(DMDALocalInfo *info, Vec u, AdvectCtx* user) {
             x = -1.0 + (i+0.5) * hx;
             switch (user->problem) {
                 case STRAIGHT:
-                    au[j][i] = stump(x,y);
+                    au[j][i] = (*user->initialshape)(x,y);
                     break;
                 case ROTATION:
                     au[j][i] = cone(x,y) + box(x,y);
@@ -139,6 +126,30 @@ static double g_source(double x, double y, double u, AdvectCtx* user) {
 static double dg_source(double x, double y, double u, AdvectCtx* user) {
     return 0.0;
 }
+
+//STARTLIMITER
+/* the centered-space method is a trivial (and poor) limiter */
+static double centered(double th) {
+    return 0.5;
+}
+
+/* the van Leer (1974) limiter is formula (1.11) in section III.1 of
+Hundsdorfer & Verwer */
+static double vanleer(double th) {
+    return 0.5 * (th + PetscAbsReal(th)) / (1.0 + PetscAbsReal(th));
+}
+
+/* the Koren (1993) limiter is formula (1.7) in same source */
+static double koren(double th) {
+    const double z = (1.0/3.0) + (1.0/6.0) * th;
+    return PetscMax(0.0, PetscMin(1.0, PetscMin(z, th)));
+}
+
+typedef enum {NONE, CENTERED, VANLEER, KOREN} LimiterType;
+static const char *LimiterTypes[] = {"none","centered","vanleer","koren",
+                                     "LimiterType", "", NULL};
+static void* limiterptr[] = {NULL, &centered, &vanleer, &koren};
+//ENDLIMITER
 
 /* method-of-lines discretization gives ODE system  u' = G(t,u)
 so our finite volume scheme computes
@@ -277,14 +288,15 @@ PetscErrorCode dumptobinary(const char* root, const char* append, Vec u) {
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
-    AdvectCtx      user;
-    TS             ts;
-    DM             da;
-    Vec            u;
-    DMDALocalInfo  info;
-    LimiterType    limiterchoice = VANLEER;
-    double         hx, hy, t0, dt, tf;
-    char           fileroot[PETSC_MAX_PATH_LEN] = "";
+    AdvectCtx        user;
+    TS               ts;
+    DM               da;
+    Vec              u;
+    DMDALocalInfo    info;
+    LimiterType      limiterchoice = KOREN;
+    InitialShapeType initialshapechoice = STUMP;
+    double           hx, hy, t0, dt, tf;
+    char             fileroot[PETSC_MAX_PATH_LEN] = "";
 
     PetscInitialize(&argc,&argv,(char*)0,help);
 
@@ -295,6 +307,11 @@ int main(int argc,char **argv) {
            "adv_", "options for advect.c", ""); CHKERRQ(ierr);
     ierr = PetscOptionsString("-dumpto","filename root for initial/final state",
            "advect.c",fileroot,fileroot,PETSC_MAX_PATH_LEN,NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsEnum("-initial",
+           "shape of initial condition (if -adv_problem straight)",
+           "advect.c",InitialShapeTypes,
+           (PetscEnum)initialshapechoice,(PetscEnum*)&initialshapechoice,NULL); CHKERRQ(ierr);
+    user.initialshape = initialshapeptr[initialshapechoice];
     ierr = PetscOptionsEnum("-limiter","flux-limiter type",
            "advect.c",LimiterTypes,
            (PetscEnum)limiterchoice,(PetscEnum*)&limiterchoice,NULL); CHKERRQ(ierr);
@@ -354,10 +371,10 @@ int main(int argc,char **argv) {
     ierr = dumptobinary(fileroot,"_final",u); CHKERRQ(ierr);
 
     ierr = TSGetTime(ts,&tf); CHKERRQ(ierr);
-    if ((user.problem == STRAIGHT) && (PetscAbs(fmod(tf+1.0e-9,1.0)) <= 1.0e-8)
-        && (fmod(user.windx,2.0) == 0.0) && (fmod(user.windy,2.0) == 0.0)) {
+    if ( (user.problem == STRAIGHT) && (PetscAbs(fmod(tf+0.5e-8,1.0)) <= 1.0e-8)
+         && (fmod(user.windx,2.0) == 0.0) && (fmod(user.windy,2.0) == 0.0) ) {
         // exact solution is same as initial condition
-        Vec uexact;
+        Vec    uexact;
         double norms[2];
         ierr = VecDuplicate(u,&uexact); CHKERRQ(ierr);
         ierr = FormInitial(&info,uexact,&user); CHKERRQ(ierr);
@@ -366,8 +383,9 @@ int main(int argc,char **argv) {
         norms[0] *= hx * hy;
         norms[1] *= PetscSqrtReal(hx * hy);
         ierr = PetscPrintf(PETSC_COMM_WORLD,
-           "errors |u-uexact|_{1,h} = %.4e, |u-uexact|_{2,h} = %.4e\n",
-           norms[0],norms[1]); CHKERRQ(ierr);
+            "errors |u-uexact|_{1,h} = %.4e, |u-uexact|_{2,h} = %.4e\n",
+            norms[0],norms[1]); CHKERRQ(ierr);
+        VecDestroy(&uexact);
     }
 
     VecDestroy(&u);  TSDestroy(&ts);  DMDestroy(&da);

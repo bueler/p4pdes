@@ -14,13 +14,13 @@ ad3: ad3.o  chkopts
 runadvect_1:
 	-@../testit.sh advect "-da_refine 1 -ts_monitor -ts_rk_type 5f -adv_limiter none -ts_final_time 1.0" 1 1
 
-# vanleer limiter [default] and parallel and beuler and rotation and -snes_fd_color
+# vanleer limiter and parallel and beuler and rotation and -snes_fd_color
 runadvect_2:
-	-@../testit.sh advect "-da_refine 2 -ts_monitor -adv_problem rotation -ts_type beuler -snes_monitor_short -ts_final_time 0.01 -ts_dt 0.01 -snes_rtol 1.0e-4 -snes_fd_color" 2 2
+	-@../testit.sh advect "-da_refine 2 -ts_monitor -adv_limiter vanleer -adv_problem rotation -ts_type beuler -snes_monitor_short -ts_final_time 0.01 -ts_dt 0.01 -snes_rtol 1.0e-4 -snes_fd_color" 2 2
 
-# koren limiter and rightward wind and CN and analytical jacobian
+# koren limiter [default] and rightward wind and CN and analytical jacobian
 runadvect_3:
-	-@../testit.sh advect "-da_refine 1 -ts_monitor -adv_limiter koren -adv_windy 0.0 -ts_final_time 0.02 -ts_dt 0.01 -ts_type cn -snes_converged_reason" 1 3
+	-@../testit.sh advect "-da_refine 1 -ts_monitor -adv_windy 0.0 -ts_final_time 0.02 -ts_dt 0.01 -ts_type cn -snes_converged_reason" 1 3
 
 # eps = 1.0 [default] and centered-difference advection [default]
 runad3_1:
