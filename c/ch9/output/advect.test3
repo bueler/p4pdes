@@ -1,7 +1,8 @@
-solving problem 'straight' on 10 x 10 grid with dx=0.2 x dy=0.2 cells,
-  t0=0., initial dt=0.01, and 'koren' limiter ...
+solving problem 'straight' (initial: stump) on 10 x 10 grid (cells dx=0.2 x dy=0.2),
+    with t0=0., initial dt=0.01, and 'koren' limiter ...
 0 TS dt 0.01 time 0.
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 9
 1 TS dt 0.01 time 0.01
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 9
 2 TS dt 0.01 time 0.02
+completed 2 steps to time 0.02

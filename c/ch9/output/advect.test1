@@ -1,5 +1,5 @@
-solving problem 'straight' on 10 x 10 grid with dx=0.2 x dy=0.2 cells,
-  t0=0., initial dt=0.1, and 'none' limiter ...
+solving problem 'straight' (initial: stump) on 10 x 10 grid (cells dx=0.2 x dy=0.2),
+    with t0=0., initial dt=0.1, and 'none' limiter ...
 0 TS dt 0.1 time 0.
 1 TS dt 0.0305577 time 0.0281663
 2 TS dt 0.0355308 time 0.0587241
@@ -15,4 +15,5 @@ solving problem 'straight' on 10 x 10 grid with dx=0.2 x dy=0.2 cells,
 12 TS dt 0.123459 time 0.762408
 13 TS dt 0.114133 time 0.885867
 14 TS dt 0.147917 time 1.
+completed 14 steps to time 1.
 errors |u-uexact|_{1,h} = 3.0014e-01, |u-uexact|_{2,h} = 3.8348e-01

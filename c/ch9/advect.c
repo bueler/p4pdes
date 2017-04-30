@@ -277,6 +277,7 @@ int main(int argc,char **argv) {
     InitialShapeType initialshapechoice = STUMP;
     double           hx, hy, t0, dt, tf;
     char             fileroot[PETSC_MAX_PATH_LEN] = "";
+    int              steps;
 
     PetscInitialize(&argc,&argv,(char*)0,help);
 
@@ -288,7 +289,7 @@ int main(int argc,char **argv) {
     ierr = PetscOptionsString("-dumpto","filename root for initial/final state",
            "advect.c",fileroot,fileroot,PETSC_MAX_PATH_LEN,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsEnum("-initial",
-           "shape of initial condition (if -adv_problem straight)",
+           "shape of initial condition if problem==straight",
            "advect.c",InitialShapeTypes,
            (PetscEnum)initialshapechoice,(PetscEnum*)&initialshapechoice,NULL); CHKERRQ(ierr);
     user.initialshape = initialshapeptr[initialshapechoice];
@@ -336,27 +337,28 @@ int main(int argc,char **argv) {
     ierr = TSSetDuration(ts,1000000,0.6); CHKERRQ(ierr);
     ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
 
+    ierr = DMCreateGlobalVector(da,&u); CHKERRQ(ierr);
+    ierr = FormInitial(&info,u,&user); CHKERRQ(ierr);
+    ierr = dumptobinary(fileroot,"_initial",u); CHKERRQ(ierr);
     ierr = TSGetTime(ts,&t0); CHKERRQ(ierr);
     ierr = TSGetTimeStep(ts,&dt); CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,"solving problem '%s' ",
            ProblemTypes[user.problem]); CHKERRQ(ierr);
     if (user.problem == STRAIGHT) {
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"(%s) ",
+        ierr = PetscPrintf(PETSC_COMM_WORLD,"(initial: %s) ",
            InitialShapeTypes[initialshapechoice]); CHKERRQ(ierr);
     }
     ierr = PetscPrintf(PETSC_COMM_WORLD,
-           "on %d x %d grid with dx=%g x dy=%g cells,\n"
-           "  t0=%g, initial dt=%g, and '%s' limiter ...\n",
-           info.mx,info.my,hx,hy,
-           t0,dt,LimiterTypes[limiterchoice]); CHKERRQ(ierr);
+           "on %d x %d grid (cells dx=%g x dy=%g),\n"
+           "    with t0=%g, initial dt=%g, and '%s' limiter ...\n",
+           info.mx,info.my,hx,hy,t0,dt,LimiterTypes[limiterchoice]); CHKERRQ(ierr);
 
-    ierr = DMCreateGlobalVector(da,&u); CHKERRQ(ierr);
-    ierr = FormInitial(&info,u,&user); CHKERRQ(ierr);
-    ierr = dumptobinary(fileroot,"_initial",u); CHKERRQ(ierr);
     ierr = TSSolve(ts,u); CHKERRQ(ierr);
-    ierr = dumptobinary(fileroot,"_final",u); CHKERRQ(ierr);
 
+    ierr = TSGetTotalSteps(ts,&steps); CHKERRQ(ierr);
     ierr = TSGetTime(ts,&tf); CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,
+            "completed %d steps to time %g\n",steps,tf); CHKERRQ(ierr);
     if ( (user.problem == STRAIGHT) && (PetscAbs(fmod(tf+0.5e-8,1.0)) <= 1.0e-8)
          && (fmod(user.windx,2.0) == 0.0) && (fmod(user.windy,2.0) == 0.0) ) {
         // exact solution is same as initial condition
@@ -373,6 +375,7 @@ int main(int argc,char **argv) {
             norms[0],norms[1]); CHKERRQ(ierr);
         VecDestroy(&uexact);
     }
+    ierr = dumptobinary(fileroot,"_final",u); CHKERRQ(ierr);
 
     VecDestroy(&u);  TSDestroy(&ts);  DMDestroy(&da);
     PetscFinalize();
