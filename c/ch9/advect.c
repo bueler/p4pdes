@@ -12,30 +12,10 @@ static char help[] =
 "  straight   Figure 6.2, page 303, in Hundsdorfer & Verwer (2003) [default]\n"
 "  rotation   Figure 20.5, page 461, in LeVeque (2002).\n"
 "For the former problem, if final time is an integer and velocities are kept\n"
-"at default values, then exact solution is available; reports L1, L2 errors.\n\n";
+"at default values, then exact solution is available and L1, L2 errors\n"
+"are reported.\n\n";
 
 #include <petsc.h>
-
-// try:
-//   ./advect -da_refine 5 -ts_monitor_solution draw -ts_monitor -ts_rk_type 5dp -adv_limiter koren
-
-// shows, via L1 and L2 errors in case where exact solution is known, this
-// limiter order for L1 error (tested for LEV = 1 ... 8):
-//   centered < none < vanleer < koren             [rightward is better]
-// for LIMITER in centered none vanleer koren; do mpiexec -n 4 ./advect -ts_final_time 1.0 -adv_limiter $LIMITER -da_refine $LEV; done
-
-// one lap of circular motion, computed in parallel, reproducing LeVeque Figure 20.5:
-//   mpiexec -n 4 ./advect -da_grid_x 80 -da_grid_y 80 -ts_monitor_solution draw -ts_monitor -ts_rk_type 2a -adv_problem rotation -ts_final_time 3.1415926
-
-// above is really fast with -ts_rk_type 5f|5dp|3bs
-
-// implicit and evidence that smoother limiter is better: succeeds with XX=none,centered,vanleer; big iteration counts and then fails for koren; note "-snes_mf_operator" works with vanleer but hangs with koren
-// mpiexec -n 4 ./advect -ts_monitor_solution draw -ts_monitor -adv_problem rotation -ts_final_time 0.2 -ts_type cn -da_refine 6 -snes_monitor -ts_dt 0.02 -snes_fd_color -adv_limiter XX
-
-// with -adv_limiter none, -snes_type test suggests Jacobian is correct
-
-// see petsc pull request https://bitbucket.org/petsc/petsc/pull-requests/662/barry-fix-even-huger-flaw-in-ts/diff regarding -snes_mf_operator
-
 
 // equal to 1 in a disc of radius 0.2 around (-0.6,-0.6)
 static double stump(double x, double y) {
@@ -68,10 +48,10 @@ static const char *InitialShapeTypes[] = {"stump", "cone", "box",
 static void* initialshapeptr[] = {&stump, &cone, &box};
 
 typedef struct {
-    ProblemType      problem;
-    double           windx, windy;  // x,y velocity if problem==STRAIGHT
-    double           (*limiter)(double);
-    double           (*initialshape)(double,double); // if problem==STRAIGHT
+    ProblemType  problem;
+    double       windx, windy;  // x,y velocity if problem==STRAIGHT
+    double       (*limiter)(double);
+    double       (*initialshape)(double,double); // if problem==STRAIGHT
 } AdvectCtx;
 //ENDCTX
 
@@ -358,10 +338,16 @@ int main(int argc,char **argv) {
 
     ierr = TSGetTime(ts,&t0); CHKERRQ(ierr);
     ierr = TSGetTimeStep(ts,&dt); CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"solving problem '%s' ",
+           ProblemTypes[user.problem]); CHKERRQ(ierr);
+    if (user.problem == STRAIGHT) {
+        ierr = PetscPrintf(PETSC_COMM_WORLD,"(%s) ",
+           InitialShapeTypes[initialshapechoice]); CHKERRQ(ierr);
+    }
     ierr = PetscPrintf(PETSC_COMM_WORLD,
-           "solving problem '%s' on %d x %d grid with dx=%g x dy=%g cells,\n"
+           "on %d x %d grid with dx=%g x dy=%g cells,\n"
            "  t0=%g, initial dt=%g, and '%s' limiter ...\n",
-           ProblemTypes[user.problem],info.mx,info.my,hx,hy,
+           info.mx,info.my,hx,hy,
            t0,dt,LimiterTypes[limiterchoice]); CHKERRQ(ierr);
 
     ierr = DMCreateGlobalVector(da,&u); CHKERRQ(ierr);
