@@ -1,11 +1,14 @@
 static char help[] =
-"Time-dependent pure-advection equation, in flux-conservative form, in 2D\n"
-"using TS.  Option prefix -adv_.  Domain is (-1,1) x (-1,1).  Equation is\n"
+"Time-dependent pure-advection equation, in flux-conservative form, in 2D.\n"
+"Option prefix -adv_.  Domain is (-1,1) x (-1,1).  Equation is\n"
 "  u_t + div(a(x,y) u) = g(x,y,u).\n"
 "Boundary conditions are periodic in x and y.  Cells are grid-point centered.\n"
 "Uses flux-limited (non-oscillatory) method-of-lines discretization\n"
-"(Hundsdorfer & Verwer 2003). Limiters are van Leer (1974) [default],\n"
-"Koren (1993), centered, or none (= first-order upwind).\n\n";
+"(Hundsdorfer & Verwer 2003).  Limiters are van Leer (1974) [default],\n"
+"Koren (1993), centered, or none (= first-order upwind).\n"
+"Two problems:
+"  STRAIGHT reproduces Figure 6.2, page 303, in Hundsdorfer & Verwer (2003)
+"  ROTATION reproduces Figure 20.5, page 461, in LeVeque (2002).\n\n";
 
 #include <petsc.h>
 
@@ -65,10 +68,30 @@ typedef struct {
 } AdvectCtx;
 //ENDCTX
 
+// equal to 1 in a disc of radius 0.2 around (-0.6,-0.6)
+static double stump(double x, double y) {
+    const double r = PetscSqrtReal((x+0.6)*(x+0.6) + (y+0.6)*(y+0.6));
+    return (r < 0.2) ? 1.0 : 0.0;
+}
+
+// cone of height 1 of base radius 0.35 centered at (-0.45,0.0)
+static double cone(double x, double y) {
+    const double r = PetscSqrtReal((x+0.45)*(x+0.45) + y*y);
+    return (r < 0.35) ? 1.0 - r / 0.35 : 0.0;
+}
+
+// equal to 1 in square of side-length 0.5 (0.1,0.6) x (-0.25,0.25)
+static double box(double x, double y) {
+    if ((0.1 < x) && (x < 0.6) && (-0.25 < y) && (y < 0.25)) {
+        return 1.0;
+    } else
+        return 0.0;
+}
+
 PetscErrorCode FormInitial(DMDALocalInfo *info, Vec u, AdvectCtx* user) {
     PetscErrorCode ierr;
     int          i, j;
-    double       hx, hy, x, y, r, **au;
+    double       hx, hy, x, y, **au;
 
     ierr = VecSet(u,0.0); CHKERRQ(ierr);  // clear it first
     ierr = DMDAVecGetArray(info->da, u, &au); CHKERRQ(ierr);
@@ -79,25 +102,10 @@ PetscErrorCode FormInitial(DMDALocalInfo *info, Vec u, AdvectCtx* user) {
             x = -1.0 + (i+0.5) * hx;
             switch (user->problem) {
                 case STRAIGHT:
-                    // goal: reproduce Figure 6.2, page 303, in
-                    // Hundsdorfer & Verwer (2003). "Numerical Solution of
-                    // Time-Dependent Advection-Diffusion-Reaction Equations",
-                    // Springer; but scaled by factor of 2
-                    r = PetscSqrtReal((x+0.6)*(x+0.6) + (y+0.6)*(y+0.6));
-                    if (r < 0.2) {
-                        au[j][i] = 1.0;
-                    }
+                    au[j][i] = stump(x,y);
                     break;
                 case ROTATION:
-                    // goal: reproduce Figure 20.5, page 461, in
-                    // LeVeque (2002). "Finite Volume Methods for Hyperbolic
-                    // Problems", Cambridge
-                    r = PetscSqrtReal((x+0.45)*(x+0.45) + y*y);
-                    if ((0.1 < x) && (x < 0.6) && (-0.25 < y) && (y < 0.25)) {
-                        au[j][i] = 1.0;
-                    } else if (r < 0.35) {
-                        au[j][i] = 1.0 - r / 0.35;
-                    }
+                    au[j][i] = cone(x,y) + box(x,y);
                     break;
                 default:
                     SETERRQ(PETSC_COMM_WORLD,1,"invalid user->problem\n");
