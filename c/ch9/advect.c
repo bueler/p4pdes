@@ -17,6 +17,24 @@ static char help[] =
 
 #include <petsc.h>
 
+//STARTCTX
+typedef enum {STRAIGHT, ROTATION} ProblemType;
+static const char *ProblemTypes[] = {"straight","rotation",
+                                     "ProblemType", "", NULL};
+
+typedef enum {STUMP, CONE, BOX} InitialShapeType;
+static const char *InitialShapeTypes[] = {"stump", "cone", "box",
+                                          "InitialShapeType", "", NULL};
+
+typedef struct {
+    ProblemType  problem;
+    double       windx, windy;  // x,y velocity if problem==STRAIGHT
+    double       (*initialshape)(double,double); // if problem==STRAIGHT
+    double       (*limiter)(double);
+} AdvectCtx;
+//ENDCTX
+
+//STARTINITIALSHAPES
 // equal to 1 in a disc of radius 0.2 around (-0.6,-0.6)
 static double stump(double x, double y) {
     const double r = PetscSqrtReal((x+0.6)*(x+0.6) + (y+0.6)*(y+0.6));
@@ -37,23 +55,8 @@ static double box(double x, double y) {
         return 0.0;
 }
 
-//STARTCTX
-typedef enum {STRAIGHT, ROTATION} ProblemType;
-static const char *ProblemTypes[] = {"straight","rotation",
-                                     "ProblemType", "", NULL};
-
-typedef enum {STUMP, CONE, BOX} InitialShapeType;
-static const char *InitialShapeTypes[] = {"stump", "cone", "box",
-                                          "InitialShapeType", "", NULL};
 static void* initialshapeptr[] = {&stump, &cone, &box};
-
-typedef struct {
-    ProblemType  problem;
-    double       windx, windy;  // x,y velocity if problem==STRAIGHT
-    double       (*limiter)(double);
-    double       (*initialshape)(double,double); // if problem==STRAIGHT
-} AdvectCtx;
-//ENDCTX
+//ENDINITIALSHAPES
 
 PetscErrorCode FormInitial(DMDALocalInfo *info, Vec u, AdvectCtx* user) {
     PetscErrorCode ierr;
@@ -91,8 +94,6 @@ static double a_wind(double x, double y, int dir, AdvectCtx* user) {
         case ROTATION:
             return (dir == 0) ? 2.0 * y : - 2.0 * x;
         default:
-            PetscPrintf(PETSC_COMM_WORLD,"bad problem ... ending\n");
-            PetscEnd();
             return 0.0;
     }
 }
@@ -108,21 +109,23 @@ static double dg_source(double x, double y, double u, AdvectCtx* user) {
 }
 
 //STARTLIMITER
-/* the centered-space method is a trivial (and poor) limiter */
-static double centered(double th) {
+/* the centered-space method is a linear (and unlimited) "limiter" */
+static double centered(double theta) {
     return 0.5;
 }
 
-/* the van Leer (1974) limiter is formula (1.11) in section III.1 of
-Hundsdorfer & Verwer */
-static double vanleer(double th) {
-    return 0.5 * (th + PetscAbsReal(th)) / (1.0 + PetscAbsReal(th));
+/* van Leer (1974) limiter is formula (1.11) in section III.1 of
+Hundsdorfer & Verwer (2003) */
+static double vanleer(double theta) {
+    const double abstheta = PetscAbsReal(theta);
+    return 0.5 * (theta + abstheta) / (1.0 + abstheta);
 }
 
-/* the Koren (1993) limiter is formula (1.7) in same source */
-static double koren(double th) {
-    const double z = (1.0/3.0) + (1.0/6.0) * th;
-    return PetscMax(0.0, PetscMin(1.0, PetscMin(z, th)));
+/* Koren (1993) limiter is formula (1.7) in section III.1 of
+Hundsdorfer & Verwer (2003) */
+static double koren(double theta) {
+    const double z = (1.0/3.0) + (1.0/6.0) * theta;
+    return PetscMax(0.0, PetscMin(1.0, PetscMin(z, theta)));
 }
 
 typedef enum {NONE, CENTERED, VANLEER, KOREN} LimiterType;
@@ -152,9 +155,9 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t,
     // q = 0,1 is cell boundary index                          '---'
     hx = 2.0 / info->mx;  hy = 2.0 / info->my;
     halfx = hx / 2.0;     halfy = hy / 2.0;
-    for (j = info->ys-1; j < info->ys + info->ym; j++) { // note -1
+    for (j = info->ys-1; j < info->ys + info->ym; j++) { // note -1 start
         y = -1.0 + (j+0.5) * hy;
-        for (i = info->xs-1; i < info->xs + info->xm; i++) {
+        for (i = info->xs-1; i < info->xs + info->xm; i++) { // note -1 start
             x = -1.0 + (i+0.5) * hx;
             if ((i >= info->xs) && (j >= info->ys)) {
                 aG[j][i] += g_source(x,y,au[j][i],user);
@@ -250,19 +253,20 @@ PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info, double t,
     return 0;
 }
 
-// dumps to file; does nothing if root is empty or NULL
+// dumps to file; does nothing if string root is empty or NULL
 PetscErrorCode dumptobinary(const char* root, const char* append, Vec u) {
     PetscErrorCode ierr;
-    PetscViewer  viewer;
-    char filename[PETSC_MAX_PATH_LEN] = "";
-    if ((!root) || (strlen(root) == 0))  return 0;
-    sprintf(filename,"%s%s.dat",root,append);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,
-        "writing PETSC binary file %s ...\n",filename); CHKERRQ(ierr);
-    ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename,
-        FILE_MODE_WRITE,&viewer); CHKERRQ(ierr);
-    ierr = VecView(u,viewer); CHKERRQ(ierr);
-    ierr = PetscViewerDestroy(&viewer); CHKERRQ(ierr);
+    if ((root) && (strlen(root) > 0)) {
+        PetscViewer  viewer;
+        char         filename[PETSC_MAX_PATH_LEN] = "";
+        sprintf(filename,"%s%s.dat",root,append);
+        ierr = PetscPrintf(PETSC_COMM_WORLD,
+            "writing PETSC binary file %s ...\n",filename); CHKERRQ(ierr);
+        ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename,
+            FILE_MODE_WRITE,&viewer); CHKERRQ(ierr);
+        ierr = VecView(u,viewer); CHKERRQ(ierr);
+        ierr = PetscViewerDestroy(&viewer); CHKERRQ(ierr);
+    }
     return 0;
 }
 
@@ -288,6 +292,7 @@ int main(int argc,char **argv) {
            "adv_", "options for advect.c", ""); CHKERRQ(ierr);
     ierr = PetscOptionsString("-dumpto","filename root for initial/final state",
            "advect.c",fileroot,fileroot,PETSC_MAX_PATH_LEN,NULL);CHKERRQ(ierr);
+//STARTENUMOPTIONS
     ierr = PetscOptionsEnum("-initial",
            "shape of initial condition if problem==straight",
            "advect.c",InitialShapeTypes,
@@ -300,6 +305,7 @@ int main(int argc,char **argv) {
     ierr = PetscOptionsEnum("-problem","problem type",
            "advect.c",ProblemTypes,
            (PetscEnum)user.problem,(PetscEnum*)&user.problem,NULL); CHKERRQ(ierr);
+//ENDENUMOPTIONS
     ierr = PetscOptionsReal("-windx","x component of wind (if problem==straight)",
            "advect.c",user.windx,&user.windx,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsReal("-windy","y component of wind (if problem==straight)",
