@@ -336,8 +336,7 @@ int main(int argc,char **argv) {
            (DMDATSRHSFunctionLocal)FormRHSFunctionLocal,&user); CHKERRQ(ierr);
     ierr = DMDATSSetRHSJacobianLocal(da,
            (DMDATSRHSJacobianLocal)FormRHSJacobianLocal,&user); CHKERRQ(ierr);
-    ierr = TSSetType(ts,TSRK); CHKERRQ(ierr);
-    ierr = TSRKSetType(ts,TSRK2A); CHKERRQ(ierr);
+    ierr = TSSetType(ts,TSRK); CHKERRQ(ierr);  // defaults to -ts_rk_type 3bs
     ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
     ierr = TSSetInitialTimeStep(ts,0.0,0.1); CHKERRQ(ierr);
     ierr = TSSetDuration(ts,1000000,0.6); CHKERRQ(ierr);
