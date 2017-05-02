@@ -282,6 +282,7 @@ int main(int argc,char **argv) {
     double           hx, hy, t0, dt, tf;
     char             fileroot[PETSC_MAX_PATH_LEN] = "";
     int              steps;
+    PetscBool        oneline;
 
     PetscInitialize(&argc,&argv,(char*)0,help);
 
@@ -306,6 +307,8 @@ int main(int argc,char **argv) {
            "advect.c",ProblemTypes,
            (PetscEnum)user.problem,(PetscEnum*)&user.problem,NULL); CHKERRQ(ierr);
 //ENDENUMOPTIONS
+    ierr = PetscOptionsBool("-oneline","in exact solution cases, show one-line output",
+           "advect.c",oneline,&oneline,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsReal("-windx","x component of wind (if problem==straight)",
            "advect.c",user.windx,&user.windx,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsReal("-windy","y component of wind (if problem==straight)",
@@ -347,23 +350,31 @@ int main(int argc,char **argv) {
     ierr = dumptobinary(fileroot,"_initial",u); CHKERRQ(ierr);
     ierr = TSGetTime(ts,&t0); CHKERRQ(ierr);
     ierr = TSGetTimeStep(ts,&dt); CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"solving problem '%s' ",
-           ProblemTypes[user.problem]); CHKERRQ(ierr);
-    if (user.problem == STRAIGHT) {
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"(initial: %s) ",
-           InitialShapeTypes[initialshapechoice]); CHKERRQ(ierr);
+
+    if (!oneline) {
+        ierr = PetscPrintf(PETSC_COMM_WORLD,"solving problem '%s' ",
+               ProblemTypes[user.problem]); CHKERRQ(ierr);
+        if (user.problem == STRAIGHT) {
+            ierr = PetscPrintf(PETSC_COMM_WORLD,"(initial: %s) ",
+               InitialShapeTypes[initialshapechoice]); CHKERRQ(ierr);
+        }
+        ierr = PetscPrintf(PETSC_COMM_WORLD,
+               "on %d x %d grid (cells dx=%g x dy=%g),\n"
+               "    with t0=%g, initial dt=%g, and '%s' limiter ...\n",
+               info.mx,info.my,hx,hy,t0,dt,LimiterTypes[limiterchoice]); CHKERRQ(ierr);
     }
-    ierr = PetscPrintf(PETSC_COMM_WORLD,
-           "on %d x %d grid (cells dx=%g x dy=%g),\n"
-           "    with t0=%g, initial dt=%g, and '%s' limiter ...\n",
-           info.mx,info.my,hx,hy,t0,dt,LimiterTypes[limiterchoice]); CHKERRQ(ierr);
 
     ierr = TSSolve(ts,u); CHKERRQ(ierr);
 
     ierr = TSGetTotalSteps(ts,&steps); CHKERRQ(ierr);
     ierr = TSGetTime(ts,&tf); CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,
-            "completed %d steps to time %g\n",steps,tf); CHKERRQ(ierr);
+    ierr = dumptobinary(fileroot,"_final",u); CHKERRQ(ierr);
+
+    if (!oneline) {
+        ierr = PetscPrintf(PETSC_COMM_WORLD,
+                "completed %d steps to time %g\n",steps,tf); CHKERRQ(ierr);
+    }
+
     if ( (user.problem == STRAIGHT) && (PetscAbs(fmod(tf+0.5e-8,1.0)) <= 1.0e-8)
          && (fmod(user.windx,2.0) == 0.0) && (fmod(user.windy,2.0) == 0.0) ) {
         // exact solution is same as initial condition
@@ -375,12 +386,19 @@ int main(int argc,char **argv) {
         ierr = VecNorm(u,NORM_1_AND_2,norms); CHKERRQ(ierr);
         norms[0] *= hx * hy;
         norms[1] *= PetscSqrtReal(hx * hy);
-        ierr = PetscPrintf(PETSC_COMM_WORLD,
-            "errors |u-uexact|_{1,h} = %.4e, |u-uexact|_{2,h} = %.4e\n",
-            norms[0],norms[1]); CHKERRQ(ierr);
         VecDestroy(&uexact);
+        if (oneline) {
+            ierr = PetscPrintf(PETSC_COMM_WORLD,
+                "%s,%s,%s,%d,%d,%g,%g,%d,%g,%.4e,%.4e\n",
+                ProblemTypes[user.problem],InitialShapeTypes[initialshapechoice],
+                LimiterTypes[limiterchoice],info.mx,info.my,hx,hy,steps,tf,
+                norms[0],norms[1]); CHKERRQ(ierr);
+        } else {
+            ierr = PetscPrintf(PETSC_COMM_WORLD,
+                "errors |u-uexact|_{1,h} = %.4e, |u-uexact|_{2,h} = %.4e\n",
+                norms[0],norms[1]); CHKERRQ(ierr);
+        }
     }
-    ierr = dumptobinary(fileroot,"_final",u); CHKERRQ(ierr);
 
     VecDestroy(&u);  TSDestroy(&ts);  DMDestroy(&da);
     PetscFinalize();
