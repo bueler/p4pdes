@@ -17,23 +17,6 @@ static char help[] =
 
 #include <petsc.h>
 
-//STARTCTX
-typedef enum {STRAIGHT, ROTATION} ProblemType;
-static const char *ProblemTypes[] = {"straight","rotation",
-                                     "ProblemType", "", NULL};
-
-typedef enum {STUMP, CONE, BOX} InitialShapeType;
-static const char *InitialShapeTypes[] = {"stump", "cone", "box",
-                                          "InitialShapeType", "", NULL};
-
-typedef struct {
-    ProblemType  problem;
-    double       windx, windy;  // x,y velocity if problem==STRAIGHT
-    double       (*initialshape)(double,double); // if problem==STRAIGHT
-    double       (*limiter)(double);
-} AdvectCtx;
-//ENDCTX
-
 //STARTINITIALSHAPES
 // equal to 1 in a disc of radius 0.2 around (-0.6,-0.6)
 static double stump(double x, double y) {
@@ -58,6 +41,87 @@ static double box(double x, double y) {
 static void* initialshapeptr[] = {&stump, &cone, &box};
 //ENDINITIALSHAPES
 
+//STARTLIMITER
+/* the centered-space method is a linear (and unlimited) "limiter" */
+static double centered(double theta) {
+    return 0.5;
+}
+
+/* van Leer (1974) limiter is formula (1.11) in section III.1 of
+Hundsdorfer & Verwer (2003) */
+static double vanleer(double theta) {
+    const double abstheta = PetscAbsReal(theta);
+    return 0.5 * (theta + abstheta) / (1.0 + abstheta);
+}
+
+/* Koren (1993) limiter is formula (1.7) in section III.1 of
+Hundsdorfer & Verwer (2003) */
+static double koren(double theta) {
+    const double z = (1.0/3.0) + (1.0/6.0) * theta;
+    return PetscMax(0.0, PetscMin(1.0, PetscMin(z, theta)));
+}
+
+typedef enum {NONE, CENTERED, VANLEER, KOREN} LimiterType;
+static const char *LimiterTypes[] = {"none","centered","vanleer","koren",
+                                     "LimiterType", "", NULL};
+static void* limiterptr[] = {NULL, &centered, &vanleer, &koren};
+//ENDLIMITER
+
+//STARTCTX
+typedef enum {STRAIGHT, ROTATION} ProblemType;
+static const char *ProblemTypes[] = {"straight","rotation",
+                                     "ProblemType", "", NULL};
+
+typedef enum {STUMP, CONE, BOX} InitialShapeType;
+static const char *InitialShapeTypes[] = {"stump", "cone", "box",
+                                          "InitialShapeType", "", NULL};
+
+typedef struct {
+    InitialShapeType initialshape;
+    LimiterType      limiter;
+    ProblemType      problem;
+    double           windx, windy;  // x,y velocity if problem==STRAIGHT
+    double           (*initialshape_fcn)(double,double); // if problem==STRAIGHT
+    double           (*limiter_fcn)(double);
+} AdvectCtx;
+//ENDCTX
+
+PetscErrorCode setup(AdvectCtx *user, char *fileroot, PetscBool *oneline) {
+    PetscErrorCode ierr;
+    user->initialshape = STUMP;
+    user->limiter = KOREN;
+    user->problem = STRAIGHT;
+    user->windx = 2.0;
+    user->windy = 2.0;
+    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,
+           "adv_", "options for advect.c", ""); CHKERRQ(ierr);
+    ierr = PetscOptionsString("-dumpto","filename root for initial/final state",
+           "advect.c",fileroot,fileroot,PETSC_MAX_PATH_LEN,NULL);CHKERRQ(ierr);
+//STARTENUMOPTIONS
+    ierr = PetscOptionsEnum("-initial",
+           "shape of initial condition if problem==straight",
+           "advect.c",InitialShapeTypes,
+           (PetscEnum)user->initialshape,
+           (PetscEnum*)&user->initialshape,NULL); CHKERRQ(ierr);
+    user->initialshape_fcn = initialshapeptr[user->initialshape];
+    ierr = PetscOptionsEnum("-limiter","flux-limiter type",
+           "advect.c",LimiterTypes,
+           (PetscEnum)user->limiter,(PetscEnum*)&user->limiter,NULL); CHKERRQ(ierr);
+    user->limiter_fcn = limiterptr[user->limiter];
+    ierr = PetscOptionsEnum("-problem","problem type",
+           "advect.c",ProblemTypes,
+           (PetscEnum)user->problem,(PetscEnum*)&user->problem,NULL); CHKERRQ(ierr);
+//ENDENUMOPTIONS
+    ierr = PetscOptionsBool("-oneline","in exact solution cases, show one-line output",
+           "advect.c",*oneline,oneline,NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsReal("-windx","x component of wind (if problem==straight)",
+           "advect.c",user->windx,&user->windx,NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsReal("-windy","y component of wind (if problem==straight)",
+           "advect.c",user->windy,&user->windy,NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+    return 0;
+}
+
 PetscErrorCode FormInitial(DMDALocalInfo *info, Vec u, AdvectCtx* user) {
     PetscErrorCode ierr;
     int          i, j;
@@ -72,7 +136,7 @@ PetscErrorCode FormInitial(DMDALocalInfo *info, Vec u, AdvectCtx* user) {
             x = -1.0 + (i+0.5) * hx;
             switch (user->problem) {
                 case STRAIGHT:
-                    au[j][i] = (*user->initialshape)(x,y);
+                    au[j][i] = (*user->initialshape_fcn)(x,y);
                     break;
                 case ROTATION:
                     au[j][i] = cone(x,y) + box(x,y);
@@ -107,32 +171,6 @@ static double g_source(double x, double y, double u, AdvectCtx* user) {
 static double dg_source(double x, double y, double u, AdvectCtx* user) {
     return 0.0;
 }
-
-//STARTLIMITER
-/* the centered-space method is a linear (and unlimited) "limiter" */
-static double centered(double theta) {
-    return 0.5;
-}
-
-/* van Leer (1974) limiter is formula (1.11) in section III.1 of
-Hundsdorfer & Verwer (2003) */
-static double vanleer(double theta) {
-    const double abstheta = PetscAbsReal(theta);
-    return 0.5 * (theta + abstheta) / (1.0 + abstheta);
-}
-
-/* Koren (1993) limiter is formula (1.7) in section III.1 of
-Hundsdorfer & Verwer (2003) */
-static double koren(double theta) {
-    const double z = (1.0/3.0) + (1.0/6.0) * theta;
-    return PetscMax(0.0, PetscMin(1.0, PetscMin(z, theta)));
-}
-
-typedef enum {NONE, CENTERED, VANLEER, KOREN} LimiterType;
-static const char *LimiterTypes[] = {"none","centered","vanleer","koren",
-                                     "LimiterType", "", NULL};
-static void* limiterptr[] = {NULL, &centered, &vanleer, &koren};
-//ENDLIMITER
 
 /* method-of-lines discretization gives ODE system  u' = G(t,u)
 so our finite volume scheme computes
@@ -170,14 +208,14 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t,
                 u_up = (a >= 0.0) ? au[j][i] : au[j+q][i+(1-q)];
                 flux = a * u_up;
                 // use flux-limiter
-                if (user->limiter != NULL) {
+                if (user->limiter_fcn != NULL) {
                     // formulas (1.2),(1.3),(1.6); H&V pp 216--217
                     u_dn = (a >= 0.0) ? au[j+q][i+(1-q)] : au[j][i];
                     if (u_dn != u_up) {
                         u_far = (a >= 0.0) ? au[j-q][i-(1-q)]
                                            : au[j+2*q][i+2*(1-q)];
                         theta = (u_up - u_far) / (u_dn - u_up);
-                        flux += a * (*user->limiter)(theta)*(u_dn-u_up);
+                        flux += a * (*user->limiter_fcn)(theta)*(u_dn-u_up);
                     }
                 }
                 // update owned G_ij on both sides of computed flux
@@ -277,43 +315,13 @@ int main(int argc,char **argv) {
     DM               da;
     Vec              u;
     DMDALocalInfo    info;
-    LimiterType      limiterchoice = KOREN;
-    InitialShapeType initialshapechoice = STUMP;
     double           hx, hy, t0, dt, tf;
     char             fileroot[PETSC_MAX_PATH_LEN] = "";
     int              steps;
     PetscBool        oneline;
 
     PetscInitialize(&argc,&argv,(char*)0,help);
-
-    user.problem = STRAIGHT;
-    user.windx = 2.0;
-    user.windy = 2.0;
-    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,
-           "adv_", "options for advect.c", ""); CHKERRQ(ierr);
-    ierr = PetscOptionsString("-dumpto","filename root for initial/final state",
-           "advect.c",fileroot,fileroot,PETSC_MAX_PATH_LEN,NULL);CHKERRQ(ierr);
-//STARTENUMOPTIONS
-    ierr = PetscOptionsEnum("-initial",
-           "shape of initial condition if problem==straight",
-           "advect.c",InitialShapeTypes,
-           (PetscEnum)initialshapechoice,(PetscEnum*)&initialshapechoice,NULL); CHKERRQ(ierr);
-    user.initialshape = initialshapeptr[initialshapechoice];
-    ierr = PetscOptionsEnum("-limiter","flux-limiter type",
-           "advect.c",LimiterTypes,
-           (PetscEnum)limiterchoice,(PetscEnum*)&limiterchoice,NULL); CHKERRQ(ierr);
-    user.limiter = limiterptr[limiterchoice];
-    ierr = PetscOptionsEnum("-problem","problem type",
-           "advect.c",ProblemTypes,
-           (PetscEnum)user.problem,(PetscEnum*)&user.problem,NULL); CHKERRQ(ierr);
-//ENDENUMOPTIONS
-    ierr = PetscOptionsBool("-oneline","in exact solution cases, show one-line output",
-           "advect.c",oneline,&oneline,NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-windx","x component of wind (if problem==straight)",
-           "advect.c",user.windx,&user.windx,NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-windy","y component of wind (if problem==straight)",
-           "advect.c",user.windy,&user.windy,NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+    ierr = setup(&user,fileroot,&oneline); CHKERRQ(ierr);
 
     ierr = DMDACreate2d(PETSC_COMM_WORLD,
                DM_BOUNDARY_PERIODIC, DM_BOUNDARY_PERIODIC,
@@ -356,12 +364,12 @@ int main(int argc,char **argv) {
                ProblemTypes[user.problem]); CHKERRQ(ierr);
         if (user.problem == STRAIGHT) {
             ierr = PetscPrintf(PETSC_COMM_WORLD,"(initial: %s) ",
-               InitialShapeTypes[initialshapechoice]); CHKERRQ(ierr);
+               InitialShapeTypes[user.initialshape]); CHKERRQ(ierr);
         }
         ierr = PetscPrintf(PETSC_COMM_WORLD,
                "on %d x %d grid (cells dx=%g x dy=%g),\n"
                "    with t0=%g, initial dt=%g, and '%s' limiter ...\n",
-               info.mx,info.my,hx,hy,t0,dt,LimiterTypes[limiterchoice]); CHKERRQ(ierr);
+               info.mx,info.my,hx,hy,t0,dt,LimiterTypes[user.limiter]); CHKERRQ(ierr);
     }
 
     ierr = TSSolve(ts,u); CHKERRQ(ierr);
@@ -390,8 +398,8 @@ int main(int argc,char **argv) {
         if (oneline) {
             ierr = PetscPrintf(PETSC_COMM_WORLD,
                 "%s,%s,%s,%d,%d,%g,%g,%d,%g,%.4e,%.4e\n",
-                ProblemTypes[user.problem],InitialShapeTypes[initialshapechoice],
-                LimiterTypes[limiterchoice],info.mx,info.my,hx,hy,steps,tf,
+                ProblemTypes[user.problem],InitialShapeTypes[user.initialshape],
+                LimiterTypes[user.limiter],info.mx,info.my,hx,hy,steps,tf,
                 norms[0],norms[1]); CHKERRQ(ierr);
         } else {
             ierr = PetscPrintf(PETSC_COMM_WORLD,
