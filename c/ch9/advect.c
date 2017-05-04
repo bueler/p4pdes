@@ -77,11 +77,11 @@ static const char *InitialShapeTypes[] = {"stump", "cone", "box",
                                           "InitialShapeType", "", NULL};
 
 typedef struct {
+    ProblemType      problem;
     InitialShapeType initialshape;
     LimiterType      limiter;
-    ProblemType      problem;
     double           windx, windy;  // x,y velocity if problem==STRAIGHT
-    double           (*initialshape_fcn)(double,double); // if problem==STRAIGHT
+    double           (*initialshape_fcn)(double,double); // if STRAIGHT
     double           (*limiter_fcn)(double);
 } AdvectCtx;
 //ENDCTX
