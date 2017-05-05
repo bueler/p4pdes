@@ -1,5 +1,5 @@
-solving problem 'rotation' on 20 x 20 grid (cells dx=0.1 x dy=0.1),
-    with t0=0., initial dt=0.01, and 'vanleer' limiter ...
+solving problem 'rotation' on 20 x 20 grid,
+    cells dx=0.1 x dy=0.1, and 'vanleer' limiter ...
 0 TS dt 0.01 time 0.
     0 SNES Function norm 27.6222 
     1 SNES Function norm 1.88138 

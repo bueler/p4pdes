@@ -349,7 +349,10 @@ int main(int argc,char **argv) {
            (DMDATSRHSJacobianLocal)FormRHSJacobianLocal,&user); CHKERRQ(ierr);
     ierr = TSSetType(ts,TSRK); CHKERRQ(ierr);  // defaults to -ts_rk_type 3bs
     ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
-    ierr = TSSetInitialTimeStep(ts,0.0,0.1); CHKERRQ(ierr);
+    // use CFL number of 0.5 to set initial time step, but note most methods
+    // adapt anyway
+    dt = 0.5 / PetscMax(PetscAbsReal(user.windx)/hx, PetscAbsReal(user.windy)/hy);
+    ierr = TSSetInitialTimeStep(ts,0.0,dt); CHKERRQ(ierr);
     ierr = TSSetDuration(ts,1000000,0.6); CHKERRQ(ierr);
     ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
 
@@ -367,9 +370,9 @@ int main(int argc,char **argv) {
                InitialShapeTypes[user.initialshape]); CHKERRQ(ierr);
         }
         ierr = PetscPrintf(PETSC_COMM_WORLD,
-               "on %d x %d grid (cells dx=%g x dy=%g),\n"
-               "    with t0=%g, initial dt=%g, and '%s' limiter ...\n",
-               info.mx,info.my,hx,hy,t0,dt,LimiterTypes[user.limiter]); CHKERRQ(ierr);
+               "on %d x %d grid,\n"
+               "    cells dx=%g x dy=%g, and '%s' limiter ...\n",
+               info.mx,info.my,hx,hy,LimiterTypes[user.limiter]); CHKERRQ(ierr);
     }
 
     ierr = TSSolve(ts,u); CHKERRQ(ierr);
