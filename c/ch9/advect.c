@@ -200,7 +200,7 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t,
             if ((i >= info->xs) && (j >= info->ys)) {
                 aG[j][i] += g_source(x,y,au[j][i],user);
             }
-            for (q = 0; q < 2; q++) {   // get E,N fluxes on cell bdry
+            for (q = 0; q < 2; q++) {   // E (q=0) and N (q=1) fluxes on bdry
                 if ((q == 0) && (j < info->ys))  continue;
                 if ((q == 1) && (i < info->xs))  continue;
                 a = a_wind(x + halfx*(1-q),y + halfy*q,q,user);
