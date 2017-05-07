@@ -1,0 +1,4 @@
+  0 SNES Function norm 2.45145 
+  1 SNES Function norm 1.52206e-05 
+  2 SNES Function norm 1.243e-11 
+done on 5 x 5 x 6 grid with eps=0.01:  error |u-uexact|_{2,h} = 1.2097e-02

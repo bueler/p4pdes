@@ -26,11 +26,15 @@ runadvect_3:
 runad3_1:
 	-@../testit.sh ad3 "-da_refine 1 -snes_converged_reason" 1 1
 
-test: runadvect_1 runadvect_2 runadvect_3 runad3_1
+# eps = 0.01 and upwind and GAMG
+runad3_2:
+	-@../testit.sh ad3 "-da_refine 1 -ad3_eps 0.01 -ad3_upwind -pc_type gamg -snes_monitor_short" 1 2
+
+test: runadvect_1 runadvect_2 runadvect_3 runad3_1 runad3_2
 
 # etc
 
-.PHONY: distclean runadvect_1 runadvect_2
+.PHONY: distclean runadvect_1 runadvect_2 runadvect_3 runad3_1
 
 distclean:
 	@rm -f *~ *tmp advect ad3

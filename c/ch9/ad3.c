@@ -1,6 +1,6 @@
 static char help[] =
 "Solves a 3D linear advection-diffusion problem with structured-grid (DMDA)\n"
-"and SNES.  Option prefix -ad3_...  The equation is\n"
+"and SNES.  Option prefix -ad3_.  The equation is\n"
 "    - eps Laplacian u + W . Grad u = f\n"
 "on the domain  [-1,1]^3  with boundary conditions:\n"
 "    u(1,y,z) = g(y,z)\n"
@@ -32,6 +32,9 @@ all of these work:
   "                   -snes_mf
   "                   -snes_mf_operator
 
+excellent illustration of Elman's point that discretization must handle advection problem if we are to get good preconditioning; compare following with and without -ad3_upwind:
+for LEV in 0 1 2 3 4 5; do timer mpiexec -n 4 ./ad3 -snes_converged_reason -ksp_converged_reason -ksp_rtol 1.0e-14 -da_refine $LEV -pc_type gamg -ad3_eps 0.1 -ad3_upwind; done
+
 FIXME: multigrid?
 */
 
@@ -52,14 +55,20 @@ static Wind getWind(double x, double y, double z) {
     return W;
 }
 
-static double f_source(double x, double y, double z, Ctx *user) {
-    const double E = PETSC_PI / 2.0,  F = 2.0 * PETSC_PI,
-                 lam2 = E*E + F*F; // lambda = sqrt(17.0) * PETSC_PI / 2.0
+static double uexact(double x, double y, double z, Ctx *user) {
+    const double C = exp(-2.0 / user->eps), // may underflow to 0; thats o.k.
+                 E = PETSC_PI / 2.0,
+                 F = 2.0 * PETSC_PI;
     double u;
-    u = exp((x+1) / user->eps) - 1.0;
-    u /= exp(2.0 / user->eps) - 1.0;
-    u *= sin(E*(y+1.0)) * sin(F*(z+1.0));
-    return user->eps * lam2 * u;
+    u = (exp((x-1) / user->eps) - C) / (1.0 - C);
+    return u * sin(E*(y+1.0)) * sin(F*(z+1.0));
+}
+
+static double f_source(double x, double y, double z, Ctx *user) {
+    const double E = PETSC_PI / 2.0,
+                 F = 2.0 * PETSC_PI,
+                 lam2 = E*E + F*F; // lambda = sqrt(17.0) * PETSC_PI / 2.0
+    return user->eps * lam2 * uexact(x,y,z,user);
 }
 
 static double g_bdry(double y, double z, Ctx *user) {
@@ -105,8 +114,7 @@ PetscErrorCode formUex(DMDALocalInfo *info, Ctx *usr, Vec uex) {
     PetscErrorCode  ierr;
     int          i, j, k;
     Spacings     s;
-    const double E = PETSC_PI / 2.0,  F = 2.0 * PETSC_PI;
-    double       x, y, z, QQ, UU, ***auex;
+    double       x, y, z, ***auex;
 
     getSpacings(info,&s);
     ierr = DMDAVecGetArray(info->da, uex, &auex);CHKERRQ(ierr);
@@ -114,12 +122,9 @@ PetscErrorCode formUex(DMDALocalInfo *info, Ctx *usr, Vec uex) {
         z = -1.0 + k * s.hz;
         for (j=info->ys; j<info->ys+info->ym; j++) {
             y = -1.0 + j * s.hy;
-            QQ = sin(E*(y+1.0)) * sin(F*(z+1.0));
             for (i=info->xs; i<info->xs+info->xm; i++) {
                 x = -1.0 + i * s.hx;
-                UU = exp((x+1)/usr->eps) - 1.0;
-                UU /= exp(2.0/usr->eps) - 1.0;
-                auex[k][j][i] = UU * QQ;
+                auex[k][j][i] = uexact(x,y,z,usr);
             }
         }
     }
@@ -291,8 +296,9 @@ int main(int argc,char **argv) {
     DM             da;
     SNES           snes;
     Vec            u, uexact;
-    double         err, uexnorm;
+    double         err;
     DMDALocalInfo  info;
+    Spacings       s;
     Ctx            user;
 
     PetscInitialize(&argc,&argv,(char*)0,help);
@@ -308,12 +314,13 @@ int main(int argc,char **argv) {
 //ENDDMDA
     ierr = DMSetFromOptions(da); CHKERRQ(ierr);
     ierr = DMSetUp(da); CHKERRQ(ierr);
-    ierr = DMDASetUniformCoordinates(da,-1.0,1.0,-1.0,1.0,-1.0,1.0); CHKERRQ(ierr);
     ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
     if ((info.mx < 2) || (info.my < 2) || (info.mz < 3)) {
         SETERRQ(PETSC_COMM_WORLD,1,"grid too coarse: require (mx,my,mz) >= (2,2,3)");
     }
+    ierr = DMDASetUniformCoordinates(da,-1.0,1.0,-1.0,1.0,-1.0,1.0); CHKERRQ(ierr);
+    getSpacings(&info,&s);
 
     ierr = DMCreateGlobalVector(da,&uexact); CHKERRQ(ierr);
     ierr = formUex(&info,&user,uexact); CHKERRQ(ierr);
@@ -332,10 +339,10 @@ int main(int argc,char **argv) {
 
     ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uxact
     ierr = VecNorm(u,NORM_2,&err); CHKERRQ(ierr);
-    ierr = VecNorm(uexact,NORM_2,&uexnorm); CHKERRQ(ierr);
+    err *= PetscSqrtReal(s.hx * s.hy * s.hz);
     ierr = PetscPrintf(PETSC_COMM_WORLD,
-         "done on %d x %d x %d grid with eps=%g:  error |u-uexact|_2/|uexact|_2 = %g\n",
-         info.mx,info.my,info.mz,user.eps,err/uexnorm); CHKERRQ(ierr);
+         "done on %d x %d x %d grid with eps=%g:  error |u-uexact|_{2,h} = %.4e\n",
+         info.mx,info.my,info.mz,user.eps,err); CHKERRQ(ierr);
 
     VecDestroy(&u);  VecDestroy(&uexact);
     SNESDestroy(&snes);  DMDestroy(&da);
