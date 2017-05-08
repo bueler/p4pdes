@@ -12,7 +12,7 @@ EXEC=../advect
 LAPS=1            # could run additional experiment with e.g. 5 laps
 
 for LEV in 3 4 5 6 7 8; do
-    for SHAPE in stump cone; do    # "box" is other possibility, but doesnt add much
+    for SHAPE in stump smooth cone; do # "box" is other possibility, but doesnt add much over stump
         for LIMITER in centered none vanleer koren; do
             mpiexec -n $NPROCS $EXEC -adv_oneline \
                 -ts_final_time $LAPS -da_refine $LEV \

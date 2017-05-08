@@ -24,6 +24,12 @@ static double stump(double x, double y) {
     return (r < 0.2) ? 1.0 : 0.0;
 }
 
+// smooth (in C^6?) version of above stump
+static double smooth(double x, double y) {
+    const double r = PetscSqrtReal((x+0.6)*(x+0.6) + (y+0.6)*(y+0.6));
+    return (r < 0.2) ? PetscPowReal(1.0 - PetscPowReal(r / 0.2,6.0),6.0) : 0.0;
+}
+
 // cone of height 1 of base radius 0.35 centered at (-0.45,0.0)
 static double cone(double x, double y) {
     const double r = PetscSqrtReal((x+0.45)*(x+0.45) + y*y);
@@ -38,7 +44,7 @@ static double box(double x, double y) {
         return 0.0;
 }
 
-static void* initialshapeptr[] = {&stump, &cone, &box};
+static void* initialshapeptr[] = {&stump, &smooth, &cone, &box};
 //ENDINITIALSHAPES
 
 //STARTLIMITER
@@ -72,8 +78,8 @@ typedef enum {STRAIGHT, ROTATION} ProblemType;
 static const char *ProblemTypes[] = {"straight","rotation",
                                      "ProblemType", "", NULL};
 
-typedef enum {STUMP, CONE, BOX} InitialShapeType;
-static const char *InitialShapeTypes[] = {"stump", "cone", "box",
+typedef enum {STUMP, SMOOTH, CONE, BOX} InitialShapeType;
+static const char *InitialShapeTypes[] = {"stump", "smooth", "cone", "box",
                                           "InitialShapeType", "", NULL};
 
 typedef struct {
