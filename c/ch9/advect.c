@@ -180,7 +180,7 @@ but only east (E) and north (N) fluxes are computed
 //STARTFUNCTION
 PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t,
         double **au, double **aG, AdvectCtx *user) {
-    int         i, j, q;
+    int         i, j, q, dj, di;
     double      hx, hy, halfx, halfy, x, y, a,
                 u_up, u_dn, u_far, theta, flux;
 
@@ -203,17 +203,19 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t,
             for (q = 0; q < 2; q++) {   // E (q=0) and N (q=1) fluxes on bdry
                 if ((q == 0) && (j < info->ys))  continue;
                 if ((q == 1) && (i < info->xs))  continue;
-                a = a_wind(x + halfx*(1-q),y + halfy*q,q,user);
+                di = 1 - q;
+                dj = q;
+                a = a_wind(x + halfx*di,y + halfy*dj,q,user);
                 // first-order flux
-                u_up = (a >= 0.0) ? au[j][i] : au[j+q][i+(1-q)];
+                u_up = (a >= 0.0) ? au[j][i] : au[j+dj][i+di];
                 flux = a * u_up;
                 // use flux-limiter
                 if (user->limiter_fcn != NULL) {
                     // formulas (1.2),(1.3),(1.6); H&V pp 216--217
-                    u_dn = (a >= 0.0) ? au[j+q][i+(1-q)] : au[j][i];
+                    u_dn = (a >= 0.0) ? au[j+dj][i+di] : au[j][i];
                     if (u_dn != u_up) {
-                        u_far = (a >= 0.0) ? au[j-q][i-(1-q)]
-                                           : au[j+2*q][i+2*(1-q)];
+                        u_far = (a >= 0.0) ? au[j-dj][i-di]
+                                           : au[j+2*dj][i+2*di];
                         theta = (u_up - u_far) / (u_dn - u_up);
                         flux += a * (*user->limiter_fcn)(theta)*(u_dn-u_up);
                     }
