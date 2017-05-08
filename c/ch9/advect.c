@@ -201,8 +201,8 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t,
                 aG[j][i] += g_source(x,y,au[j][i],user);
             }
             for (q = 0; q < 2; q++) {   // E (q=0) and N (q=1) fluxes on bdry
-                if ((q == 0) && (j < info->ys))  continue;
-                if ((q == 1) && (i < info->xs))  continue;
+                if (q == 0 && j < info->ys)  continue;
+                if (q == 1 && i < info->xs)  continue;
                 di = 1 - q;
                 dj = q;
                 a = a_wind(x + halfx*di,y + halfy*dj,q,user);
