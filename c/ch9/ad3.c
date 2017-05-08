@@ -103,13 +103,16 @@ static double b_bdry(double y, double z, Ctx *user) {
 
 
 typedef struct {
-    double  hx, hy, hz, hx2, hy2, hz2;
+    double  hx, hy, hz, halfx, halfy, halfz, hx2, hy2, hz2;
 } Spacings;
 
 void getSpacings(DMDALocalInfo *info, Spacings *s) {
-    s->hx = 2.0/(info->mx-1);
-    s->hy = 2.0/(info->my-1);
-    s->hz = 2.0/(info->mz);    // periodic direction
+    s->hx = 2.0 / (info->mx - 1);
+    s->hy = 2.0 / (info->my - 1);
+    s->hz = 2.0 / info->mz;    // periodic direction
+    s->halfx = s->hx / 2.0;
+    s->halfy = s->hy / 2.0;
+    s->halfz = s->hz / 2.0;
     s->hx2 = s->hx * s->hx;
     s->hy2 = s->hy * s->hy;
     s->hz2 = s->hz * s->hz;
@@ -152,6 +155,7 @@ PetscErrorCode formUex(DMDALocalInfo *info, Ctx *usr, Vec uex) {
     ierr = DMDAVecGetArray(info->da, uex, &auex);CHKERRQ(ierr);
     for (k=info->zs; k<info->zs+info->zm; k++) {
         z = -1.0 + k * s.hz;
+//FIXME        z = -1.0 + (k+0.5) * s.hz;
         for (j=info->ys; j<info->ys+info->ym; j++) {
             y = -1.0 + j * s.hy;
             for (i=info->xs; i<info->xs+info->xm; i++) {
@@ -165,34 +169,48 @@ PetscErrorCode formUex(DMDALocalInfo *info, Ctx *usr, Vec uex) {
 }
 
 
-//STARTFUNCTION
-PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***u,
-                                 double ***F, Ctx *usr) {
+PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***au,
+                                 double ***aF, Ctx *usr) {
     int          i, j, k;
     double       x, y, z, uu, uE, uW, uN, uS, uxx, uyy, uzz, Wux, Wuy, Wuz;
     Wind         W;
     Spacings     s;
 
     getSpacings(info,&s);
+
+    // clear F first
+    for (k=info->zs; k<info->zs+info->zm; k++)
+        for (j=info->ys; j<info->ys+info->ym; j++)
+            for (i=info->xs; i<info->xs+info->xm; i++)
+                aF[k][j][i] = 0.0;
+
     for (k=info->zs; k<info->zs+info->zm; k++) {
+//FIXME:    for (k=info->zs-1; k<info->zs+info->zm; k++) { // note -1 start
         z = -1.0 + k * s.hz;
+//FIXME:        z = -1.0 + (k+0.5) * s.hz;
         for (j=info->ys; j<info->ys+info->ym; j++) {
             y = -1.0 + j * s.hy;
             for (i=info->xs; i<info->xs+info->xm; i++) {
                 x = -1.0 + i * s.hx;
                 if (i == info->mx-1) {
-                    F[k][j][i] = u[k][j][i] - b_bdry(y,z,usr);
+                    if (k >= info->zs)
+                        aF[k][j][i] = au[k][j][i] - b_bdry(y,z,usr);
                 } else if (i == 0 || j == 0 || j == info->my-1) {
-                    F[k][j][i] = u[k][j][i];
+                    if (k >= info->zs)
+                        aF[k][j][i] = au[k][j][i];
                 } else {
-                    uu = u[k][j][i];
-                    uE = (i == info->mx-2) ? b_bdry(y,z,usr) : u[k][j][i+1];
-                    uW = (i == 1)          ?             0.0 : u[k][j][i-1];
-                    uN = (j == info->my-2) ?             0.0 : u[k][j+1][i];
-                    uS = (j == 1)          ?             0.0 : u[k][j-1][i];
-                    uxx = (uW - 2.0 * uu + uE) / s.hx2;
-                    uyy = (uS - 2.0 * uu + uN) / s.hy2;
-                    uzz = (u[k-1][j][i] - 2.0 * uu + u[k+1][j][i]) / s.hz2;
+                    if (k >= info->zs) {
+                        uu = au[k][j][i];
+                        uE = (i == info->mx-2) ? b_bdry(y,z,usr) : au[k][j][i+1];
+                        uW = (i == 1)          ?             0.0 : au[k][j][i-1];
+                        uN = (j == info->my-2) ?             0.0 : au[k][j+1][i];
+                        uS = (j == 1)          ?             0.0 : au[k][j-1][i];
+                        uxx = (uW - 2.0 * uu + uE) / s.hx2;
+                        uyy = (uS - 2.0 * uu + uN) / s.hy2;
+                        uzz = (au[k-1][j][i] - 2.0 * uu + au[k+1][j][i]) / s.hz2;
+                        aF[k][j][i] -= usr->eps * (uxx + uyy + uzz)
+                                       + g_source(x,y,z,uu,usr);
+                    }
                     W = a_wind(x,y,z);
                     //major FIXME: eval flux on boundaries
                     if (!usr->limiter) {
@@ -200,26 +218,23 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***u,
                         Wux *= W.x / s.hx;
                         Wuy = (W.y > 0) ? uu - uS : uN - uu;
                         Wuy *= W.y / s.hy;
-                        Wuz = (W.z > 0) ? uu - u[k-1][j][i]
-                                        : u[k+1][j][i] - uu;
+                        Wuz = (W.z > 0) ? uu - au[k-1][j][i]
+                                        : au[k+1][j][i] - uu;
                         Wuz *= W.z / s.hz;
                     } else if (usr->limiter == CENTERED) {
                         Wux = W.x * (uE - uW) / (2.0*s.hx);
                         Wuy = W.y * (uN - uS) / (2.0*s.hy);
-                        Wuz = W.z * (u[k+1][j][i] - u[k-1][j][i]) / (2.0*s.hz);
+                        Wuz = W.z * (au[k+1][j][i] - au[k-1][j][i]) / (2.0*s.hz);
                     } else {
                         SETERRQ(PETSC_COMM_WORLD,1,"invalid limiter choice");
                     }
-                    F[k][j][i] = - usr->eps * (uxx + uyy + uzz)
-                                 + Wux + Wuy + Wuz
-                                 - g_source(x,y,z,uu,usr);
+                    aF[k][j][i] += Wux + Wuy + Wuz;
                 }
             }
         }
     }
     return 0;
 }
-//ENDFUNCTION
 
 
 PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar ***au,
@@ -340,13 +355,15 @@ int main(int argc,char **argv) {
 
     ierr = configureCtx(&user); CHKERRQ(ierr);
 
-//STARTDMDA
     ierr = DMDACreate3d(PETSC_COMM_WORLD,
         DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DM_BOUNDARY_PERIODIC,
-        DMDA_STENCIL_STAR, 3,3,3, PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,
-        1, 1, NULL,NULL,NULL,
-        &da); CHKERRQ(ierr);
-//ENDDMDA
+        DMDA_STENCIL_STAR,               // no diagonal differencing
+        3,3,3,                           // default to hx=hx=0.5 grid
+                                         // FIXME mz=5 allows -snes_fd_color)
+        PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,
+        1, 1,                            // d.o.f & stencil width
+//FIXME        1, 2,                            // d.o.f & stencil width
+        NULL,NULL,NULL,&da); CHKERRQ(ierr);
     ierr = DMSetFromOptions(da); CHKERRQ(ierr);
     ierr = DMSetUp(da); CHKERRQ(ierr);
     ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
@@ -354,8 +371,9 @@ int main(int argc,char **argv) {
     if ((info.mx < 2) || (info.my < 2) || (info.mz < 3)) {
         SETERRQ(PETSC_COMM_WORLD,1,"grid too coarse: require (mx,my,mz) >= (2,2,3)");
     }
-    ierr = DMDASetUniformCoordinates(da,-1.0,1.0,-1.0,1.0,-1.0,1.0); CHKERRQ(ierr);
     getSpacings(&info,&s);
+    ierr = DMDASetUniformCoordinates(da,-1.0,1.0,-1.0,1.0,-1.0,1.0); CHKERRQ(ierr);
+//FIXME    ierr = DMDASetUniformCoordinates(da,-1.0,1.0,-1.0,1.0,-1.0+s.halfz,1.0-s.halfz); CHKERRQ(ierr);
 
     ierr = SNESCreate(PETSC_COMM_WORLD,&snes);CHKERRQ(ierr);
     ierr = SNESSetDM(snes,da);CHKERRQ(ierr);
