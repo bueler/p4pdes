@@ -1,21 +1,24 @@
 static char help[] =
 "Solves a 3D linear advection-diffusion problem with structured-grid (DMDA)\n"
 "and SNES.  Option prefix -ad3_.  The equation is\n"
-"    - eps Laplacian u + W . Grad u = f\n"
-"on the domain  [-1,1]^3  with boundary conditions:\n"
-"    u(1,y,z) = g(y,z)\n"
+"    div (a(x,y,z) u) = eps Laplacian u + g(x,y,z,u),\n"
+"where eps > 0, the vector velocity a(x,y,z) and the scalar source g(x,y,z,u)\n"
+"are smooth.  The domain is  [-1,1]^3  with boundary conditions\n"
+"    u(1,y,z) = b(y,z)\n"
 "    u(-1,y,z) = u(x,-1,z) = u(x,1,z) = 0\n"
 "    u periodic in z\n"
+"The SNES sees as residual function the discretized version of\n"
+"    F(u) = - eps Laplacian u + div (a(x,y,z) u) - g(x,y,z,u)\n"
 "Significant restrictions are:\n"
 "    * only Dirichlet and periodic boundary conditions are demonstrated\n"
-"    * f(x,y,z), g(y,z), W(x,y,z) must be given by formulas\n"
+"    * a(x,y,z), g(x,y,z,u), b(y,z) must be given by formulas\n"
 "    * FIXME  only centered and first-order-upwind differences for advection\n"
 "An exact solution is used to evaluate numerical error:\n"
 "    u(x,y,z) = U(x) sin(E (y+1)) sin(F (z+1))\n"
 "where  U(x) = (exp((x+1)/eps) - 1) / (exp(2/eps) - 1)\n"
 "and constants E,F so that homogeneous/periodic boundary conditions\n"
-"are satisfied.  The problem solved has  W=<1,0,0>,  g(y,z) = u(1,y,z),\n"
-"and f(x,y,z) = eps lambda^2 u(x,y,z)  where  lambda^2 = E^2 + F^2.\n\n";
+"are satisfied.  The problem solved has  a=<1,0,0>,  b(y,z) = u(1,y,z),\n"
+"and g(x,y,z,u) = eps lambda^2 u  where  lambda^2 = E^2 + F^2.\n\n";
 
 /* evidence for convergence plus some feedback on iterations, but bad KSP iterations because GMRES+BJACOBI+ILU:
   $ for LEV in 0 1 2 3 4 5 6; do timer mpiexec -n 4 ./ad3 -snes_monitor -snes_converged_reason -ksp_converged_reason -ksp_rtol 1.0e-14 -da_refine $LEV; done
@@ -50,30 +53,32 @@ typedef struct {
     double  x,y,z;
 } Wind;
 
-static Wind getWind(double x, double y, double z) {
+static Wind a_wind(double x, double y, double z) {
     Wind W = {1.0,0.0,0.0};
     return W;
 }
 
-static double uexact(double x, double y, double z, Ctx *user) {
-    const double C = exp(-2.0 / user->eps), // may underflow to 0; thats o.k.
-                 E = PETSC_PI / 2.0,
-                 F = 2.0 * PETSC_PI;
+static double EE = PETSC_PI / 2.0,
+              FF = 2.0 * PETSC_PI;
+
+static double u_exact(double x, double y, double z, Ctx *user) {
+    const double C = exp(-2.0 / user->eps); // may underflow to 0; thats o.k.
     double u;
     u = (exp((x-1) / user->eps) - C) / (1.0 - C);
-    return u * sin(E*(y+1.0)) * sin(F*(z+1.0));
+    return u * sin(EE*(y+1.0)) * sin(FF*(z+1.0));
 }
 
-static double f_source(double x, double y, double z, Ctx *user) {
-    const double E = PETSC_PI / 2.0,
-                 F = 2.0 * PETSC_PI,
-                 lam2 = E*E + F*F; // lambda = sqrt(17.0) * PETSC_PI / 2.0
-    return user->eps * lam2 * uexact(x,y,z,user);
+static double g_source(double x, double y, double z, double u, Ctx *user) {
+    const double lam2 = EE*EE + FF*FF; // lambda = sqrt(17.0) * PETSC_PI / 2.0
+    return user->eps * lam2 * u_exact(x,y,z,user);
 }
 
-static double g_bdry(double y, double z, Ctx *user) {
-    const double E = PETSC_PI / 2.0,  F = 2.0 * PETSC_PI;
-    return sin(E*(y+1.0)) * sin(F*(z+1.0));
+static double dgdu_source(double x, double y, double z, double u, Ctx *user) {
+    return 0.0;
+}
+
+static double b_bdry(double y, double z, Ctx *user) {
+    return sin(EE*(y+1.0)) * sin(FF*(z+1.0));
 }
 //ENDSETUP
 
@@ -124,7 +129,7 @@ PetscErrorCode formUex(DMDALocalInfo *info, Ctx *usr, Vec uex) {
             y = -1.0 + j * s.hy;
             for (i=info->xs; i<info->xs+info->xm; i++) {
                 x = -1.0 + i * s.hx;
-                auex[k][j][i] = uexact(x,y,z,usr);
+                auex[k][j][i] = u_exact(x,y,z,usr);
             }
         }
     }
@@ -149,19 +154,19 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***u,
             for (i=info->xs; i<info->xs+info->xm; i++) {
                 x = -1.0 + i * s.hx;
                 if (i == info->mx-1) {
-                    F[k][j][i] = u[k][j][i] - g_bdry(y,z,usr);
+                    F[k][j][i] = u[k][j][i] - b_bdry(y,z,usr);
                 } else if (i == 0 || j == 0 || j == info->my-1) {
                     F[k][j][i] = u[k][j][i];
                 } else {
                     uu = u[k][j][i];
-                    uE = (i == info->mx-2) ? g_bdry(y,z,usr) : u[k][j][i+1];
+                    uE = (i == info->mx-2) ? b_bdry(y,z,usr) : u[k][j][i+1];
                     uW = (i == 1)          ?             0.0 : u[k][j][i-1];
                     uN = (j == info->my-2) ?             0.0 : u[k][j+1][i];
                     uS = (j == 1)          ?             0.0 : u[k][j-1][i];
                     uxx = (uW - 2.0 * uu + uE) / s.hx2;
                     uyy = (uS - 2.0 * uu + uN) / s.hy2;
                     uzz = (u[k-1][j][i] - 2.0 * uu + u[k+1][j][i]) / s.hz2;
-                    W = getWind(x,y,z);
+                    W = a_wind(x,y,z);
                     if (usr->upwind) {
                         Wux = (W.x > 0) ? uu - uW : uE - uu;
                         Wux *= W.x / s.hx;
@@ -177,7 +182,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***u,
                     }
                     F[k][j][i] = - usr->eps * (uxx + uyy + uzz)
                                  + Wux + Wuy + Wuz
-                                 - f_source(x,y,z,usr);
+                                 - g_source(x,y,z,uu,usr);
                 }
             }
         }
@@ -187,7 +192,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***u,
 //ENDFUNCTION
 
 
-PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar ***u,
+PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar ***au,
                                  Mat J, Mat Jpre, Ctx *usr) {
     PetscErrorCode  ierr;
     int          i,j,k,q;
@@ -214,8 +219,8 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar ***u,
                     v[0] = 1.0;
                     q = 1;
                 } else {
-                    W = getWind(x,y,z);
-                    v[0] = diag;
+                    W = a_wind(x,y,z);
+                    v[0] = diag - dgdu_source(x,y,z,au[k][j][i],usr);
                     if (usr->upwind) {
                         v[0] += (W.x / s.hx) * ((W.x > 0.0) ? 1.0 : -1.0);
                         v[0] += (W.y / s.hy) * ((W.y > 0.0) ? 1.0 : -1.0);
@@ -322,9 +327,6 @@ int main(int argc,char **argv) {
     ierr = DMDASetUniformCoordinates(da,-1.0,1.0,-1.0,1.0,-1.0,1.0); CHKERRQ(ierr);
     getSpacings(&info,&s);
 
-    ierr = DMCreateGlobalVector(da,&uexact); CHKERRQ(ierr);
-    ierr = formUex(&info,&user,uexact); CHKERRQ(ierr);
-
     ierr = SNESCreate(PETSC_COMM_WORLD,&snes);CHKERRQ(ierr);
     ierr = SNESSetDM(snes,da);CHKERRQ(ierr);
     ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
@@ -333,10 +335,12 @@ int main(int argc,char **argv) {
             (DMDASNESJacobian)FormJacobianLocal,&user);CHKERRQ(ierr);
     ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
 
-    ierr = VecDuplicate(uexact,&u); CHKERRQ(ierr);
+    ierr = DMCreateGlobalVector(da,&u); CHKERRQ(ierr);
     ierr = VecSet(u,0.0); CHKERRQ(ierr);
     ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
 
+    ierr = VecDuplicate(u,&uexact); CHKERRQ(ierr);
+    ierr = formUex(&info,&user,uexact); CHKERRQ(ierr);
     ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uxact
     ierr = VecNorm(u,NORM_2,&err); CHKERRQ(ierr);
     err *= PetscSqrtReal(s.hx * s.hy * s.hz);
