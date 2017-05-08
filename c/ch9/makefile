@@ -22,9 +22,9 @@ runadvect_2:
 runadvect_3:
 	-@../testit.sh advect "-da_refine 1 -ts_monitor -adv_windy 0.0 -ts_final_time 0.02 -ts_dt 0.01 -ts_type cn -snes_converged_reason" 1 3
 
-# eps = 1.0 [default] and centered-difference advection [default]
+# eps = 1.0 [default] and centered fluxes and no Jacobian evaluation
 runad3_1:
-	-@../testit.sh ad3 "-da_refine 1 -snes_converged_reason" 1 1
+	-@../testit.sh ad3 "-da_refine 1 -snes_converged_reason -ad3_limiter centered -snes_fd_color" 1 1
 
 # eps = 0.01 and upwind and GAMG
 runad3_2:

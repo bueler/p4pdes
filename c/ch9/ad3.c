@@ -8,7 +8,8 @@ static char help[] =
 "    u(-1,y,z) = u(x,-1,z) = u(x,1,z) = 0\n"
 "    u periodic in z\n"
 "The SNES sees as residual function the discretized version of\n"
-"    F(u) = - eps Laplacian u + div (a(x,y,z) u) - g(x,y,z,u)\n"
+"    F(u) = div (a(x,y,z) u) - eps Laplacian u - g(x,y,z,u)\n"
+"so that Jacobian is positive-(semi-)definite if a=0 and g=0.\n"
 "Significant restrictions are:\n"
 "    * only Dirichlet and periodic boundary conditions are demonstrated\n"
 "    * a(x,y,z), g(x,y,z,u), b(y,z) must be given by formulas\n"
@@ -68,14 +69,18 @@ typedef struct {
     double      (*limiter_fcn)(double);
 } Ctx;
 
-
+//FIXME needed for Jacobian ... but discard old
 typedef struct {
     double  x,y,z;
 } Wind;
-
-static Wind a_wind(double x, double y, double z) {
+static Wind a_wind_old(double x, double y, double z) {
     Wind W = {1.0,0.0,0.0};
     return W;
+}
+//END old
+
+static double a_wind(double x, double y, double z, int q, Ctx *user) {
+    return (q == 0) ? 1.0 : 0.0;
 }
 
 static double EE = PETSC_PI / 2.0,
@@ -154,8 +159,7 @@ PetscErrorCode formUex(DMDALocalInfo *info, Ctx *usr, Vec uex) {
     getSpacings(info,&s);
     ierr = DMDAVecGetArray(info->da, uex, &auex);CHKERRQ(ierr);
     for (k=info->zs; k<info->zs+info->zm; k++) {
-        z = -1.0 + k * s.hz;
-//FIXME        z = -1.0 + (k+0.5) * s.hz;
+        z = -1.0 + (k+0.5) * s.hz;
         for (j=info->ys; j<info->ys+info->ym; j++) {
             y = -1.0 + j * s.hy;
             for (i=info->xs; i<info->xs+info->xm; i++) {
@@ -171,9 +175,10 @@ PetscErrorCode formUex(DMDALocalInfo *info, Ctx *usr, Vec uex) {
 
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***au,
                                  double ***aF, Ctx *usr) {
-    int          i, j, k;
-    double       x, y, z, uu, uE, uW, uN, uS, uxx, uyy, uzz, Wux, Wuy, Wuz;
-    Wind         W;
+    int          i, j, k, q, di, dj, dk;
+    double       x, y, z, uu, uE, uW, uN, uS, uxx, uyy, uzz,
+                 a, flux, u_up, u_dn, u_far, theta;
+    PetscBool    deep;
     Spacings     s;
 
     getSpacings(info,&s);
@@ -184,22 +189,20 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***au,
             for (i=info->xs; i<info->xs+info->xm; i++)
                 aF[k][j][i] = 0.0;
 
-    for (k=info->zs; k<info->zs+info->zm; k++) {
-//FIXME:    for (k=info->zs-1; k<info->zs+info->zm; k++) { // note -1 start
-        z = -1.0 + k * s.hz;
-//FIXME:        z = -1.0 + (k+0.5) * s.hz;
+    for (k=info->zs-1; k<info->zs+info->zm; k++) { // note -1 start
+        z = -1.0 + (k+0.5) * s.hz;
         for (j=info->ys; j<info->ys+info->ym; j++) {
             y = -1.0 + j * s.hy;
             for (i=info->xs; i<info->xs+info->xm; i++) {
                 x = -1.0 + i * s.hx;
-                if (i == info->mx-1) {
-                    if (k >= info->zs)
+                // for cell centers, determine non-advective parts of residual
+                // FIXME: multiply through by cell volume to get better scaling?
+                if (k >= info->zs) {
+                    if (i == info->mx-1) {
                         aF[k][j][i] = au[k][j][i] - b_bdry(y,z,usr);
-                } else if (i == 0 || j == 0 || j == info->my-1) {
-                    if (k >= info->zs)
+                    } else if (i == 0 || j == 0 || j == info->my-1) {
                         aF[k][j][i] = au[k][j][i];
-                } else {
-                    if (k >= info->zs) {
+                    } else {
                         uu = au[k][j][i];
                         uE = (i == info->mx-2) ? b_bdry(y,z,usr) : au[k][j][i+1];
                         uW = (i == 1)          ?             0.0 : au[k][j][i-1];
@@ -211,24 +214,50 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***au,
                         aF[k][j][i] -= usr->eps * (uxx + uyy + uzz)
                                        + g_source(x,y,z,uu,usr);
                     }
-                    W = a_wind(x,y,z);
-                    //major FIXME: eval flux on boundaries
-                    if (!usr->limiter) {
-                        Wux = (W.x > 0) ? uu - uW : uE - uu;
-                        Wux *= W.x / s.hx;
-                        Wuy = (W.y > 0) ? uu - uS : uN - uu;
-                        Wuy *= W.y / s.hy;
-                        Wuz = (W.z > 0) ? uu - au[k-1][j][i]
-                                        : au[k+1][j][i] - uu;
-                        Wuz *= W.z / s.hz;
-                    } else if (usr->limiter == CENTERED) {
-                        Wux = W.x * (uE - uW) / (2.0*s.hx);
-                        Wuy = W.y * (uN - uS) / (2.0*s.hy);
-                        Wuz = W.z * (au[k+1][j][i] - au[k-1][j][i]) / (2.0*s.hz);
-                    } else {
-                        SETERRQ(PETSC_COMM_WORLD,1,"invalid limiter choice");
+                }
+                if (i == info->mx-1 || j == info->my-1)
+                    continue;
+                // traverse flux contributions on cell boundaries at E, N, T
+                // [East/West, North/South, Top/Bottom for x,y,z resp.]
+                for (q = 0; q < 3; q++) {
+                    if (q < 2 && k < info->zs)  continue;
+                    di = (q == 0) ? 1 : 0;
+                    dj = (q == 1) ? 1 : 0;
+                    dk = (q == 2) ? 1 : 0;
+                    a = a_wind(x+s.halfx*di,y+s.halfy*dj,z+s.halfz*dk,q,usr);
+                    u_up = (a >= 0.0) ? au[k][j][i] : au[k+dk][j+dj][i+di];
+                    flux = a * u_up;
+                    deep = (i > 1 && i < info->mx-2 && j > 1 && j < info->my-2);
+                    if (usr->limiter_fcn != NULL && deep) {
+                        u_dn = (a >= 0.0) ? au[k+dk][j+dj][i+di] : au[k][j][i];
+                        if (u_dn != u_up) {
+                            u_far = (a >= 0.0) ? au[k-dk][j-dj][i-di]
+                                               : au[k+2*dk][j+2*dj][i+2*di];
+                            theta = (u_up - u_far) / (u_dn - u_up);
+                            flux += a * (*usr->limiter_fcn)(theta)*(u_dn-u_up);
+                        }
                     }
-                    aF[k][j][i] += Wux + Wuy + Wuz;
+                    // update non-boundary and owned F_ijk on both sides of computed flux
+                    switch (q) {
+                        case 0:  // flux at E
+                            if (i > 0)
+                                aF[k][j][i]   += flux / s.hx;
+                            if (i < info->mx-1 && i+1 < info->xs + info->xm)
+                                aF[k][j][i+1] -= flux / s.hx;
+                            break;
+                        case 1:  // flux at N
+                            if (j > 0)
+                                aF[k][j][i]   += flux / s.hy;
+                            if (j < info->my-1 && j+1 < info->ys + info->ym)
+                                aF[k][j+1][i] -= flux / s.hy;
+                            break;
+                        case 3:  // flux at T
+                            if (k >= info->zs)
+                                aF[k][j][i]   += flux / s.hz;
+                            if (k+1 < info->zs + info->zm)
+                                aF[k+1][j][i] -= flux / s.hz;
+                            break;
+                    }
                 }
             }
         }
@@ -237,6 +266,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***au,
 }
 
 
+// major FIXME:  uses old form of advection
 PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar ***au,
                                  Mat J, Mat Jpre, Ctx *usr) {
     PetscErrorCode  ierr;
@@ -264,7 +294,7 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar ***au,
                     v[0] = 1.0;
                     q = 1;
                 } else {
-                    W = a_wind(x,y,z);
+                    W = a_wind_old(x,y,z);
                     v[0] = diag - dgdu_source(x,y,z,au[k][j][i],usr);
                     if (!usr->limiter) {
                         v[0] += (W.x / s.hx) * ((W.x > 0.0) ? 1.0 : -1.0);
@@ -358,11 +388,10 @@ int main(int argc,char **argv) {
     ierr = DMDACreate3d(PETSC_COMM_WORLD,
         DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DM_BOUNDARY_PERIODIC,
         DMDA_STENCIL_STAR,               // no diagonal differencing
-        3,3,3,                           // default to hx=hx=0.5 grid
-                                         // FIXME mz=5 allows -snes_fd_color)
+        3,3,5,                           // default to hx=hx=0.5,hz=0.2 grid
+                                         // (mz=5 allows -snes_fd_color)
         PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,
-        1, 1,                            // d.o.f & stencil width
-//FIXME        1, 2,                            // d.o.f & stencil width
+        1, 2,                            // d.o.f & stencil width
         NULL,NULL,NULL,&da); CHKERRQ(ierr);
     ierr = DMSetFromOptions(da); CHKERRQ(ierr);
     ierr = DMSetUp(da); CHKERRQ(ierr);
@@ -372,8 +401,7 @@ int main(int argc,char **argv) {
         SETERRQ(PETSC_COMM_WORLD,1,"grid too coarse: require (mx,my,mz) >= (2,2,3)");
     }
     getSpacings(&info,&s);
-    ierr = DMDASetUniformCoordinates(da,-1.0,1.0,-1.0,1.0,-1.0,1.0); CHKERRQ(ierr);
-//FIXME    ierr = DMDASetUniformCoordinates(da,-1.0,1.0,-1.0,1.0,-1.0+s.halfz,1.0-s.halfz); CHKERRQ(ierr);
+    ierr = DMDASetUniformCoordinates(da,-1.0,1.0,-1.0,1.0,-1.0+s.halfz,1.0-s.halfz); CHKERRQ(ierr);
 
     ierr = SNESCreate(PETSC_COMM_WORLD,&snes);CHKERRQ(ierr);
     ierr = SNESSetDM(snes,da);CHKERRQ(ierr);
