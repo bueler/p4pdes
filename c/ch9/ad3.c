@@ -38,7 +38,9 @@ all of these work:
 excellent illustration of Elman's point that discretization must handle advection problem if we are to get good preconditioning; compare following with and without -ad3_limiter none:
 for LEV in 0 1 2 3 4 5; do timer mpiexec -n 4 ./ad3 -snes_converged_reason -ksp_converged_reason -ksp_rtol 1.0e-14 -da_refine $LEV -pc_type gamg -ad3_eps 0.1 -ad3_limiter none; done
 
-FIXME: multigrid?
+FIXME: geometric multigrid?
+
+FIXME: double glazing problem?
 */
 
 #include <petsc.h>
