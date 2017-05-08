@@ -35,19 +35,37 @@ all of these work:
   "                   -snes_mf
   "                   -snes_mf_operator
 
-excellent illustration of Elman's point that discretization must handle advection problem if we are to get good preconditioning; compare following with and without -ad3_upwind:
-for LEV in 0 1 2 3 4 5; do timer mpiexec -n 4 ./ad3 -snes_converged_reason -ksp_converged_reason -ksp_rtol 1.0e-14 -da_refine $LEV -pc_type gamg -ad3_eps 0.1 -ad3_upwind; done
+excellent illustration of Elman's point that discretization must handle advection problem if we are to get good preconditioning; compare following with and without -ad3_limiter none:
+for LEV in 0 1 2 3 4 5; do timer mpiexec -n 4 ./ad3 -snes_converged_reason -ksp_converged_reason -ksp_rtol 1.0e-14 -da_refine $LEV -pc_type gamg -ad3_eps 0.1 -ad3_limiter none; done
 
 FIXME: multigrid?
 */
 
 #include <petsc.h>
 
-//STARTSETUP
+
+/* compare limiters in advect.c */
+static double centered(double theta) {
+    return 0.5;
+}
+
+static double vanleer(double theta) {
+    const double abstheta = PetscAbsReal(theta);
+    return 0.5 * (theta + abstheta) / (1.0 + abstheta);
+}
+
+typedef enum {NONE, CENTERED, VANLEER} LimiterType;
+static const char *LimiterTypes[] = {"none","centered","vanleer",
+                                     "LimiterType", "", NULL};
+static void* limiterptr[] = {NULL, &centered, &vanleer};
+
+
 typedef struct {
-    double     eps;
-    PetscBool  upwind;
+    double      eps;
+    LimiterType limiter;
+    double      (*limiter_fcn)(double);
 } Ctx;
+
 
 typedef struct {
     double  x,y,z;
@@ -80,7 +98,6 @@ static double dgdu_source(double x, double y, double z, double u, Ctx *user) {
 static double b_bdry(double y, double z, Ctx *user) {
     return sin(EE*(y+1.0)) * sin(FF*(z+1.0));
 }
-//ENDSETUP
 
 
 typedef struct {
@@ -100,16 +117,24 @@ void getSpacings(DMDALocalInfo *info, Spacings *s) {
 PetscErrorCode configureCtx(Ctx *usr) {
     PetscErrorCode  ierr;
     usr->eps = 1.0;
-    usr->upwind = PETSC_FALSE;
+    usr->limiter = CENTERED;
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"ad3_",
                "ad3 (3D advection-diffusion solver) options",""); CHKERRQ(ierr);
     ierr = PetscOptionsReal("-eps","diffusion coefficient eps with  0 < eps < infty",
-               NULL,usr->eps,&(usr->eps),NULL); CHKERRQ(ierr);
+               "ad3.c",usr->eps,&(usr->eps),NULL); CHKERRQ(ierr);
     if (usr->eps <= 0.0) {
         SETERRQ1(PETSC_COMM_WORLD,1,"eps=%.3f invalid ... eps > 0 required",usr->eps);
     }
-    ierr = PetscOptionsBool("-upwind","use first-order upwinding",
-               NULL,usr->upwind,&(usr->upwind),NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsEnum("-limiter","flux-limiter type",
+               "ad3.c",LimiterTypes,
+           (PetscEnum)usr->limiter,(PetscEnum*)&usr->limiter,NULL); CHKERRQ(ierr);
+    usr->limiter_fcn = limiterptr[usr->limiter];
+
+    // FIXME
+    if (usr->limiter == VANLEER) {
+        SETERRQ(PETSC_COMM_WORLD,1,"van leer limiter not implemented");
+    }
+
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
     return 0;
 }
@@ -167,7 +192,8 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***u,
                     uyy = (uS - 2.0 * uu + uN) / s.hy2;
                     uzz = (u[k-1][j][i] - 2.0 * uu + u[k+1][j][i]) / s.hz2;
                     W = a_wind(x,y,z);
-                    if (usr->upwind) {
+                    //major FIXME: eval flux on boundaries
+                    if (!usr->limiter) {
                         Wux = (W.x > 0) ? uu - uW : uE - uu;
                         Wux *= W.x / s.hx;
                         Wuy = (W.y > 0) ? uu - uS : uN - uu;
@@ -175,10 +201,12 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***u,
                         Wuz = (W.z > 0) ? uu - u[k-1][j][i]
                                         : u[k+1][j][i] - uu;
                         Wuz *= W.z / s.hz;
-                    } else {
+                    } else if (usr->limiter == CENTERED) {
                         Wux = W.x * (uE - uW) / (2.0*s.hx);
                         Wuy = W.y * (uN - uS) / (2.0*s.hy);
                         Wuz = W.z * (u[k+1][j][i] - u[k-1][j][i]) / (2.0*s.hz);
+                    } else {
+                        SETERRQ(PETSC_COMM_WORLD,1,"invalid limiter choice");
                     }
                     F[k][j][i] = - usr->eps * (uxx + uyy + uzz)
                                  + Wux + Wuy + Wuz
@@ -221,20 +249,20 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar ***au,
                 } else {
                     W = a_wind(x,y,z);
                     v[0] = diag - dgdu_source(x,y,z,au[k][j][i],usr);
-                    if (usr->upwind) {
+                    if (!usr->limiter) {
                         v[0] += (W.x / s.hx) * ((W.x > 0.0) ? 1.0 : -1.0);
                         v[0] += (W.y / s.hy) * ((W.y > 0.0) ? 1.0 : -1.0);
                         v[0] += (W.z / s.hz) * ((W.z > 0.0) ? 1.0 : -1.0);
                     }
                     v[1] = - usr->eps / s.hz2;
-                    if (usr->upwind) {
+                    if (!usr->limiter) {
                         if (W.z > 0.0)
                             v[1] -= W.z / s.hz;
                     } else
                         v[1] -= W.z / (2.0 * s.hz);
                     col[1].k = k-1;  col[1].j = j;  col[1].i = i;
                     v[2] = - usr->eps / s.hz2;
-                    if (usr->upwind) {
+                    if (!usr->limiter) {
                         if (W.z <= 0.0)
                             v[2] += W.z / s.hz;
                     } else
@@ -243,7 +271,7 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar ***au,
                     q = 3;
                     if (i-1 != 0) {
                         v[q] = - usr->eps / s.hx2;
-                        if (usr->upwind) {
+                        if (!usr->limiter) {
                             if (W.x > 0.0)
                                 v[q] -= W.x / s.hx;
                         } else
@@ -253,7 +281,7 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar ***au,
                     }
                     if (i+1 != info->mx-1) {
                         v[q] = - usr->eps / s.hx2;
-                        if (usr->upwind) {
+                        if (!usr->limiter) {
                             if (W.x <= 0.0)
                                 v[q] += W.x / s.hx;
                         } else
@@ -263,7 +291,7 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar ***au,
                     }
                     if (j-1 != 0) {
                         v[q] = - usr->eps / s.hy2;
-                        if (usr->upwind) {
+                        if (!usr->limiter) {
                             if (W.y > 0.0)
                                 v[q] -= W.y / s.hy;
                         } else
@@ -273,7 +301,7 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar ***au,
                     }
                     if (j+1 != info->my-1) {
                         v[q] = - usr->eps / s.hy2;
-                        if (usr->upwind) {
+                        if (!usr->limiter) {
                             if (W.y <= 0.0)
                                 v[q] += W.y / s.hy;
                         } else
