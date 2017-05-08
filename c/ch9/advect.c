@@ -83,6 +83,7 @@ typedef struct {
     double           windx, windy;  // x,y velocity if problem==STRAIGHT
     double           (*initialshape_fcn)(double,double); // if STRAIGHT
     double           (*limiter_fcn)(double);
+    PetscBool        centeredjacobian;
 } AdvectCtx;
 //ENDCTX
 
@@ -93,8 +94,11 @@ PetscErrorCode setup(AdvectCtx *user, char *fileroot, PetscBool *oneline) {
     user->problem = STRAIGHT;
     user->windx = 2.0;
     user->windy = 2.0;
+    user->centeredjacobian = PETSC_FALSE;
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD,
            "adv_", "options for advect.c", ""); CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-centered_jacobian","Jacobian calculated from centered formulas",
+           "advect.c",user->centeredjacobian,&user->centeredjacobian,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsString("-dumpto","filename root for initial/final state",
            "advect.c",fileroot,fileroot,PETSC_MAX_PATH_LEN,NULL);CHKERRQ(ierr);
 //STARTENUMOPTIONS
@@ -242,11 +246,11 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t,
 PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info, double t,
         double **au, Mat J, Mat P, AdvectCtx *user) {
     PetscErrorCode ierr;
-    const int   dir[4] = {0, 1, 0, 1},  // use x (0) or y (1) component
-                xsh[4]   = { 1, 0,-1, 0},  ysh[4]   = { 0, 1, 0,-1};
+    const int   dir[4] = { 0, 1, 0, 1},  // use x (0) or y (1) component
+                xsh[4] = { 1, 0,-1, 0},  ysh[4]   = { 0, 1, 0,-1};
     int         i, j, l, nc;
-    double      hx, hy, halfx, halfy, x, y, a, v[5];
-    MatStencil  col[5],row;
+    double      hx, hy, halfx, halfy, x, y, a, v[9];
+    MatStencil  col[9],row;
 
     ierr = MatZeroEntries(P); CHKERRQ(ierr);
     hx = 2.0 / info->mx;  hy = 2.0 / info->my;
@@ -260,25 +264,52 @@ PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info, double t,
             col[0].j = j;  col[0].i = i;
             v[0] = dg_source(x,y,au[j][i],user);
             nc = 1;
-            for (l = 0; l < 4; l++) {   // loop over cell boundaries
+            for (l = 0; l < 4; l++) {   // loop over cell boundaries: E, N, W, S
                 a = a_wind(x + halfx*xsh[l],y + halfy*ysh[l],dir[l],user);
-                switch (l) {
-                    case 0:
-                        col[nc].j = j;  col[nc].i = (a >= 0.0) ? i : i+1;
-                        v[nc++] = - a / hx;
-                        break;
-                    case 1:
-                        col[nc].j = (a >= 0.0) ? j : j+1;  col[nc].i = i;
-                        v[nc++] = - a / hy;
-                        break;
-                    case 2:
-                        col[nc].j = j;  col[nc].i = (a >= 0.0) ? i-1 : i;
-                        v[nc++] = a / hx;
-                        break;
-                    case 3:
-                        col[nc].j = (a >= 0.0) ? j-1 : j;  col[nc].i = i;
-                        v[nc++] = a / hy;
-                        break;
+                if (user->centeredjacobian) {
+                    // Jacobian is from centered fluxes
+                    switch (l) {
+                        case 0:
+                            col[nc].j = j;  col[nc].i = i;    v[nc++] = - a / (2.0*hx);
+                            col[nc].j = j;  col[nc].i = i+1;  v[nc++] = - a / (2.0*hx);
+                            break;
+                        case 1:
+                            col[nc].j = j;    col[nc].i = i;  v[nc++] = - a / (2.0*hy);
+                            col[nc].j = j+1;  col[nc].i = i;  v[nc++] = - a / (2.0*hy);
+                            break;
+                        case 2:
+                            col[nc].j = j;  col[nc].i = i-1;  v[nc++] = a / (2.0*hx);
+                            col[nc].j = j;  col[nc].i = i;    v[nc++] = a / (2.0*hx);
+                            break;
+                        case 3:
+                            col[nc].j = j-1;  col[nc].i = i;  v[nc++] = a / (2.0*hy);
+                            col[nc].j = j;    col[nc].i = i;  v[nc++] = a / (2.0*hy);
+                            break;
+                    }
+                } else {
+                    // Jacobian is from upwind fluxes
+                    switch (l) {
+                        case 0:
+                            col[nc].j = j;
+                            col[nc].i = (a >= 0.0) ? i : i+1;
+                            v[nc++] = - a / hx;
+                            break;
+                        case 1:
+                            col[nc].j = (a >= 0.0) ? j : j+1;
+                            col[nc].i = i;
+                            v[nc++] = - a / hy;
+                            break;
+                        case 2:
+                            col[nc].j = j;
+                            col[nc].i = (a >= 0.0) ? i-1 : i;
+                            v[nc++] = a / hx;
+                            break;
+                        case 3:
+                            col[nc].j = (a >= 0.0) ? j-1 : j;
+                            col[nc].i = i;
+                            v[nc++] = a / hy;
+                            break;
+                    }
                 }
             }
             ierr = MatSetValuesStencil(P,1,&row,nc,col,v,ADD_VALUES); CHKERRQ(ierr);

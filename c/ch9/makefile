@@ -10,6 +10,7 @@ ad3: ad3.o  chkopts
 	${RM} ad3.o
 
 # testing
+
 # first-order upwinding and nonstandard RK and evaluation of error
 runadvect_1:
 	-@../testit.sh advect "-da_refine 1 -ts_monitor -ts_rk_type 5f -adv_limiter none -ts_final_time 1.0" 1 1
@@ -18,9 +19,15 @@ runadvect_1:
 runadvect_2:
 	-@../testit.sh advect "-da_refine 2 -ts_monitor -adv_limiter vanleer -adv_problem rotation -ts_type beuler -snes_monitor_short -ts_final_time 0.01 -ts_dt 0.01 -snes_rtol 1.0e-4 -snes_fd_color" 2 2
 
-# koren limiter [default] and rightward wind and CN and analytical jacobian
+# koren limiter [default] and rightward wind and CN and analytical (upwind) jacobian
 runadvect_3:
 	-@../testit.sh advect "-da_refine 1 -ts_monitor -adv_windy 0.0 -ts_final_time 0.02 -ts_dt 0.01 -ts_type cn -snes_converged_reason" 1 3
+
+# centered limiter and analytical (centered) jacobian; compare with -snes_fd
+runadvect_4:
+	-@../testit.sh advect "-da_grid_x 3 -da_grid_y 3 -adv_limiter centered -adv_centered_jacobian -ts_type cn -ts_theta_adapt -ts_monitor -ts_dt 0.01 -ts_final_time 0.02 -snes_converged_reason" 1 4
+
+
 
 # eps = 1.0 [default] and centered fluxes and no Jacobian evaluation
 runad3_1:
@@ -30,7 +37,8 @@ runad3_1:
 runad3_2:
 	-@../testit.sh ad3 "-da_refine 1 -ad3_eps 0.01 -ad3_limiter none -pc_type gamg -snes_monitor_short" 1 2
 
-test_advect: runadvect_1 runadvect_2 runadvect_3
+
+test_advect: runadvect_1 runadvect_2 runadvect_3 runadvect_4
 test_ad3: runad3_1 runad3_2
 test: test_advect test_ad3
 
