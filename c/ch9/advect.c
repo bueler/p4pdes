@@ -99,7 +99,7 @@ PetscErrorCode setup(AdvectCtx *user, char *fileroot, PetscBool *oneline) {
            "adv_", "options for advect.c", ""); CHKERRQ(ierr);
     ierr = PetscOptionsBool("-centered_jacobian","Jacobian calculated from centered formulas",
            "advect.c",user->centeredjacobian,&user->centeredjacobian,NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsString("-dumpto","filename root for initial/final state",
+    ierr = PetscOptionsString("-dumpto","filename root for binary files with initial/final state",
            "advect.c",fileroot,fileroot,PETSC_MAX_PATH_LEN,NULL);CHKERRQ(ierr);
 //STARTENUMOPTIONS
     ierr = PetscOptionsEnum("-initial",
@@ -118,9 +118,9 @@ PetscErrorCode setup(AdvectCtx *user, char *fileroot, PetscBool *oneline) {
 //ENDENUMOPTIONS
     ierr = PetscOptionsBool("-oneline","in exact solution cases, show one-line output",
            "advect.c",*oneline,oneline,NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-windx","x component of wind (if problem==straight)",
+    ierr = PetscOptionsReal("-windx","x component of wind for problem==straight",
            "advect.c",user->windx,&user->windx,NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-windy","y component of wind (if problem==straight)",
+    ierr = PetscOptionsReal("-windy","y component of wind for problem==straight",
            "advect.c",user->windy,&user->windy,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
     return 0;
