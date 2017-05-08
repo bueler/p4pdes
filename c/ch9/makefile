@@ -37,5 +37,5 @@ test: runadvect_1 runadvect_2 runadvect_3 runad3_1 runad3_2
 .PHONY: distclean runadvect_1 runadvect_2 runadvect_3 runad3_1
 
 distclean:
-	@rm -f *~ *tmp advect ad3
+	@rm -f *~ *tmp *.pyc advect ad3
 
