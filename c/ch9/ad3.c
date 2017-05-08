@@ -69,16 +69,6 @@ typedef struct {
     double      (*limiter_fcn)(double);
 } Ctx;
 
-//FIXME needed for Jacobian ... but discard old
-typedef struct {
-    double  x,y,z;
-} Wind;
-static Wind a_wind_old(double x, double y, double z) {
-    Wind W = {1.0,0.0,0.0};
-    return W;
-}
-//END old
-
 static double a_wind(double x, double y, double z, int q, Ctx *user) {
     return (q == 0) ? 1.0 : 0.0;
 }
@@ -139,12 +129,6 @@ PetscErrorCode configureCtx(Ctx *usr) {
                "ad3.c",LimiterTypes,
            (PetscEnum)usr->limiter,(PetscEnum*)&usr->limiter,NULL); CHKERRQ(ierr);
     usr->limiter_fcn = limiterptr[usr->limiter];
-
-    // FIXME
-    if (usr->limiter == VANLEER) {
-        SETERRQ(PETSC_COMM_WORLD,1,"van leer limiter not implemented");
-    }
-
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
     return 0;
 }
@@ -266,7 +250,16 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***au,
 }
 
 
-// major FIXME:  uses old form of advection
+// major FIXME:  Jacobian uses old form of advection
+typedef struct {
+    double  x,y,z;
+} Wind;
+
+static Wind a_wind_old(double x, double y, double z) {
+    Wind W = {1.0,0.0,0.0};
+    return W;
+}
+
 PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar ***au,
                                  Mat J, Mat Jpre, Ctx *usr) {
     PetscErrorCode  ierr;
