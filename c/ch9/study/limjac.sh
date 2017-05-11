@@ -5,21 +5,19 @@ set +x
 
 # run with --with-debugging=0 build
 # run as
-#    ./limjac.sh
+#    ./limjac.sh &> limjac.txt
 # and hand-generate table in book
 
-EXEC=../advect
-LEV=5    # results (on number of Newton iterations) seem independent of this(?)
+LEV=4
+DT=0.01  # for LEV=4, CFL of 0.5 gives dt = 0.00625
 
-# note initial condition (stump|smooth|cone|box) irrelevant because none|centered
-# Jacobians are not affected 
-
+# using stump initial
 for LIM in none centered vanleer koren; do
     for JAC in none centered; do
         echo "limiter=" $LIM ", jacobian=" $JAC ":"
-        $EXEC -da_refine $LEV -ts_dt 0.01 -ts_final_time 0.01 \
-           -ts_type cn -ts_monitor -snes_converged_reason -ksp_rtol 1.0e-12 \
-            -adv_limiter $LIM -adv_jacobian $JAC -snes_max_it 200
+        ../advect -da_refine $LEV -ts_dt $DT -ts_final_time $DT -ts_type cn \
+             -ksp_rtol 1.0e-12 -snes_converged_reason -snes_max_it 200 \
+             -adv_limiter $LIM -adv_jacobian $JAC
         echo
     done
 done
