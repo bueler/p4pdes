@@ -85,11 +85,11 @@ static const char *InitialShapeTypes[] = {"stump", "smooth", "cone", "box",
 typedef struct {
     ProblemType      problem;
     InitialShapeType initialshape;
-    LimiterType      limiter;
+    LimiterType      limiter,
+                     jacobian;
     double           windx, windy;  // x,y velocity if problem==STRAIGHT
     double           (*initialshape_fcn)(double,double); // if STRAIGHT
     double           (*limiter_fcn)(double);
-    PetscBool        centeredjacobian;
 } AdvectCtx;
 //ENDCTX
 
@@ -97,14 +97,12 @@ PetscErrorCode setup(AdvectCtx *user, char *fileroot, PetscBool *oneline) {
     PetscErrorCode ierr;
     user->initialshape = STUMP;
     user->limiter = KOREN;
+    user->jacobian = NONE;
     user->problem = STRAIGHT;
     user->windx = 2.0;
     user->windy = 2.0;
-    user->centeredjacobian = PETSC_FALSE;
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD,
            "adv_", "options for advect.c", ""); CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-centered_jacobian","Jacobian calculated from centered formulas",
-           "advect.c",user->centeredjacobian,&user->centeredjacobian,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsString("-dumpto","filename root for binary files with initial/final state",
            "advect.c",fileroot,fileroot,PETSC_MAX_PATH_LEN,NULL);CHKERRQ(ierr);
 //STARTENUMOPTIONS
@@ -114,6 +112,9 @@ PetscErrorCode setup(AdvectCtx *user, char *fileroot, PetscBool *oneline) {
            (PetscEnum)user->initialshape,
            (PetscEnum*)&user->initialshape,NULL); CHKERRQ(ierr);
     user->initialshape_fcn = initialshapeptr[user->initialshape];
+    ierr = PetscOptionsEnum("-jacobian","flux-limiter type used in calculating Jacobian",
+           "advect.c",LimiterTypes,
+           (PetscEnum)user->jacobian,(PetscEnum*)&user->jacobian,NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnum("-limiter","flux-limiter type",
            "advect.c",LimiterTypes,
            (PetscEnum)user->limiter,(PetscEnum*)&user->limiter,NULL); CHKERRQ(ierr);
@@ -272,27 +273,7 @@ PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info, double t,
             nc = 1;
             for (l = 0; l < 4; l++) {   // loop over cell boundaries: E, N, W, S
                 a = a_wind(x + halfx*xsh[l],y + halfy*ysh[l],dir[l],user);
-                if (user->centeredjacobian) {
-                    // Jacobian is from centered fluxes
-                    switch (l) {
-                        case 0:
-                            col[nc].j = j;  col[nc].i = i;    v[nc++] = - a / (2.0*hx);
-                            col[nc].j = j;  col[nc].i = i+1;  v[nc++] = - a / (2.0*hx);
-                            break;
-                        case 1:
-                            col[nc].j = j;    col[nc].i = i;  v[nc++] = - a / (2.0*hy);
-                            col[nc].j = j+1;  col[nc].i = i;  v[nc++] = - a / (2.0*hy);
-                            break;
-                        case 2:
-                            col[nc].j = j;  col[nc].i = i-1;  v[nc++] = a / (2.0*hx);
-                            col[nc].j = j;  col[nc].i = i;    v[nc++] = a / (2.0*hx);
-                            break;
-                        case 3:
-                            col[nc].j = j-1;  col[nc].i = i;  v[nc++] = a / (2.0*hy);
-                            col[nc].j = j;    col[nc].i = i;  v[nc++] = a / (2.0*hy);
-                            break;
-                    }
-                } else {
+                if (user->jacobian == NONE) {
                     // Jacobian is from upwind fluxes
                     switch (l) {
                         case 0:
@@ -316,6 +297,28 @@ PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info, double t,
                             v[nc++] = a / hy;
                             break;
                     }
+                } else if (user->jacobian == CENTERED) {
+                    // Jacobian is from centered fluxes
+                    switch (l) {
+                        case 0:
+                            col[nc].j = j;  col[nc].i = i;    v[nc++] = - a / (2.0*hx);
+                            col[nc].j = j;  col[nc].i = i+1;  v[nc++] = - a / (2.0*hx);
+                            break;
+                        case 1:
+                            col[nc].j = j;    col[nc].i = i;  v[nc++] = - a / (2.0*hy);
+                            col[nc].j = j+1;  col[nc].i = i;  v[nc++] = - a / (2.0*hy);
+                            break;
+                        case 2:
+                            col[nc].j = j;  col[nc].i = i-1;  v[nc++] = a / (2.0*hx);
+                            col[nc].j = j;  col[nc].i = i;    v[nc++] = a / (2.0*hx);
+                            break;
+                        case 3:
+                            col[nc].j = j-1;  col[nc].i = i;  v[nc++] = a / (2.0*hy);
+                            col[nc].j = j;    col[nc].i = i;  v[nc++] = a / (2.0*hy);
+                            break;
+                    }
+                } else {
+                    SETERRQ(PETSC_COMM_WORLD,1,"Jacobian cases 'vanleer' and 'koren' not implemented\n");
                 }
             }
             ierr = MatSetValuesStencil(P,1,&row,nc,col,v,ADD_VALUES); CHKERRQ(ierr);
