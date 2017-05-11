@@ -354,7 +354,7 @@ int main(int argc,char **argv) {
     DM               da;
     Vec              u;
     DMDALocalInfo    info;
-    double           hx, hy, t0, dt, tf;
+    double           hx, hy, t0, c, dt, tf;
     char             fileroot[PETSC_MAX_PATH_LEN] = "";
     int              steps;
     PetscBool        oneline;
@@ -390,7 +390,11 @@ int main(int argc,char **argv) {
     ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
     // use CFL number of 0.5 to set initial time step, but note most methods
     // adapt anyway
-    dt = 0.5 / PetscMax(PetscAbsReal(user.windx)/hx, PetscAbsReal(user.windy)/hy);
+    if (user.problem == STRAIGHT)
+        c = PetscMax(PetscAbsReal(user.windx)/hx, PetscAbsReal(user.windy)/hy);
+    else
+        c = PetscMax(1.0/hx, 1.0/hy);
+    dt = 0.5 / c;
     ierr = TSSetInitialTimeStep(ts,0.0,dt); CHKERRQ(ierr);
     ierr = TSSetDuration(ts,1000000,0.6); CHKERRQ(ierr);
     ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
