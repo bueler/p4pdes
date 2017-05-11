@@ -1,10 +1,10 @@
 solving problem 'rotation' on 20 x 20 grid,
     cells dx=0.1 x dy=0.1, and 'vanleer' limiter ...
-0 TS dt 0.01 time 0.
-    0 SNES Function norm 27.6222 
-    1 SNES Function norm 1.88138 
-    2 SNES Function norm 0.217593 
-    3 SNES Function norm 0.00278866 
-    4 SNES Function norm 3.48614e-07 
-1 TS dt 0.01 time 0.01
-completed 1 steps to time 0.01
+0 TS dt 0.02 time 0.
+    0 SNES Function norm 13.8111 
+    1 SNES Function norm 0.940691 
+    2 SNES Function norm 0.108796 
+    3 SNES Function norm 0.00139433 
+    4 SNES Function norm 1.74307e-07 
+1 TS dt 0.02 time 0.02
+completed 1 steps to time 0.02

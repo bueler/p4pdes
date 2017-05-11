@@ -166,7 +166,7 @@ static double a_wind(double x, double y, int dir, AdvectCtx* user) {
         case STRAIGHT:
             return (dir == 0) ? user->windx : user->windy;
         case ROTATION:
-            return (dir == 0) ? 2.0 * y : - 2.0 * x;
+            return (dir == 0) ? y : - x;
         default:
             return 0.0;
     }

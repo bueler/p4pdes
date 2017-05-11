@@ -17,7 +17,7 @@ runadvect_1:
 
 # vanleer limiter and parallel and beuler and rotation and -snes_fd_color
 runadvect_2:
-	-@../testit.sh advect "-da_refine 2 -ts_monitor -adv_limiter vanleer -adv_problem rotation -ts_type beuler -snes_monitor_short -ts_final_time 0.01 -ts_dt 0.01 -snes_rtol 1.0e-4 -snes_fd_color" 2 2
+	-@../testit.sh advect "-da_refine 2 -ts_monitor -adv_limiter vanleer -adv_problem rotation -ts_type beuler -snes_monitor_short -ts_final_time 0.02 -ts_dt 0.02 -snes_rtol 1.0e-4 -snes_fd_color" 2 2
 
 # koren limiter [default] and rightward wind and CN and analytical (upwind) jacobian
 runadvect_3:
