@@ -6,6 +6,7 @@ set +x
 # run as
 #    ./verif.sh &> advect-workstation.txt
 # and copy the .txt file to figs/ in book repo for figure generation
+# see p4pdes-book/figs/advect-conv.py
 
 NPROCS=8
 EXEC=../advect
