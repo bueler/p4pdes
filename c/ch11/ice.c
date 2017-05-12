@@ -189,7 +189,7 @@ int main(int argc,char **argv) {
   ierr = TSSetType(ts,TSARKIMEX); CHKERRQ(ierr);
   ierr = TSGetAdapt(ts,&adapt); CHKERRQ(ierr);
   ierr = TSAdaptSetType(adapt,TSADAPTBASIC); CHKERRQ(ierr);
-  ierr = TSAdaptBasicSetClip(adapt,0.5,1.2); CHKERRQ(ierr);
+  ierr = TSAdaptSetClip(adapt,0.5,1.2); CHKERRQ(ierr);
   ierr = TSSetDM(ts,da); CHKERRQ(ierr);
   ierr = DMDATSSetIFunctionLocal(da,INSERT_VALUES,
            (DMDATSIFunctionLocal)FormIFunctionLocal,&user); CHKERRQ(ierr);
