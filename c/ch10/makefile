@@ -1,6 +1,10 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
+well: well.o  chkopts
+	-${CLINKER} -o well well.o  ${PETSC_LIB}
+	${RM} well.o
+
 stokes: stokes.o  chkopts
 	-${CLINKER} -o stokes stokes.o  ${PETSC_LIB}
 	${RM} stokes.o
@@ -15,5 +19,5 @@ ex7: ex7.o  chkopts
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ stokes ex7
+	@rm -f *~ stokes ex7 well
 
