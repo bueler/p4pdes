@@ -27,6 +27,13 @@ static char help[] =
    * see snes example ex70.c; note enum option is "SCHUR" not "schur"
    * note these -ksp_type also work:  gmres, cgs, richardson
 */
+
+/* 20 second run on 4 million grid points:
+timer ./well -snes_converged_reason -snes_monitor -snes_fd_color -da_refine 21 -ksp_type fgmres -pc_type fieldsplit -pc_fieldsplit_type SCHUR -pc_fieldsplit_schur_fact_type lower -fieldsplit_1_pc_type none -ksp_converged_reason -fieldsplit_0_ksp_type cg -fieldsplit_0_pc_type icc
+   * also works with -fieldsplit_0_ksp_type gmres
+   * also in parallel (no speedup) if -fieldsplit_0_pc_type bjacobi -fieldsplit_0_sub_pc_type icc
+*/
+
 #include <petsc.h>
 
 typedef struct {
