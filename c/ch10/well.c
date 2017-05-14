@@ -122,8 +122,8 @@ int main(int argc,char **args) {
     DM            da;
     SNES          snes;
     AppCtx        user;
-    Vec           u, uexact;
-    double        errnorm, unorm;
+    Vec           X, Xexact;
+    double        uerrnorm, perrnorm, pnorm;
     DMDALocalInfo info;
 
     PetscInitialize(&argc,&args,NULL,help);
@@ -142,7 +142,7 @@ int main(int argc,char **args) {
     ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
 
-    ierr = DMCreateGlobalVector(da,&u); CHKERRQ(ierr);
+    ierr = DMCreateGlobalVector(da,&X); CHKERRQ(ierr);
 
     ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
     ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
@@ -152,19 +152,21 @@ int main(int argc,char **args) {
     //           (DMDASNESJacobian)FormJacobianLocal,&user); CHKERRQ(ierr);
     ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
-    ierr = VecSet(u,0.0); CHKERRQ(ierr);
-    ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
+    ierr = VecSet(X,0.0); CHKERRQ(ierr);
+    ierr = SNESSolve(snes,NULL,X); CHKERRQ(ierr);
 
-    ierr = VecDuplicate(u,&uexact); CHKERRQ(ierr);
-    ierr = ExactSolution(&info, uexact,&user); CHKERRQ(ierr);
-    ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
-    ierr = VecNorm(u,NORM_INFINITY,&errnorm); CHKERRQ(ierr);
-    ierr = VecNorm(uexact,NORM_INFINITY,&unorm); CHKERRQ(ierr);
+    ierr = VecDuplicate(X,&Xexact); CHKERRQ(ierr);
+    ierr = ExactSolution(&info,Xexact,&user); CHKERRQ(ierr);
+    ierr = VecAXPY(X,-1.0,Xexact); CHKERRQ(ierr);    // X <- X + (-1.0) Xexact
+    ierr = VecStrideNorm(X,0,NORM_INFINITY,&uerrnorm); CHKERRQ(ierr);
+    ierr = VecStrideNorm(X,1,NORM_INFINITY,&perrnorm); CHKERRQ(ierr);
+    ierr = VecStrideNorm(Xexact,1,NORM_INFINITY,&pnorm); CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,
-           "on %d point grid:  |u-uexact|_inf / |uexact|_inf = %g\n",
-           info.mx,errnorm/unorm); CHKERRQ(ierr);
+           "on %d point grid:\n"
+           "  |u-uexact|_inf = %g,  |p-pexact|_inf / |pexact|_inf = %g\n",
+           info.mx,uerrnorm,perrnorm/pnorm); CHKERRQ(ierr);
 
-    VecDestroy(&u);  VecDestroy(&uexact);
+    VecDestroy(&X);  VecDestroy(&Xexact);
     SNESDestroy(&snes);  DMDestroy(&da);
     PetscFinalize();
     return 0;
