@@ -2,15 +2,31 @@ static char help[] =
 "1D Stokes problem with DMDA and SNES.  Option prefix -wel_.\n\n";
 
 // staggered might actually be right:
-// ./well -snes_monitor -snes_fd -snes_converged_reason -ksp_type preonly -pc_type svd -da_refine 8 -snes_monitor_solution draw -draw_pause 2
+// ./well -snes_monitor -snes_converged_reason -ksp_type preonly -pc_type svd -snes_fd_color -da_refine 7 -snes_monitor_solution draw -draw_pause 2
+
+// try:
+//   -ksp_type preonly -pc_type svd
+//   -ksp_type minres -pc_type none -ksp_converged_reason
+// and fieldsplit below
+
+// matrix is really symmetric:
+// ./well -snes_monitor -snes_fd_color -ksp_type preonly -pc_type svd -da_refine 3 -mat_is_symmetric 1.0e-15
+
+// view diagonal blocks with fieldsplit:
+// ./well -snes_converged_reason -snes_monitor -snes_fd_color -ksp_type minres -da_refine 1 -pc_type fieldsplit -fieldsplit_0_ksp_view_mat
 
 // generate matrix in matlab
 // ./well -snes_monitor -snes_fd -snes_converged_reason -ksp_type preonly -pc_type svd -da_refine 1 -mat_view ascii:foo.m:ascii_matlab
 // then:
-// M = [whos to get name]
-// A = M(1:2:end,1:2:end);  B = M(1:2:end,2:2:end);  BT = M(2:2:end,1:2:end);  C = M(2:2:end,2:2:end);
-// T = [A B; BT C]
+// >> M = [whos to get name]
+// >> A = M(1:2:end,1:2:end);  B = M(1:2:end,2:2:end);  BT = M(2:2:end,1:2:end);  C = M(2:2:end,2:2:end);
+// >> T = [A B; BT C]
 
+/* VICTORY:
+./well -snes_converged_reason -snes_monitor -snes_fd_color -da_refine 7 -ksp_type fgmres -pc_type fieldsplit -pc_fieldsplit_type SCHUR -pc_fieldsplit_schur_fact_type lower -fieldsplit_1_pc_type none -ksp_converged_reason
+   * see snes example ex70.c; note enum option is "SCHUR" not "schur"
+   * note these -ksp_type also work:  gmres, cgs, richardson
+*/
 #include <petsc.h>
 
 typedef struct {
@@ -107,7 +123,7 @@ int main(int argc,char **args) {
     SNES          snes;
     AppCtx        user;
     Vec           u, uexact;
-    double        errnorm;
+    double        errnorm, unorm;
     DMDALocalInfo info;
 
     PetscInitialize(&argc,&args,NULL,help);
@@ -143,8 +159,10 @@ int main(int argc,char **args) {
     ierr = ExactSolution(&info, uexact,&user); CHKERRQ(ierr);
     ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
     ierr = VecNorm(u,NORM_INFINITY,&errnorm); CHKERRQ(ierr);
+    ierr = VecNorm(uexact,NORM_INFINITY,&unorm); CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,
-           "on %d point grid:  |u-u_exact|_inf = %g\n",info.mx,errnorm); CHKERRQ(ierr);
+           "on %d point grid:  |u-uexact|_inf / |uexact|_inf = %g\n",
+           info.mx,errnorm/unorm); CHKERRQ(ierr);
 
     VecDestroy(&u);  VecDestroy(&uexact);
     SNESDestroy(&snes);  DMDestroy(&da);
