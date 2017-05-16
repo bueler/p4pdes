@@ -14,6 +14,17 @@ ex7: ex7.o  chkopts
 	-${CLINKER} -o ex7 ex7.o  ${PETSC_LIB}
 	${RM} ex7.o
 
+# testing
+
+# staggered grid and -snes_fd
+runwell_1:
+	-@../testit.sh well "-snes_fd -snes_converged_reason -snes_monitor_short -ksp_type preonly -pc_type svd -da_refine 1" 1 1
+
+
+test_well: runwell_1
+test: test_well
+
+
 # etc
 
 .PHONY: distclean
