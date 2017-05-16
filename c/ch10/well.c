@@ -20,7 +20,7 @@ static char help[] =
 // >> A = M(1:2:end,1:2:end);  BT = M(1:2:end,2:2:end);  B = M(2:2:end,1:2:end);  C = M(2:2:end,2:2:end);  T = [A BT; B C]
 
 /* VICTORY:
-./well -snes_converged_reason -snes_monitor -snes_fd_color -da_refine 7 -ksp_type fgmres -pc_type fieldsplit -pc_fieldsplit_type SCHUR -pc_fieldsplit_schur_fact_type lower -fieldsplit_1_pc_type none -ksp_converged_reason
+./well -snes_converged_reason -snes_monitor -da_refine 7 -ksp_type fgmres -pc_type fieldsplit -pc_fieldsplit_type SCHUR -pc_fieldsplit_schur_fact_type lower -fieldsplit_1_pc_type none -ksp_converged_reason
    * see snes example ex70.c; note enum option is "SCHUR" not "schur"
    * note these -ksp_type also work:  gmres, cgs, richardson
    *  ... and converge in 2 iterations (for reasons in: Murphy, Golub, Wathen 2000)
@@ -62,7 +62,10 @@ PetscErrorCode ExactSolution(DMDALocalInfo *info, Vec X, AppCtx *user) {
     ierr = DMDAVecGetArray(info->da,X,&aX); CHKERRQ(ierr);
     for (int i=info->xs; i<info->xs+info->xm; i++) {
         aX[i].u = 0.0;
-        x = h * (i + 0.5);
+        if (user->scheme == STAGGERED)
+            x = h * (i + 0.5);
+        else
+            x = h * i;
         if (i < info->mx - 1)
             aX[i].p = user->rho * user->g * (user->H - x);
         else
@@ -82,7 +85,7 @@ PetscErrorCode FormFunctionStaggeredLocal(DMDALocalInfo *info, Field *X,
     const double h  = user->H / (info->mx-1),
                  h2 = h * h;
     for (int i=info->xs; i<info->xs+info->xm; i++) {
-        if (i == 0) { // bottom of water
+        if (i == 0) { // bottom of well
             F[i].u = X[i].u;                                              // u(0) = 0
             F[i].p = - (X[i+1].u - 0.0) * h;                              // -u_x(0+1/2) = 0
         } else if (i == 1) {
@@ -93,7 +96,7 @@ PetscErrorCode FormFunctionStaggeredLocal(DMDALocalInfo *info, Field *X,
             F[i].u = - user->mu * (X[i+1].u - 2 * X[i].u + X[i-1].u)      // -mu u_xx(xi) + p_x(xi) = - rho g
                        + (X[i].p - X[i-1].p) * h + user->rho * user->g * h2;
             F[i].p = - (X[i+1].u - X[i].u) * h;                           // - u_x(xi+1/2) = 0
-        } else if (i == info->mx - 1) { // top of water
+        } else if (i == info->mx - 1) { // top of well
             F[i].u = - user->mu * (- 2 * X[i].u + 2 * X[i-1].u)           // -mu u_xx(xm-1) + p_x(xm-1) = - rho g
                        + (- 2 * X[i-1].p) * h + user->rho * user->g * h2; // and  u_x(xm-1) = 0  and  p(xm-1) = 0
             F[i].u /= 2;                                                  // for symmetry
@@ -107,7 +110,32 @@ PetscErrorCode FormFunctionStaggeredLocal(DMDALocalInfo *info, Field *X,
 
 PetscErrorCode FormFunctionRegularLocal(DMDALocalInfo *info, Field *X,
                                         Field *F, AppCtx *user) {
-    SETERRQ(PETSC_COMM_WORLD,1,"not implemented");
+    const double h  = user->H / (info->mx-1),
+                 h2 = h * h;
+    for (int i=info->xs; i<info->xs+info->xm; i++) {
+        if (i == 0) { // bottom of well
+            F[i].u = X[i].u;                                              // u(0) = 0
+            F[i].p = - (X[i+1].u - 0.0) * h;                              // -u_x(0+1/2) = 0
+        } else if (i == 1) {
+            F[i].u = - user->mu * (X[i+1].u - 2 * X[i].u + 0.0)           // -mu u_xx(x1) + p_x(x1) = - rho g
+                       + (X[i+1].p - X[i-1].p) * h / 2 + user->rho * user->g * h2;
+            F[i].p = - (X[i+1].u - 0.0) * h / 2;                          // - u_x(x1) = 0
+        } else if (i > 1 && i < info->mx - 2) {
+            F[i].u = - user->mu * (X[i+1].u - 2 * X[i].u + X[i-1].u)      // -mu u_xx(xi) + p_x(xi) = - rho g
+                       + (X[i+1].p - X[i-1].p) * h / 2 + user->rho * user->g * h2;
+            F[i].p = - (X[i+1].u - X[i-1].u) * h / 2;                     // - u_x(xi) = 0
+        } else if (i == info->mx - 2) {
+            F[i].u = - user->mu * (X[i+1].u - 2 * X[i].u + X[i-1].u)      // -mu u_xx(xm-2) + p_x(xm-2) = - rho g
+                       + (0.0 - X[i-1].p) * h / 2 + user->rho * user->g * h2;
+            F[i].p = - (X[i+1].u - X[i-1].u) * h / 2;                     // - u_x(xm-2) = 0
+        } else if (i == info->mx - 1) { // top of well
+            F[i].u = - user->mu * (- 2 * X[i].u + 2 * X[i-1].u)           // -mu u_xx(xm-1) + p_x(xm-1) = - rho g
+                       + (- X[i-1].p) * h + user->rho * user->g * h2;     // and  u_x(xm-1) = 0  and  p(xm-1) = 0
+            F[i].p = X[i].p;                                              // p(xm-1) = 0
+        } else {
+            SETERRQ(PETSC_COMM_WORLD,1,"no way to get here");
+        }
+    }
     return 0;
 }
 
@@ -173,7 +201,7 @@ PetscErrorCode FormJacobianStaggeredLocal(DMDALocalInfo *info, double *X,
 
 PetscErrorCode FormJacobianRegularLocal(DMDALocalInfo *info, double *X,
                                         Mat J, Mat P, AppCtx *user) {
-    SETERRQ(PETSC_COMM_WORLD,1,"not implemented");
+    SETERRQ(PETSC_COMM_WORLD,1,"Jacobian for REGULAR scheme not implemented ... use -snes_fd_color");
     return 0;
 }
 
@@ -182,8 +210,12 @@ int main(int argc,char **args) {
     PetscErrorCode ierr;
     DM            da;
     SNES          snes;
+    KSP           ksp;
+    PC            pc;
     AppCtx        user;
     Vec           X, Xexact;
+    PetscRandom   rctx;
+    PetscBool     randominit;
     double        uerrnorm, perrnorm, pnorm;
     DMDALocalInfo info;
 
@@ -198,6 +230,8 @@ int main(int argc,char **args) {
     ierr = PetscOptionsEnum("-scheme","finite difference scheme type",
            "well.c",SchemeTypes,
            (PetscEnum)user.scheme,(PetscEnum*)&user.scheme,NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-randominit","initialize u,p with random",
+           "well.c",randominit,&randominit,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
     ierr = DMDACreate1d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,3,2,1,NULL,&da); CHKERRQ(ierr);
@@ -223,13 +257,30 @@ int main(int argc,char **args) {
     } else {
         SETERRQ(PETSC_COMM_WORLD,1,"no way to get here");
     }
+    // set defaults to -ksp_type preonly -pc_type svd ... which does not scale or parallelize but is robust
+    ierr = SNESGetKSP(snes,&ksp); CHKERRQ(ierr);
+    ierr = KSPSetType(ksp,KSPPREONLY); CHKERRQ(ierr);
+    ierr = KSPGetPC(ksp,&pc); CHKERRQ(ierr);
+    ierr = PCSetType(pc,PCSVD); CHKERRQ(ierr);
     ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
-    ierr = VecSet(X,0.0); CHKERRQ(ierr);
+    if (randominit) {
+        ierr = PetscRandomCreate(PETSC_COMM_WORLD,&rctx); CHKERRQ(ierr);
+        ierr = PetscRandomSetFromOptions(rctx); CHKERRQ(ierr);
+        ierr = VecSetRandom(X,rctx); CHKERRQ(ierr);
+        ierr = PetscRandomDestroy(&rctx); CHKERRQ(ierr);
+    } else {
+        ierr = VecSet(X,0.0); CHKERRQ(ierr);
+    }
+
     ierr = SNESSolve(snes,NULL,X); CHKERRQ(ierr);
 
     ierr = VecDuplicate(X,&Xexact); CHKERRQ(ierr);
     ierr = ExactSolution(&info,Xexact,&user); CHKERRQ(ierr);
+
+//ierr = VecView(X,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
+//ierr = VecView(Xexact,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
+
     ierr = VecAXPY(X,-1.0,Xexact); CHKERRQ(ierr);    // X <- X + (-1.0) Xexact
     ierr = VecStrideNorm(X,0,NORM_INFINITY,&uerrnorm); CHKERRQ(ierr);
     ierr = VecStrideNorm(X,1,NORM_INFINITY,&perrnorm); CHKERRQ(ierr);
