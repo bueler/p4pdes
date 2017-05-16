@@ -20,14 +20,16 @@ ex7: ex7.o  chkopts
 runwell_1:
 	-@../testit.sh well "-snes_fd -snes_converged_reason -snes_monitor_short -ksp_type preonly -pc_type svd -da_refine 1" 1 1
 
+runwell_2:
+	-@../testit.sh well "-snes_converged_reason -ksp_converged_reason -ksp_type minres -pc_type none -da_refine 2 -ksp_rtol 1.0e-14" 1 2
 
-test_well: runwell_1
+test_well: runwell_1 runwell_2
 test: test_well
 
 
 # etc
 
-.PHONY: distclean
+.PHONY: distclean runwell_1 runwell_2 test_well test
 
 distclean:
 	@rm -f *~ stokes ex7 well

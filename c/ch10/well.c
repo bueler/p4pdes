@@ -1,26 +1,23 @@
 static char help[] =
 "1D Stokes problem with DMDA and SNES.  Option prefix -wel_.\n\n";
 
-// staggered might actually be right:
-// ./well -snes_monitor -snes_converged_reason -ksp_type preonly -pc_type svd -snes_fd_color -da_refine 7 -snes_monitor_solution draw -draw_pause 2
+// show solution (staggered):
+// ./well -snes_monitor -snes_converged_reason -ksp_type preonly -pc_type svd -da_refine 7 -snes_monitor_solution draw -draw_pause 2
 
 // try:
 //   -ksp_type preonly -pc_type svd
 //   -ksp_type minres -pc_type none -ksp_converged_reason
 // and fieldsplit below
 
-// matrix is really symmetric:
-// ./well -snes_monitor -snes_fd_color -ksp_type preonly -pc_type svd -da_refine 3 -mat_is_symmetric 1.0e-15
-
-// view diagonal blocks with fieldsplit:
-// ./well -snes_converged_reason -snes_monitor -snes_fd_color -ksp_type minres -da_refine 1 -pc_type fieldsplit -fieldsplit_0_ksp_view_mat
+// Jacobian is correct and symmetric:
+// ./well -snes_monitor -ksp_type preonly -pc_type svd -da_refine 3 -snes_type test
+// ./well -snes_monitor -ksp_type preonly -pc_type svd -da_refine 3 -mat_is_symmetric
 
 // generate matrix in matlab
-// ./well -snes_monitor -snes_fd -snes_converged_reason -ksp_type preonly -pc_type svd -da_refine 1 -mat_view ascii:foo.m:ascii_matlab
+// ./well -snes_converged_reason -ksp_type preonly -pc_type svd -da_refine 1 -mat_view ascii:foo.m:ascii_matlab
 // then:
 // >> M = [whos to get name]
-// >> A = M(1:2:end,1:2:end);  BT = M(1:2:end,2:2:end);  B = M(2:2:end,1:2:end);  C = M(2:2:end,2:2:end);
-// >> T = [A B; BT C]
+// >> A = M(1:2:end,1:2:end);  BT = M(1:2:end,2:2:end);  B = M(2:2:end,1:2:end);  C = M(2:2:end,2:2:end);  T = [A BT; B C]
 
 /* VICTORY:
 ./well -snes_converged_reason -snes_monitor -snes_fd_color -da_refine 7 -ksp_type fgmres -pc_type fieldsplit -pc_fieldsplit_type SCHUR -pc_fieldsplit_schur_fact_type lower -fieldsplit_1_pc_type none -ksp_converged_reason
@@ -30,8 +27,11 @@ static char help[] =
    * converges with -ksp_type minres but in ~50 iterations
 */
 
-/* 20 second run on 4 million grid points:
-timer ./well -snes_converged_reason -snes_monitor -snes_fd_color -da_refine 21 -ksp_type fgmres -pc_type fieldsplit -pc_fieldsplit_type SCHUR -pc_fieldsplit_schur_fact_type lower -fieldsplit_1_pc_type none -ksp_converged_reason -fieldsplit_0_ksp_type cg -fieldsplit_0_pc_type icc
+// view diagonal blocks with fieldsplit:
+// ./well -snes_converged_reason -snes_monitor -ksp_type gmres -da_refine 1 -pc_type fieldsplit -pc_fieldsplit_type SCHUR -pc_fieldsplit_schur_fact_type lower -fieldsplit_1_pc_type none -fieldsplit_0_ksp_view_mat
+
+/* 40 second run (linux-c-opt) on 8 million grid points:
+timer ./well -snes_converged_reason -snes_monitor -da_refine 22 -ksp_type gmres -pc_type fieldsplit -pc_fieldsplit_type SCHUR -pc_fieldsplit_schur_fact_type lower -fieldsplit_1_pc_type none -ksp_converged_reason -fieldsplit_0_ksp_type cg -fieldsplit_0_pc_type icc
    * also works with -fieldsplit_0_ksp_type gmres
    * also in parallel (no speedup) if -fieldsplit_0_pc_type bjacobi -fieldsplit_0_sub_pc_type icc
 */
@@ -74,23 +74,23 @@ PetscErrorCode ExactSolution(DMDALocalInfo *info, Vec X, AppCtx *user) {
 //               p_i-1                p_i                  p_i+1
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, Field *X,
                                  Field *F, AppCtx *user) {
-    const double h     = user->H / (info->mx-1),
-                 h2    = h * h;
+    const double h  = user->H / (info->mx-1),
+                 h2 = h * h;
     for (int i=info->xs; i<info->xs+info->xm; i++) {
         if (i == 0) { // bottom of water
             F[i].u = X[i].u;                                              // u(0) = 0
-            F[i].p = - (X[i+1].u - 0.0) / h;                              // -u_x(0+1/2) = 0
+            F[i].p = - (X[i+1].u - 0.0) * h;                              // -u_x(0+1/2) = 0
         } else if (i == 1) {
-            F[i].u = - user->nu * (X[i+1].u - 2 * X[i].u + 0.0) / h2      // -nu u_xx(x1) + p_x(x1) = - rho g
-                       + (X[i].p - X[i-1].p) / h + user->rho * user->g;
-            F[i].p = - (X[i+1].u - X[i].u) / h;                           // - u_x(x1+1/2) = 0
+            F[i].u = - user->nu * (X[i+1].u - 2 * X[i].u + 0.0)           // -nu u_xx(x1) + p_x(x1) = - rho g
+                       + (X[i].p - X[i-1].p) * h + user->rho * user->g * h2;
+            F[i].p = - (X[i+1].u - X[i].u) * h;                           // - u_x(x1+1/2) = 0
         } else if (i > 1 && i < info->mx - 1) {
-            F[i].u = - user->nu * (X[i+1].u - 2 * X[i].u + X[i-1].u) / h2 // -nu u_xx(xi) + p_x(xi) = - rho g
-                       + (X[i].p - X[i-1].p) / h + user->rho * user->g;
-            F[i].p = - (X[i+1].u - X[i].u) / h;                           // - u_x(xi+1/2) = 0
+            F[i].u = - user->nu * (X[i+1].u - 2 * X[i].u + X[i-1].u)      // -nu u_xx(xi) + p_x(xi) = - rho g
+                       + (X[i].p - X[i-1].p) * h + user->rho * user->g * h2;
+            F[i].p = - (X[i+1].u - X[i].u) * h;                           // - u_x(xi+1/2) = 0
         } else if (i == info->mx - 1) { // top of water
-            F[i].u = - user->nu * (- 2 * X[i].u + 2 * X[i-1].u) / h2      // -nu u_xx(xm-1) + p_x(xm-1) = - rho g
-                       + (- 2 * X[i-1].p) / h + user->rho * user->g;      // and  u_x(xm-1) = 0  and  p(xm-1) = 0
+            F[i].u = - user->nu * (- 2 * X[i].u + 2 * X[i-1].u)           // -nu u_xx(xm-1) + p_x(xm-1) = - rho g
+                       + (- 2 * X[i-1].p) * h + user->rho * user->g * h2; // and  u_x(xm-1) = 0  and  p(xm-1) = 0
             F[i].u /= 2;                                                  // for symmetry
             F[i].p = X[i].p;                                              // no actual d.o.f. here
         } else {
@@ -100,28 +100,56 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, Field *X,
     return 0;
 }
 
-/*  from c/ch4/reaction.c
-PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, double *u,
+PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, double *X,
                                  Mat J, Mat P, AppCtx *user) {
     PetscErrorCode ierr;
-    int    i, col[3];
-    double h = 1.0 / (info->mx-1), dRdu, v[3];
-    for (i=info->xs; i<info->xs+info->xm; i++) {
-        if ((i == 0) | (i == info->mx-1)) {
-            v[0] = 1.0;
-            ierr = MatSetValues(P,1,&i,1,&i,v,INSERT_VALUES); CHKERRQ(ierr);
+    MatStencil   col[5],row;
+    double       v[5];
+    const double h  = user->H / (info->mx-1);
+    for (int i=info->xs; i<info->xs+info->xm; i++) {
+        row.i = i;
+        if (i == 0) {
+            row.c = 0;  col[0].i = i;    col[0].c = 0;  v[0] = 1.0;
+            ierr = MatSetValuesStencil(P,1,&row,1,col,v,INSERT_VALUES); CHKERRQ(ierr);
+            row.c = 1;  col[0].i = i+1;  col[0].c = 0;  v[0] = - h;
+            ierr = MatSetValuesStencil(P,1,&row,1,col,v,INSERT_VALUES); CHKERRQ(ierr);
+        } else if (i == 1) {
+            row.c = 0;
+            col[0].c = 0;  col[0].i = i;    v[0] = 2.0 * user->nu;
+            col[1].c = 0;  col[1].i = i+1;  v[1] = - user->nu;
+            col[2].c = 1;  col[2].i = i;    v[2] = h;
+            col[3].c = 1;  col[3].i = i-1;  v[3] = - h;
+            ierr = MatSetValuesStencil(P,1,&row,4,col,v,INSERT_VALUES); CHKERRQ(ierr);
+            row.c = 1;
+            col[0].c = 0;  col[0].i = i;    v[0] = h;
+            col[1].c = 0;  col[1].i = i+1;  v[1] = - h;
+            ierr = MatSetValuesStencil(P,1,&row,2,col,v,INSERT_VALUES); CHKERRQ(ierr);
+        } else if (i > 1 && i < info->mx - 1) {
+            row.c = 0;
+            col[0].c = 0;  col[0].i = i;    v[0] = 2.0 * user->nu;
+            col[1].c = 0;  col[1].i = i-1;  v[1] = - user->nu;
+            col[2].c = 0;  col[2].i = i+1;  v[2] = - user->nu;
+            col[3].c = 1;  col[3].i = i;    v[3] = h;
+            col[4].c = 1;  col[4].i = i-1;  v[4] = - h;
+            ierr = MatSetValuesStencil(P,1,&row,5,col,v,INSERT_VALUES); CHKERRQ(ierr);
+            row.c = 1;
+            col[0].c = 0;  col[0].i = i;    v[0] = h;
+            col[1].c = 0;  col[1].i = i+1;  v[1] = - h;
+            ierr = MatSetValuesStencil(P,1,&row,2,col,v,INSERT_VALUES); CHKERRQ(ierr);
+        } else if (i == info->mx - 1) {
+            row.c = 0;
+            col[0].c = 0;  col[0].i = i;    v[0] = user->nu;
+            col[1].c = 0;  col[1].i = i-1;  v[1] = - user->nu;
+            col[2].c = 1;  col[2].i = i-1;  v[2] = - h;
+            ierr = MatSetValuesStencil(P,1,&row,3,col,v,INSERT_VALUES); CHKERRQ(ierr);
+            row.c = 1;
+            col[0].c = 1;  col[0].i = i;    v[0] = 1.0;
+            ierr = MatSetValuesStencil(P,1,&row,1,col,v,INSERT_VALUES); CHKERRQ(ierr);
         } else {
-            dRdu = - (user->rho / 2.0) / PetscSqrtReal(u[i]);
-            col[0] = i-1;  v[0] = - 1.0;
-            col[1] = i;
-            if (user->noRinJ)
-                v[1] = 2.0;
-            else
-                v[1] = 2.0 - h*h * dRdu;
-            col[2] = i+1;  v[2] = - 1.0;
-            ierr = MatSetValues(P,1,&i,3,col,v,INSERT_VALUES); CHKERRQ(ierr);
+            SETERRQ(PETSC_COMM_WORLD,1,"no way to get here");
         }
     }
+
     ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
     ierr = MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
     if (J != P) {
@@ -130,7 +158,7 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, double *u,
     }
     return 0;
 }
-*/
+
 
 int main(int argc,char **args) {
     PetscErrorCode ierr;
@@ -163,8 +191,8 @@ int main(int argc,char **args) {
     ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
     ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
              (DMDASNESFunction)FormFunctionLocal,&user); CHKERRQ(ierr);
-    //ierr = DMDASNESSetJacobianLocal(da,
-    //           (DMDASNESJacobian)FormJacobianLocal,&user); CHKERRQ(ierr);
+    ierr = DMDASNESSetJacobianLocal(da,
+             (DMDASNESJacobian)FormJacobianLocal,&user); CHKERRQ(ierr);
     ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
     ierr = VecSet(X,0.0); CHKERRQ(ierr);
@@ -182,7 +210,7 @@ int main(int argc,char **args) {
     ierr = VecStrideNorm(Xexact,1,NORM_INFINITY,&pnorm); CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,
            "on %d point grid with h=%g:\n"
-           "  |u-uexact|_inf = %g,  |p-pexact|_inf / |pexact|_inf = %g\n",
+           "  |u-uexact|_inf = %.3e,  |p-pexact|_inf / |pexact|_inf = %.3e\n",
            info.mx,user.H/(info.mx-1),uerrnorm,perrnorm/pnorm); CHKERRQ(ierr);
 
     VecDestroy(&X);  VecDestroy(&Xexact);
