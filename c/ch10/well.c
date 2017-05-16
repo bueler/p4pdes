@@ -173,7 +173,7 @@ int main(int argc,char **args) {
     user.rho = 1000.0;
     user.g   = 9.81;
     user.H   = 10.0;
-    user.nu  = 1.0;   // Pa s;  1.0 for corn syrup; 10^-3 for liquid water
+    user.nu  = 1.0;   // Pa s; = 1.0 for corn syrup; = 10^-3 for liquid water
 
     //ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"wel_","options for well",""); CHKERRQ(ierr);
     //ierr = PetscOptionsBool("-xxx","xxx","well.c",X,&(X),NULL); CHKERRQ(ierr);
@@ -200,10 +200,6 @@ int main(int argc,char **args) {
 
     ierr = VecDuplicate(X,&Xexact); CHKERRQ(ierr);
     ierr = ExactSolution(&info,Xexact,&user); CHKERRQ(ierr);
-
-//ierr = VecView(X,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
-//ierr = VecView(Xexact,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
-
     ierr = VecAXPY(X,-1.0,Xexact); CHKERRQ(ierr);    // X <- X + (-1.0) Xexact
     ierr = VecStrideNorm(X,0,NORM_INFINITY,&uerrnorm); CHKERRQ(ierr);
     ierr = VecStrideNorm(X,1,NORM_INFINITY,&perrnorm); CHKERRQ(ierr);
