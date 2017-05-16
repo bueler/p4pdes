@@ -1,4 +1,4 @@
   Linear solve converged due to CONVERGED_RTOL iterations 21
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
-on 9 point grid with h=1.25:
+on 9 point grid with h=1.25 and scheme = 'staggered':
   |u-uexact|_inf = 3.331e-10,  |p-pexact|_inf / |pexact|_inf = 2.136e-15

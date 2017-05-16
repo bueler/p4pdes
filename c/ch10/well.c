@@ -42,11 +42,16 @@ typedef struct {
   double u, p;
 } Field;
 
+typedef enum {STAGGERED, REGULAR} SchemeType;
+static const char *SchemeTypes[] = {"staggered","regular",
+                                    "SchemeType", "", NULL};
+
 typedef struct {
-    double    H,
-              rho,
-              g,
-              nu;
+    double     H,       // height of well (m)
+               rho,     // density of water (kg m-3)
+               g,       // acceleration of gravity (m s-2)
+               mu;      // dynamic viscosity of water (Pa s)
+    SchemeType scheme;
 } AppCtx;
 
 PetscErrorCode ExactSolution(DMDALocalInfo *info, Vec X, AppCtx *user) {
@@ -72,8 +77,8 @@ PetscErrorCode ExactSolution(DMDALocalInfo *info, Vec X, AppCtx *user) {
 //    x_i-1        O        x_i        O        x_i+1        O
 //    u_i-1                 u_i                 u_i+1
 //               p_i-1                p_i                  p_i+1
-PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, Field *X,
-                                 Field *F, AppCtx *user) {
+PetscErrorCode FormFunctionStaggeredLocal(DMDALocalInfo *info, Field *X,
+                                          Field *F, AppCtx *user) {
     const double h  = user->H / (info->mx-1),
                  h2 = h * h;
     for (int i=info->xs; i<info->xs+info->xm; i++) {
@@ -81,15 +86,15 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, Field *X,
             F[i].u = X[i].u;                                              // u(0) = 0
             F[i].p = - (X[i+1].u - 0.0) * h;                              // -u_x(0+1/2) = 0
         } else if (i == 1) {
-            F[i].u = - user->nu * (X[i+1].u - 2 * X[i].u + 0.0)           // -nu u_xx(x1) + p_x(x1) = - rho g
+            F[i].u = - user->mu * (X[i+1].u - 2 * X[i].u + 0.0)           // -mu u_xx(x1) + p_x(x1) = - rho g
                        + (X[i].p - X[i-1].p) * h + user->rho * user->g * h2;
             F[i].p = - (X[i+1].u - X[i].u) * h;                           // - u_x(x1+1/2) = 0
         } else if (i > 1 && i < info->mx - 1) {
-            F[i].u = - user->nu * (X[i+1].u - 2 * X[i].u + X[i-1].u)      // -nu u_xx(xi) + p_x(xi) = - rho g
+            F[i].u = - user->mu * (X[i+1].u - 2 * X[i].u + X[i-1].u)      // -mu u_xx(xi) + p_x(xi) = - rho g
                        + (X[i].p - X[i-1].p) * h + user->rho * user->g * h2;
             F[i].p = - (X[i+1].u - X[i].u) * h;                           // - u_x(xi+1/2) = 0
         } else if (i == info->mx - 1) { // top of water
-            F[i].u = - user->nu * (- 2 * X[i].u + 2 * X[i-1].u)           // -nu u_xx(xm-1) + p_x(xm-1) = - rho g
+            F[i].u = - user->mu * (- 2 * X[i].u + 2 * X[i-1].u)           // -mu u_xx(xm-1) + p_x(xm-1) = - rho g
                        + (- 2 * X[i-1].p) * h + user->rho * user->g * h2; // and  u_x(xm-1) = 0  and  p(xm-1) = 0
             F[i].u /= 2;                                                  // for symmetry
             F[i].p = X[i].p;                                              // no actual d.o.f. here
@@ -100,8 +105,14 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, Field *X,
     return 0;
 }
 
-PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, double *X,
-                                 Mat J, Mat P, AppCtx *user) {
+PetscErrorCode FormFunctionRegularLocal(DMDALocalInfo *info, Field *X,
+                                        Field *F, AppCtx *user) {
+    SETERRQ(PETSC_COMM_WORLD,1,"not implemented");
+    return 0;
+}
+
+PetscErrorCode FormJacobianStaggeredLocal(DMDALocalInfo *info, double *X,
+                                          Mat J, Mat P, AppCtx *user) {
     PetscErrorCode ierr;
     MatStencil   col[5],row;
     double       v[5];
@@ -115,8 +126,8 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, double *X,
             ierr = MatSetValuesStencil(P,1,&row,1,col,v,INSERT_VALUES); CHKERRQ(ierr);
         } else if (i == 1) {
             row.c = 0;
-            col[0].c = 0;  col[0].i = i;    v[0] = 2.0 * user->nu;
-            col[1].c = 0;  col[1].i = i+1;  v[1] = - user->nu;
+            col[0].c = 0;  col[0].i = i;    v[0] = 2.0 * user->mu;
+            col[1].c = 0;  col[1].i = i+1;  v[1] = - user->mu;
             col[2].c = 1;  col[2].i = i;    v[2] = h;
             col[3].c = 1;  col[3].i = i-1;  v[3] = - h;
             ierr = MatSetValuesStencil(P,1,&row,4,col,v,INSERT_VALUES); CHKERRQ(ierr);
@@ -126,9 +137,9 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, double *X,
             ierr = MatSetValuesStencil(P,1,&row,2,col,v,INSERT_VALUES); CHKERRQ(ierr);
         } else if (i > 1 && i < info->mx - 1) {
             row.c = 0;
-            col[0].c = 0;  col[0].i = i;    v[0] = 2.0 * user->nu;
-            col[1].c = 0;  col[1].i = i-1;  v[1] = - user->nu;
-            col[2].c = 0;  col[2].i = i+1;  v[2] = - user->nu;
+            col[0].c = 0;  col[0].i = i;    v[0] = 2.0 * user->mu;
+            col[1].c = 0;  col[1].i = i-1;  v[1] = - user->mu;
+            col[2].c = 0;  col[2].i = i+1;  v[2] = - user->mu;
             col[3].c = 1;  col[3].i = i;    v[3] = h;
             col[4].c = 1;  col[4].i = i-1;  v[4] = - h;
             ierr = MatSetValuesStencil(P,1,&row,5,col,v,INSERT_VALUES); CHKERRQ(ierr);
@@ -138,8 +149,8 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, double *X,
             ierr = MatSetValuesStencil(P,1,&row,2,col,v,INSERT_VALUES); CHKERRQ(ierr);
         } else if (i == info->mx - 1) {
             row.c = 0;
-            col[0].c = 0;  col[0].i = i;    v[0] = user->nu;
-            col[1].c = 0;  col[1].i = i-1;  v[1] = - user->nu;
+            col[0].c = 0;  col[0].i = i;    v[0] = user->mu;
+            col[1].c = 0;  col[1].i = i-1;  v[1] = - user->mu;
             col[2].c = 1;  col[2].i = i-1;  v[2] = - h;
             ierr = MatSetValuesStencil(P,1,&row,3,col,v,INSERT_VALUES); CHKERRQ(ierr);
             row.c = 1;
@@ -160,6 +171,13 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, double *X,
 }
 
 
+PetscErrorCode FormJacobianRegularLocal(DMDALocalInfo *info, double *X,
+                                        Mat J, Mat P, AppCtx *user) {
+    SETERRQ(PETSC_COMM_WORLD,1,"not implemented");
+    return 0;
+}
+
+
 int main(int argc,char **args) {
     PetscErrorCode ierr;
     DM            da;
@@ -173,11 +191,14 @@ int main(int argc,char **args) {
     user.rho = 1000.0;
     user.g   = 9.81;
     user.H   = 10.0;
-    user.nu  = 1.0;   // Pa s; = 1.0 for corn syrup; = 10^-3 for liquid water
+    user.mu  = 1.0;   // Pa s; = 1.0 for corn syrup; = 10^-3 for liquid water
+    user.scheme = STAGGERED;
 
-    //ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"wel_","options for well",""); CHKERRQ(ierr);
-    //ierr = PetscOptionsBool("-xxx","xxx","well.c",X,&(X),NULL); CHKERRQ(ierr);
-    //ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"well_","options for well",""); CHKERRQ(ierr);
+    ierr = PetscOptionsEnum("-scheme","finite difference scheme type",
+           "well.c",SchemeTypes,
+           (PetscEnum)user.scheme,(PetscEnum*)&user.scheme,NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
     ierr = DMDACreate1d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,3,2,1,NULL,&da); CHKERRQ(ierr);
     ierr = DMSetFromOptions(da); CHKERRQ(ierr);
@@ -189,10 +210,19 @@ int main(int argc,char **args) {
 
     ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
     ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
-    ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
-             (DMDASNESFunction)FormFunctionLocal,&user); CHKERRQ(ierr);
-    ierr = DMDASNESSetJacobianLocal(da,
-             (DMDASNESJacobian)FormJacobianLocal,&user); CHKERRQ(ierr);
+    if (user.scheme == STAGGERED) {
+        ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
+                 (DMDASNESFunction)FormFunctionStaggeredLocal,&user); CHKERRQ(ierr);
+        ierr = DMDASNESSetJacobianLocal(da,
+                 (DMDASNESJacobian)FormJacobianStaggeredLocal,&user); CHKERRQ(ierr);
+    } else if (user.scheme == REGULAR) {
+        ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
+                 (DMDASNESFunction)FormFunctionRegularLocal,&user); CHKERRQ(ierr);
+        ierr = DMDASNESSetJacobianLocal(da,
+                 (DMDASNESJacobian)FormJacobianRegularLocal,&user); CHKERRQ(ierr);
+    } else {
+        SETERRQ(PETSC_COMM_WORLD,1,"no way to get here");
+    }
     ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
     ierr = VecSet(X,0.0); CHKERRQ(ierr);
@@ -205,9 +235,10 @@ int main(int argc,char **args) {
     ierr = VecStrideNorm(X,1,NORM_INFINITY,&perrnorm); CHKERRQ(ierr);
     ierr = VecStrideNorm(Xexact,1,NORM_INFINITY,&pnorm); CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,
-           "on %d point grid with h=%g:\n"
+           "on %d point grid with h=%g and scheme = '%s':\n"
            "  |u-uexact|_inf = %.3e,  |p-pexact|_inf / |pexact|_inf = %.3e\n",
-           info.mx,user.H/(info.mx-1),uerrnorm,perrnorm/pnorm); CHKERRQ(ierr);
+           info.mx,user.H/(info.mx-1),SchemeTypes[user.scheme],
+           uerrnorm,perrnorm/pnorm); CHKERRQ(ierr);
 
     VecDestroy(&X);  VecDestroy(&Xexact);
     SNESDestroy(&snes);  DMDestroy(&da);
