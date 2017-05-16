@@ -44,7 +44,7 @@ test: test_advect test_ad3
 
 # etc
 
-.PHONY: distclean runadvect_1 runadvect_2 runadvect_3 runad3_1
+.PHONY: distclean runadvect_1 runadvect_2 runadvect_3 runadvect_4 runad3_1 runad3_2 test_advect test_ad3 test
 
 distclean:
 	@rm -f *~ *tmp *.pyc advect ad3
