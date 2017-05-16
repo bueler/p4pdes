@@ -19,13 +19,15 @@ static char help[] =
 // ./well -snes_monitor -snes_fd -snes_converged_reason -ksp_type preonly -pc_type svd -da_refine 1 -mat_view ascii:foo.m:ascii_matlab
 // then:
 // >> M = [whos to get name]
-// >> A = M(1:2:end,1:2:end);  B = M(1:2:end,2:2:end);  BT = M(2:2:end,1:2:end);  C = M(2:2:end,2:2:end);
+// >> A = M(1:2:end,1:2:end);  BT = M(1:2:end,2:2:end);  B = M(2:2:end,1:2:end);  C = M(2:2:end,2:2:end);
 // >> T = [A B; BT C]
 
 /* VICTORY:
 ./well -snes_converged_reason -snes_monitor -snes_fd_color -da_refine 7 -ksp_type fgmres -pc_type fieldsplit -pc_fieldsplit_type SCHUR -pc_fieldsplit_schur_fact_type lower -fieldsplit_1_pc_type none -ksp_converged_reason
    * see snes example ex70.c; note enum option is "SCHUR" not "schur"
    * note these -ksp_type also work:  gmres, cgs, richardson
+   *  ... and converge in 2 iterations (for reasons in: Murphy, Golub, Wathen 2000)
+   * converges with -ksp_type minres but in ~50 iterations
 */
 
 /* 20 second run on 4 million grid points:
@@ -51,40 +53,46 @@ PetscErrorCode ExactSolution(DMDALocalInfo *info, Vec X, AppCtx *user) {
     PetscErrorCode ierr;
     double h, x;
     Field  *aX;
-    h  = user->H / (info->mx-2);
+    h  = user->H / (info->mx-1);
     ierr = DMDAVecGetArray(info->da,X,&aX); CHKERRQ(ierr);
     for (int i=info->xs; i<info->xs+info->xm; i++) {
         aX[i].u = 0.0;
         x = h * (i + 0.5);
-        aX[i].p = user->rho * user->g * (user->H - x);
+        if (i < info->mx - 1)
+            aX[i].p = user->rho * user->g * (user->H - x);
+        else
+            aX[i].p = 0.0;
     }
     ierr = DMDAVecRestoreArray(info->da,X,&aX); CHKERRQ(ierr);
     return 0;
 }
 
-// the staggered version:
-//    x_i-1        O        x_i        O        x_i+1
-//    u_i-1      p_i-1      u_i       p_i       u_i+1
+// the staggered version of residual evaluation F(X)
+// grid has p at staggered locations "O" where incompressibility u_x=0 is enforced
+//    x_i-1        O        x_i        O        x_i+1        O
+//    u_i-1                 u_i                 u_i+1
+//               p_i-1                p_i                  p_i+1
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, Field *X,
                                  Field *F, AppCtx *user) {
-    const double h     = user->H / (info->mx-2),
+    const double h     = user->H / (info->mx-1),
                  h2    = h * h;
     for (int i=info->xs; i<info->xs+info->xm; i++) {
-        if (i == 0) {
+        if (i == 0) { // bottom of water
             F[i].u = X[i].u;                                              // u(0) = 0
             F[i].p = - (X[i+1].u - 0.0) / h;                              // -u_x(0+1/2) = 0
         } else if (i == 1) {
-            F[i].u = -user->nu * (X[i+1].u - 2 * X[i].u + 0.0) / h2       // -nu u_xx(x1) + p_x(x1) = - rho g
+            F[i].u = - user->nu * (X[i+1].u - 2 * X[i].u + 0.0) / h2      // -nu u_xx(x1) + p_x(x1) = - rho g
                        + (X[i].p - X[i-1].p) / h + user->rho * user->g;
             F[i].p = - (X[i+1].u - X[i].u) / h;                           // - u_x(x1+1/2) = 0
         } else if (i > 1 && i < info->mx - 1) {
-            F[i].u = -user->nu * (X[i+1].u - 2 * X[i].u + X[i-1].u) / h2  // -nu u_xx(xi) + p_x(xi) = - rho g
+            F[i].u = - user->nu * (X[i+1].u - 2 * X[i].u + X[i-1].u) / h2 // -nu u_xx(xi) + p_x(xi) = - rho g
                        + (X[i].p - X[i-1].p) / h + user->rho * user->g;
             F[i].p = - (X[i+1].u - X[i].u) / h;                           // - u_x(xi+1/2) = 0
-        } else if (i == info->mx - 1) {
-            F[i].u = -user->nu * (- X[i].u + X[i-1].u) / h2               // -nu/2 u_xx(xm-1) + p_x(xm-1)/2 = - rho g/2
-                       + (- X[i-1].p) / h + user->rho * user->g / 2;      // and  u_x(xm-1) = 0
-            F[i].p = X[i].p;                                              // p(xm-1/2) = 0
+        } else if (i == info->mx - 1) { // top of water
+            F[i].u = - user->nu * (- 2 * X[i].u + 2 * X[i-1].u) / h2      // -nu u_xx(xm-1) + p_x(xm-1) = - rho g
+                       + (- 2 * X[i-1].p) / h + user->rho * user->g;      // and  u_x(xm-1) = 0  and  p(xm-1) = 0
+            F[i].u /= 2;                                                  // for symmetry
+            F[i].p = X[i].p;                                              // no actual d.o.f. here
         } else {
             SETERRQ(PETSC_COMM_WORLD,1,"no way to get here");
         }
@@ -164,14 +172,18 @@ int main(int argc,char **args) {
 
     ierr = VecDuplicate(X,&Xexact); CHKERRQ(ierr);
     ierr = ExactSolution(&info,Xexact,&user); CHKERRQ(ierr);
+
+//ierr = VecView(X,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
+//ierr = VecView(Xexact,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
+
     ierr = VecAXPY(X,-1.0,Xexact); CHKERRQ(ierr);    // X <- X + (-1.0) Xexact
     ierr = VecStrideNorm(X,0,NORM_INFINITY,&uerrnorm); CHKERRQ(ierr);
     ierr = VecStrideNorm(X,1,NORM_INFINITY,&perrnorm); CHKERRQ(ierr);
     ierr = VecStrideNorm(Xexact,1,NORM_INFINITY,&pnorm); CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,
-           "on %d point grid:\n"
+           "on %d point grid with h=%g:\n"
            "  |u-uexact|_inf = %g,  |p-pexact|_inf / |pexact|_inf = %g\n",
-           info.mx,uerrnorm,perrnorm/pnorm); CHKERRQ(ierr);
+           info.mx,user.H/(info.mx-1),uerrnorm,perrnorm/pnorm); CHKERRQ(ierr);
 
     VecDestroy(&X);  VecDestroy(&Xexact);
     SNESDestroy(&snes);  DMDestroy(&da);
