@@ -2,7 +2,7 @@ static char help[] =
 "1D Stokes problem with DMDA and SNES.  Option prefix -wel_.\n\n";
 
 // show solution (staggered):
-// ./well -snes_monitor -snes_converged_reason -ksp_type preonly -pc_type svd -da_refine 7 -snes_monitor_solution draw -draw_pause 2
+// ./well -snes_monitor -snes_converged_reason -da_refine 7 -snes_monitor_solution draw -draw_pause 1
 
 // try:
 //   -ksp_type preonly -pc_type svd
@@ -37,6 +37,7 @@ timer ./well -snes_converged_reason -snes_monitor -da_refine 22 -ksp_type gmres 
 */
 
 #include <petsc.h>
+#include <time.h>
 
 typedef struct {
   double u, p;
@@ -214,9 +215,8 @@ int main(int argc,char **args) {
     PC            pc;
     AppCtx        user;
     Vec           X, Xexact;
-    PetscRandom   rctx;
-    PetscBool     randominit;
-    double        uerrnorm, perrnorm, pnorm;
+    PetscBool     randominit = PETSC_FALSE, shorterrors = PETSC_FALSE;
+    double        uerrnorm, perrnorm, pnorm, setol = 1.0e-8;
     DMDALocalInfo info;
 
     PetscInitialize(&argc,&args,NULL,help);
@@ -232,6 +232,8 @@ int main(int argc,char **args) {
            (PetscEnum)user.scheme,(PetscEnum*)&user.scheme,NULL); CHKERRQ(ierr);
     ierr = PetscOptionsBool("-randominit","initialize u,p with random",
            "well.c",randominit,&randominit,NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-shorterrors","abbreviated error output (e.g. for regression testing)",
+           "well.c",shorterrors,&shorterrors,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
     ierr = DMDACreate1d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,3,2,1,NULL,&da); CHKERRQ(ierr);
@@ -265,13 +267,16 @@ int main(int argc,char **args) {
     ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
     if (randominit) {
+        PetscRandom   rctx;
         ierr = PetscRandomCreate(PETSC_COMM_WORLD,&rctx); CHKERRQ(ierr);
-        ierr = PetscRandomSetFromOptions(rctx); CHKERRQ(ierr);
+        ierr = PetscRandomSetSeed(rctx,time(NULL)); CHKERRQ(ierr);
+        ierr = PetscRandomSeed(rctx); CHKERRQ(ierr);
         ierr = VecSetRandom(X,rctx); CHKERRQ(ierr);
         ierr = PetscRandomDestroy(&rctx); CHKERRQ(ierr);
     } else {
         ierr = VecSet(X,0.0); CHKERRQ(ierr);
     }
+//ierr = VecView(X,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
 
     ierr = SNESSolve(snes,NULL,X); CHKERRQ(ierr);
 
@@ -286,10 +291,17 @@ int main(int argc,char **args) {
     ierr = VecStrideNorm(X,1,NORM_INFINITY,&perrnorm); CHKERRQ(ierr);
     ierr = VecStrideNorm(Xexact,1,NORM_INFINITY,&pnorm); CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,
-           "on %d point grid with h=%g and scheme = '%s':\n"
-           "  |u-uexact|_inf = %.3e,  |p-pexact|_inf / |pexact|_inf = %.3e\n",
-           info.mx,user.H/(info.mx-1),SchemeTypes[user.scheme],
-           uerrnorm,perrnorm/pnorm); CHKERRQ(ierr);
+           "on %d point grid with h=%g and scheme = '%s':\n",
+           info.mx,user.H/(info.mx-1),SchemeTypes[user.scheme]); CHKERRQ(ierr);
+    if (shorterrors && uerrnorm < setol && perrnorm/pnorm < setol) {
+        ierr = PetscPrintf(PETSC_COMM_WORLD,
+               "  |u-uexact|_inf < %.1e,  |p-pexact|_inf / |pexact|_inf < %.1e\n",
+               setol,setol); CHKERRQ(ierr);
+    } else {
+        ierr = PetscPrintf(PETSC_COMM_WORLD,
+               "  |u-uexact|_inf = %.3e,  |p-pexact|_inf / |pexact|_inf = %.3e\n",
+               uerrnorm,perrnorm/pnorm); CHKERRQ(ierr);
+    }
 
     VecDestroy(&X);  VecDestroy(&Xexact);
     SNESDestroy(&snes);  DMDestroy(&da);
