@@ -5,16 +5,17 @@ static char help[] =
 // ./well -snes_monitor -snes_converged_reason -da_refine 7 -snes_monitor_solution draw -draw_pause 1
 
 // try:
-//   -ksp_type preonly -pc_type svd
+//   -ksp_type preonly -pc_type svd                         [default]
 //   -ksp_type minres -pc_type none -ksp_converged_reason
+//   -ksp_type gmres -pc_type none -ksp_converged_reason
 // and fieldsplit below
 
 // Jacobian is correct and symmetric:
-// ./well -snes_monitor -ksp_type preonly -pc_type svd -da_refine 3 -snes_type test
-// ./well -snes_monitor -ksp_type preonly -pc_type svd -da_refine 3 -mat_is_symmetric
+// ./well -snes_monitor -da_refine 3 -snes_type test
+// ./well -snes_monitor -da_refine 3 -mat_is_symmetric
 
 // generate matrix in matlab
-// ./well -snes_converged_reason -ksp_type preonly -pc_type svd -da_refine 1 -mat_view ascii:foo.m:ascii_matlab
+// ./well -snes_converged_reason -da_refine 1 -mat_view ascii:foo.m:ascii_matlab
 // then:
 // >> M = [whos to get name]
 // >> A = M(1:2:end,1:2:end);  BT = M(1:2:end,2:2:end);  B = M(2:2:end,1:2:end);  C = M(2:2:end,2:2:end);  T = [A BT; B C]
