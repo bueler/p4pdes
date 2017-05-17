@@ -35,5 +35,5 @@ test: test_well
 .PHONY: distclean runwell_1 runwell_2 runwell_3 test_well test
 
 distclean:
-	@rm -f *~ *tmp stokes ex7 well
+	@rm -f *~ *tmp *.dat *.dat.info *.pyc PetscBinaryIO.py petsc_conf.py stokes ex7 well
 

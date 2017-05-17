@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 
-# generate figure showing small, negative eigenvalues for the staggered and regular methods:
-# ln -s ~/petsc/bin/PetscBinaryIO.py
-# ln -s ~/petsc/bin/petsc_conf.py
-# ./well -snes_converged_reason -da_refine 3 -mat_view binary:matstag.dat
-# ./well -snes_converged_reason -da_refine 3 -well_scheme regular -snes_fd_color -mat_view binary:matregu.dat
-# ./plotstokeseigs.py
+# generate figures showing negative and positive eigenvalues for the staggered and regular methods
+
+# run:
+#   make well
+#   ./mats1D.sh
+#   ./plotstokeseigs.py  # FIXME:  file names as arguments
 
 import PetscBinaryIO
 
@@ -63,5 +63,5 @@ for negpos in range(2):
     plt.grid(True)
     plt.gca().set_yticks([0.0,1.0])
     plt.gca().set_yticklabels(['regular','staggered'])
-    plt.savefig(preambles[negpos]+'eigs.pdf',bbox_inches='tight')
+    plt.savefig(preambles[negpos]+'eigs.pdf',bbox_inches='tight')   # FIXME print filename at write
 
