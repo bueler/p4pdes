@@ -1,5 +1,3 @@
-  0 SNES Function norm 110533. 
-  1 SNES Function norm 2.071e-10 
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
 on 5 point grid with h=2.5 and scheme = 'staggered':
-  |u-uexact|_inf = 4.425e-11,  |p-pexact|_inf / |pexact|_inf = 5.086e-16
+  |u-uexact|_inf < 1.0e-08,  |p-pexact|_inf / |pexact|_inf < 1.0e-08

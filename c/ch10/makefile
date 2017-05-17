@@ -18,13 +18,13 @@ ex7: ex7.o  chkopts
 
 # staggered grid and -snes_fd
 runwell_1:
-	-@../testit.sh well "-snes_fd -snes_converged_reason -snes_monitor_short -da_refine 1" 1 1
+	-@../testit.sh well "-snes_fd -snes_converged_reason -da_refine 1 -well_shorterrors" 1 1
 
 runwell_2:
-	-@../testit.sh well "-snes_converged_reason -ksp_converged_reason -ksp_type minres -pc_type none -da_refine 2 -ksp_rtol 1.0e-14" 1 2
+	-@../testit.sh well "-snes_converged_reason -ksp_converged_reason -ksp_type minres -pc_type none -da_refine 2 -ksp_rtol 1.0e-14 -well_shorterrors" 1 2
 
 runwell_3:
-	-@../testit.sh well "-snes_fd_color -snes_converged_reason -snes_monitor_short -da_refine 1 -well_scheme regular" 1 3
+	-@../testit.sh well "-snes_fd_color -snes_converged_reason -snes_monitor_short -da_refine 1 -well_scheme regular -well_shorterrors" 1 3
 
 test_well: runwell_1 runwell_2 runwell_3
 test: test_well
@@ -35,5 +35,5 @@ test: test_well
 .PHONY: distclean runwell_1 runwell_2 runwell_3 test_well test
 
 distclean:
-	@rm -f *~ stokes ex7 well
+	@rm -f *~ *tmp stokes ex7 well
 
