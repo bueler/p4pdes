@@ -11,11 +11,14 @@ import PetscBinaryIO
 
 import numpy as np
 import matplotlib.pyplot as plt
-
 import sys
 
 from scipy.sparse import csr_matrix
 from scipy.linalg import eig
+
+def writeout(fname):
+    print 'writing image file %s ...' % fname
+    plt.savefig(fname,bbox_inches='tight')
 
 # row indices in PETSc MatSparse need filling-in to be used by csr_matrix()
 def fillrowindices(I,J,M):
@@ -57,11 +60,12 @@ for negpos in range(2):
            lam = lam[lam < 0.0]
        else:
            lam = lam[lam >= 0.0]
+       print '%s eigenvalues of %s:' % (preambles[negpos],fnames[q])
        print lam
        plt.plot(lam,np.zeros(np.shape(lam))+(1-q),'o',color='k')
     plt.ylim(-0.5,1.5)
     plt.grid(True)
     plt.gca().set_yticks([0.0,1.0])
     plt.gca().set_yticklabels(['regular','staggered'])
-    plt.savefig(preambles[negpos]+'eigs.pdf',bbox_inches='tight')   # FIXME print filename at write
+    writeout(preambles[negpos]+'eigs.pdf')
 
