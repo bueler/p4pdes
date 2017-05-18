@@ -1,9 +1,11 @@
 p4pdes
 ======
 
-_PETSc for Partial Differential Equations_ is a book on using [PETSc](http://www.mcs.anl.gov/petsc/) for [partial differential equations](https://en.wikipedia.org/wiki/Partial_differential_equation).  A publication contract has been signed with [SIAM Press](http://www.siam.org/books/).  The development of the book itself, i.e. the LaTeX sources and figure files etc., has been moved into a private repo.
+_PETSc for Partial Differential Equations_ is a book on using [PETSc](http://www.mcs.anl.gov/petsc/) for numerically solving [partial differential equations](https://en.wikipedia.org/wiki/Partial_differential_equation).
 
-This repository contains the codes upon which the book is based.  At this time only C codes exist.  These codes will remain in this location in the long term, and be maintained.
+A publication contract for the book has been signed with [SIAM Press](http://www.siam.org/books/).  The development of the book itself, i.e. the LaTeX sources and figure files etc., has been moved into a private repo.
+
+This repository contains the codes upon which the book is based, only C codes at this time.  These codes will remain here for the long term, and be maintained.
 
 ### The C codes
 
