@@ -89,18 +89,18 @@ PetscErrorCode FormFunctionStaggeredLocal(DMDALocalInfo *info, Field *X,
     for (int i=info->xs; i<info->xs+info->xm; i++) {
         if (i == 0) { // bottom of well
             F[i].u = X[i].u;                                              // u(0) = 0
-            F[i].p = - (X[i+1].u - 0.0) * h;                              // -u_x(0+1/2) = 0
+            F[i].p = - (X[i+1].u - 0.0) / h;                              // -u_x(0+1/2) = 0
         } else if (i == 1) {
-            F[i].u = - user->mu * (X[i+1].u - 2 * X[i].u + 0.0)           // -mu u_xx(x1) + p_x(x1) = - rho g
-                       + (X[i].p - X[i-1].p) * h + user->rho * user->g * h2;
-            F[i].p = - (X[i+1].u - X[i].u) * h;                           // - u_x(x1+1/2) = 0
+            F[i].u = - user->mu * (X[i+1].u - 2 * X[i].u + 0.0) / h2      // -mu u_xx(x1) + p_x(x1) = - rho g
+                       + (X[i].p - X[i-1].p) / h + user->rho * user->g;
+            F[i].p = - (X[i+1].u - X[i].u) / h;                           // - u_x(x1+1/2) = 0
         } else if (i > 1 && i < info->mx - 1) {
-            F[i].u = - user->mu * (X[i+1].u - 2 * X[i].u + X[i-1].u)      // -mu u_xx(xi) + p_x(xi) = - rho g
-                       + (X[i].p - X[i-1].p) * h + user->rho * user->g * h2;
-            F[i].p = - (X[i+1].u - X[i].u) * h;                           // - u_x(xi+1/2) = 0
+            F[i].u = - user->mu * (X[i+1].u - 2 * X[i].u + X[i-1].u) / h2 // -mu u_xx(xi) + p_x(xi) = - rho g
+                       + (X[i].p - X[i-1].p) / h + user->rho * user->g;
+            F[i].p = - (X[i+1].u - X[i].u) / h;                           // - u_x(xi+1/2) = 0
         } else if (i == info->mx - 1) { // top of well
-            F[i].u = - user->mu * (- 2 * X[i].u + 2 * X[i-1].u)           // -mu u_xx(xm-1) + p_x(xm-1) = - rho g
-                       + (- 2 * X[i-1].p) * h + user->rho * user->g * h2; // and  u_x(xm-1) = 0  and  p(xm-1) = 0
+            F[i].u = - user->mu * (- 2 * X[i].u + 2 * X[i-1].u) / h2      // -mu u_xx(xm-1) + p_x(xm-1) = - rho g
+                       + (- 2 * X[i-1].p) / h + user->rho * user->g;      // and  u_x(xm-1) = 0  and  p(xm-1) = 0
             F[i].u /= 2;                                                  // for symmetry
             F[i].p = X[i].p;                                              // no actual d.o.f. here
         } else {
@@ -117,22 +117,23 @@ PetscErrorCode FormFunctionRegularLocal(DMDALocalInfo *info, Field *X,
     for (int i=info->xs; i<info->xs+info->xm; i++) {
         if (i == 0) { // bottom of well
             F[i].u = X[i].u;                                              // u(0) = 0
-            F[i].p = - (X[i+1].u - 0.0) * h;                              // -u_x(0+1/2) = 0
+            F[i].p = - (X[i+1].u - 0.0) / (2 * h);                        // -u_x(0+1/2) = 0  (and / 2 for symmetry)
         } else if (i == 1) {
-            F[i].u = - user->mu * (X[i+1].u - 2 * X[i].u + 0.0)           // -mu u_xx(x1) + p_x(x1) = - rho g
-                       + (X[i+1].p - X[i-1].p) * h / 2 + user->rho * user->g * h2;
-            F[i].p = - (X[i+1].u - 0.0) * h / 2;                          // - u_x(x1) = 0
+            F[i].u = - user->mu * (X[i+1].u - 2 * X[i].u + 0.0) / h2      // -mu u_xx(x1) + p_x(x1) = - rho g
+                       + (X[i+1].p - X[i-1].p) / (2 * h) + user->rho * user->g;
+            F[i].p = - (X[i+1].u - 0.0) / (2 * h);                        // - u_x(x1) = 0
         } else if (i > 1 && i < info->mx - 2) {
-            F[i].u = - user->mu * (X[i+1].u - 2 * X[i].u + X[i-1].u)      // -mu u_xx(xi) + p_x(xi) = - rho g
-                       + (X[i+1].p - X[i-1].p) * h / 2 + user->rho * user->g * h2;
-            F[i].p = - (X[i+1].u - X[i-1].u) * h / 2;                     // - u_x(xi) = 0
+            F[i].u = - user->mu * (X[i+1].u - 2 * X[i].u + X[i-1].u) / h2 // -mu u_xx(xi) + p_x(xi) = - rho g
+                       + (X[i+1].p - X[i-1].p) / (2 * h) + user->rho * user->g;
+            F[i].p = - (X[i+1].u - X[i-1].u) / (2 * h);                   // - u_x(xi) = 0
         } else if (i == info->mx - 2) {
-            F[i].u = - user->mu * (X[i+1].u - 2 * X[i].u + X[i-1].u)      // -mu u_xx(xm-2) + p_x(xm-2) = - rho g
-                       + (0.0 - X[i-1].p) * h / 2 + user->rho * user->g * h2;
-            F[i].p = - (X[i+1].u - X[i-1].u) * h / 2;                     // - u_x(xm-2) = 0
+            F[i].u = - user->mu * (X[i+1].u - 2 * X[i].u + X[i-1].u) / h2 // -mu u_xx(xm-2) + p_x(xm-2) = - rho g
+                       + (0.0 - X[i-1].p) / (2 * h) + user->rho * user->g;
+            F[i].p = - (X[i+1].u - X[i-1].u) / (2 * h);                   // - u_x(xm-2) = 0
         } else if (i == info->mx - 1) { // top of well
-            F[i].u = - user->mu * (- 2 * X[i].u + 2 * X[i-1].u)           // -mu u_xx(xm-1) + p_x(xm-1) = - rho g
-                       + (- X[i-1].p) * h + user->rho * user->g * h2;     // and  u_x(xm-1) = 0  and  p(xm-1) = 0
+            F[i].u = - user->mu * (- 2 * X[i].u + 2 * X[i-1].u) / h2      // -mu u_xx(xm-1) + p_x(xm-1) = - rho g
+                       + (- X[i-1].p) / h + user->rho * user->g;          // and  u_x(xm-1) = 0  and  p(xm-1) = 0
+            F[i].u /= 2;                                                  // for symmetry
             F[i].p = X[i].p;                                              // p(xm-1) = 0
         } else {
             SETERRQ(PETSC_COMM_WORLD,1,"no way to get here");
@@ -146,42 +147,43 @@ PetscErrorCode FormJacobianStaggeredLocal(DMDALocalInfo *info, double *X,
     PetscErrorCode ierr;
     MatStencil   col[5],row;
     double       v[5];
-    const double h  = user->L / (info->mx-1);
+    const double h  = user->L / (info->mx-1),
+                 h2 = h * h;
     for (int i=info->xs; i<info->xs+info->xm; i++) {
         row.i = i;
         if (i == 0) {
             row.c = 0;  col[0].i = i;    col[0].c = 0;  v[0] = 1.0;
             ierr = MatSetValuesStencil(P,1,&row,1,col,v,INSERT_VALUES); CHKERRQ(ierr);
-            row.c = 1;  col[0].i = i+1;  col[0].c = 0;  v[0] = - h;
+            row.c = 1;  col[0].i = i+1;  col[0].c = 0;  v[0] = - 1.0 / h;
             ierr = MatSetValuesStencil(P,1,&row,1,col,v,INSERT_VALUES); CHKERRQ(ierr);
         } else if (i == 1) {
             row.c = 0;
-            col[0].c = 0;  col[0].i = i;    v[0] = 2.0 * user->mu;
-            col[1].c = 0;  col[1].i = i+1;  v[1] = - user->mu;
-            col[2].c = 1;  col[2].i = i;    v[2] = h;
-            col[3].c = 1;  col[3].i = i-1;  v[3] = - h;
+            col[0].c = 0;  col[0].i = i;    v[0] = 2.0 * user->mu / h2;
+            col[1].c = 0;  col[1].i = i+1;  v[1] = - user->mu / h2;
+            col[2].c = 1;  col[2].i = i;    v[2] = 1.0 / h;
+            col[3].c = 1;  col[3].i = i-1;  v[3] = - 1.0 / h;
             ierr = MatSetValuesStencil(P,1,&row,4,col,v,INSERT_VALUES); CHKERRQ(ierr);
             row.c = 1;
-            col[0].c = 0;  col[0].i = i;    v[0] = h;
-            col[1].c = 0;  col[1].i = i+1;  v[1] = - h;
+            col[0].c = 0;  col[0].i = i;    v[0] = 1.0 / h;
+            col[1].c = 0;  col[1].i = i+1;  v[1] = - 1.0 / h;
             ierr = MatSetValuesStencil(P,1,&row,2,col,v,INSERT_VALUES); CHKERRQ(ierr);
         } else if (i > 1 && i < info->mx - 1) {
             row.c = 0;
-            col[0].c = 0;  col[0].i = i;    v[0] = 2.0 * user->mu;
-            col[1].c = 0;  col[1].i = i-1;  v[1] = - user->mu;
-            col[2].c = 0;  col[2].i = i+1;  v[2] = - user->mu;
-            col[3].c = 1;  col[3].i = i;    v[3] = h;
-            col[4].c = 1;  col[4].i = i-1;  v[4] = - h;
+            col[0].c = 0;  col[0].i = i;    v[0] = 2.0 * user->mu / h2;
+            col[1].c = 0;  col[1].i = i-1;  v[1] = - user->mu / h2;
+            col[2].c = 0;  col[2].i = i+1;  v[2] = - user->mu / h2;
+            col[3].c = 1;  col[3].i = i;    v[3] = 1.0 / h;
+            col[4].c = 1;  col[4].i = i-1;  v[4] = - 1.0 / h;
             ierr = MatSetValuesStencil(P,1,&row,5,col,v,INSERT_VALUES); CHKERRQ(ierr);
             row.c = 1;
-            col[0].c = 0;  col[0].i = i;    v[0] = h;
-            col[1].c = 0;  col[1].i = i+1;  v[1] = - h;
+            col[0].c = 0;  col[0].i = i;    v[0] = 1.0 / h;
+            col[1].c = 0;  col[1].i = i+1;  v[1] = - 1.0 / h;
             ierr = MatSetValuesStencil(P,1,&row,2,col,v,INSERT_VALUES); CHKERRQ(ierr);
         } else if (i == info->mx - 1) {
             row.c = 0;
-            col[0].c = 0;  col[0].i = i;    v[0] = user->mu;
-            col[1].c = 0;  col[1].i = i-1;  v[1] = - user->mu;
-            col[2].c = 1;  col[2].i = i-1;  v[2] = - h;
+            col[0].c = 0;  col[0].i = i;    v[0] = user->mu / h2;
+            col[1].c = 0;  col[1].i = i-1;  v[1] = - user->mu / h2;
+            col[2].c = 1;  col[2].i = i-1;  v[2] = - 1.0 / h;
             ierr = MatSetValuesStencil(P,1,&row,3,col,v,INSERT_VALUES); CHKERRQ(ierr);
             row.c = 1;
             col[0].c = 1;  col[0].i = i;    v[0] = 1.0;
