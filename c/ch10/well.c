@@ -49,7 +49,7 @@ static const char *SchemeTypes[] = {"staggered","regular",
                                     "SchemeType", "", NULL};
 
 typedef struct {
-    double     H,       // height of well (m)
+    double     L,       // length (height) of well (m)
                rho,     // density of water (kg m-3)
                g,       // acceleration of gravity (m s-2)
                mu;      // dynamic viscosity of water (Pa s)
@@ -60,7 +60,7 @@ PetscErrorCode ExactSolution(DMDALocalInfo *info, Vec X, AppCtx *user) {
     PetscErrorCode ierr;
     double h, x;
     Field  *aX;
-    h  = user->H / (info->mx-1);
+    h  = user->L / (info->mx-1);
     ierr = DMDAVecGetArray(info->da,X,&aX); CHKERRQ(ierr);
     for (int i=info->xs; i<info->xs+info->xm; i++) {
         aX[i].u = 0.0;
@@ -69,7 +69,7 @@ PetscErrorCode ExactSolution(DMDALocalInfo *info, Vec X, AppCtx *user) {
         else
             x = h * i;
         if (i < info->mx - 1)
-            aX[i].p = user->rho * user->g * (user->H - x);
+            aX[i].p = user->rho * user->g * (user->L - x);
         else
             aX[i].p = 0.0;
     }
@@ -84,7 +84,7 @@ PetscErrorCode ExactSolution(DMDALocalInfo *info, Vec X, AppCtx *user) {
 //               p_i-1                p_i                  p_i+1
 PetscErrorCode FormFunctionStaggeredLocal(DMDALocalInfo *info, Field *X,
                                           Field *F, AppCtx *user) {
-    const double h  = user->H / (info->mx-1),
+    const double h  = user->L / (info->mx-1),
                  h2 = h * h;
     for (int i=info->xs; i<info->xs+info->xm; i++) {
         if (i == 0) { // bottom of well
@@ -112,7 +112,7 @@ PetscErrorCode FormFunctionStaggeredLocal(DMDALocalInfo *info, Field *X,
 
 PetscErrorCode FormFunctionRegularLocal(DMDALocalInfo *info, Field *X,
                                         Field *F, AppCtx *user) {
-    const double h  = user->H / (info->mx-1),
+    const double h  = user->L / (info->mx-1),
                  h2 = h * h;
     for (int i=info->xs; i<info->xs+info->xm; i++) {
         if (i == 0) { // bottom of well
@@ -146,7 +146,7 @@ PetscErrorCode FormJacobianStaggeredLocal(DMDALocalInfo *info, double *X,
     PetscErrorCode ierr;
     MatStencil   col[5],row;
     double       v[5];
-    const double h  = user->H / (info->mx-1);
+    const double h  = user->L / (info->mx-1);
     for (int i=info->xs; i<info->xs+info->xm; i++) {
         row.i = i;
         if (i == 0) {
@@ -223,7 +223,7 @@ int main(int argc,char **args) {
     PetscInitialize(&argc,&args,NULL,help);
     user.rho = 1000.0;
     user.g   = 9.81;
-    user.H   = 10.0;
+    user.L   = 10.0;
     user.mu  = 1.0;   // Pa s; = 1.0 for corn syrup; = 10^-3 for liquid water
     user.scheme = STAGGERED;
 
@@ -293,7 +293,7 @@ int main(int argc,char **args) {
     ierr = VecStrideNorm(Xexact,1,NORM_INFINITY,&pnorm); CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,
            "on %d point grid with h=%g and scheme = '%s':\n",
-           info.mx,user.H/(info.mx-1),SchemeTypes[user.scheme]); CHKERRQ(ierr);
+           info.mx,user.L/(info.mx-1),SchemeTypes[user.scheme]); CHKERRQ(ierr);
     if (shorterrors && uerrnorm < setol && perrnorm/pnorm < setol) {
         ierr = PetscPrintf(PETSC_COMM_WORLD,
                "  |u-uexact|_inf < %.1e,  |p-pexact|_inf / |pexact|_inf < %.1e\n",
