@@ -16,9 +16,8 @@ ex7: ex7.o  chkopts
 
 # testing
 
-# staggered grid and -snes_fd
 runwell_1:
-	-@../testit.sh well "-snes_fd -snes_converged_reason -da_refine 1 -well_shorterrors" 1 1
+	-@../testit.sh well "-snes_converged_reason -da_refine 1 -well_shorterrors" 1 1
 
 runwell_2:
 	-@../testit.sh well "-snes_converged_reason -ksp_converged_reason -ksp_type minres -pc_type none -da_refine 2 -ksp_rtol 1.0e-14 -well_shorterrors" 1 2
