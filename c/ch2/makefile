@@ -27,13 +27,19 @@ runloadsolve_1:
 	-@./tri -ksp_view_mat binary:Ab.dat -ksp_view_rhs binary:Ab.dat::append > /dev/null
 	-@../testit.sh loadsolve "-notime -verbose -f Ab.dat -ksp_view_mat -ksp_view_rhs -ksp_view_solution" 1 1
 
-test: runvecmatksp_1 runtri_1 runtri_2 runloadsolve_1
+test_vecmatksp: runvecmatksp_1
+
+test_tri: runtri_1 runtri_2
+
+test_loadsolve: runloadsolve_1
+
+test: test_vecmatksp test_tri test_loadsolve
 
 # etc
 
-.PHONY: distclean runvecmatksp_1 runtri_1 runtri_2 test
+.PHONY: distclean runvecmatksp_1 runtri_1 runtri_2 runloadsolve_1 test test_vecmatksp test_tri test_loadsolve
 
 distclean:
 	@rm -f *~ vecmatksp tri loadsolve *tmp
-	@rm -f Ab.dat*
+	@rm -f *.dat *.dat.info
 

@@ -40,11 +40,19 @@ runheat_2:
 runpattern_1:
 	-@../testit.sh pattern "-da_refine 2 -ts_monitor" 1 1   # refinement of 1 misses initial condition
 
-test: runode_1 runode_2 runode_3 runodejac_1 runheat_1 runheat_2 runpattern_1
+test_ode: runode_1 runode_2 runode_3
+
+test_odejac: runodejac_1
+
+test_heat: runheat_1 runheat_2
+
+test_pattern: runpattern_1
+
+test: test_ode test_odejac test_heat test_pattern
 
 # etc
 
-.PHONY: distclean runode_1 runode_2 runode_3 runodejac_1 runheat_1 runheat_2 runpattern_1 test
+.PHONY: distclean runode_1 runode_2 runode_3 runodejac_1 runheat_1 runheat_2 runpattern_1 test test_ode test_odejac test_heat test_pattern
 
 distclean:
 	@rm -f *~ ode odejac heat pattern *tmp

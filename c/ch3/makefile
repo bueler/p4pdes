@@ -15,11 +15,13 @@ runpoisson_2:
 runpoisson_3:
 	-@../testit.sh poisson "-da_grid_x 10 -da_grid_y 10" 4 3
 
-test: runpoisson_1 runpoisson_2 runpoisson_3
+test_poisson: runpoisson_1 runpoisson_2 runpoisson_3
+
+test: test_poisson
 
 # etc
 
-.PHONY: distclean runpoisson_1 runpoisson_2 runpoisson_3 test
+.PHONY: distclean runpoisson_1 runpoisson_2 runpoisson_3 test test_poisson
 
 distclean:
 	@rm -f *~ poisson *tmp

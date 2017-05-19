@@ -26,6 +26,7 @@ runwell_3:
 	-@../testit.sh well "-snes_fd_color -snes_converged_reason -snes_monitor_short -da_refine 1 -well_scheme regular -well_shorterrors" 1 3
 
 test_well: runwell_1 runwell_2 runwell_3
+
 test: test_well
 
 

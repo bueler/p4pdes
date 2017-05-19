@@ -21,11 +21,13 @@ runplap_4:
 runplap_5:
 	-@../testit.sh plap "-plap_no_residual -snes_fd_function -snes_type ncg -snes_converged_reason" 1 5
 
-test: runplap_1 runplap_2 runplap_3 runplap_4 runplap_5
+test_plap: runplap_1 runplap_2 runplap_3 runplap_4 runplap_5
+
+test: test_plap
 
 # etc
 
-.PHONY: distclean runplap_1 runplap_2 runplap_3 runplap_4 test
+.PHONY: distclean runplap_1 runplap_2 runplap_3 runplap_4 test test_plap
 
 distclean:
 	@rm -f *~ plap *tmp

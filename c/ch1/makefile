@@ -9,9 +9,11 @@ e: e.o  chkopts
 rune_1:
 	-@../testit.sh e "" 1 1
 
-test: rune_1
+test_e: rune_1
 
-.PHONY: distclean rune_1 test
+test: test_e
+
+.PHONY: distclean rune_1 test_e test
 
 distclean:
 	@rm -f *~ e *tmp

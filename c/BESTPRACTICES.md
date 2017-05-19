@@ -1,8 +1,7 @@
 best practices for codes in "PETSc for PDEs"
 ============================================
 
-My goal for myself is to use consistent best practices.  This goal is not yet
-achieved, of course.
+My goal for myself is to use consistent best practices, as follows:
 
   * A feature without a regression test is broken.
   * A code which is not valgrind-clean is broken.
@@ -19,3 +18,4 @@ achieved, of course.
     [PETSc Developer's Guide](http://www.mcs.anl.gov/petsc/developers/developers.pdf),
     but a collection of examples is not a library API, so this is not rigid.
 
+This goal is not yet achieved!

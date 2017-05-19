@@ -31,11 +31,13 @@ rununfem_4: petscPyScripts
 	-@./tri2petsc.py meshes/square.1 meshes/square.1 > /dev/null
 	-@../testit.sh unfem "-un_mesh meshes/square.1 -un_case 3" 1 4
 
-test: rununfem_1 rununfem_2 rununfem_3 rununfem_4
+test_unfem: rununfem_1 rununfem_2 rununfem_3 rununfem_4
+
+test: test_unfem
 
 # etc
 
-.PHONY: distclean rununfem_1 rununfem_2 rununfem_3 rununfem_4 test petscPyScripts
+.PHONY: distclean rununfem_1 rununfem_2 rununfem_3 rununfem_4 test test_unfem petscPyScripts
 
 distclean:
 	@rm -f *~ unfem *tmp

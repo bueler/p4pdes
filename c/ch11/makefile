@@ -32,11 +32,15 @@ runice_3:
 runice_4:
 	-@../testit.sh ice "-da_refine 2 -ice_tf 20 -ice_dtinit 1 -snes_converged_reason -ts_adapt_clip 0.1,10.0" 1 4
 
-test: runobstacle_1 runobstacle_2 runobstacle_3 runice_1 runice_2 runice_3 runice_4
+test_obstacle: runobstacle_1 runobstacle_2 runobstacle_3
+
+test_ice: runice_1 runice_2 runice_3 runice_4
+
+test: test_obstacle test_ice
 
 # etc
 
-.PHONY: distclean
+.PHONY: distclean runobstacle_1 runobstacle_2 runobstacle_3 runice_1 runice_2 runice_3 runice_4 test test_obstacle test_ice
 
 distclean:
 	@rm -f *~ obstacle ice *tmp
