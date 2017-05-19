@@ -205,7 +205,71 @@ PetscErrorCode FormJacobianStaggeredLocal(DMDALocalInfo *info, double *X,
 
 PetscErrorCode FormJacobianRegularLocal(DMDALocalInfo *info, double *X,
                                         Mat J, Mat P, AppCtx *user) {
-    SETERRQ(PETSC_COMM_WORLD,1,"Jacobian for REGULAR scheme not implemented ... use -snes_fd_color");
+    PetscErrorCode ierr;
+    MatStencil   col[5],row;
+    double       v[5];
+    const double h  = user->L / (info->mx-1),
+                 h2 = h * h;
+    for (int i=info->xs; i<info->xs+info->xm; i++) {
+        row.i = i;
+        if (i == 0) {
+            row.c = 0;  col[0].i = i;    col[0].c = 0;  v[0] = 1.0;
+            ierr = MatSetValuesStencil(P,1,&row,1,col,v,INSERT_VALUES); CHKERRQ(ierr);
+            row.c = 1;  col[0].i = i+1;  col[0].c = 0;  v[0] = - 1.0 / (2.0 * h);
+            ierr = MatSetValuesStencil(P,1,&row,1,col,v,INSERT_VALUES); CHKERRQ(ierr);
+        } else if (i == 1) {
+            row.c = 0;
+            col[0].c = 0;  col[0].i = i;    v[0] = 2.0 * user->mu / h2;
+            col[1].c = 0;  col[1].i = i+1;  v[1] = - user->mu / h2;
+            col[2].c = 1;  col[2].i = i+1;  v[2] = 1.0 / (2.0 * h);
+            col[3].c = 1;  col[3].i = i-1;  v[3] = - 1.0 / (2.0 * h);
+            ierr = MatSetValuesStencil(P,1,&row,4,col,v,INSERT_VALUES); CHKERRQ(ierr);
+            row.c = 1;
+            col[0].c = 0;  col[0].i = i+1;    v[0] = - 1.0 / (2.0 * h);
+            ierr = MatSetValuesStencil(P,1,&row,1,col,v,INSERT_VALUES); CHKERRQ(ierr);
+        } else if (i > 1 && i < info->mx - 2) {
+            row.c = 0;
+            col[0].c = 0;  col[0].i = i;    v[0] = 2.0 * user->mu / h2;
+            col[1].c = 0;  col[1].i = i-1;  v[1] = - user->mu / h2;
+            col[2].c = 0;  col[2].i = i+1;  v[2] = - user->mu / h2;
+            col[3].c = 1;  col[3].i = i+1;  v[3] = 1.0 / (2.0 * h);
+            col[4].c = 1;  col[4].i = i-1;  v[4] = - 1.0 / (2.0 * h);
+            ierr = MatSetValuesStencil(P,1,&row,5,col,v,INSERT_VALUES); CHKERRQ(ierr);
+            row.c = 1;
+            col[0].c = 0;  col[0].i = i-1;  v[0] = 1.0 / (2.0 * h);
+            col[1].c = 0;  col[1].i = i+1;  v[1] = - 1.0 / (2.0 * h);
+            ierr = MatSetValuesStencil(P,1,&row,2,col,v,INSERT_VALUES); CHKERRQ(ierr);
+        } else if (i == info->mx - 2) {
+            row.c = 0;
+            col[0].c = 0;  col[0].i = i;    v[0] = 2.0 * user->mu / h2;
+            col[1].c = 0;  col[1].i = i-1;  v[1] = - user->mu / h2;
+            col[2].c = 0;  col[2].i = i+1;  v[2] = - user->mu / h2;
+            col[3].c = 1;  col[3].i = i-1;  v[3] = - 1.0 / (2.0 * h);
+            ierr = MatSetValuesStencil(P,1,&row,4,col,v,INSERT_VALUES); CHKERRQ(ierr);
+            row.c = 1;
+            col[0].c = 0;  col[0].i = i-1;  v[0] = 1.0 / (2.0 * h);
+            col[1].c = 0;  col[1].i = i+1;  v[1] = - 1.0 / (2.0 * h);
+            ierr = MatSetValuesStencil(P,1,&row,2,col,v,INSERT_VALUES); CHKERRQ(ierr);
+        } else if (i == info->mx - 1) {
+            row.c = 0;
+            col[0].c = 0;  col[0].i = i;    v[0] = user->mu / h2;
+            col[1].c = 0;  col[1].i = i-1;  v[1] = - user->mu / h2;
+            col[2].c = 1;  col[2].i = i-1;  v[2] = - 1.0 / (2.0 * h);
+            ierr = MatSetValuesStencil(P,1,&row,3,col,v,INSERT_VALUES); CHKERRQ(ierr);
+            row.c = 1;
+            col[0].c = 1;  col[0].i = i;    v[0] = 1.0;
+            ierr = MatSetValuesStencil(P,1,&row,1,col,v,INSERT_VALUES); CHKERRQ(ierr);
+        } else {
+            SETERRQ(PETSC_COMM_WORLD,1,"no way to get here");
+        }
+    }
+
+    ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+    ierr = MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+    if (J != P) {
+        ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+        ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    }
     return 0;
 }
 
