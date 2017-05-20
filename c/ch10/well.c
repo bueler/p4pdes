@@ -20,19 +20,45 @@ static char help[] =
 // >> M = [whos to get name]
 // >> A = M(1:2:end,1:2:end);  BT = M(1:2:end,2:2:end);  B = M(2:2:end,1:2:end);  C = M(2:2:end,2:2:end);  T = [A BT; B C]
 
-/* VICTORY:
+/* Schur-complement preconditioning:
+
 ./well -snes_converged_reason -snes_monitor -da_refine 7 -ksp_type fgmres -pc_type fieldsplit -pc_fieldsplit_type SCHUR -pc_fieldsplit_schur_fact_type lower -fieldsplit_1_pc_type none -ksp_converged_reason
+
    * see snes example ex70.c; note enum option is "SCHUR" not "schur"
    * note these -ksp_type also work:  gmres, cgs, richardson
-   *  ... and converge in 2 iterations (for reasons in: Murphy, Golub, Wathen 2000)
-   * converges with -ksp_type minres but in ~50 iterations
-*/
 
-// view diagonal blocks with fieldsplit:
-// ./well -snes_converged_reason -snes_monitor -ksp_type gmres -da_refine 1 -pc_type fieldsplit -pc_fieldsplit_type SCHUR -pc_fieldsplit_schur_fact_type lower -fieldsplit_1_pc_type none -fieldsplit_0_ksp_view_mat
+with minres need positive definite preconditioner so use -pc_fieldsplit_schur_fact_type diag (see http://www.mcs.anl.gov/petsc/petsc-current/docs/manualpages/PC/PCFieldSplitSetSchurFactType.html):
 
-/* 40 second run (linux-c-opt) on 8 million grid points:
+./well -snes_converged_reason -snes_monitor -da_refine 7 -ksp_type minres -pc_type fieldsplit -pc_fieldsplit_type SCHUR -pc_fieldsplit_schur_fact_type diag -fieldsplit_1_pc_type none -ksp_converged_reason
+
+quote from http://www.mcs.anl.gov/petsc/petsc-current/docs/manualpages/PC/PCFieldSplitSetSchurFactType.html:
+
+    If applied exactly, FULL factorization is a direct solver. The preconditioned
+    operator with LOWER or UPPER has all eigenvalues equal to 1 and minimal polynomial
+    of degree 2, so KSPGMRES converges in 2 iterations. If the iteration count is very
+    low, consider using KSPFGMRES or KSPGCR which can use one less preconditioner
+    application in this case. Note that the preconditioned operator may be highly
+    non-normal, so such fast convergence may not be observed in practice. With DIAG,
+    the preconditioned operator has three distinct nonzero eigenvalues and minimal
+    polynomial of degree at most 4, so KSPGMRES converges in at most 4 iterations.
+
+   * indeed we see FULL converge in 1 iterations ... it IS a direct solver like SVD
+   * and LOWER/UPPER + GMRES give convergence in 2 iterations as advertised
+   * Murphy, Golub, Wathen (2000) explains final comment re DIAG and gmres
+   * in practice DIAG + GMRES
+
+schur as direct solver:
+
+./well -snes_converged_reason -snes_monitor -da_refine 7 -ksp_type preonly -pc_type fieldsplit -pc_fieldsplit_type SCHUR -pc_fieldsplit_schur_fact_type full -fieldsplit_1_pc_type none -ksp_converged_reason
+
+view diagonal blocks with fieldsplit:
+
+./well -snes_converged_reason -snes_monitor -ksp_type gmres -da_refine 1 -pc_type fieldsplit -pc_fieldsplit_type SCHUR -pc_fieldsplit_schur_fact_type lower -fieldsplit_1_pc_type none -fieldsplit_0_ksp_view_mat
+
+40 second run (linux-c-opt) on 8 million grid points:
+
 timer ./well -snes_converged_reason -snes_monitor -da_refine 22 -ksp_type gmres -pc_type fieldsplit -pc_fieldsplit_type SCHUR -pc_fieldsplit_schur_fact_type lower -fieldsplit_1_pc_type none -ksp_converged_reason -fieldsplit_0_ksp_type cg -fieldsplit_0_pc_type icc
+
    * also works with -fieldsplit_0_ksp_type gmres
    * also in parallel (no speedup) if -fieldsplit_0_pc_type bjacobi -fieldsplit_0_sub_pc_type icc
 */
