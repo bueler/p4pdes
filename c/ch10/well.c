@@ -22,14 +22,15 @@ static char help[] =
 
 /* Schur-complement preconditioning:
 
-./well -snes_converged_reason -snes_monitor -da_refine 7 -ksp_type fgmres -pc_type fieldsplit -pc_fieldsplit_type SCHUR -pc_fieldsplit_schur_fact_type lower -fieldsplit_1_pc_type none -ksp_converged_reason
+./well -snes_converged_reason -snes_monitor -da_refine 7 -ksp_type fgmres -pc_type fieldsplit -pc_fieldsplit_type schur -pc_fieldsplit_schur_fact_type lower -fieldsplit_pressure_pc_type none -ksp_converged_reason
 
-   * see snes example ex70.c; note enum option is "SCHUR" not "schur"
+   * see snes example ex70.c
    * note these -ksp_type also work:  gmres, cgs, richardson
+   * above is same as  -fieldsplit_velocity_pc_type ilu
 
 with minres need positive definite preconditioner so use -pc_fieldsplit_schur_fact_type diag (see http://www.mcs.anl.gov/petsc/petsc-current/docs/manualpages/PC/PCFieldSplitSetSchurFactType.html):
 
-./well -snes_converged_reason -snes_monitor -da_refine 7 -ksp_type minres -pc_type fieldsplit -pc_fieldsplit_type SCHUR -pc_fieldsplit_schur_fact_type diag -fieldsplit_1_pc_type none -ksp_converged_reason
+./well -snes_converged_reason -snes_monitor -da_refine 7 -ksp_type minres -pc_type fieldsplit -pc_fieldsplit_type schur -pc_fieldsplit_schur_fact_type diag -fieldsplit_pressure_pc_type none -ksp_converged_reason
 
 quote from http://www.mcs.anl.gov/petsc/petsc-current/docs/manualpages/PC/PCFieldSplitSetSchurFactType.html:
 
@@ -49,18 +50,21 @@ quote from http://www.mcs.anl.gov/petsc/petsc-current/docs/manualpages/PC/PCFiel
 
 schur as direct solver:
 
-./well -snes_converged_reason -snes_monitor -da_refine 7 -ksp_type preonly -pc_type fieldsplit -pc_fieldsplit_type SCHUR -pc_fieldsplit_schur_fact_type full -fieldsplit_1_pc_type none -ksp_converged_reason
+./well -snes_converged_reason -snes_monitor -da_refine 7 -ksp_type preonly -pc_type fieldsplit -pc_fieldsplit_type schur -pc_fieldsplit_schur_fact_type full -fieldsplit_pressure_pc_type none -ksp_converged_reason
 
-view diagonal blocks with fieldsplit:
+view all matrices (both interlaced and blocks) as dense with fieldsplit:
 
-./well -snes_converged_reason -snes_monitor -ksp_type gmres -da_refine 1 -pc_type fieldsplit -pc_fieldsplit_type SCHUR -pc_fieldsplit_schur_fact_type lower -fieldsplit_1_pc_type none -fieldsplit_0_ksp_view_mat
+./well -snes_converged_reason -snes_monitor -da_refine 1 -ksp_type preonly -pc_type fieldsplit -pc_fieldsplit_type schur -pc_fieldsplit_schur_fact_type full -fieldsplit_pressure_pc_type none -mat_view ::ascii_dense
+
+put diagonal blocks only in matlab files foov.m, foop.m (off-diagonal: how?)
+./well -snes_converged_reason -snes_monitor -da_refine 1 -ksp_type preonly -pc_type fieldsplit -pc_fieldsplit_type schur -pc_fieldsplit_schur_fact_type full -fieldsplit_pressure_pc_type none -fieldsplit_velocity_mat_view :foov.m:ascii_matlab -fieldsplit_pressure_mat_view :foop.m:ascii_matlab
 
 40 second run (linux-c-opt) on 8 million grid points:
 
-timer ./well -snes_converged_reason -snes_monitor -da_refine 22 -ksp_type gmres -pc_type fieldsplit -pc_fieldsplit_type SCHUR -pc_fieldsplit_schur_fact_type lower -fieldsplit_1_pc_type none -ksp_converged_reason -fieldsplit_0_ksp_type cg -fieldsplit_0_pc_type icc
+timer ./well -snes_converged_reason -snes_monitor -da_refine 22 -ksp_type gmres -pc_type fieldsplit -pc_fieldsplit_type schur -pc_fieldsplit_schur_fact_type diag -fieldsplit_pressure_pc_type none -ksp_converged_reason -fieldsplit_velocity_ksp_type cg -fieldsplit_velocity_pc_type icc
 
-   * also works with -fieldsplit_0_ksp_type gmres
-   * also in parallel (no speedup) if -fieldsplit_0_pc_type bjacobi -fieldsplit_0_sub_pc_type icc
+   * also works with -ksp_type minres
+   * also in parallel (no speedup) if -fieldsplit_velocity_pc_type bjacobi -fieldsplit_velocity_sub_pc_type icc
 */
 
 #include <petsc.h>
@@ -334,6 +338,10 @@ int main(int argc,char **args) {
     ierr = DMSetUp(da); CHKERRQ(ierr);
     ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+    ierr = DMDASetUniformCoordinates(da,0.0,user.L,0.0,1.0,0.0,1.0); CHKERRQ(ierr);
+    ierr = DMDASetCoordinateName(da,0,"x"); CHKERRQ(ierr);
+    ierr = DMDASetFieldName(da,0,"velocity"); CHKERRQ(ierr);
+    ierr = DMDASetFieldName(da,1,"pressure"); CHKERRQ(ierr);
 
     ierr = DMCreateGlobalVector(da,&X); CHKERRQ(ierr);
 
