@@ -375,11 +375,9 @@ int main(int argc,char **argv) {
     ierr = DMSetFromOptions(da); CHKERRQ(ierr);
     ierr = DMSetUp(da); CHKERRQ(ierr);
     ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
-
-    // grid is cell-centered
     ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
     hx = 2.0 / info.mx;  hy = 2.0 / info.my;
-    ierr = DMDASetUniformCoordinates(da,
+    ierr = DMDASetUniformCoordinates(da,    // grid is cell-centered
         -1.0+hx/2.0,1.0-hx/2.0,-1.0+hy/2.0,1.0-hy/2.0,0.0,1.0);CHKERRQ(ierr);
 
     ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
