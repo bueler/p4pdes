@@ -197,6 +197,7 @@ PetscErrorCode FormJacobianStaggeredLocal(DMDALocalInfo *info, double *X,
             col[0].c = 0;  col[0].i = i;    v[0] = 1.0 / h;
             col[1].c = 0;  col[1].i = i+1;  v[1] = - 1.0 / h;
             ierr = MatSetValuesStencil(P,1,&row,2,col,v,INSERT_VALUES); CHKERRQ(ierr);
+//STARTSTAGMATGENERIC
         } else if (i > 1 && i < info->mx - 1) {
             row.c = 0;
             col[0].c = 0;  col[0].i = i;    v[0] = 2.0 * user->mu / h2;
@@ -209,6 +210,7 @@ PetscErrorCode FormJacobianStaggeredLocal(DMDALocalInfo *info, double *X,
             col[0].c = 0;  col[0].i = i;    v[0] = 1.0 / h;
             col[1].c = 0;  col[1].i = i+1;  v[1] = - 1.0 / h;
             ierr = MatSetValuesStencil(P,1,&row,2,col,v,INSERT_VALUES); CHKERRQ(ierr);
+//ENDSTAGMATGENERIC
         } else if (i == info->mx - 1) {
             row.c = 0;
             col[0].c = 0;  col[0].i = i;    v[0] = user->mu / h2;
