@@ -70,10 +70,6 @@ timer ./well -snes_converged_reason -snes_monitor -da_refine 22 -ksp_type gmres 
 #include <petsc.h>
 #include <time.h>
 
-typedef struct {
-  double u, p;
-} Field;
-
 typedef enum {STAGGERED, REGULAR} SchemeType;
 static const char *SchemeTypes[] = {"staggered","regular",
                                     "SchemeType", "", NULL};
@@ -85,6 +81,10 @@ typedef struct {
                mu;      // dynamic viscosity of water (Pa s)
     SchemeType scheme;
 } AppCtx;
+
+typedef struct {
+  double u, p;
+} Field;
 
 PetscErrorCode ExactSolution(DMDALocalInfo *info, Vec X, AppCtx *user) {
     PetscErrorCode ierr;
@@ -122,12 +122,15 @@ PetscErrorCode FormFunctionStaggeredLocal(DMDALocalInfo *info, Field *X,
             F[i].p = - (X[i+1].u - 0.0) / h;                              // -u_x(0+1/2) = 0
         } else if (i == 1) {
             F[i].u = - user->mu * (X[i+1].u - 2 * X[i].u + 0.0) / h2      // -mu u_xx(x1) + p_x(x1) = - rho g
-                       + (X[i].p - X[i-1].p) / h + user->rho * user->g;
+                       + (X[i].p - X[i-1].p) / h
+                       + user->rho * user->g;
             F[i].p = - (X[i+1].u - X[i].u) / h;                           // - u_x(x1+1/2) = 0
+        // generic cases:  - mu u_xx(xi) + p_x(xi) = - rho g  AND  - u_x(xi+1/2) = 0
         } else if (i > 1 && i < info->mx - 1) {
-            F[i].u = - user->mu * (X[i+1].u - 2 * X[i].u + X[i-1].u) / h2 // -mu u_xx(xi) + p_x(xi) = - rho g
-                       + (X[i].p - X[i-1].p) / h + user->rho * user->g;
-            F[i].p = - (X[i+1].u - X[i].u) / h;                           // - u_x(xi+1/2) = 0
+            F[i].u = - user->mu * (X[i+1].u - 2 * X[i].u + X[i-1].u) / h2
+                       + (X[i].p - X[i-1].p) / h
+                       + user->rho * user->g;
+            F[i].p = - (X[i+1].u - X[i].u) / h;
         } else if (i == info->mx - 1) { // top of well
             F[i].u = - user->mu * (- 2 * X[i].u + 2 * X[i-1].u) / h2      // -mu u_xx(xm-1) + p_x(xm-1) = - rho g
                        + (- 2 * X[i-1].p) / h + user->rho * user->g;      // and  u_x(xm-1) = 0  and  p(xm-1) = 0
@@ -150,15 +153,21 @@ PetscErrorCode FormFunctionRegularLocal(DMDALocalInfo *info, Field *X,
             F[i].p = - (X[i+1].u - 0.0) / (2 * h);                        // -u_x(0+1/2) = 0  (and / 2 for symmetry)
         } else if (i == 1) {
             F[i].u = - user->mu * (X[i+1].u - 2 * X[i].u + 0.0) / h2      // -mu u_xx(x1) + p_x(x1) = - rho g
-                       + (X[i+1].p - X[i-1].p) / (2 * h) + user->rho * user->g;
+                       + (X[i+1].p - X[i-1].p) / (2 * h)
+                       + user->rho * user->g;
             F[i].p = - (X[i+1].u - 0.0) / (2 * h);                        // - u_x(x1) = 0
+        // generic cases:  - mu u_xx(xi) + p_x(xi) = - rho g  AND  - u_x(xi) = 0
+//STARTREGFUNC
         } else if (i > 1 && i < info->mx - 2) {
-            F[i].u = - user->mu * (X[i+1].u - 2 * X[i].u + X[i-1].u) / h2 // -mu u_xx(xi) + p_x(xi) = - rho g
-                       + (X[i+1].p - X[i-1].p) / (2 * h) + user->rho * user->g;
-            F[i].p = - (X[i+1].u - X[i-1].u) / (2 * h);                   // - u_x(xi) = 0
+            F[i].u = - user->mu * (X[i+1].u - 2 * X[i].u + X[i-1].u) / h2
+                       + (X[i+1].p - X[i-1].p) / (2 * h)
+                       + user->rho * user->g;
+            F[i].p = - (X[i+1].u - X[i-1].u) / (2 * h);
+//ENDREGFUNC
         } else if (i == info->mx - 2) {
             F[i].u = - user->mu * (X[i+1].u - 2 * X[i].u + X[i-1].u) / h2 // -mu u_xx(xm-2) + p_x(xm-2) = - rho g
-                       + (0.0 - X[i-1].p) / (2 * h) + user->rho * user->g;
+                       + (0.0 - X[i-1].p) / (2 * h)
+                       + user->rho * user->g;
             F[i].p = - (X[i+1].u - X[i-1].u) / (2 * h);                   // - u_x(xm-2) = 0
         } else if (i == info->mx - 1) { // top of well
             F[i].u = - user->mu * (- 2 * X[i].u + 2 * X[i-1].u) / h2      // -mu u_xx(xm-1) + p_x(xm-1) = - rho g
@@ -197,7 +206,6 @@ PetscErrorCode FormJacobianStaggeredLocal(DMDALocalInfo *info, double *X,
             col[0].c = 0;  col[0].i = i;    v[0] = 1.0 / h;
             col[1].c = 0;  col[1].i = i+1;  v[1] = - 1.0 / h;
             ierr = MatSetValuesStencil(P,1,&row,2,col,v,INSERT_VALUES); CHKERRQ(ierr);
-//STARTSTAGMATGENERIC
         } else if (i > 1 && i < info->mx - 1) {
             row.c = 0;
             col[0].c = 0;  col[0].i = i;    v[0] = 2.0 * user->mu / h2;
@@ -210,7 +218,6 @@ PetscErrorCode FormJacobianStaggeredLocal(DMDALocalInfo *info, double *X,
             col[0].c = 0;  col[0].i = i;    v[0] = 1.0 / h;
             col[1].c = 0;  col[1].i = i+1;  v[1] = - 1.0 / h;
             ierr = MatSetValuesStencil(P,1,&row,2,col,v,INSERT_VALUES); CHKERRQ(ierr);
-//ENDSTAGMATGENERIC
         } else if (i == info->mx - 1) {
             row.c = 0;
             col[0].c = 0;  col[0].i = i;    v[0] = user->mu / h2;
@@ -259,6 +266,7 @@ PetscErrorCode FormJacobianRegularLocal(DMDALocalInfo *info, double *X,
             row.c = 1;
             col[0].c = 0;  col[0].i = i+1;    v[0] = - 1.0 / (2.0 * h);
             ierr = MatSetValuesStencil(P,1,&row,1,col,v,INSERT_VALUES); CHKERRQ(ierr);
+//STARTREGMAT
         } else if (i > 1 && i < info->mx - 2) {
             row.c = 0;
             col[0].c = 0;  col[0].i = i;    v[0] = 2.0 * user->mu / h2;
@@ -271,6 +279,7 @@ PetscErrorCode FormJacobianRegularLocal(DMDALocalInfo *info, double *X,
             col[0].c = 0;  col[0].i = i-1;  v[0] = 1.0 / (2.0 * h);
             col[1].c = 0;  col[1].i = i+1;  v[1] = - 1.0 / (2.0 * h);
             ierr = MatSetValuesStencil(P,1,&row,2,col,v,INSERT_VALUES); CHKERRQ(ierr);
+//ENDREGMAT
         } else if (i == info->mx - 2) {
             row.c = 0;
             col[0].c = 0;  col[0].i = i;    v[0] = 2.0 * user->mu / h2;
