@@ -77,16 +77,17 @@ const double w[3][4]   = {{1.0/2.0,    NAN,       NAN,       NAN},
                           {1.0/3.0,    1.0/5.0,   1.0/5.0,   3.0/5.0}};
 //ENDFEM
 
-//STARTBDRYRESIDUALS
+//STARTRESIDUAL
 PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
     PetscErrorCode ierr;
     unfemCtx     *user = (unfemCtx*)ctx;
     const int    *abfn, *ae, *as, *abfs, *en, deg = user->quaddeg - 1;
     const Node   *aloc;
     const double *au;
-    double       *aF, unode[3], gradu[2], gradpsi[3][2], uquad[4], aquad[4],
-                 fquad[4], dx, dy, dx1, dx2, dy1, dy2, detJ,
-                 ls, xmid, ymid, sint, xx, yy, sum;
+    double       *aF, unode[3], gradu[2], gradpsi[3][2],
+                 uquad[4], aquad[4], fquad[4],
+                 dx, dy, dx1, dx2, dy1, dy2, detJ,
+                 ls, xmid, ymid, sint, xx, yy, psi, sum;
     int          n, p, na, nb, k, l, q;
 
     PetscLogStagePush(user->resstage);  //STRIP
@@ -109,14 +110,13 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
         if (abfs[p] == 1) {  // segment is Neumann
             na = as[2*p+0];  // nodes at end of segment
             nb = as[2*p+1];
-            // length of segment
             dx = aloc[na].x-aloc[nb].x;
             dy = aloc[na].y-aloc[nb].y;
-            ls = sqrt(dx * dx + dy * dy);
+            ls = sqrt(dx * dx + dy * dy);  // length of segment
             // midpoint rule; psi_na=psi_nb=0.5 at midpoint of segment
             xmid = 0.5*(aloc[na].x+aloc[nb].x);
             ymid = 0.5*(aloc[na].y+aloc[nb].y);
-            sint = 0.5 * user->gN_fcn(xmid,ymid) * ls;
+            sint = 0.5 * ls * user->gN_fcn(xmid,ymid);
             // nodes at end of segment could be Dirichlet
             if (abfn[na] != 2)
                 aF[na] -= sint;
@@ -126,9 +126,7 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
     }
     ierr = ISRestoreIndices(user->mesh->s,&as); CHKERRQ(ierr);
     ierr = ISRestoreIndices(user->mesh->bfs,&abfs); CHKERRQ(ierr);
-//ENDBDRYRESIDUALS
 
-//STARTELEMENTRESIDUALS
     // element contributions
     ierr = ISGetIndices(user->mesh->e,&ae); CHKERRQ(ierr);
     for (k = 0; k < user->mesh->K; k++) {
@@ -167,10 +165,12 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
         for (l = 0; l < 3; l++) {
             if (abfn[en[l]] < 2) { // if NOT a Dirichlet node
                 sum = 0.0;
-                for (q = 0; q < Q[deg]; q++)
+                for (q = 0; q < Q[deg]; q++) {
+                    psi = chi(l,xi[deg][q],eta[deg][q]);
                     sum += w[deg][q]
                              * ( aquad[q] * InnerProd(gradu,gradpsi[l])
-                                 - fquad[q] * chi(l,xi[deg][q],eta[deg][q]) );
+                                 - fquad[q] * psi );
+                }
                 aF[en[l]] += fabs(detJ) * sum;
             }
         }
@@ -184,7 +184,7 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
     PetscLogStagePop();  //STRIP
     return 0;
 }
-//ENDELEMENTRESIDUALS
+//ENDRESIDUAL
 
 PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
     PetscErrorCode ierr;
