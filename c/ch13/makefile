@@ -7,7 +7,7 @@ tiny: tiny.o  chkopts
 
 # testing
 
-#FIXME
+#FIXME add one or two tests for tiny
 
 # etc
 
