@@ -17,6 +17,7 @@ compare these views:  FIXME:  abstract out my "view" routines
 */
 
 #include <petsc.h>
+#include "plexview.h"
 
 // describe mesh: triangle style
 static const int dim = 2,
@@ -109,67 +110,20 @@ int main(int argc,char **argv) {
     ierr = DMSetFromOptions(dmplex); CHKERRQ(ierr);
     ierr = PetscObjectSetName((PetscObject) dmplex, "tiny mesh"); CHKERRQ(ierr);
     ierr = DMViewFromOptions(dmplex, NULL, "-dm_view"); CHKERRQ(ierr);  // why not enabled by default?
-    ierr = DMPlexGetChart(dmplex,&pstart,&pend); CHKERRQ(ierr);
-
-    // optionally print out point index ranges by stratum
     if (ranges) {
-        const char* names[] = {"nodes",  // or "vertices"
-                               "edges",
-                               "cells"}; // or "elements" or "triangles"
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"chart has point indices %d,...,%d\n",
-                           pstart,pend-1); CHKERRQ(ierr);
-        for (m = 0; m < 3; m++) {
-            int start, end;
-            if (use_height) {
-                ierr = DMPlexGetHeightStratum(dmplex,m,&start,&end); CHKERRQ(ierr);
-                ierr = PetscPrintf(PETSC_COMM_WORLD,"    height %d: %s are %d,...,%d\n",
-                                   m,names[2-m],start,end-1); CHKERRQ(ierr);
-            } else {
-                ierr = DMPlexGetDepthStratum(dmplex,m,&start,&end); CHKERRQ(ierr);
-                ierr = PetscPrintf(PETSC_COMM_WORLD,"    depth (=dim) %d: %s are %d,...,%d\n",
-                                   m,names[m],start,end-1); CHKERRQ(ierr);
-            }
-        }
+        ierr = PlexViewRanges(dmplex,PETSC_VIEWER_STDOUT_WORLD,use_height); CHKERRQ(ierr);
     }
-
-    // optionally print out point indices for cones of each cell
     if (cones) {
-        int       size;
-        const int *edges;
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"cones (=edge indices) of each cell:\n"); CHKERRQ(ierr);
-        for (m = 0; m < ncell; m++) {
-            ierr = DMPlexGetConeSize(dmplex,m,&size); CHKERRQ(ierr);
-            if (size != 3) {
-                SETERRQ(PETSC_COMM_WORLD,1,"WRONG: cone size for cell should be 3");
-            }
-            ierr = DMPlexGetCone(dmplex,m,&edges); CHKERRQ(ierr);
-            ierr = PetscPrintf(PETSC_COMM_WORLD,"    cell %d: %d,%d,%d\n",
-                m,edges[0],edges[1],edges[2]); CHKERRQ(ierr);
-        }
+        ierr = PlexViewFans(dmplex,PETSC_VIEWER_STDOUT_WORLD,PETSC_TRUE,"cell","edge",0,ncell); CHKERRQ(ierr);
     }
-
-    // optionally print out point indices for supports of each vertex
     if (supports) {
-        int       size;
-        const int *edges;
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"supports (=edge indices) of each vertex:\n"); CHKERRQ(ierr);
-        for (m = ncell; m < nvert + ncell; m++) {
-            ierr = DMPlexGetSupportSize(dmplex,m,&size); CHKERRQ(ierr);
-            if (size < 2) {
-                SETERRQ(PETSC_COMM_WORLD,1,"WRONG: support size must be at least 2");
-            }
-            ierr = DMPlexGetSupport(dmplex,m,&edges); CHKERRQ(ierr);
-            ierr = PetscPrintf(PETSC_COMM_WORLD,"    vertex %d: ",m); CHKERRQ(ierr);
-            for (j = 0; j < size-1; j++) {
-                ierr = PetscPrintf(PETSC_COMM_WORLD,"%d,",edges[j]); CHKERRQ(ierr);
-            }
-            ierr = PetscPrintf(PETSC_COMM_WORLD,"%d\n",edges[size-1]); CHKERRQ(ierr);
-        }
+        ierr = PlexViewFans(dmplex,PETSC_VIEWER_STDOUT_WORLD,PETSC_FALSE,"vertex","edge",ncell,ncell+nvert); CHKERRQ(ierr);
     }
 
     // create dofs like P2 elements using PetscSection
     // with 1 dof on each node (depth==0) and 1 dof on each edge (depth==1)
     // [DMPlexCreateSection() seems to do something like the following]
+    ierr = DMPlexGetChart(dmplex,&pstart,&pend); CHKERRQ(ierr);
     ierr = DMPlexGetDepthStratum(dmplex, 0, &nstart, &nend); CHKERRQ(ierr);
     ierr = DMPlexGetDepthStratum(dmplex, 1, &estart, &eend); CHKERRQ(ierr);
     ierr = PetscSectionCreate(PETSC_COMM_WORLD,&section); CHKERRQ(ierr);
