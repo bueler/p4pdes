@@ -47,6 +47,7 @@ static const int npoint = 15,
                                 {5,7}};
 
 extern PetscErrorCode CreateMeshByHand(DM*);
+extern PetscErrorCode CreateCoordinateSectionByHand(DM*);
 extern PetscErrorCode PlexViewRanges(DM, PetscBool);
 extern PetscErrorCode PlexViewFans(DM, int, int, int);
 
@@ -80,17 +81,18 @@ int main(int argc,char **argv) {
 
     if (by_hand) {
         ierr = CreateMeshByHand(&dmplex); CHKERRQ(ierr);
+        ierr = CreateCoordinateSectionByHand(&dmplex); CHKERRQ(ierr);
     } else {
         PetscMPIInt rank;
         ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank); CHKERRQ(ierr);
-        if (rank == 0) { // set all cells
+        if (rank == 0) { // create mesh on rank 0
             ierr = DMPlexCreateFromCellList(PETSC_COMM_WORLD,
                 dim,ncell,nvert,dim+1,
                 PETSC_TRUE,  // "interpolate" flag; TRUE means "topologically-interpolate"
                              // i.e. create edges (1D) from vertices (0D) and cells (2D)
                 cells,dim,coordverts,
                 &dmplex); CHKERRQ(ierr);
-        } else { // set nothing
+        } else { // empty mesh on rank > 0
             ierr = DMPlexCreateFromCellList(PETSC_COMM_WORLD,
                 dim,0,0,dim+1,PETSC_TRUE,NULL,dim,NULL,&dmplex); CHKERRQ(ierr);
         }
@@ -141,7 +143,7 @@ int main(int argc,char **argv) {
     ierr = DMSetDefaultSection(dmplex, section); CHKERRQ(ierr);
 
 #if 0
-TO DO THE FOLLOWING, NAMELY SET VALUES ON ONE CELL, NEED TO CHECK IF WE OWN THAT CELL
+//TO DO THE FOLLOWING, NAMELY SET VALUES ON ONE CELL, NEED TO CHECK IF WE OWN THAT CELL
     // assign values in a global Vec for the section, i.e. on P2 dofs
     // FIXME a more interesting task would be to have an f(x,y), and attach
     // coordinates to the nodes, and evaluate an integral \int_Omega f(x,y) dx dy
@@ -185,46 +187,63 @@ TO DO THE FOLLOWING, NAMELY SET VALUES ON ONE CELL, NEED TO CHECK IF WE OWN THAT
 }
 
 
-// FIXME this is not right in parallel; needs to set on rank 0
-/* this function is equivalent to DMPlexCreateFromCellList(); see implementation in
-DMPlexBuildFromCellList_Private(), DMPlexInterpolate(), and DMPlexBuildCoordinates_Private()
-see also  DMPlexCreateFromCellListParallel() */
+/* This function is essentially equivalent to using DMPlexCreateFromCellList().
+Note that rank 0 gets the actual mesh and other ranks get an empty mesh.
+See the implementations of
+    DMPlexBuildFromCellList_Private()
+    DMPlexCreateFromCellListParallel()
+    DMPlexInterpolate()
+    DMPlexBuildCoordinates_Private()      */
 PetscErrorCode CreateMeshByHand(DM *dmplex) {
     PetscErrorCode ierr;
-    int           d, j;
-    PetscSection  coordSection;
-    DM            cdm;
-    Vec           coordinates;
-    double        *acoord;
+    int           j;
+    PetscMPIInt   rank;
+    ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank); CHKERRQ(ierr);
     ierr = DMPlexCreate(PETSC_COMM_WORLD,dmplex); CHKERRQ(ierr);
-    // set the total number of points (ncell+nvert+nedges)
-    ierr = DMPlexSetChart(*dmplex, 0, npoint); CHKERRQ(ierr);
-    // the points are cells, vertices, edges in that order, and we only set cones for cells and edges
-    for (j = 0; j < ncell; j++) {
-        ierr = DMPlexSetConeSize(*dmplex, j, dim+1); CHKERRQ(ierr);
-    }
-    for (j = offedge; j < npoint; j++) {
-        ierr = DMPlexSetConeSize(*dmplex, j, dim); CHKERRQ(ierr);
-    }
-    ierr = DMSetUp(*dmplex);
-    for (j = 0; j < ncell; j++) {
-        ierr = DMPlexSetCone(*dmplex, j, ccone[j]); CHKERRQ(ierr);
-    }
-    for (j = offedge; j < npoint; j++) {
-        ierr = DMPlexSetCone(*dmplex, j, econe[j-offedge]); CHKERRQ(ierr);
+    ierr = DMSetDimension(*dmplex,dim); CHKERRQ(ierr);
+    if (rank == 0) {
+        // set the total number of points (npoint = ncell + nvert + nedges)
+        ierr = DMPlexSetChart(*dmplex, 0, npoint); CHKERRQ(ierr);
+        // the points are cells, vertices, edges in that order
+        // we only set cones for cells and edges
+        for (j = 0; j < ncell; j++) {
+            ierr = DMPlexSetConeSize(*dmplex, j, dim+1); CHKERRQ(ierr);
+        }
+        for (j = offedge; j < npoint; j++) {
+            ierr = DMPlexSetConeSize(*dmplex, j, dim); CHKERRQ(ierr);
+        }
+        ierr = DMSetUp(*dmplex);
+        for (j = 0; j < ncell; j++) {
+            ierr = DMPlexSetCone(*dmplex, j, ccone[j]); CHKERRQ(ierr);
+        }
+        for (j = offedge; j < npoint; j++) {
+            ierr = DMPlexSetCone(*dmplex, j, econe[j-offedge]); CHKERRQ(ierr);
+        }
+    } else {
+        ierr = DMPlexSetChart(*dmplex, 0, 0); CHKERRQ(ierr);
     }
     // with cones we have only upward directions and no labels for the strata
     // (note: both Symmetrize & Stratify are required, and they must be in this order
     ierr = DMPlexSymmetrize(*dmplex); CHKERRQ(ierr);
     ierr = DMPlexStratify(*dmplex); CHKERRQ(ierr);
-    ierr = DMSetDimension(*dmplex,dim); CHKERRQ(ierr);
+    return 0;
+}
+
+// FIXME won't work if rank>0 ??
+PetscErrorCode CreateCoordinateSectionByHand(DM *dmplex) {
+    PetscErrorCode ierr;
+    PetscSection  coordSection;
+    DM            cdm;
+    Vec           coordinates;
+    double        *acoord;
+    int           j, d;
     // you have to setup the PetscSection returned by DMGetCoordinateSection() first,
     // or else the Vec returned by DMCreateLocalVector() has zero size
     // (and thus seg faults)
     ierr = DMGetCoordinateSection(*dmplex, &coordSection); CHKERRQ(ierr);
     ierr = PetscSectionSetNumFields(coordSection, 1); CHKERRQ(ierr);
     ierr = PetscSectionSetFieldComponents(coordSection, 0, dim); CHKERRQ(ierr);
-    ierr = PetscSectionSetChart(coordSection, ncell, ncell+nvert); CHKERRQ(ierr);
+    ierr = PetscSectionSetChart(coordSection, ncell, ncell+nvert); CHKERRQ(ierr); // FIXME use zero sizes if rank>0 ?
     for (j = ncell; j < ncell+nvert; j++) {
         ierr = PetscSectionSetDof(coordSection, j, dim); CHKERRQ(ierr);
         ierr = PetscSectionSetFieldDof(coordSection, j, 0, dim); CHKERRQ(ierr);
