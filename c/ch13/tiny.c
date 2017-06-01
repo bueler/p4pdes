@@ -13,6 +13,7 @@ compare these views:
 ./tiny -tny_ranges -tny_use_height
 ./tiny -tny_cell_cones
 ./tiny -tny_vertex_supports
+./tiny -tny_coords_view
 ./tiny -tny_vec_view  FIXME broken
 */
 
@@ -57,10 +58,11 @@ int main(int argc,char **argv) {
     PetscSection  section;
     PetscBool     by_hand = PETSC_FALSE,
                   cell_cones = PETSC_FALSE,
-                  use_height = PETSC_FALSE,
+                  coords_view = PETSC_FALSE,
                   ranges = PETSC_FALSE,
-                  vertex_supports = PETSC_FALSE,
-                  vec_view = PETSC_FALSE;
+                  use_height = PETSC_FALSE,
+                  vec_view = PETSC_FALSE,
+                  vertex_supports = PETSC_FALSE;
 
     PetscInitialize(&argc,&argv,NULL,help);
 
@@ -69,14 +71,16 @@ int main(int argc,char **argv) {
                             "tiny.c", by_hand, &by_hand, NULL);CHKERRQ(ierr);
     ierr = PetscOptionsBool("-cell_cones", "print cones of each cell",
                             "tiny.c", cell_cones, &cell_cones, NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-use_height", "use Height instead of Depth when printing points",
-                            "tiny.c", use_height, &use_height, NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-coords_view", "print entries of a global vec for vertex coordinates",
+                            "tiny.c", coords_view, &coords_view, NULL);CHKERRQ(ierr);
     ierr = PetscOptionsBool("-ranges", "print point index ranges for vertices,edges,cells",
                             "tiny.c", ranges, &ranges, NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-vertex_supports", "print supports of each vertex",
-                            "tiny.c", vertex_supports, &vertex_supports, NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-use_height", "use Height instead of Depth when printing points",
+                            "tiny.c", use_height, &use_height, NULL);CHKERRQ(ierr);
     ierr = PetscOptionsBool("-vec_view", "print entries of a global vec for P2 elements",
                             "tiny.c", vec_view, &vec_view, NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-vertex_supports", "print supports of each vertex",
+                            "tiny.c", vertex_supports, &vertex_supports, NULL);CHKERRQ(ierr);
     ierr = PetscOptionsEnd();
 
     if (by_hand) {
@@ -104,6 +108,7 @@ int main(int argc,char **argv) {
     DM               distributedMesh = NULL;
     ierr = DMPlexGetPartitioner(dmplex,&part);CHKERRQ(ierr);
     ierr = PetscPartitionerSetFromOptions(part);CHKERRQ(ierr);  // allows -petscpartitioner_view
+    // overlap of 0 appropriate to P2 etc. FEM:
     ierr = DMPlexDistribute(dmplex, 0, NULL, &distributedMesh);CHKERRQ(ierr);
     if (distributedMesh) {
       ierr = DMDestroy(&dmplex);CHKERRQ(ierr);
@@ -112,7 +117,7 @@ int main(int argc,char **argv) {
 
     ierr = DMSetFromOptions(dmplex); CHKERRQ(ierr);
 
-    // viewing of dmplex
+    // viewing of dmplex and vertex coordinates
     ierr = DMViewFromOptions(dmplex, NULL, "-dm_view"); CHKERRQ(ierr);  // why not enabled by default?
     if (ranges) {
         ierr = PlexViewRanges(dmplex,use_height); CHKERRQ(ierr);
@@ -122,6 +127,16 @@ int main(int argc,char **argv) {
     }
     if (vertex_supports) {
         ierr = PlexViewFans(dmplex,2,0,1); CHKERRQ(ierr);
+    }
+    if (coords_view) {
+        Vec coords;
+        ierr = DMGetCoordinates(dmplex,&coords); CHKERRQ(ierr);
+        if (coords) {
+            ierr = VecView(coords,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
+        } else {
+            ierr = PetscPrintf(PETSC_COMM_WORLD,
+                "[vertex coordinates have not been set]\n"); CHKERRQ(ierr);
+        }
     }
 
     // create dofs like P2 elements using PetscSection
