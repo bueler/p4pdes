@@ -1,9 +1,9 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
-tiny: tiny.o chkopts
-	-${CLINKER} -o tiny tiny.o ${PETSC_LIB}
-	${RM} tiny.o
+tiny: tiny.o plexview.o chkopts
+	-${CLINKER} -o tiny tiny.o plexview.o ${PETSC_LIB}
+	${RM} tiny.o plexview.o
 
 # testing
 
