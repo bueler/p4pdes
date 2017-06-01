@@ -1,0 +1,38 @@
+[rank 0] chart for 2-dimensional DMPlex has points 0,...,10
+    depth=dim 0 of size 4: 2,...,5 (vertex)
+    depth=dim 1 of size 5: 6,...,10 (edge)
+    depth=dim 2 of size 2: 0,...,1 (cell)
+[rank 1] chart for 2-dimensional DMPlex has points 0,...,6
+    depth=dim 0 of size 3: 1,...,3 (vertex)
+    depth=dim 1 of size 3: 4,...,6 (edge)
+    depth=dim 2 of size 1: 0,...,0 (cell)
+PetscSection Object: coordinate section 2 MPI processes
+  type not yet set
+1 fields
+  field 0 with 2 components
+Process 0:
+  (   2) dim  2 offset   0
+  (   3) dim  2 offset   2
+  (   4) dim  2 offset   4
+  (   5) dim  2 offset   6
+Process 1:
+  (   1) dim  2 offset   0
+  (   2) dim  2 offset   2
+  (   3) dim  2 offset   4
+local Vec: coordinates 2 MPI processes
+[rank 0]:
+0.
+0.
+0.
+1.
+0.5
+1.
+1.
+0.
+[rank 1]:
+0.5
+1.
+1.
+0.
+1.
+1.

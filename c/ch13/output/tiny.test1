@@ -1,0 +1,17 @@
+chart for 2-dimensional DMPlex has points 0,...,46
+    height 0 of size 12: 0,...,11 (cell)
+    height 1 of size 23: 24,...,46 (edge)
+    height 2 of size 12: 12,...,23 (vertex)
+cones (= edge indices) of each cell:
+    cell 0: 24,40,29
+    cell 1: 25,26,38
+    cell 2: 39,27,28
+    cell 3: 38,39,40
+    cell 4: 29,43,33
+    cell 5: 28,30,41
+    cell 6: 42,31,32
+    cell 7: 41,42,43
+    cell 8: 27,46,37
+    cell 9: 26,34,44
+    cell 10: 45,35,36
+    cell 11: 44,45,46
