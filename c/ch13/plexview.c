@@ -8,7 +8,6 @@ PetscErrorCode PlexViewFromOptions(DM plex) {
                ranges = PETSC_FALSE,
                use_height = PETSC_FALSE,
                vertex_supports = PETSC_FALSE;
-    ierr = DMViewFromOptions(plex, NULL, "-dm_view"); CHKERRQ(ierr);  // why not enabled by default?
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "plex_view_", "view options for tiny", "");CHKERRQ(ierr);
     ierr = PetscOptionsBool("-cell_cones", "print cones of each cell",
                             "tiny.c", cell_cones, &cell_cones, NULL);CHKERRQ(ierr);

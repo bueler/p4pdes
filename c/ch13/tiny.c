@@ -10,13 +10,15 @@ or by directly setting cones "by hand":
 compare these views:
     ./tiny -dm_view
     ./tiny -section_view
-    ./tiny -v_vec_view
+    ./tiny -v_vec_view  FIXME
 and -plex_view_xxx options (see plexview.h)
 
 check it out: parallel refinement already works!:
     mpiexec -n 2 ./tiny -dm_refine 1 -plex_view_ranges -plex_view_coords
 
 FIXME add option -tny_element P1|P2|P3
+
+FIXME quadrature and integration of f(x,y) = e^{-x - 2 y}
 */
 
 #include <petsc.h>
@@ -107,6 +109,7 @@ int main(int argc,char **argv) {
     }
 
     ierr = DMSetFromOptions(dmplex); CHKERRQ(ierr);
+    ierr = DMViewFromOptions(dmplex, NULL, "-dm_view"); CHKERRQ(ierr);  // why not enabled by default?
     ierr = PlexViewFromOptions(dmplex); CHKERRQ(ierr);
 
     // Create nodes (degrees of freedom) for P2 elements using PetscSection.
