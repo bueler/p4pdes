@@ -88,6 +88,34 @@ int main(int argc,char **argv) {
     ierr = DMSetFromOptions(dmplex); CHKERRQ(ierr);
     ierr = PetscObjectSetName((PetscObject) dmplex, "tiny mesh"); CHKERRQ(ierr);
 
+#if 0
+    /* optionally refine mesh using a volume constraint = refinementLimit;
+    from src/snes/examples/tutorials/ex12.c */
+    DM               refinedMesh     = NULL;
+    if (refinementLimit > 0.0) {
+      ierr = DMPlexSetRefinementLimit(dmplex,refinementLimit);CHKERRQ(ierr);
+      ierr = DMRefine(dmplex,PETSC_COMM_WORLD,&refinedMesh);CHKERRQ(ierr);
+      if (refinedMesh) {
+        ierr = DMDestroy(&dmplex);CHKERRQ(ierr);
+        dmplex = refinedMesh;
+        ierr = PetscObjectSetName((PetscObject) dmplex, "refined tiny mesh");CHKERRQ(ierr);
+      }
+    }
+#endif
+
+#if 0
+    /* optionally distribute mesh over processes; same source as above */
+    PetscPartitioner part;
+    DM               distributedMesh = NULL;
+    ierr = DMPlexGetPartitioner(*dm,&part);CHKERRQ(ierr);
+    ierr = PetscPartitionerSetFromOptions(part);CHKERRQ(ierr);  // allows -petscpartitioner_view
+    ierr = DMPlexDistribute(*dm, 0, NULL, &distributedMesh);CHKERRQ(ierr);
+    if (distributedMesh) {
+      ierr = DMDestroy(dm);CHKERRQ(ierr);
+      *dm  = distributedMesh;
+    }
+#endif
+
     // viewing of dmplex
     ierr = DMViewFromOptions(dmplex, NULL, "-dm_view"); CHKERRQ(ierr);  // why not enabled by default?
     if (ranges) {
