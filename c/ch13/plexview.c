@@ -9,30 +9,37 @@ static const char* names[4][4] = {{"nodes","",     "",     ""},       // dim=0 n
 PetscErrorCode PlexViewRanges(DM plex, PetscViewer viewer, PetscBool use_height) {
     PetscErrorCode ierr;
     int         dim, m, start, end;
-    ierr = PetscViewerASCIIPushSynchronized(viewer); CHKERRQ(ierr);
+    MPI_Comm    comm;
+    PetscMPIInt rank,size;
+    ierr = PetscObjectGetComm((PetscObject)plex,&comm); CHKERRQ(ierr);
+    ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
+    ierr = MPI_Comm_rank(comm,&rank); CHKERRQ(ierr);
     ierr = DMGetDimension(plex,&dim); CHKERRQ(ierr);
     ierr = DMPlexGetChart(plex,&start,&end); CHKERRQ(ierr);
-    ierr = PetscViewerASCIISynchronizedPrintf(viewer,
-        "chart for %d-dimensional DMPlex has point indices %d,...,%d\n",
+    if (size > 1) {
+        ierr = PetscSynchronizedPrintf(comm,"[rank %d] ",rank); CHKERRQ(ierr);
+    }
+    ierr = PetscSynchronizedPrintf(comm,
+        "chart for %d-dimensional DMPlex has points %d,...,%d\n",
         dim,start,end-1); CHKERRQ(ierr);
     for (m = 0; m < dim + 1; m++) {
         if (use_height) {
             ierr = DMPlexGetHeightStratum(plex,m,&start,&end); CHKERRQ(ierr);
-            ierr = PetscViewerASCIISynchronizedPrintf(viewer,
-                "    height %d: %d,...,%d (%s)\n",
-                m,start,end-1,dim < 4 ? names[dim][2-m] : ""); CHKERRQ(ierr);
+            ierr = PetscSynchronizedPrintf(comm,
+                "    height %d of size %d: %d,...,%d (%s)\n",
+                m,end-start,start,end-1,dim < 4 ? names[dim][2-m] : ""); CHKERRQ(ierr);
         } else {
             ierr = DMPlexGetDepthStratum(plex,m,&start,&end); CHKERRQ(ierr);
-            ierr = PetscViewerASCIISynchronizedPrintf(viewer,
-                "    depth=dim %d: %d,...,%d (%s)\n",
-                m,start,end-1,dim < 4 ? names[dim][m] : ""); CHKERRQ(ierr);
+            ierr = PetscSynchronizedPrintf(comm,
+                "    depth=dim %d of size %d: %d,...,%d (%s)\n",
+                m,end-start,start,end-1,dim < 4 ? names[dim][m] : ""); CHKERRQ(ierr);
         }
     }
-    ierr = PetscViewerASCIIPopSynchronized(viewer); CHKERRQ(ierr);
+    ierr = PetscSynchronizedFlush(comm,PETSC_STDOUT); CHKERRQ(ierr);
     return 0;
 }
 
-
+// FIXME changes including: use Synchronized as above and get start,end locally from chart
 PetscErrorCode PlexViewFans(DM plex, PetscViewer viewer, PetscBool use_cone,
                             const char* basename, const char* targetname,
                             int start, int end) {
