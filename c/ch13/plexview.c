@@ -59,13 +59,15 @@ static const char* stratanames[4][10] =
 PetscErrorCode PlexViewRanges(DM plex, PetscBool use_height) {
     PetscErrorCode ierr;
     int         dim, m, start, end;
+    const char  *plexname;
     MPI_Comm    comm;
     PetscMPIInt rank,size;
     ierr = PetscObjectGetComm((PetscObject)plex,&comm); CHKERRQ(ierr);
     ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
     ierr = MPI_Comm_rank(comm,&rank); CHKERRQ(ierr);
     ierr = DMGetDimension(plex,&dim); CHKERRQ(ierr);
-    ierr = PetscPrintf(comm,"DMPlex object in %dD:\n",dim); CHKERRQ(ierr);
+    ierr = PetscObjectGetName((PetscObject)plex,&plexname); CHKERRQ(ierr);
+    ierr = PetscPrintf(comm,"DMPlex %s in %dD:\n",plexname,dim); CHKERRQ(ierr);
     if (size > 1) {
         ierr = PetscSynchronizedPrintf(comm,"  [rank %d] ",rank); CHKERRQ(ierr);
     }

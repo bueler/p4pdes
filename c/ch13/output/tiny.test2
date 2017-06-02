@@ -1,4 +1,4 @@
-DMPlex object in 2D:
+DMPlex tiny mesh in 2D:
   [rank 0] chart points 0,...,10
     depth=dim 0 of size 4: 2,...,5 (vertex)
     depth=dim 1 of size 5: 6,...,10 (edge)

@@ -1,4 +1,4 @@
-DMPlex object in 2D:
+DMPlex tiny mesh in 2D:
 chart points 0,...,46
     height 0 of size 12: 0,...,11 (cell)
     height 1 of size 23: 24,...,46 (edge)

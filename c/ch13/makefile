@@ -25,5 +25,5 @@ test: test_tiny
 .PHONY: distclean runtiny_1 runtiny_2 runtiny_3 test test_tiny
 
 distclean:
-	@rm -f *~ tiny
+	@rm -f *~ tiny *tmp
 
