@@ -65,13 +65,14 @@ PetscErrorCode PlexViewRanges(DM plex, PetscBool use_height) {
     ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
     ierr = MPI_Comm_rank(comm,&rank); CHKERRQ(ierr);
     ierr = DMGetDimension(plex,&dim); CHKERRQ(ierr);
+    ierr = PetscPrintf(comm,"DMPlex object in %dD:\n",dim); CHKERRQ(ierr);
     if (size > 1) {
-        ierr = PetscSynchronizedPrintf(comm,"[rank %d] ",rank); CHKERRQ(ierr);
+        ierr = PetscSynchronizedPrintf(comm,"  [rank %d] ",rank); CHKERRQ(ierr);
     }
     ierr = DMPlexGetChart(plex,&start,&end); CHKERRQ(ierr);
     ierr = PetscSynchronizedPrintf(comm,
-        "chart for %d-dimensional DMPlex has points %d,...,%d\n",
-        dim,start,end-1); CHKERRQ(ierr);
+        "chart points %d,...,%d\n",
+        start,end-1); CHKERRQ(ierr);
     for (m = 0; m < dim + 1; m++) {
         if (use_height) {
             ierr = DMPlexGetHeightStratum(plex,m,&start,&end); CHKERRQ(ierr);
@@ -99,7 +100,7 @@ PetscErrorCode PlexViewFans(DM plex, int dim, int basestrata, int targetstrata) 
     ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
     ierr = MPI_Comm_rank(comm,&rank); CHKERRQ(ierr);
     if (size > 1) {
-        ierr = PetscSynchronizedPrintf(comm,"[rank %d] ",rank); CHKERRQ(ierr);
+        ierr = PetscSynchronizedPrintf(comm,"  [rank %d] ",rank); CHKERRQ(ierr);
     }
     ierr = PetscSynchronizedPrintf(comm,
         "%s (= %s indices) of each %s:\n",

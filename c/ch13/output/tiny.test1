@@ -1,4 +1,5 @@
-chart for 2-dimensional DMPlex has points 0,...,46
+DMPlex object in 2D:
+chart points 0,...,46
     height 0 of size 12: 0,...,11 (cell)
     height 1 of size 23: 24,...,46 (edge)
     height 2 of size 12: 12,...,23 (vertex)
