@@ -101,11 +101,11 @@ int main(int argc,char **argv) {
     // reset names before viewing
     ierr = PetscObjectSetName((PetscObject)dmplex, "tiny mesh"); CHKERRQ(ierr);
     {
-        DM           coorddm;
-        PetscSection coordsection;
-        ierr = DMGetCoordinateDM(dmplex, &coorddm); CHKERRQ(ierr);
-        ierr = DMGetDefaultSection(coorddm, &coordsection); CHKERRQ(ierr);
-        ierr = PetscObjectSetName((PetscObject)coordsection, "coordinate section"); CHKERRQ(ierr);
+        DM           cdm;
+        PetscSection csection;
+        ierr = DMGetCoordinateDM(dmplex, &cdm); CHKERRQ(ierr);
+        ierr = DMGetDefaultSection(cdm, &csection); CHKERRQ(ierr);
+        ierr = PetscObjectSetName((PetscObject)csection, "vertex coordinate section"); CHKERRQ(ierr);
     }
 
     ierr = DMSetFromOptions(dmplex); CHKERRQ(ierr);
@@ -113,13 +113,13 @@ int main(int argc,char **argv) {
     ierr = PlexViewFromOptions(dmplex); CHKERRQ(ierr);
 
     // Create nodes (degrees of freedom) for P2 elements using PetscSection.
-    // Have 1 dof on each vertex (depth==0) and 1 dof on each edge (depth==1).
     {
         int  j, vertexstart, edgeend;
         ierr = DMPlexGetDepthStratum(dmplex, 0, &vertexstart, NULL); CHKERRQ(ierr);
         ierr = DMPlexGetDepthStratum(dmplex, 1, NULL, &edgeend); CHKERRQ(ierr);
+        // section has 1 dof on each vertex (depth==0) and (depth==1).
         ierr = PetscSectionCreate(PETSC_COMM_WORLD,&section); CHKERRQ(ierr);
-        ierr = PetscObjectSetName((PetscObject)section, "P2 scalar field section"); CHKERRQ(ierr);
+        ierr = PetscObjectSetName((PetscObject)section, "P2 scalar section"); CHKERRQ(ierr);
         ierr = PetscSectionSetNumFields(section, 1); CHKERRQ(ierr);
         ierr = PetscSectionSetChart(section, vertexstart, edgeend); CHKERRQ(ierr);
         for (j = vertexstart; j < edgeend; ++j) {
@@ -136,30 +136,46 @@ int main(int argc,char **argv) {
     // assign values in a global Vec for the section, i.e. on P2 dofs
     // FIXME a more interesting task would be to have an f(x,y), and attach
     // coordinates to the nodes, and evaluate an integral \int_Omega f(x,y) dx dy
-    Vec    v;
-    double *av;
-    int    m, numpts, *pts = NULL, dof, off;
+    {
+        Vec    coords, v;
+        double *acoords;
+        //double *av, *acoords;
+        int    j, m, numpts, *pts = NULL, dof, off;
 
-    ierr = DMGetGlobalVector(dmplex, &v); CHKERRQ(ierr);
-    ierr = PetscObjectSetName((PetscObject) v, "v"); CHKERRQ(ierr);
-    ierr = VecSet(v,0.0); CHKERRQ(ierr);
+        ierr = DMGetLocalVector(dmplex, &v); CHKERRQ(ierr);
+        ierr = DMGetLocalVector(coorddmplex, &coords); CHKERRQ(ierr);
+        ierr = VecSet(v,0.0); CHKERRQ(ierr);
 
-    // FIXME Vec gets 1.0 for dofs on cell=1  <-- boring
-    VecGetArray(v, &av);
-    DMPlexGetTransitiveClosure(dmplex, 1, PETSC_TRUE, &numpts, &pts);
-    for (j = 0; j < 2 * numpts; j += 2) {  // skip over orientations
-        PetscSectionGetDof(section, pts[j], &dof);
-        PetscSectionGetOffset(section, pts[j], &off);
-        for (m = 0; m < dof; ++m) {
-            av[off+m] = 1.0;
+        // FIXME Vec gets 1.0 for dofs on cell=1  <-- boring
+        ierr = DMPlexGetDepthStratum(dmplex, 0, &vertexstart, &vertexend); CHKERRQ(ierr);
+        //VecGetArray(v, &av);
+        VecGetArray(coords, &acoords);
+        for (j = 0; j < vertexend-vertexstart; j++) {
+            for (d = 0; d < dim; ++d) {
+                acoord[j*dim+d] = coordverts[j*dim+d];
+            }
         }
-    }
-    DMPlexRestoreTransitiveClosure(dmplex, 1, PETSC_TRUE, &numpts, &pts);
-    VecRestoreArray(v, &av);
 
-    ierr = VecSetFromOptions(v); CHKERRQ(ierr);  // FIXME enables -v_vec_view?
-    //ierr = PetscObjectViewFromOptions((PetscObject)v,NULL,"-vec_view"); CHKERRQ(ierr);
-    ierr = DMRestoreGlobalVector(dmplex, &v); CHKERRQ(ierr);
+/*
+        DMPlexGetTransitiveClosure(dmplex, 1, PETSC_TRUE, &numpts, &pts);
+        for (j = 0; j < 2 * numpts; j += 2) {  // skip over orientations
+            PetscSectionGetDof(section, pts[j], &dof);
+            PetscSectionGetOffset(section, pts[j], &off);
+            for (m = 0; m < dof; ++m) {
+                av[off+m] = 1.0;
+            }
+        }
+        DMPlexRestoreTransitiveClosure(dmplex, 1, PETSC_TRUE, &numpts, &pts);
+*/
+        //VecRestoreArray(v, &av);
+        VecRestoreArray(coords, &acoords);
+
+        ierr = VecSetFromOptions(v); CHKERRQ(ierr);  // FIXME enables -v_vec_view?
+        //ierr = PetscObjectViewFromOptions((PetscObject)v,NULL,"-vec_view"); CHKERRQ(ierr);
+
+        ierr = DMRestoreLocalVector(dmplex, &v); CHKERRQ(ierr);
+        ierr = DMRestoreLocalVector(coorddmplex, &coords); CHKERRQ(ierr);
+    }
 #endif
 
     PetscSectionDestroy(&section); DMDestroy(&dmplex);
