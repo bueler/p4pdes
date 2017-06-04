@@ -71,6 +71,7 @@ int main(int argc,char **argv) {
                             "tiny.c", by_hand, &by_hand, NULL);CHKERRQ(ierr);
     ierr = PetscOptionsEnd();
 
+    // create the DMPlex mesh
     if (by_hand) {
         ierr = CreateMeshByHand(&dmplex); CHKERRQ(ierr);
         ierr = CreateCoordinateSectionByHand(&dmplex); CHKERRQ(ierr);
@@ -110,12 +111,11 @@ int main(int argc,char **argv) {
         ierr = DMGetDefaultSection(cdm, &csection); CHKERRQ(ierr);
         ierr = PetscObjectSetName((PetscObject)csection, "vertex coordinate section"); CHKERRQ(ierr);
     }
-
     ierr = DMSetFromOptions(dmplex); CHKERRQ(ierr);
-    ierr = DMViewFromOptions(dmplex, NULL, "-dm_view"); CHKERRQ(ierr);  // why not enabled by default?
+    ierr = DMViewFromOptions(dmplex, NULL, "-dm_view"); CHKERRQ(ierr);
     ierr = PlexViewFromOptions(dmplex); CHKERRQ(ierr);
 
-    // Create nodes (degrees of freedom) for 2D P2 elements using PetscSection.
+    // create nodes (degrees of freedom) for 2D P2 elements using PetscSection
     ierr = CreateSection2DP2(dmplex,&p2section); CHKERRQ(ierr);
     ierr = DMSetDefaultSection(dmplex, p2section); CHKERRQ(ierr);
     ierr = PetscObjectViewFromOptions((PetscObject)p2section,NULL,"-section_view"); CHKERRQ(ierr);
@@ -216,14 +216,13 @@ PetscErrorCode CreateCoordinateSectionByHand(DM *dmplex) {
 PetscErrorCode CreateSection2DP2(DM dmplex, PetscSection *section) {
     PetscErrorCode ierr;
     int  j, pstart, pend, vertexstart, edgeend;
-    ierr = DMPlexGetChart(dmplex, &pstart, &pend); CHKERRQ(ierr);
-    ierr = DMPlexGetDepthStratum(dmplex, 0, &vertexstart, NULL); CHKERRQ(ierr);
-    ierr = DMPlexGetDepthStratum(dmplex, 1, NULL, &edgeend); CHKERRQ(ierr);
-    // p2section has dof=0 for each cell and dof=1 on each vertex (depth==0) and (depth==1).
     ierr = PetscSectionCreate(PETSC_COMM_WORLD,section); CHKERRQ(ierr);
     ierr = PetscObjectSetName((PetscObject)*section, "P2 scalar section"); CHKERRQ(ierr);
     ierr = PetscSectionSetNumFields(*section, 1); CHKERRQ(ierr);
+    ierr = DMPlexGetChart(dmplex, &pstart, &pend); CHKERRQ(ierr);
     ierr = PetscSectionSetChart(*section, pstart, pend); CHKERRQ(ierr);
+    ierr = DMPlexGetDepthStratum(dmplex, 0, &vertexstart, NULL); CHKERRQ(ierr);
+    ierr = DMPlexGetDepthStratum(dmplex, 1, NULL, &edgeend); CHKERRQ(ierr);
     for (j = pstart; j < pend; ++j) {
         if (j < vertexstart) {
             ierr = PetscSectionSetDof(*section, j, 0); CHKERRQ(ierr);
