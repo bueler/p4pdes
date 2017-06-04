@@ -1,12 +1,13 @@
-DMPlex tiny mesh in 2D:
-  [rank 0] chart points 0,...,10
+point ranges for DMPlex tiny mesh in 2D:
+  [rank 0]  chart points 0,...,10
     depth=dim 0 of size 4: 2,...,5 (vertex)
     depth=dim 1 of size 5: 6,...,10 (edge)
     depth=dim 2 of size 2: 0,...,1 (cell)
-  [rank 1] chart points 0,...,6
+  [rank 1]  chart points 0,...,6
     depth=dim 0 of size 3: 1,...,3 (vertex)
     depth=dim 1 of size 3: 4,...,6 (edge)
     depth=dim 2 of size 1: 0,...,0 (cell)
+coordinate PetscSection and Vec for DMPlex tiny mesh:
 PetscSection Object: vertex coordinate section 2 MPI processes
   type not yet set
 1 fields

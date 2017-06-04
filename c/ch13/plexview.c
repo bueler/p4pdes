@@ -61,14 +61,18 @@ PetscErrorCode PlexViewPointRanges(DM plex, PetscBool use_height) {
     ierr = MPI_Comm_rank(comm,&rank); CHKERRQ(ierr);
     ierr = DMGetDimension(plex,&dim); CHKERRQ(ierr);
     ierr = PetscObjectGetName((PetscObject)plex,&plexname); CHKERRQ(ierr);
-    ierr = PetscPrintf(comm,"DMPlex %s in %dD:\n",plexname,dim); CHKERRQ(ierr);
+    ierr = PetscPrintf(comm,"point ranges for DMPlex %s in %dD:\n",plexname,dim); CHKERRQ(ierr);
     if (size > 1) {
-        ierr = PetscSynchronizedPrintf(comm,"  [rank %d] ",rank); CHKERRQ(ierr);
+        ierr = PetscSynchronizedPrintf(comm,"  [rank %d]",rank); CHKERRQ(ierr);
     }
     ierr = DMPlexGetChart(plex,&start,&end); CHKERRQ(ierr);
+    if (end < 1) { // nothing on this rank
+        ierr = PetscSynchronizedPrintf(comm,"\n"); CHKERRQ(ierr);
+        ierr = PetscSynchronizedFlush(comm,PETSC_STDOUT); CHKERRQ(ierr);
+        return 0;
+    }
     ierr = PetscSynchronizedPrintf(comm,
-        "chart points %d,...,%d\n",
-        start,end-1); CHKERRQ(ierr);
+        "  chart points %d,...,%d\n",start,end-1); CHKERRQ(ierr);
     for (m = 0; m < dim + 1; m++) {
         if (use_height) {
             ierr = DMPlexGetHeightStratum(plex,m,&start,&end); CHKERRQ(ierr);
@@ -88,6 +92,7 @@ PetscErrorCode PlexViewPointRanges(DM plex, PetscBool use_height) {
 
 PetscErrorCode PlexViewFans(DM plex, int dim, int basestrata, int targetstrata) {
     PetscErrorCode ierr;
+    const char  *plexname;
     const int   *targets;
     int         j, m, start, end, cssize;
     MPI_Comm    comm;
@@ -96,11 +101,13 @@ PetscErrorCode PlexViewFans(DM plex, int dim, int basestrata, int targetstrata) 
     ierr = PetscObjectGetComm((PetscObject)plex,&comm); CHKERRQ(ierr);
     ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
     ierr = MPI_Comm_rank(comm,&rank); CHKERRQ(ierr);
+    ierr = PetscObjectGetName((PetscObject)plex,&plexname); CHKERRQ(ierr);
+    ierr = PetscPrintf(comm,"fans (cones or supports) for DMPlex %s:\n",plexname); CHKERRQ(ierr);
     if (size > 1) {
-        ierr = PetscSynchronizedPrintf(comm,"  [rank %d] ",rank); CHKERRQ(ierr);
+        ierr = PetscSynchronizedPrintf(comm,"  [rank %d]",rank); CHKERRQ(ierr);
     }
     ierr = PetscSynchronizedPrintf(comm,
-        "%s (= %s indices) of each %s:\n",
+        "  %s (= %s indices) of each %s\n",
         (basestrata > targetstrata) ? "cones" : "supports",
         stratanames[dim][targetstrata],stratanames[dim][basestrata]); CHKERRQ(ierr);
     ierr = DMPlexGetDepthStratum(plex, basestrata, &start, &end); CHKERRQ(ierr);
@@ -129,7 +136,10 @@ PetscErrorCode PlexViewCoords(DM plex) {
     PetscErrorCode ierr;
     PetscSection coordSection;
     Vec          coordVec;
+    const char   *plexname;
 
+    ierr = PetscObjectGetName((PetscObject)plex,&plexname); CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"coordinate PetscSection and Vec for DMPlex %s:\n",plexname); CHKERRQ(ierr);
     ierr = DMGetCoordinateSection(plex, &coordSection); CHKERRQ(ierr);
     if (coordSection) {
         ierr = PetscSectionView(coordSection,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
@@ -156,29 +166,37 @@ PetscErrorCode PlexViewClosuresCoords(DM plex) {
                 j, p, vertexstart, vertexend, edgeend, cellstart, cellend;
     MPI_Comm    comm;
     PetscMPIInt rank,size;
+    const char  *plexname;
 
     ierr = PetscObjectGetComm((PetscObject)plex,&comm); CHKERRQ(ierr);
     ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
     ierr = MPI_Comm_rank(comm,&rank); CHKERRQ(ierr);
+    ierr = PetscObjectGetName((PetscObject)plex,&plexname); CHKERRQ(ierr);
+    ierr = PetscPrintf(comm,"closure points and coordinates for each cell in DMPlex %s:\n",plexname); CHKERRQ(ierr);
     if (size > 1) {
-        ierr = PetscSynchronizedPrintf(comm,"[rank %d] ",rank); CHKERRQ(ierr);
+        ierr = PetscSynchronizedPrintf(comm,"  [rank %d]",rank); CHKERRQ(ierr);
+    }
+    ierr = DMPlexGetHeightStratum(plex, 0, &cellstart, &cellend); CHKERRQ(ierr);
+    if (cellend < 1) { // nothing on this rank
+        ierr = PetscSynchronizedPrintf(comm,"\n"); CHKERRQ(ierr);
+        ierr = PetscSynchronizedFlush(comm,PETSC_STDOUT); CHKERRQ(ierr);
+        return 0;
     }
     ierr = DMGetCoordinateDM(plex, &cdm); CHKERRQ(ierr);
     ierr = DMGetCoordinatesLocal(plex,&coords); CHKERRQ(ierr);
-    ierr = DMPlexGetHeightStratum(plex, 0, &cellstart, &cellend); CHKERRQ(ierr);
     ierr = DMPlexGetDepthStratum(plex, 0, &vertexstart, &vertexend); CHKERRQ(ierr);
     ierr = DMPlexGetDepthStratum(plex, 1, NULL, &edgeend); CHKERRQ(ierr);
     ierr = VecGetArray(coords, &acoords); CHKERRQ(ierr);
     for (j = cellstart; j < cellend; j++) {
         ierr = DMPlexGetTransitiveClosure(plex, j, PETSC_TRUE, &numpts, &pts);
-        ierr = PetscSynchronizedPrintf(comm,"cell %d:\n",j); CHKERRQ(ierr);
+        ierr = PetscSynchronizedPrintf(comm,"  cell %d\n",j); CHKERRQ(ierr);
         for (p = 0; p < numpts*2; p += 2) {   // omit orientations
             if ((pts[p] >= vertexstart) && (pts[p] < edgeend)) { // omit cells in closure
                 if (pts[p] < vertexend) { // get location from coords
                     int voff;
                     voff = pts[p] - vertexstart;
                     ierr = PetscSynchronizedPrintf(comm,
-                        "  vertex %3d at (%g,%g)\n",
+                        "    vertex %3d at (%g,%g)\n",
                         pts[p],acoords[2*voff+0],acoords[2*voff+1]); CHKERRQ(ierr);
                 } else { // assume it is an edge ... compute center
                     const int *vertices;
@@ -190,7 +208,7 @@ PetscErrorCode PlexViewClosuresCoords(DM plex) {
                     x = 0.5 * (acoords[2*voff[0]+0] + acoords[2*voff[1]+0]);
                     y = 0.5 * (acoords[2*voff[0]+1] + acoords[2*voff[1]+1]);
                     ierr = PetscSynchronizedPrintf(comm,
-                        "  edge   %3d at (%g,%g)\n",pts[p],x,y); CHKERRQ(ierr);
+                        "    edge   %3d at (%g,%g)\n",pts[p],x,y); CHKERRQ(ierr);
                 }
             }
         }
