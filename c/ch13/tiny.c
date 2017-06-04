@@ -10,15 +10,17 @@ or by directly setting cones "by hand":
 compare these views:
     ./tiny -dm_view
     ./tiny -section_view
-    ./tiny -tny_edges_view  FIXME:  should be replaced with something better
+    ./tiny -v_vec_view
 and -plex_view_xxx options (see plexview.h)
 
 check it out: parallel refinement already works!:
     mpiexec -n 2 ./tiny -dm_refine 1 -plex_view_ranges -plex_view_coords
 
-FIXME add option -tny_element P1|P2|P3
+-tny_closure_view FIXME move to plex_view
 
 FIXME quadrature and integration of f(x,y) = e^{-x - 2 y}
+
+FIXME add option -tny_element P1|P2|P3
 */
 
 #include <petsc.h>
@@ -59,14 +61,14 @@ int main(int argc,char **argv) {
     PetscErrorCode ierr;
     DM            dmplex;
     PetscSection  section;
-    PetscBool     by_hand = PETSC_FALSE, edges_view = PETSC_FALSE;
+    PetscBool     by_hand = PETSC_FALSE, closure_view = PETSC_FALSE;
 
     PetscInitialize(&argc,&argv,NULL,help);
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "tny_", "options for tiny", "");CHKERRQ(ierr);
     ierr = PetscOptionsBool("-by_hand", "use by-hand construction",
                             "tiny.c", by_hand, &by_hand, NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-edges_view", "show coordinates of edge ends and centers (thus for P2) FIxME",
-                            "tiny.c", edges_view, &edges_view, NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-closure_view", "show coordinates of each cells transitive closure",
+                            "tiny.c", closure_view, &closure_view, NULL);CHKERRQ(ierr);
     ierr = PetscOptionsEnd();
 
     if (by_hand) {
@@ -132,54 +134,67 @@ int main(int argc,char **argv) {
         ierr = PetscObjectViewFromOptions((PetscObject)section,NULL,"-section_view"); CHKERRQ(ierr);
     }
 
-    if (edges_view) {
-        DM        cdm;
-        Vec       coords;
-        double    *acoords, ecx, ecy, vx[2], vy[2];
-        int       j, vertexstart, edgestart, edgeend, off[2];
-        const int *vertices;
+    // put function f(x,y) into v
+    DM        cdm;
+    Vec       v, coords;
+    double    *av, *acoords, x, y;
+    int       numpts, *pts = NULL, off,
+              j, p, vertexstart, vertexend, edgeend, cellstart, cellend;
 
-        ierr = DMGetCoordinateDM(dmplex, &cdm); CHKERRQ(ierr);
-        //ierr = DMGetLocalVector(dmplex, &v); CHKERRQ(ierr);
-        //ierr = VecSet(v,0.0); CHKERRQ(ierr);
-        ierr = DMGetCoordinatesLocal(dmplex,&coords); CHKERRQ(ierr);
-        ierr = DMPlexGetDepthStratum(dmplex, 0, &vertexstart, NULL); CHKERRQ(ierr);
-        ierr = DMPlexGetDepthStratum(dmplex, 1, &edgestart, &edgeend); CHKERRQ(ierr);
-        //VecGetArray(v, &av);
-        ierr = VecGetArray(coords, &acoords); CHKERRQ(ierr);
-        for (j = edgestart; j < edgeend; j++) {
-            ierr = DMPlexGetCone(dmplex, j, &vertices); CHKERRQ(ierr);
-            off[0] = vertices[0] - vertexstart;
-            off[1] = vertices[1] - vertexstart;
-            vx[0] = acoords[2*off[0]+0];
-            vy[0] = acoords[2*off[0]+1];
-            vx[1] = acoords[2*off[1]+0];
-            vy[1] = acoords[2*off[1]+1];
-            ecx = 0.5 * (acoords[2*off[0]+0] + acoords[2*off[1]+0]);
-            ecy = 0.5 * (acoords[2*off[0]+1] + acoords[2*off[1]+1]);
-            ierr = PetscPrintf(PETSC_COMM_WORLD,
-                "edge %d with ends (%g,%g) and (%g,%g) has center (%g,%g)\n",
-                j,vx[0],vy[0],vx[1],vy[1],ecx,ecy); CHKERRQ(ierr);
-        }
-        //VecRestoreArray(v, &av);
-        //ierr = DMRestoreLocalVector(dmplex, &v); CHKERRQ(ierr);
-        ierr = VecRestoreArray(coords, &acoords); CHKERRQ(ierr);
-    }
-
-        //ierr = VecSetFromOptions(v); CHKERRQ(ierr);  // FIXME enables -v_vec_view?
-        //ierr = PetscObjectViewFromOptions((PetscObject)v,NULL,"-vec_view"); CHKERRQ(ierr);
-/*
-        DMPlexGetTransitiveClosure(dmplex, 1, PETSC_TRUE, &numpts, &pts);
-        for (j = 0; j < 2 * numpts; j += 2) {  // skip over orientations
-            PetscSectionGetDof(section, pts[j], &dof);
-            PetscSectionGetOffset(section, pts[j], &off);
-            for (m = 0; m < dof; ++m) {
-                av[off+m] = 1.0;
+    ierr = DMCreateLocalVector(dmplex, &v); CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject)v, "v"); CHKERRQ(ierr);
+    ierr = VecGetArray(v, &av); CHKERRQ(ierr);
+    ierr = DMGetCoordinateDM(dmplex, &cdm); CHKERRQ(ierr);
+    ierr = DMGetCoordinatesLocal(dmplex,&coords); CHKERRQ(ierr);
+    ierr = DMPlexGetHeightStratum(dmplex, 0, &cellstart, &cellend); CHKERRQ(ierr);
+    ierr = DMPlexGetDepthStratum(dmplex, 0, &vertexstart, &vertexend); CHKERRQ(ierr);
+    ierr = DMPlexGetDepthStratum(dmplex, 1, NULL, &edgeend); CHKERRQ(ierr);
+    ierr = VecGetArray(coords, &acoords); CHKERRQ(ierr);
+    for (j = cellstart; j < cellend; j++) {
+        ierr = DMPlexGetTransitiveClosure(dmplex, j, PETSC_TRUE, &numpts, &pts);
+        for (p = 0; p < numpts*2; p += 2) {   // omit orientations
+            if ((pts[p] >= vertexstart) && (pts[p] < edgeend)) { // omit cells
+                PetscSectionGetOffset(section, pts[p], &off);  // assume dof==1
+                if (pts[p] < vertexend) { // get location from coords
+                    int voff;
+                    voff = pts[p] - vertexstart;
+                    x = acoords[2*voff+0];
+                    y = acoords[2*voff+1];
+                    if (closure_view) {
+                        ierr = PetscPrintf(PETSC_COMM_WORLD,
+                            "cell %d: vertex %d at (%g,%g)\n",
+                            j,pts[p],x,y); CHKERRQ(ierr);
+                    }
+                } else { // assume it is an edge ... compute center
+                    const int *vertices;
+                    int       voff[2];
+                    double    vx[2], vy[2];
+                    ierr = DMPlexGetCone(dmplex, pts[p], &vertices); CHKERRQ(ierr);
+                    voff[0] = vertices[0] - vertexstart;
+                    voff[1] = vertices[1] - vertexstart;
+                    vx[0] = acoords[2*voff[0]+0];
+                    vy[0] = acoords[2*voff[0]+1];
+                    vx[1] = acoords[2*voff[1]+0];
+                    vy[1] = acoords[2*voff[1]+1];
+                    x = 0.5 * (vx[0] + vx[1]);
+                    y = 0.5 * (vy[0] + vy[1]);
+                    if (closure_view) {
+                        ierr = PetscPrintf(PETSC_COMM_WORLD,
+                            "cell %d: edge %d with ends (%g,%g) and (%g,%g) has center (%g,%g)\n",
+                            j,pts[p],vx[0],vy[0],vx[1],vy[1],x,y); CHKERRQ(ierr);
+                    }
+                }
+                av[off] = exp(- x - 2 * y);
             }
         }
-        DMPlexRestoreTransitiveClosure(dmplex, 1, PETSC_TRUE, &numpts, &pts);
-*/
+        ierr = DMPlexRestoreTransitiveClosure(dmplex, j, PETSC_TRUE, &numpts, &pts); CHKERRQ(ierr);
+    }
+    ierr = VecRestoreArray(v, &av); CHKERRQ(ierr);
+    ierr = VecRestoreArray(coords, &acoords); CHKERRQ(ierr);
 
+    ierr = PetscObjectViewFromOptions((PetscObject)v,NULL,"-v_vec_view"); CHKERRQ(ierr);
+
+    ierr = VecDestroy(&v); CHKERRQ(ierr);
     PetscSectionDestroy(&section); DMDestroy(&dmplex);
     return PetscFinalize();
 }
