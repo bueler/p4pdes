@@ -53,10 +53,14 @@ static const int npoint = 15,
                                 {6,7},
                                 {5,7}};
 
+static double f(double x, double y) {
+    return exp(- x - 2 * y);
+}
+
 extern PetscErrorCode CreateMeshByHand(DM*);
 extern PetscErrorCode CreateCoordinateSectionByHand(DM*);
 extern PetscErrorCode CreateSection2DP2(DM,PetscSection*);
-extern PetscErrorCode EvalFunction2DP2(DM,PetscSection,Vec*);
+extern PetscErrorCode EvalFunction2DP2(DM,PetscSection,double(double,double),Vec*);
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
@@ -123,7 +127,7 @@ int main(int argc,char **argv) {
     // put function f(x,y) into v by local calculations using coordinates and p2section
     ierr = DMCreateGlobalVector(dmplex, &v); CHKERRQ(ierr);
     ierr = PetscObjectSetName((PetscObject)v, "v"); CHKERRQ(ierr);
-    ierr = EvalFunction2DP2(dmplex,p2section,&v); CHKERRQ(ierr);
+    ierr = EvalFunction2DP2(dmplex,p2section,f,&v); CHKERRQ(ierr);
     ierr = PetscObjectViewFromOptions((PetscObject)v,NULL,"-v_vec_view"); CHKERRQ(ierr);
 
     VecDestroy(&v);  PetscSectionDestroy(&p2section);  DMDestroy(&dmplex);
@@ -236,7 +240,9 @@ PetscErrorCode CreateSection2DP2(DM dmplex, PetscSection *section) {
     return 0;
 }
 
-PetscErrorCode EvalFunction2DP2(DM dmplex, PetscSection section, Vec *v) {
+
+PetscErrorCode EvalFunction2DP2(DM dmplex, PetscSection section,
+                                double f(double x,double y), Vec *v) {
     PetscErrorCode ierr;
     DM        cdm;
     Vec       vloc, coords;
@@ -278,7 +284,7 @@ PetscErrorCode EvalFunction2DP2(DM dmplex, PetscSection section, Vec *v) {
                 }
                 // get index "off" into Vec vloc based on P2 scalar section
                 PetscSectionGetOffset(section, pts[p], &off);
-                avloc[off] = exp(- x - 2 * y);  // FIXME make argument f(x,y)
+                avloc[off] = f(x,y);
             }
         }
         ierr = DMPlexRestoreTransitiveClosure(dmplex, j, PETSC_TRUE, &numpts, &pts); CHKERRQ(ierr);
