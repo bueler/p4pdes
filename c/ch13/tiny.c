@@ -11,12 +11,11 @@ compare these views:
     ./tiny -dm_view
     ./tiny -section_view
     ./tiny -v_vec_view
+
 and -plex_view_xxx options (see plexview.h)
 
 check it out: parallel refinement already works!:
     mpiexec -n 2 ./tiny -dm_refine 1 -plex_view_ranges -plex_view_coords
-
--tny_closure_view FIXME move to plex_view
 
 FIXME quadrature and integration of f(x,y) = e^{-x - 2 y}
 
@@ -56,19 +55,20 @@ static const int npoint = 15,
 
 extern PetscErrorCode CreateMeshByHand(DM*);
 extern PetscErrorCode CreateCoordinateSectionByHand(DM*);
+extern PetscErrorCode CreateSection2DP2(DM,PetscSection*);
+extern PetscErrorCode EvalFunction2DP2(DM,PetscSection,Vec*);
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
     DM            dmplex;
-    PetscSection  section;
-    PetscBool     by_hand = PETSC_FALSE, closure_view = PETSC_FALSE;
+    PetscSection  p2section;
+    Vec           v;
+    PetscBool     by_hand = PETSC_FALSE;
 
     PetscInitialize(&argc,&argv,NULL,help);
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "tny_", "options for tiny", "");CHKERRQ(ierr);
     ierr = PetscOptionsBool("-by_hand", "use by-hand construction",
                             "tiny.c", by_hand, &by_hand, NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-closure_view", "show coordinates of each cells transitive closure",
-                            "tiny.c", closure_view, &closure_view, NULL);CHKERRQ(ierr);
     ierr = PetscOptionsEnd();
 
     if (by_hand) {
@@ -115,87 +115,18 @@ int main(int argc,char **argv) {
     ierr = DMViewFromOptions(dmplex, NULL, "-dm_view"); CHKERRQ(ierr);  // why not enabled by default?
     ierr = PlexViewFromOptions(dmplex); CHKERRQ(ierr);
 
-    // Create nodes (degrees of freedom) for P2 elements using PetscSection.
-    {
-        int  j, vertexstart, edgeend;
-        ierr = DMPlexGetDepthStratum(dmplex, 0, &vertexstart, NULL); CHKERRQ(ierr);
-        ierr = DMPlexGetDepthStratum(dmplex, 1, NULL, &edgeend); CHKERRQ(ierr);
-        // section has 1 dof on each vertex (depth==0) and (depth==1).
-        ierr = PetscSectionCreate(PETSC_COMM_WORLD,&section); CHKERRQ(ierr);
-        ierr = PetscObjectSetName((PetscObject)section, "P2 scalar section"); CHKERRQ(ierr);
-        ierr = PetscSectionSetNumFields(section, 1); CHKERRQ(ierr);
-        ierr = PetscSectionSetChart(section, vertexstart, edgeend); CHKERRQ(ierr);
-        for (j = vertexstart; j < edgeend; ++j) {
-            ierr = PetscSectionSetDof(section, j, 1); CHKERRQ(ierr);
-            ierr = PetscSectionSetFieldDof(section, j, 0, 1); CHKERRQ(ierr);
-        }
-        ierr = PetscSectionSetUp(section); CHKERRQ(ierr);
-        ierr = DMSetDefaultSection(dmplex, section); CHKERRQ(ierr);
-        ierr = PetscObjectViewFromOptions((PetscObject)section,NULL,"-section_view"); CHKERRQ(ierr);
-    }
+    // Create nodes (degrees of freedom) for 2D P2 elements using PetscSection.
+    ierr = CreateSection2DP2(dmplex,&p2section); CHKERRQ(ierr);
+    ierr = DMSetDefaultSection(dmplex, p2section); CHKERRQ(ierr);
+    ierr = PetscObjectViewFromOptions((PetscObject)p2section,NULL,"-section_view"); CHKERRQ(ierr);
 
-    // put function f(x,y) into v
-    DM        cdm;
-    Vec       v, coords;
-    double    *av, *acoords, x, y;
-    int       numpts, *pts = NULL, off,
-              j, p, vertexstart, vertexend, edgeend, cellstart, cellend;
-
-    ierr = DMCreateLocalVector(dmplex, &v); CHKERRQ(ierr);
+    // put function f(x,y) into v by local calculations using coordinates and p2section
+    ierr = DMCreateGlobalVector(dmplex, &v); CHKERRQ(ierr);
     ierr = PetscObjectSetName((PetscObject)v, "v"); CHKERRQ(ierr);
-    ierr = VecGetArray(v, &av); CHKERRQ(ierr);
-    ierr = DMGetCoordinateDM(dmplex, &cdm); CHKERRQ(ierr);
-    ierr = DMGetCoordinatesLocal(dmplex,&coords); CHKERRQ(ierr);
-    ierr = DMPlexGetHeightStratum(dmplex, 0, &cellstart, &cellend); CHKERRQ(ierr);
-    ierr = DMPlexGetDepthStratum(dmplex, 0, &vertexstart, &vertexend); CHKERRQ(ierr);
-    ierr = DMPlexGetDepthStratum(dmplex, 1, NULL, &edgeend); CHKERRQ(ierr);
-    ierr = VecGetArray(coords, &acoords); CHKERRQ(ierr);
-    for (j = cellstart; j < cellend; j++) {
-        ierr = DMPlexGetTransitiveClosure(dmplex, j, PETSC_TRUE, &numpts, &pts);
-        for (p = 0; p < numpts*2; p += 2) {   // omit orientations
-            if ((pts[p] >= vertexstart) && (pts[p] < edgeend)) { // omit cells
-                PetscSectionGetOffset(section, pts[p], &off);  // assume dof==1
-                if (pts[p] < vertexend) { // get location from coords
-                    int voff;
-                    voff = pts[p] - vertexstart;
-                    x = acoords[2*voff+0];
-                    y = acoords[2*voff+1];
-                    if (closure_view) {
-                        ierr = PetscPrintf(PETSC_COMM_WORLD,
-                            "cell %d: vertex %d at (%g,%g)\n",
-                            j,pts[p],x,y); CHKERRQ(ierr);
-                    }
-                } else { // assume it is an edge ... compute center
-                    const int *vertices;
-                    int       voff[2];
-                    double    vx[2], vy[2];
-                    ierr = DMPlexGetCone(dmplex, pts[p], &vertices); CHKERRQ(ierr);
-                    voff[0] = vertices[0] - vertexstart;
-                    voff[1] = vertices[1] - vertexstart;
-                    vx[0] = acoords[2*voff[0]+0];
-                    vy[0] = acoords[2*voff[0]+1];
-                    vx[1] = acoords[2*voff[1]+0];
-                    vy[1] = acoords[2*voff[1]+1];
-                    x = 0.5 * (vx[0] + vx[1]);
-                    y = 0.5 * (vy[0] + vy[1]);
-                    if (closure_view) {
-                        ierr = PetscPrintf(PETSC_COMM_WORLD,
-                            "cell %d: edge %d with ends (%g,%g) and (%g,%g) has center (%g,%g)\n",
-                            j,pts[p],vx[0],vy[0],vx[1],vy[1],x,y); CHKERRQ(ierr);
-                    }
-                }
-                av[off] = exp(- x - 2 * y);
-            }
-        }
-        ierr = DMPlexRestoreTransitiveClosure(dmplex, j, PETSC_TRUE, &numpts, &pts); CHKERRQ(ierr);
-    }
-    ierr = VecRestoreArray(v, &av); CHKERRQ(ierr);
-    ierr = VecRestoreArray(coords, &acoords); CHKERRQ(ierr);
-
+    ierr = EvalFunction2DP2(dmplex,p2section,&v); CHKERRQ(ierr);
     ierr = PetscObjectViewFromOptions((PetscObject)v,NULL,"-v_vec_view"); CHKERRQ(ierr);
 
-    ierr = VecDestroy(&v); CHKERRQ(ierr);
-    PetscSectionDestroy(&section); DMDestroy(&dmplex);
+    VecDestroy(&v);  PetscSectionDestroy(&p2section);  DMDestroy(&dmplex);
     return PetscFinalize();
 }
 
@@ -279,6 +210,87 @@ PetscErrorCode CreateCoordinateSectionByHand(DM *dmplex) {
     // finally we tell the DM that it has coordinates
     ierr = DMSetCoordinatesLocal(*dmplex, coordinates); CHKERRQ(ierr);
     VecDestroy(&coordinates);
+    return 0;
+}
+
+PetscErrorCode CreateSection2DP2(DM dmplex, PetscSection *section) {
+    PetscErrorCode ierr;
+    int  j, pstart, pend, vertexstart, edgeend;
+    ierr = DMPlexGetChart(dmplex, &pstart, &pend); CHKERRQ(ierr);
+    ierr = DMPlexGetDepthStratum(dmplex, 0, &vertexstart, NULL); CHKERRQ(ierr);
+    ierr = DMPlexGetDepthStratum(dmplex, 1, NULL, &edgeend); CHKERRQ(ierr);
+    // p2section has dof=0 for each cell and dof=1 on each vertex (depth==0) and (depth==1).
+    ierr = PetscSectionCreate(PETSC_COMM_WORLD,section); CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject)*section, "P2 scalar section"); CHKERRQ(ierr);
+    ierr = PetscSectionSetNumFields(*section, 1); CHKERRQ(ierr);
+    ierr = PetscSectionSetChart(*section, pstart, pend); CHKERRQ(ierr);
+    for (j = pstart; j < pend; ++j) {
+        if (j < vertexstart) {
+            ierr = PetscSectionSetDof(*section, j, 0); CHKERRQ(ierr);
+            ierr = PetscSectionSetFieldDof(*section, j, 0, 0); CHKERRQ(ierr);
+        } else {
+            ierr = PetscSectionSetDof(*section, j, 1); CHKERRQ(ierr);
+            ierr = PetscSectionSetFieldDof(*section, j, 0, 1); CHKERRQ(ierr);
+        }
+    }
+    ierr = PetscSectionSetUp(*section); CHKERRQ(ierr);
+    return 0;
+}
+
+PetscErrorCode EvalFunction2DP2(DM dmplex, PetscSection section, Vec *v) {
+    PetscErrorCode ierr;
+    DM        cdm;
+    Vec       vloc, coords;
+    double    *avloc, *acoords, x, y;
+    int       numpts, *pts = NULL, dof, off,
+              j, p, vertexstart, vertexend, edgestart, edgeend, cellstart, cellend;
+
+    // we put values in a local vector, thus redundantly on overlap
+    ierr = DMGetLocalVector(dmplex, &vloc); CHKERRQ(ierr);
+    ierr = VecGetArray(vloc, &avloc); CHKERRQ(ierr);
+    // need coordinates of P2 nodes (i.e. both vertices and edges)
+    ierr = DMGetCoordinateDM(dmplex, &cdm); CHKERRQ(ierr);
+    ierr = DMGetCoordinatesLocal(dmplex,&coords); CHKERRQ(ierr);
+    ierr = DMPlexGetHeightStratum(dmplex, 0, &cellstart, &cellend); CHKERRQ(ierr);
+    ierr = DMPlexGetDepthStratum(dmplex, 0, &vertexstart, &vertexend); CHKERRQ(ierr);
+    ierr = DMPlexGetDepthStratum(dmplex, 1, &edgestart, &edgeend); CHKERRQ(ierr);
+    ierr = VecGetArray(coords, &acoords); CHKERRQ(ierr);
+    for (j = cellstart; j < cellend; j++) {
+        ierr = DMPlexGetTransitiveClosure(dmplex, j, PETSC_TRUE, &numpts, &pts);
+        for (p = 0; p < numpts*2; p += 2) {   // omit orientations
+            PetscSectionGetDof(section, pts[p], &dof);
+            if (dof > 0) {
+                // compute (x,y) for vertex or edge center from coords
+                if (pts[p] < vertexstart) {
+                    SETERRQ(PETSC_COMM_WORLD,1,"cell center computation not implemented\n");
+                } else if (pts[p] < edgestart) {
+                    int voff;
+                    voff = pts[p] - vertexstart;
+                    x = acoords[2*voff+0];
+                    y = acoords[2*voff+1];
+                } else { // pts[p] is an edge ...
+                    const int *vpts;
+                    int       voff[2];
+                    ierr = DMPlexGetCone(dmplex, pts[p], &vpts); CHKERRQ(ierr);
+                    voff[0] = vpts[0] - vertexstart;
+                    voff[1] = vpts[1] - vertexstart;
+                    x = 0.5 * (acoords[2*voff[0]+0] + acoords[2*voff[1]+0]);
+                    y = 0.5 * (acoords[2*voff[0]+1] + acoords[2*voff[1]+1]);
+                }
+                // get index "off" into Vec vloc based on P2 scalar section
+                PetscSectionGetOffset(section, pts[p], &off);
+                avloc[off] = exp(- x - 2 * y);  // FIXME make argument f(x,y)
+            }
+        }
+        ierr = DMPlexRestoreTransitiveClosure(dmplex, j, PETSC_TRUE, &numpts, &pts); CHKERRQ(ierr);
+    }
+    ierr = VecRestoreArray(vloc, &avloc); CHKERRQ(ierr);
+    ierr = VecRestoreArray(coords, &acoords); CHKERRQ(ierr);
+
+    // now we want v global, i.e. only values not duplicate ghosts
+    ierr = DMLocalToGlobalBegin(dmplex,vloc,INSERT_VALUES,*v); CHKERRQ(ierr);
+    ierr = DMLocalToGlobalEnd(dmplex,vloc,INSERT_VALUES,*v); CHKERRQ(ierr);
+    ierr = DMRestoreLocalVector(dmplex, &vloc); CHKERRQ(ierr);
     return 0;
 }
 
