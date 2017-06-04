@@ -47,7 +47,6 @@ if args.showdata:
     print data
 
 fig = plt.figure(figsize=(7,6))
-plt.hold(True)
 
 # actually plot points
 snesmarker = 'ko'
@@ -67,7 +66,6 @@ for k in range(len(data)):
         else:
             plt.semilogy(jshift,data[k][j+1],kspmarker,markersize=10.0)
 
-plt.hold(False)
 plt.grid(True)
 plt.xlabel('SNES iteration',fontsize=18.0)
 plt.xticks(range(len(data)))
