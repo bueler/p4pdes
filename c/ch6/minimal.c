@@ -54,10 +54,7 @@ gives 4.0 sec on N=1 and 2.1 sec on N=2
 #include "jacobians.c"
 #define COMM PETSC_COMM_WORLD
 
-
-// FIXME   add RHS f(x,y) and manufacture a solution
-
-// FIXME   write computeArea()
+// FIXME   write computeArea() using Q1 quadrature and make into a monitor to see area decrease as residual decreases
 
 
 typedef struct {

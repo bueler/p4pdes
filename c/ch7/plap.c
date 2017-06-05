@@ -8,6 +8,7 @@ static char help[] = "Solve the p-Laplacian equation in 2D using Q^1 FEM.\n"
 "Uses a manufactured solution.\n\n";
 
 #include <petsc.h>
+#include "../quadrature.h"
 
 #define COMM PETSC_COMM_WORLD
 
@@ -136,14 +137,6 @@ gradRef deval(const double v[4], double xi, double eta) {
 }
 //ENDGRADFEM
 
-static double
-    zq[3][3] = { {0.0,NAN,NAN},
-                 {-0.577350269189626,0.577350269189626,NAN},
-                 {-0.774596669241483,0.0,0.774596669241483} },
-    wq[3][3] = { {2.0,NAN,NAN},
-                 {1.0,1.0,NAN},
-                 {0.555555555555556,0.888888888888889,0.555555555555556} };
-
 //STARTTOOLS
 void GetUorG(DMDALocalInfo *info, int i, int j, double **au, double *u,
              PLapCtx *user) {
@@ -181,7 +174,8 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
                                   double *obj, PLapCtx *user) {
   PetscErrorCode ierr;
   const double hx = 1.0 / (info->mx+1),  hy = 1.0 / (info->my+1);
-  const int    n = user->quaddegree,
+  const Quad1D q = gausslegendre[user->quaddegree-1];
+  const int    n = q.n,
                XE = info->xs + info->xm,  YE = info->ys + info->ym;
   double       x, y, lobj = 0.0, u[4];
   int          i,j,r,s;
@@ -199,10 +193,11 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
                                    Frhs(x-hx,y-hy,user),
                                    Frhs(x,   y-hy,user)};
               GetUorG(info,i,j,au,u,user);
+              // loop over quadrature points
               for (r=0; r<n; r++) {
                   for (s=0; s<n; s++) {
-                      lobj += wq[n-1][r] * wq[n-1][s]
-                              * ObjIntegrandRef(info,f,u,zq[n-1][r],zq[n-1][s],
+                      lobj += q.w[r] * q.w[s]
+                              * ObjIntegrandRef(info,f,u,q.z[r],q.z[s],
                                                 user->p,user->eps);
                   }
               }
@@ -230,7 +225,8 @@ double FunIntegrandRef(DMDALocalInfo *info, int L,
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                                  double **FF, PLapCtx *user) {
   const double hx = 1.0 / (info->mx+1),  hy = 1.0 / (info->my+1);
-  const int    n = user->quaddegree,
+  const Quad1D q = gausslegendre[user->quaddegree-1];
+  const int    n = q.n,
                XE = info->xs + info->xm,  YE = info->ys + info->ym,
                li[4] = {0,-1,-1,0},  lj[4] = {0,0,-1,-1};
   double       x, y, u[4];
@@ -261,9 +257,8 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                   for (r=0; r<n; r++) {
                       for (s=0; s<n; s++) {
                          FF[QQ][PP]
-                             += 0.25 * hx * hy * wq[n-1][r] * wq[n-1][s]
-                                * FunIntegrandRef(info,l,f,u,
-                                                  zq[n-1][r],zq[n-1][s],
+                             += 0.25 * hx * hy * q.w[r] * q.w[s]
+                                * FunIntegrandRef(info,l,f,u,q.z[r],q.z[s],
                                                   user->p,user->eps);
                       }
                   }
