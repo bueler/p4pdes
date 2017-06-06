@@ -175,8 +175,7 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
   PetscErrorCode ierr;
   const double hx = 1.0 / (info->mx+1),  hy = 1.0 / (info->my+1);
   const Quad1D q = gausslegendre[user->quaddegree-1];
-  const int    n = q.n,
-               XE = info->xs + info->xm,  YE = info->ys + info->ym;
+  const int    XE = info->xs + info->xm,  YE = info->ys + info->ym;
   double       x, y, lobj = 0.0, u[4];
   int          i,j,r,s;
   MPI_Comm     com;
@@ -194,8 +193,8 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
                                    Frhs(x,   y-hy,user)};
               GetUorG(info,i,j,au,u,user);
               // loop over quadrature points
-              for (r=0; r<n; r++) {
-                  for (s=0; s<n; s++) {
+              for (r = 0; r < q.n; r++) {
+                  for (s = 0; s < q.n; s++) {
                       lobj += q.w[r] * q.w[s]
                               * ObjIntegrandRef(info,f,u,q.z[r],q.z[s],
                                                 user->p,user->eps);
@@ -226,8 +225,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                                  double **FF, PLapCtx *user) {
   const double hx = 1.0 / (info->mx+1),  hy = 1.0 / (info->my+1);
   const Quad1D q = gausslegendre[user->quaddegree-1];
-  const int    n = q.n,
-               XE = info->xs + info->xm,  YE = info->ys + info->ym,
+  const int    XE = info->xs + info->xm,  YE = info->ys + info->ym,
                li[4] = {0,-1,-1,0},  lj[4] = {0,0,-1,-1};
   double       x, y, u[4];
   int          i,j,l,r,s,PP,QQ;
@@ -254,8 +252,8 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
               // only update residual if we own node
               if (PP >= info->xs && PP < XE && QQ >= info->ys && QQ < YE) {
                   // loop over quadrature points
-                  for (r=0; r<n; r++) {
-                      for (s=0; s<n; s++) {
+                  for (r = 0; r < q.n; r++) {
+                      for (s = 0; s < q.n; s++) {
                          FF[QQ][PP]
                              += 0.25 * hx * hy * q.w[r] * q.w[s]
                                 * FunIntegrandRef(info,l,f,u,q.z[r],q.z[s],

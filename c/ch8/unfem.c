@@ -9,6 +9,7 @@ static char help[] = "Unstructured 2D FEM solution of nonlinear Poisson equation
 "along subsets of boundary.\n\n";
 
 #include <petsc.h>
+#include "../quadrature.h"
 #include "um.h"
 #include "cases.h"
 
@@ -16,7 +17,7 @@ static char help[] = "Unstructured 2D FEM solution of nonlinear Poisson equation
 typedef struct {
     UM     *mesh;
     int    solncase,
-           quaddeg;
+           quaddegree;
     double (*a_fcn)(double, double, double);
     double (*f_fcn)(double, double, double);
     double (*gD_fcn)(double, double);
@@ -63,32 +64,21 @@ double eval(const double v[3], double xi, double eta) {
 double InnerProd(const double V[2], const double W[2]) {
     return V[0] * W[0] + V[1] * W[1];
 }
-
-// quadrature points and weights
-const int    Q[3] = {1, 3, 4};  // number of quadrature points
-const double w[3][4]   = {{1.0/2.0,    NAN,       NAN,       NAN},
-                          {1.0/6.0,    1.0/6.0,   1.0/6.0,   NAN},
-                          {-27.0/96.0, 25.0/96.0, 25.0/96.0, 25.0/96.0}},
-             xi[3][4]  = {{1.0/3.0,    NAN,       NAN,       NAN},
-                          {1.0/6.0,    2.0/3.0,   1.0/6.0,   NAN},
-                          {1.0/3.0,    1.0/5.0,   3.0/5.0,   1.0/5.0}},
-             eta[3][4] = {{1.0/3.0,    NAN,       NAN,       NAN},
-                          {1.0/6.0,    1.0/6.0,   2.0/3.0,   NAN},
-                          {1.0/3.0,    1.0/5.0,   1.0/5.0,   3.0/5.0}};
 //ENDFEM
 
 //STARTRESIDUAL
 PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
     PetscErrorCode ierr;
-    unfemCtx     *user = (unfemCtx*)ctx;
-    const int    *abfn, *ae, *as, *abfs, *en, deg = user->quaddeg - 1;
-    const Node   *aloc;
-    const double *au;
-    double       *aF, unode[3], gradu[2], gradpsi[3][2],
-                 uquad[4], aquad[4], fquad[4],
-                 dx, dy, dx1, dx2, dy1, dy2, detJ,
-                 ls, xmid, ymid, sint, xx, yy, psi, sum;
-    int          n, p, na, nb, k, l, q;
+    unfemCtx        *user = (unfemCtx*)ctx;
+    const Quad2DTri q = symmgauss[user->quaddegree-1];
+    const int       *abfn, *ae, *as, *abfs, *en;
+    const Node      *aloc;
+    const double    *au;
+    double          *aF, unode[3], gradu[2], gradpsi[3][2],
+                    uquad[4], aquad[4], fquad[4],
+                    dx, dy, dx1, dx2, dy1, dy2, detJ,
+                    ls, xmid, ymid, sint, xx, yy, psi, ip, sum;
+    int             n, p, na, nb, k, l, r;
 
     PetscLogStagePush(user->resstage);  //STRIP
     ierr = VecGetArrayRead(u,&au); CHKERRQ(ierr);
@@ -154,22 +144,21 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
             gradu[1] += unode[l] * gradpsi[l][1];
         }
         // function values at quadrature points on element
-        for (q = 0; q < Q[deg]; q++) {
-            uquad[q] = eval(unode,xi[deg][q],eta[deg][q]);
-            xx = aloc[en[0]].x + dx1 * xi[deg][q] + dx2 * eta[deg][q];
-            yy = aloc[en[0]].y + dy1 * xi[deg][q] + dy2 * eta[deg][q];
-            aquad[q] = user->a_fcn(uquad[q],xx,yy);
-            fquad[q] = user->f_fcn(uquad[q],xx,yy);
+        for (r = 0; r < q.n; r++) {
+            uquad[r] = eval(unode,q.xi[r],q.eta[r]);
+            xx = aloc[en[0]].x + dx1 * q.xi[r] + dx2 * q.eta[r];
+            yy = aloc[en[0]].y + dy1 * q.xi[r] + dy2 * q.eta[r];
+            aquad[r] = user->a_fcn(uquad[r],xx,yy);
+            fquad[r] = user->f_fcn(uquad[r],xx,yy);
         }
         // residual contribution for each node of element
         for (l = 0; l < 3; l++) {
             if (abfn[en[l]] < 2) { // if NOT a Dirichlet node
                 sum = 0.0;
-                for (q = 0; q < Q[deg]; q++) {
-                    psi = chi(l,xi[deg][q],eta[deg][q]);
-                    sum += w[deg][q]
-                             * ( aquad[q] * InnerProd(gradu,gradpsi[l])
-                                 - fquad[q] * psi );
+                for (r = 0; r < q.n; r++) {
+                    psi = chi(l,q.xi[r],q.eta[r]);
+                    ip  = InnerProd(gradu,gradpsi[l]);
+                    sum += q.w[r] * ( aquad[r] * ip - fquad[r] * psi );
                 }
                 aF[en[l]] += fabs(detJ) * sum;
             }
@@ -188,14 +177,15 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
 
 PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
     PetscErrorCode ierr;
-    unfemCtx     *user = (unfemCtx*)ctx;
-    const int    *abfn, *ae, *en, deg = user->quaddeg - 1;
-    const Node   *aloc;
-    const double *au;
-    double       unode[3], gradpsi[3][2],
-                 uquad[4], aquad[4], v[9],
-                 dx1, dx2, dy1, dy2, detJ, xx, yy, sum;
-    int          n, k, l, m, q, cr, cv, row[3];
+    unfemCtx        *user = (unfemCtx*)ctx;
+    const Quad2DTri q = symmgauss[user->quaddegree-1];
+    const int       *abfn, *ae, *en;
+    const Node      *aloc;
+    const double    *au;
+    double          unode[3], gradpsi[3][2],
+                    uquad[4], aquad[4], v[9],
+                    dx1, dx2, dy1, dy2, detJ, xx, yy, sum;
+    int             n, k, l, m, r, cr, cv, row[3];
 
     PetscLogStagePush(user->jacstage);  //STRIP
     ierr = MatZeroEntries(P); CHKERRQ(ierr);
@@ -227,11 +217,11 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
                 unode[l] = au[en[l]];
         }
         // function values at quadrature points on element
-        for (q = 0; q < Q[deg]; q++) {
-            uquad[q] = eval(unode,xi[deg][q],eta[deg][q]);
-            xx = aloc[en[0]].x + dx1 * xi[deg][q] + dx2 * eta[deg][q];
-            yy = aloc[en[0]].y + dy1 * xi[deg][q] + dy2 * eta[deg][q];
-            aquad[q] = user->a_fcn(uquad[q],xx,yy);
+        for (r = 0; r < q.n; r++) {
+            uquad[r] = eval(unode,q.xi[r],q.eta[r]);
+            xx = aloc[en[0]].x + dx1 * q.xi[r] + dx2 * q.eta[r];
+            yy = aloc[en[0]].y + dy1 * q.xi[r] + dy2 * q.eta[r];
+            aquad[r] = user->a_fcn(uquad[r],xx,yy);
         }
         // generate 3x3 element stiffness matrix
         cr = 0; // count rows
@@ -243,8 +233,8 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
                 for (m = 0; m < 3; m++) {
                     if (abfn[en[m]] != 2) {
                         sum = 0.0;
-                        for (q = 0; q < Q[deg]; q++) {
-                            sum += w[deg][q] * aquad[q]
+                        for (r = 0; r < q.n; r++) {
+                            sum += q.w[r] * aquad[r]
                                        * InnerProd(gradpsi[l],gradpsi[m]);
                         }
                         v[cv] = fabs(detJ) * sum;
@@ -322,7 +312,7 @@ int main(int argc,char **argv) {
     ierr = PetscLogStageRegister("Residual eval  ", &user.resstage); CHKERRQ(ierr);  //STRIP
     ierr = PetscLogStageRegister("Jacobian eval  ", &user.jacstage); CHKERRQ(ierr);  //STRIP
 
-    user.quaddeg = 1;
+    user.quaddegree = 1;
     user.solncase = 0;
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "un_", "options for unfem", ""); CHKERRQ(ierr);
     ierr = PetscOptionsInt("-case",
@@ -331,9 +321,9 @@ int main(int argc,char **argv) {
     ierr = PetscOptionsString("-mesh",
            "file name root of mesh stored in PETSc binary with .vec,.is extensions",
            "unfem.c",root,root,sizeof(root),NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsInt("-quaddeg",
+    ierr = PetscOptionsInt("-quaddegree",
            "quadrature degree (1,2,3)",
-           "unfem.c",user.quaddeg,&(user.quaddeg),NULL); CHKERRQ(ierr);
+           "unfem.c",user.quaddegree,&(user.quaddegree),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsBool("-view",
            "view loaded nodes and elements at stdout",
            "unfem.c",view,&view,NULL); CHKERRQ(ierr);

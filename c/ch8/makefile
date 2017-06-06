@@ -19,7 +19,7 @@ rununfem_1: petscPyScripts
 rununfem_2: petscPyScripts
 	-@triangle -pqa0.5 meshes/trap > /dev/null
 	-@./tri2petsc.py meshes/trap.1 meshes/trap.1 > /dev/null
-	-@../testit.sh unfem "-un_mesh meshes/trap.1 -un_quaddeg 2 -un_case 1" 1 2
+	-@../testit.sh unfem "-un_mesh meshes/trap.1 -un_quaddegree 2 -un_case 1" 1 2
 
 rununfem_3: petscPyScripts
 	-@triangle -pqa0.5 meshes/trapneu > /dev/null
