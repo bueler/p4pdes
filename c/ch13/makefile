@@ -19,7 +19,10 @@ runtiny_3:
 runtiny_4:
 	-@../testit.sh tiny "-plex_view_closures_coords -v_vec_view" 2 4
 
-test_tiny: runtiny_1 runtiny_2 runtiny_3 runtiny_4
+runtiny_5:
+	-@../testit.sh tiny "-dm_refine 1 -tny_integrate_f -tny_quaddegree 1" 1 5
+
+test_tiny: runtiny_1 runtiny_2 runtiny_3 runtiny_4 runtiny_5
 
 test: test_tiny
 
