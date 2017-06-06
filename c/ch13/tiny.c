@@ -7,6 +7,10 @@ static const char help[] =
 or by directly setting cones "by hand":
     ./tiny -tny_by_hand
 
+compute an integral by symmetric Gauss quadrature:
+    ./tiny -tny_integrate_f
+    ./tiny -tny_integrate_f -tny_quaddegree 1|[2]|3
+
 compare these views:
     ./tiny -dm_view
     ./tiny -section_view
@@ -14,15 +18,18 @@ compare these views:
 
 and -plex_view_xxx options (see plexview.h)
 
-check it out: parallel refinement already works!:
+parallel refinement works:
     mpiexec -n 2 ./tiny -dm_refine 1 -plex_view_ranges -plex_view_coords
 
-FIXME quadrature and integration of f(x,y) = e^{-x - 2 y}
+FIXME interpolation of f(x,y) by P2
+
+FIXME interpolate f(x,y) by P2 and integrate it
 
 FIXME add option -tny_element P1|P2|P3
 */
 
 #include <petsc.h>
+#include "../quadrature.h"
 #include "plexview.h"
 
 // Describe the mesh "triangle style" with separate numbering for cells and vertices.
@@ -59,20 +66,30 @@ static double f(double x, double y) {
 
 extern PetscErrorCode CreateMeshByHand(DM*);
 extern PetscErrorCode CreateCoordinateSectionByHand(DM*);
-extern PetscErrorCode CreateSection2DP2(DM,PetscSection*);
-extern PetscErrorCode EvalFunction2DP2(DM,PetscSection,double(double,double),Vec*);
+extern PetscErrorCode CreateSectionP2(DM,PetscSection*);
+extern PetscErrorCode IntegrateF(DM,double(double,double),int,double*);
+extern PetscErrorCode EvaluateFP2(DM,PetscSection,double(double,double),Vec*);
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
     DM            dmplex;
     PetscSection  p2section;
     Vec           v;
-    PetscBool     by_hand = PETSC_FALSE;
+    PetscBool     by_hand = PETSC_FALSE,
+                  integrate_f = PETSC_FALSE;
+    int           quaddegree = 2;
 
     PetscInitialize(&argc,&argv,NULL,help);
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "tny_", "options for tiny", "");CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-by_hand", "use by-hand construction",
-                            "tiny.c", by_hand, &by_hand, NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-by_hand",
+        "use by-hand construction",
+        "tiny.c", by_hand, &by_hand, NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-integrate_f",
+        "integrate f(x,y) by summing over cells and using quadrature",
+        "tiny.c", integrate_f, &integrate_f, NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsInt("-quaddegree",
+        "use this quadrature degree for numerical integrations",
+        "tiny.c", quaddegree, &quaddegree, NULL);CHKERRQ(ierr);
     ierr = PetscOptionsEnd();
 
     // create the DMPlex mesh
@@ -119,21 +136,30 @@ int main(int argc,char **argv) {
     ierr = DMViewFromOptions(dmplex, NULL, "-dm_view"); CHKERRQ(ierr);
     ierr = PlexViewFromOptions(dmplex); CHKERRQ(ierr);
 
-    // create nodes (degrees of freedom) for 2D P2 elements using PetscSection
-    ierr = CreateSection2DP2(dmplex,&p2section); CHKERRQ(ierr);
+    // integrate f(x,y) by summing over cells and using quadrature
+    if (integrate_f) {
+        double       integral;
+        const double intfexact = (1.0 - exp(-1.0)) * 0.5 * (1.0 - exp (-2.0));
+        ierr = IntegrateF(dmplex,f,quaddegree,&integral); CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_WORLD,
+            "integral of f(x,y) is %.12f with error %.2e\n",
+            integral,fabs(integral - intfexact)); CHKERRQ(ierr);
+    }
+
+    // create nodes (degrees of freedom) for P2 elements using PetscSection
+    ierr = CreateSectionP2(dmplex,&p2section); CHKERRQ(ierr);
     ierr = DMSetDefaultSection(dmplex, p2section); CHKERRQ(ierr);
     ierr = PetscObjectViewFromOptions((PetscObject)p2section,NULL,"-section_view"); CHKERRQ(ierr);
 
     // put function f(x,y) into v by local calculations using coordinates and p2section
     ierr = DMCreateGlobalVector(dmplex, &v); CHKERRQ(ierr);
     ierr = PetscObjectSetName((PetscObject)v, "v"); CHKERRQ(ierr);
-    ierr = EvalFunction2DP2(dmplex,p2section,f,&v); CHKERRQ(ierr);
+    ierr = EvaluateFP2(dmplex,p2section,f,&v); CHKERRQ(ierr);
     ierr = PetscObjectViewFromOptions((PetscObject)v,NULL,"-v_vec_view"); CHKERRQ(ierr);
 
     VecDestroy(&v);  PetscSectionDestroy(&p2section);  DMDestroy(&dmplex);
     return PetscFinalize();
 }
-
 
 /* This function is essentially equivalent to using DMPlexCreateFromCellList().
 Note that rank 0 gets the actual mesh and other ranks get an empty mesh.
@@ -217,7 +243,67 @@ PetscErrorCode CreateCoordinateSectionByHand(DM *dmplex) {
     return 0;
 }
 
-PetscErrorCode CreateSection2DP2(DM dmplex, PetscSection *section) {
+// use quadrature to integrate a function by summing over cells
+PetscErrorCode IntegrateF(DM dmplex, double f(double x,double y),
+                          int quaddegree, double *fint) {
+    PetscErrorCode ierr;
+    DM              cdm;
+    Vec             coords;
+    const Quad2DTri q = symmgauss[quaddegree-1];
+    const double    *acoords;
+    double          x[3], y[3], xr, yr, dx1, dx2, dy1, dy2, absdetJ,
+                    csum, fintloc;
+    int             numpts, *pts = NULL, voff, j, p, l, r,
+                    vertstart, vertend, cellstart, cellend;
+    MPI_Comm        comm;
+
+    ierr = DMGetCoordinateDM(dmplex, &cdm); CHKERRQ(ierr);
+    ierr = DMGetCoordinatesLocal(dmplex, &coords); CHKERRQ(ierr);
+    ierr = DMPlexGetHeightStratum(dmplex, 0, &cellstart, &cellend); CHKERRQ(ierr);
+    ierr = DMPlexGetDepthStratum(dmplex, 0, &vertstart, &vertend); CHKERRQ(ierr);
+    ierr = VecGetArrayRead(coords, &acoords); CHKERRQ(ierr);
+    // integral by sum over cells
+    fintloc = 0.0;
+    for (j = cellstart; j < cellend; j++) {
+        ierr = DMPlexGetTransitiveClosure(dmplex, j, PETSC_TRUE, &numpts, &pts);
+        if (numpts != 7) {
+            SETERRQ(PETSC_COMM_WORLD,1,"wrong: assume closure of triangle has 7 points\n");
+        }
+        // record vertex coordinates
+        for (l = 0; l < 3; l++) { // loop through vertex points
+            p = 8 + 2 * l; // p=0,1 are cell info; p=2,...,7 are edge info; omit orientations
+            if ((pts[p] < vertstart) || (pts[p] >= vertend))  {
+                SETERRQ(PETSC_COMM_WORLD,2,"wrong: pts[p] should be a vertex\n");
+            }
+            voff = pts[p] - vertstart;
+            x[l] = acoords[2*voff+0];
+            y[l] = acoords[2*voff+1];
+        }
+        // geometry of element (cell)
+        dx1 = x[1] - x[0];
+        dx2 = x[2] - x[0];
+        dy1 = y[1] - y[0];
+        dy2 = y[2] - y[0];
+        absdetJ = fabs(dx1 * dy2 - dx2 * dy1);
+        // sum over quadrature points on cell
+        csum = 0.0;
+        for (r = 0; r < q.n; r++) {
+            xr = x[0] + dx1 * q.xi[r] + dx2 * q.eta[r];
+            yr = y[0] + dy1 * q.xi[r] + dy2 * q.eta[r];
+            csum += q.w[r] * f(xr,yr);
+        }
+        // add cell contribution
+        fintloc += absdetJ * csum;
+        ierr = DMPlexRestoreTransitiveClosure(dmplex, j, PETSC_TRUE, &numpts, &pts); CHKERRQ(ierr);
+    }
+    ierr = VecRestoreArrayRead(coords, &acoords); CHKERRQ(ierr);
+
+    ierr = PetscObjectGetComm((PetscObject)dmplex,&comm); CHKERRQ(ierr);
+    ierr = MPI_Allreduce(&fintloc,fint,1,MPI_DOUBLE,MPI_SUM,comm); CHKERRQ(ierr);
+    return 0;
+}
+
+PetscErrorCode CreateSectionP2(DM dmplex, PetscSection *section) {
     PetscErrorCode ierr;
     int  j, pstart, pend, vertexstart, edgeend;
     ierr = PetscSectionCreate(PETSC_COMM_WORLD,section); CHKERRQ(ierr);
@@ -240,15 +326,15 @@ PetscErrorCode CreateSection2DP2(DM dmplex, PetscSection *section) {
     return 0;
 }
 
-
-PetscErrorCode EvalFunction2DP2(DM dmplex, PetscSection section,
+PetscErrorCode EvaluateFP2(DM dmplex, PetscSection section,
                                 double f(double x,double y), Vec *v) {
     PetscErrorCode ierr;
-    DM        cdm;
-    Vec       vloc, coords;
-    double    *avloc, *acoords, x, y;
-    int       numpts, *pts = NULL, dof, off,
-              j, p, vertexstart, vertexend, edgestart, edgeend, cellstart, cellend;
+    DM           cdm;
+    Vec          vloc, coords;
+    double       *avloc, x, y;
+    const double *acoords;
+    int          numpts, *pts = NULL, dof, off, j, p,
+                 vertstart, vertend, edgestart, edgeend, cellstart, cellend;
 
     // we put values in a local vector, thus redundantly on overlap
     ierr = DMGetLocalVector(dmplex, &vloc); CHKERRQ(ierr);
@@ -257,28 +343,28 @@ PetscErrorCode EvalFunction2DP2(DM dmplex, PetscSection section,
     ierr = DMGetCoordinateDM(dmplex, &cdm); CHKERRQ(ierr);
     ierr = DMGetCoordinatesLocal(dmplex,&coords); CHKERRQ(ierr);
     ierr = DMPlexGetHeightStratum(dmplex, 0, &cellstart, &cellend); CHKERRQ(ierr);
-    ierr = DMPlexGetDepthStratum(dmplex, 0, &vertexstart, &vertexend); CHKERRQ(ierr);
+    ierr = DMPlexGetDepthStratum(dmplex, 0, &vertstart, &vertend); CHKERRQ(ierr);
     ierr = DMPlexGetDepthStratum(dmplex, 1, &edgestart, &edgeend); CHKERRQ(ierr);
-    ierr = VecGetArray(coords, &acoords); CHKERRQ(ierr);
+    ierr = VecGetArrayRead(coords, &acoords); CHKERRQ(ierr);
     for (j = cellstart; j < cellend; j++) {
         ierr = DMPlexGetTransitiveClosure(dmplex, j, PETSC_TRUE, &numpts, &pts);
         for (p = 0; p < numpts*2; p += 2) {   // omit orientations
             PetscSectionGetDof(section, pts[p], &dof);
             if (dof > 0) {
                 // compute (x,y) for vertex or edge center from coords
-                if (pts[p] < vertexstart) {
+                if (pts[p] < vertstart) {
                     SETERRQ(PETSC_COMM_WORLD,1,"cell center computation not implemented\n");
                 } else if (pts[p] < edgestart) {
                     int voff;
-                    voff = pts[p] - vertexstart;
+                    voff = pts[p] - vertstart;
                     x = acoords[2*voff+0];
                     y = acoords[2*voff+1];
                 } else { // pts[p] is an edge ...
                     const int *vpts;
                     int       voff[2];
                     ierr = DMPlexGetCone(dmplex, pts[p], &vpts); CHKERRQ(ierr);
-                    voff[0] = vpts[0] - vertexstart;
-                    voff[1] = vpts[1] - vertexstart;
+                    voff[0] = vpts[0] - vertstart;
+                    voff[1] = vpts[1] - vertstart;
                     x = 0.5 * (acoords[2*voff[0]+0] + acoords[2*voff[1]+0]);
                     y = 0.5 * (acoords[2*voff[0]+1] + acoords[2*voff[1]+1]);
                 }
@@ -290,7 +376,7 @@ PetscErrorCode EvalFunction2DP2(DM dmplex, PetscSection section,
         ierr = DMPlexRestoreTransitiveClosure(dmplex, j, PETSC_TRUE, &numpts, &pts); CHKERRQ(ierr);
     }
     ierr = VecRestoreArray(vloc, &avloc); CHKERRQ(ierr);
-    ierr = VecRestoreArray(coords, &acoords); CHKERRQ(ierr);
+    ierr = VecRestoreArrayRead(coords, &acoords); CHKERRQ(ierr);
 
     // now we want v global, i.e. only values not duplicate ghosts
     ierr = DMLocalToGlobalBegin(dmplex,vloc,INSERT_VALUES,*v); CHKERRQ(ierr);
@@ -298,4 +384,6 @@ PetscErrorCode EvalFunction2DP2(DM dmplex, PetscSection section,
     ierr = DMRestoreLocalVector(dmplex, &vloc); CHKERRQ(ierr);
     return 0;
 }
+
+// FIXME InterpolateFP2()
 
