@@ -172,7 +172,8 @@ PetscErrorCode PlexViewClosuresCoords(DM plex) {
     ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
     ierr = MPI_Comm_rank(comm,&rank); CHKERRQ(ierr);
     ierr = PetscObjectGetName((PetscObject)plex,&plexname); CHKERRQ(ierr);
-    ierr = PetscPrintf(comm,"closure points and coordinates for each cell in DMPlex %s:\n",plexname); CHKERRQ(ierr);
+    ierr = PetscPrintf(comm,
+        "closure points and coordinates for each cell in DMPlex %s:\n",plexname); CHKERRQ(ierr);
     if (size > 1) {
         ierr = PetscSynchronizedPrintf(comm,"  [rank %d]",rank); CHKERRQ(ierr);
     }
