@@ -2,12 +2,12 @@
 #define QUADRATURE_H_
 
 //STARTONEDIM
-#define MAXPTS1D 3
+#define MAXPTS 3
 
 typedef struct {
-    int    n;            // number of quadrature points for this rule
-    double xi[MAXPTS1D], // locations in [-1,1]
-           w[MAXPTS1D];  // weights (sum to 2)
+    int    n;          // number of quadrature points for this rule
+    double xi[MAXPTS], // locations in [-1,1]
+           w[MAXPTS];  // weights (sum to 2)
 } Quad1D;
 
 static const Quad1D gausslegendre[3]
@@ -23,13 +23,13 @@ static const Quad1D gausslegendre[3]
 //ENDONEDIM
 
 //STARTTRIANGLE
-#define MAXPTS2DT 4
+#define MAXPTS 4
 
 typedef struct {
-    int    n;              // number of quadrature points for this rule
-    double xi[MAXPTS2DT],  // locations: (xi,eta) in reference triangle
-           eta[MAXPTS2DT], //   with vertices (0,0), (1,0), (0,1)
-           w[MAXPTS2DT];   // weights (sum to 0.5)
+    int    n;           // number of quadrature points for this rule
+    double xi[MAXPTS],  // locations: (xi,eta) in reference triangle
+           eta[MAXPTS], //   with vertices (0,0), (1,0), (0,1)
+           w[MAXPTS];   // weights (sum to 0.5)
 } Quad2DTri;
 
 static const Quad2DTri symmgauss[3]
