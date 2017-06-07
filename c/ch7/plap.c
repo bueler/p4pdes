@@ -113,9 +113,7 @@ double eval(const double v[4], double xi, double eta) {
         sum += v[L] * chi(L,xi,eta);
     return sum;
 }
-//ENDFEM
 
-//STARTGRADFEM
 typedef struct {
     double  xi, eta;
 } gradRef;
@@ -135,7 +133,7 @@ gradRef deval(const double v[4], double xi, double eta) {
     }
     return sum;
 }
-//ENDGRADFEM
+//ENDFEM
 
 //STARTTOOLS
 void GetUorG(DMDALocalInfo *info, int i, int j, double **au, double *u,
@@ -164,7 +162,8 @@ double GradPow(DMDALocalInfo *info, gradRef du, double P, double eps) {
 //ENDTOOLS
 
 //STARTOBJECTIVE
-double ObjIntegrandRef(DMDALocalInfo *info, const double f[4], const double u[4],
+double ObjIntegrandRef(DMDALocalInfo *info,
+                       const double f[4], const double u[4],
                        double xi, double eta, double p, double eps) {
     const gradRef du = deval(u,xi,eta);
     return GradPow(info,du,p,eps) / p - eval(f,xi,eta) * eval(u,xi,eta);
@@ -250,13 +249,15 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
               PP = i + li[l];
               QQ = j + lj[l];
               // only update residual if we own node
-              if (PP >= info->xs && PP < XE && QQ >= info->ys && QQ < YE) {
+              if (PP >= info->xs && PP < XE
+                  && QQ >= info->ys && QQ < YE) {
                   // loop over quadrature points
                   for (r = 0; r < q.n; r++) {
                       for (s = 0; s < q.n; s++) {
                          FF[QQ][PP]
                              += 0.25 * hx * hy * q.w[r] * q.w[s]
-                                * FunIntegrandRef(info,l,f,u,q.xi[r],q.xi[s],
+                                * FunIntegrandRef(info,l,f,u,
+                                                  q.xi[r],q.xi[s],
                                                   user->p,user->eps);
                       }
                   }
