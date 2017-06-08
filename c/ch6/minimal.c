@@ -52,9 +52,8 @@ gives 4.0 sec on N=1 and 2.1 sec on N=2
 
 #include <petsc.h>
 #include "jacobians.c"
+#include "../quadrature.h"
 #define COMM PETSC_COMM_WORLD
-
-// FIXME   write computeArea() using Q1 quadrature and make into a monitor to see area decrease as residual decreases
 
 
 typedef struct {
@@ -196,12 +195,43 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
     return 0;
 }
 
+// compute surface area using Q1 quadrature
+PetscErrorCode AreaMonitor(SNES snes, int its, double norm, void *ctx) {
+    PetscErrorCode ierr;
+    DM             da;
+    Vec            u;
+    DMDALocalInfo  info;
+    double         xymin[2], xymax[2], hx, hy, **au, arealoc, area;
+    int            i,j;
+    MPI_Comm       comm;
+    ierr = SNESGetDM(snes, &da); CHKERRQ(ierr);
+    ierr = SNESGetSolution(snes, &u); CHKERRQ(ierr);
+    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+    ierr = DMDAGetBoundingBox(da,xymin,xymax); CHKERRQ(ierr);
+    hx = (xymax[0] - xymin[0]) / (info.mx - 1);
+    hy = (xymax[1] - xymin[1]) / (info.my - 1);
+    ierr = DMDAVecGetArrayRead(da,u,&au); CHKERRQ(ierr);
+    arealoc = 0.0;
+    for (j = info.ys; j < info.ys + info.ym; j++) {
+        for (i = info.xs; i < info.xs + info.xm; i++) {
+            arealoc += au[j][i]; // FIXME WRONG formula
+        }
+    }
+    ierr = DMDAVecRestoreArrayRead(da,u,&au); CHKERRQ(ierr);
+    arealoc *= hx * hy;
+    ierr = PetscObjectGetComm((PetscObject)da,&comm); CHKERRQ(ierr);
+    ierr = MPI_Allreduce(&arealoc,&area,1,MPI_DOUBLE,MPI_SUM,comm); CHKERRQ(ierr);
+    ierr = PetscPrintf(COMM,"   %3d: area = %.14f\n",its,area); CHKERRQ(ierr);
+    return 0;
+}
+
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
     DM             da;
     SNES           snes;
     Vec            u;
     MinimalCtx     user;
+    PetscBool      monitor_area = PETSC_FALSE;
     DMDALocalInfo  info;
 
     PetscInitialize(&argc,&argv,NULL,help);
@@ -216,6 +246,8 @@ int main(int argc,char **argv) {
                             "minimal.c",user.laplace,&(user.laplace),NULL);CHKERRQ(ierr);
     ierr = PetscOptionsBool("-manu","solve nonlinear problem with manufactured solution",
                             "minimal.c",user.manu,&(user.manu),NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-monitor_area","compute and print surface area at each SNES iteration",
+                            "minimal.c",monitor_area,&(monitor_area),NULL);CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
     ierr = DMDACreate2d(COMM,
@@ -238,6 +270,9 @@ int main(int argc,char **argv) {
     //     (consider using -snes_mf_operator)
     ierr = DMDASNESSetJacobianLocal(da,
                (DMDASNESJacobian)Form2DJacobianLocal,&user); CHKERRQ(ierr);
+    if (monitor_area) {
+        ierr = SNESMonitorSet(snes,AreaMonitor,&user,NULL); CHKERRQ(ierr);
+    }
     ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
     ierr = VecSet(u,0.0); CHKERRQ(ierr);
