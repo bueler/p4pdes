@@ -38,7 +38,7 @@ $ ./fish1 -da_refine 4 -pc_type mg -mg_coarse_ksp_type cg -mg_coarse_pc_type jac
 */
 
 #include <petsc.h>
-#include "jacobians.c"
+#include "../jacobians.h"
 #define COMM PETSC_COMM_WORLD
 
 typedef struct {

@@ -33,7 +33,7 @@ with e.g. -ksp_monitor_solution :foo.m:ascii_matlab
 */
 
 #include <petsc.h>
-#include "jacobians.c"
+#include "../jacobians.h"
 #define COMM PETSC_COMM_WORLD
 
 typedef struct {

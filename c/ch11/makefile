@@ -1,9 +1,9 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
-obstacle: obstacle.o  chkopts
-	-${CLINKER} -o obstacle obstacle.o  ${PETSC_LIB}
-	${RM} obstacle.o
+obstacle: obstacle.o ../jacobians.o chkopts
+	-${CLINKER} -o obstacle obstacle.o ../jacobians.o ${PETSC_LIB}
+	${RM} obstacle.o ../jacobians.o
 
 ice: ice.o  chkopts
 	-${CLINKER} -o ice ice.o  ${PETSC_LIB}

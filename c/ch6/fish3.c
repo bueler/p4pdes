@@ -7,7 +7,7 @@ static char help[] =
 /* see study/mgstudy.sh for multigrid parameter study */
 
 #include <petsc.h>
-#include "jacobians.c"
+#include "../jacobians.h"
 #define COMM PETSC_COMM_WORLD
 
 typedef struct {

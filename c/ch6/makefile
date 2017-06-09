@@ -1,21 +1,21 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
-fish1: fish1.o chkopts
-	-${CLINKER} -o fish1 fish1.o ${PETSC_LIB}
-	${RM} fish1.o
+fish1: fish1.o ../jacobians.o chkopts
+	-${CLINKER} -o fish1 fish1.o ../jacobians.o ${PETSC_LIB}
+	${RM} fish1.o ../jacobians.o
 
-fish2: fish2.o chkopts
-	-${CLINKER} -o fish2 fish2.o ${PETSC_LIB}
-	${RM} fish2.o
+fish2: fish2.o ../jacobians.o chkopts
+	-${CLINKER} -o fish2 fish2.o ../jacobians.o ${PETSC_LIB}
+	${RM} fish2.o ../jacobians.o
 
-fish3: fish3.o chkopts
-	-${CLINKER} -o fish3 fish3.o ${PETSC_LIB}
-	${RM} fish3.o
+fish3: fish3.o ../jacobians.o chkopts
+	-${CLINKER} -o fish3 fish3.o ../jacobians.o ${PETSC_LIB}
+	${RM} fish3.o ../jacobians.o
 
-minimal: minimal.o chkopts
-	-${CLINKER} -o minimal minimal.o ${PETSC_LIB}
-	${RM} minimal.o
+minimal: minimal.o ../jacobians.o chkopts
+	-${CLINKER} -o minimal minimal.o ../jacobians.o ${PETSC_LIB}
+	${RM} minimal.o ../jacobians.o
 
 # testing
 

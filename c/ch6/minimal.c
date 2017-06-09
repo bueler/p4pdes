@@ -50,7 +50,7 @@ gives 4.0 sec on N=1 and 2.1 sec on N=2
 */
 
 #include <petsc.h>
-#include "jacobians.c"
+#include "../jacobians.h"
 #include "../quadrature.h"
 #define COMM PETSC_COMM_WORLD
 

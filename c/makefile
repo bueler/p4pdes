@@ -17,5 +17,5 @@ distclean:
 	for DIR in $(TESTDIRS); do \
 	     (cd $$DIR; rm -f maketmp tmp difftmp; ${MAKE} distclean; cd solns/; ${MAKE} distclean); \
 	done
-	@rm -f *~
+	@rm -f *~ *.o
 

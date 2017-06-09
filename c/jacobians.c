@@ -1,9 +1,5 @@
-/* Includable file which promotes code re-use.
-
-This contains 1D, 2D, 3D matrix-assembly routines for the Jacobians of the
-Poisson equation with Dirichlet boundary conditions, i.e. for discretized
-Laplacian operators, on structured grids.
-*/
+#include <petsc.h>
+#include "jacobians.h"
 
 PetscErrorCode Form1DJacobianLocal(DMDALocalInfo *info, PetscScalar *au,
                                    Mat J, Mat Jpre, void *user) {
