@@ -184,7 +184,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                     duy = (un - au[j][i]) / hy;
                     Dn = DD(dux * dux + duy * duy);
                     // ...                  at south point  (i,j-1/2):
-                    dux = (ue + use - uw - use) / (4.0 * hx);
+                    dux = (ue + use - uw - usw) / (4.0 * hx);
                     duy = (au[j][i] - us) / hy;
                     Ds = DD(dux * dux + duy * duy);
                 }
