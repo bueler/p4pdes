@@ -58,58 +58,76 @@ gives 4.0 sec on N=1 and 2.1 sec on N=2
 typedef struct {
     double    H;       // height of tent along y=0 boundary
     PetscBool laplace, // solve Laplace equation instead of minimal surface
-              manu;    // solve with manufactured f(x,y) and g(x,y) = 0  FIXME: working?
+              manu;    // solve with manufactured f(x,y) and g(x,y) = 0
 } MinimalCtx;
 
-// Dirichlet boundary condition along y=0 boundary
-double GG(PetscBool manu, double H, double x) {
-    return (manu) ? 0.0 : 2.0 * H * (x < 0.5 ? x : (1.0 - x));
+// Dirichlet boundary condition; only use along y=0 boundary
+double GG(double x, MinimalCtx *user) {
+    if (user->manu)
+        return 0.0;
+    else
+        return 2.0 * user->H * (x < 0.5 ? x : 1.0 - x);
 }
 
 // the coefficient (diffusivity) of minimal surface equation, as a function
-//   of  z = |nabla u|^2
-double DD(double z) { 
-    return pow(1.0 + z,-0.5);
+//   of  s = |grad u|^2
+double DD(double s) {
+    return pow(1.0 + s,-0.5);
 }
 
-// this derivative is only used in manufacturing a solution
-double dDD(double z) { 
-    return -0.5 * pow(1.0 + z,-1.5);
+// derivative is only used in manufacturing a solution
+double dDD(double s) {
+    return -0.5 * pow(1.0 + s,-1.5);
 }
 
 // manufactured only: the exact solution u(x,y)
-double u_M(double x, double y) {
+double u_manu(double x, double y) {
     return (x - x*x) * (y*y - y);
 }
 
-// manufactured only: the right-hand-side f(x,y)
-double f_M(double x, double y) {
-    double dux, duy, gsu, dgsux, dgsuy;
-    dux   = (1.0 - 2.0 * x) * (y*y - y);
-    duy   = (x - x*x) * (2.0 * y - 1.0);
-    gsu   = dux * dux + duy * duy;  // Gradient Squared of U
-    dgsux =   2.0 * dux * (-2.0 * (y*y - y))
-            + 2.0 * duy * ((1.0 - 2.0 * x) * (2.0 * y - 1));
-    dgsuy =   2.0 * dux * ((1.0 - 2.0 * x) * (2.0 * y - 1))
-            + 2.0 * duy * (2.0 * (x - x*x));
-    return - dDD(gsu) * (dgsux * dux + dgsuy * duy)
-           - 2.0 * DD(gsu) * (y - y*y + x - x*x);
+// manufactured only: the right-hand-side f(x,y) = - div (DD(s) grad u)
+double f_manu(double x, double y, MinimalCtx *user) {
+    if (user->manu) {
+        double uxx, uyy;
+        uxx  = - 2.0 * (y*y - y);
+        uyy  = (x - x*x) * 2.0;
+        if (user->laplace) {
+            return - uxx - uyy;
+        } else {
+            double ux, uy, uxy, s, sx, sy;
+            ux   = (1.0 - 2.0 * x) * (y*y - y);
+            uy   = (x - x*x) * (2.0 * y - 1.0);
+            uxy  = (1.0 - 2.0 * x) * (2.0 * y - 1.0);
+            s    = ux * ux + uy * uy;  // s = |grad u|^2
+            sx   = 2.0 * ux * uxx + 2.0 * uy * uxy;
+            sy   = 2.0 * ux * uxy + 2.0 * uy * uyy;
+            return - dDD(s) * (sx * ux + sy * uy) - DD(s) * (uxx + uyy);
+        }
+    } else
+        return 0.0;
+}
+
+PetscErrorCode Spacings(DMDALocalInfo *info, double *hx, double *hy) {
+    PetscErrorCode ierr;
+    double  xymin[2], xymax[2];
+    ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
+    *hx = (xymax[0] - xymin[0]) / (info->mx - 1);
+    *hy = (xymax[1] - xymin[1]) / (info->my - 1);
+    return 0;
 }
 
 PetscErrorCode FormExactManufactured(DMDALocalInfo *info, Vec uexact,
                                      MinimalCtx *user) {
     PetscErrorCode ierr;
-    int          i, j;
-    double       xymin[2], xymax[2], hx, hy, x, y, **auexact;
-    ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
-    hx = (xymax[0] - xymin[0]) / (info->mx - 1);
-    hy = (xymax[1] - xymin[1]) / (info->my - 1);
+    int     i, j;
+    double  hx, hy, x, y, **auexact;
+    ierr = Spacings(info,&hx,&hy); CHKERRQ(ierr);
     ierr = DMDAVecGetArray(info->da,uexact,&auexact); CHKERRQ(ierr);
     for (j = info->ys; j < info->ys + info->ym; j++) {
-        y = xymin[1] + j * hy;
+        y = j * hy;
         for (i = info->xs; i < info->xs + info->xm; i++) {
-            x = xymin[0] + i * hx;
-            auexact[j][i] = u_M(x,y);
+            x = i * hx;
+            auexact[j][i] = u_manu(x,y);
         }
     }
     ierr = DMDAVecRestoreArray(info->da,uexact,&auexact); CHKERRQ(ierr);
@@ -120,20 +138,18 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                                  double **FF, MinimalCtx *user) {
     PetscErrorCode ierr;
     int          i, j;
-    double       xymin[2], xymax[2], hx, hy, hxhy, hyhx, x, y,
+    double       hx, hy, hxhy, hyhx, x, y,
                  ue, uw, un, us, une, use, unw, usw,
                  dux, duy, De, Dw, Dn, Ds;
-    ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
-    hx = (xymax[0] - xymin[0]) / (info->mx - 1);
-    hy = (xymax[1] - xymin[1]) / (info->my - 1);
+    ierr = Spacings(info,&hx,&hy); CHKERRQ(ierr);
     hxhy = hx / hy;
     hyhx = hy / hx;
     for (j = info->ys; j < info->ys + info->ym; j++) {
-        y = xymin[1] + j * hy;
+        y = j * hy;
         for (i = info->xs; i < info->xs + info->xm; i++) {
-            x = xymin[0] + i * hx;
+            x = i * hx;
             if (j==0) {
-                FF[j][i] = au[j][i] - GG(user->manu,user->H,x);
+                FF[j][i] = au[j][i] - GG(x,user);
             } else if (i==0 || i==info->mx-1 || j==info->my-1) {
                 FF[j][i] = au[j][i];
             } else {
@@ -142,7 +158,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                 ue  = (i+1 == info->mx-1) ? 0.0 : au[j][i+1];
                 uw  = (i-1 == 0)          ? 0.0 : au[j][i-1];
                 un  = (j+1 == info->my-1) ? 0.0 : au[j+1][i];
-                us  = (j-1 == 0)          ? GG(user->manu,user->H,x) : au[j-1][i];
+                us  = (j-1 == 0)          ? GG(x,user) : au[j-1][i];
                 if (user->laplace) {
                     De = 1.0;  Dw = 1.0;
                     Dn = 1.0;  Ds = 1.0;
@@ -160,14 +176,14 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                     if (i+1 == info->mx-1) {
                         use = 0.0;
                     } else if (j-1 == 0) {
-                        use = GG(user->manu,user->H,x + hx);
+                        use = GG(x + hx,user);
                     } else {
                         use = au[j-1][i+1];
                     }
                     if (i-1 == 0) {
                         usw = 0.0;
                     } else if (j-1 == 0) {
-                        usw = GG(user->manu,user->H,x - hx);
+                        usw = GG(x - hx,user);
                     } else {
                         usw = au[j-1][i-1];
                     }
@@ -190,10 +206,8 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                 }
                 // evaluate residual
                 FF[j][i] = - hyhx * (De * (ue - au[j][i]) - Dw * (au[j][i] - uw))
-                           - hxhy * (Dn * (un - au[j][i]) - Ds * (au[j][i] - us));
-                if (user->manu) {
-                    FF[j][i] -= f_M(x,y);
-                }
+                           - hxhy * (Dn * (un - au[j][i]) - Ds * (au[j][i] - us))
+                           - hx * hy * f_manu(x,y,user);
             }
         }
     }
@@ -208,8 +222,7 @@ PetscErrorCode AreaMonitor(SNES snes, int its, double norm, void *ctx) {
     DMDALocalInfo  info;
     const int      ndegree = 2;
     const Quad1D   q = gausslegendre[ndegree-1];
-    double         xymin[2], xymax[2], hx, hy, **au,
-                   x_i, y_j, x, y, ux, uy, arealoc, area;
+    double         hx, hy, **au, x_i, y_j, x, y, ux, uy, arealoc, area;
     int            i, j, r, s;
     MPI_Comm       comm;
     ierr = SNESGetDM(snes, &da); CHKERRQ(ierr);
@@ -218,18 +231,16 @@ PetscErrorCode AreaMonitor(SNES snes, int its, double norm, void *ctx) {
     ierr = DMGlobalToLocalBegin(da, u, INSERT_VALUES, uloc); CHKERRQ(ierr);
     ierr = DMGlobalToLocalEnd(da, u, INSERT_VALUES, uloc); CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-    ierr = DMDAGetBoundingBox(da,xymin,xymax); CHKERRQ(ierr);
-    hx = (xymax[0] - xymin[0]) / (info.mx - 1);
-    hy = (xymax[1] - xymin[1]) / (info.my - 1);
+    ierr = Spacings(&info,&hx,&hy); CHKERRQ(ierr);
     ierr = DMDAVecGetArrayRead(da,uloc,&au); CHKERRQ(ierr);
     arealoc = 0.0;
     // loop over rectangles in grid
     for (j = info.ys; j < info.ys + info.ym; j++) {
         if (j == 0)
             continue;
-        y_j = xymin[1] + j * hy;
+        y_j = j * hy;
         for (i = info.xs; i < info.xs + info.xm; i++) {
-            x_i = xymin[0] + i * hx;
+            x_i = i * hx;
             if (i == 0)
                 continue;
             // loop over quadrature points in rectangle w corner (x_i,y_j)
@@ -252,10 +263,11 @@ PetscErrorCode AreaMonitor(SNES snes, int its, double norm, void *ctx) {
         }
     }
     ierr = DMDAVecRestoreArrayRead(da,uloc,&au); CHKERRQ(ierr);
+    ierr = DMRestoreLocalVector(da, &uloc); CHKERRQ(ierr);
     arealoc *= hx * hy / 4.0;  // from change of variables formula
     ierr = PetscObjectGetComm((PetscObject)da,&comm); CHKERRQ(ierr);
     ierr = MPI_Allreduce(&arealoc,&area,1,MPI_DOUBLE,MPI_SUM,comm); CHKERRQ(ierr);
-    ierr = PetscPrintf(COMM,"   %3d: area = %.14f\n",its,area); CHKERRQ(ierr);
+    ierr = PetscPrintf(COMM,"    area = %.14f\n",area); CHKERRQ(ierr);
     return 0;
 }
 

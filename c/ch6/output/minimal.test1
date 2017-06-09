@@ -1,2 +1,7 @@
-Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+  0 SNES Function norm 0.155134 
+  1 SNES Function norm 0.00214165 
+  2 SNES Function norm 1.15716e-06 
+  3 SNES Function norm < 1.e-11
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+error |u-uexact|_inf = 8.03119e-05
 done on 5 x 5 grid ...
