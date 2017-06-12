@@ -25,15 +25,12 @@ The matrices A are normalized so that A / (hx * hy) approximates the Laplacian.
 Thus the entries are O(1).  The entries are integers if hx = hy.
 */
 
-typedef enum {MANUPOLY, MANUEXP, ZERO} PoissonProblemType;
-extern const char *PoissonProblemTypes[];
-
+//FIXME rename u_exact() --> g_bdry()
 typedef struct {
-    PoissonProblemType problem;
     // the exact solution u(x,y,z), for boundary condition and error calculation:
-    double             (*u_exact)(double x, double y, double z);
+    double (*u_exact)(double x, double y, double z);
     // the right-hand-side f(x,y,z) = - laplacian u:
-    double             (*f_rhs)(double x, double y, double z);
+    double (*f_rhs)(double x, double y, double z);
 } PoissonCtx;
 
 

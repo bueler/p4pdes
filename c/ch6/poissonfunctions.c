@@ -1,14 +1,32 @@
 #include <petsc.h>
 #include "poissonfunctions.h"
 
-const char* PoissonProblemTypes[] = {"manupoly","manuexp","zero",
-                                     "PoissonProblemType", "", NULL};
+PetscErrorCode Form1DFunctionLocal(DMDALocalInfo *info, double *au,
+                                   double *aF, PoissonCtx *user) {
+    PetscErrorCode ierr;
+    int          i;
+    double       xmax[1], xmin[1], hx, x, ue, uw;
+    ierr = DMDAGetBoundingBox(info->da,xmin,xmax); CHKERRQ(ierr);
+    hx = (xmax[0] - xmin[0]) / (info->mx - 1);
+    for (i = info->xs; i < info->xs + info->xm; i++) {
+        x = xmin[0] + i * hx;
+        if (i==0 || i==info->mx-1) {
+            aF[i] = au[i] - user->u_exact(x,0.0,0.0);
+        } else {
+            ue = (i+1 == info->mx-1) ? user->u_exact(x+hx,0.0,0.0) : au[i+1];
+            uw = (i-1 == 0)          ? user->u_exact(x-hx,0.0,0.0) : au[i-1];
+            aF[i] = 2.0 * au[i] - uw - ue
+                    - hx * hx * user->f_rhs(x,0.0,0.0);
+        }
+    }
+    return 0;
+}
 
 PetscErrorCode Form2DFunctionLocal(DMDALocalInfo *info, double **au,
                                    double **aF, PoissonCtx *user) {
     PetscErrorCode ierr;
     int     i, j;
-    double  hx, hy, xymin[2], xymax[2], x, y, ue, uw, un, us;
+    double  xymin[2], xymax[2], hx, hy, x, y, ue, uw, un, us;
     ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
     hx = (xymax[0] - xymin[0]) / (info->mx - 1);
     hy = (xymax[1] - xymin[1]) / (info->my - 1);
@@ -33,6 +51,12 @@ PetscErrorCode Form2DFunctionLocal(DMDALocalInfo *info, double **au,
             }
         }
     }
+    return 0;
+}
+
+PetscErrorCode Form3DFunctionLocal(DMDALocalInfo *info, double ***au,
+                                   double ***aF, PoissonCtx *user) {
+    SETERRQ(PETSC_COMM_WORLD,1,"NOT TRANSFERED YET\n");
     return 0;
 }
 
