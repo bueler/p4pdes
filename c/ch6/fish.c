@@ -17,17 +17,17 @@ since these are linear problems, consider adding:
 see study/mgstudy.sh for multigrid parameter study
 
 this makes sense and shows V-cycles:
-$ ./fish2 -da_refine 3 -pc_type mg -snes_type ksponly -ksp_converged_reason -mg_levels_ksp_monitor
+$ ./fish -da_refine 3 -pc_type mg -snes_type ksponly -ksp_converged_reason -mg_levels_ksp_monitor
 
 in parallel with -snes_fd_color (exploits full rediscretization)
-$ mpiexec -n 2 ./fish2 -da_refine 4 -pc_type mg -snes_fd_color
+$ mpiexec -n 2 ./fish -da_refine 4 -pc_type mg -snes_fd_color
 
 compare with rediscretization at every level or use Galerkin coarse grid operator
-$ ./fish2 -da_refine 4 -pc_type mg -snes_monitor
-$ ./fish2 -da_refine 4 -pc_type mg -snes_monitor -pc_mg_galerkin
+$ ./fish -da_refine 4 -pc_type mg -snes_monitor
+$ ./fish -da_refine 4 -pc_type mg -snes_monitor -pc_mg_galerkin
 
 choose linear solver for coarse grid (default is preonly+lu):
-$ ./fish2 -da_refine 4 -pc_type mg -mg_coarse_ksp_type cg -mg_coarse_pc_type jacobi -ksp_view
+$ ./fish -da_refine 4 -pc_type mg -mg_coarse_ksp_type cg -mg_coarse_pc_type jacobi -ksp_view
 
 to make truly random init, with time as seed, add
     #include <time.h>
@@ -42,7 +42,7 @@ add viewer for RHS:
    PetscViewerPushFormat(viewer,PETSC_VIEWER_ASCII_MATLAB);
    VecView(f,viewer);
 then do:
-$ ./fish2 -da_refine 1 -snes_monitor -ksp_monitor -snes_max_it 1 -ksp_type richardson -pc_type jacobi|sor
+$ ./fish -da_refine 1 -snes_monitor -ksp_monitor -snes_max_it 1 -ksp_type richardson -pc_type jacobi|sor
 with e.g. -ksp_monitor_solution :foo.m:ascii_matlab
 */
 
@@ -118,17 +118,17 @@ int main(int argc,char **argv) {
 
     PetscInitialize(&argc,&argv,NULL,help);
     user.problem = MANUEXP;
-    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"fsh_", "options for fish2.c", ""); CHKERRQ(ierr);
+    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"fsh_", "options for fish.c", ""); CHKERRQ(ierr);
     ierr = PetscOptionsReal("-Lx",
-         "set Lx in domain [0,Lx] x [0,Ly]","fish2.c",Lx,&Lx,NULL);CHKERRQ(ierr);
+         "set Lx in domain [0,Lx] x [0,Ly]","fish.c",Lx,&Lx,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsReal("-Ly",
-         "set Ly in domain [0,Lx] x [0,Ly]","fish2.c",Ly,&Ly,NULL);CHKERRQ(ierr);
+         "set Ly in domain [0,Lx] x [0,Ly]","fish.c",Ly,&Ly,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsBool("-init_random",
          "initial state is random (default is zero)",
-         "fish2.c",init_random,&init_random,NULL);CHKERRQ(ierr);
+         "fish.c",init_random,&init_random,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsEnum("-problem",
          "problem type (determines exact solution and RHS)",
-         "fish2.c",PoissonProblemTypes,
+         "fish.c",PoissonProblemTypes,
          (PetscEnum)user.problem,(PetscEnum*)&user.problem,NULL); CHKERRQ(ierr);
     user.u_exact = u_exact_ptr[user.problem];
     user.f_rhs = f_rhs_ptr[user.problem];
