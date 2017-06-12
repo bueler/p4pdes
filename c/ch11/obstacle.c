@@ -18,17 +18,13 @@ typedef struct {
       g;    // Dirichlet boundary conditions
 } ObsCtx;
 
-void GridSpaces(DMDALocalInfo *info, double *dx, double *dy) {
-  *dx = 4.0 / (PetscReal)(info->mx-1);
-  *dy = 4.0 / (PetscReal)(info->my-1);
-}
-
 PetscErrorCode FormDirichletPsiExact(DMDALocalInfo *info, Vec Uexact, ObsCtx *user) {
   PetscErrorCode ierr;
   int            i,j;
   double         **ag, **apsi, **auexact, dx, dy, x, y, r,
                  afree = 0.69797, A = 0.68026, B = 0.47152;
-  GridSpaces(info,&dx,&dy);
+  dx = 4.0 / (PetscReal)(info->mx-1);
+  dy = 4.0 / (PetscReal)(info->my-1);
   ierr = DMDAVecGetArray(info->da, user->g, &ag);CHKERRQ(ierr);
   ierr = DMDAVecGetArray(info->da, user->psi, &apsi);CHKERRQ(ierr);
   ierr = DMDAVecGetArray(info->da, Uexact, &auexact);CHKERRQ(ierr);
@@ -69,6 +65,7 @@ PetscErrorCode FormBounds(SNES snes, Vec Xl, Vec Xu) {
   return 0;
 }
 
+// DEPRECATED
 /* FormFunctionLocal - Evaluates nonlinear function, F(x) on local process patch */
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscScalar **au,
                                  PetscScalar **aF, PoissonCtx *user) {
@@ -76,15 +73,18 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscScalar **au,
   int     i, j;
   double  dx, dy, hxhy, hyhx, uxx, uyy, **ag;
   ObsCtx  *octx = (ObsCtx*)(user->addctx);
-  GridSpaces(info,&dx,&dy);  hxhy = dx / dy;  hyhx = dy / dx;
+  dx = 4.0 / (PetscReal)(info->mx-1);
+  dy = 4.0 / (PetscReal)(info->my-1);
+  hxhy = dx / dy;  hyhx = dy / dx;
   ierr = DMDAVecGetArray(info->da, octx->g, &ag);CHKERRQ(ierr);
   for (j=info->ys; j<info->ys+info->ym; j++) {
     for (i=info->xs; i<info->xs+info->xm; i++) {
       if (i == 0 || j == 0 || i == info->mx-1 || j == info->my-1) {
         aF[j][i] = au[j][i] - ag[j][i];
       } else {
-        uxx     = hyhx * (au[j][i-1] - 2.0 * au[j][i] + au[j][i+1]);
-        uyy     = hxhy * (au[j-1][i] - 2.0 * au[j][i] + au[j+1][i]);
+        // NON-SYMMETRIC
+        uxx = hyhx * (au[j][i-1] - 2.0 * au[j][i] + au[j][i+1]);
+        uyy = hxhy * (au[j-1][i] - 2.0 * au[j][i] + au[j+1][i]);
         aF[j][i] = - uxx - uyy;
       }
     }
