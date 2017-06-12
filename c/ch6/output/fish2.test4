@@ -1,4 +1,0 @@
-Matrix is symmetric (tolerance 1e-05)
-Matrix is symmetric (tolerance 1e-05)
-Matrix is symmetric (tolerance 1e-05)
-on 9 x 9 grid:  error |u-uexact|_inf = 0.000763883, |...|_h = 4.12e-04
