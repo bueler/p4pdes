@@ -5,9 +5,9 @@ fish: fish.o poissonfunctions.o chkopts
 	-${CLINKER} -o fish fish.o poissonfunctions.o ${PETSC_LIB}
 	${RM} fish.o poissonfunctions.o
 
-minimal: minimal.o ../jacobians.o chkopts
-	-${CLINKER} -o minimal minimal.o ../jacobians.o ${PETSC_LIB}
-	${RM} minimal.o ../jacobians.o
+minimal: minimal.o poissonfunctions.o chkopts
+	-${CLINKER} -o minimal minimal.o poissonfunctions.o ${PETSC_LIB}
+	${RM} minimal.o poissonfunctions.o
 
 # testing
 

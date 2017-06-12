@@ -50,23 +50,22 @@ gives 4.0 sec on N=1 and 2.1 sec on N=2
 */
 
 #include <petsc.h>
-#include "../jacobians.h"
+#include "poissonfunctions.h"
 #include "../quadrature.h"
-#define COMM PETSC_COMM_WORLD
-
 
 typedef struct {
     double    H;       // height of tent along y=0 boundary
-    PetscBool laplace, // solve Laplace equation instead of minimal surface
-              manu;    // solve with manufactured f(x,y) and g(x,y) = 0
+    PetscBool laplace; // solve Laplace equation instead of minimal surface
 } MinimalCtx;
 
 // Dirichlet boundary condition; only use along y=0 boundary
-double GG(double x, MinimalCtx *user) {
-    if (user->manu)
-        return 0.0;
-    else
-        return 2.0 * user->H * (x < 0.5 ? x : 1.0 - x);
+double g_bdry_tent(double x, double y, double z, void *ctx) {
+    PoissonCtx *user = (PoissonCtx*)ctx;
+    MinimalCtx *mctx = (MinimalCtx*)(user->addctx);
+    if (PetscAbs(y) < 1.0e-8) {
+        return 2.0 * mctx->H * (x < 0.5 ? x : 1.0 - x);
+    } else
+        return 0;
 }
 
 // the coefficient (diffusivity) of minimal surface equation, as a function
@@ -80,31 +79,34 @@ double dDD(double s) {
     return -0.5 * pow(1.0 + s,-1.5);
 }
 
+double zero(double x, double y, double z, void *ctx) {
+    return 0.0;
+}
+
 // manufactured only: the exact solution u(x,y)
-double u_manu(double x, double y) {
+double u_manu(double x, double y, double z, void *ctx) {
     return (x - x*x) * (y*y - y);
 }
 
 // manufactured only: the right-hand-side f(x,y) = - div (DD(s) grad u)
-double f_manu(double x, double y, MinimalCtx *user) {
-    if (user->manu) {
-        double uxx, uyy;
-        uxx  = - 2.0 * (y*y - y);
-        uyy  = (x - x*x) * 2.0;
-        if (user->laplace) {
-            return - uxx - uyy;
-        } else {
-            double ux, uy, uxy, s, sx, sy;
-            ux   = (1.0 - 2.0 * x) * (y*y - y);
-            uy   = (x - x*x) * (2.0 * y - 1.0);
-            uxy  = (1.0 - 2.0 * x) * (2.0 * y - 1.0);
-            s    = ux * ux + uy * uy;  // s = |grad u|^2
-            sx   = 2.0 * ux * uxx + 2.0 * uy * uxy;
-            sy   = 2.0 * ux * uxy + 2.0 * uy * uyy;
-            return - dDD(s) * (sx * ux + sy * uy) - DD(s) * (uxx + uyy);
-        }
-    } else
-        return 0.0;
+double f_manu_laplace(double x, double y, double z, void *ctx) {
+    double uxx, uyy;
+    uxx  = - 2.0 * (y*y - y);
+    uyy  = (x - x*x) * 2.0;
+    return - uxx - uyy;
+}
+
+double f_manu(double x, double y, double z, void *ctx) {
+    double uxx, uyy, ux, uy, uxy, s, sx, sy;
+    uxx  = - 2.0 * (y*y - y);
+    uyy  = (x - x*x) * 2.0;
+    ux   = (1.0 - 2.0 * x) * (y*y - y);
+    uy   = (x - x*x) * (2.0 * y - 1.0);
+    uxy  = (1.0 - 2.0 * x) * (2.0 * y - 1.0);
+    s    = ux * ux + uy * uy;  // s = |grad u|^2
+    sx   = 2.0 * ux * uxx + 2.0 * uy * uxy;
+    sy   = 2.0 * ux * uxy + 2.0 * uy * uyy;
+    return - dDD(s) * (sx * ux + sy * uy) - DD(s) * (uxx + uyy);
 }
 
 PetscErrorCode Spacings(DMDALocalInfo *info, double *hx, double *hy) {
@@ -117,7 +119,7 @@ PetscErrorCode Spacings(DMDALocalInfo *info, double *hx, double *hy) {
 }
 
 PetscErrorCode FormExactManufactured(DMDALocalInfo *info, Vec uexact,
-                                     MinimalCtx *user) {
+                                     PoissonCtx *user) {
     PetscErrorCode ierr;
     int     i, j;
     double  hx, hy, x, y, **auexact;
@@ -127,7 +129,7 @@ PetscErrorCode FormExactManufactured(DMDALocalInfo *info, Vec uexact,
         y = j * hy;
         for (i = info->xs; i < info->xs + info->xm; i++) {
             x = i * hx;
-            auexact[j][i] = u_manu(x,y);
+            auexact[j][i] = u_manu(x,y,0.0,user);
         }
     }
     ierr = DMDAVecRestoreArray(info->da,uexact,&auexact); CHKERRQ(ierr);
@@ -135,12 +137,13 @@ PetscErrorCode FormExactManufactured(DMDALocalInfo *info, Vec uexact,
 }
 
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
-                                 double **FF, MinimalCtx *user) {
+                                 double **FF, PoissonCtx *user) {
     PetscErrorCode ierr;
-    int          i, j;
-    double       hx, hy, hxhy, hyhx, x, y,
-                 ue, uw, un, us, une, use, unw, usw,
-                 dux, duy, De, Dw, Dn, Ds;
+    MinimalCtx *mctx = (MinimalCtx*)(user->addctx);
+    int        i, j;
+    double     hx, hy, hxhy, hyhx, x, y,
+               ue, uw, un, us, une, use, unw, usw,
+               dux, duy, De, Dw, Dn, Ds;
     ierr = Spacings(info,&hx,&hy); CHKERRQ(ierr);
     hxhy = hx / hy;
     hyhx = hy / hx;
@@ -148,42 +151,40 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
         y = j * hy;
         for (i = info->xs; i < info->xs + info->xm; i++) {
             x = i * hx;
-            if (j==0) {
-                FF[j][i] = au[j][i] - GG(x,user);
-            } else if (i==0 || i==info->mx-1 || j==info->my-1) {
-                FF[j][i] = au[j][i];
+            if (j==0 || i==0 || i==info->mx-1 || j==info->my-1) {
+                FF[j][i] = au[j][i] - user->g_bdry(x,y,0.0,user);
             } else {
                 // assign neighbor values with either boundary condition or
                 //     current u at that point (==> symmetric matrix)
-                ue  = (i+1 == info->mx-1) ? 0.0 : au[j][i+1];
-                uw  = (i-1 == 0)          ? 0.0 : au[j][i-1];
-                un  = (j+1 == info->my-1) ? 0.0 : au[j+1][i];
-                us  = (j-1 == 0)          ? GG(x,user) : au[j-1][i];
-                if (user->laplace) {
+                ue  = (i+1 == info->mx-1) ? user->g_bdry(x+hx,y,0.0,user)
+                                          : au[j][i+1];
+                uw  = (i-1 == 0)          ? user->g_bdry(x-hx,y,0.0,user)
+                                          : au[j][i-1];
+                un  = (j+1 == info->my-1) ? user->g_bdry(x,y+hy,0.0,user)
+                                          : au[j+1][i];
+                us  = (j-1 == 0)          ? user->g_bdry(x,y-hy,0.0,user)
+                                          : au[j-1][i];
+                if (mctx->laplace) {
                     De = 1.0;  Dw = 1.0;
                     Dn = 1.0;  Ds = 1.0;
                 } else {
-                    if ((i+1 == info->mx-1) || (j+1 == info->my-1)) {
-                        une = 0.0;
+                    if (i+1 == info->mx-1 || j+1 == info->my-1) {
+                        une = user->g_bdry(x+hx,y+hy,0.0,user);
                     } else {
                         une = au[j+1][i+1];
                     }
-                    if ((i-1 == 0) || (j+1 == info->my-1)) {
-                        unw = 0.0;
+                    if (i-1 == 0 || j+1 == info->my-1) {
+                        unw = user->g_bdry(x-hx,y+hy,0.0,user);
                     } else {
                         unw = au[j+1][i-1];
                     }
-                    if (i+1 == info->mx-1) {
-                        use = 0.0;
-                    } else if (j-1 == 0) {
-                        use = GG(x + hx,user);
+                    if (i+1 == info->mx-1 || j-1 == 0) {
+                        use = user->g_bdry(x+hx,y-hy,0.0,user);
                     } else {
                         use = au[j-1][i+1];
                     }
-                    if (i-1 == 0) {
-                        usw = 0.0;
-                    } else if (j-1 == 0) {
-                        usw = GG(x - hx,user);
+                    if (i-1 == 0 || j-1 == 0) {
+                        usw = user->g_bdry(x-hx,y-hy,0.0,user);
                     } else {
                         usw = au[j-1][i-1];
                     }
@@ -207,7 +208,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                 // evaluate residual
                 FF[j][i] = - hyhx * (De * (ue - au[j][i]) - Dw * (au[j][i] - uw))
                            - hxhy * (Dn * (un - au[j][i]) - Ds * (au[j][i] - us))
-                           - hx * hy * f_manu(x,y,user);
+                           - hx * hy * user->f_rhs(x,y,0.0,user);
             }
         }
     }
@@ -267,7 +268,7 @@ PetscErrorCode AreaMonitor(SNES snes, int its, double norm, void *ctx) {
     arealoc *= hx * hy / 4.0;  // from change of variables formula
     ierr = PetscObjectGetComm((PetscObject)da,&comm); CHKERRQ(ierr);
     ierr = MPI_Allreduce(&arealoc,&area,1,MPI_DOUBLE,MPI_SUM,comm); CHKERRQ(ierr);
-    ierr = PetscPrintf(COMM,"    area = %.14f\n",area); CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"    area = %.14f\n",area); CHKERRQ(ierr);
     return 0;
 }
 
@@ -276,27 +277,40 @@ int main(int argc,char **argv) {
     DM             da;
     SNES           snes;
     Vec            u;
-    MinimalCtx     user;
-    PetscBool      monitor_area = PETSC_FALSE;
+    PoissonCtx     user;
+    MinimalCtx     mctx;
+    PetscBool      monitor_area = PETSC_FALSE,
+                   manu = PETSC_FALSE;    // solve with manufactured f(x,y) and g(x,y) = 0
     DMDALocalInfo  info;
 
     PetscInitialize(&argc,&argv,NULL,help);
-
-    user.H       = 1.0;
-    user.laplace = PETSC_FALSE;
-    user.manu    = PETSC_FALSE;
-    ierr = PetscOptionsBegin(COMM,"mse_","minimal surface equation solver options",""); CHKERRQ(ierr);
+    mctx.H = 1.0;
+    mctx.laplace = PETSC_FALSE;
+    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"mse_","minimal surface equation solver options",""); CHKERRQ(ierr);
     ierr = PetscOptionsReal("-H","tent height",
-                            "minimal.c",user.H,&(user.H),NULL); CHKERRQ(ierr);
+                            "minimal.c",mctx.H,&(mctx.H),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsBool("-laplace","solve Laplace equation (linear) instead of minimal surface",
-                            "minimal.c",user.laplace,&(user.laplace),NULL);CHKERRQ(ierr);
+                            "minimal.c",mctx.laplace,&(mctx.laplace),NULL);CHKERRQ(ierr);
     ierr = PetscOptionsBool("-manu","solve nonlinear problem with manufactured solution",
-                            "minimal.c",user.manu,&(user.manu),NULL);CHKERRQ(ierr);
+                            "minimal.c",manu,&(manu),NULL);CHKERRQ(ierr);
     ierr = PetscOptionsBool("-monitor_area","compute and print surface area at each SNES iteration",
                             "minimal.c",monitor_area,&(monitor_area),NULL);CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
-    ierr = DMDACreate2d(COMM, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
+    user.addctx = &mctx;
+    if (manu) {
+        user.g_bdry = &zero;
+        if (mctx.laplace) {
+            user.f_rhs = &f_manu_laplace;
+        } else {
+            user.f_rhs = &f_manu;
+        }
+    } else {
+        user.g_bdry = &g_bdry_tent;
+        user.f_rhs = &zero;
+    }
+
+    ierr = DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
                         DMDA_STENCIL_BOX,  // contrast with fish2
                         3,3,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&da); CHKERRQ(ierr);
     ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
@@ -306,7 +320,7 @@ int main(int argc,char **argv) {
     ierr = DMCreateGlobalVector(da,&u); CHKERRQ(ierr);
     ierr = PetscObjectSetName((PetscObject)u,"u"); CHKERRQ(ierr);
 
-    ierr = SNESCreate(COMM,&snes); CHKERRQ(ierr);
+    ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
     ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
     ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
                (DMDASNESFunction)FormFunctionLocal,&user); CHKERRQ(ierr);
@@ -315,7 +329,7 @@ int main(int argc,char **argv) {
     ierr = DMDASNESSetJacobianLocal(da,
                (DMDASNESJacobian)Form2DJacobianLocal,&user); CHKERRQ(ierr);
     if (monitor_area) {
-        ierr = SNESMonitorSet(snes,AreaMonitor,&user,NULL); CHKERRQ(ierr);
+        ierr = SNESMonitorSet(snes,AreaMonitor,NULL,NULL); CHKERRQ(ierr);
     }
     ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
@@ -323,17 +337,17 @@ int main(int argc,char **argv) {
     ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
 
     ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-    if (user.manu) {
+    if (manu) {
         Vec    uexact;
         double errnorm;
         ierr = VecDuplicate(u,&uexact); CHKERRQ(ierr);
         ierr = FormExactManufactured(&info,uexact,&user); CHKERRQ(ierr);
         ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
         ierr = VecNorm(u,NORM_INFINITY,&errnorm); CHKERRQ(ierr);
-        ierr = PetscPrintf(COMM,"error |u-uexact|_inf = %g\n",errnorm); CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_WORLD,"error |u-uexact|_inf = %g\n",errnorm); CHKERRQ(ierr);
         VecDestroy(&uexact);
     }
-    ierr = PetscPrintf(COMM,"done on %d x %d grid ...\n",info.mx,info.my); CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"done on %d x %d grid ...\n",info.mx,info.my); CHKERRQ(ierr);
 
     VecDestroy(&u);  SNESDestroy(&snes);  DMDestroy(&da);
     PetscFinalize();
