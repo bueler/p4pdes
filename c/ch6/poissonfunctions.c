@@ -11,12 +11,12 @@ PetscErrorCode Form1DFunctionLocal(DMDALocalInfo *info, double *au,
     for (i = info->xs; i < info->xs + info->xm; i++) {
         x = xmin[0] + i * hx;
         if (i==0 || i==info->mx-1) {
-            aF[i] = au[i] - user->g_bdry(x,0.0,0.0);
+            aF[i] = au[i] - user->g_bdry(x,0.0,0.0,user);
         } else {
-            ue = (i+1 == info->mx-1) ? user->g_bdry(x+hx,0.0,0.0) : au[i+1];
-            uw = (i-1 == 0)          ? user->g_bdry(x-hx,0.0,0.0) : au[i-1];
+            ue = (i+1 == info->mx-1) ? user->g_bdry(x+hx,0.0,0.0,user) : au[i+1];
+            uw = (i-1 == 0)          ? user->g_bdry(x-hx,0.0,0.0,user) : au[i-1];
             aF[i] = 2.0 * au[i] - uw - ue
-                    - hx * hx * user->f_rhs(x,0.0,0.0);
+                    - hx * hx * user->f_rhs(x,0.0,0.0,user);
         }
     }
     return 0;
@@ -35,19 +35,19 @@ PetscErrorCode Form2DFunctionLocal(DMDALocalInfo *info, double **au,
         for (i = info->xs; i < info->xs + info->xm; i++) {
             x = xymin[0] + i * hx;
             if (i==0 || i==info->mx-1 || j==0 || j==info->my-1) {
-                aF[j][i] = au[j][i] - user->g_bdry(x,y,0.0);
+                aF[j][i] = au[j][i] - user->g_bdry(x,y,0.0,user);
             } else {
-                ue = (i+1 == info->mx-1) ? user->g_bdry(x+hx,y,0.0)
+                ue = (i+1 == info->mx-1) ? user->g_bdry(x+hx,y,0.0,user)
                                          : au[j][i+1];
-                uw = (i-1 == 0)          ? user->g_bdry(x-hx,y,0.0)
+                uw = (i-1 == 0)          ? user->g_bdry(x-hx,y,0.0,user)
                                          : au[j][i-1];
-                un = (j+1 == info->my-1) ? user->g_bdry(x,y+hy,0.0)
+                un = (j+1 == info->my-1) ? user->g_bdry(x,y+hy,0.0,user)
                                          : au[j+1][i];
-                us = (j-1 == 0)          ? user->g_bdry(x,y-hy,0.0)
+                us = (j-1 == 0)          ? user->g_bdry(x,y-hy,0.0,user)
                                          : au[j-1][i];
                 aF[j][i] = 2.0 * (hy/hx + hx/hy) * au[j][i]
                            - hy/hx * (uw + ue) - hx/hy * (us + un)
-                           - hx*hy * user->f_rhs(x,y,0.0);
+                           - hx*hy * user->f_rhs(x,y,0.0,user);
             }
         }
     }
@@ -77,23 +77,23 @@ PetscErrorCode Form3DFunctionLocal(DMDALocalInfo *info, double ***au,
                 if (   i==0 || i==info->mx-1
                     || j==0 || j==info->my-1
                     || k==0 || k==info->mz-1) {
-                    aF[k][j][i] = au[k][j][i] - user->g_bdry(x,y,z);
+                    aF[k][j][i] = au[k][j][i] - user->g_bdry(x,y,z,user);
                 } else {
-                    ue = (i+1 == info->mx-1) ? user->g_bdry(x+hx,y,z)
+                    ue = (i+1 == info->mx-1) ? user->g_bdry(x+hx,y,z,user)
                                              : au[k][j][i+1];
-                    uw = (i-1 == 0)          ? user->g_bdry(x-hx,y,z)
+                    uw = (i-1 == 0)          ? user->g_bdry(x-hx,y,z,user)
                                              : au[k][j][i-1];
-                    un = (j+1 == info->my-1) ? user->g_bdry(x,y+hy,z)
+                    un = (j+1 == info->my-1) ? user->g_bdry(x,y+hy,z,user)
                                              : au[k][j+1][i];
-                    us = (j-1 == 0)          ? user->g_bdry(x,y-hy,z)
+                    us = (j-1 == 0)          ? user->g_bdry(x,y-hy,z,user)
                                              : au[k][j-1][i];
-                    uu = (k+1 == info->mz-1) ? user->g_bdry(x,y,z+hz)
+                    uu = (k+1 == info->mz-1) ? user->g_bdry(x,y,z+hz,user)
                                              : au[k+1][j][i];
-                    ud = (k-1 == 0)          ? user->g_bdry(x,y,z-hz)
+                    ud = (k-1 == 0)          ? user->g_bdry(x,y,z-hz,user)
                                              : au[k-1][j][i];
                     aF[k][j][i] = 2.0 * (cx + cy + cz) * au[k][j][i]
                                   - cx * (uw + ue) - cy * (us + un) - cz * (uu + ud)
-                                  - h*h * user->f_rhs(x,y,z);
+                                  - h*h * user->f_rhs(x,y,z,user);
                 }
             }
         }

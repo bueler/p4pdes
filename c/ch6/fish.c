@@ -82,44 +82,44 @@ with e.g. -ksp_monitor_solution :foo.m:ascii_matlab
 
 // exact solutions  u(x,y),  for boundary condition and error calculation
 
-double u_exact_1Dmanupoly(double x, double y, double z) {
+double u_exact_1Dmanupoly(double x, double y, double z, void *ctx) {
     return x*x * (1.0 - x*x);
 }
 
-double u_exact_2Dmanupoly(double x, double y, double z) {
+double u_exact_2Dmanupoly(double x, double y, double z, void *ctx) {
     return (x - x*x) * (y*y - y);
 }
 
-double u_exact_2Dmanuexp(double x, double y, double z) {
+double u_exact_2Dmanuexp(double x, double y, double z, void *ctx) {
     return - x * exp(y);
 }
 
-double u_exact_3Dmanupoly(double x, double y, double z) {
+double u_exact_3Dmanupoly(double x, double y, double z, void *ctx) {
     return x*x * (1.0 - x*x) * y*y * (y*y - 1.0) * z*z * (z*z - 1.0);
 }
 
-double u_exact_zero(double x, double y, double z) {
+double u_exact_zero(double x, double y, double z, void *ctx) {
     return 0.0;
 }
 
 // right-hand-side functions  f(x,y) = - laplacian u
 
-double f_rhs_1Dmanupoly(double x, double y, double z) {
+double f_rhs_1Dmanupoly(double x, double y, double z, void *ctx) {
     return 12.0 * x*x - 2.0;
 }
 
-double f_rhs_2Dmanupoly(double x, double y, double z) {
+double f_rhs_2Dmanupoly(double x, double y, double z, void *ctx) {
     double uxx, uyy;
     uxx  = - 2.0 * (y*y - y);
     uyy  = (x - x*x) * 2.0;
     return - uxx - uyy;
 }
 
-double f_rhs_2Dmanuexp(double x, double y, double z) {
+double f_rhs_2Dmanuexp(double x, double y, double z, void *ctx) {
     return x * exp(y);  // indeed   - (u_xx + u_yy) = -u  !
 }
 
-double f_rhs_3Dmanupoly(double x, double y, double z) {
+double f_rhs_3Dmanupoly(double x, double y, double z, void *ctx) {
     double aa, bb, cc, ddaa, ddbb, ddcc;
     aa = x*x * (1.0 - x*x);
     bb = y*y * (y*y - 1.0);
@@ -130,7 +130,7 @@ double f_rhs_3Dmanupoly(double x, double y, double z) {
     return - (ddaa * bb * cc + aa * ddbb * cc + aa * bb * ddcc);
 }
 
-double f_rhs_zero(double x, double y, double z) {
+double f_rhs_zero(double x, double y, double z, void *ctx) {
     return 0.0;
 }
 
@@ -145,7 +145,7 @@ PetscErrorCode Form1DUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
   ierr = DMDAVecGetArray(info->da, u, &au);CHKERRQ(ierr);
   for (i=info->xs; i<info->xs+info->xm; i++) {
       x = xmin[0] + i * hx;
-      au[i] = user->g_bdry(x,0.0,0.0);
+      au[i] = user->g_bdry(x,0.0,0.0,user);
   }
   ierr = DMDAVecRestoreArray(info->da, u, &au);CHKERRQ(ierr);
   return 0;
@@ -163,7 +163,7 @@ PetscErrorCode Form2DUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
         y = xymin[1] + j * hy;
         for (i=info->xs; i<info->xs+info->xm; i++) {
             x = xymin[0] + i * hx;
-            au[j][i] = user->g_bdry(x,y,0.0);
+            au[j][i] = user->g_bdry(x,y,0.0,user);
         }
     }
     ierr = DMDAVecRestoreArray(info->da, u, &au);CHKERRQ(ierr);
@@ -185,7 +185,7 @@ PetscErrorCode Form3DUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
             y = xyzmin[1] + j * hy;
             for (i=info->xs; i<info->xs+info->xm; i++) {
                 x = xyzmin[0] + i * hx;
-                au[k][j][i] = user->g_bdry(x,y,z);
+                au[k][j][i] = user->g_bdry(x,y,z,user);
             }
         }
     }

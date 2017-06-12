@@ -27,10 +27,10 @@ Thus the entries are O(1).  The entries are integers if hx = hy.
 
 typedef struct {
     // the Dirichlet boundary condition for g(x,y,z); same as exact solution when exists
-    double (*g_bdry)(double x, double y, double z);
+    double (*g_bdry)(double x, double y, double z, void *ctx);
     // the right-hand-side f(x,y,z) = - laplacian u:
-    double (*f_rhs)(double x, double y, double z);
-    void   *ctx;  // additional context; see example usage in minimal.c
+    double (*f_rhs)(double x, double y, double z, void *ctx);
+    void   *addctx;  // additional context; see example usage in minimal.c
 } PoissonCtx;
 
 
