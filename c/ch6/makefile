@@ -5,10 +5,6 @@ fish: fish.o poissonfunctions.o chkopts
 	-${CLINKER} -o fish fish.o poissonfunctions.o ${PETSC_LIB}
 	${RM} fish.o poissonfunctions.o
 
-fish3: fish3.o ../jacobians.o chkopts
-	-${CLINKER} -o fish3 fish3.o ../jacobians.o ${PETSC_LIB}
-	${RM} fish3.o ../jacobians.o
-
 minimal: minimal.o ../jacobians.o chkopts
 	-${CLINKER} -o minimal minimal.o ../jacobians.o ${PETSC_LIB}
 	${RM} minimal.o ../jacobians.o
@@ -30,17 +26,17 @@ runfish_4:
 runfish_5:
 	-@../testit.sh fish "-fsh_dim 2 -da_refine 3 -mat_is_symmetric 1.0e-7 -snes_fd_color" 1 5
 
-runfish3_1:
-	-@../testit.sh fish3 "-ksp_converged_reason -snes_converged_reason -da_refine 1" 1 1
+runfish_6:
+	-@../testit.sh fish "-fsh_dim 3 -fsh_problem manupoly -ksp_converged_reason -snes_converged_reason -da_refine 1" 1 6
 
-runfish3_2:
-	-@../testit.sh fish3 "-snes_fd_color -ksp_rtol 1.0e-12 -pc_type mg -pc_mg_galerkin -ksp_converged_reason -da_refine 2" 2 2
+runfish_7:
+	-@../testit.sh fish "-fsh_dim 3 -fsh_problem manupoly -snes_fd_color -ksp_rtol 1.0e-12 -pc_type mg -pc_mg_galerkin -ksp_converged_reason -da_refine 2" 2 7
 
-runfish3_3:
-	-@../testit.sh fish3 "-da_refine 2 -mat_is_symmetric" 1 3
+runfish_8:
+	-@../testit.sh fish "-fsh_dim 3 -fsh_problem manupoly -da_refine 2 -mat_is_symmetric" 1 8
 
-runfish3_4:
-	-@../testit.sh fish3 "-da_refine 3 -mat_is_symmetric 1.0e-5 -snes_fd_color" 1 4
+runfish_9:
+	-@../testit.sh fish "-fsh_dim 3 -fsh_problem manupoly -da_refine 3 -mat_is_symmetric 1.0e-5 -snes_fd_color" 1 9
 
 runminimal_1:
 	-@../testit.sh minimal "-snes_fd_color -snes_converged_reason -snes_monitor_short -mse_manu -da_refine 1" 1 1
@@ -51,18 +47,16 @@ runminimal_2:
 runminimal_3:
 	-@../testit.sh minimal "-snes_mf_operator -snes_converged_reason -pc_type mg -da_refine 2" 2 3
 
-test_fish: runfish_1 runfish_2 runfish_3 runfish_4 runfish_5
-
-test_fish3: runfish3_1 runfish3_2 runfish3_3 runfish3_4
+test_fish: runfish_1 runfish_2 runfish_3 runfish_4 runfish_5 runfish_6 runfish_7 runfish_8 runfish_9
 
 test_minimal: runminimal_1 runminimal_2 runminimal_3
 
-test: test_fish test_fish3 test_minimal
+test: test_fish test_minimal
 
 # etc
 
-.PHONY: distclean runfish_1 runfish_2 runfish_3 runfish_4 runfish_5 runfish3_1 runfish3_2 runfish3_3 runfish3_4 runminimal_1 runminimal_2 runminimal_3 test test_fish1 test_fish2 test_fish3 test_minimal
+.PHONY: distclean runfish_1 runfish_2 runfish_3 runfish_4 runfish_5 runfish_6 runfish_7 runfish_8 runfish_9 runminimal_1 runminimal_2 runminimal_3 test test_fish test_minimal
 
 distclean:
-	@rm -f *~ fish fish3 minimal *tmp
+	@rm -f *~ fish minimal *tmp
 

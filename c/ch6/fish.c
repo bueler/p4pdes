@@ -7,6 +7,35 @@ static char help[] =
 "to 2D.\n\n";
 
 /*
+view the basics with multigrid:
+$ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 3 -pc_type mg -snes_view|less
+$ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -snes_monitor -ksp_converged_reason
+
+this makes sense and shows V-cycles:
+$ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -snes_monitor -ksp_converged_reason -mg_levels_ksp_monitor|less
+
+this additionally generate .m files with solutions at levels:
+$ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -snes_monitor_solution ascii:u.m:ascii_matlab
+$ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -mg_levels_3_ksp_monitor_solution ascii:errlevel3.m:ascii_matlab
+$ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -mg_levels_2_ksp_monitor_solution ascii:errlevel2.m:ascii_matlab
+$ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -mg_levels_1_ksp_monitor_solution ascii:errlevel1.m:ascii_matlab
+
+because default -mg_coarse_ksp_type is preonly, without changing that we get nothing:
+$ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -mg_coarse_ksp_type cg -snes_monitor -ksp_converged_reason -mg_levels_ksp_monitor -mg_coarse_ksp_monitor|less
+$ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -mg_coarse_ksp_type cg -mg_coarse_ksp_monitor_solution ascii:errcoarse.m:ascii_matlab
+
+FD jacobian with coloring is actually faster (and it is clear what is going on):
+$ timer ./fish -fsh_dim 1 -fsh_problem manupoly -snes_monitor -da_refine 16
+$ timer ./fish -fsh_dim 1 -fsh_problem manupoly -snes_monitor -da_refine 16 -snes_fd_color
+
+compare whether rediscretization happens at each level (former) or Galerkin grid-
+transfer operators are used (latter)
+$ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 4 -pc_type mg -snes_monitor
+$ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 4 -pc_type mg -snes_monitor -pc_mg_galerkin
+
+choose linear solver for coarse grid (default is preonly+lu):
+$ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 4 -pc_type mg -mg_coarse_ksp_type cg -mg_coarse_pc_type jacobi -ksp_view|less
+
 note -fsh_dim 2 -fsh_problem manuexp is problem re-used many times in Smith et al 1996
 
 add options to any run:
@@ -65,6 +94,10 @@ double u_exact_2Dmanuexp(double x, double y, double z) {
     return - x * exp(y);
 }
 
+double u_exact_3Dmanupoly(double x, double y, double z) {
+    return x*x * (1.0 - x*x) * y*y * (y*y - 1.0) * z*z * (z*z - 1.0);
+}
+
 double u_exact_zero(double x, double y, double z) {
     return 0.0;
 }
@@ -84,6 +117,17 @@ double f_rhs_2Dmanupoly(double x, double y, double z) {
 
 double f_rhs_2Dmanuexp(double x, double y, double z) {
     return x * exp(y);  // indeed   - (u_xx + u_yy) = -u  !
+}
+
+double f_rhs_3Dmanupoly(double x, double y, double z) {
+    double aa, bb, cc, ddaa, ddbb, ddcc;
+    aa = x*x * (1.0 - x*x);
+    bb = y*y * (y*y - 1.0);
+    cc = z*z * (z*z - 1.0);
+    ddaa = 2.0 * (1.0 - 6.0 * x*x);
+    ddbb = 2.0 * (6.0 * y*y - 1.0);
+    ddcc = 2.0 * (6.0 * z*z - 1.0);
+    return - (ddaa * bb * cc + aa * ddbb * cc + aa * bb * ddcc);
 }
 
 double f_rhs_zero(double x, double y, double z) {
@@ -125,6 +169,29 @@ PetscErrorCode Form2DUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
     return 0;
 }
 
+PetscErrorCode Form3DUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
+    PetscErrorCode ierr;
+    int    i, j, k;
+    double xyzmin[3], xyzmax[3], hx, hy, hz, x, y, z, ***au;
+    ierr = DMDAGetBoundingBox(info->da,xyzmin,xyzmax); CHKERRQ(ierr);
+    hx = (xyzmax[0] - xyzmin[0]) / (info->mx - 1);
+    hy = (xyzmax[1] - xyzmin[1]) / (info->my - 1);
+    hz = (xyzmax[2] - xyzmin[2]) / (info->mz - 1);
+    ierr = DMDAVecGetArray(info->da, u, &au);CHKERRQ(ierr);
+    for (k=info->zs; k<info->zs+info->zm; k++) {
+        z = xyzmin[2] + k * hz;
+        for (j=info->ys; j<info->ys+info->ym; j++) {
+            y = xyzmin[1] + j * hy;
+            for (i=info->xs; i<info->xs+info->xm; i++) {
+                x = xyzmin[0] + i * hx;
+                au[k][j][i] = user->u_exact(x,y,z);
+            }
+        }
+    }
+    ierr = DMDAVecRestoreArray(info->da, u, &au);CHKERRQ(ierr);
+    return 0;
+}
+
 // arrays of pointers to functions:   ..._ptr[DIMS]
 static void* residual_ptr[3]
     = {&Form1DFunctionLocal, &Form2DFunctionLocal, &Form3DFunctionLocal};
@@ -133,7 +200,7 @@ static void* jacobian_ptr[3]
     = {&Form1DJacobianLocal, &Form2DJacobianLocal, &Form3DJacobianLocal};
 
 static void* getuexact_ptr[3]
-    = {&Form1DUExact, &Form2DUExact, NULL};
+    = {&Form1DUExact, &Form2DUExact, &Form3DUExact};
 
 typedef enum {MANUPOLY, MANUEXP, ZERO} ProblemType;
 static const char* ProblemTypes[] = {"manupoly","manuexp","zero",
@@ -144,12 +211,12 @@ static const char* ProblemTypes[] = {"manupoly","manuexp","zero",
 static void* u_exact_ptr[3][3]
     = {{&u_exact_1Dmanupoly, NULL,               &u_exact_zero},
        {&u_exact_2Dmanupoly, &u_exact_2Dmanuexp, &u_exact_zero},
-       {NULL,                NULL,               &u_exact_zero}};
+       {&u_exact_3Dmanupoly, NULL,               &u_exact_zero}};
 
 static void* f_rhs_ptr[3][3]
     = {{&f_rhs_1Dmanupoly, NULL,             &f_rhs_zero},
        {&f_rhs_2Dmanupoly, &f_rhs_2Dmanuexp, &f_rhs_zero},
-       {NULL,              NULL,             &f_rhs_zero}};
+       {&f_rhs_3Dmanupoly, NULL,             &f_rhs_zero}};
 
 int main(int argc,char **argv) {
     PetscErrorCode    ierr;
@@ -200,6 +267,7 @@ int main(int argc,char **argv) {
                 DMDA_STENCIL_STAR,
                 3,3,3,PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,
                 1,1,NULL,NULL,NULL,&da); CHKERRQ(ierr);
+            break;
         default:
             SETERRQ(PETSC_COMM_WORLD,1,"invalid dim value in creating DMDA\n");
     }

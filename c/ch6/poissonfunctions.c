@@ -56,7 +56,48 @@ PetscErrorCode Form2DFunctionLocal(DMDALocalInfo *info, double **au,
 
 PetscErrorCode Form3DFunctionLocal(DMDALocalInfo *info, double ***au,
                                    double ***aF, PoissonCtx *user) {
-    SETERRQ(PETSC_COMM_WORLD,1,"NOT TRANSFERED YET\n");
+    PetscErrorCode ierr;
+    int    i, j, k;
+    double xyzmin[3], xyzmax[3], hx, hy, hz, h, cx, cy, cz, x, y, z,
+           ue, uw, un, us, uu, ud;
+    ierr = DMDAGetBoundingBox(info->da,xyzmin,xyzmax); CHKERRQ(ierr);
+    hx = (xyzmax[0] - xyzmin[0]) / (info->mx - 1);
+    hy = (xyzmax[1] - xyzmin[1]) / (info->my - 1);
+    hz = (xyzmax[2] - xyzmin[2]) / (info->mz - 1);
+    h = pow(hx*hy*hz,1.0/3.0);
+    cx = h*h / (hx*hx);
+    cy = h*h / (hy*hy);
+    cz = h*h / (hz*hz);
+    for (k = info->zs; k < info->zs + info->zm; k++) {
+        z = xyzmin[2] + k * hz;
+        for (j = info->ys; j < info->ys + info->ym; j++) {
+            y = xyzmin[1] + j * hy;
+            for (i = info->xs; i < info->xs + info->xm; i++) {
+                x = xyzmin[0] + i * hx;
+                if (   i==0 || i==info->mx-1
+                    || j==0 || j==info->my-1
+                    || k==0 || k==info->mz-1) {
+                    aF[k][j][i] = au[k][j][i] - user->u_exact(x,y,z);
+                } else {
+                    ue = (i+1 == info->mx-1) ? user->u_exact(x+hx,y,z)
+                                             : au[k][j][i+1];
+                    uw = (i-1 == 0)          ? user->u_exact(x-hx,y,z)
+                                             : au[k][j][i-1];
+                    un = (j+1 == info->my-1) ? user->u_exact(x,y+hy,z)
+                                             : au[k][j+1][i];
+                    us = (j-1 == 0)          ? user->u_exact(x,y-hy,z)
+                                             : au[k][j-1][i];
+                    uu = (k+1 == info->mz-1) ? user->u_exact(x,y,z+hz)
+                                             : au[k+1][j][i];
+                    ud = (k-1 == 0)          ? user->u_exact(x,y,z-hz)
+                                             : au[k-1][j][i];
+                    aF[k][j][i] = 2.0 * (cx + cy + cz) * au[k][j][i]
+                                  - cx * (uw + ue) - cy * (us + un) - cz * (uu + ud)
+                                  - h*h * user->f_rhs(x,y,z);
+                }
+            }
+        }
+    }
     return 0;
 }
 
