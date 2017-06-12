@@ -25,12 +25,12 @@ The matrices A are normalized so that A / (hx * hy) approximates the Laplacian.
 Thus the entries are O(1).  The entries are integers if hx = hy.
 */
 
-//FIXME rename u_exact() --> g_bdry()
 typedef struct {
-    // the exact solution u(x,y,z), for boundary condition and error calculation:
-    double (*u_exact)(double x, double y, double z);
+    // the Dirichlet boundary condition for g(x,y,z); same as exact solution when exists
+    double (*g_bdry)(double x, double y, double z);
     // the right-hand-side f(x,y,z) = - laplacian u:
     double (*f_rhs)(double x, double y, double z);
+    void   *ctx;  // additional context; see example usage in minimal.c
 } PoissonCtx;
 
 

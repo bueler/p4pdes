@@ -134,6 +134,7 @@ double f_rhs_zero(double x, double y, double z) {
     return 0.0;
 }
 
+// functions simply to put u_exact()=g_bdry() into a grid; irritatingly-dimension-dependent
 
 PetscErrorCode Form1DUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
   PetscErrorCode ierr;
@@ -144,7 +145,7 @@ PetscErrorCode Form1DUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
   ierr = DMDAVecGetArray(info->da, u, &au);CHKERRQ(ierr);
   for (i=info->xs; i<info->xs+info->xm; i++) {
       x = xmin[0] + i * hx;
-      au[i] = user->u_exact(x,0.0,0.0);
+      au[i] = user->g_bdry(x,0.0,0.0);
   }
   ierr = DMDAVecRestoreArray(info->da, u, &au);CHKERRQ(ierr);
   return 0;
@@ -162,7 +163,7 @@ PetscErrorCode Form2DUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
         y = xymin[1] + j * hy;
         for (i=info->xs; i<info->xs+info->xm; i++) {
             x = xymin[0] + i * hx;
-            au[j][i] = user->u_exact(x,y,0.0);
+            au[j][i] = user->g_bdry(x,y,0.0);
         }
     }
     ierr = DMDAVecRestoreArray(info->da, u, &au);CHKERRQ(ierr);
@@ -184,7 +185,7 @@ PetscErrorCode Form3DUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
             y = xyzmin[1] + j * hy;
             for (i=info->xs; i<info->xs+info->xm; i++) {
                 x = xyzmin[0] + i * hx;
-                au[k][j][i] = user->u_exact(x,y,z);
+                au[k][j][i] = user->g_bdry(x,y,z);
             }
         }
     }
@@ -206,9 +207,9 @@ typedef enum {MANUPOLY, MANUEXP, ZERO} ProblemType;
 static const char* ProblemTypes[] = {"manupoly","manuexp","zero",
                                      "ProblemType", "", NULL};
 
-// more arrays of pointers to functions:   ..._ptr[DIMS][CASES]
+// more arrays of pointers to functions:   ..._ptr[DIMS][PROBLEMS]
 
-static void* u_exact_ptr[3][3]
+static void* g_bdry_ptr[3][3]
     = {{&u_exact_1Dmanupoly, NULL,               &u_exact_zero},
        {&u_exact_2Dmanupoly, &u_exact_2Dmanuexp, &u_exact_zero},
        {&u_exact_3Dmanupoly, NULL,               &u_exact_zero}};
@@ -217,6 +218,7 @@ static void* f_rhs_ptr[3][3]
     = {{&f_rhs_1Dmanupoly, NULL,             &f_rhs_zero},
        {&f_rhs_2Dmanupoly, &f_rhs_2Dmanuexp, &f_rhs_zero},
        {&f_rhs_3Dmanupoly, NULL,             &f_rhs_zero}};
+
 
 int main(int argc,char **argv) {
     PetscErrorCode    ierr;
@@ -272,11 +274,11 @@ int main(int argc,char **argv) {
             SETERRQ(PETSC_COMM_WORLD,1,"invalid dim value in creating DMDA\n");
     }
 
-    user.u_exact = u_exact_ptr[dim-1][problem];
+    user.g_bdry = g_bdry_ptr[dim-1][problem];
     user.f_rhs = f_rhs_ptr[dim-1][problem];
     getuexact = getuexact_ptr[dim-1];
-    if (user.u_exact == NULL) {
-        SETERRQ(PETSC_COMM_WORLD,2,"error setting up u_exact() function\n");
+    if (user.g_bdry == NULL) {
+        SETERRQ(PETSC_COMM_WORLD,2,"error setting up g_bdry() function\n");
     }
     if (user.f_rhs == NULL) {
         SETERRQ(PETSC_COMM_WORLD,3,"error setting up f_rhs() function\n");
