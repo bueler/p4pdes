@@ -6,6 +6,8 @@ static char help[] =
 "fully-rediscretize for the supplied grid.\n\n";
 
 /*
+note -fsh_problem manuexp is problem re-used many times in Smith et al 1996
+
 add options to any run:
     -{ksp,snes}_monitor -{ksp,snes}_converged_reason
 
@@ -46,7 +48,6 @@ with e.g. -ksp_monitor_solution :foo.m:ascii_matlab
 
 #include <petsc.h>
 #include "../jacobians.h"
-#define COMM PETSC_COMM_WORLD
 
 typedef enum {MANUPOLY, MANUEXP, ZERO} ProblemType;
 static const char *ProblemTypes[] = {"manupoly","manuexp","zero",
@@ -85,22 +86,22 @@ double f_rhs(double x, double y, ProblemType problem) {
 }
 
 PetscErrorCode formExact(DMDALocalInfo *info, Vec u, FishCtx* user) {
-  PetscErrorCode ierr;
-  int          i, j;
-  double       xymin[2], xymax[2], hx, hy, x, y, **au;
-  ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
-  hx = (xymax[0] - xymin[0]) / (info->mx - 1);
-  hy = (xymax[1] - xymin[1]) / (info->my - 1);
-  ierr = DMDAVecGetArray(info->da, u, &au);CHKERRQ(ierr);
-  for (j=info->ys; j<info->ys+info->ym; j++) {
-    y = xymin[1] + j * hy;
-    for (i=info->xs; i<info->xs+info->xm; i++) {
-      x = xymin[0] + i * hx;
-      au[j][i] = u_exact(x,y,user->problem);
+    PetscErrorCode ierr;
+    int     i, j;
+    double  xymin[2], xymax[2], hx, hy, x, y, **au;
+    ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
+    hx = (xymax[0] - xymin[0]) / (info->mx - 1);
+    hy = (xymax[1] - xymin[1]) / (info->my - 1);
+    ierr = DMDAVecGetArray(info->da, u, &au);CHKERRQ(ierr);
+    for (j=info->ys; j<info->ys+info->ym; j++) {
+        y = xymin[1] + j * hy;
+        for (i=info->xs; i<info->xs+info->xm; i++) {
+            x = xymin[0] + i * hx;
+            au[j][i] = u_exact(x,y,user->problem);
+        }
     }
-  }
-  ierr = DMDAVecRestoreArray(info->da, u, &au);CHKERRQ(ierr);
-  return 0;
+    ierr = DMDAVecRestoreArray(info->da, u, &au);CHKERRQ(ierr);
+    return 0;
 }
 
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
@@ -137,55 +138,54 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
 }
 
 int main(int argc,char **argv) {
-  PetscErrorCode ierr;
-  DM             da;
-  SNES           snes;
-  KSP            ksp;
-  Vec            u, uexact;
-  FishCtx        user;
-  double         Lx = 1.0, Ly = 1.0;
-  PetscBool      init_random = PETSC_FALSE;
-  DMDALocalInfo  info;
-  double         errinf,err2h;
+    PetscErrorCode ierr;
+    DM             da;
+    SNES           snes;
+    KSP            ksp;
+    Vec            u, uexact;
+    FishCtx        user;
+    double         Lx = 1.0, Ly = 1.0;
+    PetscBool      init_random = PETSC_FALSE;
+    DMDALocalInfo  info;
+    double         errinf,err2h;
 
-  PetscInitialize(&argc,&argv,NULL,help);
-
-  user.problem = MANUEXP;
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"fsh_", "options for fish2.c", ""); CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-Lx",
+    PetscInitialize(&argc,&argv,NULL,help);
+    user.problem = MANUEXP;
+    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"fsh_", "options for fish2.c", ""); CHKERRQ(ierr);
+    ierr = PetscOptionsReal("-Lx",
          "set Lx in domain [0,Lx] x [0,Ly]","fish2.c",Lx,&Lx,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-Ly",
+    ierr = PetscOptionsReal("-Ly",
          "set Ly in domain [0,Lx] x [0,Ly]","fish2.c",Ly,&Ly,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-init_random",
+    ierr = PetscOptionsBool("-init_random",
          "initial state is random (default is zero)",
          "fish2.c",init_random,&init_random,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsEnum("-problem",
+    ierr = PetscOptionsEnum("-problem",
          "problem type (determines exact solution and RHS)",
          "fish2.c",ProblemTypes,
          (PetscEnum)user.problem,(PetscEnum*)&user.problem,NULL); CHKERRQ(ierr);
-  ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+    ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
-  ierr = DMDACreate2d(COMM,
+    ierr = DMDACreate2d(PETSC_COMM_WORLD,
                DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
                DMDA_STENCIL_STAR,
                3,3,PETSC_DECIDE,PETSC_DECIDE,
                1,1,NULL,NULL,&da); CHKERRQ(ierr);
-  ierr = DMSetFromOptions(da); CHKERRQ(ierr);
-  ierr = DMSetUp(da); CHKERRQ(ierr);  // this must be called BEFORE SetUniformCoordinates
-  ierr = DMSetApplicationContext(da,&user);CHKERRQ(ierr);
-  ierr = DMDASetUniformCoordinates(da,0.0,Lx,0.0,Ly,0.0,1.0);CHKERRQ(ierr);
-  ierr = DMCreateGlobalVector(da,&u);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)u,"u");CHKERRQ(ierr);
+    ierr = DMSetFromOptions(da); CHKERRQ(ierr);
+    ierr = DMSetUp(da); CHKERRQ(ierr);  // this must be called BEFORE SetUniformCoordinates
+    ierr = DMSetApplicationContext(da,&user);CHKERRQ(ierr);
+    ierr = DMDASetUniformCoordinates(da,0.0,Lx,0.0,Ly,0.0,1.0);CHKERRQ(ierr);
+    ierr = DMCreateGlobalVector(da,&u);CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject)u,"u");CHKERRQ(ierr);
 
-  ierr = SNESCreate(COMM,&snes); CHKERRQ(ierr);
-  ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
-  ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
+    ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
+    ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
+    ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
              (DMDASNESFunction)FormFunctionLocal,&user); CHKERRQ(ierr);
-  ierr = DMDASNESSetJacobianLocal(da,
+    ierr = DMDASNESSetJacobianLocal(da,
              (DMDASNESJacobian)Form2DJacobianLocal,&user); CHKERRQ(ierr);
-  ierr = SNESGetKSP(snes,&ksp); CHKERRQ(ierr);
-  ierr = KSPSetType(ksp,KSPCG); CHKERRQ(ierr);
-  ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
+    ierr = SNESGetKSP(snes,&ksp); CHKERRQ(ierr);
+    ierr = KSPSetType(ksp,KSPCG); CHKERRQ(ierr);
+    ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
     if (init_random) {
         PetscRandom   rctx;
@@ -196,22 +196,22 @@ int main(int argc,char **argv) {
         ierr = VecSet(u,0.0); CHKERRQ(ierr);
     }
 
-  ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
+    ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
 
-  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-  ierr = VecDuplicate(u,&uexact);CHKERRQ(ierr);
-  ierr = formExact(&info,uexact,&user); CHKERRQ(ierr);
-  ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
-  ierr = VecNorm(u,NORM_INFINITY,&errinf); CHKERRQ(ierr);
-  ierr = VecNorm(u,NORM_2,&err2h); CHKERRQ(ierr);
-  err2h /= PetscSqrtReal((double)(info.mx-1)*(info.my-1)); // like continuous L2
-  ierr = PetscPrintf(COMM,
+    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+    ierr = VecDuplicate(u,&uexact);CHKERRQ(ierr);
+    ierr = formExact(&info,uexact,&user); CHKERRQ(ierr);
+    ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
+    ierr = VecNorm(u,NORM_INFINITY,&errinf); CHKERRQ(ierr);
+    ierr = VecNorm(u,NORM_2,&err2h); CHKERRQ(ierr);
+    err2h /= PetscSqrtReal((double)(info.mx-1)*(info.my-1)); // like continuous L2
+    ierr = PetscPrintf(PETSC_COMM_WORLD,
            "on %d x %d grid:  error |u-uexact|_inf = %g, |...|_h = %.2e\n",
            info.mx,info.my,errinf,err2h); CHKERRQ(ierr);
 
-  VecDestroy(&u);  VecDestroy(&uexact);
-  SNESDestroy(&snes);  DMDestroy(&da);
-  PetscFinalize();
-  return 0;
+    VecDestroy(&u);  VecDestroy(&uexact);
+    SNESDestroy(&snes);  DMDestroy(&da);
+    PetscFinalize();
+    return 0;
 }
 
