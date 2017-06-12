@@ -233,7 +233,7 @@ int main(int argc,char **argv) {
     PetscBool      init_random = PETSC_FALSE;
     DMDALocalInfo  info;
     double         errinf, normconst2h, err2h;
-    double         (*getuexact)(DMDALocalInfo*,Vec,PoissonCtx*);
+    PetscErrorCode (*getuexact)(DMDALocalInfo*,Vec,PoissonCtx*);
 
     PetscInitialize(&argc,&argv,NULL,help);
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"fsh_", "options for fish.c", ""); CHKERRQ(ierr);
@@ -276,7 +276,6 @@ int main(int argc,char **argv) {
 
     user.g_bdry = g_bdry_ptr[dim-1][problem];
     user.f_rhs = f_rhs_ptr[dim-1][problem];
-    getuexact = getuexact_ptr[dim-1];
     if (user.g_bdry == NULL) {
         SETERRQ(PETSC_COMM_WORLD,2,"error setting up g_bdry() function\n");
     }
@@ -315,7 +314,8 @@ int main(int argc,char **argv) {
 
     ierr = VecDuplicate(u,&uexact);CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-    ierr = getuexact(&info,uexact,&user); CHKERRQ(ierr);
+    getuexact = getuexact_ptr[dim-1];
+    ierr = (*getuexact)(&info,uexact,&user); CHKERRQ(ierr);
     ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
     ierr = VecNorm(u,NORM_INFINITY,&errinf); CHKERRQ(ierr);
     ierr = VecNorm(u,NORM_2,&err2h); CHKERRQ(ierr);
