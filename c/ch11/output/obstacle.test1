@@ -1,7 +1,7 @@
-  0 SNES Function norm 3.18153 
+  0 SNES Function norm 3.32733 
   Linear solve converged due to CONVERGED_RTOL iterations 18
-  1 SNES Function norm 1.29667 
-  Linear solve converged due to CONVERGED_RTOL iterations 18
+  1 SNES Function norm 0.776289 
+  Linear solve converged due to CONVERGED_RTOL iterations 19
   2 SNES Function norm 0.0408573 
   Linear solve converged due to CONVERGED_RTOL iterations 19
   3 SNES Function norm < 1.e-11
