@@ -1,8 +1,43 @@
 #include <petsc.h>
-#include "jacobians.h"
+#include "poissonfunctions.h"
+
+const char* PoissonProblemTypes[] = {"manupoly","manuexp","zero",
+                                     "PoissonProblemType", "", NULL};
+
+PetscErrorCode Form2DFunctionLocal(DMDALocalInfo *info, double **au,
+                                   double **aF, PoissonCtx *user) {
+    PetscErrorCode ierr;
+    int     i, j;
+    double  hx, hy, xymin[2], xymax[2], x, y, ue, uw, un, us;
+    ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
+    hx = (xymax[0] - xymin[0]) / (info->mx - 1);
+    hy = (xymax[1] - xymin[1]) / (info->my - 1);
+    for (j = info->ys; j < info->ys + info->ym; j++) {
+        y = xymin[1] + j * hy;
+        for (i = info->xs; i < info->xs + info->xm; i++) {
+            x = xymin[0] + i * hx;
+            if (i==0 || i==info->mx-1 || j==0 || j==info->my-1) {
+                aF[j][i] = au[j][i] - user->u_exact(x,y,0.0);
+            } else {
+                ue = (i+1 == info->mx-1) ? user->u_exact(x+hx,y,0.0)
+                                         : au[j][i+1];
+                uw = (i-1 == 0)          ? user->u_exact(x-hx,y,0.0)
+                                         : au[j][i-1];
+                un = (j+1 == info->my-1) ? user->u_exact(x,y+hy,0.0)
+                                         : au[j+1][i];
+                us = (j-1 == 0)          ? user->u_exact(x,y-hy,0.0)
+                                         : au[j-1][i];
+                aF[j][i] = 2.0 * (hy/hx + hx/hy) * au[j][i]
+                           - hy/hx * (uw + ue) - hx/hy * (us + un)
+                           - hx*hy * user->f_rhs(x,y,0.0);
+            }
+        }
+    }
+    return 0;
+}
 
 PetscErrorCode Form1DJacobianLocal(DMDALocalInfo *info, PetscScalar *au,
-                                   Mat J, Mat Jpre, void *user) {
+                                   Mat J, Mat Jpre, PoissonCtx *user) {
     PetscErrorCode  ierr;
     int          i,ncols;
     double       v[3];
@@ -36,7 +71,7 @@ PetscErrorCode Form1DJacobianLocal(DMDALocalInfo *info, PetscScalar *au,
 }
 
 PetscErrorCode Form2DJacobianLocal(DMDALocalInfo *info, PetscScalar **au,
-                                   Mat J, Mat Jpre, void *user) {
+                                   Mat J, Mat Jpre, PoissonCtx *user) {
     PetscErrorCode  ierr;
     double       dx, dy, hyhx, hxhy, xymin[2], xymax[2];
     int          i,j,ncols;
@@ -82,7 +117,7 @@ PetscErrorCode Form2DJacobianLocal(DMDALocalInfo *info, PetscScalar **au,
 }
 
 PetscErrorCode Form3DJacobianLocal(DMDALocalInfo *info, PetscScalar ***au,
-                                   Mat J, Mat Jpre, void *user) {
+                                   Mat J, Mat Jpre, PoissonCtx *user) {
     PetscErrorCode  ierr;
     double       dx, dy, dz, h, cx, cy, cz, xyzmin[3], xyzmax[3];
     int          i,j,k,ncols;

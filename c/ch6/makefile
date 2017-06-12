@@ -1,6 +1,10 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
+fish: fish.o poissonfunctions.o chkopts
+	-${CLINKER} -o fish fish.o poissonfunctions.o ${PETSC_LIB}
+	${RM} fish.o poissonfunctions.o
+
 fish1: fish1.o ../jacobians.o chkopts
 	-${CLINKER} -o fish1 fish1.o ../jacobians.o ${PETSC_LIB}
 	${RM} fish1.o ../jacobians.o
