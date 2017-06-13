@@ -87,7 +87,7 @@ double u_exact_1Dmanupoly(double x, double y, double z, void *ctx) {
 }
 
 double u_exact_2Dmanupoly(double x, double y, double z, void *ctx) {
-    return (x - x*x) * (y*y - y);
+    return x*x * (1.0 - x*x) * y*y *(y*y - 1.0);
 }
 
 double u_exact_2Dmanuexp(double x, double y, double z, void *ctx) {
@@ -109,10 +109,12 @@ double f_rhs_1Dmanupoly(double x, double y, double z, void *ctx) {
 }
 
 double f_rhs_2Dmanupoly(double x, double y, double z, void *ctx) {
-    double uxx, uyy;
-    uxx  = - 2.0 * (y*y - y);
-    uyy  = (x - x*x) * 2.0;
-    return - uxx - uyy;
+    double aa, bb, ddaa, ddbb;
+    aa = x*x * (1.0 - x*x);
+    bb = y*y * (y*y - 1.0);
+    ddaa = 2.0 * (1.0 - 6.0 * x*x);
+    ddbb = 2.0 * (6.0 * y*y - 1.0);
+    return - (ddaa * bb + aa * ddbb);
 }
 
 double f_rhs_2Dmanuexp(double x, double y, double z, void *ctx) {
