@@ -90,12 +90,20 @@ double u_exact_2Dmanupoly(double x, double y, double z, void *ctx) {
     return x*x * (1.0 - x*x) * y*y *(y*y - 1.0);
 }
 
+double u_exact_3Dmanupoly(double x, double y, double z, void *ctx) {
+    return x*x * (1.0 - x*x) * y*y * (y*y - 1.0) * z*z * (z*z - 1.0);
+}
+
+double u_exact_1Dmanuexp(double x, double y, double z, void *ctx) {
+    return - exp(x);
+}
+
 double u_exact_2Dmanuexp(double x, double y, double z, void *ctx) {
     return - x * exp(y);
 }
 
-double u_exact_3Dmanupoly(double x, double y, double z, void *ctx) {
-    return x*x * (1.0 - x*x) * y*y * (y*y - 1.0) * z*z * (z*z - 1.0);
+double u_exact_3Dmanuexp(double x, double y, double z, void *ctx) {
+    return FIXME;
 }
 
 double u_exact_zero(double x, double y, double z, void *ctx) {
@@ -117,10 +125,6 @@ double f_rhs_2Dmanupoly(double x, double y, double z, void *ctx) {
     return - (ddaa * bb + aa * ddbb);
 }
 
-double f_rhs_2Dmanuexp(double x, double y, double z, void *ctx) {
-    return x * exp(y);  // indeed   - (u_xx + u_yy) = -u  !
-}
-
 double f_rhs_3Dmanupoly(double x, double y, double z, void *ctx) {
     double aa, bb, cc, ddaa, ddbb, ddcc;
     aa = x*x * (1.0 - x*x);
@@ -130,6 +134,18 @@ double f_rhs_3Dmanupoly(double x, double y, double z, void *ctx) {
     ddbb = 2.0 * (6.0 * y*y - 1.0);
     ddcc = 2.0 * (6.0 * z*z - 1.0);
     return - (ddaa * bb * cc + aa * ddbb * cc + aa * bb * ddcc);
+}
+
+double f_rhs_1Dmanuexp(double x, double y, double z, void *ctx) {
+    return exp(x);
+}
+
+double f_rhs_2Dmanuexp(double x, double y, double z, void *ctx) {
+    return x * exp(y);  // indeed   - (u_xx + u_yy) = -u  !
+}
+
+double f_rhs_3Dmanuexp(double x, double y, double z, void *ctx) {
+    return FIXME;
 }
 
 double f_rhs_zero(double x, double y, double z, void *ctx) {
@@ -212,14 +228,14 @@ static const char* ProblemTypes[] = {"manupoly","manuexp","zero",
 // more arrays of pointers to functions:   ..._ptr[DIMS][PROBLEMS]
 
 static void* g_bdry_ptr[3][3]
-    = {{&u_exact_1Dmanupoly, NULL,               &u_exact_zero},
+    = {{&u_exact_1Dmanupoly, &u_exact_1Dmanuexp, &u_exact_zero},
        {&u_exact_2Dmanupoly, &u_exact_2Dmanuexp, &u_exact_zero},
-       {&u_exact_3Dmanupoly, NULL,               &u_exact_zero}};
+       {&u_exact_3Dmanupoly, &u_exact_3Dmanuexp, &u_exact_zero}};
 
 static void* f_rhs_ptr[3][3]
-    = {{&f_rhs_1Dmanupoly, NULL,             &f_rhs_zero},
+    = {{&f_rhs_1Dmanupoly, &f_rhs_1Dmanuexp, &f_rhs_zero},
        {&f_rhs_2Dmanupoly, &f_rhs_2Dmanuexp, &f_rhs_zero},
-       {&f_rhs_3Dmanupoly, NULL,             &f_rhs_zero}};
+       {&f_rhs_3Dmanupoly, &f_rhs_3Dmanuexp, &f_rhs_zero}};
 
 
 int main(int argc,char **argv) {
