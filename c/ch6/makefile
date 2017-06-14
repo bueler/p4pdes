@@ -33,10 +33,7 @@ runfish_7:
 	-@../testit.sh fish "-fsh_dim 3 -fsh_problem manupoly -snes_fd_color -ksp_rtol 1.0e-12 -pc_type mg -pc_mg_galerkin -ksp_converged_reason -da_refine 2" 2 7
 
 runfish_8:
-	-@../testit.sh fish "-fsh_dim 3 -fsh_problem manupoly -da_refine 2 -mat_is_symmetric" 1 8
-
-runfish_9:
-	-@../testit.sh fish "-fsh_dim 3 -fsh_problem manupoly -da_refine 3 -mat_is_symmetric 1.0e-5 -snes_fd_color" 1 9
+	-@../testit.sh fish "-fsh_dim 3 -da_refine 2 -mat_is_symmetric 1.0e-7 -snes_fd_color" 1 8
 
 runminimal_1:
 	-@../testit.sh minimal "-snes_fd_color -snes_converged_reason -snes_monitor_short -mse_manu -da_refine 1" 1 1
@@ -47,7 +44,7 @@ runminimal_2:
 runminimal_3:
 	-@../testit.sh minimal "-snes_mf_operator -snes_converged_reason -pc_type mg -da_refine 2" 2 3
 
-test_fish: runfish_1 runfish_2 runfish_3 runfish_4 runfish_5 runfish_6 runfish_7 runfish_8 runfish_9
+test_fish: runfish_1 runfish_2 runfish_3 runfish_4 runfish_5 runfish_6 runfish_7 runfish_8
 
 test_minimal: runminimal_1 runminimal_2 runminimal_3
 
@@ -55,7 +52,7 @@ test: test_fish test_minimal
 
 # etc
 
-.PHONY: distclean runfish_1 runfish_2 runfish_3 runfish_4 runfish_5 runfish_6 runfish_7 runfish_8 runfish_9 runminimal_1 runminimal_2 runminimal_3 test test_fish test_minimal
+.PHONY: distclean runfish_1 runfish_2 runfish_3 runfish_4 runfish_5 runfish_6 runfish_7 runfish_8 runminimal_1 runminimal_2 runminimal_3 test test_fish test_minimal
 
 distclean:
 	@rm -f *~ fish minimal *tmp

@@ -103,10 +103,10 @@ double u_exact_2Dmanuexp(double x, double y, double z, void *ctx) {
 }
 
 double u_exact_3Dmanuexp(double x, double y, double z, void *ctx) {
-    return FIXME;
+    return - x * exp(y + z);
 }
 
-double u_exact_zero(double x, double y, double z, void *ctx) {
+double zero(double x, double y, double z, void *ctx) {
     return 0.0;
 }
 
@@ -141,16 +141,13 @@ double f_rhs_1Dmanuexp(double x, double y, double z, void *ctx) {
 }
 
 double f_rhs_2Dmanuexp(double x, double y, double z, void *ctx) {
-    return x * exp(y);  // indeed   - (u_xx + u_yy) = -u  !
+    return x * exp(y);  // note  f = - (u_xx + u_yy) = - u
 }
 
 double f_rhs_3Dmanuexp(double x, double y, double z, void *ctx) {
-    return FIXME;
+    return 2.0 * x * exp(y + z);  // note  f = - laplacian u = - 2 u
 }
 
-double f_rhs_zero(double x, double y, double z, void *ctx) {
-    return 0.0;
-}
 
 // functions simply to put u_exact()=g_bdry() into a grid; irritatingly-dimension-dependent
 
@@ -228,41 +225,46 @@ static const char* ProblemTypes[] = {"manupoly","manuexp","zero",
 // more arrays of pointers to functions:   ..._ptr[DIMS][PROBLEMS]
 
 static void* g_bdry_ptr[3][3]
-    = {{&u_exact_1Dmanupoly, &u_exact_1Dmanuexp, &u_exact_zero},
-       {&u_exact_2Dmanupoly, &u_exact_2Dmanuexp, &u_exact_zero},
-       {&u_exact_3Dmanupoly, &u_exact_3Dmanuexp, &u_exact_zero}};
+    = {{&u_exact_1Dmanupoly, &u_exact_1Dmanuexp, &zero},
+       {&u_exact_2Dmanupoly, &u_exact_2Dmanuexp, &zero},
+       {&u_exact_3Dmanupoly, &u_exact_3Dmanuexp, &zero}};
 
 static void* f_rhs_ptr[3][3]
-    = {{&f_rhs_1Dmanupoly, &f_rhs_1Dmanuexp, &f_rhs_zero},
-       {&f_rhs_2Dmanupoly, &f_rhs_2Dmanuexp, &f_rhs_zero},
-       {&f_rhs_3Dmanupoly, &f_rhs_3Dmanuexp, &f_rhs_zero}};
+    = {{&f_rhs_1Dmanupoly, &f_rhs_1Dmanuexp, &zero},
+       {&f_rhs_2Dmanupoly, &f_rhs_2Dmanuexp, &zero},
+       {&f_rhs_3Dmanupoly, &f_rhs_3Dmanuexp, &zero}};
 
 
 int main(int argc,char **argv) {
-    PetscErrorCode    ierr;
+    PetscErrorCode ierr;
     DM             da;
     SNES           snes;
     KSP            ksp;
     Vec            u, uexact;
     PoissonCtx     user;
-    ProblemType    problem = MANUEXP;
-    int            dim = 2;
-    double         Lx = 1.0, Ly = 1.0, Lz = 1.0;
-    PetscBool      init_random = PETSC_FALSE;
     DMDALocalInfo  info;
     double         errinf, normconst2h, err2h;
     PetscErrorCode (*getuexact)(DMDALocalInfo*,Vec,PoissonCtx*);
 
+    int            dim = 2;                       // defaults: 2D,
+    ProblemType    problem = MANUEXP;             // manufactured problem using exp(),
+    PetscBool      init_random = PETSC_FALSE;     // default to zero initial iterate,
+    double         Lx = 1.0, Ly = 1.0, Lz = 1.0;  // domain [0,1]x[0,1]x[0,1]
+
     PetscInitialize(&argc,&argv,NULL,help);
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"fsh_", "options for fish.c", ""); CHKERRQ(ierr);
     ierr = PetscOptionsInt("-dim",
-         "dimension of problem (=1,2,3 only)","fish.c",dim,&dim,NULL);CHKERRQ(ierr);
+         "dimension of problem (=1,2,3 only)",
+         "fish.c",dim,&dim,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsReal("-Lx",
-         "set Lx in domain ([0,Lx] x [0,Ly] x [0,Lz], or for lower dim)","fish.c",Lx,&Lx,NULL);CHKERRQ(ierr);
+         "set Lx in domain ([0,Lx] x [0,Ly] x [0,Lz], etc.)",
+         "fish.c",Lx,&Lx,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsReal("-Ly",
-         "set Ly in domain ([0,Lx] x [0,Ly] x [0,Lz], or for lower dim)","fish.c",Ly,&Ly,NULL);CHKERRQ(ierr);
+         "set Ly in domain ([0,Lx] x [0,Ly] x [0,Lz], etc.)",
+         "fish.c",Ly,&Ly,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsReal("-Lz",
-         "set Ly in domain ([0,Lx] x [0,Ly] x [0,Lz], or for lower dim)","fish.c",Lz,&Lz,NULL);CHKERRQ(ierr);
+         "set Ly in domain ([0,Lx] x [0,Ly] x [0,Lz], etc.)",
+         "fish.c",Lz,&Lz,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsBool("-init_random",
          "initial state is random (default is zero)",
          "fish.c",init_random,&init_random,NULL);CHKERRQ(ierr);
@@ -294,20 +296,14 @@ int main(int argc,char **argv) {
 
     user.g_bdry = g_bdry_ptr[dim-1][problem];
     user.f_rhs = f_rhs_ptr[dim-1][problem];
-    if (user.g_bdry == NULL) {
-        SETERRQ(PETSC_COMM_WORLD,2,"error setting up g_bdry() function\n");
-    }
-    if (user.f_rhs == NULL) {
-        SETERRQ(PETSC_COMM_WORLD,3,"error setting up f_rhs() function\n");
-    }
-    ierr = DMSetApplicationContext(da,&user);CHKERRQ(ierr);
+    ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
 
     ierr = DMSetFromOptions(da); CHKERRQ(ierr);
     ierr = DMSetUp(da); CHKERRQ(ierr);  // this must be called BEFORE SetUniformCoordinates
-    ierr = DMDASetUniformCoordinates(da,0.0,Lx,0.0,Ly,0.0,Lz);CHKERRQ(ierr);
+    ierr = DMDASetUniformCoordinates(da,0.0,Lx,0.0,Ly,0.0,Lz); CHKERRQ(ierr);
 
-    ierr = DMCreateGlobalVector(da,&u);CHKERRQ(ierr);
-    ierr = PetscObjectSetName((PetscObject)u,"u");CHKERRQ(ierr);
+    ierr = DMCreateGlobalVector(da,&u); CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject)u,"u"); CHKERRQ(ierr);
 
     ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
     ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
@@ -330,7 +326,7 @@ int main(int argc,char **argv) {
 
     ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
 
-    ierr = VecDuplicate(u,&uexact);CHKERRQ(ierr);
+    ierr = VecDuplicate(u,&uexact); CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
     getuexact = getuexact_ptr[dim-1];
     ierr = (*getuexact)(&info,uexact,&user); CHKERRQ(ierr);
@@ -364,9 +360,7 @@ int main(int argc,char **argv) {
             SETERRQ(PETSC_COMM_WORLD,4,"invalid dim value in final report\n");
     }
 
-    VecDestroy(&u);  VecDestroy(&uexact);
-    SNESDestroy(&snes);  DMDestroy(&da);
-    PetscFinalize();
-    return 0;
+    VecDestroy(&u);  VecDestroy(&uexact);  SNESDestroy(&snes);  DMDestroy(&da);
+    return PetscFinalize();
 }
 
