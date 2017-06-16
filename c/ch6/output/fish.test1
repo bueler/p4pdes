@@ -1,4 +1,4 @@
   0 SNES Function norm 0.0578466 
   Linear solve converged due to CONVERGED_RTOL iterations 7
   1 SNES Function norm < 1.e-11
-on 17 point grid:  error |u-uexact|_inf = 0.000976563, |...|_h = 7.13e-04
+on 17 point 1D grid:  error |u-uexact|_inf = 0.000976563, |...|_h = 7.13e-04

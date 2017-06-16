@@ -339,21 +339,21 @@ int main(int argc,char **argv) {
             normconst2h = PetscSqrtReal((double)(info.mx-1));
             err2h /= normconst2h; // like continuous L2
             ierr = PetscPrintf(PETSC_COMM_WORLD,
-                "on %d point grid:  error |u-uexact|_inf = %g, |...|_h = %.2e\n",
+                "on %d point 1D grid:  error |u-uexact|_inf = %g, |...|_h = %.2e\n",
                 info.mx,errinf,err2h); CHKERRQ(ierr);
             break;
         case 2:
             normconst2h = PetscSqrtReal((double)(info.mx-1)*(info.my-1));
             err2h /= normconst2h; // like continuous L2
             ierr = PetscPrintf(PETSC_COMM_WORLD,
-                "on %d x %d grid:  error |u-uexact|_inf = %g, |...|_h = %.2e\n",
+                "on %d x %d 2D grid:  error |u-uexact|_inf = %g, |...|_h = %.2e\n",
                 info.mx,info.my,errinf,err2h); CHKERRQ(ierr);
             break;
         case 3:
             normconst2h = PetscSqrtReal((double)(info.mx-1)*(info.my-1)*(info.mz-1));
             err2h /= normconst2h; // like continuous L2
             ierr = PetscPrintf(PETSC_COMM_WORLD,
-                "on %d x %d x %d grid:  error |u-uexact|_inf = %g, |...|_h = %.2e\n",
+                "on %d x %d x %d 3D grid:  error |u-uexact|_inf = %g, |...|_h = %.2e\n",
                 info.mx,info.my,info.mz,errinf,err2h); CHKERRQ(ierr);
             break;
         default:

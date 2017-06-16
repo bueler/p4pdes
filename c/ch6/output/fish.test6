@@ -1,4 +1,4 @@
   Linear solve converged due to CONVERGED_RTOL iterations 5
   Linear solve converged due to CONVERGED_RTOL iterations 5
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
-on 5 x 5 x 5 grid:  error |u-uexact|_inf = 0.000580114, |...|_h = 2.42e-04
+on 5 x 5 x 5 3D grid:  error |u-uexact|_inf = 0.000580114, |...|_h = 2.42e-04
