@@ -1,47 +1,39 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
-obstacle: obstacle.o ../ch6/poissonfunctions.o chkopts
-	-${CLINKER} -o obstacle obstacle.o ../ch6/poissonfunctions.o ${PETSC_LIB}
-	${RM} obstacle.o ../ch6/poissonfunctions.o
+well: well.o  chkopts
+	-${CLINKER} -o well well.o  ${PETSC_LIB}
+	${RM} well.o
 
-ice: ice.o  chkopts
-	-${CLINKER} -o ice ice.o  ${PETSC_LIB}
-	${RM} ice.o
+stokes: stokes.o  chkopts
+	-${CLINKER} -o stokes stokes.o  ${PETSC_LIB}
+	${RM} stokes.o
+
+# copy of this broken example from petsc commit 55cee6f09eb989b4d30b8ed1c133ceefb891d332
+ex7: ex7.o  chkopts
+	-${CLINKER} -o ex7 ex7.o  ${PETSC_LIB}
+	${RM} ex7.o
 
 # testing
 
-runobstacle_1:
-	-@../testit.sh obstacle "-da_refine 3 -snes_monitor_short -ksp_rtol 1.0e-12 -snes_rtol 1.0e-10 -ksp_converged_reason" 1 1
+runwell_1:
+	-@../testit.sh well "-snes_converged_reason -da_refine 1 -well_shorterrors" 1 1
 
-runobstacle_2:
-	-@../testit.sh obstacle "-da_refine 4 -snes_monitor_short -pc_type asm -sub_pc_type lu" 4 2
+runwell_2:
+	-@../testit.sh well "-snes_converged_reason -ksp_converged_reason -ksp_type minres -pc_type none -da_refine 2 -ksp_rtol 1.0e-14 -well_shorterrors" 1 2
 
-runobstacle_3:
-	-@../testit.sh obstacle "-da_refine 2 -mat_is_symmetric -snes_converged_reason -pc_type mg" 1 3
+runwell_3:
+	-@../testit.sh well "-snes_converged_reason -snes_monitor_short -da_refine 1 -well_scheme regular -well_shorterrors" 1 3
 
-runice_1:
-	-@../testit.sh ice "-da_refine 2 -ice_verif 1 -ice_eps 0.0 -ice_tf 40 -ice_dtinit 10 -ts_type beuler -ts_adapt_type none" 1 1
+test_well: runwell_1 runwell_2 runwell_3
 
-runice_2:
-	-@../testit.sh ice "-da_refine 2 -ice_verif 2 -ice_eps 0.0 -ice_tf 10 -ice_dtinit 3 -snes_fd_color" 2 2
+test: test_well
 
-runice_3:
-	-@../testit.sh ice "-da_refine 1 -ice_tf 4 -ice_dtinit 1 -ice_maxslide 500 -ts_type bdf -ts_bdf_order 2 -ts_adapt_type none" 1 3
-
-runice_4:
-	-@../testit.sh ice "-da_refine 2 -ice_tf 20 -ice_dtinit 1 -snes_converged_reason -ts_adapt_clip 0.1,10.0" 1 4
-
-test_obstacle: runobstacle_1 runobstacle_2 runobstacle_3
-
-test_ice: runice_1 runice_2 runice_3 runice_4
-
-test: test_obstacle test_ice
 
 # etc
 
-.PHONY: distclean runobstacle_1 runobstacle_2 runobstacle_3 runice_1 runice_2 runice_3 runice_4 test test_obstacle test_ice
+.PHONY: distclean runwell_1 runwell_2 runwell_3 test_well test
 
 distclean:
-	@rm -f *~ obstacle ice *tmp
+	@rm -f *~ *tmp *.dat *.dat.info *.pyc PetscBinaryIO.py petsc_conf.py stokes ex7 well
 
