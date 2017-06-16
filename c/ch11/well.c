@@ -90,9 +90,10 @@ PetscErrorCode ExactSolution(DMDALocalInfo *info, Vec X, AppCtx *user) {
     PetscErrorCode ierr;
     double h, x;
     Field  *aX;
+    int    i;
     h  = user->L / (info->mx-1);
     ierr = DMDAVecGetArray(info->da,X,&aX); CHKERRQ(ierr);
-    for (int i=info->xs; i<info->xs+info->xm; i++) {
+    for (i=info->xs; i<info->xs+info->xm; i++) {
         aX[i].u = 0.0;
         if (user->scheme == STAGGERED)
             x = h * (i + 0.5);
@@ -116,7 +117,8 @@ PetscErrorCode FormFunctionStaggeredLocal(DMDALocalInfo *info, Field *X,
                                           Field *F, AppCtx *user) {
     const double h  = user->L / (info->mx-1),
                  h2 = h * h;
-    for (int i=info->xs; i<info->xs+info->xm; i++) {
+    int          i;
+    for (i=info->xs; i<info->xs+info->xm; i++) {
         if (i == 0) { // bottom of well
             F[i].u = X[i].u;                                              // u(0) = 0
             F[i].p = - (X[i+1].u - 0.0) / h;                              // -u_x(0+1/2) = 0
@@ -147,7 +149,8 @@ PetscErrorCode FormFunctionRegularLocal(DMDALocalInfo *info, Field *X,
                                         Field *F, AppCtx *user) {
     const double h  = user->L / (info->mx-1),
                  h2 = h * h;
-    for (int i=info->xs; i<info->xs+info->xm; i++) {
+    int          i;
+    for (i=info->xs; i<info->xs+info->xm; i++) {
         if (i == 0) { // bottom of well
             F[i].u = X[i].u;                                              // u(0) = 0
             F[i].p = - (X[i+1].u - 0.0) / (2 * h);                        // -u_x(0+1/2) = 0  (and / 2 for symmetry)
@@ -188,7 +191,8 @@ PetscErrorCode FormJacobianStaggeredLocal(DMDALocalInfo *info, double *X,
     double       v[5];
     const double h  = user->L / (info->mx-1),
                  h2 = h * h;
-    for (int i=info->xs; i<info->xs+info->xm; i++) {
+    int          i;
+    for (i=info->xs; i<info->xs+info->xm; i++) {
         row.i = i;
         if (i == 0) {
             row.c = 0;  col[0].i = i;    col[0].c = 0;  v[0] = 1.0;
@@ -249,7 +253,8 @@ PetscErrorCode FormJacobianRegularLocal(DMDALocalInfo *info, double *X,
     double       v[5];
     const double h  = user->L / (info->mx-1),
                  h2 = h * h;
-    for (int i=info->xs; i<info->xs+info->xm; i++) {
+    int          i;
+    for (i=info->xs; i<info->xs+info->xm; i++) {
         row.i = i;
         if (i == 0) {
             row.c = 0;  col[0].i = i;    col[0].c = 0;  v[0] = 1.0;

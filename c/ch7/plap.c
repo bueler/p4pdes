@@ -67,11 +67,12 @@ double Frhs(double x, double y, PLapCtx *user) {
 PetscErrorCode InitialIterateLocal(DMDALocalInfo *info, Vec u, PLapCtx *user) {
     PetscErrorCode ierr;
     const double hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1);
-    double       x,y, **au;
+    double       x, y, **au;
+    int          i, j;
     ierr = DMDAVecGetArray(info->da,u,&au); CHKERRQ(ierr);
-    for (int j = info->ys; j < info->ys + info->ym; j++) {
+    for (j = info->ys; j < info->ys + info->ym; j++) {
         y = hy * (j + 1);
-        for (int i = info->xs; i < info->xs + info->xm; i++) {
+        for (i = info->xs; i < info->xs + info->xm; i++) {
             x = hx * (i + 1);
             au[j][i] = (1.0 - x) * Uexact(0.0,y,user->alpha)
                        + x * Uexact(1.0,y,user->alpha);
@@ -85,11 +86,12 @@ PetscErrorCode InitialIterateLocal(DMDALocalInfo *info, Vec u, PLapCtx *user) {
 PetscErrorCode GetUexactLocal(DMDALocalInfo *info, Vec uex, PLapCtx *user) {
     PetscErrorCode ierr;
     const double hx = 1.0 / (info->mx+1), hy = 1.0 / (info->my+1);
-    double       x,y, **auex;
+    double       x, y, **auex;
+    int          i, j;
     ierr = DMDAVecGetArray(info->da,uex,&auex); CHKERRQ(ierr);
-    for (int j = info->ys; j < info->ys + info->ym; j++) {
+    for (j = info->ys; j < info->ys + info->ym; j++) {
         y = hy * (j + 1);
-        for (int i = info->xs; i < info->xs + info->xm; i++) {
+        for (i = info->xs; i < info->xs + info->xm; i++) {
             x = hx * (i + 1);
             auex[j][i] = Uexact(x,y,user->alpha);
         }
@@ -109,7 +111,8 @@ double chi(int L, double xi, double eta) {
 // evaluate v(xi,eta) on reference element using local node numbering
 double eval(const double v[4], double xi, double eta) {
     double sum = 0.0;
-    for (int L=0; L<4; L++)
+    int    L;
+    for (L=0; L<4; L++)
         sum += v[L] * chi(L,xi,eta);
     return sum;
 }
@@ -127,7 +130,8 @@ gradRef dchi(int L, double xi, double eta) {
 // evaluate partial derivs of v(xi,eta) on reference element
 gradRef deval(const double v[4], double xi, double eta) {
     gradRef sum = {0.0,0.0}, tmp;
-    for (int L=0; L<4; L++) {
+    int     L;
+    for (L=0; L<4; L++) {
         tmp = dchi(L,xi,eta);
         sum.xi += v[L] * tmp.xi;  sum.eta += v[L] * tmp.eta;
     }

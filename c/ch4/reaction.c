@@ -11,8 +11,9 @@ typedef struct {
 
 PetscErrorCode InitialAndExact(DMDALocalInfo *info, double *u0,
                                double *uex, AppCtx *user) {
+    int    i;
     double h = 1.0 / (info->mx-1), x;
-    for (int i=info->xs; i<info->xs+info->xm; i++) {
+    for (i=info->xs; i<info->xs+info->xm; i++) {
         x = h * i;
         u0[i]  = user->alpha * (1.0 - x) + user->beta * x;
         uex[i] = user->M * PetscPowReal(x + 1.0,4.0);
@@ -22,8 +23,9 @@ PetscErrorCode InitialAndExact(DMDALocalInfo *info, double *u0,
 
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *u,
                                  double *FF, AppCtx *user) {
+    int    i;
     double h = 1.0 / (info->mx-1), R;
-    for (int i=info->xs; i<info->xs+info->xm; i++) {
+    for (i=info->xs; i<info->xs+info->xm; i++) {
         if (i == 0) {
             FF[i] = u[i] - user->alpha;
         } else if (i == info->mx-1) {
