@@ -360,7 +360,7 @@ int main(int argc,char **argv) {
     double           hx, hy, t0, c, dt, tf;
     char             fileroot[PETSC_MAX_PATH_LEN] = "";
     int              steps;
-    PetscBool        oneline;
+    PetscBool        oneline = PETSC_FALSE;
 
     PetscInitialize(&argc,&argv,(char*)0,help);
     ierr = setup(&user,fileroot,&oneline); CHKERRQ(ierr);
