@@ -1,3 +1,4 @@
   Linear solve converged due to CONVERGED_RTOL iterations 4
   Linear solve converged due to CONVERGED_RTOL iterations 4
-on 5 x 5 2D grid:  error |u-uexact|_inf = 0.000306743, |...|_h = 1.75e-04
+problem manuexp on 5 x 5 point 2D grid:
+  error |u-uexact|_inf = 3.067e-04, |u-uexact|_h = 1.745e-04

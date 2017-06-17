@@ -1,2 +1,3 @@
   Linear solve converged due to CONVERGED_RTOL iterations 8
-on 9 x 9 x 9 3D grid:  error |u-uexact|_inf = 0.000169304, |...|_h = 6.09e-05
+problem manupoly on 9 x 9 x 9 point 3D grid:
+  error |u-uexact|_inf = 1.693e-04, |u-uexact|_h = 6.089e-05

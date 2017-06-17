@@ -1,4 +1,5 @@
 Matrix is symmetric (tolerance 1e-07)
 Matrix is symmetric (tolerance 1e-07)
 Matrix is symmetric (tolerance 1e-07)
-on 9 x 9 x 9 3D grid:  error |u-uexact|_inf = 0.000235506, |...|_h = 9.45e-05
+problem manuexp on 9 x 9 x 9 point 3D grid:
+  error |u-uexact|_inf = 2.355e-04, |u-uexact|_h = 9.453e-05

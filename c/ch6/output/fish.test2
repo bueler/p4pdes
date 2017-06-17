@@ -1,3 +1,4 @@
 Matrix is symmetric (tolerance 1e-05)
 Matrix is symmetric (tolerance 1e-05)
-on 5 point 1D grid:  error |u-uexact|_inf = 0.015625, |...|_h = 1.14e-02
+problem manupoly on 5 point 1D grid:
+  error |u-uexact|_inf = 1.562e-02, |u-uexact|_h = 1.139e-02

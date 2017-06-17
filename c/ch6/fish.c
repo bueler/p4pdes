@@ -244,6 +244,7 @@ int main(int argc,char **argv) {
     PoissonCtx     user;
     DMDALocalInfo  info;
     double         errinf, normconst2h, err2h;
+    char           gridstr[99];
     PetscErrorCode (*getuexact)(DMDALocalInfo*,Vec,PoissonCtx*);
 
     int            dim = 2;                       // defaults: 2D,
@@ -337,28 +338,24 @@ int main(int argc,char **argv) {
     switch (dim) {
         case 1:
             normconst2h = PetscSqrtReal((double)(info.mx-1));
-            err2h /= normconst2h; // like continuous L2
-            ierr = PetscPrintf(PETSC_COMM_WORLD,
-                "on %d point 1D grid:  error |u-uexact|_inf = %g, |...|_h = %.2e\n",
-                info.mx,errinf,err2h); CHKERRQ(ierr);
+            snprintf(gridstr,99,"%d point 1D",info.mx);
             break;
         case 2:
             normconst2h = PetscSqrtReal((double)(info.mx-1)*(info.my-1));
-            err2h /= normconst2h; // like continuous L2
-            ierr = PetscPrintf(PETSC_COMM_WORLD,
-                "on %d x %d 2D grid:  error |u-uexact|_inf = %g, |...|_h = %.2e\n",
-                info.mx,info.my,errinf,err2h); CHKERRQ(ierr);
+            snprintf(gridstr,99,"%d x %d point 2D",info.mx,info.my);
             break;
         case 3:
             normconst2h = PetscSqrtReal((double)(info.mx-1)*(info.my-1)*(info.mz-1));
-            err2h /= normconst2h; // like continuous L2
-            ierr = PetscPrintf(PETSC_COMM_WORLD,
-                "on %d x %d x %d 3D grid:  error |u-uexact|_inf = %g, |...|_h = %.2e\n",
-                info.mx,info.my,info.mz,errinf,err2h); CHKERRQ(ierr);
+            snprintf(gridstr,99,"%d x %d x %d point 3D",info.mx,info.my,info.mz);
             break;
         default:
             SETERRQ(PETSC_COMM_WORLD,4,"invalid dim value in final report\n");
     }
+    err2h /= normconst2h; // like continuous L2
+    ierr = PetscPrintf(PETSC_COMM_WORLD,
+                "problem %s on %s grid:\n"
+                "  error |u-uexact|_inf = %.3e, |u-uexact|_h = %.3e\n",
+                ProblemTypes[problem],gridstr,errinf,err2h); CHKERRQ(ierr);
 
     VecDestroy(&u);  VecDestroy(&uexact);  SNESDestroy(&snes);  DMDestroy(&da);
     return PetscFinalize();
