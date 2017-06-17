@@ -48,7 +48,7 @@ $GO ../ch6/fish -fsh_dim 3 -da_refine 8 -pc_type mg -snes_type ksponly -ksp_conv
 $GO ../ch9/advect -da_refine 8 -ts_final_time 1.0 -ts_rk_type 3bs -ts_monitor -log_view
 
 # -da_refine 10 is 2049x2049; -pc_mg_levels to avoid "too fine" error?
-$GO ../ch12/obstacle -da_refine 10 -snes_monitor -ksp_converged_reason -pc_type mg -pc_mg_levels 8 -log_view
+$GO ../ch12/obstacle -da_refine 10 -snes_monitor -ksp_converged_reason -pc_type mg -pc_mg_levels 8 -snes_max_it 1000 -log_view
 
 #FIXME add an unstructured from Chapter 10?
 #---------------------------------------------------------------------------------
