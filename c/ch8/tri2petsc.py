@@ -57,7 +57,7 @@ def triangle_read_node(filename):
             bfn[count] = int(nxyb[3])
             count += 1
     nodefile.close()
-    L = np.count_nonzero(bfn == 2)
+    L = (bfn == 2).sum()
     return N,loc,bfn,L
 
 # K,e,xc,yc = triangle_read_ele(filename,x,y)
