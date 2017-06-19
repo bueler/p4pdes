@@ -7,16 +7,17 @@ static char help[] =
 "to 2D.\n\n";
 
 /*
-START: basic 2D run with pure linear multigrid on 9 x 9 point fine grid, with V cycles until the (true) residual norm is reduced by 1.0e-5:
+START: basic 2D run with pure linear multigrid on 9 x 9 point fine grid:
 
 $ ./fish -da_refine 2 -pc_type mg -snes_type ksponly
 
 VIEW:
-   -snes_view | less
+   -ksp_view | less
+(NOTE -snes_view much the same)
 
-HYPOTHETICAL WANT: classical multigrid with true gauss-seidel smoothing with nu_1=1, nu_2=1
+HYPOTHETICAL WANT: classical multigrid with true gauss-seidel smoothing with nu_1=1, nu_2=1, with V cycles until the (true) residual norm is reduced by 1.0e-5
 
-significant defaults observed in -snes_view:
+significant defaults observed in -ksp_view:
    -ksp_type cg                        WANT richardson
    -ksp_rtol 1.0e-5                    OK
    -ksp_norm_type preconditioned       WANT to not have V cycle before first KSP residual norm,
@@ -27,9 +28,10 @@ significant defaults observed in -snes_view:
    -pc_mg_smoothup 2                   ("maximum iterations=2") WANT 1
    -pc_mg_smoothdown 2                 (ditto) WANT 1
    (also: -fsh_dim 2 -fsh_problem manuexp)
+   -mg_levels_pc_type sor              OK; it is GS by default anyway
 
 *ADD* options in turn:
-   -ksp_monitor                                # shows 4 KSP iterations
+   -ksp_monitor                                # shows 4 KSP iterations  [PETSC BUG:  PRESENCE OF THIS MONITOR DETERMINES CONVERGENCE????]
    -mg_{levels,coarse}_ksp_converged_reason    # shows one V-cycle per ksp iter. and two smoother applications per level (up and down), and coarse ( = level 0) solve
    -ksp_type richardson
    -ksp_norm_type unpreconditioned             # now no V-cycle before first residual norm
@@ -37,7 +39,7 @@ significant defaults observed in -snes_view:
    -pc_mg_smoothup 1 -pc_mg_smoothdown 1       # back to 4 KSP iters
 
 SEE that this is what you wanted:
-   -snes_view | less                           # should be understandable
+   -ksp_view | less                           # should be understandable
 
 EVALUATE CONVERGENCE FACTOR by looking at residual norm reduction
 
@@ -47,7 +49,7 @@ alternate options:
    -ksp_type preonly                           # also force only one V cycle, but now no -ksp_monitor residual norms
 
 PARALLEL:
-   mpiexec -n 4 ... -snes_view |less           # now 6 iterations (why?)
+   mpiexec -n 4 ... -ksp_view |less            # now 6 iterations (why?)
 (NOTE PARALLEL DEFAULT: -mg_coarse_pc_type redundant -mg_coarse_redundant_pc_type lu)
    -mg_levels_pc_type jacobi                   # now 33 iterations with EITHER 4 or 1 process
 */
