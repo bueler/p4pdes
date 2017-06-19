@@ -22,29 +22,32 @@ significant defaults observed in -ksp_view:
    -ksp_rtol 1.0e-5                    OK
    -ksp_norm_type preconditioned       WANT to not have V cycle before first KSP residual norm,
                                        (and want it to be norm)
+   -pc_mg_levels 3                     OK fine=level 2 (9x9), level 1 (5x5), and coarse (3x3) grids
+   -pc_mg_cycle_type v                 OK
    -mg_coarse_ksp_type preonly         OK
    -mg_coarse_pc_type lu               OK
    -mg_levels_ksp_type chebyshev       WANT richardson
-   -pc_mg_smoothup 2                   ("maximum iterations=2") WANT 1
-   -pc_mg_smoothdown 2                 (ditto) WANT 1
+   -mg_levels_ksp_max_it 2             ("maximum iterations=2") WANT 1 for both up- and down-smoother
    (also: -fsh_dim 2 -fsh_problem manuexp)
    -mg_levels_pc_type sor              OK; it is GS by default anyway
 
 *ADD* options in turn:
-   -ksp_monitor                                # shows 4 KSP iterations  [PETSC BUG:  PRESENCE OF THIS MONITOR DETERMINES CONVERGENCE????]
+   -ksp_monitor                                # shows 4 KSP iterations
    -mg_{levels,coarse}_ksp_converged_reason    # shows one V-cycle per ksp iter. and two smoother applications per level (up and down), and coarse ( = level 0) solve
    -ksp_type richardson
    -ksp_norm_type unpreconditioned             # now no V-cycle before first residual norm
    -mg_levels_ksp_type richardson              # now 3 KSP iters
-   -pc_mg_smoothup 1 -pc_mg_smoothdown 1       # back to 4 KSP iters
+   -mg_levels_ksp_max_it 1                     # back to 4 KSP iters]
+   [-pc_mg_smoothup 1 -pc_mg_smoothdown 1      # should be same as last, but instead PETSC issues #170, #140]
 
 SEE that this is what you wanted:
    -ksp_view | less                           # should be understandable
 
 EVALUATE CONVERGENCE FACTOR by looking at residual norm reduction
 
-alternate options:
+alternate options relevant to mg here:
    -pc_mg_levels 2                             # only fine (9 x 9) and coarse (5 x 5) grids
+   -pc_mg_cycle_type w
    -ksp_max_it 1                               # force one V cycle by using only 1 KSP iter
    -ksp_type preonly                           # also force only one V cycle, but now no -ksp_monitor residual norms
 
