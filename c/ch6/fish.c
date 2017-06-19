@@ -7,14 +7,53 @@ static char help[] =
 "to 2D.\n\n";
 
 /*
-view the basics with multigrid:
-$ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 3 -pc_type mg -snes_view|less
-$ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -snes_monitor -ksp_converged_reason
+START: basic 2D run with pure linear multigrid on 9 x 9 point fine grid, with V cycles until the (true) residual norm is reduced by 1.0e-5:
 
-this makes sense and shows V-cycles:
-$ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -snes_monitor -ksp_converged_reason -mg_levels_ksp_monitor|less
+$ ./fish -da_refine 2 -pc_type mg -snes_type ksponly
 
-this additionally generate .m files with solutions at levels:
+VIEW:
+   -snes_view | less
+
+HYPOTHETICAL WANT: classical multigrid with true gauss-seidel smoothing with nu_1=1, nu_2=1
+
+significant defaults observed in -snes_view:
+   -ksp_type cg                        WANT richardson
+   -ksp_rtol 1.0e-5                    OK
+   -ksp_norm_type preconditioned       WANT to not have V cycle before first KSP residual norm,
+                                       (and want it to be norm)
+   -mg_coarse_ksp_type preonly         OK
+   -mg_coarse_pc_type lu               OK
+   -mg_levels_ksp_type chebyshev       WANT richardson
+   -pc_mg_smoothup 2                   ("maximum iterations=2") WANT 1
+   -pc_mg_smoothdown 2                 (ditto) WANT 1
+   (also: -fsh_dim 2 -fsh_problem manuexp)
+
+*ADD* options in turn:
+   -ksp_monitor                                # shows 4 KSP iterations
+   -mg_{levels,coarse}_ksp_converged_reason    # shows one V-cycle per ksp iter. and two smoother applications per level (up and down), and coarse ( = level 0) solve
+   -ksp_type richardson
+   -ksp_norm_type unpreconditioned             # now no V-cycle before first residual norm
+   -mg_levels_ksp_type richardson              # now 3 KSP iters
+   -pc_mg_smoothup 1 -pc_mg_smoothdown 1       # back to 4 KSP iters
+
+SEE that this is what you wanted:
+   -snes_view | less                           # should be understandable
+
+EVALUATE CONVERGENCE FACTOR by looking at residual norm reduction
+
+alternate options:
+   -pc_mg_levels 2                             # only fine (9 x 9) and coarse (5 x 5) grids
+   -ksp_max_it 1                               # force one V cycle by using only 1 KSP iter
+   -ksp_type preonly                           # also force only one V cycle, but now no -ksp_monitor residual norms
+
+PARALLEL:
+   mpiexec -n 4 ... -snes_view |less           # now 6 iterations (why?)
+(NOTE PARALLEL DEFAULT: -mg_coarse_pc_type redundant -mg_coarse_redundant_pc_type lu)
+   -mg_levels_pc_type jacobi                   # now 33 iterations with EITHER 4 or 1 process
+*/
+
+/*
+# generate .m files with solutions at levels:
 $ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -snes_monitor_solution ascii:u.m:ascii_matlab
 $ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -mg_levels_3_ksp_monitor_solution ascii:errlevel3.m:ascii_matlab
 $ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -mg_levels_2_ksp_monitor_solution ascii:errlevel2.m:ascii_matlab
