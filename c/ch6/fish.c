@@ -252,6 +252,7 @@ PetscErrorCode Form3DUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
     return 0;
 }
 
+//STARTPTRARRAYS
 // arrays of pointers to functions:   ..._ptr[DIMS]
 static void* residual_ptr[3]
     = {&Form1DFunctionLocal, &Form2DFunctionLocal, &Form3DFunctionLocal};
@@ -261,6 +262,7 @@ static void* jacobian_ptr[3]
 
 static void* getuexact_ptr[3]
     = {&Form1DUExact, &Form2DUExact, &Form3DUExact};
+//ENDPTRARRAYS
 
 typedef enum {MANUPOLY, MANUEXP, ZERO} ProblemType;
 static const char* ProblemTypes[] = {"manupoly","manuexp","zero",
@@ -290,10 +292,10 @@ int main(int argc,char **argv) {
     double         errinf, normconst2h, err2h;
     char           gridstr[99];
     PetscErrorCode (*getuexact)(DMDALocalInfo*,Vec,PoissonCtx*);
-
-    int            dim = 2;                       // defaults: 2D,
-    ProblemType    problem = MANUEXP;             // manufactured problem using exp(),
-    PetscBool      init_random = PETSC_FALSE;     // default to zero initial iterate,
+    // defaults:
+    int            dim = 2;                       // 2D
+    ProblemType    problem = MANUEXP;             // manufactured problem using exp()
+    PetscBool      init_random = PETSC_FALSE;     // default to zero initial iterate
     double         Lx = 1.0, Ly = 1.0, Lz = 1.0;  // domain [0,1]x[0,1]x[0,1]
 
     PetscInitialize(&argc,&argv,NULL,help);
@@ -317,7 +319,10 @@ int main(int argc,char **argv) {
          "problem type (determines exact solution and RHS)",
          "fish.c",ProblemTypes,(PetscEnum)problem,(PetscEnum*)&problem,NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+    user.g_bdry = g_bdry_ptr[dim-1][problem];
+    user.f_rhs = f_rhs_ptr[dim-1][problem];
 
+//STARTCREATE
     switch (dim) {
         case 1:
             ierr = DMDACreate1d(PETSC_COMM_WORLD,
@@ -336,19 +341,13 @@ int main(int argc,char **argv) {
                 1,1,NULL,NULL,NULL,&da); CHKERRQ(ierr);
             break;
         default:
-            SETERRQ(PETSC_COMM_WORLD,1,"invalid dim value in creating DMDA\n");
+            SETERRQ(PETSC_COMM_WORLD,1,"invalid dim for DMDA creation\n");
     }
 
-    user.g_bdry = g_bdry_ptr[dim-1][problem];
-    user.f_rhs = f_rhs_ptr[dim-1][problem];
     ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
-
     ierr = DMSetFromOptions(da); CHKERRQ(ierr);
-    ierr = DMSetUp(da); CHKERRQ(ierr);  // this must be called BEFORE SetUniformCoordinates
+    ierr = DMSetUp(da); CHKERRQ(ierr);  // call BEFORE SetUniformCoordinates
     ierr = DMDASetUniformCoordinates(da,0.0,Lx,0.0,Ly,0.0,Lz); CHKERRQ(ierr);
-
-    ierr = DMCreateGlobalVector(da,&u); CHKERRQ(ierr);
-    ierr = PetscObjectSetName((PetscObject)u,"u"); CHKERRQ(ierr);
 
     ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
     ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
@@ -359,7 +358,10 @@ int main(int argc,char **argv) {
     ierr = SNESGetKSP(snes,&ksp); CHKERRQ(ierr);
     ierr = KSPSetType(ksp,KSPCG); CHKERRQ(ierr);
     ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
+//ENDCREATE
 
+    ierr = DMCreateGlobalVector(da,&u); CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject)u,"u"); CHKERRQ(ierr);
     if (init_random) {
         PetscRandom   rctx;
         ierr = PetscRandomCreate(PETSC_COMM_WORLD,&rctx); CHKERRQ(ierr);

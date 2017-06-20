@@ -22,6 +22,7 @@ PetscErrorCode Form1DFunctionLocal(DMDALocalInfo *info, double *au,
     return 0;
 }
 
+//STARTFORM2DFUNCTION
 PetscErrorCode Form2DFunctionLocal(DMDALocalInfo *info, double **au,
                                    double **aF, PoissonCtx *user) {
     PetscErrorCode ierr;
@@ -53,6 +54,7 @@ PetscErrorCode Form2DFunctionLocal(DMDALocalInfo *info, double **au,
     }
     return 0;
 }
+//ENDFORM2DFUNCTION
 
 PetscErrorCode Form3DFunctionLocal(DMDALocalInfo *info, double ***au,
                                    double ***aF, PoissonCtx *user) {

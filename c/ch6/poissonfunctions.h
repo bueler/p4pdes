@@ -25,14 +25,14 @@ The matrices A are normalized so that A / (hx * hy) approximates the Laplacian.
 Thus the entries are O(1).  The entries are integers if hx = hy.
 */
 
+//STARTDECLARE
 typedef struct {
-    // the Dirichlet boundary condition for g(x,y,z); same as exact solution when exists
+    // the Dirichlet boundary condition for g(x,y,z)
     double (*g_bdry)(double x, double y, double z, void *ctx);
     // the right-hand-side f(x,y,z) = - laplacian u:
     double (*f_rhs)(double x, double y, double z, void *ctx);
     void   *addctx;  // additional context; see example usage in minimal.c
 } PoissonCtx;
-
 
 PetscErrorCode Form1DFunctionLocal(DMDALocalInfo *info,
     double *au, double *aF, PoissonCtx *user);
@@ -42,6 +42,7 @@ PetscErrorCode Form2DFunctionLocal(DMDALocalInfo *info,
 
 PetscErrorCode Form3DFunctionLocal(DMDALocalInfo *info,
     double ***au, double ***aF, PoissonCtx *user);
+//ENDDECLARE
 
 /* This generates the classical tridiagonal sparse matrix with 2 on the diagonal
 and -1 on the off diagonal, if hx = hy.  The boundary conditions correspond to
