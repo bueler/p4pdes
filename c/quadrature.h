@@ -23,13 +23,13 @@ static const Quad1D gausslegendre[3]
 //ENDONEDIM
 
 //STARTTRIANGLE
-#define MAXPTSTRI 4
+#define MAXPTS_TRI 4
 
 typedef struct {
-    int    n;              // number of quadrature points for this rule
-    double xi[MAXPTSTRI],  // locations: (xi,eta) in reference triangle
-           eta[MAXPTSTRI], //   with vertices (0,0), (1,0), (0,1)
-           w[MAXPTSTRI];   // weights (sum to 0.5)
+    int    n;               // number of quadrature points for this rule
+    double xi[MAXPTS_TRI],  // locations: (xi,eta) in reference triangle
+           eta[MAXPTS_TRI], //   with vertices (0,0), (1,0), (0,1)
+           w[MAXPTS_TRI];   // weights (sum to 0.5)
 } Quad2DTri;
 
 static const Quad2DTri symmgauss[3]
