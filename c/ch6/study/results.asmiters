@@ -22,18 +22,6 @@ mpiexec -n 2 ../fish -fsh_dim 2 -snes_type ksponly -ksp_converged_reason -pc_typ
   Linear solve converged due to CONVERGED_RTOL iterations 35
 mpiexec -n 2 ../fish -fsh_dim 2 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 8 -pc_asm_overlap 1 -sub_pc_type ilu
   Linear solve converged due to CONVERGED_RTOL iterations 751
-mpiexec -n 2 ../fish -fsh_dim 2 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 4 -pc_asm_overlap 2 -sub_pc_type lu
-  Linear solve converged due to CONVERGED_RTOL iterations 8
-mpiexec -n 2 ../fish -fsh_dim 2 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 4 -pc_asm_overlap 2 -sub_pc_type ilu
-  Linear solve converged due to CONVERGED_RTOL iterations 23
-mpiexec -n 2 ../fish -fsh_dim 2 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 6 -pc_asm_overlap 2 -sub_pc_type lu
-  Linear solve converged due to CONVERGED_RTOL iterations 15
-mpiexec -n 2 ../fish -fsh_dim 2 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 6 -pc_asm_overlap 2 -sub_pc_type ilu
-  Linear solve converged due to CONVERGED_RTOL iterations 106
-mpiexec -n 2 ../fish -fsh_dim 2 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 8 -pc_asm_overlap 2 -sub_pc_type lu
-  Linear solve converged due to CONVERGED_RTOL iterations 27
-mpiexec -n 2 ../fish -fsh_dim 2 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 8 -pc_asm_overlap 2 -sub_pc_type ilu
-  Linear solve converged due to CONVERGED_RTOL iterations 747
 mpiexec -n 2 ../fish -fsh_dim 2 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 4 -pc_asm_overlap 4 -sub_pc_type lu
   Linear solve converged due to CONVERGED_RTOL iterations 6
 mpiexec -n 2 ../fish -fsh_dim 2 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 4 -pc_asm_overlap 4 -sub_pc_type ilu
@@ -70,18 +58,6 @@ mpiexec -n 4 ../fish -fsh_dim 2 -snes_type ksponly -ksp_converged_reason -pc_typ
   Linear solve converged due to CONVERGED_RTOL iterations 48
 mpiexec -n 4 ../fish -fsh_dim 2 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 8 -pc_asm_overlap 1 -sub_pc_type ilu
   Linear solve converged due to CONVERGED_RTOL iterations 706
-mpiexec -n 4 ../fish -fsh_dim 2 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 4 -pc_asm_overlap 2 -sub_pc_type lu
-  Linear solve converged due to CONVERGED_RTOL iterations 8
-mpiexec -n 4 ../fish -fsh_dim 2 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 4 -pc_asm_overlap 2 -sub_pc_type ilu
-  Linear solve converged due to CONVERGED_RTOL iterations 23
-mpiexec -n 4 ../fish -fsh_dim 2 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 6 -pc_asm_overlap 2 -sub_pc_type lu
-  Linear solve converged due to CONVERGED_RTOL iterations 16
-mpiexec -n 4 ../fish -fsh_dim 2 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 6 -pc_asm_overlap 2 -sub_pc_type ilu
-  Linear solve converged due to CONVERGED_RTOL iterations 107
-mpiexec -n 4 ../fish -fsh_dim 2 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 8 -pc_asm_overlap 2 -sub_pc_type lu
-  Linear solve converged due to CONVERGED_RTOL iterations 30
-mpiexec -n 4 ../fish -fsh_dim 2 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 8 -pc_asm_overlap 2 -sub_pc_type ilu
-  Linear solve converged due to CONVERGED_RTOL iterations 747
 mpiexec -n 4 ../fish -fsh_dim 2 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 4 -pc_asm_overlap 4 -sub_pc_type lu
   Linear solve converged due to CONVERGED_RTOL iterations 6
 mpiexec -n 4 ../fish -fsh_dim 2 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 4 -pc_asm_overlap 4 -sub_pc_type ilu
@@ -118,18 +94,6 @@ mpiexec -n 8 ../fish -fsh_dim 2 -snes_type ksponly -ksp_converged_reason -pc_typ
   Linear solve converged due to CONVERGED_RTOL iterations 53
 mpiexec -n 8 ../fish -fsh_dim 2 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 8 -pc_asm_overlap 1 -sub_pc_type ilu
   Linear solve converged due to CONVERGED_RTOL iterations 747
-mpiexec -n 8 ../fish -fsh_dim 2 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 4 -pc_asm_overlap 2 -sub_pc_type lu
-  Linear solve converged due to CONVERGED_RTOL iterations 11
-mpiexec -n 8 ../fish -fsh_dim 2 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 4 -pc_asm_overlap 2 -sub_pc_type ilu
-  Linear solve converged due to CONVERGED_RTOL iterations 23
-mpiexec -n 8 ../fish -fsh_dim 2 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 6 -pc_asm_overlap 2 -sub_pc_type lu
-  Linear solve converged due to CONVERGED_RTOL iterations 22
-mpiexec -n 8 ../fish -fsh_dim 2 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 6 -pc_asm_overlap 2 -sub_pc_type ilu
-  Linear solve converged due to CONVERGED_RTOL iterations 107
-mpiexec -n 8 ../fish -fsh_dim 2 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 8 -pc_asm_overlap 2 -sub_pc_type lu
-  Linear solve converged due to CONVERGED_RTOL iterations 48
-mpiexec -n 8 ../fish -fsh_dim 2 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 8 -pc_asm_overlap 2 -sub_pc_type ilu
-  Linear solve converged due to CONVERGED_RTOL iterations 748
 mpiexec -n 8 ../fish -fsh_dim 2 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 4 -pc_asm_overlap 4 -sub_pc_type lu
   Linear solve converged due to CONVERGED_RTOL iterations 9
 mpiexec -n 8 ../fish -fsh_dim 2 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 4 -pc_asm_overlap 4 -sub_pc_type ilu
@@ -150,10 +114,6 @@ mpiexec -n 2 ../fish -fsh_dim 3 -snes_type ksponly -ksp_converged_reason -pc_typ
   Linear solve converged due to CONVERGED_RTOL iterations 27
 mpiexec -n 2 ../fish -fsh_dim 3 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 6 -pc_asm_overlap 1 -sub_pc_type ilu
   Linear solve converged due to CONVERGED_RTOL iterations 122
-mpiexec -n 2 ../fish -fsh_dim 3 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 4 -pc_asm_overlap 2 -sub_pc_type ilu
-  Linear solve converged due to CONVERGED_RTOL iterations 27
-mpiexec -n 2 ../fish -fsh_dim 3 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 6 -pc_asm_overlap 2 -sub_pc_type ilu
-  Linear solve converged due to CONVERGED_RTOL iterations 119
 mpiexec -n 2 ../fish -fsh_dim 3 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 4 -pc_asm_overlap 4 -sub_pc_type ilu
   Linear solve converged due to CONVERGED_RTOL iterations 27
 mpiexec -n 2 ../fish -fsh_dim 3 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 6 -pc_asm_overlap 4 -sub_pc_type ilu
@@ -166,10 +126,6 @@ mpiexec -n 4 ../fish -fsh_dim 3 -snes_type ksponly -ksp_converged_reason -pc_typ
   Linear solve converged due to CONVERGED_RTOL iterations 27
 mpiexec -n 4 ../fish -fsh_dim 3 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 6 -pc_asm_overlap 1 -sub_pc_type ilu
   Linear solve converged due to CONVERGED_RTOL iterations 123
-mpiexec -n 4 ../fish -fsh_dim 3 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 4 -pc_asm_overlap 2 -sub_pc_type ilu
-  Linear solve converged due to CONVERGED_RTOL iterations 27
-mpiexec -n 4 ../fish -fsh_dim 3 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 6 -pc_asm_overlap 2 -sub_pc_type ilu
-  Linear solve converged due to CONVERGED_RTOL iterations 120
 mpiexec -n 4 ../fish -fsh_dim 3 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 4 -pc_asm_overlap 4 -sub_pc_type ilu
   Linear solve converged due to CONVERGED_RTOL iterations 27
 mpiexec -n 4 ../fish -fsh_dim 3 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 6 -pc_asm_overlap 4 -sub_pc_type ilu
@@ -182,10 +138,6 @@ mpiexec -n 8 ../fish -fsh_dim 3 -snes_type ksponly -ksp_converged_reason -pc_typ
   Linear solve converged due to CONVERGED_RTOL iterations 27
 mpiexec -n 8 ../fish -fsh_dim 3 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 6 -pc_asm_overlap 1 -sub_pc_type ilu
   Linear solve converged due to CONVERGED_RTOL iterations 124
-mpiexec -n 8 ../fish -fsh_dim 3 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 4 -pc_asm_overlap 2 -sub_pc_type ilu
-  Linear solve converged due to CONVERGED_RTOL iterations 27
-mpiexec -n 8 ../fish -fsh_dim 3 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 6 -pc_asm_overlap 2 -sub_pc_type ilu
-  Linear solve converged due to CONVERGED_RTOL iterations 120
 mpiexec -n 8 ../fish -fsh_dim 3 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 4 -pc_asm_overlap 4 -sub_pc_type ilu
   Linear solve converged due to CONVERGED_RTOL iterations 27
 mpiexec -n 8 ../fish -fsh_dim 3 -snes_type ksponly -ksp_converged_reason -pc_type asm -da_refine 6 -pc_asm_overlap 4 -sub_pc_type ilu

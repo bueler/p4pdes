@@ -4,7 +4,7 @@ set -e
 # test ASM iterations with 2,3 dimensions and lu,ilu solution on blocks, with
 #   NN   = 2,4,8    subdomains/processes
 #   LEV  = 4,6,8    refinement (m=33,129,513) in 2D;  only m=33,129 in 3D
-#   OVER = 0,1,2,4  overlap
+#   OVER = 0,1,4    overlap
 
 COMMON="-snes_type ksponly -ksp_converged_reason -pc_type asm"
 
@@ -26,7 +26,7 @@ function runcase() {
 }
 
 for NN in 2 4 8; do
-    for OVER in 0 1 2 4; do
+    for OVER in 0 1 4; do
         for LEV in 4 6 8; do
             runcase $NN 2 $LEV $OVER lu
             runcase $NN 2 $LEV $OVER ilu
@@ -35,7 +35,7 @@ for NN in 2 4 8; do
 done
 
 for NN in 2 4 8; do
-    for OVER in 0 1 2 4; do
+    for OVER in 0 1 4; do
         for LEV in 4 6; do
             runcase $NN 3 $LEV $OVER ilu
         done
