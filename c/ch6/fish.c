@@ -234,7 +234,6 @@ int main(int argc,char **argv) {
     PetscErrorCode ierr;
     DM             da;
     SNES           snes;
-    KSP            ksp;
     Vec            u, uexact;
     PoissonCtx     user;
     DMDALocalInfo  info;
@@ -304,8 +303,6 @@ int main(int argc,char **argv) {
              (DMDASNESFunction)(residual_ptr[dim-1]),&user); CHKERRQ(ierr);
     ierr = DMDASNESSetJacobianLocal(da,
              (DMDASNESJacobian)(jacobian_ptr[dim-1]),&user); CHKERRQ(ierr);
-    ierr = SNESGetKSP(snes,&ksp); CHKERRQ(ierr);
-    ierr = KSPSetType(ksp,KSPCG); CHKERRQ(ierr);
     ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 //ENDCREATE
 
