@@ -90,7 +90,7 @@ PetscErrorCode formRHS(DM da, Vec b) {
 }
 //ENDEXACT
 
-//STARTCREATE
+//STARTMAIN
 int main(int argc,char **args) {
   PetscErrorCode ierr;
   DM            da;
@@ -102,11 +102,11 @@ int main(int argc,char **args) {
 
   PetscInitialize(&argc,&args,(char*)0,help);
 
-  // default size (9 x 9) can be changed using -da_grid_x M -da_grid_y N
+  // default size (9 x 9) can be changed using -da_refine X or
+  //     -da_grid_x M -da_grid_y N
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
-               DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
-               9,9,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,
-               &da); CHKERRQ(ierr);
+      DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
+      9,9,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&da); CHKERRQ(ierr);
 
   // create linear system matrix A
   ierr = DMSetFromOptions(da); CHKERRQ(ierr);
@@ -123,8 +123,7 @@ int main(int argc,char **args) {
   ierr = formExact(da,uexact); CHKERRQ(ierr);
   ierr = formRHS(da,b); CHKERRQ(ierr);
   ierr = formMatrix(da,A); CHKERRQ(ierr);
-//ENDCREATE
-//STARTSOLVE
+
   // create and solve the linear system
   ierr = KSPCreate(PETSC_COMM_WORLD,&ksp); CHKERRQ(ierr);
   ierr = KSPSetOperators(ksp,A,A); CHKERRQ(ierr);
@@ -144,5 +143,5 @@ int main(int argc,char **args) {
   PetscFinalize();
   return 0;
 }
-//ENDSOLVE
+//ENDMAIN
 
