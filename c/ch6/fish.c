@@ -243,7 +243,8 @@ int main(int argc,char **argv) {
     // defaults:
     int            dim = 2;                       // 2D
     ProblemType    problem = MANUEXP;             // manufactured problem using exp()
-    PetscBool      init_random = PETSC_FALSE;     // default to zero initial iterate
+    PetscBool      init_random = PETSC_FALSE,     // default to zero initial iterate
+                   q0interp = PETSC_FALSE;
     double         Lx = 1.0, Ly = 1.0, Lz = 1.0;  // domain [0,1]x[0,1]x[0,1]
 
     PetscInitialize(&argc,&argv,NULL,help);
@@ -266,6 +267,9 @@ int main(int argc,char **argv) {
     ierr = PetscOptionsEnum("-problem",
          "problem type (determines exact solution and RHS)",
          "fish.c",ProblemTypes,(PetscEnum)problem,(PetscEnum*)&problem,NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-q0interp",
+         "use DMDAInterpolationType of DMDA_Q0 instead of default DMDA_Q1",
+         "fish.c",q0interp,&q0interp,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
     user.g_bdry = g_bdry_ptr[dim-1][problem];
     user.f_rhs = f_rhs_ptr[dim-1][problem];
@@ -290,6 +294,9 @@ int main(int argc,char **argv) {
             break;
         default:
             SETERRQ(PETSC_COMM_WORLD,1,"invalid dim for DMDA creation\n");
+    }
+    if (q0interp) {
+        DMDASetInterpolationType(da, DMDA_Q0);
     }
 
     ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
