@@ -8,6 +8,10 @@ set -e
 
 COMMON="-snes_type ksponly -ksp_converged_reason -pc_type asm -sub_pc_type lu"
 
+# or exploit symmetry by using CG and CHOLESKY; recall need to turn on nested dissection:
+#COMMON="-snes_type ksponly -ksp_converged_reason -ksp_type cg -pc_type asm -sub_pc_type cholesky -sub_pc_factor_mat_ordering_type nd"
+# conclusion: a few more iterations, but a little bit faster, and all the same patterns
+
 # notes:
 #   * defaults to -ksp_type gmres -ksp_gmres_restart 30 -ksp_rtol 1.0e-5
 #   * run with --with-debugging=0 configuration
