@@ -8,16 +8,16 @@ set -e
 # is 10^-2 reduction in preconditioned 2-norm (see man page for KSPSetNormType())
 
 # do
-#   ./asmiters.sh 4
+#   ./asmaddmult.sh 4
 # for N=33 (33x33 grid) and
-#   ./asmiters.sh 5
+#   ./asmaddmult.sh 5
 # for N=65 (65x65 grid)
 
 LEV=$1
 
 COMMON="-fsh_dim 2 -ksp_type gmres -ksp_gmres_restart 10 -fsh_problem manuexp -snes_type ksponly -ksp_converged_reason -ksp_rtol 1.0e-2"
 
-ASM="-pc_type asm -sub_pc_type lu -pc_asm_type BASIC"
+ASM="-pc_type asm -sub_pc_type lu -pc_asm_type basic"
 
 #  -pc_asm_dm_subdomains: <FALSE> Use DMCreateDomainDecomposition() to define subdomains (PCASMSetDMSubdomains)
 #  -pc_asm_blocks <-1>: Number of subdomains (PCASMSetTotalSubdomains)
