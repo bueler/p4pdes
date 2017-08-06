@@ -6,8 +6,33 @@ static char help[] =
 "because call-backs fully-rediscretize for the supplied grid.  Defaults\n"
 "to 2D.\n\n";
 
+
+/* these are linear problems, consider adding:
+    -snes_type ksponly -ksp_rtol 1.0e-12
+*/
+
+/* compare whether rediscretization happens at each level (former) or Galerkin grid-
+transfer operators are used (latter)
+$ ./fish -fsh_problem manupoly -da_refine 4 -pc_type mg -snes_monitor
+$ ./fish -fsh_problem manupoly -da_refine 4 -pc_type mg -snes_monitor -pc_mg_galerkin
+*/
+
 /*
-# generate .m files with solutions at levels:
+choose linear solver for coarse grid, e.g.:
+$ ./fish -da_refine 4 -pc_type mg -mg_coarse_ksp_type cg -mg_coarse_pc_type jacobi -ksp_view|less
+default is preonly+lu
+*/
+
+/*
+this makes sense and shows V-cycles:
+$ ./fish -da_refine 3 -pc_type mg -snes_type ksponly -ksp_converged_reason -mg_levels_ksp_monitor
+*/
+
+/* see study/mgstudy.sh for multigrid parameter study */
+
+
+
+/* in 1D, generate .m files with solutions at levels:
 $ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -snes_monitor_solution ascii:u.m:ascii_matlab
 $ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -mg_levels_3_ksp_monitor_solution ascii:errlevel3.m:ascii_matlab
 $ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -mg_levels_2_ksp_monitor_solution ascii:errlevel2.m:ascii_matlab
@@ -16,42 +41,27 @@ $ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 3 -pc_type mg -ksp_rtol 1.0
 because default -mg_coarse_ksp_type is preonly, without changing that we get nothing:
 $ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -mg_coarse_ksp_type cg -snes_monitor -ksp_converged_reason -mg_levels_ksp_monitor -mg_coarse_ksp_monitor|less
 $ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -mg_coarse_ksp_type cg -mg_coarse_ksp_monitor_solution ascii:errcoarse.m:ascii_matlab
+*/
 
-FD jacobian with coloring is actually faster (and it is clear what is going on):
+/* in 1D, FD jacobian with coloring is actually faster:
 $ timer ./fish -fsh_dim 1 -fsh_problem manupoly -snes_monitor -da_refine 16
 $ timer ./fish -fsh_dim 1 -fsh_problem manupoly -snes_monitor -da_refine 16 -snes_fd_color
+presumably the reason is that running code to assemble the jacobian is slower than the extra function evals
+*/
 
-compare whether rediscretization happens at each level (former) or Galerkin grid-
-transfer operators are used (latter)
-$ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 4 -pc_type mg -snes_monitor
-$ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 4 -pc_type mg -snes_monitor -pc_mg_galerkin
 
-choose linear solver for coarse grid (default is preonly+lu):
-$ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 4 -pc_type mg -mg_coarse_ksp_type cg -mg_coarse_pc_type jacobi -ksp_view|less
 
-note -fsh_dim 2 -fsh_problem manuexp is problem re-used many times in Smith et al 1996
+/* MORE COMMENTS:
 
-add options to any run:
-    -{ksp,snes}_monitor -{ksp,snes}_converged_reason
-
-since these are linear problems, consider adding:
-    -snes_type ksponly -ksp_rtol 1.0e-12
-
-see study/mgstudy.sh for multigrid parameter study
-
-this makes sense and shows V-cycles:
-$ ./fish -fsh_dim 2 -da_refine 3 -pc_type mg -snes_type ksponly -ksp_converged_reason -mg_levels_ksp_monitor
-
-in parallel with -snes_fd_color (exploits full rediscretization)
-$ mpiexec -n 2 ./fish -fsh_dim 2 -da_refine 4 -pc_type mg -snes_fd_color
+in parallel (needed?), mg with -snes_fd_color exploits full rediscretization:
+$ mpiexec -n 2 ./fish -da_refine 4 -pc_type mg -snes_fd_color
 
 compare with rediscretization at every level or use Galerkin coarse grid operator
 $ ./fish -fsh_dim 2 -da_refine 4 -pc_type mg -snes_monitor
 $ ./fish -fsh_dim 2 -da_refine 4 -pc_type mg -snes_monitor -pc_mg_galerkin
+*/
 
-choose linear solver for coarse grid (default is preonly+lu):
-$ ./fish -fsh_dim 2 -da_refine 4 -pc_type mg -mg_coarse_ksp_type cg -mg_coarse_pc_type jacobi -ksp_view
-
+/* NEEDED?:
 to make truly random init, with time as seed, add
     #include <time.h>
     ...
