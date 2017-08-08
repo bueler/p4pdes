@@ -21,8 +21,16 @@ and are designed to be call-backs,
   ierr = DMDASNESSetJacobianLocal(dmda,
              (DMDASNESJacobian)FormXDJacobianLocal,&user); CHKERRQ(ierr);
 
-The matrices A are normalized so that A / (hx * hy) approximates the Laplacian.
-Thus the entries are O(1).  The entries are integers if hx = hy.
+All of these function work with equally-spaced, but independently in each
+dimension, structured grids.  That is, the dimensions hx, hy, hz of the
+rectangular cells can have any values.
+
+The matrices A are normalized so that if cells are square (h = hx = hy = hz)
+then A / h^d approximates the Laplacian in d dimensions.  This is the way
+the rows would be scaled in a Galerkin FEM scheme.  (Thus the entries are O(1)
+only if d=2.)  The Dirichlet boundary conditions generate diagonal Jacobian
+entries with the same values as the diagonal entries for points in
+the interior; the Jacobian matrices here have constant diagonal.
 */
 
 //STARTDECLARE
@@ -44,31 +52,23 @@ PetscErrorCode Form3DFunctionLocal(DMDALocalInfo *info,
     double ***au, double ***aF, PoissonCtx *user);
 //ENDDECLARE
 
-/* This generates the classical tridiagonal sparse matrix with 2 on the diagonal
-and -1 on the off diagonal, if hx = hy.  The boundary conditions correspond to
-1 on the diagonal.  For example,
-    ch6/fish -fsh_dim 1 -mat_view ::ascii_dense -da_refine 1
-produces
- 1.00000e+00   0.00000e+00   0.00000e+00   0.00000e+00  0.00000e+00
- 0.00000e+00   2.00000e+00  -1.00000e+00   0.00000e+00  0.00000e+00
- 0.00000e+00  -1.00000e+00   2.00000e+00  -1.00000e+00  0.00000e+00
- 0.00000e+00   0.00000e+00  -1.00000e+00   2.00000e+00  0.00000e+00
- 0.00000e+00   0.00000e+00   0.00000e+00   0.00000e+00  1.00000e+00       */
+/* This generates a tridiagonal sparse matrix.  For example, see the result
+of
+    ./fish -fsh_dim 1 -mat_view ::ascii_dense -da_refine N                */
 PetscErrorCode Form1DJacobianLocal(DMDALocalInfo *info, PetscScalar *au,
                                    Mat J, Mat Jpre, PoissonCtx *user);
 
-/* This generates the expected 2m-1 bandwidth (if m=mx=my) sparse matrix with
-4 or 1 on the diagonal and -1 or zero in all off-diagonal positions (if hx=hy).
+/* If h = hx = hy and h = L/(m-1) then this generates a 2m-1 bandwidth
+sparse matrix with 4 on the diagonal and -1 or zero in off-diagonal positions.
 For example,
-    ch6/fish -fsh_dim 2 -mat_view :foo.m:ascii_matlab -da_refine N
+    ./fish -fsh_dim 2 -mat_view :foo.m:ascii_matlab -da_refine N
 produces a matrix which can be read into Matlab/Octave.                 */
 PetscErrorCode Form2DJacobianLocal(DMDALocalInfo *info, PetscScalar **au,
                                    Mat J, Mat Jpre, PoissonCtx *user);
 
-/* This generates the expected 2m^2-1 bandwidth (if m=mx=my=mz) sparse matrix
-with 6 or 1 on the diagonal and -1 or zero in off-diagonal positions (if hx=hy).
-For example,
-    ch6/fish -fsh_dim 3 -mat_view :foo.m:ascii_matlab -da_refine N
+/* If h = hx = hy = hz and h = L/(m-1) then this generates a 2m^2-1 bandwidth
+sparse matrix.  For example,
+    ./fish -fsh_dim 3 -mat_view :foo.m:ascii_matlab -da_refine N
 produces a matrix which can be read into Matlab/Octave.
 */
 PetscErrorCode Form3DJacobianLocal(DMDALocalInfo *info, PetscScalar ***au,

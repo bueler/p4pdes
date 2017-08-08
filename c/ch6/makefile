@@ -18,7 +18,7 @@ runfish_2:
 	-@../testit.sh fish "-fsh_dim 1 -fsh_problem manupoly -da_refine 1 -mat_is_symmetric 1.0e-5 -snes_fd_color" 1 2
 
 runfish_3:
-	-@../testit.sh fish "-fsh_dim 2 -da_refine 1 -pc_type mg -ksp_converged_reason" 1 3
+	-@../testit.sh fish "-fsh_dim 2 -snes_type ksponly -da_refine 1 -pc_type mg -ksp_converged_reason" 1 3
 
 runfish_4:
 	-@../testit.sh fish "-fsh_dim 2 -da_refine 3 -pc_type mg -pc_mg_cycle_type w -mg_levels_ksp_type richardson -mg_levels_ksp_max_it 1 -ksp_converged_reason" 2 4

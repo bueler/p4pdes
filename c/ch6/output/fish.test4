@@ -1,4 +1,4 @@
-  Linear solve converged due to CONVERGED_RTOL iterations 3
+  Linear solve converged due to CONVERGED_RTOL iterations 4
   Linear solve converged due to CONVERGED_RTOL iterations 4
 problem manuexp on 17 x 17 point 2D grid:
   error |u-uexact|_inf = 2.184e-05, |u-uexact|_h = 1.160e-05
