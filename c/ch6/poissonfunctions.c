@@ -11,12 +11,13 @@ PetscErrorCode Form1DFunctionLocal(DMDALocalInfo *info, double *au,
     for (i = info->xs; i < info->xs + info->xm; i++) {
         x = xmin[0] + i * hx;
         if (i==0 || i==info->mx-1) {
-            aF[i] = au[i] - user->g_bdry(x,0.0,0.0,user);
+            aF[i] = (2.0 / hx) * (au[i] - user->g_bdry(x,0.0,0.0,user));
         } else {
             ue = (i+1 == info->mx-1) ? user->g_bdry(x+hx,0.0,0.0,user) : au[i+1];
             uw = (i-1 == 0)          ? user->g_bdry(x-hx,0.0,0.0,user) : au[i-1];
             aF[i] = 2.0 * au[i] - uw - ue
                     - hx * hx * user->f_rhs(x,0.0,0.0,user);
+            aF[i] /= hx;  // FIXME
         }
     }
     return 0;
@@ -56,6 +57,8 @@ PetscErrorCode Form2DFunctionLocal(DMDALocalInfo *info, double **au,
 }
 //ENDFORM2DFUNCTION
 
+// FIXME correct scaling in 3D case: multiply
+
 PetscErrorCode Form3DFunctionLocal(DMDALocalInfo *info, double ***au,
                                    double ***aF, PoissonCtx *user) {
     PetscErrorCode ierr;
@@ -70,6 +73,11 @@ PetscErrorCode Form3DFunctionLocal(DMDALocalInfo *info, double ***au,
     cx = h*h / (hx*hx);
     cy = h*h / (hy*hy);
     cz = h*h / (hz*hz);
+    /* FIXME new:
+    cx = hx*hy*hz / (hx*hx);
+    cy = hx*hy*hz / (hy*hy);
+    cz = hx*hy*hz / (hz*hz);
+    */
     for (k = info->zs; k < info->zs + info->zm; k++) {
         z = xyzmin[2] + k * hz;
         for (j = info->ys; j < info->ys + info->ym; j++) {
@@ -79,7 +87,7 @@ PetscErrorCode Form3DFunctionLocal(DMDALocalInfo *info, double ***au,
                 if (   i==0 || i==info->mx-1
                     || j==0 || j==info->my-1
                     || k==0 || k==info->mz-1) {
-                    aF[k][j][i] = au[k][j][i] - user->g_bdry(x,y,z,user);
+                    aF[k][j][i] = au[k][j][i] - user->g_bdry(x,y,z,user);  // FIXME multiply by 2.0 * (cx + cy + cz)
                 } else {
                     ue = (i+1 == info->mx-1) ? user->g_bdry(x+hx,y,z,user)
                                              : au[k][j][i+1];
@@ -95,7 +103,7 @@ PetscErrorCode Form3DFunctionLocal(DMDALocalInfo *info, double ***au,
                                              : au[k-1][j][i];
                     aF[k][j][i] = 2.0 * (cx + cy + cz) * au[k][j][i]
                                   - cx * (uw + ue) - cy * (us + un) - cz * (uu + ud)
-                                  - h*h * user->f_rhs(x,y,z,user);
+                                  - h*h * user->f_rhs(x,y,z,user);         // FIXME check RHS scaling
                 }
             }
         }
@@ -107,22 +115,24 @@ PetscErrorCode Form1DJacobianLocal(DMDALocalInfo *info, PetscScalar *au,
                                    Mat J, Mat Jpre, PoissonCtx *user) {
     PetscErrorCode  ierr;
     int          i,ncols;
-    double       v[3];
+    double       xmin[1], xmax[1], hx, v[3];
     MatStencil   col[3],row;
 
+    ierr = DMDAGetBoundingBox(info->da,xmin,xmax); CHKERRQ(ierr);  // FIXME: scaling by hx added
+    hx = (xmax[0] - xmin[0]) / (info->mx - 1);
     for (i = info->xs; i < info->xs+info->xm; i++) {
         row.i = i;
         col[0].i = i;
         ncols = 1;
         if (i==0 || i==info->mx-1) {
-            v[0] = 1.0;
+            v[0] = 2.0 / hx;
         } else {
-            v[0] = 2.0;
+            v[0] = 2.0 / hx;
             if (i-1 > 0) {
-                col[ncols].i = i-1;  v[ncols++] = -1.0;
+                col[ncols].i = i-1;  v[ncols++] = -1.0 / hx;
             }
             if (i+1 < info->mx-1) {
-                col[ncols].i = i+1;  v[ncols++] = -1.0;
+                col[ncols].i = i+1;  v[ncols++] = -1.0 / hx;
             }
         }
         ierr = MatSetValuesStencil(Jpre,1,&row,ncols,col,v,INSERT_VALUES); CHKERRQ(ierr);
