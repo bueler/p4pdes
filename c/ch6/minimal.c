@@ -48,8 +48,39 @@ evidence of parallel:
     Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 34
 gives 4.0 sec on N=1 and 2.1 sec on N=2
 
-FIXME change code so -snes_grid_sequence will work, and demonstrate;
 key idea:   -snes_grid_sequence X   REPLACES!   -da_refine X
+
+-snes_grid_sequence is effective when nonlinearity is strong (default H=1):
+    timer ./minimal -snes_fd_color -snes_converged_reason -da_refine 7
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 22
+    done on 257 x 257 grid ...
+    real 28.72
+    timer ./minimal -snes_fd_color -snes_converged_reason -snes_grid_sequence 7
+    ...
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+    done on 257 x 257 grid ...
+    real 4.98
+
+in parallel at higher
+    timer mpiexec -n 4 ./minimal -snes_fd_color -snes_converged_reason -ksp_converged_reason -snes_grid_sequence 8
+    ...
+      Linear solve converged due to CONVERGED_RTOL iterations 405
+      Linear solve converged due to CONVERGED_RTOL iterations 400
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+    done on 513 x 513 grid ...
+    real 27.28
+add multigrid:
+    timer mpiexec -n 4 ./minimal -snes_fd_color -snes_converged_reason -ksp_converged_reason -snes_grid_sequence 8 -pc_type mg
+    ...
+      Linear solve converged due to CONVERGED_RTOL iterations 13
+      Linear solve converged due to CONVERGED_RTOL iterations 13
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+    done on 513 x 513 grid ...
+    real 16.92
+can't seem to speed up in trying to reduce ksp iterations on finer levels:
+    * try -pc_mg_type full or -pc_mg_cycle_type w   [neither very effective]
+    * change the amount of smoothing: -mg_levels_ksp_max_it 10   [slower but counts down]
+    * change the smoother: -mg_levels_pc_type gamg  (!)    [slower but counts a lot down]
 */
 
 #include <petsc.h>
@@ -277,9 +308,9 @@ PetscErrorCode AreaMonitor(SNES snes, int its, double norm, void *ctx) {
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
-    DM             da;
+    DM             da, da_after;
     SNES           snes;
-    Vec            u;
+    Vec            u_initial;
     PoissonCtx     user;
     MinimalCtx     mctx;
     PetscBool      monitor_area = PETSC_FALSE,
@@ -320,8 +351,7 @@ int main(int argc,char **argv) {
     ierr = DMSetFromOptions(da); CHKERRQ(ierr);
     ierr = DMSetUp(da); CHKERRQ(ierr);  // this must be called BEFORE SetUniformCoordinates
     ierr = DMDASetUniformCoordinates(da,0.0,1.0,0.0,1.0,0.0,1.0); CHKERRQ(ierr);
-    ierr = DMCreateGlobalVector(da,&u); CHKERRQ(ierr);
-    ierr = PetscObjectSetName((PetscObject)u,"u"); CHKERRQ(ierr);
+    ierr = DMCreateGlobalVector(da,&u_initial); CHKERRQ(ierr);
 
     ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
     ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
@@ -336,24 +366,27 @@ int main(int argc,char **argv) {
     }
     ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
-    ierr = VecSet(u,0.0); CHKERRQ(ierr);
-    ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
+    ierr = VecSet(u_initial,0.0); CHKERRQ(ierr);
+    ierr = SNESSolve(snes,NULL,u_initial); CHKERRQ(ierr);
+    ierr = VecDestroy(&u_initial); CHKERRQ(ierr);
+    ierr = DMDestroy(&da); CHKERRQ(ierr);
 
-    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+    ierr = SNESGetDM(snes,&da_after); CHKERRQ(ierr);
+    ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
     if (manu) {
-        Vec    uexact;
+        Vec    u, u_exact;
         double errnorm;
-        ierr = VecDuplicate(u,&uexact); CHKERRQ(ierr);
-        ierr = FormExactManufactured(&info,uexact,&user); CHKERRQ(ierr);
-        ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
+        ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr);
+        ierr = VecDuplicate(u,&u_exact); CHKERRQ(ierr);
+        ierr = FormExactManufactured(&info,u_exact,&user); CHKERRQ(ierr);
+        ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
+        ierr = VecDestroy(&u_exact); CHKERRQ(ierr);
         ierr = VecNorm(u,NORM_INFINITY,&errnorm); CHKERRQ(ierr);
         ierr = PetscPrintf(PETSC_COMM_WORLD,"error |u-uexact|_inf = %g\n",errnorm); CHKERRQ(ierr);
-        VecDestroy(&uexact);
     }
     ierr = PetscPrintf(PETSC_COMM_WORLD,"done on %d x %d grid ...\n",info.mx,info.my); CHKERRQ(ierr);
 
-    VecDestroy(&u);  SNESDestroy(&snes);  DMDestroy(&da);
-    PetscFinalize();
-    return 0;
+    ierr = SNESDestroy(&snes); CHKERRQ(ierr);
+    return PetscFinalize();
 }
 
