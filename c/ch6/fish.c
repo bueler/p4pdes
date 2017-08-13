@@ -333,6 +333,7 @@ int main(int argc,char **argv) {
     // solve
     ierr = SNESSolve(snes,NULL,u_initial); CHKERRQ(ierr);
     ierr = VecDestroy(&u_initial); CHKERRQ(ierr);  // SNES now has internal solution so u_initial not needed
+    ierr = DMDestroy(&da); CHKERRQ(ierr);  // SNES now has internal DMDA ...
 
     // evaluate error and report
     ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr);  // SNES owns u; we do not destroy it
@@ -369,7 +370,6 @@ int main(int argc,char **argv) {
 
     // destroy what we explicitly "Create"ed
     ierr = SNESDestroy(&snes); CHKERRQ(ierr);
-    ierr = DMDestroy(&da); CHKERRQ(ierr);
     return PetscFinalize();
 }
 
