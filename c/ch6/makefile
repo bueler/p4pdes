@@ -44,9 +44,12 @@ runminimal_2:
 runminimal_3:
 	-@../testit.sh minimal "-snes_mf_operator -snes_converged_reason -pc_type mg -da_refine 2" 2 3
 
+runminimal_4:
+	-@../testit.sh minimal "-snes_fd_color -snes_converged_reason -snes_grid_sequence 2" 1 4
+
 test_fish: runfish_1 runfish_2 runfish_3 runfish_4 runfish_5 runfish_6 runfish_7 runfish_8
 
-test_minimal: runminimal_1 runminimal_2 runminimal_3
+test_minimal: runminimal_1 runminimal_2 runminimal_3 runminimal_4
 
 test: test_fish test_minimal
 
