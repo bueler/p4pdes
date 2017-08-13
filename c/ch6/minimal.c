@@ -47,6 +47,9 @@ evidence of parallel:
     timer mpiexec -n N ./minimal -snes_fd_color -snes_converged_reason -da_refine 6 -pc_type mg -snes_max_it 200
     Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 34
 gives 4.0 sec on N=1 and 2.1 sec on N=2
+
+FIXME change code so -snes_grid_sequence will work, and demonstrate;
+key idea:   -snes_grid_sequence X   REPLACES!   -da_refine X
 */
 
 #include <petsc.h>

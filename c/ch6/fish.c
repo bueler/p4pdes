@@ -242,9 +242,9 @@ static void* f_rhs_ptr[3][3]
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
-    DM             da;
+    DM             da, da_after;
     SNES           snes;
-    Vec            u, uexact;
+    Vec            u_initial, u, u_exact;
     PoissonCtx     user;
     DMDALocalInfo  info;
     double         errinf, normconst2h, err2h;
@@ -257,6 +257,8 @@ int main(int argc,char **argv) {
     double         Lx = 1.0, Ly = 1.0, Lz = 1.0;  // domain [0,1]x[0,1]x[0,1]
 
     PetscInitialize(&argc,&argv,NULL,help);
+
+    // get options
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"fsh_", "options for fish.c", ""); CHKERRQ(ierr);
     ierr = PetscOptionsInt("-dim",
          "dimension of problem (=1,2,3 only)",
@@ -281,6 +283,7 @@ int main(int argc,char **argv) {
     user.f_rhs = f_rhs_ptr[dim-1][problem];
 
 //STARTCREATE
+    // create and set-up DMDA
     switch (dim) {
         case 1:
             ierr = DMDACreate1d(PETSC_COMM_WORLD,
@@ -301,12 +304,12 @@ int main(int argc,char **argv) {
         default:
             SETERRQ(PETSC_COMM_WORLD,1,"invalid dim for DMDA creation\n");
     }
-
     ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
     ierr = DMSetFromOptions(da); CHKERRQ(ierr);
     ierr = DMSetUp(da); CHKERRQ(ierr);  // call BEFORE SetUniformCoordinates
     ierr = DMDASetUniformCoordinates(da,0.0,Lx,0.0,Ly,0.0,Lz); CHKERRQ(ierr);
 
+    // create and set-up SNES
     ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
     ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
     ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
@@ -316,27 +319,32 @@ int main(int argc,char **argv) {
     ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 //ENDCREATE
 
-    ierr = DMCreateGlobalVector(da,&u); CHKERRQ(ierr);
-    ierr = PetscObjectSetName((PetscObject)u,"u"); CHKERRQ(ierr);
+    // create and set-up initial iterate for SNES
+    ierr = DMCreateGlobalVector(da,&u_initial); CHKERRQ(ierr);
     if (init_random) {
         PetscRandom   rctx;
         ierr = PetscRandomCreate(PETSC_COMM_WORLD,&rctx); CHKERRQ(ierr);
-        ierr = VecSetRandom(u,rctx); CHKERRQ(ierr);
+        ierr = VecSetRandom(u_initial,rctx); CHKERRQ(ierr);
         ierr = PetscRandomDestroy(&rctx); CHKERRQ(ierr);
     } else {
-        ierr = VecSet(u,0.0); CHKERRQ(ierr);
+        ierr = VecSet(u_initial,0.0); CHKERRQ(ierr);
     }
 
-    ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
+    // solve
+    ierr = SNESSolve(snes,NULL,u_initial); CHKERRQ(ierr);
+    ierr = VecDestroy(&u_initial); CHKERRQ(ierr);  // SNES now has internal solution so u_initial not needed
 
-    ierr = VecDuplicate(u,&uexact); CHKERRQ(ierr);
-    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+    // evaluate error and report
+    ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr);  // SNES owns u; we do not destroy it
+    ierr = VecDuplicate(u,&u_exact); CHKERRQ(ierr);
+    ierr = SNESGetDM(snes,&da_after); CHKERRQ(ierr);  // SNES owns da_after; we do not destroy it
+    ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
     getuexact = getuexact_ptr[dim-1];
-    ierr = (*getuexact)(&info,uexact,&user); CHKERRQ(ierr);
-    ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
+    ierr = (*getuexact)(&info,u_exact,&user); CHKERRQ(ierr);
+    ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
+    ierr = VecDestroy(&u_exact); CHKERRQ(ierr);  // no longer needed
     ierr = VecNorm(u,NORM_INFINITY,&errinf); CHKERRQ(ierr);
     ierr = VecNorm(u,NORM_2,&err2h); CHKERRQ(ierr);
-
     switch (dim) {
         case 1:
             normconst2h = PetscSqrtReal((double)(info.mx-1));
@@ -359,7 +367,9 @@ int main(int argc,char **argv) {
                 "  error |u-uexact|_inf = %.3e, |u-uexact|_h = %.3e\n",
                 ProblemTypes[problem],gridstr,errinf,err2h); CHKERRQ(ierr);
 
-    VecDestroy(&u);  VecDestroy(&uexact);  SNESDestroy(&snes);  DMDestroy(&da);
+    // destroy what we explicitly "Create"ed
+    ierr = SNESDestroy(&snes); CHKERRQ(ierr);
+    ierr = DMDestroy(&da); CHKERRQ(ierr);
     return PetscFinalize();
 }
 
