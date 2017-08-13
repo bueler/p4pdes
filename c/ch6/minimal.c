@@ -50,7 +50,7 @@ gives 4.0 sec on N=1 and 2.1 sec on N=2
 
 key idea:   -snes_grid_sequence X   REPLACES!   -da_refine X
 
--snes_grid_sequence is effective when nonlinearity is strong (default H=1):
+-snes_grid_sequence is effective when nonlinearity is strong (default H=1 is already strong!):
     timer ./minimal -snes_fd_color -snes_converged_reason -da_refine 7
     Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 22
     done on 257 x 257 grid ...
