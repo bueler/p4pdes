@@ -39,7 +39,13 @@ all of these work:
 excellent illustration of Elman's point that discretization must handle advection problem if we are to get good preconditioning; compare following with and without -ad3_limiter none:
 for LEV in 0 1 2 3 4 5; do timer mpiexec -n 4 ./ad3 -snes_converged_reason -ksp_converged_reason -ksp_rtol 1.0e-14 -da_refine $LEV -pc_type gamg -ad3_eps 0.1 -ad3_limiter none; done
 
-FIXME: geometric multigrid?
+multigrid works, but is not beneficial yet; compare
+    ./ad3 -{snes,ksp}_converged_reason -ad3_limiter none -snes_type ksponly -da_refine 4 -pc_type X
+with X=ilu,mg,gamg;  presumably needs advection-specific smoothing
+
+grid-sequencing works, in nonlinear limiter case, but not beneficial; compare
+    ./ad3 -{snes,ksp}_converged_reason -ad3_limiter vanleer -da_refine 4
+    ./ad3 -{snes,ksp}_converged_reason -ad3_limiter vanleer -snes_grid_sequence 4
 
 FIXME: double glazing problem?
 */
@@ -166,7 +172,6 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***au,
     Spacings     s;
 
     getSpacings(info,&s);
-
     // clear F first
     for (k=info->zs; k<info->zs+info->zm; k++)
         for (j=info->ys; j<info->ys+info->ym; j++)
@@ -366,9 +371,9 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar ***au,
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
-    DM             da;
+    DM             da, da_after;
     SNES           snes;
-    Vec            u, uexact;
+    Vec            u_initial, u, u_exact;
     double         err;
     DMDALocalInfo  info;
     Spacings       s;
@@ -389,12 +394,11 @@ int main(int argc,char **argv) {
     ierr = DMSetFromOptions(da); CHKERRQ(ierr);
     ierr = DMSetUp(da); CHKERRQ(ierr);
     ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
+
     ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
     if ((info.mx < 2) || (info.my < 2) || (info.mz < 3)) {
         SETERRQ(PETSC_COMM_WORLD,1,"grid too coarse: require (mx,my,mz) >= (2,2,3)");
     }
-    getSpacings(&info,&s);
-    ierr = DMDASetUniformCoordinates(da,-1.0,1.0,-1.0,1.0,-1.0+s.halfz,1.0-s.halfz); CHKERRQ(ierr);
 
     ierr = SNESCreate(PETSC_COMM_WORLD,&snes);CHKERRQ(ierr);
     ierr = SNESSetDM(snes,da);CHKERRQ(ierr);
@@ -404,21 +408,26 @@ int main(int argc,char **argv) {
             (DMDASNESJacobian)FormJacobianLocal,&user);CHKERRQ(ierr);
     ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
 
-    ierr = DMCreateGlobalVector(da,&u); CHKERRQ(ierr);
-    ierr = VecSet(u,0.0); CHKERRQ(ierr);
-    ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
+    ierr = DMCreateGlobalVector(da,&u_initial); CHKERRQ(ierr);
+    ierr = VecSet(u_initial,0.0); CHKERRQ(ierr);
+    ierr = SNESSolve(snes,NULL,u_initial); CHKERRQ(ierr);
+    ierr = VecDestroy(&u_initial); CHKERRQ(ierr);
+    ierr = DMDestroy(&da); CHKERRQ(ierr);
 
-    ierr = VecDuplicate(u,&uexact); CHKERRQ(ierr);
-    ierr = formUex(&info,&user,uexact); CHKERRQ(ierr);
-    ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uxact
+    ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr);
+    ierr = VecDuplicate(u,&u_exact); CHKERRQ(ierr);
+    ierr = SNESGetDM(snes,&da_after); CHKERRQ(ierr);
+    ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
+    ierr = formUex(&info,&user,u_exact); CHKERRQ(ierr);
+    ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr);    // u <- u + (-1.0) u_exact
     ierr = VecNorm(u,NORM_2,&err); CHKERRQ(ierr);
+    getSpacings(&info,&s);
     err *= PetscSqrtReal(s.hx * s.hy * s.hz);
     ierr = PetscPrintf(PETSC_COMM_WORLD,
          "done on %d x %d x %d grid with eps=%g:  error |u-uexact|_{2,h} = %.4e\n",
          info.mx,info.my,info.mz,user.eps,err); CHKERRQ(ierr);
 
-    VecDestroy(&u);  VecDestroy(&uexact);
-    SNESDestroy(&snes);  DMDestroy(&da);
+    VecDestroy(&u_exact);  SNESDestroy(&snes);
     PetscFinalize();
     return 0;
 }
