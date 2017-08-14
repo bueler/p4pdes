@@ -1,0 +1,7 @@
+solving on 9 x 8 grid with dx=0.125 x dy=0.125 cells, t0=0.,
+and initial step dt=0.01 (so D0 dt / (dx dy) = 0.64) ...
+0 TS dt 0.01 time 0.
+1 TS dt 0.00248874 time 0.00136468
+2 TS dt 0.00307329 time 0.00385342
+3 TS dt 0.00307329 time 0.00692671
+4 TS dt 0.00858921 time 0.01

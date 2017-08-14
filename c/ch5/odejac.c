@@ -73,9 +73,11 @@ int main(int argc,char **argv) {
 //ENDMATJ
 
   // set time axis
-  ierr = TSSetInitialTimeStep(ts,t0,dt); CHKERRQ(ierr);
-  ierr = TSSetDuration(ts,100*(int)((tf-t0)/dt),tf-t0); CHKERRQ(ierr);
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
+  ierr = TSSetTime(ts,t0); CHKERRQ(ierr);
+  ierr = TSSetMaxTime(ts,tf); CHKERRQ(ierr);
+  ierr = TSSetMaxSteps(ts,100*(int)((tf-t0)/dt)); CHKERRQ(ierr);
+  ierr = TSSetTimeStep(ts,dt); CHKERRQ(ierr);
   ierr = TSSetFromOptions(ts); CHKERRQ(ierr);  // can override defaults
 
   // set initial value and solve
@@ -84,7 +86,7 @@ int main(int argc,char **argv) {
   ierr = TSSolve(ts,y); CHKERRQ(ierr);
 
   // compute error and report
-  ierr = TSGetTotalSteps(ts,&steps); CHKERRQ(ierr);
+  ierr = TSGetStepNumber(ts,&steps); CHKERRQ(ierr);
   ierr = TSGetTime(ts,&tf); CHKERRQ(ierr);
   ierr = SetFromExact(tf,yexact); CHKERRQ(ierr);
   ierr = VecAXPY(y,-1.0,yexact); CHKERRQ(ierr);    // y <- y - yexact

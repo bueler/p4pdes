@@ -31,20 +31,26 @@ runode_3:
 runodejac_1:
 	-@../testit.sh odejac "-ts_final_time 1.0" 1 1
 
+runodejac_2:
+	-@../testit.sh odejac "-ts_monitor -ts_final_time 1.0 -ts_type rk" 1 2
+
 runheat_1:
 	-@../testit.sh heat "-da_refine 1 -ts_monitor" 1 1
 
 runheat_2:
 	-@../testit.sh heat "-da_refine 2 -ht_monitor" 2 2
 
+runheat_3:
+	-@../testit.sh heat "-da_refine 1 -ts_monitor -ts_type rk -ts_final_time 0.01" 1 3
+
 runpattern_1:
 	-@../testit.sh pattern "-da_refine 2 -ts_monitor" 1 1   # refinement of 1 misses initial condition
 
 test_ode: runode_1 runode_2 runode_3
 
-test_odejac: runodejac_1
+test_odejac: runodejac_1 runodejac_2
 
-test_heat: runheat_1 runheat_2
+test_heat: runheat_1 runheat_2 runheat_3
 
 test_pattern: runpattern_1
 
