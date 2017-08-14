@@ -46,13 +46,17 @@ runheat_3:
 runpattern_1:
 	-@../testit.sh pattern "-da_refine 2 -ts_monitor" 1 1   # refinement of 1 misses initial condition
 
+# why does GMG work for pattern but not heat?  (GMG really is working; add -mg_{coarse,levels}_ksp_converged_reason)
+runpattern_2:
+	-@../testit.sh pattern "-da_refine 2 -ts_monitor -ts_dt 1 -ts_final_time 1 -ts_type beuler -pc_type mg -snes_converged_reason -ksp_converged_reason -snes_rtol 1.0e-1" 1 2
+
 test_ode: runode_1 runode_2 runode_3
 
 test_odejac: runodejac_1 runodejac_2
 
 test_heat: runheat_1 runheat_2 runheat_3
 
-test_pattern: runpattern_1
+test_pattern: runpattern_1 runpattern_2
 
 test: test_ode test_odejac test_heat test_pattern
 

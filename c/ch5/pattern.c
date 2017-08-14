@@ -204,11 +204,11 @@ int main(int argc,char **argv)
                4,4,PETSC_DECIDE,PETSC_DECIDE,
                2, 1,              // degrees of freedom, stencil width
                NULL,NULL,&da); CHKERRQ(ierr);
-  ierr = DMDASetFieldName(da,0,"u"); CHKERRQ(ierr);
-  ierr = DMDASetFieldName(da,1,"v"); CHKERRQ(ierr);
 //ENDDMDACREATE
   ierr = DMSetFromOptions(da); CHKERRQ(ierr);
   ierr = DMSetUp(da); CHKERRQ(ierr);
+  ierr = DMDASetFieldName(da,0,"u"); CHKERRQ(ierr);
+  ierr = DMDASetFieldName(da,1,"v"); CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
   if (info.mx != info.my) {
       SETERRQ(PETSC_COMM_WORLD,1,"pattern.c requires mx == my");
@@ -231,13 +231,15 @@ int main(int argc,char **argv)
            (DMDATSIJacobianLocal)FormIJacobianLocal,&user); CHKERRQ(ierr);
   ierr = TSSetType(ts,TSARKIMEX); CHKERRQ(ierr);
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
-  ierr = TSSetInitialTimeStep(ts,0.0,5.0); CHKERRQ(ierr);  // t_0 = 0.0, dt = 5.0
-  ierr = TSSetDuration(ts,1000000,200.0); CHKERRQ(ierr);   // t_f = 200
+  // default run:  t_0 = 0.0, t_f = 200, dt = 5.0
+  ierr = TSSetTime(ts,0.0); CHKERRQ(ierr);
+  ierr = TSSetMaxTime(ts,200.0); CHKERRQ(ierr);
+  ierr = TSSetTimeStep(ts,5.0); CHKERRQ(ierr);
   ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
 //ENDTSSETUP
 
   ierr = DMCreateGlobalVector(da,&x); CHKERRQ(ierr);
-  ierr = InitialState(x,noiselevel,&user); CHKERRQ(ierr);
+  ierr = InitialState(da,x,noiselevel,&user); CHKERRQ(ierr);
   ierr = TSSolve(ts,x); CHKERRQ(ierr);
 
   VecDestroy(&x);  TSDestroy(&ts);  DMDestroy(&da);
