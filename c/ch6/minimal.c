@@ -147,8 +147,8 @@ PetscErrorCode Spacings(DMDALocalInfo *info, double *hx, double *hy) {
     PetscErrorCode ierr;
     double  xymin[2], xymax[2];
     ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
-    *hx = (xymax[0] - xymin[0]) / (info->mx - 1);
-    *hy = (xymax[1] - xymin[1]) / (info->my - 1);
+    if (hx)  *hx = (xymax[0] - xymin[0]) / (info->mx - 1);
+    if (hy)  *hy = (xymax[1] - xymin[1]) / (info->my - 1);
     return 0;
 }
 
