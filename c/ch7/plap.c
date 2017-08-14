@@ -12,6 +12,16 @@ static char help[] = "Solve the p-Laplacian equation in 2D using Q^1 FEM.\n"
 
 #define COMM PETSC_COMM_WORLD
 
+/* note -pc_type mg works!
+
+note -snes_fd_color is OK in an optimal solver!
+
+cool dendritic failure:
+    ./plap -snes_fd_color -snes_converged_reason -ksp_converged_reason -pc_type mg -plap_p 10.0 -da_refine 6 -snes_monitor_solution draw
+succeeds in 11 snes iterations (on fine grid) with grid sequencing:
+    ./plap -snes_fd_color -snes_converged_reason -ksp_converged_reason -pc_type mg -plap_p 10.0 -snes_grid_sequence 6 -snes_monitor_solution draw
+*/
+
 //STARTCTX
 typedef struct {
     double    p, eps, alpha;
@@ -275,9 +285,9 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
 
 int main(int argc,char **argv) {
   PetscErrorCode ierr;
-  DM             da;
+  DM             da, da_after;
   SNES           snes;
-  Vec            u, uexact;
+  Vec            u_initial, u, u_exact;
   PLapCtx        user;
   DMDALocalInfo  info;
   double         err;
@@ -291,10 +301,6 @@ int main(int argc,char **argv) {
   ierr = DMSetFromOptions(da); CHKERRQ(ierr);
   ierr = DMSetUp(da); CHKERRQ(ierr);
   ierr = DMSetApplicationContext(da,&user);CHKERRQ(ierr);
-  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-  ierr = PetscPrintf(COMM,
-            "grid of %d x %d = %d interior nodes\n",
-            info.mx,info.my,info.mx*info.my); CHKERRQ(ierr);
 
   ierr = SNESCreate(COMM,&snes); CHKERRQ(ierr);
   ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
@@ -306,18 +312,27 @@ int main(int argc,char **argv) {
   }
   ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
-  ierr = DMCreateGlobalVector(da,&u);CHKERRQ(ierr);
-  ierr = InitialIterateLocal(&info,u,&user); CHKERRQ(ierr);
-  ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
+  ierr = DMCreateGlobalVector(da,&u_initial);CHKERRQ(ierr);
+  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+  ierr = InitialIterateLocal(&info,u_initial,&user); CHKERRQ(ierr);
+  ierr = SNESSolve(snes,NULL,u_initial); CHKERRQ(ierr);
+  ierr = VecDestroy(&u_initial); CHKERRQ(ierr);
+  ierr = DMDestroy(&da); CHKERRQ(ierr);
 
-  ierr = VecDuplicate(u,&uexact);CHKERRQ(ierr);
-  ierr = GetUexactLocal(&info,uexact,&user); CHKERRQ(ierr);
-  ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
+  ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr);
+  ierr = VecDuplicate(u,&u_exact); CHKERRQ(ierr);
+  ierr = SNESGetDM(snes,&da_after); CHKERRQ(ierr);
+  ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
+  ierr = PetscPrintf(COMM,
+            "grid of %d x %d = %d interior nodes\n",
+            info.mx,info.my,info.mx*info.my); CHKERRQ(ierr);
+  ierr = GetUexactLocal(&info,u_exact,&user); CHKERRQ(ierr);
+  ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
   ierr = VecNorm(u,NORM_INFINITY,&err); CHKERRQ(ierr);
   ierr = PetscPrintf(COMM,"numerical error:  |u-u_exact|_inf = %.3e\n",
            err); CHKERRQ(ierr);
 
-  VecDestroy(&u);  VecDestroy(&uexact);  SNESDestroy(&snes);  DMDestroy(&da);
+  VecDestroy(&u_exact);  SNESDestroy(&snes);
   PetscFinalize();
   return 0;
 }
