@@ -16,7 +16,6 @@ typedef struct {
 } Field;
 
 typedef struct {
-  DM        da;
   double    L,    // domain side length
             Du,   // diffusion coefficient of first equation
             Dv,   // diffusion coefficient of second equation
@@ -27,7 +26,7 @@ typedef struct {
 
 // Formulas from page 22 of Hundsdorfer & Verwer (2003).  Interpretation here is
 // to always generate 0.5 x 0.5 non-trivial patch in (0,L) x (0,L) domain.
-PetscErrorCode InitialState(Vec Y, double noiselevel, PatternCtx* user) {
+PetscErrorCode InitialState(DM da, Vec Y, double noiselevel, PatternCtx* user) {
   PetscErrorCode ierr;
   DMDALocalInfo  info;
   int            i,j;
@@ -44,9 +43,9 @@ PetscErrorCode InitialState(Vec Y, double noiselevel, PatternCtx* user) {
       ierr = VecSetRandom(Y,NULL); CHKERRQ(ierr);
       ierr = VecScale(Y,noiselevel); CHKERRQ(ierr);
   }
-  ierr = DMDAGetLocalInfo(user->da,&info); CHKERRQ(ierr);
-  ierr = DMDAGetCoordinateArray(user->da,&aC); CHKERRQ(ierr);
-  ierr = DMDAVecGetArray(user->da,Y,&aY); CHKERRQ(ierr);
+  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+  ierr = DMDAGetCoordinateArray(da,&aC); CHKERRQ(ierr);
+  ierr = DMDAVecGetArray(da,Y,&aY); CHKERRQ(ierr);
   for (j = info.ys; j < info.ys+info.ym; j++) {
     for (i = info.xs; i < info.xs+info.xm; i++) {
       if ((aC[j][i].x >= ledge) && (aC[j][i].x <= redge)
@@ -58,8 +57,8 @@ PetscErrorCode InitialState(Vec Y, double noiselevel, PatternCtx* user) {
       aY[j][i].u += 1.0 - 2.0 * aY[j][i].v;
     }
   }
-  ierr = DMDAVecRestoreArray(user->da,Y,&aY); CHKERRQ(ierr);
-  ierr = DMDARestoreCoordinateArray(user->da,&aC); CHKERRQ(ierr);
+  ierr = DMDAVecRestoreArray(da,Y,&aY); CHKERRQ(ierr);
+  ierr = DMDARestoreCoordinateArray(da,&aC); CHKERRQ(ierr);
   return 0;
 }
 
@@ -170,6 +169,7 @@ int main(int argc,char **argv)
   PatternCtx     user;
   TS             ts;
   Vec            x;
+  DM             da;
   DMDALocalInfo  info;
   double         noiselevel = -1.0;  // negative value means no initial noise
 
@@ -203,18 +203,17 @@ int main(int argc,char **argv)
                DMDA_STENCIL_BOX,  // for 9-point stencil
                4,4,PETSC_DECIDE,PETSC_DECIDE,
                2, 1,              // degrees of freedom, stencil width
-               NULL,NULL,&user.da); CHKERRQ(ierr);
+               NULL,NULL,&da); CHKERRQ(ierr);
+  ierr = DMDASetFieldName(da,0,"u"); CHKERRQ(ierr);
+  ierr = DMDASetFieldName(da,1,"v"); CHKERRQ(ierr);
 //ENDDMDACREATE
-  ierr = DMSetFromOptions(user.da); CHKERRQ(ierr);
-  ierr = DMSetUp(user.da); CHKERRQ(ierr);
-  ierr = DMDASetFieldName(user.da,0,"u"); CHKERRQ(ierr);
-  ierr = DMDASetFieldName(user.da,1,"v"); CHKERRQ(ierr);
-  ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr);
+  ierr = DMSetFromOptions(da); CHKERRQ(ierr);
+  ierr = DMSetUp(da); CHKERRQ(ierr);
+  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
   if (info.mx != info.my) {
       SETERRQ(PETSC_COMM_WORLD,1,"pattern.c requires mx == my");
   }
-  ierr = DMDASetUniformCoordinates(user.da, 0.0, user.L, 0.0, user.L, -1.0, -1.0); CHKERRQ(ierr);
-  ierr = DMSetApplicationContext(user.da,&user); CHKERRQ(ierr);
+  ierr = DMDASetUniformCoordinates(da, 0.0, user.L, 0.0, user.L, -1.0, -1.0); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
            "running on %d x %d grid with square cells of side h = %.6f ...\n",
            info.mx,info.my,user.L/(double)(info.mx)); CHKERRQ(ierr);
@@ -222,12 +221,13 @@ int main(int argc,char **argv)
 //STARTTSSETUP
   ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
   ierr = TSSetProblemType(ts,TS_NONLINEAR); CHKERRQ(ierr);
-  ierr = TSSetDM(ts,user.da); CHKERRQ(ierr);
-  ierr = DMDATSSetRHSFunctionLocal(user.da,INSERT_VALUES,
+  ierr = TSSetDM(ts,da); CHKERRQ(ierr);
+  ierr = TSSetApplicationContext(ts,&user); CHKERRQ(ierr);
+  ierr = DMDATSSetRHSFunctionLocal(da,INSERT_VALUES,
            (DMDATSRHSFunctionLocal)FormRHSFunctionLocal,&user); CHKERRQ(ierr);
-  ierr = DMDATSSetIFunctionLocal(user.da,INSERT_VALUES,
+  ierr = DMDATSSetIFunctionLocal(da,INSERT_VALUES,
            (DMDATSIFunctionLocal)FormIFunctionLocal,&user); CHKERRQ(ierr);
-  ierr = DMDATSSetIJacobianLocal(user.da,
+  ierr = DMDATSSetIJacobianLocal(da,
            (DMDATSIJacobianLocal)FormIJacobianLocal,&user); CHKERRQ(ierr);
   ierr = TSSetType(ts,TSARKIMEX); CHKERRQ(ierr);
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
@@ -236,11 +236,11 @@ int main(int argc,char **argv)
   ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
 //ENDTSSETUP
 
-  ierr = DMCreateGlobalVector(user.da,&x); CHKERRQ(ierr);
+  ierr = DMCreateGlobalVector(da,&x); CHKERRQ(ierr);
   ierr = InitialState(x,noiselevel,&user); CHKERRQ(ierr);
   ierr = TSSolve(ts,x); CHKERRQ(ierr);
 
-  VecDestroy(&x);  TSDestroy(&ts);  DMDestroy(&user.da);
+  VecDestroy(&x);  TSDestroy(&ts);  DMDestroy(&da);
   PetscFinalize();
   return 0;
 }
