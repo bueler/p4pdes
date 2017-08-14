@@ -17,6 +17,15 @@ static char help[] =
 
 #include <petsc.h>
 
+/*
+THIS REALLY OUGHT TO WORK WITH -pc_type mg BUT:
+    ./advect -da_refine 1 -ts_type beuler -pc_type mg
+    ...
+    [0]PETSC ERROR: Nonconforming object sizes
+    [0]PETSC ERROR: Non conforming matrix add: 100 25 100 25
+...
+*/
+
 //STARTINITIALSHAPES
 // equal to 1 in a disc of radius 0.2 around (-0.6,-0.6)
 static double stump(double x, double y) {
