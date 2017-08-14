@@ -97,11 +97,12 @@ int main(int argc,char **args) {
   ierr = DMSetFromOptions(da); CHKERRQ(ierr);
   ierr = DMSetUp(da); CHKERRQ(ierr);
   ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
-  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
 
   ierr = DMCreateGlobalVector(da,&u); CHKERRQ(ierr);
   ierr = VecDuplicate(u,&uexact); CHKERRQ(ierr);
   ierr = DMDAVecGetArray(da,u,&au); CHKERRQ(ierr);
+
+  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
   ierr = DMDAVecGetArray(da,uexact,&auex); CHKERRQ(ierr);
   ierr = InitialAndExact(&info,au,auex,&user); CHKERRQ(ierr);
   ierr = DMDAVecRestoreArray(da,u,&au); CHKERRQ(ierr);
