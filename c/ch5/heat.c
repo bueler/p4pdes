@@ -179,7 +179,6 @@ int main(int argc,char **argv)
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
   ierr = TSSetTime(ts,0.0); CHKERRQ(ierr);
   ierr = TSSetMaxTime(ts,0.1); CHKERRQ(ierr);
-  ierr = TSSetMaxSteps(ts,1000000); CHKERRQ(ierr);
   ierr = TSSetTimeStep(ts,0.01); CHKERRQ(ierr);
   ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
 //ENDTSSETUP
