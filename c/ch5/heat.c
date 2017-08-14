@@ -1,5 +1,5 @@
 static char help[] =
-"Solves time-dependent heat equation in 2D using TS.  Option prefix -heat_.\n"
+"Solves time-dependent heat equation in 2D using TS.  Option prefix -ht_.\n"
 "Equation is  u_t = D_0 laplacian u + f.  Domain is (0,1) x (0,1).\n"
 "Boundary conditions are non-homogeneous Neumann in x and periodic in y.\n"
 "Energy is conserved (for these particular conditions/source) and an extra\n"
@@ -11,19 +11,13 @@ static char help[] =
 
 //STARTHEATCTX
 typedef struct {
-  DM     da;
   double D0;    // conductivity
-  Vec    f,     // source f(x,y)
-         gamma; // Neumann boundary condition; = gamma(y) on left boundary
 } HeatCtx;
 //ENDHEATCTX
 
-PetscErrorCode Spacings(DM da, double *hx, double *hy) {
-    PetscErrorCode ierr;
-    DMDALocalInfo  info;
-    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-    if (hx)  *hx = 1.0 / (double)(info.mx-1);
-    if (hy)  *hy = 1.0 / (double)(info.my);   // periodic direction
+PetscErrorCode Spacings(DMDALocalInfo *info, double *hx, double *hy) {
+    if (hx)  *hx = 1.0 / (double)(info->mx-1);
+    if (hy)  *hy = 1.0 / (double)(info->my);   // periodic direction
     return 0;
 }
 
@@ -31,14 +25,15 @@ PetscErrorCode Spacings(DM da, double *hx, double *hy) {
 PetscErrorCode EnergyMonitor(TS ts, PetscInt step, PetscReal time, Vec u,
                              void *ctx) {
     PetscErrorCode ierr;
-    HeatCtx        *user = (HeatCtx*)ctx;
     double         lenergy = 0.0, energy, hx, hy, **au;
     int            i,j;
     MPI_Comm       com;
+    DM             da;
     DMDALocalInfo  info;
 
-    ierr = DMDAGetLocalInfo(user->da,&info); CHKERRQ(ierr);
-    ierr = DMDAVecGetArrayRead(user->da,u,&au); CHKERRQ(ierr);
+    ierr = TSGetDM(ts,&da); CHKERRQ(ierr);
+    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+    ierr = DMDAVecGetArrayRead(da,u,&au); CHKERRQ(ierr);
     for (j = info.ys; j < info.ys + info.ym; j++) {
         for (i = info.xs; i < info.xs + info.xm; i++) {
             if ((i == 0) || (i == info.mx-1))
@@ -47,55 +42,22 @@ PetscErrorCode EnergyMonitor(TS ts, PetscInt step, PetscReal time, Vec u,
                 lenergy += au[j][i];
         }
     }
-    ierr = DMDAVecRestoreArrayRead(user->da,u,&au); CHKERRQ(ierr);
-    ierr = Spacings(user->da,&hx,&hy); CHKERRQ(ierr);
+    ierr = DMDAVecRestoreArrayRead(da,u,&au); CHKERRQ(ierr);
+    ierr = Spacings(&info,&hx,&hy); CHKERRQ(ierr);
     lenergy *= hx * hy;
-    ierr = PetscObjectGetComm((PetscObject)(user->da),&com); CHKERRQ(ierr);
+    ierr = PetscObjectGetComm((PetscObject)(da),&com); CHKERRQ(ierr);
     ierr = MPI_Allreduce(&lenergy,&energy,1,MPI_DOUBLE,MPI_SUM,com); CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,"  energy = %.2e\n",energy); CHKERRQ(ierr);
     return 0;
 }
 //ENDMONITOR
 
-PetscErrorCode SetSource(Vec f, HeatCtx* user) {
-    PetscErrorCode ierr;
-    DMDALocalInfo  info;
-    int            i,j;
-    double         hx, hy, **af, x, y, q;
-
-    ierr = DMDAGetLocalInfo(user->da,&info); CHKERRQ(ierr);
-    ierr = Spacings(user->da,&hx,&hy); CHKERRQ(ierr);
-    ierr = DMDAVecGetArray(user->da,f,&af); CHKERRQ(ierr);
-    for (j = info.ys; j < info.ys+info.ym; j++) {
-        y = hy * j;
-        for (i = info.xs; i < info.xs+info.xm; i++) {
-            x = hx * i;
-            q = (x-0.6) * (x-0.6);
-            af[j][i] = 3.0 * exp(-25.0*q) * sin(2.0*PETSC_PI*y);
-        }
-    }
-    ierr = DMDAVecRestoreArray(user->da,f,&af); CHKERRQ(ierr);
-    return 0;
+double f_source(double x, double y) {
+    return 3.0 * exp(-25.0 * (x-0.6) * (x-0.6)) * sin(2.0*PETSC_PI*y);
 }
 
-PetscErrorCode SetNeumannValues(Vec gamma, HeatCtx* user) {
-    PetscErrorCode ierr;
-    DMDALocalInfo  info;
-    int            j;
-    double         hy, **agamma, y;
-
-    ierr = VecSet(gamma,NAN); CHKERRQ(ierr);  // invalidate
-    ierr = DMDAGetLocalInfo(user->da,&info); CHKERRQ(ierr);
-    if (info.xs == 0) { // only a process that owns i=0 will do the following
-        ierr = Spacings(user->da,NULL,&hy); CHKERRQ(ierr);
-        ierr = DMDAVecGetArray(user->da,gamma,&agamma); CHKERRQ(ierr);
-        for (j = info.ys; j < info.ys+info.ym; j++) {
-            y = hy * j;
-            agamma[j][0] = sin(6.0 * PETSC_PI * y);
-        }
-        ierr = DMDAVecRestoreArray(user->da,gamma,&agamma); CHKERRQ(ierr);
-    }
-    return 0;
+double gamma_neumann(double x, double y) {
+    return sin(6.0 * PETSC_PI * y);
 }
 
 //STARTRHSFUNCTION
@@ -103,24 +65,23 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **au,
                                     double **aG, HeatCtx *user) {
   PetscErrorCode ierr;
   int      i, j, mx = info->mx;
-  double   hx, hy, ul, ur, uxx, uyy, **af, **agamma;
+  double   hx, hy, x, y, ul, ur, uxx, uyy;
 
-  ierr = Spacings(info->da,&hx,&hy); CHKERRQ(ierr);
-  ierr = DMDAVecGetArray(user->da,user->f,&af); CHKERRQ(ierr);
-  ierr = DMDAVecGetArray(user->da,user->gamma,&agamma); CHKERRQ(ierr);
+  ierr = Spacings(info,&hx,&hy); CHKERRQ(ierr);
   for (j = info->ys; j < info->ys + info->ym; j++) {
+      y = hy * j;
       for (i = info->xs; i < info->xs + info->xm; i++) {
-          // apply Neumann b.c. (if needed) to determine left/right neighbor
-          ul = (i == 0)    ? au[j][i+1] + 2.0 * hx * agamma[j][i] : au[j][i-1];
-          ur = (i == mx-1) ? au[j][i-1]                           : au[j][i+1];
+          x = hx * i;
+          // apply Neumann b.c.s
+          ul = (i == 0) ? au[j][i+1] + 2.0 * hx * gamma_neumann(x,y)
+                        : au[j][i-1];
+          ur = (i == mx-1) ? au[j][i-1] : au[j][i+1];
           uxx = (ul - 2.0 * au[j][i]+ ur) / (hx*hx);
           // j-1, j+1 values always valid because DMDA is periodic in y
           uyy = (au[j-1][i] - 2.0 * au[j][i]+ au[j+1][i]) / (hy*hy);
-          aG[j][i] = user->D0 * (uxx + uyy) + af[j][i];
+          aG[j][i] = user->D0 * (uxx + uyy) + f_source(x,y);
       }
   }
-  ierr = DMDAVecRestoreArray(user->da,user->f,&af); CHKERRQ(ierr);
-  ierr = DMDAVecRestoreArray(user->da,user->gamma,&agamma); CHKERRQ(ierr);
   return 0;
 }
 //ENDRHSFUNCTION
@@ -134,7 +95,7 @@ PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info, double t, double **au,
     double         hx, hy, hx2, hy2, v[5];
     MatStencil     col[5],row;
 
-    ierr = Spacings(info->da,&hx,&hy); CHKERRQ(ierr);
+    ierr = Spacings(info,&hx,&hy); CHKERRQ(ierr);
     hx2 = hx * hx;  hy2 = hy * hy;
     for (j = info->ys; j < info->ys+info->ym; j++) {
         row.j = j;  col[0].j = j;
@@ -176,6 +137,7 @@ int main(int argc,char **argv)
   HeatCtx        user;
   TS             ts;
   Vec            u;
+  DM             da;
   DMDALocalInfo  info;
   double         hx, hy, hxhy, t0, dt;
   PetscBool      monitorenergy = PETSC_FALSE;
@@ -183,7 +145,7 @@ int main(int argc,char **argv)
   PetscInitialize(&argc,&argv,(char*)0,help);
 
   user.D0  = 1.0;
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "heat_", "options for heat", ""); CHKERRQ(ierr);
+  ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "ht_", "options for heat", ""); CHKERRQ(ierr);
   ierr = PetscOptionsReal("-D0","constant thermal diffusivity",
            "heat.c",user.D0,&user.D0,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-monitor","also display total heat energy at each step",
@@ -194,25 +156,21 @@ int main(int argc,char **argv)
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
                DM_BOUNDARY_NONE, DM_BOUNDARY_PERIODIC, DMDA_STENCIL_STAR,
                5,4,PETSC_DECIDE,PETSC_DECIDE,  // default to hx=hx=0.25 grid
-               1,1,                       // degrees of freedom, stencil width
-               NULL,NULL,&user.da); CHKERRQ(ierr);
-  ierr = DMSetFromOptions(user.da); CHKERRQ(ierr);
-  ierr = DMSetUp(user.da); CHKERRQ(ierr);
-  ierr = DMSetApplicationContext(user.da,&user); CHKERRQ(ierr);
-  ierr = DMCreateGlobalVector(user.da,&u); CHKERRQ(ierr);
-  ierr = VecDuplicate(u,&(user.f)); CHKERRQ(ierr);
-  ierr = VecDuplicate(u,&(user.gamma)); CHKERRQ(ierr);
-  ierr = SetSource(user.f,&user); CHKERRQ(ierr);
-  ierr = SetNeumannValues(user.gamma,&user); CHKERRQ(ierr);
+               1,1,                            // degrees of freedom, stencil width
+               NULL,NULL,&da); CHKERRQ(ierr);
+  ierr = DMSetFromOptions(da); CHKERRQ(ierr);
+  ierr = DMSetUp(da); CHKERRQ(ierr);
+  ierr = DMCreateGlobalVector(da,&u); CHKERRQ(ierr);
 //ENDDMDASETUP
 
 //STARTTSSETUP
   ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
   ierr = TSSetProblemType(ts,TS_NONLINEAR); CHKERRQ(ierr);
-  ierr = TSSetDM(ts,user.da); CHKERRQ(ierr);
-  ierr = DMDATSSetRHSFunctionLocal(user.da,INSERT_VALUES,
+  ierr = TSSetDM(ts,da); CHKERRQ(ierr);
+  ierr = TSSetApplicationContext(ts,&user); CHKERRQ(ierr);
+  ierr = DMDATSSetRHSFunctionLocal(da,INSERT_VALUES,
            (DMDATSRHSFunctionLocal)FormRHSFunctionLocal,&user); CHKERRQ(ierr);
-  ierr = DMDATSSetRHSJacobianLocal(user.da,
+  ierr = DMDATSSetRHSJacobianLocal(da,
            (DMDATSRHSJacobianLocal)FormRHSJacobianLocal,&user); CHKERRQ(ierr);
   if (monitorenergy) {
       ierr = TSMonitorSet(ts,EnergyMonitor,&user,NULL); CHKERRQ(ierr);
@@ -222,25 +180,25 @@ int main(int argc,char **argv)
   ierr = TSSetInitialTimeStep(ts,0.0,0.01); CHKERRQ(ierr);
   ierr = TSSetDuration(ts,1000000,0.1); CHKERRQ(ierr);
   ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
-
-  // report on set up //STRIP
-  ierr = TSGetTime(ts,&t0); CHKERRQ(ierr); //STRIP
-  ierr = TSGetTimeStep(ts,&dt); CHKERRQ(ierr); //STRIP
-  ierr = DMDAGetLocalInfo(user.da,&info); CHKERRQ(ierr); //STRIP
-  ierr = Spacings(user.da,&hx,&hy); CHKERRQ(ierr); //STRIP
-  hxhy = PetscMin(hx,hy);  hxhy = hxhy * hxhy; //STRIP
-  ierr = PetscPrintf(PETSC_COMM_WORLD, //STRIP
-           "solving on %d x %d grid with dx=%g x dy=%g cells, t0=%g,\n" //STRIP
-           "and initial step dt=%g (so D0 dt / (dx dy) = %g) ...\n", //STRIP
-           info.mx,info.my,hx,hy, //STRIP
-           t0,dt,user.D0*dt/hxhy); CHKERRQ(ierr); //STRIP
-  // solve //STRIP
-  ierr = VecSet(u,0.0); CHKERRQ(ierr);   // initial condition
-  ierr = TSSolve(ts,u); CHKERRQ(ierr);
 //ENDTSSETUP
 
-  VecDestroy(&u);  VecDestroy(&(user.f));  VecDestroy(&(user.gamma));
-  TSDestroy(&ts);  DMDestroy(&user.da);
+  // report on set up
+  ierr = TSGetTime(ts,&t0); CHKERRQ(ierr);
+  ierr = TSGetTimeStep(ts,&dt); CHKERRQ(ierr);
+  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+  ierr = Spacings(&info,&hx,&hy); CHKERRQ(ierr);
+  hxhy = PetscMin(hx,hy);  hxhy = hxhy * hxhy;
+  ierr = PetscPrintf(PETSC_COMM_WORLD,
+           "solving on %d x %d grid with dx=%g x dy=%g cells, t0=%g,\n"
+           "and initial step dt=%g (so D0 dt / (dx dy) = %g) ...\n",
+           info.mx,info.my,hx,hy,
+           t0,dt,user.D0*dt/hxhy); CHKERRQ(ierr);
+
+  // solve
+  ierr = VecSet(u,0.0); CHKERRQ(ierr);   // initial condition
+  ierr = TSSolve(ts,u); CHKERRQ(ierr);
+
+  VecDestroy(&u);  TSDestroy(&ts);  DMDestroy(&da);
   PetscFinalize();
   return 0;
 }

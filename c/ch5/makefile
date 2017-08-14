@@ -35,7 +35,7 @@ runheat_1:
 	-@../testit.sh heat "-da_refine 1 -ts_monitor" 1 1
 
 runheat_2:
-	-@../testit.sh heat "-da_refine 2 -heat_monitor" 2 2
+	-@../testit.sh heat "-da_refine 2 -ht_monitor" 2 2
 
 runpattern_1:
 	-@../testit.sh pattern "-da_refine 2 -ts_monitor" 1 1   # refinement of 1 misses initial condition
