@@ -2,13 +2,14 @@
 
 # This is a sample batch file for running jobs on a linux cluster.  A goal is that the
 # total run time is less than an hour for > 8 processes.  If you have a bigger machine
-# (e.g. >100 processes) consider refining runs below.
+# (e.g. >100 processes) consider refining the grids more in the runs below.
 
 # In parent directory ../c/, set PETSC_ARCH to a --with-debugging=0 PETSc configuration.
 # Then run "make distclean" to clean out old executables.  Then run "make test" to make sure
-# executables ../ch*/CODE get built.
+# executables in ../ch*/ get built.
 
-# For each run a -log_view is generated, and analyzed for performance data.  Do
+# For each run a -log_view is generated.  These can be analyzed for performance
+# data.  For example do
 #   grep "(sec):" cluster.xxxx
 # to see total times of runs.
 
@@ -38,17 +39,18 @@ srun -l /bin/hostname | sort -n | awk '{print $2}' > ./nodes.$SLURM_JOB_ID
 GO="mpiexec -n $SLURM_NTASKS -machinefile ./nodes.$SLURM_JOB_ID"
 
 #---------------------------------------------------------------------------------
-# -da_refine 6 is 256x256 and does ~230 time steps
+# -da_refine 6 is 256x256; this does ~230 time steps
 $GO ../ch5/pattern -da_refine 6 -ptn_phi 0.05 -ptn_kappa 0.063 -ts_final_time 5000 -ptn_noisy_init 0.15 -ts_monitor -log_view
 
-# -da_refine 8 is 513x513x513; ~6Gb memory
+# -da_refine 8 is 513x513x513; uses ~6Gb memory
 $GO ../ch6/fish -fsh_dim 3 -da_refine 8 -pc_type mg -snes_type ksponly -ksp_converged_reason -log_view
 
-# -da_refine 8 is 1280x1280 and does ~2400 time steps
+# -da_refine 8 is 1280x1280; this does ~2400 time steps
 $GO ../ch9/advect -da_refine 8 -ts_final_time 1.0 -ts_rk_type 3bs -ts_monitor -log_view
 
-# -da_refine 10 is 2049x2049; -pc_mg_levels to avoid "too fine" error?
-$GO ../ch12/obstacle -da_refine 10 -snes_monitor -ksp_converged_reason -pc_type mg -pc_mg_levels 8 -snes_max_it 1000 -log_view
+# -da_refine 10 is 2049x2049 (as is 33x33 with -snes_grid_sequence 6)
+$GO ../ch12/obstacle -da_refine 10 -snes_monitor -ksp_converged_reason -pc_type mg -pc_mg_levels 8 -snes_max_it 1000 -log_view  # -pc_mg_levels needed to avoid "too fine" error?
+$GO ../ch12/obstacle -da_grid_x 33 -da_grid_y 33 -snes_grid_sequence 6 -snes_monitor -ksp_converged_reason -pc_type mg -log_view
 
 #FIXME add an unstructured from Chapter 10?
 #---------------------------------------------------------------------------------
