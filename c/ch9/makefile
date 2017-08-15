@@ -13,7 +13,7 @@ ad3: ad3.o  chkopts
 
 # first-order upwinding and nonstandard RK and evaluation of error
 runadvect_1:
-	-@../testit.sh advect "-da_refine 1 -ts_monitor -ts_rk_type 5f -adv_limiter none -ts_final_time 1.0" 1 1
+	-@../testit.sh advect "-da_refine 1 -ts_monitor -ts_rk_type 5f -adv_limiter none -ts_final_time 0.1" 1 1
 
 # vanleer limiter and parallel and beuler and rotation and -snes_fd_color
 runadvect_2:

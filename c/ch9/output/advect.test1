@@ -2,18 +2,7 @@ solving problem 'straight' (initial: stump) on 10 x 10 grid,
     cells dx=0.2 x dy=0.2, and 'none' limiter ...
 0 TS dt 0.05 time 0.
 1 TS dt 0.0304896 time 0.0295903
-2 TS dt 0.0357998 time 0.0600799
-3 TS dt 0.0413101 time 0.0958797
-4 TS dt 0.0478656 time 0.13719
-5 TS dt 0.0552345 time 0.185055
-6 TS dt 0.0634456 time 0.24029
-7 TS dt 0.072468 time 0.303736
-8 TS dt 0.0822307 time 0.376203
-9 TS dt 0.0925291 time 0.458434
-10 TS dt 0.103019 time 0.550963
-11 TS dt 0.113426 time 0.653982
-12 TS dt 0.12391 time 0.767409
-13 TS dt 0.108681 time 0.891319
-14 TS dt 0.148843 time 1.
-completed 14 steps to time 1.
-errors |u-uexact|_{1,h} = 3.0014e-01, |u-uexact|_{2,h} = 3.8348e-01
+2 TS dt 0.01996 time 0.0600799
+3 TS dt 0.01996 time 0.08004
+4 TS dt 0.0462395 time 0.1
+completed 4 steps to time 0.1

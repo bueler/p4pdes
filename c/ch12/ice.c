@@ -211,8 +211,9 @@ int main(int argc,char **argv) {
 
   // set time axis defaults
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
-  ierr = TSSetInitialTimeStep(ts,0.0,user.dtinit); CHKERRQ(ierr);
-  ierr = TSSetDuration(ts,100 * (int) ceil(user.tf/user.dtinit),user.tf); CHKERRQ(ierr);
+  ierr = TSSetTime(ts,0.0); CHKERRQ(ierr);
+  ierr = TSSetMaxTime(ts,user.tf); CHKERRQ(ierr);
+  ierr = TSSetTimeStep(ts,user.dtinit); CHKERRQ(ierr);
 
   // now allow it all to be changed at runtime
   ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
@@ -238,7 +239,7 @@ int main(int argc,char **argv) {
   // time-stepping summary if -ice_dtlimits
   if (user.dtlimits) {
       int count;
-      ierr = TSGetTimeStepNumber(ts,&count); CHKERRQ(ierr);
+      ierr = TSGetStepNumber(ts,&count); CHKERRQ(ierr);
       ierr = PetscPrintf(PETSC_COMM_WORLD,
           "average dt %.5f a, average dtexplicit %.5f a\n",
           (user.tf/user.secpera)/(double)count,

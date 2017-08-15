@@ -405,8 +405,9 @@ int main(int argc,char **argv) {
     else
         c = PetscMax(1.0/hx, 1.0/hy);
     dt = 0.5 / c;
-    ierr = TSSetInitialTimeStep(ts,0.0,dt); CHKERRQ(ierr);
-    ierr = TSSetDuration(ts,1000000,0.6); CHKERRQ(ierr);
+    ierr = TSSetTime(ts,0.0); CHKERRQ(ierr);
+    ierr = TSSetMaxTime(ts,0.6); CHKERRQ(ierr);
+    ierr = TSSetTimeStep(ts,dt); CHKERRQ(ierr);
     ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
 
     ierr = DMCreateGlobalVector(da,&u); CHKERRQ(ierr);
@@ -430,7 +431,7 @@ int main(int argc,char **argv) {
 
     ierr = TSSolve(ts,u); CHKERRQ(ierr);
 
-    ierr = TSGetTotalSteps(ts,&steps); CHKERRQ(ierr);
+    ierr = TSGetStepNumber(ts,&steps); CHKERRQ(ierr);
     ierr = TSGetTime(ts,&tf); CHKERRQ(ierr);
     ierr = dumptobinary(fileroot,"_final",u); CHKERRQ(ierr);
 
