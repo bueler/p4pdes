@@ -7,8 +7,55 @@ the problem is nonlinear.\n";
 parallel runs, spatial refinement, robust PC:
 for M in 0 1 2 3 4 5 6; do mpiexec -n 4 ./obstacle -da_refine $M -snes_converged_reason -pc_type asm -sub_pc_type lu; done
 
-multigrid gets finer (use --with-debugging=0):
-for M in 0 1 2 3 4 5 6 7 8; do mpiexec -n 4 ./obstacle -da_refine $M -snes_converged_reason -pc_type asm -sub_pc_type lu; done
+grid sequencing really worthwhile:
+    timer mpiexec -n 4 ./obstacle -snes_monitor -snes_converged_reason -snes_grid_sequence 8
+    real 10.82
+versus 180 seconds
+
+check it out:
+$ timer ./obstacle -da_refine 8 -pc_type ilu
+errors on 513 x 513 grid: av |u-uexact| = 2.141e-06, |u-uexact|_inf = 1.950e-05
+real 178.07
+$ timer ./obstacle -da_refine 8 -pc_type mg
+errors on 513 x 513 grid: av |u-uexact| = 2.137e-06, |u-uexact|_inf = 1.950e-05
+real 38.58
+$ timer ./obstacle -snes_grid_sequence 8 -pc_type ilu
+errors on 513 x 513 grid: av |u-uexact| = 2.137e-06, |u-uexact|_inf = 1.950e-05
+real 9.81
+$ timer ./obstacle -snes_grid_sequence 8 -pc_type mg
+errors on 513 x 513 grid: av |u-uexact| = 2.137e-06, |u-uexact|_inf = 1.950e-05
+real 2.65
+
+and then one can increase the dimension by 64 times!!!!:
+$ timer ./obstacle -snes_grid_sequence 9 -pc_type mg
+errors on 1025 x 1025 grid: av |u-uexact| = 7.130e-07, |u-uexact|_inf = 6.908e-06
+real 11.38
+$ timer ./obstacle -snes_grid_sequence 10 -pc_type mg
+errors on 2049 x 2049 grid: av |u-uexact| = 2.243e-07, |u-uexact|_inf = 1.828e-06
+real 38.63
+$ timer ./obstacle -snes_grid_sequence 11 -pc_type mg
+errors on 4097 x 4097 grid: av |u-uexact| = 1.231e-07, |u-uexact|_inf = 7.511e-07
+real 147.49
+
+one can adjust the smallest grid, which is needed in parallel to correctly cut-up
+the coarsest grid, but starting small seems good:
+$ timer ./obstacle -snes_converged_reason -pc_type mg -snes_grid_sequence 9
+                  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+                Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+...
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+errors on 1025 x 1025 grid: av |u-uexact| = 7.130e-07, |u-uexact|_inf = 6.908e-06
+real 11.39
+$ timer ./obstacle -da_grid_x 33 -da_grid_y 33 -snes_converged_reason -pc_type mg -snes_grid_sequence 5
+          Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+...
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+errors on 1025 x 1025 grid: av |u-uexact| = 7.130e-07, |u-uexact|_inf = 6.908e-06
+real 12.16
 */
 
 #include <petsc.h>
@@ -82,9 +129,9 @@ PetscErrorCode FormBounds(SNES snes, Vec Xl, Vec Xu) {
 
 int main(int argc,char **argv) {
   PetscErrorCode ierr;
-  DM             da;
+  DM             da, da_after;
   SNES           snes;
-  Vec            u, uexact;   /* solution, exact solution */
+  Vec            u_initial, u, u_exact;   /* solution, exact solution */
   PoissonCtx     user;
   double         error1,errorinf;
   DMDALocalInfo  info;
@@ -101,7 +148,6 @@ int main(int argc,char **argv) {
   ierr = DMSetUp(da); CHKERRQ(ierr);
   ierr = DMDASetUniformCoordinates(da,-2.0,2.0,-2.0,2.0,-1.0,-1.0);CHKERRQ(ierr);
 
-  ierr = DMCreateGlobalVector(da,&u);CHKERRQ(ierr);
   user.g_bdry = &g_fcn;
   user.f_rhs = &zero;
   user.addctx = NULL;
@@ -121,23 +167,28 @@ int main(int argc,char **argv) {
   ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
 
   /* solve */
-  ierr = VecSet(u,0.0); CHKERRQ(ierr);
-  ierr = SNESSolve(snes,NULL,u);CHKERRQ(ierr);
+  ierr = DMCreateGlobalVector(da,&u_initial);CHKERRQ(ierr);
+  ierr = VecSet(u_initial,0.0); CHKERRQ(ierr);
+  ierr = SNESSolve(snes,NULL,u_initial);CHKERRQ(ierr);
+  ierr = VecDestroy(&u_initial); CHKERRQ(ierr);
+  ierr = DMDestroy(&da); CHKERRQ(ierr);
 
   /* compare to exact */
-  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-  ierr = VecDuplicate(u,&uexact);CHKERRQ(ierr);
-  ierr = FormUExact(&info,uexact);CHKERRQ(ierr);
-  ierr = VecAXPY(u,-1.0,uexact);CHKERRQ(ierr); /* u <- u - uexact */
-  ierr = VecNorm(u,NORM_1,&error1);CHKERRQ(ierr);
+  ierr = SNESGetDM(snes,&da_after); CHKERRQ(ierr);
+  ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr);
+  ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
+  ierr = VecDuplicate(u,&u_exact); CHKERRQ(ierr);
+  ierr = FormUExact(&info,u_exact); CHKERRQ(ierr);
+  ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr); /* u <- u - u_exact */
+  ierr = VecDestroy(&u_exact); CHKERRQ(ierr);
+  ierr = VecNorm(u,NORM_1,&error1); CHKERRQ(ierr);
   error1 /= (double)info.mx * (double)info.my;
-  ierr = VecNorm(u,NORM_INFINITY,&errorinf);CHKERRQ(ierr);
+  ierr = VecNorm(u,NORM_INFINITY,&errorinf); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
       "errors on %3d x %3d grid: av |u-uexact| = %.3e, |u-uexact|_inf = %.3e\n",
-      info.mx,info.my,error1,errorinf);CHKERRQ(ierr);
+      info.mx,info.my,error1,errorinf); CHKERRQ(ierr);
 
-  VecDestroy(&u);  VecDestroy(&uexact);
-  SNESDestroy(&snes);  DMDestroy(&da);
+  SNESDestroy(&snes);
   PetscFinalize();
   return 0;
 }
