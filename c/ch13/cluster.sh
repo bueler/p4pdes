@@ -48,9 +48,8 @@ $GO ../ch6/fish -fsh_dim 3 -da_refine 8 -pc_type mg -snes_type ksponly -ksp_conv
 # -da_refine 8 is 1280x1280; this does ~2400 time steps
 $GO ../ch9/advect -da_refine 8 -ts_final_time 1.0 -ts_rk_type 3bs -ts_monitor -log_view
 
-# -da_refine 10 is 2049x2049 (as is 33x33 with -snes_grid_sequence 6)
-$GO ../ch12/obstacle -da_refine 10 -snes_monitor -ksp_converged_reason -pc_type mg -pc_mg_levels 8 -snes_max_it 1000 -log_view  # -pc_mg_levels needed to avoid "too fine" error?
-$GO ../ch12/obstacle -da_grid_x 33 -da_grid_y 33 -snes_grid_sequence 6 -snes_monitor -ksp_converged_reason -pc_type mg -log_view
+# 33x33 base grid with -snes_grid_sequence 6 is 2049x2049 finest grid
+$GO ../ch12/obstacle -da_grid_x 33 -da_grid_y 33 -snes_grid_sequence 6 -snes_converged_reason -snes_monitor -ksp_converged_reason -pc_type mg -log_view
 
 #FIXME add an unstructured from Chapter 10?
 #---------------------------------------------------------------------------------
