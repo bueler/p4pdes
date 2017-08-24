@@ -9,6 +9,10 @@ typedef struct {
     PetscBool noRinJ;
 } AppCtx;
 
+double f_source(double x) {
+    return 0.0;
+}
+
 PetscErrorCode InitialAndExact(DMDALocalInfo *info, double *u0,
                                double *uex, AppCtx *user) {
     int    i;
@@ -23,8 +27,9 @@ PetscErrorCode InitialAndExact(DMDALocalInfo *info, double *u0,
 
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *u,
                                  double *FF, AppCtx *user) {
-    int    i;
-    double h = 1.0 / (info->mx-1), R;
+    int          i;
+    const double h = 1.0 / (info->mx-1);
+    double       x, R;
     for (i=info->xs; i<info->xs+info->xm; i++) {
         if (i == 0) {
             FF[i] = u[i] - user->alpha;
@@ -32,7 +37,9 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *u,
             FF[i] = u[i] - user->beta;
         } else {  // interior location
             R = - user->rho * PetscSqrtReal(u[i]);
-            FF[i] = - u[i+1] + 2.0 * u[i] - u[i-1] - h*h * R;
+            x = i * h;
+            FF[i] = - u[i+1] + 2.0 * u[i] - u[i-1]
+                    - h*h * (R + f_source(x));
         }
     }
     return 0;
