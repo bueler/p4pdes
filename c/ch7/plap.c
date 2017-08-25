@@ -333,7 +333,6 @@ int main(int argc,char **argv) {
            err); CHKERRQ(ierr);
 
   VecDestroy(&u_exact);  SNESDestroy(&snes);
-  PetscFinalize();
-  return 0;
+  return PetscFinalize();
 }
 

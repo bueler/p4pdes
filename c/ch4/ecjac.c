@@ -78,8 +78,7 @@ int main(int argc,char **argv)
   ierr = VecView(x,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
 
   VecDestroy(&x);  VecDestroy(&r);  SNESDestroy(&snes);  MatDestroy(&J);
-  PetscFinalize();
-  return 0;
+  return PetscFinalize();
 }
 //ENDMAIN
 

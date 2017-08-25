@@ -448,11 +448,8 @@ int main(int argc,char **argv) {
     }
 
     // clean-up
-    SNESDestroy(&snes);
-    MatDestroy(&A);
     VecDestroy(&u);  VecDestroy(&r);
-    UMDestroy(&mesh);
-    PetscFinalize();
-    return 0;
+    MatDestroy(&A);  SNESDestroy(&snes);  UMDestroy(&mesh);
+    return PetscFinalize();
 }
 

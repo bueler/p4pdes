@@ -189,7 +189,6 @@ int main(int argc,char **argv) {
       info.mx,info.my,error1,errorinf); CHKERRQ(ierr);
 
   SNESDestroy(&snes);
-  PetscFinalize();
-  return 0;
+  return PetscFinalize();
 }
 

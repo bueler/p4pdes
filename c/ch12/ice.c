@@ -290,8 +290,7 @@ int main(int argc,char **argv) {
   }
 
   // clean up
-  VecDestroy(&H);
-  TSDestroy(&ts);  DMDestroy(&da);
+  VecDestroy(&H);  TSDestroy(&ts);  DMDestroy(&da);
   return PetscFinalize();
 }
 

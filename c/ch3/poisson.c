@@ -140,8 +140,7 @@ int main(int argc,char **args) {
 
   VecDestroy(&u);  VecDestroy(&uexact);  VecDestroy(&b);
   MatDestroy(&A);  KSPDestroy(&ksp);  DMDestroy(&da);
-  PetscFinalize();
-  return 0;
+  return PetscFinalize();
 }
 //ENDMAIN
 

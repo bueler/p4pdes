@@ -67,7 +67,6 @@ int main(int argc,char **args) {
 
   KSPDestroy(&ksp);  MatDestroy(&A);
   VecDestroy(&x);  VecDestroy(&b);  VecDestroy(&xexact);
-  PetscFinalize();
-  return 0;
+  return PetscFinalize();
 }
 //ENDSOLVE

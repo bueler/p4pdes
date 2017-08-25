@@ -96,7 +96,6 @@ int main(int argc,char **argv) {
 
   MatDestroy(&J);
   VecDestroy(&y);  VecDestroy(&yexact);  TSDestroy(&ts);
-  PetscFinalize();
-  return 0;
+  return PetscFinalize();
 }
 

@@ -67,10 +67,8 @@ int main(int argc,char **argv)
 
   FIXME
 
-  ierr = SNESDestroy(&snes); CHKERRQ(ierr);
-  ierr = DMDestroy(&user.da); CHKERRQ(ierr);
-  ierr = PetscFinalize();
-  return 0;
+  SNESDestroy(&snes);  DMDestroy(&user.da);
+  return PetscFinalize();
 }
 
 

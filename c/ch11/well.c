@@ -422,7 +422,6 @@ int main(int argc,char **args) {
 
     VecDestroy(&X);  VecDestroy(&Xexact);
     SNESDestroy(&snes);  DMDestroy(&da);
-    PetscFinalize();
-    return 0;
+    return PetscFinalize();
 }
 

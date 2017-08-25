@@ -200,7 +200,6 @@ int main(int argc,char **argv)
   ierr = TSSolve(ts,u); CHKERRQ(ierr);
 
   VecDestroy(&u);  TSDestroy(&ts);  DMDestroy(&da);
-  PetscFinalize();
-  return 0;
+  return PetscFinalize();
 }
 

@@ -428,7 +428,6 @@ int main(int argc,char **argv) {
          info.mx,info.my,info.mz,user.eps,err); CHKERRQ(ierr);
 
     VecDestroy(&u_exact);  SNESDestroy(&snes);
-    PetscFinalize();
-    return 0;
+    return PetscFinalize();
 }
 

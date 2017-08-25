@@ -75,8 +75,7 @@ int main(int argc,char **argv) {
               tf,steps,err); CHKERRQ(ierr);
 
   VecDestroy(&y);  VecDestroy(&yexact);  TSDestroy(&ts);
-  PetscFinalize();
-  return 0;
+  return PetscFinalize();
 }
 //ENDMAIN
 
