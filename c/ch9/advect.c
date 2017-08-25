@@ -397,9 +397,9 @@ int main(int argc,char **argv) {
     ierr = DMDATSSetRHSJacobianLocal(da,
            (DMDATSRHSJacobianLocal)FormRHSJacobianLocal,&user); CHKERRQ(ierr);
     ierr = TSSetType(ts,TSRK); CHKERRQ(ierr);  // defaults to -ts_rk_type 3bs
-    ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
-    // use CFL number of 0.5 to set initial time step, but note most methods
-    // adapt anyway
+
+    // time axis: use CFL number of 0.5 to set initial time step, but note
+    //            most methods adapt anyway
     if (user.problem == STRAIGHT)
         c = PetscMax(PetscAbsReal(user.windx)/hx, PetscAbsReal(user.windy)/hy);
     else
@@ -408,6 +408,7 @@ int main(int argc,char **argv) {
     ierr = TSSetTime(ts,0.0); CHKERRQ(ierr);
     ierr = TSSetMaxTime(ts,0.6); CHKERRQ(ierr);
     ierr = TSSetTimeStep(ts,dt); CHKERRQ(ierr);
+    ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
     ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
 
     ierr = DMCreateGlobalVector(da,&u); CHKERRQ(ierr);

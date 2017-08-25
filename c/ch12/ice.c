@@ -209,13 +209,11 @@ int main(int argc,char **argv) {
   ierr = SNESSetType(snes,SNESVINEWTONRSLS); CHKERRQ(ierr);
   ierr = SNESVISetComputeVariableBounds(snes,&FormBounds); CHKERRQ(ierr);
 
-  // set time axis defaults
-  ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
+  // set time axis
   ierr = TSSetTime(ts,0.0); CHKERRQ(ierr);
   ierr = TSSetMaxTime(ts,user.tf); CHKERRQ(ierr);
   ierr = TSSetTimeStep(ts,user.dtinit); CHKERRQ(ierr);
-
-  // now allow it all to be changed at runtime
+  ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
   ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
 
   // set up initial condition on fine grid

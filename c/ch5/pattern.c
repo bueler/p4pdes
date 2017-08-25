@@ -230,11 +230,11 @@ int main(int argc,char **argv)
   ierr = DMDATSSetIJacobianLocal(da,
            (DMDATSIJacobianLocal)FormIJacobianLocal,&user); CHKERRQ(ierr);
   ierr = TSSetType(ts,TSARKIMEX); CHKERRQ(ierr);
-  ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
   // default run:  t_0 = 0.0, t_f = 200, dt = 5.0
   ierr = TSSetTime(ts,0.0); CHKERRQ(ierr);
   ierr = TSSetMaxTime(ts,200.0); CHKERRQ(ierr);
   ierr = TSSetTimeStep(ts,5.0); CHKERRQ(ierr);
+  ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
   ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
 //ENDTSSETUP
 

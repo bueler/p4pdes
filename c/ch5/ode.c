@@ -53,10 +53,10 @@ int main(int argc,char **argv) {
   ierr = TSSetType(ts,TSRK); CHKERRQ(ierr);
 
   // set time axis
-  ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
   ierr = TSSetTime(ts,t0); CHKERRQ(ierr);
   ierr = TSSetMaxTime(ts,tf); CHKERRQ(ierr);
   ierr = TSSetTimeStep(ts,dt); CHKERRQ(ierr);
+  ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
   ierr = TSSetFromOptions(ts); CHKERRQ(ierr);  // can override defaults
 
   // set initial value and solve

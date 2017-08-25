@@ -176,10 +176,10 @@ int main(int argc,char **argv)
       ierr = TSMonitorSet(ts,EnergyMonitor,&user,NULL); CHKERRQ(ierr);
   }
   ierr = TSSetType(ts,TSBEULER); CHKERRQ(ierr);
-  ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
   ierr = TSSetTime(ts,0.0); CHKERRQ(ierr);
   ierr = TSSetMaxTime(ts,0.1); CHKERRQ(ierr);
   ierr = TSSetTimeStep(ts,0.01); CHKERRQ(ierr);
+  ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
   ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
 //ENDTSSETUP
 
