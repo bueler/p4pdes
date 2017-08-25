@@ -3,7 +3,7 @@ static char help[] =
 
 #include <petsc.h>
 
-//STARTCALLBACK
+//STARTCTX
 typedef struct {
     double    rho, M, alpha, beta;
     PetscBool noRinJ;
@@ -24,7 +24,9 @@ PetscErrorCode InitialAndExact(DMDALocalInfo *info, double *u0,
     }
     return 0;
 }
+//ENDCTX
 
+//STARTFUNCTIONS
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *u,
                                  double *FF, AppCtx *user) {
     int          i;
@@ -44,9 +46,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *u,
     }
     return 0;
 }
-//ENDCALLBACK
 
-//STARTJACOBIAN
 PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, double *u,
                                  Mat J, Mat P, AppCtx *user) {
     PetscErrorCode ierr;
@@ -76,7 +76,7 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, double *u,
     }
     return 0;
 }
-//ENDJACOBIAN
+//ENDFUNCTIONS
 
 //STARTMAIN
 int main(int argc,char **args) {
@@ -130,7 +130,8 @@ int main(int argc,char **args) {
   ierr = PetscPrintf(PETSC_COMM_WORLD,
       "on %d point grid:  |u-u_exact|_inf = %g\n",info.mx,errnorm); CHKERRQ(ierr);
 
-  VecDestroy(&u);  VecDestroy(&uexact);  SNESDestroy(&snes);  DMDestroy(&da);
+  VecDestroy(&u);  VecDestroy(&uexact);
+  SNESDestroy(&snes);  DMDestroy(&da);
   PetscFinalize();
   return 0;
 }
