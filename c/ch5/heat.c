@@ -59,7 +59,8 @@ double gamma_neumann(double x, double y) {
 }
 
 //STARTRHSFUNCTION
-PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **au,
+PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info,
+                                    double t, double **au,
                                     double **aG, HeatCtx *user) {
   PetscErrorCode ierr;
   int      i, j, mx = info->mx;
@@ -85,7 +86,8 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **au,
 //ENDRHSFUNCTION
 
 //STARTRHSJACOBIAN
-PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info, double t, double **au,
+PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info,
+                                    double t, double **au,
                                     Mat J, Mat P, HeatCtx *user) {
     PetscErrorCode ierr;
     int            i, j, ncols;
@@ -152,10 +154,10 @@ int main(int argc,char **argv)
 
 //STARTDMDASETUP
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
-               DM_BOUNDARY_NONE, DM_BOUNDARY_PERIODIC, DMDA_STENCIL_STAR,
-               5,4,PETSC_DECIDE,PETSC_DECIDE,  // default to hx=hx=0.25 grid
-               1,1,                            // degrees of freedom, stencil width
-               NULL,NULL,&da); CHKERRQ(ierr);
+      DM_BOUNDARY_NONE, DM_BOUNDARY_PERIODIC, DMDA_STENCIL_STAR,
+      5,4,PETSC_DECIDE,PETSC_DECIDE,  // default to hx=hx=0.25 grid
+      1,1,                            // degrees of freedom, stencil width
+      NULL,NULL,&da); CHKERRQ(ierr);
   ierr = DMSetFromOptions(da); CHKERRQ(ierr);
   ierr = DMSetUp(da); CHKERRQ(ierr);
   ierr = DMCreateGlobalVector(da,&u); CHKERRQ(ierr);
