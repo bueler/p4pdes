@@ -54,7 +54,7 @@ double f_source(double x, double y) {
     return 3.0 * exp(-25.0 * (x-0.6) * (x-0.6)) * sin(2.0*PETSC_PI*y);
 }
 
-double gamma_neumann(double x, double y) {
+double gamma_neumann(double y) {
     return sin(6.0 * PETSC_PI * y);
 }
 
@@ -72,7 +72,7 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info,
       for (i = info->xs; i < info->xs + info->xm; i++) {
           x = hx * i;
           // apply Neumann b.c.s
-          ul = (i == 0) ? au[j][i+1] + 2.0 * hx * gamma_neumann(x,y)
+          ul = (i == 0) ? au[j][i+1] + 2.0 * hx * gamma_neumann(y)
                         : au[j][i-1];
           ur = (i == mx-1) ? au[j][i-1] : au[j][i+1];
           uxx = (ul - 2.0 * au[j][i]+ ur) / (hx*hx);
