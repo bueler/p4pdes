@@ -9,11 +9,9 @@ static char help[] =
 
 #include <petsc.h>
 
-//STARTHEATCTX
 typedef struct {
   double D0;    // conductivity
 } HeatCtx;
-//ENDHEATCTX
 
 PetscErrorCode Spacings(DMDALocalInfo *info, double *hx, double *hy) {
     if (hx)  *hx = 1.0 / (double)(info->mx-1);
