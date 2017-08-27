@@ -67,8 +67,9 @@ int main(int argc,char **argv) {
   ierr = TSSetRHSJacobian(ts,J,J,FormRHSJacobian,NULL); CHKERRQ(ierr);
 
   ierr = TSSetType(ts,TSRK); CHKERRQ(ierr);
-  ierr = TSSetInitialTimeStep(ts,0.0,1.0); CHKERRQ(ierr);
-  ierr = TSSetDuration(ts,100000,10.0); CHKERRQ(ierr);
+  ierr = TSSetTime(ts,0.0); CHKERRQ(ierr);
+  ierr = TSSetMaxTime(ts,10.0); CHKERRQ(ierr);
+  ierr = TSSetTimeStep(ts,1.0); CHKERRQ(ierr);
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
   ierr = TSSetFromOptions(ts); CHKERRQ(ierr);  // can override defaults
 
@@ -76,7 +77,7 @@ int main(int argc,char **argv) {
   ierr = TSSolve(ts,y); CHKERRQ(ierr);
 
   ierr = VecView(y,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
-  ierr = TSGetTotalSteps(ts,&steps); CHKERRQ(ierr);
+  ierr = TSGetStepNumber(ts,&steps); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
               "total steps = %d\n",steps); CHKERRQ(ierr);
 
