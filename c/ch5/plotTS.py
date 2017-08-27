@@ -106,6 +106,7 @@ else:
     plt.xlabel('t')
     plt.legend()
     if args.filename:
+        print 'writing file %s' % args.filename
         plt.savefig(args.filename)
     else:
         plt.show()
