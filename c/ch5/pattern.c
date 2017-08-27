@@ -66,8 +66,8 @@ PetscErrorCode InitialState(DM da, Vec Y, double noiselevel, PatternCtx* user) {
 //     G^u(t,u,v) = - u v^2 + phi (1 - u)
 //     G^v(t,u,v) = + u v^2 - (phi + kappa) v
 //STARTRHSFUNCTION
-PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, Field **aY,
-                                    Field **aG, PatternCtx *user) {
+PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info,
+                   double t, Field **aY, Field **aG, PatternCtx *user) {
   int            i, j;
   double         uv2;
 
@@ -87,8 +87,9 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, Field **aY,
 //     F^u(t,u,v,u_t,v_t) = u_t - D_u Laplacian u
 //     F^v(t,u,v,u_t,v_t) = v_t - D_v Laplacian v
 //STARTIFUNCTION
-PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t, Field **aY,
-                                  Field **aYdot, Field **aF, PatternCtx *user) {
+PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info,
+                   double t, Field **aY, Field **aYdot, Field **aF,
+                   PatternCtx *user) {
   int            i, j;
   const double   h = user->L / (double)(info->mx),
                  Cu = user->Du / (6.0 * h * h),
@@ -118,9 +119,9 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t, Field **aY,
 // Jacobian of F():
 //     J = (shift) dF/d(dot Y) + dF/dY
 //STARTIJACOBIAN
-PetscErrorCode FormIJacobianLocal(DMDALocalInfo *info, double t, Field **aY,
-                                  Field **aYdot, double shift, Mat J, Mat P,
-                                  PatternCtx *user) {
+PetscErrorCode FormIJacobianLocal(DMDALocalInfo *info,
+                   double t, Field **aY, Field **aYdot, double shift,
+                   Mat J, Mat P, PatternCtx *user) {
     PetscErrorCode ierr;
     int            i, j, s, c;
     const double   h = user->L / (double)(info->mx),
@@ -138,7 +139,8 @@ PetscErrorCode FormIJacobianLocal(DMDALocalInfo *info, double t, Field **aY,
                 CC = (c == 0) ? Cu : Cv;
                 for (s = 0; s < 9; s++)
                     col[s].c = c;
-                col[0].i = i;   col[0].j = j;    val[0] = shift + 20.0 * CC;
+                col[0].i = i;   col[0].j = j;
+                val[0] = shift + 20.0 * CC;
                 col[1].i = i-1; col[1].j = j;    val[1] = - 4.0 * CC;
                 col[2].i = i+1; col[2].j = j;    val[2] = - 4.0 * CC;
                 col[3].i = i;   col[3].j = j-1;  val[3] = - 4.0 * CC;
