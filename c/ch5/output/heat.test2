@@ -1,5 +1,5 @@
-solving on 17 x 16 grid with dx=0.0625 x dy=0.0625 cells, t0=0.,
-and initial step dt=0.01 (so D0 dt / (dx dy) = 2.56) ...
+solving on 17 x 16 grid with dx=0.0625 x dy=0.0625 cells
+  and time axis  0.:0.1:0.01  (note: D0 dt / (dx dy) = 2.56) ...
   energy = 0.00e+00
   energy = 1.29e-14
   energy = 3.07e-14

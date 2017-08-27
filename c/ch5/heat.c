@@ -139,7 +139,7 @@ int main(int argc,char **argv)
   Vec            u;
   DM             da;
   DMDALocalInfo  info;
-  double         hx, hy, hxhy, t0, dt;
+  double         hx, hy, hxhy, t0, tf, dt;
   PetscBool      monitorenergy = PETSC_FALSE;
 
   PetscInitialize(&argc,&argv,(char*)0,help);
@@ -185,15 +185,16 @@ int main(int argc,char **argv)
 
   // report on set up
   ierr = TSGetTime(ts,&t0); CHKERRQ(ierr);
+  ierr = TSGetMaxTime(ts,&tf); CHKERRQ(ierr);
   ierr = TSGetTimeStep(ts,&dt); CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
   ierr = Spacings(&info,&hx,&hy); CHKERRQ(ierr);
   hxhy = PetscMin(hx,hy);  hxhy = hxhy * hxhy;
   ierr = PetscPrintf(PETSC_COMM_WORLD,
-           "solving on %d x %d grid with dx=%g x dy=%g cells, t0=%g,\n"
-           "and initial step dt=%g (so D0 dt / (dx dy) = %g) ...\n",
+           "solving on %d x %d grid with dx=%g x dy=%g cells\n"
+           "  and time axis  %g:%g:%g  (note: D0 dt / (dx dy) = %g) ...\n",
            info.mx,info.my,hx,hy,
-           t0,dt,user.D0*dt/hxhy); CHKERRQ(ierr);
+           t0,tf,dt,user.D0*dt/hxhy); CHKERRQ(ierr);
 
   // solve
   ierr = VecSet(u,0.0); CHKERRQ(ierr);   // initial condition
