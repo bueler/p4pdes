@@ -92,7 +92,13 @@ typedef struct {
     PetscBool laplace; // solve Laplace equation instead of minimal surface
 } MinimalCtx;
 
-// Dirichlet boundary condition; only use along y=0 boundary
+// source function f(x,y)
+// manufactured only: Dirichlet boundary condition
+double zero(double x, double y, double z, void *ctx) {
+    return 0.0;
+}
+
+// Dirichlet boundary condition
 double g_bdry_tent(double x, double y, double z, void *ctx) {
     PoissonCtx *user = (PoissonCtx*)ctx;
     MinimalCtx *mctx = (MinimalCtx*)(user->addctx);
@@ -113,23 +119,12 @@ double dDD(double s) {
     return -0.5 * pow(1.0 + s,-1.5);
 }
 
-double zero(double x, double y, double z, void *ctx) {
-    return 0.0;
-}
-
 // manufactured only: the exact solution u(x,y)
 double u_manu(double x, double y, double z, void *ctx) {
     return (x - x*x) * (y*y - y);
 }
 
-// manufactured only: the right-hand-side f(x,y) = - div (DD(s) grad u)
-double f_manu_laplace(double x, double y, double z, void *ctx) {
-    double uxx, uyy;
-    uxx  = - 2.0 * (y*y - y);
-    uyy  = (x - x*x) * 2.0;
-    return - uxx - uyy;
-}
-
+// manufactured only: the right-hand-side f(x,y)
 double f_manu(double x, double y, double z, void *ctx) {
     double uxx, uyy, ux, uy, uxy, s, sx, sy;
     uxx  = - 2.0 * (y*y - y);
@@ -141,6 +136,14 @@ double f_manu(double x, double y, double z, void *ctx) {
     sx   = 2.0 * ux * uxx + 2.0 * uy * uxy;
     sy   = 2.0 * ux * uxy + 2.0 * uy * uyy;
     return - dDD(s) * (sx * ux + sy * uy) - DD(s) * (uxx + uyy);
+}
+
+// manufactured only, laplace case: the right-hand-side f(x,y) = - div (DD(s) grad u)
+double f_manu_laplace(double x, double y, double z, void *ctx) {
+    double uxx, uyy;
+    uxx  = - 2.0 * (y*y - y);
+    uyy  = (x - x*x) * 2.0;
+    return - uxx - uyy;
 }
 
 PetscErrorCode Spacings(DMDALocalInfo *info, double *hx, double *hy) {
@@ -314,7 +317,7 @@ int main(int argc,char **argv) {
     PoissonCtx     user;
     MinimalCtx     mctx;
     PetscBool      monitor_area = PETSC_FALSE,
-                   manu = PETSC_FALSE;    // solve with manufactured f(x,y) and g(x,y) = 0
+                   manu = PETSC_FALSE;    // solve with manufactured f(x,y)
     DMDALocalInfo  info;
 
     PetscInitialize(&argc,&argv,NULL,help);
@@ -357,8 +360,8 @@ int main(int argc,char **argv) {
     ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
     ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
                (DMDASNESFunction)FormFunctionLocal,&user); CHKERRQ(ierr);
-    // this is the Jacobian of the Poisson equation, thus only approximate
-    //     (consider using -snes_mf_operator)
+    // this is the Jacobian of the Poisson equation, thus ONLY APPROXIMATE
+    //     ... consider using -snes_fd_color or -snes_mf_operator
     ierr = DMDASNESSetJacobianLocal(da,
                (DMDASNESJacobian)Form2DJacobianLocal,&user); CHKERRQ(ierr);
     if (monitor_area) {
