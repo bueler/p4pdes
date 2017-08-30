@@ -114,7 +114,6 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info,
 }
 //ENDIFUNCTION
 
-
 // in system form  F(t,Y,dot Y) = G(t,Y),  compute combined/shifted
 // Jacobian of F():
 //     J = (shift) dF/d(dot Y) + dF/dY
@@ -153,13 +152,8 @@ PetscErrorCode FormIJacobianLocal(DMDALocalInfo *info,
             }
         }
     }
-
     ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
     ierr = MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-    if (J != P) {
-        ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-        ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-    }
     return 0;
 }
 //ENDIJACOBIAN
