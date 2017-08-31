@@ -361,6 +361,10 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar ***au,
     }
     ierr = MatAssemblyBegin(Jpre,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
     ierr = MatAssemblyEnd(Jpre,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+    if (J != Jpre) {
+        ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+        ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+    }
     return 0;
 }
 
