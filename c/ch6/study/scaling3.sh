@@ -1,31 +1,39 @@
 #!/bin/bash
 set -e
 
-# run as:   ./scaling3.sh &> scaling3.txt
-
+# run as:
+#   ./scaling3.sh &> scaling3.txt
 # use PETSC_ARCH with --with-debugging=0
+# limitations: going to -da_refine 8 gives out of memory on WORKSTATION with 16Gb
+# compare scaling2.sh
 
-# going to -da_refine 8 gives out of memory on WORKSTATION with 16Gb
+# re measuring timing:  the time in SNESSolve includes assembly of system on
+# each coarser grid, through calls to FormJacobianLocal(); note
+# FormFunctionLocal() only called once, on finest grid
 
-# see scaling2.sh
+# shows number of CG iterations constant (7 at each level) and error is O(h^2):
+#   (level)    (mx)      (time)      (flops)
+#   4          33        1.5960e-01  9.65e+07
+#   5          65        9.2471e-01  7.41e+08
+#   6          129       6.1326e+00  5.81e+09
+#   7          257       4.6442e+01  4.60e+10
 
-# >> mx = 2.^(5:8)+1
-# >> kspiters = [10 14 20 26]
-# >> time = [0.23 1.70 13.65 128.89]
-# >> polyfit(log(mx.^3),log(time),1)
-# ans =
-#      1.0264     -12.284
-# ... pretty damn linear
-
-# >> kspitersGAMG = [8 9 10 10]     # -pc_type gamg
-# >> timeGAMG = [0.36 2.23 17.73 145.63]
-# >> polyfit(log(mx.^3),log(timeGAMG),1)
-# ans =
-#      0.97829     -11.356
+# copy block of data above into data3.txt; then:
+# >> load('data3.txt')
+# >> mx = data3(:,2);  time = data3(:,3);  flops = data3(:,4);
+# >> pt = polyfit(log(mx.^3),log(time),1)
+# pt =
+#       0.9213     -11.558                     % slightly sublinear
+# >> loglog(mx,time,'k-o',mx,exp(pt(1)*log(mx.^3)+pt(2)),'k--')
+# >> pf = polyfit(log(mx.^3),log(flops),1)
+# pf =
+#       1.0015      7.8809                     % perfectly linear
 
 for LEV in 4 5 6 7; do
-    CMD="../fish3 -da_refine $LEV -ksp_type cg -pc_type mg -ksp_converged_reason -ksp_rtol 1.0e-10 -snes_max_it 1"
+    CMD="../fish -fsh_dim 3 -snes_type ksponly -ksp_type cg -pc_type mg -ksp_rtol 1.0e-10 -ksp_converged_reason -da_refine $LEV -log_view"
     echo "COMMAND:  $CMD"
-    /usr/bin/time --portability -f "real %e" $CMD
+    rm -rf tmp.txt
+    $CMD &> tmp.txt
+    grep -C 1 "problem manuexp" tmp.txt
+    grep SNESSolve tmp.txt
 done
-
