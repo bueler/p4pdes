@@ -259,7 +259,7 @@ PetscErrorCode AreaMonitor(SNES snes, int its, double norm, void *ctx) {
     Vec            u, uloc;
     DMDALocalInfo  info;
     const int      ndegree = 2;
-    const Quad1D   q = gausslegendre[ndegree-1];
+    const Quad1D   q = gausslegendre[ndegree-1];   // from ../quadrature.h
     double         hx, hy, **au, x_i, y_j, x, y, ux, uy, arealoc, area;
     int            i, j, r, s;
     MPI_Comm       comm;
