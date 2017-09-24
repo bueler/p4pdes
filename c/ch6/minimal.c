@@ -321,6 +321,9 @@ int main(int argc,char **argv) {
     DMDALocalInfo  info;
 
     PetscInitialize(&argc,&argv,NULL,help);
+    user.cx = 1.0;
+    user.cy = 1.0;
+    user.cz = 1.0;
     mctx.H = 1.0;
     mctx.laplace = PETSC_FALSE;
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"mse_","minimal surface equation solver options",""); CHKERRQ(ierr);

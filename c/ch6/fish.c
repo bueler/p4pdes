@@ -116,19 +116,22 @@ double zero(double x, double y, double z, void *ctx) {
 // right-hand-side functions  f(x,y) = - laplacian u
 
 double f_rhs_1Dmanupoly(double x, double y, double z, void *ctx) {
-    return 12.0 * x*x - 2.0;
+    PoissonCtx* user = (PoissonCtx*)ctx;
+    return user->cx * 12.0 * x*x - 2.0;
 }
 
 double f_rhs_2Dmanupoly(double x, double y, double z, void *ctx) {
+    PoissonCtx* user = (PoissonCtx*)ctx;
     double aa, bb, ddaa, ddbb;
     aa = x*x * (1.0 - x*x);
     bb = y*y * (y*y - 1.0);
     ddaa = 2.0 * (1.0 - 6.0 * x*x);
     ddbb = 2.0 * (6.0 * y*y - 1.0);
-    return - (ddaa * bb + aa * ddbb);
+    return - (user->cx * ddaa * bb + user->cy * aa * ddbb);
 }
 
 double f_rhs_3Dmanupoly(double x, double y, double z, void *ctx) {
+    PoissonCtx* user = (PoissonCtx*)ctx;
     double aa, bb, cc, ddaa, ddbb, ddcc;
     aa = x*x * (1.0 - x*x);
     bb = y*y * (y*y - 1.0);
@@ -136,7 +139,7 @@ double f_rhs_3Dmanupoly(double x, double y, double z, void *ctx) {
     ddaa = 2.0 * (1.0 - 6.0 * x*x);
     ddbb = 2.0 * (6.0 * y*y - 1.0);
     ddcc = 2.0 * (6.0 * z*z - 1.0);
-    return - (ddaa * bb * cc + aa * ddbb * cc + aa * bb * ddcc);
+    return - (user->cx * ddaa * bb * cc + user->cy * aa * ddbb * cc + user->cz * aa * bb * ddcc);
 }
 
 double f_rhs_1Dmanuexp(double x, double y, double z, void *ctx) {
@@ -258,11 +261,26 @@ int main(int argc,char **argv) {
 
     PetscInitialize(&argc,&argv,NULL,help);
 
-    // get options
+    // get options and configure context
+    user.cx = 1.0;
+    user.cy = 1.0;
+    user.cz = 1.0;
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"fsh_", "options for fish.c", ""); CHKERRQ(ierr);
+    ierr = PetscOptionsReal("-cx",
+         "set coefficient of x term u_xx in equation",
+         "fish.c",user.cx,&user.cx,NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsReal("-cy",
+         "set coefficient of y term u_yy in equation",
+         "fish.c",user.cy,&user.cy,NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsReal("-cz",
+         "set coefficient of z term u_zz in equation",
+         "fish.c",user.cz,&user.cz,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsInt("-dim",
          "dimension of problem (=1,2,3 only)",
          "fish.c",dim,&dim,NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-init_random",
+         "initial state is random (default is zero)",
+         "fish.c",init_random,&init_random,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsReal("-Lx",
          "set Lx in domain ([0,Lx] x [0,Ly] x [0,Lz], etc.)",
          "fish.c",Lx,&Lx,NULL);CHKERRQ(ierr);
@@ -272,15 +290,18 @@ int main(int argc,char **argv) {
     ierr = PetscOptionsReal("-Lz",
          "set Ly in domain ([0,Lx] x [0,Ly] x [0,Lz], etc.)",
          "fish.c",Lz,&Lz,NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-init_random",
-         "initial state is random (default is zero)",
-         "fish.c",init_random,&init_random,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsEnum("-problem",
          "problem type (determines exact solution and RHS)",
          "fish.c",ProblemTypes,(PetscEnum)problem,(PetscEnum*)&problem,NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
     user.g_bdry = g_bdry_ptr[dim-1][problem];
     user.f_rhs = f_rhs_ptr[dim-1][problem];
+    if ( user.cx <= 0.0 || user.cy <= 0.0 || user.cz <= 0.0 ) {
+        SETERRQ(PETSC_COMM_WORLD,2,"positivity required for coefficients cx,cy,cz\n");
+    }
+    if ((problem == MANUEXP) && ( user.cx != 1.0 || user.cy != 1.0 || user.cz != 1.0)) {
+        SETERRQ(PETSC_COMM_WORLD,3,"cx=cy=cz=1 required for problem MANUEXP\n");
+    }
 
 //STARTCREATE
     // create and set-up DMDA
