@@ -11,10 +11,13 @@ PetscErrorCode Form1DFunctionLocal(DMDALocalInfo *info, double *au,
     for (i = info->xs; i < info->xs + info->xm; i++) {
         x = xmin[0] + i * h;
         if (i==0 || i==info->mx-1) {
-            aF[i] = user->cx * (2.0 / h) * (au[i] - user->g_bdry(x,0.0,0.0,user));
+            aF[i] = au[i] - user->g_bdry(x,0.0,0.0,user);
+            aF[i] *= user->cx * (2.0 / h);
         } else {
-            ue = (i+1 == info->mx-1) ? user->g_bdry(x+h,0.0,0.0,user) : au[i+1];
-            uw = (i-1 == 0)          ? user->g_bdry(x-h,0.0,0.0,user) : au[i-1];
+            ue = (i+1 == info->mx-1) ? user->g_bdry(x+h,0.0,0.0,user)
+                                     : au[i+1];
+            uw = (i-1 == 0)          ? user->g_bdry(x-h,0.0,0.0,user)
+                                     : au[i-1];
             aF[i] = user->cx * (2.0 * au[i] - uw - ue) / h
                     - h * user->f_rhs(x,0.0,0.0,user);
         }
@@ -27,7 +30,8 @@ PetscErrorCode Form2DFunctionLocal(DMDALocalInfo *info, double **au,
                                    double **aF, PoissonCtx *user) {
     PetscErrorCode ierr;
     int     i, j;
-    double  xymin[2], xymax[2], hx, hy, scx, scy, scdiag, x, y, ue, uw, un, us;
+    double  xymin[2], xymax[2], hx, hy, scx, scy, scdiag, x, y,
+            ue, uw, un, us;
     ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
     hx = (xymax[0] - xymin[0]) / (info->mx - 1);
     hy = (xymax[1] - xymin[1]) / (info->my - 1);
@@ -39,7 +43,8 @@ PetscErrorCode Form2DFunctionLocal(DMDALocalInfo *info, double **au,
         for (i = info->xs; i < info->xs + info->xm; i++) {
             x = xymin[0] + i * hx;
             if (i==0 || i==info->mx-1 || j==0 || j==info->my-1) {
-                aF[j][i] = scdiag * (au[j][i] - user->g_bdry(x,y,0.0,user));
+                aF[j][i] = au[j][i] - user->g_bdry(x,y,0.0,user);
+                aF[j][i] *= scdiag;
             } else {
                 ue = (i+1 == info->mx-1) ? user->g_bdry(x+hx,y,0.0,user)
                                          : au[j][i+1];
@@ -83,7 +88,8 @@ PetscErrorCode Form3DFunctionLocal(DMDALocalInfo *info, double ***au,
                 if (   i==0 || i==info->mx-1
                     || j==0 || j==info->my-1
                     || k==0 || k==info->mz-1) {
-                    aF[k][j][i] = scdiag * (au[k][j][i] - user->g_bdry(x,y,z,user));
+                    aF[k][j][i] = au[k][j][i] - user->g_bdry(x,y,z,user);
+                    aF[k][j][i] *= scdiag;
                 } else {
                     ue = (i+1 == info->mx-1) ? user->g_bdry(x+hx,y,z,user)
                                              : au[k][j][i+1];
@@ -98,8 +104,8 @@ PetscErrorCode Form3DFunctionLocal(DMDALocalInfo *info, double ***au,
                     ud = (k-1 == 0)          ? user->g_bdry(x,y,z-hz,user)
                                              : au[k-1][j][i];
                     aF[k][j][i] = scdiag * au[k][j][i]
-                                  - scx * (uw + ue) - scy * (us + un) - scz * (uu + ud)
-                                  - dvol * user->f_rhs(x,y,z,user);
+                        - scx * (uw + ue) - scy * (us + un) - scz * (uu + ud)
+                        - dvol * user->f_rhs(x,y,z,user);
                 }
             }
         }
