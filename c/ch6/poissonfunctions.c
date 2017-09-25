@@ -1,8 +1,6 @@
 #include <petsc.h>
 #include "poissonfunctions.h"
 
-// FIXME make all parts work with cx,cy,cz arbitrary; add tests of fish for that
-
 PetscErrorCode Form1DFunctionLocal(DMDALocalInfo *info, double *au,
                                    double *aF, PoissonCtx *user) {
     PetscErrorCode ierr;
@@ -13,11 +11,11 @@ PetscErrorCode Form1DFunctionLocal(DMDALocalInfo *info, double *au,
     for (i = info->xs; i < info->xs + info->xm; i++) {
         x = xmin[0] + i * h;
         if (i==0 || i==info->mx-1) {
-            aF[i] = (2.0 / h) * (au[i] - user->g_bdry(x,0.0,0.0,user));
+            aF[i] = user->cx * (2.0 / h) * (au[i] - user->g_bdry(x,0.0,0.0,user));
         } else {
             ue = (i+1 == info->mx-1) ? user->g_bdry(x+h,0.0,0.0,user) : au[i+1];
             uw = (i-1 == 0)          ? user->g_bdry(x-h,0.0,0.0,user) : au[i-1];
-            aF[i] = (2.0 * au[i] - uw - ue) / h
+            aF[i] = user->cx * (2.0 * au[i] - uw - ue) / h
                     - h * user->f_rhs(x,0.0,0.0,user);
         }
     }
@@ -29,11 +27,13 @@ PetscErrorCode Form2DFunctionLocal(DMDALocalInfo *info, double **au,
                                    double **aF, PoissonCtx *user) {
     PetscErrorCode ierr;
     int     i, j;
-    double  xymin[2], xymax[2], hx, hy, scdiag, x, y, ue, uw, un, us;
+    double  xymin[2], xymax[2], hx, hy, scx, scy, scdiag, x, y, ue, uw, un, us;
     ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
     hx = (xymax[0] - xymin[0]) / (info->mx - 1);
     hy = (xymax[1] - xymin[1]) / (info->my - 1);
-    scdiag = 2.0 * (hy / hx + hx / hy);    // diagonal scaling
+    scx = user->cx * hy / hx;
+    scy = user->cy * hx / hy;
+    scdiag = 2.0 * (scx + scy);    // diagonal scaling
     for (j = info->ys; j < info->ys + info->ym; j++) {
         y = xymin[1] + j * hy;
         for (i = info->xs; i < info->xs + info->xm; i++) {
@@ -50,7 +50,7 @@ PetscErrorCode Form2DFunctionLocal(DMDALocalInfo *info, double **au,
                 us = (j-1 == 0)          ? user->g_bdry(x,y-hy,0.0,user)
                                          : au[j-1][i];
                 aF[j][i] = scdiag * au[j][i]
-                           - hy/hx * (uw + ue) - hx/hy * (us + un)
+                           - scx * (uw + ue) - scy * (us + un)
                            - hx*hy * user->f_rhs(x,y,0.0,user);
             }
         }
@@ -70,9 +70,9 @@ PetscErrorCode Form3DFunctionLocal(DMDALocalInfo *info, double ***au,
     hy = (xyzmax[1] - xyzmin[1]) / (info->my - 1);
     hz = (xyzmax[2] - xyzmin[2]) / (info->mz - 1);
     dvol = hx * hy * hz;
-    scx = dvol / (hx*hx);
-    scy = dvol / (hy*hy);
-    scz = dvol / (hz*hz);
+    scx = user->cx * dvol / (hx*hx);
+    scy = user->cy * dvol / (hy*hy);
+    scz = user->cz * dvol / (hz*hz);
     scdiag = 2.0 * (scx + scy + scz);
     for (k = info->zs; k < info->zs + info->zm; k++) {
         z = xyzmin[2] + k * hz;
@@ -121,14 +121,14 @@ PetscErrorCode Form1DJacobianLocal(DMDALocalInfo *info, PetscScalar *au,
         col[0].i = i;
         ncols = 1;
         if (i==0 || i==info->mx-1) {
-            v[0] = 2.0 / h;
+            v[0] = user->cx * 2.0 / h;
         } else {
-            v[0] = 2.0 / h;
+            v[0] = user->cx * 2.0 / h;
             if (i-1 > 0) {
-                col[ncols].i = i-1;  v[ncols++] = - 1.0 / h;
+                col[ncols].i = i-1;  v[ncols++] = - user->cx / h;
             }
             if (i+1 < info->mx-1) {
-                col[ncols].i = i+1;  v[ncols++] = - 1.0 / h;
+                col[ncols].i = i+1;  v[ncols++] = - user->cx / h;
             }
         }
         ierr = MatSetValuesStencil(Jpre,1,&row,ncols,col,v,INSERT_VALUES); CHKERRQ(ierr);
@@ -146,16 +146,16 @@ PetscErrorCode Form1DJacobianLocal(DMDALocalInfo *info, PetscScalar *au,
 PetscErrorCode Form2DJacobianLocal(DMDALocalInfo *info, PetscScalar **au,
                                    Mat J, Mat Jpre, PoissonCtx *user) {
     PetscErrorCode  ierr;
-    double       xymin[2], xymax[2], hx, hy, hyhx, hxhy, scdiag, v[5];
+    double       xymin[2], xymax[2], hx, hy, scx, scy, scdiag, v[5];
     int          i,j,ncols;
     MatStencil   col[5],row;
 
     ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
     hx = (xymax[0] - xymin[0]) / (info->mx - 1);
     hy = (xymax[1] - xymin[1]) / (info->my - 1);
-    hyhx = hy / hx;
-    hxhy = hx / hy;
-    scdiag = 2.0 * (hyhx + hxhy);
+    scx = user->cx * hy / hx;
+    scy = user->cy * hx / hy;
+    scdiag = 2.0 * (scx + scy);
     for (j = info->ys; j < info->ys+info->ym; j++) {
         row.j = j;
         col[0].j = j;
@@ -166,13 +166,13 @@ PetscErrorCode Form2DJacobianLocal(DMDALocalInfo *info, PetscScalar **au,
             v[0] = scdiag;
             if (i>0 && i<info->mx-1 && j>0 && j<info->my-1) {
                 if (i-1 > 0) {
-                    col[ncols].j = j;    col[ncols].i = i-1;  v[ncols++] = -hyhx;  }
+                    col[ncols].j = j;    col[ncols].i = i-1;  v[ncols++] = - scx;  }
                 if (i+1 < info->mx-1) {
-                    col[ncols].j = j;    col[ncols].i = i+1;  v[ncols++] = -hyhx;  }
+                    col[ncols].j = j;    col[ncols].i = i+1;  v[ncols++] = - scx;  }
                 if (j-1 > 0) {
-                    col[ncols].j = j-1;  col[ncols].i = i;    v[ncols++] = -hxhy;  }
+                    col[ncols].j = j-1;  col[ncols].i = i;    v[ncols++] = - scy;  }
                 if (j+1 < info->my-1) {
-                    col[ncols].j = j+1;  col[ncols].i = i;    v[ncols++] = -hxhy;  }
+                    col[ncols].j = j+1;  col[ncols].i = i;    v[ncols++] = - scy;  }
             }
             ierr = MatSetValuesStencil(Jpre,1,&row,ncols,col,v,INSERT_VALUES); CHKERRQ(ierr);
         }
@@ -199,9 +199,9 @@ PetscErrorCode Form3DJacobianLocal(DMDALocalInfo *info, PetscScalar ***au,
     hy = (xyzmax[1] - xyzmin[1]) / (info->my - 1);
     hz = (xyzmax[2] - xyzmin[2]) / (info->mz - 1);
     dvol = hx * hy * hz;
-    scx = dvol / (hx*hx);
-    scy = dvol / (hy*hy);
-    scz = dvol / (hz*hz);
+    scx = user->cx * dvol / (hx*hx);
+    scy = user->cy * dvol / (hy*hy);
+    scz = user->cz * dvol / (hz*hz);
     scdiag = 2.0 * (scx + scy + scz);
     for (k = info->zs; k < info->zs+info->zm; k++) {
         row.k = k;

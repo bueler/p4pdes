@@ -184,6 +184,9 @@ int main(int argc,char **argv) {
   ierr = DMSetUp(da); CHKERRQ(ierr);
   ierr = DMDASetUniformCoordinates(da,-2.0,2.0,-2.0,2.0,-1.0,-1.0);CHKERRQ(ierr);
 
+  user.cx = 1.0;
+  user.cy = 1.0;
+  user.cz = 1.0;
   user.g_bdry = &g_fcn;
   user.f_rhs = &zero;
   user.addctx = NULL;

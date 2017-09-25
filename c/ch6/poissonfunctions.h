@@ -2,40 +2,40 @@
 #define POISSONFUNCTIONS_H_
 
 /*
-These functions approximate the residual of, and the Jacobian of the
+These functions approximate the residual of, and the Jacobian of, the
 (slightly-generalized) Poisson equation
     - cx u_xx - cy u_yy - cz u_zz = f(x,y)
-with Dirichlet boundary conditions, u = g(x,y) on boundary.
+with Dirichlet boundary conditions  u = g(x,y).
 
 These functions promote code reuse and serve as canonical examples.  They
-are used in ch6/fish.c, ch6/minimal.c, and ch11/obstacle.c.
+are used in ch6/fish.c, ch6/minimal.c, and ch12/obstacle.c.
 
 The functions FormXDFunctionLocal() compute residuals for the 1D, 2D, 3D
-Poisson equation with Dirichlet boundary conditions on a structured grid (DMDA)
-on a interval, rectangle, or rectangular solid.  They are designed to be
-used as call-backs,
+problems on a structured grid (DMDA).  The domain is an interval, rectangle,
+or rectangular solid.  These functions are designed to be used as call-backs:
 
   ierr = DMDASNESSetFunctionLocal(dmda,INSERT_VALUES,
              (DMDASNESFunction)FormXDFunctionLocal,&user); CHKERRQ(ierr);
 
 where X=1,2,3.
 
-The FormXDJacobianLocal() functions assemble Jacobians for the same problems,
-and are designed to be call-backs,
+The FormXDJacobianLocal() functions are call-backs which assemble Jacobians
+for the same problems:
 
   ierr = DMDASNESSetJacobianLocal(dmda,
              (DMDASNESJacobian)FormXDJacobianLocal,&user); CHKERRQ(ierr);
 
-All of these function work with equally-spaced, but independently in each
-dimension, structured grids.  That is, the dimensions hx, hy, hz of the
-rectangular cells can have any values.
+All of these function work with equally-spaced structured grids.  The
+dimensions hx, hy, hz of the rectangular cells can have any positive values.
 
 The matrices A are normalized so that if cells are square (h = hx = hy = hz)
 then A / h^d approximates the Laplacian in d dimensions.  This is the way
-the rows would be scaled in a Galerkin FEM scheme.  (Thus the entries are O(1)
-only if d=2.)  The Dirichlet boundary conditions generate diagonal Jacobian
+the rows would be scaled in a Galerkin FEM scheme.  (The entries are O(1)
+only if d=2.)
+
+The Dirichlet boundary conditions are approximated using diagonal Jacobian
 entries with the same values as the diagonal entries for points in
-the interior; the Jacobian matrices here have constant diagonal.
+the interior.  Thus these Jacobian matrices have constant diagonal.
 */
 
 // warning: the user is in charge of setting up ALL of this content!
