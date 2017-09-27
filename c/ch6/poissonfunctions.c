@@ -259,3 +259,69 @@ PetscErrorCode Form3DJacobianLocal(DMDALocalInfo *info, PetscScalar ***au,
     return 0;
 }
 
+PetscErrorCode InitialState(DMDALocalInfo *info, InitialType it, PetscBool gbdry,
+                            Vec u, PoissonCtx *user) {
+    PetscErrorCode ierr;
+    PetscRandom  rctx;
+    switch (it) {
+        case GINTERPOLANT:
+            SETERRQ(PETSC_COMM_WORLD,1,"case GINTERPOLANT not implemented\n");
+        case RANDOM:
+            ierr = PetscRandomCreate(PETSC_COMM_WORLD,&rctx); CHKERRQ(ierr);
+            ierr = VecSetRandom(u,rctx); CHKERRQ(ierr);
+            ierr = PetscRandomDestroy(&rctx); CHKERRQ(ierr);
+            break;
+        case ZEROS:
+            ierr = VecSet(u,0.0); CHKERRQ(ierr);
+            break;
+        default:
+            SETERRQ(PETSC_COMM_WORLD,2,"invalid InitialType ... how did I get here?\n");
+    }
+    if (!gbdry) {
+        return 0;
+    }
+    switch (info->dim) {
+        case 1:
+        {
+            int    i;
+            double xmax[1], xmin[1], h, x, *au;
+            ierr = DMDAVecGetArray(info->da, u, &au); CHKERRQ(ierr);
+            ierr = DMDAGetBoundingBox(info->da,xmin,xmax); CHKERRQ(ierr);
+            h = (xmax[0] - xmin[0]) / (info->mx - 1);
+            for (i = info->xs; i < info->xs + info->xm; i++) {
+                if (i==0 || i==info->mx-1) {
+                    x = xmin[0] + i * h;
+                    au[i] = user->g_bdry(x,0.0,0.0,user);
+                }
+            }
+            ierr = DMDAVecRestoreArray(info->da, u, &au); CHKERRQ(ierr);
+            break;
+        }
+        case 2:
+        {
+            int     i, j;
+            double  xymin[2], xymax[2], hx, hy, x, y, **au;
+            ierr = DMDAVecGetArray(info->da, u, &au); CHKERRQ(ierr);
+            ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
+            hx = (xymax[0] - xymin[0]) / (info->mx - 1);
+            hy = (xymax[1] - xymin[1]) / (info->my - 1);
+            for (j = info->ys; j < info->ys + info->ym; j++) {
+                y = xymin[1] + j * hy;
+                for (i = info->xs; i < info->xs + info->xm; i++) {
+                    if (i==0 || i==info->mx-1 || j==0 || j==info->my-1) {
+                        x = xymin[0] + i * hx;
+                        au[j][i] = user->g_bdry(x,y,0.0,user);
+                    }
+                }
+            }
+            ierr = DMDAVecRestoreArray(info->da, u, &au); CHKERRQ(ierr);
+            break;
+        }
+        case 3:
+            SETERRQ(PETSC_COMM_WORLD,4,"case dim==3 not implemented\n");
+        default:
+            SETERRQ(PETSC_COMM_WORLD,5,"invalid dim from DMDALocalInfo\n");
+    }
+    return 0;
+}
+

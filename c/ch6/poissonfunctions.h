@@ -63,7 +63,7 @@ PetscErrorCode Form3DFunctionLocal(DMDALocalInfo *info,
 /* This generates a tridiagonal sparse matrix.  If cx=1 then it has 2 on the
 diagonal and -1 or zero in off-diagonal positions.  For example,
     ./fish -fsh_dim 1 -mat_view ::ascii_dense -da_refine N                */
-PetscErrorCode Form1DJacobianLocal(DMDALocalInfo *info, PetscScalar *au,
+PetscErrorCode Form1DJacobianLocal(DMDALocalInfo *info, double *au,
                                    Mat J, Mat Jpre, PoissonCtx *user);
 
 /* If h = hx = hy and h = L/(m-1) then this generates a 2m-1 bandwidth
@@ -71,17 +71,26 @@ sparse matrix.  If cx=cy=1 then it has 4 on the diagonal and -1 or zero in
 off-diagonal positions.  For example,
     ./fish -fsh_dim 2 -mat_view :foo.m:ascii_matlab -da_refine N
 produces a matrix which can be read into Matlab/Octave.                   */
-PetscErrorCode Form2DJacobianLocal(DMDALocalInfo *info, PetscScalar **au,
+PetscErrorCode Form2DJacobianLocal(DMDALocalInfo *info, double **au,
                                    Mat J, Mat Jpre, PoissonCtx *user);
 
 /* If h = hx = hy = hz and h = L/(m-1) then this generates a 2m^2-1 bandwidth
 sparse matrix.  For example,
     ./fish -fsh_dim 3 -mat_view :foo.m:ascii_matlab -da_refine N          */
-PetscErrorCode Form3DJacobianLocal(DMDALocalInfo *info, PetscScalar ***au,
+PetscErrorCode Form3DJacobianLocal(DMDALocalInfo *info, double ***au,
                                    Mat J, Mat Jpre, PoissonCtx *user);
 
-// FIXME  add initializer that respects boundary conditions?  with either
-// linear interpolation of g(x,y,z) across the domain, or with random interior
-// values (and correct boundary conditions)
+/* The following function generates an initial iterate using either
+  * an interpolant of the boundary function g (reasonably smooth)
+  * a random function (no smoothness)
+  * zero
+In addition, one can initialize either using the boundary function g for
+the boundary locations in the initial state, or not.                      */
+
+typedef enum {GINTERPOLANT, RANDOM, ZEROS} InitialType;
+
+PetscErrorCode InitialState(DMDALocalInfo *info, InitialType it, PetscBool gbdry,
+                            Vec u, PoissonCtx *user);
 
 #endif
+
