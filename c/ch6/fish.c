@@ -242,6 +242,9 @@ static void* f_rhs_ptr[3][3]
        {&f_rhs_2Dmanupoly, &f_rhs_2Dmanuexp, &zero},
        {&f_rhs_3Dmanupoly, &f_rhs_3Dmanuexp, &zero}};
 
+static const char* InitialTypes[] = {"zeros","random","ginterpolant",
+                                     "InitialType", "", NULL};
+
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
@@ -253,15 +256,19 @@ int main(int argc,char **argv) {
     double         errinf, normconst2h, err2h;
     char           gridstr[99];
     PetscErrorCode (*getuexact)(DMDALocalInfo*,Vec,PoissonCtx*);
-    // defaults:
-    int            dim = 2;                       // 2D
-    ProblemType    problem = MANUEXP;             // manufactured problem using exp()
-    PetscBool      init_random = PETSC_FALSE;     // default to zero initial iterate
-    double         Lx = 1.0, Ly = 1.0, Lz = 1.0;  // domain [0,1]x[0,1]x[0,1]
+
+    // fish defaults:
+    int            dim = 2;                  // 2D
+    ProblemType    problem = MANUEXP;        // manufactured problem using exp()
+    InitialType    initial = ZEROS;          // set u=0 for initial iterate
+    PetscBool      gonboundary = PETSC_TRUE; // initial iterate has u=g on boundary
 
     PetscInitialize(&argc,&argv,NULL,help);
 
     // get options and configure context
+    user.Lx = 1.0;
+    user.Ly = 1.0;
+    user.Lz = 1.0;
     user.cx = 1.0;
     user.cy = 1.0;
     user.cz = 1.0;
@@ -278,18 +285,21 @@ int main(int argc,char **argv) {
     ierr = PetscOptionsInt("-dim",
          "dimension of problem (=1,2,3 only)",
          "fish.c",dim,&dim,NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-init_random",
-         "initial state is random (default is zero)",
-         "fish.c",init_random,&init_random,NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-initial_gonboundary",
+         "set initial to have correct boundary values",
+         "fish.c",gonboundary,&gonboundary,NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsEnum("-initial_type",
+         "type of initial iterate",
+         "fish.c",InitialTypes,(PetscEnum)initial,(PetscEnum*)&initial,NULL); CHKERRQ(ierr);
     ierr = PetscOptionsReal("-Lx",
          "set Lx in domain ([0,Lx] x [0,Ly] x [0,Lz], etc.)",
-         "fish.c",Lx,&Lx,NULL);CHKERRQ(ierr);
+         "fish.c",user.Lx,&user.Lx,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsReal("-Ly",
          "set Ly in domain ([0,Lx] x [0,Ly] x [0,Lz], etc.)",
-         "fish.c",Ly,&Ly,NULL);CHKERRQ(ierr);
+         "fish.c",user.Ly,&user.Ly,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsReal("-Lz",
          "set Ly in domain ([0,Lx] x [0,Ly] x [0,Lz], etc.)",
-         "fish.c",Lz,&Lz,NULL);CHKERRQ(ierr);
+         "fish.c",user.Lz,&user.Lz,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsEnum("-problem",
          "problem type (determines exact solution and RHS)",
          "fish.c",ProblemTypes,(PetscEnum)problem,(PetscEnum*)&problem,NULL); CHKERRQ(ierr);
@@ -328,7 +338,7 @@ int main(int argc,char **argv) {
     ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
     ierr = DMSetFromOptions(da); CHKERRQ(ierr);
     ierr = DMSetUp(da); CHKERRQ(ierr);  // call BEFORE SetUniformCoordinates
-    ierr = DMDASetUniformCoordinates(da,0.0,Lx,0.0,Ly,0.0,Lz); CHKERRQ(ierr);
+    ierr = DMDASetUniformCoordinates(da,0.0,user.Lx,0.0,user.Ly,0.0,user.Lz); CHKERRQ(ierr);
 
     // create and set-up SNES
     ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
@@ -340,18 +350,10 @@ int main(int argc,char **argv) {
     ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 //ENDCREATE
 
-    // create and set-up initial iterate for SNES
+    // set-up initial iterate for SNES and solve
     ierr = DMCreateGlobalVector(da,&u_initial); CHKERRQ(ierr);
-    if (init_random) {
-        PetscRandom   rctx;
-        ierr = PetscRandomCreate(PETSC_COMM_WORLD,&rctx); CHKERRQ(ierr);
-        ierr = VecSetRandom(u_initial,rctx); CHKERRQ(ierr);
-        ierr = PetscRandomDestroy(&rctx); CHKERRQ(ierr);
-    } else {
-        ierr = VecSet(u_initial,0.0); CHKERRQ(ierr);
-    }
-
-    // solve
+    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+    ierr = InitialState(&info, initial, gonboundary, u_initial, &user); CHKERRQ(ierr);
     ierr = SNESSolve(snes,NULL,u_initial); CHKERRQ(ierr);
     ierr = VecDestroy(&u_initial); CHKERRQ(ierr);  // SNES now has internal solution so u_initial not needed
     ierr = DMDestroy(&da); CHKERRQ(ierr);  // SNES now has internal DMDA ...

@@ -264,18 +264,67 @@ PetscErrorCode InitialState(DMDALocalInfo *info, InitialType it, PetscBool gbdry
     PetscErrorCode ierr;
     PetscRandom  rctx;
     switch (it) {
-        case GINTERPOLANT:
-            SETERRQ(PETSC_COMM_WORLD,1,"case GINTERPOLANT not implemented\n");
+        case ZEROS:
+            ierr = VecSet(u,0.0); CHKERRQ(ierr);
+            break;
         case RANDOM:
             ierr = PetscRandomCreate(PETSC_COMM_WORLD,&rctx); CHKERRQ(ierr);
             ierr = VecSetRandom(u,rctx); CHKERRQ(ierr);
             ierr = PetscRandomDestroy(&rctx); CHKERRQ(ierr);
             break;
-        case ZEROS:
-            ierr = VecSet(u,0.0); CHKERRQ(ierr);
+        case GINTERPOLANT:
+        {
+            switch (info->dim) {
+                case 1:
+                {
+                    int    i;
+                    double xmax[1], xmin[1], h, lam, *au;
+                    ierr = DMDAVecGetArray(info->da, u, &au); CHKERRQ(ierr);
+                    ierr = DMDAGetBoundingBox(info->da,xmin,xmax); CHKERRQ(ierr);
+                    h = (xmax[0] - xmin[0]) / (info->mx - 1);
+                    for (i = info->xs; i < info->xs + info->xm; i++) {
+                        lam = (xmin[0] + i * h) / user->Lx;
+                        au[i] =   (1.0 - lam) * user->g_bdry(0.0,0.0,0.0,user)
+                                +         lam * user->g_bdry(user->Lx,0.0,0.0,user);
+                    }
+                    ierr = DMDAVecRestoreArray(info->da, u, &au); CHKERRQ(ierr);
+                    break;
+                }
+                case 2:
+                {
+                    // FIXME this is not a good g average; it uses corners so
+                    // it does not generate exact g value at boundary locations
+                    int    i, j;
+                    double xymax[2], xymin[2], hx, hy, lamx, lamy, **au;
+                    ierr = DMDAVecGetArray(info->da, u, &au); CHKERRQ(ierr);
+                    ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
+                    hx = (xymax[0] - xymin[0]) / (info->mx - 1);
+                    hy = (xymax[1] - xymin[1]) / (info->my - 1);
+                    for (j = info->ys; j < info->ys + info->ym; j++) {
+                        lamy = (xymin[1] + j * hy) / user->Ly;
+                        for (i = info->xs; i < info->xs + info->xm; i++) {
+                            lamx = (xymin[0] + i * hx) / user->Lx;
+                            au[j][i] = (1.0 - lamy) *
+                                        ( (1.0 - lamx) * user->g_bdry(0.0,0.0,0.0,user)
+                                         +        lamx * user->g_bdry(user->Lx,0.0,0.0,user) )
+                                       + lamy *
+                                        ( (1.0 - lamx) * user->g_bdry(0.0,user->Ly,0.0,user)
+                                         +        lamx * user->g_bdry(user->Lx,user->Ly,0.0,user) );
+                        }
+                    }
+                    ierr = DMDAVecRestoreArray(info->da, u, &au); CHKERRQ(ierr);
+                    break;
+                }
+                case 3:
+                    // FIXME
+                    SETERRQ(PETSC_COMM_WORLD,3,"case dim=3 GINTERPOLANT not implemented\n");
+                default:
+                    SETERRQ(PETSC_COMM_WORLD,1,"GINTERPOLANT, dim weird: how get here?\n");
+            }
             break;
+        }
         default:
-            SETERRQ(PETSC_COMM_WORLD,2,"invalid InitialType ... how did I get here?\n");
+            SETERRQ(PETSC_COMM_WORLD,4,"invalid InitialType ... how did I get here?\n");
     }
     if (!gbdry) {
         return 0;
@@ -318,7 +367,30 @@ PetscErrorCode InitialState(DMDALocalInfo *info, InitialType it, PetscBool gbdry
             break;
         }
         case 3:
-            SETERRQ(PETSC_COMM_WORLD,4,"case dim==3 not implemented\n");
+        {
+            int     i, j, k;
+            double  xyzmin[3], xyzmax[3], hx, hy, hz, x, y, z, ***au;
+            ierr = DMDAVecGetArray(info->da, u, &au); CHKERRQ(ierr);
+            ierr = DMDAGetBoundingBox(info->da,xyzmin,xyzmax); CHKERRQ(ierr);
+            hx = (xyzmax[0] - xyzmin[0]) / (info->mx - 1);
+            hy = (xyzmax[1] - xyzmin[1]) / (info->my - 1);
+            hz = (xyzmax[2] - xyzmin[2]) / (info->mz - 1);
+            for (k = info->zs; k < info->zs+info->zm; k++) {
+                z = xyzmin[2] + k * hz;
+                for (j = info->ys; j < info->ys + info->ym; j++) {
+                    y = xyzmin[1] + j * hy;
+                    for (i = info->xs; i < info->xs + info->xm; i++) {
+                        if (i==0 || i==info->mx-1 || j==0 || j==info->my-1
+                                 || k==0 || k==info->mz-1) {
+                            x = xyzmin[0] + i * hx;
+                            au[k][j][i] = user->g_bdry(x,y,z,user);
+                        }
+                    }
+                }
+            }
+            ierr = DMDAVecRestoreArray(info->da, u, &au); CHKERRQ(ierr);
+            break;
+        }
         default:
             SETERRQ(PETSC_COMM_WORLD,5,"invalid dim from DMDALocalInfo\n");
     }

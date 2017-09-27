@@ -18,7 +18,7 @@ runfish_2:
 	-@../testit.sh fish "-fsh_dim 1 -fsh_problem manupoly -da_refine 1 -mat_is_symmetric 1.0e-5 -snes_fd_color" 1 2
 
 runfish_3:
-	-@../testit.sh fish "-fsh_dim 2 -snes_type ksponly -da_refine 1 -pc_type mg -ksp_converged_reason" 1 3
+	-@../testit.sh fish "-fsh_dim 2 -fsh_initial_gonboundary false -snes_type ksponly -da_refine 1 -pc_type mg -ksp_converged_reason" 1 3
 
 runfish_4:
 	-@../testit.sh fish "-fsh_dim 2 -da_refine 3 -pc_type mg -pc_mg_cycle_type w -mg_levels_ksp_type richardson -mg_levels_ksp_max_it 1 -ksp_converged_reason" 2 4
@@ -34,6 +34,8 @@ runfish_7:
 
 runfish_8:
 	-@../testit.sh fish "-fsh_dim 3 -da_refine 2 -mat_is_symmetric 1.0e-7 -snes_fd_color" 1 8
+
+# FIXME add test in 2D of -fsh_initial_type ginterpolant
 
 runminimal_1:
 	-@../testit.sh minimal "-snes_fd_color -snes_converged_reason -snes_monitor_short -mse_manu -da_refine 1" 1 1
