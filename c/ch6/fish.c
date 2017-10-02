@@ -286,7 +286,7 @@ int main(int argc,char **argv) {
          "dimension of problem (=1,2,3 only)",
          "fish.c",dim,&dim,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsBool("-initial_gonboundary",
-         "set initial to have correct boundary values",
+         "set initial iterate to have correct boundary values",
          "fish.c",gonboundary,&gonboundary,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsEnum("-initial_type",
          "type of initial iterate",

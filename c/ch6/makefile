@@ -35,7 +35,8 @@ runfish_7:
 runfish_8:
 	-@../testit.sh fish "-fsh_dim 3 -da_refine 2 -mat_is_symmetric 1.0e-7 -snes_fd_color" 1 8
 
-# FIXME add test in 2D of -fsh_initial_type ginterpolant
+runfish_9:
+	-@../testit.sh fish "-fsh_dim 2 -da_refine 2 -snes_type ksponly -ksp_monitor -fsh_initial_type ginterpolant -pc_type mg" 1 9
 
 runminimal_1:
 	-@../testit.sh minimal "-snes_fd_color -snes_converged_reason -snes_monitor_short -mse_manu -da_refine 1" 1 1
@@ -49,7 +50,7 @@ runminimal_3:
 runminimal_4:
 	-@../testit.sh minimal "-snes_fd_color -snes_converged_reason -snes_grid_sequence 2" 1 4
 
-test_fish: runfish_1 runfish_2 runfish_3 runfish_4 runfish_5 runfish_6 runfish_7 runfish_8
+test_fish: runfish_1 runfish_2 runfish_3 runfish_4 runfish_5 runfish_6 runfish_7 runfish_8 runfish_9
 
 test_minimal: runminimal_1 runminimal_2 runminimal_3 runminimal_4
 
@@ -57,7 +58,7 @@ test: test_fish test_minimal
 
 # etc
 
-.PHONY: distclean runfish_1 runfish_2 runfish_3 runfish_4 runfish_5 runfish_6 runfish_7 runfish_8 runminimal_1 runminimal_2 runminimal_3 test test_fish test_minimal
+.PHONY: distclean runfish_1 runfish_2 runfish_3 runfish_4 runfish_5 runfish_6 runfish_7 runfish_8 runfish_9 runminimal_1 runminimal_2 runminimal_3 test test_fish test_minimal
 
 distclean:
 	@rm -f *~ fish minimal *tmp
