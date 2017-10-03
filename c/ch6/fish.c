@@ -23,11 +23,6 @@ $ ./fish -da_refine 4 -pc_type mg -mg_coarse_ksp_type cg -mg_coarse_pc_type jaco
 default is preonly+lu
 */
 
-/*
-this makes sense and shows V-cycles:
-$ ./fish -da_refine 3 -pc_type mg -snes_type ksponly -ksp_converged_reason -mg_levels_ksp_monitor
-*/
-
 /* see study/mgstudy.sh for multigrid parameter study */
 
 
@@ -49,11 +44,7 @@ $ timer ./fish -fsh_dim 1 -fsh_problem manupoly -snes_monitor -da_refine 16 -sne
 presumably the reason is that running code to assemble the jacobian is slower than the extra function evals
 */
 
-
-
-/* MORE COMMENTS:
-
-in parallel (needed?), mg with -snes_fd_color exploits full rediscretization:
+/* in parallel (needed?), mg with -snes_fd_color exploits full rediscretization:
 $ mpiexec -n 2 ./fish -da_refine 4 -pc_type mg -snes_fd_color
 
 compare with rediscretization at every level or use Galerkin coarse grid operator
@@ -61,14 +52,7 @@ $ ./fish -fsh_dim 2 -da_refine 4 -pc_type mg -snes_monitor
 $ ./fish -fsh_dim 2 -da_refine 4 -pc_type mg -snes_monitor -pc_mg_galerkin
 */
 
-/* NEEDED?:
-to make truly random init, with time as seed, add
-    #include <time.h>
-    ...
-        ierr = PetscRandomSetSeed(rctx,time(NULL)); CHKERRQ(ierr);
-        ierr = PetscRandomSeed(rctx); CHKERRQ(ierr);
-
-to generate classical jacobi/gauss-seidel results, put f in a Vec and
+/* to generate classical jacobi/gauss-seidel results, put f in a Vec and
 add viewer for RHS:
    PetscViewer viewer;
    PetscViewerASCIIOpen(COMM,"rhs.m",&viewer);
