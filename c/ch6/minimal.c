@@ -11,55 +11,37 @@ static char help[] =
 "low-amplitude data (g and f).  Multigrid-capable.\n\n";
 
 /* 
-snes_fd_color is ten times faster than snes_mf_operator?  (and multigrid gives some speedup over ilu):
-    $ timer ./minimal -snes_mf_operator -snes_converged_reason -da_refine 6
-    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 27
-    done on 129 x 129 grid ...
-    real 90.47
-    $ timer ./minimal -snes_fd_color -snes_converged_reason -da_refine 6
-    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 28
-    done on 129 x 129 grid ...
-    real 8.09
-    $ timer ./minimal -snes_mf_operator -snes_converged_reason -da_refine 6 -ksp_type gmres -pc_type mg
-    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 27
-    done on 129 x 129 grid ...
-    real 49.46
-    $ timer ./minimal -snes_fd_color -snes_converged_reason -da_refine 6 -ksp_type gmres -pc_type mg
-    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 28
-    done on 129 x 129 grid ...
-    real 6.06
+snes_fd_color is 10 times faster than snes_mf_operator:
+$ timer ./minimal -snes_mf_operator -snes_converged_reason -da_refine 6
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 11
+done on 129 x 129 grid ...
+real 13.19
+$ timer ./minimal -snes_fd_color -snes_converged_reason -da_refine 6
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 11
+done on 129 x 129 grid ...
+real 1.49
 
-parallel multigrid choices for linear and nonlinear problems; note GMRES vs CG; note also similar performance for fish2 and for minimal -mse_laplace:
-    $ timer mpiexec -n 2 ./minimal -snes_fd_color -snes_converged_reason -da_refine 7 -ksp_type gmres -pc_type mg -snes_max_it 500
-    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 65
-    done on 257 x 257 grid ...
-    real 59.47
-    $ timer mpiexec -n 2 ./minimal -mse_laplace -snes_converged_reason -da_refine 7 -ksp_type cg -pc_type mg
-    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
-    done on 257 x 257 grid ...
-    real 0.97
-    $ timer mpiexec -n 2 ./fish2 -snes_converged_reason -da_refine 7 -ksp_type cg -pc_type mg
-    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
-    on 257 x 257 grid:  error |u-uexact|_inf = 7.68279e-07
-    real 0.72
+CG is 50% faster than GMRES (prev):
+$ timer ./minimal -snes_fd_color -snes_converged_reason -da_refine 6 -ksp_type cg
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 11
+done on 129 x 129 grid ...
+real 1.12
 
-evidence of parallel:
-    timer mpiexec -n N ./minimal -snes_fd_color -snes_converged_reason -da_refine 6 -pc_type mg -snes_max_it 200
-    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 34
-gives 4.0 sec on N=1 and 2.1 sec on N=2
+multigrid is faster than ILU(0) (previous), but only on finer grids:
+$ timer ./minimal -snes_fd_color -snes_converged_reason -da_refine 8 -ksp_type cg -pc_type PC
+is 85 seconds for PC=mg and 149 seconds for PC=ilu
 
 key idea:   -snes_grid_sequence X   REPLACES!   -da_refine X
 
--snes_grid_sequence is effective when nonlinearity is strong (default H=1 is already strong!):
-    timer ./minimal -snes_fd_color -snes_converged_reason -da_refine 7
-    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 22
-    done on 257 x 257 grid ...
-    real 28.72
-    timer ./minimal -snes_fd_color -snes_converged_reason -snes_grid_sequence 7
-    ...
-    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
-    done on 257 x 257 grid ...
-    real 4.98
+but -snes_grid_sequence is much better:
+$ timer ./minimal -snes_fd_color -snes_converged_reason -snes_grid_sequence 8 -ksp_type cg -pc_type mg
+is 15 seconds
+
+note also similar performance for fish2 and for minimal -mse_laplace
+
+evidence of parallel?  hard to find with -pc_type mg or -snes_grid_sequence):
+
+-snes_grid_sequence is effective when nonlinearity is strong (default H=1 is already strong!
 
 in parallel at higher
     timer mpiexec -n 4 ./minimal -snes_fd_color -snes_converged_reason -ksp_converged_reason -snes_grid_sequence 8
@@ -77,6 +59,7 @@ add multigrid:
     Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
     done on 513 x 513 grid ...
     real 16.92
+
 can't seem to speed up in trying to reduce ksp iterations on finer levels:
     * try -pc_mg_type full or -pc_mg_cycle_type w   [neither very effective]
     * change the amount of smoothing: -mg_levels_ksp_max_it 10   [slower but counts down]
@@ -102,8 +85,8 @@ double zero(double x, double y, double z, void *ctx) {
 double g_bdry_tent(double x, double y, double z, void *ctx) {
     PoissonCtx *user = (PoissonCtx*)ctx;
     MinimalCtx *mctx = (MinimalCtx*)(user->addctx);
-    if (PetscAbs(y) < 1.0e-8) {
-        return 2.0 * mctx->H * (x < 0.5 ? x : 1.0 - x);
+    if (x < 1.0e-8) {
+        return 2.0 * mctx->H * (y < 0.5 ? y : 1.0 - y);
     } else
         return 0;
 }
@@ -305,7 +288,7 @@ PetscErrorCode AreaMonitor(SNES snes, int its, double norm, void *ctx) {
     arealoc *= hx * hy / 4.0;  // from change of variables formula
     ierr = PetscObjectGetComm((PetscObject)da,&comm); CHKERRQ(ierr);
     ierr = MPI_Allreduce(&arealoc,&area,1,MPI_DOUBLE,MPI_SUM,comm); CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"    area = %.14f\n",area); CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"area = %.14f\n",area); CHKERRQ(ierr);
     return 0;
 }
 
@@ -372,7 +355,8 @@ int main(int argc,char **argv) {
     }
     ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
-    ierr = VecSet(u_initial,0.0); CHKERRQ(ierr);
+    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+    ierr = InitialState(&info, ZEROS, PETSC_TRUE, u_initial, &user); CHKERRQ(ierr);
     ierr = SNESSolve(snes,NULL,u_initial); CHKERRQ(ierr);
     ierr = VecDestroy(&u_initial); CHKERRQ(ierr);
     ierr = DMDestroy(&da); CHKERRQ(ierr);
