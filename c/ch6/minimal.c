@@ -60,6 +60,9 @@ add multigrid:
     done on 513 x 513 grid ...
     real 16.92
 
+this would seem to be FAS with NGS smoothing, but with "Use finite difference secant approximation with coloring with h = 1e-08" for the NGS, which is also used on coarse grid:
+./minimal -da_refine 4 -snes_monitor -snes_type fas -fas_coarse_snes_type ngs -fas_levels_snes_type ngs
+
 can't seem to speed up in trying to reduce ksp iterations on finer levels:
     * try -pc_mg_type full or -pc_mg_cycle_type w   [neither very effective]
     * change the amount of smoothing: -mg_levels_ksp_max_it 10   [slower but counts down]
