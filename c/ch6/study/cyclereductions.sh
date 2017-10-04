@@ -28,7 +28,8 @@ function runcase() {
 }
 
 rm -f $TRANSCRIPT
-for extra in "" "-fsh_initial_type random" "-fsh_problem manupoly -fsh_cx 0.01 -fsh_cz 100.0" ; do
+#for extra in "" "-fsh_initial_type random" "-fsh_problem manupoly -fsh_cx 0.01 -fsh_cz 100.0" ; do
+for extra in "" "-fsh_initial_type random" ; do
     runcase multiplicative 2 "-pc_mg_cycle_type v" "$extra"
     runcase multiplicative 2 "-pc_mg_cycle_type w" "$extra"
     runcase multiplicative 1 "-pc_mg_cycle_type v -pc_mg_multiplicative_cycles 2" "$extra"
