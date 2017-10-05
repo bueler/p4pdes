@@ -189,8 +189,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                 us  = (j-1 == 0)          ? user->g_bdry(x,y-hy,0.0,user)
                                           : au[j-1][i];
                 if (mctx->laplace) {
-                    De = 1.0;  Dw = 1.0;
-                    Dn = 1.0;  Ds = 1.0;
+                    De = 1.0;  Dw = 1.0;  Dn = 1.0;  Ds = 1.0;
                 } else {
                     if (i+1 == info->mx-1 || j+1 == info->my-1) {
                         une = user->g_bdry(x+hx,y+hy,0.0,user);
@@ -242,9 +241,10 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
 
 PetscErrorCode NonlinearGS(SNES snes, Vec u, Vec b, void *ctx) {
     PetscErrorCode ierr;
-    PetscInt       i, j, its, tot_its, sweeps, l;
-    double         hx, hy, hxhy, hyhx, **au, **ab, x, y,
-                   bij, atol, rtol, stol;
+    PetscInt       i, j, k, maxits, totalits=0, sweeps, l;
+    double         atol, rtol, stol, hx, hy, darea, hxhy, hyhx, **au, **ab,
+                   x, y, bij, fsource, uu, ue, uw, un, us, De, Dw, Dn, Ds,
+                   F0, F, dFdu, s;
     DM             da;
     DMDALocalInfo  info;
     PoissonCtx     *user;
@@ -253,14 +253,14 @@ PetscErrorCode NonlinearGS(SNES snes, Vec u, Vec b, void *ctx) {
 
     PetscFunctionBeginUser;
 
-    tot_its = 0;
     ierr = SNESNGSGetSweeps(snes,&sweeps);CHKERRQ(ierr);
-    ierr = SNESNGSGetTolerances(snes,&atol,&rtol,&stol,&its);CHKERRQ(ierr);
+    ierr = SNESNGSGetTolerances(snes,&atol,&rtol,&stol,&maxits);CHKERRQ(ierr);
     ierr = SNESGetDM(snes,&da);CHKERRQ(ierr);
     ierr = DMGetApplicationContext(da,(PoissonCtx**)&user);CHKERRQ(ierr);
     mctx = (MinimalCtx*)(user->addctx);
     ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
     ierr = Spacings(&info,&hx,&hy); CHKERRQ(ierr);
+    darea = hx * hy;
     hxhy = hx / hy;
     hyhx = hy / hx;
 
@@ -283,33 +283,35 @@ PetscErrorCode NonlinearGS(SNES snes, Vec u, Vec b, void *ctx) {
                         bij = ab[j][i];
                     else
                         bij = 0.;
-                    au[j][i] = 0.0;   // FIXME
-/* FIXME this content from ex5.c:
-                    u  = x[j][i];
-                    un = x[j-1][i];
-                    us = x[j+1][i];
-                    ue = x[j][i-1];
-                    uw = x[j][i+1];
-                    // do pointwise Newton iterations:
-                    for (k=0; k<its; k++) {
-                        eu  = PetscExpScalar(u);
-                        uxx = (2.0*u - ue - uw)*hydhx;
-                        uyy = (2.0*u - un - us)*hxdhy;
-                        F   = uxx + uyy - sc*eu - bij;
+                    uu = au[j][i];
+                    ue = au[j][i+1];
+                    uw = au[j][i-1];
+                    un = au[j+1][i];
+                    us = au[j-1][i];
+                    // do pointwise Newton iterations
+                    F0 = 0.0;
+                    fsource = darea * user->f_rhs(x,y,0.0,user) + bij;
+                    for (k = 0; k < maxits; k++) {
+                        if (mctx->laplace) {
+                            De = 1.0;  Dw = 1.0;  Dn = 1.0;  Ds = 1.0;
+                        } else {
+                            //FIXME  De, Dw, Dn, Ds
+                        }
+                        F = - hyhx * (De * (ue - uu) - Dw * (uu - uw))
+                            - hxhy * (Dn * (un - uu) - Ds * (uu - us))
+                            - fsource;
                         if (k == 0) F0 = F;
-                        J  = 2.0*(hydhx + hxdhy) - sc*eu;
-                        y  = F/J;
-                        u -= y;
-                        tot_its++;
-
+                        dFdu  = 0.0;  //FIXME
+                        s = - F / dFdu;     // Newton step
+                        uu += s;
+                        totalits++;
                         if (   atol > PetscAbsReal(PetscRealPart(F))
                             || rtol*PetscAbsReal(PetscRealPart(F0)) > PetscAbsReal(PetscRealPart(F))
-                            || stol*PetscAbsReal(PetscRealPart(u)) > PetscAbsReal(PetscRealPart(y))  ) {
+                            || stol*PetscAbsReal(PetscRealPart(uu)) > PetscAbsReal(PetscRealPart(s))  ) {
                             break;
                         }
                     }
-                    x[j][i] = u;
-*/
+                    au[j][i] = uu;
                 }
             }
         }
@@ -321,6 +323,7 @@ PetscErrorCode NonlinearGS(SNES snes, Vec u, Vec b, void *ctx) {
     if (b) {
         ierr = DMDAVecRestoreArray(da,b,&ab);CHKERRQ(ierr);
     }
+    //FIXME ierr = PetscLogFlops(totalits*(21.0));CHKERRQ(ierr);
     PetscFunctionReturn(0);
 }
 
