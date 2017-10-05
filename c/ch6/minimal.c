@@ -238,6 +238,91 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
     return 0;
 }
 
+PetscErrorCode NonlinearGS(SNES snes, Vec u, Vec b, void *ctx) {
+    PetscErrorCode ierr;
+    PetscInt       i, j, its, tot_its, sweeps, l;
+    double         hx, hy, hxhy, hyhx, **au, **ab, x, y,
+                   bij, atol, rtol, stol;
+    DM             da;
+    DMDALocalInfo  info;
+    PoissonCtx     *user;
+    MinimalCtx     *mctx;
+    Vec            uloc;
+
+    PetscFunctionBeginUser;
+
+    tot_its = 0;
+    ierr = SNESNGSGetSweeps(snes,&sweeps);CHKERRQ(ierr);
+    ierr = SNESNGSGetTolerances(snes,&atol,&rtol,&stol,&its);CHKERRQ(ierr);
+    ierr = SNESGetDM(snes,&da);CHKERRQ(ierr);
+    ierr = DMGetApplicationContext(da,(PoissonCtx**)&user);CHKERRQ(ierr);
+    mctx = (MinimalCtx*)(user->addctx);
+    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+    ierr = Spacings(&info,&hx,&hy); CHKERRQ(ierr);
+    hxhy = hx / hy;
+    hyhx = hy / hx;
+
+    ierr = DMGetLocalVector(da,&uloc);CHKERRQ(ierr);
+    for (l=0; l<sweeps; l++) {
+        ierr = DMGlobalToLocalBegin(da,u,INSERT_VALUES,uloc);CHKERRQ(ierr);
+        ierr = DMGlobalToLocalEnd(da,u,INSERT_VALUES,uloc);CHKERRQ(ierr);
+        ierr = DMDAVecGetArray(da,uloc,&au);CHKERRQ(ierr);
+        if (b) {
+            ierr = DMDAVecGetArray(da,b,&ab); CHKERRQ(ierr);
+        }
+        for (j = info.ys; j < info.ys + info.ym; j++) {
+            y = j * hy;
+            for (i = info.xs; i < info.xs + info.xm; i++) {
+                x = i * hx;
+                if (j==0 || i==0 || i==info.mx-1 || j==info.my-1) {
+                    au[j][i] = user->g_bdry(x,y,0.0,user);
+                } else {
+                    if (b)
+                        bij = ab[j][i];
+                    else
+                        bij = 0.;
+                    au[j][i] = 0.0;   // FIXME
+/* FIXME this content from ex5.c:
+                    u  = x[j][i];
+                    un = x[j-1][i];
+                    us = x[j+1][i];
+                    ue = x[j][i-1];
+                    uw = x[j][i+1];
+                    // do pointwise Newton iterations:
+                    for (k=0; k<its; k++) {
+                        eu  = PetscExpScalar(u);
+                        uxx = (2.0*u - ue - uw)*hydhx;
+                        uyy = (2.0*u - un - us)*hxdhy;
+                        F   = uxx + uyy - sc*eu - bij;
+                        if (k == 0) F0 = F;
+                        J  = 2.0*(hydhx + hxdhy) - sc*eu;
+                        y  = F/J;
+                        u -= y;
+                        tot_its++;
+
+                        if (   atol > PetscAbsReal(PetscRealPart(F))
+                            || rtol*PetscAbsReal(PetscRealPart(F0)) > PetscAbsReal(PetscRealPart(F))
+                            || stol*PetscAbsReal(PetscRealPart(u)) > PetscAbsReal(PetscRealPart(y))  ) {
+                            break;
+                        }
+                    }
+                    x[j][i] = u;
+*/
+                }
+            }
+        }
+        ierr = DMDAVecRestoreArray(da,uloc,&au);CHKERRQ(ierr);
+        ierr = DMLocalToGlobalBegin(da,uloc,INSERT_VALUES,u);CHKERRQ(ierr);
+        ierr = DMLocalToGlobalEnd(da,uloc,INSERT_VALUES,u);CHKERRQ(ierr);
+    }
+    ierr = DMRestoreLocalVector(da,&uloc);CHKERRQ(ierr);
+    if (b) {
+        ierr = DMDAVecRestoreArray(da,b,&ab);CHKERRQ(ierr);
+    }
+    PetscFunctionReturn(0);
+}
+
+
 // compute surface area using tensor product gaussian quadrature
 PetscErrorCode AreaMonitor(SNES snes, int its, double norm, void *ctx) {
     PetscErrorCode ierr;
