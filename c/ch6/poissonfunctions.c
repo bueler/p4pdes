@@ -22,6 +22,7 @@ PetscErrorCode Form1DFunctionLocal(DMDALocalInfo *info, double *au,
                     - h * user->f_rhs(x,0.0,0.0,user);
         }
     }
+    ierr = PetscLogFlops(9.0*info->xm);CHKERRQ(ierr);
     return 0;
 }
 
@@ -30,11 +31,12 @@ PetscErrorCode Form2DFunctionLocal(DMDALocalInfo *info, double **au,
                                    double **aF, PoissonCtx *user) {
     PetscErrorCode ierr;
     int     i, j;
-    double  xymin[2], xymax[2], hx, hy, scx, scy, scdiag, x, y,
+    double  xymin[2], xymax[2], hx, hy, darea, scx, scy, scdiag, x, y,
             ue, uw, un, us;
     ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
     hx = (xymax[0] - xymin[0]) / (info->mx - 1);
     hy = (xymax[1] - xymin[1]) / (info->my - 1);
+    darea = hx * hy;
     scx = user->cx * hy / hx;
     scy = user->cy * hx / hy;
     scdiag = 2.0 * (scx + scy);    // diagonal scaling
@@ -56,10 +58,11 @@ PetscErrorCode Form2DFunctionLocal(DMDALocalInfo *info, double **au,
                                          : au[j-1][i];
                 aF[j][i] = scdiag * au[j][i]
                            - scx * (uw + ue) - scy * (us + un)
-                           - hx*hy * user->f_rhs(x,y,0.0,user);
+                           - darea * user->f_rhs(x,y,0.0,user);
             }
         }
     }
+    ierr = PetscLogFlops(11.0*info->xm*info->ym);CHKERRQ(ierr);
     return 0;
 }
 //ENDFORM2DFUNCTION
@@ -110,6 +113,7 @@ PetscErrorCode Form3DFunctionLocal(DMDALocalInfo *info, double ***au,
             }
         }
     }
+    ierr = PetscLogFlops(14.0*info->xm*info->ym*info->zm);CHKERRQ(ierr);
     return 0;
 }
 
