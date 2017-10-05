@@ -164,16 +164,17 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
     PetscErrorCode ierr;
     MinimalCtx *mctx = (MinimalCtx*)(user->addctx);
     int        i, j;
-    double     hx, hy, hxhy, hyhx, x, y,
+    double     hx, hy, darea, hxhy, hyhx, x, y,
                ue, uw, un, us, une, use, unw, usw,
                dux, duy, De, Dw, Dn, Ds;
     ierr = Spacings(info,&hx,&hy); CHKERRQ(ierr);
+    darea = hx * hy;
     hxhy = hx / hy;
     hyhx = hy / hx;
     for (j = info->ys; j < info->ys + info->ym; j++) {
         y = j * hy;
         for (i = info->xs; i < info->xs + info->xm; i++) {
-            x = i * hx;
+            x = i * hx;   // 1 flop
             if (j==0 || i==0 || i==info->mx-1 || j==info->my-1) {
                 FF[j][i] = au[j][i] - user->g_bdry(x,y,0.0,user);
             } else {
@@ -226,15 +227,16 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                     // ...                  at south point  (i,j-1/2):
                     dux = (ue + use - uw - usw) / (4.0 * hx);
                     duy = (au[j][i] - us) / hy;
-                    Ds = DD(dux * dux + duy * duy);
+                    Ds = DD(dux * dux + duy * duy);  // 36 flops to get De,Dw,Dn,Ds
                 }
                 // evaluate residual
                 FF[j][i] = - hyhx * (De * (ue - au[j][i]) - Dw * (au[j][i] - uw))
                            - hxhy * (Dn * (un - au[j][i]) - Ds * (au[j][i] - us))
-                           - hx * hy * user->f_rhs(x,y,0.0,user);
+                           - darea * user->f_rhs(x,y,0.0,user);  // 15 flops (w/o f)
             }
         }
     }
+    ierr = PetscLogFlops(52.0*info->xm*info->ym);CHKERRQ(ierr); // 1+36+15=52
     return 0;
 }
 
