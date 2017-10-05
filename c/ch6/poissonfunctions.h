@@ -21,6 +21,9 @@ designed as call-backs:
   ierr = DMDASNESSetFunctionLocal(dmda,INSERT_VALUES,
              (DMDASNESFunction)FormXDFunctionLocal,&user); CHKERRQ(ierr);
 
+A rough estimate is made of the number of flops in the functions
+FormXDFunctionLocal().
+
 The FormXDJacobianLocal() functions are call-backs which assemble Jacobians
 for the same problems:
 
