@@ -291,7 +291,7 @@ PetscErrorCode AreaMonitor(SNES snes, int its, double norm, void *ctx) {
     arealoc *= hx * hy / 4.0;  // from change of variables formula
     ierr = PetscObjectGetComm((PetscObject)da,&comm); CHKERRQ(ierr);
     ierr = MPI_Allreduce(&arealoc,&area,1,MPI_DOUBLE,MPI_SUM,comm); CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"area = %.14f\n",area); CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"area = %.8f\n",area); CHKERRQ(ierr);
     return 0;
 }
 
