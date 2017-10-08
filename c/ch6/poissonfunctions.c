@@ -1,7 +1,7 @@
 #include <petsc.h>
 #include "poissonfunctions.h"
 
-PetscErrorCode Form1DFunctionLocal(DMDALocalInfo *info, double *au,
+PetscErrorCode Poisson1DFunctionLocal(DMDALocalInfo *info, double *au,
                                    double *aF, PoissonCtx *user) {
     PetscErrorCode ierr;
     int          i;
@@ -27,7 +27,7 @@ PetscErrorCode Form1DFunctionLocal(DMDALocalInfo *info, double *au,
 }
 
 //STARTFORM2DFUNCTION
-PetscErrorCode Form2DFunctionLocal(DMDALocalInfo *info, double **au,
+PetscErrorCode Poisson2DFunctionLocal(DMDALocalInfo *info, double **au,
                                    double **aF, PoissonCtx *user) {
     PetscErrorCode ierr;
     int     i, j;
@@ -67,7 +67,7 @@ PetscErrorCode Form2DFunctionLocal(DMDALocalInfo *info, double **au,
 }
 //ENDFORM2DFUNCTION
 
-PetscErrorCode Form3DFunctionLocal(DMDALocalInfo *info, double ***au,
+PetscErrorCode Poisson3DFunctionLocal(DMDALocalInfo *info, double ***au,
                                    double ***aF, PoissonCtx *user) {
     PetscErrorCode ierr;
     int    i, j, k;
@@ -117,7 +117,7 @@ PetscErrorCode Form3DFunctionLocal(DMDALocalInfo *info, double ***au,
     return 0;
 }
 
-PetscErrorCode Form1DJacobianLocal(DMDALocalInfo *info, PetscScalar *au,
+PetscErrorCode Poisson1DJacobianLocal(DMDALocalInfo *info, PetscScalar *au,
                                    Mat J, Mat Jpre, PoissonCtx *user) {
     PetscErrorCode  ierr;
     int          i,ncols;
@@ -153,7 +153,7 @@ PetscErrorCode Form1DJacobianLocal(DMDALocalInfo *info, PetscScalar *au,
     return 0;
 }
 
-PetscErrorCode Form2DJacobianLocal(DMDALocalInfo *info, PetscScalar **au,
+PetscErrorCode Poisson2DJacobianLocal(DMDALocalInfo *info, PetscScalar **au,
                                    Mat J, Mat Jpre, PoissonCtx *user) {
     PetscErrorCode  ierr;
     double       xymin[2], xymax[2], hx, hy, scx, scy, scdiag, v[5];
@@ -197,7 +197,7 @@ PetscErrorCode Form2DJacobianLocal(DMDALocalInfo *info, PetscScalar **au,
     return 0;
 }
 
-PetscErrorCode Form3DJacobianLocal(DMDALocalInfo *info, PetscScalar ***au,
+PetscErrorCode Poisson3DJacobianLocal(DMDALocalInfo *info, PetscScalar ***au,
                                    Mat J, Mat Jpre, PoissonCtx *user) {
     PetscErrorCode  ierr;
     double       xyzmin[3], xyzmax[3], hx, hy, hz, dvol, scx, scy, scz, scdiag, v[7];

@@ -356,7 +356,7 @@ int main(int argc,char **argv) {
     // this is the Jacobian of the Poisson equation, thus ONLY APPROXIMATE
     //     ... consider using -snes_fd_color or -snes_mf_operator
     ierr = DMDASNESSetJacobianLocal(da,
-               (DMDASNESJacobian)Form2DJacobianLocal,&user); CHKERRQ(ierr);
+               (DMDASNESJacobian)Poisson2DJacobianLocal,&user); CHKERRQ(ierr);
     if (monitor_area) {
         ierr = SNESMonitorSet(snes,AreaMonitor,NULL,NULL); CHKERRQ(ierr);
     }

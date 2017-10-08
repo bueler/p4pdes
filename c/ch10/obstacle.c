@@ -200,9 +200,9 @@ int main(int argc,char **argv) {
   ierr = SNESVISetComputeVariableBounds(snes,&FormBounds);CHKERRQ(ierr);
   
   ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
-             (DMDASNESFunction)Form2DFunctionLocal,&user); CHKERRQ(ierr);
+             (DMDASNESFunction)Poisson2DFunctionLocal,&user); CHKERRQ(ierr);
   ierr = DMDASNESSetJacobianLocal(da,
-             (DMDASNESJacobian)Form2DJacobianLocal,&user); CHKERRQ(ierr);
+             (DMDASNESJacobian)Poisson2DJacobianLocal,&user); CHKERRQ(ierr);
   ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
 
   /* solve */

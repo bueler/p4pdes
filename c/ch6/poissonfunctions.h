@@ -15,20 +15,20 @@ dimensions hx, hy, hz of the rectangular cells can have any positive values.
 These functions promote code reuse and serve as canonical examples.  They
 are used in ch6/fish.c, ch6/minimal.c, and ch12/obstacle.c.
 
-The functions FormXDFunctionLocal(), X=1,2,3, compute residuals and are
+The functions PoissonXDFunctionLocal(), X=1,2,3, compute residuals and are
 designed as call-backs:
 
   ierr = DMDASNESSetFunctionLocal(dmda,INSERT_VALUES,
-             (DMDASNESFunction)FormXDFunctionLocal,&user); CHKERRQ(ierr);
+             (DMDASNESFunction)PoissonXDFunctionLocal,&user); CHKERRQ(ierr);
 
 A rough estimate is made of the number of flops in the functions
-FormXDFunctionLocal().
+PoissonXDFunctionLocal().
 
-The FormXDJacobianLocal() functions are call-backs which assemble Jacobians
+The PoissonXDJacobianLocal() functions are call-backs which assemble Jacobians
 for the same problems:
 
   ierr = DMDASNESSetJacobianLocal(dmda,
-             (DMDASNESJacobian)FormXDJacobianLocal,&user); CHKERRQ(ierr);
+             (DMDASNESJacobian)PoissonXDJacobianLocal,&user); CHKERRQ(ierr);
 
 The matrices A are normalized so that if cells are square (h = hx = hy = hz)
 then A / h^d approximates the Laplacian in d dimensions.  This is the way
@@ -52,20 +52,20 @@ typedef struct {
     void   *addctx;  // additional context; see example usage in minimal.c
 } PoissonCtx;
 
-PetscErrorCode Form1DFunctionLocal(DMDALocalInfo *info,
+PetscErrorCode Poisson1DFunctionLocal(DMDALocalInfo *info,
     double *au, double *aF, PoissonCtx *user);
 
-PetscErrorCode Form2DFunctionLocal(DMDALocalInfo *info,
+PetscErrorCode Poisson2DFunctionLocal(DMDALocalInfo *info,
     double **au, double **aF, PoissonCtx *user);
 
-PetscErrorCode Form3DFunctionLocal(DMDALocalInfo *info,
+PetscErrorCode Poisson3DFunctionLocal(DMDALocalInfo *info,
     double ***au, double ***aF, PoissonCtx *user);
 //ENDDECLARE
 
 /* This generates a tridiagonal sparse matrix.  If cx=1 then it has 2 on the
 diagonal and -1 or zero in off-diagonal positions.  For example,
     ./fish -fsh_dim 1 -mat_view ::ascii_dense -da_refine N                */
-PetscErrorCode Form1DJacobianLocal(DMDALocalInfo *info, double *au,
+PetscErrorCode Poisson1DJacobianLocal(DMDALocalInfo *info, double *au,
                                    Mat J, Mat Jpre, PoissonCtx *user);
 
 /* If h = hx = hy and h = L/(m-1) then this generates a 2m-1 bandwidth
@@ -73,13 +73,13 @@ sparse matrix.  If cx=cy=1 then it has 4 on the diagonal and -1 or zero in
 off-diagonal positions.  For example,
     ./fish -fsh_dim 2 -mat_view :foo.m:ascii_matlab -da_refine N
 produces a matrix which can be read into Matlab/Octave.                   */
-PetscErrorCode Form2DJacobianLocal(DMDALocalInfo *info, double **au,
+PetscErrorCode Poisson2DJacobianLocal(DMDALocalInfo *info, double **au,
                                    Mat J, Mat Jpre, PoissonCtx *user);
 
 /* If h = hx = hy = hz and h = L/(m-1) then this generates a 2m^2-1 bandwidth
 sparse matrix.  For example,
     ./fish -fsh_dim 3 -mat_view :foo.m:ascii_matlab -da_refine N          */
-PetscErrorCode Form3DJacobianLocal(DMDALocalInfo *info, double ***au,
+PetscErrorCode Poisson3DJacobianLocal(DMDALocalInfo *info, double ***au,
                                    Mat J, Mat Jpre, PoissonCtx *user);
 
 /* The following function generates an initial iterate using either

@@ -201,10 +201,10 @@ PetscErrorCode Form3DUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
 //STARTPTRARRAYS
 // arrays of pointers to functions:   ..._ptr[DIMS]
 static void* residual_ptr[3]
-    = {&Form1DFunctionLocal, &Form2DFunctionLocal, &Form3DFunctionLocal};
+    = {&Poisson1DFunctionLocal, &Poisson2DFunctionLocal, &Poisson3DFunctionLocal};
 
 static void* jacobian_ptr[3]
-    = {&Form1DJacobianLocal, &Form2DJacobianLocal, &Form3DJacobianLocal};
+    = {&Poisson1DJacobianLocal, &Poisson2DJacobianLocal, &Poisson3DJacobianLocal};
 
 static void* getuexact_ptr[3]
     = {&Form1DUExact, &Form2DUExact, &Form3DUExact};
