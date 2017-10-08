@@ -1,24 +1,15 @@
-static char help[] = "Solves the Bratu reaction-diffusion problem in 1D.\n"
-"Optionally includes manufactured solution to generalized problem.\n";
+static char help[] = "Solves the Liouville-Bratu reaction-diffusion problem in 1D.  Option prefix lb_.\n"
+"Solves\n"
+"    - u'' - lambda e^u = 0\n"
+"on [0,1] subject to homogeneous Dirichlet boundary conditions.  Optionally\n"
+"uses manufactured solution to problem with f(x) on right-hand-side.\n\n";
 
 #include <petsc.h>
 
 typedef struct {
-  PetscBool manufactured;
-  double    lambda;
+    PetscBool manufactured;
+    double    lambda;
 } AppCtx;
-
-PetscErrorCode Initial(DM da, DMDALocalInfo *info, Vec u0, AppCtx *user) {
-    PetscErrorCode ierr;
-    int    i;
-    double *au0;
-    ierr = DMDAVecGetArray(da,u0,&au0); CHKERRQ(ierr);
-    for (i=info->xs; i<info->xs+info->xm; i++) {
-        au0[i] = 0.0;
-    }
-    ierr = DMDAVecRestoreArray(da,u0,&au0); CHKERRQ(ierr);
-    return 0;
-}
 
 PetscErrorCode Exact(DM da, DMDALocalInfo *info, Vec uex, AppCtx *user) {
     PetscErrorCode ierr;
@@ -93,10 +84,10 @@ int main(int argc,char **args) {
   user.lambda = 1.0;
   user.manufactured = PETSC_FALSE;
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD,
-                           "bra_","options for bratu1D",""); CHKERRQ(ierr);
+                           "lb_","options for bratu1D",""); CHKERRQ(ierr);
   ierr = PetscOptionsReal("-lambda","coefficient of nonlinear zeroth-order term",
                           "bratu1D.c",user.lambda,&(user.lambda),NULL); CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-manufactured","if set, use a manufactured solution",
+  ierr = PetscOptionsBool("-manu","if set, use a manufactured solution",
                           "bratu1D.c",user.manufactured,&(user.manufactured),NULL); CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
@@ -105,10 +96,6 @@ int main(int argc,char **args) {
   ierr = DMSetUp(da); CHKERRQ(ierr);
   ierr = DMDASetUniformCoordinates(da,0.0,1.0,-1.0,-1.0,-1.0,-1.0); CHKERRQ(ierr);
   ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
-  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-
-  ierr = DMCreateGlobalVector(da,&u); CHKERRQ(ierr);
-  ierr = Initial(da,&info,u,&user); CHKERRQ(ierr);
 
   ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
   ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
@@ -118,7 +105,11 @@ int main(int argc,char **args) {
              (DMDASNESJacobian)FormJacobianLocal,&user); CHKERRQ(ierr);
   ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
+  ierr = DMCreateGlobalVector(da,&u); CHKERRQ(ierr);
+  ierr = VecSet(u,0.0); CHKERRQ(ierr);
   ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
+
+  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
   if (user.manufactured) {
       ierr = VecDuplicate(u,&uexact); CHKERRQ(ierr);
       ierr = Exact(da,&info,uexact,&user); CHKERRQ(ierr);
