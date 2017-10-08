@@ -21,11 +21,14 @@ typedef struct {
 
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                                  double **FF, PoissonCtx *user) {
+    PetscErrorCode ierr;
     BratuCtx   *bctx = (BratuCtx*)(user->addctx);
     int        i, j;
-    double     hx, hy, hxhy, hyhx;
+    double     hx, hy, darea, hxhy, hyhx;
+
     hx = 1.0 / (double)(info->mx - 1);
     hy = 1.0 / (double)(info->my - 1);
+    darea = hx * hy;
     hxhy = hx / hy;
     hyhx = hy / hx;
     for (j = info->ys; j < info->ys + info->ym; j++) {
@@ -35,14 +38,86 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
             } else {
                 FF[j][i] =   hyhx * (2.0 * au[j][i] - au[j][i-1] - au[j][i+1])
                            + hxhy * (2.0 * au[j][i] - au[j-1][i] - au[j+1][i])
-                           - hx * hy * bctx->lambda * PetscExpScalar(au[j][i]);
+                           - darea * bctx->lambda * PetscExpScalar(au[j][i]);
             }
         }
     }
+    ierr = PetscLogFlops(12.0 * info->xm * info->ym); CHKERRQ(ierr);
     return 0;
 }
 
-// FIXME grab NonlinearGS() from branch add-ngs-to-minimal
+PetscErrorCode NonlinearGS(SNES snes, Vec u, Vec b, void *ctx) {
+    PetscErrorCode ierr;
+    PetscInt       i, j, k, maxits, totalits=0, sweeps, l;
+    double         atol, rtol, stol, hx, hy, darea, hxhy, hyhx, **au, **ab,
+                   bij, uu, F0, F, dFdu, s;
+    DM             da;
+    DMDALocalInfo  info;
+    PoissonCtx     *user = (PoissonCtx*)(ctx);
+    BratuCtx       *bctx = (BratuCtx*)(user->addctx);
+    Vec            uloc;
+
+    PetscFunctionBeginUser;
+    ierr = SNESNGSGetSweeps(snes,&sweeps);CHKERRQ(ierr);
+    ierr = SNESNGSGetTolerances(snes,&atol,&rtol,&stol,&maxits);CHKERRQ(ierr);
+    ierr = SNESGetDM(snes,&da);CHKERRQ(ierr);
+    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+
+    hx = 1.0 / (double)(info.mx - 1);
+    hy = 1.0 / (double)(info.my - 1);
+    darea = hx * hy;
+    hxhy = hx / hy;
+    hyhx = hy / hx;
+
+    ierr = DMGetLocalVector(da,&uloc);CHKERRQ(ierr);
+    for (l=0; l<sweeps; l++) {
+        ierr = DMGlobalToLocalBegin(da,u,INSERT_VALUES,uloc);CHKERRQ(ierr);
+        ierr = DMGlobalToLocalEnd(da,u,INSERT_VALUES,uloc);CHKERRQ(ierr);
+        ierr = DMDAVecGetArray(da,uloc,&au);CHKERRQ(ierr);
+        if (b) {
+            ierr = DMDAVecGetArray(da,b,&ab); CHKERRQ(ierr);
+        }
+        for (j = info.ys; j < info.ys + info.ym; j++) {
+            for (i = info.xs; i < info.xs + info.xm; i++) {
+                if (j==0 || i==0 || i==info.mx-1 || j==info.my-1) {
+                    au[j][i] = 0.0;
+                } else {
+                    if (b)
+                        bij = ab[j][i];
+                    else
+                        bij = 0.0;
+                    // do pointwise Newton iterations
+                    uu = au[j][i];
+                    F0 = 0.0;
+                    for (k = 0; k < maxits; k++) {
+                        F = FIXME
+                            - bctx->lambda * FIXME - bij;
+                        if (k == 0) F0 = F;
+                        dFdu  = 0.0;  //FIXME
+                        s = - F / dFdu;     // Newton step
+                        uu += s;
+                        totalits++;
+                        if (   atol > PetscAbsReal(PetscRealPart(F))
+                            || rtol*PetscAbsReal(PetscRealPart(F0)) > PetscAbsReal(PetscRealPart(F))
+                            || stol*PetscAbsReal(PetscRealPart(uu)) > PetscAbsReal(PetscRealPart(s))  ) {
+                            break;
+                        }
+                    }
+                    au[j][i] = uu;
+                }
+            }
+        }
+        ierr = DMDAVecRestoreArray(da,uloc,&au);CHKERRQ(ierr);
+        ierr = DMLocalToGlobalBegin(da,uloc,INSERT_VALUES,u);CHKERRQ(ierr);
+        ierr = DMLocalToGlobalEnd(da,uloc,INSERT_VALUES,u);CHKERRQ(ierr);
+    }
+    ierr = DMRestoreLocalVector(da,&uloc);CHKERRQ(ierr);
+    if (b) {
+        ierr = DMDAVecRestoreArray(da,b,&ab);CHKERRQ(ierr);
+    }
+    //FIXME ierr = PetscLogFlops(totalits*(21.0));CHKERRQ(ierr);
+    PetscFunctionReturn(0);
+}
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
@@ -79,11 +154,11 @@ int main(int argc,char **argv) {
     ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
     ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
                (DMDASNESFunction)FormFunctionLocal,&user); CHKERRQ(ierr);
+    ierr = SNESSetNGS(snes,NonlinearGS,&user); CHKERRQ(ierr);
     // this is the Jacobian of the Poisson equation, thus ONLY APPROXIMATE
     //     ... consider using -snes_fd_color or -snes_mf_operator
     ierr = DMDASNESSetJacobianLocal(da,
                (DMDASNESJacobian)Poisson2DJacobianLocal,&user); CHKERRQ(ierr);
-    // FIXME set NGS
     ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
     ierr = DMCreateGlobalVector(da,&u_initial); CHKERRQ(ierr);
