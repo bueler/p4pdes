@@ -7,9 +7,9 @@ atan: atan.o chkopts
 	-${CLINKER} -o atan atan.o ${PETSC_LIB}
 	${RM} atan.o
 
-bratu: bratu.o chkopts
-	-${CLINKER} -o bratu bratu.o ${PETSC_LIB}
-	${RM} bratu.o
+bratu1D: bratu1D.o chkopts
+	-${CLINKER} -o bratu1D bratu1D.o ${PETSC_LIB}
+	${RM} bratu1D.o
 
 ecdigits: ecdigits.o chkopts
 	-${CLINKER} -o ecdigits ecdigits.o ${PETSC_LIB}
@@ -20,5 +20,5 @@ ecdigits: ecdigits.o chkopts
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ atan bratu ecdigits
+	@rm -f *~ atan bratu1D ecdigits
 

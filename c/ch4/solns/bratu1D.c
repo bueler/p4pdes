@@ -1,17 +1,17 @@
 static char help[] = "Solves the Bratu reaction-diffusion problem in 1D.\n"
-"Optionally includes manufactured solutio to generalized problem.\n";
+"Optionally includes manufactured solution to generalized problem.\n";
 
 #include <petsc.h>
 
 typedef struct {
   PetscBool manufactured;
-  PetscReal lambda;
+  double    lambda;
 } AppCtx;
 
 PetscErrorCode Initial(DM da, DMDALocalInfo *info, Vec u0, AppCtx *user) {
     PetscErrorCode ierr;
-    PetscInt  i;
-    PetscReal *au0;
+    int    i;
+    double *au0;
     ierr = DMDAVecGetArray(da,u0,&au0); CHKERRQ(ierr);
     for (i=info->xs; i<info->xs+info->xm; i++) {
         au0[i] = 0.0;
@@ -22,8 +22,8 @@ PetscErrorCode Initial(DM da, DMDALocalInfo *info, Vec u0, AppCtx *user) {
 
 PetscErrorCode Exact(DM da, DMDALocalInfo *info, Vec uex, AppCtx *user) {
     PetscErrorCode ierr;
-    PetscInt  i;
-    PetscReal h = 1.0 / (info->mx-1), x, *auex;
+    int    i;
+    double h = 1.0 / (info->mx-1), x, *auex;
     ierr = DMDAVecGetArray(da,uex,&auex); CHKERRQ(ierr);
     for (i=info->xs; i<info->xs+info->xm; i++) {
         x = i * h;
@@ -33,10 +33,10 @@ PetscErrorCode Exact(DM da, DMDALocalInfo *info, Vec uex, AppCtx *user) {
     return 0;
 }
 
-PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal *u,
-                                 PetscReal *f, AppCtx *user) {
-    PetscInt  i;
-    PetscReal h = 1.0 / (info->mx-1), x, R, compf;
+PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *u,
+                                 double *f, AppCtx *user) {
+    int    i;
+    double h = 1.0 / (info->mx-1), x, R, compf, uex;
     for (i=info->xs; i<info->xs+info->xm; i++) {
         if ((i == 0) || (i == info->mx-1)) {
             f[i] = u[i];
@@ -44,7 +44,6 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal *u,
             R = user->lambda * PetscExpReal(u[i]);
             f[i] = - u[i+1] + 2.0 * u[i] - u[i-1] - h*h * R;
             if (user->manufactured) {
-                PetscReal uex;
                 x = i * h;
                 uex = sin(PETSC_PI * x);
                 compf = PETSC_PI * PETSC_PI * uex - user->lambda * PetscExpReal(uex);
@@ -55,11 +54,11 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal *u,
     return 0;
 }
 
-PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscReal *u,
+PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, double *u,
                                  Mat J, Mat P, AppCtx *user) {
     PetscErrorCode ierr;
-    PetscInt  i, col[3];
-    PetscReal h = 1.0 / (info->mx-1), dRdu, v[3];
+    int    i, col[3];
+    double h = 1.0 / (info->mx-1), dRdu, v[3];
     for (i=info->xs; i<info->xs+info->xm; i++) {
         if ((i == 0) | (i == info->mx-1)) {
             v[0] = 1.0;
@@ -86,18 +85,19 @@ int main(int argc,char **args) {
   DM                  da;
   SNES                snes;
   AppCtx              user;
-  Vec                 u;
+  Vec                 u, uexact;
+  double              unorm, errnorm;
   DMDALocalInfo       info;
 
   PetscInitialize(&argc,&args,(char*)0,help);
   user.lambda = 1.0;
   user.manufactured = PETSC_FALSE;
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD,
-                           "bra_","options for bratu",""); CHKERRQ(ierr);
+                           "bra_","options for bratu1D",""); CHKERRQ(ierr);
   ierr = PetscOptionsReal("-lambda","coefficient of nonlinear zeroth-order term",
-                          "bratu.c",user.lambda,&(user.lambda),NULL); CHKERRQ(ierr);
+                          "bratu1D.c",user.lambda,&(user.lambda),NULL); CHKERRQ(ierr);
   ierr = PetscOptionsBool("-manufactured","if set, use a manufactured solution",
-                          "bratu.c",user.manufactured,&(user.manufactured),NULL); CHKERRQ(ierr);
+                          "bratu1D.c",user.manufactured,&(user.manufactured),NULL); CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
   ierr = DMDACreate1d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,9,1,1,NULL,&da); CHKERRQ(ierr);
@@ -120,8 +120,6 @@ int main(int argc,char **args) {
 
   ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
   if (user.manufactured) {
-      Vec       uexact;
-      PetscReal unorm, errnorm;
       ierr = VecDuplicate(u,&uexact); CHKERRQ(ierr);
       ierr = Exact(da,&info,uexact,&user); CHKERRQ(ierr);
       ierr = VecNorm(u,NORM_INFINITY,&unorm); CHKERRQ(ierr);
@@ -135,8 +133,7 @@ int main(int argc,char **args) {
       ierr = PetscPrintf(PETSC_COMM_WORLD,"done on %d point grid\n",info.mx); CHKERRQ(ierr);
   }
 
-  VecDestroy(&u);
-  SNESDestroy(&snes);  DMDestroy(&da);
+  VecDestroy(&u);  SNESDestroy(&snes);  DMDestroy(&da);
   PetscFinalize();
   return 0;
 }
