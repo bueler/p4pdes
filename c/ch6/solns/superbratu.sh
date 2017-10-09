@@ -10,49 +10,49 @@ set -e
 
 # add to see what is happening: 
 #     -snes_monitor -snes_fas_monitor -fas_coarse_snes_monitor -fas_coarse_ksp_converged_reason
+# add to use exact solution:
+#     -lb_exact -snes_rtol 1.0e-10
+# also try:
+#     -snes_fas_type multiplicative
 
-/usr/bin/time --portability -f "real %e"  ./bratu2D -snes_converged_reason -lb_showcounts -da_refine 6 -snes_type fas -fas_levels_snes_type ngs -fas_coarse_snes_type newtonls -fas_coarse_ksp_type cg -fas_coarse_pc_type icc  -snes_fas_levels 4
+OPTIONS="-snes_converged_reason -lb_showcounts -snes_type fas -snes_fas_type full -fas_levels_snes_type ngs -fas_coarse_snes_type newtonls -fas_coarse_ksp_type cg -fas_coarse_pc_type icc"
 
-/usr/bin/time --portability -f "real %e"  ./bratu2D -snes_converged_reason -lb_showcounts -da_refine 7 -snes_type fas -fas_levels_snes_type ngs -fas_coarse_snes_type newtonls -fas_coarse_ksp_type cg -fas_coarse_pc_type icc  -snes_fas_levels 5
-
-/usr/bin/time --portability -f "real %e"  ./bratu2D -snes_converged_reason -lb_showcounts -da_refine 8 -snes_type fas -fas_levels_snes_type ngs -fas_coarse_snes_type newtonls -fas_coarse_ksp_type cg -fas_coarse_pc_type icc  -snes_fas_levels 6
-
-/usr/bin/time --portability -f "real %e"  ./bratu2D -snes_converged_reason -lb_showcounts -da_refine 9 -snes_type fas -fas_levels_snes_type ngs -fas_coarse_snes_type newtonls -fas_coarse_ksp_type cg -fas_coarse_pc_type icc  -snes_fas_levels 7
-
-/usr/bin/time --portability -f "real %e"  ./bratu2D -snes_converged_reason -lb_showcounts -da_refine 10 -snes_type fas -fas_levels_snes_type ngs -fas_coarse_snes_type newtonls -fas_coarse_ksp_type cg -fas_coarse_pc_type icc  -snes_fas_levels 8
-
-/usr/bin/time --portability -f "real %e"  ./bratu2D -snes_converged_reason -lb_showcounts -da_refine 11 -snes_type fas -fas_levels_snes_type ngs -fas_coarse_snes_type newtonls -fas_coarse_ksp_type cg -fas_coarse_pc_type icc  -snes_fas_levels 9
-
-/usr/bin/time --portability -f "real %e"  ./bratu2D -snes_converged_reason -lb_showcounts -da_refine 12 -snes_type fas -fas_levels_snes_type ngs -fas_coarse_snes_type newtonls -fas_coarse_ksp_type cg -fas_coarse_pc_type icc  -snes_fas_levels 10
-
+/usr/bin/time --portability -f "real %e"  ./bratu2D $OPTIONS -da_refine 6 -snes_fas_levels 2
+/usr/bin/time --portability -f "real %e"  ./bratu2D $OPTIONS -da_refine 7 -snes_fas_levels 3
+/usr/bin/time --portability -f "real %e"  ./bratu2D $OPTIONS -da_refine 8 -snes_fas_levels 4
+/usr/bin/time --portability -f "real %e"  ./bratu2D $OPTIONS -da_refine 9 -snes_fas_levels 5
+/usr/bin/time --portability -f "real %e"  ./bratu2D $OPTIONS -da_refine 10 -snes_fas_levels 6
+/usr/bin/time --portability -f "real %e"  ./bratu2D $OPTIONS -da_refine 11 -snes_fas_levels 7
+/usr/bin/time --portability -f "real %e"  ./bratu2D $OPTIONS -da_refine 12 -snes_fas_levels 8
 
 #$ ./superbratu.sh 
-#Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 10
-#flops = 6.431e+07,  residual calls = 390,  NGS calls = 60
+#Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 8
+#flops = 1.317e+09,  residual calls = 304,  NGS calls = 24
 #done on 129 x 129 grid ...
-#real 0.20
-#Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 10
-#flops = 1.663e+08,  residual calls = 443,  NGS calls = 80
+#real 0.97
+#Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 6
+#flops = 1.548e+09,  residual calls = 375,  NGS calls = 42
 #done on 257 x 257 grid ...
-#real 0.47
-#Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 10
-#flops = 5.689e+08,  residual calls = 495,  NGS calls = 100
+#real 1.67
+#Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 6
+#flops = 1.811e+09,  residual calls = 458,  NGS calls = 78
 #done on 513 x 513 grid ...
-#real 1.61
-#Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 10
-#flops = 2.157e+09,  residual calls = 545,  NGS calls = 120
+#real 2.59
+#Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+#flops = 3.085e+09,  residual calls = 551,  NGS calls = 105
 #done on 1025 x 1025 grid ...
-#real 5.27
-#Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 10
-#flops = 8.398e+09,  residual calls = 595,  NGS calls = 140
+#real 5.47
+#Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+#flops = 7.979e+09,  residual calls = 703,  NGS calls = 155
 #done on 2049 x 2049 grid ...
-#real 18.86
-#Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 10
-#flops = 3.285e+10,  residual calls = 645,  NGS calls = 160
+#real 16.22
+#Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+#flops = 2.706e+10,  residual calls = 888,  NGS calls = 215
 #done on 4097 x 4097 grid ...
-#real 70.75
-#Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 11
-#flops = 1.388e+11,  residual calls = 741,  NGS calls = 198
+#real 55.56
+#Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+#flops = 1.015e+11,  residual calls = 1093,  NGS calls = 285
 #done on 8193 x 8193 grid ...
-#real 290.10
+#real 204.52
+
 
