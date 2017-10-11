@@ -2,7 +2,7 @@
 set -e
 
 # summary:   Solve Bratu equation by FAS using NGS smoothing.  The coarse grid
-# is 17x17 and solved by Newton-Krylov using CG+ICC.
+# problem is solved by Newton-Krylov using CG+ICC.
 
 # use --with-debugging=0 build for timing
 
@@ -17,15 +17,24 @@ set -e
 
 OPTIONS="-snes_converged_reason -lb_showcounts -snes_type fas -snes_fas_type full -fas_levels_snes_type ngs -fas_coarse_snes_type newtonls -fas_coarse_ksp_type cg -fas_coarse_pc_type icc"
 
-/usr/bin/time --portability -f "real %e"  ./bratu2D $OPTIONS -da_refine 6 -snes_fas_levels 2
-/usr/bin/time --portability -f "real %e"  ./bratu2D $OPTIONS -da_refine 7 -snes_fas_levels 3
-/usr/bin/time --portability -f "real %e"  ./bratu2D $OPTIONS -da_refine 8 -snes_fas_levels 4
-/usr/bin/time --portability -f "real %e"  ./bratu2D $OPTIONS -da_refine 9 -snes_fas_levels 5
-/usr/bin/time --portability -f "real %e"  ./bratu2D $OPTIONS -da_refine 10 -snes_fas_levels 6
-/usr/bin/time --portability -f "real %e"  ./bratu2D $OPTIONS -da_refine 11 -snes_fas_levels 7
-/usr/bin/time --portability -f "real %e"  ./bratu2D $OPTIONS -da_refine 12 -snes_fas_levels 8
+# for this loop flops/N is nearly constant, as is time/N
+#for LEV in 6 7 8 9 10 11 12; do  # -da_refine 12 is 8193x8193 grid
+for LEV in 6 7 8 9 10; do
+    CMD="./bratu2D $OPTIONS -da_refine $LEV"
+    echo $CMD
+    /usr/bin/time --portability -f "real %e"  $CMD
+done
 
-#$ ./superbratu.sh 
+# here fine grid times are smaller, and call counts are smaller, but flops/N large for coarser grids
+#for LEV in 6 7 8 9 10 11 12; do
+for LEV in 6 7 8 9 10; do
+    CMD="./bratu2D $OPTIONS -da_refine $LEV -snes_fas_levels $(( LEV - 3 ))"  # coarse grid is 33x33
+    echo $CMD
+    /usr/bin/time --portability -f "real %e"  $CMD
+done
+
+#$ ./fasbratu.sh
+# FIXME  show new results from WORKSTATION
 #Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 8
 #flops = 1.317e+09,  residual calls = 304,  NGS calls = 24
 #done on 129 x 129 grid ...
@@ -54,5 +63,4 @@ OPTIONS="-snes_converged_reason -lb_showcounts -snes_type fas -snes_fas_type ful
 #flops = 1.015e+11,  residual calls = 1093,  NGS calls = 285
 #done on 8193 x 8193 grid ...
 #real 204.52
-
 
