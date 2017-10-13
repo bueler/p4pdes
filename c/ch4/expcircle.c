@@ -4,19 +4,7 @@ static char help[] = "Newton's method for a two-variable system.\n"
 
 #include <petsc.h>
 
-PetscErrorCode FormFunction(SNES snes, Vec x, Vec F, void *ctx) {
-    PetscErrorCode ierr;
-    const double b = 2.0, *ax;
-    double       *aF;
-
-    ierr = VecGetArrayRead(x,&ax);CHKERRQ(ierr);
-    ierr = VecGetArray(F,&aF);CHKERRQ(ierr);
-    aF[0] = (1.0 / b) * PetscExpReal(b * ax[0]) - ax[1];
-    aF[1] = ax[0] * ax[0] + ax[1] * ax[1] - 1.0;
-    ierr = VecRestoreArrayRead(x,&ax);CHKERRQ(ierr);
-    ierr = VecRestoreArray(F,&aF);CHKERRQ(ierr);
-    return 0;
-}
+extern PetscErrorCode FormFunction(SNES, Vec, Vec, void*);
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
@@ -39,4 +27,19 @@ int main(int argc,char **argv) {
     VecDestroy(&x);  VecDestroy(&r);  SNESDestroy(&snes);
     return PetscFinalize();
 }
+
+PetscErrorCode FormFunction(SNES snes, Vec x, Vec F, void *ctx) {
+    PetscErrorCode ierr;
+    const double b = 2.0, *ax;
+    double       *aF;
+
+    ierr = VecGetArrayRead(x,&ax);CHKERRQ(ierr);
+    ierr = VecGetArray(F,&aF);CHKERRQ(ierr);
+    aF[0] = (1.0 / b) * PetscExpReal(b * ax[0]) - ax[1];
+    aF[1] = ax[0] * ax[0] + ax[1] * ax[1] - 1.0;
+    ierr = VecRestoreArrayRead(x,&ax);CHKERRQ(ierr);
+    ierr = VecRestoreArray(F,&aF);CHKERRQ(ierr);
+    return 0;
+}
 //ENDWHOLE
+

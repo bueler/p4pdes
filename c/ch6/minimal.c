@@ -82,14 +82,13 @@ typedef struct {
     PetscBool laplace; // solve Laplace equation instead of minimal surface
 } MinimalCtx;
 
-// source function f(x,y)
-// manufactured only: Dirichlet boundary condition
-double zero(double x, double y, double z, void *ctx) {
+// source function f(x,y); manufactured only: Dirichlet boundary condition
+static double zero(double x, double y, double z, void *ctx) {
     return 0.0;
 }
 
 // Dirichlet boundary condition
-double g_bdry_tent(double x, double y, double z, void *ctx) {
+static double g_bdry_tent(double x, double y, double z, void *ctx) {
     PoissonCtx *user = (PoissonCtx*)ctx;
     MinimalCtx *mctx = (MinimalCtx*)(user->addctx);
     if (x < 1.0e-8) {
@@ -100,22 +99,22 @@ double g_bdry_tent(double x, double y, double z, void *ctx) {
 
 // the coefficient (diffusivity) of minimal surface equation, as a function
 //   of  s = |grad u|^2
-double DD(double s) {
+static double DD(double s) {
     return pow(1.0 + s,-0.5);
 }
 
 // derivative is only used in manufacturing a solution
-double dDD(double s) {
+static double dDD(double s) {
     return -0.5 * pow(1.0 + s,-1.5);
 }
 
 // manufactured only: the exact solution u(x,y)
-double u_manu(double x, double y, double z, void *ctx) {
+static double u_manu(double x, double y, double z, void *ctx) {
     return (x - x*x) * (y*y - y);
 }
 
 // manufactured only: the right-hand-side f(x,y)
-double f_manu(double x, double y, double z, void *ctx) {
+static double f_manu(double x, double y, double z, void *ctx) {
     double uxx, uyy, ux, uy, uxy, s, sx, sy;
     uxx  = - 2.0 * (y*y - y);
     uyy  = (x - x*x) * 2.0;
@@ -129,175 +128,17 @@ double f_manu(double x, double y, double z, void *ctx) {
 }
 
 // manufactured only, laplace case: the right-hand-side f(x,y) = - div (DD(s) grad u)
-double f_manu_laplace(double x, double y, double z, void *ctx) {
+static double f_manu_laplace(double x, double y, double z, void *ctx) {
     double uxx, uyy;
     uxx  = - 2.0 * (y*y - y);
     uyy  = (x - x*x) * 2.0;
     return - uxx - uyy;
 }
 
-PetscErrorCode Spacings(DMDALocalInfo *info, double *hx, double *hy) {
-    PetscErrorCode ierr;
-    double  xymin[2], xymax[2];
-    ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
-    if (hx)  *hx = (xymax[0] - xymin[0]) / (info->mx - 1);
-    if (hy)  *hy = (xymax[1] - xymin[1]) / (info->my - 1);
-    return 0;
-}
-
-PetscErrorCode FormExactManufactured(DMDALocalInfo *info, Vec uexact,
-                                     PoissonCtx *user) {
-    PetscErrorCode ierr;
-    int     i, j;
-    double  hx, hy, x, y, **auexact;
-    ierr = Spacings(info,&hx,&hy); CHKERRQ(ierr);
-    ierr = DMDAVecGetArray(info->da,uexact,&auexact); CHKERRQ(ierr);
-    for (j = info->ys; j < info->ys + info->ym; j++) {
-        y = j * hy;
-        for (i = info->xs; i < info->xs + info->xm; i++) {
-            x = i * hx;
-            auexact[j][i] = u_manu(x,y,0.0,user);
-        }
-    }
-    ierr = DMDAVecRestoreArray(info->da,uexact,&auexact); CHKERRQ(ierr);
-    return 0;
-}
-
-PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
-                                 double **FF, PoissonCtx *user) {
-    PetscErrorCode ierr;
-    MinimalCtx *mctx = (MinimalCtx*)(user->addctx);
-    int        i, j;
-    double     hx, hy, hxhy, hyhx, x, y,
-               ue, uw, un, us, une, use, unw, usw,
-               dux, duy, De, Dw, Dn, Ds;
-    ierr = Spacings(info,&hx,&hy); CHKERRQ(ierr);
-    hxhy = hx / hy;
-    hyhx = hy / hx;
-    for (j = info->ys; j < info->ys + info->ym; j++) {
-        y = j * hy;
-        for (i = info->xs; i < info->xs + info->xm; i++) {
-            x = i * hx;
-            if (j==0 || i==0 || i==info->mx-1 || j==info->my-1) {
-                FF[j][i] = au[j][i] - user->g_bdry(x,y,0.0,user);
-            } else {
-                // assign neighbor values with either boundary condition or
-                //     current u at that point (==> symmetric matrix)
-                ue  = (i+1 == info->mx-1) ? user->g_bdry(x+hx,y,0.0,user)
-                                          : au[j][i+1];
-                uw  = (i-1 == 0)          ? user->g_bdry(x-hx,y,0.0,user)
-                                          : au[j][i-1];
-                un  = (j+1 == info->my-1) ? user->g_bdry(x,y+hy,0.0,user)
-                                          : au[j+1][i];
-                us  = (j-1 == 0)          ? user->g_bdry(x,y-hy,0.0,user)
-                                          : au[j-1][i];
-                if (mctx->laplace) {
-                    De = 1.0;  Dw = 1.0;
-                    Dn = 1.0;  Ds = 1.0;
-                } else {
-                    if (i+1 == info->mx-1 || j+1 == info->my-1) {
-                        une = user->g_bdry(x+hx,y+hy,0.0,user);
-                    } else {
-                        une = au[j+1][i+1];
-                    }
-                    if (i-1 == 0 || j+1 == info->my-1) {
-                        unw = user->g_bdry(x-hx,y+hy,0.0,user);
-                    } else {
-                        unw = au[j+1][i-1];
-                    }
-                    if (i+1 == info->mx-1 || j-1 == 0) {
-                        use = user->g_bdry(x+hx,y-hy,0.0,user);
-                    } else {
-                        use = au[j-1][i+1];
-                    }
-                    if (i-1 == 0 || j-1 == 0) {
-                        usw = user->g_bdry(x-hx,y-hy,0.0,user);
-                    } else {
-                        usw = au[j-1][i-1];
-                    }
-                    // gradient  (dux,duy)   at east point  (i+1/2,j):
-                    dux = (ue - au[j][i]) / hx;
-                    duy = (un + une - us - use) / (4.0 * hy);
-                    De = DD(dux * dux + duy * duy);
-                    // ...                   at west point  (i-1/2,j):
-                    dux = (au[j][i] - uw) / hx;
-                    duy = (unw + un - usw - us) / (4.0 * hy);
-                    Dw = DD(dux * dux + duy * duy);
-                    // ...                  at north point  (i,j+1/2):
-                    dux = (ue + une - uw - unw) / (4.0 * hx);
-                    duy = (un - au[j][i]) / hy;
-                    Dn = DD(dux * dux + duy * duy);
-                    // ...                  at south point  (i,j-1/2):
-                    dux = (ue + use - uw - usw) / (4.0 * hx);
-                    duy = (au[j][i] - us) / hy;
-                    Ds = DD(dux * dux + duy * duy);
-                }
-                // evaluate residual
-                FF[j][i] = - hyhx * (De * (ue - au[j][i]) - Dw * (au[j][i] - uw))
-                           - hxhy * (Dn * (un - au[j][i]) - Ds * (au[j][i] - us))
-                           - hx * hy * user->f_rhs(x,y,0.0,user);
-            }
-        }
-    }
-    return 0;
-}
-
-// compute surface area using tensor product gaussian quadrature
-PetscErrorCode AreaMonitor(SNES snes, int its, double norm, void *ctx) {
-    PetscErrorCode ierr;
-    DM             da;
-    Vec            u, uloc;
-    DMDALocalInfo  info;
-    const int      ndegree = 2;
-    const Quad1D   q = gausslegendre[ndegree-1];   // from ../quadrature.h
-    double         hx, hy, **au, x_i, y_j, x, y, ux, uy, arealoc, area;
-    int            i, j, r, s;
-    MPI_Comm       comm;
-    ierr = SNESGetDM(snes, &da); CHKERRQ(ierr);
-    ierr = SNESGetSolution(snes, &u); CHKERRQ(ierr);
-    ierr = DMGetLocalVector(da, &uloc); CHKERRQ(ierr);
-    ierr = DMGlobalToLocalBegin(da, u, INSERT_VALUES, uloc); CHKERRQ(ierr);
-    ierr = DMGlobalToLocalEnd(da, u, INSERT_VALUES, uloc); CHKERRQ(ierr);
-    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-    ierr = Spacings(&info,&hx,&hy); CHKERRQ(ierr);
-    ierr = DMDAVecGetArrayRead(da,uloc,&au); CHKERRQ(ierr);
-    arealoc = 0.0;
-    // loop over rectangles in grid
-    for (j = info.ys; j < info.ys + info.ym; j++) {
-        if (j == 0)
-            continue;
-        y_j = j * hy;
-        for (i = info.xs; i < info.xs + info.xm; i++) {
-            x_i = i * hx;
-            if (i == 0)
-                continue;
-            // loop over quadrature points in rectangle w corner (x_i,y_j)
-            for (r = 0; r < q.n; r++) {
-                x = x_i + 0.5 * hx * q.xi[r];
-                for (s = 0; s < q.n; s++) {
-                    y = y_j + 0.5 * hy * q.xi[s];
-                    // slopes of u(x,y) at quadrature point
-                    ux =   (au[j][i] - au[j][i-1])     * (y - (y_j - hy))
-                         + (au[j-1][i] - au[j-1][i-1]) * (y_j - y);
-                    ux /= hx * hy;
-                    uy =   (au[j][i] - au[j-1][i])     * (x - (x_i - hx))
-                         + (au[j][i-1] - au[j-1][i-1]) * (x_i - x);
-                    uy /= hx * hy;
-                    // use surface area formula
-                    arealoc += q.w[r] * q.w[s]
-                               * PetscSqrtReal(1.0 + ux * ux + uy * uy);
-                }
-            }
-        }
-    }
-    ierr = DMDAVecRestoreArrayRead(da,uloc,&au); CHKERRQ(ierr);
-    ierr = DMRestoreLocalVector(da, &uloc); CHKERRQ(ierr);
-    arealoc *= hx * hy / 4.0;  // from change of variables formula
-    ierr = PetscObjectGetComm((PetscObject)da,&comm); CHKERRQ(ierr);
-    ierr = MPI_Allreduce(&arealoc,&area,1,MPI_DOUBLE,MPI_SUM,comm); CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"area = %.8f\n",area); CHKERRQ(ierr);
-    return 0;
-}
+extern PetscErrorCode FormExactManufactured(DMDALocalInfo*, Vec, PoissonCtx*);
+extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, double**,
+                                        double **FF, PoissonCtx*);
+extern PetscErrorCode AreaMonitor(SNES, int, double, void*);
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
@@ -385,5 +226,166 @@ int main(int argc,char **argv) {
 
     ierr = SNESDestroy(&snes); CHKERRQ(ierr);
     return PetscFinalize();
+}
+
+PetscErrorCode FormExactManufactured(DMDALocalInfo *info, Vec uexact,
+                                     PoissonCtx *user) {
+    PetscErrorCode ierr;
+    int     i, j;
+    double  xymin[2], xymax[2], hx, hy, x, y, **auexact;
+    ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
+    hx = (xymax[0] - xymin[0]) / (info->mx - 1);
+    hy = (xymax[1] - xymin[1]) / (info->my - 1);
+    ierr = DMDAVecGetArray(info->da,uexact,&auexact); CHKERRQ(ierr);
+    for (j = info->ys; j < info->ys + info->ym; j++) {
+        y = j * hy;
+        for (i = info->xs; i < info->xs + info->xm; i++) {
+            x = i * hx;
+            auexact[j][i] = u_manu(x,y,0.0,user);
+        }
+    }
+    ierr = DMDAVecRestoreArray(info->da,uexact,&auexact); CHKERRQ(ierr);
+    return 0;
+}
+
+PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
+                                 double **FF, PoissonCtx *user) {
+    PetscErrorCode ierr;
+    MinimalCtx *mctx = (MinimalCtx*)(user->addctx);
+    int        i, j;
+    double     xymin[2], xymax[2], hx, hy, hxhy, hyhx, x, y,
+               ue, uw, un, us, une, use, unw, usw,
+               dux, duy, De, Dw, Dn, Ds;
+    ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
+    hx = (xymax[0] - xymin[0]) / (info->mx - 1);
+    hy = (xymax[1] - xymin[1]) / (info->my - 1);
+    hxhy = hx / hy;
+    hyhx = hy / hx;
+    for (j = info->ys; j < info->ys + info->ym; j++) {
+        y = j * hy;
+        for (i = info->xs; i < info->xs + info->xm; i++) {
+            x = i * hx;
+            if (j==0 || i==0 || i==info->mx-1 || j==info->my-1) {
+                FF[j][i] = au[j][i] - user->g_bdry(x,y,0.0,user);
+            } else {
+                // assign neighbor values with either boundary condition or
+                //     current u at that point (==> symmetric matrix)
+                ue  = (i+1 == info->mx-1) ? user->g_bdry(x+hx,y,0.0,user)
+                                          : au[j][i+1];
+                uw  = (i-1 == 0)          ? user->g_bdry(x-hx,y,0.0,user)
+                                          : au[j][i-1];
+                un  = (j+1 == info->my-1) ? user->g_bdry(x,y+hy,0.0,user)
+                                          : au[j+1][i];
+                us  = (j-1 == 0)          ? user->g_bdry(x,y-hy,0.0,user)
+                                          : au[j-1][i];
+                if (mctx->laplace) {
+                    De = 1.0;  Dw = 1.0;
+                    Dn = 1.0;  Ds = 1.0;
+                } else {
+                    if (i+1 == info->mx-1 || j+1 == info->my-1) {
+                        une = user->g_bdry(x+hx,y+hy,0.0,user);
+                    } else {
+                        une = au[j+1][i+1];
+                    }
+                    if (i-1 == 0 || j+1 == info->my-1) {
+                        unw = user->g_bdry(x-hx,y+hy,0.0,user);
+                    } else {
+                        unw = au[j+1][i-1];
+                    }
+                    if (i+1 == info->mx-1 || j-1 == 0) {
+                        use = user->g_bdry(x+hx,y-hy,0.0,user);
+                    } else {
+                        use = au[j-1][i+1];
+                    }
+                    if (i-1 == 0 || j-1 == 0) {
+                        usw = user->g_bdry(x-hx,y-hy,0.0,user);
+                    } else {
+                        usw = au[j-1][i-1];
+                    }
+                    // gradient  (dux,duy)   at east point  (i+1/2,j):
+                    dux = (ue - au[j][i]) / hx;
+                    duy = (un + une - us - use) / (4.0 * hy);
+                    De = DD(dux * dux + duy * duy);
+                    // ...                   at west point  (i-1/2,j):
+                    dux = (au[j][i] - uw) / hx;
+                    duy = (unw + un - usw - us) / (4.0 * hy);
+                    Dw = DD(dux * dux + duy * duy);
+                    // ...                  at north point  (i,j+1/2):
+                    dux = (ue + une - uw - unw) / (4.0 * hx);
+                    duy = (un - au[j][i]) / hy;
+                    Dn = DD(dux * dux + duy * duy);
+                    // ...                  at south point  (i,j-1/2):
+                    dux = (ue + use - uw - usw) / (4.0 * hx);
+                    duy = (au[j][i] - us) / hy;
+                    Ds = DD(dux * dux + duy * duy);
+                }
+                // evaluate residual
+                FF[j][i] = - hyhx * (De * (ue - au[j][i]) - Dw * (au[j][i] - uw))
+                           - hxhy * (Dn * (un - au[j][i]) - Ds * (au[j][i] - us))
+                           - hx * hy * user->f_rhs(x,y,0.0,user);
+            }
+        }
+    }
+    return 0;
+}
+
+// compute surface area using tensor product gaussian quadrature
+PetscErrorCode AreaMonitor(SNES snes, int its, double norm, void *ctx) {
+    PetscErrorCode ierr;
+    DM             da;
+    Vec            u, uloc;
+    DMDALocalInfo  info;
+    const int      ndegree = 2;
+    const Quad1D   q = gausslegendre[ndegree-1];   // from ../quadrature.h
+    double         xymin[2], xymax[2], hx, hy, **au, x_i, y_j, x, y,
+                   ux, uy, arealoc, area;
+    int            i, j, r, s;
+    MPI_Comm       comm;
+    ierr = SNESGetDM(snes, &da); CHKERRQ(ierr);
+    ierr = SNESGetSolution(snes, &u); CHKERRQ(ierr);
+    ierr = DMGetLocalVector(da, &uloc); CHKERRQ(ierr);
+    ierr = DMGlobalToLocalBegin(da, u, INSERT_VALUES, uloc); CHKERRQ(ierr);
+    ierr = DMGlobalToLocalEnd(da, u, INSERT_VALUES, uloc); CHKERRQ(ierr);
+    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+    ierr = DMDAGetBoundingBox(info.da,xymin,xymax); CHKERRQ(ierr);
+    hx = (xymax[0] - xymin[0]) / (info.mx - 1);
+    hy = (xymax[1] - xymin[1]) / (info.my - 1);
+    ierr = DMDAVecGetArrayRead(da,uloc,&au); CHKERRQ(ierr);
+    arealoc = 0.0;
+    // loop over rectangles in grid
+    for (j = info.ys; j < info.ys + info.ym; j++) {
+        if (j == 0)
+            continue;
+        y_j = j * hy;
+        for (i = info.xs; i < info.xs + info.xm; i++) {
+            x_i = i * hx;
+            if (i == 0)
+                continue;
+            // loop over quadrature points in rectangle w corner (x_i,y_j)
+            for (r = 0; r < q.n; r++) {
+                x = x_i + 0.5 * hx * q.xi[r];
+                for (s = 0; s < q.n; s++) {
+                    y = y_j + 0.5 * hy * q.xi[s];
+                    // slopes of u(x,y) at quadrature point
+                    ux =   (au[j][i] - au[j][i-1])     * (y - (y_j - hy))
+                         + (au[j-1][i] - au[j-1][i-1]) * (y_j - y);
+                    ux /= hx * hy;
+                    uy =   (au[j][i] - au[j-1][i])     * (x - (x_i - hx))
+                         + (au[j][i-1] - au[j-1][i-1]) * (x_i - x);
+                    uy /= hx * hy;
+                    // use surface area formula
+                    arealoc += q.w[r] * q.w[s]
+                               * PetscSqrtReal(1.0 + ux * ux + uy * uy);
+                }
+            }
+        }
+    }
+    ierr = DMDAVecRestoreArrayRead(da,uloc,&au); CHKERRQ(ierr);
+    ierr = DMRestoreLocalVector(da, &uloc); CHKERRQ(ierr);
+    arealoc *= hx * hy / 4.0;  // from change of variables formula
+    ierr = PetscObjectGetComm((PetscObject)da,&comm); CHKERRQ(ierr);
+    ierr = MPI_Allreduce(&arealoc,&area,1,MPI_DOUBLE,MPI_SUM,comm); CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"area = %.8f\n",area); CHKERRQ(ierr);
+    return 0;
 }
 

@@ -2,6 +2,64 @@ static char help[] = "A structured-grid Poisson problem with DMDA+KSP.\n\n";
 
 #include <petsc.h>
 
+extern PetscErrorCode formMatrix(DM, Mat);
+extern PetscErrorCode formExact(DM, Vec);
+extern PetscErrorCode formRHS(DM, Vec);
+
+//STARTMAIN
+int main(int argc,char **args) {
+  PetscErrorCode ierr;
+  DM            da;
+  Mat           A;
+  Vec           b,u,uexact;
+  KSP           ksp;
+  double        errnorm;
+  DMDALocalInfo info;
+
+  PetscInitialize(&argc,&args,(char*)0,help);
+
+  // default size (9 x 9) can be changed using -da_refine X or
+  //     -da_grid_x M -da_grid_y N
+  ierr = DMDACreate2d(PETSC_COMM_WORLD,
+      DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
+      9,9,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&da); CHKERRQ(ierr);
+
+  // create linear system matrix A
+  ierr = DMSetFromOptions(da); CHKERRQ(ierr);
+  ierr = DMSetUp(da); CHKERRQ(ierr);
+  ierr = DMCreateMatrix(da,&A); CHKERRQ(ierr);
+  ierr = MatSetFromOptions(A); CHKERRQ(ierr);
+
+  // create right-hand-side (RHS) b, approx solution u, exact solution uexact
+  ierr = DMCreateGlobalVector(da,&b); CHKERRQ(ierr);
+  ierr = VecDuplicate(b,&u); CHKERRQ(ierr);
+  ierr = VecDuplicate(b,&uexact); CHKERRQ(ierr);
+
+  // fill vectors and assemble linear system
+  ierr = formExact(da,uexact); CHKERRQ(ierr);
+  ierr = formRHS(da,b); CHKERRQ(ierr);
+  ierr = formMatrix(da,A); CHKERRQ(ierr);
+
+  // create and solve the linear system
+  ierr = KSPCreate(PETSC_COMM_WORLD,&ksp); CHKERRQ(ierr);
+  ierr = KSPSetOperators(ksp,A,A); CHKERRQ(ierr);
+  ierr = KSPSetFromOptions(ksp); CHKERRQ(ierr);
+  ierr = KSPSolve(ksp,b,u); CHKERRQ(ierr);
+
+  // report on grid and numerical error
+  ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uxact
+  ierr = VecNorm(u,NORM_INFINITY,&errnorm); CHKERRQ(ierr);
+  ierr = DMDAGetLocalInfo(da,&info);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,
+             "on %d x %d grid:  error |u-uexact|_inf = %g\n",
+             info.mx,info.my,errnorm); CHKERRQ(ierr);
+
+  VecDestroy(&u);  VecDestroy(&uexact);  VecDestroy(&b);
+  MatDestroy(&A);  KSPDestroy(&ksp);  DMDestroy(&da);
+  return PetscFinalize();
+}
+//ENDMAIN
+
 //STARTMATRIX
 PetscErrorCode formMatrix(DM da, Mat A) {
   PetscErrorCode ierr;
@@ -89,58 +147,4 @@ PetscErrorCode formRHS(DM da, Vec b) {
   return 0;
 }
 //ENDEXACT
-
-//STARTMAIN
-int main(int argc,char **args) {
-  PetscErrorCode ierr;
-  DM            da;
-  Mat           A;
-  Vec           b,u,uexact;
-  KSP           ksp;
-  double        errnorm;
-  DMDALocalInfo info;
-
-  PetscInitialize(&argc,&args,(char*)0,help);
-
-  // default size (9 x 9) can be changed using -da_refine X or
-  //     -da_grid_x M -da_grid_y N
-  ierr = DMDACreate2d(PETSC_COMM_WORLD,
-      DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
-      9,9,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&da); CHKERRQ(ierr);
-
-  // create linear system matrix A
-  ierr = DMSetFromOptions(da); CHKERRQ(ierr);
-  ierr = DMSetUp(da); CHKERRQ(ierr);
-  ierr = DMCreateMatrix(da,&A); CHKERRQ(ierr);
-  ierr = MatSetFromOptions(A); CHKERRQ(ierr);
-
-  // create right-hand-side (RHS) b, approx solution u, exact solution uexact
-  ierr = DMCreateGlobalVector(da,&b); CHKERRQ(ierr);
-  ierr = VecDuplicate(b,&u); CHKERRQ(ierr);
-  ierr = VecDuplicate(b,&uexact); CHKERRQ(ierr);
-
-  // fill vectors and assemble linear system
-  ierr = formExact(da,uexact); CHKERRQ(ierr);
-  ierr = formRHS(da,b); CHKERRQ(ierr);
-  ierr = formMatrix(da,A); CHKERRQ(ierr);
-
-  // create and solve the linear system
-  ierr = KSPCreate(PETSC_COMM_WORLD,&ksp); CHKERRQ(ierr);
-  ierr = KSPSetOperators(ksp,A,A); CHKERRQ(ierr);
-  ierr = KSPSetFromOptions(ksp); CHKERRQ(ierr);
-  ierr = KSPSolve(ksp,b,u); CHKERRQ(ierr);
-
-  // report on grid and numerical error
-  ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uxact
-  ierr = VecNorm(u,NORM_INFINITY,&errnorm); CHKERRQ(ierr);
-  ierr = DMDAGetLocalInfo(da,&info);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,
-             "on %d x %d grid:  error |u-uexact|_inf = %g\n",
-             info.mx,info.my,errnorm); CHKERRQ(ierr);
-
-  VecDestroy(&u);  VecDestroy(&uexact);  VecDestroy(&b);
-  MatDestroy(&A);  KSPDestroy(&ksp);  DMDestroy(&da);
-  return PetscFinalize();
-}
-//ENDMAIN
 

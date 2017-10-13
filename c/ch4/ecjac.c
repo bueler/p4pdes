@@ -4,11 +4,49 @@ static char help[] =
 
 #include <petsc.h>
 
-//STARTFORM
+//STARTMAIN
 typedef struct {
   double  b;
 } AppCtx;
 
+extern PetscErrorCode FormFunction(SNES, Vec, Vec, void*);
+extern PetscErrorCode FormJacobian(SNES, Vec, Mat, Mat, void*);
+
+int main(int argc,char **argv) {
+  SNES   snes;         // nonlinear solver context
+  Vec    x,r;          // solution, residual vectors
+  Mat    J;
+  AppCtx user;
+  PetscErrorCode ierr;
+
+  PetscInitialize(&argc,&argv,NULL,help);
+  user.b = 2.0;
+
+  ierr = VecCreate(PETSC_COMM_WORLD,&x); CHKERRQ(ierr);
+  ierr = VecSetSizes(x,PETSC_DECIDE,2); CHKERRQ(ierr);
+  ierr = VecSetFromOptions(x); CHKERRQ(ierr);
+  ierr = VecDuplicate(x,&r); CHKERRQ(ierr);
+
+  ierr = MatCreate(PETSC_COMM_WORLD,&J); CHKERRQ(ierr);
+  ierr = MatSetSizes(J,PETSC_DECIDE,PETSC_DECIDE,2,2); CHKERRQ(ierr);
+  ierr = MatSetFromOptions(J); CHKERRQ(ierr);
+  ierr = MatSetUp(J); CHKERRQ(ierr);
+
+  ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
+  ierr = SNESSetFunction(snes,r,FormFunction,&user);CHKERRQ(ierr);
+  ierr = SNESSetJacobian(snes,J,J,FormJacobian,&user);CHKERRQ(ierr);
+  ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
+
+  ierr = VecSet(x,1.0);CHKERRQ(ierr);
+  ierr = SNESSolve(snes,NULL,x);CHKERRQ(ierr);
+  ierr = VecView(x,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
+
+  VecDestroy(&x);  VecDestroy(&r);  SNESDestroy(&snes);  MatDestroy(&J);
+  return PetscFinalize();
+}
+//ENDMAIN
+
+//STARTFORM
 PetscErrorCode FormFunction(SNES snes, Vec x, Vec F, void *ctx) {
     PetscErrorCode ierr;
     AppCtx       *user = (AppCtx*)ctx;
@@ -45,40 +83,4 @@ PetscErrorCode FormJacobian(SNES snes, Vec x, Mat J, Mat P, void *ctx) {
     return 0;
 }
 //ENDFORM
-
-//STARTMAIN
-int main(int argc,char **argv)
-{
-  SNES   snes;         // nonlinear solver context
-  Vec    x,r;          // solution, residual vectors
-  Mat    J;
-  AppCtx user;
-  PetscErrorCode ierr;
-
-  PetscInitialize(&argc,&argv,NULL,help);
-  user.b = 2.0;
-
-  ierr = VecCreate(PETSC_COMM_WORLD,&x); CHKERRQ(ierr);
-  ierr = VecSetSizes(x,PETSC_DECIDE,2); CHKERRQ(ierr);
-  ierr = VecSetFromOptions(x); CHKERRQ(ierr);
-  ierr = VecDuplicate(x,&r); CHKERRQ(ierr);
-
-  ierr = MatCreate(PETSC_COMM_WORLD,&J); CHKERRQ(ierr);
-  ierr = MatSetSizes(J,PETSC_DECIDE,PETSC_DECIDE,2,2); CHKERRQ(ierr);
-  ierr = MatSetFromOptions(J); CHKERRQ(ierr);
-  ierr = MatSetUp(J); CHKERRQ(ierr);
-
-  ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
-  ierr = SNESSetFunction(snes,r,FormFunction,&user);CHKERRQ(ierr);
-  ierr = SNESSetJacobian(snes,J,J,FormJacobian,&user);CHKERRQ(ierr);
-  ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
-
-  ierr = VecSet(x,1.0);CHKERRQ(ierr);
-  ierr = SNESSolve(snes,NULL,x);CHKERRQ(ierr);
-  ierr = VecView(x,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
-
-  VecDestroy(&x);  VecDestroy(&r);  SNESDestroy(&snes);  MatDestroy(&J);
-  return PetscFinalize();
-}
-//ENDMAIN
 

@@ -8,75 +8,12 @@ typedef struct {
     double    rho, M, alpha, beta;
     PetscBool noRinJ;
 } AppCtx;
+// ENDCTX
 
-double f_source(double x) {
-    return 0.0;
-}
-
-PetscErrorCode InitialAndExact(DMDALocalInfo *info, double *u0,
-                               double *uex, AppCtx *user) {
-    int    i;
-    double h = 1.0 / (info->mx-1), x;
-    for (i=info->xs; i<info->xs+info->xm; i++) {
-        x = h * i;
-        u0[i]  = user->alpha * (1.0 - x) + user->beta * x;
-        uex[i] = user->M * PetscPowReal(x + 1.0,4.0);
-    }
-    return 0;
-}
-//ENDCTX
-
-//STARTFUNCTIONS
-PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *u,
-                                 double *FF, AppCtx *user) {
-    int          i;
-    const double h = 1.0 / (info->mx-1);
-    double       x, R;
-    for (i=info->xs; i<info->xs+info->xm; i++) {
-        if (i == 0) {
-            FF[i] = u[i] - user->alpha;
-        } else if (i == info->mx-1) {
-            FF[i] = u[i] - user->beta;
-        } else {  // interior location
-            R = - user->rho * PetscSqrtReal(u[i]);
-            x = i * h;
-            FF[i] = - u[i+1] + 2.0 * u[i] - u[i-1]
-                    - h*h * (R + f_source(x));
-        }
-    }
-    return 0;
-}
-
-PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, double *u,
-                                 Mat J, Mat P, AppCtx *user) {
-    PetscErrorCode ierr;
-    int    i, col[3];
-    double h = 1.0 / (info->mx-1), dRdu, v[3];
-    for (i=info->xs; i<info->xs+info->xm; i++) {
-        if ((i == 0) | (i == info->mx-1)) {
-            v[0] = 1.0;
-            ierr = MatSetValues(P,1,&i,1,&i,v,INSERT_VALUES); CHKERRQ(ierr);
-        } else {
-            dRdu = - (user->rho / 2.0) / PetscSqrtReal(u[i]);
-            col[0] = i-1;  v[0] = - 1.0;
-            col[1] = i;
-            if (user->noRinJ)
-                v[1] = 2.0;
-            else
-                v[1] = 2.0 - h*h * dRdu;
-            col[2] = i+1;  v[2] = - 1.0;
-            ierr = MatSetValues(P,1,&i,3,col,v,INSERT_VALUES); CHKERRQ(ierr);
-        }
-    }
-    ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-    ierr = MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-    if (J != P) {
-        ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-        ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-    }
-    return 0;
-}
-//ENDFUNCTIONS
+extern double f_source(double);
+extern PetscErrorCode InitialAndExact(DMDALocalInfo*, double*, double*, AppCtx*);
+extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, double*, double*, AppCtx*);
+extern PetscErrorCode FormJacobianLocal(DMDALocalInfo*, double*, Mat, Mat, AppCtx*);
 
 //STARTMAIN
 int main(int argc,char **args) {
@@ -135,4 +72,72 @@ int main(int argc,char **args) {
   return PetscFinalize();
 }
 //ENDMAIN
+
+double f_source(double x) {
+    return 0.0;
+}
+
+//STARTFUNCTIONS
+PetscErrorCode InitialAndExact(DMDALocalInfo *info, double *u0,
+                               double *uex, AppCtx *user) {
+    int    i;
+    double h = 1.0 / (info->mx-1), x;
+    for (i=info->xs; i<info->xs+info->xm; i++) {
+        x = h * i;
+        u0[i]  = user->alpha * (1.0 - x) + user->beta * x;
+        uex[i] = user->M * PetscPowReal(x + 1.0,4.0);
+    }
+    return 0;
+}
+
+PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *u,
+                                 double *FF, AppCtx *user) {
+    int          i;
+    const double h = 1.0 / (info->mx-1);
+    double       x, R;
+    for (i=info->xs; i<info->xs+info->xm; i++) {
+        if (i == 0) {
+            FF[i] = u[i] - user->alpha;
+        } else if (i == info->mx-1) {
+            FF[i] = u[i] - user->beta;
+        } else {  // interior location
+            R = - user->rho * PetscSqrtReal(u[i]);
+            x = i * h;
+            FF[i] = - u[i+1] + 2.0 * u[i] - u[i-1]
+                    - h*h * (R + f_source(x));
+        }
+    }
+    return 0;
+}
+
+PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, double *u,
+                                 Mat J, Mat P, AppCtx *user) {
+    PetscErrorCode ierr;
+    int    i, col[3];
+    double h = 1.0 / (info->mx-1), dRdu, v[3];
+    for (i=info->xs; i<info->xs+info->xm; i++) {
+        if ((i == 0) | (i == info->mx-1)) {
+            v[0] = 1.0;
+            ierr = MatSetValues(P,1,&i,1,&i,v,INSERT_VALUES); CHKERRQ(ierr);
+        } else {
+            dRdu = - (user->rho / 2.0) / PetscSqrtReal(u[i]);
+            col[0] = i-1;  v[0] = - 1.0;
+            col[1] = i;
+            if (user->noRinJ)
+                v[1] = 2.0;
+            else
+                v[1] = 2.0 - h*h * dRdu;
+            col[2] = i+1;  v[2] = - 1.0;
+            ierr = MatSetValues(P,1,&i,3,col,v,INSERT_VALUES); CHKERRQ(ierr);
+        }
+    }
+    ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+    ierr = MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+    if (J != P) {
+        ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+        ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    }
+    return 0;
+}
+//ENDFUNCTIONS
 

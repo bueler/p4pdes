@@ -4,44 +4,9 @@ static char help[] =
 
 #include <petsc.h>
 
-PetscErrorCode SetFromExact(double t, Vec y) {
-    double *ay;
-    VecGetArray(y,&ay);
-    ay[0] = t - sin(t);
-    ay[1] = 1.0 - cos(t);
-    VecRestoreArray(y,&ay);
-    return 0;
-}
-
-PetscErrorCode FormRHSFunction(TS ts, double t, Vec y, Vec g, void *ptr) {
-    const double *ay;
-    double       *ag;
-    VecGetArrayRead(y,&ay);
-    VecGetArray(g,&ag);
-    ag[0] = ay[1];            // = G_1(t,y)
-    ag[1] = - ay[0] + t;      // = G_2(t,y)
-    VecRestoreArrayRead(y,&ay);
-    VecRestoreArray(g,&ag);
-    return 0;
-}
-
-//STARTJACOBIAN
-PetscErrorCode FormRHSJacobian(TS ts, double t, Vec y, Mat J, Mat P,
-                               void *ptr) {
-    PetscErrorCode ierr;
-    int    row[2] = {0, 1},  col[2] = {0, 1};
-    double v[4] = { 0.0, 1.0,
-                   -1.0, 0.0};
-    ierr = MatSetValues(P,2,row,2,col,v,INSERT_VALUES); CHKERRQ(ierr);
-    ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-    ierr = MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-    if (J != P) {
-        ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-        ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-    }
-    return 0;
-}
-//ENDJACOBIAN
+extern PetscErrorCode SetFromExact(double, Vec);
+extern PetscErrorCode FormRHSFunction(TS, double, Vec, Vec, void*);
+extern PetscErrorCode FormRHSJacobian(TS, double, Vec, Mat, Mat, void*);
 
 int main(int argc,char **argv) {
   PetscErrorCode ierr;
@@ -98,4 +63,43 @@ int main(int argc,char **argv) {
   VecDestroy(&y);  VecDestroy(&yexact);  TSDestroy(&ts);
   return PetscFinalize();
 }
+
+PetscErrorCode SetFromExact(double t, Vec y) {
+    double *ay;
+    VecGetArray(y,&ay);
+    ay[0] = t - sin(t);
+    ay[1] = 1.0 - cos(t);
+    VecRestoreArray(y,&ay);
+    return 0;
+}
+
+PetscErrorCode FormRHSFunction(TS ts, double t, Vec y, Vec g, void *ptr) {
+    const double *ay;
+    double       *ag;
+    VecGetArrayRead(y,&ay);
+    VecGetArray(g,&ag);
+    ag[0] = ay[1];            // = G_1(t,y)
+    ag[1] = - ay[0] + t;      // = G_2(t,y)
+    VecRestoreArrayRead(y,&ay);
+    VecRestoreArray(g,&ag);
+    return 0;
+}
+
+//STARTJACOBIAN
+PetscErrorCode FormRHSJacobian(TS ts, double t, Vec y, Mat J, Mat P,
+                               void *ptr) {
+    PetscErrorCode ierr;
+    int    row[2] = {0, 1},  col[2] = {0, 1};
+    double v[4] = { 0.0, 1.0,
+                   -1.0, 0.0};
+    ierr = MatSetValues(P,2,row,2,col,v,INSERT_VALUES); CHKERRQ(ierr);
+    ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    ierr = MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    if (J != P) {
+        ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+        ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    }
+    return 0;
+}
+//ENDJACOBIAN
 

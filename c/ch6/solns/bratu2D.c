@@ -39,15 +39,111 @@ typedef struct {
     int       residualcount, ngscount;
 } BratuCtx;
 
-double g_zero(double x, double y, double z, void *ctx) {
+static double g_zero(double x, double y, double z, void *ctx) {
     return 0.0;
 }
 
-double g_liouville(double x, double y, double z, void *ctx) {
+static double g_liouville(double x, double y, double z, void *ctx) {
     double r2 = (x + 1.0) * (x + 1.0) + (y + 1.0) * (y + 1.0),
            qq = r2 * r2 + 1.0,
            omega = r2 / (qq * qq);
     return PetscLogReal(32.0 * omega);
+}
+
+extern PetscErrorCode FormUExact(DMDALocalInfo*, Vec, PoissonCtx*);
+extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, double **,
+                                        double**, PoissonCtx*);
+extern PetscErrorCode NonlinearGS(SNES, Vec, Vec, void*);
+
+int main(int argc,char **argv) {
+    PetscErrorCode ierr;
+    DM             da, da_after;
+    SNES           snes;
+    Vec            u, uexact;
+    PoissonCtx     user;
+    BratuCtx       bctx;
+    DMDALocalInfo  info;
+    PetscBool      showcounts = PETSC_FALSE;
+    PetscLogDouble flops;
+    double         errinf;
+
+    PetscInitialize(&argc,&argv,NULL,help);
+    user.Lx = 1.0;
+    user.Ly = 1.0;
+    user.Lz = 1.0;
+    user.cx = 1.0;
+    user.cy = 1.0;
+    user.cz = 1.0;
+    user.g_bdry = &g_zero;
+    bctx.lambda = 1.0;
+    bctx.exact = PETSC_FALSE;
+    bctx.residualcount = 0;
+    bctx.ngscount = 0;
+    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"lb_","Liouville-Bratu equation solver options",""); CHKERRQ(ierr);
+    ierr = PetscOptionsReal("-lambda","coefficient of e^u (reaction) term",
+                            "bratu2D.c",bctx.lambda,&(bctx.lambda),NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-exact","use case of Liouville exact solution",
+                            "bratu2D.c",bctx.exact,&(bctx.exact),NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-showcounts","at finish, print numbers of calls to call-back functions",
+                            "bratu2D.c",showcounts,&showcounts,NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+    if (bctx.exact) {
+        if (bctx.lambda != 1.0) {
+            SETERRQ(PETSC_COMM_WORLD,1,"Liouville exact solution only implemented for lambda = 1.0\n");
+        }
+        user.g_bdry = &g_liouville;
+    }
+    user.addctx = &bctx;
+
+    ierr = DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
+                        DMDA_STENCIL_BOX,  // contrast with fish2
+                        3,3,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&da); CHKERRQ(ierr);
+    ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
+    ierr = DMSetFromOptions(da); CHKERRQ(ierr);
+    ierr = DMSetUp(da); CHKERRQ(ierr);  // this must be called BEFORE SetUniformCoordinates
+    ierr = DMDASetUniformCoordinates(da,0.0,1.0,0.0,1.0,0.0,1.0); CHKERRQ(ierr);
+
+    ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
+    ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
+    ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
+               (DMDASNESFunction)FormFunctionLocal,&user); CHKERRQ(ierr);
+    ierr = SNESSetNGS(snes,NonlinearGS,&user); CHKERRQ(ierr);
+    // this is the Jacobian of the Poisson equation, thus ONLY APPROXIMATE
+    //     ... consider using -snes_fd_color or -snes_mf_operator
+    ierr = DMDASNESSetJacobianLocal(da,
+               (DMDASNESJacobian)Poisson2DJacobianLocal,&user); CHKERRQ(ierr);
+    ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
+
+    ierr = DMGetGlobalVector(da,&u); CHKERRQ(ierr);
+    ierr = VecSet(u,0.0); CHKERRQ(ierr);  // initialize to zero
+    ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
+    ierr = DMRestoreGlobalVector(da,&u);CHKERRQ(ierr);
+    ierr = DMDestroy(&da); CHKERRQ(ierr);
+
+    if (showcounts) {
+        ierr = PetscGetFlops(&flops); CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_WORLD,"flops = %.3e,  residual calls = %d,  NGS calls = %d\n",
+                           flops,bctx.residualcount,bctx.ngscount); CHKERRQ(ierr);
+    }
+
+    ierr = SNESGetDM(snes,&da_after); CHKERRQ(ierr);
+    ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
+    if (bctx.exact) {
+        ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr);  // SNES owns u; we do not destroy it
+        ierr = VecDuplicate(u,&uexact); CHKERRQ(ierr);
+        ierr = FormUExact(&info,uexact,&user); CHKERRQ(ierr);
+        ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
+        ierr = VecDestroy(&uexact); CHKERRQ(ierr);  // no longer needed
+        ierr = VecNorm(u,NORM_INFINITY,&errinf); CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_WORLD,
+                "done on %d x %d grid:   error |u-uexact|_inf = %.3e\n",
+                info.mx,info.my,errinf); CHKERRQ(ierr);
+    } else {
+        ierr = PetscPrintf(PETSC_COMM_WORLD,"done on %d x %d grid ...\n",info.mx,info.my); CHKERRQ(ierr);
+    }
+
+    ierr = SNESDestroy(&snes); CHKERRQ(ierr);
+    return PetscFinalize();
 }
 
 PetscErrorCode FormUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
@@ -187,96 +283,5 @@ PetscErrorCode NonlinearGS(SNES snes, Vec u, Vec b, void *ctx) {
     ierr = PetscLogFlops(21.0 * totalits); CHKERRQ(ierr);
     (bctx->ngscount)++;
     return 0;
-}
-
-int main(int argc,char **argv) {
-    PetscErrorCode ierr;
-    DM             da, da_after;
-    SNES           snes;
-    Vec            u, uexact;
-    PoissonCtx     user;
-    BratuCtx       bctx;
-    DMDALocalInfo  info;
-    PetscBool      showcounts = PETSC_FALSE;
-    PetscLogDouble flops;
-    double         errinf;
-
-    PetscInitialize(&argc,&argv,NULL,help);
-    user.Lx = 1.0;
-    user.Ly = 1.0;
-    user.Lz = 1.0;
-    user.cx = 1.0;
-    user.cy = 1.0;
-    user.cz = 1.0;
-    user.g_bdry = &g_zero;
-    bctx.lambda = 1.0;
-    bctx.exact = PETSC_FALSE;
-    bctx.residualcount = 0;
-    bctx.ngscount = 0;
-    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"lb_","Liouville-Bratu equation solver options",""); CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-lambda","coefficient of e^u (reaction) term",
-                            "bratu2D.c",bctx.lambda,&(bctx.lambda),NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-exact","use case of Liouville exact solution",
-                            "bratu2D.c",bctx.exact,&(bctx.exact),NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-showcounts","at finish, print numbers of calls to call-back functions",
-                            "bratu2D.c",showcounts,&showcounts,NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsEnd(); CHKERRQ(ierr);
-    if (bctx.exact) {
-        if (bctx.lambda != 1.0) {
-            SETERRQ(PETSC_COMM_WORLD,1,"Liouville exact solution only implemented for lambda = 1.0\n");
-        }
-        user.g_bdry = &g_liouville;
-    }
-    user.addctx = &bctx;
-
-    ierr = DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
-                        DMDA_STENCIL_BOX,  // contrast with fish2
-                        3,3,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&da); CHKERRQ(ierr);
-    ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
-    ierr = DMSetFromOptions(da); CHKERRQ(ierr);
-    ierr = DMSetUp(da); CHKERRQ(ierr);  // this must be called BEFORE SetUniformCoordinates
-    ierr = DMDASetUniformCoordinates(da,0.0,1.0,0.0,1.0,0.0,1.0); CHKERRQ(ierr);
-
-    ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
-    ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
-    ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
-               (DMDASNESFunction)FormFunctionLocal,&user); CHKERRQ(ierr);
-    ierr = SNESSetNGS(snes,NonlinearGS,&user); CHKERRQ(ierr);
-    // this is the Jacobian of the Poisson equation, thus ONLY APPROXIMATE
-    //     ... consider using -snes_fd_color or -snes_mf_operator
-    ierr = DMDASNESSetJacobianLocal(da,
-               (DMDASNESJacobian)Poisson2DJacobianLocal,&user); CHKERRQ(ierr);
-    ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
-
-    ierr = DMGetGlobalVector(da,&u); CHKERRQ(ierr);
-    ierr = VecSet(u,0.0); CHKERRQ(ierr);  // initialize to zero
-    ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
-    ierr = DMRestoreGlobalVector(da,&u);CHKERRQ(ierr);
-    ierr = DMDestroy(&da); CHKERRQ(ierr);
-
-    if (showcounts) {
-        ierr = PetscGetFlops(&flops); CHKERRQ(ierr);
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"flops = %.3e,  residual calls = %d,  NGS calls = %d\n",
-                           flops,bctx.residualcount,bctx.ngscount); CHKERRQ(ierr);
-    }
-
-    ierr = SNESGetDM(snes,&da_after); CHKERRQ(ierr);
-    ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
-    if (bctx.exact) {
-        ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr);  // SNES owns u; we do not destroy it
-        ierr = VecDuplicate(u,&uexact); CHKERRQ(ierr);
-        ierr = FormUExact(&info,uexact,&user); CHKERRQ(ierr);
-        ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
-        ierr = VecDestroy(&uexact); CHKERRQ(ierr);  // no longer needed
-        ierr = VecNorm(u,NORM_INFINITY,&errinf); CHKERRQ(ierr);
-        ierr = PetscPrintf(PETSC_COMM_WORLD,
-                "done on %d x %d grid:   error |u-uexact|_inf = %.3e\n",
-                info.mx,info.my,errinf); CHKERRQ(ierr);
-    } else {
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"done on %d x %d grid ...\n",info.mx,info.my); CHKERRQ(ierr);
-    }
-
-    ierr = SNESDestroy(&snes); CHKERRQ(ierr);
-    return PetscFinalize();
 }
 

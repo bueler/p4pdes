@@ -1,5 +1,4 @@
-static char help[] =
-"Siff ODE system.  Compare odejac.c.\n\n";
+static char help[] = "Stiff ODE system.  Compare odejac.c.\n\n";
 
 #include <petsc.h>
 
@@ -13,35 +12,8 @@ RESULT:
 [-1.383623   -0.29588643  0.        ]
 */
 
-PetscErrorCode FormRHSFunction(TS ts, double t, Vec y, Vec g, void *ptr) {
-    const double *ay;
-    double       *ag;
-    VecGetArrayRead(y,&ay);
-    VecGetArray(g,&ag);
-    ag[0] = ay[1];
-    ag[1] = - ay[0] + 0.1 * ay[2];
-    ag[2] = - 101.0 * ay[2];
-    VecRestoreArrayRead(y,&ay);
-    VecRestoreArray(g,&ag);
-    return 0;
-}
-
-PetscErrorCode FormRHSJacobian(TS ts, double t, Vec y, Mat J, Mat P,
-                               void *ptr) {
-    PetscErrorCode ierr;
-    int    j[3] = {0, 1, 2};
-    double v[9] = { 0.0, 1.0, 0.0,
-                   -1.0, 0.0, 0.1,
-                    0.0, 0.0, -101.0};
-    ierr = MatSetValues(P,3,j,3,j,v,INSERT_VALUES); CHKERRQ(ierr);
-    ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-    ierr = MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-    if (J != P) {
-        ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-        ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-    }
-    return 0;
-}
+extern PetscErrorCode FormRHSFunction(TS, double, Vec, Vec, void*);
+PetscErrorCode FormRHSJacobian(TS, double, Vec, Mat, Mat, void*);
 
 int main(int argc,char **argv) {
   PetscErrorCode ierr;
@@ -84,5 +56,35 @@ int main(int argc,char **argv) {
   VecDestroy(&y);  TSDestroy(&ts);  MatDestroy(&J);
   PetscFinalize();
   return 0;
+}
+
+PetscErrorCode FormRHSFunction(TS ts, double t, Vec y, Vec g, void *ptr) {
+    const double *ay;
+    double       *ag;
+    VecGetArrayRead(y,&ay);
+    VecGetArray(g,&ag);
+    ag[0] = ay[1];
+    ag[1] = - ay[0] + 0.1 * ay[2];
+    ag[2] = - 101.0 * ay[2];
+    VecRestoreArrayRead(y,&ay);
+    VecRestoreArray(g,&ag);
+    return 0;
+}
+
+PetscErrorCode FormRHSJacobian(TS ts, double t, Vec y, Mat J, Mat P,
+                               void *ptr) {
+    PetscErrorCode ierr;
+    int    j[3] = {0, 1, 2};
+    double v[9] = { 0.0, 1.0, 0.0,
+                   -1.0, 0.0, 0.1,
+                    0.0, 0.0, -101.0};
+    ierr = MatSetValues(P,3,j,3,j,v,INSERT_VALUES); CHKERRQ(ierr);
+    ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    ierr = MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    if (J != P) {
+        ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+        ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    }
+    return 0;
 }
 

@@ -66,45 +66,44 @@ with e.g. -ksp_monitor_solution :foo.m:ascii_matlab
 #include <petsc.h>
 #include "poissonfunctions.h"
 
-
 // exact solutions  u(x,y),  for boundary condition and error calculation
 
-double u_exact_1Dmanupoly(double x, double y, double z, void *ctx) {
+static double u_exact_1Dmanupoly(double x, double y, double z, void *ctx) {
     return x*x * (1.0 - x*x);
 }
 
-double u_exact_2Dmanupoly(double x, double y, double z, void *ctx) {
+static double u_exact_2Dmanupoly(double x, double y, double z, void *ctx) {
     return x*x * (1.0 - x*x) * y*y *(y*y - 1.0);
 }
 
-double u_exact_3Dmanupoly(double x, double y, double z, void *ctx) {
+static double u_exact_3Dmanupoly(double x, double y, double z, void *ctx) {
     return x*x * (1.0 - x*x) * y*y * (y*y - 1.0) * z*z * (z*z - 1.0);
 }
 
-double u_exact_1Dmanuexp(double x, double y, double z, void *ctx) {
+static double u_exact_1Dmanuexp(double x, double y, double z, void *ctx) {
     return - exp(x);
 }
 
-double u_exact_2Dmanuexp(double x, double y, double z, void *ctx) {
+static double u_exact_2Dmanuexp(double x, double y, double z, void *ctx) {
     return - x * exp(y);
 }
 
-double u_exact_3Dmanuexp(double x, double y, double z, void *ctx) {
+static double u_exact_3Dmanuexp(double x, double y, double z, void *ctx) {
     return - x * exp(y + z);
 }
 
-double zero(double x, double y, double z, void *ctx) {
+static double zero(double x, double y, double z, void *ctx) {
     return 0.0;
 }
 
 // right-hand-side functions  f(x,y) = - laplacian u
 
-double f_rhs_1Dmanupoly(double x, double y, double z, void *ctx) {
+static double f_rhs_1Dmanupoly(double x, double y, double z, void *ctx) {
     PoissonCtx* user = (PoissonCtx*)ctx;
     return user->cx * 12.0 * x*x - 2.0;
 }
 
-double f_rhs_2Dmanupoly(double x, double y, double z, void *ctx) {
+static double f_rhs_2Dmanupoly(double x, double y, double z, void *ctx) {
     PoissonCtx* user = (PoissonCtx*)ctx;
     double aa, bb, ddaa, ddbb;
     aa = x*x * (1.0 - x*x);
@@ -114,7 +113,7 @@ double f_rhs_2Dmanupoly(double x, double y, double z, void *ctx) {
     return - (user->cx * ddaa * bb + user->cy * aa * ddbb);
 }
 
-double f_rhs_3Dmanupoly(double x, double y, double z, void *ctx) {
+static double f_rhs_3Dmanupoly(double x, double y, double z, void *ctx) {
     PoissonCtx* user = (PoissonCtx*)ctx;
     double aa, bb, cc, ddaa, ddbb, ddcc;
     aa = x*x * (1.0 - x*x);
@@ -126,77 +125,23 @@ double f_rhs_3Dmanupoly(double x, double y, double z, void *ctx) {
     return - (user->cx * ddaa * bb * cc + user->cy * aa * ddbb * cc + user->cz * aa * bb * ddcc);
 }
 
-double f_rhs_1Dmanuexp(double x, double y, double z, void *ctx) {
+static double f_rhs_1Dmanuexp(double x, double y, double z, void *ctx) {
     return exp(x);
 }
 
-double f_rhs_2Dmanuexp(double x, double y, double z, void *ctx) {
+static double f_rhs_2Dmanuexp(double x, double y, double z, void *ctx) {
     return x * exp(y);  // note  f = - (u_xx + u_yy) = - u
 }
 
-double f_rhs_3Dmanuexp(double x, double y, double z, void *ctx) {
+static double f_rhs_3Dmanuexp(double x, double y, double z, void *ctx) {
     return 2.0 * x * exp(y + z);  // note  f = - laplacian u = - 2 u
 }
 
-
-// functions simply to put u_exact()=g_bdry() into a grid; irritatingly-dimension-dependent
-
-PetscErrorCode Form1DUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
-  PetscErrorCode ierr;
-  int          i;
-  double       xmax[1], xmin[1], hx, x, *au;
-  ierr = DMDAGetBoundingBox(info->da,xmin,xmax); CHKERRQ(ierr);
-  hx = (xmax[0] - xmin[0]) / (info->mx - 1);
-  ierr = DMDAVecGetArray(info->da, u, &au);CHKERRQ(ierr);
-  for (i=info->xs; i<info->xs+info->xm; i++) {
-      x = xmin[0] + i * hx;
-      au[i] = user->g_bdry(x,0.0,0.0,user);
-  }
-  ierr = DMDAVecRestoreArray(info->da, u, &au);CHKERRQ(ierr);
-  return 0;
-}
-
-PetscErrorCode Form2DUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
-    PetscErrorCode ierr;
-    int     i, j;
-    double  xymin[2], xymax[2], hx, hy, x, y, **au;
-    ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
-    hx = (xymax[0] - xymin[0]) / (info->mx - 1);
-    hy = (xymax[1] - xymin[1]) / (info->my - 1);
-    ierr = DMDAVecGetArray(info->da, u, &au);CHKERRQ(ierr);
-    for (j=info->ys; j<info->ys+info->ym; j++) {
-        y = xymin[1] + j * hy;
-        for (i=info->xs; i<info->xs+info->xm; i++) {
-            x = xymin[0] + i * hx;
-            au[j][i] = user->g_bdry(x,y,0.0,user);
-        }
-    }
-    ierr = DMDAVecRestoreArray(info->da, u, &au);CHKERRQ(ierr);
-    return 0;
-}
-
-PetscErrorCode Form3DUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
-    PetscErrorCode ierr;
-    int    i, j, k;
-    double xyzmin[3], xyzmax[3], hx, hy, hz, x, y, z, ***au;
-    ierr = DMDAGetBoundingBox(info->da,xyzmin,xyzmax); CHKERRQ(ierr);
-    hx = (xyzmax[0] - xyzmin[0]) / (info->mx - 1);
-    hy = (xyzmax[1] - xyzmin[1]) / (info->my - 1);
-    hz = (xyzmax[2] - xyzmin[2]) / (info->mz - 1);
-    ierr = DMDAVecGetArray(info->da, u, &au);CHKERRQ(ierr);
-    for (k=info->zs; k<info->zs+info->zm; k++) {
-        z = xyzmin[2] + k * hz;
-        for (j=info->ys; j<info->ys+info->ym; j++) {
-            y = xyzmin[1] + j * hy;
-            for (i=info->xs; i<info->xs+info->xm; i++) {
-                x = xyzmin[0] + i * hx;
-                au[k][j][i] = user->g_bdry(x,y,z,user);
-            }
-        }
-    }
-    ierr = DMDAVecRestoreArray(info->da, u, &au);CHKERRQ(ierr);
-    return 0;
-}
+// functions simply to put u_exact()=g_bdry() into a grid
+// these are irritatingly-dimension-dependent inside ...
+extern PetscErrorCode Form1DUExact(DMDALocalInfo*, Vec, PoissonCtx*);
+extern PetscErrorCode Form2DUExact(DMDALocalInfo*, Vec, PoissonCtx*);
+extern PetscErrorCode Form3DUExact(DMDALocalInfo*, Vec, PoissonCtx*);
 
 //STARTPTRARRAYS
 // arrays of pointers to functions:   ..._ptr[DIMS]
@@ -215,7 +160,6 @@ static const char* ProblemTypes[] = {"manupoly","manuexp","zero",
                                      "ProblemType", "", NULL};
 
 // more arrays of pointers to functions:   ..._ptr[DIMS][PROBLEMS]
-
 static void* g_bdry_ptr[3][3]
     = {{&u_exact_1Dmanupoly, &u_exact_1Dmanuexp, &zero},
        {&u_exact_2Dmanupoly, &u_exact_2Dmanuexp, &zero},
@@ -378,5 +322,62 @@ int main(int argc,char **argv) {
     // destroy what we explicitly "Create"ed
     ierr = SNESDestroy(&snes); CHKERRQ(ierr);
     return PetscFinalize();
+}
+
+PetscErrorCode Form1DUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
+  PetscErrorCode ierr;
+  int          i;
+  double       xmax[1], xmin[1], hx, x, *au;
+  ierr = DMDAGetBoundingBox(info->da,xmin,xmax); CHKERRQ(ierr);
+  hx = (xmax[0] - xmin[0]) / (info->mx - 1);
+  ierr = DMDAVecGetArray(info->da, u, &au);CHKERRQ(ierr);
+  for (i=info->xs; i<info->xs+info->xm; i++) {
+      x = xmin[0] + i * hx;
+      au[i] = user->g_bdry(x,0.0,0.0,user);
+  }
+  ierr = DMDAVecRestoreArray(info->da, u, &au);CHKERRQ(ierr);
+  return 0;
+}
+
+PetscErrorCode Form2DUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
+    PetscErrorCode ierr;
+    int     i, j;
+    double  xymin[2], xymax[2], hx, hy, x, y, **au;
+    ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
+    hx = (xymax[0] - xymin[0]) / (info->mx - 1);
+    hy = (xymax[1] - xymin[1]) / (info->my - 1);
+    ierr = DMDAVecGetArray(info->da, u, &au);CHKERRQ(ierr);
+    for (j=info->ys; j<info->ys+info->ym; j++) {
+        y = xymin[1] + j * hy;
+        for (i=info->xs; i<info->xs+info->xm; i++) {
+            x = xymin[0] + i * hx;
+            au[j][i] = user->g_bdry(x,y,0.0,user);
+        }
+    }
+    ierr = DMDAVecRestoreArray(info->da, u, &au);CHKERRQ(ierr);
+    return 0;
+}
+
+PetscErrorCode Form3DUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
+    PetscErrorCode ierr;
+    int    i, j, k;
+    double xyzmin[3], xyzmax[3], hx, hy, hz, x, y, z, ***au;
+    ierr = DMDAGetBoundingBox(info->da,xyzmin,xyzmax); CHKERRQ(ierr);
+    hx = (xyzmax[0] - xyzmin[0]) / (info->mx - 1);
+    hy = (xyzmax[1] - xyzmin[1]) / (info->my - 1);
+    hz = (xyzmax[2] - xyzmin[2]) / (info->mz - 1);
+    ierr = DMDAVecGetArray(info->da, u, &au);CHKERRQ(ierr);
+    for (k=info->zs; k<info->zs+info->zm; k++) {
+        z = xyzmin[2] + k * hz;
+        for (j=info->ys; j<info->ys+info->ym; j++) {
+            y = xyzmin[1] + j * hy;
+            for (i=info->xs; i<info->xs+info->xm; i++) {
+                x = xyzmin[0] + i * hx;
+                au[k][j][i] = user->g_bdry(x,y,z,user);
+            }
+        }
+    }
+    ierr = DMDAVecRestoreArray(info->da, u, &au);CHKERRQ(ierr);
+    return 0;
 }
 

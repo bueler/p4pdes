@@ -3,6 +3,50 @@ static char help[] = "Solves a 1D Poisson problem with DMDA and KSP.\n\n";
 
 #include <petsc.h>
 
+extern PetscErrorCode formdirichletlaplacian(DM, Mat);
+extern PetscErrorCode formExactAndRHS(DM, Vec, Vec);
+
+int main(int argc,char **args) {
+  PetscErrorCode ierr;
+  DM             da;
+  KSP            ksp;
+  Mat            A;
+  Vec            b,u,uexact;
+  PetscReal      errnorm;
+  DMDALocalInfo  info;
+
+  PetscInitialize(&argc,&args,(char*)0,help);
+  ierr = DMDACreate1d(PETSC_COMM_WORLD,
+               DM_BOUNDARY_NONE,
+               9,1,1,NULL,
+               &da); CHKERRQ(ierr);
+  ierr = DMSetFromOptions(da); CHKERRQ(ierr);
+  ierr = DMSetUp(da); CHKERRQ(ierr);
+  ierr = DMDASetUniformCoordinates(da,0.0,1.0,-1.0,-1.0,-1.0,-1.0); CHKERRQ(ierr);
+  ierr = DMCreateMatrix(da,&A);CHKERRQ(ierr);
+  ierr = MatSetOptionsPrefix(A,"a_"); CHKERRQ(ierr);
+  ierr = MatSetFromOptions(A); CHKERRQ(ierr);
+  ierr = DMCreateGlobalVector(da,&b);CHKERRQ(ierr);
+  ierr = VecDuplicate(b,&u); CHKERRQ(ierr);
+  ierr = VecDuplicate(b,&uexact); CHKERRQ(ierr);
+  ierr = formExactAndRHS(da,uexact,b); CHKERRQ(ierr);
+  ierr = formdirichletlaplacian(da,A); CHKERRQ(ierr);
+  ierr = KSPCreate(PETSC_COMM_WORLD,&ksp); CHKERRQ(ierr);
+  ierr = KSPSetOperators(ksp,A,A); CHKERRQ(ierr);
+  ierr = KSPSetFromOptions(ksp); CHKERRQ(ierr);
+  ierr = KSPSolve(ksp,b,u); CHKERRQ(ierr);
+  ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uxact
+  ierr = VecNorm(u,NORM_INFINITY,&errnorm); CHKERRQ(ierr);
+  ierr = DMDAGetLocalInfo(da,&info);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,
+             "on %d point grid:  error |u-uexact|_inf = %g\n",
+             info.mx,errnorm); CHKERRQ(ierr);
+  VecDestroy(&u);  VecDestroy(&uexact);  VecDestroy(&b);
+  MatDestroy(&A);  KSPDestroy(&ksp);  DMDestroy(&da);
+  PetscFinalize();
+  return 0;
+}
+
 PetscErrorCode formdirichletlaplacian(DM da, Mat A) {
     PetscErrorCode ierr;
     DMDALocalInfo  info;
@@ -53,47 +97,6 @@ PetscErrorCode formExactAndRHS(DM da, Vec uexact, Vec b) {
   ierr = VecAssemblyEnd(b); CHKERRQ(ierr);
   ierr = VecAssemblyBegin(uexact); CHKERRQ(ierr);
   ierr = VecAssemblyEnd(uexact); CHKERRQ(ierr);
-  return 0;
-}
-
-int main(int argc,char **args) {
-  PetscErrorCode ierr;
-  DM             da;
-  KSP            ksp;
-  Mat            A;
-  Vec            b,u,uexact;
-  PetscReal      errnorm;
-  DMDALocalInfo  info;
-
-  PetscInitialize(&argc,&args,(char*)0,help);
-  ierr = DMDACreate1d(PETSC_COMM_WORLD,
-               DM_BOUNDARY_NONE,
-               9,1,1,NULL,
-               &da); CHKERRQ(ierr);
-  ierr = DMSetFromOptions(da); CHKERRQ(ierr);
-  ierr = DMSetUp(da); CHKERRQ(ierr);
-  ierr = DMDASetUniformCoordinates(da,0.0,1.0,-1.0,-1.0,-1.0,-1.0); CHKERRQ(ierr);
-  ierr = DMCreateMatrix(da,&A);CHKERRQ(ierr);
-  ierr = MatSetOptionsPrefix(A,"a_"); CHKERRQ(ierr);
-  ierr = MatSetFromOptions(A); CHKERRQ(ierr);
-  ierr = DMCreateGlobalVector(da,&b);CHKERRQ(ierr);
-  ierr = VecDuplicate(b,&u); CHKERRQ(ierr);
-  ierr = VecDuplicate(b,&uexact); CHKERRQ(ierr);
-  ierr = formExactAndRHS(da,uexact,b); CHKERRQ(ierr);
-  ierr = formdirichletlaplacian(da,A); CHKERRQ(ierr);
-  ierr = KSPCreate(PETSC_COMM_WORLD,&ksp); CHKERRQ(ierr);
-  ierr = KSPSetOperators(ksp,A,A); CHKERRQ(ierr);
-  ierr = KSPSetFromOptions(ksp); CHKERRQ(ierr);
-  ierr = KSPSolve(ksp,b,u); CHKERRQ(ierr);
-  ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uxact
-  ierr = VecNorm(u,NORM_INFINITY,&errnorm); CHKERRQ(ierr);
-  ierr = DMDAGetLocalInfo(da,&info);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,
-             "on %d point grid:  error |u-uexact|_inf = %g\n",
-             info.mx,errnorm); CHKERRQ(ierr);
-  VecDestroy(&u);  VecDestroy(&uexact);  VecDestroy(&b);
-  MatDestroy(&A);  KSPDestroy(&ksp);  DMDestroy(&da);
-  PetscFinalize();
   return 0;
 }
 

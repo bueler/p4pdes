@@ -8,28 +8,8 @@ static char help[] =
 
 #include <petsc.h>
 
-//STARTCALLBACKS
-PetscErrorCode SetFromExact(double t, Vec y) {
-    double *ay;
-    VecGetArray(y,&ay);
-    ay[0] = t - sin(t);
-    ay[1] = 1.0 - cos(t);
-    VecRestoreArray(y,&ay);
-    return 0;
-}
-
-PetscErrorCode FormRHSFunction(TS ts, double t, Vec y, Vec g, void *ptr) {
-    const double *ay;
-    double       *ag;
-    VecGetArrayRead(y,&ay);
-    VecGetArray(g,&ag);
-    ag[0] = ay[1];            // = G_1(t,y)
-    ag[1] = - ay[0] + t;      // = G_2(t,y)
-    VecRestoreArrayRead(y,&ay);
-    VecRestoreArray(g,&ag);
-    return 0;
-}
-//ENDCALLBACKS
+extern PetscErrorCode SetFromExact(double, Vec);
+extern PetscErrorCode FormRHSFunction(TS, double, Vec, Vec, void*);
 
 //STARTMAIN
 int main(int argc,char **argv) {
@@ -78,4 +58,27 @@ int main(int argc,char **argv) {
   return PetscFinalize();
 }
 //ENDMAIN
+
+//STARTCALLBACKS
+PetscErrorCode SetFromExact(double t, Vec y) {
+    double *ay;
+    VecGetArray(y,&ay);
+    ay[0] = t - sin(t);
+    ay[1] = 1.0 - cos(t);
+    VecRestoreArray(y,&ay);
+    return 0;
+}
+
+PetscErrorCode FormRHSFunction(TS ts, double t, Vec y, Vec g, void *ptr) {
+    const double *ay;
+    double       *ag;
+    VecGetArrayRead(y,&ay);
+    VecGetArray(g,&ag);
+    ag[0] = ay[1];            // = G_1(t,y)
+    ag[1] = - ay[0] + t;      // = G_2(t,y)
+    VecRestoreArrayRead(y,&ay);
+    VecRestoreArray(g,&ag);
+    return 0;
+}
+//ENDCALLBACKS
 
