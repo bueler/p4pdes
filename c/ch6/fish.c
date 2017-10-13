@@ -4,55 +4,32 @@ static char help[] =
 "Dirichlet boundary conditions on unit square.  Three different problems\n"
 "where exact solution is known.  Uses DMDA and SNES.  Multigrid-capable\n"
 "because call-backs fully-rediscretize for the supplied grid.  Defaults\n"
-"to 2D.\n\n";
-
-
-/* these are linear problems, consider adding:
-    -snes_type ksponly -ksp_rtol 1.0e-12
-*/
-
-/* compare whether rediscretization happens at each level (former) or Galerkin grid-
-transfer operators are used (latter)
-$ ./fish -fsh_problem manupoly -da_refine 4 -pc_type mg -snes_monitor
-$ ./fish -fsh_problem manupoly -da_refine 4 -pc_type mg -snes_monitor -pc_mg_galerkin
-*/
+"to 2D.  As the problem is linear, consider adding -snes_type ksponly.\n\n";
 
 /*
 choose linear solver for coarse grid, e.g.:
 $ ./fish -da_refine 4 -pc_type mg -mg_coarse_ksp_type cg -mg_coarse_pc_type jacobi -ksp_view|less
 default is preonly+lu
-*/
 
-/* see study/mgstudy.sh for multigrid parameter study */
+see study/mgstudy.sh for multigrid parameter study
 
-
-
-/* in 1D, generate .m files with solutions at levels:
+in 1D, generate .m files with solutions at all levels or at particular level:
 $ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -snes_monitor_solution ascii:u.m:ascii_matlab
-$ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -mg_levels_3_ksp_monitor_solution ascii:errlevel3.m:ascii_matlab
-$ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -mg_levels_2_ksp_monitor_solution ascii:errlevel2.m:ascii_matlab
 $ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -mg_levels_1_ksp_monitor_solution ascii:errlevel1.m:ascii_matlab
 
-because default -mg_coarse_ksp_type is preonly, without changing that we get nothing:
-$ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -mg_coarse_ksp_type cg -snes_monitor -ksp_converged_reason -mg_levels_ksp_monitor -mg_coarse_ksp_monitor|less
+generate .m for coarse grid; because default -mg_coarse_ksp_type is preonly, without changing that we get nothing:
 $ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -mg_coarse_ksp_type cg -mg_coarse_ksp_monitor_solution ascii:errcoarse.m:ascii_matlab
-*/
 
-/* in 1D, FD jacobian with coloring is actually faster:
+in 1D, FD jacobian with coloring is actually faster:
 $ timer ./fish -fsh_dim 1 -fsh_problem manupoly -snes_monitor -da_refine 16
 $ timer ./fish -fsh_dim 1 -fsh_problem manupoly -snes_monitor -da_refine 16 -snes_fd_color
 presumably the reason is that running code to assemble the jacobian is slower than the extra function evals
-*/
 
-/* in parallel (needed?), mg with -snes_fd_color exploits full rediscretization:
-$ mpiexec -n 2 ./fish -da_refine 4 -pc_type mg -snes_fd_color
+compare rediscretization at every level or use Galerkin coarse grid operator
+$ ./fish -da_refine 4 -pc_type mg -snes_monitor
+$ ./fish -da_refine 4 -pc_type mg -snes_monitor -pc_mg_galerkin
 
-compare with rediscretization at every level or use Galerkin coarse grid operator
-$ ./fish -fsh_dim 2 -da_refine 4 -pc_type mg -snes_monitor
-$ ./fish -fsh_dim 2 -da_refine 4 -pc_type mg -snes_monitor -pc_mg_galerkin
-*/
-
-/* to generate classical jacobi/gauss-seidel results, put f in a Vec and
+to generate classical jacobi/gauss-seidel results, put f in a Vec and
 add viewer for RHS:
    PetscViewer viewer;
    PetscViewerASCIIOpen(COMM,"rhs.m",&viewer);
