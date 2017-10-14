@@ -3,6 +3,7 @@ set -e
 
 # test one application of various multigrid cycles by looking at residual norm
 # reduction in 3D case
+
 #   * timings do not matter (but using --with-debugging=0 is convenient)
 #   * run as:
 #         $ ./cyclereductions > residuals.txt
@@ -28,15 +29,27 @@ function runcase() {
 }
 
 rm -f $TRANSCRIPT
+
 for INIT in "zeros" "random" ; do
     runcase multiplicative 2 $INIT "-pc_mg_cycle_type v"
     runcase multiplicative 2 $INIT "-pc_mg_cycle_type w"
     runcase multiplicative 1 $INIT "-pc_mg_cycle_type v -pc_mg_multiplicative_cycles 2"
     runcase multiplicative 1 $INIT "-pc_mg_cycle_type w -pc_mg_multiplicative_cycles 2"
-    runcase full 2 $INIT ""
-    runcase kaskade 4 $INIT ""
+    runcase full 2 $INIT "" ""
+    runcase kaskade 4 $INIT "" ""
 done
 
-#FIXME: test anisotropic at some point, with
-#   -fsh_problem manupoly -fsh_cx 0.01 -fsh_cz 100.0
+echo
+
+# test anisotropic 3D W cycles with manupoly problem that allows coefficients
+# cx,cy,cz to be arbitrary
+runcase multiplicative 2 random "-pc_mg_cycle_type w -fsh_problem manupoly"
+runcase multiplicative 2 random "-pc_mg_cycle_type w -fsh_problem manupoly -fsh_cx 0.5 -fsh_cz 2.0"
+runcase multiplicative 2 random "-pc_mg_cycle_type w -fsh_problem manupoly -fsh_cx 0.1 -fsh_cz 10.0"
+runcase multiplicative 2 random "-pc_mg_cycle_type w -fsh_problem manupoly -fsh_cx 0.01 -fsh_cz 100.0"
+runcase multiplicative 2 random "-pc_mg_cycle_type w -fsh_problem manupoly -fsh_cx 0.001 -fsh_cz 1000.0"
+runcase multiplicative 2 random "-pc_mg_cycle_type w -fsh_problem manupoly -fsh_cy 0.5 -fsh_cx 2.0"
+runcase multiplicative 2 random "-pc_mg_cycle_type w -fsh_problem manupoly -fsh_cy 0.1 -fsh_cx 10.0"
+runcase multiplicative 2 random "-pc_mg_cycle_type w -fsh_problem manupoly -fsh_cy 0.01 -fsh_cx 100.0"
+runcase multiplicative 2 random "-pc_mg_cycle_type w -fsh_problem manupoly -fsh_cy 0.001 -fsh_cx 1000.0"
 
