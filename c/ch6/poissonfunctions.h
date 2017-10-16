@@ -84,14 +84,13 @@ PetscErrorCode Poisson3DJacobianLocal(DMDALocalInfo *info, double ***au,
 
 /* The following function generates an initial iterate using either
   * zero
-  * a random function (no smoothness)
-  * an interpolant of the boundary function g (reasonably smooth)
+  * a random function (white noise; *no* smoothness)
 In addition, one can initialize either using the boundary function g for
 the boundary locations in the initial state, or not.                      */
 
-typedef enum {ZEROS, RANDOM, GINTERPOLANT} InitialType;
+typedef enum {ZEROS, RANDOM} InitialType;
 
-PetscErrorCode InitialState(DMDALocalInfo *info, InitialType it, PetscBool gbdry,
+PetscErrorCode InitialState(DM da, InitialType it, PetscBool gbdry,
                             Vec u, PoissonCtx *user);
 
 #endif

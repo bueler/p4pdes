@@ -2,13 +2,13 @@ static char help[] =
 "Structured-grid minimal surface equation in 2D.  Option prefix mse_.\n"
 "Solves\n"
 "            /         nabla u         \\ \n"
-"  - nabla . | ----------------------- | = f(x,y)\n"
+"  - nabla . | ----------------------- | = 0\n"
 "            \\  sqrt(1 + |nabla u|^2)  / \n"
 "on the unit square [0,1]x[0,1], subject to Dirichlet boundary conditions\n"
-"u = g(x,y).  Main example has \"tent\" boundary condition.  Nonzero RHS is\n"
-"only used in an optional manufactured solution.  Re-uses of Jacobian from\n"
-"Poisson equation (see fish2.c) as preconditioner; this is suitable only for\n"
-"low-amplitude data (g and f).  Multigrid-capable.\n\n";
+"u = g(x,y).  Implemented boundary conditions include catenoid (with exact\n"
+"solution) and \"tent\" cases.  Re-uses Jacobian from Poisson equation\n"
+"as preconditioner; this is suitable only for low-amplitude g.\n"
+"Multigrid-capable.\n\n";
 
 /* 
 snes_fd_color is 10 times faster than snes_mf_operator:
@@ -37,11 +37,12 @@ but -snes_grid_sequence is much better:
 $ timer ./minimal -snes_fd_color -snes_converged_reason -snes_grid_sequence 8 -ksp_type cg -pc_type mg
 is 15 seconds
 
-note also similar performance for fish2 and for minimal -mse_laplace
+-snes_grid_sequence is effective when nonlinearity is strong (default H=1 is
+already strong!) and for getting into domain of convergence in catenoid case
+
+exercise: -snes_grid_sequence gets initial state suitable for catenoid, but an alternate strategy is to first solve the laplace equation and then use the solution to start on MSE
 
 evidence of parallel?  hard to find with -pc_type mg or -snes_grid_sequence):
-
--snes_grid_sequence is effective when nonlinearity is strong (default H=1 is already strong!
 
 in parallel at higher
     timer mpiexec -n 4 ./minimal -snes_fd_color -snes_converged_reason -ksp_converged_reason -snes_grid_sequence 8
@@ -78,64 +79,36 @@ can't seem to speed up in trying to reduce ksp iterations on finer levels:
 #include "../quadrature.h"
 
 typedef struct {
-    double    H;       // height of tent along y=0 boundary
-    PetscBool laplace; // solve Laplace equation instead of minimal surface
+    double    power,      // the exponent in the diffusivity;
+                          // =-1/2 for minimal surface eqn; =0 for Laplace eqn
+              H_tent,     // height of tent along y=0 boundary
+              c_catenoid; // parameter in catenoid boundary condition
 } MinimalCtx;
 
-// source function f(x,y); manufactured only: Dirichlet boundary condition
-static double zero(double x, double y, double z, void *ctx) {
-    return 0.0;
-}
-
-// Dirichlet boundary condition
+// Dirichlet boundary conditions
 static double g_bdry_tent(double x, double y, double z, void *ctx) {
     PoissonCtx *user = (PoissonCtx*)ctx;
     MinimalCtx *mctx = (MinimalCtx*)(user->addctx);
     if (x < 1.0e-8) {
-        return 2.0 * mctx->H * (y < 0.5 ? y : 1.0 - y);
+        return 2.0 * mctx->H_tent * (y < 0.5 ? y : 1.0 - y);
     } else
         return 0;
 }
 
+static double g_bdry_catenoid(double x, double y, double z, void *ctx) {
+    PoissonCtx   *user = (PoissonCtx*)ctx;
+    MinimalCtx   *mctx = (MinimalCtx*)(user->addctx);
+    const double c = mctx->c_catenoid;
+    return c * cosh(x/c) * sin(acos( (y/c) / cosh(x/c) ));
+}
+
 // the coefficient (diffusivity) of minimal surface equation, as a function
-//   of  s = |grad u|^2
-static double DD(double s) {
-    return pow(1.0 + s,-0.5);
+//   of  w = |grad u|^2
+static double DD(double w, double power) {
+    return pow(1.0 + w,power);
 }
 
-// derivative is only used in manufacturing a solution
-static double dDD(double s) {
-    return -0.5 * pow(1.0 + s,-1.5);
-}
-
-// manufactured only: the exact solution u(x,y)
-static double u_manu(double x, double y, double z, void *ctx) {
-    return (x - x*x) * (y*y - y);
-}
-
-// manufactured only: the right-hand-side f(x,y)
-static double f_manu(double x, double y, double z, void *ctx) {
-    double uxx, uyy, ux, uy, uxy, s, sx, sy;
-    uxx  = - 2.0 * (y*y - y);
-    uyy  = (x - x*x) * 2.0;
-    ux   = (1.0 - 2.0 * x) * (y*y - y);
-    uy   = (x - x*x) * (2.0 * y - 1.0);
-    uxy  = (1.0 - 2.0 * x) * (2.0 * y - 1.0);
-    s    = ux * ux + uy * uy;  // s = |grad u|^2
-    sx   = 2.0 * ux * uxx + 2.0 * uy * uxy;
-    sy   = 2.0 * ux * uxy + 2.0 * uy * uyy;
-    return - dDD(s) * (sx * ux + sy * uy) - DD(s) * (uxx + uyy);
-}
-
-// manufactured only, laplace case: the right-hand-side f(x,y) = - div (DD(s) grad u)
-static double f_manu_laplace(double x, double y, double z, void *ctx) {
-    double uxx, uyy;
-    uxx  = - 2.0 * (y*y - y);
-    uyy  = (x - x*x) * 2.0;
-    return - uxx - uyy;
-}
-
-extern PetscErrorCode FormExactManufactured(DMDALocalInfo*, Vec, PoissonCtx*);
+extern PetscErrorCode FormExactFromG(DMDALocalInfo*, Vec, PoissonCtx*);
 extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, double**,
                                         double **FF, PoissonCtx*);
 extern PetscErrorCode AreaMonitor(SNES, int, double, void*);
@@ -148,37 +121,34 @@ int main(int argc,char **argv) {
     PoissonCtx     user;
     MinimalCtx     mctx;
     PetscBool      monitor_area = PETSC_FALSE,
-                   manu = PETSC_FALSE;    // solve with manufactured f(x,y)
+                   catenoid = PETSC_FALSE;
     DMDALocalInfo  info;
 
     PetscInitialize(&argc,&argv,NULL,help);
     user.cx = 1.0;
     user.cy = 1.0;
     user.cz = 1.0;
-    mctx.H = 1.0;
-    mctx.laplace = PETSC_FALSE;
+    mctx.power = -0.5;
+    mctx.H_tent = 1.0;
+    mctx.c_catenoid = 2.0;
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"mse_","minimal surface equation solver options",""); CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-H","tent height",
-                            "minimal.c",mctx.H,&(mctx.H),NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-laplace","solve Laplace equation (linear) instead of minimal surface",
-                            "minimal.c",mctx.laplace,&(mctx.laplace),NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-manu","solve nonlinear problem with manufactured solution",
-                            "minimal.c",manu,&(manu),NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsReal("-c_catenoid","catenoid parameter; c >= 1 required",
+                            "minimal.c",mctx.c_catenoid,&(mctx.c_catenoid),NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-catenoid","use catenoid boundary conditions, so exact solution is available",
+                            "minimal.c",catenoid,&(catenoid),NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsReal("-H_tent","tent height",
+                            "minimal.c",mctx.H_tent,&(mctx.H_tent),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsBool("-monitor_area","compute and print surface area at each SNES iteration",
                             "minimal.c",monitor_area,&(monitor_area),NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsReal("-power","power of (1+|grad u|^2) in diffusivity",
+                            "minimal.c",mctx.power,&(mctx.power),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
     user.addctx = &mctx;
-    if (manu) {
-        user.g_bdry = &zero;
-        if (mctx.laplace) {
-            user.f_rhs = &f_manu_laplace;
-        } else {
-            user.f_rhs = &f_manu;
-        }
+    if (catenoid) {
+        user.g_bdry = &g_bdry_catenoid;
     } else {
         user.g_bdry = &g_bdry_tent;
-        user.f_rhs = &zero;
     }
 
     ierr = DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
@@ -188,7 +158,6 @@ int main(int argc,char **argv) {
     ierr = DMSetFromOptions(da); CHKERRQ(ierr);
     ierr = DMSetUp(da); CHKERRQ(ierr);  // this must be called BEFORE SetUniformCoordinates
     ierr = DMDASetUniformCoordinates(da,0.0,1.0,0.0,1.0,0.0,1.0); CHKERRQ(ierr);
-    ierr = DMCreateGlobalVector(da,&u_initial); CHKERRQ(ierr);
 
     ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
     ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
@@ -203,20 +172,22 @@ int main(int argc,char **argv) {
     }
     ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
-    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-    ierr = InitialState(&info, ZEROS, PETSC_TRUE, u_initial, &user); CHKERRQ(ierr);
+    // initial iterate has u=g on boundary and u=0 in interior
+    ierr = DMGetGlobalVector(da,&u_initial); CHKERRQ(ierr);
+    ierr = InitialState(da, ZEROS, PETSC_TRUE, u_initial, &user); CHKERRQ(ierr);
+
     ierr = SNESSolve(snes,NULL,u_initial); CHKERRQ(ierr);
-    ierr = VecDestroy(&u_initial); CHKERRQ(ierr);
+    ierr = DMRestoreGlobalVector(da,&u_initial); CHKERRQ(ierr);
     ierr = DMDestroy(&da); CHKERRQ(ierr);
 
     ierr = SNESGetDM(snes,&da_after); CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
-    if (manu) {
+    if (catenoid) {
         Vec    u, u_exact;
         double errnorm;
         ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr);
         ierr = VecDuplicate(u,&u_exact); CHKERRQ(ierr);
-        ierr = FormExactManufactured(&info,u_exact,&user); CHKERRQ(ierr);
+        ierr = FormExactFromG(&info,u_exact,&user); CHKERRQ(ierr);
         ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
         ierr = VecDestroy(&u_exact); CHKERRQ(ierr);
         ierr = VecNorm(u,NORM_INFINITY,&errnorm); CHKERRQ(ierr);
@@ -228,8 +199,8 @@ int main(int argc,char **argv) {
     return PetscFinalize();
 }
 
-PetscErrorCode FormExactManufactured(DMDALocalInfo *info, Vec uexact,
-                                     PoissonCtx *user) {
+PetscErrorCode FormExactFromG(DMDALocalInfo *info, Vec uexact,
+                         PoissonCtx *user) {
     PetscErrorCode ierr;
     int     i, j;
     double  xymin[2], xymax[2], hx, hy, x, y, **auexact;
@@ -241,7 +212,7 @@ PetscErrorCode FormExactManufactured(DMDALocalInfo *info, Vec uexact,
         y = j * hy;
         for (i = info->xs; i < info->xs + info->xm; i++) {
             x = i * hx;
-            auexact[j][i] = u_manu(x,y,0.0,user);
+            auexact[j][i] = user->g_bdry(x,y,0.0,user);
         }
     }
     ierr = DMDAVecRestoreArray(info->da,uexact,&auexact); CHKERRQ(ierr);
@@ -278,51 +249,45 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                                           : au[j+1][i];
                 us  = (j-1 == 0)          ? user->g_bdry(x,y-hy,0.0,user)
                                           : au[j-1][i];
-                if (mctx->laplace) {
-                    De = 1.0;  Dw = 1.0;
-                    Dn = 1.0;  Ds = 1.0;
+                if (i+1 == info->mx-1 || j+1 == info->my-1) {
+                    une = user->g_bdry(x+hx,y+hy,0.0,user);
                 } else {
-                    if (i+1 == info->mx-1 || j+1 == info->my-1) {
-                        une = user->g_bdry(x+hx,y+hy,0.0,user);
-                    } else {
-                        une = au[j+1][i+1];
-                    }
-                    if (i-1 == 0 || j+1 == info->my-1) {
-                        unw = user->g_bdry(x-hx,y+hy,0.0,user);
-                    } else {
-                        unw = au[j+1][i-1];
-                    }
-                    if (i+1 == info->mx-1 || j-1 == 0) {
-                        use = user->g_bdry(x+hx,y-hy,0.0,user);
-                    } else {
-                        use = au[j-1][i+1];
-                    }
-                    if (i-1 == 0 || j-1 == 0) {
-                        usw = user->g_bdry(x-hx,y-hy,0.0,user);
-                    } else {
-                        usw = au[j-1][i-1];
-                    }
-                    // gradient  (dux,duy)   at east point  (i+1/2,j):
-                    dux = (ue - au[j][i]) / hx;
-                    duy = (un + une - us - use) / (4.0 * hy);
-                    De = DD(dux * dux + duy * duy);
-                    // ...                   at west point  (i-1/2,j):
-                    dux = (au[j][i] - uw) / hx;
-                    duy = (unw + un - usw - us) / (4.0 * hy);
-                    Dw = DD(dux * dux + duy * duy);
-                    // ...                  at north point  (i,j+1/2):
-                    dux = (ue + une - uw - unw) / (4.0 * hx);
-                    duy = (un - au[j][i]) / hy;
-                    Dn = DD(dux * dux + duy * duy);
-                    // ...                  at south point  (i,j-1/2):
-                    dux = (ue + use - uw - usw) / (4.0 * hx);
-                    duy = (au[j][i] - us) / hy;
-                    Ds = DD(dux * dux + duy * duy);
+                    une = au[j+1][i+1];
                 }
+                if (i-1 == 0 || j+1 == info->my-1) {
+                    unw = user->g_bdry(x-hx,y+hy,0.0,user);
+                } else {
+                    unw = au[j+1][i-1];
+                }
+                if (i+1 == info->mx-1 || j-1 == 0) {
+                    use = user->g_bdry(x+hx,y-hy,0.0,user);
+                } else {
+                    use = au[j-1][i+1];
+                }
+                if (i-1 == 0 || j-1 == 0) {
+                    usw = user->g_bdry(x-hx,y-hy,0.0,user);
+                } else {
+                    usw = au[j-1][i-1];
+                }
+                // gradient  (dux,duy)   at east point  (i+1/2,j):
+                dux = (ue - au[j][i]) / hx;
+                duy = (un + une - us - use) / (4.0 * hy);
+                De = DD(dux * dux + duy * duy, mctx->power);
+                // ...                   at west point  (i-1/2,j):
+                dux = (au[j][i] - uw) / hx;
+                duy = (unw + un - usw - us) / (4.0 * hy);
+                Dw = DD(dux * dux + duy * duy, mctx->power);
+                // ...                  at north point  (i,j+1/2):
+                dux = (ue + une - uw - unw) / (4.0 * hx);
+                duy = (un - au[j][i]) / hy;
+                Dn = DD(dux * dux + duy * duy, mctx->power);
+                // ...                  at south point  (i,j-1/2):
+                dux = (ue + use - uw - usw) / (4.0 * hx);
+                duy = (au[j][i] - us) / hy;
+                Ds = DD(dux * dux + duy * duy, mctx->power);
                 // evaluate residual
                 FF[j][i] = - hyhx * (De * (ue - au[j][i]) - Dw * (au[j][i] - uw))
-                           - hxhy * (Dn * (un - au[j][i]) - Ds * (au[j][i] - us))
-                           - hx * hy * user->f_rhs(x,y,0.0,user);
+                           - hxhy * (Dn * (un - au[j][i]) - Ds * (au[j][i] - us));
             }
         }
     }

@@ -205,16 +205,23 @@ int main(int argc,char **argv) {
              (DMDASNESJacobian)Poisson2DJacobianLocal,&user); CHKERRQ(ierr);
   ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
 
-  /* solve */
+  // petsc bug: I get error inside VINEWTONRSLS if I use DMGetGlobalVector() here
+  //   PETSC ERROR: Clearing DM of global vectors that has a global vector obtained with DMGetGlobalVector()
+  //   ...
+  //   PETSC ERROR: #2 DMSetVI() line 224 in /home/ed/petsc/src/snes/impls/vi/rs/virs.c
+  //   PETSC ERROR: #3 SNESSolve_VINEWTONRSLS() line 431 in /home/ed/petsc/src/snes/impls/vi/rs/virs.c
   ierr = DMCreateGlobalVector(da,&u_initial);CHKERRQ(ierr);
-  ierr = VecSet(u_initial,0.0); CHKERRQ(ierr);
+  // initial iterate has u=g on boundary and u=0 in interior
+  ierr = InitialState(da, ZEROS, PETSC_TRUE, u_initial, &user); CHKERRQ(ierr);
+
+  /* solve */
   ierr = SNESSolve(snes,NULL,u_initial);CHKERRQ(ierr);
   ierr = VecDestroy(&u_initial); CHKERRQ(ierr);
   ierr = DMDestroy(&da); CHKERRQ(ierr);
 
   /* compare to exact */
   ierr = SNESGetDM(snes,&da_after); CHKERRQ(ierr);
-  ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr);
+  ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr); /* do not destroy u */
   ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
   ierr = VecDuplicate(u,&u_exact); CHKERRQ(ierr);
   ierr = FormUExact(&info,u_exact); CHKERRQ(ierr);

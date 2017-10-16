@@ -1,6 +1,0 @@
-    0 KSP Residual norm 6.131001841648e-01 
-    1 KSP Residual norm 9.090904089739e-03 
-    2 KSP Residual norm 1.756639760092e-04 
-    3 KSP Residual norm 4.400136355403e-06 
-problem manuexp on 9 x 9 point 2D grid:
-  error |u-uexact|_inf = 8.671e-05, |u-uexact|_h = 4.598e-05

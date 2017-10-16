@@ -147,7 +147,7 @@ static void* f_rhs_ptr[3][3]
        {&f_rhs_2Dmanupoly, &f_rhs_2Dmanuexp, &zero},
        {&f_rhs_3Dmanupoly, &f_rhs_3Dmanuexp, &zero}};
 
-static const char* InitialTypes[] = {"zeros","random","ginterpolant",
+static const char* InitialTypes[] = {"zeros","random",
                                      "InitialType", "", NULL};
 
 
@@ -256,11 +256,10 @@ int main(int argc,char **argv) {
 //ENDCREATE
 
     // set-up initial iterate for SNES and solve
-    ierr = DMCreateGlobalVector(da,&u_initial); CHKERRQ(ierr);
-    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-    ierr = InitialState(&info, initial, gonboundary, u_initial, &user); CHKERRQ(ierr);
+    ierr = DMGetGlobalVector(da,&u_initial); CHKERRQ(ierr);
+    ierr = InitialState(da, initial, gonboundary, u_initial, &user); CHKERRQ(ierr);
     ierr = SNESSolve(snes,NULL,u_initial); CHKERRQ(ierr);
-    ierr = VecDestroy(&u_initial); CHKERRQ(ierr);  // SNES now has internal solution so u_initial not needed
+    ierr = DMRestoreGlobalVector(da,&u_initial); CHKERRQ(ierr);
     ierr = DMDestroy(&da); CHKERRQ(ierr);  // SNES now has internal DMDA ...
 
     // evaluate error and report
