@@ -6,7 +6,7 @@ set -e
 
 #   * timings do not matter (but using --with-debugging=0 is convenient)
 #   * run as:
-#         $ ./cyclereductions > residuals.txt
+#         $ ./cyclereductions.sh > residuals.txt
 #   * generates additional file transcript.txt
 #   * python one-liner to extract norm-reduction ratios:
 #         import numpy; v = numpy.loadtxt('residuals.txt'); v[1::2] / v[::2]
@@ -38,18 +38,4 @@ for INIT in "zeros" "random" ; do
     runcase full 2 $INIT "" ""
     runcase kaskade 4 $INIT "" ""
 done
-
-echo
-
-# test anisotropic 3D W cycles with manupoly problem that allows coefficients
-# cx,cy,cz to be arbitrary
-runcase multiplicative 2 random "-pc_mg_cycle_type w -fsh_problem manupoly"
-runcase multiplicative 2 random "-pc_mg_cycle_type w -fsh_problem manupoly -fsh_cx 0.5 -fsh_cz 2.0"
-runcase multiplicative 2 random "-pc_mg_cycle_type w -fsh_problem manupoly -fsh_cx 0.1 -fsh_cz 10.0"
-runcase multiplicative 2 random "-pc_mg_cycle_type w -fsh_problem manupoly -fsh_cx 0.01 -fsh_cz 100.0"
-runcase multiplicative 2 random "-pc_mg_cycle_type w -fsh_problem manupoly -fsh_cx 0.001 -fsh_cz 1000.0"
-runcase multiplicative 2 random "-pc_mg_cycle_type w -fsh_problem manupoly -fsh_cy 0.5 -fsh_cx 2.0"
-runcase multiplicative 2 random "-pc_mg_cycle_type w -fsh_problem manupoly -fsh_cy 0.1 -fsh_cx 10.0"
-runcase multiplicative 2 random "-pc_mg_cycle_type w -fsh_problem manupoly -fsh_cy 0.01 -fsh_cx 100.0"
-runcase multiplicative 2 random "-pc_mg_cycle_type w -fsh_problem manupoly -fsh_cy 0.001 -fsh_cx 1000.0"
 
