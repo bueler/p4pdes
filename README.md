@@ -13,4 +13,4 @@ To compile and run the example C codes see `README.md` in the [`c/`](https://git
 
 ### PDF of the book
 
-An early draft PDF, containing approximations of the first seven chapters, is at the `book.pdf` link at [the most recent release](https://github.com/bueler/p4pdes/releases).  Please contact the author for a more recent PDF draft.
+An early draft PDF, containing approximations of the first seven chapters, is at the `book.pdf` link at [releases](https://github.com/bueler/p4pdes/releases).  It is seriously out of date.  Please contact the author for a more recent PDF draft.
