@@ -17,10 +17,10 @@ TRANSCRIPT=transcript.txt
 
 KSPITS=5
 
-COMMON="-fsh_dim 2 -fsh_problem manupoly -fsh_initial_type random -da_refine $LEV -snes_type ksponly -ksp_type richardson -ksp_norm_type unpreconditioned -ksp_monitor -ksp_max_it $KSPITS -ksp_rtol 0 -ksp_atol 0 -pc_type mg"
+COMMON="-fsh_problem manupoly -fsh_initial_type random -da_refine $LEV -snes_type ksponly -ksp_type richardson -ksp_norm_type unpreconditioned -ksp_monitor -ksp_max_it $KSPITS -ksp_rtol 0 -ksp_atol 0 -pc_type mg"
 
 function runcase() {
-  CMD="../fish $COMMON $1 $2"
+  CMD="../fish $COMMON $1"
   echo $CMD >> $TRANSCRIPT
   rm -f tmp.txt
   /usr/bin/time -f "real %e" $CMD &> tmp.txt
@@ -37,7 +37,7 @@ rm -f $TRANSCRIPT
 for SMOOTH in "" "-mg_levels_ksp_type richardson -mg_levels_pc_type sor" "-mg_levels_ksp_type richardson -mg_levels_pc_type sor -mg_levels_pc_sor_forward"; do
     echo "#SMOOTH = $SMOOTH"       # note "#" is comment character for numpy.loadtxt()
     for CY in 1.0 1.0e1 1.0e2 1.0e3 1.0e4 1.0e5; do
-        runcase "$SMOOTH" "-fsh_cy ${CY}"
+        runcase "-fsh_cy ${CY} $SMOOTH"
     done
 done
 
