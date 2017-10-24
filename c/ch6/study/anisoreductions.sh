@@ -36,7 +36,7 @@ rm -f $TRANSCRIPT
 # compare Chebyshev, SSOR, GS smoothing with anisotropy
 for SMOOTH in "" "-mg_levels_ksp_type richardson -mg_levels_pc_type sor" "-mg_levels_ksp_type richardson -mg_levels_pc_type sor -mg_levels_pc_sor_forward"; do
     echo "#SMOOTH = $SMOOTH"       # note "#" is comment character for numpy.loadtxt()
-    for CY in 1.0 1.0e1 1.0e2 1.0e3 1.0e4 1.0e5; do
+    for CY in 1.0 1.0e1 1.0e2 1.0e3; do
         runcase "-fsh_cy ${CY} $SMOOTH"
     done
 done
