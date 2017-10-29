@@ -20,12 +20,9 @@ function runcase() {
     grep "problem manuexp" tmp.txt | awk '{print $4}'         # mx for grid
     grep "error |u-uexact|_inf" tmp.txt | awk '{print $4}' | sed 's/,*$//g' # numerical error; strip comma
     grep "Linear solve converged" tmp.txt | awk '{print $8}'  # KSP iterations
-    #grep SNESSolve tmp.txt | awk '{print $6}'                 # flops ... don't bother
 }
 
 # NUMBER OF GRID POINTS IN SUBDOMAIN FIXED (thus H)
-#echo
-#runcase  1 "-pc_type lu" 5                  # base case ... does not show anything
 for PRECOND in "${DW}" "${ASMLU}"; do
     echo
     runcase  4 "${PRECOND}" 6
@@ -34,8 +31,6 @@ for PRECOND in "${DW}" "${ASMLU}"; do
     echo
     runcase 64 "${PRECOND}" 8
     #echo
-    #runcase 512 9  # my mpiexec fails with 512 processes
+    #runcase 512 9                 # mpiexec on WORKSTATION fails with 512 processes
 done
-
-
 
