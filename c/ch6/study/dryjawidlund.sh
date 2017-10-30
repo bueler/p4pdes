@@ -14,7 +14,7 @@ COMMON="-fsh_dim 2 -snes_type ksponly -ksp_type gmres -ksp_rtol 1.0e-10 -ksp_con
 
 function runcase() {
     CMD="mpiexec -n $1 ../fish $COMMON $2 -da_refine $3"
-    #echo "COMMAND:  $CMD"
+    echo "COMMAND:  $CMD"
     rm -rf tmp.txt
     $CMD &> tmp.txt
     grep "problem manuexp" tmp.txt | awk '{print $4}'         # mx for grid
@@ -32,5 +32,6 @@ for PRECOND in "${DW}" "${ASMLU}"; do
     runcase 64 "${PRECOND}" 8
     #echo
     #runcase 512 9                 # mpiexec on WORKSTATION fails with 512 processes
+                                   # this case can be tried in ch13/cluster.sh
 done
 
