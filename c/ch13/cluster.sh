@@ -17,7 +17,7 @@
 # Many details below are particular to the Slurm batch system (see https://slurm.schedmd.com/).
 
 #SBATCH --partition=debug
-#SBATCH --ntasks=8
+#SBATCH --ntasks=12
 #SBATCH --tasks-per-node=4
 #SBATCH --mail-user=elbueler@alaska.edu   # FIXME don't release this way; I'll get spammed by slurm!
 #SBATCH --mail-type=BEGIN
@@ -64,11 +64,11 @@ $GO ../ch9/advect -da_refine 8 -ts_final_time 1.0 -ts_rk_type 3bs -ts_monitor -l
 
 # OBSTACLE:  solve 2D inequality-constrained free-boundary problem
 # 33x33 base grid with -snes_grid_sequence 6 is 2049x2049 finest grid
-$GO ../ch12/obstacle -da_grid_x 33 -da_grid_y 33 -snes_grid_sequence 6 -snes_converged_reason -snes_monitor -ksp_converged_reason -pc_type mg -log_view
+$GO ../ch10/obstacle -da_grid_x 33 -da_grid_y 33 -snes_grid_sequence 6 -snes_converged_reason -snes_monitor -ksp_converged_reason -pc_type mg -log_view
 
-#FIXME add an unstructured from Chapter 8 using AMG?
+#FIXME add an unstructured Poisson problem from Chapter 8 using GAMG?
 
-#FIXME add unstructured Stokes problem?
+#FIXME add an unstructured Stokes problem from Chapter 11?
 
 #---------------------------------------------------------------------------------
 
