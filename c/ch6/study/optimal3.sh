@@ -9,10 +9,6 @@ set -e
 
 # limitations: going to -da_refine 8 gives out of memory on WORKSTATION with 16Gb
 
-# FIXME re measured timing:  the time in SNESSolve includes assembly of system on
-# each coarser grid (= calls to FormJacobianLocal()), but note
-# FormFunctionLocal() is only called once (on finest grid)
-
 # results:  see p4pdes-book/figs/optimal3.txt
 # figure-generation:  see p4pdes-book/figs/optimal.py
 
