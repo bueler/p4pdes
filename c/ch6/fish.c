@@ -1,29 +1,18 @@
 static char help[] =
-"Structured-grid Poisson problem in 1D, 2D, or 3D.  Option prefix fsh_.\n"
-"Solves  - nabla^2 u = f  by putting it in form  F(u) = - nabla^2 u - f.\n"
-"Dirichlet boundary conditions on unit square.  Three different problems\n"
-"where exact solution is known.  Uses DMDA and SNES.  Multigrid-capable\n"
-"because call-backs fully-rediscretize for the supplied grid.  Defaults\n"
-"to 2D.  As the problem is linear, consider adding -snes_type ksponly.\n\n";
+"Solves structured-grid Poisson problem in 1D, 2D, 3D.  Option prefix fsh_.\n"
+"Equation  - nabla^2 u = f,  subject to Dirichlet boundary conditions.\n
+"Solves three different problems where exact solution is known.  Uses DMDA\n"
+"and SNES; equations is put in form  F(u) = - nabla^2 u - f.  Call-backs\n"
+"fully-rediscretize for the supplied grid.  Defaults to 2D.  As the problem\n"
+"is linear, consider adding -snes_type ksponly.\n\n";
 
 /*
-choose linear solver for coarse grid, e.g.:
-$ ./fish -da_refine 4 -pc_type mg -mg_coarse_ksp_type cg -mg_coarse_pc_type jacobi -ksp_view|less
-default is preonly+lu
-
-see study/mgstudy.sh for multigrid parameter study
-
 in 1D, generate .m files with solutions at all levels or at particular level:
 $ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -snes_monitor_solution ascii:u.m:ascii_matlab
 $ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -mg_levels_1_ksp_monitor_solution ascii:errlevel1.m:ascii_matlab
 
 generate .m for coarse grid; because default -mg_coarse_ksp_type is preonly, without changing that we get nothing:
 $ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -mg_coarse_ksp_type cg -mg_coarse_ksp_monitor_solution ascii:errcoarse.m:ascii_matlab
-
-in 1D, FD jacobian with coloring is actually faster:
-$ timer ./fish -fsh_dim 1 -fsh_problem manupoly -snes_monitor -da_refine 16
-$ timer ./fish -fsh_dim 1 -fsh_problem manupoly -snes_monitor -da_refine 16 -snes_fd_color
-presumably the reason is that running code to assemble the jacobian is slower than the extra function evals
 
 compare rediscretization at every level or use Galerkin coarse grid operator
 $ ./fish -da_refine 4 -pc_type mg -snes_monitor
