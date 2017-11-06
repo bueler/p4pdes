@@ -1,6 +1,6 @@
 static char help[] =
-"Structured-grid minimal surface equation in 2D.  Option prefix mse_.\n"
-"Solves\n"
+"Solves structured-grid minimal surface equation in 2D.  Option prefix mse_.\n"
+"Equation is\n"
 "            /         nabla u         \\ \n"
 "  - nabla . | ----------------------- | = 0\n"
 "            \\  sqrt(1 + |nabla u|^2)  / \n"
