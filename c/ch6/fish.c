@@ -6,29 +6,6 @@ static char help[] =
 "fully-rediscretize for the supplied grid.  Defaults to 2D.  As the problem\n"
 "is linear, consider adding -snes_type ksponly.\n\n";
 
-/*
-in 1D, generate .m files with solutions at all levels or at particular level:
-$ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -snes_monitor_solution ascii:u.m:ascii_matlab
-$ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -mg_levels_1_ksp_monitor_solution ascii:errlevel1.m:ascii_matlab
-
-generate .m for coarse grid; because default -mg_coarse_ksp_type is preonly, without changing that we get nothing:
-$ ./fish -fsh_dim 1 -fsh_problem manupoly -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -mg_coarse_ksp_type cg -mg_coarse_ksp_monitor_solution ascii:errcoarse.m:ascii_matlab
-
-compare rediscretization at every level or use Galerkin coarse grid operator
-$ ./fish -da_refine 4 -pc_type mg -snes_monitor
-$ ./fish -da_refine 4 -pc_type mg -snes_monitor -pc_mg_galerkin
-
-to generate classical jacobi/gauss-seidel results, put f in a Vec and
-add viewer for RHS:
-   PetscViewer viewer;
-   PetscViewerASCIIOpen(COMM,"rhs.m",&viewer);
-   PetscViewerPushFormat(viewer,PETSC_VIEWER_ASCII_MATLAB);
-   VecView(f,viewer);
-then do:
-$ ./fish -fsh_dim 2 -da_refine 1 -snes_monitor -ksp_monitor -snes_max_it 1 -ksp_type richardson -pc_type jacobi|sor
-with e.g. -ksp_monitor_solution :foo.m:ascii_matlab
-*/
-
 #include <petsc.h>
 #include "poissonfunctions.h"
 
