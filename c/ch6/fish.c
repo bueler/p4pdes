@@ -1,6 +1,6 @@
 static char help[] =
 "Solves structured-grid Poisson problem in 1D, 2D, 3D.  Option prefix fsh_.\n"
-"Equation  - nabla^2 u = f,  subject to Dirichlet boundary conditions.\n
+"Equation  - nabla^2 u = f,  subject to Dirichlet boundary conditions.\n"
 "Solves three different problems where exact solution is known.  Uses DMDA\n"
 "and SNES; equations is put in form  F(u) = - nabla^2 u - f.  Call-backs\n"
 "fully-rediscretize for the supplied grid.  Defaults to 2D.  As the problem\n"
