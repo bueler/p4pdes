@@ -12,17 +12,17 @@ static const char help[] = "Solves the 2D dam-saturation problem on pages\n"
 /*
 note PFAS is not implemented in PETSc, but the following runs for X = 1,2,3,4,5,6
 quickly solve the same problems as in Brandt & Cryer Table 4.2:
-   ./dam -snes_monitor -pc_type mg -snes_grid_sequence X
+   s ./dam -snes_monitor -pc_type mg -snes_grid_sequence X
 
 on WORKSTATION I can go up to X = 10 giving 2049 x 3073 grid
 (the next step runs out of memory)
 
 on parallel I am getting error messages with vinewtonrsls + mg:
-   mpiexec -n 4 ./dam -snes_converged_reason -snes_grid_sequence 5 -snes_type vinewtonrsls -pc_type mg
+    mpiexec -n 4 ./dam -snes_converged_reason -snes_grid_sequence 5 -snes_type vinewtonrsls -pc_type mg
 but this works with either vinewtonssls or another PC (gamg or bjacobi+ilu or asm+lu or etc.)
 
 run as:
-$ ./dam -da_refine 1 -snes_view_solution :foo.m:ascii_matlab -snes_converged_reason -snes_rtol 1.0e-12
+    ./dam -da_refine 1 -snes_view_solution :foo.m:ascii_matlab -snes_converged_reason -snes_rtol 1.0e-12
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
 done on   5 x   7 grid
 
@@ -38,6 +38,18 @@ u =
          128      89.9564647149903       53.982307919772      22.6601332428759             0
          200      146.570291707977      94.3247021169195      44.7462088399388             0
          288                   218                   148                    78             8
+
+regarding computing seepage face height, runs
+    ./dam -snes_converged_reason -pc_type mg -snes_rtol 1.0e-8 -snes_grid_sequence X
+gives:
+    X    grid       height
+    6    129x193    8.8750000
+    7    257x385    8.7500000
+    8    513x769    8.7500000
+    9    1025x1537  8.7343750
+    10   2049x3073  8.7187500
+but note these numbers depend (at the second digit, even) on the value of
+"wetthreshold" in GetSeepageFaceHeight()
 */
 
 #include <petsc.h>
@@ -76,23 +88,18 @@ double f_fcn(double x, double y, double z, void *ctx) {
     return -1.0;
 }
 
-// for call-back: tell SNESVI (variational inequality) that we want
-//     0 <= u < +infinity
-PetscErrorCode FormBounds(SNES snes, Vec Xl, Vec Xu) {
-  PetscErrorCode ierr;
-  ierr = VecSet(Xl,0.0);CHKERRQ(ierr);
-  ierr = VecSet(Xu,PETSC_INFINITY);CHKERRQ(ierr);
-  return 0;
-}
+extern PetscErrorCode FormBounds(SNES, Vec, Vec);
+extern PetscErrorCode GetSeepageFaceHeight(DMDALocalInfo*, Vec, double*, DamCtx*);
 
 int main(int argc,char **argv) {
   PetscErrorCode ierr;
   DM             da, da_after;
   SNES           snes;
-  Vec            u_initial;
+  Vec            u;
   PoissonCtx     user;
   DamCtx         dctx;
   DMDALocalInfo  info;
+  double         height;
 
   PetscInitialize(&argc,&argv,NULL,help);
 
@@ -130,23 +137,55 @@ int main(int argc,char **argv) {
              (DMDASNESJacobian)Poisson2DJacobianLocal,&user); CHKERRQ(ierr);
   ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
 
-  ierr = DMCreateGlobalVector(da,&u_initial);CHKERRQ(ierr);
+  ierr = DMCreateGlobalVector(da,&u);CHKERRQ(ierr);
   // initial iterate has u=g on boundary and u=0 in interior
-  ierr = InitialState(da, ZEROS, PETSC_TRUE, u_initial, &user); CHKERRQ(ierr);
+  ierr = InitialState(da, ZEROS, PETSC_TRUE, u, &user); CHKERRQ(ierr);
 
   /* solve */
-  ierr = SNESSolve(snes,NULL,u_initial);CHKERRQ(ierr);
-  ierr = VecDestroy(&u_initial); CHKERRQ(ierr);
+  ierr = SNESSolve(snes,NULL,u);CHKERRQ(ierr);
+  ierr = VecDestroy(&u); CHKERRQ(ierr);
   ierr = DMDestroy(&da); CHKERRQ(ierr);
 
-  // report
+  // report seepage face
+  ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr); /* do not destroy u */
   ierr = SNESGetDM(snes,&da_after); CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
+  ierr = GetSeepageFaceHeight(&info,u,&height,&dctx); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
-      "done on %3d x %3d grid\n",
-      info.mx,info.my); CHKERRQ(ierr);
+      "done on %3d x %3d grid; computed seepage face height = %.7f\n",
+      info.mx,info.my,height); CHKERRQ(ierr);
 
   SNESDestroy(&snes);
   return PetscFinalize();
+}
+
+// for call-back: tell SNESVI we want  0 <= u < +infinity
+PetscErrorCode FormBounds(SNES snes, Vec Xl, Vec Xu) {
+    PetscErrorCode ierr;
+    ierr = VecSet(Xl,0.0);CHKERRQ(ierr);
+    ierr = VecSet(Xu,PETSC_INFINITY);CHKERRQ(ierr);
+    return 0;
+}
+
+PetscErrorCode GetSeepageFaceHeight(DMDALocalInfo *info, Vec u, double *height, DamCtx *dctx) {
+    PetscErrorCode ierr;
+    MPI_Comm       comm;
+    const double   dy = dctx->y1 / (PetscReal)(info->my-1),
+                   wetthreshhold = 1.0e-6;  // what does "u>0" mean?
+    int            j;
+    double         **au, locwetmax = - PETSC_INFINITY;
+    ierr = DMDAVecGetArrayRead(info->da,u,&au); CHKERRQ(ierr);
+    if (info->xs+info->xm == info->mx) { // do we even own (part of) the x=a side of the rectangle?
+        for (j=info->ys; j<info->ys+info->ym; j++) {
+           if (au[j][info->mx-2] > wetthreshhold) {  // is the first inter point wet?
+               locwetmax = PetscMax(j*dy,locwetmax);
+           }
+        }
+    }
+    ierr = DMDAVecRestoreArrayRead(info->da,u,&au); CHKERRQ(ierr);
+    ierr = PetscObjectGetComm((PetscObject)(info->da),&comm); CHKERRQ(ierr);
+    ierr = MPI_Allreduce(&locwetmax,height,1,MPI_DOUBLE,MPI_MAX,comm); CHKERRQ(ierr);
+    *height -= dctx->y2;   // height is segment ED in figure
+    return 0;
 }
 
