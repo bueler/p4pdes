@@ -121,47 +121,8 @@ double zero(double x, double y, double z, void *ctx) {
     return 0.0;
 }
 
-PetscErrorCode FormUExact(DMDALocalInfo *info, Vec u) {
-  PetscErrorCode ierr;
-  int     i,j;
-  double  **au, dx, dy, x, y;
-  dx = 4.0 / (PetscReal)(info->mx-1);
-  dy = 4.0 / (PetscReal)(info->my-1);
-  ierr = DMDAVecGetArray(info->da, u, &au);CHKERRQ(ierr);
-  for (j=info->ys; j<info->ys+info->ym; j++) {
-    y = -2.0 + j * dy;
-    for (i=info->xs; i<info->xs+info->xm; i++) {
-      x = -2.0 + i * dx;
-      au[j][i] = u_exact(x,y);
-    }
-  }
-  ierr = DMDAVecRestoreArray(info->da, u, &au);CHKERRQ(ierr);
-  return 0;
-}
-
-//  for call-back: tell SNESVI (variational inequality) that we want  psi <= u < +infinity
-PetscErrorCode FormBounds(SNES snes, Vec Xl, Vec Xu) {
-  PetscErrorCode ierr;
-  DM            da;
-  DMDALocalInfo info;
-  int           i, j;
-  double        **aXl, dx, dy, x, y;
-  ierr = SNESGetDM(snes,&da);CHKERRQ(ierr);
-  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-  dx = 4.0 / (PetscReal)(info.mx-1);
-  dy = 4.0 / (PetscReal)(info.my-1);
-  ierr = DMDAVecGetArray(da, Xl, &aXl);CHKERRQ(ierr);
-  for (j=info.ys; j<info.ys+info.ym; j++) {
-    y = -2.0 + j * dy;
-    for (i=info.xs; i<info.xs+info.xm; i++) {
-      x = -2.0 + i * dx;
-      aXl[j][i] = psi(x,y);
-    }
-  }
-  ierr = DMDAVecRestoreArray(da, Xl, &aXl);CHKERRQ(ierr);
-  ierr = VecSet(Xu,PETSC_INFINITY);CHKERRQ(ierr);
-  return 0;
-}
+extern PetscErrorCode FormUExact(DMDALocalInfo*, Vec);
+extern PetscErrorCode FormBounds(SNES, Vec, Vec);
 
 int main(int argc,char **argv) {
   PetscErrorCode ierr;
@@ -236,5 +197,47 @@ int main(int argc,char **argv) {
 
   SNESDestroy(&snes);
   return PetscFinalize();
+}
+
+PetscErrorCode FormUExact(DMDALocalInfo *info, Vec u) {
+  PetscErrorCode ierr;
+  int     i,j;
+  double  **au, dx, dy, x, y;
+  dx = 4.0 / (PetscReal)(info->mx-1);
+  dy = 4.0 / (PetscReal)(info->my-1);
+  ierr = DMDAVecGetArray(info->da, u, &au);CHKERRQ(ierr);
+  for (j=info->ys; j<info->ys+info->ym; j++) {
+    y = -2.0 + j * dy;
+    for (i=info->xs; i<info->xs+info->xm; i++) {
+      x = -2.0 + i * dx;
+      au[j][i] = u_exact(x,y);
+    }
+  }
+  ierr = DMDAVecRestoreArray(info->da, u, &au);CHKERRQ(ierr);
+  return 0;
+}
+
+//  for call-back: tell SNESVI (variational inequality) that we want  psi <= u < +infinity
+PetscErrorCode FormBounds(SNES snes, Vec Xl, Vec Xu) {
+  PetscErrorCode ierr;
+  DM            da;
+  DMDALocalInfo info;
+  int           i, j;
+  double        **aXl, dx, dy, x, y;
+  ierr = SNESGetDM(snes,&da);CHKERRQ(ierr);
+  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+  dx = 4.0 / (PetscReal)(info.mx-1);
+  dy = 4.0 / (PetscReal)(info.my-1);
+  ierr = DMDAVecGetArray(da, Xl, &aXl);CHKERRQ(ierr);
+  for (j=info.ys; j<info.ys+info.ym; j++) {
+    y = -2.0 + j * dy;
+    for (i=info.xs; i<info.xs+info.xm; i++) {
+      x = -2.0 + i * dx;
+      aXl[j][i] = psi(x,y);
+    }
+  }
+  ierr = DMDAVecRestoreArray(da, Xl, &aXl);CHKERRQ(ierr);
+  ierr = VecSet(Xu,PETSC_INFINITY);CHKERRQ(ierr);
+  return 0;
 }
 
