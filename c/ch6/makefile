@@ -36,7 +36,7 @@ runfish_8:
 	-@../testit.sh fish "-fsh_dim 3 -da_refine 2 -mat_is_symmetric 1.0e-7 -snes_fd_color" 1 8
 
 runminimal_1:
-	-@../testit.sh minimal "-snes_fd_color -snes_converged_reason -snes_monitor_short -mse_catenoid -da_refine 1" 1 1
+	-@../testit.sh minimal "-snes_fd_color -snes_converged_reason -snes_monitor_short -mse_problem catenoid -da_refine 1" 1 1
 
 runminimal_2:
 	-@../testit.sh minimal "-snes_fd_color -mat_is_symmetric 1.0e-7 -mse_power 0.0 -ksp_type cg -ksp_converged_reason -da_refine 2" 1 2

@@ -113,6 +113,10 @@ extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, double**,
                                         double **FF, PoissonCtx*);
 extern PetscErrorCode AreaMonitor(SNES, int, double, void*);
 
+typedef enum {TENT, CATENOID} ProblemType;
+static const char* ProblemTypes[] = {"tent","catenoid",
+                                     "ProblemType", "", NULL};
+
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
     DM             da, da_after;
@@ -120,35 +124,44 @@ int main(int argc,char **argv) {
     Vec            u_initial;
     PoissonCtx     user;
     MinimalCtx     mctx;
-    PetscBool      monitor_area = PETSC_FALSE,
-                   catenoid = PETSC_FALSE;
+    PetscBool      monitor_area = PETSC_FALSE;
     DMDALocalInfo  info;
 
-    PetscInitialize(&argc,&argv,NULL,help);
-    user.cx = 1.0;
-    user.cy = 1.0;
-    user.cz = 1.0;
+    // defaults:
+    ProblemType    problem = TENT;
     mctx.power = -0.5;
     mctx.H_tent = 1.0;
     mctx.c_catenoid = 2.0;
-    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"mse_","minimal surface equation solver options",""); CHKERRQ(ierr);
+    user.cx = 1.0;
+    user.cy = 1.0;
+    user.cz = 1.0;
+
+    PetscInitialize(&argc,&argv,NULL,help);
+    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"mse_",
+                             "minimal surface equation solver options",""); CHKERRQ(ierr);
     ierr = PetscOptionsReal("-c_catenoid","catenoid parameter; c >= 1 required",
                             "minimal.c",mctx.c_catenoid,&(mctx.c_catenoid),NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-catenoid","use catenoid boundary conditions, so exact solution is available",
-                            "minimal.c",catenoid,&(catenoid),NULL);CHKERRQ(ierr);
     ierr = PetscOptionsReal("-H_tent","tent height",
                             "minimal.c",mctx.H_tent,&(mctx.H_tent),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsBool("-monitor_area","compute and print surface area at each SNES iteration",
                             "minimal.c",monitor_area,&(monitor_area),NULL);CHKERRQ(ierr);
     ierr = PetscOptionsReal("-power","power of (1+|grad u|^2) in diffusivity",
                             "minimal.c",mctx.power,&(mctx.power),NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsEnum("-problem","problem type; determines boundary conditions",
+                            "minimal.c",ProblemTypes,(PetscEnum)problem,(PetscEnum*)&problem,
+                            NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
     user.addctx = &mctx;
-    if (catenoid) {
-        user.g_bdry = &g_bdry_catenoid;
-    } else {
-        user.g_bdry = &g_bdry_tent;
+    switch (problem) {
+        case TENT:
+            user.g_bdry = &g_bdry_tent;
+            break;
+        case CATENOID:
+            user.g_bdry = &g_bdry_catenoid;
+            break;
+        default:
+            SETERRQ(PETSC_COMM_WORLD,1,"unknown problem type\n");
     }
 
     ierr = DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
@@ -182,7 +195,8 @@ int main(int argc,char **argv) {
 
     ierr = SNESGetDM(snes,&da_after); CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
-    if (catenoid) {
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"done on %d x %d grid ...\n",info.mx,info.my); CHKERRQ(ierr);
+    if ((problem == CATENOID) && (mctx.power == -0.5)) {
         Vec    u, u_exact;
         double errnorm;
         ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr);
@@ -193,7 +207,6 @@ int main(int argc,char **argv) {
         ierr = VecNorm(u,NORM_INFINITY,&errnorm); CHKERRQ(ierr);
         ierr = PetscPrintf(PETSC_COMM_WORLD,"error |u-uexact|_inf = %g\n",errnorm); CHKERRQ(ierr);
     }
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"done on %d x %d grid ...\n",info.mx,info.my); CHKERRQ(ierr);
 
     ierr = SNESDestroy(&snes); CHKERRQ(ierr);
     return PetscFinalize();
