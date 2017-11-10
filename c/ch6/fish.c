@@ -134,8 +134,6 @@ int main(int argc,char **argv) {
     InitialType    initial = ZEROS;          // set u=0 for initial iterate
     PetscBool      gonboundary = PETSC_TRUE; // initial iterate has u=g on boundary
 
-    PetscInitialize(&argc,&argv,NULL,help);
-
     // get options and configure context
     user.Lx = 1.0;
     user.Ly = 1.0;
@@ -143,6 +141,7 @@ int main(int argc,char **argv) {
     user.cx = 1.0;
     user.cy = 1.0;
     user.cz = 1.0;
+    PetscInitialize(&argc,&argv,NULL,help);
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"fsh_", "options for fish.c", ""); CHKERRQ(ierr);
     ierr = PetscOptionsReal("-cx",
          "set coefficient of x term u_xx in equation",
@@ -172,7 +171,7 @@ int main(int argc,char **argv) {
          "set Ly in domain ([0,Lx] x [0,Ly] x [0,Lz], etc.)",
          "fish.c",user.Lz,&user.Lz,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsEnum("-problem",
-         "problem type (determines exact solution and RHS)",
+         "problem type; determines exact solution and RHS",
          "fish.c",ProblemTypes,(PetscEnum)problem,(PetscEnum*)&problem,NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
     user.g_bdry = g_bdry_ptr[dim-1][problem];
