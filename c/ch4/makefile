@@ -33,7 +33,7 @@ runreaction_2:
 	-@../testit.sh reaction "-da_grid_x 7" 1 2
 
 runreaction_3:
-	-@../testit.sh reaction "-snes_fd_color -da_refine 2" 4 3
+	-@../testit.sh reaction "-snes_fd_color -da_refine 1 -snes_view" 4 3
 
 runreaction_4:
 	-@../testit.sh reaction "-snes_converged_reason -snes_linesearch_type cp" 1 4
