@@ -443,7 +443,7 @@ int main(int argc,char **argv) {
         VecDestroy(&uexact);
     } else {
         ierr = PetscPrintf(PETSC_COMM_WORLD,
-                   "case %d completed for N=%d nodes with h = %.3e (no exact solution)\n",
+                   "case %d result for N=%d nodes with h = %.3e :  ... done (no exact)\n",
                    user.solncase,mesh.N,h_max); CHKERRQ(ierr);
     }
 
