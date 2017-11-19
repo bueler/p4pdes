@@ -1,12 +1,25 @@
 #!/bin/bash
 
-# run "make test" and "./gensquares.sh" first
-# see also gamgopt.sh to generate input files sq100.xxx, ..., sq800.xxx
+# test -pc_type gamg for optimality by running unfem on a sequence of refining
+# meshes; uses CG for Krylov
 
-#FIXME option for MAXLEV
-#FIXME check if this works for Koch levels
-for LEV in 1 2 3 4 5 6; do
-    cmd="./unfem -un_case 3 -snes_type ksponly -ksp_rtol 1.0e-8 -snes_monitor_short -ksp_converged_reason -pc_type gamg -un_mesh meshes/sq${LEV}"
+# run gensquares.sh, gentraps.sh, or koch/genkochs.sh first
+
+# example:
+#   ./gamgopt.sh meshes/sq 3 4      # -un_case 3 and 4 levels
+#   ./gamgopt.sh meshes/sq 3 6      # ... level 6 is large: 3200x3200 grid w. N=10^7
+#   ./gamgopt.sh meshes/trap 0 6    # -un_case 0 and 6 levels
+#   ./gamgopt.sh koch/koch 4 7      # -un_case 4 and 7 levels
+#   ./gamgopt.sh koch/koch 4 9      # ... level 9 is large: N = 4 x 10^6
+
+NAME=$1
+CASE=$2
+MAXLEV=$3
+
+for (( Z=1; Z<=$MAXLEV; Z++ )); do
+    echo "running level ${Z}"
+    IN=$NAME.$Z
+    cmd="./unfem -un_case $CASE -snes_type ksponly -ksp_rtol 1.0e-8 -ksp_type cg -pc_type gamg -snes_monitor_short -ksp_converged_reason -un_mesh $IN"
     rm -f foo.txt
     $cmd -log_view &> foo.txt
     'grep' "Linear solve converged due to" foo.txt
