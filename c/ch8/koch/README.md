@@ -1,15 +1,12 @@
 koch/
 =====
 
-This directory contains script `poisson.sh` which does the following for-fun
-example:
+This directory contains script `snowflake.sh` which does a for-fun example:
 
-1. Generate a Koch snowflake polygon, a pseudo-fractal, in triangle-readable
-file `koch.poly`.
-2. Triangulates the interior S of the polygon and generates `unfem`-readable
-files `koch.1.*`.
+1. Generate a Koch snowflake polygon in triangle-readable `.poly` file.
+2. Triangulates the polygon and generates `unfem`-readable files `koch.1.*`.
 3. Solves the Poisson equation,  -grad^2 u = 1,  with u=0 Dirichlet boundary
-conditions, on S.
+conditions.
 4. Generates an image `snowflake.pdf` showing u(x,y) as a contour map.
 
 Before running the example do
@@ -18,7 +15,7 @@ Before running the example do
 
 To run the example:
 
-        $ ./poisson.sh
+        $ ./snowflake.sh
 
 Now use a PDF viewer on `snowflake.pdf`.
 
