@@ -1,12 +1,14 @@
 #!/bin/bash
 
-# generate trapezoidal unstructured meshes using triangle and tri2petsc.py
+# generate refining trapezoidal unstructured meshes using triangle and tri2petsc.py
+
+# run "make test" first to get links to PETSc python scripts for binary files
 
 # example:
 #   ./gentraps.sh trap 5
 
 NAME=$1
-LEV=$2
+MAXLEV=$2
 
 area[0]=0.5
 area[1]=0.1
@@ -20,11 +22,11 @@ area[8]=0.000002
 area[9]=0.0000005
 triangle -pqa${area[0]} meshes/$NAME
 ./tri2petsc.py meshes/$NAME.1 meshes/$NAME.1
-for (( N=1; N<$LEV; N++ )); do
-    # generates $NAME.$((N+1)).poly|.node|.ele
-    triangle -rpqa${area[$N]} meshes/$NAME.$N
-    # generates $NAME.$((N+1)).vec|.is
-    OUT=meshes/$NAME.$((N+1))
+for (( Z=1; Z<$MAXLEV; Z++ )); do
+    # generates .poly, .node, .ele
+    triangle -rpqa${area[$Z]} meshes/$NAME.$Z
+    # generates .vec, .is
+    OUT=meshes/$NAME.$((Z+1))
     ./tri2petsc.py $OUT $OUT
 done
 
