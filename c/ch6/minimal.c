@@ -195,7 +195,7 @@ int main(int argc,char **argv) {
 
     ierr = SNESGetDM(snes,&da_after); CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"done on %d x %d grid ...\n",info.mx,info.my); CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"done on %d x %d grid",info.mx,info.my); CHKERRQ(ierr);
     if ((problem == CATENOID) && (mctx.power == -0.5)) {
         Vec    u, u_exact;
         double errnorm;
@@ -205,7 +205,10 @@ int main(int argc,char **argv) {
         ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
         ierr = VecDestroy(&u_exact); CHKERRQ(ierr);
         ierr = VecNorm(u,NORM_INFINITY,&errnorm); CHKERRQ(ierr);
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"error |u-uexact|_inf = %g\n",errnorm); CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_WORLD,
+                           ":  error |u-uexact|_inf = %.5e\n",errnorm); CHKERRQ(ierr);
+    } else {
+        ierr = PetscPrintf(PETSC_COMM_WORLD," ...\n"); CHKERRQ(ierr);
     }
 
     ierr = SNESDestroy(&snes); CHKERRQ(ierr);
