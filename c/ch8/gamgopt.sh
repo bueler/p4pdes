@@ -12,6 +12,12 @@
 #   ./gamgopt.sh koch/koch 4 7      # -un_case 4 and 7 levels
 #   ./gamgopt.sh koch/koch 4 9      # ... level 9 is large: N = 4 x 10^6
 
+# run as:
+#   ./gamgopt.sh koch/koch 4 9 &> gamgopt.txt
+# use PETSC_ARCH with --with-debugging=0
+
+# results & figure-generation:  see p4pdes-book/figs/gamgopt.txt|py
+
 NAME=$1
 CASE=$2
 MAXLEV=$3

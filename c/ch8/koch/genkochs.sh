@@ -21,7 +21,6 @@ area[6]=0.00005
 area[7]=0.00001
 area[8]=0.0000025
 area[9]=0.0000005
-area[10]=0.0000001   # not recommended
 
 for (( Z=1; Z<=$MAXLEV; Z++ )); do
     # generate .poly for level Z Koch polygon
