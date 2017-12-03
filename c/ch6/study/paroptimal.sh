@@ -14,18 +14,28 @@ set -e
 # those other scripts, but the number of levels in a V cycle is one less here
 COARSE="-da_grid_x 5 -da_grid_y 5 -da_grid_z 5"
 
+function runcase() {
+    CMD="$1 ../fish -fsh_dim 3 -snes_type ksponly -ksp_type cg -ksp_rtol 1.0e-10 -ksp_converged_reason $COARSE -da_refine $2 $3 -log_view"
+    echo "COMMAND:  $CMD"
+    rm -rf tmp.txt
+    $CMD &> tmp.txt
+    grep -C 1 "problem manuexp" tmp.txt
+    grep "Flop:  " tmp.txt
+}
+
 MINLEV=2
 MAXLEV=${1:-6}  # expands to $1 if set, otherwise is 6
 
 for PAR in "" "mpiexec -n 8" "mpiexec -n 64"; do
     echo "**** CASE: $PAR ****"
+    SOLVE="-pc_type mg"
     for (( LEV=MINLEV; LEV<=$MAXLEV; LEV++ )); do
-        CMD="$PAR ../fish -fsh_dim 3 $COARSE -snes_type ksponly -ksp_type cg -pc_type mg -ksp_rtol 1.0e-10 -ksp_converged_reason -da_refine $LEV -log_view"
-        echo "COMMAND:  $CMD"
-        rm -rf tmp.txt
-        $CMD &> tmp.txt
-        grep -C 1 "problem manuexp" tmp.txt
-        grep "Flop:  " tmp.txt
+        runcase "${PAR}" $LEV "${SOLVE}"
+    done
+    echo
+    SOLVE="-pc_type asm -sub_pc_type icc"
+    for (( LEV=MINLEV; LEV<=5; LEV++ )); do
+        runcase "${PAR}" $LEV "${SOLVE}"
     done
     echo
 done
