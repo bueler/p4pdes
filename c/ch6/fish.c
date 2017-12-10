@@ -218,7 +218,7 @@ int main(int argc,char **argv) {
              (DMDASNESFunction)(residual_ptr[dim-1]),&user); CHKERRQ(ierr);
     ierr = DMDASNESSetJacobianLocal(da,
              (DMDASNESJacobian)(jacobian_ptr[dim-1]),&user); CHKERRQ(ierr);
-    // set defaults to KSPONLY and CG because problem is linear and symmetric
+    // set defaults: KSPONLY+CG because problem is linear and symmetric
     ierr = SNESSetType(snes,SNESKSPONLY); CHKERRQ(ierr);
     ierr = SNESGetKSP(snes,&ksp); CHKERRQ(ierr);
     ierr = KSPSetType(ksp,KSPCG); CHKERRQ(ierr);
