@@ -15,7 +15,7 @@ set -e
 
 LEV=$1
 
-COMMON="-fsh_dim 2 -ksp_type gmres -ksp_gmres_restart 10 -fsh_problem manuexp -snes_type ksponly -ksp_converged_reason -ksp_rtol 1.0e-2"
+COMMON="-fsh_dim 2 -ksp_type gmres -ksp_gmres_restart 10 -fsh_problem manuexp -ksp_converged_reason -ksp_rtol 1.0e-2"
 
 ASM="-pc_type asm -sub_pc_type lu -pc_asm_type basic"
 

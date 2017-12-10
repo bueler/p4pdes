@@ -7,7 +7,7 @@ set -e
 # all runs lu on subdomains
 # 2D runs uses 4 blocks and 3D use 8
 
-COMMON="-snes_type ksponly -ksp_converged_reason -pc_type asm -sub_pc_type lu"
+COMMON="-ksp_converged_reason -ksp_type gmres -pc_type asm -sub_pc_type lu"
 
 # or exploit symmetry by using CG and CHOLESKY; recall need to turn on nested dissection:
 #COMMON="-snes_type ksponly -ksp_converged_reason -ksp_type cg -pc_type asm -sub_pc_type cholesky -sub_pc_factor_mat_ordering_type nd"

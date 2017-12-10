@@ -21,7 +21,7 @@ ENDDEPTH=3     # going to 2 essentially stalls
 #   ---> conclude number of V cycles (KSP iterations) increase when depth is small (again: 4 or 3)
 for CSOLVE in "" "-mg_coarse_ksp_type cg -mg_coarse_pc_type icc -mg_coarse_ksp_max_it 2 -mg_coarse_ksp_converged_reason -mg_coarse_ksp_convergence_test skip"; do
     for (( DEPTH=$STARTDEPTH; DEPTH>=$ENDDEPTH; DEPTH-- )); do
-        CMD="../fish -fsh_dim 3 -snes_type ksponly -ksp_type cg -ksp_rtol 1.0e-10 -ksp_converged_reason -pc_type mg -da_refine $MAXLEV -pc_mg_levels $DEPTH $CSOLVE -log_view"
+        CMD="../fish -fsh_dim 3 -ksp_rtol 1.0e-10 -ksp_converged_reason -pc_type mg -da_refine $MAXLEV -pc_mg_levels $DEPTH $CSOLVE -log_view"
         echo "COMMAND:  $CMD"
         rm -rf tmp.txt
         $CMD &> tmp.txt

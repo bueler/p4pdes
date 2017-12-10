@@ -16,7 +16,7 @@ LEV=6    # 129x129 grid
 TRANSCRIPT=transcript.txt
 
 
-COMMON="-fsh_problem manupoly -fsh_initial_type random -da_refine $LEV -snes_type ksponly -ksp_type richardson -ksp_norm_type unpreconditioned -ksp_monitor -ksp_rtol 0 -ksp_atol 0 -pc_type mg"
+COMMON="-fsh_problem manupoly -fsh_initial_type random -da_refine $LEV -ksp_type richardson -ksp_norm_type unpreconditioned -ksp_monitor -ksp_rtol 0 -ksp_atol 0 -pc_type mg"
 
 function runcasetranscripttmp() {
   CMD="../fish $COMMON $1"

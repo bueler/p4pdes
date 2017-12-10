@@ -3,8 +3,8 @@ static char help[] =
 "Equation  - nabla^2 u = f,  subject to Dirichlet boundary conditions.\n"
 "Solves three different problems where exact solution is known.  Uses DMDA\n"
 "and SNES; equations is put in form  F(u) = - nabla^2 u - f.  Call-backs\n"
-"fully-rediscretize for the supplied grid.  Defaults to 2D.  As the problem\n"
-"is linear, consider adding -snes_type ksponly.\n\n";
+"fully-rediscretize for the supplied grid.  Defaults to 2D, a SNESType of\n"
+"KSPONLY, and a KSPType of CG.\n\n";
 
 #include <petsc.h>
 #include "poissonfunctions.h"
@@ -121,6 +121,7 @@ int main(int argc,char **argv) {
     PetscErrorCode ierr;
     DM             da, da_after;
     SNES           snes;
+    KSP            ksp;
     Vec            u_initial, u, u_exact;
     PoissonCtx     user;
     DMDALocalInfo  info;
@@ -217,6 +218,10 @@ int main(int argc,char **argv) {
              (DMDASNESFunction)(residual_ptr[dim-1]),&user); CHKERRQ(ierr);
     ierr = DMDASNESSetJacobianLocal(da,
              (DMDASNESJacobian)(jacobian_ptr[dim-1]),&user); CHKERRQ(ierr);
+    // set defaults to KSPONLY and CG because problem is linear and symmetric
+    ierr = SNESSetType(snes,SNESKSPONLY); CHKERRQ(ierr);
+    ierr = SNESGetKSP(snes,&ksp); CHKERRQ(ierr);
+    ierr = KSPSetType(ksp,KSPCG); CHKERRQ(ierr);
     ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 //ENDCREATE
 

@@ -16,7 +16,7 @@ LEV=6    # 129x129x129 grid; each run takes less than 5 seconds?
 
 TRANSCRIPT=transcript.txt
 
-COMMON="-fsh_dim 3 -da_refine $LEV -snes_type ksponly -ksp_type richardson -ksp_max_it 1 -ksp_norm_type unpreconditioned -ksp_monitor -pc_type mg -mg_levels_${LEV}_ksp_converged_reason"
+COMMON="-fsh_dim 3 -da_refine $LEV -ksp_type richardson -ksp_max_it 1 -ksp_norm_type unpreconditioned -ksp_monitor -pc_type mg -mg_levels_${LEV}_ksp_converged_reason"
 
 function runcase() {
   CMD="../fish $COMMON -pc_mg_type $1 -mg_levels_ksp_max_it $2 -fsh_initial_type $3 $4"

@@ -10,7 +10,7 @@ DW="-pc_type mg -pc_mg_levels 2 -pc_mg_type additive -mg_levels_ksp_type preonly
 
 ASMLU="-pc_type asm -sub_pc_type lu"
 
-COMMON="-fsh_dim 2 -snes_type ksponly -ksp_type gmres -ksp_rtol 1.0e-10 -ksp_converged_reason -log_view"
+COMMON="-fsh_dim 2 -ksp_type gmres -ksp_rtol 1.0e-10 -ksp_converged_reason -log_view"
 
 function runcase() {
     CMD="mpiexec -n $1 ../fish $COMMON $2 -da_refine $3"

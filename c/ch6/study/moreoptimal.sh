@@ -7,7 +7,7 @@ set -e
 
 # use PETSC_ARCH with --with-debugging=0
 
-# results and figure-generation:  see p4pdes-book/figs/FIXME|FIXME
+# results and figure-generation:  see p4pdes-book/figs/moreoptimal.txt|py
 
 MINLEV=3
 MAXLEV=${1:-7}  # expands to $1 if set, otherwise is 7
@@ -15,7 +15,7 @@ MAXLEV=${1:-7}  # expands to $1 if set, otherwise is 7
 for ADD in "" "-pc_mg_cycle_type w" "-pc_mg_type full" "-pc_mg_galerkin"; do
     echo "**** CASE: $ADD ****"
     for (( LEV=MINLEV; LEV<=$MAXLEV; LEV++ )); do
-        CMD="../fish -fsh_dim 3 -snes_type ksponly -ksp_type cg -pc_type mg $ADD -ksp_rtol 1.0e-10 -ksp_converged_reason -da_refine $LEV -log_view"
+        CMD="../fish -fsh_dim 3 -pc_type mg $ADD -ksp_rtol 1.0e-10 -ksp_converged_reason -da_refine $LEV -log_view"
         echo "COMMAND:  $CMD"
         rm -rf tmp.txt
         $CMD &> tmp.txt
