@@ -1,37 +1,24 @@
 static char help[] =
-"Solves structured-grid minimal surface equation in 2D.  Option prefix mse_.\n"
+"Structured-grid minimal surface equation in 2D.  Option prefix mse_.\n"
 "Equation is\n"
 "            /         nabla u         \\ \n"
 "  - nabla . | ----------------------- | = 0\n"
 "            \\  sqrt(1 + |nabla u|^2)  / \n"
 "on the unit square [0,1]x[0,1], subject to Dirichlet boundary conditions\n"
-"u = g(x,y).  Implemented boundary conditions include catenoid (with exact\n"
-"solution) and \"tent\" cases.  Re-uses Jacobian from Poisson equation\n"
-"as preconditioner; this is suitable only for low-amplitude g.\n"
-"Multigrid-capable.\n\n";
+"u = g(x,y).  Implemented boundary conditions include tent and catenoid\n"
+"cases; the latter is the default and has exact solution.  Re-uses Jacobian\n"
+"from Poisson equation as preconditioner; this is suitable only for\n"
+"low-amplitude g.  Multigrid and DD capable.\n\n";
 
 /* 
-snes_fd_color is 10 times faster than snes_mf_operator:
-$ timer ./minimal -snes_mf_operator -snes_converged_reason -da_refine 6
-Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 11
-done on 129 x 129 grid ...
-real 13.19
-$ timer ./minimal -snes_fd_color -snes_converged_reason -da_refine 6
-Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 11
-done on 129 x 129 grid ...
-real 1.49
-
-CG is 50% faster than GMRES (prev):
-$ timer ./minimal -snes_fd_color -snes_converged_reason -da_refine 6 -ksp_type cg
-Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 11
-done on 129 x 129 grid ...
-real 1.12
+snes_fd_color is 10 times faster than snes_mf_operator
+CG is 50% faster than GMRES (prev)
 
 multigrid is faster than ILU(0) (previous), but only on finer grids:
 $ timer ./minimal -snes_fd_color -snes_converged_reason -da_refine 8 -ksp_type cg -pc_type PC
 is 85 seconds for PC=mg and 149 seconds for PC=ilu
 
-key idea:   -snes_grid_sequence X   REPLACES!   -da_refine X
+key idea:   -snes_grid_sequence X   REPLACES   -da_refine X
 
 but -snes_grid_sequence is much better:
 $ timer ./minimal -snes_fd_color -snes_converged_reason -snes_grid_sequence 8 -ksp_type cg -pc_type mg
@@ -42,24 +29,9 @@ already strong!) and for getting into domain of convergence in catenoid case
 
 exercise: -snes_grid_sequence gets initial state suitable for catenoid, but an alternate strategy is to first solve the laplace equation and then use the solution to start on MSE
 
-evidence of parallel?  hard to find with -pc_type mg or -snes_grid_sequence):
-
-in parallel at higher
-    timer mpiexec -n 4 ./minimal -snes_fd_color -snes_converged_reason -ksp_converged_reason -snes_grid_sequence 8
-    ...
-      Linear solve converged due to CONVERGED_RTOL iterations 405
-      Linear solve converged due to CONVERGED_RTOL iterations 400
-    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
-    done on 513 x 513 grid ...
-    real 27.28
-add multigrid:
-    timer mpiexec -n 4 ./minimal -snes_fd_color -snes_converged_reason -ksp_converged_reason -snes_grid_sequence 8 -pc_type mg
-    ...
-      Linear solve converged due to CONVERGED_RTOL iterations 13
-      Linear solve converged due to CONVERGED_RTOL iterations 13
-    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
-    done on 513 x 513 grid ...
-    real 16.92
+in parallel at higher res with multigrid:
+    timer mpiexec -n 4 ./minimal -snes_fd_color -snes_converged_reason -ksp_converged_reason -snes_grid_sequence 8 -pc_type mg -mse_problem catenoid
+(works to level 10; also good with -snes_mf_operator)
 
 this would seem to be FAS with NGS smoothing, but with "Use finite difference secant approximation with coloring with h = 1e-08" for the NGS, which is also used on coarse grid:
 ./minimal -da_refine 4 -snes_monitor -snes_type fas -fas_coarse_snes_type ngs -fas_levels_snes_type ngs
@@ -68,7 +40,7 @@ also:
   ./minimal -da_refine 4 -snes_monitor -snes_type fas -fas_coarse_pc_type lu -fas_coarse_ksp_type preonly -fas_coarse_snes_type newtonls -fas_levels_snes_type nrichardson
   ./minimal -da_refine 4 -snes_monitor -snes_type fas -fas_coarse_pc_type lu -fas_coarse_ksp_type preonly -fas_coarse_snes_type newtonls -fas_levels_snes_type ngs
 
-can't seem to speed up in trying to reduce ksp iterations on finer levels:
+with tent?, can't seem to speed up in trying to reduce ksp iterations on finer levels:
     * try -pc_mg_type full or -pc_mg_cycle_type w   [neither very effective]
     * change the amount of smoothing: -mg_levels_ksp_max_it 10   [slower but counts down]
     * change the smoother: -mg_levels_pc_type gamg  (!)    [slower but counts a lot down]
@@ -126,12 +98,12 @@ int main(int argc,char **argv) {
     MinimalCtx     mctx;
     PetscBool      monitor_area = PETSC_FALSE;
     DMDALocalInfo  info;
+    ProblemType    problem = CATENOID;
 
     // defaults:
-    ProblemType    problem = TENT;
     mctx.power = -0.5;
     mctx.H_tent = 1.0;
-    mctx.c_catenoid = 2.0;
+    mctx.c_catenoid = 1.1;  // case shown in Figure in book
     user.cx = 1.0;
     user.cy = 1.0;
     user.cz = 1.0;
@@ -152,7 +124,7 @@ int main(int argc,char **argv) {
                             NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
-    user.addctx = &mctx;
+    user.addctx = &mctx;   // attach MSE-specific parameters
     switch (problem) {
         case TENT:
             user.g_bdry = &g_bdry_tent;
@@ -176,8 +148,8 @@ int main(int argc,char **argv) {
     ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
     ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
                (DMDASNESFunction)FormFunctionLocal,&user); CHKERRQ(ierr);
-    // this is the Jacobian of the Poisson equation, thus ONLY APPROXIMATE
-    //     ... consider using -snes_fd_color or -snes_mf_operator
+    // this is the Jacobian of the Poisson equation, thus ONLY APPROXIMATE;
+    //     generally use -snes_fd_color or -snes_mf_operator
     ierr = DMDASNESSetJacobianLocal(da,
                (DMDASNESJacobian)Poisson2DJacobianLocal,&user); CHKERRQ(ierr);
     if (monitor_area) {

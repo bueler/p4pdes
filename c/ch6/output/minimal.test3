@@ -1,8 +1,9 @@
-area = 1.41540464
-area = 1.29904335
-area = 1.29602408
-area = 1.29590391
-area = 1.29590213
-area = 1.29590213
-Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
-done on 9 x 9 grid ...
+area = 4.43988463
+area = 1.86724888
+area = 1.39586564
+area = 1.33505439
+area = 1.33389818
+area = 1.33389532
+area = 1.33389532
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 6
+done on 9 x 9 grid:  error |u-uexact|_inf = 6.79501e-04

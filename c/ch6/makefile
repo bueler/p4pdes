@@ -36,16 +36,16 @@ runfish_8:
 	-@../testit.sh fish "-fsh_dim 3 -da_refine 2 -mat_is_symmetric 1.0e-7 -snes_fd_color" 1 8
 
 runminimal_1:
-	-@../testit.sh minimal "-snes_fd_color -snes_converged_reason -snes_monitor_short -mse_problem catenoid -da_refine 1" 1 1
+	-@../testit.sh minimal "-snes_fd_color -snes_converged_reason -snes_monitor_short -mse_problem catenoid -mse_c_catenoid 2.0 -da_refine 1" 1 1
 
 runminimal_2:
-	-@../testit.sh minimal "-snes_fd_color -mat_is_symmetric 1.0e-7 -mse_power 0.0 -ksp_type cg -ksp_converged_reason -da_refine 2" 1 2
+	-@../testit.sh minimal "-snes_fd_color -mat_is_symmetric 1.0e-7 -mse_power 0.0 -ksp_type cg -ksp_converged_reason -da_refine 2 -mse_problem tent" 1 2
 
 runminimal_3:
 	-@../testit.sh minimal "-snes_mf_operator -snes_converged_reason -pc_type mg -da_refine 2 -mse_monitor_area" 2 3
 
 runminimal_4:
-	-@../testit.sh minimal "-snes_fd_color -snes_converged_reason -snes_grid_sequence 2" 1 4
+	-@../testit.sh minimal "-snes_fd_color -snes_converged_reason -snes_grid_sequence 2 -mse_problem tent" 1 4
 
 test_fish: runfish_1 runfish_2 runfish_3 runfish_4 runfish_5 runfish_6 runfish_7 runfish_8
 
