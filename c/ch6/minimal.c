@@ -1,14 +1,13 @@
 static char help[] =
 "Structured-grid minimal surface equation in 2D.  Option prefix mse_.\n"
 "Equation is\n"
-"            /         nabla u         \\ \n"
-"  - nabla . | ----------------------- | = 0\n"
-"            \\  sqrt(1 + |nabla u|^2)  / \n"
-"on the unit square [0,1]x[0,1], subject to Dirichlet boundary conditions\n"
-"u = g(x,y).  Implemented boundary conditions include tent and catenoid\n"
-"cases; the latter is the default and has exact solution.  Re-uses Jacobian\n"
-"from Poisson equation as preconditioner; this is suitable only for\n"
-"low-amplitude g.  Multigrid and DD capable.\n\n";
+"  - div ( (1 + |grad u|^2)^q grad u ) = 0\n"
+"on the unit square [0,1]x[0,1] subject to Dirichlet boundary\n"
+"conditions u = g(x,y).  Power q defaults to -1/2 but is adjustable.\n"
+"Catenoid and tent boundary conditions are implemented; catenoid is an exact\n"
+"solution.  We re-use the Jacobian from the Poisson equation.  This is suitable\n"
+"only for low-amplitude g, or as preconditioning material in -snes_mf_operator.\n"
+"This code is multigrid and DD capable.\n\n";
 
 /* 
 snes_fd_color is 10 times faster than snes_mf_operator

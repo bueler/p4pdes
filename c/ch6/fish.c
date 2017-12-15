@@ -1,10 +1,11 @@
 static char help[] =
 "Solves structured-grid Poisson problem in 1D, 2D, 3D.  Option prefix fsh_.\n"
-"Equation  - nabla^2 u = f,  subject to Dirichlet boundary conditions.\n"
-"Solves three different problems where exact solution is known.  Uses DMDA\n"
-"and SNES; equations is put in form  F(u) = - nabla^2 u - f.  Call-backs\n"
-"fully-rediscretize for the supplied grid.  Defaults to 2D, a SNESType of\n"
-"KSPONLY, and a KSPType of CG.\n\n";
+"Equation is\n"
+"    - cx u_xx - cy u_yy - cz u_zz = f,\n"
+"subject to Dirichlet boundary conditions.  Solves three different problems\n"
+"where exact solution is known.  Uses DMDA and SNES.  Equation is put in form\n"
+"F(u) = - grad^2 u - f.  Call-backs fully-rediscretize for the supplied grid.\n"
+"Defaults to 2D, a SNESType of KSPONLY, and a KSPType of CG.\n\n";
 
 #include <petsc.h>
 #include "poissonfunctions.h"
