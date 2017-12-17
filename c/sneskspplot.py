@@ -125,6 +125,7 @@ def genskfigure(snesdata, kspdata,
                     plt.semilogy(jjshift,kspruns[j],kspmarker+'-',markersize=msize-2)
 
     # default decorations
+    plt.ylabel('residual norm',fontsize=18.0)
     plt.grid(True)
     if showsnes:
         plt.xticks(range(len(snesdata)))
