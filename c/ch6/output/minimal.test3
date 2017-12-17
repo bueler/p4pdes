@@ -6,4 +6,4 @@ area = 1.33389818
 area = 1.33389532
 area = 1.33389532
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 6
-done on 9 x 9 grid:  error |u-uexact|_inf = 6.79501e-04
+done on 9 x 9 grid and problem catenoid:  error |u-uexact|_inf = 6.79501e-04

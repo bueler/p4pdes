@@ -95,7 +95,8 @@ int main(int argc,char **argv) {
     Vec            u_initial;
     PoissonCtx     user;
     MinimalCtx     mctx;
-    PetscBool      monitor_area = PETSC_FALSE;
+    PetscBool      monitor_area = PETSC_FALSE,
+                   exact_init = PETSC_FALSE;
     DMDALocalInfo  info;
     ProblemType    problem = CATENOID;
 
@@ -116,6 +117,8 @@ int main(int argc,char **argv) {
                             "minimal.c",mctx.H_tent,&(mctx.H_tent),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsBool("-monitor_area","compute and print surface area at each SNES iteration",
                             "minimal.c",monitor_area,&(monitor_area),NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-exact_init","initial Newton iterate is exact solution",
+                            "minimal.c",exact_init,&(exact_init),NULL);CHKERRQ(ierr);
     ierr = PetscOptionsReal("-power","power of (1+|grad u|^2) in diffusivity",
                             "minimal.c",mctx.power,&(mctx.power),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnum("-problem","problem type; determines boundary conditions",
@@ -126,9 +129,17 @@ int main(int argc,char **argv) {
     user.addctx = &mctx;   // attach MSE-specific parameters
     switch (problem) {
         case TENT:
+            if (exact_init) {
+                SETERRQ(PETSC_COMM_WORLD,2,
+                    "initialization with exact solution only possible for -mse_problem catenoid\n");
+            }
             user.g_bdry = &g_bdry_tent;
             break;
         case CATENOID:
+            if ((exact_init) && (mctx.power != -0.5)) {
+                SETERRQ(PETSC_COMM_WORLD,3,
+                    "initialization with exact solution only possible if q=-0.5\n");
+            }
             user.g_bdry = &g_bdry_catenoid;
             break;
         default:
@@ -156,9 +167,14 @@ int main(int argc,char **argv) {
     }
     ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
-    // initial iterate has u=g on boundary and u=0 in interior
     ierr = DMGetGlobalVector(da,&u_initial); CHKERRQ(ierr);
-    ierr = InitialState(da, ZEROS, PETSC_TRUE, u_initial, &user); CHKERRQ(ierr);
+    if ((problem == CATENOID) && (mctx.power == -0.5) && (exact_init)) {
+        ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+        ierr = FormExactFromG(&info,u_initial,&user); CHKERRQ(ierr);
+    } else {
+        // initial iterate has u=g on boundary and u=0 in interior
+        ierr = InitialState(da, ZEROS, PETSC_TRUE, u_initial, &user); CHKERRQ(ierr);
+    }
 
     ierr = SNESSolve(snes,NULL,u_initial); CHKERRQ(ierr);
     ierr = DMRestoreGlobalVector(da,&u_initial); CHKERRQ(ierr);
@@ -166,7 +182,8 @@ int main(int argc,char **argv) {
 
     ierr = SNESGetDM(snes,&da_after); CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"done on %d x %d grid",info.mx,info.my); CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"done on %d x %d grid and problem %s",
+                       info.mx,info.my,ProblemTypes[problem]); CHKERRQ(ierr);
     if ((problem == CATENOID) && (mctx.power == -0.5)) {
         Vec    u, u_exact;
         double errnorm;
