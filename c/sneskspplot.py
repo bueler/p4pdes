@@ -105,10 +105,10 @@ def genskfigure(snesdata, kspdata,
         assert len(snesdata) > 0, 'empty snesdata'
         for k in range(len(snesdata)):
             if k == 0:
-                plt.semilogy(0,snesdata[0],snesmarker,markersize=msize,
+                plt.semilogy(0,snesdata[0],snesmarker,markersize=msize+2.0,mfc='none',
                              label='SNES residual norm')
             else:
-                plt.semilogy(k,snesdata[k],snesmarker,markersize=msize)
+                plt.semilogy(k,snesdata[k],snesmarker,markersize=msize+2.0,mfc='none')
         plt.xlabel('SNES iteration',fontsize=18.0)
     if showksp:
         assert len(kspdata) > 0, 'empty kspdata'
