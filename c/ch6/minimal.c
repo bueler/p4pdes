@@ -52,8 +52,8 @@ with tent?, can't seem to speed up in trying to reduce ksp iterations on finer l
 typedef struct {
     double    power,      // the exponent in the diffusivity;
                           // =-1/2 for minimal surface eqn; =0 for Laplace eqn
-              H_tent,     // height of tent along y=0 boundary
-              c_catenoid; // parameter in catenoid boundary condition
+              tent_H,     // height of tent door along y=0 boundary
+              catenoid_c; // parameter in catenoid formula
 } MinimalCtx;
 
 // Dirichlet boundary conditions
@@ -61,7 +61,7 @@ static double g_bdry_tent(double x, double y, double z, void *ctx) {
     PoissonCtx *user = (PoissonCtx*)ctx;
     MinimalCtx *mctx = (MinimalCtx*)(user->addctx);
     if (x < 1.0e-8) {
-        return 2.0 * mctx->H_tent * (y < 0.5 ? y : 1.0 - y);
+        return 2.0 * mctx->tent_H * (y < 0.5 ? y : 1.0 - y);
     } else
         return 0;
 }
@@ -69,7 +69,7 @@ static double g_bdry_tent(double x, double y, double z, void *ctx) {
 static double g_bdry_catenoid(double x, double y, double z, void *ctx) {
     PoissonCtx   *user = (PoissonCtx*)ctx;
     MinimalCtx   *mctx = (MinimalCtx*)(user->addctx);
-    const double c = mctx->c_catenoid;
+    const double c = mctx->catenoid_c;
     return c * cosh(x/c) * sin(acos( (y/c) / cosh(x/c) ));
 }
 
@@ -82,7 +82,7 @@ static double DD(double w, double power) {
 extern PetscErrorCode FormExactFromG(DMDALocalInfo*, Vec, PoissonCtx*);
 extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, double**,
                                         double **FF, PoissonCtx*);
-extern PetscErrorCode AreaMonitor(SNES, int, double, void*);
+extern PetscErrorCode MSEMonitor(SNES, int, double, void*);
 
 typedef enum {TENT, CATENOID} ProblemType;
 static const char* ProblemTypes[] = {"tent","catenoid",
@@ -95,15 +95,15 @@ int main(int argc,char **argv) {
     Vec            u_initial;
     PoissonCtx     user;
     MinimalCtx     mctx;
-    PetscBool      monitor_area = PETSC_FALSE,
+    PetscBool      monitor = PETSC_FALSE,
                    exact_init = PETSC_FALSE;
     DMDALocalInfo  info;
     ProblemType    problem = CATENOID;
 
     // defaults:
     mctx.power = -0.5;
-    mctx.H_tent = 1.0;
-    mctx.c_catenoid = 1.1;  // case shown in Figure in book
+    mctx.tent_H = 1.0;
+    mctx.catenoid_c = 1.1;  // case shown in Figure in book
     user.cx = 1.0;
     user.cy = 1.0;
     user.cz = 1.0;
@@ -111,19 +111,19 @@ int main(int argc,char **argv) {
     PetscInitialize(&argc,&argv,NULL,help);
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"mse_",
                              "minimal surface equation solver options",""); CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-c_catenoid","catenoid parameter; c >= 1 required",
-                            "minimal.c",mctx.c_catenoid,&(mctx.c_catenoid),NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-H_tent","tent height",
-                            "minimal.c",mctx.H_tent,&(mctx.H_tent),NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-monitor_area","compute and print surface area at each SNES iteration",
-                            "minimal.c",monitor_area,&(monitor_area),NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-exact_init","initial Newton iterate is exact solution",
+    ierr = PetscOptionsReal("-catenoid_c","parameter for problem catenoid; c >= 1 required",
+                            "minimal.c",mctx.catenoid_c,&(mctx.catenoid_c),NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-exact_init","initial Newton iterate = continuum exact solution; only for catenoid",
                             "minimal.c",exact_init,&(exact_init),NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-monitor","print surface area and diffusivity bounds at each SNES iteration",
+                            "minimal.c",monitor,&(monitor),NULL);CHKERRQ(ierr);
     ierr = PetscOptionsReal("-power","power of (1+|grad u|^2) in diffusivity",
                             "minimal.c",mctx.power,&(mctx.power),NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsEnum("-problem","problem type; determines boundary conditions",
+    ierr = PetscOptionsEnum("-problem","problem type determines boundary conditions",
                             "minimal.c",ProblemTypes,(PetscEnum)problem,(PetscEnum*)&problem,
                             NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsReal("-tent_H","'door' height for problem tent",
+                            "minimal.c",mctx.tent_H,&(mctx.tent_H),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
     user.addctx = &mctx;   // attach MSE-specific parameters
@@ -162,8 +162,8 @@ int main(int argc,char **argv) {
     //     generally use -snes_fd_color or -snes_mf_operator
     ierr = DMDASNESSetJacobianLocal(da,
                (DMDASNESJacobian)Poisson2DJacobianLocal,&user); CHKERRQ(ierr);
-    if (monitor_area) {
-        ierr = SNESMonitorSet(snes,AreaMonitor,NULL,NULL); CHKERRQ(ierr);
+    if (monitor) {
+        ierr = SNESMonitorSet(snes,MSEMonitor,&user,NULL); CHKERRQ(ierr);
     }
     ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
@@ -298,16 +298,21 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
     return 0;
 }
 
-// compute surface area using tensor product gaussian quadrature
-PetscErrorCode AreaMonitor(SNES snes, int its, double norm, void *ctx) {
+// compute surface area and bounds on diffusivity using Q^1 elements and
+// tensor product gaussian quadrature
+PetscErrorCode MSEMonitor(SNES snes, int its, double norm, void *user) {
     PetscErrorCode ierr;
+    PoissonCtx     *pctx = (PoissonCtx*)(user);
+    MinimalCtx     *mctx = (MinimalCtx*)(pctx->addctx);
     DM             da;
     Vec            u, uloc;
     DMDALocalInfo  info;
     const int      ndegree = 2;
     const Quad1D   q = gausslegendre[ndegree-1];   // from ../quadrature.h
     double         xymin[2], xymax[2], hx, hy, **au, x_i, y_j, x, y,
-                   ux, uy, arealoc, area;
+                   ux, uy, W, D,
+                   Dminloc = PETSC_INFINITY, Dmaxloc = 0.0, Dmin, Dmax,
+                   arealoc = 0.0, area;
     int            i, j, r, s;
     MPI_Comm       comm;
     ierr = SNESGetDM(snes, &da); CHKERRQ(ierr);
@@ -320,7 +325,6 @@ PetscErrorCode AreaMonitor(SNES snes, int its, double norm, void *ctx) {
     hx = (xymax[0] - xymin[0]) / (info.mx - 1);
     hy = (xymax[1] - xymin[1]) / (info.my - 1);
     ierr = DMDAVecGetArrayRead(da,uloc,&au); CHKERRQ(ierr);
-    arealoc = 0.0;
     // loop over rectangles in grid
     for (j = info.ys; j < info.ys + info.ym; j++) {
         if (j == 0)
@@ -342,19 +346,28 @@ PetscErrorCode AreaMonitor(SNES snes, int its, double norm, void *ctx) {
                     uy =   (au[j][i] - au[j-1][i])     * (x - (x_i - hx))
                          + (au[j][i-1] - au[j-1][i-1]) * (x_i - x);
                     uy /= hx * hy;
+                    W = ux * ux + uy * uy;
+                    // min and max of diffusivity at quadrature points
+                    D = DD(W,mctx->power);
+                    Dminloc = PetscMin(Dminloc,D);
+                    Dmaxloc = PetscMax(Dmaxloc,D);
                     // use surface area formula
-                    arealoc += q.w[r] * q.w[s]
-                               * PetscSqrtReal(1.0 + ux * ux + uy * uy);
+                    arealoc += q.w[r] * q.w[s] * PetscSqrtReal(1.0 + W);
                 }
             }
         }
     }
     ierr = DMDAVecRestoreArrayRead(da,uloc,&au); CHKERRQ(ierr);
     ierr = DMRestoreLocalVector(da, &uloc); CHKERRQ(ierr);
-    arealoc *= hx * hy / 4.0;  // from change of variables formula
+
+    // do global reductions and report
     ierr = PetscObjectGetComm((PetscObject)da,&comm); CHKERRQ(ierr);
+    arealoc *= hx * hy / 4.0;  // from change of variables formula
     ierr = MPI_Allreduce(&arealoc,&area,1,MPI_DOUBLE,MPI_SUM,comm); CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"area = %.8f\n",area); CHKERRQ(ierr);
+    ierr = MPI_Allreduce(&Dminloc,&Dmin,1,MPI_DOUBLE,MPI_MIN,comm); CHKERRQ(ierr);
+    ierr = MPI_Allreduce(&Dmaxloc,&Dmax,1,MPI_DOUBLE,MPI_MAX,comm); CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"area = %.8f; %.4f <= D(|grad u|^2) <= %.4f\n",
+               area,Dmin,Dmax); CHKERRQ(ierr);
     return 0;
 }
 
