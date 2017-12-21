@@ -50,7 +50,7 @@ with tent?, can't seem to speed up in trying to reduce ksp iterations on finer l
 #include "../quadrature.h"
 
 typedef struct {
-    double    power,      // the exponent in the diffusivity;
+    double    q,          // the exponent in the diffusivity;
                           // =-1/2 for minimal surface eqn; =0 for Laplace eqn
               tent_H,     // height of tent door along y=0 boundary
               catenoid_c; // parameter in catenoid formula
@@ -75,8 +75,8 @@ static double g_bdry_catenoid(double x, double y, double z, void *ctx) {
 
 // the coefficient (diffusivity) of minimal surface equation, as a function
 //   of  w = |grad u|^2
-static double DD(double w, double power) {
-    return pow(1.0 + w,power);
+static double DD(double w, double q) {
+    return pow(1.0 + w,q);
 }
 
 extern PetscErrorCode FormExactFromG(DMDALocalInfo*, Vec, PoissonCtx*);
@@ -101,7 +101,7 @@ int main(int argc,char **argv) {
     ProblemType    problem = CATENOID;
 
     // defaults:
-    mctx.power = -0.5;
+    mctx.q = -0.5;
     mctx.tent_H = 1.0;
     mctx.catenoid_c = 1.1;  // case shown in Figure in book
     user.cx = 1.0;
@@ -117,8 +117,8 @@ int main(int argc,char **argv) {
                             "minimal.c",exact_init,&(exact_init),NULL);CHKERRQ(ierr);
     ierr = PetscOptionsBool("-monitor","print surface area and diffusivity bounds at each SNES iteration",
                             "minimal.c",monitor,&(monitor),NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-power","power of (1+|grad u|^2) in diffusivity",
-                            "minimal.c",mctx.power,&(mctx.power),NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsReal("-q","power of (1+|grad u|^2) in diffusivity",
+                            "minimal.c",mctx.q,&(mctx.q),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnum("-problem","problem type determines boundary conditions",
                             "minimal.c",ProblemTypes,(PetscEnum)problem,(PetscEnum*)&problem,
                             NULL); CHKERRQ(ierr);
@@ -136,7 +136,7 @@ int main(int argc,char **argv) {
             user.g_bdry = &g_bdry_tent;
             break;
         case CATENOID:
-            if ((exact_init) && (mctx.power != -0.5)) {
+            if ((exact_init) && (mctx.q != -0.5)) {
                 SETERRQ(PETSC_COMM_WORLD,3,
                     "initialization with exact solution only possible if q=-0.5\n");
             }
@@ -168,7 +168,7 @@ int main(int argc,char **argv) {
     ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
     ierr = DMGetGlobalVector(da,&u_initial); CHKERRQ(ierr);
-    if ((problem == CATENOID) && (mctx.power == -0.5) && (exact_init)) {
+    if ((problem == CATENOID) && (mctx.q == -0.5) && (exact_init)) {
         ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
         ierr = FormExactFromG(&info,u_initial,&user); CHKERRQ(ierr);
     } else {
@@ -184,7 +184,7 @@ int main(int argc,char **argv) {
     ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,"done on %d x %d grid and problem %s",
                        info.mx,info.my,ProblemTypes[problem]); CHKERRQ(ierr);
-    if ((problem == CATENOID) && (mctx.power == -0.5)) {
+    if ((problem == CATENOID) && (mctx.q == -0.5)) {
         Vec    u, u_exact;
         double errnorm;
         ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr);
@@ -276,19 +276,19 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                 // gradient  (dux,duy)   at east point  (i+1/2,j):
                 dux = (ue - au[j][i]) / hx;
                 duy = (un + une - us - use) / (4.0 * hy);
-                De = DD(dux * dux + duy * duy, mctx->power);
+                De = DD(dux * dux + duy * duy, mctx->q);
                 // ...                   at west point  (i-1/2,j):
                 dux = (au[j][i] - uw) / hx;
                 duy = (unw + un - usw - us) / (4.0 * hy);
-                Dw = DD(dux * dux + duy * duy, mctx->power);
+                Dw = DD(dux * dux + duy * duy, mctx->q);
                 // ...                  at north point  (i,j+1/2):
                 dux = (ue + une - uw - unw) / (4.0 * hx);
                 duy = (un - au[j][i]) / hy;
-                Dn = DD(dux * dux + duy * duy, mctx->power);
+                Dn = DD(dux * dux + duy * duy, mctx->q);
                 // ...                  at south point  (i,j-1/2):
                 dux = (ue + use - uw - usw) / (4.0 * hx);
                 duy = (au[j][i] - us) / hy;
-                Ds = DD(dux * dux + duy * duy, mctx->power);
+                Ds = DD(dux * dux + duy * duy, mctx->q);
                 // evaluate residual
                 FF[j][i] = - hyhx * (De * (ue - au[j][i]) - Dw * (au[j][i] - uw))
                            - hxhy * (Dn * (un - au[j][i]) - Ds * (au[j][i] - us));
@@ -348,7 +348,7 @@ PetscErrorCode MSEMonitor(SNES snes, int its, double norm, void *user) {
                     uy /= hx * hy;
                     W = ux * ux + uy * uy;
                     // min and max of diffusivity at quadrature points
-                    D = DD(W,mctx->power);
+                    D = DD(W,mctx->q);
                     Dminloc = PetscMin(Dminloc,D);
                     Dmaxloc = PetscMax(Dmaxloc,D);
                     // use surface area formula

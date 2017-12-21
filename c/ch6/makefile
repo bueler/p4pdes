@@ -39,7 +39,7 @@ runminimal_1:
 	-@../testit.sh minimal "-snes_fd_color -snes_converged_reason -snes_monitor_short -mse_problem catenoid -mse_catenoid_c 2.0 -da_refine 1" 1 1
 
 runminimal_2:
-	-@../testit.sh minimal "-snes_fd_color -mat_is_symmetric 1.0e-7 -mse_power 0.0 -ksp_type cg -ksp_converged_reason -da_refine 2 -mse_problem tent" 1 2
+	-@../testit.sh minimal "-snes_fd_color -mat_is_symmetric 1.0e-7 -mse_q 0.0 -ksp_type cg -ksp_converged_reason -da_refine 2 -mse_problem tent" 1 2
 
 runminimal_3:
 	-@../testit.sh minimal "-snes_mf_operator -snes_converged_reason -pc_type mg -da_refine 2 -mse_monitor" 2 3
