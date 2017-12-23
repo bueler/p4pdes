@@ -1,36 +1,18 @@
 static char help[] =
-"Structured-grid minimal surface equation in 2D.  Option prefix mse_.\n"
+"Structured-grid minimal surface equation (MSE) in 2D.  Option prefix mse_.\n"
 "Equation is\n"
 "  - div ( (1 + |grad u|^2)^q grad u ) = 0\n"
 "on the unit square [0,1]x[0,1] subject to Dirichlet boundary\n"
-"conditions u = g(x,y).  Power q defaults to -1/2 but is adjustable.\n"
+"conditions u = g(x,y).  Power q defaults to -1/2 (i.e. MSE) but is adjustable.\n"
 "Catenoid and tent boundary conditions are implemented; catenoid is an exact\n"
-"solution.  We re-use the Jacobian from the Poisson equation.  This is suitable\n"
+"solution.  We re-use the Jacobian from the Poisson equation, but it is suitable\n"
 "only for low-amplitude g, or as preconditioning material in -snes_mf_operator.\n"
-"This code is multigrid and DD capable.\n\n";
+"Options -snes_fd_color and -snes_grid_sequence K are recommended.\n"
+"This code is multigrid (GMG) capable.\n\n";
 
 /* 
-snes_fd_color is 10 times faster than snes_mf_operator
-CG is 50% faster than GMRES (prev)
-
-multigrid is faster than ILU(0) (previous), but only on finer grids:
-$ timer ./minimal -snes_fd_color -snes_converged_reason -da_refine 8 -ksp_type cg -pc_type PC
-is 85 seconds for PC=mg and 149 seconds for PC=ilu
-
-key idea:   -snes_grid_sequence X   REPLACES   -da_refine X
-
-but -snes_grid_sequence is much better:
-$ timer ./minimal -snes_fd_color -snes_converged_reason -snes_grid_sequence 8 -ksp_type cg -pc_type mg
-is 15 seconds
-
 -snes_grid_sequence is effective when nonlinearity is strong (default H=1 is
 already strong!) and for getting into domain of convergence in catenoid case
-
-exercise: -snes_grid_sequence gets initial state suitable for catenoid, but an alternate strategy is to first solve the laplace equation and then use the solution to start on MSE
-
-in parallel at higher res with multigrid:
-    timer mpiexec -n 4 ./minimal -snes_fd_color -snes_converged_reason -ksp_converged_reason -snes_grid_sequence 8 -pc_type mg -mse_problem catenoid
-(works to level 10; also good with -snes_mf_operator)
 
 this would seem to be FAS with NGS smoothing, but with "Use finite difference secant approximation with coloring with h = 1e-08" for the NGS, which is also used on coarse grid:
 ./minimal -da_refine 4 -snes_monitor -snes_type fas -fas_coarse_snes_type ngs -fas_levels_snes_type ngs
@@ -90,9 +72,9 @@ static const char* ProblemTypes[] = {"tent","catenoid",
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
-    DM             da, da_after;
+    DM             da;
     SNES           snes;
-    Vec            u_initial;
+    Vec            u_initial, u;
     PoissonCtx     user;
     MinimalCtx     mctx;
     PetscBool      monitor = PETSC_FALSE,
@@ -111,18 +93,24 @@ int main(int argc,char **argv) {
     PetscInitialize(&argc,&argv,NULL,help);
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"mse_",
                              "minimal surface equation solver options",""); CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-catenoid_c","parameter for problem catenoid; c >= 1 required",
+    ierr = PetscOptionsReal("-catenoid_c",
+                            "parameter for problem catenoid; c >= 1 required",
                             "minimal.c",mctx.catenoid_c,&(mctx.catenoid_c),NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-exact_init","initial Newton iterate = continuum exact solution; only for catenoid",
+    ierr = PetscOptionsBool("-exact_init",
+                            "initial Newton iterate = continuum exact solution; only for catenoid",
                             "minimal.c",exact_init,&(exact_init),NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-monitor","print surface area and diffusivity bounds at each SNES iteration",
+    ierr = PetscOptionsBool("-monitor",
+                            "print surface area and diffusivity bounds at each SNES iteration",
                             "minimal.c",monitor,&(monitor),NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-q","power of (1+|grad u|^2) in diffusivity",
+    ierr = PetscOptionsReal("-q",
+                            "power of (1+|grad u|^2) in diffusivity",
                             "minimal.c",mctx.q,&(mctx.q),NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsEnum("-problem","problem type determines boundary conditions",
+    ierr = PetscOptionsEnum("-problem",
+                            "problem type determines boundary conditions",
                             "minimal.c",ProblemTypes,(PetscEnum)problem,(PetscEnum*)&problem,
                             NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-tent_H","'door' height for problem tent",
+    ierr = PetscOptionsReal("-tent_H",
+                            "'door' height for problem tent",
                             "minimal.c",mctx.tent_H,&(mctx.tent_H),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
@@ -180,18 +168,21 @@ int main(int argc,char **argv) {
         ierr = InitialState(da, ZEROS, PETSC_TRUE, u_initial, &user); CHKERRQ(ierr);
     }
 
+//STARTSNESSOLVE
     ierr = SNESSolve(snes,NULL,u_initial); CHKERRQ(ierr);
     ierr = DMRestoreGlobalVector(da,&u_initial); CHKERRQ(ierr);
     ierr = DMDestroy(&da); CHKERRQ(ierr);
-
-    ierr = SNESGetDM(snes,&da_after); CHKERRQ(ierr);
-    ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
+    ierr = SNESGetDM(snes,&da); CHKERRQ(ierr);
+    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,"done on %d x %d grid and problem %s",
                        info.mx,info.my,ProblemTypes[problem]); CHKERRQ(ierr);
+    ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr);
+//ENDSNESSOLVE
+
+    // evaluate numerical error in exact solution case
     if ((problem == CATENOID) && (mctx.q == -0.5)) {
-        Vec    u, u_exact;
+        Vec    u_exact;
         double errnorm;
-        ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr);
         ierr = VecDuplicate(u,&u_exact); CHKERRQ(ierr);
         ierr = FormExactFromG(&info,u_exact,&user); CHKERRQ(ierr);
         ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
