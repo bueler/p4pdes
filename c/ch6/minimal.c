@@ -325,17 +325,17 @@ PetscErrorCode MSEMonitor(SNES snes, int its, double norm, void *user) {
     for (j = info.ys; j < info.ys + info.ym; j++) {
         if (j == 0)
             continue;
-        y_j = j * hy;
+        y_j = j * hy;  // NE corner of cell is (x_i,y_j)
         for (i = info.xs; i < info.xs + info.xm; i++) {
             if (i == 0)
                 continue;
             x_i = i * hx;
-            // loop over quadrature points in rectangle w NE corner (x_i,y_j)
+            // loop over quadrature points in cell
             for (r = 0; r < q.n; r++) {
                 x = x_i - hx + hx * 0.5 * (q.xi[r] + 1);
                 for (s = 0; s < q.n; s++) {
                     y = y_j - hy + hy * 0.5 * (q.xi[s] + 1);
-                    // gradient of u(x,y) at quadrature points
+                    // gradient of u(x,y) at a quadrature point
                     ux =   (au[j][i] - au[j][i-1])     * (y - (y_j - hy))
                          + (au[j-1][i] - au[j-1][i-1]) * (y_j - y);
                     ux /= hx * hy;
