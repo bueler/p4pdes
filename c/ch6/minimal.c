@@ -10,23 +10,6 @@ static char help[] =
 "Options -snes_fd_color and -snes_grid_sequence K are recommended.\n"
 "This code is multigrid (GMG) capable.\n\n";
 
-/* 
--snes_grid_sequence is effective when nonlinearity is strong (default H=1 is
-already strong!) and for getting into domain of convergence in catenoid case
-
-this would seem to be FAS with NGS smoothing, but with "Use finite difference secant approximation with coloring with h = 1e-08" for the NGS, which is also used on coarse grid:
-./minimal -da_refine 4 -snes_monitor -snes_type fas -fas_coarse_snes_type ngs -fas_levels_snes_type ngs
-
-also:
-  ./minimal -da_refine 4 -snes_monitor -snes_type fas -fas_coarse_pc_type lu -fas_coarse_ksp_type preonly -fas_coarse_snes_type newtonls -fas_levels_snes_type nrichardson
-  ./minimal -da_refine 4 -snes_monitor -snes_type fas -fas_coarse_pc_type lu -fas_coarse_ksp_type preonly -fas_coarse_snes_type newtonls -fas_levels_snes_type ngs
-
-with tent?, can't seem to speed up in trying to reduce ksp iterations on finer levels:
-    * try -pc_mg_type full or -pc_mg_cycle_type w   [neither very effective]
-    * change the amount of smoothing: -mg_levels_ksp_max_it 10   [slower but counts down]
-    * change the smoother: -mg_levels_pc_type gamg  (!)    [slower but counts a lot down]
-*/
-
 #include <petsc.h>
 #include "poissonfunctions.h"
 #include "../quadrature.h"
@@ -36,6 +19,7 @@ typedef struct {
                           // =-1/2 for minimal surface eqn; =0 for Laplace eqn
               tent_H,     // height of tent door along y=0 boundary
               catenoid_c; // parameter in catenoid formula
+    int       quaddegree; // quadrature degree used in -mse_monitor
 } MinimalCtx;
 
 // Dirichlet boundary conditions
@@ -86,6 +70,7 @@ int main(int argc,char **argv) {
     mctx.q = -0.5;
     mctx.tent_H = 1.0;
     mctx.catenoid_c = 1.1;  // case shown in Figure in book
+    mctx.quaddegree = 3;
     user.cx = 1.0;
     user.cy = 1.0;
     user.cz = 1.0;
@@ -105,6 +90,9 @@ int main(int argc,char **argv) {
     ierr = PetscOptionsReal("-q",
                             "power of (1+|grad u|^2) in diffusivity",
                             "minimal.c",mctx.q,&(mctx.q),NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsInt("-quaddegree",
+                            "quadrature degree (=1,2,3) used in -mse_monitor",
+                            "minimal.c",mctx.quaddegree,&(mctx.quaddegree),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnum("-problem",
                             "problem type determines boundary conditions",
                             "minimal.c",ProblemTypes,(PetscEnum)problem,(PetscEnum*)&problem,
@@ -302,8 +290,7 @@ PetscErrorCode MSEMonitor(SNES snes, int its, double norm, void *user) {
     DM             da;
     Vec            u, uloc;
     DMDALocalInfo  info;
-    const int      ndegree = 2;
-    const Quad1D   q = gausslegendre[ndegree-1];   // from ../quadrature.h
+    const Quad1D   q = gausslegendre[mctx->quaddegree-1];   // from ../quadrature.h
     double         xymin[2], xymax[2], hx, hy, **au, x_i, y_j, x, y,
                    ux, uy, W, D,
                    Dminloc = PETSC_INFINITY, Dmaxloc = 0.0, Dmin, Dmax,
