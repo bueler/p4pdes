@@ -320,21 +320,22 @@ PetscErrorCode MSEMonitor(SNES snes, int its, double norm, void *user) {
     hx = (xymax[0] - xymin[0]) / (info.mx - 1);
     hy = (xymax[1] - xymin[1]) / (info.my - 1);
     ierr = DMDAVecGetArrayRead(da,uloc,&au); CHKERRQ(ierr);
-    // loop over rectangles in grid
+//STARTMONITORLOOP
+    // loop over rectangular cells in grid
     for (j = info.ys; j < info.ys + info.ym; j++) {
         if (j == 0)
             continue;
         y_j = j * hy;
         for (i = info.xs; i < info.xs + info.xm; i++) {
-            x_i = i * hx;
             if (i == 0)
                 continue;
-            // loop over quadrature points in rectangle w corner (x_i,y_j)
+            x_i = i * hx;
+            // loop over quadrature points in rectangle w NE corner (x_i,y_j)
             for (r = 0; r < q.n; r++) {
-                x = x_i + 0.5 * hx * q.xi[r];
+                x = x_i - hx + hx * 0.5 * (q.xi[r] + 1);
                 for (s = 0; s < q.n; s++) {
-                    y = y_j + 0.5 * hy * q.xi[s];
-                    // slopes of u(x,y) at quadrature point
+                    y = y_j - hy + hy * 0.5 * (q.xi[s] + 1);
+                    // gradient of u(x,y) at quadrature points
                     ux =   (au[j][i] - au[j][i-1])     * (y - (y_j - hy))
                          + (au[j-1][i] - au[j-1][i-1]) * (y_j - y);
                     ux /= hx * hy;
@@ -346,12 +347,13 @@ PetscErrorCode MSEMonitor(SNES snes, int its, double norm, void *user) {
                     D = DD(W,mctx->q);
                     Dminloc = PetscMin(Dminloc,D);
                     Dmaxloc = PetscMax(Dmaxloc,D);
-                    // use surface area formula
+                    // apply quadrature in surface area formula
                     arealoc += q.w[r] * q.w[s] * PetscSqrtReal(1.0 + W);
                 }
             }
         }
     }
+//ENDMONITORLOOP
     ierr = DMDAVecRestoreArrayRead(da,uloc,&au); CHKERRQ(ierr);
     ierr = DMRestoreLocalVector(da, &uloc); CHKERRQ(ierr);
 
