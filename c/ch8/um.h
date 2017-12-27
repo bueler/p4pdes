@@ -45,7 +45,7 @@ PetscErrorCode UMReadISs(UM *mesh, char *filename);
 PetscErrorCode UMViewASCII(UM *mesh, PetscViewer viewer);
 PetscErrorCode UMViewSolutionBinary(UM *mesh, char *filename, Vec u);
 
-// compute statistics for mesh:  maxh,meanh are for triangle side lengths
+// compute statistics for mesh:  maxh,meanh are for triangle side
 // lengths; maxa,meana are for areas
 PetscErrorCode UMStats(UM *mesh, double *maxh, double *meanh,
                        double *maxa, double *meana);
