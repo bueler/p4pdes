@@ -16,12 +16,12 @@ typedef struct {
     IS       e,     // element triples; length 3K
                     //     values e[3*k+0],e[3*k+1],e[3*k+2]
                     //     are indices into node-based Vecs
-             bfn,   // flag for boundary nodes; length N
-                    //     if abfn[i] > 0 then node i is on boundary
-                    //     if abfn[i] == 2 then node i is Dirichlet
              s,     // boundary segment pairs; length 2P
                     //     values s[2*p+0],s[2*p+1]
                     //     are indices into node-based Vecs
+             bfn,   // flag for boundary nodes; length N
+                    //     if abfn[i] > 0 then node i is on boundary
+                    //     if abfn[i] == 2 then node i is Dirichlet
              bfs;   // flag for boundary segments; length P
                     //     if abfs[p] == 1 then segment p is Neumann
                     //     if abfs[p] == 2 then segment p is Dirichlet
