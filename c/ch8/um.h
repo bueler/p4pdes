@@ -32,6 +32,7 @@ typedef struct {
 
 //STARTDECLARE
 PetscErrorCode UMInitialize(UM *mesh);  // call first
+PetscErrorCode UMDestroy(UM *mesh);     // call last
 
 // create Vec and then read node coordinates from file into it
 PetscErrorCode UMReadNodes(UM *mesh, char *filename);
@@ -44,16 +45,14 @@ PetscErrorCode UMReadISs(UM *mesh, char *filename);
 PetscErrorCode UMViewASCII(UM *mesh, PetscViewer viewer);
 PetscErrorCode UMViewSolutionBinary(UM *mesh, char *filename, Vec u);
 
-// compute statistics for mesh:  maxh,meanh = maximum/mean of side
-// lengths; maxa,meana = maximum/mean of areas
+// compute statistics for mesh:  maxh,meanh are for triangle side lengths
+// lengths; maxa,meana are for areas
 PetscErrorCode UMStats(UM *mesh, double *maxh, double *meanh,
                        double *maxa, double *meana);
 
-// give access to a length-N array of Node structs
+// access to a length-N array of structs for nodal coordinates
 PetscErrorCode UMGetNodeCoordArrayRead(UM *mesh, const Node **xy);
 PetscErrorCode UMRestoreNodeCoordArrayRead(UM *mesh, const Node **xy);
-
-PetscErrorCode UMDestroy(UM *mesh);  // call last
 //ENDDECLARE
 #endif
 

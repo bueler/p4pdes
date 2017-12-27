@@ -44,10 +44,8 @@ PetscErrorCode FillExact(Vec uexact, unfemCtx *ctx) {
 
 //STARTFEM
 double chi(int L, double xi, double eta) {
-    if (L == 0)
-        return 1.0 - xi - eta;
-    else
-        return (L == 1) ? xi : eta;
+    const double z[3] = {1.0 - xi - eta, xi, eta};
+    return z[L];
 }
 
 const double dchi[3][2] = {{-1.0,-1.0},{ 1.0, 0.0},{ 0.0, 1.0}};
