@@ -21,12 +21,12 @@ area[7]=0.00001
 area[8]=0.000002
 area[9]=0.0000005
 triangle -pqa${area[0]} meshes/$NAME
-./tri2petsc.py meshes/$NAME.1 meshes/$NAME.1
+./tri2petsc.py meshes/$NAME.1
 for (( Z=1; Z<$MAXLEV; Z++ )); do
     # generates .poly, .node, .ele
     triangle -rpqa${area[$Z]} meshes/$NAME.$Z
     # generates .vec, .is
     OUT=meshes/$NAME.$((Z+1))
-    ./tri2petsc.py $OUT $OUT
+    ./tri2petsc.py $OUT
 done
 

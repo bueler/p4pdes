@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 #
-# (C) 2016 Ed Bueler
+# (C) 2016-2017 Ed Bueler
 #
 # Create PETSc binary files .vec,.is from .node,.ele,.poly output of triangle.
 
 # example to put Vec loc (node coordinates x,y) and ISs e,bfn,s,bfs in foo.{vec,is}
 #    $ cd c/ch7/
 #    $ triangle -pqa0.5 meshes/trap
-#    $ ./tri2petsc.py meshes/trap.1 foo
+#    $ ./tri2petsc.py --outroot foo meshes/trap.1
 
 import numpy as np
 import sys
@@ -206,11 +206,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description= \
         'Converts .node, .ele, .poly files from triangle ASCII format into PETSc binary format.')
     # positional filenames
-    parser.add_argument('inroot', metavar='NAMEROOT',
+    parser.add_argument('inroot', metavar='INROOT',
                         help='root of input file name for .node,.ele,.poly')
-    parser.add_argument('outfile', metavar='FILENAME',
-                        help='output file name')
+    parser.add_argument('--outroot', metavar='OUTROOT', default='',
+                        help='root of output file name; defaults to INROOT')
     args = parser.parse_args()
+    if len(args.outroot) == 0:
+        args.outroot = args.inroot
 
     nodename = args.inroot + '.node'
     print 'reading nodes from %s ' % nodename
@@ -227,15 +229,15 @@ if __name__ == "__main__":
     PN,PS,px,py,s,bfs = triangle_read_poly(polyname)
     print '... PN=%d nodes and PS=%d segments' % (PN,PS)
 
-    print 'writing node coordinates as Vec to petsc binary file %s.vec' % args.outfile
+    print 'writing node coordinates as Vec to petsc binary file %s.vec' % args.outroot
     oloc = loc.view(PetscBinaryIO.Vec)
     petsc = PetscBinaryIO.PetscBinaryIO()
-    petsc.writeBinaryFile(args.outfile+'.vec',[oloc,])
+    petsc.writeBinaryFile(args.outroot+'.vec',[oloc,])
 
-    print 'writing elements, segments, and boundary flags as ISs to petsc binary file %s.is' % args.outfile
+    print 'writing elements, segments, and boundary flags as ISs to petsc binary file %s.is' % args.outroot
     oe = e.flatten().view(PetscBinaryIO.IS)
     obfn = bfn.view(PetscBinaryIO.IS)
     os = s.flatten().view(PetscBinaryIO.IS)
     obfs = bfs.view(PetscBinaryIO.IS)
-    petsc.writeBinaryFile(args.outfile+'.is',[oe,obfn,os,obfs])
+    petsc.writeBinaryFile(args.outroot+'.is',[oe,obfn,os,obfs])
 

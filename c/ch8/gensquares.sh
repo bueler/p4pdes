@@ -17,7 +17,7 @@ for (( N=1; N<=$LEV; N++ )); do
     echo "generating level $N square mesh with MX=$MX"
     OUT=meshes/$NAME.$N
     ./genstructured.py $OUT $MX
-    ./tri2petsc.py $OUT $OUT
+    ./tri2petsc.py $OUT
     MX=$((MX*2))
 done
 
