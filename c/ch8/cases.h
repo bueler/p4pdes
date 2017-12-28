@@ -68,7 +68,8 @@ double gN_linneu(double x, double y) {
 
 // -----------------------------------------------------------------------------
 // CASE 3
-// LINEAR PROBLEM, HOMOGENEOUS DIRICHLET ONLY, SQUARE DOMAIN, CHAPTER 3
+// LINEAR PROBLEM, HOMOGENEOUS DIRICHLET ONLY, SQUARE DOMAIN
+// SAME PROBLEM AS SOLVED BY DEFAULT BY c/ch6/fish.c
 // USE: genstructured.py to generate meshes
 
 double a_square(double u, double x, double y) {
@@ -77,16 +78,11 @@ double a_square(double u, double x, double y) {
 
 // manufactured from a_square(), uexact_square():
 double f_square(double u, double x, double y) {
-    const double x2 = x * x,
-                 y2 = y * y;
-    return 2.0 * (1.0 - 6.0 * x2) * y2 * (1.0 - y2)
-           + 2.0 * (1.0 - 6.0 * y2) * x2 * (1.0 - x2);
+    return x * exp(y);  // note  f = - (u_xx + u_yy) = - u
 }
 
 double uexact_square(double x, double y) {
-    const double x2 = x * x,
-                 y2 = y * y;
-    return (x2 - x2 * x2) * (y2 * y2 - y2);
+    return - x * exp(y);
 }
 
 // just evaluate exact u on boundary point:
