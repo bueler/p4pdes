@@ -43,7 +43,7 @@ node.close()
 # write .ele file
 ele = open(args.file + '.ele', 'w')
 K = (N-1)*(N-1) * 2   # two triangles per square cell
-print 'writing file %s with %d eles ...' % (args.file + '.ele',K)
+print 'writing file %s with %d elements ...' % (args.file + '.ele',K)
 ele.write('%d  3  0\n' % K)  # K triangles, 3 nodes per triangle, no attributes
 for j in range(N-1):
     for i in range(N-1):
