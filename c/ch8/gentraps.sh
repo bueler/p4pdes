@@ -26,7 +26,6 @@ for (( Z=1; Z<$MAXLEV; Z++ )); do
     # generates .poly, .node, .ele
     triangle -rpqa${area[$Z]} meshes/$NAME.$Z
     # generates .vec, .is
-    OUT=meshes/$NAME.$((Z+1))
-    ./tri2petsc.py $OUT
+    ./tri2petsc.py meshes/$NAME.$((Z+1))
 done
 
