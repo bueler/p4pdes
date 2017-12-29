@@ -1,7 +1,7 @@
 p4pdes/c/
 =========
 
-C codes which support a book on using PETSc for PDEs.
+This directory contains C codes which support the book _PETSc for PDEs_.
 
   * I will maintain and support these example codes in the long term.
 
@@ -14,20 +14,20 @@ Follow instructions at [www.mcs.anl.gov/petsc/documentation/installation.html](h
 
 ### compile and run one code
 
-Do this to build the first code:
+Do this to build and run the first code:
 
     $ cd ch1
     $ make e
     $ ./e
     $ mpiexec -n 20 ./e
 
-### regression test the codes
+### regression testing
 
     $ make test
 
 Tested with PETSc master branch.
 
-### clean up
+### cleaning up
 
     $ make distclean
 
