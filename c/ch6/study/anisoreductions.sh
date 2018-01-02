@@ -52,12 +52,12 @@ done
 # (which is created via c/sneskspplot.py)
 KSPITS=10
 CY=1.0e3
-runcasetranscripttmp "-ksp_max_it ${KSPITS} -fsh_cy ${CY}" trans_chebssor.txt
+runcasetranscripttmp "-ksp_max_it ${KSPITS} -fsh_cy ${CY} -mg_levels_pc_type sor" trans_chebssor.txt
 rm -f tmp.txt
 runcasetranscripttmp "-ksp_max_it ${KSPITS} -fsh_cy ${CY} -mg_levels_pc_type icc" trans_chebicc.txt
 rm -f tmp.txt
 runcasetranscripttmp "-ksp_max_it ${KSPITS} -fsh_cy ${CY} -mg_levels_ksp_type richardson -mg_levels_pc_type sor" trans_richssor.txt
 rm -f tmp.txt
-runcasetranscripttmp "-ksp_max_it ${KSPITS} -fsh_cy ${CY} -mg_levels_ksp_type richardson -mg_levels_pc_type sor -mg_levels_pc_sor_forward" trans_richgs.txt
+runcasetranscripttmp "-ksp_max_it ${KSPITS} -fsh_cy ${CY} -mg_levels_ksp_type richardson -mg_levels_pc_type icc" trans_richicc.txt
 rm -f tmp.txt
 
