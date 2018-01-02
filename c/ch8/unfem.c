@@ -424,11 +424,6 @@ int main(int argc,char **argv) {
     PetscLogStagePop();  //STRIP
 //ENDMAININITIAL
 
-    if (viewsoln) {
-        strcpy(solnname, root);
-        strncat(solnname, ".soln", 5);
-        ierr = UMViewSolutionBinary(&mesh,solnname,u); CHKERRQ(ierr);
-    }
     if (user.uexact_fcn) {
         // measure error relative to exact solution
         ierr = VecDuplicate(r,&uexact); CHKERRQ(ierr);
@@ -443,6 +438,14 @@ int main(int argc,char **argv) {
         ierr = PetscPrintf(PETSC_COMM_WORLD,
                    "case %d result for N=%d nodes with h = %.3e ... done\n",
                    user.solncase,mesh.N,h_max); CHKERRQ(ierr);
+    }
+
+    if (viewsoln) {
+        strcpy(solnname, root);
+        strncat(solnname, ".soln", 5);
+        ierr = PetscPrintf(PETSC_COMM_WORLD,
+                   "writing solution in binary format to %s ...\n",solnname); CHKERRQ(ierr);
+        ierr = UMViewSolutionBinary(&mesh,solnname,u); CHKERRQ(ierr);
     }
 
     // clean-up

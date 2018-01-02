@@ -13,7 +13,7 @@ args = parser.parse_args()
 iterations = args.l
 
 N = 3 * 4**iterations   # number of nodes
-print "creating level %d Koch snowflake with N=%d nodes in unit circle ..." % (iterations,N)
+print "creating level %d Koch snowflake polygon with P=%d segments ..." % (iterations,N)
 
 # generate string code for snowflake; see https://commons.wikimedia.org/wiki/Koch_snowflake
 koch_flake = "FRFRF"
@@ -55,7 +55,7 @@ f.write('# N=%d nodes (vertices), in 2D, no attributes, no vertex markers\n' % N
 f.write('%d 2 0 0\n' % N)
 for j in range(N):
     f.write('%5d %15.10f %15.10f\n' % (j,nodes[j,0],nodes[j,1]))
-f.write('# N=%d segments (edges), one edge marker (2 = Dirichlet)\n' % N)
+f.write('# P=%d segments (edges), one edge marker (2 = Dirichlet)\n' % N)
 f.write('%d 1\n' % N)
 for j in range(N-1):
     f.write('%5d %4d %4d   2\n' % (j,j,j+1))
