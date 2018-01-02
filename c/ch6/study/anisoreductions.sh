@@ -50,7 +50,7 @@ done
 
 # put longer runs into individual transcripts for stagnation figure
 # (which is created via c/sneskspplot.py)
-KSPITS=12
+KSPITS=10
 CY=1.0e3
 runcasetranscripttmp "-ksp_max_it ${KSPITS} -fsh_cy ${CY}" trans_chebssor.txt
 rm -f tmp.txt
