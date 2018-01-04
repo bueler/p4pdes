@@ -1,47 +1,34 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
-
-unfem: unfem.o um.o chkopts
-	-${CLINKER} -o unfem unfem.o um.o  ${PETSC_LIB}
-	${RM} unfem.o um.o
-
-petscPyScripts:
-	ln -sf ${PETSC_DIR}/bin/PetscBinaryIO.py
-	ln -sf ${PETSC_DIR}/bin/petsc_conf.py
+plap: plap.o chkopts
+	-${CLINKER} -o plap plap.o ${PETSC_LIB}
+	${RM} plap.o
 
 # testing
-rununfem_1: petscPyScripts
-	-@triangle -pqa0.5 meshes/trap > /dev/null
-	-@./tri2petsc.py meshes/trap.1 > /dev/null
-	-@../testit.sh unfem "-un_mesh meshes/trap.1 -un_case 0" 1 1
+runplap_1:
+	-@../testit.sh plap "-plap_no_residual -snes_fd_function -snes_fd_color -snes_converged_reason" 1 1
 
-rununfem_2: petscPyScripts
-	-@triangle -pqa0.5 meshes/trap > /dev/null
-	-@./tri2petsc.py meshes/trap.1 > /dev/null
-	-@../testit.sh unfem "-un_mesh meshes/trap.1 -un_quaddegree 2 -un_case 1" 1 2
+runplap_2:
+	-@../testit.sh plap "-snes_converged_reason -ksp_type cg -pc_type icc -da_refine 3" 1 2
 
-rununfem_3: petscPyScripts
-	-@triangle -pqa0.5 meshes/trapneu > /dev/null
-	-@./tri2petsc.py meshes/trapneu.1 > /dev/null
-	-@../testit.sh unfem "-un_mesh meshes/trapneu.1 -un_case 2" 1 3
+runplap_3:
+	-@../testit.sh plap "-snes_fd_color -snes_converged_reason -da_refine 2 -snes_linesearch_type cp" 4 3
 
-rununfem_4: petscPyScripts
-	-@./genstructured.py meshes/square.1 3 > /dev/null
-	-@./tri2petsc.py meshes/square.1 > /dev/null
-	-@../testit.sh unfem "-un_mesh meshes/square.1 -un_case 3" 1 4
+runplap_4:
+	-@../testit.sh plap "-plap_quaddegree 1 -snes_converged_reason" 1 4
 
-test_unfem: rununfem_1 rununfem_2 rununfem_3 rununfem_4
+#runplap_5:  (deactivated because it is slow)
+#	-@../testit.sh plap "-plap_no_residual -snes_fd_function -snes_type ncg -snes_converged_reason" 1 5
 
-test: test_unfem
+test_plap: runplap_1 runplap_2 runplap_3 runplap_4
+
+test: test_plap
 
 # etc
 
-.PHONY: distclean rununfem_1 rununfem_2 rununfem_3 rununfem_4 test test_unfem petscPyScripts
+.PHONY: distclean runplap_1 runplap_2 runplap_3 runplap_4 test test_plap
 
 distclean:
-	@rm -f *~ unfem *tmp
-	@rm -f *.pyc PetscBinaryIO.py petsc_conf.py
-	(cd meshes/ && ${MAKE} clean)
-	(cd koch/ && ${MAKE} clean)
+	@rm -f *~ plap *tmp
 

@@ -1,39 +1,35 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
-well: well.o  chkopts
-	-${CLINKER} -o well well.o  ${PETSC_LIB}
-	${RM} well.o
-
-stokes: stokes.o  chkopts
-	-${CLINKER} -o stokes stokes.o  ${PETSC_LIB}
-	${RM} stokes.o
-
-# copy of this broken example from petsc commit 55cee6f09eb989b4d30b8ed1c133ceefb891d332
-ex7: ex7.o  chkopts
-	-${CLINKER} -o ex7 ex7.o  ${PETSC_LIB}
-	${RM} ex7.o
+tiny: tiny.o plexview.o chkopts
+	-${CLINKER} -o tiny tiny.o plexview.o ${PETSC_LIB}
+	${RM} tiny.o plexview.o
 
 # testing
 
-runwell_1:
-	-@../testit.sh well "-snes_converged_reason -da_refine 1 -well_shorterrors" 1 1
+runtiny_1:
+	-@../testit.sh tiny "-dm_refine 1 -plex_view_points -plex_view_use_height -plex_view_cell_cones" 1 1
 
-runwell_2:
-	-@../testit.sh well "-ksp_type minres -pc_type none -da_refine 2 -ksp_rtol 1.0e-14 -well_shorterrors" 1 2
+runtiny_2:
+	-@../testit.sh tiny "-tny_by_hand -plex_view_points -plex_view_coords" 2 2
 
-runwell_3:
-	-@../testit.sh well "-snes_converged_reason -da_refine 1 -well_scheme regular -well_shorterrors" 1 3
+runtiny_3:
+	-@../testit.sh tiny "-section_view" 1 3
 
-test_well: runwell_1 runwell_2 runwell_3
+runtiny_4:
+	-@../testit.sh tiny "-plex_view_closures_coords -v_vec_view" 2 4
 
-test: test_well
+runtiny_5:
+	-@../testit.sh tiny "-dm_refine 1 -tny_integrate_f -tny_quaddegree 1" 1 5
 
+test_tiny: runtiny_1 runtiny_2 runtiny_3 runtiny_4 runtiny_5
+
+test: test_tiny
 
 # etc
 
-.PHONY: distclean runwell_1 runwell_2 runwell_3 test_well test
+.PHONY: distclean runtiny_? test test_tiny
 
 distclean:
-	@rm -f *~ *tmp *.dat *.dat.info *.pyc PetscBinaryIO.py petsc_conf.py stokes ex7 well
+	@rm -f *~ tiny *tmp
 
