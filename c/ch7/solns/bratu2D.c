@@ -31,7 +31,7 @@ $ for LEV in 3 4 5 6 7 8 9; do ./bratu2D -da_refine $LEV -snes_monitor -snes_fd_
 */
 
 #include <petsc.h>
-#include "../poissonfunctions.h"
+#include "../../ch6/poissonfunctions.h"
 
 typedef struct {
     double    lambda;

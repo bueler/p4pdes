@@ -11,7 +11,7 @@ static char help[] =
 "This code is multigrid (GMG) capable.\n\n";
 
 #include <petsc.h>
-#include "poissonfunctions.h"
+#include "../ch6/poissonfunctions.h"
 #include "../quadrature.h"
 
 typedef struct {
