@@ -290,7 +290,7 @@ int main(int argc,char **argv) {
   Vec            u_initial, u, u_exact;
   PLapCtx        user;
   DMDALocalInfo  info;
-  double         err;
+  double         err, hx, hy;
 
   PetscInitialize(&argc,&argv,NULL,help);
   ierr = ConfigureCtx(&user); CHKERRQ(ierr);
@@ -301,6 +301,11 @@ int main(int argc,char **argv) {
   ierr = DMSetFromOptions(da); CHKERRQ(ierr);
   ierr = DMSetUp(da); CHKERRQ(ierr);
   ierr = DMSetApplicationContext(da,&user);CHKERRQ(ierr);
+
+  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+  hx = 1.0 / (info.mx+1);
+  hy = 1.0 / (info.my+1);
+  ierr = DMDASetUniformCoordinates(da,hx,1.0-hx,hy,1.0-hy,0.0,1.0); CHKERRQ(ierr);
 
   ierr = SNESCreate(COMM,&snes); CHKERRQ(ierr);
   ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
@@ -313,7 +318,6 @@ int main(int argc,char **argv) {
   ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
   ierr = DMCreateGlobalVector(da,&u_initial);CHKERRQ(ierr);
-  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
   ierr = InitialIterateLocal(&info,u_initial,&user); CHKERRQ(ierr);
   ierr = SNESSolve(snes,NULL,u_initial); CHKERRQ(ierr);
   ierr = VecDestroy(&u_initial); CHKERRQ(ierr);
