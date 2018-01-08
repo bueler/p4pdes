@@ -1,5 +1,6 @@
-
-static char help[] = "Unstructured 2D FEM solution of nonlinear Poisson equation\n"
+static char help[] =
+"Unstructured 2D FEM solution of nonlinear Poisson.  Option prefix un_.\n"
+"Equation is\n"
 "    - div( a(u,x,y) grad u ) = f(u,x,y)\n"
 "on arbitrary 2D polygonal domain, with boundary data g_D(x,y), g_N(x,y).\n"
 "Functions a(), f(), g_D(), g_N(), and u_exact() are given as formulas.\n"
@@ -341,7 +342,16 @@ int main(int argc,char **argv) {
            "unfem.c",viewsoln,&viewsoln,NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
-    // set parameters and exact solution
+    // determine filenames
+    if (strlen(root) == 0) {
+        SETERRQ(PETSC_COMM_WORLD,4,"no mesh name root given; rerun with '-un_mesh foo'");
+    }
+    strcpy(nodesname, root);
+    strncat(nodesname, ".vec", 4);
+    strcpy(issname, root);
+    strncat(issname, ".is", 3);
+
+    // set source/boundary functions and exact solution
     user.a_fcn = &a_lin;
     user.f_fcn = &f_lin;
     user.uexact_fcn = &uexact_lin;
@@ -367,19 +377,13 @@ int main(int argc,char **argv) {
         case 4 :
             user.a_fcn = &a_koch;
             user.f_fcn = &f_koch;
-            user.uexact_fcn = NULL;
+            user.uexact_fcn = NULL;  // seg fault if ever called
             user.gD_fcn = &gD_koch;
             user.gN_fcn = NULL;  // seg fault if ever called
             break;
         default :
             SETERRQ(PETSC_COMM_WORLD,1,"other solution cases not implemented");
     }
-
-    // determine filenames
-    strcpy(nodesname, root);
-    strncat(nodesname, ".vec", 4);
-    strcpy(issname, root);
-    strncat(issname, ".is", 3);
 
 //STARTMAININITIAL
     PetscLogStagePush(user.readstage);  //STRIP
@@ -445,7 +449,8 @@ int main(int argc,char **argv) {
             }
             if (savepintlevel < levels) {
                 ierr = PetscPrintf(PETSC_COMM_WORLD,
-                       "PC is GAMG with %d levels\n  saving levels %d->%d interpolation operator to %s ...\n",
+                       "PC is GAMG with %d levels\n"
+                       "  saving levels %d->%d interpolation operator to %s ...\n",
                        levels,savepintlevel-1,savepintlevel,savepintname); CHKERRQ(ierr);
                 ierr = PCMGGetInterpolation(pc,savepintlevel,&pint); CHKERRQ(ierr);
                 ierr = PetscViewerASCIIOpen(PETSC_COMM_WORLD,savepintname,&viewer); CHKERRQ(ierr);
