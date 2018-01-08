@@ -293,7 +293,9 @@ int main(int argc,char **argv) {
     PetscBool   view = PETSC_FALSE,
                 viewsoln = PETSC_FALSE,
                 noprealloc = PETSC_FALSE;
-    char        root[256] = "", nodesname[256], issname[256], solnname[256];
+    char        root[256] = "", nodesname[256], issname[256], solnname[256],
+                savepintname[256] = "";
+    int         savepintlevel = -1;
     UM          mesh;
     unfemCtx    user;
     SNES        snes;
@@ -316,9 +318,18 @@ int main(int argc,char **argv) {
     ierr = PetscOptionsInt("-case",
            "exact solution cases: 0=linear, 1=nonlinear, 2=nonhomoNeumann, 3=chapter3, 4=koch",
            "unfem.c",user.solncase,&(user.solncase),NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsString("-gamg_save_pint",
+           "filename under which to save interpolation operator in ascii Matlab format",
+           "unfem.c",savepintname,savepintname,sizeof(savepintname),NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsInt("-gamg_save_pint_level",
+           "saved interpolation operator is between L-1 and L where this option sets L; defaults to finest levels",
+           "unfem.c",savepintlevel,&savepintlevel,NULL); CHKERRQ(ierr);
     ierr = PetscOptionsString("-mesh",
            "file name root of mesh stored in PETSc binary with .vec,.is extensions",
            "unfem.c",root,root,sizeof(root),NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-noprealloc",
+           "do not perform preallocation before matrix assembly",
+           "unfem.c",noprealloc,&noprealloc,NULL); CHKERRQ(ierr);
     ierr = PetscOptionsInt("-quaddegree",
            "quadrature degree (1,2,3)",
            "unfem.c",user.quaddegree,&(user.quaddegree),NULL); CHKERRQ(ierr);
@@ -328,9 +339,6 @@ int main(int argc,char **argv) {
     ierr = PetscOptionsBool("-view_solution",
            "view solution u(x,y) to binary file; uses root name of mesh plus .soln\nsee petsc2tricontour.py to view graphically",
            "unfem.c",viewsoln,&viewsoln,NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-noprealloc",
-           "do not perform preallocation before matrix assembly",
-           "unfem.c",noprealloc,&noprealloc,NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
     // set parameters and exact solution
@@ -423,6 +431,33 @@ int main(int argc,char **argv) {
     ierr = SNESSolve(snes,NULL,u);CHKERRQ(ierr);
     PetscLogStagePop();  //STRIP
 //ENDMAININITIAL
+
+    if (strlen(savepintname) > 0) {
+        PCType pctype;
+        ierr = PCGetType(pc,&pctype); CHKERRQ(ierr);
+        if (strcmp(pctype,"gamg") == 0) {
+            int         levels;
+            Mat         pint;
+            PetscViewer viewer;
+            ierr = PCMGGetLevels(pc,&levels); CHKERRQ(ierr);
+            if (savepintlevel <= 0) {
+                savepintlevel = levels - 1;
+            }
+            if (savepintlevel < levels) {
+                ierr = PetscPrintf(PETSC_COMM_WORLD,
+                       "PC is GAMG with %d levels\n  saving levels %d->%d interpolation operator to %s ...\n",
+                       levels,savepintlevel-1,savepintlevel,savepintname); CHKERRQ(ierr);
+                ierr = PCMGGetInterpolation(pc,savepintlevel,&pint); CHKERRQ(ierr);
+                ierr = PetscViewerASCIIOpen(PETSC_COMM_WORLD,savepintname,&viewer); CHKERRQ(ierr);
+                ierr = PetscViewerPushFormat(viewer,PETSC_VIEWER_ASCII_MATLAB); CHKERRQ(ierr);
+                ierr = MatView(pint,viewer); CHKERRQ(ierr);
+            } else {
+                SETERRQ(PETSC_COMM_WORLD,2,"invalid level given in -un_gamg_save_pint_level");
+            }
+        } else {
+            SETERRQ(PETSC_COMM_WORLD,3,"option -un_gamg_save_pint set but PC is not of type PCGAMG");
+        }
+    }
 
     if (user.uexact_fcn) {
         // measure error relative to exact solution
