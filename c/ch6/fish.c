@@ -81,12 +81,6 @@ static double f_rhs_3Dmanuexp(double x, double y, double z, void *ctx) {
     return 2.0 * x * exp(y + z);  // note  f = - laplacian u = - 2 u
 }
 
-// functions simply to put u_exact()=g_bdry() into a grid
-// these are irritatingly-dimension-dependent inside ...
-extern PetscErrorCode Form1DUExact(DMDALocalInfo*, Vec, PoissonCtx*);
-extern PetscErrorCode Form2DUExact(DMDALocalInfo*, Vec, PoissonCtx*);
-extern PetscErrorCode Form3DUExact(DMDALocalInfo*, Vec, PoissonCtx*);
-
 //STARTPTRARRAYS
 // arrays of pointers to functions:   ..._ptr[DIMS]
 static void* residual_ptr[3]
@@ -117,6 +111,11 @@ static void* f_rhs_ptr[3][3]
 static const char* InitialTypes[] = {"zeros","random",
                                      "InitialType", "", NULL};
 
+// functions simply to put u_exact()=g_bdry() into a grid
+// these are irritatingly-dimension-dependent inside ...
+extern PetscErrorCode Form1DUExact(DMDALocalInfo*, Vec, PoissonCtx*);
+extern PetscErrorCode Form2DUExact(DMDALocalInfo*, Vec, PoissonCtx*);
+extern PetscErrorCode Form3DUExact(DMDALocalInfo*, Vec, PoissonCtx*);
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;

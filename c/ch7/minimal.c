@@ -45,14 +45,14 @@ static double DD(double w, double q) {
     return pow(1.0 + w,q);
 }
 
+typedef enum {TENT, CATENOID} ProblemType;
+static const char* ProblemTypes[] = {"tent","catenoid",
+                                     "ProblemType", "", NULL};
+
 extern PetscErrorCode FormExactFromG(DMDALocalInfo*, Vec, PoissonCtx*);
 extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, double**,
                                         double **FF, PoissonCtx*);
 extern PetscErrorCode MSEMonitor(SNES, int, double, void*);
-
-typedef enum {TENT, CATENOID} ProblemType;
-static const char* ProblemTypes[] = {"tent","catenoid",
-                                     "ProblemType", "", NULL};
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
