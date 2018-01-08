@@ -7,6 +7,8 @@ import sys
 import matplotlib.pyplot as plt
 import matplotlib.tri as tri
 import numpy as np
+
+# need link to PetscBinaryIO.py
 import PetscBinaryIO
 
 parser = argparse.ArgumentParser(description=

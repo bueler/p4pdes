@@ -216,7 +216,7 @@ int main(int argc,char **argv) {
             if (savepintlevel < levels) {
                 ierr = PetscPrintf(PETSC_COMM_WORLD,
                        "PC is GAMG with %d levels\n"
-                       "  saving levels %d->%d interpolation operator to %s ...\n",
+                       "  saving interpolation operator %d->%d to %s ...\n",
                        levels,savepintlevel-1,savepintlevel,savepintname); CHKERRQ(ierr);
                 ierr = PCMGGetInterpolation(pc,savepintlevel,&pint); CHKERRQ(ierr);
                 ierr = PetscViewerASCIIOpen(PETSC_COMM_WORLD,savepintname,&viewer); CHKERRQ(ierr);
