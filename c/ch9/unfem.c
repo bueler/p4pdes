@@ -62,12 +62,13 @@ int main(int argc,char **argv) {
                 noprealloc = PETSC_FALSE;
     char        root[256] = "", nodesname[256], issname[256], solnname[256],
                 savepintname[256] = "";
-    int         savepintlevel = -1;
+    int         savepintlevel = -1, levels;
     UM          mesh;
     unfemCtx    user;
     SNES        snes;
     KSP         ksp;
     PC          pc;
+    PCType      pctype;
     Mat         A;
     Vec         r, u, uexact;
     double      err, h_max;
@@ -202,36 +203,38 @@ int main(int argc,char **argv) {
     PetscLogStagePop();  //STRIP
 //ENDMAININITIAL
 
-    if (strlen(savepintname) > 0) {
-        PCType pctype;
-        ierr = PCGetType(pc,&pctype); CHKERRQ(ierr);
-        if (strcmp(pctype,"gamg") == 0) {
-            int         levels;
-            Mat         pint;
-            PetscViewer viewer;
-            ierr = PCMGGetLevels(pc,&levels); CHKERRQ(ierr);
-            if (savepintlevel <= 0) {
-                savepintlevel = levels - 1;
-            }
-            if (savepintlevel < levels) {
-                ierr = PetscPrintf(PETSC_COMM_WORLD,
-                       "PC is GAMG with %d levels\n"
-                       "  saving interpolation operator %d->%d to %s ...\n",
-                       levels,savepintlevel-1,savepintlevel,savepintname); CHKERRQ(ierr);
-                ierr = PCMGGetInterpolation(pc,savepintlevel,&pint); CHKERRQ(ierr);
-                ierr = PetscViewerASCIIOpen(PETSC_COMM_WORLD,savepintname,&viewer); CHKERRQ(ierr);
-                ierr = PetscViewerPushFormat(viewer,PETSC_VIEWER_ASCII_MATLAB); CHKERRQ(ierr);
-                ierr = MatView(pint,viewer); CHKERRQ(ierr);
-            } else {
-                SETERRQ(PETSC_COMM_WORLD,2,"invalid level given in -un_gamg_save_pint_level");
-            }
-        } else {
-            SETERRQ(PETSC_COMM_WORLD,3,"option -un_gamg_save_pint set but PC is not of type PCGAMG");
-        }
+    // report if PC is GAMG
+    ierr = PCGetType(pc,&pctype); CHKERRQ(ierr);
+    if (strcmp(pctype,"gamg") == 0) {
+        ierr = PCMGGetLevels(pc,&levels); CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_WORLD,
+               "  PC is GAMG with %d levels\n",levels); CHKERRQ(ierr);
     }
 
+    // save Pint from GAMG if requested
+    if (strlen(savepintname) > 0) {
+        Mat         pint;
+        PetscViewer viewer;
+        if (strcmp(pctype,"gamg") != 0) {
+            SETERRQ(PETSC_COMM_WORLD,2,"option -un_gamg_save_pint set but PC is not of type PCGAMG");
+        }
+        if (savepintlevel >= levels) {
+            SETERRQ(PETSC_COMM_WORLD,3,"invalid level given in -un_gamg_save_pint_level");
+        }
+        if (savepintlevel <= 0) {
+            savepintlevel = levels - 1;
+        }
+        ierr = PetscPrintf(PETSC_COMM_WORLD,
+               "  saving interpolation operator %d->%d to %s ...\n",
+               savepintlevel-1,savepintlevel,savepintname); CHKERRQ(ierr);
+        ierr = PCMGGetInterpolation(pc,savepintlevel,&pint); CHKERRQ(ierr);
+        ierr = PetscViewerASCIIOpen(PETSC_COMM_WORLD,savepintname,&viewer); CHKERRQ(ierr);
+        ierr = PetscViewerPushFormat(viewer,PETSC_VIEWER_ASCII_MATLAB); CHKERRQ(ierr);
+        ierr = MatView(pint,viewer); CHKERRQ(ierr);
+    }
+
+    // if exact solution available, report numerical error
     if (user.uexact_fcn) {
-        // measure error relative to exact solution
         ierr = VecDuplicate(r,&uexact); CHKERRQ(ierr);
         ierr = FillExact(uexact,&user); CHKERRQ(ierr);
         ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
@@ -246,6 +249,7 @@ int main(int argc,char **argv) {
                    user.solncase,mesh.N,h_max); CHKERRQ(ierr);
     }
 
+    // save solution in PETSc binary if requested
     if (viewsoln) {
         strcpy(solnname, root);
         strncat(solnname, ".soln", 5);
