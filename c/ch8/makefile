@@ -1,11 +1,21 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
+phelm: phelm.o chkopts
+	-${CLINKER} -o phelm phelm.o ${PETSC_LIB}
+	${RM} phelm.o
+
 plap: plap.o chkopts
 	-${CLINKER} -o plap plap.o ${PETSC_LIB}
 	${RM} plap.o
 
 # testing
+runphelm_1:
+	-@../testit.sh phelm "-ph_p 2.0 -ph_no_residual -snes_fd_function -snes_fd -snes_converged_reason" 1 1
+
+runphelm_2:
+	-@../testit.sh phelm "-ph_p 2.0 -snes_converged_reason -ksp_type cg -pc_type mg -da_refine 3" 1 2
+
 runplap_1:
 	-@../testit.sh plap "-plap_no_residual -snes_fd_function -snes_fd_color -snes_converged_reason" 1 1
 
@@ -21,14 +31,16 @@ runplap_4:
 #runplap_5:  (deactivated because it is slow)
 #	-@../testit.sh plap "-plap_no_residual -snes_fd_function -snes_type ncg -snes_converged_reason" 1 5
 
+test_phelm: runphelm_1 runphelm_2
+
 test_plap: runplap_1 runplap_2 runplap_3 runplap_4
 
-test: test_plap
+test: test_phelm test_plap
 
 # etc
 
-.PHONY: distclean runplap_1 runplap_2 runplap_3 runplap_4 test test_plap
+.PHONY: distclean runphelm_1 runphelm_2 runplap_1 runplap_2 runplap_3 runplap_4 test test_phelm test_plap
 
 distclean:
-	@rm -f *~ plap *tmp
+	@rm -f *~ phelm plap *tmp
 
