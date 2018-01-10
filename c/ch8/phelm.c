@@ -1,7 +1,7 @@
 static char help[] =
 "Solves the p-Helmholtz equation in 2D using Q^1 FEM.  Option prefix -ph_.\n"
 "Implements an objective function and a residual (gradient) function, but\n"
-"no Jacobian.  Defaults to p=2 [FIXME] and quadrature degree n=2.  Can run with\n"
+"no Jacobian.  Defaults to p=4 and quadrature degree n=2.  Can run with\n"
 "only an objective function; use -ph_no_residual -snes_fd_function.\n"
 "Exact (manufactured) solution available in cases p=2,4.\n\n";
 
@@ -24,12 +24,13 @@ int main(int argc,char **argv) {
     Vec            u_initial, u;
     PHelmCtx       user;
     DMDALocalInfo  info;
-    PetscBool      no_residual = PETSC_FALSE,
+    PetscBool      no_objective = PETSC_FALSE,
+                   no_residual = PETSC_FALSE,
                    exact_init = PETSC_FALSE;
     int            tmpa = 1, tmpb = 0;
 
     PetscInitialize(&argc,&argv,NULL,help);
-    user.p = 2.0; // FIXME
+    user.p = 4.0;
     user.eps = 0.0;
     user.quaddegree = 2;
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"ph_","p-Helmholtz solver options",""); CHKERRQ(ierr);
@@ -37,6 +38,8 @@ int main(int argc,char **argv) {
                   "plap.c",user.eps,&(user.eps),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsBool("-exact_init","use exact solution to initialize (p=2,4 only)",
                   "plap.c",exact_init,&(exact_init),NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-no_objective","do not set the objective evaluation function",
+                  "plap.c",no_objective,&(no_objective),NULL);CHKERRQ(ierr);
     ierr = PetscOptionsBool("-no_residual","do not set the residual evaluation function",
                   "plap.c",no_residual,&(no_residual),NULL);CHKERRQ(ierr);
     ierr = PetscOptionsReal("-p","exponent p with  1 <= p < infty",
@@ -67,8 +70,10 @@ int main(int argc,char **argv) {
 
     ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
     ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
-    ierr = DMDASNESSetObjectiveLocal(da,
-         (DMDASNESObjective)FormObjectiveLocal,&user); CHKERRQ(ierr);
+    if (!no_objective) {
+        ierr = DMDASNESSetObjectiveLocal(da,
+             (DMDASNESObjective)FormObjectiveLocal,&user); CHKERRQ(ierr);
+    }
     if (no_residual) {
         // why isn't this the default?  why no programmatic way to set?
         ierr = PetscOptionsSetValue(NULL,"-snes_fd_function_eps","0.0"); CHKERRQ(ierr);
@@ -98,7 +103,7 @@ int main(int argc,char **argv) {
         "done on %d x %d grid",info.mx,info.my); CHKERRQ(ierr);
 
     // evaluate numerical error if available
-    if ((user.p == 2) || (user.p == 4)) {
+    if (user.p == 2.0 || user.p == 4.0) {
         Vec     u_exact;
         double  err;
         ierr = VecDuplicate(u,&u_exact); CHKERRQ(ierr);
@@ -122,10 +127,27 @@ static double UExact(double x, double y, PHelmCtx *user) {
 
 static double Frhs(double x, double y, PHelmCtx *user) {
     if (user->p == 2.0) {
-        double u = UExact(x,y,user);
-        return (PETSC_PI*PETSC_PI * (user->a*user->a + user->b*user->b) + 1.0) * u;
+        const double u = UExact(x,y,user),
+                     api = user->a * PETSC_PI,
+                     bpi = user->b * PETSC_PI;
+        return (api * api + bpi * bpi + 1.0) * u;
     } else if (user->p == 4.0) {
-        return 1.0; //FIXME
+        const double u = UExact(x,y,user),
+                     api = user->a * PETSC_PI,
+                     bpi = user->b * PETSC_PI,
+                     api2 = api * api,
+                     bpi2 = bpi * bpi,
+                     lapu = - (api2 + bpi2) * u,
+                     sax = sin(api * x),
+                     cax = cos(api * x),
+                     sby = sin(bpi * y),
+                     cby = cos(bpi * y),
+                     ux = - api * sax * cby,
+                     uy = - bpi * cax * sby,
+                     w = ux * ux + uy * uy,
+                     wx = api * sin(2 * api * x) * (api2 * cby * cby - bpi2 * sby * sby),
+                     wy = bpi * sin(2 * bpi * y) * (bpi2 * cax * cax - api2 * sax * sax);
+        return - wx * ux - wy * uy - w * lapu + u;
     } else {
         return 1.0;
     }
