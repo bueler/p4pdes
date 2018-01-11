@@ -125,7 +125,7 @@ static double UExact(double x, double y, PHelmCtx *user) {
     return cos(user->a * PETSC_PI * x) * cos(user->b * PETSC_PI * y);
 }
 
-static double Frhs(double x, double y, PHelmCtx *user) {
+static double F(double x, double y, PHelmCtx *user) {
     if (user->p == 2.0) {
         const double u = UExact(x,y,user),
                      api = user->a * PETSC_PI,
@@ -249,14 +249,10 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
           if (i == 0)
               continue;
           x = i * hx;
-          const double f[4] = {Frhs(x,   y,   user),
-                               Frhs(x-hx,y,   user),
-                               Frhs(x-hx,y-hy,user),
-                               Frhs(x,   y-hy,user)};
-          const double u[4] = {au[j][i],
-                               au[j][i-1],
-                               au[j-1][i-1],
-                               au[j-1][i]};
+          const double f[4] = {F(x,y,user),F(x-hx,y,user),
+                               F(x-hx,y-hy,user),F(x,y-hy,user)};
+          const double u[4] = {au[j][i],au[j][i-1],
+                               au[j-1][i-1],au[j-1][i]};
           // loop over quadrature points on this element
           for (r = 0; r < q.n; r++) {
               for (s = 0; s < q.n; s++) {
@@ -307,14 +303,10 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
           if (i == 0)
               continue;
           x = i * hx;
-          const double f[4] = {Frhs(x,   y,   user),
-                               Frhs(x-hx,y,   user),
-                               Frhs(x-hx,y-hy,user),
-                               Frhs(x,   y-hy,user)};
-          const double u[4] = {au[j][i],
-                               au[j][i-1],
-                               au[j-1][i-1],
-                               au[j-1][i]};
+          const double f[4] = {F(x,y,user),F(x-hx,y,user),
+                               F(x-hx,y-hy,user),F(x,y-hy,user)};
+          const double u[4] = {au[j][i],au[j][i-1],
+                               au[j-1][i-1],au[j-1][i]};
           // loop over corners of element i,j
           for (l = 0; l < 4; l++) {
               PP = i + li[l];
