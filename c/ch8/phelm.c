@@ -208,13 +208,15 @@ static gradRef deval(const double v[4], double xi, double eta) {
     return sum;
 }
 
-static double GradInnerProd(double hx, double hy, gradRef du, gradRef dv) {
+static double GradInnerProd(double hx, double hy,
+                            gradRef du, gradRef dv) {
     const double cx = 4.0 / (hx * hx),  cy = 4.0 / (hy * hy);
     return cx * du.xi  * dv.xi + cy * du.eta * dv.eta;
 }
 
-static double GradPow(double hx, double hy, gradRef du, double P, double eps) {
-    return PetscPowScalar(GradInnerProd(hx,hy,du,du) + eps * eps, P / 2.0);
+static double GradPow(double hx, double hy,
+                      gradRef du, double P, double eps) {
+    return PetscPowScalar(GradInnerProd(hx,hy,du,du) + eps*eps, P/2.0);
 }
 //ENDFEM
 
@@ -225,7 +227,8 @@ static double ObjIntegrandRef(DMDALocalInfo *info,
     const gradRef du = deval(u,xi,eta);
     const double  hx = 1.0 / (info->mx - 1),  hy = 1.0 / (info->my - 1),
                   uu = eval(u,xi,eta);
-    return GradPow(hx,hy,du,user->p,user->eps) / user->p + 0.5 * uu * uu - eval(f,xi,eta) * uu;
+    return GradPow(hx,hy,du,user->p,user->eps) / user->p + 0.5 * uu * uu
+           - eval(f,xi,eta) * uu;
 }
 
 PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
@@ -237,7 +240,6 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
   int          i,j,r,s;
   MPI_Comm     com;
 
-  //ierr = PetscPrintf(PETSC_COMM_WORLD,"in FormObjectiveLocal():\n"); CHKERRQ(ierr);
   // loop over all elements
   for (j = info->ys; j < info->ys + info->ym; j++) {
       if (j == 0)
@@ -247,7 +249,6 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
           if (i == 0)
               continue;
           x = i * hx;
-          //ierr = PetscPrintf(PETSC_COMM_WORLD,"    element i,j=%d,%d\n",i,j); CHKERRQ(ierr);
           const double f[4] = {Frhs(x,   y,   user),
                                Frhs(x-hx,y,   user),
                                Frhs(x-hx,y-hy,user),
@@ -260,7 +261,7 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
           for (r = 0; r < q.n; r++) {
               for (s = 0; s < q.n; s++) {
                   lobj += q.w[r] * q.w[s]
-                          * ObjIntegrandRef(info,f,u,q.xi[r],q.xi[s],user);
+                        * ObjIntegrandRef(info,f,u,q.xi[r],q.xi[s],user);
               }
           }
       }
@@ -279,7 +280,8 @@ static double FunIntegrandRef(DMDALocalInfo *info, int L,
   const gradRef du    = deval(u,xi,eta),
                 dchiL = dchi(L,xi,eta);
   const double  hx = 1.0 / (info->mx - 1),  hy = 1.0 / (info->my - 1);
-  return GradPow(hx,hy,du,user->p - 2.0,user->eps) * GradInnerProd(hx,hy,du,dchiL)
+  return GradPow(hx,hy,du,user->p - 2.0,user->eps)
+           * GradInnerProd(hx,hy,du,dchiL)
          + (eval(u,xi,eta) - eval(f,xi,eta)) * chi(L,xi,eta);
 }
 
