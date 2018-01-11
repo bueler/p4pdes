@@ -100,7 +100,7 @@ int main(int argc,char **argv) {
     ierr = SNESGetDM(snes,&da); CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,
-        "done on %d x %d grid",info.mx,info.my); CHKERRQ(ierr);
+        "done on %d x %d grid using p=%.3f",info.mx,info.my,user.p); CHKERRQ(ierr);
 
     // evaluate numerical error if available
     if (user.p == 2.0 || user.p == 4.0) {
