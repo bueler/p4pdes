@@ -1,2 +1,2 @@
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
-done on 9 x 9 grid using p=2.000; numerical error:  |u-u_exact|_inf = 1.159e-02
+done on 9 x 9 grid; p=2.000; numerical error:  |u-u_exact|_inf = 4.957e-13

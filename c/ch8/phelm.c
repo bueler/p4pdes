@@ -1,19 +1,57 @@
 static char help[] =
 "Solves the p-Helmholtz equation in 2D using Q^1 FEM.  Option prefix -ph_.\n"
-"Implements an objective function and a residual (gradient) function, but\n"
-"no Jacobian.  Defaults to p=4 and quadrature degree n=2.  Can run with\n"
-"only an objective function; use -ph_no_residual -snes_fd_function.\n"
-"Exact (manufactured) solution available in cases p=2,4.\n\n";
+"Equation is\n"
+"    - div( |grad u|^{p-2} grad u ) + u = f\n"
+"with homogeneous Neumann boundary conditions.  The objective functional is\n"
+"    I[u] = int_Omega (1/p) |grad u|^p + (1/2) u^2 - f u.\n"
+"Implements objective and residual (gradient) but no Jacobian.  Covers cases\n"
+"1 <= p <= 2.  Defaults to easy linear problem with p=2.  Defaults to\n"
+"quadrature degree 2.  Can run with only an objective function; use\n"
+"-ph_no_residual -snes_fd_function.\n\n";
 
 #include <petsc.h>
 #include "../quadrature.h"
 
 typedef struct {
-    double     p, eps, a, b;
+    double     p, eps;
     int        quaddegree;
+    double     (*f)(double x, double y, double p, double eps);
 } PHelmCtx;
 
-extern PetscErrorCode GetUExactLocal(DMDALocalInfo*, Vec, PHelmCtx*);
+static double f_constant(double x, double y, double p, double eps) {
+    return 1.0;
+}
+
+static double u_exact_cosines(double x, double y) {
+    return cos(PETSC_PI * x) * cos(PETSC_PI * y);
+}
+
+static double f_cosines(double x, double y, double p, double eps) {
+    const double uu = u_exact_cosines(x,y),
+                 pi2 = PETSC_PI * PETSC_PI,
+                 lapu = - 2 * pi2 * uu;
+    if (p == 2.0) {
+        return - lapu + uu;
+    } else {
+        const double
+            ux = - PETSC_PI * sin(PETSC_PI * x) * cos(PETSC_PI * y),
+            uy = - PETSC_PI * cos(PETSC_PI * x) * sin(PETSC_PI * y),
+            w = ux * ux + uy * uy + eps * eps,  // FIXME consider capping |f| instead
+            pi3 = pi2 * PETSC_PI,
+            wx = pi3 * sin(2 * PETSC_PI * x) * cos(2 * PETSC_PI * y),
+            wy = pi3 * cos(2 * PETSC_PI * x) * sin(2 * PETSC_PI * y);
+        const double s = (p - 2) / 2;  //  -1/2 <= s <= 0
+        return - s * PetscPowScalar(w,s-1) * (wx * ux + wy * uy)
+               - PetscPowScalar(w,s) * lapu
+               + uu;
+    }
+}
+
+typedef enum {CONSTANT, COSINES} ProblemType;
+static const char* ProblemTypes[] = {"constant","cosines",
+                                     "ProblemType", "", NULL};
+
+extern PetscErrorCode GetUExactCosinesLocal(DMDALocalInfo*, Vec);
 extern PetscErrorCode FormObjectiveLocal(DMDALocalInfo*, double**, double*, PHelmCtx*);
 extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, double**, double**, PHelmCtx*);
 
@@ -21,43 +59,44 @@ int main(int argc,char **argv) {
     PetscErrorCode ierr;
     DM             da;
     SNES           snes;
-    Vec            u_initial, u;
+    Vec            u_initial, u, u_exact;
     PHelmCtx       user;
     DMDALocalInfo  info;
+    ProblemType    problem = COSINES;
     PetscBool      no_objective = PETSC_FALSE,
                    no_residual = PETSC_FALSE,
                    exact_init = PETSC_FALSE;
-    int            tmpa = 1, tmpb = 0;
+    double         err;
 
     PetscInitialize(&argc,&argv,NULL,help);
-    user.p = 4.0;
+    user.p = 2.0;
     user.eps = 0.0;
     user.quaddegree = 2;
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"ph_","p-Helmholtz solver options",""); CHKERRQ(ierr);
     ierr = PetscOptionsReal("-eps","regularization parameter eps",
                   "plap.c",user.eps,&(user.eps),NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-exact_init","use exact solution to initialize (p=2,4 only)",
+    ierr = PetscOptionsBool("-exact_init","use exact solution to initialize",
                   "plap.c",exact_init,&(exact_init),NULL);CHKERRQ(ierr);
     ierr = PetscOptionsBool("-no_objective","do not set the objective evaluation function",
                   "plap.c",no_objective,&(no_objective),NULL);CHKERRQ(ierr);
     ierr = PetscOptionsBool("-no_residual","do not set the residual evaluation function",
                   "plap.c",no_residual,&(no_residual),NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-p","exponent p with  1 <= p < infty",
+    ierr = PetscOptionsReal("-p","exponent p with  1 <= p <= 2",
                   "plap.c",user.p,&(user.p),NULL); CHKERRQ(ierr);
     if (user.p < 1.0) {
          SETERRQ(PETSC_COMM_WORLD,1,"p >= 1 required");
     }
+    if (user.p > 2.0) {
+         SETERRQ(PETSC_COMM_WORLD,2,"p <= 2 required");
+    }
     ierr = PetscOptionsInt("-quaddegree","quadrature degree n (= 1,2,3 only)",
                  "plap.c",user.quaddegree,&(user.quaddegree),NULL); CHKERRQ(ierr);
     if ((user.quaddegree < 1) || (user.quaddegree > 3)) {
-        SETERRQ(PETSC_COMM_WORLD,2,"quadrature degree n=1,2,3 only");
+        SETERRQ(PETSC_COMM_WORLD,3,"quadrature degree n=1,2,3 only");
     }
-    ierr = PetscOptionsInt("-soln_a","integer parameter a in exact solution (p=2,4 only)",
-                  "plap.c",tmpa,&tmpa,NULL); CHKERRQ(ierr);
-    user.a = (double)tmpa;
-    ierr = PetscOptionsInt("-soln_b","integer parameter b in exact solution (p=2,4 only)",
-                  "plap.c",tmpb,&tmpb,NULL); CHKERRQ(ierr);
-    user.b = (double)tmpb;
+    ierr = PetscOptionsEnum("-problem","problem type determines right side f(x,y)",
+                 "plap.c",ProblemTypes,(PetscEnum)problem,(PetscEnum*)&problem,
+                 NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
     ierr = DMDACreate2d(PETSC_COMM_WORLD,
@@ -67,6 +106,7 @@ int main(int argc,char **argv) {
     ierr = DMSetUp(da); CHKERRQ(ierr);
     ierr = DMSetApplicationContext(da,&user);CHKERRQ(ierr);
     ierr = DMDASetUniformCoordinates(da,0.0,1.0,0.0,1.0,-1.0,-1.0); CHKERRQ(ierr);
+    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
 
     ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
     ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
@@ -83,13 +123,24 @@ int main(int argc,char **argv) {
     }
     ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
-    // set initial iterate
+    // set initial iterate and right-hand side
     ierr = DMCreateGlobalVector(da,&u_initial);CHKERRQ(ierr);
-    if (exact_init) {
-        ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-        ierr = GetUExactLocal(&info,u_initial,&user); CHKERRQ(ierr);
-    } else {
-        ierr = VecSet(u_initial,0.0); CHKERRQ(ierr);
+    ierr = VecSet(u_initial,0.5); CHKERRQ(ierr);
+    switch (problem) {
+        case CONSTANT:
+            if (exact_init) {
+                ierr = VecSet(u_initial,1.0); CHKERRQ(ierr);
+            }
+            user.f = &f_constant;
+            break;
+        case COSINES:
+            if (exact_init) {
+                ierr = GetUExactCosinesLocal(&info,u_initial); CHKERRQ(ierr);
+            }
+            user.f = &f_cosines;
+            break;
+        default:
+            SETERRQ(PETSC_COMM_WORLD,4,"unknown problem type\n");
     }
 
     // solve and clean up
@@ -99,61 +150,29 @@ int main(int argc,char **argv) {
     ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr);
     ierr = SNESGetDM(snes,&da); CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,
-        "done on %d x %d grid using p=%.3f",info.mx,info.my,user.p); CHKERRQ(ierr);
 
-    // evaluate numerical error if available
-    if (user.p == 2.0 || user.p == 4.0) {
-        Vec     u_exact;
-        double  err;
-        ierr = VecDuplicate(u,&u_exact); CHKERRQ(ierr);
-        ierr = GetUExactLocal(&info,u_exact,&user); CHKERRQ(ierr);
-        ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
-        ierr = VecNorm(u,NORM_INFINITY,&err); CHKERRQ(ierr);
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"; numerical error:  |u-u_exact|_inf = %.3e\n",
-               err); CHKERRQ(ierr);
-        ierr = VecDestroy(&u_exact); CHKERRQ(ierr);
-    } else {
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"...\n"); CHKERRQ(ierr);
+    // evaluate numerical error
+    ierr = VecDuplicate(u,&u_exact); CHKERRQ(ierr);
+    switch (problem) {
+        case CONSTANT:
+            ierr = VecSet(u_exact,1.0); CHKERRQ(ierr);
+            break;
+        case COSINES:
+            ierr = GetUExactCosinesLocal(&info,u_exact); CHKERRQ(ierr);
+            break;
+        default:
+            SETERRQ(PETSC_COMM_WORLD,5,"unknown problem type\n");
     }
-
-    SNESDestroy(&snes);
+    ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
+    ierr = VecNorm(u,NORM_INFINITY,&err); CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,
+        "done on %d x %d grid; p=%.3f; numerical error:  |u-u_exact|_inf = %.3e\n",
+        info.mx,info.my,user.p,err); CHKERRQ(ierr);
+    VecDestroy(&u_exact);  SNESDestroy(&snes);
     return PetscFinalize();
 }
 
-static double UExact(double x, double y, PHelmCtx *user) {
-    return cos(user->a * PETSC_PI * x) * cos(user->b * PETSC_PI * y);
-}
-
-static double F(double x, double y, PHelmCtx *user) {
-    if (user->p == 2.0) {
-        const double u = UExact(x,y,user),
-                     api = user->a * PETSC_PI,
-                     bpi = user->b * PETSC_PI;
-        return (api * api + bpi * bpi + 1.0) * u;
-    } else if (user->p == 4.0) {
-        const double u = UExact(x,y,user),
-                     api = user->a * PETSC_PI,
-                     bpi = user->b * PETSC_PI,
-                     api2 = api * api,
-                     bpi2 = bpi * bpi,
-                     lapu = - (api2 + bpi2) * u,
-                     sax = sin(api * x),
-                     cax = cos(api * x),
-                     sby = sin(bpi * y),
-                     cby = cos(bpi * y),
-                     ux = - api * sax * cby,
-                     uy = - bpi * cax * sby,
-                     w = ux * ux + uy * uy,
-                     wx = api * sin(2 * api * x) * (api2 * cby * cby - bpi2 * sby * sby),
-                     wy = bpi * sin(2 * bpi * y) * (bpi2 * cax * cax - api2 * sax * sax);
-        return - wx * ux - wy * uy - w * lapu + u;
-    } else {
-        return 1.0;
-    }
-}
-
-PetscErrorCode GetUExactLocal(DMDALocalInfo *info, Vec uex, PHelmCtx *user) {
+PetscErrorCode GetUExactCosinesLocal(DMDALocalInfo *info, Vec uex) {
     PetscErrorCode ierr;
     const double hx = 1.0 / (info->mx - 1), hy = 1.0 / (info->my - 1);
     double       x, y, **auex;
@@ -163,7 +182,7 @@ PetscErrorCode GetUExactLocal(DMDALocalInfo *info, Vec uex, PHelmCtx *user) {
         y = j * hy;
         for (i = info->xs; i < info->xs + info->xm; i++) {
             x = i * hx;
-            auex[j][i] = UExact(x,y,user);
+            auex[j][i] = u_exact_cosines(x,y);
         }
     }
     ierr = DMDAVecRestoreArray(info->da,uex,&auex); CHKERRQ(ierr);
@@ -222,13 +241,13 @@ static double GradPow(double hx, double hy,
 
 //STARTOBJECTIVE
 static double ObjIntegrandRef(DMDALocalInfo *info,
-                       const double f[4], const double u[4],
+                       const double ff[4], const double uu[4],
                        double xi, double eta, PHelmCtx *user) {
-    const gradRef du = deval(u,xi,eta);
+    const gradRef du = deval(uu,xi,eta);
     const double  hx = 1.0 / (info->mx - 1),  hy = 1.0 / (info->my - 1),
-                  uu = eval(u,xi,eta);
-    return GradPow(hx,hy,du,user->p,user->eps) / user->p + 0.5 * uu * uu
-           - eval(f,xi,eta) * uu;
+                  u = eval(uu,xi,eta);
+    return GradPow(hx,hy,du,user->p,user->eps) / user->p + 0.5 * u * u
+           - eval(ff,xi,eta) * u;
 }
 
 PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
@@ -249,15 +268,17 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
           if (i == 0)
               continue;
           x = i * hx;
-          const double f[4] = {F(x,y,user),F(x-hx,y,user),
-                               F(x-hx,y-hy,user),F(x,y-hy,user)};
-          const double u[4] = {au[j][i],au[j][i-1],
-                               au[j-1][i-1],au[j-1][i]};
+          const double ff[4] = {user->f(x,y,user->p,user->eps),
+                                user->f(x-hx,y,user->p,user->eps),
+                                user->f(x-hx,y-hy,user->p,user->eps),
+                                user->f(x,y-hy,user->p,user->eps)};
+          const double uu[4] = {au[j][i],au[j][i-1],
+                                au[j-1][i-1],au[j-1][i]};
           // loop over quadrature points on this element
           for (r = 0; r < q.n; r++) {
               for (s = 0; s < q.n; s++) {
                   lobj += q.w[r] * q.w[s]
-                        * ObjIntegrandRef(info,f,u,q.xi[r],q.xi[s],user);
+                        * ObjIntegrandRef(info,ff,uu,q.xi[r],q.xi[s],user);
               }
           }
       }
@@ -271,14 +292,14 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
 
 //STARTFUNCTION
 static double FunIntegrandRef(DMDALocalInfo *info, int L,
-                       const double f[4], const double u[4],
+                       const double ff[4], const double uu[4],
                        double xi, double eta, PHelmCtx *user) {
-  const gradRef du    = deval(u,xi,eta),
+  const gradRef du    = deval(uu,xi,eta),
                 dchiL = dchi(L,xi,eta);
   const double  hx = 1.0 / (info->mx - 1),  hy = 1.0 / (info->my - 1);
   return GradPow(hx,hy,du,user->p - 2.0,user->eps)
            * GradInnerProd(hx,hy,du,dchiL)
-         + (eval(u,xi,eta) - eval(f,xi,eta)) * chi(L,xi,eta);
+         + (eval(uu,xi,eta) - eval(ff,xi,eta)) * chi(L,xi,eta);
 }
 
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
@@ -303,10 +324,12 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
           if (i == 0)
               continue;
           x = i * hx;
-          const double f[4] = {F(x,y,user),F(x-hx,y,user),
-                               F(x-hx,y-hy,user),F(x,y-hy,user)};
-          const double u[4] = {au[j][i],au[j][i-1],
-                               au[j-1][i-1],au[j-1][i]};
+          const double ff[4] = {user->f(x,y,user->p,user->eps),
+                                user->f(x-hx,y,user->p,user->eps),
+                                user->f(x-hx,y-hy,user->p,user->eps),
+                                user->f(x,y-hy,user->p,user->eps)};
+          const double uu[4] = {au[j][i],au[j][i-1],
+                                au[j-1][i-1],au[j-1][i]};
           // loop over corners of element i,j
           for (l = 0; l < 4; l++) {
               PP = i + li[l];
@@ -319,7 +342,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                       for (s = 0; s < q.n; s++) {
                          FF[QQ][PP]
                              += 0.25 * hx * hy * q.w[r] * q.w[s]
-                                * FunIntegrandRef(info,l,f,u,
+                                * FunIntegrandRef(info,l,ff,uu,
                                                   q.xi[r],q.xi[s],user);
                       }
                   }
