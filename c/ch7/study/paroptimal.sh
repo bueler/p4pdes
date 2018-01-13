@@ -15,7 +15,7 @@ set -e
 COARSE="-da_grid_x 5 -da_grid_y 5 -da_grid_z 5"
 
 function runcase() {
-    CMD="$1 ../fish -fsh_dim 3 -ksp_rtol 1.0e-10 -ksp_converged_reason $COARSE -da_refine $2 $3 -log_view"
+    CMD="$1 ../../ch6/fish -fsh_dim 3 -ksp_rtol 1.0e-10 -ksp_converged_reason $COARSE -da_refine $2 $3 -log_view"
     echo "COMMAND:  $CMD"
     rm -rf tmp.txt
     $CMD &> tmp.txt
