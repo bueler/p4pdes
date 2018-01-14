@@ -8,7 +8,7 @@ static char help[] = "Solve the p-Laplacian equation in 2D using Q^1 FEM.\n"
 "Uses a manufactured solution.\n\n";
 
 #include <petsc.h>
-#include "../quadrature.h"
+#include "../../quadrature.h"
 
 #define COMM PETSC_COMM_WORLD
 
