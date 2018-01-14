@@ -22,12 +22,12 @@ static double f_constant(double x, double y, double p, double eps) {
     return 1.0;
 }
 
-static double u_exact_cosines(double x, double y) {
+static double u_exact_cosines(double x, double y, double p, double eps) {
     return cos(PETSC_PI * x) * cos(PETSC_PI * y);
 }
 
 static double f_cosines(double x, double y, double p, double eps) {
-    const double uu = u_exact_cosines(x,y),
+    const double uu = u_exact_cosines(x,y,p,eps),
                  pi2 = PETSC_PI * PETSC_PI,
                  lapu = - 2 * pi2 * uu;
     if (p == 2.0) {
@@ -51,7 +51,7 @@ typedef enum {CONSTANT, COSINES} ProblemType;
 static const char* ProblemTypes[] = {"constant","cosines",
                                      "ProblemType", "", NULL};
 
-extern PetscErrorCode GetUExactCosinesLocal(DMDALocalInfo*, Vec);
+extern PetscErrorCode GetVecLocalFromFunction(DMDALocalInfo*, Vec, double (*)(double, double, double, double), PHelmCtx*);
 extern PetscErrorCode FormObjectiveLocal(DMDALocalInfo*, double**, double*, PHelmCtx*);
 extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, double**, double**, PHelmCtx*);
 
@@ -135,7 +135,7 @@ int main(int argc,char **argv) {
             break;
         case COSINES:
             if (exact_init) {
-                ierr = GetUExactCosinesLocal(&info,u_initial); CHKERRQ(ierr);
+                ierr = GetVecLocalFromFunction(&info,u_initial,&u_exact_cosines,&user); CHKERRQ(ierr);
             }
             user.f = &f_cosines;
             break;
@@ -151,6 +151,8 @@ int main(int argc,char **argv) {
     ierr = SNESGetDM(snes,&da); CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
 
+// FIXME optionally view f(x,y)
+
     // evaluate numerical error
     ierr = VecDuplicate(u,&u_exact); CHKERRQ(ierr);
     switch (problem) {
@@ -158,7 +160,7 @@ int main(int argc,char **argv) {
             ierr = VecSet(u_exact,1.0); CHKERRQ(ierr);
             break;
         case COSINES:
-            ierr = GetUExactCosinesLocal(&info,u_exact); CHKERRQ(ierr);
+            ierr = GetVecLocalFromFunction(&info,u_exact,&u_exact_cosines,&user); CHKERRQ(ierr);
             break;
         default:
             SETERRQ(PETSC_COMM_WORLD,5,"unknown problem type\n");
@@ -172,20 +174,20 @@ int main(int argc,char **argv) {
     return PetscFinalize();
 }
 
-PetscErrorCode GetUExactCosinesLocal(DMDALocalInfo *info, Vec uex) {
+PetscErrorCode GetVecLocalFromFunction(DMDALocalInfo *info, Vec w, double (*fcn)(double, double, double, double), PHelmCtx *user) {
     PetscErrorCode ierr;
     const double hx = 1.0 / (info->mx - 1), hy = 1.0 / (info->my - 1);
-    double       x, y, **auex;
+    double       x, y, **aw;
     int          i, j;
-    ierr = DMDAVecGetArray(info->da,uex,&auex); CHKERRQ(ierr);
+    ierr = DMDAVecGetArray(info->da,w,&aw); CHKERRQ(ierr);
     for (j = info->ys; j < info->ys + info->ym; j++) {
         y = j * hy;
         for (i = info->xs; i < info->xs + info->xm; i++) {
             x = i * hx;
-            auex[j][i] = u_exact_cosines(x,y);
+            aw[j][i] = (*fcn)(x,y,user->p,user->eps);
         }
     }
-    ierr = DMDAVecRestoreArray(info->da,uex,&auex); CHKERRQ(ierr);
+    ierr = DMDAVecRestoreArray(info->da,w,&aw); CHKERRQ(ierr);
     return 0;
 }
 
