@@ -23,11 +23,11 @@ Do this to build and run the first code:
 
 ### regression testing
 
-    $ make test
+    $ make test               # in either c/ or c/ch*/
 
-Tested with PETSc master branch.
+Regularly tested with PETSc master branch.
 
 ### cleaning up
 
-    $ make distclean
+    $ make distclean          # in either c/ or c/ch*/
 
