@@ -318,12 +318,12 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
           FF[j][i] = 0.0;
 
   // loop over all elements
-  for (j = info->ys; j < info->ys + info->ym; j++) {
-      if (j == 0)
+  for (j = info->ys; j <= info->ys + info->ym; j++) {
+      if ((j == 0) || (j > info->my-1))
           continue;
       y = j * hy;
-      for (i = info->xs; i < info->xs + info->xm; i++) {
-          if (i == 0)
+      for (i = info->xs; i <= info->xs + info->xm; i++) {
+          if ((i == 0) || (i > info->mx-1))
               continue;
           x = i * hx;
           const double ff[4] = {user->f(x,y,user->p,user->eps),

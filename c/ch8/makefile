@@ -15,16 +15,18 @@ runphelm_2:
 runphelm_3:
 	-@../testit.sh phelm "-ph_p 1.5 -ph_eps 1.0e-3 -ph_no_objective -ph_quaddegree 1 -ph_exact_init -da_refine 1 -snes_converged_reason" 1 3
 
-# FIXME need -snes_grid_sequence -pc_type gamg test (?)
-# FIXME need parallel test of phelm
+runphelm_4:
+	-@../testit.sh phelm "-ph_no_objective -snes_fd_color -snes_converged_reason -da_refine 1" 2 4
 
-test_phelm: runphelm_1 runphelm_2 runphelm_3
+# FIXME need -snes_grid_sequence -pc_type gamg test (?)
+
+test_phelm: runphelm_1 runphelm_2 runphelm_3 runphelm_4
 
 test: test_phelm
 
 # etc
 
-.PHONY: distclean runphelm_1 runphelm_2 runphelm_3 test test_phelm
+.PHONY: distclean runphelm_1 runphelm_2 runphelm_3 runphelm_4 test test_phelm
 
 distclean:
 	@rm -f *~ phelm

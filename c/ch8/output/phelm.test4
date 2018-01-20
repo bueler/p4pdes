@@ -1,0 +1,2 @@
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+done on 3 x 3 grid; p=2.000; numerical error:  |u-u_exact|_inf = 1.704e-01
