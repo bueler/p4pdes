@@ -5,9 +5,8 @@ static char help[] =
 "with homogeneous Neumann boundary conditions.  The objective functional is\n"
 "    I[u] = int_Omega (1/p) |grad u|^p + (1/2) u^2 - f u.\n"
 "Implements objective and residual (gradient) but no Jacobian.  Covers cases\n"
-"1 <= p <= 2.  Defaults to easy linear problem with p=2.  Defaults to\n"
-"quadrature degree 2.  Can run with only an objective function; use\n"
-"-ph_no_residual -snes_fd_function.\n\n";
+"1 <= p.  Defaults to easy linear problem with p=2 and quadrature degree 2.\n"
+"Can be run with only an objective function; use -ph_no_residual -snes_fd_function.\n\n";
 
 #include <petsc.h>
 #include "../quadrature.h"
@@ -36,14 +35,13 @@ static double f_cosines(double x, double y, double p, double eps) {
         const double
             ux = - PETSC_PI * sin(PETSC_PI * x) * cos(PETSC_PI * y),
             uy = - PETSC_PI * cos(PETSC_PI * x) * sin(PETSC_PI * y),
-            w = ux * ux + uy * uy + eps * eps,  // FIXME consider capping |f| instead
+            w = ux * ux + uy * uy + eps * eps, // note regularization affects f(x,y) [but not u(x,y)]
             pi3 = pi2 * PETSC_PI,
             wx = pi3 * sin(2 * PETSC_PI * x) * cos(2 * PETSC_PI * y),
             wy = pi3 * cos(2 * PETSC_PI * x) * sin(2 * PETSC_PI * y);
         const double s = (p - 2) / 2;  //  -1/2 <= s <= 0
         return - s * PetscPowScalar(w,s-1) * (wx * ux + wy * uy)
-               - PetscPowScalar(w,s) * lapu
-               + uu;
+               - PetscPowScalar(w,s) * lapu + uu;
     }
 }
 
@@ -81,13 +79,10 @@ int main(int argc,char **argv) {
                   "plap.c",no_objective,&(no_objective),NULL);CHKERRQ(ierr);
     ierr = PetscOptionsBool("-no_residual","do not set the residual evaluation function",
                   "plap.c",no_residual,&(no_residual),NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-p","exponent p with  1 <= p <= 2",
+    ierr = PetscOptionsReal("-p","exponent p with  1 <= p",
                   "plap.c",user.p,&(user.p),NULL); CHKERRQ(ierr);
     if (user.p < 1.0) {
          SETERRQ(PETSC_COMM_WORLD,1,"p >= 1 required");
-    }
-    if (user.p > 2.0) {
-         SETERRQ(PETSC_COMM_WORLD,2,"p <= 2 required");
     }
     ierr = PetscOptionsInt("-quaddegree","quadrature degree n (= 1,2,3 only)",
                  "plap.c",user.quaddegree,&(user.quaddegree),NULL); CHKERRQ(ierr);
