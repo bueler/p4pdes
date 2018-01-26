@@ -272,7 +272,8 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
           for (r = 0; r < q.n; r++) {
               for (s = 0; s < q.n; s++) {
                   lobj += q.w[r] * q.w[s]
-                        * ObjIntegrandRef(info,ff,uu,q.xi[r],q.xi[s],user);
+                          * ObjIntegrandRef(info,ff,uu,
+                                            q.xi[r],q.xi[s],user);
               }
           }
       }
