@@ -196,11 +196,8 @@ static double chi(int L, double xi, double eta) {
 
 // evaluate v(xi,eta) on reference element using local node numbering
 static double eval(const double v[4], double xi, double eta) {
-    double sum = 0.0;
-    int    L;
-    for (L=0; L<4; L++)
-        sum += v[L] * chi(L,xi,eta);
-    return sum;
+    return   v[0] * chi(0,xi,eta) + v[1] * chi(1,xi,eta)
+           + v[2] * chi(2,xi,eta) + v[3] * chi(3,xi,eta);
 }
 
 typedef struct {
