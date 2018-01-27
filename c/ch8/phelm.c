@@ -13,7 +13,7 @@ static char help[] =
 
 typedef struct {
     double     p, eps;
-    int        quaddegree;
+    int        quadpts;
     double     (*f)(double x, double y, double p, double eps);
 } PHelmCtx;
 
@@ -69,7 +69,7 @@ int main(int argc,char **argv) {
     PetscInitialize(&argc,&argv,NULL,help);
     user.p = 2.0;
     user.eps = 0.0;
-    user.quaddegree = 2;
+    user.quadpts = 2;
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"ph_","p-Helmholtz solver options",""); CHKERRQ(ierr);
     ierr = PetscOptionsReal("-eps","regularization parameter eps",
                   "plap.c",user.eps,&(user.eps),NULL); CHKERRQ(ierr);
@@ -84,10 +84,10 @@ int main(int argc,char **argv) {
     if (user.p < 1.0) {
          SETERRQ(PETSC_COMM_WORLD,1,"p >= 1 required");
     }
-    ierr = PetscOptionsInt("-quaddegree","quadrature degree n (= 1,2,3 only)",
-                 "plap.c",user.quaddegree,&(user.quaddegree),NULL); CHKERRQ(ierr);
-    if ((user.quaddegree < 1) || (user.quaddegree > 3)) {
-        SETERRQ(PETSC_COMM_WORLD,3,"quadrature degree n=1,2,3 only");
+    ierr = PetscOptionsInt("-quadpts","number n of quadrature points in each direction (= 1,2,3 only)",
+                 "plap.c",user.quadpts,&(user.quadpts),NULL); CHKERRQ(ierr);
+    if ((user.quadpts < 1) || (user.quadpts > 3)) {
+        SETERRQ(PETSC_COMM_WORLD,3,"quadrature points n=1,2,3 only");
     }
     ierr = PetscOptionsEnum("-problem","problem type determines right side f(x,y)",
                  "plap.c",ProblemTypes,(PetscEnum)problem,(PetscEnum*)&problem,
@@ -248,7 +248,7 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
                                   double *obj, PHelmCtx *user) {
   PetscErrorCode ierr;
   const double hx = 1.0 / (info->mx - 1),  hy = 1.0 / (info->my - 1);
-  const Quad1D q = gausslegendre[user->quaddegree-1];
+  const Quad1D q = gausslegendre[user->quadpts-1];
   double       x, y, lobj = 0.0;
   int          i,j,r,s;
   MPI_Comm     com;
@@ -300,7 +300,7 @@ static double FunIntegrandRef(DMDALocalInfo *info, int L,
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                                  double **FF, PHelmCtx *user) {
   const double hx = 1.0 / (info->mx - 1),  hy = 1.0 / (info->my - 1);
-  const Quad1D q = gausslegendre[user->quaddegree-1];
+  const Quad1D q = gausslegendre[user->quadpts-1];
   const int    li[4] = {0,-1,-1,0},  lj[4] = {0,0,-1,-1};
   double       x, y;
   int          i,j,l,r,s,PP,QQ;
