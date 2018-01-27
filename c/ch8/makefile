@@ -10,7 +10,7 @@ runphelm_1:
 	-@../testit.sh phelm "-ph_no_residual -snes_fd_function -snes_fd -snes_converged_reason" 1 1
 
 runphelm_2:
-	-@../testit.sh phelm "-ph_problem constant -snes_converged_reason -ksp_type cg -pc_type mg -da_refine 3" 1 2
+	-@../testit.sh phelm "-ph_problem constant -snes_type ksponly -ksp_converged_reason -ksp_type cg -pc_type mg -da_refine 3" 1 2
 
 runphelm_3:
 	-@../testit.sh phelm "-ph_p 1.5 -ph_eps 1.0e-3 -ph_no_objective -ph_quadpts 1 -ph_exact_init -da_refine 1 -snes_converged_reason" 1 3
