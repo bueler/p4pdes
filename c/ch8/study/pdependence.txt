@@ -1,0 +1,325 @@
+p = 1.1
+
+COMMAND:  ../phelm -snes_converged_reason -snes_rtol 1.0e-5 -ksp_type cg -pc_type mg -ksp_converged_reason -snes_grid_sequence 3 -ph_p 1.1 -ph_eps 1.0e-4
+      Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 19
+done on 9 x 9 grid; p=1.100; numerical error:  |u-u_exact|_inf = 7.835e+04
+PCApply              165 1.0 2.8544e-02 1.0 4.62e+06 1.0 0.0e+00 0.0e+00 0.0e+00 13 17  0  0  0  13 17  0  0  0   162
+
+COMMAND:  ../phelm -snes_converged_reason -snes_rtol 1.0e-5 -ksp_type cg -pc_type mg -ksp_converged_reason -snes_grid_sequence 4 -ph_p 1.1 -ph_eps 1.0e-4
+        Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+      Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 19
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 19
+done on 17 x 17 grid; p=1.100; numerical error:  |u-u_exact|_inf = 7.810e+04
+PCApply              292 1.0 6.2297e-02 1.0 2.08e+07 1.0 0.0e+00 0.0e+00 0.0e+00  8 20  0  0  0   8 20  0  0  0   334
+
+COMMAND:  ../phelm -snes_converged_reason -snes_rtol 1.0e-5 -ksp_type cg -pc_type mg -ksp_converged_reason -snes_grid_sequence 5 -ph_p 1.1 -ph_eps 1.0e-4
+          Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+        Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+      Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 19
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 19
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 14
+done on 33 x 33 grid; p=1.100; numerical error:  |u-u_exact|_inf = 7.755e+04
+PCApply              390 1.0 1.3147e-01 1.0 6.83e+07 1.0 0.0e+00 0.0e+00 0.0e+00  6 22  0  0  0   6 22  0  0  0   520
+
+COMMAND:  ../phelm -snes_converged_reason -snes_rtol 1.0e-5 -ksp_type cg -pc_type mg -ksp_converged_reason -snes_grid_sequence 6 -ph_p 1.1 -ph_eps 1.0e-4
+            Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+          Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+        Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+      Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 19
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 19
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 14
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 22
+done on 65 x 65 grid; p=1.100; numerical error:  |u-u_exact|_inf = 7.641e+04
+PCApply              569 1.0 5.1499e-01 1.0 3.96e+08 1.0 0.0e+00 0.0e+00 0.0e+00  5 25  0  0  0   5 25  0  0  0   769
+
+COMMAND:  ../phelm -snes_converged_reason -snes_rtol 1.0e-5 -ksp_type cg -pc_type mg -ksp_converged_reason -snes_grid_sequence 7 -ph_p 1.1 -ph_eps 1.0e-4
+              Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+            Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+          Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+        Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 19
+      Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 19
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 14
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 22
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 19
+done on 129 x 129 grid; p=1.100; numerical error:  |u-u_exact|_inf = 7.402e+04
+PCApply              719 1.0 2.0165e+00 1.0 1.49e+09 1.0 0.0e+00 0.0e+00 0.0e+00  5 26  0  0  0   5 26  0  0  0   739
+
+COMMAND:  ../phelm -snes_converged_reason -snes_rtol 1.0e-5 -ksp_type cg -pc_type mg -ksp_converged_reason -snes_grid_sequence 8 -ph_p 1.1 -ph_eps 1.0e-4
+                Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+              Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+            Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+          Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 19
+        Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 19
+      Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 14
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 22
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 19
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 26
+done on 257 x 257 grid; p=1.100; numerical error:  |u-u_exact|_inf = 6.903e+04
+PCApply              938 1.0 1.1854e+01 1.0 7.75e+09 1.0 0.0e+00 0.0e+00 0.0e+00  6 28  0  0  0   6 28  0  0  0   654
+
+p = 1.5
+
+COMMAND:  ../phelm -snes_converged_reason -snes_rtol 1.0e-5 -ksp_type cg -pc_type mg -ksp_converged_reason -snes_grid_sequence 3 -ph_p 1.5 -ph_eps 1.0e-4
+      Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+done on 9 x 9 grid; p=1.500; numerical error:  |u-u_exact|_inf = 1.990e+02
+PCApply               56 1.0 1.0895e-02 1.0 1.02e+06 1.0 0.0e+00 0.0e+00 0.0e+00 13 12  0  0  0  13 12  0  0  0    93
+
+COMMAND:  ../phelm -snes_converged_reason -snes_rtol 1.0e-5 -ksp_type cg -pc_type mg -ksp_converged_reason -snes_grid_sequence 4 -ph_p 1.5 -ph_eps 1.0e-4
+        Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+      Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 7
+done on 17 x 17 grid; p=1.500; numerical error:  |u-u_exact|_inf = 3.991e+01
+PCApply               86 1.0 2.0241e-02 1.0 5.44e+06 1.0 0.0e+00 0.0e+00 0.0e+00  7 15  0  0  0   7 15  0  0  0   269
+
+COMMAND:  ../phelm -snes_converged_reason -snes_rtol 1.0e-5 -ksp_type cg -pc_type mg -ksp_converged_reason -snes_grid_sequence 5 -ph_p 1.5 -ph_eps 1.0e-4
+          Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+        Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+      Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 7
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 9
+done on 33 x 33 grid; p=1.500; numerical error:  |u-u_exact|_inf = 6.642e+00
+PCApply              125 1.0 5.2618e-02 1.0 2.75e+07 1.0 0.0e+00 0.0e+00 0.0e+00  4 18  0  0  0   4 18  0  0  0   523
+
+COMMAND:  ../phelm -snes_converged_reason -snes_rtol 1.0e-5 -ksp_type cg -pc_type mg -ksp_converged_reason -snes_grid_sequence 6 -ph_p 1.5 -ph_eps 1.0e-4
+            Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+          Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+        Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+      Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 7
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 9
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 9
+done on 65 x 65 grid; p=1.500; numerical error:  |u-u_exact|_inf = 1.118e+00
+PCApply              164 1.0 1.5074e-01 1.0 1.14e+08 1.0 0.0e+00 0.0e+00 0.0e+00  3 19  0  0  0   3 19  0  0  0   757
+
+COMMAND:  ../phelm -snes_converged_reason -snes_rtol 1.0e-5 -ksp_type cg -pc_type mg -ksp_converged_reason -snes_grid_sequence 7 -ph_p 1.5 -ph_eps 1.0e-4
+              Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+            Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+          Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+        Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+      Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 7
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 9
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 9
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 8
+done on 129 x 129 grid; p=1.500; numerical error:  |u-u_exact|_inf = 2.068e-01
+PCApply              199 1.0 5.5113e-01 1.0 4.20e+08 1.0 0.0e+00 0.0e+00 0.0e+00  3 19  0  0  0   3 19  0  0  0   763
+
+COMMAND:  ../phelm -snes_converged_reason -snes_rtol 1.0e-5 -ksp_type cg -pc_type mg -ksp_converged_reason -snes_grid_sequence 8 -ph_p 1.5 -ph_eps 1.0e-4
+                Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+              Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+            Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+          Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+        Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 7
+      Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 9
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 9
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 8
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 7
+done on 257 x 257 grid; p=1.500; numerical error:  |u-u_exact|_inf = 4.225e-02
+PCApply              229 1.0 2.0660e+00 1.0 1.47e+09 1.0 0.0e+00 0.0e+00 0.0e+00  4 20  0  0  0   4 20  0  0  0   713
+
+p = 2
+
+COMMAND:  ../phelm -snes_converged_reason -snes_rtol 1.0e-5 -ksp_type cg -pc_type mg -ksp_converged_reason -snes_grid_sequence 3 -ph_p 2 -ph_eps 1.0e-4
+      Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+done on 9 x 9 grid; p=2.000; numerical error:  |u-u_exact|_inf = 1.214e-02
+PCApply               17 1.0 3.1865e-03 1.0 2.20e+05 1.0 0.0e+00 0.0e+00 0.0e+00 20 11  0  0  0  20 11  0  0  0    69
+
+COMMAND:  ../phelm -snes_converged_reason -snes_rtol 1.0e-5 -ksp_type cg -pc_type mg -ksp_converged_reason -snes_grid_sequence 4 -ph_p 2 -ph_eps 1.0e-4
+        Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+      Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+done on 17 x 17 grid; p=2.000; numerical error:  |u-u_exact|_inf = 3.052e-03
+PCApply               21 1.0 5.5096e-03 1.0 8.27e+05 1.0 0.0e+00 0.0e+00 0.0e+00 17 14  0  0  0  17 14  0  0  0   150
+
+COMMAND:  ../phelm -snes_converged_reason -snes_rtol 1.0e-5 -ksp_type cg -pc_type mg -ksp_converged_reason -snes_grid_sequence 5 -ph_p 2 -ph_eps 1.0e-4
+          Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+        Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+      Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+done on 33 x 33 grid; p=2.000; numerical error:  |u-u_exact|_inf = 7.642e-04
+PCApply               25 1.0 1.1012e-02 1.0 3.16e+06 1.0 0.0e+00 0.0e+00 0.0e+00 13 16  0  0  0  13 16  0  0  0   287
+
+COMMAND:  ../phelm -snes_converged_reason -snes_rtol 1.0e-5 -ksp_type cg -pc_type mg -ksp_converged_reason -snes_grid_sequence 6 -ph_p 2 -ph_eps 1.0e-4
+            Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+          Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+        Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+      Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+done on 65 x 65 grid; p=2.000; numerical error:  |u-u_exact|_inf = 1.911e-04
+PCApply               29 1.0 2.1096e-02 1.0 1.23e+07 1.0 0.0e+00 0.0e+00 0.0e+00 10 17  0  0  0  10 17  0  0  0   584
+
+COMMAND:  ../phelm -snes_converged_reason -snes_rtol 1.0e-5 -ksp_type cg -pc_type mg -ksp_converged_reason -snes_grid_sequence 7 -ph_p 2 -ph_eps 1.0e-4
+              Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+            Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+          Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+        Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+      Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+done on 129 x 129 grid; p=2.000; numerical error:  |u-u_exact|_inf = 4.778e-05
+PCApply               33 1.0 6.9122e-02 1.0 4.86e+07 1.0 0.0e+00 0.0e+00 0.0e+00  8 18  0  0  0   8 18  0  0  0   702
+
+COMMAND:  ../phelm -snes_converged_reason -snes_rtol 1.0e-5 -ksp_type cg -pc_type mg -ksp_converged_reason -snes_grid_sequence 8 -ph_p 2 -ph_eps 1.0e-4
+                Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+              Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+            Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+          Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+        Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+      Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+done on 257 x 257 grid; p=2.000; numerical error:  |u-u_exact|_inf = 1.195e-05
+PCApply               37 1.0 2.8358e-01 1.0 1.93e+08 1.0 0.0e+00 0.0e+00 0.0e+00  9 18  0  0  0   9 18  0  0  0   679
+
+p = 4
+
+COMMAND:  ../phelm -snes_converged_reason -snes_rtol 1.0e-5 -ksp_type cg -pc_type mg -ksp_converged_reason -snes_grid_sequence 3 -ph_p 4 -ph_eps 1.0e-4
+      Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 6
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+done on 9 x 9 grid; p=4.000; numerical error:  |u-u_exact|_inf = 5.542e-02
+PCApply               75 1.0 1.2887e-02 1.0 1.02e+06 1.0 0.0e+00 0.0e+00 0.0e+00 19 13  0  0  0  19 13  0  0  0    79
+
+COMMAND:  ../phelm -snes_converged_reason -snes_rtol 1.0e-5 -ksp_type cg -pc_type mg -ksp_converged_reason -snes_grid_sequence 4 -ph_p 4 -ph_eps 1.0e-4
+        Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 6
+      Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+done on 17 x 17 grid; p=4.000; numerical error:  |u-u_exact|_inf = 2.121e-02
+PCApply               92 1.0 2.1285e-02 1.0 3.53e+06 1.0 0.0e+00 0.0e+00 0.0e+00 13 15  0  0  0  13 15  0  0  0   166
+
+COMMAND:  ../phelm -snes_converged_reason -snes_rtol 1.0e-5 -ksp_type cg -pc_type mg -ksp_converged_reason -snes_grid_sequence 5 -ph_p 4 -ph_eps 1.0e-4
+          Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 6
+        Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+      Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+done on 33 x 33 grid; p=4.000; numerical error:  |u-u_exact|_inf = 7.140e-03
+PCApply              109 1.0 2.9062e-02 1.0 1.32e+07 1.0 0.0e+00 0.0e+00 0.0e+00  7 17  0  0  0   7 17  0  0  0   455
+
+COMMAND:  ../phelm -snes_converged_reason -snes_rtol 1.0e-5 -ksp_type cg -pc_type mg -ksp_converged_reason -snes_grid_sequence 6 -ph_p 4 -ph_eps 1.0e-4
+            Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 6
+          Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+        Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+      Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+done on 65 x 65 grid; p=4.000; numerical error:  |u-u_exact|_inf = 2.286e-03
+PCApply              122 1.0 6.5650e-02 1.0 4.21e+07 1.0 0.0e+00 0.0e+00 0.0e+00  6 18  0  0  0   6 18  0  0  0   641
+
+COMMAND:  ../phelm -snes_converged_reason -snes_rtol 1.0e-5 -ksp_type cg -pc_type mg -ksp_converged_reason -snes_grid_sequence 7 -ph_p 4 -ph_eps 1.0e-4
+              Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 6
+            Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+          Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+        Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+      Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+done on 129 x 129 grid; p=4.000; numerical error:  |u-u_exact|_inf = 6.884e-04
+PCApply              135 1.0 2.1636e-01 1.0 1.56e+08 1.0 0.0e+00 0.0e+00 0.0e+00  5 19  0  0  0   5 19  0  0  0   722
+
+COMMAND:  ../phelm -snes_converged_reason -snes_rtol 1.0e-5 -ksp_type cg -pc_type mg -ksp_converged_reason -snes_grid_sequence 8 -ph_p 4 -ph_eps 1.0e-4
+                Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 6
+              Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+            Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+          Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+        Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+      Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+done on 257 x 257 grid; p=4.000; numerical error:  |u-u_exact|_inf = 2.262e-04
+PCApply              145 1.0 6.8875e-01 1.0 4.88e+08 1.0 0.0e+00 0.0e+00 0.0e+00  6 20  0  0  0   6 20  0  0  0   709
+
+p = 10
+
+COMMAND:  ../phelm -snes_converged_reason -snes_rtol 1.0e-5 -ksp_type cg -pc_type mg -ksp_converged_reason -snes_grid_sequence 3 -ph_p 10 -ph_eps 1.0e-4
+      Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 8
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 7
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 8
+done on 9 x 9 grid; p=10.000; numerical error:  |u-u_exact|_inf = 1.269e-01
+PCApply              262 1.0 4.0577e-02 1.0 4.17e+06 1.0 0.0e+00 0.0e+00 0.0e+00 26 25  0  0  0  26 25  0  0  0   103
+
+COMMAND:  ../phelm -snes_converged_reason -snes_rtol 1.0e-5 -ksp_type cg -pc_type mg -ksp_converged_reason -snes_grid_sequence 4 -ph_p 10 -ph_eps 1.0e-4
+        Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 8
+      Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 7
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 8
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+done on 17 x 17 grid; p=10.000; numerical error:  |u-u_exact|_inf = 6.124e-02
+PCApply              327 1.0 5.4393e-02 1.0 1.13e+07 1.0 0.0e+00 0.0e+00 0.0e+00 18 28  0  0  0  18 28  0  0  0   208
+
+COMMAND:  ../phelm -snes_converged_reason -snes_rtol 1.0e-5 -ksp_type cg -pc_type mg -ksp_converged_reason -snes_grid_sequence 5 -ph_p 10 -ph_eps 1.0e-4
+          Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 8
+        Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+      Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 7
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 8
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+done on 33 x 33 grid; p=10.000; numerical error:  |u-u_exact|_inf = 2.634e-02
+PCApply              377 1.0 8.6756e-02 1.0 3.26e+07 1.0 0.0e+00 0.0e+00 0.0e+00 12 30  0  0  0  12 30  0  0  0   376
+
+COMMAND:  ../phelm -snes_converged_reason -snes_rtol 1.0e-5 -ksp_type cg -pc_type mg -ksp_converged_reason -snes_grid_sequence 6 -ph_p 10 -ph_eps 1.0e-4
+            Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 8
+          Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+        Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 7
+      Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 8
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+done on 65 x 65 grid; p=10.000; numerical error:  |u-u_exact|_inf = 1.128e-02
+PCApply              428 1.0 1.8946e-01 1.0 1.14e+08 1.0 0.0e+00 0.0e+00 0.0e+00 10 36  0  0  0  10 36  0  0  0   602
+
+COMMAND:  ../phelm -snes_converged_reason -snes_rtol 1.0e-5 -ksp_type cg -pc_type mg -ksp_converged_reason -snes_grid_sequence 7 -ph_p 10 -ph_eps 1.0e-4
+              Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 8
+            Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+          Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 7
+        Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 8
+      Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+done on 129 x 129 grid; p=10.000; numerical error:  |u-u_exact|_inf = 3.896e-03
+PCApply              480 1.0 6.7684e-01 1.0 4.42e+08 1.0 0.0e+00 0.0e+00 0.0e+00 10 39  0  0  0  10 39  0  0  0   654
+
+COMMAND:  ../phelm -snes_converged_reason -snes_rtol 1.0e-5 -ksp_type cg -pc_type mg -ksp_converged_reason -snes_grid_sequence 8 -ph_p 10 -ph_eps 1.0e-4
+                Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 8
+              Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+            Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 7
+          Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 8
+        Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+      Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+done on 257 x 257 grid; p=10.000; numerical error:  |u-u_exact|_inf = 1.743e-03
+PCApply              536 1.0 2.7568e+00 1.0 1.78e+09 1.0 0.0e+00 0.0e+00 0.0e+00 14 47  0  0  0  14 47  0  0  0   646
+
