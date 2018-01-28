@@ -6,7 +6,7 @@ static char help[] =
 "    I[u] = int_Omega (1/p) |grad u|^p + (1/2) u^2 - f u.\n"
 "Implements objective and residual (gradient) but no Jacobian.  Covers cases\n"
 "1 <= p.  Defaults to easy linear problem with p=2 and quadrature degree 2.\n"
-"Can be run with only an objective function; use -ph_no_residual -snes_fd_function.\n\n";
+"Can be run with only an objective function; use -ph_no_gradient -snes_fd_function.\n\n";
 
 #include <petsc.h>
 #include "../quadrature.h"
@@ -63,8 +63,9 @@ int main(int argc,char **argv) {
     DMDALocalInfo  info;
     ProblemType    problem = COSINES;
     PetscBool      no_objective = PETSC_FALSE,
-                   no_residual = PETSC_FALSE,
-                   exact_init = PETSC_FALSE;
+                   no_gradient = PETSC_FALSE,
+                   exact_init = PETSC_FALSE,
+                   view_f = PETSC_FALSE;
     double         err;
 
     PetscInitialize(&argc,&argv,NULL,help);
@@ -82,25 +83,28 @@ int main(int argc,char **argv) {
     ierr = PetscOptionsBool("-no_objective",
                   "do not set the objective evaluation function",
                   "phelm.c",no_objective,&(no_objective),NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-no_residual",
+    ierr = PetscOptionsBool("-no_gradient",
                   "do not set the residual evaluation function",
-                  "phelm.c",no_residual,&(no_residual),NULL);CHKERRQ(ierr);
+                  "phelm.c",no_gradient,&(no_gradient),NULL);CHKERRQ(ierr);
     ierr = PetscOptionsReal("-p",
                   "exponent p with  1 <= p",
                   "phelm.c",user.p,&(user.p),NULL); CHKERRQ(ierr);
     if (user.p < 1.0) {
          SETERRQ(PETSC_COMM_WORLD,1,"p >= 1 required");
     }
+    ierr = PetscOptionsEnum("-problem",
+                  "problem type determines right side f(x,y)",
+                  "phelm.c",ProblemTypes,(PetscEnum)problem,(PetscEnum*)&problem,
+                  NULL); CHKERRQ(ierr);
     ierr = PetscOptionsInt("-quadpts",
                   "number n of quadrature points in each direction (= 1,2,3 only)",
                   "phelm.c",user.quadpts,&(user.quadpts),NULL); CHKERRQ(ierr);
     if ((user.quadpts < 1) || (user.quadpts > 3)) {
         SETERRQ(PETSC_COMM_WORLD,3,"quadrature points n=1,2,3 only");
     }
-    ierr = PetscOptionsEnum("-problem",
-                  "problem type determines right side f(x,y)",
-                  "phelm.c",ProblemTypes,(PetscEnum)problem,(PetscEnum*)&problem,
-                  NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-view_f",
+                  "view right-hand side to STDOUT",
+                  "phelm.c",view_f,&(view_f),NULL);CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
     ierr = DMDACreate2d(PETSC_COMM_WORLD,
@@ -118,7 +122,7 @@ int main(int argc,char **argv) {
         ierr = DMDASNESSetObjectiveLocal(da,
              (DMDASNESObjective)FormObjectiveLocal,&user); CHKERRQ(ierr);
     }
-    if (no_residual) {
+    if (no_gradient) {
         // why isn't this the default?  why no programmatic way to set?
         ierr = PetscOptionsSetValue(NULL,"-snes_fd_function_eps","0.0"); CHKERRQ(ierr);
     } else {
@@ -147,6 +151,22 @@ int main(int argc,char **argv) {
             SETERRQ(PETSC_COMM_WORLD,4,"unknown problem type\n");
     }
 
+    // optionally view right-hand-side
+    if (view_f) {
+        Vec vf;
+        ierr = VecDuplicate(u_initial,&vf); CHKERRQ(ierr);
+        switch (problem) {
+            case CONSTANT:
+                ierr = VecSet(vf,1.0); CHKERRQ(ierr);
+                break;
+            case COSINES:
+                ierr = GetVecLocalFromFunction(&info,vf,&f_cosines,&user); CHKERRQ(ierr);
+                break;
+        }
+        ierr = VecView(vf,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
+        VecDestroy(&vf);
+    }
+
     // solve and clean up
     ierr = SNESSolve(snes,NULL,u_initial); CHKERRQ(ierr);
     ierr = VecDestroy(&u_initial); CHKERRQ(ierr);
@@ -164,14 +184,13 @@ int main(int argc,char **argv) {
         case COSINES:
             ierr = GetVecLocalFromFunction(&info,u_exact,&u_exact_cosines,&user); CHKERRQ(ierr);
             break;
-        default:
-            SETERRQ(PETSC_COMM_WORLD,5,"unknown problem type\n");
     }
     ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
     ierr = VecNorm(u,NORM_INFINITY,&err); CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,
         "done on %d x %d grid; p=%.3f; numerical error:  |u-u_exact|_inf = %.3e\n",
         info.mx,info.my,user.p,err); CHKERRQ(ierr);
+
     VecDestroy(&u_exact);  SNESDestroy(&snes);
     return PetscFinalize();
 }
