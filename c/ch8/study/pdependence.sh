@@ -13,7 +13,7 @@ RTOL=1.0e-5
 EPS=1.0e-4
 
 function runcase() {
-    CMD="../phelm -snes_converged_reason -snes_rtol $RTOL -ksp_type cg -pc_type mg -ksp_converged_reason -snes_grid_sequence $1 -ph_p $2 -ph_eps $EPS"
+    CMD="../phelm -snes_converged_reason -snes_rtol $RTOL -ksp_type cg -pc_type mg -snes_grid_sequence $1 -ph_p $2 -ph_eps $EPS"
     echo "COMMAND:  $CMD"
     rm -rf tmp.txt
     $CMD -log_view &> tmp.txt
