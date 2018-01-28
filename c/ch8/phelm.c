@@ -49,7 +49,8 @@ typedef enum {CONSTANT, COSINES} ProblemType;
 static const char* ProblemTypes[] = {"constant","cosines",
                                      "ProblemType", "", NULL};
 
-extern PetscErrorCode GetVecLocalFromFunction(DMDALocalInfo*, Vec, double (*)(double, double, double, double), PHelmCtx*);
+extern PetscErrorCode GetVecLocalFromFunction(DMDALocalInfo*, Vec,
+                         double (*)(double, double, double, double), PHelmCtx*);
 extern PetscErrorCode FormObjectiveLocal(DMDALocalInfo*, double**, double*, PHelmCtx*);
 extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, double**, double**, PHelmCtx*);
 
@@ -70,28 +71,36 @@ int main(int argc,char **argv) {
     user.p = 2.0;
     user.eps = 0.0;
     user.quadpts = 2;
-    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"ph_","p-Helmholtz solver options",""); CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-eps","regularization parameter eps",
-                  "plap.c",user.eps,&(user.eps),NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-exact_init","use exact solution to initialize",
-                  "plap.c",exact_init,&(exact_init),NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-no_objective","do not set the objective evaluation function",
-                  "plap.c",no_objective,&(no_objective),NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-no_residual","do not set the residual evaluation function",
-                  "plap.c",no_residual,&(no_residual),NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-p","exponent p with  1 <= p",
-                  "plap.c",user.p,&(user.p),NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"ph_",
+                  "p-Helmholtz solver options",""); CHKERRQ(ierr);
+    ierr = PetscOptionsReal("-eps",
+                  "regularization parameter eps",
+                  "phelm.c",user.eps,&(user.eps),NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-exact_init",
+                  "use exact solution to initialize",
+                  "phelm.c",exact_init,&(exact_init),NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-no_objective",
+                  "do not set the objective evaluation function",
+                  "phelm.c",no_objective,&(no_objective),NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-no_residual",
+                  "do not set the residual evaluation function",
+                  "phelm.c",no_residual,&(no_residual),NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsReal("-p",
+                  "exponent p with  1 <= p",
+                  "phelm.c",user.p,&(user.p),NULL); CHKERRQ(ierr);
     if (user.p < 1.0) {
          SETERRQ(PETSC_COMM_WORLD,1,"p >= 1 required");
     }
-    ierr = PetscOptionsInt("-quadpts","number n of quadrature points in each direction (= 1,2,3 only)",
-                 "plap.c",user.quadpts,&(user.quadpts),NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsInt("-quadpts",
+                  "number n of quadrature points in each direction (= 1,2,3 only)",
+                  "phelm.c",user.quadpts,&(user.quadpts),NULL); CHKERRQ(ierr);
     if ((user.quadpts < 1) || (user.quadpts > 3)) {
         SETERRQ(PETSC_COMM_WORLD,3,"quadrature points n=1,2,3 only");
     }
-    ierr = PetscOptionsEnum("-problem","problem type determines right side f(x,y)",
-                 "plap.c",ProblemTypes,(PetscEnum)problem,(PetscEnum*)&problem,
-                 NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsEnum("-problem",
+                  "problem type determines right side f(x,y)",
+                  "phelm.c",ProblemTypes,(PetscEnum)problem,(PetscEnum*)&problem,
+                  NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
     ierr = DMDACreate2d(PETSC_COMM_WORLD,
@@ -146,8 +155,6 @@ int main(int argc,char **argv) {
     ierr = SNESGetDM(snes,&da); CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
 
-// FIXME optionally view f(x,y)
-
     // evaluate numerical error
     ierr = VecDuplicate(u,&u_exact); CHKERRQ(ierr);
     switch (problem) {
@@ -169,7 +176,8 @@ int main(int argc,char **argv) {
     return PetscFinalize();
 }
 
-PetscErrorCode GetVecLocalFromFunction(DMDALocalInfo *info, Vec w, double (*fcn)(double, double, double, double), PHelmCtx *user) {
+PetscErrorCode GetVecLocalFromFunction(DMDALocalInfo *info, Vec w,
+                   double (*fcn)(double, double, double, double), PHelmCtx *user) {
     PetscErrorCode ierr;
     const double hx = 1.0 / (info->mx - 1), hy = 1.0 / (info->my - 1);
     double       x, y, **aw;
@@ -224,7 +232,7 @@ static gradRef deval(const double v[4], double xi, double eta) {
 static double GradInnerProd(double hx, double hy,
                             gradRef du, gradRef dv) {
     const double cx = 4.0 / (hx * hx),  cy = 4.0 / (hy * hy);
-    return cx * du.xi  * dv.xi + cy * du.eta * dv.eta;
+    return cx * du.xi * dv.xi + cy * du.eta * dv.eta;
 }
 
 static double GradPow(double hx, double hy,
@@ -232,6 +240,18 @@ static double GradPow(double hx, double hy,
     return PetscPowScalar(GradInnerProd(hx,hy,du,du) + eps*eps, P/2.0);
 }
 //ENDFEM
+
+/* FLOPS:  (counting PetscPowScalar as 1)
+     chi = 6
+     eval = 4*6+7 = 31
+     dchi = 8
+     deval = 4*8+4 = 36
+     GradInnerProd = 9
+     GradPow = 9+4 = 13
+     ObjIntegrandRef = deval + 2*eval + GradPow + 10 = 121
+     FunIntegrandRef = chi + dchi + 2*eval + deval + GradPo + GradInnerProd + 9
+                     = 143
+*/
 
 //STARTOBJECTIVE
 static double ObjIntegrandRef(DMDALocalInfo *info,
@@ -281,6 +301,7 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
   lobj *= hx * hy / 4.0;  // from change of variables formula
   ierr = PetscObjectGetComm((PetscObject)(info->da),&com); CHKERRQ(ierr);
   ierr = MPI_Allreduce(&lobj,obj,1,MPI_DOUBLE,MPI_SUM,com); CHKERRQ(ierr);
+  ierr = PetscLogFlops(129*info->xm*info->ym); CHKERRQ(ierr);
   return 0;
 }
 //ENDOBJECTIVE
@@ -299,6 +320,7 @@ static double FunIntegrandRef(DMDALocalInfo *info, int L,
 
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                                  double **FF, PHelmCtx *user) {
+  PetscErrorCode ierr;
   const double hx = 1.0 / (info->mx - 1),  hy = 1.0 / (info->my - 1);
   const Quad1D q = gausslegendre[user->quadpts-1];
   const int    li[4] = {0,-1,-1,0},  lj[4] = {0,0,-1,-1};
@@ -345,6 +367,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
           }
       }
   }
+  ierr = PetscLogFlops((5+q.n*q.n*149)*(info->xm+1)*(info->ym+1)); CHKERRQ(ierr);
   return 0;
 }
 //ENDFUNCTION
