@@ -279,7 +279,7 @@ static double ObjIntegrandRef(DMDALocalInfo *info,
     const gradRef du = deval(uu,xi,eta);
     const double  hx = 1.0 / (info->mx - 1),  hy = 1.0 / (info->my - 1),
                   u = eval(uu,xi,eta);
-    return GradPow(hx,hy,du,user->p,user->eps) / user->p + 0.5 * u * u
+    return GradPow(hx,hy,du,user->p,0.0) / user->p + 0.5 * u * u
            - eval(ff,xi,eta) * u;
 }
 
