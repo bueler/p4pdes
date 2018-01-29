@@ -1,12 +1,14 @@
 static char help[] =
 "Solves the p-Helmholtz equation in 2D using Q^1 FEM.  Option prefix -ph_.\n"
-"Equation is\n"
-"    - div( |grad u|^{p-2} grad u ) + u = f\n"
-"with homogeneous Neumann boundary conditions.  The objective functional is\n"
+"Problem is posed as minimizing this objective functional over W^{1,p}:\n"
 "    I[u] = int_Omega (1/p) |grad u|^p + (1/2) u^2 - f u.\n"
-"Implements objective and residual (gradient) but no Jacobian.  Covers cases\n"
-"1 <= p.  Defaults to easy linear problem with p=2 and quadrature degree 2.\n"
-"Can be run with only an objective function; use -ph_no_gradient -snes_fd_function.\n\n";
+"The strong form equation, namely setting the gradient to zero, is a PDE\n"
+"    - div( |grad u|^{p-2} grad u ) + u = f\n"
+"subject to homogeneous Neumann boundary conditions.  Implements objective\n"
+"and gradient (residual) but no Hessian (Jacobian).  Covers cases 1 <= p.\n"
+"Defaults to easy linear problem with p=2 and quadrature degree 2.\n"
+"Can be run with only an objective function; use -ph_no_gradient\n"
+"-snes_fd_function.\n\n";
 
 #include <petsc.h>
 #include "../quadrature.h"
@@ -35,7 +37,8 @@ static double f_cosines(double x, double y, double p, double eps) {
         const double
             ux = - PETSC_PI * sin(PETSC_PI * x) * cos(PETSC_PI * y),
             uy = - PETSC_PI * cos(PETSC_PI * x) * sin(PETSC_PI * y),
-            w = ux * ux + uy * uy + eps * eps, // note regularization affects f(x,y) [but not u(x,y)]
+            // note regularization changes f(x,y) but not u(x,y):
+            w = ux * ux + uy * uy + eps * eps,
             pi3 = pi2 * PETSC_PI,
             wx = pi3 * sin(2 * PETSC_PI * x) * cos(2 * PETSC_PI * y),
             wy = pi3 * cos(2 * PETSC_PI * x) * sin(2 * PETSC_PI * y);
@@ -49,7 +52,7 @@ typedef enum {CONSTANT, COSINES} ProblemType;
 static const char* ProblemTypes[] = {"constant","cosines",
                                      "ProblemType", "", NULL};
 
-extern PetscErrorCode GetVecLocalFromFunction(DMDALocalInfo*, Vec,
+extern PetscErrorCode GetVecFromFunction(DMDALocalInfo*, Vec,
                          double (*)(double, double, double, double), PHelmCtx*);
 extern PetscErrorCode FormObjectiveLocal(DMDALocalInfo*, double**, double*, PHelmCtx*);
 extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, double**, double**, PHelmCtx*);
@@ -143,7 +146,7 @@ int main(int argc,char **argv) {
             break;
         case COSINES:
             if (exact_init) {
-                ierr = GetVecLocalFromFunction(&info,u_initial,&u_exact_cosines,&user); CHKERRQ(ierr);
+                ierr = GetVecFromFunction(&info,u_initial,&u_exact_cosines,&user); CHKERRQ(ierr);
             }
             user.f = &f_cosines;
             break;
@@ -151,7 +154,7 @@ int main(int argc,char **argv) {
             SETERRQ(PETSC_COMM_WORLD,4,"unknown problem type\n");
     }
 
-    // optionally view right-hand-side
+    // optionally view right-hand-side on initial grid
     if (view_f) {
         Vec vf;
         ierr = VecDuplicate(u_initial,&vf); CHKERRQ(ierr);
@@ -160,7 +163,7 @@ int main(int argc,char **argv) {
                 ierr = VecSet(vf,1.0); CHKERRQ(ierr);
                 break;
             case COSINES:
-                ierr = GetVecLocalFromFunction(&info,vf,&f_cosines,&user); CHKERRQ(ierr);
+                ierr = GetVecFromFunction(&info,vf,&f_cosines,&user); CHKERRQ(ierr);
                 break;
         }
         ierr = VecView(vf,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
@@ -182,7 +185,7 @@ int main(int argc,char **argv) {
             ierr = VecSet(u_exact,1.0); CHKERRQ(ierr);
             break;
         case COSINES:
-            ierr = GetVecLocalFromFunction(&info,u_exact,&u_exact_cosines,&user); CHKERRQ(ierr);
+            ierr = GetVecFromFunction(&info,u_exact,&u_exact_cosines,&user); CHKERRQ(ierr);
             break;
     }
     ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
@@ -195,7 +198,7 @@ int main(int argc,char **argv) {
     return PetscFinalize();
 }
 
-PetscErrorCode GetVecLocalFromFunction(DMDALocalInfo *info, Vec w,
+PetscErrorCode GetVecFromFunction(DMDALocalInfo *info, Vec w,
                    double (*fcn)(double, double, double, double), PHelmCtx *user) {
     PetscErrorCode ierr;
     const double hx = 1.0 / (info->mx - 1), hy = 1.0 / (info->my - 1);
