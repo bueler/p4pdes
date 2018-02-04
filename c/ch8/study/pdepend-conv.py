@@ -1,13 +1,27 @@
 #!/bin/bash
 set -e
 
-# studies phelm.c for various p values
+# studies convergence and solver complexity of phelm.c for various p values
+# serial
 
 # run as:
-#   ./pdependence.sh &> pdependence.txt
+#   ./pdepend-conv.sh &> pdepend-conv.txt
 # use PETSC_ARCH with --with-debugging=0 (for convenience)
 
-# results & figure-generation:  see p4pdes-book/figs/FIXME
+# results & figure-generation:  see p4pdes-book/figs/pdepend-conv.py
+
+PRANGE="1.4 1.8 2.5 4 8"
+
+LEVRANGE="4 5 6 7 8 9 10"
+# 3 = 9x9
+# 4 = 17x17
+# 5 = 33x33
+# 6 = 65x65
+# 7 = 129x129
+# 8 = 257x257
+# 9 = 513x513
+#10 = 1025x1025
+#11 = 2049x2049
 
 RTOL=1.0e-5
 EPS=1.0e-4
@@ -20,11 +34,14 @@ function runcase() {
     grep "Nonlinear solve" tmp.txt  # allows count of Newton iters and CONVERGED/DIVERGED
     grep "numerical error" tmp.txt
     grep "PCApply" tmp.txt          # total number of linear iterations (sort of)
+    grep "Flop:  " tmp.txt          # total number of flops
+    grep "Time (sec):" tmp.txt
 }
 
-for PP in 1.1 1.5 2 4 10; do
+for PP in $PRANGE; do
+    echo "======================================================"
     echo "p = $PP"
-    for LEV in 3 4 5 6 7 8; do
+    for LEV in $LEVRANGE; do
         echo
         runcase $LEV $PP
     done
