@@ -149,7 +149,7 @@ int main(int argc,char **argv) {
     // create nodes (degrees of freedom) for P2 elements using PetscSection
     ierr = CreateSectionP2(dmplex,&p2section); CHKERRQ(ierr);
     ierr = DMSetDefaultSection(dmplex, p2section); CHKERRQ(ierr);
-    ierr = PetscObjectViewFromOptions((PetscObject)p2section,NULL,"-section_view"); CHKERRQ(ierr);
+    ierr = PetscObjectViewFromOptions((PetscObject)p2section,NULL,"-tny_view_section"); CHKERRQ(ierr);
 
     // put function f(x,y) into v by local calculations using coordinates and p2section
     ierr = DMCreateGlobalVector(dmplex, &v); CHKERRQ(ierr);

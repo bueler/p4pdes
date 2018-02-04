@@ -14,7 +14,7 @@ runtiny_2:
 	-@../testit.sh tiny "-tny_by_hand -plex_view_points -plex_view_coords" 2 2
 
 runtiny_3:
-	-@../testit.sh tiny "-section_view" 1 3
+	-@../testit.sh tiny "-tny_view_section" 1 3
 
 runtiny_4:
 	-@../testit.sh tiny "-plex_view_closures_coords -v_vec_view" 2 4
