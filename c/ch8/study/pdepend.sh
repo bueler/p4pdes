@@ -5,10 +5,10 @@ set -e
 # serial
 
 # run as:
-#   ./pdepend-conv.sh &> pdepend-conv.txt
+#   ./pdepend.sh &> pdepend.txt
 # use PETSC_ARCH with --with-debugging=0 (for convenience)
 
-# results & figure-generation:  see p4pdes-book/figs/pdepend-conv.py
+# results & figure-generation:  see p4pdes-book/figs/pdepend.txt|py
 
 PRANGE="1.4 1.8 2.5 4 8"
 
