@@ -7,7 +7,7 @@ set -e
 #   ./phelmcond.sh &> phelmcond.txt
 # use PETSC_ARCH with --with-debugging=0 (for convenience)
 
-# results & figure-generation:  see p4pdes-book/figs/FIXME
+# results & figure-generation:  see p4pdes-book/figs/phelmcond.txt|py
 
 EPS=1.0e-4
 KSPRTOL=1.0e-12
