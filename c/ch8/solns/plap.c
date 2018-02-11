@@ -5,18 +5,16 @@ static char help[] = "Solve the p-Laplacian equation in 2D using Q^1 FEM.\n"
 "   ./plap -snes_mf\n"
 "   ./plap -snes_fd                   [does not scale]\n"
 "   ./plap -snes_fd_function -snes_fd [does not scale]\n"
-"Uses a manufactured solution.\n\n";
+"Uses a manufactured solution.\n"
+"This is NOT a recommended example for further work because of the weird way\n"
+"it handles the Dirichlet boundary values.\n\n";
 
 #include <petsc.h>
 #include "../../quadrature.h"
 
 #define COMM PETSC_COMM_WORLD
 
-/* note -pc_type mg works!
-
-note -snes_fd_color is OK in an optimal solver!
-
-cool dendritic failure:
+/* cool dendritic failure:
     ./plap -snes_fd_color -snes_converged_reason -ksp_converged_reason -pc_type mg -plap_p 10.0 -da_refine 6 -snes_monitor_solution draw
 succeeds in 11 snes iterations (on fine grid) with grid sequencing:
     ./plap -snes_fd_color -snes_converged_reason -ksp_converged_reason -pc_type mg -plap_p 10.0 -snes_grid_sequence 6 -snes_monitor_solution draw
