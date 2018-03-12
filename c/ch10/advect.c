@@ -36,7 +36,10 @@ static double stump(double x, double y) {
 // smooth (in C^6?) version of above stump
 static double smooth(double x, double y) {
     const double r = PetscSqrtReal((x+0.6)*(x+0.6) + (y+0.6)*(y+0.6));
-    return (r < 0.2) ? PetscPowReal(1.0 - PetscPowReal(r / 0.2,6.0),6.0) : 0.0;
+    if (r < 0.2)
+        return PetscPowReal(1.0 - PetscPowReal(r / 0.2,6.0),6.0);
+    else
+        return 0.0;
 }
 
 // cone of height 1 of base radius 0.35 centered at (-0.45,0.0)
@@ -47,9 +50,9 @@ static double cone(double x, double y) {
 
 // equal to 1 in square of side-length 0.5 (0.1,0.6) x (-0.25,0.25)
 static double box(double x, double y) {
-    if ((0.1 < x) && (x < 0.6) && (-0.25 < y) && (y < 0.25)) {
+    if ((0.1 < x) && (x < 0.6) && (-0.25 < y) && (y < 0.25))
         return 1.0;
-    } else
+    else
         return 0.0;
 }
 
