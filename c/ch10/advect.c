@@ -5,10 +5,10 @@ static char help[] =
 "Boundary conditions are periodic in x and y.  Cells are grid-point centered.\n"
 "Uses flux-limited (non-oscillatory) method-of-lines discretization:\n"
 "  none       first-order upwinding (limiter = 0)\n"
-"  centered   linear centered fluxes\n"
+"  centered   linear centered\n"
 "  vanleer    van Leer (1974) limiter\n"
 "  koren      Koren (1993) limiter [default].\n"
-"Solves either of two problems with initial conditions from:\n"
+"Solves either of two problems with initial conditions:\n"
 "  straight   Figure 6.2, page 303, in Hundsdorfer & Verwer (2003) [default]\n"
 "  rotation   Figure 20.5, page 461, in LeVeque (2002).\n"
 "For the former problem, if final time is an integer and velocities are kept\n"
@@ -16,15 +16,6 @@ static char help[] =
 "are reported.\n\n";
 
 #include <petsc.h>
-
-/*
-THIS REALLY OUGHT TO WORK WITH -pc_type mg BUT:
-    ./advect -da_refine 1 -ts_type beuler -pc_type mg
-    ...
-    [0]PETSC ERROR: Nonconforming object sizes
-    [0]PETSC ERROR: Non conforming matrix add: 100 25 100 25
-...
-*/
 
 //STARTINITIAL
 // equal to 1 in a disc of radius 0.2 around (-0.6,-0.6)
@@ -97,8 +88,7 @@ static const char *InitialTypes[] = {"stump", "smooth", "cone", "box",
 typedef struct {
     ProblemType      problem;
     InitialType      initial;
-    LimiterType      limiter,
-                     jacobian;
+    LimiterType      limiter, jacobian;
     double           windx, windy;  // x,y velocity if problem==STRAIGHT
     double           (*initial_fcn)(double,double); // if STRAIGHT
     double           (*limiter_fcn)(double);
