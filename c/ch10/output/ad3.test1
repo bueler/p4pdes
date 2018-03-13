@@ -1,2 +1,3 @@
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
-done on 5 x 5 x 10 grid with eps=1.:  error |u-uexact|_{2,h} = 5.6751e-02
+done on 6 x 6 x 5 grid, cell dims 0.4000 x 0.4000 x 0.4000, eps=1., limiter = centered:
+  error |u-uexact|_{2,h} = 2.6674e-01

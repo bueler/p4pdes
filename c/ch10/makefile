@@ -28,14 +28,13 @@ runadvect_4:
 	-@../testit.sh advect "-da_grid_x 3 -da_grid_y 3 -adv_limiter centered -adv_jacobian centered -ts_type cn -ts_adapt_type basic -ts_monitor -ts_dt 0.01 -ts_final_time 0.02 -snes_converged_reason" 1 4
 
 
-
-# eps = 1.0 [default] and centered fluxes and no Jacobian evaluation
+# defaults: eps = 1.0, centered fluxes, -snes_fd_color
 runad3_1:
-	-@../testit.sh ad3 "-da_refine 1 -snes_converged_reason -ad3_limiter centered -snes_fd_color" 1 1
+	-@../testit.sh ad3 "-snes_converged_reason" 1 1
 
 # eps = 0.01 and upwind and GAMG
 runad3_2:
-	-@../testit.sh ad3 "-da_refine 1 -ad3_eps 0.01 -ad3_limiter none -pc_type gamg -snes_converged_reason" 1 2
+	-@../testit.sh ad3 "-ad3_eps 0.01 -ad3_limiter none -pc_type gamg -snes_converged_reason" 1 2
 
 
 test_advect: runadvect_1 runadvect_2 runadvect_3 runadvect_4
