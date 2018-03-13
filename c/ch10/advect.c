@@ -26,7 +26,7 @@ THIS REALLY OUGHT TO WORK WITH -pc_type mg BUT:
 ...
 */
 
-//STARTINITIALSHAPES
+//STARTINITIAL
 // equal to 1 in a disc of radius 0.2 around (-0.6,-0.6)
 static double stump(double x, double y) {
     const double r = PetscSqrtReal((x+0.6)*(x+0.6) + (y+0.6)*(y+0.6));
@@ -56,8 +56,8 @@ static double box(double x, double y) {
         return 0.0;
 }
 
-static void* initialshapeptr[] = {&stump, &smooth, &cone, &box};
-//ENDINITIALSHAPES
+static void* initialptr[] = {&stump, &smooth, &cone, &box};
+//ENDINITIAL
 
 //STARTLIMITER
 /* the centered-space method is a linear (and unlimited) "limiter" */
@@ -90,24 +90,24 @@ typedef enum {STRAIGHT, ROTATION} ProblemType;
 static const char *ProblemTypes[] = {"straight","rotation",
                                      "ProblemType", "", NULL};
 
-typedef enum {STUMP, SMOOTH, CONE, BOX} InitialShapeType;
-static const char *InitialShapeTypes[] = {"stump", "smooth", "cone", "box",
-                                          "InitialShapeType", "", NULL};
+typedef enum {STUMP, SMOOTH, CONE, BOX} InitialType;
+static const char *InitialTypes[] = {"stump", "smooth", "cone", "box",
+                                     "InitialType", "", NULL};
 
 typedef struct {
     ProblemType      problem;
-    InitialShapeType initialshape;
+    InitialType      initial;
     LimiterType      limiter,
                      jacobian;
     double           windx, windy;  // x,y velocity if problem==STRAIGHT
-    double           (*initialshape_fcn)(double,double); // if STRAIGHT
+    double           (*initial_fcn)(double,double); // if STRAIGHT
     double           (*limiter_fcn)(double);
 } AdvectCtx;
 //ENDCTX
 
 PetscErrorCode setup(AdvectCtx *user, char *fileroot, PetscBool *oneline) {
     PetscErrorCode ierr;
-    user->initialshape = STUMP;
+    user->initial = STUMP;
     user->limiter = KOREN;
     user->jacobian = NONE;
     user->problem = STRAIGHT;
@@ -120,18 +120,20 @@ PetscErrorCode setup(AdvectCtx *user, char *fileroot, PetscBool *oneline) {
 //STARTENUMOPTIONS
     ierr = PetscOptionsEnum("-initial",
            "shape of initial condition if problem==straight",
-           "advect.c",InitialShapeTypes,
-           (PetscEnum)user->initialshape,
-           (PetscEnum*)&user->initialshape,NULL); CHKERRQ(ierr);
-    user->initialshape_fcn = initialshapeptr[user->initialshape];
-    ierr = PetscOptionsEnum("-jacobian","flux-limiter type used in calculating Jacobian",
+           "advect.c",InitialTypes,
+           (PetscEnum)user->initial,(PetscEnum*)&user->initial,NULL); CHKERRQ(ierr);
+    user->initial_fcn = initialptr[user->initial];
+    ierr = PetscOptionsEnum("-jacobian",
+           "flux-limiter type used in calculating Jacobian",
            "advect.c",LimiterTypes,
            (PetscEnum)user->jacobian,(PetscEnum*)&user->jacobian,NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsEnum("-limiter","flux-limiter type",
+    ierr = PetscOptionsEnum("-limiter",
+           "flux-limiter type",
            "advect.c",LimiterTypes,
            (PetscEnum)user->limiter,(PetscEnum*)&user->limiter,NULL); CHKERRQ(ierr);
     user->limiter_fcn = limiterptr[user->limiter];
-    ierr = PetscOptionsEnum("-problem","problem type",
+    ierr = PetscOptionsEnum("-problem",
+           "problem type",
            "advect.c",ProblemTypes,
            (PetscEnum)user->problem,(PetscEnum*)&user->problem,NULL); CHKERRQ(ierr);
 //ENDENUMOPTIONS
@@ -159,7 +161,7 @@ PetscErrorCode FormInitial(DMDALocalInfo *info, Vec u, AdvectCtx* user) {
             x = -1.0 + (i+0.5) * hx;
             switch (user->problem) {
                 case STRAIGHT:
-                    au[j][i] = (*user->initialshape_fcn)(x,y);
+                    au[j][i] = (*user->initial_fcn)(x,y);
                     break;
                 case ROTATION:
                     au[j][i] = cone(x,y) + box(x,y);
@@ -211,19 +213,18 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t,
     for (j = info->ys; j < info->ys + info->ym; j++)
         for (i = info->xs; i < info->xs + info->xm; i++)
             aG[j][i] = 0.0;
-    // fluxes on cell boundaries are traversed in this order:  ,-1-,
-    // cell center at * has coordinates (x,y):                 | * 0
-    // q = 0,1 is cell boundary index                          '---'
+    // fluxes on cell boundaries are traversed in E,N order with indices
+    // q=0 for E and q=1 for N; cell center has coordinates (x,y)
     hx = 2.0 / info->mx;  hy = 2.0 / info->my;
     halfx = hx / 2.0;     halfy = hy / 2.0;
     for (j = info->ys-1; j < info->ys + info->ym; j++) { // note -1 start
         y = -1.0 + (j+0.5) * hy;
-        for (i = info->xs-1; i < info->xs + info->xm; i++) { // note -1 start
+        for (i = info->xs-1; i < info->xs + info->xm; i++) { // -1 start
             x = -1.0 + (i+0.5) * hx;
             if ((i >= info->xs) && (j >= info->ys)) {
                 aG[j][i] += g_source(x,y,au[j][i],user);
             }
-            for (q = 0; q < 2; q++) {   // E (q=0) and N (q=1) fluxes on bdry
+            for (q = 0; q < 2; q++) {   // E (q=0) and N (q=1) bdry fluxes
                 if (q == 0 && j < info->ys)  continue;
                 if (q == 1 && i < info->xs)  continue;
                 di = 1 - q;
@@ -240,7 +241,8 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t,
                         u_far = (a >= 0.0) ? au[j-dj][i-di]
                                            : au[j+2*dj][i+2*di];
                         theta = (u_up - u_far) / (u_dn - u_up);
-                        flux += a * (*user->limiter_fcn)(theta)*(u_dn-u_up);
+                        flux += a * (*user->limiter_fcn)(theta)
+                                  * (u_dn-u_up);
                     }
                 }
                 // update owned G_ij on both sides of computed flux
@@ -425,7 +427,7 @@ int main(int argc,char **argv) {
                ProblemTypes[user.problem]); CHKERRQ(ierr);
         if (user.problem == STRAIGHT) {
             ierr = PetscPrintf(PETSC_COMM_WORLD,"(initial: %s) ",
-               InitialShapeTypes[user.initialshape]); CHKERRQ(ierr);
+               InitialTypes[user.initial]); CHKERRQ(ierr);
         }
         ierr = PetscPrintf(PETSC_COMM_WORLD,
                "on %d x %d grid,\n"
@@ -459,7 +461,7 @@ int main(int argc,char **argv) {
         if (oneline) {
             ierr = PetscPrintf(PETSC_COMM_WORLD,
                 "%s,%s,%s,%d,%d,%g,%g,%d,%g,%.4e,%.4e\n",
-                ProblemTypes[user.problem],InitialShapeTypes[user.initialshape],
+                ProblemTypes[user.problem],InitialTypes[user.initial],
                 LimiterTypes[user.limiter],info.mx,info.my,hx,hy,steps,tf,
                 norms[0],norms[1]); CHKERRQ(ierr);
         } else {
