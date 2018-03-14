@@ -17,6 +17,6 @@ My goal for myself is to use these best practices:
      [PETSc Developer's Guide](http://www.mcs.anl.gov/petsc/developers/developers.pdf).
      * A collection of examples is not a library API, so this is not rigid.
   6. If you do `./code -help intro` then you should see a description of the
-     code _and_ its option prefix `xxx_`.
-  7. From 6, `./code -help |grep xxx_` documented code-specific options.
+     code and its option prefix `xxx_`.
+  7. Do `./code -help |grep xxx_` to get documentation for code-specific options.
 
