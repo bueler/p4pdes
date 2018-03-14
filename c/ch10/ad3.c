@@ -1,22 +1,27 @@
 static char help[] =
-"Solves a 3D linear advection-diffusion problem with structured-grid (DMDA)\n"
-"and SNES.  Option prefix -ad3_.  The equation is\n"
-"    div (a(x,y,z) u) = eps Laplacian u + g(x,y,z,u),\n"
-"where eps > 0, the vector velocity a(x,y,z) and the scalar source g(x,y,z,u)\n"
-"are smooth.  The domain is  [-1,1]^3  with boundary conditions\n"
+"Solves a 3D linear advection-diffusion problem using FD discretization,\n"
+"structured-grid (DMDA), and SNES.  Option prefix -ad3_.  The equation is\n"
+"    - eps Laplacian u + div (w_0 a(x,y,z) u) = g(x,y,z,u),\n"
+"where the wind a(x,y,z) and source g(x,y,z,u) are given smooth functions.\n"
+"The diffusivity eps > 0 (-ad3_eps) and wind constant (-ad3_w0) can be chosen\n"
+"by options.  The domain is  [-1,1]^3  with Dirichlet-periodic boundary\n"
+"conditions\n"
 "    u(1,y,z) = b(y,z)\n"
-"    u(-1,y,z) = u(x,-1,z) = u(x,1,z) = 0\n"
-"    u periodic in z\n"
-"Significant restrictions are:\n"
-"    * only Dirichlet and periodic boundary conditions are demonstrated\n"
-"    * a(x,y,z), g(x,y,z,u), b(y,z) must be given by formulas\n"
-"    * FIXME  only centered and first-order-upwind differences for advection\n"
-"An exact solution is used to evaluate numerical error:\n"
-"    u(x,y,z) = U(x) sin(E (y+1)) sin(F (z+1))\n"
-"where  U(x) = (exp((x+1)/eps) - 1) / (exp(2/eps) - 1)\n"
-"and constants E,F so that homogeneous/periodic boundary conditions\n"
-"are satisfied.  The problem solved has  a=<1,0,0>,  b(y,z) = u(1,y,z),\n"
-"and g(x,y,z,u) = eps lambda^2 u  where  lambda^2 = E^2 + F^2.\n\n";
+"    u(-1,y,z) = u(x,y,-1) = u(x,y,1) = 0\n"
+"    u periodic in y\n"
+"where b(y,z) is a given smooth function.  An exact solution, based on\n"
+"a boundary layer of width eps, and a double-glazing problem are included\n"
+"(-ad3_problem layer|glaze).  Advection can be discretized by first-order\n"
+"upwinding, centered, or van Leer limiter schemes\n"
+"(-ad3_limiter none|centered|vanleer).\n\n";
+
+/* TODO:
+1. transpose so both layer and glaze problems seem more natural
+2. put coefficient on wind to allow turning off; check that Poisson equation in good shape including GMG
+3. multiply through by cell volume to get better scaling ... this may be why GMG is not good
+4. options to allow view slice
+5. implement glazing
+*/
 
 /* evidence for convergence plus some feedback on iterations, but bad KSP iterations because GMRES+BJACOBI+ILU:
   $ for LEV in 0 1 2 3 4 5 6; do timer mpiexec -n 4 ./ad3 -snes_monitor -snes_converged_reason -ksp_converged_reason -ksp_rtol 1.0e-14 -da_refine $LEV; done
@@ -43,8 +48,6 @@ with X=ilu,mg,gamg;  presumably needs advection-specific smoothing
 grid-sequencing works, in nonlinear limiter case, but not beneficial; compare
     ./ad3 -{snes,ksp}_converged_reason -ad3_limiter vanleer -da_refine 4
     ./ad3 -{snes,ksp}_converged_reason -ad3_limiter vanleer -snes_grid_sequence 4
-
-FIXME: double glazing problem?
 */
 
 #include <petsc.h>
@@ -66,49 +69,71 @@ static const char *LimiterTypes[] = {"none","centered","vanleer",
 static void* limiterptr[] = {NULL, &centered, &vanleer};
 
 typedef struct {
-    double      eps;
+    double      eps, w0;
+    double      (*a_fcn)(double, double, double, int);
+    double      (*g_fcn)(double, double, double, int);
+    double      (*b_fcn)(double, double, double, int);
     double      (*limiter_fcn)(double);
-} Ctx;
+} AdCtx;
 
-static double a_wind(double x, double y, double z, int q, Ctx *user) {
+/*
+A partly-manufactured 3D exact solution of a boundary layer problem, with
+exponential layer near x=1, allows evaluation of numerical error:
+    u(x,y,z) = U(x) sin(E (y+1)) sin(F (z+1))
+where
+    U(x) = (exp((x+1)/eps) - 1) / (exp(2/eps) - 1)
+         = (exp((x-1)/eps) - C) / (1 - C)
+where C = exp(-2/eps) may gracefully underflow, satisfies
+    -eps U'' + U' = 0.
+Note U(x) satisfies U(-1)=0 and U(1)=1, and it has a boundary layer of width
+eps near x=1.  Constants E = 2 pi and F = pi / 2 are set so that u is periodic
+and smooth in y and satisfies Dirichlet boundary conditions u(x,y,+-1) = 0.
+The problem solved has
+    a = <1,0,0>
+    g(x,y,z,u) = lambda u
+where lambda = eps (E^2 + F^2), and
+    b(y,z) = u(1,y,z)
+*/
+
+static double EE = 2.0 * PETSC_PI,
+              FF = PETSC_PI / 2.0;
+
+static double layer_u(double x, double y, double z, double eps) {
+    const double C = exp(-2.0 / eps); // may underflow to 0; that's o.k.
+    return ((exp((x-1) / eps) - C) / (1.0 - C))
+           * sin(EE*(y+1.0)) * sin(FF*(z+1.0));
+}
+
+// vector function returns q=0,1,2 component
+static double layer_a(double x, double y, double z, int q) {
     return (q == 0) ? 1.0 : 0.0;
 }
 
-static double EE = PETSC_PI / 2.0,
-              FF = 2.0 * PETSC_PI;
-
-static double u_exact(double x, double y, double z, Ctx *user) {
-    const double C = exp(-2.0 / user->eps); // may underflow to 0; thats o.k.
-    double u;
-    u = (exp((x-1) / user->eps) - C) / (1.0 - C);
-    return u * sin(EE*(y+1.0)) * sin(FF*(z+1.0));
+static double layer_g(double x, double y, double z, double eps) {
+    const double lam = eps * (EE*EE + FF*FF);
+    return lam * layer_u(x,y,z,eps);
 }
 
-static double g_source(double x, double y, double z, double u, Ctx *user) {
-    const double lam2 = EE*EE + FF*FF; // lambda = sqrt(17.0) * PETSC_PI / 2.0
-    return user->eps * lam2 * u_exact(x,y,z,user);
-}
-
-static double b_bdry(double y, double z, Ctx *user) {
+static double layer_b(double y, double z) {
     return sin(EE*(y+1.0)) * sin(FF*(z+1.0));
 }
 
-PetscErrorCode formUex(DMDALocalInfo *info, Ctx *usr, Vec uex) {
+PetscErrorCode FormLayerUExact(DMDALocalInfo *info, AdCtx *usr, Vec uex) {
     PetscErrorCode  ierr;
     int          i, j, k;
     double       hx, hy, hz, x, y, z, ***auex;
 
     hx = 2.0 / (info->mx - 1);
-    hy = 2.0 / (info->my - 1);
-    hz = 2.0 / info->mz;
+    hz = 2.0 / info->my;
+    hy = 2.0 / (info->mz - 1);
     ierr = DMDAVecGetArray(info->da, uex, &auex);CHKERRQ(ierr);
     for (k=info->zs; k<info->zs+info->zm; k++) {
-        z = -1.0 + (k+0.5) * hz;
+        z = -1.0 + j * hz;
         for (j=info->ys; j<info->ys+info->ym; j++) {
-            y = -1.0 + j * hy;
+            y = -1.0 + (j + 0.5) * hy;
             for (i=info->xs; i<info->xs+info->xm; i++) {
                 x = -1.0 + i * hx;
-                auex[k][j][i] = u_exact(x,y,z,usr);
+                auex[k][j][i] = layer_u(x,y,z,usr->eps);
             }
         }
     }
@@ -116,6 +141,7 @@ PetscErrorCode formUex(DMDALocalInfo *info, Ctx *usr, Vec uex) {
     return 0;
 }
 
+FIXME: implement transpose
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***au,
                                  double ***aF, Ctx *usr) {
     int          i, j, k, q, di, dj, dk;
