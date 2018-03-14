@@ -52,8 +52,10 @@ grid-sequencing works, in nonlinear limiter case, but not beneficial; compare
 
 #include <petsc.h>
 
+typedef enum {NONE, CENTERED, VANLEER} LimiterType;
+static const char *LimiterTypes[] = {"none","centered","vanleer",
+                                     "LimiterType", "", NULL};
 
-/* compare limiters in advect.c */
 static double centered(double theta) {
     return 0.5;
 }
@@ -63,20 +65,21 @@ static double vanleer(double theta) {
     return 0.5 * (theta + abstheta) / (1.0 + abstheta);
 }
 
-typedef enum {NONE, CENTERED, VANLEER} LimiterType;
-static const char *LimiterTypes[] = {"none","centered","vanleer",
-                                     "LimiterType", "", NULL};
 static void* limiterptr[] = {NULL, &centered, &vanleer};
+
+typedef enum {LAYER, GLAZE} ProblemType;
+static const char *ProblemTypes[] = {"layer", "glaze",
+                                     "ProblemType", "", NULL};
 
 typedef struct {
     double      eps, w0;
-    double      (*a_fcn)(double, double, double, int);
-    double      (*g_fcn)(double, double, double, int);
-    double      (*b_fcn)(double, double, double, int);
+    double      (*a_fcn)(double, double, double, int, double);
+    double      (*g_fcn)(double, double, double, double);
+    double      (*b_fcn)(double, double);
     double      (*limiter_fcn)(double);
 } AdCtx;
 
-/*
+/* problem LAYER:
 A partly-manufactured 3D exact solution of a boundary layer problem, with
 exponential layer near x=1, allows evaluation of numerical error:
     u(x,y,z) = U(x) sin(E (y+1)) sin(F (z+1))
@@ -105,7 +108,7 @@ static double layer_u(double x, double y, double z, double eps) {
 }
 
 // vector function returns q=0,1,2 component
-static double layer_a(double x, double y, double z, int q) {
+static double layer_a(double x, double y, double z, int q, double param) {
     return (q == 0) ? 1.0 : 0.0;
 }
 
@@ -116,6 +119,138 @@ static double layer_g(double x, double y, double z, double eps) {
 
 static double layer_b(double y, double z) {
     return sin(EE*(y+1.0)) * sin(FF*(z+1.0));
+}
+
+/* problem GLAZE:
+See pages 240-241 of Elman et al (2014) for this problem.  The recirculating
+flow is counterclockwise in the x-z plane.  An additional drift is in the
+y-direction.
+*/
+
+// vector function returns q=0,1,2 component
+static double glaze_a(double x, double y, double z, int q, double drift) {
+    switch (q) {
+        case 0:
+            return 2.0 * z * (1.0 - x * x);
+            break;
+        case 1:
+            return drift;
+            break;
+        case 2:
+            return - 2.0 * x * (1.0 - z * z);
+            break;
+    }
+}
+
+static double glaze_g(double x, double y, double z, double eps) {
+    return 0.0;
+}
+
+static double glaze_b(double y, double z) {
+    return 1.0;
+}
+
+extern PetscErrorCode FormLayerUExact(DMDALocalInfo*, AdCtx*, Vec);
+extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, double***,
+                                        double***, AdCtx*);
+
+int main(int argc,char **argv) {
+    PetscErrorCode ierr;
+    DM             da, da_after;
+    SNES           snes;
+    Vec            u_initial, u, u_exact;
+    double         hx, hy, hz, err;
+    int            my;
+    DMDALocalInfo  info;
+    LimiterType    limiter;
+    ProblemType    problem;
+    AdCtx          user;
+
+    PetscInitialize(&argc,&argv,(char*)0,help);
+
+    user.eps = 1.0;
+    user.w0 = 1.0;
+    limiter = CENTERED;
+    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"ad3_",
+               "ad3 (3D advection-diffusion solver) options",""); CHKERRQ(ierr);
+    ierr = PetscOptionsReal("-eps","diffusion coefficient eps with  0 < eps < infty",
+               "ad3.c",user.eps,&(user.eps),NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsEnum("-limiter","flux-limiter type",
+               "ad3.c",LimiterTypes,
+               (PetscEnum)limiter,(PetscEnum*)&limiter,NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsEnum("-problem","problem type",
+               "ad3.c",ProblemTypes,
+               (PetscEnum)problem,(PetscEnum*)&problem,NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsReal("-w0","overall scaling of wind (velocity)",
+               "ad3.c",user.w0,&(user.w0),NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+
+    if (user.eps <= 0.0) {
+        SETERRQ1(PETSC_COMM_WORLD,1,"eps=%.3f invalid ... eps > 0 required",user.eps);
+    }
+    user.limiter_fcn = limiterptr[limiter];
+    if (problem == LAYER) {
+        user.a_fcn = &layer_a;
+        user.g_fcn = &layer_g;
+        user.b_fcn = &layer_b;
+    } else if  (problem == GLAZE) {
+        user.a_fcn = &glaze_a;
+        user.g_fcn = &glaze_g;
+        user.b_fcn = &glaze_b;
+    } else {
+        SETERRQ(PETSC_COMM_WORLD,2,"unknown ProblemType");
+    }
+
+    my = (user.limiter_fcn == NULL) ? 6 : 5;
+    ierr = DMDACreate3d(PETSC_COMM_WORLD,
+        DM_BOUNDARY_NONE, DM_BOUNDARY_PERIODIC, DM_BOUNDARY_NONE,
+        DMDA_STENCIL_STAR,               // no diagonal differencing
+        6,my,6,                          // usually default to hx=hx=hz=0.4 grid
+                                         // (mz>=5 allows -snes_fd_color)
+        PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,
+        1,                               // d.o.f
+        (user.limiter_fcn == NULL) ? 1 : 2, // stencil width
+        NULL,NULL,NULL,&da); CHKERRQ(ierr);
+    ierr = DMSetFromOptions(da); CHKERRQ(ierr);
+    ierr = DMSetUp(da); CHKERRQ(ierr);
+    ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
+    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+    // set coordinates of cell-centered regular grid
+    ierr = DMDASetUniformCoordinates(da,-1.0,1.0,
+                                        -1.0+hy/2.0,1.0-hy/2.0,
+                                        -1.0,1.0); CHKERRQ(ierr);
+
+    ierr = SNESCreate(PETSC_COMM_WORLD,&snes);CHKERRQ(ierr);
+    ierr = SNESSetDM(snes,da);CHKERRQ(ierr);
+    ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
+            (DMDASNESFunction)FormFunctionLocal,&user);CHKERRQ(ierr);
+    ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
+
+    ierr = DMCreateGlobalVector(da,&u_initial); CHKERRQ(ierr);
+    ierr = VecSet(u_initial,0.0); CHKERRQ(ierr);
+    ierr = SNESSolve(snes,NULL,u_initial); CHKERRQ(ierr);
+    ierr = VecDestroy(&u_initial); CHKERRQ(ierr);
+    ierr = DMDestroy(&da); CHKERRQ(ierr);
+
+    ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr);
+    ierr = VecDuplicate(u,&u_exact); CHKERRQ(ierr);
+    ierr = SNESGetDM(snes,&da_after); CHKERRQ(ierr);
+    ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
+FIXME LAYER ONLY
+    ierr = formUex(&info,&user,u_exact); CHKERRQ(ierr);
+    ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr);    // u <- u + (-1.0) u_exact
+    ierr = VecNorm(u,NORM_2,&err); CHKERRQ(ierr);
+    hx = 2.0 / (info.mx - 1);
+    hy = 2.0 / info.my;
+    hz = 2.0 / (info.mz - 1);
+    err *= PetscSqrtReal(hx * hy * hz);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,
+         "done on %d x %d x %d grid, cell dims %.4f x %.4f x %.4f, eps=%g, limiter = %s:\n"
+         "  error |u-uexact|_{2,h} = %.4e\n",
+         info.mx,info.my,info.mz,hx,hy,hz,user.eps,err,LimiterTypes[limiter]); CHKERRQ(ierr);
+
+    VecDestroy(&u_exact);  SNESDestroy(&snes);
+    return PetscFinalize();
 }
 
 PetscErrorCode FormLayerUExact(DMDALocalInfo *info, AdCtx *usr, Vec uex) {
@@ -141,9 +276,9 @@ PetscErrorCode FormLayerUExact(DMDALocalInfo *info, AdCtx *usr, Vec uex) {
     return 0;
 }
 
-FIXME: implement transpose
+// FIXME: implement transpose
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***au,
-                                 double ***aF, Ctx *usr) {
+                                 double ***aF, AdCtx *usr) {
     int          i, j, k, q, di, dj, dk;
     double       hx, hy, hz, halfx, halfy, halfz, hx2, hy2, hz2, x, y, z,
                  uu, uE, uW, uN, uS, uxx, uyy, uzz,
@@ -240,87 +375,5 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***au,
         }
     }
     return 0;
-}
-
-int main(int argc,char **argv) {
-    PetscErrorCode ierr;
-    DM             da, da_after;
-    SNES           snes;
-    Vec            u_initial, u, u_exact;
-    double         hx, hy, hz, err;
-    int            mz;
-    DMDALocalInfo  info;
-    LimiterType    limiter;
-    Ctx            user;
-
-    PetscInitialize(&argc,&argv,(char*)0,help);
-
-    user.eps = 1.0;
-    limiter = CENTERED;
-    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"ad3_",
-               "ad3 (3D advection-diffusion solver) options",""); CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-eps","diffusion coefficient eps with  0 < eps < infty",
-               "ad3.c",user.eps,&(user.eps),NULL); CHKERRQ(ierr);
-    if (user.eps <= 0.0) {
-        SETERRQ1(PETSC_COMM_WORLD,1,"eps=%.3f invalid ... eps > 0 required",user.eps);
-    }
-    ierr = PetscOptionsEnum("-limiter","flux-limiter type",
-               "ad3.c",LimiterTypes,
-               (PetscEnum)limiter,(PetscEnum*)&limiter,NULL); CHKERRQ(ierr);
-    user.limiter_fcn = limiterptr[limiter];
-    ierr = PetscOptionsEnd(); CHKERRQ(ierr);
-    mz = (user.limiter_fcn == NULL) ? 6 : 5;
-
-    ierr = DMDACreate3d(PETSC_COMM_WORLD,
-        DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DM_BOUNDARY_PERIODIC,
-        DMDA_STENCIL_STAR,               // no diagonal differencing
-        6,6,mz,                          // usually default to hx=hx=hz=0.4 grid
-                                         // (mz>=5 allows -snes_fd_color)
-        PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,
-        1,                               // d.o.f
-        (user.limiter_fcn == NULL) ? 1 : 2, // stencil width
-        NULL,NULL,NULL,&da); CHKERRQ(ierr);
-    ierr = DMSetFromOptions(da); CHKERRQ(ierr);
-    ierr = DMSetUp(da); CHKERRQ(ierr);
-    ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
-    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-    hx = 2.0 / (info.mx - 1);
-    hy = 2.0 / (info.my - 1);
-    hz = 2.0 / info.mz;        // periodic direction
-    // set coordinates of cell-centered regular grid
-    ierr = DMDASetUniformCoordinates(da,-1.0+hx/2.0,1.0-hx/2.0,
-                                        -1.0+hy/2.0,1.0-hy/2.0,
-                                        -1.0+hz/2.0,1.0-hz/2.0); CHKERRQ(ierr);
-
-    ierr = SNESCreate(PETSC_COMM_WORLD,&snes);CHKERRQ(ierr);
-    ierr = SNESSetDM(snes,da);CHKERRQ(ierr);
-    ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
-            (DMDASNESFunction)FormFunctionLocal,&user);CHKERRQ(ierr);
-    ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
-
-    ierr = DMCreateGlobalVector(da,&u_initial); CHKERRQ(ierr);
-    ierr = VecSet(u_initial,0.0); CHKERRQ(ierr);
-    ierr = SNESSolve(snes,NULL,u_initial); CHKERRQ(ierr);
-    ierr = VecDestroy(&u_initial); CHKERRQ(ierr);
-    ierr = DMDestroy(&da); CHKERRQ(ierr);
-
-    ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr);
-    ierr = VecDuplicate(u,&u_exact); CHKERRQ(ierr);
-    ierr = SNESGetDM(snes,&da_after); CHKERRQ(ierr);
-    ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
-    ierr = formUex(&info,&user,u_exact); CHKERRQ(ierr);
-    ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr);    // u <- u + (-1.0) u_exact
-    ierr = VecNorm(u,NORM_2,&err); CHKERRQ(ierr);
-    hx = 2.0 / (info.mx - 1);
-    hy = 2.0 / (info.my - 1);
-    hz = 2.0 / info.mz;
-    err *= PetscSqrtReal(hx * hy * hz);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,
-         "done on %d x %d x %d grid, cell dims %.4f x %.4f x %.4f, eps=%g, limiter = %s:\n"
-         "  error |u-uexact|_{2,h} = %.4e\n",
-         info.mx,info.my,info.mz,hx,hy,hz,user.eps,err,LimiterTypes[limiter]); CHKERRQ(ierr);
-
-    VecDestroy(&u_exact);  SNESDestroy(&snes);
-    return PetscFinalize();
 }
 
