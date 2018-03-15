@@ -17,13 +17,15 @@ static char help[] =
 
 /* TODO:
 1. transpose so both layer and glaze problems seem more natural
-2. put coefficient on wind to allow turning off; check that Poisson equation in good shape including GMG
-3. multiply through by cell volume to get better scaling ... this may be why GMG is not good
-4. options to allow view slice
-5. implement glazing
+2. put coefficient on wind to allow turning off
+3. check that Poisson equation in good shape including GMG
+4. implement glaze problem
+5. multiply through by cell volume to get better scaling ... this may be why GMG is not good
+6. options to allow view slice
 */
 
-/* evidence for convergence plus some feedback on iterations, but bad KSP iterations because GMRES+BJACOBI+ILU:
+/* OLD NOTES CONTAINING INTERESTING/RELEVANT IDEAS
+evidence for convergence plus some feedback on iterations, but bad KSP iterations because GMRES+BJACOBI+ILU:
   $ for LEV in 0 1 2 3 4 5 6; do timer mpiexec -n 4 ./ad3 -snes_monitor -snes_converged_reason -ksp_converged_reason -ksp_rtol 1.0e-14 -da_refine $LEV; done
 
 can go to LEV 7 if -ksp_type bicg or -ksp_type bcgs  ... GMRES is mem hog
@@ -72,10 +74,8 @@ static const char *ProblemTypes[] = {"layer", "glaze",
                                      "ProblemType", "", NULL};
 
 typedef struct {
+    ProblemType problem;
     double      eps, w0, glazedrift;
-    double      (*a_fcn)(double, double, double, int, double);
-    double      (*g_fcn)(double, double, double, double);
-    double      (*b_fcn)(double, double);
     double      (*limiter_fcn)(double);
 } AdCtx;
 
@@ -84,12 +84,13 @@ A partly-manufactured 3D exact solution of a boundary layer problem, with
 exponential layer near x=1, allows evaluation of numerical error:
     u(x,y,z) = U(x) sin(E (y+1)) sin(F (z+1))
 where
-    U(x) = (exp((x+1)/eps) - 1) / (exp(2/eps) - 1)
-         = (exp((x-1)/eps) - C) / (1 - C)
-where C = exp(-2/eps) may gracefully underflow, satisfies
-    -eps U'' + U' = 0.
+    U(x) = (exp((x+1)/delta) - 1) / (exp(2/delta) - 1)
+         = (exp((x-1)/delta) - C) / (1 - C)
+where  delta = eps / w0  and  C = exp(-2 / delta).  Note eps > 0 and w0 > 0
+are required.  Note C may gracefully underflow.  Thus U(x) satisfies
+    -eps U'' + w0 U' = 0.
 Note U(x) satisfies U(-1)=0 and U(1)=1, and it has a boundary layer of width
-eps near x=1.  Constants E = 2 pi and F = pi / 2 are set so that u is periodic
+delta near x=1.  Constants E = 2 pi and F = pi / 2 are set so that u is periodic
 and smooth in y and satisfies Dirichlet boundary conditions u(x,y,+-1) = 0.
 The problem solved has
     a = <1,0,0>
@@ -101,25 +102,16 @@ where lambda = eps (E^2 + F^2), and
 static double EE = 2.0 * PETSC_PI,
               FF = PETSC_PI / 2.0;
 
-static double layer_u(double x, double y, double z, double eps) {
-    const double C = exp(-2.0 / eps); // may underflow to 0; that's o.k.
-    return ((exp((x-1) / eps) - C) / (1.0 - C))
+static double layer_u(double x, double y, double z, AdCtx *user) {
+    const double delta = user->eps / user->w0,
+                 C = exp(-2.0 / delta); // may underflow to 0; that's o.k.
+    return ((exp((x-1) / delta) - C) / (1.0 - C))
            * sin(EE*(y+1.0)) * sin(FF*(z+1.0));
 }
 
-// vector function returns q=0,1,2 component
-static double layer_a(double x, double y, double z, int q, double param) {
-    return (q == 0) ? 1.0 : 0.0;
-}
-
-// FIXME if exact solution is to work for any w0, it needs to appear here
-static double layer_g(double x, double y, double z, double eps) {
-    const double lam = eps * (EE*EE + FF*FF);
-    return lam * layer_u(x,y,z,eps);
-}
-
-static double layer_b(double y, double z) {
-    return sin(EE*(y+1.0)) * sin(FF*(z+1.0));
+static double layer_g(double x, double y, double z, AdCtx *user) {
+    const double lam = user->eps * (EE*EE + FF*FF);
+    return lam * layer_u(x,y,z,user);
 }
 
 /* problem GLAZE:
@@ -129,28 +121,40 @@ y-direction.
 */
 
 // vector function returns q=0,1,2 component
-static double glaze_a(double x, double y, double z, int q, double drift) {
-    switch (q) {
-        case 0:
-            return 2.0 * z * (1.0 - x * x);
-            break;
-        case 1:
-            return drift;
-            break;
-        case 2:
-            return - 2.0 * x * (1.0 - z * z);
-            break;
-        default:
-            return 9.99999e306;  // FIXME
+static double wind_a(double x, double y, double z, int q, AdCtx *user) {
+    if (user->problem == LAYER) {
+        return (q == 0) ? 1.0 : 0.0;
+    } else {
+        switch (q) {
+            case 0:
+                return 2.0 * z * (1.0 - x * x);
+                break;
+            case 1:
+                return user->glazedrift;
+                break;
+            case 2:
+                return - 2.0 * x * (1.0 - z * z);
+                break;
+            default:
+                return 9.99999e306;  // FIXME
+        }
     }
 }
 
-static double glaze_g(double x, double y, double z, double eps) {
-    return 0.0;
+static double source_g(double x, double y, double z, AdCtx *user) {
+    if (user->problem == LAYER) {
+        return layer_g(x,y,z,user);
+    } else {
+        return 0.0;
+    }
 }
 
-static double glaze_b(double y, double z) {
-    return 1.0;
+static double bdry_b(double y, double z, AdCtx *user) {
+    if (user->problem == LAYER) {
+        return layer_u(1.0,y,z,user);
+    } else {
+        return 1.0;
+    }
 }
 
 extern PetscErrorCode FormLayerUExact(DMDALocalInfo*, AdCtx*, Vec);
@@ -165,8 +169,7 @@ int main(int argc,char **argv) {
     double         hx, hy, hz, err;
     int            my;
     DMDALocalInfo  info;
-    LimiterType    limiter;
-    ProblemType    problem;
+    LimiterType    limiter = CENTERED;
     AdCtx          user;
 
     PetscInitialize(&argc,&argv,(char*)0,help);
@@ -174,8 +177,7 @@ int main(int argc,char **argv) {
     user.eps = 1.0;
     user.w0 = 1.0;
     user.glazedrift = 0.0;  // FIXME option
-    limiter = CENTERED;
-    problem = LAYER;
+    user.problem = LAYER;
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"ad3_",
                "ad3 (3D advection-diffusion solver) options",""); CHKERRQ(ierr);
     ierr = PetscOptionsReal("-eps","diffusion coefficient eps with  0 < eps < infty",
@@ -185,7 +187,7 @@ int main(int argc,char **argv) {
                (PetscEnum)limiter,(PetscEnum*)&limiter,NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnum("-problem","problem type",
                "ad3.c",ProblemTypes,
-               (PetscEnum)problem,(PetscEnum*)&problem,NULL); CHKERRQ(ierr);
+               (PetscEnum)(user.problem),(PetscEnum*)&(user.problem),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsReal("-w0","overall scaling of wind (velocity)",
                "ad3.c",user.w0,&(user.w0),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
@@ -193,18 +195,10 @@ int main(int argc,char **argv) {
     if (user.eps <= 0.0) {
         SETERRQ1(PETSC_COMM_WORLD,1,"eps=%.3f invalid ... eps > 0 required",user.eps);
     }
-    user.limiter_fcn = limiterptr[limiter];
-    if (problem == LAYER) {
-        user.a_fcn = &layer_a;
-        user.g_fcn = &layer_g;
-        user.b_fcn = &layer_b;
-    } else if  (problem == GLAZE) {
-        user.a_fcn = &glaze_a;
-        user.g_fcn = &glaze_g;
-        user.b_fcn = &glaze_b;
-    } else {
-        SETERRQ(PETSC_COMM_WORLD,2,"unknown ProblemType");
+    if (user.w0 <= 0.0) {
+        SETERRQ1(PETSC_COMM_WORLD,2,"w0=%.3f invalid ... w0 > 0 required",user.eps);
     }
+    user.limiter_fcn = limiterptr[limiter];
 
     my = (user.limiter_fcn == NULL) ? 6 : 5;
     ierr = DMDACreate3d(PETSC_COMM_WORLD,
@@ -249,7 +243,7 @@ int main(int argc,char **argv) {
          "done on %d x %d x %d grid, cell dims %.4f x %.4f x %.4f, eps=%g, limiter = %s",
          info.mx,info.my,info.mz,hx,hy,hz,user.eps,LimiterTypes[limiter]); CHKERRQ(ierr);
 
-    if (problem == LAYER) {
+    if (user.problem == LAYER) {
         ierr = VecDuplicate(u,&u_exact); CHKERRQ(ierr);
         ierr = FormLayerUExact(&info,&user,u_exact); CHKERRQ(ierr);
         ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr);    // u <- u + (-1.0) u_exact
@@ -281,7 +275,7 @@ PetscErrorCode FormLayerUExact(DMDALocalInfo *info, AdCtx *usr, Vec uex) {
             y = -1.0 + (j + 0.5) * hy;
             for (i=info->xs; i<info->xs+info->xm; i++) {
                 x = -1.0 + i * hx;
-                auex[k][j][i] = layer_u(x,y,z,usr->eps);
+                auex[k][j][i] = layer_u(x,y,z,usr);
             }
         }
     }
@@ -329,12 +323,12 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***au,
                 // FIXME: multiply through by cell volume to get better scaling?
                 if (j >= info->ys) {
                     if (i == info->mx-1) {
-                        aF[k][j][i] = au[k][j][i] - (*usr->b_fcn)(y,z);
+                        aF[k][j][i] = au[k][j][i] - bdry_b(y,z,usr);
                     } else if (i == 0 || k == 0 || k == info->mz-1) {
                         aF[k][j][i] = au[k][j][i];
                     } else {
                         uu = au[k][j][i];
-                        uE = (i == info->mx-2) ? (*usr->b_fcn)(y,z) : au[k][j][i+1];
+                        uE = (i == info->mx-2) ? bdry_b(y,z,usr) : au[k][j][i+1];
                         uW = (i == 1)          ?             0.0 : au[k][j][i-1];
                         uT = (k == info->mz-2) ?             0.0 : au[k+1][j][i];
                         uB = (k == 1)          ?             0.0 : au[k-1][j][i];
@@ -342,7 +336,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***au,
                         uyy = (au[k][j-1][i] - 2.0 * uu + au[k][j+1][i]) / hy2;
                         uzz = (uB - 2.0 * uu + uT) / hz2;
                         aF[k][j][i] -= usr->eps * (uxx + uyy + uzz)
-                                       + (*usr->g_fcn)(x,y,z,usr->eps);
+                                       + source_g(x,y,z,usr);
                     }
                 }
                 // FIXME: is the following correct?  if we are on x=1 or z=1
@@ -357,8 +351,8 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***au,
                     dj = (p == 1) ? 1 : 0;
                     dk = (p == 2) ? 1 : 0;
                     // get pth component of wind
-                    ap = (*usr->a_fcn)(x + halfx * di, y + halfy * dj, z + halfz * dk,
-                                       p,usr->glazedrift);
+                    ap = wind_a(x + halfx * di, y + halfy * dj, z + halfz * dk,
+                                p,usr);
                     ap *= usr->w0;
                     u_up = (ap >= 0.0) ? au[k][j][i] : au[k+dk][j+dj][i+di];
                     flux = ap * u_up;  // first-order upwind flux
