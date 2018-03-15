@@ -1,8 +1,8 @@
 static char help[] =
 "Solves a 3D linear advection-diffusion problem using FD discretization,\n"
 "structured-grid (DMDA), and SNES.  Option prefix -ad3_.  The equation is\n"
-"    - eps Laplacian u + div (w_0 a(x,y,z) u) = g(x,y,z,u),\n"
-"where the wind a(x,y,z) and source g(x,y,z,u) are given smooth functions.\n"
+"    - eps Laplacian u + div (w_0 a(x,y,z) u) = g(x,y,z),\n"
+"where the wind a(x,y,z) and source g(x,y,z) are given smooth functions.\n"
 "The diffusivity eps > 0 (-ad3_eps) and wind constant (-ad3_w0) can be chosen\n"
 "by options.  The domain is  [-1,1]^3  with Dirichlet-periodic boundary\n"
 "conditions\n"
@@ -72,7 +72,7 @@ static const char *ProblemTypes[] = {"layer", "glaze",
                                      "ProblemType", "", NULL};
 
 typedef struct {
-    double      eps, w0;
+    double      eps, w0, glazedrift;
     double      (*a_fcn)(double, double, double, int, double);
     double      (*g_fcn)(double, double, double, double);
     double      (*b_fcn)(double, double);
@@ -112,6 +112,7 @@ static double layer_a(double x, double y, double z, int q, double param) {
     return (q == 0) ? 1.0 : 0.0;
 }
 
+// FIXME if exact solution is to work for any w0, it needs to appear here
 static double layer_g(double x, double y, double z, double eps) {
     const double lam = eps * (EE*EE + FF*FF);
     return lam * layer_u(x,y,z,eps);
@@ -139,6 +140,8 @@ static double glaze_a(double x, double y, double z, int q, double drift) {
         case 2:
             return - 2.0 * x * (1.0 - z * z);
             break;
+        default:
+            return 9.99999e306;  // FIXME
     }
 }
 
@@ -170,7 +173,9 @@ int main(int argc,char **argv) {
 
     user.eps = 1.0;
     user.w0 = 1.0;
+    user.glazedrift = 0.0;  // FIXME option
     limiter = CENTERED;
+    problem = LAYER;
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"ad3_",
                "ad3 (3D advection-diffusion solver) options",""); CHKERRQ(ierr);
     ierr = PetscOptionsReal("-eps","diffusion coefficient eps with  0 < eps < infty",
@@ -214,8 +219,10 @@ int main(int argc,char **argv) {
     ierr = DMSetFromOptions(da); CHKERRQ(ierr);
     ierr = DMSetUp(da); CHKERRQ(ierr);
     ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
-    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+
     // set coordinates of cell-centered regular grid
+    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+    hy = 2.0 / info.my;
     ierr = DMDASetUniformCoordinates(da,-1.0,1.0,
                                         -1.0+hy/2.0,1.0-hy/2.0,
                                         -1.0,1.0); CHKERRQ(ierr);
@@ -233,23 +240,29 @@ int main(int argc,char **argv) {
     ierr = DMDestroy(&da); CHKERRQ(ierr);
 
     ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr);
-    ierr = VecDuplicate(u,&u_exact); CHKERRQ(ierr);
     ierr = SNESGetDM(snes,&da_after); CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
-FIXME LAYER ONLY
-    ierr = formUex(&info,&user,u_exact); CHKERRQ(ierr);
-    ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr);    // u <- u + (-1.0) u_exact
-    ierr = VecNorm(u,NORM_2,&err); CHKERRQ(ierr);
     hx = 2.0 / (info.mx - 1);
     hy = 2.0 / info.my;
     hz = 2.0 / (info.mz - 1);
-    err *= PetscSqrtReal(hx * hy * hz);
     ierr = PetscPrintf(PETSC_COMM_WORLD,
-         "done on %d x %d x %d grid, cell dims %.4f x %.4f x %.4f, eps=%g, limiter = %s:\n"
-         "  error |u-uexact|_{2,h} = %.4e\n",
-         info.mx,info.my,info.mz,hx,hy,hz,user.eps,err,LimiterTypes[limiter]); CHKERRQ(ierr);
+         "done on %d x %d x %d grid, cell dims %.4f x %.4f x %.4f, eps=%g, limiter = %s",
+         info.mx,info.my,info.mz,hx,hy,hz,user.eps,LimiterTypes[limiter]); CHKERRQ(ierr);
 
-    VecDestroy(&u_exact);  SNESDestroy(&snes);
+    if (problem == LAYER) {
+        ierr = VecDuplicate(u,&u_exact); CHKERRQ(ierr);
+        ierr = FormLayerUExact(&info,&user,u_exact); CHKERRQ(ierr);
+        ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr);    // u <- u + (-1.0) u_exact
+        ierr = VecNorm(u,NORM_2,&err); CHKERRQ(ierr);
+        err *= PetscSqrtReal(hx * hy * hz);
+        ierr = PetscPrintf(PETSC_COMM_WORLD,
+             "\n  error |u-uexact|_{2,h} = %.4e\n",err); CHKERRQ(ierr);
+        VecDestroy(&u_exact);
+    } else {
+        ierr = PetscPrintf(PETSC_COMM_WORLD,"...\n"); CHKERRQ(ierr);
+    }
+
+    SNESDestroy(&snes);
     return PetscFinalize();
 }
 
@@ -276,18 +289,22 @@ PetscErrorCode FormLayerUExact(DMDALocalInfo *info, AdCtx *usr, Vec uex) {
     return 0;
 }
 
-// FIXME: implement transpose
+/* compute residuals
+    F_ijk = - eps Laplacian u - g(x,y,z) + div f
+where the vector flux is
+    f = w_0 a(x,y,z) u
+*/
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***au,
                                  double ***aF, AdCtx *usr) {
-    int          i, j, k, q, di, dj, dk;
+    int          i, j, k, p, di, dj, dk;
     double       hx, hy, hz, halfx, halfy, halfz, hx2, hy2, hz2, x, y, z,
-                 uu, uE, uW, uN, uS, uxx, uyy, uzz,
-                 a, flux, u_up, u_dn, u_far, theta;
-    PetscBool    deep;
+                 uu, uE, uW, uT, uB, uxx, uyy, uzz,
+                 ap, flux, u_up, u_dn, u_far, theta;
+    PetscBool    allowdeep;
 
     hx = 2.0 / (info->mx - 1);
-    hy = 2.0 / (info->my - 1);
-    hz = 2.0 / info->mz;
+    hy = 2.0 / info->my;
+    hz = 2.0 / (info->mz - 1);
     halfx = hx / 2.0;
     halfy = hy / 2.0;
     halfz = hz / 2.0;
@@ -301,72 +318,80 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***au,
             for (i=info->xs; i<info->xs+info->xm; i++)
                 aF[k][j][i] = 0.0;
 
-    for (k=info->zs-1; k<info->zs+info->zm; k++) { // note -1 start
-        z = -1.0 + (k+0.5) * hz;
-        for (j=info->ys; j<info->ys+info->ym; j++) {
-            y = -1.0 + j * hy;
+    for (k=info->zs; k<info->zs+info->zm; k++) {
+        z = -1.0 + k * hz;
+        for (j=info->ys-1; j<info->ys+info->ym; j++) { // note -1 start
+            y = -1.0 + (j + 0.5) * hy;
             for (i=info->xs; i<info->xs+info->xm; i++) {
                 x = -1.0 + i * hx;
-                // for cell centers, determine non-advective parts of residual
+                // for owned cell centers, determine non-advective parts of residual
+                // notation East/West, North/South, Top/Bottom for x,y,z resp.
                 // FIXME: multiply through by cell volume to get better scaling?
-                if (k >= info->zs) {
+                if (j >= info->ys) {
                     if (i == info->mx-1) {
-                        aF[k][j][i] = au[k][j][i] - b_bdry(y,z,usr);
-                    } else if (i == 0 || j == 0 || j == info->my-1) {
+                        aF[k][j][i] = au[k][j][i] - (*usr->b_fcn)(y,z);
+                    } else if (i == 0 || k == 0 || k == info->mz-1) {
                         aF[k][j][i] = au[k][j][i];
                     } else {
                         uu = au[k][j][i];
-                        uE = (i == info->mx-2) ? b_bdry(y,z,usr) : au[k][j][i+1];
+                        uE = (i == info->mx-2) ? (*usr->b_fcn)(y,z) : au[k][j][i+1];
                         uW = (i == 1)          ?             0.0 : au[k][j][i-1];
-                        uN = (j == info->my-2) ?             0.0 : au[k][j+1][i];
-                        uS = (j == 1)          ?             0.0 : au[k][j-1][i];
+                        uT = (k == info->mz-2) ?             0.0 : au[k+1][j][i];
+                        uB = (k == 1)          ?             0.0 : au[k-1][j][i];
                         uxx = (uW - 2.0 * uu + uE) / hx2;
-                        uyy = (uS - 2.0 * uu + uN) / hy2;
-                        uzz = (au[k-1][j][i] - 2.0 * uu + au[k+1][j][i]) / hz2;
+                        uyy = (au[k][j-1][i] - 2.0 * uu + au[k][j+1][i]) / hy2;
+                        uzz = (uB - 2.0 * uu + uT) / hz2;
                         aF[k][j][i] -= usr->eps * (uxx + uyy + uzz)
-                                       + g_source(x,y,z,uu,usr);
+                                       + (*usr->g_fcn)(x,y,z,usr->eps);
                     }
                 }
-                if (i == info->mx-1 || j == info->my-1)
+                // FIXME: is the following correct?  if we are on x=1 or z=1
+                // boundaries then do we not need to compute any face-center fluxes?
+                if (i == info->mx-1 || k == info->mz-1)
                     continue;
-                // traverse flux contributions on cell boundaries at E, N, T
-                // [East/West, North/South, Top/Bottom for x,y,z resp.]
-                for (q = 0; q < 3; q++) {
-                    if (q < 2 && k < info->zs)  continue;
-                    di = (q == 0) ? 1 : 0;
-                    dj = (q == 1) ? 1 : 0;
-                    dk = (q == 2) ? 1 : 0;
-                    a = a_wind(x+halfx*di,y+halfy*dj,z+halfz*dk,q,usr);
-                    u_up = (a >= 0.0) ? au[k][j][i] : au[k+dk][j+dj][i+di];
-                    flux = a * u_up;
-                    deep = (i > 1 && i < info->mx-2 && j > 1 && j < info->my-2);
-                    if (usr->limiter_fcn != NULL && deep) {
-                        u_dn = (a >= 0.0) ? au[k+dk][j+dj][i+di] : au[k][j][i];
+                // traverse half of cell face center points for flux contributions
+                // E,N,T corresponding to p=0,1,2
+                for (p = 0; p < 3; p++) {
+                    if (j < info->ys && p != 1)  continue;
+                    di = (p == 0) ? 1 : 0;
+                    dj = (p == 1) ? 1 : 0;
+                    dk = (p == 2) ? 1 : 0;
+                    // get pth component of wind
+                    ap = (*usr->a_fcn)(x + halfx * di, y + halfy * dj, z + halfz * dk,
+                                       p,usr->glazedrift);
+                    ap *= usr->w0;
+                    u_up = (ap >= 0.0) ? au[k][j][i] : au[k+dk][j+dj][i+di];
+                    flux = ap * u_up;  // first-order upwind flux
+                    // flux correction is not possible too-near boundaries
+                    allowdeep = (   i > 1 && i < info->mx-2
+                                 && k > 1 && k < info->mz-2);
+                    if (usr->limiter_fcn != NULL && allowdeep) {
+                        u_dn = (ap >= 0.0) ? au[k+dk][j+dj][i+di] : au[k][j][i];
                         if (u_dn != u_up) {
-                            u_far = (a >= 0.0) ? au[k-dk][j-dj][i-di]
-                                               : au[k+2*dk][j+2*dj][i+2*di];
+                            u_far = (ap >= 0.0) ? au[k-dk][j-dj][i-di]
+                                                : au[k+2*dk][j+2*dj][i+2*di];
                             theta = (u_up - u_far) / (u_dn - u_up);
-                            flux += a * (*usr->limiter_fcn)(theta)*(u_dn-u_up);
+                            flux += ap * (*usr->limiter_fcn)(theta) * (u_dn - u_up);
                         }
                     }
                     // update non-boundary and owned F_ijk on both sides of computed flux
-                    switch (q) {
+                    switch (p) {
                         case 0:  // flux at E
                             if (i > 0)
-                                aF[k][j][i]   += flux / hx;
+                                aF[k][j][i]   += flux / hx;  // flux out of i,j,k at E
                             if (i < info->mx-1 && i+1 < info->xs + info->xm)
-                                aF[k][j][i+1] -= flux / hx;
+                                aF[k][j][i+1] -= flux / hx;  // flux into i+1,j,k at W
                             break;
                         case 1:  // flux at N
-                            if (j > 0)
+                            if (j >= info->ys)
                                 aF[k][j][i]   += flux / hy;
-                            if (j < info->my-1 && j+1 < info->ys + info->ym)
+                            if (j+1 < info->ys + info->ym)
                                 aF[k][j+1][i] -= flux / hy;
                             break;
                         case 3:  // flux at T
-                            if (k >= info->zs)
+                            if (k > 0)
                                 aF[k][j][i]   += flux / hz;
-                            if (k+1 < info->zs + info->zm)
+                            if (k < info->mz-1 && k+1 < info->zs + info->zm)
                                 aF[k+1][j][i] -= flux / hz;
                             break;
                     }
