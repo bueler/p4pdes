@@ -32,11 +32,11 @@ static const char *ProblemTypes[] = {"straight","rotation",
 
 typedef struct {
     InitialType      initial;
-    LimiterType      limiter, jacobian;
+    LimiterType      jacobian; // the limiter type used in Jacobian evaluation
     ProblemType      problem;
     double           windx, windy;  // x,y velocity if problem==STRAIGHT
     double           (*initial_fcn)(double,double); // if STRAIGHT
-    double           (*limiter_fcn)(double);
+    double           (*limiter_fcn)(double);  // actual limiter used in residual
 } AdvectCtx;
 //ENDCTX
 
@@ -127,7 +127,6 @@ extern PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo*, double,
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
-    AdvectCtx        user;
     TS               ts;
     DM               da;
     Vec              u;
@@ -136,11 +135,12 @@ int main(int argc,char **argv) {
     char             fileroot[PETSC_MAX_PATH_LEN] = "";
     int              steps;
     PetscBool        oneline = PETSC_FALSE;
+    LimiterType      limiter = KOREN;
+    AdvectCtx        user;
 
     PetscInitialize(&argc,&argv,(char*)0,help);
 
     user.initial = STUMP;
-    user.limiter = KOREN;
     user.jacobian = NONE;
     user.problem = STRAIGHT;
     user.windx = 2.0;
@@ -162,18 +162,21 @@ int main(int argc,char **argv) {
     ierr = PetscOptionsEnum("-limiter",
            "flux-limiter type",
            "advect.c",LimiterTypes,
-           (PetscEnum)user.limiter,(PetscEnum*)&user.limiter,NULL); CHKERRQ(ierr);
-    user.limiter_fcn = limiterptr[user.limiter];
+           (PetscEnum)limiter,(PetscEnum*)&limiter,NULL); CHKERRQ(ierr);
+    user.limiter_fcn = limiterptr[limiter];
     ierr = PetscOptionsEnum("-problem",
            "problem type",
            "advect.c",ProblemTypes,
            (PetscEnum)user.problem,(PetscEnum*)&user.problem,NULL); CHKERRQ(ierr);
 //ENDENUMOPTIONS
-    ierr = PetscOptionsBool("-oneline","in exact solution cases, show one-line output",
+    ierr = PetscOptionsBool("-oneline",
+           "in exact solution cases, show one-line output",
            "advect.c",oneline,&oneline,NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-windx","x component of wind for problem==straight",
+    ierr = PetscOptionsReal("-windx",
+           "x component of wind for problem==straight",
            "advect.c",user.windx,&user.windx,NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-windy","y component of wind for problem==straight",
+    ierr = PetscOptionsReal("-windy",
+           "y component of wind for problem==straight",
            "advect.c",user.windy,&user.windy,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
@@ -230,7 +233,7 @@ int main(int argc,char **argv) {
         ierr = PetscPrintf(PETSC_COMM_WORLD,
                "on %d x %d grid,\n"
                "    cells dx=%g x dy=%g, and '%s' limiter ...\n",
-               info.mx,info.my,hx,hy,LimiterTypes[user.limiter]); CHKERRQ(ierr);
+               info.mx,info.my,hx,hy,LimiterTypes[limiter]); CHKERRQ(ierr);
     }
 
     ierr = TSSolve(ts,u); CHKERRQ(ierr);
@@ -260,7 +263,7 @@ int main(int argc,char **argv) {
             ierr = PetscPrintf(PETSC_COMM_WORLD,
                 "%s,%s,%s,%d,%d,%g,%g,%d,%g,%.4e,%.4e\n",
                 ProblemTypes[user.problem],InitialTypes[user.initial],
-                LimiterTypes[user.limiter],info.mx,info.my,hx,hy,steps,tf,
+                LimiterTypes[limiter],info.mx,info.my,hx,hy,steps,tf,
                 norms[0],norms[1]); CHKERRQ(ierr);
         } else {
             ierr = PetscPrintf(PETSC_COMM_WORLD,
