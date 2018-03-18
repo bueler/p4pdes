@@ -36,16 +36,20 @@ runad3_1:
 runad3_2:
 	-@../testit.sh ad3 "-ad3_eps 0.01 -ad3_limiter none -pc_type gamg -snes_converged_reason" 1 2
 
+# diffusion problem with two-level GMG
+runad3_3:
+	-@../testit.sh ad3 "-ad3_problem nowind -ad3_limiter none -da_refine 1 -ksp_converged_reason -snes_type ksponly -ksp_type cg -pc_type mg" 1 3
+
 
 test_advect: runadvect_1 runadvect_2 runadvect_3 runadvect_4
 
-test_ad3: runad3_1 runad3_2
+test_ad3: runad3_1 runad3_2 runad3_3
 
 test: test_advect test_ad3
 
 # etc
 
-.PHONY: distclean runadvect_1 runadvect_2 runadvect_3 runadvect_4 runad3_1 runad3_2 test_advect test_ad3 test
+.PHONY: distclean runadvect_1 runadvect_2 runadvect_3 runadvect_4 runad3_1 runad3_2 runad3_3 test_advect test_ad3 test
 
 distclean:
 	@rm -f *~ *tmp *.pyc advect ad3
