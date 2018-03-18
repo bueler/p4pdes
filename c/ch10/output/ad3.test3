@@ -1,3 +1,4 @@
   Linear solve converged due to CONVERGED_RTOL iterations 3
-done on 11 x 12 x 11 grid, cell dims 0.2000 x 0.1667 x 0.2000, eps=1., limiter = none
+done on 11 x 12 x 11 grid, cell dims 0.2000 x 0.1667 x 0.2000,
+  problem = nowind, eps=1., limiter = none
   error |u-uexact|_{2,h} = 7.7471e-02

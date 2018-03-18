@@ -16,16 +16,23 @@ static char help[] =
 "(-ad3_limiter none|centered|vanleer).\n\n";
 
 /* TODO:
-1. check advection discretization
-2. test layer convergence & GMG
-3. options to allow view slice
-4. visualize glaze problem
+1. study script for layer convergence & GMG
+2. options to allow view slice
+3. visualize glaze problem
 */
 
-/* shows scaling is on the dot so that GMG has constant its, and converges, in NOWIND problem:
+/* shows scaling is on the dot so that GMG has constant its, and converges, for NOWIND:
 for LEV in 1 2 3 4; do ./ad3 -ad3_problem nowind -ad3_limiter none -da_refine $LEV -ksp_converged_reason -snes_type ksponly -ksp_type cg -pc_type mg; done
 compare in ch6/:
 for LEV in 1 2 3 4; do ./fish -fsh_dim 3 -da_grid_x 6 -da_grid_y 7 -da_grid_z 6 -da_refine $LEV -ksp_converged_reason -snes_type ksponly -ksp_type cg -pc_type mg; done
+*/
+
+/* acting like it is correct for LAYER and using GMG correctly:
+for LIM in none centered vanleer; do
+    for LEV in 1 2 3 4; do
+        ./ad3 -ad3_limiter $LIM -snes_converged_reason -ksp_converged_reason -da_refine $LEV -ksp_rtol 1.0e-9 -pc_type mg
+    done
+done
 */
 
 /* OLD NOTES CONTAINING INTERESTING/RELEVANT IDEAS
@@ -272,8 +279,10 @@ int main(int argc,char **argv) {
     hy = 2.0 / info.my;
     hz = 2.0 / (info.mz - 1);
     ierr = PetscPrintf(PETSC_COMM_WORLD,
-         "done on %d x %d x %d grid, cell dims %.4f x %.4f x %.4f, eps=%g, limiter = %s",
-         info.mx,info.my,info.mz,hx,hy,hz,user.eps,LimiterTypes[limiter]); CHKERRQ(ierr);
+         "done on %d x %d x %d grid, cell dims %.4f x %.4f x %.4f,\n"
+         "  problem = %s, eps=%g, limiter = %s",
+         info.mx,info.my,info.mz,hx,hy,hz,
+         ProblemTypes[user.problem],user.eps,LimiterTypes[limiter]); CHKERRQ(ierr);
 
     if ((user.problem == LAYER) || (user.problem == NOWIND)) {
         ierr = VecDuplicate(u,&u_exact); CHKERRQ(ierr);
@@ -314,8 +323,9 @@ PetscErrorCode FormUExact(DMDALocalInfo *info, AdCtx *usr, Vec uex) {
                     auex[k][j][i] = layer_u(x,y,z,usr);
                 else if (usr->problem == NOWIND)
                     auex[k][j][i] = nowind_u(x,y,z,usr);
-                else
+                else {
                     SETERRQ(PETSC_COMM_WORLD,2,"how get here?");
+                }
             }
         }
     }
@@ -378,8 +388,6 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***au,
         }
     }
 
-// FIXME  following advection meat can be assumed to be wrong for now!!
-
     // for each E,N,T face of an owned cell, compute flux at the face center
     // and then add that to the correct residual
     for (k=info->zs; k<info->zs+info->zm; k++) {
@@ -388,14 +396,14 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***au,
             y = -1.0 + (j + 0.5) * hy;
             for (i=info->xs; i<info->xs+info->xm; i++) {
                 x = -1.0 + i * hx;
-                // FIXME: is the following correct?  if we are on x=1 or z=1
-                // boundaries then do we not need to compute any face-center fluxes?
+                // if we are on x=1 or z=1 boundaries then we do not need to
+                //   compute any face-center fluxes
                 if (i == info->mx-1 || k == info->mz-1)
                     continue;
                 // traverse half of cell face center points for flux contributions
                 // E,N,T corresponding to p=0,1,2
                 for (p = 0; p < 3; p++) {
-                    if (j < info->ys && p != 1)  continue;
+                    if (j < info->ys && p != 1)  continue;  // only need N point when j < ys
                     di = (p == 0) ? 1 : 0;
                     dj = (p == 1) ? 1 : 0;
                     dk = (p == 2) ? 1 : 0;
@@ -404,16 +412,20 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***au,
                                 p,usr);
                     u_up = (ap >= 0.0) ? au[k][j][i] : au[k+dk][j+dj][i+di];
                     flux = ap * u_up;  // first-order upwind flux
-                    // flux correction is not possible too-near boundaries
-                    allowdeep = (   i > 1 && i < info->mx-2
-                                 && k > 1 && k < info->mz-2);
-                    if (usr->limiter_fcn != NULL && allowdeep) {
-                        u_dn = (ap >= 0.0) ? au[k+dk][j+dj][i+di] : au[k][j][i];
-                        if (u_dn != u_up) {
-                            u_far = (ap >= 0.0) ? au[k-dk][j-dj][i-di]
-                                                : au[k+2*dk][j+2*dj][i+2*di];
-                            theta = (u_up - u_far) / (u_dn - u_up);
-                            flux += ap * (*usr->limiter_fcn)(theta) * (u_dn - u_up);
+                    if (usr->limiter_fcn != NULL) {
+                        // flux correction is not possible near boundaries
+                        allowdeep = (   (p == 0 && i > 1 && i < info->mx-2)
+                                     || (p == 1)
+                                     || (p == 2 && k > 1 && k < info->mz-2) );
+                        if (allowdeep) {
+                            // compute flux correction from high-order formula with psi(theta)
+                            u_dn = (ap >= 0.0) ? au[k+dk][j+dj][i+di] : au[k][j][i];
+                            if (u_dn != u_up) {
+                                u_far = (ap >= 0.0) ? au[k-dk][j-dj][i-di]
+                                                    : au[k+2*dk][j+2*dj][i+2*di];
+                                theta = (u_up - u_far) / (u_dn - u_up);
+                                flux += ap * (*usr->limiter_fcn)(theta) * (u_dn - u_up);
+                            }
                         }
                     }
                     // update non-boundary and owned F_ijk on both sides of computed flux
@@ -421,7 +433,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***au,
                         case 0:  // flux at E
                             if (i > 0)
                                 aF[k][j][i]   += scF * flux / hx;  // flux out of i,j,k at E
-                            if (i < info->mx-1 && i+1 < info->xs + info->xm)
+                            if (i+1 < info->mx && i+1 < info->xs + info->xm)
                                 aF[k][j][i+1] -= scF * flux / hx;  // flux into i+1,j,k at W
                             break;
                         case 1:  // flux at N
@@ -433,7 +445,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***au,
                         case 3:  // flux at T
                             if (k > 0)
                                 aF[k][j][i]   += scF * flux / hz;
-                            if (k < info->mz-1 && k+1 < info->zs + info->zm)
+                            if (k+1 < info->mz && k+1 < info->zs + info->zm)
                                 aF[k+1][j][i] -= scF * flux / hz;
                             break;
                     }
