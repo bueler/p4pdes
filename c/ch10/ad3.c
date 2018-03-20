@@ -17,8 +17,7 @@ static char help[] =
 
 /* TODO:
 1. study script for layer convergence & GMG
-2. options to allow view slice
-3. visualize glaze problem
+2. visualize glaze problem to check for correctness
 */
 
 /* shows scaling is on the dot so that GMG has constant its, and converges, for NOWIND:
@@ -210,6 +209,9 @@ int main(int argc,char **argv) {
     Vec            u_initial, u, u_exact;
     double         hx, hy, hz, err;
     int            my;
+    char           filename[PETSC_MAX_PATH_LEN] = "filename.vts";
+    PetscBool      vtsoutput = PETSC_FALSE;
+    PetscViewer    viewer;
     DMDALocalInfo  info;
     LimiterType    limiter = CENTERED;
     AdCtx          user;
@@ -228,6 +230,8 @@ int main(int argc,char **argv) {
     ierr = PetscOptionsEnum("-limiter","flux-limiter type",
                "ad3.c",LimiterTypes,
                (PetscEnum)limiter,(PetscEnum*)&limiter,NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsString("-o","output solution in vts format, e.g. for paraview",
+               "ad3.c",filename,filename,sizeof(filename),&vtsoutput);CHKERRQ(ierr);
     ierr = PetscOptionsEnum("-problem","problem type",
                "ad3.c",ProblemTypes,
                (PetscEnum)(user.problem),(PetscEnum*)&(user.problem),NULL); CHKERRQ(ierr);
@@ -273,16 +277,26 @@ int main(int argc,char **argv) {
     ierr = DMDestroy(&da); CHKERRQ(ierr);
 
     ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject)u, "u_solution"); CHKERRQ(ierr);
     ierr = SNESGetDM(snes,&da_after); CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
     hx = 2.0 / (info.mx - 1);
     hy = 2.0 / info.my;
     hz = 2.0 / (info.mz - 1);
     ierr = PetscPrintf(PETSC_COMM_WORLD,
-         "done on %d x %d x %d grid, cell dims %.4f x %.4f x %.4f,\n"
-         "  problem = %s, eps=%g, limiter = %s",
-         info.mx,info.my,info.mz,hx,hy,hz,
+         "done on problem = %s, eps = %g, limiter = %s\n",
          ProblemTypes[user.problem],user.eps,LimiterTypes[limiter]); CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,
+         "grid:  %d x %d x %d,  cell dims: %.4f x %.4f x %.4f\n",
+         info.mx,info.my,info.mz,hx,hy,hz); CHKERRQ(ierr);
+
+    if (vtsoutput) {
+        ierr = PetscPrintf(PETSC_COMM_WORLD,
+            "writing u_solution to %s ...\n",filename); CHKERRQ(ierr);
+        ierr = PetscViewerVTKOpen(PETSC_COMM_WORLD,filename,FILE_MODE_WRITE,&viewer);CHKERRQ(ierr);
+        ierr = VecView(u,viewer);CHKERRQ(ierr);
+        ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
+    }
 
     if ((user.problem == LAYER) || (user.problem == NOWIND)) {
         ierr = VecDuplicate(u,&u_exact); CHKERRQ(ierr);
@@ -291,10 +305,8 @@ int main(int argc,char **argv) {
         ierr = VecNorm(u,NORM_2,&err); CHKERRQ(ierr);
         err *= PetscSqrtReal(hx * hy * hz);
         ierr = PetscPrintf(PETSC_COMM_WORLD,
-             "\n  error |u-uexact|_{2,h} = %.4e\n",err); CHKERRQ(ierr);
+             "numerical error:  |u-uexact|_{2,h} = %.4e\n",err); CHKERRQ(ierr);
         VecDestroy(&u_exact);
-    } else {
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"...\n"); CHKERRQ(ierr);
     }
 
     SNESDestroy(&snes);

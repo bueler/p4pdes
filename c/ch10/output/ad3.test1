@@ -1,4 +1,4 @@
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
-done on 6 x 5 x 6 grid, cell dims 0.4000 x 0.4000 x 0.4000,
-  problem = layer, eps=1., limiter = centered
-  error |u-uexact|_{2,h} = 2.7032e-01
+done on problem = layer, eps = 1., limiter = centered
+grid:  6 x 5 x 6,  cell dims: 0.4000 x 0.4000 x 0.4000
+numerical error:  |u-uexact|_{2,h} = 2.7032e-01
