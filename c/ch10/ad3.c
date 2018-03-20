@@ -255,6 +255,7 @@ int main(int argc,char **argv) {
     ierr = DMSetFromOptions(da); CHKERRQ(ierr);
     ierr = DMSetUp(da); CHKERRQ(ierr);
     ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
+    ierr = DMDASetFieldName(da,0,""); CHKERRQ(ierr);
 
     // set coordinates of cell-centered regular grid
     ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
@@ -277,7 +278,6 @@ int main(int argc,char **argv) {
     ierr = DMDestroy(&da); CHKERRQ(ierr);
 
     ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr);
-    ierr = PetscObjectSetName((PetscObject)u, "u_solution"); CHKERRQ(ierr);
     ierr = SNESGetDM(snes,&da_after); CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
     hx = 2.0 / (info.mx - 1);
@@ -292,7 +292,8 @@ int main(int argc,char **argv) {
 
     if (vtsoutput) {
         ierr = PetscPrintf(PETSC_COMM_WORLD,
-            "writing u_solution to %s ...\n",filename); CHKERRQ(ierr);
+            "writing solution_u to %s ...\n",filename); CHKERRQ(ierr);
+        ierr = PetscObjectSetName((PetscObject)u, "solution_u"); CHKERRQ(ierr);
         ierr = PetscViewerVTKOpen(PETSC_COMM_WORLD,filename,FILE_MODE_WRITE,&viewer);CHKERRQ(ierr);
         ierr = VecView(u,viewer);CHKERRQ(ierr);
         ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
