@@ -26,11 +26,18 @@ compare in ch6/:
 for LEV in 1 2 3 4; do ./fish -fsh_dim 3 -da_grid_x 6 -da_grid_y 7 -da_grid_z 6 -da_refine $LEV -ksp_converged_reason -snes_type ksponly -ksp_type cg -pc_type mg; done
 */
 
-/* acting like it is correct for LAYER and using GMG correctly:
+/* acting like it is correct for LAYER with easy eps=1.0 and using GMG with ILU smoothing:
 for LIM in none centered vanleer; do
-    for LEV in 1 2 3 4; do
-        ./ad3 -ad3_limiter $LIM -snes_converged_reason -ksp_converged_reason -da_refine $LEV -ksp_rtol 1.0e-9 -pc_type mg
+    for LEV in 1 2 3 4 5; do
+        timer ./ad3 -ad3_limiter $LIM -snes_converged_reason -ksp_converged_reason -da_refine $LEV -ksp_rtol 1.0e-9 -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu
     done
+done
+*/
+
+/* there is no need to refine in y-direction; this refinement path allows
+fully-resolving the boundary layer in LAYER:
+for LEV in 1 2 3 4 5 6 7; do
+    timer ./ad3 -ad3_eps 0.01 -ad3_limiter none -snes_type ksponly -ksp_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -da_grid_y 21 -da_refine_y 1 -da_refine $LEV
 done
 */
 
@@ -101,7 +108,7 @@ where  C = exp(-2 / eps).  (Note C may gracefully underflow (not overflow)
 if eps is really small.)  Thus U(x) satisfies
     -eps U'' + U' = 0.
 Also U(x) satisfies U(-1)=0 and U(1)=1, and it has a boundary layer of width
-delta near x=1.  Constants E = 2 pi and F = pi / 2 are set so that u is periodic
+O(eps) near x=1.  Constants E = 2 pi and F = pi / 2 are set so that u is periodic
 and smooth in y and satisfies Dirichlet boundary conditions in z (i.e.
 u(x,y,+-1) = 0.)  The problem solved has
     a = <1,0,0>
@@ -416,26 +423,38 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***au,
                 // traverse half of cell face center points for flux contributions
                 // E,N,T corresponding to p=0,1,2
                 for (p = 0; p < 3; p++) {
-                    if (j < info->ys && p != 1)  continue;  // only need N point when j < ys
+                    if (j < info->ys && p != 1) // when j < ys, only need N point
+                        continue;
+                    // location on other side of face
                     di = (p == 0) ? 1 : 0;
                     dj = (p == 1) ? 1 : 0;
                     dk = (p == 2) ? 1 : 0;
-                    // get pth component of wind
+                    // get pth component of wind and first-order upwind flux
                     ap = wind_a(x + halfx * di, y + halfy * dj, z + halfz * dk,
                                 p,usr);
-                    u_up = (ap >= 0.0) ? au[k][j][i] : au[k+dk][j+dj][i+di];
-                    flux = ap * u_up;  // first-order upwind flux
+                    if (ap >= 0.0) {
+                        u_up = au[k][j][i];
+                    } else {
+                        if (i+di == info->mx-1) {
+                            u_up = bdry_b(y,z,usr);
+                        } else if (k+dk == info->mz-1) {
+                            u_up = 0.0;
+                        } else {
+                            u_up = au[k+dk][j+dj][i+di];
+                        }
+                    }
+                    flux = ap * u_up;
+                    // flux correction if have limiter and not near boundaries
                     if (usr->limiter_fcn != NULL) {
-                        // flux correction is not possible near boundaries
-                        allowdeep = (   (p == 0 && i > 1 && i < info->mx-2)
+                        allowdeep = (   (p == 0 && i > 0 && i < info->mx-2)
                                      || (p == 1)
-                                     || (p == 2 && k > 1 && k < info->mz-2) );
+                                     || (p == 2 && k > 0 && k < info->mz-2) );
                         if (allowdeep) {
                             // compute flux correction from high-order formula with psi(theta)
                             u_dn = (ap >= 0.0) ? au[k+dk][j+dj][i+di] : au[k][j][i];
                             if (u_dn != u_up) {
-                                u_far = (ap >= 0.0) ? au[k-dk][j-dj][i-di]
-                                                    : au[k+2*dk][j+2*dj][i+2*di];
+                                u_far = (ap >= 0.0) ? au[k-dk][j-dj][i-di]         // FIXME uminus could be bdry
+                                                    : au[k+2*dk][j+2*dj][i+2*di];  // FIXME uplus2 could be bdry
                                 theta = (u_up - u_far) / (u_dn - u_up);
                                 flux += ap * (*usr->limiter_fcn)(theta) * (u_dn - u_up);
                             }

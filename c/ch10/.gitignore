@@ -1,5 +1,6 @@
 /ad3
 /advect
-*.pyc
+/*.pyc
 PetscBinaryIO.py
 petsc_conf.py
+/*.vts
