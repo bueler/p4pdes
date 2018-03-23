@@ -28,10 +28,11 @@ for LEV in 1 2 3 4; do ./fish -fsh_dim 3 -da_grid_x 6 -da_grid_y 7 -da_grid_z 6 
 
 /* acting like it is correct for LAYER with easy eps=1.0 and using GMG with ILU smoothing:
 for LIM in none centered vanleer; do
-    for LEV in 1 2 3 4 5; do
+    for LEV in 1 2 3 4; do
         timer ./ad3 -ad3_limiter $LIM -snes_converged_reason -ksp_converged_reason -da_refine $LEV -ksp_rtol 1.0e-9 -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu
     done
 done
+(going to LEV=5 generates seg fault from attempt to get too much memory?)
 */
 
 /* there is no need to refine in y-direction; this refinement path allows
@@ -39,6 +40,8 @@ fully-resolving the boundary layer in LAYER:
 for LEV in 1 2 3 4 5 6 7; do
     timer ./ad3 -ad3_eps 0.01 -ad3_limiter none -snes_type ksponly -ksp_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -da_grid_y 21 -da_refine_y 1 -da_refine $LEV
 done
+(* replace with "-da_grid_y 20" for centered, vanleer
+ * could be improved by having fully y-independent exact solution)
 */
 
 /* OLD NOTES CONTAINING INTERESTING/RELEVANT IDEAS
@@ -314,10 +317,10 @@ int main(int argc,char **argv) {
         err *= PetscSqrtReal(hx * hy * hz);
         ierr = PetscPrintf(PETSC_COMM_WORLD,
              "numerical error:  |u-uexact|_{2,h} = %.4e\n",err); CHKERRQ(ierr);
-        VecDestroy(&u_exact);
+        ierr = VecDestroy(&u_exact); CHKERRQ(ierr);
     }
 
-    SNESDestroy(&snes);
+    ierr = SNESDestroy(&snes); CHKERRQ(ierr);
     return PetscFinalize();
 }
 
@@ -410,20 +413,27 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***au,
 
     // for each E,N,T face of an owned cell, compute flux at the face center
     // and then add that to the correct residual
-    for (k=info->zs; k<info->zs+info->zm; k++) {
+    // note -1 starts to get W,S,B faces of owned cells living on ownership
+    // boundaries for i,j,k resp.
+    for (k=info->zs-1; k<info->zs+info->zm; k++) {
         z = -1.0 + k * hz;
-        for (j=info->ys-1; j<info->ys+info->ym; j++) { // note -1 start
+        for (j=info->ys-1; j<info->ys+info->ym; j++) {
             y = -1.0 + (j + 0.5) * hy;
-            for (i=info->xs; i<info->xs+info->xm; i++) {
+            for (i=info->xs-1; i<info->xs+info->xm; i++) {
                 x = -1.0 + i * hx;
-                // if we are on x=1 or z=1 boundaries then we do not need to
-                //   compute any face-center fluxes
+                // consider cell centered at (x,y,z) and (i,j,k) ...
+                // if cell center is on x=1 or z=1 boundaries then we
+                //   do not need to compute any face-center fluxes
                 if (i == info->mx-1 || k == info->mz-1)
                     continue;
-                // traverse half of cell face center points for flux contributions
-                // E,N,T corresponding to p=0,1,2
+                // traverse E,N,T cell face center points for flux
+                //   contributions (E,N,T correspond to p=0,1,2)
                 for (p = 0; p < 3; p++) {
-                    if (j < info->ys && p != 1) // when j < ys, only need N point
+                    if (((i == 0 || i < info->xs) && p != 0) || (i < 0)) // skip N,T
+                        continue;
+                    if  (j < info->ys             && p != 1)             // skip E,T
+                        continue;
+                    if (((k == 0 || k < info->zs) && p != 2) || (k < 0)) // skip E,N
                         continue;
                     // location on other side of face
                     di = (p == 0) ? 1 : 0;
