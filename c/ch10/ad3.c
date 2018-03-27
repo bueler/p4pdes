@@ -219,8 +219,8 @@ int main(int argc,char **argv) {
     Vec            u_initial, u, u_exact;
     double         hx, hy, hz, err;
     int            my;
-    char           filename[PETSC_MAX_PATH_LEN] = "filename.vts";
-    PetscBool      vtsoutput = PETSC_FALSE;
+    char           filename[PETSC_MAX_PATH_LEN] = "filename.vtr";
+    PetscBool      vtkoutput = PETSC_FALSE;
     PetscViewer    viewer;
     DMDALocalInfo  info;
     LimiterType    limiter = CENTERED;
@@ -240,8 +240,8 @@ int main(int argc,char **argv) {
     ierr = PetscOptionsEnum("-limiter","flux-limiter type",
                "ad3.c",LimiterTypes,
                (PetscEnum)limiter,(PetscEnum*)&limiter,NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsString("-o","output solution in vts format, e.g. for paraview",
-               "ad3.c",filename,filename,sizeof(filename),&vtsoutput);CHKERRQ(ierr);
+    ierr = PetscOptionsString("-o","output solution in VTK format (.vtr,.vts), e.g. for paraview",
+               "ad3.c",filename,filename,sizeof(filename),&vtkoutput);CHKERRQ(ierr);
     ierr = PetscOptionsEnum("-problem","problem type",
                "ad3.c",ProblemTypes,
                (PetscEnum)(user.problem),(PetscEnum*)&(user.problem),NULL); CHKERRQ(ierr);
@@ -300,7 +300,7 @@ int main(int argc,char **argv) {
          "grid:  %d x %d x %d,  cell dims: %.4f x %.4f x %.4f\n",
          info.mx,info.my,info.mz,hx,hy,hz); CHKERRQ(ierr);
 
-    if (vtsoutput) {
+    if (vtkoutput) {
         ierr = PetscPrintf(PETSC_COMM_WORLD,
             "writing solution_u to %s ...\n",filename); CHKERRQ(ierr);
         ierr = PetscObjectSetName((PetscObject)u, "solution_u"); CHKERRQ(ierr);

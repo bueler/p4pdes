@@ -4,3 +4,4 @@
 PetscBinaryIO.py
 petsc_conf.py
 /*.vts
+/*.vtr
