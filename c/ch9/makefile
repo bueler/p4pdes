@@ -7,8 +7,8 @@ unfem: unfem.o um.o chkopts
 	${RM} unfem.o um.o
 
 petscPyScripts:
-	ln -sf ${PETSC_DIR}/bin/PetscBinaryIO.py
-	ln -sf ${PETSC_DIR}/bin/petsc_conf.py
+	ln -sf ${PETSC_DIR}/lib/petsc/bin/PetscBinaryIO.py
+	ln -sf ${PETSC_DIR}/lib/petsc/bin/petsc_conf.py
 
 # testing
 rununfem_1: petscPyScripts
