@@ -1,4 +1,4 @@
-// generate trapezoid domain geometry
+// trapezoid domain geometry
 // usage:  gmsh -2 trap.geo
 
 lc = 1.5;
@@ -12,4 +12,7 @@ Line(7) = {3,4};
 Line(8) = {4,1};
 Line Loop(9) = {5,6,7,8};
 Plane Surface(10) = {9};
+Physical Line(11) = {5,6,7};  // Dirichlet boundary
+Physical Line(12) = {8};
+Physical Surface(13) = {10};
 
