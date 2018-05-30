@@ -20,9 +20,8 @@ import numpy as np
 import sys
 
 # debug print
-VERBOSITY=5;  # set to large value to see messages
-def dprint(d,s):
-    if d < VERBOSITY:
+def dprint(debug,s):
+    if debug:
         print(s)
 
 def fail(k,s):
@@ -30,9 +29,9 @@ def fail(k,s):
     sys.exit(k)
 
 def check_mesh_format(filename):
+    MFread = False
+    numsread = False
     with open(filename, 'r') as mshfile:
-        MFread = False
-        numsread = False
         for line in mshfile:
             line = line.strip()  # remove leading and trailing whitespace
             if line: # only look at nonempty lines
@@ -48,58 +47,81 @@ def check_mesh_format(filename):
                     continue
         return (MFread and numsread)
 
-def read_nodes(filename):
+def read_physical_names(filename):
+    PNread = False
+    nPN = 0
+    physical = {}   # empty dictionary
     with open(filename, 'r') as mshfile:
-        Nodesread = False
-        EndNodesread = False
-        N = 0   # number of nodes
-        count = 0
-        coords = []
+        for line in mshfile:
+            line = line.strip()  # remove leading and trailing whitespace
+            if line: # only look at nonempty lines
+                if line == '$PhysicalNames':
+                    PNread = True
+                elif line == '$EndPhysicalNames':
+                    break
+                elif PNread:
+                    ls = line.split(' ')
+                    if nPN == 0 and len(ls) == 1:
+                        try:
+                            nPN = int(ls[0])
+                        except ValueError:
+                            fail(2,'nPN not an integer')
+                    else:
+                        assert (len(ls) == 3), 'expected three items on line'
+                        try:
+                            dim = int(ls[0])
+                        except ValueError:
+                            fail(2,'dim not an integer')
+                        try:
+                            num = int(ls[1])
+                        except ValueError:
+                            fail(2,'num not an integer')
+                        physical[ls[2].strip('"')] = num
+    assert (nPN == len(physical)), 'expected number of physical names does not equal number read'
+    return physical
+
+def read_nodes(filename):
+    Nodesread = False
+    EndNodesread = False
+    N = 0   # number of nodes
+    count = 0
+    coords = []
+    with open(filename, 'r') as mshfile:
         for line in mshfile:
             line = line.strip()  # remove leading and trailing whitespace
             if line: # only look at nonempty lines
                 if line == '$Nodes':
-                    if Nodesread:
-                        fail(2,'"$Nodes" repeated')
+                    assert (not Nodesread), '"$Nodes" repeated'
                     Nodesread = True
                 elif line == '$EndNodes':
-                    if not Nodesread:
-                        fail(3,'"$EndNodes" before "$Nodes"')
-                    if len(coords) < 2:
-                        fail(4,'"$EndNodes" reached before any nodes read')
-                    if count != N:
-                        fail(5,'N does not agree with index')
+                    assert (Nodesread), '"$EndNodes" before "$Nodes"'
+                    assert (len(coords) >= 2), '"$EndNodes" reached before any nodes read'
+                    assert (count == N), 'N does not agree with index'
                     break  # apparent success reading the nodes
                 elif Nodesread:
                     ls = line.split(' ')
                     if len(ls) == 1:
-                        if N != 0:
-                            fail(6,'N found but already read')
+                        assert (N == 0), 'N found again but already read'
                         try:
                             N = int(ls[0])
                         except ValueError:
                             fail(7,'N not an integer')
-                        if N <= 0:
-                            fail(8,'N invalid')
+                        assert (N > 0), 'N invalid'
                         coords = np.zeros(2*N)  # allocate space for nodes
-                        dprint(1,'N=%d' % N)
                     else:
-                        if N == 0:
-                            fail(9,'expected to read N by now')
+                        assert (N > 0), 'expected to read N by now'
                         try:
                             rcount = int(ls[0])
                         except ValueError:
                             fail(10,'node index not an integer')
-                        if count+1 != rcount:
-                            fail(11,'unexpected (noncontiguous?) node indexing')
                         count += 1
+                        assert (count == rcount), 'unexpected (noncontiguous?) node indexing'
                         try:
                             xy = map(float,ls[1:3])
                         except ValueError:
                             fail(12,'could not convert node coordinates to float')
                         coords[2*(count-1):2*count] = xy            
-    if count != N:
-        fail(13,'N should equal count of read nodes')
+    assert (count == N), 'N should equal count of read nodes'
     return coords
 
 if __name__ == "__main__":
@@ -110,6 +132,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description= \
         'Converts .msh ASCII file from Gmsh into PETSc binary files .vec,.is.')
     # required positional filename
+    parser.add_argument('-v', default=False, action='store_true',
+                        help='verbose output for debugging')
     parser.add_argument('inname', metavar='FILE',
                         help='input file name with .msh extension')
     args = parser.parse_args()
@@ -126,14 +150,20 @@ if __name__ == "__main__":
         print('ERROR: mesh format not as expected ... stopping')
         sys.exit(1)
 
-    print('  reading node coordinates from %s ...' % args.inname)
+    print('  reading physical names ...')
+    phys = read_physical_names(args.inname)
+    dprint(args.v,phys)
+
+    print('  reading node coordinates ...')
     xycoords = read_nodes(args.inname)
+    dprint(args.v,'N=%d' % (len(xycoords)/2))
+    dprint(args.v,xycoords)
 
     print('  writing node coordinates as PETSc Vec to %s ...' % vecoutname)
     petsc = PetscBinaryIO.PetscBinaryIO()
     petsc.writeBinaryFile(vecoutname,[xycoords.view(PetscBinaryIO.Vec),])
 
-    print('  reading element tuples from %s ...' % args.inname)
+    print('  reading element tuples ...')
     # FIXME
     #print('  writing FIXME as PETSc Vec to %s ...' % vecoutname)
     #petsc.writeBinaryFile(args.outroot+'.is',[oe,obfn,os,obfs])
