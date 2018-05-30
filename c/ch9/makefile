@@ -10,11 +10,11 @@ petscPyScripts:
 	ln -sf ${PETSC_DIR}/lib/petsc/bin/PetscBinaryIO.py
 	ln -sf ${PETSC_DIR}/lib/petsc/bin/petsc_conf.py
 
-meshes/trap1.vec meshes/trap1.is: meshes/trap.geo
+meshes/trap1.vec meshes/trap1.is: meshes/trap.geo msh2petsc.py
 	-@gmsh -2 meshes/trap.geo -o meshes/trap1.msh > /dev/null
 	-@./msh2petsc.py meshes/trap1.msh > /dev/null
 
-meshes/trapneu1.vec meshes/trapneu1.is: meshes/trapneu.geo
+meshes/trapneu1.vec meshes/trapneu1.is: meshes/trapneu.geo msh2petsc.py
 	-@gmsh -2 meshes/trapneu.geo -o meshes/trapneu1.msh > /dev/null
 	-@./msh2petsc.py meshes/trapneu1.msh > /dev/null
 
