@@ -57,7 +57,7 @@ extern PetscErrorCode Preallocation(Mat, unfemCtx*);
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
-    PetscBool   view = PETSC_FALSE,
+    PetscBool   viewmesh = PETSC_FALSE,
                 viewsoln = PETSC_FALSE,
                 noprealloc = PETSC_FALSE;
     char        root[256] = "", nodesname[256], issname[256], solnname[256],
@@ -101,9 +101,9 @@ int main(int argc,char **argv) {
     ierr = PetscOptionsInt("-quaddegree",
            "quadrature degree (1,2,3)",
            "unfem.c",user.quaddegree,&(user.quaddegree),NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-view",
-           "view loaded nodes and elements at stdout",
-           "unfem.c",view,&view,NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-viewmesh",
+           "view loaded mesh (nodes and elements) at stdout",
+           "unfem.c",viewmesh,&viewmesh,NULL); CHKERRQ(ierr);
     ierr = PetscOptionsBool("-view_solution",
            "view solution u(x,y) to binary file; uses root name of mesh plus .soln\nsee petsc2tricontour.py to view graphically",
            "unfem.c",viewsoln,&viewsoln,NULL); CHKERRQ(ierr);
@@ -159,7 +159,7 @@ int main(int argc,char **argv) {
     ierr = UMReadNodes(&mesh,nodesname); CHKERRQ(ierr);
     ierr = UMReadISs(&mesh,issname); CHKERRQ(ierr);
     ierr = UMStats(&mesh, &h_max, NULL, NULL, NULL); CHKERRQ(ierr);
-    if (view) {  //STRIP
+    if (viewmesh) {  //STRIP
         PetscViewer stdoutviewer;  //STRIP
         ierr = PetscViewerASCIIGetStdout(PETSC_COMM_WORLD,&stdoutviewer); CHKERRQ(ierr);  //STRIP
         ierr = UMViewASCII(&mesh,stdoutviewer); CHKERRQ(ierr);  //STRIP

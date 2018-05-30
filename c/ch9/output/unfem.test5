@@ -1,0 +1,44 @@
+8 nodes at (x,y) coordinates:
+      0 : (2.,0.)
+      1 : (1.,1.)
+      2 : (-1.,1.)
+      3 : (-2.,0.)
+      4 : (0.,0.)
+      5 : (1.,0.)
+      6 : (0.,1.)
+      7 : (-1.,0.)
+6 elements:
+      0 :   2   7   4
+      1 :   5   0   1
+      2 :   4   1   6
+      3 :   6   2   4
+      4 :   2   3   7
+      5 :   1   4   5
+8 boundary flags at nodes (0 = interior, 1 = boundary, 2 = Dirichlet):
+      0 : 2
+      1 : 2
+      2 : 2
+      3 : 2
+      4 : 1
+      5 : 1
+      6 : 2
+      7 : 1
+8 boundary segments:
+      0 :   1   0
+      1 :   2   6
+      2 :   3   2
+      3 :   0   5
+      4 :   4   7
+      5 :   5   4
+      6 :   6   1
+      7 :   7   3
+8 boundary flags at segments (1 = Neumann, 2 = Dirichlet):
+      0 : 2
+      1 : 2
+      2 : 2
+      3 : 1
+      4 : 1
+      5 : 1
+      6 : 2
+      7 : 1
+case 0 result for N=8 nodes with h = 1.414e+00:  |u-u_ex|_inf = 2.30e-01

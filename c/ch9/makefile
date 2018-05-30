@@ -31,13 +31,18 @@ rununfem_4: petscPyScripts
 	-@./tri2petsc.py meshes/square.1 > /dev/null
 	-@../testit.sh unfem "-un_mesh meshes/square.1 -un_case 3" 1 4
 
-test_unfem: rununfem_1 rununfem_2 rununfem_3 rununfem_4
+rununfem_5: petscPyScripts
+	-@triangle -pqa0.5 meshes/trap > /dev/null
+	-@./tri2petsc.py meshes/trap.1 > /dev/null
+	-@../testit.sh unfem "-un_mesh meshes/trap.1 -un_viewmesh" 1 5
+
+test_unfem: rununfem_1 rununfem_2 rununfem_3 rununfem_4 rununfem_5
 
 test: test_unfem
 
 # etc
 
-.PHONY: distclean rununfem_1 rununfem_2 rununfem_3 rununfem_4 test test_unfem petscPyScripts
+.PHONY: distclean rununfem_1 rununfem_2 rununfem_3 rununfem_4 rununfem_5 test test_unfem petscPyScripts
 
 distclean:
 	@rm -f *~ unfem *tmp
