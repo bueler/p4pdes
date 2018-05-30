@@ -181,14 +181,14 @@ def read_elements(filename,N,phys):
                                 fail(3,'unable to convert segment ends to integers')
                             if etype == phys['dirichlet']:
                                 # reading a Dirichlet boundary segment; note zero-indexing
-                                bf[np.array(ends,dtype=int) - 1] = 1
+                                bf[np.array(ends,dtype=int) - 1] = 2
                             elif etype == phys['neumann']:
                                 # reading a Neumann boundary segment; note zero-indexing
                                 ns.append(np.array(ends,dtype=int) - 1)
                                 ends = np.array(ends,dtype=int) - 1
                                 for j in range(2):
                                     if bf[ends[j]] == 0:
-                                        bf[ends[j]] = 2
+                                        bf[ends[j]] = 1
                             else:
                                 fail(3,'should not be here: dim=1 and 7 entries but not etype')
                         else:
