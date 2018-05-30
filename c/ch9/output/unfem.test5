@@ -1,27 +1,3 @@
-7 nodes at (x,y) coordinates:
-      0 : (2.,0.)
-      1 : (1.,1.)
-      2 : (-1.,1.)
-      3 : (-2.,0.)
-      4 : (2.75513e-12,1.)
-      5 : (-0.666667,0.)
-      6 : (0.666667,0.)
-5 elements:
-      0 :   6   4   5
-      1 :   6   0   1
-      2 :   3   5   2
-      3 :   5   4   2
-      4 :   6   1   4
-7 boundary flags at nodes (0 = interior, 1 = boundary, 2 = Dirichlet):
-      0 : 2
-      1 : 2
-      2 : 2
-      3 : 2
-      4 : 2
-      5 : 1
-      6 : 1
-3 Neumann boundary segments:
-      0 :   3   5
-      1 :   5   6
-      2 :   6   0
-case 0 result for N=7 nodes with h = 1.414e+00:  |u-u_ex|_inf = 4.68e-02
+  Linear solve converged due to CONVERGED_RTOL iterations 5
+  PC is GAMG with 2 levels
+case 0 result for N=18 nodes with h = 7.071e-01:  |u-u_ex|_inf = 1.97e-02

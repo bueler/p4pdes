@@ -14,6 +14,11 @@ meshes/trap1.vec meshes/trap1.is: meshes/trap.geo msh2petsc.py
 	-@gmsh -2 meshes/trap.geo -o meshes/trap1.msh > /dev/null
 	-@./msh2petsc.py meshes/trap1.msh > /dev/null
 
+meshes/trap2.vec meshes/trap2.is: meshes/trap.geo msh2petsc.py
+	-@gmsh -2 meshes/trap.geo -o meshes/trap2.msh > /dev/null
+	-@gmsh -refine meshes/trap2.msh > /dev/null
+	-@./msh2petsc.py meshes/trap2.msh > /dev/null
+
 meshes/trapneu1.vec meshes/trapneu1.is: meshes/trapneu.geo msh2petsc.py
 	-@gmsh -2 meshes/trapneu.geo -o meshes/trapneu1.msh > /dev/null
 	-@./msh2petsc.py meshes/trapneu1.msh > /dev/null
@@ -26,7 +31,7 @@ rununfem_1: petscPyScripts meshes/trap1.vec meshes/trap1.is
 	-@../testit.sh unfem "-un_mesh meshes/trap1 -un_case 0" 1 1
 
 rununfem_2: petscPyScripts meshes/trap1.vec meshes/trap1.is
-	-@../testit.sh unfem "-un_mesh meshes/trap1 -un_quaddegree 2 -un_case 1" 1 2
+	-@../testit.sh unfem "-un_mesh meshes/trap1 -un_quaddegree 2 -un_case 1 -un_view_mesh" 1 2
 
 rununfem_3: petscPyScripts meshes/trapneu1.vec meshes/trapneu1.is
 	-@../testit.sh unfem "-un_mesh meshes/trapneu1 -un_case 2" 1 3
@@ -34,8 +39,8 @@ rununfem_3: petscPyScripts meshes/trapneu1.vec meshes/trapneu1.is
 rununfem_4: petscPyScripts meshes/square1.vec meshes/square1.is
 	-@../testit.sh unfem "-un_mesh meshes/square1 -un_case 3" 1 4
 
-rununfem_5: petscPyScripts meshes/trap1.vec meshes/trap1.is
-	-@../testit.sh unfem "-un_mesh meshes/trap1 -un_view_mesh" 1 5
+rununfem_5: petscPyScripts meshes/trap2.vec meshes/trap2.is
+	-@../testit.sh unfem "-un_mesh meshes/trap2 -pc_type gamg -ksp_converged_reason -ksp_rtol 1.0e-9" 1 5
 
 test_unfem: rununfem_1 rununfem_2 rununfem_3 rununfem_4 rununfem_5
 
