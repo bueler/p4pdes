@@ -76,8 +76,10 @@ def read_physical_names(filename):
                             num = int(ls[1])
                         except ValueError:
                             fail(2,'num not an integer')
-                        physical[ls[2].strip('"')] = num
+                        physical[ls[2].strip('"').lower()] = num
     assert (nPN == len(physical)), 'expected number of physical names does not equal number read'
+    for key in ['dirichlet','neumann','interior']:
+        assert (key in physical), 'no key "%s" in dictionary' % key
     return physical
 
 def read_nodes(filename):
@@ -110,6 +112,7 @@ def read_nodes(filename):
                         coords = np.zeros(2*N)  # allocate space for nodes
                     else:
                         assert (N > 0), 'expected to read N by now'
+                        assert (len(ls) == 4), 'expected to read four values on node line'
                         try:
                             rcount = int(ls[0])
                         except ValueError:
@@ -121,8 +124,76 @@ def read_nodes(filename):
                         except ValueError:
                             fail(12,'could not convert node coordinates to float')
                         coords[2*(count-1):2*count] = xy            
-    assert (count == N), 'N should equal count of read nodes'
-    return coords
+    assert (2*N == len(coords)), 'coords should have length 2N'
+    return N,coords
+
+
+def read_elements(filename,N,phys):
+    Elementsread = False
+    NE = 0   # number of Elements (in Gmsh sense; both triangles and boundary segments)
+    tri = []
+    ns = []
+    bf = np.zeros(N,dtype=int)   # zero for interior
+    with open(filename, 'r') as mshfile:
+        for line in mshfile:
+            line = line.strip()  # remove leading and trailing whitespace
+            if line: # only look at nonempty lines
+                if line == '$Elements':
+                    assert (not Elementsread), '"$Elements" repeated'
+                    Elementsread = True
+                elif line == '$EndElements':
+                    assert (Elementsread), '"$EndElements" before "$Elements"'
+                    assert (len(tri) > 0), 'no triangles read'
+                    break  # apparent success reading the elements
+                elif Elementsread:
+                    ls = line.split(' ')
+                    if len(ls) == 1:
+                        assert (NE == 0), 'NE found again but already read'
+                        try:
+                            NE = int(ls[0])
+                        except ValueError:
+                            fail(3,'NE not an integer')
+                        assert (NE > 0), 'NE invalid'
+                    else:
+                        assert (NE > 0), 'expected to read NE by now'
+                        assert (len(ls) == 7 or len(ls) == 8), 'expected to read 7 or 8 values on element line'
+                        try:
+                            dim = int(ls[1])
+                        except ValueError:
+                            fail(3,'dim not an integer')
+                        assert (dim == 1 or dim == 2), 'dim not 1 or 2'
+                        try:
+                            etype = int(ls[3])
+                        except ValueError:
+                            fail(3,'etype not an integer')
+                        if dim == 2 and etype == phys['interior'] and len(ls) == 8:
+                            # reading a triangle
+                            try:
+                                thistri = map(int,ls[5:8])
+                            except:
+                                fail(3,'unable to convert triangle vertices to integers')
+                            # change to zero-indexing
+                            tri.append(np.array(thistri,dtype=int) - 1)
+                        elif dim == 1 and len(ls) == 7:
+                            try:
+                                ends = map(int,ls[5:7])
+                            except:
+                                fail(3,'unable to convert segment ends to integers')
+                            if etype == phys['dirichlet']:
+                                # reading a Dirichlet boundary segment; note zero-indexing
+                                bf[np.array(ends,dtype=int) - 1] = 1
+                            elif etype == phys['neumann']:
+                                # reading a Neumann boundary segment; note zero-indexing
+                                ns.append(np.array(ends,dtype=int) - 1)
+                                ends = np.array(ends,dtype=int) - 1
+                                for j in range(2):
+                                    if bf[ends[j]] == 0:
+                                        bf[ends[j]] = 2
+                            else:
+                                fail(3,'should not be here: dim=1 and 7 entries but not etype')
+                        else:
+                            fail(3,'should not be here: neither triangle or boundary segment')
+    return NE,np.array(tri).flatten(),bf,np.array(ns).flatten()
 
 if __name__ == "__main__":
     import argparse
@@ -145,7 +216,7 @@ if __name__ == "__main__":
     vecoutname = outroot + '.vec'
     isoutname = outroot + '.is'
 
-    print('  checking mesh format in input file %s ...' % args.inname)
+    dprint(args.v,'checking for MeshFormat in input file %s ...' % args.inname)
     if not check_mesh_format(args.inname):
         print('ERROR: mesh format not as expected ... stopping')
         sys.exit(1)
@@ -155,16 +226,28 @@ if __name__ == "__main__":
     dprint(args.v,phys)
 
     print('  reading node coordinates ...')
-    xycoords = read_nodes(args.inname)
-    dprint(args.v,'N=%d' % (len(xycoords)/2))
-    dprint(args.v,xycoords)
+    N,xy = read_nodes(args.inname)
+    dprint(args.v,'N=%d' % N)
+    dprint(args.v,xy)
 
-    print('  writing node coordinates as PETSc Vec to %s ...' % vecoutname)
+    print('  writing N=%d node coordinates as PETSc Vec to %s ...' \
+          % (N,vecoutname))
     petsc = PetscBinaryIO.PetscBinaryIO()
-    petsc.writeBinaryFile(vecoutname,[xycoords.view(PetscBinaryIO.Vec),])
+    petsc.writeBinaryFile(vecoutname,[xy.view(PetscBinaryIO.Vec),])
 
     print('  reading element tuples ...')
-    # FIXME
-    #print('  writing FIXME as PETSc Vec to %s ...' % vecoutname)
-    #petsc.writeBinaryFile(args.outroot+'.is',[oe,obfn,os,obfs])
+    NE,e,bf,ns = read_elements(args.inname,N,phys)
+    assert (len(e) % 3 == 0), 'element index list length not 3 K'
+    K = len(e) / 3
+    assert (len(bf) == N), 'boundary flag list not length N'
+    assert (len(ns) % 2 == 0), 'Neumann segment index list length not 2 P'
+    P = len(ns) / 2
+    dprint(args.v,'NE=%d' % NE)
+    dprint(args.v,e)
+    dprint(args.v,bf)
+    dprint(args.v,ns)
+    print('''  writing K=%d elements, N=%d boundary flags, and P=%d Neumann segments
+    as PETSc IS to %s ...''' % (K,N,P,isoutname))
+    IS = PetscBinaryIO.IS
+    petsc.writeBinaryFile(isoutname,[e.view(IS),bf.view(IS),ns.view(IS)])
 
