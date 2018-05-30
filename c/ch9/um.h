@@ -11,24 +11,21 @@ typedef struct {
 typedef struct {
     int      N,     // number of nodes
              K,     // number of elements
-             P;     // number of boundary segments
+             P;     // number of Neumann boundary segments
     Vec      loc;   // nodal locations; length N, dof=2 Vec
     IS       e,     // element triples; length 3K
                     //     values e[3*k+0],e[3*k+1],e[3*k+2]
                     //     are indices into node-based Vecs
-             s,     // boundary segment pairs; length 2P
+             ns,    // Neumann boundary segment pairs; length 2P
                     //     values s[2*p+0],s[2*p+1]
                     //     are indices into node-based Vecs
-             bfn,   // flag for boundary nodes; length N
-                    //     if abfn[i] > 0 then node i is on boundary
-                    //     if abfn[i] == 2 then node i is Dirichlet
-             bfs;   // flag for boundary segments; length P
-                    //     if abfs[p] == 1 then segment p is Neumann
-                    //     if abfs[p] == 2 then segment p is Dirichlet
+             bf;    // flag for boundary nodes; length N
+                    //     if bf[i] > 0  then node i is on boundary
+                    //     if bf[i] == 2 then node i is Dirichlet
 } UM;
 //ENDSTRUCT
 
-//"methods" below are listed in typical call order
+// methods below are listed in typical call order
 
 //STARTDECLARE
 PetscErrorCode UMInitialize(UM *mesh);  // call first
@@ -37,7 +34,7 @@ PetscErrorCode UMDestroy(UM *mesh);     // call last
 // create Vec and then read node coordinates from file into it
 PetscErrorCode UMReadNodes(UM *mesh, char *filename);
 
-// create ISs and then read element triples, boundary segments, and
+// create ISs and then read element triples, Neumann boundary segments, and
 // boundary flags into them; call UMReadNodes() first
 PetscErrorCode UMReadISs(UM *mesh, char *filename);
 
