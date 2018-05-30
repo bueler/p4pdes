@@ -308,25 +308,27 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
             aF[n] = au[n] - user->gD_fcn(aloc[n].x,aloc[n].y);
     }
 
-    // Neumann boundary segment contributions
-    ierr = ISGetIndices(user->mesh->ns,&ans); CHKERRQ(ierr);
-    for (p = 0; p < user->mesh->P; p++) {
-        na = ans[2*p+0];  // nodes at end of segment
-        nb = ans[2*p+1];
-        dx = aloc[na].x-aloc[nb].x;
-        dy = aloc[na].y-aloc[nb].y;
-        ls = sqrt(dx * dx + dy * dy);  // length of segment
-        // midpoint rule; psi_na=psi_nb=0.5 at midpoint of segment
-        xmid = 0.5*(aloc[na].x+aloc[nb].x);
-        ymid = 0.5*(aloc[na].y+aloc[nb].y);
-        sint = 0.5 * ls * user->gN_fcn(xmid,ymid);
-        // nodes could be Dirichlet
-        if (abf[na] != 2)
-            aF[na] -= sint;
-        if (abf[nb] != 2)
-            aF[nb] -= sint;
+    // Neumann boundary segment contributions (if any)
+    if (user->mesh->P > 0) {
+        ierr = ISGetIndices(user->mesh->ns,&ans); CHKERRQ(ierr);
+        for (p = 0; p < user->mesh->P; p++) {
+            na = ans[2*p+0];  // nodes at end of segment
+            nb = ans[2*p+1];
+            dx = aloc[na].x-aloc[nb].x;
+            dy = aloc[na].y-aloc[nb].y;
+            ls = sqrt(dx * dx + dy * dy);  // length of segment
+            // midpoint rule; psi_na=psi_nb=0.5 at midpoint of segment
+            xmid = 0.5*(aloc[na].x+aloc[nb].x);
+            ymid = 0.5*(aloc[na].y+aloc[nb].y);
+            sint = 0.5 * ls * user->gN_fcn(xmid,ymid);
+            // nodes could be Dirichlet
+            if (abf[na] != 2)
+                aF[na] -= sint;
+            if (abf[nb] != 2)
+                aF[nb] -= sint;
+        }
+        ierr = ISRestoreIndices(user->mesh->ns,&ans); CHKERRQ(ierr);
     }
-    ierr = ISRestoreIndices(user->mesh->ns,&ans); CHKERRQ(ierr);
 
     // element contributions
     ierr = ISGetIndices(user->mesh->e,&ae); CHKERRQ(ierr);

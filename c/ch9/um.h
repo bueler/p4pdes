@@ -11,17 +11,17 @@ typedef struct {
 typedef struct {
     int      N,     // number of nodes
              K,     // number of elements
-             P;     // number of Neumann boundary segments
+             P;     // number of Neumann boundary segments; may be 0
     Vec      loc;   // nodal locations; length N, dof=2 Vec
     IS       e,     // element triples; length 3K
                     //     values e[3*k+0],e[3*k+1],e[3*k+2]
                     //     are indices into node-based Vecs
-             ns,    // Neumann boundary segment pairs; length 2P
-                    //     values s[2*p+0],s[2*p+1]
-                    //     are indices into node-based Vecs
-             bf;    // flag for boundary nodes; length N
+             bf,    // flag for boundary nodes; length N
                     //     if bf[i] > 0  then node i is on boundary
                     //     if bf[i] == 2 then node i is Dirichlet
+             ns;    // Neumann boundary segment pairs; length 2P; may be null
+                    //     values s[2*p+0],s[2*p+1]
+                    //     are indices into node-based Vecs
 } UM;
 //ENDSTRUCT
 

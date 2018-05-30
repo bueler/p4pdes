@@ -7,16 +7,16 @@ PetscErrorCode UMInitialize(UM *mesh) {
     mesh->P = 0;
     mesh->loc = NULL;
     mesh->e = NULL;
-    mesh->ns = NULL;
     mesh->bf = NULL;
+    mesh->ns = NULL;
     return 0;
 }
 
 PetscErrorCode UMDestroy(UM *mesh) {
     VecDestroy(&(mesh->loc));
     ISDestroy(&(mesh->e));
-    ISDestroy(&(mesh->ns));
     ISDestroy(&(mesh->bf));
+    ISDestroy(&(mesh->ns));
     return 0;
 }
 
@@ -49,17 +49,6 @@ PetscErrorCode UMViewASCII(UM *mesh, PetscViewer viewer) {
     } else {
         ierr = PetscViewerASCIISynchronizedPrintf(viewer,"element index triples empty or unallocated\n"); CHKERRQ(ierr);
     }
-    if (mesh->ns && (mesh->P > 0)) {
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%d Neumann boundary segments:\n",mesh->P); CHKERRQ(ierr);
-        ierr = ISGetIndices(mesh->ns,&ans); CHKERRQ(ierr);
-        for (n = 0; n < mesh->P; n++) {
-            ierr = PetscViewerASCIISynchronizedPrintf(viewer,"    %3d : %3d %3d\n",
-                               n,ans[2*n+0],ans[2*n+1]); CHKERRQ(ierr);
-        }
-        ierr = ISRestoreIndices(mesh->ns,&ans); CHKERRQ(ierr);
-    } else {
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"Neumann boundary segments empty or unallocated\n"); CHKERRQ(ierr);
-    }
     if (mesh->bf && (mesh->N > 0)) {
         ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%d boundary flags at nodes (0 = interior, 1 = boundary, 2 = Dirichlet):\n",mesh->N); CHKERRQ(ierr);
         ierr = ISGetIndices(mesh->bf,&abf); CHKERRQ(ierr);
@@ -70,6 +59,17 @@ PetscErrorCode UMViewASCII(UM *mesh, PetscViewer viewer) {
         ierr = ISRestoreIndices(mesh->bf,&abf); CHKERRQ(ierr);
     } else {
         ierr = PetscViewerASCIISynchronizedPrintf(viewer,"boundary flags empty or unallocated\n"); CHKERRQ(ierr);
+    }
+    if (mesh->ns && (mesh->P > 0)) {
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%d Neumann boundary segments:\n",mesh->P); CHKERRQ(ierr);
+        ierr = ISGetIndices(mesh->ns,&ans); CHKERRQ(ierr);
+        for (n = 0; n < mesh->P; n++) {
+            ierr = PetscViewerASCIISynchronizedPrintf(viewer,"    %3d : %3d %3d\n",
+                               n,ans[2*n+0],ans[2*n+1]); CHKERRQ(ierr);
+        }
+        ierr = ISRestoreIndices(mesh->ns,&ans); CHKERRQ(ierr);
+    } else {
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"Neumann boundary segments empty or unallocated\n"); CHKERRQ(ierr);
     }
     ierr = PetscViewerASCIIPopSynchronized(viewer); CHKERRQ(ierr);
     return 0;
@@ -144,17 +144,17 @@ PetscErrorCode UMCheckBoundaryData(UM *mesh) {
     PetscErrorCode ierr;
     const int   *ans, *abf;
     int         n, m;
-    if (mesh->bf == NULL) {
-        SETERRQ(PETSC_COMM_WORLD,1,
-                "boundary flags at nodes not allocated; call UMReadNodes() first\n");
-    }
     if (mesh->N == 0) {
         SETERRQ(PETSC_COMM_WORLD,2,
                 "node size unknown so boundary flag check impossible; call UMReadNodes() first\n");
     }
-    if ((mesh->P == 0) || (mesh->ns == NULL)) {
+    if (mesh->bf == NULL) {
+        SETERRQ(PETSC_COMM_WORLD,1,
+                "boundary flags at nodes not allocated; call UMReadNodes() first\n");
+    }
+    if ((mesh->P > 0) && (mesh->ns == NULL)) {
         SETERRQ(PETSC_COMM_WORLD,3,
-                "number of Neumann boundary segments unknown; call UMReadElements() first\n");
+                "inconsistent data for Neumann boundary segments\n");
     }
     ierr = ISGetIndices(mesh->bf,&abf); CHKERRQ(ierr);
     for (n = 0; n < mesh->N; n++) {
@@ -170,17 +170,19 @@ PetscErrorCode UMCheckBoundaryData(UM *mesh) {
         }
     }
     ierr = ISRestoreIndices(mesh->bf,&abf); CHKERRQ(ierr);
-    ierr = ISGetIndices(mesh->ns,&ans); CHKERRQ(ierr);
-    for (n = 0; n < mesh->P; n++) {
-        for (m = 0; m < 2; m++) {
-            if ((ans[2*n+m] < 0) || (ans[2*n+m] >= mesh->N)) {
-                SETERRQ3(PETSC_COMM_WORLD,6,
-                   "index ns[%d]=%d invalid: not between 0 and N-1=%d\n",
-                   2*n+m,ans[3*n+m],mesh->N-1);
+    if (mesh->P > 0) {
+        ierr = ISGetIndices(mesh->ns,&ans); CHKERRQ(ierr);
+        for (n = 0; n < mesh->P; n++) {
+            for (m = 0; m < 2; m++) {
+                if ((ans[2*n+m] < 0) || (ans[2*n+m] >= mesh->N)) {
+                    SETERRQ3(PETSC_COMM_WORLD,6,
+                       "index ns[%d]=%d invalid: not between 0 and N-1=%d\n",
+                       2*n+m,ans[3*n+m],mesh->N-1);
+                }
             }
         }
+        ierr = ISRestoreIndices(mesh->ns,&ans); CHKERRQ(ierr);
     }
-    ierr = ISRestoreIndices(mesh->ns,&ans); CHKERRQ(ierr);
     return 0;
 }
 
@@ -188,13 +190,13 @@ PetscErrorCode UMReadISs(UM *mesh, char *filename) {
     PetscErrorCode ierr;
     PetscViewer viewer;
     int         n_bf;
-    if ((mesh->K > 0) || (mesh->P > 0)) {
-        SETERRQ(PETSC_COMM_WORLD,1,
-                "elements already created? ... stopping\n");
-    }
     if ((!mesh->loc) || (mesh->N == 0)) {
         SETERRQ(PETSC_COMM_WORLD,2,
                 "node coordinates not created ... do that first ... stopping\n");
+    }
+    if ((mesh->K > 0) || (mesh->P > 0) || (mesh->e != NULL) || (mesh->bf != NULL) || (mesh->ns != NULL)) {
+        SETERRQ(PETSC_COMM_WORLD,1,
+                "elements, boundary flags, Neumann boundary segments already created? ... stopping\n");
     }
     ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename,FILE_MODE_READ,&viewer); CHKERRQ(ierr);
     // create and load e
@@ -214,17 +216,27 @@ PetscErrorCode UMReadISs(UM *mesh, char *filename) {
         SETERRQ1(PETSC_COMM_WORLD,4,
                  "IS bf loaded from %s is wrong size for list of boundary flags\n",filename);
     }
-    // create and load ns
+    // FIXME  seems there is no way to tell if file is empty at this point
+    // create and load ns last ... may *start with a negative value* in which case set P = 0
+    const int *ans;
     ierr = ISCreate(PETSC_COMM_WORLD,&(mesh->ns)); CHKERRQ(ierr);
     ierr = ISLoad(mesh->ns,viewer); CHKERRQ(ierr);
-    ierr = ISGetSize(mesh->ns,&(mesh->P)); CHKERRQ(ierr);
-    if (mesh->P % 2 != 0) {
-        SETERRQ1(PETSC_COMM_WORLD,4,
-                 "IS s loaded from %s is wrong size for list of Neumann boundary segment pairs\n",filename);
+    ierr = ISGetIndices(mesh->ns,&ans); CHKERRQ(ierr);
+    if (ans[0] < 0) {
+        ISDestroy(&(mesh->ns));
+        mesh->ns = NULL;
+        mesh->P = 0;
+    } else {
+        ierr = ISGetSize(mesh->ns,&(mesh->P)); CHKERRQ(ierr);
+        if (mesh->P % 2 != 0) {
+            SETERRQ1(PETSC_COMM_WORLD,4,
+                     "IS s loaded from %s is wrong size for list of Neumann boundary segment pairs\n",filename);
+        }
+        mesh->P /= 2;
     }
-    mesh->P /= 2;
-    // mesh should be complete now
     ierr = PetscViewerDestroy(&viewer); CHKERRQ(ierr);
+
+    // check that mesh is complete now
     ierr = UMCheckElements(mesh); CHKERRQ(ierr);
     ierr = UMCheckBoundaryData(mesh); CHKERRQ(ierr);
     return 0;
