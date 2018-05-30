@@ -10,31 +10,32 @@ petscPyScripts:
 	ln -sf ${PETSC_DIR}/lib/petsc/bin/PetscBinaryIO.py
 	ln -sf ${PETSC_DIR}/lib/petsc/bin/petsc_conf.py
 
+meshes/trap1.vec meshes/trap1.is: meshes/trap.geo
+	-@gmsh -2 meshes/trap.geo -o meshes/trap1.msh > /dev/null
+	-@./msh2petsc.py meshes/trap1.msh > /dev/null
+
+meshes/trapneu1.vec meshes/trapneu1.is: meshes/trapneu.geo
+	-@gmsh -2 meshes/trapneu.geo -o meshes/trapneu1.msh > /dev/null
+	-@./msh2petsc.py meshes/trapneu1.msh > /dev/null
+
 # testing
-rununfem_1: petscPyScripts
-	-@triangle -pqa0.5 meshes/trap > /dev/null
-	-@./tri2petsc.py meshes/trap.1 > /dev/null
-	-@../testit.sh unfem "-un_mesh meshes/trap.1 -un_case 0" 1 1
+rununfem_1: petscPyScripts meshes/trap1.vec meshes/trap1.is
+	-@../testit.sh unfem "-un_mesh meshes/trap1 -un_case 0" 1 1
 
-rununfem_2: petscPyScripts
-	-@triangle -pqa0.5 meshes/trap > /dev/null
-	-@./tri2petsc.py meshes/trap.1 > /dev/null
-	-@../testit.sh unfem "-un_mesh meshes/trap.1 -un_quaddegree 2 -un_case 1" 1 2
+rununfem_2: petscPyScripts meshes/trap1.vec meshes/trap1.is
+	-@../testit.sh unfem "-un_mesh meshes/trap1 -un_quaddegree 2 -un_case 1" 1 2
 
-rununfem_3: petscPyScripts
-	-@triangle -pqa0.5 meshes/trapneu > /dev/null
-	-@./tri2petsc.py meshes/trapneu.1 > /dev/null
-	-@../testit.sh unfem "-un_mesh meshes/trapneu.1 -un_case 2" 1 3
+rununfem_3: petscPyScripts meshes/trapneu1.vec meshes/trapneu1.is
+	-@../testit.sh unfem "-un_mesh meshes/trapneu1 -un_case 2" 1 3
 
+# FIXME need to rewrite genstructured.py
 rununfem_4: petscPyScripts
 	-@./genstructured.py meshes/square.1 3 > /dev/null
 	-@./tri2petsc.py meshes/square.1 > /dev/null
 	-@../testit.sh unfem "-un_mesh meshes/square.1 -un_case 3" 1 4
 
-rununfem_5: petscPyScripts
-	-@triangle -pqa0.5 meshes/trap > /dev/null
-	-@./tri2petsc.py meshes/trap.1 > /dev/null
-	-@../testit.sh unfem "-un_mesh meshes/trap.1 -un_viewmesh" 1 5
+rununfem_5: petscPyScripts meshes/trap1.vec meshes/trap1.is
+	-@../testit.sh unfem "-un_mesh meshes/trap1 -un_view_mesh" 1 5
 
 test_unfem: rununfem_1 rununfem_2 rununfem_3 rununfem_4 rununfem_5
 
