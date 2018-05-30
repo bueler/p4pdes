@@ -18,6 +18,9 @@ meshes/trapneu1.vec meshes/trapneu1.is: meshes/trapneu.geo msh2petsc.py
 	-@gmsh -2 meshes/trapneu.geo -o meshes/trapneu1.msh > /dev/null
 	-@./msh2petsc.py meshes/trapneu1.msh > /dev/null
 
+meshes/square1.vec meshes/square1.is: genstructured.py
+	-@./genstructured.py meshes/square1 3 > /dev/null
+
 # testing
 rununfem_1: petscPyScripts meshes/trap1.vec meshes/trap1.is
 	-@../testit.sh unfem "-un_mesh meshes/trap1 -un_case 0" 1 1
@@ -28,11 +31,8 @@ rununfem_2: petscPyScripts meshes/trap1.vec meshes/trap1.is
 rununfem_3: petscPyScripts meshes/trapneu1.vec meshes/trapneu1.is
 	-@../testit.sh unfem "-un_mesh meshes/trapneu1 -un_case 2" 1 3
 
-# FIXME need to rewrite genstructured.py
-rununfem_4: petscPyScripts
-	-@./genstructured.py meshes/square.1 3 > /dev/null
-	-@./tri2petsc.py meshes/square.1 > /dev/null
-	-@../testit.sh unfem "-un_mesh meshes/square.1 -un_case 3" 1 4
+rununfem_4: petscPyScripts meshes/square1.vec meshes/square1.is
+	-@../testit.sh unfem "-un_mesh meshes/square1 -un_case 3" 1 4
 
 rununfem_5: petscPyScripts meshes/trap1.vec meshes/trap1.is
 	-@../testit.sh unfem "-un_mesh meshes/trap1 -un_view_mesh" 1 5
