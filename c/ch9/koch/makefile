@@ -1,4 +1,4 @@
 .PHONY: clean
 
 clean:
-	@rm -f *~ *.geo *.msh *.vec *.is snowflake.pdf
+	@rm -f *~ *.geo *.msh *.vec *.is *.soln *.soln.info snowflake.pdf
