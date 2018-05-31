@@ -101,7 +101,7 @@ print('  found: N=%d, K=%d, P=%d' % (N,K,P))
 print('  writing to %s ...' % args.o)
 tikz = open(args.o, 'w')
 tikz.write('%% created by script tri2tikz.py command line:%s\n' % '')
-tikz.write('%%   %s\n\n' % commandline)
+tikz.write('%%   %s\n' % commandline)
 tikz.write('\\begin{tikzpicture}[scale=%f]\n' % args.scale)
 
 # go through elements: label centroids and draw edges
