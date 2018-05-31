@@ -1,23 +1,25 @@
 #!/usr/bin/env python
 #
-# (C) 2016 Ed Bueler
+# (C) 2016-2018 Ed Bueler
 
+from __future__ import print_function
 import numpy as np
 import argparse
 
-parser = argparse.ArgumentParser(description='Generate a .poly file for a Koch snowflake.')
-parser.add_argument('-l', type=int, metavar='LEVEL', default=3, help='recursion level for snowflake; default=3; note levels 1 .. 8 finish in seconds')
-parser.add_argument('-o', default='koch.poly', metavar='FILE', help='output filename; default=koch.poly')
+parser = argparse.ArgumentParser(description='Generate a .geo file for a Koch snowflake.')
+parser.add_argument('-l', type=int, metavar='LEVEL', default=2,
+                    help='recursion level for snowflake; default=2')
+parser.add_argument('-o', default='koch.geo', metavar='FILE',
+                    help='name for .geo output file; default=koch.geo')
 args = parser.parse_args()
+lev = args.l
 
-iterations = args.l
-
-N = 3 * 4**iterations   # number of nodes
-print "creating level %d Koch snowflake polygon with P=%d segments ..." % (iterations,N)
+N = 3 * 4**lev   # number of boundary nodes
+print('creating level %d Koch snowflake polygon with %d segments ...' % (lev,N))
 
 # generate string code for snowflake; see https://commons.wikimedia.org/wiki/Koch_snowflake
 koch_flake = "FRFRF"
-for i in range(iterations):
+for i in range(lev):
     koch_flake = koch_flake.replace("F","FLFRFLF")
 
 # draw by saving array of "turtle" positions
@@ -48,18 +50,29 @@ r = np.sqrt(nodes[:,0]**2+nodes[:,1]**2).max()
 for j in range(N):
     nodes[j] /= r
 
-# generate triangle-readable .poly file
-print "writing triangle-readable file  %s  ..." % args.o
+# get length of a first segment
+h0 = np.sqrt(sum((nodes[1,:] - nodes[0,:])**2))
+
+# generate Gmsh-readable .geo file
+print('writing Gmsh-readable file  %s  ...' % args.o)
 f = open(args.o, 'w')
-f.write('# N=%d nodes (vertices), in 2D, no attributes, no vertex markers\n' % N)
-f.write('%d 2 0 0\n' % N)
+f.write('// level %d Koch domain with %d boundary segments\n\n' % (lev,N))
+f.write('cl = %.10e; // characteristic length\n' % h0)
 for j in range(N):
-    f.write('%5d %15.10f %15.10f\n' % (j,nodes[j,0],nodes[j,1]))
-f.write('# P=%d segments (edges), one edge marker (2 = Dirichlet)\n' % N)
-f.write('%d 1\n' % N)
+    f.write('Point(%d) = {%.10f,%.10f,0,cl};\n' % (j+1,nodes[j,0],nodes[j,1]))
 for j in range(N-1):
-    f.write('%5d %4d %4d   2\n' % (j,j,j+1))
-f.write('%5d %4d    0   2\n' % (N-1,N-1))
-f.write('# zero holes; it is simply-connected\n0\n')
+    f.write('Line(%d) = {%d,%d};\n' % (N+1+j,j+1,j+2))
+f.write('Line(%d) = {%d,1};\n' % (2*N,N))
+f.write('Line Loop(%d) = {' % (2*N+1))
+for j in range(N-1):
+    f.write('%d,' % (N+1+j))
+f.write('%d};\n' % (2*N))
+f.write('Plane Surface(%d) = {%d};\n' % (2*N+2,2*N+1))
+f.write('Physical Line("dirichlet") = {')
+for j in range(N-1):
+    f.write('%d,' % (N+1+j))
+f.write('%d};\n' % (2*N))
+f.write('Physical Line("neumann") = {};\n')
+f.write('Physical Surface("interior") = {%d};\n' % (2*N+2))
 f.close()
 

@@ -1,4 +1,3 @@
-/koch.?.*
-/koch?.?.*
-/koch*.poly
+/*.geo
+/*.msh
 /snowflake.pdf
