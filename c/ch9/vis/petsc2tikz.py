@@ -4,10 +4,6 @@
 
 from __future__ import print_function
 import sys, argparse
-import numpy as np
-
-sys.path.append('../')
-import PetscBinaryIO # may need link
 
 commandline = " ".join(sys.argv[:])
 
@@ -35,6 +31,11 @@ parser.add_argument('inroot', metavar='NAMEROOT', default='',
                     help='root of input file name for .vec,.is')
 args = parser.parse_args()
 root = args.inroot
+
+import numpy as np
+
+sys.path.append('../')
+import PetscBinaryIO # may need link
 
 io = PetscBinaryIO.PetscBinaryIO()
 vecfile = open(root+'.vec')

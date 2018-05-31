@@ -4,12 +4,7 @@
 
 from __future__ import print_function
 import sys, argparse
-import matplotlib.pyplot as plt
-import matplotlib.tri as tri
 import numpy as np
-
-sys.path.append('../')
-import PetscBinaryIO # may need link
 
 parser = argparse.ArgumentParser(description=
 '''Contour plot of a solution on a triangulation.  Reads PETSc binary
@@ -22,6 +17,13 @@ parser.add_argument('-o', metavar='PDFFILE', default='',
 parser.add_argument('--contours', metavar='C', type=np.double, nargs='+',
                     default=np.nan, help='contour levels; space-separated list')
 args = parser.parse_args()
+
+import matplotlib.pyplot as plt
+import matplotlib.tri as tri
+
+sys.path.append('../')
+import PetscBinaryIO # may need link
+
 root = args.i
 
 io = PetscBinaryIO.PetscBinaryIO()

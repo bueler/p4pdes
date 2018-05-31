@@ -196,8 +196,6 @@ def read_elements(filename,N,phys):
 
 if __name__ == "__main__":
     import argparse
-    import PetscBinaryIO
-    # need link to petsc/bin/petsc-pythonscripts/PetscBinaryIO.py
 
     parser = argparse.ArgumentParser(description= \
         'Converts .msh ASCII file from Gmsh into PETSc binary files .vec,.is.')
@@ -207,6 +205,8 @@ if __name__ == "__main__":
     parser.add_argument('inname', metavar='FILE',
                         help='input file name with .msh extension')
     args = parser.parse_args()
+
+    import PetscBinaryIO  # may need link to petsc/bin/petsc-pythonscripts/PetscBinaryIO.py
 
     if args.inname.split('.')[-1] == 'msh':
         outroot = '.'.join(args.inname.split('.')[:-1]) # strip .msh
