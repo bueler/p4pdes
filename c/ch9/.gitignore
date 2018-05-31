@@ -1,7 +1,7 @@
 *.pyc
 *.vec
 *.is
-/square.*
+*.soln
 PetscBinaryIO.py
 petsc_conf.py
 unfem
