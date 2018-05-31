@@ -241,12 +241,16 @@ if __name__ == "__main__":
     assert (len(bf) == N), 'boundary flag list not length N'
     assert (len(ns) % 2 == 0), 'Neumann segment index list length not 2 P'
     P = len(ns) / 2
+    if (P == 0):
+        print('WARNING: P=0 so writing a bogus negative-valued Neumann boundary segment')
+        ns = np.array([-1,-1],dtype=int)
     dprint(args.v,'NE=%d' % NE)
     dprint(args.v,e)
     dprint(args.v,bf)
     dprint(args.v,ns)
-    print('''  writing K=%d elements, N=%d boundary flags, and P=%d Neumann segments
-    as PETSc IS to %s ...''' % (K,N,P,isoutname))
+    print('  writing K=%d elements, N=%d boundary flags, and P=%d Neumann segments' \
+          % (K,N,P))
+    print('    as PETSc IS to %s ...' % isoutname)
     IS = PetscBinaryIO.IS
     petsc.writeBinaryFile(isoutname,[e.view(IS),bf.view(IS),ns.view(IS)])
 
