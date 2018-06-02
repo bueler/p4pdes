@@ -8,10 +8,6 @@
 #   ./gamgopt.sh meshes/trap 0 LEV &> gamgopt.txt
 # LEV=12 with N=10492929 nodes and 100 sec run achievable on ed-galago
 
-# other examples: FIXME redo with genstructured.py and koch/ stuff
-#   ./gamgopt.sh meshes/sq 3 6      # ... level 6 is large: 3200x3200 grid w. N=10^7
-#   ./gamgopt.sh koch/koch 4 9      # ... level 9 is large: N = 4 x 10^6
-
 # results & figure-generation:  see p4pdes-book/figs/gamgopt.txt|py
 
 NAME=$1
