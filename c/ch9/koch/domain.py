@@ -20,15 +20,17 @@ N = 3 * 4**lev   # number of boundary nodes
 print('creating level %d Koch snowflake polygon with %d segments ...' % (lev,N))
 
 # generate string code for snowflake; see https://commons.wikimedia.org/wiki/Koch_snowflake
-koch_flake = "FRFRF"
+# F = forward, R = right (120 degrees; below), L = left (60 degrees)
+koch_flake = "FRFRF"   # forms a triangle
 for i in range(lev):
-    koch_flake = koch_flake.replace("F","FLFRFLF")
+    koch_flake = koch_flake.replace("F","FLFRFLF")   # replaces edge by _/\_
 
-# draw by saving array of "turtle" positions
+# draw by saving array of "turtle graphics" positions
+# pos = (current turtle location), vec = (current direction turtle is pointing)
 nodes = np.zeros((N,2))
 pos = np.array([0.0,0.0])  # initial location; arbitrary because of rescale (below)
 vec = np.array([1.0,0.0])  # initial direction
-dist = 1.0  # edge length; really arbitrary because of rescale
+dist = 1.0  # edge length; arbitrary because of rescale
 count = 0
 for move in koch_flake:
     if move == "F":
