@@ -289,11 +289,10 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
     const int       *ae, *ans, *abf, *en;
     const Node      *aloc;
     const double    *au;
-    double          *aF, unode[3], gradu[2], gradpsi[3][2],
-                    uquad[4], aquad[4], fquad[4],
-                    dx, dy, dx1, dx2, dy1, dy2, detJ,
-                    ls, xmid, ymid, sint, xx, yy, psi, ip, sum;
     int             p, na, nb, k, l, r;
+    double          *aF, unode[3], gradu[2], gradpsi[3][2], uquad[4],
+                    aquad[4], fquad[4], dx, dy, dx1, dx2, dy1, dy2,
+                    detJ, ls, xmid, ymid, sint, xx, yy, psi, ip, sum;
 
     PetscLogStagePush(user->resstage);  //STRIP
     ierr = VecSet(F,0.0); CHKERRQ(ierr);
@@ -305,10 +304,8 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
     if (user->mesh->P > 0) {
         ierr = ISGetIndices(user->mesh->ns,&ans); CHKERRQ(ierr);
         for (p = 0; p < user->mesh->P; p++) {
-            na = ans[2*p+0];  // nodes at end of segment
-            nb = ans[2*p+1];
-            dx = aloc[na].x-aloc[nb].x;
-            dy = aloc[na].y-aloc[nb].y;
+            na = ans[2*p+0];  nb = ans[2*p+1];  // nodes at end of segment
+            dx = aloc[na].x-aloc[nb].x;  dy = aloc[na].y-aloc[nb].y;
             ls = sqrt(dx * dx + dy * dy);  // length of segment
             // midpoint rule; psi_na=psi_nb=0.5 at midpoint of segment
             xmid = 0.5*(aloc[na].x+aloc[nb].x);
@@ -327,7 +324,7 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
     ierr = VecGetArrayRead(u,&au); CHKERRQ(ierr);
     ierr = ISGetIndices(user->mesh->e,&ae); CHKERRQ(ierr);
     for (k = 0; k < user->mesh->K; k++) {
-        // element and hat function gradients
+        // element geometry and hat function gradients
         en = ae + 3*k;  // en[0], en[1], en[2] are nodes of element k
         dx1 = aloc[en[1]].x - aloc[en[0]].x;
         dx2 = aloc[en[2]].x - aloc[en[0]].x;
@@ -360,8 +357,7 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
         // residual contribution for each node of element
         for (l = 0; l < 3; l++) {
             if (abf[en[l]] == 2) { // set Dirichlet residual
-                xx = aloc[en[l]].x;
-                yy = aloc[en[l]].y;
+                xx = aloc[en[l]].x;   yy = aloc[en[l]].y;
                 aF[en[l]] = au[en[l]] - user->gD_fcn(xx,yy);
             } else {
                 sum = 0.0;
