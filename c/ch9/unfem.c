@@ -293,7 +293,7 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
                     uquad[4], aquad[4], fquad[4],
                     dx, dy, dx1, dx2, dy1, dy2, detJ,
                     ls, xmid, ymid, sint, xx, yy, psi, ip, sum;
-    int             n, p, na, nb, k, l, r;
+    int             p, na, nb, k, l, r;
 
     PetscLogStagePush(user->resstage);  //STRIP
     ierr = VecGetArrayRead(u,&au); CHKERRQ(ierr);
@@ -301,14 +301,8 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
     ierr = VecGetArray(F,&aF); CHKERRQ(ierr);
     ierr = UMGetNodeCoordArrayRead(user->mesh,&aloc); CHKERRQ(ierr);
 
-    // Dirichlet node residuals
-    ierr = ISGetIndices(user->mesh->bf,&abf); CHKERRQ(ierr);
-    for (n = 0; n < user->mesh->N; n++) {
-        if (abf[n] == 2)  // node is Dirichlet
-            aF[n] = au[n] - user->gD_fcn(aloc[n].x,aloc[n].y);
-    }
-
     // Neumann boundary segment contributions (if any)
+    ierr = ISGetIndices(user->mesh->bf,&abf); CHKERRQ(ierr);
     if (user->mesh->P > 0) {
         ierr = ISGetIndices(user->mesh->ns,&ans); CHKERRQ(ierr);
         for (p = 0; p < user->mesh->P; p++) {
@@ -330,7 +324,7 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
         ierr = ISRestoreIndices(user->mesh->ns,&ans); CHKERRQ(ierr);
     }
 
-    // element contributions
+    // element contributions and Dirichlet node residuals
     ierr = ISGetIndices(user->mesh->e,&ae); CHKERRQ(ierr);
     for (k = 0; k < user->mesh->K; k++) {
         en = ae + 3*k;  // en[0], en[1], en[2] are nodes of element k
@@ -374,6 +368,8 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
                     sum += q.w[r] * ( aquad[r] * ip - fquad[r] * psi );
                 }
                 aF[en[l]] += fabs(detJ) * sum;
+            } else { // set Dirichlet residual
+                aF[en[l]] = au[en[l]] - user->gD_fcn(aloc[en[l]].x,aloc[en[l]].y);
             }
         }
     }
