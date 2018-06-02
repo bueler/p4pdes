@@ -7,6 +7,8 @@ import numpy as np
 import argparse
 
 parser = argparse.ArgumentParser(description='Generate a .geo file for a Koch snowflake.')
+parser.add_argument('--neumann', action='store_true', default=False,
+                    help='mark entire boundary as Neumann (useful for plotting polygon only; see petsc2tikz.py)')
 parser.add_argument('-l', type=int, metavar='LEVEL', default=2,
                     help='recursion level for snowflake; default=2')
 parser.add_argument('-o', default='koch.geo', metavar='FILE',
@@ -68,11 +70,17 @@ for j in range(N-1):
     f.write('%d,' % (N+1+j))
 f.write('%d};\n' % (2*N))
 f.write('Plane Surface(%d) = {%d};\n' % (2*N+2,2*N+1))
-f.write('Physical Line("dirichlet") = {')
+if args.neumann:
+    f.write('Physical Line("neumann") = {')
+else:
+    f.write('Physical Line("dirichlet") = {')
 for j in range(N-1):
     f.write('%d,' % (N+1+j))
 f.write('%d};\n' % (2*N))
-f.write('Physical Line("neumann") = {};\n')
+if args.neumann:
+    f.write('Physical Line("dirichlet") = {};\n')
+else:
+    f.write('Physical Line("neumann") = {};\n')
 f.write('Physical Surface("interior") = {%d};\n' % (2*N+2))
 f.close()
 
