@@ -369,7 +369,9 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
                 }
                 aF[en[l]] += fabs(detJ) * sum;
             } else { // set Dirichlet residual
-                aF[en[l]] = au[en[l]] - user->gD_fcn(aloc[en[l]].x,aloc[en[l]].y);
+                xx = aloc[en[l]].x;
+                yy = aloc[en[l]].y;
+                aF[en[l]] = au[en[l]] - user->gD_fcn(xx,yy);
             }
         }
     }

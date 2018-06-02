@@ -19,8 +19,8 @@ typedef struct {
              bf,    // flag for boundary nodes; length N
                     //     if bf[i] > 0  then node i is on boundary
                     //     if bf[i] == 2 then node i is Dirichlet
-             ns;    // Neumann boundary segment pairs; length 2P; may be null
-                    //     values s[2*p+0],s[2*p+1]
+             ns;    // Neumann boundary segment pairs; length 2P;
+                    //     may be a null ptr; values s[2*p+0],s[2*p+1]
                     //     are indices into node-based Vecs
 } UM;
 //ENDSTRUCT
