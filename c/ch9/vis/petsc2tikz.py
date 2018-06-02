@@ -8,6 +8,8 @@ import sys, argparse
 commandline = " ".join(sys.argv[:])
 
 parser = argparse.ArgumentParser(description='Convert .vec,.is input files into .tikz for inclusion in LaTeX documents.')
+parser.add_argument('--neumannonly', action='store_true', default=False,
+                    help='only generate the Neumann boundary segments (no interior edges or nodes)')
 parser.add_argument('--dirichletsize', type=float, metavar='X', default=2.5,
                     help='size (pt) for dots showing Dirichlet boundary nodes')
 parser.add_argument('--eleoffset', type=float, metavar='X', default=0.0,
@@ -104,32 +106,33 @@ tikz.write('%% created by script tri2tikz.py command line:%s\n' % '')
 tikz.write('%%   %s\n' % commandline)
 tikz.write('\\begin{tikzpicture}[scale=%f]\n' % args.scale)
 
-# go through elements: label centroids and draw edges
-for ke in range(K):
-    if args.labelelements:
-        xc = np.average(xy[e[ke,:],0])
-        yc = np.average(xy[e[ke,:],1])
-        tikz.write( '  \\draw (%f,%f) node {$%d$};\n' \
-                   % (xc+0.7*args.eleoffset,yc-args.eleoffset,ke))
-    j = e[ke,0]
-    tikz.write('  \\draw[gray,very thin] (%f,%f) ' % (xy[j,0],xy[j,1]))
-    for k in [1, 2, 0]:  # cycle through local node index
-        j = e[ke,k]
-        tikz.write('-- (%f,%f) ' % (xy[j,0],xy[j,1]))
-    tikz.write(';\n')
+if not args.neumannonly:
+    # go through elements: draw each triangle
+    for ke in range(K):
+        j = e[ke,0]
+        tikz.write('  \\draw[gray,very thin] (%f,%f) ' % (xy[j,0],xy[j,1]))
+        for k in [1, 2, 0]:  # cycle through local node index
+            j = e[ke,k]
+            tikz.write('-- (%f,%f) ' % (xy[j,0],xy[j,1]))
+        tikz.write(';\n')
+        if args.labelelements:  # label centroid if desired
+            xc = np.average(xy[e[ke,:],0])
+            yc = np.average(xy[e[ke,:],1])
+            tikz.write( '  \\draw (%f,%f) node {$%d$};\n' \
+                       % (xc+0.7*args.eleoffset,yc-args.eleoffset,ke))
+    # plot nodes; looks better if *after* edges
+    for j in range(N):
+        if bf[j] == 2:
+            mysize = args.dirichletsize
+        else:
+            mysize = args.nodesize
+        if mysize > 0:
+            tikz.write('  \\filldraw (%f,%f) circle (%fpt);\n' % (xy[j,0],xy[j,1],mysize))
+        if args.labelnodes:  # label node if desired
+            tikz.write( '  \\draw (%f,%f) node {$%d$};\n' \
+                               % (xy[j,0]+0.7*args.nodeoffset,xy[j,1]-args.nodeoffset,j))
 
-# plot all nodes, with labels if wanted; looks better if *after* edges
-for j in range(N):
-    if bf[j] == 2:
-        mysize = args.dirichletsize
-    else:
-        mysize = args.nodesize
-    tikz.write('  \\filldraw (%f,%f) circle (%fpt);\n' % (xy[j,0],xy[j,1],mysize))
-    if args.labelnodes:
-        tikz.write( '  \\draw (%f,%f) node {$%d$};\n' \
-                   % (xy[j,0]+0.7*args.nodeoffset,xy[j,1]-args.nodeoffset,j))
-
-# go through Neumann boundary segments and plot with weight from type
+# go through Neumann boundary segments and plot with width
 for js in range(P):
     jfrom = ns[js,0]
     jto = ns[js,1]
