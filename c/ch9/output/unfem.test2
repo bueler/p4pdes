@@ -24,4 +24,4 @@
       0 :   3   5
       1 :   5   6
       2 :   6   0
-case 1 result for N=7 nodes with h = 1.414e+00:  |u-u_ex|_inf = 1.30e-01
+case 1 result for N=7 nodes with h = 1.414e+00 :  |u-u_ex|_inf = 1.30e-01
