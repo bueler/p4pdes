@@ -388,8 +388,7 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
     const int       *ae, *abf, *en;
     const Node      *aloc;
     const double    *au;
-    double          unode[3], gradpsi[3][2],
-                    uquad[4], aquad[4], v[9],
+    double          unode[3], gradpsi[3][2], uquad[4], aquad[4], v[9],
                     dx1, dx2, dy1, dy2, detJ, xx, yy, sum;
     int             n, k, l, m, r, cr, cv, row[3];
 
@@ -429,22 +428,18 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
             yy = aloc[en[0]].y + dy1 * q.xi[r] + dy2 * q.eta[r];
             aquad[r] = user->a_fcn(uquad[r],xx,yy);
         }
-        // generate 3x3 element stiffness matrix
-        cr = 0; // count rows
-        cv = 0; // count values
+        // generate 3x3 element stiffness matrix (3x3 is max size but may be smaller)
+        cr = 0;  cv = 0;  // cr = count rows; cv = value counter for all entries
         for (l = 0; l < 3; l++) {
             if (abf[en[l]] != 2) {
-                row[cr] = en[l];
-                cr++;
+                row[cr++] = en[l];
                 for (m = 0; m < 3; m++) {
                     if (abf[en[m]] != 2) {
                         sum = 0.0;
                         for (r = 0; r < q.n; r++) {
-                            sum += q.w[r] * aquad[r]
-                                       * InnerProd(gradpsi[l],gradpsi[m]);
+                            sum += q.w[r] * aquad[r] * InnerProd(gradpsi[l],gradpsi[m]);
                         }
-                        v[cv] = fabs(detJ) * sum;
-                        cv++;
+                        v[cv++] = fabs(detJ) * sum;
                     }
                 }
             }
@@ -469,9 +464,10 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
 }
 
 
-/* In this procedure, note that nnz[n] is the number of nonzeros in row n.
-It is one for Dirichlet rows.  It is one more than the vertex degree for
-interior points, and two more for Neumann nodes. */
+/* Note that nnz[n] is the number of nonzeros in row n.  It equals one for
+Dirichlet rows, one more than the number of incident triangles for an
+interior point, and two more than the number of incident triangles for
+Neumann boundary nodes. */
 //STARTPREALLOC
 PetscErrorCode Preallocation(Mat J, unfemCtx *user) {
     PetscErrorCode ierr;
