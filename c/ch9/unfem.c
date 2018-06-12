@@ -58,9 +58,11 @@ int main(int argc,char **argv) {
     PetscErrorCode ierr;
     PetscBool   viewmesh = PETSC_FALSE,
                 viewsoln = PETSC_FALSE,
-                noprealloc = PETSC_FALSE;
+                noprealloc = PETSC_FALSE,
+                savepintbinary = PETSC_FALSE,
+                savepintmatlab = PETSC_FALSE;
     char        root[256] = "", nodesname[256], issname[256], solnname[256],
-                savepintname[256] = "";
+                pintname[256] = "";
     int         savepintlevel = -1, levels;
     UM          mesh;
     unfemCtx    user;
@@ -85,9 +87,12 @@ int main(int argc,char **argv) {
     ierr = PetscOptionsInt("-case",
            "exact solution cases: 0=linear, 1=nonlinear, 2=nonhomoNeumann, 3=chapter3, 4=koch",
            "unfem.c",user.solncase,&(user.solncase),NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsString("-gamg_save_pint",
-           "filename under which to save interpolation operator in ascii Matlab format",
-           "unfem.c",savepintname,savepintname,sizeof(savepintname),NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsString("-gamg_save_pint_binary",
+           "filename under which to save interpolation operator (Mat) in PETSc binary format",
+           "unfem.c",pintname,pintname,sizeof(pintname),&savepintbinary); CHKERRQ(ierr);
+    ierr = PetscOptionsString("-gamg_save_pint_matlab",
+           "filename under which to save interpolation operator (Mat) in ascii Matlab format",
+           "unfem.c",pintname,pintname,sizeof(pintname),&savepintmatlab); CHKERRQ(ierr);
     ierr = PetscOptionsInt("-gamg_save_pint_level",
            "saved interpolation operator is between L-1 and L where this option sets L; defaults to finest levels",
            "unfem.c",savepintlevel,&savepintlevel,NULL); CHKERRQ(ierr);
@@ -214,7 +219,7 @@ int main(int argc,char **argv) {
     }
 
     // save Pint from GAMG if requested
-    if (strlen(savepintname) > 0) {
+    if (strlen(pintname) > 0) {
         Mat         pint;
         PetscViewer viewer;
         if (strcmp(pctype,"gamg") != 0) {
@@ -223,15 +228,26 @@ int main(int argc,char **argv) {
         if (savepintlevel >= levels) {
             SETERRQ(PETSC_COMM_WORLD,3,"invalid level given in -un_gamg_save_pint_level");
         }
+        if (savepintbinary && savepintmatlab) {
+            SETERRQ(PETSC_COMM_WORLD,4,"only one of -un_gamg_save_pint_binary OR -un_gamg_save_pint_matlab is allowed");
+        }
         if (savepintlevel <= 0) {
             savepintlevel = levels - 1;
         }
-        ierr = PetscPrintf(PETSC_COMM_WORLD,
-               "  saving interpolation operator %d->%d to %s ...\n",
-               savepintlevel-1,savepintlevel,savepintname); CHKERRQ(ierr);
         ierr = PCMGGetInterpolation(pc,savepintlevel,&pint); CHKERRQ(ierr);
-        ierr = PetscViewerASCIIOpen(PETSC_COMM_WORLD,savepintname,&viewer); CHKERRQ(ierr);
-        ierr = PetscViewerPushFormat(viewer,PETSC_VIEWER_ASCII_MATLAB); CHKERRQ(ierr);
+        if (savepintbinary) {
+            ierr = PetscPrintf(PETSC_COMM_WORLD,
+               "  saving interpolation operator on levels %d->%d in binary format to %s ...\n",
+               savepintlevel-1,savepintlevel,pintname); CHKERRQ(ierr);
+            ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,pintname,FILE_MODE_WRITE,&viewer); CHKERRQ(ierr);
+            ierr = PetscViewerPushFormat(viewer,PETSC_VIEWER_ASCII_MATLAB); CHKERRQ(ierr);
+        } else {
+            ierr = PetscPrintf(PETSC_COMM_WORLD,
+               "  saving interpolation operator on levels %d->%d in ascii format to %s ...\n",
+               savepintlevel-1,savepintlevel,pintname); CHKERRQ(ierr);
+            ierr = PetscViewerASCIIOpen(PETSC_COMM_WORLD,pintname,&viewer); CHKERRQ(ierr);
+            ierr = PetscViewerPushFormat(viewer,PETSC_VIEWER_ASCII_MATLAB); CHKERRQ(ierr);
+        }
         ierr = MatView(pint,viewer); CHKERRQ(ierr);
     }
 
