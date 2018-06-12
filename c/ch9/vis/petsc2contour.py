@@ -8,8 +8,8 @@ import numpy as np
 
 parser = argparse.ArgumentParser(description=
 '''Contour plot of a solution on a triangulation.  Reads PETSc binary
-files .vec,.is,.soln.  (.soln file is generated from unfem option
--un_view_solution)''')
+files .vec,.is,.soln.  (Note .soln file is generated from unfem option
+-un_view_solution.)  Requires ../PetscBinaryIO.py.''')
 parser.add_argument('-i', metavar='ROOT',
                     help='root of input file name for files .vec,.is,.soln')
 parser.add_argument('-o', metavar='PDFFILE', default='',

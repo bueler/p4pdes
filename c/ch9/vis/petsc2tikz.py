@@ -7,7 +7,7 @@ import sys, argparse
 
 commandline = " ".join(sys.argv[:])
 
-parser = argparse.ArgumentParser(description='Convert .vec,.is input files into .tikz for inclusion in LaTeX documents.')
+parser = argparse.ArgumentParser(description='Convert .vec,.is unfem input files into .tikz for inclusion in LaTeX documents.  Requires ../PetscBinaryIO.py.')
 parser.add_argument('--neumannonly', action='store_true', default=False,
                     help='only generate the Neumann boundary segments (no interior edges or nodes)')
 parser.add_argument('--dirichletsize', type=float, metavar='X', default=2.5,
