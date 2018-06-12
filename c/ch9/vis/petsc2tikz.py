@@ -15,12 +15,12 @@ def readcoordinates(io,vech):
         xy = io.readVec(vech)
         N = len(xy)
         if N % 2 != 0:
-            print('ERROR: nodes in .vec file invalid ... stopping')
+            print('ERROR: nodes in .vec file not of even length ... stopping')
             sys.exit()
         N /= 2
         xy = np.reshape(xy,(N,2))
     else:
-        print('ERROR: no valid .vec file ... stopping')
+        print('ERROR: not a valid .vec file for coordinates ... stopping')
         sys.exit()
     return N, xy
 
@@ -30,7 +30,7 @@ def readindices(io,ish):
         e = io.readIS(ish)
         K = len(e)
         if K % 3 != 0:
-            print('ERROR: elements (triangles) in .is file invalid ... stopping')
+            print('ERROR: elements (triangles) in .is file not multiple of three ... stopping')
             sys.exit()
         K /= 3
         if (e.max() >= N) or (e.min() < 0):
@@ -41,7 +41,7 @@ def readindices(io,ish):
         bf = io.readIS(ish)
         Nbf = len(bf)
         if Nbf != N:
-            print('ERROR: number of boundary flags is wrong in .is file invalid ... stopping')
+            print('ERROR: number of boundary flags is wrong in .is file ... stopping')
             sys.exit()
         if (bf.max() > 2) or (bf.min() < 0):
             print('ERROR: boundary flags contains invalid values ... stopping')
@@ -51,7 +51,7 @@ def readindices(io,ish):
         if ns[0] >= 0:
             P = len(ns)
             if P % 2 != 0:
-                print('ERROR: neumann segments in .is file invalid ... stopping')
+                print('ERROR: neumann segments in .is file not even length ... stopping')
                 sys.exit()
             P /= 2
             if (ns.max() >= N) or (ns.min() < 0):
@@ -62,11 +62,11 @@ def readindices(io,ish):
             P = 0
             ns = []
     else:
-        print('ERROR: no valid .is file ... stopping')
+        print('ERROR: not a valid .is file for elements,boundary-flags,neumann-segments ... stopping')
         sys.exit()
     return K, P, e, bf, ns
 
-def writetikzelements(tikz,K,e,xy,eleoffset=FIXME):
+def writetikzelements(tikz,K,e,xy,eleoffset=0.0,labelelements=False):
     # go through elements and draw each triangle
     for ke in range(K):
         j = e[ke,0]
@@ -75,31 +75,32 @@ def writetikzelements(tikz,K,e,xy,eleoffset=FIXME):
             j = e[ke,k]
             tikz.write('-- (%f,%f) ' % (xy[j,0],xy[j,1]))
         tikz.write(';\n')
-        if args.labelelements:  # label centroid if desired
+        if labelelements:  # label centroid if desired
             xc = np.average(xy[e[ke,:],0])
             yc = np.average(xy[e[ke,:],1])
             tikz.write( '  \\draw (%f,%f) node {$%d$};\n' \
-                       % (xc+0.7*args.eleoffset,yc-args.eleoffset,ke))
+                       % (xc+0.7*eleoffset,yc-eleoffset,ke))
 
-def writetikznodes(tikz,N,xy):
+def writetikznodes(tikz,N,xy,dirichletsize=2.5,nodesize=1.25,labelnodes=False,nodeoffset=0.0):
     # plot nodes; looks better if *after* elements and segments
     for j in range(N):
         if bf[j] == 2:
-            mysize = args.dirichletsize
+            mysize = dirichletsize
         else:
-            mysize = args.nodesize
+            mysize = nodesize
         if mysize > 0:
-            tikz.write('  \\filldraw (%f,%f) circle (%fpt);\n' % (xy[j,0],xy[j,1],mysize))
-        if args.labelnodes:  # label node if desired
+            tikz.write('  \\filldraw (%f,%f) circle (%fpt);\n' \
+                       % (xy[j,0],xy[j,1],mysize))
+        if labelnodes:  # label node if desired
             tikz.write( '  \\draw (%f,%f) node {$%d$};\n' \
-                               % (xy[j,0]+0.7*args.nodeoffset,xy[j,1]-args.nodeoffset,j))
+                       % (xy[j,0]+0.7*nodeoffset,xy[j,1]-nodeoffset,j))
 
-def writetikzneumannsegments(tikz,P,ns,xy):
+def writetikzneumannsegments(tikz,P,ns,xy,width=2.5):
     # go through Neumann boundary segments and plot with width
     for js in range(P):
         jfrom = ns[js,0]
         jto = ns[js,1]
-        mywidth = '%fpt' % args.neumannwidth
+        mywidth = '%fpt' % width
         tikz.write('  \\draw[line width=%s] (%f,%f) -- (%f,%f);\n' \
                    % (mywidth,xy[jfrom,0],xy[jfrom,1],xy[jto,0],xy[jto,1]))
 
@@ -134,25 +135,28 @@ if __name__ == "__main__":
     root = args.inroot
 
     io = PetscBinaryIO.PetscBinaryIO()
-    vecfile = open(root+'.vec')
-    isfile  = open(root+'.is')
-
     print('  reading node locations from %s ...' % (root+'.vec'))
+    vecfile = open(root+'.vec')
     N, xy = readcoordinates(io,vecfile)
     print('  reading topology (element indices, boundary flags, Neumann segments) from %s ...' % (root+'.is'))
+    isfile  = open(root+'.is')
     K, P, e, bf, ns = readindices(io,isfile)
-
-
     print('  found: N=%d, K=%d, P=%d' % (N,K,P))
 
     print('  writing to %s ...' % args.o)
     tikz = open(args.o, 'w')
-    tikz.write('%% created by script tri2tikz.py command line:%s\n' % '')
+    tikz.write('%% created by command line:%s\n' % '')
     tikz.write('%%   %s\n' % commandline)
     tikz.write('\\begin{tikzpicture}[scale=%f]\n' % args.scale)
 
     if not args.neumannonly:
-        FIXME
+        writetikzelements(tikz,K,e,xy, \
+            eleoffset=args.eleoffset,labelelements=args.labelelements)
+        writetikznodes(tikz,N,xy, \
+            dirichletsize=args.dirichletsize,nodesize=args.nodesize, \
+            labelnodes=args.labelnodes,nodeoffset=args.nodeoffset)
+
+    writetikzneumannsegments(tikz,P,ns,xy,width=args.neumannwidth)
 
     tikz.write('\\end{tikzpicture}\n')
     tikz.close()
