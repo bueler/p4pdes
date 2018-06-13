@@ -81,7 +81,7 @@ def writeelements(tikz,K,e,xy,eleoffset=0.0,labelelements=False):
             tikz.write( '  \\draw (%f,%f) node {$%d$};\n' \
                        % (xc+0.7*eleoffset,yc-eleoffset,ke))
 
-def writenodes(tikz,N,xy,dirichletsize=2.5,nodesize=1.25,labelnodes=False,nodeoffset=0.0):
+def writenodes(tikz,N,xy,bf,dirichletsize=2.5,nodesize=1.25,labelnodes=False,nodeoffset=0.0):
     # plot nodes; looks better if *after* elements and segments
     for j in range(N):
         if bf[j] == 2:
@@ -155,7 +155,7 @@ documents.  Requires ../PetscBinaryIO.py.
     if not args.neumannonly:
         writeelements(tikz,K,e,xy, \
             eleoffset=args.eleoffset,labelelements=args.labelelements)
-        writenodes(tikz,N,xy, \
+        writenodes(tikz,N,xy,bf, \
             dirichletsize=args.dirichletsize,nodesize=args.nodesize, \
             labelnodes=args.labelnodes,nodeoffset=args.nodeoffset)
     writeneumannsegments(tikz,P,ns,xy,width=args.neumannwidth)
