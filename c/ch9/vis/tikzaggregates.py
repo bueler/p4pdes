@@ -35,7 +35,7 @@ parser.add_argument('-mat', metavar='MATNAME', default='',
                     help='input file name for file containing one Mat in PETSc binary format')
 parser.add_argument('-o', metavar='FILENAME', default='',
                     help='output file name (.tikz or .tex)')
-parser.add_argument('-scale', type=float, metavar='X', default=1.0,
+parser.add_argument('-scale', type=float, metavar='X', default=1.4,
                     help='amount by which to scale TikZ figure')
 # positional filename:
 parser.add_argument('meshroot', metavar='MESHROOT', default='',
@@ -72,12 +72,14 @@ print('  writing to %s ...' % args.o)
 tikz = open(args.o, 'w')
 tikz.write('%% created by command line:%s\n' % '')
 tikz.write('%%   %s\n' % commandline)
-tikz.write('\\begin{tikzpicture}[scale=%f]\n' % args.scale)
-writeelements(tikz,K,e,xy)
-#FIXME
-#for j in range(JJ):
-#    writeselectnodes(tikz,N,xy,np.array(Pint[:,j]))
-writeselectnodes(tikz,N,xy,np.array(Pint[:,0]))
-tikz.write('\\end{tikzpicture}\n')
+for j in range(JJ):
+    tikz.write('\\begin{tikzpicture}[scale=%f]\n' % args.scale)
+    writeelements(tikz,K,e,xy)
+    writeselectnodes(tikz,N,xy,np.array(Pint[:,j]))
+    if (j % 2) == 0:
+        tikz.write('\\end{tikzpicture} \\quad ')
+    else:
+        tikz.write('\\end{tikzpicture}\n\n\\bigskip\n\n')
+tikz.write('\n')
 tikz.close()
 
