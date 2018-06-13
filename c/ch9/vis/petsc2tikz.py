@@ -24,7 +24,7 @@ def readcoordinates(io,vech):
         sys.exit()
     return N, xy
 
-def readindices(io,ish):
+def readindices(io,ish,N):
     objecttype = io.readObjectType(ish)
     if objecttype == 'IS':
         e = io.readIS(ish)
@@ -66,7 +66,7 @@ def readindices(io,ish):
         sys.exit()
     return K, P, e, bf, ns
 
-def writetikzelements(tikz,K,e,xy,eleoffset=0.0,labelelements=False):
+def writeelements(tikz,K,e,xy,eleoffset=0.0,labelelements=False):
     # go through elements and draw each triangle
     for ke in range(K):
         j = e[ke,0]
@@ -81,7 +81,7 @@ def writetikzelements(tikz,K,e,xy,eleoffset=0.0,labelelements=False):
             tikz.write( '  \\draw (%f,%f) node {$%d$};\n' \
                        % (xc+0.7*eleoffset,yc-eleoffset,ke))
 
-def writetikznodes(tikz,N,xy,dirichletsize=2.5,nodesize=1.25,labelnodes=False,nodeoffset=0.0):
+def writenodes(tikz,N,xy,dirichletsize=2.5,nodesize=1.25,labelnodes=False,nodeoffset=0.0):
     # plot nodes; looks better if *after* elements and segments
     for j in range(N):
         if bf[j] == 2:
@@ -95,7 +95,7 @@ def writetikznodes(tikz,N,xy,dirichletsize=2.5,nodesize=1.25,labelnodes=False,no
             tikz.write( '  \\draw (%f,%f) node {$%d$};\n' \
                        % (xy[j,0]+0.7*nodeoffset,xy[j,1]-nodeoffset,j))
 
-def writetikzneumannsegments(tikz,P,ns,xy,width=2.5):
+def writeneumannsegments(tikz,P,ns,xy,width=2.5):
     # go through Neumann boundary segments and plot with width
     for js in range(P):
         jfrom = ns[js,0]
@@ -107,7 +107,10 @@ def writetikzneumannsegments(tikz,P,ns,xy,width=2.5):
 
 if __name__ == "__main__":
     commandline = " ".join(sys.argv[:])
-    parser = argparse.ArgumentParser(description='Convert .vec,.is unfem input files into .tikz for inclusion in LaTeX documents.  Requires ../PetscBinaryIO.py.')
+    parser = argparse.ArgumentParser(description=
+'''Convert .vec,.is unfem input files into .tikz for inclusion in LaTeX
+documents.  Requires ../PetscBinaryIO.py.
+''')
     parser.add_argument('--neumannonly', action='store_true', default=False,
                         help='only generate the Neumann boundary segments (no interior edges or nodes)')
     parser.add_argument('--dirichletsize', type=float, metavar='X', default=2.5,
@@ -135,29 +138,27 @@ if __name__ == "__main__":
     root = args.inroot
 
     io = PetscBinaryIO.PetscBinaryIO()
+
     print('  reading node locations from %s ...' % (root+'.vec'))
     vecfile = open(root+'.vec')
     N, xy = readcoordinates(io,vecfile)
-    print('  reading topology (element indices, boundary flags, Neumann segments) from %s ...' % (root+'.is'))
+    print('  reading topology (element indices, boundary flags, Neumann segments)\n    from %s ...' % (root+'.is'))
     isfile  = open(root+'.is')
-    K, P, e, bf, ns = readindices(io,isfile)
-    print('  found: N=%d, K=%d, P=%d' % (N,K,P))
+    K, P, e, bf, ns = readindices(io,isfile,N)
+    print('    found: N=%d, K=%d, P=%d' % (N,K,P))
 
     print('  writing to %s ...' % args.o)
     tikz = open(args.o, 'w')
     tikz.write('%% created by command line:%s\n' % '')
     tikz.write('%%   %s\n' % commandline)
     tikz.write('\\begin{tikzpicture}[scale=%f]\n' % args.scale)
-
     if not args.neumannonly:
-        writetikzelements(tikz,K,e,xy, \
+        writeelements(tikz,K,e,xy, \
             eleoffset=args.eleoffset,labelelements=args.labelelements)
-        writetikznodes(tikz,N,xy, \
+        writenodes(tikz,N,xy, \
             dirichletsize=args.dirichletsize,nodesize=args.nodesize, \
             labelnodes=args.labelnodes,nodeoffset=args.nodeoffset)
-
-    writetikzneumannsegments(tikz,P,ns,xy,width=args.neumannwidth)
-
+    writeneumannsegments(tikz,P,ns,xy,width=args.neumannwidth)
     tikz.write('\\end{tikzpicture}\n')
     tikz.close()
 
