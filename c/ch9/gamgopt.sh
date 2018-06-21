@@ -6,6 +6,7 @@
 # main example uses PETSC_ARCH with --with-debugging=0:
 #   ./refinetraps.sh meshes/trap LEV
 #   ./gamgopt.sh meshes/trap 0 LEV &> gamgopt.txt
+
 # LEV=12 with N=10492929 nodes and 100 sec run achievable on ed-galago
 
 # results & figure-generation:  see p4pdes-book/figs/gamgopt.txt|py
@@ -17,7 +18,7 @@ MAXLEV=$3
 for (( Z=1; Z<=$MAXLEV; Z++ )); do
     echo "running level ${Z}"
     IN=${NAME}$Z
-    cmd="./unfem -un_case $CASE -snes_type ksponly -ksp_rtol 1.0e-9 -ksp_type cg -pc_type gamg -ksp_converged_reason -un_mesh $IN"
+    cmd="./unfem -un_case $CASE -snes_type ksponly -pc_type gamg -ksp_converged_reason -un_mesh $IN"
     rm -f foo.txt
     echo $cmd
     $cmd -log_view &> foo.txt
