@@ -1,6 +1,6 @@
 static char help[] =
 "Solves a 3D linear advection-diffusion problem using FD discretization,\n"
-"structured-grid (DMDA), and SNES.  Option prefix -ad3_.  The equation is\n"
+"structured-grid (DMDA).  Option prefix -ad3_.  The equation is\n"
 "    - eps Laplacian u + div (a(x,y,z) u) = g(x,y,z),\n"
 "where the wind a(x,y,z) and source g(x,y,z) are given smooth functions.\n"
 "The domain is  [-1,1]^3 with Dirichlet and periodic boundary conditions\n"
@@ -19,7 +19,7 @@ static char help[] =
 */
 
 /* shows scaling is on the dot so that GMG has constant its, and converges, for NOWIND:
-for LEV in 1 2 3 4; do ./ad3 -ad3_problem nowind -ad3_limiter none -da_refine $LEV -ksp_converged_reason -snes_type ksponly -ksp_type cg -pc_type mg; done
+for LEV in 1 2 3 4; do ./ad3 -ad3_problem nowind -ad3_limiter none -da_refine $LEV -ksp_converged_reason -ksp_type cg -pc_type mg; done
 compare in ch6/:
 for LEV in 1 2 3 4; do ./fish -fsh_dim 3 -da_grid_x 6 -da_grid_y 7 -da_grid_z 6 -da_refine $LEV -ksp_converged_reason -snes_type ksponly -ksp_type cg -pc_type mg; done
 */
@@ -27,7 +27,7 @@ for LEV in 1 2 3 4; do ./fish -fsh_dim 3 -da_grid_x 6 -da_grid_y 7 -da_grid_z 6 
 /* acting like it is correct for LAYER with easy eps=1.0 and using GMG with ILU smoothing:
 for LIM in none centered vanleer; do
     for LEV in 1 2 3 4; do
-        timer ./ad3 -ad3_limiter $LIM -snes_converged_reason -ksp_converged_reason -da_refine $LEV -ksp_rtol 1.0e-9 -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu
+        timer ./ad3 -ad3_limiter $LIM -ksp_converged_reason -da_refine $LEV -ksp_rtol 1.0e-9 -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu
     done
 done
 (going to LEV=5 generates seg fault from attempt to get too much memory?)
@@ -277,6 +277,7 @@ int main(int argc,char **argv) {
     ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
             (DMDASNESFunction)FormFunctionLocal,&user);CHKERRQ(ierr);
     ierr = SNESSetApplicationContext(snes,&user); CHKERRQ(ierr);
+    ierr = SNESSetType(snes,SNESKSPONLY); CHKERRQ(ierr);
     ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
 
     ierr = DMGetGlobalVector(da,&u_initial); CHKERRQ(ierr);
