@@ -3,17 +3,15 @@ static char help[] =
 "structured-grid (DMDA), and SNES.  Option prefix -ad3_.  The equation is\n"
 "    - eps Laplacian u + div (a(x,y,z) u) = g(x,y,z),\n"
 "where the wind a(x,y,z) and source g(x,y,z) are given smooth functions.\n"
-"The diffusivity eps > 0 is set by -ad3_eps.  The domain is  [-1,1]^3\n"
-"with Dirichlet and periodic boundary conditions\n"
+"The domain is  [-1,1]^3 with Dirichlet and periodic boundary conditions\n"
 "    u(1,y,z) = b(y,z)\n"
 "    u(-1,y,z) = u(x,y,-1) = u(x,y,1) = 0\n"
 "    u periodic in y\n"
 "where b(y,z) is a given smooth function.  Problems include: LAYER = exact\n"
 "solution based on a boundary layer of width eps; NOWIND = exact\n"
-"diffusion-only solution; GLAZE = double-glazing problem. (Options:\n"
-"-ad3_problem layer|nowind|glaze).  Advection can be discretized by\n"
-"first-order upwinding, centered, or van Leer limiter schemes\n"
-"(-ad3_limiter none|centered|vanleer).\n\n";
+"diffusion-only solution; GLAZE = double-glazing problem.  Advection\n"
+"can be discretized by first-order upwinding, centered, or van Leer\n"
+"limiter schemes.\n\n";
 
 /* TODO:
 1. study script for layer convergence & GMG
