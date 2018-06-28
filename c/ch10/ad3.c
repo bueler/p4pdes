@@ -1,15 +1,15 @@
 static char help[] =
-"Solves a 3D linear advection-diffusion problem using FD discretization,\n"
+"Solves a 3D linear advection-diffusion problem using FD discretization and\n"
 "structured-grid (DMDA).  Option prefix -ad3_.  The equation is\n"
 "    - eps Laplacian u + div (a(x,y,z) u) = g(x,y,z),\n"
 "where the wind a(x,y,z) and source g(x,y,z) are given smooth functions.\n"
-"The domain is  [-1,1]^3 with Dirichlet and periodic boundary conditions\n"
+"The domain is [-1,1]^3 with Dirichlet and periodic boundary conditions:\n"
 "    u(1,y,z) = b(y,z)\n"
 "    u(-1,y,z) = u(x,y,-1) = u(x,y,1) = 0\n"
 "    u periodic in y\n"
-"where b(y,z) is a given smooth function.  Problems include: LAYER = exact\n"
-"solution based on a boundary layer of width eps; NOWIND = exact\n"
-"diffusion-only solution; GLAZE = double-glazing problem.  Advection\n"
+"where b(y,z) is a given smooth function.  Problems include: LAYER = (exact\n"
+"solution based on a boundary layer of width eps), NOWIND = (exact\n"
+"diffusion-only solution), and GLAZE = (double-glazing problem).  Advection\n"
 "can be discretized by first-order upwinding, centered, or van Leer\n"
 "limiter schemes.\n\n";
 
@@ -38,8 +38,8 @@ fully-resolving the boundary layer in LAYER:
 for LEV in 1 2 3 4 5 6 7; do
     timer ./ad3 -ad3_eps 0.01 -ad3_limiter none -snes_type ksponly -ksp_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -da_grid_y 21 -da_refine_y 1 -da_refine $LEV
 done
-(* replace with "-da_grid_y 20" for centered, vanleer
- * could be improved by having fully y-independent exact solution)
+  * replace with "-da_grid_y 20" for centered, vanleer
+  * could be improved by having fully y-independent exact solution
 */
 
 /* OLD NOTES CONTAINING INTERESTING/RELEVANT IDEAS
@@ -277,7 +277,9 @@ int main(int argc,char **argv) {
     ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
             (DMDASNESFunction)FormFunctionLocal,&user);CHKERRQ(ierr);
     ierr = SNESSetApplicationContext(snes,&user); CHKERRQ(ierr);
-    ierr = SNESSetType(snes,SNESKSPONLY); CHKERRQ(ierr);
+    if (limiter != VANLEER) {
+        ierr = SNESSetType(snes,SNESKSPONLY); CHKERRQ(ierr);
+    }
     ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
 
     ierr = DMGetGlobalVector(da,&u_initial); CHKERRQ(ierr);
