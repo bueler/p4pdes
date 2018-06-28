@@ -30,11 +30,11 @@ runadvect_4:
 
 # defaults: eps = 1.0, centered fluxes, -snes_fd_color
 runad3_1:
-	-@../testit.sh ad3 "-snes_converged_reason" 1 1
+	-@../testit.sh ad3 "" 1 1
 
 # eps = 0.01 and upwind and GAMG
 runad3_2:
-	-@../testit.sh ad3 "-ad3_eps 0.01 -ad3_limiter none -pc_type gamg -snes_converged_reason" 1 2
+	-@../testit.sh ad3 "-ad3_eps 0.01 -ad3_limiter none -pc_type gamg" 1 2
 
 # diffusion problem with two-level GMG
 runad3_3:
