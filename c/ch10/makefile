@@ -38,7 +38,7 @@ runad3_2:
 
 # diffusion-only problem with two-level GMG
 runad3_3:
-	-@../testit.sh ad3 "-ad3_problem nowind -ad3_limiter none -da_refine 1 -ksp_converged_reason -snes_type ksponly -ksp_type cg -pc_type mg" 1 3
+	-@../testit.sh ad3 "-ad3_problem nowind -ad3_limiter none -da_refine 1 -ksp_converged_reason -ksp_type cg -pc_type mg" 1 3
 
 
 test_advect: runadvect_1 runadvect_2 runadvect_3 runadvect_4
