@@ -1,6 +1,6 @@
 static char help[] =
-"Solves a 3D linear advection-diffusion problem using FD discretization and\n"
-"structured-grid (DMDA).  Option prefix -ad3_.  The equation is\n"
+"Solves a 3D linear advection-diffusion problem using FD discretization,\n"
+"structured-grid (DMDA), and -snes_fd_color.  Option prefix -ad3_.  Equation:\n"
 "    - eps Laplacian u + div (a(x,y,z) u) = g(x,y,z),\n"
 "where the wind a(x,y,z) and source g(x,y,z) are given smooth functions.\n"
 "The domain is [-1,1]^3 with Dirichlet and periodic boundary conditions:\n"
@@ -31,6 +31,11 @@ for LIM in none centered vanleer; do
     done
 done
 (going to LEV=5 generates seg fault from attempt to get too much memory?)
+*/
+
+/* fastest GMG method for significant advection-dominated:
+timer ./ad3 -ad3_limiter none -ksp_converged_reason -da_refine LEV -ksp_rtol 1.0e-9 -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -ksp_monitor -ad3_eps 0.1 -ksp_type bcgs
+can go to LEV=6 on ed-galago?
 */
 
 /* there is no need to refine in y-direction; this refinement path allows
@@ -107,9 +112,9 @@ where
          = (exp((x-1) / eps) - C) / (1 - C)
 where  C = exp(-2 / eps).  (Note C may gracefully underflow (not overflow)
 if eps is really small.)  Thus U(x) satisfies
-    -eps U'' + U' = 0.
-Also U(x) satisfies U(-1)=0 and U(1)=1, and it has a boundary layer of width
-O(eps) near x=1.  Constants E = 2 pi and F = pi / 2 are set so that u is periodic
+    -eps U'' + U' = 0,
+U(-1)=0, U(1)=1, and it has a boundary layer of width O(eps) near x=1.
+Constants E = 2 pi and F = pi / 2 are set so that u is periodic
 and smooth in y and satisfies Dirichlet boundary conditions in z (i.e.
 u(x,y,+-1) = 0.)  The problem solved has
     a = <1,0,0>
@@ -155,8 +160,9 @@ static double nowind_g(double x, double y, double z, AdCtx *user) {
 }
 
 /* problem GLAZE:
-See pages 240-241 of Elman et al (2014) for this problem.  The recirculating
-flow is counterclockwise in the x-z plane.  An additional drift is in the
+See pages 240-241 of Elman et al (2014) for this problem, a recirculating flow
+which is counterclockwise in the x-z plane.  Note g(x,y,z) = 0 and b(y,z) = 0.
+See wind_a() for velocity, and not an additional drift can be added in the
 y-direction.
 */
 
@@ -255,7 +261,7 @@ int main(int argc,char **argv) {
         DM_BOUNDARY_NONE, DM_BOUNDARY_PERIODIC, DM_BOUNDARY_NONE,
         DMDA_STENCIL_STAR,               // no diagonal differencing
         6,my,6,                          // usually default to hx=hx=hz=0.4 grid
-                                         // (mz>=5 allows -snes_fd_color)
+                                         // (mz>=5 necessary for -snes_fd_color)
         PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,
         1,                               // d.o.f
         (user.limiter_fcn == NULL) ? 1 : 2, // stencil width

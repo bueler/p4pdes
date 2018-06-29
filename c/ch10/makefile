@@ -28,15 +28,15 @@ runadvect_4:
 	-@../testit.sh advect "-da_grid_x 3 -da_grid_y 3 -adv_limiter centered -adv_jacobian centered -ts_type cn -ts_adapt_type basic -ts_monitor -ts_dt 0.01 -ts_final_time 0.02 -snes_converged_reason" 1 4
 
 
-# defaults: eps = 1.0, centered fluxes, -snes_fd_color
+# defaults: problem = layer, eps = 1.0, centered fluxes, -snes_fd_color
 runad3_1:
 	-@../testit.sh ad3 "" 1 1
 
-# eps = 0.01 and upwind and GAMG
+# problem = layer, eps = 0.01 and upwind and GAMG
 runad3_2:
 	-@../testit.sh ad3 "-ad3_eps 0.01 -ad3_limiter none -pc_type gamg" 1 2
 
-# diffusion problem with two-level GMG
+# diffusion-only problem with two-level GMG
 runad3_3:
 	-@../testit.sh ad3 "-ad3_problem nowind -ad3_limiter none -da_refine 1 -ksp_converged_reason -snes_type ksponly -ksp_type cg -pc_type mg" 1 3
 
