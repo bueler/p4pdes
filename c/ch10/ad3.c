@@ -14,8 +14,9 @@ static char help[] =
 "limiter schemes.\n\n";
 
 /* TODO:
-1. study script for layer convergence & GMG
-2. visualize glaze problem to check for correctness
+1. pointer to g,b
+2. create LAYERX and LAYERZ problems
+3. visualize glaze problem to check for correctness
 */
 
 /* shows scaling is on the dot so that GMG has constant its, and converges, for NOWIND:
@@ -100,7 +101,9 @@ typedef struct {
     ProblemType problem;
     double      eps,          // amount of diffusion; eps > 0
                 glaze_drift;
-    double      (*limiter_fcn)(double);
+    double      (*limiter_fcn)(double),
+                (*g_fcn)(double, double, double, void*),
+                (*b_fcn)(double, double, void*);
 } AdCtx;
 
 /* problem LAYER:
@@ -137,6 +140,10 @@ static double layer_g(double x, double y, double z, AdCtx *user) {
     return lam * layer_u(x,y,z,user);
 }
 
+static double layer_b(double y, double z, AdCtx *user) {
+    return layer_u(1.0,y,z,user);
+}
+
 /* problem NOWIND:
 A manufactured 3D exact solution of a boundary layer problem for testing the
 diffusion only problem:
@@ -159,17 +166,27 @@ static double nowind_g(double x, double y, double z, AdCtx *user) {
     return mu * nowind_u(x,y,z,user);
 }
 
+static double nowind_b(double y, double z, AdCtx *user) {
+    return nowind_u(1.0,y,z,user);
+}
+
 /* problem GLAZE:
 See pages 240-241 of Elman et al (2014) for this problem, a recirculating flow
-which is counterclockwise in the x-z plane.  Note g(x,y,z) = 0 and b(y,z) = 0.
+which is counterclockwise in the x-z plane.  Note g(x,y,z) = 0 and b(y,z) = 1.
 See wind_a() for velocity, and not an additional drift can be added in the
 y-direction.
 */
 
-/* next three functions are the ones used in FormFunctionLocal() to get
-   a(x,y,z), g(x,y,z), and boundary value b(y,z) */
+static double glaze_g(double x, double y, double z, AdCtx *user) {
+    return 0.0;
+}
 
-// vector function returns q=0,1,2 component
+static double glaze_b(double y, double z, AdCtx *user) {
+    return 1.0;
+}
+
+/* This vector function returns q=0,1,2 component.  It is used in
+FormFunctionLocal() to get a(x,y,z). */
 static double wind_a(double x, double y, double z, int q, AdCtx *user) {
     if (user->problem == LAYER) {
         return (q == 0) ? 1.0 : 0.0;
@@ -189,26 +206,6 @@ static double wind_a(double x, double y, double z, int q, AdCtx *user) {
             default:
                 return 1.0e308 * 100.0;  // cause overflow
         }
-    }
-}
-
-static double source_g(double x, double y, double z, AdCtx *user) {
-    if (user->problem == LAYER) {
-        return layer_g(x,y,z,user);
-    } else if (user->problem == NOWIND) {
-        return nowind_g(x,y,z,user);
-    } else {
-        return 0.0;
-    }
-}
-
-static double bdry_b(double y, double z, AdCtx *user) {
-    if (user->problem == LAYER) {
-        return layer_u(1.0,y,z,user);
-    } else if (user->problem == NOWIND) {
-        return nowind_u(1.0,y,z,user);
-    } else {
-        return 1.0;
     }
 }
 
