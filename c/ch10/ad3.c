@@ -14,7 +14,6 @@ static char help[] =
 "limiter schemes.\n\n";
 
 /* TODO:
-1. pointer to g,b
 2. create LAYERX and LAYERZ problems
 3. visualize glaze problem to check for correctness
 */
@@ -135,13 +134,14 @@ static double layer_u(double x, double y, double z, AdCtx *user) {
            * sin(EE*(y+1.0)) * sin(FF*(z+1.0));
 }
 
-static double layer_g(double x, double y, double z, AdCtx *user) {
-    const double lam = user->eps * (EE*EE + FF*FF);
-    return lam * layer_u(x,y,z,user);
+static double layer_g(double x, double y, double z, void *user) {
+    AdCtx* usr = (AdCtx*)user;
+    const double lam = usr->eps * (EE*EE + FF*FF);
+    return lam * layer_u(x,y,z,usr);
 }
 
-static double layer_b(double y, double z, AdCtx *user) {
-    return layer_u(1.0,y,z,user);
+static double layer_b(double y, double z, void *user) {
+    return layer_u(1.0,y,z,(AdCtx*)user);
 }
 
 /* problem NOWIND:
@@ -161,13 +161,14 @@ static double nowind_u(double x, double y, double z, AdCtx *user) {
     return sin(AA*(x+1.0)) * sin(EE*(y+1.0)) * sin(FF*(z+1.0));
 }
 
-static double nowind_g(double x, double y, double z, AdCtx *user) {
-    const double mu = user->eps * (AA*AA + EE*EE + FF*FF);
-    return mu * nowind_u(x,y,z,user);
+static double nowind_g(double x, double y, double z, void *user) {
+    AdCtx* usr = (AdCtx*)user;
+    const double mu = usr->eps * (AA*AA + EE*EE + FF*FF);
+    return mu * nowind_u(x,y,z,usr);
 }
 
-static double nowind_b(double y, double z, AdCtx *user) {
-    return nowind_u(1.0,y,z,user);
+static double nowind_b(double y, double z, void *user) {
+    return nowind_u(1.0,y,z,(AdCtx*)user);
 }
 
 /* problem GLAZE:
@@ -177,13 +178,16 @@ See wind_a() for velocity, and not an additional drift can be added in the
 y-direction.
 */
 
-static double glaze_g(double x, double y, double z, AdCtx *user) {
+static double glaze_g(double x, double y, double z, void *user) {
     return 0.0;
 }
 
-static double glaze_b(double y, double z, AdCtx *user) {
+static double glaze_b(double y, double z, void *user) {
     return 1.0;
 }
+
+static void* gptr[] = {&layer_g, &nowind_g, &glaze_g};
+static void* bptr[] = {&layer_b, &nowind_b, &glaze_b};
 
 /* This vector function returns q=0,1,2 component.  It is used in
 FormFunctionLocal() to get a(x,y,z). */
@@ -252,6 +256,8 @@ int main(int argc,char **argv) {
         SETERRQ1(PETSC_COMM_WORLD,1,"eps=%.3f invalid ... eps > 0 required",user.eps);
     }
     user.limiter_fcn = limiterptr[limiter];
+    user.g_fcn = gptr[user.problem];
+    user.b_fcn = bptr[user.problem];
 
     my = (user.limiter_fcn == NULL) ? 6 : 5;
     ierr = DMDACreate3d(PETSC_COMM_WORLD,
@@ -396,20 +402,20 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***au,
             for (i=info->xs; i<info->xs+info->xm; i++) {
                 x = -1.0 + i * hx;
                 if (i == info->mx-1) {   // x=1 boundary has nonhomo. Dirichlet
-                    aF[k][j][i] = scDir * (au[k][j][i] - bdry_b(y,z,usr));
+                    aF[k][j][i] = scDir * (au[k][j][i] - (*usr->b_fcn)(y,z,usr));
                 } else if (i == 0 || k == 0 || k == info->mz-1) {
                     aF[k][j][i] = scDir * au[k][j][i];
                 } else {
                     uu = au[k][j][i];
-                    uE = (i == info->mx-2) ? bdry_b(y,z,usr) : au[k][j][i+1];
-                    uW = (i == 1)          ?             0.0 : au[k][j][i-1];
-                    uT = (k == info->mz-2) ?             0.0 : au[k+1][j][i];
-                    uB = (k == 1)          ?             0.0 : au[k-1][j][i];
+                    uE = (i == info->mx-2) ? (*usr->b_fcn)(y,z,usr) : au[k][j][i+1];
+                    uW = (i == 1)          ?                    0.0 : au[k][j][i-1];
+                    uT = (k == info->mz-2) ?                    0.0 : au[k+1][j][i];
+                    uB = (k == 1)          ?                    0.0 : au[k-1][j][i];
                     uxx = (uW - 2.0 * uu + uE) / hx2;
                     uyy = (au[k][j-1][i] - 2.0 * uu + au[k][j+1][i]) / hy2;
                     uzz = (uB - 2.0 * uu + uT) / hz2;
                     aF[k][j][i] = scF * (- usr->eps * (uxx + uyy + uzz)
-                                         - source_g(x,y,z,usr));
+                                         - (*usr->g_fcn)(x,y,z,usr));
                 }
             }
         }
@@ -450,7 +456,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***au,
                         u_up = au[k][j][i];
                     } else {
                         if (i+di == info->mx-1) {
-                            u_up = bdry_b(y,z,usr);
+                            u_up = (*usr->b_fcn)(y,z,usr);
                         } else if (k+dk == info->mz-1) {
                             u_up = 0.0;
                         } else {
