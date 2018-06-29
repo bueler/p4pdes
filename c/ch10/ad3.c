@@ -16,6 +16,7 @@ static char help[] =
 /* TODO:
 2. create LAYERX and LAYERZ problems
 3. visualize glaze problem to check for correctness
+4. implement Jacobian for -ad3_limiter none; test with -snes_mf_operator -ad3_limiter vanleer
 */
 
 /* shows scaling is on the dot so that GMG has constant its, and converges, for NOWIND:
