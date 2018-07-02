@@ -156,7 +156,7 @@ int main(int argc,char **argv) {
            (PetscEnum)user.initial,(PetscEnum*)&user.initial,NULL); CHKERRQ(ierr);
     user.initial_fcn = initialptr[user.initial];
     ierr = PetscOptionsEnum("-jacobian",
-           "flux-limiter type used in calculating Jacobian",
+           "flux-limiter type used in calculating Jacobian; only none|centered allowed",
            "advect.c",LimiterTypes,
            (PetscEnum)user.jacobian,(PetscEnum*)&user.jacobian,NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnum("-limiter",
