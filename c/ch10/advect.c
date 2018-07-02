@@ -47,7 +47,7 @@ static double stump(double x, double y) {
     return (r < 0.2) ? 1.0 : 0.0;
 }
 
-// smooth (in C^6?) version of above stump
+// smooth (C^6) version of stump
 static double smooth(double x, double y) {
     const double r = PetscSqrtReal((x+0.6)*(x+0.6) + (y+0.6)*(y+0.6));
     if (r < 0.2)
@@ -74,7 +74,7 @@ static void* initialptr[] = {&stump, &smooth, &cone, &box};
 //ENDINITIAL
 
 //STARTLIMITER
-/* the centered-space method is a linear (and unlimited) "limiter" */
+/* the centered-space method is linear */
 static double centered(double theta) {
     return 0.5;
 }
