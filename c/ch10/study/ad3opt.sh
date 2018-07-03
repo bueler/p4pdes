@@ -4,6 +4,14 @@
 # advection-diffusion problem.  Uses no limiter (= first-order upwinding) and
 # small coarse grid for efficiency.
 
+# Results (mx=mz so N=mx^2*my):
+# mx  my  flop       time (s)   flop/N
+# 13  12  1.826e+06  2.211e-02   900.4
+# 25  24  1.893e+07  1.374e-01  1262.0
+# 49  48  1.861e+08  1.038e+00  1614.8
+# 97  96  1.464e+09  7.624e+00  1620.8
+#193 192  1.161e+10  4.674e+01  1623.4
+
 MAXLEV=6
 EPS=0.1
 
