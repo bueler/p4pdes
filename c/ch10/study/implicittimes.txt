@@ -1,0 +1,24 @@
+CN + (correct jacobian)
+limiter=none
+straight,smooth,none,160,160,0.0125,0.0125,320,1.,7.5582e-02,1.6147e-01
+real 6.35
+limiter=centered
+straight,smooth,centered,160,160,0.0125,0.0125,320,1.,4.9932e-02,8.3758e-02
+real 12.81
+CN + (vanleer limiter) + (none Jacobian)
+JFNK = 
+straight,smooth,vanleer,160,160,0.0125,0.0125,320,1.,1.0328e-02,3.1244e-02
+real 67.62
+JFNK = -snes_mf_operator
+straight,smooth,vanleer,160,160,0.0125,0.0125,320,1.,1.0328e-02,3.1244e-02
+real 54.79
+RK
+limiter=none
+straight,smooth,none,160,160,0.0125,0.0125,253,1.,7.5613e-02,1.6151e-01
+real 0.49
+limiter=centered
+straight,smooth,centered,160,160,0.0125,0.0125,183,1.,3.6684e-02,6.9652e-02
+real 0.45
+limiter=vanleer
+straight,smooth,vanleer,160,160,0.0125,0.0125,316,1.,1.1802e-02,3.5575e-02
+real 0.98

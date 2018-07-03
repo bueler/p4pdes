@@ -2,29 +2,35 @@
 set -e
 set +x
 
+# demonstrate that for advect.c, implicit (CN) time stepping works but is much
+# slower than explicit (RK)
+
 # run with --with-debugging=0 build
 # run as
-#    ./implicittimes.sh &> implicit-advect.txt
+#    ./implicittimes.sh &> implicittimes.txt
 
 EXEC=../advect
 LAPS=1.0
-LEV=4
+LEV=5
 
-# CN + (correct jacobian for none|centered limiter)
+echo "CN + (correct jacobian)"
 for LIMITER in none centered; do
-    time $EXEC -adv_oneline -ts_type cn \
+    echo "limiter=$LIMITER"
+    /usr/bin/time -f "real %e" $EXEC -adv_oneline -ts_type cn \
         -adv_initial smooth -ts_final_time $LAPS -da_refine $LEV \
         -adv_limiter $LIMITER -adv_jacobian $LIMITER
 done
-# CN + (vanleer limiter) + (use none Jacobian two ways)
+echo "CN + (vanleer limiter) + (none Jacobian)"
 for JFNK in "" "-snes_mf_operator"; do
-    time $EXEC -adv_oneline -ts_type cn \
+    echo "JFNK = $JFNK"
+    /usr/bin/time -f "real %e" $EXEC -adv_oneline -ts_type cn \
         -adv_initial smooth -ts_final_time $LAPS -da_refine $LEV \
         -adv_limiter vanleer -adv_jacobian none $JFNK
 done
-# RK
+echo "RK"
 for LIMITER in none centered vanleer; do
-    time $EXEC -adv_oneline \
+    echo "limiter=$LIMITER"
+    /usr/bin/time -f "real %e" $EXEC -adv_oneline \
         -adv_initial smooth -ts_final_time $LAPS -da_refine $LEV \
         -adv_limiter $LIMITER
 done
