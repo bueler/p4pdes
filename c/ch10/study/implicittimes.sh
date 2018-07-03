@@ -4,7 +4,7 @@ set +x
 
 # run with --with-debugging=0 build
 # run as
-#    ./implicitverif.sh &> implicit-advect.txt
+#    ./implicittimes.sh &> implicit-advect.txt
 
 EXEC=../advect
 LAPS=1.0
