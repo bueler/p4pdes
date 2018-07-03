@@ -4,25 +4,29 @@ set +x
 
 # run with --with-debugging=0 build
 # run as
-#    ./implicitverif.sh &> implicit-advect-workstation.txt
-# and copy the .txt file to figs/ in book repo for figure generation  FIXME
-# see p4pdes-book/figs/advect-conv.py
+#    ./implicitverif.sh &> implicit-advect.txt
 
-NPROCS=4
 EXEC=../advect
-LAPS=1
+LAPS=1.0
+LEV=4
 
-#FIXME once -snes_mf_operator is in master, add timing
-
-#for LEV in 3 4 5 6 7 8; do
-for LEV in 3 4 5 6; do
-    for LIMITER in none vanleer; do
-        mpiexec -n $NPROCS $EXEC -adv_oneline -ts_type cn \
-            -ts_final_time $LAPS -da_refine $LEV \
-            -adv_limiter $LIMITER -adv_jacobian none -adv_initial smooth #-snes_converged_reason
-    done
-    # FIXME: add vanleer + -snes_mf_operator
-    mpiexec -n $NPROCS $EXEC -adv_oneline -ts_type cn \
-        -ts_final_time $LAPS -da_refine $LEV \
-        -adv_limiter centered -adv_jacobian centered -adv_initial smooth #-snes_converged_reason
+# CN + (correct jacobian for none|centered limiter)
+for LIMITER in none centered; do
+    time $EXEC -adv_oneline -ts_type cn \
+        -adv_initial smooth -ts_final_time $LAPS -da_refine $LEV \
+        -adv_limiter $LIMITER -adv_jacobian $LIMITER
 done
+# CN + (vanleer limiter) + (use none Jacobian two ways)
+for JFNK in "" "-snes_mf_operator"; do
+    time $EXEC -adv_oneline -ts_type cn \
+        -adv_initial smooth -ts_final_time $LAPS -da_refine $LEV \
+        -adv_limiter vanleer -adv_jacobian none $JFNK
+done
+# RK
+for LIMITER in none centered vanleer; do
+    time $EXEC -adv_oneline \
+        -adv_initial smooth -ts_final_time $LAPS -da_refine $LEV \
+        -adv_limiter $LIMITER
+done
+
+

@@ -8,11 +8,12 @@ set +x
 # and copy the .txt file to figs/ in book repo for figure generation
 # see p4pdes-book/figs/advect-conv.py
 
-NPROCS=8
+NPROCS=2
+MAXLEV=8
 EXEC=../advect
 LAPS=1            # could run additional experiment with e.g. 5 laps
 
-for LEV in 3 4 5 6 7 8; do
+for (( LEV=3; LEV<=$MAXLEV; LEV++ )); do
     for SHAPE in stump smooth cone; do # "box" is other possibility, but doesnt add much over stump
         for LIMITER in centered none vanleer koren; do
             mpiexec -n $NPROCS $EXEC -adv_oneline \
