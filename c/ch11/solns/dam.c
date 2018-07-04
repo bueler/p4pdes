@@ -14,7 +14,7 @@ note PFAS is not implemented in PETSc, but the following runs for X = 1,2,3,4,5,
 quickly solve the same problems as in Brandt & Cryer Table 4.2:
    s ./dam -snes_monitor -pc_type mg -snes_grid_sequence X
 
-on WORKSTATION I can go up to X = 10 giving 2049 x 3073 grid
+on ed-galago I can go up to X = 11 giving 4097 x 6145 grid and serial runtime of 297 seconds
 (the next step runs out of memory)
 
 on parallel I am getting error messages with vinewtonrsls + mg:
@@ -48,6 +48,7 @@ gives:
     8    513x769    8.7500000
     9    1025x1537  8.7343750
     10   2049x3073  8.7187500
+    11   4097x6145  8.7109375
 but note these numbers depend (at the second digit, even) on the value of
 "wetthreshold" in GetSeepageFaceHeight()
 */
