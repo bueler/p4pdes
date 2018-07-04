@@ -1,6 +1,6 @@
 static const char help[] = "Solves obstacle problem in 2D as a variational\n\
-inequality.  An elliptic problem with solution  u  constrained to be above a\n\
-given function  psi.  Exact solution is known.  Because of the constraint,\n\
+inequality.  An elliptic problem with solution u(x,y) constrained to be above a\n\
+given function psi(x,y).  Exact solution is known.  Because of the constraint,\n\
 the problem is nonlinear.\n";
 
 /*
@@ -62,7 +62,7 @@ SUCCEEDS IN 6.18 secs: $ timer mpiexec -n 4 ./obstacle -da_grid_x 33 -da_grid_y 
 #include <petsc.h>
 #include "../ch6/poissonfunctions.h"
 
-// z = psi(x,y) is the obstacle
+// z = psi(x,y) is the hemispherical obstacle
 double psi(double x, double y) {
     double  rr = x * x + y * y;
     return (rr <= 1.0) ? PetscSqrtReal(1.0 - rr) : -1.0;
@@ -72,7 +72,7 @@ double psi(double x, double y) {
     https://github.com/bueler/fem-code-challenge/blob/master/obstacleDOC.pdf
 
 In summary, solve a 1D radial free-boundary problem on interval 0 < r < 2 with
-obstacle
+hemispherical obstacle
 
     psi(r) =  / sqrt(1 - r^2),  r < 1
               \ -1,             otherwise
@@ -137,7 +137,7 @@ int main(int argc,char **argv) {
 
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
       DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
-      3,3,                       // override with -da_refine or -da_grid_x,_y
+      3,3,                       // override with -da_grid_x,_y
       PETSC_DECIDE,PETSC_DECIDE, // num of procs in each dim
       1,1,NULL,NULL,             // dof = 1 and stencil width = 1
       &da);CHKERRQ(ierr);
@@ -157,22 +157,20 @@ int main(int argc,char **argv) {
   ierr = SNESSetDM(snes,da);CHKERRQ(ierr);
   ierr = SNESSetApplicationContext(snes,&user);CHKERRQ(ierr);
 
+  // set the SNES type to a variational inequality (VI) solver of reduced-space
+  // (RS) type
   ierr = SNESSetType(snes,SNESVINEWTONRSLS);CHKERRQ(ierr);
   ierr = SNESVISetComputeVariableBounds(snes,&FormBounds);CHKERRQ(ierr);
-  
+
+  // reuse residual and jacobian from ch6/
   ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
              (DMDASNESFunction)Poisson2DFunctionLocal,&user); CHKERRQ(ierr);
   ierr = DMDASNESSetJacobianLocal(da,
              (DMDASNESJacobian)Poisson2DJacobianLocal,&user); CHKERRQ(ierr);
   ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
 
-  // petsc bug: I get error inside VINEWTONRSLS if I use DMGetGlobalVector() here
-  //   PETSC ERROR: Clearing DM of global vectors that has a global vector obtained with DMGetGlobalVector()
-  //   ...
-  //   PETSC ERROR: #2 DMSetVI() line 224 in /home/ed/petsc/src/snes/impls/vi/rs/virs.c
-  //   PETSC ERROR: #3 SNESSolve_VINEWTONRSLS() line 431 in /home/ed/petsc/src/snes/impls/vi/rs/virs.c
-  ierr = DMCreateGlobalVector(da,&u_initial);CHKERRQ(ierr);
   // initial iterate has u=g on boundary and u=0 in interior
+  ierr = DMCreateGlobalVector(da,&u_initial);CHKERRQ(ierr);
   ierr = InitialState(da, ZEROS, PETSC_TRUE, u_initial, &user); CHKERRQ(ierr);
 
   /* solve */
