@@ -1,7 +1,9 @@
-static const char help[] = "Solves obstacle problem in 2D as a variational\n\
-inequality.  An elliptic problem with solution u(x,y) constrained to be above a\n\
-given function psi(x,y).  Exact solution is known.  Because of the constraint,\n\
-the problem is nonlinear.\n";
+static const char help[] =
+"Solves obstacle problem in 2D using SNESVI.  Option prefix -obs_.\n"
+"The obstacle problem is a free boundary problem for an elliptic PDE.\n"
+"The solution u(x,y) is constrained to be above a given function psi(x,y).\n"
+"Problem solved here on square [-2,2] x [-2,2] has known exact solution.\n"
+"Because of the constraint, the problem is nonlinear.\n\n";
 
 /*
 parallel runs, spatial refinement, robust PC:
@@ -132,8 +134,16 @@ int main(int argc,char **argv) {
   PoissonCtx     user;
   double         error1,errorinf;
   DMDALocalInfo  info;
+  char           dumpname[256] = "dump.dat";
+  PetscBool      dumpbinary = PETSC_FALSE;
 
   PetscInitialize(&argc,&argv,NULL,help);
+
+  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"obs_","options to obstacle","");CHKERRQ(ierr);
+  ierr = PetscOptionsString("-dump_binary",
+           "filename for saving solution and obstacle in PETSc binary format",
+           "obstacle.c",dumpname,dumpname,sizeof(dumpname),&dumpbinary); CHKERRQ(ierr);
+  ierr = PetscOptionsEnd();CHKERRQ(ierr);
 
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
       DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
@@ -169,19 +179,34 @@ int main(int argc,char **argv) {
              (DMDASNESJacobian)Poisson2DJacobianLocal,&user); CHKERRQ(ierr);
   ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
 
-  // initial iterate has u=g on boundary and u=0 in interior
+  // initial iterate (from ch6/) has u=g on boundary and u=0 in interior
   ierr = DMCreateGlobalVector(da,&u_initial);CHKERRQ(ierr);
   ierr = InitialState(da, ZEROS, PETSC_TRUE, u_initial, &user); CHKERRQ(ierr);
 
-  /* solve */
+  /* solve and get solution, DM after solution*/
   ierr = SNESSolve(snes,NULL,u_initial);CHKERRQ(ierr);
   ierr = VecDestroy(&u_initial); CHKERRQ(ierr);
   ierr = DMDestroy(&da); CHKERRQ(ierr);
-
-  /* compare to exact */
   ierr = SNESGetDM(snes,&da_after); CHKERRQ(ierr);
   ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr); /* do not destroy u */
   ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
+
+  /* save solution to binary file if requested */
+  if (dumpbinary) {
+      Vec         Xl, Xu;
+      PetscViewer dumpviewer;
+      ierr = PetscPrintf(PETSC_COMM_WORLD,
+               "writing u,psi in binary format to %s ...\n",dumpname); CHKERRQ(ierr);
+      ierr = VecDuplicate(u,&Xl); CHKERRQ(ierr);
+      ierr = VecDuplicate(u,&Xu); CHKERRQ(ierr);
+      ierr = FormBounds(snes,Xl,Xu); CHKERRQ(ierr);
+      ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,dumpname,FILE_MODE_WRITE,&dumpviewer); CHKERRQ(ierr);
+      ierr = VecView(u,dumpviewer); CHKERRQ(ierr);
+      ierr = VecView(Xl,dumpviewer); CHKERRQ(ierr);
+      ierr = PetscViewerDestroy(&dumpviewer); CHKERRQ(ierr);
+  }
+
+  /* compare to exact */
   ierr = VecDuplicate(u,&u_exact); CHKERRQ(ierr);
   ierr = FormUExact(&info,u_exact); CHKERRQ(ierr);
   ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr); /* u <- u - u_exact */

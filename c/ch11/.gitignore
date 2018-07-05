@@ -1,3 +1,7 @@
 /obstacle
 /ice
+*.dat
+*.dat.info
+/PetscBinaryIO.py
+/petsc_conf.py
 
