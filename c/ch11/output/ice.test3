@@ -3,5 +3,5 @@ grid: 6 x 6 points, spacing dx=300.000 km x dy=300.000 km, dtinit=1.000 a
   0: time 0.000 a,  volume 37.6 10^3 km^3,  area 90.0 10^3 km^2
   1: time 1.000 a,  volume 37.7 10^3 km^3,  area 90.0 10^3 km^2
   2: time 2.000 a,  volume 37.8 10^3 km^3,  area 90.0 10^3 km^2
-  3: time 3.000 a,  volume 37.8 10^3 km^3,  area 90.0 10^3 km^2
+  3: time 3.000 a,  volume 37.9 10^3 km^3,  area 90.0 10^3 km^2
   4: time 4.000 a,  volume 37.9 10^3 km^3,  area 90.0 10^3 km^2
