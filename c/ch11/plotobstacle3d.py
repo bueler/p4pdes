@@ -10,6 +10,11 @@ Requires access to
 e.g. sym-links.
 '''
 
+# generate figure in book by:
+#   ./obstacle -da_refine 5 -obs_dump_binary obstacle65.dat
+#   ./plotobstacle3d.py -o obstacle65.pdf -mx 65 -my 65 obstacle65.dat
+#   pdfcrop obstacle65.pdf obstacle65.pdf
+
 from sys import exit
 from argparse import ArgumentParser, RawTextHelpFormatter
 
@@ -46,12 +51,35 @@ else:
     sys.exit(1)
 psi = np.reshape(psiin,(args.my,args.mx))
 
-#FIXME  need 3D graphics
-plt.imshow(u)
-#plt.xlabel('t')
+from mpl_toolkits.mplot3d import Axes3D
+
+fig = plt.figure(figsize=(12, 6))
+ax = fig.add_subplot(111, projection='3d')
+
+# plot entire unit sphere (in grey)
+theta = np.linspace(0, 2 * np.pi, 100)
+phi = np.linspace(0, np.pi, 100)
+xs = np.outer(np.cos(theta), np.sin(phi))
+ys = np.outer(np.sin(theta), np.sin(phi))
+zs = np.outer(np.ones(np.size(theta)), np.cos(phi))
+ax.plot_surface(xs, ys, zs, color='grey', alpha=1.0)
+
+# plot z = u(x,y) over sphere
+x = np.linspace(-2.0,2.0,args.mx)
+y = np.linspace(-2.0,2.0,args.my)
+xx, yy = np.meshgrid(x,y)
+ax.plot_wireframe(xx,yy,u,color='k',linewidth=0.3)
+   
+# remove x-ticks
+ax.set_xticks([])
+ax.set_yticks([])
+ax.set_zticks([])
+plt.xlabel('x',fontsize=12.0)
+plt.ylabel('y',fontsize=12.0)
+
 if len(args.o) > 0:
     print 'writing file %s' % args.o
-    plt.savefig(args.o)
+    plt.savefig(args.o, dpi=fig.dpi)
 else:
     plt.show()
 
