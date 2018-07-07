@@ -43,5 +43,7 @@ test: test_obstacle test_ice
 .PHONY: distclean runobstacle_1 runobstacle_2 runobstacle_3 runice_1 runice_2 runice_3 runice_4 test test_obstacle test_ice
 
 distclean:
-	@rm -f *~ obstacle ice *tmp
+	@rm -f *~ obstacle ice *.pyc *tmp
+	@rm -f PetscBinaryIO.py petsc_conf.py
+	(cd solns; ${MAKE} distclean)
 
