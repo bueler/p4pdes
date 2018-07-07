@@ -1,9 +1,12 @@
 static const char help[] =
 "Solves obstacle problem in 2D using SNESVI.  Option prefix -obs_.\n"
-"The obstacle problem is a free boundary problem for an elliptic PDE.\n"
-"The solution u(x,y) is constrained to be above a given function psi(x,y).\n"
-"Problem solved here on square [-2,2] x [-2,2] has known exact solution.\n"
-"Because of the constraint, the problem is nonlinear.\n\n";
+"The obstacle problem is a free boundary problem for the Poisson equation,\n"
+"equivalently it is a variational inequality (VI), complementarity problem\n"
+"(CP), or an inequality-constrained minimization.  The solution u(x,y) is\n"
+"constrained to be above the obstacle psi(x,y).  The problem solved here is\n"
+"on the square [-2,2] x [-2,2] and has known exact solution.  Because of the\n"
+"constraint, the problem is nonlinear but the code reuses the residual and\n"
+"Jacobian evaluation code in ch6/.\n\n";
 
 /*
 parallel runs, spatial refinement, robust PC:
@@ -70,47 +73,26 @@ double psi(double x, double y) {
     return (rr <= 1.0) ? PetscSqrtReal(1.0 - rr) : -1.0;
 }
 
-/* To get exact solution see
-    https://github.com/bueler/fem-code-challenge/blob/master/obstacleDOC.pdf
-
-In summary, solve a 1D radial free-boundary problem on interval 0 < r < 2 with
-hemispherical obstacle
-
+/*  This exact solution solves a 1D radial free-boundary problem for the
+Laplace equation, on the interval 0 < r < 2, with hemispherical obstacle
     psi(r) =  / sqrt(1 - r^2),  r < 1
               \ -1,             otherwise
-
-and Laplace equation where u(r) > psi(r),
-
+The Laplace equation applies where u(r) > psi(r),
     u''(r) + r^-1 u'(r) = 0
-
-with (free) boundary conditions
-
+with boundary conditions including free b.c.s at an unknown location r = a:
     u(a) = psi(a),  u'(a) = psi'(a),  u(2) = 0
-
-The solution is  u(r) = - A log(r) + B   on the interval  a < r < 2.  The
-boundary conditions can then be reduced to a root-finding problem for a:
-
+The solution is  u(r) = - A log(r) + B   on  r > a.  The boundary conditions
+can then be reduced to a root-finding problem for a:
     a^2 (log(2) - log(a)) = 1 - a^2
-
-Solved via Matlab/Octave:
->> f = @(a) a.^2 .* (log(2)-log(a)) - 1 + a.^2;
->> a = 0.2:0.001:1.0; plot(a,f(a)), grid on
->> a = fzero(f,0.7)
-a =    0.697965148223374
->> f(a)
-ans = 1.49880108324396e-15
->> A = a^2*(1-a^2)^(-0.5),  B = A*log(2)
-A =    0.680259411891719
-B =    0.471519893402112
-
-These constants appear in the C function below.                    */
+The solution is a = 0.697965148223374 (giving residual 1.5e-15).  Then
+A = a^2*(1-a^2)^(-0.5) and B = A*log(2) are as given below in the code.  */
 double u_exact(double x, double y) {
     const double afree = 0.697965148223374,
                  A     = 0.680259411891719,
                  B     = 0.471519893402112;
     double  r;
     r = PetscSqrtReal(x * x + y * y);
-    return (r <= afree) ? psi(x,y)  // on the obstacle
+    return (r <= afree) ? psi(x,y)  // active set; on the obstacle
                         : - A * PetscLogReal(r) + B; // solves laplace eqn
 }
 
@@ -119,6 +101,7 @@ double g_fcn(double x, double y, double z, void *ctx) {
     return u_exact(x,y);
 }
 
+// we solve Laplace's equation with f = 0
 double zero(double x, double y, double z, void *ctx) {
     return 0.0;
 }
@@ -204,6 +187,7 @@ int main(int argc,char **argv) {
       ierr = VecView(u,dumpviewer); CHKERRQ(ierr);
       ierr = VecView(Xl,dumpviewer); CHKERRQ(ierr);
       ierr = PetscViewerDestroy(&dumpviewer); CHKERRQ(ierr);
+      VecDestroy(&Xl);  VecDestroy(&Xu);
   }
 
   /* compare to exact */
@@ -217,7 +201,6 @@ int main(int argc,char **argv) {
   ierr = PetscPrintf(PETSC_COMM_WORLD,
       "errors on %3d x %3d grid: av |u-uexact| = %.3e, |u-uexact|_inf = %.3e\n",
       info.mx,info.my,error1,errorinf); CHKERRQ(ierr);
-
   SNESDestroy(&snes);
   return PetscFinalize();
 }
@@ -240,7 +223,8 @@ PetscErrorCode FormUExact(DMDALocalInfo *info, Vec u) {
   return 0;
 }
 
-//  for call-back: tell SNESVI (variational inequality) that we want  psi <= u < +infinity
+//STARTBOUNDS
+// for call-back: tell SNESVI we want  psi <= u < +infinity
 PetscErrorCode FormBounds(SNES snes, Vec Xl, Vec Xu) {
   PetscErrorCode ierr;
   DM            da;
@@ -263,4 +247,5 @@ PetscErrorCode FormBounds(SNES snes, Vec Xl, Vec Xu) {
   ierr = VecSet(Xu,PETSC_INFINITY);CHKERRQ(ierr);
   return 0;
 }
+//ENDBOUNDS
 
