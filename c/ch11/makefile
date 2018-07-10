@@ -12,13 +12,13 @@ ice: ice.o  chkopts
 # testing
 
 runobstacle_1:
-	-@../testit.sh obstacle "-da_refine 3 -snes_monitor_short -ksp_rtol 1.0e-12 -snes_rtol 1.0e-10 -ksp_converged_reason" 1 1
+	-@../testit.sh obstacle "-da_refine 2 -mat_is_symmetric -snes_monitor_short -ksp_rtol 1.0e-12 -snes_rtol 1.0e-10 -ksp_converged_reason" 1 1
 
 runobstacle_2:
-	-@../testit.sh obstacle "-da_refine 4 -snes_monitor_short -pc_type asm -sub_pc_type lu" 4 2
+	-@../testit.sh obstacle "-da_refine 3 -snes_monitor_short -pc_type asm -sub_pc_type lu" 4 2
 
 runobstacle_3:
-	-@../testit.sh obstacle "-da_refine 2 -mat_is_symmetric -snes_converged_reason -pc_type mg" 1 3
+	-@../testit.sh obstacle "-snes_grid_sequence 3 -snes_converged_reason -ksp_type cg -pc_type mg" 1 3
 
 runice_1:
 	-@../testit.sh ice "-da_refine 2 -ice_verif 1 -ice_eps 0.0 -ice_tf 40 -ice_dtinit 10 -ts_type beuler -ts_adapt_type none" 1 1

@@ -1,7 +1,7 @@
-  0 SNES Function norm 3.49121 
-  1 SNES Function norm 1.15841 
-  2 SNES Function norm 0.321429 
-  3 SNES Function norm 0.0327191 
-  4 SNES Function norm 0.000185246 
-  5 SNES Function norm 8.189e-10 
-errors on  33 x  33 grid: av |u-uexact| = 8.182e-04, |u-uexact|_inf = 5.747e-03
+  0 SNES Function norm 3.19358 
+  1 SNES Function norm 0.77629 
+  2 SNES Function norm 0.0408576 
+  3 SNES Function norm 1.89983e-07 
+  4 SNES Function norm < 1.e-11
+on   17 x   17 grid: total flops = 3.816e+05, SNES iters = 4, last KSP iters = 5
+errors: av |u-uexact| = 2.707e-03, |u-uexact|_inf = 1.428e-02, active area error = 18.430%

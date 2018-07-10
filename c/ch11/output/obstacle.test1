@@ -1,8 +1,6 @@
-  0 SNES Function norm 3.19358 
-  Linear solve converged due to CONVERGED_RTOL iterations 18
-  1 SNES Function norm 0.776289 
-  Linear solve converged due to CONVERGED_RTOL iterations 19
-  2 SNES Function norm 0.0408577 
-  Linear solve converged due to CONVERGED_RTOL iterations 19
-  3 SNES Function norm < 1.e-11
-errors on  17 x  17 grid: av |u-uexact| = 2.707e-03, |u-uexact|_inf = 1.428e-02
+  0 SNES Function norm 2.72363 
+Matrix is symmetric (tolerance 0.)
+  Linear solve converged due to CONVERGED_RTOL iterations 11
+  1 SNES Function norm < 1.e-11
+on    9 x    9 grid: total flops = 3.963e+04, SNES iters = 1, last KSP iters = 11
+errors: av |u-uexact| = 3.076e-03, |u-uexact|_inf = 1.334e-02, active area error = 47.016%

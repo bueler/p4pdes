@@ -1,9 +1,9 @@
 static const char help[] =
 "Solves obstacle problem in 2D using SNESVI.  Option prefix -obs_.\n"
-"The obstacle problem is a free boundary problem for the Poisson equation,\n"
-"equivalently it is a variational inequality (VI), complementarity problem\n"
-"(CP), or an inequality-constrained minimization.  The solution u(x,y) is\n"
-"constrained to be above the obstacle psi(x,y).  The problem solved here is\n"
+"The obstacle problem is a free boundary problem for the Poisson equation\n"
+"in which the solution u(x,y) is constrained to be above the obstacle psi(x,y).\n"
+"Equivalently it is a variational inequality (VI), complementarity problem\n"
+"(CP), or an inequality-constrained minimization.  The example here is\n"
 "on the square [-2,2] x [-2,2] and has known exact solution.  Because of the\n"
 "constraint, the problem is nonlinear but the code reuses the residual and\n"
 "Jacobian evaluation code in ch6/.\n\n";
@@ -107,15 +107,19 @@ double zero(double x, double y, double z, void *ctx) {
 }
 
 extern PetscErrorCode FormUExact(DMDALocalInfo*, Vec);
+extern PetscErrorCode GetActiveSet(SNES, DMDALocalInfo*, Vec, Vec, int*, double*);
 extern PetscErrorCode FormBounds(SNES, Vec, Vec);
 
 int main(int argc,char **argv) {
   PetscErrorCode ierr;
   DM             da, da_after;
   SNES           snes;
-  Vec            u_initial, u, u_exact;   /* solution, exact solution */
+  KSP            ksp;
+  Vec            u_initial, u, u_exact, Xl, Xu;
   PoissonCtx     user;
-  double         error1,errorinf;
+  const double   aexact = 0.697965148223374;
+  int            snesit, kspit;
+  double         error1,errorinf,lflops,flops,actarea,exactarea,areaerr;
   DMDALocalInfo  info;
   char           dumpname[256] = "dump.dat";
   PetscBool      dumpbinary = PETSC_FALSE;
@@ -173,37 +177,84 @@ int main(int argc,char **argv) {
   ierr = SNESGetDM(snes,&da_after); CHKERRQ(ierr);
   ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr); /* do not destroy u */
   ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
+  ierr = VecDuplicate(u,&Xl); CHKERRQ(ierr);
+  ierr = VecDuplicate(u,&Xu); CHKERRQ(ierr);
+  ierr = FormBounds(snes,Xl,Xu); CHKERRQ(ierr);
 
   /* save solution to binary file if requested */
   if (dumpbinary) {
-      Vec         Xl, Xu;
       PetscViewer dumpviewer;
       ierr = PetscPrintf(PETSC_COMM_WORLD,
                "writing u,psi in binary format to %s ...\n",dumpname); CHKERRQ(ierr);
-      ierr = VecDuplicate(u,&Xl); CHKERRQ(ierr);
-      ierr = VecDuplicate(u,&Xu); CHKERRQ(ierr);
-      ierr = FormBounds(snes,Xl,Xu); CHKERRQ(ierr);
       ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,dumpname,FILE_MODE_WRITE,&dumpviewer); CHKERRQ(ierr);
       ierr = VecView(u,dumpviewer); CHKERRQ(ierr);
       ierr = VecView(Xl,dumpviewer); CHKERRQ(ierr);
       ierr = PetscViewerDestroy(&dumpviewer); CHKERRQ(ierr);
-      VecDestroy(&Xl);  VecDestroy(&Xu);
   }
 
+  /* compute final performance measures */
+  ierr = SNESGetIterationNumber(snes,&snesit); CHKERRQ(ierr);
+  ierr = SNESGetKSP(snes,&ksp); CHKERRQ(ierr);
+  ierr = KSPGetIterationNumber(ksp,&kspit); CHKERRQ(ierr);
+  ierr = PetscGetFlops(&lflops); CHKERRQ(ierr);
+  ierr = MPI_Allreduce(&lflops,&flops,1,MPI_DOUBLE,MPI_SUM,PETSC_COMM_WORLD); CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,
+      "on %4d x %4d grid: total flops = %.3e, SNES iters = %d, last KSP iters = %d\n",
+      info.mx,info.my,flops,snesit,kspit); CHKERRQ(ierr);
+
   /* compare to exact */
+  ierr = GetActiveSet(snes,&info,u,Xl,NULL,&actarea); CHKERRQ(ierr);
+  exactarea = PETSC_PI * aexact * aexact;
+  areaerr = PetscAbsReal(actarea - exactarea) / exactarea;
   ierr = VecDuplicate(u,&u_exact); CHKERRQ(ierr);
   ierr = FormUExact(&info,u_exact); CHKERRQ(ierr);
   ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr); /* u <- u - u_exact */
-  ierr = VecDestroy(&u_exact); CHKERRQ(ierr);
   ierr = VecNorm(u,NORM_1,&error1); CHKERRQ(ierr);
   error1 /= (double)info.mx * (double)info.my;
   ierr = VecNorm(u,NORM_INFINITY,&errorinf); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
-      "errors on %3d x %3d grid: av |u-uexact| = %.3e, |u-uexact|_inf = %.3e\n",
-      info.mx,info.my,error1,errorinf); CHKERRQ(ierr);
+      "errors: av |u-uexact| = %.3e, |u-uexact|_inf = %.3e, active area error = %.3f%%\n",
+      error1,errorinf,100.0*areaerr); CHKERRQ(ierr);
+
+  VecDestroy(&u_exact);  VecDestroy(&Xl);  VecDestroy(&Xu);
   SNESDestroy(&snes);
   return PetscFinalize();
 }
+
+
+PetscErrorCode GetActiveSet(SNES snes, DMDALocalInfo *info, Vec u, Vec Xl,
+                            int *act, double *actarea) {
+  PetscErrorCode ierr;
+  Vec          F;
+  double       dx, dy;
+  const double *au, *aXl, *aF, zerotol = 1.0e-8;  // see petsc/src/snes/impls/vi/vi.c for value
+  int          i,n,lact,gact;
+
+  dx = 4.0 / (PetscReal)(info->mx-1);
+  dy = 4.0 / (PetscReal)(info->my-1);
+  ierr = VecGetLocalSize(u,&n);CHKERRQ(ierr);
+  ierr = VecGetArrayRead(u,&au); CHKERRQ(ierr);
+  ierr = VecGetArrayRead(Xl,&aXl); CHKERRQ(ierr);
+  ierr = SNESGetFunction(snes,&F,NULL,NULL); CHKERRQ(ierr); /* do not destroy F */
+  ierr = VecGetArrayRead(F,&aF); CHKERRQ(ierr);
+  lact = 0;
+  for (i=0; i<n; i++) {
+    if ((au[i] <= aXl[i] + zerotol) && (aF[i] > 0.0))
+        lact++;
+  }
+  ierr = VecRestoreArrayRead(u,&au);CHKERRQ(ierr);
+  ierr = VecRestoreArrayRead(Xl,&aXl);CHKERRQ(ierr);
+  ierr = VecRestoreArrayRead(F,&aF); CHKERRQ(ierr);
+  ierr = MPI_Allreduce(&lact,&gact,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)snes));CHKERRQ(ierr);
+  if (act) {
+      *act = gact;
+  }
+  if (actarea) {
+      *actarea = dx * dy * gact;
+  }
+  return 0;
+}
+
 
 PetscErrorCode FormUExact(DMDALocalInfo *info, Vec u) {
   PetscErrorCode ierr;
