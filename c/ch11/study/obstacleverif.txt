@@ -1,0 +1,57 @@
+
+grid by -da_refine, type vinewtonrsls:
+on   17 x   17 grid: total flops = 1.321e+06, SNES iters = 3, last KSP iters = 4
+errors: av |u-uexact| = 2.707e-03, |u-uexact|_inf = 1.428e-02, active area error = 18.430%
+on   33 x   33 grid: total flops = 1.024e+07, SNES iters = 6, last KSP iters = 3
+errors: av |u-uexact| = 8.182e-04, |u-uexact|_inf = 5.747e-03, active area error = 11.283%
+on   65 x   65 grid: total flops = 4.537e+07, SNES iters = 7, last KSP iters = 4
+errors: av |u-uexact| = 9.818e-05, |u-uexact|_inf = 5.991e-04, active area error = 7.455%
+on  129 x  129 grid: total flops = 3.211e+08, SNES iters = 12, last KSP iters = 4
+errors: av |u-uexact| = 3.334e-05, |u-uexact|_inf = 2.154e-04, active area error = 2.669%
+on  257 x  257 grid: total flops = 2.404e+09, SNES iters = 21, last KSP iters = 4
+errors: av |u-uexact| = 9.373e-06, |u-uexact|_inf = 9.340e-05, active area error = 1.728%
+on  513 x  513 grid: total flops = 1.902e+10, SNES iters = 41, last KSP iters = 4
+errors: av |u-uexact| = 2.051e-06, |u-uexact|_inf = 1.918e-05, active area error = 0.759%
+
+grid by -da_refine, type vinewtonssls:
+on   17 x   17 grid: total flops = 4.342e+06, SNES iters = 7, last KSP iters = 5
+errors: av |u-uexact| = 2.707e-03, |u-uexact|_inf = 1.428e-02, active area error = 18.430%
+on   33 x   33 grid: total flops = 3.346e+07, SNES iters = 11, last KSP iters = 7
+errors: av |u-uexact| = 8.182e-04, |u-uexact|_inf = 5.747e-03, active area error = 11.283%
+on   65 x   65 grid: total flops = 1.722e+08, SNES iters = 11, last KSP iters = 11
+errors: av |u-uexact| = 9.818e-05, |u-uexact|_inf = 5.991e-04, active area error = 7.455%
+on  129 x  129 grid: total flops = 1.490e+09, SNES iters = 17, last KSP iters = 14
+errors: av |u-uexact| = 3.334e-05, |u-uexact|_inf = 2.154e-04, active area error = 2.669%
+on  257 x  257 grid: total flops = 1.388e+10, SNES iters = 25, last KSP iters = 23
+errors: av |u-uexact| = 9.373e-06, |u-uexact|_inf = 9.340e-05, active area error = 1.728%
+on  513 x  513 grid: total flops = 3.442e+11, SNES iters = 45, last KSP iters = 48
+errors: av |u-uexact| = 2.051e-06, |u-uexact|_inf = 1.918e-05, active area error = 0.759%
+
+grid by -snes_grid_sequence, type vinewtonrsls:
+on   17 x   17 grid: total flops = 1.564e+06, SNES iters = 3, last KSP iters = 4
+errors: av |u-uexact| = 2.707e-03, |u-uexact|_inf = 1.428e-02, active area error = 18.430%
+on   33 x   33 grid: total flops = 8.720e+06, SNES iters = 4, last KSP iters = 4
+errors: av |u-uexact| = 8.182e-04, |u-uexact|_inf = 5.747e-03, active area error = 11.283%
+on   65 x   65 grid: total flops = 2.256e+07, SNES iters = 2, last KSP iters = 4
+errors: av |u-uexact| = 9.818e-05, |u-uexact|_inf = 5.991e-04, active area error = 7.455%
+on  129 x  129 grid: total flops = 8.463e+07, SNES iters = 2, last KSP iters = 4
+errors: av |u-uexact| = 3.334e-05, |u-uexact|_inf = 2.154e-04, active area error = 2.669%
+on  257 x  257 grid: total flops = 4.111e+08, SNES iters = 3, last KSP iters = 4
+errors: av |u-uexact| = 9.373e-06, |u-uexact|_inf = 9.340e-05, active area error = 1.728%
+on  513 x  513 grid: total flops = 1.285e+09, SNES iters = 2, last KSP iters = 4
+errors: av |u-uexact| = 2.051e-06, |u-uexact|_inf = 1.918e-05, active area error = 0.759%
+
+grid by -snes_grid_sequence, type vinewtonssls:
+on   17 x   17 grid: total flops = 3.539e+06, SNES iters = 5, last KSP iters = 5
+errors: av |u-uexact| = 2.707e-03, |u-uexact|_inf = 1.428e-02, active area error = 18.430%
+on   33 x   33 grid: total flops = 2.926e+07, SNES iters = 8, last KSP iters = 7
+errors: av |u-uexact| = 8.182e-04, |u-uexact|_inf = 5.747e-03, active area error = 11.283%
+on   65 x   65 grid: total flops = 1.145e+08, SNES iters = 6, last KSP iters = 11
+errors: av |u-uexact| = 9.818e-05, |u-uexact|_inf = 5.991e-04, active area error = 7.455%
+on  129 x  129 grid: total flops = 5.253e+08, SNES iters = 6, last KSP iters = 14
+errors: av |u-uexact| = 3.334e-05, |u-uexact|_inf = 2.154e-04, active area error = 2.669%
+on  257 x  257 grid: total flops = 3.047e+09, SNES iters = 7, last KSP iters = 21
+errors: av |u-uexact| = 9.373e-06, |u-uexact|_inf = 9.340e-05, active area error = 1.728%
+on  513 x  513 grid: total flops = 2.191e+10, SNES iters = 8, last KSP iters = 34
+errors: av |u-uexact| = 2.051e-06, |u-uexact|_inf = 1.918e-05, active area error = 0.759%
+
