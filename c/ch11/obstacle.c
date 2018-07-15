@@ -9,8 +9,10 @@ static const char help[] =
 "Jacobian evaluation code in ch6/.\n\n";
 
 /*
-parallel runs, spatial refinement, robust PC:
-for M in 0 1 2 3 4 5 6; do mpiexec -n 4 ./obstacle -da_refine $M -snes_converged_reason -pc_type asm -sub_pc_type lu; done
+visualization: on -da_refine 7 try
+  -snes_monitor_solution draw
+  -snes_monitor_solution_update draw
+  -snes_vi_monitor_residual    [draws]
 
 grid sequencing really worthwhile; check out these serial runs:
 $ timer ./obstacle -da_refine 8 -pc_type ilu
@@ -62,15 +64,25 @@ real 8.31
 parallel versions of above two runs:
 STALLS: $ timer mpiexec -n 4 ./obstacle -snes_converged_reason -pc_type mg -snes_grid_sequence 9
 SUCCEEDS IN 6.18 secs: $ timer mpiexec -n 4 ./obstacle -da_grid_x 33 -da_grid_y 33 -snes_converged_reason -pc_type mg -snes_grid_sequence 5
+
+parallel runs, spatial refinement, robust PC:
+for M in 0 1 2 3 4 5 6; do mpiexec -n 4 ./obstacle -da_refine $M -snes_converged_reason -pc_type asm -sub_pc_type lu; done
 */
 
 #include <petsc.h>
 #include "../ch6/poissonfunctions.h"
 
-// z = psi(x,y) is the hemispherical obstacle
+// z = psi(x,y) is the hemispherical obstacle, but made C^1 with "skirt" at r=r0
 double psi(double x, double y) {
-    double  rr = x * x + y * y;
-    return (rr <= 1.0) ? PetscSqrtReal(1.0 - rr) : -1.0;
+    const double  r = x * x + y * y,
+                  r0 = 0.9,
+                  psi0 = PetscSqrtReal(1.0 - r0*r0),
+                  dpsi0 = - r0 / psi0;
+    if (r <= r0) {
+        return PetscSqrtReal(1.0 - r);
+    } else {
+        return psi0 + dpsi0 * (r - r0);
+    }
 }
 
 /*  This exact solution solves a 1D radial free-boundary problem for the
@@ -118,6 +130,7 @@ int main(int argc,char **argv) {
   Vec            u_initial, u, u_exact, Xl, Xu;
   PoissonCtx     user;
   const double   aexact = 0.697965148223374;
+  SNESConvergedReason reason;
   int            snesit, kspit;
   double         error1,errorinf,lflops,flops,actarea,exactarea,areaerr;
   DMDALocalInfo  info;
@@ -193,6 +206,11 @@ int main(int argc,char **argv) {
   }
 
   /* compute final performance measures */
+  ierr = SNESGetConvergedReason(snes,&reason); CHKERRQ(ierr);
+  if (reason <= 0) {
+      ierr = PetscPrintf(PETSC_COMM_WORLD,
+          "WARNING: SNES not converged ... use -snes_converged_reason to check\n"); CHKERRQ(ierr);
+  }
   ierr = SNESGetIterationNumber(snes,&snesit); CHKERRQ(ierr);
   ierr = SNESGetKSP(snes,&ksp); CHKERRQ(ierr);
   ierr = KSPGetIterationNumber(ksp,&kspit); CHKERRQ(ierr);
