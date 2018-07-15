@@ -58,4 +58,5 @@ distclean:
 	@rm -f *.pyc PetscBinaryIO.py petsc_conf.py
 	(cd meshes/ && ${MAKE} clean)
 	(cd koch/ && ${MAKE} clean)
+	(cd vis/ && ${MAKE} clean)
 
