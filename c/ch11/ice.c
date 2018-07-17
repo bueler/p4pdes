@@ -150,7 +150,7 @@ int main(int argc,char **argv) {
   PetscInitialize(&argc,&argv,(char*)0,help);
 
   ierr = SetFromOptionsAppCtx(&user); CHKERRQ(ierr);
-  ierr = SetFromOptions_CMBModel(&cmb,"ice_cmb_",user.secpera);
+  ierr = SetFromOptions_CMBModel(&cmb,user.secpera);
   user.cmb = &cmb;
 
   // this DMDA is the cell-centered grid
@@ -739,6 +739,18 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t,
   Vec             qquad[4], b;
 
   PetscFunctionBeginUser;
+
+#if 0
+  // optionally check admissibility
+  for (k = info->ys; k < info->ys + info->ym; k++) {
+      for (j = info->xs; j < info->xs + info->xm; j++) {
+          if (aH[k][j] < 0.0) {
+              SETERRQ3(PETSC_COMM_WORLD,1,"ERROR: non-admissible H[k][j] = %.3e < 0.0 detected at j,k = %d,%d ... stopping\n",aH[k][j],j,k);
+          }
+      }
+  }
+#endif
+
   user->locmaxD = 0.0;
   ierr = DMGetLocalVector(info->da, &b); CHKERRQ(ierr);
   if (user->verif > 0) {

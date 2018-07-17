@@ -11,7 +11,7 @@ typedef struct {
            initmagic;  // constant used to multiply CMB for initial H
 } CMBModel;
 
-PetscErrorCode SetFromOptions_CMBModel(CMBModel *cmb, const char *optprefix, double secpera) {
+PetscErrorCode SetFromOptions_CMBModel(CMBModel *cmb, double secpera) {
   PetscErrorCode ierr;
   PetscBool      set;
   cmb->secpera    = 31556926.0;  // number of seconds in a year
@@ -19,7 +19,7 @@ PetscErrorCode SetFromOptions_CMBModel(CMBModel *cmb, const char *optprefix, dou
   cmb->zgradabove = 0.001; // a^-1
   cmb->zgradbelow = 0.002; // a^-1
   cmb->initmagic  = 1000.0 * cmb->secpera; // s
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,optprefix,
+  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"ice_cmb_",
             "options to climatic mass balance (CMB) model, if used","");CHKERRQ(ierr);
   ierr = PetscOptionsReal(
       "-ela", "equilibrium line altitude, in m",
