@@ -14,54 +14,10 @@ visualization: on -da_refine 7 try
   -snes_monitor_solution_update draw
   -snes_vi_monitor_residual    [draws]
 
-grid sequencing really worthwhile; check out these serial runs:
-$ timer ./obstacle -da_refine 8 -pc_type ilu
-errors on 513 x 513 grid: av |u-uexact| = 2.055e-06, |u-uexact|_inf = 1.918e-05
-real 143.77
-$ timer ./obstacle -da_refine 8 -pc_type mg
-errors on 513 x 513 grid: av |u-uexact| = 2.051e-06, |u-uexact|_inf = 1.918e-05
-real 27.44
-$ timer ./obstacle -snes_grid_sequence 8 -pc_type ilu
-errors on 513 x 513 grid: av |u-uexact| = 2.051e-06, |u-uexact|_inf = 1.918e-05
-real 7.90
-$ timer ./obstacle -snes_grid_sequence 8 -pc_type mg
-errors on 513 x 513 grid: av |u-uexact| = 2.051e-06, |u-uexact|_inf = 1.918e-05
-real 1.91
+one can adjust the smallest grid:
+./obstacle -da_grid_x 33 -da_grid_y 33 -snes_converged_reason -pc_type mg -snes_grid_sequence 5
 
-and then one can increase the dimension by 64 times!!!! (still serial; level 12
-would exceed memory on WORKSTATION):
-$ timer ./obstacle -snes_grid_sequence 9 -pc_type mg
-errors on 1025 x 1025 grid: av |u-uexact| = 6.266e-07, |u-uexact|_inf = 6.592e-06
-real 8.18
-$ timer ./obstacle -snes_grid_sequence 10 -pc_type mg
-errors on 2049 x 2049 grid: av |u-uexact| = 1.379e-07, |u-uexact|_inf = 1.511e-06
-real 29.15
-$ timer ./obstacle -snes_grid_sequence 11 -pc_type mg
-errors on 4097 x 4097 grid: av |u-uexact| = 3.657e-08, |u-uexact|_inf = 4.332e-07
-real 111.59
-
-one can adjust the smallest grid, which is needed in parallel to correctly cut-up
-the coarsest grid, but starting small seems good:
-$ timer ./obstacle -snes_converged_reason -pc_type mg -snes_grid_sequence 9
-                  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
-                Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
-...
-    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
-Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-errors on 1025 x 1025 grid: av |u-uexact| = 6.266e-07, |u-uexact|_inf = 6.592e-06
-real 8.33
-$ timer ./obstacle -da_grid_x 33 -da_grid_y 33 -snes_converged_reason -pc_type mg -snes_grid_sequence 5
-          Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
-        Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
-      Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
-    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
-Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-errors on 1025 x 1025 grid: av |u-uexact| = 6.266e-07, |u-uexact|_inf = 6.592e-06
-real 8.31
-
-parallel versions of above two runs:
+parallel versions:
 STALLS: $ timer mpiexec -n 4 ./obstacle -snes_converged_reason -pc_type mg -snes_grid_sequence 9
 SUCCEEDS IN 6.18 secs: $ timer mpiexec -n 4 ./obstacle -da_grid_x 33 -da_grid_y 33 -snes_converged_reason -pc_type mg -snes_grid_sequence 5
 
