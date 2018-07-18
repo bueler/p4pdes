@@ -9,17 +9,9 @@ static const char help[] =
 "Jacobian evaluation code in ch6/.\n\n";
 
 /*
-visualization: on -da_refine 7 try
-  -snes_monitor_solution draw
-  -snes_monitor_solution_update draw
-  -snes_vi_monitor_residual    [draws]
-
-one can adjust the smallest grid:
-./obstacle -da_grid_x 33 -da_grid_y 33 -snes_converged_reason -pc_type mg -snes_grid_sequence 5
-
 parallel versions:
 STALLS: $ timer mpiexec -n 4 ./obstacle -snes_converged_reason -pc_type mg -snes_grid_sequence 9
-SUCCEEDS IN 6.18 secs: $ timer mpiexec -n 4 ./obstacle -da_grid_x 33 -da_grid_y 33 -snes_converged_reason -pc_type mg -snes_grid_sequence 5
+SUCCEEDS: $ timer mpiexec -n 4 ./obstacle -da_grid_x 33 -da_grid_y 33 -snes_converged_reason -pc_type mg -snes_grid_sequence 5
 
 parallel runs, spatial refinement, robust PC:
 for M in 0 1 2 3 4 5 6; do mpiexec -n 4 ./obstacle -da_refine $M -snes_converged_reason -pc_type asm -sub_pc_type lu; done
@@ -135,9 +127,9 @@ int main(int argc,char **argv) {
              (DMDASNESJacobian)Poisson2DJacobianLocal,&user); CHKERRQ(ierr);
   ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
 
-  // initial iterate (from ch6/) has u=g on boundary and u=0 in interior
+  // initial iterate is zero for simplicity
   ierr = DMCreateGlobalVector(da,&u_initial);CHKERRQ(ierr);
-  ierr = InitialState(da, ZEROS, PETSC_TRUE, u_initial, &user); CHKERRQ(ierr);
+  ierr = VecSet(u_initial,0.0); CHKERRQ(ierr);
 
   /* solve and get solution, DM after solution*/
   ierr = SNESSolve(snes,NULL,u_initial);CHKERRQ(ierr);
