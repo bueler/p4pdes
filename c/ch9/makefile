@@ -1,62 +1,37 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
-
-unfem: unfem.o um.o chkopts
-	-${CLINKER} -o unfem unfem.o um.o  ${PETSC_LIB}
-	${RM} unfem.o um.o
-
-petscPyScripts:
-	ln -sf ${PETSC_DIR}/lib/petsc/bin/PetscBinaryIO.py
-	ln -sf ${PETSC_DIR}/lib/petsc/bin/petsc_conf.py
-
-meshes/trap1.vec meshes/trap1.is: meshes/trap.geo msh2petsc.py
-	-@gmsh -2 meshes/trap.geo -o meshes/trap1.msh > /dev/null
-	-@./msh2petsc.py meshes/trap1.msh > /dev/null
-
-meshes/trap2.vec meshes/trap2.is: meshes/trap.geo msh2petsc.py
-	-@gmsh -2 meshes/trap.geo -o meshes/trap2.msh > /dev/null
-	-@gmsh -refine meshes/trap2.msh > /dev/null
-	-@./msh2petsc.py meshes/trap2.msh > /dev/null
-
-meshes/trapneu1.vec meshes/trapneu1.is: meshes/trapneu.geo msh2petsc.py
-	-@gmsh -2 meshes/trapneu.geo -o meshes/trapneu1.msh > /dev/null
-	-@./msh2petsc.py meshes/trapneu1.msh > /dev/null
-
-meshes/square1.vec meshes/square1.is: genstructured.py
-	-@./genstructured.py meshes/square1 3 > /dev/null
+phelm: phelm.o chkopts
+	-${CLINKER} -o phelm phelm.o ${PETSC_LIB}
+	${RM} phelm.o
 
 # testing
-rununfem_1: petscPyScripts meshes/trap1.vec meshes/trap1.is
-	-@../testit.sh unfem "-un_mesh meshes/trap1 -un_case 0" 1 1
+runphelm_1:
+	-@../testit.sh phelm "-ph_no_gradient -snes_fd_function -snes_fd -snes_converged_reason" 1 1
 
-rununfem_2: petscPyScripts meshes/trap1.vec meshes/trap1.is
-	-@../testit.sh unfem "-un_mesh meshes/trap1 -un_quaddegree 2 -un_case 1 -un_view_mesh" 1 2
+runphelm_2:
+	-@../testit.sh phelm "-ph_problem constant -snes_type ksponly -ksp_converged_reason -ksp_type cg -pc_type mg -da_refine 3" 1 2
 
-rununfem_3: petscPyScripts meshes/trapneu1.vec meshes/trapneu1.is
-	-@../testit.sh unfem "-un_mesh meshes/trapneu1 -un_case 2" 1 3
+runphelm_3:
+	-@../testit.sh phelm "-ph_p 1.5 -ph_eps 1.0e-3 -ph_no_objective -ph_quadpts 1 -ph_exact_init -da_refine 1 -snes_converged_reason" 1 3
 
-rununfem_4: petscPyScripts meshes/square1.vec meshes/square1.is
-	-@../testit.sh unfem "-un_mesh meshes/square1 -un_case 3" 1 4
+runphelm_4:
+	-@../testit.sh phelm "-ph_no_objective -snes_fd_color -snes_converged_reason -da_refine 1" 2 4
 
-rununfem_5: petscPyScripts meshes/trap2.vec meshes/trap2.is
-	-@../testit.sh unfem "-un_mesh meshes/trap2 -pc_type gamg -ksp_converged_reason -ksp_rtol 1.0e-9" 1 5
+runphelm_5:
+	-@../testit.sh phelm "-ph_view_f -ph_p 1.5" 1 5  # generates nan
 
-rununfem_6: petscPyScripts meshes/trap1.vec meshes/trap1.is
-	-@../testit.sh unfem "-un_mesh meshes/trap1 -un_case 1 -snes_mf_operator -snes_converged_reason -ksp_converged_reason" 1 6
+# FIXME need -snes_grid_sequence -pc_type gamg test (?)
 
-test_unfem: rununfem_1 rununfem_2 rununfem_3 rununfem_4 rununfem_5 rununfem_6
+test_phelm: runphelm_1 runphelm_2 runphelm_3 runphelm_4 runphelm_5
 
-test: test_unfem
+test: test_phelm
 
 # etc
 
-.PHONY: distclean rununfem_1 rununfem_2 rununfem_3 rununfem_4 rununfem_5 rununfem_6 test test_unfem petscPyScripts
+.PHONY: distclean runphelm_1 runphelm_2 runphelm_3 runphelm_4 runphelm_5 test test_phelm
 
 distclean:
-	@rm -f *~ unfem *tmp
-	@rm -f *.pyc PetscBinaryIO.py petsc_conf.py
-	(cd meshes/ && ${MAKE} clean)
-	(cd koch/ && ${MAKE} clean)
-	(cd vis/ && ${MAKE} clean)
+	@rm -f *~ phelm
+	(cd solns/; ${MAKE} distclean);
 

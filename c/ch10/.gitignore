@@ -1,7 +1,7 @@
-/ad3
-/advect
-/*.pyc
+*.pyc
+*.vec
+*.is
+*.soln
 PetscBinaryIO.py
 petsc_conf.py
-/*.vts
-/*.vtr
+unfem

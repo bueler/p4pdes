@@ -1,7 +1,7 @@
-/obstacle
-/ice
-*.dat
-*.dat.info
-/PetscBinaryIO.py
-/petsc_conf.py
-
+/ad3
+/advect
+/*.pyc
+PetscBinaryIO.py
+petsc_conf.py
+/*.vts
+/*.vtr

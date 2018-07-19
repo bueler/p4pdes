@@ -1,35 +1,49 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
-tiny: tiny.o plexview.o chkopts
-	-${CLINKER} -o tiny tiny.o plexview.o ${PETSC_LIB}
-	${RM} tiny.o plexview.o
+obstacle: obstacle.o ../ch6/poissonfunctions.o chkopts
+	-${CLINKER} -o obstacle obstacle.o ../ch6/poissonfunctions.o ${PETSC_LIB}
+	${RM} obstacle.o ../ch6/poissonfunctions.o
+
+ice: ice.o  chkopts
+	-${CLINKER} -o ice ice.o  ${PETSC_LIB}
+	${RM} ice.o
 
 # testing
 
-runtiny_1:
-	-@../testit.sh tiny "-dm_refine 1 -plex_view_points -plex_view_use_height -plex_view_cell_cones" 1 1
+runobstacle_1:
+	-@../testit.sh obstacle "-da_refine 2 -mat_is_symmetric -snes_monitor_short -ksp_rtol 1.0e-12 -snes_rtol 1.0e-10 -ksp_converged_reason" 1 1
 
-runtiny_2:
-	-@../testit.sh tiny "-tny_by_hand -plex_view_points -plex_view_coords" 2 2
+runobstacle_2:
+	-@../testit.sh obstacle "-da_refine 3 -snes_monitor_short -pc_type asm -sub_pc_type lu" 4 2
 
-runtiny_3:
-	-@../testit.sh tiny "-tny_view_section" 1 3
+runobstacle_3:
+	-@../testit.sh obstacle "-snes_grid_sequence 3 -snes_converged_reason -ksp_type cg -pc_type mg" 1 3
 
-runtiny_4:
-	-@../testit.sh tiny "-plex_view_closures_coords -v_vec_view" 2 4
+runice_1:
+	-@../testit.sh ice "-da_refine 2 -ice_verif 1 -ice_eps 0.0 -ice_tf 40 -ice_dtinit 10 -ts_type beuler -ts_adapt_type none" 1 1
 
-runtiny_5:
-	-@../testit.sh tiny "-dm_refine 1 -tny_integrate_f -tny_quaddegree 1" 1 5
+runice_2:
+	-@../testit.sh ice "-da_refine 2 -ice_verif 2 -ice_eps 0.0 -ice_tf 10 -ice_dtinit 3 -snes_fd_color" 2 2
 
-test_tiny: runtiny_1 runtiny_2 runtiny_3 runtiny_4 runtiny_5
+runice_3:
+	-@../testit.sh ice "-da_refine 1 -ice_tf 4 -ice_dtinit 1 -ts_type bdf -ts_bdf_order 2 -ts_adapt_type none" 1 3
 
-test: test_tiny
+runice_4:
+	-@../testit.sh ice "-da_refine 2 -ice_tf 20 -ice_dtinit 1 -snes_converged_reason -ts_adapt_clip 0.1,10.0" 1 4
+
+test_obstacle: runobstacle_1 runobstacle_2 runobstacle_3
+
+test_ice: runice_1 runice_2 runice_3 runice_4
+
+test: test_obstacle test_ice
 
 # etc
 
-.PHONY: distclean runtiny_? test test_tiny
+.PHONY: distclean runobstacle_1 runobstacle_2 runobstacle_3 runice_1 runice_2 runice_3 runice_4 test test_obstacle test_ice
 
 distclean:
-	@rm -f *~ tiny *tmp
+	@rm -f *~ obstacle ice *.pyc *tmp
+	@rm -f PetscBinaryIO.py petsc_conf.py
+	(cd solns; ${MAKE} distclean)
 

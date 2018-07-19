@@ -1,7 +1,2 @@
-*.pyc
-*.vec
-*.is
-*.soln
-PetscBinaryIO.py
-petsc_conf.py
-unfem
+phelm
+
