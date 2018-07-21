@@ -1,69 +1,64 @@
 #!/usr/bin/env python3
 
-#FIXME (1) solve same 2D problem as c/ch6/fish.c
-#      (2) use only nonlinear solver
-
+helpstr = """
+Use nonlinear solver for Poisson equation.
+  -Laplace(u) = f        in the unit square
+            u = g        on the boundary
+using polynomial manufactured exact solution.  PETSc solver prefix 's_'.
 """
-Use nonlinear solver (or linear solver with -linprob) for Poisson equation.
-  -Laplace(u) = f        # in the unit square
-            u = u_D      # on the boundary
-where
-  u_D = exp(x - y^2)
-    f = exp(x - y^2) * (1 - 4 y^2)     # manufactured
-"""
-
-# numerical error and KSP its are the same for these:
-#   for MM in 2 4 8 16 32; do ./poissonF.py -m $MM -s_snes_converged_reason -s_ksp_converged_reason -linprob; done
-#   for MM in 2 4 8 16 32; do ./poissonF.py -m $MM -s_snes_converged_reason -s_ksp_converged_reason; done
 
 import argparse
-parser = argparse.ArgumentParser(description='Use nonlinear solver for Poisson equation.')
-parser.add_argument('-linprob', action='store_true')
-parser.add_argument('-m', type=int, default=8, metavar='M',
-                    help='number of mesh points in each dimension')
+parser = argparse.ArgumentParser(description=helpstr,
+                                 formatter_class=argparse.RawTextHelpFormatter)
+parser.add_argument('-mx', type=int, default=3, metavar='MX',
+                    help='number of mesh points in x-direction')
+parser.add_argument('-my', type=int, default=3, metavar='MY',
+                    help='number of mesh points in y-direction')
+parser.add_argument('-o', metavar='NAME', type=str, default='',
+                    help='output file name ending with .pvd')
+parser.add_argument('-order', type=int, default=1, metavar='X',
+                    help='polynomial degree for elements')
+parser.add_argument('-quad', action='store_true', default=False,
+                    help='use quadrilateral finite elements')
 args, unknown = parser.parse_known_args()
 
 from firedrake import *
 
 # Create mesh and define function space
-mesh = UnitSquareMesh(args.m, args.m)
-V = FunctionSpace(mesh, "CG", 1)       # FIXME changing either causes seg faults ... what's going on?
-
-# Define boundary condition and RHS
+mesh = UnitSquareMesh(args.mx, args.my, quadrilateral=args.quad)
 x,y = SpatialCoordinate(mesh)
-u_D = exp(x - y*y)
-boundary_ids = (1, 2, 3, 4)
-bc = DirichletBC(V, u_D, boundary_ids)
-f = Function(V).interpolate(exp(x - y*y) * (1.0 - 4.0 * y * y))
+V = FunctionSpace(mesh, 'Lagrange', args.order)
+if args.quad:
+    elementstr = 'Q^%d' % args.order
+else:
+    elementstr = 'P^%d' % args.order
 
-# Define variational problem and solve either using linear or nonlinear
+# Define exact solution and right-hand side
+u_exact = Function(V).interpolate(x*x * (1.0 - x*x) * y*y *(y*y - 1.0))
+f_rhs = - Function(V).interpolate(2.0 * (1.0 - 6.0 * x*x) * y*y * (y*y - 1.0)
+                                  + x*x * (1.0 - x*x) * 2.0 * (6.0 * y*y - 1.0))
+
+# Define boundary conditions and weak form
+boundary_ids = (1, 2, 3, 4)
+bc = DirichletBC(V, u_exact, boundary_ids)
 v = TestFunction(V)
 u = Function(V)
-sps = {'ksp_type': 'cg',
-       'pc_type': 'gamg',
-       'ksp_rtol': 1.0e-7,
-       'snes_rtol': 1.0e-5}
-if args.linprob:
-    print('using linear solver ...')
-    utry = TrialFunction(V)
-    a = dot(grad(utry), grad(v)) * dx
-    L = f*v * dx
-    solve(a == L, u, bcs = [bc], options_prefix='s',
-          solver_parameters = sps)
-else:
-    print('using nonlinear solver ...')
-    Fnl = (dot(grad(u), grad(v)) - f*v) * dx
-    u.interpolate(Constant(0.0, domain=mesh))   # initial iterate
-    solve(Fnl == 0, u, bcs = [bc], options_prefix='s',
-          solver_parameters = sps)
+F = (dot(grad(u), grad(v)) - f_rhs*v) * dx
 
-# Compute error in L_2, L_infty norm
-u_ex = Function(V).interpolate(u_D)
-error_Linf = max(abs(u.vector().array() - u_ex.vector().array()))
-error_L2 = sqrt(assemble(dot(u - u_ex, u - u_ex) * dx))
+# Set-up solver
+u.interpolate(Constant(0.0, domain=mesh))   # initial iterate is zero
+solve(F == 0, u, bcs = [bc], options_prefix='s',
+      solver_parameters = {'snes_type': 'ksponly',
+                           'ksp_type': 'cg'})
 
-print('done on %d x %d mesh; error_L2 = %.3e, error_Linf = %.3e' \
-      % (args.m,args.m,error_L2,error_Linf))
-print('saving solution to usoln.pvd ...')
-File("usoln.pvd").write(u)
+# Compute error in L_infty and L_2 norm
+error_Linf = max(abs(u.vector().array() - u_exact.vector().array()))
+error_L2 = sqrt(assemble(dot(u - u_exact, u - u_exact) * dx))
+print('done on %d x %d mesh with %s elements:' % (args.mx,args.my,elementstr))
+print('  error |u-uexact|_inf = %.3e, |u-uexact|_h = %.3e' % (error_Linf,error_L2))
+
+# Save to file viewable with Paraview
+if len(args.o) > 0:
+    print('saving solution to %s ...' % args.o)
+    File(args.o).write(u)
 
