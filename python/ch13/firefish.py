@@ -25,28 +25,29 @@ args, unknown = parser.parse_known_args()
 # Create mesh and define function space
 mesh = UnitSquareMesh(args.mx-1, args.my-1, quadrilateral=args.quad)
 x,y = SpatialCoordinate(mesh)
-V = FunctionSpace(mesh, 'Lagrange', args.order)
+W = FunctionSpace(mesh, 'Lagrange', args.order)
 
-# Define exact solution and right-hand side
-u_exact = Function(V).interpolate(- x * exp(y))
-f_rhs = Function(V).interpolate(x * exp(y))  # note f = -(u_xx + u_yy)
+# Define boundary condition g and right-hand side f
+g_bdry = Function(W).interpolate(- x * exp(y))  # = exact solution
+f_rhs = Function(W).interpolate(x * exp(y))  # manufactured
 
-# Define boundary conditions and weak form
-boundary_ids = (1, 2, 3, 4)
-bc = DirichletBC(V, u_exact, boundary_ids)
-v = TestFunction(V)
-u = Function(V)
+# Define weak form
+u = Function(W)
+v = TestFunction(W)
 F = (dot(grad(u), grad(v)) - f_rhs*v) * dx
 
-# Set-up solver
+# Set-up solver including boundary conditions
+bdry_ids = (1, 2, 3, 4)   # all four sides of boundary
+bc = DirichletBC(W, g_bdry, bdry_ids)
 u.interpolate(Constant(0.0, domain=mesh))   # initial iterate is zero
 solve(F == 0, u,
-      bcs = [bc], options_prefix='s',
+      bcs = [bc], options_prefix = 's',
       solver_parameters = {'snes_type': 'ksponly',
                            'ksp_type': 'cg'})
 
 # Compute error in L_infty and L_2 norm
 elementstr = '%s^%d' % (['P','Q'][args.quad],args.order)
+u_exact = g_bdry
 error_Linf = max(abs(u.vector().array() - u_exact.vector().array()))
 error_L2 = sqrt(assemble(dot(u - u_exact, u - u_exact) * dx))
 print('done on %d x %d point 2D grid (mesh) with %s elements:' \
