@@ -9,7 +9,7 @@ set +x
 #    ./hprefine.sh &> hprefine.txt
 
 function runcase() {
-    CMD="../firefish.py -mx $1 -my $1 -order $2 $3 -s_ksp_view"
+    CMD="../firefish.py -mx $1 -my $1 -order $2 $3 -s_ksp_view -log_view"
     echo "COMMAND:  $CMD"
     rm -rf tmp.txt
     $CMD &> tmp.txt
@@ -17,6 +17,7 @@ function runcase() {
     grep "error " tmp.txt
     grep -A 3 "Mat Object: (s_)" tmp.txt | grep "rows"
     grep -A 3 "Mat Object: (s_)" tmp.txt | grep "total:"
+    grep "Flop:    " tmp.txt
 }
 
 # h refine
@@ -25,7 +26,7 @@ for M in 5 9 17 33 65 129 257 513 1025; do
 done
 
 # p refine
-for P in 1 2 3 4 5 6 7; do
+for P in 1 2 3 4 5 6 7 8; do
      runcase 5 $P "-s_ksp_type preonly -s_pc_type lu"
 done
 
