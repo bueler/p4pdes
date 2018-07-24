@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 
-import argparse
+from argparse import ArgumentParser, RawTextHelpFormatter
 from firedrake import *
 
-parser = argparse.ArgumentParser(description="""
+parser = ArgumentParser(description="""
 Use Firedrake's nonlinear solver for the Poisson problem
   -Laplace(u) = f        in the unit square
             u = g        on the boundary
-Uses same manufactured exact solution as c/ch6/fish.c.
-The PETSc solver prefix is 's_'.""",
-                    formatter_class=argparse.RawTextHelpFormatter)
+Compare c/ch6/fish.c.  The PETSc solver prefix is 's_'.""",
+                    formatter_class=RawTextHelpFormatter)
 parser.add_argument('-mx', type=int, default=3, metavar='MX',
                     help='number of mesh points in x-direction')
 parser.add_argument('-my', type=int, default=3, metavar='MY',
@@ -27,21 +26,18 @@ mesh = UnitSquareMesh(args.mx-1, args.my-1, quadrilateral=args.quad)
 x,y = SpatialCoordinate(mesh)
 W = FunctionSpace(mesh, 'Lagrange', args.order)
 
-# Define boundary condition g and right-hand side f
-g_bdry = Function(W).interpolate(- x * exp(y))  # = exact solution
+# Define right-hand side and weak form.
 f_rhs = Function(W).interpolate(x * exp(y))  # manufactured
-
-# Define weak form
 u = Function(W)
 v = TestFunction(W)
 F = (dot(grad(u), grad(v)) - f_rhs*v) * dx
 
-# Set-up solver including boundary conditions
+# Call solver, including boundary conditions
+g_bdry = Function(W).interpolate(- x * exp(y))  # = exact solution
 bdry_ids = (1, 2, 3, 4)   # all four sides of boundary
 bc = DirichletBC(W, g_bdry, bdry_ids)
 u.interpolate(Constant(0.0, domain=mesh))   # initial iterate is zero
-solve(F == 0, u,
-      bcs = [bc], options_prefix = 's',
+solve(F == 0, u, bcs = [bc], options_prefix = 's',
       solver_parameters = {'snes_type': 'ksponly',
                            'ksp_type': 'cg'})
 
@@ -58,6 +54,6 @@ print('  error |u-uexact|_inf = %.3e, |u-uexact|_h = %.3e' \
 # Optionally save to a .pvd file viewable with Paraview
 if len(args.o) > 0:
     print('saving solution to %s ...' % args.o)
-    u.rename("u")
+    u.rename('u')
     File(args.o).write(u)
 
