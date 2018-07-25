@@ -7,6 +7,7 @@ rm -f maketmp tmp difftmp
 make $1 > maketmp 2>&1;
 
 CMD="mpiexec -n $3 ./$1 $2"
+CURRDIR=${PWD##*/}
 
 if [[ ! -f output/$1.test$4 ]]; then
     echo "FAIL: Test #$4 of $CURRDIR/$1"
@@ -19,7 +20,6 @@ else
 
     diff output/$1.test$4 tmp > difftmp
 
-    CURRDIR=${PWD##*/}
     if [[ -s difftmp ]] ; then
        echo "FAIL: Test #$4 of $CURRDIR/$1"
        echo "       command = '$CMD'"
