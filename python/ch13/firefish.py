@@ -28,7 +28,7 @@ W = FunctionSpace(mesh, 'Lagrange', args.order)
 
 # Define right-hand side and weak form.
 f_rhs = Function(W).interpolate(x * exp(y))  # manufactured
-u = Function(W)
+u = Function(W)  # initialized to zero
 v = TestFunction(W)
 F = (dot(grad(u), grad(v)) - f_rhs*v) * dx
 
@@ -36,7 +36,6 @@ F = (dot(grad(u), grad(v)) - f_rhs*v) * dx
 g_bdry = Function(W).interpolate(- x * exp(y))  # = exact solution
 bdry_ids = (1, 2, 3, 4)   # all four sides of boundary
 bc = DirichletBC(W, g_bdry, bdry_ids)
-u.interpolate(Constant(0.0, domain=mesh))   # initial iterate is zero
 solve(F == 0, u, bcs = [bc], options_prefix = 's',
       solver_parameters = {'snes_type': 'ksponly',
                            'ksp_type': 'cg'})
