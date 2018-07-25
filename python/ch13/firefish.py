@@ -24,13 +24,13 @@ args, unknown = parser.parse_known_args()
 # Create mesh and define function space
 mesh = UnitSquareMesh(args.mx-1, args.my-1, quadrilateral=args.quad)
 x,y = SpatialCoordinate(mesh)
-W = FunctionSpace(mesh, 'Lagrange', args.order)
+W = FunctionSpace(mesh, 'Lagrange', degree=args.order)
 
 # Define right-hand side and weak form.
 f_rhs = Function(W).interpolate(x * exp(y))  # manufactured
 u = Function(W)  # initialized to zero
 v = TestFunction(W)
-F = (dot(grad(u), grad(v)) - f_rhs*v) * dx
+F = (dot(grad(u), grad(v)) - f_rhs * v) * dx
 
 # Call solver, including boundary conditions
 g_bdry = Function(W).interpolate(- x * exp(y))  # = exact solution
