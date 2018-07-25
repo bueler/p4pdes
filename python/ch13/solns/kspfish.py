@@ -48,7 +48,7 @@ elementstr = '%s^%d' % (['P','Q'][args.quad],args.order)
 u_exact = g_bdry
 error_Linf = max(abs(u.vector().array() - u_exact.vector().array()))
 error_L2 = sqrt(assemble(dot(u - u_exact, u - u_exact) * dx))
-print('done on %d x %d point 2D grid (mesh) with %s elements:' \
+print('done on %d x %d point grid with %s elements:' \
       % (args.mx,args.my,elementstr))
 print('  error |u-uexact|_inf = %.3e, |u-uexact|_h = %.3e' \
       % (error_Linf,error_L2))
