@@ -29,7 +29,7 @@ FIXME add option -tny_element P1|P2|P3
 */
 
 #include <petsc.h>
-#include "../quadrature.h"
+#include "../../quadrature.h"
 #include "plexview.h"
 
 // Describe the mesh "triangle style" with separate numbering for cells and vertices.
