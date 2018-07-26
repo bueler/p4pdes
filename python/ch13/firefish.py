@@ -2,6 +2,7 @@
 
 from argparse import ArgumentParser, RawTextHelpFormatter
 from firedrake import *
+from firedrake.petsc import PETSc
 
 parser = ArgumentParser(description="""
 Use Firedrake's nonlinear solver for the Poisson problem
@@ -50,16 +51,18 @@ solve(F == 0, u, bcs = [bc], options_prefix = 's',
 
 # Compute error in L_infty and L_2 norm
 elementstr = '%s^%d' % (['P','Q'][args.quad],args.order)
-u_exact = g_bdry
-error_Linf = max(abs(u.vector().array() - u_exact.vector().array()))
-error_L2 = sqrt(assemble(dot(u - u_exact, u - u_exact) * dx))
-print('done on %d x %d grid with %s elements:' % (mx,my,elementstr))
-print('  error |u-uexact|_inf = %.3e, |u-uexact|_h = %.3e' \
+udiff = Function(W).interpolate(u - g_bdry)
+with udiff.dat.vec_ro as vudiff:
+    error_Linf = abs(vudiff).max()[1]
+error_L2 = sqrt(assemble(dot(udiff, udiff) * dx))
+PETSc.Sys.Print('done on %d x %d grid with %s elements:' \
+      % (mx,my,elementstr))
+PETSc.Sys.Print('  error |u-uexact|_inf = %.3e, |u-uexact|_h = %.3e' \
       % (error_Linf,error_L2))
 
 # Optionally save to a .pvd file viewable with Paraview
 if len(args.o) > 0:
-    print('saving solution to %s ...' % args.o)
+    PETSc.Sys.Print('saving solution to %s ...' % args.o)
     u.rename('u')
     File(args.o).write(u)
 
