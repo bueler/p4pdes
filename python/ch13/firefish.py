@@ -31,6 +31,7 @@ if args.refine > 0:
     mesh = hierarchy[-1]     # i.e. the fine mesh
     mx, my = (mx-1) * 2**args.refine + 1, (my-1) * 2**args.refine + 1
 x,y = SpatialCoordinate(mesh)
+mesh._plex.viewFromOptions('-dm_view')
 
 # Define function space, right-hand side, and weak form.
 W = FunctionSpace(mesh, 'Lagrange', degree=args.order)
