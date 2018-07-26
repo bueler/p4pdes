@@ -1,0 +1,3 @@
+  Linear s_ solve converged due to CONVERGED_RTOL iterations 3
+done on 9 x 9 grid with P^1 elements:
+  error |u-uexact|_inf = 2.447e-04, |u-uexact|_h = 1.362e-04
