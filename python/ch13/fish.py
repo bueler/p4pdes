@@ -11,9 +11,9 @@ Use Firedrake's nonlinear solver for the Poisson problem
 Compare c/ch6/fish.c.  The PETSc solver prefix is 's_'.""",
                     formatter_class=RawTextHelpFormatter)
 parser.add_argument('-mx', type=int, default=3, metavar='MX',
-                    help='number of mesh points in x-direction')
+                    help='number of grid points in x-direction')
 parser.add_argument('-my', type=int, default=3, metavar='MY',
-                    help='number of mesh points in y-direction')
+                    help='number of grid points in y-direction')
 parser.add_argument('-o', metavar='NAME', type=str, default='',
                     help='output file name ending with .pvd')
 parser.add_argument('-order', type=int, default=1, metavar='X',
