@@ -2,7 +2,8 @@
 
 #FIXME (1) allow read of Gmsh generated mesh e.g. refinement in corners
 #      (2) how to show DMPlex data structures for simple mesh?
-#      (3) show FIXME vortices in corners
+#      (3) add computation of stream function
+#      (3) show ? vortices in corners
 
 # A simple example of a saddle-point system.  We set up the problem as a
 # lid-driven cavity.  Zero Dirichlet conditions on the bottom and side walls,
@@ -10,7 +11,26 @@
 # This example was originally generated from demos/matrix_free/stokes.py.rst
 # in firedrake source.
 
+from argparse import ArgumentParser, RawTextHelpFormatter
 from firedrake import *
+from firedrake.petsc import PETSc
+
+parser = ArgumentParser(description="""
+FIXME  The PETSc solver prefix is 's_'.""",
+                    formatter_class=RawTextHelpFormatter)
+parser.add_argument('-mx', type=int, default=3, metavar='MX',
+                    help='number of grid points in x-direction (uniform case)')
+parser.add_argument('-my', type=int, default=3, metavar='MY',
+                    help='number of grid points in y-direction (uniform case)')
+parser.add_argument('-o', metavar='NAME', type=str, default='',
+                    help='output file name ending with .pvd')
+parser.add_argument('-order', type=int, default=1, metavar='X',
+                    help='polynomial degree for elements')
+parser.add_argument('-quad', action='store_true', default=False,
+                    help='use quadrilateral finite elements')
+parser.add_argument('-refine', type=int, default=-1, metavar='X',
+                    help='number of refinement levels (e.g. for GMG)')
+args, unknown = parser.parse_known_args()
 
 # define a mesh
 N = 64
