@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
 
-# generated from firedrake/demos/matrix_free/stokes.py.rst
-
-#FIXME (1) check that read of Gmsh file works
-#      (2) demo refinement in corners
-#      (3) add computation of stream function
-#      (4) show Moffat eddies
+#FIXME (1) add computation of stream function
+#      (2) show Moffat eddies
+#      (3) parallel runs working?
 
 from argparse import ArgumentParser, RawTextHelpFormatter
 from firedrake import *
@@ -40,16 +37,20 @@ parser.add_argument('-show_norms', action='store_true', default=False,
                     help='print solution norms (useful for testing)')
 args, unknown = parser.parse_known_args()
 
-# create mesh, either from file or uniform, enabling GMG using hierarchy
+# read or create mesh, either from file or uniform, and enable GMG using hierarchy
 if len(args.i) > 0:
-    # ignoring -mx,-my if given
+    PETSc.Sys.Print('reading mesh from %s ...' % args.i)
     mesh = Mesh(args.i)
-    meshstr = 'Gmsh mesh from %s' % args.i
+    meshstr = ''
+    other = (41,)  # FIXME use str names 'lid','other'
+    lid = (40,)
 else:
     mx, my = args.mx, args.my
     mesh = UnitSquareMesh(mx-1, my-1, quadrilateral=args.quad)
     mx, my = (mx-1) * 2**args.refine + 1, (my-1) * 2**args.refine + 1
-    meshstr = '%d x %d grid' % (mx,my)
+    meshstr = ' on %d x %d grid' % (mx,my)
+    other = (1,2,3)
+    lid = (4,)
 if args.refine > 0:
     hierarchy = MeshHierarchy(mesh, args.refine)
     mesh = hierarchy[-1]     # the fine mesh
@@ -58,7 +59,7 @@ if args.refine > 0:
 x,y = SpatialCoordinate(mesh)
 mesh._plex.viewFromOptions('-dm_view')
 
-# define Taylor-Hood elements (P^k-P^l or Q^k-Q^l)
+# define mixed finite elements (P^k-P^l or Q^k-Q^l)
 V = VectorFunctionSpace(mesh, 'Lagrange', degree=args.uorder)
 W = FunctionSpace(mesh, 'Lagrange', degree=args.porder)
 Z = V * W
@@ -69,25 +70,28 @@ u,p = split(up)
 v,q = TestFunctions(Z)
 f = Constant((0.0, 0.0))  # no body force
 F = (inner(grad(u), grad(v)) - p * div(v) - div(u) * q - inner(f,v)) * dx
-# FIXME compare bug in firedrake example which causes non-symmetry:
-#a = (inner(grad(u), grad(v)) - p * div(v) + div(u) * q) * dx
 
 # boundary conditions are defined on the velocity space
 noslip = Constant((0.0, 0.0))
-lid_tangent = Constant((args.lidvelocity, 0.0))
-othersides = (1,2,3)   # boundary indices from UnitSquareMesh
-top = (4,)
-bc = [ DirichletBC(Z.sub(0), noslip, othersides),
-       DirichletBC(Z.sub(0), lid_tangent, top) ]
+lidtangent = Constant((args.lidvelocity, 0.0))
+bc = [ DirichletBC(Z.sub(0), noslip, other),
+       DirichletBC(Z.sub(0), lidtangent, lid) ]
 
 # no boundary conditions on the pressure space therefore set nullspace
-ns = MixedVectorSpaceBasis(Z,[Z.sub(0), VectorSpaceBasis(constant=True)])
+ns = MixedVectorSpaceBasis(Z, [Z.sub(0), VectorSpaceBasis(constant=True)])
 
-# solve
+# describe job and then solve
 uFEstr = '%s^%d' % (['P','Q'][args.quad],args.uorder)
 pFEstr = '%s^%d' % (['P','Q'][args.quad],args.porder)
-print('solving on %s with %s x %s mixed elements ...' \
-      % (meshstr,uFEstr,pFEstr))
+PETSc.Sys.Print('solving%s with %s x %s mixed elements ...' \
+                % (meshstr,uFEstr,pFEstr))
+if len(args.i) > 0:
+    PETSc.Sys.Print('  mesh has %d elements (2-cells) and %d vertices' \
+                    % (mesh.num_cells(),mesh.num_vertices()))
+if mesh.comm.size > 1:
+    PETSc.Sys.syncPrint('    rank %d owns %d elements (cells) and can access %d vertices' \
+                        % (mesh.comm.rank,mesh.num_cells(),mesh.num_vertices()), comm=mesh.comm)
+    PETSc.Sys.syncFlush(comm=mesh.comm)
 solve(F == 0, up, bcs=bc, nullspace=ns, options_prefix='s',
       solver_parameters={'snes_type': 'ksponly',
                          'ksp_type': 'fgmres',  # or minres, gmres
@@ -114,8 +118,9 @@ if args.show_norms:
     pL2 = sqrt(assemble(dot(p, p) * dx))
     PETSc.Sys.Print('  norms: |u|_h = %.3e, |p|_h = %.3e' % (uL2, pL2))
 
-# optionally save to a .pvd file viewable with Paraview
+# optionally save to .pvd file viewable with Paraview
 if len(args.o) > 0:
+    PETSc.Sys.Print('saving to %s ...' % args.o)
     u.rename('velocity')
     p.rename('pressure')
     File(args.o).write(u,p)
