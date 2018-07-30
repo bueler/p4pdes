@@ -6,15 +6,21 @@ runfish_1:
 runfish_2:
 	-@../../c/testit.sh fish.py "-refine 2 -s_ksp_converged_reason -s_pc_type mg" 1 2
 
+runstokes_1:
+	-@../../c/testit.sh stokes.py "-mx 4 -my 4 -refine 1 -show_norms" 1 1
+
+runstokes_2:
+	-@../../c/testit.sh stokes.py "-uorder 4 -porder 3 -quad -show_norms" 1 2
+
 test_fish: runfish_1 runfish_2
 
-test: test_fish
+test_stokes: runstokes_1 runstokes_2
+
+test: test_fish test_stokes
 
 # etc
 
-.PHONY: clean runfish_1 runfish_2 test test_fish
-
-.PHONY: clean
+.PHONY: clean runfish_1 runfish_2 runstokes_1 runstokes_2 test_fish test_stokes test
 
 clean:
 	@rm -f *.pyc *.pvd *.vtu
