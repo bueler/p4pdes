@@ -24,12 +24,12 @@ parser.add_argument('-refine', type=int, default=-1, metavar='X',
                     help='number of refinement levels (e.g. for GMG)')
 args, unknown = parser.parse_known_args()
 
-# Create mesh, enabling geometric multigrid using heirarchy
+# Create mesh, enabling GMG using hierarchy
 mx, my = args.mx, args.my
 mesh = UnitSquareMesh(mx-1, my-1, quadrilateral=args.quad)
 if args.refine > 0:
     hierarchy = MeshHierarchy(mesh, args.refine)
-    mesh = hierarchy[-1]     # i.e. the fine mesh
+    mesh = hierarchy[-1]     # the fine mesh
     mx, my = (mx-1) * 2**args.refine + 1, (my-1) * 2**args.refine + 1
 x,y = SpatialCoordinate(mesh)
 mesh._plex.viewFromOptions('-dm_view')
