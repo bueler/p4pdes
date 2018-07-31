@@ -10,7 +10,7 @@ runstokes_1:
 	-@../../c/testit.sh stokes.py "-mx 4 -my 4 -refine 1 -show_norms" 1 1
 
 runstokes_2:
-	-@../../c/testit.sh stokes.py "-uorder 4 -porder 3 -quad -show_norms" 1 2
+	-@../../c/testit.sh stokes.py "-uorder 3 -porder 2 -quad -s_mat_type aij -s_ksp_type preonly -s_pc_type svd -show_norms" 1 2
 
 runstokes_3:
 	-@gmsh -v 0 -2 lidbox.geo  # verbosity=0 for quiet
