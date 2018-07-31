@@ -23,6 +23,8 @@ parser.add_argument('-mx', type=int, default=3, metavar='MX',
                     help='number of grid points in x-direction (uniform case)')
 parser.add_argument('-my', type=int, default=3, metavar='MY',
                     help='number of grid points in y-direction (uniform case)')
+parser.add_argument('-mu', type=float, default=1.0, metavar='MU',
+                    help='dynamic viscosity (default is 1.0)')
 parser.add_argument('-o', metavar='OUTNAME', type=str, default='',
                     help='output file name ending with .pvd')
 parser.add_argument('-uorder', type=int, default=2, metavar='K',
@@ -69,7 +71,7 @@ up = Function(Z)
 u,p = split(up)
 v,q = TestFunctions(Z)
 f = Constant((0.0, 0.0))  # no body force
-F = (inner(grad(u), grad(v)) - p * div(v) - div(u) * q - inner(f,v)) * dx
+F = (args.mu * inner(grad(u), grad(v)) - p * div(v) - div(u) * q - inner(f,v)) * dx
 
 # boundary conditions are defined on the velocity space
 noslip = Constant((0.0, 0.0))

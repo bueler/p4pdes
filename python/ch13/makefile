@@ -7,7 +7,7 @@ runfish_2:
 	-@../../c/testit.sh fish.py "-refine 2 -s_ksp_converged_reason -s_pc_type mg" 1 2
 
 runstokes_1:
-	-@../../c/testit.sh stokes.py "-mx 4 -my 4 -refine 1 -show_norms" 1 1
+	-@../../c/testit.sh stokes.py "-mx 4 -my 4 -refine 1 -mu 10.0 -show_norms" 1 1
 
 runstokes_2:
 	-@../../c/testit.sh stokes.py "-uorder 3 -porder 2 -quad -s_mat_type aij -s_ksp_type preonly -s_pc_type svd -show_norms" 1 2
