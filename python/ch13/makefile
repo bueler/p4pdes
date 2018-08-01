@@ -16,15 +16,18 @@ runstokes_3:
 	-@gmsh -v 0 -2 lidbox.geo  # verbosity=0 for quiet
 	-@../../c/testit.sh stokes.py "-i lidbox.msh -show_norms" 1 3
 
+runstokes_4:
+	-@../../c/testit.sh stokes.py "-porder 0 -dpressure -show_norms" 1 4
+
 test_fish: runfish_1 runfish_2
 
-test_stokes: runstokes_1 runstokes_2 runstokes_3
+test_stokes: runstokes_1 runstokes_2 runstokes_3 runstokes_4
 
 test: test_fish test_stokes
 
 # etc
 
-.PHONY: clean runfish_1 runfish_2 runstokes_1 runstokes_2 runstokes_3 test_fish test_stokes test
+.PHONY: clean runfish_1 runfish_2 runstokes_1 runstokes_2 runstokes_3 runstokes_4 test_fish test_stokes test
 
 clean:
 	@rm -f *.pyc *.msh *.pvd *.vtu maketmp tmp difftmp

@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 
 #FIXME
-# (1) option to allow discontinuous for pressure
-# (2) put in analytical solution
-# (3) show Moffat eddies in paraview-generated figure
-#     finds 2nd eddy: ./stokes.py -i lidbox.msh -s_ksp_rtol 1.0e-11 -o lidbox4_21.pvd -refine 4
-# (4) parallel runs working?
+# * put in analytical solution
+# * show Moffat eddies in paraview-generated figure
+#   finds 2nd eddy: ./stokes.py -i lidbox.msh -s_ksp_rtol 1.0e-11 -o lidbox4_21.pvd -refine 4
+# * parallel runs working?
 
 from argparse import ArgumentParser, RawTextHelpFormatter
 from firedrake import *
@@ -18,6 +17,8 @@ Other sides have zero velocity.)  Mixed FE method, P^k x P^l or Q^k x Q^l;
 defaults to Taylor-Hood P^2 x P^1.  An example of a saddle-point system.
 The PETSc solver prefix is 's_'.""",
                     formatter_class=RawTextHelpFormatter)
+parser.add_argument('-dpressure', action='store_true', default=False,
+                    help='use discontinuous-Galerkin finite elements for pressure')
 parser.add_argument('-i', metavar='INNAME', type=str, default='',
                     help='input file for mesh in Gmsh format (.msh); ignors -mx,-my if given')
 parser.add_argument('-lidscale', type=float, default=1.0, metavar='GAMMA',
@@ -65,8 +66,13 @@ x,y = SpatialCoordinate(mesh)
 mesh._plex.viewFromOptions('-dm_view')
 
 # define mixed finite elements (P^k-P^l or Q^k-Q^l)
-V = VectorFunctionSpace(mesh, 'Lagrange', degree=args.uorder)
-W = FunctionSpace(mesh, 'Lagrange', degree=args.porder)
+V = VectorFunctionSpace(mesh, 'CG', degree=args.uorder)
+if args.dpressure:
+    W = FunctionSpace(mesh, 'DG', degree=args.porder)
+    FEname = 'CD'
+else:
+    W = FunctionSpace(mesh, 'CG', degree=args.porder)
+    FEname = 'Taylor-Hood'
 Z = V * W
 
 # define weak form
@@ -88,8 +94,8 @@ ns = MixedVectorSpaceBasis(Z, [Z.sub(0), VectorSpaceBasis(constant=True)])
 # describe job and then solve
 uFEstr = '%s^%d' % (['P','Q'][args.quad],args.uorder)
 pFEstr = '%s^%d' % (['P','Q'][args.quad],args.porder)
-PETSc.Sys.Print('solving%s with %s x %s mixed elements ...' \
-                % (meshstr,uFEstr,pFEstr))
+PETSc.Sys.Print('solving%s with %s x %s %s elements ...' \
+                % (meshstr,uFEstr,pFEstr,FEname))
 if len(args.i) > 0:
     PETSc.Sys.Print('  mesh has %d elements (2-cells) and %d vertices' \
                     % (mesh.num_cells(),mesh.num_vertices()))
