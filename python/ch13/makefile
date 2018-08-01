@@ -30,5 +30,5 @@ test: test_fish test_stokes
 .PHONY: clean runfish_1 runfish_2 runstokes_1 runstokes_2 runstokes_3 runstokes_4 test_fish test_stokes test
 
 clean:
-	@rm -f *.pyc *.msh *.pvd *.vtu maketmp tmp difftmp
+	@rm -f *.pyc *.msh *.pvd *.vtu *.m maketmp tmp difftmp
 
