@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 
-#FIXME (1) add computation of stream function
-#      (2) show Moffat eddies
-#      (3) parallel runs working?
+#FIXME
+# (1) option to allow discontinuous for pressure
+# (2) put in analytical solution
+# (3) show Moffat eddies in paraview-generated figure
+#     finds 2nd eddy: ./stokes.py -i lidbox.msh -s_ksp_rtol 1.0e-11 -o lidbox4_21.pvd -refine 4
+# (4) parallel runs working?
 
 from argparse import ArgumentParser, RawTextHelpFormatter
 from firedrake import *
@@ -10,15 +13,15 @@ from firedrake.petsc import PETSc
 
 parser = ArgumentParser(description="""
 Solve the linear Stokes problem for a lid-driven cavity.  Dirichlet velocity
-conditions on all sides.  (The top lid has constant horizontal velocity.
+conditions on all sides.  (The top lid has quadratic horizontal velocity.
 Other sides have zero velocity.)  Mixed FE method, P^k x P^l or Q^k x Q^l;
 defaults to Taylor-Hood P^2 x P^1.  An example of a saddle-point system.
 The PETSc solver prefix is 's_'.""",
                     formatter_class=RawTextHelpFormatter)
 parser.add_argument('-i', metavar='INNAME', type=str, default='',
                     help='input file for mesh in Gmsh format (.msh); ignors -mx,-my if given')
-parser.add_argument('-lidvelocity', type=float, default=1.0, metavar='V0',
-                    help='lid velocity (rightward is positive; default is 1.0)')
+parser.add_argument('-lidscale', type=float, default=1.0, metavar='GAMMA',
+                    help='scale for lid velocity (rightward is positive; default is 1.0)')
 parser.add_argument('-mx', type=int, default=3, metavar='MX',
                     help='number of grid points in x-direction (uniform case)')
 parser.add_argument('-my', type=int, default=3, metavar='MY',
@@ -75,7 +78,7 @@ F = (args.mu * inner(grad(u), grad(v)) - p * div(v) - div(u) * q - inner(f,v)) *
 
 # boundary conditions are defined on the velocity space
 noslip = Constant((0.0, 0.0))
-lidtangent = Constant((args.lidvelocity, 0.0))
+lidtangent = interpolate(as_vector([args.lidscale * x * (1.0 - x),0.0]),V)
 bc = [ DirichletBC(Z.sub(0), noslip, other),
        DirichletBC(Z.sub(0), lidtangent, lid) ]
 

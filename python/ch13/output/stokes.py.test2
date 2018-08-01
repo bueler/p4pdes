@@ -1,2 +1,2 @@
 solving on 3 x 3 grid with Q^3 x Q^2 mixed elements ...
-  norms: |u|_h = 2.616e-01, |p|_h = 2.902e+00
+  norms: |u|_h = 5.445e-02, |p|_h = 8.610e-01
