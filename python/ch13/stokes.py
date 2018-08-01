@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 #FIXME
-# * put in analytical solution
 # * show Moffat eddies in paraview-generated figure
 #   finds 2nd eddy: ./stokes.py -i lidbox.msh -s_ksp_rtol 1.0e-11 -o lidbox4_21.pvd -refine 4
 # * parallel runs working?
@@ -11,24 +10,26 @@ from firedrake import *
 from firedrake.petsc import PETSc
 
 parser = ArgumentParser(description="""
-Solve the linear Stokes problem for a lid-driven cavity.  Dirichlet velocity
+Solve the linear Stokes problem for a lid-driven cavity.  Dirichlet
 conditions on all sides.  (The top lid has quadratic horizontal velocity.
 Other sides have zero velocity.)  Mixed FE method, P^k x P^l or Q^k x Q^l;
 defaults to Taylor-Hood P^2 x P^1.  An example of a saddle-point system.
 The PETSc solver prefix is 's_'.""",
                     formatter_class=RawTextHelpFormatter)
+parser.add_argument('-analytical', action='store_true', default=False,
+                    help='use problem with exact solution')
 parser.add_argument('-dpressure', action='store_true', default=False,
                     help='use discontinuous-Galerkin finite elements for pressure')
 parser.add_argument('-i', metavar='INNAME', type=str, default='',
-                    help='input file for mesh in Gmsh format (.msh); ignors -mx,-my if given')
-parser.add_argument('-lidscale', type=float, default=1.0, metavar='GAMMA',
-                    help='scale for lid velocity (rightward is positive; default is 1.0)')
+                    help='input file for mesh in Gmsh format (.msh)')
+parser.add_argument('-lidscale', type=float, default=1.0, metavar='X',
+                    help='scale for lid velocity (rightward positive; default=1.0)')
 parser.add_argument('-mx', type=int, default=3, metavar='MX',
                     help='number of grid points in x-direction (uniform case)')
 parser.add_argument('-my', type=int, default=3, metavar='MY',
                     help='number of grid points in y-direction (uniform case)')
 parser.add_argument('-mu', type=float, default=1.0, metavar='MU',
-                    help='dynamic viscosity (default is 1.0)')
+                    help='dynamic viscosity (default=1.0)')
 parser.add_argument('-o', metavar='OUTNAME', type=str, default='',
                     help='output file name ending with .pvd')
 parser.add_argument('-uorder', type=int, default=2, metavar='K',
@@ -37,13 +38,15 @@ parser.add_argument('-porder', type=int, default=1, metavar='L',
                     help='polynomial degree for pressure')
 parser.add_argument('-quad', action='store_true', default=False,
                     help='use quadrilateral finite elements')
-parser.add_argument('-refine', type=int, default=0, metavar='X',
+parser.add_argument('-refine', type=int, default=0, metavar='R',
                     help='number of refinement levels (e.g. for GMG)')
+parser.add_argument('-rho', type=float, default=1.0, metavar='RHO',
+                    help='constant fluid density (default=1.0)')
 parser.add_argument('-show_norms', action='store_true', default=False,
                     help='print solution norms (useful for testing)')
 args, unknown = parser.parse_known_args()
 
-# read or create mesh, either from file or uniform, and enable GMG using hierarchy
+# read general mesh or create uniform mesh
 if len(args.i) > 0:
     PETSc.Sys.Print('reading mesh from %s ...' % args.i)
     mesh = Mesh(args.i)
@@ -57,6 +60,8 @@ else:
     meshstr = ' on %d x %d grid' % (mx,my)
     other = (1,2,3)
     lid = (4,)
+
+# enable GMG using hierarchy
 if args.refine > 0:
     hierarchy = MeshHierarchy(mesh, args.refine)
     mesh = hierarchy[-1]     # the fine mesh
@@ -75,23 +80,32 @@ else:
     FEname = 'Taylor-Hood'
 Z = V * W
 
+# define body force and Dir. boundary condition (on velocity only)
+if args.analytical:
+    assert (len(args.i) == 0)  # require UnitSquareMesh
+    assert (args.mu == 1.0 and args.rho == 1.0)
+    g = as_vector([ 28.0 * pi*pi * sin(4.0*pi*x) * cos(4.0*pi*y), \
+                   -36.0 * pi*pi * cos(4.0*pi*x) * sin(4.0*pi*y)])
+    print('not implemented : which index is which side?')
+    assert False
+else:
+    g = Constant((0.0, 0.0))  # no body force in lid-driven cavity
+    noslip = Constant((0.0, 0.0))
+    lidtangent = interpolate(as_vector([args.lidscale * x * (1.0 - x),0.0]),V)
+    bc = [ DirichletBC(Z.sub(0), noslip, other),
+           DirichletBC(Z.sub(0), lidtangent, lid) ]
+
 # define weak form
 up = Function(Z)
 u,p = split(up)
 v,q = TestFunctions(Z)
-f = Constant((0.0, 0.0))  # no body force
-F = (args.mu * inner(grad(u), grad(v)) - p * div(v) - div(u) * q - inner(f,v)) * dx
+F = (args.mu * inner(grad(u), grad(v)) - p * div(v) - div(u) * q \
+     - inner(args.rho * g,v)) * dx
 
-# boundary conditions are defined on the velocity space
-noslip = Constant((0.0, 0.0))
-lidtangent = interpolate(as_vector([args.lidscale * x * (1.0 - x),0.0]),V)
-bc = [ DirichletBC(Z.sub(0), noslip, other),
-       DirichletBC(Z.sub(0), lidtangent, lid) ]
-
-# no boundary conditions on the pressure space therefore set nullspace
+# ... no boundary conds on pressure space therefore set nullspace
 ns = MixedVectorSpaceBasis(Z, [Z.sub(0), VectorSpaceBasis(constant=True)])
 
-# describe job and then solve
+# describe method and then solve
 uFEstr = '%s^%d' % (['P','Q'][args.quad],args.uorder)
 pFEstr = '%s^%d' % (['P','Q'][args.quad],args.porder)
 PETSc.Sys.Print('solving%s with %s x %s %s elements ...' \
