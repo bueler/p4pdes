@@ -10,10 +10,11 @@ from firedrake import *
 from firedrake.petsc import PETSc
 
 parser = ArgumentParser(description="""
-Solve the linear Stokes problem for a lid-driven cavity.  Dirichlet
-conditions on all sides.  (The top lid has quadratic horizontal velocity.
-Other sides have zero velocity.)  Mixed FE method, P^k x P^l or Q^k x Q^l;
-defaults to Taylor-Hood P^2 x P^1.  An example of a saddle-point system.
+Solve the linear Stokes problem for a lid-driven cavity (default) or problem
+with an analytical exact solution.  Dirichlet conditions on all sides.
+Uses mixed FE method, either Taylor-Hood family (P^k x P^l or Q^k x Q^l)
+or CD with discontinuous pressure.  Defaults to P^2 x P^1.  Uses either
+uniform mesh or reads mesh.  Serves as an example of a saddle-point system.
 The PETSc solver prefix is 's_'.""",
                     formatter_class=RawTextHelpFormatter)
 parser.add_argument('-analytical', action='store_true', default=False,
@@ -33,9 +34,9 @@ parser.add_argument('-mu', type=float, default=1.0, metavar='MU',
 parser.add_argument('-o', metavar='OUTNAME', type=str, default='',
                     help='output file name ending with .pvd')
 parser.add_argument('-uorder', type=int, default=2, metavar='K',
-                    help='polynomial degree for velocity')
+                    help='polynomial degree for velocity (default=2)')
 parser.add_argument('-porder', type=int, default=1, metavar='L',
-                    help='polynomial degree for pressure')
+                    help='polynomial degree for pressure (default=1)')
 parser.add_argument('-quad', action='store_true', default=False,
                     help='use quadrilateral finite elements')
 parser.add_argument('-refine', type=int, default=0, metavar='R',
@@ -58,6 +59,11 @@ else:
     mesh = UnitSquareMesh(mx-1, my-1, quadrilateral=args.quad)
     mx, my = (mx-1) * 2**args.refine + 1, (my-1) * 2**args.refine + 1
     meshstr = ' on %d x %d grid' % (mx,my)
+    # boundary i.d.s:    4
+    #                   ---
+    #                 1 | | 2
+    #                   ---
+    #                    3
     other = (1,2,3)
     lid = (4,)
 
@@ -81,19 +87,23 @@ else:
 Z = V * W
 
 # define body force and Dir. boundary condition (on velocity only)
+# note: UFL as_vector() takes UFL expressions and combines
 if args.analytical:
     assert (len(args.i) == 0)  # require UnitSquareMesh
     assert (args.mu == 1.0 and args.rho == 1.0)
     g = as_vector([ 28.0 * pi*pi * sin(4.0*pi*x) * cos(4.0*pi*y), \
                    -36.0 * pi*pi * cos(4.0*pi*x) * sin(4.0*pi*y)])
-    print('not implemented : which index is which side?')
-    assert False
+    u_12 = Function(V).interpolate(as_vector([0.0,-sin(4.0*pi*y)]))
+    u_34 = Function(V).interpolate(as_vector([sin(4.0*pi*x),0.0]))
+    bc = [ DirichletBC(Z.sub(0), u_12, (1,2)),
+           DirichletBC(Z.sub(0), u_34, (3,4)) ]
 else:
     g = Constant((0.0, 0.0))  # no body force in lid-driven cavity
-    noslip = Constant((0.0, 0.0))
-    lidtangent = interpolate(as_vector([args.lidscale * x * (1.0 - x),0.0]),V)
-    bc = [ DirichletBC(Z.sub(0), noslip, other),
-           DirichletBC(Z.sub(0), lidtangent, lid) ]
+    u_noslip = Constant((0.0, 0.0))
+    xlid = args.lidscale * x * (1.0 - x)
+    u_lid = Function(V).interpolate(as_vector([xlid,0.0]))
+    bc = [ DirichletBC(Z.sub(0), u_noslip, other),
+           DirichletBC(Z.sub(0), u_lid,    lid)   ]
 
 # define weak form
 up = Function(Z)
@@ -102,10 +112,10 @@ v,q = TestFunctions(Z)
 F = (args.mu * inner(grad(u), grad(v)) - p * div(v) - div(u) * q \
      - inner(args.rho * g,v)) * dx
 
-# ... no boundary conds on pressure space therefore set nullspace
+# no boundary conds on pressure space therefore set nullspace
 ns = MixedVectorSpaceBasis(Z, [Z.sub(0), VectorSpaceBasis(constant=True)])
 
-# describe method and then solve
+# describe method
 uFEstr = '%s^%d' % (['P','Q'][args.quad],args.uorder)
 pFEstr = '%s^%d' % (['P','Q'][args.quad],args.porder)
 PETSc.Sys.Print('solving%s with %s x %s %s elements ...' \
@@ -117,6 +127,8 @@ if mesh.comm.size > 1:
     PETSc.Sys.syncPrint('    rank %d owns %d elements (cells) and can access %d vertices' \
                         % (mesh.comm.rank,mesh.num_cells(),mesh.num_vertices()), comm=mesh.comm)
     PETSc.Sys.syncFlush(comm=mesh.comm)
+
+# solve
 solve(F == 0, up, bcs=bc, nullspace=ns, options_prefix='s',
       solver_parameters={'snes_type': 'ksponly',
                          'ksp_type': 'fgmres',  # or minres, gmres
@@ -136,6 +148,16 @@ u,p = up.split()
 #    "ksp_view_mat": ":foo.m:ascii_matlab"
 #    "fieldsplit_0_ksp_converged_reason": True
 #    "fieldsplit_1_ksp_converged_reason": True
+
+# get numerical error if possible
+if args.analytical:
+    xexact = sin(4.0*pi*x) * cos(4.0*pi*y)
+    yexact = -cos(4.0*pi*x) * sin(4.0*pi*y)
+    u_exact = Function(V).interpolate(as_vector([xexact,yexact]))
+    p_exact = Function(W).interpolate(pi * cos(4.0*pi*x) * cos(4.0*pi*y))
+    uerr = sqrt(assemble(dot(u - u_exact, u - u_exact) * dx))
+    perr = sqrt(assemble(dot(p - p_exact, p - p_exact) * dx))
+    PETSc.Sys.Print('  numerical errors: |u-uexact|_h = %.3e, |p-pexact|_h = %.3e' % (uerr, perr))
 
 # optionally print solution norms
 if args.show_norms:
