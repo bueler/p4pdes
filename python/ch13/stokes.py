@@ -141,7 +141,7 @@ u,p = up.split()
 if args.show_norms:
     uL2 = sqrt(assemble(dot(u, u) * dx))
     pL2 = sqrt(assemble(dot(p, p) * dx))
-    PETSc.Sys.Print('  norms: |u|_h = %.3e, |p|_h = %.3e' % (uL2, pL2))
+    PETSc.Sys.Print('  norms: |u|_h = %.5e, |p|_h = %.5e' % (uL2, pL2))
 
 # optionally save to .pvd file viewable with Paraview
 if len(args.o) > 0:
