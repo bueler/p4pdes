@@ -1,5 +1,5 @@
-p4pdes/python/
-==============
+p4pdes/python/ch13/
+===================
 
 Only Chapter 13 of _PETSc for PDEs_ has [Python](https://www.python.org/)
 example codes.  They use Python3 and [Firedrake](https://www.firedrakeproject.org/),
@@ -22,30 +22,31 @@ downloading the Firedrake install script do something like
 
 Do something like this to run the Poisson solver:
 
+        $ cd ch13/
         $ unset PYTHONPATH; unset PETSC_DIR; unset PETSC_ARCH;
         $ source ~/firedrake/bin/activate
-        $ cd ch13/
-        $ ./firefish.py
+        (firedrake) $ ./fish.py
 
-Running the Stokes solver is similar.  The author has the following Bash alias:
+Running the Stokes solver `stokes.py` is similar.
+
+The author has set the following Bash alias for himself:
 
         alias drakeme='unset PETSC_DIR; unset PETSC_ARCH; source ~/firedrake/bin/activate'
 
 ### run the test suite
 
-From the `ch13/` directory do
+Do
 
-        $ make test
+        (firedrake) $ make test
 
 ### visualize results
 
-The `ch13/` codes allow the `-o foo.pvd` option.  It writes a file which is
-readable with [Paraview](https://www.paraview.org/).
+The two codes `fish.py` and `stokes.py` allow the `-o foo.pvd` option which
+writes a file which is readable with [Paraview](https://www.paraview.org/).
 
 ### cleaning up
 
-From the `ch13/` directory do
+Do
 
-        $ cd ch13/
         $ make clean
 
