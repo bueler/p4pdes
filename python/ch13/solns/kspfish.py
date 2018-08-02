@@ -7,7 +7,7 @@ parser = ArgumentParser(description="""
 Use Firedrake's LINEAR solver for the Poisson problem
   -Laplace(u) = f        in the unit square
             u = g        on the boundary
-Compare ../firefish.py.  The PETSc solver prefix is 's_'.""",
+Compare ../fish.py.  The PETSc solver prefix is 's_'.""",
                     formatter_class=RawTextHelpFormatter)
 parser.add_argument('-mx', type=int, default=3, metavar='MX',
                     help='number of mesh points in x-direction')

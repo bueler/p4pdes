@@ -6,7 +6,7 @@ set +x
 #    ./hprefine.sh &> hprefine.txt
 
 function runcase() {
-    CMD="../firefish.py -refine $1 -order $2 $3 -s_ksp_view -log_view"
+    CMD="../fish.py -refine $1 -order $2 $3 -s_ksp_view -log_view"
     echo "COMMAND:  $CMD"
     rm -rf tmp.txt
     $CMD &> tmp.txt
