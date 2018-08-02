@@ -13,8 +13,10 @@ runstokes_2:
 	-@../../c/testit.sh stokes.py "-uorder 3 -porder 2 -quad -s_mat_type aij -s_ksp_type preonly -s_pc_type svd -show_norms" 1 2
 
 runstokes_3:
-	-@gmsh -v 0 -2 lidbox.geo  # verbosity=0 for quiet
-	-@../../c/testit.sh stokes.py "-i lidbox.msh -show_norms" 1 3
+	-@./lidbox.py -quiet -cl 0.4 -cornerrefine 4 coarse.geo
+	-@gmsh -v 0 -2 coarse.geo  # verbosity=0 for quiet
+	-@../../c/testit.sh stokes.py "-i coarse.msh -show_norms" 1 3
+	-@rm coarse.geo coarse.msh
 
 runstokes_4:
 	-@../../c/testit.sh stokes.py "-porder 0 -dpressure -show_norms" 1 4
@@ -30,5 +32,5 @@ test: test_fish test_stokes
 .PHONY: clean runfish_1 runfish_2 runstokes_1 runstokes_2 runstokes_3 runstokes_4 test_fish test_stokes test
 
 clean:
-	@rm -f *.pyc *.msh *.pvd *.vtu *.m maketmp tmp difftmp
+	@rm -f *.pyc *.geo *.msh *.pvd *.vtu *.m maketmp tmp difftmp
 
