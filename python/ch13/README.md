@@ -1,8 +1,7 @@
 p4pdes/python/ch13/
 ===================
 
-Only Chapter 13 of _PETSc for PDEs_ has [Python](https://www.python.org/)
-example codes.  They use Python3 and [Firedrake](https://www.firedrakeproject.org/),
+The codes in this Chapter use Python3 and [Firedrake](https://www.firedrakeproject.org/),
 a finite element library based on PETSc data types and solvers.
 
 These examples will remain here and be maintained and supported in the long
