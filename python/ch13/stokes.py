@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 #FIXME
+# * generate small matrix and talk/check/show some details:
+#   ./stokes.py -analytical -mx 2 -my 2 -s_mat_type aij -s_ksp_view_mat :foo.m:ascii_matlab
 # * show Moffat eddies in paraview-generated figure
 #   finds 2nd eddy: ./stokes.py -i lidbox.msh -s_ksp_rtol 1.0e-11 -o lidbox4_21.pvd -refine 4
 # * parallel runs working?
