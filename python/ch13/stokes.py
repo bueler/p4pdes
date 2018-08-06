@@ -80,10 +80,10 @@ mesh._plex.viewFromOptions('-dm_view')
 V = VectorFunctionSpace(mesh, 'CG', degree=args.uorder)
 if args.dpressure:
     W = FunctionSpace(mesh, 'DG', degree=args.porder)
-    FEname = 'CD'
+    mixedname = 'CD'
 else:
     W = FunctionSpace(mesh, 'CG', degree=args.porder)
-    FEname = 'Taylor-Hood'
+    mixedname = 'Taylor-Hood'
 Z = V * W
 
 # define body force and Dir. boundary condition (on velocity only)
@@ -119,7 +119,7 @@ ns = MixedVectorSpaceBasis(Z, [Z.sub(0), VectorSpaceBasis(constant=True)])
 uFEstr = '%s^%d' % (['P','Q'][args.quad],args.uorder)
 pFEstr = '%s^%d' % (['P','Q'][args.quad],args.porder)
 PETSc.Sys.Print('solving%s with %s x %s %s elements ...' \
-                % (meshstr,uFEstr,pFEstr,FEname))
+                % (meshstr,uFEstr,pFEstr,mixedname))
 if len(args.i) > 0:
     PETSc.Sys.Print('  mesh has %d elements (2-cells) and %d vertices' \
                     % (mesh.num_cells(),mesh.num_vertices()))
