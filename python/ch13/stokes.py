@@ -122,13 +122,6 @@ uFEstr = '%s^%d' % (['P','Q'][args.quad],args.uorder)
 pFEstr = '%s^%d' % (['P','Q'][args.quad],args.porder)
 PETSc.Sys.Print('solving%s with %s x %s %s elements ...' \
                 % (meshstr,uFEstr,pFEstr,mixedname))
-if len(args.i) > 0:
-    PETSc.Sys.Print('  mesh has %d elements (2-cells) and %d vertices' \
-                    % (mesh.num_cells(),mesh.num_vertices()))
-if mesh.comm.size > 1:
-    PETSc.Sys.syncPrint('    rank %d owns %d elements (cells) and can access %d vertices' \
-                        % (mesh.comm.rank,mesh.num_cells(),mesh.num_vertices()), comm=mesh.comm)
-    PETSc.Sys.syncFlush(comm=mesh.comm)
 
 # solve
 solve(F == 0, up, bcs=bc, nullspace=ns, options_prefix='s',

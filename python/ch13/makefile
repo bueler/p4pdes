@@ -15,8 +15,7 @@ runstokes_2:
 runstokes_3:
 	-@./lidbox.py -quiet -cl 0.4 -cornerrefine 4 coarse.geo
 	-@gmsh -v 0 -2 coarse.geo  # verbosity=0 for quiet
-	-@../../c/testit.sh stokes.py "-i coarse.msh -show_norms" 1 3
-	-@rm coarse.geo coarse.msh
+	-@../../c/testit.sh stokes.py "-i coarse.msh -show_norms -dm_view" 1 3
 
 runstokes_4:
 	-@../../c/testit.sh stokes.py "-porder 0 -dpressure -show_norms" 1 4
