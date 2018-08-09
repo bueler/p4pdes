@@ -2,7 +2,10 @@
 
 #FIXME
 # * generate small matrix and talk/check/show some details:
-#   ./stokes.py -analytical -mx 2 -my 2 -s_mat_type aij -s_ksp_view_mat :foo.m:ascii_matlab
+#      ./stokes.py -analytical -mx 2 -my 2 -s_mat_type aij -s_ksp_view_mat :foo.m:ascii_matlab
+# * showing fixed number of iterations independent of LEV:
+#      ./stokes.py -s_ksp_converged_reason -s_fieldsplit_1_ksp_converged_reason -refine LEV
+# * consider detuning S block (-s_fieldsplit_1_ksp_rtol 1.0e-3)
 # * show Moffat eddies in paraview-generated figure
 # * finds 2nd eddy:
 #      ./stokes.py -i lidbox.msh -dm_view -s_ksp_monitor -s_ksp_rtol 1.0e-10 -s_ksp_type fgmres -o lidbox3_21.pvd -refine 3
@@ -12,10 +15,10 @@ from firedrake import *
 from firedrake.petsc import PETSc
 
 parser = ArgumentParser(description="""
-Solve the linear Stokes problem.  Three problem cases:
+Solve a linear Stokes problem in 2D.  Three problem cases:
   1. (default) Lid-driven cavity with quadratic velocity on lid and
-     Dirichlet conditions on all sides.  Null space of constants.
-  2. (-nobase) Same but with stress free condition on bottom; no null space.
+     Dirichlet conditions on all sides.  Null space = {constants}.
+  2. (-nobase) Same but with stress free condition on bottom; null space = {0}.
   3. (-analytical) Analytical exact solution from Logg et al (2012).
 Uses mixed FE method, either Taylor-Hood family (P^k x P^l or Q^k x Q^l)
 or CD with discontinuous pressure; defaults to P^2 x P^1.  Uses either
@@ -140,8 +143,8 @@ sparams = {'snes_type': 'ksponly',
            'fieldsplit_1_ksp_type': 'cg',  # why can https://www.firedrakeproject.org/demos/geometric_multigrid.py.html use preonly here?
            'fieldsplit_1_pc_type': 'bjacobi',
            'fieldsplit_1_sub_pc_type': 'icc'}
-# no boundary conds on pressure space therefore set nullspace
 if not args.nobase:
+    # Dirichlet-only boundary conds on velocity therefore set nullspace
     ns = MixedVectorSpaceBasis(Z, [Z.sub(0), VectorSpaceBasis(constant=True)])
     solve(F == 0, up, bcs=bc, nullspace=ns, options_prefix='s',
           solver_parameters=sparams)
