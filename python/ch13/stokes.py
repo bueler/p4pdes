@@ -17,7 +17,7 @@ from firedrake.petsc import PETSc
 parser = ArgumentParser(description="""
 Solve a linear Stokes problem in 2D.  Three problem cases:
   1. (default) Lid-driven cavity with quadratic velocity on lid and
-     Dirichlet conditions on all sides.  Null space = {constants}.
+     Dirichlet conditions on all sides.  Null space = {constant pressure}.
   2. (-nobase) Same but with stress free condition on bottom; null space = {0}.
   3. (-analytical) Analytical exact solution from Logg et al (2012).
 Uses mixed FE method, either Taylor-Hood family (P^k x P^l or Q^k x Q^l)
@@ -143,7 +143,7 @@ sparams = {'snes_type': 'ksponly',
            'fieldsplit_1_ksp_type': 'cg',  # why can https://www.firedrakeproject.org/demos/geometric_multigrid.py.html use preonly here?
            'fieldsplit_1_pc_type': 'jacobi'}
 if not args.nobase:
-    # Dirichlet-only boundary conds on velocity therefore set nullspace
+    # Dirichlet-only boundary conds on velocity therefore set nullspace to constant pressure
     ns = MixedVectorSpaceBasis(Z, [Z.sub(0), VectorSpaceBasis(constant=True)])
     solve(F == 0, up, bcs=bc, nullspace=ns, options_prefix='s',
           solver_parameters=sparams)
