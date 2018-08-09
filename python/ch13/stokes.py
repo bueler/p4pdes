@@ -4,8 +4,8 @@
 # * generate small matrix and talk/check/show some details:
 #   ./stokes.py -analytical -mx 2 -my 2 -s_mat_type aij -s_ksp_view_mat :foo.m:ascii_matlab
 # * show Moffat eddies in paraview-generated figure
-#   finds 2nd eddy: ./stokes.py -i lidbox.msh -s_ksp_rtol 1.0e-11 -o lidbox4_21.pvd -refine 4
-# * parallel runs working?
+#   finds 2nd eddy:
+#      ./stokes.py -i lidbox.msh -dm_view -s_ksp_monitor -s_ksp_rtol 1.0e-10 -s_ksp_type fgmres -o lidbox3_21.pvd -refine 3
 
 from argparse import ArgumentParser, RawTextHelpFormatter
 from firedrake import *
@@ -130,19 +130,17 @@ solve(F == 0, up, bcs=bc, nullspace=ns, options_prefix='s',
                          'pc_type': 'fieldsplit',
                          'pc_fieldsplit_type': 'schur',
                          'pc_fieldsplit_schur_factorization_type': 'diag',
-                         'fieldsplit_0_ksp_type': 'preonly', # FIXME why not CG+GMG
-                         'fieldsplit_0_pc_type': 'lu',
-                         'fieldsplit_1_ksp_type': 'gmres',
-                         'fieldsplit_1_pc_type': 'none'})  # FIXME why?
+                         'fieldsplit_0_ksp_type': 'preonly',
+                         'fieldsplit_0_pc_type': 'mg',
+                         'fieldsplit_1_ksp_type': 'cg',  # why can https://www.firedrakeproject.org/demos/geometric_multigrid.py.html use preonly here?
+                         'fieldsplit_1_pc_type': 'bjacobi',
+                         'fieldsplit_1_sub_pc_type': 'icc'})
 u,p = up.split()
 
 # ALSO can add these using -s_ prefix:
-#    "ksp_type": "minres", "pc_type": "jacobi",
-#    "mat_type": "aij"
 #    "mat_type": "aij", "ksp_type": "preonly", "pc_type": "svd",  # fully-direct solver
-#    "ksp_view_mat": ":foo.m:ascii_matlab"
-#    "fieldsplit_0_ksp_converged_reason": True
-#    "fieldsplit_1_ksp_converged_reason": True
+#    "mat_type": "aij", "ksp_view_mat": ":foo.m:ascii_matlab"
+
 
 # get numerical error if possible
 if args.analytical:
