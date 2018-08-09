@@ -138,7 +138,7 @@ sparams = {'snes_type': 'ksponly',
            'pc_type': 'fieldsplit',
            'pc_fieldsplit_type': 'schur',
            'pc_fieldsplit_schur_factorization_type': 'diag',
-           'fieldsplit_0_ksp_type': 'preonly',
+           'fieldsplit_0_ksp_type': 'preonly', # -s_fieldsplit_0_ksp_converged_reason shows repeated application of KSP ... why?
            'fieldsplit_0_pc_type': 'mg',
            'fieldsplit_1_ksp_type': 'cg',  # why can https://www.firedrakeproject.org/demos/geometric_multigrid.py.html use preonly here?
            'fieldsplit_1_pc_type': 'jacobi'}
