@@ -141,8 +141,7 @@ sparams = {'snes_type': 'ksponly',
            'fieldsplit_0_ksp_type': 'preonly',
            'fieldsplit_0_pc_type': 'mg',
            'fieldsplit_1_ksp_type': 'cg',  # why can https://www.firedrakeproject.org/demos/geometric_multigrid.py.html use preonly here?
-           'fieldsplit_1_pc_type': 'bjacobi',
-           'fieldsplit_1_sub_pc_type': 'icc'}
+           'fieldsplit_1_pc_type': 'jacobi'}
 if not args.nobase:
     # Dirichlet-only boundary conds on velocity therefore set nullspace
     ns = MixedVectorSpaceBasis(Z, [Z.sub(0), VectorSpaceBasis(constant=True)])
