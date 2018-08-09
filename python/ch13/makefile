@@ -20,15 +20,18 @@ runstokes_3:
 runstokes_4:
 	-@../../c/testit.sh stokes.py "-refine 1 -porder 0 -dpressure -show_norms" 1 4
 
+runstokes_5:
+	-@../../c/testit.sh stokes.py "-s_ksp_monitor_short -refine 1 -nobase -show_norms" 2 5
+
 test_fish: runfish_1 runfish_2
 
-test_stokes: runstokes_1 runstokes_2 runstokes_3 runstokes_4
+test_stokes: runstokes_1 runstokes_2 runstokes_3 runstokes_4 runstokes_5
 
 test: test_fish test_stokes
 
 # etc
 
-.PHONY: clean runfish_1 runfish_2 runstokes_1 runstokes_2 runstokes_3 runstokes_4 test_fish test_stokes test
+.PHONY: clean runfish_1 runfish_2 runstokes_1 runstokes_2 runstokes_3 runstokes_4 runstokes_5 test_fish test_stokes test
 
 clean:
 	@rm -f *.pyc *.geo *.msh *.pvd *.vtu *.m maketmp tmp difftmp

@@ -4,7 +4,7 @@
 # * generate small matrix and talk/check/show some details:
 #   ./stokes.py -analytical -mx 2 -my 2 -s_mat_type aij -s_ksp_view_mat :foo.m:ascii_matlab
 # * show Moffat eddies in paraview-generated figure
-#   finds 2nd eddy:
+# * finds 2nd eddy:
 #      ./stokes.py -i lidbox.msh -dm_view -s_ksp_monitor -s_ksp_rtol 1.0e-10 -s_ksp_type fgmres -o lidbox3_21.pvd -refine 3
 
 from argparse import ArgumentParser, RawTextHelpFormatter
@@ -12,12 +12,15 @@ from firedrake import *
 from firedrake.petsc import PETSc
 
 parser = ArgumentParser(description="""
-Solve the linear Stokes problem for a lid-driven cavity (default) or problem
-with an analytical exact solution.  Dirichlet conditions on all sides.
+Solve the linear Stokes problem.  Three problem cases:
+  1. (default) Lid-driven cavity with quadratic velocity on lid and
+     Dirichlet conditions on all sides.  Null space of constants.
+  2. (-nobase) Same but with stress free condition on bottom; no null space.
+  3. (-analytical) Analytical exact solution from Logg et al (2012).
 Uses mixed FE method, either Taylor-Hood family (P^k x P^l or Q^k x Q^l)
-or CD with discontinuous pressure.  Defaults to P^2 x P^1.  Uses either
+or CD with discontinuous pressure; defaults to P^2 x P^1.  Uses either
 uniform mesh or reads mesh.  Serves as an example of a saddle-point system.
-The PETSc solver prefix is 's_'.""",
+The solver prefix for PETSc options is 's_'.""",
                     formatter_class=RawTextHelpFormatter)
 parser.add_argument('-analytical', action='store_true', default=False,
                     help='use problem with exact solution')
@@ -33,10 +36,10 @@ parser.add_argument('-my', type=int, default=3, metavar='MY',
                     help='number of grid points in y-direction (uniform case)')
 parser.add_argument('-mu', type=float, default=1.0, metavar='MU',
                     help='dynamic viscosity (default=1.0)')
+parser.add_argument('-nobase', action='store_true', default=False,
+                    help='use problem with stress-free boundary condition on base')
 parser.add_argument('-o', metavar='OUTNAME', type=str, default='',
                     help='output file name ending with .pvd')
-parser.add_argument('-uorder', type=int, default=2, metavar='K',
-                    help='polynomial degree for velocity (default=2)')
 parser.add_argument('-porder', type=int, default=1, metavar='L',
                     help='polynomial degree for pressure (default=1)')
 parser.add_argument('-quad', action='store_true', default=False,
@@ -47,10 +50,13 @@ parser.add_argument('-rho', type=float, default=1.0, metavar='RHO',
                     help='constant fluid density (default=1.0)')
 parser.add_argument('-show_norms', action='store_true', default=False,
                     help='print solution norms (useful for testing)')
+parser.add_argument('-uorder', type=int, default=2, metavar='K',
+                    help='polynomial degree for velocity (default=2)')
 args, unknown = parser.parse_known_args()
 
 # read general mesh or create uniform mesh
 if len(args.i) > 0:
+    assert (not args.analytical) and (not args.nobase)
     PETSc.Sys.Print('reading mesh from %s ...' % args.i)
     mesh = Mesh(args.i)
     meshstr = ''
@@ -66,7 +72,10 @@ else:
     #                 1 | | 2
     #                   ---
     #                    3
-    other = (1,2,3)
+    if args.nobase:
+        other = (1,2)
+    else:
+        other = (1,2,3)
     lid = (4,)
 
 # enable GMG using hierarchy
@@ -114,9 +123,6 @@ v,q = TestFunctions(Z)
 F = (args.mu * inner(grad(u), grad(v)) - p * div(v) - div(u) * q \
      - inner(args.rho * g,v)) * dx
 
-# no boundary conds on pressure space therefore set nullspace
-ns = MixedVectorSpaceBasis(Z, [Z.sub(0), VectorSpaceBasis(constant=True)])
-
 # describe method
 uFEstr = '%s^%d' % (['P','Q'][args.quad],args.uorder)
 pFEstr = '%s^%d' % (['P','Q'][args.quad],args.porder)
@@ -124,17 +130,24 @@ PETSc.Sys.Print('solving%s with %s x %s %s elements ...' \
                 % (meshstr,uFEstr,pFEstr,mixedname))
 
 # solve
-solve(F == 0, up, bcs=bc, nullspace=ns, options_prefix='s',
-      solver_parameters={'snes_type': 'ksponly',
-                         'ksp_type': 'minres',
-                         'pc_type': 'fieldsplit',
-                         'pc_fieldsplit_type': 'schur',
-                         'pc_fieldsplit_schur_factorization_type': 'diag',
-                         'fieldsplit_0_ksp_type': 'preonly',
-                         'fieldsplit_0_pc_type': 'mg',
-                         'fieldsplit_1_ksp_type': 'cg',  # why can https://www.firedrakeproject.org/demos/geometric_multigrid.py.html use preonly here?
-                         'fieldsplit_1_pc_type': 'bjacobi',
-                         'fieldsplit_1_sub_pc_type': 'icc'})
+sparams = {'snes_type': 'ksponly',
+           'ksp_type': 'minres',
+           'pc_type': 'fieldsplit',
+           'pc_fieldsplit_type': 'schur',
+           'pc_fieldsplit_schur_factorization_type': 'diag',
+           'fieldsplit_0_ksp_type': 'preonly',
+           'fieldsplit_0_pc_type': 'mg',
+           'fieldsplit_1_ksp_type': 'cg',  # why can https://www.firedrakeproject.org/demos/geometric_multigrid.py.html use preonly here?
+           'fieldsplit_1_pc_type': 'bjacobi',
+           'fieldsplit_1_sub_pc_type': 'icc'}
+# no boundary conds on pressure space therefore set nullspace
+if not args.nobase:
+    ns = MixedVectorSpaceBasis(Z, [Z.sub(0), VectorSpaceBasis(constant=True)])
+    solve(F == 0, up, bcs=bc, nullspace=ns, options_prefix='s',
+          solver_parameters=sparams)
+else:
+    solve(F == 0, up, bcs=bc, options_prefix='s',
+          solver_parameters=sparams)
 u,p = up.split()
 
 # ALSO can add these using -s_ prefix:
