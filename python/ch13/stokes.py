@@ -126,10 +126,10 @@ PETSc.Sys.Print('solving%s with %s x %s %s elements ...' \
 # solve
 solve(F == 0, up, bcs=bc, nullspace=ns, options_prefix='s',
       solver_parameters={'snes_type': 'ksponly',
-                         'ksp_type': 'fgmres',  # or minres, gmres
+                         'ksp_type': 'minres',
                          'pc_type': 'fieldsplit',
                          'pc_fieldsplit_type': 'schur',
-                         'pc_fieldsplit_schur_factorization_type': 'full',  # or diag
+                         'pc_fieldsplit_schur_factorization_type': 'diag',
                          'fieldsplit_0_ksp_type': 'preonly', # FIXME why not CG+GMG
                          'fieldsplit_0_pc_type': 'lu',
                          'fieldsplit_1_ksp_type': 'gmres',

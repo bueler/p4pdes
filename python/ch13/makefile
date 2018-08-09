@@ -18,7 +18,7 @@ runstokes_3:
 	-@../../c/testit.sh stokes.py "-i coarse.msh -show_norms -dm_view" 1 3
 
 runstokes_4:
-	-@../../c/testit.sh stokes.py "-porder 0 -dpressure -show_norms" 1 4
+	-@../../c/testit.sh stokes.py "-refine 1 -porder 0 -dpressure -show_norms" 1 4
 
 test_fish: runfish_1 runfish_2
 
