@@ -21,7 +21,7 @@ runstokes_4:
 	-@../../c/testit.sh stokes.py "-refine 1 -porder 0 -dpressure -show_norms" 1 4
 
 runstokes_5:
-	-@../../c/testit.sh stokes.py "-s_ksp_monitor_short -refine 1 -nobase -show_norms" 2 5
+	-@../../c/testit.sh stokes.py "-s_ksp_monitor_short -s_ksp_rtol 1.0e-3 -refine 1 -nobase -show_norms" 2 5
 
 test_fish: runfish_1 runfish_2
 

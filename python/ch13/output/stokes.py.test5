@@ -7,7 +7,4 @@ solving on 5 x 5 grid with P^2 x P^1 Taylor-Hood elements ...
     4 KSP Residual norm 0.0882975 
     5 KSP Residual norm 0.0657579 
     6 KSP Residual norm 0.00291174 
-    7 KSP Residual norm 0.00119627 
-    8 KSP Residual norm 0.000868081 
-    9 KSP Residual norm 5.81685e-05 
-  norms: |u|_h = 5.51691e-02, |p|_h = 9.88070e-01
+  norms: |u|_h = 5.51675e-02, |p|_h = 9.88088e-01
