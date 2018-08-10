@@ -49,8 +49,6 @@ parser.add_argument('-quad', action='store_true', default=False,
                     help='use quadrilateral finite elements')
 parser.add_argument('-refine', type=int, default=0, metavar='R',
                     help='number of refinement levels (e.g. for GMG)')
-parser.add_argument('-rho', type=float, default=1.0, metavar='RHO',
-                    help='constant fluid density (default=1.0)')
 parser.add_argument('-show_norms', action='store_true', default=False,
                     help='print solution norms (useful for testing)')
 parser.add_argument('-uorder', type=int, default=2, metavar='K',
@@ -104,15 +102,15 @@ Z = V * W
 # note: UFL as_vector() takes UFL expressions and combines
 if args.analytical:
     assert (len(args.i) == 0)  # require UnitSquareMesh
-    assert (args.mu == 1.0 and args.rho == 1.0)
-    g = as_vector([ 28.0 * pi*pi * sin(4.0*pi*x) * cos(4.0*pi*y), \
-                   -36.0 * pi*pi * cos(4.0*pi*x) * sin(4.0*pi*y)])
+    assert (args.mu == 1.0)
+    f_body = as_vector([ 28.0 * pi*pi * sin(4.0*pi*x) * cos(4.0*pi*y), \
+                       -36.0 * pi*pi * cos(4.0*pi*x) * sin(4.0*pi*y)])
     u_12 = Function(V).interpolate(as_vector([0.0,-sin(4.0*pi*y)]))
     u_34 = Function(V).interpolate(as_vector([sin(4.0*pi*x),0.0]))
     bc = [ DirichletBC(Z.sub(0), u_12, (1,2)),
            DirichletBC(Z.sub(0), u_34, (3,4)) ]
 else:
-    g = Constant((0.0, 0.0))  # no body force in lid-driven cavity
+    f_body = Constant((0.0, 0.0))  # no body force in lid-driven cavity
     u_noslip = Constant((0.0, 0.0))
     xlid = args.lidscale * x * (1.0 - x)
     u_lid = Function(V).interpolate(as_vector([xlid,0.0]))
@@ -124,7 +122,7 @@ up = Function(Z)
 u,p = split(up)
 v,q = TestFunctions(Z)
 F = (args.mu * inner(grad(u), grad(v)) - p * div(v) - div(u) * q \
-     - inner(args.rho * g,v)) * dx
+     - inner(f_body,v)) * dx
 
 # describe method
 uFEstr = '%s^%d' % (['P','Q'][args.quad],args.uorder)
