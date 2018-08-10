@@ -112,8 +112,8 @@ if args.analytical:
 else:
     f_body = Constant((0.0, 0.0))  # no body force in lid-driven cavity
     u_noslip = Constant((0.0, 0.0))
-    xlid = args.lidscale * x * (1.0 - x)
-    u_lid = Function(V).interpolate(as_vector([xlid,0.0]))
+    ux_lid = args.lidscale * x * (1.0 - x)
+    u_lid = Function(V).interpolate(as_vector([ux_lid,0.0]))
     bc = [ DirichletBC(Z.sub(0), u_noslip, other),
            DirichletBC(Z.sub(0), u_lid,    lid)   ]
 
