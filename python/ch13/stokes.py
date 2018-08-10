@@ -43,7 +43,7 @@ parser.add_argument('-nobase', action='store_true', default=False,
                     help='use problem with stress-free boundary condition on base')
 parser.add_argument('-o', metavar='OUTNAME', type=str, default='',
                     help='output file name ending with .pvd')
-parser.add_argument('-porder', type=int, default=1, metavar='L',
+parser.add_argument('-pdegree', type=int, default=1, metavar='L',
                     help='polynomial degree for pressure (default=1)')
 parser.add_argument('-quad', action='store_true', default=False,
                     help='use quadrilateral finite elements')
@@ -51,7 +51,7 @@ parser.add_argument('-refine', type=int, default=0, metavar='R',
                     help='number of refinement levels (e.g. for GMG)')
 parser.add_argument('-show_norms', action='store_true', default=False,
                     help='print solution norms (useful for testing)')
-parser.add_argument('-uorder', type=int, default=2, metavar='K',
+parser.add_argument('-udegree', type=int, default=2, metavar='K',
                     help='polynomial degree for velocity (default=2)')
 args, unknown = parser.parse_known_args()
 
@@ -89,12 +89,12 @@ x,y = SpatialCoordinate(mesh)
 mesh._plex.viewFromOptions('-dm_view')
 
 # define mixed finite elements (P^k-P^l or Q^k-Q^l)
-V = VectorFunctionSpace(mesh, 'CG', degree=args.uorder)
+V = VectorFunctionSpace(mesh, 'CG', degree=args.udegree)
 if args.dpressure:
-    W = FunctionSpace(mesh, 'DG', degree=args.porder)
+    W = FunctionSpace(mesh, 'DG', degree=args.pdegree)
     mixedname = 'CD'
 else:
-    W = FunctionSpace(mesh, 'CG', degree=args.porder)
+    W = FunctionSpace(mesh, 'CG', degree=args.pdegree)
     mixedname = 'Taylor-Hood'
 Z = V * W
 
@@ -125,8 +125,8 @@ F = (args.mu * inner(grad(u), grad(v)) - p * div(v) - div(u) * q \
      - inner(f_body,v)) * dx
 
 # describe method
-uFEstr = '%s^%d' % (['P','Q'][args.quad],args.uorder)
-pFEstr = '%s^%d' % (['P','Q'][args.quad],args.porder)
+uFEstr = '%s^%d' % (['P','Q'][args.quad],args.udegree)
+pFEstr = '%s^%d' % (['P','Q'][args.quad],args.pdegree)
 PETSc.Sys.Print('solving%s with %s x %s %s elements ...' \
                 % (meshstr,uFEstr,pFEstr,mixedname))
 
