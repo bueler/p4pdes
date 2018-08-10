@@ -7,7 +7,7 @@ runfish_2:
 	-@../../c/testit.sh fish.py "-refine 2 -s_ksp_converged_reason -s_pc_type mg" 1 2
 
 runstokes_1:
-	-@../../c/testit.sh stokes.py "-mx 4 -my 4 -refine 1 -analytical" 1 1
+	-@../../c/testit.sh stokes.py "-mx 4 -my 4 -refine 1 -analytical -s_ksp_converged_reason" 1 1
 
 runstokes_2:
 	-@../../c/testit.sh stokes.py "-udegree 3 -pdegree 2 -quad -s_mat_type aij -s_ksp_type preonly -s_pc_type svd -show_norms" 1 2
@@ -18,10 +18,10 @@ runstokes_3:
 	-@../../c/testit.sh stokes.py "-i coarse.msh -show_norms -dm_view" 1 3
 
 runstokes_4:
-	-@../../c/testit.sh stokes.py "-refine 1 -pdegree 0 -dpressure -show_norms" 1 4
+	-@../../c/testit.sh stokes.py "-refine 1 -pdegree 0 -dpressure -show_norms -recommended_pc" 1 4
 
 runstokes_5:
-	-@../../c/testit.sh stokes.py "-s_ksp_monitor_short -s_ksp_rtol 1.0e-3 -refine 1 -nobase -show_norms" 2 5
+	-@../../c/testit.sh stokes.py "-s_ksp_monitor_short -s_ksp_rtol 1.0e-3 -refine 1 -nobase -show_norms -recommended_pc" 2 5
 
 test_fish: runfish_1 runfish_2
 

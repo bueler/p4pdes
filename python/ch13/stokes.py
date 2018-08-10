@@ -4,11 +4,11 @@
 # * generate small matrix and talk/check/show some details:
 #      ./stokes.py -analytical -mx 2 -my 2 -s_mat_type aij -s_ksp_view_mat :foo.m:ascii_matlab
 # * showing fixed number of iterations independent of LEV:
-#      ./stokes.py -s_ksp_converged_reason -s_fieldsplit_1_ksp_converged_reason -refine LEV
+#      ./stokes.py -recommended_pc -s_ksp_converged_reason -s_fieldsplit_1_ksp_converged_reason -refine LEV
 # * consider detuning S block (-s_fieldsplit_1_ksp_rtol 1.0e-3)
 # * show Moffat eddies in paraview-generated figure
 # * finds 2nd eddy:
-#      ./stokes.py -i lidbox.msh -dm_view -s_ksp_monitor -s_ksp_rtol 1.0e-10 -s_ksp_type fgmres -o lidbox3_21.pvd -refine 3
+#      ./stokes.py -i lidbox.msh -dm_view -recommended_pc -s_ksp_type fgmres -s_ksp_monitor -s_ksp_rtol 1.0e-10 -refine 3 -o lidbox3_21.pvd
 
 from argparse import ArgumentParser, RawTextHelpFormatter
 from firedrake import *
@@ -47,6 +47,8 @@ parser.add_argument('-pdegree', type=int, default=1, metavar='L',
                     help='polynomial degree for pressure (default=1)')
 parser.add_argument('-quad', action='store_true', default=False,
                     help='use quadrilateral finite elements')
+parser.add_argument('-recommended_pc', action='store_true', default=False,
+                    help='use recommended PC: fieldsplit, Schur diag, GMG on velocities')
 parser.add_argument('-refine', type=int, default=0, metavar='R',
                     help='number of refinement levels (e.g. for GMG)')
 parser.add_argument('-show_norms', action='store_true', default=False,
@@ -130,16 +132,20 @@ pFEstr = '%s^%d' % (['P','Q'][args.quad],args.pdegree)
 PETSc.Sys.Print('solving%s with %s x %s %s elements ...' \
                 % (meshstr,uFEstr,pFEstr,mixedname))
 
-# solve
+# solver parameters; default to un-preconditioned MINRES
 sparams = {'snes_type': 'ksponly',
-           'ksp_type': 'minres',
-           'pc_type': 'fieldsplit',
+           'ksp_type': 'minres'}
+recommended = {'pc_type': 'fieldsplit',  # FIXME work in progress
            'pc_fieldsplit_type': 'schur',
            'pc_fieldsplit_schur_factorization_type': 'diag',
            'fieldsplit_0_ksp_type': 'preonly', # -s_fieldsplit_0_ksp_converged_reason shows repeated application of KSP ... why?
            'fieldsplit_0_pc_type': 'mg',
            'fieldsplit_1_ksp_type': 'cg',  # why can https://www.firedrakeproject.org/demos/geometric_multigrid.py.html use preonly here?
            'fieldsplit_1_pc_type': 'jacobi'}
+if args.recommended_pc:
+    sparams.update(recommended)
+else:
+    sparams.update({'pc_type': 'none'})
 if not args.nobase:
     # Dirichlet-only boundary conds on velocity therefore set nullspace to constant pressure
     ns = MixedVectorSpaceBasis(Z, [Z.sub(0), VectorSpaceBasis(constant=True)])

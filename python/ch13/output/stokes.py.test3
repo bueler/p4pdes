@@ -12,4 +12,4 @@ Labels:
   Face Sets: 2 strata with value/size (41 (17), 40 (3))
   depth: 3 strata with value/size (0 (50), 1 (127), 2 (78))
 solving with P^2 x P^1 Taylor-Hood elements ...
-  norms: |u|_h = 5.44748e-02, |p|_h = 8.53606e-01
+  norms: |u|_h = 5.44747e-02, |p|_h = 8.53601e-01
