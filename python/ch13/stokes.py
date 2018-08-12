@@ -5,7 +5,9 @@
 #      ./stokes.py -analytical -mx 2 -my 2 -s_mat_type aij -s_ksp_view_mat :foo.m:ascii_matlab
 # * showing fixed number of iterations independent of LEV:
 #      ./stokes.py -recommended_pc -s_ksp_converged_reason -s_fieldsplit_1_ksp_converged_reason -refine LEV
-# * consider detuning S block (-s_fieldsplit_1_ksp_rtol 1.0e-3)
+# * consider detuning S block (-s_fieldsplit_1_ksp_rtol 1.0e-3 ?)
+# * key fieldsplit control which I need to return to documentation for:
+#      -pc_fieldsplit_schur_precondition <self,selfp,user,a11,full> -default is a11
 # * show Moffat eddies in paraview-generated figure
 # * finds 2nd eddy:
 #      ./stokes.py -i lidbox.msh -dm_view -recommended_pc -s_ksp_type fgmres -s_ksp_monitor -s_ksp_rtol 1.0e-10 -refine 3 -o lidbox3_21.pvd
@@ -136,8 +138,11 @@ PETSc.Sys.Print('solving%s with %s x %s %s elements ...' \
 sparams = {'snes_type': 'ksponly',
            'ksp_type': 'minres'}
 recommended = {'pc_type': 'fieldsplit',  # FIXME work in progress
-           'pc_fieldsplit_type': 'schur',
-           'pc_fieldsplit_schur_factorization_type': 'diag',
+           'pc_fieldsplit_type': 'schur',  # this is the ONLY viable fieldsplit type;
+                                           # additive,multiplicative,symmetric_multiplicative
+                                           # all fail because diagonal pressure block is identically
+                                           # zero and non-invertible
+           'pc_fieldsplit_schur_factorization_type': 'diag',  # note Murphy et al 2000 theorem applies to MINRES+(this diag); the default -pc_fieldsplit_schur_scale -1.0 is what we want
            'fieldsplit_0_ksp_type': 'preonly', # -s_fieldsplit_0_ksp_converged_reason shows repeated application of KSP ... why?
            'fieldsplit_0_pc_type': 'mg',
            'fieldsplit_1_ksp_type': 'cg',  # why can https://www.firedrakeproject.org/demos/geometric_multigrid.py.html use preonly here?
