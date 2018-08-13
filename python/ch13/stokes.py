@@ -3,14 +3,15 @@
 #FIXME
 # * generate small matrix and talk/check/show some details:
 #      ./stokes.py -analytical -mx 2 -my 2 -s_mat_type aij -s_ksp_view_mat :foo.m:ascii_matlab
-# * showing fixed number of iterations independent of LEV:
-#      ./stokes.py -recommended_pc -s_ksp_converged_reason -s_fieldsplit_1_ksp_converged_reason -refine LEV
-# * consider detuning S block (-s_fieldsplit_1_ksp_rtol 1.0e-3 ?)
-# * key fieldsplit control which I need to return to documentation for:
-#      -pc_fieldsplit_schur_precondition <self,selfp,user,a11,full> -default is a11
-# * show Moffat eddies in paraview-generated figure
-# * fully-resolves 2nd eddy!:
-#      ./stokes.py -i lidbox.msh -show_norms -dm_view -refine 5 -package schur2 -s_ksp_converged_reason -o foo.pvd -s_ksp_rtol 1.0e-10
+# * showing fixed number of iterations independent of LEV and clear evidence of
+#   optimality; note ksp_view_mat shows MatNest so get n_p,n_u; can go to level
+#   9 = 1025x1025 grid which uses more than 16 Gb:
+#      for LEV in 1 2 3 4 5 6 7 8; do
+#          timer ./stokes.py -package schur2 -s_ksp_converged_reason -s_mat_view -refine $LEV
+#      done
+# * show Moffat eddies with paraview-generated streamlines
+# * resolves 3rd eddy! -refine 6 works too and uses ~30Gb memory (but does not get 4th eddy)
+#      ./stokes.py -i lidbox.msh -show_norms -dm_view -refine 5 -package schur2 -s_ksp_converged_reason -o lid5.pvd -s_ksp_rtol 1.0e-12
 
 import sys
 from argparse import ArgumentParser, RawTextHelpFormatter
@@ -142,6 +143,8 @@ F = (args.mu * inner(grad(u), grad(v)) - p * div(v) - div(u) * q \
 #   -s_fieldsplit_0_ksp_converged_reason
 #       this shows repeated application of KSP ... why? ... I think it is
 #       in applying (A00)^-1 in applying Schur factor
+#   -pc_fieldsplit_schur_precondition <self,selfp,user,a11,full>
+#       default is a11; key fieldsplit control which I need to gronk
 
 # solver packages
 pars = {'minres':      # default is un-preconditioned MINRES
@@ -166,10 +169,10 @@ pars = {'minres':      # default is un-preconditioned MINRES
             'fieldsplit_0_pc_type': 'mg',
             'fieldsplit_1_ksp_type': 'cg',
             'fieldsplit_1_pc_type': 'jacobi'},
-        'schur2':      # GMRES+Schur(lower)+GMG
+        'schur2':      # FGMRES+Schur(lower)+GMG
            # reference: https://www.firedrakeproject.org/demos/geometric_multigrid.py.html
            # ALSO: adds pressure mass matrix term in Jacobian for preconditioning Schur
-           {'ksp_type': 'gmres',
+           {'ksp_type': 'fgmres',  # change from Firedrake form with gmres
             'pc_type': 'fieldsplit',
             'pc_fieldsplit_type': 'schur',
             'pc_fieldsplit_schur_factorization_type': 'lower',
