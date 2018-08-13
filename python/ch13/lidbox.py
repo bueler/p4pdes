@@ -14,8 +14,8 @@ parser.add_argument('outname', type=str, default='', metavar='OUTNAME',
                     help='output file name ending with .geo')
 parser.add_argument('-cl', type=float, default=0.1, metavar='CL',
                     help='characteristic length for most of boundary (default=0.1)')
-parser.add_argument('-cornerrefine', type=float, default=20, metavar='X',
-                    help='ratio of refinement in corners (default=20)')
+parser.add_argument('-cornerrefine', type=float, default=100, metavar='X',
+                    help='ratio of refinement in corners (default=100)')
 parser.add_argument('-quiet', action='store_true', default=False,
                     help='suppress all stdout')
 args = parser.parse_args()
