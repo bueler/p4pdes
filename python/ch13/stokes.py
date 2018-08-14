@@ -7,11 +7,13 @@
 #   optimality; note ksp_view_mat shows MatNest so get n_p,n_u; can go to level
 #   9 = 1025x1025 grid which uses more than 16 Gb:
 #      for LEV in 1 2 3 4 5 6 7 8; do
-#          timer ./stokes.py -package schur2 -s_ksp_converged_reason -s_mat_view -refine $LEV
+#          timer ./stokes.py -package schur2 -s_ksp_converged_reason \
+#              -s_ksp_view_mat -refine $LEV
 #      done
 # * show Moffat eddies with paraview-generated streamlines
-# * resolves 3rd eddy! -refine 6 works too and uses ~30Gb memory (but does not get 4th eddy)
+# * resolves 3rd eddy!:
 #      ./stokes.py -i lidbox.msh -show_norms -dm_view -refine 5 -package schur2 -s_ksp_converged_reason -o lid5.pvd -s_ksp_rtol 1.0e-12
+#   (-refine 6 works too and uses ~30Gb memory but does not get 4th eddy)
 
 import sys
 from argparse import ArgumentParser, RawTextHelpFormatter
@@ -27,6 +29,7 @@ Solve a linear Stokes problem in 2D.  Three problem cases:
 Uses mixed FE method, either Taylor-Hood family (P^k x P^l or Q^k x Q^l)
 or CD with discontinuous pressure; defaults to P^2 x P^1.  Uses either
 uniform mesh or reads mesh.  Serves as an example of a saddle-point system.
+See code for solver packages: -package minres|directlu|directsvd|schur1|schur2
 The solver prefix for PETSc options is 's_'.""",
                     formatter_class=RawTextHelpFormatter)
 parser.add_argument('-analytical', action='store_true', default=False,
