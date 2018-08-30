@@ -6,21 +6,21 @@ static const char help[] =
 "always subject to the constraint\n"
 "       H(t,x,y) >= 0.\n"
 "In these equations  H(t,x,y)  is ice thickness,  b(x,y)  is bed elevation,\n"
-"s(t,x,y) = H(t,x,y) + b(x,y)  is surface elevation,  and  m(x,y), is the\n"
-"climatic mass balance.  Note b and m are the primary data of the problem.\n"
-"Note  n > 1  and  Gamma = 2 A (rho g)^n / (n+2).  The domain is square,\n"
-"Omega = [0,L] x [0,L],  with periodic boundary conditions.\n"
+"s(t,x,y) = H(t,x,y) + b(x,y)  is surface elevation,  and  m(x,y)  is the\n"
+"climatic mass balance.  Constants are  n > 1  and  Gamma = 2 A (rho g)^n / (n+2).\n"
+"The domain is square,  Omega = [0,L] x [0,L],  with periodic boundary conditions.\n"
 "Equation (*) is semi-discretized in space by a Q1 structured-grid FVE method\n"
-"(Bueler, 2016), so this is method-of-lines.  The resulting ODE in time is\n"
+"(Bueler, 2016); this is method-of-lines.  The resulting ODE in time is\n"
 "written in the form\n"
 "      F(t,H,H_t) = G(t,H)\n"
 "For this ODE we define three callbacks:\n"
 "      FormIFunction()   evaluates F(H,H_t) = H_t + div q\n"
 "      FormRHSFunction() evaluates G(t,H) = m\n"
 "      FormIJacobian()   evaluates (shift) dF/dH_t + dF/dH.\n"
-"Options -snes_fd_color works well but is slower by a factor of two or so.\n"
-"Requires SNESVI (-snes_type vinewtonrsls|vinewtonssls) because of constraint,\n"
-"and, with current PETSc design, explicit TS types do not work.\n\n";
+"Options -snes_fd_color works well but is slower than the default Jacobian\n"
+"by a factor of two or so.  Requires SNESVI types (i.e.\n"
+"-snes_type vinewton{rsls|ssls}) because of constraint.  With current PETSc\n"
+"design, explicit TS types do not work.\n\n";
 
 /* try:
 
