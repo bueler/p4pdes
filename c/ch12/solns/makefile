@@ -5,10 +5,14 @@ dam: dam.o ../../ch6/poissonfunctions.o chkopts
 	-${CLINKER} -o dam dam.o ../../ch6/poissonfunctions.o ${PETSC_LIB}
 	${RM} dam.o ../../ch6/poissonfunctions.o
 
+elasto: elasto.o ../../ch6/poissonfunctions.o chkopts
+	-${CLINKER} -o elasto elasto.o ../../ch6/poissonfunctions.o ${PETSC_LIB}
+	${RM} elasto.o ../../ch6/poissonfunctions.o
+
 # etc
 
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ dam
+	@rm -f *~ dam elasto
 

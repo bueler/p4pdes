@@ -1,5 +1,6 @@
-static const char help[] = "Solves the 2D dam-saturation problem on pages\n"
-"667-668 of Brandt & Cryer (1983).  The exact soluution is not known, but\n"
+static const char help[] =
+"Solves a 2D dam-saturation problem.  No options.\n"
+"The exact soluution is not known, but\n"
 "a coarse-grid discrete solution can be checked against that source.\n"
 "Note Poisson2DFunctionLocal() sets-up this unconstrained problem:\n"
 "    - u_xx - u_yy = - 1\n"
@@ -7,7 +8,8 @@ static const char help[] = "Solves the 2D dam-saturation problem on pages\n"
 "    F(u) = - u_xx - u_yy + 1 >= 0\n"
 "    u >= 0\n"
 "    u F(u) = 0.\n"
-"As with obstacle.c, this is solved (default) by -snes_type vinewtonrsls.\n";
+"As with obstacle.c, this is solved (default) by -snes_type vinewtonrsls.\n"
+"Reference:  pages 667-668 of Brandt & Cryer (1983).\n\n";
 
 /*
 note PFAS is not implemented in PETSc, but the following runs for X = 1,2,3,4,5,6
