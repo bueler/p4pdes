@@ -105,6 +105,7 @@ typedef struct {
               L,      // spatial domain is [0,L] x [0,L]
               tf,     // final time; time domain is [0,tf]
               dtinit, // user-requested initial time step
+              dtmax,  // set TS maximum time step
               g,      // acceleration of gravity
               rho_ice,// ice density
               n_ice,  // Glen exponent for SIA flux term
@@ -118,7 +119,7 @@ typedef struct {
               dtexplicitsum;// running sum of explicit dt limit
     int       verif;  // 0 = not verification, 1 = dome, 2 = Halfar (1983)
     PetscBool monitor,// use -ice_monitor
-              dtlimits,// also monitor time step limits for explicit schemes
+              monitor_dt_limits,// also monitor time step limits for explicit schemes
               dump;   // dump state (H,b) at final time
     CMBModel  *cmb;// defined in cmbmodel.h
 } AppCtx;
@@ -167,6 +168,42 @@ int main(int argc,char **argv) {
   ierr = DMSetApplicationContext(da, &user);CHKERRQ(ierr);
   ierr = DMDASetUniformCoordinates(da, 0.0, user.L, 0.0, user.L, 0.0,1.0); CHKERRQ(ierr);
 
+  // initialize the TS and configure its time-axis, including its TSAdapt
+  ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
+  ierr = TSSetProblemType(ts,TS_NONLINEAR); CHKERRQ(ierr);
+  ierr = TSSetType(ts,TSARKIMEX); CHKERRQ(ierr);
+  ierr = TSSetTime(ts,0.0); CHKERRQ(ierr);
+  ierr = TSSetMaxTime(ts,user.tf); CHKERRQ(ierr);
+  ierr = TSSetTimeStep(ts,user.dtinit); CHKERRQ(ierr);
+  ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
+  ierr = TSGetAdapt(ts,&adapt); CHKERRQ(ierr);
+  ierr = TSAdaptSetType(adapt,TSADAPTBASIC); CHKERRQ(ierr);
+  ierr = TSAdaptSetClip(adapt,0.5,1.2); CHKERRQ(ierr);
+  ierr = TSAdaptSetStepLimits(adapt,0.0,user.dtmax); CHKERRQ(ierr);
+  if (user.monitor) {
+      ierr = TSMonitorSet(ts,IceMonitor,&user,NULL); CHKERRQ(ierr);
+  }
+  if (user.monitor_dt_limits) {
+      ierr = TSMonitorSet(ts,ExplicitLimitsMonitor,&user,NULL); CHKERRQ(ierr);
+  }
+
+  // set methods to compute parts of ODE system, for the DMDA grid, for TS callback
+  ierr = TSSetDM(ts,da); CHKERRQ(ierr);
+  ierr = DMDATSSetIFunctionLocal(da,INSERT_VALUES,
+           (DMDATSIFunctionLocal)FormIFunctionLocal,&user); CHKERRQ(ierr);
+  ierr = DMDATSSetIJacobianLocal(da,
+           (DMDATSIJacobianLocal)FormIJacobianLocal,&user); CHKERRQ(ierr);
+  ierr = DMDATSSetRHSFunctionLocal(da,INSERT_VALUES,
+           (DMDATSRHSFunctionLocal)FormRHSFunctionLocal,&user); CHKERRQ(ierr);
+
+  // configure the SNES and DM to solve a NCP/VI at each step
+  ierr = TSGetSNES(ts,&snes); CHKERRQ(ierr);
+  ierr = SNESSetType(snes,SNESVINEWTONRSLS); CHKERRQ(ierr);
+  ierr = SNESVISetComputeVariableBounds(snes,&FormBounds); CHKERRQ(ierr);
+
+  // should be done setting up TS
+  ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
+
   // report on space-time grid
   ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
   dx = user.L / (double)(info.mx);
@@ -177,44 +214,9 @@ int main(int argc,char **argv) {
      user.L/1000.0,user.tf/user.secpera,
      info.mx,info.my,dx/1000.0,dy/1000.0,user.dtinit/user.secpera);
 
+  // set up initial condition on fine grid
   ierr = DMCreateGlobalVector(da,&H);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject)H,"H"); CHKERRQ(ierr);
-
-  // initialize the TS
-  ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
-  ierr = TSSetProblemType(ts,TS_NONLINEAR); CHKERRQ(ierr);
-  ierr = TSSetType(ts,TSARKIMEX); CHKERRQ(ierr);
-  ierr = TSGetAdapt(ts,&adapt); CHKERRQ(ierr);
-  ierr = TSAdaptSetType(adapt,TSADAPTBASIC); CHKERRQ(ierr);
-  ierr = TSAdaptSetClip(adapt,0.5,1.2); CHKERRQ(ierr);
-  ierr = TSSetDM(ts,da); CHKERRQ(ierr);
-  ierr = DMDATSSetIFunctionLocal(da,INSERT_VALUES,
-           (DMDATSIFunctionLocal)FormIFunctionLocal,&user); CHKERRQ(ierr);
-  ierr = DMDATSSetIJacobianLocal(da,
-           (DMDATSIJacobianLocal)FormIJacobianLocal,&user); CHKERRQ(ierr);
-  ierr = DMDATSSetRHSFunctionLocal(da,INSERT_VALUES,
-           (DMDATSRHSFunctionLocal)FormRHSFunctionLocal,&user); CHKERRQ(ierr);
-  if (user.monitor) {
-      ierr = TSMonitorSet(ts,IceMonitor,&user,NULL); CHKERRQ(ierr);
-  }
-  if (user.dtlimits) {
-      ierr = TSMonitorSet(ts,ExplicitLimitsMonitor,&user,NULL); CHKERRQ(ierr);
-  }
-
-  // configure the SNES to solve NCP/VI at each step
-  ierr = TSGetSNES(ts,&snes); CHKERRQ(ierr);
-  ierr = SNESSetType(snes,SNESVINEWTONRSLS); CHKERRQ(ierr);
-  ierr = SNESVISetComputeVariableBounds(snes,&FormBounds); CHKERRQ(ierr);
-
-  // set time axis
-  ierr = TSSetTime(ts,0.0); CHKERRQ(ierr);
-  ierr = TSSetMaxTime(ts,user.tf); CHKERRQ(ierr);
-  ierr = TSSetTimeStep(ts,user.dtinit); CHKERRQ(ierr);
-  ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
-  //FIXME add max time step?
-  ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
-
-  // set up initial condition on fine grid
   ierr = DMDAVecGetArray(da,H,&aH); CHKERRQ(ierr);
   if (user.verif == 1) {
       ierr = DomeThicknessLocal(&info,aH,&user); CHKERRQ(ierr);
@@ -233,7 +235,7 @@ int main(int argc,char **argv) {
   ierr = TSSolve(ts,H); CHKERRQ(ierr);
 
   // time-stepping summary if -ice_dtlimits
-  if (user.dtlimits) {
+  if (user.monitor_dt_limits) {
       int count;
       ierr = TSGetStepNumber(ts,&count); CHKERRQ(ierr);
       ierr = PetscPrintf(PETSC_COMM_WORLD,
@@ -301,6 +303,7 @@ PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
   user->L      = 1800.0e3;    // m; note  domeL=750.0e3 is radius of verification ice sheet
   user->tf     = 100.0 * user->secpera;  // default to 100 years
   user->dtinit = 10.0 * user->secpera;   // default to 10 year as initial step
+  user->dtmax  = 1.0e6 * user->secpera;   // default to million years; huge
   user->g      = 9.81;        // m/s^2
   user->rho_ice= 910.0;       // kg/m^3
   user->n_ice  = 3.0;
@@ -312,7 +315,7 @@ PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
   user->dtexplicitsum = 0.0;
   user->verif  = 0;
   user->monitor = PETSC_TRUE;
-  user->dtlimits = PETSC_FALSE;
+  user->monitor_dt_limits = PETSC_FALSE;
   user->dump   = PETSC_FALSE;
   user->cmb    = NULL;
 
@@ -328,12 +331,13 @@ PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
       "-delta", "dimensionless regularization for slope in SIA formulas",
       "ice.c",user->delta,&user->delta,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal(
-      "-dtinit", "initial time step in seconds; input units are years",
+      "-dt_init", "initial time step; input units are years",
       "ice.c",user->dtinit,&user->dtinit,&set);CHKERRQ(ierr);
   if (set)   user->dtinit *= user->secpera;
-  ierr = PetscOptionsBool(
-      "-dtlimits", "monitor the time-step limits which would apply to an explicit scheme",
-      "ice.c",user->dtlimits,&user->dtlimits,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal(
+      "-dt_max", "maximum time step; input units are years",
+      "ice.c",user->dtmax,&user->dtmax,&set);CHKERRQ(ierr);
+  if (set)   user->dtmax *= user->secpera;
   ierr = PetscOptionsBool(
       "-dump", "save final state (H, b)",
       "ice.c",user->dump,&user->dump,NULL);CHKERRQ(ierr);
@@ -350,6 +354,9 @@ PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
       "-monitor", "use the ice monitor which shows ice sheet volume and area",
       "ice.c",user->monitor,&user->monitor,&set);CHKERRQ(ierr);
   if (!set)   user->monitor = PETSC_TRUE;
+  ierr = PetscOptionsBool(
+      "-monitor_dt_limits", "monitor the time-step limits which would apply to an explicit scheme",
+      "ice.c",user->monitor_dt_limits,&user->monitor_dt_limits,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal(
       "-n", "value of Glen exponent n",
       "ice.c",user->n_ice,&user->n_ice,NULL);CHKERRQ(ierr);
@@ -435,7 +442,7 @@ PetscErrorCode ExplicitLimitsMonitor(TS ts, int step, double time, Vec H, void *
     ierr = MPI_Allreduce(&(user->locmaxD),&maxD,1,MPI_DOUBLE,MPI_MAX,com); CHKERRQ(ierr);
     // compute explicit limits
     if (maxD <= 0.0) {
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"    [NO -ice_dtlimits output because maxD is zero]\n"); CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_WORLD,"    [NO -ice_monitor_dt_limits output because maxD is zero]\n"); CHKERRQ(ierr);
     } else {
         ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
         dd = PetscMin(user->L / (double)(info.mx), user->L / (double)(info.my));
@@ -790,7 +797,7 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t,
               ierr = SIAflux(gH,gb,H,Hup,xdire[c],
                              &DSIA_ckj,&qSIA_ckj,user); CHKERRQ(ierr);
               aqquad[c][k][j] = qSIA_ckj;
-              if (user->dtlimits) {
+              if (user->monitor_dt_limits) {
                   user->locmaxD = PetscMax(user->locmaxD,DSIA_ckj);
               }
           }

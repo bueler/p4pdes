@@ -21,16 +21,16 @@ runobstacle_3:
 	-@../testit.sh obstacle "-snes_grid_sequence 3 -snes_converged_reason -ksp_type cg -pc_type mg" 1 3
 
 runice_1:
-	-@../testit.sh ice "-da_refine 2 -ice_verif 1 -ice_eps 0.0 -ice_tf 40 -ice_dtinit 10 -ts_type beuler -ts_adapt_type none" 1 1
+	-@../testit.sh ice "-da_refine 2 -ice_verif 1 -ice_eps 0.0 -ice_tf 40 -ice_dt_init 10 -ts_type beuler -ts_adapt_type none" 1 1
 
 runice_2:
-	-@../testit.sh ice "-da_refine 2 -ice_verif 2 -ice_eps 0.0 -ice_tf 10 -ice_dtinit 3 -snes_fd_color" 2 2
+	-@../testit.sh ice "-da_refine 2 -ice_verif 2 -ice_eps 0.0 -ice_tf 10 -ice_dt_init 3 -snes_fd_color" 2 2
 
 runice_3:
-	-@../testit.sh ice "-da_refine 2 -ice_tf 4 -ice_dtinit 1 -ts_type bdf -ts_bdf_order 2 -ts_adapt_type none" 1 3
+	-@../testit.sh ice "-da_refine 2 -ice_tf 4 -ice_dt_init 1 -ts_type bdf -ts_bdf_order 2 -ts_adapt_type none" 1 3
 
 runice_4:
-	-@../testit.sh ice "-da_refine 2 -ice_tf 20 -ice_dtinit 1 -snes_converged_reason -ts_adapt_clip 0.1,10.0" 1 4
+	-@../testit.sh ice "-da_refine 2 -ice_tf 20 -ice_dt_init 1 -snes_converged_reason -ts_adapt_clip 0.1,10.0" 1 4
 
 test_obstacle: runobstacle_1 runobstacle_2 runobstacle_3
 
