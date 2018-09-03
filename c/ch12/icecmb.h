@@ -6,8 +6,8 @@
 typedef struct {
     double secpera,
            ela,        // equilibrium line altitude (m)
-           zgradabove, // vertical derivative (gradient) of CMB (s^-1), above ela
-           zgradbelow, // vertical derivative (gradient) of CMB (s^-1), below ela
+           holdelev,   // hold CMB above this elevation (m)
+           zgrad,      // vertical derivative (gradient) of CMB (s^-1)
            initmagic;  // constant used to multiply CMB for initial H
 } CMBModel;
 
@@ -16,35 +16,35 @@ PetscErrorCode SetFromOptions_CMBModel(CMBModel *cmb, double secpera) {
   PetscBool      set;
   cmb->secpera    = 31556926.0;  // number of seconds in a year
   cmb->ela        = 2000.0; // m
-  cmb->zgradabove = 0.001; // a^-1
-  cmb->zgradbelow = 0.002; // a^-1
+  cmb->zgrad      = 0.004; // a^-1
+  cmb->holdelev   = 2250.0; // a^-1
   cmb->initmagic  = 1000.0 * cmb->secpera; // s
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"ice_cmb_",
             "options to climatic mass balance (CMB) model, if used","");CHKERRQ(ierr);
   ierr = PetscOptionsReal(
-      "-ela", "equilibrium line altitude, in m",
+      "-ela", "equilibrium line altitude; in m",
       "icecmb.h",cmb->ela,&cmb->ela,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal(
+      "-holdelev", "hold CMB above this elevation; in m",
+      "icecmb.h",cmb->holdelev,&cmb->holdelev,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal(
       "-initmagic", "used to multiply CMB to get initial thickness iterate; input in a",
       "icecmb.h",cmb->initmagic,&cmb->initmagic,&set);CHKERRQ(ierr);
   if (set)   cmb->initmagic *= cmb->secpera;
   ierr = PetscOptionsReal(
-      "-zgradabove", "vertical derivative (gradient) of CMB above ela; input in a^-1",
-      "icecmb.h",cmb->zgradabove,&cmb->zgradabove,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal(
-      "-zgradbelow", "vertical derivative (gradient) of CMB below ela; input in a^-1",
-      "icecmb.h",cmb->zgradbelow,&cmb->zgradbelow,NULL);CHKERRQ(ierr);
+      "-zgrad", "vertical derivative (gradient) of CMB; input in a^-1",
+      "icecmb.h",cmb->zgrad,&cmb->zgrad,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
-  cmb->zgradabove /= secpera;
-  cmb->zgradbelow /= secpera;
+  cmb->zgrad /= secpera;
   PetscFunctionReturn(0);
 }
 
+//FIXME achieving more reliable convergence may require this to be more smooth?
 double M_CMBModel(CMBModel *cmb, double s) {
-  if (s > cmb->ela) {
-      return cmb->zgradabove * (s - cmb->ela);
+  if (s <= cmb->holdelev) {
+      return cmb->zgrad * (s - cmb->ela);
   } else {
-      return cmb->zgradbelow * (s - cmb->ela);
+      return cmb->zgrad * (cmb->holdelev - cmb->ela);
   }
 }
 
