@@ -25,6 +25,9 @@ static const char help[] =
 
 ./ice -da_refine 3                  # only meaningful at this res and higher
 
+./ice -snes_atol 1.0e-14            # CRITICAL; some lower bound on SNES norm is
+                                    #   critical to allowing convergence near steady state
+
 ./ice                               # DEFAULT uses analytical jacobian
 ./ice -snes_fd_color
 ./ice -snes_type vinewtonrsls       # DEFAULT
