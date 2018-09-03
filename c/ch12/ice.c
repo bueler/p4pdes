@@ -10,8 +10,7 @@ static const char help[] =
 "climatic mass balance.  Constants are  n > 1  and  Gamma = 2 A (rho g)^n / (n+2).\n"
 "The domain is square,  Omega = [0,L] x [0,L],  with periodic boundary conditions.\n"
 "Equation (*) is semi-discretized in space by a Q1 structured-grid FVE method\n"
-"(Bueler, 2016); this is method-of-lines.  The resulting ODE in time is\n"
-"written in the form\n"
+"(Bueler, 2016).  The resulting method-of-lines ODE in time is in the form\n"
 "      F(t,H,H_t) = G(t,H)\n"
 "For this ODE we define three callbacks:\n"
 "      FormIFunction()   evaluates F(H,H_t) = H_t + div q\n"
@@ -24,40 +23,40 @@ static const char help[] =
 
 /* try:
 
-./ice                                   # DEFAULT uses analytical jacobian
+./ice -da_refine 3                  # only meaningful at this res and higher
+
+./ice                               # DEFAULT uses analytical jacobian
 ./ice -snes_fd_color
-
-./ice -ts_view
-./ice -da_refine 3                      # only meaningful at this res and higher
-
-./ice -snes_type vinewtonrsls           # DEFAULT
-./ice -snes_type vinewtonssls           # slightly more robust?
+./ice -snes_type vinewtonrsls       # DEFAULT
+./ice -snes_type vinewtonssls       # slightly more robust?
 (other -snes_types like newtonls not allowed because don't support bounds)
 
-./ice -ts_type arkimex                  # DEFAULT
-./ice -ts_type beuler                   # robust
-./ice -ts_type cn                       # mis-behaves on long time steps
-./ice -ts_type cn -ts_theta_adapt       # good
-./ice -ts_type theta -ts_theta_adapt    # good
+./ice -ts_type arkimex              # DEFAULT
+./ice -ts_type beuler               # robust
+./ice -ts_type cn                   # mis-behaves on long time steps
+./ice -ts_type cn -ts_theta_adapt                         # good
+./ice -ts_type theta -ts_theta_adapt                      # good
 ./ice -ts_type bdf -ts_bdf_adapt -ts_bdf_order 2|3|4|5|6  # good
 
 # time-stepping control options
 -ts_adapt_type basic                # DEFAULT
--ts_adapt_basic_clip 0.5,1.2        # DEFAULT and recommended:
-                                      don't lengthen too much, but allow
+-ts_adapt_basic_clip 0.5,1.2        # DEFAULT and recommended;
+                                      doesn't lengthen too much, but allows
                                       significantly shorter, in response to estimate of
-                                      local truncation error (default: 0.1,10.0)
+                                      local truncation error (vs default: 0.1,10.0)
 -ts_max_snes_failures -1            # recommended: do retry solve
 -ts_adapt_scale_solve_failed 0.9    # recommended: try a slightly-easier problem
 -ts_max_reject 50                   # recommended?:  keep trying if lte is too big
 
-./ice -ts_monitor -ts_adapt_monitor -ice_dtlimits  # more info on adapt and comparison to explicit
+./ice -ice_dtlimits                 # info on comparison to explicit
+./ice -ts_adapt_monitor             # info on adapt
 
 # PC possibilities
--pc_type gamg -pc_gamg_threshold 0.0 -pc_gamg_agg_nsmooths 1  # defaults
+-ksp_type gmres                                               # DEFAULT
+-pc_type ilu                                                  # DEFAULT
+-pc_type gamg -pc_gamg_threshold 0.0 -pc_gamg_agg_nsmooths 1  # these are GAMG defaults
 -pc_type gamg -pc_gamg_threshold 0.2 -pc_gamg_agg_nsmooths 1  # a little faster?
 -pc_type lu
--pc_type ilu
 -pc_type asm -sub_pc_type lu
 -pc_type asm -sub_pc_type ilu
 -pc_type mg
@@ -209,6 +208,7 @@ int main(int argc,char **argv) {
   ierr = TSSetMaxTime(ts,user.tf); CHKERRQ(ierr);
   ierr = TSSetTimeStep(ts,user.dtinit); CHKERRQ(ierr);
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
+  //FIXME add max time step?
   ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
 
   // set up initial condition on fine grid
