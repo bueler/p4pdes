@@ -1,100 +1,20 @@
 static const char help[] =
-"Solves time-dependent nonlinear ice sheet problem in 2D:\n"
-"(*)    H_t + div q = m\n"
-"where q = (q^x,q^y) is the nonsliding shallow ice approximation (SIA) flux,\n"
-"       q = - Gamma H^{n+2} |grad s|^{n-1} grad s\n"
-"always subject to the constraint\n"
-"       H(t,x,y) >= 0.\n"
-"In these equations  H(t,x,y)  is ice thickness,  b(x,y)  is bed elevation,\n"
-"s(t,x,y) = H(t,x,y) + b(x,y)  is surface elevation,  and  m(x,y)  is the\n"
-"climatic mass balance.  Constants are  n > 1  and  Gamma = 2 A (rho g)^n / (n+2).\n"
-"The domain is square,  Omega = [0,L] x [0,L],  with periodic boundary conditions.\n"
-"Equation (*) is semi-discretized in space by a Q1 structured-grid FVE method\n"
-"(Bueler, 2016).  The resulting method-of-lines ODE in time is in the form\n"
-"      F(t,H,H_t) = G(t,H)\n"
-"For this ODE we define three callbacks:\n"
-"      FormIFunction()   evaluates F(H,H_t) = H_t + div q\n"
-"      FormRHSFunction() evaluates G(t,H) = m\n"
-"      FormIJacobian()   evaluates (shift) dF/dH_t + dF/dH.\n"
-"Options -snes_fd_color works well but is slower than the default Jacobian\n"
-"by a factor of two or so.  Requires SNESVI types (i.e.\n"
-"-snes_type vinewton{rsls|ssls}) because of constraint.  With current PETSc\n"
-"design, explicit TS types do not work.\n\n";
+"Solves steady-state, nonlinear ice sheet problem in 2D.  Option prefix ice_.\n"
+"The equation is\n"
+"       div (D grad H) - div(W H^{n+2}) = m(x,y,H)\n"
+"where D, W are from the nonsliding shallow ice approximation (SIA) flux:\n"
+"       D = D(H,grad H,grad b) = Gamma H^{n+2} |grad H + grad b|^{n-1}\n"
+"       W = FIXME\n"
+"Solution is subject to the constraint\n"
+"       H(x,y) >= 0.\n"
+"In these equations  H(x,y)  is ice thickness,  b(x,y)  is bed elevation,\n"
+"s = H + b  is surface elevation,  and  m(x,y,H)  is the climatic mass balance.\n"
+"Constants are  n > 1  and  Gamma = 2 A (rho g)^n / (n+2); see text for more.\n"
+"The domain is square  [0,L] x [0,L]  with periodic boundary conditions.\n"
+"The equation is discretized by a Q1 structured-grid FVE method (Bueler, 2016).\n"
+"Requires SNESVI (-snes_type vinewton{rsls|ssls}) because of constraint.\n\n";
 
-/* try:
-
-./ice -da_refine 3                  # only meaningful at this res and higher
-
-./ice -snes_atol 1.0e-14            # CRITICAL; some lower bound on SNES norm is
-                                    #   critical to allowing convergence near steady state
-
-./ice                               # DEFAULT uses analytical jacobian
-./ice -snes_fd_color
-./ice -snes_type vinewtonrsls       # DEFAULT
-./ice -snes_type vinewtonssls       # slightly more robust?
-(other -snes_types like newtonls not allowed because don't support bounds)
-
-./ice -ts_type arkimex              # DEFAULT
-./ice -ts_type beuler               # robust
-./ice -ts_type cn                   # mis-behaves on long time steps
-./ice -ts_type cn -ts_theta_adapt                         # good
-./ice -ts_type theta -ts_theta_adapt                      # good
-./ice -ts_type bdf -ts_bdf_adapt -ts_bdf_order 2|3|4|5|6  # good
-
-# time-stepping control options
--ts_adapt_type basic                # DEFAULT
--ts_adapt_basic_clip 0.5,1.2        # DEFAULT and recommended;
-                                      doesn't lengthen too much, but allows
-                                      significantly shorter, in response to estimate of
-                                      local truncation error (vs default: 0.1,10.0)
--ts_max_snes_failures -1            # recommended: do retry solve
--ts_adapt_scale_solve_failed 0.9    # recommended: try a slightly-easier problem
--ts_max_reject 50                   # recommended?:  keep trying if lte is too big
-
-./ice -ice_dtlimits                 # info on comparison to explicit
-./ice -ts_adapt_monitor             # info on adapt
-
-# PC possibilities
--ksp_type gmres                                               # DEFAULT
--pc_type ilu                                                  # DEFAULT
--pc_type gamg -pc_gamg_threshold 0.0 -pc_gamg_agg_nsmooths 1  # these are GAMG defaults
--pc_type gamg -pc_gamg_threshold 0.2 -pc_gamg_agg_nsmooths 1  # a little faster?
--pc_type lu
--pc_type asm -sub_pc_type lu
--pc_type asm -sub_pc_type ilu
--pc_type mg
--pc_type mg -pc_mg_levels 4 -mg_levels_ksp_monitor
-
-# shows nontriviality converging ice caps on mountains:
-mpiexec -n 2 ./ice -da_refine 5 -ts_monitor_solution draw -snes_converged_reason -ice_tf 10000.0 -ice_dtinit 100.0 -ts_max_snes_failures -1 -ts_adapt_scale_solve_failed 0.9
-
-# start with short time step and it will find good time scale
-./ice -snes_converged_reason -da_refine 4 -ice_dtinit 0.1
-
-# recovery from convergence failures works!  (failure here triggered by n=4):
-./ice -da_refine 3 -ice_n 4 -ts_max_snes_failures -1 -snes_converged_reason
-
-verif with dome=1, halfar=2:
-for TEST in 1 2; do
-    for N in 2 3 4 5 6; do
-        mpiexec -n 2 ./ice -ice_monitor 0 -ice_verif $TEST -ice_eps 0.0 -ice_dtinit 50.0 -ice_tf 2000.0 -da_refine $N -ts_type beuler
-    done
-done
-
-actual test B from Bueler et al 2005:
-./ice -ice_verif 2 -ice_eps 0 -ice_dtinit 100 -ice_tf 25000 -ice_L 2200e3 -da_refine $N
-
-recommended "new PISM":
-mpiexec -n N ./ice -da_refine M \
-   -snes_type vinewtonrsls \
-   -ts_type arkimex \    #(OR -ts_type bdf -ts_bdf_adapt -ts_bdf_order 4)
-   -ts_adapt_type basic -ts_adapt_basic_clip 0.5,1.2 \
-   -ts_max_snes_failures -1 -ts_adapt_scale_solve_failed 0.9 \
-   -pc_type gamg
-
-run to generate final-time result in file ice_192_50000.dat:
-mpiexec -n 4 ./ice -da_refine 6 -pc_type mg -pc_mg_levels 4 -ice_dtlimits -ice_tf 50000 -ice_dtinit 1.0 -ts_max_snes_failures -1 -ts_adapt_scale_solve_failed 0.9 -ice_dump
-*/
+/* see comments on runtime stuff in icet/icet.c, the time-dependent version */
 
 #include <petsc.h>
 #include "icecmb.h"
@@ -103,9 +23,6 @@ mpiexec -n 4 ./ice -da_refine 6 -pc_type mg -pc_mg_levels 4 -ice_dtlimits -ice_t
 typedef struct {
     double    secpera,// number of seconds in a year
               L,      // spatial domain is [0,L] x [0,L]
-              tf,     // final time; time domain is [0,tf]
-              dtinit, // user-requested initial time step
-              dtmax,  // set TS maximum time step
               g,      // acceleration of gravity
               rho_ice,// ice density
               n_ice,  // Glen exponent for SIA flux term
@@ -114,36 +31,89 @@ typedef struct {
               D0,     // representative value of diffusivity (used in regularizing D)
               eps,    // regularization parameter for D
               delta,  // dimensionless regularization for slope in SIA formulas
-              lambda, // amount of upwinding; lambda=0 is none and lambda=1 is "full"
-              locmaxD,// maximum of diffusivity from last residual evaluation
-              dtexplicitsum;// running sum of explicit dt limit
-    int       verif;  // 0 = not verification, 1 = dome, 2 = Halfar (1983)
-    PetscBool monitor,// use -ice_monitor
-              monitor_dt_limits,// also monitor time step limits for explicit schemes
-              dump;   // dump state (H,b) at final time
-    CMBModel  *cmb;// defined in cmbmodel.h
+              lambda; // amount of upwinding; lambda=0 is none and lambda=1 is "full"
+    PetscBool verif;  // use dome formulas if true
+    PetscBool dump;   // dump state (H,b) after solve
+    CMBModel  *cmb;   // defined in cmbmodel.h
 } AppCtx;
 
-#include "iceverif.h"
+
+// compute (and regularize) radius from center of [0,L] x [0,L]
+double radialcoord(double x, double y, AppCtx *user) {
+  double xc = x - user->L/2.0, yc = y - user->L/2.0, r;
+  r = PetscSqrtReal(xc * xc + yc * yc);
+  return r;
+}
+
+double DomeCMB(double x, double y, AppCtx *user) {
+  const double  domeR  = 750.0e3,  // radius of exact ice sheet (m)
+                domeH0 = 3600.0,   // center thickness of exact ice sheet (m)
+                n  = user->n_ice,
+                pp = 1.0 / n,
+                CC = user->Gamma * PetscPowReal(domeH0,2.0*n+2.0)
+                         / PetscPowReal(2.0 * domeR * (1.0-1.0/n),n);
+  double        r, s, tmp1, tmp2;
+  r = radialcoord(x, y, user);
+  // avoid singularities at center, margin, resp.
+  if (r < 0.01)
+      r = 0.01;
+  if (r > domeR - 0.01)
+      r = domeR - 0.01;
+  s = r / domeR;
+  tmp1 = PetscPowReal(s,pp) + PetscPowReal(1.0-s,pp) - 1.0;
+  tmp2 = 2.0 * PetscPowReal(s,pp) + PetscPowReal(1.0-s,pp-1.0) * (1.0 - 2.0*s) - 1.0;
+  return (CC / r) * PetscPowReal(tmp1,n-1.0) * tmp2;
+}
+
+
+PetscErrorCode DomeThicknessLocal(DMDALocalInfo *info, double **aH, AppCtx *user) {
+  const double   domeR  = 750.0e3,  // radius of exact ice sheet (m)
+                 domeH0 = 3600.0,   // center thickness of exact ice sheet (m)
+                 n  = user->n_ice,
+                 mm = 1.0 + 1.0 / n,
+                 qq = n / (2.0 * n + 2.0),
+                 CC = domeH0 / PetscPowReal(1.0 - 1.0 / n,qq),
+                 dx = user->L / (double)(info->mx),
+                 dy = user->L / (double)(info->my);
+  double         x, y, r, s, tmp;
+  int            j, k;
+
+  PetscFunctionBeginUser;
+  for (k=info->ys; k<info->ys+info->ym; k++) {
+      y = k * dy;
+      for (j=info->xs; j<info->xs+info->xm; j++) {
+          x = j * dx;
+          r = radialcoord(x, y, user);
+          // avoid singularities at center, margin, resp.
+          if (r < 0.01)
+              r = 0.01;
+          if (r > domeR - 0.01)
+              r = domeR - 0.01;
+          s = r / domeR;
+          if (r < domeR) {
+              s = r / domeR;
+              tmp = mm * s - (1.0/n) + PetscPowReal(1.0-s,mm) - PetscPowReal(s,mm);
+              aH[k][j] = CC * PetscPowReal(tmp,qq);
+          } else {
+              aH[k][j] = 0.0;
+          }
+      }
+  }
+  PetscFunctionReturn(0);
+}
 
 extern PetscErrorCode SetFromOptionsAppCtx(AppCtx*);
-extern PetscErrorCode IceMonitor(TS, int, double, Vec, void*);
-extern PetscErrorCode ExplicitLimitsMonitor(TS, int, double, Vec, void*);
 extern PetscErrorCode FormBedLocal(DMDALocalInfo*, int, double**, AppCtx*);
 extern PetscErrorCode FormBounds(SNES,Vec,Vec);
-extern PetscErrorCode FormIFunctionLocal(DMDALocalInfo*, double,
-                          double**, double**, double**, AppCtx*);
-extern PetscErrorCode FormIJacobianLocal(DMDALocalInfo*, double,
-                          double**, double**, double, Mat, Mat, AppCtx *user);
-extern PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo*, double,
-                          double**, double**, AppCtx*);
+extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, double**,
+                                        double **, AppCtx*);
+extern PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, double **,
+                                        Mat, Mat, AppCtx*);
 
 int main(int argc,char **argv) {
   PetscErrorCode ierr;
   DM             da;
-  TS             ts;
-  SNES           snes;   // no need to destroy (owned by TS)
-  TSAdapt        adapt;
+  SNES           snes;
   Vec            H;
   AppCtx         user;
   CMBModel       cmb;
@@ -160,7 +130,7 @@ int main(int argc,char **argv) {
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
                       DM_BOUNDARY_PERIODIC,DM_BOUNDARY_PERIODIC,
                       DMDA_STENCIL_BOX,
-                      3,3,PETSC_DECIDE,PETSC_DECIDE,
+                      3,3, PETSC_DECIDE,PETSC_DECIDE,
                       1, 1,        // dof=1, stencilwidth=1
                       NULL,NULL,&da);
   ierr = DMSetFromOptions(da); CHKERRQ(ierr);
@@ -168,81 +138,30 @@ int main(int argc,char **argv) {
   ierr = DMSetApplicationContext(da, &user);CHKERRQ(ierr);
   ierr = DMDASetUniformCoordinates(da, 0.0, user.L, 0.0, user.L, 0.0,1.0); CHKERRQ(ierr);
 
-  // initialize the TS and configure its time-axis, including its TSAdapt
-  ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
-  ierr = TSSetProblemType(ts,TS_NONLINEAR); CHKERRQ(ierr);
-  ierr = TSSetType(ts,TSARKIMEX); CHKERRQ(ierr);
-  ierr = TSSetTime(ts,0.0); CHKERRQ(ierr);
-  ierr = TSSetMaxTime(ts,user.tf); CHKERRQ(ierr);
-  ierr = TSSetTimeStep(ts,user.dtinit); CHKERRQ(ierr);
-  ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
-  ierr = TSGetAdapt(ts,&adapt); CHKERRQ(ierr);
-  ierr = TSAdaptSetType(adapt,TSADAPTBASIC); CHKERRQ(ierr);
-  ierr = TSAdaptSetClip(adapt,0.5,1.2); CHKERRQ(ierr);
-  ierr = TSAdaptSetStepLimits(adapt,0.0,user.dtmax); CHKERRQ(ierr);
-  if (user.monitor) {
-      ierr = TSMonitorSet(ts,IceMonitor,&user,NULL); CHKERRQ(ierr);
-  }
-  if (user.monitor_dt_limits) {
-      ierr = TSMonitorSet(ts,ExplicitLimitsMonitor,&user,NULL); CHKERRQ(ierr);
-  }
-
-  // set methods to compute parts of ODE system, for the DMDA grid, for TS callback
-  ierr = TSSetDM(ts,da); CHKERRQ(ierr);
-  ierr = DMDATSSetIFunctionLocal(da,INSERT_VALUES,
-           (DMDATSIFunctionLocal)FormIFunctionLocal,&user); CHKERRQ(ierr);
-  ierr = DMDATSSetIJacobianLocal(da,
-           (DMDATSIJacobianLocal)FormIJacobianLocal,&user); CHKERRQ(ierr);
-  ierr = DMDATSSetRHSFunctionLocal(da,INSERT_VALUES,
-           (DMDATSRHSFunctionLocal)FormRHSFunctionLocal,&user); CHKERRQ(ierr);
-
-  // configure the SNES and DM to solve a NCP/VI at each step
-  ierr = TSGetSNES(ts,&snes); CHKERRQ(ierr);
+  // configure the SNES to solve a NCP/VI at each step
+  ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
+               (DMDASNESFunction)FormFunctionLocal,&user); CHKERRQ(ierr);
+  ierr = DMDASNESSetJacobianLocal(da,
+               (DMDASNESJacobian)FormJacobianLocal,&user); CHKERRQ(ierr);
   ierr = SNESSetType(snes,SNESVINEWTONRSLS); CHKERRQ(ierr);
   ierr = SNESVISetComputeVariableBounds(snes,&FormBounds); CHKERRQ(ierr);
 
-  // should be done setting up TS
-  ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
-
-  // report on space-time grid
+  // report on grid
   ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
   dx = user.L / (double)(info.mx);
   dy = user.L / (double)(info.my);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
-     "solving on domain [0,L] x [0,L] (L=%.3f km) and time interval [0,tf] (tf=%.3f a)\n"
-     "grid: %d x %d points, spacing dx=%.3f km x dy=%.3f km, dtinit=%.3f a\n",
-     user.L/1000.0,user.tf/user.secpera,
-     info.mx,info.my,dx/1000.0,dy/1000.0,user.dtinit/user.secpera);
+     "solving on grid: %d x %d points, dx=%.3f km, dy=%.3f km\n",
+     info.mx,info.my,dx/1000.0,dy/1000.0);
 
-  // set up initial condition on fine grid
+  // set up initial iterate on fine grid
   ierr = DMCreateGlobalVector(da,&H);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject)H,"H"); CHKERRQ(ierr);
-  ierr = DMDAVecGetArray(da,H,&aH); CHKERRQ(ierr);
-  if (user.verif == 1) {
-      ierr = DomeThicknessLocal(&info,aH,&user); CHKERRQ(ierr);
-  } else if (user.verif == 2) {
-      double t0;
-      ierr = TSGetTime(ts,&t0); CHKERRQ(ierr);
-      ierr = HalfarThicknessLocal(&info,t0,aH,&user); CHKERRQ(ierr);
-  } else {
-      // fill H according to chop-scale-CMB
-      ierr = FormBedLocal(&info,0,aH,&user); CHKERRQ(ierr);  // H(x,y) <- b(x,y)
-      ierr = ChopScaleInitialHLocal_CMBModel(&cmb,&info,aH,aH); CHKERRQ(ierr);
-  }
-  ierr = DMDAVecRestoreArray(da,H,&aH); CHKERRQ(ierr);
+  ierr = VecSet(H,0.0); CHKERRQ(ierr);
+  // FIXME consider using ChopScaleInitialHLocal_CMBModel() or  DomeThicknessLocal()
 
   // solve
-  ierr = TSSolve(ts,H); CHKERRQ(ierr);
-
-  // time-stepping summary if -ice_dtlimits
-  if (user.monitor_dt_limits) {
-      int count;
-      ierr = TSGetStepNumber(ts,&count); CHKERRQ(ierr);
-      ierr = PetscPrintf(PETSC_COMM_WORLD,
-          "average dt %.5f a, average dtexplicit %.5f a\n",
-          (user.tf/user.secpera)/(double)count,
-          (user.dtexplicitsum/user.secpera)/(double)count); CHKERRQ(ierr);
-  }
+  ierr = SNESSolve(snes,NULL,H); CHKERRQ(ierr);
 
   // dump state if requested
   if (user.dump) {
@@ -255,7 +174,7 @@ int main(int argc,char **argv) {
       ierr = DMDAVecGetArray(da,b,&ab); CHKERRQ(ierr);
       ierr = FormBedLocal(&info,0,ab,&user); CHKERRQ(ierr);
       ierr = DMDAVecRestoreArray(da,b,&ab); CHKERRQ(ierr);
-      ierr = sprintf(filename,"ice_%d_%d.dat",info.mx,(int)(user.tf/user.secpera));
+      ierr = sprintf(filename,"ice_%dx%d.dat",info.mx,info.my);
       ierr = PetscPrintf(PETSC_COMM_WORLD,"writing PETSC binary file %s ...\n",filename); CHKERRQ(ierr);
       ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename,FILE_MODE_WRITE,&viewer); CHKERRQ(ierr);
       ierr = VecView(b,viewer); CHKERRQ(ierr);
@@ -265,45 +184,33 @@ int main(int argc,char **argv) {
   }
 
   // compute error in verification case
-  if (user.verif > 0) {
+  if (user.verif) {
       Vec Hexact;
       double infnorm, onenorm;
       ierr = VecDuplicate(H,&Hexact); CHKERRQ(ierr);
       ierr = DMDAVecGetArray(da,Hexact,&aH); CHKERRQ(ierr);
-      if (user.verif == 1) {
-          ierr = DomeThicknessLocal(&info,aH,&user); CHKERRQ(ierr);
-      } else if (user.verif == 2) {
-          double tf;
-          ierr = TSGetTime(ts,&tf); CHKERRQ(ierr);
-          ierr = HalfarThicknessLocal(&info,tf,aH,&user); CHKERRQ(ierr);
-      } else {
-          SETERRQ(PETSC_COMM_WORLD,3,"invalid user.verif ... how did I get here?\n");
-      }
+      ierr = DomeThicknessLocal(&info,aH,&user); CHKERRQ(ierr);
       ierr = DMDAVecRestoreArray(da,Hexact,&aH); CHKERRQ(ierr);
       ierr = VecAXPY(H,-1.0,Hexact); CHKERRQ(ierr);    // H <- H + (-1.0) Hexact
       VecDestroy(&Hexact);
       ierr = VecNorm(H,NORM_INFINITY,&infnorm); CHKERRQ(ierr);
       ierr = VecNorm(H,NORM_1,&onenorm); CHKERRQ(ierr);
       ierr = PetscPrintf(PETSC_COMM_WORLD,
-          "errors on verif %d: |H-Hexact|_inf = %.3f, |H-Hexact|_average = %.3f\n",
-          user.verif,infnorm,onenorm/(double)(info.mx*info.my)); CHKERRQ(ierr);
+          "numerical errors: |H-Hexact|_inf = %.3f, |H-Hexact|_average = %.3f\n",
+          infnorm,onenorm/(double)(info.mx*info.my)); CHKERRQ(ierr);
   }
 
   // clean up
-  VecDestroy(&H);  TSDestroy(&ts);  DMDestroy(&da);
+  VecDestroy(&H);  SNESDestroy(&snes);  DMDestroy(&da);
   return PetscFinalize();
 }
 
 
 PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
   PetscErrorCode ierr;
-  PetscBool      set;
 
   user->secpera= 31556926.0;  // number of seconds in a year
   user->L      = 1800.0e3;    // m; note  domeL=750.0e3 is radius of verification ice sheet
-  user->tf     = 100.0 * user->secpera;  // default to 100 years
-  user->dtinit = 10.0 * user->secpera;   // default to 10 year as initial step
-  user->dtmax  = 1.0e6 * user->secpera;   // default to million years; huge
   user->g      = 9.81;        // m/s^2
   user->rho_ice= 910.0;       // kg/m^3
   user->n_ice  = 3.0;
@@ -312,12 +219,10 @@ PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
   user->eps    = 0.001;
   user->delta  = 1.0e-4;
   user->lambda = 0.25;
-  user->dtexplicitsum = 0.0;
-  user->verif  = 0;
-  user->monitor = PETSC_TRUE;
-  user->monitor_dt_limits = PETSC_FALSE;
+  user->verif  = PETSC_FALSE;
   user->dump   = PETSC_FALSE;
   user->cmb    = NULL;
+  // user->Gamma is derived below
 
   PetscFunctionBeginUser;
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"ice_","options to ice","");CHKERRQ(ierr);
@@ -330,14 +235,6 @@ PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
   ierr = PetscOptionsReal(
       "-delta", "dimensionless regularization for slope in SIA formulas",
       "ice.c",user->delta,&user->delta,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal(
-      "-dt_init", "initial time step; input units are years",
-      "ice.c",user->dtinit,&user->dtinit,&set);CHKERRQ(ierr);
-  if (set)   user->dtinit *= user->secpera;
-  ierr = PetscOptionsReal(
-      "-dt_max", "maximum time step; input units are years",
-      "ice.c",user->dtmax,&user->dtmax,&set);CHKERRQ(ierr);
-  if (set)   user->dtmax *= user->secpera;
   ierr = PetscOptionsBool(
       "-dump", "save final state (H, b)",
       "ice.c",user->dump,&user->dump,NULL);CHKERRQ(ierr);
@@ -350,13 +247,6 @@ PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
   ierr = PetscOptionsReal(
       "-lambda", "amount of upwinding; lambda=0 is none and lambda=1 is full",
       "ice.c",user->lambda,&user->lambda,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool(
-      "-monitor", "use the ice monitor which shows ice sheet volume and area",
-      "ice.c",user->monitor,&user->monitor,&set);CHKERRQ(ierr);
-  if (!set)   user->monitor = PETSC_TRUE;
-  ierr = PetscOptionsBool(
-      "-monitor_dt_limits", "monitor the time-step limits which would apply to an explicit scheme",
-      "ice.c",user->monitor_dt_limits,&user->monitor_dt_limits,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal(
       "-n", "value of Glen exponent n",
       "ice.c",user->n_ice,&user->n_ice,NULL);CHKERRQ(ierr);
@@ -367,18 +257,9 @@ PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
   ierr = PetscOptionsReal(
       "-rho", "ice density in units kg m3",
       "ice.c",user->rho_ice,&user->rho_ice,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal(
-      "-tf", "final time in seconds; input units are years",
-      "ice.c",user->tf,&user->tf,&set);CHKERRQ(ierr);
-  if (set)   user->tf *= user->secpera;
-  ierr = PetscOptionsInt(
-      "-verif","1 = dome exact solution; 2 = halfar exact solution",
-      "ice.c",user->verif,&(user->verif),&set);CHKERRQ(ierr);
-  if ((set) && ((user->verif < 0) || (user->verif > 2))) {
-      SETERRQ1(PETSC_COMM_WORLD,2,
-          "ERROR: verif = %d not allowed ... 0 <= verif <= 2 is required\n",
-          user->verif);
-  }
+  ierr = PetscOptionsBool(
+      "-verif", "use dome exact solution for verification",
+      "ice.c",user->verif,&user->verif,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
 
   // derived constant computed after other ice properties are set
@@ -386,72 +267,6 @@ PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
                     * user->A_ice / (user->n_ice+2.0);
 
   PetscFunctionReturn(0);
-}
-
-
-// this basic monitor gives current time, volume, area
-PetscErrorCode IceMonitor(TS ts, int step, double time, Vec H, void *ctx) {
-    PetscErrorCode ierr;
-    AppCtx         *user = (AppCtx*)ctx;
-    double         lvol = 0.0, vol, larea = 0.0, area, darea, **aH;
-    int            j, k;
-    MPI_Comm       com;
-    DM             da;
-    DMDALocalInfo  info;
-
-    PetscFunctionBeginUser;
-    ierr = TSGetDM(ts,&da);CHKERRQ(ierr);
-    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-    darea = user->L * user->L / (double)(info.mx * info.my);
-    ierr = DMDAVecGetArrayRead(da,H,&aH); CHKERRQ(ierr);
-    for (k = info.ys; k < info.ys + info.ym; k++) {
-        for (j = info.xs; j < info.xs + info.xm; j++) {
-            if (aH[k][j] > 1.0) {  // for volume/area its helpful to not count tinys
-                larea += darea;
-                lvol += aH[k][j];
-            }
-        }
-    }
-    ierr = DMDAVecRestoreArrayRead(da,H,&aH); CHKERRQ(ierr);
-    lvol *= darea;
-    ierr = PetscObjectGetComm((PetscObject)(da),&com); CHKERRQ(ierr);
-    ierr = MPI_Allreduce(&lvol,&vol,1,MPI_DOUBLE,MPI_SUM,com); CHKERRQ(ierr);
-    ierr = MPI_Allreduce(&larea,&area,1,MPI_DOUBLE,MPI_SUM,com); CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,
-        "%3d: time %.3f a,  volume %.1f 10^3 km^3,  area %.1f 10^3 km^2\n",
-        step,time/user->secpera,vol/1.0e12,area/1.0e9); CHKERRQ(ierr);
-    PetscFunctionReturn(0);
-}
-
-// this monitor reports on max diffusivity, velocity, explicit time-step limits (for comparison)
-PetscErrorCode ExplicitLimitsMonitor(TS ts, int step, double time, Vec H, void *ctx) {
-    PetscErrorCode ierr;
-    AppCtx         *user = (AppCtx*)ctx;
-    double         maxD, dd, dtD=PETSC_INFINITY;
-    MPI_Comm       com;
-    DM             da;
-    DMDALocalInfo  info;
-
-    PetscFunctionBeginUser;
-    if (time <= 0.0) {
-        PetscFunctionReturn(0);
-    }
-    // globalize maxD
-    ierr = TSGetDM(ts,&da);CHKERRQ(ierr);
-    ierr = PetscObjectGetComm((PetscObject)(da),&com); CHKERRQ(ierr);
-    ierr = MPI_Allreduce(&(user->locmaxD),&maxD,1,MPI_DOUBLE,MPI_MAX,com); CHKERRQ(ierr);
-    // compute explicit limits
-    if (maxD <= 0.0) {
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"    [NO -ice_monitor_dt_limits output because maxD is zero]\n"); CHKERRQ(ierr);
-    } else {
-        ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-        dd = PetscMin(user->L / (double)(info.mx), user->L / (double)(info.my));
-        dtD = dd * dd / (4.0*maxD);
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"    max D_SIA %.3f m2s-1,  dtD %.3e a\n",
-            maxD,dtD/user->secpera); CHKERRQ(ierr);
-        user->dtexplicitsum += dtD;
-    }
-    PetscFunctionReturn(0);
 }
 
 PetscErrorCode FormBedLocal(DMDALocalInfo *info, int stencilwidth, double **ab, AppCtx *user) {
@@ -695,6 +510,8 @@ static const PetscBool xdire[4] = {PETSC_TRUE, PETSC_FALSE, PETSC_TRUE, PETSC_FA
 static const double locx[4] = {  0.5, 0.75,  0.5, 0.25},
                     locy[4] = { 0.25,  0.5, 0.75,  0.5};
 
+
+// FIXME broken from here
 
 /* FormIFunctionLocal  =  IFunction call-back by TS using DMDA info.
 
