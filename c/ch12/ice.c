@@ -12,10 +12,13 @@ static const char help[] =
 "Constants are  n > 1  and  Gamma = 2 A (rho g)^n / (n+2); see text for more.\n"
 "The domain is square  [0,L] x [0,L]  with periodic boundary conditions.\n"
 "The equation is discretized by a Q1 structured-grid FVE method (Bueler, 2016).\n"
-"Requires SNESVI (-snes_type vinewton{rsls|ssls}) because of constraint.\n\n";
+"Requires SNESVI (-snes_type vinewton{rsls|ssls}) because of constraint;\n"
+"defaults to SSLS.\n\n";
 
 /* shows basic success with SSLS; converges to level 7 at least:
-   mpiexec -n 4 ./ice -ice_verif -snes_converged_reason -snes_type vinewtonssls -snes_grid_sequence LEV
+   mpiexec -n 4 ./ice -ice_verif -snes_converged_reason -snes_grid_sequence LEV
+much more convergence problem without -ice_verif, so:
+FIXME consider making CMB model smooth
 */
 
 /* see comments on runtime stuff in icet/icet.c, the time-dependent version */
@@ -153,7 +156,7 @@ int main(int argc,char **argv) {
 //FIXME
 //  ierr = DMDASNESSetJacobianLocal(da,
 //               (DMDASNESJacobian)FormJacobianLocal,&user); CHKERRQ(ierr);
-  ierr = SNESSetType(snes,SNESVINEWTONRSLS); CHKERRQ(ierr);
+  ierr = SNESSetType(snes,SNESVINEWTONSSLS); CHKERRQ(ierr);
   ierr = SNESVISetComputeVariableBounds(snes,&FormBounds); CHKERRQ(ierr);
   ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
 
@@ -161,7 +164,7 @@ int main(int argc,char **argv) {
   ierr = DMCreateGlobalVector(da,&H);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject)H,"H"); CHKERRQ(ierr);
   ierr = VecSet(H,0.0); CHKERRQ(ierr);
-  // FIXME consider using ChopScaleInitialHLocal_CMBModel() or  DomeThicknessLocal()
+  // FIXME when -ice_verif, implement -ice_exact_init with DomeThicknessLocal()
 
   // solve and get solution & DM on fine grid (if it changed) after solve
   ierr = SNESSolve(snes,NULL,H); CHKERRQ(ierr);
