@@ -14,6 +14,10 @@ static const char help[] =
 "The equation is discretized by a Q1 structured-grid FVE method (Bueler, 2016).\n"
 "Requires SNESVI (-snes_type vinewton{rsls|ssls}) because of constraint.\n\n";
 
+/* shows basic success with SSLS; converges to level 7 at least:
+   mpiexec -n 4 ./ice -ice_verif -snes_converged_reason -snes_type vinewtonssls -snes_grid_sequence LEV
+*/
+
 /* see comments on runtime stuff in icet/icet.c, the time-dependent version */
 
 #include <petsc.h>
@@ -107,18 +111,21 @@ extern PetscErrorCode FormBedLocal(DMDALocalInfo*, int, double**, AppCtx*);
 extern PetscErrorCode FormBounds(SNES,Vec,Vec);
 extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, double**,
                                         double **, AppCtx*);
-extern PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, double **,
-                                        Mat, Mat, AppCtx*);
+//FIXME extern PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, double **,
+//                                        Mat, Mat, AppCtx*);
 
 int main(int argc,char **argv) {
-  PetscErrorCode ierr;
-  DM             da;
-  SNES           snes;
-  Vec            H;
-  AppCtx         user;
-  CMBModel       cmb;
-  DMDALocalInfo  info;
-  double         dx,dy,**aH;
+  PetscErrorCode      ierr;
+  DM                  da, da_after;
+  SNES                snes;
+  KSP                 ksp;
+  Vec                 H;
+  AppCtx              user;
+  CMBModel            cmb;
+  DMDALocalInfo       info;
+  double              **aH,lflops,flops;
+  SNESConvergedReason reason;
+  int                 snesit,kspit;
 
   PetscInitialize(&argc,&argv,(char*)0,help);
 
@@ -126,7 +133,7 @@ int main(int argc,char **argv) {
   ierr = SetFromOptions_CMBModel(&cmb,user.secpera);
   user.cmb = &cmb;
 
-  // this DMDA is the cell-centered grid
+  // DMDA for the cell-centered grid
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
                       DM_BOUNDARY_PERIODIC,DM_BOUNDARY_PERIODIC,
                       DMDA_STENCIL_BOX,
@@ -136,23 +143,19 @@ int main(int argc,char **argv) {
   ierr = DMSetFromOptions(da); CHKERRQ(ierr);
   ierr = DMSetUp(da); CHKERRQ(ierr);  // this must be called BEFORE SetUniformCoordinates
   ierr = DMSetApplicationContext(da, &user);CHKERRQ(ierr);
-  ierr = DMDASetUniformCoordinates(da, 0.0, user.L, 0.0, user.L, 0.0,1.0); CHKERRQ(ierr);
 
-  // configure the SNES to solve a NCP/VI at each step
+  // create and configure the SNES to solve a NCP/VI at each step
+  ierr = SNESCreate(PETSC_COMM_WORLD,&snes);CHKERRQ(ierr);
+  ierr = SNESSetDM(snes,da);CHKERRQ(ierr);
+  ierr = SNESSetApplicationContext(snes,&user);CHKERRQ(ierr);
   ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
                (DMDASNESFunction)FormFunctionLocal,&user); CHKERRQ(ierr);
-  ierr = DMDASNESSetJacobianLocal(da,
-               (DMDASNESJacobian)FormJacobianLocal,&user); CHKERRQ(ierr);
+//FIXME
+//  ierr = DMDASNESSetJacobianLocal(da,
+//               (DMDASNESJacobian)FormJacobianLocal,&user); CHKERRQ(ierr);
   ierr = SNESSetType(snes,SNESVINEWTONRSLS); CHKERRQ(ierr);
   ierr = SNESVISetComputeVariableBounds(snes,&FormBounds); CHKERRQ(ierr);
-
-  // report on grid
-  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-  dx = user.L / (double)(info.mx);
-  dy = user.L / (double)(info.my);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,
-     "solving on grid: %d x %d points, dx=%.3f km, dy=%.3f km\n",
-     info.mx,info.my,dx/1000.0,dy/1000.0);
+  ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
 
   // set up initial iterate on fine grid
   ierr = DMCreateGlobalVector(da,&H);CHKERRQ(ierr);
@@ -160,20 +163,44 @@ int main(int argc,char **argv) {
   ierr = VecSet(H,0.0); CHKERRQ(ierr);
   // FIXME consider using ChopScaleInitialHLocal_CMBModel() or  DomeThicknessLocal()
 
-  // solve
+  // solve and get solution & DM on fine grid (if it changed) after solve
   ierr = SNESSolve(snes,NULL,H); CHKERRQ(ierr);
+  ierr = VecDestroy(&H); CHKERRQ(ierr);
+  ierr = DMDestroy(&da); CHKERRQ(ierr);
+  ierr = SNESGetDM(snes,&da_after); CHKERRQ(ierr);
+  ierr = SNESGetSolution(snes,&H); CHKERRQ(ierr); /* do not destroy u */
 
-  // dump state if requested
+  /* compute performance measures */
+  ierr = SNESGetConvergedReason(snes,&reason); CHKERRQ(ierr);
+  if (reason <= 0) {
+      ierr = PetscPrintf(PETSC_COMM_WORLD,
+          "WARNING: SNES not converged ... use -snes_converged_reason to check\n"); CHKERRQ(ierr);
+  }
+  ierr = SNESGetIterationNumber(snes,&snesit); CHKERRQ(ierr);
+  ierr = SNESGetKSP(snes,&ksp); CHKERRQ(ierr);
+  ierr = KSPGetIterationNumber(ksp,&kspit); CHKERRQ(ierr);
+  ierr = PetscGetFlops(&lflops); CHKERRQ(ierr);
+  ierr = MPI_Allreduce(&lflops,&flops,1,MPI_DOUBLE,MPI_SUM,PETSC_COMM_WORLD); CHKERRQ(ierr);
+  ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,
+      "on %4d x %4d grid: total flops = %.3e, SNES iters = %d, last KSP iters = %d\n",
+      info.mx,info.my,flops,snesit,kspit); CHKERRQ(ierr);
+
+  // dump state (H,b) if requested
   if (user.dump) {
       char           filename[1024];
       PetscViewer    viewer;
       Vec            b;
       double         **ab;
-      ierr = VecDuplicate(H,&b);CHKERRQ(ierr);
+      ierr = VecDuplicate(H,&b); CHKERRQ(ierr);
       ierr = PetscObjectSetName((PetscObject)b,"b"); CHKERRQ(ierr);
-      ierr = DMDAVecGetArray(da,b,&ab); CHKERRQ(ierr);
-      ierr = FormBedLocal(&info,0,ab,&user); CHKERRQ(ierr);
-      ierr = DMDAVecRestoreArray(da,b,&ab); CHKERRQ(ierr);
+      if (user.verif) {
+          ierr = VecSet(b,0.0); CHKERRQ(ierr);
+      } else {
+          ierr = DMDAVecGetArray(da_after,b,&ab); CHKERRQ(ierr);
+          ierr = FormBedLocal(&info,0,ab,&user); CHKERRQ(ierr);
+          ierr = DMDAVecRestoreArray(da_after,b,&ab); CHKERRQ(ierr);
+      }
       ierr = sprintf(filename,"ice_%dx%d.dat",info.mx,info.my);
       ierr = PetscPrintf(PETSC_COMM_WORLD,"writing PETSC binary file %s ...\n",filename); CHKERRQ(ierr);
       ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename,FILE_MODE_WRITE,&viewer); CHKERRQ(ierr);
@@ -188,9 +215,9 @@ int main(int argc,char **argv) {
       Vec Hexact;
       double infnorm, onenorm;
       ierr = VecDuplicate(H,&Hexact); CHKERRQ(ierr);
-      ierr = DMDAVecGetArray(da,Hexact,&aH); CHKERRQ(ierr);
+      ierr = DMDAVecGetArray(da_after,Hexact,&aH); CHKERRQ(ierr);
       ierr = DomeThicknessLocal(&info,aH,&user); CHKERRQ(ierr);
-      ierr = DMDAVecRestoreArray(da,Hexact,&aH); CHKERRQ(ierr);
+      ierr = DMDAVecRestoreArray(da_after,Hexact,&aH); CHKERRQ(ierr);
       ierr = VecAXPY(H,-1.0,Hexact); CHKERRQ(ierr);    // H <- H + (-1.0) Hexact
       VecDestroy(&Hexact);
       ierr = VecNorm(H,NORM_INFINITY,&infnorm); CHKERRQ(ierr);
@@ -200,8 +227,7 @@ int main(int argc,char **argv) {
           infnorm,onenorm/(double)(info.mx*info.my)); CHKERRQ(ierr);
   }
 
-  // clean up
-  VecDestroy(&H);  SNESDestroy(&snes);  DMDestroy(&da);
+  SNESDestroy(&snes);
   return PetscFinalize();
 }
 
@@ -340,6 +366,7 @@ static double sigma(Grad gH, Grad gb, const AppCtx *user) {
     }
 }
 
+#if 0
 /* Regularized derivative of sigma with respect to nodal value H_l:
    d sigma / dl = (d sigma / d gH.x) * (d gH.x / dl) + (d sigma / d gH.y) * (d gH.y / dl),
 but
@@ -359,6 +386,7 @@ static double DsigmaDl(Grad gH, Grad gb, Grad dgHdl, const AppCtx *user) {
         return 0.0;
     }
 }
+#endif
 
 /* Pseudo-velocity from bed slope:  W = - sigma * grad b. */
 static Grad W(double sigma, Grad gb) {
@@ -368,6 +396,7 @@ static Grad W(double sigma, Grad gb) {
     return W;
 }
 
+#if 0
 /* Derivative of pseudo-velocity W with respect to nodal value H_l. */
 static Grad DWDl(double dsigmadl, Grad gb) {
     Grad dWdl;
@@ -375,7 +404,7 @@ static Grad DWDl(double dsigmadl, Grad gb) {
     dWdl.y = - dsigmadl * gb.y;
     return dWdl;
 }
-
+#endif
 
 /* DCS = diffusivity from the continuation scheme:
      D(eps) = (1-eps) sigma H^{n+2} + eps D_0
@@ -386,6 +415,7 @@ static double DCS(double sigma, double H, const AppCtx *user) {
 }
 
 
+#if 0
 /* Derivative of diffusivity D = DCS with respect to nodal value H_l.  Since
   D = (1-eps) sigma H^{n+2} + eps D0
 it follows that
@@ -396,7 +426,7 @@ static double DDCSDl(double sigma, double dsigmadl, double H, double dHdl,
     const double Hpow = PetscPowReal(PetscAbsReal(H),user->n_ice+1.0);
     return (1.0 - user->eps) * Hpow * ( dsigmadl * H + sigma * (user->n_ice+2.0) * dHdl );
 }
-
+#endif
 
 /* Flux component from the non-sliding SIA on a general bed. */
 PetscErrorCode SIAflux(Grad gH, Grad gb, double H, double Hup, PetscBool xdir,
@@ -417,6 +447,7 @@ PetscErrorCode SIAflux(Grad gH, Grad gb, double H, double Hup, PetscBool xdir,
 }
 
 
+#if 0
 static double DSIAfluxDl(Grad gH, Grad gb, Grad dgHdl,
                          double H, double dHdl, double Hup, double dHupdl,
                          PetscBool xdir, const AppCtx *user) {
@@ -433,7 +464,7 @@ static double DSIAfluxDl(Grad gH, Grad gb, Grad dgHdl,
     else
         return - dDdl * gH.y - myD * dgHdl.y + dWdl.y * Huppow * Hup + myW.y * dHuppow;
 }
-
+#endif
 
 // gradients of weights for Q^1 interpolant
 static const double gx[4] = {-1.0,  1.0, 1.0, -1.0},
@@ -455,11 +486,13 @@ static double fieldatptArray(int u, int v, double xi, double eta, double **f) {
 }
 
 
+#if 0
 static double dfieldatpt(int l, double xi, double eta) {
   const double x[4] = { 1.0-xi,      xi,  xi, 1.0-xi},
                y[4] = {1.0-eta, 1.0-eta, eta,    eta};
   return x[l] * y[l];
 }
+#endif
 
 
 static Grad gradfatpt(double xi, double eta, double dx, double dy, double f[4]) {
@@ -483,6 +516,7 @@ static Grad gradfatptArray(int u, int v, double xi, double eta, double dx, doubl
 }
 
 
+#if 0
 static Grad dgradfatpt(int l, double xi, double eta, double dx, double dy) {
   Grad dgradfdl;
   const double x[4] = { 1.0-xi,      xi,  xi, 1.0-xi},
@@ -493,7 +527,7 @@ static Grad dgradfatpt(int l, double xi, double eta, double dx, double dy) {
   dgradfdl.y =  x[l] * gy[l] / dy;
   return dgradfdl;
 }
-
+#endif
 
 // indexing of the 8 quadrature points along the boundary of the control volume in M*
 // point s=0,...,7 is in element (j,k) = (j+je[s],k+ke[s])
@@ -511,9 +545,7 @@ static const double locx[4] = {  0.5, 0.75,  0.5, 0.25},
                     locy[4] = { 0.25,  0.5, 0.75,  0.5};
 
 
-// FIXME broken from here
-
-/* FormIFunctionLocal  =  IFunction call-back by TS using DMDA info.
+/* FormFunctionLocal  =  call-back by SNES using DMDA info.
 
 Evaluates residual FF on local process patch:
    FF_{j,k} = \int_{\partial V_{j,k}} \mathbf{q} \cdot \mathbf{n}
@@ -521,37 +553,39 @@ Evaluates residual FF on local process patch:
 where V_{j,k} is the control volume centered at (x_j,y_k).
 
 Regarding indexing locations along the boundary of the control volume where
-flux is evaluated, this figure shows four elements and one control volume
-centered at (x_j,y_k).  The boundary of the control volume has 8 points,
-numbered s=0,...,7:
-   -------------------
-  |         |         |
-  |    ..2..|..1..    |
-  |   3:    |    :0   |
-k |--------- ---------|
-  |   4:    |    :7   |
-  |    ..5..|..6..    |
-  |         |         |
-   -------------------
-            j
+flux is evaluated, this figure shows the control volume centered at (x_j,y_k)
+and the four elements it meets.  Quadrature uses 8 points on the boundary of
+the control volume, numbered s=0,...,7:
+
+     -------------------
+    |         |         |
+    |    ..2..|..1..    |
+    |   3:    |    :0   |
+  k |--------- ---------|
+    |   4:    |    :7   |
+    |    ..5..|..6..    |
+    |         |         |
+     -------------------
+              j
 
 Regarding flux-component indexing on the element indexed by (j,k) node,
 the value  (aqquad[c])[k][j] for c=0,1,2,3 is an x-component at "*" and
 a y-component at "%"; note (x_j,y_k) is lower-left corner:
-   -------------------
-  |         :         |
-  |         *2        |
-  |    3    :    1    |
-  |....%.... ....%....|
-  |         :         |
-  |         *0        |
-  |         :         |
-  @-------------------
-(j,k)
+
+     -------------------
+    |         :         |
+    |         *2        |
+    |    3    :    1    |
+    |....%.... ....%....|
+    |         :         |
+    |         *0        |
+    |         :         |
+    @-------------------
+  (j,k)
+
 */
-PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t,
-                                  double **aH, double **aHdot, double **FF,
-                                  AppCtx *user) {
+PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **aH,
+                                        double **FF, AppCtx *user) {
   PetscErrorCode  ierr;
   const double    dx = user->L / (double)(info->mx),
                   dy = user->L / (double)(info->my);
@@ -561,7 +595,8 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t,
   const double    upmin = (1.0 - user->lambda) * 0.5,
                   upmax = (1.0 + user->lambda) * 0.5;
   int             c, j, k, s;
-  double          H, Hup, lxup, lyup, **aqquad[4], **ab, DSIA_ckj, qSIA_ckj;
+  double          H, Hup, lxup, lyup, **aqquad[4], **ab, DSIA_ckj, qSIA_ckj,
+                  M, x, y;
   Grad            gH, gb;
   Vec             qquad[4], b;
 
@@ -578,15 +613,16 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t,
   }
 #endif
 
-  user->locmaxD = 0.0;
+  // get bed elevation b(x,y) on this grid
   ierr = DMGetLocalVector(info->da, &b); CHKERRQ(ierr);
-  if (user->verif > 0) {
+  ierr = DMDAVecGetArray(info->da,b,&ab); CHKERRQ(ierr);
+  if (user->verif) {
       ierr = VecSet(b,0.0); CHKERRQ(ierr);
-      ierr = DMDAVecGetArray(info->da,b,&ab); CHKERRQ(ierr);
   } else {
-      ierr = DMDAVecGetArray(info->da,b,&ab); CHKERRQ(ierr);
       ierr = FormBedLocal(info,1,ab,user); CHKERRQ(ierr);  // get stencil width
   }
+
+  // working space for fluxes; see text for face location of flux evaluation
   for (c = 0; c < 4; c++) {
       ierr = DMGetLocalVector(info->da, &(qquad[c])); CHKERRQ(ierr);
       ierr = DMDAVecGetArray(info->da,qquad[c],&(aqquad[c])); CHKERRQ(ierr);
@@ -614,25 +650,32 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t,
               ierr = SIAflux(gH,gb,H,Hup,xdire[c],
                              &DSIA_ckj,&qSIA_ckj,user); CHKERRQ(ierr);
               aqquad[c][k][j] = qSIA_ckj;
-              if (user->monitor_dt_limits) {
-                  user->locmaxD = PetscMax(user->locmaxD,DSIA_ckj);
-              }
           }
       }
   }
 
-  // loop over nodes, not including ghosts, to get function F(t,H,H') from quadature over
+  // loop over nodes, not including ghosts, to get function F(H) from quadature over
   // s = 0,1,...,7 points on boundary of control volume (rectangle) around node
   for (k=info->ys; k<info->ys+info->ym; k++) {
       for (j=info->xs; j<info->xs+info->xm; j++) {
-          FF[k][j] = aHdot[k][j];
+          // climatic mass balance
+          if (user->verif) {
+              x = j * dx;
+              y = k * dy;
+              M = DomeCMB(x,y,user);
+          } else {
+              M = M_CMBModel(user->cmb,ab[k][j] + aH[k][j]);  // s=b+H is surface elevation
+          }
+          FF[k][j] = - M * dx * dy;
           // now add integral over control volume boundary using two
           // quadrature points on each side
           for (s=0; s<8; s++)
-              FF[k][j] += coeff[s] * aqquad[ce[s]][k+ke[s]][j+je[s]] / (dx * dy);
+              FF[k][j] += coeff[s] * aqquad[ce[s]][k+ke[s]][j+je[s]];
       }
   }
 
+
+  // restore working space and bed
   for (c = 0; c < 4; c++) {
       ierr = DMDAVecRestoreArray(info->da,qquad[c],&(aqquad[c])); CHKERRQ(ierr);
       ierr = DMRestoreLocalVector(info->da, &(qquad[c])); CHKERRQ(ierr);
@@ -642,6 +685,8 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, double t,
   PetscFunctionReturn(0);
 }
 
+
+#if 0
 
 // use j,k for x,y directions in loops and MatSetValuesStencil
 typedef struct {
@@ -757,36 +802,5 @@ PetscErrorCode FormIJacobianLocal(DMDALocalInfo *info, double t,
   PetscFunctionReturn(0);
 }
 
-
-PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t, double **aH,
-                                    double **GG, AppCtx *user) {
-  PetscErrorCode  ierr;
-  const double    dx = user->L / (double)(info->mx),
-                  dy = user->L / (double)(info->my);
-  int             j, k;
-  Vec             b;
-  double          **ab, y, x, m;
-
-  PetscFunctionBeginUser;
-  ierr = DMGetLocalVector(info->da, &b); CHKERRQ(ierr);
-  ierr = DMDAVecGetArray(info->da,b,&ab); CHKERRQ(ierr);
-  ierr = FormBedLocal(info,0,ab,user); CHKERRQ(ierr);  // stencil width NOT needed
-  for (k=info->ys; k<info->ys+info->ym; k++) {
-      y = k * dy;
-      for (j=info->xs; j<info->xs+info->xm; j++) {
-          x = j * dx;
-          if (user->verif == 1) {
-              m = DomeCMB(x,y,user);
-          } else if (user->verif == 2) {
-              m = 0.0;
-          } else {
-              m = M_CMBModel(user->cmb,ab[k][j] + aH[k][j]);  // s = b + H is surface elevation
-          }
-          GG[k][j] = m;
-      }
-  }
-  ierr = DMDAVecRestoreArray(info->da,b,&ab); CHKERRQ(ierr);
-  ierr = DMRestoreLocalVector(info->da, &b); CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
+#endif
 
