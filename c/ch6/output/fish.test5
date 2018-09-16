@@ -1,3 +1,4 @@
 Matrix is symmetric (tolerance 1e-07)
+Matrix is symmetric (tolerance 1e-07)
 problem manuexp on 17 x 17 point 2D grid:
   error |u-uexact|_inf = 2.526e-05, |u-uexact|_h = 1.208e-05
