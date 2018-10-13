@@ -350,7 +350,7 @@ PetscErrorCode MSEMonitor(SNES snes, int its, double norm, void *user) {
     ierr = MPI_Allreduce(&arealoc,&area,1,MPI_DOUBLE,MPI_SUM,comm); CHKERRQ(ierr);
     ierr = MPI_Allreduce(&Dminloc,&Dmin,1,MPI_DOUBLE,MPI_MIN,comm); CHKERRQ(ierr);
     ierr = MPI_Allreduce(&Dmaxloc,&Dmax,1,MPI_DOUBLE,MPI_MAX,comm); CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"area = %.8f; %.4f <= D(|grad u|^2) <= %.4f\n",
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"area = %.8f; %.4f <= D <= %.4f\n",
                area,Dmin,Dmax); CHKERRQ(ierr);
     return 0;
 }

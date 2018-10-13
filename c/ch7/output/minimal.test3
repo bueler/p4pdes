@@ -1,9 +1,9 @@
-area = 4.31581546; 0.0725 <= D(|grad u|^2) <= 1.0000
-area = 1.82557432; 0.1686 <= D(|grad u|^2) <= 0.9998
-area = 1.38801369; 0.3436 <= D(|grad u|^2) <= 0.9881
-area = 1.33566049; 0.5205 <= D(|grad u|^2) <= 0.9975
-area = 1.33475488; 0.5157 <= D(|grad u|^2) <= 0.9968
-area = 1.33475385; 0.5156 <= D(|grad u|^2) <= 0.9968
-area = 1.33475385; 0.5156 <= D(|grad u|^2) <= 0.9968
+area = 4.31581546; 0.0725 <= D <= 1.0000
+area = 1.82557432; 0.1686 <= D <= 0.9998
+area = 1.38801369; 0.3436 <= D <= 0.9881
+area = 1.33566049; 0.5205 <= D <= 0.9975
+area = 1.33475488; 0.5157 <= D <= 0.9968
+area = 1.33475385; 0.5156 <= D <= 0.9968
+area = 1.33475385; 0.5156 <= D <= 0.9968
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 6
 done on 9 x 9 grid and problem catenoid:  error |u-uexact|_inf = 6.79501e-04
