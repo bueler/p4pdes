@@ -9,10 +9,14 @@ elasto: elasto.o ../../ch6/poissonfunctions.o chkopts
 	-${CLINKER} -o elasto elasto.o ../../ch6/poissonfunctions.o ${PETSC_LIB}
 	${RM} elasto.o ../../ch6/poissonfunctions.o
 
+elasto1D: elasto1D.o chkopts
+	-${CLINKER} -o elasto1D elasto1D.o ${PETSC_LIB}
+	${RM} elasto1D.o
+
 # etc
 
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ dam elasto
+	@rm -f *~ dam elasto elasto1D
 
