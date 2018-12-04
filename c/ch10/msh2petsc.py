@@ -7,7 +7,7 @@
 #   http://gmsh.info/doc/texinfo/gmsh.html#MSH-ASCII-file-format
 # Note that one could use existing Python libraries such as
 #   https://pypi.org/project/pygmsh/
-# to interact with Gmsh, but instead this simple script avoids the dependency.
+# to interact with Gmsh, but using this script avoids the dependency.
 
 # example: put PETSc Vec with locations (node coordinates x,y) in meshes/trap.vec
 # and PETSc ISs (e,bfn,s,bfs) in meshes/trap.is
