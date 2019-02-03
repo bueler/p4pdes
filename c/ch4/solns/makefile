@@ -15,10 +15,14 @@ ecdigits: ecdigits.o chkopts
 	-${CLINKER} -o ecdigits ecdigits.o ${PETSC_LIB}
 	${RM} ecdigits.o
 
+census: census.o chkopts
+	-${CLINKER} -o census census.o ${PETSC_LIB}
+	${RM} census.o
+
 # etc
 
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ atan bratu1D ecdigits
+	@rm -f *~ atan bratu1D ecdigits census
 
