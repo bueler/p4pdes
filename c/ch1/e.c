@@ -15,7 +15,7 @@ int main(int argc, char **argv) {
   // sum the contributions over all processes
   ierr = MPI_Allreduce(&localval, &globalsum, 1, MPI_DOUBLE, MPI_SUM,
       PETSC_COMM_WORLD); CHKERRQ(ierr);
-  // output one estimate of e, but report on work from each process
+  // output one estimate of e and report on work from each process
   ierr = PetscPrintf(PETSC_COMM_WORLD,
       "e is about %17.15f\n",globalsum); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_SELF,
