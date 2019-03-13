@@ -1,6 +1,6 @@
 static char help[] = "Compute ln 2 in serial with PETSc, using random\n"
 "permutation of sum order.  Shows that floating-point arithmetic is not\n"
-"commutative.  Based on shuffle.c.\n\n";
+"associative.\n\n";
 
 #include <petsc.h>
 #include <time.h>
@@ -55,6 +55,5 @@ int main(int argc, char **args) {
 
   PetscRandomDestroy(&r);
   PetscFree(a);
-  PetscFinalize();
-  return 0;
+  return PetscFinalize();
 }
