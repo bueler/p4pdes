@@ -83,7 +83,8 @@ int main(int argc,char **argv) {
   double         error1,errorinf,lflops,flops,actarea,exactarea,areaerr;
   DMDALocalInfo  info;
   char           dumpname[256] = "dump.dat";
-  PetscBool      dumpbinary = PETSC_FALSE;
+  PetscBool      dumpbinary = PETSC_FALSE,
+                 reportflops = PETSC_FALSE;
 
   PetscInitialize(&argc,&argv,NULL,help);
 
@@ -91,6 +92,9 @@ int main(int argc,char **argv) {
   ierr = PetscOptionsString("-dump_binary",
            "filename for saving solution and obstacle in PETSc binary format",
            "obstacle.c",dumpname,dumpname,sizeof(dumpname),&dumpbinary); CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-report_flops",
+           "print number of total flops after solving",
+           "obstacle.c",reportflops,&reportflops,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
 
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
@@ -165,8 +169,12 @@ int main(int argc,char **argv) {
   ierr = PetscGetFlops(&lflops); CHKERRQ(ierr);
   ierr = MPI_Allreduce(&lflops,&flops,1,MPI_DOUBLE,MPI_SUM,PETSC_COMM_WORLD); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
-      "on %4d x %4d grid: total flops = %.3e, SNES iters = %d, last KSP iters = %d\n",
-      info.mx,info.my,flops,snesit,kspit); CHKERRQ(ierr);
+      "on %4d x %4d grid: SNES iters = %d, last KSP iters = %d\n",
+      info.mx,info.my,snesit,kspit); CHKERRQ(ierr);
+  if (reportflops) {
+      ierr = PetscPrintf(PETSC_COMM_WORLD,
+          "total flops = %.3e\n",flops); CHKERRQ(ierr);
+  }
 
   /* compare to exact */
   ierr = GetActiveSet(snes,&info,u,Xl,NULL,&actarea); CHKERRQ(ierr);

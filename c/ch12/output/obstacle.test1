@@ -6,5 +6,5 @@ Matrix is symmetric (tolerance 0.)
 Matrix is symmetric (tolerance 0.)
   Linear solve converged due to CONVERGED_RTOL iterations 11
   2 SNES Function norm < 1.e-11
-on    9 x    9 grid: total flops = 7.565e+04, SNES iters = 2, last KSP iters = 11
+on    9 x    9 grid: SNES iters = 2, last KSP iters = 11
 errors: av |u-uexact| = 3.076e-03, |u-uexact|_inf = 1.334e-02, active area error = 47.016%
