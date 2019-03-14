@@ -1,5 +1,5 @@
   0 SNES Function norm 0.925546 
-  Linear solve converged due to CONVERGED_RTOL iterations 7
+  Linear solve converged due to CONVERGED_RTOL iterations 8
   1 SNES Function norm < 1.e-11
 problem manupoly on 17 point 1D grid:
   error |u-uexact|_inf = 9.766e-04, |u-uexact|_h = 7.132e-04

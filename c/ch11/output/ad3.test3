@@ -1,4 +1,4 @@
-  Linear solve converged due to CONVERGED_RTOL iterations 3
+  Linear solve converged due to CONVERGED_RTOL iterations 4
 done on problem = nowind, eps = 1., limiter = none
 grid:  11 x 12 x 11,  cell dims: 0.2000 x 0.1667 x 0.2000
-numerical error:  |u-uexact|_{2,h} = 7.7471e-02
+numerical error:  |u-uexact|_{2,h} = 7.7473e-02
