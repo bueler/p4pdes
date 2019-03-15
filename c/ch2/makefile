@@ -24,8 +24,8 @@ runtri_2:
 	-@../testit.sh tri "-tri_m 1000 -ksp_rtol 1.0e-10 -ksp_type cg -pc_type bjacobi -sub_pc_type icc -ksp_converged_reason" 2 2
 
 runloadsolve_1:
-	-@./tri -ksp_view_mat binary:Ab.dat -ksp_view_rhs binary:Ab.dat::append > /dev/null
-	-@../testit.sh loadsolve "-notime -verbose -f Ab.dat -ksp_view_mat -ksp_view_rhs -ksp_view_solution" 1 1
+	-@./tri -ksp_view_mat binary:A.dat -ksp_view_rhs binary:b.dat > /dev/null
+	-@../testit.sh loadsolve "-verbose -fA A.dat -fb b.dat -ksp_view_mat -ksp_view_rhs -ksp_view_solution" 1 1
 
 test_vecmatksp: runvecmatksp_1
 
