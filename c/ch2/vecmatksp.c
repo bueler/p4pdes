@@ -1,5 +1,5 @@
 //STARTWHOLE
-static char help[] = "Solve a 4x4 linear system using Vec, Mat, and KSP.\n";
+static char help[] = "Solve a 4x4 linear system using KSP.\n";
 
 #include <petsc.h>
 
