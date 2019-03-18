@@ -1,6 +1,6 @@
-//STARTSETUP
-static char help[] =
-  "Solve a tridiagonal system of arbitrary size.  Option prefix = tri_.\n";
+//STARTWHOLE
+static char help[] = "Solve a tridiagonal system of arbitrary size.\n"
+"Option prefix = tri_.\n";
 
 #include <petsc.h>
 
@@ -29,8 +29,6 @@ int main(int argc,char **args) {
   ierr = MatSetOptionsPrefix(A,"a_"); CHKERRQ(ierr);
   ierr = MatSetFromOptions(A); CHKERRQ(ierr);
   ierr = MatSetUp(A); CHKERRQ(ierr);
-//ENDSETUP
-//STARTSOLVE
   ierr = MatGetOwnershipRange(A,&Istart,&Iend); CHKERRQ(ierr);
   for (i=Istart; i<Iend; i++) {
     if (i == 0) {
@@ -69,4 +67,4 @@ int main(int argc,char **args) {
   VecDestroy(&x);  VecDestroy(&b);  VecDestroy(&xexact);
   return PetscFinalize();
 }
-//ENDSOLVE
+//ENDWHOLE
