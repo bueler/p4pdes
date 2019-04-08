@@ -52,12 +52,11 @@ int main(int argc,char **args) {
       ierr = PetscPrintf(PETSC_COMM_WORLD,
          "reading matrix from %s ...\n",nameA); CHKERRQ(ierr);
   }
-  ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,nameA,FILE_MODE_READ,&fileA);CHKERRQ(ierr);
   ierr = MatCreate(PETSC_COMM_WORLD,&A);CHKERRQ(ierr);
   ierr = MatSetFromOptions(A);CHKERRQ(ierr);
+  ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,nameA,FILE_MODE_READ,&fileA);CHKERRQ(ierr);
   ierr = MatLoad(A,fileA);CHKERRQ(ierr);
   ierr = PetscViewerDestroy(&fileA);CHKERRQ(ierr);
-
   ierr = MatGetSize(A,&m,&n); CHKERRQ(ierr);
   if (m != n) {
       SETERRQ(PETSC_COMM_WORLD,2,"only works for square matrices\n");
@@ -89,6 +88,7 @@ int main(int argc,char **args) {
   ierr = KSPCreate(PETSC_COMM_WORLD,&ksp); CHKERRQ(ierr);
   ierr = KSPSetOperators(ksp,A,A); CHKERRQ(ierr);
   ierr = KSPSetFromOptions(ksp); CHKERRQ(ierr);
+
   ierr = VecDuplicate(b,&x);CHKERRQ(ierr);
   ierr = KSPSolve(ksp,b,x); CHKERRQ(ierr);
 
