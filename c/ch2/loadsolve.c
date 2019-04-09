@@ -58,6 +58,10 @@ int main(int argc,char **args) {
   ierr = MatLoad(A,fileA);CHKERRQ(ierr);
   ierr = PetscViewerDestroy(&fileA);CHKERRQ(ierr);
   ierr = MatGetSize(A,&m,&n); CHKERRQ(ierr);
+  if (verbose) {
+      ierr = PetscPrintf(PETSC_COMM_WORLD,
+         "matrix has size m x n = %d x %d ...\n",m,n); CHKERRQ(ierr);
+  }
   if (m != n) {
       SETERRQ(PETSC_COMM_WORLD,2,"only works for square matrices\n");
   }
