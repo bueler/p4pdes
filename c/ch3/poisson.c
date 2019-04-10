@@ -1,4 +1,4 @@
-static char help[] = "A structured-grid Poisson problem with DMDA+KSP.\n\n";
+static char help[] = "A structured-grid Poisson solver using DMDA+KSP.\n\n";
 
 #include <petsc.h>
 
@@ -18,11 +18,10 @@ int main(int argc,char **args) {
 
     PetscInitialize(&argc,&args,(char*)0,help);
 
-    // default size (9 x 9) can be changed using -da_refine X or
-    //     -da_grid_x M -da_grid_y N
+    // change default 9x9 size using -da_grid_x M -da_grid_y N
     ierr = DMDACreate2d(PETSC_COMM_WORLD,
-    DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
-    9,9,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&da); CHKERRQ(ierr);
+                 DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
+                 9,9,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&da); CHKERRQ(ierr);
 
     // create linear system matrix A
     ierr = DMSetFromOptions(da); CHKERRQ(ierr);
@@ -74,11 +73,11 @@ PetscErrorCode formMatrix(DM da, Mat A) {
         for (i = info.xs; i < info.xs+info.xm; i++) {
             row.j = j;           // row of A corresponding to (x_i,y_j)
             row.i = i;
-            col[0].j = j;        // in this diagonal entry
+            col[0].j = j;        // diagonal entry
             col[0].i = i;
             ncols = 1;
             if (i==0 || i==info.mx-1 || j==0 || j==info.my-1) {
-                v[0] = 1.0;  // on boundary: diagonal entry
+                v[0] = 1.0;      // on boundary: trivial equation
             } else {
                 v[0] = 2*(hy/hx + hx/hy); // interior: build a row
                 if (i-1 > 0) {
