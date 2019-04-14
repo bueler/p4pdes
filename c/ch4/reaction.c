@@ -75,7 +75,6 @@ double f_source(double x) {
     return 0.0;
 }
 
-//STARTFUNCTIONS
 PetscErrorCode InitialAndExact(DMDALocalInfo *info, double *u0,
                                double *uex, AppCtx *user) {
     int    i;
@@ -88,6 +87,7 @@ PetscErrorCode InitialAndExact(DMDALocalInfo *info, double *u0,
     return 0;
 }
 
+//STARTFUNCTIONS
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *u,
                                  double *FF, AppCtx *user) {
     int          i;
@@ -124,7 +124,8 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, double *u,
             v[0] = 1.0;
             ierr = MatSetValues(P,1,&i,1,&i,v,INSERT_VALUES); CHKERRQ(ierr);
         } else {
-            col[0] = i;  v[0] = 2.0;
+            col[0] = i;
+            v[0] = 2.0;
             if (!user->noRinJ) {
                 dRdu = - (user->rho / 2.0) / PetscSqrtReal(u[i]);
                 v[0] -= h*h * dRdu;
