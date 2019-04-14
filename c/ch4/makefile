@@ -38,17 +38,23 @@ runreaction_3:
 runreaction_4:
 	-@../testit.sh reaction "-snes_converged_reason -snes_linesearch_type cp" 1 4
 
+runreaction_5:
+	-@../testit.sh reaction "-snes_test_jacobian" 1 5
+
+runreaction_6:
+	-@../testit.sh reaction "-mat_is_symmetric" 1 6
+
 test_expcircle: runexpcircle_1 runexpcircle_2
 
 test_ecjac: runecjac_1 runecjac_2
 
-test_reaction: runreaction_1 runreaction_2 runreaction_3 runreaction_4
+test_reaction: runreaction_1 runreaction_2 runreaction_3 runreaction_4 runreaction_5 runreaction_6
 
 test: test_expcircle test_ecjac test_reaction
 
 # etc
 
-.PHONY: distclean runexpcircle_1 runexpcircle_2 runecjac_1 runecjac_2 runreaction_1 runreaction_2 runreaction_3 runreaction_4 test test_expcircle test_ecjac test_reaction
+.PHONY: distclean runexpcircle_1 runexpcircle_2 runecjac_1 runecjac_2 runreaction_1 runreaction_2 runreaction_3 runreaction_4 runreaction_5 runreaction_6 test test_expcircle test_ecjac test_reaction
 
 distclean:
 	@rm -f *~ expcircle ecjac reaction *tmp

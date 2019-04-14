@@ -3,12 +3,10 @@ static char help[] =
 
 #include <petsc.h>
 
-//STARTCTX
 typedef struct {
     double    rho, M, alpha, beta;
     PetscBool noRinJ;
 } AppCtx;
-// ENDCTX
 
 extern double f_source(double);
 extern PetscErrorCode InitialAndExact(DMDALocalInfo*, double*, double*, AppCtx*);
@@ -101,10 +99,16 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *u,
         } else if (i == info->mx-1) {
             FF[i] = u[i] - user->beta;
         } else {  // interior location
+            if (i == 1) {
+                FF[i] = - u[i+1] + 2.0 * u[i] - user->alpha;
+            } else if (i == info->mx-2) {
+                FF[i] = - user->beta + 2.0 * u[i] - u[i-1];
+            } else {
+                FF[i] = - u[i+1] + 2.0 * u[i] - u[i-1];
+            }
             R = - user->rho * PetscSqrtReal(u[i]);
             x = i * h;
-            FF[i] = - u[i+1] + 2.0 * u[i] - u[i-1]
-                    - h*h * (R + f_source(x));
+            FF[i] -= h*h * (R + f_source(x));
         }
     }
     return 0;
@@ -120,14 +124,13 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, double *u,
             v[0] = 1.0;
             ierr = MatSetValues(P,1,&i,1,&i,v,INSERT_VALUES); CHKERRQ(ierr);
         } else {
-            dRdu = - (user->rho / 2.0) / PetscSqrtReal(u[i]);
-            col[0] = i-1;  v[0] = - 1.0;
-            col[1] = i;
-            if (user->noRinJ)
-                v[1] = 2.0;
-            else
-                v[1] = 2.0 - h*h * dRdu;
-            col[2] = i+1;  v[2] = - 1.0;
+            col[0] = i;  v[0] = 2.0;
+            if (!user->noRinJ) {
+                dRdu = - (user->rho / 2.0) / PetscSqrtReal(u[i]);
+                v[0] -= h*h * dRdu;
+            }
+            col[1] = i-1;   v[1] = (i > 1) ? - 1.0 : 0.0;
+            col[2] = i+1;   v[2] = (i < info->mx-2) ? - 1.0 : 0.0;
             ierr = MatSetValues(P,1,&i,3,col,v,INSERT_VALUES); CHKERRQ(ierr);
         }
     }
