@@ -4,7 +4,6 @@ static char help[] =
 
 #include <petsc.h>
 
-//STARTMAIN
 typedef struct {
   double  b;
 } AppCtx;
@@ -12,6 +11,7 @@ typedef struct {
 extern PetscErrorCode FormFunction(SNES, Vec, Vec, void*);
 extern PetscErrorCode FormJacobian(SNES, Vec, Mat, Mat, void*);
 
+//STARTMAIN
 int main(int argc,char **argv) {
   SNES   snes;         // nonlinear solver context
   Vec    x,r;          // solution, residual vectors
@@ -72,8 +72,8 @@ PetscErrorCode FormJacobian(SNES snes, Vec x, Mat J, Mat P, void *ctx) {
     ierr = VecGetArrayRead(x,&ax); CHKERRQ(ierr);
     v[0] = PetscExpReal(b * ax[0]);  v[1] = -1.0;
     v[2] = 2.0 * ax[0];              v[3] = 2.0 * ax[1];
-    ierr = MatSetValues(P,2,row,2,col,v,INSERT_VALUES); CHKERRQ(ierr);
     ierr = VecRestoreArrayRead(x,&ax); CHKERRQ(ierr);
+    ierr = MatSetValues(P,2,row,2,col,v,INSERT_VALUES); CHKERRQ(ierr);
     ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
     ierr = MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
     if (J != P) {
