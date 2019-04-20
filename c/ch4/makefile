@@ -27,10 +27,10 @@ runecjac_2:
 	-@../testit.sh ecjac "-snes_mf_operator" 1 2
 
 runreaction_1:
-	-@../testit.sh reaction "-snes_converged_reason -da_refine 2" 1 1
+	-@../testit.sh reaction "-snes_converged_reason -da_refine 1" 1 1
 
 runreaction_2:
-	-@../testit.sh reaction "-da_grid_x 7" 1 2
+	-@../testit.sh reaction "-da_grid_x 7 -mat_is_symmetric" 1 2
 
 runreaction_3:
 	-@../testit.sh reaction "-snes_fd_color -da_refine 1 -snes_view" 4 3
@@ -42,7 +42,7 @@ runreaction_5:
 	-@../testit.sh reaction "-snes_test_jacobian" 1 5
 
 runreaction_6:
-	-@../testit.sh reaction "-mat_is_symmetric" 1 6
+	-@../testit.sh reaction "-snes_converged_reason -rct_noRinJ" 1 6
 
 test_expcircle: runexpcircle_1 runexpcircle_2
 
