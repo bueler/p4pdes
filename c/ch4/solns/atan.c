@@ -13,7 +13,7 @@ int main(int argc,char **argv) {
 
     PetscInitialize(&argc,&argv,(char*)0,help);
 
-    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"","options to e3arctan","");CHKERRQ(ierr);
+    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"","options to atan","");CHKERRQ(ierr);
     ierr = PetscOptionsReal("-x0","initial value","atan.c",x0,&x0,NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnd();CHKERRQ(ierr);
 

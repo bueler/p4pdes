@@ -1,5 +1,5 @@
 static char help[] =
-   "Version of ecjacobian which shows lots of digits.  Demonstrates SNESMonitorSet().\n";
+   "Version of ecjac.c which shows lots of digits.  Demonstrates SNESMonitorSet().\n";
 
 #include <petsc.h>
 
