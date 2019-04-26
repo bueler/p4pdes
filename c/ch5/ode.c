@@ -8,13 +8,12 @@ static char help[] =
 
 #include <petsc.h>
 
-extern PetscErrorCode SetFromExact(double, Vec);
+extern PetscErrorCode ExactSolution(double, Vec);
 extern PetscErrorCode FormRHSFunction(TS, double, Vec, Vec, void*);
 
 //STARTMAIN
 int main(int argc,char **argv) {
   PetscErrorCode ierr;
-  const int N = 2;
   int       steps;
   double    t0 = 0.0, tf = 20.0, dt = 0.1, err;
   Vec       y, yexact;
@@ -23,7 +22,7 @@ int main(int argc,char **argv) {
   PetscInitialize(&argc,&argv,(char*)0,help);
 
   ierr = VecCreate(PETSC_COMM_WORLD,&y); CHKERRQ(ierr);
-  ierr = VecSetSizes(y,PETSC_DECIDE,N); CHKERRQ(ierr);
+  ierr = VecSetSizes(y,PETSC_DECIDE,2); CHKERRQ(ierr);
   ierr = VecSetFromOptions(y); CHKERRQ(ierr);
   ierr = VecDuplicate(y,&yexact); CHKERRQ(ierr);
 
@@ -37,17 +36,17 @@ int main(int argc,char **argv) {
   ierr = TSSetMaxTime(ts,tf); CHKERRQ(ierr);
   ierr = TSSetTimeStep(ts,dt); CHKERRQ(ierr);
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
-  ierr = TSSetFromOptions(ts); CHKERRQ(ierr);  // can override defaults
+  ierr = TSSetFromOptions(ts); CHKERRQ(ierr);
 
-  // set initial value and solve
+  // set initial values and solve
   ierr = TSGetTime(ts,&t0); CHKERRQ(ierr);
-  ierr = SetFromExact(t0,y); CHKERRQ(ierr);
+  ierr = ExactSolution(t0,y); CHKERRQ(ierr);
   ierr = TSSolve(ts,y); CHKERRQ(ierr);
 
   // compute error and report
   ierr = TSGetStepNumber(ts,&steps); CHKERRQ(ierr);
   ierr = TSGetTime(ts,&tf); CHKERRQ(ierr);
-  ierr = SetFromExact(tf,yexact); CHKERRQ(ierr);
+  ierr = ExactSolution(tf,yexact); CHKERRQ(ierr);
   ierr = VecAXPY(y,-1.0,yexact); CHKERRQ(ierr);    // y <- y - yexact
   ierr = VecNorm(y,NORM_INFINITY,&err); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
@@ -60,7 +59,7 @@ int main(int argc,char **argv) {
 //ENDMAIN
 
 //STARTCALLBACKS
-PetscErrorCode SetFromExact(double t, Vec y) {
+PetscErrorCode ExactSolution(double t, Vec y) {
     double *ay;
     VecGetArray(y,&ay);
     ay[0] = t - sin(t);
