@@ -131,7 +131,7 @@ PetscErrorCode EnergyMonitor(TS ts, int step, double time, Vec u,
     ierr = MPI_Allreduce(&lenergy,&energy,1,MPI_DOUBLE,MPI_SUM,com); CHKERRQ(ierr);
     ierr = TSGetTimeStep(ts,&dt); CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,"  energy = %9.2e     nu = %8.4f\n",
-                       energy,user->D0*dt/(hx*hy)); CHKERRQ(ierr);
+                energy,user->D0*dt/(hx*hy)); CHKERRQ(ierr);
     return 0;
 }
 //ENDMONITOR
