@@ -154,7 +154,7 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info,
                         : au[j][i-1];
           ur = (i == mx-1) ? au[j][i-1] : au[j][i+1];
           uxx = (ul - 2.0 * au[j][i]+ ur) / (hx*hx);
-          // j-1, j+1 values always valid because DMDA is periodic in y
+          // DMDA is periodic in y
           uyy = (au[j-1][i] - 2.0 * au[j][i]+ au[j+1][i]) / (hy*hy);
           aG[j][i] = user->D0 * (uxx + uyy) + f_source(x,y);
       }
