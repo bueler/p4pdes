@@ -1,5 +1,4 @@
-solving on 9 x 8 grid with dx=0.125 x dy=0.125 cells
-  and time axis  0.:0.01:0.01  (note: D0 dt / (dx dy) = 0.64) ...
+solving on 9 x 8 grid for t0=0. to tf=0.01 ...
 0 TS dt 0.01 time 0.
 1 TS dt 0.00248874 time 0.00136468
 2 TS dt 0.00307329 time 0.00385342

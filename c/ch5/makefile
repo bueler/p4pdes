@@ -35,10 +35,10 @@ runodejac_2:
 	-@../testit.sh odejac "-ts_monitor -ts_max_time 1.0 -ts_type rk" 1 2
 
 runheat_1:
-	-@../testit.sh heat "-da_refine 1 -ts_monitor" 1 1
+	-@../testit.sh heat "-da_refine 1 -ts_monitor -ts_type beuler" 1 1
 
 runheat_2:
-	-@../testit.sh heat "-da_refine 2 -ht_monitor" 2 2
+	-@../testit.sh heat "-da_refine 1 -ht_monitor" 2 2
 
 runheat_3:
 	-@../testit.sh heat "-da_refine 1 -ts_monitor -ts_type rk -ts_max_time 0.01" 1 3

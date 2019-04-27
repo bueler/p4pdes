@@ -1,13 +1,23 @@
-solving on 17 x 16 grid with dx=0.0625 x dy=0.0625 cells
-  and time axis  0.:0.1:0.01  (note: D0 dt / (dx dy) = 2.56) ...
-  energy = 0.00e+00
-  energy = 1.29e-14
-  energy = 3.07e-14
-  energy = 3.58e-14
-  energy = 3.94e-14
-  energy = 4.23e-14
-  energy = 4.47e-14
-  energy = 4.65e-14
-  energy = 4.78e-14
-  energy = 4.87e-14
-  energy = 4.94e-14
+solving on 9 x 8 grid for t0=0. to tf=0.1 ...
+  energy =  0.00e+00     nu =   0.6400
+  energy =  6.17e-16     nu =   0.0285
+  energy =  1.04e-15     nu =   0.0465
+  energy =  1.31e-15     nu =   0.0794
+  energy =  1.54e-15     nu =   0.0753
+  energy =  1.72e-15     nu =   0.0774
+  energy =  1.91e-15     nu =   0.0866
+  energy =  2.27e-15     nu =   0.0983
+  energy =  3.15e-15     nu =   0.1152
+  energy =  3.55e-15     nu =   0.1378
+  energy =  3.72e-15     nu =   0.1672
+  energy =  3.80e-15     nu =   0.2057
+  energy =  3.94e-15     nu =   0.2574
+  energy =  4.08e-15     nu =   0.3268
+  energy =  5.06e-15     nu =   0.4148
+  energy =  6.06e-15     nu =   0.5076
+  energy =  6.77e-15     nu =   0.5908
+  energy =  8.25e-15     nu =   0.6722
+  energy =  1.26e-14     nu =   0.7648
+  energy =  1.44e-14     nu =   0.8658
+  energy =  1.53e-14     nu =   0.8658
+  energy =  1.57e-14     nu =   1.1627

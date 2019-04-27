@@ -36,7 +36,7 @@ int main(int argc,char **argv)
   Vec            u;
   DM             da;
   DMDALocalInfo  info;
-  double         hx, hy, hxhy, t0, tf, dt;
+  double         t0, tf;
   PetscBool      monitorenergy = PETSC_FALSE;
 
   PetscInitialize(&argc,&argv,(char*)0,help);
@@ -72,7 +72,7 @@ int main(int argc,char **argv)
   if (monitorenergy) {
       ierr = TSMonitorSet(ts,EnergyMonitor,&user,NULL); CHKERRQ(ierr);
   }
-  ierr = TSSetType(ts,TSBEULER); CHKERRQ(ierr);
+  ierr = TSSetType(ts,TSBDF); CHKERRQ(ierr);
   ierr = TSSetTime(ts,0.0); CHKERRQ(ierr);
   ierr = TSSetMaxTime(ts,0.1); CHKERRQ(ierr);
   ierr = TSSetTimeStep(ts,0.01); CHKERRQ(ierr);
@@ -83,15 +83,10 @@ int main(int argc,char **argv)
   // report on set up
   ierr = TSGetTime(ts,&t0); CHKERRQ(ierr);
   ierr = TSGetMaxTime(ts,&tf); CHKERRQ(ierr);
-  ierr = TSGetTimeStep(ts,&dt); CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-  ierr = Spacings(&info,&hx,&hy); CHKERRQ(ierr);
-  hxhy = PetscMin(hx,hy);  hxhy = hxhy * hxhy;
   ierr = PetscPrintf(PETSC_COMM_WORLD,
-           "solving on %d x %d grid with dx=%g x dy=%g cells\n"
-           "  and time axis  %g:%g:%g  (note: D0 dt / (dx dy) = %g) ...\n",
-           info.mx,info.my,hx,hy,
-           t0,tf,dt,user.D0*dt/hxhy); CHKERRQ(ierr);
+           "solving on %d x %d grid for t0=%g to tf=%g ...\n",
+           info.mx,info.my,t0,tf); CHKERRQ(ierr);
 
   // solve
   ierr = VecSet(u,0.0); CHKERRQ(ierr);   // initial condition
@@ -111,7 +106,8 @@ PetscErrorCode Spacings(DMDALocalInfo *info, double *hx, double *hy) {
 PetscErrorCode EnergyMonitor(TS ts, int step, double time, Vec u,
                              void *ctx) {
     PetscErrorCode ierr;
-    double         lenergy = 0.0, energy, hx, hy, **au;
+    HeatCtx        *user = (HeatCtx*)ctx;
+    double         lenergy = 0.0, energy, dt, hx, hy, **au;
     int            i,j;
     MPI_Comm       com;
     DM             da;
@@ -133,7 +129,9 @@ PetscErrorCode EnergyMonitor(TS ts, int step, double time, Vec u,
     lenergy *= hx * hy;
     ierr = PetscObjectGetComm((PetscObject)(da),&com); CHKERRQ(ierr);
     ierr = MPI_Allreduce(&lenergy,&energy,1,MPI_DOUBLE,MPI_SUM,com); CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"  energy = %.2e\n",energy); CHKERRQ(ierr);
+    ierr = TSGetTimeStep(ts,&dt); CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"  energy = %9.2e     nu = %8.4f\n",
+                       energy,user->D0*dt/(hx*hy)); CHKERRQ(ierr);
     return 0;
 }
 //ENDMONITOR
