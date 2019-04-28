@@ -1,9 +1,9 @@
 Making movies
 =============
 
-PETSc TS-using codes, like the ones in this directory, can generate binary files containing the _trajectory_, that is, the time-axis _t_ and the solution _y(t)_.  One may then plot solutions as curves in the time-versus-solution plane, as trajectories.  Additionally, for codes that solve PDEs in two spatial dimensions, namely `heat.c` and `pattern.c` in this directory, one can visualize the full trajectory by generating a _movie_.
+PETSc TS codes, like the ones in this directory, can generate binary files containing the _trajectory_, that is, the time-axis _t_ and the solution _y(t)_.  One may then plot solutions as curves in the time-versus-solution plane, as trajectories.  Additionally, for codes that solve PDEs in two spatial dimensions, e.g. `heat.c` and `pattern.c` in this directory, one can generate a movie.
 
-The method here, based on the [python](https://www.python.org/)/[matplotlib](http://matplotlib.org/) script `plotTS.py` in the current directory, is light-weight.  It needs either local copies of, or sym-links to, `PetscBinaryIO.py` and `petsc_conf.py` which are in `$PETSC_DIR/bin/`.
+The light-weight method here is based on the [python](https://www.python.org/)/[matplotlib](http://matplotlib.org/) script `plotTS.py` in the current directory.  It needs either local copies of, or sym-links to, `PetscBinaryIO.py` and `petsc_conf.py` which are in `$PETSC_DIR/lib/petsc/bin/`.
 
 For improved visualization one might either improve/modify the script or switch to a more advanced visualization framework like [paraview](http://www.paraview.org/).
 
@@ -54,13 +54,13 @@ Simply add a filename root to save the frames in individual files:
 
 This generates files `bar000.png`, `bar001.png`, and so on, using the name pattern `bar%03d.png`.
 
-Now use the [`ffmpeg`](https://www.ffmpeg.org/) tool to generate a `.m4v` format movie from the collection of `.png` image files:
+Now use the [`ffmpeg`](https://www.ffmpeg.org/) tool, for example, to generate a `.m4v` format movie from the collection of `.png` image files:
 
         ffmpeg -r 4 -i bar%03d.png bar.m4v     # set rate to 4 frames/second
 
-Of course one might need to install `ffmpeg`, so something like `sudo apt-get install ffmpeg` might be needed.  Viewing the movie itself requires some viewer.  (On linux platforms, `totem` or `vlc` are possibilities.)
+The compression from the `.m4v` format and `ffmpeg` is substantial.  While `u.dat` is several MB, `bar.m4v` is under 100 KB.
 
-The compression from the `.m4v` format and `ffmpeg` is substantial.  In particular, `u.dat` is several MB while `bar.m4v` is under 100 KB.
+Viewing the movie itself requires some viewer.  On linux platforms, `totem` or `vlc` are possibilities.
 
 
 movie for dof>1 PDE in spatial 2D
