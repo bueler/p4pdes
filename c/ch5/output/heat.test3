@@ -1,6 +1,6 @@
 solving on 9 x 8 grid for t0=0. to tf=0.01 ...
-0 TS dt 0.01 time 0.
-1 TS dt 0.00248874 time 0.00136468
-2 TS dt 0.00307329 time 0.00385342
-3 TS dt 0.00307329 time 0.00692671
-4 TS dt 0.00858921 time 0.01
+0 TS dt 0.001 time 0.
+1 TS dt 0.00226419 time 0.001
+2 TS dt 0.00336791 time 0.00326419
+3 TS dt 0.00336791 time 0.00663209
+4 TS dt 0.00889336 time 0.01
