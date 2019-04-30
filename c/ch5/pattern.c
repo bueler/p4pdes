@@ -10,19 +10,17 @@ static char help[] =
 
 #include <petsc.h>
 
-//STARTFIELDCTX
 typedef struct {
   double u, v;
 } Field;
 
 typedef struct {
-  double    L,    // domain side length
-            Du,   // diffusion coefficient of first equation
-            Dv,   // diffusion coefficient of second equation
-            phi,  // = "dimensionless feed rate" F in (Pearson 1993)
-            kappa;// = "dimensionless rate constant" k in (Pearson 1993)
+  double    L,     // domain side length
+            Du,    // diffusion coefficient: u equation
+            Dv,    //                        v equation
+            phi,   // "dimensionless feed rate" (F in Pearson 1993)
+            kappa; // "dimensionless rate constant" (k in Pearson 1993)
 } PatternCtx;
-//ENDFIELDCTX
 
 extern PetscErrorCode InitialState(DM, Vec, double, PatternCtx*);
 extern PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo*, double, Field**,
@@ -66,14 +64,12 @@ int main(int argc,char **argv)
            "pattern.c",user.kappa,&user.kappa,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
-//STARTDMDACREATE
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
                DM_BOUNDARY_PERIODIC, DM_BOUNDARY_PERIODIC,
                DMDA_STENCIL_BOX,  // for 9-point stencil
                4,4,PETSC_DECIDE,PETSC_DECIDE,
                2, 1,              // degrees of freedom, stencil width
                NULL,NULL,&da); CHKERRQ(ierr);
-//ENDDMDACREATE
   ierr = DMSetFromOptions(da); CHKERRQ(ierr);
   ierr = DMSetUp(da); CHKERRQ(ierr);
   ierr = DMDASetFieldName(da,0,"u"); CHKERRQ(ierr);
@@ -99,7 +95,6 @@ int main(int argc,char **argv)
   ierr = DMDATSSetIJacobianLocal(da,
            (DMDATSIJacobianLocal)FormIJacobianLocal,&user); CHKERRQ(ierr);
   ierr = TSSetType(ts,TSARKIMEX); CHKERRQ(ierr);
-  // default run:  t_0 = 0.0, t_f = 200, dt = 5.0
   ierr = TSSetTime(ts,0.0); CHKERRQ(ierr);
   ierr = TSSetMaxTime(ts,200.0); CHKERRQ(ierr);
   ierr = TSSetTimeStep(ts,5.0); CHKERRQ(ierr);
