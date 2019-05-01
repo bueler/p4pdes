@@ -1,6 +1,5 @@
-running on 16 x 16 grid with square cells of side h = 0.156250 ...
+running on 12 x 12 grid with square cells of side h = 0.208333 ...
 0 TS dt 1. time 0.
     Linear solve converged due to CONVERGED_RTOL iterations 3
-    Linear solve converged due to CONVERGED_RTOL iterations 3
-  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
 1 TS dt 1. time 1.

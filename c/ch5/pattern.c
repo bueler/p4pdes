@@ -67,7 +67,7 @@ int main(int argc,char **argv)
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
                DM_BOUNDARY_PERIODIC, DM_BOUNDARY_PERIODIC,
                DMDA_STENCIL_BOX,  // for 9-point stencil
-               4,4,PETSC_DECIDE,PETSC_DECIDE,
+               3,3,PETSC_DECIDE,PETSC_DECIDE,
                2, 1,              // degrees of freedom, stencil width
                NULL,NULL,&da); CHKERRQ(ierr);
   ierr = DMSetFromOptions(da); CHKERRQ(ierr);
