@@ -41,15 +41,16 @@ points in the interior.  Thus these Jacobian matrices have constant diagonal.
 // warning: the user is in charge of setting up ALL of this content!
 //STARTDECLARE
 typedef struct {
-    // the domain dimensions
+    // domain dimensions
     double Lx, Ly, Lz;
-    // the coefficients in  - cx u_xx - cy u_yy - cz u_zz = f
+    // coefficients in  - cx u_xx - cy u_yy - cz u_zz = f
     double cx, cy, cz;
-    // the right-hand-side f(x,y,z)
+    // right-hand-side f(x,y,z)
     double (*f_rhs)(double x, double y, double z, void *ctx);
-    // the Dirichlet boundary condition g(x,y,z)
+    // Dirichlet boundary condition g(x,y,z)
     double (*g_bdry)(double x, double y, double z, void *ctx);
-    void   *addctx;  // additional context; see example usage in minimal.c
+    // additional context; see example usage in ch7/minimal.c
+    void   *addctx;
 } PoissonCtx;
 
 PetscErrorCode Poisson1DFunctionLocal(DMDALocalInfo *info,

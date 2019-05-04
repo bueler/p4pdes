@@ -185,7 +185,7 @@ int main(int argc,char **argv) {
     }
 
 //STARTCREATE
-    // create and set-up DMDA
+    // DMDA in chosen dimension
     switch (dim) {
         case 1:
             ierr = DMDACreate1d(PETSC_COMM_WORLD,
@@ -211,38 +211,44 @@ int main(int argc,char **argv) {
     ierr = DMSetUp(da); CHKERRQ(ierr);  // call BEFORE SetUniformCoordinates
     ierr = DMDASetUniformCoordinates(da,0.0,user.Lx,0.0,user.Ly,0.0,user.Lz); CHKERRQ(ierr);
 
-    // create and set-up SNES
+    // create SNES supply call-backs
     ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
     ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
     ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
              (DMDASNESFunction)(residual_ptr[dim-1]),&user); CHKERRQ(ierr);
     ierr = DMDASNESSetJacobianLocal(da,
              (DMDASNESJacobian)(jacobian_ptr[dim-1]),&user); CHKERRQ(ierr);
-    // set defaults: KSPONLY+CG because problem is linear and symmetric
+
+    // default to KSPONLY+CG because problem is linear and SPD
     ierr = SNESSetType(snes,SNESKSPONLY); CHKERRQ(ierr);
     ierr = SNESGetKSP(snes,&ksp); CHKERRQ(ierr);
     ierr = KSPSetType(ksp,KSPCG); CHKERRQ(ierr);
     ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
-//ENDCREATE
 
-    // set-up initial iterate for SNES and solve
+    // initial iterate and solve
     ierr = DMGetGlobalVector(da,&u_initial); CHKERRQ(ierr);
     ierr = InitialState(da, initial, gonboundary, u_initial, &user); CHKERRQ(ierr);
     ierr = SNESSolve(snes,NULL,u_initial); CHKERRQ(ierr);
+//ENDCREATE
+
+//STARTGETSOLUTION
+    // -snes_grid_sequence could change grid resolution
     ierr = DMRestoreGlobalVector(da,&u_initial); CHKERRQ(ierr);
-    ierr = DMDestroy(&da); CHKERRQ(ierr);  // SNES now has internal DMDA ...
+    ierr = DMDestroy(&da); CHKERRQ(ierr);
 
     // evaluate error and report
-    ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr);  // SNES owns u; we do not destroy it
+    ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr);  // SNES owns u; do not destroy it
     ierr = VecDuplicate(u,&u_exact); CHKERRQ(ierr);
-    ierr = SNESGetDM(snes,&da_after); CHKERRQ(ierr);  // SNES owns da_after; we do not destroy it
+    ierr = SNESGetDM(snes,&da_after); CHKERRQ(ierr); // SNES owns da_after; do not destroy it
     ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
     getuexact = getuexact_ptr[dim-1];
     ierr = (*getuexact)(&info,u_exact,&user); CHKERRQ(ierr);
-    ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
-    ierr = VecDestroy(&u_exact); CHKERRQ(ierr);  // no longer needed
+    ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr);   // u <- u + (-1.0) uexact
+    ierr = VecDestroy(&u_exact); CHKERRQ(ierr);      // no longer needed
     ierr = VecNorm(u,NORM_INFINITY,&errinf); CHKERRQ(ierr);
     ierr = VecNorm(u,NORM_2,&err2h); CHKERRQ(ierr);
+//ENDGETSOLUTION
+
     switch (dim) {
         case 1:
             normconst2h = PetscSqrtReal((double)(info.mx-1));
@@ -265,7 +271,7 @@ int main(int argc,char **argv) {
                 "  error |u-uexact|_inf = %.3e, |u-uexact|_h = %.3e\n",
                 ProblemTypes[problem],gridstr,errinf,err2h); CHKERRQ(ierr);
 
-    // destroy what we explicitly "Create"ed
+    // destroy what we explicitly Created
     ierr = SNESDestroy(&snes); CHKERRQ(ierr);
     return PetscFinalize();
 }
