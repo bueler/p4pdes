@@ -106,7 +106,7 @@ int main(int argc,char **argv) {
     hx = 2.0 / (info.mx - 1);
     err2 *= PetscSqrtReal(hx);
     ierr = PetscPrintf(PETSC_COMM_WORLD,
-         "numerical error:  |u-uexact|=%.4e,  |u-uexact|_{2,h} = %.4e\n",
+         "numerical error:  |u-uexact|_inf = %.4e,  |u-uexact|_{2,h} = %.4e\n",
          errinf,err2); CHKERRQ(ierr);
 
     VecDestroy(&u_exact);  SNESDestroy(&snes);
@@ -133,8 +133,8 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *au,
                                  double *aF, AdCtx *usr) {
     int          i;
     double       hx, halfx, hx2, x, uE, uW, uxx, a, u_up, flux;
-//    double       u_dn, u_far, theta;
-//    PetscBool    allowdeep;
+    double       u_dn, u_far, theta;
+    PetscBool    allowfar;
 
     hx = 2.0 / (info->mx - 1);
     halfx = hx / 2.0;
@@ -181,22 +181,16 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *au,
         flux = a * u_up;
         // flux correction if have limiter and not near boundaries
         if (usr->limiter_fcn != NULL) {
-            SETERRQ(PETSC_COMM_WORLD,1,"cases with limiter not implemented");
-/*
-            allowdeep = (   (p == 0 && i > 0 && i < info->mx-2)
-                         || (p == 1)
-                         || (p == 2 && k > 0 && k < info->mz-2) );
-            if (allowdeep) {
+            allowfar = (i > 0 && i+1 < info->mx-1);
+            if (allowfar) {
                 // compute flux correction from high-order formula with psi(theta)
-                u_dn = (ap >= 0.0) ? au[k+dk][j+dj][i+di] : au[k][j][i];
+                u_dn = (a >= 0.0) ? au[i+1] : au[i];
                 if (u_dn != u_up) {
-                    u_far = (ap >= 0.0) ? au[k-dk][j-dj][i-di]         // FIXME uminus could be bdry
-                                        : au[k+2*dk][j+2*dj][i+2*di];  // FIXME uplus2 could be bdry
+                    u_far = (a >= 0.0) ? au[i-1] : au[i+2];
                     theta = (u_up - u_far) / (u_dn - u_up);
-                    flux += ap * (*usr->limiter_fcn)(theta) * (u_dn - u_up);
+                    flux += a * (*usr->limiter_fcn)(theta) * (u_dn - u_up);
                 }
             }
-*/
         }
         // update non-boundary and owned F_i on both sides of computed flux
         if (i > 0)
