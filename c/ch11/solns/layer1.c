@@ -141,14 +141,13 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *au,
     hx2 = hx * hx;
     // for each owned cell, non-advective part of residual at cell center
     for (i=info->xs; i<info->xs+info->xm; i++) {
-        x = -1.0 + i * hx;
         if (i == 0) {
             aF[i] = au[i] - 1.0;
         } else if (i == info->mx-1) {
             aF[i] = au[i] - 0.0;
         } else {
-            uW = (i == 1)          ? 0.0 : au[i-1];
-            uE = (i == info->mx-2) ? 1.0 : au[i+1];
+            uW = (i == 1)          ? 1.0 : au[i-1];
+            uE = (i == info->mx-2) ? 0.0 : au[i+1];
             uxx = (uW - 2.0 * au[i] + uE) / hx2;
             aF[i] = - usr->eps * uxx;
         }
@@ -158,13 +157,13 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *au,
     // note -1 start to get W faces of owned cells living on ownership
     // boundaries
     for (i=info->xs-1; i<info->xs+info->xm; i++) {
-        x = -1.0 + i * hx;
         // if cell center is outside [-1,1], or on x=1 boundary, then no need
         // to compute a flux
         if ((i < 0) || (i == info->mx-1))
             continue;
         // traverse E cell face center points x_{i+1/2} for flux contributions
         // get pth component of wind and first-order upwind flux
+        x = -1.0 + i * hx;
         a = wind_a(x + halfx);
         if (a >= 0.0) {
             if (i == 0) {
@@ -202,7 +201,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *au,
         // update non-boundary and owned F_i on both sides of computed flux
         if (i > 0)
             aF[i] += flux / hx;  // flux out of i at E
-        if (i+1 < info->mx && i+1 < info->xs + info->xm)
+        if (i+1 < info->mx-1 && i+1 < info->xs + info->xm)  // note aF[] does not have stencil width
             aF[i+1] -= flux / hx;  // flux into i+1 at W
     }
     return 0;
