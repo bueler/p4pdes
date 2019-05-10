@@ -20,4 +20,4 @@ Vec Object: Vec_0x84000000_0 1 MPI processes
 0.833977
 0.
 done on 5 point grid; eps = 0.1, limiter = none
-numerical error:  |u-uexact|_inf = 1.5929e-01,  |u-uexact|_{2,h} = 1.1427e-01
+numerical error:  |u-uexact|_inf = 1.5929e-01,  |u-uexact|_2 = 1.1427e-01

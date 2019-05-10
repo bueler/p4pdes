@@ -72,7 +72,6 @@ int main(int argc,char **argv) {
     ierr = DMSetFromOptions(da); CHKERRQ(ierr);
     ierr = DMSetUp(da); CHKERRQ(ierr);
     ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
-
     ierr = DMDASetUniformCoordinates(da,-1.0,1.0,-1.0,1.0,-1.0,1.0); CHKERRQ(ierr);
 
     ierr = SNESCreate(PETSC_COMM_WORLD,&snes);CHKERRQ(ierr);
@@ -80,9 +79,6 @@ int main(int argc,char **argv) {
     ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
             (DMDASNESFunction)FormFunctionLocal,&user);CHKERRQ(ierr);
     ierr = SNESSetApplicationContext(snes,&user); CHKERRQ(ierr);
-    //if (limiter != VANLEER) {
-    //    ierr = SNESSetType(snes,SNESKSPONLY); CHKERRQ(ierr);
-    //}
     ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
 
     ierr = DMGetGlobalVector(da,&u_initial); CHKERRQ(ierr);
@@ -106,7 +102,7 @@ int main(int argc,char **argv) {
     hx = 2.0 / (info.mx - 1);
     err2 *= PetscSqrtReal(hx);
     ierr = PetscPrintf(PETSC_COMM_WORLD,
-         "numerical error:  |u-uexact|_inf = %.4e,  |u-uexact|_{2,h} = %.4e\n",
+         "numerical error:  |u-uexact|_inf = %.4e,  |u-uexact|_2 = %.4e\n",
          errinf,err2); CHKERRQ(ierr);
 
     VecDestroy(&u_exact);  SNESDestroy(&snes);
@@ -159,7 +155,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *au,
     for (i=info->xs-1; i<info->xs+info->xm; i++) {
         // if cell center is outside [-1,1], or on x=1 boundary, then no need
         // to compute a flux
-        if ((i < 0) || (i == info->mx-1))
+        if (i < 0 || i == info->mx-1)
             continue;
         // traverse E cell face center points x_{i+1/2} for flux contributions
         // get pth component of wind and first-order upwind flux
