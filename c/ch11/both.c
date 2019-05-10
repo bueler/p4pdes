@@ -58,7 +58,7 @@ static double nowind_g(double x, double y, void *user) {
 // problem LAYER:  Elman page 237, Example 6.1.1
 static double layer_u(double x, double y, AdCtx *user) {  // exact solution
     AdCtx* usr = (AdCtx*)user;
-    return x * (1.0 - exp((y-1) / usr->eps) / (1.0 - exp(- 2.0 / usr->eps));
+    return x * (1.0 - exp((y-1) / usr->eps)) / (1.0 - exp(- 2.0 / usr->eps));
 }
 
 static double layer_f(double x, double y, void *user) {
