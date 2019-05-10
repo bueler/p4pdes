@@ -5,6 +5,10 @@ advect: advect.o  chkopts
 	-${CLINKER} -o advect advect.o  ${PETSC_LIB}
 	${RM} advect.o
 
+both: both.o  chkopts
+	-${CLINKER} -o both both.o  ${PETSC_LIB}
+	${RM} both.o
+
 ad3: ad3.o  chkopts
 	-${CLINKER} -o ad3 ad3.o  ${PETSC_LIB}
 	${RM} ad3.o
@@ -52,5 +56,5 @@ test: test_advect test_ad3
 .PHONY: distclean runadvect_1 runadvect_2 runadvect_3 runadvect_4 runad3_1 runad3_2 runad3_3 test_advect test_ad3 test
 
 distclean:
-	@rm -f *~ *tmp *.pyc advect ad3
+	@rm -f *~ *tmp *.pyc advect both ad3
 
