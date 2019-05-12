@@ -1,6 +1,6 @@
 static char help[] =
 "Solves a 1D advection plus diffusion problem using FD discretization,\n"
-"structured-grid (DMDA), and -snes_fd_color.  Option prefix -lay_.\n"
+"structured-grid (DMDA), and -snes_fd_color.  Option prefix -b1_.\n"
 "Equation is  - eps u'' + (a(x) u)' = 0  with a(x)=1, on domain [-1,1]\n"
 "with Dirichlet boundary conditions u(-1) = 1, u(1) = 0.  Advection\n"
 "discretized by first-order upwinding, centered, or van Leer limiter scheme.\n\n";
@@ -52,12 +52,12 @@ int main(int argc,char **argv) {
     PetscInitialize(&argc,&argv,(char*)0,help);
 
     user.eps = 1.0;
-    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"lay_",
-               "layer1 (1D advection-diffusion solver) options",""); CHKERRQ(ierr);
+    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"b1_",
+               "both1 (1D advection and diffusion solver) options",""); CHKERRQ(ierr);
     ierr = PetscOptionsReal("-eps","positive diffusion coefficient",
-               "layer1.c",user.eps,&(user.eps),NULL); CHKERRQ(ierr);
+               "both1.c",user.eps,&(user.eps),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnum("-limiter","flux-limiter type",
-               "layer1.c",LimiterTypes,
+               "both1.c",LimiterTypes,
                (PetscEnum)limiter,(PetscEnum*)&limiter,NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 

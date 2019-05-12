@@ -1,6 +1,6 @@
 static char help[] =
 "Solves 2D advection plus diffusion problems using FD discretization,\n"
-"structured-grid (DMDA), and -snes_fd_color.  Option prefix -bth_.\n"
+"structured-grid (DMDA), and -snes_fd_color.  Option prefix -b2_.\n"
 "Equation:\n"
 "    - eps Laplacian u + div (a(x,y) u) = f(x,y),\n"
 "where the (vector) wind a(x,y) and (scalar) source f(x,y) are given smooth\n"
@@ -147,19 +147,19 @@ int main(int argc,char **argv) {
     user.eps = 1.0;
     user.glaze_drift = 0.0;
     user.problem = LAYER;
-    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"ad3_",
-               "ad3 (3D advection-diffusion solver) options",""); CHKERRQ(ierr);
+    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"b2_",
+               "both2 (3D advection-diffusion solver) options",""); CHKERRQ(ierr);
     ierr = PetscOptionsReal("-eps","positive diffusion coefficient",
-               "ad3.c",user.eps,&(user.eps),NULL); CHKERRQ(ierr);
+               "both2.c",user.eps,&(user.eps),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsReal("-glaze_drift","y-direction drift constant for glaze problem",
-               "ad3.c",user.glaze_drift,&(user.glaze_drift),NULL); CHKERRQ(ierr);
+               "both2.c",user.glaze_drift,&(user.glaze_drift),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnum("-limiter","flux-limiter type",
-               "ad3.c",LimiterTypes,
+               "both2.c",LimiterTypes,
                (PetscEnum)limiter,(PetscEnum*)&limiter,NULL); CHKERRQ(ierr);
     ierr = PetscOptionsString("-o","output solution in VTK format (.vtr,.vts), e.g. for paraview",
-               "ad3.c",filename,filename,sizeof(filename),&vtkoutput);CHKERRQ(ierr);
+               "both2.c",filename,filename,sizeof(filename),&vtkoutput);CHKERRQ(ierr);
     ierr = PetscOptionsEnum("-problem","problem type",
-               "ad3.c",ProblemTypes,
+               "both2.c",ProblemTypes,
                (PetscEnum)(user.problem),(PetscEnum*)&(user.problem),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
