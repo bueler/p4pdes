@@ -9,10 +9,6 @@ both: both.o  chkopts
 	-${CLINKER} -o both both.o  ${PETSC_LIB}
 	${RM} both.o
 
-ad3: ad3.o  chkopts
-	-${CLINKER} -o ad3 ad3.o  ${PETSC_LIB}
-	${RM} ad3.o
-
 # testing
 
 # first-order upwinding and nonstandard RK and evaluation of error
@@ -32,29 +28,14 @@ runadvect_4:
 	-@../testit.sh advect "-da_grid_x 3 -da_grid_y 3 -adv_limiter centered -adv_jacobian centered -ts_type cn -ts_adapt_type basic -ts_monitor -ts_dt 0.01 -ts_max_time 0.02 -snes_converged_reason" 1 4
 
 
-# defaults: problem = layer, eps = 1.0, centered fluxes, -snes_fd_color
-runad3_1:
-	-@../testit.sh ad3 "" 1 1
-
-# problem = layer, eps = 0.01 and upwind and GAMG
-runad3_2:
-	-@../testit.sh ad3 "-ad3_eps 0.01 -ad3_limiter none -pc_type gamg" 1 2
-
-# diffusion-only problem with two-level GMG
-runad3_3:
-	-@../testit.sh ad3 "-ad3_problem nowind -ad3_limiter none -da_refine 1 -ksp_converged_reason -ksp_type cg -pc_type mg" 1 3
-
-
 test_advect: runadvect_1 runadvect_2 runadvect_3 runadvect_4
 
-test_ad3: runad3_1 runad3_2 runad3_3
-
-test: test_advect test_ad3
+test: test_advect
 
 # etc
 
-.PHONY: distclean runadvect_1 runadvect_2 runadvect_3 runadvect_4 runad3_1 runad3_2 runad3_3 test_advect test_ad3 test
+.PHONY: distclean runadvect_1 runadvect_2 runadvect_3 runadvect_4 test_advect test
 
 distclean:
-	@rm -f *~ *tmp *.pyc advect both ad3
+	@rm -f *~ *tmp *.pyc advect both
 
