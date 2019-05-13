@@ -1,0 +1,8 @@
+  ---------- Testing Jacobian -------------
+  Run with -snes_test_jacobian_view and optionally -snes_test_jacobian <threshold> to show difference
+    of hand-coded and finite difference Jacobian entries greater than <threshold>.
+  Testing hand-coded Jacobian, if (for double precision runs) ||J - Jfd||_F/||J||_F is
+    O(1.e-8), the hand-coded Jacobian is probably correct.
+  ||J - Jfd||_F/||J||_F = 3.71533e-09, ||J - Jfd||_F = 1.01678e-08
+done on 5 point grid; eps = 0.01, limiter = none
+numerical error:  |u-uexact|_inf = 1.9608e-02,  |u-uexact|_2 = 1.3867e-02

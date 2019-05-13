@@ -1,0 +1,8 @@
+    0 KSP Residual norm 2.07941 
+    1 KSP Residual norm 1.20217 
+    2 KSP Residual norm 0.0428254 
+    3 KSP Residual norm 0.00135082 
+    4 KSP Residual norm 5.5226e-05 
+    5 KSP Residual norm 7.699e-07 
+done on 9 point grid; eps = 0.01, limiter = none
+numerical error:  |u-uexact|_inf = 3.8462e-02,  |u-uexact|_2 = 1.9245e-02

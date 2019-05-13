@@ -7,7 +7,7 @@ static char help[] =
 "upwinding, centered, or van Leer limiter scheme.\n\n";
 
 /* fit error norms with two lines:
-$ for LEV in 1 2 3 4 5 6 7 8 9 10 11 12 13; do ./both1 -da_refine $LEV -ksp_type preonly -pc_type lu -b1_limiter vanleer; done
+$ for LEV in 1 2 3 4 5 6 7 8 9 10 11 12 13; do ./both1 -da_refine $LEV -ksp_type preonly -pc_type lu -b1_limiter vanleer -snes_fd_color; done
 */
 
 #include <petsc.h>
@@ -29,7 +29,8 @@ static void* limiterptr[] = {NULL, &centered, &vanleer};
 
 typedef struct {
     double      eps;          // amount of diffusion; require: eps > 0
-    double      (*limiter_fcn)(double);
+    double      (*limiter_fcn)(double),
+                (*jac_limiter_fcn)(double);
 } AdCtx;
 
 static double u_exact(double x, AdCtx *usr) {
@@ -51,7 +52,8 @@ int main(int argc,char **argv) {
     Vec            u_initial, u, u_exact;
     double         hx, err2, errinf;
     DMDALocalInfo  info;
-    LimiterType    limiter = NONE;
+    LimiterType    limiter = NONE, jac_limiter;
+    PetscBool      snesfdset, snesfdcolorset;
     AdCtx          user;
 
     PetscInitialize(&argc,&argv,(char*)0,help);
@@ -64,12 +66,31 @@ int main(int argc,char **argv) {
     ierr = PetscOptionsEnum("-limiter","flux-limiter type",
                "both1.c",LimiterTypes,
                (PetscEnum)limiter,(PetscEnum*)&limiter,NULL); CHKERRQ(ierr);
+    jac_limiter = limiter;
+    ierr = PetscOptionsEnum("-jac_limiter","flux-limiter type used in Jacobian evaluation",
+               "both1.c",LimiterTypes,
+               (PetscEnum)jac_limiter,(PetscEnum*)&jac_limiter,NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
-    if (user.eps <= 0.0) {
-        SETERRQ1(PETSC_COMM_WORLD,1,"eps=%.3f invalid ... eps > 0 required",user.eps);
-    }
     user.limiter_fcn = limiterptr[limiter];
+
+    ierr = PetscOptionsHasName(NULL,NULL,"-snes_fd",&snesfdset); CHKERRQ(ierr);
+    ierr = PetscOptionsHasName(NULL,NULL,"-snes_fd_color",&snesfdcolorset); CHKERRQ(ierr);
+    if (snesfdset || snesfdcolorset)
+        user.jac_limiter_fcn = NULL;
+    else {
+        if (jac_limiter != NONE) {  //FIXME
+            SETERRQ(PETSC_COMM_WORLD,99,"jac_limiter != NONE NOT IMPLEMENTED");
+        }
+        if (user.limiter_fcn == NULL && jac_limiter != NONE) {
+            SETERRQ(PETSC_COMM_WORLD,1,"if limiter=none then jac_limiter=none is required");
+        }
+        user.jac_limiter_fcn = limiterptr[jac_limiter];
+    }
+
+    if (user.eps <= 0.0) {
+        SETERRQ1(PETSC_COMM_WORLD,2,"eps=%.3f invalid ... eps > 0 required",user.eps);
+    }
 
     ierr = DMDACreate1d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,
                  3, // default to hx=1 grid

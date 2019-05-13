@@ -32,18 +32,27 @@ runadvect_4:
 	-@../testit.sh advect "-da_grid_x 3 -da_grid_y 3 -adv_limiter centered -adv_jacobian centered -ts_type cn -ts_adapt_type basic -ts_monitor -ts_dt 0.01 -ts_max_time 0.02 -snes_converged_reason" 1 4
 
 runboth1_1:
-	-@../testit.sh both1 "-b1_eps 0.1 -da_refine 1 -ksp_view_mat ::ascii_dense -snes_monitor_solution" 1 1
+	-@../testit.sh both1 "-b1_eps 0.1 -da_refine 1 -ksp_view_mat ::ascii_dense -snes_monitor_solution -snes_fd_color" 1 1
+
+runboth1_2:
+	-@../testit.sh both1 "-da_refine 1 -snes_test_jacobian" 1 2
+
+runboth1_3:
+	-@../testit.sh both1 "-da_refine 2 -snes_type ksponly -ksp_monitor_short -pc_type asm -sub_pc_type sor -sub_pc_sor_forward" 2 3
+
+runboth1_4:
+	-@../testit.sh both1 "-da_refine 1 -snes_monitor_short -b1_limiter vanleer -b1_jac_limiter none -snes_mf_operator" 1 4
 
 
 test_advect: runadvect_1 runadvect_2 runadvect_3 runadvect_4
 
-test_both1: runboth1_1
+test_both1: runboth1_1 runboth1_2 runboth1_3 runboth1_4
 
 test: test_advect test_both1
 
 # etc
 
-.PHONY: distclean runadvect_1 runadvect_2 runadvect_3 runadvect_4 runboth1_1 test_advect test_both1 test
+.PHONY: distclean runadvect_1 runadvect_2 runadvect_3 runadvect_4 runboth1_1 runboth1_2 runboth1_3 runboth1_4 test_advect test_both1 test
 
 distclean:
 	@rm -f *~ *tmp *.pyc advect both1 both2
