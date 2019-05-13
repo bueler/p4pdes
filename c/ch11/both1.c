@@ -6,8 +6,8 @@ static char help[] =
 "Diffusion discretize by centered.  Advection discretized by first-order\n"
 "upwinding, centered, or van Leer limiter scheme.\n\n";
 
-/* fit error norms with two lines:
-$ for LEV in 1 2 3 4 5 6 7 8 9 10 11 12 13; do ./both1 -da_refine $LEV -ksp_type preonly -pc_type lu -b1_limiter vanleer -snes_fd_color; done
+/* fit error norms with two lines (and compare none,centered):
+for LEV in 1 2 3 4 5 6 7 8 9 10 11 12 13; do ./both1 -da_refine $LEV -ksp_type preonly -pc_type lu -b1_limiter vanleer -snes_fd_color; done
 */
 
 #include <petsc.h>
@@ -208,17 +208,16 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *au,
             }
         }
         flux = a * u_up;
-        // flux correction if have limiter and not near boundaries
         if (usr->limiter_fcn != NULL) {
-            allowfar = (i > 0 && i+1 < info->mx-1);
-            if (allowfar) {
-                // compute flux correction from high-order formula with psi(theta)
-                u_dn = (a >= 0.0) ? au[i+1] : au[i];
-                if (u_dn != u_up) {
-                    u_far = (a >= 0.0) ? au[i-1] : au[i+2];
-                    theta = (u_up - u_far) / (u_dn - u_up);
-                    flux += a * (*usr->limiter_fcn)(theta) * (u_dn - u_up);
-                }
+            // flux correction from high-order formula with psi(theta)
+            u_dn = (a >= 0.0) ? au[i+1] : au[i];
+            if (u_dn != u_up) {
+                if (a >= 0)
+                   u_far = (i-1 > 0) ? au[i-1] : 1.0;
+                else
+                   u_far = (i+2 < info->mx-1) ? au[i+2] : 0.0;
+                theta = (u_up - u_far) / (u_dn - u_up);
+                flux += a * (*usr->limiter_fcn)(theta) * (u_dn - u_up);
             }
         }
         // update non-boundary and owned F_i on both sides of computed flux

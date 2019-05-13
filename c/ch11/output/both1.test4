@@ -1,7 +1,8 @@
   0 SNES Function norm 1.45671 
-  1 SNES Function norm 0.000487614 
-  2 SNES Function norm 6.48361e-06 
-  3 SNES Function norm 2.47594e-08 
-  4 SNES Function norm < 1.e-11
+  1 SNES Function norm 0.0187985 
+  2 SNES Function norm 0.00105373 
+  3 SNES Function norm 0.000270517 
+  4 SNES Function norm 1.29097e-06 
+  5 SNES Function norm 3.082e-11 
 done on 5 point grid; eps = 0.01, limiter = vanleer
-numerical error:  |u-uexact|_inf = 1.9608e-02,  |u-uexact|_2 = 1.3866e-02
+numerical error:  |u-uexact|_inf = 9.9990e-03,  |u-uexact|_2 = 7.0707e-03
