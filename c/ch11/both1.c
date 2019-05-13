@@ -7,7 +7,7 @@ static char help[] =
 "upwinding, centered, or van Leer limiter scheme.\n\n";
 
 /* fit error norms with two lines:
-$ for LEV in 1 2 3 4 5 6 7 8 9 10 11 12; do ./both1 -da_refine $LEV -ksp_type preonly -pc_type lu -b1_limiter vanleer; done
+$ for LEV in 1 2 3 4 5 6 7 8 9 10 11 12 13; do ./both1 -da_refine $LEV -ksp_type preonly -pc_type lu -b1_limiter vanleer; done
 */
 
 #include <petsc.h>
@@ -42,7 +42,7 @@ static double wind_a(double x) {
 
 extern PetscErrorCode FormUExact(DMDALocalInfo*, AdCtx*, Vec);
 extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, double*,double*, AdCtx*);
-//extern PetscErrorCode FormJacobianLocal(DMDALocalInfo*, double*, Mat, Mat, AdCtx*);
+extern PetscErrorCode FormJacobianLocal(DMDALocalInfo*, double*, Mat, Mat, AdCtx*);
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
@@ -85,8 +85,8 @@ int main(int argc,char **argv) {
     ierr = SNESSetDM(snes,da);CHKERRQ(ierr);
     ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
             (DMDASNESFunction)FormFunctionLocal,&user);CHKERRQ(ierr);
-//    ierr = DMDASNESSetJacobianLocal(da,
-//            (DMDASNESJacobian)FormJacobianLocal,&user); CHKERRQ(ierr);
+    ierr = DMDASNESSetJacobianLocal(da,
+            (DMDASNESJacobian)FormJacobianLocal,&user); CHKERRQ(ierr);
     ierr = SNESSetApplicationContext(snes,&user); CHKERRQ(ierr);
     ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
 
@@ -134,8 +134,8 @@ PetscErrorCode FormUExact(DMDALocalInfo *info, AdCtx *usr, Vec uex) {
 }
 
 // compute residuals with symmetric dependence:
-//   F_i = - eps u'' + u'   at interior points
-//   F_i = u - (b.c.)       at boundary points
+//   F_i = (- eps u'' + u') * hx   at interior points
+//   F_i = c (u - (b.c.))          at boundary points
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *au,
                                  double *aF, AdCtx *usr) {
     int          i;
@@ -143,7 +143,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *au,
                  hx = 2.0 / (info->mx - 1),
                  halfx = hx / 2.0,
                  hx2 = hx * hx,
-                 scdiag = (2.0 * eps) / hx2 + 1.0 / hx;
+                 scdiag = (2.0 * eps) / hx + 1.0;
     double       x, uE, uW, uxx, a, u_up, flux, u_dn, u_far, theta;
     PetscBool    allowfar;
 
@@ -157,7 +157,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *au,
             uW = (i == 1)          ? 1.0 : au[i-1];
             uE = (i == info->mx-2) ? 0.0 : au[i+1];
             uxx = (uW - 2.0 * au[i] + uE) / hx2;
-            aF[i] = - eps * uxx;
+            aF[i] = - eps * uxx * hx;
         }
     }
     // for each E face of an owned cell, compute flux at the face center
@@ -202,41 +202,58 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *au,
         }
         // update non-boundary and owned F_i on both sides of computed flux
         if (i > 0)
-            aF[i] += flux / hx;  // flux out of i at E
+            aF[i] += flux;  // flux out of i at E
         if (i+1 < info->mx-1 && i+1 < info->xs + info->xm)  // note aF[] does not have stencil width
-            aF[i+1] -= flux / hx;  // flux into i+1 at W
+            aF[i+1] -= flux;  // flux into i+1 at W
     }
     return 0;
 }
 
 //FIXME initial implementation is for limiter=none (first-order upwind)
-/*
 PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, double *u,
                                  Mat J, Mat P, AdCtx *usr) {
     PetscErrorCode ierr;
     const double eps = usr->eps,
                  hx = 2.0 / (info->mx - 1),
                  halfx = hx / 2.0,
-                 hx2 = hx * hx;
-//    double       x, uE, uW, uxx, a, u_up, flux, u_dn, u_far, theta;
-//    PetscBool    allowfar;
+                 scdiag = (2.0 * eps) / hx + 1.0;
     int          i, col[3];
-    double       v[3];
+    double       a, x, v[3];
+
+    ierr = MatZeroEntries(P); CHKERRQ(ierr);
 
     for (i=info->xs; i<info->xs+info->xm; i++) {
-        if ((i == 0) | (i == info->mx-1)) {
-            v[0] = 1.0;
-            ierr = MatSetValues(P,1,&i,1,&i,v,INSERT_VALUES); CHKERRQ(ierr);
+        if (i == 0 || i == info->mx-1) {
+            v[0] = scdiag;
+            ierr = MatSetValues(P,1,&i,1,&i,v,ADD_VALUES); CHKERRQ(ierr);
         } else {
+            // diffusive part
             col[0] = i;
-            v[0] = (2.0 * eps) / hx2;
-            if (!user->noRinJ) {
-                dRdu = - (user->rho / 2.0) / PetscSqrtReal(u[i]);
-                v[0] -= h*h * dRdu;
+            v[0] = (2.0 * eps) / hx;
+            col[1] = i-1;
+            v[1] = (i-1 > 0) ? - eps / hx : 0.0;
+            col[2] = i+1;
+            v[2] = (i+1 < info->mx-1) ? - eps / hx : 0.0;
+            ierr = MatSetValues(P,1,&i,3,col,v,ADD_VALUES); CHKERRQ(ierr);
+            // advective part: from each adjacent face
+            x = -1.0 + i * hx;
+            a = wind_a(x + halfx);  // E face
+            if (a >= 0.0) {
+                col[0] = i;
+                v[0] = a;
+            } else {
+                col[0] = i+1;
+                v[0] = (i+1 < info->mx-1) ? a : 0.0;  // check if i+1 is boundary
             }
-            col[1] = i-1;   v[1] = (i > 1) ? - 1.0 : 0.0;
-            col[2] = i+1;   v[2] = (i < info->mx-2) ? - 1.0 : 0.0;
-            ierr = MatSetValues(P,1,&i,3,col,v,INSERT_VALUES); CHKERRQ(ierr);
+            a = wind_a(x - halfx);  // W face
+            if (a >= 0.0) {
+                col[1] = i-1;
+                v[1] = (i-1 > 0) ? - a : 0.0;  // check if i-1 is boundary
+            } else {
+                col[1] = i;
+                v[1] = - a;
+            }
+            ierr = MatSetValues(P,1,&i,2,col,v,ADD_VALUES); CHKERRQ(ierr);
         }
     }
     ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
@@ -247,4 +264,4 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, double *u,
     }
     return 0;
 }
-*/
+
