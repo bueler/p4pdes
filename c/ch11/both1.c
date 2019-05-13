@@ -201,9 +201,10 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *au,
             }
         }
         // update non-boundary and owned F_i on both sides of computed flux
-        if (i > 0)
+        // note aF[] does not have stencil width
+        if (i > 0 && i >= info->xs)
             aF[i] += flux;  // flux out of i at E
-        if (i+1 < info->mx-1 && i+1 < info->xs + info->xm)  // note aF[] does not have stencil width
+        if (i+1 < info->mx-1 && i+1 < info->xs + info->xm)
             aF[i+1] -= flux;  // flux into i+1 at W
     }
     return 0;
