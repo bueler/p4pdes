@@ -3,11 +3,17 @@ static char help[] =
 "structured-grid (DMDA), and -snes_fd_color.  Option prefix -b1_.\n"
 "Equation is  - eps u'' + (a(x) u)' = 0  with a(x)=1, on domain [-1,1]\n"
 "with Dirichlet boundary conditions u(-1) = 1, u(1) = 0 and default eps=0.01.\n"
-"Diffusion discretize by centered.  Advection discretized by first-order\n"
-"upwinding, centered, or van Leer limiter scheme.\n\n";
+"Diffusion discretized by centered.  Advection discretized by first-order\n"
+"upwinding, centered, or van Leer limiter scheme.  Limiter in residual and\n"
+"Jacobian functions separately controllable, but van Leer Jacobian not\n"
+"implemented\n\n";
 
-/* fit error norms with two lines (and compare none,centered):
+/*
+for vanleer fit error norms with two lines (and compare none,centered):
 for LEV in 1 2 3 4 5 6 7 8 9 10 11 12 13; do ./both1 -da_refine $LEV -ksp_type preonly -pc_type lu -b1_limiter vanleer -snes_fd_color; done
+
+visualization vanleer (and compare none,centered):
+./both1 -snes_grid_sequence 5 -ksp_view_mat draw -draw_pause 0.5 -b1_limiter vanleer -snes_monitor -snes_fd_color -snes_monitor_solution draw
 */
 
 #include <petsc.h>
@@ -79,12 +85,6 @@ int main(int argc,char **argv) {
     if (snesfdset || snesfdcolorset)
         user.jac_limiter_fcn = NULL;
     else {
-        if (jac_limiter != NONE) {  //FIXME
-            SETERRQ(PETSC_COMM_WORLD,99,"jac_limiter != NONE NOT IMPLEMENTED");
-        }
-        if (user.limiter_fcn == NULL && jac_limiter != NONE) {
-            SETERRQ(PETSC_COMM_WORLD,1,"if limiter=none then jac_limiter=none is required");
-        }
         user.jac_limiter_fcn = limiterptr[jac_limiter];
     }
 
@@ -209,7 +209,10 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *au,
         flux = a * u_up;
         if (usr->limiter_fcn != NULL) {
             // flux correction from high-order formula with psi(theta)
-            u_dn = (a >= 0.0) ? au[i+1] : au[i];
+            if (a >= 0)
+                u_dn = (i+1 < info->mx-1) ? au[i+1] : 0.0;
+            else
+                u_dn = au[i];
             if (u_dn != u_up) {
                 if (a >= 0)
                    u_far = (i-1 > 0) ? au[i-1] : 1.0;
@@ -229,7 +232,6 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *au,
     return 0;
 }
 
-//FIXME initial implementation is for limiter=none (first-order upwind)
 PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, double *u,
                                  Mat J, Mat P, AdCtx *usr) {
     PetscErrorCode ierr;
@@ -238,8 +240,11 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, double *u,
                  halfx = hx / 2.0,
                  scdiag = (2.0 * eps) / hx + 1.0;
     int          i, col[3];
-    double       a, x, v[3];
+    double       x, aE, aW, v[3];
 
+    if (usr->jac_limiter_fcn == &vanleer) {
+        SETERRQ(PETSC_COMM_WORLD,1,"Jacobian for vanleer limiter is not implemented");
+    }
     ierr = MatZeroEntries(P); CHKERRQ(ierr);
 
     for (i=info->xs; i<info->xs+info->xm; i++) {
@@ -257,23 +262,45 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, double *u,
             ierr = MatSetValues(P,1,&i,3,col,v,ADD_VALUES); CHKERRQ(ierr);
             // advective part: from each adjacent face
             x = -1.0 + i * hx;
-            a = wind_a(x + halfx);  // E face
-            if (a >= 0.0) {
+            aE = wind_a(x + halfx);
+            aW = wind_a(x - halfx);
+            if (aE >= 0.0) {
                 col[0] = i;
-                v[0] = a;
+                v[0] = aE;
             } else {
                 col[0] = i+1;
-                v[0] = (i+1 < info->mx-1) ? a : 0.0;  // check if i+1 is boundary
+                v[0] = (i+1 < info->mx-1) ? aE : 0.0;  // check if i+1 is boundary
             }
-            a = wind_a(x - halfx);  // W face
-            if (a >= 0.0) {
+            if (aW >= 0.0) {
                 col[1] = i-1;
-                v[1] = (i-1 > 0) ? - a : 0.0;  // check if i-1 is boundary
+                v[1] = (i-1 > 0) ? - aW : 0.0;  // check if i-1 is boundary
             } else {
                 col[1] = i;
-                v[1] = - a;
+                v[1] = - aW;
             }
             ierr = MatSetValues(P,1,&i,2,col,v,ADD_VALUES); CHKERRQ(ierr);
+            if (usr->jac_limiter_fcn == &centered) {
+                col[0] = i+1;
+                col[1] = i;
+                if (aE >= 0.0) {
+                    v[0] = (i+1 < info->mx-1) ? aE/2.0 : 0.0;  // check if i+1 is boundary
+                    v[1] = - aE/2.0;
+                } else {
+                    v[0] = (i+1 < info->mx-1) ? - aE/2.0 : 0.0;  // check if i+1 is boundary
+                    v[1] = aE/2.0;
+                }
+                ierr = MatSetValues(P,1,&i,2,col,v,ADD_VALUES); CHKERRQ(ierr);
+                col[0] = i;
+                col[1] = i-1;
+                if (aW >= 0.0) {
+                    v[0] = - aW/2.0;
+                    v[1] = (i-1 > 0) ? aW/2.0 : 0.0;  // check if i-1 is boundary
+                } else {
+                    v[0] = aW/2.0;
+                    v[1] = (i-1 > 0) ? - aW/2.0 : 0.0;  // check if i-1 is boundary
+                }
+                ierr = MatSetValues(P,1,&i,2,col,v,ADD_VALUES); CHKERRQ(ierr);
+            }
         }
     }
     ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);

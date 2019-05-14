@@ -43,16 +43,19 @@ runboth1_3:
 runboth1_4:
 	-@../testit.sh both1 "-da_refine 1 -snes_monitor_short -b1_limiter vanleer -b1_jac_limiter none -snes_mf_operator" 1 4
 
+runboth1_5:
+	-@../testit.sh both1 "-da_refine 1 -snes_type ksponly -b1_limiter centered -b1_jac_limiter centered -snes_test_jacobian" 1 5
+
 
 test_advect: runadvect_1 runadvect_2 runadvect_3 runadvect_4
 
-test_both1: runboth1_1 runboth1_2 runboth1_3 runboth1_4
+test_both1: runboth1_1 runboth1_2 runboth1_3 runboth1_4 runboth1_5
 
 test: test_advect test_both1
 
 # etc
 
-.PHONY: distclean runadvect_1 runadvect_2 runadvect_3 runadvect_4 runboth1_1 runboth1_2 runboth1_3 runboth1_4 test_advect test_both1 test
+.PHONY: distclean runadvect_1 runadvect_2 runadvect_3 runadvect_4 runboth1_1 runboth1_2 runboth1_3 runboth1_4 runboth1_5 test_advect test_both1 test
 
 distclean:
 	@rm -f *~ *tmp *.pyc advect both1 both2
