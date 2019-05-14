@@ -95,7 +95,7 @@ int main(int argc,char **argv) {
     ierr = DMDACreate1d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,
                  3, // default to hx=1 grid
                  1, // d.o.f.
-                 (user.limiter_fcn == NULL) ? 1 : 2, // stencil width
+                 2, // stencil width
                  NULL,&da); CHKERRQ(ierr);
     ierr = DMSetFromOptions(da); CHKERRQ(ierr);
     ierr = DMSetUp(da); CHKERRQ(ierr);
@@ -166,7 +166,6 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *au,
                  hx2 = hx * hx,
                  scdiag = (2.0 * eps) / hx + 1.0;
     double       x, uE, uW, uxx, a, u_up, flux, u_dn, u_far, theta;
-    PetscBool    allowfar;
 
     // for each owned cell, non-advective part of residual at cell center
     for (i=info->xs; i<info->xs+info->xm; i++) {
