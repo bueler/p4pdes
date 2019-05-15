@@ -9,14 +9,6 @@ static char help[] =
 "Jacobian evaluations separately controllable.  (van Leer limiter in\n"
 "Jacobian is not implemented.)\n\n";
 
-/*
-for vanleer fit error norms with two lines (and compare none,centered):
-for LEV in 1 2 3 4 5 6 7 8 9 10 11 12 13; do ./both1 -da_refine $LEV -ksp_type preonly -pc_type lu -b1_limiter vanleer -snes_fd_color; done
-
-visualization vanleer (and compare none,centered):
-./both1 -snes_grid_sequence 5 -ksp_view_mat draw -draw_pause 0.5 -b1_limiter vanleer -snes_monitor -snes_fd_color -snes_monitor_solution draw
-*/
-
 #include <petsc.h>
 
 typedef enum {NONE, CENTERED, VANLEER} LimiterType;
