@@ -4,5 +4,5 @@
     3 KSP Residual norm 0.00110368 
     4 KSP Residual norm 4.90984e-05 
     5 KSP Residual norm 6.91528e-08 
-done on 9 point grid; eps = 0.01, limiter = none
+done on 9 point grid (eps = 0.01, limiter = none, jac_limiter = none)
 numerical error:  |u-uexact|_inf = 3.8462e-02,  |u-uexact|_2 = 1.9245e-02

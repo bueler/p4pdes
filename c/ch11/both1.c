@@ -1,12 +1,13 @@
 static char help[] =
-"Solves a 1D advection plus diffusion problem using FD discretization,\n"
-"structured-grid (DMDA), and -snes_fd_color.  Option prefix -b1_.\n"
-"Equation is  - eps u'' + (a(x) u)' = 0  with a(x)=1, on domain [-1,1]\n"
-"with Dirichlet boundary conditions u(-1) = 1, u(1) = 0 and default eps=0.01.\n"
-"Diffusion discretized by centered.  Advection discretized by first-order\n"
+"Solves a 1D advection plus diffusion problem using FD discretization\n"
+"and a structured-grid (DMDA).  Option prefix -b1_.  Equation is\n"
+"  - eps u'' + (a(x) u)' = 0\n"
+"with a(x)=1, on domain [-1,1], and with Dirichlet boundary conditions\n"
+"u(-1) = 1, u(1) = 0.  Default eps=0.01.\n"
+"  Diffusion discretized by centered, but advection is by first-order\n"
 "upwinding, centered, or van Leer limiter scheme.  Limiter in residual and\n"
-"Jacobian functions separately controllable, but van Leer Jacobian not\n"
-"implemented\n\n";
+"Jacobian evaluations separately controllable.  (van Leer limiter in\n"
+"Jacobian is not implemented.)\n\n";
 
 /*
 for vanleer fit error norms with two lines (and compare none,centered):
@@ -78,24 +79,21 @@ int main(int argc,char **argv) {
                (PetscEnum)jac_limiter,(PetscEnum*)&jac_limiter,NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
-    user.limiter_fcn = limiterptr[limiter];
-
-    ierr = PetscOptionsHasName(NULL,NULL,"-snes_fd",&snesfdset); CHKERRQ(ierr);
-    ierr = PetscOptionsHasName(NULL,NULL,"-snes_fd_color",&snesfdcolorset); CHKERRQ(ierr);
-    if (snesfdset || snesfdcolorset)
-        user.jac_limiter_fcn = NULL;
-    else {
-        user.jac_limiter_fcn = limiterptr[jac_limiter];
-    }
-
     if (user.eps <= 0.0) {
         SETERRQ1(PETSC_COMM_WORLD,2,"eps=%.3f invalid ... eps > 0 required",user.eps);
     }
+    user.limiter_fcn = limiterptr[limiter];
+    ierr = PetscOptionsHasName(NULL,NULL,"-snes_fd",&snesfdset); CHKERRQ(ierr);
+    ierr = PetscOptionsHasName(NULL,NULL,"-snes_fd_color",&snesfdcolorset); CHKERRQ(ierr);
+    if (snesfdset || snesfdcolorset) {
+        user.jac_limiter_fcn = NULL;
+        jac_limiter = 4;   // corresponds to empty string
+    } else
+        user.jac_limiter_fcn = limiterptr[jac_limiter];
 
     ierr = DMDACreate1d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,
                  3, // default to hx=1 grid
-                 1, // d.o.f.
-                 2, // stencil width
+                 1,2, // d.o.f., stencil width
                  NULL,&da); CHKERRQ(ierr);
     ierr = DMSetFromOptions(da); CHKERRQ(ierr);
     ierr = DMSetUp(da); CHKERRQ(ierr);
@@ -121,8 +119,8 @@ int main(int argc,char **argv) {
     ierr = SNESGetDM(snes,&da_after); CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,
-         "done on %d point grid; eps = %g, limiter = %s\n",
-         info.mx,user.eps,LimiterTypes[limiter]); CHKERRQ(ierr);
+         "done on %d point grid (eps = %g, limiter = %s, jac_limiter = %s)\n",
+         info.mx,user.eps,LimiterTypes[limiter],LimiterTypes[jac_limiter]); CHKERRQ(ierr);
 
     ierr = VecDuplicate(u,&u_exact); CHKERRQ(ierr);
     ierr = FormUExact(&info,&user,u_exact); CHKERRQ(ierr);

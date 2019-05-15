@@ -4,5 +4,5 @@
   Testing hand-coded Jacobian, if (for double precision runs) ||J - Jfd||_F/||J||_F is
     O(1.e-8), the hand-coded Jacobian is probably correct.
   ||J - Jfd||_F/||J||_F = 4.39397e-09, ||J - Jfd||_F = 7.82275e-09
-done on 5 point grid; eps = 0.01, limiter = centered
+done on 5 point grid (eps = 0.01, limiter = centered, jac_limiter = centered)
 numerical error:  |u-uexact|_inf = 6.0192e+00,  |u-uexact|_2 = 5.7845e+00

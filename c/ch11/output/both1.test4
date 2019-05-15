@@ -4,5 +4,5 @@
   3 SNES Function norm 0.000270517 
   4 SNES Function norm 1.29097e-06 
   5 SNES Function norm 3.082e-11 
-done on 5 point grid; eps = 0.01, limiter = vanleer
+done on 5 point grid (eps = 0.01, limiter = vanleer, jac_limiter = none)
 numerical error:  |u-uexact|_inf = 9.9990e-03,  |u-uexact|_2 = 7.0707e-03
