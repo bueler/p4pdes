@@ -3,17 +3,16 @@ static char help[] =
 "Option prefix -adv_.  Domain is (-1,1) x (-1,1).  Equation is\n"
 "  u_t + div(a(x,y) u) = g(x,y,u).\n"
 "Boundary conditions are periodic in x and y.  Cells are grid-point centered.\n"
-"Uses flux-limited (non-oscillatory) method-of-lines discretization:\n"
-"  none       first-order upwinding (limiter = 0)\n"
-"  centered   linear centered\n"
-"  vanleer    van Leer (1974) limiter\n"
-"  koren      Koren (1993) limiter [default].\n"
+"Allows flux-limited (non-oscillatory) method-of-lines discretization:\n"
+"  none       O(h^1)  first-order upwinding (limiter = 0)\n"
+"  centered   O(h^2)  linear centered\n"
+"  vanleer    O(h^2)  van Leer (1974) limiter\n"
+"  koren      O(h^3)  Koren (1993) limiter [default].\n"
 "Solves either of two problems with initial conditions:\n"
 "  straight   Figure 6.2, page 303, in Hundsdorfer & Verwer (2003) [default]\n"
 "  rotation   Figure 20.5, page 461, in LeVeque (2002).\n"
-"For the former problem, if final time is an integer and velocities are kept\n"
-"at default values, then exact solution is available and L1, L2 errors\n"
-"are reported.\n\n";
+"For straight, if final time is an integer and velocities are kept at default\n"
+"values, then exact solution is known and L1,L2 errors are reported.\n\n";
 
 #include <petsc.h>
 
@@ -31,12 +30,12 @@ static const char *ProblemTypes[] = {"straight","rotation",
                                      "ProblemType", "", NULL};
 
 typedef struct {
-    InitialType      initial;
-    LimiterType      jacobian; // the limiter type used in Jacobian evaluation
-    ProblemType      problem;
-    double           windx, windy;  // x,y velocity if problem==STRAIGHT
-    double           (*initial_fcn)(double,double); // if STRAIGHT
-    double           (*limiter_fcn)(double);  // actual limiter used in residual
+    InitialType    initial;
+    LimiterType    jacobian;                // limiter used in Jacobian
+    ProblemType    problem;
+    double         windx, windy,            // x,y velocity in STRAIGHT
+                   (*initial_fcn)(double,double), // for STRAIGHT
+                   (*limiter_fcn)(double);  // limiter used in residual
 } AdvectCtx;
 //ENDCTX
 
@@ -73,7 +72,7 @@ static double box(double x, double y) {
 static void* initialptr[] = {&stump, &smooth, &cone, &box};
 //ENDINITIAL
 
-//STARTLIMITER
+//STARTLIMITERS
 /* the centered-space method is linear */
 static double centered(double theta) {
     return 0.5;
@@ -94,7 +93,7 @@ static double koren(double theta) {
 }
 
 static void* limiterptr[] = {NULL, &centered, &vanleer, &koren};
-//ENDLIMITER
+//ENDLIMITERS
 
 // velocity  a(x,y) = ( a^x(x,y), a^y(x,y) )
 static double a_wind(double x, double y, int dir, AdvectCtx* user) {
@@ -149,7 +148,6 @@ int main(int argc,char **argv) {
            "adv_", "options for advect.c", ""); CHKERRQ(ierr);
     ierr = PetscOptionsString("-dumpto","filename root for binary files with initial/final state",
            "advect.c",fileroot,fileroot,PETSC_MAX_PATH_LEN,NULL);CHKERRQ(ierr);
-//STARTENUMOPTIONS
     ierr = PetscOptionsEnum("-initial",
            "shape of initial condition if problem==straight",
            "advect.c",InitialTypes,
@@ -168,7 +166,6 @@ int main(int argc,char **argv) {
            "problem type",
            "advect.c",ProblemTypes,
            (PetscEnum)user.problem,(PetscEnum*)&user.problem,NULL); CHKERRQ(ierr);
-//ENDENUMOPTIONS
     ierr = PetscOptionsBool("-oneline",
            "in exact solution cases, show one-line output",
            "advect.c",oneline,&oneline,NULL);CHKERRQ(ierr);
@@ -470,5 +467,4 @@ PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info, double t,
     }
     return 0;
 }
-
 
