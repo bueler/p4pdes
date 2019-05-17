@@ -5,6 +5,9 @@ set -e
 # shows first-order upwind is eventually O(h^1), centered is O(h^2),
 # vanleer is eventually O(h^2), and vanleer combines best of others
 
+# this script generated p4pdes-book/figs/both1errors.txt which is
+# loaded by figure script p4pdes-book/figs/both1errors.py
+
 COMMON="-snes_rtol 1.0e-11 -snes_converged_reason -ksp_type preonly -pc_type lu"
 LEVELS="1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16"
 
