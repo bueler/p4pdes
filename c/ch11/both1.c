@@ -145,7 +145,7 @@ PetscErrorCode FormUExact(DMDALocalInfo *info, AdCtx *usr, Vec uex) {
 }
 
 // compute residuals with symmetric dependence:
-//   F_i = (- eps u'' + u') * hx   at interior points
+//   F_i = (- eps u'' + (a(x) u)') * hx   at interior points
 //   F_i = c (u - (b.c.))          at boundary points
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *au,
                                  double *aF, AdCtx *usr) {
