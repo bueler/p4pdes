@@ -8,6 +8,8 @@ static char help[] =
 "  centered   O(h^2)  linear centered\n"
 "  vanleer    O(h^2)  van Leer (1974) limiter\n"
 "  koren      O(h^3)  Koren (1993) limiter [default].\n"
+"(There is separate control over the limiter in the residual and in the\n"
+"Jacobian.  Only none and centered are implemented for the Jacobian.)\n"
 "Solves either of two problems with initial conditions:\n"
 "  straight   Figure 6.2, page 303, in Hundsdorfer & Verwer (2003) [default]\n"
 "  rotation   Figure 20.5, page 461, in LeVeque (2002).\n"
@@ -30,12 +32,11 @@ static const char *ProblemTypes[] = {"straight","rotation",
                                      "ProblemType", "", NULL};
 
 typedef struct {
-    InitialType    initial;
-    LimiterType    jacobian;                // limiter used in Jacobian
     ProblemType    problem;
     double         windx, windy,            // x,y velocity in STRAIGHT
                    (*initial_fcn)(double,double), // for STRAIGHT
-                   (*limiter_fcn)(double);  // limiter used in residual
+                   (*limiter_fcn)(double),  // limiter used in RHS
+                   (*jac_limiter_fcn)(double); // used in Jacobian
 } AdvectCtx;
 //ENDCTX
 
@@ -133,14 +134,13 @@ int main(int argc,char **argv) {
     double           hx, hy, t0, c, dt, tf;
     char             fileroot[PETSC_MAX_PATH_LEN] = "";
     int              steps;
-    PetscBool        oneline = PETSC_FALSE;
-    LimiterType      limiter = KOREN;
+    PetscBool        oneline = PETSC_FALSE, snesfdset, snesfdcolorset;
+    InitialType      initial = STUMP;
+    LimiterType      limiter = KOREN, jac_limiter = NONE;
     AdvectCtx        user;
 
     PetscInitialize(&argc,&argv,(char*)0,help);
 
-    user.initial = STUMP;
-    user.jacobian = NONE;
     user.problem = STRAIGHT;
     user.windx = 2.0;
     user.windy = 2.0;
@@ -151,17 +151,18 @@ int main(int argc,char **argv) {
     ierr = PetscOptionsEnum("-initial",
            "shape of initial condition if problem==straight",
            "advect.c",InitialTypes,
-           (PetscEnum)user.initial,(PetscEnum*)&user.initial,NULL); CHKERRQ(ierr);
-    user.initial_fcn = initialptr[user.initial];
-    ierr = PetscOptionsEnum("-jacobian",
-           "flux-limiter type used in calculating Jacobian; only none|centered allowed",
-           "advect.c",LimiterTypes,
-           (PetscEnum)user.jacobian,(PetscEnum*)&user.jacobian,NULL); CHKERRQ(ierr);
+           (PetscEnum)initial,(PetscEnum*)&initial,NULL); CHKERRQ(ierr);
+    user.initial_fcn = initialptr[initial];
     ierr = PetscOptionsEnum("-limiter",
-           "flux-limiter type",
+           "flux-limiter type used in RHS evaluation",
            "advect.c",LimiterTypes,
            (PetscEnum)limiter,(PetscEnum*)&limiter,NULL); CHKERRQ(ierr);
     user.limiter_fcn = limiterptr[limiter];
+    ierr = PetscOptionsEnum("-jac_limiter",
+           "flux-limiter type used in Jacobian (of RHS) evaluation",
+           "advect.c",LimiterTypes,
+           (PetscEnum)jac_limiter,(PetscEnum*)&jac_limiter,NULL); CHKERRQ(ierr);
+    user.jac_limiter_fcn = limiterptr[jac_limiter];
     ierr = PetscOptionsEnum("-problem",
            "problem type",
            "advect.c",ProblemTypes,
@@ -176,6 +177,13 @@ int main(int argc,char **argv) {
            "y component of wind for problem==straight",
            "advect.c",user.windy,&user.windy,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+
+    ierr = PetscOptionsHasName(NULL,NULL,"-snes_fd",&snesfdset); CHKERRQ(ierr);
+    ierr = PetscOptionsHasName(NULL,NULL,"-snes_fd_color",&snesfdcolorset); CHKERRQ(ierr);
+    if (snesfdset || snesfdcolorset) {
+        user.jac_limiter_fcn = NULL;
+        jac_limiter = 5;   // corresponds to empty string
+    }
 
     ierr = DMDACreate2d(PETSC_COMM_WORLD,
                DM_BOUNDARY_PERIODIC, DM_BOUNDARY_PERIODIC,
@@ -221,16 +229,11 @@ int main(int argc,char **argv) {
     ierr = TSGetTimeStep(ts,&dt); CHKERRQ(ierr);
 
     if (!oneline) {
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"solving problem '%s' ",
-               ProblemTypes[user.problem]); CHKERRQ(ierr);
-        if (user.problem == STRAIGHT) {
-            ierr = PetscPrintf(PETSC_COMM_WORLD,"(initial: %s) ",
-               InitialTypes[user.initial]); CHKERRQ(ierr);
-        }
         ierr = PetscPrintf(PETSC_COMM_WORLD,
-               "on %d x %d grid,\n"
-               "    cells dx=%g x dy=%g, and '%s' limiter ...\n",
-               info.mx,info.my,hx,hy,LimiterTypes[limiter]); CHKERRQ(ierr);
+               "solving problem %s with %s initial state on %d x %d grid,\n"
+               "    cells dx=%g x dy=%g, limiter = %s, and jac_limiter = %s ...\n",
+               ProblemTypes[user.problem],InitialTypes[initial],info.mx,info.my,
+               hx,hy,LimiterTypes[limiter],LimiterTypes[jac_limiter]); CHKERRQ(ierr);
     }
 
     ierr = TSSolve(ts,u); CHKERRQ(ierr);
@@ -259,7 +262,7 @@ int main(int argc,char **argv) {
         if (oneline) {
             ierr = PetscPrintf(PETSC_COMM_WORLD,
                 "%s,%s,%s,%d,%d,%g,%g,%d,%g,%.4e,%.4e\n",
-                ProblemTypes[user.problem],InitialTypes[user.initial],
+                ProblemTypes[user.problem],InitialTypes[initial],
                 LimiterTypes[limiter],info.mx,info.my,hx,hy,steps,tf,
                 norms[0],norms[1]); CHKERRQ(ierr);
         } else {
@@ -408,7 +411,7 @@ PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info, double t,
             nc = 1;
             for (l = 0; l < 4; l++) {   // loop over cell boundaries: E, N, W, S
                 a = a_wind(x + halfx*xsh[l],y + halfy*ysh[l],dir[l],user);
-                if (user->jacobian == NONE) {
+                if (user->jac_limiter_fcn == NULL) {
                     // Jacobian is from upwind fluxes
                     switch (l) {
                         case 0:
@@ -432,7 +435,7 @@ PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info, double t,
                             v[nc++] = a / hy;
                             break;
                     }
-                } else if (user->jacobian == CENTERED) {
+                } else if (user->jac_limiter_fcn == &centered) {
                     // Jacobian is from centered fluxes
                     switch (l) {
                         case 0:
@@ -453,7 +456,7 @@ PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info, double t,
                             break;
                     }
                 } else {
-                    SETERRQ(PETSC_COMM_WORLD,1,"Jacobian cases 'vanleer' and 'koren' not implemented\n");
+                    SETERRQ(PETSC_COMM_WORLD,1,"only Jacobian cases none|centered are implemented\n");
                 }
             }
             ierr = MatSetValuesStencil(P,1,&row,nc,col,v,ADD_VALUES); CHKERRQ(ierr);

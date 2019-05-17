@@ -1,5 +1,5 @@
-solving problem 'straight' (initial: stump) on 3 x 3 grid,
-    cells dx=0.666667 x dy=0.666667, and 'centered' limiter ...
+solving problem straight with stump initial state on 3 x 3 grid,
+    cells dx=0.666667 x dy=0.666667, limiter = centered, and jac_limiter = centered ...
 0 TS dt 0.01 time 0.
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
 1 TS dt 0.01 time 0.01

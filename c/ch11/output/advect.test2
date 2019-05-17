@@ -1,5 +1,5 @@
-solving problem 'rotation' on 20 x 20 grid,
-    cells dx=0.1 x dy=0.1, and 'vanleer' limiter ...
+solving problem rotation with stump initial state on 20 x 20 grid,
+    cells dx=0.1 x dy=0.1, limiter = vanleer, and jac_limiter =  ...
 0 TS dt 0.02 time 0.
     0 SNES Function norm 13.8111 
     1 SNES Function norm 0.940691 

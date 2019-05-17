@@ -29,7 +29,7 @@ runadvect_3:
 
 # centered limiter and analytical (centered) jacobian; compare with -snes_fd
 runadvect_4:
-	-@../testit.sh advect "-da_grid_x 3 -da_grid_y 3 -adv_limiter centered -adv_jacobian centered -ts_type cn -ts_adapt_type basic -ts_monitor -ts_dt 0.01 -ts_max_time 0.02 -snes_converged_reason" 1 4
+	-@../testit.sh advect "-da_grid_x 3 -da_grid_y 3 -adv_limiter centered -adv_jac_limiter centered -ts_type cn -ts_adapt_type basic -ts_monitor -ts_dt 0.01 -ts_max_time 0.02 -snes_converged_reason" 1 4
 
 runboth1_1:
 	-@../testit.sh both1 "-b1_eps 0.1 -da_refine 1 -ksp_view_mat ::ascii_dense -snes_monitor_solution -snes_fd_color" 1 1

@@ -1,5 +1,5 @@
-solving problem 'straight' (initial: stump) on 10 x 10 grid,
-    cells dx=0.2 x dy=0.2, and 'none' limiter ...
+solving problem straight with stump initial state on 10 x 10 grid,
+    cells dx=0.2 x dy=0.2, limiter = none, and jac_limiter = none ...
 0 TS dt 0.05 time 0.
 1 TS dt 0.0304896 time 0.0295903
 2 TS dt 0.01996 time 0.0600799
