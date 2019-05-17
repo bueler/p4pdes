@@ -30,6 +30,8 @@ typedef struct {
     double      eps;          // amount of diffusion; require: eps > 0
     double      (*limiter_fcn)(double),
                 (*jac_limiter_fcn)(double);
+    PetscBool   none_on_down;
+    int         mx_fine;
 } AdCtx;
 
 static double u_exact(double x, AdCtx *usr) {
@@ -58,6 +60,7 @@ int main(int argc,char **argv) {
     PetscInitialize(&argc,&argv,(char*)0,help);
 
     user.eps = 0.01;
+    user.none_on_down = PETSC_FALSE;
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"b1_",
                "both1 (1D advection and diffusion solver) options",""); CHKERRQ(ierr);
     ierr = PetscOptionsReal("-eps","positive diffusion coefficient",
@@ -69,6 +72,10 @@ int main(int argc,char **argv) {
     ierr = PetscOptionsEnum("-jac_limiter","flux-limiter type used in Jacobian evaluation",
                "both1.c",LimiterTypes,
                (PetscEnum)jac_limiter,(PetscEnum*)&jac_limiter,NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-none_on_down",
+               "on grids coarser than the finest, disregard limiter choices and use none",
+               "both1.c",user.none_on_down,&(user.none_on_down),NULL);
+               CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
     if (user.eps <= 0.0) {
@@ -89,8 +96,10 @@ int main(int argc,char **argv) {
                  NULL,&da); CHKERRQ(ierr);
     ierr = DMSetFromOptions(da); CHKERRQ(ierr);
     ierr = DMSetUp(da); CHKERRQ(ierr);
-    ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
     ierr = DMDASetUniformCoordinates(da,-1.0,1.0,-1.0,1.0,-1.0,1.0); CHKERRQ(ierr);
+    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+    user.mx_fine = info.mx;
+    ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
 
     ierr = SNESCreate(PETSC_COMM_WORLD,&snes);CHKERRQ(ierr);
     ierr = SNESSetDM(snes,da);CHKERRQ(ierr);
@@ -156,6 +165,12 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *au,
                  hx2 = hx * hx,
                  scdiag = (2.0 * eps) / hx + 1.0;
     double       x, uE, uW, uxx, a, u_up, flux, u_dn, u_far, theta;
+    double      (*limiter)(double);
+
+    if (usr->none_on_down && info->mx < usr->mx_fine)
+        limiter = NULL;
+    else
+        limiter = usr->limiter_fcn;
 
     // for each owned cell, non-advective part of residual at cell center
     for (i=info->xs; i<info->xs+info->xm; i++) {
@@ -197,7 +212,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *au,
             }
         }
         flux = a * u_up;
-        if (usr->limiter_fcn != NULL) {
+        if (limiter != NULL) {
             // flux correction from high-order formula with psi(theta)
             if (a >= 0)
                 u_dn = (i+1 < info->mx-1) ? au[i+1] : 0.0;
@@ -209,7 +224,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *au,
                 else
                    u_far = (i+2 < info->mx-1) ? au[i+2] : 0.0;
                 theta = (u_up - u_far) / (u_dn - u_up);
-                flux += a * (*usr->limiter_fcn)(theta) * (u_dn - u_up);
+                flux += a * (*limiter)(theta) * (u_dn - u_up);
             }
         }
         // update non-boundary and owned F_i on both sides of computed flux
@@ -231,10 +246,16 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, double *u,
                  scdiag = (2.0 * eps) / hx + 1.0;
     int          i, col[3];
     double       x, aE, aW, v[3];
+    double       (*limiter)(double);
 
     if (usr->jac_limiter_fcn == &vanleer) {
         SETERRQ(PETSC_COMM_WORLD,1,"Jacobian for vanleer limiter is not implemented");
     }
+    if (usr->none_on_down && info->mx < usr->mx_fine)
+        limiter = NULL;
+    else
+        limiter = usr->jac_limiter_fcn;
+
     ierr = MatZeroEntries(P); CHKERRQ(ierr);
 
     for (i=info->xs; i<info->xs+info->xm; i++) {
@@ -269,7 +290,7 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, double *u,
                 v[1] = - aW;
             }
             ierr = MatSetValues(P,1,&i,2,col,v,ADD_VALUES); CHKERRQ(ierr);
-            if (usr->jac_limiter_fcn == &centered) {
+            if (limiter == &centered) {
                 col[0] = i+1;
                 col[1] = i;
                 if (aE >= 0.0) {
