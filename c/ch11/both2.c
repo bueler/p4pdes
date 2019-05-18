@@ -44,6 +44,11 @@ typedef struct {
     int         mx_fine, my_fine;                 //    on finest grid
 } AdCtx;
 
+// used for source functions
+static double zero(double x, double y, void *user) {
+    return 0.0;
+}
+
 // problem NOWIND: same problem as ./fish -fsh_problem manuexp
 static double nowind_u(double x, double y, void *user) {  // exact solution
     return - x * exp(y);
@@ -64,68 +69,49 @@ static double layer_u(double x, double y, AdCtx *user) {  // exact solution
     return x * (1.0 - exp((y-1) / usr->eps)) / (1.0 - exp(- 2.0 / usr->eps));
 }
 
-static double layer_f(double x, double y, void *user) {
-    return 0.0;
-}
-
 static double layer_g(double x, double y, void *user) {
     return layer_u(x,y,user);
 }
 
 // problem INTERNAL:  Elman page 239, Example 6.1.3
-static double internal_f(double x, double y, void *user) {
-    return 0.0;
-}
-
 static double internal_g(double x, double y, void *user) {
-FIXME    if (x > 1.0-small) && ((y > -1.0+small) || (y < 1.0-small))) {
-       return 1.0;
+    if (y > 2*x - 1)
+       return 1.0;   // along x=1 and (y=-1 & 0 < x < 1) boundaries
     else
        return 0.0;
 }
 
 // problem GLAZE:  Elman page 240, Example 6.1.4
-static double glaze_f(double x, double y, void *user) {
-    return 0.0;  // note wind is divergence-free
-}
-
 static double glaze_g(double x, double y, void *user) {
-    if (x > 1.0-small) && ((y > -1.0+small) || (y < 1.0-small))) {
-       return 1.0;
+    if (x > 0.0 && y < x && y > -x)
+       return 1.0;   // along x=1 boundary
     else
        return 0.0;
 }
 
-static void* fptr[] = {&nowind_f, &layer_f, &internal_f, &glaze_f};
-static void* gptr[] = {&nowind_g, &layer_g, &internal_g, &glaze_g};
+static void* uexptr[] = {&nowind_u, &layer_u, NULL,        NULL};
+static void* fptr[]   = {&nowind_f, &zero,    &zero,       &zero};
+static void* gptr[]   = {&nowind_g, &layer_g, &internal_g, &glaze_g};
 
-FIXME
-
-/* This vector function returns q=0,1,2 component.  It is used in
-FormFunctionLocal() to get a(x,y,z). */
-static double wind_a(double x, double y, double z, int q, AdCtx *user) {
-    if (user->problem == LAYER) {
-        return (q == 0) ? 1.0 : 0.0;
-    } else if (user->problem == NOWIND) {
-        return 0.0;
-    } else { // GLAZE
-        switch (q) {
-            case 0:
-                return 2.0 * z * (1.0 - x * x);
-                break;
-            case 1:
-                return user->glaze_drift;
-                break;
-            case 2:
-                return - 2.0 * x * (1.0 - z * z);
-                break;
-            default:
-                return 1.0e308 * 100.0;  // cause overflow
-        }
+/* This vector function returns q=0,1 component.  It is used in
+   FormFunctionLocal() to get a(x,y). */
+static double wind_a(double x, double y, int q, AdCtx *user) {
+    switch (user->problem) {
+        case NOWIND:
+            return 0.0;
+        case LAYER:
+            return (q == 0) ? 1.0 : 0.0;
+        case INTERNAL:
+            return (q == 0) ? -0.5 : PetscSqrtReal(3.0)/2.0;
+        case GLAZE:
+            return (q == 0) ? 2.0*y*(1.0-x*x) : -2.0*x*(1.0-y*y);
+        default:
+            return 1.0e308 * 100.0;  // cause overflow
     }
 }
 
-extern PetscErrorCode FormUExact(DMDALocalInfo*, AdCtx*, Vec);
+extern PetscErrorCode FormUExact(DMDALocalInfo*, AdCtx*, 
+                                 double (*)(double, double, void*), Vec);
 extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, double***,
                                         double***, AdCtx*);
 
@@ -136,8 +122,8 @@ int main(int argc,char **argv) {
     Vec            u_initial, u, u_exact;
     double         hx, hy, err2;
     DMDALocalInfo  info;
-    LimiterType    limiter = NONE, jac_limiter;
-    PetscBool      snesfdset, snesfdcolorset;
+    double         (*uexact_fcn)(double, double, void*);
+    LimiterType    limiter = NONE;
     AdCtx          user;
 
     PetscInitialize(&argc,&argv,(char*)0,help);
@@ -152,10 +138,6 @@ int main(int argc,char **argv) {
     ierr = PetscOptionsEnum("-limiter","flux-limiter type",
                "both2.c",LimiterTypes,
                (PetscEnum)limiter,(PetscEnum*)&limiter,NULL); CHKERRQ(ierr);
-    jac_limiter = limiter;
-    ierr = PetscOptionsEnum("-jac_limiter","flux-limiter type used in Jacobian evaluation",
-               "both2.c",LimiterTypes,
-               (PetscEnum)jac_limiter,(PetscEnum*)&jac_limiter,NULL); CHKERRQ(ierr);
     ierr = PetscOptionsBool("-none_on_down",
                "on grids coarser than the finest, disregard limiter choices and use none",
                "both2.c",user.none_on_down,&(user.none_on_down),NULL);
@@ -169,15 +151,9 @@ int main(int argc,char **argv) {
         SETERRQ1(PETSC_COMM_WORLD,1,"eps=%.3f invalid ... eps > 0 required",user.eps);
     }
     user.limiter_fcn = limiterptr[limiter];
-    ierr = PetscOptionsHasName(NULL,NULL,"-snes_fd",&snesfdset); CHKERRQ(ierr);
-    ierr = PetscOptionsHasName(NULL,NULL,"-snes_fd_color",&snesfdcolorset); CHKERRQ(ierr);
-    if (snesfdset || snesfdcolorset) {
-        user.jac_limiter_fcn = NULL;
-        jac_limiter = 4;   // corresponds to empty string
-    } else
-        user.jac_limiter_fcn = limiterptr[jac_limiter];
+    uexact_fcn = uexptr[user.problem];
+    user.f_fcn = fptr[user.problem];
     user.g_fcn = gptr[user.problem];
-    user.b_fcn = bptr[user.problem];
 
     ierr = DMDACreate2d(PETSC_COMM_WORLD,
         DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
@@ -210,13 +186,13 @@ int main(int argc,char **argv) {
     ierr = SNESGetDM(snes,&da_after); CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,
-         "done on %d x %d grid (problem = %s, eps = %g, limiter = %s, jac_limiter = %s)\n",
-         info.mx,info.my,ProblemTypes[user.problem],user.eps,
-         LimiterTypes[limiter],LimiterTypes[jac_limiter]); CHKERRQ(ierr);
+         "done on %d x %d grid (problem = %s, eps = %g, limiter = %s)\n",
+         info.mx,info.my,ProblemTypes[user.problem],user.eps,LimiterTypes[limiter]);
+         CHKERRQ(ierr);
 
-    if (user.problem == NOWIND || user.problem == LAYER) { // FIXME: make sure LAYER has exact solution
+    if (uexact_fcn != NULL) {
         ierr = VecDuplicate(u,&u_exact); CHKERRQ(ierr);
-        ierr = FormUExact(&info,&user,u_exact); CHKERRQ(ierr);
+        ierr = FormUExact(&info,&user,uexact_fcn,u_exact); CHKERRQ(ierr);
         ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr);    // u <- u + (-1.0) u_exact
         ierr = VecNorm(u,NORM_2,&err2); CHKERRQ(ierr);
         hx = 2.0 / (info.mx - 1);
@@ -231,13 +207,14 @@ int main(int argc,char **argv) {
     return PetscFinalize();
 }
 
-PetscErrorCode FormUExact(DMDALocalInfo *info, AdCtx *usr, Vec uex) {
+PetscErrorCode FormUExact(DMDALocalInfo *info, AdCtx *usr,
+                          double (*uexact)(double, double, void*), Vec uex) {
     PetscErrorCode  ierr;
     int          i, j;
-    double       hx, hy, x, y, ***auex;
+    double       hx, hy, x, y, **auex;
 
-    if (usr->problem != NOWIND && usr->problem != LAYER) {
-        SETERRQ(PETSC_COMM_WORLD,1,"exact solutions only available for NOWIND and LAYER");
+    if (uexact == NULL) {
+        SETERRQ(PETSC_COMM_WORLD,1,"exact solution not available");
     }
     hx = 2.0 / (info->mx - 1);
     hy = 2.0 / (info->my - 1);
@@ -246,13 +223,7 @@ PetscErrorCode FormUExact(DMDALocalInfo *info, AdCtx *usr, Vec uex) {
         y = -1.0 + j * hy;
         for (i=info->xs; i<info->xs+info->xm; i++) {
             x = -1.0 + i * hx;
-            if (usr->problem == NOWIND)
-                auex[k][j][i] = nowind_u(x,y,z,usr);
-            else if (usr->problem == LAYER)
-                auex[k][j][i] = layer_u(x,y,z,usr);
-            else {
-                SETERRQ(PETSC_COMM_WORLD,2,"how got here?");
-            }
+            auex[j][i] = (*uexact)(x,y,usr);
         }
     }
     ierr = DMDAVecRestoreArray(info->da, uex, &auex);CHKERRQ(ierr);
