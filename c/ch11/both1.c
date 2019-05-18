@@ -62,7 +62,7 @@ int main(int argc,char **argv) {
     user.eps = 0.01;
     user.none_on_down = PETSC_FALSE;
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"b1_",
-               "both1 (1D advection and diffusion solver) options",""); CHKERRQ(ierr);
+               "both1 (1D advection-diffusion solver) options",""); CHKERRQ(ierr);
     ierr = PetscOptionsReal("-eps","positive diffusion coefficient",
                "both1.c",user.eps,&(user.eps),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnum("-limiter","flux-limiter type",
@@ -153,9 +153,9 @@ PetscErrorCode FormUExact(DMDALocalInfo *info, AdCtx *usr, Vec uex) {
     return 0;
 }
 
-// compute residuals with symmetric dependence:
-//   F_i = (- eps u'' + (a(x) u)') * hx   at interior points
-//   F_i = c (u - (b.c.))          at boundary points
+/* compute residuals:
+     F_i = (- eps u'' + (a(x) u)') * hx   at interior points
+     F_i = c (u - (b.c.))          at boundary points         */
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *au,
                                  double *aF, AdCtx *usr) {
     int          i;
