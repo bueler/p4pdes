@@ -12,7 +12,7 @@ COMMON="-snes_type ksponly -da_grid_x 5 -ksp_converged_reason -ksp_type richards
 LEVELS="1 2 3 4 5 6 7 8 9 10 11 12"
 
 function runcase() {
-    CMD="../both1 $COMMON -snes_fd_color -b1_eps $1 -da_refine $2"
+    CMD="../both1 $COMMON -b1_eps $1 -da_refine $2"
     rm -rf tmp.txt
     $CMD &> tmp.txt
     grep "done on" tmp.txt | awk '{print $3}'          # mx for grid
