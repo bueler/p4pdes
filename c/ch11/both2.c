@@ -1,16 +1,17 @@
 static char help[] =
-"Solves 2D advection plus diffusion problems using FD discretization,\n"
+"Solves 2D advection-diffusion problems using FD discretization,\n"
 "structured-grid (DMDA), and -snes_fd_color.  Option prefix -b2_.\n"
 "Equation:\n"
-"    - eps Laplacian u + div (a(x,y) u) = f(x,y),\n"
+"    - eps Laplacian u + Div (a(x,y) u) = f(x,y),\n"
 "where the (vector) wind a(x,y) and (scalar) source f(x,y) are given smooth\n"
-"functions.  The domain is S = [-1,1]^2 with Dirichlet boundary conditions:\n"
+"functions.  The domain is S = (-1,1)^2 with Dirichlet boundary conditions:\n"
 "    u = g(x,y) on boundary S\n"
 "where g(x,y) is a given smooth function.  Problems include: NOWIND, LAYER,\n"
 "INTERNAL, and GLAZE.  The first of these has a=0 while the last three are\n"
 "Examples 6.1.1, 6.1.3, and 6.1.4 in Elman et al (2014), respectively.\n"
-"Advection can be discretized by first-order upwinding, centered, or a\n"
-"van Leer limiter scheme.\n\n";
+"Advection can be discretized by first-order upwinding (none), centered, or a\n"
+"van Leer limiter scheme.  Option allows using none limiter on all grids\n"
+"but the finest in geometric multigrid.\n\n";
 
 #include <petsc.h>
 
@@ -35,13 +36,15 @@ static const char *ProblemTypes[] = {"nowind", "layer", "internal", "glaze",
 
 typedef struct {
     ProblemType problem;
-    double      eps;          // amount of diffusion; require: eps > 0
+    double      eps;                              // diffusion eps > 0
     double      (*limiter_fcn)(double),
                 (*f_fcn)(double, double, void*),  // source
                 (*g_fcn)(double, double, void*);  // boundary condition
+    PetscBool   none_on_down;                     // use none limiter except
+    int         mx_fine, my_fine;                 //    on finest grid
 } AdCtx;
 
-// problem NOWIND: same basic problem as ./fish -fsh_problem manuexp
+// problem NOWIND: same problem as ./fish -fsh_problem manuexp
 static double nowind_u(double x, double y, void *user) {  // exact solution
     return - x * exp(y);
 }
@@ -68,8 +71,6 @@ static double layer_f(double x, double y, void *user) {
 static double layer_g(double x, double y, void *user) {
     return layer_u(x,y,user);
 }
-
-static double small = 1.0e-10;
 
 // problem INTERNAL:  Elman page 239, Example 6.1.3
 static double internal_f(double x, double y, void *user) {
@@ -133,31 +134,32 @@ int main(int argc,char **argv) {
     DM             da, da_after;
     SNES           snes;
     Vec            u_initial, u, u_exact;
-    double         hx, hy, hz, err;
-    int            my;
-    char           filename[PETSC_MAX_PATH_LEN] = "filename.vtr";
-    PetscBool      vtkoutput = PETSC_FALSE;
-    PetscViewer    viewer;
+    double         hx, hy, err2;
     DMDALocalInfo  info;
-    LimiterType    limiter = CENTERED;
+    LimiterType    limiter = NONE, jac_limiter;
+    PetscBool      snesfdset, snesfdcolorset;
     AdCtx          user;
 
     PetscInitialize(&argc,&argv,(char*)0,help);
 
-    user.eps = 1.0;
-    user.glaze_drift = 0.0;
+    user.eps = 0.01;
+    user.none_on_down = PETSC_FALSE;
     user.problem = LAYER;
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"b2_",
-               "both2 (3D advection-diffusion solver) options",""); CHKERRQ(ierr);
+               "both2 (2D advection-diffusion solver) options",""); CHKERRQ(ierr);
     ierr = PetscOptionsReal("-eps","positive diffusion coefficient",
                "both2.c",user.eps,&(user.eps),NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-glaze_drift","y-direction drift constant for glaze problem",
-               "both2.c",user.glaze_drift,&(user.glaze_drift),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnum("-limiter","flux-limiter type",
                "both2.c",LimiterTypes,
                (PetscEnum)limiter,(PetscEnum*)&limiter,NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsString("-o","output solution in VTK format (.vtr,.vts), e.g. for paraview",
-               "both2.c",filename,filename,sizeof(filename),&vtkoutput);CHKERRQ(ierr);
+    jac_limiter = limiter;
+    ierr = PetscOptionsEnum("-jac_limiter","flux-limiter type used in Jacobian evaluation",
+               "both2.c",LimiterTypes,
+               (PetscEnum)jac_limiter,(PetscEnum*)&jac_limiter,NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-none_on_down",
+               "on grids coarser than the finest, disregard limiter choices and use none",
+               "both2.c",user.none_on_down,&(user.none_on_down),NULL);
+               CHKERRQ(ierr);
     ierr = PetscOptionsEnum("-problem","problem type",
                "both2.c",ProblemTypes,
                (PetscEnum)(user.problem),(PetscEnum*)&(user.problem),NULL); CHKERRQ(ierr);
@@ -166,41 +168,36 @@ int main(int argc,char **argv) {
     if (user.eps <= 0.0) {
         SETERRQ1(PETSC_COMM_WORLD,1,"eps=%.3f invalid ... eps > 0 required",user.eps);
     }
-
     user.limiter_fcn = limiterptr[limiter];
+    ierr = PetscOptionsHasName(NULL,NULL,"-snes_fd",&snesfdset); CHKERRQ(ierr);
+    ierr = PetscOptionsHasName(NULL,NULL,"-snes_fd_color",&snesfdcolorset); CHKERRQ(ierr);
+    if (snesfdset || snesfdcolorset) {
+        user.jac_limiter_fcn = NULL;
+        jac_limiter = 4;   // corresponds to empty string
+    } else
+        user.jac_limiter_fcn = limiterptr[jac_limiter];
     user.g_fcn = gptr[user.problem];
     user.b_fcn = bptr[user.problem];
 
-    my = (user.limiter_fcn == NULL) ? 6 : 5;
-    ierr = DMDACreate3d(PETSC_COMM_WORLD,
-        DM_BOUNDARY_NONE, DM_BOUNDARY_PERIODIC, DM_BOUNDARY_NONE,
-        DMDA_STENCIL_STAR,               // no diagonal differencing
-        6,my,6,                          // usually default to hx=hx=hz=0.4 grid
-                                         // (mz>=5 necessary for -snes_fd_color)
-        PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,
-        1,                               // d.o.f
-        (user.limiter_fcn == NULL) ? 1 : 2, // stencil width
-        NULL,NULL,NULL,&da); CHKERRQ(ierr);
+    ierr = DMDACreate2d(PETSC_COMM_WORLD,
+        DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
+        3,3,                          // default to hx=hy=1 grid
+        PETSC_DECIDE,PETSC_DECIDE,
+        1,2,                          // d.o.f, stencil width
+        NULL,NULL,&da); CHKERRQ(ierr);
     ierr = DMSetFromOptions(da); CHKERRQ(ierr);
     ierr = DMSetUp(da); CHKERRQ(ierr);
-    ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
-    ierr = DMDASetFieldName(da,0,""); CHKERRQ(ierr);
-
-    // set coordinates of cell-centered regular grid
+    ierr = DMDASetUniformCoordinates(da,-1.0,1.0,-1.0,1.0,-1.0,1.0); CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-    hy = 2.0 / info.my;
-    ierr = DMDASetUniformCoordinates(da,-1.0,1.0,
-                                        -1.0+hy/2.0,1.0-hy/2.0,
-                                        -1.0,1.0); CHKERRQ(ierr);
+    user.mx_fine = info.mx;
+    user.my_fine = info.my;
+    ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
 
     ierr = SNESCreate(PETSC_COMM_WORLD,&snes);CHKERRQ(ierr);
     ierr = SNESSetDM(snes,da);CHKERRQ(ierr);
     ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
             (DMDASNESFunction)FormFunctionLocal,&user);CHKERRQ(ierr);
     ierr = SNESSetApplicationContext(snes,&user); CHKERRQ(ierr);
-    if (limiter != VANLEER) {
-        ierr = SNESSetType(snes,SNESKSPONLY); CHKERRQ(ierr);
-    }
     ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
 
     ierr = DMGetGlobalVector(da,&u_initial); CHKERRQ(ierr);
@@ -212,33 +209,21 @@ int main(int argc,char **argv) {
     ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr);
     ierr = SNESGetDM(snes,&da_after); CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
-    hx = 2.0 / (info.mx - 1);
-    hy = 2.0 / info.my;
-    hz = 2.0 / (info.mz - 1);
     ierr = PetscPrintf(PETSC_COMM_WORLD,
-         "done on problem = %s, eps = %g, limiter = %s\n",
-         ProblemTypes[user.problem],user.eps,LimiterTypes[limiter]); CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,
-         "grid:  %d x %d x %d,  cell dims: %.4f x %.4f x %.4f\n",
-         info.mx,info.my,info.mz,hx,hy,hz); CHKERRQ(ierr);
+         "done on %d x %d grid (problem = %s, eps = %g, limiter = %s, jac_limiter = %s)\n",
+         info.mx,info.my,ProblemTypes[user.problem],user.eps,
+         LimiterTypes[limiter],LimiterTypes[jac_limiter]); CHKERRQ(ierr);
 
-    if (vtkoutput) {
-        ierr = PetscPrintf(PETSC_COMM_WORLD,
-            "writing solution_u to %s ...\n",filename); CHKERRQ(ierr);
-        ierr = PetscObjectSetName((PetscObject)u, "solution_u"); CHKERRQ(ierr);
-        ierr = PetscViewerVTKOpen(PETSC_COMM_WORLD,filename,FILE_MODE_WRITE,&viewer);CHKERRQ(ierr);
-        ierr = VecView(u,viewer);CHKERRQ(ierr);
-        ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
-    }
-
-    if ((user.problem == LAYER) || (user.problem == NOWIND)) {
+    if (user.problem == NOWIND || user.problem == LAYER) { // FIXME: make sure LAYER has exact solution
         ierr = VecDuplicate(u,&u_exact); CHKERRQ(ierr);
         ierr = FormUExact(&info,&user,u_exact); CHKERRQ(ierr);
         ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr);    // u <- u + (-1.0) u_exact
-        ierr = VecNorm(u,NORM_2,&err); CHKERRQ(ierr);
-        err *= PetscSqrtReal(hx * hy * hz);
+        ierr = VecNorm(u,NORM_2,&err2); CHKERRQ(ierr);
+        hx = 2.0 / (info.mx - 1);
+        hy = 2.0 / (info.my - 1);
+        err2 *= PetscSqrtReal(hx * hy);
         ierr = PetscPrintf(PETSC_COMM_WORLD,
-             "numerical error:  |u-uexact|_{2,h} = %.4e\n",err); CHKERRQ(ierr);
+             "numerical error:  |u-uexact|_2 = %.4e\n",err2); CHKERRQ(ierr);
         ierr = VecDestroy(&u_exact); CHKERRQ(ierr);
     }
 
@@ -248,29 +233,25 @@ int main(int argc,char **argv) {
 
 PetscErrorCode FormUExact(DMDALocalInfo *info, AdCtx *usr, Vec uex) {
     PetscErrorCode  ierr;
-    int          i, j, k;
-    double       hx, hy, hz, x, y, z, ***auex;
+    int          i, j;
+    double       hx, hy, x, y, ***auex;
 
-    if ((usr->problem != LAYER) && (usr->problem != NOWIND)) {
-        SETERRQ(PETSC_COMM_WORLD,1,"exact solutions only available for LAYER and NOWIND");
+    if (usr->problem != NOWIND && usr->problem != LAYER) {
+        SETERRQ(PETSC_COMM_WORLD,1,"exact solutions only available for NOWIND and LAYER");
     }
     hx = 2.0 / (info->mx - 1);
-    hy = 2.0 / info->my;
-    hz = 2.0 / (info->mz - 1);
+    hy = 2.0 / (info->my - 1);
     ierr = DMDAVecGetArray(info->da, uex, &auex);CHKERRQ(ierr);
-    for (k=info->zs; k<info->zs+info->zm; k++) {
-        z = -1.0 + k * hz;
-        for (j=info->ys; j<info->ys+info->ym; j++) {
-            y = -1.0 + (j + 0.5) * hy;
-            for (i=info->xs; i<info->xs+info->xm; i++) {
-                x = -1.0 + i * hx;
-                if (usr->problem == LAYER)
-                    auex[k][j][i] = layer_u(x,y,z,usr);
-                else if (usr->problem == NOWIND)
-                    auex[k][j][i] = nowind_u(x,y,z,usr);
-                else {
-                    SETERRQ(PETSC_COMM_WORLD,2,"how get here?");
-                }
+    for (j=info->ys; j<info->ys+info->ym; j++) {
+        y = -1.0 + j * hy;
+        for (i=info->xs; i<info->xs+info->xm; i++) {
+            x = -1.0 + i * hx;
+            if (usr->problem == NOWIND)
+                auex[k][j][i] = nowind_u(x,y,z,usr);
+            else if (usr->problem == LAYER)
+                auex[k][j][i] = layer_u(x,y,z,usr);
+            else {
+                SETERRQ(PETSC_COMM_WORLD,2,"how got here?");
             }
         }
     }
@@ -278,11 +259,11 @@ PetscErrorCode FormUExact(DMDALocalInfo *info, AdCtx *usr, Vec uex) {
     return 0;
 }
 
-/* compute residuals
-    F_ijk = - eps Laplacian u - g(x,y,z) + div f
-where the vector flux is
-    f = a(x,y,z) u
-*/
+/* compute residuals:
+     F_ij = (- eps Laplacian u + Div (a(x,y) u) - f(x,y)) * hx * hy
+at boundary points:
+     F_ij = c (u - g(x,y))                                          */
+FIXME
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***au,
                                  double ***aF, AdCtx *usr) {
     int          i, j, k, p, di, dj, dk;
