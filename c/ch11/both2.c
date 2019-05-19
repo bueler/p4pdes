@@ -3,7 +3,7 @@ static char help[] =
 "structured-grid (DMDA), and -snes_fd_color.  Option prefix -b2_.\n"
 "Equation:\n"
 "    - eps Laplacian u + Div (a(x,y) u) = g(x,y),\n"
-"where the (vector) wind a(x,y) and (scalar) source f(x,y) are given smooth\n"
+"where the (vector) wind a(x,y) and (scalar) source g(x,y) are given smooth\n"
 "functions.  The domain is S = (-1,1)^2 with Dirichlet boundary conditions:\n"
 "    u = b(x,y) on boundary S\n"
 "where b(x,y) is a given smooth function.  Problems include: NOWIND, LAYER,\n"
@@ -134,6 +134,7 @@ int main(int argc,char **argv) {
     DMDALocalInfo  info;
     double         (*uexact_fcn)(double, double, void*);
     LimiterType    limiter = NONE;
+    PetscBool      init_exact = PETSC_FALSE;
     AdCtx          user;
 
     PetscInitialize(&argc,&argv,(char*)0,help);
@@ -145,11 +146,13 @@ int main(int argc,char **argv) {
                "both2 (2D advection-diffusion solver) options",""); CHKERRQ(ierr);
     ierr = PetscOptionsReal("-eps","positive diffusion coefficient",
                "both2.c",user.eps,&(user.eps),NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-init_exact","use exact solution for initialization",
+               "both2.c",init_exact,&init_exact,NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnum("-limiter","flux-limiter type",
                "both2.c",LimiterTypes,
                (PetscEnum)limiter,(PetscEnum*)&limiter,NULL); CHKERRQ(ierr);
     ierr = PetscOptionsBool("-none_on_down",
-               "on grids coarser than the finest, disregard limiter choices and use none",
+               "on grids below finest, disregard limiter choices and use none",
                "both2.c",user.none_on_down,&(user.none_on_down),NULL);
                CHKERRQ(ierr);
     ierr = PetscOptionsEnum("-problem","problem type",
@@ -187,7 +190,11 @@ int main(int argc,char **argv) {
     ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
 
     ierr = DMGetGlobalVector(da,&u_initial); CHKERRQ(ierr);
-    ierr = VecSet(u_initial,0.0); CHKERRQ(ierr);
+    if (init_exact) {
+        ierr = FormUExact(&info,&user,uexact_fcn,u_initial); CHKERRQ(ierr);
+    } else {
+        ierr = VecSet(u_initial,0.0); CHKERRQ(ierr);
+    }
     ierr = SNESSolve(snes,NULL,u_initial); CHKERRQ(ierr);
     ierr = DMRestoreGlobalVector(da,&u_initial); CHKERRQ(ierr);
     ierr = DMDestroy(&da); CHKERRQ(ierr);
@@ -276,7 +283,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
             } else {
                 uE = (i+1 == info->mx-1) ? (*usr->b_fcn)(x+hx,y,usr) : au[j][i+1];
                 uW = (i-1 == 0)          ? (*usr->b_fcn)(x-hx,y,usr) : au[j][i-1];
-                uxx = (uW - 2.0 * au[j][i] + uE) / hx2;
+                uxx = (uE - 2.0 * au[j][i] + uW) / hx2;
                 uN = (j+1 == info->my-1) ? (*usr->b_fcn)(x,y+hy,usr) : au[j+1][i];
                 uS = (j-1 == 0)          ? (*usr->b_fcn)(x,y-hy,usr) : au[j-1][i];
                 uyy = (uN - 2.0 * au[j][i] + uS) / hy2;
