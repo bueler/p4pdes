@@ -13,6 +13,17 @@ static char help[] =
 "van Leer limiter scheme.  Option allows using none limiter on all grids\n"
 "but the finest in geometric multigrid.\n\n";
 
+/*
+1. looks like O(h^2) and good multigrid for NOWIND:
+for LEV in 1 2 3 4 5 6 7 8; do
+    ./both2 -snes_fd_color -snes_type ksponly -ksp_converged_reason -b2_problem nowind -da_refine $LEV -ksp_rtol 1.0e-10 -pc_type mg
+done
+
+2. looks like same scaling as fish.c for NOWIND with eps=1.0:
+./both2 -b2_problem nowind -b2_eps 1.0 -ksp_view_mat ::ascii_dense
+../ch6/fish -ksp_view_mat ::ascii_dense
+*/
+
 #include <petsc.h>
 
 typedef enum {NONE, CENTERED, VANLEER} LimiterType;
