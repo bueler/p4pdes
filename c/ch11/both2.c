@@ -111,7 +111,7 @@ static double wind_a(double x, double y, int q, AdCtx *user) {
         case NOWIND:
             return 0.0;
         case LAYER:
-            return (q == 0) ? 1.0 : 0.0;
+            return (q == 0) ? 0.0 : 1.0;
         case INTERNAL:
             return (q == 0) ? -0.5 : PetscSqrtReal(3.0)/2.0;
         case GLAZE:
