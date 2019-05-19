@@ -267,6 +267,12 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
     double       hx, hy, hx2, hy2, scF, scBC,
                  x, y, uE, uW, uN, uS, uxx, uyy,
                  ap, flux, u_up, u_dn, u_far, theta;
+    double      (*limiter)(double);
+
+    if (usr->none_on_down && (info->mx < usr->mx_fine || info->my < usr->my_fine))
+        limiter = NULL;
+    else
+        limiter = usr->limiter_fcn;
 
     hx = 2.0 / (info->mx - 1);  hy = 2.0 / (info->my - 1);
     hx2 = hx * hx;              hy2 = hy * hy;
@@ -326,7 +332,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                 }
                 flux = ap * u_up;
                 // flux correction if have limiter
-                if (usr->limiter_fcn != NULL) {
+                if (limiter != NULL) {
                     if (p == 0)
                         if (ap >= 0.0)
                             u_dn = (i+1 == info->mx-1) ? (*usr->b_fcn)(x+hx,y,usr) : au[j][i+1];
@@ -349,7 +355,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                             else
                                 u_far = (j+2 >= info->my-1) ? (*usr->b_fcn)(x,1.0,usr) : au[j+2][i];
                         theta = (u_up - u_far) / (u_dn - u_up);
-                        flux += ap * (*usr->limiter_fcn)(theta) * (u_dn - u_up);
+                        flux += ap * (*limiter)(theta) * (u_dn - u_up);
                     }
                 }
                 // update non-boundary and owned F_ij on both sides of computed flux
