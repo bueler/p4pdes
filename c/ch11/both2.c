@@ -2,11 +2,11 @@ static char help[] =
 "Solves 2D advection-diffusion problems using FD discretization,\n"
 "structured-grid (DMDA), and -snes_fd_color.  Option prefix -b2_.\n"
 "Equation:\n"
-"    - eps Laplacian u + Div (a(x,y) u) = f(x,y),\n"
+"    - eps Laplacian u + Div (a(x,y) u) = g(x,y),\n"
 "where the (vector) wind a(x,y) and (scalar) source f(x,y) are given smooth\n"
 "functions.  The domain is S = (-1,1)^2 with Dirichlet boundary conditions:\n"
-"    u = g(x,y) on boundary S\n"
-"where g(x,y) is a given smooth function.  Problems include: NOWIND, LAYER,\n"
+"    u = b(x,y) on boundary S\n"
+"where b(x,y) is a given smooth function.  Problems include: NOWIND, LAYER,\n"
 "INTERNAL, and GLAZE.  The first of these has a=0 while the last three are\n"
 "Examples 6.1.1, 6.1.3, and 6.1.4 in Elman et al (2014), respectively.\n"
 "Advection can be discretized by first-order upwinding (none), centered, or a\n"
@@ -38,8 +38,8 @@ typedef struct {
     ProblemType problem;
     double      eps;                              // diffusion eps > 0
     double      (*limiter_fcn)(double),
-                (*f_fcn)(double, double, void*),  // source
-                (*g_fcn)(double, double, void*);  // boundary condition
+                (*g_fcn)(double, double, void*),  // source
+                (*b_fcn)(double, double, void*);  // boundary condition
     PetscBool   none_on_down;                     // use none limiter except
     int         mx_fine, my_fine;                 //    on finest grid
 } AdCtx;
@@ -54,12 +54,12 @@ static double nowind_u(double x, double y, void *user) {  // exact solution
     return - x * exp(y);
 }
 
-static double nowind_f(double x, double y, void *user) {
+static double nowind_g(double x, double y, void *user) {
     AdCtx* usr = (AdCtx*)user;
     return usr->eps * x * exp(y);
 }
 
-static double nowind_g(double x, double y, void *user) {
+static double nowind_b(double x, double y, void *user) {
     return nowind_u(x,y,user);
 }
 
@@ -69,12 +69,12 @@ static double layer_u(double x, double y, AdCtx *user) {  // exact solution
     return x * (1.0 - exp((y-1) / usr->eps)) / (1.0 - exp(- 2.0 / usr->eps));
 }
 
-static double layer_g(double x, double y, void *user) {
+static double layer_b(double x, double y, void *user) {
     return layer_u(x,y,user);
 }
 
 // problem INTERNAL:  Elman page 239, Example 6.1.3
-static double internal_g(double x, double y, void *user) {
+static double internal_b(double x, double y, void *user) {
     if (y > 2*x - 1)
        return 1.0;   // along x=1 and (y=-1 & 0 < x < 1) boundaries
     else
@@ -82,7 +82,7 @@ static double internal_g(double x, double y, void *user) {
 }
 
 // problem GLAZE:  Elman page 240, Example 6.1.4
-static double glaze_g(double x, double y, void *user) {
+static double glaze_b(double x, double y, void *user) {
     if (x > 0.0 && y < x && y > -x)
        return 1.0;   // along x=1 boundary
     else
@@ -90,8 +90,8 @@ static double glaze_g(double x, double y, void *user) {
 }
 
 static void* uexptr[] = {&nowind_u, &layer_u, NULL,        NULL};
-static void* fptr[]   = {&nowind_f, &zero,    &zero,       &zero};
-static void* gptr[]   = {&nowind_g, &layer_g, &internal_g, &glaze_g};
+static void* gptr[]   = {&nowind_g, &zero,    &zero,       &zero};
+static void* bptr[]   = {&nowind_b, &layer_b, &internal_b, &glaze_b};
 
 /* This vector function returns q=0,1 component.  It is used in
    FormFunctionLocal() to get a(x,y). */
@@ -110,10 +110,9 @@ static double wind_a(double x, double y, int q, AdCtx *user) {
     }
 }
 
-extern PetscErrorCode FormUExact(DMDALocalInfo*, AdCtx*, 
-                                 double (*)(double, double, void*), Vec);
-extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, double***,
-                                        double***, AdCtx*);
+extern PetscErrorCode FormUExact(DMDALocalInfo*,AdCtx*, 
+                                 double (*)(double, double, void*),Vec);
+extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*,double**,double**,AdCtx*);
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
@@ -152,8 +151,8 @@ int main(int argc,char **argv) {
     }
     user.limiter_fcn = limiterptr[limiter];
     uexact_fcn = uexptr[user.problem];
-    user.f_fcn = fptr[user.problem];
     user.g_fcn = gptr[user.problem];
+    user.b_fcn = bptr[user.problem];
 
     ierr = DMDACreate2d(PETSC_COMM_WORLD,
         DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
@@ -231,145 +230,129 @@ PetscErrorCode FormUExact(DMDALocalInfo *info, AdCtx *usr,
 }
 
 /* compute residuals:
-     F_ij = (- eps Laplacian u + Div (a(x,y) u) - f(x,y)) * hx * hy
+     F_ij = hx * hy * (- eps Laplacian u + Div (a(x,y) u) - g(x,y))
 at boundary points:
-     F_ij = c (u - g(x,y))                                          */
-FIXME
-PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double ***au,
-                                 double ***aF, AdCtx *usr) {
-    int          i, j, k, p, di, dj, dk;
-    double       hx, hy, hz, halfx, halfy, halfz, hx2, hy2, hz2, scF, scDir,
-                 x, y, z,
-                 uu, uE, uW, uT, uB, uxx, uyy, uzz,
+     F_ij = c (u - b(x,y))
+note compass notation for faces of cells; advection scheme evaluates flux at
+each E,N face once and then includes it in two residuals:
+     N
+  -------
+  |     |
+W |  *  | E
+  |     |
+  -------
+     S
+*/
+PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
+                                 double **aF, AdCtx *usr) {
+    int          i, j, p, di, dj;
+    double       hx, hy, hx2, hy2, scF, scBC,
+                 x, y, uE, uW, uN, uS, uxx, uyy,
                  ap, flux, u_up, u_dn, u_far, theta;
-    PetscBool    allowdeep;
 
-    hx = 2.0 / (info->mx - 1);
-    hy = 2.0 / info->my;
-    hz = 2.0 / (info->mz - 1);
-    halfx = hx / 2.0;
-    halfy = hy / 2.0;
-    halfz = hz / 2.0;
-    hx2 = hx * hx;
-    hy2 = hy * hy;
-    hz2 = hz * hz;
-    // scale as in fish -fsh_dim 3
-    scF = hx * hy * hz;
-    scDir = scF * usr->eps * 2.0 * (1.0 / hx2 + 1.0 / hy2 + 1.0 / hz2);
+    hx = 2.0 / (info->mx - 1);  hy = 2.0 / (info->my - 1);
+    hx2 = hx * hx;              hy2 = hy * hy;
+    scF = hx * hy;  // scale residuals
+    scBC = scF * usr->eps * 2.0 * (1.0 / hx2 + 1.0 / hy2); // scale b.c. residuals
 
-    // for each owned cell, compute non-advective parts of residual at
-    // cell center
-    for (k=info->zs; k<info->zs+info->zm; k++) {
-        z = -1.0 + k * hz;
-        for (j=info->ys; j<info->ys+info->ym; j++) {
-            y = -1.0 + (j + 0.5) * hy;
-            for (i=info->xs; i<info->xs+info->xm; i++) {
-                x = -1.0 + i * hx;
-                if (i == info->mx-1) {   // x=1 boundary has nonhomo. Dirichlet
-                    aF[k][j][i] = scDir * (au[k][j][i] - (*usr->b_fcn)(y,z,usr));
-                } else if (i == 0 || k == 0 || k == info->mz-1) {
-                    aF[k][j][i] = scDir * au[k][j][i];
+    // for owned cell, compute non-advective parts of residual at cell center
+    for (j=info->ys; j<info->ys+info->ym; j++) {
+        y = -1.0 + j * hy;
+        for (i=info->xs; i<info->xs+info->xm; i++) {
+            x = -1.0 + i * hx;
+            if (i == 0 || i == info->mx-1 || j == 0 || j == info->my-1) {
+                aF[j][i] = scBC * (au[j][i] - (*usr->b_fcn)(x,y,usr));
+            } else {
+                uE = (i+1 == info->mx-1) ? (*usr->b_fcn)(x+hx,y,usr) : au[j][i+1];
+                uW = (i-1 == 0)          ? (*usr->b_fcn)(x-hx,y,usr) : au[j][i-1];
+                uxx = (uW - 2.0 * au[j][i] + uE) / hx2;
+                uN = (j+1 == info->my-1) ? (*usr->b_fcn)(x,y+hy,usr) : au[j+1][i];
+                uS = (j-1 == 0)          ? (*usr->b_fcn)(x,y-hy,usr) : au[j-1][i];
+                uyy = (uN - 2.0 * au[j][i] + uS) / hy2;
+                aF[j][i] = scF * (- usr->eps * (uxx + uyy) - (*usr->g_fcn)(x,y,usr));
+            }
+        }
+    }
+
+    // for each E,N face of an *owned* cell at (x,y) and (i,j), compute flux at
+    //     the face center and then add that to the correct residual
+    // note -1 starts to get W,S faces of owned cells living on ownership
+    //     boundaries for i,j resp.
+    for (j=info->ys-1; j<info->ys+info->ym; j++) {
+        y = -1.0 + j * hy;
+        // if y<0 or y=1 at cell center then no need to compute *any* E,N face-center fluxes
+        if (j < 0 || j == info->my-1)
+            continue;
+        for (i=info->xs-1; i<info->xs+info->xm; i++) {
+            x = -1.0 + i * hx;
+            // if x<0 or x=1 at cell center then no need to compute *any* E,N face-center fluxes
+            if (i < 0 || i == info->mx-1)
+                continue;
+            // get E (p=0) and N (p=1) cell face-center flux contributions
+            for (p = 0; p < 2; p++) {
+                // get pth component of wind
+                di = (p == 0) ? 1 : 0;  // on other side of face
+                dj = (p == 1) ? 1 : 0;
+                ap = wind_a(x + hx * di / 2.0, y + hy * dj / 2.0, p,usr);
+                // get first-order upwind flux
+                if (ap >= 0.0) {
+                    u_up = au[j][i];
                 } else {
-                    uu = au[k][j][i];
-                    uE = (i == info->mx-2) ? (*usr->b_fcn)(y,z,usr) : au[k][j][i+1];
-                    uW = (i == 1)          ?                    0.0 : au[k][j][i-1];
-                    uT = (k == info->mz-2) ?                    0.0 : au[k+1][j][i];
-                    uB = (k == 1)          ?                    0.0 : au[k-1][j][i];
-                    uxx = (uW - 2.0 * uu + uE) / hx2;
-                    uyy = (au[k][j-1][i] - 2.0 * uu + au[k][j+1][i]) / hy2;
-                    uzz = (uB - 2.0 * uu + uT) / hz2;
-                    aF[k][j][i] = scF * (- usr->eps * (uxx + uyy + uzz)
-                                         - (*usr->g_fcn)(x,y,z,usr));
-                }
-            }
-        }
-    }
-
-    // for each E,N,T face of an owned cell, compute flux at the face center
-    // and then add that to the correct residual
-    // note -1 starts to get W,S,B faces of owned cells living on ownership
-    // boundaries for i,j,k resp.
-    for (k=info->zs-1; k<info->zs+info->zm; k++) {
-        z = -1.0 + k * hz;
-        for (j=info->ys-1; j<info->ys+info->ym; j++) {
-            y = -1.0 + (j + 0.5) * hy;
-            for (i=info->xs-1; i<info->xs+info->xm; i++) {
-                x = -1.0 + i * hx;
-                // consider cell centered at (x,y,z) and (i,j,k) ...
-                // if cell center is on x=1 or z=1 boundaries then we
-                //   do not need to compute any face-center fluxes
-                if (i == info->mx-1 || k == info->mz-1)
-                    continue;
-                // traverse E,N,T cell face center points for flux
-                //   contributions (E,N,T correspond to p=0,1,2)
-                for (p = 0; p < 3; p++) {
-                    if (((i == 0 || i < info->xs) && p != 0) || (i < 0)) // skip N,T
-                        continue;
-                    if  (j < info->ys             && p != 1)             // skip E,T
-                        continue;
-                    if (((k == 0 || k < info->zs) && p != 2) || (k < 0)) // skip E,N
-                        continue;
-                    // location on other side of face
-                    di = (p == 0) ? 1 : 0;
-                    dj = (p == 1) ? 1 : 0;
-                    dk = (p == 2) ? 1 : 0;
-                    // get pth component of wind and first-order upwind flux
-                    ap = wind_a(x + halfx * di, y + halfy * dj, z + halfz * dk,
-                                p,usr);
-                    if (ap >= 0.0) {
-                        u_up = au[k][j][i];
+                    if (i+di == info->mx-1) {
+                        u_up = (*usr->b_fcn)(x+hx,y,usr);
+                    } else if (j+dj == info->my-1) {
+                        u_up = (*usr->b_fcn)(x,y+hy,usr);
                     } else {
-                        if (i+di == info->mx-1) {
-                            u_up = (*usr->b_fcn)(y,z,usr);
-                        } else if (k+dk == info->mz-1) {
-                            u_up = 0.0;
-                        } else {
-                            u_up = au[k+dk][j+dj][i+di];
-                        }
+                        u_up = au[j+dj][i+di];
                     }
-                    flux = ap * u_up;
-                    // flux correction if have limiter and not near boundaries
-                    if (usr->limiter_fcn != NULL) {
-                        allowdeep = (   (p == 0 && i > 0 && i < info->mx-2)
-                                     || (p == 1)
-                                     || (p == 2 && k > 0 && k < info->mz-2) );
-                        if (allowdeep) {
-                            // compute flux correction from high-order formula with psi(theta)
-                            u_dn = (ap >= 0.0) ? au[k+dk][j+dj][i+di] : au[k][j][i];
-                            if (u_dn != u_up) {
-                                u_far = (ap >= 0.0) ? au[k-dk][j-dj][i-di]         // FIXME uminus could be bdry
-                                                    : au[k+2*dk][j+2*dj][i+2*di];  // FIXME uplus2 could be bdry
-                                theta = (u_up - u_far) / (u_dn - u_up);
-                                flux += ap * (*usr->limiter_fcn)(theta) * (u_dn - u_up);
-                            }
-                        }
+                }
+                flux = ap * u_up;
+                // flux correction if have limiter
+                if (usr->limiter_fcn != NULL) {
+                    if (p == 0)
+                        if (ap >= 0.0)
+                            u_dn = (i+1 == info->mx-1) ? (*usr->b_fcn)(x+hx,y,usr) : au[j][i+1];
+                        else
+                            u_dn = au[j][i];
+                    else  // p == 1
+                        if (ap >= 0.0)
+                            u_dn = (j+1 == info->my-1) ? (*usr->b_fcn)(x,y+hy,usr) : au[j+1][i];
+                        else
+                            u_dn = au[j][i];
+                    if (u_dn != u_up) {
+                        if (p == 0)
+                            if (ap >= 0.0)
+                                u_far = (i-1 <= 0) ? (*usr->b_fcn)(-1.0,y,usr) : au[j][i-1];
+                            else
+                                u_far = (i+2 >= info->mx-1) ? (*usr->b_fcn)(1.0,y,usr) : au[j][i+2];
+                        else  // p == 1
+                            if (ap >= 0.0)
+                                u_far = (j-1 <= 0) ? (*usr->b_fcn)(x,-1.0,usr) : au[j-1][i];
+                            else
+                                u_far = (j+2 >= info->my-1) ? (*usr->b_fcn)(x,1.0,usr) : au[j+2][i];
+                        theta = (u_up - u_far) / (u_dn - u_up);
+                        flux += ap * (*usr->limiter_fcn)(theta) * (u_dn - u_up);
                     }
-                    // update non-boundary and owned F_ijk on both sides of computed flux
-                    switch (p) {
-                        case 0:  // flux at E
-                            if (i > 0)
-                                aF[k][j][i]   += scF * flux / hx;  // flux out of i,j,k at E
-                            if (i+1 < info->mx && i+1 < info->xs + info->xm)
-                                aF[k][j][i+1] -= scF * flux / hx;  // flux into i+1,j,k at W
-                            break;
-                        case 1:  // flux at N
-                            if (j >= info->ys)
-                                aF[k][j][i]   += scF * flux / hy;
-                            if (j+1 < info->ys + info->ym)
-                                aF[k][j+1][i] -= scF * flux / hy;
-                            break;
-                        case 3:  // flux at T
-                            if (k > 0)
-                                aF[k][j][i]   += scF * flux / hz;
-                            if (k+1 < info->mz && k+1 < info->zs + info->zm)
-                                aF[k+1][j][i] -= scF * flux / hz;
-                            break;
-                    }
+                }
+                // update non-boundary and owned F_ij on both sides of computed flux
+                // note aF[]: 1) does not have stencil width, 2) is scaled by scF = hx * hy
+                switch (p) {
+                    case 0:  // flux at E
+                        if (i > 0 && i >= info->xs)
+                            aF[j][i] += hy * flux;  // flux out of i,j at E
+                        if (i+1 < info->mx-1 && i+1 < info->xs + info->xm)
+                            aF[j][i+1] -= hy * flux;  // flux into i+1,j at W
+                        break;
+                    case 1:  // flux at N
+                        if (j > 0 && j >= info->ys)
+                            aF[j][i] += hx * flux;  // flux out of i,j at N
+                        if (j+1 < info->my-1 && j+1 < info->ys + info->ym)
+                            aF[j+1][i] -= hx * flux;  // flux into i,j+1 at S
+                        break;
                 }
             }
         }
     }
-
     return 0;
 }
 
