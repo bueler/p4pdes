@@ -22,6 +22,19 @@ done
 2. looks like same scaling as fish.c for NOWIND with eps=1.0:
 ./both2 -b2_problem nowind -b2_eps 1.0 -ksp_view_mat ::ascii_dense
 ../ch6/fish -ksp_view_mat ::ascii_dense
+
+3. convergence at O(h^2) and apparent optimal order for LAYER with GMRES+GMG with GS smoothing and CENTERED on fine grid but otherwise first-order upwinding:
+for LEV in 5 6 7 8 9 10; do
+    ./both2 -snes_type ksponly -b2_limiter centered -b2_none_on_down -b2_problem layer -da_refine $LEV -ksp_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type sor -mg_levels_pc_sor_forward
+done
+
+4. visualize GLAZE but on a 1025x1025 grid using GMRES+GMG with ILU smoothing:
+./both2 -b2_eps 0.005 -b2_limiter none -b2_problem glaze -snes_converged_reason -ksp_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -snes_monitor_solution draw -draw_pause 1 -da_refine 9
+
+5. evidence of optimality for GLAZE using GMRES+GMG with ILU smoothing and a 33x33 coarse grid:
+for LEV in 5 6 7 8 9 10; do
+    ./both2 -b2_eps 0.005 -b2_limiter centered -b2_none_on_down -b2_problem glaze -snes_type ksponly -ksp_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -da_refine $LEV -pc_mg_levels $(( $LEV - 3 ))
+done
 */
 
 #include <petsc.h>
@@ -263,7 +276,7 @@ W |  *  | E
 */
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                                  double **aF, AdCtx *usr) {
-    int          i, j, p, di, dj;
+    int          i, j, p;
     double       hx, hy, hx2, hy2, scF, scBC,
                  x, y, uE, uW, uN, uS, uxx, uyy,
                  ap, flux, u_up, u_dn, u_far, theta;
@@ -287,11 +300,11 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
             if (i == 0 || i == info->mx-1 || j == 0 || j == info->my-1) {
                 aF[j][i] = scBC * (au[j][i] - (*usr->b_fcn)(x,y,usr));
             } else {
-                uE = (i+1 == info->mx-1) ? (*usr->b_fcn)(x+hx,y,usr) : au[j][i+1];
-                uW = (i-1 == 0)          ? (*usr->b_fcn)(x-hx,y,usr) : au[j][i-1];
+                uE = (i+1 == info->mx-1) ? (*usr->b_fcn)(1.0,y,usr) : au[j][i+1];
+                uW = (i-1 == 0)          ? (*usr->b_fcn)(-1.0,y,usr) : au[j][i-1];
                 uxx = (uE - 2.0 * au[j][i] + uW) / hx2;
-                uN = (j+1 == info->my-1) ? (*usr->b_fcn)(x,y+hy,usr) : au[j+1][i];
-                uS = (j-1 == 0)          ? (*usr->b_fcn)(x,y-hy,usr) : au[j-1][i];
+                uN = (j+1 == info->my-1) ? (*usr->b_fcn)(x,1.0,usr) : au[j+1][i];
+                uS = (j-1 == 0)          ? (*usr->b_fcn)(x,-1.0,usr) : au[j-1][i];
                 uyy = (uN - 2.0 * au[j][i] + uS) / hy2;
                 aF[j][i] = scF * (- usr->eps * (uxx + uyy) - (*usr->g_fcn)(x,y,usr));
             }
@@ -300,7 +313,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
 
     // for each E,N face of an *owned* cell at (x,y) and (i,j), compute flux at
     //     the face center and then add that to the correct residual
-    // note -1 starts to get W,S faces of owned cells living on ownership
+    // note start offset of -1; gets W,S faces of owned cells living on ownership
     //     boundaries for i,j resp.
     for (j=info->ys-1; j<info->ys+info->ym; j++) {
         y = -1.0 + j * hy;
@@ -315,51 +328,40 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
             // get E (p=0) and N (p=1) cell face-center flux contributions
             for (p = 0; p < 2; p++) {
                 // get pth component of wind
-                di = (p == 0) ? 1 : 0;  // on other side of face
-                dj = (p == 1) ? 1 : 0;
-                ap = wind_a(x + hx * di / 2.0, y + hy * dj / 2.0, p,usr);
-                // get first-order upwind flux
-                if (ap >= 0.0) {
-                    u_up = au[j][i];
-                } else {
-                    if (i+di == info->mx-1) {
-                        u_up = (*usr->b_fcn)(x+hx,y,usr);
-                    } else if (j+dj == info->my-1) {
-                        u_up = (*usr->b_fcn)(x,y+hy,usr);
+                if (p == 0)
+                    ap = wind_a(x+hx/2.0,y,p,usr);  // x-comp of wind at E
+                else  // p == 1
+                    ap = wind_a(x,y+hy/2.0,p,usr);  // y-comp of wind at N
+                // get locations determined by wind direction
+                if (p == 0)
+                    if (ap >= 0.0) {
+                        u_up = (i == 0) ? (*usr->b_fcn)(-1.0,y,usr) : au[j][i];
+                        u_dn = (i+1 == info->mx-1) ? (*usr->b_fcn)(1.0,y,usr) : au[j][i+1];
+                        u_far = (i-1 <= 0) ? (*usr->b_fcn)(-1.0,y,usr) : au[j][i-1];
                     } else {
-                        u_up = au[j+dj][i+di];
+                        u_up = (i+1 == info->mx-1) ? (*usr->b_fcn)(1.0,y,usr) : au[j][i+1];
+                        u_dn = (i == 0) ? (*usr->b_fcn)(-1.0,y,usr) : au[j][i];
+                        u_far = (i+2 >= info->mx-1) ? (*usr->b_fcn)(1.0,y,usr) : au[j][i+2];
                     }
-                }
+                else  // p == 1
+                    if (ap >= 0.0) {
+                        u_up = (j == 0) ? (*usr->b_fcn)(x,-1.0,usr) : au[j][i];
+                        u_dn = (j+1 == info->my-1) ? (*usr->b_fcn)(x,1.0,usr) : au[j+1][i];
+                        u_far = (j-1 <= 0) ? (*usr->b_fcn)(x,-1.0,usr) : au[j-1][i];
+                    } else {
+                        u_up = (j+1 == info->my-1) ? (*usr->b_fcn)(x,1.0,usr) : au[j+1][i];
+                        u_dn = (j == 0) ? (*usr->b_fcn)(x,-1.0,usr) : au[j][i];
+                        u_far = (j+2 >= info->my-1) ? (*usr->b_fcn)(x,1.0,usr) : au[j+2][i];
+                    }
+                // first-order upwind flux
                 flux = ap * u_up;
                 // flux correction if have limiter
-                if (limiter != NULL) {
-                    if (p == 0)
-                        if (ap >= 0.0)
-                            u_dn = (i+1 == info->mx-1) ? (*usr->b_fcn)(x+hx,y,usr) : au[j][i+1];
-                        else
-                            u_dn = au[j][i];
-                    else  // p == 1
-                        if (ap >= 0.0)
-                            u_dn = (j+1 == info->my-1) ? (*usr->b_fcn)(x,y+hy,usr) : au[j+1][i];
-                        else
-                            u_dn = au[j][i];
-                    if (u_dn != u_up) {
-                        if (p == 0)
-                            if (ap >= 0.0)
-                                u_far = (i-1 <= 0) ? (*usr->b_fcn)(-1.0,y,usr) : au[j][i-1];
-                            else
-                                u_far = (i+2 >= info->mx-1) ? (*usr->b_fcn)(1.0,y,usr) : au[j][i+2];
-                        else  // p == 1
-                            if (ap >= 0.0)
-                                u_far = (j-1 <= 0) ? (*usr->b_fcn)(x,-1.0,usr) : au[j-1][i];
-                            else
-                                u_far = (j+2 >= info->my-1) ? (*usr->b_fcn)(x,1.0,usr) : au[j+2][i];
-                        theta = (u_up - u_far) / (u_dn - u_up);
-                        flux += ap * (*limiter)(theta) * (u_dn - u_up);
-                    }
+                if (limiter != NULL && u_dn != u_up) {
+                    theta = (u_up - u_far) / (u_dn - u_up);
+                    flux += ap * (*limiter)(theta) * (u_dn - u_up);
                 }
-                // update non-boundary and owned F_ij on both sides of computed flux
-                // note aF[]: 1) does not have stencil width, 2) is scaled by scF = hx * hy
+                // update non-boundary and owned residual F_ij on both sides of computed flux
+                // note: 1) aF[] does not have stencil width, 2) F_ij is scaled by scF = hx * hy
                 switch (p) {
                     case 0:  // flux at E
                         if (i > 0 && i >= info->xs)
