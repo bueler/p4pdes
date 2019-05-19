@@ -46,6 +46,15 @@ runboth1_4:
 runboth1_5:
 	-@../testit.sh both1 "-da_refine 1 -snes_type ksponly -b1_limiter centered -b1_jac_limiter centered -snes_test_jacobian" 1 5
 
+# FIXME: need GMG test of both1
+
+# FIXME: need nowind test of both2
+
+# FIXME: need layer with GMG+GS test of both2
+
+# FIXME: need glaze with CENTERD+none_on_down+GMG+ILU test of both2
+
+# FIXME: need parallel test of both2
 
 test_advect: runadvect_1 runadvect_2 runadvect_3 runadvect_4
 
