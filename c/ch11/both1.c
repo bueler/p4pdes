@@ -186,9 +186,9 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *au,
         }
     }
     // for each E face of an owned cell, compute flux at the face center
-    // and then add that to the correct residual
+    //     and then add that to the correct residual
     // note -1 start to get W faces of owned cells living on ownership
-    // boundaries
+    //     boundaries
     for (i=info->xs-1; i<info->xs+info->xm; i++) {
         // if cell center is outside [-1,1], or on x=1 boundary, then no need
         // to compute a flux
