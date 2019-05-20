@@ -44,17 +44,19 @@ runboth_3:
 runboth_4:
 	-@../testit.sh both "-snes_converged_reason -ksp_converged_reason -b2_problem glaze -b2_eps 0.005 -b2_limiter vanleer -b2_none_on_down -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -da_refine 1" 1 4
 
-# FIXME: need parallel test of both
+# parallel GMG with ASM+ILU smoothing, centered limiter, -b2_none_on_down, and 5x5 coarse grid for LAYER
+runboth_5:
+	-@../testit.sh both "-snes_type ksponly -ksp_monitor -b2_problem layer -b2_eps 0.5 -b2_limiter centered -b2_none_on_down -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type asm -mg_levels_sub_pc_type ilu -da_refine 2 -pc_mg_levels 2" 2 5
 
 test_advect: runadvect_1 runadvect_2 runadvect_3 runadvect_4
 
-test_both: runboth_1 runboth_2 runboth_3 runboth_4
+test_both: runboth_1 runboth_2 runboth_3 runboth_4 runboth_5
 
 test: test_advect test_both
 
 # etc
 
-.PHONY: distclean runadvect_1 runadvect_2 runadvect_3 runadvect_4 runboth_1 runboth_2 runboth_3 runboth_4 test_advect test_both test
+.PHONY: distclean runadvect_1 runadvect_2 runadvect_3 runadvect_4 runboth_1 runboth_2 runboth_3 runboth_4 runboth_5 test_advect test_both test
 
 distclean:
 	@rm -f *~ *tmp *.pyc advect both
