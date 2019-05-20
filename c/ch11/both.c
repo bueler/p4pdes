@@ -348,35 +348,30 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                 continue;
             // get E (p=0) and N (p=1) cell face-center flux contributions
             for (p = 0; p < 2; p++) {
-                // get pth component of wind
-                if (p == 0)
-                    ap = wind_a(x+hx/2.0,y,p,usr);  // x-comp of wind at E
-                else  // p == 1
-                    ap = wind_a(x,y+hy/2.0,p,usr);  // y-comp of wind at N
-                // get locations determined by wind direction
+                // get pth component of wind and locations determined by wind direction
+                ap = (p == 0) ? wind_a(x+hx/2.0,y,p,usr) : wind_a(x,y+hy/2.0,p,usr);
                 if (p == 0)
                     if (ap >= 0.0) {
-                        u_up = (i == 0) ? (*usr->b_fcn)(-1.0,y,usr) : au[j][i];
-                        u_dn = (i+1 == info->mx-1) ? (*usr->b_fcn)(1.0,y,usr) : au[j][i+1];
-                        u_far = (i-1 <= 0) ? (*usr->b_fcn)(-1.0,y,usr) : au[j][i-1];
+                        u_up  = (i == 0)            ? (*usr->b_fcn)(-1.0,y,usr) : au[j][i];
+                        u_dn  = (i+1 == info->mx-1) ? (*usr->b_fcn)( 1.0,y,usr) : au[j][i+1];
+                        u_far = (i-1 <= 0)          ? (*usr->b_fcn)(-1.0,y,usr) : au[j][i-1];
                     } else {
-                        u_up = (i+1 == info->mx-1) ? (*usr->b_fcn)(1.0,y,usr) : au[j][i+1];
-                        u_dn = (i == 0) ? (*usr->b_fcn)(-1.0,y,usr) : au[j][i];
-                        u_far = (i+2 >= info->mx-1) ? (*usr->b_fcn)(1.0,y,usr) : au[j][i+2];
+                        u_up  = (i+1 == info->mx-1) ? (*usr->b_fcn)( 1.0,y,usr) : au[j][i+1];
+                        u_dn  = (i == 0)            ? (*usr->b_fcn)(-1.0,y,usr) : au[j][i];
+                        u_far = (i+2 >= info->mx-1) ? (*usr->b_fcn)( 1.0,y,usr) : au[j][i+2];
                     }
                 else  // p == 1
                     if (ap >= 0.0) {
-                        u_up = (j == 0) ? (*usr->b_fcn)(x,-1.0,usr) : au[j][i];
-                        u_dn = (j+1 == info->my-1) ? (*usr->b_fcn)(x,1.0,usr) : au[j+1][i];
-                        u_far = (j-1 <= 0) ? (*usr->b_fcn)(x,-1.0,usr) : au[j-1][i];
+                        u_up  = (j == 0)            ? (*usr->b_fcn)(x,-1.0,usr) : au[j][i];
+                        u_dn  = (j+1 == info->my-1) ? (*usr->b_fcn)(x, 1.0,usr) : au[j+1][i];
+                        u_far = (j-1 <= 0)          ? (*usr->b_fcn)(x,-1.0,usr) : au[j-1][i];
                     } else {
-                        u_up = (j+1 == info->my-1) ? (*usr->b_fcn)(x,1.0,usr) : au[j+1][i];
-                        u_dn = (j == 0) ? (*usr->b_fcn)(x,-1.0,usr) : au[j][i];
-                        u_far = (j+2 >= info->my-1) ? (*usr->b_fcn)(x,1.0,usr) : au[j+2][i];
+                        u_up  = (j+1 == info->my-1) ? (*usr->b_fcn)(x, 1.0,usr) : au[j+1][i];
+                        u_dn  = (j == 0)            ? (*usr->b_fcn)(x,-1.0,usr) : au[j][i];
+                        u_far = (j+2 >= info->my-1) ? (*usr->b_fcn)(x, 1.0,usr) : au[j+2][i];
                     }
-                // first-order upwind flux
+                // first-order upwind flux plus correction if have limiter
                 flux = ap * u_up;
-                // flux correction if have limiter
                 if (limiter != NULL && u_dn != u_up) {
                     theta = (u_up - u_far) / (u_dn - u_up);
                     flux += ap * (*limiter)(theta) * (u_dn - u_up);
@@ -389,15 +384,15 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                 jp1owned = (j+1 < info->ys + info->ym);
                 switch (p) {
                     case 0:  // flux at E
-                        if (i > 0 && iowned && jowned)
+                        if (i > 0 && j > 0 && iowned && jowned)
                             aF[j][i] += hy * flux;  // flux out of i,j at E
-                        if (i+1 < info->mx-1 && ip1owned && jowned)
+                        if (i+1 < info->mx-1 && j > 0 && ip1owned && jowned)
                             aF[j][i+1] -= hy * flux;  // flux into i+1,j at W
                         break;
                     case 1:  // flux at N
-                        if (j > 0 && iowned && jowned)
+                        if (j > 0 && i > 0 && iowned && jowned)
                             aF[j][i] += hx * flux;  // flux out of i,j at N
-                        if (j+1 < info->my-1 && iowned && jp1owned)
+                        if (j+1 < info->my-1 && i > 0 && iowned && jp1owned)
                             aF[j+1][i] -= hx * flux;  // flux into i,j+1 at S
                         break;
                 }
