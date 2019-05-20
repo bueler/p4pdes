@@ -13,6 +13,12 @@ static char help[] =
 "van Leer limiter scheme.  Option allows using none limiter on all grids\n"
 "but the finest in geometric multigrid.\n\n";
 
+/* TODO:
+1. allow optional stencil expansion and test in ILU smoothing
+2. log flops in FormFunctionLocal()
+3. move both2.c-->both.c, both1.c-->solns/both1d.c  (and delete solns/glaze.c)
+*/
+
 /*
 1. looks like O(h^2) and good multigrid for NOWIND:
 for LEV in 1 2 3 4 5 6 7 8; do
