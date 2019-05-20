@@ -16,7 +16,6 @@ static char help[] =
 /* TODO:
 1. allow optional stencil expansion and test in ILU smoothing
 2. log flops in FormFunctionLocal()
-3. test parallel
 */
 
 /*
@@ -25,7 +24,7 @@ for LEV in 1 2 3 4 5 6 7 8; do
     ./both -snes_type ksponly -ksp_converged_reason -b2_problem nowind -da_refine $LEV -ksp_rtol 1.0e-10 -pc_type mg
 done
 
-2. looks like same scaling as fish.c for NOWIND with eps=1.0:
+2. same scaling as fish.c for NOWIND with eps=1.0:
 ./both -b2_problem nowind -b2_eps 1.0 -ksp_view_mat ::ascii_dense
 ../ch6/fish -ksp_view_mat ::ascii_dense
 
@@ -295,7 +294,8 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
     double       hx, hy, hx2, hy2, scF, scBC,
                  x, y, uE, uW, uN, uS, uxx, uyy,
                  ap, flux, u_up, u_dn, u_far, theta;
-    double      (*limiter)(double);
+    double       (*limiter)(double);
+    PetscBool    iowned, jowned, ip1owned, jp1owned;
 
     if (usr->none_on_down && (info->mx < usr->mx_fine || info->my < usr->my_fine))
         limiter = NULL;
@@ -377,17 +377,21 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                 }
                 // update non-boundary and owned residual F_ij on both sides of computed flux
                 // note: 1) aF[] does not have stencil width, 2) F_ij is scaled by scF = hx * hy
+                iowned = (i >= info->xs);
+                jowned = (j >= info->ys);
+                ip1owned = (i+1 < info->xs + info->xm);
+                jp1owned = (j+1 < info->ys + info->ym);
                 switch (p) {
                     case 0:  // flux at E
-                        if (i > 0 && i >= info->xs)
+                        if (i > 0 && iowned && jowned)
                             aF[j][i] += hy * flux;  // flux out of i,j at E
-                        if (i+1 < info->mx-1 && i+1 < info->xs + info->xm)
+                        if (i+1 < info->mx-1 && ip1owned && jowned)
                             aF[j][i+1] -= hy * flux;  // flux into i+1,j at W
                         break;
                     case 1:  // flux at N
-                        if (j > 0 && j >= info->ys)
+                        if (j > 0 && iowned && jowned)
                             aF[j][i] += hx * flux;  // flux out of i,j at N
-                        if (j+1 < info->my-1 && j+1 < info->ys + info->ym)
+                        if (j+1 < info->my-1 && iowned && jp1owned)
                             aF[j+1][i] -= hx * flux;  // flux into i,j+1 at S
                         break;
                 }
