@@ -16,12 +16,13 @@ static char help[] =
 /* TODO:
 1. allow optional stencil expansion and test in ILU smoothing
 2. log flops in FormFunctionLocal()
+3. test parallel
 */
 
 /*
 1. looks like O(h^2) and good multigrid for NOWIND:
 for LEV in 1 2 3 4 5 6 7 8; do
-    ./both -snes_fd_color -snes_type ksponly -ksp_converged_reason -b2_problem nowind -da_refine $LEV -ksp_rtol 1.0e-10 -pc_type mg
+    ./both -snes_type ksponly -ksp_converged_reason -b2_problem nowind -da_refine $LEV -ksp_rtol 1.0e-10 -pc_type mg
 done
 
 2. looks like same scaling as fish.c for NOWIND with eps=1.0:
@@ -40,15 +41,14 @@ done
 for LEV in 5 6 7 8 9 10; do
     ./both -b2_eps 0.005 -b2_limiter centered -b2_none_on_down -b2_problem glaze -snes_type ksponly -ksp_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -da_refine $LEV -pc_mg_levels $(( $LEV - 3 ))
 done
-*/
 
-/* reproduce Figure 3.5 from Elman et al (2005):
-
-$ ./both -da_refine 7 -b2_problem glaze -b2_eps 0.005 -snes_type ksponly -ksp_converged_reason -snes_monitor_solution ascii:glaze.m:ascii_matlab [solver from above]
+6. reproduce Figure 3.5 from Elman et al (2005):
+./both -da_refine 5 -b2_problem glaze -b2_eps 0.005 -snes_type ksponly -ksp_converged_reason -snes_monitor_solution ascii:glaze.m:ascii_matlab -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu
 
 matlab:
 >> glaze
->> x = linspace(-1,1,257);  u = reshape(u_vec,257,257)';
+>> N = 65; u = Vec_ ...
+>> x = linspace(-1,1,N);  u = reshape(u,N,N)';
 >> mesh(x,x,u,'edgecolor','k'),  xlabel x,  ylabel y
 */
 

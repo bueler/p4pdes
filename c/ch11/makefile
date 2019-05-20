@@ -27,21 +27,34 @@ runadvect_3:
 runadvect_4:
 	-@../testit.sh advect "-da_grid_x 3 -da_grid_y 3 -adv_limiter centered -adv_jac_limiter centered -ts_type cn -ts_adapt_type basic -ts_monitor -ts_dt 0.01 -ts_max_time 0.02 -snes_converged_reason" 1 4
 
-# FIXME: need nowind test of both
 
-# FIXME: need layer with GMG+GS test of both
+# basic test of diffusion part (NOWIND)
+runboth_1:
+	-@../testit.sh both "-snes_type ksponly -ksp_converged_reason -b2_problem nowind -b2_eps 1.0 -da_refine 1" 1 1
 
-# FIXME: need glaze with CENTERD+none_on_down+GMG+ILU test of both
+# GMG+GS test of first-order upwinding for LAYER
+runboth_2:
+	-@../testit.sh both "-snes_type ksponly -ksp_converged_reason -b2_problem layer -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type sor -mg_levels_pc_sor_forward -da_refine 2" 1 2
+
+# grid sequence, van Leer limiter, and -b2_none_on_down for LAYER
+runboth_3:
+	-@../testit.sh both "-snes_converged_reason -ksp_converged_reason -b2_problem layer -b2_limiter vanleer -b2_none_on_down -snes_grid_sequence 1" 1 3
+
+# GMG with ILU smoothing, van Leer limiter, and -b2_none_on_down for GLAZE
+runboth_4:
+	-@../testit.sh both "-snes_converged_reason -ksp_converged_reason -b2_problem glaze -b2_eps 0.005 -b2_limiter vanleer -b2_none_on_down -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -da_refine 1" 1 4
 
 # FIXME: need parallel test of both
 
 test_advect: runadvect_1 runadvect_2 runadvect_3 runadvect_4
 
-test: test_advect
+test_both: runboth_1 runboth_2 runboth_3 runboth_4
+
+test: test_advect test_both
 
 # etc
 
-.PHONY: distclean runadvect_1 runadvect_2 runadvect_3 runadvect_4 test_advect test
+.PHONY: distclean runadvect_1 runadvect_2 runadvect_3 runadvect_4 runboth_1 runboth_2 runboth_3 runboth_4 test_advect test_both test
 
 distclean:
 	@rm -f *~ *tmp *.pyc advect both
