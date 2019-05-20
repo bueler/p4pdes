@@ -62,19 +62,19 @@ int main(int argc,char **argv) {
     user.eps = 0.01;
     user.none_on_down = PETSC_FALSE;
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"b1_",
-               "both1 (1D advection-diffusion solver) options",""); CHKERRQ(ierr);
+               "both1d (1D advection-diffusion solver) options",""); CHKERRQ(ierr);
     ierr = PetscOptionsReal("-eps","positive diffusion coefficient",
-               "both1.c",user.eps,&(user.eps),NULL); CHKERRQ(ierr);
+               "both1d.c",user.eps,&(user.eps),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnum("-limiter","flux-limiter type",
-               "both1.c",LimiterTypes,
+               "both1d.c",LimiterTypes,
                (PetscEnum)limiter,(PetscEnum*)&limiter,NULL); CHKERRQ(ierr);
     jac_limiter = limiter;
     ierr = PetscOptionsEnum("-jac_limiter","flux-limiter type used in Jacobian evaluation",
-               "both1.c",LimiterTypes,
+               "both1d.c",LimiterTypes,
                (PetscEnum)jac_limiter,(PetscEnum*)&jac_limiter,NULL); CHKERRQ(ierr);
     ierr = PetscOptionsBool("-none_on_down",
                "on grids coarser than the finest, disregard limiter choices and use none",
-               "both1.c",user.none_on_down,&(user.none_on_down),NULL);
+               "both1d.c",user.none_on_down,&(user.none_on_down),NULL);
                CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 

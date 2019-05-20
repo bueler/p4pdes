@@ -5,13 +5,9 @@ advect: advect.o  chkopts
 	-${CLINKER} -o advect advect.o  ${PETSC_LIB}
 	${RM} advect.o
 
-both1: both1.o  chkopts
-	-${CLINKER} -o both1 both1.o  ${PETSC_LIB}
-	${RM} both1.o
-
-both2: both2.o  chkopts
-	-${CLINKER} -o both2 both2.o  ${PETSC_LIB}
-	${RM} both2.o
+both: both.o  chkopts
+	-${CLINKER} -o both both.o  ${PETSC_LIB}
+	${RM} both.o
 
 # testing
 
@@ -31,41 +27,22 @@ runadvect_3:
 runadvect_4:
 	-@../testit.sh advect "-da_grid_x 3 -da_grid_y 3 -adv_limiter centered -adv_jac_limiter centered -ts_type cn -ts_adapt_type basic -ts_monitor -ts_dt 0.01 -ts_max_time 0.02 -snes_converged_reason" 1 4
 
-runboth1_1:
-	-@../testit.sh both1 "-b1_eps 0.1 -da_refine 1 -ksp_view_mat ::ascii_dense -snes_monitor_solution -snes_fd_color" 1 1
+# FIXME: need nowind test of both
 
-runboth1_2:
-	-@../testit.sh both1 "-da_refine 1 -snes_test_jacobian" 1 2
+# FIXME: need layer with GMG+GS test of both
 
-runboth1_3:
-	-@../testit.sh both1 "-da_refine 2 -snes_type ksponly -ksp_monitor_short -pc_type asm -sub_pc_type sor -sub_pc_sor_forward" 2 3
+# FIXME: need glaze with CENTERD+none_on_down+GMG+ILU test of both
 
-runboth1_4:
-	-@../testit.sh both1 "-da_refine 1 -snes_monitor_short -b1_limiter vanleer -b1_jac_limiter none -snes_mf_operator" 1 4
-
-runboth1_5:
-	-@../testit.sh both1 "-da_refine 1 -snes_type ksponly -b1_limiter centered -b1_jac_limiter centered -snes_test_jacobian" 1 5
-
-# FIXME: need GMG test of both1
-
-# FIXME: need nowind test of both2
-
-# FIXME: need layer with GMG+GS test of both2
-
-# FIXME: need glaze with CENTERD+none_on_down+GMG+ILU test of both2
-
-# FIXME: need parallel test of both2
+# FIXME: need parallel test of both
 
 test_advect: runadvect_1 runadvect_2 runadvect_3 runadvect_4
 
-test_both1: runboth1_1 runboth1_2 runboth1_3 runboth1_4 runboth1_5
-
-test: test_advect test_both1
+test: test_advect
 
 # etc
 
-.PHONY: distclean runadvect_1 runadvect_2 runadvect_3 runadvect_4 runboth1_1 runboth1_2 runboth1_3 runboth1_4 runboth1_5 test_advect test_both1 test
+.PHONY: distclean runadvect_1 runadvect_2 runadvect_3 runadvect_4 test_advect test
 
 distclean:
-	@rm -f *~ *tmp *.pyc advect both1 both2
+	@rm -f *~ *tmp *.pyc advect both
 

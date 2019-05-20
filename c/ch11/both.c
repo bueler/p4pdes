@@ -16,31 +16,40 @@ static char help[] =
 /* TODO:
 1. allow optional stencil expansion and test in ILU smoothing
 2. log flops in FormFunctionLocal()
-3. move both2.c-->both.c, both1.c-->solns/both1d.c  (and delete solns/glaze.c)
 */
 
 /*
 1. looks like O(h^2) and good multigrid for NOWIND:
 for LEV in 1 2 3 4 5 6 7 8; do
-    ./both2 -snes_fd_color -snes_type ksponly -ksp_converged_reason -b2_problem nowind -da_refine $LEV -ksp_rtol 1.0e-10 -pc_type mg
+    ./both -snes_fd_color -snes_type ksponly -ksp_converged_reason -b2_problem nowind -da_refine $LEV -ksp_rtol 1.0e-10 -pc_type mg
 done
 
 2. looks like same scaling as fish.c for NOWIND with eps=1.0:
-./both2 -b2_problem nowind -b2_eps 1.0 -ksp_view_mat ::ascii_dense
+./both -b2_problem nowind -b2_eps 1.0 -ksp_view_mat ::ascii_dense
 ../ch6/fish -ksp_view_mat ::ascii_dense
 
 3. convergence at O(h^2) and apparent optimal order for LAYER with GMRES+GMG with GS smoothing and CENTERED on fine grid but otherwise first-order upwinding:
 for LEV in 5 6 7 8 9 10; do
-    ./both2 -snes_type ksponly -b2_limiter centered -b2_none_on_down -b2_problem layer -da_refine $LEV -ksp_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type sor -mg_levels_pc_sor_forward
+    ./both -snes_type ksponly -b2_limiter centered -b2_none_on_down -b2_problem layer -da_refine $LEV -ksp_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type sor -mg_levels_pc_sor_forward
 done
 
 4. visualize GLAZE but on a 1025x1025 grid using GMRES+GMG with ILU smoothing:
-./both2 -b2_eps 0.005 -b2_limiter none -b2_problem glaze -snes_converged_reason -ksp_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -snes_monitor_solution draw -draw_pause 1 -da_refine 9
+./both -b2_eps 0.005 -b2_limiter none -b2_problem glaze -snes_converged_reason -ksp_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -snes_monitor_solution draw -draw_pause 1 -da_refine 9
 
 5. evidence of optimality for GLAZE using GMRES+GMG with ILU smoothing and a 33x33 coarse grid:
 for LEV in 5 6 7 8 9 10; do
-    ./both2 -b2_eps 0.005 -b2_limiter centered -b2_none_on_down -b2_problem glaze -snes_type ksponly -ksp_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -da_refine $LEV -pc_mg_levels $(( $LEV - 3 ))
+    ./both -b2_eps 0.005 -b2_limiter centered -b2_none_on_down -b2_problem glaze -snes_type ksponly -ksp_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -da_refine $LEV -pc_mg_levels $(( $LEV - 3 ))
 done
+*/
+
+/* reproduce Figure 3.5 from Elman et al (2005):
+
+$ ./both -da_refine 7 -b2_problem glaze -b2_eps 0.005 -snes_type ksponly -ksp_converged_reason -snes_monitor_solution ascii:glaze.m:ascii_matlab [solver from above]
+
+matlab:
+>> glaze
+>> x = linspace(-1,1,257);  u = reshape(u_vec,257,257)';
+>> mesh(x,x,u,'edgecolor','k'),  xlabel x,  ylabel y
 */
 
 #include <petsc.h>
@@ -162,20 +171,20 @@ int main(int argc,char **argv) {
     user.none_on_down = PETSC_FALSE;
     user.problem = LAYER;
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"b2_",
-               "both2 (2D advection-diffusion solver) options",""); CHKERRQ(ierr);
+               "both (2D advection-diffusion solver) options",""); CHKERRQ(ierr);
     ierr = PetscOptionsReal("-eps","positive diffusion coefficient",
-               "both2.c",user.eps,&(user.eps),NULL); CHKERRQ(ierr);
+               "both.c",user.eps,&(user.eps),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsBool("-init_exact","use exact solution for initialization",
-               "both2.c",init_exact,&init_exact,NULL); CHKERRQ(ierr);
+               "both.c",init_exact,&init_exact,NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnum("-limiter","flux-limiter type",
-               "both2.c",LimiterTypes,
+               "both.c",LimiterTypes,
                (PetscEnum)limiter,(PetscEnum*)&limiter,NULL); CHKERRQ(ierr);
     ierr = PetscOptionsBool("-none_on_down",
                "on grids below finest, disregard limiter choices and use none",
-               "both2.c",user.none_on_down,&(user.none_on_down),NULL);
+               "both.c",user.none_on_down,&(user.none_on_down),NULL);
                CHKERRQ(ierr);
     ierr = PetscOptionsEnum("-problem","problem type",
-               "both2.c",ProblemTypes,
+               "both.c",ProblemTypes,
                (PetscEnum)(user.problem),(PetscEnum*)&(user.problem),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
