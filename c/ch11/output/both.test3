@@ -1,7 +1,7 @@
-    Linear solve converged due to CONVERGED_RTOL iterations 1
+    Linear solve converged due to CONVERGED_ATOL iterations 1
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
   Linear solve converged due to CONVERGED_RTOL iterations 2
-  Linear solve converged due to CONVERGED_RTOL iterations 2
+  Linear solve converged due to CONVERGED_RTOL iterations 3
   Linear solve converged due to CONVERGED_RTOL iterations 2
   Linear solve converged due to CONVERGED_RTOL iterations 2
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
