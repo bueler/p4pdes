@@ -49,6 +49,9 @@ matlab:
 >> N = 65; u = Vec_ ...
 >> x = linspace(-1,1,N);  u = reshape(u,N,N)';
 >> mesh(x,x,u,'edgecolor','k'),  xlabel x,  ylabel y
+
+7. good solver using BOX stencil and 1 sweep ILU smoothing and right PC:
+./both -snes_type ksponly -ksp_converged_reason -b2_problem glaze -b2_eps 0.005 -b2_limiter none -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -mg_levels_ksp_max_it 1 -ksp_pc_side right -da_refine 6 -b2_stencil_box
 */
 
 #include <petsc.h>
@@ -161,7 +164,7 @@ int main(int argc,char **argv) {
     DMDALocalInfo  info;
     double         (*uexact_fcn)(double, double, void*);
     LimiterType    limiter = NONE;
-    PetscBool      init_exact = PETSC_FALSE;
+    PetscBool      init_exact = PETSC_FALSE, stencil_box = PETSC_FALSE;
     AdCtx          user;
 
     PetscInitialize(&argc,&argv,(char*)0,help);
@@ -185,6 +188,8 @@ int main(int argc,char **argv) {
     ierr = PetscOptionsEnum("-problem","problem type",
                "both.c",ProblemTypes,
                (PetscEnum)(user.problem),(PetscEnum*)&(user.problem),NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-stencil_box","use box stencil; improves performance of ILU smoothing",
+               "both.c",stencil_box,&stencil_box,NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
     if (user.eps <= 0.0) {
@@ -196,7 +201,8 @@ int main(int argc,char **argv) {
     user.b_fcn = bptr[user.problem];
 
     ierr = DMDACreate2d(PETSC_COMM_WORLD,
-        DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
+        DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
+        (stencil_box) ? DMDA_STENCIL_BOX : DMDA_STENCIL_STAR,
         3,3,                          // default to hx=hy=1 grid
         PETSC_DECIDE,PETSC_DECIDE,
         1,2,                          // d.o.f, stencil width
