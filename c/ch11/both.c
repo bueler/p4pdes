@@ -13,11 +13,6 @@ static char help[] =
 "van Leer limiter scheme.  Option allows using none limiter on all grids\n"
 "but the finest in geometric multigrid.\n\n";
 
-/* TODO:
-1. allow optional stencil expansion and test in ILU smoothing
-2. log flops in FormFunctionLocal()
-*/
-
 /*
 1. looks like O(h^2) and good multigrid for NOWIND:
 for LEV in 1 2 3 4 5 6 7 8; do
@@ -66,7 +61,7 @@ static double centered(double theta) {
 
 static double vanleer(double theta) {
     const double abstheta = PetscAbsReal(theta);
-    return 0.5 * (theta + abstheta) / (1.0 + abstheta);
+    return 0.5 * (theta + abstheta) / (1.0 + abstheta);   // 4 flops
 }
 
 static void* limiterptr[] = {NULL, &centered, &vanleer};
@@ -296,12 +291,14 @@ W |  *  | E
 */
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                                  double **aF, AdCtx *usr) {
+    PetscErrorCode ierr;
     int          i, j, p;
     double       hx, hy, hx2, hy2, scF, scBC,
                  x, y, uE, uW, uN, uS, uxx, uyy,
                  ap, flux, u_up, u_dn, u_far, theta;
     double       (*limiter)(double);
     PetscBool    iowned, jowned, ip1owned, jp1owned;
+    PetscLogDouble ff;
 
     if (usr->none_on_down && (info->mx < usr->mx_fine || info->my < usr->my_fine))
         limiter = NULL;
@@ -313,7 +310,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
     scF = hx * hy;  // scale residuals
     scBC = scF * usr->eps * 2.0 * (1.0 / hx2 + 1.0 / hy2); // scale b.c. residuals
 
-    // for owned cell, compute non-advective parts of residual at cell center
+    // for owned cells, compute non-advective parts of residual at cell center
     for (j=info->ys; j<info->ys+info->ym; j++) {
         y = -1.0 + j * hy;
         for (i=info->xs; i<info->xs+info->xm; i++) {
@@ -331,11 +328,13 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
             }
         }
     }
+    ierr = PetscLogFlops(14.0*info->xm*info->ym); CHKERRQ(ierr);
 
     // for each E,N face of an *owned* cell at (x,y) and (i,j), compute flux at
     //     the face center and then add that to the correct residual
     // note start offset of -1; gets W,S faces of owned cells living on ownership
     //     boundaries for i,j resp.
+    // there are (xm+1)*(ym+1)*2 fluxes to evaluate
     for (j=info->ys-1; j<info->ys+info->ym; j++) {
         y = -1.0 + j * hy;
         // if y<0 or y=1 at cell center then no need to compute *any* E,N face-center fluxes
@@ -399,6 +398,11 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
             }
         }
     }
+    // ff = flops per flux evaluation
+    ff = (limiter == NULL) ? 6.0 : 13.0;
+    if (limiter == &vanleer)
+        ff += 4.0;
+    ierr = PetscLogFlops(ff*2.0*(1.0+info->xm)*(1.0+info->ym)); CHKERRQ(ierr);
     return 0;
 }
 
