@@ -36,17 +36,10 @@ for LEV in 5 6 7 8 9 10; do
     ./both -b2_eps 0.005 -b2_limiter centered -b2_none_on_down -b2_problem glaze -snes_type ksponly -ksp_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -da_refine $LEV -pc_mg_levels $(( $LEV - 3 ))
 done
 
-6. reproduce Figure 3.5 from Elman et al (2005):
-./both -da_refine 5 -b2_problem glaze -b2_eps 0.005 -snes_type ksponly -ksp_converged_reason -snes_monitor_solution ascii:glaze.m:ascii_matlab -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu
-
-matlab:
->> glaze
->> N = 65; u = Vec_ ...
->> x = linspace(-1,1,N);  u = reshape(u,N,N)';
->> mesh(x,x,u,'edgecolor','k'),  xlabel x,  ylabel y
-
-7. good solver using BOX stencil and 1 sweep ILU smoothing and right PC:
+6. good solver using BOX stencil and 1 sweep ILU smoothing and right PC:
 ./both -snes_type ksponly -ksp_converged_reason -b2_problem glaze -b2_eps 0.005 -b2_limiter none -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -mg_levels_ksp_max_it 1 -ksp_pc_side right -da_refine 6 -b2_stencil_box
+
+7. try -ksp_type bcgs for memory savings relative to GMRES
 */
 
 #include <petsc.h>

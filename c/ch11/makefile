@@ -59,5 +59,5 @@ test: test_advect test_both
 .PHONY: distclean runadvect_1 runadvect_2 runadvect_3 runadvect_4 runboth_1 runboth_2 runboth_3 runboth_4 runboth_5 test_advect test_both test
 
 distclean:
-	@rm -f *~ *tmp *.pyc advect both
+	@rm -f *~ *tmp *.pyc *.dat *.dat.info advect both
 

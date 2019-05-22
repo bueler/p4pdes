@@ -1,5 +1,6 @@
 /advect
 /both
+/*.dat*
 /*.pyc
 /PetscBinaryIO.py
 /petsc_conf.py
