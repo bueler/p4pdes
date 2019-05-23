@@ -19,9 +19,12 @@ for LEV in 1 2 3 4 5 6 7 8; do
     ./both -snes_type ksponly -ksp_converged_reason -b2_problem nowind -da_refine $LEV -ksp_rtol 1.0e-10 -pc_type mg
 done
 
-2. same scaling as fish.c for NOWIND with eps=1.0:
+2. same problem and scaling as fish.c for NOWIND with eps=1.0:
 ./both -b2_problem nowind -b2_eps 1.0 -ksp_view_mat ::ascii_dense
 ../ch6/fish -ksp_view_mat ::ascii_dense
+and
+./both -b2_problem nowind -b2_eps 1.0 -da_refine 2 -ksp_monitor_short -snes_type ksponly -ksp_type cg
+../ch6/fish -da_refine 2 -ksp_monitor_short -fsh_initial_gonboundary 0
 
 3. convergence at O(h^2) and apparent optimal order for LAYER with GMRES+GMG with GS smoothing and CENTERED on fine grid but otherwise first-order upwinding:
 for LEV in 5 6 7 8 9 10; do
@@ -147,8 +150,7 @@ int main(int argc,char **argv) {
     PetscErrorCode ierr;
     DM             da, da_after;
     SNES           snes;
-    Vec            u_initial, u, u_exact;
-    double         hx, hy, err2;
+    Vec            u_initial, u;
     DMDALocalInfo  info;
     double         (*uexact_fcn)(double, double, void*);
     LimiterType    limiter = NONE;
@@ -197,7 +199,11 @@ int main(int argc,char **argv) {
         NULL,NULL,&da); CHKERRQ(ierr);
     ierr = DMSetFromOptions(da); CHKERRQ(ierr);
     ierr = DMSetUp(da); CHKERRQ(ierr);
-    ierr = DMDASetUniformCoordinates(da,-1.0,1.0,-1.0,1.0,-1.0,1.0); CHKERRQ(ierr);
+    if (user.problem == NOWIND) {
+        ierr = DMDASetUniformCoordinates(da,0.0,1.0,0.0,1.0,-1.0,1.0); CHKERRQ(ierr);
+    } else {
+        ierr = DMDASetUniformCoordinates(da,-1.0,1.0,-1.0,1.0,-1.0,1.0); CHKERRQ(ierr);
+    }
     ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
     user.mx_fine = info.mx;
     user.my_fine = info.my;
@@ -229,12 +235,15 @@ int main(int argc,char **argv) {
          CHKERRQ(ierr);
 
     if (uexact_fcn != NULL) {
+        Vec     u_exact;
+        double  xymin[2], xymax[2], hx, hy, err2;
         ierr = VecDuplicate(u,&u_exact); CHKERRQ(ierr);
         ierr = FormUExact(&info,&user,uexact_fcn,u_exact); CHKERRQ(ierr);
         ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr);    // u <- u + (-1.0) u_exact
         ierr = VecNorm(u,NORM_2,&err2); CHKERRQ(ierr);
-        hx = 2.0 / (info.mx - 1);
-        hy = 2.0 / (info.my - 1);
+        ierr = DMDAGetBoundingBox(da_after,xymin,xymax); CHKERRQ(ierr);
+        hx = (xymax[0] - xymin[0]) / (info.mx - 1);
+        hy = (xymax[1] - xymin[1]) / (info.my - 1);
         err2 *= PetscSqrtReal(hx * hy);
         ierr = PetscPrintf(PETSC_COMM_WORLD,
              "numerical error:  |u-uexact|_2 = %.4e\n",err2); CHKERRQ(ierr);
@@ -249,18 +258,19 @@ PetscErrorCode FormUExact(DMDALocalInfo *info, AdCtx *usr,
                           double (*uexact)(double, double, void*), Vec uex) {
     PetscErrorCode  ierr;
     int          i, j;
-    double       hx, hy, x, y, **auex;
+    double       xymin[2], xymax[2], hx, hy, x, y, **auex;
 
     if (uexact == NULL) {
         SETERRQ(PETSC_COMM_WORLD,1,"exact solution not available");
     }
-    hx = 2.0 / (info->mx - 1);
-    hy = 2.0 / (info->my - 1);
+    ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
+    hx = (xymax[0] - xymin[0]) / (info->mx - 1);
+    hy = (xymax[1] - xymin[1]) / (info->my - 1);
     ierr = DMDAVecGetArray(info->da, uex, &auex);CHKERRQ(ierr);
     for (j=info->ys; j<info->ys+info->ym; j++) {
-        y = -1.0 + j * hy;
+        y = xymin[1] + j * hy;
         for (i=info->xs; i<info->xs+info->xm; i++) {
-            x = -1.0 + i * hx;
+            x = xymin[0] + i * hx;
             auex[j][i] = (*uexact)(x,y,usr);
         }
     }
@@ -286,7 +296,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                                  double **aF, AdCtx *usr) {
     PetscErrorCode ierr;
     int          i, j, p;
-    double       hx, hy, hx2, hy2, scF, scBC,
+    double       xymin[2], xymax[2], hx, hy, hx2, hy2, scF, scBC,
                  x, y, uE, uW, uN, uS, uxx, uyy,
                  ap, flux, u_up, u_dn, u_far, theta;
     double       (*limiter)(double);
@@ -298,24 +308,27 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
     else
         limiter = usr->limiter_fcn;
 
-    hx = 2.0 / (info->mx - 1);  hy = 2.0 / (info->my - 1);
-    hx2 = hx * hx;              hy2 = hy * hy;
+    ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
+    hx = (xymax[0] - xymin[0]) / (info->mx - 1);
+    hy = (xymax[1] - xymin[1]) / (info->my - 1);
+    hx2 = hx * hx;
+    hy2 = hy * hy;
     scF = hx * hy;  // scale residuals
     scBC = scF * usr->eps * 2.0 * (1.0 / hx2 + 1.0 / hy2); // scale b.c. residuals
 
     // for owned cells, compute non-advective parts of residual at cell center
     for (j=info->ys; j<info->ys+info->ym; j++) {
-        y = -1.0 + j * hy;
+        y = xymin[1] + j * hy;
         for (i=info->xs; i<info->xs+info->xm; i++) {
-            x = -1.0 + i * hx;
+            x = xymin[0] + i * hx;
             if (i == 0 || i == info->mx-1 || j == 0 || j == info->my-1) {
                 aF[j][i] = scBC * (au[j][i] - (*usr->b_fcn)(x,y,usr));
             } else {
-                uE = (i+1 == info->mx-1) ? (*usr->b_fcn)(1.0,y,usr) : au[j][i+1];
-                uW = (i-1 == 0)          ? (*usr->b_fcn)(-1.0,y,usr) : au[j][i-1];
+                uE = (i+1 == info->mx-1) ? (*usr->b_fcn)(xymax[0],y,usr) : au[j][i+1];
+                uW = (i-1 == 0)          ? (*usr->b_fcn)(xymin[0],y,usr) : au[j][i-1];
                 uxx = (uE - 2.0 * au[j][i] + uW) / hx2;
-                uN = (j+1 == info->my-1) ? (*usr->b_fcn)(x,1.0,usr) : au[j+1][i];
-                uS = (j-1 == 0)          ? (*usr->b_fcn)(x,-1.0,usr) : au[j-1][i];
+                uN = (j+1 == info->my-1) ? (*usr->b_fcn)(x,xymax[1],usr) : au[j+1][i];
+                uS = (j-1 == 0)          ? (*usr->b_fcn)(x,xymin[1],usr) : au[j-1][i];
                 uyy = (uN - 2.0 * au[j][i] + uS) / hy2;
                 aF[j][i] = scF * (- usr->eps * (uxx + uyy) - (*usr->g_fcn)(x,y,usr));
             }
@@ -329,12 +342,12 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
     //     boundaries for i,j resp.
     // there are (xm+1)*(ym+1)*2 fluxes to evaluate
     for (j=info->ys-1; j<info->ys+info->ym; j++) {
-        y = -1.0 + j * hy;
+        y = xymin[1] + j * hy;
         // if y<0 or y=1 at cell center then no need to compute *any* E,N face-center fluxes
         if (j < 0 || j == info->my-1)
             continue;
         for (i=info->xs-1; i<info->xs+info->xm; i++) {
-            x = -1.0 + i * hx;
+            x = xymin[0] + i * hx;
             // if x<0 or x=1 at cell center then no need to compute *any* E,N face-center fluxes
             if (i < 0 || i == info->mx-1)
                 continue;
@@ -344,23 +357,23 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                 ap = (p == 0) ? wind_a(x+hx/2.0,y,p,usr) : wind_a(x,y+hy/2.0,p,usr);
                 if (p == 0)
                     if (ap >= 0.0) {
-                        u_up  = (i == 0)            ? (*usr->b_fcn)(-1.0,y,usr) : au[j][i];
-                        u_dn  = (i+1 == info->mx-1) ? (*usr->b_fcn)( 1.0,y,usr) : au[j][i+1];
-                        u_far = (i-1 <= 0)          ? (*usr->b_fcn)(-1.0,y,usr) : au[j][i-1];
+                        u_up  = (i == 0)            ? (*usr->b_fcn)(xymin[0],y,usr) : au[j][i];
+                        u_dn  = (i+1 == info->mx-1) ? (*usr->b_fcn)(xymax[0],y,usr) : au[j][i+1];
+                        u_far = (i-1 <= 0)          ? (*usr->b_fcn)(xymin[0],y,usr) : au[j][i-1];
                     } else {
-                        u_up  = (i+1 == info->mx-1) ? (*usr->b_fcn)( 1.0,y,usr) : au[j][i+1];
-                        u_dn  = (i == 0)            ? (*usr->b_fcn)(-1.0,y,usr) : au[j][i];
-                        u_far = (i+2 >= info->mx-1) ? (*usr->b_fcn)( 1.0,y,usr) : au[j][i+2];
+                        u_up  = (i+1 == info->mx-1) ? (*usr->b_fcn)(xymax[0],y,usr) : au[j][i+1];
+                        u_dn  = (i == 0)            ? (*usr->b_fcn)(xymin[0],y,usr) : au[j][i];
+                        u_far = (i+2 >= info->mx-1) ? (*usr->b_fcn)(xymax[0],y,usr) : au[j][i+2];
                     }
                 else  // p == 1
                     if (ap >= 0.0) {
-                        u_up  = (j == 0)            ? (*usr->b_fcn)(x,-1.0,usr) : au[j][i];
-                        u_dn  = (j+1 == info->my-1) ? (*usr->b_fcn)(x, 1.0,usr) : au[j+1][i];
-                        u_far = (j-1 <= 0)          ? (*usr->b_fcn)(x,-1.0,usr) : au[j-1][i];
+                        u_up  = (j == 0)            ? (*usr->b_fcn)(x,xymin[1],usr) : au[j][i];
+                        u_dn  = (j+1 == info->my-1) ? (*usr->b_fcn)(x,xymax[1],usr) : au[j+1][i];
+                        u_far = (j-1 <= 0)          ? (*usr->b_fcn)(x,xymin[1],usr) : au[j-1][i];
                     } else {
-                        u_up  = (j+1 == info->my-1) ? (*usr->b_fcn)(x, 1.0,usr) : au[j+1][i];
-                        u_dn  = (j == 0)            ? (*usr->b_fcn)(x,-1.0,usr) : au[j][i];
-                        u_far = (j+2 >= info->my-1) ? (*usr->b_fcn)(x, 1.0,usr) : au[j+2][i];
+                        u_up  = (j+1 == info->my-1) ? (*usr->b_fcn)(x,xymax[1],usr) : au[j+1][i];
+                        u_dn  = (j == 0)            ? (*usr->b_fcn)(x,xymin[1],usr) : au[j][i];
+                        u_far = (j+2 >= info->my-1) ? (*usr->b_fcn)(x,xymax[1],usr) : au[j+2][i];
                     }
                 // first-order upwind flux plus correction if have limiter
                 flux = ap * u_up;
