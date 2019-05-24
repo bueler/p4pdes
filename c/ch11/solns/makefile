@@ -22,8 +22,6 @@ runboth1d_4:
 runboth1d_5:
 	-@../../testit.sh both1d "-da_refine 1 -snes_type ksponly -b1_limiter centered -b1_jac_limiter centered -snes_test_jacobian" 1 5
 
-# FIXME: need GMG test of both1dd
-
 test_both1d: runboth1d_1 runboth1d_2 runboth1d_3 runboth1d_4 runboth1d_5
 
 test: test_both1d
