@@ -3,11 +3,11 @@ static char help[] =
 "and a structured-grid (DMDA).  Option prefix -b1_.  Equation is\n"
 "  - eps u'' + (a(x) u)' = 0\n"
 "with a(x)=1, on domain [-1,1], and with Dirichlet boundary conditions\n"
-"u(-1) = 1, u(1) = 0.  Default eps=0.01.\n"
-"  Diffusion discretized by centered, but advection is by first-order\n"
-"upwinding, centered, or van Leer limiter scheme.  Limiter in residual and\n"
-"Jacobian evaluations separately controllable.  (van Leer limiter in\n"
-"Jacobian is not implemented.)\n\n";
+"u(-1) = 1, u(1) = 0.  Default eps=0.01.  The diffusion discretized by\n"
+"centered, as usual, but advection is by first-order upwinding, centered,\n"
+"or van Leer limiter scheme.  An analytic Jacobian is implemented, except\n"
+"for the van Leer limiter.  The limiters in the residual and Jacobian\n"
+"evaluations are separately controllable.\n\n";
 
 #include <petsc.h>
 
