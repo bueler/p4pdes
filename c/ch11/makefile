@@ -60,4 +60,5 @@ test: test_advect test_both
 
 distclean:
 	@rm -f *~ *tmp *.pyc *.dat *.dat.info advect both
+	(cd solns/; ${MAKE} distclean)
 
