@@ -1,6 +1,6 @@
 static char help[] =
 "Solves 2D advection-diffusion problems using FD discretization,\n"
-"structured-grid (DMDA), and -snes_fd_color.  Option prefix -b2_.\n"
+"structured-grid (DMDA), and -snes_fd_color.  Option prefix -bth_.\n"
 "Equation:\n"
 "    - eps Laplacian u + Div (a(x,y) u) = g(x,y),\n"
 "where the (vector) wind a(x,y) and (scalar) source g(x,y) are given smooth\n"
@@ -16,32 +16,32 @@ static char help[] =
 /*
 1. looks like O(h^2) and good multigrid for NOWIND:
 for LEV in 1 2 3 4 5 6 7 8; do
-    ./both -snes_type ksponly -ksp_converged_reason -b2_problem nowind -da_refine $LEV -ksp_rtol 1.0e-10 -pc_type mg
+    ./both -snes_type ksponly -ksp_converged_reason -bth_problem nowind -da_refine $LEV -ksp_rtol 1.0e-10 -pc_type mg
 done
 
 2. same problem and scaling as fish.c for NOWIND with eps=1.0:
-./both -b2_problem nowind -b2_eps 1.0 -ksp_view_mat ::ascii_dense
+./both -bth_problem nowind -bth_eps 1.0 -ksp_view_mat ::ascii_dense
 ../ch6/fish -ksp_view_mat ::ascii_dense
 and
-./both -b2_problem nowind -b2_eps 1.0 -da_refine 2 -ksp_monitor_short -snes_type ksponly -ksp_type cg
+./both -bth_problem nowind -bth_eps 1.0 -da_refine 2 -ksp_monitor_short -snes_type ksponly -ksp_type cg
 ../ch6/fish -da_refine 2 -ksp_monitor_short -fsh_initial_gonboundary 0
 
 3. convergence at O(h^2) and apparent optimal order for LAYER with GMRES+GMG with GS smoothing and CENTERED on fine grid but otherwise first-order upwinding:
 for LEV in 5 6 7 8 9 10; do
-    ./both -snes_type ksponly -b2_limiter centered -b2_none_on_peclet -b2_problem layer -da_refine $LEV -ksp_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type sor -mg_levels_pc_sor_forward
+    ./both -snes_type ksponly -bth_limiter centered -bth_none_on_peclet -bth_problem layer -da_refine $LEV -ksp_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type sor -mg_levels_pc_sor_forward
 done
 
 4. visualize GLAZE but on a 1025x1025 grid using GMRES+GMG with ILU smoothing:
-./both -b2_eps 0.005 -b2_limiter none -b2_problem glaze -snes_converged_reason -ksp_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -snes_monitor_solution draw -draw_pause 1 -da_refine 9
+./both -bth_eps 0.005 -bth_limiter none -bth_problem glaze -snes_converged_reason -ksp_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -snes_monitor_solution draw -draw_pause 1 -da_refine 9
 
 5. evidence of optimality for GLAZE using GMRES+GMG with ILU smoothing and a 33x33 coarse grid:
 for LEV in 5 6 7 8 9 10; do
-    ./both -b2_eps 0.005 -b2_limiter centered -b2_none_on_peclet -b2_problem glaze -snes_type ksponly -ksp_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -da_refine $LEV -pc_mg_levels $(( $LEV - 3 ))
+    ./both -bth_eps 0.005 -bth_limiter centered -bth_none_on_peclet -bth_problem glaze -snes_type ksponly -ksp_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -da_refine $LEV -pc_mg_levels $(( $LEV - 3 ))
 done
 
 6. good solver using BCGS for low memory, BOX stencil and 1 sweep ILU smoothing for efficient smoother, and right PC (why so much better?):
 for LEV in 5 6 7 8 9 10; do
-    ./both -snes_type ksponly -ksp_type bcgs -ksp_pc_side right -ksp_converged_reason -b2_problem glaze -b2_eps 0.005 -b2_limiter centered -b2_none_on_peclet -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -mg_levels_ksp_max_it 1 -da_refine $LEV -b2_stencil_box
+    ./both -snes_type ksponly -ksp_type bcgs -ksp_pc_side right -ksp_converged_reason -bth_problem glaze -bth_eps 0.005 -bth_limiter centered -bth_none_on_peclet -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -mg_levels_ksp_max_it 1 -da_refine $LEV -bth_stencil_box
 done
 
 7. try -ksp_type bcgs for memory savings relative to GMRES
@@ -165,7 +165,7 @@ int main(int argc,char **argv) {
     user.none_on_peclet = PETSC_FALSE;
     user.problem = LAYER;
     user.a_scale = 1.0;   // this could be made dependent on problem
-    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"b2_",
+    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"bth_",
                "both (2D advection-diffusion solver) options",""); CHKERRQ(ierr);
     ierr = PetscOptionsReal("-eps","positive diffusion coefficient",
                "both.c",user.eps,&(user.eps),NULL); CHKERRQ(ierr);
