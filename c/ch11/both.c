@@ -10,8 +10,8 @@ static char help[] =
 "INTERNAL, and GLAZE.  The first of these has a=0 while the last three are\n"
 "Examples 6.1.1, 6.1.3, and 6.1.4 in Elman et al (2014), respectively.\n"
 "Advection can be discretized by first-order upwinding (none), centered, or a\n"
-"van Leer limiter scheme.  Option allows using none limiter on all grids\n"
-"but the finest in geometric multigrid.\n\n";
+"van Leer limiter scheme.  Option allows switching to none limiter on all grids\n"
+"with mesh Peclet above one.\n\n";
 
 /*
 1. looks like O(h^2) and good multigrid for NOWIND:
@@ -28,7 +28,7 @@ and
 
 3. convergence at O(h^2) and apparent optimal order for LAYER with GMRES+GMG with GS smoothing and CENTERED on fine grid but otherwise first-order upwinding:
 for LEV in 5 6 7 8 9 10; do
-    ./both -snes_type ksponly -b2_limiter centered -b2_none_on_down -b2_problem layer -da_refine $LEV -ksp_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type sor -mg_levels_pc_sor_forward
+    ./both -snes_type ksponly -b2_limiter centered -b2_none_on_peclet -b2_problem layer -da_refine $LEV -ksp_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type sor -mg_levels_pc_sor_forward
 done
 
 4. visualize GLAZE but on a 1025x1025 grid using GMRES+GMG with ILU smoothing:
@@ -36,11 +36,13 @@ done
 
 5. evidence of optimality for GLAZE using GMRES+GMG with ILU smoothing and a 33x33 coarse grid:
 for LEV in 5 6 7 8 9 10; do
-    ./both -b2_eps 0.005 -b2_limiter centered -b2_none_on_down -b2_problem glaze -snes_type ksponly -ksp_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -da_refine $LEV -pc_mg_levels $(( $LEV - 3 ))
+    ./both -b2_eps 0.005 -b2_limiter centered -b2_none_on_peclet -b2_problem glaze -snes_type ksponly -ksp_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -da_refine $LEV -pc_mg_levels $(( $LEV - 3 ))
 done
 
-6. good solver using BOX stencil and 1 sweep ILU smoothing and right PC:
-./both -snes_type ksponly -ksp_converged_reason -b2_problem glaze -b2_eps 0.005 -b2_limiter none -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -mg_levels_ksp_max_it 1 -ksp_pc_side right -da_refine 6 -b2_stencil_box
+6. good solver using BCGS for low memory, BOX stencil and 1 sweep ILU smoothing for efficient smoother, and right PC (why so much better?):
+for LEV in 5 6 7 8 9 10; do
+    ./both -snes_type ksponly -ksp_type bcgs -ksp_pc_side right -ksp_converged_reason -b2_problem glaze -b2_eps 0.005 -b2_limiter centered -b2_none_on_peclet -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -mg_levels_ksp_max_it 1 -da_refine $LEV -b2_stencil_box
+done
 
 7. try -ksp_type bcgs for memory savings relative to GMRES
 */
@@ -72,8 +74,8 @@ typedef struct {
     double      (*limiter_fcn)(double),
                 (*g_fcn)(double, double, void*),  // source
                 (*b_fcn)(double, double, void*);  // boundary condition
-    PetscBool   none_on_down;                     // use none limiter except
-    int         mx_fine, my_fine;                 //    on finest grid
+    PetscBool   none_on_peclet;                   // use none limiter when
+    double      a_scale;                          //    mesh Peclet exceeds 1
 } AdCtx;
 
 // used for source functions
@@ -138,7 +140,7 @@ static double wind_a(double x, double y, int q, AdCtx *user) {
         case GLAZE:
             return (q == 0) ? 2.0*y*(1.0-x*x) : -2.0*x*(1.0-y*y);
         default:
-            return 1.0e308 * 100.0;  // cause overflow
+            return NAN;
     }
 }
 
@@ -160,8 +162,9 @@ int main(int argc,char **argv) {
     PetscInitialize(&argc,&argv,(char*)0,help);
 
     user.eps = 0.01;
-    user.none_on_down = PETSC_FALSE;
+    user.none_on_peclet = PETSC_FALSE;
     user.problem = LAYER;
+    user.a_scale = 1.0;   // this could be made dependent on problem
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"b2_",
                "both (2D advection-diffusion solver) options",""); CHKERRQ(ierr);
     ierr = PetscOptionsReal("-eps","positive diffusion coefficient",
@@ -171,9 +174,9 @@ int main(int argc,char **argv) {
     ierr = PetscOptionsEnum("-limiter","flux-limiter type",
                "both.c",LimiterTypes,
                (PetscEnum)limiter,(PetscEnum*)&limiter,NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-none_on_down",
-               "on grids below finest, disregard limiter choices and use none",
-               "both.c",user.none_on_down,&(user.none_on_down),NULL);
+    ierr = PetscOptionsBool("-none_on_peclet",
+               "on coarse grids such that mesh peclet exceeds 1, switch to none limiter",
+               "both.c",user.none_on_peclet,&(user.none_on_peclet),NULL);
                CHKERRQ(ierr);
     ierr = PetscOptionsEnum("-problem","problem type",
                "both.c",ProblemTypes,
@@ -204,9 +207,6 @@ int main(int argc,char **argv) {
     } else {
         ierr = DMDASetUniformCoordinates(da,-1.0,1.0,-1.0,1.0,-1.0,1.0); CHKERRQ(ierr);
     }
-    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-    user.mx_fine = info.mx;
-    user.my_fine = info.my;
     ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
 
     ierr = SNESCreate(PETSC_COMM_WORLD,&snes);CHKERRQ(ierr);
@@ -303,14 +303,13 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
     PetscBool    iowned, jowned, ip1owned, jp1owned;
     PetscLogDouble ff;
 
-    if (usr->none_on_down && (info->mx < usr->mx_fine || info->my < usr->my_fine))
-        limiter = NULL;
-    else
-        limiter = usr->limiter_fcn;
-
     ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
     hx = (xymax[0] - xymin[0]) / (info->mx - 1);
     hy = (xymax[1] - xymin[1]) / (info->my - 1);
+    limiter = usr->limiter_fcn;
+    if (usr->none_on_peclet && usr->a_scale * PetscMax(hx,hy) / usr->eps > 1.0) {
+        limiter = NULL;
+    }
     hx2 = hx * hx;
     hy2 = hy * hy;
     scF = hx * hy;  // scale residuals

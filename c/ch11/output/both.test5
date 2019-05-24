@@ -1,6 +1,6 @@
-    0 KSP Residual norm 4.646894432731e+00 
-    1 KSP Residual norm 1.167173243426e-02 
-    2 KSP Residual norm 5.758492421958e-05 
-    3 KSP Residual norm 1.452743151875e-07 
-done on 9 x 9 grid (problem = layer, eps = 0.5, limiter = centered)
-numerical error:  |u-uexact|_2 = 1.1870e-03
+    0 KSP Residual norm 4.662806673933e+00 
+    1 KSP Residual norm 1.173367645496e-02 
+    2 KSP Residual norm 5.569565360485e-05 
+    3 KSP Residual norm 1.326930661682e-07 
+done on 9 x 9 grid (problem = layer, eps = 0.49, limiter = centered)
+numerical error:  |u-uexact|_2 = 1.2547e-03

@@ -36,17 +36,17 @@ runboth_1:
 runboth_2:
 	-@../testit.sh both "-snes_type ksponly -ksp_converged_reason -b2_problem layer -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type sor -mg_levels_pc_sor_forward -da_refine 2" 1 2
 
-# grid sequence, van Leer limiter, and -b2_none_on_down for LAYER
+# grid sequence and van Leer limiter for LAYER
 runboth_3:
-	-@../testit.sh both "-snes_converged_reason -ksp_converged_reason -b2_problem layer -b2_limiter vanleer -b2_none_on_down -snes_grid_sequence 1" 1 3
+	-@../testit.sh both "-snes_converged_reason -ksp_converged_reason -b2_problem layer -b2_limiter vanleer -snes_grid_sequence 1" 1 3
 
-# GMG with ILU smoothing, van Leer limiter, and -b2_none_on_down for GLAZE
+# GMG with ILU smoothing, van Leer limiter, and -b2_none_on_peclet (thus none always) for GLAZE
 runboth_4:
-	-@../testit.sh both "-snes_converged_reason -ksp_converged_reason -b2_problem glaze -b2_eps 0.005 -b2_limiter vanleer -b2_none_on_down -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -da_refine 1" 1 4
+	-@../testit.sh both "-snes_converged_reason -ksp_converged_reason -b2_problem glaze -b2_eps 0.005 -b2_limiter vanleer -b2_none_on_peclet -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -da_refine 1" 1 4
 
-# parallel GMG with ASM+ILU smoothing, centered limiter, -b2_none_on_down, and 5x5 coarse grid for LAYER
+# parallel GMG with ASM+ILU smoothing, centered limiter, -b2_none_on_peclet, and 5x5 coarse grid for LAYER with eps=0.49 (so centered on 9x9, none on 5x5)
 runboth_5:
-	-@../testit.sh both "-snes_type ksponly -ksp_monitor -b2_problem layer -b2_eps 0.5 -b2_limiter centered -b2_none_on_down -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type asm -mg_levels_sub_pc_type ilu -da_refine 2 -pc_mg_levels 2" 2 5
+	-@../testit.sh both "-snes_type ksponly -ksp_monitor -b2_problem layer -b2_eps 0.49 -b2_limiter centered -b2_none_on_peclet -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type asm -mg_levels_sub_pc_type ilu -da_refine 2 -pc_mg_levels 2" 2 5
 
 test_advect: runadvect_1 runadvect_2 runadvect_3 runadvect_4
 
