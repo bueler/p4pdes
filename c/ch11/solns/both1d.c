@@ -11,8 +11,8 @@ static char help[] =
 
 #include <petsc.h>
 
-typedef enum {NONE, CENTERED, VANLEER} LimiterType;
-static const char *LimiterTypes[] = {"none","centered","vanleer",
+typedef enum {NONE, CENTERED, VANLEER, KOREN} LimiterType;
+static const char *LimiterTypes[] = {"none","centered","vanleer","koren",
                                      "LimiterType", "", NULL};
 
 static double centered(double theta) {
@@ -24,7 +24,12 @@ static double vanleer(double theta) {
     return 0.5 * (theta + abstheta) / (1.0 + abstheta);
 }
 
-static void* limiterptr[] = {NULL, &centered, &vanleer};
+static double koren(double theta) {
+    const double z = (1.0/3.0) + (1.0/6.0) * theta;
+    return PetscMax(0.0, PetscMin(1.0, PetscMin(z, theta)));
+}
+
+static void* limiterptr[] = {NULL, &centered, &vanleer, &koren};
 
 typedef struct {
     double      eps;          // amount of diffusion; require: eps > 0
@@ -79,7 +84,7 @@ int main(int argc,char **argv) {
     ierr = PetscOptionsHasName(NULL,NULL,"-snes_fd_color",&snesfdcolorset); CHKERRQ(ierr);
     if (snesfdset || snesfdcolorset) {
         user.jac_limiter_fcn = NULL;
-        jac_limiter = 4;   // corresponds to empty string
+        jac_limiter = 5;   // corresponds to empty string
     } else
         user.jac_limiter_fcn = limiterptr[jac_limiter];
 
@@ -234,6 +239,9 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, double *u,
 
     if (usr->jac_limiter_fcn == &vanleer) {
         SETERRQ(PETSC_COMM_WORLD,1,"Jacobian for vanleer limiter is not implemented");
+    }
+    if (usr->jac_limiter_fcn == &koren) {
+        SETERRQ(PETSC_COMM_WORLD,1,"Jacobian for koren limiter is not implemented");
     }
 
     ierr = MatZeroEntries(P); CHKERRQ(ierr);

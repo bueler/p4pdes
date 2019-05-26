@@ -49,8 +49,8 @@ done
 
 #include <petsc.h>
 
-typedef enum {NONE, CENTERED, VANLEER} LimiterType;
-static const char *LimiterTypes[] = {"none","centered","vanleer",
+typedef enum {NONE, CENTERED, VANLEER, THIRD} LimiterType;
+static const char *LimiterTypes[] = {"none","centered","vanleer","third",
                                      "LimiterType", "", NULL};
 
 static double centered(double theta) {
@@ -62,7 +62,14 @@ static double vanleer(double theta) {
     return 0.5 * (theta + abstheta) / (1.0 + abstheta);   // 4 flops
 }
 
-static void* limiterptr[] = {NULL, &centered, &vanleer};
+static double third(double theta) {
+    if (theta > 0.0)
+        return (1.0/3.0) + (1.0/6.0) * theta;   // 2 flops
+    else
+        return 0.0;
+}
+
+static void* limiterptr[] = {NULL, &centered, &vanleer, &third};
 
 typedef enum {NOWIND, LAYER, INTERNAL, GLAZE} ProblemType;
 static const char *ProblemTypes[] = {"nowind", "layer", "internal", "glaze",
@@ -407,6 +414,8 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
     ff = (limiter == NULL) ? 6.0 : 13.0;
     if (limiter == &vanleer)
         ff += 4.0;
+    else if (limiter == &third)
+        ff += 2.0;
     ierr = PetscLogFlops(ff*2.0*(1.0+info->xm)*(1.0+info->ym)); CHKERRQ(ierr);
     return 0;
 }
