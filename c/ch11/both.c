@@ -26,11 +26,6 @@ and
 ./both -bth_problem nowind -bth_eps 1.0 -da_refine 2 -ksp_monitor_short -snes_type ksponly -ksp_type cg
 ../ch6/fish -da_refine 2 -ksp_monitor_short -fsh_initial_gonboundary 0
 
-3. convergence at O(h^2) and apparent optimal order for LAYER with GMRES+GMG with GS smoothing and CENTERED on fine grid but otherwise first-order upwinding:
-for LEV in 5 6 7 8 9 10; do
-    ./both -snes_type ksponly -bth_limiter centered -bth_none_on_peclet -bth_problem layer -da_refine $LEV -ksp_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type sor -mg_levels_pc_sor_forward
-done
-
 4. visualize GLAZE but on a 1025x1025 grid using GMRES+GMG with ILU smoothing:
 ./both -bth_eps 0.005 -bth_limiter none -bth_problem glaze -snes_converged_reason -ksp_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -snes_monitor_solution draw -draw_pause 1 -da_refine 9
 
@@ -44,7 +39,11 @@ for LEV in 5 6 7 8 9 10; do
     ./both -snes_type ksponly -ksp_type bcgs -ksp_pc_side right -ksp_converged_reason -bth_problem glaze -bth_eps 0.005 -bth_limiter centered -bth_none_on_peclet -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -mg_levels_ksp_max_it 1 -da_refine $LEV -bth_stencil_box
 done
 
-7. try -ksp_type bcgs for memory savings relative to GMRES
+7. eps=1/1000 and 4097x4097 grid ... about 1 minute and uses 16Gb:
+timer ./both -snes_type ksponly -ksp_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type sor -mg_levels_pc_sor_forward -da_refine 11 -btm_limiter centered -bth_none_on_peclet -bth_eps 0.001 -ksp_rtol 1.0e-8 -ksp_monitor
+
+8. compare -ksp_type richardson|bcgs|gmres for memory usage in run like above
+
 */
 
 #include <petsc.h>
