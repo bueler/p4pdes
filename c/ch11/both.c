@@ -11,7 +11,7 @@ static char help[] =
 "Examples 6.1.1 and 6.1.4 in Elman et al (2014), respectively.\n"
 "Advection can be discretized by first-order upwinding (none), centered, or a\n"
 "van Leer limiter scheme.  Option allows switching to none limiter on all grids\n"
-"with mesh Peclet above one.\n\n";
+"for which the mesh Peclet P^h exceeds one.\n\n";
 
 /*
 1. looks like O(h^2) and good multigrid for NOWIND:
@@ -25,9 +25,6 @@ done
 and
 ./both -bth_problem nowind -bth_eps 1.0 -da_refine 2 -ksp_monitor_short -snes_type ksponly -ksp_type cg
 ../ch6/fish -da_refine 2 -ksp_monitor_short -fsh_initial_gonboundary 0
-
-4. visualize GLAZE but on a 1025x1025 grid using GMRES+GMG with ILU smoothing:
-./both -bth_eps 0.005 -bth_limiter none -bth_problem glaze -snes_converged_reason -ksp_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -snes_monitor_solution draw -draw_pause 1 -da_refine 9
 
 5. evidence of optimality for GLAZE using GMRES+GMG with ILU smoothing and a 33x33 coarse grid:
 for LEV in 5 6 7 8 9 10; do
@@ -43,7 +40,6 @@ done
 timer ./both -snes_type ksponly -ksp_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type sor -mg_levels_pc_sor_forward -da_refine 11 -btm_limiter centered -bth_none_on_peclet -bth_eps 0.001 -ksp_rtol 1.0e-8 -ksp_monitor
 
 8. compare -ksp_type richardson|bcgs|gmres for memory usage in run like above
-
 */
 
 #include <petsc.h>
@@ -73,8 +69,9 @@ typedef struct {
     double      (*limiter_fcn)(double),
                 (*g_fcn)(double, double, void*),  // source
                 (*b_fcn)(double, double, void*);  // boundary condition
-    PetscBool   none_on_peclet;                   // use none limiter when
-    double      a_scale;                          //    mesh Peclet exceeds 1
+    PetscBool   none_on_peclet,                   // use none limiter when P^h > 1
+                small_peclet_achieved;            // true if on finest grid P^h <= 1
+    double      a_scale;                          // scale for wind
 } AdCtx;
 
 // used for source functions
@@ -152,6 +149,7 @@ int main(int argc,char **argv) {
 
     user.eps = 0.01;
     user.none_on_peclet = PETSC_FALSE;
+    user.small_peclet_achieved = PETSC_FALSE;
     user.problem = LAYER;
     user.a_scale = 1.0;   // this could be made dependent on problem
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"bth_",
@@ -218,6 +216,11 @@ int main(int argc,char **argv) {
     ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr);
     ierr = SNESGetDM(snes,&da_after); CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
+    if (user.none_on_peclet && !user.small_peclet_achieved) {
+         ierr = PetscPrintf(PETSC_COMM_WORLD,
+             "WARNING: -bth_none_on_peclet set but finest grid used NONE limiter\n");
+             CHKERRQ(ierr);
+    }
     ierr = PetscPrintf(PETSC_COMM_WORLD,
          "done on %d x %d grid (problem = %s, eps = %g, limiter = %s)\n",
          info.mx,info.my,ProblemTypes[user.problem],user.eps,LimiterTypes[limiter]);
@@ -285,7 +288,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                                  double **aF, AdCtx *usr) {
     PetscErrorCode ierr;
     int          i, j, p;
-    double       xymin[2], xymax[2], hx, hy, hx2, hy2, scF, scBC,
+    double       xymin[2], xymax[2], hx, hy, Ph, hx2, hy2, scF, scBC,
                  x, y, uE, uW, uN, uS, uxx, uyy,
                  ap, flux, u_up, u_dn, u_far, theta;
     double       (*limiter)(double);
@@ -296,8 +299,12 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
     hx = (xymax[0] - xymin[0]) / (info->mx - 1);
     hy = (xymax[1] - xymin[1]) / (info->my - 1);
     limiter = usr->limiter_fcn;
-    if (usr->none_on_peclet && usr->a_scale * PetscMax(hx,hy) / usr->eps > 1.0) {
-        limiter = NULL;
+    if (usr->none_on_peclet) {
+        Ph = usr->a_scale * PetscMax(hx,hy) / usr->eps;  // mesh Peclet number
+        if (Ph > 1.0)
+            limiter = NULL;
+        else
+            usr->small_peclet_achieved = PETSC_TRUE;
     }
     hx2 = hx * hx;
     hy2 = hy * hy;
