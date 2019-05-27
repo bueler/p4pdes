@@ -7,8 +7,8 @@ static char help[] =
 "functions.  The domain is S = (-1,1)^2 with Dirichlet boundary conditions:\n"
 "    u = b(x,y) on boundary S\n"
 "where b(x,y) is a given smooth function.  Problems include: NOWIND, LAYER,\n"
-"INTERNAL, and GLAZE.  The first of these has a=0 while the last three are\n"
-"Examples 6.1.1, 6.1.3, and 6.1.4 in Elman et al (2014), respectively.\n"
+"and GLAZE.  The first of these has a=0 while the last two are\n"
+"Examples 6.1.1 and 6.1.4 in Elman et al (2014), respectively.\n"
 "Advection can be discretized by first-order upwinding (none), centered, or a\n"
 "van Leer limiter scheme.  Option allows switching to none limiter on all grids\n"
 "with mesh Peclet above one.\n\n";
@@ -63,8 +63,8 @@ static double vanleer(double theta) {
 
 static void* limiterptr[] = {NULL, &centered, &vanleer};
 
-typedef enum {NOWIND, LAYER, INTERNAL, GLAZE} ProblemType;
-static const char *ProblemTypes[] = {"nowind", "layer", "internal", "glaze",
+typedef enum {NOWIND, LAYER, GLAZE} ProblemType;
+static const char *ProblemTypes[] = {"nowind", "layer", "glaze",
                                      "ProblemType", "", NULL};
 
 typedef struct {
@@ -106,14 +106,6 @@ static double layer_b(double x, double y, void *user) {
     return layer_u(x,y,user);
 }
 
-// problem INTERNAL:  Elman page 239, Example 6.1.3
-static double internal_b(double x, double y, void *user) {
-    if (y > 2*x - 1)
-       return 1.0;   // along x=1 and (y=-1 & 0 < x < 1) boundaries
-    else
-       return 0.0;
-}
-
 // problem GLAZE:  Elman page 240, Example 6.1.4
 static double glaze_b(double x, double y, void *user) {
     if (x > 0.0 && y < x && y > -x)
@@ -122,9 +114,9 @@ static double glaze_b(double x, double y, void *user) {
        return 0.0;
 }
 
-static void* uexptr[] = {&nowind_u, &layer_u, NULL,        NULL};
-static void* gptr[]   = {&nowind_g, &zero,    &zero,       &zero};
-static void* bptr[]   = {&nowind_b, &layer_b, &internal_b, &glaze_b};
+static void* uexptr[] = {&nowind_u, &layer_u, NULL};
+static void* gptr[]   = {&nowind_g, &zero,    &zero};
+static void* bptr[]   = {&nowind_b, &layer_b, &glaze_b};
 
 /* This vector function returns q=0,1 component.  It is used in
    FormFunctionLocal() to get a(x,y). */
@@ -134,8 +126,6 @@ static double wind_a(double x, double y, int q, AdCtx *user) {
             return 0.0;
         case LAYER:
             return (q == 0) ? 0.0 : 1.0;
-        case INTERNAL:
-            return (q == 0) ? -0.5 : PetscSqrtReal(3.0)/2.0;
         case GLAZE:
             return (q == 0) ? 2.0*y*(1.0-x*x) : -2.0*x*(1.0-y*y);
         default:
