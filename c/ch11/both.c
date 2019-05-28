@@ -11,7 +11,7 @@ static char help[] =
 "Examples 6.1.1 and 6.1.4 in Elman et al (2014), respectively.\n"
 "Advection can be discretized by first-order upwinding (none), centered, or a\n"
 "van Leer limiter scheme.  Option allows switching to none limiter on all grids\n"
-"for which the mesh Peclet P^h exceeds one.\n\n";
+"for which the mesh Peclet P^h exceeds a threshold (default: 1).\n\n";
 
 /*
 1. looks like O(h^2) and good multigrid for NOWIND:
@@ -75,7 +75,8 @@ typedef struct {
                 (*b_fcn)(double, double, void*);  // boundary condition
     PetscBool   none_on_peclet,                   // use none limiter when P^h > 1
                 small_peclet_achieved;            // true if on finest grid P^h <= 1
-    double      a_scale;                          // scale for wind
+    double      a_scale,                          // scale for wind
+                peclet_threshold;
 } AdCtx;
 
 // used for source functions
@@ -156,6 +157,7 @@ int main(int argc,char **argv) {
     user.small_peclet_achieved = PETSC_FALSE;
     user.problem = LAYER;
     user.a_scale = 1.0;   // this could be made dependent on problem
+    user.peclet_threshold = 1.0;
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"bth_",
                "both (2D advection-diffusion solver) options",""); CHKERRQ(ierr);
     ierr = PetscOptionsReal("-eps","positive diffusion coefficient",
@@ -166,13 +168,17 @@ int main(int argc,char **argv) {
                "both.c",LimiterTypes,
                (PetscEnum)limiter,(PetscEnum*)&limiter,NULL); CHKERRQ(ierr);
     ierr = PetscOptionsBool("-none_on_peclet",
-               "on coarse grids such that mesh peclet exceeds 1, switch to none limiter",
+               "on coarse grids such that mesh Peclet P^h exceeds threshold, switch to none limiter",
                "both.c",user.none_on_peclet,&(user.none_on_peclet),NULL);
                CHKERRQ(ierr);
+    ierr = PetscOptionsReal("-peclet_threshold",
+               "if mesh Peclet P^h is above this value, switch to none (used with -bth_none_on_peclet)",
+               "both.c",user.peclet_threshold,&(user.peclet_threshold),NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnum("-problem","problem type",
                "both.c",ProblemTypes,
                (PetscEnum)(user.problem),(PetscEnum*)&(user.problem),NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-stencil_box","use box stencil; improves performance of ILU smoothing",
+    ierr = PetscOptionsBool("-stencil_box",
+               "use box stencil; may improve performance of ILU smoothing",
                "both.c",stencil_box,&stencil_box,NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
@@ -305,7 +311,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
     limiter = usr->limiter_fcn;
     if (usr->none_on_peclet) {
         Ph = usr->a_scale * PetscMax(hx,hy) / usr->eps;  // mesh Peclet number
-        if (Ph > 1.0)
+        if (Ph > usr->peclet_threshold)
             limiter = NULL;
         else
             usr->small_peclet_achieved = PETSC_TRUE;
