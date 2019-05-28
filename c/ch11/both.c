@@ -14,18 +14,6 @@ static char help[] =
 "for which the mesh Peclet P^h exceeds a threshold (default: 1).\n\n";
 
 /*
-1. looks like O(h^2) and good multigrid for NOWIND:
-for LEV in 1 2 3 4 5 6 7 8; do
-    ./both -snes_type ksponly -ksp_converged_reason -bth_problem nowind -da_refine $LEV -ksp_rtol 1.0e-10 -pc_type mg
-done
-
-2. same problem and scaling as fish.c for NOWIND with eps=1.0:
-./both -bth_problem nowind -bth_eps 1.0 -ksp_view_mat ::ascii_dense
-../ch6/fish -ksp_view_mat ::ascii_dense
-and
-./both -bth_problem nowind -bth_eps 1.0 -da_refine 2 -ksp_monitor_short -snes_type ksponly -ksp_type cg
-../ch6/fish -da_refine 2 -ksp_monitor_short -fsh_initial_gonboundary 0
-
 5. evidence of optimality for GLAZE using GMRES+GMG with ILU smoothing and a 33x33 coarse grid:
 for LEV in 5 6 7 8 9 10; do
     ./both -bth_eps 0.005 -bth_limiter centered -bth_none_on_peclet -bth_problem glaze -snes_type ksponly -ksp_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -da_refine $LEV -pc_mg_levels $(( $LEV - 3 ))
