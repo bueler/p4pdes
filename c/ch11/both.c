@@ -40,6 +40,10 @@ done
 timer ./both -snes_type ksponly -ksp_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type sor -mg_levels_pc_sor_forward -da_refine 11 -btm_limiter centered -bth_none_on_peclet -bth_eps 0.001 -ksp_rtol 1.0e-8 -ksp_monitor
 
 8. compare -ksp_type richardson|bcgs|gmres for memory usage in run like above
+
+9. shows excellent weak scaling, for P = 1,4,16,64 and LEV = 4,5,6,7 respectively, gives 4,3,3,2 KSP iterations:
+mpiexec -n P ./both -bth_problem glaze -bth_stencil_box -da_grid_x 17 -da_grid_y 17 -snes_type ksponly -ksp_type richardson -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type asm -mg_levels_sub_pc_type ilu -ksp_converged_reason -da_refine LEV
+(add  -log_view |grep "Flop:  "  to get flops for weak scaling)
 */
 
 #include <petsc.h>
