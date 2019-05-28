@@ -12,7 +12,7 @@ set -e
 # loaded by figure script p4pdes-book/figs/bothmgeps.py
 
 COMMON="-snes_type ksponly -ksp_converged_reason -ksp_type richardson -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type sor -mg_levels_pc_sor_forward"
-LEVELS="4 5 6 7 8 9 10 11"
+LEVELS="3 4 5 6 7 8 9 10 11"
 
 function runcase() {
     CMD="../both $COMMON -bth_eps $1 -da_refine $2"
