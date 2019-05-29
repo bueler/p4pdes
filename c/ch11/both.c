@@ -7,32 +7,11 @@ static char help[] =
 "functions.  The domain is S = (-1,1)^2 with Dirichlet boundary conditions:\n"
 "    u = b(x,y) on boundary S\n"
 "where b(x,y) is a given smooth function.  Problems include: NOWIND, LAYER,\n"
-"and GLAZE.  The first of these has a=0 while the last two are\n"
+"and GLAZE.  The first of these has a=0 while LAYER and GLAZE are\n"
 "Examples 6.1.1 and 6.1.4 in Elman et al (2014), respectively.\n"
 "Advection can be discretized by first-order upwinding (none), centered, or a\n"
 "van Leer limiter scheme.  Option allows switching to none limiter on all grids\n"
 "for which the mesh Peclet P^h exceeds a threshold (default: 1).\n\n";
-
-/*
-5. evidence of optimality for GLAZE using GMRES+GMG with ILU smoothing and a 33x33 coarse grid:
-for LEV in 5 6 7 8 9 10; do
-    ./both -bth_limiter centered -bth_none_on_peclet -bth_problem glaze -snes_type ksponly -ksp_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -da_refine $LEV -pc_mg_levels $(( $LEV - 3 ))
-done
-
-6. good solver using BCGS for low memory, BOX stencil and 1 sweep ILU smoothing for efficient smoother, and right PC (why so much better?):
-for LEV in 5 6 7 8 9 10; do
-    ./both -snes_type ksponly -ksp_type bcgs -ksp_pc_side right -ksp_converged_reason -bth_problem glaze -bth_limiter centered -bth_none_on_peclet -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -mg_levels_ksp_max_it 1 -da_refine $LEV -bth_stencil_box
-done
-
-7. eps=1/1000 and 4097x4097 grid ... about 1 minute and uses 16Gb:
-timer ./both -snes_type ksponly -ksp_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type sor -mg_levels_pc_sor_forward -da_refine 11 -btm_limiter centered -bth_none_on_peclet -bth_eps 0.001 -ksp_rtol 1.0e-8 -ksp_monitor
-
-8. compare -ksp_type richardson|bcgs|gmres for memory usage in run like above
-
-9. shows excellent weak scaling, for P = 1,4,16,64 and LEV = 4,5,6,7 respectively, gives 4,3,3,2 KSP iterations:
-mpiexec -n P ./both -bth_problem glaze -bth_eps 0.01 -bth_stencil_box -da_grid_x 17 -da_grid_y 17 -snes_type ksponly -ksp_type richardson -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type asm -mg_levels_sub_pc_type ilu -ksp_converged_reason -da_refine LEV
-(add  -log_view |grep "Flop:  "  to get flops for weak scaling)
-*/
 
 #include <petsc.h>
 
@@ -59,10 +38,10 @@ typedef struct {
     ProblemType problem;
     double      eps;                              // diffusion eps > 0
     double      (*limiter_fcn)(double),
-                (*g_fcn)(double, double, void*),  // source
+                (*g_fcn)(double, double, void*),  // right-hand-side source
                 (*b_fcn)(double, double, void*);  // boundary condition
-    PetscBool   none_on_peclet,                   // use none limiter when P^h > 1
-                small_peclet_achieved;            // true if on finest grid P^h <= 1
+    PetscBool   none_on_peclet,                   // if true use none limiter when P^h > threshold
+                small_peclet_achieved;            // true if on finest grid P^h <= threshold
     double      a_scale,                          // scale for wind
                 peclet_threshold;
 } AdCtx;
