@@ -16,12 +16,12 @@ static char help[] =
 /*
 5. evidence of optimality for GLAZE using GMRES+GMG with ILU smoothing and a 33x33 coarse grid:
 for LEV in 5 6 7 8 9 10; do
-    ./both -bth_eps 0.005 -bth_limiter centered -bth_none_on_peclet -bth_problem glaze -snes_type ksponly -ksp_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -da_refine $LEV -pc_mg_levels $(( $LEV - 3 ))
+    ./both -bth_limiter centered -bth_none_on_peclet -bth_problem glaze -snes_type ksponly -ksp_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -da_refine $LEV -pc_mg_levels $(( $LEV - 3 ))
 done
 
 6. good solver using BCGS for low memory, BOX stencil and 1 sweep ILU smoothing for efficient smoother, and right PC (why so much better?):
 for LEV in 5 6 7 8 9 10; do
-    ./both -snes_type ksponly -ksp_type bcgs -ksp_pc_side right -ksp_converged_reason -bth_problem glaze -bth_eps 0.005 -bth_limiter centered -bth_none_on_peclet -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -mg_levels_ksp_max_it 1 -da_refine $LEV -bth_stencil_box
+    ./both -snes_type ksponly -ksp_type bcgs -ksp_pc_side right -ksp_converged_reason -bth_problem glaze -bth_limiter centered -bth_none_on_peclet -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -mg_levels_ksp_max_it 1 -da_refine $LEV -bth_stencil_box
 done
 
 7. eps=1/1000 and 4097x4097 grid ... about 1 minute and uses 16Gb:
@@ -30,7 +30,7 @@ timer ./both -snes_type ksponly -ksp_converged_reason -pc_type mg -mg_levels_ksp
 8. compare -ksp_type richardson|bcgs|gmres for memory usage in run like above
 
 9. shows excellent weak scaling, for P = 1,4,16,64 and LEV = 4,5,6,7 respectively, gives 4,3,3,2 KSP iterations:
-mpiexec -n P ./both -bth_problem glaze -bth_stencil_box -da_grid_x 17 -da_grid_y 17 -snes_type ksponly -ksp_type richardson -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type asm -mg_levels_sub_pc_type ilu -ksp_converged_reason -da_refine LEV
+mpiexec -n P ./both -bth_problem glaze -bth_eps 0.01 -bth_stencil_box -da_grid_x 17 -da_grid_y 17 -snes_type ksponly -ksp_type richardson -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type asm -mg_levels_sub_pc_type ilu -ksp_converged_reason -da_refine LEV
 (add  -log_view |grep "Flop:  "  to get flops for weak scaling)
 */
 
@@ -140,7 +140,7 @@ int main(int argc,char **argv) {
 
     PetscInitialize(&argc,&argv,(char*)0,help);
 
-    user.eps = 0.01;
+    user.eps = 0.005;
     user.none_on_peclet = PETSC_FALSE;
     user.small_peclet_achieved = PETSC_FALSE;
     user.problem = LAYER;

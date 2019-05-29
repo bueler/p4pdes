@@ -42,7 +42,7 @@ runboth_3:
 
 # GMG with ILU smoothing, van Leer limiter, and -bth_none_on_peclet (thus none always) for GLAZE
 runboth_4:
-	-@../testit.sh both "-snes_converged_reason -ksp_converged_reason -bth_problem glaze -bth_eps 0.005 -bth_limiter vanleer -bth_none_on_peclet -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -da_refine 1" 1 4
+	-@../testit.sh both "-snes_converged_reason -ksp_converged_reason -bth_problem glaze -bth_limiter vanleer -bth_none_on_peclet -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type ilu -da_refine 1" 1 4
 
 # parallel GMG with ASM+ILU smoothing, centered limiter, -bth_none_on_peclet, and 5x5 coarse grid for LAYER with eps=0.49 (so centered on 9x9, none on 5x5)
 runboth_5:
