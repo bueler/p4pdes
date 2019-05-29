@@ -114,7 +114,7 @@ int main(int argc,char **argv) {
     DMDALocalInfo  info;
     double         (*uexact_fcn)(double, double, void*);
     LimiterType    limiter = NONE;
-    PetscBool      init_exact = PETSC_FALSE, stencil_box = PETSC_FALSE;
+    PetscBool      init_exact = PETSC_FALSE;
     AdCtx          user;
 
     PetscInitialize(&argc,&argv,(char*)0,help);
@@ -144,9 +144,6 @@ int main(int argc,char **argv) {
     ierr = PetscOptionsEnum("-problem","problem type",
                "both.c",ProblemTypes,
                (PetscEnum)(user.problem),(PetscEnum*)&(user.problem),NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-stencil_box",
-               "use box stencil; may improve performance of ILU smoothing",
-               "both.c",stencil_box,&stencil_box,NULL); CHKERRQ(ierr);
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
     if (user.eps <= 0.0) {
@@ -158,8 +155,7 @@ int main(int argc,char **argv) {
     user.b_fcn = bptr[user.problem];
 
     ierr = DMDACreate2d(PETSC_COMM_WORLD,
-        DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
-        (stencil_box) ? DMDA_STENCIL_BOX : DMDA_STENCIL_STAR,
+        DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
         3,3,                          // default to hx=hy=1 grid
         PETSC_DECIDE,PETSC_DECIDE,
         1,2,                          // d.o.f, stencil width
