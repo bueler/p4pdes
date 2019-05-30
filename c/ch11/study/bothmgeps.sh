@@ -27,15 +27,17 @@ set -e
 #real 19.19
 
 # no obvious advantage to adding -ksp_pc_side right
+# chebyshev is worse in the smoother
 
 # this script generated p4pdes-book/figs/bothmgeps.txt which is
 # loaded by figure script p4pdes-book/figs/bothmgeps.py
 
-COMMON="-snes_type ksponly -ksp_type bcgs -ksp_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type sor -mg_levels_pc_sor_forward"
+COMMON="-snes_type ksponly -ksp_type bcgs -ksp_converged_reason -pc_type mg"
+SMOOTH="-mg_levels_ksp_type richardson -mg_levels_pc_type sor -mg_levels_pc_sor_forward"
 LEVELS="3 4 5 6 7 8 9 10 11"
 
 function runcase() {
-    CMD="../both $COMMON -bth_eps $1 -da_refine $2"
+    CMD="../both $COMMON $SMOOTH -bth_eps $1 -da_refine $2"
     rm -rf tmp.txt
     /usr/bin/time -f "real %e" $CMD &> tmp.txt
     #cat tmp.txt
