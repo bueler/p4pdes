@@ -3,8 +3,8 @@ set -e
 
 # run with --with-debugging=0 configuration
 
-# verification figure for classical GS-smoothed V-cycle
-# multigrid on 2D advection-diffusion in advection-dominated eps=1/200 case
+# verification figure for GS-smoothed V-cycle multigrid preconditioned GMRES
+# on 2D advection-diffusion in advection-dominated eps=1/200 case
 # first-order upwinding at all levels
 
 # edited result is p4pdes-book/figs/bothlayererrors.txt which is
