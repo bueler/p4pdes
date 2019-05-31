@@ -12,6 +12,10 @@ set +x
 MAXLEV=10   # to 2049x2049 grid
 
 for (( LEV=3; LEV<=$MAXLEV; LEV++ )); do
-    ../obstacle -snes_grid_sequence $LEV -ksp_type cg -pc_type mg;
+    rm -rf tmp.txt
+    ../obstacle -snes_grid_sequence $LEV -ksp_type cg -pc_type mg -mg_levels_ksp_type richardson -log_view > tmp.txt
+    grep "errors:" tmp.txt
+    grep "last KSP iters" tmp.txt
+    grep "Flop:  " tmp.txt
 done;
 
