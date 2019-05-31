@@ -10,8 +10,8 @@ static const char help[] =
 
 /*
 parallel versions:
-STALLS: $ timer mpiexec -n 4 ./obstacle -snes_converged_reason -pc_type mg -snes_grid_sequence 9
-SUCCEEDS: $ timer mpiexec -n 4 ./obstacle -da_grid_x 33 -da_grid_y 33 -snes_converged_reason -pc_type mg -snes_grid_sequence 5
+FAILS IN PetscGatherMessageLengths(): $ mpiexec -n 4 ./obstacle -snes_converged_reason -pc_type mg -snes_grid_sequence 9
+SUCCEEDS: $ mpiexec -n 4 ./obstacle -da_grid_x 33 -da_grid_y 33 -snes_converged_reason -pc_type mg -snes_grid_sequence 5
 
 parallel runs, spatial refinement, robust PC:
 for M in 0 1 2 3 4 5 6; do mpiexec -n 4 ./obstacle -da_refine $M -snes_converged_reason -pc_type asm -sub_pc_type lu; done
@@ -80,21 +80,17 @@ int main(int argc,char **argv) {
   const double   aexact = 0.697965148223374;
   SNESConvergedReason reason;
   int            snesit, kspit;
-  double         error1,errorinf,lflops,flops,actarea,exactarea,areaerr;
+  double         error1,errorinf,actarea,exactarea,areaerr;
   DMDALocalInfo  info;
   char           dumpname[256] = "dump.dat";
-  PetscBool      dumpbinary = PETSC_FALSE,
-                 reportflops = PETSC_FALSE;
+  PetscBool      dumpbinary = PETSC_FALSE;
 
   PetscInitialize(&argc,&argv,NULL,help);
 
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"obs_","options to obstacle","");CHKERRQ(ierr);
   ierr = PetscOptionsString("-dump_binary",
-           "filename for saving solution and obstacle in PETSc binary format",
+           "filename for saving solution AND OBSTACLE in PETSc binary format",
            "obstacle.c",dumpname,dumpname,sizeof(dumpname),&dumpbinary); CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-report_flops",
-           "print number of total flops after solving",
-           "obstacle.c",reportflops,&reportflops,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
 
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
@@ -166,15 +162,9 @@ int main(int argc,char **argv) {
   ierr = SNESGetIterationNumber(snes,&snesit); CHKERRQ(ierr);
   ierr = SNESGetKSP(snes,&ksp); CHKERRQ(ierr);
   ierr = KSPGetIterationNumber(ksp,&kspit); CHKERRQ(ierr);
-  ierr = PetscGetFlops(&lflops); CHKERRQ(ierr);
-  ierr = MPI_Allreduce(&lflops,&flops,1,MPI_DOUBLE,MPI_SUM,PETSC_COMM_WORLD); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
       "on %4d x %4d grid: SNES iters = %d, last KSP iters = %d\n",
       info.mx,info.my,snesit,kspit); CHKERRQ(ierr);
-  if (reportflops) {
-      ierr = PetscPrintf(PETSC_COMM_WORLD,
-          "total flops = %.3e\n",flops); CHKERRQ(ierr);
-  }
 
   /* compare to exact */
   ierr = GetActiveSet(snes,&info,u,Xl,NULL,&actarea); CHKERRQ(ierr);
