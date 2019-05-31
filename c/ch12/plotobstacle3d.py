@@ -69,13 +69,8 @@ x = np.linspace(-2.0,2.0,args.mx)
 y = np.linspace(-2.0,2.0,args.my)
 xx, yy = np.meshgrid(x,y)
 ax.plot_wireframe(xx,yy,u,color='k',linewidth=0.3)
-   
-# remove x-ticks
-ax.set_xticks([])
-ax.set_yticks([])
-ax.set_zticks([])
-plt.xlabel('x',fontsize=12.0)
-plt.ylabel('y',fontsize=12.0)
+
+plt.axis('off')
 
 if len(args.o) > 0:
     print 'writing file %s' % args.o
