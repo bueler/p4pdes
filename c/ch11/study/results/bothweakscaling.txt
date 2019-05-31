@@ -1,0 +1,16 @@
+mpiexec -n 1 ../both -bth_eps 0.01 -bth_problem glaze -bth_limiter centered -bth_none_on_peclet -snes_type ksponly -ksp_type bcgs -pc_type mg -ksp_converged_reason -mg_levels_ksp_type richardson -mg_levels_pc_type asm -mg_levels_sub_pc_type sor -da_grid_x 17 -da_grid_y 17 -da_refine 4 -log_view
+done on 257 x 257 grid (problem = glaze, eps = 0.01, limiter = centered)
+  Linear solve converged due to CONVERGED_RTOL iterations 6
+Flop:                 2.977e+08     1.000   2.977e+08  2.977e+08
+mpiexec -n 4 ../both -bth_eps 0.01 -bth_problem glaze -bth_limiter centered -bth_none_on_peclet -snes_type ksponly -ksp_type bcgs -pc_type mg -ksp_converged_reason -mg_levels_ksp_type richardson -mg_levels_pc_type asm -mg_levels_sub_pc_type sor -da_grid_x 17 -da_grid_y 17 -da_refine 5 -log_view
+done on 513 x 513 grid (problem = glaze, eps = 0.01, limiter = centered)
+  Linear solve converged due to CONVERGED_RTOL iterations 6
+Flop:                 3.067e+08     1.011   3.050e+08  1.220e+09
+mpiexec -n 16 ../both -bth_eps 0.01 -bth_problem glaze -bth_limiter centered -bth_none_on_peclet -snes_type ksponly -ksp_type bcgs -pc_type mg -ksp_converged_reason -mg_levels_ksp_type richardson -mg_levels_pc_type asm -mg_levels_sub_pc_type sor -da_grid_x 17 -da_grid_y 17 -da_refine 6 -log_view
+done on 1025 x 1025 grid (problem = glaze, eps = 0.01, limiter = centered)
+  Linear solve converged due to CONVERGED_RTOL iterations 7
+Flop:                 3.408e+08     1.011   3.393e+08  5.429e+09
+mpiexec -n 64 ../both -bth_eps 0.01 -bth_problem glaze -bth_limiter centered -bth_none_on_peclet -snes_type ksponly -ksp_type bcgs -pc_type mg -ksp_converged_reason -mg_levels_ksp_type richardson -mg_levels_pc_type asm -mg_levels_sub_pc_type sor -da_grid_x 17 -da_grid_y 17 -da_refine 7 -log_view
+done on 2049 x 2049 grid (problem = glaze, eps = 0.01, limiter = centered)
+  Linear solve converged due to CONVERGED_RTOL iterations 7
+Flop:                 3.413e+08     1.011   3.399e+08  2.176e+10
