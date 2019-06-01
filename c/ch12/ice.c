@@ -141,7 +141,7 @@ int main(int argc,char **argv) {
   AppCtx              user;
   CMBModel            cmb;
   DMDALocalInfo       info;
-  double              **aH,lflops,flops;
+  double              **aH;
   SNESConvergedReason reason;
   int                 snesit,kspit;
 
@@ -203,15 +203,14 @@ int main(int argc,char **argv) {
   ierr = SNESGetSolution(snes,&H); CHKERRQ(ierr); /* do not destroy H */
   ierr = PetscObjectSetName((PetscObject)H,"H"); CHKERRQ(ierr);
 
-  // compute performance measures
-  ierr = SNESGetIterationNumber(snes,&snesit); CHKERRQ(ierr);
+  // compute performance measures; note utility of reporting last grid,
+  //   last snesit/kspit when doing -snes_grid_sequence
+  ierr = SNESGetIterationNumber(snes,&snesit); CHKERRQ(ierr);  // 
   ierr = SNESGetKSP(snes,&ksp); CHKERRQ(ierr);
   ierr = KSPGetIterationNumber(ksp,&kspit); CHKERRQ(ierr);
-  ierr = PetscGetFlops(&lflops); CHKERRQ(ierr);
-  ierr = MPI_Allreduce(&lflops,&flops,1,MPI_DOUBLE,MPI_SUM,PETSC_COMM_WORLD); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
-      "on %4d x %4d grid: total flops = %.3e, SNES iters = %d, last KSP iters = %d\n",
-      info.mx,info.my,flops,snesit,kspit); CHKERRQ(ierr);
+      "done on %d x %d grid ... SNES iters = %d, last KSP iters = %d\n",
+      info.mx,info.my,snesit,kspit); CHKERRQ(ierr);
 
   // dump state (H,b) if requested
   if (user.dump) {
@@ -258,7 +257,8 @@ int main(int argc,char **argv) {
   return PetscFinalize();
 }
 
-
+// FIXME  put this back in main() so only actual context params need to be in AppCtx
+// (e.g. exact_init, dump do not need to be in AppCtx)
 PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
   PetscErrorCode ierr;
 
