@@ -27,15 +27,18 @@ runice_1:
 runice_2:
 	-@../testit.sh ice "-ice_verif -snes_grid_sequence 1 -snes_converged_reason" 1 2
 
+runice_3:
+	-@../testit.sh ice "-ice_verif -da_refine 1 -snes_type vinewtonrsls -snes_converged_reason -ice_check_admissible -ice_exact_init -ice_eps 0.1" 1 3
+
 test_obstacle: runobstacle_1 runobstacle_2 runobstacle_3
 
-test_ice: runice_1 runice_2
+test_ice: runice_1 runice_2 runice_3
 
 test: test_obstacle test_ice
 
 # etc
 
-.PHONY: distclean runobstacle_1 runobstacle_2 runobstacle_3 runice_1 runice_2 test test_obstacle test_ice
+.PHONY: distclean runobstacle_1 runobstacle_2 runobstacle_3 runice_1 runice_2 runice_3 test test_obstacle test_ice
 
 distclean:
 	@rm -f *~ obstacle ice *.dat *.dat.info *.pdf *.pyc *tmp
