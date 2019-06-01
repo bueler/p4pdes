@@ -34,6 +34,7 @@ result: works at all levels if EPS=0.005; then last KSP quite constant but SNES 
     for LEV in 1 2 3 4 5 6 7 8; do ./ice -da_grid_x 6 -da_grid_y 6 -ice_verif -ice_exact_init -snes_converged_reason -ksp_type gmres -pc_type gamg -da_refine $LEV -snes_type vinewtonrsls -ice_eps 0.005; done
 
 6. visualizing -snes_grid_sequence shows something is VERY WRONG:
+    ./ice -ice_verif -snes_grid_sequence 2 -snes_converged_reason -snes_monitor_solution draw
     ./ice -da_grid_x 6 -da_grid_y 6 -ice_verif -snes_converged_reason -snes_grid_sequence 3 -snes_type vinewtonrsls -ice_eps 0.1 -snes_monitor_solution draw -draw_pause 1
 -snes_grid_sequence bug with periodic BCs? see PETSc issue #300; note RSLS and SSLS act the same; work-around is obvious, and probably wise anyway: use zero Dirichlet boundary conditions
 */

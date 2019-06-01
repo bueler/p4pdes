@@ -21,7 +21,7 @@ runobstacle_3:
 	-@../testit.sh obstacle "-snes_grid_sequence 3 -snes_converged_reason -ksp_type cg -pc_type mg" 1 3
 
 runice_1:
-	-@../testit.sh ice "-ice_verif -snes_grid_sequence 2 -snes_converged_reason" 1 1
+	-@../testit.sh ice "-ice_verif -ice_exact_init -da_refine 2 -snes_converged_reason" 1 1
 
 test_obstacle: runobstacle_1 runobstacle_2 runobstacle_3
 
