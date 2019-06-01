@@ -29,13 +29,19 @@ much more convergence problem without -ice_verif, so:
     for LEV in 1 2 3 4 5 6; do ./ice -ice_verif -ice_exact_init -snes_converged_reason -ksp_type gmres -pc_type gamg -da_refine $LEV -ice_eps EPS -snes_max_it 200; done
 result: works at all levels if EPS=0.005; then last KSP quite constant but SNES iters significantly variable; which level fails is highly-variable with smaller EPS
 
-5. convergent and nearly optimal in flops *but cheating with exact init*, and *avoiding -snes_grid_sequence*; also works with GMG:
-    for LEV in 1 2 3 4 5 6 7 8; do ./ice -da_grid_x 6 -da_grid_y 6 -ice_verif -ice_exact_init -snes_converged_reason -ksp_type gmres -pc_type gamg -da_refine $LEV -snes_type vinewtonrsls -ice_eps 0.005; done
+5. convergent and nearly optimal GMG in flops *but cheating with exact init*, and *avoiding -snes_grid_sequence*:
+    for LEV in 1 2 3 4 5 6 7; do ./ice -da_grid_x 6 -da_grid_y 6 -ice_verif -ice_exact_init -snes_converged_reason -ksp_type gmres -pc_type mg -da_refine $LEV -snes_type vinewtonrsls -ice_eps 0.01; done
 
 6. visualizing -snes_grid_sequence shows something is VERY WRONG:
     ./ice -ice_verif -snes_grid_sequence 2 -snes_converged_reason -snes_monitor_solution draw
     ./ice -da_grid_x 6 -da_grid_y 6 -ice_verif -snes_converged_reason -snes_grid_sequence 3 -snes_type vinewtonrsls -ice_eps 0.1 -snes_monitor_solution draw -draw_pause 1
 -snes_grid_sequence bug with periodic BCs? see PETSc issue #300; note RSLS and SSLS act the same; work-around is obvious, and probably wise anyway: use zero Dirichlet boundary conditions
+
+7. now with zero Dirichlet, -snes_grid_sequence works:
+    ./ice -snes_grid_sequence 6 -ice_verif -snes_monitor_solution draw -snes_type vinewtonssls -ice_eps 0.01 -snes_converged_reason
+
+8. even seems to work in parallel:
+    mpiexec -n 4 ./ice -da_grid_x 5 -da_grid_y 5 -snes_grid_sequence 5 -ice_verif -snes_monitor_solution draw -snes_type vinewtonssls -ice_eps 0.01 -snes_converged_reason
 */
 
 /* see comments on runtime stuff in icet/icet.c, the time-dependent version */
@@ -210,7 +216,7 @@ int main(int argc,char **argv) {
 
   // DMDA for the cell-centered grid
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
-                      DM_BOUNDARY_PERIODIC,DM_BOUNDARY_PERIODIC,
+                      DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,
                       DMDA_STENCIL_BOX,
                       3,3, PETSC_DECIDE,PETSC_DECIDE,
                       1, 1,        // dof=1, stencilwidth=1
@@ -331,6 +337,8 @@ PetscErrorCode FormBedLocal(DMDALocalInfo *info, int stencilwidth, double **ab, 
   for (k = info->ys-stencilwidth; k < info->ys + info->ym+stencilwidth; k++) {
       y = k * dy;
       for (j = info->xs-stencilwidth; j < info->xs + info->xm+stencilwidth; j++) {
+          if (j < 0 || j >= info->mx-1 || k < 0 || k >= info->my-1)
+              continue;
           x = j * dx;
           // b(x,y) is sum of a few sines
           b = 0.0;
@@ -549,6 +557,8 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **aH,
   // c = 0,1,2,3 points in element;  note start at (xs-1,ys-1)
   for (k = info->ys-1; k < info->ys + info->ym; k++) {
       for (j = info->xs-1; j < info->xs + info->xm; j++) {
+          if (j < 0 || j >= info->mx-1 || k < 0 || k >= info->my-1)
+              continue;
           for (c=0; c<4; c++) {
               H  = fieldatptArray(j,k,locx[c],locy[c],aH);
               gH = gradfatptArray(j,k,locx[c],locy[c],dx,dy,aH);
@@ -575,19 +585,23 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **aH,
   // s = 0,1,...,7 points on boundary of control volume (rectangle) around node
   for (k=info->ys; k<info->ys+info->ym; k++) {
       for (j=info->xs; j<info->xs+info->xm; j++) {
-          // climatic mass balance
-          if (user->verif) {
-              x = j * dx;
-              y = k * dy;
-              M = DomeCMB(x,y,user);
-          } else {
-              M = M_CMBModel(user->cmb,ab[k][j] + aH[k][j]);  // s=b+H is surface elevation
+          if (j == 0 || j == info->mx-1 || k == 0 || k == info->my-1)
+              FF[k][j] = aH[k][j];   // FIXME scaling
+          else {
+              // climatic mass balance
+              if (user->verif) {
+                  x = j * dx;
+                  y = k * dy;
+                  M = DomeCMB(x,y,user);
+              } else {
+                  M = M_CMBModel(user->cmb,ab[k][j] + aH[k][j]);  // s=b+H is surface elevation
+              }
+              FF[k][j] = - M * dx * dy;
+              // now add integral over control volume boundary using two
+              // quadrature points on each side
+              for (s=0; s<8; s++)
+                  FF[k][j] += coeff[s] * aqquad[ce[s]][k+ke[s]][j+je[s]];
           }
-          FF[k][j] = - M * dx * dy;
-          // now add integral over control volume boundary using two
-          // quadrature points on each side
-          for (s=0; s<8; s++)
-              FF[k][j] += coeff[s] * aqquad[ce[s]][k+ke[s]][j+je[s]];
       }
   }
 
