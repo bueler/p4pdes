@@ -1,3 +1,3 @@
-Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
-done on 12 x 12 grid ... SNES iters = 5, last KSP iters = 6
-numerical errors: |H-Hexact|_inf = 309.104, |H-Hexact|_average = 68.000
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 7
+done on 9 x 9 grid ... SNES iters = 7, last KSP iters = 6
+numerical errors: |H-Hexact|_inf = 989.613, |H-Hexact|_average = 163.208

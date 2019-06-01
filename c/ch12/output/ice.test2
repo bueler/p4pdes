@@ -1,4 +1,4 @@
-  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 10
-Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 15
-done on 6 x 6 grid ... SNES iters = 15, last KSP iters = 3
-numerical errors: |H-Hexact|_inf = 1335.402, |H-Hexact|_average = 393.512
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 7
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 24
+done on 5 x 5 grid ... SNES iters = 24, last KSP iters = 3
+numerical errors: |H-Hexact|_inf = 1985.254, |H-Hexact|_average = 413.346
