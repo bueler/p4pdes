@@ -2,8 +2,8 @@ static const char help[] =
 "Solves steady-state, nonlinear ice sheet problem in 2D.  Option prefix ice_.\n"
 "The equation is\n"
 "       - div (D grad H) - div(W H^{n+2}) = m\n"
-"where diffusivity D and pseudo-velocity W are from the nonsliding shallow ice\n"
-"approximation (SIA) flux:\n"
+"where diffusivity D and pseudo-velocity W (Bueler, 2016) are from the\n"
+"nonsliding shallow ice approximation (SIA) flux:\n"
 "       D = Gamma H^{n+2} |grad H + grad b|^{n-1}\n"
 "       W = - Gamma |grad H + grad b|^{n-1} grad b\n"
 "The climatic mass balance m = m(x,y,H) is from one of two models.\n"
@@ -17,22 +17,25 @@ static const char help[] =
 "Requires SNESVI (-snes_type vinewton{rsls|ssls}) because of constraint;\n"
 "defaults to SSLS.\n\n";
 
-/* shows basic success with SSLS; converges to level 7 at least:
+/*
+1. shows basic success with SSLS; converges to level 7 at least:
    mpiexec -n 4 ./ice -ice_verif -snes_converged_reason -snes_grid_sequence LEV
 much more convergence problem without -ice_verif, so:
 
-FIXME consider making CMB model smooth
+2. consider making CMB model smooth
 
-FIXME add CMB to dump and create plotting script (.py)
+3. add CMB to dump and create plotting script (.py)
 
-using exact init shows convergence depends strongly on eps for fine grids:
+4. using exact init shows convergence depends strongly on eps for fine grids:
     for LEV in 1 2 3 4 5 6; do ./ice -ice_verif -ice_exact_init -snes_converged_reason -ksp_type gmres -pc_type gamg -da_refine $LEV -ice_eps EPS -snes_max_it 200; done
-result: works at all levels if EPS=0.005; then last KSP quite constant but SNES iters significantly variable
-        which level fails is highly variable with smaller EPS
+result: works at all levels if EPS=0.005; then last KSP quite constant but SNES iters significantly variable; which level fails is highly-variable with smaller EPS
 
-convergent and nearly optimal in flops (but cheating with exact init):
+5. convergent and nearly optimal in flops *but cheating with exact init*, and *avoiding -snes_grid_sequence*; also works with GMG:
     for LEV in 1 2 3 4 5 6 7 8; do ./ice -da_grid_x 6 -da_grid_y 6 -ice_verif -ice_exact_init -snes_converged_reason -ksp_type gmres -pc_type gamg -da_refine $LEV -snes_type vinewtonrsls -ice_eps 0.005; done
 
+6. visualizing -snes_grid_sequence shows something is VERY WRONG:
+    ./ice -da_grid_x 6 -da_grid_y 6 -ice_verif -snes_converged_reason -snes_grid_sequence 3 -snes_type vinewtonrsls -ice_eps 0.1 -snes_monitor_solution draw -draw_pause 1
+-snes_grid_sequence bug with periodic BCs? see PETSc issue #300; note RSLS and SSLS act the same; work-around is obvious, and probably wise anyway: use zero Dirichlet boundary conditions
 */
 
 /* see comments on runtime stuff in icet/icet.c, the time-dependent version */
@@ -60,7 +63,7 @@ typedef struct {
 } AppCtx;
 
 
-// compute (and regularize) radius from center of [0,L] x [0,L]
+// compute radius from center of [0,L] x [0,L]
 double radialcoord(double x, double y, AppCtx *user) {
   const double xc = x - user->L/2.0,
                yc = y - user->L/2.0;
@@ -186,6 +189,11 @@ int main(int argc,char **argv) {
 
   // solve
   ierr = SNESSolve(snes,NULL,H); CHKERRQ(ierr);
+  ierr = SNESGetConvergedReason(snes,&reason); CHKERRQ(ierr);
+  if (reason <= 0) {
+      ierr = PetscPrintf(PETSC_COMM_WORLD,
+          "WARNING: SNES not converged ... use -snes_converged_reason to check\n"); CHKERRQ(ierr);
+  }
 
   // get solution & DM on fine grid (which may have changed) after solve
   ierr = VecDestroy(&H); CHKERRQ(ierr);
@@ -195,12 +203,7 @@ int main(int argc,char **argv) {
   ierr = SNESGetSolution(snes,&H); CHKERRQ(ierr); /* do not destroy H */
   ierr = PetscObjectSetName((PetscObject)H,"H"); CHKERRQ(ierr);
 
-  /* compute performance measures */
-  ierr = SNESGetConvergedReason(snes,&reason); CHKERRQ(ierr);
-  if (reason <= 0) {
-      ierr = PetscPrintf(PETSC_COMM_WORLD,
-          "WARNING: SNES not converged ... use -snes_converged_reason to check\n"); CHKERRQ(ierr);
-  }
+  // compute performance measures
   ierr = SNESGetIterationNumber(snes,&snesit); CHKERRQ(ierr);
   ierr = SNESGetKSP(snes,&ksp); CHKERRQ(ierr);
   ierr = KSPGetIterationNumber(ksp,&kspit); CHKERRQ(ierr);
