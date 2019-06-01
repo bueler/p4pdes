@@ -58,8 +58,7 @@ typedef struct {
               delta,      // dimensionless regularization for slope in SIA formulas
               lambda;     // amount of upwinding; lambda=0 is none and lambda=1 is "full"
     PetscBool verif,      // use dome formulas if true
-              exact_init, // if verif, initialize using dome exact solution
-              dump;       // dump state (H,b) after solve
+              check_admissible; // check admissibility at start of FormFunctionLocal()
     CMBModel  *cmb;       // defined in cmbmodel.h
 } AppCtx;
 
@@ -128,10 +127,7 @@ PetscErrorCode DomeThicknessLocal(DMDALocalInfo *info, double **aH, AppCtx *user
 extern PetscErrorCode SetFromOptionsAppCtx(AppCtx*);
 extern PetscErrorCode FormBedLocal(DMDALocalInfo*, int, double**, AppCtx*);
 extern PetscErrorCode FormBounds(SNES,Vec,Vec);
-extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, double**,
-                                        double **, AppCtx*);
-//FIXME extern PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, double **,
-//                                        Mat, Mat, AppCtx*);
+extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, double**, double**, AppCtx*);
 
 int main(int argc,char **argv) {
   PetscErrorCode      ierr;
@@ -141,6 +137,8 @@ int main(int argc,char **argv) {
   Vec                 H;
   AppCtx              user;
   CMBModel            cmb;
+  PetscBool           exact_init = PETSC_FALSE, // initialize using dome exact solution
+                      dump = PETSC_FALSE;       // dump state (H,b) in binary file ice_MXxMY.dat after solve
   DMDALocalInfo       info;
   double              **aH;
   SNESConvergedReason reason;
@@ -148,7 +146,67 @@ int main(int argc,char **argv) {
 
   PetscInitialize(&argc,&argv,(char*)0,help);
 
-  ierr = SetFromOptionsAppCtx(&user); CHKERRQ(ierr);
+  user.secpera    = 31556926.0;  // number of seconds in a year
+  user.L          = 1800.0e3;    // m; compare domeR=750.0e3 radius
+  user.g          = 9.81;        // m/s^2
+  user.rho_ice    = 910.0;       // kg/m^3
+  user.n_ice      = 3.0;         // Glen exponent
+  user.A_ice      = 3.1689e-24;  // 1/(Pa^3 s); EISMINT I value
+  user.D0         = 1.0;         // m^2 / s
+  user.eps        = 0.001;
+  user.delta      = 1.0e-4;
+  user.lambda     = 0.25;
+  user.verif      = PETSC_FALSE;
+  user.check_admissible = PETSC_FALSE;
+  user.cmb        = NULL;
+
+  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"ice_","options to ice","");CHKERRQ(ierr);
+  ierr = PetscOptionsReal(
+      "-A", "set value of ice softness A in units Pa-3 s-1",
+      "ice.c",user.A_ice,&user.A_ice,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool(
+      "-check_admissible", "check admissibility of iterate at start of residual evaluation FormFunctionLocal()",
+      "ice.c",user.check_admissible,&user.check_admissible,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal(
+      "-D0", "representative value of diffusivity (used in regularizing D) in units m2 s-1",
+      "ice.c",user.D0,&user.D0,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal(
+      "-delta", "dimensionless regularization for slope in SIA formulas",
+      "ice.c",user.delta,&user.delta,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool(
+      "-dump", "save final state (H, b)",
+      "ice.c",dump,&dump,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal(
+      "-eps", "dimensionless regularization for diffusivity D",
+      "ice.c",user.eps,&user.eps,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool(
+      "-exact_init", "initialize with dome exact solution",
+      "ice.c",exact_init,&exact_init,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal(
+      "-L", "side length of domain in meters",
+      "ice.c",user.L,&user.L,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal(
+      "-lambda", "amount of upwinding; lambda=0 is none and lambda=1 is full",
+      "ice.c",user.lambda,&user.lambda,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal(
+      "-n", "value of Glen exponent n",
+      "ice.c",user.n_ice,&user.n_ice,NULL);CHKERRQ(ierr);
+  if (user.n_ice < 1.0) {
+      SETERRQ1(PETSC_COMM_WORLD,1,
+          "ERROR: n = %f not allowed ... n >= 1 is required\n",user.n_ice);
+  }
+  ierr = PetscOptionsReal(
+      "-rho", "ice density in units kg m3",
+      "ice.c",user.rho_ice,&user.rho_ice,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool(
+      "-verif", "use dome exact solution for verification",
+      "ice.c",user.verif,&user.verif,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsEnd();CHKERRQ(ierr);
+
+  // derived constant computed after other ice properties are set
+  user.Gamma = 2.0 * PetscPowReal(user.rho_ice*user.g,user.n_ice) 
+                   * user.A_ice / (user.n_ice+2.0);
+
   ierr = SetFromOptions_CMBModel(&cmb,user.secpera);
   user.cmb = &cmb;
 
@@ -169,9 +227,6 @@ int main(int argc,char **argv) {
   ierr = SNESSetApplicationContext(snes,&user);CHKERRQ(ierr);
   ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
                (DMDASNESFunction)FormFunctionLocal,&user); CHKERRQ(ierr);
-//FIXME
-//  ierr = DMDASNESSetJacobianLocal(da,
-//               (DMDASNESJacobian)FormJacobianLocal,&user); CHKERRQ(ierr);
   ierr = SNESSetType(snes,SNESVINEWTONSSLS); CHKERRQ(ierr);
   ierr = SNESVISetComputeVariableBounds(snes,&FormBounds); CHKERRQ(ierr);
   ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
@@ -179,7 +234,7 @@ int main(int argc,char **argv) {
   // set up initial iterate
   ierr = DMCreateGlobalVector(da,&H);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject)H,"H"); CHKERRQ(ierr);
-  if (user.exact_init) {
+  if (exact_init) {
       ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
       ierr = DMDAVecGetArray(da,H,&aH); CHKERRQ(ierr);
       ierr = DomeThicknessLocal(&info,aH,&user); CHKERRQ(ierr);
@@ -214,7 +269,7 @@ int main(int argc,char **argv) {
       info.mx,info.my,snesit,kspit); CHKERRQ(ierr);
 
   // dump state (H,b) if requested
-  if (user.dump) {
+  if (dump) {
       char           filename[1024];
       PetscViewer    viewer;
       Vec            b;
@@ -256,75 +311,6 @@ int main(int argc,char **argv) {
 
   SNESDestroy(&snes);
   return PetscFinalize();
-}
-
-// FIXME  put this back in main() so only actual context params need to be in AppCtx
-// (e.g. exact_init, dump do not need to be in AppCtx)
-PetscErrorCode SetFromOptionsAppCtx(AppCtx *user) {
-  PetscErrorCode ierr;
-
-  user->secpera    = 31556926.0;  // number of seconds in a year
-  user->L          = 1800.0e3;    // m; compare domeR=750.0e3 radius
-  user->g          = 9.81;        // m/s^2
-  user->rho_ice    = 910.0;       // kg/m^3
-  user->n_ice      = 3.0;         // Glen exponent
-  user->A_ice      = 3.1689e-24;  // 1/(Pa^3 s); EISMINT I value
-  user->D0         = 1.0;         // m^2 / s
-  user->eps        = 0.001;
-  user->delta      = 1.0e-4;
-  user->lambda     = 0.25;
-  user->verif      = PETSC_FALSE;
-  user->exact_init = PETSC_FALSE;
-  user->dump       = PETSC_FALSE;
-  user->cmb        = NULL;
-  // user->Gamma is derived below
-
-  PetscFunctionBeginUser;
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"ice_","options to ice","");CHKERRQ(ierr);
-  ierr = PetscOptionsReal(
-      "-A", "set value of ice softness A in units Pa-3 s-1",
-      "ice.c",user->A_ice,&user->A_ice,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal(
-      "-D0", "representative value of diffusivity (used in regularizing D) in units m2 s-1",
-      "ice.c",user->D0,&user->D0,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal(
-      "-delta", "dimensionless regularization for slope in SIA formulas",
-      "ice.c",user->delta,&user->delta,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool(
-      "-dump", "save final state (H, b)",
-      "ice.c",user->dump,&user->dump,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal(
-      "-eps", "dimensionless regularization for diffusivity D",
-      "ice.c",user->eps,&user->eps,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool(
-      "-exact_init", "initialize with dome exact solution",
-      "ice.c",user->exact_init,&user->exact_init,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal(
-      "-L", "side length of domain in meters",
-      "ice.c",user->L,&user->L,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal(
-      "-lambda", "amount of upwinding; lambda=0 is none and lambda=1 is full",
-      "ice.c",user->lambda,&user->lambda,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal(
-      "-n", "value of Glen exponent n",
-      "ice.c",user->n_ice,&user->n_ice,NULL);CHKERRQ(ierr);
-  if (user->n_ice < 1.0) {
-      SETERRQ1(PETSC_COMM_WORLD,1,
-          "ERROR: n = %f not allowed ... n >= 1 is required\n",user->n_ice);
-  }
-  ierr = PetscOptionsReal(
-      "-rho", "ice density in units kg m3",
-      "ice.c",user->rho_ice,&user->rho_ice,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool(
-      "-verif", "use dome exact solution for verification",
-      "ice.c",user->verif,&user->verif,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsEnd();CHKERRQ(ierr);
-
-  // derived constant computed after other ice properties are set
-  user->Gamma = 2.0 * PetscPowReal(user->rho_ice*user->g,user->n_ice) 
-                    * user->A_ice / (user->n_ice+2.0);
-
-  PetscFunctionReturn(0);
 }
 
 PetscErrorCode FormBedLocal(DMDALocalInfo *info, int stencilwidth, double **ab, AppCtx *user) {
@@ -398,28 +384,6 @@ static double sigma(Grad gH, Grad gb, const AppCtx *user) {
     }
 }
 
-#if 0
-/* Regularized derivative of sigma with respect to nodal value H_l:
-   d sigma / dl = (d sigma / d gH.x) * (d gH.x / dl) + (d sigma / d gH.y) * (d gH.y / dl),
-but
-   d sigma / d gH.x = Gamma * (n-1) * |gH + gb|^{n-3.0} * (gH.x + gb.x)
-   d sigma / d gH.y = Gamma * (n-1) * |gH + gb|^{n-3.0} * (gH.y + gb.y)
-However, power n-3.0 can be negative, which generates NaN in areas where the
-surface gradient gH+gb is zero or tiny, so we add delta^2 to |grad s|^2. */
-static double DsigmaDl(Grad gH, Grad gb, Grad dgHdl, const AppCtx *user) {
-    const double n = user->n_ice;
-    if (n > 1.0) {
-        const double sx = gH.x + gb.x,
-                     sy = gH.y + gb.y,
-                     slopesqr = sx * sx + sy * sy + user->delta * user->delta,
-                     tmp = user->Gamma * (n-1) * PetscPowReal(slopesqr,(n-3.0)/2);
-        return tmp * sx * dgHdl.x + tmp * sy * dgHdl.y;
-    } else {
-        return 0.0;
-    }
-}
-#endif
-
 /* Pseudo-velocity from bed slope:  W = - sigma * grad b. */
 static Grad W(double sigma, Grad gb) {
     Grad W;
@@ -428,16 +392,6 @@ static Grad W(double sigma, Grad gb) {
     return W;
 }
 
-#if 0
-/* Derivative of pseudo-velocity W with respect to nodal value H_l. */
-static Grad DWDl(double dsigmadl, Grad gb) {
-    Grad dWdl;
-    dWdl.x = - dsigmadl * gb.x;
-    dWdl.y = - dsigmadl * gb.y;
-    return dWdl;
-}
-#endif
-
 /* DCS = diffusivity from the continuation scheme:
      D(eps) = (1-eps) sigma H^{n+2} + eps D_0
 so D(1)=D_0 and D(0)=sigma H^{n+2}. */
@@ -445,20 +399,6 @@ static double DCS(double sigma, double H, const AppCtx *user) {
   return (1.0 - user->eps) * sigma * PetscPowReal(PetscAbsReal(H),user->n_ice+2.0)
          + user->eps * user->D0;
 }
-
-
-#if 0
-/* Derivative of diffusivity D = DCS with respect to nodal value H_l.  Since
-  D = (1-eps) sigma H^{n+2} + eps D0
-it follows that
-  d D / dl = (1-eps) [ (d sigma / dl) H^{n+2} + sigma (n+2) H^{n+1} (d H / dl) ]
-           = (1-eps) H^{n+1} [ (d sigma / dl) H + sigma (n+2) (d H / dl) ]    */
-static double DDCSDl(double sigma, double dsigmadl, double H, double dHdl,
-                     const AppCtx *user) {
-    const double Hpow = PetscPowReal(PetscAbsReal(H),user->n_ice+1.0);
-    return (1.0 - user->eps) * Hpow * ( dsigmadl * H + sigma * (user->n_ice+2.0) * dHdl );
-}
-#endif
 
 /* Flux component from the non-sliding SIA on a general bed. */
 PetscErrorCode SIAflux(Grad gH, Grad gb, double H, double Hup, PetscBool xdir,
@@ -477,26 +417,6 @@ PetscErrorCode SIAflux(Grad gH, Grad gb, double H, double Hup, PetscBool xdir,
   }
   PetscFunctionReturn(0);
 }
-
-
-#if 0
-static double DSIAfluxDl(Grad gH, Grad gb, Grad dgHdl,
-                         double H, double dHdl, double Hup, double dHupdl,
-                         PetscBool xdir, const AppCtx *user) {
-    const double Huppow   = PetscPowReal(PetscAbsReal(Hup),user->n_ice+1.0),
-                 dHuppow  = (user->n_ice+2.0) * Huppow * dHupdl,
-                 mysig    = sigma(gH,gb,user),
-                 myD      = DCS(mysig,H,user),
-                 dsigmadl = DsigmaDl(gH,gb,dgHdl,user),
-                 dDdl     = DDCSDl(mysig,dsigmadl,H,dHdl,user);
-    const Grad   myW      = W(mysig,gb),
-                 dWdl     = DWDl(dsigmadl,gb);
-    if (xdir)
-        return - dDdl * gH.x - myD * dgHdl.x + dWdl.x * Huppow * Hup + myW.x * dHuppow;
-    else
-        return - dDdl * gH.y - myD * dgHdl.y + dWdl.y * Huppow * Hup + myW.y * dHuppow;
-}
-#endif
 
 // gradients of weights for Q^1 interpolant
 static const double gx[4] = {-1.0,  1.0, 1.0, -1.0},
@@ -517,16 +437,6 @@ static double fieldatptArray(int u, int v, double xi, double eta, double **f) {
   return fieldatpt(xi,eta,ff);
 }
 
-
-#if 0
-static double dfieldatpt(int l, double xi, double eta) {
-  const double x[4] = { 1.0-xi,      xi,  xi, 1.0-xi},
-               y[4] = {1.0-eta, 1.0-eta, eta,    eta};
-  return x[l] * y[l];
-}
-#endif
-
-
 static Grad gradfatpt(double xi, double eta, double dx, double dy, double f[4]) {
   Grad gradf;
   double x[4] = { 1.0-xi,      xi,  xi, 1.0-xi},
@@ -546,20 +456,6 @@ static Grad gradfatptArray(int u, int v, double xi, double eta, double dx, doubl
   double ff[4] = {f[v][u], f[v][u+1], f[v+1][u+1], f[v+1][u]};
   return gradfatpt(xi,eta,dx,dy,ff);
 }
-
-
-#if 0
-static Grad dgradfatpt(int l, double xi, double eta, double dx, double dy) {
-  Grad dgradfdl;
-  const double x[4] = { 1.0-xi,      xi,  xi, 1.0-xi},
-               y[4] = {1.0-eta, 1.0-eta, eta,    eta},
-               gx[4] = {-1.0,  1.0, 1.0, -1.0},
-               gy[4] = {-1.0, -1.0, 1.0,  1.0};
-  dgradfdl.x = gx[l] *  y[l] / dx;
-  dgradfdl.y =  x[l] * gy[l] / dy;
-  return dgradfdl;
-}
-#endif
 
 // indexing of the 8 quadrature points along the boundary of the control volume in M*
 // point s=0,...,7 is in element (j,k) = (j+je[s],k+ke[s])
@@ -634,16 +530,18 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **aH,
 
   PetscFunctionBeginUser;
 
-#if 0
   // optionally check admissibility
-  for (k = info->ys; k < info->ys + info->ym; k++) {
-      for (j = info->xs; j < info->xs + info->xm; j++) {
-          if (aH[k][j] < 0.0) {
-              SETERRQ3(PETSC_COMM_WORLD,1,"ERROR: non-admissible H[k][j] = %.3e < 0.0 detected at j,k = %d,%d ... stopping\n",aH[k][j],j,k);
+  if (user->check_admissible) {
+      for (k = info->ys; k < info->ys + info->ym; k++) {
+          for (j = info->xs; j < info->xs + info->xm; j++) {
+              if (aH[k][j] < 0.0) {
+                  SETERRQ3(PETSC_COMM_WORLD,1,
+                           "ERROR: non-admissible H[k][j] = %.3e < 0.0 detected at j,k = %d,%d ... stopping\n",
+                           aH[k][j],j,k);
+              }
           }
       }
   }
-#endif
 
   // get bed elevation b(x,y) on this grid
   ierr = DMGetLocalVector(info->da, &b); CHKERRQ(ierr);
@@ -716,123 +614,4 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **aH,
   ierr = DMRestoreLocalVector(info->da, &b); CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
-
-#if 0
-
-// use j,k for x,y directions in loops and MatSetValuesStencil
-typedef struct {
-  PetscInt foo,k,j,bar;
-} MyStencil;
-
-
-PetscErrorCode FormIJacobianLocal(DMDALocalInfo *info, double t,
-                                  double **aH, double **aHdot, double shift,
-                                  Mat J, Mat P, AppCtx *user) {
-  PetscErrorCode  ierr;
-  const double    dx = user->L / (double)(info->mx),
-                  dy = user->L / (double)(info->my);
-  const double    coeff[8] = {dy/2, dx/2, dx/2, -dy/2, -dy/2, -dx/2, -dx/2, dy/2};
-  const PetscBool upwind = (user->lambda > 0.0);
-  const double    upmin = (1.0 - user->lambda) * 0.5,
-                  upmax = (1.0 + user->lambda) * 0.5;
-  int             j, k, c, l, s, u, v;
-  double          H, Hup, **aDqDlquad[16], **ab, val[33], DqSIADl_clkj;
-  Grad            gH, gb;
-  Vec             DqDlquad[16], b;
-  MyStencil       col[33],row;
-
-  PetscFunctionBeginUser;
-  ierr = MatZeroEntries(P); CHKERRQ(ierr);  // because using ADD_VALUES below
-
-  ierr = DMGetLocalVector(info->da, &b); CHKERRQ(ierr);
-  if (user->verif > 0) {
-      ierr = VecSet(b,0.0); CHKERRQ(ierr);
-      ierr = DMDAVecGetArray(info->da,b,&ab); CHKERRQ(ierr);
-  } else {
-      ierr = DMDAVecGetArray(info->da,b,&ab); CHKERRQ(ierr);
-      ierr = FormBedLocal(info,1,ab,user); CHKERRQ(ierr);  // get stencil width
-  }
-  for (c = 0; c < 16; c++) {
-      ierr = DMGetLocalVector(info->da, &(DqDlquad[c])); CHKERRQ(ierr);
-      ierr = DMDAVecGetArray(info->da,DqDlquad[c],&(aDqDlquad[c])); CHKERRQ(ierr);
-  }
-
-  // loop over locally-owned elements, including ghosts, to get DfluxDl for
-  // l=0,1,2,3 at c=0,1,2,3 points in element;  note start at (xs-1,ys-1)
-  for (k = info->ys-1; k < info->ys + info->ym; k++) {
-      for (j = info->xs-1; j < info->xs + info->xm; j++) {
-          for (c=0; c<4; c++) {
-              double lxup = locx[c], lyup = locy[c];
-              H  = fieldatptArray(j,k,locx[c],locy[c],aH);
-              gH = gradfatptArray(j,k,locx[c],locy[c],dx,dy,aH);
-              gb = gradfatptArray(j,k,locx[c],locy[c],dx,dy,ab);
-              if (upwind) {
-                  if (xdire[c] == PETSC_TRUE) {
-                      lxup = (gb.x <= 0.0) ? upmin : upmax;
-                      lyup = locy[c];
-                  } else {
-                      lxup = locx[c];
-                      lyup = (gb.y <= 0.0) ? upmin : upmax;
-                  }
-                  Hup = fieldatptArray(j,k,lxup,lyup,aH);
-              } else {
-                  Hup = H;
-              }
-              for (l=0; l<4; l++) {
-                  Grad   dgHdl;
-                  double dHdl, dHupdl;
-                  dgHdl  = dgradfatpt(l,locx[c],locy[c],dx,dy);
-                  dHdl   = dfieldatpt(l,locx[c],locy[c]);
-                  dHupdl = (upwind) ? dfieldatpt(l,lxup,lyup) : dHdl;
-                  DqSIADl_clkj = DSIAfluxDl(gH,gb,dgHdl,H,dHdl,Hup,dHupdl,xdire[c],user);
-                  aDqDlquad[4*c+l][k][j] = DqSIADl_clkj;
-              }
-          }
-      }
-  }
-
-  // loop over nodes, not including ghosts, to get derivative of residual
-  // with respect to nodal value
-  for (k=info->ys; k<info->ys+info->ym; k++) {
-      row.k = k;
-      for (j=info->xs; j<info->xs+info->xm; j++) {
-          row.j = j;
-          for (s=0; s<8; s++) {
-              u = j + je[s];
-              v = k + ke[s];
-              for (l=0; l<4; l++) {
-                  const int djfroml[4] = { 0,  1,  1,  0},
-                            dkfroml[4] = { 0,  0,  1,  1};
-                  col[4*s+l].j = u + djfroml[l];
-                  col[4*s+l].k = v + dkfroml[l];
-                  val[4*s+l]   = coeff[s] * aDqDlquad[4*ce[s]+l][v][u] / (dx * dy);
-              }
-          }
-          col[32].j = j;
-          col[32].k = k;
-          val[32]   = shift;
-          ierr = MatSetValuesStencil(P,1,(MatStencil*)&row,
-                                     33,(MatStencil*)col,val,ADD_VALUES);CHKERRQ(ierr);
-      }
-  }
-
-  for (c = 0; c < 16; c++) {
-      ierr = DMDAVecRestoreArray(info->da,DqDlquad[c],&(aDqDlquad[c])); CHKERRQ(ierr);
-      ierr = DMRestoreLocalVector(info->da, &(DqDlquad[c])); CHKERRQ(ierr);
-  }
-  ierr = DMDAVecRestoreArray(info->da,b,&ab); CHKERRQ(ierr);
-  ierr = DMRestoreLocalVector(info->da, &b); CHKERRQ(ierr);
-
-  ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  if (J != P) {
-    ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-    ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  }
-  //ierr = MatView(J,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-#endif
 
