@@ -23,15 +23,19 @@ runobstacle_3:
 runice_1:
 	-@../testit.sh ice "-ice_verif -ice_exact_init -da_refine 2 -snes_converged_reason" 1 1
 
+# see PETSc issue #300:
+runice_2:
+	-@../testit.sh ice "-ice_verif -snes_grid_sequence 1 -snes_converged_reason" 1 2
+
 test_obstacle: runobstacle_1 runobstacle_2 runobstacle_3
 
-test_ice: runice_1
+test_ice: runice_1 runice_2
 
 test: test_obstacle test_ice
 
 # etc
 
-.PHONY: distclean runobstacle_1 runobstacle_2 runobstacle_3 runice_1 test test_obstacle test_ice
+.PHONY: distclean runobstacle_1 runobstacle_2 runobstacle_3 runice_1 runice_2 test test_obstacle test_ice
 
 distclean:
 	@rm -f *~ obstacle ice *.dat *.dat.info *.pdf *.pyc *tmp
