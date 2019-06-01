@@ -1,18 +1,17 @@
 static const char help[] =
 "Solves steady-state, nonlinear ice sheet problem in 2D.  Option prefix ice_.\n"
-"The equation is\n"
+"Suppose  H(x,y)  is ice thickness,  b(x,y)  is bed elevation, and\n"
+"s = H + b  is surface elevation.  The PDE (interior condition) is\n"
 "       - div (D grad H) - div(W H^{n+2}) = m\n"
-"where diffusivity D and pseudo-velocity W (Bueler, 2016) are from the\n"
+"The solution is subject to the constraint\n"
+"       H(x,y) >= 0\n"
+"The diffusivity D and pseudo-velocity W (Bueler, 2016) are from the\n"
 "nonsliding shallow ice approximation (SIA) flux:\n"
 "       D = Gamma H^{n+2} |grad H + grad b|^{n-1}\n"
 "       W = - Gamma |grad H + grad b|^{n-1} grad b\n"
 "The climatic mass balance m = m(x,y,H) is from one of two models.\n"
-"The solution is subject to the constraint\n"
-"       H(x,y) >= 0.\n"
-"In these equations  H(x,y)  is ice thickness,  b(x,y)  is bed elevation, and\n"
-"s = H + b  is surface elevation.  Constants are  n >= 1  and\n"
-"Gamma = 2 A (rho g)^n / (n+2)  where A is the ice softness.\n"
-"The domain is square  [0,L] x [0,L]  with periodic boundary conditions.\n"
+"Constants are  n >= 1  and Gamma = 2 A (rho g)^n / (n+2)  where A is the ice\n"
+"softness.  The domain is square  (0,L)^2  with periodic boundary conditions.\n"
 "The equation is discretized by a Q1 structured-grid FVE method (Bueler, 2016).\n"
 "Requires SNESVI (-snes_type vinewton{rsls|ssls}) because of constraint;\n"
 "defaults to SSLS.\n\n";
@@ -44,17 +43,16 @@ result: works at all levels if EPS=0.005; then last KSP quite constant but SNES 
 #include <petsc.h>
 #include "icecmb.h"
 
-// context is entirely grid-independent info
 typedef struct {
     double    secpera,    // number of seconds in a year
-              L,          // spatial domain is [0,L] x [0,L]
+              L,          // spatial domain is (0,L) x (0,L)
               g,          // acceleration of gravity
               rho_ice,    // ice density
               n_ice,      // Glen exponent for SIA flux term
               A_ice,      // ice softness
               Gamma,      // coefficient for SIA flux term
               D0,         // representative value of diffusivity (used in regularizing D)
-              eps,        // regularization parameter for D
+              eps,        // regularization parameter for diffusivity D
               delta,      // dimensionless regularization for slope in SIA formulas
               lambda;     // amount of upwinding; lambda=0 is none and lambda=1 is "full"
     PetscBool verif,      // use dome formulas if true
@@ -76,7 +74,7 @@ double DomeCMB(double x, double y, AppCtx *user) {
                 n  = user->n_ice,
                 pp = 1.0 / n,
                 CC = user->Gamma * PetscPowReal(domeH0,2.0*n+2.0)
-                         / PetscPowReal(2.0 * domeR * (1.0-1.0/n),n);  // FIXME for n=1?
+                         / PetscPowReal(2.0 * domeR * (1.0-1.0/n),n);
   double        r, s, tmp1, tmp2;
   r = radialcoord(x, y, user);
   // avoid singularities at center and margin
@@ -86,8 +84,8 @@ double DomeCMB(double x, double y, AppCtx *user) {
       r = domeR - 0.01;
   s = r / domeR;
   tmp1 = PetscPowReal(s,pp) + PetscPowReal(1.0-s,pp) - 1.0;
-  tmp2 = 2.0 * PetscPowReal(s,pp) + PetscPowReal(1.0-s,pp-1.0) * (1.0 - 2.0*s) - 1.0;  // FIXME for n=1 ==> pp = 1?
-  return (CC / r) * PetscPowReal(tmp1,n-1.0) * tmp2;  // FIXME for n=1?
+  tmp2 = 2.0 * PetscPowReal(s,pp) + PetscPowReal(1.0-s,pp-1.0) * (1.0 - 2.0*s) - 1.0;
+  return (CC / r) * PetscPowReal(tmp1,n-1.0) * tmp2;
 }
 
 
@@ -97,7 +95,7 @@ PetscErrorCode DomeThicknessLocal(DMDALocalInfo *info, double **aH, AppCtx *user
                  n  = user->n_ice,
                  mm = 1.0 + 1.0 / n,
                  qq = n / (2.0 * n + 2.0),
-                 CC = domeH0 / PetscPowReal(1.0 - 1.0 / n,qq),  // FIXME for n=1?
+                 CC = domeH0 / PetscPowReal(1.0 - 1.0 / n,qq),
                  dx = user->L / (double)(info->mx),
                  dy = user->L / (double)(info->my);
   double         x, y, r, s, tmp;
@@ -191,9 +189,9 @@ int main(int argc,char **argv) {
   ierr = PetscOptionsReal(
       "-n", "value of Glen exponent n",
       "ice.c",user.n_ice,&user.n_ice,NULL);CHKERRQ(ierr);
-  if (user.n_ice < 1.0) {
+  if (user.n_ice <= 1.0) {
       SETERRQ1(PETSC_COMM_WORLD,1,
-          "ERROR: n = %f not allowed ... n >= 1 is required\n",user.n_ice);
+          "ERROR: n = %f not allowed ... n > 1.0 is required\n",user.n_ice);
   }
   ierr = PetscOptionsReal(
       "-rho", "ice density in units kg m3",
@@ -364,7 +362,6 @@ typedef struct {
     double x,y;
 } Grad;
 
-
 /* We factor the SIA flux as
     q = - H^{n+2} sigma(|grad s|) grad s
 where sigma is the slope-dependent part
@@ -373,15 +370,10 @@ Also
     D = H^{n+2} sigma(|grad s|)
 so that q = - D grad s.  */
 static double sigma(Grad gH, Grad gb, const AppCtx *user) {
-    const double n = user->n_ice;
-    if (n > 1.0) {
-        const double sx = gH.x + gb.x,
-                     sy = gH.y + gb.y,
-                     slopesqr = sx * sx + sy * sy + user->delta * user->delta;
-        return user->Gamma * PetscPowReal(slopesqr,(n-1.0)/2);
-    } else {
-        return user->Gamma;
-    }
+    const double sx = gH.x + gb.x,
+                 sy = gH.y + gb.y,
+                 slopesqr = sx * sx + sy * sy + user->delta * user->delta;
+    return user->Gamma * PetscPowReal(slopesqr,(user->n_ice-1.0)/2);
 }
 
 /* Pseudo-velocity from bed slope:  W = - sigma * grad b. */
@@ -422,7 +414,6 @@ PetscErrorCode SIAflux(Grad gH, Grad gb, double H, double Hup, PetscBool xdir,
 static const double gx[4] = {-1.0,  1.0, 1.0, -1.0},
                     gy[4] = {-1.0, -1.0, 1.0,  1.0};
 
-
 static double fieldatpt(double xi, double eta, double f[4]) {
   // weights for Q^1 interpolant
   double x[4] = { 1.0-xi,      xi,  xi, 1.0-xi},
@@ -430,7 +421,6 @@ static double fieldatpt(double xi, double eta, double f[4]) {
   return   x[0] * y[0] * f[0] + x[1] * y[1] * f[1]
          + x[2] * y[2] * f[2] + x[3] * y[3] * f[3];
 }
-
 
 static double fieldatptArray(int u, int v, double xi, double eta, double **f) {
   double ff[4] = {f[v][u], f[v][u+1], f[v+1][u+1], f[v+1][u]};
@@ -450,7 +440,6 @@ static Grad gradfatpt(double xi, double eta, double dx, double dy, double f[4]) 
   return gradf;
 }
 
-
 static Grad gradfatptArray(int u, int v, double xi, double eta, double dx, double dy,
                            double **f) {
   double ff[4] = {f[v][u], f[v][u+1], f[v+1][u+1], f[v+1][u]};
@@ -463,10 +452,8 @@ static const int  je[8] = {0,  0, -1, -1, -1, -1,  0,  0},
                   ke[8] = {0,  0,  0,  0, -1, -1, -1, -1},
                   ce[8] = {0,  3,  1,  0,  2,  1,  3,  2};
 
-
 // direction of flux at 4 points in each element
 static const PetscBool xdire[4] = {PETSC_TRUE, PETSC_FALSE, PETSC_TRUE, PETSC_FALSE};
-
 
 // local (element-wise) coords of quadrature points for M*
 static const double locx[4] = {  0.5, 0.75,  0.5, 0.25},
@@ -536,7 +523,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **aH,
           for (j = info->xs; j < info->xs + info->xm; j++) {
               if (aH[k][j] < 0.0) {
                   SETERRQ3(PETSC_COMM_WORLD,1,
-                           "ERROR: non-admissible H[k][j] = %.3e < 0.0 detected at j,k = %d,%d ... stopping\n",
+                           "ERROR: non-admissible value H[k][j] = %.3e < 0.0 at j,k = %d,%d\n",
                            aH[k][j],j,k);
               }
           }
