@@ -510,7 +510,7 @@ a y-component at "%"; note (x_j,y_k) is lower-left corner:
   (j,k)
 
 */
-PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **aH,
+PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **aHin,
                                         double **FF, AppCtx *user) {
   PetscErrorCode  ierr;
   const double    dx = user->L / (double)(info->mx-1),
@@ -521,23 +521,31 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **aH,
   const double    upmin = (1.0 - user->lambda) * 0.5,
                   upmax = (1.0 + user->lambda) * 0.5;
   int             c, j, k, s;
-  double          H, Hup, lxup, lyup, **aqquad[4], **ab, DSIA_ckj, qSIA_ckj,
+  double          H, Hup, lxup, lyup, **aqquad[4], **ab, **aH, DSIA_ckj, qSIA_ckj,
                   M, x, y;
   Grad            gH, gb;
-  Vec             qquad[4], b;
+  Vec             qquad[4], Hcopy, b;
 
   PetscFunctionBeginUser;
 
-  // optionally check admissibility
-  if (user->check_admissible) {
-      for (k = info->ys; k < info->ys + info->ym; k++) {
-          for (j = info->xs; j < info->xs + info->xm; j++) {
-              if (aH[k][j] < 0.0) {
-                  SETERRQ3(PETSC_COMM_WORLD,1,
-                           "ERROR: non-admissible value H[k][j] = %.3e < 0.0 at j,k = %d,%d\n",
-                           aH[k][j],j,k);
-              }
+  // copy and set boundary conditions to zero
+  ierr = DMGetLocalVector(info->da, &Hcopy); CHKERRQ(ierr);
+  ierr = DMDAVecGetArray(info->da,Hcopy,&aH); CHKERRQ(ierr);
+  for (k = info->ys-1; k <= info->ys + info->ym; k++) {
+      for (j = info->xs-1; j <= info->xs + info->xm; j++) {
+          if (j < 0 || j > info->mx-1 || k < 0 || k > info->my-1)
+              continue;
+          if (user->check_admissible && aHin[k][j] < 0.0) {
+              SETERRQ3(PETSC_COMM_WORLD,1,
+                       "ERROR: non-admissible value H[k][j] = %.3e < 0.0 at j,k = %d,%d\n",
+                       aHin[k][j],j,k);
           }
+          if (j == 0 || j == info->mx-1 || k == 0 || k == info->my-1) {
+              if (j >= info->xs && j < info->xs+info->xm && k >= info->ys && k < info->ys+info->ym)
+                  FF[k][j] = aHin[k][j];   // FIXME scaling?
+              aH[k][j] = 0.0;
+          } else
+              aH[k][j] = aHin[k][j];
       }
   }
 
@@ -589,22 +597,20 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **aH,
   for (k=info->ys; k<info->ys+info->ym; k++) {
       for (j=info->xs; j<info->xs+info->xm; j++) {
           if (j == 0 || j == info->mx-1 || k == 0 || k == info->my-1)
-              FF[k][j] = aH[k][j];   // FIXME scaling
-          else {
-              // climatic mass balance
-              if (user->verif) {
-                  x = j * dx;
-                  y = k * dy;
-                  M = DomeCMB(x,y,user);
-              } else {
-                  M = M_CMBModel(user->cmb,ab[k][j] + aH[k][j]);  // s=b+H is surface elevation
-              }
-              FF[k][j] = - M * dx * dy;
-              // now add integral over control volume boundary using two
-              // quadrature points on each side
-              for (s=0; s<8; s++)
-                  FF[k][j] += coeff[s] * aqquad[ce[s]][k+ke[s]][j+je[s]];
+              continue;
+          // climatic mass balance
+          if (user->verif) {
+              x = j * dx;
+              y = k * dy;
+              M = DomeCMB(x,y,user);
+          } else {
+              M = M_CMBModel(user->cmb,ab[k][j] + aH[k][j]);  // s=b+H is surface elevation
           }
+          FF[k][j] = - M * dx * dy;
+          // now add integral over control volume boundary using two
+          // quadrature points on each side
+          for (s=0; s<8; s++)
+              FF[k][j] += coeff[s] * aqquad[ce[s]][k+ke[s]][j+je[s]];
       }
   }
 
@@ -614,6 +620,8 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **aH,
       ierr = DMDAVecRestoreArray(info->da,qquad[c],&(aqquad[c])); CHKERRQ(ierr);
       ierr = DMRestoreLocalVector(info->da, &(qquad[c])); CHKERRQ(ierr);
   }
+  ierr = DMDAVecRestoreArray(info->da,Hcopy,&aH); CHKERRQ(ierr);
+  ierr = DMRestoreLocalVector(info->da, &Hcopy); CHKERRQ(ierr);
   ierr = DMDAVecRestoreArray(info->da,b,&ab); CHKERRQ(ierr);
   ierr = DMRestoreLocalVector(info->da, &b); CHKERRQ(ierr);
   PetscFunctionReturn(0);
