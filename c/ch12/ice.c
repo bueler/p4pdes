@@ -11,13 +11,13 @@ static const char help[] =
 "       W = - Gamma |grad H + grad b|^{n-1} grad b\n"
 "The climatic mass balance m = m(x,y,H) is from one of two models.\n"
 "Constants are  n >= 1  and Gamma = 2 A (rho g)^n / (n+2)  where A is the ice\n"
-"softness.  The domain is square  (0,L)^2  with periodic boundary conditions.\n"
+"softness.  The domain is square  (0,L)^2  with zero Dirichlet boundary conditions.\n"
 "The equation is discretized by a Q1 structured-grid FVE method (Bueler, 2016).\n"
 "Requires SNESVI (-snes_type vinewton{rsls|ssls}) because of constraint;\n"
 "defaults to SSLS.\n\n";
 
 /*
-1. shows basic success with SSLS but DIVERGES AT LEVEL 5:
+1. shows basic success with SSLS but DIVERGES AT LEVEL 4:
    mpiexec -n 4 ./ice -ice_verif -snes_converged_reason -snes_grid_sequence LEV
 
 2. consider making CMB model smooth
@@ -25,29 +25,25 @@ static const char help[] =
 3. add CMB to dump and create plotting script (.py)
 
 4. using exact init shows convergence depends strongly on eps for fine grids:
-    for LEV in 1 2 3 4 5 6; do ./ice -ice_verif -ice_exact_init -snes_converged_reason -ksp_type gmres -pc_type gamg -da_refine $LEV -ice_eps EPS; done
+    for LEV in 1 2 3 4 5; do ./ice -ice_verif -ice_exact_init -snes_converged_reason -ksp_type gmres -pc_type gamg -da_refine $LEV -ice_eps EPS; done
 result:
   (a) works at all levels if EPS=0.005; last KSP somewhat constant but SNES iters growing
-  (b) fails on level 4 if EPS=0.003,0.002
+  (b) fails on level 3 if EPS=0.003,0.002
 
-5. convergent and nearly optimal GMG in flops *but cheating with exact init*, and *avoiding -snes_grid_sequence*:
-    for LEV in 1 2 3 4 5 6; do ./ice -da_grid_x 6 -da_grid_y 6 -ice_verif -ice_exact_init -snes_converged_reason -ksp_type gmres -pc_type mg -da_refine $LEV -snes_type vinewtonrsls -ice_eps 0.01; done
+5. convergent and nearly optimal GMG in flops *but cheating with exact init*, and *avoiding -snes_grid_sequence* and *significant eps=0.01 regularization*:
+    for LEV in 1 2 3 4 5 6 7 8; do ./ice -ice_verif -ice_exact_init -snes_converged_reason -ksp_type gmres -pc_type mg -da_refine $LEV -snes_type vinewtonrsls -ice_eps 0.01; done
 
 6. visualizing -snes_grid_sequence:
-    ./ice -da_grid_x 5 -da_grid_y 5 -ice_verif -snes_grid_sequence 2 -ice_eps 0.005 -snes_converged_reason -snes_monitor_solution draw
+    ./ice -ice_verif -snes_grid_sequence 2 -ice_eps 0.005 -snes_converged_reason -snes_monitor_solution draw
 (was -snes_grid_sequence bug with periodic BCs? see PETSc issue #300)
 
 8. even seems to work in parallel:
-    mpiexec -n 4 ./ice -da_grid_x 5 -da_grid_y 5 -ice_verif -snes_grid_sequence 5 -ice_eps 0.005 -snes_converged_reason -snes_monitor_solution draw
+    mpiexec -n 4 ./ice -ice_verif -snes_grid_sequence 5 -ice_eps 0.005 -snes_converged_reason -snes_monitor_solution draw
 
 9. same outcome with -ice_exact_init and -da_refine 5
-    mpiexec -n 4 ./ice -da_grid_x 5 -da_grid_y 5 -ice_verif -da_refine 5 -ice_eps 0.005 -snes_converged_reason -snes_monitor_solution draw -ice_exact_init
+    mpiexec -n 4 ./ice -ice_verif -da_refine 5 -ice_eps 0.005 -snes_converged_reason -snes_monitor_solution draw -ice_exact_init
 
-10. but 3x3 starting grid bad?
-FAILS: ./ice -ice_verif -ice_eps 0.01 -snes_converged_reason -snes_grid_sequence 1
-SUCCEEDS: ./ice -ice_verif -ice_eps 0.01 -snes_converged_reason -da_grid_x 5 -da_grid_y 5
-
-11. unpredictable response to changing -snes_linesearch_type bt|l2|basic  (cp seems rarely to work)
+10. unpredictable response to changing -snes_linesearch_type bt|l2|basic  (cp seems rarely to work)
 */
 
 /* see comments on runtime stuff in icet/icet.c, the time-dependent version */
@@ -73,7 +69,7 @@ typedef struct {
 } AppCtx;
 
 
-// compute radius from center of [0,L] x [0,L]
+// compute radius from center of (0,L) x (0,L)
 double radialcoord(double x, double y, AppCtx *user) {
   const double xc = x - user->L/2.0,
                yc = y - user->L/2.0;
@@ -224,11 +220,12 @@ int main(int argc,char **argv) {
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
                       DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,
                       DMDA_STENCIL_BOX,
-                      3,3, PETSC_DECIDE,PETSC_DECIDE,
+                      5,5, PETSC_DECIDE,PETSC_DECIDE,
                       1, 1,        // dof=1, stencilwidth=1
                       NULL,NULL,&da);
   ierr = DMSetFromOptions(da); CHKERRQ(ierr);
   ierr = DMSetUp(da); CHKERRQ(ierr);  // this must be called BEFORE SetUniformCoordinates
+  ierr = DMDASetUniformCoordinates(da,0.0,user.L,0.0,user.L,-1.0,-1.0);CHKERRQ(ierr);
   ierr = DMSetApplicationContext(da, &user);CHKERRQ(ierr);
 
   // create and configure the SNES to solve a NCP/VI at each step

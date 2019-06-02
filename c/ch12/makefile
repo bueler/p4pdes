@@ -21,7 +21,7 @@ runobstacle_3:
 	-@../testit.sh obstacle "-snes_grid_sequence 3 -snes_converged_reason -ksp_type cg -pc_type mg" 1 3
 
 runice_1:
-	-@../testit.sh ice "-ice_verif -ice_exact_init -da_refine 2 -snes_converged_reason" 1 1
+	-@../testit.sh ice "-ice_verif -ice_exact_init -da_refine 1 -snes_converged_reason" 1 1
 
 # see PETSc issue #300:
 runice_2:
