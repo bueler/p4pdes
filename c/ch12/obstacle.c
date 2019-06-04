@@ -1,20 +1,17 @@
 static const char help[] =
 "Solves obstacle problem in 2D using SNESVI.  Option prefix -obs_.\n"
 "The obstacle problem is a free boundary problem for the Poisson equation\n"
-"in which the solution u(x,y) is constrained to be above the obstacle psi(x,y).\n"
+"in which the solution u(x,y) is constrained to be above the obstacle psi(x,y):\n"
+"    - Lap u = f,  u >= psi.\n"
 "Equivalently it is a variational inequality (VI), complementarity problem\n"
 "(CP), or an inequality-constrained minimization.  The example here is\n"
-"on the square [-2,2] x [-2,2] and has known exact solution.  Because of the\n"
+"on the square (-2,2)^2 and has known exact solution.  Because of the\n"
 "constraint, the problem is nonlinear but the code reuses the residual and\n"
-"Jacobian evaluation code in ch6/.\n\n";
+"Jacobian evaluation code for the Poisson equation in ch6/.\n\n";
 
 /*
 parallel versions:
-FAILS IN PetscGatherMessageLengths(): $ mpiexec -n 4 ./obstacle -snes_converged_reason -pc_type mg -snes_grid_sequence 9
-SUCCEEDS: $ mpiexec -n 4 ./obstacle -da_grid_x 33 -da_grid_y 33 -snes_converged_reason -pc_type mg -snes_grid_sequence 5
-
-parallel runs, spatial refinement, robust PC:
-for M in 0 1 2 3 4 5 6; do mpiexec -n 4 ./obstacle -da_refine $M -snes_converged_reason -pc_type asm -sub_pc_type lu; done
+FAILS IN PetscGatherMessageLengths(): $ mpiexec -n 8 ./obstacle -snes_grid_sequence 8 -snes_converged_reason -pc_type mg -da_grid_x 5 -da_grid_y 5 -snes_type vinewtonrsls
 */
 
 #include <petsc.h>
