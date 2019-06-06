@@ -34,7 +34,7 @@ test_obstacle: runobstacle_1 runobstacle_2 runobstacle_3
 
 test_ice: runice_1 runice_2 runice_3
 
-test: test_obstacle test_ice
+test: test_obstacle
 
 # etc
 
