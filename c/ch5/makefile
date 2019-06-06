@@ -47,7 +47,7 @@ runpattern_1:
 	-@../testit.sh pattern "-da_grid_x 4 -da_grid_y 4 -da_refine 2 -ts_monitor" 1 1   # refinement of 1 misses initial condition
 
 runpattern_2:
-	-@../testit.sh pattern "-da_refine 2 -ts_monitor -ts_dt 1 -ts_max_time 1 -ts_type beuler -pc_type mg -snes_converged_reason -ksp_converged_reason -snes_rtol 1.0e-1" 1 2
+	-@../testit.sh pattern "-da_refine 2 -ts_monitor -ts_dt 1 -ts_max_time 1 -ts_type beuler -pc_type mg -snes_converged_reason -ksp_converged_reason -snes_rtol 1.0e-1 -ptn_no_rhsjacobian" 1 2
 
 runpattern_3:
 	-@../testit.sh pattern "-da_refine 2 -ts_monitor -ts_type cn -snes_fd_color -ts_max_time 10 -snes_converged_reason" 2 3

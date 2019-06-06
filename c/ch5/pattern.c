@@ -1,12 +1,8 @@
 static char help[] =
 "Coupled reaction-diffusion equations (Pearson 1993).  Option prefix -ptn_.\n"
 "Demonstrates form  F(t,Y,dot Y) = G(t,Y)  where F() is IFunction and G() is\n"
-"RHSFunction().  Implements IJacobian().  Defaults to ARKIMEX (= adaptive\n"
-"Runge-Kutta implicit-explicit) TS type.\n\n";
-
-// compare runs with
-//    -dm_mat_type aij|baij|sbaij
-//    -dm_mat_type sbaij -ksp_type cg -pc_type icc  # 20% speed up?
+"RHSFunction().  Implements IJacobian() and RHSJacobian().  Defaults to ARKIMEX\n"
+"(= adaptive Runge-Kutta implicit-explicit) TS type.\n\n";
 
 #include <petsc.h>
 
@@ -25,6 +21,8 @@ typedef struct {
 extern PetscErrorCode InitialState(DM, Vec, double, PatternCtx*);
 extern PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo*, double, Field**,
                                            Field**, PatternCtx*);
+extern PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo*, double, Field**,
+                                           Mat, Mat, PatternCtx*);
 extern PetscErrorCode FormIFunctionLocal(DMDALocalInfo*, double, Field**, Field**,
                                          Field **, PatternCtx*);
 extern PetscErrorCode FormIJacobianLocal(DMDALocalInfo*, double, Field**, Field**,
@@ -39,6 +37,8 @@ int main(int argc,char **argv)
   DM             da;
   DMDALocalInfo  info;
   double         noiselevel = -1.0;  // negative value means no initial noise
+  PetscBool      no_rhsjacobian = PETSC_FALSE,
+                 no_ijacobian = PETSC_FALSE;
 
   PetscInitialize(&argc,&argv,(char*)0,help);
 
@@ -52,16 +52,20 @@ int main(int argc,char **argv)
   ierr = PetscOptionsReal("-noisy_init",
            "initialize u,v with this much random noise (e.g. 0.2) on top of usual initial values",
            "pattern.c",noiselevel,&noiselevel,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-L","square domain side length; recommend L >= 0.5",
-           "pattern.c",user.L,&user.L,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-Du","diffusion coefficient of first equation",
            "pattern.c",user.Du,&user.Du,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-Dv","diffusion coefficient of second equation",
            "pattern.c",user.Dv,&user.Dv,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-phi","dimensionless feed rate (=F in (Pearson, 1993))",
-           "pattern.c",user.phi,&user.phi,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-kappa","dimensionless rate constant (=k in (Pearson, 1993))",
            "pattern.c",user.kappa,&user.kappa,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-L","square domain side length; recommend L >= 0.5",
+           "pattern.c",user.L,&user.L,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-no_ijacobian","do not set call-back DMDATSSetIJacobian()",
+           "pattern.c",no_ijacobian,&(no_ijacobian),NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-no_rhsjacobian","do not set call-back DMDATSSetRHSJacobian()",
+           "pattern.c",no_rhsjacobian,&(no_rhsjacobian),NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-phi","dimensionless feed rate (=F in (Pearson, 1993))",
+           "pattern.c",user.phi,&user.phi,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
@@ -85,15 +89,20 @@ int main(int argc,char **argv)
 
 //STARTTSSETUP
   ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
-  ierr = TSSetProblemType(ts,TS_NONLINEAR); CHKERRQ(ierr);
   ierr = TSSetDM(ts,da); CHKERRQ(ierr);
   ierr = TSSetApplicationContext(ts,&user); CHKERRQ(ierr);
   ierr = DMDATSSetRHSFunctionLocal(da,INSERT_VALUES,
            (DMDATSRHSFunctionLocal)FormRHSFunctionLocal,&user); CHKERRQ(ierr);
+  if (!no_rhsjacobian) {
+      ierr = DMDATSSetRHSJacobianLocal(da,
+               (DMDATSRHSJacobianLocal)FormRHSJacobianLocal,&user); CHKERRQ(ierr);
+  }
   ierr = DMDATSSetIFunctionLocal(da,INSERT_VALUES,
            (DMDATSIFunctionLocal)FormIFunctionLocal,&user); CHKERRQ(ierr);
-  ierr = DMDATSSetIJacobianLocal(da,
-           (DMDATSIJacobianLocal)FormIJacobianLocal,&user); CHKERRQ(ierr);
+  if (!no_ijacobian) {
+      ierr = DMDATSSetIJacobianLocal(da,
+               (DMDATSIJacobianLocal)FormIJacobianLocal,&user); CHKERRQ(ierr);
+  }
   ierr = TSSetType(ts,TSARKIMEX); CHKERRQ(ierr);
   ierr = TSSetTime(ts,0.0); CHKERRQ(ierr);
   ierr = TSSetMaxTime(ts,200.0); CHKERRQ(ierr);
@@ -167,6 +176,42 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info,
   return 0;
 }
 //ENDRHSFUNCTION
+
+PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info,
+                                    double t, Field **aY,
+                                    Mat J, Mat P, PatternCtx *user) {
+    PetscErrorCode ierr;
+    int            i, j;
+    double         v[2], uv, v2;
+    MatStencil     col[2],row;
+
+    for (j = info->ys; j < info->ys+info->ym; j++) {
+        row.j = j;  col[0].j = j;  col[1].j = j;
+        for (i = info->xs; i < info->xs+info->xm; i++) {
+            row.i = i;  col[0].i = i;  col[1].i = i;
+            uv = aY[j][i].u * aY[j][i].v;
+            v2 = aY[j][i].v * aY[j][i].v;
+            // u equation
+            row.c = 0;  col[0].c = 0;  col[1].c = 1;
+            v[0] = - v2 - user->phi;
+            v[1] = - 2.0 * uv;
+            ierr = MatSetValuesStencil(P,1,&row,2,col,v,INSERT_VALUES); CHKERRQ(ierr);
+            // v equation
+            row.c = 1;  col[0].c = 0;  col[1].c = 1;
+            v[0] = v2;
+            v[1] = 2.0 * uv - (user->phi + user->kappa);
+            ierr = MatSetValuesStencil(P,1,&row,2,col,v,INSERT_VALUES); CHKERRQ(ierr);
+        }
+    }
+
+    ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    ierr = MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    if (J != P) {
+        ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+        ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    }
+    return 0;
+}
 
 // in system form  F(t,Y,dot Y) = G(t,Y),  compute F():
 //     F^u(t,u,v,u_t,v_t) = u_t - D_u Laplacian u
