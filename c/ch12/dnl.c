@@ -1,22 +1,23 @@
 static const char help[] =
 "Solves doubly-nonlinear obstacle problems in 2D.  Option prefix dnl_.\n"
 "The PDE (interior condition) of such problems has solution u(x,y):\n"
-"       - div (u^q |grad(u+b)|^{p-2} grad(u+b)) = f\n"
+"       - div (C u^q |grad(u+b)|^{p-2} grad(u+b)) = f(u,x,y)\n"
 "subject to a obstacle constraint\n"
 "       u >= psi\n"
-"FIXME Includes the steady-state, nonlinear ice sheet problem in 2D in which u=H\n"
-"is ice thickness,  b  is bed elevation, and  s = H + b  is surface elevation:\n"
-"       - div (D grad H) - div(W H^{n+2}) = m\n"
-"The diffusivity D and pseudo-velocity W (Bueler, 2016) are from the\n"
-"nonsliding shallow ice approximation (SIA) flux:\n"
-"       D = Gamma H^{n+2} |grad H + grad b|^{n-1}\n"
-"       W = - Gamma |grad H + grad b|^{n-1} grad b\n"
-"The climatic mass balance f = m(x,y,H) is from one of two models.\n"
-"Constants are  n >= 1  and Gamma = 2 A (rho g)^n / (n+2)  where A is the ice\n"
-"softness.  The domain is square  (0,L)^2  with zero Dirichlet boundary conditions.\n"
+"Here psi(x,y) and b(x,y) are given functions, C>0 is constant, q >= 0, and p > 1.\n"
+"Solves based on the diffusivity/pseudo-velocity (Bueler, 2016) decomposition\n"
+"       - div (D grad u) + div(W u^q) = f\n"
+"where  D = C u^q |grad(u+b)|^{p-2}  and  W = - C |grad(u+b)|^{p-2} grad b.\n\n"
+"Optionally can solve the steady-state ice sheet problem in 2D in which u = H\n"
+"is ice thickness,  b  is bed elevation, and  s = H + b  is surface elevation.\n"
+"In the ice case p = n+1  where n >= 1 is the Glen exponent, q = n+2, and\n"
+"Gamma = 2 A (rho g)^n / (n+2)  where A is the ice softness, rho is ice density,\n"
+"and g is gravity.  Then  Q = - D grad u + W u^q  is the nonsliding shallow ice\n"
+"approximation (SIA) flux.  In the ice sheet case the climatic mass balance\n"
+"f = m(H,x,y) is from one of two models; see icecmb.h.\n"
+"The domain is square  (0,L)^2  with zero Dirichlet boundary conditions.\n"
 "The equation is discretized by a Q1 structured-grid FVE method (Bueler, 2016).\n"
-"Requires SNESVI (-snes_type vinewton{rsls|ssls}) because of constraint;\n"
-"defaults to SSLS.\n\n";
+"Requires SNESVI (-snes_type vinewton{rsls|ssls}) because of the constraint.\n\n";
 
 /*
 1. shows basic success with SSLS but DIVERGES AT LEVEL 4:
@@ -51,88 +52,38 @@ result:
 /* see comments on runtime stuff in icet/icet.c, the time-dependent version */
 
 #include <petsc.h>
-#include "icecmb.h"
+#include "ice.h"
 
 typedef struct {
-    double    secpera,    // number of seconds in a year
-              L,          // spatial domain is (0,L) x (0,L)
-              g,          // acceleration of gravity
-              rho_ice,    // ice density
-              n_ice,      // Glen exponent for SIA flux term
-              A_ice,      // ice softness
-              Gamma,      // coefficient for SIA flux term
+    double    L,          // spatial domain is (0,L) x (0,L)
+              C,          // coefficient
               D0,         // representative value of diffusivity (used in regularizing D)
               eps,        // regularization parameter for diffusivity D
-              delta,      // dimensionless regularization for slope in SIA formulas
+              delta,      // dimensionless regularization for |grad(u+b)| term
               lambda;     // amount of upwinding; lambda=0 is none and lambda=1 is "full"
-    PetscBool verif,      // use dome formulas if true
-              check_admissible; // check admissibility at start of FormFunctionLocal()
-    CMBModel  *cmb;       // defined in cmbmodel.h
+    PetscBool check_admissible; // check admissibility at start of FormFunctionLocal()
+    double    (*psi)(double,double); // evaluate obstacle  psi(x,y)
+    IceCtx    *ice;       // NULL if not solving ice sheet problem
 } AppCtx;
 
-
-// compute radius from center of (0,L) x (0,L)
-double radialcoord(double x, double y, AppCtx *user) {
-  const double xc = x - user->L/2.0,
-               yc = y - user->L/2.0;
-  return PetscSqrtReal(xc * xc + yc * yc);
+// z = psi(x,y) is same as in obstacle.c
+double psi(double x, double y) {
+    const double  r = x * x + y * y,  // FIXME this is from (0,0)
+                  r0 = 0.9,
+                  psi0 = PetscSqrtReal(1.0 - r0*r0),
+                  dpsi0 = - r0 / psi0;
+    if (r <= r0) {
+        return PetscSqrtReal(1.0 - r);
+    } else {
+        return psi0 + dpsi0 * (r - r0);
+    }
 }
 
-double DomeCMB(double x, double y, AppCtx *user) {
-  const double  domeR  = 750.0e3,  // radius of exact ice sheet (m)
-                domeH0 = 3600.0,   // center thickness of exact ice sheet (m)
-                n  = user->n_ice,
-                pp = 1.0 / n,
-                CC = user->Gamma * PetscPowReal(domeH0,2.0*n+2.0)
-                         / PetscPowReal(2.0 * domeR * (1.0-1.0/n),n);
-  double        r, s, tmp1, tmp2;
-  r = radialcoord(x, y, user);
-  // avoid singularities at center and margin
-  if (r < 0.01)
-      r = 0.01;
-  if (r > domeR - 0.01)
-      r = domeR - 0.01;
-  s = r / domeR;
-  tmp1 = PetscPowReal(s,pp) + PetscPowReal(1.0-s,pp) - 1.0;
-  tmp2 = 2.0 * PetscPowReal(s,pp) + PetscPowReal(1.0-s,pp-1.0) * (1.0 - 2.0*s) - 1.0;
-  return (CC / r) * PetscPowReal(tmp1,n-1.0) * tmp2;
+// obstacle is zero in ice sheet case
+double zero(double x, double y) {
+    return 0.0;
 }
 
-
-PetscErrorCode DomeThicknessLocal(DMDALocalInfo *info, double **aH, AppCtx *user) {
-  const double   domeR  = 750.0e3,  // radius of exact ice sheet (m)
-                 domeH0 = 3600.0,   // center thickness of exact ice sheet (m)
-                 n  = user->n_ice,
-                 mm = 1.0 + 1.0 / n,
-                 qq = n / (2.0 * n + 2.0),
-                 CC = domeH0 / PetscPowReal(1.0 - 1.0 / n,qq),
-                 dx = user->L / (double)(info->mx-1),
-                 dy = user->L / (double)(info->my-1);
-  double         x, y, r, s, tmp;
-  int            j, k;
-
-  PetscFunctionBeginUser;
-  for (k=info->ys; k<info->ys+info->ym; k++) {
-      y = k * dy;
-      for (j=info->xs; j<info->xs+info->xm; j++) {
-          x = j * dx;
-          r = radialcoord(x, y, user);
-          // avoid singularities at margin and center
-          if (r > domeR - 0.01)
-              aH[k][j] = 0.0;
-          else {
-              if (r < 0.01)
-                  r = 0.01;
-              s = r / domeR;
-              tmp = mm * s - (1.0/n) + PetscPowReal(1.0-s,mm) - PetscPowReal(s,mm);
-              aH[k][j] = CC * PetscPowReal(tmp,qq);
-          }
-      }
-  }
-  PetscFunctionReturn(0);
-}
-
-extern PetscErrorCode SetFromOptionsAppCtx(AppCtx*);
 extern PetscErrorCode FormBedLocal(DMDALocalInfo*, int, double**, AppCtx*);
 extern PetscErrorCode FormBounds(SNES,Vec,Vec);
 extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, double**, double**, AppCtx*);
@@ -144,9 +95,8 @@ int main(int argc,char **argv) {
   KSP                 ksp;
   Vec                 H;
   AppCtx              user;
-  CMBModel            cmb;
   PetscBool           exact_init = PETSC_FALSE, // initialize using dome exact solution
-                      dump = PETSC_FALSE;       // dump state (H,b) in binary file ice_MXxMY.dat after solve
+                      dump = PETSC_FALSE;       // dump state (u,b) in binary file ice_MXxMY.dat after solve
   DMDALocalInfo       info;
   double              **aH;
   SNESConvergedReason reason;
@@ -154,69 +104,47 @@ int main(int argc,char **argv) {
 
   PetscInitialize(&argc,&argv,(char*)0,help);
 
-  user.secpera    = 31556926.0;  // number of seconds in a year
   user.L          = 1800.0e3;    // m; compare domeR=750.0e3 radius
-  user.g          = 9.81;        // m/s^2
-  user.rho_ice    = 910.0;       // kg/m^3
-  user.n_ice      = 3.0;         // Glen exponent
-  user.A_ice      = 3.1689e-24;  // 1/(Pa^3 s); EISMINT I value
   user.D0         = 1.0;         // m^2 / s
   user.eps        = 0.001;
   user.delta      = 1.0e-4;
   user.lambda     = 0.25;
   user.verif      = PETSC_FALSE;
   user.check_admissible = PETSC_FALSE;
-  user.cmb        = NULL;
 
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"ice_","options to ice","");CHKERRQ(ierr);
-  ierr = PetscOptionsReal(
-      "-A", "set value of ice softness A in units Pa-3 s-1",
-      "ice.c",user.A_ice,&user.A_ice,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"dnl_","options to dnl","");CHKERRQ(ierr);
   ierr = PetscOptionsBool(
       "-check_admissible", "check admissibility of iterate at start of residual evaluation FormFunctionLocal()",
-      "ice.c",user.check_admissible,&user.check_admissible,NULL);CHKERRQ(ierr);
+      "dnl.c",user.check_admissible,&user.check_admissible,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal(
       "-D0", "representative value of diffusivity (used in regularizing D) in units m2 s-1",
-      "ice.c",user.D0,&user.D0,NULL);CHKERRQ(ierr);
+      "dnl.c",user.D0,&user.D0,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal(
-      "-delta", "dimensionless regularization for slope in SIA formulas",
-      "ice.c",user.delta,&user.delta,NULL);CHKERRQ(ierr);
+      "-delta", "dimensionless regularization for slope",
+      "dnl.c",user.delta,&user.delta,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool(
-      "-dump", "save final state (H, b)",
-      "ice.c",dump,&dump,NULL);CHKERRQ(ierr);
+      "-dump", "save final state (u, b)",
+      "dnl.c",dump,&dump,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal(
       "-eps", "dimensionless regularization for diffusivity D",
-      "ice.c",user.eps,&user.eps,NULL);CHKERRQ(ierr);
+      "dnl.c",user.eps,&user.eps,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool(
-      "-exact_init", "initialize with dome exact solution",
-      "ice.c",exact_init,&exact_init,NULL);CHKERRQ(ierr);
+      "-exact_init", "initialize with exact solution",
+      "dnl.c",exact_init,&exact_init,NULL);CHKERRQ(ierr);
+
+FIXME:  L should not be optimal; set domain according to which problem is being solve, and use DMDASetUniformCoordinates() accordingly; then use DMDAGetBoundingBox() in functions
+
   ierr = PetscOptionsReal(
       "-L", "side length of domain in meters",
-      "ice.c",user.L,&user.L,NULL);CHKERRQ(ierr);
+      "dnl.c",user.L,&user.L,NULL);CHKERRQ(ierr);
+
   ierr = PetscOptionsReal(
       "-lambda", "amount of upwinding; lambda=0 is none and lambda=1 is full",
-      "ice.c",user.lambda,&user.lambda,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal(
-      "-n", "value of Glen exponent n",
-      "ice.c",user.n_ice,&user.n_ice,NULL);CHKERRQ(ierr);
-  if (user.n_ice <= 1.0) {
-      SETERRQ1(PETSC_COMM_WORLD,1,
-          "ERROR: n = %f not allowed ... n > 1.0 is required\n",user.n_ice);
-  }
-  ierr = PetscOptionsReal(
-      "-rho", "ice density in units kg m3",
-      "ice.c",user.rho_ice,&user.rho_ice,NULL);CHKERRQ(ierr);
+      "dnl.c",user.lambda,&user.lambda,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool(
-      "-verif", "use dome exact solution for verification",
-      "ice.c",user.verif,&user.verif,NULL);CHKERRQ(ierr);
+      "-verif", "use exact solution for verification",
+      "dnl.c",user.verif,&user.verif,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
-
-  // derived constant computed after other ice properties are set
-  user.Gamma = 2.0 * PetscPowReal(user.rho_ice*user.g,user.n_ice) 
-                   * user.A_ice / (user.n_ice+2.0);
-
-  ierr = SetFromOptions_CMBModel(&cmb,user.secpera);
-  user.cmb = &cmb;
 
   // DMDA for the cell-centered grid
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
@@ -358,15 +286,31 @@ PetscErrorCode FormBedLocal(DMDALocalInfo *info, int stencilwidth, double **ab, 
   PetscFunctionReturn(0);
 }
 
-
-//  for call-back: tell SNESVI (variational inequality) that we want
-//    0.0 <= H < +infinity
+// bounds: psi <= u < +infinity
 PetscErrorCode FormBounds(SNES snes, Vec Xl, Vec Xu) {
   PetscErrorCode ierr;
-  PetscFunctionBeginUser;
-  ierr = VecSet(Xl,0.0); CHKERRQ(ierr);
-  ierr = VecSet(Xu,PETSC_INFINITY); CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  DM            da;
+  DMDALocalInfo info;
+  AppCtx        *user;
+  int           i, j;
+  double        **aXl, dx, dy, x, y, xymin[2], xymax[2];
+  ierr = SNESGetDM(snes,&da);CHKERRQ(ierr);
+  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+  ierr = DMDAGetBoundingBox(info.da,xymin,xymax); CHKERRQ(ierr);
+  dx = (xymax[0] - xymin[0]) / (info.mx - 1);
+  dy = (xymax[1] - xymin[1]) / (info.my - 1);
+  ierr = SNESGetApplicationContext(snes,&user); CHKERRQ(ierr);
+  ierr = DMDAVecGetArray(da, Xl, &aXl);CHKERRQ(ierr);
+  for (j=info.ys; j<info.ys+info.ym; j++) {
+    y = xymin[1] + j * dy;
+    for (i=info.xs; i<info.xs+info.xm; i++) {
+      x = xymin[0] + i * dx;
+      aXl[j][i] = (*(user->psi))(x,y);
+    }
+  }
+  ierr = DMDAVecRestoreArray(da, Xl, &aXl);CHKERRQ(ierr);
+  ierr = VecSet(Xu,PETSC_INFINITY);CHKERRQ(ierr);
+  return 0;
 }
 
 

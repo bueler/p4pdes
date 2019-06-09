@@ -5,9 +5,9 @@ obstacle: obstacle.o ../ch6/poissonfunctions.o chkopts
 	-${CLINKER} -o obstacle obstacle.o ../ch6/poissonfunctions.o ${PETSC_LIB}
 	${RM} obstacle.o ../ch6/poissonfunctions.o
 
-ice: ice.o  chkopts
-	-${CLINKER} -o ice ice.o  ${PETSC_LIB}
-	${RM} ice.o
+dnl: dnl.o  chkopts
+	-${CLINKER} -o dnl dnl.o  ${PETSC_LIB}
+	${RM} dnl.o
 
 # testing
 
@@ -20,6 +20,7 @@ runobstacle_2:
 runobstacle_3:
 	-@../testit.sh obstacle "-snes_grid_sequence 3 -snes_converged_reason -ksp_type cg -pc_type mg" 1 3
 
+# FIXME  convert these to dnl tests
 runice_1:
 	-@../testit.sh ice "-ice_verif -ice_exact_init -da_refine 1 -snes_converged_reason" 1 1
 
