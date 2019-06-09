@@ -8,16 +8,19 @@ static const char help[] =
 "Solves based on the diffusivity/pseudo-velocity (Bueler, 2016) decomposition\n"
 "       - div (D grad u) + div(W u^q) = f\n"
 "where  D = C u^q |grad(u+b)|^{p-2}  and  W = - C |grad(u+b)|^{p-2} grad b.\n\n"
-"Optionally can solve the steady-state ice sheet problem in 2D in which u = H\n"
-"is ice thickness,  b  is bed elevation, and  s = H + b  is surface elevation.\n"
-"In the ice case p = n+1  where n >= 1 is the Glen exponent, q = n+2, and\n"
-"Gamma = 2 A (rho g)^n / (n+2)  where A is the ice softness, rho is ice density,\n"
-"and g is gravity.  Then  Q = - D grad u + W u^q  is the nonsliding shallow ice\n"
-"approximation (SIA) flux.  In the ice sheet case the climatic mass balance\n"
-"f = m(H,x,y) is from one of two models; see icecmb.h.\n"
-"The domain is square  (0,L)^2  with zero Dirichlet boundary conditions.\n"
+"The domain is square with zero Dirichlet boundary conditions.\n"
 "The equation is discretized by a Q1 structured-grid FVE method (Bueler, 2016).\n"
-"Requires SNESVI (-snes_type vinewton{rsls|ssls}) because of the constraint.\n\n";
+"Requires SNESVI (-snes_type vinewton{rsls|ssls}) because of the constraint.\n\n"
+"Default problem is classical obstacle (-dnl_problem obstacle) with domain\n"
+"(-2,2)^2, C = 1, q = 0, p = 2, b = 0, f = 0, and psi(x,y) giving a \n"
+"hemispherical obstacle.\n\n"
+"Can solve a steady-state ice sheet problem (-dnl_problem ice) in 2D\n"
+"in which  u = H  is ice thickness,  b  is bed elevation, and  s = H + b  is\n"
+"ice surface elevation.  In that case  p = n+1  where  n >= 1  is the Glen\n"
+"exponent, q = n+2, and  C  is computed using the ice softness, ice density,\n"
+"and gravity.  In the ice case  Q = - D grad u + W u^q  is the nonsliding\n"
+"shallow ice approximation (SIA) flux and the climatic mass balance\n"
+"f = m(H,x,y) is from one of two models.  See ice.h.\n\n";
 
 /*
 1. shows basic success with SSLS but DIVERGES AT LEVEL 4:
@@ -55,19 +58,20 @@ result:
 #include "ice.h"
 
 typedef struct {
-    double    L,          // spatial domain is (0,L) x (0,L)
-              C,          // coefficient
-              D0,         // representative value of diffusivity (used in regularizing D)
+    double    C,          // coefficient
+              q,          // power on u (porous medium type degeneracy)
+              p,          // p-Laplacian power (|grad u|^{p-2} degeneracy)
+              D0,         // representative value of diffusivity (used for regularizing D)
               eps,        // regularization parameter for diffusivity D
               delta,      // dimensionless regularization for |grad(u+b)| term
               lambda;     // amount of upwinding; lambda=0 is none and lambda=1 is "full"
     PetscBool check_admissible; // check admissibility at start of FormFunctionLocal()
-    double    (*psi)(double,double); // evaluate obstacle  psi(x,y)
-    IceCtx    *ice;       // NULL if not solving ice sheet problem
+    double    (*psi)(double,double), // evaluate obstacle  psi(x,y)  at point
+              (*bed)(double,double); // evaluate bed elevation  b(x,y)  at point
 } AppCtx;
 
-// z = psi(x,y) is same as in obstacle.c
-double psi(double x, double y) {
+// z = hemisphere(x,y) is same obstacle as in obstacle.c
+double hemisphere(double x, double y) {
     const double  r = x * x + y * y,  // FIXME this is from (0,0)
                   r0 = 0.9,
                   psi0 = PetscSqrtReal(1.0 - r0*r0),
@@ -84,8 +88,16 @@ double zero(double x, double y) {
     return 0.0;
 }
 
-extern PetscErrorCode FormBedLocal(DMDALocalInfo*, int, double**, AppCtx*);
+typedef enum {OBSTACLE, ICE} ProblemType;
+static const char *ProblemTypes[] = {"obstacle", "ice",
+                                     "ProblemType", "", NULL};
+
+typedef enum {ZERO, ROLLING} IceBedType;
+static const char *IceBedTypes[] = {"zero", "rolling",
+                                     "IceBedType", "", NULL};
+
 extern PetscErrorCode FormBounds(SNES,Vec,Vec);
+extern PetscErrorCode FormBed(SNES,Vec);
 extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, double**, double**, AppCtx*);
 
 int main(int argc,char **argv) {
@@ -93,23 +105,25 @@ int main(int argc,char **argv) {
   DM                  da;
   SNES                snes;
   KSP                 ksp;
-  Vec                 H;
+  Vec                 u;
   AppCtx              user;
-  PetscBool           exact_init = PETSC_FALSE, // initialize using dome exact solution
-                      dump = PETSC_FALSE;       // dump state (u,b) in binary file ice_MXxMY.dat after solve
+  ProblemType         problem = OBSTACLE;
+  IceBedType          icebed = ZERO;
+  PetscBool           exact_init = PETSC_FALSE, // initialize using exact solution (if possible)
+                      dump = PETSC_FALSE;       // dump state (u,b) in binary file dnl_MXxMY.dat after solve
   DMDALocalInfo       info;
-  double              **aH;
   SNESConvergedReason reason;
   int                 snesit,kspit;
 
   PetscInitialize(&argc,&argv,(char*)0,help);
 
-  user.L          = 1800.0e3;    // m; compare domeR=750.0e3 radius
+  user.C          = 1.0;
+  user.q          = 0.0;
+  user.p          = 2.0;
   user.D0         = 1.0;         // m^2 / s
   user.eps        = 0.001;
   user.delta      = 1.0e-4;
   user.lambda     = 0.25;
-  user.verif      = PETSC_FALSE;
   user.check_admissible = PETSC_FALSE;
 
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"dnl_","options to dnl","");CHKERRQ(ierr);
@@ -131,19 +145,21 @@ int main(int argc,char **argv) {
   ierr = PetscOptionsBool(
       "-exact_init", "initialize with exact solution",
       "dnl.c",exact_init,&exact_init,NULL);CHKERRQ(ierr);
-
-FIXME:  L should not be optimal; set domain according to which problem is being solve, and use DMDASetUniformCoordinates() accordingly; then use DMDAGetBoundingBox() in functions
-
-  ierr = PetscOptionsReal(
-      "-L", "side length of domain in meters",
-      "dnl.c",user.L,&user.L,NULL);CHKERRQ(ierr);
-
+  ierr = PetscOptionsEnum("-ice_bed","type of bed elevation map to use with -dnl_problem ice",
+      "dnl.c",IceBedTypes,
+      (PetscEnum)(icebed),(PetscEnum*)&(icebed),NULL); CHKERRQ(ierr);
   ierr = PetscOptionsReal(
       "-lambda", "amount of upwinding; lambda=0 is none and lambda=1 is full",
       "dnl.c",user.lambda,&user.lambda,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool(
-      "-verif", "use exact solution for verification",
-      "dnl.c",user.verif,&user.verif,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal(
+      "-p", "p-Laplacian exponent",
+      "dnl.c",user.p,&user.p,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsEnum("-problem","problem type",
+      "dnl.c",ProblemTypes,
+      (PetscEnum)(problem),(PetscEnum*)&(problem),NULL); CHKERRQ(ierr);
+  ierr = PetscOptionsReal(
+      "-q", "porous medium type exponent",
+      "dnl.c",user.q,&user.q,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
 
   // DMDA for the cell-centered grid
@@ -155,8 +171,21 @@ FIXME:  L should not be optimal; set domain according to which problem is being 
                       NULL,NULL,&da);
   ierr = DMSetFromOptions(da); CHKERRQ(ierr);
   ierr = DMSetUp(da); CHKERRQ(ierr);  // this must be called BEFORE SetUniformCoordinates
-  ierr = DMDASetUniformCoordinates(da,0.0,user.L,0.0,user.L,-1.0,-1.0);CHKERRQ(ierr);
   ierr = DMSetApplicationContext(da, &user);CHKERRQ(ierr);
+
+  // set domain, obstacle, and b (bed)
+  user.bed = &zero;
+  if (problem == ICE) {
+      const double L = 1800.0e3;
+      ierr = DMDASetUniformCoordinates(da,0.0,L,0.0,L,-1.0,-1.0);CHKERRQ(ierr);
+      user.psi = &zero;
+      if (icebed == ROLLING) {
+          user.bed = &rollingbed;
+      }
+  } else { // problem == OBSTACLE
+      ierr = DMDASetUniformCoordinates(da,-2.0,2.0,-2.0,2.0,-1.0,-1.0);CHKERRQ(ierr);
+      user.psi = &hemisphere;
+  }
 
   // create and configure the SNES to solve a NCP/VI at each step
   ierr = SNESCreate(PETSC_COMM_WORLD,&snes);CHKERRQ(ierr);
@@ -164,14 +193,16 @@ FIXME:  L should not be optimal; set domain according to which problem is being 
   ierr = SNESSetApplicationContext(snes,&user);CHKERRQ(ierr);
   ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
                (DMDASNESFunction)FormFunctionLocal,&user); CHKERRQ(ierr);
-  ierr = SNESSetType(snes,SNESVINEWTONSSLS); CHKERRQ(ierr);
+  ierr = SNESSetType(snes,SNESVINEWTONRSLS); CHKERRQ(ierr);
   ierr = SNESVISetComputeVariableBounds(snes,&FormBounds); CHKERRQ(ierr);
   ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
 
   // set up initial iterate
-  ierr = DMCreateGlobalVector(da,&H);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject)H,"H"); CHKERRQ(ierr);
+  ierr = DMCreateGlobalVector(da,&u);CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject)u,"u"); CHKERRQ(ierr);
+FIXME FROM HERE
   if (exact_init) {
+      double **aH;
       ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
       ierr = DMDAVecGetArray(da,H,&aH); CHKERRQ(ierr);
       ierr = DomeThicknessLocal(&info,aH,&user); CHKERRQ(ierr);
@@ -181,7 +212,7 @@ FIXME:  L should not be optimal; set domain according to which problem is being 
   }
 
   // solve
-  ierr = SNESSolve(snes,NULL,H); CHKERRQ(ierr);
+  ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
   ierr = SNESGetConvergedReason(snes,&reason); CHKERRQ(ierr);
   if (reason <= 0) {
       ierr = PetscPrintf(PETSC_COMM_WORLD,
@@ -189,14 +220,14 @@ FIXME:  L should not be optimal; set domain according to which problem is being 
   }
 
   // get solution & DM on fine grid (which may have changed) after solve
-  ierr = VecDestroy(&H); CHKERRQ(ierr);
+  ierr = VecDestroy(&u); CHKERRQ(ierr);
   ierr = DMDestroy(&da); CHKERRQ(ierr);
   ierr = SNESGetDM(snes,&da); CHKERRQ(ierr); /* do not destroy da */
   ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-  ierr = SNESGetSolution(snes,&H); CHKERRQ(ierr); /* do not destroy H */
-  ierr = PetscObjectSetName((PetscObject)H,"H"); CHKERRQ(ierr);
+  ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr); /* do not destroy H */
+  ierr = PetscObjectSetName((PetscObject)u,"u"); CHKERRQ(ierr);
 
-  // compute performance measures; note utility of reporting last grid,
+  // compute performance measures; note it is useful to report last grid,
   //   last snesit/kspit when doing -snes_grid_sequence
   ierr = SNESGetIterationNumber(snes,&snesit); CHKERRQ(ierr);  // 
   ierr = SNESGetKSP(snes,&ksp); CHKERRQ(ierr);
@@ -250,67 +281,56 @@ FIXME:  L should not be optimal; set domain according to which problem is being 
   return PetscFinalize();
 }
 
-PetscErrorCode FormBedLocal(DMDALocalInfo *info, int stencilwidth, double **ab, AppCtx *user) {
-  int          j,k,r,s;
-  const double dx = user->L / (double)(info->mx-1),
-               dy = user->L / (double)(info->my-1),
-               Z = PETSC_PI / user->L;
-  double       x, y, b;
-  // vaguely-random frequencies and coeffs generated by fiddling; see randbed.py
-  const int    nc = 4,
-               jc[4] = {1, 3, 6, 8},
-               kc[4] = {1, 3, 4, 7};
-  const double scalec = 750.0,
-               C[4][4] = { { 2.00000000,  0.33000000, -0.55020034,  0.54495520},
-                           { 0.50000000,  0.45014486,  0.60551833, -0.52250644},
-                           { 0.93812068,  0.32638429, -0.24654812,  0.33887052},
-                           { 0.17592361, -0.35496741,  0.22694547, -0.05280704} };
-  PetscFunctionBeginUser;
-  // go through owned portion of grid and compute  b(x,y)
-  for (k = info->ys-stencilwidth; k < info->ys + info->ym+stencilwidth; k++) {
-      y = k * dy;
-      for (j = info->xs-stencilwidth; j < info->xs + info->xm+stencilwidth; j++) {
-          if (j < 0 || j >= info->mx-1 || k < 0 || k >= info->my-1)
-              continue;
-          x = j * dx;
-          // b(x,y) is sum of a few sines
-          b = 0.0;
-          for (r = 0; r < nc; r++) {
-              for (s = 0; s < nc; s++) {
-                  b += C[r][s] * sin(jc[r] * Z * x) * sin(kc[s] * Z * y);
-              }
-          }
-          ab[k][j] = scalec * b;
-      }
-  }
-  PetscFunctionReturn(0);
-}
-
 // bounds: psi <= u < +infinity
 PetscErrorCode FormBounds(SNES snes, Vec Xl, Vec Xu) {
-  PetscErrorCode ierr;
-  DM            da;
-  DMDALocalInfo info;
-  AppCtx        *user;
-  int           i, j;
-  double        **aXl, dx, dy, x, y, xymin[2], xymax[2];
-  ierr = SNESGetDM(snes,&da);CHKERRQ(ierr);
-  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-  ierr = DMDAGetBoundingBox(info.da,xymin,xymax); CHKERRQ(ierr);
-  dx = (xymax[0] - xymin[0]) / (info.mx - 1);
-  dy = (xymax[1] - xymin[1]) / (info.my - 1);
-  ierr = SNESGetApplicationContext(snes,&user); CHKERRQ(ierr);
-  ierr = DMDAVecGetArray(da, Xl, &aXl);CHKERRQ(ierr);
-  for (j=info.ys; j<info.ys+info.ym; j++) {
-    y = xymin[1] + j * dy;
-    for (i=info.xs; i<info.xs+info.xm; i++) {
-      x = xymin[0] + i * dx;
-      aXl[j][i] = (*(user->psi))(x,y);
+    PetscErrorCode ierr;
+    DM            da;
+    DMDALocalInfo info;
+    AppCtx        *user;
+    int           i, j;
+    double        **aXl, dx, dy, x, y, xymin[2], xymax[2];
+    ierr = SNESGetDM(snes,&da);CHKERRQ(ierr);
+    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+    ierr = DMDAGetBoundingBox(info.da,xymin,xymax); CHKERRQ(ierr);
+    dx = (xymax[0] - xymin[0]) / (info.mx - 1);
+    dy = (xymax[1] - xymin[1]) / (info.my - 1);
+    ierr = SNESGetApplicationContext(snes,&user); CHKERRQ(ierr);
+    ierr = DMDAVecGetArray(da, Xl, &aXl);CHKERRQ(ierr);
+    for (j=info.ys; j<info.ys+info.ym; j++) {
+        y = xymin[1] + j * dy;
+        for (i=info.xs; i<info.xs+info.xm; i++) {
+            x = xymin[0] + i * dx;
+            aXl[j][i] = (*(user->psi))(x,y);
+        }
     }
-  }
-  ierr = DMDAVecRestoreArray(da, Xl, &aXl);CHKERRQ(ierr);
-  ierr = VecSet(Xu,PETSC_INFINITY);CHKERRQ(ierr);
-  return 0;
+    ierr = DMDAVecRestoreArray(da, Xl, &aXl);CHKERRQ(ierr);
+    ierr = VecSet(Xu,PETSC_INFINITY);CHKERRQ(ierr);
+    return 0;
+}
+
+PetscErrorCode FormBed(SNES snes, Vec b) {
+    PetscErrorCode ierr;
+    DM            da;
+    DMDALocalInfo info;
+    AppCtx        *user;
+    int           i, j;
+    double        **ab, dx, dy, x, y, xymin[2], xymax[2];
+    ierr = SNESGetDM(snes,&da);CHKERRQ(ierr);
+    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+    ierr = DMDAGetBoundingBox(info.da,xymin,xymax); CHKERRQ(ierr);
+    dx = (xymax[0] - xymin[0]) / (info.mx - 1);
+    dy = (xymax[1] - xymin[1]) / (info.my - 1);
+    ierr = SNESGetApplicationContext(snes,&user); CHKERRQ(ierr);
+    ierr = DMDAVecGetArray(da, b, &ab);CHKERRQ(ierr);
+    for (j=info.ys; j<info.ys+info.ym; j++) {
+        y = xymin[1] + j * dy;
+        for (i=info.xs; i<info.xs+info.xm; i++) {
+            x = xymin[0] + i * dx;
+            ab[j][i] = (*(user->bed))(x,y);
+        }
+    }
+    ierr = DMDAVecRestoreArray(da, b, &ab);CHKERRQ(ierr);
+    return 0;
 }
 
 
@@ -502,6 +522,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **aHin,
       ierr = VecSet(b,0.0); CHKERRQ(ierr);
   } else {
       ierr = FormBedLocal(info,1,ab,user); CHKERRQ(ierr);  // get stencil width
+FIXME need GlobalToLocal on bed
   }
 
   // working space for fluxes; see text for face location of flux evaluation
