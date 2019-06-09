@@ -5,9 +5,9 @@ obstacle: obstacle.o ../ch6/poissonfunctions.o chkopts
 	-${CLINKER} -o obstacle obstacle.o ../ch6/poissonfunctions.o ${PETSC_LIB}
 	${RM} obstacle.o ../ch6/poissonfunctions.o
 
-dnl: dnl.o  chkopts
-	-${CLINKER} -o dnl dnl.o  ${PETSC_LIB}
-	${RM} dnl.o
+dnlo: dnlo.o  chkopts
+	-${CLINKER} -o dnlo dnlo.o  ${PETSC_LIB}
+	${RM} dnlo.o
 
 # testing
 
@@ -20,11 +20,13 @@ runobstacle_2:
 runobstacle_3:
 	-@../testit.sh obstacle "-snes_grid_sequence 3 -snes_converged_reason -ksp_type cg -pc_type mg" 1 3
 
-# FIXME  convert these to dnl tests
+rundnlo_1:
+	-@../testit.sh dnlo "-snes_monitor_short -da_refine 1" 1 1
+
+# FIXME  convert these to dnlo tests
 runice_1:
 	-@../testit.sh ice "-ice_verif -ice_exact_init -da_refine 1 -snes_converged_reason" 1 1
 
-# see PETSc issue #300:
 runice_2:
 	-@../testit.sh ice "-ice_verif -snes_grid_sequence 1 -snes_converged_reason" 1 2
 
@@ -33,16 +35,16 @@ runice_3:
 
 test_obstacle: runobstacle_1 runobstacle_2 runobstacle_3
 
-test_ice: runice_1 runice_2 runice_3
+test_dnlo: rundnlo_1
 
-test: test_obstacle
+test: test_obstacle test_dnlo
 
 # etc
 
-.PHONY: distclean runobstacle_1 runobstacle_2 runobstacle_3 runice_1 runice_2 runice_3 test test_obstacle test_ice
+.PHONY: distclean runobstacle_1 runobstacle_2 runobstacle_3 rundnlo_1 test test_obstacle test_dnlo
 
 distclean:
-	@rm -f *~ obstacle ice *.dat *.dat.info *.pdf *.pyc *tmp
+	@rm -f *~ obstacle dnlo *.dat *.dat.info *.pdf *.pyc *tmp
 	@rm -f PetscBinaryIO.py petsc_conf.py
 	(cd solns; ${MAKE} distclean)
 

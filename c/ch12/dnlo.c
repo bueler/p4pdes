@@ -1,5 +1,5 @@
 static const char help[] = "\n"
-"Solves doubly-nonlinear obstacle problems in 2D.  Option prefix dnl_.\n"
+"Solves doubly-nonlinear obstacle problems in 2D.  Option prefix dn_.\n"
 "The PDE (interior condition) of such problems is\n"
 "    - div (C u^q |grad(u+b)|^{p-2} grad(u+b)) = f(u,x,y)\n"
 "where the solution u(x,y) is subject to a obstacle constraint\n"
@@ -26,10 +26,10 @@ static const char help[] = "\n"
 
 /*
 1. looks reasonable with RSLS:
-./dnl -snes_monitor -ksp_converged_reason -pc_type mg -snes_grid_sequence 3
+./dnlo -snes_monitor -ksp_converged_reason -pc_type mg -snes_grid_sequence 3
 
 2. looks like it works with SSLS:
-./dnl -snes_type vinewtonssls -snes_monitor -snes_monitor_solution draw -draw_pause 1 -da_refine 1
+./dnlo -snes_type vinewtonssls -snes_monitor -snes_monitor_solution draw -draw_pause 1 -da_refine 1
 ./obstacle -da_refine 1 -snes_monitor_solution draw -draw_pause 1 -snes_monitor -snes_type vinewtonssls
 */
 
@@ -137,40 +137,40 @@ int main(int argc,char **argv) {
   user.lambda     = 0.25;
   user.check_admissible = PETSC_FALSE;
 
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"dnl_","options to dnl","");CHKERRQ(ierr);
+  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"dn_","options to dnlo","");CHKERRQ(ierr);
   ierr = PetscOptionsBool(
       "-check_admissible", "check admissibility of iterate at start of residual evaluation FormFunctionLocal()",
-      "dnl.c",user.check_admissible,&user.check_admissible,NULL);CHKERRQ(ierr);
+      "dnlo.c",user.check_admissible,&user.check_admissible,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal(
       "-D0", "representative value of diffusivity (used in regularizing D) in units m2 s-1",
-      "dnl.c",user.D0,&user.D0,NULL);CHKERRQ(ierr);
+      "dnlo.c",user.D0,&user.D0,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal(
       "-delta", "dimensionless regularization for slope",
-      "dnl.c",user.delta,&user.delta,NULL);CHKERRQ(ierr);
+      "dnlo.c",user.delta,&user.delta,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool(
-      "-dump", "save final state (u, psi, b) in file dnl_MXxMY.dat",
-      "dnl.c",dump,&dump,NULL);CHKERRQ(ierr);
+      "-dump", "save final state (u, psi, b) in file dnlo_MXxMY.dat",
+      "dnlo.c",dump,&dump,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal(
       "-eps", "dimensionless regularization for diffusivity D",
-      "dnl.c",user.eps,&user.eps,NULL);CHKERRQ(ierr);
+      "dnlo.c",user.eps,&user.eps,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool(
       "-exact_init", "initialize with exact solution (only possible if FIXME)",
-      "dnl.c",exact_init,&exact_init,NULL);CHKERRQ(ierr);
+      "dnlo.c",exact_init,&exact_init,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnum("-ice_bed","type of bed elevation map to use with -dnl_problem ice",
-      "dnl.c",IceBedTypes,
+      "dnlo.c",IceBedTypes,
       (PetscEnum)(icebed),(PetscEnum*)&(icebed),NULL); CHKERRQ(ierr);
   ierr = PetscOptionsReal(
       "-lambda", "amount of upwinding; lambda=0 is none and lambda=1 is full",
-      "dnl.c",user.lambda,&user.lambda,NULL);CHKERRQ(ierr);
+      "dnlo.c",user.lambda,&user.lambda,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal(
       "-p", "p-Laplacian exponent",
-      "dnl.c",user.p,&user.p,NULL);CHKERRQ(ierr);
+      "dnlo.c",user.p,&user.p,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnum("-problem","problem type",
-      "dnl.c",ProblemTypes,
+      "dnlo.c",ProblemTypes,
       (PetscEnum)(problem),(PetscEnum*)&(problem),NULL); CHKERRQ(ierr);
   ierr = PetscOptionsReal(
       "-q", "porous medium type exponent",
-      "dnl.c",user.q,&user.q,NULL);CHKERRQ(ierr);
+      "dnlo.c",user.q,&user.q,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
 
   // DMDA for the cell-centered grid
@@ -262,7 +262,7 @@ int main(int argc,char **argv) {
       ierr = PetscObjectSetName((PetscObject)b,"b"); CHKERRQ(ierr);
       ierr = FormField(da,user.psi,psi); CHKERRQ(ierr);
       ierr = FormField(da,user.bed,b); CHKERRQ(ierr);
-      ierr = sprintf(filename,"dnl_%dx%d.dat",info.mx,info.my);
+      ierr = sprintf(filename,"dnlo_%dx%d.dat",info.mx,info.my);
       ierr = PetscPrintf(PETSC_COMM_WORLD,"writing PETSC binary file %s ...\n",
           filename); CHKERRQ(ierr);
       ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename,FILE_MODE_WRITE,
@@ -537,7 +537,8 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **auin,
                        auin[k][j],j,k);
           }
           if (j == 0 || j == info->mx-1 || k == 0 || k == info->my-1) {
-              if (j >= info->xs && j < info->xs+info->xm && k >= info->ys && k < info->ys+info->ym)
+              if (   j >= info->xs && j < info->xs+info->xm
+                  && k >= info->ys && k < info->ys+info->ym)
                   FF[k][j] = auin[k][j];   // FIXME scaling?
               au[k][j] = 0.0;
           } else

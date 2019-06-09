@@ -1,0 +1,5 @@
+solving problem obstacle using q = 0.000 and p = 2.000 ...
+  0 SNES Function norm 1.99847 
+  1 SNES Function norm 3.53702e-06 
+  2 SNES Function norm < 1.e-11
+done on 9 x 9 grid (SNES iters = 2, last KSP iters = 4)
