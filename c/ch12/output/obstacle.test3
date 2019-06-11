@@ -2,5 +2,5 @@
     Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-on   17 x   17 grid: SNES iters = 3, last KSP iters = 4
+done on 17 x 17 grid ... CONVERGED_FNORM_RELATIVE, SNES iters = 3, last KSP iters = 4
 errors: av |u-uexact| = 2.707e-03, |u-uexact|_inf = 1.428e-02, active area error = 18.430%

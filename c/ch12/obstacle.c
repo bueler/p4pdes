@@ -10,8 +10,9 @@ static const char help[] =
 "Jacobian evaluation code for the Poisson equation in ch6/.\n\n";
 
 /*
-parallel versions:
-FAILS IN PetscGatherMessageLengths(): $ mpiexec -n 8 ./obstacle -snes_grid_sequence 8 -snes_converged_reason -pc_type mg -da_grid_x 5 -da_grid_y 5 -snes_type vinewtonrsls
+parallel bug; FAILS IN PetscGatherMessageLengths() in --with-debugging=0 case:
+    mpiexec -n 8 ./obstacle -snes_grid_sequence 3 -snes_converged_reason -pc_type mg -da_grid_x 5 -da_grid_y 5 -snes_type vinewtonrsls
+works with GAMG, works for --with-debugging=1
 */
 
 #include <petsc.h>
@@ -160,8 +161,8 @@ int main(int argc,char **argv) {
   ierr = SNESGetKSP(snes,&ksp); CHKERRQ(ierr);
   ierr = KSPGetIterationNumber(ksp,&kspit); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
-      "on %4d x %4d grid: SNES iters = %d, last KSP iters = %d\n",
-      info.mx,info.my,snesit,kspit); CHKERRQ(ierr);
+      "done on %d x %d grid ... %s, SNES iters = %d, last KSP iters = %d\n",
+      info.mx,info.my,SNESConvergedReasons[reason],snesit,kspit); CHKERRQ(ierr);
 
   /* compare to exact */
   ierr = GetActiveSet(snes,&info,u,Xl,NULL,&actarea); CHKERRQ(ierr);
