@@ -11,18 +11,21 @@ runobstacle_1:
 	-@../testit.sh obstacle "-da_refine 2 -mat_is_symmetric -snes_monitor_short -ksp_rtol 1.0e-12 -snes_rtol 1.0e-10 -ksp_converged_reason" 1 1
 
 runobstacle_2:
-	-@../testit.sh obstacle "-da_refine 3 -snes_monitor_short -ksp_type gmres -pc_type asm -sub_pc_type lu" 4 2
+	-@../testit.sh obstacle "-da_refine 2 -snes_monitor_short -ksp_type gmres -pc_type asm -sub_pc_type lu" 4 2
 
 runobstacle_3:
-	-@../testit.sh obstacle "-snes_grid_sequence 3 -snes_converged_reason -ksp_type cg -pc_type mg" 1 3
+	-@../testit.sh obstacle "-snes_grid_sequence 3 -snes_converged_reason -pc_type mg" 1 3
 
-test_obstacle: runobstacle_1 runobstacle_2 runobstacle_3
+runobstacle_4:
+	-@../testit.sh obstacle "-snes_grid_sequence 2 -snes_converged_reason -pc_type gamg -pc_gamg_type classical" 1 4
+
+test_obstacle: runobstacle_1 runobstacle_2 runobstacle_3 runobstacle_4
 
 test: test_obstacle
 
 # etc
 
-.PHONY: distclean runobstacle_1 runobstacle_2 runobstacle_3 test test_obstacle
+.PHONY: distclean runobstacle_1 runobstacle_2 runobstacle_3 runobstacle_4 test test_obstacle
 
 distclean:
 	@rm -f *~ obstacle *.dat *.dat.info *.pdf *.pyc *tmp
