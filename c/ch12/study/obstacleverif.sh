@@ -7,15 +7,26 @@ set +x
 
 # see p4pdes-book/figs/obstacle.py|txt for visualization
 
-# defaults to RSLS solver
+# defaults to RS solver
 
-MAXLEV=10   # to 2049x2049 grid
+MAXLEV=7   # to 257x257 grid
 
-for (( LEV=3; LEV<=$MAXLEV; LEV++ )); do
-    rm -rf tmp.txt
-    ../obstacle -snes_grid_sequence $LEV -ksp_type cg -pc_type mg -mg_levels_ksp_type richardson -log_view > tmp.txt
-    grep "errors:" tmp.txt
-    grep "last KSP iters" tmp.txt
-    grep "Flop:  " tmp.txt
-done;
+for GRID in "-da_refine" "-snes_grid_sequence"; do
+    echo "=============== USING $GRID ============="
+    for SNES in vinewtonrsls vinewtonssls; do
+        for PCMG in "-pc_type mg -mg_levels_ksp_max_it 3" \
+                    "-pc_type gamg -pc_gamg_type classical"; do
+            METH="-snes_type $SNES -ksp_type cg $PCMG"
+            echo "METHOD:  $METH"
+            for (( LEV=3; LEV<=$MAXLEV; LEV++ )); do
+                rm -rf tmp.txt
+                ../obstacle $GRID $LEV $METH -log_view > tmp.txt
+                grep "errors:" tmp.txt
+                grep "last KSP iters" tmp.txt
+                grep "Flop:  " tmp.txt
+            done
+            echo
+        done
+    done
+done
 
