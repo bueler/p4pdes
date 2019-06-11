@@ -3,9 +3,11 @@ set -e
 set +x
 
 # run with --with-debugging=0 build, as
-#   ./obstacleverif.sh &> obstacleverif.txt
+#   ./obstaclemgruns.sh &> obstaclemgruns.txt
 
-# see p4pdes-book/figs/obstacle.py|txt for visualization
+# generates first two tables in Chapter 12
+
+# see also p4pdes-book/figs/obstacle.py for visualization
 
 # defaults to RS solver
 
