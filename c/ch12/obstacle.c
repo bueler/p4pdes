@@ -123,6 +123,8 @@ int main(int argc,char **argv) {
              (DMDASNESFunction)Poisson2DFunctionLocal,&user); CHKERRQ(ierr);
   ierr = DMDASNESSetJacobianLocal(da,
              (DMDASNESJacobian)Poisson2DJacobianLocal,&user); CHKERRQ(ierr);
+  ierr = SNESGetKSP(snes,&ksp); CHKERRQ(ierr);
+  ierr = KSPSetType(ksp,KSPCG); CHKERRQ(ierr);
   ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
 
   // initial iterate is zero for simplicity
