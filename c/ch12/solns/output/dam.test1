@@ -1,0 +1,4 @@
+    Nonlinear solve converged due to CONVERGED_FNORM_ABS iterations 2
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+done on   9 x  13 grid; computed seepage face height = 10.0000000
