@@ -31,9 +31,14 @@ double zero(double x, double y, double z, void *ctx) {
     return 0.0;
 }
 
-static double C = 2.5;
-double f_fcn(double x, double y, double z, void *ctx) {
-    return 2.0 * C;
+typedef struct {
+    double  C;   // physical parameter
+} ElastoCtx;
+
+double f_fcn(double x, double y, double z, void *user) {
+    PoissonCtx *poi = (PoissonCtx*) user;
+    ElastoCtx  *elasto = (ElastoCtx*) poi->addctx;
+    return 2.0 * elasto->C;
 }
 
 extern PetscErrorCode FormBounds(SNES, Vec, Vec);
@@ -44,6 +49,7 @@ int main(int argc,char **argv) {
   SNES           snes;
   Vec            u_initial, u;
   PoissonCtx     user;
+  ElastoCtx      elasto;
   SNESConvergedReason reason;
   int            snesits;
   double         lflops,flops;
@@ -51,10 +57,11 @@ int main(int argc,char **argv) {
 
   PetscInitialize(&argc,&argv,NULL,help);
 
+  elasto.C = 2.5;
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"el_",
                            "elasto-plastic torsion solver options",""); CHKERRQ(ierr);
   ierr = PetscOptionsReal("-C","f(x,y)=2C is source term",
-                          "elasto.c",C,&C,NULL); CHKERRQ(ierr);
+                          "elasto.c",elasto.C,&elasto.C,NULL); CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
@@ -72,7 +79,7 @@ int main(int argc,char **argv) {
   user.cz = 1.0;
   user.g_bdry = &zero;
   user.f_rhs = &f_fcn;
-  user.addctx = NULL;
+  user.addctx = &elasto;
   ierr = DMSetApplicationContext(da,&user);CHKERRQ(ierr);
 
   ierr = SNESCreate(PETSC_COMM_WORLD,&snes);CHKERRQ(ierr);
@@ -111,8 +118,8 @@ int main(int argc,char **argv) {
   ierr = MPI_Allreduce(&lflops,&flops,1,MPI_DOUBLE,MPI_SUM,PETSC_COMM_WORLD); CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
-      "done on %4d x %4d grid; total flops = %.3e; SNES iterations %d\n",
-      info.mx,info.my,flops,snesits); CHKERRQ(ierr);
+      "done on %d x %d grid using C=%.3f: total flops = %.3e; SNES iterations %d\n",
+      info.mx,info.my,elasto.C,flops,snesits); CHKERRQ(ierr);
 
   SNESDestroy(&snes);
   return PetscFinalize();

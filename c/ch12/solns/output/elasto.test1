@@ -1,4 +1,4 @@
     Nonlinear solve converged due to CONVERGED_FNORM_ABS iterations 1
   Nonlinear solve converged due to CONVERGED_FNORM_ABS iterations 2
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
-done on    9 x    9 grid; total flops = 1.256e+05; SNES iterations 4
+done on 9 x 9 grid using C=2.500: total flops = 1.259e+05; SNES iterations 4
