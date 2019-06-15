@@ -18,13 +18,13 @@ runstokes_2:
 runstokes_3:
 	-@./lidbox.py -quiet -cl 0.4 -cornerrefine 4 coarse.geo
 	-@gmsh -v 0 -2 coarse.geo  # verbosity=0 for quiet
-	-@../../c/testit.sh stokes.py "-i coarse.msh -show_norms -dm_view -refine 1 -package schur2 -s_ksp_converged_reason" 1 3
+	-@../../c/testit.sh stokes.py "-i coarse.msh -show_norms -dm_view -refine 1 -package schur3 -s_ksp_converged_reason" 1 3
 
 runstokes_4:
-	-@../../c/testit.sh stokes.py "-refine 1 -pdegree 0 -dpressure -show_norms -package schur1" 1 4
+	-@../../c/testit.sh stokes.py "-refine 1 -pdegree 0 -dpressure -show_norms -package schur3" 1 4
 
 runstokes_5:
-	-@../../c/testit.sh stokes.py "-s_ksp_monitor_short -s_ksp_rtol 1.0e-3 -refine 1 -nobase -show_norms -package schur1" 2 5
+	-@../../c/testit.sh stokes.py "-s_ksp_monitor_short -s_ksp_rtol 1.0e-3 -refine 1 -nobase -show_norms -package schur3" 2 5
 
 test_fish: runfish_1 runfish_2 runfish_3
 

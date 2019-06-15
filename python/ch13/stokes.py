@@ -174,7 +174,7 @@ pars = {'minres':      # default is un-preconditioned MINRES
             'fieldsplit_1_pc_type': 'jacobi'},
         'schur2':      # FGMRES+Schur(lower)+GMG
            # reference: https://www.firedrakeproject.org/demos/geometric_multigrid.py.html
-           # ALSO: adds pressure mass matrix term in Jacobian for preconditioning Schur
+           # ALSO: adds pressure mass matrix term in Jacobian for preconditioning Schur  (see args.package == 'schur2' conditional below)
            {'ksp_type': 'fgmres',  # change from Firedrake form with gmres
             'pc_type': 'fieldsplit',
             'pc_fieldsplit_type': 'schur',
@@ -183,7 +183,18 @@ pars = {'minres':      # default is un-preconditioned MINRES
             'fieldsplit_0_pc_type': 'mg',
             'fieldsplit_1_ksp_type': 'preonly',
             'fieldsplit_1_pc_type': 'bjacobi',
-            'fieldsplit_1_sub_pc_type': 'icc'}}
+            'fieldsplit_1_sub_pc_type': 'icc'},
+        'schur3':      # GMRES+Schur(full)+GAMG   FIXME this is just something that works, until I can get back to making schur2 work properly; see FIXME below
+           {'ksp_type': 'gmres',
+            'pmat_type': 'aij',
+            'pc_type': 'fieldsplit',
+            'pc_fieldsplit_type': 'schur',
+            'pc_fieldsplit_schur_factorization_type': 'full',
+            'fieldsplit_0_ksp_type': 'preonly',
+            'fieldsplit_0_pc_type': 'gamg',
+            'fieldsplit_1_ksp_type': 'cg',
+            'fieldsplit_1_pc_type': 'bjacobi',
+            'fieldsplit_1_sub_pc_type': 'icc'} }
 try:
     sparams = pars[args.package]
 except KeyError:
@@ -198,11 +209,13 @@ pFEstr = '%s^%d' % (['P','Q'][args.quad],args.pdegree)
 PETSc.Sys.Print('solving%s with %s x %s %s elements and package %s ...' \
                 % (meshstr,uFEstr,pFEstr,mixedname,args.package))
 
+# FIXME  see changes in https://github.com/firedrakeproject/firedrake/commit/43a57439c331c35312af19a0ace3f6593bb12394 for geometric_multigrid.py ... new way of handling pressure mass matrix ... see latest firedrake/demos/multigrid/geometric_multigrid.py for best way to handle
+
 # actually solve
 uu, pp = TrialFunctions(Z)
 a = (args.mu * inner(grad(uu), grad(v)) - pp * div(v) - div(uu) * q) * dx
 if args.package == 'schur2':
-    Jp = a + pp * q * dx
+    Jp = a + pp * q * dx   # FIXME old way of handling pressure mass matrix
 else:
     Jp = a
 if args.nobase:
