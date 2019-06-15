@@ -2,6 +2,7 @@
 
 from argparse import ArgumentParser, RawTextHelpFormatter
 from firedrake import *
+from firedrake.petsc import PETSc
 
 parser = ArgumentParser(description="""
 Use Firedrake's LINEAR solver for the Poisson problem
@@ -10,52 +11,63 @@ Use Firedrake's LINEAR solver for the Poisson problem
 Compare ../fish.py.  The PETSc solver prefix is 's_'.""",
                     formatter_class=RawTextHelpFormatter)
 parser.add_argument('-mx', type=int, default=3, metavar='MX',
-                    help='number of mesh points in x-direction')
+                    help='number of grid points in x-direction')
 parser.add_argument('-my', type=int, default=3, metavar='MY',
-                    help='number of mesh points in y-direction')
+                    help='number of grid points in y-direction')
 parser.add_argument('-o', metavar='NAME', type=str, default='',
                     help='output file name ending with .pvd')
-parser.add_argument('-order', type=int, default=1, metavar='X',
+parser.add_argument('-k', type=int, default=1, metavar='K',
                     help='polynomial degree for elements')
 parser.add_argument('-quad', action='store_true', default=False,
                     help='use quadrilateral finite elements')
+parser.add_argument('-refine', type=int, default=-1, metavar='X',
+                    help='number of refinement levels (e.g. for GMG)')
 args, unknown = parser.parse_known_args()
 
-# Create mesh and define function space
-mesh = UnitSquareMesh(args.mx-1, args.my-1, quadrilateral=args.quad)
+# Create mesh, enabling GMG via refinement using hierarchy
+mx, my = args.mx, args.my
+mesh = UnitSquareMesh(mx-1, my-1, quadrilateral=args.quad)
+if args.refine > 0:
+    hierarchy = MeshHierarchy(mesh, args.refine)
+    mesh = hierarchy[-1]     # the fine mesh
+    mx, my = (mx-1) * 2**args.refine + 1, (my-1) * 2**args.refine + 1
 x,y = SpatialCoordinate(mesh)
-W = FunctionSpace(mesh, 'Lagrange', degree=args.order)
+mesh._plex.viewFromOptions('-dm_view')
 
-# Define right-hand side and weak form.
+# Define function space, right-hand side, and weak form.
+W = FunctionSpace(mesh, 'Lagrange', degree=args.k)
 f_rhs = Function(W).interpolate(x * exp(y))  # manufactured
+u = Function(W)  # initialized to zero here
 v = TestFunction(W)
-# CHANGES FOR KSP here
-u = TrialFunction(W)  # initialized to zero
-a = dot(grad(u), grad(v)) * dx
-L = f_rhs * v * dx
+u = TrialFunction(W)  # initialized to zero   CHANGE TO KSP
+a = dot(grad(u), grad(v)) * dx   # CHANGE TO KSP
+L = f_rhs * v * dx   # CHANGE TO KSP
 
-# Call solver, including boundary conditions
+# Dirichlet boundary conditions
 g_bdry = Function(W).interpolate(- x * exp(y))  # = exact solution
 bdry_ids = (1, 2, 3, 4)   # all four sides of boundary
 bc = DirichletBC(W, g_bdry, bdry_ids)
-u = Function(W)
-solve(a == L, u, bcs = [bc], options_prefix = 's',
+
+# Solve
+u = Function(W)   # CHANGE TO KSP
+solve(a == L, u, bcs = [bc], options_prefix = 's',   # CHANGE TO KSP
       solver_parameters = {'snes_type': 'ksponly',
                            'ksp_type': 'cg'})
 
-# Compute error in L_infty and L_2 norm
-elementstr = '%s^%d' % (['P','Q'][args.quad],args.order)
-u_exact = g_bdry
-error_Linf = max(abs(u.vector().array() - u_exact.vector().array()))
-error_L2 = sqrt(assemble(dot(u - u_exact, u - u_exact) * dx))
-print('done on %d x %d point grid with %s elements:' \
-      % (args.mx,args.my,elementstr))
-print('  error |u-uexact|_inf = %.3e, |u-uexact|_h = %.3e' \
+# Numerical error in L_infty and L_2 norm
+elementstr = '%s^%d' % (['P','Q'][args.quad],args.k)
+udiff = Function(W).interpolate(u - g_bdry)
+with udiff.dat.vec_ro as vudiff:
+    error_Linf = abs(vudiff).max()[1]
+error_L2 = sqrt(assemble(dot(udiff, udiff) * dx))
+PETSc.Sys.Print('done on %d x %d grid with %s elements:' \
+      % (mx,my,elementstr))
+PETSc.Sys.Print('  error |u-uexact|_inf = %.3e, |u-uexact|_h = %.3e' \
       % (error_Linf,error_L2))
 
 # Optionally save to a .pvd file viewable with Paraview
 if len(args.o) > 0:
-    print('saving solution to %s ...' % args.o)
+    PETSc.Sys.Print('saving solution to %s ...' % args.o)
     u.rename('u')
     File(args.o).write(u)
 
