@@ -30,7 +30,7 @@ Uses mixed FE method, either Taylor-Hood family (P^k x P^l or Q^k x Q^l)
 or CD with discontinuous pressure; defaults to P^2 x P^1.  Uses either
 uniform mesh or reads mesh.  Serves as an example of a saddle-point system.
 See code for solver packages: -package minres|directlu|directsvd|schur1|schur2
-The solver prefix for PETSc options is 's_'.""",
+The prefix for PETSC solver options is 's_'.""",
                     formatter_class=RawTextHelpFormatter)
 parser.add_argument('-analytical', action='store_true', default=False,
                     help='use problem with exact solution')

@@ -8,7 +8,7 @@ parser = ArgumentParser(description="""
 Use Firedrake's nonlinear solver for the Poisson problem
   -Laplace(u) = f        in the unit square
             u = g        on the boundary
-Compare c/ch6/fish.c.  The PETSc solver prefix is 's_'.""",
+Compare c/ch6/fish.c.  The prefix for PETSC solver options is 's_'.""",
                     formatter_class=RawTextHelpFormatter)
 parser.add_argument('-mx', type=int, default=3, metavar='MX',
                     help='number of grid points in x-direction')
