@@ -1,12 +1,13 @@
 static char help[] =
-"Structured-grid minimal surface equation (MSE) in 2D.  Option prefix mse_.\n"
+"Solve the minimal surface equation in 2D.  Option prefix ms_.\n"
 "Equation is\n"
 "  - div ( (1 + |grad u|^2)^q grad u ) = 0\n"
-"on the unit square [0,1]x[0,1] subject to Dirichlet boundary\n"
-"conditions u = g(x,y).  Power q defaults to -1/2 (i.e. MSE) but is adjustable.\n"
+"on the unit square S=(0,1)^2 subject to Dirichlet boundary\n"
+"conditions u = g(x,y).  Power q defaults to -1/2 but is adjustable.\n"
 "Catenoid and tent boundary conditions are implemented; catenoid is an exact\n"
-"solution.  We re-use the Jacobian from the Poisson equation, but it is suitable\n"
-"only for low-amplitude g, or as preconditioning material in -snes_mf_operator.\n"
+"solution.  The discretization is structured-grid (DMDA) finite differences.\n"
+"We re-use the Jacobian from the Poisson equation, but it is suitable only\n"
+"for low-amplitude g, or as preconditioning material in -snes_mf_operator.\n"
 "Options -snes_fd_color and -snes_grid_sequence K are recommended.\n"
 "This code is multigrid (GMG) capable.\n\n";
 
@@ -76,7 +77,7 @@ int main(int argc,char **argv) {
     user.cz = 1.0;
 
     PetscInitialize(&argc,&argv,NULL,help);
-    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"mse_",
+    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"ms_",
                              "minimal surface equation solver options",""); CHKERRQ(ierr);
     ierr = PetscOptionsReal("-catenoid_c",
                             "parameter for problem catenoid; c >= 1 required",
