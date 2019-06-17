@@ -5,6 +5,10 @@ minimal: minimal.o ../ch6/poissonfunctions.o chkopts
 	-${CLINKER} -o minimal minimal.o ../ch6/poissonfunctions.o ${PETSC_LIB}
 	${RM} minimal.o ../ch6/poissonfunctions.o
 
+biharm: biharm.o ../ch6/poissonfunctions.o chkopts
+	-${CLINKER} -o biharm biharm.o ../ch6/poissonfunctions.o ${PETSC_LIB}
+	${RM} biharm.o ../ch6/poissonfunctions.o
+
 # testing
 
 runminimal_1:
@@ -28,5 +32,5 @@ test: test_minimal
 .PHONY: distclean runminimal_1 runminimal_2 runminimal_3 runminimal_4 test test_minimal
 
 distclean:
-	@rm -f *~ minimal *tmp
+	@rm -f *~ minimal biharm *tmp
 
