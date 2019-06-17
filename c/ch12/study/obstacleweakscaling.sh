@@ -4,6 +4,7 @@ set -e
 # generates p4pdes-book/figs/obstacleweakscaling.txt; see last table and figure in Chapter 12
 
 # FIXME run with --with-debugging=1 configuration, and lower resolution than desired, because of PETSc issue #306
+# see PR #1785 which seems to resolve it
 
 # weak scaling for obstacle:  grid-sequencing + RS + GMG + ASM/SSOR
 

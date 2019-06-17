@@ -13,6 +13,7 @@ static const char help[] =
 parallel bug; FAILS IN PetscGatherMessageLengths() in --with-debugging=0 case:
     mpiexec -n 8 ./obstacle -snes_grid_sequence 3 -snes_converged_reason -pc_type mg -da_grid_x 5 -da_grid_y 5 -snes_type vinewtonrsls
 works with GAMG, works for --with-debugging=1
+see PR #1785 which seems to resolve
 */
 
 #include <petsc.h>
