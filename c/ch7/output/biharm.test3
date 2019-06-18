@@ -1,0 +1,6 @@
+    0 KSP Residual norm 0.0316786 
+    1 KSP Residual norm 0.00019927 
+    2 KSP Residual norm 4.55319e-07 
+    3 KSP Residual norm 1.68289e-09 
+done on 9 x 9 grid ...
+  errors |v-vex|_inf/|vex|_inf = 1.44843e-01, |u-uex|_inf/|uex|_inf = 3.76023e-01
