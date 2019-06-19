@@ -88,7 +88,7 @@ extern PetscErrorCode Form2DUExact(DMDALocalInfo*, Vec, PoissonCtx*);
 extern PetscErrorCode Form3DUExact(DMDALocalInfo*, Vec, PoissonCtx*);
 
 //STARTPTRARRAYS
-// arrays of pointers to functions:   ..._ptr[DIMS]
+// arrays of pointers to functions
 static void* residual_ptr[3]
     = {&Poisson1DFunctionLocal, &Poisson2DFunctionLocal, &Poisson3DFunctionLocal};
 
