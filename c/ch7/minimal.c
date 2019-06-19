@@ -162,13 +162,13 @@ int main(int argc,char **argv) {
     ierr = DMRestoreGlobalVector(da,&u_initial); CHKERRQ(ierr);
     ierr = DMDestroy(&da); CHKERRQ(ierr);
     ierr = SNESGetDM(snes,&da); CHKERRQ(ierr);
-    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"done on %d x %d grid and problem %s",
-                       info.mx,info.my,ProblemTypes[problem]); CHKERRQ(ierr);
     ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr);
 //ENDSNESSOLVE
 
     // evaluate numerical error in exact solution case
+    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"done on %d x %d grid and problem %s",
+                       info.mx,info.my,ProblemTypes[problem]); CHKERRQ(ierr);
     if ((problem == CATENOID) && (mctx.q == -0.5)) {
         Vec    u_exact;
         double errnorm;
