@@ -1,6 +1,5 @@
 static char help[] =
-"Solve the linear biharmonic equation in 2D.  Option prefix bh_.\n"
-"Equation is\n"
+"Solve the linear biharmonic equation in 2D.  Equation is\n"
 "  - grad^4 u = f\n"
 "equivalently  - u_xxxx - 2 u_xxyy - u_yyyy = f(x,y),  on the unit square\n"
 "S=(0,1)^2 subject to homogeneous simply-supported boundary conditions:\n"
