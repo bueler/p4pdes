@@ -1,19 +1,12 @@
-mpiexec -n 1 ../obstacle -snes_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type asm -mg_levels_sub_pc_type sor -da_grid_x 17 -da_grid_y 17 -snes_grid_sequence 3 -log_view
-done on 129 x 129 grid ... CONVERGED_FNORM_RELATIVE, SNES iters = 2, last KSP iters = 3
-      Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
-    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
-Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
-Flop:                 3.315e+07     1.000   3.315e+07  3.315e+07
-mpiexec -n 4 ../obstacle -snes_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type asm -mg_levels_sub_pc_type sor -da_grid_x 17 -da_grid_y 17 -snes_grid_sequence 4 -log_view
-done on 257 x 257 grid ... CONVERGED_FNORM_RELATIVE, SNES iters = 2, last KSP iters = 4
+mpiexec -n 1 ../obstacle -snes_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type asm -mg_levels_sub_pc_type sor -da_grid_x 17 -da_grid_y 17 -snes_grid_sequence 4 -log_view
+done on 257 x 257 grid ... CONVERGED_FNORM_RELATIVE, SNES iters = 2, last KSP iters = 3
         Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
       Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
     Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
-Flop:                 3.694e+07     1.021   3.656e+07  1.462e+08
-mpiexec -n 16 ../obstacle -snes_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type asm -mg_levels_sub_pc_type sor -da_grid_x 17 -da_grid_y 17 -snes_grid_sequence 5 -log_view
+Flop:                 1.252e+08     1.000   1.252e+08  1.252e+08
+mpiexec -n 4 ../obstacle -snes_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type asm -mg_levels_sub_pc_type sor -da_grid_x 17 -da_grid_y 17 -snes_grid_sequence 5 -log_view
 done on 513 x 513 grid ... CONVERGED_FNORM_RELATIVE, SNES iters = 1, last KSP iters = 4
           Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
         Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
@@ -21,8 +14,8 @@ done on 513 x 513 grid ... CONVERGED_FNORM_RELATIVE, SNES iters = 1, last KSP it
     Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
-Flop:                 2.869e+07     1.609   2.569e+07  4.110e+08
-mpiexec -n 64 ../obstacle -snes_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type asm -mg_levels_sub_pc_type sor -da_grid_x 17 -da_grid_y 17 -snes_grid_sequence 6 -log_view
+Flop:                 9.297e+07     1.013   9.236e+07  3.694e+08
+mpiexec -n 16 ../obstacle -snes_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type asm -mg_levels_sub_pc_type sor -da_grid_x 17 -da_grid_y 17 -snes_grid_sequence 6 -log_view
 done on 1025 x 1025 grid ... CONVERGED_FNORM_RELATIVE, SNES iters = 2, last KSP iters = 4
             Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
           Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
@@ -31,5 +24,15 @@ done on 1025 x 1025 grid ... CONVERGED_FNORM_RELATIVE, SNES iters = 2, last KSP 
     Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
-Flop:                 4.244e+07    12.601   3.807e+07  2.437e+09
-
+Flop:                 1.535e+08     1.604   1.384e+08  2.214e+09
+mpiexec -n 64 ../obstacle -snes_converged_reason -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type asm -mg_levels_sub_pc_type sor -da_grid_x 17 -da_grid_y 17 -snes_grid_sequence 7 -log_view
+done on 2049 x 2049 grid ... CONVERGED_FNORM_RELATIVE, SNES iters = 2, last KSP iters = 4
+              Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4
+            Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+          Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+        Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+      Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+Flop:                 1.662e+08    18.155   1.498e+08  9.590e+09
