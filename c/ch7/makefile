@@ -23,15 +23,16 @@ runminimal_3:
 runminimal_4:
 	-@../testit.sh minimal "-snes_fd_color -snes_converged_reason -snes_grid_sequence 2 -ms_problem tent" 1 4
 
-# monolithic GAMG
+# monolithic GAMG and FD Jacobian
 runbiharm_1:
-	-@../testit.sh biharm "-ksp_converged_reason -da_refine 1 -pc_type gamg" 1 1
+	-@../testit.sh biharm "-ksp_converged_reason -da_refine 1 -pc_type gamg -snes_fd_color" 1 1
 
 # parallel fieldsplit with defaults (multiplicative fieldsplit, ILU on blocks)
 runbiharm_2:
 	-@../testit.sh biharm "-ksp_converged_reason -da_refine 1 -pc_type fieldsplit" 2 2
 
-# multiplicative (Gauss-Seidel) fieldsplit with MG preconditioner on blocks; BUG is need for galerkin; WHY need for setting mg_levels?
+# multiplicative (Gauss-Seidel) fieldsplit with MG preconditioner on blocks
+# BUG: needs galerkin; see PETSc issue #307 which reproduces with snes ex19.c
 runbiharm_3:
 	-@../testit.sh biharm "-ksp_monitor_short -da_refine 2 -pc_type fieldsplit -fieldsplit_v_pc_type mg -fieldsplit_v_pc_mg_galerkin -fieldsplit_v_pc_mg_levels 3 -fieldsplit_v_mg_levels_ksp_type richardson -fieldsplit_u_pc_type mg -fieldsplit_u_pc_mg_galerkin -fieldsplit_u_pc_mg_levels 3 -fieldsplit_u_mg_levels_ksp_type richardson" 1 3
 

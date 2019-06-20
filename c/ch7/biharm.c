@@ -1,21 +1,22 @@
 static char help[] =
 "Solve the linear biharmonic equation in 2D.  Equation is\n"
-"  - grad^4 u = f\n"
-"equivalently  - u_xxxx - 2 u_xxyy - u_yyyy = f(x,y),  on the unit square\n"
-"S=(0,1)^2 subject to homogeneous simply-supported boundary conditions:\n"
-"  u = 0,  Lap u = 0\n"
-"where Lap u = u_xx + u_yy.  The equation is rewritten as a 2x2 block system\n"
-"with SPD Laplacian blocks on the diagonal,\n"
-"   / -Lap |   0  \\  / v \\   /  0 \\ \n"
-"   |------|------|  |---| = |----| \n"
-"   \\  -I  | -Lap /  \\ u /   \\ -f / \n"
+"  Lap^2 u = f\n"
+"where Lap = - grad^2 is the positive Laplacian, equivalently\n"
+"  u_xxxx + 2 u_xxyy + u_yyyy = f(x,y)\n"
+"Domain is unit square  S = (0,1)^2.   Boundary conditions are homogeneous\n"
+"simply-supported:  u = 0,  Lap u = 0.  The equation is rewritten as a\n"
+"2x2 block system with SPD Laplacian blocks on the diagonal:\n"
+"   | Lap |  0  |  | v |   | f | \n"
+"   |-----|-----|  |---| = |---| \n"
+"   | -I  | Lap |  | u |   | 0 | \n"
 "Includes manufactured, polynomial exact solution.  The discretization is\n"
-"structured-grid (DMDA) finite differences.  Option -snes_fd_color (essentially)\n"
-"required to form the Jacobian.  Recommended preconditioning combines\n"
-"Gauss-Seidel-type (i.e. multiplicative) fieldsplit with GMG as the\n"
-"preconditioner for the diagonal blocks:\n"
+"structured-grid (DMDA) finite differences.  Includes analytical Jacobian.\n"
+"Recommended preconditioning combines Gauss-Seidel-type (i.e. multiplicative)\n"
+"fieldsplit with multigrid as the preconditioner for the diagonal blocks:\n"
 "   -pc_type fieldsplit -pc_fieldsplit_type multiplicative \\\n"
-"   -fieldsplit_v_pc_type mg -fieldsplit_u_pc_type mg\n\n";
+"   -fieldsplit_v_pc_type mg|gamg -fieldsplit_u_pc_type mg|gamg\n"
+"but can also do monolithic multigrid:\n"
+"   -pc_type mg|gamg\n\n";
 
 /*
 1. view of solver; actually seems to be multiplicative fieldsplit with 2-level multigrid as preconditioner in each block:
@@ -24,13 +25,13 @@ static char help[] =
   BUG: removing "galerkin"s causes memory corruption errors
 
 2. optimal; 2 KSP iterations on all grids up to 2049^2:
-    for LEV in 5 6 7 8 9 10; do ./biharm -ksp_converged_reason -pc_type fieldsplit -da_refine $LEV -fieldsplit_v_pc_type mg -fieldsplit_v_pc_mg_galerkin -fieldsplit_v_pc_mg_levels $LEV -fieldsplit_u_pc_type mg -fieldsplit_u_pc_mg_galerkin -fieldsplit_u_pc_mg_levels $LEV -fieldsplit_v_mg_levels_ksp_type richardson -fieldsplit_u_mg_levels_ksp_type richardson; done
+    for LEV in 7 8 9 10; do ./biharm -ksp_converged_reason -pc_type fieldsplit -da_refine $LEV -fieldsplit_v_pc_type mg -fieldsplit_v_pc_mg_galerkin -fieldsplit_v_pc_mg_levels $LEV -fieldsplit_u_pc_type mg -fieldsplit_u_pc_mg_galerkin -fieldsplit_u_pc_mg_levels $LEV -fieldsplit_v_mg_levels_ksp_type richardson -fieldsplit_u_mg_levels_ksp_type richardson; done
 QUESTIONS:
   a) why need to set mg_levels (-fieldsplit_?_pc_mg_levels $LEV)?
   b) BUG: fails without galerkin
 
-3. one can do "monolithic" GMG too; 3 KSP iterations on all grids up to 2049^2:
-    for LEV in 5 6 7 8 9 10; do ./biharm -ksp_converged_reason -pc_type mg -da_refine $LEV -mg_levels_ksp_type richardson; done
+3. equally good is to do "monolithic" GMG too; 3 KSP iterations on all grids up to 2049^2:
+    for LEV in 7 8 9 10; do ./biharm -ksp_converged_reason -pc_type mg -da_refine $LEV -mg_levels_ksp_type richardson; done
 
 4. GAMG works fine too
 */
@@ -69,8 +70,8 @@ static double f_fcn(double x, double y) {
 }
 
 extern PetscErrorCode FormExactWLocal(DMDALocalInfo*, Field**, BiharmCtx*);
-extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, Field**,
-                                        Field **FF, BiharmCtx*);
+extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, Field**, Field **FF, BiharmCtx*);
+extern PetscErrorCode FormJacobianLocal(DMDALocalInfo*, Field**, Mat, Mat, BiharmCtx*);
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
@@ -100,6 +101,8 @@ int main(int argc,char **argv) {
     ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
     ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
                (DMDASNESFunction)FormFunctionLocal,&user); CHKERRQ(ierr);
+    ierr = DMDASNESSetJacobianLocal(da,
+               (DMDASNESJacobian)FormJacobianLocal,&user); CHKERRQ(ierr);
     ierr = SNESSetType(snes,SNESKSPONLY); CHKERRQ(ierr);
     ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
@@ -187,6 +190,70 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, Field **aW,
         }
     }
     ierr = PetscLogFlops(18.0*info->xm*info->ym);CHKERRQ(ierr);
+    return 0;
+}
+
+PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, Field **aW,
+                                 Mat J, Mat Jpre, BiharmCtx *user) {
+    PetscErrorCode ierr;
+    int          i, j, c, ncol;
+    double       xymin[2], xymax[2], hx, hy, darea, scx, scy, scdiag, val[6];
+    MatStencil   col[6], row;
+
+    ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
+    hx = (xymax[0] - xymin[0]) / (info->mx - 1);
+    hy = (xymax[1] - xymin[1]) / (info->my - 1);
+    darea = hx * hy;               // multiply FD equations by this
+    scx = hy / hx;
+    scy = hx / hy;
+    scdiag = 2.0 * (scx + scy);    // diagonal scaling
+    for (j = info->ys; j < info->ys + info->ym; j++) {
+        row.j = j;
+        for (i = info->xs; i < info->xs + info->xm; i++) {
+            row.i = i;
+            for (c = 0; c < 2; c++) { // v,u equations are c=0,1
+                row.c = c;
+                col[0].c = c;     col[0].i = i;       col[0].j = j;
+                val[0] = scdiag;
+                if (i==0 || i==info->mx-1 || j==0 || j==info->my-1) {
+                    ierr = MatSetValuesStencil(Jpre,1,&row,1,col,val,INSERT_VALUES);
+                        CHKERRQ(ierr);
+                } else {
+                    ncol = 1;
+                    if (i+1 < info->mx-1) {
+                        col[ncol].c = c;  col[ncol].i = i+1;  col[ncol].j = j;
+                        val[ncol++] = -scx;
+                    }
+                    if (i-1 > 0) {
+                        col[ncol].c = c;  col[ncol].i = i-1;  col[ncol].j = j;
+                        val[ncol++] = -scx;
+                    }
+                    if (j+1 < info->my-1) {
+                        col[ncol].c = c;  col[ncol].i = i;    col[ncol].j = j+1;
+                        val[ncol++] = -scy;
+                    }
+                    if (j-1 > 0) {
+                        col[ncol].c = c;  col[ncol].i = i;    col[ncol].j = j-1;
+                        val[ncol++] = -scy;
+                    }
+                    if (c == 1) {  // u equation;  has off-diagonal block entry
+                        col[ncol].c = 0;
+                        col[ncol].i = i;  col[ncol].j = j;
+                        val[ncol++] = - darea;
+                    }
+                    ierr = MatSetValuesStencil(Jpre,1,&row,ncol,col,val,INSERT_VALUES);
+                        CHKERRQ(ierr);
+                }
+            }
+        }
+    }
+
+    ierr = MatAssemblyBegin(Jpre,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    ierr = MatAssemblyEnd(Jpre,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    if (J != Jpre) {
+        ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+        ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    }
     return 0;
 }
 
