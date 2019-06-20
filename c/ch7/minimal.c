@@ -296,7 +296,7 @@ PetscErrorCode MSEMonitor(SNES snes, int its, double norm, void *user) {
                    ux, uy, W, D,
                    Dminloc = PETSC_INFINITY, Dmaxloc = 0.0, Dmin, Dmax,
                    arealoc = 0.0, area;
-    int            i, j, r, s;
+    int            i, j, r, s, tab;
     MPI_Comm       comm;
     ierr = SNESGetDM(snes, &da); CHKERRQ(ierr);
     ierr = SNESGetSolution(snes, &u); CHKERRQ(ierr);
@@ -351,8 +351,13 @@ PetscErrorCode MSEMonitor(SNES snes, int its, double norm, void *user) {
     ierr = MPI_Allreduce(&arealoc,&area,1,MPI_DOUBLE,MPI_SUM,comm); CHKERRQ(ierr);
     ierr = MPI_Allreduce(&Dminloc,&Dmin,1,MPI_DOUBLE,MPI_MIN,comm); CHKERRQ(ierr);
     ierr = MPI_Allreduce(&Dmaxloc,&Dmax,1,MPI_DOUBLE,MPI_MAX,comm); CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"area = %.8f; %.4f <= D <= %.4f\n",
-               area,Dmin,Dmax); CHKERRQ(ierr);
+
+    // tabbed (indented) print
+    ierr = PetscObjectGetTabLevel((PetscObject)snes,&tab); CHKERRQ(ierr);
+    ierr = PetscViewerASCIIAddTab(PETSC_VIEWER_STDOUT_WORLD,tab); CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_WORLD,
+        "area = %.8f; %.4f <= D <= %.4f\n",area,Dmin,Dmax); CHKERRQ(ierr);
+    ierr = PetscViewerASCIISubtractTab(PETSC_VIEWER_STDOUT_WORLD,tab); CHKERRQ(ierr);
     return 0;
 }
 
