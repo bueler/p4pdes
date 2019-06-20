@@ -62,11 +62,11 @@ static double u_exact_fcn(double x, double y) {
 }
 
 static double lap_u_exact_fcn(double x, double y) {
-    return ddc(x) * c(y) + c(x) * ddc(y);  // is grad^2 u
+    return - ddc(x) * c(y) - c(x) * ddc(y);  // Lap u = - grad^2 u
 }
 
 static double f_fcn(double x, double y) {
-    return d4c(x) * c(y) + 2.0 * ddc(x) * ddc(y) + c(x) * d4c(y);  // is grad^4 u
+    return d4c(x) * c(y) + 2.0 * ddc(x) * ddc(y) + c(x) * d4c(y);  // Lap^2 u = grad^4 u
 }
 
 extern PetscErrorCode FormExactWLocal(DMDALocalInfo*, Field**, BiharmCtx*);
@@ -147,7 +147,7 @@ PetscErrorCode FormExactWLocal(DMDALocalInfo *info, Field **aW, BiharmCtx *user)
         for (i = info->xs; i < info->xs + info->xm; i++) {
             x = i * hx;
             aW[j][i].u = u_exact_fcn(x,y);
-            aW[j][i].v = - lap_u_exact_fcn(x,y);
+            aW[j][i].v = lap_u_exact_fcn(x,y);
         }
     }
     return 0;
