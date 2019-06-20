@@ -3,12 +3,12 @@ static char help[] =
 "Equation is\n"
 "  - div ( (1 + |grad u|^2)^q grad u ) = 0\n"
 "on the unit square S=(0,1)^2 subject to Dirichlet boundary\n"
-"conditions u = g(x,y).  Power q defaults to -1/2 but is adjustable.\n"
+"conditions u = g(x,y).  Power q defaults to -1/2 but can be set (by -ms_q).\n"
 "Catenoid and tent boundary conditions are implemented; catenoid is an exact\n"
 "solution.  The discretization is structured-grid (DMDA) finite differences.\n"
 "We re-use the Jacobian from the Poisson equation, but it is suitable only\n"
 "for low-amplitude g, or as preconditioning material in -snes_mf_operator.\n"
-"Options -snes_fd_color and -snes_grid_sequence K are recommended.\n"
+"Options -snes_fd_color and -snes_grid_sequence are recommended.\n"
 "This code is multigrid (GMG) capable.\n\n";
 
 #include <petsc.h>
@@ -17,7 +17,7 @@ static char help[] =
 
 typedef struct {
     double    q,          // the exponent in the diffusivity;
-                          // =-1/2 for minimal surface eqn; =0 for Laplace eqn
+                          //   =-1/2 for minimal surface eqn; =0 for Laplace eqn
               tent_H,     // height of tent door along y=0 boundary
               catenoid_c; // parameter in catenoid formula
     int       quaddegree; // quadrature degree used in -mse_monitor
@@ -298,18 +298,21 @@ PetscErrorCode MSEMonitor(SNES snes, int its, double norm, void *user) {
                    arealoc = 0.0, area;
     int            i, j, r, s, tab;
     MPI_Comm       comm;
+
     ierr = SNESGetDM(snes, &da); CHKERRQ(ierr);
-    ierr = SNESGetSolution(snes, &u); CHKERRQ(ierr);
-    ierr = DMGetLocalVector(da, &uloc); CHKERRQ(ierr);
-    ierr = DMGlobalToLocalBegin(da, u, INSERT_VALUES, uloc); CHKERRQ(ierr);
-    ierr = DMGlobalToLocalEnd(da, u, INSERT_VALUES, uloc); CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
     ierr = DMDAGetBoundingBox(info.da,xymin,xymax); CHKERRQ(ierr);
     hx = (xymax[0] - xymin[0]) / (info.mx - 1);
     hy = (xymax[1] - xymin[1]) / (info.my - 1);
-    ierr = DMDAVecGetArrayRead(da,uloc,&au); CHKERRQ(ierr);
-//STARTMONITORLOOP
+
+    // get the current solution u, with stencil width
+    ierr = SNESGetSolution(snes, &u); CHKERRQ(ierr);
+    ierr = DMGetLocalVector(da, &uloc); CHKERRQ(ierr);
+    ierr = DMGlobalToLocalBegin(da, u, INSERT_VALUES, uloc); CHKERRQ(ierr);
+    ierr = DMGlobalToLocalEnd(da, u, INSERT_VALUES, uloc); CHKERRQ(ierr);
+
     // loop over rectangular cells in grid
+    ierr = DMDAVecGetArrayRead(da,uloc,&au); CHKERRQ(ierr);
     for (j = info.ys; j < info.ys + info.ym; j++) {
         if (j == 0)
             continue;
@@ -341,18 +344,17 @@ PetscErrorCode MSEMonitor(SNES snes, int its, double norm, void *user) {
             }
         }
     }
-//ENDMONITORLOOP
     ierr = DMDAVecRestoreArrayRead(da,uloc,&au); CHKERRQ(ierr);
     ierr = DMRestoreLocalVector(da, &uloc); CHKERRQ(ierr);
-
-    // do global reductions and report
-    ierr = PetscObjectGetComm((PetscObject)da,&comm); CHKERRQ(ierr);
     arealoc *= hx * hy / 4.0;  // from change of variables formula
+
+    // do global reductions (because could be in parallel)
+    ierr = PetscObjectGetComm((PetscObject)da,&comm); CHKERRQ(ierr);
     ierr = MPI_Allreduce(&arealoc,&area,1,MPI_DOUBLE,MPI_SUM,comm); CHKERRQ(ierr);
     ierr = MPI_Allreduce(&Dminloc,&Dmin,1,MPI_DOUBLE,MPI_MIN,comm); CHKERRQ(ierr);
     ierr = MPI_Allreduce(&Dmaxloc,&Dmax,1,MPI_DOUBLE,MPI_MAX,comm); CHKERRQ(ierr);
 
-    // tabbed (indented) print
+    // report using tabbed (indented) print
     ierr = PetscObjectGetTabLevel((PetscObject)snes,&tab); CHKERRQ(ierr);
     ierr = PetscViewerASCIIAddTab(PETSC_VIEWER_STDOUT_WORLD,tab); CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_WORLD,
