@@ -4,4 +4,5 @@ Vec Object: 1 MPI processes
 -7.54763e+08
 -7.54763e+08
 6.34678e+08
-done on 2 x 2 grid; p=1.500; numerical error:  |u-u_exact|_inf = 1.500e+00
+done on 2 x 2 grid with p=1.500 ...
+  numerical error:  |u-u_exact|_inf = 1.500e+00
