@@ -191,7 +191,8 @@ int main(int argc,char **argv) {
     ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
     ierr = VecNorm(u,NORM_INFINITY,&err); CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,
-        "done on %d x %d grid; p=%.3f; numerical error:  |u-u_exact|_inf = %.3e\n",
+        "done on %d x %d grid with p=%.3f ...\n"
+        "  numerical error:  |u-u_exact|_inf = %.3e\n",
         info.mx,info.my,user.p,err); CHKERRQ(ierr);
 
     VecDestroy(&u_exact);  SNESDestroy(&snes);
