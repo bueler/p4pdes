@@ -38,7 +38,7 @@ QUESTIONS:
 #include <petsc.h>
 
 typedef struct {
-    double  v,u;  // order matters here
+    double  v, u;
 } Field;
 
 typedef struct {
