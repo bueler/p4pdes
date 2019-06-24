@@ -11,30 +11,13 @@ static char help[] =
 "   | -I  | Lap |  | u |   | 0 | \n"
 "Includes manufactured, polynomial exact solution.  The discretization is\n"
 "structured-grid (DMDA) finite differences.  Includes analytical Jacobian.\n"
-"Recommended preconditioning combines Gauss-Seidel-type (i.e. multiplicative)\n"
-"fieldsplit with multigrid as the preconditioner for the diagonal blocks:\n"
-"   -pc_type fieldsplit -pc_fieldsplit_type multiplicative \\\n"
+"Recommended preconditioning combines fieldsplit:\n"
+"   -pc_type fieldsplit -pc_fieldsplit_type multiplicative|additive \n"
+"with multigrid as the preconditioner for the diagonal blocks:\n"
 "   -fieldsplit_v_pc_type mg|gamg -fieldsplit_u_pc_type mg|gamg\n"
-"but can also do monolithic multigrid:\n"
-"   -pc_type mg|gamg\n\n";
+"(GMG requires setting levels and Galerkin coarsening.)  One can also do\n"
+"monolithic multigrid (-pc_type mg|gamg).\n\n";
 
-/*
-1. view of solver; actually seems to be multiplicative fieldsplit with 2-level multigrid as preconditioner in each block:
-    ./biharm -ksp_monitor_short -pc_type fieldsplit -pc_fieldsplit_type multiplicative -da_refine 1 -fieldsplit_v_pc_type mg -fieldsplit_v_pc_mg_galerkin -fieldsplit_v_pc_mg_levels 2 -fieldsplit_u_pc_type mg -fieldsplit_u_pc_mg_galerkin -fieldsplit_u_pc_mg_levels 2 -snes_view |less
-  NOTE:  -fieldsplit_?_ksp_type preonly  is default
-  BUG: removing "galerkin"s causes memory corruption errors
-
-2. optimal; 2 KSP iterations on all grids up to 2049^2:
-    for LEV in 7 8 9 10; do ./biharm -ksp_converged_reason -pc_type fieldsplit -da_refine $LEV -fieldsplit_v_pc_type mg -fieldsplit_v_pc_mg_galerkin -fieldsplit_v_pc_mg_levels $LEV -fieldsplit_u_pc_type mg -fieldsplit_u_pc_mg_galerkin -fieldsplit_u_pc_mg_levels $LEV -fieldsplit_v_mg_levels_ksp_type richardson -fieldsplit_u_mg_levels_ksp_type richardson; done
-QUESTIONS:
-  a) why need to set mg_levels (-fieldsplit_?_pc_mg_levels $LEV)?
-  b) BUG: fails without galerkin
-
-3. equally good is to do "monolithic" GMG too; 3 KSP iterations on all grids up to 2049^2:
-    for LEV in 7 8 9 10; do ./biharm -ksp_converged_reason -pc_type mg -da_refine $LEV -mg_levels_ksp_type richardson; done
-
-4. GAMG works fine too
-*/
 #include <petsc.h>
 
 typedef struct {
