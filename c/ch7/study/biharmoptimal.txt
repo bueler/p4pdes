@@ -1,0 +1,89 @@
+===== monolithic =====
+done on 33 x 33 grid ...
+  errors |v-vex|_inf/|vex|_inf = 8.92938e-03, |u-uex|_inf/|uex|_inf = 2.27770e-02
+  Linear solve converged due to CONVERGED_RTOL iterations 3
+Flop:                 5.128e+06     1.000   5.128e+06  5.128e+06
+done on 65 x 65 grid ...
+  errors |v-vex|_inf/|vex|_inf = 2.23018e-03, |u-uex|_inf/|uex|_inf = 5.68253e-03
+  Linear solve converged due to CONVERGED_RTOL iterations 3
+Flop:                 2.030e+07     1.000   2.030e+07  2.030e+07
+done on 129 x 129 grid ...
+  errors |v-vex|_inf/|vex|_inf = 5.57616e-04, |u-uex|_inf/|uex|_inf = 1.42061e-03
+  Linear solve converged due to CONVERGED_RTOL iterations 3
+Flop:                 8.045e+07     1.000   8.045e+07  8.045e+07
+done on 257 x 257 grid ...
+  errors |v-vex|_inf/|vex|_inf = 1.42691e-04, |u-uex|_inf/|uex|_inf = 3.76030e-04
+  Linear solve converged due to CONVERGED_RTOL iterations 2
+Flop:                 2.774e+08     1.000   2.774e+08  2.774e+08
+done on 513 x 513 grid ...
+  errors |v-vex|_inf/|vex|_inf = 3.54723e-05, |u-uex|_inf/|uex|_inf = 9.46609e-05
+  Linear solve converged due to CONVERGED_RTOL iterations 2
+Flop:                 1.106e+09     1.000   1.106e+09  1.106e+09
+done on 1025 x 1025 grid ...
+  errors |v-vex|_inf/|vex|_inf = 8.63191e-06, |u-uex|_inf/|uex|_inf = 2.90143e-05
+  Linear solve converged due to CONVERGED_RTOL iterations 2
+Flop:                 4.417e+09     1.000   4.417e+09  4.417e+09
+done on 2049 x 2049 grid ...
+  errors |v-vex|_inf/|vex|_inf = 2.44738e-06, |u-uex|_inf/|uex|_inf = 1.99340e-05
+  Linear solve converged due to CONVERGED_RTOL iterations 2
+Flop:                 1.765e+10     1.000   1.765e+10  1.765e+10
+
+===== multiplicative fieldsplit =====
+done on 33 x 33 grid ...
+  errors |v-vex|_inf/|vex|_inf = 8.92943e-03, |u-uex|_inf/|uex|_inf = 2.27765e-02
+  Linear solve converged due to CONVERGED_RTOL iterations 3
+Flop:                 3.276e+06     1.000   3.276e+06  3.276e+06
+done on 65 x 65 grid ...
+  errors |v-vex|_inf/|vex|_inf = 2.23017e-03, |u-uex|_inf/|uex|_inf = 5.68431e-03
+  Linear solve converged due to CONVERGED_RTOL iterations 3
+Flop:                 1.294e+07     1.000   1.294e+07  1.294e+07
+done on 129 x 129 grid ...
+  errors |v-vex|_inf/|vex|_inf = 5.57613e-04, |u-uex|_inf/|uex|_inf = 1.42075e-03
+  Linear solve converged due to CONVERGED_RTOL iterations 3
+Flop:                 5.122e+07     1.000   5.122e+07  5.122e+07
+done on 257 x 257 grid ...
+  errors |v-vex|_inf/|vex|_inf = 1.42689e-04, |u-uex|_inf/|uex|_inf = 3.67680e-04
+  Linear solve converged due to CONVERGED_RTOL iterations 2
+Flop:                 1.773e+08     1.000   1.773e+08  1.773e+08
+done on 513 x 513 grid ...
+  errors |v-vex|_inf/|vex|_inf = 3.54682e-05, |u-uex|_inf/|uex|_inf = 9.37448e-05
+  Linear solve converged due to CONVERGED_RTOL iterations 2
+Flop:                 7.066e+08     1.000   7.066e+08  7.066e+08
+done on 1025 x 1025 grid ...
+  errors |v-vex|_inf/|vex|_inf = 8.63083e-06, |u-uex|_inf/|uex|_inf = 2.53347e-05
+  Linear solve converged due to CONVERGED_RTOL iterations 2
+Flop:                 2.821e+09     1.000   2.821e+09  2.821e+09
+done on 2049 x 2049 grid ...
+  errors |v-vex|_inf/|vex|_inf = 2.44777e-06, |u-uex|_inf/|uex|_inf = 1.18811e-05
+  Linear solve converged due to CONVERGED_RTOL iterations 2
+Flop:                 1.127e+10     1.000   1.127e+10  1.127e+10
+
+===== additive fieldsplit =====
+done on 33 x 33 grid ...
+  errors |v-vex|_inf/|vex|_inf = 8.92962e-03, |u-uex|_inf/|uex|_inf = 2.28508e-02
+  Linear solve converged due to CONVERGED_RTOL iterations 3
+Flop:                 3.233e+06     1.000   3.233e+06  3.233e+06
+done on 65 x 65 grid ...
+  errors |v-vex|_inf/|vex|_inf = 2.23074e-03, |u-uex|_inf/|uex|_inf = 5.69855e-03
+  Linear solve converged due to CONVERGED_RTOL iterations 3
+Flop:                 1.277e+07     1.000   1.277e+07  1.277e+07
+done on 129 x 129 grid ...
+  errors |v-vex|_inf/|vex|_inf = 5.57820e-04, |u-uex|_inf/|uex|_inf = 1.42621e-03
+  Linear solve converged due to CONVERGED_RTOL iterations 3
+Flop:                 5.056e+07     1.000   5.056e+07  5.056e+07
+done on 257 x 257 grid ...
+  errors |v-vex|_inf/|vex|_inf = 1.39498e-04, |u-uex|_inf/|uex|_inf = 3.56519e-04
+  Linear solve converged due to CONVERGED_RTOL iterations 3
+Flop:                 2.010e+08     1.000   2.010e+08  2.010e+08
+done on 513 x 513 grid ...
+  errors |v-vex|_inf/|vex|_inf = 3.48772e-05, |u-uex|_inf/|uex|_inf = 8.87880e-05
+  Linear solve converged due to CONVERGED_RTOL iterations 3
+Flop:                 8.011e+08     1.000   8.011e+08  8.011e+08
+done on 1025 x 1025 grid ...
+  errors |v-vex|_inf/|vex|_inf = 8.71787e-06, |u-uex|_inf/|uex|_inf = 2.18705e-05
+  Linear solve converged due to CONVERGED_RTOL iterations 3
+Flop:                 3.198e+09     1.000   3.198e+09  3.198e+09
+done on 2049 x 2049 grid ...
+  errors |v-vex|_inf/|vex|_inf = 2.17751e-06, |u-uex|_inf/|uex|_inf = 5.23348e-06
+  Linear solve converged due to CONVERGED_RTOL iterations 3
+Flop:                 1.278e+10     1.000   1.278e+10  1.278e+10
