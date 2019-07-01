@@ -278,8 +278,8 @@ static double GradPow(double hx, double hy,
 
 //STARTOBJECTIVE
 static double ObjIntegrandRef(DMDALocalInfo *info,
-                       const double ff[4], const double uu[4],
-                       double xi, double eta, PHelmCtx *user) {
+                              const double ff[4], const double uu[4],
+                              double xi, double eta, PHelmCtx *user) {
     const gradRef du = deval(uu,xi,eta);
     const double  hx = 1.0 / (info->mx - 1),  hy = 1.0 / (info->my - 1),
                   u = eval(uu,xi,eta);
@@ -330,9 +330,9 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
 //ENDOBJECTIVE
 
 //STARTFUNCTION
-static double FunIntegrandRef(DMDALocalInfo *info, int L,
-                       const double ff[4], const double uu[4],
-                       double xi, double eta, PHelmCtx *user) {
+static double IntegrandRef(DMDALocalInfo *info, int L,
+                           const double ff[4], const double uu[4],
+                           double xi, double eta, PHelmCtx *user) {
   const gradRef du    = deval(uu,xi,eta),
                 dchiL = dchi(L,xi,eta);
   const double  hx = 1.0 / (info->mx - 1),  hy = 1.0 / (info->my - 1);
@@ -382,8 +382,8 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
                       for (s = 0; s < q.n; s++) {
                          FF[QQ][PP]
                              += 0.25 * hx * hy * q.w[r] * q.w[s]
-                                * FunIntegrandRef(info,l,ff,uu,
-                                                  q.xi[r],q.xi[s],user);
+                                * IntegrandRef(info,l,ff,uu,
+                                               q.xi[r],q.xi[s],user);
                       }
                   }
               }
