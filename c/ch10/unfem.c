@@ -43,10 +43,6 @@ double eval(const double v[3], double xi, double eta) {
         sum += v[L] * chi(L,xi,eta);
     return sum;
 }
-
-double InnerProd(const double V[2], const double W[2]) {
-    return V[0] * W[0] + V[1] * W[1];
-}
 //ENDFEM
 
 extern PetscErrorCode FillExact(Vec, unfemCtx*);
@@ -295,6 +291,10 @@ PetscErrorCode FillExact(Vec uexact, unfemCtx *ctx) {
     ierr = VecRestoreArray(uexact,&auexact); CHKERRQ(ierr);
     ierr = UMRestoreNodeCoordArrayRead(ctx->mesh,&aloc); CHKERRQ(ierr);
     return 0;
+}
+
+double InnerProd(const double V[2], const double W[2]) {
+    return V[0] * W[0] + V[1] * W[1];
 }
 
 //STARTRESIDUAL
