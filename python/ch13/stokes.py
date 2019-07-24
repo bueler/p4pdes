@@ -1,19 +1,38 @@
 #!/usr/bin/env python3
 
-#FIXME
-# * generate small matrix and talk/check/show some details:
-#      ./stokes.py -analytical -mx 2 -my 2 -s_mat_type aij -s_ksp_view_mat :foo.m:ascii_matlab
+# * generate small matrix and talk/check/show some details (?):
+#      ./stokes.py -analytical -s_ksp_type minres -s_pc_type none -mx 2 -my 2 -s_mat_type aij -s_ksp_view_mat :foo.m:ascii_matlab
+
 # * showing fixed number of iterations independent of LEV and clear evidence of
-#   optimality; note ksp_view_mat shows MatNest so get n_p,n_u; can go to level
-#   9 = 1025x1025 grid which uses more than 16 Gb:
+#   optimality; note ksp_view_mat shows MatNest so get n_p,n_u;
 #      for LEV in 1 2 3 4 5 6 7 8; do
-#          timer ./stokes.py -package schur2 -s_ksp_converged_reason \
-#              -s_ksp_view_mat -refine $LEV
+#          timer ./stokes.py -s_ksp_converged_reason -pcpackage schur_lower_gmg -refine $LEV
 #      done
-# * show Moffat eddies with paraview-generated streamlines
-# * resolves 3rd eddy!:
-#      ./stokes.py -i lidbox.msh -show_norms -dm_view -refine 5 -package schur2 -s_ksp_converged_reason -o lid5.pvd -s_ksp_rtol 1.0e-12
-#   (-refine 6 works too and uses ~30Gb memory but does not get 4th eddy)
+#   + uses default -s_ksp_type gmres
+#   + level 8 is 513x513 grid
+#   + add for flops: -log_view |grep "Flop:  "
+#   + add -s_ksp_view_mat to show MatNest to get n_p,n_u
+#   + add -analytical -s_ksp_rtol 1.0e-10 to show convergence
+#   + can go to level 9 (1025x1025 grid) which uses more than 16 Gb:
+
+# * show Moffat eddies with paraview-generated streamlines; resolves 3rd eddy!:
+#      ./lidbox.py lidbox.geo
+#      gmsh -2 lidbox.geo -o lidbox.msh
+#      ./stokes.py -i lidbox.msh -show_norms -dm_view -s_ksp_rtol 1.0e-12 -s_ksp_converged_reason -pcpackage schur_lower_gmg -refine 5 -o lid5.pvd
+#   + uses default -s_ksp_type gmres
+#   + -refine 6 works too and uses ~30Gb memory but does not get 4th eddy
+
+# solver notes:
+#   -s_pc_fieldsplit_type schur
+#       is the ONLY viable fieldsplit type;
+#       additive,multiplicative,symmetric_multiplicative all fail because
+#       diagonal pressure block is identically zero and non-invertible
+#   -s_pc_fieldsplit_schur_factorization_type diag
+#       note main Murphy et al 2000 theorem applies to MINRES+(this schur diag);
+#       the default -s_pc_fieldsplit_schur_scale -1.0 *is* what we want
+#   with -pcpackage schur_lower_gmg_nomass, option -s_fieldsplit_0_ksp_converged_reason
+#       shows extra applications of fieldsplit_0 KSP because it is applying (A00)^-1
+#       in applying Schur factor
 
 import sys
 from argparse import ArgumentParser, RawTextHelpFormatter
@@ -24,12 +43,13 @@ parser = ArgumentParser(description="""
 Solve a linear Stokes problem in 2D.  Three problem cases:
   1. (default) Lid-driven cavity with quadratic velocity on lid and
      Dirichlet conditions on all sides.  Null space = {constant pressure}.
-  2. (-nobase) Same but with stress free condition on bottom; null space = {0}.
-  3. (-analytical) Analytical exact solution from Logg et al (2012).
+  2. (-analytical) Analytical exact solution from Logg et al (2012).
+  3. (-nobase) Same but with stress free condition on bottom; null space = {0}.
 Uses mixed FE method, either Taylor-Hood family (P^k x P^l or Q^k x Q^l)
 or CD with discontinuous pressure; defaults to P^2 x P^1.  Uses either
 uniform mesh or reads mesh.  Serves as an example of a saddle-point system.
-See code for solver packages: -package minres|directlu|directsvd|schur1|schur2
+See code for PC packages:
+  -pcpackage directlu|schur_lower_gmg|schur_lower_gmg_nomass|schur_diag_gmg
 The prefix for PETSC solver options is 's_'.""",
                     formatter_class=RawTextHelpFormatter)
 parser.add_argument('-analytical', action='store_true', default=False,
@@ -50,8 +70,8 @@ parser.add_argument('-nobase', action='store_true', default=False,
                     help='use problem with stress-free boundary condition on base')
 parser.add_argument('-o', metavar='OUTNAME', type=str, default='',
                     help='output file name ending with .pvd')
-parser.add_argument('-package', metavar='PKG', default='minres',
-                    help='choose a KSP+PC solver package: see text for options')
+parser.add_argument('-pcpackage', metavar='PKG', default='',
+                    help='choose a PC solver package: see text for options')
 parser.add_argument('-pdegree', type=int, default=1, metavar='L',
                     help='polynomial degree for pressure (default=1)')
 parser.add_argument('-quad', action='store_true', default=False,
@@ -135,96 +155,78 @@ v,q = TestFunctions(Z)
 F = (args.mu * inner(grad(u), grad(v)) - p * div(v) - div(u) * q \
      - inner(f_body,v)) * dx
 
-# solver notes:
-#   -s_pc_fieldsplit_type schur
-#       is the ONLY viable fieldsplit type;
-#       additive,multiplicative,symmetric_multiplicative all fail because
-#       diagonal pressure block is identically zero and non-invertible
-#   -s_pc_fieldsplit_schur_factorization_type diag
-#       note Murphy et al 2000 theorem applies to MINRES+(this schur diag);
-#       the default -s_pc_fieldsplit_schur_scale -1.0 *is* what we want
-#   -s_fieldsplit_0_ksp_converged_reason
-#       this shows repeated application of KSP ... why? ... I think it is
-#       in applying (A00)^-1 in applying Schur factor
-#   -pc_fieldsplit_schur_precondition <self,selfp,user,a11,full>
-#       default is a11; key fieldsplit control which I need to gronk
+# reference for preconditioning Schur block using viscosity-weighted mass matrix: https://www.firedrakeproject.org/demos/geometric_multigrid.py.html
+class Mass(AuxiliaryOperatorPC):
 
-# solver packages
-pars = {'minres':      # default is un-preconditioned MINRES
-           {'ksp_type': 'minres',
-            'pc_type': 'none'},
-        'directlu':    # LU direct solver (serial only)
-           # reference: https://www.firedrakeproject.org/demos/geometric_multigrid.py.html
-           {'ksp_type': 'preonly',
-            'pmat_type': 'aij',
+    def form(self, pc, test, trial):
+        a = (1.0/args.mu) * inner(test, trial)*dx
+        bcs = None
+        return (a, bcs)
+
+# solver packages; reference: https://www.firedrakeproject.org/demos/geometric_multigrid.py.html
+pars = {'directlu':         # LU direct solver (serial only)
+           {'pmat_type': 'aij',
             'pc_type': 'lu',
             'pc_factor_shift_type': 'inblocks'},
-        'directsvd':   # SVD direct solver (serial only; ONLY VERY COARSE!)
-           {'ksp_type': 'preonly',
-            'pmat_type': 'aij',
-            'pc_type': 'svd'},
-        'schur1':      # MINRES+Schur(diag)+GMG ... work in progress
-           {'ksp_type': 'minres',
-            'pc_type': 'fieldsplit',
+        'schur_lower_gmg':  # Schur(lower)+GMG with mass-matrix PC on Schur; use gmres
+           {'pc_type': 'fieldsplit',
             'pc_fieldsplit_type': 'schur',
-            'pc_fieldsplit_schur_factorization_type': 'diag',
-            'fieldsplit_0_ksp_type': 'preonly', # -s_fieldsplit_0_ksp_converged_reason shows repeated application of KSP ... why?
-            'fieldsplit_0_pc_type': 'mg',
-            'fieldsplit_1_ksp_type': 'cg',
-            'fieldsplit_1_pc_type': 'jacobi'},
-        'schur2':      # FGMRES+Schur(lower)+GMG
-           # reference: https://www.firedrakeproject.org/demos/geometric_multigrid.py.html
-           # ALSO: adds pressure mass matrix term in Jacobian for preconditioning Schur  (see args.package == 'schur2' conditional below)
-           {'ksp_type': 'fgmres',  # change from Firedrake form with gmres
-            'pc_type': 'fieldsplit',
-            'pc_fieldsplit_type': 'schur',
-            'pc_fieldsplit_schur_factorization_type': 'lower',
+            'pc_fieldsplit_schur_fact_type': 'lower',
             'fieldsplit_0_ksp_type': 'preonly',
             'fieldsplit_0_pc_type': 'mg',
             'fieldsplit_1_ksp_type': 'preonly',
-            'fieldsplit_1_pc_type': 'bjacobi',
-            'fieldsplit_1_sub_pc_type': 'icc'},
-        'schur3':      # GMRES+Schur(full)+GAMG   FIXME this is just something that works, until I can get back to making schur2 work properly; see FIXME below
-           {'ksp_type': 'gmres',
-            'pmat_type': 'aij',
-            'pc_type': 'fieldsplit',
+            'fieldsplit_1_pc_type': 'python',
+            'fieldsplit_1_pc_python_type': '__main__.Mass',
+            'fieldsplit_1_aux_pc_type': 'bjacobi',
+            'fieldsplit_1_aux_sub_pc_type': 'icc'},
+        'schur_lower_gmg_nomass':  # Schur(lower)+GMG w/o mass-matrix PC; use fgmres
+           {'pc_type': 'fieldsplit',
             'pc_fieldsplit_type': 'schur',
-            'pc_fieldsplit_schur_factorization_type': 'full',
+            'pc_fieldsplit_schur_fact_type': 'lower',
             'fieldsplit_0_ksp_type': 'preonly',
-            'fieldsplit_0_pc_type': 'gamg',
+            'fieldsplit_0_pc_type': 'mg',
             'fieldsplit_1_ksp_type': 'cg',
-            'fieldsplit_1_pc_type': 'bjacobi',
-            'fieldsplit_1_sub_pc_type': 'icc'} }
-try:
-    sparams = pars[args.package]
-except KeyError:
-    print('ERROR: invalid solver package choice')
-    print('       choices are %s' % list(pars.keys()))
-    sys.exit(1)
+            'fieldsplit_1_pc_type': 'jacobi'},
+        'schur_diag_gmg': # Schur(diag)+GMG with mass-matrix PC; use minres or gmres
+           # FIXME why doesn't this work with minres?
+           {'pc_type': 'fieldsplit',
+            'pc_fieldsplit_type': 'schur',
+            'pc_fieldsplit_schur_fact_type': 'diag',
+            'fieldsplit_0_ksp_type': 'preonly',
+            'fieldsplit_0_pc_type': 'mg',
+            'fieldsplit_1_ksp_type': 'preonly',
+            'fieldsplit_1_pc_type': 'python',
+            'fieldsplit_1_pc_python_type': '__main__.Mass',
+            'fieldsplit_1_aux_pc_type': 'bjacobi',
+            'fieldsplit_1_aux_sub_pc_type': 'icc'},
+       }
+
+sparams = {}
+if len(args.pcpackage) > 0:
+    try:
+        sparams.update(pars[args.pcpackage])
+    except KeyError:
+        print('ERROR: invalid solver package choice')
+        print('       choices are %s' % list(pars.keys()))
+        sys.exit(1)
+    PETSc.Sys.Print('PC package %s: ' % args.pcpackage,sparams)
 sparams.update({'snes_type': 'ksponly'})  # applies to all
 
 # describe method
 uFEstr = '%s^%d' % (['P','Q'][args.quad],args.udegree)
 pFEstr = '%s^%d' % (['P','Q'][args.quad],args.pdegree)
-PETSc.Sys.Print('solving%s with %s x %s %s elements and package %s ...' \
-                % (meshstr,uFEstr,pFEstr,mixedname,args.package))
-
-# FIXME  see changes in https://github.com/firedrakeproject/firedrake/commit/43a57439c331c35312af19a0ace3f6593bb12394 for geometric_multigrid.py ... new way of handling pressure mass matrix ... see latest firedrake/demos/multigrid/geometric_multigrid.py for best way to handle
+PETSc.Sys.Print('solving%s with %s x %s %s elements ...' \
+                % (meshstr,uFEstr,pFEstr,mixedname))
 
 # actually solve
 uu, pp = TrialFunctions(Z)
-a = (args.mu * inner(grad(uu), grad(v)) - pp * div(v) - div(uu) * q) * dx
-if args.package == 'schur2':
-    Jp = a + pp * q * dx   # FIXME old way of handling pressure mass matrix
-else:
-    Jp = a
 if args.nobase:
-    ns = None  # is this the right form of no null space?
+    ns = None
 else:
     # Dirichlet-only boundary conds on velocity therefore set nullspace to constant pressure
     ns = MixedVectorSpaceBasis(Z, [Z.sub(0), VectorSpaceBasis(constant=True)])
-solve(F == 0, up, bcs=bc, Jp=Jp, nullspace=ns, options_prefix='s',
-          solver_parameters=sparams)
+solve(F == 0, up, bcs=bc, nullspace=ns,
+      options_prefix='s', solver_parameters=sparams)
 u,p = up.split()
 
 # get numerical error if possible
