@@ -138,15 +138,22 @@ if args.analytical:
                        -36.0 * pi*pi * cos(4.0*pi*x) * sin(4.0*pi*y)])
     u_12 = Function(V).interpolate(as_vector([0.0,-sin(4.0*pi*y)]))
     u_34 = Function(V).interpolate(as_vector([sin(4.0*pi*x),0.0]))
-    bc = [ DirichletBC(Z.sub(0), u_12, (1,2)),
-           DirichletBC(Z.sub(0), u_34, (3,4)) ]
+    bcs = [ DirichletBC(Z.sub(0), u_12, (1,2)),
+            DirichletBC(Z.sub(0), u_34, (3,4)) ]
 else:
     f_body = Constant((0.0, 0.0))  # no body force in lid-driven cavity
     u_noslip = Constant((0.0, 0.0))
     ux_lid = args.lidscale * x * (1.0 - x)
     u_lid = Function(V).interpolate(as_vector([ux_lid,0.0]))
-    bc = [ DirichletBC(Z.sub(0), u_noslip, other),
-           DirichletBC(Z.sub(0), u_lid,    lid)   ]
+    bcs = [ DirichletBC(Z.sub(0), u_noslip, other),
+            DirichletBC(Z.sub(0), u_lid,    lid)   ]
+
+# some cases have a null space
+if args.nobase:
+    ns = None
+else:
+    # Dirichlet-only boundary conds on velocity therefore set nullspace to constant pressure
+    ns = MixedVectorSpaceBasis(Z, [Z.sub(0), VectorSpaceBasis(constant=True)])
 
 # define weak form
 up = Function(Z)
@@ -223,13 +230,7 @@ PETSc.Sys.Print('solving%s with %s x %s %s elements ...' \
                 % (meshstr,uFEstr,pFEstr,mixedname))
 
 # actually solve
-uu, pp = TrialFunctions(Z)
-if args.nobase:
-    ns = None
-else:
-    # Dirichlet-only boundary conds on velocity therefore set nullspace to constant pressure
-    ns = MixedVectorSpaceBasis(Z, [Z.sub(0), VectorSpaceBasis(constant=True)])
-solve(F == 0, up, bcs=bc, nullspace=ns,
+solve(F == 0, up, bcs=bcs, nullspace=ns,
       options_prefix='s', solver_parameters=sparams)
 u,p = up.split()
 
@@ -241,7 +242,8 @@ if args.analytical:
     p_exact = Function(W).interpolate(pi * cos(4.0*pi*x) * cos(4.0*pi*y))
     uerr = sqrt(assemble(dot(u - u_exact, u - u_exact) * dx))
     perr = sqrt(assemble(dot(p - p_exact, p - p_exact) * dx))
-    PETSc.Sys.Print('  numerical errors: |u-uexact|_h = %.3e, |p-pexact|_h = %.3e' % (uerr, perr))
+    PETSc.Sys.Print('  numerical errors: |u-uexact|_h = %.3e, |p-pexact|_h = %.3e' \
+                    % (uerr, perr))
 
 # optionally print solution norms
 if args.verbose:
