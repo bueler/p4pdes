@@ -4,27 +4,27 @@ runfish_1:
 	-@../../c/testit.sh fish.py "-mx 5 -my 5 -k 2 -s_ksp_type preonly -s_pc_type lu" 1 1
 
 runfish_2:
-	-@../../c/testit.sh fish.py "-refine 2 -s_ksp_converged_reason -s_pc_type mg -s_mg_levels_ksp_max_it 3" 1 2
+	-@../../c/testit.sh fish.py "-refine 2 -dm_view -s_ksp_converged_reason -s_pc_type mg -s_mg_levels_ksp_max_it 3" 2 2
 
 runfish_3:
-	-@../../c/testit.sh fish.py "-refine 1 -s_snes_type newtonls -s_snes_converged_reason -s_ksp_converged_reason -s_pc_type gamg -dm_view" 1 3
+	-@../../c/testit.sh fish.py "-refine 1 -dm_view -s_snes_type newtonls -s_snes_converged_reason -s_ksp_converged_reason -s_pc_type gamg" 1 3
 
 runstokes_1:
 	-@../../c/testit.sh stokes.py "-mx 4 -my 4 -refine 1 -s_ksp_type minres -s_pc_type none -analytical -s_ksp_converged_reason" 1 1
 
 runstokes_2:
-	-@../../c/testit.sh stokes.py "-udegree 3 -pdegree 2 -quad -s_ksp_type preonly -pcpackage directlu -show_norms" 1 2
+	-@../../c/testit.sh stokes.py "-udegree 3 -pdegree 2 -quad -s_ksp_type preonly -pcpackage directlu -verbose" 1 2
 
 runstokes_3:
 	-@./lidbox.py -quiet -cl 0.4 -cornerrefine 4 coarse.geo
 	-@gmsh -v 0 -2 coarse.geo  # verbosity=0 for quiet
-	-@../../c/testit.sh stokes.py "-i coarse.msh -show_norms -dm_view -refine 1 -pcpackage schur_lower_gmg_nomass -s_ksp_converged_reason" 1 3
+	-@../../c/testit.sh stokes.py "-i coarse.msh -dm_view -refine 1 -s_ksp_type fgmres -pcpackage schur_lower_gmg_nomass -s_ksp_converged_reason" 1 3
 
 runstokes_4:
-	-@../../c/testit.sh stokes.py "-refine 1 -pdegree 0 -dpressure -show_norms -pcpackage schur_lower_gmg" 1 4
+	-@../../c/testit.sh stokes.py "-refine 1 -pdegree 0 -dpressure -pcpackage schur_diag_gmg" 1 4
 
 runstokes_5:
-	-@../../c/testit.sh stokes.py "-s_ksp_monitor_short -s_ksp_rtol 1.0e-3 -refine 1 -nobase -show_norms -pcpackage schur_lower_gmg" 2 5
+	-@../../c/testit.sh stokes.py "-nobase -refine 1 -dm_view -s_ksp_monitor_short -s_ksp_rtol 1.0e-3 -pcpackage schur_lower_gmg -verbose" 2 5
 
 test_fish: runfish_1 runfish_2 runfish_3
 
