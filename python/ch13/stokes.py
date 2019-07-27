@@ -21,6 +21,7 @@
 #      ./stokes.py -i lidbox.msh -show_norms -dm_view -s_ksp_rtol 1.0e-12 -s_ksp_converged_reason -pcpackage schur_lower_gmg -refine 5 -o lid5.pvd
 #   + uses default -s_ksp_type gmres
 #   + -refine 6 works too and uses ~30Gb memory but does not get 4th eddy
+#   + n_u = 2816258, n_p = 352833,  N = n_u+n_p = 3169091
 
 # solver notes:
 #   -s_pc_fieldsplit_type schur
