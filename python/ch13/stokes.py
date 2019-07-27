@@ -78,8 +78,8 @@ parser.add_argument('-quad', action='store_true', default=False,
                     help='use quadrilateral finite elements')
 parser.add_argument('-refine', type=int, default=0, metavar='R',
                     help='number of refinement levels (e.g. for GMG)')
-parser.add_argument('-show_norms', action='store_true', default=False,
-                    help='print solution norms (useful for testing)')
+parser.add_argument('-verbose', action='store_true', default=False,
+                    help='print solver and solution norms (useful for testing)')
 parser.add_argument('-udegree', type=int, default=2, metavar='K',
                     help='polynomial degree for velocity (default=2)')
 args, unknown = parser.parse_known_args()
@@ -187,7 +187,7 @@ pars = {'directlu':         # LU direct solver (serial only)
             'fieldsplit_0_pc_type': 'mg',
             'fieldsplit_1_ksp_type': 'cg',
             'fieldsplit_1_pc_type': 'jacobi'},
-        'schur_diag_gmg': # Schur(diag)+GMG with mass-matrix PC; use minres or gmres
+        'schur_diag_gmg': # Schur(diag)+GMG with mass-matrix PC; use gmres
            # FIXME why doesn't this work with minres?
            {'pc_type': 'fieldsplit',
             'pc_fieldsplit_type': 'schur',
@@ -209,8 +209,12 @@ if len(args.pcpackage) > 0:
         print('ERROR: invalid solver package choice')
         print('       choices are %s' % list(pars.keys()))
         sys.exit(1)
-    PETSc.Sys.Print('PC package %s: ' % args.pcpackage,sparams)
+    PETSc.Sys.Print('PC package %s' % args.pcpackage)
 sparams.update({'snes_type': 'ksponly'})  # applies to all
+
+# optionally show solver dictionary
+if args.verbose:
+    PETSc.Sys.Print("  ", sparams)
 
 # describe method
 uFEstr = '%s^%d' % (['P','Q'][args.quad],args.udegree)
@@ -240,10 +244,10 @@ if args.analytical:
     PETSc.Sys.Print('  numerical errors: |u-uexact|_h = %.3e, |p-pexact|_h = %.3e' % (uerr, perr))
 
 # optionally print solution norms
-if args.show_norms:
+if args.verbose:
     uL2 = sqrt(assemble(dot(u, u) * dx))
     pL2 = sqrt(assemble(dot(p, p) * dx))
-    PETSc.Sys.Print('  norms: |u|_h = %.5e, |p|_h = %.5e' % (uL2, pL2))
+    PETSc.Sys.Print('solution norms: |u|_h = %.5e, |p|_h = %.5e' % (uL2, pL2))
 
 # optionally save to .pvd file viewable with Paraview
 if len(args.o) > 0:
