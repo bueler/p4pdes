@@ -166,7 +166,7 @@ v,q = TestFunctions(Z)
 F = (args.mu * inner(grad(u), grad(v)) - p * div(v) - div(u) * q \
      - inner(f_body,v)) * dx
 
-# for preconditioning Schur block using viscosity-weighted mass matrix
+# for preconditioning of Schur block using viscosity-weighted mass matrix
 #     reference: https://www.firedrakeproject.org/demos/geometric_multigrid.py.html
 class Mass(AuxiliaryOperatorPC):
 
