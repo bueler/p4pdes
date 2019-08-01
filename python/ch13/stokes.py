@@ -42,17 +42,20 @@ from firedrake.petsc import PETSc
 
 parser = ArgumentParser(description="""
 Solve a linear Stokes problem in 2D.  Three problem cases:
-  1. (default) Lid-driven cavity with quadratic velocity on lid and
-     Dirichlet conditions on all sides.  Null space = {constant pressure}.
+  1. Lid-driven cavity with quadratic velocity on lid and Dirichlet conditions
+     on all sides and a null space of constant pressures.  The default problem.
   2. (-analytical) Analytical exact solution from Logg et al (2012).
-  3. (-nobase) Same but with stress free condition on bottom; null space = {0}.
-Uses mixed FE method, either Taylor-Hood family (P^k x P^l or Q^k x Q^l)
-or CD with discontinuous pressure; defaults to P^2 x P^1.  Uses either
-uniform mesh or reads mesh.  Serves as an example of a saddle-point system.
-See code for PC packages:
+  3. (-nobase) Same as 1. but with stress-free condition on bottom so the null
+     space is trivial.
+Uses mixed FE method, either Taylor-Hood family (P^k x P^l, or Q^k x Q^l with
+-quad) or CD with discontinuous pressure; defaults to P^2 x P^1.  Uses either
+uniform mesh or reads a mesh in Gmsh format.  Serves as an example of a
+saddle-point system.  See the code for PC packages:
   -pcpackage directlu|schur_lower_gmg|schur_lower_gmg_nomass|schur_diag_gmg
 The prefix for PETSC solver options is 's_'.""",
-                    formatter_class=RawTextHelpFormatter)
+                        formatter_class=RawTextHelpFormatter)
+
+# options
 parser.add_argument('-analytical', action='store_true', default=False,
                     help='use problem with exact solution')
 parser.add_argument('-dpressure', action='store_true', default=False,
@@ -93,18 +96,18 @@ if len(args.i) > 0:
     PETSc.Sys.Print('reading mesh from %s ...' % args.i)
     mesh = Mesh(args.i)
     meshstr = ''
-    other = (41,)  # FIXME use str names 'lid','other'
+    other = (41,)
     lid = (40,)
 else:
     mx, my = args.mx, args.my
     mesh = UnitSquareMesh(mx-1, my-1, quadrilateral=args.quad)
     mx, my = (mx-1) * 2**args.refine + 1, (my-1) * 2**args.refine + 1
     meshstr = ' on %d x %d grid' % (mx,my)
-    # boundary i.d.s:    4
-    #                   ---
-    #                 1 | | 2
-    #                   ---
-    #                    3
+    # boundary i.d.s:    ---4---
+    #                    |     |
+    #                    1     2
+    #                    |     |
+    #                    ---3---
     if args.nobase:
         other = (1,2)
     else:
@@ -131,7 +134,7 @@ else:
 Z = V * W
 
 # define body force and Dir. boundary condition (on velocity only)
-# note: UFL as_vector() takes UFL expressions and combines
+#     note: UFL as_vector() takes UFL expressions and combines
 if args.analytical:
     assert (len(args.i) == 0)  # require UnitSquareMesh
     assert (args.mu == 1.0)
@@ -163,7 +166,8 @@ v,q = TestFunctions(Z)
 F = (args.mu * inner(grad(u), grad(v)) - p * div(v) - div(u) * q \
      - inner(f_body,v)) * dx
 
-# reference for preconditioning Schur block using viscosity-weighted mass matrix: https://www.firedrakeproject.org/demos/geometric_multigrid.py.html
+# for preconditioning Schur block using viscosity-weighted mass matrix
+#     reference: https://www.firedrakeproject.org/demos/geometric_multigrid.py.html
 class Mass(AuxiliaryOperatorPC):
 
     def form(self, pc, test, trial):
@@ -171,7 +175,7 @@ class Mass(AuxiliaryOperatorPC):
         bcs = None
         return (a, bcs)
 
-# solver packages; reference: https://www.firedrakeproject.org/demos/geometric_multigrid.py.html
+# solver packages
 pars = {'directlu':         # LU direct solver (serial only)
            {'pmat_type': 'aij',
             'pc_type': 'lu',
@@ -195,7 +199,7 @@ pars = {'directlu':         # LU direct solver (serial only)
             'fieldsplit_0_pc_type': 'mg',
             'fieldsplit_1_ksp_type': 'cg',
             'fieldsplit_1_pc_type': 'jacobi'},
-        'schur_diag_gmg': # Schur(diag)+GMG with mass-matrix PC; use gmres
+        'schur_diag_gmg':   # Schur(diag)+GMG with mass-matrix PC; use gmres
            # FIXME why doesn't this work with minres?
            {'pc_type': 'fieldsplit',
             'pc_fieldsplit_type': 'schur',
@@ -209,6 +213,7 @@ pars = {'directlu':         # LU direct solver (serial only)
             'fieldsplit_1_aux_sub_pc_type': 'icc'},
        }
 
+# solver package check and reporting
 sparams = {}
 if len(args.pcpackage) > 0:
     try:
@@ -219,9 +224,7 @@ if len(args.pcpackage) > 0:
         sys.exit(1)
     PETSc.Sys.Print('PC package %s' % args.pcpackage)
 sparams.update({'snes_type': 'ksponly'})  # applies to all
-
-# optionally show solver dictionary
-if args.verbose:
+if args.verbose:  # optionally show solver dictionary
     PETSc.Sys.Print("  ", sparams)
 
 # describe method
@@ -235,7 +238,7 @@ solve(F == 0, up, bcs=bcs, nullspace=ns,
       options_prefix='s', solver_parameters=sparams)
 u,p = up.split()
 
-# get numerical error if possible
+# numerical error (if appropriate)
 if args.analytical:
     xexact = sin(4.0*pi*x) * cos(4.0*pi*y)
     yexact = -cos(4.0*pi*x) * sin(4.0*pi*y)
