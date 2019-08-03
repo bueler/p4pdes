@@ -1,4 +1,2 @@
-PC package directlu
-   {'pmat_type': 'aij', 'pc_type': 'lu', 'pc_factor_shift_type': 'inblocks', 'snes_type': 'ksponly'}
 solving on 3 x 3 grid with Q^3 x Q^2 Taylor-Hood elements ...
 solution norms: |u|_h = 5.46342e-02, |p|_h = 8.64085e-01

@@ -13,8 +13,7 @@ Labels:
   boundary_faces: 1 strata with value/size (1 (10))
   exterior_facets: 1 strata with value/size (1 (10))
   depth: 3 strata with value/size (0 (19), 1 (38), 2 (20))
-PC package schur_lower_gmg
-   {'pc_type': 'fieldsplit', 'pc_fieldsplit_type': 'schur', 'pc_fieldsplit_schur_fact_type': 'lower', 'fieldsplit_0_ksp_type': 'preonly', 'fieldsplit_0_pc_type': 'mg', 'fieldsplit_1_ksp_type': 'preonly', 'fieldsplit_1_pc_type': 'python', 'fieldsplit_1_pc_python_type': '__main__.Mass', 'fieldsplit_1_aux_pc_type': 'bjacobi', 'fieldsplit_1_aux_sub_pc_type': 'icc', 'snes_type': 'ksponly'}
+Schur+GMG package lower
 solving on 5 x 5 grid with P^2 x P^1 Taylor-Hood elements ...
     Residual norms for s_ solve.
     0 KSP Residual norm 1.74358 

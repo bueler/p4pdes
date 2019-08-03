@@ -13,18 +13,18 @@ runstokes_1:
 	-@../../c/testit.sh stokes.py "-mx 4 -my 4 -refine 1 -s_ksp_type minres -s_pc_type none -analytical -s_ksp_converged_reason" 1 1
 
 runstokes_2:
-	-@../../c/testit.sh stokes.py "-udegree 3 -pdegree 2 -quad -s_ksp_type preonly -pcpackage directlu -verbose" 1 2
+	-@../../c/testit.sh stokes.py "-shownorms -udegree 3 -pdegree 2 -quad -s_ksp_type preonly -s_pc_type lu -s_pc_factor_shift_type inblocks -s_pmat_type aij" 1 2
 
 runstokes_3:
 	-@./lidbox.py -quiet -cl 0.4 -cornerrefine 4 coarse.geo
 	-@gmsh -v 0 -2 coarse.geo  # verbosity=0 for quiet
-	-@../../c/testit.sh stokes.py "-i coarse.msh -dm_view -refine 1 -s_ksp_type fgmres -pcpackage schur_lower_gmg_nomass -s_ksp_converged_reason" 1 3
+	-@../../c/testit.sh stokes.py "-i coarse.msh -dm_view -refine 1 -s_ksp_type fgmres -s_ksp_converged_reason -schurgmg lower_nomass" 1 3
 
 runstokes_4:
-	-@../../c/testit.sh stokes.py "-refine 1 -pdegree 0 -dpressure -s_ksp_type minres -s_ksp_converged_reason -pcpackage schur_diag_gmg" 1 4
+	-@../../c/testit.sh stokes.py "-refine 1 -pdegree 0 -dpressure -s_ksp_type minres -s_ksp_converged_reason -schurgmg diag" 1 4
 
 runstokes_5:
-	-@../../c/testit.sh stokes.py "-nobase -refine 1 -dm_view -s_ksp_monitor_short -s_ksp_rtol 1.0e-3 -pcpackage schur_lower_gmg -verbose" 2 5
+	-@../../c/testit.sh stokes.py "-nobase -refine 1 -dm_view -shownorms -s_ksp_monitor_short -s_ksp_rtol 1.0e-3 -schurgmg lower" 2 5
 
 test_fish: runfish_1 runfish_2 runfish_3
 
