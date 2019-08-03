@@ -191,13 +191,20 @@ pars = {'directlu':         # LU direct solver (serial only)
             'fieldsplit_1_pc_python_type': '__main__.Mass',
             'fieldsplit_1_aux_pc_type': 'bjacobi',
             'fieldsplit_1_aux_sub_pc_type': 'icc'},
-        'schur_lower_gmg_nomass':  # Schur(lower)+GMG w/o mass-matrix PC; use fgmres
+        'schur_lower_gmg_nomass':  # Schur(lower)+GMG w/o mass-matrix PC; use gmres or fgmres
            {'pc_type': 'fieldsplit',
             'pc_fieldsplit_type': 'schur',
             'pc_fieldsplit_schur_fact_type': 'lower',
+            'pc_fieldsplit_schur_precondition': 'selfp', # seems to be faster to
+                                                         # go ahead and assemble
+                                                         # S when we don't use Mass
             'fieldsplit_0_ksp_type': 'preonly',
             'fieldsplit_0_pc_type': 'mg',
             'fieldsplit_1_ksp_type': 'cg',
+            'fieldsplit_1_ksp_max_it': 6,                # fixed number of iterations
+                                                         # seems faster, and is
+                                                         # appropriate with GMRES
+            'fieldsplit_1_ksp_convergence_test': 'skip',
             'fieldsplit_1_pc_type': 'jacobi'},
         'schur_diag_gmg':   # Schur(diag)+GMG with mass-matrix PC; use minres or gmres
            {'pc_type': 'fieldsplit',
