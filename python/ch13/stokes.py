@@ -29,8 +29,7 @@
 #       additive,multiplicative,symmetric_multiplicative all fail because
 #       diagonal pressure block is identically zero and non-invertible
 #   -s_pc_fieldsplit_schur_factorization_type diag
-#       note main Murphy et al 2000 theorem applies to MINRES+(this schur diag);
-#       the default -s_pc_fieldsplit_schur_scale -1.0 *is* what we want
+#       note main Murphy et al 2000 theorem applies to MINRES + schur_diag_gmg
 #   with -pcpackage schur_lower_gmg_nomass, option -s_fieldsplit_0_ksp_converged_reason
 #       shows extra applications of fieldsplit_0 KSP because it is applying (A00)^-1
 #       in applying Schur factor
@@ -166,8 +165,9 @@ v,q = TestFunctions(Z)
 F = (args.mu * inner(grad(u), grad(v)) - p * div(v) - div(u) * q \
      - inner(f_body,v)) * dx
 
-# for preconditioning of Schur block using viscosity-weighted mass matrix
-#     reference: https://www.firedrakeproject.org/demos/geometric_multigrid.py.html
+# for preconditioning of Schur block  S = - B A^-1 B^T  using viscosity-weighted
+# mass matrix:    Mass  ~~  -S^{-1}
+# reference: https://www.firedrakeproject.org/demos/geometric_multigrid.py.html
 class Mass(AuxiliaryOperatorPC):
 
     def form(self, pc, test, trial):
@@ -199,11 +199,13 @@ pars = {'directlu':         # LU direct solver (serial only)
             'fieldsplit_0_pc_type': 'mg',
             'fieldsplit_1_ksp_type': 'cg',
             'fieldsplit_1_pc_type': 'jacobi'},
-        'schur_diag_gmg':   # Schur(diag)+GMG with mass-matrix PC; use gmres
-           # FIXME why doesn't this work with minres?
+        'schur_diag_gmg':   # Schur(diag)+GMG with mass-matrix PC; use minres or gmres
            {'pc_type': 'fieldsplit',
             'pc_fieldsplit_type': 'schur',
             'pc_fieldsplit_schur_fact_type': 'diag',
+            'pc_fieldsplit_schur_scale': 1.0,   # note Mass is SPD so we *don't*
+                                                # want to flip sign, which is
+                                                # the default for diag
             'fieldsplit_0_ksp_type': 'preonly',
             'fieldsplit_0_pc_type': 'mg',
             'fieldsplit_1_ksp_type': 'preonly',
