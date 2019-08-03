@@ -1,2 +1,3 @@
 PC package schur_diag_gmg
 solving on 5 x 5 grid with P^2 x P^0 CD elements ...
+  Linear s_ solve converged due to CONVERGED_RTOL iterations 24
