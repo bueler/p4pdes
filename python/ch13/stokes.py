@@ -166,7 +166,8 @@ F = (args.mu * inner(grad(u), grad(v)) - p * div(v) - div(u) * q \
 #       is already SPD
 # 3. -s_pc_fieldsplit_schur_precondition selfp
 #       when not using Mass it seems to be faster to go ahead and *assemble*
-#       the preconditioner for the A11
+#       the preconditioner for the A11, though this only inverts the diagonal
+#       of A00:  S  is approximated by  - B inv(diag(A)) B^T
 
 # for preconditioning of Schur block  S = - B A^-1 B^T  using viscosity-weighted
 # mass matrix:    Mass  ~~  -S^{-1}
@@ -183,7 +184,7 @@ common = {'pc_type': 'fieldsplit',
           'pc_fieldsplit_type': 'schur',
           'fieldsplit_0_ksp_type': 'preonly',
           'fieldsplit_0_pc_type': 'mg'}
-pars = {# diagonal Schur with mass-matrix PC on A11; use minres or gmres
+pars = {# diagonal Schur with mass-matrix PC on pressures; use minres or gmres
         'diag':
            {'pc_fieldsplit_schur_fact_type': 'diag',
             'pc_fieldsplit_schur_scale': 1.0,
@@ -192,7 +193,23 @@ pars = {# diagonal Schur with mass-matrix PC on A11; use minres or gmres
             'fieldsplit_1_pc_python_type': '__main__.Mass',
             'fieldsplit_1_aux_pc_type': 'bjacobi',
             'fieldsplit_1_aux_sub_pc_type': 'icc'},
-        # lower-triangular Schur with mass-matrix PC on A11; use gmres
+        # diagonal Schur WITHOUT mass-matrix PC on pressures; use minres or gmres
+        'diag_nomass':
+           {'pc_fieldsplit_schur_fact_type': 'diag',
+            'pc_fieldsplit_schur_precondition': 'selfp',
+            'pc_fieldsplit_schur_scale': -1.0,
+            'fieldsplit_1_ksp_type': 'preonly',
+            'fieldsplit_1_pc_type': 'jacobi'},
+        # diagonal Schur WITHOUT mass-matrix PC on pressures and (very slow)
+        # "full" assembly of S and then cholesky factorization of it;
+        # fails if S has a kernel; only serial; use minres or gmres
+        'diag_nomass_full_cholesky':
+           {'pc_fieldsplit_schur_fact_type': 'diag',
+            'pc_fieldsplit_schur_precondition': 'full',
+            'pc_fieldsplit_schur_scale': -1.0,
+            'fieldsplit_1_ksp_type': 'preonly',
+            'fieldsplit_1_pc_type': 'cholesky'},
+        # lower-triangular Schur with mass-matrix PC on pressures; use gmres
         'lower':
            {'pc_fieldsplit_schur_fact_type': 'lower',
             'fieldsplit_1_ksp_type': 'preonly',
@@ -200,15 +217,11 @@ pars = {# diagonal Schur with mass-matrix PC on A11; use minres or gmres
             'fieldsplit_1_pc_python_type': '__main__.Mass',
             'fieldsplit_1_aux_pc_type': 'bjacobi',
             'fieldsplit_1_aux_sub_pc_type': 'icc'},
-        # lower-trianguler Schur WITHOUT mass-matrix PC on A11; use gmres or fgmres
+        # lower-triangular Schur WITHOUT mass-matrix PC on pressures; use gmres or fgmres
         'lower_nomass':
            {'pc_fieldsplit_schur_fact_type': 'lower',
             'pc_fieldsplit_schur_precondition': 'selfp',
-            'fieldsplit_1_ksp_type': 'cg',
-            'fieldsplit_1_ksp_max_it': 2,  # a small, fixed number of iterations seems
-                                           # faster, and is appropriate with GMRES;
-                                           # might want FGMRES if not fixed
-            'fieldsplit_1_ksp_convergence_test': 'skip',
+            'fieldsplit_1_ksp_type': 'preonly',
             'fieldsplit_1_pc_type': 'jacobi'},
        }
 
