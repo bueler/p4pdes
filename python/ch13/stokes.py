@@ -249,12 +249,16 @@ solve(F == 0, up, bcs=bcs, nullspace=ns,
       options_prefix='s', solver_parameters=sparams)
 u,p = up.split()
 
-# numerical error (if appropriate)
+# numerical error (if possible)
 if args.analytical:
     xexact = sin(4.0*pi*x) * cos(4.0*pi*y)
     yexact = -cos(4.0*pi*x) * sin(4.0*pi*y)
-    u_exact = Function(V).interpolate(as_vector([xexact,yexact]))
-    p_exact = Function(W).interpolate(pi * cos(4.0*pi*x) * cos(4.0*pi*y))
+    # compare Logg et al 2012, Fig 20.11; degree 10 is not necessary but same
+    # degree as computation spaces will yield wrong rates
+    Vhigh = VectorFunctionSpace(mesh, 'CG', degree=args.udegree+2)
+    Whigh = FunctionSpace(mesh, 'CG', degree=args.pdegree+2)
+    u_exact = Function(Vhigh).interpolate(as_vector([xexact,yexact]))
+    p_exact = Function(Whigh).interpolate(pi * cos(4.0*pi*x) * cos(4.0*pi*y))
     uerr = sqrt(assemble(dot(u - u_exact, u - u_exact) * dx))
     perr = sqrt(assemble(dot(p - p_exact, p - p_exact) * dx))
     PETSc.Sys.Print('  numerical errors: |u-uexact|_h = %.3e, |p-pexact|_h = %.3e' \
