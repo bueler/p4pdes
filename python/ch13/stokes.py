@@ -3,25 +3,13 @@
 # * generate small matrix and talk/check/show some details (?):
 #      ./stokes.py -analytical -s_ksp_type minres -s_pc_type none -mx 2 -my 2 -s_mat_type aij -s_ksp_view_mat :foo.m:ascii_matlab
 
-# * showing fixed number of iterations independent of LEV and clear evidence of
-#   optimality; note ksp_view_mat shows MatNest so get n_p,n_u;
-#      for LEV in 1 2 3 4 5 6 7 8; do
-#          timer ./stokes.py -s_ksp_converged_reason -schurgmg lower -refine $LEV
-#      done
-#   + uses default -s_ksp_type gmres
-#   + level 8 is 513x513 grid
-#   + add for flops: -log_view |grep "Flop:  "
-#   + add -s_ksp_view_mat to show MatNest to get n_p,n_u
-#   + add -analytical -s_ksp_rtol 1.0e-10 to show convergence
-#   + can go to level 9 (1025x1025 grid) which uses more than 16 Gb:
-
 # * show Moffat eddies with paraview-generated streamlines; resolves 3rd eddy!:
 #      ./lidbox.py lidbox.geo
 #      gmsh -2 lidbox.geo -o lidbox.msh
 #      ./stokes.py -i lidbox.msh -show_norms -dm_view -s_ksp_rtol 1.0e-12 -s_ksp_converged_reason -schurgmg lower -refine 5 -o lid5.pvd
 #   + uses default -s_ksp_type gmres
 #   + -refine 6 works too and uses ~30Gb memory but does not get 4th eddy
-#   + n_u = 2816258, n_p = 352833,  N = n_u+n_p = 3169091
+#   + n_u = 2816258, n_p = 352833, N = 3169091
 
 import sys
 from argparse import ArgumentParser, RawTextHelpFormatter
