@@ -70,8 +70,8 @@ parser.add_argument('-refine', type=int, default=0, metavar='R',
                     help='number of refinement levels (e.g. for GMG)')
 parser.add_argument('-schurgmg', metavar='PKG', default='',
                     help='choose a Schur+GMG PC solver package: see text for options')
-parser.add_argument('-shownorms', action='store_true', default=False,
-                    help='print solution norms (useful for testing)')
+parser.add_argument('-showinfo', action='store_true', default=False,
+                    help='print function space sizes and solution norms (useful for testing)')
 parser.add_argument('-udegree', type=int, default=2, metavar='K',
                     help='polynomial degree for velocity (default=2)')
 args, unknown = parser.parse_known_args()
@@ -264,11 +264,13 @@ if args.analytical:
     PETSc.Sys.Print('  numerical errors: |u-uexact|_h = %.3e, |p-pexact|_h = %.3e' \
                     % (uerr, perr))
 
-# optionally print solution norms
-if args.shownorms:
+# optionally print number of degrees of freedom and solution norms
+if args.showinfo:
+    n_u,n_p = V.dim(),W.dim()
+    PETSc.Sys.Print('  sizes: n_u = %d, n_p = %d, N = %d' % (n_u,n_p,n_u+n_p))
     uL2 = sqrt(assemble(dot(u, u) * dx))
     pL2 = sqrt(assemble(dot(p, p) * dx))
-    PETSc.Sys.Print('solution norms: |u|_h = %.5e, |p|_h = %.5e' % (uL2, pL2))
+    PETSc.Sys.Print('  solution norms: |u|_h = %.5e, |p|_h = %.5e' % (uL2, pL2))
 
 # optionally save to .pvd file viewable with Paraview
 if len(args.o) > 0:
