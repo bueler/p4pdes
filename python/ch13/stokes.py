@@ -27,7 +27,7 @@ Uses mixed FE method, either Taylor-Hood family (P^k x P^l, or Q^k x Q^l with
 -quad) or CD with discontinuous pressure; defaults to P^2 x P^1.  Uses either
 uniform mesh or reads a mesh in Gmsh format.  Serves as an example of a
 saddle-point system.  See the code for Schur+GMG based PC packages:
-  -schurgmg lower|lower_nomass|diag
+  -schurgmg diag|diag_mass|lower|lower_mass
 The prefix for PETSC solver options is 's_'.""",
                         formatter_class=RawTextHelpFormatter)
 
@@ -173,7 +173,7 @@ common = {'pc_type': 'fieldsplit',
           'fieldsplit_0_ksp_type': 'preonly',
           'fieldsplit_0_pc_type': 'mg'}
 pars = {# diagonal Schur with mass-matrix PC on pressures; use minres or gmres
-        'diag':
+        'diag_mass':
            {'pc_fieldsplit_schur_fact_type': 'diag',
             'pc_fieldsplit_schur_scale': 1.0,
             'fieldsplit_1_ksp_type': 'preonly',
@@ -181,32 +181,32 @@ pars = {# diagonal Schur with mass-matrix PC on pressures; use minres or gmres
             'fieldsplit_1_pc_python_type': '__main__.Mass',
             'fieldsplit_1_aux_pc_type': 'bjacobi',
             'fieldsplit_1_aux_sub_pc_type': 'icc'},
-        # diagonal Schur WITHOUT mass-matrix PC on pressures; use minres or gmres
-        'diag_nomass':
+        # diagonal Schur using "selfp" PC on pressures; use minres or gmres
+        'diag':
            {'pc_fieldsplit_schur_fact_type': 'diag',
             'pc_fieldsplit_schur_precondition': 'selfp',
             'pc_fieldsplit_schur_scale': -1.0,
             'fieldsplit_1_ksp_type': 'preonly',
             'fieldsplit_1_pc_type': 'jacobi'},
-        # diagonal Schur WITHOUT mass-matrix PC on pressures and (very slow)
-        # "full" assembly of S and then cholesky factorization of it;
-        # fails if S has a kernel; only serial; use minres or gmres
-        'diag_nomass_full_cholesky':
+        # diagonal Schur with (very slow) "full" assembly of S and then
+        # cholesky factorization of it; fails if S has a kernel
+        # only serial; use minres or gmres
+        'diag_full_cholesky':
            {'pc_fieldsplit_schur_fact_type': 'diag',
             'pc_fieldsplit_schur_precondition': 'full',
             'pc_fieldsplit_schur_scale': -1.0,
             'fieldsplit_1_ksp_type': 'preonly',
             'fieldsplit_1_pc_type': 'cholesky'},
         # lower-triangular Schur with mass-matrix PC on pressures; use gmres
-        'lower':
+        'lower_mass':
            {'pc_fieldsplit_schur_fact_type': 'lower',
             'fieldsplit_1_ksp_type': 'preonly',
             'fieldsplit_1_pc_type': 'python',
             'fieldsplit_1_pc_python_type': '__main__.Mass',
             'fieldsplit_1_aux_pc_type': 'bjacobi',
             'fieldsplit_1_aux_sub_pc_type': 'icc'},
-        # lower-triangular Schur WITHOUT mass-matrix PC on pressures; use gmres or fgmres
-        'lower_nomass':
+        # lower-triangular Schur using "selfp" PC on pressures; use gmres or fgmres
+        'lower':
            {'pc_fieldsplit_schur_fact_type': 'lower',
             'pc_fieldsplit_schur_precondition': 'selfp',
             'fieldsplit_1_ksp_type': 'preonly',

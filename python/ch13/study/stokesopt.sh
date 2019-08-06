@@ -9,10 +9,10 @@ set +x
 # FE method is Q^2 x Q^1 Taylor-Hood
 
 MAXLEV=9   # LEV=9 is 1025x1025 uniform grid with N about 10^7
-for SOLVE in "-s_ksp_type minres -schurgmg diag" \
-             "-s_ksp_type minres -schurgmg diag_nomass" \
-             "-s_ksp_type gmres -schurgmg lower" \
-             "-s_ksp_type gmres -schurgmg lower_nomass"; do      
+for SOLVE in "-s_ksp_type minres -schurgmg diag_mass" \
+             "-s_ksp_type minres -schurgmg diag" \
+             "-s_ksp_type gmres -schurgmg lower_mass" \
+             "-s_ksp_type gmres -schurgmg lower"; do
     for (( LEV=2; LEV<=$MAXLEV; LEV++ )); do
         cmd="../stokes.py -quad -showinfo -s_ksp_converged_reason ${SOLVE} -refine ${LEV} -log_view"
         echo $cmd

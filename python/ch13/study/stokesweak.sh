@@ -8,7 +8,7 @@ set +x
 # problem is default lid-driven cavity with Dirichlet on whole boundary
 # FE method is Q^2 x Q^1 Taylor-Hood
 
-SOLVE="-s_ksp_type gmres -schurgmg lower_nomass"  # see stokesopt.sh for reason for this solver
+SOLVE="-s_ksp_type gmres -schurgmg lower"  # see stokesopt.sh for reason for this solver
 
 # COARSE and LEV imply 129x129 grid on each process
 COARSE="-mx 9 -my 9"

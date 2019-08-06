@@ -6,8 +6,8 @@ set +x
 #    ./stokesconv.sh &> stokesconv.txt
 
 # minimal testing suggests this is faster than:
-#    GMRES+lower, MINRES+diag, MINRES+diag_nomass
-SOLVE="-s_ksp_type gmres -schurgmg lower_nomass"
+#    GMRES+lower_mass, MINRES+diag_mass, MINRES+diag
+SOLVE="-s_ksp_type gmres -schurgmg lower"
 COMMON="-analytical -s_ksp_rtol 1.0e-8 -s_ksp_converged_reason $SOLVE"
 
 # FE methods are: P2xP1, Q2xQ1, P3xP2, CD(P2xP0)

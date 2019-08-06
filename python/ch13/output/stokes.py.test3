@@ -14,6 +14,6 @@ Labels:
   Cell Sets: 1 strata with value/size (50 (546))
   exterior_facets: 1 strata with value/size (1 (40))
   depth: 3 strata with value/size (0 (177), 1 (488), 2 (312))
-Schur+GMG package lower_nomass
+Schur+GMG package lower
 solving with 1 levels uniform refinement with P^2 x P^1 Taylor-Hood elements ...
   Linear s_ solve converged due to CONVERGED_RTOL iterations 17
