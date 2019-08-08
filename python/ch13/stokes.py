@@ -144,22 +144,28 @@ F = (args.mu * inner(grad(u), grad(v)) - p * div(v) - div(u) * q \
 
 # solver notes:
 # 1. -s_pc_fieldsplit_type schur
-#       is the ONLY viable fieldsplit type because others (i.e. additive,
+#       This is the ONLY viable fieldsplit type because others (i.e. additive,
 #       multiplicative, and symmetric_multiplicative) all fail because diagonal
-#       pressure block is zero (non-invertible!)
+#       pressure block is zero (non-invertible).
 # 2. -s_pc_fieldsplit_schur_factorization_type diag
-#       Murphy et al 2000 theorem applies to MINRES + (this option); with this
-#       option the default for -pc_fieldsplit_schur_scale is -1.0; we do NOT
+#       The Murphy et al 2000 theorem applies to MINRES + (this option).  Note
+#       the default for diag is -pc_fieldsplit_schur_scale -1.0.  We do NOT
 #       want this sign flip when using Mass for preconditioning because Mass
-#       is already SPD
-# 3. -s_pc_fieldsplit_schur_precondition selfp
-#       when not using Mass it seems to be faster to go ahead and *assemble*
-#       the preconditioner for the A11, though this only inverts the diagonal
-#       of A00:  S  is approximated by  - B inv(diag(A)) B^T
+#       is already SPD.
+# 3. For preconditioning of the Schur block  S = - B A^-1 B^T  we may use a
+#       viscosity-weighted form of the mass matrix to approximate -S^{-1}.
+#       The reference for how to do this in Firedrake is
+#         https://www.firedrakeproject.org/demos/geometric_multigrid.py.html
+#       The class Mass below, and the options below, are from this source.
+# 4. -s_pc_fieldsplit_schur_precondition selfp
+#       When not using Mass it seems to be faster to go ahead and *assemble*
+#       the preconditioner for the A11 block.  This option does so, but only
+#       inverts the diagonal of A00, so S \approx - B inv(diag(A)) B^T
+# 5. The "diag_mass" PC combination below uses bjacobi+icc, which is possible
+#       because the mass matrix is SPD.  However, testing shows that for the
+#       "lower_mass" combination jacobi is much better *for fine grids* than
+#       bjacobi+icc.  It is not clear why this is so.
 
-# for preconditioning of Schur block  S = - B A^-1 B^T  using viscosity-weighted
-# mass matrix:    Mass  ~~  -S^{-1}
-# reference: https://www.firedrakeproject.org/demos/geometric_multigrid.py.html
 class Mass(AuxiliaryOperatorPC):
 
     def form(self, pc, test, trial):
@@ -173,7 +179,8 @@ common = {'pc_type': 'fieldsplit',
           'fieldsplit_0_ksp_type': 'preonly',
           'fieldsplit_0_pc_type': 'mg',
           'fieldsplit_1_ksp_type': 'preonly'}
-pars = {# diagonal Schur with mass-matrix PC on pressures; use minres or gmres
+
+pacs = {# diagonal Schur with mass-matrix PC on pressures; use minres or gmres
         'diag_mass':
            {'pc_fieldsplit_schur_fact_type': 'diag',
             'pc_fieldsplit_schur_scale': 1.0,
@@ -200,8 +207,7 @@ pars = {# diagonal Schur with mass-matrix PC on pressures; use minres or gmres
            {'pc_fieldsplit_schur_fact_type': 'lower',
             'fieldsplit_1_pc_type': 'python',
             'fieldsplit_1_pc_python_type': '__main__.Mass',
-            'fieldsplit_1_aux_pc_type': 'bjacobi',
-            'fieldsplit_1_aux_sub_pc_type': 'icc'},
+            'fieldsplit_1_pc_type': 'jacobi'},
         # lower-triangular Schur using "selfp" PC on pressures; use gmres or fgmres
         'lower':
            {'pc_fieldsplit_schur_fact_type': 'lower',
@@ -214,10 +220,10 @@ sparams = {}
 if len(args.schurgmg) > 0:
     sparams.update(common)
     try:
-        sparams.update(pars[args.schurgmg])
+        sparams.update(pacs[args.schurgmg])
     except KeyError:
         print('ERROR: invalid solver package choice')
-        print('       choices are %s' % list(pars.keys()))
+        print('       choices are %s' % list(pacs.keys()))
         sys.exit(1)
 sparams.update({'snes_type': 'ksponly'})  # applies to all
 
