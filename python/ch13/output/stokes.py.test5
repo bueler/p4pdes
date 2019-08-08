@@ -14,31 +14,17 @@ Labels:
   exterior_facets: 1 strata with value/size (1 (10))
   depth: 3 strata with value/size (0 (19), 1 (38), 2 (20))
 solving on 5 x 5 grid with P^2 x P^1 Taylor-Hood elements ...
-  Schur+GMG PC package lower_mass
+  Schur+GMG PC package lower
     Residual norms for s_ solve.
-    0 KSP Residual norm 1.74358 
-    1 KSP Residual norm 1.42078 
-    2 KSP Residual norm 1.41182 
-    3 KSP Residual norm 1.06603 
-    4 KSP Residual norm 0.806095 
-    5 KSP Residual norm 0.799838 
-    6 KSP Residual norm 0.607936 
-    7 KSP Residual norm 0.315874 
-    8 KSP Residual norm 0.306265 
-    9 KSP Residual norm 0.211391 
-   10 KSP Residual norm 0.132888 
-   11 KSP Residual norm 0.132351 
-   12 KSP Residual norm 0.0925318 
-   13 KSP Residual norm 0.041185 
-   14 KSP Residual norm 0.0371155 
-   15 KSP Residual norm 0.0195499 
-   16 KSP Residual norm 0.0132379 
-   17 KSP Residual norm 0.0111518 
-   18 KSP Residual norm 0.00505813 
-   19 KSP Residual norm 0.00501871 
-   20 KSP Residual norm 0.00328229 
-   21 KSP Residual norm 0.00231723 
-   22 KSP Residual norm 0.00190619 
-   23 KSP Residual norm 0.000634639 
+    0 KSP Residual norm 16.1827 
+    1 KSP Residual norm 6.71305 
+    2 KSP Residual norm 2.91771 
+    3 KSP Residual norm 1.90584 
+    4 KSP Residual norm 0.591078 
+    5 KSP Residual norm 0.225716 
+    6 KSP Residual norm 0.0900777 
+    7 KSP Residual norm 0.0363689 
+    8 KSP Residual norm 0.0182084 
+    9 KSP Residual norm 0.0114799 
   sizes: n_u = 162, n_p = 25, N = 187
-  solution norms: |u|_h = 5.51731e-02, |p|_h = 9.88099e-01
+  solution norms: |u|_h = 5.43848e-02, |p|_h = 9.90918e-01

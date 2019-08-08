@@ -24,7 +24,7 @@ runstokes_4:
 	-@../../c/testit.sh stokes.py "-refine 1 -pdegree 0 -dpressure -s_ksp_type minres -s_ksp_converged_reason -schurgmg diag_mass" 1 4
 
 runstokes_5:
-	-@../../c/testit.sh stokes.py "-nobase -refine 1 -dm_view -showinfo -s_ksp_monitor_short -s_ksp_rtol 1.0e-3 -schurgmg lower_mass" 2 5
+	-@../../c/testit.sh stokes.py "-nobase -refine 1 -dm_view -showinfo -s_ksp_monitor_short -s_ksp_rtol 1.0e-3 -schurgmg lower" 2 5
 
 test_fish: runfish_1 runfish_2 runfish_3
 
