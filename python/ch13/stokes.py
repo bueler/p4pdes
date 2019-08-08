@@ -171,12 +171,12 @@ class Mass(AuxiliaryOperatorPC):
 common = {'pc_type': 'fieldsplit',
           'pc_fieldsplit_type': 'schur',
           'fieldsplit_0_ksp_type': 'preonly',
-          'fieldsplit_0_pc_type': 'mg'}
+          'fieldsplit_0_pc_type': 'mg',
+          'fieldsplit_1_ksp_type': 'preonly'}
 pars = {# diagonal Schur with mass-matrix PC on pressures; use minres or gmres
         'diag_mass':
            {'pc_fieldsplit_schur_fact_type': 'diag',
             'pc_fieldsplit_schur_scale': 1.0,
-            'fieldsplit_1_ksp_type': 'preonly',
             'fieldsplit_1_pc_type': 'python',
             'fieldsplit_1_pc_python_type': '__main__.Mass',
             'fieldsplit_1_aux_pc_type': 'bjacobi',
@@ -186,7 +186,6 @@ pars = {# diagonal Schur with mass-matrix PC on pressures; use minres or gmres
            {'pc_fieldsplit_schur_fact_type': 'diag',
             'pc_fieldsplit_schur_precondition': 'selfp',
             'pc_fieldsplit_schur_scale': -1.0,
-            'fieldsplit_1_ksp_type': 'preonly',
             'fieldsplit_1_pc_type': 'jacobi'},
         # diagonal Schur with (very slow) "full" assembly of S and then
         # cholesky factorization of it; fails if S has a kernel
@@ -195,12 +194,10 @@ pars = {# diagonal Schur with mass-matrix PC on pressures; use minres or gmres
            {'pc_fieldsplit_schur_fact_type': 'diag',
             'pc_fieldsplit_schur_precondition': 'full',
             'pc_fieldsplit_schur_scale': -1.0,
-            'fieldsplit_1_ksp_type': 'preonly',
             'fieldsplit_1_pc_type': 'cholesky'},
         # lower-triangular Schur with mass-matrix PC on pressures; use gmres
         'lower_mass':
            {'pc_fieldsplit_schur_fact_type': 'lower',
-            'fieldsplit_1_ksp_type': 'preonly',
             'fieldsplit_1_pc_type': 'python',
             'fieldsplit_1_pc_python_type': '__main__.Mass',
             'fieldsplit_1_aux_pc_type': 'bjacobi',
@@ -209,7 +206,6 @@ pars = {# diagonal Schur with mass-matrix PC on pressures; use minres or gmres
         'lower':
            {'pc_fieldsplit_schur_fact_type': 'lower',
             'pc_fieldsplit_schur_precondition': 'selfp',
-            'fieldsplit_1_ksp_type': 'preonly',
             'fieldsplit_1_pc_type': 'jacobi'},
        }
 
@@ -223,7 +219,6 @@ if len(args.schurgmg) > 0:
         print('ERROR: invalid solver package choice')
         print('       choices are %s' % list(pars.keys()))
         sys.exit(1)
-    PETSc.Sys.Print('Schur+GMG package %s' % args.schurgmg)
 sparams.update({'snes_type': 'ksponly'})  # applies to all
 
 # describe method
@@ -231,6 +226,9 @@ uFEstr = '%s^%d' % (['P','Q'][args.quad],args.udegree)
 pFEstr = '%s^%d' % (['P','Q'][args.quad],args.pdegree)
 PETSc.Sys.Print('solving%s with %s x %s %s elements ...' \
                 % (meshstr,uFEstr,pFEstr,mixedname))
+
+if len(args.schurgmg) > 0 and args.showinfo:
+    PETSc.Sys.Print('  Schur+GMG PC package %s' % args.schurgmg)
 
 # actually solve
 solve(F == 0, up, bcs=bcs, nullspace=ns,

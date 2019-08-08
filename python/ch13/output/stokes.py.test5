@@ -13,8 +13,8 @@ Labels:
   boundary_faces: 1 strata with value/size (1 (10))
   exterior_facets: 1 strata with value/size (1 (10))
   depth: 3 strata with value/size (0 (19), 1 (38), 2 (20))
-Schur+GMG package lower_mass
 solving on 5 x 5 grid with P^2 x P^1 Taylor-Hood elements ...
+  Schur+GMG PC package lower_mass
     Residual norms for s_ solve.
     0 KSP Residual norm 1.74358 
     1 KSP Residual norm 1.42078 
