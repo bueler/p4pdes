@@ -18,6 +18,8 @@ parser.add_argument('-cornerrefine', type=float, default=100, metavar='X',
                     help='ratio of refinement in corners (default=100)')
 parser.add_argument('-quiet', action='store_true', default=False,
                     help='suppress all stdout')
+parser.add_argument('-usenames', action='store_true', default=False,
+                    help='put names "dirichlet","neumann","interior" in PhysicalNames() ... used only for running through c/ch10/vis/petsc2tikz.py')
 args = parser.parse_args()
 
 if not args.quiet:
@@ -47,12 +49,19 @@ Line(16) = {7,8};
 Line(17) = {8,1};
 
 Line Loop(20) = {10,11,12,13,14,15,16,17};
-Plane Surface(30) = {20};
+Plane Surface(30) = {20};\n'''
 
+physnums = '''
 Physical Line(40) = {17};  // lid
 Physical Line(41) = {10,11,12,13,14,15,16};  // other
 
 Physical Surface(50) = {30};  // interior\n'''
+
+physnames = '''
+Physical Line("dirichlet") = {10,11,12,13,14,15,16,17};
+Physical Line("neumann") = {};
+
+Physical Surface("interior") = {30};\n'''
 
 geo.write(firstline)
 now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -65,6 +74,9 @@ geo.write('cleddy = %f;  // characteristic length for corners (%g times smaller)
           % (args.cl/args.cornerrefine,args.cornerrefine))
 geo.write('trans = 0.4;  // location of transition\n')
 geo.write(meat)
-
+if args.usenames:
+    geo.write(physnames)
+else:
+    geo.write(physnums)
 geo.close()
 
