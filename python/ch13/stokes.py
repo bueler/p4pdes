@@ -1,16 +1,5 @@
 #!/usr/bin/env python3
 
-# * generate small matrix and talk/check/show some details (?):
-#      ./stokes.py -analytical -s_ksp_type minres -s_pc_type none -mx 2 -my 2 -s_mat_type aij -s_ksp_view_mat :foo.m:ascii_matlab
-
-# * show Moffat eddies with paraview-generated streamlines; resolves 3rd eddy!:
-#      ./lidbox.py lidbox.geo
-#      gmsh -2 lidbox.geo -o lidbox.msh
-#      ./stokes.py -i lidbox.msh -show_norms -dm_view -s_ksp_rtol 1.0e-12 -s_ksp_converged_reason -schurgmg lower -refine 5 -o lid5.pvd
-#   + uses default -s_ksp_type gmres
-#   + -refine 6 works too and uses ~30Gb memory but does not get 4th eddy
-#   + n_u = 2816258, n_p = 352833, N = 3169091
-
 import sys
 from argparse import ArgumentParser, RawTextHelpFormatter
 from firedrake import *
@@ -28,10 +17,8 @@ Uses mixed FE method, either Taylor-Hood family (P^k x P^l, or Q^k x Q^l with
 uniform mesh or reads a mesh in Gmsh format.  Serves as an example of a
 saddle-point system.  See the code for Schur+GMG based PC packages:
   -schurgmg diag|diag_mass|lower|lower_mass
-The prefix for PETSC solver options is 's_'.""",
-                        formatter_class=RawTextHelpFormatter)
+The prefix for PETSC solver options is 's_'.""",formatter_class=RawTextHelpFormatter)
 
-# options
 parser.add_argument('-analytical', action='store_true', default=False,
                     help='use problem with exact solution')
 parser.add_argument('-dpressure', action='store_true', default=False,
