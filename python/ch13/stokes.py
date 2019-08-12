@@ -170,6 +170,7 @@ common = {'pc_type': 'fieldsplit',
 pacs = {# diagonal Schur with mass-matrix PC on pressures; use minres or gmres
         'diag_mass':
            {'pc_fieldsplit_schur_fact_type': 'diag',
+            'pc_fieldsplit_schur_precondition': 'a11',
             'pc_fieldsplit_schur_scale': 1.0,
             'fieldsplit_1_pc_type': 'python',
             'fieldsplit_1_pc_python_type': '__main__.Mass',
@@ -192,6 +193,7 @@ pacs = {# diagonal Schur with mass-matrix PC on pressures; use minres or gmres
         # lower-triangular Schur with mass-matrix PC on pressures; use gmres
         'lower_mass':
            {'pc_fieldsplit_schur_fact_type': 'lower',
+            'pc_fieldsplit_schur_precondition': 'a11',
             'fieldsplit_1_pc_type': 'python',
             'fieldsplit_1_pc_python_type': '__main__.Mass',
             'fieldsplit_1_pc_type': 'jacobi'},
