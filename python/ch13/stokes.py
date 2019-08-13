@@ -86,14 +86,12 @@ if args.refine > 0:
 x,y = SpatialCoordinate(mesh)
 mesh._plex.viewFromOptions('-dm_view')
 
-# define mixed finite elements (P^k-P^l or Q^k-Q^l)
+# define mixed finite elements
 V = VectorFunctionSpace(mesh, 'CG', degree=args.udegree)
 if args.dpressure:
     W = FunctionSpace(mesh, 'DG', degree=args.pdegree)
-    mixedname = 'CD'
 else:
     W = FunctionSpace(mesh, 'CG', degree=args.pdegree)
-    mixedname = 'Taylor-Hood'
 Z = V * W
 
 # define body force and Dir. boundary condition (on velocity only)
@@ -216,9 +214,17 @@ if len(args.schurgmg) > 0:
         sys.exit(1)
 sparams.update({'snes_type': 'ksponly'})  # applies to all
 
-# describe method
+# describe mixed FE method
 uFEstr = '%s^%d' % (['P','Q'][args.quad],args.udegree)
 pFEstr = '%s^%d' % (['P','Q'][args.quad],args.pdegree)
+if args.dpressure:
+    mixedname = 'CD'
+else:
+    if args.pdegree == args.udegree - 1:
+        mixedname = 'Taylor-Hood'
+    else:
+        mixedname = ''
+Z = V * W
 PETSc.Sys.Print('solving%s with %s x %s %s elements ...' \
                 % (meshstr,uFEstr,pFEstr,mixedname))
 
