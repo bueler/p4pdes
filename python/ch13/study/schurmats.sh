@@ -26,7 +26,7 @@ for LEV in 1 2 3 4; do  # LEV=4 is generates N=O(10^4) matrices
     OUT=schur_CD_lev${LEV}.dat
     echo "generating ${OUT} ..."
     ../stokes.py -nobase $SOLVE -refine $LEV \
-        -udegree 2 -pdegree 0 -dpressure \
+        -udegree 2 -pdegree 0 -dp \
         -s_mat_type aij -s_ksp_view_mat binary:${OUT}
     OUT=schur_P1P1_lev${LEV}.dat
     echo "generating ${OUT} ..."
@@ -36,7 +36,7 @@ for LEV in 1 2 3 4; do  # LEV=4 is generates N=O(10^4) matrices
     OUT=schur_P1P0_lev${LEV}.dat
     echo "generating ${OUT} ..."
     ../stokes.py -nobase $SOLVE -refine $LEV \
-        -udegree 1 -pdegree 0 -dpressure \
+        -udegree 1 -pdegree 0 -dp \
         -s_mat_type aij -s_ksp_view_mat binary:${OUT}
 done
 

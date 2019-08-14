@@ -21,7 +21,7 @@ The prefix for PETSC solver options is 's_'.""",formatter_class=RawTextHelpForma
 
 parser.add_argument('-analytical', action='store_true', default=False,
                     help='use problem with exact solution')
-parser.add_argument('-dpressure', action='store_true', default=False,
+parser.add_argument('-dp', action='store_true', default=False,
                     help='use discontinuous-Galerkin finite elements for pressure')
 parser.add_argument('-i', metavar='INNAME', type=str, default='',
                     help='input file for mesh in Gmsh format (.msh)')
@@ -88,7 +88,7 @@ mesh._plex.viewFromOptions('-dm_view')
 
 # define mixed finite elements
 V = VectorFunctionSpace(mesh, 'CG', degree=args.udegree)
-if args.dpressure:
+if args.dp:
     W = FunctionSpace(mesh, 'DG', degree=args.pdegree)
 else:
     W = FunctionSpace(mesh, 'CG', degree=args.pdegree)
@@ -217,7 +217,7 @@ sparams.update({'snes_type': 'ksponly'})  # applies to all
 # describe mixed FE method
 uFEstr = '%s^%d' % (['P','Q'][args.quad],args.udegree)
 pFEstr = '%s^%d' % (['P','Q'][args.quad],args.pdegree)
-if args.dpressure:
+if args.dp:
     mixedname = 'CD'
 else:
     if args.pdegree == args.udegree - 1:
