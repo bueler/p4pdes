@@ -194,7 +194,8 @@ pacs = {# diagonal Schur with mass-matrix PC on pressures; use minres or gmres
             'pc_fieldsplit_schur_precondition': 'a11',
             'fieldsplit_1_pc_type': 'python',
             'fieldsplit_1_pc_python_type': '__main__.Mass',
-            'fieldsplit_1_aux_pc_type': 'jacobi'},
+            'fieldsplit_1_aux_pc_type': 'bjacobi',
+            'fieldsplit_1_aux_sub_pc_type': 'icc'},
         # lower-triangular Schur using "selfp" PC on pressures; use gmres or fgmres
         'lower':
            {'pc_fieldsplit_schur_fact_type': 'lower',
