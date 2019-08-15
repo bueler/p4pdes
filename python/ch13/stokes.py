@@ -23,10 +23,10 @@ parser.add_argument('-analytical', action='store_true', default=False,
                     help='use problem with exact solution')
 parser.add_argument('-dp', action='store_true', default=False,
                     help='use discontinuous-Galerkin finite elements for pressure')
-parser.add_argument('-i', metavar='INNAME', type=str, default='',
-                    help='input file for mesh in Gmsh format (.msh)')
 parser.add_argument('-lidscale', type=float, default=1.0, metavar='X',
                     help='scale for lid velocity (rightward positive; default=1.0)')
+parser.add_argument('-mesh', metavar='INNAME', type=str, default='',
+                    help='input file for mesh in Gmsh format (.msh)')
 parser.add_argument('-mx', type=int, default=3, metavar='MX',
                     help='number of grid points in x-direction (uniform case)')
 parser.add_argument('-my', type=int, default=3, metavar='MY',
@@ -53,11 +53,11 @@ args, unknown = parser.parse_known_args()
 assert not (args.analytical and args.nobase), 'conflict in problem choice options'
 
 # read Gmsh mesh or create uniform mesh
-if len(args.i) > 0:
+if len(args.mesh) > 0:
     assert (not args.analytical), 'Gmsh file not allowed for -analytical problem'
     assert (not args.nobase), 'Gmsh file not allowed for -nobase problem'
-    PETSc.Sys.Print('reading mesh from %s ...' % args.i)
-    mesh = Mesh(args.i)
+    PETSc.Sys.Print('reading mesh from %s ...' % args.mesh)
+    mesh = Mesh(args.mesh)
     meshstr = ''
     other = (41,)
     lid = (40,)
@@ -81,7 +81,7 @@ else:
 if args.refine > 0:
     hierarchy = MeshHierarchy(mesh, args.refine)
     mesh = hierarchy[-1]     # the fine mesh
-    if len(args.i) > 0:
+    if len(args.mesh) > 0:
         meshstr += ' with %d levels uniform refinement' % args.refine
 x,y = SpatialCoordinate(mesh)
 mesh._plex.viewFromOptions('-dm_view')
@@ -97,7 +97,7 @@ Z = V * W
 # define body force and Dir. boundary condition (on velocity only)
 #     note: UFL as_vector() takes UFL expressions and combines
 if args.analytical:
-    assert (len(args.i) == 0)  # require UnitSquareMesh
+    assert (len(args.mesh) == 0)  # require UnitSquareMesh
     assert (args.mu == 1.0)
     f_body = as_vector([ 28.0 * pi*pi * sin(4.0*pi*x) * cos(4.0*pi*y), \
                        -36.0 * pi*pi * cos(4.0*pi*x) * sin(4.0*pi*y)])
