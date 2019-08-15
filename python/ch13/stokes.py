@@ -17,7 +17,9 @@ Uses mixed FE method, either Taylor-Hood family (P^k x P^l, or Q^k x Q^l with
 uniform mesh or reads a mesh in Gmsh format.  Serves as an example of a
 saddle-point system.  See the code for Schur+GMG based PC packages:
   -schurgmg diag|diag_mass|lower|lower_mass
-The prefix for PETSC solver options is 's_'.""",formatter_class=RawTextHelpFormatter)
+The prefix for PETSC solver options is 's_'.  Use -help for PETSc options
+and -stokeshelp for options to stokes.py.""",
+    formatter_class=RawTextHelpFormatter,add_help=False)
 
 parser.add_argument('-analytical', action='store_true', default=False,
                     help='use problem with exact solution')
@@ -47,10 +49,16 @@ parser.add_argument('-schurgmg', metavar='PKG', default='',
                     help='choose a Schur+GMG PC solver package: see text for options')
 parser.add_argument('-showinfo', action='store_true', default=False,
                     help='print function space sizes and solution norms (useful for testing)')
+parser.add_argument('-stokeshelp', action='store_true', default=False,
+                    help='help for stokes.py options; -help is for PETSc options')
 parser.add_argument('-udegree', type=int, default=2, metavar='K',
                     help='polynomial degree for velocity (default=2)')
 args, unknown = parser.parse_known_args()
 assert not (args.analytical and args.nobase), 'conflict in problem choice options'
+
+# -stokeshelp is for help with stokes.py
+if args.stokeshelp:
+    parser.print_help()
 
 # read Gmsh mesh or create uniform mesh
 if len(args.mesh) > 0:

@@ -8,8 +8,11 @@ parser = ArgumentParser(description="""
 Use Firedrake's nonlinear solver for the Poisson problem
   -Laplace(u) = f        in the unit square
             u = g        on the boundary
-Compare c/ch6/fish.c.  The prefix for PETSC solver options is 's_'.""",
-                    formatter_class=RawTextHelpFormatter)
+Compare c/ch6/fish.c.  The prefix for PETSC solver options is 's_'.
+Use -help for PETSc options and -fishhelp for options to fish.py.""",
+    formatter_class=RawTextHelpFormatter,add_help=False)
+parser.add_argument('-fishhelp', action='store_true', default=False,
+                    help='help for fish.py options; -help is for PETSc options')
 parser.add_argument('-mx', type=int, default=3, metavar='MX',
                     help='number of grid points in x-direction')
 parser.add_argument('-my', type=int, default=3, metavar='MY',
@@ -23,6 +26,10 @@ parser.add_argument('-quad', action='store_true', default=False,
 parser.add_argument('-refine', type=int, default=-1, metavar='X',
                     help='number of refinement levels (e.g. for GMG)')
 args, unknown = parser.parse_known_args()
+
+# -fishhelp is for help with fish.py
+if args.fishhelp:
+    parser.print_help()
 
 # Create mesh, enabling GMG via refinement using hierarchy
 mx, my = args.mx, args.my

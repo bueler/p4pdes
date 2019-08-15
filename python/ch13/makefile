@@ -9,6 +9,9 @@ runfish_2:
 runfish_3:
 	-@../../c/testit.sh fish.py "-refine 1 -dm_view -s_snes_type newtonls -s_snes_converged_reason -s_ksp_converged_reason -s_pc_type gamg" 1 3
 
+runfish_4:
+	-@../../c/testit.sh fish.py "-fishhelp" 1 4
+
 runstokes_1:
 	-@../../c/testit.sh stokes.py "-mx 4 -my 4 -refine 1 -s_ksp_type minres -s_pc_type none -analytical -s_ksp_converged_reason" 1 1
 
@@ -26,9 +29,12 @@ runstokes_4:
 runstokes_5:
 	-@../../c/testit.sh stokes.py "-nobase -refine 1 -dm_view -showinfo -s_ksp_monitor_short -s_ksp_rtol 1.0e-3 -schurgmg lower" 2 5
 
-test_fish: runfish_1 runfish_2 runfish_3
+runstokes_6:
+	-@../../c/testit.sh stokes.py "-stokeshelp" 1 6
 
-test_stokes: runstokes_1 runstokes_2 runstokes_3 runstokes_4 runstokes_5
+test_fish: runfish_1 runfish_2 runfish_3 runfish_4
+
+test_stokes: runstokes_1 runstokes_2 runstokes_3 runstokes_4 runstokes_5 runstokes_6
 
 test: test_fish test_stokes
 
