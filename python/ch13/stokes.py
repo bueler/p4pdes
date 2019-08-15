@@ -174,6 +174,12 @@ pacs = {# diagonal Schur with mass-matrix PC on pressures; use minres or gmres
             'fieldsplit_1_pc_python_type': '__main__.Mass',
             'fieldsplit_1_aux_pc_type': 'bjacobi',
             'fieldsplit_1_aux_sub_pc_type': 'icc'},
+        # diagonal Schur with with identity as PC on pressures; use minres or gmres
+        'diag_eye':
+           {'pc_fieldsplit_schur_fact_type': 'diag',
+            'pc_fieldsplit_schur_precondition': 'a11',
+            'pc_fieldsplit_schur_scale': 1.0,
+            'fieldsplit_1_pc_type': 'jacobi'},
         # diagonal Schur using "selfp" PC on pressures; use minres or gmres
         'diag':
            {'pc_fieldsplit_schur_fact_type': 'diag',
@@ -196,6 +202,11 @@ pacs = {# diagonal Schur with mass-matrix PC on pressures; use minres or gmres
             'fieldsplit_1_pc_python_type': '__main__.Mass',
             'fieldsplit_1_aux_pc_type': 'bjacobi',
             'fieldsplit_1_aux_sub_pc_type': 'icc'},
+        # lower-triangular Schur with identity as PC on pressures; use gmres
+        'lower_eye':
+           {'pc_fieldsplit_schur_fact_type': 'lower',
+            'pc_fieldsplit_schur_precondition': 'a11',
+            'fieldsplit_1_pc_type': 'jacobi'},
         # lower-triangular Schur using "selfp" PC on pressures; use gmres or fgmres
         'lower':
            {'pc_fieldsplit_schur_fact_type': 'lower',
