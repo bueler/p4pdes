@@ -12,7 +12,7 @@ Compare c/ch6/fish.c.  The prefix for PETSC solver options is 's_'.
 Use -help for PETSc options and -fishhelp for options to fish.py.""",
     formatter_class=RawTextHelpFormatter,add_help=False)
 parser.add_argument('-fishhelp', action='store_true', default=False,
-                    help='help for fish.py options; -help is for PETSc options')
+                    help='help for fish.py options')
 parser.add_argument('-mx', type=int, default=3, metavar='MX',
                     help='number of grid points in x-direction')
 parser.add_argument('-my', type=int, default=3, metavar='MY',

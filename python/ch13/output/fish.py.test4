@@ -10,7 +10,7 @@ Compare c/ch6/fish.c.  The prefix for PETSC solver options is 's_'.
 Use -help for PETSc options and -fishhelp for options to fish.py.
 
 optional arguments:
-  -fishhelp  help for fish.py options; -help is for PETSc options
+  -fishhelp  help for fish.py options
   -mx MX     number of grid points in x-direction
   -my MY     number of grid points in y-direction
   -o NAME    output file name ending with .pvd

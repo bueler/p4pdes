@@ -50,7 +50,7 @@ parser.add_argument('-schurgmg', metavar='PKG', default='',
 parser.add_argument('-showinfo', action='store_true', default=False,
                     help='print function space sizes and solution norms (useful for testing)')
 parser.add_argument('-stokeshelp', action='store_true', default=False,
-                    help='help for stokes.py options; -help is for PETSc options')
+                    help='help for stokes.py options')
 parser.add_argument('-udegree', type=int, default=2, metavar='K',
                     help='polynomial degree for velocity (default=2)')
 args, unknown = parser.parse_known_args()

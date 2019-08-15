@@ -33,5 +33,5 @@ optional arguments:
   -refine R      number of refinement levels (e.g. for GMG)
   -schurgmg PKG  choose a Schur+GMG PC solver package: see text for options
   -showinfo      print function space sizes and solution norms (useful for testing)
-  -stokeshelp    help for stokes.py options; -help is for PETSc options
+  -stokeshelp    help for stokes.py options
   -udegree K     polynomial degree for velocity (default=2)
