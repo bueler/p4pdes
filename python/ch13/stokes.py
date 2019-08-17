@@ -6,19 +6,18 @@ from firedrake import *
 from firedrake.petsc import PETSc
 
 parser = ArgumentParser(description="""
-Solve a linear Stokes problem in 2D.  Three problem cases:
+Solve a linear Stokes problem in 2D, an example of a saddle-point system.
+Three problem cases:
   1. Lid-driven cavity with quadratic velocity on lid and Dirichlet conditions
      on all sides and a null space of constant pressures.  The default problem.
   2. (-analytical) Analytical exact solution from Logg et al (2012).
   3. (-nobase) Same as 1. but with stress-free condition on bottom so the null
      space is trivial.
 Uses mixed FE method, either Taylor-Hood family (P^k x P^l, or Q^k x Q^l with
--quad) or CD with discontinuous pressure; defaults to P^2 x P^1.  Uses either
-uniform mesh or reads a mesh in Gmsh format.  Serves as an example of a
-saddle-point system.  See the code for Schur+GMG based PC packages:
-  -schurgmg diag|diag_mass|lower|lower_mass
-The prefix for PETSC solver options is 's_'.  Use -help for PETSc options
-and -stokeshelp for options to stokes.py.""",
+-quad) or CD with discontinuous pressure.  Default is P^2 x P^1.  Uses either
+uniform mesh or reads a mesh in Gmsh format.  See the code for Schur+GMG
+PC packages.  The prefix for PETSC solver options is 's_'.  Use -help for
+PETSc options and -stokeshelp for options to stokes.py.""",
     formatter_class=RawTextHelpFormatter,add_help=False)
 
 parser.add_argument('-analytical', action='store_true', default=False,
@@ -45,10 +44,12 @@ parser.add_argument('-quad', action='store_true', default=False,
                     help='use quadrilateral finite elements')
 parser.add_argument('-refine', type=int, default=0, metavar='R',
                     help='number of refinement levels (e.g. for GMG)')
-parser.add_argument('-schurgmg', metavar='PKG', default='',
-                    help='choose a Schur+GMG PC solver package: see text for options')
-parser.add_argument('-showinfo', action='store_true', default=False,
-                    help='print function space sizes and solution norms (useful for testing)')
+parser.add_argument('-schurgmg', metavar='X', default='',
+                    help='Schur+GMG PC solver package: diag|lower|full')
+parser.add_argument('-schurpre', metavar='X', default='',
+                    help='how Schur block is preconditioned: selfp|mass|eye')
+parser.add_argument('-showinfo', action='store_true', default=False, # FIXME add h bounds (mesh sizes)
+                    help='print function space sizes and solution norms')
 parser.add_argument('-stokeshelp', action='store_true', default=False,
                     help='help for stokes.py options')
 parser.add_argument('-udegree', type=int, default=2, metavar='K',
@@ -139,7 +140,7 @@ F = (args.mu * inner(grad(u), grad(v)) - p * div(v) - div(u) * q \
 # 1. -s_pc_fieldsplit_type schur
 #       This is the ONLY viable fieldsplit type because others (i.e. additive,
 #       multiplicative, and symmetric_multiplicative) all fail because diagonal
-#       pressure block is zero (non-invertible).
+#       pressure block is zero (non-invertible) in a stable mixed method.
 # 2. -s_pc_fieldsplit_schur_factorization_type diag
 #       The Murphy et al 2000 theorem applies to MINRES + (this option).  Note
 #       the default for diag is -pc_fieldsplit_schur_scale -1.0.  We do NOT
@@ -154,10 +155,8 @@ F = (args.mu * inner(grad(u), grad(v)) - p * div(v) - div(u) * q \
 #       When not using Mass it seems to be faster to go ahead and *assemble*
 #       the preconditioner for the A11 block.  This option does so, but only
 #       inverts the diagonal of A00, so S \approx - B inv(diag(A)) B^T
-# 5. The "diag_mass" PC combination below uses bjacobi+icc, which is possible
-#       because the mass matrix is SPD.  However, testing shows that for the
-#       "lower_mass" combination jacobi is much better *for fine grids* than
-#       bjacobi+icc.  It is not clear why this is so.
+# 5. The "mass" preconditioner for S, below, uses bjacobi+icc, possible
+#       because the mass matrix is SPD.
 
 class Mass(AuxiliaryOperatorPC):
 
@@ -166,60 +165,45 @@ class Mass(AuxiliaryOperatorPC):
         bcs = None
         return (a, bcs)
 
-# Schur + GMG based solver packages
+# common to Schur + GMG based solver packages
 common = {'pc_type': 'fieldsplit',
           'pc_fieldsplit_type': 'schur',
           'fieldsplit_0_ksp_type': 'preonly',
           'fieldsplit_0_pc_type': 'mg',
           'fieldsplit_1_ksp_type': 'preonly'}
 
-pacs = {# diagonal Schur with mass-matrix PC on pressures; use minres or gmres
-        'diag_mass':
-           {'pc_fieldsplit_schur_fact_type': 'diag',
-            'pc_fieldsplit_schur_precondition': 'a11',
-            'pc_fieldsplit_schur_scale': 1.0,
-            'fieldsplit_1_pc_type': 'python',
-            'fieldsplit_1_pc_python_type': '__main__.Mass',
-            'fieldsplit_1_aux_pc_type': 'bjacobi',
-            'fieldsplit_1_aux_sub_pc_type': 'icc'},
-        # diagonal Schur with with identity as PC on pressures; use minres or gmres
-        'diag_eye':
-           {'pc_fieldsplit_schur_fact_type': 'diag',
-            'pc_fieldsplit_schur_precondition': 'a11',
-            'pc_fieldsplit_schur_scale': 1.0,
-            'fieldsplit_1_pc_type': 'jacobi'},
-        # diagonal Schur using "selfp" PC on pressures; use minres or gmres
+sgmg = {# diagonal Schur; use minres or gmres
         'diag':
-           {'pc_fieldsplit_schur_fact_type': 'diag',
-            'pc_fieldsplit_schur_precondition': 'selfp',
-            'pc_fieldsplit_schur_scale': -1.0,
-            'fieldsplit_1_pc_type': 'jacobi'},
-        # diagonal Schur with (very slow) "full" assembly of S and then
-        # cholesky factorization of it; fails if S has a kernel
-        # only serial; use minres or gmres
-        'diag_full_cholesky':
-           {'pc_fieldsplit_schur_fact_type': 'diag',
-            'pc_fieldsplit_schur_precondition': 'full',
-            'pc_fieldsplit_schur_scale': -1.0,
-            'fieldsplit_1_pc_type': 'cholesky'},
-        # lower-triangular Schur with mass-matrix PC on pressures; use gmres
-        'lower_mass':
-           {'pc_fieldsplit_schur_fact_type': 'lower',
-            'pc_fieldsplit_schur_precondition': 'a11',
+           {'pc_fieldsplit_schur_fact_type': 'diag'},
+        # lower-triangular Schur; use gmres
+        'lower':
+           {'pc_fieldsplit_schur_fact_type': 'lower'},
+        # full Schur; use gmres
+        'full':
+           {'pc_fieldsplit_schur_fact_type': 'full'},
+       }
+
+spre = {# precondition Schur using "selfp" and Jacobi application
+        'selfp':
+           {'pc_fieldsplit_schur_precondition': 'selfp',
+            'pc_fieldsplit_schur_scale': -1.0,  # only active for diag
+            'fieldsplit_1_pc_type': 'jacobi',
+            'fieldsplit_1_pc_jacobi_type': 'diagonal'},
+        # precondition Schur with mass-matrix and ICC application
+        'mass':
+           {'pc_fieldsplit_schur_precondition': 'a11',
+            'pc_fieldsplit_schur_scale': 1.0,  # only active for diag
             'fieldsplit_1_pc_type': 'python',
             'fieldsplit_1_pc_python_type': '__main__.Mass',
             'fieldsplit_1_aux_pc_type': 'bjacobi',
             'fieldsplit_1_aux_sub_pc_type': 'icc'},
-        # lower-triangular Schur with identity as PC on pressures; use gmres
-        'lower_eye':
-           {'pc_fieldsplit_schur_fact_type': 'lower',
-            'pc_fieldsplit_schur_precondition': 'a11',
-            'fieldsplit_1_pc_type': 'jacobi'},
-        # lower-triangular Schur using "selfp" PC on pressures; use gmres or fgmres
-        'lower':
-           {'pc_fieldsplit_schur_fact_type': 'lower',
-            'pc_fieldsplit_schur_precondition': 'selfp',
-            'fieldsplit_1_pc_type': 'jacobi'},
+        # precondition Schur with identity (jacobi does this on A11: 0.0 --> 1.0)
+        # WARNING: does not scale with mu
+        'eye':
+           {'pc_fieldsplit_schur_precondition': 'a11',
+            'pc_fieldsplit_schur_scale': 1.0,  # only active for diag
+            'fieldsplit_1_pc_type': 'jacobi',
+            'fieldsplit_1_pc_jacobi_type': 'diagonal'},
        }
 
 # select solver package
@@ -227,10 +211,15 @@ sparams = {}
 if len(args.schurgmg) > 0:
     sparams.update(common)
     try:
-        sparams.update(pacs[args.schurgmg])
+        sparams.update(sgmg[args.schurgmg])
     except KeyError:
-        print('ERROR: invalid solver package choice')
-        print('       choices are %s' % list(pacs.keys()))
+        print('ERROR: invalid -schurgmg; choices are %s' % list(sgmg.keys()))
+        sys.exit(1)
+if len(args.schurpre) > 0:
+    try:
+        sparams.update(spre[args.schurpre])
+    except KeyError:
+        print('ERROR: invalid -schurpre; choices are %s' % list(spre.keys()))
         sys.exit(1)
 sparams.update({'snes_type': 'ksponly'})  # applies to all
 
@@ -249,7 +238,8 @@ PETSc.Sys.Print('solving%s with %s x %s %s elements ...' \
                 % (meshstr,uFEstr,pFEstr,mixedname))
 
 if len(args.schurgmg) > 0 and args.showinfo:
-    PETSc.Sys.Print('  Schur+GMG PC package %s' % args.schurgmg)
+    PETSc.Sys.Print('  Schur+GMG PC package %s + %s' \
+                    % (args.schurgmg,args.schurpre))
 
 # actually solve
 solve(F == 0, up, bcs=bcs, nullspace=ns,
