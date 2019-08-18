@@ -67,7 +67,7 @@ if len(args.mesh) > 0:
     assert (not args.nobase), 'Gmsh file not allowed for -nobase problem'
     PETSc.Sys.Print('reading mesh from %s ...' % args.mesh)
     mesh = Mesh(args.mesh)
-    meshstr = ''
+    meshstr = ' on mesh'
     other = (41,)
     lid = (40,)
 else:
@@ -91,7 +91,7 @@ if args.refine > 0:
     hierarchy = MeshHierarchy(mesh, args.refine)
     mesh = hierarchy[-1]     # the fine mesh
     if len(args.mesh) > 0:
-        meshstr += ' with %d levels uniform refinement' % args.refine
+        meshstr += ' (%d levels refinement)' % args.refine
 x,y = SpatialCoordinate(mesh)
 mesh._plex.viewFromOptions('-dm_view')
 
