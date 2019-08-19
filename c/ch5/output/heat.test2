@@ -7,15 +7,15 @@ solving on 9 x 8 grid for t0=0. to tf=0.1 ...
   energy = -7.89e-16     nu =   0.0809
   energy = -6.34e-16     nu =   0.0904
   energy = -1.71e-16     nu =   0.1031
-  energy =  3.23e-17     nu =   0.1212
+  energy =  3.22e-17     nu =   0.1212
   energy =  1.85e-16     nu =   0.1457
   energy =  2.51e-16     nu =   0.1778
-  energy =  2.95e-16     nu =   0.2201
+  energy =  2.96e-16     nu =   0.2201
   energy =  5.29e-16     nu =   0.2770
-  energy =  8.09e-16     nu =   0.3528
+  energy =  8.10e-16     nu =   0.3528
   energy =  1.11e-15     nu =   0.4444
   energy =  1.31e-15     nu =   0.5347
-  energy =  1.85e-15     nu =   0.6157
+  energy =  1.86e-15     nu =   0.6157
   energy =  3.84e-15     nu =   0.6996
   energy =  9.87e-15     nu =   0.7975
   energy =  1.23e-14     nu =   0.7348
