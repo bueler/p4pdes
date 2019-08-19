@@ -14,6 +14,8 @@ set +x
 #   $ gmsh -2 graded.geo
 #   $ cd study/
 
+# compare stokesopt.sh
+
 REFINE=5   # REFINE=4 gives N=8x10^5, REFINE=5 gives N=3.2x10^6
 
 for SGMG in "-s_ksp_type minres -schurgmg diag" \
