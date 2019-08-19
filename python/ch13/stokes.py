@@ -47,8 +47,8 @@ parser.add_argument('-refine', type=int, default=0, metavar='R',
 parser.add_argument('-schurgmg', metavar='X', default='',
                     help='Schur+GMG PC solver package: diag|lower|full')
 parser.add_argument('-schurpre', metavar='X', default='',
-                    help='how Schur block is preconditioned: selfp|mass|eye')
-parser.add_argument('-showinfo', action='store_true', default=False, # FIXME add h bounds (mesh sizes)
+                    help='how Schur block is preconditioned: selfp|mass')
+parser.add_argument('-showinfo', action='store_true', default=False,
                     help='print function space sizes and solution norms')
 parser.add_argument('-stokeshelp', action='store_true', default=False,
                     help='help for stokes.py options')
@@ -122,11 +122,10 @@ else:
     bcs = [ DirichletBC(Z.sub(0), u_noslip, other),
             DirichletBC(Z.sub(0), u_lid,    lid)   ]
 
-# some cases have a null space
+# if Dirichlet-only b.c.s on velocity then set nullspace to constant pressure
 if args.nobase:
     ns = None
 else:
-    # Dirichlet-only boundary conds on velocity therefore set nullspace to constant pressure
     ns = MixedVectorSpaceBasis(Z, [Z.sub(0), VectorSpaceBasis(constant=True)])
 
 # define weak form
@@ -197,13 +196,6 @@ spre = {# precondition Schur using "selfp" and Jacobi application
             'fieldsplit_1_pc_python_type': '__main__.Mass',
             'fieldsplit_1_aux_pc_type': 'bjacobi',
             'fieldsplit_1_aux_sub_pc_type': 'icc'},
-        # precondition Schur with identity (jacobi does this on A11: 0.0 --> 1.0)
-        # WARNING: does not scale with mu
-        'eye':
-           {'pc_fieldsplit_schur_precondition': 'a11',
-            'pc_fieldsplit_schur_scale': 1.0,  # only active for diag
-            'fieldsplit_1_pc_type': 'jacobi',
-            'fieldsplit_1_pc_jacobi_type': 'diagonal'},
        }
 
 # select solver package

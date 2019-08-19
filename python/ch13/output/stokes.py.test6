@@ -31,7 +31,7 @@ optional arguments:
   -quad         use quadrilateral finite elements
   -refine R     number of refinement levels (e.g. for GMG)
   -schurgmg X   Schur+GMG PC solver package: diag|lower|full
-  -schurpre X   how Schur block is preconditioned: selfp|mass|eye
+  -schurpre X   how Schur block is preconditioned: selfp|mass
   -showinfo     print function space sizes and solution norms
   -stokeshelp   help for stokes.py options
   -udegree K    polynomial degree for velocity (default=2)
