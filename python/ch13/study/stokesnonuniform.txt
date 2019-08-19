@@ -1,54 +1,42 @@
 ../stokes.py -mesh ../graded.msh -showinfo -s_ksp_converged_reason -s_ksp_type minres -schurgmg diag -schurpre selfp -refine 5 -s_ksp_max_it 200 -log_view
   sizes: n_u = 2816258, n_p = 352833, N = 3169091
+  solution norms: |u|_h = 5.40308e-02, |p|_h = 8.47027e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 33
 6.045e+10
-8.007e+01
+8.157e+01
 
 ../stokes.py -mesh ../graded.msh -showinfo -s_ksp_converged_reason -s_ksp_type minres -schurgmg diag -schurpre mass -refine 5 -s_ksp_max_it 200 -log_view
   sizes: n_u = 2816258, n_p = 352833, N = 3169091
+  solution norms: |u|_h = 5.40309e-02, |p|_h = 8.47029e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 27
 5.054e+10
-7.415e+01
-
-../stokes.py -mesh ../graded.msh -showinfo -s_ksp_converged_reason -s_ksp_type minres -schurgmg diag -schurpre eye -refine 5 -s_ksp_max_it 200 -log_view
-  sizes: n_u = 2816258, n_p = 352833, N = 3169091
-  Linear s_ solve converged due to CONVERGED_RTOL iterations 27
-5.042e+10
-7.464e+01
+7.299e+01
 
 ../stokes.py -mesh ../graded.msh -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg lower -schurpre selfp -refine 5 -s_ksp_max_it 200 -log_view
   sizes: n_u = 2816258, n_p = 352833, N = 3169091
+  solution norms: |u|_h = 5.40308e-02, |p|_h = 8.47028e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 18
 3.758e+10
-6.150e+01
+5.846e+01
 
 ../stokes.py -mesh ../graded.msh -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg lower -schurpre mass -refine 5 -s_ksp_max_it 200 -log_view
   sizes: n_u = 2816258, n_p = 352833, N = 3169091
+  solution norms: |u|_h = 5.40309e-02, |p|_h = 8.47028e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 33
 6.727e+10
-8.563e+01
-
-../stokes.py -mesh ../graded.msh -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg lower -schurpre eye -refine 5 -s_ksp_max_it 200 -log_view
-  sizes: n_u = 2816258, n_p = 352833, N = 3169091
-  Linear s_ solve converged due to CONVERGED_RTOL iterations 9
-2.126e+10
-4.520e+01
+9.149e+01
 
 ../stokes.py -mesh ../graded.msh -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg full -schurpre selfp -refine 5 -s_ksp_max_it 200 -log_view
   sizes: n_u = 2816258, n_p = 352833, N = 3169091
+  solution norms: |u|_h = 5.40317e-02, |p|_h = 8.47028e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 17
 6.218e+10
-8.244e+01
+9.170e+01
 
 ../stokes.py -mesh ../graded.msh -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg full -schurpre mass -refine 5 -s_ksp_max_it 200 -log_view
   sizes: n_u = 2816258, n_p = 352833, N = 3169091
+  solution norms: |u|_h = 5.40309e-02, |p|_h = 8.47028e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 33
 1.187e+11
-1.365e+02
-
-../stokes.py -mesh ../graded.msh -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg full -schurpre eye -refine 5 -s_ksp_max_it 200 -log_view
-  sizes: n_u = 2816258, n_p = 352833, N = 3169091
-  Linear s_ solve converged due to CONVERGED_RTOL iterations 9
-3.595e+10
-6.137e+01
+1.363e+02
 

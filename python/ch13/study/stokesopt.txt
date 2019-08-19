@@ -1,369 +1,294 @@
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type minres -schurgmg diag -schurpre selfp -refine 2 -log_view
   sizes: n_u = 578, n_p = 81, N = 659
+  solution norms: |u|_h = 5.40900e-02, |p|_h = 8.50245e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 41
 1.800e+07
-1.841e+00
+1.884e+00
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type minres -schurgmg diag -schurpre selfp -refine 3 -log_view
   sizes: n_u = 2178, n_p = 289, N = 2467
+  solution norms: |u|_h = 5.40354e-02, |p|_h = 8.48062e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 43
 7.666e+07
-2.032e+00
+2.007e+00
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type minres -schurgmg diag -schurpre selfp -refine 4 -log_view
   sizes: n_u = 8450, n_p = 1089, N = 9539
+  solution norms: |u|_h = 5.40311e-02, |p|_h = 8.47338e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 41
 2.929e+08
-2.370e+00
+2.302e+00
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type minres -schurgmg diag -schurpre selfp -refine 5 -log_view
   sizes: n_u = 33282, n_p = 4225, N = 37507
+  solution norms: |u|_h = 5.40308e-02, |p|_h = 8.47113e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 39
 1.115e+09
-4.017e+00
+3.954e+00
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type minres -schurgmg diag -schurpre selfp -refine 6 -log_view
   sizes: n_u = 132098, n_p = 16641, N = 148739
+  solution norms: |u|_h = 5.40308e-02, |p|_h = 8.47046e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 37
 4.240e+09
-8.429e+00
+8.427e+00
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type minres -schurgmg diag -schurpre selfp -refine 7 -log_view
   sizes: n_u = 526338, n_p = 66049, N = 592387
+  solution norms: |u|_h = 5.40308e-02, |p|_h = 8.47026e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 35
 1.610e+10
-2.322e+01
+2.293e+01
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type minres -schurgmg diag -schurpre selfp -refine 8 -log_view
   sizes: n_u = 2101250, n_p = 263169, N = 2364419
+  solution norms: |u|_h = 5.40308e-02, |p|_h = 8.47020e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 33
 6.103e+10
-7.210e+01
+7.160e+01
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type minres -schurgmg diag -schurpre selfp -refine 9 -log_view
   sizes: n_u = 8396802, n_p = 1050625, N = 9447427
+  solution norms: |u|_h = 5.40308e-02, |p|_h = 8.47019e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 32
 2.374e+11
-2.721e+02
+2.630e+02
 
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type minres -schurgmg diag -schurpre mass -refine 2 -log_view
   sizes: n_u = 578, n_p = 81, N = 659
+  solution norms: |u|_h = 5.40900e-02, |p|_h = 8.50245e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 25
 1.154e+07
-2.078e+00
+1.881e+00
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type minres -schurgmg diag -schurpre mass -refine 3 -log_view
   sizes: n_u = 2178, n_p = 289, N = 2467
+  solution norms: |u|_h = 5.40354e-02, |p|_h = 8.48062e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 24
 4.540e+07
-2.056e+00
+1.948e+00
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type minres -schurgmg diag -schurpre mass -refine 4 -log_view
   sizes: n_u = 8450, n_p = 1089, N = 9539
+  solution norms: |u|_h = 5.40311e-02, |p|_h = 8.47338e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 24
 1.812e+08
-2.333e+00
+2.190e+00
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type minres -schurgmg diag -schurpre mass -refine 5 -log_view
   sizes: n_u = 33282, n_p = 4225, N = 37507
+  solution norms: |u|_h = 5.40308e-02, |p|_h = 8.47113e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 24
 7.220e+08
-3.635e+00
+3.392e+00
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type minres -schurgmg diag -schurpre mass -refine 6 -log_view
   sizes: n_u = 132098, n_p = 16641, N = 148739
+  solution norms: |u|_h = 5.40308e-02, |p|_h = 8.47046e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 25
 2.984e+09
-7.163e+00
+6.859e+00
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type minres -schurgmg diag -schurpre mass -refine 7 -log_view
   sizes: n_u = 526338, n_p = 66049, N = 592387
+  solution norms: |u|_h = 5.40308e-02, |p|_h = 8.47026e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 24
 1.150e+10
-1.890e+01
+1.792e+01
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type minres -schurgmg diag -schurpre mass -refine 8 -log_view
   sizes: n_u = 2101250, n_p = 263169, N = 2364419
+  solution norms: |u|_h = 5.40308e-02, |p|_h = 8.47020e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 23
 4.431e+10
-5.979e+01
+5.641e+01
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type minres -schurgmg diag -schurpre mass -refine 9 -log_view
   sizes: n_u = 8396802, n_p = 1050625, N = 9447427
+  solution norms: |u|_h = 5.40308e-02, |p|_h = 8.47018e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 23
 1.771e+11
-2.265e+02
-
-../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type minres -schurgmg diag -schurpre eye -refine 2 -log_view
-  sizes: n_u = 578, n_p = 81, N = 659
-  Linear s_ solve converged due to CONVERGED_RTOL iterations 51
-2.197e+07
-1.950e+00
-../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type minres -schurgmg diag -schurpre eye -refine 3 -log_view
-  sizes: n_u = 2178, n_p = 289, N = 2467
-  Linear s_ solve converged due to CONVERGED_RTOL iterations 60
-1.043e+08
-2.202e+00
-../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type minres -schurgmg diag -schurpre eye -refine 4 -log_view
-  sizes: n_u = 8450, n_p = 1089, N = 9539
-  Linear s_ solve converged due to CONVERGED_RTOL iterations 60
-4.165e+08
-2.580e+00
-../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type minres -schurgmg diag -schurpre eye -refine 5 -log_view
-  sizes: n_u = 33282, n_p = 4225, N = 37507
-  Linear s_ solve converged due to CONVERGED_RTOL iterations 48
-1.346e+09
-4.715e+00
-../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type minres -schurgmg diag -schurpre eye -refine 6 -log_view
-  sizes: n_u = 132098, n_p = 16641, N = 148739
-  Linear s_ solve converged due to CONVERGED_RTOL iterations 28
-3.290e+09
-7.783e+00
-../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type minres -schurgmg diag -schurpre eye -refine 7 -log_view
-  sizes: n_u = 526338, n_p = 66049, N = 592387
-  Linear s_ solve converged due to CONVERGED_RTOL iterations 21
-1.023e+10
-1.727e+01
-../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type minres -schurgmg diag -schurpre eye -refine 8 -log_view
-  sizes: n_u = 2101250, n_p = 263169, N = 2364419
-  Linear s_ solve converged due to CONVERGED_RTOL iterations 14
-2.925e+10
-4.582e+01
-../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type minres -schurgmg diag -schurpre eye -refine 9 -log_view
-  sizes: n_u = 8396802, n_p = 1050625, N = 9447427
-  Linear s_ solve converged due to CONVERGED_RTOL iterations 9
-8.375e+10
-1.464e+02
+2.113e+02
 
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg lower -schurpre selfp -refine 2 -log_view
   sizes: n_u = 578, n_p = 81, N = 659
+  solution norms: |u|_h = 5.40898e-02, |p|_h = 8.50245e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 17
 8.687e+06
-1.872e+00
+1.793e+00
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg lower -schurpre selfp -refine 3 -log_view
   sizes: n_u = 2178, n_p = 289, N = 2467
+  solution norms: |u|_h = 5.40355e-02, |p|_h = 8.48063e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 18
 3.714e+07
-1.990e+00
+1.910e+00
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg lower -schurpre selfp -refine 4 -log_view
   sizes: n_u = 8450, n_p = 1089, N = 9539
+  solution norms: |u|_h = 5.40313e-02, |p|_h = 8.47339e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 18
 1.481e+08
-2.301e+00
+2.143e+00
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg lower -schurpre selfp -refine 5 -log_view
   sizes: n_u = 33282, n_p = 4225, N = 37507
+  solution norms: |u|_h = 5.40309e-02, |p|_h = 8.47113e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 18
 5.898e+08
-3.335e+00
+3.186e+00
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg lower -schurpre selfp -refine 6 -log_view
   sizes: n_u = 132098, n_p = 16641, N = 148739
+  solution norms: |u|_h = 5.40309e-02, |p|_h = 8.47046e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 19
 2.467e+09
-6.253e+00
+6.072e+00
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg lower -schurpre selfp -refine 7 -log_view
   sizes: n_u = 526338, n_p = 66049, N = 592387
+  solution norms: |u|_h = 5.40310e-02, |p|_h = 8.47026e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 18
 9.395e+09
-1.518e+01
+1.449e+01
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg lower -schurpre selfp -refine 8 -log_view
   sizes: n_u = 2101250, n_p = 263169, N = 2364419
+  solution norms: |u|_h = 5.40310e-02, |p|_h = 8.47020e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 18
 3.755e+10
-5.258e+01
+4.955e+01
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg lower -schurpre selfp -refine 9 -log_view
   sizes: n_u = 8396802, n_p = 1050625, N = 9447427
+  solution norms: |u|_h = 5.40314e-02, |p|_h = 8.47019e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 19
 1.574e+11
-2.079e+02
+1.921e+02
 
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg lower -schurpre mass -refine 2 -log_view
   sizes: n_u = 578, n_p = 81, N = 659
+  solution norms: |u|_h = 5.40900e-02, |p|_h = 8.50245e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 20
 1.001e+07
-1.921e+00
+2.154e+00
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg lower -schurpre mass -refine 3 -log_view
   sizes: n_u = 2178, n_p = 289, N = 2467
+  solution norms: |u|_h = 5.40353e-02, |p|_h = 8.48062e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 21
 4.250e+07
-2.002e+00
+1.960e+00
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg lower -schurpre mass -refine 4 -log_view
   sizes: n_u = 8450, n_p = 1089, N = 9539
+  solution norms: |u|_h = 5.40312e-02, |p|_h = 8.47338e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 23
 1.842e+08
-2.235e+00
+2.179e+00
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg lower -schurpre mass -refine 5 -log_view
   sizes: n_u = 33282, n_p = 4225, N = 37507
+  solution norms: |u|_h = 5.40309e-02, |p|_h = 8.47113e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 23
 7.335e+08
-3.595e+00
+3.436e+00
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg lower -schurpre mass -refine 6 -log_view
   sizes: n_u = 132098, n_p = 16641, N = 148739
+  solution norms: |u|_h = 5.40308e-02, |p|_h = 8.47046e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 23
 2.925e+09
-6.816e+00
+6.685e+00
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg lower -schurpre mass -refine 7 -log_view
   sizes: n_u = 526338, n_p = 66049, N = 592387
+  solution norms: |u|_h = 5.40308e-02, |p|_h = 8.47026e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 23
 1.168e+10
-1.683e+01
+1.641e+01
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg lower -schurpre mass -refine 8 -log_view
   sizes: n_u = 2101250, n_p = 263169, N = 2364419
+  solution norms: |u|_h = 5.40308e-02, |p|_h = 8.47020e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 23
 4.669e+10
-5.978e+01
+5.724e+01
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg lower -schurpre mass -refine 9 -log_view
   sizes: n_u = 8396802, n_p = 1050625, N = 9447427
+  solution norms: |u|_h = 5.40309e-02, |p|_h = 8.47019e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 24
 1.942e+11
-2.313e+02
-
-../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg lower -schurpre eye -refine 2 -log_view
-  sizes: n_u = 578, n_p = 81, N = 659
-  Linear s_ solve converged due to CONVERGED_RTOL iterations 62
-2.943e+07
-2.129e+00
-../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg lower -schurpre eye -refine 3 -log_view
-  sizes: n_u = 2178, n_p = 289, N = 2467
-  Linear s_ solve converged due to CONVERGED_RTOL iterations 57
-1.086e+08
-2.286e+00
-../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg lower -schurpre eye -refine 4 -log_view
-  sizes: n_u = 8450, n_p = 1089, N = 9539
-  Linear s_ solve converged due to CONVERGED_RTOL iterations 54
-4.104e+08
-2.616e+00
-../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg lower -schurpre eye -refine 5 -log_view
-  sizes: n_u = 33282, n_p = 4225, N = 37507
-  Linear s_ solve converged due to CONVERGED_RTOL iterations 29
-9.111e+08
-3.881e+00
-../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg lower -schurpre eye -refine 6 -log_view
-  sizes: n_u = 132098, n_p = 16641, N = 148739
-  Linear s_ solve converged due to CONVERGED_RTOL iterations 15
-2.000e+09
-5.649e+00
-../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg lower -schurpre eye -refine 7 -log_view
-  sizes: n_u = 526338, n_p = 66049, N = 592387
-  Linear s_ solve converged due to CONVERGED_RTOL iterations 8
-4.897e+09
-1.092e+01
-../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg lower -schurpre eye -refine 8 -log_view
-  sizes: n_u = 2101250, n_p = 263169, N = 2364419
-  Linear s_ solve converged due to CONVERGED_RTOL iterations 3
-1.104e+10
-2.946e+01
-../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg lower -schurpre eye -refine 9 -log_view
-  sizes: n_u = 8396802, n_p = 1050625, N = 9447427
-  Linear s_ solve converged due to CONVERGED_RTOL iterations 3
-4.414e+10
-1.130e+02
+2.199e+02
 
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg full -schurpre selfp -refine 2 -log_view
   sizes: n_u = 578, n_p = 81, N = 659
+  solution norms: |u|_h = 5.40895e-02, |p|_h = 8.50244e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 16
 1.439e+07
-1.849e+00
+1.820e+00
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg full -schurpre selfp -refine 3 -log_view
   sizes: n_u = 2178, n_p = 289, N = 2467
+  solution norms: |u|_h = 5.40346e-02, |p|_h = 8.48061e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 18
 6.530e+07
-2.013e+00
+1.987e+00
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg full -schurpre selfp -refine 4 -log_view
   sizes: n_u = 8450, n_p = 1089, N = 9539
+  solution norms: |u|_h = 5.40307e-02, |p|_h = 8.47338e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 18
 2.607e+08
-2.299e+00
+2.295e+00
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg full -schurpre selfp -refine 5 -log_view
   sizes: n_u = 33282, n_p = 4225, N = 37507
+  solution norms: |u|_h = 5.40307e-02, |p|_h = 8.47113e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 18
 1.039e+09
-4.122e+00
+3.904e+00
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg full -schurpre selfp -refine 6 -log_view
   sizes: n_u = 132098, n_p = 16641, N = 148739
+  solution norms: |u|_h = 5.40307e-02, |p|_h = 8.47046e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 18
 4.145e+09
-8.495e+00
+8.221e+00
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg full -schurpre selfp -refine 7 -log_view
   sizes: n_u = 526338, n_p = 66049, N = 592387
+  solution norms: |u|_h = 5.40308e-02, |p|_h = 8.47026e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 18
 1.655e+10
-2.321e+01
+2.234e+01
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg full -schurpre selfp -refine 8 -log_view
   sizes: n_u = 2101250, n_p = 263169, N = 2364419
+  solution norms: |u|_h = 5.40308e-02, |p|_h = 8.47021e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 18
 6.616e+10
-7.802e+01
+7.376e+01
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg full -schurpre selfp -refine 9 -log_view
   sizes: n_u = 8396802, n_p = 1050625, N = 9447427
+  solution norms: |u|_h = 5.40307e-02, |p|_h = 8.47019e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 18
 2.645e+11
-2.941e+02
+2.741e+02
 
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg full -schurpre mass -refine 2 -log_view
   sizes: n_u = 578, n_p = 81, N = 659
+  solution norms: |u|_h = 5.40900e-02, |p|_h = 8.50245e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 20
 1.760e+07
-1.919e+00
+1.847e+00
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg full -schurpre mass -refine 3 -log_view
   sizes: n_u = 2178, n_p = 289, N = 2467
+  solution norms: |u|_h = 5.40353e-02, |p|_h = 8.48062e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 21
 7.512e+07
-2.156e+00
+2.045e+00
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg full -schurpre mass -refine 4 -log_view
   sizes: n_u = 8450, n_p = 1089, N = 9539
+  solution norms: |u|_h = 5.40312e-02, |p|_h = 8.47338e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 23
 3.265e+08
-2.482e+00
+2.364e+00
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg full -schurpre mass -refine 5 -log_view
   sizes: n_u = 33282, n_p = 4225, N = 37507
+  solution norms: |u|_h = 5.40309e-02, |p|_h = 8.47113e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 23
 1.301e+09
-4.572e+00
+4.290e+00
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg full -schurpre mass -refine 6 -log_view
   sizes: n_u = 132098, n_p = 16641, N = 148739
+  solution norms: |u|_h = 5.40308e-02, |p|_h = 8.47046e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 23
 5.189e+09
-9.857e+00
+9.544e+00
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg full -schurpre mass -refine 7 -log_view
   sizes: n_u = 526338, n_p = 66049, N = 592387
+  solution norms: |u|_h = 5.40308e-02, |p|_h = 8.47026e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 23
 2.072e+10
-2.690e+01
+2.605e+01
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg full -schurpre mass -refine 8 -log_view
   sizes: n_u = 2101250, n_p = 263169, N = 2364419
+  solution norms: |u|_h = 5.40308e-02, |p|_h = 8.47020e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 23
 8.283e+10
-9.272e+01
+8.673e+01
 ../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg full -schurpre mass -refine 9 -log_view
   sizes: n_u = 8396802, n_p = 1050625, N = 9447427
+  solution norms: |u|_h = 5.40309e-02, |p|_h = 8.47019e-01
   Linear s_ solve converged due to CONVERGED_RTOL iterations 24
 3.447e+11
-3.565e+02
-
-../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg full -schurpre eye -refine 2 -log_view
-  sizes: n_u = 578, n_p = 81, N = 659
-  Linear s_ solve converged due to CONVERGED_RTOL iterations 62
-5.293e+07
-2.114e+00
-../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg full -schurpre eye -refine 3 -log_view
-  sizes: n_u = 2178, n_p = 289, N = 2467
-  Linear s_ solve converged due to CONVERGED_RTOL iterations 57
-1.961e+08
-2.398e+00
-../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg full -schurpre eye -refine 4 -log_view
-  sizes: n_u = 8450, n_p = 1089, N = 9539
-  Linear s_ solve converged due to CONVERGED_RTOL iterations 54
-7.424e+08
-2.960e+00
-../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg full -schurpre eye -refine 5 -log_view
-  sizes: n_u = 33282, n_p = 4225, N = 37507
-  Linear s_ solve converged due to CONVERGED_RTOL iterations 29
-1.620e+09
-4.924e+00
-../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg full -schurpre eye -refine 6 -log_view
-  sizes: n_u = 132098, n_p = 16641, N = 148739
-  Linear s_ solve converged due to CONVERGED_RTOL iterations 15
-3.509e+09
-7.564e+00
-../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg full -schurpre eye -refine 7 -log_view
-  sizes: n_u = 526338, n_p = 66049, N = 592387
-  Linear s_ solve converged due to CONVERGED_RTOL iterations 8
-8.288e+09
-1.440e+01
-../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg full -schurpre eye -refine 8 -log_view
-  sizes: n_u = 2101250, n_p = 263169, N = 2364419
-  Linear s_ solve converged due to CONVERGED_RTOL iterations 3
-1.706e+10
-3.517e+01
-../stokes.py -quad -showinfo -s_ksp_converged_reason -s_ksp_type gmres -schurgmg full -schurpre eye -refine 9 -log_view
-  sizes: n_u = 8396802, n_p = 1050625, N = 9447427
-  Linear s_ solve converged due to CONVERGED_RTOL iterations 3
-6.822e+10
-1.341e+02
+3.342e+02
 

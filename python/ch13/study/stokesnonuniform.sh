@@ -20,13 +20,13 @@ for SGMG in "-s_ksp_type minres -schurgmg diag" \
             "-s_ksp_type gmres -schurgmg lower" \
             "-s_ksp_type gmres -schurgmg full"; do
     for SPRE in "-schurpre selfp" \
-                "-schurpre mass" \
-                "-schurpre eye"; do
+                "-schurpre mass"; do
         cmd="../stokes.py -mesh ../graded.msh -showinfo -s_ksp_converged_reason ${SGMG} ${SPRE} -refine ${REFINE} -s_ksp_max_it 200 -log_view"
         echo $cmd
         rm -f foo.txt
         $cmd &> foo.txt
         'grep' "sizes:" foo.txt
+        'grep' "solution norms:" foo.txt
         'grep' "solve converged due to" foo.txt
         'grep' "Flop:  " foo.txt | awk '{print $2}'
         'grep' "Time (sec):" foo.txt | awk '{print $3}'
