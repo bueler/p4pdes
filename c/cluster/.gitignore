@@ -1,1 +1,2 @@
-cluster.o.*
+/*.o.*
+/*.txt
