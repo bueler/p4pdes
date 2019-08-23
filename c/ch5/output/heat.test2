@@ -1,23 +1,6 @@
-solving on 9 x 8 grid for t0=0. to tf=0.1 ...
-  energy =  0.00e+00     nu =   0.0640
-  energy =  2.49e-19     nu =   0.0296
-  energy =  2.55e-19     nu =   0.0493
-  energy =  3.29e-19     nu =   0.0930
-  energy = -7.02e-16     nu =   0.0785
-  energy = -7.89e-16     nu =   0.0809
-  energy = -6.34e-16     nu =   0.0904
-  energy = -1.71e-16     nu =   0.1031
-  energy =  3.22e-17     nu =   0.1212
-  energy =  1.85e-16     nu =   0.1457
-  energy =  2.51e-16     nu =   0.1778
-  energy =  2.96e-16     nu =   0.2201
-  energy =  5.29e-16     nu =   0.2770
-  energy =  8.10e-16     nu =   0.3528
-  energy =  1.11e-15     nu =   0.4444
-  energy =  1.31e-15     nu =   0.5347
-  energy =  1.86e-15     nu =   0.6157
-  energy =  3.84e-15     nu =   0.6996
-  energy =  9.87e-15     nu =   0.7975
-  energy =  1.23e-14     nu =   0.7348
-  energy =  1.93e-14     nu =   0.7348
-  energy =  2.55e-14     nu =   1.1752
+solving on 9 x 8 grid for t0=0. to tf=0.01 ...
+0 TS dt 0.001 time 0.
+1 TS dt 0.00226419 time 0.001
+2 TS dt 0.00336791 time 0.00326419
+3 TS dt 0.00336791 time 0.00663209
+4 TS dt 0.00889336 time 0.01

@@ -38,10 +38,7 @@ runheat_1:
 	-@../testit.sh heat "-da_refine 1 -ts_monitor -ts_type beuler" 1 1
 
 runheat_2:
-	-@../testit.sh heat "-da_refine 1 -ht_monitor" 2 2
-
-runheat_3:
-	-@../testit.sh heat "-da_refine 1 -ts_monitor -ts_type rk -ts_max_time 0.01" 1 3
+	-@../testit.sh heat "-da_refine 1 -ts_monitor -ts_type rk -ts_max_time 0.01" 2 2
 
 runpattern_1:
 	-@../testit.sh pattern "-da_grid_x 4 -da_grid_y 4 -da_refine 2 -ts_monitor" 1 1   # refinement of 1 misses initial condition
@@ -56,7 +53,7 @@ test_ode: runode_1 runode_2 runode_3
 
 test_odejac: runodejac_1 runodejac_2
 
-test_heat: runheat_1 runheat_2 runheat_3
+test_heat: runheat_1 runheat_2
 
 test_pattern: runpattern_1 runpattern_2 runpattern_3
 
@@ -64,7 +61,7 @@ test: test_ode test_odejac test_heat test_pattern
 
 # etc
 
-.PHONY: distclean runode_1 runode_2 runode_3 runodejac_1 runheat_1 runheat_2 runpattern_1 test test_ode test_odejac test_heat test_pattern
+.PHONY: distclean runode_1 runode_2 runode_3 runodejac_1 runodejac_2 runheat_1 runheat_2 runpattern_1 runpattern_2 runpattern_3 test test_ode test_odejac test_heat test_pattern
 
 distclean:
 	@rm -f *~ ode odejac heat pattern *tmp
