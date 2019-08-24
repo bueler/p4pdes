@@ -3,7 +3,7 @@ include ${PETSC_DIR}/lib/petsc/conf/rules
 
 .PHONY: test
 
-TESTDIRS = ch1 ch2 ch3 ch4 ch5 ch6 ch7 ch9 ch10 ch11 ch12   # FIXME: ch8 ch13
+TESTDIRS = ch1 ch2 ch3 ch4 ch5 ch6 ch7 ch9 ch10 ch11 ch12
 test:
 	@echo "PETSC_DIR=${PETSC_DIR}"
 	@echo "PETSC_ARCH=${PETSC_ARCH}"

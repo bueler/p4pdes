@@ -1,7 +1,8 @@
-best practices for C codes in `p4pdes`
---------------------------------------
+best practices for C codes in `p4pdes/c/`
+-----------------------------------------
 
-My goal for myself is to use these best practices:
+My goal for myself is to use the following best practices.  I do not always
+succeed:
 
   1. A feature without a regression test is broken.
   2. A code which is not valgrind-clean is broken.
@@ -15,7 +16,8 @@ My goal for myself is to use these best practices:
      * `static` helper functions are an exception.
   5. When in doubt the style should follow the Style Guide in the
      [PETSc Developer's Guide](http://www.mcs.anl.gov/petsc/developers/developers.pdf).
-     * A collection of examples is not a library API, so this is not rigid.
+     * A collection of examples is not a library API, so rigidly following
+       this Guide would be foolish.
   6. If you do `./code -help intro` then you should see a description of the
      code and its option prefix `xxx_`.
   7. Do `./code -help |grep xxx_` to get documentation for code-specific options.
