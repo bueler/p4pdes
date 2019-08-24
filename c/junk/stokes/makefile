@@ -5,10 +5,6 @@ well: well.o  chkopts
 	-${CLINKER} -o well well.o  ${PETSC_LIB}
 	${RM} well.o
 
-stokes: stokes.o  chkopts
-	-${CLINKER} -o stokes stokes.o  ${PETSC_LIB}
-	${RM} stokes.o
-
 # copy of this broken example from petsc commit 55cee6f09eb989b4d30b8ed1c133ceefb891d332
 ex7: ex7.o  chkopts
 	-${CLINKER} -o ex7 ex7.o  ${PETSC_LIB}
@@ -35,5 +31,5 @@ test: test_well
 .PHONY: distclean runwell_1 runwell_2 runwell_3 test_well test
 
 distclean:
-	@rm -f *~ *tmp *.dat *.dat.info *.pyc PetscBinaryIO.py petsc_conf.py stokes ex7 well
+	@rm -f *~ *tmp *.dat *.dat.info *.pyc PetscBinaryIO.py petsc_conf.py ex7 well
 
