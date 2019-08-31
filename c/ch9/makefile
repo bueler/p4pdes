@@ -32,6 +32,6 @@ test: test_phelm
 .PHONY: distclean runphelm_1 runphelm_2 runphelm_3 runphelm_4 runphelm_5 test test_phelm
 
 distclean:
-	@rm -f *~ phelm
+	@rm -f *~ phelm *tmp
 	(cd solns/; ${MAKE} distclean);
 
