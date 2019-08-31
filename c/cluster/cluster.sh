@@ -19,13 +19,14 @@
 #   grep "Time (sec):" p4pdes.xxx
 # to see total flops and max times of runs.
 
-# Many details below are particular to the Slurm batch system;
+# Many details below are particular to the Slurm batch system:
 #     https://slurm.schedmd.com/
+# Normally we use a better partition and more tasks.
 
-#SBATCH --partition=t1standard
-#SBATCH --ntasks=32
+#SBATCH --partition=debug
+#SBATCH --ntasks=12
 #SBATCH --tasks-per-node=4
-#SBATCH --mail-user=<USERNAME>@alaska.edu
+#SBATCH --mail-user=<USERNAME>@alaska.edu  # CHANGE TO REAL EMAIL FOR RUN
 #SBATCH --mail-type=BEGIN
 #SBATCH --mail-type=END
 #SBATCH --mail-type=FAIL
@@ -35,7 +36,10 @@
 ulimit -s unlimited
 ulimit -l unlimited
 
-# Submit from c/cluster/ for this to work.
+# Get streams info for these processes and then head back to submit directory.
+# (Submit from c/cluster/ for this to work.)
+cd $PETSC_DIR
+make streams NPMAX=$SLURM_NTASKS
 cd $SLURM_SUBMIT_DIR
 
 # Generate a list of allocated nodes; will serve as a machinefile for mpirun.
