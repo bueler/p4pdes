@@ -47,6 +47,7 @@ rawpre = r'''#!/bin/bash
 #SBATCH --mail-type=BEGIN
 #SBATCH --mail-type=END
 #SBATCH --mail-type=FAIL
+#SBATCH --output=%s
 
 # This cluster needs these for some reason.
 ulimit -s unlimited
@@ -115,9 +116,11 @@ for dim in [2, 3]:
         print('  case: run %s with %d nodes and P=%d processes on %d^%d grid'
               % (code,nodes,P,grid,dim))
 
-        preamble = rawpre % (args.queue,P,args.pernode,args.time,args.email)
+        root = 'weak_%s_%d' % (code,P)
+        preamble = rawpre % (args.queue,P,args.pernode,args.time,args.email,
+                             root + r'.o.%j')
 
-        batchname = 'weak_%s_%d.sh' % (code,P)
+        batchname = root + '.sh'
         print('    writing %s ...' % batchname)
         batch = open(batchname,'w')
         batch.write(preamble)
