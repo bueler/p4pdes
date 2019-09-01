@@ -1,11 +1,11 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
-advect: advect.o  chkopts
+advect: advect.o
 	-${CLINKER} -o advect advect.o  ${PETSC_LIB}
 	${RM} advect.o
 
-both: both.o  chkopts
+both: both.o
 	-${CLINKER} -o both both.o  ${PETSC_LIB}
 	${RM} both.o
 

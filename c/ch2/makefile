@@ -1,19 +1,19 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
-sparsemat: sparsemat.o  chkopts
+sparsemat: sparsemat.o
 	-${CLINKER} -o sparsemat sparsemat.o  ${PETSC_LIB}
 	${RM} sparsemat.o
 
-vecmatksp: vecmatksp.o  chkopts
+vecmatksp: vecmatksp.o
 	-${CLINKER} -o vecmatksp vecmatksp.o  ${PETSC_LIB}
 	${RM} vecmatksp.o
 
-tri: tri.o  chkopts
+tri: tri.o
 	-${CLINKER} -o tri tri.o  ${PETSC_LIB}
 	${RM} tri.o
 
-loadsolve: loadsolve.o  chkopts
+loadsolve: loadsolve.o
 	-${CLINKER} -o loadsolve loadsolve.o  ${PETSC_LIB}
 	${RM} loadsolve.o
 

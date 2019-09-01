@@ -1,15 +1,15 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
-expcircle: expcircle.o chkopts
+expcircle: expcircle.o
 	-${CLINKER} -o expcircle expcircle.o ${PETSC_LIB}
 	${RM} expcircle.o
 
-ecjac: ecjac.o chkopts
+ecjac: ecjac.o
 	-${CLINKER} -o ecjac ecjac.o ${PETSC_LIB}
 	${RM} ecjac.o
 
-reaction: reaction.o chkopts
+reaction: reaction.o
 	-${CLINKER} -o reaction reaction.o ${PETSC_LIB}
 	${RM} reaction.o
 

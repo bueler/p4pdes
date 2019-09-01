@@ -1,7 +1,7 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
-phelm: phelm.o chkopts
+phelm: phelm.o
 	-${CLINKER} -o phelm phelm.o ${PETSC_LIB}
 	${RM} phelm.o
 

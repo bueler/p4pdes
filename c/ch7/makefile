@@ -1,11 +1,11 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
-minimal: minimal.o ../ch6/poissonfunctions.o chkopts
+minimal: minimal.o ../ch6/poissonfunctions.o
 	-${CLINKER} -o minimal minimal.o ../ch6/poissonfunctions.o ${PETSC_LIB}
 	${RM} minimal.o ../ch6/poissonfunctions.o
 
-biharm: biharm.o ../ch6/poissonfunctions.o chkopts
+biharm: biharm.o ../ch6/poissonfunctions.o
 	-${CLINKER} -o biharm biharm.o ../ch6/poissonfunctions.o ${PETSC_LIB}
 	${RM} biharm.o ../ch6/poissonfunctions.o
 

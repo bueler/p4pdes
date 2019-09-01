@@ -1,19 +1,19 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
-ode: ode.o  chkopts
+ode: ode.o
 	-${CLINKER} -o ode ode.o  ${PETSC_LIB}
 	${RM} ode.o
 
-odejac: odejac.o  chkopts
+odejac: odejac.o
 	-${CLINKER} -o odejac odejac.o  ${PETSC_LIB}
 	${RM} odejac.o
 
-heat: heat.o  chkopts
+heat: heat.o
 	-${CLINKER} -o heat heat.o  ${PETSC_LIB}
 	${RM} heat.o
 
-pattern: pattern.o  chkopts
+pattern: pattern.o
 	-${CLINKER} -o pattern pattern.o  ${PETSC_LIB}
 	${RM} pattern.o
 

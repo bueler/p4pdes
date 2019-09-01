@@ -1,7 +1,7 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
-obstacle: obstacle.o ../ch6/poissonfunctions.o chkopts
+obstacle: obstacle.o ../ch6/poissonfunctions.o
 	-${CLINKER} -o obstacle obstacle.o ../ch6/poissonfunctions.o ${PETSC_LIB}
 	${RM} obstacle.o ../ch6/poissonfunctions.o
 
