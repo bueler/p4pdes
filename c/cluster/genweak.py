@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
-# example:
-#   $ ./genweak.py -email elbueler@alaska.edu -queue debug -maxP 16 -pernode 6 -time 30
+# examples:
+#   $ ./genweak.py -email elbueler@alaska.edu -queue debug -maxP 16 -pernode 6 -time 30 -streams
+#   $ ./genweak.py -email elbueler@alaska.edu -queue t2standard -maxP 256 -pernode 8 -time 60
 
 from argparse import ArgumentParser, RawTextHelpFormatter
 import numpy as np
@@ -18,13 +19,15 @@ power of 4 like 16,64,256,1024,4096,... recommended''')
 parser.add_argument('-queue', metavar='QUEUE', type=str,
                     default='debug', help='SLURM queue (partition) name')
 parser.add_argument('-pernode', type=int, default=2, metavar='K',
-                    help='''number of MPI processes to assign to each node;
+                    help='''maximum number of MPI processes to assign to each node;
 small value may increase streams bandwidth and performance''')
+parser.add_argument('-streams', action='store_true', default=False,
+                    help='include "make streams" before run (but may hang on attempt to use python?)')
 parser.add_argument('-time', type=int, default=120, metavar='T',
                     help='''max time in minutes for SLURM job''')
 args = parser.parse_args()
 
-print('settings for SLURM: %s queue, %d tasks per node, %s as email'
+print('settings: %s queue, %d max tasks per node, %s as email'
       % (args.queue,args.pernode,args.email))
 
 m2D = int(np.floor(np.log(float(args.maxP)) / np.log(4.0)))
@@ -53,16 +56,20 @@ rawpre = r'''#!/bin/bash
 ulimit -s unlimited
 ulimit -l unlimited
 
-# Get streams info for these processes.
-cd $PETSC_DIR
-make streams NPMAX=$SLURM_NTASKS
-cd $SLURM_SUBMIT_DIR
-
 # Generate a list of allocated nodes as a machinefile for mpiexec.
 srun -l /bin/hostname | sort -n | awk '{print $2}' > ./nodes.$SLURM_JOB_ID
 
 # Launches the MPI application.
 GO="mpiexec -n $SLURM_NTASKS -machinefile ./nodes.$SLURM_JOB_ID"
+
+cd $SLURM_SUBMIT_DIR
+'''
+
+rawstreams= r'''
+# Get streams info for these processes.
+cd $PETSC_DIR
+make streams NPMAX=$SLURM_NTASKS
+cd $SLURM_SUBMIT_DIR
 '''
 
 rawfish = r'''
@@ -105,7 +112,6 @@ for dim in [2, 3]:
         code = 'fish'
         xdict = fishdict
     for P in Plist:
-        nodes = P / args.pernode
         rlev = xdict[P][0]  # refinement level
         grid = xdict[P][1]
         if dim == 2:
@@ -113,17 +119,21 @@ for dim in [2, 3]:
         else:
             wrun = rawfish % (rlev,grid,grid,grid,grid*grid*grid/P,rlev)
 
-        print('  case: run %s with %d nodes and P=%d processes on %d^%d grid'
-              % (code,nodes,P,grid,dim))
+        pernode = min(P,args.pernode)
+        nodes = P / pernode
+        print('  case: run %s with %d nodes, %d tasks per node, and P=%d processes on %d^%d grid'
+              % (code,nodes,pernode,P,grid,dim))
 
         root = 'weak_%s_%d' % (code,P)
-        preamble = rawpre % (args.queue,P,args.pernode,args.time,args.email,
+        preamble = rawpre % (args.queue,P,pernode,args.time,args.email,
                              root + r'.o.%j')
 
         batchname = root + '.sh'
         print('    writing %s ...' % batchname)
         batch = open(batchname,'w')
         batch.write(preamble)
+        if args.streams:
+            batch.write(rawstreams)
         batch.write(wrun)
         batch.close()
 
