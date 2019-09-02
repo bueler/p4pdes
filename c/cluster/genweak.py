@@ -82,9 +82,9 @@ $GO ../ch6/fish -fsh_dim 3 -da_grid_x 9 -da_grid_y 9 -da_grid_z 9 -da_refine %d 
 '''
 fishdict = {  1: (3,65),
               8: (4,129),
-             64: (7,257),
-            512: (8,513),
-           4096: (9,1025)}
+             64: (5,257),
+            512: (6,513),
+           4096: (7,1025)}  # N=10^9; requires 64-bit indices for DMCreateCoordinateDM_DA()
 
 rawminimal = r'''
 # MINIMAL:  solve 2D minimal surface equation
@@ -100,7 +100,7 @@ minimaldict = {  1: (4,513),
                 64: (7,4097),
                256: (8,8193),
               1024: (9,16385),
-              4096: (10,65537)}
+              4096: (10,32769)}  # N=10^9; may require 64-bit indices
 
 for dim in [2, 3]:
     if dim == 2:
