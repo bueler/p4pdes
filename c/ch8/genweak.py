@@ -1,34 +1,37 @@
 #!/usr/bin/env python
 
-# examples:
-#   $ ./genweak.py -email elbueler@alaska.edu -queue debug -maxP 16 -pernode 6 -time 30 -streams
-#   $ ./genweak.py -email elbueler@alaska.edu -queue t2standard -maxP 256 -pernode 8 -time 60
+# WARNING:  You will need to edit this file to match your batch system!!
 
 from argparse import ArgumentParser, RawTextHelpFormatter
 import numpy as np
 
-parser = ArgumentParser(description='''
-Write SLURM batch files for weak scaling study using ch7/minimal.c in 2D and
-ch6/fish.c in 3D.''',
-    formatter_class=RawTextHelpFormatter)
+intro = '''
+Write SLURM batch files for weak scaling study using both ch7/minimal.c in 2D
+and ch6/fish.c in 3D.  Examples:
+    ./genweak.py -email xx@yy.edu -queue debug -maxP 16 -pernode 6 -minutes 30 -streams
+    ./genweak.py -email xx@yy.edu -queue t2standard -maxP 256 -pernode 8 -minutes 60
+'''
+
+parser = ArgumentParser(description=intro, formatter_class=RawTextHelpFormatter)
 parser.add_argument('-email', metavar='EMAIL', type=str,
                     default='USERNAME@alaska.edu', help='email address')
 parser.add_argument('-maxP', type=int, default=4, metavar='P',
                     help='''maximum number of MPI processes;
 power of 4 like 16,64,256,1024,4096,... recommended''')
-parser.add_argument('-queue', metavar='QUEUE', type=str,
+parser.add_argument('-minutes', type=int, default=120, metavar='T',
+                    help='''max time in minutes for SLURM job''')
+parser.add_argument('-queue', metavar='Q', type=str,
                     default='debug', help='SLURM queue (partition) name')
 parser.add_argument('-pernode', type=int, default=2, metavar='K',
                     help='''maximum number of MPI processes to assign to each node;
 small value may increase streams bandwidth and performance''')
 parser.add_argument('-streams', action='store_true', default=False,
                     help='include "make streams" before run (but may hang on attempt to use python?)')
-parser.add_argument('-time', type=int, default=120, metavar='T',
-                    help='''max time in minutes for SLURM job''')
+
 args = parser.parse_args()
 
-print('settings: %s queue, %d max tasks per node, %s as email'
-      % (args.queue,args.pernode,args.email))
+print('settings: %s queue, %d max tasks per node, %s as email, request time %d minutes'
+      % (args.queue,args.pernode,args.email,args.minutes))
 
 m2D = int(np.floor(np.log(float(args.maxP)) / np.log(4.0)))
 Plist2D = np.round(4.0**np.arange(m2D+1)).astype(int).tolist()
@@ -83,8 +86,7 @@ $GO ../ch6/fish -fsh_dim 3 -da_grid_x 9 -da_grid_y 9 -da_grid_z 9 -da_refine %d 
 fishdict = {  1: (3,65),
               8: (4,129),
              64: (5,257),
-            512: (6,513),
-           4096: (7,1025)}  # N=10^9; requires 64-bit indices for DMCreateCoordinateDM_DA()
+            512: (6,513)}
 
 rawminimal = r'''
 # MINIMAL:  solve 2D minimal surface equation
@@ -98,9 +100,7 @@ minimaldict = {  1: (4,513),
                  4: (5,1025),
                 16: (6,2049),
                 64: (7,4097),
-               256: (8,8193),
-              1024: (9,16385),
-              4096: (10,32769)}  # N=10^9; may require 64-bit indices
+               256: (8,8193)}
 
 for dim in [2, 3]:
     if dim == 2:
@@ -125,7 +125,7 @@ for dim in [2, 3]:
               % (code,nodes,pernode,P,grid,dim))
 
         root = 'weak_%s_%d' % (code,P)
-        preamble = rawpre % (args.queue,P,pernode,args.time,args.email,
+        preamble = rawpre % (args.queue,P,pernode,args.minutes,args.email,
                              root + r'.o.%j')
 
         batchname = root + '.sh'

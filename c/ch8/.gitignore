@@ -1,3 +1,4 @@
 /weak_*.sh
+/strong_*.sh
 /*.o.*
 /*.txt
