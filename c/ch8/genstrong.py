@@ -8,6 +8,9 @@ import numpy as np
 intro = '''
 Write SLURM batch files for strong scaling study using ch7/minimal.c.  Example:
     ./genstrong.py -email xx@yy.edu -lev 6 -queue t2standard -minP 4 -maxP 64 -pernode 4 -minutes 60
+Solves 2D minimal surface equation using grid-sequenced Newton GMRES+GMG solver
+and 33x33 coarse grid.  With -lev 7 (i.e. -snes_grid_sequence 7) is 4097x4097
+fine grid with N = 16785409 degrees of freedom.
 '''
 
 parser = ArgumentParser(description=intro,formatter_class=RawTextHelpFormatter)
