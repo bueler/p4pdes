@@ -1,12 +1,15 @@
 c/ch8/
 ======
 
-This directory contains scripts which runs codes from the book _PETSc for_
-_Partial Differential Equations_ on a Linux cluster.  This example might be
-useful as a suggestion for using a batch system on many-node machines, but
+This directory contains scripts which runs codes from other Chapters of the book
+_PETSc for Partial Differential Equations_.
+
+These scripts demonstrate the use of a batch system on a Linux cluster, and they
+support the discussion of parallel scaling in Chapter 8.  The scripts might be
+useful as a suggestion for using a batch system on other clusters, but
 users should expect to make modifications for their own machines.
 
-The particular settings are for a modest-sized Linux cluster `chinook` at the
+The particular settings are for a modest-sized cluster `chinook` at the
 University of Alaska Fairbanks; see
    https://www.gi.alaska.edu/services/research-computing-systems.
 Access to `chinook` is generally limited to UAF students and faculty.
