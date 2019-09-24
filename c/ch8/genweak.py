@@ -14,14 +14,12 @@ Write SLURM batch files for weak scaling study using ch7/minimal.c.  Examples:
     ./genweak.py -email elbueler@alaska.edu -queue t2standard -minP 16 -maxP 64 -pernode 4 -minutes 60
     ./genweak.py -email elbueler@alaska.edu -queue t2standard -minP 16 -maxP 256 -pernode 8 -minutes 60
 Solves 2D minimal surface equation using grid-sequenced Newton GMRES+GMG solver
-and 33x33 coarse grid.  Each process gets a 512x512 grid with N/P = 2.6e5.
+and 33x33 coarse grid.  Each process gets a 1024x1024 grid with N/P = 1.05e6.
 '''
 
 parser = ArgumentParser(description=intro, formatter_class=RawTextHelpFormatter)
 parser.add_argument('-email', metavar='EMAIL', type=str,
                     default='USERNAME@alaska.edu', help='email address')
-parser.add_argument('-lev', type=int, default=4, metavar='X',
-                    help='''refinement level for -snes_grid_sequence; in {4,5,6,7,8}''')
 parser.add_argument('-maxP', type=int, default=4, metavar='P',
                     help='''maximum number of MPI processes;
 power of 4 like 4,16,64,256,1024,... recommended''')
@@ -89,11 +87,11 @@ rawminimal = r'''
 
 $GO ../ch7/minimal -da_grid_x 33 -da_grid_y 33 -snes_grid_sequence %d -snes_fd_color -snes_converged_reason -snes_monitor -ksp_converged_reason -pc_type mg -log_view
 '''
-minimaldict = {  1: (4,513),
-                 4: (5,1025),
-                16: (6,2049),
-                64: (7,4097),
-               256: (8,8193)}
+minimaldict = {  1: (5,1025),
+                 4: (6,2049),
+                16: (7,4097),
+                64: (8,8193),
+               256: (9,16385)}
 
 for P in Plist:
     rlev = minimaldict[P][0]  # refinement level
