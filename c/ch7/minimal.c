@@ -192,7 +192,7 @@ PetscErrorCode FormExactFromG(DMDALocalInfo *info, Vec uexact,
     PetscErrorCode ierr;
     int     i, j;
     double  xymin[2], xymax[2], hx, hy, x, y, **auexact;
-    ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
+    ierr = DMGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
     hx = (xymax[0] - xymin[0]) / (info->mx - 1);
     hy = (xymax[1] - xymin[1]) / (info->my - 1);
     ierr = DMDAVecGetArray(info->da,uexact,&auexact); CHKERRQ(ierr);
@@ -215,7 +215,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
     double     xymin[2], xymax[2], hx, hy, hxhy, hyhx, x, y,
                ue, uw, un, us, une, use, unw, usw,
                dux, duy, De, Dw, Dn, Ds;
-    ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
+    ierr = DMGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
     hx = (xymax[0] - xymin[0]) / (info->mx - 1);
     hy = (xymax[1] - xymin[1]) / (info->my - 1);
     hxhy = hx / hy;
@@ -301,7 +301,7 @@ PetscErrorCode MSEMonitor(SNES snes, int its, double norm, void *user) {
 
     ierr = SNESGetDM(snes, &da); CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-    ierr = DMDAGetBoundingBox(info.da,xymin,xymax); CHKERRQ(ierr);
+    ierr = DMGetBoundingBox(info.da,xymin,xymax); CHKERRQ(ierr);
     hx = (xymax[0] - xymin[0]) / (info.mx - 1);
     hy = (xymax[1] - xymin[1]) / (info.my - 1);
 

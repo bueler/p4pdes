@@ -280,7 +280,7 @@ PetscErrorCode Form1DUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
   PetscErrorCode ierr;
   int          i;
   double       xmax[1], xmin[1], hx, x, *au;
-  ierr = DMDAGetBoundingBox(info->da,xmin,xmax); CHKERRQ(ierr);
+  ierr = DMGetBoundingBox(info->da,xmin,xmax); CHKERRQ(ierr);
   hx = (xmax[0] - xmin[0]) / (info->mx - 1);
   ierr = DMDAVecGetArray(info->da, u, &au);CHKERRQ(ierr);
   for (i=info->xs; i<info->xs+info->xm; i++) {
@@ -295,7 +295,7 @@ PetscErrorCode Form2DUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
     PetscErrorCode ierr;
     int     i, j;
     double  xymin[2], xymax[2], hx, hy, x, y, **au;
-    ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
+    ierr = DMGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
     hx = (xymax[0] - xymin[0]) / (info->mx - 1);
     hy = (xymax[1] - xymin[1]) / (info->my - 1);
     ierr = DMDAVecGetArray(info->da, u, &au);CHKERRQ(ierr);
@@ -314,7 +314,7 @@ PetscErrorCode Form3DUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
     PetscErrorCode ierr;
     int    i, j, k;
     double xyzmin[3], xyzmax[3], hx, hy, hz, x, y, z, ***au;
-    ierr = DMDAGetBoundingBox(info->da,xyzmin,xyzmax); CHKERRQ(ierr);
+    ierr = DMGetBoundingBox(info->da,xyzmin,xyzmax); CHKERRQ(ierr);
     hx = (xyzmax[0] - xyzmin[0]) / (info->mx - 1);
     hy = (xyzmax[1] - xyzmin[1]) / (info->my - 1);
     hz = (xyzmax[2] - xyzmin[2]) / (info->mz - 1);

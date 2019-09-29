@@ -206,7 +206,7 @@ int main(int argc,char **argv) {
         ierr = FormUExact(&info,&user,uexact_fcn,u_exact); CHKERRQ(ierr);
         ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr);    // u <- u + (-1.0) u_exact
         ierr = VecNorm(u,NORM_2,&err2); CHKERRQ(ierr);
-        ierr = DMDAGetBoundingBox(da_after,xymin,xymax); CHKERRQ(ierr);
+        ierr = DMGetBoundingBox(da_after,xymin,xymax); CHKERRQ(ierr);
         hx = (xymax[0] - xymin[0]) / (info.mx - 1);
         hy = (xymax[1] - xymin[1]) / (info.my - 1);
         err2 *= PetscSqrtReal(hx * hy);
@@ -228,7 +228,7 @@ PetscErrorCode FormUExact(DMDALocalInfo *info, AdCtx *usr,
     if (uexact == NULL) {
         SETERRQ(PETSC_COMM_WORLD,1,"exact solution not available");
     }
-    ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
+    ierr = DMGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
     hx = (xymax[0] - xymin[0]) / (info->mx - 1);
     hy = (xymax[1] - xymin[1]) / (info->my - 1);
     ierr = DMDAVecGetArray(info->da, uex, &auex);CHKERRQ(ierr);
@@ -268,7 +268,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
     PetscBool    iowned, jowned, ip1owned, jp1owned;
     PetscLogDouble ff;
 
-    ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
+    ierr = DMGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
     hx = (xymax[0] - xymin[0]) / (info->mx - 1);
     hy = (xymax[1] - xymin[1]) / (info->my - 1);
     limiter = usr->limiter_fcn;

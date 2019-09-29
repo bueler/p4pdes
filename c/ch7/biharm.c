@@ -122,7 +122,7 @@ PetscErrorCode FormExactWLocal(DMDALocalInfo *info, Field **aW, BiharmCtx *user)
     PetscErrorCode ierr;
     int     i, j;
     double  xymin[2], xymax[2], hx, hy, x, y;
-    ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
+    ierr = DMGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
     hx = (xymax[0] - xymin[0]) / (info->mx - 1);
     hy = (xymax[1] - xymin[1]) / (info->my - 1);
     for (j = info->ys; j < info->ys + info->ym; j++) {
@@ -142,7 +142,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, Field **aW,
     int        i, j;
     double     xymin[2], xymax[2], hx, hy, darea, scx, scy, scdiag, x, y,
                ve, vw, vn, vs, ue, uw, un, us;
-    ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
+    ierr = DMGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
     hx = (xymax[0] - xymin[0]) / (info->mx - 1);
     hy = (xymax[1] - xymin[1]) / (info->my - 1);
     darea = hx * hy;               // multiply FD equations by this
@@ -183,7 +183,7 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, Field **aW,
     double       xymin[2], xymax[2], hx, hy, darea, scx, scy, scdiag, val[6];
     MatStencil   col[6], row;
 
-    ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
+    ierr = DMGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
     hx = (xymax[0] - xymin[0]) / (info->mx - 1);
     hy = (xymax[1] - xymin[1]) / (info->my - 1);
     darea = hx * hy;               // multiply FD equations by this

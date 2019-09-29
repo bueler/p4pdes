@@ -6,7 +6,7 @@ PetscErrorCode Poisson1DFunctionLocal(DMDALocalInfo *info, double *au,
     PetscErrorCode ierr;
     int          i;
     double       xmax[1], xmin[1], h, x, ue, uw;
-    ierr = DMDAGetBoundingBox(info->da,xmin,xmax); CHKERRQ(ierr);
+    ierr = DMGetBoundingBox(info->da,xmin,xmax); CHKERRQ(ierr);
     h = (xmax[0] - xmin[0]) / (info->mx - 1);
     for (i = info->xs; i < info->xs + info->xm; i++) {
         x = xmin[0] + i * h;
@@ -33,7 +33,7 @@ PetscErrorCode Poisson2DFunctionLocal(DMDALocalInfo *info, double **au,
     int     i, j;
     double  xymin[2], xymax[2], hx, hy, darea, scx, scy, scdiag, x, y,
             ue, uw, un, us;
-    ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
+    ierr = DMGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
     hx = (xymax[0] - xymin[0]) / (info->mx - 1);
     hy = (xymax[1] - xymin[1]) / (info->my - 1);
     darea = hx * hy;
@@ -73,7 +73,7 @@ PetscErrorCode Poisson3DFunctionLocal(DMDALocalInfo *info, double ***au,
     int    i, j, k;
     double xyzmin[3], xyzmax[3], hx, hy, hz, dvol, scx, scy, scz, scdiag,
            x, y, z, ue, uw, un, us, uu, ud;
-    ierr = DMDAGetBoundingBox(info->da,xyzmin,xyzmax); CHKERRQ(ierr);
+    ierr = DMGetBoundingBox(info->da,xyzmin,xyzmax); CHKERRQ(ierr);
     hx = (xyzmax[0] - xyzmin[0]) / (info->mx - 1);
     hy = (xyzmax[1] - xyzmin[1]) / (info->my - 1);
     hz = (xyzmax[2] - xyzmin[2]) / (info->mz - 1);
@@ -124,7 +124,7 @@ PetscErrorCode Poisson1DJacobianLocal(DMDALocalInfo *info, PetscScalar *au,
     double       xmin[1], xmax[1], h, v[3];
     MatStencil   col[3],row;
 
-    ierr = DMDAGetBoundingBox(info->da,xmin,xmax); CHKERRQ(ierr);
+    ierr = DMGetBoundingBox(info->da,xmin,xmax); CHKERRQ(ierr);
     h = (xmax[0] - xmin[0]) / (info->mx - 1);
     for (i = info->xs; i < info->xs+info->xm; i++) {
         row.i = i;
@@ -160,7 +160,7 @@ PetscErrorCode Poisson2DJacobianLocal(DMDALocalInfo *info, PetscScalar **au,
     int          i,j,ncols;
     MatStencil   col[5],row;
 
-    ierr = DMDAGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
+    ierr = DMGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
     hx = (xymax[0] - xymin[0]) / (info->mx - 1);
     hy = (xymax[1] - xymin[1]) / (info->my - 1);
     scx = user->cx * hy / hx;
@@ -204,7 +204,7 @@ PetscErrorCode Poisson3DJacobianLocal(DMDALocalInfo *info, PetscScalar ***au,
     int          i,j,k,ncols;
     MatStencil   col[7],row;
 
-    ierr = DMDAGetBoundingBox(info->da,xyzmin,xyzmax); CHKERRQ(ierr);
+    ierr = DMGetBoundingBox(info->da,xyzmin,xyzmax); CHKERRQ(ierr);
     hx = (xyzmax[0] - xyzmin[0]) / (info->mx - 1);
     hy = (xyzmax[1] - xyzmin[1]) / (info->my - 1);
     hz = (xyzmax[2] - xyzmin[2]) / (info->mz - 1);
@@ -290,7 +290,7 @@ PetscErrorCode InitialState(DM da, InitialType it, PetscBool gbdry,
             int    i;
             double xmax[1], xmin[1], h, x, *au;
             ierr = DMDAVecGetArray(da, u, &au); CHKERRQ(ierr);
-            ierr = DMDAGetBoundingBox(da,xmin,xmax); CHKERRQ(ierr);
+            ierr = DMGetBoundingBox(da,xmin,xmax); CHKERRQ(ierr);
             h = (xmax[0] - xmin[0]) / (info.mx - 1);
             for (i = info.xs; i < info.xs + info.xm; i++) {
                 if (i==0 || i==info.mx-1) {
@@ -306,7 +306,7 @@ PetscErrorCode InitialState(DM da, InitialType it, PetscBool gbdry,
             int     i, j;
             double  xymin[2], xymax[2], hx, hy, x, y, **au;
             ierr = DMDAVecGetArray(da, u, &au); CHKERRQ(ierr);
-            ierr = DMDAGetBoundingBox(da,xymin,xymax); CHKERRQ(ierr);
+            ierr = DMGetBoundingBox(da,xymin,xymax); CHKERRQ(ierr);
             hx = (xymax[0] - xymin[0]) / (info.mx - 1);
             hy = (xymax[1] - xymin[1]) / (info.my - 1);
             for (j = info.ys; j < info.ys + info.ym; j++) {
@@ -326,7 +326,7 @@ PetscErrorCode InitialState(DM da, InitialType it, PetscBool gbdry,
             int     i, j, k;
             double  xyzmin[3], xyzmax[3], hx, hy, hz, x, y, z, ***au;
             ierr = DMDAVecGetArray(da, u, &au); CHKERRQ(ierr);
-            ierr = DMDAGetBoundingBox(da,xyzmin,xyzmax); CHKERRQ(ierr);
+            ierr = DMGetBoundingBox(da,xyzmin,xyzmax); CHKERRQ(ierr);
             hx = (xyzmax[0] - xyzmin[0]) / (info.mx - 1);
             hy = (xyzmax[1] - xyzmin[1]) / (info.my - 1);
             hz = (xyzmax[2] - xyzmin[2]) / (info.mz - 1);
