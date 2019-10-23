@@ -1,9 +1,0 @@
-stokes
-ex7
-well
-PetscBinaryIO.py
-petsc_conf.py
-*.pyc
-*.dat
-*.dat.info
-

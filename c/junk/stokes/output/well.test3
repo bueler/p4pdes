@@ -1,3 +1,0 @@
-Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
-on 5 point grid with h=2.5 and scheme = 'regular':
-  |u-uexact|_inf < 1.0e-08,  |p-pexact|_inf / |pexact|_inf < 1.0e-08

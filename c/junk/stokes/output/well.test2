@@ -1,2 +1,0 @@
-on 9 point grid with h=1.25 and scheme = 'staggered':
-  |u-uexact|_inf < 1.0e-08,  |p-pexact|_inf / |pexact|_inf < 1.0e-08
