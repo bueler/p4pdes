@@ -7,9 +7,9 @@ This repository contains only the C and Python codes upon which the book is base
 
 ### C codes
 
-To compile and run the example C codes see the `README.md` in the [`c/`](https://github.com/bueler/p4pdes/tree/master/c) directory.
+To compile and run the example C codes see the `README.md` in the `c/` directory.
 
 ### Python/Firedrake codes
 
-The codes in Chapter 13 use [Firedrake](https://www.firedrakeproject.org/), a finite element library based on PETSc data types and solvers.  See the `README.md` in the [`python/`](https://github.com/bueler/p4pdes/tree/master/python) directory.
+Chapter 13 uses [Firedrake](https://www.firedrakeproject.org/), a [Python](https://www.python.org/) finite element library based on [petsc4py](https://petsc4py.readthedocs.io/en/stable/).  See the `README.md` in the `python/` directory.
 
