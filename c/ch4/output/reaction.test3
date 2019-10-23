@@ -44,19 +44,19 @@ SNES Object: 4 MPI processes
               rows=5, cols=5
               package used to perform factorization: petsc
               total: nonzeros=13, allocated nonzeros=13
-              total number of mallocs used during MatSetValues calls =0
+              total number of mallocs used during MatSetValues calls=0
                 not using I-node routines
       linear system matrix = precond matrix:
       Mat Object: 1 MPI processes
         type: seqaij
         rows=5, cols=5
         total: nonzeros=13, allocated nonzeros=15
-        total number of mallocs used during MatSetValues calls =0
+        total number of mallocs used during MatSetValues calls=0
           not using I-node routines
     linear system matrix = precond matrix:
     Mat Object: 4 MPI processes
       type: mpiaij
       rows=17, cols=17
       total: nonzeros=49, allocated nonzeros=102
-      total number of mallocs used during MatSetValues calls =0
+      total number of mallocs used during MatSetValues calls=0
 on 17 point grid:  |u-u_exact|_inf = 0.000525304
