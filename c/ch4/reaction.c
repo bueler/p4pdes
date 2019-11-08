@@ -1,17 +1,16 @@
-static char help[] =
-"1D reaction-diffusion problem with DMDA and SNES.  Option prefix -rct_.\n\n";
+static char help[] = "1D reaction-diffusion problem with DMDA and SNES.  Option prefix -rct_.\n\n";
 
 #include <petsc.h>
 
 typedef struct {
-    double    rho, M, alpha, beta;
+    PetscReal    rho, M, alpha, beta;
     PetscBool noRinJ;
 } AppCtx;
 
-extern double f_source(double);
-extern PetscErrorCode InitialAndExact(DMDALocalInfo*, double*, double*, AppCtx*);
-extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, double*, double*, AppCtx*);
-extern PetscErrorCode FormJacobianLocal(DMDALocalInfo*, double*, Mat, Mat, AppCtx*);
+extern PetscReal f_source(PetscReal);
+extern PetscErrorCode InitialAndExact(DMDALocalInfo*, PetscReal*, PetscReal*, AppCtx*);
+extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, PetscReal*, PetscReal*, AppCtx*);
+extern PetscErrorCode FormJacobianLocal(DMDALocalInfo*, PetscReal*, Mat, Mat, AppCtx*);
 
 //STARTMAIN
 int main(int argc,char **args) {
@@ -20,7 +19,7 @@ int main(int argc,char **args) {
   SNES          snes;
   AppCtx        user;
   Vec           u, uexact;
-  double        errnorm, *au, *auex;
+  PetscReal     errnorm, *au, *auex;
   DMDALocalInfo info;
 
   PetscInitialize(&argc,&args,NULL,help);
@@ -71,14 +70,14 @@ int main(int argc,char **args) {
 }
 //ENDMAIN
 
-double f_source(double x) {
+PetscReal f_source(PetscReal x) {
     return 0.0;
 }
 
-PetscErrorCode InitialAndExact(DMDALocalInfo *info, double *u0,
-                               double *uex, AppCtx *user) {
-    int    i;
-    double h = 1.0 / (info->mx-1), x;
+PetscErrorCode InitialAndExact(DMDALocalInfo *info, PetscReal *u0,
+                               PetscReal *uex, AppCtx *user) {
+    PetscInt   i;
+    PetscReal  h = 1.0 / (info->mx-1), x;
     for (i=info->xs; i<info->xs+info->xm; i++) {
         x = h * i;
         u0[i]  = user->alpha * (1.0 - x) + user->beta * x;
@@ -88,11 +87,10 @@ PetscErrorCode InitialAndExact(DMDALocalInfo *info, double *u0,
 }
 
 //STARTFUNCTIONS
-PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *u,
-                                 double *FF, AppCtx *user) {
-    int          i;
-    const double h = 1.0 / (info->mx-1);
-    double       x, R;
+PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal *u,
+                                 PetscReal *FF, AppCtx *user) {
+    PetscInt   i;
+    PetscReal  h = 1.0 / (info->mx-1), x, R;
     for (i=info->xs; i<info->xs+info->xm; i++) {
         if (i == 0) {
             FF[i] = u[i] - user->alpha;
@@ -114,11 +112,11 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *u,
     return 0;
 }
 
-PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, double *u,
+PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscReal *u,
                                  Mat J, Mat P, AppCtx *user) {
     PetscErrorCode ierr;
-    int    i, col[3];
-    double h = 1.0 / (info->mx-1), dRdu, v[3];
+    PetscInt   i, col[3];
+    PetscReal  h = 1.0 / (info->mx-1), dRdu, v[3];
     for (i=info->xs; i<info->xs+info->xm; i++) {
         if ((i == 0) | (i == info->mx-1)) {
             v[0] = 1.0;

@@ -1,6 +1,6 @@
 //STARTWHOLE
 static char help[] = "Newton's method for a two-variable system.\n"
-    "No analytical Jacobian.  Run with -snes_fd or -snes_mf.\n\n";
+"No analytical Jacobian.  Run with -snes_fd or -snes_mf.\n\n";
 
 #include <petsc.h>
 
@@ -8,7 +8,7 @@ extern PetscErrorCode FormFunction(SNES, Vec, Vec, void*);
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
-    SNES  snes;          // nonlinear solver context
+    SNES  snes;          // nonlinear solver
     Vec   x, r;          // solution, residual vectors
 
     PetscInitialize(&argc,&argv,NULL,help);
@@ -30,8 +30,8 @@ int main(int argc,char **argv) {
 
 PetscErrorCode FormFunction(SNES snes, Vec x, Vec F, void *ctx) {
     PetscErrorCode ierr;
-    const double b = 2.0, *ax;
-    double       *aF;
+    const PetscReal  b = 2.0, *ax;
+    PetscReal        *aF;
 
     ierr = VecGetArrayRead(x,&ax);CHKERRQ(ierr);
     ierr = VecGetArray(F,&aF);CHKERRQ(ierr);

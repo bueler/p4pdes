@@ -2,7 +2,8 @@ static char help[] = "Newton's method for a three-variable system.\n"
 "The system is from fitting logistic population model\n"
 "P(t) = N / (1 + A exp(-Nbt)) to 3 points (t,P) from census data in\n"
 "D. Zill, 11th ed., exercise 4 in section 3.2.  The points are\n"
-"(1790,3.929), (1850,23.192), (1910,91.972); populations in millions.\n";
+"(1790,3.929), (1850,23.192), (1910,91.972); populations in millions.\n"
+"Run with -snes_fd.\n";
 
 /*
 example:
@@ -25,9 +26,9 @@ extern PetscErrorCode FormFunction(SNES, Vec, Vec, void*);
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
-    SNES  snes;          // nonlinear solver context
-    Vec   x, r;          // solution, residual vectors
-    double *ax;
+    SNES      snes;          // nonlinear solver
+    Vec       x, r;          // solution, residual vectors
+    PetscReal *ax;
 
     PetscInitialize(&argc,&argv,NULL,help);
     ierr = VecCreate(PETSC_COMM_WORLD,&x); CHKERRQ(ierr);
@@ -58,8 +59,8 @@ int main(int argc,char **argv) {
 
 PetscErrorCode FormFunction(SNES snes, Vec x, Vec F, void *ctx) {
     PetscErrorCode ierr;
-    const double *ax;
-    double       *aF;
+    const PetscReal *ax;
+    PetscReal       *aF;
 
     ierr = VecGetArrayRead(x,&ax);CHKERRQ(ierr);
     ierr = VecGetArray(F,&aF);CHKERRQ(ierr);

@@ -1,11 +1,9 @@
-static char help[] =
-   "Newton's method for a two-variable system.  Implements analytical Jacobian.\n"
-   "Adds struct to hold parameter.\n";
+static char help[] = "Newton's method for a two-variable system.  Implements analytical Jacobian and a struct to hold a parameter.\n";
 
 #include <petsc.h>
 
 typedef struct {
-  double  b;
+  PetscReal  b;
 } AppCtx;
 
 extern PetscErrorCode FormFunction(SNES, Vec, Vec, void*);
@@ -13,11 +11,11 @@ extern PetscErrorCode FormJacobian(SNES, Vec, Mat, Mat, void*);
 
 //STARTMAIN
 int main(int argc,char **argv) {
-  SNES   snes;         // nonlinear solver context
+  PetscErrorCode ierr;
+  SNES   snes;         // nonlinear solver
   Vec    x,r;          // solution, residual vectors
   Mat    J;
   AppCtx user;
-  PetscErrorCode ierr;
 
   PetscInitialize(&argc,&argv,NULL,help);
   user.b = 2.0;
@@ -49,9 +47,9 @@ int main(int argc,char **argv) {
 //STARTFORM
 PetscErrorCode FormFunction(SNES snes, Vec x, Vec F, void *ctx) {
     PetscErrorCode ierr;
-    AppCtx       *user = (AppCtx*)ctx;
-    const double b = user->b, *ax;
-    double       *aF;
+    AppCtx          *user = (AppCtx*)ctx;
+    const PetscReal b = user->b, *ax;
+    PetscReal       *aF;
 
     ierr = VecGetArrayRead(x,&ax);CHKERRQ(ierr);
     ierr = VecGetArray(F,&aF);CHKERRQ(ierr);
@@ -64,10 +62,10 @@ PetscErrorCode FormFunction(SNES snes, Vec x, Vec F, void *ctx) {
 
 PetscErrorCode FormJacobian(SNES snes, Vec x, Mat J, Mat P, void *ctx) {
     PetscErrorCode ierr;
-    AppCtx       *user = (AppCtx*)ctx;
-    const double b = user->b, *ax;
-    double       v[4];
-    int          row[2] = {0,1}, col[2] = {0,1};
+    AppCtx           *user = (AppCtx*)ctx;
+    const PetscReal  b = user->b, *ax;
+    PetscReal        v[4];
+    PetscInt         row[2] = {0,1}, col[2] = {0,1};
 
     ierr = VecGetArrayRead(x,&ax); CHKERRQ(ierr);
     v[0] = PetscExpReal(b * ax[0]);  v[1] = -1.0;

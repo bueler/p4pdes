@@ -1,15 +1,14 @@
-static char help[] =
-   "Version of ecjac.c which shows lots of digits.  Demonstrates SNESMonitorSet().\n";
+static char help[] = "Version of ecjac.c which shows lots of digits.  Demonstrates SNESMonitorSet().\n";
 
 #include <petsc.h>
 
 typedef struct {
-  double  b;
+  PetscReal  b;
 } AppCtx;
 
 extern PetscErrorCode FormFunction(SNES, Vec, Vec, void*);
 extern PetscErrorCode FormJacobian(SNES, Vec, Mat, Mat, void*);
-extern PetscErrorCode SpewDigitsMonitor(SNES, int, double, void*);
+extern PetscErrorCode SpewDigitsMonitor(SNES, PetscInt, PetscReal, void*);
 
 int main(int argc,char **argv) {
   PetscErrorCode ierr;
@@ -47,9 +46,9 @@ int main(int argc,char **argv) {
 
 PetscErrorCode FormFunction(SNES snes, Vec x, Vec F, void *ctx) {
     PetscErrorCode ierr;
-    AppCtx       *user = (AppCtx*)ctx;
-    const double b = user->b, *ax;
-    double       *aF;
+    AppCtx          *user = (AppCtx*)ctx;
+    const PetscReal b = user->b, *ax;
+    PetscReal       *aF;
 
     ierr = VecGetArrayRead(x,&ax);CHKERRQ(ierr);
     ierr = VecGetArray(F,&aF);CHKERRQ(ierr);
@@ -62,10 +61,10 @@ PetscErrorCode FormFunction(SNES snes, Vec x, Vec F, void *ctx) {
 
 PetscErrorCode FormJacobian(SNES snes, Vec x, Mat J, Mat P, void *ctx) {
     PetscErrorCode ierr;
-    AppCtx       *user = (AppCtx*)ctx;
-    const double b = user->b, *ax;
-    double       v[4];
-    int          row[2] = {0,1}, col[2] = {0,1};
+    AppCtx           *user = (AppCtx*)ctx;
+    const PetscReal  b = user->b, *ax;
+    PetscReal        v[4];
+    PetscInt         row[2] = {0,1}, col[2] = {0,1};
 
     ierr = VecGetArrayRead(x,&ax); CHKERRQ(ierr);
     v[0] = PetscExpReal(b * ax[0]);  v[1] = -1.0;
@@ -81,10 +80,10 @@ PetscErrorCode FormJacobian(SNES snes, Vec x, Mat J, Mat P, void *ctx) {
     return 0;
 }
 
-PetscErrorCode SpewDigitsMonitor(SNES snes, int its, double norm, void *ctx) {
+PetscErrorCode SpewDigitsMonitor(SNES snes, PetscInt its, PetscReal norm, void *ctx) {
     PetscErrorCode ierr;
-    Vec x;
-    const double *ax;
+    Vec             x;
+    const PetscReal *ax;
     ierr = SNESGetSolution(snes, &x); CHKERRQ(ierr);
     ierr = VecGetArrayRead(x,&ax);CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,"  %3d:  x[0] = %18.16f,  x[1] = %18.16f\n",

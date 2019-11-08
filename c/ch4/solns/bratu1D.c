@@ -1,20 +1,18 @@
-static char help[] = "Solves the Liouville-Bratu reaction-diffusion problem in 1D.  Option prefix lb_.\n"
-"Solves\n"
+static char help[] = "Solves the Liouville-Bratu reaction-diffusion problem in 1D.  Option prefix lb_.  Solves\n"
 "    - u'' - lambda e^u = 0\n"
-"on [0,1] subject to homogeneous Dirichlet boundary conditions.  Optionally\n"
-"uses manufactured solution to problem with f(x) on right-hand-side.\n\n";
+"on [0,1] subject to homogeneous Dirichlet boundary conditions.  Optionally uses manufactured solution to problem with f(x) on right-hand-side.\n\n";
 
 #include <petsc.h>
 
 typedef struct {
-    PetscBool manufactured;
-    double    lambda;
+    PetscBool  manufactured;
+    PetscReal  lambda;
 } AppCtx;
 
 extern PetscErrorCode Exact(DM, DMDALocalInfo*, Vec, AppCtx*);
-extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, double*,
-                                 double*, AppCtx*);
-extern PetscErrorCode FormJacobianLocal(DMDALocalInfo*, double*,
+extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, PetscReal*,
+                                 PetscReal*, AppCtx*);
+extern PetscErrorCode FormJacobianLocal(DMDALocalInfo*, PetscReal*,
                                  Mat, Mat, AppCtx*);
 
 int main(int argc,char **args) {
@@ -23,7 +21,7 @@ int main(int argc,char **args) {
   SNES                snes;
   AppCtx              user;
   Vec                 u, uexact;
-  double              unorm, errnorm;
+  PetscReal           unorm, errnorm;
   DMDALocalInfo       info;
 
   PetscInitialize(&argc,&args,(char*)0,help);
@@ -71,14 +69,13 @@ int main(int argc,char **args) {
   }
 
   VecDestroy(&u);  SNESDestroy(&snes);  DMDestroy(&da);
-  PetscFinalize();
-  return 0;
+  return PetscFinalize();
 }
 
 PetscErrorCode Exact(DM da, DMDALocalInfo *info, Vec uex, AppCtx *user) {
     PetscErrorCode ierr;
-    int    i;
-    double h = 1.0 / (info->mx-1), x, *auex;
+    PetscInt   i;
+    PetscReal  h = 1.0 / (info->mx-1), x, *auex;
     ierr = DMDAVecGetArray(da,uex,&auex); CHKERRQ(ierr);
     for (i=info->xs; i<info->xs+info->xm; i++) {
         x = i * h;
@@ -88,10 +85,10 @@ PetscErrorCode Exact(DM da, DMDALocalInfo *info, Vec uex, AppCtx *user) {
     return 0;
 }
 
-PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *u,
-                                 double *f, AppCtx *user) {
-    int    i;
-    double h = 1.0 / (info->mx-1), x, R, compf, uex;
+PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal *u,
+                                 PetscReal *f, AppCtx *user) {
+    PetscInt   i;
+    PetscReal  h = 1.0 / (info->mx-1), x, R, compf, uex;
     for (i=info->xs; i<info->xs+info->xm; i++) {
         if ((i == 0) || (i == info->mx-1)) {
             f[i] = u[i];
@@ -109,11 +106,11 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *u,
     return 0;
 }
 
-PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, double *u,
+PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscReal *u,
                                  Mat J, Mat P, AppCtx *user) {
     PetscErrorCode ierr;
-    int    i, col[3];
-    double h = 1.0 / (info->mx-1), dRdu, v[3];
+    PetscInt   i, col[3];
+    PetscReal  h = 1.0 / (info->mx-1), dRdu, v[3];
     for (i=info->xs; i<info->xs+info->xm; i++) {
         if ((i == 0) | (i == info->mx-1)) {
             v[0] = 1.0;

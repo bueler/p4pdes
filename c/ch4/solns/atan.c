@@ -1,5 +1,4 @@
-//START
-static char help[] = "Newton's method for arctan x = 0.\n\n";
+static char help[] = "Newton's method for arctan x = 0.  Run with -snes_fd or -snes_mf.\n\n";
 
 #include <petsc.h>
 
@@ -7,7 +6,7 @@ extern PetscErrorCode FormFunction(SNES, Vec, Vec, void*);
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
-    SNES      snes;          // nonlinear solver context
+    SNES      snes;          // nonlinear solver
     Vec       x, r;          // solution, residual vectors
     PetscReal x0 = 2.0;
 
