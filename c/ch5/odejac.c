@@ -4,17 +4,17 @@ static char help[] =
 
 #include <petsc.h>
 
-extern PetscErrorCode ExactSolution(double, Vec);
-extern PetscErrorCode FormRHSFunction(TS, double, Vec, Vec, void*);
-extern PetscErrorCode FormRHSJacobian(TS, double, Vec, Mat, Mat, void*);
+extern PetscErrorCode ExactSolution(PetscReal, Vec);
+extern PetscErrorCode FormRHSFunction(TS, PetscReal, Vec, Vec, void*);
+extern PetscErrorCode FormRHSJacobian(TS, PetscReal, Vec, Mat, Mat, void*);
 
 int main(int argc,char **argv) {
   PetscErrorCode ierr;
-  int       steps;
-  double    t0 = 0.0, tf = 20.0, dt = 0.1, err;
-  Vec       y, yexact;
-  Mat       J;
-  TS        ts;
+  PetscInt   steps;
+  PetscReal  t0 = 0.0, tf = 20.0, dt = 0.1, err;
+  Vec        y, yexact;
+  Mat        J;
+  TS         ts;
 
   PetscInitialize(&argc,&argv,(char*)0,help);
 
@@ -63,8 +63,8 @@ int main(int argc,char **argv) {
   return PetscFinalize();
 }
 
-PetscErrorCode ExactSolution(double t, Vec y) {
-    double *ay;
+PetscErrorCode ExactSolution(PetscReal t, Vec y) {
+    PetscReal *ay;
     VecGetArray(y,&ay);
     ay[0] = t - sin(t);
     ay[1] = 1.0 - cos(t);
@@ -72,9 +72,9 @@ PetscErrorCode ExactSolution(double t, Vec y) {
     return 0;
 }
 
-PetscErrorCode FormRHSFunction(TS ts, double t, Vec y, Vec g, void *ptr) {
-    const double *ay;
-    double       *ag;
+PetscErrorCode FormRHSFunction(TS ts, PetscReal t, Vec y, Vec g, void *ptr) {
+    const PetscReal *ay;
+    PetscReal       *ag;
     VecGetArrayRead(y,&ay);
     VecGetArray(g,&ag);
     ag[0] = ay[1];            // = G_1(t,y)
@@ -85,12 +85,12 @@ PetscErrorCode FormRHSFunction(TS ts, double t, Vec y, Vec g, void *ptr) {
 }
 
 //STARTJACOBIAN
-PetscErrorCode FormRHSJacobian(TS ts, double t, Vec y, Mat J, Mat P,
+PetscErrorCode FormRHSJacobian(TS ts, PetscReal t, Vec y, Mat J, Mat P,
                                void *ptr) {
     PetscErrorCode ierr;
-    int    row[2] = {0, 1},  col[2] = {0, 1};
-    double v[4] = { 0.0, 1.0,
-                   -1.0, 0.0};
+    PetscInt   row[2] = {0, 1},  col[2] = {0, 1};
+    PetscReal  v[4] = { 0.0, 1.0,
+                       -1.0, 0.0};
     ierr = MatSetValues(P,2,row,2,col,v,INSERT_VALUES); CHKERRQ(ierr);
     ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
     ierr = MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);

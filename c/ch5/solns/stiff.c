@@ -12,16 +12,16 @@ RESULT:
 [-1.383623   -0.29588643  0.        ]
 */
 
-extern PetscErrorCode FormRHSFunction(TS, double, Vec, Vec, void*);
-PetscErrorCode FormRHSJacobian(TS, double, Vec, Mat, Mat, void*);
+extern PetscErrorCode FormRHSFunction(TS, PetscReal, Vec, Vec, void*);
+extern PetscErrorCode FormRHSJacobian(TS, PetscReal, Vec, Mat, Mat, void*);
 
 int main(int argc,char **argv) {
   PetscErrorCode ierr;
-  const int N = 3;
-  int       steps;
-  Vec       y;
-  Mat       J;
-  TS        ts;
+  const PetscInt N = 3;
+  PetscInt       steps;
+  Vec            y;
+  Mat            J;
+  TS             ts;
 
   PetscInitialize(&argc,&argv,(char*)0,help);
 
@@ -58,9 +58,9 @@ int main(int argc,char **argv) {
   return 0;
 }
 
-PetscErrorCode FormRHSFunction(TS ts, double t, Vec y, Vec g, void *ptr) {
-    const double *ay;
-    double       *ag;
+PetscErrorCode FormRHSFunction(TS ts, PetscReal t, Vec y, Vec g, void *ptr) {
+    const PetscReal *ay;
+    PetscReal       *ag;
     VecGetArrayRead(y,&ay);
     VecGetArray(g,&ag);
     ag[0] = ay[1];
@@ -71,11 +71,11 @@ PetscErrorCode FormRHSFunction(TS ts, double t, Vec y, Vec g, void *ptr) {
     return 0;
 }
 
-PetscErrorCode FormRHSJacobian(TS ts, double t, Vec y, Mat J, Mat P,
+PetscErrorCode FormRHSJacobian(TS ts, PetscReal t, Vec y, Mat J, Mat P,
                                void *ptr) {
     PetscErrorCode ierr;
-    int    j[3] = {0, 1, 2};
-    double v[9] = { 0.0, 1.0, 0.0,
+    PetscInt   j[3] = {0, 1, 2};
+    PetscReal  v[9] = { 0.0, 1.0, 0.0,
                    -1.0, 0.0, 0.1,
                     0.0, 0.0, -101.0};
     ierr = MatSetValues(P,3,j,3,j,v,INSERT_VALUES); CHKERRQ(ierr);

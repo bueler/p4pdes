@@ -10,33 +10,32 @@ static char help[] =
 #include <petsc.h>
 
 typedef struct {
-  double D0;    // conductivity
+  PetscReal D0;    // conductivity
 } HeatCtx;
 
-static double f_source(double x, double y) {
+static PetscReal f_source(PetscReal x, PetscReal y) {
     return 3.0 * exp(-25.0 * (x-0.6) * (x-0.6)) * sin(2.0*PETSC_PI*y);
 }
 
-static double gamma_neumann(double y) {
+static PetscReal gamma_neumann(PetscReal y) {
     return sin(6.0 * PETSC_PI * y);
 }
 
-extern PetscErrorCode Spacings(DMDALocalInfo*, double*, double*);
-extern PetscErrorCode EnergyMonitor(TS, int, double, Vec, void*);
-extern PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo*, double, double**,
-                                           double**, HeatCtx*);
-extern PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo*, double, double**,
+extern PetscErrorCode Spacings(DMDALocalInfo*, PetscReal*, PetscReal*);
+extern PetscErrorCode EnergyMonitor(TS, PetscInt, PetscReal, Vec, void*);
+extern PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo*, PetscReal, PetscReal**,
+                                           PetscReal**, HeatCtx*);
+extern PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo*, PetscReal, PetscReal**,
                                            Mat, Mat, HeatCtx*);
 
-int main(int argc,char **argv)
-{
+int main(int argc,char **argv) {
   PetscErrorCode ierr;
   HeatCtx        user;
   TS             ts;
   Vec            u;
   DM             da;
   DMDALocalInfo  info;
-  double         t0, tf;
+  PetscReal      t0, tf;
   PetscBool      monitorenergy = PETSC_FALSE;
 
   PetscInitialize(&argc,&argv,(char*)0,help);
@@ -96,19 +95,19 @@ int main(int argc,char **argv)
   return PetscFinalize();
 }
 
-PetscErrorCode Spacings(DMDALocalInfo *info, double *hx, double *hy) {
-    if (hx)  *hx = 1.0 / (double)(info->mx-1);
-    if (hy)  *hy = 1.0 / (double)(info->my);   // periodic direction
+PetscErrorCode Spacings(DMDALocalInfo *info, PetscReal *hx, PetscReal *hy) {
+    if (hx)  *hx = 1.0 / (PetscReal)(info->mx-1);
+    if (hy)  *hy = 1.0 / (PetscReal)(info->my);   // periodic direction
     return 0;
 }
 
 //STARTMONITOR
-PetscErrorCode EnergyMonitor(TS ts, int step, double time, Vec u,
+PetscErrorCode EnergyMonitor(TS ts, PetscInt step, PetscReal time, Vec u,
                              void *ctx) {
     PetscErrorCode ierr;
     HeatCtx        *user = (HeatCtx*)ctx;
-    double         lenergy = 0.0, energy, dt, hx, hy, **au;
-    int            i,j;
+    PetscReal         lenergy = 0.0, energy, dt, hx, hy, **au;
+    PetscInt       i,j;
     MPI_Comm       com;
     DM             da;
     DMDALocalInfo  info;
@@ -128,7 +127,7 @@ PetscErrorCode EnergyMonitor(TS ts, int step, double time, Vec u,
     ierr = Spacings(&info,&hx,&hy); CHKERRQ(ierr);
     lenergy *= hx * hy;
     ierr = PetscObjectGetComm((PetscObject)(da),&com); CHKERRQ(ierr);
-    ierr = MPI_Allreduce(&lenergy,&energy,1,MPI_DOUBLE,MPI_SUM,com); CHKERRQ(ierr);
+    ierr = MPI_Allreduce(&lenergy,&energy,1,MPIU_REAL,MPIU_SUM,com); CHKERRQ(ierr);
     ierr = TSGetTimeStep(ts,&dt); CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,"  energy = %9.2e     nu = %8.4f\n",
                 energy,user->D0*dt/(hx*hy)); CHKERRQ(ierr);
@@ -138,11 +137,11 @@ PetscErrorCode EnergyMonitor(TS ts, int step, double time, Vec u,
 
 //STARTRHSFUNCTION
 PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info,
-                                    double t, double **au,
-                                    double **aG, HeatCtx *user) {
+                                    PetscReal t, PetscReal **au,
+                                    PetscReal **aG, HeatCtx *user) {
   PetscErrorCode ierr;
-  int      i, j, mx = info->mx;
-  double   hx, hy, x, y, ul, ur, uxx, uyy;
+  PetscInt   i, j, mx = info->mx;
+  PetscReal  hx, hy, x, y, ul, ur, uxx, uyy;
 
   ierr = Spacings(info,&hx,&hy); CHKERRQ(ierr);
   for (j = info->ys; j < info->ys + info->ym; j++) {
@@ -165,13 +164,13 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info,
 
 //STARTRHSJACOBIAN
 PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info,
-                                    double t, double **au,
+                                    PetscReal t, PetscReal **au,
                                     Mat J, Mat P, HeatCtx *user) {
     PetscErrorCode ierr;
-    int            i, j, ncols;
-    const double   D = user->D0;
-    double         hx, hy, hx2, hy2, v[5];
-    MatStencil     col[5],row;
+    PetscInt         i, j, ncols;
+    const PetscReal  D = user->D0;
+    PetscReal        hx, hy, hx2, hy2, v[5];
+    MatStencil       col[5],row;
 
     ierr = Spacings(info,&hx,&hy); CHKERRQ(ierr);
     hx2 = hx * hx;  hy2 = hy * hy;

@@ -1,32 +1,32 @@
 static char help[] =
 "Coupled reaction-diffusion equations (Pearson 1993).  Option prefix -ptn_.\n"
 "Demonstrates form  F(t,Y,dot Y) = G(t,Y)  where F() is IFunction and G() is\n"
-"RHSFunction().  Implements IJacobian() and RHSJacobian().  Defaults to ARKIMEX\n"
-"(= adaptive Runge-Kutta implicit-explicit) TS type.\n\n";
+"RHSFunction().  Implements IJacobian() and RHSJacobian().  Defaults to\n"
+"ARKIMEX (= adaptive Runge-Kutta implicit-explicit) TS type.\n\n";
 
 #include <petsc.h>
 
 typedef struct {
-  double u, v;
+  PetscReal u, v;
 } Field;
 
 typedef struct {
-  double    L,     // domain side length
-            Du,    // diffusion coefficient: u equation
-            Dv,    //                        v equation
-            phi,   // "dimensionless feed rate" (F in Pearson 1993)
-            kappa; // "dimensionless rate constant" (k in Pearson 1993)
+  PetscReal  L,     // domain side length
+             Du,    // diffusion coefficient: u equation
+             Dv,    //                        v equation
+             phi,   // "dimensionless feed rate" (F in Pearson 1993)
+             kappa; // "dimensionless rate constant" (k in Pearson 1993)
 } PatternCtx;
 
-extern PetscErrorCode InitialState(DM, Vec, double, PatternCtx*);
-extern PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo*, double, Field**,
+extern PetscErrorCode InitialState(DM, Vec, PetscReal, PatternCtx*);
+extern PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo*, PetscReal, Field**,
                                            Field**, PatternCtx*);
-extern PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo*, double, Field**,
+extern PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo*, PetscReal, Field**,
                                            Mat, Mat, PatternCtx*);
-extern PetscErrorCode FormIFunctionLocal(DMDALocalInfo*, double, Field**, Field**,
+extern PetscErrorCode FormIFunctionLocal(DMDALocalInfo*, PetscReal, Field**, Field**,
                                          Field **, PatternCtx*);
-extern PetscErrorCode FormIJacobianLocal(DMDALocalInfo*, double, Field**, Field**,
-                                         double, Mat, Mat, PatternCtx*);
+extern PetscErrorCode FormIJacobianLocal(DMDALocalInfo*, PetscReal, Field**, Field**,
+                                         PetscReal, Mat, Mat, PatternCtx*);
 
 int main(int argc,char **argv)
 {
@@ -36,7 +36,7 @@ int main(int argc,char **argv)
   Vec            x;
   DM             da;
   DMDALocalInfo  info;
-  double         noiselevel = -1.0;  // negative value means no initial noise
+  PetscReal      noiselevel = -1.0;  // negative value means no initial noise
   PetscBool      no_rhsjacobian = PETSC_FALSE,
                  no_ijacobian = PETSC_FALSE;
 
@@ -85,7 +85,7 @@ int main(int argc,char **argv)
   ierr = DMDASetUniformCoordinates(da, 0.0, user.L, 0.0, user.L, -1.0, -1.0); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
            "running on %d x %d grid with square cells of side h = %.6f ...\n",
-           info.mx,info.my,user.L/(double)(info.mx)); CHKERRQ(ierr);
+           info.mx,info.my,user.L/(PetscReal)(info.mx)); CHKERRQ(ierr);
 
 //STARTTSSETUP
   ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
@@ -121,15 +121,15 @@ int main(int argc,char **argv)
 
 // Formulas from page 22 of Hundsdorfer & Verwer (2003).  Interpretation here is
 // to always generate 0.5 x 0.5 non-trivial patch in (0,L) x (0,L) domain.
-PetscErrorCode InitialState(DM da, Vec Y, double noiselevel, PatternCtx* user) {
+PetscErrorCode InitialState(DM da, Vec Y, PetscReal noiselevel, PatternCtx* user) {
   PetscErrorCode ierr;
-  DMDALocalInfo  info;
-  int            i,j;
-  double         sx,sy;
-  const double   ledge = (user->L - 0.5) / 2.0, // nontrivial initial values on
-                 redge = user->L - ledge;       //   ledge < x,y < redge
-  DMDACoor2d     **aC;
-  Field          **aY;
+  DMDALocalInfo    info;
+  PetscInt         i,j;
+  PetscReal        sx,sy;
+  const PetscReal  ledge = (user->L - 0.5) / 2.0, // nontrivial initial values on
+                   redge = user->L - ledge;       //   ledge < x,y < redge
+  DMDACoor2d       **aC;
+  Field            **aY;
 
   ierr = VecSet(Y,0.0); CHKERRQ(ierr);
   if (noiselevel > 0.0) {
@@ -162,9 +162,9 @@ PetscErrorCode InitialState(DM da, Vec Y, double noiselevel, PatternCtx* user) {
 //     G^v(t,u,v) = + u v^2 - (phi + kappa) v
 //STARTRHSFUNCTION
 PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info,
-                   double t, Field **aY, Field **aG, PatternCtx *user) {
-  int            i, j;
-  double         uv2;
+                   PetscReal t, Field **aY, Field **aG, PatternCtx *user) {
+  PetscInt   i, j;
+  PetscReal  uv2;
 
   for (j = info->ys; j < info->ys + info->ym; j++) {
       for (i = info->xs; i < info->xs + info->xm; i++) {
@@ -178,12 +178,12 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info,
 //ENDRHSFUNCTION
 
 PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info,
-                                    double t, Field **aY,
+                                    PetscReal t, Field **aY,
                                     Mat J, Mat P, PatternCtx *user) {
     PetscErrorCode ierr;
-    int            i, j;
-    double         v[2], uv, v2;
-    MatStencil     col[2],row;
+    PetscInt    i, j;
+    PetscReal   v[2], uv, v2;
+    MatStencil  col[2],row;
 
     for (j = info->ys; j < info->ys+info->ym; j++) {
         row.j = j;  col[0].j = j;  col[1].j = j;
@@ -217,14 +217,14 @@ PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info,
 //     F^u(t,u,v,u_t,v_t) = u_t - D_u Laplacian u
 //     F^v(t,u,v,u_t,v_t) = v_t - D_v Laplacian v
 //STARTIFUNCTION
-PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info,
-                   double t, Field **aY, Field **aYdot, Field **aF,
-                   PatternCtx *user) {
-  int            i, j;
-  const double   h = user->L / (double)(info->mx),
-                 Cu = user->Du / (6.0 * h * h),
-                 Cv = user->Dv / (6.0 * h * h);
-  double         u, v, lapu, lapv;
+PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, PetscReal t,
+                                  Field **aY, Field **aYdot, Field **aF,
+                                  PatternCtx *user) {
+  PetscInt         i, j;
+  const PetscReal  h = user->L / (PetscReal)(info->mx),
+                   Cu = user->Du / (6.0 * h * h),
+                   Cv = user->Dv / (6.0 * h * h);
+  PetscReal        u, v, lapu, lapv;
 
   for (j = info->ys; j < info->ys + info->ym; j++) {
       for (i = info->xs; i < info->xs + info->xm; i++) {
@@ -249,15 +249,15 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info,
 //     J = (shift) dF/d(dot Y) + dF/dY
 //STARTIJACOBIAN
 PetscErrorCode FormIJacobianLocal(DMDALocalInfo *info,
-                   double t, Field **aY, Field **aYdot, double shift,
+                   PetscReal t, Field **aY, Field **aYdot, PetscReal shift,
                    Mat J, Mat P, PatternCtx *user) {
     PetscErrorCode ierr;
-    int            i, j, s, c;
-    const double   h = user->L / (double)(info->mx),
-                   Cu = user->Du / (6.0 * h * h),
-                   Cv = user->Dv / (6.0 * h * h);
-    double         val[9], CC;
-    MatStencil     col[9], row;
+    PetscInt         i, j, s, c;
+    const PetscReal  h = user->L / (PetscReal)(info->mx),
+                     Cu = user->Du / (6.0 * h * h),
+                     Cv = user->Dv / (6.0 * h * h);
+    PetscReal        val[9], CC;
+    MatStencil       col[9], row;
 
     for (j = info->ys; j < info->ys + info->ym; j++) {
         row.j = j;
