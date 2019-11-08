@@ -5,15 +5,15 @@ static char help[] = "Solve a 4x4 linear system using KSP.\n";
 
 int main(int argc,char **args) {
     PetscErrorCode ierr;
-    Vec    x, b;
-    Mat    A;
-    KSP    ksp;
-    int    i, j[4] = {0, 1, 2, 3};                // j = column indices
-    double ab[4] = {7.0, 1.0, 1.0, 3.0},          // entries of vector b
-           aA[4][4] = {{ 1.0,  2.0,  3.0,  0.0},  // entries of matrix A
-                       { 2.0,  1.0, -2.0, -3.0},
-                       {-1.0,  1.0,  1.0,  0.0},
-                       { 0.0,  1.0,  1.0, -1.0}};
+    Vec        x, b;
+    Mat        A;
+    KSP        ksp;
+    PetscInt   i, j[4] = {0, 1, 2, 3};                // j = column indices
+    PetscReal  ab[4] = {7.0, 1.0, 1.0, 3.0},          // entries of vector b
+               aA[4][4] = {{ 1.0,  2.0,  3.0,  0.0},  // entries of matrix A
+                           { 2.0,  1.0, -2.0, -3.0},
+                           {-1.0,  1.0,  1.0,  0.0},
+                           { 0.0,  1.0,  1.0, -1.0}};
 
     PetscInitialize(&argc,&args,NULL,help);
 

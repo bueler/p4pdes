@@ -13,7 +13,7 @@ int main(int argc,char **args) {
     Mat           A;
     Vec           b,u,uexact;
     KSP           ksp;
-    double        errnorm;
+    PetscReal     errnorm;
     DMDALocalInfo info;
 
     PetscInitialize(&argc,&args,(char*)0,help);
@@ -64,8 +64,8 @@ PetscErrorCode formMatrix(DM da, Mat A) {
     PetscErrorCode ierr;
     DMDALocalInfo  info;
     MatStencil     row, col[5];
-    double         hx, hy, v[5];
-    int            i, j, ncols;
+    PetscReal      hx, hy, v[5];
+    PetscInt       i, j, ncols;
 
     ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
     hx = 1.0/(info.mx-1);  hy = 1.0/(info.my-1);
@@ -110,8 +110,8 @@ PetscErrorCode formMatrix(DM da, Mat A) {
 PetscErrorCode formExact(DM da, Vec uexact) {
     PetscErrorCode ierr;
     DMDALocalInfo  info;
-    int            i, j;
-    double         hx, hy, x, y, **auexact;
+    PetscInt       i, j;
+    PetscReal      hx, hy, x, y, **auexact;
 
     ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
     hx = 1.0/(info.mx-1);  hy = 1.0/(info.my-1);
@@ -129,8 +129,8 @@ PetscErrorCode formExact(DM da, Vec uexact) {
 
 PetscErrorCode formRHS(DM da, Vec b) {
     PetscErrorCode ierr;
-    int            i, j;
-    double         hx, hy, x, y, f, **ab;
+    PetscInt       i, j;
+    PetscReal      hx, hy, x, y, f, **ab;
     DMDALocalInfo  info;
 
     ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);

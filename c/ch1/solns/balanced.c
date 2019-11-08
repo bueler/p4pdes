@@ -6,7 +6,7 @@ static char help[] = "Load-balanced computation of Euler's constant, with\n"
 int main(int argc,char **args) {
   PetscErrorCode  ierr;
   PetscMPIInt     rank, size;
-  PetscScalar     localval, globalsum;
+  PetscReal       localval, globalsum;
 
   PetscInitialize(&argc,&args,(char*)0,help);  // <-- always call
 
@@ -18,12 +18,12 @@ int main(int argc,char **args) {
   if (rank == 0) {
     localval = 1.0;
     if (size > 1) {
-      ierr = MPI_Send(&localval, 1, MPI_DOUBLE, rank+1, 1,
+      ierr = MPI_Send(&localval, 1, MPIU_REAL, rank+1, 1,
                PETSC_COMM_WORLD); CHKERRQ(ierr);
     }
   } else {
     MPI_Status status;
-    ierr =  MPI_Recv(&localval, 1, MPI_DOUBLE, rank-1, MPI_ANY_TAG,
+    ierr =  MPI_Recv(&localval, 1, MPIU_REAL, rank-1, MPI_ANY_TAG,
              PETSC_COMM_WORLD, &status); CHKERRQ(ierr);
     localval /= rank;
     if (rank < size-1) {
@@ -33,7 +33,7 @@ int main(int argc,char **args) {
   }
 
   // sum the contributions over all processes
-  ierr = MPI_Allreduce(&localval, &globalsum, 1, MPI_DOUBLE, MPI_SUM,
+  ierr = MPI_Allreduce(&localval, &globalsum, 1, MPIU_REAL, MPIU_SUM,
                        PETSC_COMM_WORLD); CHKERRQ(ierr);
 
   // output one estimate of e
@@ -44,7 +44,6 @@ int main(int argc,char **args) {
   ierr = PetscPrintf(PETSC_COMM_SELF,
                      "rank %d did %d flops\n",rank,rank == 0 ? 1 : 2); CHKERRQ(ierr);
 
-  PetscFinalize();  // <-- always call
-  return 0;
+  return PetscFinalize();
 }
 

@@ -1,4 +1,3 @@
-
 static char help[] = "Solves a 1D Poisson problem with DMDA and KSP.\n\n";
 
 #include <petsc.h>
@@ -43,8 +42,7 @@ int main(int argc,char **args) {
              info.mx,errnorm); CHKERRQ(ierr);
   VecDestroy(&u);  VecDestroy(&uexact);  VecDestroy(&b);
   MatDestroy(&A);  KSPDestroy(&ksp);  DMDestroy(&da);
-  PetscFinalize();
-  return 0;
+  return PetscFinalize();
 }
 
 PetscErrorCode formdirichletlaplacian(DM da, Mat A) {

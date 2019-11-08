@@ -10,7 +10,7 @@ static char help[] =
 "(This is a simpler code than src/ksp/ksp/examples/tutorials/ex10.c.)\n";
 
 /*
-small system example where RHS missing:
+small system example w/o RHS:
 ./tri -ksp_view_mat binary:A.dat
 ./loadsolve -fA A.dat -ksp_view_mat -ksp_view_rhs
 
@@ -26,7 +26,7 @@ int main(int argc,char **args) {
   Vec         x, b;
   Mat         A;
   KSP         ksp;
-  int         m, n, mb;
+  PetscInt    m, n, mb;
   PetscBool   flg,
               verbose = PETSC_FALSE;
   char        nameA[PETSC_MAX_PATH_LEN] = "",

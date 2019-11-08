@@ -1,19 +1,18 @@
-//START
-static char help[] = "Solve a 4x4 linear system using Vec, Mat, and KSP.\n";
+static char help[] = "Solve a 4x4 linear system using Vec, Mat, and KSP by setting all values on rank 0.\n";
 
 #include <petsc.h>
 
 int main(int argc,char **args) {
   PetscErrorCode ierr;
-  Vec    x, b;
-  Mat    A;
-  KSP    ksp;
-  int    rank, i, j[4] = {0, 1, 2, 3};                // j = column indices
-  double ab[4] = {7.0, 1.0, 1.0, 3.0},          // entries of vector b
-         aA[4][4] = {{ 1.0,  2.0,  3.0,  0.0},  // entries of matrix A
-                     { 2.0,  1.0, -2.0, -3.0},
-                     {-1.0,  1.0,  1.0,  0.0},
-                     { 0.0,  1.0,  1.0, -1.0}};
+  Vec        x, b;
+  Mat        A;
+  KSP        ksp;
+  PetscInt   rank, i, j[4] = {0, 1, 2, 3};          // j = column indices
+  PetscReal  ab[4] = {7.0, 1.0, 1.0, 3.0},          // entries of vector b
+             aA[4][4] = {{ 1.0,  2.0,  3.0,  0.0},  // entries of matrix A
+                         { 2.0,  1.0, -2.0, -3.0},
+                         {-1.0,  1.0,  1.0,  0.0},
+                         { 0.0,  1.0,  1.0, -1.0}};
 
   PetscInitialize(&argc,&args,NULL,help);
 
@@ -27,7 +26,6 @@ int main(int argc,char **args) {
   }
   ierr = VecAssemblyBegin(b); CHKERRQ(ierr);
   ierr = VecAssemblyEnd(b); CHKERRQ(ierr);
-//  ierr = VecView(b,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);  //STRIP
 
   ierr = MatCreate(PETSC_COMM_WORLD,&A); CHKERRQ(ierr);
   ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,4,4); CHKERRQ(ierr);
@@ -40,7 +38,6 @@ int main(int argc,char **args) {
   }
   ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
   ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-//  ierr = MatView(A,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);  //STRIP
 
   ierr = KSPCreate(PETSC_COMM_WORLD,&ksp); CHKERRQ(ierr);
   ierr = KSPSetOperators(ksp,A,A); CHKERRQ(ierr);
@@ -51,8 +48,6 @@ int main(int argc,char **args) {
 
   KSPDestroy(&ksp);  MatDestroy(&A);
   VecDestroy(&x);  VecDestroy(&b);
-  PetscFinalize();
-  return 0;
+  return PetscFinalize();
 }
-//END
 

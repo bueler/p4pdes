@@ -6,11 +6,11 @@ static char help[] = "Solve a tridiagonal system of arbitrary size.\n"
 
 int main(int argc,char **args) {
     PetscErrorCode ierr;
-    Vec    x, b, xexact;
-    Mat    A;
-    KSP    ksp;
-    int    m = 4, i, Istart, Iend, j[3];
-    double v[3], xval, errnorm;
+    Vec         x, b, xexact;
+    Mat         A;
+    KSP         ksp;
+    PetscInt    m = 4, i, Istart, Iend, j[3];
+    PetscReal   v[3], xval, errnorm;
 
     PetscInitialize(&argc,&args,NULL,help);
 
