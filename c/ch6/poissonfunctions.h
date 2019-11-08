@@ -42,46 +42,46 @@ points in the interior.  Thus these Jacobian matrices have constant diagonal.
 //STARTDECLARE
 typedef struct {
     // domain dimensions
-    double Lx, Ly, Lz;
+    PetscReal Lx, Ly, Lz;
     // coefficients in  - cx u_xx - cy u_yy - cz u_zz = f
-    double cx, cy, cz;
+    PetscReal cx, cy, cz;
     // right-hand-side f(x,y,z)
-    double (*f_rhs)(double x, double y, double z, void *ctx);
+    PetscReal (*f_rhs)(PetscReal x, PetscReal y, PetscReal z, void *ctx);
     // Dirichlet boundary condition g(x,y,z)
-    double (*g_bdry)(double x, double y, double z, void *ctx);
+    PetscReal (*g_bdry)(PetscReal x, PetscReal y, PetscReal z, void *ctx);
     // additional context; see example usage in ch7/minimal.c
     void   *addctx;
 } PoissonCtx;
 
 PetscErrorCode Poisson1DFunctionLocal(DMDALocalInfo *info,
-    double *au, double *aF, PoissonCtx *user);
+    PetscReal *au, PetscReal *aF, PoissonCtx *user);
 
 PetscErrorCode Poisson2DFunctionLocal(DMDALocalInfo *info,
-    double **au, double **aF, PoissonCtx *user);
+    PetscReal **au, PetscReal **aF, PoissonCtx *user);
 
 PetscErrorCode Poisson3DFunctionLocal(DMDALocalInfo *info,
-    double ***au, double ***aF, PoissonCtx *user);
+    PetscReal ***au, PetscReal ***aF, PoissonCtx *user);
 //ENDDECLARE
 
 /* This generates a tridiagonal sparse matrix.  If cx=1 then it has 2 on the
 diagonal and -1 or zero in off-diagonal positions.  For example,
     ./fish -fsh_dim 1 -mat_view ::ascii_dense -da_refine N                */
-PetscErrorCode Poisson1DJacobianLocal(DMDALocalInfo *info, double *au,
-                                   Mat J, Mat Jpre, PoissonCtx *user);
+PetscErrorCode Poisson1DJacobianLocal(DMDALocalInfo *info, PetscReal *au,
+                                      Mat J, Mat Jpre, PoissonCtx *user);
 
 /* If h = hx = hy and h = L/(m-1) then this generates a 2m-1 bandwidth
 sparse matrix.  If cx=cy=1 then it has 4 on the diagonal and -1 or zero in
 off-diagonal positions.  For example,
     ./fish -fsh_dim 2 -mat_view :foo.m:ascii_matlab -da_refine N
 produces a matrix which can be read into Matlab/Octave.                   */
-PetscErrorCode Poisson2DJacobianLocal(DMDALocalInfo *info, double **au,
-                                   Mat J, Mat Jpre, PoissonCtx *user);
+PetscErrorCode Poisson2DJacobianLocal(DMDALocalInfo *info, PetscReal **au,
+                                      Mat J, Mat Jpre, PoissonCtx *user);
 
 /* If h = hx = hy = hz and h = L/(m-1) then this generates a 2m^2-1 bandwidth
 sparse matrix.  For example,
     ./fish -fsh_dim 3 -mat_view :foo.m:ascii_matlab -da_refine N          */
-PetscErrorCode Poisson3DJacobianLocal(DMDALocalInfo *info, double ***au,
-                                   Mat J, Mat Jpre, PoissonCtx *user);
+PetscErrorCode Poisson3DJacobianLocal(DMDALocalInfo *info, PetscReal ***au,
+                                      Mat J, Mat Jpre, PoissonCtx *user);
 
 /* The following function generates an initial iterate using either
   * zero

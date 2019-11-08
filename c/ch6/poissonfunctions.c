@@ -1,11 +1,11 @@
 #include <petsc.h>
 #include "poissonfunctions.h"
 
-PetscErrorCode Poisson1DFunctionLocal(DMDALocalInfo *info, double *au,
-                                   double *aF, PoissonCtx *user) {
+PetscErrorCode Poisson1DFunctionLocal(DMDALocalInfo *info, PetscReal *au,
+                                   PetscReal *aF, PoissonCtx *user) {
     PetscErrorCode ierr;
     int          i;
-    double       xmax[1], xmin[1], h, x, ue, uw;
+    PetscReal       xmax[1], xmin[1], h, x, ue, uw;
     ierr = DMGetBoundingBox(info->da,xmin,xmax); CHKERRQ(ierr);
     h = (xmax[0] - xmin[0]) / (info->mx - 1);
     for (i = info->xs; i < info->xs + info->xm; i++) {
@@ -27,11 +27,11 @@ PetscErrorCode Poisson1DFunctionLocal(DMDALocalInfo *info, double *au,
 }
 
 //STARTFORM2DFUNCTION
-PetscErrorCode Poisson2DFunctionLocal(DMDALocalInfo *info, double **au,
-                                   double **aF, PoissonCtx *user) {
+PetscErrorCode Poisson2DFunctionLocal(DMDALocalInfo *info, PetscReal **au,
+                                   PetscReal **aF, PoissonCtx *user) {
     PetscErrorCode ierr;
     int     i, j;
-    double  xymin[2], xymax[2], hx, hy, darea, scx, scy, scdiag, x, y,
+    PetscReal  xymin[2], xymax[2], hx, hy, darea, scx, scy, scdiag, x, y,
             ue, uw, un, us;
     ierr = DMGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
     hx = (xymax[0] - xymin[0]) / (info->mx - 1);
@@ -67,11 +67,11 @@ PetscErrorCode Poisson2DFunctionLocal(DMDALocalInfo *info, double **au,
 }
 //ENDFORM2DFUNCTION
 
-PetscErrorCode Poisson3DFunctionLocal(DMDALocalInfo *info, double ***au,
-                                   double ***aF, PoissonCtx *user) {
+PetscErrorCode Poisson3DFunctionLocal(DMDALocalInfo *info, PetscReal ***au,
+                                   PetscReal ***aF, PoissonCtx *user) {
     PetscErrorCode ierr;
     int    i, j, k;
-    double xyzmin[3], xyzmax[3], hx, hy, hz, dvol, scx, scy, scz, scdiag,
+    PetscReal xyzmin[3], xyzmax[3], hx, hy, hz, dvol, scx, scy, scz, scdiag,
            x, y, z, ue, uw, un, us, uu, ud;
     ierr = DMGetBoundingBox(info->da,xyzmin,xyzmax); CHKERRQ(ierr);
     hx = (xyzmax[0] - xyzmin[0]) / (info->mx - 1);
@@ -121,7 +121,7 @@ PetscErrorCode Poisson1DJacobianLocal(DMDALocalInfo *info, PetscScalar *au,
                                    Mat J, Mat Jpre, PoissonCtx *user) {
     PetscErrorCode  ierr;
     int          i,ncols;
-    double       xmin[1], xmax[1], h, v[3];
+    PetscReal       xmin[1], xmax[1], h, v[3];
     MatStencil   col[3],row;
 
     ierr = DMGetBoundingBox(info->da,xmin,xmax); CHKERRQ(ierr);
@@ -156,7 +156,7 @@ PetscErrorCode Poisson1DJacobianLocal(DMDALocalInfo *info, PetscScalar *au,
 PetscErrorCode Poisson2DJacobianLocal(DMDALocalInfo *info, PetscScalar **au,
                                    Mat J, Mat Jpre, PoissonCtx *user) {
     PetscErrorCode  ierr;
-    double       xymin[2], xymax[2], hx, hy, scx, scy, scdiag, v[5];
+    PetscReal       xymin[2], xymax[2], hx, hy, scx, scy, scdiag, v[5];
     int          i,j,ncols;
     MatStencil   col[5],row;
 
@@ -200,7 +200,7 @@ PetscErrorCode Poisson2DJacobianLocal(DMDALocalInfo *info, PetscScalar **au,
 PetscErrorCode Poisson3DJacobianLocal(DMDALocalInfo *info, PetscScalar ***au,
                                    Mat J, Mat Jpre, PoissonCtx *user) {
     PetscErrorCode  ierr;
-    double       xyzmin[3], xyzmax[3], hx, hy, hz, dvol, scx, scy, scz, scdiag, v[7];
+    PetscReal       xyzmin[3], xyzmax[3], hx, hy, hz, dvol, scx, scy, scz, scdiag, v[7];
     int          i,j,k,ncols;
     MatStencil   col[7],row;
 
@@ -287,8 +287,8 @@ PetscErrorCode InitialState(DM da, InitialType it, PetscBool gbdry,
     switch (info.dim) {
         case 1:
         {
-            int    i;
-            double xmax[1], xmin[1], h, x, *au;
+            PetscInt  i;
+            PetscReal xmax[1], xmin[1], h, x, *au;
             ierr = DMDAVecGetArray(da, u, &au); CHKERRQ(ierr);
             ierr = DMGetBoundingBox(da,xmin,xmax); CHKERRQ(ierr);
             h = (xmax[0] - xmin[0]) / (info.mx - 1);
@@ -303,8 +303,8 @@ PetscErrorCode InitialState(DM da, InitialType it, PetscBool gbdry,
         }
         case 2:
         {
-            int     i, j;
-            double  xymin[2], xymax[2], hx, hy, x, y, **au;
+            PetscInt   i, j;
+            PetscReal  xymin[2], xymax[2], hx, hy, x, y, **au;
             ierr = DMDAVecGetArray(da, u, &au); CHKERRQ(ierr);
             ierr = DMGetBoundingBox(da,xymin,xymax); CHKERRQ(ierr);
             hx = (xymax[0] - xymin[0]) / (info.mx - 1);
@@ -323,8 +323,8 @@ PetscErrorCode InitialState(DM da, InitialType it, PetscBool gbdry,
         }
         case 3:
         {
-            int     i, j, k;
-            double  xyzmin[3], xyzmax[3], hx, hy, hz, x, y, z, ***au;
+            PetscInt   i, j, k;
+            PetscReal  xyzmin[3], xyzmax[3], hx, hy, hz, x, y, z, ***au;
             ierr = DMDAVecGetArray(da, u, &au); CHKERRQ(ierr);
             ierr = DMGetBoundingBox(da,xyzmin,xyzmax); CHKERRQ(ierr);
             hx = (xyzmax[0] - xyzmin[0]) / (info.mx - 1);

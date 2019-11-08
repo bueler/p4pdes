@@ -12,44 +12,44 @@ static char help[] =
 
 // exact solutions  u(x,y),  for boundary condition and error calculation
 
-static double u_exact_1Dmanupoly(double x, double y, double z, void *ctx) {
+static PetscReal u_exact_1Dmanupoly(PetscReal x, PetscReal y, PetscReal z, void *ctx) {
     return x*x * (1.0 - x*x);
 }
 
-static double u_exact_2Dmanupoly(double x, double y, double z, void *ctx) {
+static PetscReal u_exact_2Dmanupoly(PetscReal x, PetscReal y, PetscReal z, void *ctx) {
     return x*x * (1.0 - x*x) * y*y *(y*y - 1.0);
 }
 
-static double u_exact_3Dmanupoly(double x, double y, double z, void *ctx) {
+static PetscReal u_exact_3Dmanupoly(PetscReal x, PetscReal y, PetscReal z, void *ctx) {
     return x*x * (1.0 - x*x) * y*y * (y*y - 1.0) * z*z * (z*z - 1.0);
 }
 
-static double u_exact_1Dmanuexp(double x, double y, double z, void *ctx) {
+static PetscReal u_exact_1Dmanuexp(PetscReal x, PetscReal y, PetscReal z, void *ctx) {
     return - exp(x);
 }
 
-static double u_exact_2Dmanuexp(double x, double y, double z, void *ctx) {
+static PetscReal u_exact_2Dmanuexp(PetscReal x, PetscReal y, PetscReal z, void *ctx) {
     return - x * exp(y);
 }
 
-static double u_exact_3Dmanuexp(double x, double y, double z, void *ctx) {
+static PetscReal u_exact_3Dmanuexp(PetscReal x, PetscReal y, PetscReal z, void *ctx) {
     return - x * exp(y + z);
 }
 
-static double zero(double x, double y, double z, void *ctx) {
+static PetscReal zero(PetscReal x, PetscReal y, PetscReal z, void *ctx) {
     return 0.0;
 }
 
 // right-hand-side functions  f(x,y) = - laplacian u
 
-static double f_rhs_1Dmanupoly(double x, double y, double z, void *ctx) {
+static PetscReal f_rhs_1Dmanupoly(PetscReal x, PetscReal y, PetscReal z, void *ctx) {
     PoissonCtx* user = (PoissonCtx*)ctx;
     return user->cx * 12.0 * x*x - 2.0;
 }
 
-static double f_rhs_2Dmanupoly(double x, double y, double z, void *ctx) {
+static PetscReal f_rhs_2Dmanupoly(PetscReal x, PetscReal y, PetscReal z, void *ctx) {
     PoissonCtx* user = (PoissonCtx*)ctx;
-    double aa, bb, ddaa, ddbb;
+    PetscReal   aa, bb, ddaa, ddbb;
     aa = x*x * (1.0 - x*x);
     bb = y*y * (y*y - 1.0);
     ddaa = 2.0 * (1.0 - 6.0 * x*x);
@@ -57,9 +57,9 @@ static double f_rhs_2Dmanupoly(double x, double y, double z, void *ctx) {
     return - (user->cx * ddaa * bb + user->cy * aa * ddbb);
 }
 
-static double f_rhs_3Dmanupoly(double x, double y, double z, void *ctx) {
+static PetscReal f_rhs_3Dmanupoly(PetscReal x, PetscReal y, PetscReal z, void *ctx) {
     PoissonCtx* user = (PoissonCtx*)ctx;
-    double aa, bb, cc, ddaa, ddbb, ddcc;
+    PetscReal   aa, bb, cc, ddaa, ddbb, ddcc;
     aa = x*x * (1.0 - x*x);
     bb = y*y * (y*y - 1.0);
     cc = z*z * (z*z - 1.0);
@@ -69,15 +69,15 @@ static double f_rhs_3Dmanupoly(double x, double y, double z, void *ctx) {
     return - (user->cx * ddaa * bb * cc + user->cy * aa * ddbb * cc + user->cz * aa * bb * ddcc);
 }
 
-static double f_rhs_1Dmanuexp(double x, double y, double z, void *ctx) {
+static PetscReal f_rhs_1Dmanuexp(PetscReal x, PetscReal y, PetscReal z, void *ctx) {
     return exp(x);
 }
 
-static double f_rhs_2Dmanuexp(double x, double y, double z, void *ctx) {
+static PetscReal f_rhs_2Dmanuexp(PetscReal x, PetscReal y, PetscReal z, void *ctx) {
     return x * exp(y);  // note  f = - (u_xx + u_yy) = - u
 }
 
-static double f_rhs_3Dmanuexp(double x, double y, double z, void *ctx) {
+static PetscReal f_rhs_3Dmanuexp(PetscReal x, PetscReal y, PetscReal z, void *ctx) {
     return 2.0 * x * exp(y + z);  // note  f = - laplacian u = - 2 u
 }
 
@@ -125,12 +125,12 @@ int main(int argc,char **argv) {
     Vec            u_initial, u, u_exact;
     PoissonCtx     user;
     DMDALocalInfo  info;
-    double         errinf, normconst2h, err2h;
+    PetscReal      errinf, normconst2h, err2h;
     char           gridstr[99];
     PetscErrorCode (*getuexact)(DMDALocalInfo*,Vec,PoissonCtx*);
 
     // fish defaults:
-    int            dim = 2;                  // 2D
+    PetscInt       dim = 2;                  // 2D
     ProblemType    problem = MANUEXP;        // manufactured problem using exp()
     InitialType    initial = ZEROS;          // set u=0 for initial iterate
     PetscBool      gonboundary = PETSC_TRUE; // initial iterate has u=g on boundary
@@ -251,15 +251,15 @@ int main(int argc,char **argv) {
 
     switch (dim) {
         case 1:
-            normconst2h = PetscSqrtReal((double)(info.mx-1));
+            normconst2h = PetscSqrtReal((PetscReal)(info.mx-1));
             snprintf(gridstr,99,"%d point 1D",info.mx);
             break;
         case 2:
-            normconst2h = PetscSqrtReal((double)(info.mx-1)*(info.my-1));
+            normconst2h = PetscSqrtReal((PetscReal)(info.mx-1)*(info.my-1));
             snprintf(gridstr,99,"%d x %d point 2D",info.mx,info.my);
             break;
         case 3:
-            normconst2h = PetscSqrtReal((double)(info.mx-1)*(info.my-1)*(info.mz-1));
+            normconst2h = PetscSqrtReal((PetscReal)(info.mx-1)*(info.my-1)*(info.mz-1));
             snprintf(gridstr,99,"%d x %d x %d point 3D",info.mx,info.my,info.mz);
             break;
         default:
@@ -278,8 +278,8 @@ int main(int argc,char **argv) {
 
 PetscErrorCode Form1DUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
   PetscErrorCode ierr;
-  int          i;
-  double       xmax[1], xmin[1], hx, x, *au;
+  PetscInt   i;
+  PetscReal  xmax[1], xmin[1], hx, x, *au;
   ierr = DMGetBoundingBox(info->da,xmin,xmax); CHKERRQ(ierr);
   hx = (xmax[0] - xmin[0]) / (info->mx - 1);
   ierr = DMDAVecGetArray(info->da, u, &au);CHKERRQ(ierr);
@@ -293,8 +293,8 @@ PetscErrorCode Form1DUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
 
 PetscErrorCode Form2DUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
     PetscErrorCode ierr;
-    int     i, j;
-    double  xymin[2], xymax[2], hx, hy, x, y, **au;
+    PetscInt   i, j;
+    PetscReal  xymin[2], xymax[2], hx, hy, x, y, **au;
     ierr = DMGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
     hx = (xymax[0] - xymin[0]) / (info->mx - 1);
     hy = (xymax[1] - xymin[1]) / (info->my - 1);
@@ -312,8 +312,8 @@ PetscErrorCode Form2DUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
 
 PetscErrorCode Form3DUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
     PetscErrorCode ierr;
-    int    i, j, k;
-    double xyzmin[3], xyzmax[3], hx, hy, hz, x, y, z, ***au;
+    PetscInt  i, j, k;
+    PetscReal xyzmin[3], xyzmax[3], hx, hy, hz, x, y, z, ***au;
     ierr = DMGetBoundingBox(info->da,xyzmin,xyzmax); CHKERRQ(ierr);
     hx = (xyzmax[0] - xyzmin[0]) / (info->mx - 1);
     hy = (xyzmax[1] - xyzmin[1]) / (info->my - 1);
