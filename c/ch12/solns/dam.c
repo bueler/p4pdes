@@ -59,16 +59,16 @@ but note these numbers depend (at the second digit, even) on the value of
 #include "../../ch6/poissonfunctions.h"
 
 typedef struct {
-    double  a, y1, y2;
+    PetscReal  a, y1, y2;
 } DamCtx;
 
-double g_fcn(double x, double y, double z, void *ctx) {
-    PoissonCtx *user = (PoissonCtx*)ctx;
-    DamCtx     *dctx = (DamCtx*)(user->addctx);
-    const double a = dctx->a,
-                 y1 = dctx->y1,
-                 y2 = dctx->y2,
-                 tol = a * 1.0e-8;
+PetscReal g_fcn(PetscReal x, PetscReal y, PetscReal z, void *ctx) {
+    PoissonCtx       *user = (PoissonCtx*)ctx;
+    DamCtx           *dctx = (DamCtx*)(user->addctx);
+    const PetscReal  a = dctx->a,
+                     y1 = dctx->y1,
+                     y2 = dctx->y2,
+                     tol = a * 1.0e-8;
     // see (4.2) in Brandt & Cryer for following:
     if (x < tol) {
        return (y1 - y) * (y1 - y) / 2.0;                      // AB
@@ -87,12 +87,12 @@ double g_fcn(double x, double y, double z, void *ctx) {
     }
 }
 
-double f_fcn(double x, double y, double z, void *ctx) {
+PetscReal f_fcn(PetscReal x, PetscReal y, PetscReal z, void *ctx) {
     return -1.0;
 }
 
 extern PetscErrorCode FormBounds(SNES, Vec, Vec);
-extern PetscErrorCode GetSeepageFaceHeight(DMDALocalInfo*, Vec, double*, DamCtx*);
+extern PetscErrorCode GetSeepageFaceHeight(DMDALocalInfo*, Vec, PetscReal*, DamCtx*);
 
 int main(int argc,char **argv) {
   PetscErrorCode ierr;
@@ -102,7 +102,7 @@ int main(int argc,char **argv) {
   PoissonCtx     user;
   DamCtx         dctx;
   DMDALocalInfo  info;
-  double         height;
+  PetscReal      height;
 
   PetscInitialize(&argc,&argv,NULL,help);
 
@@ -170,13 +170,13 @@ PetscErrorCode FormBounds(SNES snes, Vec Xl, Vec Xu) {
     return 0;
 }
 
-PetscErrorCode GetSeepageFaceHeight(DMDALocalInfo *info, Vec u, double *height, DamCtx *dctx) {
+PetscErrorCode GetSeepageFaceHeight(DMDALocalInfo *info, Vec u, PetscReal *height, DamCtx *dctx) {
     PetscErrorCode ierr;
-    MPI_Comm       comm;
-    const double   dy = dctx->y1 / (PetscReal)(info->my-1),
-                   wetthreshhold = 1.0e-6;  // what does "u>0" mean?
-    int            j;
-    double         **au, locwetmax = - PETSC_INFINITY;
+    MPI_Comm         comm;
+    const PetscReal  dy = dctx->y1 / (PetscReal)(info->my-1),
+                     wetthreshhold = 1.0e-6;  // what does "u>0" mean?
+    PetscInt         j;
+    PetscReal         **au, locwetmax = - PETSC_INFINITY;
     ierr = DMDAVecGetArrayRead(info->da,u,&au); CHKERRQ(ierr);
     if (info->xs+info->xm == info->mx) { // do we even own (part of) the x=a side of the rectangle?
         for (j=info->ys; j<info->ys+info->ym; j++) {
@@ -187,7 +187,7 @@ PetscErrorCode GetSeepageFaceHeight(DMDALocalInfo *info, Vec u, double *height, 
     }
     ierr = DMDAVecRestoreArrayRead(info->da,u,&au); CHKERRQ(ierr);
     ierr = PetscObjectGetComm((PetscObject)(info->da),&comm); CHKERRQ(ierr);
-    ierr = MPI_Allreduce(&locwetmax,height,1,MPI_DOUBLE,MPI_MAX,comm); CHKERRQ(ierr);
+    ierr = MPI_Allreduce(&locwetmax,height,1,MPIU_REAL,MPIU_MAX,comm); CHKERRQ(ierr);
     *height -= dctx->y2;   // height is segment ED in figure
     return 0;
 }

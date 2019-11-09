@@ -13,11 +13,11 @@ static const char help[] =
 #include "../ch6/poissonfunctions.h"
 
 // z = psi(x,y) is the hemispherical obstacle, but made C^1 with "skirt" at r=r0
-double psi(double x, double y) {
-    const double  r = x * x + y * y,
-                  r0 = 0.9,
-                  psi0 = PetscSqrtReal(1.0 - r0*r0),
-                  dpsi0 = - r0 / psi0;
+PetscReal psi(PetscReal x, PetscReal y) {
+    const PetscReal  r = x * x + y * y,
+                     r0 = 0.9,
+                     psi0 = PetscSqrtReal(1.0 - r0*r0),
+                     dpsi0 = - r0 / psi0;
     if (r <= r0) {
         return PetscSqrtReal(1.0 - r);
     } else {
@@ -38,44 +38,45 @@ can then be reduced to a root-finding problem for a:
     a^2 (log(2) - log(a)) = 1 - a^2
 The solution is a = 0.697965148223374 (giving residual 1.5e-15).  Then
 A = a^2*(1-a^2)^(-0.5) and B = A*log(2) are as given below in the code.  */
-double u_exact(double x, double y) {
-    const double afree = 0.697965148223374,
-                 A     = 0.680259411891719,
-                 B     = 0.471519893402112;
-    double  r;
+PetscReal u_exact(PetscReal x, PetscReal y) {
+    const PetscReal afree = 0.697965148223374,
+                    A     = 0.680259411891719,
+                    B     = 0.471519893402112;
+    PetscReal       r;
     r = PetscSqrtReal(x * x + y * y);
     return (r <= afree) ? psi(x,y)  // active set; on the obstacle
                         : - A * PetscLogReal(r) + B; // solves laplace eqn
 }
 
 // boundary conditions from exact solution
-double g_fcn(double x, double y, double z, void *ctx) {
+PetscReal g_fcn(PetscReal x, PetscReal y, PetscReal z, void *ctx) {
     return u_exact(x,y);
 }
 
 // we solve Laplace's equation with f = 0
-double zero(double x, double y, double z, void *ctx) {
+PetscReal zero(PetscReal x, PetscReal y, PetscReal z, void *ctx) {
     return 0.0;
 }
 
 extern PetscErrorCode FormUExact(DMDALocalInfo*, Vec);
-extern PetscErrorCode GetActiveSet(SNES, DMDALocalInfo*, Vec, Vec, int*, double*);
+extern PetscErrorCode GetActiveSet(SNES, DMDALocalInfo*, Vec, Vec,
+                                   PetscInt*, PetscReal*);
 extern PetscErrorCode FormBounds(SNES, Vec, Vec);
 
 int main(int argc,char **argv) {
   PetscErrorCode ierr;
-  DM             da, da_after;
-  SNES           snes;
-  KSP            ksp;
-  Vec            u_initial, u, u_exact, Xl, Xu;
-  PoissonCtx     user;
-  const double   aexact = 0.697965148223374;
+  DM                  da, da_after;
+  SNES                snes;
+  KSP                 ksp;
+  Vec                 u_initial, u, u_exact, Xl, Xu;
+  PoissonCtx          user;
+  const PetscReal     aexact = 0.697965148223374;
   SNESConvergedReason reason;
-  int            snesit, kspit;
-  double         error1,errorinf,actarea,exactarea,areaerr;
-  DMDALocalInfo  info;
-  char           dumpname[256] = "dump.dat";
-  PetscBool      dumpbinary = PETSC_FALSE;
+  PetscInt            snesit, kspit;
+  PetscReal           error1,errorinf,actarea,exactarea,areaerr;
+  DMDALocalInfo       info;
+  char                dumpname[256] = "dump.dat";
+  PetscBool           dumpbinary = PETSC_FALSE;
 
   PetscInitialize(&argc,&argv,NULL,help);
 
@@ -168,7 +169,7 @@ int main(int argc,char **argv) {
   ierr = FormUExact(&info,u_exact); CHKERRQ(ierr);
   ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr); /* u <- u - u_exact */
   ierr = VecNorm(u,NORM_1,&error1); CHKERRQ(ierr);
-  error1 /= (double)info.mx * (double)info.my;
+  error1 /= (PetscReal)info.mx * (PetscReal)info.my;
   ierr = VecNorm(u,NORM_INFINITY,&errorinf); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
       "errors: av |u-uexact| = %.3e, |u-uexact|_inf = %.3e, active area error = %.3f%%\n",
@@ -181,12 +182,12 @@ int main(int argc,char **argv) {
 
 
 PetscErrorCode GetActiveSet(SNES snes, DMDALocalInfo *info, Vec u, Vec Xl,
-                            int *act, double *actarea) {
+                            PetscInt *act, PetscReal *actarea) {
   PetscErrorCode ierr;
-  Vec          F;
-  double       dx, dy;
-  const double *au, *aXl, *aF, zerotol = 1.0e-8;  // see petsc/src/snes/impls/vi/vi.c for value
-  int          i,n,lact,gact;
+  Vec              F;
+  const PetscReal  *au, *aXl, *aF, zerotol = 1.0e-8;  // see petsc/src/snes/impls/vi/vi.c for value
+  PetscReal        dx, dy;
+  PetscInt         i,n,lact,gact;
 
   dx = 4.0 / (PetscReal)(info->mx-1);
   dy = 4.0 / (PetscReal)(info->my-1);
@@ -203,7 +204,7 @@ PetscErrorCode GetActiveSet(SNES snes, DMDALocalInfo *info, Vec u, Vec Xl,
   ierr = VecRestoreArrayRead(u,&au);CHKERRQ(ierr);
   ierr = VecRestoreArrayRead(Xl,&aXl);CHKERRQ(ierr);
   ierr = VecRestoreArrayRead(F,&aF); CHKERRQ(ierr);
-  ierr = MPI_Allreduce(&lact,&gact,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)snes));CHKERRQ(ierr);
+  ierr = MPI_Allreduce(&lact,&gact,1,MPIU_INT,MPIU_SUM,PetscObjectComm((PetscObject)snes));CHKERRQ(ierr);
   if (act) {
       *act = gact;
   }
@@ -216,8 +217,8 @@ PetscErrorCode GetActiveSet(SNES snes, DMDALocalInfo *info, Vec u, Vec Xl,
 
 PetscErrorCode FormUExact(DMDALocalInfo *info, Vec u) {
   PetscErrorCode ierr;
-  int     i,j;
-  double  **au, dx, dy, x, y;
+  PetscInt   i,j;
+  PetscReal  **au, dx, dy, x, y;
   dx = 4.0 / (PetscReal)(info->mx-1);
   dy = 4.0 / (PetscReal)(info->my-1);
   ierr = DMDAVecGetArray(info->da, u, &au);CHKERRQ(ierr);
@@ -236,10 +237,10 @@ PetscErrorCode FormUExact(DMDALocalInfo *info, Vec u) {
 // for call-back: tell SNESVI we want  psi <= u < +infinity
 PetscErrorCode FormBounds(SNES snes, Vec Xl, Vec Xu) {
   PetscErrorCode ierr;
-  DM            da;
-  DMDALocalInfo info;
-  int           i, j;
-  double        **aXl, dx, dy, x, y;
+  DM             da;
+  DMDALocalInfo  info;
+  PetscInt       i, j;
+  PetscReal      **aXl, dx, dy, x, y;
   ierr = SNESGetDM(snes,&da);CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
   dx = 4.0 / (PetscReal)(info.mx-1);

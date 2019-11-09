@@ -14,7 +14,7 @@ static const char help[] =
 #include "../../ch6/poissonfunctions.h"
 
 // z = psi(x,y) = dist((x,y), bdry Omega)  is the upper obstacle
-double psi(double x, double y) {
+PetscReal psi(PetscReal x, PetscReal y) {
     if (y <= x)
         if (y <= 1.0 - x)
             return y;
@@ -27,15 +27,15 @@ double psi(double x, double y) {
             return 1.0 - y;
 }
 
-double zero(double x, double y, double z, void *ctx) {
+PetscReal zero(PetscReal x, PetscReal y, PetscReal z, void *ctx) {
     return 0.0;
 }
 
 typedef struct {
-    double  C;   // physical parameter
+    PetscReal  C;   // physical parameter
 } ElastoCtx;
 
-double f_fcn(double x, double y, double z, void *user) {
+PetscReal f_fcn(PetscReal x, PetscReal y, PetscReal z, void *user) {
     PoissonCtx *poi = (PoissonCtx*) user;
     ElastoCtx  *elasto = (ElastoCtx*) poi->addctx;
     return 2.0 * elasto->C;
@@ -45,15 +45,15 @@ extern PetscErrorCode FormBounds(SNES, Vec, Vec);
 
 int main(int argc,char **argv) {
   PetscErrorCode ierr;
-  DM             da, da_after;
-  SNES           snes;
-  Vec            u_initial, u;
-  PoissonCtx     user;
-  ElastoCtx      elasto;
-  SNESConvergedReason reason;
-  int            snesits;
-  double         lflops,flops;
-  DMDALocalInfo  info;
+  DM                   da, da_after;
+  SNES                 snes;
+  Vec                  u_initial, u;
+  PoissonCtx           user;
+  ElastoCtx            elasto;
+  SNESConvergedReason  reason;
+  PetscInt             snesits;
+  PetscReal            lflops,flops;
+  DMDALocalInfo        info;
 
   PetscInitialize(&argc,&argv,NULL,help);
 
@@ -115,7 +115,7 @@ int main(int argc,char **argv) {
   }
   ierr = SNESGetIterationNumber(snes,&snesits); CHKERRQ(ierr);
   ierr = PetscGetFlops(&lflops); CHKERRQ(ierr);
-  ierr = MPI_Allreduce(&lflops,&flops,1,MPI_DOUBLE,MPI_SUM,PETSC_COMM_WORLD); CHKERRQ(ierr);
+  ierr = MPI_Allreduce(&lflops,&flops,1,MPIU_REAL,MPIU_SUM,PETSC_COMM_WORLD); CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
       "done on %d x %d grid using C=%.3f: total flops = %.3e; SNES iterations %d\n",
@@ -129,10 +129,10 @@ int main(int argc,char **argv) {
 // for call-back: tell SNESVI we want  -infty < u <= psi
 PetscErrorCode FormBounds(SNES snes, Vec Xl, Vec Xu) {
   PetscErrorCode ierr;
-  DM            da;
-  DMDALocalInfo info;
-  int           i, j;
-  double        **aXu, dx, dy, x, y;
+  DM             da;
+  DMDALocalInfo  info;
+  PetscInt       i, j;
+  PetscReal      **aXu, dx, dy, x, y;
   ierr = VecSet(Xu,PETSC_NINFINITY);CHKERRQ(ierr);
   ierr = SNESGetDM(snes,&da);CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
@@ -149,5 +149,4 @@ PetscErrorCode FormBounds(SNES snes, Vec Xl, Vec Xu) {
   ierr = DMDAVecRestoreArray(da, Xu, &aXu);CHKERRQ(ierr);
   return 0;
 }
-
 
