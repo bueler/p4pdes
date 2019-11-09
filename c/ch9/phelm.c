@@ -14,27 +14,27 @@ static char help[] =
 #include "../quadrature.h"
 
 typedef struct {
-    double     p, eps;
-    int        quadpts;
-    double     (*f)(double x, double y, double p, double eps);
+    PetscReal  p, eps;
+    PetscInt   quadpts;
+    PetscReal  (*f)(PetscReal x, PetscReal y, PetscReal p, PetscReal eps);
 } PHelmCtx;
 
-static double f_constant(double x, double y, double p, double eps) {
+static PetscReal f_constant(PetscReal x, PetscReal y, PetscReal p, PetscReal eps) {
     return 1.0;
 }
 
-static double u_exact_cosines(double x, double y, double p, double eps) {
+static PetscReal u_exact_cosines(PetscReal x, PetscReal y, PetscReal p, PetscReal eps) {
     return cos(PETSC_PI * x) * cos(PETSC_PI * y);
 }
 
-static double f_cosines(double x, double y, double p, double eps) {
-    const double uu = u_exact_cosines(x,y,p,eps),
-                 pi2 = PETSC_PI * PETSC_PI,
-                 lapu = - 2 * pi2 * uu;
+static PetscReal f_cosines(PetscReal x, PetscReal y, PetscReal p, PetscReal eps) {
+    const PetscReal uu = u_exact_cosines(x,y,p,eps),
+                    pi2 = PETSC_PI * PETSC_PI,
+                    lapu = - 2 * pi2 * uu;
     if (p == 2.0) {
         return - lapu + uu;
     } else {
-        const double
+        const PetscReal
             ux = - PETSC_PI * sin(PETSC_PI * x) * cos(PETSC_PI * y),
             uy = - PETSC_PI * cos(PETSC_PI * x) * sin(PETSC_PI * y),
             // note regularization changes f(x,y) but not u(x,y):
@@ -42,7 +42,7 @@ static double f_cosines(double x, double y, double p, double eps) {
             pi3 = pi2 * PETSC_PI,
             wx = pi3 * sin(2 * PETSC_PI * x) * cos(2 * PETSC_PI * y),
             wy = pi3 * cos(2 * PETSC_PI * x) * sin(2 * PETSC_PI * y);
-        const double s = (p - 2) / 2;  //  -1/2 <= s <= 0
+        const PetscReal s = (p - 2) / 2;  //  -1/2 <= s <= 0
         return - s * PetscPowScalar(w,s-1) * (wx * ux + wy * uy)
                - PetscPowScalar(w,s) * lapu + uu;
     }
@@ -53,9 +53,9 @@ static const char* ProblemTypes[] = {"constant","cosines",
                                      "ProblemType", "", NULL};
 
 extern PetscErrorCode GetVecFromFunction(DMDALocalInfo*, Vec,
-                         double (*)(double, double, double, double), PHelmCtx*);
-extern PetscErrorCode FormObjectiveLocal(DMDALocalInfo*, double**, double*, PHelmCtx*);
-extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, double**, double**, PHelmCtx*);
+                         PetscReal (*)(PetscReal, PetscReal, PetscReal, PetscReal), PHelmCtx*);
+extern PetscErrorCode FormObjectiveLocal(DMDALocalInfo*, PetscReal**, PetscReal*, PHelmCtx*);
+extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, PetscReal**, PetscReal**, PHelmCtx*);
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
@@ -69,7 +69,7 @@ int main(int argc,char **argv) {
                    no_gradient = PETSC_FALSE,
                    exact_init = PETSC_FALSE,
                    view_f = PETSC_FALSE;
-    double         err;
+    PetscReal      err;
 
     PetscInitialize(&argc,&argv,NULL,help);
     user.p = 2.0;
@@ -200,11 +200,12 @@ int main(int argc,char **argv) {
 }
 
 PetscErrorCode GetVecFromFunction(DMDALocalInfo *info, Vec w,
-                   double (*fcn)(double, double, double, double), PHelmCtx *user) {
-    PetscErrorCode ierr;
-    const double hx = 1.0 / (info->mx - 1), hy = 1.0 / (info->my - 1);
-    double       x, y, **aw;
-    int          i, j;
+         PetscReal (*fcn)(PetscReal, PetscReal, PetscReal, PetscReal),
+         PHelmCtx *user) {
+    PetscErrorCode  ierr;
+    const PetscReal hx = 1.0 / (info->mx - 1), hy = 1.0 / (info->my - 1);
+    PetscReal       x, y, **aw;
+    PetscInt        i, j;
     ierr = DMDAVecGetArray(info->da,w,&aw); CHKERRQ(ierr);
     for (j = info->ys; j < info->ys + info->ym; j++) {
         y = j * hy;
@@ -218,33 +219,33 @@ PetscErrorCode GetVecFromFunction(DMDALocalInfo *info, Vec w,
 }
 
 //STARTFEM
-static double xiL[4]  = { 1.0, -1.0, -1.0,  1.0},
-              etaL[4] = { 1.0,  1.0, -1.0, -1.0};
+static PetscReal xiL[4]  = { 1.0, -1.0, -1.0,  1.0},
+                 etaL[4] = { 1.0,  1.0, -1.0, -1.0};
 
-static double chi(int L, double xi, double eta) {
+static PetscReal chi(PetscInt L, PetscReal xi, PetscReal eta) {
     return 0.25 * (1.0 + xiL[L] * xi) * (1.0 + etaL[L] * eta);
 }
 
 // evaluate v(xi,eta) on reference element using local node numbering
-static double eval(const double v[4], double xi, double eta) {
+static PetscReal eval(const PetscReal v[4], PetscReal xi, PetscReal eta) {
     return   v[0] * chi(0,xi,eta) + v[1] * chi(1,xi,eta)
            + v[2] * chi(2,xi,eta) + v[3] * chi(3,xi,eta);
 }
 
 typedef struct {
-    double  xi, eta;
+    PetscReal  xi, eta;
 } gradRef;
 
-static gradRef dchi(int L, double xi, double eta) {
+static gradRef dchi(PetscInt L, PetscReal xi, PetscReal eta) {
     const gradRef result = {0.25 * xiL[L]  * (1.0 + etaL[L] * eta),
                             0.25 * etaL[L] * (1.0 + xiL[L]  * xi)};
     return result;
 }
 
 // evaluate partial derivs of v(xi,eta) on reference element
-static gradRef deval(const double v[4], double xi, double eta) {
-    gradRef sum = {0.0,0.0}, tmp;
-    int     L;
+static gradRef deval(const PetscReal v[4], PetscReal xi, PetscReal eta) {
+    gradRef   sum = {0.0,0.0}, tmp;
+    PetscInt  L;
     for (L=0; L<4; L++) {
         tmp = dchi(L,xi,eta);
         sum.xi += v[L] * tmp.xi;  sum.eta += v[L] * tmp.eta;
@@ -252,14 +253,14 @@ static gradRef deval(const double v[4], double xi, double eta) {
     return sum;
 }
 
-static double GradInnerProd(double hx, double hy,
-                            gradRef du, gradRef dv) {
-    const double cx = 4.0 / (hx * hx),  cy = 4.0 / (hy * hy);
+static PetscReal GradInnerProd(PetscReal hx, PetscReal hy,
+                               gradRef du, gradRef dv) {
+    const PetscReal cx = 4.0 / (hx * hx),  cy = 4.0 / (hy * hy);
     return cx * du.xi * dv.xi + cy * du.eta * dv.eta;
 }
 
-static double GradPow(double hx, double hy,
-                      gradRef du, double P, double eps) {
+static PetscReal GradPow(PetscReal hx, PetscReal hy,
+                         gradRef du, PetscReal P, PetscReal eps) {
     return PetscPowScalar(GradInnerProd(hx,hy,du,du) + eps*eps, P/2.0);
 }
 //ENDFEM
@@ -277,24 +278,24 @@ static double GradPow(double hx, double hy,
 */
 
 //STARTOBJECTIVE
-static double ObjIntegrandRef(DMDALocalInfo *info,
-                              const double ff[4], const double uu[4],
-                              double xi, double eta, PHelmCtx *user) {
-    const gradRef du = deval(uu,xi,eta);
-    const double  hx = 1.0 / (info->mx - 1),  hy = 1.0 / (info->my - 1),
-                  u = eval(uu,xi,eta);
+static PetscReal ObjIntegrandRef(DMDALocalInfo *info,
+                                 const PetscReal ff[4], const PetscReal uu[4],
+                                 PetscReal xi, PetscReal eta, PHelmCtx *user) {
+    const gradRef    du = deval(uu,xi,eta);
+    const PetscReal  hx = 1.0 / (info->mx - 1),  hy = 1.0 / (info->my - 1),
+                     u = eval(uu,xi,eta);
     return GradPow(hx,hy,du,user->p,0.0) / user->p + 0.5 * u * u
            - eval(ff,xi,eta) * u;
 }
 
-PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
-                                  double *obj, PHelmCtx *user) {
-  PetscErrorCode ierr;
-  const double hx = 1.0 / (info->mx - 1),  hy = 1.0 / (info->my - 1);
-  const Quad1D q = gausslegendre[user->quadpts-1];
-  double       x, y, lobj = 0.0;
-  int          i,j,r,s;
-  MPI_Comm     com;
+PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **au,
+                                  PetscReal *obj, PHelmCtx *user) {
+  PetscErrorCode  ierr;
+  const PetscReal hx = 1.0 / (info->mx - 1),  hy = 1.0 / (info->my - 1);
+  const Quad1D    q = gausslegendre[user->quadpts-1];
+  PetscReal       x, y, lobj = 0.0;
+  PetscInt        i,j,r,s;
+  MPI_Comm        com;
 
   // loop over all elements
   for (j = info->ys; j < info->ys + info->ym; j++) {
@@ -305,12 +306,12 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
           if (i == 0)
               continue;
           x = i * hx;
-          const double ff[4] = {user->f(x,y,user->p,user->eps),
-                                user->f(x-hx,y,user->p,user->eps),
-                                user->f(x-hx,y-hy,user->p,user->eps),
-                                user->f(x,y-hy,user->p,user->eps)};
-          const double uu[4] = {au[j][i],au[j][i-1],
-                                au[j-1][i-1],au[j-1][i]};
+          const PetscReal ff[4] = {user->f(x,y,user->p,user->eps),
+                                   user->f(x-hx,y,user->p,user->eps),
+                                   user->f(x-hx,y-hy,user->p,user->eps),
+                                   user->f(x,y-hy,user->p,user->eps)};
+          const PetscReal uu[4] = {au[j][i],au[j][i-1],
+                                   au[j-1][i-1],au[j-1][i]};
           // loop over quadrature points on this element
           for (r = 0; r < q.n; r++) {
               for (s = 0; s < q.n; s++) {
@@ -323,32 +324,32 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, double **au,
   }
   lobj *= hx * hy / 4.0;  // from change of variables formula
   ierr = PetscObjectGetComm((PetscObject)(info->da),&com); CHKERRQ(ierr);
-  ierr = MPI_Allreduce(&lobj,obj,1,MPI_DOUBLE,MPI_SUM,com); CHKERRQ(ierr);
+  ierr = MPI_Allreduce(&lobj,obj,1,MPIU_REAL,MPIU_SUM,com); CHKERRQ(ierr);
   ierr = PetscLogFlops(129*info->xm*info->ym); CHKERRQ(ierr);
   return 0;
 }
 //ENDOBJECTIVE
 
 //STARTFUNCTION
-static double IntegrandRef(DMDALocalInfo *info, int L,
-                           const double ff[4], const double uu[4],
-                           double xi, double eta, PHelmCtx *user) {
-  const gradRef du    = deval(uu,xi,eta),
-                dchiL = dchi(L,xi,eta);
-  const double  hx = 1.0 / (info->mx - 1),  hy = 1.0 / (info->my - 1);
+static PetscReal IntegrandRef(DMDALocalInfo *info, PetscInt L,
+                              const PetscReal ff[4], const PetscReal uu[4],
+                              PetscReal xi, PetscReal eta, PHelmCtx *user) {
+  const gradRef    du    = deval(uu,xi,eta),
+                   dchiL = dchi(L,xi,eta);
+  const PetscReal  hx = 1.0 / (info->mx - 1),  hy = 1.0 / (info->my - 1);
   return GradPow(hx,hy,du,user->p - 2.0,user->eps)
            * GradInnerProd(hx,hy,du,dchiL)
          + (eval(uu,xi,eta) - eval(ff,xi,eta)) * chi(L,xi,eta);
 }
 
-PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
-                                 double **FF, PHelmCtx *user) {
+PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal **au,
+                                 PetscReal **FF, PHelmCtx *user) {
   PetscErrorCode ierr;
-  const double hx = 1.0 / (info->mx - 1),  hy = 1.0 / (info->my - 1);
-  const Quad1D q = gausslegendre[user->quadpts-1];
-  const int    li[4] = {0,-1,-1,0},  lj[4] = {0,0,-1,-1};
-  double       x, y;
-  int          i,j,l,r,s,PP,QQ;
+  const PetscReal hx = 1.0 / (info->mx - 1),  hy = 1.0 / (info->my - 1);
+  const Quad1D    q = gausslegendre[user->quadpts-1];
+  const PetscInt  li[4] = {0,-1,-1,0},  lj[4] = {0,0,-1,-1};
+  PetscReal       x, y;
+  PetscInt        i,j,l,r,s,PP,QQ;
 
   // clear residuals
   for (j = info->ys; j < info->ys + info->ym; j++)
@@ -364,12 +365,12 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
           if ((i == 0) || (i > info->mx-1))
               continue;
           x = i * hx;
-          const double ff[4] = {user->f(x,y,user->p,user->eps),
-                                user->f(x-hx,y,user->p,user->eps),
-                                user->f(x-hx,y-hy,user->p,user->eps),
-                                user->f(x,y-hy,user->p,user->eps)};
-          const double uu[4] = {au[j][i],au[j][i-1],
-                                au[j-1][i-1],au[j-1][i]};
+          const PetscReal ff[4] = {user->f(x,y,user->p,user->eps),
+                                   user->f(x-hx,y,user->p,user->eps),
+                                   user->f(x-hx,y-hy,user->p,user->eps),
+                                   user->f(x,y-hy,user->p,user->eps)};
+          const PetscReal uu[4] = {au[j][i],au[j][i-1],
+                                   au[j-1][i-1],au[j-1][i]};
           // loop over corners of element i,j
           for (l = 0; l < 4; l++) {
               PP = i + li[l];
