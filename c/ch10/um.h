@@ -4,12 +4,12 @@
 //STARTSTRUCT
 // location of one node
 typedef struct {
-    double   x,y;
+    PetscReal  x,y;
 } Node;
 
 // data type for an Unstructured Mesh
 typedef struct {
-    int      N,     // number of nodes
+    PetscInt N,     // number of nodes
              K,     // number of elements
              P;     // number of Neumann boundary segments; may be 0
     Vec      loc;   // nodal locations; length N, dof=2 Vec
@@ -44,8 +44,8 @@ PetscErrorCode UMViewSolutionBinary(UM *mesh, char *filename, Vec u);
 
 // compute statistics for mesh:  maxh,meanh are for triangle side
 // lengths; maxa,meana are for areas
-PetscErrorCode UMStats(UM *mesh, double *maxh, double *meanh,
-                       double *maxa, double *meana);
+PetscErrorCode UMStats(UM *mesh, PetscReal *maxh, PetscReal *meanh,
+                       PetscReal *maxa, PetscReal *meana);
 
 // access to a length-N array of structs for nodal coordinates
 PetscErrorCode UMGetNodeCoordArrayRead(UM *mesh, const Node **xy);

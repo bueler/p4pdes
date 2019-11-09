@@ -6,26 +6,26 @@
 // LINEAR PROBLEM, NONHOMOGENEOUS DIRICHLET, HOMOGENEOUS NEUMANN
 // USE: trap.poly
 
-double a_lin(double u, double x, double y) {
+PetscReal a_lin(PetscReal u, PetscReal x, PetscReal y) {
     return 1.0;
 }
 
 // manufactured from a_lin(), uexact_lin():
-double f_lin(double u, double x, double y) {
+PetscReal f_lin(PetscReal u, PetscReal x, PetscReal y) {
     return 2.0 + 3.0 * y * y;
 }
 
-double uexact_lin(double x, double y) {
-    const double y2 = y * y;
+PetscReal uexact_lin(PetscReal x, PetscReal y) {
+    const PetscReal y2 = y * y;
     return 1.0 - y2 - 0.25 * y2 * y2;
 }
 
 // just evaluate exact u on boundary point:
-double gD_lin(double x, double y) {
+PetscReal gD_lin(PetscReal x, PetscReal y) {
     return uexact_lin(x,y);
 }
 
-double gN_lin(double x, double y) {
+PetscReal gN_lin(PetscReal x, PetscReal y) {
     return 0.0;
 }
 
@@ -35,13 +35,13 @@ double gN_lin(double x, double y) {
 // NONLINEAR PROBLEM, NONHOMOGENEOUS DIRICHLET, HOMOGENEOUS NEUMANN
 // USE: trap.poly
 
-double a_nonlin(double u, double x, double y) {
+PetscReal a_nonlin(PetscReal u, PetscReal x, PetscReal y) {
     return 1.0 + u * u;
 }
 
 // manufactured from a_nonlin(), uexact_lin()
-double f_nonlin(double u, double x, double y) {
-    const double dudy = - 2.0 * y - y * y * y;
+PetscReal f_nonlin(PetscReal u, PetscReal x, PetscReal y) {
+    const PetscReal dudy = - 2.0 * y - y * y * y;
     return - 2.0 * u * dudy * dudy + (1.0 + u * u) * (2.0 + 3.0 * y * y);
 }
 
@@ -61,7 +61,7 @@ double f_nonlin(double u, double x, double y) {
 // gD_linneu = gD_lin
 
 // only valid on line with slope -1
-double gN_linneu(double x, double y) {
+PetscReal gN_linneu(PetscReal x, PetscReal y) {
     return - y * (2.0 + y * y) / sqrt(2.0);
 }
 
@@ -72,21 +72,21 @@ double gN_linneu(double x, double y) {
 // SAME PROBLEM AS SOLVED BY DEFAULT BY c/ch6/fish.c
 // USE: genstructured.py to generate meshes
 
-double a_square(double u, double x, double y) {
+PetscReal a_square(PetscReal u, PetscReal x, PetscReal y) {
     return 1.0;
 }
 
 // manufactured from a_square(), uexact_square():
-double f_square(double u, double x, double y) {
+PetscReal f_square(PetscReal u, PetscReal x, PetscReal y) {
     return x * exp(y);  // note  f = - (u_xx + u_yy) = - u
 }
 
-double uexact_square(double x, double y) {
+PetscReal uexact_square(PetscReal x, PetscReal y) {
     return - x * exp(y);
 }
 
 // just evaluate exact u on boundary point:
-double gD_square(double x, double y) {
+PetscReal gD_square(PetscReal x, PetscReal y) {
     return uexact_square(x,y);
 }
 
@@ -98,15 +98,15 @@ double gD_square(double x, double y) {
 // LINEAR PROBLEM, HOMOGENEOUS DIRICHLET ONLY; NO EXACT SOLN
 // USE: koch.poly from kochmesh.py (or genstructured.py)
 
-double a_koch(double u, double x, double y) {
+PetscReal a_koch(PetscReal u, PetscReal x, PetscReal y) {
     return 1.0;
 }
 
-double f_koch(double u, double x, double y) {
+PetscReal f_koch(PetscReal u, PetscReal x, PetscReal y) {
     return 1.0;
 }
 
-double gD_koch(double x, double y) {
+PetscReal gD_koch(PetscReal x, PetscReal y) {
     return 0.0;
 }
 

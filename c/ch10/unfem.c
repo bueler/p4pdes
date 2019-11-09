@@ -15,30 +15,30 @@ static char help[] =
 
 //STARTCTX
 typedef struct {
-    UM     *mesh;
-    int    solncase,
-           quaddegree;
-    double (*a_fcn)(double, double, double);
-    double (*f_fcn)(double, double, double);
-    double (*gD_fcn)(double, double);
-    double (*gN_fcn)(double, double);
-    double (*uexact_fcn)(double, double);
+    UM        *mesh;
+    PetscInt  solncase,
+              quaddegree;
+    PetscReal (*a_fcn)(PetscReal, PetscReal, PetscReal);
+    PetscReal (*f_fcn)(PetscReal, PetscReal, PetscReal);
+    PetscReal (*gD_fcn)(PetscReal, PetscReal);
+    PetscReal (*gN_fcn)(PetscReal, PetscReal);
+    PetscReal (*uexact_fcn)(PetscReal, PetscReal);
     PetscLogStage readstage, setupstage, solverstage, resstage, jacstage;  //STRIP
 } unfemCtx;
 //ENDCTX
 
 //STARTFEM
-double chi(int L, double xi, double eta) {
-    const double z[3] = {1.0 - xi - eta, xi, eta};
+PetscReal chi(PetscInt L, PetscReal xi, PetscReal eta) {
+    const PetscReal z[3] = {1.0 - xi - eta, xi, eta};
     return z[L];
 }
 
-const double dchi[3][2] = {{-1.0,-1.0},{ 1.0, 0.0},{ 0.0, 1.0}};
+const PetscReal dchi[3][2] = {{-1.0,-1.0},{ 1.0, 0.0},{ 0.0, 1.0}};
 
 // evaluate v(xi,eta) on reference element using local node numbering
-double eval(const double v[3], double xi, double eta) {
-    double sum = 0.0;
-    int    L;
+PetscReal eval(const PetscReal v[3], PetscReal xi, PetscReal eta) {
+    PetscReal  sum = 0.0;
+    PetscInt   L;
     for (L = 0; L < 3; L++)
         sum += v[L] * chi(L,xi,eta);
     return sum;
@@ -59,7 +59,7 @@ int main(int argc,char **argv) {
                 savepintmatlab = PETSC_FALSE;
     char        root[256] = "", nodesname[256], issname[256], solnname[256],
                 pintname[256] = "";
-    int         savepintlevel = -1, levels;
+    PetscInt    savepintlevel = -1, levels;
     UM          mesh;
     unfemCtx    user;
     SNES        snes;
@@ -68,7 +68,7 @@ int main(int argc,char **argv) {
     PCType      pctype;
     Mat         A;
     Vec         r, u, uexact;
-    double      err, h_max;
+    PetscReal   err, h_max;
 
     PetscInitialize(&argc,&argv,NULL,help);
     ierr = PetscLogStageRegister("Read mesh      ", &user.readstage); CHKERRQ(ierr);  //STRIP
@@ -281,8 +281,8 @@ int main(int argc,char **argv) {
 PetscErrorCode FillExact(Vec uexact, unfemCtx *ctx) {
     PetscErrorCode ierr;
     const Node   *aloc;
-    double       *auexact;
-    int          i;
+    PetscReal    *auexact;
+    PetscInt     i;
     ierr = UMGetNodeCoordArrayRead(ctx->mesh,&aloc); CHKERRQ(ierr);
     ierr = VecGetArray(uexact,&auexact); CHKERRQ(ierr);
     for (i = 0; i < ctx->mesh->N; i++) {
@@ -293,22 +293,22 @@ PetscErrorCode FillExact(Vec uexact, unfemCtx *ctx) {
     return 0;
 }
 
-double InnerProd(const double V[2], const double W[2]) {
+PetscReal InnerProd(const PetscReal V[2], const PetscReal W[2]) {
     return V[0] * W[0] + V[1] * W[1];
 }
 
 //STARTRESIDUAL
 PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
     PetscErrorCode ierr;
-    unfemCtx        *user = (unfemCtx*)ctx;
-    const Quad2DTri q = symmgauss[user->quaddegree-1];
-    const int       *ae, *ans, *abf, *en;
-    const Node      *aloc;
-    const double    *au;
-    int             p, na, nb, k, l, r;
-    double          *aF, unode[3], gradu[2], gradpsi[3][2], uquad[4],
-                    aquad[4], fquad[4], dx, dy, dx1, dx2, dy1, dy2,
-                    detJ, ls, xmid, ymid, sint, xx, yy, psi, ip, sum;
+    unfemCtx         *user = (unfemCtx*)ctx;
+    const Quad2DTri  q = symmgauss[user->quaddegree-1];
+    const PetscInt   *ae, *ans, *abf, *en;
+    const Node       *aloc;
+    const PetscReal  *au;
+    PetscInt         p, na, nb, k, l, r;
+    PetscReal        *aF, unode[3], gradu[2], gradpsi[3][2], uquad[4],
+                     aquad[4], fquad[4], dx, dy, dx1, dx2, dy1, dy2,
+                     detJ, ls, xmid, ymid, sint, xx, yy, psi, ip, sum;
 
     PetscLogStagePush(user->resstage);  //STRIP
     ierr = VecSet(F,0.0); CHKERRQ(ierr);
@@ -399,14 +399,14 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
 
 PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
     PetscErrorCode ierr;
-    unfemCtx        *user = (unfemCtx*)ctx;
-    const Quad2DTri q = symmgauss[user->quaddegree-1];
-    const int       *ae, *abf, *en;
-    const Node      *aloc;
-    const double    *au;
-    double          unode[3], gradpsi[3][2], uquad[4], aquad[4], v[9],
-                    dx1, dx2, dy1, dy2, detJ, xx, yy, sum;
-    int             n, k, l, m, r, cr, cv, row[3];
+    unfemCtx         *user = (unfemCtx*)ctx;
+    const Quad2DTri  q = symmgauss[user->quaddegree-1];
+    const PetscInt   *ae, *abf, *en;
+    const Node       *aloc;
+    const PetscReal  *au;
+    PetscReal        unode[3], gradpsi[3][2], uquad[4], aquad[4], v[9],
+                     dx1, dx2, dy1, dy2, detJ, xx, yy, sum;
+    PetscInt         n, k, l, m, r, cr, cv, row[3];
 
     PetscLogStagePush(user->jacstage);  //STRIP
     ierr = MatZeroEntries(P); CHKERRQ(ierr);
@@ -487,10 +487,10 @@ Neumann boundary nodes. */
 //STARTPREALLOC
 PetscErrorCode Preallocation(Mat J, unfemCtx *user) {
     PetscErrorCode ierr;
-    const int    *ae, *abf, *en;
-    int          *nnz, n, k, l;
+    const PetscInt  *ae, *abf, *en;
+    PetscInt        *nnz, n, k, l;
 
-    nnz = (int *)malloc(sizeof(int)*(user->mesh->N));
+    nnz = (PetscInt *)malloc(sizeof(PetscInt)*(user->mesh->N));
     ierr = ISGetIndices(user->mesh->bf,&abf); CHKERRQ(ierr);
     for (n = 0; n < user->mesh->N; n++)
         nnz[n] = (abf[n] == 1) ? 2 : 1;

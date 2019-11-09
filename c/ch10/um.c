@@ -22,19 +22,19 @@ PetscErrorCode UMDestroy(UM *mesh) {
 
 PetscErrorCode UMViewASCII(UM *mesh, PetscViewer viewer) {
     PetscErrorCode ierr;
-    int          n, k;
-    const Node   *aloc;
-    const int    *ae, *abf, *ans;
+    PetscInt        n, k;
+    const Node      *aloc;
+    const PetscInt  *ae, *abf, *ans;
 
     ierr = PetscViewerASCIIPushSynchronized(viewer); CHKERRQ(ierr);
     if (mesh->loc && (mesh->N > 0)) {
         ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%d nodes at (x,y) coordinates:\n",mesh->N); CHKERRQ(ierr);
-        ierr = VecGetArrayRead(mesh->loc,(const double **)&aloc); CHKERRQ(ierr);
+        ierr = VecGetArrayRead(mesh->loc,(const PetscReal **)&aloc); CHKERRQ(ierr);
         for (n = 0; n < mesh->N; n++) {
             ierr = PetscViewerASCIISynchronizedPrintf(viewer,"    %3d : (%g,%g)\n",
                                n,aloc[n].x,aloc[n].y); CHKERRQ(ierr);
         }
-        ierr = VecRestoreArrayRead(mesh->loc,(const double **)&aloc); CHKERRQ(ierr);
+        ierr = VecRestoreArrayRead(mesh->loc,(const PetscReal **)&aloc); CHKERRQ(ierr);
     } else {
         ierr = PetscViewerASCIISynchronizedPrintf(viewer,"node coordinates empty or unallocated\n"); CHKERRQ(ierr);
     }
@@ -78,7 +78,7 @@ PetscErrorCode UMViewASCII(UM *mesh, PetscViewer viewer) {
 
 PetscErrorCode UMViewSolutionBinary(UM *mesh, char *filename, Vec u) {
     PetscErrorCode ierr;
-    int         Nu;
+    PetscInt       Nu;
     PetscViewer viewer;
     ierr = VecGetSize(u,&Nu); CHKERRQ(ierr);
     if (Nu != mesh->N) {
@@ -94,7 +94,7 @@ PetscErrorCode UMViewSolutionBinary(UM *mesh, char *filename, Vec u) {
 
 PetscErrorCode UMReadNodes(UM *mesh, char *filename) {
     PetscErrorCode ierr;
-    int         twoN;
+    PetscInt       twoN;
     PetscViewer viewer;
     if (mesh->N > 0) {
         SETERRQ(PETSC_COMM_WORLD,1,"nodes already created?\n");
@@ -115,8 +115,8 @@ PetscErrorCode UMReadNodes(UM *mesh, char *filename) {
 
 PetscErrorCode UMCheckElements(UM *mesh) {
     PetscErrorCode ierr;
-    const int   *ae;
-    int         k, m;
+    const PetscInt  *ae;
+    PetscInt        k, m;
     if ((mesh->K == 0) || (mesh->e == NULL)) {
         SETERRQ(PETSC_COMM_WORLD,1,
                 "number of elements unknown; call UMReadElements() first\n");
@@ -142,8 +142,8 @@ PetscErrorCode UMCheckElements(UM *mesh) {
 
 PetscErrorCode UMCheckBoundaryData(UM *mesh) {
     PetscErrorCode ierr;
-    const int   *ans, *abf;
-    int         n, m;
+    const PetscInt  *ans, *abf;
+    PetscInt        n, m;
     if (mesh->N == 0) {
         SETERRQ(PETSC_COMM_WORLD,2,
                 "node size unknown so boundary flag check impossible; call UMReadNodes() first\n");
@@ -188,8 +188,8 @@ PetscErrorCode UMCheckBoundaryData(UM *mesh) {
 
 PetscErrorCode UMReadISs(UM *mesh, char *filename) {
     PetscErrorCode ierr;
-    PetscViewer viewer;
-    int         n_bf;
+    PetscViewer  viewer;
+    PetscInt     n_bf;
     if ((!mesh->loc) || (mesh->N == 0)) {
         SETERRQ(PETSC_COMM_WORLD,2,
                 "node coordinates not created ... do that first ... stopping\n");
@@ -218,7 +218,7 @@ PetscErrorCode UMReadISs(UM *mesh, char *filename) {
     }
     // FIXME  seems there is no way to tell if file is empty at this point
     // create and load ns last ... may *start with a negative value* in which case set P = 0
-    const int *ans;
+    const PetscInt *ans;
     ierr = ISCreate(PETSC_COMM_WORLD,&(mesh->ns)); CHKERRQ(ierr);
     ierr = ISLoad(mesh->ns,viewer); CHKERRQ(ierr);
     ierr = ISGetIndices(mesh->ns,&ans); CHKERRQ(ierr);
@@ -243,13 +243,14 @@ PetscErrorCode UMReadISs(UM *mesh, char *filename) {
 }
 
 
-PetscErrorCode UMStats(UM *mesh, double *maxh, double *meanh, double *maxa, double *meana) {
+PetscErrorCode UMStats(UM *mesh, PetscReal *maxh, PetscReal *meanh,
+                       PetscReal *maxa, PetscReal *meana) {
     PetscErrorCode ierr;
-    const int   *ae;
-    const Node  *aloc;
-    int         k;
-    double      x[3], y[3], ax, ay, bx, by, cx, cy, h, a,
-                Maxh = 0.0, Maxa = 0.0, Sumh = 0.0, Suma = 0.0;
+    const PetscInt *ae;
+    const Node     *aloc;
+    PetscInt       k;
+    PetscReal      x[3], y[3], ax, ay, bx, by, cx, cy, h, a,
+                   Maxh = 0.0, Maxa = 0.0, Sumh = 0.0, Suma = 0.0;
     if ((mesh->K == 0) || (mesh->e == NULL)) {
         SETERRQ(PETSC_COMM_WORLD,1,
                 "number of elements unknown; call UMReadElements() first\n");
@@ -295,7 +296,7 @@ PetscErrorCode UMGetNodeCoordArrayRead(UM *mesh, const Node **xy) {
     if ((!mesh->loc) || (mesh->N == 0)) {
         SETERRQ(PETSC_COMM_WORLD,1,"node coordinates not created ... stopping\n");
     }
-    ierr = VecGetArrayRead(mesh->loc,(const double **)xy); CHKERRQ(ierr);
+    ierr = VecGetArrayRead(mesh->loc,(const PetscReal **)xy); CHKERRQ(ierr);
     return 0;
 }
 
@@ -305,7 +306,7 @@ PetscErrorCode UMRestoreNodeCoordArrayRead(UM *mesh, const Node **xy) {
     if ((!mesh->loc) || (mesh->N == 0)) {
         SETERRQ(PETSC_COMM_WORLD,1,"node coordinates not created ... stopping\n");
     }
-    ierr = VecRestoreArrayRead(mesh->loc,(const double **)xy); CHKERRQ(ierr);
+    ierr = VecRestoreArrayRead(mesh->loc,(const PetscReal **)xy); CHKERRQ(ierr);
     return 0;
 }
 
