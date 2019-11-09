@@ -16,15 +16,15 @@ static char help[] =
 #include "../quadrature.h"
 
 typedef struct {
-    double    q,          // the exponent in the diffusivity;
+    PetscReal q,          // the exponent in the diffusivity;
                           //   =-1/2 for minimal surface eqn; =0 for Laplace eqn
               tent_H,     // height of tent door along y=0 boundary
               catenoid_c; // parameter in catenoid formula
-    int       quaddegree; // quadrature degree used in -mse_monitor
+    PetscInt  quaddegree; // quadrature degree used in -mse_monitor
 } MinimalCtx;
 
 // Dirichlet boundary conditions
-static double g_bdry_tent(double x, double y, double z, void *ctx) {
+static PetscReal g_bdry_tent(PetscReal x, PetscReal y, PetscReal z, void *ctx) {
     PoissonCtx *user = (PoissonCtx*)ctx;
     MinimalCtx *mctx = (MinimalCtx*)(user->addctx);
     if (x < 1.0e-8) {
@@ -33,16 +33,16 @@ static double g_bdry_tent(double x, double y, double z, void *ctx) {
         return 0;
 }
 
-static double g_bdry_catenoid(double x, double y, double z, void *ctx) {
-    PoissonCtx   *user = (PoissonCtx*)ctx;
-    MinimalCtx   *mctx = (MinimalCtx*)(user->addctx);
-    const double c = mctx->catenoid_c;
+static PetscReal g_bdry_catenoid(PetscReal x, PetscReal y, PetscReal z, void *ctx) {
+    PoissonCtx      *user = (PoissonCtx*)ctx;
+    MinimalCtx      *mctx = (MinimalCtx*)(user->addctx);
+    const PetscReal c = mctx->catenoid_c;
     return c * cosh(x/c) * sin(acos( (y/c) / cosh(x/c) ));
 }
 
 // the coefficient (diffusivity) of minimal surface equation, as a function
 //   of  w = |grad u|^2
-static double DD(double w, double q) {
+static PetscReal DD(PetscReal w, PetscReal q) {
     return pow(1.0 + w,q);
 }
 
@@ -51,11 +51,11 @@ static const char* ProblemTypes[] = {"tent","catenoid",
                                      "ProblemType", "", NULL};
 
 extern PetscErrorCode FormExactFromG(DMDALocalInfo*, Vec, PoissonCtx*);
-extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, double**,
-                                        double **FF, PoissonCtx*);
-extern PetscErrorCode MSEMonitor(SNES, int, double, void*);
+extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, PetscReal**,
+                                        PetscReal **FF, PoissonCtx*);
+extern PetscErrorCode MSEMonitor(SNES, int, PetscReal, void*);
 
-int main(int argc,char **argv) {
+int main(int argc, char **argv) {
     PetscErrorCode ierr;
     DM             da;
     SNES           snes;
@@ -171,7 +171,7 @@ int main(int argc,char **argv) {
                        info.mx,info.my,ProblemTypes[problem]); CHKERRQ(ierr);
     if ((problem == CATENOID) && (mctx.q == -0.5)) {
         Vec    u_exact;
-        double errnorm;
+        PetscReal errnorm;
         ierr = VecDuplicate(u,&u_exact); CHKERRQ(ierr);
         ierr = FormExactFromG(&info,u_exact,&user); CHKERRQ(ierr);
         ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
@@ -188,10 +188,10 @@ int main(int argc,char **argv) {
 }
 
 PetscErrorCode FormExactFromG(DMDALocalInfo *info, Vec uexact,
-                         PoissonCtx *user) {
+                              PoissonCtx *user) {
     PetscErrorCode ierr;
-    int     i, j;
-    double  xymin[2], xymax[2], hx, hy, x, y, **auexact;
+    PetscInt   i, j;
+    PetscReal  xymin[2], xymax[2], hx, hy, x, y, **auexact;
     ierr = DMGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
     hx = (xymax[0] - xymin[0]) / (info->mx - 1);
     hy = (xymax[1] - xymin[1]) / (info->my - 1);
@@ -207,12 +207,12 @@ PetscErrorCode FormExactFromG(DMDALocalInfo *info, Vec uexact,
     return 0;
 }
 
-PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
-                                 double **FF, PoissonCtx *user) {
+PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal **au,
+                                 PetscReal **FF, PoissonCtx *user) {
     PetscErrorCode ierr;
     MinimalCtx *mctx = (MinimalCtx*)(user->addctx);
-    int        i, j;
-    double     xymin[2], xymax[2], hx, hy, hxhy, hyhx, x, y,
+    PetscInt   i, j;
+    PetscReal  xymin[2], xymax[2], hx, hy, hxhy, hyhx, x, y,
                ue, uw, un, us, une, use, unw, usw,
                dux, duy, De, Dw, Dn, Ds;
     ierr = DMGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
@@ -284,7 +284,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
 
 // compute surface area and bounds on diffusivity using Q^1 elements and
 // tensor product gaussian quadrature
-PetscErrorCode MSEMonitor(SNES snes, int its, double norm, void *user) {
+PetscErrorCode MSEMonitor(SNES snes, PetscInt its, PetscReal norm, void *user) {
     PetscErrorCode ierr;
     PoissonCtx     *pctx = (PoissonCtx*)(user);
     MinimalCtx     *mctx = (MinimalCtx*)(pctx->addctx);
@@ -292,11 +292,11 @@ PetscErrorCode MSEMonitor(SNES snes, int its, double norm, void *user) {
     Vec            u, uloc;
     DMDALocalInfo  info;
     const Quad1D   q = gausslegendre[mctx->quaddegree-1];   // from ../quadrature.h
-    double         xymin[2], xymax[2], hx, hy, **au, x_i, y_j, x, y,
+    PetscReal      xymin[2], xymax[2], hx, hy, **au, x_i, y_j, x, y,
                    ux, uy, W, D,
                    Dminloc = PETSC_INFINITY, Dmaxloc = 0.0, Dmin, Dmax,
                    arealoc = 0.0, area;
-    int            i, j, r, s, tab;
+    PetscInt       i, j, r, s, tab;
     MPI_Comm       comm;
 
     ierr = SNESGetDM(snes, &da); CHKERRQ(ierr);
@@ -350,9 +350,9 @@ PetscErrorCode MSEMonitor(SNES snes, int its, double norm, void *user) {
 
     // do global reductions (because could be in parallel)
     ierr = PetscObjectGetComm((PetscObject)da,&comm); CHKERRQ(ierr);
-    ierr = MPI_Allreduce(&arealoc,&area,1,MPI_DOUBLE,MPI_SUM,comm); CHKERRQ(ierr);
-    ierr = MPI_Allreduce(&Dminloc,&Dmin,1,MPI_DOUBLE,MPI_MIN,comm); CHKERRQ(ierr);
-    ierr = MPI_Allreduce(&Dmaxloc,&Dmax,1,MPI_DOUBLE,MPI_MAX,comm); CHKERRQ(ierr);
+    ierr = MPI_Allreduce(&arealoc,&area,1,MPIU_REAL,MPIU_SUM,comm); CHKERRQ(ierr);
+    ierr = MPI_Allreduce(&Dminloc,&Dmin,1,MPIU_REAL,MPIU_MIN,comm); CHKERRQ(ierr);
+    ierr = MPI_Allreduce(&Dmaxloc,&Dmax,1,MPIU_REAL,MPIU_MAX,comm); CHKERRQ(ierr);
 
     // report using tabbed (indented) print
     ierr = PetscObjectGetTabLevel((PetscObject)snes,&tab); CHKERRQ(ierr);

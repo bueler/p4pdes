@@ -21,34 +21,34 @@ static char help[] =
 #include <petsc.h>
 
 typedef struct {
-    double  v, u;
+    PetscReal  v, u;
 } Field;
 
 typedef struct {
-    double  (*f)(double x, double y);  // right-hand side
+    PetscReal  (*f)(PetscReal x, PetscReal y);  // right-hand side
 } BiharmCtx;
 
-static double c(double x) {
+static PetscReal c(PetscReal x) {
     return x*x*x * (1.0-x)*(1.0-x)*(1.0-x);
 }
 
-static double ddc(double x) {
+static PetscReal ddc(PetscReal x) {
     return 6.0 * x * (1.0-x) * (1.0 - 5.0 * x + 5.0 * x*x);
 }
 
-static double d4c(double x) {
+static PetscReal d4c(PetscReal x) {
     return - 72.0 * (1.0 - 5.0 * x + 5.0 * x*x);
 }
 
-static double u_exact_fcn(double x, double y) {
+static PetscReal u_exact_fcn(PetscReal x, PetscReal y) {
     return c(x) * c(y);
 }
 
-static double lap_u_exact_fcn(double x, double y) {
+static PetscReal lap_u_exact_fcn(PetscReal x, PetscReal y) {
     return - ddc(x) * c(y) - c(x) * ddc(y);  // Lap u = - grad^2 u
 }
 
-static double f_fcn(double x, double y) {
+static PetscReal f_fcn(PetscReal x, PetscReal y) {
     return d4c(x) * c(y) + 2.0 * ddc(x) * ddc(y) + c(x) * d4c(y);  // Lap^2 u = grad^4 u
 }
 
@@ -63,7 +63,7 @@ int main(int argc,char **argv) {
     Vec            w, w_initial, w_exact;
     BiharmCtx      user;
     Field          **aW;
-    double         normv, normu, errv, erru;
+    PetscReal      normv, normu, errv, erru;
     DMDALocalInfo  info;
 
     PetscInitialize(&argc,&argv,NULL,help);
@@ -120,8 +120,8 @@ int main(int argc,char **argv) {
 
 PetscErrorCode FormExactWLocal(DMDALocalInfo *info, Field **aW, BiharmCtx *user) {
     PetscErrorCode ierr;
-    int     i, j;
-    double  xymin[2], xymax[2], hx, hy, x, y;
+    PetscInt   i, j;
+    PetscReal  xymin[2], xymax[2], hx, hy, x, y;
     ierr = DMGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
     hx = (xymax[0] - xymin[0]) / (info->mx - 1);
     hy = (xymax[1] - xymin[1]) / (info->my - 1);
@@ -139,8 +139,8 @@ PetscErrorCode FormExactWLocal(DMDALocalInfo *info, Field **aW, BiharmCtx *user)
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, Field **aW,
                                  Field **FF, BiharmCtx *user) {
     PetscErrorCode ierr;
-    int        i, j;
-    double     xymin[2], xymax[2], hx, hy, darea, scx, scy, scdiag, x, y,
+    PetscInt   i, j;
+    PetscReal  xymin[2], xymax[2], hx, hy, darea, scx, scy, scdiag, x, y,
                ve, vw, vn, vs, ue, uw, un, us;
     ierr = DMGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
     hx = (xymax[0] - xymin[0]) / (info->mx - 1);
@@ -179,8 +179,8 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, Field **aW,
 PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, Field **aW,
                                  Mat J, Mat Jpre, BiharmCtx *user) {
     PetscErrorCode ierr;
-    int          i, j, c, ncol;
-    double       xymin[2], xymax[2], hx, hy, darea, scx, scy, scdiag, val[6];
+    PetscInt     i, j, c, ncol;
+    PetscReal    xymin[2], xymax[2], hx, hy, darea, scx, scy, scdiag, val[6];
     MatStencil   col[6], row;
 
     ierr = DMGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);

@@ -34,25 +34,25 @@ $ for LEV in 3 4 5 6 7 8 9; do ./bratu2D -da_refine $LEV -snes_monitor -snes_fd_
 #include "../../ch6/poissonfunctions.h"
 
 typedef struct {
-    double    lambda;
+    PetscReal lambda;
     PetscBool exact;
     int       residualcount, ngscount;
 } BratuCtx;
 
-static double g_zero(double x, double y, double z, void *ctx) {
+static PetscReal g_zero(PetscReal x, PetscReal y, PetscReal z, void *ctx) {
     return 0.0;
 }
 
-static double g_liouville(double x, double y, double z, void *ctx) {
-    double r2 = (x + 1.0) * (x + 1.0) + (y + 1.0) * (y + 1.0),
-           qq = r2 * r2 + 1.0,
-           omega = r2 / (qq * qq);
-    return PetscLogReal(32.0 * omega);
+static PetscReal g_liouville(PetscReal x, PetscReal y, PetscReal z, void *ctx) {
+    PetscReal r2 = (x + 1.0) * (x + 1.0) + (y + 1.0) * (y + 1.0),
+              qq = r2 * r2 + 1.0,
+              omega = r2 / (qq * qq);
+    return 32.0 * omega;
 }
 
 extern PetscErrorCode FormUExact(DMDALocalInfo*, Vec, PoissonCtx*);
-extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, double **,
-                                        double**, PoissonCtx*);
+extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, PetscReal **,
+                                        PetscReal**, PoissonCtx*);
 extern PetscErrorCode NonlinearGS(SNES, Vec, Vec, void*);
 
 int main(int argc,char **argv) {
@@ -65,7 +65,7 @@ int main(int argc,char **argv) {
     DMDALocalInfo  info;
     PetscBool      showcounts = PETSC_FALSE;
     PetscLogDouble flops;
-    double         errinf;
+    PetscReal      errinf;
 
     PetscInitialize(&argc,&argv,NULL,help);
     user.Lx = 1.0;
@@ -148,17 +148,17 @@ int main(int argc,char **argv) {
 
 PetscErrorCode FormUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
     PetscErrorCode ierr;
-    BratuCtx  *bctx = (BratuCtx*)(user->addctx);
-    int       i, j;
-    double    hx, hy, x, y, **au;
+    BratuCtx     *bctx = (BratuCtx*)(user->addctx);
+    PetscInt     i, j;
+    PetscReal    hx, hy, x, y, **au;
     if (user->g_bdry != &g_liouville) {
         SETERRQ(PETSC_COMM_WORLD,1,"exact solution only implemented for g_liouville() boundary conditions\n");
     }
     if (bctx->lambda != 1.0) {
         SETERRQ(PETSC_COMM_WORLD,2,"Liouville exact solution only implemented for lambda = 1.0\n");
     }
-    hx = 1.0 / (double)(info->mx - 1);
-    hy = 1.0 / (double)(info->my - 1);
+    hx = 1.0 / (PetscReal)(info->mx - 1);
+    hy = 1.0 / (PetscReal)(info->my - 1);
     ierr = DMDAVecGetArray(info->da, u, &au);CHKERRQ(ierr);
     for (j=info->ys; j<info->ys+info->ym; j++) {
         y = j * hy;
@@ -172,15 +172,15 @@ PetscErrorCode FormUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
 }
 
 // compute F(u), the residual of the discretized PDE on the given grid
-PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
-                                 double **FF, PoissonCtx *user) {
+PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal **au,
+                                 PetscReal **FF, PoissonCtx *user) {
     PetscErrorCode ierr;
     BratuCtx   *bctx = (BratuCtx*)(user->addctx);
-    int        i, j;
-    double     hx, hy, darea, hxhy, hyhx, x, y;
+    PetscInt   i, j;
+    PetscReal  hx, hy, darea, hxhy, hyhx, x, y;
 
-    hx = 1.0 / (double)(info->mx - 1);
-    hy = 1.0 / (double)(info->my - 1);
+    hx = 1.0 / (PetscReal)(info->mx - 1);
+    hy = 1.0 / (PetscReal)(info->my - 1);
     darea = hx * hy;
     hxhy = hx / hy;
     hyhx = hy / hx;
@@ -207,7 +207,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
 PetscErrorCode NonlinearGS(SNES snes, Vec u, Vec b, void *ctx) {
     PetscErrorCode ierr;
     PetscInt       i, j, k, maxits, totalits=0, sweeps, l;
-    double         atol, rtol, stol, hx, hy, darea, hxhy, hyhx, x, y,
+    PetscReal      atol, rtol, stol, hx, hy, darea, hxhy, hyhx, x, y,
                    **au, **ab, bij, uu, phi0, phi, dphidu, s;
     DM             da;
     DMDALocalInfo  info;
@@ -220,8 +220,8 @@ PetscErrorCode NonlinearGS(SNES snes, Vec u, Vec b, void *ctx) {
     ierr = SNESGetDM(snes,&da);CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
 
-    hx = 1.0 / (double)(info.mx - 1);
-    hy = 1.0 / (double)(info.my - 1);
+    hx = 1.0 / (PetscReal)(info.mx - 1);
+    hy = 1.0 / (PetscReal)(info.my - 1);
     darea = hx * hy;
     hxhy = hx / hy;
     hyhx = hy / hx;
