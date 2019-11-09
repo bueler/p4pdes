@@ -19,12 +19,12 @@ typedef enum {NONE, CENTERED, VANLEER} LimiterType;
 static const char *LimiterTypes[] = {"none","centered","vanleer",
                                      "LimiterType", "", NULL};
 
-static double centered(double theta) {
+static PetscReal centered(PetscReal theta) {
     return 0.5;
 }
 
-static double vanleer(double theta) {
-    const double abstheta = PetscAbsReal(theta);
+static PetscReal vanleer(PetscReal theta) {
+    const PetscReal abstheta = PetscAbsReal(theta);
     return 0.5 * (theta + abstheta) / (1.0 + abstheta);   // 4 flops
 }
 
@@ -35,48 +35,48 @@ static const char *ProblemTypes[] = {"nowind", "layer", "glaze",
                                      "ProblemType", "", NULL};
 
 typedef struct {
-    ProblemType problem;
-    double      eps;                              // diffusion eps > 0
-    double      (*limiter_fcn)(double),
-                (*g_fcn)(double, double, void*),  // right-hand-side source
-                (*b_fcn)(double, double, void*);  // boundary condition
-    PetscBool   none_on_peclet,                   // if true use none limiter when P^h > threshold
-                small_peclet_achieved;            // true if on finest grid P^h <= threshold
-    double      a_scale,                          // scale for wind
-                peclet_threshold;
+    ProblemType  problem;
+    PetscReal    eps,                              // diffusion eps > 0
+                 a_scale,                          // scale for wind
+                 peclet_threshold,
+                 (*limiter_fcn)(PetscReal),
+                 (*g_fcn)(PetscReal, PetscReal, void*),  // right-hand-side source
+                 (*b_fcn)(PetscReal, PetscReal, void*);  // boundary condition
+    PetscBool    none_on_peclet,                   // if true use none limiter when P^h > threshold
+                 small_peclet_achieved;            // true if on finest grid P^h <= threshold
 } AdCtx;
 
 // used for source functions
-static double zero(double x, double y, void *user) {
+static PetscReal zero(PetscReal x, PetscReal y, void *user) {
     return 0.0;
 }
 
 // problem NOWIND: same problem as ./fish -fsh_problem manuexp
-static double nowind_u(double x, double y, void *user) {  // exact solution
+static PetscReal nowind_u(PetscReal x, PetscReal y, void *user) {  // exact solution
     return - x * exp(y);
 }
 
-static double nowind_g(double x, double y, void *user) {
+static PetscReal nowind_g(PetscReal x, PetscReal y, void *user) {
     AdCtx* usr = (AdCtx*)user;
     return usr->eps * x * exp(y);
 }
 
-static double nowind_b(double x, double y, void *user) {
+static PetscReal nowind_b(PetscReal x, PetscReal y, void *user) {
     return nowind_u(x,y,user);
 }
 
 // problem LAYER:  Elman page 237, Example 6.1.1
-static double layer_u(double x, double y, AdCtx *user) {  // exact solution
+static PetscReal layer_u(PetscReal x, PetscReal y, AdCtx *user) {  // exact solution
     AdCtx* usr = (AdCtx*)user;
     return x * (1.0 - exp((y-1) / usr->eps)) / (1.0 - exp(- 2.0 / usr->eps));
 }
 
-static double layer_b(double x, double y, void *user) {
+static PetscReal layer_b(PetscReal x, PetscReal y, void *user) {
     return layer_u(x,y,user);
 }
 
 // problem GLAZE:  Elman page 240, Example 6.1.4
-static double glaze_b(double x, double y, void *user) {
+static PetscReal glaze_b(PetscReal x, PetscReal y, void *user) {
     if (x > 0.0 && y < x && y > -x)
        return 1.0;   // along x=1 boundary
     else
@@ -89,7 +89,7 @@ static void* bptr[]   = {&nowind_b, &layer_b, &glaze_b};
 
 /* This vector function returns q=0,1 component.  It is used in
    FormFunctionLocal() to get a(x,y). */
-static double wind_a(double x, double y, int q, AdCtx *user) {
+static PetscReal wind_a(PetscReal x, PetscReal y, PetscInt q, AdCtx *user) {
     switch (user->problem) {
         case NOWIND:
             return 0.0;
@@ -103,8 +103,8 @@ static double wind_a(double x, double y, int q, AdCtx *user) {
 }
 
 extern PetscErrorCode FormUExact(DMDALocalInfo*,AdCtx*, 
-                                 double (*)(double, double, void*),Vec);
-extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*,double**,double**,AdCtx*);
+                                 PetscReal (*)(PetscReal, PetscReal, void*),Vec);
+extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*,PetscReal**,PetscReal**,AdCtx*);
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
@@ -112,7 +112,7 @@ int main(int argc,char **argv) {
     SNES           snes;
     Vec            u_initial, u;
     DMDALocalInfo  info;
-    double         (*uexact_fcn)(double, double, void*);
+    PetscReal      (*uexact_fcn)(PetscReal, PetscReal, void*);
     LimiterType    limiter = NONE;
     PetscBool      init_exact = PETSC_FALSE;
     AdCtx          user;
@@ -201,7 +201,7 @@ int main(int argc,char **argv) {
 
     if (uexact_fcn != NULL) {
         Vec     u_exact;
-        double  xymin[2], xymax[2], hx, hy, err2;
+        PetscReal  xymin[2], xymax[2], hx, hy, err2;
         ierr = VecDuplicate(u,&u_exact); CHKERRQ(ierr);
         ierr = FormUExact(&info,&user,uexact_fcn,u_exact); CHKERRQ(ierr);
         ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr);    // u <- u + (-1.0) u_exact
@@ -220,10 +220,10 @@ int main(int argc,char **argv) {
 }
 
 PetscErrorCode FormUExact(DMDALocalInfo *info, AdCtx *usr,
-                          double (*uexact)(double, double, void*), Vec uex) {
+                          PetscReal (*uexact)(PetscReal, PetscReal, void*), Vec uex) {
     PetscErrorCode  ierr;
-    int          i, j;
-    double       xymin[2], xymax[2], hx, hy, x, y, **auex;
+    PetscInt        i, j;
+    PetscReal       xymin[2], xymax[2], hx, hy, x, y, **auex;
 
     if (uexact == NULL) {
         SETERRQ(PETSC_COMM_WORLD,1,"exact solution not available");
@@ -257,16 +257,16 @@ W |  *  | E
   -------
      S
 */
-PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double **au,
-                                 double **aF, AdCtx *usr) {
+PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal **au,
+                                 PetscReal **aF, AdCtx *usr) {
     PetscErrorCode ierr;
-    int          i, j, p;
-    double       xymin[2], xymax[2], hx, hy, Ph, hx2, hy2, scF, scBC,
-                 x, y, uE, uW, uN, uS, uxx, uyy,
-                 ap, flux, u_up, u_dn, u_far, theta;
-    double       (*limiter)(double);
-    PetscBool    iowned, jowned, ip1owned, jp1owned;
-    PetscLogDouble ff;
+    PetscInt        i, j, p;
+    PetscReal       xymin[2], xymax[2], hx, hy, Ph, hx2, hy2, scF, scBC,
+                    x, y, uE, uW, uN, uS, uxx, uyy,
+                    ap, flux, u_up, u_dn, u_far, theta;
+    PetscReal       (*limiter)(PetscReal);
+    PetscBool       iowned, jowned, ip1owned, jp1owned;
+    PetscLogDouble  ff;
 
     ierr = DMGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
     hx = (xymax[0] - xymin[0]) / (info->mx - 1);

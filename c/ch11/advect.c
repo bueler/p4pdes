@@ -32,24 +32,24 @@ static const char *ProblemTypes[] = {"straight","rotation",
                                      "ProblemType", "", NULL};
 
 typedef struct {
-    ProblemType    problem;
-    double         windx, windy,            // x,y velocity in STRAIGHT
-                   (*initial_fcn)(double,double), // for STRAIGHT
-                   (*limiter_fcn)(double),  // limiter used in RHS
-                   (*jac_limiter_fcn)(double); // used in Jacobian
+    ProblemType  problem;
+    PetscReal    windx, windy,            // x,y velocity in STRAIGHT
+                 (*initial_fcn)(PetscReal,PetscReal), // for STRAIGHT
+                 (*limiter_fcn)(PetscReal),  // limiter used in RHS
+                 (*jac_limiter_fcn)(PetscReal); // used in Jacobian
 } AdvectCtx;
 //ENDCTX
 
 //STARTINITIAL
 // equal to 1 in a disc of radius 0.2 around (-0.6,-0.6)
-static double stump(double x, double y) {
-    const double r = PetscSqrtReal((x+0.6)*(x+0.6) + (y+0.6)*(y+0.6));
+static PetscReal stump(PetscReal x, PetscReal y) {
+    const PetscReal r = PetscSqrtReal((x+0.6)*(x+0.6) + (y+0.6)*(y+0.6));
     return (r < 0.2) ? 1.0 : 0.0;
 }
 
 // smooth (C^6) version of stump
-static double smooth(double x, double y) {
-    const double r = PetscSqrtReal((x+0.6)*(x+0.6) + (y+0.6)*(y+0.6));
+static PetscReal smooth(PetscReal x, PetscReal y) {
+    const PetscReal r = PetscSqrtReal((x+0.6)*(x+0.6) + (y+0.6)*(y+0.6));
     if (r < 0.2)
         return PetscPowReal(1.0 - PetscPowReal(r / 0.2,6.0),6.0);
     else
@@ -57,13 +57,13 @@ static double smooth(double x, double y) {
 }
 
 // cone of height 1 of base radius 0.35 centered at (-0.45,0.0)
-static double cone(double x, double y) {
-    const double r = PetscSqrtReal((x+0.45)*(x+0.45) + y*y);
+static PetscReal cone(PetscReal x, PetscReal y) {
+    const PetscReal r = PetscSqrtReal((x+0.45)*(x+0.45) + y*y);
     return (r < 0.35) ? 1.0 - r / 0.35 : 0.0;
 }
 
 // equal to 1 in square of side-length 0.5 (0.1,0.6) x (-0.25,0.25)
-static double box(double x, double y) {
+static PetscReal box(PetscReal x, PetscReal y) {
     if ((0.1 < x) && (x < 0.6) && (-0.25 < y) && (y < 0.25))
         return 1.0;
     else
@@ -75,21 +75,21 @@ static void* initialptr[] = {&stump, &smooth, &cone, &box};
 
 //STARTLIMITERS
 /* the centered-space method is linear */
-static double centered(double theta) {
+static PetscReal centered(PetscReal theta) {
     return 0.5;
 }
 
 /* van Leer (1974) limiter is formula (1.11) in section III.1 of
 Hundsdorfer & Verwer (2003) */
-static double vanleer(double theta) {
-    const double abstheta = PetscAbsReal(theta);
+static PetscReal vanleer(PetscReal theta) {
+    const PetscReal abstheta = PetscAbsReal(theta);
     return 0.5 * (theta + abstheta) / (1.0 + abstheta);
 }
 
 /* Koren (1993) limiter is formula (1.7) in section III.1 of
 Hundsdorfer & Verwer (2003) */
-static double koren(double theta) {
-    const double z = (1.0/3.0) + (1.0/6.0) * theta;
+static PetscReal koren(PetscReal theta) {
+    const PetscReal z = (1.0/3.0) + (1.0/6.0) * theta;
     return PetscMax(0.0, PetscMin(1.0, PetscMin(z, theta)));
 }
 
@@ -97,7 +97,7 @@ static void* limiterptr[] = {NULL, &centered, &vanleer, &koren};
 //ENDLIMITERS
 
 // velocity  a(x,y) = ( a^x(x,y), a^y(x,y) )
-static double a_wind(double x, double y, int dir, AdvectCtx* user) {
+static PetscReal a_wind(PetscReal x, PetscReal y, PetscInt dir, AdvectCtx* user) {
     switch (user->problem) {
         case STRAIGHT:
             return (dir == 0) ? user->windx : user->windy;
@@ -109,21 +109,21 @@ static double a_wind(double x, double y, int dir, AdvectCtx* user) {
 }
 
 // source  g(x,y,u)
-static double g_source(double x, double y, double u, AdvectCtx* user) {
+static PetscReal g_source(PetscReal x, PetscReal y, PetscReal u, AdvectCtx* user) {
     return 0.0;
 }
 
 //         d g(x,y,u) / d u
-static double dg_source(double x, double y, double u, AdvectCtx* user) {
+static PetscReal dg_source(PetscReal x, PetscReal y, PetscReal u, AdvectCtx* user) {
     return 0.0;
 }
 
 extern PetscErrorCode FormInitial(DMDALocalInfo*, Vec, AdvectCtx*);
 extern PetscErrorCode DumpBinary(const char*, const char*, Vec);
-extern PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo*, double,
-        double**, double**, AdvectCtx*);
-extern PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo*, double,
-        double**, Mat, Mat, AdvectCtx*);
+extern PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo*, PetscReal,
+        PetscReal**, PetscReal**, AdvectCtx*);
+extern PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo*, PetscReal,
+        PetscReal**, Mat, Mat, AdvectCtx*);
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
@@ -131,9 +131,9 @@ int main(int argc,char **argv) {
     DM               da;
     Vec              u;
     DMDALocalInfo    info;
-    double           hx, hy, t0, c, dt, tf;
+    PetscReal        hx, hy, t0, c, dt, tf;
     char             fileroot[PETSC_MAX_PATH_LEN] = "";
-    int              steps;
+    PetscInt         steps;
     PetscBool        oneline = PETSC_FALSE, snesfdset, snesfdcolorset;
     InitialType      initial = STUMP;
     LimiterType      limiter = KOREN, jac_limiter = NONE;
@@ -251,7 +251,7 @@ int main(int argc,char **argv) {
          && (fmod(user.windx,2.0) == 0.0) && (fmod(user.windy,2.0) == 0.0) ) {
         // exact solution is same as initial condition
         Vec    uexact;
-        double norms[2];
+        PetscReal norms[2];
         ierr = VecDuplicate(u,&uexact); CHKERRQ(ierr);
         ierr = FormInitial(&info,uexact,&user); CHKERRQ(ierr);
         ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr); // u <- u + (-1.0) uexact
@@ -278,8 +278,8 @@ int main(int argc,char **argv) {
 
 PetscErrorCode FormInitial(DMDALocalInfo *info, Vec u, AdvectCtx* user) {
     PetscErrorCode ierr;
-    int          i, j;
-    double       hx, hy, x, y, **au;
+    PetscInt   i, j;
+    PetscReal  hx, hy, x, y, **au;
 
     ierr = VecSet(u,0.0); CHKERRQ(ierr);  // clear it first
     ierr = DMDAVecGetArray(info->da, u, &au); CHKERRQ(ierr);
@@ -327,11 +327,11 @@ so our finite volume scheme computes
 but only east (E) and north (N) fluxes are computed
 */
 //STARTFUNCTION
-PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t,
-        double **au, double **aG, AdvectCtx *user) {
-    int         i, j, q, dj, di;
-    double      hx, hy, halfx, halfy, x, y, a,
-                u_up, u_dn, u_far, theta, flux;
+PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, PetscReal t,
+        PetscReal **au, PetscReal **aG, AdvectCtx *user) {
+    PetscInt   i, j, q, dj, di;
+    PetscReal  hx, hy, halfx, halfy, x, y, a,
+               u_up, u_dn, u_far, theta, flux;
 
     // clear G first
     for (j = info->ys; j < info->ys + info->ym; j++)
@@ -388,14 +388,14 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, double t,
 }
 //ENDFUNCTION
 
-PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info, double t,
-        double **au, Mat J, Mat P, AdvectCtx *user) {
+PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info, PetscReal t,
+        PetscReal **au, Mat J, Mat P, AdvectCtx *user) {
     PetscErrorCode ierr;
-    const int   dir[4] = { 0, 1, 0, 1},  // use x (0) or y (1) component
-                xsh[4] = { 1, 0,-1, 0},  ysh[4]   = { 0, 1, 0,-1};
-    int         i, j, l, nc;
-    double      hx, hy, halfx, halfy, x, y, a, v[9];
-    MatStencil  col[9],row;
+    const PetscInt  dir[4] = { 0, 1, 0, 1},  // use x (0) or y (1) component
+                    xsh[4] = { 1, 0,-1, 0},  ysh[4]   = { 0, 1, 0,-1};
+    PetscInt        i, j, l, nc;
+    PetscReal       hx, hy, halfx, halfy, x, y, a, v[9];
+    MatStencil      col[9],row;
 
     ierr = MatZeroEntries(P); CHKERRQ(ierr);
     hx = 2.0 / info->mx;  hy = 2.0 / info->my;

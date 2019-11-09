@@ -15,41 +15,41 @@ typedef enum {NONE, CENTERED, VANLEER} LimiterType;
 static const char *LimiterTypes[] = {"none","centered","vanleer",
                                      "LimiterType", "", NULL};
 
-static double centered(double theta) {
+static PetscReal centered(PetscReal theta) {
     return 0.5;
 }
 
-static double vanleer(double theta) {
-    const double abstheta = PetscAbsReal(theta);
+static PetscReal vanleer(PetscReal theta) {
+    const PetscReal abstheta = PetscAbsReal(theta);
     return 0.5 * (theta + abstheta) / (1.0 + abstheta);
 }
 
 static void* limiterptr[] = {NULL, &centered, &vanleer};
 
 typedef struct {
-    double      eps;          // amount of diffusion; require: eps > 0
-    double      (*limiter_fcn)(double),
-                (*jac_limiter_fcn)(double);
+    PetscReal   eps;          // amount of diffusion; require: eps > 0
+    PetscReal   (*limiter_fcn)(PetscReal),
+                (*jac_limiter_fcn)(PetscReal);
 } AdCtx;
 
-static double u_exact(double x, AdCtx *usr) {
+static PetscReal u_exact(PetscReal x, AdCtx *usr) {
     return (1.0 - exp((x-1) / usr->eps)) / (1.0 - exp(- 2.0 / usr->eps));
 }
 
-static double wind_a(double x) {
+static PetscReal wind_a(PetscReal x) {
     return 1.0;
 }
 
 extern PetscErrorCode FormUExact(DMDALocalInfo*, AdCtx*, Vec);
-extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, double*,double*, AdCtx*);
-extern PetscErrorCode FormJacobianLocal(DMDALocalInfo*, double*, Mat, Mat, AdCtx*);
+extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, PetscReal*,PetscReal*, AdCtx*);
+extern PetscErrorCode FormJacobianLocal(DMDALocalInfo*, PetscReal*, Mat, Mat, AdCtx*);
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
     DM             da, da_after;
     SNES           snes;
     Vec            u_initial, u, u_exact;
-    double         hx, err2, errinf;
+    PetscReal      hx, err2, errinf;
     DMDALocalInfo  info;
     LimiterType    limiter = NONE, jac_limiter;
     PetscBool      snesfdset, snesfdcolorset;
@@ -131,8 +131,8 @@ int main(int argc,char **argv) {
 
 PetscErrorCode FormUExact(DMDALocalInfo *info, AdCtx *usr, Vec uex) {
     PetscErrorCode  ierr;
-    int          i;
-    double       hx, x, *auex;
+    PetscInt   i;
+    PetscReal  hx, x, *auex;
 
     hx = 2.0 / (info->mx - 1);
     ierr = DMDAVecGetArray(info->da, uex, &auex);CHKERRQ(ierr);
@@ -147,15 +147,15 @@ PetscErrorCode FormUExact(DMDALocalInfo *info, AdCtx *usr, Vec uex) {
 /* compute residuals:
      F_i = (- eps u'' + (a(x) u)') * hx   at interior points
      F_i = c (u - (b.c.))          at boundary points         */
-PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *au,
-                                 double *aF, AdCtx *usr) {
-    int          i;
-    const double eps = usr->eps,
-                 hx = 2.0 / (info->mx - 1),
-                 halfx = hx / 2.0,
-                 hx2 = hx * hx,
-                 scdiag = (2.0 * eps) / hx + 1.0;
-    double       x, uE, uW, uxx, a, u_up, flux, u_dn, u_far, theta;
+PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal *au,
+                                 PetscReal *aF, AdCtx *usr) {
+    const PetscReal  eps = usr->eps,
+                     hx = 2.0 / (info->mx - 1),
+                     halfx = hx / 2.0,
+                     hx2 = hx * hx,
+                     scdiag = (2.0 * eps) / hx + 1.0;
+    PetscReal        x, uE, uW, uxx, a, u_up, flux, u_dn, u_far, theta;
+    PetscInt         i;
 
     // for each owned cell, non-advective part of residual at cell center
     for (i=info->xs; i<info->xs+info->xm; i++) {
@@ -222,15 +222,15 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, double *au,
     return 0;
 }
 
-PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, double *u,
+PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscReal *u,
                                  Mat J, Mat P, AdCtx *usr) {
     PetscErrorCode ierr;
-    const double eps = usr->eps,
-                 hx = 2.0 / (info->mx - 1),
-                 halfx = hx / 2.0,
-                 scdiag = (2.0 * eps) / hx + 1.0;
-    int          i, col[3];
-    double       x, aE, aW, v[3];
+    const PetscReal eps = usr->eps,
+                    hx = 2.0 / (info->mx - 1),
+                    halfx = hx / 2.0,
+                    scdiag = (2.0 * eps) / hx + 1.0;
+    PetscInt        i, col[3];
+    PetscReal       x, aE, aW, v[3];
 
     if (usr->jac_limiter_fcn == &vanleer) {
         SETERRQ(PETSC_COMM_WORLD,1,"Jacobian for vanleer limiter is not implemented");
