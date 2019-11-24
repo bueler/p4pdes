@@ -1,11 +1,8 @@
-solving problem straight with stump initial state on 3 x 3 grid,
-    cells dx=0.666667 x dy=0.666667, limiter = centered, and jac_limiter = centered ...
+solving problem straight with stump initial state on 6 x 6 grid,
+    cells dx=0.333333 x dy=0.333333, limiter = centered, and jac_limiter = centered ...
 0 TS dt 0.01 time 0.
-  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
-1 TS dt 0.01 time 0.01
-  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
-  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
-2 TS dt 0.00334121 time 0.0166588
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
-3 TS dt 0.00665486 time 0.02
-completed 3 steps to time 0.02
+1 TS dt 0.01 time 0.01
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+2 TS dt 0.01 time 0.02
+completed 2 steps to time 0.02
