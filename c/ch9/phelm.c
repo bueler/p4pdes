@@ -1,14 +1,13 @@
 static char help[] =
 "Solves the p-Helmholtz equation in 2D using Q^1 FEM.  Option prefix -ph_.\n"
-"Problem is posed as minimizing this objective functional over W^{1,p}:\n"
+"Problem is posed as minimizing this objective functional over W^{1,p}\n"
+"for p>1:\n"
 "    I[u] = int_Omega (1/p) |grad u|^p + (1/2) u^2 - f u.\n"
 "The strong form equation, namely setting the gradient to zero, is a PDE\n"
 "    - div( |grad u|^{p-2} grad u ) + u = f\n"
 "subject to homogeneous Neumann boundary conditions.  Implements objective\n"
-"and gradient (residual) but no Hessian (Jacobian).  Covers cases 1 <= p.\n"
-"Defaults to easy linear problem with p=2 and quadrature degree 2.\n"
-"Can be run with only an objective function; use -ph_no_gradient\n"
-"-snes_fd_function.\n\n";
+"and gradient (residual) but no Hessian (Jacobian).  Defaults to linear\n"
+"problem (p=2) and quadrature degree 2.  Can be run with only an objective\n" "function; use -ph_no_gradient -snes_fd_function.\n\n";
 
 #include <petsc.h>
 #include "../quadrature.h"
@@ -90,10 +89,14 @@ int main(int argc,char **argv) {
                   "do not set the residual evaluation function",
                   "phelm.c",no_gradient,&(no_gradient),NULL);CHKERRQ(ierr);
     ierr = PetscOptionsReal("-p",
-                  "exponent p with  1 <= p",
+                  "exponent p > 1",
                   "phelm.c",user.p,&(user.p),NULL); CHKERRQ(ierr);
     if (user.p < 1.0) {
          SETERRQ(PETSC_COMM_WORLD,1,"p >= 1 required");
+    }
+    if (user.p == 1.0) {
+        ierr = PetscPrintf(PETSC_COMM_WORLD,
+            "WARNING: well-posedness only known for p > 1\n"); CHKERRQ(ierr);
     }
     ierr = PetscOptionsEnum("-problem",
                   "problem type determines right side f(x,y)",
