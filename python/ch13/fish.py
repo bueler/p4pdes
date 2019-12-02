@@ -40,6 +40,7 @@ if args.refine > 0:
     mx, my = (mx-1) * 2**args.refine + 1, (my-1) * 2**args.refine + 1
 x,y = SpatialCoordinate(mesh)
 mesh._plex.viewFromOptions('-dm_view')
+# to print coordinates:  print(mesh.coordinates.dat.data)
 
 # Define function space, right-hand side, and weak form.
 W = FunctionSpace(mesh, 'Lagrange', degree=args.k)
