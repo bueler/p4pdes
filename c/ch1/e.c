@@ -16,7 +16,7 @@ int main(int argc, char **argv) {
       localval /= i;
 
   // sum the contributions over all processes
-  ierr = MPI_Allreduce(&localval, &globalsum, 1, MPIU_REAL, MPIU_SUM,
+  ierr = MPI_Allreduce(&localval,&globalsum,1,MPIU_REAL,MPIU_SUM,
       PETSC_COMM_WORLD); CHKERRQ(ierr);
 
   // output one estimate of e and report on work from each process
