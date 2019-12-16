@@ -8,6 +8,8 @@ rm -f maketmp tmp difftmp
 
 make $1 > maketmp 2>&1;
 
+grep warning maketmp
+
 CURRDIR=${PWD##*/}
 
 if [ $3 -eq 1 ]; then
