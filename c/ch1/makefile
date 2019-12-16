@@ -1,5 +1,6 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
+CFLAGS += -pedantic -std=c99
 
 e: e.o
 	-${CLINKER} -o e e.o  ${PETSC_LIB}

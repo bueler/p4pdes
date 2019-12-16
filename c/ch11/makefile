@@ -1,5 +1,6 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
+CFLAGS += -pedantic -std=c99
 
 advect: advect.o
 	-${CLINKER} -o advect advect.o  ${PETSC_LIB}

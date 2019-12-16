@@ -1,5 +1,6 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
+CFLAGS += -pedantic -std=c99
 
 obstacle: obstacle.o ../ch6/poissonfunctions.o
 	-${CLINKER} -o obstacle obstacle.o ../ch6/poissonfunctions.o ${PETSC_LIB}

@@ -1,5 +1,6 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
+CFLAGS += -pedantic -std=c99
 
 sparsemat: sparsemat.o
 	-${CLINKER} -o sparsemat sparsemat.o  ${PETSC_LIB}

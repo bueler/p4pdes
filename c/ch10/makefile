@@ -1,6 +1,6 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
-
+CFLAGS += -pedantic -std=c99
 
 unfem: unfem.o um.o
 	-${CLINKER} -o unfem unfem.o um.o  ${PETSC_LIB}
