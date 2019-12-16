@@ -28,7 +28,9 @@ static PetscReal vanleer(PetscReal theta) {
     return 0.5 * (theta + abstheta) / (1.0 + abstheta);   // 4 flops
 }
 
-static void* limiterptr[] = {NULL, &centered, &vanleer};
+typedef PetscReal (*LimiterFcn)(PetscReal);
+
+static LimiterFcn limiterptr[] = {NULL, &centered, &vanleer};
 
 typedef enum {NOWIND, LAYER, GLAZE} ProblemType;
 static const char *ProblemTypes[] = {"nowind", "layer", "glaze",
@@ -66,7 +68,7 @@ static PetscReal nowind_b(PetscReal x, PetscReal y, void *user) {
 }
 
 // problem LAYER:  Elman page 237, Example 6.1.1
-static PetscReal layer_u(PetscReal x, PetscReal y, AdCtx *user) {  // exact solution
+static PetscReal layer_u(PetscReal x, PetscReal y, void *user) {  // exact solution
     AdCtx* usr = (AdCtx*)user;
     return x * (1.0 - exp((y-1) / usr->eps)) / (1.0 - exp(- 2.0 / usr->eps));
 }
@@ -83,9 +85,11 @@ static PetscReal glaze_b(PetscReal x, PetscReal y, void *user) {
        return 0.0;
 }
 
-static void* uexptr[] = {&nowind_u, &layer_u, NULL};
-static void* gptr[]   = {&nowind_g, &zero,    &zero};
-static void* bptr[]   = {&nowind_b, &layer_b, &glaze_b};
+typedef PetscReal (*PointwiseFcn)(PetscReal,PetscReal,void*);
+
+static PointwiseFcn uexptr[] = {&nowind_u, &layer_u, NULL};
+static PointwiseFcn gptr[]   = {&nowind_g, &zero,    &zero};
+static PointwiseFcn bptr[]   = {&nowind_b, &layer_b, &glaze_b};
 
 /* This vector function returns q=0,1 component.  It is used in
    FormFunctionLocal() to get a(x,y). */
@@ -112,7 +116,7 @@ int main(int argc,char **argv) {
     SNES           snes;
     Vec            u_initial, u;
     DMDALocalInfo  info;
-    PetscReal      (*uexact_fcn)(PetscReal, PetscReal, void*);
+    PointwiseFcn   uexact_fcn;
     LimiterType    limiter = NONE;
     PetscBool      init_exact = PETSC_FALSE;
     AdCtx          user;

@@ -89,13 +89,19 @@ extern PetscErrorCode Form3DUExact(DMDALocalInfo*, Vec, PoissonCtx*);
 
 //STARTPTRARRAYS
 // arrays of pointers to functions
-static void* residual_ptr[3]
-    = {&Poisson1DFunctionLocal, &Poisson2DFunctionLocal, &Poisson3DFunctionLocal};
+static DMDASNESFunction residual_ptr[3]
+    = {(DMDASNESFunction)&Poisson1DFunctionLocal,
+       (DMDASNESFunction)&Poisson2DFunctionLocal,
+       (DMDASNESFunction)&Poisson3DFunctionLocal};
 
-static void* jacobian_ptr[3]
-    = {&Poisson1DJacobianLocal, &Poisson2DJacobianLocal, &Poisson3DJacobianLocal};
+static DMDASNESJacobian jacobian_ptr[3]
+    = {(DMDASNESJacobian)&Poisson1DJacobianLocal,
+       (DMDASNESJacobian)&Poisson2DJacobianLocal,
+       (DMDASNESJacobian)&Poisson3DJacobianLocal};
 
-static void* getuexact_ptr[3]
+typedef PetscErrorCode (*ExactFcnVec)(DMDALocalInfo*,Vec,PoissonCtx*);
+
+static ExactFcnVec getuexact_ptr[3]
     = {&Form1DUExact, &Form2DUExact, &Form3DUExact};
 //ENDPTRARRAYS
 
@@ -104,12 +110,14 @@ static const char* ProblemTypes[] = {"manupoly","manuexp","zero",
                                      "ProblemType", "", NULL};
 
 // more arrays of pointers to functions:   ..._ptr[DIMS][PROBLEMS]
-static void* g_bdry_ptr[3][3]
+typedef PetscReal (*PointwiseFcn)(PetscReal,PetscReal,PetscReal,void*);
+
+static PointwiseFcn g_bdry_ptr[3][3]
     = {{&u_exact_1Dmanupoly, &u_exact_1Dmanuexp, &zero},
        {&u_exact_2Dmanupoly, &u_exact_2Dmanuexp, &zero},
        {&u_exact_3Dmanupoly, &u_exact_3Dmanuexp, &zero}};
 
-static void* f_rhs_ptr[3][3]
+static PointwiseFcn f_rhs_ptr[3][3]
     = {{&f_rhs_1Dmanupoly, &f_rhs_1Dmanuexp, &zero},
        {&f_rhs_2Dmanupoly, &f_rhs_2Dmanuexp, &zero},
        {&f_rhs_3Dmanupoly, &f_rhs_3Dmanuexp, &zero}};
@@ -127,7 +135,7 @@ int main(int argc,char **argv) {
     DMDALocalInfo  info;
     PetscReal      errinf, normconst2h, err2h;
     char           gridstr[99];
-    PetscErrorCode (*getuexact)(DMDALocalInfo*,Vec,PoissonCtx*);
+    ExactFcnVec    getuexact;
 
     // fish defaults:
     PetscInt       dim = 2;                  // 2D

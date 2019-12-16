@@ -70,7 +70,9 @@ static PetscReal box(PetscReal x, PetscReal y) {
         return 0.0;
 }
 
-static void* initialptr[] = {&stump, &smooth, &cone, &box};
+typedef PetscReal (*PointwiseFcn)(PetscReal,PetscReal);
+
+static PointwiseFcn initialptr[] = {&stump, &smooth, &cone, &box};
 //ENDINITIAL
 
 //STARTLIMITERS
@@ -93,7 +95,9 @@ static PetscReal koren(PetscReal theta) {
     return PetscMax(0.0, PetscMin(1.0, PetscMin(z, theta)));
 }
 
-static void* limiterptr[] = {NULL, &centered, &vanleer, &koren};
+typedef PetscReal (*LimiterFcn)(PetscReal);
+
+static LimiterFcn limiterptr[] = {NULL, &centered, &vanleer, &koren};
 //ENDLIMITERS
 
 // velocity  a(x,y) = ( a^x(x,y), a^y(x,y) )
