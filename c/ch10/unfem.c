@@ -52,6 +52,7 @@ extern PetscErrorCode Preallocation(Mat, unfemCtx*);
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
+    PetscMPIInt size;
     PetscBool   viewmesh = PETSC_FALSE,
                 viewsoln = PETSC_FALSE,
                 noprealloc = PETSC_FALSE,
@@ -71,6 +72,12 @@ int main(int argc,char **argv) {
     PetscReal   err, h_max;
 
     PetscInitialize(&argc,&argv,NULL,help);
+
+    ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size); CHKERRQ(ierr);
+    if (size != 1) {
+        SETERRQ(PETSC_COMM_WORLD,1,"unfem only works on one MPI process");
+    }
+
     ierr = PetscLogStageRegister("Read mesh      ", &user.readstage); CHKERRQ(ierr);  //STRIP
     ierr = PetscLogStageRegister("Set-up         ", &user.setupstage); CHKERRQ(ierr);  //STRIP
     ierr = PetscLogStageRegister("Solver         ", &user.solverstage); CHKERRQ(ierr);  //STRIP
@@ -111,7 +118,7 @@ int main(int argc,char **argv) {
 
     // determine filenames
     if (strlen(root) == 0) {
-        SETERRQ(PETSC_COMM_WORLD,4,"no mesh name root given; rerun with '-un_mesh foo'");
+        SETERRQ(PETSC_COMM_WORLD,2,"no mesh name root given; rerun with '-un_mesh foo'");
     }
     strcpy(nodesname, root);
     strncat(nodesname, ".vec", 4);
@@ -149,7 +156,7 @@ int main(int argc,char **argv) {
             user.gN_fcn = NULL;  // seg fault if ever called
             break;
         default :
-            SETERRQ(PETSC_COMM_WORLD,1,"other solution cases not implemented");
+            SETERRQ(PETSC_COMM_WORLD,3,"other solution cases not implemented");
     }
 
     PetscLogStagePush(user.readstage);
@@ -219,13 +226,13 @@ int main(int argc,char **argv) {
         Mat         pint;
         PetscViewer viewer;
         if (strcmp(pctype,"gamg") != 0) {
-            SETERRQ(PETSC_COMM_WORLD,2,"option -un_gamg_save_pint set but PC is not of type PCGAMG");
+            SETERRQ(PETSC_COMM_WORLD,4,"option -un_gamg_save_pint set but PC is not of type PCGAMG");
         }
         if (savepintlevel >= levels) {
-            SETERRQ(PETSC_COMM_WORLD,3,"invalid level given in -un_gamg_save_pint_level");
+            SETERRQ(PETSC_COMM_WORLD,5,"invalid level given in -un_gamg_save_pint_level");
         }
         if (savepintbinary && savepintmatlab) {
-            SETERRQ(PETSC_COMM_WORLD,4,"only one of -un_gamg_save_pint_binary OR -un_gamg_save_pint_matlab is allowed");
+            SETERRQ(PETSC_COMM_WORLD,6,"only one of -un_gamg_save_pint_binary OR -un_gamg_save_pint_matlab is allowed");
         }
         if (savepintlevel <= 0) {
             savepintlevel = levels - 1;

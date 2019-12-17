@@ -13,10 +13,11 @@ PetscErrorCode UMInitialize(UM *mesh) {
 }
 
 PetscErrorCode UMDestroy(UM *mesh) {
-    VecDestroy(&(mesh->loc));
-    ISDestroy(&(mesh->e));
-    ISDestroy(&(mesh->bf));
-    ISDestroy(&(mesh->ns));
+    PetscErrorCode ierr;
+    ierr = VecDestroy(&(mesh->loc)); CHKERRQ(ierr);
+    ierr = ISDestroy(&(mesh->e)); CHKERRQ(ierr);
+    ierr = ISDestroy(&(mesh->bf)); CHKERRQ(ierr);
+    ierr = ISDestroy(&(mesh->ns)); CHKERRQ(ierr);
     return 0;
 }
 
