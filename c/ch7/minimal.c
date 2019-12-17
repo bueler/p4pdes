@@ -282,7 +282,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal **au,
     return 0;
 }
 
-// compute surface area and bounds on diffusivity using Q^1 elements and
+// compute surface area and bounds on diffusivity using Q_1 elements and
 // tensor product gaussian quadrature
 PetscErrorCode MSEMonitor(SNES snes, PetscInt its, PetscReal norm, void *user) {
     PetscErrorCode ierr;

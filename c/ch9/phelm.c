@@ -1,5 +1,5 @@
 static char help[] =
-"Solves the p-Helmholtz equation in 2D using Q^1 FEM.  Option prefix -ph_.\n"
+"Solves the p-Helmholtz equation in 2D using Q_1 FEM.  Option prefix -ph_.\n"
 "Problem is posed as minimizing this objective functional over W^{1,p}\n"
 "for p>1:\n"
 "    I[u] = int_Omega (1/p) |grad u|^p + (1/2) u^2 - f u.\n"

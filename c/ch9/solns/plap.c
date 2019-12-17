@@ -1,4 +1,4 @@
-static char help[] = "Solve the p-Laplacian equation in 2D using Q^1 FEM.\n"
+static char help[] = "Solve the p-Laplacian equation in 2D using Q_1 FEM.\n"
 "Implements an objective function and a residual (gradient) function, but\n"
 "no Jacobian.  Defaults to p=4 and quadrature degree n=2.  Run as one of:\n"
 "   ./plap -snes_fd_color             [default]\n"
