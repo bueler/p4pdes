@@ -497,7 +497,7 @@ PetscErrorCode Preallocation(Mat J, unfemCtx *user) {
     const PetscInt  *ae, *abf, *en;
     PetscInt        *nnz, n, k, l;
 
-    nnz = (PetscInt *)malloc(sizeof(PetscInt)*(user->mesh->N));
+    ierr = PetscMalloc1(user->mesh->N,&nnz); CHKERRQ(ierr);
     ierr = ISGetIndices(user->mesh->bf,&abf); CHKERRQ(ierr);
     for (n = 0; n < user->mesh->N; n++)
         nnz[n] = (abf[n] == 1) ? 2 : 1;
@@ -511,7 +511,7 @@ PetscErrorCode Preallocation(Mat J, unfemCtx *user) {
     ierr = ISRestoreIndices(user->mesh->e,&ae); CHKERRQ(ierr);
     ierr = ISRestoreIndices(user->mesh->bf,&abf); CHKERRQ(ierr);
     ierr = MatSeqAIJSetPreallocation(J,-1,nnz); CHKERRQ(ierr);
-    free(nnz);
+    ierr = PetscFree(nnz); CHKERRQ(ierr);
     return 0;
 }
 //ENDPREALLOC
