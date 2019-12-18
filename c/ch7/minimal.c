@@ -37,7 +37,8 @@ static PetscReal g_bdry_catenoid(PetscReal x, PetscReal y, PetscReal z, void *ct
     PoissonCtx      *user = (PoissonCtx*)ctx;
     MinimalCtx      *mctx = (MinimalCtx*)(user->addctx);
     const PetscReal c = mctx->catenoid_c;
-    return c * cosh(x/c) * sin(acos( (y/c) / cosh(x/c) ));
+    return c * PetscCoshReal(x/c)
+             * PetscSinReal(PetscAcosReal( (y/c) / PetscCoshReal(x/c) ));
 }
 
 // the coefficient (diffusivity) of minimal surface equation, as a function

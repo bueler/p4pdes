@@ -62,8 +62,8 @@ int main(int argc,char **argv) {
 PetscErrorCode ExactSolution(PetscReal t, Vec y) {
     PetscReal *ay;
     VecGetArray(y,&ay);
-    ay[0] = t - sin(t);
-    ay[1] = 1.0 - cos(t);
+    ay[0] = t - PetscSinReal(t);
+    ay[1] = 1.0 - PetscCosReal(t);
     VecRestoreArray(y,&ay);
     return 0;
 }

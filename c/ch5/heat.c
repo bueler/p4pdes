@@ -14,11 +14,12 @@ typedef struct {
 } HeatCtx;
 
 static PetscReal f_source(PetscReal x, PetscReal y) {
-    return 3.0 * exp(-25.0 * (x-0.6) * (x-0.6)) * sin(2.0*PETSC_PI*y);
+    return 3.0 * PetscExpReal(-25.0 * (x-0.6) * (x-0.6))
+               * PetscSinReal(2.0*PETSC_PI*y);
 }
 
 static PetscReal gamma_neumann(PetscReal y) {
-    return sin(6.0 * PETSC_PI * y);
+    return PetscSinReal(6.0 * PETSC_PI * y);
 }
 
 extern PetscErrorCode Spacings(DMDALocalInfo*, PetscReal*, PetscReal*);
@@ -106,7 +107,7 @@ PetscErrorCode EnergyMonitor(TS ts, PetscInt step, PetscReal time, Vec u,
                              void *ctx) {
     PetscErrorCode ierr;
     HeatCtx        *user = (HeatCtx*)ctx;
-    PetscReal         lenergy = 0.0, energy, dt, hx, hy, **au;
+    PetscReal      lenergy = 0.0, energy, dt, hx, hy, **au;
     PetscInt       i,j;
     MPI_Comm       com;
     DM             da;

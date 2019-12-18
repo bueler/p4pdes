@@ -55,12 +55,12 @@ static PetscReal zero(PetscReal x, PetscReal y, void *user) {
 
 // problem NOWIND: same problem as ./fish -fsh_problem manuexp
 static PetscReal nowind_u(PetscReal x, PetscReal y, void *user) {  // exact solution
-    return - x * exp(y);
+    return - x * PetscExpReal(y);
 }
 
 static PetscReal nowind_g(PetscReal x, PetscReal y, void *user) {
     AdCtx* usr = (AdCtx*)user;
-    return usr->eps * x * exp(y);
+    return usr->eps * x * PetscExpReal(y);
 }
 
 static PetscReal nowind_b(PetscReal x, PetscReal y, void *user) {
@@ -70,7 +70,8 @@ static PetscReal nowind_b(PetscReal x, PetscReal y, void *user) {
 // problem LAYER:  Elman page 237, Example 6.1.1
 static PetscReal layer_u(PetscReal x, PetscReal y, void *user) {  // exact solution
     AdCtx* usr = (AdCtx*)user;
-    return x * (1.0 - exp((y-1) / usr->eps)) / (1.0 - exp(- 2.0 / usr->eps));
+    return x * (1.0 - PetscExpReal((y-1) / usr->eps))
+             / (1.0 - PetscExpReal(- 2.0 / usr->eps));
 }
 
 static PetscReal layer_b(PetscReal x, PetscReal y, void *user) {

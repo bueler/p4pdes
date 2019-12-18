@@ -25,15 +25,15 @@ static PetscReal u_exact_3Dmanupoly(PetscReal x, PetscReal y, PetscReal z, void 
 }
 
 static PetscReal u_exact_1Dmanuexp(PetscReal x, PetscReal y, PetscReal z, void *ctx) {
-    return - exp(x);
+    return - PetscExpReal(x);
 }
 
 static PetscReal u_exact_2Dmanuexp(PetscReal x, PetscReal y, PetscReal z, void *ctx) {
-    return - x * exp(y);
+    return - x * PetscExpReal(y);
 }
 
 static PetscReal u_exact_3Dmanuexp(PetscReal x, PetscReal y, PetscReal z, void *ctx) {
-    return - x * exp(y + z);
+    return - x * PetscExpReal(y + z);
 }
 
 static PetscReal zero(PetscReal x, PetscReal y, PetscReal z, void *ctx) {
@@ -70,15 +70,15 @@ static PetscReal f_rhs_3Dmanupoly(PetscReal x, PetscReal y, PetscReal z, void *c
 }
 
 static PetscReal f_rhs_1Dmanuexp(PetscReal x, PetscReal y, PetscReal z, void *ctx) {
-    return exp(x);
+    return PetscExpReal(x);
 }
 
 static PetscReal f_rhs_2Dmanuexp(PetscReal x, PetscReal y, PetscReal z, void *ctx) {
-    return x * exp(y);  // note  f = - (u_xx + u_yy) = - u
+    return x * PetscExpReal(y);  // note  f = - (u_xx + u_yy) = - u
 }
 
 static PetscReal f_rhs_3Dmanuexp(PetscReal x, PetscReal y, PetscReal z, void *ctx) {
-    return 2.0 * x * exp(y + z);  // note  f = - laplacian u = - 2 u
+    return 2.0 * x * PetscExpReal(y + z);  // note  f = - laplacian u = - 2 u
 }
 
 // functions simply to put u_exact()=g_bdry() into a grid

@@ -23,7 +23,7 @@ static PetscReal f_constant(PetscReal x, PetscReal y, PetscReal p, PetscReal eps
 }
 
 static PetscReal u_exact_cosines(PetscReal x, PetscReal y, PetscReal p, PetscReal eps) {
-    return cos(PETSC_PI * x) * cos(PETSC_PI * y);
+    return PetscCosReal(PETSC_PI * x) * PetscCosReal(PETSC_PI * y);
 }
 
 static PetscReal f_cosines(PetscReal x, PetscReal y, PetscReal p, PetscReal eps) {
@@ -34,13 +34,17 @@ static PetscReal f_cosines(PetscReal x, PetscReal y, PetscReal p, PetscReal eps)
         return - lapu + uu;
     } else {
         const PetscReal
-            ux = - PETSC_PI * sin(PETSC_PI * x) * cos(PETSC_PI * y),
-            uy = - PETSC_PI * cos(PETSC_PI * x) * sin(PETSC_PI * y),
+            ux = - PETSC_PI * PetscSinReal(PETSC_PI * x)
+                 * PetscCosReal(PETSC_PI * y),
+            uy = - PETSC_PI * PetscCosReal(PETSC_PI * x)
+                 * PetscSinReal(PETSC_PI * y),
             // note regularization changes f(x,y) but not u(x,y):
             w = ux * ux + uy * uy + eps * eps,
             pi3 = pi2 * PETSC_PI,
-            wx = pi3 * sin(2 * PETSC_PI * x) * cos(2 * PETSC_PI * y),
-            wy = pi3 * cos(2 * PETSC_PI * x) * sin(2 * PETSC_PI * y);
+            wx = pi3 * PetscSinReal(2 * PETSC_PI * x)
+                 * PetscCosReal(2 * PETSC_PI * y),
+            wy = pi3 * PetscCosReal(2 * PETSC_PI * x)
+                 * PetscSinReal(2 * PETSC_PI * y);
         const PetscReal s = (p - 2) / 2;  //  -1/2 <= s <= 0
         return - s * PetscPowScalar(w,s-1) * (wx * ux + wy * uy)
                - PetscPowScalar(w,s) * lapu + uu;

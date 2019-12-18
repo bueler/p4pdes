@@ -145,8 +145,8 @@ PetscErrorCode InitialState(DM da, Vec Y, PetscReal noiselevel, PatternCtx* user
     for (i = info.xs; i < info.xs+info.xm; i++) {
       if ((aC[j][i].x >= ledge) && (aC[j][i].x <= redge)
               && (aC[j][i].y >= ledge) && (aC[j][i].y <= redge)) {
-          sx = sin(4.0 * PETSC_PI * aC[j][i].x);
-          sy = sin(4.0 * PETSC_PI * aC[j][i].y);
+          sx = PetscSinReal(4.0 * PETSC_PI * aC[j][i].x);
+          sy = PetscSinReal(4.0 * PETSC_PI * aC[j][i].y);
           aY[j][i].v += 0.5 * sx * sx * sy * sy;
       }
       aY[j][i].u += 1.0 - 2.0 * aY[j][i].v;
