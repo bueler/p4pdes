@@ -48,8 +48,7 @@ PetscReal eval(const PetscReal v[3], PetscReal xi, PetscReal eta) {
 extern PetscErrorCode FillExact(Vec, unfemCtx*);
 extern PetscErrorCode FormFunction(SNES, Vec, Vec, void*);
 extern PetscErrorCode FormPicard(SNES, Vec, Mat, Mat, void*);
-extern PetscErrorCode Preallocation(Mat, unfemCtx*);
-extern PetscErrorCode SetSparsity(Mat, unfemCtx*);
+extern PetscErrorCode PreallocateAndSetNonzeros(Mat, unfemCtx*);
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
@@ -202,8 +201,7 @@ int main(int argc,char **argv) {
     if (noprealloc) {
         ierr = MatSetUp(A); CHKERRQ(ierr);
     } else {
-        ierr = Preallocation(A,&user); CHKERRQ(ierr);
-        ierr = SetSparsity(A,&user); CHKERRQ(ierr);
+        ierr = PreallocateAndSetNonzeros(A,&user); CHKERRQ(ierr);
     }
     ierr = SNESSetJacobian(snes,A,A,FormPicard,&user); CHKERRQ(ierr);
     ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
@@ -488,65 +486,65 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
 }
 
 
-/* Note that nnz[n] is the number of nonzeros in row n.  It equals one for
-Dirichlet rows, one more than the number of incident triangles for an
-interior point, and two more than the number of incident triangles for
-Neumann boundary nodes. */
+/* The following procedure is accomplishes essentially the same actions
+as DMCreateMatrix() when a DM is present.  (At least when the Mat is in
+MATAIJ format.)  It first preallocates storage for the sparse matrix
+by providing a count of the entries.  Then it actually sets the sparsity
+pattern by inserting zeros (ironically) where there will be nonzero entries.
+This means that -snes_fd_color can be used.
+
+Note that nnz[n] is the number of nonzeros in row n.  In our case it
+equals one for Dirichlet rows, it is one more than the number of incident
+triangles for an interior point, and it is two more than the number of
+incident triangles for Neumann boundary nodes. */
 //STARTPREALLOC
-PetscErrorCode Preallocation(Mat J, unfemCtx *user) {
+PetscErrorCode PreallocateAndSetNonzeros(Mat J, unfemCtx *user) {
     PetscErrorCode ierr;
     const PetscInt  *ae, *abf, *en;
-    PetscInt        *nnz, n, k, l;
+    PetscInt        *nnz, n, k, l, cr, row[3];
 
-    ierr = PetscMalloc1(user->mesh->N,&nnz); CHKERRQ(ierr);
     ierr = ISGetIndices(user->mesh->bf,&abf); CHKERRQ(ierr);
+    ierr = ISGetIndices(user->mesh->e,&ae); CHKERRQ(ierr);
+
+    // preallocate: number of nonzeros per row
+    ierr = PetscMalloc1(user->mesh->N,&nnz); CHKERRQ(ierr);
     for (n = 0; n < user->mesh->N; n++)
         nnz[n] = (abf[n] == 1) ? 2 : 1;
-    ierr = ISGetIndices(user->mesh->e,&ae); CHKERRQ(ierr);
     for (k = 0; k < user->mesh->K; k++) {
         en = ae + 3*k;  // en[0], en[1], en[2] are nodes of element k
         for (l = 0; l < 3; l++)
             if (abf[en[l]] != 2)
                 nnz[en[l]] += 1;
     }
-    ierr = ISRestoreIndices(user->mesh->e,&ae); CHKERRQ(ierr);
-    ierr = ISRestoreIndices(user->mesh->bf,&abf); CHKERRQ(ierr);
     ierr = MatSeqAIJSetPreallocation(J,-1,nnz); CHKERRQ(ierr);
     ierr = PetscFree(nnz); CHKERRQ(ierr);
-    return 0;
-}
-//ENDPREALLOC
 
-PetscErrorCode SetSparsity(Mat J, unfemCtx *user) {
-    PetscErrorCode ierr;
-    const PetscInt   *ae, *abf, *en;
-    PetscInt         n, k, l, cr, row[3];
-
-    ierr = ISGetIndices(user->mesh->bf,&abf); CHKERRQ(ierr);
+    // set nonzeros: put values (zeros, actually) in locations which may be nonzero
     for (n = 0; n < user->mesh->N; n++) {
         if (abf[n] == 2) {
             ierr = MatSetValues(J,1,&n,1,&n,NULL,INSERT_VALUES); CHKERRQ(ierr);
         }
     }
-    ierr = ISGetIndices(user->mesh->e,&ae); CHKERRQ(ierr);
     for (k = 0; k < user->mesh->K; k++) {
         en = ae + 3*k;  // en[0], en[1], en[2] are nodes of element k
-        // generate 3x3 element stiffness matrix (3x3 is max size but may be smaller)
+        // a 3x3 element stiffness matrix (at most) for each element
         cr = 0;  // cr = count rows
         for (l = 0; l < 3; l++) {
             if (abf[en[l]] != 2) {
                 row[cr++] = en[l];
             }
         }
-        // insert zeros for element stiffness matrix
         ierr = MatSetValues(J,cr,row,cr,row,NULL,INSERT_VALUES); CHKERRQ(ierr);
     }
-    ierr = ISRestoreIndices(user->mesh->e,&ae); CHKERRQ(ierr);
-    ierr = ISRestoreIndices(user->mesh->bf,&abf); CHKERRQ(ierr);
-
     ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
     ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    // with following setting, the assembly routine FormPicard() will generate
+    //   an error if it tries to put a matrix entry in the wrong place
     ierr = MatSetOption(J,MAT_NEW_NONZERO_LOCATION_ERR,PETSC_TRUE); CHKERRQ(ierr);
+
+    ierr = ISRestoreIndices(user->mesh->e,&ae); CHKERRQ(ierr);
+    ierr = ISRestoreIndices(user->mesh->bf,&abf); CHKERRQ(ierr);
     return 0;
 }
+//ENDPREALLOC
 
