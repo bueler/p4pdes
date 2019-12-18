@@ -203,6 +203,12 @@ int main(int argc,char **argv) {
     } else {
         ierr = PreallocateAndSetNonzeros(A,&user); CHKERRQ(ierr);
     }
+    // The following setting is ignored if option -snes_fd or -snes_fd_color
+    //   is set.  However, if PreallocateAndSetNonzeros() is called (above)
+    //   then coloring will work because SNESComputeJacobianDefaultColor()
+    //   will be used instead of FormPicard().  In that case the Mat A does
+    //   contain the sparsity pattern (i.e. topology information) needed for
+    //   coloring.
     ierr = SNESSetJacobian(snes,A,A,FormPicard,&user); CHKERRQ(ierr);
     ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
     PetscLogStagePop();  //STRIP
