@@ -12,6 +12,9 @@ runfish_3:
 runfish_4:
 	-@../../c/testit.sh fish.py "-fishhelp" 1 4
 
+runfish_5:
+	-@../../c/testit.sh fish.py "-dm_view" 10 5 # zero elements on some ranks
+
 runstokes_1:
 	-@../../c/testit.sh stokes.py "-mx 4 -my 4 -refine 1 -s_ksp_type minres -s_pc_type none -analytical -s_ksp_converged_reason" 1 1
 
@@ -32,7 +35,7 @@ runstokes_5:
 runstokes_6:
 	-@../../c/testit.sh stokes.py "-stokeshelp" 1 6
 
-test_fish: runfish_1 runfish_2 runfish_3 runfish_4
+test_fish: runfish_1 runfish_2 runfish_3 runfish_4 runfish_5
 
 test_stokes: runstokes_1 runstokes_2 runstokes_3 runstokes_4 runstokes_5 runstokes_6
 
@@ -40,7 +43,7 @@ test: test_fish test_stokes
 
 # etc
 
-.PHONY: clean runfish_1 runfish_2 runfish_3 runstokes_1 runstokes_2 runstokes_3 runstokes_4 runstokes_5 test_fish test_stokes test
+.PHONY: clean runfish_1 runfish_2 runfish_3 runfish_4 runfish_5 runstokes_1 runstokes_2 runstokes_3 runstokes_4 runstokes_5 runstokes_6 test_fish test_stokes test
 
 clean:
 	@rm -f *.pyc *.geo *.msh *.pvd *.vtu *.m maketmp tmp difftmp
