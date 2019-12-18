@@ -5,14 +5,14 @@ DM_0x84000000_1 in 2 dimensions:
   1-cells: 56
   2-cells: 32
 Labels:
-  pyop2_ghost: 0 strata with value/size ()
-  pyop2_owned: 0 strata with value/size ()
-  pyop2_core: 1 strata with value/size (1 (113))
-  interior_facets: 1 strata with value/size (1 (40))
+  depth: 3 strata with value/size (0 (25), 1 (56), 2 (32))
   Face Sets: 4 strata with value/size (1 (4), 3 (4), 4 (4), 2 (4))
   boundary_faces: 1 strata with value/size (1 (16))
   exterior_facets: 1 strata with value/size (1 (16))
-  depth: 3 strata with value/size (0 (25), 1 (56), 2 (32))
+  interior_facets: 1 strata with value/size (1 (40))
+  pyop2_core: 1 strata with value/size (1 (113))
+  pyop2_owned: 0 strata with value/size ()
+  pyop2_ghost: 0 strata with value/size ()
   Linear s_ solve converged due to CONVERGED_RTOL iterations 4
   Linear s_ solve converged due to CONVERGED_RTOL iterations 3
 Nonlinear s_ solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
