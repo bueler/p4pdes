@@ -198,17 +198,19 @@ int main(int argc,char **argv) {
     ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,mesh.N,mesh.N); CHKERRQ(ierr);
     ierr = MatSetFromOptions(A); CHKERRQ(ierr);
     ierr = MatSetOption(A,MAT_SYMMETRIC,PETSC_TRUE); CHKERRQ(ierr);
+    // Preallocation and setting the sparsity pattern is recommended.
+    //   (The latter allows finite difference approximation of the
+    //   Jacobian using coloring.)  However, option -un_noprealloc exists
+    //   to show the poor performance without these steps.
     if (noprealloc) {
         ierr = MatSetUp(A); CHKERRQ(ierr);
     } else {
         ierr = PreallocateAndSetNonzeros(A,&user); CHKERRQ(ierr);
     }
-    // The following setting is ignored if option -snes_fd or -snes_fd_color
-    //   is set.  However, if PreallocateAndSetNonzeros() is called (above)
-    //   then coloring will work because SNESComputeJacobianDefaultColor()
-    //   will be used instead of FormPicard().  In that case the Mat A does
-    //   contain the sparsity pattern (i.e. topology information) needed for
-    //   coloring.
+    // The following call-back setting is ignored if option -snes_fd
+    //   or -snes_fd_color is set.  However, when PreallocateAndSetNonzeros()
+    //   is called (above) the coloring will still work because
+    //   SNESComputeJacobianDefaultColor() is substituted for FormPicard().
     ierr = SNESSetJacobian(snes,A,A,FormPicard,&user); CHKERRQ(ierr);
     ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
     PetscLogStagePop();  //STRIP
