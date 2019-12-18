@@ -45,13 +45,16 @@ rununfem_5: petscPyScripts meshes/trap2.vec meshes/trap2.is
 rununfem_6: petscPyScripts meshes/trap1.vec meshes/trap1.is
 	-@../testit.sh unfem "-un_mesh meshes/trap1 -un_case 1 -snes_mf_operator -snes_converged_reason -ksp_converged_reason" 1 6
 
-test_unfem: rununfem_1 rununfem_2 rununfem_3 rununfem_4 rununfem_5 rununfem_6
+rununfem_7: petscPyScripts meshes/trap1.vec meshes/trap1.is
+	-@../testit.sh unfem "-un_mesh meshes/trap1 -un_case 1 -snes_fd_color -snes_converged_reason" 1 7
+
+test_unfem: rununfem_1 rununfem_2 rununfem_3 rununfem_4 rununfem_5 rununfem_6 rununfem_7
 
 test: test_unfem
 
 # etc
 
-.PHONY: distclean rununfem_1 rununfem_2 rununfem_3 rununfem_4 rununfem_5 rununfem_6 test test_unfem petscPyScripts
+.PHONY: distclean rununfem_1 rununfem_2 rununfem_3 rununfem_4 rununfem_5 rununfem_6 rununfem_7 test test_unfem petscPyScripts
 
 distclean:
 	@rm -f *~ unfem *tmp

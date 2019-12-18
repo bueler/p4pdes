@@ -49,6 +49,7 @@ extern PetscErrorCode FillExact(Vec, unfemCtx*);
 extern PetscErrorCode FormFunction(SNES, Vec, Vec, void*);
 extern PetscErrorCode FormPicard(SNES, Vec, Mat, Mat, void*);
 extern PetscErrorCode Preallocation(Mat, unfemCtx*);
+extern PetscErrorCode SetSparsity(Mat, unfemCtx*);
 
 int main(int argc,char **argv) {
     PetscErrorCode ierr;
@@ -202,6 +203,7 @@ int main(int argc,char **argv) {
         ierr = MatSetUp(A); CHKERRQ(ierr);
     } else {
         ierr = Preallocation(A,&user); CHKERRQ(ierr);
+        ierr = SetSparsity(A,&user); CHKERRQ(ierr);
     }
     ierr = SNESSetJacobian(snes,A,A,FormPicard,&user); CHKERRQ(ierr);
     ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
@@ -481,7 +483,6 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
         ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
         ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
     }
-    ierr = MatSetOption(P,MAT_NEW_NONZERO_LOCATION_ERR,PETSC_TRUE); CHKERRQ(ierr);
     PetscLogStagePop();  //STRIP
     return 0;
 }
@@ -515,4 +516,37 @@ PetscErrorCode Preallocation(Mat J, unfemCtx *user) {
     return 0;
 }
 //ENDPREALLOC
+
+PetscErrorCode SetSparsity(Mat J, unfemCtx *user) {
+    PetscErrorCode ierr;
+    const PetscInt   *ae, *abf, *en;
+    PetscInt         n, k, l, cr, row[3];
+
+    ierr = ISGetIndices(user->mesh->bf,&abf); CHKERRQ(ierr);
+    for (n = 0; n < user->mesh->N; n++) {
+        if (abf[n] == 2) {
+            ierr = MatSetValues(J,1,&n,1,&n,NULL,INSERT_VALUES); CHKERRQ(ierr);
+        }
+    }
+    ierr = ISGetIndices(user->mesh->e,&ae); CHKERRQ(ierr);
+    for (k = 0; k < user->mesh->K; k++) {
+        en = ae + 3*k;  // en[0], en[1], en[2] are nodes of element k
+        // generate 3x3 element stiffness matrix (3x3 is max size but may be smaller)
+        cr = 0;  // cr = count rows
+        for (l = 0; l < 3; l++) {
+            if (abf[en[l]] != 2) {
+                row[cr++] = en[l];
+            }
+        }
+        // insert zeros for element stiffness matrix
+        ierr = MatSetValues(J,cr,row,cr,row,NULL,INSERT_VALUES); CHKERRQ(ierr);
+    }
+    ierr = ISRestoreIndices(user->mesh->e,&ae); CHKERRQ(ierr);
+    ierr = ISRestoreIndices(user->mesh->bf,&abf); CHKERRQ(ierr);
+
+    ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    ierr = MatSetOption(J,MAT_NEW_NONZERO_LOCATION_ERR,PETSC_TRUE); CHKERRQ(ierr);
+    return 0;
+}
 
