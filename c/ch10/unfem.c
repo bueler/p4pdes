@@ -391,7 +391,7 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
                     ip  = InnerProd(gradu,gradpsi[l]);
                     sum += q.w[r] * ( aquad[r] * ip - fquad[r] * psi );
                 }
-                aF[en[l]] += fabs(detJ) * sum;
+                aF[en[l]] += PetscAbsReal(detJ) * sum;
             }
         }
     }
@@ -464,7 +464,7 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
                         for (r = 0; r < q.n; r++) {
                             sum += q.w[r] * aquad[r] * InnerProd(gradpsi[l],gradpsi[m]);
                         }
-                        v[cv++] = fabs(detJ) * sum;
+                        v[cv++] = PetscAbsReal(detJ) * sum;
                     }
                 }
             }
