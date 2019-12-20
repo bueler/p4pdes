@@ -8,9 +8,9 @@ int main(int argc,char **args) {
     Vec        x, b;
     Mat        A;
     KSP        ksp;
-    PetscInt   i, j[4] = {0, 1, 2, 3};                // j = column indices
-    PetscReal  ab[4] = {7.0, 1.0, 1.0, 3.0},          // entries of vector b
-               aA[4][4] = {{ 1.0,  2.0,  3.0,  0.0},  // entries of matrix A
+    PetscInt   i, j[4] = {0, 1, 2, 3};                // j = column index
+    PetscReal  ab[4] = {7.0, 1.0, 1.0, 3.0},          // vector entries
+               aA[4][4] = {{ 1.0,  2.0,  3.0,  0.0},  // matrix entries
                            { 2.0,  1.0, -2.0, -3.0},
                            {-1.0,  1.0,  1.0,  0.0},
                            { 0.0,  1.0,  1.0, -1.0}};
