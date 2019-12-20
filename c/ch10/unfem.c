@@ -509,7 +509,8 @@ PetscErrorCode PreallocateAndSetNonzeros(Mat J, unfemCtx *user) {
     PetscErrorCode ierr;
     const PetscInt  *ae, *abf, *en;
     PetscInt        *nnz, n, k, l, cr, row[3];
-    PetscReal       zero = 0.0, v[9] = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+    PetscReal       zero = 0.0,
+                    v[9] = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
 
     ierr = ISGetIndices(user->mesh->bf,&abf); CHKERRQ(ierr);
     ierr = ISGetIndices(user->mesh->e,&ae); CHKERRQ(ierr);
@@ -527,7 +528,7 @@ PetscErrorCode PreallocateAndSetNonzeros(Mat J, unfemCtx *user) {
     ierr = MatSeqAIJSetPreallocation(J,-1,nnz); CHKERRQ(ierr);
     ierr = PetscFree(nnz); CHKERRQ(ierr);
 
-    // set nonzeros: put values (zeros, actually) in locations which may be nonzero
+    // set nonzeros: put values (=zeros) in allocated locations
     for (n = 0; n < user->mesh->N; n++) {
         if (abf[n] == 2) {
             ierr = MatSetValues(J,1,&n,1,&n,&zero,INSERT_VALUES); CHKERRQ(ierr);
@@ -546,8 +547,8 @@ PetscErrorCode PreallocateAndSetNonzeros(Mat J, unfemCtx *user) {
     }
     ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
     ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-    // an assembly routine (e.g. FormPicard()) will generate an error if it
-    // tries to put a matrix entry in the wrong place:
+    // an assembly routine (e.g. FormPicard()) will generate an error if
+    //   it tries to put a matrix entry in the wrong place:
     ierr = MatSetOption(J,MAT_NEW_NONZERO_LOCATION_ERR,PETSC_TRUE); CHKERRQ(ierr);
 
     ierr = ISRestoreIndices(user->mesh->e,&ae); CHKERRQ(ierr);

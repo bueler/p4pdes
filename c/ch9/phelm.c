@@ -286,10 +286,10 @@ static PetscReal GradPow(PetscReal hx, PetscReal hy,
 
 //STARTOBJECTIVE
 static PetscReal ObjIntegrandRef(DMDALocalInfo *info,
-                                 const PetscReal ff[4], const PetscReal uu[4],
-                                 PetscReal xi, PetscReal eta, PHelmCtx *user) {
+                       const PetscReal ff[4], const PetscReal uu[4],
+                       PetscReal xi, PetscReal eta, PHelmCtx *user) {
     const gradRef    du = deval(uu,xi,eta);
-    const PetscReal  hx = 1.0 / (info->mx - 1),  hy = 1.0 / (info->my - 1),
+    const PetscReal  hx = 1.0 / (info->mx-1),  hy = 1.0 / (info->my-1),
                      u = eval(uu,xi,eta);
     return GradPow(hx,hy,du,user->p,0.0) / user->p + 0.5 * u * u
            - eval(ff,xi,eta) * u;
@@ -298,7 +298,7 @@ static PetscReal ObjIntegrandRef(DMDALocalInfo *info,
 PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **au,
                                   PetscReal *obj, PHelmCtx *user) {
   PetscErrorCode  ierr;
-  const PetscReal hx = 1.0 / (info->mx - 1),  hy = 1.0 / (info->my - 1);
+  const PetscReal hx = 1.0 / (info->mx-1),  hy = 1.0 / (info->my-1);
   const Quad1D    q = gausslegendre[user->quadpts-1];
   PetscReal       x, y, lobj = 0.0;
   PetscInt        i,j,r,s;
@@ -339,11 +339,11 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **au,
 
 //STARTFUNCTION
 static PetscReal IntegrandRef(DMDALocalInfo *info, PetscInt L,
-                              const PetscReal ff[4], const PetscReal uu[4],
-                              PetscReal xi, PetscReal eta, PHelmCtx *user) {
+                     const PetscReal ff[4], const PetscReal uu[4],
+                     PetscReal xi, PetscReal eta, PHelmCtx *user) {
   const gradRef    du    = deval(uu,xi,eta),
                    dchiL = dchi(L,xi,eta);
-  const PetscReal  hx = 1.0 / (info->mx - 1),  hy = 1.0 / (info->my - 1);
+  const PetscReal  hx = 1.0 / (info->mx-1),  hy = 1.0 / (info->my-1);
   return GradPow(hx,hy,du,user->p - 2.0,user->eps)
            * GradInnerProd(hx,hy,du,dchiL)
          + (eval(uu,xi,eta) - eval(ff,xi,eta)) * chi(L,xi,eta);
@@ -352,7 +352,7 @@ static PetscReal IntegrandRef(DMDALocalInfo *info, PetscInt L,
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal **au,
                                  PetscReal **FF, PHelmCtx *user) {
   PetscErrorCode ierr;
-  const PetscReal hx = 1.0 / (info->mx - 1),  hy = 1.0 / (info->my - 1);
+  const PetscReal hx = 1.0 / (info->mx-1),  hy = 1.0 / (info->my-1);
   const Quad1D    q = gausslegendre[user->quadpts-1];
   const PetscInt  li[4] = {0,-1,-1,0},  lj[4] = {0,0,-1,-1};
   PetscReal       x, y;

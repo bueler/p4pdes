@@ -26,8 +26,8 @@ static const Quad1D gausslegendre[3]
 #define MAXPTS_TRI 4
 
 typedef struct {
-    PetscInt   n;               // number of quadrature points for this rule
-    PetscReal  xi[MAXPTS_TRI],  // locations: (xi,eta) in reference triangle
+    PetscInt   n;               // number of quad. points for this rule
+    PetscReal  xi[MAXPTS_TRI],  // locations: (xi,eta) in ref. triangle
                eta[MAXPTS_TRI], //   with vertices (0,0), (1,0), (0,1)
                w[MAXPTS_TRI];   // weights (sum to 0.5)
 } Quad2DTri;

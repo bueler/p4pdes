@@ -249,8 +249,9 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, PetscReal t,
 //     J = (shift) dF/d(dot Y) + dF/dY
 //STARTIJACOBIAN
 PetscErrorCode FormIJacobianLocal(DMDALocalInfo *info,
-                   PetscReal t, Field **aY, Field **aYdot, PetscReal shift,
-                   Mat J, Mat P, PatternCtx *user) {
+                   PetscReal t, Field **aY, Field **aYdot,
+                   PetscReal shift, Mat J, Mat P,
+                   PatternCtx *user) {
     PetscErrorCode ierr;
     PetscInt         i, j, s, c;
     const PetscReal  h = user->L / (PetscReal)(info->mx),

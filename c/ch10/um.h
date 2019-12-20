@@ -34,8 +34,8 @@ PetscErrorCode UMDestroy(UM *mesh);     // call last
 // create Vec and then read node coordinates from file into it
 PetscErrorCode UMReadNodes(UM *mesh, char *filename);
 
-// create ISs and then read element triples, Neumann boundary segments, and
-// boundary flags into them; call UMReadNodes() first
+// create ISs and then read element triples, Neumann boundary segments,
+//   and boundary flags into them; call UMReadNodes() first
 PetscErrorCode UMReadISs(UM *mesh, char *filename);
 
 // view all fields in UM to the viewer
@@ -43,7 +43,7 @@ PetscErrorCode UMViewASCII(UM *mesh, PetscViewer viewer);
 PetscErrorCode UMViewSolutionBinary(UM *mesh, char *filename, Vec u);
 
 // compute statistics for mesh:  maxh,meanh are for triangle side
-// lengths; maxa,meana are for areas
+//   lengths; maxa,meana are for areas
 PetscErrorCode UMStats(UM *mesh, PetscReal *maxh, PetscReal *meanh,
                        PetscReal *maxa, PetscReal *meana);
 
