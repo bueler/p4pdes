@@ -93,7 +93,8 @@ int main(int argc,char **args) {
   ierr = KSPSetOperators(ksp,A,A); CHKERRQ(ierr);
   ierr = KSPSetFromOptions(ksp); CHKERRQ(ierr);
 
-  ierr = VecDuplicate(b,&x);CHKERRQ(ierr);
+  ierr = VecDuplicate(b,&x); CHKERRQ(ierr);
+  ierr = VecSet(x,0.0); CHKERRQ(ierr);
   ierr = KSPSolve(ksp,b,x); CHKERRQ(ierr);
 
   KSPDestroy(&ksp);  MatDestroy(&A);
