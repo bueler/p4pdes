@@ -109,9 +109,9 @@ PetscErrorCode formMatrix(DM da, Mat A) {
 //STARTEXACT
 PetscErrorCode formExact(DM da, Vec uexact) {
     PetscErrorCode ierr;
-    DMDALocalInfo  info;
     PetscInt       i, j;
     PetscReal      hx, hy, x, y, **auexact;
+    DMDALocalInfo  info;
 
     ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
     hx = 1.0/(info.mx-1);  hy = 1.0/(info.my-1);
