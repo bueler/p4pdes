@@ -15,7 +15,7 @@ int main(int argc,char **argv) {
     ierr = VecCreate(PETSC_COMM_WORLD,&x); CHKERRQ(ierr);
     ierr = VecSetSizes(x,PETSC_DECIDE,2); CHKERRQ(ierr);
     ierr = VecSetFromOptions(x); CHKERRQ(ierr);
-    ierr = VecSet(x,1.0); CHKERRQ(ierr);
+    ierr = VecSet(x,1.0); CHKERRQ(ierr);         // initial iterate
     ierr = VecDuplicate(x,&r); CHKERRQ(ierr);
 
     ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
@@ -24,7 +24,7 @@ int main(int argc,char **argv) {
     ierr = SNESSolve(snes,NULL,x); CHKERRQ(ierr);
     ierr = VecView(x,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
 
-    VecDestroy(&x);  VecDestroy(&r);  SNESDestroy(&snes);
+    SNESDestroy(&snes);  VecDestroy(&x);  VecDestroy(&r);
     return PetscFinalize();
 }
 
