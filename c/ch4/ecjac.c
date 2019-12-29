@@ -35,11 +35,11 @@ int main(int argc,char **argv) {
   ierr = SNESSetJacobian(snes,J,J,FormJacobian,&user);CHKERRQ(ierr);
   ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
 
-  ierr = VecSet(x,1.0);CHKERRQ(ierr);
+  ierr = VecSet(x,1.0);CHKERRQ(ierr);            // initial iterate
   ierr = SNESSolve(snes,NULL,x);CHKERRQ(ierr);
   ierr = VecView(x,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
 
-  VecDestroy(&x);  VecDestroy(&r);  SNESDestroy(&snes);  MatDestroy(&J);
+  SNESDestroy(&snes);  MatDestroy(&J);  VecDestroy(&x);  VecDestroy(&r);
   return PetscFinalize();
 }
 //ENDMAIN
