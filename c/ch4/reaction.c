@@ -3,8 +3,8 @@ static char help[] = "1D reaction-diffusion problem with DMDA and SNES.  Option 
 #include <petsc.h>
 
 typedef struct {
-    PetscReal    rho, M, alpha, beta;
-    PetscBool noRinJ;
+    PetscReal  rho, M, alpha, beta;
+    PetscBool  noRinJ;
 } AppCtx;
 
 extern PetscReal f_source(PetscReal);
