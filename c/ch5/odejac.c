@@ -72,13 +72,14 @@ PetscErrorCode ExactSolution(PetscReal t, Vec y) {
     return 0;
 }
 
-PetscErrorCode FormRHSFunction(TS ts, PetscReal t, Vec y, Vec g, void *ptr) {
+PetscErrorCode FormRHSFunction(TS ts, PetscReal t, Vec y, Vec g,
+                               void *ptr) {
     const PetscReal *ay;
     PetscReal       *ag;
     VecGetArrayRead(y,&ay);
     VecGetArray(g,&ag);
-    ag[0] = ay[1];            // = G_1(t,y)
-    ag[1] = - ay[0] + t;      // = G_2(t,y)
+    ag[0] = ay[1];            // = g_1(t,y)
+    ag[1] = - ay[0] + t;      // = g_2(t,y)
     VecRestoreArrayRead(y,&ay);
     VecRestoreArray(g,&ag);
     return 0;
