@@ -18,6 +18,10 @@ pattern: pattern.o
 	-${CLINKER} -o pattern pattern.o  ${PETSC_LIB}
 	${RM} pattern.o
 
+petscPyScripts:
+	ln -sf ${PETSC_DIR}/lib/petsc/bin/PetscBinaryIO.py
+	ln -sf ${PETSC_DIR}/lib/petsc/bin/petsc_conf.py
+
 
 # testing
 runode_1:
