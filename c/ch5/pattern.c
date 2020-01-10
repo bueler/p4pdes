@@ -89,6 +89,7 @@ int main(int argc,char **argv)
 
 //STARTTSSETUP
   ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
+  ierr = TSSetProblemType(ts,TS_NONLINEAR); CHKERRQ(ierr);
   ierr = TSSetDM(ts,da); CHKERRQ(ierr);
   ierr = TSSetApplicationContext(ts,&user); CHKERRQ(ierr);
   ierr = DMDATSSetRHSFunctionLocal(da,INSERT_VALUES,
