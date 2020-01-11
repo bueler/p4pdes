@@ -193,7 +193,7 @@ int main(int argc,char **argv) {
     }
 
 //STARTCREATE
-    // DMDA in chosen dimension
+    // create DMDA in chosen dimension
     switch (dim) {
         case 1:
             ierr = DMDACreate1d(PETSC_COMM_WORLD,
@@ -219,7 +219,7 @@ int main(int argc,char **argv) {
     ierr = DMSetUp(da); CHKERRQ(ierr);  // call BEFORE SetUniformCoordinates
     ierr = DMDASetUniformCoordinates(da,0.0,user.Lx,0.0,user.Ly,0.0,user.Lz); CHKERRQ(ierr);
 
-    // create SNES supply call-backs
+    // set SNES call-backs
     ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
     ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
     ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
@@ -233,7 +233,7 @@ int main(int argc,char **argv) {
     ierr = KSPSetType(ksp,KSPCG); CHKERRQ(ierr);
     ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
 
-    // initial iterate and solve
+    // set initial iterate and then solve
     ierr = DMGetGlobalVector(da,&u_initial); CHKERRQ(ierr);
     ierr = InitialState(da, initial, gonboundary, u_initial, &user); CHKERRQ(ierr);
     ierr = SNESSolve(snes,NULL,u_initial); CHKERRQ(ierr);
