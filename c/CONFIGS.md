@@ -1,7 +1,7 @@
 CONFIGS.md
 ==========
 
-This is a list of recent configure commands, defining different `PETSC_ARCH` values, on the author's machine.
+This is a list of recent configure commands, defining different `PETSC_ARCH` values, on the author's machines.
 
   * `linux-c-dbg`:
 
@@ -14,3 +14,4 @@ This is a list of recent configure commands, defining different `PETSC_ARCH` val
   * `linux-c-quad`:
 
         ./configure --download-mpich --with-64-bit-indices --with-precision=__float128 --download-f2cblaslapack --with-debugging=1
+
