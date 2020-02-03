@@ -178,16 +178,16 @@ int main(int argc,char **argv) {
 
     PetscLogStagePush(user.setupstage);
 //STARTMAININITIAL
-    // configure Vecs and SNES
+    // configure Vecs
     ierr = VecCreate(PETSC_COMM_WORLD,&r); CHKERRQ(ierr);
     ierr = VecSetSizes(r,PETSC_DECIDE,mesh.N); CHKERRQ(ierr);
     ierr = VecSetFromOptions(r); CHKERRQ(ierr);
     ierr = VecDuplicate(r,&u); CHKERRQ(ierr);
     ierr = VecSet(u,0.0); CHKERRQ(ierr);
+
+    // configure SNES: reset default KSP and PC
     ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
     ierr = SNESSetFunction(snes,r,FormFunction,&user); CHKERRQ(ierr);
-
-    // reset default KSP and PC
     ierr = SNESGetKSP(snes,&ksp); CHKERRQ(ierr);
     ierr = KSPSetType(ksp,KSPCG); CHKERRQ(ierr);
     ierr = KSPGetPC(ksp,&pc); CHKERRQ(ierr);
@@ -198,19 +198,18 @@ int main(int argc,char **argv) {
     ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,mesh.N,mesh.N); CHKERRQ(ierr);
     ierr = MatSetFromOptions(A); CHKERRQ(ierr);
     ierr = MatSetOption(A,MAT_SYMMETRIC,PETSC_TRUE); CHKERRQ(ierr);
-    // Preallocation and setting the sparsity pattern is recommended.
-    //   (The latter allows finite difference approximation of the
-    //   Jacobian using coloring.)  However, option -un_noprealloc exists
-    //   to show the poor performance without these steps.
+    // Preallocation and setting the nonzero (sparsity) pattern is
+    //   recommended; setting the pattern allows finite difference
+    //   approximation of the Jacobian using coloring.  Option
+    //   -un_noprealloc reveals the poor performance otherwise.
     if (noprealloc) {
         ierr = MatSetUp(A); CHKERRQ(ierr);
     } else {
         ierr = PreallocateAndSetNonzeros(A,&user); CHKERRQ(ierr);
     }
-    // The following call-back setting is ignored if option -snes_fd
-    //   or -snes_fd_color is set.  However, when PreallocateAndSetNonzeros()
-    //   is called (above) the coloring will still work because
-    //   SNESComputeJacobianDefaultColor() is substituted for FormPicard().
+    // The following call-back setting is ignored under option -snes_fd
+    //   or -snes_fd_color; in the latter case
+    //   SNESComputeJacobianDefaultColor() substitutes for FormPicard().
     ierr = SNESSetJacobian(snes,A,A,FormPicard,&user); CHKERRQ(ierr);
     ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
     PetscLogStagePop();  //STRIP
@@ -335,7 +334,7 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
     if (user->mesh->P > 0) {
         ierr = ISGetIndices(user->mesh->ns,&ans); CHKERRQ(ierr);
         for (p = 0; p < user->mesh->P; p++) {
-            na = ans[2*p+0];  nb = ans[2*p+1];  // nodes at end of segment
+            na = ans[2*p+0];  nb = ans[2*p+1];  // end nodes of segment
             dx = aloc[na].x-aloc[nb].x;  dy = aloc[na].y-aloc[nb].y;
             ls = sqrt(dx * dx + dy * dy);  // length of segment
             // midpoint rule; psi_na=psi_nb=0.5 at midpoint of segment
