@@ -411,6 +411,8 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
 }
 //ENDRESIDUAL
 
+
+//STARTPICARD
 PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
     PetscErrorCode ierr;
     unfemCtx         *user = (unfemCtx*)ctx;
@@ -458,8 +460,8 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
             yy = aloc[en[0]].y + dy1 * q.xi[r] + dy2 * q.eta[r];
             aquad[r] = user->a_fcn(uquad[r],xx,yy);
         }
-        // generate 3x3 element stiffness matrix (3x3 is max size; may be smaller)
-        cr = 0;  cv = 0;  // cr = count rows; cv = value counter for all entries
+        // generate 3x3 element stiffness matrix (may be smaller)
+        cr = 0;  cv = 0;  // cr = count rows; cv = entry counter
         for (l = 0; l < 3; l++) {
             if (abf[en[l]] != 2) {
                 row[cr++] = en[l];
@@ -467,14 +469,14 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
                     if (abf[en[m]] != 2) {
                         sum = 0.0;
                         for (r = 0; r < q.n; r++) {
-                            sum += q.w[r] * aquad[r] * InnerProd(gradpsi[l],gradpsi[m]);
+                            sum += q.w[r] * aquad[r]
+                                   * InnerProd(gradpsi[l],gradpsi[m]);
                         }
                         v[cv++] = PetscAbsReal(detJ) * sum;
                     }
                 }
             }
         }
-        // insert element stiffness matrix
         ierr = MatSetValues(P,cr,row,cr,row,v,ADD_VALUES); CHKERRQ(ierr);
     }
     ierr = ISRestoreIndices(user->mesh->e,&ae); CHKERRQ(ierr);
@@ -491,6 +493,7 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
     PetscLogStagePop();  //STRIP
     return 0;
 }
+//ENDPICARD
 
 
 /* The following procedure is accomplishes essentially the same actions
@@ -511,10 +514,9 @@ PetscErrorCode PreallocateAndSetNonzeros(Mat J, unfemCtx *user) {
     PetscReal       zero = 0.0,
                     v[9] = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
 
+    // preallocate: set number of nonzeros per row
     ierr = ISGetIndices(user->mesh->bf,&abf); CHKERRQ(ierr);
     ierr = ISGetIndices(user->mesh->e,&ae); CHKERRQ(ierr);
-
-    // preallocate: set number of nonzeros per row
     ierr = PetscMalloc1(user->mesh->N,&nnz); CHKERRQ(ierr);
     for (n = 0; n < user->mesh->N; n++)
         nnz[n] = (abf[n] == 1) ? 2 : 1;
@@ -546,10 +548,9 @@ PetscErrorCode PreallocateAndSetNonzeros(Mat J, unfemCtx *user) {
     }
     ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
     ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-    // an assembly routine (e.g. FormPicard()) will generate an error if
-    //   it tries to put a matrix entry in the wrong place:
+    // the assembly routine FormPicard() will generate an error if
+    //   it tries to put a matrix entry in the wrong place
     ierr = MatSetOption(J,MAT_NEW_NONZERO_LOCATION_ERR,PETSC_TRUE); CHKERRQ(ierr);
-
     ierr = ISRestoreIndices(user->mesh->e,&ae); CHKERRQ(ierr);
     ierr = ISRestoreIndices(user->mesh->bf,&abf); CHKERRQ(ierr);
     return 0;
