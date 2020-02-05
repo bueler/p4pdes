@@ -3,11 +3,15 @@
 # test -pc_type gamg for optimality by running unfem on a sequence of refining
 # meshes; uses CG for Krylov
 
-# main example uses PETSC_ARCH with --with-debugging=0:
-#   ./refinetraps.sh meshes/trap LEV
-#   ./gamgopt.sh meshes/trap 0 LEV &> gamgopt.txt
+# generate meshes/trapN.{is,vec} for N=1,...,12 first
 
-# LEV=12 with N=10492929 nodes and 100 sec run achievable on ed-galago
+# main example uses PETSC_ARCH with --with-debugging=0:
+#   cd c/ch10/
+#   ./refinetraps.sh meshes/trap 12
+#   cd study/
+#   ./gamgopt.sh ../meshes/trap 0 12 &> gamgopt.txt
+
+# LEV=12 with N=10^7 nodes and ~100 sec run time achievable given ~10 Gb memory
 
 # results & figure-generation:  see p4pdes-book/figs/gamgopt.txt|py
 
@@ -18,7 +22,7 @@ MAXLEV=$3
 for (( Z=1; Z<=$MAXLEV; Z++ )); do
     echo "running level ${Z}"
     IN=${NAME}$Z
-    cmd="./unfem -un_case $CASE -snes_type ksponly -pc_type gamg -ksp_converged_reason -un_mesh $IN"
+    cmd="../unfem -un_case $CASE -snes_type ksponly -pc_type gamg -ksp_rtol 1.0e-10 -ksp_converged_reason -un_mesh $IN"
     rm -f foo.txt
     echo $cmd
     $cmd -log_view &> foo.txt
