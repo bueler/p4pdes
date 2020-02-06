@@ -2,14 +2,12 @@
 set -e
 
 # convergence and iterations for case 0,1,2 for unfem
-
 # generate meshes/trapN.{is,vec} for N=1,...,10 first
-
 # run as:
 #   ./unfem-conv.sh &> unfem-conv.txt
 # use PETSC_ARCH with --with-debugging=0 (for speed; time not measured)
-
-# results & figure-generation:  see p4pdes-book/figs/unfem-conv.txt|py
+# results:  hand edits give p4pdes-book/figs/unfem-conv.txt
+# figure-generation:  p4pdes-book/figs/unfem-conv.py
 
 function runcase() {
     CMD="../unfem -un_case $1 -un_mesh ../meshes/trap$2 $3"
