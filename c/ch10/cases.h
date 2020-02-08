@@ -103,7 +103,7 @@ PetscReal a_koch(PetscReal u, PetscReal x, PetscReal y) {
 }
 
 PetscReal f_koch(PetscReal u, PetscReal x, PetscReal y) {
-    return 1.0;
+    return 2.0;
 }
 
 PetscReal gD_koch(PetscReal x, PetscReal y) {
