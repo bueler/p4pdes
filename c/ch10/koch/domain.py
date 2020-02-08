@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# (C) 2016-2018 Ed Bueler
+# (C) 2016-2020 Ed Bueler
 
 from __future__ import print_function
 import numpy as np
