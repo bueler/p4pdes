@@ -1,3 +1,3 @@
   Linear solve converged due to CONVERGED_RTOL iterations 5
   PC is GAMG with 2 levels
-case 0 result for N=18 nodes with h = 7.071e-01 :  |u-u_ex|_inf = 1.97e-02
+case 0 result for N=18 nodes with h = 7.071e-01: |u-u_ex|_inf = 1.97e-02

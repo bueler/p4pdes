@@ -1,2 +1,2 @@
 Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
-case 1 result for N=7 nodes with h = 1.414e+00 :  |u-u_ex|_inf = 1.09e-01
+case 1 result for N=7 nodes with h = 1.414e+00: |u-u_ex|_inf = 1.09e-01

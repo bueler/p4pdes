@@ -268,7 +268,7 @@ int main(int argc,char **argv) {
         ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
         ierr = VecNorm(u,NORM_INFINITY,&err); CHKERRQ(ierr);
         ierr = PetscPrintf(PETSC_COMM_WORLD,
-                   "case %d result for N=%d nodes with h = %.3e :  |u-u_ex|_inf = %.2e\n",
+                   "case %d result for N=%d nodes with h = %.3e: |u-u_ex|_inf = %.2e\n",
                    user.solncase,mesh.N,h_max,err); CHKERRQ(ierr);
         VecDestroy(&uexact);
     } else {
