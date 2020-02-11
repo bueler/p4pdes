@@ -12,12 +12,12 @@ PetscReal a_lin(PetscReal u, PetscReal x, PetscReal y) {
 
 // manufactured from a_lin(), uexact_lin():
 PetscReal f_lin(PetscReal u, PetscReal x, PetscReal y) {
-    return 2.0 + 3.0 * y * y;
+    return 2.0 * x + 3.0 * y * y;
 }
 
 PetscReal uexact_lin(PetscReal x, PetscReal y) {
     const PetscReal y2 = y * y;
-    return 1.0 - y2 - 0.25 * y2 * y2;
+    return 1.0 - x * y2 - 0.25 * y2 * y2;
 }
 
 // just evaluate exact u on boundary point:
@@ -40,9 +40,13 @@ PetscReal a_nonlin(PetscReal u, PetscReal x, PetscReal y) {
 }
 
 // manufactured from a_nonlin(), uexact_lin()
-PetscReal f_nonlin(PetscReal u, PetscReal x, PetscReal y) {
-    const PetscReal dudy = - 2.0 * y - y * y * y;
-    return - 2.0 * u * dudy * dudy + (1.0 + u * u) * (2.0 + 3.0 * y * y);
+PetscReal f_nonlin(PetscReal udrop, PetscReal x, PetscReal y) {
+    const PetscReal y2 = y * y,
+                    y4 = y2 * y2,
+                    u = 1.0 - x * y2 - 0.25 * y4,
+                    v = 2.0 * x * y + y * y2;
+    return - 2.0 * y4 * u - 2.0 * u * v * v
+           + (1.0 + u * u) * (2.0 * x + 3.0 * y2);
 }
 
 // uexact_nonlin = uexact_lin
@@ -60,9 +64,9 @@ PetscReal f_nonlin(PetscReal u, PetscReal x, PetscReal y) {
 // uexact_linneu = uexact_lin
 // gD_linneu = gD_lin
 
-// only valid on line with slope -1
+// only valid on line  y = 2 - x
 PetscReal gN_linneu(PetscReal x, PetscReal y) {
-    return - y * (2.0 + y * y) / sqrt(2.0);
+    return - y * (4.0 - y + y * y * y) / sqrt(2.0);
 }
 
 
