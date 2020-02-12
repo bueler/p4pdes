@@ -42,7 +42,7 @@ done
 echo
 
 echo "********** JFNK with Picard matrix ***********"
-for LEV in 3 4 5 6 7 8 9 10; do
+for LEV in 3 4 5 6 7 8 9; do   # LEV=10 generates DIVERGED_ITS error on 4th SNES iter
     run $LEV "-snes_mf_operator"
 done
 echo
