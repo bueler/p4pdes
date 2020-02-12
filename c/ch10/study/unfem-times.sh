@@ -1,15 +1,13 @@
 #!/bin/bash
 set -e
 
-# solver time for case 0 of unfem, either CG+ICC or CG+GAMG
-#
-# run as:
+# solver time, flops, and run-time stage fractions for case 0 of unfem,
+# either CG+ICC or CG+GAMG;  run as:
 #   cd c/ch10/
 #   make unfem                        # use PETSC_ARCH with --with-debugging=0
 #   ./refinetraps.sh meshes/trap 12   # generate meshes/trapN.{is,vec} for N=1,...,12
 #   cd study/
 #   ./unfem-times.sh &> unfem-times.txt
-#
 # results:  hand edits give p4pdes-book/figs/unfem-times.txt
 # figure-generation:  p4pdes-book/figs/unfem-times.py
 
