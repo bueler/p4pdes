@@ -29,11 +29,22 @@ function run() {
     grep "Time (sec):     " tmp.txt
 }
 
-for METH in "" "-snes_fd_color" "-snes_mf_operator"; do
-    echo "********** METH = $METH ***********"
-    for LEV in 4 5 6 7 8 9 10 11; do
-        run $LEV "$METH"
-    done
-    echo
+echo "********** Picard ***********"
+for LEV in 3 4 5 6 7 8 9 10 11; do
+    run $LEV ""
 done
+echo
+
+echo "********** Newton by _fd_color ***********"
+for LEV in 3 4 5 6 7 8 9 10 11; do
+    run $LEV "-snes_fd_color"
+done
+echo
+
+echo "********** JFNK with Picard matrix ***********"
+for LEV in 3 4 5 6 7 8 9 10; do
+    run $LEV "-snes_mf_operator"
+done
+echo
+
 
