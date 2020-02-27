@@ -207,9 +207,8 @@ int main(int argc,char **argv) {
     } else {
         ierr = PreallocateAndSetNonzeros(A,&user); CHKERRQ(ierr);
     }
-    // The following call-back setting is ignored under option -snes_fd
-    //   or -snes_fd_color; in the latter case
-    //   SNESComputeJacobianDefaultColor() substitutes for FormPicard().
+    // The following call-back is ignored under option -snes_fd or
+    //   -snes_fd_color.
     ierr = SNESSetJacobian(snes,A,A,FormPicard,&user); CHKERRQ(ierr);
     ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
     PetscLogStagePop();  //STRIP
