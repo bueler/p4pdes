@@ -19,6 +19,10 @@ static char help[] =
 #include <petsc.h>
 
 //STARTCTX
+typedef enum {STRAIGHT, ROTATION} ProblemType;
+static const char *ProblemTypes[] = {"straight","rotation",
+                                     "ProblemType", "", NULL};
+
 typedef enum {STUMP, SMOOTH, CONE, BOX} InitialType;
 static const char *InitialTypes[] = {"stump", "smooth", "cone", "box",
                                      "InitialType", "", NULL};
@@ -26,10 +30,6 @@ static const char *InitialTypes[] = {"stump", "smooth", "cone", "box",
 typedef enum {NONE, CENTERED, VANLEER, KOREN} LimiterType;
 static const char *LimiterTypes[] = {"none","centered","vanleer","koren",
                                      "LimiterType", "", NULL};
-
-typedef enum {STRAIGHT, ROTATION} ProblemType;
-static const char *ProblemTypes[] = {"straight","rotation",
-                                     "ProblemType", "", NULL};
 
 typedef struct {
     ProblemType  problem;
@@ -167,13 +167,13 @@ int main(int argc,char **argv) {
            "advect.c",LimiterTypes,
            (PetscEnum)jac_limiter,(PetscEnum*)&jac_limiter,NULL); CHKERRQ(ierr);
     user.jac_limiter_fcn = limiterptr[jac_limiter];
+    ierr = PetscOptionsBool("-oneline",
+           "in exact solution cases, show one-line output",
+           "advect.c",oneline,&oneline,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsEnum("-problem",
            "problem type",
            "advect.c",ProblemTypes,
            (PetscEnum)user.problem,(PetscEnum*)&user.problem,NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-oneline",
-           "in exact solution cases, show one-line output",
-           "advect.c",oneline,&oneline,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsReal("-windx",
            "x component of wind for problem==straight",
            "advect.c",user.windx,&user.windx,NULL);CHKERRQ(ierr);
