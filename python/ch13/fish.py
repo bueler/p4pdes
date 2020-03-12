@@ -4,6 +4,8 @@ from argparse import ArgumentParser, RawTextHelpFormatter
 from firedrake import *
 from firedrake.petsc import PETSc
 
+# Read command-line options (in addition to PETSc solver options
+# which use -s_ prefix; see below)
 parser = ArgumentParser(description="""
 Use Firedrake's nonlinear solver for the Poisson problem
   -Laplace(u) = f        in the unit square
@@ -26,9 +28,7 @@ parser.add_argument('-quad', action='store_true', default=False,
 parser.add_argument('-refine', type=int, default=-1, metavar='X',
                     help='number of refinement levels (e.g. for GMG)')
 args, unknown = parser.parse_known_args()
-
-# -fishhelp is for help with fish.py
-if args.fishhelp:
+if args.fishhelp:  # -fishhelp is for help with fish.py
     parser.print_help()
 
 # Create mesh, enabling GMG via refinement using hierarchy
@@ -49,17 +49,17 @@ u = Function(W)  # initialized to zero here
 v = TestFunction(W)
 F = (dot(grad(u), grad(v)) - f_rhs * v) * dx
 
-# Dirichlet boundary conditions
+# Define Dirichlet boundary conditions
 g_bdry = Function(W).interpolate(- x * exp(y))  # = exact solution
 bdry_ids = (1, 2, 3, 4)   # all four sides of boundary
 bc = DirichletBC(W, g_bdry, bdry_ids)
 
-# Solve
+# Solve system as though it is nonlinear:  F(u) = 0
 solve(F == 0, u, bcs = [bc], options_prefix = 's',
       solver_parameters = {'snes_type': 'ksponly',
                            'ksp_type': 'cg'})
 
-# Numerical error in L_infty and L_2 norm
+# Print numerical error in L_infty and L_2 norm
 elementstr = '%s^%d' % (['P','Q'][args.quad],args.k)
 udiff = Function(W).interpolate(u - g_bdry)
 with udiff.dat.vec_ro as vudiff:
