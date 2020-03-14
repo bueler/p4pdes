@@ -1,3 +1,3 @@
 solving on 3 x 3 grid with Q^3 x Q^2 Taylor-Hood elements ...
   sizes: n_u = 98, n_p = 25, N = 123
-  solution norms: |u|_h = 5.46340e-02, |p|_h = 8.64117e-01
+  solution norms: |u|_h = 5.46340e-02, |p|_h = 8.64133e-01
