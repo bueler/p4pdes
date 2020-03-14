@@ -134,6 +134,8 @@ u,p = split(up)
 v,q = TestFunctions(Z)
 F = (args.mu * inner(grad(u), grad(v)) - p * div(v) - div(u) * q \
      - inner(f_body,v)) * dx
+#F = (0.5 * args.mu * inner(grad(u)+grad(u).T, grad(v)+grad(v).T) - p * div(v) - div(u) * q \
+#     - inner(f_body,v)) * dx
 
 # solver notes:
 # 1. -s_pc_fieldsplit_type schur
