@@ -7,14 +7,14 @@ These codes will remain here and be maintained and supported in the long term.
 
 ### configure and install Firedrake
 
-To download and install Firedrake installation follow the instructions at the [download tab on the Firedrake page](https://www.firedrakeproject.org/download.html).  It is recommended that Firedrake downloads its own copy of PETSc.
+To download and install Firedrake installation follow the instructions at the [download tab on the Firedrake page](https://www.firedrakeproject.org/download.html).  It is recommended that you allow Firedrake to download its own copy of PETSc.
 
 After the initial download (of the Firedrake install script) do something like
 
         $ unset PYTHONPATH; unset PETSC_DIR; unset PETSC_ARCH;
         $ python3 firedrake-install
 
-The reason to unset variables is so that Firedrake does its own PETSc install with a version of PETSc that will work for it.
+Firedrake will then proceed to download and install its rather large stack of dependencies.  The reason to unset variables is so that Firedrake does its own PETSc install with its own compatible version of PETSc.
 
 ### run the Poisson example
 
