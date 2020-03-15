@@ -54,6 +54,8 @@ parser.add_argument('-stokeshelp', action='store_true', default=False,
                     help='help for stokes.py options')
 parser.add_argument('-udegree', type=int, default=2, metavar='K',
                     help='polynomial degree for velocity (default=2)')
+parser.add_argument('-vectorlap', action='store_true', default=False,
+                    help='use vector laplacian residual formula')
 args, unknown = parser.parse_known_args()
 assert not (args.analytical and args.nobase), 'conflict in problem choice options'
 
@@ -132,10 +134,14 @@ else:
 up = Function(Z)
 u,p = split(up)
 v,q = TestFunctions(Z)
-F = (args.mu * inner(grad(u), grad(v)) - p * div(v) - div(u) * q \
-     - inner(f_body,v)) * dx
-#F = (0.5 * args.mu * inner(grad(u)+grad(u).T, grad(v)+grad(v).T) - p * div(v) - div(u) * q \
-#     - inner(f_body,v)) * dx
+if args.vectorlap:
+    F = (args.mu * inner(grad(u), grad(v)) - p * div(v) - div(u) * q \
+         - inner(f_body,v)) * dx
+else:
+    Du = 0.5 * (grad(u)+grad(u).T)
+    Dv = 0.5 * (grad(v)+grad(v).T)
+    F = (2.0 * args.mu * inner(Du,Dv) - p * div(v) - div(u) * q \
+         - inner(f_body,v)) * dx
 
 # solver notes:
 # 1. -s_pc_fieldsplit_type schur
