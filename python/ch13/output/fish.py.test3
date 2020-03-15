@@ -6,6 +6,7 @@ DM_0x84000000_1 in 2 dimensions:
   2-cells: 32
 Labels:
   depth: 3 strata with value/size (0 (25), 1 (56), 2 (32))
+  celltype: 3 strata with value/size (2 (32), 0 (25), 1 (56))
   Face Sets: 4 strata with value/size (1 (4), 3 (4), 4 (4), 2 (4))
   boundary_faces: 1 strata with value/size (1 (16))
   exterior_facets: 1 strata with value/size (1 (16))

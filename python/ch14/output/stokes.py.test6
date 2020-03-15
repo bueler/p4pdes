@@ -2,7 +2,7 @@ solving on 3 x 3 grid with P^2 x P^1 Taylor-Hood elements ...
 usage: stokes.py [-analytical] [-dp] [-lidscale X] [-mesh INNAME] [-mx MX]
                  [-my MY] [-mu MU] [-nobase] [-o OUTNAME] [-pdegree L] [-quad]
                  [-refine R] [-schurgmg X] [-schurpre X] [-showinfo]
-                 [-stokeshelp] [-udegree K]
+                 [-stokeshelp] [-udegree K] [-vectorlap]
 
 Solve a linear Stokes problem in 2D, an example of a saddle-point system.
 Three problem cases:
@@ -35,3 +35,4 @@ optional arguments:
   -showinfo     print function space sizes and solution norms
   -stokeshelp   help for stokes.py options
   -udegree K    polynomial degree for velocity (default=2)
+  -vectorlap    use vector laplacian residual formula

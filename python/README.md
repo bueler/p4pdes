@@ -1,7 +1,7 @@
 p4pdes/python/
 ==============
 
-The codes in Chapter 13 use [Firedrake](https://www.firedrakeproject.org/), a finite element library based on PETSc data types and solvers.  Firedrake uses [Python](https://www.python.org/) and [petsc4py](https://petsc4py.readthedocs.io/en/stable/).
+The codes in Chapters 13 and 14 use [Firedrake](https://www.firedrakeproject.org/), a finite element library based on PETSc data types and solvers.  Firedrake uses [Python](https://www.python.org/) and [petsc4py](https://petsc4py.readthedocs.io/en/stable/).
 
 These codes will remain here and be maintained and supported in the long term.
 
@@ -16,52 +16,24 @@ After the initial download (of the Firedrake install script) do something like
 
 Firedrake will then proceed to download and install its rather large stack of dependencies.  The reason to unset variables is so that Firedrake does its own PETSc install with its own compatible version of PETSc.
 
-### run the Poisson example
+### start with the Poisson example
 
-Do something like this to run the Poisson solver:
+Do something like this to run the Poisson solver in Chapter 13, which will test your Firedrake installation:
 
         $ cd p4pdes/python/ch13/
         $ source ~/firedrake/bin/activate
         (firedrake) $ ./fish.py
 
-Use `./fish.py --help` to get some options.
-
-The default grid is 3 x 3 and the default KSP is CG.  Note the grid can be set by either `-refine X` or `-mx` and `-my`; using `-refine` allows geometric multigrid (GMG).  Solver options use prefix `-s_`.  Thus for CG+GMG on a fine grid do something like
+Note that the default grid is 3 x 3 and the default KSP is CG.  Note the grid can be set by either `-refine X` or `-mx` and `-my`; using `-refine` allows geometric multigrid (GMG).  Solver options use prefix `-s_`.  Thus for CG+GMG on a fine grid do something like
 
         (firedrake) $ ./fish.py -refine 8 -s_pc_type mg -s_ksp_monitor
 
-To get an output file in Paraview-readable form use `-o NAME.pvd`.
+To see help do these; the first gives help specific to `fish.py` and the second gives the usual PETSc type of help (i.e. with all applicable PETSc options):
 
-### run the Stokes example
+        (firedrake) $ ./fish.py -fishhelp
+        (firedrake) $ ./fish.py -help
 
-Running the Stokes solver `stokes.py` is similar.  For a uniform grid with default Taylor-Hood elements do
-
-        (firedrake) $ ./stokes.py -mx 65 -my 65 -s_ksp_monitor
-
-Generally the options available for `fish.py` are also available for `stokes.py`, but see `--help` output.
-
-For a nonuniform grid, with refinement in the lower corners, use a special script to generate a `.geo` geometry-description file and then use [Gmsh](http://gmsh.info/) to generate a mesh readable by `stokes.py`:
-
-        (firedrake) $ ./lidbox.py foo.geo
-        (firedrake) $ gmsh -2 foo.geo
-        (firedrake) $ ./stokes.py -i foo.msh -s_ksp_monitor
-
-For more about solver options see the book text in Chapter 13.
-
-
-### run the test suite
-
-Do
+To test the Firedrake installation you can also do the following in either `ch13/` or `ch14/`:
 
         (firedrake) $ make test
-
-### visualize results
-
-The two codes `fish.py` and `stokes.py` allow the `-o foo.pvd` option which writes a file which is readable with [Paraview](https://www.paraview.org/).
-
-### cleaning up
-
-Do
-
-        $ make clean
 
