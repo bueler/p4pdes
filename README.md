@@ -11,5 +11,5 @@ To compile and run the example C codes see the `README.md` in the `c/` directory
 
 ### Python/Firedrake codes
 
-Chapter 13 uses [Firedrake](https://www.firedrakeproject.org/), a [Python](https://www.python.org/) finite element library based on [petsc4py](https://petsc4py.readthedocs.io/en/stable/).  See the `README.md` in the `python/` directory.
+Chapters 13 and 14 use [Firedrake](https://www.firedrakeproject.org/), a [Python](https://www.python.org/) finite element library based on [petsc4py](https://petsc4py.readthedocs.io/en/stable/).  See the `README.md` in the `python/` directory.
 
