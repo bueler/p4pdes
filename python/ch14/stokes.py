@@ -224,8 +224,8 @@ if len(args.schurpre) > 0:
 sparams.update({'snes_type': 'ksponly'})  # applies to all
 
 # describe mixed FE method
-uFEstr = '%s^%d' % (['P','Q'][args.quad],args.udegree)
-pFEstr = '%s^%d' % (['P','Q'][args.quad],args.pdegree)
+uFEstr = '%s_%d' % (['P','Q'][args.quad],args.udegree)
+pFEstr = '%s_%d' % (['P','Q'][args.quad],args.pdegree)
 if args.dp:
     mixedname = 'CD'
 else:
