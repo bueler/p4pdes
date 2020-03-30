@@ -207,7 +207,7 @@ int main(int argc,char **argv) {
     if (uexact_fcn != NULL) {
         Vec     u_exact;
         PetscReal  xymin[2], xymax[2], hx, hy, err2;
-        ierr = VecDuplicate(u,&u_exact); CHKERRQ(ierr);
+        ierr = DMCreateGlobalVector(da_after,&u_exact); CHKERRQ(ierr);
         ierr = FormUExact(&info,&user,uexact_fcn,u_exact); CHKERRQ(ierr);
         ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr);    // u <- u + (-1.0) u_exact
         ierr = VecNorm(u,NORM_2,&err2); CHKERRQ(ierr);

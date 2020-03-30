@@ -99,7 +99,7 @@ int main(int argc,char **argv) {
     ierr = SNESGetDM(snes,&da); CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
 
-    ierr = VecDuplicate(w,&w_exact); CHKERRQ(ierr);
+    ierr = DMCreateGlobalVector(da,&w_exact); CHKERRQ(ierr);
     ierr = DMDAVecGetArray(da,w_exact,&aW); CHKERRQ(ierr);
     ierr = FormExactWLocal(&info,aW,&user); CHKERRQ(ierr);
     ierr = DMDAVecRestoreArray(da,w_exact,&aW); CHKERRQ(ierr);

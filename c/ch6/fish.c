@@ -246,9 +246,9 @@ int main(int argc,char **argv) {
 
     // evaluate error and report
     ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr);  // SNES owns u; do not destroy it
-    ierr = VecDuplicate(u,&u_exact); CHKERRQ(ierr);
     ierr = SNESGetDM(snes,&da_after); CHKERRQ(ierr); // SNES owns da_after; do not destroy it
     ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
+    ierr = DMCreateGlobalVector(da_after,&u_exact); CHKERRQ(ierr);
     getuexact = getuexact_ptr[dim-1];
     ierr = (*getuexact)(&info,u_exact,&user); CHKERRQ(ierr);
     ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr);   // u <- u + (-1.0) uexact

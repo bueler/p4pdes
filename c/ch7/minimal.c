@@ -173,7 +173,7 @@ int main(int argc, char **argv) {
     if ((problem == CATENOID) && (mctx.q == -0.5)) {
         Vec    u_exact;
         PetscReal errnorm;
-        ierr = VecDuplicate(u,&u_exact); CHKERRQ(ierr);
+        ierr = DMCreateGlobalVector(da,&u_exact); CHKERRQ(ierr);
         ierr = FormExactFromG(&info,u_exact,&user); CHKERRQ(ierr);
         ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
         ierr = VecDestroy(&u_exact); CHKERRQ(ierr);
