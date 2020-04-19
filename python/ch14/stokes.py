@@ -242,8 +242,8 @@ if len(args.schurgmg) > 0 and args.showinfo:
                     % (args.schurgmg,args.schurpre))
 
 # actually solve
-solve(F == 0, up, bcs=bcs, nullspace=ns,
-      options_prefix='s', solver_parameters=sparams)
+solve(F == 0, up, bcs=bcs, nullspace=ns, options_prefix='s',
+      solver_parameters=sparams)
 u,p = up.split()
 
 # numerical error (if possible)
