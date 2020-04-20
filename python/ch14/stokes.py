@@ -10,18 +10,18 @@ Solve a linear Stokes problem in 2D, an example of a saddle-point system.
 Three problem cases:
   1. Lid-driven cavity with quadratic velocity on lid and Dirichlet conditions
      on all sides and a null space of constant pressures.  The default problem.
-  2. (-analytical) Analytical exact solution from Logg et al (2012).
-  3. (-nobase) Same as 1. but with stress-free condition on bottom so the null
+  2. -analytical:  Analytical exact solution from Logg et al (2012).
+  3. -nobase:  Same as 1. but with stress-free condition on bottom so the null
      space is trivial.
 Uses mixed FE method, either Taylor-Hood family (P^k x P^l, or Q^k x Q^l with
--quad) or CD with discontinuous pressure.  Default is P^2 x P^1.  Uses either
-uniform mesh or reads a mesh in Gmsh format.  See the code for Schur+GMG
+-quad) or CD with discontinuous pressure; default is P^2 x P^1.  Uses either
+uniform mesh or reads a mesh in Gmsh format.  See source code for Schur+GMG
 PC packages.  The prefix for PETSC solver options is 's_'.  Use -help for
 PETSc options and -stokeshelp for options to stokes.py.""",
     formatter_class=RawTextHelpFormatter,add_help=False)
 
 parser.add_argument('-analytical', action='store_true', default=False,
-                    help='use problem with exact solution')
+                    help='Stokes problem with exact solution')
 parser.add_argument('-dp', action='store_true', default=False,
                     help='use discontinuous-Galerkin finite elements for pressure')
 parser.add_argument('-lidscale', type=float, default=1.0, metavar='X',
@@ -33,11 +33,11 @@ parser.add_argument('-mx', type=int, default=3, metavar='MX',
 parser.add_argument('-my', type=int, default=3, metavar='MY',
                     help='number of grid points in y-direction (uniform case)')
 parser.add_argument('-mu', type=float, default=1.0, metavar='MU',
-                    help='dynamic viscosity (default=1.0)')
+                    help='constant dynamic viscosity (default=1.0)')
 parser.add_argument('-nobase', action='store_true', default=False,
-                    help='use problem with stress-free boundary condition on base')
+                    help='Stokes problem with stress-free boundary condition on base')
 parser.add_argument('-o', metavar='OUTNAME', type=str, default='',
-                    help='output file name ending with .pvd')
+                    help='output file name for Paraview format (.pvd)')
 parser.add_argument('-pdegree', type=int, default=1, metavar='L',
                     help='polynomial degree for pressure (default=1)')
 parser.add_argument('-quad', action='store_true', default=False,
@@ -46,7 +46,7 @@ parser.add_argument('-refine', type=int, default=0, metavar='R',
                     help='number of refinement levels (e.g. for GMG)')
 parser.add_argument('-schurgmg', metavar='X', default='',
                     help='Schur+GMG PC solver package: diag|lower|full')
-parser.add_argument('-schurpre', metavar='X', default='',
+parser.add_argument('-schurpre', metavar='X', default='selfp',
                     help='how Schur block is preconditioned: selfp|mass')
 parser.add_argument('-showinfo', action='store_true', default=False,
                     help='print function space sizes and solution norms')
@@ -134,23 +134,23 @@ else:
 up = Function(Z)
 u,p = split(up)
 v,q = TestFunctions(Z)
-if args.vectorlap:
+if args.vectorlap:   # form which is special to constant viscosity
     F = (args.mu * inner(grad(u), grad(v)) - p * div(v) - div(u) * q \
          - inner(f_body,v)) * dx
-else:
+else:                # form that generalizes to variable or nonlinear viscosity
     Du = 0.5 * (grad(u)+grad(u).T)
     Dv = 0.5 * (grad(v)+grad(v).T)
     F = (2.0 * args.mu * inner(Du,Dv) - p * div(v) - div(u) * q \
          - inner(f_body,v)) * dx
 
-# solver notes:
+# some fieldsplit/Schur solver notes:
 # 1. -s_pc_fieldsplit_type schur
 #       This is the ONLY viable fieldsplit type because others (i.e. additive,
 #       multiplicative, and symmetric_multiplicative) all fail because diagonal
 #       pressure block is zero (non-invertible) in a stable mixed method.
 # 2. -s_pc_fieldsplit_schur_factorization_type diag
-#       The Murphy et al 2000 theorem applies to MINRES + (this option).  Note
-#       the default for diag is -pc_fieldsplit_schur_scale -1.0.  We do NOT
+#       The Murphy et al 2000 theorem applies to MINRES + (this option).
+#       The default for diag is -pc_fieldsplit_schur_scale -1.0.  We do NOT
 #       want this sign flip when using Mass for preconditioning because Mass
 #       is already SPD.
 # 3. For preconditioning of the Schur block  S = - B A^-1 B^T  we may use a
@@ -158,19 +158,12 @@ else:
 #       The reference for how to do this in Firedrake is
 #         https://www.firedrakeproject.org/demos/geometric_multigrid.py.html
 #       The class Mass below, and the options below, are from this source.
+#       This preconditioner for S uses bjacobi+icc, possible because the
+#       mass matrix is SPD.
 # 4. -s_pc_fieldsplit_schur_precondition selfp
-#       When not using Mass it seems to be faster to go ahead and *assemble*
-#       the preconditioner for the A11 block.  This option does so, but only
-#       inverts the diagonal of A00, so S \approx - B inv(diag(A)) B^T
-# 5. The "mass" preconditioner for S, below, uses bjacobi+icc, possible
-#       because the mass matrix is SPD.
-
-class Mass(AuxiliaryOperatorPC):
-
-    def form(self, pc, test, trial):
-        a = (1.0/args.mu) * inner(test, trial)*dx
-        bcs = None
-        return (a, bcs)
+#       When not using Mass we may go ahead and assemble the preconditioner for
+#       the A11 block.  This option approximately does so.  That is, it only
+#       inverts the diagonal of A00, so S ~~ - B inv(diag(A)) B^T
 
 # common to Schur + GMG based solver packages
 common = {'pc_type': 'fieldsplit',
@@ -179,16 +172,23 @@ common = {'pc_type': 'fieldsplit',
           'fieldsplit_0_pc_type': 'mg',
           'fieldsplit_1_ksp_type': 'preonly'}
 
-sgmg = {# diagonal Schur; use minres or gmres
+sgmg = {# diagonal Schur; use minres or gmres or fgmres
         'diag':
            {'pc_fieldsplit_schur_fact_type': 'diag'},
-        # lower-triangular Schur; use gmres
+        # lower-triangular Schur; use gmres or fgmres
         'lower':
            {'pc_fieldsplit_schur_fact_type': 'lower'},
-        # full Schur; use gmres
+        # full Schur; use gmres or fgmres
         'full':
            {'pc_fieldsplit_schur_fact_type': 'full'},
        }
+
+class Mass(AuxiliaryOperatorPC):
+
+    def form(self, pc, test, trial):
+        a = (1.0/args.mu) * inner(test, trial)*dx
+        bcs = None
+        return (a, bcs)
 
 spre = {# precondition Schur using "selfp" and Jacobi application
         'selfp':
@@ -215,7 +215,6 @@ if len(args.schurgmg) > 0:
     except KeyError:
         print('ERROR: invalid -schurgmg; choices are %s' % list(sgmg.keys()))
         sys.exit(1)
-if len(args.schurpre) > 0:
     try:
         sparams.update(spre[args.schurpre])
     except KeyError:
@@ -237,16 +236,12 @@ Z = V * W
 PETSc.Sys.Print('solving%s with %s x %s %s elements ...' \
                 % (meshstr,uFEstr,pFEstr,mixedname))
 
-if len(args.schurgmg) > 0 and args.showinfo:
-    PETSc.Sys.Print('  Schur+GMG PC package %s + %s' \
-                    % (args.schurgmg,args.schurpre))
-
 # actually solve
 solve(F == 0, up, bcs=bcs, nullspace=ns, options_prefix='s',
       solver_parameters=sparams)
 u,p = up.split()
 
-# numerical error (if possible)
+# numerical error for -analytical case ONLY
 if args.analytical:
     xexact = sin(4.0*pi*x) * cos(4.0*pi*y)
     yexact = -cos(4.0*pi*x) * sin(4.0*pi*y)
@@ -261,8 +256,11 @@ if args.analytical:
     PETSc.Sys.Print('  numerical errors: |u-uexact|_h = %.3e, |p-pexact|_h = %.3e' \
                     % (uerr, perr))
 
-# optionally print number of degrees of freedom and solution norms
+# optionally print Schur/GMG package, number of degrees of freedom, and solution norms
 if args.showinfo:
+    if len(args.schurgmg) > 0:
+        PETSc.Sys.Print('  Schur+GMG PC package %s + %s' \
+                        % (args.schurgmg,args.schurpre))
     n_u,n_p = V.dim(),W.dim()
     PETSc.Sys.Print('  sizes: n_u = %d, n_p = %d, N = %d' % (n_u,n_p,n_u+n_p))
     uL2 = sqrt(assemble(dot(u, u) * dx))
