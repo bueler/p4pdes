@@ -16,4 +16,4 @@ Labels:
   pyop2_owned: 0 strata with value/size ()
   pyop2_ghost: 0 strata with value/size ()
 solving on mesh (1 levels refinement) with P_2 x P_1 Taylor-Hood elements ...
-  Linear s_ solve converged due to CONVERGED_RTOL iterations 17
+  Linear s_ solve converged due to CONVERGED_RTOL iterations 15

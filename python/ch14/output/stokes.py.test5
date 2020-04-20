@@ -15,17 +15,16 @@ Labels:
   pyop2_owned: 1 strata with value/size (1 (22))
   pyop2_ghost: 1 strata with value/size (1 (25))
 solving on 5 x 5 grid with P_2 x P_1 Taylor-Hood elements ...
-  Schur+GMG PC package lower + selfp
     Residual norms for s_ solve.
-    0 KSP Residual norm 16.1827 
-    1 KSP Residual norm 6.71305 
-    2 KSP Residual norm 2.91771 
-    3 KSP Residual norm 1.90584 
-    4 KSP Residual norm 0.591078 
-    5 KSP Residual norm 0.225716 
-    6 KSP Residual norm 0.0900777 
-    7 KSP Residual norm 0.0363689 
-    8 KSP Residual norm 0.0182084 
-    9 KSP Residual norm 0.0114799 
+    0 KSP Residual norm 20.04 
+    1 KSP Residual norm 6.3705 
+    2 KSP Residual norm 4.11218 
+    3 KSP Residual norm 2.23017 
+    4 KSP Residual norm 0.572121 
+    5 KSP Residual norm 0.235603 
+    6 KSP Residual norm 0.0896293 
+    7 KSP Residual norm 0.0339781 
+    8 KSP Residual norm 0.0158232 
+  Schur+GMG PC package lower + selfp
   sizes: n_u = 162, n_p = 25, N = 187
-  solution norms: |u|_h = 5.43848e-02, |p|_h = 9.90918e-01
+  solution norms: |u|_h = 5.46258e-02, |p|_h = 1.18218e+00
