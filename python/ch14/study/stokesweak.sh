@@ -8,19 +8,22 @@ set +x
 # problem is default lid-driven cavity with Dirichlet on whole boundary
 # FE method is Q^2 x Q^1 Taylor-Hood
 
-SOLVE="-s_ksp_type gmres -schurgmg lower"  # see stokesopt.sh for reason for this solver
+MPI="mpiexec --map-by core --bind-to hwthread"  # one possible setting
 
-# COARSE and LEV imply 129x129 grid on each process
-COARSE="-mx 9 -my 9"
-LEV0=4
+# see text of chapter for evidence this is a reasonable choice
+SOLVE="-s_ksp_type gmres -schurgmg lower -schurpre selfp"
+
+COARSE="-mx 9 -my 9" # need at least one point per process on coarse grid
+LEV0=5  # 4 is 129x129 grid on each process, 5 is 257x257, 6 is 513x513
 
 LEV=$LEV0
 P=1
-for X in 1 2 3 4; do
-    cmd="mpiexec -n ${P} ../stokes.py -quad -showinfo -s_ksp_converged_reason ${SOLVE} ${COARSE} -refine ${LEV} -log_view"
+for X in 1 2 3 4; do   # 1->1, 2->4, 3->16, 4->64
+    cmd="${MPI} -n ${P} ../stokes.py -quad -showinfo -s_ksp_converged_reason ${SOLVE} ${COARSE} -refine ${LEV} -log_view"
     echo $cmd
     rm -f foo.txt
     $cmd &> foo.txt
+    'grep' "solving on" foo.txt
     'grep' "sizes:" foo.txt
     'grep' "solve converged due to" foo.txt
     'grep' "Flop:  " foo.txt

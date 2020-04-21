@@ -8,7 +8,9 @@ set +x
 # problem is default lid-driven cavity with Dirichlet on whole boundary
 # FE method is Q^2 x Q^1 Taylor-Hood
 
-MAXLEV=9   # LEV=9 is 1025x1025 uniform grid with N about 10^7
+MAXLEV=10   # LEV=9 is 1025x1025 uniform grid with N~~10^7, LEV=10 is 2049^2
+
+# compare 6 Schur+GMG solvers
 for SGMG in "-s_ksp_type minres -schurgmg diag" \
             "-s_ksp_type gmres -schurgmg lower" \
             "-s_ksp_type gmres -schurgmg full"; do
