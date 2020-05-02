@@ -17,7 +17,7 @@ SOLVE="-s_ksp_type gmres -schurgmg lower -schurpre selfp"
 # level 6 is 129x129, 7 is 257x257, 8 is 513x513, 9 is 1025x1025
 for FE in "" "-quad" "-pdegree 0 -dp" "-udegree 3 -pdegree 2"; do
     for LEV in 2 3 4 5 6 7 8 9; do   # adjust levels as desired
-        cmd="../stokes.py ${COMMON} ${SOLVE} ${FE} -refine ${LEV}"
+        cmd="../stokes.py ${COMMON} ${SOLVE} ${FE} -refine ${LEV} -showinfo"
         echo $cmd
         /usr/bin/time -f "real %e" $cmd
     done
