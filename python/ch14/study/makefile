@@ -4,5 +4,5 @@
 .PHONY: clean
 
 clean:
-	@rm -f *.dat *.dat.info *.txt
+	@rm -f *.dat *.dat.info
 
