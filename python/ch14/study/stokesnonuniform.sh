@@ -16,14 +16,14 @@ set +x
 
 # compare stokesopt.sh
 
-REFINE=5   # REFINE=4 gives N=8x10^5, REFINE=5 gives N=3.2x10^6
+REFINE=5   # REFINE=4 gives N=8x10^5, REFINE=5 gives N=3.2x10^6, REFINE=6 gives N=1.3x10^7
 
 for SGMG in "-s_ksp_type minres -schurgmg diag" \
             "-s_ksp_type gmres -schurgmg lower" \
             "-s_ksp_type gmres -schurgmg full"; do
     for SPRE in "-schurpre selfp" \
                 "-schurpre mass"; do
-        cmd="../stokes.py -mesh ../graded.msh -showinfo -s_ksp_converged_reason ${SGMG} ${SPRE} -refine ${REFINE} -s_ksp_max_it 200 -log_view"
+        cmd="../stokes.py -mesh ../graded.msh -showinfo -s_ksp_converged_reason ${SGMG} ${SPRE} -refine ${REFINE} -log_view"
         echo $cmd
         rm -f foo.txt
         $cmd &> foo.txt
