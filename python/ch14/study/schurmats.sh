@@ -4,8 +4,12 @@ set +x
 
 # generate matrix .dat files to show dependence of norms of S_h^{-1} on the
 # mesh size h, for different mixed FE methods; here we just write the whole
-# system matrix K_h; the problem is -nobase so K_h is invertible IF the
-# elements are stable
+# system matrix K_h
+
+# details:
+#   1. the problem is -nobase so K_h is invertible IF the elements are stable
+#   2. we want the unpreconditioned matrix
+#   3. -s_ksp_rtol 1.0 so terminates in one iteration
 
 # see p4pdes-book/figs/schurinverse.py to process these
 
