@@ -14,7 +14,7 @@ MPI="mpiexec --map-by core --bind-to hwthread"  # one possible setting
 SOLVE="-s_ksp_type gmres -schurgmg lower -schurpre selfp"
 
 COARSE="-mx 9 -my 9" # need at least one point per process on coarse grid
-LEV0=5  # 4 is 129x129 grid on each process, 5 is 257x257, 6 is 513x513
+LEV0=5  # 5 is 257x257 grid on each process
 
 LEV=$LEV0
 P=1
