@@ -2,7 +2,7 @@
 set -e
 set +x
 
-# generates data read by p4pdes-book/figs/poissoneigs.py to generate figure
+# generates data read by p4pdes-book/figs/poissoneigs.py to generate a figure
 # in chapter 3
 
 POIS="../poisson"
