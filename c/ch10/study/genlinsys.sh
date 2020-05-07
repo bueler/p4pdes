@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# generate N= linear system for chapter 2 timing results
+# generate N=41409 linear system for chapter 2 timing results
 # run in ch10/:
 #   ./refinetraps.sh meshes/trap 8
 # then run this script here in ch10/study/ once:
