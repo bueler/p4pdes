@@ -83,7 +83,7 @@ PetscErrorCode UMViewSolutionBinary(UM *mesh, char *filename, Vec u) {
     PetscViewer viewer;
     ierr = VecGetSize(u,&Nu); CHKERRQ(ierr);
     if (Nu != mesh->N) {
-        SETERRQ2(PETSC_COMM_WORLD,1,
+        SETERRQ2(PETSC_COMM_SELF,1,
            "incompatible sizes of u (=%d) and number of nodes (=%d)\n",Nu,mesh->N);
     }
     ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename,FILE_MODE_WRITE,&viewer); CHKERRQ(ierr);
@@ -98,7 +98,7 @@ PetscErrorCode UMReadNodes(UM *mesh, char *filename) {
     PetscInt       twoN;
     PetscViewer viewer;
     if (mesh->N > 0) {
-        SETERRQ(PETSC_COMM_WORLD,1,"nodes already created?\n");
+        SETERRQ(PETSC_COMM_SELF,1,"nodes already created?\n");
     }
     ierr = VecCreate(PETSC_COMM_WORLD,&mesh->loc); CHKERRQ(ierr);
     ierr = VecSetFromOptions(mesh->loc); CHKERRQ(ierr);
@@ -107,7 +107,7 @@ PetscErrorCode UMReadNodes(UM *mesh, char *filename) {
     ierr = PetscViewerDestroy(&viewer); CHKERRQ(ierr);
     ierr = VecGetSize(mesh->loc,&twoN); CHKERRQ(ierr);
     if (twoN % 2 != 0) {
-        SETERRQ1(PETSC_COMM_WORLD,2,"node locations loaded from %s are not N pairs\n",filename);
+        SETERRQ1(PETSC_COMM_SELF,2,"node locations loaded from %s are not N pairs\n",filename);
     }
     mesh->N = twoN / 2;
     return 0;
@@ -119,18 +119,18 @@ PetscErrorCode UMCheckElements(UM *mesh) {
     const PetscInt  *ae;
     PetscInt        k, m;
     if ((mesh->K == 0) || (mesh->e == NULL)) {
-        SETERRQ(PETSC_COMM_WORLD,1,
+        SETERRQ(PETSC_COMM_SELF,1,
                 "number of elements unknown; call UMReadElements() first\n");
     }
     if (mesh->N == 0) {
-        SETERRQ(PETSC_COMM_WORLD,2,
+        SETERRQ(PETSC_COMM_SELF,2,
                 "node size unknown so element check impossible; call UMReadNodes() first\n");
     }
     ierr = ISGetIndices(mesh->e,&ae); CHKERRQ(ierr);
     for (k = 0; k < mesh->K; k++) {
         for (m = 0; m < 3; m++) {
             if ((ae[3*k+m] < 0) || (ae[3*k+m] >= mesh->N)) {
-                SETERRQ3(PETSC_COMM_WORLD,3,
+                SETERRQ3(PETSC_COMM_SELF,3,
                    "index e[%d]=%d invalid: not between 0 and N-1=%d\n",
                    3*k+m,ae[3*k+m],mesh->N-1);
             }
@@ -146,15 +146,15 @@ PetscErrorCode UMCheckBoundaryData(UM *mesh) {
     const PetscInt  *ans, *abf;
     PetscInt        n, m;
     if (mesh->N == 0) {
-        SETERRQ(PETSC_COMM_WORLD,2,
+        SETERRQ(PETSC_COMM_SELF,2,
                 "node size unknown so boundary flag check impossible; call UMReadNodes() first\n");
     }
     if (mesh->bf == NULL) {
-        SETERRQ(PETSC_COMM_WORLD,1,
+        SETERRQ(PETSC_COMM_SELF,1,
                 "boundary flags at nodes not allocated; call UMReadNodes() first\n");
     }
     if ((mesh->P > 0) && (mesh->ns == NULL)) {
-        SETERRQ(PETSC_COMM_WORLD,3,
+        SETERRQ(PETSC_COMM_SELF,3,
                 "inconsistent data for Neumann boundary segments\n");
     }
     ierr = ISGetIndices(mesh->bf,&abf); CHKERRQ(ierr);
@@ -165,7 +165,7 @@ PetscErrorCode UMCheckBoundaryData(UM *mesh) {
             case 2 :
                 break;
             default :
-                SETERRQ2(PETSC_COMM_WORLD,5,
+                SETERRQ2(PETSC_COMM_SELF,5,
                    "boundary flag bf[%d]=%d invalid: not in {0,1,2}\n",
                    n,abf[n]);
         }
@@ -176,7 +176,7 @@ PetscErrorCode UMCheckBoundaryData(UM *mesh) {
         for (n = 0; n < mesh->P; n++) {
             for (m = 0; m < 2; m++) {
                 if ((ans[2*n+m] < 0) || (ans[2*n+m] >= mesh->N)) {
-                    SETERRQ3(PETSC_COMM_WORLD,6,
+                    SETERRQ3(PETSC_COMM_SELF,6,
                        "index ns[%d]=%d invalid: not between 0 and N-1=%d\n",
                        2*n+m,ans[3*n+m],mesh->N-1);
                 }
@@ -192,11 +192,11 @@ PetscErrorCode UMReadISs(UM *mesh, char *filename) {
     PetscViewer  viewer;
     PetscInt     n_bf;
     if ((!mesh->loc) || (mesh->N == 0)) {
-        SETERRQ(PETSC_COMM_WORLD,2,
+        SETERRQ(PETSC_COMM_SELF,2,
                 "node coordinates not created ... do that first ... stopping\n");
     }
     if ((mesh->K > 0) || (mesh->P > 0) || (mesh->e != NULL) || (mesh->bf != NULL) || (mesh->ns != NULL)) {
-        SETERRQ(PETSC_COMM_WORLD,1,
+        SETERRQ(PETSC_COMM_SELF,1,
                 "elements, boundary flags, Neumann boundary segments already created? ... stopping\n");
     }
     ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename,FILE_MODE_READ,&viewer); CHKERRQ(ierr);
@@ -205,7 +205,7 @@ PetscErrorCode UMReadISs(UM *mesh, char *filename) {
     ierr = ISLoad(mesh->e,viewer); CHKERRQ(ierr);
     ierr = ISGetSize(mesh->e,&(mesh->K)); CHKERRQ(ierr);
     if (mesh->K % 3 != 0) {
-        SETERRQ1(PETSC_COMM_WORLD,3,
+        SETERRQ1(PETSC_COMM_SELF,3,
                  "IS e loaded from %s is wrong size for list of element triples\n",filename);
     }
     mesh->K /= 3;
@@ -214,7 +214,7 @@ PetscErrorCode UMReadISs(UM *mesh, char *filename) {
     ierr = ISLoad(mesh->bf,viewer); CHKERRQ(ierr);
     ierr = ISGetSize(mesh->bf,&n_bf); CHKERRQ(ierr);
     if (n_bf != mesh->N) {
-        SETERRQ1(PETSC_COMM_WORLD,4,
+        SETERRQ1(PETSC_COMM_SELF,4,
                  "IS bf loaded from %s is wrong size for list of boundary flags\n",filename);
     }
     // FIXME  seems there is no way to tell if file is empty at this point
@@ -230,7 +230,7 @@ PetscErrorCode UMReadISs(UM *mesh, char *filename) {
     } else {
         ierr = ISGetSize(mesh->ns,&(mesh->P)); CHKERRQ(ierr);
         if (mesh->P % 2 != 0) {
-            SETERRQ1(PETSC_COMM_WORLD,4,
+            SETERRQ1(PETSC_COMM_SELF,4,
                      "IS s loaded from %s is wrong size for list of Neumann boundary segment pairs\n",filename);
         }
         mesh->P /= 2;
@@ -253,11 +253,11 @@ PetscErrorCode UMStats(UM *mesh, PetscReal *maxh, PetscReal *meanh,
     PetscReal      x[3], y[3], ax, ay, bx, by, cx, cy, h, a,
                    Maxh = 0.0, Maxa = 0.0, Sumh = 0.0, Suma = 0.0;
     if ((mesh->K == 0) || (mesh->e == NULL)) {
-        SETERRQ(PETSC_COMM_WORLD,1,
+        SETERRQ(PETSC_COMM_SELF,1,
                 "number of elements unknown; call UMReadElements() first\n");
     }
     if (mesh->N == 0) {
-        SETERRQ(PETSC_COMM_WORLD,2,
+        SETERRQ(PETSC_COMM_SELF,2,
                 "node size unknown so element check impossible; call UMReadNodes() first\n");
     }
     ierr = UMGetNodeCoordArrayRead(mesh,&aloc); CHKERRQ(ierr);
@@ -295,7 +295,7 @@ PetscErrorCode UMStats(UM *mesh, PetscReal *maxh, PetscReal *meanh,
 PetscErrorCode UMGetNodeCoordArrayRead(UM *mesh, const Node **xy) {
     PetscErrorCode ierr;
     if ((!mesh->loc) || (mesh->N == 0)) {
-        SETERRQ(PETSC_COMM_WORLD,1,"node coordinates not created ... stopping\n");
+        SETERRQ(PETSC_COMM_SELF,1,"node coordinates not created ... stopping\n");
     }
     ierr = VecGetArrayRead(mesh->loc,(const PetscReal **)xy); CHKERRQ(ierr);
     return 0;
@@ -305,7 +305,7 @@ PetscErrorCode UMGetNodeCoordArrayRead(UM *mesh, const Node **xy) {
 PetscErrorCode UMRestoreNodeCoordArrayRead(UM *mesh, const Node **xy) {
     PetscErrorCode ierr;
     if ((!mesh->loc) || (mesh->N == 0)) {
-        SETERRQ(PETSC_COMM_WORLD,1,"node coordinates not created ... stopping\n");
+        SETERRQ(PETSC_COMM_SELF,1,"node coordinates not created ... stopping\n");
     }
     ierr = VecRestoreArrayRead(mesh->loc,(const PetscReal **)xy); CHKERRQ(ierr);
     return 0;

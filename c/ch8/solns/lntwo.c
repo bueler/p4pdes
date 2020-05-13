@@ -16,7 +16,7 @@ int main(int argc, char **args) {
 
   ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size); CHKERRQ(ierr);
   if (size > 1) {
-      SETERRQ(PETSC_COMM_WORLD,1,"lntwo only works in serial\n");
+      SETERRQ(PETSC_COMM_SELF,1,"lntwo only works in serial\n");
   }
 
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"","options for lntwo",""); CHKERRQ(ierr);

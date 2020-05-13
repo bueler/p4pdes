@@ -80,7 +80,7 @@ int main(int argc,char **argv)
   ierr = DMDASetFieldName(da,1,"v"); CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
   if (info.mx != info.my) {
-      SETERRQ(PETSC_COMM_WORLD,1,"pattern.c requires mx == my");
+      SETERRQ(PETSC_COMM_SELF,1,"pattern.c requires mx == my");
   }
   ierr = DMDASetUniformCoordinates(da, 0.0, user.L, 0.0, user.L, -1.0, -1.0); CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,

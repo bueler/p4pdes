@@ -300,7 +300,7 @@ PetscErrorCode FormInitial(DMDALocalInfo *info, Vec u, AdvectCtx* user) {
                     au[j][i] = cone(x,y) + box(x,y);
                     break;
                 default:
-                    SETERRQ(PETSC_COMM_WORLD,1,"invalid user->problem\n");
+                    SETERRQ(PETSC_COMM_SELF,1,"invalid user->problem\n");
             }
         }
     }
@@ -460,7 +460,7 @@ PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info, PetscReal t,
                             break;
                     }
                 } else {
-                    SETERRQ(PETSC_COMM_WORLD,1,"only Jacobian cases none|centered are implemented\n");
+                    SETERRQ(PETSC_COMM_SELF,1,"only Jacobian cases none|centered are implemented\n");
                 }
             }
             ierr = MatSetValuesStencil(P,1,&row,nc,col,v,ADD_VALUES); CHKERRQ(ierr);

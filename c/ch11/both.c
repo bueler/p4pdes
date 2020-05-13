@@ -152,7 +152,7 @@ int main(int argc,char **argv) {
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
     if (user.eps <= 0.0) {
-        SETERRQ1(PETSC_COMM_WORLD,1,"eps=%.3f invalid ... eps > 0 required",user.eps);
+        SETERRQ1(PETSC_COMM_SELF,1,"eps=%.3f invalid ... eps > 0 required",user.eps);
     }
     user.limiter_fcn = limiterptr[limiter];
     uexact_fcn = uexptr[user.problem];
@@ -231,7 +231,7 @@ PetscErrorCode FormUExact(DMDALocalInfo *info, AdCtx *usr,
     PetscReal       xymin[2], xymax[2], hx, hy, x, y, **auex;
 
     if (uexact == NULL) {
-        SETERRQ(PETSC_COMM_WORLD,1,"exact solution not available");
+        SETERRQ(PETSC_COMM_SELF,1,"exact solution not available");
     }
     ierr = DMGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
     hx = (xymax[0] - xymin[0]) / (info->mx - 1);

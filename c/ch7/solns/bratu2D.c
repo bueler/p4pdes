@@ -89,7 +89,7 @@ int main(int argc,char **argv) {
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
     if (bctx.exact) {
         if (bctx.lambda != 1.0) {
-            SETERRQ(PETSC_COMM_WORLD,1,"Liouville exact solution only implemented for lambda = 1.0\n");
+            SETERRQ(PETSC_COMM_SELF,1,"Liouville exact solution only implemented for lambda = 1.0\n");
         }
         user.g_bdry = &g_liouville;
     }
@@ -152,10 +152,10 @@ PetscErrorCode FormUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
     PetscInt     i, j;
     PetscReal    hx, hy, x, y, **au;
     if (user->g_bdry != &g_liouville) {
-        SETERRQ(PETSC_COMM_WORLD,1,"exact solution only implemented for g_liouville() boundary conditions\n");
+        SETERRQ(PETSC_COMM_SELF,1,"exact solution only implemented for g_liouville() boundary conditions\n");
     }
     if (bctx->lambda != 1.0) {
-        SETERRQ(PETSC_COMM_WORLD,2,"Liouville exact solution only implemented for lambda = 1.0\n");
+        SETERRQ(PETSC_COMM_SELF,2,"Liouville exact solution only implemented for lambda = 1.0\n");
     }
     hx = 1.0 / (PetscReal)(info->mx - 1);
     hy = 1.0 / (PetscReal)(info->my - 1);

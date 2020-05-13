@@ -96,7 +96,7 @@ int main(int argc,char **argv) {
                   "exponent p > 1",
                   "phelm.c",user.p,&(user.p),NULL); CHKERRQ(ierr);
     if (user.p < 1.0) {
-         SETERRQ(PETSC_COMM_WORLD,1,"p >= 1 required");
+         SETERRQ(PETSC_COMM_SELF,1,"p >= 1 required");
     }
     if (user.p == 1.0) {
         ierr = PetscPrintf(PETSC_COMM_WORLD,
@@ -110,7 +110,7 @@ int main(int argc,char **argv) {
                   "number n of quadrature points in each direction (= 1,2,3 only)",
                   "phelm.c",user.quadpts,&(user.quadpts),NULL); CHKERRQ(ierr);
     if ((user.quadpts < 1) || (user.quadpts > 3)) {
-        SETERRQ(PETSC_COMM_WORLD,3,"quadrature points n=1,2,3 only");
+        SETERRQ(PETSC_COMM_SELF,3,"quadrature points n=1,2,3 only");
     }
     ierr = PetscOptionsBool("-view_f",
                   "view right-hand side to STDOUT",
@@ -158,7 +158,7 @@ int main(int argc,char **argv) {
             user.f = &f_cosines;
             break;
         default:
-            SETERRQ(PETSC_COMM_WORLD,4,"unknown problem type\n");
+            SETERRQ(PETSC_COMM_SELF,4,"unknown problem type\n");
     }
 
     // optionally view right-hand-side on initial grid

@@ -186,10 +186,10 @@ int main(int argc,char **argv) {
     user.g_bdry = g_bdry_ptr[dim-1][problem];
     user.f_rhs = f_rhs_ptr[dim-1][problem];
     if ( user.cx <= 0.0 || user.cy <= 0.0 || user.cz <= 0.0 ) {
-        SETERRQ(PETSC_COMM_WORLD,2,"positivity required for coefficients cx,cy,cz\n");
+        SETERRQ(PETSC_COMM_SELF,2,"positivity required for coefficients cx,cy,cz\n");
     }
     if ((problem == MANUEXP) && ( user.cx != 1.0 || user.cy != 1.0 || user.cz != 1.0)) {
-        SETERRQ(PETSC_COMM_WORLD,3,"cx=cy=cz=1 required for problem MANUEXP\n");
+        SETERRQ(PETSC_COMM_SELF,3,"cx=cy=cz=1 required for problem MANUEXP\n");
     }
 
 //STARTCREATE
@@ -212,7 +212,7 @@ int main(int argc,char **argv) {
                 1,1,NULL,NULL,NULL,&da); CHKERRQ(ierr);
             break;
         default:
-            SETERRQ(PETSC_COMM_WORLD,1,"invalid dim for DMDA creation\n");
+            SETERRQ(PETSC_COMM_SELF,1,"invalid dim for DMDA creation\n");
     }
     ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
     ierr = DMSetFromOptions(da); CHKERRQ(ierr);
@@ -271,7 +271,7 @@ int main(int argc,char **argv) {
             snprintf(gridstr,99,"%d x %d x %d point 3D",info.mx,info.my,info.mz);
             break;
         default:
-            SETERRQ(PETSC_COMM_WORLD,4,"invalid dim value in final report\n");
+            SETERRQ(PETSC_COMM_SELF,4,"invalid dim value in final report\n");
     }
     err2h /= normconst2h; // like continuous L2
     ierr = PetscPrintf(PETSC_COMM_WORLD,

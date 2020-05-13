@@ -278,7 +278,7 @@ PetscErrorCode InitialState(DM da, InitialType it, PetscBool gbdry,
             ierr = PetscRandomDestroy(&rctx); CHKERRQ(ierr);
             break;
         default:
-            SETERRQ(PETSC_COMM_WORLD,4,"invalid InitialType ... how did I get here?\n");
+            SETERRQ(PETSC_COMM_SELF,4,"invalid InitialType ... how did I get here?\n");
     }
     if (!gbdry) {
         return 0;
@@ -347,7 +347,7 @@ PetscErrorCode InitialState(DM da, InitialType it, PetscBool gbdry,
             break;
         }
         default:
-            SETERRQ(PETSC_COMM_WORLD,5,"invalid dim from DMDALocalInfo\n");
+            SETERRQ(PETSC_COMM_SELF,5,"invalid dim from DMDALocalInfo\n");
     }
     return 0;
 }

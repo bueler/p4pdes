@@ -108,24 +108,24 @@ int main(int argc, char **argv) {
     switch (problem) {
         case TENT:
             if (exact_init) {
-                SETERRQ(PETSC_COMM_WORLD,2,
+                SETERRQ(PETSC_COMM_SELF,2,
                     "initialization with exact solution only possible for -mse_problem catenoid\n");
             }
             user.g_bdry = &g_bdry_tent;
             break;
         case CATENOID:
             if (mctx.catenoid_c < 1.0) {
-                SETERRQ(PETSC_COMM_WORLD,3,
+                SETERRQ(PETSC_COMM_SELF,3,
                     "catenoid exact solution only valid if c >= 1\n");
             }
             if ((exact_init) && (mctx.q != -0.5)) {
-                SETERRQ(PETSC_COMM_WORLD,4,
+                SETERRQ(PETSC_COMM_SELF,4,
                     "initialization with catenoid exact solution only possible if q=-0.5\n");
             }
             user.g_bdry = &g_bdry_catenoid;
             break;
         default:
-            SETERRQ(PETSC_COMM_WORLD,5,"unknown problem type\n");
+            SETERRQ(PETSC_COMM_SELF,5,"unknown problem type\n");
     }
 
     ierr = DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,

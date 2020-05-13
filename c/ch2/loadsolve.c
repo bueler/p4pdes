@@ -44,7 +44,7 @@ int main(int argc,char **args) {
                           "loadsolve.c",verbose,&verbose,NULL); CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
   if (strlen(nameA) == 0) {
-      SETERRQ(PETSC_COMM_WORLD,1,
+      SETERRQ(PETSC_COMM_SELF,1,
               "no input matrix provided ... ending  (usage: loadsolve -fA A.dat)\n");
   }
 
@@ -63,7 +63,7 @@ int main(int argc,char **args) {
          "matrix has size m x n = %d x %d ...\n",m,n); CHKERRQ(ierr);
   }
   if (m != n) {
-      SETERRQ(PETSC_COMM_WORLD,2,"only works for square matrices\n");
+      SETERRQ(PETSC_COMM_SELF,2,"only works for square matrices\n");
   }
 
   ierr = VecCreate(PETSC_COMM_WORLD,&b);CHKERRQ(ierr);
@@ -78,7 +78,7 @@ int main(int argc,char **args) {
       ierr = PetscViewerDestroy(&fileb);CHKERRQ(ierr);
       ierr = VecGetSize(b,&mb); CHKERRQ(ierr);
       if (mb != m) {
-          SETERRQ(PETSC_COMM_WORLD,3,"size of matrix and vector do not match\n");
+          SETERRQ(PETSC_COMM_SELF,3,"size of matrix and vector do not match\n");
       }
   } else {
       if (verbose) {
