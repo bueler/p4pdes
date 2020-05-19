@@ -10,7 +10,7 @@ static char help[] =
 "problem (p=2) and quadrature degree 2.  Can be run with only an objective\n" "function; use -ph_no_gradient -snes_fd_function.\n\n";
 
 #include <petsc.h>
-#include "../quadrature.h"
+#include "../interlude/quadrature.h"
 
 typedef struct {
     PetscReal  p, eps;

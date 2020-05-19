@@ -13,7 +13,7 @@ static char help[] =
 
 #include <petsc.h>
 #include "../ch6/poissonfunctions.h"
-#include "../quadrature.h"
+#include "../interlude/quadrature.h"
 
 typedef struct {
     PetscReal q,          // the exponent in the diffusivity;
@@ -292,7 +292,7 @@ PetscErrorCode MSEMonitor(SNES snes, PetscInt its, PetscReal norm, void *user) {
     DM             da;
     Vec            u, uloc;
     DMDALocalInfo  info;
-    const Quad1D   q = gausslegendre[mctx->quaddegree-1];   // from ../quadrature.h
+    const Quad1D   q = gausslegendre[mctx->quaddegree-1];   // from quadrature.h
     PetscReal      xymin[2], xymax[2], hx, hy, **au, x_i, y_j, x, y,
                    ux, uy, W, D,
                    Dminloc = PETSC_INFINITY, Dmaxloc = 0.0, Dmin, Dmax,

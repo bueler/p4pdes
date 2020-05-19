@@ -9,7 +9,7 @@ static char help[] =
 "Neumann boundary conditions.  Five different solution cases are implemented.\n\n";
 
 #include <petsc.h>
-#include "../quadrature.h"
+#include "../interlude/quadrature.h"
 #include "um.h"
 #include "cases.h"
 
