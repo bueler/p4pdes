@@ -160,14 +160,12 @@ int main(int argc,char **argv) {
     }
 
     PetscLogStagePush(user.readstage);
-//STARTREADMESH
     // read mesh object of type UM
     ierr = UMInitialize(&mesh); CHKERRQ(ierr);
     ierr = UMReadNodes(&mesh,nodesname); CHKERRQ(ierr);
     ierr = UMReadISs(&mesh,issname); CHKERRQ(ierr);
     ierr = UMStats(&mesh, &h_max, NULL, NULL, NULL); CHKERRQ(ierr);
     user.mesh = &mesh;
-//ENDREADMESH
     PetscLogStagePop();
 
     if (viewmesh) {
