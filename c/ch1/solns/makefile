@@ -15,5 +15,5 @@ balanced: balanced.o
 .PHONY: distclean
 
 distclean:
-	@rm -f *~ balanced
+	@rm -f *~ expx balanced
 

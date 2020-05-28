@@ -31,5 +31,4 @@ test: test_obstacle
 distclean:
 	@rm -f *~ obstacle *.dat *.dat.info *.pdf *.pyc *tmp
 	@rm -f PetscBinaryIO.py petsc_conf.py
-	(cd solns; ${MAKE} distclean)
 
