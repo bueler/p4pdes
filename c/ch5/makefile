@@ -18,6 +18,7 @@ pattern: pattern.o
 	-${CLINKER} -o pattern pattern.o  ${PETSC_LIB}
 	${RM} pattern.o
 
+# use this target to create symbolic links to PETSc binary files scripts
 petscPyScripts:
 	ln -sf ${PETSC_DIR}/lib/petsc/bin/PetscBinaryIO.py
 	ln -sf ${PETSC_DIR}/lib/petsc/bin/petsc_conf.py
@@ -71,4 +72,5 @@ test: test_ode test_odejac test_heat test_pattern
 distclean:
 	@rm -f *~ ode odejac heat pattern *tmp
 	@rm -f *.pyc *.dat *.dat.info *.png PetscBinaryIO.py petsc_conf.py
+	@rm -rf __pycache__/
 

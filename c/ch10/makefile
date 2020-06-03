@@ -58,7 +58,7 @@ test: test_unfem
 distclean:
 	@rm -f *~ unfem *tmp
 	@rm -f *.pyc PetscBinaryIO.py petsc_conf.py
-	@rm -rf __pycache__
+	@rm -rf __pycache__/
 	(cd meshes/ && ${MAKE} clean)
 	(cd koch/ && ${MAKE} clean)
 	(cd vis/ && ${MAKE} clean)

@@ -6,6 +6,11 @@ obstacle: obstacle.o ../ch6/poissonfunctions.o
 	-${CLINKER} -o obstacle obstacle.o ../ch6/poissonfunctions.o ${PETSC_LIB}
 	${RM} obstacle.o ../ch6/poissonfunctions.o
 
+# use this target to create symbolic links to PETSc binary files scripts
+petscPyScripts:
+	ln -sf ${PETSC_DIR}/lib/petsc/bin/PetscBinaryIO.py
+	ln -sf ${PETSC_DIR}/lib/petsc/bin/petsc_conf.py
+
 # testing
 
 runobstacle_1:
@@ -31,4 +36,5 @@ test: test_obstacle
 distclean:
 	@rm -f *~ obstacle *.dat *.dat.info *.pdf *.pyc *tmp
 	@rm -f PetscBinaryIO.py petsc_conf.py
+	@rm -rf __pycache__/
 

@@ -1,8 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
-# (C) 2016-2018 Ed Bueler
+# (C) 2016-2020 Ed Bueler
 
-from __future__ import print_function
 import sys, argparse
 import numpy as np
 
@@ -39,7 +38,7 @@ if objecttype == 'Vec':
     if N % 2 != 0:
         print('ERROR: nodes in .vec file invalid ... stopping')
         sys.exit()
-    N /= 2
+    N = int(N/2)
     xy = np.reshape(xy,(N,2))
 else:
     print('ERROR: no valid .vec file ... stopping')
@@ -52,7 +51,7 @@ if objecttype == 'IS':
     if K % 3 != 0:
         print('ERROR: elements (triangles) in .is file invalid ... stopping')
         sys.exit()
-    K /= 3
+    K = int(K/3)
     if (ele.max() > N) or (ele.min() < 0):
         print('ERROR: elements contain invalid indices ... stopping')
         sys.exit()

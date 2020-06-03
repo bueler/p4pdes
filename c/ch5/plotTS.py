@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 help =\
 '''
@@ -47,37 +47,38 @@ U = np.array(io.readBinaryFile(args.ufile)).transpose()
 dims = np.shape(U)
 
 if len(t) != dims[1]:
-    print 'time dimension mismatch: %d != %d' % (len(t),dims[1])
+    print('time dimension mismatch: %d != %d' % (len(t),dims[1]))
     exit(1)
 if frames:
     if args.dof == 1:
         if dims[0] != args.mx * args.my:
-            print 'spatial dimension mismatch: %d != %d * %d (and dof=1)' % \
-                  (dims[0],args.mx,args.my)
+            print('spatial dimension mismatch: %d != %d * %d (and dof=1)' % \
+                  (dims[0],args.mx,args.my))
             exit(2)
         U = np.reshape(U,(args.my,args.mx,len(t)))
         dims = np.shape(U)
-        print 'solution U is shape=(%d,%d,%d)' % tuple(dims)
+        print('solution U is shape=(%d,%d,%d)' % tuple(dims))
     else:
         if dims[0] != args.mx * args.my * args.dof:
-            print 'spatial dimension mismatch: %d != %d * %d * %d' % \
-                  (dims[0],args.mx,args.my,args.dof)
+            print('spatial dimension mismatch: %d != %d * %d * %d' % \
+                  (dims[0],args.mx,args.my,args.dof))
             exit(3)
         U = np.reshape(U,(args.my,args.mx,args.dof,len(t)))
         dims = np.shape(U)
-        print 'solution U is shape=(%d,%d,%d,%d)' % tuple(dims)
-    print 'time t has length=%d, with mx x my = %d x %d frames' % (dims[-1],dims[1],dims[0])
+        print('solution U is shape=(%d,%d,%d,%d)' % tuple(dims))
+    print('time t has length=%d, with mx x my = %d x %d frames' % \
+          (dims[-1],dims[1],dims[0]))
 else:
-    print 'time t has length=%d, solution Y is shape=(%d,%d)' % \
-          (len(t),dims[0],dims[1])
+    print('time t has length=%d, solution Y is shape=(%d,%d)' % \
+          (len(t),dims[0],dims[1]))
 
 framescmap = 'jet'  # close to the PETSc X windows default
 #framescmap = 'inferno'
 #framescmap = 'gray'
 
 if frames:
-    print 'generating files %s000.png .. %s%03d.png:' % \
-          (args.rootname,args.rootname,len(t)-1)
+    print('generating files %s000.png .. %s%03d.png:' % \
+          (args.rootname,args.rootname,len(t)-1))
     if args.dof == 1:
         plt.imshow(U[:,:,0],cmap=framescmap)
     else:
@@ -89,7 +90,7 @@ if frames:
         plt.ion()
         plt.show()
     for k in range(len(t)-1):
-        print '.',
+        print('.', end =' ')
         stdout.flush()
         if args.dof == 1:
             plt.imshow(U[:,:,k+1],cmap=framescmap)
@@ -100,14 +101,14 @@ if frames:
             plt.savefig(args.rootname + "%03d.png" % (k+1))
         else:
             plt.pause(0.1)
-    print '.'
+    print('.')
 else:
     for k in range(dims[0]):
         plt.plot(t,U[k],label='y[%d]' % k)
     plt.xlabel('t')
     plt.legend()
     if args.filename:
-        print 'writing file %s' % args.filename
+        print('writing file %s' % args.filename)
         plt.savefig(args.filename)
     else:
         plt.show()

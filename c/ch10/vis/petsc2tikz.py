@@ -1,8 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
-# (C) 2018 Ed Bueler
+# (C) 2018-2020 Ed Bueler
 
-from __future__ import print_function
 import sys, argparse
 import numpy as np
 
@@ -17,7 +16,7 @@ def readcoordinates(io,vech):
         if N % 2 != 0:
             print('ERROR: nodes in .vec file not of even length ... stopping')
             sys.exit()
-        N /= 2
+        N = int(N/2)
         xy = np.reshape(xy,(N,2))
     else:
         print('ERROR: not a valid .vec file for coordinates ... stopping')
@@ -32,7 +31,7 @@ def readindices(io,ish,N):
         if K % 3 != 0:
             print('ERROR: elements (triangles) in .is file not multiple of three ... stopping')
             sys.exit()
-        K /= 3
+        K = int(K/3)
         if (e.max() >= N) or (e.min() < 0):
             print('ERROR: elements contain invalid indices ... stopping')
             sys.exit()
@@ -53,7 +52,7 @@ def readindices(io,ish,N):
             if P % 2 != 0:
                 print('ERROR: neumann segments in .is file not even length ... stopping')
                 sys.exit()
-            P /= 2
+            P = int(P/2)
             if (ns.max() >= N) or (ns.min() < 0):
                 print('ERROR: elements contain invalid indices ... stopping')
                 sys.exit()

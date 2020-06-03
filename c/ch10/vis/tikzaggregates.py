@@ -1,12 +1,11 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
-# (C) 2018 Ed Bueler
+# (C) 2018-2020 Ed Bueler
 
 # example with 55 nodes and 6 aggregates:
 #   ../unfem -un_mesh ../meshes/trap3 -pc_type gamg -un_gamg_save_pint_binary foo.mat
 #   ./tikzaggregates.py -mat foo.mat -o foo.tikz ../meshes/trap3
 
-from __future__ import print_function
 import sys, argparse
 from petsc2tikz import readcoordinates, readindices, writeelements
 import numpy as np

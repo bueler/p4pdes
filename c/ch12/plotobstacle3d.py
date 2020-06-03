@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 help = '''
 Plot solution and obstacle in 3D figure.  Reads output from obstacle using
@@ -40,14 +40,14 @@ objecttype = io.readObjectType(fh)
 if objecttype == 'Vec':
     uin = io.readVec(fh)
 else:
-    print 'error reading first Vec'
+    print('error reading first Vec')
     sys.exit(1)
 u = np.reshape(uin,(args.my,args.mx))
 objecttype = io.readObjectType(fh)
 if objecttype == 'Vec':
     psiin = io.readVec(fh)
 else:
-    print 'error reading second Vec'
+    print('error reading second Vec')
     sys.exit(1)
 psi = np.reshape(psiin,(args.my,args.mx))
 
@@ -73,7 +73,7 @@ ax.plot_wireframe(xx,yy,u,color='k',linewidth=0.3)
 plt.axis('off')
 
 if len(args.o) > 0:
-    print 'writing file %s' % args.o
+    print('writing file %s' % args.o)
     plt.savefig(args.o, dpi=fig.dpi)
 else:
     plt.show()

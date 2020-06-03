@@ -1,8 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
-# (C) 2014-2018 Ed Bueler
-
-from __future__ import print_function
+# (C) 2014-2020 Ed Bueler
 
 import sys, argparse
 import numpy as np
