@@ -6,6 +6,7 @@ unfem: unfem.o um.o
 	-${CLINKER} -o unfem unfem.o um.o  ${PETSC_LIB}
 	${RM} unfem.o um.o
 
+# see issue #46; old gmsh versions may not take option -format msh22
 GMSH = gmsh -format msh22
 
 petscPyScripts:
