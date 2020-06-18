@@ -6,21 +6,23 @@ unfem: unfem.o um.o
 	-${CLINKER} -o unfem unfem.o um.o  ${PETSC_LIB}
 	${RM} unfem.o um.o
 
+GMSH = gmsh -format msh22
+
 petscPyScripts:
 	ln -sf ${PETSC_DIR}/lib/petsc/bin/PetscBinaryIO.py
 	ln -sf ${PETSC_DIR}/lib/petsc/bin/petsc_conf.py
 
 meshes/trap1.vec meshes/trap1.is: meshes/trap.geo msh2petsc.py
-	-@gmsh -2 meshes/trap.geo -o meshes/trap1.msh > /dev/null
+	-@${GMSH} -2 meshes/trap.geo -o meshes/trap1.msh > /dev/null
 	-@./msh2petsc.py meshes/trap1.msh > /dev/null
 
 meshes/trap2.vec meshes/trap2.is: meshes/trap.geo msh2petsc.py
-	-@gmsh -2 meshes/trap.geo -o meshes/trap2.msh > /dev/null
-	-@gmsh -refine meshes/trap2.msh > /dev/null
+	-@${GMSH} -2 meshes/trap.geo -o meshes/trap2.msh > /dev/null
+	-@${GMSH} -refine meshes/trap2.msh > /dev/null
 	-@./msh2petsc.py meshes/trap2.msh > /dev/null
 
 meshes/trapneu1.vec meshes/trapneu1.is: meshes/trapneu.geo msh2petsc.py
-	-@gmsh -2 meshes/trapneu.geo -o meshes/trapneu1.msh > /dev/null
+	-@${GMSH} -2 -format msh22 meshes/trapneu.geo -o meshes/trapneu1.msh > /dev/null
 	-@./msh2petsc.py meshes/trapneu1.msh > /dev/null
 
 meshes/square1.vec meshes/square1.is: genstructured.py
