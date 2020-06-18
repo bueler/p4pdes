@@ -1,6 +1,6 @@
 # testing
 
-# NOTE I expect to remove "-vectorlap" as things get updated ... it is put here so tests pass using the old code
+GMSH = gmsh
 
 runstokes_1:
 	-@../../c/testit.sh stokes.py "-analytical -mx 4 -my 4 -refine 1 -s_ksp_type minres -s_ksp_converged_reason -s_pc_type none" 1 1
@@ -10,7 +10,7 @@ runstokes_2:
 
 runstokes_3:
 	-@./lidbox.py -quiet -cl 0.4 -cornerrefine 4 coarse.geo
-	-@gmsh -v 0 -2 coarse.geo  # verbosity=0 for quiet
+	-@${GMSH} -v 0 -2 coarse.geo  # results will depend on Gmsh version
 	-@../../c/testit.sh stokes.py "-mesh coarse.msh -refine 1 -dm_view -s_ksp_type fgmres -s_ksp_converged_reason -schurgmg lower -schurpre selfp" 1 3
 
 runstokes_4:
