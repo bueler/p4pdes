@@ -121,9 +121,9 @@ int main(int argc,char **argv) {
         SETERRQ(PETSC_COMM_SELF,2,"no mesh name root given; rerun with '-un_mesh foo'");
     }
     strcpy(nodesname, root);
-    strncat(nodesname, ".vec", 4);
+    strncat(nodesname, ".vec", 5);
     strcpy(issname, root);
-    strncat(issname, ".is", 3);
+    strncat(issname, ".is", 4);
 
     // set source/boundary functions and exact solution
     user.a_fcn = &a_lin;
@@ -277,7 +277,7 @@ int main(int argc,char **argv) {
     // save solution in PETSc binary if requested
     if (viewsoln) {
         strcpy(solnname, root);
-        strncat(solnname, ".soln", 5);
+        strncat(solnname, ".soln", 6);
         ierr = PetscPrintf(PETSC_COMM_WORLD,
                    "writing solution in binary format to %s ...\n",solnname); CHKERRQ(ierr);
         ierr = UMViewSolutionBinary(&mesh,solnname,u); CHKERRQ(ierr);
