@@ -27,30 +27,23 @@ def fail(k,s):
     print('ERROR: %s ... stopping' % s)
     sys.exit(k)
 
-gmshversion = '4.1'
-
 def get_mesh_format(filename):
-    global gmshversion
     MFread = False
     with open(filename, 'r') as mshfile:
         for line in mshfile:
             line = line.strip()  # remove leading and trailing whitespace
             if line: # only look at nonempty lines
                 if line == '$MeshFormat':
-                    if MFread:
-                        print('WARNING: "$MeshFormat" repeated')
+                    assert (not MFread), '$MeshFormat repeated'
                     MFread = True
-                elif line == '$EndMeshFormat':
-                    return MFread
-                else:
+                elif MFread:
                     nums = line.split(' ')
-                    if nums[0] == '2.2':
-                        gmshversion = '2.2'
-                    elif nums[0] != '4.1':
-                        fail(1,'unknown Gmsh format version %s' % nums[0])
-                    if nums[1:] != ['0','8']:
-                        fail(1,'unexpected MeshFormat numbers')
-        return MFread
+                    gmshversion = nums[0]
+                    assert (gmshversion in ['2.2','4.1']), \
+                        'unknown Gmsh format version %s' % gmshversion
+                    assert (nums[1:] == ['0','8']), 'unexpected MeshFormat data'
+                    break
+        return gmshversion
 
 # this is the same format for 2.2 and 4.1
 def read_physical_names(filename):
@@ -64,6 +57,7 @@ def read_physical_names(filename):
                 if line == '$PhysicalNames':
                     PNread = True
                 elif line == '$EndPhysicalNames':
+                    assert (PNread), '$EndPhysicalNames before $PhysicalNames'
                     break
                 elif PNread:
                     ls = line.split(' ')
@@ -99,12 +93,11 @@ def read_nodes_22(filename):
             line = line.strip()  # remove leading and trailing whitespace
             if line: # only look at nonempty lines
                 if line == '$Nodes':
-                    assert (not Nodesread), '"$Nodes" repeated'
+                    assert (not Nodesread), '$Nodes repeated'
                     Nodesread = True
                 elif line == '$EndNodes':
-                    assert (Nodesread), '"$EndNodes" before "$Nodes"'
-                    assert (len(coords) >= 2), '"$EndNodes" reached before any nodes read'
-                    assert (count == N), 'N does not agree with index'
+                    assert (Nodesread), '$EndNodes before $Nodes'
+                    assert (len(coords) >= 2), '$EndNodes reached before any nodes read'
                     break  # apparent success reading the nodes
                 elif Nodesread:
                     ls = line.split(' ')
@@ -130,6 +123,7 @@ def read_nodes_22(filename):
                         except ValueError:
                             fail(12,'could not convert node coordinates to float')
                         coords[2*(count-1):2*count] = xy            
+    assert (count == N), 'N does not agree with index'
     assert (2*N == len(coords)), 'coords should have length 2N'
     return N,coords
 
@@ -205,7 +199,9 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description= \
-        'Converts .msh ASCII file from Gmsh into PETSc binary files .vec,.is.')
+'''Converts .msh ASCII file from Gmsh into PETSc binary files with .vec
+and .is extensions.  Reads both Gmsh file format version 2.2 (legacy) and 4.1.
+Needs link to ${PETSC_DIR}/lib/petsc/bin/PetscBinaryIO.py.''')
     # required positional filename
     parser.add_argument('-v', default=False, action='store_true',
                         help='verbose output for debugging')
@@ -213,7 +209,7 @@ if __name__ == "__main__":
                         help='input file name with .msh extension')
     args = parser.parse_args()
 
-    import PetscBinaryIO  # need link to ${PETSC_DIR}/lib/petsc/bin/PetscBinaryIO.py
+    import PetscBinaryIO
 
     if args.inname.split('.')[-1] == 'msh':
         outroot = '.'.join(args.inname.split('.')[:-1]) # strip .msh
@@ -221,18 +217,12 @@ if __name__ == "__main__":
         print('WARNING: expected .msh extension for input file')
     vecoutname = outroot + '.vec'
     isoutname = outroot + '.is'
-
-    dprint(args.v,'checking for MeshFormat in input file %s ...' % args.inname)
-    if not get_mesh_format(args.inname):
-        fail(1,'gmsh file format not as expected')
+    gmshversion = get_mesh_format(args.inname)
+    print('  input file %s in Gmsh format v%s' % (args.inname,gmshversion))
 
     print('  reading physical names ...')
     phys = read_physical_names(args.inname)
     dprint(args.v,phys)
-
-    #FIXME when read_nodes_41(), read_elements_41() are ready, remove this
-    if gmshversion != '2.2':
-        fail(1,'only gmsh file format 2.2. implemented ... 4.1 TODO')
 
     print('  reading node coordinates ...')
     N,xy = read_nodes_22(args.inname)
