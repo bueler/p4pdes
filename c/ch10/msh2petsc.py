@@ -19,8 +19,7 @@ import numpy as np
 import sys
 
 from meshes.format22 import read_nodes_22, read_elements_22
-#FIXME: from meshes.format41 import read_nodes_41, read_entities_41, read_elements_41
-from meshes.format41 import read_nodes_41, read_elements_41
+from meshes.format41 import read_entities_41, read_nodes_41, read_elements_41
 
 # debug print
 def dprint(debug,s):
@@ -108,6 +107,11 @@ Needs link to ${PETSC_DIR}/lib/petsc/bin/PetscBinaryIO.py.''')
     phys = read_physical_names(args.inname)
     dprint(args.v,phys)
 
+    if gmshversion == '4.1':
+        print('  reading entities ...')
+        tagmap = read_entities_41(args.inname)
+        dprint(args.v,tagmap)
+
     print('  reading node coordinates ...')
     if gmshversion == '2.2':
         N,xy = read_nodes_22(args.inname)
@@ -127,7 +131,7 @@ Needs link to ${PETSC_DIR}/lib/petsc/bin/PetscBinaryIO.py.''')
     if gmshversion == '2.2':
         e,bf,ns = read_elements_22(args.inname,N,phys)
     else:
-        e,bs = read_elements_41(args.inname,nodetag)
+        e,bs = read_elements_41(args.inname,nodetag)  #FIXME
     assert (len(e) % 3 == 0), 'element index list length not 3 K'
     K = len(e) / 3
     dprint(args.v,e)

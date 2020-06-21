@@ -8,6 +8,61 @@
 import numpy as np
 import sys
 
+
+#Gmsh format version 4.1:
+#$Entities
+#  numPoints numCurves numSurfaces numVolumes      # use: numPoints, numCurves
+#                                                  # check: numSurfaces = 1, numVolumes = 0
+#  pointTag X Y Z numPhysicalTags                  # check: numPhysicalTags = 0
+#  ...
+#  curveTag minX minY minZ maxX maxY maxZ numPhysicalTags physicalTag
+#    numBoundingPoints pointTag ...                # use: curveTag, physicalTag
+#                                                  # check: numPhysicalTags = 1
+#  ...
+#  surfaceTag minX minY minZ maxX maxY maxZ numPhysicalTags physicalTag
+#    numBoundingCurves curveTag ...                # use: surfaceTag, physicalTag
+#                                                  # check: numPhysicalTags = 1
+#  volumeTag ...                                   # should be absent
+#$EndEntities
+
+def read_entities_41(filename):
+    Entitiesread = False
+    EndEntitiesread = False
+    firstlineread = False
+    Npoints = 0
+    Ncurves = 0
+    count = 0
+    tagmap = {}    # dictionary:  tagmap[curveTag] = physicalTag
+    with open(filename, 'r') as mshfile:
+        for line in mshfile:
+            line = line.strip()  # remove leading and trailing whitespace
+            if line: # only look at nonempty lines
+                if line == '$Entities':
+                    assert (not Entitiesread), '$Entities repeated'
+                    Entitiesread = True
+                elif line == '$EndEntities':
+                    assert (Entitiesread), '$EndEntities before $Entities'
+                    break  # apparent success reading the entities
+                elif Entitiesread:
+                    ls = line.split(' ')
+                    assert (len(ls) in [4,5,12,14]), 'unexpected line format'
+                    if len(ls) == 4:
+                        assert (not firstlineread), 'only one length 4 line expected'
+                        Npoints = int(ls[0])
+                        Ncurves = int(ls[1])
+                        assert (int(ls[2]) == 1), 'expected only one surface entity'
+                        assert (int(ls[3]) == 0), 'expected zero volume entities'
+                        firstlineread = True
+                    elif len(ls) == 5:
+                        continue
+                    elif len(ls) == 12:
+                        assert (int(ls[7]) == 1), 'expected only one physical tag per curve'
+                        tagmap[int(ls[0])] = int(ls[8])
+                    elif len(ls) == 14:
+                        assert (int(ls[7]) == 1), 'expected only one physical tag per surface'
+                        tagmap[int(ls[0])] = int(ls[8])
+    return tagmap
+
 #Gmsh format version 4.1:
 #$Nodes
 #  numEntityBlocks numNodes minNodeTag maxNodeTag    # use: numNodes
@@ -51,8 +106,8 @@ def read_nodes_41(filename):
                             coords = np.zeros(2*N)            # allocate space for coordinates
                         else:
                             assert (N > 0), 'N not defined'
-                            blocksize = int(ls[3])
                             assert (ls[2] == '0'), 'parametric not equal to zero'
+                            blocksize = int(ls[3])
                             assert (blocksize <= N - count), 'expected to read fewer nodes'
                             blocknodecount = 0
                             blockcoordscount = 0
@@ -75,7 +130,7 @@ def read_nodes_41(filename):
 #Gmsh format version 4.1:
 #$Elements
 #  numEntityBlocks numElements minElementTag maxElementTag   # use: numElements
-#  entityDim entityTag elementType numElementsInBlock        # use: elementType, numElementsInBlock
+#  entityDim entityTag elementType numElementsInBlock        # use: FIXME entityTag, elementType, numElementsInBlock
 #    elementTag nodeTag nodeTag                   # when elementType == 1
 #    elementTag nodeTag nodeTag nodeTag           # when elementType == 2
 #    ...
