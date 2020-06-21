@@ -6,8 +6,8 @@ unfem: unfem.o um.o
 	-${CLINKER} -o unfem unfem.o um.o  ${PETSC_LIB}
 	${RM} unfem.o um.o
 
-# see issue #46; old gmsh versions may not take option -format msh22
-GMSH = gmsh -format msh22
+#GMSH = gmsh -format msh22  # if desired; old Gmsh executable may not take -format msh22
+GMSH = gmsh            # newer Gmsh versions will use 4.1 format
 
 petscPyScripts:
 	ln -sf ${PETSC_DIR}/lib/petsc/bin/PetscBinaryIO.py
@@ -23,7 +23,7 @@ meshes/trap2.vec meshes/trap2.is: meshes/trap.geo msh2petsc.py
 	-@./msh2petsc.py meshes/trap2.msh > /dev/null
 
 meshes/trapneu1.vec meshes/trapneu1.is: meshes/trapneu.geo msh2petsc.py
-	-@${GMSH} -2 -format msh22 meshes/trapneu.geo -o meshes/trapneu1.msh > /dev/null
+	-@${GMSH} -2 meshes/trapneu.geo -o meshes/trapneu1.msh > /dev/null
 	-@./msh2petsc.py meshes/trapneu1.msh > /dev/null
 
 meshes/square1.vec meshes/square1.is: genstructured.py
