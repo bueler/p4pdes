@@ -1,0 +1,16 @@
+  input file meshes/tmp22.msh in Gmsh format v2.2
+  reading physical names ...
+{'neumann': 1, 'dirichlet': 2, 'interior': 3}
+  reading node coordinates ...
+N=7
+[ 2.00000000e+00  0.00000000e+00  1.00000000e+00  1.00000000e+00
+ -1.00000000e+00  1.00000000e+00 -2.00000000e+00  0.00000000e+00
+  2.75512946e-12  1.00000000e+00 -6.66666667e-01  0.00000000e+00
+  6.66666667e-01  0.00000000e+00]
+  writing N=7 node coordinates as PETSc Vec to meshes/tmp22.vec ...
+  reading element tuples ...
+[6 4 5 6 0 1 3 5 2 5 4 2 6 1 4]
+[2 2 2 2 2 1 1]
+[3 5 5 6 6 0]
+  writing K=5 elements, N=7 boundary flags, and P=3 Neumann segments
+    as PETSc IS to meshes/tmp22.is ...
