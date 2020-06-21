@@ -63,6 +63,7 @@ def read_entities_41(filename):
                         tagmap[int(ls[0])] = int(ls[8])
     return tagmap
 
+
 #Gmsh format version 4.1:
 #$Nodes
 #  numEntityBlocks numNodes minNodeTag maxNodeTag    # use: numNodes
@@ -124,7 +125,8 @@ def read_nodes_41(filename):
                         count += 1
                         coords[2*(count-1):2*count] = xy
     assert (count == N), 'N does not agree with count'
-    return N,coords,nodetag
+    assert (nodetag[0] == 1 and all(np.diff(nodetag)==1)), 'expect nodetag = [1,2,3,...]'
+    return N,coords
 
 
 #Gmsh format version 4.1:
@@ -137,7 +139,7 @@ def read_nodes_41(filename):
 #  ...
 #$EndElements
 
-def read_elements_41(filename,N,nodetag,tagmap):
+def read_elements_41(filename,N,tagmap):
     Elementsread = False
     firstlineread = False
     NE = 0
@@ -177,14 +179,14 @@ def read_elements_41(filename,N,nodetag,tagmap):
                         else:  # read a triangle
                             assert (blocktype == 2), 'expecting a triangle'
                             assert (blockcount < blocksize), 'already read all elements in block'
-                            thistri = [nodetag.index(int(s)) for s in ls[1:4]]
+                            thistri = [int(s)-1 for s in ls[1:4]]
                             tri.append(np.array(thistri,dtype=int))
                             blockcount += 1
                             count += 1
                     else:      # read a boundary segment
                         assert (blocktype == 1), 'expecting a boundary segment'
                         assert (blockcount < blocksize), 'already read all elements in block'
-                        thisbs = [nodetag.index(int(s)) for s in ls[1:3]]
+                        thisbs = [int(s)-1 for s in ls[1:3]]
                         for j in range(2):
                             # Dirichlet=2 wins for nodes
                             bf[thisbs[j]] = max(bf[thisbs[j]],tagmap[blockentity])

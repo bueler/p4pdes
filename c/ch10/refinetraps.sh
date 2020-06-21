@@ -11,10 +11,13 @@
 NAME=$1
 MAXLEV=$2
 
-gmsh -2 ${NAME}.geo -o ${NAME}1.msh
+GMSH=gmsh
+#GMSH="gmsh -format msh22"   # legacy 2.2 format also allowed with msh2petsc.py
+
+${GMSH} -2 ${NAME}.geo -o ${NAME}1.msh
 ./msh2petsc.py ${NAME}1.msh
 for (( Z=1; Z<$MAXLEV; Z++ )); do
-    gmsh -refine ${NAME}$Z.msh -o ${NAME}$((Z+1)).msh
+    ${GMSH} -refine ${NAME}$Z.msh -o ${NAME}$((Z+1)).msh
     ./msh2petsc.py $NAME$((Z+1)).msh
 done
 

@@ -115,12 +115,10 @@ Needs link to ${PETSC_DIR}/lib/petsc/bin/PetscBinaryIO.py.''')
     print('  reading node coordinates ...')
     if gmshversion == '2.2':
         N,xy = read_nodes_22(args.inname)
-        nodetag = []
     else:
-        N,xy,nodetag = read_nodes_41(args.inname)
+        N,xy = read_nodes_41(args.inname)
     dprint(args.v,'N=%d' % N)
     dprint(args.v,xy)
-    dprint(args.v and (gmshversion == '4.1'),nodetag)
 
     print('  writing N=%d node coordinates as PETSc Vec to %s ...' \
           % (N,vecoutname))
@@ -131,7 +129,7 @@ Needs link to ${PETSC_DIR}/lib/petsc/bin/PetscBinaryIO.py.''')
     if gmshversion == '2.2':
         e,bf,ns = read_elements_22(args.inname,N,phys)
     else:
-        e,bf,ns = read_elements_41(args.inname,N,nodetag,tagmap)
+        e,bf,ns = read_elements_41(args.inname,N,tagmap)
     assert (len(e) % 3 == 0), 'element index list length not 3 K'
     K = len(e) / 3
     dprint(args.v,e)
