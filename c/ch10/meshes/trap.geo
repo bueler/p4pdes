@@ -12,7 +12,7 @@ Line(7) = {3,4};
 Line(8) = {4,1};
 Line Loop(9) = {5,6,7,8};
 Plane Surface(10) = {9};
-Physical Line("dirichlet") = {5,6,7};
 Physical Line("neumann") = {8};
+Physical Line("dirichlet") = {5,6,7};
 Physical Surface("interior") = {10};
 
