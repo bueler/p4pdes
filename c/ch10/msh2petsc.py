@@ -82,6 +82,14 @@ def read_physical_names(filename):
         assert (key in physical), 'no key "%s" in dictionary' % key
     return physical
 
+
+#Gmsh format version 2.2 (legacy):
+#$Nodes
+#number-of-nodes
+#node-number x-coord y-coord z-coord       # ignore z-coord
+#…
+#$EndNodes
+
 def read_nodes_22(filename):
     Nodesread = False
     EndNodesread = False
@@ -124,8 +132,85 @@ def read_nodes_22(filename):
                             fail(12,'could not convert node coordinates to float')
                         coords[2*(count-1):2*count] = xy            
     assert (count == N), 'N does not agree with index'
-    assert (2*N == len(coords)), 'coords should have length 2N'
     return N,coords
+
+
+#Gmsh format version 4.1:
+#$Nodes
+#  numEntityBlocks numNodes minNodeTag maxNodeTag    # use: numNodes
+#  entityDim entityTag parametric numNodesInBlock    # use: numNodesInBlock
+#                                                    # check: parametric == 0
+#    nodeTag
+#    ...
+#    x(double) y(double) z(double)                   # ignore z
+#    ...
+#  ...
+#$EndNodes
+
+def read_nodes_41(filename):
+    Nodesread = False
+    EndNodesread = False
+    firstlineread = False
+    entitylineread = False
+    N = 0           # number of nodes
+    count = 0       # count of nodes read
+    blocksize = 0   # number of nodes in block
+    blocknodecount = 0    # count of node tags read in block
+    nodetag = []    # node tag as read
+    coords = []     # pairs (x-coord, y-coord)
+    with open(filename, 'r') as mshfile:
+        for line in mshfile:
+            line = line.strip()  # remove leading and trailing whitespace
+            if line: # only look at nonempty lines
+                if line == '$Nodes':
+                    assert (not Nodesread), '$Nodes repeated'
+                    Nodesread = True
+                elif line == '$EndNodes':
+                    assert (Nodesread), '$EndNodes before $Nodes'
+                    assert (len(coords) >= 2), '$EndNodes reached before any nodes read'
+                    break  # apparent success reading the nodes
+                elif Nodesread:
+                    ls = line.split(' ')
+                    assert (len(ls) in [1,3,4]), 'unexpected line format'
+                    if len(ls) == 4:
+                        if not firstlineread:
+                            try:
+                                N = int(ls[1])
+                            except ValueError:
+                                fail(7,'N not an integer')
+                            firstlineread = True
+                            nodetag = np.zeros(N,dtype=int)   # space for indexing map
+                            coords = np.zeros(2*N)            # allocate space for coordinates
+                        else:
+                            assert (N > 0), 'N not defined'
+                            try:
+                                blocksize = int(ls[3])
+                            except ValueError:
+                                fail(8,'numNodesInBlock not an integer')
+                            assert (ls[2] == '0'), 'parametric not equal to zero'
+                            assert (blocksize <= N - count), 'expected to read fewer nodes'
+                            blocknodecount = 0
+                            blockcoordscount = 0
+                        continue
+                    elif len(ls) == 1:
+                        assert (firstlineread), 'first line of nodes not yet read'
+                        assert (blocknodecount < blocksize), 'not expecting a node tag'
+                        try:
+                            thistag = int(ls[0])
+                        except ValueError:
+                            fail(9,'nodeTag not an integer')
+                        nodetag[count+blocknodecount] = thistag
+                        blocknodecount += 1
+                    elif len(ls) == 3:
+                        assert (firstlineread), 'first line of nodes not yet read'
+                        try:
+                            xy = [float(s) for s in ls[0:2]]
+                        except ValueError:
+                            fail(12,'could not convert node coordinates to float')
+                        count += 1
+                        coords[2*(count-1):2*count] = xy
+    assert (count == N), 'N does not agree with count'
+    return N,coords,nodetag
 
 
 def read_elements_22(filename,N,phys):
@@ -195,6 +280,7 @@ def read_elements_22(filename,N,phys):
                             fail(3,'should not be here: neither triangle or boundary segment')
     return NE,np.array(tri).flatten(),bf,np.array(ns).flatten()
 
+
 if __name__ == "__main__":
     import argparse
 
@@ -225,14 +311,22 @@ Needs link to ${PETSC_DIR}/lib/petsc/bin/PetscBinaryIO.py.''')
     dprint(args.v,phys)
 
     print('  reading node coordinates ...')
-    N,xy = read_nodes_22(args.inname)
+    if gmshversion == '2.2':
+        N,xy = read_nodes_22(args.inname)
+        nodetag = []
+    else:
+        N,xy,nodetag = read_nodes_41(args.inname)
     dprint(args.v,'N=%d' % N)
     dprint(args.v,xy)
+    dprint(args.v and (gmshversion == '4.1'),nodetag)
 
     print('  writing N=%d node coordinates as PETSc Vec to %s ...' \
           % (N,vecoutname))
     petsc = PetscBinaryIO.PetscBinaryIO()
     petsc.writeBinaryFile(vecoutname,[xy.view(PetscBinaryIO.Vec),])
+
+    if gmshversion == '4.1':
+        fail(99,'not implemented')
 
     print('  reading element tuples ...')
     NE,e,bf,ns = read_elements_22(args.inname,N,phys)
