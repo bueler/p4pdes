@@ -131,16 +131,10 @@ Needs link to ${PETSC_DIR}/lib/petsc/bin/PetscBinaryIO.py.''')
     if gmshversion == '2.2':
         e,bf,ns = read_elements_22(args.inname,N,phys)
     else:
-        e,bs = read_elements_41(args.inname,nodetag)  #FIXME
+        e,bf,ns = read_elements_41(args.inname,N,nodetag,tagmap)
     assert (len(e) % 3 == 0), 'element index list length not 3 K'
     K = len(e) / 3
     dprint(args.v,e)
-
-    # FIXME from here
-    if gmshversion == '4.1':
-        dprint(args.v,bs)
-        fail('element read not fully implemented for format version 4.1')
-
     assert (len(bf) == N), 'boundary flag list not length N'
     dprint(args.v,bf)
     assert (len(ns) % 2 == 0), 'Neumann segment index list length not 2 P'
