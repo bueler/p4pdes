@@ -27,7 +27,7 @@ Line(17) = {8,9};
 Line(18) = {9,1};
 Line Loop(19) = {10,11,12,13,14,15,16,17,18};
 Plane Surface(20) = {19};
-Physical Line("dirichlet") = {10,11,12};
 Physical Line("neumann") = {13,14,15,16,17,18};
+Physical Line("dirichlet") = {10,11,12};
 Physical Surface("interior") = {20};
 
