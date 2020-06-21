@@ -10,7 +10,7 @@
 #   http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format-version-2-_0028Legacy_0029
 
 # example: put PETSc Vec with locations (node coordinates x,y) in meshes/trap.vec
-# and PETSc ISs (e,bfn,s,bfs) in meshes/trap.is
+# and PETSc ISs (e,bf,ns) in meshes/trap.is
 #    $ make petscPyScripts
 #    $ gmsh -2 meshes/trap.geo
 #    $ ./msh2petsc.py meshes/trap.msh
@@ -23,9 +23,10 @@ def dprint(debug,s):
     if debug:
         print(s)
 
-def fail(k,s):
+# fail and exit with message
+def fail(s):
     print('ERROR: %s ... stopping' % s)
-    sys.exit(k)
+    sys.exit(1)
 
 def get_mesh_format(filename):
     MFread = False
@@ -62,20 +63,11 @@ def read_physical_names(filename):
                 elif PNread:
                     ls = line.split(' ')
                     if nPN == 0 and len(ls) == 1:
-                        try:
-                            nPN = int(ls[0])
-                        except ValueError:
-                            fail(2,'nPN not an integer')
+                        nPN = int(ls[0])
                     else:
                         assert (len(ls) == 3), 'expected three items on line'
-                        try:
-                            dim = int(ls[0])
-                        except ValueError:
-                            fail(2,'dim not an integer')
-                        try:
-                            num = int(ls[1])
-                        except ValueError:
-                            fail(2,'num not an integer')
+                        dim = int(ls[0])
+                        num = int(ls[1])
                         physical[ls[2].strip('"').lower()] = num
     assert (nPN == len(physical)), 'expected number of physical names does not equal number read'
     for key in ['dirichlet','neumann','interior']:
@@ -111,25 +103,16 @@ def read_nodes_22(filename):
                     ls = line.split(' ')
                     if len(ls) == 1:
                         assert (N == 0), 'N found again but already read'
-                        try:
-                            N = int(ls[0])
-                        except ValueError:
-                            fail(7,'N not an integer')
+                        N = int(ls[0])
                         assert (N > 0), 'N invalid'
                         coords = np.zeros(2*N)  # allocate space for nodes
                     else:
                         assert (N > 0), 'expected to read N by now'
                         assert (len(ls) == 4), 'expected to read four values on node line'
-                        try:
-                            rcount = int(ls[0])
-                        except ValueError:
-                            fail(10,'node index not an integer')
+                        rcount = int(ls[0])
                         count += 1
                         assert (count == rcount), 'unexpected (noncontiguous?) node indexing'
-                        try:
-                            xy = [float(s) for s in ls[1:3]]
-                        except ValueError:
-                            fail(12,'could not convert node coordinates to float')
+                        xy = [float(s) for s in ls[1:3]]
                         coords[2*(count-1):2*count] = xy            
     assert (count == N), 'N does not agree with index'
     return N,coords
@@ -173,18 +156,12 @@ def read_nodes_41(filename):
                     assert (len(ls) in [1,3,4]), 'unexpected line format'
                     if len(ls) == 4:
                         if not firstlineread:
-                            try:
-                                N = int(ls[1])
-                            except ValueError:
-                                fail(7,'N not an integer')
+                            N = int(ls[1])
                             firstlineread = True
                             coords = np.zeros(2*N)            # allocate space for coordinates
                         else:
                             assert (N > 0), 'N not defined'
-                            try:
-                                blocksize = int(ls[3])
-                            except ValueError:
-                                fail(8,'numNodesInBlock not an integer')
+                            blocksize = int(ls[3])
                             assert (ls[2] == '0'), 'parametric not equal to zero'
                             assert (blocksize <= N - count), 'expected to read fewer nodes'
                             blocknodecount = 0
@@ -193,18 +170,12 @@ def read_nodes_41(filename):
                     elif len(ls) == 1:
                         assert (firstlineread), 'first line of nodes not yet read'
                         assert (blocknodecount < blocksize), 'not expecting a node tag'
-                        try:
-                            thistag = int(ls[0])
-                        except ValueError:
-                            fail(9,'nodeTag not an integer')
+                        thistag = int(ls[0])
                         nodetag.append(thistag)
                         blocknodecount += 1
                     elif len(ls) == 3:
                         assert (firstlineread), 'first line of nodes not yet read'
-                        try:
-                            xy = [float(s) for s in ls[0:2]]
-                        except ValueError:
-                            fail(12,'could not convert node coordinates to float')
+                        xy = [float(s) for s in ls[0:2]]
                         count += 1
                         coords[2*(count-1):2*count] = xy
     assert (count == N), 'N does not agree with count'
@@ -239,36 +210,21 @@ def read_elements_22(filename,N,phys):
                     ls = line.split(' ')
                     if len(ls) == 1:
                         assert (NE == 0), 'NE found again but already read'
-                        try:
-                            NE = int(ls[0])
-                        except ValueError:
-                            fail(3,'NE not an integer')
+                        NE = int(ls[0])
                         assert (NE > 0), 'NE invalid'
                     else:
                         assert (NE > 0), 'expected to read NE by now'
                         assert (len(ls) == 7 or len(ls) == 8), 'expected to read 7 or 8 values on element line'
-                        try:
-                            dim = int(ls[1])
-                        except ValueError:
-                            fail(3,'dim not an integer')
+                        dim = int(ls[1])
                         assert (dim == 1 or dim == 2), 'dim not 1 or 2'
-                        try:
-                            etype = int(ls[3])
-                        except ValueError:
-                            fail(3,'etype not an integer')
+                        etype = int(ls[3])
                         if dim == 2 and etype == phys['interior'] and len(ls) == 8:
                             # reading a triangle
-                            try:
-                                thistri = [int(s) for s in ls[5:8]]
-                            except:
-                                fail(3,'unable to convert triangle vertices to integers')
+                            thistri = [int(s) for s in ls[5:8]]
                             # change to zero-indexing
                             tri.append(np.array(thistri,dtype=int) - 1)
                         elif dim == 1 and len(ls) == 7:
-                            try:
-                                ends = [int(s) for s in ls[5:7]]
-                            except:
-                                fail(3,'unable to convert segment ends to integers')
+                            ends = [int(s) for s in ls[5:7]]
                             if etype == phys['dirichlet']:
                                 # reading a Dirichlet boundary segment; note zero-indexing
                                 bf[np.array(ends,dtype=int) - 1] = 2
@@ -280,9 +236,9 @@ def read_elements_22(filename,N,phys):
                                     if bf[ends[j]] == 0:
                                         bf[ends[j]] = 1
                             else:
-                                fail(3,'should not be here: dim=1 and 7 entries but not etype')
+                                fail('should not be here: dim=1 and 7 entries but not etype')
                         else:
-                            fail(3,'should not be here: neither triangle or boundary segment')
+                            fail('should not be here: neither triangle or boundary segment')
     return np.array(tri).flatten(),bf,np.array(ns).flatten()
 
 
@@ -309,7 +265,7 @@ def read_elements_41(filename,nodetag):
     blocksize = 0       # number of elements in block
     blocktype = 0       # =1 for boundary segments, =2 for triangles
     blockcount = 0      # count of elements read in block
-    bs = []
+    bs = []  #FIXME
     tri = []
     with open(filename, 'r') as mshfile:
         for line in mshfile:
@@ -328,40 +284,25 @@ def read_elements_41(filename,nodetag):
                     assert (len(ls) in [3,4]), 'unexpected line format'
                     if len(ls) == 4:
                         if not firstlineread:
-                            try:
-                                NE = int(ls[1])
-                            except ValueError:
-                                fail(7,'NE not an integer')
+                            NE = int(ls[1])
                             firstlineread = True
                         elif blockcount == blocksize:  # then a line with 4 describes the block
                             assert (NE > 0), 'NE not defined'
-                            try:
-                                blocktype = int(ls[2])
-                            except ValueError:
-                                fail(8,'elementType not an integer')
-                            try:
-                                blocksize = int(ls[3])
-                            except ValueError:
-                                fail(8,'numElementsInBlock not an integer')
+                            blocktype = int(ls[2])
+                            blocksize = int(ls[3])
                             assert (blocksize <= NE - count), 'expected to read fewer elements'
                             blockcount = 0
                         else:  # read a triangle
                             assert (blocktype == 2), 'expecting a triangle'
                             assert (blockcount < blocksize), 'already read all elements in block'
-                            try:
-                                thistri = [nodetag.index(int(s)) for s in ls[1:4]]
-                            except:
-                                fail(3,'unable to convert triangle nodeTags to indices')
+                            thistri = [nodetag.index(int(s)) for s in ls[1:4]]
                             tri.append(np.array(thistri,dtype=int))
                             blockcount += 1
                             count += 1
                     else:      # read a boundary segment
                         assert (blocktype == 1), 'expecting a boundary segment'
                         assert (blockcount < blocksize), 'already read all elements in block'
-                        try:
-                            thisbs = [nodetag.index(int(s)) for s in ls[1:3]]
-                        except:
-                            fail(4,'unable to convert boundary segment nodeTags to indices')
+                        thisbs = [nodetag.index(int(s)) for s in ls[1:3]]
                         bs.append(np.array(thisbs,dtype=int))
                         blockcount += 1
                         count += 1
@@ -425,7 +366,7 @@ Needs link to ${PETSC_DIR}/lib/petsc/bin/PetscBinaryIO.py.''')
     # FIXME from here
     if gmshversion == '4.1':
         dprint(args.v,bs)
-        fail(1,'element read not fully implemented for format version 4.1')
+        fail('element read not fully implemented for format version 4.1')
 
     assert (len(bf) == N), 'boundary flag list not length N'
     dprint(args.v,bf)
