@@ -87,7 +87,7 @@ def read_physical_names(filename):
 #$Nodes
 #number-of-nodes
 #node-number x-coord y-coord z-coord       # ignore z-coord
-#…
+#...
 #$EndNodes
 
 def read_nodes_22(filename):
@@ -151,7 +151,6 @@ def read_nodes_41(filename):
     Nodesread = False
     EndNodesread = False
     firstlineread = False
-    entitylineread = False
     N = 0           # number of nodes
     count = 0       # count of nodes read
     blocksize = 0   # number of nodes in block
@@ -179,7 +178,6 @@ def read_nodes_41(filename):
                             except ValueError:
                                 fail(7,'N not an integer')
                             firstlineread = True
-                            nodetag = np.zeros(N,dtype=int)   # space for indexing map
                             coords = np.zeros(2*N)            # allocate space for coordinates
                         else:
                             assert (N > 0), 'N not defined'
@@ -199,7 +197,7 @@ def read_nodes_41(filename):
                             thistag = int(ls[0])
                         except ValueError:
                             fail(9,'nodeTag not an integer')
-                        nodetag[count+blocknodecount] = thistag
+                        nodetag.append(thistag)
                         blocknodecount += 1
                     elif len(ls) == 3:
                         assert (firstlineread), 'first line of nodes not yet read'
@@ -212,6 +210,13 @@ def read_nodes_41(filename):
     assert (count == N), 'N does not agree with count'
     return N,coords,nodetag
 
+
+#Gmsh format version 2.2 (legacy):
+#$Elements
+#number-of-elements
+#elm-number elm-type number-of-tags < tag > ... node-number-list
+#...
+#$EndElements
 
 def read_elements_22(filename,N,phys):
     Elementsread = False
@@ -278,7 +283,90 @@ def read_elements_22(filename,N,phys):
                                 fail(3,'should not be here: dim=1 and 7 entries but not etype')
                         else:
                             fail(3,'should not be here: neither triangle or boundary segment')
-    return NE,np.array(tri).flatten(),bf,np.array(ns).flatten()
+    return np.array(tri).flatten(),bf,np.array(ns).flatten()
+
+
+#Gmsh format version 4.1:
+#$Elements
+#  numEntityBlocks numElements minElementTag maxElementTag   # use: numElements
+#  entityDim entityTag elementType numElementsInBlock        # use: elementType, numElementsInBlock
+#    elementTag nodeTag nodeTag                   # when elementType == 1
+#    elementTag nodeTag nodeTag nodeTag           # when elementType == 2
+#    ...
+#  ...
+#$EndElements
+
+# FIXME for now this procedure reads the 2D elements (triangles) and the
+# 1D boundary segments
+# FIXME to get the boundary flags, and to decide on which are the Neumann segments,
+# will require reading $Entities ... $EndEntities because the boundary entities
+# are the only place where the Dirichlet/Neumann distinction is made
+def read_elements_41(filename,nodetag):
+    Elementsread = False
+    firstlineread = False
+    NE = 0
+    count = 0           # count of elements read
+    blocksize = 0       # number of elements in block
+    blocktype = 0       # =1 for boundary segments, =2 for triangles
+    blockcount = 0      # count of elements read in block
+    bs = []
+    tri = []
+    with open(filename, 'r') as mshfile:
+        for line in mshfile:
+            line = line.strip()  # remove leading and trailing whitespace
+            if line: # only look at nonempty lines
+                if line == '$Elements':
+                    assert (not Elementsread), '"$Elements" repeated'
+                    Elementsread = True
+                elif line == '$EndElements':
+                    assert (Elementsread), '"$EndElements" before "$Elements"'
+                    assert (len(bs) > 0), 'no boundary segments read'
+                    assert (len(tri) > 0), 'no triangles read'
+                    break  # apparent success
+                elif Elementsread:
+                    ls = line.split(' ')
+                    assert (len(ls) in [3,4]), 'unexpected line format'
+                    if len(ls) == 4:
+                        if not firstlineread:
+                            try:
+                                NE = int(ls[1])
+                            except ValueError:
+                                fail(7,'NE not an integer')
+                            firstlineread = True
+                        elif blockcount == blocksize:  # then a line with 4 describes the block
+                            assert (NE > 0), 'NE not defined'
+                            try:
+                                blocktype = int(ls[2])
+                            except ValueError:
+                                fail(8,'elementType not an integer')
+                            try:
+                                blocksize = int(ls[3])
+                            except ValueError:
+                                fail(8,'numElementsInBlock not an integer')
+                            assert (blocksize <= NE - count), 'expected to read fewer elements'
+                            blockcount = 0
+                        else:  # read a triangle
+                            assert (blocktype == 2), 'expecting a triangle'
+                            assert (blockcount < blocksize), 'already read all elements in block'
+                            try:
+                                thistri = [nodetag.index(int(s)) for s in ls[1:4]]
+                            except:
+                                fail(3,'unable to convert triangle nodeTags to indices')
+                            tri.append(np.array(thistri,dtype=int))
+                            blockcount += 1
+                            count += 1
+                    else:      # read a boundary segment
+                        assert (blocktype == 1), 'expecting a boundary segment'
+                        assert (blockcount < blocksize), 'already read all elements in block'
+                        try:
+                            thisbs = [nodetag.index(int(s)) for s in ls[1:3]]
+                        except:
+                            fail(4,'unable to convert boundary segment nodeTags to indices')
+                        bs.append(np.array(thisbs,dtype=int))
+                        blockcount += 1
+                        count += 1
+    assert (count == NE), 'count of elements read does not equal numElements'
+    return np.array(tri).flatten(),np.array(bs).flatten()
 
 
 if __name__ == "__main__":
@@ -325,22 +413,27 @@ Needs link to ${PETSC_DIR}/lib/petsc/bin/PetscBinaryIO.py.''')
     petsc = PetscBinaryIO.PetscBinaryIO()
     petsc.writeBinaryFile(vecoutname,[xy.view(PetscBinaryIO.Vec),])
 
-    if gmshversion == '4.1':
-        fail(99,'not implemented')
-
     print('  reading element tuples ...')
-    NE,e,bf,ns = read_elements_22(args.inname,N,phys)
+    if gmshversion == '2.2':
+        e,bf,ns = read_elements_22(args.inname,N,phys)
+    else:
+        e,bs = read_elements_41(args.inname,nodetag)
     assert (len(e) % 3 == 0), 'element index list length not 3 K'
     K = len(e) / 3
+    dprint(args.v,e)
+
+    # FIXME from here
+    if gmshversion == '4.1':
+        dprint(args.v,bs)
+        fail(1,'element read not fully implemented for format version 4.1')
+
     assert (len(bf) == N), 'boundary flag list not length N'
+    dprint(args.v,bf)
     assert (len(ns) % 2 == 0), 'Neumann segment index list length not 2 P'
     P = len(ns) / 2
     if (P == 0):
         print('WARNING: P=0 so writing a bogus negative-valued Neumann boundary segment')
         ns = np.array([-1,-1],dtype=int)
-    dprint(args.v,'NE=%d' % NE)
-    dprint(args.v,e)
-    dprint(args.v,bf)
     dprint(args.v,ns)
     print('  writing K=%d elements, N=%d boundary flags, and P=%d Neumann segments' \
           % (K,N,P))
