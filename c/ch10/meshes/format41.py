@@ -12,16 +12,16 @@ import sys
 #Gmsh format version 4.1:
 #$Entities
 #  numPoints numCurves numSurfaces numVolumes      # use: numPoints, numCurves
-#                                                  # check: numSurfaces = 1, numVolumes = 0
-#  pointTag X Y Z numPhysicalTags                  # check: numPhysicalTags = 0
+#                                                  # check: [len=4] numSurfaces = 1, numVolumes = 0
+#  pointTag X Y Z numPhysicalTags                  # check: [len=5] numPhysicalTags = 0
 #  ...
 #  curveTag minX minY minZ maxX maxY maxZ numPhysicalTags physicalTag
-#    numBoundingPoints pointTag ...                # use: curveTag, physicalTag
-#                                                  # check: numPhysicalTags = 1
+#    numBoundingPoints pointTag pointTag           # use: curveTag, physicalTag
+#                                                  # check: [len=12] numPhysicalTags = 1
 #  ...
 #  surfaceTag minX minY minZ maxX maxY maxZ numPhysicalTags physicalTag
 #    numBoundingCurves curveTag ...                # use: surfaceTag, physicalTag
-#                                                  # check: numPhysicalTags = 1
+#                                                  # check: [len>=13] numPhysicalTags = 1
 #  volumeTag ...                                   # should be absent
 #$EndEntities
 
@@ -45,7 +45,7 @@ def read_entities_41(filename):
                     break  # apparent success reading the entities
                 elif Entitiesread:
                     ls = line.split(' ')
-                    assert (len(ls) in [4,5,12,14]), 'unexpected line format'
+                    assert (len(ls) >= 12 or len(ls) in [4,5]), 'unexpected line format'
                     if len(ls) == 4:
                         assert (not firstlineread), 'only one length 4 line expected'
                         Npoints = int(ls[0])
@@ -58,7 +58,7 @@ def read_entities_41(filename):
                     elif len(ls) == 12:
                         assert (int(ls[7]) == 1), 'expected only one physical tag per curve'
                         tagmap[int(ls[0])] = int(ls[8])
-                    elif len(ls) == 14:
+                    elif len(ls) >= 13:
                         assert (int(ls[7]) == 1), 'expected only one physical tag per surface'
                         tagmap[int(ls[0])] = int(ls[8])
     return tagmap
