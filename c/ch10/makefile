@@ -29,6 +29,11 @@ meshes/trapneu1.vec meshes/trapneu1.is: meshes/trapneu.geo msh2petsc.py
 meshes/square1.vec meshes/square1.is: genstructured.py
 	-@./genstructured.py meshes/square1 3 > /dev/null
 
+koch/koch2.vec koch/koch2.is: koch/domain.py
+	-@koch/domain.py -l 2 -o koch/koch2.geo > /dev/null
+	-@${GMSH} -2 koch/koch2.geo -o koch/koch2.msh > /dev/null
+	-@./msh2petsc.py koch/koch2.msh > /dev/null
+
 # testing
 runmsh2petsc_1: petscPyScripts
 	-@gmsh -2 meshes/trap.geo -o meshes/tmp41.msh > /dev/null
@@ -59,14 +64,17 @@ rununfem_6: petscPyScripts meshes/trap1.vec meshes/trap1.is
 rununfem_7: petscPyScripts meshes/trap1.vec meshes/trap1.is
 	-@../testit.sh unfem "-un_mesh meshes/trap1 -un_case 1 -snes_fd_color -snes_converged_reason" 1 7
 
+rununfem_8: petscPyScripts koch/koch2.vec koch/koch2.is
+	-@../testit.sh unfem "-un_mesh koch/koch2 -un_case 4 -snes_type ksponly -ksp_converged_reason -pc_type gamg" 1 8
+
 test_msh2petsc: runmsh2petsc_1 runmsh2petsc_2
 
-test_unfem: rununfem_1 rununfem_2 rununfem_3 rununfem_4 rununfem_5 rununfem_6 rununfem_7
+test_unfem: rununfem_1 rununfem_2 rununfem_3 rununfem_4 rununfem_5 rununfem_6 rununfem_7 rununfem_8
 
 test: test_msh2petsc test_unfem
 
 # etc
-.PHONY: distclean runmsh2petsc_1 runmsh2petsc_2 rununfem_1 rununfem_2 rununfem_3 rununfem_4 rununfem_5 rununfem_6 rununfem_7 test test_msh2petsc test_unfem petscPyScripts
+.PHONY: distclean runmsh2petsc_1 runmsh2petsc_2 rununfem_1 rununfem_2 rununfem_3 rununfem_4 rununfem_5 rununfem_6 rununfem_7 rununfem_8 test test_msh2petsc test_unfem petscPyScripts
 
 distclean:
 	@rm -f *~ unfem *tmp
