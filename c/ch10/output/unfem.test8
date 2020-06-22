@@ -1,3 +1,3 @@
-  Linear solve converged due to CONVERGED_RTOL iterations 4
+  Linear solve converged due to CONVERGED_RTOL iterations 3
   PC is GAMG with 2 levels
-case 4 result for N=91 nodes with h = 2.222e-01 ... done
+case 4 result for N=85 nodes with h = 1.925e-01 ... done
