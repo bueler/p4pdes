@@ -73,15 +73,16 @@ f.write('%d};\n' % (2*N))
 f.write('Plane Surface(%d) = {%d};\n' % (2*N+2,2*N+1))
 if args.neumann:
     f.write('Physical Line("neumann") = {')
-else:
-    f.write('Physical Line("dirichlet") = {')
-for j in range(N-1):
-    f.write('%d,' % (N+1+j))
-f.write('%d};\n' % (2*N))
-if args.neumann:
+    for j in range(N-1):
+        f.write('%d,' % (N+1+j))
+    f.write('%d};\n' % (2*N))
     f.write('Physical Line("dirichlet") = {};\n')
 else:
     f.write('Physical Line("neumann") = {};\n')
+    f.write('Physical Line("dirichlet") = {')
+    for j in range(N-1):
+        f.write('%d,' % (N+1+j))
+    f.write('%d};\n' % (2*N))
 f.write('Physical Surface("interior") = {%d};\n' % (2*N+2))
 f.close()
 
