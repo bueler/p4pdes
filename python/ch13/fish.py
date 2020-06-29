@@ -39,7 +39,7 @@ if args.refine > 0:
     mesh = hierarchy[-1]     # the fine mesh
     mx, my = (mx-1) * 2**args.refine + 1, (my-1) * 2**args.refine + 1
 x,y = SpatialCoordinate(mesh)
-mesh._plex.viewFromOptions('-dm_view')
+mesh._topology_dm.viewFromOptions('-dm_view')
 # to print coordinates:  print(mesh.coordinates.dat.data)
 
 # Define function space, right-hand side, and weak form.

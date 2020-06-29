@@ -95,7 +95,7 @@ if args.refine > 0:
     if len(args.mesh) > 0:
         meshstr += ' (%d levels refinement)' % args.refine
 x,y = SpatialCoordinate(mesh)
-mesh._plex.viewFromOptions('-dm_view')
+mesh._topology_dm.viewFromOptions('-dm_view')
 
 # define mixed finite elements
 V = VectorFunctionSpace(mesh, 'CG', degree=args.udegree)
