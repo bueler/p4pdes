@@ -97,10 +97,11 @@ if args.refine > 0:
 x,y = SpatialCoordinate(mesh)
 mesh._topology_dm.viewFromOptions('-dm_view')
 
-# define mixed finite elements
-V = VectorFunctionSpace(mesh, 'CG', degree=args.udegree)
+# define mixed finite elements; for family names see
+#   https://www.firedrakeproject.org/variational-problems.html#supported-finite-elements
+V = VectorFunctionSpace(mesh, 'CG', degree=args.udegree)  # CG = Lagrange
 if args.dp:
-    W = FunctionSpace(mesh, 'DG', degree=args.pdegree)
+    W = FunctionSpace(mesh, 'DG', degree=args.pdegree)  # DG = Discontinuous Lagrange
 else:
     W = FunctionSpace(mesh, 'CG', degree=args.pdegree)
 Z = V * W
