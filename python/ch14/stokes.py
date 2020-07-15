@@ -233,7 +233,6 @@ else:
         mixedname = 'Taylor-Hood'
     else:
         mixedname = ''
-Z = V * W
 PETSc.Sys.Print('solving%s with %s x %s %s elements ...' \
                 % (meshstr,uFEstr,pFEstr,mixedname))
 
