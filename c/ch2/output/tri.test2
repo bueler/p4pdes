@@ -1,2 +1,2 @@
 Linear solve converged due to CONVERGED_RTOL iterations 3
-error for m = 1000 system is |x-xexact|_2 = 9.1e-15
+error for m = 1000 system is |x-xexact|_2 = 9.2e-15
