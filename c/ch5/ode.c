@@ -1,10 +1,9 @@
 static char help[] =
-"ODE system solver example using TS.  Solves N-dimensional system\n"
+"ODE system solver example using TS.  Solves a 2D system\n"
 "    dy/dt = G(t,y)\n"
-"with y(t0) = y0 to compute y(tf).  Serial only.\n"
-"Sets TS type to Runge-Kutta.  The implemented example has\n"
-"G_0 = y_1, G_1 = - y_0 + t, y_0(0) = 0, y_1(0) = 0.  The exact solution is\n"
-"y_0(t) = t - sin(t), y_1(t) = 1 - cos(t).\n\n";
+"with y(t0) = y0 to compute y(tf).  Sets problem type to NONLINEAR and\n"
+"TS type to Runge-Kutta.  No Jacobian is supplied; compare odejac.c.\n"
+"Exact solution is known.\n\n";
 
 #include <petsc.h>
 

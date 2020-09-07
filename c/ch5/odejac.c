@@ -1,5 +1,5 @@
 static char help[] =
-"ODE system solver example using TS, with Jacobian.  Sets TS type to\n"
+"ODE system solver example using TS, but with Jacobian.  Sets TS type to\n"
 "implicit Crank-Nicolson.  Compare ode.c.\n\n";
 
 #include <petsc.h>
