@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 Generate residual norm figure from PETSc monitor output from a SNES+KSP solve.
@@ -141,10 +141,10 @@ if __name__=='__main__':
     snesdata, kspdata = readskfile(open(args.infile, 'r'),
                                    showksp=args.showksp, ksptrue=args.ksptrue)
     if args.showdata:
-        print 'SNES residual norms:'
-        print snesdata
-        print 'KSP residual norms ([count, norm]):'
-        print kspdata
+        print('SNES residual norms:')
+        print(snesdata)
+        print('KSP residual norms ([count, norm]):')
+        print(kspdata)
     genskfigure(snesdata, kspdata,
                 docolor=args.color, showsnes=args.showsnes, showksp=args.showksp,
                 ksptrue=args.ksptrue, msize=args.msize)

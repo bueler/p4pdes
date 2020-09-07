@@ -49,4 +49,5 @@ test: test_minimal test_biharm
 
 distclean:
 	@rm -f *~ minimal biharm *tmp
+	@rm -f *.pdf *.txt
 
