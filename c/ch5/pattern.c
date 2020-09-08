@@ -16,6 +16,7 @@ typedef struct {
              Dv,    //                        v equation
              phi,   // "dimensionless feed rate" (F in Pearson 1993)
              kappa; // "dimensionless rate constant" (k in Pearson 1993)
+  PetscBool  IFcn_called, IJac_called, RHSFcn_called, RHSJac_called;
 } PatternCtx;
 
 extern PetscErrorCode InitialState(DM, Vec, PetscReal, PatternCtx*);
@@ -38,7 +39,9 @@ int main(int argc,char **argv)
   DMDALocalInfo  info;
   PetscReal      noiselevel = -1.0;  // negative value means no initial noise
   PetscBool      no_rhsjacobian = PETSC_FALSE,
-                 no_ijacobian = PETSC_FALSE;
+                 no_ijacobian = PETSC_FALSE,
+                 call_back_report = PETSC_FALSE;
+  TSType         type;
 
   PetscInitialize(&argc,&argv,(char*)0,help);
 
@@ -48,10 +51,13 @@ int main(int argc,char **argv)
   user.Dv     = 4.0e-5;
   user.phi    = 0.024;
   user.kappa  = 0.06;
+  user.IFcn_called   = PETSC_FALSE;
+  user.IJac_called   = PETSC_FALSE;
+  user.RHSFcn_called = PETSC_FALSE;
+  user.RHSJac_called = PETSC_FALSE;
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "ptn_", "options for patterns", ""); CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-noisy_init",
-           "initialize u,v with this much random noise (e.g. 0.2) on top of usual initial values",
-           "pattern.c",noiselevel,&noiselevel,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-call_back_report","report on which user-supplied call-backs were actually called",
+           "pattern.c",call_back_report,&(call_back_report),NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-Du","diffusion coefficient of first equation",
            "pattern.c",user.Du,&user.Du,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-Dv","diffusion coefficient of second equation",
@@ -64,6 +70,9 @@ int main(int argc,char **argv)
            "pattern.c",no_ijacobian,&(no_ijacobian),NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-no_rhsjacobian","do not set call-back DMDATSSetRHSJacobian()",
            "pattern.c",no_rhsjacobian,&(no_rhsjacobian),NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-noisy_init",
+           "initialize u,v with this much random noise (e.g. 0.2) on top of usual initial values",
+           "pattern.c",noiselevel,&noiselevel,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-phi","dimensionless feed rate (=F in (Pearson, 1993))",
            "pattern.c",user.phi,&user.phi,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
@@ -116,6 +125,16 @@ int main(int argc,char **argv)
   ierr = InitialState(da,x,noiselevel,&user); CHKERRQ(ierr);
   ierr = TSSolve(ts,x); CHKERRQ(ierr);
 
+  // optionally report on call-backs
+  if (call_back_report) {
+      ierr = TSGetType(ts,&type);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"CALL-BACK REPORT\n  solver type: %s\n",type); CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"  IFunction:   %D  | IJacobian:   %D\n",
+                                          (int)user.IFcn_called,(int)user.IJac_called); CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"  RHSFunction: %D  | RHSJacobian: %D\n",
+                                          (int)user.RHSFcn_called,(int)user.RHSJac_called); CHKERRQ(ierr);
+  }
+
   VecDestroy(&x);  TSDestroy(&ts);  DMDestroy(&da);
   return PetscFinalize();
 }
@@ -167,6 +186,7 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info,
   PetscInt   i, j;
   PetscReal  uv2;
 
+  user->RHSFcn_called = PETSC_TRUE;
   for (j = info->ys; j < info->ys + info->ym; j++) {
       for (i = info->xs; i < info->xs + info->xm; i++) {
           uv2 = aY[j][i].u * aY[j][i].v * aY[j][i].v;
@@ -186,6 +206,7 @@ PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info,
     PetscReal   v[2], uv, v2;
     MatStencil  col[2],row;
 
+    user->RHSJac_called = PETSC_TRUE;
     for (j = info->ys; j < info->ys+info->ym; j++) {
         row.j = j;  col[0].j = j;  col[1].j = j;
         for (i = info->xs; i < info->xs+info->xm; i++) {
@@ -227,6 +248,7 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info, PetscReal t,
                    Cv = user->Dv / (6.0 * h * h);
   PetscReal        u, v, lapu, lapv;
 
+  user->IFcn_called = PETSC_TRUE;
   for (j = info->ys; j < info->ys + info->ym; j++) {
       for (i = info->xs; i < info->xs + info->xm; i++) {
           u = aY[j][i].u;
@@ -261,6 +283,7 @@ PetscErrorCode FormIJacobianLocal(DMDALocalInfo *info,
     PetscReal        val[9], CC;
     MatStencil       col[9], row;
 
+    user->IJac_called = PETSC_TRUE;
     for (j = info->ys; j < info->ys + info->ym; j++) {
         row.j = j;
         for (i = info->xs; i < info->xs + info->xm; i++) {

@@ -55,19 +55,25 @@ runpattern_2:
 runpattern_3:
 	-@../testit.sh pattern "-da_refine 2 -ts_monitor -ts_type cn -snes_fd_color -ts_max_time 10 -snes_converged_reason" 2 3
 
+runpattern_4:
+	-@../testit.sh pattern "-da_refine 3 -ptn_call_back_report -ts_monitor" 1 4
+
+runpattern_5:
+	-@../testit.sh pattern "-da_refine 4 -ptn_call_back_report -ts_type bdf -ts_max_time 1 -snes_converged_reason -ts_monitor" 1 5
+
 test_ode: runode_1 runode_2 runode_3
 
 test_odejac: runodejac_1 runodejac_2
 
 test_heat: runheat_1 runheat_2
 
-test_pattern: runpattern_1 runpattern_2 runpattern_3
+test_pattern: runpattern_1 runpattern_2 runpattern_3 runpattern_4 runpattern_5
 
 test: test_ode test_odejac test_heat test_pattern
 
 # etc
 
-.PHONY: distclean runode_1 runode_2 runode_3 runodejac_1 runodejac_2 runheat_1 runheat_2 runpattern_1 runpattern_2 runpattern_3 test test_ode test_odejac test_heat test_pattern
+.PHONY: distclean runode_1 runode_2 runode_3 runodejac_1 runodejac_2 runheat_1 runheat_2 runpattern_1 runpattern_2 runpattern_3 runpattern_4 runpattern_5 test test_ode test_odejac test_heat test_pattern
 
 distclean:
 	@rm -f *~ ode odejac heat pattern *tmp

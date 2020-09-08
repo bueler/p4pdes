@@ -1,0 +1,9 @@
+running on 48 x 48 grid with square cells of side h = 0.052083 ...
+0 TS dt 1. time 0.
+  Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 5
+  Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 10
+1 TS dt 1.10972 time 1.
+CALL-BACK REPORT
+  solver type: bdf
+  IFunction:   1  | IJacobian:   1
+  RHSFunction: 1  | RHSJacobian: 1

@@ -1,0 +1,16 @@
+running on 24 x 24 grid with square cells of side h = 0.104167 ...
+0 TS dt 5. time 0.
+1 TS dt 7.32225 time 5.
+2 TS dt 9.34935 time 12.3223
+3 TS dt 12.4736 time 21.6716
+4 TS dt 17.0057 time 34.1452
+5 TS dt 25.5789 time 51.1509
+6 TS dt 28.718 time 76.7298
+7 TS dt 26.7656 time 105.448
+8 TS dt 33.8933 time 132.213
+9 TS dt 33.8933 time 166.107
+10 TS dt 83.5115 time 200.
+CALL-BACK REPORT
+  solver type: arkimex
+  IFunction:   1  | IJacobian:   1
+  RHSFunction: 1  | RHSJacobian: 0
