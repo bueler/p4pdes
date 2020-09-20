@@ -122,7 +122,7 @@ int main(int argc,char **argv) {
     PetscBool      init_exact = PETSC_FALSE;
     AdCtx          user;
 
-    PetscInitialize(&argc,&argv,(char*)0,help);
+    ierr = PetscInitialize(&argc,&argv,NULL,help); if (ierr) return ierr;
 
     user.eps = 0.005;
     user.none_on_peclet = PETSC_FALSE;

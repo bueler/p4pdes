@@ -39,7 +39,7 @@ int main(int argc,char **argv) {
   PetscReal      t0, tf;
   PetscBool      monitorenergy = PETSC_FALSE;
 
-  PetscInitialize(&argc,&argv,(char*)0,help);
+  ierr = PetscInitialize(&argc,&argv,NULL,help); if (ierr) return ierr;
 
   user.D0  = 1.0;
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "ht_", "options for heat", ""); CHKERRQ(ierr);

@@ -66,7 +66,8 @@ int main(int argc,char **argv) {
     PetscReal      normv, normu, errv, erru;
     DMDALocalInfo  info;
 
-    PetscInitialize(&argc,&argv,NULL,help);
+    ierr = PetscInitialize(&argc,&argv,NULL,help); if (ierr) return ierr;
+
     user.f = &f_fcn;
     ierr = DMDACreate2d(PETSC_COMM_WORLD,
                         DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,

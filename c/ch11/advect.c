@@ -143,7 +143,7 @@ int main(int argc,char **argv) {
     LimiterType      limiter = KOREN, jac_limiter = NONE;
     AdvectCtx        user;
 
-    PetscInitialize(&argc,&argv,(char*)0,help);
+    ierr = PetscInitialize(&argc,&argv,NULL,help); if (ierr) return ierr;
 
     user.problem = STRAIGHT;
     user.windx = 2.0;

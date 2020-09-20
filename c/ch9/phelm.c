@@ -74,7 +74,8 @@ int main(int argc,char **argv) {
                    view_f = PETSC_FALSE;
     PetscReal      err;
 
-    PetscInitialize(&argc,&argv,NULL,help);
+    ierr = PetscInitialize(&argc,&argv,NULL,help); if (ierr) return ierr;
+
     user.p = 2.0;
     user.eps = 0.0;
     user.quadpts = 2;

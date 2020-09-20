@@ -6,8 +6,8 @@ int main(int argc, char **argv) {
   PetscInt       i;
   PetscReal      localval, globalsum;
 
-  PetscInitialize(&argc,&argv,NULL,
-      "Compute e in parallel with PETSc.\n\n");
+  ierr = PetscInitialize(&argc,&argv,NULL,
+      "Compute e in parallel with PETSc.\n\n"); if (ierr) return ierr;
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank); CHKERRQ(ierr);
 
   // compute  1/n!  where n = (rank of process) + 1

@@ -17,7 +17,7 @@ int main(int argc,char **args) {
              aA2[3] = { 1.0,  1.0, -1.0},
              aA3 = -3.0;
 
-  PetscInitialize(&argc,&args,NULL,help);
+  ierr = PetscInitialize(&argc,&args,NULL,help); if (ierr) return ierr;
 
   ierr = MatCreate(PETSC_COMM_WORLD,&A); CHKERRQ(ierr);
   ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,4,4); CHKERRQ(ierr);

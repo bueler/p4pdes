@@ -16,7 +16,7 @@ int main(int argc,char **args) {
     PetscReal     errnorm;
     DMDALocalInfo info;
 
-    PetscInitialize(&argc,&args,(char*)0,help);
+    ierr = PetscInitialize(&argc,&args,NULL,help); if (ierr) return ierr;
 
     // change default 9x9 size using -da_grid_x M -da_grid_y N
     ierr = DMDACreate2d(PETSC_COMM_WORLD,

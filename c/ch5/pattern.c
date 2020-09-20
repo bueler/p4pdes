@@ -43,7 +43,7 @@ int main(int argc,char **argv)
                  call_back_report = PETSC_FALSE;
   TSType         type;
 
-  PetscInitialize(&argc,&argv,(char*)0,help);
+  ierr = PetscInitialize(&argc,&argv,NULL,help); if (ierr) return ierr;
 
   // parameter values from pages 21-22 in Hundsdorfer & Verwer (2003)
   user.L      = 2.5;

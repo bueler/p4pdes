@@ -68,7 +68,9 @@ int main(int argc, char **argv) {
     DMDALocalInfo  info;
     ProblemType    problem = CATENOID;
 
-    // defaults:
+    ierr = PetscInitialize(&argc,&argv,NULL,help); if (ierr) return ierr;
+
+    // defaults and options
     mctx.q = -0.5;
     mctx.tent_H = 1.0;
     mctx.catenoid_c = 1.1;  // case shown in Figure in book
@@ -76,8 +78,6 @@ int main(int argc, char **argv) {
     user.cx = 1.0;
     user.cy = 1.0;
     user.cz = 1.0;
-
-    PetscInitialize(&argc,&argv,NULL,help);
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"ms_",
                              "minimal surface equation solver options",""); CHKERRQ(ierr);
     ierr = PetscOptionsReal("-catenoid_c",

@@ -78,7 +78,7 @@ int main(int argc,char **argv) {
   char                dumpname[256] = "dump.dat";
   PetscBool           dumpbinary = PETSC_FALSE;
 
-  PetscInitialize(&argc,&argv,NULL,help);
+  ierr = PetscInitialize(&argc,&argv,NULL,help); if (ierr) return ierr;
 
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"obs_","options to obstacle","");CHKERRQ(ierr);
   ierr = PetscOptionsString("-dump_binary",

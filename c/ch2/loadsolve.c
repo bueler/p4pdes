@@ -33,7 +33,7 @@ int main(int argc,char **args) {
               nameb[PETSC_MAX_PATH_LEN] = "";
   PetscViewer fileA, fileb;
 
-  PetscInitialize(&argc,&args,NULL,help);
+  ierr = PetscInitialize(&argc,&args,NULL,help); if (ierr) return ierr;
 
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"","options for loadsolve",""); CHKERRQ(ierr);
   ierr = PetscOptionsString("-fA","input file containing matrix A",

@@ -15,7 +15,7 @@ int main(int argc,char **args) {
                            {-1.0,  1.0,  1.0,  0.0},
                            { 0.0,  1.0,  1.0, -1.0}};
 
-    PetscInitialize(&argc,&args,NULL,help);
+    ierr = PetscInitialize(&argc,&args,NULL,help); if (ierr) return ierr;
 
     ierr = VecCreate(PETSC_COMM_WORLD,&b); CHKERRQ(ierr);
     ierr = VecSetSizes(b,PETSC_DECIDE,4); CHKERRQ(ierr);

@@ -71,7 +71,7 @@ int main(int argc,char **argv) {
     Vec         r, u, uexact;
     PetscReal   err, h_max;
 
-    PetscInitialize(&argc,&argv,NULL,help);
+    ierr = PetscInitialize(&argc,&argv,NULL,help); if (ierr) return ierr;
 
     ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size); CHKERRQ(ierr);
     if (size != 1) {

@@ -17,7 +17,7 @@ int main(int argc,char **argv) {
   Mat    J;
   AppCtx user;
 
-  PetscInitialize(&argc,&argv,NULL,help);
+  ierr = PetscInitialize(&argc,&argv,NULL,help); if (ierr) return ierr;
   user.b = 2.0;
 
   ierr = VecCreate(PETSC_COMM_WORLD,&x); CHKERRQ(ierr);

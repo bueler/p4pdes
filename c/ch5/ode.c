@@ -18,7 +18,7 @@ int main(int argc,char **argv) {
   Vec        y, yexact;
   TS         ts;
 
-  PetscInitialize(&argc,&argv,(char*)0,help);
+  ierr = PetscInitialize(&argc,&argv,NULL,help); if (ierr) return ierr;
 
   ierr = VecCreate(PETSC_COMM_WORLD,&y); CHKERRQ(ierr);
   ierr = VecSetSizes(y,PETSC_DECIDE,2); CHKERRQ(ierr);

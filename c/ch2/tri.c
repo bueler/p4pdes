@@ -12,7 +12,7 @@ int main(int argc,char **args) {
     PetscInt    m = 4, i, Istart, Iend, j[3];
     PetscReal   v[3], xval, errnorm;
 
-    PetscInitialize(&argc,&args,NULL,help);
+    ierr = PetscInitialize(&argc,&args,NULL,help); if (ierr) return ierr;
 
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"tri_","options for tri",""); CHKERRQ(ierr);
     ierr = PetscOptionsInt("-m","dimension of linear system","tri.c",m,&m,NULL); CHKERRQ(ierr);

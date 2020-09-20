@@ -11,7 +11,7 @@ int main(int argc,char **argv) {
     SNES  snes;          // nonlinear solver
     Vec   x, r;          // solution, residual vectors
 
-    PetscInitialize(&argc,&argv,NULL,help);
+    ierr = PetscInitialize(&argc,&argv,NULL,help); if (ierr) return ierr;
     ierr = VecCreate(PETSC_COMM_WORLD,&x); CHKERRQ(ierr);
     ierr = VecSetSizes(x,PETSC_DECIDE,2); CHKERRQ(ierr);
     ierr = VecSetFromOptions(x); CHKERRQ(ierr);
