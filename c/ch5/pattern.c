@@ -283,6 +283,7 @@ PetscErrorCode FormIJacobianLocal(DMDALocalInfo *info,
     PetscReal        val[9], CC;
     MatStencil       col[9], row;
 
+    ierr = MatZeroEntries(P); CHKERRQ(ierr);  // workaround to address PETSc issue #734
     user->IJac_called = PETSC_TRUE;
     for (j = info->ys; j < info->ys + info->ym; j++) {
         row.j = j;
