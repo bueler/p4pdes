@@ -253,7 +253,7 @@ if args.analytical:
     p_exact = Function(Whigh).interpolate(pi * cos(4.0*pi*x) * cos(4.0*pi*y))
     uerr = sqrt(assemble(dot(u - u_exact, u - u_exact) * dx))
     perr = sqrt(assemble(dot(p - p_exact, p - p_exact) * dx))
-    PETSc.Sys.Print('  numerical errors: |u-uexact|_h = %.3e, |p-pexact|_h = %.3e' \
+    PETSc.Sys.Print('  numerical errors: |u-uexact|_h = %.2e, |p-pexact|_h = %.2e' \
                     % (uerr, perr))
 
 # optionally print Schur/GMG package, number of degrees of freedom, and solution norms
@@ -265,7 +265,7 @@ if args.showinfo:
     PETSc.Sys.Print('  sizes: n_u = %d, n_p = %d, N = %d' % (n_u,n_p,n_u+n_p))
     uL2 = sqrt(assemble(dot(u, u) * dx))
     pL2 = sqrt(assemble(dot(p, p) * dx))
-    PETSc.Sys.Print('  solution norms: |u|_h = %.5e, |p|_h = %.5e' % (uL2, pL2))
+    PETSc.Sys.Print('  solution norms: |u|_h = %.2e, |p|_h = %.2e' % (uL2, pL2))
 
 # optionally save to .pvd file viewable with Paraview
 if len(args.o) > 0:
