@@ -1,7 +1,7 @@
 p4pdes
 ======
 
-_PETSc for Partial Differential Equations_ is a new book on using [PETSc](http://www.mcs.anl.gov/petsc/) to solve [partial differential equations](https://en.wikipedia.org/wiki/Partial_differential_equation) by modern numerical methods.  It can be pre-ordered from [SIAM Press](https://my.siam.org/Store/Product/viewproduct/?ProductId=32850137):
+_PETSc for Partial Differential Equations_ is a new book on using [PETSc](http://www.mcs.anl.gov/petsc/) to solve [partial differential equations](https://en.wikipedia.org/wiki/Partial_differential_equation) by modern numerical methods.  It can be ordered from [SIAM Press](https://my.siam.org/Store/Product/viewproduct/?ProductId=32850137):
 
 <p align="center">
   <a  href="https://my.siam.org/Store/Product/viewproduct/?ProductId=32850137"> <img src="frontcover.jpg" alt="image of front cover" /img> </a>
@@ -15,5 +15,5 @@ To compile and run the C examples, for Chapters 1 through 12, see `README.md` in
 
 ### Python/Firedrake examples
 
-Chapters 13 and 14 use [Firedrake](https://www.firedrakeproject.org/), a [Python](https://www.python.org/) finite element library based on [petsc4py](https://petsc4py.readthedocs.io/en/stable/).  See `README.md` in the `python/` directory to run these examples.
+Chapters 13 and 14 use [Firedrake](https://www.firedrakeproject.org/), a [Python](https://www.python.org/) finite element library based on PETSc, and [petsc4py](https://petsc4py.readthedocs.io/en/stable/) in particular.  See `README.md` in the `python/` directory to run these examples.
 

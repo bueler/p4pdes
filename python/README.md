@@ -7,31 +7,37 @@ These codes will remain here and be maintained and supported in the long term.
 
 ### configure and install Firedrake
 
-To download and install Firedrake installation follow the instructions at the [download tab on the Firedrake page](https://www.firedrakeproject.org/download.html).  It is recommended that you allow Firedrake to download its own copy of PETSc.
+To download and install Firedrake please follow the instructions at the [download tab on the Firedrake page](https://www.firedrakeproject.org/download.html).  It is recommended that you allow Firedrake to download and configure its own copy of PETSc.
 
-After the initial download (of the Firedrake install script) do something like
+After the initial download (of the Firedrake install script) do something like this:
 
         $ unset PYTHONPATH; unset PETSC_DIR; unset PETSC_ARCH;
         $ python3 firedrake-install
 
 Firedrake will then proceed to download and install its rather large stack of dependencies.  The reason to unset variables is so that Firedrake does its own PETSc install with its own compatible version of PETSc.
 
-### start with the Poisson example
+### getting started with the Poisson example
 
-Do something like this to run the Poisson solver in Chapter 13, which will test your Firedrake installation:
+Do this to run the Poisson solver in Chapter 13, which will test your Firedrake installation:
 
         $ cd p4pdes/python/ch13/
         $ source ~/firedrake/bin/activate
         (firedrake) $ ./fish.py
 
-Note that the default grid is 3 x 3 and the default KSP is CG.  Note the grid can be set by either `-refine X` or `-mx` and `-my`; using `-refine` allows geometric multigrid (GMG).  Solver options use prefix `-s_`.  Thus for CG+GMG on a fine grid do something like
+When you run a Firedrake program for the first time it will cache various finite element constructions.  Thus it will run much faster the second time.
 
-        (firedrake) $ ./fish.py -refine 8 -s_pc_type mg -s_ksp_monitor
+Note that the default mesh is a 3 x 3 regular grid and the default KSP is CG.  Finer meshes can be set by either `-refine X` and/or `-mx` and `-my`.  Note that using `-refine` allows geometric multigrid (GMG).  PETSc solver options use prefix `-s_`.  Thus for CG+GMG on a fine grid with tight tolerances do something like this:
 
-To see help do these; the first gives help specific to `fish.py` and the second gives the usual PETSc type of help (i.e. with all applicable PETSc options):
+        (firedrake) $ ./fish.py -refine 8 -s_pc_type mg -s_ksp_monitor -s_ksp_rtol 1.0e-10
+
+To see help do the following:
 
         (firedrake) $ ./fish.py -fishhelp
         (firedrake) $ ./fish.py -help
+
+The first gives help specific to `fish.py`.  The second gives the usual PETSc type of help (i.e. with all applicable PETSc options); `grep` for specific PETSc options.
+
+### software testing
 
 To test the Firedrake installation you can also do the following in either `ch13/` or `ch14/`:
 
