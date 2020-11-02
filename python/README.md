@@ -18,7 +18,7 @@ Firedrake will then proceed to download and install its rather large stack of de
 
 ### getting started with the Poisson example
 
-Do this to run the Poisson solver in Chapter 13, which will test your Firedrake installation:
+Do this to run the Poisson solver in Chapter 13, which will also test whether your Firedrake installation is working:
 
         $ cd p4pdes/python/ch13/
         $ source ~/firedrake/bin/activate
