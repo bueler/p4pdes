@@ -1,17 +1,17 @@
 Errata for "PETSc for PDEs"
 ---------------------------
 
-Not everything in the book is correct, and reader corrections and comments are much appreciated!  Please submit corrections and issues through the [Issues](https://github.com/bueler/p4pdes/issues) or [Pull requests](https://github.com/bueler/p4pdes/pulls) tabs.  Corrections to the example programs (i.e. files in `c/` and `py/` in the current repo) will appear as commits here and thus will appear in the [releases](https://github.com/bueler/p4pdes/releases) over time.
+Not everything in the book is correct, and so reader corrections and comments are much appreciated!  Please submit corrections and issues through the [Issues](https://github.com/bueler/p4pdes/issues) or [pull requests](https://github.com/bueler/p4pdes/pulls) tabs.  Corrections to the example programs (i.e. files in `c/` and `py/`) will appear as commits in the current repo and then in the [releases](https://github.com/bueler/p4pdes/releases).
 
 The list of errata below shows corrections to the text of the published book, including notable ones labeled _BAD ONE_.
 
-* Page 3: In `e.c`, a better way to handle an error code returned from `PetscInitialize()` is to get its output `ierr` and then add the check `if (ierr) return ierr;`  The example programs now do this.
+* Page 3: In the program `e.c`, a better way to handle an error code returned from `PetscInitialize()` is to get its output `ierr` and then add the check `if (ierr) return ierr;`  The example programs now do this.
 
 * Page 15: In the footnote: "solver" --> "solvers".
 
 * Page 29: In the first complete sentence on the page, for clarity add "the action of" before M^{-1}.
 
-* Page 47 _BAD ONE_: In the fourth sentence of the text on this page, substitute "global" for "local".  (This is the worst error found so far!  Can you beat it?)
+* Page 47 _BAD ONE_: In the fourth sentence of the text on this page, substitute "global" for "local".
 
 * Page 50: In the first sentence after Code 3.1, add "the" before "locally owned".
 
