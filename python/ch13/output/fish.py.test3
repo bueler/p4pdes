@@ -17,5 +17,5 @@ Labels:
   Linear s_ solve converged due to CONVERGED_RTOL iterations 3
   Linear s_ solve converged due to CONVERGED_RTOL iterations 3
 Nonlinear s_ solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
-done on 5 x 5 grid with P^1 elements:
+done on 5 x 5 grid with P_1 elements:
   error |u-uexact|_inf = 9.286e-04, |u-uexact|_h = 4.695e-04

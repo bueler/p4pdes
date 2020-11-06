@@ -15,13 +15,16 @@ runfish_4:
 runfish_5:
 	-@../../c/testit.sh fish.py "-dm_view" 10 5 # zero elements on some ranks
 
-test_fish: runfish_1 runfish_2 runfish_3 runfish_4 runfish_5
+runfish_6:
+	-@../../c/testit.sh fish.py "-refine 1 -quad -s_ksp_converged_reason -s_pc_type mg -s_mg_levels_ksp_type richardson -s_mg_levels_pc_type icc" 1 6
+
+test_fish: runfish_1 runfish_2 runfish_3 runfish_4 runfish_5 runfish_6
 
 test: test_fish
 
 # etc
 
-.PHONY: clean runfish_1 runfish_2 runfish_3 runfish_4 runfish_5 test_fish test
+.PHONY: clean runfish_1 runfish_2 runfish_3 runfish_4 runfish_5 runfish_6 test_fish test
 
 clean:
 	@rm -f *.pyc *.geo *.msh *.pvd *.vtu *.m maketmp tmp difftmp

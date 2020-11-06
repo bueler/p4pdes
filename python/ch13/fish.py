@@ -60,7 +60,7 @@ solve(F == 0, u, bcs = [bc], options_prefix = 's',
                            'ksp_type': 'cg'})
 
 # Print numerical error in L_infty and L_2 norm
-elementstr = '%s^%d' % (['P','Q'][args.quad],args.k)
+elementstr = '%s_%d' % (['P','Q'][args.quad],args.k)
 udiff = Function(W).interpolate(u - g_bdry)
 with udiff.dat.vec_ro as vudiff:
     error_Linf = abs(vudiff).max()[1]

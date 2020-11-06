@@ -15,5 +15,5 @@ Labels:
   pyop2_owned: 1 strata with value/size (1 (46))
   pyop2_ghost: 1 strata with value/size (1 (49))
   Linear s_ solve converged due to CONVERGED_RTOL iterations 3
-done on 9 x 9 grid with P^1 elements:
+done on 9 x 9 grid with P_1 elements:
   error |u-uexact|_inf = 2.533e-04, |u-uexact|_h = 1.346e-04

@@ -1,2 +1,2 @@
-done on 5 x 5 grid with P^2 elements:
+done on 5 x 5 grid with P_2 elements:
   error |u-uexact|_inf = 2.972e-05, |u-uexact|_h = 1.332e-05

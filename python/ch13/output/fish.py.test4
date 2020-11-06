@@ -1,4 +1,4 @@
-done on 3 x 3 grid with P^1 elements:
+done on 3 x 3 grid with P_1 elements:
   error |u-uexact|_inf = 3.365e-03, |u-uexact|_h = 1.190e-03
 usage: fish.py [-fishhelp] [-mx MX] [-my MY] [-o NAME] [-k K] [-quad]
                [-refine X]
