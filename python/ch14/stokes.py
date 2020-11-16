@@ -146,33 +146,34 @@ else:                # form that generalizes to variable or nonlinear viscosity
 
 # some fieldsplit/Schur solver notes:
 # 1. -s_pc_fieldsplit_type schur
-#       This is the ONLY viable fieldsplit type because others (i.e. additive,
-#       multiplicative, and symmetric_multiplicative) all fail because diagonal
-#       pressure block is zero (non-invertible) in a stable mixed method.
+#       This is the ONLY viable fieldsplit type.  The others (i.e. additive,
+#       multiplicative, and symmetric_multiplicative) all fail because the
+#       pressure block is zero, thus non-invertible, in a stable mixed method.
 # 2. -s_pc_fieldsplit_schur_factorization_type diag
-#       The Murphy et al 2000 theorem applies to MINRES + (this option).
-#       The default for diag is -pc_fieldsplit_schur_scale -1.0.  We do NOT
-#       want this sign flip when using Mass for preconditioning because Mass
-#       is already SPD.
+#       The Murphy et al 2000 theorem applies to MINRES with this option.
+#       The default for diag is -pc_fieldsplit_schur_scale -1.0.  However,
+#       We do NOT want this sign flip when using Mass for preconditioning
+#       because Mass is already SPD.
 # 3. For preconditioning of the Schur block  S = - B A^-1 B^T  we may use a
 #       viscosity-weighted form of the mass matrix to approximate -S^{-1}.
 #       The reference for how to do this in Firedrake is
 #         https://www.firedrakeproject.org/demos/geometric_multigrid.py.html
 #       The class Mass below, and the options below, are from this source.
-#       This preconditioner for S uses bjacobi+icc, possible because the
+#       This preconditioner for S uses bjacobi+icc, allowed because the
 #       mass matrix is SPD.
 # 4. -s_pc_fieldsplit_schur_precondition selfp
 #       When not using Mass we may go ahead and assemble the preconditioner for
-#       the A11 block.  This option approximately does so.  That is, it only
-#       inverts the diagonal of A00, so S ~~ - B inv(diag(A)) B^T
+#       the A11 block, and this option APPROXIMATELY does so.  That is, it only
+#       inverts the diagonal of A00, so S' = - B inv(diag(A)) B^T
 
-# common to Schur + GMG based solver packages
+# common to all Schur + GMG based solver packages
 common = {'pc_type': 'fieldsplit',
           'pc_fieldsplit_type': 'schur',
           'fieldsplit_0_ksp_type': 'preonly',
           'fieldsplit_0_pc_type': 'mg',
           'fieldsplit_1_ksp_type': 'preonly'}
 
+# specific Schur + GMG choices
 sgmg = {# diagonal Schur; use minres or gmres or fgmres
         'diag':
            {'pc_fieldsplit_schur_fact_type': 'diag'},
@@ -191,6 +192,7 @@ class Mass(AuxiliaryOperatorPC):
         bcs = None
         return (a, bcs)
 
+# choice of preconditioning method for Schur block
 spre = {# precondition Schur using "selfp" and Jacobi application
         'selfp':
            {'pc_fieldsplit_schur_precondition': 'selfp',
@@ -208,7 +210,7 @@ spre = {# precondition Schur using "selfp" and Jacobi application
        }
 
 # select solver package
-sparams = {}
+sparams = {'snes_type': 'ksponly'}  # applies to all
 if len(args.schurgmg) > 0:
     sparams.update(common)
     try:
@@ -221,7 +223,6 @@ if len(args.schurgmg) > 0:
     except KeyError:
         print('ERROR: invalid -schurpre; choices are %s' % list(spre.keys()))
         sys.exit(1)
-sparams.update({'snes_type': 'ksponly'})  # applies to all
 
 # describe mixed FE method
 uFEstr = '%s_%d' % (['P','Q'][args.quad],args.udegree)
