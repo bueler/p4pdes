@@ -25,3 +25,33 @@ The list of errata below shows corrections to the text of the published book, in
 
 * Page 132 **BAD ONE**: In equations (6.6) and (6.7) replace `u_k[i]` with `u_k[j]` and `u_{k+1}[i]` with `u_{k+1}[j]`.
 
+* Page 163: In Example 6.9, remove "if cy > 1" from "namely the x-direction if cy > 1"; the condition is clearly unnecessary.
+
+* Page 177: In the fifth line from the bottom, write "compare" instead of "compare with".
+
+* Page 181: Near the end of the first paragraph, replace "would require" with "requires".
+
+* Page 213-214: Sentences are out of order.  Move the last two sentences at the bottom of page 213, which start "Consider also ..." and "The `-ksp_view` ...", to be the second and third sentences on page 214, i.e. just before "See Exercise 8.7."
+
+* Page 258: In the second complete sentence on the page, replace "and shows the" with "and the".
+
+* Page 259: In the first sentence replace "we need to" with "we propose to".
+
+* Page 264: In the first sentence of the second full paragraph, replace "Our solver" with "Our default solver".
+
+* Page 266: In the last sentence of the first full paragraph, replace "the example in Chapter 14" with "the examples in Chapters 13 and 14".
+
+* Page 271: In the last sentence on the page, replace "see Chapter 14 for" with "see Chapters 13 and 14 for".
+
+* Page 272: In item (i) replace "an" with "a".
+
+* Page 315: In the second sentence of the third paragraph replace "on a 2D" with "on 2D".
+
+* Page 355: In the second sentence of the second paragraph replace "so assembling" with "assembling".
+
+* Page 357: In the third sentence of the third paragraph replace "for all q \in L^2" with "for all sufficiently smooth q \in L^2".  (This paragraph should be treated as a sketch of why the inf-sup inequality (14.36) justifies the heuristic (14.35).)
+
+* Page 359: In the second to last sentence on the page replace "and is obligatory" with "while MINRES will not work".
+
+* Page 360: In the last sentence of the second bullet point replace "in [10]" with "in the language of [10]".
+
