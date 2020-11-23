@@ -3,7 +3,7 @@
 GMSH = gmsh
 
 runstokes_1:
-	-@../../c/testit.sh stokes.py "-analytical -mx 4 -my 4 -refine 1 -s_ksp_type minres -s_ksp_converged_reason -s_pc_type none" 1 1
+	-@../../c/testit.sh stokes.py "-analytical -mx 4 -my 4 -s_ksp_type minres -s_ksp_converged_reason -s_pc_type none" 1 1
 
 runstokes_2:
 	-@../../c/testit.sh stokes.py "-udegree 3 -pdegree 2 -quad -showinfo -s_ksp_type preonly -s_pc_type lu -s_pc_factor_shift_type inblocks -s_pmat_type aij" 1 2
