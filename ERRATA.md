@@ -1,9 +1,7 @@
 Errata for "PETSc for PDEs"
 ---------------------------
 
-Not everything in the book is correct, and so reader corrections and comments are much appreciated!  Please submit corrections and issues through the [Issues](https://github.com/bueler/p4pdes/issues) or [pull requests](https://github.com/bueler/p4pdes/pulls) tabs.  Corrections to the example programs (i.e. files in `c/` and `py/`) will appear as commits in the current repo and then in the [releases](https://github.com/bueler/p4pdes/releases).
-
-The list of errata below shows corrections to the text of the published book, including notable ones labeled **BAD ONE**.
+Not everything in the book is correct, and so reader corrections and comments are much appreciated!  Please submit corrections and issues through the [Issues](https://github.com/bueler/p4pdes/issues) or [pull requests](https://github.com/bueler/p4pdes/pulls) tabs or by email to the author at `elbueler@alaska.edu`.  The list of errata below shows corrections to the text of the published book, including a couple of notable ones labeled **BAD ONE**.  Note that any corrections to the example programs (i.e. files in `c/` and `py/`) will appear as commits in the current repo, and then in the [releases](https://github.com/bueler/p4pdes/releases), and generally not in this list.
 
 * Page 3: In the program `e.c`, a better way to handle an error code returned from `PetscInitialize()` is to get its output `ierr` and then add the check `if (ierr) return ierr;`  The example programs now do this.
 
@@ -44,6 +42,12 @@ The list of errata below shows corrections to the text of the published book, in
 * Page 271: In the last sentence on the page, replace "see Chapter 14 for" with "see Chapters 13 and 14 for".
 
 * Page 272: In item (i) replace "an" with "a".
+
+* Page 294: At the end of the first paragraph in the "Advection results" section, replace "but without a flux limiter" with "but with a smaller final time".  In the very next sentence on the same page, remove "is" from "relatively is insensitive".
+
+* Page 296: In the second sentence on this page replace "limiter imposes" with "limiters impose".
+
+* Page 309: In Exercise 11.1 replace "from g" with "from g and a".
 
 * Page 315: In the second sentence of the third paragraph replace "on a 2D" with "on 2D".
 
