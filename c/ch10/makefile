@@ -35,6 +35,10 @@ koch/koch2.vec koch/koch2.is: koch/domain.py
 	-@./msh2petsc.py koch/koch2.msh > /dev/null
 
 # testing
+rungmshversion_1:
+	-@../testit.sh ${GMSH} "-version" -1 1    # P=-1 means run gmsh not ./gmsh
+
+# most of the following tests depend on gmsh version
 runmsh2petsc_1: petscPyScripts
 	-@gmsh -2 meshes/trap.geo -o meshes/tmp41.msh > /dev/null
 	-@../testit.sh msh2petsc.py "-v meshes/tmp41.msh" 1 1
@@ -67,14 +71,16 @@ rununfem_7: petscPyScripts meshes/trap1.vec meshes/trap1.is
 rununfem_8: petscPyScripts koch/koch2.vec koch/koch2.is
 	-@../testit.sh unfem "-un_mesh koch/koch2 -un_case 4 -snes_type ksponly -ksp_converged_reason -pc_type gamg" 1 8
 
+test_gmshversion: rungmshversion_1
+
 test_msh2petsc: runmsh2petsc_1 runmsh2petsc_2
 
 test_unfem: rununfem_1 rununfem_2 rununfem_3 rununfem_4 rununfem_5 rununfem_6 rununfem_7 rununfem_8
 
-test: test_msh2petsc test_unfem
+test: rungmshversion_1 test_msh2petsc test_unfem
 
 # etc
-.PHONY: distclean runmsh2petsc_1 runmsh2petsc_2 rununfem_1 rununfem_2 rununfem_3 rununfem_4 rununfem_5 rununfem_6 rununfem_7 rununfem_8 test test_msh2petsc test_unfem petscPyScripts
+.PHONY: distclean rungmshversion_1 runmsh2petsc_1 runmsh2petsc_2 rununfem_1 rununfem_2 rununfem_3 rununfem_4 rununfem_5 rununfem_6 rununfem_7 rununfem_8 test test_gmshversion test_msh2petsc test_unfem petscPyScripts
 
 distclean:
 	@rm -f *~ unfem *tmp
