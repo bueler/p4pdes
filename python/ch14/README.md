@@ -1,7 +1,7 @@
-p4pdes/c/ch10/
-==============
+p4pdes/python/ch14/
+===================
 
-This directory contains the programs for Chapter 10.  Most runs will need Gmsh.
+This directory contains the programs for Chapter 14.  Some runs will need Gmsh.
 
 ### software testing
 
