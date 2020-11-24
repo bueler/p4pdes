@@ -14,6 +14,8 @@ CURRDIR=${PWD##*/}
 
 if [ $3 -eq 1 ]; then
     CMD="./$1 $2"
+elif [ $3 -eq -1 ]; then
+    CMD="$1 $2"
 else
     CMD="mpiexec -n $3 ./$1 $2"
 fi
@@ -25,7 +27,7 @@ if [[ ! -f output/$1.test$4 ]]; then
 
 else
 
-    $CMD > tmp
+    $CMD &> tmp
 
     diff output/$1.test$4 tmp > difftmp
 
