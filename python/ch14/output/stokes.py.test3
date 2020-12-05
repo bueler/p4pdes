@@ -2,17 +2,17 @@ reading mesh from coarse.msh ...
 DM Object: 1 MPI processes
   type: plex
 DM_0x84000000_1 in 2 dimensions:
-  0-cells: 177
-  1-cells: 488
-  2-cells: 312
+  0-cells: 153
+  1-cells: 416
+  2-cells: 264
 Labels:
-  celltype: 3 strata with value/size (1 (488), 3 (312), 0 (177))
-  depth: 3 strata with value/size (0 (177), 1 (488), 2 (312))
-  Cell Sets: 1 strata with value/size (50 (312))
+  celltype: 3 strata with value/size (1 (416), 3 (264), 0 (153))
+  depth: 3 strata with value/size (0 (153), 1 (416), 2 (264))
+  Cell Sets: 1 strata with value/size (50 (264))
   Face Sets: 2 strata with value/size (41 (34), 40 (6))
   exterior_facets: 1 strata with value/size (1 (40))
-  interior_facets: 1 strata with value/size (1 (448))
-  pyop2_core: 1 strata with value/size (1 (977))
+  interior_facets: 1 strata with value/size (1 (376))
+  pyop2_core: 1 strata with value/size (1 (833))
   pyop2_owned: 0 strata with value/size ()
   pyop2_ghost: 0 strata with value/size ()
 solving on mesh (1 levels refinement) with P_2 x P_1 Taylor-Hood elements ...
