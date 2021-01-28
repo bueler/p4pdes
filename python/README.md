@@ -1,6 +1,8 @@
 p4pdes/python/
 ==============
 
+FIXME  The codes in Chapters 1--12, i.e. in `ch*/`, are petsc4py versions of the corresponding codes in `c/ch*/`
+
 The codes in Chapters 13 and 14 use [Firedrake](https://www.firedrakeproject.org/), a finite element library based on PETSc data types and solvers.  Firedrake uses [Python](https://www.python.org/) and [petsc4py](https://petsc4py.readthedocs.io/en/stable/).
 
 These codes will remain here and be maintained and supported in the long term.
