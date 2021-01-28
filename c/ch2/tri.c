@@ -44,7 +44,7 @@ int main(int argc,char **args) {
                 ierr = MatSetValues(A,1,&i,3,j,v,INSERT_VALUES); CHKERRQ(ierr);
             }
         }
-        xval = PetscExpReal(PetscCosReal(i));
+        xval = PetscExpReal(PetscCosReal((double)i));
         ierr = VecSetValues(xexact,1,&i,&xval,INSERT_VALUES); CHKERRQ(ierr);
     }
     ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
