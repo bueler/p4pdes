@@ -1,8 +1,14 @@
-import sys
+#!/usr/bin/env python3
+'''Solve a tridiagonal system of arbitrary size.  Option prefix = tri_.'''
+
+import sys, petsc4py
+petsc4py.init(sys.argv)
 import numpy as np
 from petsc4py import PETSc
 
-m = 4
+Opt = PETSc.Options(prefix='tri_')
+m = Opt.getInt('m',4)
+
 x = PETSc.Vec()
 x.create(PETSc.COMM_WORLD)
 x.setSizes(m)
@@ -13,7 +19,7 @@ xexact = x.duplicate()
 A = PETSc.Mat()
 A.create(PETSc.COMM_WORLD)
 A.setSizes((m,m))
-# ierr = MatSetOptionsPrefix(A,"a_"); CHKERRQ(ierr);
+A.setOptionsPrefix("a_")
 A.setFromOptions()
 A.setUp()
 
