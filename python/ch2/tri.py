@@ -7,7 +7,7 @@ import numpy as np
 from petsc4py import PETSc
 
 Opt = PETSc.Options(prefix='tri_')
-m = Opt.getInt('m',4)
+m = Opt.getInt('m',default=4)
 
 x = PETSc.Vec()
 x.create(PETSc.COMM_WORLD)
