@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 '''Assemble a Mat sparsely.'''
 
-import sys, petsc4py
-petsc4py.init(sys.argv)
-import numpy as np
+import sys
+import petsc4py
 from petsc4py import PETSc
+petsc4py.init(sys.argv)
 
 i1 = [0, 1, 2]
 j1 = [0, 1, 2]
@@ -28,4 +28,3 @@ A.setValues(i2,j2,aA2)
 A.setValue(i3,j3,aA3)
 A.assemblyBegin()
 A.assemblyEnd()
-

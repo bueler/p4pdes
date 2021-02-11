@@ -17,10 +17,10 @@ To time the solution read the third printed number:
 # ./tri.py -tri_m 10000000 -ksp_view_mat binary:A.dat -ksp_view_rhs binary:b.dat
 # ./loadsolve.py -fA A.dat -fb b.dat -log_view |grep KSPSolve
 
-import sys, petsc4py
-petsc4py.init(sys.argv)
-import numpy as np
+import sys
+import petsc4py
 from petsc4py import PETSc
+petsc4py.init(sys.argv)
 
 Opt = PETSc.Options()
 nameA = Opt.getString('-fA', default='')
@@ -33,7 +33,7 @@ fileA = PETSc.Viewer().createBinary(nameA, 'r')
 A = PETSc.Mat().load(fileA)
 m,n = A.getSize()
 if verbose:
-    PETSc.Sys.Print('matrix has size m x n = %d x %d ...' % (m,n))
+    PETSc.Sys.Print('matrix has size m x n = %d x %d ...' % (m, n))
 if m != n:
     raise ValueError('only works for square matrices')
 
@@ -42,7 +42,7 @@ if len(nameb) == 0:
         PETSc.Sys.Print('right-hand-side vector b not provided ... using zero vector of length %d' % m)
     b = PETSc.Vec()
     b.setSizes(m)
-    b.zeroEntries()  
+    b.zeroEntries()
 else:
     if verbose:
         PETSc.Sys.Print('reading vector from %s ...' % nameb)
@@ -54,11 +54,9 @@ else:
 
 ksp = PETSc.KSP()
 ksp.create(PETSc.COMM_WORLD)
-ksp.setOperators(A=A,P=A)
+ksp.setOperators(A=A, P=A)
 ksp.setFromOptions()
 
 x = b.duplicate()
 x.zeroEntries()
-ksp.solve(b,x)
-#x.view()
-
+ksp.solve(b, x)

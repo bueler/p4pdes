@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 '''Solve a tridiagonal system of arbitrary size.  Option prefix = tri_.'''
 
-import sys, petsc4py
-petsc4py.init(sys.argv)
+import sys
 import numpy as np
+import petsc4py
 from petsc4py import PETSc
+petsc4py.init(sys.argv)
 
 Opt = PETSc.Options(prefix='tri_')
 m = Opt.getInt('m',default=4)
@@ -52,4 +53,3 @@ x.axpy(-1.0,xexact)
 errnorm = x.norm(norm_type=PETSc.NormType.NORM_2)
 PETSc.Sys.Print('error for m = %d system is |x-xexact|_2 = %.1e' \
                 % (m,errnorm))
-
