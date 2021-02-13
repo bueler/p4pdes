@@ -3,9 +3,9 @@
 
 import sys
 import petsc4py
+petsc4py.init(sys.argv)  # must come before "import PETSc"
 from petsc4py import PETSc
 from mpi4py import MPI
-petsc4py.init(sys.argv)
 
 comm = PETSc.COMM_WORLD.tompi4py()
 rank = comm.Get_rank()

@@ -3,8 +3,8 @@
 
 import sys
 import petsc4py
+petsc4py.init(sys.argv)  # must come before "import PETSc"
 from petsc4py import PETSc
-petsc4py.init(sys.argv)
 
 j = [0, 1, 2, 3]
 ab = [7.0, 1.0, 1.0, 3.0]

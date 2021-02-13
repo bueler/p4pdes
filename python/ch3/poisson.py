@@ -4,8 +4,8 @@
 import sys
 import numpy as np
 import petsc4py
+petsc4py.init(sys.argv)  # must come before "import PETSc"
 from petsc4py import PETSc
-petsc4py.init(sys.argv)
 
 FIXME
 

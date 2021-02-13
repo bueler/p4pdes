@@ -19,8 +19,8 @@ To time the solution read the third printed number:
 
 import sys
 import petsc4py
+petsc4py.init(sys.argv)  # must come before "import PETSc"
 from petsc4py import PETSc
-petsc4py.init(sys.argv)
 
 Opt = PETSc.Options()
 nameA = Opt.getString('-fA', default='')
