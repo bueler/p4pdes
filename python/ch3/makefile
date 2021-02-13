@@ -1,8 +1,8 @@
 # testing
-COUTPUTS := ../../c/ch1/output/
+COUTPUT := ../../c/ch1/output/
 
 output:
-	@ln -sf $(COUTPUTS)
+	@ln -sf $(COUTPUT)
 
 FIXME
 

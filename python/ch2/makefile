@@ -1,8 +1,8 @@
 # testing
-COUTPUTS := ../../c/ch2/output/
+COUTPUT := ../../c/ch2/output/
 
 output:
-	@ln -sf $(COUTPUTS)
+	@ln -sf $(COUTPUT)
 
 runsparsemat_1: output
 	-@../ptestit.sh sparsemat "-mat_view" 1 1
