@@ -1,11 +1,17 @@
 p4pdes/python/
 ==============
 
-FIXME  The codes in Chapters 1--12, i.e. in `ch*/`, are petsc4py versions of the corresponding codes in `c/ch*/`
+## petsc4py programs
 
-The codes in Chapters 13 and 14 use [Firedrake](https://www.firedrakeproject.org/), a finite element library based on PETSc data types and solvers.  Firedrake uses [Python](https://www.python.org/) and [petsc4py](https://petsc4py.readthedocs.io/en/stable/).
+FIXME  The programs in Chapters 1--12, i.e. in `ch*/`, are petsc4py versions of the corresponding programs in `c/ch*/`
 
-These codes will remain here and be maintained and supported in the long term.
+FIXME to install petsc4py one might use [these instructions](https://www.mcs.anl.gov/petsc/petsc4py-current/docs/usrman/install.html).  alternatively just install Firedrake and then activate the venv
+
+## Firedrake programs
+
+The programs in Chapters 13 and 14 use [Firedrake](https://www.firedrakeproject.org/), a finite element library based on PETSc data types and solvers.  Firedrake uses [Python](https://www.python.org/) and [petsc4py](https://petsc4py.readthedocs.io/en/stable/).
+
+These programs will remain here and be maintained and supported in the long term.
 
 ### configure and install Firedrake
 
