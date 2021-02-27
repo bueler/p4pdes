@@ -1,5 +1,5 @@
-    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
-  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
-Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
-done on 9 x 9 grid ... CONVERGED_FNORM_RELATIVE, SNES iters = 2, last KSP iters = 4
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 6
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+done on 9 x 9 grid ... CONVERGED_FNORM_RELATIVE, SNES iters = 5, last KSP iters = 6
 errors: av |u-uexact| = 3.076e-03, |u-uexact|_inf = 1.334e-02, active area error = 47.016%

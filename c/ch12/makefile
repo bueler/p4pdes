@@ -22,8 +22,10 @@ runobstacle_2:
 runobstacle_3:
 	-@../testit.sh obstacle "-snes_grid_sequence 3 -snes_converged_reason -pc_type mg" 1 3
 
+# preferred test (see PETSc issue #829)
+#-@../testit.sh obstacle "-snes_grid_sequence 2 -snes_converged_reason -pc_type gamg -pc_gamg_type classical" 1 4
 runobstacle_4:
-	-@../testit.sh obstacle "-snes_grid_sequence 2 -snes_converged_reason -pc_type gamg -pc_gamg_type classical" 1 4
+	-@../testit.sh obstacle "-snes_grid_sequence 2 -snes_converged_reason -snes_type vinewtonssls" 1 4
 
 test_obstacle: runobstacle_1 runobstacle_2 runobstacle_3 runobstacle_4
 
