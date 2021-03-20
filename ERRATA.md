@@ -23,7 +23,11 @@ Not everything in the book is correct, and so reader corrections and comments ar
 
 * Page 132 **BAD ONE**: In equations (6.6) and (6.7) replace `u_k[i]` with `u_k[j]` and `u_{k+1}[i]` with `u_{k+1}[j]`.
 
+* Page 148: In the third line from the top, replace "systems" with "system".
+
 * Page 163: In Example 6.9, remove "if cy > 1" from "namely the x-direction if cy > 1"; the condition is clearly unnecessary.
+
+* Page 176: In the sixth line from the top, replace "This yields a matrix" with "For d > 1 this yields a matrix".
 
 * Page 177: In the fifth line from the bottom, write "compare" instead of "compare with".
 
@@ -38,6 +42,8 @@ Not everything in the book is correct, and so reader corrections and comments ar
 * Page 264: In the first sentence of the second full paragraph, replace "Our solver" with "Our default solver".
 
 * Page 266: In the last sentence of the first full paragraph, replace "the example in Chapter 14" with "the examples in Chapters 13 and 14".
+
+* Page 267: In sentence starting "Figure 10.15 ...", replace "KSP iterations, flops, and time" with "KSP iterations and flops".
 
 * Page 271: In the last sentence on the page, replace "see Chapter 14 for" with "see Chapters 13 and 14 for".
 
@@ -59,3 +65,4 @@ Not everything in the book is correct, and so reader corrections and comments ar
 
 * Page 360: In the last sentence of the second bullet point replace "in [10]" with "in the language of [10]".
 
+* Page 386: The "Liouville-Bratu equation" index entry is missing two page numbers.  Add pages 93 and 196 to the list.
