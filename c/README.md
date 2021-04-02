@@ -15,10 +15,9 @@ Notes:
   * My book does not contain PETSc installation instructions, though it has
     minimal advice.  Maintaining installation information is the job of
     PETSc developers, not me.  (Thank goodness.)
-  * Also, my book does not help the reader with debugging C programs.
-  * However, [CONFIGS.md](CONFIGS.md) contains some of the `configure`
-    commands which work on the author's machines.  These are minimal
-    installation examples/suggestions.
+  * [CONFIGS.md](CONFIGS.md) contains some of the `configure` commands which
+    work on the author's machines.  These are minimal installation suggestions.
+  * My book does not help the reader with debugging C programs.
 
 ### compile and run one example
 
@@ -29,11 +28,10 @@ Do this to build and run the program `e.c` in Chapter 1:
     $ ./e
     $ mpiexec -n 20 ./e
 
-### software testing
+### software (regression) testing
 
     $ make test               # in either c/ or c/ch*/
 
 ### cleaning up
 
     $ make distclean          # in either c/ or c/ch*/
-
