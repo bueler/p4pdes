@@ -27,5 +27,5 @@ test: test_fish
 .PHONY: clean runfish_1 runfish_2 runfish_3 runfish_4 runfish_5 runfish_6 test_fish test
 
 clean:
-	@rm -f *.pyc *.geo *.msh *.pvd *.vtu *.m maketmp tmp difftmp
+	@rm -f *.pyc *.geo *.msh *.pvd *.pvtu *.vtu *.m maketmp tmp difftmp
 

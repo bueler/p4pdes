@@ -37,5 +37,5 @@ test: test_gmshversion test_stokes
 .PHONY: clean rungmshversion_1 runstokes_1 runstokes_2 runstokes_3 runstokes_4 runstokes_5 runstokes_6 test_stokes test
 
 clean:
-	@rm -f *.pyc *.geo *.msh *.pvd *.vtu *.m maketmp tmp difftmp
+	@rm -f *.pyc *.geo *.msh *.pvd *.pvtu *.vtu *.m maketmp tmp difftmp
 
