@@ -8,7 +8,6 @@ Labels:
   depth: 3 strata with value/size (0 (3), 1 (3), 2 (1))
   celltype: 3 strata with value/size (0 (3), 1 (3), 3 (1))
   Face Sets: 0 strata with value/size ()
-  boundary_faces: 0 strata with value/size ()
   exterior_facets: 0 strata with value/size ()
   interior_facets: 1 strata with value/size (1 (3))
 done on 3 x 3 grid with P_1 elements:

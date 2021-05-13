@@ -7,7 +7,7 @@ runfish_2:
 	-@../../c/testit.sh fish.py "-refine 2 -dm_view -s_ksp_converged_reason -s_pc_type mg -s_mg_levels_ksp_max_it 3" 2 2
 
 runfish_3:
-	-@../../c/testit.sh fish.py "-refine 1 -dm_view -s_snes_type newtonls -s_snes_converged_reason -s_ksp_converged_reason -s_pc_type gamg" 1 3
+	-@../../c/testit.sh fish.py "-refine 1 -s_snes_type newtonls -s_snes_converged_reason -s_ksp_converged_reason -s_pc_type gamg" 1 3
 
 runfish_4:
 	-@../../c/testit.sh fish.py "-fishhelp" 1 4
