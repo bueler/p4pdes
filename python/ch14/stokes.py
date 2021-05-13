@@ -95,7 +95,7 @@ if args.refine > 0:
     if len(args.mesh) > 0:
         meshstr += ' (%d levels refinement)' % args.refine
 x,y = SpatialCoordinate(mesh)
-mesh._topology_dm.viewFromOptions('-dm_view')
+mesh.topology_dm.viewFromOptions('-dm_view')
 
 # define mixed finite elements; for family names see
 #   https://www.firedrakeproject.org/variational-problems.html#supported-finite-elements
