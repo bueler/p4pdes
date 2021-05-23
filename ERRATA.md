@@ -80,6 +80,10 @@ The list of errata below shows corrections to the text of the published book, in
 
 * Page 315: In the second sentence of the third paragraph replace "on a 2D" with "on 2D".
 
+### Chapter 13
+
+* Page 335: The superscripts used in Figure 13.1 should be subscripts, thus "P_1" and so on.
+
 ### Chapter 14
 
 * Page 355: In the second sentence of the second paragraph replace "so assembling" with "assembling".
