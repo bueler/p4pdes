@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite my book below."
+authors:
+- family-names: "Bueler"
+  given-names: "Ed"
+title: "PETSc for Partial Differential Equations: Numerical Solutions in C and Python"
+isbn: 9781611976304
+date-released: 2021
+url: "https://github.com/bueler/p4pdes"
+preferred-citation:
+  type: book
+  authors:
+  - family-names: "Bueler"
+    given-names: "Ed"
+  title: "PETSc for Partial Differential Equations: Numerical Solutions in C and Python"
+  publisher: SIAM Press
+  address: Philadelphia
+  url: "https://github.com/bueler/p4pdes"
+  year: 2021
