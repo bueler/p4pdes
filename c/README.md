@@ -8,7 +8,7 @@ This directory contains the C programs which support the book _PETSc for PDEs_.
 
 ### install PETSc
 
-Please follow the instructions at [www.mcs.anl.gov/petsc/documentation/installation.html](http://www.mcs.anl.gov/petsc/documentation/installation.html).
+Please follow the instructions at [petsc.org/release/install/](https://petsc.org/release/install/).
 
 Notes:
 

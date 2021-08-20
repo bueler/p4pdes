@@ -17,6 +17,6 @@ always succeed.
        `extern int foo(double);`) just before `main()`.
      * `static` helper functions should be defined before `main()`.
   7. When in doubt the style should follow the Style Guide in the PETSc
-     [Developer's Guide](http://www.mcs.anl.gov/petsc/developers/developers.pdf).
+     [Developer's Documentation](https://petsc.org/release/developers/).
      * A collection of examples is not a library API, so rigid conformance
        would be foolish.

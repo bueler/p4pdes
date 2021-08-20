@@ -1,7 +1,7 @@
 p4pdes
 ======
 
-_PETSc for Partial Differential Equations_ is a new book on using [PETSc](http://www.mcs.anl.gov/petsc/) to solve [partial differential equations](https://en.wikipedia.org/wiki/Partial_differential_equation) by modern numerical methods.
+_PETSc for Partial Differential Equations_ is a new book on using [PETSc](https://petsc.org/release/) to solve [partial differential equations](https://en.wikipedia.org/wiki/Partial_differential_equation) by modern numerical methods.
 
 <p align="center">
   <a  href="https://my.siam.org/Store/Product/viewproduct/?ProductId=32850137"> <img src="frontcover.jpg" alt="image of front cover" /img> </a>
