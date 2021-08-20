@@ -1,7 +1,7 @@
 Hardware topology: process placement for performance
 ----------------------------------------------------
 
-Telling your MPI to bind and/or map processes to your hardware will improve performance.  See the "Maximizing memory bandwidth" section of the [PETSc/TAO User's Manual](https://petsc.org/release/docs/manual/).  First, a good idea is to install [`hwloc`](https://www.open-mpi.org/projects/hwloc/), including the program [`lstopo`](https://www.open-mpi.org/projects/hwloc/lstopo/) which can display your machine's "hardware topology".  (A `hwloc` package may be available from your package manager.)  Then do
+Telling your MPI to bind and/or map processes to your hardware will improve performance.  See the ["Hints for Performance Tuning" section of the PETSc/TAO User's Manual](https://petsc.org/release/docs/manual/performance/).  First, a good idea is to install [`hwloc`](https://www.open-mpi.org/projects/hwloc/), including the program [`lstopo`](https://www.open-mpi.org/projects/hwloc/lstopo/) which can display your machine's "hardware topology".  (A `hwloc` package may be available from your package manager.)  Then do
 
         $ lstopo
 
@@ -28,5 +28,5 @@ The author gets a factor-of-two speedup on his laptop, with `P=4` runs on a four
 
 ### More information
 
-_Why_ does such mapping and binding improve performance?  Also, _why_ are these not default settings for `mpiexec`?  We offer no clear justification, but read the [PETSc/TAO User's Manual](https://petsc.org/release/docs/manual/).  Also see why processor affinity can effectively reduce cache problems at the [processor affinity wikipedia page](https://en.wikipedia.org/wiki/Processor_affinity).  See also [MPICH Hydra usage](https://wiki.mpich.org/mpich/index.php/Using_the_Hydra_Process_Manager) or the [Open-MPI mpirun man page](https://www.open-mpi.org/doc/current/man1/mpirun.1.php).
+_Why_ does such mapping and binding improve performance?  Also, _why_ are these not default settings for `mpiexec`?  Read the [PETSc/TAO User's Manual](https://petsc.org/release/docs/manual/), but also see why processor affinity can effectively reduce cache problems at the [processor affinity wikipedia page](https://en.wikipedia.org/wiki/Processor_affinity).  See also [MPICH Hydra usage](https://wiki.mpich.org/mpich/index.php/Using_the_Hydra_Process_Manager) or the [Open-MPI mpirun man page](https://www.open-mpi.org/doc/current/man1/mpirun.1.php).
 
