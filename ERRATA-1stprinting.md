@@ -6,9 +6,6 @@ The list of errata below shows corrections to the text of the _first printing_ o
 
 _October 2021:  The text (not program) errors below will be corrected in the forthcoming second printing._
 
-### Chapter 1
-
-* Page 3: In the program `e.c`, a better way to handle an error code returned from `PetscInitialize()` is to get its output `ierr` and then add the check `if (ierr) return ierr;`  The example programs now do this.
 
 ### Chapter 2
 
