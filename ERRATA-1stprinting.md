@@ -1,8 +1,10 @@
-# Errata for *PETSc for Partial Differential Equations*
+# Errata for the first printing of *PETSc for Partial Differential Equations*
 
-> Not everything in the book is correct!  It follows that reader-submitted corrections and comments are very much appreciated.  Please submit them through the [issues](https://github.com/bueler/p4pdes/issues) or [pull requests](https://github.com/bueler/p4pdes/pulls) tabs at the [github](https://github.com/bueler/p4pdes) site, or by email to the author at `elbueler@alaska.edu`.  Corrections to the example programs themselves will appear as commits in the repository, and then in the [releases](https://github.com/bueler/p4pdes/releases).
+Not everything in the book is perfect, so reader-submitted corrections and comments are very much appreciated.  Please submit them through the [issues](https://github.com/bueler/p4pdes/issues) or [pull requests](https://github.com/bueler/p4pdes/pulls) tabs at the [github](https://github.com/bueler/p4pdes) site, or by email to the author at `elbueler@alaska.edu`.  Corrections to the example programs themselves will appear as commits in the repository, and then in the [releases](https://github.com/bueler/p4pdes/releases).
 
-The list of errata below shows corrections to the text of the published book, including a couple of notable ones labeled **BAD ONE**.
+The list of errata below shows corrections to the text of the _first printing_ of the published book, including a couple of notable ones labeled **BAD ONE**.
+
+_October 2021:  The text (not program) errors below will be corrected in the forthcoming second printing._
 
 ### Chapter 1
 
