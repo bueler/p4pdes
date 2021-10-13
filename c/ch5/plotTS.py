@@ -103,8 +103,12 @@ if frames:
             plt.pause(0.1)
     print('.')
 else:
-    for k in range(dims[0]):
-        plt.plot(t,U[k],label='y[%d]' % k)
+    if args.dof > 1:
+        print('plotting only component %d ...' % args.c)
+        plt.plot(t,U[args.c],label='y[%d]' % args.c)
+    else:
+        for k in range(dims[0]):
+            plt.plot(t,U[k],label='y[%d]' % k)
     plt.xlabel('t')
     plt.legend()
     if args.filename:
@@ -112,4 +116,3 @@ else:
         plt.savefig(args.filename)
     else:
         plt.show()
-
