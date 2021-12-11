@@ -7,11 +7,11 @@
       5 : (-0.666667,0.)
       6 : (0.666667,0.)
 5 elements:
-      0 :   6   4   5
-      1 :   6   0   1
+      0 :   5   6   4
+      1 :   1   6   0
       2 :   3   5   2
       3 :   5   4   2
-      4 :   6   1   4
+      4 :   4   6   1
 7 boundary flags at nodes (0 = interior, 1 = boundary, 2 = Dirichlet):
       0 : 2
       1 : 2
