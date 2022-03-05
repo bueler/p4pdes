@@ -152,7 +152,7 @@ int main(int argc,char **argv) {
     ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
     if (user.eps <= 0.0) {
-        SETERRQ1(PETSC_COMM_SELF,1,"eps=%.3f invalid ... eps > 0 required",user.eps);
+        SETERRQ(PETSC_COMM_SELF,1,"eps=%.3f invalid ... eps > 0 required",user.eps);
     }
     user.limiter_fcn = limiterptr[limiter];
     uexact_fcn = uexptr[user.problem];
