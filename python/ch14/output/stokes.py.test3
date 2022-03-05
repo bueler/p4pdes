@@ -2,9 +2,9 @@ reading mesh from coarse.msh ...
 DM Object: 1 MPI processes
   type: plex
 DM_0x84000000_1 in 2 dimensions:
-  0-cells: 157
-  1-cells: 428
-  2-cells: 272
+  Number of 0-cells per rank: 157
+  Number of 1-cells per rank: 428
+  Number of 2-cells per rank: 272
 Labels:
   celltype: 3 strata with value/size (1 (428), 3 (272), 0 (157))
   depth: 3 strata with value/size (0 (157), 1 (428), 2 (272))
