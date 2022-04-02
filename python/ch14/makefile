@@ -9,7 +9,7 @@ runstokes_1:
 	-@../../c/testit.sh stokes.py "-analytical -mx 4 -my 4 -s_ksp_type minres -s_ksp_converged_reason -s_pc_type none -s_ksp_rtol 1.0e-2" 1 1
 
 runstokes_2:
-	-@../../c/testit.sh stokes.py "-udegree 3 -pdegree 2 -quad -showinfo -s_ksp_type preonly -s_pc_type lu -s_pc_factor_shift_type inblocks -s_pmat_type aij" 1 2
+	-@../../c/testit.sh stokes.py "-udegree 3 -pdegree 2 -refine 1 -quad -showinfo -s_ksp_type preonly -s_pc_type lu -s_pc_factor_shift_type inblocks -s_pmat_type aij -s_ksp_monitor" 1 2
 
 # following test depends on gmsh version
 runstokes_3:
@@ -38,4 +38,3 @@ test: test_gmshversion test_stokes
 
 clean:
 	@rm -f *.pyc *.geo *.msh *.pvd *.pvtu *.vtu *.m maketmp tmp difftmp
-

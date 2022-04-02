@@ -1,3 +1,6 @@
-solving on 3 x 3 grid with Q_3 x Q_2 Taylor-Hood elements ...
-  sizes: n_u = 98, n_p = 25, N = 123
-  solution norms: |u|_h = 5.46e-02, |p|_h = 8.94e-01
+solving on 5 x 5 grid with Q_3 x Q_2 Taylor-Hood elements ...
+    Residual norms for s_ solve.
+    0 KSP Residual norm 1.101691365508e+00 
+    1 KSP Residual norm 3.195792542366e-15 
+  sizes: n_u = 338, n_p = 81, N = 419
+  solution norms: |u|_h = 5.41e-02, |p|_h = 8.65e-01
