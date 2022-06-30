@@ -78,13 +78,13 @@ int main(int argc,char **argv) {
   char                dumpname[256] = "dump.dat";
   PetscBool           dumpbinary = PETSC_FALSE;
 
-  ierr = PetscInitialize(&argc,&argv,NULL,help); if (ierr) return ierr;
+  PetscCall(PetscInitialize(&argc,&argv,NULL,help));
 
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"obs_","options to obstacle","");CHKERRQ(ierr);
-  ierr = PetscOptionsString("-dump_binary",
-           "filename for saving solution AND OBSTACLE in PETSc binary format",
-           "obstacle.c",dumpname,dumpname,sizeof(dumpname),&dumpbinary); CHKERRQ(ierr);
-  ierr = PetscOptionsEnd();CHKERRQ(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD,"obs_","options to obstacle","");
+  PetscCall(PetscOptionsString("-dump_binary",
+            "filename for saving solution AND OBSTACLE in PETSc binary format",
+            "obstacle.c",dumpname,dumpname,sizeof(dumpname),&dumpbinary));
+  PetscOptionsEnd();
 
   ierr = DMDACreate2d(PETSC_COMM_WORLD,
       DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
