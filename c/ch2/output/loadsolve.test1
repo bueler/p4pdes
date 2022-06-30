@@ -1,19 +1,19 @@
 reading matrix from A.dat ...
 matrix has size m x n = 4 x 4 ...
 reading vector from b.dat ...
-Mat Object: 1 MPI processes
+Mat Object: 1 MPI process
   type: seqaij
 row 0: (0, 3.)  (1, -1.) 
 row 1: (0, -1.)  (1, 3.)  (2, -1.) 
 row 2: (1, -1.)  (2, 3.)  (3, -1.) 
 row 3: (2, -1.)  (3, 3.) 
-Vec Object: 1 MPI processes
+Vec Object: 1 MPI process
   type: seq
 6.43832
 1.77171
 -0.109355
 0.455155
-Vec Object: 1 MPI processes
+Vec Object: 1 MPI process
   type: seq
 2.71828
 1.71653

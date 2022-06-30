@@ -33,16 +33,17 @@ int main(int argc,char **args) {
               nameb[PETSC_MAX_PATH_LEN] = "";
   PetscViewer fileA, fileb;
 
-  ierr = PetscInitialize(&argc,&args,NULL,help); if (ierr) return ierr;
+  PetscCall(PetscInitialize(&argc,&args,NULL,help));
 
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"","options for loadsolve",""); CHKERRQ(ierr);
-  ierr = PetscOptionsString("-fA","input file containing matrix A",
-                            "loadsolve.c",nameA,nameA,PETSC_MAX_PATH_LEN,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsString("-fb","input file containing vector b",
-                            "loadsolve.c",nameb,nameb,PETSC_MAX_PATH_LEN,&flg);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-verbose","say what is going on",
-                          "loadsolve.c",verbose,&verbose,NULL); CHKERRQ(ierr);
-  ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD,"","options for loadsolve","");
+  PetscCall(PetscOptionsString("-fA","input file containing matrix A",
+                               "loadsolve.c",nameA,nameA,PETSC_MAX_PATH_LEN,NULL));
+  PetscCall(PetscOptionsString("-fb","input file containing vector b",
+                               "loadsolve.c",nameb,nameb,PETSC_MAX_PATH_LEN,&flg));
+  PetscCall(PetscOptionsBool("-verbose","say what is going on",
+                             "loadsolve.c",verbose,&verbose,NULL));
+  PetscOptionsEnd();
+
   if (strlen(nameA) == 0) {
       SETERRQ(PETSC_COMM_SELF,1,
               "no input matrix provided ... ending  (usage: loadsolve -fA A.dat)\n");

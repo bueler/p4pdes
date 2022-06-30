@@ -12,11 +12,11 @@ int main(int argc,char **args) {
     PetscInt    m = 4, i, Istart, Iend, j[3];
     PetscReal   v[3], xval, errnorm;
 
-    ierr = PetscInitialize(&argc,&args,NULL,help); if (ierr) return ierr;
+    PetscCall(PetscInitialize(&argc,&args,NULL,help));
 
-    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"tri_","options for tri",""); CHKERRQ(ierr);
-    ierr = PetscOptionsInt("-m","dimension of linear system","tri.c",m,&m,NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+    PetscOptionsBegin(PETSC_COMM_WORLD,"tri_","options for tri",NULL);
+    PetscCall(PetscOptionsInt("-m","dimension of linear system","tri.c",m,&m,NULL));
+    PetscOptionsEnd();
 
     ierr = VecCreate(PETSC_COMM_WORLD,&x); CHKERRQ(ierr);
     ierr = VecSetSizes(x,PETSC_DECIDE,m); CHKERRQ(ierr);
