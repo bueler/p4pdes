@@ -1,5 +1,5 @@
 reading mesh from coarse.msh ...
-DM Object: 1 MPI processes
+DM Object: DM_0x84000000_1 1 MPI process
   type: plex
 DM_0x84000000_1 in 2 dimensions:
   Number of 0-cells per rank: 157
