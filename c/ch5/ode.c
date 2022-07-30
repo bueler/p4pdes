@@ -12,58 +12,60 @@ extern PetscErrorCode FormRHSFunction(TS, PetscReal, Vec, Vec, void*);
 
 //STARTMAIN
 int main(int argc,char **argv) {
-  PetscErrorCode ierr;
   PetscInt   steps;
   PetscReal  t0 = 0.0, tf = 20.0, dt = 0.1, err;
   Vec        y, yexact;
   TS         ts;
 
-  ierr = PetscInitialize(&argc,&argv,NULL,help); if (ierr) return ierr;
+  PetscCall(PetscInitialize(&argc,&argv,NULL,help));
 
-  ierr = VecCreate(PETSC_COMM_WORLD,&y); CHKERRQ(ierr);
-  ierr = VecSetSizes(y,PETSC_DECIDE,2); CHKERRQ(ierr);
-  ierr = VecSetFromOptions(y); CHKERRQ(ierr);
-  ierr = VecDuplicate(y,&yexact); CHKERRQ(ierr);
+  PetscCall(VecCreate(PETSC_COMM_WORLD,&y));
+  PetscCall(VecSetSizes(y,PETSC_DECIDE,2));
+  PetscCall(VecSetFromOptions(y));
+  PetscCall(VecDuplicate(y,&yexact));
 
-  ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
-  ierr = TSSetProblemType(ts,TS_NONLINEAR); CHKERRQ(ierr);
-  ierr = TSSetRHSFunction(ts,NULL,FormRHSFunction,NULL); CHKERRQ(ierr);
-  ierr = TSSetType(ts,TSRK); CHKERRQ(ierr);
+  PetscCall(TSCreate(PETSC_COMM_WORLD,&ts));
+  PetscCall(TSSetProblemType(ts,TS_NONLINEAR));
+  PetscCall(TSSetRHSFunction(ts,NULL,FormRHSFunction,NULL));
+  PetscCall(TSSetType(ts,TSRK));
 
   // set time axis
-  ierr = TSSetTime(ts,t0); CHKERRQ(ierr);
-  ierr = TSSetMaxTime(ts,tf); CHKERRQ(ierr);
-  ierr = TSSetTimeStep(ts,dt); CHKERRQ(ierr);
-  ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
-  ierr = TSSetFromOptions(ts); CHKERRQ(ierr);
+  PetscCall(TSSetTime(ts,t0));
+  PetscCall(TSSetMaxTime(ts,tf));
+  PetscCall(TSSetTimeStep(ts,dt));
+  PetscCall(TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP));
+  PetscCall(TSSetFromOptions(ts));
 
   // set initial values and solve
-  ierr = TSGetTime(ts,&t0); CHKERRQ(ierr);
-  ierr = ExactSolution(t0,y); CHKERRQ(ierr);
-  ierr = TSSolve(ts,y); CHKERRQ(ierr);
+  PetscCall(TSGetTime(ts,&t0));
+  PetscCall(ExactSolution(t0,y));
+  PetscCall(TSSolve(ts,y));
 
   // compute error and report
-  ierr = TSGetStepNumber(ts,&steps); CHKERRQ(ierr);
-  ierr = TSGetTime(ts,&tf); CHKERRQ(ierr);
-  ierr = ExactSolution(tf,yexact); CHKERRQ(ierr);
-  ierr = VecAXPY(y,-1.0,yexact); CHKERRQ(ierr);    // y <- y - yexact
-  ierr = VecNorm(y,NORM_INFINITY,&err); CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,
+  PetscCall(TSGetStepNumber(ts,&steps));
+  PetscCall(TSGetTime(ts,&tf));
+  PetscCall(ExactSolution(tf,yexact));
+  PetscCall(VecAXPY(y,-1.0,yexact));    // y <- y - yexact
+  PetscCall(VecNorm(y,NORM_INFINITY,&err));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,
               "error at tf = %.3f with %d steps:  |y-y_exact|_inf = %g\n",
-              tf,steps,err); CHKERRQ(ierr);
+              tf,steps,err));
 
-  VecDestroy(&y);  VecDestroy(&yexact);  TSDestroy(&ts);
-  return PetscFinalize();
+  PetscCall(VecDestroy(&y));
+  PetscCall(VecDestroy(&yexact));
+  PetscCall(TSDestroy(&ts));
+  PetscCall(PetscFinalize());
+  return 0;
 }
 //ENDMAIN
 
 //STARTCALLBACKS
 PetscErrorCode ExactSolution(PetscReal t, Vec y) {
     PetscReal *ay;
-    VecGetArray(y,&ay);
+    PetscCall(VecGetArray(y,&ay));
     ay[0] = t - PetscSinReal(t);
     ay[1] = 1.0 - PetscCosReal(t);
-    VecRestoreArray(y,&ay);
+    PetscCall(VecRestoreArray(y,&ay));
     return 0;
 }
 
@@ -71,13 +73,12 @@ PetscErrorCode FormRHSFunction(TS ts, PetscReal t, Vec y, Vec g,
                                void *ptr) {
     const PetscReal *ay;
     PetscReal       *ag;
-    VecGetArrayRead(y,&ay);
-    VecGetArray(g,&ag);
+    PetscCall(VecGetArrayRead(y,&ay));
+    PetscCall(VecGetArray(g,&ag));
     ag[0] = ay[1];            // = g_1(t,y)
     ag[1] = - ay[0] + t;      // = g_2(t,y)
-    VecRestoreArrayRead(y,&ay);
-    VecRestoreArray(g,&ag);
+    PetscCall(VecRestoreArrayRead(y,&ay));
+    PetscCall(VecRestoreArray(g,&ag));
     return 0;
 }
 //ENDCALLBACKS
-

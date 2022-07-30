@@ -126,7 +126,6 @@ static const char* InitialTypes[] = {"zeros","random",
                                      "InitialType", "", NULL};
 
 int main(int argc,char **argv) {
-    PetscErrorCode ierr;
     DM             da, da_after;
     SNES           snes;
     KSP            ksp;
@@ -143,7 +142,7 @@ int main(int argc,char **argv) {
     InitialType    initial = ZEROS;          // set u=0 for initial iterate
     PetscBool      gonboundary = PETSC_TRUE; // initial iterate has u=g on boundary
 
-    ierr = PetscInitialize(&argc,&argv,NULL,help); if (ierr) return ierr;
+    PetscCall(PetscInitialize(&argc,&argv,NULL,help));
 
     // get options and configure context
     user.Lx = 1.0;
@@ -152,38 +151,38 @@ int main(int argc,char **argv) {
     user.cx = 1.0;
     user.cy = 1.0;
     user.cz = 1.0;
-    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"fsh_", "options for fish.c", ""); CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-cx",
+    PetscOptionsBegin(PETSC_COMM_WORLD,"fsh_", "options for fish.c", "");
+    PetscCall(PetscOptionsReal("-cx",
          "set coefficient of x term u_xx in equation",
-         "fish.c",user.cx,&user.cx,NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-cy",
+         "fish.c",user.cx,&user.cx,NULL));
+    PetscCall(PetscOptionsReal("-cy",
          "set coefficient of y term u_yy in equation",
-         "fish.c",user.cy,&user.cy,NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-cz",
+         "fish.c",user.cy,&user.cy,NULL));
+    PetscCall(PetscOptionsReal("-cz",
          "set coefficient of z term u_zz in equation",
-         "fish.c",user.cz,&user.cz,NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsInt("-dim",
+         "fish.c",user.cz,&user.cz,NULL));
+    PetscCall(PetscOptionsInt("-dim",
          "dimension of problem (=1,2,3 only)",
-         "fish.c",dim,&dim,NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-initial_gonboundary",
+         "fish.c",dim,&dim,NULL));
+    PetscCall(PetscOptionsBool("-initial_gonboundary",
          "set initial iterate to have correct boundary values",
-         "fish.c",gonboundary,&gonboundary,NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsEnum("-initial_type",
+         "fish.c",gonboundary,&gonboundary,NULL));
+    PetscCall(PetscOptionsEnum("-initial_type",
          "type of initial iterate",
-         "fish.c",InitialTypes,(PetscEnum)initial,(PetscEnum*)&initial,NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-Lx",
+         "fish.c",InitialTypes,(PetscEnum)initial,(PetscEnum*)&initial,NULL));
+    PetscCall(PetscOptionsReal("-Lx",
          "set Lx in domain ([0,Lx] x [0,Ly] x [0,Lz], etc.)",
-         "fish.c",user.Lx,&user.Lx,NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-Ly",
+         "fish.c",user.Lx,&user.Lx,NULL));
+    PetscCall(PetscOptionsReal("-Ly",
          "set Ly in domain ([0,Lx] x [0,Ly] x [0,Lz], etc.)",
-         "fish.c",user.Ly,&user.Ly,NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-Lz",
+         "fish.c",user.Ly,&user.Ly,NULL));
+    PetscCall(PetscOptionsReal("-Lz",
          "set Ly in domain ([0,Lx] x [0,Ly] x [0,Lz], etc.)",
-         "fish.c",user.Lz,&user.Lz,NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsEnum("-problem",
+         "fish.c",user.Lz,&user.Lz,NULL));
+    PetscCall(PetscOptionsEnum("-problem",
          "problem type; determines exact solution and RHS",
-         "fish.c",ProblemTypes,(PetscEnum)problem,(PetscEnum*)&problem,NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+         "fish.c",ProblemTypes,(PetscEnum)problem,(PetscEnum*)&problem,NULL));
+    PetscOptionsEnd();
     user.g_bdry = g_bdry_ptr[dim-1][problem];
     user.f_rhs = f_rhs_ptr[dim-1][problem];
     if ( user.cx <= 0.0 || user.cy <= 0.0 || user.cz <= 0.0 ) {
@@ -197,65 +196,65 @@ int main(int argc,char **argv) {
     // create DMDA in chosen dimension
     switch (dim) {
         case 1:
-            ierr = DMDACreate1d(PETSC_COMM_WORLD,
-                DM_BOUNDARY_NONE,3,1,1, NULL, &da); CHKERRQ(ierr);
+            PetscCall(DMDACreate1d(PETSC_COMM_WORLD,
+                DM_BOUNDARY_NONE,3,1,1, NULL, &da));
             break;
         case 2:
-            ierr = DMDACreate2d(PETSC_COMM_WORLD,
+            PetscCall(DMDACreate2d(PETSC_COMM_WORLD,
                 DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DMDA_STENCIL_STAR,
-                3,3,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&da); CHKERRQ(ierr);
+                3,3,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&da));
             break;
         case 3:
-            ierr = DMDACreate3d(PETSC_COMM_WORLD,
+            PetscCall(DMDACreate3d(PETSC_COMM_WORLD,
                 DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
                 DMDA_STENCIL_STAR,
                 3,3,3,PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,
-                1,1,NULL,NULL,NULL,&da); CHKERRQ(ierr);
+                1,1,NULL,NULL,NULL,&da));
             break;
         default:
             SETERRQ(PETSC_COMM_SELF,1,"invalid dim for DMDA creation\n");
     }
-    ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
-    ierr = DMSetFromOptions(da); CHKERRQ(ierr);
-    ierr = DMSetUp(da); CHKERRQ(ierr);  // call BEFORE SetUniformCoordinates
-    ierr = DMDASetUniformCoordinates(da,0.0,user.Lx,0.0,user.Ly,0.0,user.Lz); CHKERRQ(ierr);
+    PetscCall(DMSetApplicationContext(da,&user));
+    PetscCall(DMSetFromOptions(da));
+    PetscCall(DMSetUp(da));  // call BEFORE SetUniformCoordinates
+    PetscCall(DMDASetUniformCoordinates(da,0.0,user.Lx,0.0,user.Ly,0.0,user.Lz));
 
     // set SNES call-backs
-    ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
-    ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
-    ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
-             (DMDASNESFunction)(residual_ptr[dim-1]),&user); CHKERRQ(ierr);
-    ierr = DMDASNESSetJacobianLocal(da,
-             (DMDASNESJacobian)(jacobian_ptr[dim-1]),&user); CHKERRQ(ierr);
+    PetscCall(SNESCreate(PETSC_COMM_WORLD,&snes));
+    PetscCall(SNESSetDM(snes,da));
+    PetscCall(DMDASNESSetFunctionLocal(da,INSERT_VALUES,
+             (DMDASNESFunction)(residual_ptr[dim-1]),&user));
+    PetscCall(DMDASNESSetJacobianLocal(da,
+             (DMDASNESJacobian)(jacobian_ptr[dim-1]),&user));
 
     // default to KSPONLY+CG because problem is linear and SPD
-    ierr = SNESSetType(snes,SNESKSPONLY); CHKERRQ(ierr);
-    ierr = SNESGetKSP(snes,&ksp); CHKERRQ(ierr);
-    ierr = KSPSetType(ksp,KSPCG); CHKERRQ(ierr);
-    ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
+    PetscCall(SNESSetType(snes,SNESKSPONLY));
+    PetscCall(SNESGetKSP(snes,&ksp));
+    PetscCall(KSPSetType(ksp,KSPCG));
+    PetscCall(SNESSetFromOptions(snes));
 
     // set initial iterate and then solve
-    ierr = DMGetGlobalVector(da,&u_initial); CHKERRQ(ierr);
-    ierr = InitialState(da, initial, gonboundary, u_initial, &user); CHKERRQ(ierr);
-    ierr = SNESSolve(snes,NULL,u_initial); CHKERRQ(ierr);
+    PetscCall(DMGetGlobalVector(da,&u_initial));
+    PetscCall(InitialState(da, initial, gonboundary, u_initial, &user));
+    PetscCall(SNESSolve(snes,NULL,u_initial));
 //ENDCREATE
 
 //STARTGETSOLUTION
     // -snes_grid_sequence could change grid resolution
-    ierr = DMRestoreGlobalVector(da,&u_initial); CHKERRQ(ierr);
-    ierr = DMDestroy(&da); CHKERRQ(ierr);
+    PetscCall(DMRestoreGlobalVector(da,&u_initial));
+    PetscCall(DMDestroy(&da));
 
     // evaluate error and report
-    ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr);  // SNES owns u; do not destroy it
-    ierr = SNESGetDM(snes,&da_after); CHKERRQ(ierr); // SNES owns da_after; do not destroy it
-    ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
-    ierr = DMCreateGlobalVector(da_after,&u_exact); CHKERRQ(ierr);
+    PetscCall(SNESGetSolution(snes,&u));  // SNES owns u; do not destroy it
+    PetscCall(SNESGetDM(snes,&da_after)); // SNES owns da_after; do not destroy it
+    PetscCall(DMDAGetLocalInfo(da_after,&info));
+    PetscCall(DMCreateGlobalVector(da_after,&u_exact));
     getuexact = getuexact_ptr[dim-1];
-    ierr = (*getuexact)(&info,u_exact,&user); CHKERRQ(ierr);
-    ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr);   // u <- u + (-1.0) uexact
-    ierr = VecDestroy(&u_exact); CHKERRQ(ierr);      // no longer needed
-    ierr = VecNorm(u,NORM_INFINITY,&errinf); CHKERRQ(ierr);
-    ierr = VecNorm(u,NORM_2,&err2h); CHKERRQ(ierr);
+    PetscCall((*getuexact)(&info,u_exact,&user));
+    PetscCall(VecAXPY(u,-1.0,u_exact));   // u <- u + (-1.0) uexact
+    PetscCall(VecDestroy(&u_exact));      // no longer needed
+    PetscCall(VecNorm(u,NORM_INFINITY,&errinf));
+    PetscCall(VecNorm(u,NORM_2,&err2h));
 //ENDGETSOLUTION
 
     switch (dim) {
@@ -275,39 +274,38 @@ int main(int argc,char **argv) {
             SETERRQ(PETSC_COMM_SELF,4,"invalid dim value in final report\n");
     }
     err2h /= normconst2h; // like continuous L2
-    ierr = PetscPrintf(PETSC_COMM_WORLD,
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,
                 "problem %s on %s grid:\n"
                 "  error |u-uexact|_inf = %.3e, |u-uexact|_h = %.3e\n",
-                ProblemTypes[problem],gridstr,errinf,err2h); CHKERRQ(ierr);
+                ProblemTypes[problem],gridstr,errinf,err2h));
 
     // destroy what we explicitly Created
-    ierr = SNESDestroy(&snes); CHKERRQ(ierr);
-    return PetscFinalize();
+    PetscCall(SNESDestroy(&snes));
+    PetscCall(PetscFinalize());
+    return 0;
 }
 
 PetscErrorCode Form1DUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
-  PetscErrorCode ierr;
   PetscInt   i;
   PetscReal  xmax[1], xmin[1], hx, x, *au;
-  ierr = DMGetBoundingBox(info->da,xmin,xmax); CHKERRQ(ierr);
+  PetscCall(DMGetBoundingBox(info->da,xmin,xmax));
   hx = (xmax[0] - xmin[0]) / (info->mx - 1);
-  ierr = DMDAVecGetArray(info->da, u, &au);CHKERRQ(ierr);
+  PetscCall(DMDAVecGetArray(info->da, u, &au));
   for (i=info->xs; i<info->xs+info->xm; i++) {
       x = xmin[0] + i * hx;
       au[i] = user->g_bdry(x,0.0,0.0,user);
   }
-  ierr = DMDAVecRestoreArray(info->da, u, &au);CHKERRQ(ierr);
+  PetscCall(DMDAVecRestoreArray(info->da, u, &au));
   return 0;
 }
 
 PetscErrorCode Form2DUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
-    PetscErrorCode ierr;
     PetscInt   i, j;
     PetscReal  xymin[2], xymax[2], hx, hy, x, y, **au;
-    ierr = DMGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
+    PetscCall(DMGetBoundingBox(info->da,xymin,xymax));
     hx = (xymax[0] - xymin[0]) / (info->mx - 1);
     hy = (xymax[1] - xymin[1]) / (info->my - 1);
-    ierr = DMDAVecGetArray(info->da, u, &au);CHKERRQ(ierr);
+    PetscCall(DMDAVecGetArray(info->da, u, &au));
     for (j=info->ys; j<info->ys+info->ym; j++) {
         y = xymin[1] + j * hy;
         for (i=info->xs; i<info->xs+info->xm; i++) {
@@ -315,19 +313,18 @@ PetscErrorCode Form2DUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
             au[j][i] = user->g_bdry(x,y,0.0,user);
         }
     }
-    ierr = DMDAVecRestoreArray(info->da, u, &au);CHKERRQ(ierr);
+    PetscCall(DMDAVecRestoreArray(info->da, u, &au));
     return 0;
 }
 
 PetscErrorCode Form3DUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
-    PetscErrorCode ierr;
     PetscInt  i, j, k;
     PetscReal xyzmin[3], xyzmax[3], hx, hy, hz, x, y, z, ***au;
-    ierr = DMGetBoundingBox(info->da,xyzmin,xyzmax); CHKERRQ(ierr);
+    PetscCall(DMGetBoundingBox(info->da,xyzmin,xyzmax));
     hx = (xyzmax[0] - xyzmin[0]) / (info->mx - 1);
     hy = (xyzmax[1] - xyzmin[1]) / (info->my - 1);
     hz = (xyzmax[2] - xyzmin[2]) / (info->mz - 1);
-    ierr = DMDAVecGetArray(info->da, u, &au);CHKERRQ(ierr);
+    PetscCall(DMDAVecGetArray(info->da, u, &au));
     for (k=info->zs; k<info->zs+info->zm; k++) {
         z = xyzmin[2] + k * hz;
         for (j=info->ys; j<info->ys+info->ym; j++) {
@@ -338,7 +335,6 @@ PetscErrorCode Form3DUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
             }
         }
     }
-    ierr = DMDAVecRestoreArray(info->da, u, &au);CHKERRQ(ierr);
+    PetscCall(DMDAVecRestoreArray(info->da, u, &au));
     return 0;
 }
-

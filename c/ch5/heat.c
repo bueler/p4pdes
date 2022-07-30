@@ -30,7 +30,6 @@ extern PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo*, PetscReal, PetscReal*
                                            Mat, Mat, HeatCtx*);
 
 int main(int argc,char **argv) {
-  PetscErrorCode ierr;
   HeatCtx        user;
   TS             ts;
   Vec            u;
@@ -39,61 +38,64 @@ int main(int argc,char **argv) {
   PetscReal      t0, tf;
   PetscBool      monitorenergy = PETSC_FALSE;
 
-  ierr = PetscInitialize(&argc,&argv,NULL,help); if (ierr) return ierr;
+  PetscCall(PetscInitialize(&argc,&argv,NULL,help));
 
   user.D0  = 1.0;
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "ht_", "options for heat", ""); CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-D0","constant thermal diffusivity",
-           "heat.c",user.D0,&user.D0,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-monitor","also display total heat energy at each step",
-           "heat.c",monitorenergy,&monitorenergy,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD, "ht_", "options for heat", "");
+  PetscCall(PetscOptionsReal("-D0","constant thermal diffusivity",
+           "heat.c",user.D0,&user.D0,NULL));
+  PetscCall(PetscOptionsBool("-monitor","also display total heat energy at each step",
+           "heat.c",monitorenergy,&monitorenergy,NULL));
+  PetscOptionsEnd();
 
 //STARTDMDASETUP
-  ierr = DMDACreate2d(PETSC_COMM_WORLD,
+  PetscCall(DMDACreate2d(PETSC_COMM_WORLD,
       DM_BOUNDARY_NONE, DM_BOUNDARY_PERIODIC, DMDA_STENCIL_STAR,
       5,4,PETSC_DECIDE,PETSC_DECIDE,  // default to hx=hx=0.25 grid
       1,1,                            // degrees of freedom, stencil width
-      NULL,NULL,&da); CHKERRQ(ierr);
-  ierr = DMSetFromOptions(da); CHKERRQ(ierr);
-  ierr = DMSetUp(da); CHKERRQ(ierr);
-  ierr = DMCreateGlobalVector(da,&u); CHKERRQ(ierr);
+      NULL,NULL,&da));
+  PetscCall(DMSetFromOptions(da));
+  PetscCall(DMSetUp(da));
+  PetscCall(DMCreateGlobalVector(da,&u));
 //ENDDMDASETUP
 
 //STARTTSSETUP
-  ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
-  ierr = TSSetProblemType(ts,TS_NONLINEAR); CHKERRQ(ierr);
-  ierr = TSSetDM(ts,da); CHKERRQ(ierr);
-  ierr = TSSetApplicationContext(ts,&user); CHKERRQ(ierr);
-  ierr = DMDATSSetRHSFunctionLocal(da,INSERT_VALUES,
-           (DMDATSRHSFunctionLocal)FormRHSFunctionLocal,&user); CHKERRQ(ierr);
-  ierr = DMDATSSetRHSJacobianLocal(da,
-           (DMDATSRHSJacobianLocal)FormRHSJacobianLocal,&user); CHKERRQ(ierr);
+  PetscCall(TSCreate(PETSC_COMM_WORLD,&ts));
+  PetscCall(TSSetProblemType(ts,TS_NONLINEAR));
+  PetscCall(TSSetDM(ts,da));
+  PetscCall(TSSetApplicationContext(ts,&user));
+  PetscCall(DMDATSSetRHSFunctionLocal(da,INSERT_VALUES,
+           (DMDATSRHSFunctionLocal)FormRHSFunctionLocal,&user));
+  PetscCall(DMDATSSetRHSJacobianLocal(da,
+           (DMDATSRHSJacobianLocal)FormRHSJacobianLocal,&user));
   if (monitorenergy) {
-      ierr = TSMonitorSet(ts,EnergyMonitor,&user,NULL); CHKERRQ(ierr);
+      PetscCall(TSMonitorSet(ts,EnergyMonitor,&user,NULL));
   }
-  ierr = TSSetType(ts,TSBDF); CHKERRQ(ierr);
-  ierr = TSSetTime(ts,0.0); CHKERRQ(ierr);
-  ierr = TSSetMaxTime(ts,0.1); CHKERRQ(ierr);
-  ierr = TSSetTimeStep(ts,0.001); CHKERRQ(ierr);
-  ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
-  ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
+  PetscCall(TSSetType(ts,TSBDF));
+  PetscCall(TSSetTime(ts,0.0));
+  PetscCall(TSSetMaxTime(ts,0.1));
+  PetscCall(TSSetTimeStep(ts,0.001));
+  PetscCall(TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP));
+  PetscCall(TSSetFromOptions(ts));
 //ENDTSSETUP
 
   // report on set up
-  ierr = TSGetTime(ts,&t0); CHKERRQ(ierr);
-  ierr = TSGetMaxTime(ts,&tf); CHKERRQ(ierr);
-  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,
+  PetscCall(TSGetTime(ts,&t0));
+  PetscCall(TSGetMaxTime(ts,&tf));
+  PetscCall(DMDAGetLocalInfo(da,&info));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,
            "solving on %d x %d grid for t0=%g to tf=%g ...\n",
-           info.mx,info.my,t0,tf); CHKERRQ(ierr);
+           info.mx,info.my,t0,tf));
 
   // solve
-  ierr = VecSet(u,0.0); CHKERRQ(ierr);   // initial condition
-  ierr = TSSolve(ts,u); CHKERRQ(ierr);
+  PetscCall(VecSet(u,0.0));   // initial condition
+  PetscCall(TSSolve(ts,u));
 
-  VecDestroy(&u);  TSDestroy(&ts);  DMDestroy(&da);
-  return PetscFinalize();
+  PetscCall(VecDestroy(&u));
+  PetscCall(TSDestroy(&ts));
+  PetscCall(DMDestroy(&da));
+  PetscCall(PetscFinalize());
+  return 0;
 }
 
 PetscErrorCode Spacings(DMDALocalInfo *info, PetscReal *hx, PetscReal *hy) {
@@ -105,7 +107,6 @@ PetscErrorCode Spacings(DMDALocalInfo *info, PetscReal *hx, PetscReal *hy) {
 //STARTMONITOR
 PetscErrorCode EnergyMonitor(TS ts, PetscInt step, PetscReal time, Vec u,
                              void *ctx) {
-    PetscErrorCode ierr;
     HeatCtx        *user = (HeatCtx*)ctx;
     PetscReal      lenergy = 0.0, energy, dt, hx, hy, **au;
     PetscInt       i,j;
@@ -113,9 +114,9 @@ PetscErrorCode EnergyMonitor(TS ts, PetscInt step, PetscReal time, Vec u,
     DM             da;
     DMDALocalInfo  info;
 
-    ierr = TSGetDM(ts,&da); CHKERRQ(ierr);
-    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-    ierr = DMDAVecGetArrayRead(da,u,&au); CHKERRQ(ierr);
+    PetscCall(TSGetDM(ts,&da));
+    PetscCall(DMDAGetLocalInfo(da,&info));
+    PetscCall(DMDAVecGetArrayRead(da,u,&au));
     for (j = info.ys; j < info.ys + info.ym; j++) {
         for (i = info.xs; i < info.xs + info.xm; i++) {
             if ((i == 0) || (i == info.mx-1))
@@ -124,14 +125,14 @@ PetscErrorCode EnergyMonitor(TS ts, PetscInt step, PetscReal time, Vec u,
                 lenergy += au[j][i];
         }
     }
-    ierr = DMDAVecRestoreArrayRead(da,u,&au); CHKERRQ(ierr);
-    ierr = Spacings(&info,&hx,&hy); CHKERRQ(ierr);
+    PetscCall(DMDAVecRestoreArrayRead(da,u,&au));
+    PetscCall(Spacings(&info,&hx,&hy));
     lenergy *= hx * hy;
-    ierr = PetscObjectGetComm((PetscObject)(da),&com); CHKERRQ(ierr);
-    ierr = MPI_Allreduce(&lenergy,&energy,1,MPIU_REAL,MPIU_SUM,com); CHKERRQ(ierr);
-    ierr = TSGetTimeStep(ts,&dt); CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"  energy = %9.2e     nu = %8.4f\n",
-                energy,user->D0*dt/(hx*hy)); CHKERRQ(ierr);
+    PetscCall(PetscObjectGetComm((PetscObject)(da),&com));
+    PetscCall(MPI_Allreduce(&lenergy,&energy,1,MPIU_REAL,MPIU_SUM,com));
+    PetscCall(TSGetTimeStep(ts,&dt));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"  energy = %9.2e     nu = %8.4f\n",
+                energy,user->D0*dt/(hx*hy)));
     return 0;
 }
 //ENDMONITOR
@@ -140,11 +141,10 @@ PetscErrorCode EnergyMonitor(TS ts, PetscInt step, PetscReal time, Vec u,
 PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info,
                                     PetscReal t, PetscReal **au,
                                     PetscReal **aG, HeatCtx *user) {
-  PetscErrorCode ierr;
   PetscInt   i, j, mx = info->mx;
   PetscReal  hx, hy, x, y, ul, ur, uxx, uyy;
 
-  ierr = Spacings(info,&hx,&hy); CHKERRQ(ierr);
+  PetscCall(Spacings(info,&hx,&hy));
   for (j = info->ys; j < info->ys + info->ym; j++) {
       y = hy * j;
       for (i = info->xs; i < info->xs + info->xm; i++) {
@@ -167,13 +167,12 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info,
 PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info,
                                     PetscReal t, PetscReal **au,
                                     Mat J, Mat P, HeatCtx *user) {
-    PetscErrorCode ierr;
     PetscInt         i, j, ncols;
     const PetscReal  D = user->D0;
     PetscReal        hx, hy, hx2, hy2, v[5];
     MatStencil       col[5],row;
 
-    ierr = Spacings(info,&hx,&hy); CHKERRQ(ierr);
+    PetscCall(Spacings(info,&hx,&hy));
     hx2 = hx * hx;  hy2 = hy * hy;
     for (j = info->ys; j < info->ys+info->ym; j++) {
         row.j = j;  col[0].j = j;
@@ -195,17 +194,16 @@ PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info,
                 ncols = 4;
                 col[3].j = j;  col[3].i = i-1;  v[3] = 2.0 * D / hx2;
             }
-            ierr = MatSetValuesStencil(P,1,&row,ncols,col,v,INSERT_VALUES); CHKERRQ(ierr);
+            PetscCall(MatSetValuesStencil(P,1,&row,ncols,col,v,INSERT_VALUES));
         }
     }
 
-    ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-    ierr = MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    PetscCall(MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY));
     if (J != P) {
-        ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-        ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+        PetscCall(MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY));
+        PetscCall(MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY));
     }
     return 0;
 }
 //ENDRHSJACOBIAN
-

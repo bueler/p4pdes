@@ -3,10 +3,9 @@
 
 PetscErrorCode Poisson1DFunctionLocal(DMDALocalInfo *info, PetscReal *au,
                                       PetscReal *aF, PoissonCtx *user) {
-    PetscErrorCode ierr;
     PetscInt   i;
     PetscReal  xmax[1], xmin[1], h, x, ue, uw;
-    ierr = DMGetBoundingBox(info->da,xmin,xmax); CHKERRQ(ierr);
+    PetscCall(DMGetBoundingBox(info->da,xmin,xmax));
     h = (xmax[0] - xmin[0]) / (info->mx - 1);
     for (i = info->xs; i < info->xs + info->xm; i++) {
         x = xmin[0] + i * h;
@@ -22,18 +21,17 @@ PetscErrorCode Poisson1DFunctionLocal(DMDALocalInfo *info, PetscReal *au,
                     - h * user->f_rhs(x,0.0,0.0,user);
         }
     }
-    ierr = PetscLogFlops(9.0*info->xm);CHKERRQ(ierr);
+    PetscCall(PetscLogFlops(9.0*info->xm));
     return 0;
 }
 
 //STARTFORM2DFUNCTION
 PetscErrorCode Poisson2DFunctionLocal(DMDALocalInfo *info, PetscReal **au,
                                       PetscReal **aF, PoissonCtx *user) {
-    PetscErrorCode ierr;
     PetscInt   i, j;
     PetscReal  xymin[2], xymax[2], hx, hy, darea, scx, scy, scdiag, x, y,
                ue, uw, un, us;
-    ierr = DMGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
+    PetscCall(DMGetBoundingBox(info->da,xymin,xymax));
     hx = (xymax[0] - xymin[0]) / (info->mx - 1);
     hy = (xymax[1] - xymin[1]) / (info->my - 1);
     darea = hx * hy;
@@ -62,18 +60,17 @@ PetscErrorCode Poisson2DFunctionLocal(DMDALocalInfo *info, PetscReal **au,
             }
         }
     }
-    ierr = PetscLogFlops(11.0*info->xm*info->ym);CHKERRQ(ierr);
+    PetscCall(PetscLogFlops(11.0*info->xm*info->ym));
     return 0;
 }
 //ENDFORM2DFUNCTION
 
 PetscErrorCode Poisson3DFunctionLocal(DMDALocalInfo *info, PetscReal ***au,
                                       PetscReal ***aF, PoissonCtx *user) {
-    PetscErrorCode ierr;
     PetscInt   i, j, k;
     PetscReal  xyzmin[3], xyzmax[3], hx, hy, hz, dvol, scx, scy, scz, scdiag,
                x, y, z, ue, uw, un, us, uu, ud;
-    ierr = DMGetBoundingBox(info->da,xyzmin,xyzmax); CHKERRQ(ierr);
+    PetscCall(DMGetBoundingBox(info->da,xyzmin,xyzmax));
     hx = (xyzmax[0] - xyzmin[0]) / (info->mx - 1);
     hy = (xyzmax[1] - xyzmin[1]) / (info->my - 1);
     hz = (xyzmax[2] - xyzmin[2]) / (info->mz - 1);
@@ -113,18 +110,17 @@ PetscErrorCode Poisson3DFunctionLocal(DMDALocalInfo *info, PetscReal ***au,
             }
         }
     }
-    ierr = PetscLogFlops(14.0*info->xm*info->ym*info->zm);CHKERRQ(ierr);
+    PetscCall(PetscLogFlops(14.0*info->xm*info->ym*info->zm));
     return 0;
 }
 
 PetscErrorCode Poisson1DJacobianLocal(DMDALocalInfo *info, PetscScalar *au,
                                       Mat J, Mat Jpre, PoissonCtx *user) {
-    PetscErrorCode  ierr;
     PetscInt     i,ncols;
     PetscReal    xmin[1], xmax[1], h, v[3];
     MatStencil   col[3],row;
 
-    ierr = DMGetBoundingBox(info->da,xmin,xmax); CHKERRQ(ierr);
+    PetscCall(DMGetBoundingBox(info->da,xmin,xmax));
     h = (xmax[0] - xmin[0]) / (info->mx - 1);
     for (i = info->xs; i < info->xs+info->xm; i++) {
         row.i = i;
@@ -141,26 +137,25 @@ PetscErrorCode Poisson1DJacobianLocal(DMDALocalInfo *info, PetscScalar *au,
                 col[ncols].i = i+1;  v[ncols++] = - user->cx / h;
             }
         }
-        ierr = MatSetValuesStencil(Jpre,1,&row,ncols,col,v,INSERT_VALUES); CHKERRQ(ierr);
+        PetscCall(MatSetValuesStencil(Jpre,1,&row,ncols,col,v,INSERT_VALUES));
     }
 
-    ierr = MatAssemblyBegin(Jpre,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-    ierr = MatAssemblyEnd(Jpre,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    PetscCall(MatAssemblyBegin(Jpre,MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(Jpre,MAT_FINAL_ASSEMBLY));
     if (J != Jpre) {
-        ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-        ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+        PetscCall(MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY));
+        PetscCall(MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY));
     }
     return 0;
 }
 
 PetscErrorCode Poisson2DJacobianLocal(DMDALocalInfo *info, PetscScalar **au,
                                       Mat J, Mat Jpre, PoissonCtx *user) {
-    PetscErrorCode  ierr;
     PetscReal   xymin[2], xymax[2], hx, hy, scx, scy, scdiag, v[5];
     PetscInt    i,j,ncols;
     MatStencil  col[5],row;
 
-    ierr = DMGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
+    PetscCall(DMGetBoundingBox(info->da,xymin,xymax));
     hx = (xymax[0] - xymin[0]) / (info->mx - 1);
     hy = (xymax[1] - xymin[1]) / (info->my - 1);
     scx = user->cx * hy / hx;
@@ -184,27 +179,26 @@ PetscErrorCode Poisson2DJacobianLocal(DMDALocalInfo *info, PetscScalar **au,
                 if (j+1 < info->my-1) {
                     col[ncols].j = j+1;  col[ncols].i = i;    v[ncols++] = - scy;  }
             }
-            ierr = MatSetValuesStencil(Jpre,1,&row,ncols,col,v,INSERT_VALUES); CHKERRQ(ierr);
+            PetscCall(MatSetValuesStencil(Jpre,1,&row,ncols,col,v,INSERT_VALUES));
         }
     }
 
-    ierr = MatAssemblyBegin(Jpre,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-    ierr = MatAssemblyEnd(Jpre,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    PetscCall(MatAssemblyBegin(Jpre,MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(Jpre,MAT_FINAL_ASSEMBLY));
     if (J != Jpre) {
-        ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-        ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+        PetscCall(MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY));
+        PetscCall(MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY));
     }
     return 0;
 }
 
 PetscErrorCode Poisson3DJacobianLocal(DMDALocalInfo *info, PetscScalar ***au,
                                       Mat J, Mat Jpre, PoissonCtx *user) {
-    PetscErrorCode  ierr;
     PetscReal   xyzmin[3], xyzmax[3], hx, hy, hz, dvol, scx, scy, scz, scdiag, v[7];
     PetscInt    i,j,k,ncols;
     MatStencil  col[7],row;
 
-    ierr = DMGetBoundingBox(info->da,xyzmin,xyzmax); CHKERRQ(ierr);
+    PetscCall(DMGetBoundingBox(info->da,xyzmin,xyzmax));
     hx = (xyzmax[0] - xyzmin[0]) / (info->mx - 1);
     hy = (xyzmax[1] - xyzmin[1]) / (info->my - 1);
     hz = (xyzmax[2] - xyzmin[2]) / (info->mz - 1);
@@ -250,32 +244,31 @@ PetscErrorCode Poisson3DJacobianLocal(DMDALocalInfo *info, PetscScalar ***au,
                         v[ncols++] = - scz;
                     }
                 }
-                ierr = MatSetValuesStencil(Jpre,1,&row,ncols,col,v,INSERT_VALUES); CHKERRQ(ierr);
+                PetscCall(MatSetValuesStencil(Jpre,1,&row,ncols,col,v,INSERT_VALUES));
             }
         }
     }
-    ierr = MatAssemblyBegin(Jpre,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-    ierr = MatAssemblyEnd(Jpre,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    PetscCall(MatAssemblyBegin(Jpre,MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(Jpre,MAT_FINAL_ASSEMBLY));
     if (J != Jpre) {
-        ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-        ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+        PetscCall(MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY));
+        PetscCall(MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY));
     }
     return 0;
 }
 
 PetscErrorCode InitialState(DM da, InitialType it, PetscBool gbdry,
                             Vec u, PoissonCtx *user) {
-    PetscErrorCode ierr;
     DMDALocalInfo  info;
     PetscRandom    rctx;
     switch (it) {
         case ZEROS:
-            ierr = VecSet(u,0.0); CHKERRQ(ierr);
+            PetscCall(VecSet(u,0.0));
             break;
         case RANDOM:
-            ierr = PetscRandomCreate(PETSC_COMM_WORLD,&rctx); CHKERRQ(ierr);
-            ierr = VecSetRandom(u,rctx); CHKERRQ(ierr);
-            ierr = PetscRandomDestroy(&rctx); CHKERRQ(ierr);
+            PetscCall(PetscRandomCreate(PETSC_COMM_WORLD,&rctx));
+            PetscCall(VecSetRandom(u,rctx));
+            PetscCall(PetscRandomDestroy(&rctx));
             break;
         default:
             SETERRQ(PETSC_COMM_SELF,4,"invalid InitialType ... how did I get here?\n");
@@ -283,14 +276,14 @@ PetscErrorCode InitialState(DM da, InitialType it, PetscBool gbdry,
     if (!gbdry) {
         return 0;
     }
-    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+    PetscCall(DMDAGetLocalInfo(da,&info));
     switch (info.dim) {
         case 1:
         {
             PetscInt  i;
             PetscReal xmax[1], xmin[1], h, x, *au;
-            ierr = DMDAVecGetArray(da, u, &au); CHKERRQ(ierr);
-            ierr = DMGetBoundingBox(da,xmin,xmax); CHKERRQ(ierr);
+            PetscCall(DMDAVecGetArray(da, u, &au));
+            PetscCall(DMGetBoundingBox(da,xmin,xmax));
             h = (xmax[0] - xmin[0]) / (info.mx - 1);
             for (i = info.xs; i < info.xs + info.xm; i++) {
                 if (i==0 || i==info.mx-1) {
@@ -298,15 +291,15 @@ PetscErrorCode InitialState(DM da, InitialType it, PetscBool gbdry,
                     au[i] = user->g_bdry(x,0.0,0.0,user);
                 }
             }
-            ierr = DMDAVecRestoreArray(da, u, &au); CHKERRQ(ierr);
+            PetscCall(DMDAVecRestoreArray(da, u, &au));
             break;
         }
         case 2:
         {
             PetscInt   i, j;
             PetscReal  xymin[2], xymax[2], hx, hy, x, y, **au;
-            ierr = DMDAVecGetArray(da, u, &au); CHKERRQ(ierr);
-            ierr = DMGetBoundingBox(da,xymin,xymax); CHKERRQ(ierr);
+            PetscCall(DMDAVecGetArray(da, u, &au));
+            PetscCall(DMGetBoundingBox(da,xymin,xymax));
             hx = (xymax[0] - xymin[0]) / (info.mx - 1);
             hy = (xymax[1] - xymin[1]) / (info.my - 1);
             for (j = info.ys; j < info.ys + info.ym; j++) {
@@ -318,15 +311,15 @@ PetscErrorCode InitialState(DM da, InitialType it, PetscBool gbdry,
                     }
                 }
             }
-            ierr = DMDAVecRestoreArray(da, u, &au); CHKERRQ(ierr);
+            PetscCall(DMDAVecRestoreArray(da, u, &au));
             break;
         }
         case 3:
         {
             PetscInt   i, j, k;
             PetscReal  xyzmin[3], xyzmax[3], hx, hy, hz, x, y, z, ***au;
-            ierr = DMDAVecGetArray(da, u, &au); CHKERRQ(ierr);
-            ierr = DMGetBoundingBox(da,xyzmin,xyzmax); CHKERRQ(ierr);
+            PetscCall(DMDAVecGetArray(da, u, &au));
+            PetscCall(DMGetBoundingBox(da,xyzmin,xyzmax));
             hx = (xyzmax[0] - xyzmin[0]) / (info.mx - 1);
             hy = (xyzmax[1] - xyzmin[1]) / (info.my - 1);
             hz = (xyzmax[2] - xyzmin[2]) / (info.mz - 1);
@@ -343,7 +336,7 @@ PetscErrorCode InitialState(DM da, InitialType it, PetscBool gbdry,
                     }
                 }
             }
-            ierr = DMDAVecRestoreArray(da, u, &au); CHKERRQ(ierr);
+            PetscCall(DMDAVecRestoreArray(da, u, &au));
             break;
         }
         default:
@@ -351,4 +344,3 @@ PetscErrorCode InitialState(DM da, InitialType it, PetscBool gbdry,
     }
     return 0;
 }
-

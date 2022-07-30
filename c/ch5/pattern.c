@@ -31,7 +31,6 @@ extern PetscErrorCode FormIJacobianLocal(DMDALocalInfo*, PetscReal, Field**, Fie
 
 int main(int argc,char **argv)
 {
-  PetscErrorCode ierr;
   PatternCtx     user;
   TS             ts;
   Vec            x;
@@ -43,7 +42,7 @@ int main(int argc,char **argv)
                  call_back_report = PETSC_FALSE;
   TSType         type;
 
-  ierr = PetscInitialize(&argc,&argv,NULL,help); if (ierr) return ierr;
+  PetscCall(PetscInitialize(&argc,&argv,NULL,help));
 
   // parameter values from pages 21-22 in Hundsdorfer & Verwer (2003)
   user.L      = 2.5;
@@ -55,94 +54,96 @@ int main(int argc,char **argv)
   user.IJac_called   = PETSC_FALSE;
   user.RHSFcn_called = PETSC_FALSE;
   user.RHSJac_called = PETSC_FALSE;
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "ptn_", "options for patterns", ""); CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-call_back_report","report on which user-supplied call-backs were actually called",
-           "pattern.c",call_back_report,&(call_back_report),NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-Du","diffusion coefficient of first equation",
-           "pattern.c",user.Du,&user.Du,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-Dv","diffusion coefficient of second equation",
-           "pattern.c",user.Dv,&user.Dv,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-kappa","dimensionless rate constant (=k in (Pearson, 1993))",
-           "pattern.c",user.kappa,&user.kappa,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-L","square domain side length; recommend L >= 0.5",
-           "pattern.c",user.L,&user.L,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-no_ijacobian","do not set call-back DMDATSSetIJacobian()",
-           "pattern.c",no_ijacobian,&(no_ijacobian),NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-no_rhsjacobian","do not set call-back DMDATSSetRHSJacobian()",
-           "pattern.c",no_rhsjacobian,&(no_rhsjacobian),NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-noisy_init",
+  PetscOptionsBegin(PETSC_COMM_WORLD, "ptn_", "options for patterns", "");
+  PetscCall(PetscOptionsBool("-call_back_report","report on which user-supplied call-backs were actually called",
+           "pattern.c",call_back_report,&(call_back_report),NULL));
+  PetscCall(PetscOptionsReal("-Du","diffusion coefficient of first equation",
+           "pattern.c",user.Du,&user.Du,NULL));
+  PetscCall(PetscOptionsReal("-Dv","diffusion coefficient of second equation",
+           "pattern.c",user.Dv,&user.Dv,NULL));
+  PetscCall(PetscOptionsReal("-kappa","dimensionless rate constant (=k in (Pearson, 1993))",
+           "pattern.c",user.kappa,&user.kappa,NULL));
+  PetscCall(PetscOptionsReal("-L","square domain side length; recommend L >= 0.5",
+           "pattern.c",user.L,&user.L,NULL));
+  PetscCall(PetscOptionsBool("-no_ijacobian","do not set call-back DMDATSSetIJacobian()",
+           "pattern.c",no_ijacobian,&(no_ijacobian),NULL));
+  PetscCall(PetscOptionsBool("-no_rhsjacobian","do not set call-back DMDATSSetRHSJacobian()",
+           "pattern.c",no_rhsjacobian,&(no_rhsjacobian),NULL));
+  PetscCall(PetscOptionsReal("-noisy_init",
            "initialize u,v with this much random noise (e.g. 0.2) on top of usual initial values",
-           "pattern.c",noiselevel,&noiselevel,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-phi","dimensionless feed rate (=F in (Pearson, 1993))",
-           "pattern.c",user.phi,&user.phi,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+           "pattern.c",noiselevel,&noiselevel,NULL));
+  PetscCall(PetscOptionsReal("-phi","dimensionless feed rate (=F in (Pearson, 1993))",
+           "pattern.c",user.phi,&user.phi,NULL));
+  PetscOptionsEnd();
 
-  ierr = DMDACreate2d(PETSC_COMM_WORLD,
+  PetscCall(DMDACreate2d(PETSC_COMM_WORLD,
                DM_BOUNDARY_PERIODIC, DM_BOUNDARY_PERIODIC,
                DMDA_STENCIL_BOX,  // for 9-point stencil
                3,3,PETSC_DECIDE,PETSC_DECIDE,
                2, 1,              // degrees of freedom, stencil width
-               NULL,NULL,&da); CHKERRQ(ierr);
-  ierr = DMSetFromOptions(da); CHKERRQ(ierr);
-  ierr = DMSetUp(da); CHKERRQ(ierr);
-  ierr = DMDASetFieldName(da,0,"u"); CHKERRQ(ierr);
-  ierr = DMDASetFieldName(da,1,"v"); CHKERRQ(ierr);
-  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+               NULL,NULL,&da));
+  PetscCall(DMSetFromOptions(da));
+  PetscCall(DMSetUp(da));
+  PetscCall(DMDASetFieldName(da,0,"u"));
+  PetscCall(DMDASetFieldName(da,1,"v"));
+  PetscCall(DMDAGetLocalInfo(da,&info));
   if (info.mx != info.my) {
       SETERRQ(PETSC_COMM_SELF,1,"pattern.c requires mx == my");
   }
-  ierr = DMDASetUniformCoordinates(da, 0.0, user.L, 0.0, user.L, -1.0, -1.0); CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,
+  PetscCall(DMDASetUniformCoordinates(da, 0.0, user.L, 0.0, user.L, -1.0, -1.0));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,
            "running on %d x %d grid with square cells of side h = %.6f ...\n",
-           info.mx,info.my,user.L/(PetscReal)(info.mx)); CHKERRQ(ierr);
+           info.mx,info.my,user.L/(PetscReal)(info.mx)));
 
 //STARTTSSETUP
-  ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
-  ierr = TSSetProblemType(ts,TS_NONLINEAR); CHKERRQ(ierr);
-  ierr = TSSetDM(ts,da); CHKERRQ(ierr);
-  ierr = TSSetApplicationContext(ts,&user); CHKERRQ(ierr);
-  ierr = DMDATSSetRHSFunctionLocal(da,INSERT_VALUES,
-           (DMDATSRHSFunctionLocal)FormRHSFunctionLocal,&user); CHKERRQ(ierr);
+  PetscCall(TSCreate(PETSC_COMM_WORLD,&ts));
+  PetscCall(TSSetProblemType(ts,TS_NONLINEAR));
+  PetscCall(TSSetDM(ts,da));
+  PetscCall(TSSetApplicationContext(ts,&user));
+  PetscCall(DMDATSSetRHSFunctionLocal(da,INSERT_VALUES,
+           (DMDATSRHSFunctionLocal)FormRHSFunctionLocal,&user));
   if (!no_rhsjacobian) {
-      ierr = DMDATSSetRHSJacobianLocal(da,
-               (DMDATSRHSJacobianLocal)FormRHSJacobianLocal,&user); CHKERRQ(ierr);
+      PetscCall(DMDATSSetRHSJacobianLocal(da,
+               (DMDATSRHSJacobianLocal)FormRHSJacobianLocal,&user));
   }
-  ierr = DMDATSSetIFunctionLocal(da,INSERT_VALUES,
-           (DMDATSIFunctionLocal)FormIFunctionLocal,&user); CHKERRQ(ierr);
+  PetscCall(DMDATSSetIFunctionLocal(da,INSERT_VALUES,
+           (DMDATSIFunctionLocal)FormIFunctionLocal,&user));
   if (!no_ijacobian) {
-      ierr = DMDATSSetIJacobianLocal(da,
-               (DMDATSIJacobianLocal)FormIJacobianLocal,&user); CHKERRQ(ierr);
+      PetscCall(DMDATSSetIJacobianLocal(da,
+               (DMDATSIJacobianLocal)FormIJacobianLocal,&user));
   }
-  ierr = TSSetType(ts,TSARKIMEX); CHKERRQ(ierr);
-  ierr = TSSetTime(ts,0.0); CHKERRQ(ierr);
-  ierr = TSSetMaxTime(ts,200.0); CHKERRQ(ierr);
-  ierr = TSSetTimeStep(ts,5.0); CHKERRQ(ierr);
-  ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
-  ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
+  PetscCall(TSSetType(ts,TSARKIMEX));
+  PetscCall(TSSetTime(ts,0.0));
+  PetscCall(TSSetMaxTime(ts,200.0));
+  PetscCall(TSSetTimeStep(ts,5.0));
+  PetscCall(TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP));
+  PetscCall(TSSetFromOptions(ts));
 //ENDTSSETUP
 
-  ierr = DMCreateGlobalVector(da,&x); CHKERRQ(ierr);
-  ierr = InitialState(da,x,noiselevel,&user); CHKERRQ(ierr);
-  ierr = TSSolve(ts,x); CHKERRQ(ierr);
+  PetscCall(DMCreateGlobalVector(da,&x));
+  PetscCall(InitialState(da,x,noiselevel,&user));
+  PetscCall(TSSolve(ts,x));
 
   // optionally report on call-backs
   if (call_back_report) {
-      ierr = TSGetType(ts,&type);CHKERRQ(ierr);
-      ierr = PetscPrintf(PETSC_COMM_WORLD,"CALL-BACK REPORT\n  solver type: %s\n",type); CHKERRQ(ierr);
-      ierr = PetscPrintf(PETSC_COMM_WORLD,"  IFunction:   %D  | IJacobian:   %D\n",
-                                          (int)user.IFcn_called,(int)user.IJac_called); CHKERRQ(ierr);
-      ierr = PetscPrintf(PETSC_COMM_WORLD,"  RHSFunction: %D  | RHSJacobian: %D\n",
-                                          (int)user.RHSFcn_called,(int)user.RHSJac_called); CHKERRQ(ierr);
+      PetscCall(TSGetType(ts,&type));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD,"CALL-BACK REPORT\n  solver type: %s\n",type));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD,"  IFunction:   %d  | IJacobian:   %d\n",
+                                          (int)user.IFcn_called,(int)user.IJac_called));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD,"  RHSFunction: %d  | RHSJacobian: %d\n",
+                                          (int)user.RHSFcn_called,(int)user.RHSJac_called));
   }
 
-  VecDestroy(&x);  TSDestroy(&ts);  DMDestroy(&da);
-  return PetscFinalize();
+  PetscCall(VecDestroy(&x));
+  PetscCall(TSDestroy(&ts));
+  PetscCall(DMDestroy(&da));
+  PetscCall(PetscFinalize());
+  return 0;
 }
 
 // Formulas from page 22 of Hundsdorfer & Verwer (2003).  Interpretation here is
 // to always generate 0.5 x 0.5 non-trivial patch in (0,L) x (0,L) domain.
 PetscErrorCode InitialState(DM da, Vec Y, PetscReal noiselevel, PatternCtx* user) {
-  PetscErrorCode ierr;
   DMDALocalInfo    info;
   PetscInt         i,j;
   PetscReal        sx,sy;
@@ -151,16 +152,16 @@ PetscErrorCode InitialState(DM da, Vec Y, PetscReal noiselevel, PatternCtx* user
   DMDACoor2d       **aC;
   Field            **aY;
 
-  ierr = VecSet(Y,0.0); CHKERRQ(ierr);
+  PetscCall(VecSet(Y,0.0));
   if (noiselevel > 0.0) {
       // noise added to usual initial condition is uniform on [0,noiselevel],
       //     independently for each location and component
-      ierr = VecSetRandom(Y,NULL); CHKERRQ(ierr);
-      ierr = VecScale(Y,noiselevel); CHKERRQ(ierr);
+      PetscCall(VecSetRandom(Y,NULL));
+      PetscCall(VecScale(Y,noiselevel));
   }
-  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-  ierr = DMDAGetCoordinateArray(da,&aC); CHKERRQ(ierr);
-  ierr = DMDAVecGetArray(da,Y,&aY); CHKERRQ(ierr);
+  PetscCall(DMDAGetLocalInfo(da,&info));
+  PetscCall(DMDAGetCoordinateArray(da,&aC));
+  PetscCall(DMDAVecGetArray(da,Y,&aY));
   for (j = info.ys; j < info.ys+info.ym; j++) {
     for (i = info.xs; i < info.xs+info.xm; i++) {
       if ((aC[j][i].x >= ledge) && (aC[j][i].x <= redge)
@@ -172,8 +173,8 @@ PetscErrorCode InitialState(DM da, Vec Y, PetscReal noiselevel, PatternCtx* user
       aY[j][i].u += 1.0 - 2.0 * aY[j][i].v;
     }
   }
-  ierr = DMDAVecRestoreArray(da,Y,&aY); CHKERRQ(ierr);
-  ierr = DMDARestoreCoordinateArray(da,&aC); CHKERRQ(ierr);
+  PetscCall(DMDAVecRestoreArray(da,Y,&aY));
+  PetscCall(DMDARestoreCoordinateArray(da,&aC));
   return 0;
 }
 
@@ -201,7 +202,6 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info,
 PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info,
                                     PetscReal t, Field **aY,
                                     Mat J, Mat P, PatternCtx *user) {
-    PetscErrorCode ierr;
     PetscInt    i, j;
     PetscReal   v[2], uv, v2;
     MatStencil  col[2],row;
@@ -217,20 +217,20 @@ PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info,
             row.c = 0;  col[0].c = 0;  col[1].c = 1;
             v[0] = - v2 - user->phi;
             v[1] = - 2.0 * uv;
-            ierr = MatSetValuesStencil(P,1,&row,2,col,v,INSERT_VALUES); CHKERRQ(ierr);
+            PetscCall(MatSetValuesStencil(P,1,&row,2,col,v,INSERT_VALUES));
             // v equation
             row.c = 1;  col[0].c = 0;  col[1].c = 1;
             v[0] = v2;
             v[1] = 2.0 * uv - (user->phi + user->kappa);
-            ierr = MatSetValuesStencil(P,1,&row,2,col,v,INSERT_VALUES); CHKERRQ(ierr);
+            PetscCall(MatSetValuesStencil(P,1,&row,2,col,v,INSERT_VALUES));
         }
     }
 
-    ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-    ierr = MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    PetscCall(MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY));
     if (J != P) {
-        ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-        ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+        PetscCall(MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY));
+        PetscCall(MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY));
     }
     return 0;
 }
@@ -275,7 +275,6 @@ PetscErrorCode FormIJacobianLocal(DMDALocalInfo *info,
                    PetscReal t, Field **aY, Field **aYdot,
                    PetscReal shift, Mat J, Mat P,
                    PatternCtx *user) {
-    PetscErrorCode ierr;
     PetscInt         i, j, s, c;
     const PetscReal  h = user->L / (PetscReal)(info->mx),
                      Cu = user->Du / (6.0 * h * h),
@@ -283,7 +282,7 @@ PetscErrorCode FormIJacobianLocal(DMDALocalInfo *info,
     PetscReal        val[9], CC;
     MatStencil       col[9], row;
 
-    ierr = MatZeroEntries(P); CHKERRQ(ierr);  // workaround to address PETSc issue #734
+    PetscCall(MatZeroEntries(P));  // workaround to address PETSc issue #734
     user->IJac_called = PETSC_TRUE;
     for (j = info->ys; j < info->ys + info->ym; j++) {
         row.j = j;
@@ -304,18 +303,17 @@ PetscErrorCode FormIJacobianLocal(DMDALocalInfo *info,
                 col[6].i = i-1; col[6].j = j+1;  val[6] = - CC;
                 col[7].i = i+1; col[7].j = j-1;  val[7] = - CC;
                 col[8].i = i+1; col[8].j = j+1;  val[8] = - CC;
-                ierr = MatSetValuesStencil(P,1,&row,9,col,val,INSERT_VALUES); CHKERRQ(ierr);
+                PetscCall(MatSetValuesStencil(P,1,&row,9,col,val,INSERT_VALUES));
             }
         }
     }
 
-    ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-    ierr = MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    PetscCall(MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY));
     if (J != P) {
-        ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-        ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+        PetscCall(MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY));
+        PetscCall(MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY));
     }
     return 0;
 }
 //ENDIJACOBIAN
-
