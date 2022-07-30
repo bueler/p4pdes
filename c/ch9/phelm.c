@@ -61,7 +61,6 @@ extern PetscErrorCode FormObjectiveLocal(DMDALocalInfo*, PetscReal**, PetscReal*
 extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, PetscReal**, PetscReal**, PHelmCtx*);
 
 int main(int argc,char **argv) {
-    PetscErrorCode ierr;
     DM             da;
     SNES           snes;
     Vec            u_initial, u, u_exact;
@@ -74,87 +73,87 @@ int main(int argc,char **argv) {
                    view_f = PETSC_FALSE;
     PetscReal      err;
 
-    ierr = PetscInitialize(&argc,&argv,NULL,help); if (ierr) return ierr;
+    PetscCall(PetscInitialize(&argc,&argv,NULL,help));
 
     user.p = 2.0;
     user.eps = 0.0;
     user.quadpts = 2;
-    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"ph_",
-                  "p-Helmholtz solver options",""); CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-eps",
+    PetscOptionsBegin(PETSC_COMM_WORLD,"ph_",
+                  "p-Helmholtz solver options","");
+    PetscCall(PetscOptionsReal("-eps",
                   "regularization parameter eps",
-                  "phelm.c",user.eps,&(user.eps),NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-exact_init",
+                  "phelm.c",user.eps,&(user.eps),NULL));
+    PetscCall(PetscOptionsBool("-exact_init",
                   "use exact solution to initialize",
-                  "phelm.c",exact_init,&(exact_init),NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-no_objective",
+                  "phelm.c",exact_init,&(exact_init),NULL));
+    PetscCall(PetscOptionsBool("-no_objective",
                   "do not set the objective evaluation function",
-                  "phelm.c",no_objective,&(no_objective),NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-no_gradient",
+                  "phelm.c",no_objective,&(no_objective),NULL));
+    PetscCall(PetscOptionsBool("-no_gradient",
                   "do not set the residual evaluation function",
-                  "phelm.c",no_gradient,&(no_gradient),NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-p",
+                  "phelm.c",no_gradient,&(no_gradient),NULL));
+    PetscCall(PetscOptionsReal("-p",
                   "exponent p > 1",
-                  "phelm.c",user.p,&(user.p),NULL); CHKERRQ(ierr);
+                  "phelm.c",user.p,&(user.p),NULL));
     if (user.p < 1.0) {
          SETERRQ(PETSC_COMM_SELF,1,"p >= 1 required");
     }
     if (user.p == 1.0) {
-        ierr = PetscPrintf(PETSC_COMM_WORLD,
-            "WARNING: well-posedness only known for p > 1\n"); CHKERRQ(ierr);
+        PetscCall(PetscPrintf(PETSC_COMM_WORLD,
+            "WARNING: well-posedness only known for p > 1\n"));
     }
-    ierr = PetscOptionsEnum("-problem",
+    PetscCall(PetscOptionsEnum("-problem",
                   "problem type determines right side f(x,y)",
                   "phelm.c",ProblemTypes,(PetscEnum)problem,(PetscEnum*)&problem,
-                  NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsInt("-quadpts",
+                  NULL));
+    PetscCall(PetscOptionsInt("-quadpts",
                   "number n of quadrature points in each direction (= 1,2,3 only)",
-                  "phelm.c",user.quadpts,&(user.quadpts),NULL); CHKERRQ(ierr);
+                  "phelm.c",user.quadpts,&(user.quadpts),NULL));
     if ((user.quadpts < 1) || (user.quadpts > 3)) {
         SETERRQ(PETSC_COMM_SELF,3,"quadrature points n=1,2,3 only");
     }
-    ierr = PetscOptionsBool("-view_f",
+    PetscCall(PetscOptionsBool("-view_f",
                   "view right-hand side to STDOUT",
-                  "phelm.c",view_f,&(view_f),NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+                  "phelm.c",view_f,&(view_f),NULL));
+    PetscOptionsEnd();
 
-    ierr = DMDACreate2d(PETSC_COMM_WORLD,
+    PetscCall(DMDACreate2d(PETSC_COMM_WORLD,
            DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_BOX,
-           2,2,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&da); CHKERRQ(ierr);
-    ierr = DMSetFromOptions(da); CHKERRQ(ierr);
-    ierr = DMSetUp(da); CHKERRQ(ierr);
-    ierr = DMSetApplicationContext(da,&user);CHKERRQ(ierr);
-    ierr = DMDASetUniformCoordinates(da,0.0,1.0,0.0,1.0,-1.0,-1.0); CHKERRQ(ierr);
-    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+           2,2,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&da));
+    PetscCall(DMSetFromOptions(da));
+    PetscCall(DMSetUp(da));
+    PetscCall(DMSetApplicationContext(da,&user));
+    PetscCall(DMDASetUniformCoordinates(da,0.0,1.0,0.0,1.0,-1.0,-1.0));
+    PetscCall(DMDAGetLocalInfo(da,&info));
 
-    ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
-    ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
+    PetscCall(SNESCreate(PETSC_COMM_WORLD,&snes));
+    PetscCall(SNESSetDM(snes,da));
     if (!no_objective) {
-        ierr = DMDASNESSetObjectiveLocal(da,
-             (DMDASNESObjective)FormObjectiveLocal,&user); CHKERRQ(ierr);
+        PetscCall(DMDASNESSetObjectiveLocal(da,
+             (DMDASNESObjective)FormObjectiveLocal,&user));
     }
     if (no_gradient) {
         // why isn't this the default?  why no programmatic way to set?
-        ierr = PetscOptionsSetValue(NULL,"-snes_fd_function_eps","0.0"); CHKERRQ(ierr);
+        PetscCall(PetscOptionsSetValue(NULL,"-snes_fd_function_eps","0.0"));
     } else {
-        ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
-             (DMDASNESFunction)FormFunctionLocal,&user); CHKERRQ(ierr);
+        PetscCall(DMDASNESSetFunctionLocal(da,INSERT_VALUES,
+             (DMDASNESFunction)FormFunctionLocal,&user));
     }
-    ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
+    PetscCall(SNESSetFromOptions(snes));
 
     // set initial iterate and right-hand side
-    ierr = DMCreateGlobalVector(da,&u_initial);CHKERRQ(ierr);
-    ierr = VecSet(u_initial,0.5); CHKERRQ(ierr);
+    PetscCall(DMCreateGlobalVector(da,&u_initial));
+    PetscCall(VecSet(u_initial,0.5));
     switch (problem) {
         case CONSTANT:
             if (exact_init) {
-                ierr = VecSet(u_initial,1.0); CHKERRQ(ierr);
+                PetscCall(VecSet(u_initial,1.0));
             }
             user.f = &f_constant;
             break;
         case COSINES:
             if (exact_init) {
-                ierr = GetVecFromFunction(&info,u_initial,&u_exact_cosines,&user); CHKERRQ(ierr);
+                PetscCall(GetVecFromFunction(&info,u_initial,&u_exact_cosines,&user));
             }
             user.f = &f_cosines;
             break;
@@ -165,56 +164,57 @@ int main(int argc,char **argv) {
     // optionally view right-hand-side on initial grid
     if (view_f) {
         Vec vf;
-        ierr = VecDuplicate(u_initial,&vf); CHKERRQ(ierr);
+        PetscCall(VecDuplicate(u_initial,&vf));
         switch (problem) {
             case CONSTANT:
-                ierr = VecSet(vf,1.0); CHKERRQ(ierr);
+                PetscCall(VecSet(vf,1.0));
                 break;
             case COSINES:
-                ierr = GetVecFromFunction(&info,vf,&f_cosines,&user); CHKERRQ(ierr);
+                PetscCall(GetVecFromFunction(&info,vf,&f_cosines,&user));
                 break;
         }
-        ierr = VecView(vf,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
+        PetscCall(VecView(vf,PETSC_VIEWER_STDOUT_WORLD));
         VecDestroy(&vf);
     }
 
     // solve and clean up
-    ierr = SNESSolve(snes,NULL,u_initial); CHKERRQ(ierr);
-    ierr = VecDestroy(&u_initial); CHKERRQ(ierr);
-    ierr = DMDestroy(&da); CHKERRQ(ierr);
-    ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr);
-    ierr = SNESGetDM(snes,&da); CHKERRQ(ierr);
-    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+    PetscCall(SNESSolve(snes,NULL,u_initial));
+    PetscCall(VecDestroy(&u_initial));
+    PetscCall(DMDestroy(&da));
+    PetscCall(SNESGetSolution(snes,&u));
+    PetscCall(SNESGetDM(snes,&da));
+    PetscCall(DMDAGetLocalInfo(da,&info));
 
     // evaluate numerical error
-    ierr = VecDuplicate(u,&u_exact); CHKERRQ(ierr);
+    PetscCall(VecDuplicate(u,&u_exact));
     switch (problem) {
         case CONSTANT:
-            ierr = VecSet(u_exact,1.0); CHKERRQ(ierr);
+            PetscCall(VecSet(u_exact,1.0));
             break;
         case COSINES:
-            ierr = GetVecFromFunction(&info,u_exact,&u_exact_cosines,&user); CHKERRQ(ierr);
+            PetscCall(GetVecFromFunction(&info,u_exact,&u_exact_cosines,&user));
             break;
     }
-    ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
-    ierr = VecNorm(u,NORM_INFINITY,&err); CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,
+    PetscCall(VecAXPY(u,-1.0,u_exact));    // u <- u + (-1.0) uexact
+    PetscCall(VecNorm(u,NORM_INFINITY,&err));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,
         "done on %d x %d grid with p=%.3f ...\n"
         "  numerical error:  |u-u_exact|_inf = %.3e\n",
-        info.mx,info.my,user.p,err); CHKERRQ(ierr);
+        info.mx,info.my,user.p,err));
 
-    VecDestroy(&u_exact);  SNESDestroy(&snes);
-    return PetscFinalize();
+    PetscCall(VecDestroy(&u_exact));
+    PetscCall(SNESDestroy(&snes));
+    PetscCall(PetscFinalize());
+    return 0;
 }
 
 PetscErrorCode GetVecFromFunction(DMDALocalInfo *info, Vec w,
          PetscReal (*fcn)(PetscReal, PetscReal, PetscReal, PetscReal),
          PHelmCtx *user) {
-    PetscErrorCode  ierr;
     const PetscReal hx = 1.0 / (info->mx - 1), hy = 1.0 / (info->my - 1);
     PetscReal       x, y, **aw;
     PetscInt        i, j;
-    ierr = DMDAVecGetArray(info->da,w,&aw); CHKERRQ(ierr);
+    PetscCall(DMDAVecGetArray(info->da,w,&aw));
     for (j = info->ys; j < info->ys + info->ym; j++) {
         y = j * hy;
         for (i = info->xs; i < info->xs + info->xm; i++) {
@@ -222,7 +222,7 @@ PetscErrorCode GetVecFromFunction(DMDALocalInfo *info, Vec w,
             aw[j][i] = (*fcn)(x,y,user->p,user->eps);
         }
     }
-    ierr = DMDAVecRestoreArray(info->da,w,&aw); CHKERRQ(ierr);
+    PetscCall(DMDAVecRestoreArray(info->da,w,&aw));
     return 0;
 }
 
@@ -298,7 +298,6 @@ static PetscReal ObjIntegrandRef(DMDALocalInfo *info,
 
 PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **au,
                                   PetscReal *obj, PHelmCtx *user) {
-  PetscErrorCode  ierr;
   const PetscReal hx = 1.0 / (info->mx-1),  hy = 1.0 / (info->my-1);
   const Quad1D    q = gausslegendre[user->quadpts-1];
   PetscReal       x, y, lobj = 0.0;
@@ -331,9 +330,9 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info, PetscReal **au,
       }
   }
   lobj *= hx * hy / 4.0;  // from change of variables formula
-  ierr = PetscObjectGetComm((PetscObject)(info->da),&com); CHKERRQ(ierr);
-  ierr = MPI_Allreduce(&lobj,obj,1,MPIU_REAL,MPIU_SUM,com); CHKERRQ(ierr);
-  ierr = PetscLogFlops(129*info->xm*info->ym); CHKERRQ(ierr);
+  PetscCall(PetscObjectGetComm((PetscObject)(info->da),&com));
+  PetscCall(MPI_Allreduce(&lobj,obj,1,MPIU_REAL,MPIU_SUM,com));
+  PetscCall(PetscLogFlops(129*info->xm*info->ym));
   return 0;
 }
 //ENDOBJECTIVE
@@ -352,7 +351,6 @@ static PetscReal IntegrandRef(DMDALocalInfo *info, PetscInt L,
 
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal **au,
                                  PetscReal **FF, PHelmCtx *user) {
-  PetscErrorCode ierr;
   const PetscReal hx = 1.0 / (info->mx-1),  hy = 1.0 / (info->my-1);
   const Quad1D    q = gausslegendre[user->quadpts-1];
   const PetscInt  li[4] = {0,-1,-1,0},  lj[4] = {0,0,-1,-1};
@@ -399,8 +397,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal **au,
           }
       }
   }
-  ierr = PetscLogFlops((5+q.n*q.n*149)*(info->xm+1)*(info->ym+1)); CHKERRQ(ierr);
+  PetscCall(PetscLogFlops((5+q.n*q.n*149)*(info->xm+1)*(info->ym+1)));
   return 0;
 }
 //ENDFUNCTION
-

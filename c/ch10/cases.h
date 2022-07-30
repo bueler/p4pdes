@@ -115,4 +115,3 @@ PetscReal gD_koch(PetscReal x, PetscReal y) {
 }
 
 #endif
-

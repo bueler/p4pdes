@@ -13,99 +13,95 @@ PetscErrorCode UMInitialize(UM *mesh) {
 }
 
 PetscErrorCode UMDestroy(UM *mesh) {
-    PetscErrorCode ierr;
-    ierr = VecDestroy(&(mesh->loc)); CHKERRQ(ierr);
-    ierr = ISDestroy(&(mesh->e)); CHKERRQ(ierr);
-    ierr = ISDestroy(&(mesh->bf)); CHKERRQ(ierr);
-    ierr = ISDestroy(&(mesh->ns)); CHKERRQ(ierr);
+    PetscCall(VecDestroy(&(mesh->loc)));
+    PetscCall(ISDestroy(&(mesh->e)));
+    PetscCall(ISDestroy(&(mesh->bf)));
+    PetscCall(ISDestroy(&(mesh->ns)));
     return 0;
 }
 
 PetscErrorCode UMViewASCII(UM *mesh, PetscViewer viewer) {
-    PetscErrorCode ierr;
     PetscInt        n, k;
     const Node      *aloc;
     const PetscInt  *ae, *abf, *ans;
 
-    ierr = PetscViewerASCIIPushSynchronized(viewer); CHKERRQ(ierr);
+    PetscCall(PetscViewerASCIIPushSynchronized(viewer));
     if (mesh->loc && (mesh->N > 0)) {
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%d nodes at (x,y) coordinates:\n",mesh->N); CHKERRQ(ierr);
-        ierr = VecGetArrayRead(mesh->loc,(const PetscReal **)&aloc); CHKERRQ(ierr);
+        PetscCall(PetscViewerASCIISynchronizedPrintf(viewer,"%d nodes at (x,y) coordinates:\n",mesh->N));
+        PetscCall(VecGetArrayRead(mesh->loc,(const PetscReal **)&aloc));
         for (n = 0; n < mesh->N; n++) {
-            ierr = PetscViewerASCIISynchronizedPrintf(viewer,"    %3d : (%g,%g)\n",
-                               n,aloc[n].x,aloc[n].y); CHKERRQ(ierr);
+            PetscCall(PetscViewerASCIISynchronizedPrintf(viewer,"    %3d : (%g,%g)\n",
+                               n,aloc[n].x,aloc[n].y));
         }
-        ierr = VecRestoreArrayRead(mesh->loc,(const PetscReal **)&aloc); CHKERRQ(ierr);
+        PetscCall(VecRestoreArrayRead(mesh->loc,(const PetscReal **)&aloc));
     } else {
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"node coordinates empty or unallocated\n"); CHKERRQ(ierr);
+        PetscCall(PetscViewerASCIISynchronizedPrintf(viewer,"node coordinates empty or unallocated\n"));
     }
     if (mesh->e && (mesh->K > 0)) {
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%d elements:\n",mesh->K); CHKERRQ(ierr);
-        ierr = ISGetIndices(mesh->e,&ae); CHKERRQ(ierr);
+        PetscCall(PetscViewerASCIISynchronizedPrintf(viewer,"%d elements:\n",mesh->K));
+        PetscCall(ISGetIndices(mesh->e,&ae));
         for (k = 0; k < mesh->K; k++) {
-            ierr = PetscPrintf(PETSC_COMM_WORLD,"    %3d : %3d %3d %3d\n",
-                               k,ae[3*k+0],ae[3*k+1],ae[3*k+2]); CHKERRQ(ierr);
+            PetscCall(PetscPrintf(PETSC_COMM_WORLD,"    %3d : %3d %3d %3d\n",
+                               k,ae[3*k+0],ae[3*k+1],ae[3*k+2]));
         }
-        ierr = ISRestoreIndices(mesh->e,&ae); CHKERRQ(ierr);
+        PetscCall(ISRestoreIndices(mesh->e,&ae));
     } else {
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"element index triples empty or unallocated\n"); CHKERRQ(ierr);
+        PetscCall(PetscViewerASCIISynchronizedPrintf(viewer,"element index triples empty or unallocated\n"));
     }
     if (mesh->bf && (mesh->N > 0)) {
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%d boundary flags at nodes (0 = interior, 1 = boundary, 2 = Dirichlet):\n",mesh->N); CHKERRQ(ierr);
-        ierr = ISGetIndices(mesh->bf,&abf); CHKERRQ(ierr);
+        PetscCall(PetscViewerASCIISynchronizedPrintf(viewer,"%d boundary flags at nodes (0 = interior, 1 = boundary, 2 = Dirichlet):\n",mesh->N));
+        PetscCall(ISGetIndices(mesh->bf,&abf));
         for (n = 0; n < mesh->N; n++) {
-            ierr = PetscViewerASCIISynchronizedPrintf(viewer,"    %3d : %1d\n",
-                               n,abf[n]); CHKERRQ(ierr);
+            PetscCall(PetscViewerASCIISynchronizedPrintf(viewer,"    %3d : %1d\n",
+                               n,abf[n]));
         }
-        ierr = ISRestoreIndices(mesh->bf,&abf); CHKERRQ(ierr);
+        PetscCall(ISRestoreIndices(mesh->bf,&abf));
     } else {
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"boundary flags empty or unallocated\n"); CHKERRQ(ierr);
+        PetscCall(PetscViewerASCIISynchronizedPrintf(viewer,"boundary flags empty or unallocated\n"));
     }
     if (mesh->ns && (mesh->P > 0)) {
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%d Neumann boundary segments:\n",mesh->P); CHKERRQ(ierr);
-        ierr = ISGetIndices(mesh->ns,&ans); CHKERRQ(ierr);
+        PetscCall(PetscViewerASCIISynchronizedPrintf(viewer,"%d Neumann boundary segments:\n",mesh->P));
+        PetscCall(ISGetIndices(mesh->ns,&ans));
         for (n = 0; n < mesh->P; n++) {
-            ierr = PetscViewerASCIISynchronizedPrintf(viewer,"    %3d : %3d %3d\n",
-                               n,ans[2*n+0],ans[2*n+1]); CHKERRQ(ierr);
+            PetscCall(PetscViewerASCIISynchronizedPrintf(viewer,"    %3d : %3d %3d\n",
+                               n,ans[2*n+0],ans[2*n+1]));
         }
-        ierr = ISRestoreIndices(mesh->ns,&ans); CHKERRQ(ierr);
+        PetscCall(ISRestoreIndices(mesh->ns,&ans));
     } else {
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"Neumann boundary segments empty or unallocated\n"); CHKERRQ(ierr);
+        PetscCall(PetscViewerASCIISynchronizedPrintf(viewer,"Neumann boundary segments empty or unallocated\n"));
     }
-    ierr = PetscViewerASCIIPopSynchronized(viewer); CHKERRQ(ierr);
+    PetscCall(PetscViewerASCIIPopSynchronized(viewer));
     return 0;
 }
 
 
 PetscErrorCode UMViewSolutionBinary(UM *mesh, char *filename, Vec u) {
-    PetscErrorCode ierr;
     PetscInt       Nu;
     PetscViewer viewer;
-    ierr = VecGetSize(u,&Nu); CHKERRQ(ierr);
+    PetscCall(VecGetSize(u,&Nu));
     if (Nu != mesh->N) {
         SETERRQ(PETSC_COMM_SELF,1,
            "incompatible sizes of u (=%d) and number of nodes (=%d)\n",Nu,mesh->N);
     }
-    ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename,FILE_MODE_WRITE,&viewer); CHKERRQ(ierr);
-    ierr = VecView(u,viewer); CHKERRQ(ierr);
-    ierr = PetscViewerDestroy(&viewer); CHKERRQ(ierr);
+    PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename,FILE_MODE_WRITE,&viewer));
+    PetscCall(VecView(u,viewer));
+    PetscCall(PetscViewerDestroy(&viewer));
     return 0;
 }
 
 
 PetscErrorCode UMReadNodes(UM *mesh, char *filename) {
-    PetscErrorCode ierr;
     PetscInt       twoN;
     PetscViewer viewer;
     if (mesh->N > 0) {
         SETERRQ(PETSC_COMM_SELF,1,"nodes already created?\n");
     }
-    ierr = VecCreate(PETSC_COMM_WORLD,&mesh->loc); CHKERRQ(ierr);
-    ierr = VecSetFromOptions(mesh->loc); CHKERRQ(ierr);
-    ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename,FILE_MODE_READ,&viewer); CHKERRQ(ierr);
-    ierr = VecLoad(mesh->loc,viewer); CHKERRQ(ierr);
-    ierr = PetscViewerDestroy(&viewer); CHKERRQ(ierr);
-    ierr = VecGetSize(mesh->loc,&twoN); CHKERRQ(ierr);
+    PetscCall(VecCreate(PETSC_COMM_WORLD,&mesh->loc));
+    PetscCall(VecSetFromOptions(mesh->loc));
+    PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename,FILE_MODE_READ,&viewer));
+    PetscCall(VecLoad(mesh->loc,viewer));
+    PetscCall(PetscViewerDestroy(&viewer));
+    PetscCall(VecGetSize(mesh->loc,&twoN));
     if (twoN % 2 != 0) {
         SETERRQ(PETSC_COMM_SELF,2,"node locations loaded from %s are not N pairs\n",filename);
     }
@@ -115,7 +111,6 @@ PetscErrorCode UMReadNodes(UM *mesh, char *filename) {
 
 
 PetscErrorCode UMCheckElements(UM *mesh) {
-    PetscErrorCode ierr;
     const PetscInt  *ae;
     PetscInt        k, m;
     if ((mesh->K == 0) || (mesh->e == NULL)) {
@@ -126,7 +121,7 @@ PetscErrorCode UMCheckElements(UM *mesh) {
         SETERRQ(PETSC_COMM_SELF,2,
                 "node size unknown so element check impossible; call UMReadNodes() first\n");
     }
-    ierr = ISGetIndices(mesh->e,&ae); CHKERRQ(ierr);
+    PetscCall(ISGetIndices(mesh->e,&ae));
     for (k = 0; k < mesh->K; k++) {
         for (m = 0; m < 3; m++) {
             if ((ae[3*k+m] < 0) || (ae[3*k+m] >= mesh->N)) {
@@ -137,12 +132,11 @@ PetscErrorCode UMCheckElements(UM *mesh) {
         }
         // FIXME: could add check for distinct indices
     }
-    ierr = ISRestoreIndices(mesh->e,&ae); CHKERRQ(ierr);
+    PetscCall(ISRestoreIndices(mesh->e,&ae));
     return 0;
 }
 
 PetscErrorCode UMCheckBoundaryData(UM *mesh) {
-    PetscErrorCode ierr;
     const PetscInt  *ans, *abf;
     PetscInt        n, m;
     if (mesh->N == 0) {
@@ -157,7 +151,7 @@ PetscErrorCode UMCheckBoundaryData(UM *mesh) {
         SETERRQ(PETSC_COMM_SELF,3,
                 "inconsistent data for Neumann boundary segments\n");
     }
-    ierr = ISGetIndices(mesh->bf,&abf); CHKERRQ(ierr);
+    PetscCall(ISGetIndices(mesh->bf,&abf));
     for (n = 0; n < mesh->N; n++) {
         switch (abf[n]) {
             case 0 :
@@ -170,9 +164,9 @@ PetscErrorCode UMCheckBoundaryData(UM *mesh) {
                    n,abf[n]);
         }
     }
-    ierr = ISRestoreIndices(mesh->bf,&abf); CHKERRQ(ierr);
+    PetscCall(ISRestoreIndices(mesh->bf,&abf));
     if (mesh->P > 0) {
-        ierr = ISGetIndices(mesh->ns,&ans); CHKERRQ(ierr);
+        PetscCall(ISGetIndices(mesh->ns,&ans));
         for (n = 0; n < mesh->P; n++) {
             for (m = 0; m < 2; m++) {
                 if ((ans[2*n+m] < 0) || (ans[2*n+m] >= mesh->N)) {
@@ -182,13 +176,12 @@ PetscErrorCode UMCheckBoundaryData(UM *mesh) {
                 }
             }
         }
-        ierr = ISRestoreIndices(mesh->ns,&ans); CHKERRQ(ierr);
+        PetscCall(ISRestoreIndices(mesh->ns,&ans));
     }
     return 0;
 }
 
 PetscErrorCode UMReadISs(UM *mesh, char *filename) {
-    PetscErrorCode ierr;
     PetscViewer  viewer;
     PetscInt     n_bf;
     if ((!mesh->loc) || (mesh->N == 0)) {
@@ -199,20 +192,20 @@ PetscErrorCode UMReadISs(UM *mesh, char *filename) {
         SETERRQ(PETSC_COMM_SELF,1,
                 "elements, boundary flags, Neumann boundary segments already created? ... stopping\n");
     }
-    ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename,FILE_MODE_READ,&viewer); CHKERRQ(ierr);
+    PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename,FILE_MODE_READ,&viewer));
     // create and load e
-    ierr = ISCreate(PETSC_COMM_WORLD,&(mesh->e)); CHKERRQ(ierr);
-    ierr = ISLoad(mesh->e,viewer); CHKERRQ(ierr);
-    ierr = ISGetSize(mesh->e,&(mesh->K)); CHKERRQ(ierr);
+    PetscCall(ISCreate(PETSC_COMM_WORLD,&(mesh->e)));
+    PetscCall(ISLoad(mesh->e,viewer));
+    PetscCall(ISGetSize(mesh->e,&(mesh->K)));
     if (mesh->K % 3 != 0) {
         SETERRQ(PETSC_COMM_SELF,3,
                  "IS e loaded from %s is wrong size for list of element triples\n",filename);
     }
     mesh->K /= 3;
     // create and load bf
-    ierr = ISCreate(PETSC_COMM_WORLD,&(mesh->bf)); CHKERRQ(ierr);
-    ierr = ISLoad(mesh->bf,viewer); CHKERRQ(ierr);
-    ierr = ISGetSize(mesh->bf,&n_bf); CHKERRQ(ierr);
+    PetscCall(ISCreate(PETSC_COMM_WORLD,&(mesh->bf)));
+    PetscCall(ISLoad(mesh->bf,viewer));
+    PetscCall(ISGetSize(mesh->bf,&n_bf));
     if (n_bf != mesh->N) {
         SETERRQ(PETSC_COMM_SELF,4,
                  "IS bf loaded from %s is wrong size for list of boundary flags\n",filename);
@@ -220,33 +213,32 @@ PetscErrorCode UMReadISs(UM *mesh, char *filename) {
     // FIXME  seems there is no way to tell if file is empty at this point
     // create and load ns last ... may *start with a negative value* in which case set P = 0
     const PetscInt *ans;
-    ierr = ISCreate(PETSC_COMM_WORLD,&(mesh->ns)); CHKERRQ(ierr);
-    ierr = ISLoad(mesh->ns,viewer); CHKERRQ(ierr);
-    ierr = ISGetIndices(mesh->ns,&ans); CHKERRQ(ierr);
+    PetscCall(ISCreate(PETSC_COMM_WORLD,&(mesh->ns)));
+    PetscCall(ISLoad(mesh->ns,viewer));
+    PetscCall(ISGetIndices(mesh->ns,&ans));
     if (ans[0] < 0) {
         ISDestroy(&(mesh->ns));
         mesh->ns = NULL;
         mesh->P = 0;
     } else {
-        ierr = ISGetSize(mesh->ns,&(mesh->P)); CHKERRQ(ierr);
+        PetscCall(ISGetSize(mesh->ns,&(mesh->P)));
         if (mesh->P % 2 != 0) {
             SETERRQ(PETSC_COMM_SELF,4,
                      "IS s loaded from %s is wrong size for list of Neumann boundary segment pairs\n",filename);
         }
         mesh->P /= 2;
     }
-    ierr = PetscViewerDestroy(&viewer); CHKERRQ(ierr);
+    PetscCall(PetscViewerDestroy(&viewer));
 
     // check that mesh is complete now
-    ierr = UMCheckElements(mesh); CHKERRQ(ierr);
-    ierr = UMCheckBoundaryData(mesh); CHKERRQ(ierr);
+    PetscCall(UMCheckElements(mesh));
+    PetscCall(UMCheckBoundaryData(mesh));
     return 0;
 }
 
 
 PetscErrorCode UMStats(UM *mesh, PetscReal *maxh, PetscReal *meanh,
                        PetscReal *maxa, PetscReal *meana) {
-    PetscErrorCode ierr;
     const PetscInt *ae;
     const Node     *aloc;
     PetscInt       k;
@@ -260,8 +252,8 @@ PetscErrorCode UMStats(UM *mesh, PetscReal *maxh, PetscReal *meanh,
         SETERRQ(PETSC_COMM_SELF,2,
                 "node size unknown so element check impossible; call UMReadNodes() first\n");
     }
-    ierr = UMGetNodeCoordArrayRead(mesh,&aloc); CHKERRQ(ierr);
-    ierr = ISGetIndices(mesh->e,&ae); CHKERRQ(ierr);
+    PetscCall(UMGetNodeCoordArrayRead(mesh,&aloc));
+    PetscCall(ISGetIndices(mesh->e,&ae));
     for (k = 0; k < mesh->K; k++) {
         x[0] = aloc[ae[3*k]].x;
         y[0] = aloc[ae[3*k]].y;
@@ -283,8 +275,8 @@ PetscErrorCode UMStats(UM *mesh, PetscReal *maxh, PetscReal *meanh,
         Maxa = PetscMax(Maxa,a);
         Suma += a;
     }
-    ierr = ISRestoreIndices(mesh->e,&ae); CHKERRQ(ierr);
-    ierr = UMRestoreNodeCoordArrayRead(mesh,&aloc); CHKERRQ(ierr);
+    PetscCall(ISRestoreIndices(mesh->e,&ae));
+    PetscCall(UMRestoreNodeCoordArrayRead(mesh,&aloc));
     if (maxh)  *maxh = Maxh;
     if (maxa)  *maxa = Maxa;
     if (meanh)  *meanh = Sumh / mesh->K;
@@ -293,21 +285,18 @@ PetscErrorCode UMStats(UM *mesh, PetscReal *maxh, PetscReal *meanh,
 }
 
 PetscErrorCode UMGetNodeCoordArrayRead(UM *mesh, const Node **xy) {
-    PetscErrorCode ierr;
     if ((!mesh->loc) || (mesh->N == 0)) {
         SETERRQ(PETSC_COMM_SELF,1,"node coordinates not created ... stopping\n");
     }
-    ierr = VecGetArrayRead(mesh->loc,(const PetscReal **)xy); CHKERRQ(ierr);
+    PetscCall(VecGetArrayRead(mesh->loc,(const PetscReal **)xy));
     return 0;
 }
 
 
 PetscErrorCode UMRestoreNodeCoordArrayRead(UM *mesh, const Node **xy) {
-    PetscErrorCode ierr;
     if ((!mesh->loc) || (mesh->N == 0)) {
         SETERRQ(PETSC_COMM_SELF,1,"node coordinates not created ... stopping\n");
     }
-    ierr = VecRestoreArrayRead(mesh->loc,(const PetscReal **)xy); CHKERRQ(ierr);
+    PetscCall(VecRestoreArrayRead(mesh->loc,(const PetscReal **)xy));
     return 0;
 }
-

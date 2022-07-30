@@ -51,7 +51,6 @@ extern PetscErrorCode FormPicard(SNES, Vec, Mat, Mat, void*);
 extern PetscErrorCode PreallocateAndSetNonzeros(Mat, unfemCtx*);
 
 int main(int argc,char **argv) {
-    PetscErrorCode ierr;
     PetscMPIInt size;
     PetscBool   viewmesh = PETSC_FALSE,
                 viewsoln = PETSC_FALSE,
@@ -71,50 +70,50 @@ int main(int argc,char **argv) {
     Vec         r, u, uexact;
     PetscReal   err, h_max;
 
-    ierr = PetscInitialize(&argc,&argv,NULL,help); if (ierr) return ierr;
+    PetscCall(PetscInitialize(&argc,&argv,NULL,help));
 
-    ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size); CHKERRQ(ierr);
+    PetscCall(MPI_Comm_size(PETSC_COMM_WORLD,&size));
     if (size != 1) {
         SETERRQ(PETSC_COMM_SELF,1,"unfem only works on one MPI process");
     }
 
-    ierr = PetscLogStageRegister("Read mesh      ", &user.readstage); CHKERRQ(ierr);  //STRIP
-    ierr = PetscLogStageRegister("Set-up         ", &user.setupstage); CHKERRQ(ierr);  //STRIP
-    ierr = PetscLogStageRegister("Solver         ", &user.solverstage); CHKERRQ(ierr);  //STRIP
-    ierr = PetscLogStageRegister("Residual eval  ", &user.resstage); CHKERRQ(ierr);  //STRIP
-    ierr = PetscLogStageRegister("Jacobian eval  ", &user.jacstage); CHKERRQ(ierr);  //STRIP
+    PetscCall(PetscLogStageRegister("Read mesh      ", &user.readstage));  //STRIP
+    PetscCall(PetscLogStageRegister("Set-up         ", &user.setupstage));  //STRIP
+    PetscCall(PetscLogStageRegister("Solver         ", &user.solverstage));  //STRIP
+    PetscCall(PetscLogStageRegister("Residual eval  ", &user.resstage));  //STRIP
+    PetscCall(PetscLogStageRegister("Jacobian eval  ", &user.jacstage));  //STRIP
 
     user.quaddegree = 1;
     user.solncase = 0;
-    ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "un_", "options for unfem", ""); CHKERRQ(ierr);
-    ierr = PetscOptionsInt("-case",
+    PetscOptionsBegin(PETSC_COMM_WORLD, "un_", "options for unfem", "");
+    PetscCall(PetscOptionsInt("-case",
            "exact solution cases: 0=linear, 1=nonlinear, 2=nonhomoNeumann, 3=chapter3, 4=koch",
-           "unfem.c",user.solncase,&(user.solncase),NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsString("-gamg_save_pint_binary",
+           "unfem.c",user.solncase,&(user.solncase),NULL));
+    PetscCall(PetscOptionsString("-gamg_save_pint_binary",
            "filename under which to save interpolation operator (Mat) in PETSc binary format",
-           "unfem.c",pintname,pintname,sizeof(pintname),&savepintbinary); CHKERRQ(ierr);
-    ierr = PetscOptionsString("-gamg_save_pint_matlab",
+           "unfem.c",pintname,pintname,sizeof(pintname),&savepintbinary));
+    PetscCall(PetscOptionsString("-gamg_save_pint_matlab",
            "filename under which to save interpolation operator (Mat) in ascii Matlab format",
-           "unfem.c",pintname,pintname,sizeof(pintname),&savepintmatlab); CHKERRQ(ierr);
-    ierr = PetscOptionsInt("-gamg_save_pint_level",
+           "unfem.c",pintname,pintname,sizeof(pintname),&savepintmatlab));
+    PetscCall(PetscOptionsInt("-gamg_save_pint_level",
            "saved interpolation operator is between L-1 and L where this option sets L; defaults to finest levels",
-           "unfem.c",savepintlevel,&savepintlevel,NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsString("-mesh",
+           "unfem.c",savepintlevel,&savepintlevel,NULL));
+    PetscCall(PetscOptionsString("-mesh",
            "file name root of mesh stored in PETSc binary with .vec,.is extensions",
-           "unfem.c",root,root,sizeof(root),NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-noprealloc",
+           "unfem.c",root,root,sizeof(root),NULL));
+    PetscCall(PetscOptionsBool("-noprealloc",
            "do not perform preallocation before matrix assembly",
-           "unfem.c",noprealloc,&noprealloc,NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsInt("-quaddegree",
+           "unfem.c",noprealloc,&noprealloc,NULL));
+    PetscCall(PetscOptionsInt("-quaddegree",
            "quadrature degree (1,2,3)",
-           "unfem.c",user.quaddegree,&(user.quaddegree),NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-view_mesh",
+           "unfem.c",user.quaddegree,&(user.quaddegree),NULL));
+    PetscCall(PetscOptionsBool("-view_mesh",
            "view loaded mesh (nodes and elements) at stdout",
-           "unfem.c",viewmesh,&viewmesh,NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-view_solution",
+           "unfem.c",viewmesh,&viewmesh,NULL));
+    PetscCall(PetscOptionsBool("-view_solution",
            "view solution u(x,y) to binary file; uses root name of mesh plus .soln\nsee petsc2tricontour.py to view graphically",
-           "unfem.c",viewsoln,&viewsoln,NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+           "unfem.c",viewsoln,&viewsoln,NULL));
+    PetscOptionsEnd();
 
     // determine filenames
     if (strlen(root) == 0) {
@@ -161,68 +160,68 @@ int main(int argc,char **argv) {
 
     PetscLogStagePush(user.readstage);
     // read mesh object of type UM
-    ierr = UMInitialize(&mesh); CHKERRQ(ierr);
-    ierr = UMReadNodes(&mesh,nodesname); CHKERRQ(ierr);
-    ierr = UMReadISs(&mesh,issname); CHKERRQ(ierr);
-    ierr = UMStats(&mesh, &h_max, NULL, NULL, NULL); CHKERRQ(ierr);
+    PetscCall(UMInitialize(&mesh));
+    PetscCall(UMReadNodes(&mesh,nodesname));
+    PetscCall(UMReadISs(&mesh,issname));
+    PetscCall(UMStats(&mesh, &h_max, NULL, NULL, NULL));
     user.mesh = &mesh;
     PetscLogStagePop();
 
     if (viewmesh) {
         PetscViewer stdoutviewer;
-        ierr = PetscViewerASCIIGetStdout(PETSC_COMM_WORLD,&stdoutviewer); CHKERRQ(ierr);
-        ierr = UMViewASCII(&mesh,stdoutviewer); CHKERRQ(ierr);
+        PetscCall(PetscViewerASCIIGetStdout(PETSC_COMM_WORLD,&stdoutviewer));
+        PetscCall(UMViewASCII(&mesh,stdoutviewer));
     }
 
     PetscLogStagePush(user.setupstage);
 //STARTMAININITIAL
     // configure Vecs
-    ierr = VecCreate(PETSC_COMM_WORLD,&r); CHKERRQ(ierr);
-    ierr = VecSetSizes(r,PETSC_DECIDE,mesh.N); CHKERRQ(ierr);
-    ierr = VecSetFromOptions(r); CHKERRQ(ierr);
-    ierr = VecDuplicate(r,&u); CHKERRQ(ierr);
-    ierr = VecSet(u,0.0); CHKERRQ(ierr);
+    PetscCall(VecCreate(PETSC_COMM_WORLD,&r));
+    PetscCall(VecSetSizes(r,PETSC_DECIDE,mesh.N));
+    PetscCall(VecSetFromOptions(r));
+    PetscCall(VecDuplicate(r,&u));
+    PetscCall(VecSet(u,0.0));
 
     // configure SNES: reset default KSP and PC
-    ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
-    ierr = SNESSetFunction(snes,r,FormFunction,&user); CHKERRQ(ierr);
-    ierr = SNESGetKSP(snes,&ksp); CHKERRQ(ierr);
-    ierr = KSPSetType(ksp,KSPCG); CHKERRQ(ierr);
-    ierr = KSPGetPC(ksp,&pc); CHKERRQ(ierr);
-    ierr = PCSetType(pc,PCICC); CHKERRQ(ierr);
+    PetscCall(SNESCreate(PETSC_COMM_WORLD,&snes));
+    PetscCall(SNESSetFunction(snes,r,FormFunction,&user));
+    PetscCall(SNESGetKSP(snes,&ksp));
+    PetscCall(KSPSetType(ksp,KSPCG));
+    PetscCall(KSPGetPC(ksp,&pc));
+    PetscCall(PCSetType(pc,PCICC));
 
     // setup matrix for Picard iteration, including preallocation
-    ierr = MatCreate(PETSC_COMM_WORLD,&A); CHKERRQ(ierr);
-    ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,mesh.N,mesh.N); CHKERRQ(ierr);
-    ierr = MatSetFromOptions(A); CHKERRQ(ierr);
-    ierr = MatSetOption(A,MAT_SYMMETRIC,PETSC_TRUE); CHKERRQ(ierr);
+    PetscCall(MatCreate(PETSC_COMM_WORLD,&A));
+    PetscCall(MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,mesh.N,mesh.N));
+    PetscCall(MatSetFromOptions(A));
+    PetscCall(MatSetOption(A,MAT_SYMMETRIC,PETSC_TRUE));
     // Preallocation and setting the nonzero (sparsity) pattern is
     //   recommended; setting the pattern allows finite difference
     //   approximation of the Jacobian using coloring.  Option
     //   -un_noprealloc reveals the poor performance otherwise.
     if (noprealloc) {
-        ierr = MatSetUp(A); CHKERRQ(ierr);
+        PetscCall(MatSetUp(A));
     } else {
-        ierr = PreallocateAndSetNonzeros(A,&user); CHKERRQ(ierr);
+        PetscCall(PreallocateAndSetNonzeros(A,&user));
     }
     // The following call-back is ignored under option -snes_fd or
     //   -snes_fd_color.
-    ierr = SNESSetJacobian(snes,A,A,FormPicard,&user); CHKERRQ(ierr);
-    ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
+    PetscCall(SNESSetJacobian(snes,A,A,FormPicard,&user));
+    PetscCall(SNESSetFromOptions(snes));
     PetscLogStagePop();  //STRIP
 
     // solve
     PetscLogStagePush(user.solverstage);  //STRIP
-    ierr = SNESSolve(snes,NULL,u);CHKERRQ(ierr);
+    PetscCall(SNESSolve(snes,NULL,u));
 //ENDMAININITIAL
     PetscLogStagePop();
 
     // report if PC is GAMG
-    ierr = PCGetType(pc,&pctype); CHKERRQ(ierr);
+    PetscCall(PCGetType(pc,&pctype));
     if (strcmp(pctype,"gamg") == 0) {
-        ierr = PCMGGetLevels(pc,&levels); CHKERRQ(ierr);
-        ierr = PetscPrintf(PETSC_COMM_WORLD,
-               "  PC is GAMG with %d levels\n",levels); CHKERRQ(ierr);
+        PetscCall(PCMGGetLevels(pc,&levels));
+        PetscCall(PetscPrintf(PETSC_COMM_WORLD,
+               "  PC is GAMG with %d levels\n",levels));
     }
 
     // save Pint from GAMG if requested
@@ -241,66 +240,69 @@ int main(int argc,char **argv) {
         if (savepintlevel <= 0) {
             savepintlevel = levels - 1;
         }
-        ierr = PCMGGetInterpolation(pc,savepintlevel,&pint); CHKERRQ(ierr);
+        PetscCall(PCMGGetInterpolation(pc,savepintlevel,&pint));
         if (savepintbinary) {
-            ierr = PetscPrintf(PETSC_COMM_WORLD,
+            PetscCall(PetscPrintf(PETSC_COMM_WORLD,
                "  saving interpolation operator on levels %d->%d in binary format to %s ...\n",
-               savepintlevel-1,savepintlevel,pintname); CHKERRQ(ierr);
-            ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,pintname,FILE_MODE_WRITE,&viewer); CHKERRQ(ierr);
-            ierr = PetscViewerPushFormat(viewer,PETSC_VIEWER_ASCII_MATLAB); CHKERRQ(ierr);
+               savepintlevel-1,savepintlevel,pintname));
+            PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD,pintname,FILE_MODE_WRITE,&viewer));
+            PetscCall(PetscViewerPushFormat(viewer,PETSC_VIEWER_ASCII_MATLAB));
         } else {
-            ierr = PetscPrintf(PETSC_COMM_WORLD,
+            PetscCall(PetscPrintf(PETSC_COMM_WORLD,
                "  saving interpolation operator on levels %d->%d in ascii format to %s ...\n",
-               savepintlevel-1,savepintlevel,pintname); CHKERRQ(ierr);
-            ierr = PetscViewerASCIIOpen(PETSC_COMM_WORLD,pintname,&viewer); CHKERRQ(ierr);
-            ierr = PetscViewerPushFormat(viewer,PETSC_VIEWER_ASCII_MATLAB); CHKERRQ(ierr);
+               savepintlevel-1,savepintlevel,pintname));
+            PetscCall(PetscViewerASCIIOpen(PETSC_COMM_WORLD,pintname,&viewer));
+            PetscCall(PetscViewerPushFormat(viewer,PETSC_VIEWER_ASCII_MATLAB));
         }
-        ierr = MatView(pint,viewer); CHKERRQ(ierr);
+        PetscCall(MatView(pint,viewer));
     }
 
     // if exact solution available, report numerical error
     if (user.uexact_fcn) {
-        ierr = VecDuplicate(r,&uexact); CHKERRQ(ierr);
-        ierr = FillExact(uexact,&user); CHKERRQ(ierr);
-        ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
-        ierr = VecNorm(u,NORM_INFINITY,&err); CHKERRQ(ierr);
-        ierr = PetscPrintf(PETSC_COMM_WORLD,
+        PetscCall(VecDuplicate(r,&uexact));
+        PetscCall(FillExact(uexact,&user));
+        PetscCall(VecAXPY(u,-1.0,uexact));    // u <- u + (-1.0) uexact
+        PetscCall(VecNorm(u,NORM_INFINITY,&err));
+        PetscCall(PetscPrintf(PETSC_COMM_WORLD,
                    "case %d result for N=%d nodes with h = %.3e: |u-u_ex|_inf = %.2e\n",
-                   user.solncase,mesh.N,h_max,err); CHKERRQ(ierr);
+                   user.solncase,mesh.N,h_max,err));
         VecDestroy(&uexact);
     } else {
-        ierr = PetscPrintf(PETSC_COMM_WORLD,
+        PetscCall(PetscPrintf(PETSC_COMM_WORLD,
                    "case %d result for N=%d nodes with h = %.3e ... done\n",
-                   user.solncase,mesh.N,h_max); CHKERRQ(ierr);
+                   user.solncase,mesh.N,h_max));
     }
 
     // save solution in PETSc binary if requested
     if (viewsoln) {
         strcpy(solnname, root);
         strncat(solnname, ".soln", 6);
-        ierr = PetscPrintf(PETSC_COMM_WORLD,
-                   "writing solution in binary format to %s ...\n",solnname); CHKERRQ(ierr);
-        ierr = UMViewSolutionBinary(&mesh,solnname,u); CHKERRQ(ierr);
+        PetscCall(PetscPrintf(PETSC_COMM_WORLD,
+                   "writing solution in binary format to %s ...\n",solnname));
+        PetscCall(UMViewSolutionBinary(&mesh,solnname,u));
     }
 
     // clean-up
-    VecDestroy(&u);  VecDestroy(&r);
-    MatDestroy(&A);  SNESDestroy(&snes);  UMDestroy(&mesh);
-    return PetscFinalize();
+    PetscCall(VecDestroy(&u));
+    PetscCall(VecDestroy(&r));
+    PetscCall(MatDestroy(&A));
+    PetscCall(SNESDestroy(&snes));
+    PetscCall(UMDestroy(&mesh));
+    PetscCall(PetscFinalize());
+    return 0;
 }
 
 PetscErrorCode FillExact(Vec uexact, unfemCtx *ctx) {
-    PetscErrorCode ierr;
     const Node   *aloc;
     PetscReal    *auexact;
     PetscInt     i;
-    ierr = UMGetNodeCoordArrayRead(ctx->mesh,&aloc); CHKERRQ(ierr);
-    ierr = VecGetArray(uexact,&auexact); CHKERRQ(ierr);
+    PetscCall(UMGetNodeCoordArrayRead(ctx->mesh,&aloc));
+    PetscCall(VecGetArray(uexact,&auexact));
     for (i = 0; i < ctx->mesh->N; i++) {
         auexact[i] = ctx->uexact_fcn(aloc[i].x,aloc[i].y);
     }
-    ierr = VecRestoreArray(uexact,&auexact); CHKERRQ(ierr);
-    ierr = UMRestoreNodeCoordArrayRead(ctx->mesh,&aloc); CHKERRQ(ierr);
+    PetscCall(VecRestoreArray(uexact,&auexact));
+    PetscCall(UMRestoreNodeCoordArrayRead(ctx->mesh,&aloc));
     return 0;
 }
 
@@ -310,7 +312,6 @@ PetscReal InnerProd(const PetscReal V[2], const PetscReal W[2]) {
 
 //STARTRESIDUAL
 PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
-    PetscErrorCode ierr;
     unfemCtx         *user = (unfemCtx*)ctx;
     const Quad2DTri  q = symmgauss[user->quaddegree-1];
     const PetscInt   *ae, *ans, *abf, *en;
@@ -322,14 +323,14 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
                      detJ, ls, xmid, ymid, sint, xx, yy, psi, ip, sum;
 
     PetscLogStagePush(user->resstage);  //STRIP
-    ierr = VecSet(F,0.0); CHKERRQ(ierr);
-    ierr = VecGetArray(F,&aF); CHKERRQ(ierr);
-    ierr = UMGetNodeCoordArrayRead(user->mesh,&aloc); CHKERRQ(ierr);
-    ierr = ISGetIndices(user->mesh->bf,&abf); CHKERRQ(ierr);
+    PetscCall(VecSet(F,0.0));
+    PetscCall(VecGetArray(F,&aF));
+    PetscCall(UMGetNodeCoordArrayRead(user->mesh,&aloc));
+    PetscCall(ISGetIndices(user->mesh->bf,&abf));
 
     // Neumann boundary segment contributions (if any)
     if (user->mesh->P > 0) {
-        ierr = ISGetIndices(user->mesh->ns,&ans); CHKERRQ(ierr);
+        PetscCall(ISGetIndices(user->mesh->ns,&ans));
         for (p = 0; p < user->mesh->P; p++) {
             na = ans[2*p+0];  nb = ans[2*p+1];  // end nodes of segment
             dx = aloc[na].x-aloc[nb].x;  dy = aloc[na].y-aloc[nb].y;
@@ -344,12 +345,12 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
             if (abf[nb] != 2)
                 aF[nb] -= sint;
         }
-        ierr = ISRestoreIndices(user->mesh->ns,&ans); CHKERRQ(ierr);
+        PetscCall(ISRestoreIndices(user->mesh->ns,&ans));
     }
 
     // element contributions and Dirichlet node residuals
-    ierr = VecGetArrayRead(u,&au); CHKERRQ(ierr);
-    ierr = ISGetIndices(user->mesh->e,&ae); CHKERRQ(ierr);
+    PetscCall(VecGetArrayRead(u,&au));
+    PetscCall(ISGetIndices(user->mesh->e,&ae));
     for (k = 0; k < user->mesh->K; k++) {
         // element geometry and hat function gradients
         en = ae + 3*k;  // en[0], en[1], en[2] are nodes of element k
@@ -398,11 +399,11 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
         }
     }
 
-    ierr = ISRestoreIndices(user->mesh->e,&ae); CHKERRQ(ierr);
-    ierr = VecRestoreArrayRead(u,&au); CHKERRQ(ierr);
-    ierr = ISRestoreIndices(user->mesh->bf,&abf); CHKERRQ(ierr);
-    ierr = UMRestoreNodeCoordArrayRead(user->mesh,&aloc); CHKERRQ(ierr);
-    ierr = VecRestoreArray(F,&aF); CHKERRQ(ierr);
+    PetscCall(ISRestoreIndices(user->mesh->e,&ae));
+    PetscCall(VecRestoreArrayRead(u,&au));
+    PetscCall(ISRestoreIndices(user->mesh->bf,&abf));
+    PetscCall(UMRestoreNodeCoordArrayRead(user->mesh,&aloc));
+    PetscCall(VecRestoreArray(F,&aF));
     PetscLogStagePop();  //STRIP
     return 0;
 }
@@ -411,7 +412,6 @@ PetscErrorCode FormFunction(SNES snes, Vec u, Vec F, void *ctx) {
 
 //STARTPICARD
 PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
-    PetscErrorCode ierr;
     unfemCtx         *user = (unfemCtx*)ctx;
     const Quad2DTri  q = symmgauss[user->quaddegree-1];
     const PetscInt   *ae, *abf, *en;
@@ -422,17 +422,17 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
     PetscInt         n, k, l, m, r, cr, cv, row[3];
 
     PetscLogStagePush(user->jacstage);  //STRIP
-    ierr = MatZeroEntries(P); CHKERRQ(ierr);
-    ierr = ISGetIndices(user->mesh->bf,&abf); CHKERRQ(ierr);
+    PetscCall(MatZeroEntries(P));
+    PetscCall(ISGetIndices(user->mesh->bf,&abf));
     for (n = 0; n < user->mesh->N; n++) {
         if (abf[n] == 2) {
             v[0] = 1.0;
-            ierr = MatSetValues(P,1,&n,1,&n,v,ADD_VALUES); CHKERRQ(ierr);
+            PetscCall(MatSetValues(P,1,&n,1,&n,v,ADD_VALUES));
         }
     }
-    ierr = ISGetIndices(user->mesh->e,&ae); CHKERRQ(ierr);
-    ierr = VecGetArrayRead(u,&au); CHKERRQ(ierr);
-    ierr = UMGetNodeCoordArrayRead(user->mesh,&aloc); CHKERRQ(ierr);
+    PetscCall(ISGetIndices(user->mesh->e,&ae));
+    PetscCall(VecGetArrayRead(u,&au));
+    PetscCall(UMGetNodeCoordArrayRead(user->mesh,&aloc));
     for (k = 0; k < user->mesh->K; k++) {
         en = ae + 3*k;  // en[0], en[1], en[2] are nodes of element k
         // geometry of element
@@ -474,18 +474,18 @@ PetscErrorCode FormPicard(SNES snes, Vec u, Mat A, Mat P, void *ctx) {
                 }
             }
         }
-        ierr = MatSetValues(P,cr,row,cr,row,v,ADD_VALUES); CHKERRQ(ierr);
+        PetscCall(MatSetValues(P,cr,row,cr,row,v,ADD_VALUES));
     }
-    ierr = ISRestoreIndices(user->mesh->e,&ae); CHKERRQ(ierr);
-    ierr = ISRestoreIndices(user->mesh->bf,&abf); CHKERRQ(ierr);
-    ierr = VecRestoreArrayRead(u,&au); CHKERRQ(ierr);
-    ierr = UMRestoreNodeCoordArrayRead(user->mesh,&aloc); CHKERRQ(ierr);
+    PetscCall(ISRestoreIndices(user->mesh->e,&ae));
+    PetscCall(ISRestoreIndices(user->mesh->bf,&abf));
+    PetscCall(VecRestoreArrayRead(u,&au));
+    PetscCall(UMRestoreNodeCoordArrayRead(user->mesh,&aloc));
 
-    ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-    ierr = MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    PetscCall(MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY));
     if (A != P) {
-        ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-        ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+        PetscCall(MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY));
+        PetscCall(MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY));
     }
     PetscLogStagePop();  //STRIP
     return 0;
@@ -505,16 +505,15 @@ triangles for an interior point, and it is two more than the number of
 incident triangles for Neumann boundary nodes. */
 //STARTPREALLOC
 PetscErrorCode PreallocateAndSetNonzeros(Mat J, unfemCtx *user) {
-    PetscErrorCode ierr;
     const PetscInt  *ae, *abf, *en;
     PetscInt        *nnz, n, k, l, cr, row[3];
     PetscReal       zero = 0.0,
                     v[9] = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
 
     // preallocate: set number of nonzeros per row
-    ierr = ISGetIndices(user->mesh->bf,&abf); CHKERRQ(ierr);
-    ierr = ISGetIndices(user->mesh->e,&ae); CHKERRQ(ierr);
-    ierr = PetscMalloc1(user->mesh->N,&nnz); CHKERRQ(ierr);
+    PetscCall(ISGetIndices(user->mesh->bf,&abf));
+    PetscCall(ISGetIndices(user->mesh->e,&ae));
+    PetscCall(PetscMalloc1(user->mesh->N,&nnz));
     for (n = 0; n < user->mesh->N; n++)
         nnz[n] = (abf[n] == 1) ? 2 : 1;
     for (k = 0; k < user->mesh->K; k++) {
@@ -523,13 +522,13 @@ PetscErrorCode PreallocateAndSetNonzeros(Mat J, unfemCtx *user) {
             if (abf[en[l]] != 2)
                 nnz[en[l]] += 1;
     }
-    ierr = MatSeqAIJSetPreallocation(J,-1,nnz); CHKERRQ(ierr);
-    ierr = PetscFree(nnz); CHKERRQ(ierr);
+    PetscCall(MatSeqAIJSetPreallocation(J,-1,nnz));
+    PetscCall(PetscFree(nnz));
 
     // set nonzeros: put values (=zeros) in allocated locations
     for (n = 0; n < user->mesh->N; n++) {
         if (abf[n] == 2) {
-            ierr = MatSetValues(J,1,&n,1,&n,&zero,INSERT_VALUES); CHKERRQ(ierr);
+            PetscCall(MatSetValues(J,1,&n,1,&n,&zero,INSERT_VALUES));
         }
     }
     for (k = 0; k < user->mesh->K; k++) {
@@ -541,16 +540,15 @@ PetscErrorCode PreallocateAndSetNonzeros(Mat J, unfemCtx *user) {
                 row[cr++] = en[l];
             }
         }
-        ierr = MatSetValues(J,cr,row,cr,row,v,INSERT_VALUES); CHKERRQ(ierr);
+        PetscCall(MatSetValues(J,cr,row,cr,row,v,INSERT_VALUES));
     }
-    ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-    ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    PetscCall(MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY));
     // the assembly routine FormPicard() will generate an error if
     //   it tries to put a matrix entry in the wrong place
-    ierr = MatSetOption(J,MAT_NEW_NONZERO_LOCATION_ERR,PETSC_TRUE); CHKERRQ(ierr);
-    ierr = ISRestoreIndices(user->mesh->e,&ae); CHKERRQ(ierr);
-    ierr = ISRestoreIndices(user->mesh->bf,&abf); CHKERRQ(ierr);
+    PetscCall(MatSetOption(J,MAT_NEW_NONZERO_LOCATION_ERR,PETSC_TRUE));
+    PetscCall(ISRestoreIndices(user->mesh->e,&ae));
+    PetscCall(ISRestoreIndices(user->mesh->bf,&abf));
     return 0;
 }
 //ENDPREALLOC
-

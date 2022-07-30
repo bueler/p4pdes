@@ -52,4 +52,3 @@ PetscErrorCode UMGetNodeCoordArrayRead(UM *mesh, const Node **xy);
 PetscErrorCode UMRestoreNodeCoordArrayRead(UM *mesh, const Node **xy);
 //ENDDECLARE
 #endif
-
