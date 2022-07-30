@@ -3,8 +3,8 @@ static char help[] =
 "Solves\n"
 "  - nabla^2 u - lambda e^u = 0\n"
 "on the unit square [0,1]x[0,1] subject to zero Dirichlet boundary conditions.\n"
-"Critical value occurs about at lambda = 6.808.  Optional exact solution\n"
-"(Liouville 1853) in case lambda=1.0.\n\n";
+"Critical value occurs about at lambda = 6.808.  Optional exact solution by\n"
+"Liouville (1853) for case lambda=1.0.\n\n";
 
 /* compare:
 timer ./bratu2D -snes_monitor -snes_converged_reason -ksp_converged_reason -pc_type mg -da_refine 8
@@ -56,7 +56,6 @@ extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, PetscReal **,
 extern PetscErrorCode NonlinearGS(SNES, Vec, Vec, void*);
 
 int main(int argc,char **argv) {
-    PetscErrorCode ierr;
     DM             da, da_after;
     SNES           snes;
     Vec            u, uexact;
@@ -67,7 +66,7 @@ int main(int argc,char **argv) {
     PetscLogDouble flops;
     PetscReal      errinf;
 
-    PetscInitialize(&argc,&argv,NULL,help);
+    PetscCall(PetscInitialize(&argc,&argv,NULL,help));
     user.Lx = 1.0;
     user.Ly = 1.0;
     user.Lz = 1.0;
@@ -79,14 +78,14 @@ int main(int argc,char **argv) {
     bctx.exact = PETSC_FALSE;
     bctx.residualcount = 0;
     bctx.ngscount = 0;
-    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"lb_","Liouville-Bratu equation solver options",""); CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-lambda","coefficient of e^u (reaction) term",
-                            "bratu2D.c",bctx.lambda,&(bctx.lambda),NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-exact","use case of Liouville exact solution",
-                            "bratu2D.c",bctx.exact,&(bctx.exact),NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-showcounts","at finish, print numbers of calls to call-back functions",
-                            "bratu2D.c",showcounts,&showcounts,NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+    PetscOptionsBegin(PETSC_COMM_WORLD,"lb_","Liouville-Bratu equation solver options","");
+    PetscCall(PetscOptionsReal("-lambda","coefficient of e^u (reaction) term",
+                            "bratu2D.c",bctx.lambda,&(bctx.lambda),NULL));
+    PetscCall(PetscOptionsBool("-exact","use case of Liouville exact solution",
+                            "bratu2D.c",bctx.exact,&(bctx.exact),NULL));
+    PetscCall(PetscOptionsBool("-showcounts","at finish, print numbers of calls to call-back functions",
+                            "bratu2D.c",showcounts,&showcounts,NULL));
+    PetscOptionsEnd();
     if (bctx.exact) {
         if (bctx.lambda != 1.0) {
             SETERRQ(PETSC_COMM_SELF,1,"Liouville exact solution only implemented for lambda = 1.0\n");
@@ -95,59 +94,59 @@ int main(int argc,char **argv) {
     }
     user.addctx = &bctx;
 
-    ierr = DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
+    PetscCall(DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
                         DMDA_STENCIL_BOX,  // contrast with fish2
-                        3,3,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&da); CHKERRQ(ierr);
-    ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
-    ierr = DMSetFromOptions(da); CHKERRQ(ierr);
-    ierr = DMSetUp(da); CHKERRQ(ierr);  // this must be called BEFORE SetUniformCoordinates
-    ierr = DMDASetUniformCoordinates(da,0.0,1.0,0.0,1.0,0.0,1.0); CHKERRQ(ierr);
+                        3,3,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&da));
+    PetscCall(DMSetApplicationContext(da,&user));
+    PetscCall(DMSetFromOptions(da));
+    PetscCall(DMSetUp(da));  // this must be called BEFORE SetUniformCoordinates
+    PetscCall(DMDASetUniformCoordinates(da,0.0,1.0,0.0,1.0,0.0,1.0));
 
-    ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
-    ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
-    ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
-               (DMDASNESFunction)FormFunctionLocal,&user); CHKERRQ(ierr);
-    ierr = SNESSetNGS(snes,NonlinearGS,&user); CHKERRQ(ierr);
+    PetscCall(SNESCreate(PETSC_COMM_WORLD,&snes));
+    PetscCall(SNESSetDM(snes,da));
+    PetscCall(DMDASNESSetFunctionLocal(da,INSERT_VALUES,
+               (DMDASNESFunction)FormFunctionLocal,&user));
+    PetscCall(SNESSetNGS(snes,NonlinearGS,&user));
     // this is the Jacobian of the Poisson equation, thus ONLY APPROXIMATE
     //     ... consider using -snes_fd_color or -snes_mf_operator
-    ierr = DMDASNESSetJacobianLocal(da,
-               (DMDASNESJacobian)Poisson2DJacobianLocal,&user); CHKERRQ(ierr);
-    ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
+    PetscCall(DMDASNESSetJacobianLocal(da,
+               (DMDASNESJacobian)Poisson2DJacobianLocal,&user));
+    PetscCall(SNESSetFromOptions(snes));
 
-    ierr = DMGetGlobalVector(da,&u); CHKERRQ(ierr);
-    ierr = VecSet(u,0.0); CHKERRQ(ierr);  // initialize to zero
-    ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
-    ierr = DMRestoreGlobalVector(da,&u);CHKERRQ(ierr);
-    ierr = DMDestroy(&da); CHKERRQ(ierr);
+    PetscCall(DMGetGlobalVector(da,&u));
+    PetscCall(VecSet(u,0.0));  // initialize to zero
+    PetscCall(SNESSolve(snes,NULL,u));
+    PetscCall(DMRestoreGlobalVector(da,&u));
+    PetscCall(DMDestroy(&da));
 
     if (showcounts) {
-        ierr = PetscGetFlops(&flops); CHKERRQ(ierr);
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"flops = %.3e,  residual calls = %d,  NGS calls = %d\n",
-                           flops,bctx.residualcount,bctx.ngscount); CHKERRQ(ierr);
+        PetscCall(PetscGetFlops(&flops));
+        PetscCall(PetscPrintf(PETSC_COMM_WORLD,"flops = %.3e,  residual calls = %d,  NGS calls = %d\n",
+                           flops,bctx.residualcount,bctx.ngscount));
     }
 
-    ierr = SNESGetDM(snes,&da_after); CHKERRQ(ierr);
-    ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
+    PetscCall(SNESGetDM(snes,&da_after));
+    PetscCall(DMDAGetLocalInfo(da_after,&info));
     if (bctx.exact) {
-        ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr);  // SNES owns u; we do not destroy it
-        ierr = VecDuplicate(u,&uexact); CHKERRQ(ierr);
-        ierr = FormUExact(&info,uexact,&user); CHKERRQ(ierr);
-        ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
-        ierr = VecDestroy(&uexact); CHKERRQ(ierr);  // no longer needed
-        ierr = VecNorm(u,NORM_INFINITY,&errinf); CHKERRQ(ierr);
-        ierr = PetscPrintf(PETSC_COMM_WORLD,
+        PetscCall(SNESGetSolution(snes,&u));  // SNES owns u; we do not destroy it
+        PetscCall(DMGetGlobalVector(da_after,&uexact));
+        PetscCall(FormUExact(&info,uexact,&user));
+        PetscCall(VecAXPY(u,-1.0,uexact));    // u <- u + (-1.0) uexact
+        PetscCall(DMRestoreGlobalVector(da_after,&uexact));
+        PetscCall(VecNorm(u,NORM_INFINITY,&errinf));
+        PetscCall(PetscPrintf(PETSC_COMM_WORLD,
                 "done on %d x %d grid:   error |u-uexact|_inf = %.3e\n",
-                info.mx,info.my,errinf); CHKERRQ(ierr);
+                info.mx,info.my,errinf));
     } else {
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"done on %d x %d grid ...\n",info.mx,info.my); CHKERRQ(ierr);
+        PetscCall(PetscPrintf(PETSC_COMM_WORLD,"done on %d x %d grid ...\n",info.mx,info.my));
     }
 
-    ierr = SNESDestroy(&snes); CHKERRQ(ierr);
-    return PetscFinalize();
+    PetscCall(SNESDestroy(&snes));
+    PetscCall(PetscFinalize());
+    return 0;
 }
 
 PetscErrorCode FormUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
-    PetscErrorCode ierr;
     BratuCtx     *bctx = (BratuCtx*)(user->addctx);
     PetscInt     i, j;
     PetscReal    hx, hy, x, y, **au;
@@ -159,7 +158,7 @@ PetscErrorCode FormUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
     }
     hx = 1.0 / (PetscReal)(info->mx - 1);
     hy = 1.0 / (PetscReal)(info->my - 1);
-    ierr = DMDAVecGetArray(info->da, u, &au);CHKERRQ(ierr);
+    PetscCall(DMDAVecGetArray(info->da, u, &au));
     for (j=info->ys; j<info->ys+info->ym; j++) {
         y = j * hy;
         for (i=info->xs; i<info->xs+info->xm; i++) {
@@ -167,14 +166,13 @@ PetscErrorCode FormUExact(DMDALocalInfo *info, Vec u, PoissonCtx* user) {
             au[j][i] = user->g_bdry(x,y,0.0,bctx);
         }
     }
-    ierr = DMDAVecRestoreArray(info->da, u, &au);CHKERRQ(ierr);
+    PetscCall(DMDAVecRestoreArray(info->da, u, &au));
     return 0;
 }
 
 // compute F(u), the residual of the discretized PDE on the given grid
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal **au,
                                  PetscReal **FF, PoissonCtx *user) {
-    PetscErrorCode ierr;
     BratuCtx   *bctx = (BratuCtx*)(user->addctx);
     PetscInt   i, j;
     PetscReal  hx, hy, darea, hxhy, hyhx, x, y;
@@ -197,7 +195,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal **au,
             }
         }
     }
-    ierr = PetscLogFlops(12.0 * info->xm * info->ym); CHKERRQ(ierr);
+    PetscCall(PetscLogFlops(12.0 * info->xm * info->ym));
     (bctx->residualcount)++;
     return 0;
 }
@@ -205,7 +203,6 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal **au,
 // do nonlinear Gauss-Seidel (processor-block) sweeps on
 //     F(u) = b
 PetscErrorCode NonlinearGS(SNES snes, Vec u, Vec b, void *ctx) {
-    PetscErrorCode ierr;
     PetscInt       i, j, k, maxits, totalits=0, sweeps, l;
     PetscReal      atol, rtol, stol, hx, hy, darea, hxhy, hyhx, x, y,
                    **au, **ab, bij, uu, phi0, phi, dphidu, s;
@@ -215,10 +212,10 @@ PetscErrorCode NonlinearGS(SNES snes, Vec u, Vec b, void *ctx) {
     BratuCtx       *bctx = (BratuCtx*)(user->addctx);
     Vec            uloc;
 
-    ierr = SNESNGSGetSweeps(snes,&sweeps);CHKERRQ(ierr);
-    ierr = SNESNGSGetTolerances(snes,&atol,&rtol,&stol,&maxits);CHKERRQ(ierr);
-    ierr = SNESGetDM(snes,&da);CHKERRQ(ierr);
-    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+    PetscCall(SNESNGSGetSweeps(snes,&sweeps));
+    PetscCall(SNESNGSGetTolerances(snes,&atol,&rtol,&stol,&maxits));
+    PetscCall(SNESGetDM(snes,&da));
+    PetscCall(DMDAGetLocalInfo(da,&info));
 
     hx = 1.0 / (PetscReal)(info.mx - 1);
     hy = 1.0 / (PetscReal)(info.my - 1);
@@ -226,13 +223,13 @@ PetscErrorCode NonlinearGS(SNES snes, Vec u, Vec b, void *ctx) {
     hxhy = hx / hy;
     hyhx = hy / hx;
 
-    ierr = DMGetLocalVector(da,&uloc);CHKERRQ(ierr);
+    PetscCall(DMGetLocalVector(da,&uloc));
     for (l=0; l<sweeps; l++) {
-        ierr = DMGlobalToLocalBegin(da,u,INSERT_VALUES,uloc);CHKERRQ(ierr);
-        ierr = DMGlobalToLocalEnd(da,u,INSERT_VALUES,uloc);CHKERRQ(ierr);
-        ierr = DMDAVecGetArray(da,uloc,&au);CHKERRQ(ierr);
+        PetscCall(DMGlobalToLocalBegin(da,u,INSERT_VALUES,uloc));
+        PetscCall(DMGlobalToLocalEnd(da,u,INSERT_VALUES,uloc));
+        PetscCall(DMDAVecGetArray(da,uloc,&au));
         if (b) {
-            ierr = DMDAVecGetArrayRead(da,b,&ab); CHKERRQ(ierr);
+            PetscCall(DMDAVecGetArrayRead(da,b,&ab));
         }
         for (j = info.ys; j < info.ys + info.ym; j++) {
             y = j * hy;
@@ -272,16 +269,15 @@ PetscErrorCode NonlinearGS(SNES snes, Vec u, Vec b, void *ctx) {
                 }
             }
         }
-        ierr = DMDAVecRestoreArray(da,uloc,&au);CHKERRQ(ierr);
-        ierr = DMLocalToGlobalBegin(da,uloc,INSERT_VALUES,u);CHKERRQ(ierr);
-        ierr = DMLocalToGlobalEnd(da,uloc,INSERT_VALUES,u);CHKERRQ(ierr);
+        PetscCall(DMDAVecRestoreArray(da,uloc,&au));
+        PetscCall(DMLocalToGlobalBegin(da,uloc,INSERT_VALUES,u));
+        PetscCall(DMLocalToGlobalEnd(da,uloc,INSERT_VALUES,u));
     }
-    ierr = DMRestoreLocalVector(da,&uloc);CHKERRQ(ierr);
+    PetscCall(DMRestoreLocalVector(da,&uloc));
     if (b) {
-        ierr = DMDAVecRestoreArrayRead(da,b,&ab);CHKERRQ(ierr);
+        PetscCall(DMDAVecRestoreArrayRead(da,b,&ab));
     }
-    ierr = PetscLogFlops(21.0 * totalits); CHKERRQ(ierr);
+    PetscCall(PetscLogFlops(21.0 * totalits));
     (bctx->ngscount)++;
     return 0;
 }
-
