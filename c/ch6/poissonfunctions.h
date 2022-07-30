@@ -18,8 +18,8 @@ are used in ch6/fish.c, ch6/minimal.c, and ch12/obstacle.c.
 The functions PoissonXDFunctionLocal(), X=1,2,3, compute residuals and are
 designed as call-backs:
 
-  ierr = DMDASNESSetFunctionLocal(dmda,INSERT_VALUES,
-             (DMDASNESFunction)PoissonXDFunctionLocal,&user); CHKERRQ(ierr);
+  DMDASNESSetFunctionLocal(dmda,INSERT_VALUES,
+             (DMDASNESFunction)PoissonXDFunctionLocal,&user);
 
 A rough estimate is made of the number of flops in the functions
 PoissonXDFunctionLocal().
@@ -27,8 +27,8 @@ PoissonXDFunctionLocal().
 The PoissonXDJacobianLocal() functions are call-backs which assemble Jacobians
 for the same problems:
 
-  ierr = DMDASNESSetJacobianLocal(dmda,
-             (DMDASNESJacobian)PoissonXDJacobianLocal,&user); CHKERRQ(ierr);
+  DMDASNESSetJacobianLocal(dmda,
+             (DMDASNESJacobian)PoissonXDJacobianLocal,&user);
 
 The matrices A are normalized so that if cells are square (h = hx = hy = hz)
 then A / h^d approximates the Laplacian in d dimensions.  This is the way
