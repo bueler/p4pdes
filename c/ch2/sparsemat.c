@@ -3,7 +3,6 @@ static char help[] = "Assemble a Mat sparsely.\n";
 #include <petsc.h>
 
 int main(int argc,char **args) {
-  PetscErrorCode ierr;
   Mat        A;
   PetscInt   i1[3] = {0, 1, 2},
              j1[3] = {0, 1, 2},
@@ -17,19 +16,20 @@ int main(int argc,char **args) {
              aA2[3] = { 1.0,  1.0, -1.0},
              aA3 = -3.0;
 
-  ierr = PetscInitialize(&argc,&args,NULL,help); if (ierr) return ierr;
+  PetscCall(PetscInitialize(&argc,&args,NULL,help));
 
-  ierr = MatCreate(PETSC_COMM_WORLD,&A); CHKERRQ(ierr);
-  ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,4,4); CHKERRQ(ierr);
-  ierr = MatSetFromOptions(A); CHKERRQ(ierr);
-  ierr = MatSetUp(A); CHKERRQ(ierr);
-  ierr = MatSetValues(A,3,i1,3,j1,aA1,INSERT_VALUES); CHKERRQ(ierr);
-  ierr = MatSetValues(A,1,&i2,3,j2,aA2,INSERT_VALUES); CHKERRQ(ierr);
-  ierr = MatSetValue(A,i3,j3,aA3,INSERT_VALUES); CHKERRQ(ierr);
-  ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+  PetscCall(MatCreate(PETSC_COMM_WORLD,&A));
+  PetscCall(MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,4,4));
+  PetscCall(MatSetFromOptions(A));
+  PetscCall(MatSetUp(A));
+  PetscCall(MatSetValues(A,3,i1,3,j1,aA1,INSERT_VALUES));
+  PetscCall(MatSetValues(A,1,&i2,3,j2,aA2,INSERT_VALUES));
+  PetscCall(MatSetValue(A,i3,j3,aA3,INSERT_VALUES));
+  PetscCall(MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY));
 
-  MatDestroy(&A);
-  return PetscFinalize();
+  PetscCall(MatDestroy(&A);
+  PetscCall(PetscFinalize();
+  return 0;
 }
 

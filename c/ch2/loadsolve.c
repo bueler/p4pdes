@@ -22,7 +22,6 @@ large tridiagonal system (m=10^7) example:
 #include <petsc.h>
 
 int main(int argc,char **args) {
-  PetscErrorCode ierr;
   Vec         x, b;
   Mat         A;
   KSP         ksp;
@@ -45,61 +44,63 @@ int main(int argc,char **args) {
   PetscOptionsEnd();
 
   if (strlen(nameA) == 0) {
-      SETERRQ(PETSC_COMM_SELF,1,
+      SETERRQ(PETSC_COMM_WORLD,1,
               "no input matrix provided ... ending  (usage: loadsolve -fA A.dat)\n");
   }
 
   if (verbose) {
-      ierr = PetscPrintf(PETSC_COMM_WORLD,
-         "reading matrix from %s ...\n",nameA); CHKERRQ(ierr);
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD,
+         "reading matrix from %s ...\n",nameA));
   }
-  ierr = MatCreate(PETSC_COMM_WORLD,&A);CHKERRQ(ierr);
-  ierr = MatSetFromOptions(A);CHKERRQ(ierr);
-  ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,nameA,FILE_MODE_READ,&fileA);CHKERRQ(ierr);
-  ierr = MatLoad(A,fileA);CHKERRQ(ierr);
-  ierr = PetscViewerDestroy(&fileA);CHKERRQ(ierr);
-  ierr = MatGetSize(A,&m,&n); CHKERRQ(ierr);
+  PetscCall(MatCreate(PETSC_COMM_WORLD,&A));
+  PetscCall(MatSetFromOptions(A));
+  PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD,nameA,FILE_MODE_READ,&fileA));
+  PetscCall(MatLoad(A,fileA));
+  PetscCall(PetscViewerDestroy(&fileA));
+  PetscCall(MatGetSize(A,&m,&n));
   if (verbose) {
-      ierr = PetscPrintf(PETSC_COMM_WORLD,
-         "matrix has size m x n = %d x %d ...\n",m,n); CHKERRQ(ierr);
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD,
+         "matrix has size m x n = %d x %d ...\n",m,n));
   }
   if (m != n) {
-      SETERRQ(PETSC_COMM_SELF,2,"only works for square matrices\n");
+      SETERRQ(PETSC_COMM_WORLD,2,"only works for square matrices\n");
   }
 
-  ierr = VecCreate(PETSC_COMM_WORLD,&b);CHKERRQ(ierr);
-  ierr = VecSetFromOptions(b);CHKERRQ(ierr);
+  PetscCall(VecCreate(PETSC_COMM_WORLD,&b));
+  PetscCall(VecSetFromOptions(b));
   if (flg) {
-      ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,nameb,FILE_MODE_READ,&fileb);CHKERRQ(ierr);
+      PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD,nameb,FILE_MODE_READ,&fileb));
       if (verbose) {
-          ierr = PetscPrintf(PETSC_COMM_WORLD,
-             "reading vector from %s ...\n",nameb); CHKERRQ(ierr);
+          PetscCall(PetscPrintf(PETSC_COMM_WORLD,
+             "reading vector from %s ...\n",nameb));
       }
-      ierr = VecLoad(b,fileb);CHKERRQ(ierr);
-      ierr = PetscViewerDestroy(&fileb);CHKERRQ(ierr);
-      ierr = VecGetSize(b,&mb); CHKERRQ(ierr);
+      PetscCall(VecLoad(b,fileb));
+      PetscCall(PetscViewerDestroy(&fileb));
+      PetscCall(VecGetSize(b,&mb));
       if (mb != m) {
-          SETERRQ(PETSC_COMM_SELF,3,"size of matrix and vector do not match\n");
+          SETERRQ(PETSC_COMM_WORLD,3,"size of matrix and vector do not match\n");
       }
   } else {
       if (verbose) {
-          ierr = PetscPrintf(PETSC_COMM_WORLD,
-             "right-hand-side vector b not provided ... using zero vector of length %d\n",m); CHKERRQ(ierr);
+          PetscCall(PetscPrintf(PETSC_COMM_WORLD,
+             "right-hand-side vector b not provided ... using zero vector of length %d\n",m));
       }
-      ierr = VecSetSizes(b,PETSC_DECIDE,m); CHKERRQ(ierr);
-      ierr = VecSet(b,0.0); CHKERRQ(ierr);
+      PetscCall(VecSetSizes(b,PETSC_DECIDE,m));
+      PetscCall(VecSet(b,0.0));
   }
 
-  ierr = KSPCreate(PETSC_COMM_WORLD,&ksp); CHKERRQ(ierr);
-  ierr = KSPSetOperators(ksp,A,A); CHKERRQ(ierr);
-  ierr = KSPSetFromOptions(ksp); CHKERRQ(ierr);
+  PetscCall(KSPCreate(PETSC_COMM_WORLD,&ksp));
+  PetscCall(KSPSetOperators(ksp,A,A));
+  PetscCall(KSPSetFromOptions(ksp));
 
-  ierr = VecDuplicate(b,&x); CHKERRQ(ierr);
-  ierr = VecSet(x,0.0); CHKERRQ(ierr);
-  ierr = KSPSolve(ksp,b,x); CHKERRQ(ierr);
+  PetscCall(VecDuplicate(b,&x));
+  PetscCall(VecSet(x,0.0));
+  PetscCall(KSPSolve(ksp,b,x));
 
-  KSPDestroy(&ksp);  MatDestroy(&A);
-  VecDestroy(&x);  VecDestroy(&b);
-  return PetscFinalize();
+  PetscCall(KSPDestroy(&ksp));
+  PetscCall(MatDestroy(&A));
+  PetscCall(VecDestroy(&x));
+  PetscCall(VecDestroy(&b));
+  PetscCall(PetscFinalize());
+  return 0;
 }
-
