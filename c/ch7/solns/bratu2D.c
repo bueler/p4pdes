@@ -47,7 +47,7 @@ static PetscReal g_liouville(PetscReal x, PetscReal y, PetscReal z, void *ctx) {
     PetscReal r2 = (x + 1.0) * (x + 1.0) + (y + 1.0) * (y + 1.0),
               qq = r2 * r2 + 1.0,
               omega = r2 / (qq * qq);
-    return 32.0 * omega;
+    return PetscLogReal(32.0 * omega);
 }
 
 extern PetscErrorCode FormUExact(DMDALocalInfo*, Vec, PoissonCtx*);
