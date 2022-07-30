@@ -64,7 +64,6 @@ extern PetscErrorCode GetActiveSet(SNES, DMDALocalInfo*, Vec, Vec,
 extern PetscErrorCode FormBounds(SNES, Vec, Vec);
 
 int main(int argc,char **argv) {
-  PetscErrorCode ierr;
   DM                  da, da_after;
   SNES                snes;
   KSP                 ksp;
@@ -86,15 +85,15 @@ int main(int argc,char **argv) {
             "obstacle.c",dumpname,dumpname,sizeof(dumpname),&dumpbinary));
   PetscOptionsEnd();
 
-  ierr = DMDACreate2d(PETSC_COMM_WORLD,
+  PetscCall(DMDACreate2d(PETSC_COMM_WORLD,
       DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
       3,3,                       // override with -da_grid_x,_y
       PETSC_DECIDE,PETSC_DECIDE, // num of procs in each dim
       1,1,NULL,NULL,             // dof = 1 and stencil width = 1
-      &da);CHKERRQ(ierr);
-  ierr = DMSetFromOptions(da); CHKERRQ(ierr);
-  ierr = DMSetUp(da); CHKERRQ(ierr);
-  ierr = DMDASetUniformCoordinates(da,-2.0,2.0,-2.0,2.0,-1.0,-1.0);CHKERRQ(ierr);
+      &da));
+  PetscCall(DMSetFromOptions(da));
+  PetscCall(DMSetUp(da));
+  PetscCall(DMDASetUniformCoordinates(da,-2.0,2.0,-2.0,2.0,-1.0,-1.0));
 
   user.cx = 1.0;
   user.cy = 1.0;
@@ -102,88 +101,90 @@ int main(int argc,char **argv) {
   user.g_bdry = &g_fcn;
   user.f_rhs = &zero;
   user.addctx = NULL;
-  ierr = DMSetApplicationContext(da,&user);CHKERRQ(ierr);
+  PetscCall(DMSetApplicationContext(da,&user));
 
-  ierr = SNESCreate(PETSC_COMM_WORLD,&snes);CHKERRQ(ierr);
-  ierr = SNESSetDM(snes,da);CHKERRQ(ierr);
-  ierr = SNESSetApplicationContext(snes,&user);CHKERRQ(ierr);
+  PetscCall(SNESCreate(PETSC_COMM_WORLD,&snes));
+  PetscCall(SNESSetDM(snes,da));
+  PetscCall(SNESSetApplicationContext(snes,&user));
 
   // set the SNES type to a variational inequality (VI) solver of reduced-space
   // (RS) type
-  ierr = SNESSetType(snes,SNESVINEWTONRSLS);CHKERRQ(ierr);
-  ierr = SNESVISetComputeVariableBounds(snes,&FormBounds);CHKERRQ(ierr);
+  PetscCall(SNESSetType(snes,SNESVINEWTONRSLS));
+  PetscCall(SNESVISetComputeVariableBounds(snes,&FormBounds));
 
   // reuse residual and jacobian from ch6/
-  ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
-             (DMDASNESFunction)Poisson2DFunctionLocal,&user); CHKERRQ(ierr);
-  ierr = DMDASNESSetJacobianLocal(da,
-             (DMDASNESJacobian)Poisson2DJacobianLocal,&user); CHKERRQ(ierr);
-  ierr = SNESGetKSP(snes,&ksp); CHKERRQ(ierr);
-  ierr = KSPSetType(ksp,KSPCG); CHKERRQ(ierr);
-  ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
+  PetscCall(DMDASNESSetFunctionLocal(da,INSERT_VALUES,
+             (DMDASNESFunction)Poisson2DFunctionLocal,&user));
+  PetscCall(DMDASNESSetJacobianLocal(da,
+             (DMDASNESJacobian)Poisson2DJacobianLocal,&user));
+  PetscCall(SNESGetKSP(snes,&ksp));
+  PetscCall(KSPSetType(ksp,KSPCG));
+  PetscCall(SNESSetFromOptions(snes));
 
   // initial iterate is zero for simplicity
-  ierr = DMCreateGlobalVector(da,&u_initial);CHKERRQ(ierr);
-  ierr = VecSet(u_initial,0.0); CHKERRQ(ierr);
+  PetscCall(DMCreateGlobalVector(da,&u_initial));
+  PetscCall(VecSet(u_initial,0.0));
 
   /* solve and get solution, DM after solution*/
-  ierr = SNESSolve(snes,NULL,u_initial);CHKERRQ(ierr);
-  ierr = VecDestroy(&u_initial); CHKERRQ(ierr);
-  ierr = DMDestroy(&da); CHKERRQ(ierr);
-  ierr = SNESGetDM(snes,&da_after); CHKERRQ(ierr);
-  ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr); /* do not destroy u */
-  ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
-  ierr = VecDuplicate(u,&Xl); CHKERRQ(ierr);
-  ierr = VecDuplicate(u,&Xu); CHKERRQ(ierr);
-  ierr = FormBounds(snes,Xl,Xu); CHKERRQ(ierr);
+  PetscCall(SNESSolve(snes,NULL,u_initial));
+  PetscCall(VecDestroy(&u_initial));
+  PetscCall(DMDestroy(&da));
+  PetscCall(SNESGetDM(snes,&da_after));
+  PetscCall(SNESGetSolution(snes,&u)); /* do not destroy u */
+  PetscCall(DMDAGetLocalInfo(da_after,&info));
+  PetscCall(VecDuplicate(u,&Xl));
+  PetscCall(VecDuplicate(u,&Xu));
+  PetscCall(FormBounds(snes,Xl,Xu));
 
   /* save solution to binary file if requested */
   if (dumpbinary) {
       PetscViewer dumpviewer;
-      ierr = PetscPrintf(PETSC_COMM_WORLD,
-               "writing u,psi in binary format to %s ...\n",dumpname); CHKERRQ(ierr);
-      ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,dumpname,FILE_MODE_WRITE,&dumpviewer); CHKERRQ(ierr);
-      ierr = VecView(u,dumpviewer); CHKERRQ(ierr);
-      ierr = VecView(Xl,dumpviewer); CHKERRQ(ierr);
-      ierr = PetscViewerDestroy(&dumpviewer); CHKERRQ(ierr);
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD,
+               "writing u,psi in binary format to %s ...\n",dumpname));
+      PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD,dumpname,FILE_MODE_WRITE,&dumpviewer));
+      PetscCall(VecView(u,dumpviewer));
+      PetscCall(VecView(Xl,dumpviewer));
+      PetscCall(PetscViewerDestroy(&dumpviewer));
   }
 
   /* compute final performance measures */
-  ierr = SNESGetConvergedReason(snes,&reason); CHKERRQ(ierr);
+  PetscCall(SNESGetConvergedReason(snes,&reason));
   if (reason <= 0) {
-      ierr = PetscPrintf(PETSC_COMM_WORLD,
-          "WARNING: SNES not converged ... use -snes_converged_reason to check\n"); CHKERRQ(ierr);
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD,
+          "WARNING: SNES not converged ... use -snes_converged_reason to check\n"));
   }
-  ierr = SNESGetIterationNumber(snes,&snesit); CHKERRQ(ierr);
-  ierr = SNESGetKSP(snes,&ksp); CHKERRQ(ierr);
-  ierr = KSPGetIterationNumber(ksp,&kspit); CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,
+  PetscCall(SNESGetIterationNumber(snes,&snesit));
+  PetscCall(SNESGetKSP(snes,&ksp));
+  PetscCall(KSPGetIterationNumber(ksp,&kspit));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,
       "done on %d x %d grid ... %s, SNES iters = %d, last KSP iters = %d\n",
-      info.mx,info.my,SNESConvergedReasons[reason],snesit,kspit); CHKERRQ(ierr);
+      info.mx,info.my,SNESConvergedReasons[reason],snesit,kspit));
 
   /* compare to exact */
-  ierr = GetActiveSet(snes,&info,u,Xl,NULL,&actarea); CHKERRQ(ierr);
+  PetscCall(GetActiveSet(snes,&info,u,Xl,NULL,&actarea));
   exactarea = PETSC_PI * aexact * aexact;
   areaerr = PetscAbsReal(actarea - exactarea) / exactarea;
-  ierr = VecDuplicate(u,&u_exact); CHKERRQ(ierr);
-  ierr = FormUExact(&info,u_exact); CHKERRQ(ierr);
-  ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr); /* u <- u - u_exact */
-  ierr = VecNorm(u,NORM_1,&error1); CHKERRQ(ierr);
+  PetscCall(VecDuplicate(u,&u_exact));
+  PetscCall(FormUExact(&info,u_exact));
+  PetscCall(VecAXPY(u,-1.0,u_exact)); /* u <- u - u_exact */
+  PetscCall(VecNorm(u,NORM_1,&error1));
   error1 /= (PetscReal)info.mx * (PetscReal)info.my;
-  ierr = VecNorm(u,NORM_INFINITY,&errorinf); CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,
+  PetscCall(VecNorm(u,NORM_INFINITY,&errorinf));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,
       "errors: av |u-uexact| = %.3e, |u-uexact|_inf = %.3e, active area error = %.3f%%\n",
-      error1,errorinf,100.0*areaerr); CHKERRQ(ierr);
+      error1,errorinf,100.0*areaerr));
 
-  VecDestroy(&u_exact);  VecDestroy(&Xl);  VecDestroy(&Xu);
-  SNESDestroy(&snes);
-  return PetscFinalize();
+  PetscCall(VecDestroy(&u_exact));
+  PetscCall(VecDestroy(&Xl));
+  PetscCall(VecDestroy(&Xu));
+  PetscCall(SNESDestroy(&snes));
+  PetscCall(PetscFinalize());
+  return 0;
 }
 
 
 PetscErrorCode GetActiveSet(SNES snes, DMDALocalInfo *info, Vec u, Vec Xl,
                             PetscInt *act, PetscReal *actarea) {
-  PetscErrorCode ierr;
   Vec              F;
   const PetscReal  *au, *aXl, *aF, zerotol = 1.0e-8;  // see petsc/src/snes/impls/vi/vi.c for value
   PetscReal        dx, dy;
@@ -191,20 +192,20 @@ PetscErrorCode GetActiveSet(SNES snes, DMDALocalInfo *info, Vec u, Vec Xl,
 
   dx = 4.0 / (PetscReal)(info->mx-1);
   dy = 4.0 / (PetscReal)(info->my-1);
-  ierr = VecGetLocalSize(u,&n);CHKERRQ(ierr);
-  ierr = VecGetArrayRead(u,&au); CHKERRQ(ierr);
-  ierr = VecGetArrayRead(Xl,&aXl); CHKERRQ(ierr);
-  ierr = SNESGetFunction(snes,&F,NULL,NULL); CHKERRQ(ierr); /* do not destroy F */
-  ierr = VecGetArrayRead(F,&aF); CHKERRQ(ierr);
+  PetscCall(VecGetLocalSize(u,&n));
+  PetscCall(VecGetArrayRead(u,&au));
+  PetscCall(VecGetArrayRead(Xl,&aXl));
+  PetscCall(SNESGetFunction(snes,&F,NULL,NULL)); /* do not destroy F */
+  PetscCall(VecGetArrayRead(F,&aF));
   lact = 0;
   for (i=0; i<n; i++) {
     if ((au[i] <= aXl[i] + zerotol) && (aF[i] > 0.0))
         lact++;
   }
-  ierr = VecRestoreArrayRead(u,&au);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(Xl,&aXl);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(F,&aF); CHKERRQ(ierr);
-  ierr = MPI_Allreduce(&lact,&gact,1,MPIU_INT,MPIU_SUM,PetscObjectComm((PetscObject)snes));CHKERRQ(ierr);
+  PetscCall(VecRestoreArrayRead(u,&au));
+  PetscCall(VecRestoreArrayRead(Xl,&aXl));
+  PetscCall(VecRestoreArrayRead(F,&aF));
+  PetscCall(MPI_Allreduce(&lact,&gact,1,MPIU_INT,MPIU_SUM,PetscObjectComm((PetscObject)snes)));
   if (act) {
       *act = gact;
   }
@@ -216,12 +217,11 @@ PetscErrorCode GetActiveSet(SNES snes, DMDALocalInfo *info, Vec u, Vec Xl,
 
 
 PetscErrorCode FormUExact(DMDALocalInfo *info, Vec u) {
-  PetscErrorCode ierr;
   PetscInt   i,j;
   PetscReal  **au, dx, dy, x, y;
   dx = 4.0 / (PetscReal)(info->mx-1);
   dy = 4.0 / (PetscReal)(info->my-1);
-  ierr = DMDAVecGetArray(info->da, u, &au);CHKERRQ(ierr);
+  PetscCall(DMDAVecGetArray(info->da, u, &au));
   for (j=info->ys; j<info->ys+info->ym; j++) {
     y = -2.0 + j * dy;
     for (i=info->xs; i<info->xs+info->xm; i++) {
@@ -229,23 +229,22 @@ PetscErrorCode FormUExact(DMDALocalInfo *info, Vec u) {
       au[j][i] = u_exact(x,y);
     }
   }
-  ierr = DMDAVecRestoreArray(info->da, u, &au);CHKERRQ(ierr);
+  PetscCall(DMDAVecRestoreArray(info->da, u, &au));
   return 0;
 }
 
 //STARTBOUNDS
 // for call-back: tell SNESVI we want  psi <= u < +infinity
 PetscErrorCode FormBounds(SNES snes, Vec Xl, Vec Xu) {
-  PetscErrorCode ierr;
   DM             da;
   DMDALocalInfo  info;
   PetscInt       i, j;
   PetscReal      **aXl, dx, dy, x, y;
-  ierr = SNESGetDM(snes,&da);CHKERRQ(ierr);
-  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+  PetscCall(SNESGetDM(snes,&da));
+  PetscCall(DMDAGetLocalInfo(da,&info));
   dx = 4.0 / (PetscReal)(info.mx-1);
   dy = 4.0 / (PetscReal)(info.my-1);
-  ierr = DMDAVecGetArray(da, Xl, &aXl);CHKERRQ(ierr);
+  PetscCall(DMDAVecGetArray(da, Xl, &aXl));
   for (j=info.ys; j<info.ys+info.ym; j++) {
     y = -2.0 + j * dy;
     for (i=info.xs; i<info.xs+info.xm; i++) {
@@ -253,9 +252,8 @@ PetscErrorCode FormBounds(SNES snes, Vec Xl, Vec Xu) {
       aXl[j][i] = psi(x,y);
     }
   }
-  ierr = DMDAVecRestoreArray(da, Xl, &aXl);CHKERRQ(ierr);
-  ierr = VecSet(Xu,PETSC_INFINITY);CHKERRQ(ierr);
+  PetscCall(DMDAVecRestoreArray(da, Xl, &aXl));
+  PetscCall(VecSet(Xu,PETSC_INFINITY));
   return 0;
 }
 //ENDBOUNDS
-

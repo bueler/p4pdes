@@ -112,7 +112,6 @@ extern PetscErrorCode FormUExact(DMDALocalInfo*,AdCtx*,
 extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*,PetscReal**,PetscReal**,AdCtx*);
 
 int main(int argc,char **argv) {
-    PetscErrorCode ierr;
     DM             da, da_after;
     SNES           snes;
     Vec            u_initial, u;
@@ -122,7 +121,7 @@ int main(int argc,char **argv) {
     PetscBool      init_exact = PETSC_FALSE;
     AdCtx          user;
 
-    ierr = PetscInitialize(&argc,&argv,NULL,help); if (ierr) return ierr;
+    PetscCall(PetscInitialize(&argc,&argv,NULL,help));
 
     user.eps = 0.005;
     user.none_on_peclet = PETSC_FALSE;
@@ -130,26 +129,25 @@ int main(int argc,char **argv) {
     user.problem = LAYER;
     user.a_scale = 1.0;   // this could be made dependent on problem
     user.peclet_threshold = 1.0;
-    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"bth_",
-               "both (2D advection-diffusion solver) options",""); CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-eps","positive diffusion coefficient",
-               "both.c",user.eps,&(user.eps),NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-init_exact","use exact solution for initialization",
-               "both.c",init_exact,&init_exact,NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsEnum("-limiter","flux-limiter type",
+    PetscOptionsBegin(PETSC_COMM_WORLD,"bth_",
+               "both (2D advection-diffusion solver) options","");
+    PetscCall(PetscOptionsReal("-eps","positive diffusion coefficient",
+               "both.c",user.eps,&(user.eps),NULL));
+    PetscCall(PetscOptionsBool("-init_exact","use exact solution for initialization",
+               "both.c",init_exact,&init_exact,NULL));
+    PetscCall(PetscOptionsEnum("-limiter","flux-limiter type",
                "both.c",LimiterTypes,
-               (PetscEnum)limiter,(PetscEnum*)&limiter,NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-none_on_peclet",
+               (PetscEnum)limiter,(PetscEnum*)&limiter,NULL));
+    PetscCall(PetscOptionsBool("-none_on_peclet",
                "on coarse grids such that mesh Peclet P^h exceeds threshold, switch to none limiter",
-               "both.c",user.none_on_peclet,&(user.none_on_peclet),NULL);
-               CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-peclet_threshold",
+               "both.c",user.none_on_peclet,&(user.none_on_peclet),NULL));
+    PetscCall(PetscOptionsReal("-peclet_threshold",
                "if mesh Peclet P^h is above this value, switch to none (used with -bth_none_on_peclet)",
-               "both.c",user.peclet_threshold,&(user.peclet_threshold),NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsEnum("-problem","problem type",
+               "both.c",user.peclet_threshold,&(user.peclet_threshold),NULL));
+    PetscCall(PetscOptionsEnum("-problem","problem type",
                "both.c",ProblemTypes,
-               (PetscEnum)(user.problem),(PetscEnum*)&(user.problem),NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+               (PetscEnum)(user.problem),(PetscEnum*)&(user.problem),NULL));
+    PetscOptionsEnd();
 
     if (user.eps <= 0.0) {
         SETERRQ(PETSC_COMM_SELF,1,"eps=%.3f invalid ... eps > 0 required",user.eps);
@@ -159,84 +157,82 @@ int main(int argc,char **argv) {
     user.g_fcn = gptr[user.problem];
     user.b_fcn = bptr[user.problem];
 
-    ierr = DMDACreate2d(PETSC_COMM_WORLD,
+    PetscCall(DMDACreate2d(PETSC_COMM_WORLD,
         DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
         3,3,                          // default to hx=hy=1 grid
         PETSC_DECIDE,PETSC_DECIDE,
         1,2,                          // d.o.f, stencil width
-        NULL,NULL,&da); CHKERRQ(ierr);
-    ierr = DMSetFromOptions(da); CHKERRQ(ierr);
-    ierr = DMSetUp(da); CHKERRQ(ierr);
+        NULL,NULL,&da));
+    PetscCall(DMSetFromOptions(da));
+    PetscCall(DMSetUp(da));
     if (user.problem == NOWIND) {
-        ierr = DMDASetUniformCoordinates(da,0.0,1.0,0.0,1.0,-1.0,1.0); CHKERRQ(ierr);
+        PetscCall(DMDASetUniformCoordinates(da,0.0,1.0,0.0,1.0,-1.0,1.0));
     } else {
-        ierr = DMDASetUniformCoordinates(da,-1.0,1.0,-1.0,1.0,-1.0,1.0); CHKERRQ(ierr);
+        PetscCall(DMDASetUniformCoordinates(da,-1.0,1.0,-1.0,1.0,-1.0,1.0));
     }
-    ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
+    PetscCall(DMSetApplicationContext(da,&user));
 
-    ierr = SNESCreate(PETSC_COMM_WORLD,&snes);CHKERRQ(ierr);
-    ierr = SNESSetDM(snes,da);CHKERRQ(ierr);
-    ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
-            (DMDASNESFunction)FormFunctionLocal,&user);CHKERRQ(ierr);
-    ierr = SNESSetApplicationContext(snes,&user); CHKERRQ(ierr);
-    ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
+    PetscCall(SNESCreate(PETSC_COMM_WORLD,&snes));
+    PetscCall(SNESSetDM(snes,da));
+    PetscCall(DMDASNESSetFunctionLocal(da,INSERT_VALUES,
+            (DMDASNESFunction)FormFunctionLocal,&user));
+    PetscCall(SNESSetApplicationContext(snes,&user));
+    PetscCall(SNESSetFromOptions(snes));
 
-    ierr = DMGetGlobalVector(da,&u_initial); CHKERRQ(ierr);
+    PetscCall(DMGetGlobalVector(da,&u_initial));
     if (init_exact) {
-        ierr = FormUExact(&info,&user,uexact_fcn,u_initial); CHKERRQ(ierr);
+        PetscCall(FormUExact(&info,&user,uexact_fcn,u_initial));
     } else {
-        ierr = VecSet(u_initial,0.0); CHKERRQ(ierr);
+        PetscCall(VecSet(u_initial,0.0));
     }
-    ierr = SNESSolve(snes,NULL,u_initial); CHKERRQ(ierr);
-    ierr = DMRestoreGlobalVector(da,&u_initial); CHKERRQ(ierr);
-    ierr = DMDestroy(&da); CHKERRQ(ierr);
+    PetscCall(SNESSolve(snes,NULL,u_initial));
+    PetscCall(DMRestoreGlobalVector(da,&u_initial));
+    PetscCall(DMDestroy(&da));
 
-    ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr);
-    ierr = SNESGetDM(snes,&da_after); CHKERRQ(ierr);
-    ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
+    PetscCall(SNESGetSolution(snes,&u));
+    PetscCall(SNESGetDM(snes,&da_after));
+    PetscCall(DMDAGetLocalInfo(da_after,&info));
     if (user.none_on_peclet && !user.small_peclet_achieved) {
-         ierr = PetscPrintf(PETSC_COMM_WORLD,
-             "WARNING: -bth_none_on_peclet set but finest grid used NONE limiter\n");
-             CHKERRQ(ierr);
+         PetscCall(PetscPrintf(PETSC_COMM_WORLD,
+             "WARNING: -bth_none_on_peclet set but finest grid used NONE limiter\n"));
     }
-    ierr = PetscPrintf(PETSC_COMM_WORLD,
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,
          "done on %d x %d grid (problem = %s, eps = %g, limiter = %s)\n",
-         info.mx,info.my,ProblemTypes[user.problem],user.eps,LimiterTypes[limiter]);
-         CHKERRQ(ierr);
+         info.mx,info.my,ProblemTypes[user.problem],user.eps,LimiterTypes[limiter]));
 
     if (uexact_fcn != NULL) {
         Vec     u_exact;
         PetscReal  xymin[2], xymax[2], hx, hy, err2;
-        ierr = DMCreateGlobalVector(da_after,&u_exact); CHKERRQ(ierr);
-        ierr = FormUExact(&info,&user,uexact_fcn,u_exact); CHKERRQ(ierr);
-        ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr);    // u <- u + (-1.0) u_exact
-        ierr = VecNorm(u,NORM_2,&err2); CHKERRQ(ierr);
-        ierr = DMGetBoundingBox(da_after,xymin,xymax); CHKERRQ(ierr);
+        PetscCall(DMCreateGlobalVector(da_after,&u_exact));
+        PetscCall(FormUExact(&info,&user,uexact_fcn,u_exact));
+        PetscCall(VecAXPY(u,-1.0,u_exact));    // u <- u + (-1.0) u_exact
+        PetscCall(VecNorm(u,NORM_2,&err2));
+        PetscCall(DMGetBoundingBox(da_after,xymin,xymax));
         hx = (xymax[0] - xymin[0]) / (info.mx - 1);
         hy = (xymax[1] - xymin[1]) / (info.my - 1);
         err2 *= PetscSqrtReal(hx * hy);
-        ierr = PetscPrintf(PETSC_COMM_WORLD,
-             "numerical error:  |u-uexact|_2 = %.4e\n",err2); CHKERRQ(ierr);
-        ierr = VecDestroy(&u_exact); CHKERRQ(ierr);
+        PetscCall(PetscPrintf(PETSC_COMM_WORLD,
+             "numerical error:  |u-uexact|_2 = %.4e\n",err2));
+        PetscCall(VecDestroy(&u_exact));
     }
 
-    ierr = SNESDestroy(&snes); CHKERRQ(ierr);
-    return PetscFinalize();
+    PetscCall(SNESDestroy(&snes));
+    PetscCall(PetscFinalize());
+    return 0;
 }
 
 PetscErrorCode FormUExact(DMDALocalInfo *info, AdCtx *usr,
                           PetscReal (*uexact)(PetscReal, PetscReal, void*), Vec uex) {
-    PetscErrorCode  ierr;
     PetscInt        i, j;
     PetscReal       xymin[2], xymax[2], hx, hy, x, y, **auex;
 
     if (uexact == NULL) {
         SETERRQ(PETSC_COMM_SELF,1,"exact solution not available");
     }
-    ierr = DMGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
+    PetscCall(DMGetBoundingBox(info->da,xymin,xymax));
     hx = (xymax[0] - xymin[0]) / (info->mx - 1);
     hy = (xymax[1] - xymin[1]) / (info->my - 1);
-    ierr = DMDAVecGetArray(info->da, uex, &auex);CHKERRQ(ierr);
+    PetscCall(DMDAVecGetArray(info->da, uex, &auex));
     for (j=info->ys; j<info->ys+info->ym; j++) {
         y = xymin[1] + j * hy;
         for (i=info->xs; i<info->xs+info->xm; i++) {
@@ -244,7 +240,7 @@ PetscErrorCode FormUExact(DMDALocalInfo *info, AdCtx *usr,
             auex[j][i] = (*uexact)(x,y,usr);
         }
     }
-    ierr = DMDAVecRestoreArray(info->da, uex, &auex);CHKERRQ(ierr);
+    PetscCall(DMDAVecRestoreArray(info->da, uex, &auex));
     return 0;
 }
 
@@ -264,7 +260,6 @@ W |  *  | E
 */
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal **au,
                                  PetscReal **aF, AdCtx *usr) {
-    PetscErrorCode ierr;
     PetscInt        i, j, p;
     PetscReal       xymin[2], xymax[2], hx, hy, Ph, hx2, hy2, scF, scBC,
                     x, y, uE, uW, uN, uS, uxx, uyy,
@@ -273,7 +268,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal **au,
     PetscBool       iowned, jowned, ip1owned, jp1owned;
     PetscLogDouble  ff;
 
-    ierr = DMGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
+    PetscCall(DMGetBoundingBox(info->da,xymin,xymax));
     hx = (xymax[0] - xymin[0]) / (info->mx - 1);
     hy = (xymax[1] - xymin[1]) / (info->my - 1);
     limiter = usr->limiter_fcn;
@@ -307,7 +302,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal **au,
             }
         }
     }
-    ierr = PetscLogFlops(14.0*info->xm*info->ym); CHKERRQ(ierr);
+    PetscCall(PetscLogFlops(14.0*info->xm*info->ym));
 
     // for each E,N face of an *owned* cell at (x,y) and (i,j), compute flux at
     //     the face center and then add that to the correct residual
@@ -381,7 +376,6 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal **au,
     ff = (limiter == NULL) ? 6.0 : 13.0;
     if (limiter == &vanleer)
         ff += 4.0;
-    ierr = PetscLogFlops(ff*2.0*(1.0+info->xm)*(1.0+info->ym)); CHKERRQ(ierr);
+    PetscCall(PetscLogFlops(ff*2.0*(1.0+info->xm)*(1.0+info->ym)));
     return 0;
 }
-

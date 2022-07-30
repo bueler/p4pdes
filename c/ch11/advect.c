@@ -130,7 +130,6 @@ extern PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo*, PetscReal,
         PetscReal**, Mat, Mat, AdvectCtx*);
 
 int main(int argc,char **argv) {
-    PetscErrorCode ierr;
     TS               ts;
     DM               da;
     Vec              u;
@@ -143,75 +142,75 @@ int main(int argc,char **argv) {
     LimiterType      limiter = KOREN, jac_limiter = NONE;
     AdvectCtx        user;
 
-    ierr = PetscInitialize(&argc,&argv,NULL,help); if (ierr) return ierr;
+    PetscCall(PetscInitialize(&argc,&argv,NULL,help));
 
     user.problem = STRAIGHT;
     user.windx = 2.0;
     user.windy = 2.0;
-    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,
-           "adv_", "options for advect.c", ""); CHKERRQ(ierr);
-    ierr = PetscOptionsString("-dumpto","filename root for binary files with initial/final state",
-           "advect.c",fileroot,fileroot,PETSC_MAX_PATH_LEN,NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsEnum("-initial",
+    PetscOptionsBegin(PETSC_COMM_WORLD,
+           "adv_", "options for advect.c", "");
+    PetscCall(PetscOptionsString("-dumpto","filename root for binary files with initial/final state",
+           "advect.c",fileroot,fileroot,PETSC_MAX_PATH_LEN,NULL));
+    PetscCall(PetscOptionsEnum("-initial",
            "shape of initial condition if problem==straight",
            "advect.c",InitialTypes,
-           (PetscEnum)initial,(PetscEnum*)&initial,NULL); CHKERRQ(ierr);
+           (PetscEnum)initial,(PetscEnum*)&initial,NULL));
     user.initial_fcn = initialptr[initial];
-    ierr = PetscOptionsEnum("-limiter",
+    PetscCall(PetscOptionsEnum("-limiter",
            "flux-limiter type used in RHS evaluation",
            "advect.c",LimiterTypes,
-           (PetscEnum)limiter,(PetscEnum*)&limiter,NULL); CHKERRQ(ierr);
+           (PetscEnum)limiter,(PetscEnum*)&limiter,NULL));
     user.limiter_fcn = limiterptr[limiter];
-    ierr = PetscOptionsEnum("-jac_limiter",
+    PetscCall(PetscOptionsEnum("-jac_limiter",
            "flux-limiter type used in Jacobian (of RHS) evaluation",
            "advect.c",LimiterTypes,
-           (PetscEnum)jac_limiter,(PetscEnum*)&jac_limiter,NULL); CHKERRQ(ierr);
+           (PetscEnum)jac_limiter,(PetscEnum*)&jac_limiter,NULL));
     user.jac_limiter_fcn = limiterptr[jac_limiter];
-    ierr = PetscOptionsBool("-oneline",
+    PetscCall(PetscOptionsBool("-oneline",
            "in exact solution cases, show one-line output",
-           "advect.c",oneline,&oneline,NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsEnum("-problem",
+           "advect.c",oneline,&oneline,NULL));
+    PetscCall(PetscOptionsEnum("-problem",
            "problem type",
            "advect.c",ProblemTypes,
-           (PetscEnum)user.problem,(PetscEnum*)&user.problem,NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-windx",
+           (PetscEnum)user.problem,(PetscEnum*)&user.problem,NULL));
+    PetscCall(PetscOptionsReal("-windx",
            "x component of wind for problem==straight",
-           "advect.c",user.windx,&user.windx,NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-windy",
+           "advect.c",user.windx,&user.windx,NULL));
+    PetscCall(PetscOptionsReal("-windy",
            "y component of wind for problem==straight",
-           "advect.c",user.windy,&user.windy,NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+           "advect.c",user.windy,&user.windy,NULL));
+    PetscOptionsEnd();
 
-    ierr = PetscOptionsHasName(NULL,NULL,"-snes_fd",&snesfdset); CHKERRQ(ierr);
-    ierr = PetscOptionsHasName(NULL,NULL,"-snes_fd_color",&snesfdcolorset); CHKERRQ(ierr);
+    PetscCall(PetscOptionsHasName(NULL,NULL,"-snes_fd",&snesfdset));
+    PetscCall(PetscOptionsHasName(NULL,NULL,"-snes_fd_color",&snesfdcolorset));
     if (snesfdset || snesfdcolorset) {
         user.jac_limiter_fcn = NULL;
         jac_limiter = 5;   // corresponds to empty string
     }
 
-    ierr = DMDACreate2d(PETSC_COMM_WORLD,
+    PetscCall(DMDACreate2d(PETSC_COMM_WORLD,
                DM_BOUNDARY_PERIODIC, DM_BOUNDARY_PERIODIC,
                DMDA_STENCIL_STAR,              // no diagonal differencing
                5,5,PETSC_DECIDE,PETSC_DECIDE,  // default to hx=hx=0.2 grid
                                                //   (mx=my=5 allows -snes_fd_color)
                1, 2,                           // d.o.f & stencil width
-               NULL,NULL,&da); CHKERRQ(ierr);
-    ierr = DMSetFromOptions(da); CHKERRQ(ierr);
-    ierr = DMSetUp(da); CHKERRQ(ierr);
-    ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
-    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+               NULL,NULL,&da));
+    PetscCall(DMSetFromOptions(da));
+    PetscCall(DMSetUp(da));
+    PetscCall(DMSetApplicationContext(da,&user));
+    PetscCall(DMDAGetLocalInfo(da,&info));
     hx = 2.0 / info.mx;  hy = 2.0 / info.my;
-    ierr = DMDASetUniformCoordinates(da,    // grid is cell-centered
-        -1.0+hx/2.0,1.0-hx/2.0,-1.0+hy/2.0,1.0-hy/2.0,0.0,1.0);CHKERRQ(ierr);
+    PetscCall(DMDASetUniformCoordinates(da,    // grid is cell-centered
+        -1.0+hx/2.0,1.0-hx/2.0,-1.0+hy/2.0,1.0-hy/2.0,0.0,1.0));
 
-    ierr = TSCreate(PETSC_COMM_WORLD,&ts); CHKERRQ(ierr);
-    ierr = TSSetProblemType(ts,TS_NONLINEAR); CHKERRQ(ierr);
-    ierr = TSSetDM(ts,da); CHKERRQ(ierr);
-    ierr = DMDATSSetRHSFunctionLocal(da,INSERT_VALUES,
-           (DMDATSRHSFunctionLocal)FormRHSFunctionLocal,&user); CHKERRQ(ierr);
-    ierr = DMDATSSetRHSJacobianLocal(da,
-           (DMDATSRHSJacobianLocal)FormRHSJacobianLocal,&user); CHKERRQ(ierr);
-    ierr = TSSetType(ts,TSRK); CHKERRQ(ierr);  // defaults to -ts_rk_type 3bs
+    PetscCall(TSCreate(PETSC_COMM_WORLD,&ts));
+    PetscCall(TSSetProblemType(ts,TS_NONLINEAR));
+    PetscCall(TSSetDM(ts,da));
+    PetscCall(DMDATSSetRHSFunctionLocal(da,INSERT_VALUES,
+           (DMDATSRHSFunctionLocal)FormRHSFunctionLocal,&user));
+    PetscCall(DMDATSSetRHSJacobianLocal(da,
+           (DMDATSRHSJacobianLocal)FormRHSJacobianLocal,&user));
+    PetscCall(TSSetType(ts,TSRK));  // defaults to -ts_rk_type 3bs
 
     // time axis: use CFL number of 0.5 to set initial time step, but note
     //            most methods adapt anyway
@@ -220,35 +219,35 @@ int main(int argc,char **argv) {
     else
         c = PetscMax(1.0/hx, 1.0/hy);
     dt = 0.5 / c;
-    ierr = TSSetTime(ts,0.0); CHKERRQ(ierr);
-    ierr = TSSetMaxTime(ts,0.6); CHKERRQ(ierr);
-    ierr = TSSetTimeStep(ts,dt); CHKERRQ(ierr);
-    ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP); CHKERRQ(ierr);
-    ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
+    PetscCall(TSSetTime(ts,0.0));
+    PetscCall(TSSetMaxTime(ts,0.6));
+    PetscCall(TSSetTimeStep(ts,dt));
+    PetscCall(TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP));
+    PetscCall(TSSetFromOptions(ts));
 
-    ierr = DMCreateGlobalVector(da,&u); CHKERRQ(ierr);
-    ierr = FormInitial(&info,u,&user); CHKERRQ(ierr);
-    ierr = DumpBinary(fileroot,"_initial",u); CHKERRQ(ierr);
-    ierr = TSGetTime(ts,&t0); CHKERRQ(ierr);
-    ierr = TSGetTimeStep(ts,&dt); CHKERRQ(ierr);
+    PetscCall(DMCreateGlobalVector(da,&u));
+    PetscCall(FormInitial(&info,u,&user));
+    PetscCall(DumpBinary(fileroot,"_initial",u));
+    PetscCall(TSGetTime(ts,&t0));
+    PetscCall(TSGetTimeStep(ts,&dt));
 
     if (!oneline) {
-        ierr = PetscPrintf(PETSC_COMM_WORLD,
+        PetscCall(PetscPrintf(PETSC_COMM_WORLD,
                "solving problem %s with %s initial state on %d x %d grid,\n"
                "    cells dx=%g x dy=%g, limiter = %s, and jac_limiter = %s ...\n",
                ProblemTypes[user.problem],InitialTypes[initial],info.mx,info.my,
-               hx,hy,LimiterTypes[limiter],LimiterTypes[jac_limiter]); CHKERRQ(ierr);
+               hx,hy,LimiterTypes[limiter],LimiterTypes[jac_limiter]));
     }
 
-    ierr = TSSolve(ts,u); CHKERRQ(ierr);
+    PetscCall(TSSolve(ts,u));
 
-    ierr = TSGetStepNumber(ts,&steps); CHKERRQ(ierr);
-    ierr = TSGetTime(ts,&tf); CHKERRQ(ierr);
-    ierr = DumpBinary(fileroot,"_final",u); CHKERRQ(ierr);
+    PetscCall(TSGetStepNumber(ts,&steps));
+    PetscCall(TSGetTime(ts,&tf));
+    PetscCall(DumpBinary(fileroot,"_final",u));
 
     if (!oneline) {
-        ierr = PetscPrintf(PETSC_COMM_WORLD,
-                "completed %d steps to time %g\n",steps,tf); CHKERRQ(ierr);
+        PetscCall(PetscPrintf(PETSC_COMM_WORLD,
+                "completed %d steps to time %g\n",steps,tf));
     }
 
     if ( (user.problem == STRAIGHT) && (PetscAbs(fmod(tf+0.5e-8,1.0)) <= 1.0e-8)
@@ -256,37 +255,39 @@ int main(int argc,char **argv) {
         // exact solution is same as initial condition
         Vec    uexact;
         PetscReal norms[2];
-        ierr = VecDuplicate(u,&uexact); CHKERRQ(ierr);
-        ierr = FormInitial(&info,uexact,&user); CHKERRQ(ierr);
-        ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr); // u <- u + (-1.0) uexact
-        ierr = VecNorm(u,NORM_1_AND_2,norms); CHKERRQ(ierr);
+        PetscCall(VecDuplicate(u,&uexact));
+        PetscCall(FormInitial(&info,uexact,&user));
+        PetscCall(VecAXPY(u,-1.0,uexact)); // u <- u + (-1.0) uexact
+        PetscCall(VecNorm(u,NORM_1_AND_2,norms));
         norms[0] *= hx * hy;
         norms[1] *= PetscSqrtReal(hx * hy);
         VecDestroy(&uexact);
         if (oneline) {
-            ierr = PetscPrintf(PETSC_COMM_WORLD,
+            PetscCall(PetscPrintf(PETSC_COMM_WORLD,
                 "%s,%s,%s,%d,%d,%g,%g,%d,%g,%.4e,%.4e\n",
                 ProblemTypes[user.problem],InitialTypes[initial],
                 LimiterTypes[limiter],info.mx,info.my,hx,hy,steps,tf,
-                norms[0],norms[1]); CHKERRQ(ierr);
+                norms[0],norms[1]));
         } else {
-            ierr = PetscPrintf(PETSC_COMM_WORLD,
+            PetscCall(PetscPrintf(PETSC_COMM_WORLD,
                 "errors |u-uexact|_{1,h} = %.4e, |u-uexact|_{2,h} = %.4e\n",
-                norms[0],norms[1]); CHKERRQ(ierr);
+                norms[0],norms[1]));
         }
     }
 
-    VecDestroy(&u);  TSDestroy(&ts);  DMDestroy(&da);
-    return PetscFinalize();
+    PetscCall(VecDestroy(&u));
+    PetscCall(TSDestroy(&ts));
+    PetscCall(DMDestroy(&da));
+    PetscCall(PetscFinalize());
+    return 0;
 }
 
 PetscErrorCode FormInitial(DMDALocalInfo *info, Vec u, AdvectCtx* user) {
-    PetscErrorCode ierr;
     PetscInt   i, j;
     PetscReal  hx, hy, x, y, **au;
 
-    ierr = VecSet(u,0.0); CHKERRQ(ierr);  // clear it first
-    ierr = DMDAVecGetArray(info->da, u, &au); CHKERRQ(ierr);
+    PetscCall(VecSet(u,0.0));  // clear it first
+    PetscCall(DMDAVecGetArray(info->da, u, &au));
     hx = 2.0 / info->mx;  hy = 2.0 / info->my;
     for (j=info->ys; j<info->ys+info->ym; j++) {
         y = -1.0 + (j+0.5) * hy;
@@ -304,23 +305,22 @@ PetscErrorCode FormInitial(DMDALocalInfo *info, Vec u, AdvectCtx* user) {
             }
         }
     }
-    ierr = DMDAVecRestoreArray(info->da, u, &au); CHKERRQ(ierr);
+    PetscCall(DMDAVecRestoreArray(info->da, u, &au));
     return 0;
 }
 
 // dumps to file; does nothing if string root is empty or NULL
 PetscErrorCode DumpBinary(const char* root, const char* append, Vec u) {
-    PetscErrorCode ierr;
     if ((root) && (strlen(root) > 0)) {
         PetscViewer  viewer;
         char         filename[PETSC_MAX_PATH_LEN] = "";
         sprintf(filename,"%s%s.dat",root,append);
-        ierr = PetscPrintf(PETSC_COMM_WORLD,
-            "writing PETSC binary file %s ...\n",filename); CHKERRQ(ierr);
-        ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename,
-            FILE_MODE_WRITE,&viewer); CHKERRQ(ierr);
-        ierr = VecView(u,viewer); CHKERRQ(ierr);
-        ierr = PetscViewerDestroy(&viewer); CHKERRQ(ierr);
+        PetscCall(PetscPrintf(PETSC_COMM_WORLD,
+            "writing PETSC binary file %s ...\n",filename));
+        PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename,
+            FILE_MODE_WRITE,&viewer));
+        PetscCall(VecView(u,viewer));
+        PetscCall(PetscViewerDestroy(&viewer));
     }
     return 0;
 }
@@ -394,14 +394,13 @@ PetscErrorCode FormRHSFunctionLocal(DMDALocalInfo *info, PetscReal t,
 
 PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info, PetscReal t,
         PetscReal **au, Mat J, Mat P, AdvectCtx *user) {
-    PetscErrorCode ierr;
     const PetscInt  dir[4] = { 0, 1, 0, 1},  // use x (0) or y (1) component
                     xsh[4] = { 1, 0,-1, 0},  ysh[4]   = { 0, 1, 0,-1};
     PetscInt        i, j, l, nc;
     PetscReal       hx, hy, halfx, halfy, x, y, a, v[9];
     MatStencil      col[9],row;
 
-    ierr = MatZeroEntries(P); CHKERRQ(ierr);
+    PetscCall(MatZeroEntries(P));
     hx = 2.0 / info->mx;  hy = 2.0 / info->my;
     halfx = hx / 2.0;     halfy = hy / 2.0;
     for (j = info->ys; j < info->ys+info->ym; j++) {
@@ -463,15 +462,14 @@ PetscErrorCode FormRHSJacobianLocal(DMDALocalInfo *info, PetscReal t,
                     SETERRQ(PETSC_COMM_SELF,1,"only Jacobian cases none|centered are implemented\n");
                 }
             }
-            ierr = MatSetValuesStencil(P,1,&row,nc,col,v,ADD_VALUES); CHKERRQ(ierr);
+            PetscCall(MatSetValuesStencil(P,1,&row,nc,col,v,ADD_VALUES));
         }
     }
-    ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-    ierr = MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    PetscCall(MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY));
     if (J != P) {
-        ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-        ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+        PetscCall(MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY));
+        PetscCall(MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY));
     }
     return 0;
 }
-
