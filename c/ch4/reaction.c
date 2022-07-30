@@ -14,7 +14,6 @@ extern PetscErrorCode FormJacobianLocal(DMDALocalInfo*, PetscReal*, Mat, Mat, Ap
 
 //STARTMAIN
 int main(int argc,char **args) {
-  PetscErrorCode ierr;
   DM            da;
   SNES          snes;
   AppCtx        user;
@@ -22,51 +21,54 @@ int main(int argc,char **args) {
   PetscReal     errnorm, *au, *auex;
   DMDALocalInfo info;
 
-  ierr = PetscInitialize(&argc,&args,NULL,help); if (ierr) return ierr;
+  PetscCall(PetscInitialize(&argc,&args,NULL,help));
   user.rho   = 10.0;
   user.M     = PetscSqr(user.rho / 12.0);
   user.alpha = user.M;
   user.beta  = 16.0 * user.M;
   user.noRinJ = PETSC_FALSE;
 
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"rct_","options for reaction",""); CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-noRinJ","do not include R(u) term in Jacobian",
-      "reaction.c",user.noRinJ,&(user.noRinJ),NULL); CHKERRQ(ierr);
-  ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD,"rct_","options for reaction",""); 
+  PetscCall(PetscOptionsBool("-noRinJ","do not include R(u) term in Jacobian",
+      "reaction.c",user.noRinJ,&(user.noRinJ),NULL));
+  PetscOptionsEnd();
 
-  ierr = DMDACreate1d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,9,1,1,NULL,&da); CHKERRQ(ierr);
-  ierr = DMSetFromOptions(da); CHKERRQ(ierr);
-  ierr = DMSetUp(da); CHKERRQ(ierr);
-  ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
+  PetscCall(DMDACreate1d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,9,1,1,NULL,&da));
+  PetscCall(DMSetFromOptions(da));
+  PetscCall(DMSetUp(da));
+  PetscCall(DMSetApplicationContext(da,&user));
 
-  ierr = DMCreateGlobalVector(da,&u); CHKERRQ(ierr);
-  ierr = VecDuplicate(u,&uexact); CHKERRQ(ierr);
-  ierr = DMDAVecGetArray(da,u,&au); CHKERRQ(ierr);
+  PetscCall(DMCreateGlobalVector(da,&u));
+  PetscCall(VecDuplicate(u,&uexact));
+  PetscCall(DMDAVecGetArray(da,u,&au));
 
-  ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-  ierr = DMDAVecGetArray(da,uexact,&auex); CHKERRQ(ierr);
-  ierr = InitialAndExact(&info,au,auex,&user); CHKERRQ(ierr);
-  ierr = DMDAVecRestoreArray(da,u,&au); CHKERRQ(ierr);
-  ierr = DMDAVecRestoreArray(da,uexact,&auex); CHKERRQ(ierr);
+  PetscCall(DMDAGetLocalInfo(da,&info));
+  PetscCall(DMDAVecGetArray(da,uexact,&auex));
+  PetscCall(InitialAndExact(&info,au,auex,&user));
+  PetscCall(DMDAVecRestoreArray(da,u,&au));
+  PetscCall(DMDAVecRestoreArray(da,uexact,&auex));
 
-  ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
-  ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
-  ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
-             (DMDASNESFunction)FormFunctionLocal,&user); CHKERRQ(ierr);
-  ierr = DMDASNESSetJacobianLocal(da,
-             (DMDASNESJacobian)FormJacobianLocal,&user); CHKERRQ(ierr);
-  ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
+  PetscCall(SNESCreate(PETSC_COMM_WORLD,&snes));
+  PetscCall(SNESSetDM(snes,da));
+  PetscCall(DMDASNESSetFunctionLocal(da,INSERT_VALUES,
+             (DMDASNESFunction)FormFunctionLocal,&user));
+  PetscCall(DMDASNESSetJacobianLocal(da,
+             (DMDASNESJacobian)FormJacobianLocal,&user));
+  PetscCall(SNESSetFromOptions(snes));
 
-  ierr = SNESSolve(snes,NULL,u); CHKERRQ(ierr);
+  PetscCall(SNESSolve(snes,NULL,u));
 
-  ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
-  ierr = VecNorm(u,NORM_INFINITY,&errnorm); CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,
-      "on %d point grid:  |u-u_exact|_inf = %g\n",info.mx,errnorm); CHKERRQ(ierr);
+  PetscCall(VecAXPY(u,-1.0,uexact));    // u <- u + (-1.0) uexact
+  PetscCall(VecNorm(u,NORM_INFINITY,&errnorm));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,
+      "on %d point grid:  |u-u_exact|_inf = %g\n",info.mx,errnorm));
 
-  VecDestroy(&u);  VecDestroy(&uexact);
-  SNESDestroy(&snes);  DMDestroy(&da);
-  return PetscFinalize();
+  PetscCall(VecDestroy(&u));
+  PetscCall(VecDestroy(&uexact));
+  PetscCall(SNESDestroy(&snes));
+  PetscCall(DMDestroy(&da));
+  PetscCall(PetscFinalize());
+  return 0;
 }
 //ENDMAIN
 
@@ -114,13 +116,12 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal *u,
 
 PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscReal *u,
                                  Mat J, Mat P, AppCtx *user) {
-    PetscErrorCode ierr;
     PetscInt   i, col[3];
     PetscReal  h = 1.0 / (info->mx-1), dRdu, v[3];
     for (i=info->xs; i<info->xs+info->xm; i++) {
         if ((i == 0) | (i == info->mx-1)) {
             v[0] = 1.0;
-            ierr = MatSetValues(P,1,&i,1,&i,v,INSERT_VALUES); CHKERRQ(ierr);
+            PetscCall(MatSetValues(P,1,&i,1,&i,v,INSERT_VALUES));
         } else {
             col[0] = i;
             v[0] = 2.0;
@@ -130,16 +131,15 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscReal *u,
             }
             col[1] = i-1;   v[1] = (i > 1) ? - 1.0 : 0.0;
             col[2] = i+1;   v[2] = (i < info->mx-2) ? - 1.0 : 0.0;
-            ierr = MatSetValues(P,1,&i,3,col,v,INSERT_VALUES); CHKERRQ(ierr);
+            PetscCall(MatSetValues(P,1,&i,3,col,v,INSERT_VALUES));
         }
     }
-    ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-    ierr = MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+    PetscCall(MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY));
     if (J != P) {
-        ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-        ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+        PetscCall(MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY));
+        PetscCall(MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY));
     }
     return 0;
 }
 //ENDFUNCTIONS
-

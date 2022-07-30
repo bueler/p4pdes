@@ -8,7 +8,6 @@ extern PetscErrorCode formRHS(DM, Vec);
 
 //STARTMAIN
 int main(int argc,char **args) {
-    PetscErrorCode ierr;
     DM            da;
     Mat           A;
     Vec           b,u,uexact;
@@ -16,58 +15,62 @@ int main(int argc,char **args) {
     PetscReal     errnorm;
     DMDALocalInfo info;
 
-    ierr = PetscInitialize(&argc,&args,NULL,help); if (ierr) return ierr;
+    PetscCall(PetscInitialize(&argc,&args,NULL,help));
 
     // change default 9x9 size using -da_grid_x M -da_grid_y N
-    ierr = DMDACreate2d(PETSC_COMM_WORLD,
+    PetscCall(DMDACreate2d(PETSC_COMM_WORLD,
                  DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
-                 9,9,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&da); CHKERRQ(ierr);
+                 9,9,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&da));
 
     // create linear system matrix A
-    ierr = DMSetFromOptions(da); CHKERRQ(ierr);
-    ierr = DMSetUp(da); CHKERRQ(ierr);
-    ierr = DMCreateMatrix(da,&A); CHKERRQ(ierr);
-    ierr = MatSetFromOptions(A); CHKERRQ(ierr);
+    PetscCall(DMSetFromOptions(da));
+    PetscCall(DMSetUp(da));
+    PetscCall(DMCreateMatrix(da,&A));
+    PetscCall(MatSetFromOptions(A));
 
     // create RHS b, approx solution u, exact solution uexact
-    ierr = DMCreateGlobalVector(da,&b); CHKERRQ(ierr);
-    ierr = VecDuplicate(b,&u); CHKERRQ(ierr);
-    ierr = VecDuplicate(b,&uexact); CHKERRQ(ierr);
+    PetscCall(DMCreateGlobalVector(da,&b));
+    PetscCall(VecDuplicate(b,&u));
+    PetscCall(VecDuplicate(b,&uexact));
 
     // fill vectors and assemble linear system
-    ierr = formExact(da,uexact); CHKERRQ(ierr);
-    ierr = formRHS(da,b); CHKERRQ(ierr);
-    ierr = formMatrix(da,A); CHKERRQ(ierr);
+    PetscCall(formExact(da,uexact));
+    PetscCall(formRHS(da,b));
+    PetscCall(formMatrix(da,A));
 
     // create and solve the linear system
-    ierr = KSPCreate(PETSC_COMM_WORLD,&ksp); CHKERRQ(ierr);
-    ierr = KSPSetOperators(ksp,A,A); CHKERRQ(ierr);
-    ierr = KSPSetFromOptions(ksp); CHKERRQ(ierr);
-    ierr = KSPSolve(ksp,b,u); CHKERRQ(ierr);
+    PetscCall(KSPCreate(PETSC_COMM_WORLD,&ksp));
+    PetscCall(KSPSetOperators(ksp,A,A));
+    PetscCall(KSPSetFromOptions(ksp));
+    PetscCall(KSPSolve(ksp,b,u));
 
     // report on grid and numerical error
-    ierr = VecAXPY(u,-1.0,uexact); CHKERRQ(ierr);    // u <- u + (-1.0) uxact
-    ierr = VecNorm(u,NORM_INFINITY,&errnorm); CHKERRQ(ierr);
-    ierr = DMDAGetLocalInfo(da,&info);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,
+    PetscCall(VecAXPY(u,-1.0,uexact));    // u <- u + (-1.0) uxact
+    PetscCall(VecNorm(u,NORM_INFINITY,&errnorm));
+    PetscCall(DMDAGetLocalInfo(da,&info));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,
                 "on %d x %d grid:  error |u-uexact|_inf = %g\n",
-                info.mx,info.my,errnorm); CHKERRQ(ierr);
+                info.mx,info.my,errnorm));
 
-    VecDestroy(&u);  VecDestroy(&uexact);  VecDestroy(&b);
-    MatDestroy(&A);  KSPDestroy(&ksp);  DMDestroy(&da);
-    return PetscFinalize();
+    PetscCall(VecDestroy(&u));
+    PetscCall(VecDestroy(&uexact));
+    PetscCall(VecDestroy(&b));
+    PetscCall(MatDestroy(&A));
+    PetscCall(KSPDestroy(&ksp));
+    PetscCall(DMDestroy(&da));
+    PetscCall(PetscFinalize());
+    return 0;
 }
 //ENDMAIN
 
 //STARTMATRIX
 PetscErrorCode formMatrix(DM da, Mat A) {
-    PetscErrorCode ierr;
     DMDALocalInfo  info;
     MatStencil     row, col[5];
     PetscReal      hx, hy, v[5];
     PetscInt       i, j, ncols;
 
-    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+    PetscCall(DMDAGetLocalInfo(da,&info));
     hx = 1.0/(info.mx-1);  hy = 1.0/(info.my-1);
     for (j = info.ys; j < info.ys+info.ym; j++) {
         for (i = info.xs; i < info.xs+info.xm; i++) {
@@ -97,25 +100,24 @@ PetscErrorCode formMatrix(DM da, Mat A) {
                     v[ncols++] = -hx/hy;
                 }
             }
-            ierr = MatSetValuesStencil(A,1,&row,ncols,col,v,INSERT_VALUES); CHKERRQ(ierr);
+            PetscCall(MatSetValuesStencil(A,1,&row,ncols,col,v,INSERT_VALUES));
         }
     }
-    ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-    ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+    PetscCall(MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY));
     return 0;
 }
 //ENDMATRIX
 
 //STARTEXACT
 PetscErrorCode formExact(DM da, Vec uexact) {
-    PetscErrorCode ierr;
     PetscInt       i, j;
     PetscReal      hx, hy, x, y, **auexact;
     DMDALocalInfo  info;
 
-    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+    PetscCall(DMDAGetLocalInfo(da,&info));
     hx = 1.0/(info.mx-1);  hy = 1.0/(info.my-1);
-    ierr = DMDAVecGetArray(da, uexact, &auexact);CHKERRQ(ierr);
+    PetscCall(DMDAVecGetArray(da, uexact, &auexact));
     for (j = info.ys; j < info.ys+info.ym; j++) {
         y = j * hy;
         for (i = info.xs; i < info.xs+info.xm; i++) {
@@ -123,19 +125,18 @@ PetscErrorCode formExact(DM da, Vec uexact) {
             auexact[j][i] = x*x * (1.0 - x*x) * y*y * (y*y - 1.0);
         }
     }
-    ierr = DMDAVecRestoreArray(da, uexact, &auexact);CHKERRQ(ierr);
+    PetscCall(DMDAVecRestoreArray(da, uexact, &auexact));
     return 0;
 }
 
 PetscErrorCode formRHS(DM da, Vec b) {
-    PetscErrorCode ierr;
     PetscInt       i, j;
     PetscReal      hx, hy, x, y, f, **ab;
     DMDALocalInfo  info;
 
-    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
+    PetscCall(DMDAGetLocalInfo(da,&info));
     hx = 1.0/(info.mx-1);  hy = 1.0/(info.my-1);
-    ierr = DMDAVecGetArray(da, b, &ab);CHKERRQ(ierr);
+    PetscCall(DMDAVecGetArray(da, b, &ab));
     for (j=info.ys; j<info.ys+info.ym; j++) {
         y = j * hy;
         for (i=info.xs; i<info.xs+info.xm; i++) {
@@ -149,8 +150,7 @@ PetscErrorCode formRHS(DM da, Vec b) {
             }
         }
     }
-    ierr = DMDAVecRestoreArray(da, b, &ab); CHKERRQ(ierr);
+    PetscCall(DMDAVecRestoreArray(da, b, &ab));
     return 0;
 }
 //ENDEXACT
-

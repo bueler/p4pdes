@@ -7,39 +7,39 @@ static char help[] = "Newton's method for a two-variable system.\n"
 extern PetscErrorCode FormFunction(SNES, Vec, Vec, void*);
 
 int main(int argc,char **argv) {
-    PetscErrorCode ierr;
     SNES  snes;          // nonlinear solver
     Vec   x, r;          // solution, residual vectors
 
-    ierr = PetscInitialize(&argc,&argv,NULL,help); if (ierr) return ierr;
-    ierr = VecCreate(PETSC_COMM_WORLD,&x); CHKERRQ(ierr);
-    ierr = VecSetSizes(x,PETSC_DECIDE,2); CHKERRQ(ierr);
-    ierr = VecSetFromOptions(x); CHKERRQ(ierr);
-    ierr = VecSet(x,1.0); CHKERRQ(ierr);         // initial iterate
-    ierr = VecDuplicate(x,&r); CHKERRQ(ierr);
+    PetscCall(PetscInitialize(&argc,&argv,NULL,help));
+    PetscCall(VecCreate(PETSC_COMM_WORLD,&x));
+    PetscCall(VecSetSizes(x,PETSC_DECIDE,2));
+    PetscCall(VecSetFromOptions(x));
+    PetscCall(VecSet(x,1.0));         // initial iterate
+    PetscCall(VecDuplicate(x,&r));
 
-    ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
-    ierr = SNESSetFunction(snes,r,FormFunction,NULL); CHKERRQ(ierr);
-    ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
-    ierr = SNESSolve(snes,NULL,x); CHKERRQ(ierr);
-    ierr = VecView(x,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
+    PetscCall(SNESCreate(PETSC_COMM_WORLD,&snes));
+    PetscCall(SNESSetFunction(snes,r,FormFunction,NULL));
+    PetscCall(SNESSetFromOptions(snes));
+    PetscCall(SNESSolve(snes,NULL,x));
+    PetscCall(VecView(x,PETSC_VIEWER_STDOUT_WORLD));
 
-    SNESDestroy(&snes);  VecDestroy(&x);  VecDestroy(&r);
-    return PetscFinalize();
+    PetscCall(SNESDestroy(&snes));
+    PetscCall(VecDestroy(&x));
+    PetscCall(VecDestroy(&r));
+    PetscCall(PetscFinalize());
+    return 0;
 }
 
 PetscErrorCode FormFunction(SNES snes, Vec x, Vec F, void *ctx) {
-    PetscErrorCode ierr;
     const PetscReal  b = 2.0, *ax;
     PetscReal        *aF;
 
-    ierr = VecGetArrayRead(x,&ax);CHKERRQ(ierr);
-    ierr = VecGetArray(F,&aF);CHKERRQ(ierr);
+    PetscCall(VecGetArrayRead(x,&ax));
+    PetscCall(VecGetArray(F,&aF));
     aF[0] = (1.0 / b) * PetscExpReal(b * ax[0]) - ax[1];
     aF[1] = ax[0] * ax[0] + ax[1] * ax[1] - 1.0;
-    ierr = VecRestoreArrayRead(x,&ax);CHKERRQ(ierr);
-    ierr = VecRestoreArray(F,&aF);CHKERRQ(ierr);
+    PetscCall(VecRestoreArrayRead(x,&ax));
+    PetscCall(VecRestoreArray(F,&aF));
     return 0;
 }
 //ENDWHOLE
-
