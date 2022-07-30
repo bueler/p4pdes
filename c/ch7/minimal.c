@@ -57,7 +57,6 @@ extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, PetscReal**,
 extern PetscErrorCode MSEMonitor(SNES, int, PetscReal, void*);
 
 int main(int argc, char **argv) {
-    PetscErrorCode ierr;
     DM             da;
     SNES           snes;
     Vec            u_initial, u;
@@ -68,7 +67,7 @@ int main(int argc, char **argv) {
     DMDALocalInfo  info;
     ProblemType    problem = CATENOID;
 
-    ierr = PetscInitialize(&argc,&argv,NULL,help); if (ierr) return ierr;
+    PetscCall(PetscInitialize(&argc,&argv,NULL,help));
 
     // defaults and options
     mctx.q = -0.5;
@@ -78,31 +77,31 @@ int main(int argc, char **argv) {
     user.cx = 1.0;
     user.cy = 1.0;
     user.cz = 1.0;
-    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"ms_",
-                             "minimal surface equation solver options",""); CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-catenoid_c",
+    PetscOptionsBegin(PETSC_COMM_WORLD,"ms_",
+                      "minimal surface equation solver options","");
+    PetscCall(PetscOptionsReal("-catenoid_c",
                             "parameter for problem catenoid; c >= 1 required",
-                            "minimal.c",mctx.catenoid_c,&(mctx.catenoid_c),NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-exact_init",
+                            "minimal.c",mctx.catenoid_c,&(mctx.catenoid_c),NULL));
+    PetscCall(PetscOptionsBool("-exact_init",
                             "initial Newton iterate = continuum exact solution; only for catenoid",
-                            "minimal.c",exact_init,&(exact_init),NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-monitor",
+                            "minimal.c",exact_init,&(exact_init),NULL));
+    PetscCall(PetscOptionsBool("-monitor",
                             "print surface area and diffusivity bounds at each SNES iteration",
-                            "minimal.c",monitor,&(monitor),NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-q",
+                            "minimal.c",monitor,&(monitor),NULL));
+    PetscCall(PetscOptionsReal("-q",
                             "power of (1+|grad u|^2) in diffusivity",
-                            "minimal.c",mctx.q,&(mctx.q),NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsInt("-quaddegree",
+                            "minimal.c",mctx.q,&(mctx.q),NULL));
+    PetscCall(PetscOptionsInt("-quaddegree",
                             "quadrature degree (=1,2,3) used in -mse_monitor",
-                            "minimal.c",mctx.quaddegree,&(mctx.quaddegree),NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsEnum("-problem",
+                            "minimal.c",mctx.quaddegree,&(mctx.quaddegree),NULL));
+    PetscCall(PetscOptionsEnum("-problem",
                             "problem type determines boundary conditions",
                             "minimal.c",ProblemTypes,(PetscEnum)problem,(PetscEnum*)&problem,
-                            NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-tent_H",
+                            NULL));
+    PetscCall(PetscOptionsReal("-tent_H",
                             "'door' height for problem tent",
-                            "minimal.c",mctx.tent_H,&(mctx.tent_H),NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+                            "minimal.c",mctx.tent_H,&(mctx.tent_H),NULL));
+    PetscOptionsEnd();
 
     user.addctx = &mctx;   // attach MSE-specific parameters
     switch (problem) {
@@ -128,75 +127,75 @@ int main(int argc, char **argv) {
             SETERRQ(PETSC_COMM_SELF,5,"unknown problem type\n");
     }
 
-    ierr = DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
+    PetscCall(DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
                         DMDA_STENCIL_BOX,  // contrast with fish2
-                        3,3,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&da); CHKERRQ(ierr);
-    ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
-    ierr = DMSetFromOptions(da); CHKERRQ(ierr);
-    ierr = DMSetUp(da); CHKERRQ(ierr);  // this must be called BEFORE SetUniformCoordinates
-    ierr = DMDASetUniformCoordinates(da,0.0,1.0,0.0,1.0,0.0,1.0); CHKERRQ(ierr);
+                        3,3,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&da));
+    PetscCall(DMSetApplicationContext(da,&user));
+    PetscCall(DMSetFromOptions(da));
+    PetscCall(DMSetUp(da));  // this must be called BEFORE SetUniformCoordinates
+    PetscCall(DMDASetUniformCoordinates(da,0.0,1.0,0.0,1.0,0.0,1.0));
 
-    ierr = SNESCreate(PETSC_COMM_WORLD,&snes); CHKERRQ(ierr);
-    ierr = SNESSetDM(snes,da); CHKERRQ(ierr);
-    ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
-               (DMDASNESFunction)FormFunctionLocal,&user); CHKERRQ(ierr);
+    PetscCall(SNESCreate(PETSC_COMM_WORLD,&snes));
+    PetscCall(SNESSetDM(snes,da));
+    PetscCall(DMDASNESSetFunctionLocal(da,INSERT_VALUES,
+               (DMDASNESFunction)FormFunctionLocal,&user));
     // this is the Jacobian of the Poisson equation, thus ONLY APPROXIMATE;
     //     generally use -snes_fd_color or -snes_mf_operator
-    ierr = DMDASNESSetJacobianLocal(da,
-               (DMDASNESJacobian)Poisson2DJacobianLocal,&user); CHKERRQ(ierr);
+    PetscCall(DMDASNESSetJacobianLocal(da,
+               (DMDASNESJacobian)Poisson2DJacobianLocal,&user));
     if (monitor) {
-        ierr = SNESMonitorSet(snes,MSEMonitor,&user,NULL); CHKERRQ(ierr);
+        PetscCall(SNESMonitorSet(snes,MSEMonitor,&user,NULL));
     }
-    ierr = SNESSetFromOptions(snes); CHKERRQ(ierr);
+    PetscCall(SNESSetFromOptions(snes));
 
-    ierr = DMGetGlobalVector(da,&u_initial); CHKERRQ(ierr);
+    PetscCall(DMGetGlobalVector(da,&u_initial));
     if ((problem == CATENOID) && (mctx.q == -0.5) && (exact_init)) {
-        ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-        ierr = FormExactFromG(&info,u_initial,&user); CHKERRQ(ierr);
+        PetscCall(DMDAGetLocalInfo(da,&info));
+        PetscCall(FormExactFromG(&info,u_initial,&user));
     } else {
         // initial iterate has u=g on boundary and u=0 in interior
-        ierr = InitialState(da, ZEROS, PETSC_TRUE, u_initial, &user); CHKERRQ(ierr);
+        PetscCall(InitialState(da, ZEROS, PETSC_TRUE, u_initial, &user));
     }
 
 //STARTSNESSOLVE
-    ierr = SNESSolve(snes,NULL,u_initial); CHKERRQ(ierr);
-    ierr = DMRestoreGlobalVector(da,&u_initial); CHKERRQ(ierr);
-    ierr = DMDestroy(&da); CHKERRQ(ierr);
-    ierr = SNESGetDM(snes,&da); CHKERRQ(ierr);
-    ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr);
+    PetscCall(SNESSolve(snes,NULL,u_initial));
+    PetscCall(DMRestoreGlobalVector(da,&u_initial));
+    PetscCall(DMDestroy(&da));
+    PetscCall(SNESGetDM(snes,&da));
+    PetscCall(SNESGetSolution(snes,&u));
 //ENDSNESSOLVE
 
     // evaluate numerical error in exact solution case
-    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"done on %d x %d grid and problem %s",
-                       info.mx,info.my,ProblemTypes[problem]); CHKERRQ(ierr);
+    PetscCall(DMDAGetLocalInfo(da,&info));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"done on %d x %d grid and problem %s",
+                       info.mx,info.my,ProblemTypes[problem]));
     if ((problem == CATENOID) && (mctx.q == -0.5)) {
         Vec    u_exact;
         PetscReal errnorm;
-        ierr = DMCreateGlobalVector(da,&u_exact); CHKERRQ(ierr);
-        ierr = FormExactFromG(&info,u_exact,&user); CHKERRQ(ierr);
-        ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr);    // u <- u + (-1.0) uexact
-        ierr = VecDestroy(&u_exact); CHKERRQ(ierr);
-        ierr = VecNorm(u,NORM_INFINITY,&errnorm); CHKERRQ(ierr);
-        ierr = PetscPrintf(PETSC_COMM_WORLD,
-                           ":  error |u-uexact|_inf = %.5e\n",errnorm); CHKERRQ(ierr);
+        PetscCall(DMCreateGlobalVector(da,&u_exact));
+        PetscCall(FormExactFromG(&info,u_exact,&user));
+        PetscCall(VecAXPY(u,-1.0,u_exact));    // u <- u + (-1.0) uexact
+        PetscCall(VecDestroy(&u_exact));
+        PetscCall(VecNorm(u,NORM_INFINITY,&errnorm));
+        PetscCall(PetscPrintf(PETSC_COMM_WORLD,
+                           ":  error |u-uexact|_inf = %.5e\n",errnorm));
     } else {
-        ierr = PetscPrintf(PETSC_COMM_WORLD," ...\n"); CHKERRQ(ierr);
+        PetscCall(PetscPrintf(PETSC_COMM_WORLD," ...\n"));
     }
 
-    ierr = SNESDestroy(&snes); CHKERRQ(ierr);
-    return PetscFinalize();
+    PetscCall(SNESDestroy(&snes));
+    PetscCall(PetscFinalize());
+    return 0;
 }
 
 PetscErrorCode FormExactFromG(DMDALocalInfo *info, Vec uexact,
                               PoissonCtx *user) {
-    PetscErrorCode ierr;
     PetscInt   i, j;
     PetscReal  xymin[2], xymax[2], hx, hy, x, y, **auexact;
-    ierr = DMGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
+    PetscCall(DMGetBoundingBox(info->da,xymin,xymax));
     hx = (xymax[0] - xymin[0]) / (info->mx - 1);
     hy = (xymax[1] - xymin[1]) / (info->my - 1);
-    ierr = DMDAVecGetArray(info->da,uexact,&auexact); CHKERRQ(ierr);
+    PetscCall(DMDAVecGetArray(info->da,uexact,&auexact));
     for (j = info->ys; j < info->ys + info->ym; j++) {
         y = j * hy;
         for (i = info->xs; i < info->xs + info->xm; i++) {
@@ -204,19 +203,18 @@ PetscErrorCode FormExactFromG(DMDALocalInfo *info, Vec uexact,
             auexact[j][i] = user->g_bdry(x,y,0.0,user);
         }
     }
-    ierr = DMDAVecRestoreArray(info->da,uexact,&auexact); CHKERRQ(ierr);
+    PetscCall(DMDAVecRestoreArray(info->da,uexact,&auexact));
     return 0;
 }
 
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal **au,
                                  PetscReal **FF, PoissonCtx *user) {
-    PetscErrorCode ierr;
     MinimalCtx *mctx = (MinimalCtx*)(user->addctx);
     PetscInt   i, j;
     PetscReal  xymin[2], xymax[2], hx, hy, hxhy, hyhx, x, y,
                ue, uw, un, us, une, use, unw, usw,
                dux, duy, De, Dw, Dn, Ds;
-    ierr = DMGetBoundingBox(info->da,xymin,xymax); CHKERRQ(ierr);
+    PetscCall(DMGetBoundingBox(info->da,xymin,xymax));
     hx = (xymax[0] - xymin[0]) / (info->mx - 1);
     hy = (xymax[1] - xymin[1]) / (info->my - 1);
     hxhy = hx / hy;
@@ -286,7 +284,6 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal **au,
 // compute surface area and bounds on diffusivity using Q_1 elements and
 // tensor product gaussian quadrature
 PetscErrorCode MSEMonitor(SNES snes, PetscInt its, PetscReal norm, void *user) {
-    PetscErrorCode ierr;
     PoissonCtx     *pctx = (PoissonCtx*)(user);
     MinimalCtx     *mctx = (MinimalCtx*)(pctx->addctx);
     DM             da;
@@ -300,20 +297,20 @@ PetscErrorCode MSEMonitor(SNES snes, PetscInt its, PetscReal norm, void *user) {
     PetscInt       i, j, r, s, tab;
     MPI_Comm       comm;
 
-    ierr = SNESGetDM(snes, &da); CHKERRQ(ierr);
-    ierr = DMDAGetLocalInfo(da,&info); CHKERRQ(ierr);
-    ierr = DMGetBoundingBox(info.da,xymin,xymax); CHKERRQ(ierr);
+    PetscCall(SNESGetDM(snes, &da));
+    PetscCall(DMDAGetLocalInfo(da,&info));
+    PetscCall(DMGetBoundingBox(info.da,xymin,xymax));
     hx = (xymax[0] - xymin[0]) / (info.mx - 1);
     hy = (xymax[1] - xymin[1]) / (info.my - 1);
 
     // get the current solution u, with stencil width
-    ierr = SNESGetSolution(snes, &u); CHKERRQ(ierr);
-    ierr = DMGetLocalVector(da, &uloc); CHKERRQ(ierr);
-    ierr = DMGlobalToLocalBegin(da, u, INSERT_VALUES, uloc); CHKERRQ(ierr);
-    ierr = DMGlobalToLocalEnd(da, u, INSERT_VALUES, uloc); CHKERRQ(ierr);
+    PetscCall(SNESGetSolution(snes, &u));
+    PetscCall(DMGetLocalVector(da, &uloc));
+    PetscCall(DMGlobalToLocalBegin(da, u, INSERT_VALUES, uloc));
+    PetscCall(DMGlobalToLocalEnd(da, u, INSERT_VALUES, uloc));
 
     // loop over rectangular cells in grid
-    ierr = DMDAVecGetArrayRead(da,uloc,&au); CHKERRQ(ierr);
+    PetscCall(DMDAVecGetArrayRead(da,uloc,&au));
     for (j = info.ys; j < info.ys + info.ym; j++) {
         if (j == 0)
             continue;
@@ -345,22 +342,21 @@ PetscErrorCode MSEMonitor(SNES snes, PetscInt its, PetscReal norm, void *user) {
             }
         }
     }
-    ierr = DMDAVecRestoreArrayRead(da,uloc,&au); CHKERRQ(ierr);
-    ierr = DMRestoreLocalVector(da, &uloc); CHKERRQ(ierr);
+    PetscCall(DMDAVecRestoreArrayRead(da,uloc,&au));
+    PetscCall(DMRestoreLocalVector(da, &uloc));
     arealoc *= hx * hy / 4.0;  // from change of variables formula
 
     // do global reductions (because could be in parallel)
-    ierr = PetscObjectGetComm((PetscObject)da,&comm); CHKERRQ(ierr);
-    ierr = MPI_Allreduce(&arealoc,&area,1,MPIU_REAL,MPIU_SUM,comm); CHKERRQ(ierr);
-    ierr = MPI_Allreduce(&Dminloc,&Dmin,1,MPIU_REAL,MPIU_MIN,comm); CHKERRQ(ierr);
-    ierr = MPI_Allreduce(&Dmaxloc,&Dmax,1,MPIU_REAL,MPIU_MAX,comm); CHKERRQ(ierr);
+    PetscCall(PetscObjectGetComm((PetscObject)da,&comm));
+    PetscCall(MPI_Allreduce(&arealoc,&area,1,MPIU_REAL,MPIU_SUM,comm));
+    PetscCall(MPI_Allreduce(&Dminloc,&Dmin,1,MPIU_REAL,MPIU_MIN,comm));
+    PetscCall(MPI_Allreduce(&Dmaxloc,&Dmax,1,MPIU_REAL,MPIU_MAX,comm));
 
     // report using tabbed (indented) print
-    ierr = PetscObjectGetTabLevel((PetscObject)snes,&tab); CHKERRQ(ierr);
-    ierr = PetscViewerASCIIAddTab(PETSC_VIEWER_STDOUT_WORLD,tab); CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_WORLD,
-        "area = %.8f; %.4f <= D <= %.4f\n",area,Dmin,Dmax); CHKERRQ(ierr);
-    ierr = PetscViewerASCIISubtractTab(PETSC_VIEWER_STDOUT_WORLD,tab); CHKERRQ(ierr);
+    PetscCall(PetscObjectGetTabLevel((PetscObject)snes,&tab));
+    PetscCall(PetscViewerASCIIAddTab(PETSC_VIEWER_STDOUT_WORLD,tab));
+    PetscCall(PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_WORLD,
+        "area = %.8f; %.4f <= D <= %.4f\n",area,Dmin,Dmax));
+    PetscCall(PetscViewerASCIISubtractTab(PETSC_VIEWER_STDOUT_WORLD,tab));
     return 0;
 }
-
