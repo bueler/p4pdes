@@ -6,6 +6,19 @@ static char help[] =
 "Critical value occurs about at lambda = 6.808.  Optional exact solution by\n"
 "Liouville (1853) for case lambda=1.0.\n\n";
 
+/*
+incredible performance from FAS+NGS, full-cycles, also NGS for coarse solve
+400 million unknowns in 32 seconds, full 10 digit accuracy
+uses all memory of my Thelio massive machine (uses over 90% of 128 Gb; note 20 cores out of 40)
+note only 350 flops per degree of freedom!
+
+$ timer mpiexec -n 20 --map-by core --bind-to hwthread ./bratu2D -da_grid_x 6 -da_grid_y 6 -lb_exact -snes_rtol 1.0e-10 -snes_converged_reason -lb_showcounts -snes_type fas -snes_fas_type full -fas_levels_snes_type ngs -fas_levels_snes_ngs_sweeps 2 -fas_levels_snes_max_it 1 -fas_coarse_snes_type ngs -fas_coarse_snes_ngs_sweeps 2 -fas_coarse_snes_max_it 4 -da_refine 12
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+flops = 1.467e+11,  residual calls = 416,  NGS calls = 208
+done on 20481 x 20481 grid:   error |u-uexact|_inf = 1.728e-10
+real 31.50
+*/
+
 /* compare:
 timer ./bratu2D -snes_monitor -snes_converged_reason -ksp_converged_reason -pc_type mg -da_refine 8
 
@@ -26,8 +39,11 @@ timer ./bratu2D -snes_monitor -snes_converged_reason -lb_showcounts -da_refine 8
 timer ./bratu2D -snes_monitor -snes_converged_reason -lb_showcounts -da_refine 8 -snes_type fas -fas_levels_snes_type ngs -fas_coarse_snes_type newtonls -fas_coarse_ksp_type cg -fas_coarse_pc_type icc -snes_fas_monitor -snes_fas_levels 6
 */
 
-/* excellent evidence of convergence in Liouville exact solution case:
-$ for LEV in 3 4 5 6 7 8 9; do ./bratu2D -da_refine $LEV -snes_monitor -snes_fd_color -snes_rtol 1.0e-10 -lb_exact -pc_type mg; done
+/* excellent evidence of convergence and optimality in Liouville exact solution case (use opt PETSc build):
+NEWTON+MG is fast
+$ for LEV in 4 5 6 7 8 9 10; do timer ./bratu2D -da_refine $LEV -lb_exact -snes_rtol 1.0e-10 -snes_converged_reason -lb_showcounts -snes_type newtonls -snes_fd_color -pc_type mg; done
+FAS+NGS full cycles are much faster
+$ for LEV in 4 5 6 7 8 9 10; do timer ./bratu2D -da_refine $LEV -lb_exact -snes_rtol 1.0e-10 -snes_converged_reason -lb_showcounts -snes_type fas -snes_fas_type full -fas_levels_snes_type ngs -fas_levels_snes_ngs_sweeps 2 -fas_levels_snes_max_it 1 -fas_coarse_snes_type ngs -fas_coarse_snes_ngs_sweeps 2 -fas_coarse_snes_max_it 4; done
 */
 
 #include <petsc.h>
