@@ -95,7 +95,6 @@ extern PetscErrorCode FormBounds(SNES, Vec, Vec);
 extern PetscErrorCode GetSeepageFaceHeight(DMDALocalInfo*, Vec, PetscReal*, DamCtx*);
 
 int main(int argc,char **argv) {
-  PetscErrorCode ierr;
   DM             da, da_after;
   SNES           snes;
   Vec            u;
@@ -104,7 +103,7 @@ int main(int argc,char **argv) {
   DMDALocalInfo  info;
   PetscReal      height;
 
-  PetscInitialize(&argc,&argv,NULL,help);
+  PetscCall(PetscInitialize(&argc,&argv,NULL,help));
 
   dctx.a  = 16.0;  // a, y1, y2 from Brandt & Cryer
   dctx.y1 = 24.0;
@@ -116,68 +115,67 @@ int main(int argc,char **argv) {
   user.f_rhs = &f_fcn;
   user.addctx = &dctx;
 
-  ierr = DMDACreate2d(PETSC_COMM_WORLD,
+  PetscCall(DMDACreate2d(PETSC_COMM_WORLD,
       DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR,
       3,4,                       // override with -da_refine or -da_grid_x,_y
       PETSC_DECIDE,PETSC_DECIDE, // num of procs in each dim
       1,1,NULL,NULL,             // dof = 1 and stencil width = 1
-      &da);CHKERRQ(ierr);
-  ierr = DMSetFromOptions(da); CHKERRQ(ierr);
-  ierr = DMSetUp(da); CHKERRQ(ierr);
-  ierr = DMDASetUniformCoordinates(da,0.0,dctx.a,0.0,dctx.y1,-1.0,-1.0);CHKERRQ(ierr);
-  ierr = DMSetApplicationContext(da,&user);CHKERRQ(ierr);
+      &da));
+  PetscCall(DMSetFromOptions(da));
+  PetscCall(DMSetUp(da));
+  PetscCall(DMDASetUniformCoordinates(da,0.0,dctx.a,0.0,dctx.y1,-1.0,-1.0));
+  PetscCall(DMSetApplicationContext(da,&user));
 
-  ierr = SNESCreate(PETSC_COMM_WORLD,&snes);CHKERRQ(ierr);
-  ierr = SNESSetDM(snes,da);CHKERRQ(ierr);
-  ierr = SNESSetApplicationContext(snes,&user);CHKERRQ(ierr);
+  PetscCall(SNESCreate(PETSC_COMM_WORLD,&snes));
+  PetscCall(SNESSetDM(snes,da));
+  PetscCall(SNESSetApplicationContext(snes,&user));
 
-  ierr = SNESSetType(snes,SNESVINEWTONRSLS);CHKERRQ(ierr);
-  ierr = SNESVISetComputeVariableBounds(snes,&FormBounds);CHKERRQ(ierr);
+  PetscCall(SNESSetType(snes,SNESVINEWTONRSLS));
+  PetscCall(SNESVISetComputeVariableBounds(snes,&FormBounds));
   
-  ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
-             (DMDASNESFunction)Poisson2DFunctionLocal,&user); CHKERRQ(ierr);
-  ierr = DMDASNESSetJacobianLocal(da,
-             (DMDASNESJacobian)Poisson2DJacobianLocal,&user); CHKERRQ(ierr);
-  ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
+  PetscCall(DMDASNESSetFunctionLocal(da,INSERT_VALUES,
+             (DMDASNESFunction)Poisson2DFunctionLocal,&user));
+  PetscCall(DMDASNESSetJacobianLocal(da,
+             (DMDASNESJacobian)Poisson2DJacobianLocal,&user));
+  PetscCall(SNESSetFromOptions(snes));
 
-  ierr = DMCreateGlobalVector(da,&u);CHKERRQ(ierr);
+  PetscCall(DMCreateGlobalVector(da,&u));
   // initial iterate has u=g on boundary and u=0 in interior
-  ierr = InitialState(da, ZEROS, PETSC_TRUE, u, &user); CHKERRQ(ierr);
+  PetscCall(InitialState(da, ZEROS, PETSC_TRUE, u, &user));
 
   /* solve */
-  ierr = SNESSolve(snes,NULL,u);CHKERRQ(ierr);
-  ierr = VecDestroy(&u); CHKERRQ(ierr);
-  ierr = DMDestroy(&da); CHKERRQ(ierr);
+  PetscCall(SNESSolve(snes,NULL,u));
+  PetscCall(VecDestroy(&u));
+  PetscCall(DMDestroy(&da));
 
   // report seepage face
-  ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr); /* do not destroy u */
-  ierr = SNESGetDM(snes,&da_after); CHKERRQ(ierr);
-  ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
-  ierr = GetSeepageFaceHeight(&info,u,&height,&dctx); CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,
+  PetscCall(SNESGetSolution(snes,&u)); /* do not destroy u */
+  PetscCall(SNESGetDM(snes,&da_after));
+  PetscCall(DMDAGetLocalInfo(da_after,&info));
+  PetscCall(GetSeepageFaceHeight(&info,u,&height,&dctx));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,
       "done on %3d x %3d grid; computed seepage face height = %.7f\n",
-      info.mx,info.my,height); CHKERRQ(ierr);
+      info.mx,info.my,height));
 
-  SNESDestroy(&snes);
-  return PetscFinalize();
+  PetscCall(SNESDestroy(&snes));
+  PetscCall(PetscFinalize());
+  return 0;
 }
 
 // for call-back: tell SNESVI we want  0 <= u < +infinity
 PetscErrorCode FormBounds(SNES snes, Vec Xl, Vec Xu) {
-    PetscErrorCode ierr;
-    ierr = VecSet(Xl,0.0);CHKERRQ(ierr);
-    ierr = VecSet(Xu,PETSC_INFINITY);CHKERRQ(ierr);
+    PetscCall(VecSet(Xl,0.0));
+    PetscCall(VecSet(Xu,PETSC_INFINITY));
     return 0;
 }
 
 PetscErrorCode GetSeepageFaceHeight(DMDALocalInfo *info, Vec u, PetscReal *height, DamCtx *dctx) {
-    PetscErrorCode ierr;
     MPI_Comm         comm;
     const PetscReal  dy = dctx->y1 / (PetscReal)(info->my-1),
                      wetthreshhold = 1.0e-6;  // what does "u>0" mean?
     PetscInt         j;
     PetscReal         **au, locwetmax = - PETSC_INFINITY;
-    ierr = DMDAVecGetArrayRead(info->da,u,&au); CHKERRQ(ierr);
+    PetscCall(DMDAVecGetArrayRead(info->da,u,&au));
     if (info->xs+info->xm == info->mx) { // do we even own (part of) the x=a side of the rectangle?
         for (j=info->ys; j<info->ys+info->ym; j++) {
            if (au[j][info->mx-2] > wetthreshhold) {  // is the first inter point wet?
@@ -185,10 +183,9 @@ PetscErrorCode GetSeepageFaceHeight(DMDALocalInfo *info, Vec u, PetscReal *heigh
            }
         }
     }
-    ierr = DMDAVecRestoreArrayRead(info->da,u,&au); CHKERRQ(ierr);
-    ierr = PetscObjectGetComm((PetscObject)(info->da),&comm); CHKERRQ(ierr);
-    ierr = MPI_Allreduce(&locwetmax,height,1,MPIU_REAL,MPIU_MAX,comm); CHKERRQ(ierr);
+    PetscCall(DMDAVecRestoreArrayRead(info->da,u,&au));
+    PetscCall(PetscObjectGetComm((PetscObject)(info->da),&comm));
+    PetscCall(MPI_Allreduce(&locwetmax,height,1,MPIU_REAL,MPIU_MAX,comm));
     *height -= dctx->y2;   // height is segment ED in figure
     return 0;
 }
-
