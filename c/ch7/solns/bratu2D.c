@@ -264,7 +264,6 @@ PetscErrorCode NonlinearGS(SNES snes, Vec u, Vec b, void *ctx) {
                     //            + hxhy * (2 u - au[j-1][i] - au[j+1][i])
                     //            - darea * lambda * e^u - bij
                     uu = au[j][i];
-                    phi0 = 0.0;
                     for (k = 0; k < maxits; k++) {
                         phi =   hyhx * (2.0 * uu - au[j][i-1] - au[j][i+1])
                               + hxhy * (2.0 * uu - au[j-1][i] - au[j+1][i])

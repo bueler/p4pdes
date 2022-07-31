@@ -1,0 +1,7 @@
+  0 SNES Function norm 9.04754 
+  1 SNES Function norm 0.000449564 
+  2 SNES Function norm 1.87245e-06 
+  3 SNES Function norm 8.93257e-09 
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+flops = 8.763e+04,  residual calls = 69,  NGS calls = 58
+done on 9 x 9 grid:   error |u-uexact|_inf = 3.169e-04
