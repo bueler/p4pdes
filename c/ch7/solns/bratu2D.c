@@ -63,7 +63,7 @@ int main(int argc,char **argv) {
     BratuCtx       bctx;
     DMDALocalInfo  info;
     PetscBool      showcounts = PETSC_FALSE;
-    PetscLogDouble flops;
+    PetscLogDouble lflops, flops;
     PetscReal      errinf;
 
     PetscCall(PetscInitialize(&argc,&argv,NULL,help));
@@ -120,7 +120,8 @@ int main(int argc,char **argv) {
     PetscCall(DMDestroy(&da));
 
     if (showcounts) {
-        PetscCall(PetscGetFlops(&flops));
+        PetscCall(PetscGetFlops(&lflops));
+        PetscCall(MPI_Allreduce(&lflops,&flops,1,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)snes)));
         PetscCall(PetscPrintf(PETSC_COMM_WORLD,"flops = %.3e,  residual calls = %d,  NGS calls = %d\n",
                            flops,bctx.residualcount,bctx.ngscount));
     }
