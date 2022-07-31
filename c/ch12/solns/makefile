@@ -1,11 +1,11 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
-dam: dam.o ../../ch6/poissonfunctions.o chkopts
+dam: dam.o ../../ch6/poissonfunctions.o
 	-${CLINKER} -o dam dam.o ../../ch6/poissonfunctions.o ${PETSC_LIB}
 	${RM} dam.o ../../ch6/poissonfunctions.o
 
-elasto: elasto.o ../../ch6/poissonfunctions.o chkopts
+elasto: elasto.o ../../ch6/poissonfunctions.o
 	-${CLINKER} -o elasto elasto.o ../../ch6/poissonfunctions.o ${PETSC_LIB}
 	${RM} elasto.o ../../ch6/poissonfunctions.o
 

@@ -1,11 +1,11 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
-cartoon: cartoon.o chkopts
+cartoon: cartoon.o
 	-${CLINKER} -o cartoon cartoon.o ${PETSC_SNES_LIB}
 	${RM} cartoon.o
 
-plap: plap.o chkopts
+plap: plap.o
 	-${CLINKER} -o plap plap.o ${PETSC_LIB}
 	${RM} plap.o
 

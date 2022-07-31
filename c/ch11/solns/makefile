@@ -1,7 +1,7 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
-both1d: both1d.o  chkopts
+both1d: both1d.o
 	-${CLINKER} -o both1d both1d.o  ${PETSC_LIB}
 	${RM} both1d.o
 

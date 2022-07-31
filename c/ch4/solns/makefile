@@ -3,19 +3,19 @@ include ${PETSC_DIR}/lib/petsc/conf/rules
 
 # solutions to exercises
 
-atan: atan.o chkopts
+atan: atan.o
 	-${CLINKER} -o atan atan.o ${PETSC_LIB}
 	${RM} atan.o
 
-bratu1D: bratu1D.o chkopts
+bratu1D: bratu1D.o
 	-${CLINKER} -o bratu1D bratu1D.o ${PETSC_LIB}
 	${RM} bratu1D.o
 
-ecdigits: ecdigits.o chkopts
+ecdigits: ecdigits.o
 	-${CLINKER} -o ecdigits ecdigits.o ${PETSC_LIB}
 	${RM} ecdigits.o
 
-census: census.o chkopts
+census: census.o
 	-${CLINKER} -o census census.o ${PETSC_LIB}
 	${RM} census.o
 
