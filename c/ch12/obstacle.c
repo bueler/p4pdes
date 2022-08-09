@@ -12,14 +12,14 @@ static const char help[] =
 #include <petsc.h>
 #include "../ch6/poissonfunctions.h"
 
-// z = psi(x,y) is the hemispherical obstacle, but made C^1 with "skirt" at r=r0
+// z = psi(r) is the hemispherical obstacle, but made C^1 with "skirt" at r=r0
 PetscReal psi(PetscReal x, PetscReal y) {
-    const PetscReal  r = x * x + y * y,
+    const PetscReal  r = PetscSqrtReal(x * x + y * y),
                      r0 = 0.9,
-                     psi0 = PetscSqrtReal(1.0 - r0*r0),
+                     psi0 = PetscSqrtReal(1.0 - r0 * r0),
                      dpsi0 = - r0 / psi0;
     if (r <= r0) {
-        return PetscSqrtReal(1.0 - r);
+        return PetscSqrtReal(1.0 - r * r);
     } else {
         return psi0 + dpsi0 * (r - r0);
     }
@@ -27,9 +27,7 @@ PetscReal psi(PetscReal x, PetscReal y) {
 
 /*  This exact solution solves a 1D radial free-boundary problem for the
 Laplace equation, on the interval 0 < r < 2, with hemispherical obstacle
-    psi(r) =  / sqrt(1 - r^2),  r < 1
-              \ -1,             otherwise
-The Laplace equation applies where u(r) > psi(r),
+psi(r).  The Laplace equation applies where u(r) > psi(r),
     u''(r) + r^-1 u'(r) = 0
 with boundary conditions including free b.c.s at an unknown location r = a:
     u(a) = psi(a),  u'(a) = psi'(a),  u(2) = 0
