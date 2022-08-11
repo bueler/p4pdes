@@ -111,7 +111,7 @@ int main(int argc,char **argv) {
     user.addctx = &bctx;
 
     PetscCall(DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
-                        DMDA_STENCIL_BOX,  // contrast with fish2
+                        DMDA_STENCIL_STAR,
                         3,3,PETSC_DECIDE,PETSC_DECIDE,1,1,NULL,NULL,&da));
     PetscCall(DMSetApplicationContext(da,&user));
     PetscCall(DMSetFromOptions(da));
