@@ -9,7 +9,7 @@ Use Firedrake's nonlinear solver for the Poisson problem
 Compare c/ch6/fish.c.  The prefix for PETSC solver options is 's_'.
 Use -help for PETSc options and -fishhelp for options to fish.py.
 
-optional arguments:
+options:
   -fishhelp  help for fish.py options
   -mx MX     number of grid points in x-direction
   -my MY     number of grid points in y-direction
