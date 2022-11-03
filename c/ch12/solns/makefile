@@ -1,5 +1,6 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
+CFLAGS += -pedantic -std=c99
 
 dam: dam.o ../../ch6/poissonfunctions.o
 	-${CLINKER} -o dam dam.o ../../ch6/poissonfunctions.o ${PETSC_LIB}
@@ -23,10 +24,9 @@ test_elasto: runelasto_1
 
 test: test_dam test_elasto
 
-# etc
+.PHONY: clean distclean rundam_1 runelasto_1 test test_dam test_elasto
 
-.PHONY: distclean rundam_1 runelasto_1 test test_dam test_elasto
+distclean: clean
 
-distclean:
+clean::
 	@rm -f *~ *tmp dam elasto
-

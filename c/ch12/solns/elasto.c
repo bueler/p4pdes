@@ -121,7 +121,8 @@ int main(int argc,char **argv) {
       info.mx,info.my,elasto.C,flops,snesits));
 
   SNESDestroy(&snes);
-  return PetscFinalize();
+  PetscCall(PetscFinalize());
+  return 0;
 }
 
 

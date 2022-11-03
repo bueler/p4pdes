@@ -24,7 +24,8 @@ static PetscReal vanleer(PetscReal theta) {
     return 0.5 * (theta + abstheta) / (1.0 + abstheta);
 }
 
-static void* limiterptr[] = {NULL, &centered, &vanleer};
+typedef PetscReal (*LimiterFcn)(PetscReal);
+static LimiterFcn limiterptr[] = {NULL, &centered, &vanleer};
 
 typedef struct {
     PetscReal   eps;          // amount of diffusion; require: eps > 0
@@ -45,7 +46,6 @@ extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*, PetscReal*,PetscReal*, A
 extern PetscErrorCode FormJacobianLocal(DMDALocalInfo*, PetscReal*, Mat, Mat, AdCtx*);
 
 int main(int argc,char **argv) {
-    PetscErrorCode ierr;
     DM             da, da_after;
     SNES           snes;
     Vec            u_initial, u, u_exact;
@@ -55,92 +55,92 @@ int main(int argc,char **argv) {
     PetscBool      snesfdset, snesfdcolorset;
     AdCtx          user;
 
-    PetscInitialize(&argc,&argv,(char*)0,help);
+    PetscCall(PetscInitialize(&argc,&argv,(char*)0,help));
 
     user.eps = 0.01;
-    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"b1_",
-               "both1d (1D advection-diffusion solver) options",""); CHKERRQ(ierr);
-    ierr = PetscOptionsReal("-eps","positive diffusion coefficient",
-               "both1d.c",user.eps,&(user.eps),NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsEnum("-limiter","flux-limiter type",
+    PetscOptionsBegin(PETSC_COMM_WORLD,"b1_",
+               "both1d (1D advection-diffusion solver) options","");
+    PetscCall(PetscOptionsReal("-eps","positive diffusion coefficient",
+               "both1d.c",user.eps,&(user.eps),NULL));
+    PetscCall(PetscOptionsEnum("-limiter","flux-limiter type",
                "both1d.c",LimiterTypes,
-               (PetscEnum)limiter,(PetscEnum*)&limiter,NULL); CHKERRQ(ierr);
+               (PetscEnum)limiter,(PetscEnum*)&limiter,NULL));
     jac_limiter = limiter;
-    ierr = PetscOptionsEnum("-jac_limiter","flux-limiter type used in Jacobian evaluation",
+    PetscCall(PetscOptionsEnum("-jac_limiter","flux-limiter type used in Jacobian evaluation",
                "both1d.c",LimiterTypes,
-               (PetscEnum)jac_limiter,(PetscEnum*)&jac_limiter,NULL); CHKERRQ(ierr);
-    ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+               (PetscEnum)jac_limiter,(PetscEnum*)&jac_limiter,NULL));
+    PetscOptionsEnd();
 
     if (user.eps <= 0.0) {
-        SETERRQ1(PETSC_COMM_SELF,2,"eps=%.3f invalid ... eps > 0 required",user.eps);
+        SETERRQ(PETSC_COMM_SELF,2,"eps=%.3f invalid ... eps > 0 required",user.eps);
     }
     user.limiter_fcn = limiterptr[limiter];
-    ierr = PetscOptionsHasName(NULL,NULL,"-snes_fd",&snesfdset); CHKERRQ(ierr);
-    ierr = PetscOptionsHasName(NULL,NULL,"-snes_fd_color",&snesfdcolorset); CHKERRQ(ierr);
+    PetscCall(PetscOptionsHasName(NULL,NULL,"-snes_fd",&snesfdset));
+    PetscCall(PetscOptionsHasName(NULL,NULL,"-snes_fd_color",&snesfdcolorset));
     if (snesfdset || snesfdcolorset) {
         user.jac_limiter_fcn = NULL;
         jac_limiter = 4;   // corresponds to empty string
     } else
         user.jac_limiter_fcn = limiterptr[jac_limiter];
 
-    ierr = DMDACreate1d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,
+    PetscCall(DMDACreate1d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,
                  3, // default to hx=1 grid
                  1,2, // d.o.f., stencil width
-                 NULL,&da); CHKERRQ(ierr);
-    ierr = DMSetFromOptions(da); CHKERRQ(ierr);
-    ierr = DMSetUp(da); CHKERRQ(ierr);
-    ierr = DMDASetUniformCoordinates(da,-1.0,1.0,-1.0,1.0,-1.0,1.0); CHKERRQ(ierr);
-    ierr = DMSetApplicationContext(da,&user); CHKERRQ(ierr);
+                 NULL,&da));
+    PetscCall(DMSetFromOptions(da));
+    PetscCall(DMSetUp(da));
+    PetscCall(DMDASetUniformCoordinates(da,-1.0,1.0,-1.0,1.0,-1.0,1.0));
+    PetscCall(DMSetApplicationContext(da,&user));
 
-    ierr = SNESCreate(PETSC_COMM_WORLD,&snes);CHKERRQ(ierr);
-    ierr = SNESSetDM(snes,da);CHKERRQ(ierr);
-    ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,
-            (DMDASNESFunction)FormFunctionLocal,&user);CHKERRQ(ierr);
-    ierr = DMDASNESSetJacobianLocal(da,
-            (DMDASNESJacobian)FormJacobianLocal,&user); CHKERRQ(ierr);
-    ierr = SNESSetApplicationContext(snes,&user); CHKERRQ(ierr);
-    ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
+    PetscCall(SNESCreate(PETSC_COMM_WORLD,&snes));
+    PetscCall(SNESSetDM(snes,da));
+    PetscCall(DMDASNESSetFunctionLocal(da,INSERT_VALUES,
+            (DMDASNESFunction)FormFunctionLocal,&user));
+    PetscCall(DMDASNESSetJacobianLocal(da,
+            (DMDASNESJacobian)FormJacobianLocal,&user));
+    PetscCall(SNESSetApplicationContext(snes,&user));
+    PetscCall(SNESSetFromOptions(snes));
 
-    ierr = DMGetGlobalVector(da,&u_initial); CHKERRQ(ierr);
-    ierr = VecSet(u_initial,0.0); CHKERRQ(ierr);
-    ierr = SNESSolve(snes,NULL,u_initial); CHKERRQ(ierr);
-    ierr = DMRestoreGlobalVector(da,&u_initial); CHKERRQ(ierr);
-    ierr = DMDestroy(&da); CHKERRQ(ierr);
+    PetscCall(DMGetGlobalVector(da,&u_initial));
+    PetscCall(VecSet(u_initial,0.0));
+    PetscCall(SNESSolve(snes,NULL,u_initial));
+    PetscCall(DMRestoreGlobalVector(da,&u_initial));
+    PetscCall(DMDestroy(&da));
 
-    ierr = SNESGetSolution(snes,&u); CHKERRQ(ierr);
-    ierr = SNESGetDM(snes,&da_after); CHKERRQ(ierr);
-    ierr = DMDAGetLocalInfo(da_after,&info); CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,
+    PetscCall(SNESGetSolution(snes,&u));
+    PetscCall(SNESGetDM(snes,&da_after));
+    PetscCall(DMDAGetLocalInfo(da_after,&info));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,
          "done on %d point grid (eps = %g, limiter = %s, jac_limiter = %s)\n",
-         info.mx,user.eps,LimiterTypes[limiter],LimiterTypes[jac_limiter]); CHKERRQ(ierr);
+         info.mx,user.eps,LimiterTypes[limiter],LimiterTypes[jac_limiter]));
 
-    ierr = VecDuplicate(u,&u_exact); CHKERRQ(ierr);
-    ierr = FormUExact(&info,&user,u_exact); CHKERRQ(ierr);
-    ierr = VecAXPY(u,-1.0,u_exact); CHKERRQ(ierr);    // u <- u + (-1.0) u_exact
-    ierr = VecNorm(u,NORM_INFINITY,&errinf); CHKERRQ(ierr);
-    ierr = VecNorm(u,NORM_2,&err2); CHKERRQ(ierr);
+    PetscCall(DMCreateGlobalVector(da_after,&u_exact));
+    PetscCall(FormUExact(&info,&user,u_exact));
+    PetscCall(VecAXPY(u,-1.0,u_exact));    // u <- u + (-1.0) u_exact
+    PetscCall(VecNorm(u,NORM_INFINITY,&errinf));
+    PetscCall(VecNorm(u,NORM_2,&err2));
     hx = 2.0 / (info.mx - 1);
     err2 *= PetscSqrtReal(hx);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,
          "numerical error:  |u-uexact|_inf = %.4e,  |u-uexact|_2 = %.4e\n",
-         errinf,err2); CHKERRQ(ierr);
+         errinf,err2));
 
     VecDestroy(&u_exact);  SNESDestroy(&snes);
-    return PetscFinalize();
+    PetscCall(PetscFinalize());
+    return 0;
 }
 
 PetscErrorCode FormUExact(DMDALocalInfo *info, AdCtx *usr, Vec uex) {
-    PetscErrorCode  ierr;
     PetscInt   i;
     PetscReal  hx, x, *auex;
 
     hx = 2.0 / (info->mx - 1);
-    ierr = DMDAVecGetArray(info->da, uex, &auex);CHKERRQ(ierr);
+    PetscCall(DMDAVecGetArray(info->da, uex, &auex));
     for (i=info->xs; i<info->xs+info->xm; i++) {
         x = -1.0 + i * hx;
         auex[i] = u_exact(x,usr);
     }
-    ierr = DMDAVecRestoreArray(info->da, uex, &auex);CHKERRQ(ierr);
+    PetscCall(DMDAVecRestoreArray(info->da, uex, &auex));
     return 0;
 }
 
@@ -224,7 +224,6 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscReal *au,
 
 PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscReal *u,
                                  Mat J, Mat P, AdCtx *usr) {
-    PetscErrorCode ierr;
     const PetscReal eps = usr->eps,
                     hx = 2.0 / (info->mx - 1),
                     halfx = hx / 2.0,
@@ -236,12 +235,12 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscReal *u,
         SETERRQ(PETSC_COMM_SELF,1,"Jacobian for vanleer limiter is not implemented");
     }
 
-    ierr = MatZeroEntries(P); CHKERRQ(ierr);
+    PetscCall(MatZeroEntries(P));
 
     for (i=info->xs; i<info->xs+info->xm; i++) {
         if (i == 0 || i == info->mx-1) {
             v[0] = scdiag;
-            ierr = MatSetValues(P,1,&i,1,&i,v,ADD_VALUES); CHKERRQ(ierr);
+            PetscCall(MatSetValues(P,1,&i,1,&i,v,ADD_VALUES));
         } else {
             // diffusive part
             col[0] = i;
@@ -250,7 +249,7 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscReal *u,
             v[1] = (i-1 > 0) ? - eps / hx : 0.0;
             col[2] = i+1;
             v[2] = (i+1 < info->mx-1) ? - eps / hx : 0.0;
-            ierr = MatSetValues(P,1,&i,3,col,v,ADD_VALUES); CHKERRQ(ierr);
+            PetscCall(MatSetValues(P,1,&i,3,col,v,ADD_VALUES));
             // advective part: from each adjacent face
             x = -1.0 + i * hx;
             aE = wind_a(x + halfx);
@@ -269,7 +268,7 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscReal *u,
                 col[1] = i;
                 v[1] = - aW;
             }
-            ierr = MatSetValues(P,1,&i,2,col,v,ADD_VALUES); CHKERRQ(ierr);
+            PetscCall(MatSetValues(P,1,&i,2,col,v,ADD_VALUES));
             if (usr->jac_limiter_fcn == &centered) {
                 col[0] = i+1;
                 col[1] = i;
@@ -280,7 +279,7 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscReal *u,
                     v[0] = (i+1 < info->mx-1) ? - aE/2.0 : 0.0;  // check if i+1 is boundary
                     v[1] = aE/2.0;
                 }
-                ierr = MatSetValues(P,1,&i,2,col,v,ADD_VALUES); CHKERRQ(ierr);
+                PetscCall(MatSetValues(P,1,&i,2,col,v,ADD_VALUES));
                 col[0] = i;
                 col[1] = i-1;
                 if (aW >= 0.0) {
@@ -290,16 +289,15 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscReal *u,
                     v[0] = aW/2.0;
                     v[1] = (i-1 > 0) ? - aW/2.0 : 0.0;  // check if i-1 is boundary
                 }
-                ierr = MatSetValues(P,1,&i,2,col,v,ADD_VALUES); CHKERRQ(ierr);
+                PetscCall(MatSetValues(P,1,&i,2,col,v,ADD_VALUES));
             }
         }
     }
-    ierr = MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-    ierr = MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+    PetscCall(MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY));
     if (J != P) {
-        ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-        ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+        PetscCall(MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY));
+        PetscCall(MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY));
     }
     return 0;
 }
-

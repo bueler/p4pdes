@@ -1,18 +1,18 @@
-Vec Object: 1 MPI processes
+Vec Object: 1 MPI process
   type: seq
 0.
 0.
 0.
 0.
 0.
-Mat Object: 1 MPI processes
+Mat Object: 1 MPI process
   type: seqaij
  1.40000e+00  0.00000e+00  0.00000e+00  0.00000e+00  0.00000e+00 
  0.00000e+00  1.40000e+00  -2.00000e-01  0.00000e+00  0.00000e+00 
  0.00000e+00  -1.20000e+00  1.40000e+00  -2.00000e-01  0.00000e+00 
  0.00000e+00  0.00000e+00  -1.20000e+00  1.40000e+00  0.00000e+00 
  0.00000e+00  0.00000e+00  0.00000e+00  0.00000e+00  1.40000e+00 
-Vec Object: Vec_0x84000000_0 1 MPI processes
+Vec Object: Vec_0x84000000_0 1 MPI process
   type: seq
 1.
 0.996139

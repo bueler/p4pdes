@@ -29,7 +29,6 @@ static PetscReal vanleer(PetscReal theta) {
 }
 
 typedef PetscReal (*LimiterFcn)(PetscReal);
-
 static LimiterFcn limiterptr[] = {NULL, &centered, &vanleer};
 
 typedef enum {NOWIND, LAYER, GLAZE} ProblemType;
@@ -107,7 +106,7 @@ static PetscReal wind_a(PetscReal x, PetscReal y, PetscInt q, AdCtx *user) {
     }
 }
 
-extern PetscErrorCode FormUExact(DMDALocalInfo*,AdCtx*, 
+extern PetscErrorCode FormUExact(DMDALocalInfo*,AdCtx*,
                                  PetscReal (*)(PetscReal, PetscReal, void*),Vec);
 extern PetscErrorCode FormFunctionLocal(DMDALocalInfo*,PetscReal**,PetscReal**,AdCtx*);
 

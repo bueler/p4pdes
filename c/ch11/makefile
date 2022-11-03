@@ -55,10 +55,9 @@ test_both: runboth_1 runboth_2 runboth_3 runboth_4 runboth_5
 
 test: test_advect test_both
 
-# etc
+.PHONY: clean distclean runadvect_1 runadvect_2 runadvect_3 runadvect_4 runboth_1 runboth_2 runboth_3 runboth_4 runboth_5 test_advect test_both test
 
-.PHONY: distclean runadvect_1 runadvect_2 runadvect_3 runadvect_4 runboth_1 runboth_2 runboth_3 runboth_4 runboth_5 test_advect test_both test
+distclean: clean
 
-distclean:
+clean::
 	@rm -f *~ *tmp *.pyc *.dat *.dat.info advect both
-

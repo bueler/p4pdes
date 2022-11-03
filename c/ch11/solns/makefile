@@ -1,5 +1,6 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
+CFLAGS += -pedantic -std=c99
 
 both1d: both1d.o
 	-${CLINKER} -o both1d both1d.o  ${PETSC_LIB}
@@ -26,10 +27,9 @@ test_both1d: runboth1d_1 runboth1d_2 runboth1d_3 runboth1d_4 runboth1d_5
 
 test: test_both1d
 
-# etc
+.PHONY: clean distclean runboth1d_1 runboth1d_2 runboth1d_3 runboth1d_4 runboth1d_5 test_both1d test
 
-.PHONY: distclean runboth1d_1 runboth1d_2 runboth1d_3 runboth1d_4 runboth1d_5 test_both1d test
+distclean: clean
 
-distclean:
+clean::
 	@rm -f *~ *tmp both1d
-

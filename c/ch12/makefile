@@ -31,12 +31,11 @@ test_obstacle: runobstacle_1 runobstacle_2 runobstacle_3 runobstacle_4
 
 test: test_obstacle
 
-# etc
+.PHONY: clean distclean runobstacle_1 runobstacle_2 runobstacle_3 runobstacle_4 test test_obstacle
 
-.PHONY: distclean runobstacle_1 runobstacle_2 runobstacle_3 runobstacle_4 test test_obstacle
+distclean: clean
 
-distclean:
+clean::
 	@rm -f *~ obstacle *.dat *.dat.info *.pdf *.pyc *tmp
 	@rm -f PetscBinaryIO.py petsc_conf.py
 	@rm -rf __pycache__/
-
