@@ -1,5 +1,6 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
+CFLAGS += -pedantic -std=c99
 
 cartoon: cartoon.o
 	-${CLINKER} -o cartoon cartoon.o ${PETSC_SNES_LIB}
@@ -26,11 +27,9 @@ test_plap: runplap_1 runplap_2 runplap_3 runplap_4
 
 test: test_plap
 
-# etc
+.PHONY: clean distclean runplap_1 runplap_2 runplap_3 runplap_4 test test_plap
 
-.PHONY: distclean
-.PHONY: distclean runplap_1 runplap_2 runplap_3 runplap_4 test test_plap
+distclean: clean
 
-distclean:
+clean::
 	@rm -f *~ *tmp cartoon plap
-

@@ -38,8 +38,9 @@ test: test_fish
 
 # etc
 
-.PHONY: distclean runfish_1 runfish_2 runfish_3 runfish_4 runfish_5 runfish_6 runfish_7 runfish_8 test test_fish
+.PHONY: clean distclean runfish_1 runfish_2 runfish_3 runfish_4 runfish_5 runfish_6 runfish_7 runfish_8 test test_fish
 
-distclean:
+distclean: clean
+
+clean::
 	@rm -f *~ fish *tmp
-

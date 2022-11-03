@@ -1,5 +1,6 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
+CFLAGS += -pedantic -std=c99
 
 bratu2D: bratu2D.o ../../ch6/poissonfunctions.o
 	-${CLINKER} -o bratu2D bratu2D.o ../../ch6/poissonfunctions.o ${PETSC_LIB}
@@ -14,9 +15,9 @@ test_bratu2D: runbratu2D_1
 
 test: test_bratu2D
 
-# etc
+.PHONY: clean distclean test test_bratu2D runbratu2D_1
 
-.PHONY: distclean test test_bratu2D runbratu2D_1
+distclean: clean
 
-distclean:
+clean::
 	@rm -f bratu2D *tmp

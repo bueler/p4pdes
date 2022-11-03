@@ -1,6 +1,6 @@
-# etc
 
-.PHONY: distclean
+.PHONY: clean distclean
 
-distclean:
-	
+distclean: clean
+
+clean::

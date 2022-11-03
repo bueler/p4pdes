@@ -43,11 +43,10 @@ test_biharm: runbiharm_1 runbiharm_2 runbiharm_3
 
 test: test_minimal test_biharm
 
-# etc
+.PHONY: clean distclean runminimal_1 runminimal_2 runminimal_3 runminimal_4 runbiharm_1 runbiharm_2 runbiharm_3 test test_minimal test_biharm
 
-.PHONY: distclean runminimal_1 runminimal_2 runminimal_3 runminimal_4 runbiharm_1 runbiharm_2 runbiharm_3 test test_minimal test_biharm
+distclean: clean
 
-distclean:
+clean::
 	@rm -f *~ minimal biharm *tmp
 	@rm -f *.pdf *.txt
-

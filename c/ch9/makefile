@@ -30,9 +30,10 @@ test: test_phelm
 
 # etc
 
-.PHONY: distclean runphelm_1 runphelm_2 runphelm_3 runphelm_4 runphelm_5 test test_phelm
+.PHONY: clean distclean runphelm_1 runphelm_2 runphelm_3 runphelm_4 runphelm_5 test test_phelm
 
-distclean:
+distclean: clean
+
+clean::
 	@rm -f *~ phelm *tmp
-	(cd solns/; ${MAKE} distclean);
-
+	(cd solns/; ${MAKE} clean);

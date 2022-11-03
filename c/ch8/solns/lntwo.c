@@ -6,38 +6,37 @@ static char help[] = "Compute ln 2 in serial with PETSc, using random\n"
 #include <time.h>
 
 int main(int argc, char **args) {
-  PetscErrorCode  ierr;
   PetscMPIInt     size;
   PetscInt        i, j, n=10;
   PetscReal       v, tmp, *a, sum;
   PetscRandom     r;
 
-  PetscInitialize(&argc,&args,NULL,help);
+  PetscCall(PetscInitialize(&argc,&args,NULL,help));
 
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size); CHKERRQ(ierr);
+  PetscCall(MPI_Comm_size(PETSC_COMM_WORLD,&size));
   if (size > 1) {
-      SETERRQ(PETSC_COMM_SELF,1,"lntwo only works in serial\n");
+      SETERRQ(PETSC_COMM_WORLD,1,"lntwo only works in serial\n");
   }
 
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"","options for lntwo",""); CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-n","number of terms in sum",
-                          "lntwo.c",n,&n,NULL); CHKERRQ(ierr);
-  ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD,"","options for lntwo","");
+  PetscCall(PetscOptionsInt("-n","number of terms in sum",
+                            "lntwo.c",n,&n,NULL));
+  PetscOptionsEnd();
 
-  ierr = PetscRandomCreate(PETSC_COMM_WORLD,&r); CHKERRQ(ierr);
-  ierr = PetscRandomSetType(r,PETSCRAND48); CHKERRQ(ierr);
-  ierr = PetscRandomSetSeed(r,(int)time(NULL)); CHKERRQ(ierr);
-  ierr = PetscRandomSeed(r); CHKERRQ(ierr);
+  PetscCall(PetscRandomCreate(PETSC_COMM_WORLD,&r));
+  PetscCall(PetscRandomSetType(r,PETSCRAND48));
+  PetscCall(PetscRandomSetSeed(r,(int)time(NULL)));
+  PetscCall(PetscRandomSeed(r));
 
   // fill array with the terms   (-1)^i / (i+1)  for i=0 .. n
-  ierr = PetscMalloc1(n,&a); CHKERRQ(ierr);
+  PetscCall(PetscMalloc1(n,&a));
   for (i=0; i<n; i++) {
       a[i] = pow(-1.0,(double)i) / (double)(i+1);
   }
 
   // shuffle the terms
   for (i=n-1; i>0; i--) {
-      ierr = PetscRandomGetValueReal(r,&v); CHKERRQ(ierr);
+      PetscCall(PetscRandomGetValueReal(r,&v));
       j = (int)floor(i*v);
       tmp = a[i];
       a[i] = a[j];
@@ -49,11 +48,10 @@ int main(int argc, char **args) {
   for (i=0; i<n; i++) {
       sum += a[i];
   }
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"ln 2 is approximately %18.16f\n",sum));
 
-  // print the result
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"ln 2 is approximately %18.16f\n",sum); CHKERRQ(ierr);
-
-  PetscRandomDestroy(&r);
-  PetscFree(a);
-  return PetscFinalize();
+  PetscCall(PetscRandomDestroy(&r));
+  PetscCall(PetscFree(a));
+  PetscCall(PetscFinalize());
+  return 0;
 }

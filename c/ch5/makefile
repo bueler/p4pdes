@@ -71,12 +71,11 @@ test_pattern: runpattern_1 runpattern_2 runpattern_3 runpattern_4 runpattern_5
 
 test: test_ode test_odejac test_heat test_pattern
 
-# etc
+.PHONY: clean distclean runode_1 runode_2 runode_3 runodejac_1 runodejac_2 runheat_1 runheat_2 runpattern_1 runpattern_2 runpattern_3 runpattern_4 runpattern_5 test test_ode test_odejac test_heat test_pattern
 
-.PHONY: distclean runode_1 runode_2 runode_3 runodejac_1 runodejac_2 runheat_1 runheat_2 runpattern_1 runpattern_2 runpattern_3 runpattern_4 runpattern_5 test test_ode test_odejac test_heat test_pattern
+distclean: clean
 
-distclean:
+clean::
 	@rm -f *~ ode odejac heat pattern *tmp
 	@rm -f *.pyc *.dat *.dat.info *.png PetscBinaryIO.py petsc_conf.py
 	@rm -rf __pycache__/
-

@@ -3,10 +3,9 @@
 
 test:
 
-# etc
+.PHONY: test clean distclean
 
-.PHONY: test distclean
+distclean: clean
 
-distclean:
+clean::
 	@rm -f *~ *tmp
-
