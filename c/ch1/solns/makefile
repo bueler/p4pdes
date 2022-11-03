@@ -12,8 +12,8 @@ balanced: balanced.o
 
 # etc
 
-.PHONY: distclean
+.PHONY: clean
 
-distclean:
+clean::
 	@rm -f *~ expx balanced
 

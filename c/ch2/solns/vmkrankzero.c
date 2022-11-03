@@ -3,7 +3,6 @@ static char help[] = "Solve a 4x4 linear system using Vec, Mat, and KSP by setti
 #include <petsc.h>
 
 int main(int argc,char **args) {
-  PetscErrorCode ierr;
   Vec        x, b;
   Mat        A;
   KSP        ksp;
@@ -14,40 +13,40 @@ int main(int argc,char **args) {
                          {-1.0,  1.0,  1.0,  0.0},
                          { 0.0,  1.0,  1.0, -1.0}};
 
-  PetscInitialize(&argc,&args,NULL,help);
+  PetscCall(PetscInitialize(&argc,&args,NULL,help));
 
-  ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank); CHKERRQ(ierr);
+  PetscCall(MPI_Comm_rank(PETSC_COMM_WORLD,&rank));
 
-  ierr = VecCreate(PETSC_COMM_WORLD,&b); CHKERRQ(ierr);
-  ierr = VecSetSizes(b,PETSC_DECIDE,4); CHKERRQ(ierr);
-  ierr = VecSetFromOptions(b); CHKERRQ(ierr);
+  PetscCall(VecCreate(PETSC_COMM_WORLD,&b));
+  PetscCall(VecSetSizes(b,PETSC_DECIDE,4));
+  PetscCall(VecSetFromOptions(b));
   if (rank == 0) {
-      ierr = VecSetValues(b,4,j,ab,INSERT_VALUES); CHKERRQ(ierr);
+      PetscCall(VecSetValues(b,4,j,ab,INSERT_VALUES));
   }
-  ierr = VecAssemblyBegin(b); CHKERRQ(ierr);
-  ierr = VecAssemblyEnd(b); CHKERRQ(ierr);
+  PetscCall(VecAssemblyBegin(b));
+  PetscCall(VecAssemblyEnd(b));
 
-  ierr = MatCreate(PETSC_COMM_WORLD,&A); CHKERRQ(ierr);
-  ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,4,4); CHKERRQ(ierr);
-  ierr = MatSetFromOptions(A); CHKERRQ(ierr);
-  ierr = MatSetUp(A); CHKERRQ(ierr);
+  PetscCall(MatCreate(PETSC_COMM_WORLD,&A));
+  PetscCall(MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,4,4));
+  PetscCall(MatSetFromOptions(A));
+  PetscCall(MatSetUp(A));
   if (rank == 0) {
       for (i=0; i<4; i++) {   // set entries one row at a time
-          ierr = MatSetValues(A,1,&i,4,j,aA[i],INSERT_VALUES); CHKERRQ(ierr);
+          PetscCall(MatSetValues(A,1,&i,4,j,aA[i],INSERT_VALUES));
       }
   }
-  ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+  PetscCall(MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY));
 
-  ierr = KSPCreate(PETSC_COMM_WORLD,&ksp); CHKERRQ(ierr);
-  ierr = KSPSetOperators(ksp,A,A); CHKERRQ(ierr);
-  ierr = KSPSetFromOptions(ksp); CHKERRQ(ierr);
-  ierr = VecDuplicate(b,&x); CHKERRQ(ierr);
-  ierr = KSPSolve(ksp,b,x); CHKERRQ(ierr);
-  ierr = VecView(x,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
+  PetscCall(KSPCreate(PETSC_COMM_WORLD,&ksp));
+  PetscCall(KSPSetOperators(ksp,A,A));
+  PetscCall(KSPSetFromOptions(ksp));
+  PetscCall(VecDuplicate(b,&x));
+  PetscCall(KSPSolve(ksp,b,x));
+  PetscCall(VecView(x,PETSC_VIEWER_STDOUT_WORLD));
 
   KSPDestroy(&ksp);  MatDestroy(&A);
   VecDestroy(&x);  VecDestroy(&b);
-  return PetscFinalize();
+  PetscCall(PetscFinalize());
+  return 0;
 }
-

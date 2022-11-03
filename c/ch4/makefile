@@ -53,10 +53,10 @@ test_reaction: runreaction_1 runreaction_2 runreaction_3 runreaction_4 runreacti
 
 test: test_expcircle test_ecjac test_reaction
 
-# etc
+.PHONY: clean distclean runexpcircle_1 runexpcircle_2 runecjac_1 runecjac_2 runreaction_1 runreaction_2 runreaction_3 runreaction_4 runreaction_5 runreaction_6 test test_expcircle test_ecjac test_reaction
 
-.PHONY: distclean runexpcircle_1 runexpcircle_2 runecjac_1 runecjac_2 runreaction_1 runreaction_2 runreaction_3 runreaction_4 runreaction_5 runreaction_6 test test_expcircle test_ecjac test_reaction
+distclean: clean
 
-distclean:
+clean::
 	@rm -f *~ expcircle ecjac reaction *tmp
 

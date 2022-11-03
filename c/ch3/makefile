@@ -22,8 +22,10 @@ test: test_poisson
 
 # etc
 
-.PHONY: distclean runpoisson_1 runpoisson_2 runpoisson_3 test test_poisson
+.PHONY: clean distclean runpoisson_1 runpoisson_2 runpoisson_3 test test_poisson
 
-distclean:
+distclean: clean
+
+clean::
 	@rm -f *~ poisson *tmp
 

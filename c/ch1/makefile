@@ -14,8 +14,10 @@ test_e: rune_1
 
 test: test_e
 
-.PHONY: distclean rune_1 test_e test
+.PHONY: clean distclean rune_1 test_e test
 
-distclean:
+distclean: clean
+
+clean::
 	@rm -f *~ e *tmp
 

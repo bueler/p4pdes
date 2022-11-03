@@ -47,9 +47,11 @@ test: test_sparsemat test_vecmatksp test_tri test_loadsolve
 
 # etc
 
-.PHONY: distclean runvecmatksp_1 runtri_1 runtri_2 runloadsolve_1 test test_vecmatksp test_tri test_loadsolve
+.PHONY: clean distclean runvecmatksp_1 runtri_1 runtri_2 runloadsolve_1 test test_vecmatksp test_tri test_loadsolve
 
-distclean:
+distclean: clean
+
+clean::
 	@rm -f *~ sparsemat vecmatksp tri loadsolve *tmp
 	@rm -f *.dat *.dat.info
 

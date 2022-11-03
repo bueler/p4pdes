@@ -1,7 +1,6 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
-
-# solutions to exercises
+CFLAGS += -pedantic -std=c99
 
 atan: atan.o
 	-${CLINKER} -o atan atan.o ${PETSC_LIB}
@@ -19,10 +18,10 @@ census: census.o
 	-${CLINKER} -o census census.o ${PETSC_LIB}
 	${RM} census.o
 
-# etc
-
-.PHONY: distclean
+.PHONY: clean distclean
 
 distclean:
+
+clean::
 	@rm -f *~ atan bratu1D ecdigits census
 
