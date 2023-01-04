@@ -1,8 +1,6 @@
 # Errata for the first printing of *PETSc for Partial Differential Equations*
 
-The list of errata below shows corrections to the text of the _first printing_ of the published book.  As of October 2021, I believe that these errors will be corrected in the forthcoming second printing.
-
-See `ERRATA.md` for errors which I believe survived into the 2nd printing.
+The list of errata below shows corrections to the text of the _first printing_ of the published book.  As of October 2021, I believe that these errors will be corrected in the forthcoming second printing.  See `ERRATA.md` for those additional errors which I believe survived into the 2nd printing.
 
 ### Chapter 2
 
@@ -12,7 +10,7 @@ See `ERRATA.md` for errors which I believe survived into the 2nd printing.
 
 ### Chapter 3
 
-* Page 47 **BAD ONE**: In the fourth sentence of the text on this page, substitute "global" for "local".
+* Page 47: In the fourth sentence of the text on this page, substitute "global" for "local".
 
 * Page 50: In the first sentence after Code 3.1, add "the" before "locally owned".
 
@@ -30,7 +28,7 @@ See `ERRATA.md` for errors which I believe survived into the 2nd printing.
 
 ### Chapter 6
 
-* Page 132 **BAD ONE**: In equations (6.6) and (6.7) replace `u_k[i]` with `u_k[j]` and `u_{k+1}[i]` with `u_{k+1}[j]`.
+* Page 132: In equations (6.6) and (6.7) replace `u_k[i]` with `u_k[j]` and `u_{k+1}[i]` with `u_{k+1}[j]`.
 
 * Page 148: In the third line from the top, replace "systems" with "system".
 
