@@ -8,6 +8,8 @@ The list of errata below shows corrections to the text of the 2nd printing.  Tha
 
 * Page 131: The text after equation (6.4) incorrectly defines triangular matrices.  It should say "where d_{ij} = 0 if i \ne j, l_{ij} = 0 if i < j, and u_{ij} = 0 if i > j."
 
+* Page 134: There should be a comma in the final sentence on this page.
+
 ### Chapter 9
 
 * Page 230: Formulas (9.25), (9.26), and (9.27) are all missing a "u" term.  There should be "+u \psi_{pq}" added to the integrand.  The code `phelm.c` itself is correct; see the `IntegrandRef()` function.
