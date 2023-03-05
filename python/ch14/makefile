@@ -15,7 +15,7 @@ runstokes_2:
 runstokes_3:
 	-@./lidbox.py -quiet -cl 0.4 -cornerrefine 4 coarse.geo
 	-@${GMSH} -v 0 -2 coarse.geo
-	-@../../c/testit.sh stokes.py "-mesh coarse.msh -refine 1 -dm_view -s_ksp_type fgmres -s_ksp_converged_reason -schurgmg lower -schurpre selfp" 1 3
+	-@../../c/testit.sh stokes.py "-mesh coarse.msh -refine 1 -s_ksp_type fgmres -s_ksp_converged_reason -schurgmg lower -schurpre selfp" 1 3
 
 runstokes_4:
 	-@../../c/testit.sh stokes.py "-pdegree 0 -dp -refine 1 -s_ksp_type minres -s_ksp_converged_reason -schurgmg diag -schurpre mass" 1 4

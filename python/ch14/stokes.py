@@ -129,7 +129,7 @@ else:
 if args.nobase:
     ns = None
 else:
-    ns = MixedVectorSpaceBasis(Z, [Z.sub(0), VectorSpaceBasis(constant=True)])
+    ns = MixedVectorSpaceBasis(Z, [Z.sub(0), VectorSpaceBasis(constant=True, comm=COMM_WORLD)])
 
 # define weak form
 up = Function(Z)
@@ -240,7 +240,8 @@ PETSc.Sys.Print('solving%s with %s x %s %s elements ...' \
 # actually solve
 solve(F == 0, up, bcs=bcs, nullspace=ns, options_prefix='s',
       solver_parameters=sparams)
-u,p = up.split()
+u = up.subfunctions[0]
+p = up.subfunctions[1]
 
 # numerical error for -analytical case ONLY
 if args.analytical:
@@ -274,4 +275,3 @@ if len(args.o) > 0:
     u.rename('velocity')
     p.rename('pressure')
     File(args.o).write(u,p)
-
