@@ -132,7 +132,7 @@ PetscErrorCode FormBounds(SNES snes, Vec Xl, Vec Xu) {
   DMDALocalInfo  info;
   PetscInt       i, j;
   PetscReal      **aXu, dx, dy, x, y;
-  PetscCall(VecSet(Xu,PETSC_NINFINITY));
+  PetscCall(VecSet(Xl,PETSC_NINFINITY));
   PetscCall(SNESGetDM(snes,&da));
   PetscCall(DMDAGetLocalInfo(da,&info));
   dx = 1.0 / (PetscReal)(info.mx-1);
