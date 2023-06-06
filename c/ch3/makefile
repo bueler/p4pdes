@@ -6,6 +6,10 @@ poisson: poisson.o
 	-${CLINKER} -o poisson poisson.o ${PETSC_LIB}
 	${RM} poisson.o
 
+heatsteps: heatsteps.o
+	-${CLINKER} -o heatsteps heatsteps.o ${PETSC_LIB}
+	${RM} heatsteps.o
+
 # testing
 runpoisson_1:
 	-@../testit.sh poisson "-da_grid_x 5 -da_grid_y 7" 1 1
