@@ -62,10 +62,10 @@ int main(int argc,char **args) {
     PetscCall(KSPSetOperators(ksp,A,A));
     PetscCall(KSPSetFromOptions(ksp));
 
-    // time-stepping loop
+    // time-stepping loop; THE BIG CHANGE IS HERE
     for (k=0; k<NSTEPS; k++) {
        PetscCall(PetscPrintf(PETSC_COMM_WORLD,
-                 "  solving for u_%2d = u(%.3f,x,y) ...\n",k,k*deltat));
+                 "  solving for u_%2d = u(%.3f,x,y) ...\n",k+1,(k+1)*deltat));
        PetscCall(formRHS(da,uold,b));
        PetscCall(KSPSolve(ksp,b,u));
        PetscCall(VecCopy(u,uold));
@@ -94,8 +94,9 @@ int main(int argc,char **args) {
 
 //STARTMATRIX
 // Note: this sets up the matrix for backward Euler.  If A is the original
-// matrix for -Laplacian (so A is SPD) then this is forming
-//   A_new = I + dt A
+// matrix for -Laplacian, but scaled as explained in Chapter 3, so A is SPD
+// with O(1) entries, then this is forming
+//   A_new = I + (dt/(hx*hy)) A
 PetscErrorCode formMatrix(DM da, Mat A) {
     DMDALocalInfo  info;
     MatStencil     row, col[5];
@@ -115,7 +116,7 @@ PetscErrorCode formMatrix(DM da, Mat A) {
                 v[0] = 1.0;      // on boundary: trivial equation
             } else {
                 //v[0] = 2*(hy/hx + hx/hy); // interior: build a row
-                v[0] = 1.0 + deltat * 2*(1.0/(hx*hx) + 1.0/(hy*hy)); // interior: build a row
+                v[0] = 1.0 + deltat * 2*(1.0/(hx*hx) + 1.0/(hy*hy));
                 if (i-1 > 0) {
                     col[ncols].j = j;    col[ncols].i = i-1;
                     //v[ncols++] = -hy/hx;
@@ -148,7 +149,7 @@ PetscErrorCode formMatrix(DM da, Mat A) {
 
 //STARTEXACT
 // NOTE: this is the exact solution to the Poisson equation -Laplacian u = f,
-// so it is the exact steady state also.
+// so it is the exact steady state only.
 PetscErrorCode formExact(DM da, Vec uexact) {
     PetscInt       i, j;
     PetscReal      hx, hy, x, y, **auexact;
@@ -168,6 +169,7 @@ PetscErrorCode formExact(DM da, Vec uexact) {
     return 0;
 }
 
+// Modified RHS to use previous timestep uold.
 PetscErrorCode formRHS(DM da, Vec uold, Vec b) {
     PetscInt       i, j;
     PetscReal      hx, hy, x, y, f, **ab;
