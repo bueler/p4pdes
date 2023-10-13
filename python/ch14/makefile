@@ -3,7 +3,7 @@
 GMSH = gmsh
 
 rungmshversion_1:
-	-@../../c/testit.sh ${GMSH} "-version" -1 1    # P=-1 means run gmsh not ./gmsh
+	-@../../c/testit.sh ${GMSH} "-version" INFO 1
 
 runstokes_1:
 	-@../../c/testit.sh stokes.py "-analytical -mx 4 -my 4 -s_ksp_type minres -s_ksp_converged_reason -s_pc_type none -s_ksp_rtol 1.0e-2" 1 1

@@ -12,10 +12,12 @@ grep warning maketmp
 
 CURRDIR=${PWD##*/}
 
-if [ $3 -eq 1 ]; then
-    CMD="./$1 $2"
-elif [ $3 -eq -1 ]; then
+FAIL="FAIL"
+if [ $3 = "INFO" ]; then
     CMD="$1 $2"
+    FAIL="INFO"
+elif [ $3 -eq 1 ]; then
+    CMD="./$1 $2"
 else
     CMD="mpiexec -n $3 ./$1 $2"
 fi
@@ -32,7 +34,7 @@ else
     diff output/$1.test$4 tmp > difftmp
 
     if [[ -s difftmp ]] ; then
-       echo "FAIL: Test #$4 of $CURRDIR/$1"
+       echo "$FAIL: Test #$4 of $CURRDIR/$1"
        echo "       command = '$CMD'"
        echo "       diffs follow:"
        cat difftmp

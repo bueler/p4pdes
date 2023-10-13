@@ -36,7 +36,7 @@ koch/koch2.vec koch/koch2.is: koch/domain.py
 
 # testing
 rungmshversion_1:
-	-@../testit.sh ${GMSH} "-version" -1 1    # P=-1 means run gmsh not ./gmsh
+	-@../testit.sh ${GMSH} "-version" INFO 1
 
 # most of the following tests depend on gmsh version
 runmsh2petsc_1: petscPyScripts
