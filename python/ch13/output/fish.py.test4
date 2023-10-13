@@ -1,5 +1,3 @@
-done on 3 x 3 grid with P_1 elements:
-  error |u-uexact|_inf = 3.365e-03, |u-uexact|_h = 1.190e-03
 usage: fish.py [-fishhelp] [-mx MX] [-my MY] [-o NAME] [-k K] [-quad]
                [-refine X]
 
@@ -10,7 +8,7 @@ Compare c/ch6/fish.c.  The prefix for PETSC solver options is 's_'.
 Use -help for PETSc options and -fishhelp for options to fish.py.
 
 options:
-  -fishhelp  help for fish.py options
+  -fishhelp  print help for fish.py options and exit
   -mx MX     number of grid points in x-direction
   -my MY     number of grid points in y-direction
   -o NAME    output file name ending with .pvd

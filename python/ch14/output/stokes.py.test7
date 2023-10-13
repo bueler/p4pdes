@@ -1,0 +1,37 @@
+usage: stokes.py [-analytical] [-dp] [-lidscale X] [-mesh INNAME] [-mx MX]
+                 [-my MY] [-mu MU] [-nobase] [-o OUTNAME] [-pdegree L] [-quad]
+                 [-refine R] [-schurgmg X] [-schurpre X] [-showinfo]
+                 [-stokeshelp] [-udegree K] [-vectorlap]
+
+Solve a linear Stokes problem in 2D, an example of a saddle-point system.
+Three problem cases:
+  1. Lid-driven cavity with quadratic velocity on lid and Dirichlet conditions
+     on all sides and a null space of constant pressures.  The default problem.
+  2. -analytical:  Analytical exact solution from Logg et al (2012).
+  3. -nobase:  Same as 1. but with stress-free condition on bottom so the null
+     space is trivial.
+Uses mixed FE method, either Taylor-Hood family (P^k x P^l, or Q^k x Q^l with
+-quad) or CD with discontinuous pressure; default is P^2 x P^1.  Uses either
+uniform mesh or reads a mesh in Gmsh format.  See source code for Schur+GMG
+PC packages.  The prefix for PETSC solver options is 's_'.  Use -help for
+PETSc options and -stokeshelp for options to stokes.py.
+
+options:
+  -analytical   Stokes problem with exact solution
+  -dp           use discontinuous-Galerkin finite elements for pressure
+  -lidscale X   scale for lid velocity (rightward positive; default=1.0)
+  -mesh INNAME  input file for mesh in Gmsh format (.msh)
+  -mx MX        number of grid points in x-direction (uniform case)
+  -my MY        number of grid points in y-direction (uniform case)
+  -mu MU        constant dynamic viscosity (default=1.0)
+  -nobase       Stokes problem with stress-free boundary condition on base
+  -o OUTNAME    output file name for Paraview format (.pvd)
+  -pdegree L    polynomial degree for pressure (default=1)
+  -quad         use quadrilateral finite elements
+  -refine R     number of refinement levels (e.g. for GMG)
+  -schurgmg X   Schur+GMG PC solver package: diag|lower|full
+  -schurpre X   how Schur block is preconditioned: selfp|mass
+  -showinfo     print function space sizes and solution norms
+  -stokeshelp   print help for stokes.py options and exit
+  -udegree K    polynomial degree for velocity (default=2)
+  -vectorlap    use vector laplacian residual formula

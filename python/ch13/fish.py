@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
 
-from argparse import ArgumentParser, RawTextHelpFormatter
-from firedrake import *
-from firedrake.petsc import PETSc
-
 # Read command-line options (in addition to PETSc solver options
 # which use -s_ prefix; see below)
+from argparse import ArgumentParser, RawTextHelpFormatter
 parser = ArgumentParser(description="""
 Use Firedrake's nonlinear solver for the Poisson problem
   -Laplace(u) = f        in the unit square
@@ -14,7 +11,7 @@ Compare c/ch6/fish.c.  The prefix for PETSC solver options is 's_'.
 Use -help for PETSc options and -fishhelp for options to fish.py.""",
     formatter_class=RawTextHelpFormatter,add_help=False)
 parser.add_argument('-fishhelp', action='store_true', default=False,
-                    help='help for fish.py options')
+                    help='print help for fish.py options and exit')
 parser.add_argument('-mx', type=int, default=3, metavar='MX',
                     help='number of grid points in x-direction')
 parser.add_argument('-my', type=int, default=3, metavar='MY',
@@ -27,9 +24,16 @@ parser.add_argument('-quad', action='store_true', default=False,
                     help='use quadrilateral finite elements')
 parser.add_argument('-refine', type=int, default=-1, metavar='X',
                     help='number of refinement levels (e.g. for GMG)')
-args, unknown = parser.parse_known_args()
+args, passthroughoptions = parser.parse_known_args()
 if args.fishhelp:  # -fishhelp is for help with fish.py
     parser.print_help()
+    import sys
+    sys.exit(0)
+
+import petsc4py
+petsc4py.init(passthroughoptions)
+from firedrake import *
+from firedrake.petsc import PETSc
 
 # Create mesh, enabling GMG via refinement using hierarchy
 mx, my = args.mx, args.my
@@ -75,4 +79,3 @@ if len(args.o) > 0:
     PETSc.Sys.Print('saving solution to %s ...' % args.o)
     u.rename('u')
     File(args.o).write(u)
-
