@@ -21,17 +21,16 @@ Notes:
 
 ### compile and run one example
 
-Do this to build and run the program `e.c` in Chapter 1:
+Do this to build and run the program `fish.c` from Chapter 6, which solves the Poisson equation.  This solves in parallel on a 1025 x 1025 grid in a couple of seconds:
 
-    $ cd ch1
-    $ make e
-    $ ./e
-    $ mpiexec -n 20 ./e
+    $ cd ch6
+    $ make fish
+    $ mpiexec -n 4 ./fish -pc_type mg -da_refine 9 -ksp_monitor
 
 ### software (regression) testing
 
-    $ make test               # in either c/ or c/ch*/
+    $ make test           # in either c/ or c/ch*/
 
 ### cleaning up
 
-    $ make distclean          # in either c/ or c/ch*/
+    $ make clean          # in either c/ or c/ch*/
