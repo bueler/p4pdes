@@ -14,6 +14,10 @@ balanced: balanced.o
 	-${CLINKER} -o balanced balanced.o  ${PETSC_LIB}
 	${RM} balanced.o
 
+cpi: cpi.o
+	-${CLINKER} -o cpi cpi.o  ${PETSC_LIB}
+	${RM} cpi.o
+
 # testing
 rune_1:
 	-@../testit.sh e "" 1 1
