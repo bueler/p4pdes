@@ -6,6 +6,14 @@ e: e.o
 	-${CLINKER} -o e e.o  ${PETSC_LIB}
 	${RM} e.o
 
+expx: expx.o
+	-${CLINKER} -o expx expx.o  ${PETSC_LIB}
+	${RM} expx.o
+
+balanced: balanced.o
+	-${CLINKER} -o balanced balanced.o  ${PETSC_LIB}
+	${RM} balanced.o
+
 # testing
 rune_1:
 	-@../testit.sh e "" 1 1
@@ -19,5 +27,4 @@ test: test_e
 distclean: clean
 
 clean::
-	@rm -f *~ e *tmp
-
+	@rm -f *~ e *tmp expx balanced
