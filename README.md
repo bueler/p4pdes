@@ -4,7 +4,7 @@ p4pdes
 _PETSc for Partial Differential Equations_ is a new book on using [PETSc](https://petsc.org/release/) and [Firedrake](https://www.firedrakeproject.org/) to solve [partial differential equations](https://en.wikipedia.org/wiki/Partial_differential_equation) by modern numerical methods.
 
 <p align="center">
-  <a  href="https://my.siam.org/Store/Product/viewproduct/?ProductId=32850137"> <img src="frontcover.jpg" alt="image of front cover" /img> </a>
+  <a  href="https://doi.org/10.1137/1.9781611976311"> <img src="frontcover.jpg" alt="image of front cover" /img> </a>
 </p>
 
 Order the paper book from [SIAM Press](https://doi.org/10.1137/1.9781611976311) or the e-book from [Google Play](https://play.google.com/store/books/details/Ed_Bueler_PETSc_for_Partial_Differential_Equations?id=tgMHEAAAQBAJ).
