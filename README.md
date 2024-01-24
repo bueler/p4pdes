@@ -7,7 +7,7 @@ _PETSc for Partial Differential Equations_ is a new book on using [PETSc](https:
   <a  href="https://my.siam.org/Store/Product/viewproduct/?ProductId=32850137"> <img src="frontcover.jpg" alt="image of front cover" /img> </a>
 </p>
 
-Order the paper book from [SIAM Press](https://my.siam.org/Store/Product/viewproduct/?ProductId=32850137) or the e-book from [Google Play](https://play.google.com/store/books/details/Ed_Bueler_PETSc_for_Partial_Differential_Equations?id=tgMHEAAAQBAJ).
+Order the paper book from [SIAM Press](https://doi.org/10.1137/1.9781611976311) or the e-book from [Google Play](https://play.google.com/store/books/details/Ed_Bueler_PETSc_for_Partial_Differential_Equations?id=tgMHEAAAQBAJ).
 
 This repository contains the C and Python example programs upon which the book is based.  They will remain here for the long term, and be maintained for future versions of PETSc.
 
