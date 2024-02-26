@@ -6,6 +6,10 @@ sparsemat: sparsemat.o
 	-${CLINKER} -o sparsemat sparsemat.o  ${PETSC_LIB}
 	${RM} sparsemat.o
 
+vmkrank0: vmkrankzero.o
+	-${CLINKER} -o vmkrankzero vmkrankzero.o  ${PETSC_LIB}
+	${RM} vmkrankzero.o
+
 vecmatksp: vecmatksp.o
 	-${CLINKER} -o vecmatksp vecmatksp.o  ${PETSC_LIB}
 	${RM} vecmatksp.o
@@ -52,6 +56,5 @@ test: test_sparsemat test_vecmatksp test_tri test_loadsolve
 distclean: clean
 
 clean::
-	@rm -f *~ sparsemat vecmatksp tri loadsolve *tmp
+	@rm -f *~ sparsemat vecmatksp tri loadsolve *tmp vmkrankzero
 	@rm -f *.dat *.dat.info
-
