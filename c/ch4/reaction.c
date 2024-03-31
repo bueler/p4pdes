@@ -51,9 +51,9 @@ int main(int argc,char **args) {
   PetscCall(SNESCreate(PETSC_COMM_WORLD,&snes));
   PetscCall(SNESSetDM(snes,da));
   PetscCall(DMDASNESSetFunctionLocal(da,INSERT_VALUES,
-             (DMDASNESFunction)FormFunctionLocal,&user));
+             (DMDASNESFunctionFn *)FormFunctionLocal,&user));
   PetscCall(DMDASNESSetJacobianLocal(da,
-             (DMDASNESJacobian)FormJacobianLocal,&user));
+             (DMDASNESJacobianFn *)FormJacobianLocal,&user));
   PetscCall(SNESSetFromOptions(snes));
 
   PetscCall(SNESSolve(snes,NULL,u));

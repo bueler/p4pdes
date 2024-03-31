@@ -89,15 +89,15 @@ extern PetscErrorCode Form3DUExact(DMDALocalInfo*, Vec, PoissonCtx*);
 
 //STARTPTRARRAYS
 // arrays of pointers to functions
-static DMDASNESFunction residual_ptr[3]
-    = {(DMDASNESFunction)&Poisson1DFunctionLocal,
-       (DMDASNESFunction)&Poisson2DFunctionLocal,
-       (DMDASNESFunction)&Poisson3DFunctionLocal};
+static DMDASNESFunctionFn* residual_ptr[3]
+    = {(DMDASNESFunctionFn*)&Poisson1DFunctionLocal,
+       (DMDASNESFunctionFn*)&Poisson2DFunctionLocal,
+       (DMDASNESFunctionFn*)&Poisson3DFunctionLocal};
 
-static DMDASNESJacobian jacobian_ptr[3]
-    = {(DMDASNESJacobian)&Poisson1DJacobianLocal,
-       (DMDASNESJacobian)&Poisson2DJacobianLocal,
-       (DMDASNESJacobian)&Poisson3DJacobianLocal};
+static DMDASNESJacobianFn* jacobian_ptr[3]
+    = {(DMDASNESJacobianFn*)&Poisson1DJacobianLocal,
+       (DMDASNESJacobianFn*)&Poisson2DJacobianLocal,
+       (DMDASNESJacobianFn*)&Poisson3DJacobianLocal};
 
 typedef PetscErrorCode (*ExactFcnVec)(DMDALocalInfo*,Vec,PoissonCtx*);
 
@@ -223,9 +223,9 @@ int main(int argc,char **argv) {
     PetscCall(SNESCreate(PETSC_COMM_WORLD,&snes));
     PetscCall(SNESSetDM(snes,da));
     PetscCall(DMDASNESSetFunctionLocal(da,INSERT_VALUES,
-             (DMDASNESFunction)(residual_ptr[dim-1]),&user));
+             (DMDASNESFunctionFn *)(residual_ptr[dim-1]),&user));
     PetscCall(DMDASNESSetJacobianLocal(da,
-             (DMDASNESJacobian)(jacobian_ptr[dim-1]),&user));
+             (DMDASNESJacobianFn *)(jacobian_ptr[dim-1]),&user));
 
     // default to KSPONLY+CG because problem is linear and SPD
     PetscCall(SNESSetType(snes,SNESKSPONLY));
