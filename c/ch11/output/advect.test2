@@ -1,10 +1,10 @@
 solving problem rotation with stump initial state on 20 x 20 grid,
     cells dx=0.1 x dy=0.1, limiter = vanleer, and jac_limiter =  ...
 0 TS dt 0.02 time 0.
-    0 SNES Function norm 13.8111 
-    1 SNES Function norm 0.940691 
-    2 SNES Function norm 0.108796 
-    3 SNES Function norm 0.00139433 
-    4 SNES Function norm 1.74307e-07 
+    0 SNES Function norm 13.8111
+    1 SNES Function norm 0.940691
+    2 SNES Function norm 0.108796
+    3 SNES Function norm 0.00139433
+    4 SNES Function norm 1.74309e-07
 1 TS dt 0.02 time 0.02
 completed 1 steps to time 0.02

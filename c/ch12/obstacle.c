@@ -112,9 +112,9 @@ int main(int argc,char **argv) {
 
   // reuse residual and jacobian from ch6/
   PetscCall(DMDASNESSetFunctionLocal(da,INSERT_VALUES,
-             (DMDASNESFunction)Poisson2DFunctionLocal,&user));
+             (DMDASNESFunctionFn *)Poisson2DFunctionLocal,&user));
   PetscCall(DMDASNESSetJacobianLocal(da,
-             (DMDASNESJacobian)Poisson2DJacobianLocal,&user));
+             (DMDASNESJacobianFn *)Poisson2DJacobianLocal,&user));
   PetscCall(SNESGetKSP(snes,&ksp));
   PetscCall(KSPSetType(ksp,KSPCG));
   PetscCall(SNESSetFromOptions(snes));

@@ -138,11 +138,11 @@ int main(int argc, char **argv) {
     PetscCall(SNESCreate(PETSC_COMM_WORLD,&snes));
     PetscCall(SNESSetDM(snes,da));
     PetscCall(DMDASNESSetFunctionLocal(da,INSERT_VALUES,
-               (DMDASNESFunction)FormFunctionLocal,&user));
+               (DMDASNESFunctionFn *)FormFunctionLocal,&user));
     // this is the Jacobian of the Poisson equation, thus ONLY APPROXIMATE;
     //     generally use -snes_fd_color or -snes_mf_operator
     PetscCall(DMDASNESSetJacobianLocal(da,
-               (DMDASNESJacobian)Poisson2DJacobianLocal,&user));
+               (DMDASNESJacobianFn *)Poisson2DJacobianLocal,&user));
     if (monitor) {
         PetscCall(SNESMonitorSet(snes,MSEMonitor,&user,NULL));
     }

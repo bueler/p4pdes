@@ -1,8 +1,8 @@
 Matrix is symmetric (tolerance 0.)
-  0 SNES Function norm 3.86571 
+  0 SNES Function norm 3.86571
 Matrix is symmetric (tolerance 0.)
   Linear solve converged due to CONVERGED_RTOL iterations 11
-  1 SNES Function norm 1.3323 
+  1 SNES Function norm 1.3323
 Matrix is symmetric (tolerance 0.)
   Linear solve converged due to CONVERGED_RTOL iterations 11
   2 SNES Function norm < 1.e-11

@@ -174,7 +174,7 @@ int main(int argc,char **argv) {
     PetscCall(SNESCreate(PETSC_COMM_WORLD,&snes));
     PetscCall(SNESSetDM(snes,da));
     PetscCall(DMDASNESSetFunctionLocal(da,INSERT_VALUES,
-            (DMDASNESFunction)FormFunctionLocal,&user));
+            (DMDASNESFunctionFn *)FormFunctionLocal,&user));
     PetscCall(SNESSetApplicationContext(snes,&user));
     PetscCall(SNESSetFromOptions(snes));
 

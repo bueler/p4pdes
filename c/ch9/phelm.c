@@ -130,14 +130,14 @@ int main(int argc,char **argv) {
     PetscCall(SNESSetDM(snes,da));
     if (!no_objective) {
         PetscCall(DMDASNESSetObjectiveLocal(da,
-             (DMDASNESObjective)FormObjectiveLocal,&user));
+             (DMDASNESObjectiveFn *)FormObjectiveLocal,&user));
     }
     if (no_gradient) {
         // why isn't this the default?  why no programmatic way to set?
         PetscCall(PetscOptionsSetValue(NULL,"-snes_fd_function_eps","0.0"));
     } else {
         PetscCall(DMDASNESSetFunctionLocal(da,INSERT_VALUES,
-             (DMDASNESFunction)FormFunctionLocal,&user));
+             (DMDASNESFunctionFn *)FormFunctionLocal,&user));
     }
     PetscCall(SNESSetFromOptions(snes));
 

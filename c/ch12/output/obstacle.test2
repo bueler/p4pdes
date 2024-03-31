@@ -1,6 +1,6 @@
-  0 SNES Function norm 3.86571 
-  1 SNES Function norm 1.3323 
-  2 SNES Function norm 4.84465e-06 
-  3 SNES Function norm 1.511e-11 
+  0 SNES Function norm 3.86571
+  1 SNES Function norm 1.3323
+  2 SNES Function norm 4.84465e-06
+  3 SNES Function norm 1.511e-11
 done on 9 x 9 grid ... CONVERGED_FNORM_RELATIVE, SNES iters = 3, last KSP iters = 4
 errors: av |u-uexact| = 3.076e-03, |u-uexact|_inf = 1.334e-02, active area error = 47.016%
