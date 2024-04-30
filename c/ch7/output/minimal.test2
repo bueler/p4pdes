@@ -1,6 +1,6 @@
 Matrix is symmetric (tolerance 1e-07)
 Matrix is symmetric (tolerance 1e-07)
-  Linear solve converged due to CONVERGED_RTOL iterations 5
+    Linear solve converged due to CONVERGED_RTOL iterations 5
 Matrix is symmetric (tolerance 1e-07)
-  Linear solve converged due to CONVERGED_RTOL iterations 6
+    Linear solve converged due to CONVERGED_RTOL iterations 6
 done on 9 x 9 grid and problem tent ...

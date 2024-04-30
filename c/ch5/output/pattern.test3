@@ -1,6 +1,6 @@
 running on 12 x 12 grid with square cells of side h = 0.208333 ...
 0 TS dt 5. time 0.
-  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
 1 TS dt 5. time 5.
-  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
 2 TS dt 5. time 10.

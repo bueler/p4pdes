@@ -1,8 +1,8 @@
 solving problem straight with stump initial state on 10 x 10 grid,
     cells dx=0.2 x dy=0.2, limiter = koren, and jac_limiter = none ...
 0 TS dt 0.01 time 0.
-  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 9
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 9
 1 TS dt 0.01 time 0.01
-  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 9
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 9
 2 TS dt 0.01 time 0.02
 completed 2 steps to time 0.02

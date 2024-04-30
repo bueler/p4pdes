@@ -1,2 +1,2 @@
-Linear solve converged due to CONVERGED_RTOL iterations 8
+  Linear solve converged due to CONVERGED_RTOL iterations 8
 error for m = 1000 system is |x-xexact|_2 = 2.6e-03

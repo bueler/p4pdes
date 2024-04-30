@@ -1,4 +1,4 @@
-  Linear solve converged due to CONVERGED_RTOL iterations 2
-Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
+    Linear solve converged due to CONVERGED_RTOL iterations 2
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 1
 WARNING: -bth_none_on_peclet set but finest grid used NONE limiter
 done on 5 x 5 grid (problem = glaze, eps = 0.005, limiter = vanleer)

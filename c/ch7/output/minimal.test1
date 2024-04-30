@@ -4,5 +4,5 @@
   3 SNES Function norm 0.00995652
   4 SNES Function norm 2.20675e-05
   5 SNES Function norm 1.772e-10
-Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
 done on 5 x 5 grid and problem catenoid:  error |u-uexact|_inf = 1.10603e-04

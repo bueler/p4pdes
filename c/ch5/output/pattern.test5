@@ -1,7 +1,7 @@
 running on 48 x 48 grid with square cells of side h = 0.052083 ...
 0 TS dt 1. time 0.
-  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
-  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 2
 1 TS dt 1.10972 time 1.
 CALL-BACK REPORT
   solver type: bdf

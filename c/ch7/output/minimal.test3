@@ -4,15 +4,15 @@
     area = 1.32285324; 0.6106 <= D <= 0.9561
     area = 1.32217567; 0.6158 <= D <= 0.9510
     area = 1.32217567; 0.6158 <= D <= 0.9510
-    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
+      Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 5
   area = 1.32217583; 0.6035 <= D <= 0.9518
   area = 1.33231935; 0.5757 <= D <= 0.9872
   area = 1.33230219; 0.5755 <= D <= 0.9872
   area = 1.33230217; 0.5755 <= D <= 0.9872
-  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+    Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
 area = 1.33230220; 0.5684 <= D <= 0.9872
 area = 1.33475595; 0.5153 <= D <= 0.9968
 area = 1.33475385; 0.5156 <= D <= 0.9968
 area = 1.33475385; 0.5156 <= D <= 0.9968
-Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 3
 done on 9 x 9 grid and problem catenoid:  error |u-uexact|_inf = 6.79501e-04

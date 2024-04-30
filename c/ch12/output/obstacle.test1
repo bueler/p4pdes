@@ -1,10 +1,10 @@
 Matrix is symmetric (tolerance 0.)
   0 SNES Function norm 3.86571
 Matrix is symmetric (tolerance 0.)
-  Linear solve converged due to CONVERGED_RTOL iterations 11
+    Linear solve converged due to CONVERGED_RTOL iterations 11
   1 SNES Function norm 1.3323
 Matrix is symmetric (tolerance 0.)
-  Linear solve converged due to CONVERGED_RTOL iterations 11
+    Linear solve converged due to CONVERGED_RTOL iterations 11
   2 SNES Function norm < 1.e-11
 done on 9 x 9 grid ... CONVERGED_FNORM_RELATIVE, SNES iters = 2, last KSP iters = 11
 errors: av |u-uexact| = 3.076e-03, |u-uexact|_inf = 1.334e-02, active area error = 47.016%
