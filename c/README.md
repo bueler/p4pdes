@@ -18,6 +18,7 @@ Notes:
   * [CONFIGS.md](CONFIGS.md) contains some of the `configure` commands which
     work on the author's machines.  These are minimal installation suggestions.
   * My book does not help the reader with debugging C programs.
+  * Make sure to [download the latest release](https://github.com/bueler/p4pdes/releases/) compatible with your PETSc version. Package managers (such as apt) may only contain older versions of PETSc that are incompatible with newer releases of p4pdes.
 
 ### compile and run one example
 
