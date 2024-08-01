@@ -45,12 +45,14 @@ int main(int argc,char **args) {
         }
         xval = PetscExpReal(PetscCosReal((double)i));
         PetscCall(VecSetValues(xexact,1,&i,&xval,INSERT_VALUES));
+        xval = 0.0;
+        PetscCall(VecSetValues(b,1,&i,&xval,INSERT_VALUES));
     }
     PetscCall(MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY));
     PetscCall(VecAssemblyBegin(xexact));
     PetscCall(VecAssemblyEnd(xexact));
-    PetscCall(MatMult(A,xexact,b));
+    //    PetscCall(MatMult(A,xexact,b));
 
     PetscCall(KSPCreate(PETSC_COMM_WORLD,&ksp));
     PetscCall(KSPSetOperators(ksp,A,A));
