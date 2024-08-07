@@ -100,6 +100,7 @@ PetscErrorCode formMatrix(DM da, Mat A) {
                     v[ncols++] = -hx/hy;
                 }
             }
+	    printf("ncols: %i, i: %i, j: %i\n", ncols, i, j);
             PetscCall(MatSetValuesStencil(A,1,&row,ncols,col,v,INSERT_VALUES));
         }
     }

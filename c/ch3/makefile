@@ -18,6 +18,10 @@ poisson_dirichlet: poisson_dirichlet.o
 	-${CLINKER} -o poisson_dirichlet poisson_dirichlet.o ${PETSC_LIB}
 	${RM} poisson_dirichlet.o
 
+poisson3D: poisson3D.o
+	-${CLINKER} -o poisson3D poisson3D.o ${PETSC_LIB}
+	${RM} poisson3D.o
+
 # testing
 runpoisson_1:
 	-@../testit.sh poisson "-da_grid_x 5 -da_grid_y 7" 1 1
@@ -39,5 +43,5 @@ test: test_poisson
 distclean: clean
 
 clean::
-	@rm -f *~ poisson poisson1D *tmp poisson_modify poisson_dirichlet
+	@rm -f *~ poisson poisson1D *tmp poisson_modify poisson_dirichlet poisson3D
 
