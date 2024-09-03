@@ -7,23 +7,23 @@ DM_0xc4000003_1 in 2 dimensions:
 Labels:
   depth: 3 strata with value/size (0 (19), 1 (38), 2 (20))
   celltype: 3 strata with value/size (0 (19), 1 (38), 3 (20))
-  Face Sets: 4 strata with value/size (1 (9), 2 (3), 3 (9), 4 (3))
-  exterior_facets: 1 strata with value/size (1 (21))
-  interior_facets: 1 strata with value/size (1 (46))
-  pyop2_core: 1 strata with value/size (1 (30))
-  pyop2_owned: 1 strata with value/size (1 (22))
+  Face Sets: 3 strata with value/size (1 (5), 2 (7), 4 (9))
+  exterior_facets: 1 strata with value/size (1 (19))
+  interior_facets: 1 strata with value/size (1 (47))
+  pyop2_core: 1 strata with value/size (1 (26))
+  pyop2_owned: 1 strata with value/size (1 (26))
   pyop2_ghost: 1 strata with value/size (1 (25))
 solving on 5 x 5 grid with P_2 x P_1 Taylor-Hood elements ...
     Residual norms for s_ solve.
-    0 KSP Residual norm 19.9904
-    1 KSP Residual norm 6.33001
-    2 KSP Residual norm 4.1265
-    3 KSP Residual norm 2.25042
-    4 KSP Residual norm 0.54627
-    5 KSP Residual norm 0.225211
-    6 KSP Residual norm 0.0796619
-    7 KSP Residual norm 0.0312688
-    8 KSP Residual norm 0.0151662
+    0 KSP Residual norm 20.279
+    1 KSP Residual norm 6.26496
+    2 KSP Residual norm 3.96647
+    3 KSP Residual norm 1.85486
+    4 KSP Residual norm 0.464484
+    5 KSP Residual norm 0.191884
+    6 KSP Residual norm 0.0873009
+    7 KSP Residual norm 0.0380522
+    8 KSP Residual norm 0.017663
   Schur+GMG PC package lower + selfp
   sizes: n_u = 162, n_p = 25, N = 187
-  solution norms: |u|_h = 5.46e-02, |p|_h = 1.18e+00
+  solution norms: |u|_h = 5.50e-02, |p|_h = 1.18e+00

@@ -1,3 +1,3 @@
-  Linear s_ solve converged due to CONVERGED_RTOL iterations 1
+    Linear s_ solve converged due to CONVERGED_RTOL iterations 1
 done on 5 x 5 grid with Q_1 elements:
   error |u-uexact|_inf = 3.414e-04, |u-uexact|_h = 1.751e-04
