@@ -3,31 +3,31 @@
 GMSH = gmsh
 
 rungmshversion_1:
-	-@../../c/testit.sh ${GMSH} "-version" INFO 1
+	-@../ftestit.sh ${GMSH} "-version" INFO 1
 
 runstokes_1:
-	-@../../c/testit.sh stokes.py "-analytical -mx 4 -my 4 -s_ksp_type minres -s_ksp_converged_reason -s_pc_type none -s_ksp_rtol 1.0e-2" 1 1
+	-@../ftestit.sh stokes.py "-analytical -mx 4 -my 4 -s_ksp_type minres -s_ksp_converged_reason -s_pc_type none -s_ksp_rtol 1.0e-2" 1 1
 
 runstokes_2:
-	-@../../c/testit.sh stokes.py "-udegree 3 -pdegree 2 -refine 1 -quad -showinfo -s_ksp_type preonly -s_pc_type lu -s_pc_factor_shift_type inblocks -s_ksp_monitor_short" 1 2
+	-@../ftestit.sh stokes.py "-udegree 3 -pdegree 2 -refine 1 -quad -showinfo -s_ksp_type preonly -s_pc_type lu -s_pc_factor_shift_type inblocks -s_ksp_monitor_short" 1 2
 
 # following test depends on gmsh version
 runstokes_3:
 	-@./lidbox.py -quiet -cl 0.4 -cornerrefine 4 coarse.geo
 	-@${GMSH} -v 0 -2 coarse.geo
-	-@../../c/testit.sh stokes.py "-mesh coarse.msh -refine 1 -s_ksp_type fgmres -s_ksp_converged_reason -schurgmg lower -schurpre selfp" 1 3
+	-@../ftestit.sh stokes.py "-mesh coarse.msh -refine 1 -s_ksp_type fgmres -s_ksp_converged_reason -schurgmg lower -schurpre selfp" 1 3
 
 runstokes_4:
-	-@../../c/testit.sh stokes.py "-pdegree 0 -dp -refine 1 -s_ksp_type minres -s_ksp_converged_reason -schurgmg diag -schurpre mass" 1 4
+	-@../ftestit.sh stokes.py "-pdegree 0 -dp -refine 1 -s_ksp_type minres -s_ksp_converged_reason -schurgmg diag -schurpre mass" 1 4
 
 runstokes_5:
-	-@../../c/testit.sh stokes.py "-nobase -refine 1 -dm_view -showinfo -s_ksp_monitor_short -s_ksp_rtol 1.0e-3 -schurgmg lower" 2 5
+	-@../ftestit.sh stokes.py "-nobase -refine 1 -dm_view -showinfo -s_ksp_monitor_short -s_ksp_rtol 1.0e-3 -schurgmg lower" 2 5
 
 runstokes_6:
-	-@../../c/testit.sh stokes.py "-vectorlap -analytical -refine 1 -s_ksp_type gmres -s_ksp_converged_reason -schurgmg lower" 1 6
+	-@../ftestit.sh stokes.py "-vectorlap -analytical -refine 1 -s_ksp_type gmres -s_ksp_converged_reason -schurgmg lower" 1 6
 
 runstokes_7:
-	-@../../c/testit.sh stokes.py "-stokeshelp" 1 7
+	-@../ftestit.sh stokes.py "-stokeshelp" 1 7
 
 test_gmshversion: rungmshversion_1
 
