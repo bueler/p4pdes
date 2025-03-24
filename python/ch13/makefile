@@ -4,7 +4,7 @@ runfish_1:
 	-@../ftestit.sh fish.py "-mx 5 -my 5 -k 2 -s_ksp_type preonly -s_pc_type lu" 1 1
 
 runfish_2:
-	-@../ftestit.sh fish.py "-refine 2 -dm_view -s_ksp_converged_reason -s_pc_type mg -s_mg_levels_ksp_max_it 3" 2 2
+	-@../ftestit.sh fish.py "-refine 2 -s_ksp_converged_reason -s_pc_type mg -s_mg_levels_ksp_max_it 3" 2 2
 
 runfish_3:
 	-@../ftestit.sh fish.py "-refine 1 -s_snes_type newtonls -s_snes_converged_reason -s_ksp_converged_reason -s_pc_type gamg" 1 3

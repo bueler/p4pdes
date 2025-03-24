@@ -21,7 +21,7 @@ runstokes_4:
 	-@../ftestit.sh stokes.py "-pdegree 0 -dp -refine 1 -s_ksp_type minres -s_ksp_converged_reason -schurgmg diag -schurpre mass" 1 4
 
 runstokes_5:
-	-@../ftestit.sh stokes.py "-nobase -refine 1 -dm_view -showinfo -s_ksp_monitor_short -s_ksp_rtol 1.0e-3 -schurgmg lower" 2 5
+	-@../ftestit.sh stokes.py "-nobase -refine 1 -showinfo -s_ksp_monitor_short -s_ksp_rtol 1.0e-3 -schurgmg lower" 2 5
 
 runstokes_6:
 	-@../ftestit.sh stokes.py "-vectorlap -analytical -refine 1 -s_ksp_type gmres -s_ksp_converged_reason -schurgmg lower" 1 6
