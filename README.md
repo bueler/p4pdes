@@ -33,20 +33,19 @@ To install and manage two PETSc copies I do the following:
 ```
   $ git clone -b release https://gitlab.com/petsc/petsc.git petsc
 ```
-  Configure this copy called `petsc` with any preferred flags supporting your development of C programs (or C and Fortran programs).  Almost any configuration will be compatible with building and running the C codes for Chapters 1--12, i.e. from the `c/` directory.
+  Configure this copy called `petsc` with any preferred flags supporting your development of C programs (or C and Fortran programs).  Almost any configuration will be compatible with building and running the C codes for Chapters 1--12.
 
-  2. Follow the instructions at the [Install tab on the Firedrake page](https://www.firedrakeproject.org/install.html).  However, when you clone this copy **put it in a different location**, e.g.
+  2. Follow the instructions at the [Install tab on the Firedrake page](https://www.firedrakeproject.org/install.html) to install Firedrake.  However, when you clone a copy of PETSc, **put it in a different location** from the above, e.g.
 ```
   $ git clone --depth 1 https://github.com/firedrakeproject/petsc.git petsc-firedrake
 ```
-
-  3. For the later stages of the [Firedrake installation](https://www.firedrakeproject.org/install.html), make sure that `PETSC_DIR` is set appropriately, to point to the copy called `petsc-firedrake`.  For example, in my case I set the environment variables:
+  For the later stages of the [Firedrake installation](https://www.firedrakeproject.org/install.html), make sure that `PETSC_DIR` is set appropriately, to point to `petsc-firedrake`.  For example, in my case I set the environment variables:
 ```
    CC=mpicc CXX=mpicxx PETSC_DIR=/home/bueler/petsc-firedrake PETSC_ARCH=arch-firedrake-default HDF5_MPI=ON
 ```
   Then the `pip install ...` for [Firedrake installation](https://www.firedrakeproject.org/install.html) proceeds as before.
 
-  4. Finally, I add certain convenience functions to the `.bashrc` in my home directory:
+  3. Finally, I add certain convenience functions to the `.bashrc` in my home directory:
 ```
 parse_git_dirty() {
     [[ $(git status 2> /dev/null | tail -n1) != "nothing to commit, working tree clean" ]] && echo "*"
@@ -65,12 +64,12 @@ drakeme() {
     export CC=mpicc CXX=mpicxx PETSC_DIR=~/petsc-firedrake PETSC_ARCH=arch-firedrake-default HDF5_MPI=ON
 }
 ```
-  These posix-compatible Bash functions give me prompts that are informative of what mode I am in, and also what Git branch I am on.  For example, when I start to work with the C codes in Chapters 1--12 I do:
+  These posix-compatible Bash functions give me prompts that are informative of what mode I am in, and also what Git branch I am on.  For example, here is how I start to work with the C codes in Chapters 1--12:
 ```
   ~/p4pdes/c[master]$ petscme
   (petsc) ~/p4pdes/c[master]$ ...
 ```
-  For working with the Firedrake Python codes in Chapters 13--14 I do:
+  For working with the Firedrake Python codes in Chapters 13--14, I do:
 ```
   ~/p4pdes/python[master]$ drakeme
   (firedrake) ~/p4pdes/python[master]$ 
