@@ -7,25 +7,16 @@ These codes will remain here and be maintained and supported in the long term.
 
 ### configure and install Firedrake
 
-To download and install Firedrake please follow the instructions at the [download tab on the Firedrake page](https://www.firedrakeproject.org/download.html).  It is recommended that you allow Firedrake to download and configure its own copy of PETSc.
+To download and install Firedrake please follow the instructions at the [Install tab on the Firedrake page](https://www.firedrakeproject.org/install.html).  As of March 2025 this is usually done by building a copy of PETSc from source, using Firedrake's recommended configuration flags, and then installing Firedrake via [pip](https://pypi.org/project/pip/).
 
-After the initial download (of the Firedrake install script) do something like this:
-
-        $ unset PYTHONPATH; unset PETSC_DIR; unset PETSC_ARCH;
-        $ python3 firedrake-install
-
-(The reason to unset variables is so that Firedrake does its own PETSc install with its own compatible version of PETSc.)
-
-Firedrake will then proceed to download and install its rather large stack of dependencies.  When it is done you may want to set a convenience alias something like this, for later activation of the Firedrake virtual environment:
-
-        $ alias drakeme='unset PETSC_DIR; unset PETSC_ARCH; source ~/firedrake/bin/activate'
+See the [top-level README](../README.md) for how to set-up shell environment variables so that you can go back and forth between the PETSc version you use for C program developement, and the copy of PETSc which was installed to support Firedrake.
 
 ### getting started with the Poisson example
 
 Do this to run the Poisson solver in Chapter 13, which will also test whether your Firedrake installation is working:
 
         $ cd p4pdes/python/ch13/
-        $ source ~/firedrake/bin/activate      # or use alias: $ drakeme
+        $ [activate your Firedrake venv]
         (firedrake) $ ./fish.py
 
 When you run a Firedrake program for the first time it will cache various finite element constructions.  Thus it will run much faster the second time.

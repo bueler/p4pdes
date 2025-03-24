@@ -14,11 +14,12 @@ Notes:
 
   * My book does not contain PETSc installation instructions, though it has
     minimal advice.  Maintaining installation information is the job of
-    PETSc developers, not me.  (Thank goodness.)
+    PETSc developers, not me.  (Thank goodness!)
+  * Please make sure to [download the latest release of p4pdes](https://github.com/bueler/p4pdes/releases/) which is compatible with your PETSc version.  Note that package managers (such as [apt for debian systems](https://wiki.debian.org/Apt)) may contain older versions of PETSc that are incompatible with the newest release of [p4pdes](https://github.com/bueler/p4pdes/).
   * [CONFIGS.md](CONFIGS.md) contains some of the `configure` commands which
     work on the author's machines.  These are minimal installation suggestions.
-  * My book does not help the reader with debugging C programs.
-  * Make sure to [download the latest release](https://github.com/bueler/p4pdes/releases/) compatible with your PETSc version. Package managers (such as apt) may only contain older versions of PETSc that are incompatible with newer releases of p4pdes.
+  * See [`../README.md`](../README.md) for how to set-up shell environments so that you can go back and forth between the PETSc version you use for C program development, and also maintain a copy of PETSc which was installed to support Firedrake.
+  * My book does not help the reader with tools for debugging C programs, but that is an important skill to have.
 
 ### compile and run one example
 
