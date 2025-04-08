@@ -21,9 +21,9 @@ To compile and run the C examples, for Chapters 1 through 12, see the [`README.m
 
 Chapters 13 and 14 use [Firedrake](https://www.firedrakeproject.org/), a [Python](https://www.python.org/) finite element library based on PETSc.  See the [`README.md`](python/README.md) in the `python/` directory to run these examples.
 
-### March 2025 update on managing 2 PETSc installations:
+### Spring 2025 update on managing two PETSc installations:
 
-Running all the codes from the book can be done with two copies of PETSc.  One copy is any PETSc installation, to be used for the C codes in Chapters 1--12; this one can be updated to follow any branch of PETSc, for example.  The other copy is separate, and configured so that Firedrake works, and which must have the configuration needed by Firedrake.
+Running all the codes from the book can be done with two copies of PETSc.  One copy is any PETSc installation, to be used for the C codes in Chapters 1--12; this one can be updated to follow any branch of PETSc, for example.  The other copy is separate, and configured so that Firedrake works; this one is for the Python codes in Chapters 13 & 14.
 
 Note that, as of March 2025, downloading and installing Firedrake, as in the instructions at the [Install tab on the Firedrake page](https://www.firedrakeproject.org/install.html), is usually done by building a copy of PETSc from source, using Firedrake's recommended configuration flags, and then installing Firedrake via [pip](https://pypi.org/project/pip/).
 
@@ -33,15 +33,17 @@ To install and manage two PETSc copies I do the following:
 ```
   $ git clone -b release https://gitlab.com/petsc/petsc.git petsc
 ```
-  Configure this copy called `petsc` with any preferred flags supporting your development of C programs (or C and Fortran programs).  Almost any configuration will be compatible with building and running the C codes for Chapters 1--12.
+  I configure and build this copy with any preferred flags supporting my development of C programs.  Most configurations will be compatible with building and running the codes in Chapters 1--12.
 
-  2. Follow the instructions at the [Install tab on the Firedrake page](https://www.firedrakeproject.org/install.html) to install Firedrake.  However, when you clone a copy of PETSc, **put it in a different location** from the above, e.g.
+  2. I follow the instructions at the [Install tab on the Firedrake page](https://www.firedrakeproject.org/install.html) to install Firedrake.  However, I do this inside a directory `Firedrake` so that this PETSc copy is in a different location:
 ```
-  $ git clone --depth 1 https://github.com/firedrakeproject/petsc.git petsc-firedrake
+  $ mkdir Firedrake
+  $ cd Firedrake/
+  $ git clone --depth 1 https://github.com/firedrakeproject/petsc.git petsc
 ```
-  For the later stages of the [Firedrake installation](https://www.firedrakeproject.org/install.html), make sure that `PETSC_DIR` is set appropriately, to point to `petsc-firedrake`.  For example, in my case I set the environment variables:
+  I do the [Firedrake installation](https://www.firedrakeproject.org/install.html) also from `Firedrake/`, making sure that `PETSC_DIR` is set appropriately, to point to `Firedrake/petsc/`.  For example, in my case I see the environment variables:
 ```
-   CC=mpicc CXX=mpicxx PETSC_DIR=/home/bueler/petsc-firedrake PETSC_ARCH=arch-firedrake-default HDF5_MPI=ON
+   CC=mpicc CXX=mpicxx PETSC_DIR=/home/bueler/Firedrake/petsc PETSC_ARCH=arch-firedrake-default HDF5_MPI=ON
 ```
   Then the `pip install ...` for [Firedrake installation](https://www.firedrakeproject.org/install.html) proceeds as before.
 
@@ -60,8 +62,8 @@ petscme() {
     export PS1='(petsc) \[\033[0;33m\]\w\[\033[0m\]$(parse_git_branch)$ '
 }
 drakeme() {
-    source ~/venv-firedrake/bin/activate
-    export CC=mpicc CXX=mpicxx PETSC_DIR=~/petsc-firedrake PETSC_ARCH=arch-firedrake-default HDF5_MPI=ON
+    source ~/Firedrake/venv-firedrake/bin/activate
+    export CC=mpicc CXX=mpicxx PETSC_DIR=~/Firedrake/petsc PETSC_ARCH=arch-firedrake-default HDF5_MPI=ON
 }
 ```
   These posix-compatible Bash functions give me prompts that are informative of what mode I am in, and also what Git branch I am on.  For example, here is how I start to work with the C codes in Chapters 1--12:
@@ -69,7 +71,7 @@ drakeme() {
   ~/p4pdes/c[master]$ petscme
   (petsc) ~/p4pdes/c[master]$ ...
 ```
-  For working with the Firedrake Python codes in Chapters 13--14, I do:
+  For working with the Firedrake Python codes in Chapters 13 & 14, I do:
 ```
   ~/p4pdes/python[master]$ drakeme
   (firedrake) ~/p4pdes/python[master]$ 
