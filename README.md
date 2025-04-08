@@ -41,7 +41,7 @@ To install and manage two PETSc copies I do the following:
   $ cd Firedrake/
   $ git clone --depth 1 https://github.com/firedrakeproject/petsc.git petsc
 ```
-  I do the [Firedrake installation](https://www.firedrakeproject.org/install.html) also from `Firedrake/`, making sure that `PETSC_DIR` is set appropriately, to point to `Firedrake/petsc/`.  For example, in my case I see the environment variables:
+  I do the [Firedrake installation](https://www.firedrakeproject.org/install.html) also from within `Firedrake/`, making sure that `PETSC_DIR` is set appropriately, to point to `Firedrake/petsc/`.  For example, in my case I see the environment variables:
 ```
    CC=mpicc CXX=mpicxx PETSC_DIR=/home/bueler/Firedrake/petsc PETSC_ARCH=arch-firedrake-default HDF5_MPI=ON
 ```
