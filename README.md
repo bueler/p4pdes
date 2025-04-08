@@ -27,27 +27,27 @@ Running all the codes from the book can be done with two copies of PETSc.  One c
 
 Note that, as of March 2025, downloading and installing Firedrake, as in the instructions at the [Install tab on the Firedrake page](https://www.firedrakeproject.org/install.html), is usually done by building a copy of PETSc from source, using Firedrake's recommended configuration flags, and then installing Firedrake via [pip](https://pypi.org/project/pip/).
 
-To install and manage two PETSc copies I do the following:
+To install and manage these two PETSc copies I do the following:
 
-  1.
+  1. I configure and build one copy with any preferred flags, supporting my development of C programs:
 ```
   git clone -b release https://gitlab.com/petsc/petsc.git petsc
 ```
-  I configure and build this copy with any preferred flags supporting my development of C programs.  Most configurations will be compatible with building and running the codes in Chapters 1--12.
+  Most configuration choices will be compatible with building and running the codes in Chapters 1--12.  Note that Fortran support is not needed for the book's codes.
 
-  2. I follow the instructions at the [Install tab on the Firedrake page](https://www.firedrakeproject.org/install.html) to install Firedrake.  However, I do this inside a directory `Firedrake` so that this PETSc copy is in a different location:
+  2. I follow the instructions at the [Install tab on the Firedrake page](https://www.firedrakeproject.org/install.html) to install Firedrake.  However, I do this inside a directory `Firedrake` so that the second PETSc copy needed by Firedrake is in a different location:
 ```
   mkdir Firedrake
   cd Firedrake/
   git clone --depth 1 https://github.com/firedrakeproject/petsc.git petsc
 ```
-  I do the installation also from within `Firedrake/`, making sure that `PETSC_DIR` points to `Firedrake/petsc/`.  For example, in my case I see the environment variables:
+  I do the installation, also from within `Firedrake/`, making sure that `PETSC_DIR` points to `Firedrake/petsc/`.  For example, in my case I see the environment variables:
 ```
    CC=mpicc CXX=mpicxx PETSC_DIR=/home/bueler/Firedrake/petsc PETSC_ARCH=arch-firedrake-default HDF5_MPI=ON
 ```
-  Then the `pip install ...` goes on as documented at the [Firedrake installation page](https://www.firedrakeproject.org/install.html).
+  Then the stages of starting the virtual environment and doing `pip install ...` go on as documented at the [Firedrake installation page](https://www.firedrakeproject.org/install.html).
 
-  3. Finally, I add certain convenience functions to the `.bashrc` in my home directory:
+  3. Finally, I add certain convenience functions to `.bashrc` in my home directory:
 ```
 parse_git_dirty() {
     [[ $(git status 2> /dev/null | tail -n1) != "nothing to commit, working tree clean" ]] && echo "*"
@@ -66,7 +66,7 @@ drakeme() {
     export CC=mpicc CXX=mpicxx PETSC_DIR=~/Firedrake/petsc PETSC_ARCH=arch-firedrake-default HDF5_MPI=ON
 }
 ```
-  These posix-compatible Bash functions give me prompts that are informative of what mode I am in, and also what Git branch I am on.  For example, here is how I start to work with the C codes in Chapters 1--12:
+  These posix-compatible Bash functions provide informative prompts for what mode I am in, and also what Git branch I am on.  For example, here is how I start to work with the C codes in Chapters 1--12:
 ```
   ~/p4pdes/c[master]$ petscme
   (petsc) ~/p4pdes/c[master]$ ...
