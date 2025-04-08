@@ -31,21 +31,21 @@ To install and manage two PETSc copies I do the following:
 
   1.
 ```
-  $ git clone -b release https://gitlab.com/petsc/petsc.git petsc
+  git clone -b release https://gitlab.com/petsc/petsc.git petsc
 ```
   I configure and build this copy with any preferred flags supporting my development of C programs.  Most configurations will be compatible with building and running the codes in Chapters 1--12.
 
   2. I follow the instructions at the [Install tab on the Firedrake page](https://www.firedrakeproject.org/install.html) to install Firedrake.  However, I do this inside a directory `Firedrake` so that this PETSc copy is in a different location:
 ```
-  $ mkdir Firedrake
-  $ cd Firedrake/
-  $ git clone --depth 1 https://github.com/firedrakeproject/petsc.git petsc
+  mkdir Firedrake
+  cd Firedrake/
+  git clone --depth 1 https://github.com/firedrakeproject/petsc.git petsc
 ```
-  I do the [Firedrake installation](https://www.firedrakeproject.org/install.html) also from within `Firedrake/`, making sure that `PETSC_DIR` is set appropriately, to point to `Firedrake/petsc/`.  For example, in my case I see the environment variables:
+  I do the installation also from within `Firedrake/`, making sure that `PETSC_DIR` points to `Firedrake/petsc/`.  For example, in my case I see the environment variables:
 ```
    CC=mpicc CXX=mpicxx PETSC_DIR=/home/bueler/Firedrake/petsc PETSC_ARCH=arch-firedrake-default HDF5_MPI=ON
 ```
-  Then the `pip install ...` for [Firedrake installation](https://www.firedrakeproject.org/install.html) proceeds as before.
+  Then the `pip install ...` goes on as documented at the [Firedrake installation page](https://www.firedrakeproject.org/install.html).
 
   3. Finally, I add certain convenience functions to the `.bashrc` in my home directory:
 ```
