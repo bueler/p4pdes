@@ -69,10 +69,10 @@ drakeme() {
   These posix-compatible Bash functions provide informative prompts for what mode I am in, and also what Git branch I am on.  For example, here is how I start to work with the C codes in Chapters 1--12:
 ```
   ~/p4pdes/c[master]$ petscme
-  (petsc) ~/p4pdes/c[master]$ ...
+  (petsc) ~/p4pdes/c[master]$
 ```
   For working with the Firedrake Python codes in Chapters 13 & 14, I do:
 ```
   ~/p4pdes/python[master]$ drakeme
-  (firedrake) ~/p4pdes/python[master]$ 
+  (venv-firedrake) ~/p4pdes/python[master]$
 ```
