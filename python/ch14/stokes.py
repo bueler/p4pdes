@@ -62,6 +62,7 @@ if args.stokeshelp:  # -stokeshelp is for help with stokes.py
 import petsc4py
 petsc4py.init(passthroughoptions)
 from firedrake import *
+from firedrake.output import VTKFile
 from firedrake.petsc import PETSc
 
 # read Gmsh mesh or create uniform mesh
@@ -278,4 +279,4 @@ if len(args.o) > 0:
     PETSc.Sys.Print('saving to %s ...' % args.o)
     u.rename('velocity')
     p.rename('pressure')
-    File(args.o).write(u,p)
+    VTKFile(args.o).write(u,p)

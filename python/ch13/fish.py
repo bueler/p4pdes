@@ -33,6 +33,7 @@ if args.fishhelp:  # -fishhelp is for help with fish.py
 import petsc4py
 petsc4py.init(passthroughoptions)
 from firedrake import *
+from firedrake.output import VTKFile
 from firedrake.petsc import PETSc
 
 # Create mesh, enabling GMG via refinement using hierarchy
@@ -78,4 +79,4 @@ PETSc.Sys.Print('  error |u-uexact|_inf = %.3e, |u-uexact|_h = %.3e' \
 if len(args.o) > 0:
     PETSc.Sys.Print('saving solution to %s ...' % args.o)
     u.rename('u')
-    File(args.o).write(u)
+    VTKFile(args.o).write(u)

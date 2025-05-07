@@ -1,4 +1,5 @@
 from firedrake import *
+from firedrake.output import VTKFile
 from firedrake.petsc import PETSc
 
 mesh = UnitSquareMesh(10, 10)
@@ -22,7 +23,7 @@ solve(F == 0, u, solver_parameters=sp, bcs=bc)
 uexact = Function(V).interpolate(x*(1.0-x)*y*(1.0-y)) # for comparison
 u.rename('u (numerical soln)')
 uexact.rename('uexact (exact soln)')
-File("bratu.pvd").write(u,uexact)
+VTKFile("bratu.pvd").write(u,uexact)
 
 diffu = Function(V).interpolate(u - uexact)
 error_L2 = sqrt(assemble(dot(diffu, diffu) * dx))
