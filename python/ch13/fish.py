@@ -79,4 +79,11 @@ PETSc.Sys.Print('  error |u-uexact|_inf = %.3e, |u-uexact|_h = %.3e' \
 if len(args.o) > 0:
     PETSc.Sys.Print('saving solution to %s ...' % args.o)
     u.rename('u')
-    VTKFile(args.o).write(u)
+    if mesh.comm.size > 1:
+        # write integer-valued element-wise process rank
+        rank = Function(FunctionSpace(mesh,'DG',0))
+        rank.dat.data[:] = mesh.comm.rank
+        rank.rename('rank')
+        VTKFile(args.o).write(u, rank)
+    else:
+        VTKFile(args.o).write(u)
