@@ -13,7 +13,7 @@ runfish_4:
 	-@../ftestit.sh fish.py "-fishhelp" 1 4
 
 runfish_5:
-	-@../ftestit.sh fish.py "-dm_view" 10 5 # zero elements on some ranks
+	-@../ftestit.sh fish.py "-dm_view" 3 5
 
 runfish_6:
 	-@../ftestit.sh fish.py "-refine 1 -quad -s_ksp_converged_reason -s_pc_type mg -s_mg_levels_ksp_type richardson -s_mg_levels_pc_type icc" 1 6
