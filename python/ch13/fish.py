@@ -72,7 +72,7 @@ with udiff.dat.vec_ro as vudiff:
 error_L2 = sqrt(assemble(dot(udiff, udiff) * dx))
 PETSc.Sys.Print('done on %d x %d grid with %s elements:' \
       % (mx,my,elementstr))
-PETSc.Sys.Print('  error |u-uexact|_inf = %.3e, |u-uexact|_h = %.3e' \
+PETSc.Sys.Print('  error |u-uexact|_inf = %.1e, |u-uexact|_h = %.1e' \
       % (error_Linf,error_L2))
 
 # Optionally save to a .pvd file viewable with Paraview
