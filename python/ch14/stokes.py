@@ -272,7 +272,7 @@ if args.showinfo:
     PETSc.Sys.Print('  sizes: n_u = %d, n_p = %d, N = %d' % (n_u,n_p,n_u+n_p))
     uL2 = sqrt(assemble(dot(u, u) * dx))
     pL2 = sqrt(assemble(dot(p, p) * dx))
-    PETSc.Sys.Print('  solution norms: |u|_h = %.2e, |p|_h = %.2e' % (uL2, pL2))
+    PETSc.Sys.Print('  solution norms: |u|_h = %.1e, |p|_h = %.1e' % (uL2, pL2))
 
 # optionally save to .pvd file viewable with Paraview
 if len(args.o) > 0:

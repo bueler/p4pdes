@@ -1,6 +1,4 @@
 solving on 5 x 5 grid with Q_3 x Q_2 Taylor-Hood elements ...
-    Residual norms for s_ solve.
-    0 KSP Residual norm 1.10169
-    1 KSP Residual norm < 1.e-11
+    Linear s_ solve converged due to CONVERGED_ITS iterations 1
   sizes: n_u = 338, n_p = 81, N = 419
-  solution norms: |u|_h = 5.41e-02, |p|_h = 8.65e-01
+  solution norms: |u|_h = 5.4e-02, |p|_h = 8.6e-01

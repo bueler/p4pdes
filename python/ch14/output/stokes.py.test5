@@ -1,14 +1,5 @@
 solving on 5 x 5 grid with P_2 x P_1 Taylor-Hood elements ...
-    Residual norms for s_ solve.
-    0 KSP Residual norm 20.3665
-    1 KSP Residual norm 6.35422
-    2 KSP Residual norm 4.20544
-    3 KSP Residual norm 1.98238
-    4 KSP Residual norm 0.504578
-    5 KSP Residual norm 0.191408
-    6 KSP Residual norm 0.0756049
-    7 KSP Residual norm 0.0250852
-    8 KSP Residual norm 0.0123126
+    Linear s_ solve converged due to CONVERGED_RTOL iterations 8
   Schur+GMG PC package lower + selfp
   sizes: n_u = 162, n_p = 25, N = 187
-  solution norms: |u|_h = 5.46e-02, |p|_h = 1.18e+00
+  solution norms: |u|_h = 5.5e-02, |p|_h = 1.2e+00
