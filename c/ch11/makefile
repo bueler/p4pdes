@@ -18,15 +18,15 @@ runadvect_1:
 
 # vanleer limiter and parallel and beuler and rotation and -snes_fd_color
 runadvect_2:
-	-@../testit.sh advect "-da_refine 2 -ts_monitor -adv_limiter vanleer -adv_problem rotation -ts_type beuler -snes_monitor_short -ts_max_time 0.02 -ts_dt 0.02 -snes_rtol 1.0e-3 -snes_fd_color" 2 2
+	-@../testit.sh advect "-da_refine 2 -ts_monitor -adv_limiter vanleer -adv_problem rotation -ts_type beuler -snes_monitor_short -ts_max_time 0.02 -ts_time_step 0.02 -snes_rtol 1.0e-3 -snes_fd_color" 2 2
 
 # koren limiter [default] and rightward wind and CN and analytical (upwind) jacobian
 runadvect_3:
-	-@../testit.sh advect "-da_refine 1 -ts_monitor -adv_windy 0.0 -ts_max_time 0.02 -ts_dt 0.01 -ts_type cn -snes_converged_reason" 1 3
+	-@../testit.sh advect "-da_refine 1 -ts_monitor -adv_windy 0.0 -ts_max_time 0.02 -ts_time_step 0.01 -ts_type cn -snes_converged_reason" 1 3
 
 # centered limiter and analytical (centered) jacobian; compare with -snes_fd
 runadvect_4:
-	-@../testit.sh advect "-da_grid_x 6 -da_grid_y 6 -adv_limiter centered -adv_jac_limiter centered -ts_type cn -ts_monitor -ts_dt 0.01 -ts_max_time 0.02 -snes_converged_reason" 1 4
+	-@../testit.sh advect "-da_grid_x 6 -da_grid_y 6 -adv_limiter centered -adv_jac_limiter centered -ts_type cn -ts_monitor -ts_time_step 0.01 -ts_max_time 0.02 -snes_converged_reason" 1 4
 
 
 # basic test of diffusion part (NOWIND)
