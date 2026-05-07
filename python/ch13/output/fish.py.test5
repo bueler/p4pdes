@@ -1,17 +1,15 @@
-DM Object: firedrake_default_topology 3 MPI processes
-  type: plex
-firedrake_default_topology in 2 dimensions:
-  Number of 0-cells per rank: 6 7 8
-  Number of 1-cells per rank: 9 11 13
-  Number of 2-cells per rank: 4 5 6
-Labels:
-  depth: 3 strata with value/size (0 (6), 1 (9), 2 (4))
-  celltype: 3 strata with value/size (0 (6), 1 (9), 3 (4))
-  Face Sets: 4 strata with value/size (1 (1), 2 (5), 3 (1), 4 (5))
-  exterior_facets: 1 strata with value/size (1 (9))
-  interior_facets: 1 strata with value/size (1 (10))
-  pyop2_core: 0 strata with value/size ()
-  pyop2_owned: 1 strata with value/size (1 (6))
-  pyop2_ghost: 1 strata with value/size (1 (13))
+Mat Object: 3 MPI processes
+  type: preallocator
+Mat Object: 3 MPI processes
+  type: mpiaij
+  row 0:   (0, 0.)    (1, 0.)    (5, 0.)   
+  row 1:   (0, 0.)    (1, 0.)    (2, 0.)    (5, 0.)    (6, 0.)   
+  row 2:   (1, 0.)    (2, 0.)    (6, 0.)    (8, 0.)   
+  row 3:   (3, 0.)    (7, 0.)    (8, 0.)   
+  row 4:   (4, 0.)    (5, 0.)    (6, 0.)    (7, 0.)   
+  row 5:   (0, 0.)    (1, 0.)    (4, 0.)    (5, 0.)    (6, 0.)   
+  row 6:   (1, 0.)    (2, 0.)    (4, 0.)    (5, 0.)    (6, 0.)    (7, 0.)    (8, 0.)   
+  row 7:   (3, 0.)    (4, 0.)    (6, 0.)    (7, 0.)    (8, 0.)   
+  row 8:   (2, 0.)    (3, 0.)    (6, 0.)    (7, 0.)    (8, 0.)   
 done on 3 x 3 grid with P_1 elements:
   error |u-uexact|_inf = 3.365e-03, |u-uexact|_h = 1.190e-03
