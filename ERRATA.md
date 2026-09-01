@@ -1,8 +1,10 @@
 # Errata for *PETSc for Partial Differential Equations*
 
-Not everything in the book is perfect, so reader-submitted corrections and comments are very much appreciated.  Please submit them through the [issues](https://github.com/bueler/p4pdes/issues)  tab at the [github](https://github.com/bueler/p4pdes) site, or by email to the author at `elbueler@alaska.edu`.  Corrections to the example programs themselves will appear as commits in the repository, and then in the [releases](https://github.com/bueler/p4pdes/releases).
+Not everything in the book is perfect, so reader-submitted corrections and comments are very much appreciated.  Please submit them through the [issues](https://github.com/bueler/p4pdes/issues) tab at the [github](https://github.com/bueler/p4pdes) site, or by email to the author at `elbueler@alaska.edu`.  Corrections to the example programs themselves will appear as commits in the repository, and then in the [releases](https://github.com/bueler/p4pdes/releases).
 
-The list of errata below shows corrections to the text of the 2nd printing.  That is, these errors exist in both the 1st and 2nd printing.  See [errata for the 1st printing](ERRATA-1stprinting.md) for a list of errors which have been corrected in the 2nd printing.
+The list of errata below shows author-identified corrections to the text of the 2nd printing.  That is, these errors exist in both the 1st and 2nd printing.
+
+See `ERRATA-1stprinting.md` for a list of errors which are believed to have been corrected in the 2nd printing.  (That printing occurred circa the beginning of 2023.)  See `ERRATA-claude2026-1st.md` for additional errors found by Claude Opus 5 in September 2026, when reading a 1st-edition PDF, which is humbling.  (Try it on your favorite book!)
 
 ### Chapter 6
 

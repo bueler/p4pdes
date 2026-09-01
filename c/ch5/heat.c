@@ -51,7 +51,7 @@ int main(int argc,char **argv) {
 //STARTDMDASETUP
   PetscCall(DMDACreate2d(PETSC_COMM_WORLD,
       DM_BOUNDARY_NONE, DM_BOUNDARY_PERIODIC, DMDA_STENCIL_STAR,
-      5,4,PETSC_DECIDE,PETSC_DECIDE,  // default to hx=hx=0.25 grid
+      5,4,PETSC_DECIDE,PETSC_DECIDE,  // default to hx=hy=0.25 grid
       1,1,                            // degrees of freedom, stencil width
       NULL,NULL,&da));
   PetscCall(DMSetFromOptions(da));
