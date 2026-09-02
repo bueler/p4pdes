@@ -77,8 +77,6 @@ are style-consistency observations rather than clear errors.
 
 * Page 190: in "programmer effort to implement an analytical Jacobian implementation," delete "implementation".
 
-TODO WIP: Ed needs to check from here
-
 ### Chapter 8
 
 * Pages 204-215: The notation for parallel speedup is inconsistent.  The Definition on page 204 introduces lowercase `s_N(P)` (matching `e_N(P)` for efficiency), but capital `S_N(P)` appears on pages 204, 205, 206 (three times), and 215.
@@ -129,15 +127,13 @@ TODO WIP: Ed needs to check from here
 
 ### Chapter 13
 
-* Page 331: "FEnICs" appears three times on this page; elsewhere the book spells it "FEniCS" (four occurrences).
+* Page 331: "FEnICs" appears three times on this page; elsewhere the book writes it correctly as "FEniCS".
 
 * Page 332: "which define a FE function space" should be "an FE".
 
 * Page 336: "faster than any negative power of the k" should be "power of k".
 
 ### Chapter 14
-
-* Page 344: "To compute the divergence a tensor, such as div sigma in (14.1)" is missing "of".
 
 * Page 345: "the dimensionless Reynold's number R" should be "Reynolds number".
 
@@ -148,17 +144,3 @@ TODO WIP: Ed needs to check from here
 ### Index
 
 * Page 384: "Lax-Richtmeyer equivalence theorem, 58" should be "Lax-Richtmyer".  The text on page 58 spells it correctly.
-
-### Capitalization consistency
-
-The book writes "in Chapter N" and "in Table N" (74 and 31 occurrences) when naming a
-numbered chapter or table, but the following use a capital where the word is a common noun:
-
-* Page xi: "each Chapter includes a demonstration"
-* Page 36: "matrices from tri.c in this Chapter (left)"
-* Page 297: "The cases in the Table with one iteration"
-* Page 319: "Our code in this Chapter, obstacle.c"
-* Page 331: "specific to this Chapter's examples"
-
-(Note "this Chapter 2 example" on page 167 and "the Chapter 7 definition" on page 336 name
-specific chapters and are correct as printed.)
