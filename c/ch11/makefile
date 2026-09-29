@@ -18,7 +18,7 @@ runadvect_1:
 
 # vanleer limiter and parallel and beuler and rotation and -snes_fd_color
 runadvect_2:
-	-@../testit.sh advect "-da_refine 2 -ts_monitor -adv_limiter vanleer -adv_problem rotation -ts_type beuler -snes_monitor_short -ts_max_time 0.02 -ts_time_step 0.02 -snes_rtol 1.0e-3 -snes_fd_color" 2 2
+	-@../testit.sh advect "-da_refine 2 -ts_monitor -adv_limiter vanleer -adv_problem rotation -ts_type beuler -snes_converged_reason -ts_max_time 0.02 -ts_time_step 0.02 -snes_rtol 1.0e-3 -snes_fd_color" 2 2
 
 # koren limiter [default] and rightward wind and CN and analytical (upwind) jacobian
 runadvect_3:
@@ -47,7 +47,7 @@ runboth_4:
 
 # parallel GMG with ASM+ILU smoothing, centered limiter, -bth_none_on_peclet, and 5x5 coarse grid for LAYER with eps=0.49 (so centered on 9x9, none on 5x5)
 runboth_5:
-	-@../testit.sh both "-snes_type ksponly -ksp_monitor_short -bth_problem layer -bth_eps 0.49 -bth_limiter centered -bth_none_on_peclet -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type asm -mg_levels_sub_pc_type ilu -da_refine 2 -pc_mg_levels 2" 2 5
+	-@../testit.sh both "-snes_type ksponly -ksp_converged_reason -bth_problem layer -bth_eps 0.49 -bth_limiter centered -bth_none_on_peclet -pc_type mg -mg_levels_ksp_type richardson -mg_levels_pc_type asm -mg_levels_sub_pc_type ilu -da_refine 2 -pc_mg_levels 2" 2 5
 
 test_advect: runadvect_1 runadvect_2 runadvect_3 runadvect_4
 

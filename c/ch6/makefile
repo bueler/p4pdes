@@ -9,7 +9,7 @@ fish: fish.o poissonfunctions.o
 # testing
 
 runfish_1:
-	-@../testit.sh fish "-fsh_dim 1 -fsh_problem manupoly -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -snes_monitor_short -ksp_converged_reason" 1 1
+	-@../testit.sh fish "-fsh_dim 1 -fsh_problem manupoly -da_refine 3 -pc_type mg -ksp_rtol 1.0e-12 -snes_converged_reason -ksp_converged_reason" 1 1
 
 runfish_2:
 	-@../testit.sh fish "-fsh_dim 1 -fsh_problem manupoly -da_refine 1 -mat_is_symmetric 1.0e-5 -snes_fd_color" 1 2
