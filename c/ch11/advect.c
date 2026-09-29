@@ -207,9 +207,9 @@ int main(int argc,char **argv) {
     PetscCall(TSSetProblemType(ts,TS_NONLINEAR));
     PetscCall(TSSetDM(ts,da));
     PetscCall(DMDATSSetRHSFunctionLocal(da,INSERT_VALUES,
-           (DMDATSRHSFunctionLocal)FormRHSFunctionLocal,&user));
+           (DMDATSRHSFunctionLocalFn*)FormRHSFunctionLocal,&user));
     PetscCall(DMDATSSetRHSJacobianLocal(da,
-           (DMDATSRHSJacobianLocal)FormRHSJacobianLocal,&user));
+           (DMDATSRHSJacobianLocalFn*)FormRHSJacobianLocal,&user));
     PetscCall(TSSetType(ts,TSRK));  // defaults to -ts_rk_type 3bs
 
     // time axis: use CFL number of 0.5 to set initial time step, but note

@@ -65,9 +65,9 @@ int main(int argc,char **argv) {
   PetscCall(TSSetDM(ts,da));
   PetscCall(TSSetApplicationContext(ts,&user));
   PetscCall(DMDATSSetRHSFunctionLocal(da,INSERT_VALUES,
-           (DMDATSRHSFunctionLocal)FormRHSFunctionLocal,&user));
+           (DMDATSRHSFunctionLocalFn*)FormRHSFunctionLocal,&user));
   PetscCall(DMDATSSetRHSJacobianLocal(da,
-           (DMDATSRHSJacobianLocal)FormRHSJacobianLocal,&user));
+           (DMDATSRHSJacobianLocalFn*)FormRHSJacobianLocal,&user));
   if (monitorenergy) {
       PetscCall(TSMonitorSet(ts,EnergyMonitor,&user,NULL));
   }

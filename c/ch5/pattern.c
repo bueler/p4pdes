@@ -101,16 +101,16 @@ int main(int argc,char **argv)
   PetscCall(TSSetDM(ts,da));
   PetscCall(TSSetApplicationContext(ts,&user));
   PetscCall(DMDATSSetRHSFunctionLocal(da,INSERT_VALUES,
-           (DMDATSRHSFunctionLocal)FormRHSFunctionLocal,&user));
+           (DMDATSRHSFunctionLocalFn*)FormRHSFunctionLocal,&user));
   if (!no_rhsjacobian) {
       PetscCall(DMDATSSetRHSJacobianLocal(da,
-               (DMDATSRHSJacobianLocal)FormRHSJacobianLocal,&user));
+               (DMDATSRHSJacobianLocalFn*)FormRHSJacobianLocal,&user));
   }
   PetscCall(DMDATSSetIFunctionLocal(da,INSERT_VALUES,
-           (DMDATSIFunctionLocal)FormIFunctionLocal,&user));
+           (DMDATSIFunctionLocalFn*)FormIFunctionLocal,&user));
   if (!no_ijacobian) {
       PetscCall(DMDATSSetIJacobianLocal(da,
-               (DMDATSIJacobianLocal)FormIJacobianLocal,&user));
+               (DMDATSIJacobianLocalFn*)FormIJacobianLocal,&user));
   }
   PetscCall(TSSetType(ts,TSARKIMEX));
   PetscCall(TSSetTime(ts,0.0));
